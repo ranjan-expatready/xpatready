@@ -37,7 +37,7 @@ export class Runs {
     return defs.map((d, i) => {
       const j = b.operation === FINDER_OPERATION || b.operation === UPLOAD_OPERATION ? b.jobs.find((x) => x.kind === d.kind) : b.jobs[i];
       const c = j?.detail && typeof j.detail === "object" ? (j.detail as { done?: number; total?: number }) : null;
-      return { n: i + 1, kind: d.kind, label: d.label, uses: d.ai ? "ai" : "rules", status: j?.status ?? "WAITING", message: j?.message ?? null, usd: j?.costUsd ?? 0, started_at: j && j.status !== "WAITING" && j.status !== "QUEUED" ? j.startedAt : null, finished_at: j?.finishedAt ?? null, counts: c?.total ? { done: c.done ?? 0, total: c.total, unit: b.operation === FINDER_OPERATION ? "forms" : "parts" } : null };
+      return { n: i + 1, kind: d.kind, label: d.label, uses: d.ai && !(j?.status === "COMPLETED" && !(j.costUsd ?? 0) && /no ai call/i.test(j.message ?? "")) ? "ai" : "rules", status: j?.status ?? "WAITING", message: j?.message ?? null, usd: j?.costUsd ?? 0, started_at: j && j.status !== "WAITING" && j.status !== "QUEUED" ? j.startedAt : null, finished_at: j?.finishedAt ?? null, counts: c?.total ? { done: c.done ?? 0, total: c.total, unit: b.operation === FINDER_OPERATION ? "forms" : "parts" } : null };
     });
   }
 
@@ -62,7 +62,15 @@ export class Runs {
     return { id: b.id, operation: b.operation, label: LABEL[b.operation] ?? b.operation, scope: b.operation === FINDER_OPERATION ? b.scopeLabel.split("|")[1] ?? null : b.scopeLabel, status: st.code, status_word: st.word, message: b.message,
       step: cur ? { n: cur.n, m: steps.length, label: cur.label } : null, steps, started_at: b.startedAt, finished_at: b.finishedAt, elapsed_ms: (b.finishedAt ?? new Date()).getTime() - b.startedAt.getTime(), usual_ms: usual.ms, last_activity_at: new Date(last),
       usd: { spent: Math.round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0) * 100) / 100, worst: b.worstCaseUsd, usual: usual.usd }, can_stop: ACTIVE.includes(b.status) && !b.cancelRequested,
-      error: failedStep ? { what: b.message && b.message !== failedStep.message ? b.message : `${failedStep.label}: see the step above.`, next: b.operation === FINDER_OPERATION ? { label: "Find again", href } : { label: "See the details", href } } : null, href };
+      error: failedStep ? { what: b.message && b.message !== failedStep.message ? b.message : `${failedStep.label}: see the step above.`, next: this.nextOf(b, href) } : null, href };
+  }
+
+  /** The one next step a stopped or waiting run offers (never a link to the page already open). */
+  private nextOf(b: AiBatch, href: string): { label: string; href: string } | null {
+    const plan = (b.plan ?? {}) as { held_id?: string };
+    if (b.operation === FINDER_OPERATION) return { label: "Find again", href };
+    if (b.operation === UPLOAD_OPERATION) return plan.held_id ? { label: "Record the IRCC page it came from", href: `/review/held/${plan.held_id}` } : null;
+    return { label: "See the details", href };
   }
 
   /** Stop, whatever the run: the finder and Upload PDF end their running step; field-map drafting ends its running calls. */

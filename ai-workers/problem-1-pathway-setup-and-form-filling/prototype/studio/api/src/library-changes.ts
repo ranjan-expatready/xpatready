@@ -49,7 +49,15 @@ export async function sameName(db: Pick<Db, "canonicalField" | "libraryChange" |
 export function changeView(c: LibraryChange) {
   return { id: c.id, kind: c.kind, kind_word: KIND_NOUN[c.kind] ?? c.kind, key: c.key, label: c.label ?? c.key, action: c.action, action_word: ACTION_WORD[c.action] ?? c.action, reason: c.reason,
     ai_verdict: c.aiVerdict, matches: c.matches, status: c.status, proposed_by: nameOf(c.proposedBy), proposed_by_id: c.proposedBy, proposed_at: c.proposedAt,
-    decided_by: nameOf(c.decidedBy), decided_at: c.decidedAt, decision_note: c.decisionNote, released_in: c.releasedIn, combination_id: c.combinationId };
+    decided_by: nameOf(c.decidedBy), decided_at: c.decidedAt, decision_note: c.decisionNote, released_in: c.releasedIn, combination_id: c.combinationId,
+    ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}) };
+}
+
+/** C11.18: what the second person compares: before → after, IRCC's line or the reason, and the form's canada.ca page. */
+export function acceptsView(c: Pick<LibraryChange, "key" | "matches">) {
+  const m = (c.matches ?? {}) as { channels?: string; before?: string | null; quote?: string | null; reason?: string | null; form_page?: string | null; edition?: string };
+  const w = (x?: string | null) => (x ? ({ PDF: "PDF upload", ONLINE: "Online", PDF_OR_ONLINE: "PDF upload · Online" } as Record<string, string>)[x] ?? x : "Not set yet");
+  return { form: c.key, edition: m.edition ?? null, before: w(m.before), after: w(m.channels), quote: m.quote ?? null, reason: m.reason ?? null, form_page: m.form_page ?? null };
 }
 
 /** A second person decides (P-53 item 4, BR-9): never the person who proposed it. Claimed on its status, so two

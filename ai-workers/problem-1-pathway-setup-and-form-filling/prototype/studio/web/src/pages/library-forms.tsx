@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; edition: string | null; canada_updated: string | null; accepts: string | null; accepts_basis: string | null; accepts_quote: string | null; accepts_waiting: boolean;
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
-  used_by: { id: string; label: string; picked_by_ai: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "retired"; older_editions: string[] };
+  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; older_editions: string[] };
 type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string };
 type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
 
@@ -48,8 +48,18 @@ export function FormsPage() {
   const [type, setType] = React.useState(""), [usedBy, setUsedBy] = React.useState(""), [status, setStatus] = React.useState(""), [q, setQ] = React.useState("");
   const qs = new URLSearchParams(Object.entries({ type, usedBy, status, q: q.trim() }).filter(([, v]) => v)).toString();
   const lib = useApi<List>(["library-forms-list", qs], `/library/forms/list${qs ? `?${qs}` : ""}`, { placeholderData: (p) => p });
-  const [open, setOpen] = React.useState<Row | null>(null);
-  const [runs, setRuns] = React.useState<string[]>([]);
+  const [opened, setOpened] = React.useState<Row | null>(null);
+  const open = opened ? lib.data?.rows.find((r) => r.code === opened.code) ?? opened : null;
+  // Review major 8: focus goes back to what opened the drawer (the number), never to the top of the page.
+  const back = React.useRef<HTMLElement | null>(null);
+  const setOpen = (r: Row | null) => {
+    if (r) { back.current = document.activeElement as HTMLElement | null; setOpened(r); return; }
+    const code = opened?.code; setOpened(null);
+    setTimeout(() => (back.current?.isConnected ? back.current : document.querySelector<HTMLElement>(`tr[data-form="${CSS.escape(code ?? "")}"] button`))?.focus(), 0);
+  };
+  // Break minor: run cards stay while this tab is open (a reload or a visit elsewhere keeps them).
+  const [runs, setRunsState] = React.useState<string[]>(() => { try { return JSON.parse(sessionStorage.getItem(RUNS_KEY) ?? "[]") as string[]; } catch { return []; } });
+  const setRuns = (f: (r: string[]) => string[]) => setRunsState((r) => { const n = f(r); try { sessionStorage.setItem(RUNS_KEY, JSON.stringify(n)); } catch { /* storage blocked: cards last until reload */ } return n; });
   const c = lib.data?.counts ?? {};
   const chip = (active: boolean, label: string, n: number | undefined, on: () => void, tip: string) => (
     <Tip tip={tip}><button type="button" aria-pressed={active} onClick={on} className={`rounded-full border px-3 py-1 text-sm ${active ? "border-primary bg-primary/10 text-text-link" : "border-border text-text"}`}>{label}{n !== undefined ? <span className="ml-1 tabular-nums text-text-muted">{n}</span> : null}</button></Tip>
@@ -78,7 +88,7 @@ export function FormsPage() {
             {chip(status === "newer_file", "Newer file on canada.ca", c.newer_file, () => setStatus(status === "newer_file" ? "" : "newer_file"), STATUS.newer_file.tip)}
             {chip(status === "retired", "Retired", c.retired, () => setStatus(status === "retired" ? "" : "retired"), STATUS.retired.tip)}
           </div>
-          <label className="relative ml-auto"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input type="search" aria-label="Search number or title" placeholder="Search number or title" value={q} onChange={(e) => setQ(e.target.value)} className="w-64 pl-8" /></label>
+          <label className="relative ml-auto"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input type="search" aria-label="Search number or title" placeholder="Search number or title" value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} className="w-64 pl-8" /></label>
         </div>
         {lib.isLoading ? <div className="space-y-2" aria-label="Loading forms">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
           : lib.isError ? <Notice tone="danger" title="The forms could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void lib.refetch()}>Try again</Button>}>{(lib.error as Error).message}</Notice>
@@ -90,12 +100,12 @@ export function FormsPage() {
               {lib.data.rows.map((r) => (
                 <tr key={r.code} data-form={r.code} className={r.status === "retired" ? "text-text-muted" : undefined}>
                   <td className="mono whitespace-nowrap"><button type="button" className="text-text-link underline-offset-2 hover:underline" onClick={() => setOpen(r)}>{r.code}</button></td>
-                  <td className="max-w-80"><span className="line-clamp-2" title={r.title}>{r.title}</span></td>
+                  <td className="max-w-56 xl:max-w-80"><span className="line-clamp-2" title={r.title}>{r.title}</span></td>
                   <td>{TYPE_WORD[r.type]}</td>
                   <td className="whitespace-nowrap">{editionText(r) ?? <span className="text-text-muted">no usable edition yet</span>}</td>
                   <td className="whitespace-nowrap"><AcceptsCell r={r} /></td>
-                  <td className="max-w-72">{r.used_by.length === 0 ? <span className="text-text-muted">Not used</span> : r.used_by.length === 1 ? <span className="line-clamp-2" title={r.used_by[0].label}>{r.used_by[0].label}</span> : <Tip tip={r.used_by.map((u) => u.label).join(", ")}><span tabIndex={0} className="underline decoration-dotted">{r.used_by.length} combinations</span></Tip>}</td>
-                  <td><Tip tip={STATUS[r.status].tip}><span tabIndex={0}><Pill tone={STATUS[r.status].tone}>{STATUS[r.status].word}</Pill></span></Tip></td>
+                  <td className="max-w-48 xl:max-w-72">{r.used_by.length === 0 ? <span className="text-text-muted">Not used</span> : r.used_by.length === 1 ? <TrailText label={r.used_by[0].label} /> : <Tip tip={r.used_by.map((u) => u.label).join(", ")}><span tabIndex={0} className="underline decoration-dotted">{r.used_by.length} combinations</span></Tip>}</td>
+                  <td><span className="inline-flex flex-wrap gap-1"><Tip tip={STATUS[r.status].tip}><span tabIndex={0}><Pill tone={STATUS[r.status].tone}>{STATUS[r.status].word}</Pill></span></Tip>{r.lifecycle_waiting ? <Tip tip={`A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0}><Pill tone="warn">{LIFE_WORD[r.lifecycle_waiting].title} waiting</Pill></span></Tip> : null}</span></td>
                   <td className="text-right"><RowActions row={r} canAuthor={canAuthor} onWhereUsed={() => setOpen(r)} /></td>
                 </tr>
               ))}
@@ -106,6 +116,14 @@ export function FormsPage() {
       </div>
     </TipProvider>
   );
+}
+
+const RUNS_KEY = "library-forms-runs";
+
+/** A combination's trail, its last part first (what tells them apart), the rest muted: "With an LMIA · Work permit › Employer-specific". */
+function TrailText({ label }: { label: string }) {
+  const parts = label.split(" › "), last = parts.pop();
+  return <span className="line-clamp-2" title={label}>{last}{parts.length ? <span className="text-text-muted"> · {parts.join(" › ")}</span> : null}</span>;
 }
 
 /** The IRCC accepts cell: the value, then who said it (AI · Sample, a person · Sample, the expert); a change waiting shows. */
@@ -133,14 +151,14 @@ function UploadButton({ onRuns }: { onRuns: (ids: string[]) => void }) {
   const start = async (files: FileList) => {
     setError(null);
     const fd = new FormData(); for (const f of Array.from(files)) fd.append("files", f, f.name);
-    try { const r = await api<{ runId: string; runIds?: string[] }>("/library/forms/upload", { method: "POST", body: fd }); onRuns(r.runIds ?? [r.runId]); } catch (e) { setError((e as Error).message); }
+    try { const r = await api<{ runId: string; runIds?: string[] }>("/library/forms/upload", { method: "POST", body: fd }); onRuns(r.runIds ?? [r.runId]); void queryClient.invalidateQueries({ queryKey: ["runs-active"] }); } catch (e) { setError((e as Error).message); }
   };
   return (
     <div className="flex flex-col items-end gap-1">
       <Tip tip="Upload one or more IRCC PDFs. Rules check each file and read its number, edition and title (no AI when they can), compare it with canada.ca, then it joins the library, or waits for a second person unless it is the very file canada.ca links.">
         <Button onClick={() => input.current?.click()}><FileUp /> Upload PDF</Button>
       </Tip>
-      <input ref={input} type="file" multiple accept="application/pdf,.pdf" className="sr-only" aria-label="Choose PDFs to upload" onChange={(e) => { if (e.target.files?.length) void start(e.target.files); e.target.value = ""; }} />
+      <input ref={input} type="file" tabIndex={-1} multiple accept="application/pdf,.pdf" className="sr-only" aria-label="Choose PDFs to upload" onChange={(e) => { if (e.target.files?.length) void start(e.target.files); e.target.value = ""; }} />
       {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
     </div>
   );
@@ -150,12 +168,14 @@ function UploadButton({ onRuns }: { onRuns: (ids: string[]) => void }) {
 function RowActions({ row, canAuthor, onWhereUsed }: { row: Row; canAuthor: boolean; onWhereUsed: () => void }) {
   const [life, setLife] = React.useState<"RETIRE" | "DELETE" | "RESTORE" | null>(null);
   const [reread, setReread] = React.useState(false);
+  const trigger = React.useRef<HTMLButtonElement>(null);
+  const refocus = () => setTimeout(() => trigger.current?.focus(), 0);
   const check = useAction(() => api<{ message: string }>(`/library/forms/${encodeURIComponent(row.code)}/check-canada`, { method: "POST" }), { success: (r) => r.message, invalidate: [["library-forms-list"]] });
   const item = "flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-surface";
   return (
     <>
       <DropdownMenu.Root>
-        <DropdownMenu.Trigger asChild><Button size="sm" variant="ghost" aria-label={`Actions for ${row.code}`}><MoreHorizontal /></Button></DropdownMenu.Trigger>
+        <DropdownMenu.Trigger asChild><Button ref={trigger} size="sm" variant="ghost" aria-label={`Actions for ${row.code}`}><MoreHorizontal /></Button></DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[300px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
             <DropdownMenu.Item className={item} disabled={!canAuthor || row.type === "guide" || row.status === "retired"} onSelect={() => check.mutate(undefined)}>Replace with a new edition…</DropdownMenu.Item>
@@ -164,12 +184,12 @@ function RowActions({ row, canAuthor, onWhereUsed }: { row: Row; canAuthor: bool
             {row.status === "retired"
               ? <DropdownMenu.Item className={item} disabled={!canAuthor} onSelect={() => setLife("RESTORE")}>Restore</DropdownMenu.Item>
               : <DropdownMenu.Item className={item} disabled={!canAuthor} onSelect={() => setLife("RETIRE")}>Retire · kept for released versions</DropdownMenu.Item>}
-            <DropdownMenu.Item className={item} disabled={!canAuthor || row.used_by.length > 0} onSelect={() => setLife("DELETE")}>Delete · only when nothing uses it</DropdownMenu.Item>
+            <DropdownMenu.Item className={item} disabled={!canAuthor || row.used_by.length > 0 || !!row.lifecycle_waiting} onSelect={() => setLife("DELETE")}>Delete · only when nothing uses it</DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
-      {life ? <LifecycleDialog row={row} action={life} onClose={() => setLife(null)} /> : null}
-      {reread && row.attachment_id ? <AiLaunchDialog scope={{ kind: "source", ids: [row.attachment_id], label: row.code }} onClose={() => setReread(false)} initialMode="REPLAY" /> : null}
+      {life ? <LifecycleDialog row={row} action={life} onClose={() => { setLife(null); refocus(); }} /> : null}
+      {reread && row.attachment_id ? <AiLaunchDialog scope={{ kind: "source", ids: [row.attachment_id], label: row.code }} onClose={() => { setReread(false); refocus(); }} initialMode="REPLAY" /> : null}
     </>
   );
 }

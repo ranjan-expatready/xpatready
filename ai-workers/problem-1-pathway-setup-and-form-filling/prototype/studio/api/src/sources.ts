@@ -2,9 +2,9 @@
 // AI field-map draft (p2/launch.ts: stub pass, then the live call under the existing route, input allowlist, ledger
 // and caps), a labelled replay of a saved real run, comparison with the shared library and the person's decisions.
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
-import { execFile, spawn, type ChildProcess } from "node:child_process";
+import { execFile, execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
@@ -65,9 +65,26 @@ export function recordApproval(row: Approval, bytes: Buffer) {
 }
 const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary Resident Visa", "IMM 1295": "Application for Work Permit made Outside of Canada", "IMM 5707": "Family Information", "IMM 5409": "Statutory Declaration of Common-law Union", "IMM 5476": "Use of a Representative", "IMM 5475": "Authority to Release Personal Information to a Designated Individual", "IMM 5257 SCH1": "Schedule 1: Background/Declaration" };
 
+/** Break M6: one file per running launcher (its process group id), removed when it ends. */
+const LAUNCHES = () => join(VAR_ROOT, "launches");
+function endOrphanLaunches() {
+  if (!existsSync(LAUNCHES())) return;
+  for (const f of readdirSync(LAUNCHES()).filter((x) => x.endsWith(".pid"))) {
+    const pid = Number(readFileSync(join(LAUNCHES(), f), "utf8"));
+    rmSync(join(LAUNCHES(), f), { force: true });
+    if (!Number.isInteger(pid) || pid <= 1) continue;
+    // Only a process that is still a launcher of this copy is ended (a reused process id is left alone).
+    let cmd = ""; try { cmd = execFileSync("ps", ["-o", "command=", "-p", String(pid)], { encoding: "utf8" }); } catch { continue; }
+    if (!cmd.includes(LAUNCHER)) continue;
+    try { process.kill(-pid, "SIGTERM"); } catch { /* already ended */ }
+  }
+}
+
 @Injectable()
 export class Sources {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {
+    // Break M6: a launcher left running by a server that stopped is ended now, so no call outlives the run it belongs to.
+    endOrphanLaunches();
     // A job left "running" by a stopped server can never finish: say so instead of showing it as running forever.
     void this.db.draftingJob.updateMany({ where: { status: "RUNNING" }, data: { status: "FAILED", message: "The studio server stopped while this step was running; start it again.", finishedAt: new Date() } })
       // A screen-map draft's own AI work (QA-31) ends with it (none starts since W1-02 parked online versions; an older one
@@ -430,6 +447,9 @@ export class Sources {
       // S4 (M7, P-110): the launcher runs in its own process group, so Stop ends it and the drafting process it started.
       const p = spawn(NODE, [LAUNCHER, "--job", jobId, `--${mode}`, ...approved], { cwd: ROOT, detached: true, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
       this.children.set(jobId, p);
+      const pidFile = join(LAUNCHES(), `${jobId}.pid`);
+      try { mkdirSync(LAUNCHES(), { recursive: true }); writeFileSync(pidFile, String(p.pid ?? "")); } catch { /* the in-memory Stop still works */ }
+      p.on("close", () => rmSync(pidFile, { force: true }));
       let out = "", err = "";
       p.stdout.on("data", (d) => (out += d)); p.stderr.on("data", (d) => (err += d));
       p.on("close", (code, signal) => { if (this.children.get(jobId) === p) this.children.delete(jobId); res({ code: code ?? 1, out, err, ...(signal ? { stopped: true } : {}) }); });

@@ -19,7 +19,7 @@ import { ACTORS, actorOf, Audit, Db, need, Workspace, type Actor } from "./core.
 import { Finder } from "./finder.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { addFormLine } from "./form-lines.ts";
-import { combinationTrails, formUses, recordAction, snapshotLines, type LineRow } from "./form-uses.ts";
+import { combinationTrails, formUses, lineSig, recordAction, snapshotLines, type LineRow } from "./form-uses.ts";
 import { Studio } from "./studio.ts";
 
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -30,7 +30,9 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
   return r.data;
 }
 const nameOf = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "another person";
-const TYPE_OF = (kind: string) => (kind === "guide" ? "guide" : kind === "checklist" || kind === "document" ? "checklist" : "form");
+/** Library type. Rows made before S4 say only "document": a document checklist by its title, otherwise a filed form (IMM
+ *  5802, an employer's offer of employment, is filed; review major 9). */
+const TYPE_OF = (kind: string, title = "") => (kind === "guide" ? "guide" : kind === "checklist" || (kind === "document" && /checklist/i.test(title)) ? "checklist" : "form");
 
 @Injectable()
 export class FormLibrary {
@@ -54,7 +56,8 @@ export class FormLibrary {
       this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, select: { code: true, outcome: true } }),
     ]);
     // "Re-read with AI (fields and boxes)" drafts from a combination's copy of the file (today's field-map drafting).
-    const atts = await this.db.sourceAttachment.findMany({ where: { workspaceId, kind: "Form" }, select: { id: true, sha256: true }, orderBy: { createdAt: "asc" } });
+    const atts = await this.db.sourceAttachment.findMany({ where: { workspaceId, kind: "Form" }, select: { id: true, sha256: true, combinationId: true }, orderBy: { createdAt: "asc" } });
+    const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { key: true, action: true } });
     const trails = await combinationTrails(this.db, workspaceId);
     const combos = (await this.db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true, label: true } })).map((c) => ({ id: c.id, label: trails.get(c.id) ?? c.label })).sort((a, b) => a.label.localeCompare(b.label));
     const waitingAccepts = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "form_accepts", status: { in: ["WAITING", "RETURNED"] } }, select: { key: true } })).map((x) => x.key));
@@ -63,18 +66,22 @@ export class FormLibrary {
       const current = newestEdition(editions);
       const newestPerCombination = new Map<string, (typeof f.usedBy)[number]>();
       for (const u of f.usedBy) if (!newestPerCombination.has(u.combinationId)) newestPerCombination.set(u.combinationId, u);
-      const using = [...newestPerCombination.entries()].filter(([, u]) => u.status !== "RETIRED").map(([id, u]) => ({ id, label: trails.get(id) ?? u.combination.label, picked_by_ai: u.origin === "AI_FOUND" }));
+      const using: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[] = [...newestPerCombination.entries()].filter(([, u]) => u.status !== "RETIRED").map(([id, u]) => ({ id, label: trails.get(id) ?? u.combination.label, picked_by_ai: u.origin === "AI_FOUND" }));
+      // Review must 1: a combination with one of its files attached as a source uses it too.
+      const shas = new Set(f.editions.map((e) => e.sha256).filter(Boolean));
+      for (const cid of new Set(atts.filter((a) => shas.has(a.sha256)).map((a) => a.combinationId))) if (!using.some((u) => u.id === cid)) using.push({ id: cid, label: trails.get(cid) ?? "A combination", picked_by_ai: false, as_source: true });
+      const lifecycle = lifecyclePending.find((x) => x.key === f.formKey)?.action ?? null;
       const needsOk = held.some((h) => h.code === f.formKey);
       const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 ? "newer_file" : current ? "ready" : "needs_ok";
-      return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
-        accepts: current?.acceptedChannels ?? (TYPE_OF(f.formKind) === "form" ? null : "READ_BY_AI"), accepts_basis: current?.acceptedBasis === "SAMPLE" ? "AI_SAMPLE" : current?.acceptedBasis ?? null, accepts_quote: current?.acceptedQuote ?? null, accepts_waiting: waitingAccepts.has(f.formKey),
+      return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
+        accepts: current?.acceptedChannels ?? (TYPE_OF(f.formKind, f.displayName) === "form" ? null : "READ_BY_AI"), accepts_basis: current?.acceptedBasis === "SAMPLE" ? "AI_SAMPLE" : current?.acceptedBasis ?? null, accepts_quote: current?.acceptedQuote ?? null, accepts_waiting: waitingAccepts.has(f.formKey),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
         form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256)?.id ?? null : null,
-        used_by: using, status, older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel) };
+        used_by: using, status, lifecycle_waiting: lifecycle, older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel) };
     });
-    const term = q.q?.toLowerCase();
+    const term = q.q?.toLowerCase(), termCode = q.q ? normaliseCode(q.q).toLowerCase() : undefined;
     // S5's "Add a form from the library" (for=picker): forms a combination may use now, never retired or still waiting.
-    const shown = rows.filter((r) => (q.for !== "picker" || (r.status !== "retired" && !!r.edition)) && (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.title.toLowerCase().includes(term)));
+    const shown = rows.filter((r) => (q.for !== "picker" || (r.status !== "retired" && !!r.edition)) && (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.code.toLowerCase().includes(termCode!) || r.title.toLowerCase().includes(term)));
     const count = (pred: (r: (typeof rows)[number]) => boolean) => rows.filter(pred).length;
     return { rows: shown, counts: { all: rows.length, form: count((r) => r.type === "form"), guide: count((r) => r.type === "guide"), checklist: count((r) => r.type === "checklist"), needs_ok: count((r) => r.status === "needs_ok"), newer_file: count((r) => r.status === "newer_file"), retired: count((r) => r.status === "retired") },
       combinations: combos, sample_note: "Which forms a combination needs and what IRCC accepts are Sample until the immigration expert confirms." };
@@ -91,14 +98,17 @@ export class FormLibrary {
     const workspaceId = await this.ws.id();
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } }, include: { editions: true } });
     if (!def) throw problem(404, "Not in the library", `${code} is not in the library.`);
-    if (TYPE_OF(def.formKind) !== "form") throw problem(409, "Not filed", `${code} is a ${TYPE_OF(def.formKind)}: it is read by AI and never filed, so IRCC does not accept it in any way.`);
+    if (TYPE_OF(def.formKind, def.displayName) !== "form") throw problem(409, "Not filed", `${code} is a ${TYPE_OF(def.formKind, def.displayName)}: it is read by AI and never filed, so IRCC does not accept it in any way.`);
     if (def.retiredAt) throw problem(409, "Retired", `${code} is retired: restore it first.`);
     const current = newestEdition(def.editions.filter((e) => e.channel !== "ONLINE"));
     if (!current) throw problem(409, "No edition yet", `${code} has no edition in the library yet.`);
     if (current.acceptedChannels === b.channels && (current.acceptedQuote ?? "") === (b.quote ?? "")) throw problem(409, "Nothing changes", "That is already what the library says IRCC accepts for this form.");
     if (await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })) throw problem(409, "Already waiting", `A change to what IRCC accepts for ${code} already waits for a second person on To review.`);
     const label = `${code} · IRCC accepts: ${ACCEPTS_WORD[b.channels]}`;
-    const c = await this.db.libraryChange.create({ data: { workspaceId, kind: "form_accepts", key: code, label, action: "SET_ACCEPTS", reason: b.quote ? `canada.ca: "${b.quote}"` : b.reason!, matches: { channels: b.channels, quote: b.quote ?? null, reason: b.reason ?? null, edition: current.editionLabel, before: current.acceptedChannels ?? null } as Prisma.InputJsonValue, status: "WAITING", proposedBy: actor.id } });
+    const c = await this.db.libraryChange.create({ data: { workspaceId, kind: "form_accepts", key: code, label, action: "SET_ACCEPTS", reason: b.quote ? `canada.ca: "${b.quote}"` : b.reason!, matches: { channels: b.channels, quote: b.quote ?? null, reason: b.reason ?? null, edition: current.editionLabel, before: current.acceptedChannels ?? null, form_page: def.formPageUrl ?? current.formPageUrl ?? null } as Prisma.InputJsonValue, status: "WAITING", proposedBy: actor.id } });
+    // Break minor: two people proposing at once both pass the check above; the earlier one stays, the later is refused.
+    const first = await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: "WAITING" }, orderBy: [{ proposedAt: "asc" }, { id: "asc" }] });
+    if (first && first.id !== c.id) { await this.db.libraryChange.delete({ where: { id: c.id } }); throw problem(409, "Already waiting", `A change to what IRCC accepts for ${code} already waits for a second person on To review.`); }
     await this.audit.log(workspaceId, actor.id, "proposed", "form", code, `${actor.name} proposed that IRCC accepts ${code} as ${ACCEPTS_WORD[b.channels]} (${b.quote ? "canada.ca line given" : `reason: ${b.reason}`}); waits for a second person`);
     return { id: c.id, status: c.status, label };
   }
@@ -181,6 +191,7 @@ export class FormLibrary {
   async replace(actor: Actor, combinationId: string, code: string, body: unknown) {
     need(actor, "author");
     const b = parse(LineVersionBody, body);
+    if (!(await this.db.combination.findUnique({ where: { id: combinationId }, select: { id: true } }).catch(() => null))) throw problem(404, "Not found", "This combination no longer exists.");
     await this.sameVersion(combinationId, code, b.version);
     return this.checkCanada(actor, code);
   }
@@ -193,12 +204,17 @@ export class FormLibrary {
     const a = await this.db.formLineAction.findFirst({ where: { combinationId, undoneAt: null }, orderBy: { at: "desc" } });
     if (!a) throw problem(409, "Nothing to undo", "There is no change on this combination's forms to undo.");
     if (b.changeId && b.changeId !== a.id) throw problem(409, "Changed since", `The last change on these forms is now ${nameOf(a.by)}'s (${a.action}), not the one you saw. Reload, then undo.`, { changeId: a.id });
-    const d = a.detail as unknown as { codes: string[]; before: LineRow[]; after: { id: string; status: string; version: number }[] };
-    const now = await snapshotLines(this.db, combinationId, d.codes);
-    const changed = now.length !== d.after.length || now.some((r) => { const x = d.after.find((y) => y.id === r.id); return !x || x.status !== r.status || x.version !== r.version; });
-    if (changed) throw problem(409, "Changed since", "One of these forms was changed after that step (by you or someone else), so it cannot be undone exactly. Change it by hand.");
-    if (now.some((r) => r.status === "PUBLISHED" && !d.before.some((b) => b.id === r.id))) throw problem(409, "Released since", "That change was released meanwhile: a release is never undone. Change it in a new draft.");
+    const d = a.detail as unknown as { codes: string[]; before: LineRow[]; after: { id: string; status: string; version: number; sig?: string }[] };
+    // Break M4: the check and the put-back run in one transaction with the lines locked, so an edit that lands between
+    // them is either seen (refused) or waits for the Undo to finish.
     await this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM combination_form WHERE combination_id = ${combinationId}::uuid AND lineage_key = ANY(${d.codes}) FOR UPDATE`;
+      const step = await tx.formLineAction.findUnique({ where: { id: a.id } });
+      if (step?.undoneAt) throw problem(409, "Already undone", "That change was undone a moment ago.");
+      const now = await snapshotLines(tx, combinationId, d.codes);
+      const changed = now.length !== d.after.length || now.some((r) => { const x = d.after.find((y) => y.id === r.id); return !x || x.status !== r.status || x.version !== r.version || (!!x.sig && x.sig !== lineSig(r)); });
+      if (changed) throw problem(409, "Changed since", "One of these forms was changed after that step (by you or someone else), so it cannot be undone exactly. Change it by hand.");
+      if (now.some((r) => r.status === "PUBLISHED" && !d.before.some((b) => b.id === r.id))) throw problem(409, "Released since", "That change was released meanwhile: a release is never undone. Change it in a new draft.");
       const keep = new Set(d.before.map((r) => r.id));
       await tx.combinationForm.deleteMany({ where: { id: { in: now.filter((r) => !keep.has(r.id)).map((r) => r.id) } } });
       for (const r of d.before) {
@@ -233,15 +249,15 @@ export class FormLibraryController {
   @Post("form-finder/runs/:id/stop") stop(@Headers("x-actor") a: H, @Param("id") id: string) { return this.finder.stop(actorOf(a), id); }
   @Post("combinations/:id/forms/undo") undo(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.lib.undo(actorOf(a), id, b); }
   @Get("combinations/:id/forms/find/latest") latestForms(@Param("id") id: string) { return this.finder.latestForms(id); }
-  @Post("combinations/:id/forms/:code/replace") replace(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code") code: string, @Body() b: unknown) { return this.lib.replace(actorOf(a), id, code, b); }
+  @Post("combinations/:id/forms/:code/replace") replace(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.replace(actorOf(a), id, code, b); }
   @Post("combinations/:id/forms") attach(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.lib.attach(actorOf(a), id, b); }
-  @Delete("combinations/:id/forms/:code") remove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code") code: string, @Body() b: unknown) { return this.lib.remove(actorOf(a), id, code, b); }
+  @Delete("combinations/:id/forms/:code") remove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.remove(actorOf(a), id, code, b); }
   @Get("library/forms/list") list(@Query() q: unknown) { return this.lib.list(q); }
-  @Get("library/forms/:code/uses") uses(@Param("code") code: string) { return this.lib.uses(code); }
-  @Post("library/forms/:code/accepts") accepts(@Headers("x-actor") a: H, @Param("code") code: string, @Body() b: unknown) { return this.lib.proposeAccepts(actorOf(a), code, b); }
-  @Post("library/forms/:code/check-canada") check(@Headers("x-actor") a: H, @Param("code") code: string) { return this.lib.checkCanada(actorOf(a), code); }
-  @Delete("library/forms/:code") del(@Headers("x-actor") a: H, @Param("code") code: string, @Body() b: unknown) { return this.lifecycle.propose(actorOf(a), "library_form", code, "DELETE", parse(LifecycleReasonBody, b).reason); }
-  @Post("library/forms/:code/retire") retire(@Headers("x-actor") a: H, @Param("code") code: string, @Body() b: unknown) { return this.lifecycle.propose(actorOf(a), "library_form", code, "RETIRE", parse(LifecycleReasonBody, b).reason); }
-  @Post("library/forms/:code/restore") restore(@Headers("x-actor") a: H, @Param("code") code: string, @Body() b: unknown) { return this.lifecycle.propose(actorOf(a), "library_form", code, "RESTORE", parse(LifecycleReasonBody, b).reason); }
+  @Get("library/forms/:code/uses") uses(@Param("code", { transform: normaliseCode }) code: string) { return this.lib.uses(code); }
+  @Post("library/forms/:code/accepts") accepts(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.proposeAccepts(actorOf(a), code, b); }
+  @Post("library/forms/:code/check-canada") check(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string) { return this.lib.checkCanada(actorOf(a), code); }
+  @Delete("library/forms/:code") del(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lifecycle.propose(actorOf(a), "library_form", code, "DELETE", parse(LifecycleReasonBody, b).reason); }
+  @Post("library/forms/:code/retire") retire(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lifecycle.propose(actorOf(a), "library_form", code, "RETIRE", parse(LifecycleReasonBody, b).reason); }
+  @Post("library/forms/:code/restore") restore(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lifecycle.propose(actorOf(a), "library_form", code, "RESTORE", parse(LifecycleReasonBody, b).reason); }
 }
 type H = string | undefined;

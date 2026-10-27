@@ -102,6 +102,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     step("C11.11: Where it is used lists the LMIA combination and its release", /With an LMIA/.test(dt) && /release/.test(dt), dt.slice(dt.indexOf("Where it is used"), dt.indexOf("Where it is used") + 200));
     await axe("row drawer"); await shot("07-drawer");
     await p.keyboard.press("Escape"); await sleep(300);
+    step("review M8: closing the drawer puts focus back on the number that opened it", await p.evaluate(() => document.activeElement?.textContent === "IMM 1295"), await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)));
+    step("review M8: the hidden file input is not a stop of its own when tabbing", (await p.locator('input[type="file"]').getAttribute("tabindex")) === "-1");
+    await p.setViewportSize({ width: 1024, height: 900 }); await sleep(300);
+    const inView = await p.evaluate(() => { const r = document.querySelector('tr[data-form] td:last-child button')?.getBoundingClientRect(), t = [...document.querySelectorAll('tr[data-form] td')].find((td) => td.textContent?.match(/Ready|Needs your OK|Newer file|Retired/))?.getBoundingClientRect(); return !!r && !!t && r.right <= window.innerWidth && t.right <= window.innerWidth; });
+    step("review M5: at 1024 px the Status and ⋯ columns stay in view (no sideways scroll to reach them)", inView);
+    step("review M5: Used by shows the combination's own name first, its place after it, muted", /^With an LMIA · /.test((await p.locator('tr[data-form="IMM 1295"] td').nth(5).innerText()).trim()), await p.locator('tr[data-form="IMM 1295"] td').nth(5).innerText());
+    await p.setViewportSize({ width: 1440, height: 900 }); await sleep(200);
 
     // Row menu, retire refused, delete asked
     await p.getByLabel("Search number or title").fill(""); await sleep(400);
@@ -118,11 +125,20 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await rd.getByRole("button", { name: "Cancel" }).click(); await sleep(300);
     await p.getByRole("button", { name: "Actions for IMM 5604", exact: true }).click();
     await p.getByRole("menu").getByRole("menuitem", { name: /Delete/ }).click();
-    const dd = p.getByRole("dialog"); await dd.getByLabel("Why").waitFor();
-    await dd.getByLabel("Why").fill("Uploaded by mistake; no combination uses it");
-    await dd.getByRole("button", { name: "Ask to delete" }).click();
+    const dd = p.getByRole("dialog"); await dd.getByText("Not possible now").waitFor({ timeout: 10_000 });
+    // Review must 1 (P-51): IMM 5604 is canada.ca's own file (its upload matched the form page), so it is kept: retired, never deleted.
+    step("review must 1: Delete of an official canada.ca file is refused in words (retire it instead), its button disabled", /never deleted \(P-51\): retire it instead/.test(await dd.innerText()) && await dd.getByRole("button", { name: "Ask to delete" }).isDisabled());
+    await dd.getByRole("button", { name: "Cancel" }).click(); await sleep(300);
+    await p.getByRole("button", { name: "Actions for IMM 5604", exact: true }).click();
+    await p.getByRole("menu").getByRole("menuitem", { name: /Retire/ }).click();
+    const rr = p.getByRole("dialog"); await rr.getByLabel("Why").waitFor();
+    await rr.getByLabel("Why").fill("Uploaded by mistake; no combination uses it");
+    await rr.getByRole("button", { name: "Ask to retire" }).click();
     for (let i = 0; i < 20 && !sql(`select status from library_change where kind='library_form' and key='IMM 5604'`); i++) await sleep(250);
-    step("C11.11 (P-116): Delete of an unused form is asked of a second person (waiting on To review)", sql(`select status from library_change where kind='library_form' and key='IMM 5604'`) === "WAITING");
+    step("C11.11 (P-116): Retire of an unused official form is asked of a second person (waiting on To review)", sql(`select status from library_change where kind='library_form' and key='IMM 5604'`) === "WAITING");
+    await sleep(800);
+    step("break minor: the row shows the request waiting (\"Retire waiting\"), not just Ready", /Retire waiting/.test(await p.locator('tr[data-form="IMM 5604"]').innerText()));
+    step("review M8: closing the dialog puts focus back on the row's ⋯ button", await p.evaluate(() => document.activeElement?.getAttribute("aria-label") === "Actions for IMM 5604"));
     await shot("10-delete-asked");
 
     // Read-only, long title

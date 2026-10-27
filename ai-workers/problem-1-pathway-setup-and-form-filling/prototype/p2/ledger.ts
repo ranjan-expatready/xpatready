@@ -65,6 +65,8 @@ export class SpendLedger {
 
   /** Reserves an attempt's worst case, or refuses when it would pass the run cap or the experiment cap. */
   reserve(runId: string, attempt: number, worstUsd: number, runCapUsd: number, caller?: string): string {
+    // S4 break minor: a worst case that is not a number, or below zero, would let any call through the caps.
+    if (!Number.isFinite(worstUsd) || worstUsd < 0) throw new BudgetExceeded(`worst case must be a number of US$ at or above 0 (got ${worstUsd})`);
     const total = this.committed(), run = this.committed(runId);
     if (total + worstUsd > this.capUsd) throw new BudgetExceeded(`experiment cap US$${this.capUsd}: committed ${total.toFixed(4)} + worst case ${worstUsd.toFixed(4)}`);
     if (run + worstUsd > runCapUsd) throw new BudgetExceeded(`run cap US$${runCapUsd}: committed ${run.toFixed(4)} + worst case ${worstUsd.toFixed(4)}`);

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 type RunStep = { n: number; kind: string; label: string; uses: "rules" | "ai"; status: string; message: string | null; usd: number; started_at: string | null; finished_at: string | null; counts: { done: number; total: number; unit: string } | null };
 export type RunView = { id: string; operation: string; label: string; scope: string | null; status: string; status_word: string; message: string | null; step: { n: number; m: number; label: string } | null; steps: RunStep[];
-  elapsed_ms: number; usual_ms: number | null; usd: { spent: number; worst: number; usual: number | null }; can_stop: boolean; error: { what: string; next: { label: string; href: string } } | null; href: string };
+  elapsed_ms: number; usual_ms: number | null; usd: { spent: number; worst: number; usual: number | null }; can_stop: boolean; error: { what: string; next: { label: string; href: string } | null } | null; href: string };
 
 const ACTIVE = new Set(["queued", "running", "stopping"]);
 /** "9 s", "1 min 5 s": plain elapsed time. */
@@ -71,7 +71,7 @@ export function RunCard({ runId, className, onEnded }: { runId: string; classNam
           </li>
         ))}
       </ol>
-      {!active && r.error ? <Notice tone={r.status === "needs_person" ? "warn" : "danger"} title={r.status_word} action={<Link className="text-sm text-text-link underline" to={r.error.next.href}>{r.error.next.label}</Link>}>{r.error.what}</Notice> : null}
+      {!active && r.error ? <Notice tone={r.status === "needs_person" ? "warn" : "danger"} title={r.status_word} action={r.error.next ? <Link className="text-sm text-text-link underline" to={r.error.next.href}>{r.error.next.label}</Link> : undefined}>{r.error.what}</Notice> : null}
       {!active && !r.error && r.message ? <p className="text-sm">{r.message}</p> : null}
     </section></TipProvider>
   );
@@ -85,9 +85,9 @@ export function RunChip() {
   const more = (q.data?.runs.length ?? 1) - 1;
   return (
     <TipProvider><Tip tip={`${r.label}${r.scope ? ` for ${r.scope}` : ""}: ${r.status_word.toLowerCase()}. Open it to watch its steps or stop it.${more ? ` ${more} more run${more === 1 ? "" : "s"} going on.` : ""}`}>
-      <Link to={r.href} className="hidden items-center gap-2 rounded-full border border-border px-3 py-1 text-xs md:inline-flex" data-run-chip>
+      <Link to={r.href} aria-label={`${r.label}${r.step ? `, step ${r.step.n} of ${r.step.m}` : ""}`} className="inline-flex items-center gap-2 rounded-full border border-border px-2 py-1 text-xs md:px-3" data-run-chip>
         <Loader2 className="size-3.5 animate-spin text-primary motion-reduce:animate-none" aria-hidden />
-        <span className="max-w-64 truncate">{r.label}{r.step ? ` · step ${r.step.n} of ${r.step.m}` : ""}{more ? ` · +${more}` : ""}</span>
+        <span className="hidden max-w-64 truncate md:inline">{r.label}{r.step ? ` · step ${r.step.n} of ${r.step.m}` : ""}{more ? ` · +${more}` : ""}</span>
       </Link>
     </Tip></TipProvider>
   );

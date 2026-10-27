@@ -163,7 +163,7 @@ export class Lifecycle {
   async afterApprove(actor: Actor, c: LibraryChange) {
     if (c.kind === "form_accepts") return this.applyAccepts(actor, c);
     if (!isLifecycleKind(c.kind) || c.action !== "DELETE") return;
-    await this.db.$transaction(async (tx) => {
+    const done = await this.db.$transaction(async (tx) => {
       if (c.kind === "structure_node") {
         const n = await tx.programDef.findFirst({ where: { workspaceId: c.workspaceId, programNodeKey: c.key }, include: { combination: true } });
         if (n && !n.combination && !(await tx.programDef.count({ where: { workspaceId: c.workspaceId, parentNodeKey: c.key } }))) await tx.programDef.delete({ where: { id: n.id } });
@@ -173,6 +173,10 @@ export class Lifecycle {
         if (def && !(await tx.combinationForm.count({ where: { govFormDefId: def.id } }))) {
           await tx.officialDownload.deleteMany({ where: { workspaceId: c.workspaceId, sha256: { in: def.editions.map((e) => e.sha256).filter(Boolean) as string[] } } });
           await tx.govFormDef.delete({ where: { id: def.id } });
+        } else {
+          // Break M1: never report a delete that did not happen. It is handed back with the reason.
+          await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RETURNED", decisionNote: "Not deleted: a combination still has a line for this form (perhaps retired). Retire it instead." } });
+          return false;
         }
       } else {
         const subs = (await tx.reviewSubmission.findMany({ where: { combinationId: c.key }, select: { id: true } })).map((s) => s.id);
@@ -182,7 +186,9 @@ export class Lifecycle {
         await tx.combination.delete({ where: { id: c.key } });
       }
       await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? "Removed at approval (never released)." } });
+      return true;
     });
+    if (!done) return;
     await this.audit.log(c.workspaceId, actor.id, "deleted", c.kind === "structure_node" ? "structure" : c.kind === "library_form" ? "form" : "combination", c.key, `${actor.name} approved removing "${c.label ?? c.key}": removed (never released, used nowhere)`);
   }
 

@@ -62,7 +62,17 @@ export function LibraryChangePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <Crumbs here={x.label} />
-      <Head title={`${x.action_word} ${x.kind_word}: ${x.label}`} chip={x.status === "WAITING" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "RETURNED" ? "Returned" : x.status === "APPROVED" ? "Approved · in the next release" : "Released"} tone={x.status === "WAITING" && !mine ? "warn" : "neutral"} sub={<>Proposed by {x.proposed_by}, {fmtWhen(x.proposed_at)}</>} />
+      <Head title={x.accepts ? `What IRCC accepts for ${x.accepts.form}` : `${x.action_word} ${x.kind_word}: ${x.label}`} chip={x.status === "WAITING" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "RETURNED" ? "Returned" : x.status === "APPROVED" ? "Approved · in the next release" : "Released"} tone={x.status === "WAITING" && !mine ? "warn" : "neutral"} sub={<>Proposed by {x.proposed_by}, {fmtWhen(x.proposed_at)}</>} />
+      {x.accepts ? (
+        <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-accepts>
+          <dt className="text-text-muted">Form</dt><dd className="font-semibold">{x.accepts.form}{x.accepts.edition ? ` · ${x.accepts.edition}` : ""}</dd>
+          <dt className="text-text-muted">Now</dt><dd>{x.accepts.before}</dd>
+          <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{x.accepts.after}</dd>
+          <dt className="text-text-muted">{x.accepts.quote ? "IRCC's words" : "Reason"}</dt><dd>{x.accepts.quote ? `“${x.accepts.quote}”` : x.accepts.reason}</dd>
+          <dt className="text-text-muted">Compare with</dt><dd>{x.accepts.form_page ? <a className="text-text-link underline" href={x.accepts.form_page} target="_blank" rel="noreferrer">The form's page on canada.ca</a> : "No canada.ca page recorded"} · <Link className="text-text-link underline" to="/library/forms">Shared library › Forms</Link></dd>
+          <dd className="col-span-2 text-xs text-text-muted">Approving applies it to the form's current edition, marked "Set by a person · Sample" until the immigration expert confirms.</dd>
+        </dl>
+      ) : null}
       {x.field ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-field>
           <dt className="text-text-muted">Name</dt><dd className="font-semibold">{x.field.label}</dd>
@@ -72,7 +82,7 @@ export function LibraryChangePage() {
         </dl>
       ) : null}
       <div className="space-y-1 text-sm">
-        {x.reason ? <p><b>Reason:</b> {x.reason}</p> : null}
+        {x.reason && !x.accepts ? <p><b>Reason:</b> {x.reason}</p> : null}
         {x.ai_verdict ? <p><b>Advisory check:</b> {x.ai_verdict}</p> : null}
         {(x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}

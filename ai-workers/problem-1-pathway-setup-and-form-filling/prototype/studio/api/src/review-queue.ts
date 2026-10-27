@@ -8,7 +8,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { buildSnapshots, effective, type Snapshot } from "../../engine/snapshot.ts";
 import { ACTORS, actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
-import { itemsOf, KIND_NOUN, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
+import { itemsOf, KIND_NOUN, unapprovedAdds, unapprovedWhy, acceptsView } from "./library-changes.ts";
 
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
@@ -149,7 +149,8 @@ export class ReviewQueueService {
     // second person; a returned one goes back to the person who proposed it.
     for (const c of changes) {
       const mine = c.proposedBy === actor.id, word = KIND_NOUN[c.kind] ?? c.kind.replace("_", " ");
-      const what = `${c.action === "ADD" ? `New ${word}` : `${c.action[0]}${c.action.slice(1).toLowerCase()} the ${word}`}${c.reason ? `. Reason: ${c.reason}` : ""}${c.aiVerdict ? ` · Advisory check: ${c.aiVerdict}` : ""}`;
+      const acc = c.kind === "form_accepts" ? acceptsView(c) : null; // C11.18: plain words, before → after
+      const what = acc ? `What IRCC accepts for ${acc.form}: ${acc.before} → ${acc.after}. ${acc.quote ? `canada.ca: "${acc.quote}"` : `Reason: ${acc.reason}`}` : `${c.action === "ADD" ? `New ${word}` : `${c.action[0]}${c.action.slice(1).toLowerCase()} the ${word}`}${c.reason ? `. Reason: ${c.reason}` : ""}${c.aiVerdict ? ` · Advisory check: ${c.aiVerdict}` : ""}`;
       const base = { id: `change:${c.id}`, kind: "library_change" as const, title: c.label ?? c.key, by: nameOf(c.proposedBy), at: c.proposedAt.toISOString(), cost_usd: null };
       if (c.status === "RETURNED") out.push({ ...base, what: `${what} · Returned by ${nameOf(c.decidedBy)}: ${c.decisionNote}`, ...(mine || holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: "Correct or withdraw", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: "The person who proposed it, or an author, corrects or withdraws it.", next: null }) });
       else out.push({ ...base, what, ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: c.action === "ADD" ? "Approve or return the new field" : "Approve or return", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or returns it." : "A content publisher approves or returns it.", next: null }) });

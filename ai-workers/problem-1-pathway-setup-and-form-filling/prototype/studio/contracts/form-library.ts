@@ -7,12 +7,12 @@ import { z } from "zod";
 export const FINDER_MODES = ["live", "replay", "rules"] as const;
 export type FinderMode = (typeof FINDER_MODES)[number];
 
-const code = z.string().trim().regex(/^(IMM|IRM|CIT|PPTC|EMP) ?[0-9]{3,5}( ?(SCH ?[0-9]+|DEP|[A-Z]))?$/i, "A form number looks like IMM 5257.").transform((s) => normaliseCode(s));
+const code = z.string().trim().regex(/^(IMM|IRM|CIT|PPTC|EMP) *[0-9]{3,5}( *(SCH *[0-9]+[A-Z]?|DEP|[A-Z]))?$/i, "A form number looks like IMM 5257.").transform((s) => normaliseCode(s));
 /** "imm5257", "IMM  5257 sch1" → "IMM 5257", "IMM 5257 SCH1" (one spelling everywhere). */
 export function normaliseCode(s: string): string {
-  const m = /^(IMM|IRM|CIT|PPTC|EMP)\s*([0-9]{3,5})\s*(SCH\s*([0-9]+)|DEP|[A-Z])?$/i.exec(s.trim());
+  const m = /^(IMM|IRM|CIT|PPTC|EMP)\s*([0-9]{3,5})\s*(SCH\s*([0-9]+[A-Z]?)|DEP|[A-Z])?$/i.exec(s.trim());
   if (!m) return s.trim().toUpperCase();
-  const tail = m[3] ? (m[4] ? ` SCH${m[4]}` : ` ${m[3].toUpperCase()}`) : "";
+  const tail = m[3] ? (m[4] ? ` SCH${m[4].toUpperCase()}` : ` ${m[3].toUpperCase()}`) : "";
   return `${m[1].toUpperCase()} ${m[2]}${tail}`;
 }
 

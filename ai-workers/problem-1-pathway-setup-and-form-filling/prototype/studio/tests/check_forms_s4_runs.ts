@@ -7,7 +7,8 @@
 // reservation above US$60 (on a scratch ledger). US$0: nothing calls a model or canada.ca (recorded copies).
 //   zsh studio/tools/isolated.sh forms_s4r 4456 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_forms_s4_runs.ts 4456 xr_studio_forms_s4r
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { normaliseCode } from "../contracts/form-library.ts";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BudgetExceeded, SpendLedger } from "../../p2/ledger.ts";
@@ -45,6 +46,8 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
     ok("C11.8 (m4): the Wave 1 cap is US$60 and a reservation inside it is accepted", WAVE1_CAP_USD === 60 && Math.abs(l.committedSince("2026-10-26T00:00:00.000Z") - 59) < 1e-9);
     let refused = ""; try { l.reserve("s4-wave-b", 1, 2, 100); } catch (e) { refused = e instanceof BudgetExceeded ? e.message : String(e); }
     ok("C11.8 (m4): a reservation above the Wave 1 cap is refused before any call (BudgetExceeded, in words)", /Wave 1 cap US\$60/.test(refused), refused);
+    const bad = [Number.NaN, -1].map((x) => { try { l.reserve("s4-wave-c", 1, x, 100); return "accepted"; } catch (e) { return e instanceof BudgetExceeded ? e.message : String(e); } });
+    ok("break minor: a worst case that is not a number, or below zero, is refused (it would open every cap)", bad.every((m) => /must be a number/.test(m)), bad);
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 
   let r = await call("POST", "/demo/load");
@@ -58,6 +61,12 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("C11.11 (change 4): what IRCC accepts comes from a saved real finder answer where one quotes it (IMM 5257: PDF upload, AI · Sample)", lrow("IMM 5257")?.accepts === "PDF" && lrow("IMM 5257")?.accepts_basis === "AI_SAMPLE" && /fill out the form on a computer/i.test(lrow("IMM 5257")?.accepts_quote ?? ""), lrow("IMM 5257"));
   ok("C11.11 (change 4): a form no saved answer speaks about stays Not set yet (never invented)", lrow("IMM 1295")?.accepts === null && lrow("IMM 1295")?.accepts_basis === null, lrow("IMM 1295")?.accepts);
   ok("C11.11 (change 2): checklists are not filed (Read by AI on the server, \"Not filed\" on the page)", lrow("IMM 5484")?.accepts === "READ_BY_AI");
+  ok("review M2: Load sample also puts each sample combination's guide in the library, found by rules alone (US$0)", lib.rows.some((x: any) => x.type === "guide" && /^Guide \d+/.test(x.code) && /^https:\/\/www\.canada\.ca\//.test(x.form_page_url ?? "")), lib.rows.filter((x: any) => x.type === "guide").map((x: any) => x.code));
+  ok("break minor: a number written loosely is understood in the path and in search (imm1295 is IMM 1295)", (await call("GET", "/library/forms/imm1295/uses")).body?.key === "IMM 1295" && (await call("GET", "/library/forms/list?q=imm1295")).body.rows?.[0]?.code === "IMM 1295");
+  ok("break minor: a schedule with a letter is one number (IMM 5406 SCH4A)", normaliseCode("imm5406 sch4a") === "IMM 5406 SCH4A");
+  r = await call("POST", `/combinations/${sql(`select id from combination where label = 'Visitor visa' limit 1`)}/forms`, { formKey: "IMM 0008 SCH4A" });
+  ok("break minor: a real IRCC number with a lettered schedule passes the number check (404 not in the library, not 400)", r.status === 404, r.body?.detail);
+  ok("break minor: Replace on a combination that does not exist is a 404 in words", (await call("POST", `/combinations/00000000-0000-4000-8000-000000000000/forms/${encodeURIComponent("IMM 1295")}/replace`, {})).status === 404);
 
   // --- C11.18: a person sets what IRCC accepts with the canada.ca line or a reason; a second person approves
   r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF" });
@@ -69,6 +78,8 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF_OR_ONLINE", quote: "You can apply online or on paper with this form." });
   ok("C11.18 pass: with the canada.ca line, it waits for a second person on To review", r.status < 300 && r.body.status === "WAITING" && sql(`select count(*) from library_change where kind='form_accepts' and key='IMM 1295' and status='WAITING'`) === "1", r.body);
   const acc = r.body.id;
+  const detail = (await call("GET", `/library/changes/${acc}`)).body;
+  ok("review: the second person reads the change in words: before → after, IRCC's line and the form's canada.ca page", detail?.accepts?.before === "Not set yet" && detail.accepts.after === "PDF upload · Online" && /apply online or on paper/.test(detail.accepts.quote ?? "") && /^https:\/\/www\.canada\.ca\//.test(detail.accepts.form_page ?? ""), detail?.accepts);
   ok("C11.18: the library shows the change waiting and keeps the old value until approved", (await call("GET", "/library/forms/list?q=1295")).body.rows[0]?.accepts_waiting === true && (await call("GET", "/library/forms/list?q=1295")).body.rows[0]?.accepts === null);
   r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF", reason: "another" });
   ok("C11.18 fail: a second change while one waits is refused (409)", r.status === 409 && /already waits/.test(r.body.detail), r.body.detail);
@@ -76,6 +87,9 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   r = await call("POST", `/library/changes/${acc}/approve`, { note: "Matches the form page" }, "user-B");
   lib = (await call("GET", "/library/forms/list")).body;
   ok("C11.18 pass: a second person approves: the form shows PDF upload · Online, set by a person · Sample, with the line", r.status < 300 && lrow("IMM 1295")?.accepts === "PDF_OR_ONLINE" && lrow("IMM 1295")?.accepts_basis === "PERSON_SAMPLE" && /apply online or on paper/.test(lrow("IMM 1295")?.accepts_quote ?? "") && !lrow("IMM 1295")?.accepts_waiting, lrow("IMM 1295"));
+  const twice = await Promise.all(["PDF", "ONLINE"].map((c) => call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: c, reason: `Both at once ${c}` })));
+  ok("break minor: two people proposing at the same moment leave one change waiting; the other is refused (409)", twice.filter((x) => x.status < 300).length === 1 && twice.filter((x) => x.status === 409).length === 1 && sql(`select count(*) from library_change where kind='form_accepts' and key='IMM 1295' and status='WAITING'`) === "1", twice.map((x) => x.status));
+  sql(`delete from library_change where kind='form_accepts' and key='IMM 1295' and status='WAITING'`);
   ok("C11.18: the change is closed (applied at approval) and its history says who", sql(`select status from library_change where id='${acc}'`) === "RELEASED" && /approved what IRCC accepts for IMM 1295/.test((await call("GET", `/library/forms/${encodeURIComponent("IMM 1295")}/uses`)).body.history.map((h: any) => h.what).join(" | ")));
   const vv = sql(`select id from combination where label = 'Visitor visa' limit 1`);
   r = await call("GET", "/ledger");
@@ -125,6 +139,7 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("C11.8 (M7): the AI step says it was ended while the call ran and how it is counted; nothing after it started", /Stopped while the AI call ran/.test(run.steps[2].message ?? "") && run.steps.slice(3).every((s: any) => ["SKIPPED", "CANCELLED", "WAITING"].includes(s.status)), run.steps.map((s: any) => `${s.kind}:${s.status}`));
   const alive = (() => { try { return execFileSync("pgrep", ["-f", "fake-launch.mjs --job studio-finder-forms-"], { encoding: "utf8" }).trim(); } catch { return ""; } })();
   ok("C11.8 (M7): no launcher process of that call is left running", alive === "", alive);
+  ok("break M6: each running launcher is written down (so a restarted server ends any left over) and crossed off when it ends", !(existsSync(join(VAR, "launches")) ? readdirSync(join(VAR, "launches")) : []).some((f) => f.endsWith(".pid")));
 
   // --- Upload PDF read rules first (M1)
   const official = readFileSync(join(OFFICIAL, "forms", "imm5604e.pdf"));
@@ -143,6 +158,7 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("C11.11: a file that is not a PDF is refused at the first step; nothing is read", run.status === "failed" && /not a PDF/.test(run.steps[0].message) && run.steps.slice(1).every((s: any) => s.status === "SKIPPED"), run.steps?.map((s: any) => `${s.kind}:${s.status}`));
   u = await upload("damaged.pdf", Buffer.from("%PDF-1.4\n% a header and nothing else\n%%EOF\n"));
   run = (await settle(u.body.runId)).body;
+  ok("review M6: a failed upload offers no link to the page already open", (await call("GET", `/runs/${run.id}`)).body.error?.next === null);
   ok("C11.11 (Lead fix 1): a damaged PDF fails the first rules check (it does not open); nothing else runs", run.status === "failed" && run.steps[0].status === "FAILED" && /damaged or incomplete/.test(run.steps[0].message) && run.steps.slice(1).every((s: any) => s.status === "SKIPPED"), run.steps?.map((s: any) => `${s.kind}:${s.status}`));
   u = await upload("empty.pdf", Buffer.alloc(0));
   ok("C11.11 (Lead fix 1): an empty file is refused at once, in words (400)", u.status === 400 && /empty \(0 bytes\)/.test(u.body.detail), u.body?.detail);
@@ -151,6 +167,7 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("C11.11 (M1): a PDF that opens but whose number the rules cannot read waits for a person; AI is not called on an unverified file", run.status === "needs_person" && run.steps[0].status === "COMPLETED" && /Rules could not read.*no AI call was made/.test(step("upload_identity")?.message ?? run.steps[1].message) && run.steps.every((s: any) => s.uses === "rules") && run.usd.spent === 0, run.steps?.map((s: any) => `${s.kind}:${s.status}`));
   ok("C11.11 (Lead fix 2): the waiting reason is said once: the run's box says what happens next, not the step's words again", run.error && run.error.what !== run.steps[1].message && /second person/.test(run.error.what), run.error);
   ok("C11.11: the unread upload is held for a second person (P-80), not in the library", sql(`select count(*) from intake_item where file_name='scan.pdf' and status='HELD'`) === "1");
+  ok("review M6: the held upload's next step opens its own To review item (record the IRCC page), not the page already open", run.error?.next?.href === `/review/held/${sql(`select id from intake_item where file_name='scan.pdf' and status='HELD'`)}` && /IRCC page/.test(run.error.next.label), run.error?.next);
   const fd = new FormData(); for (const [n, b] of [["imm5604e.pdf", official], ["damaged-2.pdf", Buffer.from("%PDF-1.4\n%%EOF\n")]] as const) fd.append("files", new Blob([new Uint8Array(b)], { type: "application/pdf" }), n);
   const many = await (await fetch(`http://localhost:${PORT}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json() as { runIds?: string[] };
   ok("C11.11 (Lead fix 4): one Upload PDF takes many files, one run (card) each", many.runIds?.length === 2, many);

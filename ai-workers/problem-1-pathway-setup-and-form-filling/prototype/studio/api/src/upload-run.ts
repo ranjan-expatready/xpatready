@@ -139,10 +139,14 @@ export class UploadRuns implements OnModuleInit {
       const r = await this.intake.intake(ACTORS.find((a) => a.id === actor.id) ?? actor, [{ originalname: name, buffer: bytes }], undefined, "MANUAL", forForm);
       const one = r.results[0];
       outcome = one?.outcome ?? "failed";
+      // Review major 6: a held file's card links to its own To review item, where the uploader records the IRCC page first.
+      const held = outcome.includes("held") ? await this.db.intakeItem.findFirst({ where: { sha256: sha(bytes), status: "HELD" }, orderBy: { createdAt: "desc" }, select: { id: true } }) : null;
+      if (held) { const b = await this.db.aiBatch.findUnique({ where: { id: batchId } }); await this.db.aiBatch.update({ where: { id: batchId }, data: { plan: { ...(b!.plan as object), held_id: held.id } } }); }
       return { status: outcome === "refused" || outcome === "failed" ? "FAILED" : outcome.includes("held") ? "NEEDS_PERSON" : "COMPLETED", message: one?.message ?? "Nothing was added." };
     });
     if (s4 === null) return this.finish(batchId, "CANCELLED", "Stopped.");
-    await this.finish(batchId, s4 === "COMPLETED" ? "COMPLETED" : s4 === "NEEDS_PERSON" ? "NEEDS_PERSON" : "FAILED", s4 === "COMPLETED" ? `In the library (${outcome.replace("_", " ")}).` : s4 === "NEEDS_PERSON" ? "Waiting for a second person on To review." : "Not added.");
+    const done: Record<string, string> = { added: "Added to the library.", in_library: "Already in the library: nothing was added twice.", attached: "Added to the library." };
+    await this.finish(batchId, s4 === "COMPLETED" ? "COMPLETED" : s4 === "NEEDS_PERSON" ? "NEEDS_PERSON" : "FAILED", s4 === "COMPLETED" ? done[outcome] ?? "In the library." : s4 === "NEEDS_PERSON" ? "Held: record the IRCC page it came from on To review; then a second person compares and approves it." : "Not added.");
   }
 
   /** The library's guides whose page text prints this form number (rules, US$0). */
