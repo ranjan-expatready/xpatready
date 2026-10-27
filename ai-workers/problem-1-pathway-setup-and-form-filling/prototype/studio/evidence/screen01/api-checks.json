@@ -1,12 +1,12 @@
 {
- "at": "2026-10-27T11:35:43.429Z",
+ "at": "2026-10-26T19:05:21.371Z",
  "pass": 135,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 16.989
+   "detail": 3.775
   },
   {
    "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
@@ -22,7 +22,7 @@
    "detail": [
     {
      "value": "INDIVIDUAL",
-     "label": "Retail",
+     "label": "Individual",
      "combinations": 21
     },
     {
@@ -280,7 +280,7 @@
    "name": "QA-1 pass: submitted and signed, the combination will be released",
    "ok": true,
    "detail": {
-    "combinationId": "cb65d44b-3fee-43b9-8187-c8cc10803519",
+    "combinationId": "51cc831d-0a79-424a-a07a-0e029d21b025",
     "label": "Spouse of a student",
     "path": [
      "Work permits",
@@ -386,8 +386,7 @@
     "all": 23,
     "ready": 1,
     "not_ready": 1,
-    "in_setup": 5,
-    "not_started": 16,
+    "in_setup": 21,
     "ai_proposals": 0,
     "retired": 0
    }
@@ -603,8 +602,8 @@
    "name": "source-trust race: repeated unapproved edition uploads remain held once (database guard)",
    "ok": true,
    "detail": [
-    "Held for source verification: IMM 1295 (",
     "Already waiting for a person: checksum n",
+    "Held for source verification: IMM 1295 (",
     "Already waiting for a person: checksum n",
     "Already waiting for a person: checksum n"
    ]
@@ -701,8 +700,7 @@
     "all": 23,
     "ready": 1,
     "not_ready": 1,
-    "in_setup": 5,
-    "not_started": 16,
+    "in_setup": 21,
     "ai_proposals": 0,
     "retired": 0
    }
@@ -778,26 +776,26 @@
    "detail": [
     [
      201,
-     "retail.temporary_residence.item"
+     "individual.item"
     ],
     [
      201,
-     "retail.temporary_residence.item-2"
+     "individual.item-2"
     ],
     [
      201,
-     "retail.temporary_residence.a_very_long_program_name_that_goes_on_and_on_beyond_sixty_ch"
+     "individual.a_very_long_program_name_that_goes_on_and_on_beyond_sixty_ch"
     ],
     [
      201,
-     "retail.temporary_residence.a_very_long_program_name_that_goes_on_and_on_beyond_sixty_ch-2"
+     "individual.a_very_long_program_name_that_goes_on_and_on_beyond_sixty_ch-2"
     ]
    ]
   },
   {
    "name": "M3 fail: the same name again (ignoring spaces) is still refused (BR-6)",
    "ok": true,
-   "detail": "\"日本語プログラム\" already exists under Temporary residence. Choose it instead, or give the new one a different name."
+   "detail": "\"日本語プログラム\" already exists under Individual. Choose it instead, or give the new one a different name."
   },
   {
    "name": "QA-14 pass: the same category sent four times at once is created once; the others are told it exists",
@@ -970,7 +968,7 @@
   {
    "name": "performance: a filtered catalogue answers in under 200 ms with the sample data",
    "ok": true,
-   "detail": "51 ms"
+   "detail": "4 ms"
   },
   {
    "name": "QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created",
@@ -999,7 +997,7 @@
   {
    "name": "QA-6 pass: names in any script with punctuation around letters are created as typed",
    "ok": true,
-   "detail": "retail.temporary_residence.r_sidence_temporaire.visa_d_t"
+   "detail": "individual.r_sidence_temporaire.visa_d_t"
   },
   {
    "name": "QA-11 pass: the path builder knows the existing combination's id, so \"Open the existing combination\" opens its page",
@@ -1009,13 +1007,13 @@
     "label": "With an LMIA",
     "combinations": 1,
     "hasSetup": true,
-    "combinationId": "cd0d1cce-875d-4b58-a3b6-b25e48639eed"
+    "combinationId": "9cb782ec-0031-416b-b738-5ed05caf791b"
    }
   },
   {
    "name": "QA-11 fail: a level without setup has no combination to open",
    "ok": true,
-   "detail": "individual.study_permits.open_work_permit"
+   "detail": "individual.citizenship.grant"
   },
   {
    "name": "QA-5 pass: a time the app writes is stored as the real moment, whatever the database's own zone",
@@ -1025,7 +1023,7 @@
   {
    "name": "QA-5: the app still shows it at the real time",
    "ok": true,
-   "detail": "2026-10-27T11:35:17.833Z"
+   "detail": "2026-10-26T19:05:17.173Z"
   },
   {
    "name": "QA-5 condition: the database's own zone is not UTC on this machine, so the check above is a real test of the fix",
@@ -1043,7 +1041,7 @@
    "detail": [
     [
      201,
-     21.395
+     3.569
     ],
     [
      409,
