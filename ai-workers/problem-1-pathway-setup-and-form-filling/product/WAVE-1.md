@@ -5,7 +5,7 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 ## Screen queue (P-117: one at a time; the Lead guides; "Founder OK" moves to the next)
 | # | Screen | Closes asks | Status | Founder OK |
 |---|---|---|---|---|
-| S1 | Structure (+ Pathway cards that open the tree; "Used by" names; toasts; menu background) | B5; B1, B2 in part | Merged 27 Oct; board for the finish items next | |
+| S1 | Structure (+ Pathway cards that open the tree; "Used by" names; toasts; menu background) | B5; B1, B2 in part | Merged 27 Oct; finish slice building (screens) | |
 | S2 | Immigration programs, card layout (design D) | B1–B4, C2 | Agreed design; next build | |
 | S3 | New combination | C1–C5 | Agreed design | |
 | S4 | Form library + form finder + AI run panel | E1, D6, A4 data, F6 | Concept draft | |
