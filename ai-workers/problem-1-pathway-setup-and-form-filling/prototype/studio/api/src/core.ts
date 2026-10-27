@@ -49,6 +49,14 @@ export function actorOf(header: string | undefined): Actor {
   return a;
 }
 
+/** Break m8 (27 Oct): reads of the configuration (catalogue, Structure, path options, where-used, the name check) are
+ *  denied by default like writes: a known configuration person reads; nobody, an unknown name or a case person does not. */
+export function readerOf(header: string | undefined): Actor {
+  const a = actorOf(header);
+  if (a.area !== "studio") throw new HttpException({ type: "https://expatready.local/problems/not-configuration", title: "Not for case people", status: 403, detail: `${a.name} (simulated) works on cases; the configuration is read in the Product Studio by its own people.` }, HttpStatus.FORBIDDEN);
+  return a;
+}
+
 export function need(a: Actor, duty: string) {
   if (!(a.duties as readonly string[]).includes(duty)) throw new HttpException(`${a.name} (simulated) does not hold the ${duty} duty`, HttpStatus.FORBIDDEN);
 }

@@ -8,16 +8,19 @@ updated: 2026-10-27
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | W1-structure-programs | CHECK | Lead | Lead check of S2 + fixes (branch screens/2026-10-27-s2-programs), then merge; Lead decides review m1 (bar v… |
-| forms | S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead runs the slice 1 scripted API journey (check_forms_s4_finder.ts, port 4455) and reads build-notes.md; … |
-| runtime | W1-combination-workspace (S5, W1-08, P-123) (DESIGN challenge and slice plan) | DESIGN | Lead | Lead note waiting for sync · Blocked: Lead answer; slice 3 also waits for forms S4 slices 1 and 2 |
+| screens | W1-structure-programs | CHECK | Lead | Lead check of the FIX (branch screens/2026-10-27-s1s2-fix), then merge; then the visual-system slice (P-127… |
+| forms | S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124) | FIX | Builder | Lead note waiting for sync · CI on the pushed commit and a last fresh re-score; then CHECK → Lead with the score (or FIX if a Major) |
+| runtime | W1-combination-workspace (S5, W1-08, P-123) (slice 1 (shell and tabs, Overview, Forms settings, Person roles, Who can be, Preview; scaffolding removed)) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead early look at slice 1 (screens/W1-combination-workspace/screenshots/slice1/, build-notes.md, challenge… |
 | m3 | M3-prepare-application | DESIGN | Lead | Lead reads screens/M3-prepare-application/research-agent-view.md (three IRCC representative accounts, PDF v… |
 | evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
-| qa | after-merge on main f289ec7 (S2 Immigration programs, PR #53; Lead note 27 Oct) | WAITING | Lead | Lead note waiting for sync · Lead reads qa/reports/2026-10-27-after-merge-s2.md (ready — 2 new Minors QA-49/50 screens; QA-48 re-seen wi… |
+| qa | after-merge on main f289ec7 (S2 Immigration programs, PR #53; Lead note 27 Oct) | WAITING | Lead | Lead note waiting for sync · WAITING for the screens FIX (QA-44, QA-45, QA-46, QA-49, QA-50) to merge, then /qa after-merge on it (Lead … |
 | scout | charter firm-admin-day-one done — report scout/reports/2026-10-25-firm-admin-day-one.md (5 findings SC-1..SC-5 with priorities P2/P3; SC-2 fix written+proven but reverted — new-combination.tsx busy on screens; ready patch noted) | EXPLORE | Scout | next run, charter ai-draft-review (GOOSE-TASKS.md G2) |
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-27 · Lead (Mac) · **PR #59 merged** (screens FIX; main's app code = 9fc749f, full suites green on CI). Screens → visual-system slice (P-127); qa → after-merge on the FIX; runtime and forms told to send hand-backs by message. Retro: missed hand-backs → lanes message the Lead, the Lead reads lane branches every pass.
+- 2026-10-27 · Lead (Mac) · **S5 slice 1 early look (runtime 68adc3b): founder Go for slice 2** with four fixes (forms listed once, plain-word warnings, questions not field codes, Preview sections collapsed); CI must be green (S2 scale timing re-run).
+- 2026-10-27 · Lead (Mac) · **Missed hand-backs found on a status ask:** screens FIX waited 3 h, runtime S5 slice 1 early look 4 h (neither Paste reached the Lead; the Lead did not check branches). **Screens FIX Lead-checked and merged** (9fc749f, CI green); screens → visual-system slice (P-127) with the S3 re-check during its early look; qa → after-merge on the FIX; runtime CI red on the S2 scale timing, re-run by the Lead; S5 early look to the founder.
 - 2026-10-27 · Lead (Mac) · **S4 FIX back (forms c07f402):** first CHECK 6.5/10 (1 Must, 15 Majors across reviewer and breaker), all fixed with tests. Lead: m9 accepted as designed; m12, DB CHECK constraints and the table label fixed now; m11 and the shared dialog text to backlog; **a fresh re-score (≥ 8) before the Lead check**. PR #57 merged.
 - 2026-10-27 · Lead (Mac) · **PR #56 merged.** S4 slice 3 early look (forms b35bff5): founder Go to FINISH and CHECK with five changes (Used by as a trail, IRCC accepts shows the value, guide date label, sample replay fills IRCC accepts and the page, and **hand edit of IRCC accepts with a second person**, added to P-123).
 - 2026-10-27 · Lead (Mac) · **Founder picked Program structure round 2 (P-127):** layout A (Pathway cards, Program sections, one line per combination; no tree), one Add pop-up only, one line per sub-category; amends P-115. Screens builds it in the visual-system slice after its FIX. P-51 to history (superseded by P-103/P-123).

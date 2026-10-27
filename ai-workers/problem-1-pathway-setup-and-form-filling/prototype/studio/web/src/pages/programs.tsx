@@ -136,13 +136,17 @@ export function ProgramsPage() {
     });
   }, [sel, cat.data]);
 
+  // QA-50: a double click leaves the page once; the second click finds the page already on its way out (one history entry).
+  const leaving = React.useRef(false);
+  const go = (to: string) => { if (leaving.current) return; leaving.current = true; nav(to); };
   const open = async (leaf: CatalogueLeaf, suffix = "") => {
+    if (leaving.current) return;
+    if (!leaf.combinationId && !canAuthor) return toast.push({ tone: "info", text: `${leaf.label} is not started yet. A configuration author starts it.` });
     rememberList(leaf.nodeKey);
-    if (leaf.combinationId) return nav(`/c/${leaf.combinationId}${suffix}`);
-    if (!canAuthor) return toast.push({ tone: "info", text: `${leaf.label} is not started yet. A configuration author starts it.` });
+    if (leaf.combinationId) return go(`/c/${leaf.combinationId}${suffix}`);
     // S2 fix 3: never a silent start. A Not started name (or its Start setup step) opens the Start setup page with the
     // trail filled; nothing is created until the person presses the button there.
-    return nav(`/new?${pathway === "CORPORATE" ? "pw=CORPORATE&" : ""}leaf=${encodeURIComponent(leaf.nodeKey)}`);
+    return go(`/new?${pathway === "CORPORATE" ? "pw=CORPORATE&" : ""}leaf=${encodeURIComponent(leaf.nodeKey)}`);
   };
   const step = useNextStep(open, (leaf) => rememberList(leaf.nodeKey));
   const progLabel = (cat.data?.programs ?? []).find((p) => p.key === (cat.data?.program ?? program))?.label;
