@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board · Prepare application · v3 two-stage split</title>
+<!-- v3 (QA lane suggestion, 27 Oct): keeps the v2 deliverables model (P-122) but makes the TWO STAGES
+     structural, not implied — a stage-summary header with two live stage cards that filter the
+     workspace. Boardbar "Layout" compares three renderings of the same items:
+       · Split view   — Stage 1 / Stage 2 / Everything segments (recommended)
+       · Command view — big stage cards + a "Needs attention" queue
+       · Checklist    — the v2 grouped list, shown unchanged for comparison
+     Does NOT overwrite v1 or v2. All names, channels and values Sample; research notes at the bottom. -->
+<style>
+:root{
+  --primary:#0862c5;--primary-50:#e6f4ff;--primary-100:#cce9ff;--primary-700:#054e9c;--link:#054e9c;
+  --text:#2d2d2d;--muted:#595959;--surface:#f7f7f7;--raised:#ffffff;--neutral-100:#eeeeee;
+  --border:#d9d9d9;--border-strong:#bfbfbf;
+  --danger:#dc2626;--text-danger:#991b1b;--warn:#ff8500;--orange-50:#fff3e0;--text-warn:#663200;
+  --ok:#16a34a;--text-ok:#0f5c2e;
+  --font:'Inter Variable',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --head:'Proxima Nova',var(--font);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 var(--font);color:var(--text);background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--link)}
+:focus-visible{outline:3px solid rgba(8,98,197,.5);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* Board controls: scaffolding, never ported */
+.boardbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:10px 16px;background:var(--orange-50);border-bottom:2px dashed var(--warn);font-size:12px}
+.boardbar strong{font-size:14px}
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:6px;overflow:hidden;background:var(--raised)}
+.seg button{border:0;background:none;padding:4px 10px;cursor:pointer;font-size:12px}
+.seg button[aria-pressed=true]{background:var(--primary);color:#fff}
+.boardbar label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+
+/* Shell (identical to v1/v2) */
+.app-header{height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--raised);border-bottom:1px solid var(--border)}
+.wordmark{font-family:var(--head);font-weight:700;font-size:18px;color:var(--primary)}
+.crumbs{display:flex;gap:6px;align-items:center;font-size:14px;color:var(--muted);min-width:0}
+.crumbs a{color:var(--link);text-decoration:none}.crumbs a:hover{text-decoration:underline}
+.crumbs span[aria-current]{color:var(--text);font-weight:500}
+.who{margin-left:auto;font-size:12px;color:var(--muted)}
+.layout{display:flex;min-height:calc(100vh - 56px)}
+.nav{width:208px;flex-shrink:0;background:var(--raised);border-right:1px solid var(--border);padding:12px}
+.nav p{margin:8px 8px 4px;font-size:12px;color:var(--muted);font-weight:500}
+.nav a{display:block;padding:6px 8px;border-radius:6px;text-decoration:none;color:var(--text)}
+.nav a.on{background:var(--primary-50);color:var(--primary-700);font-weight:600}
+.nav .note{margin-top:16px;font-size:12px;color:var(--muted);padding:8px;border:1px dashed var(--border-strong);border-radius:6px}
+main{flex:1;min-width:0;padding:20px 24px 48px}
+@media (max-width:1100px){.nav{display:none}main{padding:16px}}
+
+.card{background:var(--raised);border:1px solid var(--border);border-radius:8px}
+.pagehead{display:flex;gap:16px;align-items:flex-start;padding:16px 20px 0}
+.pagehead h1{margin:0;font-family:var(--head);font-size:24px;line-height:1.3}
+.sub{margin:2px 0 0;color:var(--muted)}
+
+/* ===== NEW: the two-stage summary header ===== */
+.stages{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(170px,240px);gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);align-items:stretch}
+.stage{display:flex;flex-direction:column;width:100%;text-align:left;border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--raised);cursor:pointer}
+.stage:hover{background:var(--surface)}
+.stage[aria-current=true]{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary);background:var(--primary-50)}
+.stage .top{display:flex;gap:8px;align-items:baseline;margin-bottom:6px}
+.stage h2{margin:0;font-family:var(--head);font-size:15px}
+.stage .big{margin-left:auto;font-family:var(--head);font-size:18px;font-weight:700}
+.stage .cap{display:block;font-size:12px;color:var(--muted)}
+.stagebar{display:block;height:6px;border-radius:3px;background:var(--neutral-100);overflow:hidden;margin:8px 0 6px}
+.stagebar i{display:block;height:100%;background:var(--ok)}
+.stagebar i.part{background:var(--primary)}
+.recordp{display:flex;flex-direction:column;justify-content:center;gap:6px;border:1px dashed var(--border-strong);border-radius:10px;padding:12px 16px;color:var(--muted);min-width:170px}
+.recordp b{color:var(--text)}
+@media (max-width:1180px){.stages{grid-template-columns:1fr}.recordp{min-width:0}}
+
+.ready{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.ready .grow{flex:1}
+.hint{font-size:12px;color:var(--muted);font-weight:400}
+
+/* ===== Workspace (same master-detail as v2) ===== */
+.work{display:grid;grid-template-columns:320px minmax(0,1fr);min-height:560px}
+@media (max-width:1180px){.work{grid-template-columns:280px minmax(0,1fr)}}
+.items{border-right:1px solid var(--border);padding:8px 0}
+.group h2{margin:12px 16px 4px;font-size:12px;font-weight:600;color:var(--muted);display:flex;gap:6px;align-items:center}
+.group .none{margin:0 16px 4px;font-size:12px;color:var(--muted)}
+.group[data-stage]{border-top:3px solid transparent}
+.group[data-stage="1"] h2{color:var(--primary-700)}
+.group[data-stage="2"] h2{color:var(--text)}
+.item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;padding:8px 12px 8px 13px;cursor:pointer;min-height:44px}
+.item:hover{background:var(--surface)}
+.item[aria-current=true]{background:var(--primary-50);border-left-color:var(--primary)}
+.item .t1{font-weight:600;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .t2{max-width:100%;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail{padding:16px 20px;min-width:0}
+.dhead{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+.dhead h2{margin:0;font-family:var(--head);font-size:18px}
+.dhead .grow{flex:1;min-width:240px}
+[hidden]{display:none!important}
+
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border-strong);border-radius:999px;padding:0 8px;font-size:12px;line-height:20px;white-space:nowrap;background:var(--raised)}
+.chip.ok{color:var(--text-ok);border-color:var(--ok)}
+.chip.danger{color:var(--text-danger);border-color:var(--danger)}
+.chip.warn{color:var(--text-warn);border-color:var(--warn);background:var(--orange-50)}
+.chip.info{color:var(--primary-700);border-color:var(--primary-100);background:var(--primary-50)}
+.chip.muted{color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--border-strong);background:var(--raised);font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-700)}
+.btn.small{height:28px;padding:0 10px;font-size:12px}
+.btn.link{border:0;background:none;color:var(--link);padding:0;height:auto;text-decoration:underline}
+.btn[disabled],.btn[aria-disabled=true]{opacity:.55;cursor:not-allowed}
+.finding{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:10px 12px;margin:0 0 12px;display:flex;gap:10px}
+.finding.critical{border-color:rgba(220,38,38,.4);background:rgba(220,38,38,.05)}
+.finding.warn{border-color:var(--warn);background:var(--orange-50)}
+.finding.info{border-color:var(--primary-100);background:var(--primary-50)}
+.finding .ico{font-weight:700;width:16px;flex-shrink:0}
+.finding.critical .ico{color:var(--text-danger)}.finding.warn .ico{color:var(--text-warn)}.finding.info .ico{color:var(--primary-700)}
+.finding p{margin:2px 0 0}
+.finding .acts{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+.screen{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--raised)}
+.screen>header{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:44px}
+.screen>header .name{flex:1;min-width:0;background:none;border:0;text-align:left;font-weight:600;cursor:pointer;padding:4px 0}
+.screen .body{padding:0 12px 12px;border-top:1px solid var(--border)}
+.tick{display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer}
+.tick input{width:16px;height:16px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:var(--muted);font-weight:500;padding:8px;border-bottom:1px solid var(--border)}
+td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;height:40px}
+td.ans{font-weight:500}
+.copy{border:1px solid var(--border-strong);background:var(--raised);border-radius:6px;height:28px;padding:0 8px;font-size:12px;cursor:pointer}
+.src{font-size:12px;color:var(--link);background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;text-align:left}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.step{border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--raised)}
+.step h3{margin:0;font-size:14px;display:flex;gap:8px;align-items:center}
+.step p{margin:4px 0 0}
+.step .acts{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.n{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--border-strong);font-size:12px}
+.n.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:0 0 14px}
+.kv dt{color:var(--muted);font-size:12px}.kv dd{margin:0}
+.notbuilt{border:1px dashed var(--border-strong);border-radius:8px;padding:8px 12px;color:var(--muted);font-size:12px;margin-top:12px}
+
+/* ===== Command view extras ===== */
+.bigstages{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
+@media (max-width:1180px){.bigstages{grid-template-columns:1fr}}
+.bigstage{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--raised)}
+.bigstage h2{margin:0 0 4px;font-family:var(--head);font-size:18px}
+.bigstage .meter{display:flex;align-items:baseline;gap:10px;margin:8px 0}
+.bigstage .meter b{font-family:var(--head);font-size:30px}
+.queue{padding:8px 0}
+.queue .qitem{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--border);padding:10px 20px;cursor:pointer}
+.queue .qitem:hover{background:var(--surface)}
+.queue .qitem .what{flex:1;min-width:0}
+.queue .qitem .what b{display:block}
+.queue .qitem .why{font-size:12px;color:var(--muted)}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 14px;border-radius:8px;display:none;gap:12px;align-items:center;z-index:60;max-width:640px}
+.toast.show{display:flex}
+
+/* P-33 / P-26 labels */
+.lbl{display:none;font-size:12px;line-height:18px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:middle;font-weight:500;white-space:nowrap}
+body.labels .lbl{display:inline-block}
+.lbl.c{background:var(--primary-50);color:var(--primary-700);border:1px solid var(--primary-100)}
+.lbl.s{background:var(--orange-50);color:var(--text-warn);border:1px solid var(--warn)}
+.notes{margin-top:20px;font-size:12px;color:var(--muted)}
+.notes summary{cursor:pointer;font-weight:600;color:var(--text)}
+.notes li{margin:2px 0}
+.notes table td,.notes table th{height:auto;vertical-align:top;padding:6px 8px}
+</style>
+</head>
+<body>
+
+<div class="boardbar" role="region" aria-label="Board controls (not part of the product)">
+  <strong>Board · Prepare application · v3 — two stages, structural</strong>
+  <span>Layout <span class="seg" id="layoutSeg">
+    <button data-l="split" aria-pressed="true">Split view (recommended)</button>
+    <button data-l="command" aria-pressed="false">Command view</button>
+    <button data-l="checklist" aria-pressed="false">Checklist (v2)</button>
+  </span></span>
+  <span>Open item <span class="seg" id="viewSeg"></span></span>
+  <label><input type="checkbox" id="lblToggle"> Show labels</label>
+  <span class="lbl s" style="display:inline-block">Scaffolding · board only</span>
+</div>
+
+<header class="app-header">
+  <span class="wordmark">ExpatReady</span>
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="#">Cases</a><span aria-hidden>›</span>
+    <a href="#">ER-0203 · Client A family</a><span aria-hidden>›</span>
+    <span aria-current="page">Prepare application</span>
+  </nav>
+  <span class="who">Signed in as a representative (Sample)</span>
+</header>
+
+<div class="layout">
+  <nav class="nav" aria-label="Agent menu">
+    <p>Case</p>
+    <a href="#">Overview</a>
+    <a href="#">People</a>
+    <a href="#" class="on" aria-current="page">Prepare application</a>
+    <a href="#">Filing record</a>
+    <div class="note">Scenario: Retail › Permanent residence › Family sponsorship › Spouse or common-law partner (wave-1 combination 5). All names and IRCC channel data are Sample until the immigration expert confirms.</div>
+  </nav>
+
+  <main>
+    <div class="card">
+      <div class="pagehead">
+        <div style="flex:1;min-width:0">
+          <h1>Prepare application <span class="chip info">Release 1 · pinned 19 Oct</span> <span class="lbl c">Capability</span></h1>
+          <p class="sub">Retail › Permanent residence › Family sponsorship › Spouse or common-law partner · Client A, Client B (sponsor), Client C (child)</p>
+        </div>
+        <button class="btn primary">Record the filing</button>
+      </div>
+
+      <!-- ==================== SPLIT VIEW (recommended) ==================== -->
+      <section id="L-split">
+        <!-- Two live stage cards. They are the readiness summary AND the stage filter —
+             the "two stages" are structure here, not list headings. -->
+        <div class="stages" role="group" aria-label="Stage">
+          <button class="stage" data-stage="1" aria-current="false">
+            <span class="top"><h2>Stage 1 · Get the information</h2><span class="big">9/11</span></span>
+            <span class="cap">facts confirmed · <span class="chip warn">2 proposed by AI</span> <span class="chip muted">1 section is the client's own</span></span>
+            <span class="stagebar"><i style="width:82%"></i></span>
+            <span class="cap">Questionnaire, uploads the AI reads, officer entry — each fact asked once per person. Only confirmed facts fill Stage 2.</span>
+          </button>
+          <button class="stage" data-stage="2" aria-current="false">
+            <span class="top"><h2>Stage 2 · Prepare the filing</h2><span class="big">5/14</span></span>
+            <span class="cap">deliverables ready · <span class="chip danger">1 check error</span> <span class="chip warn">1 stale after a fact change</span></span>
+            <span class="stagebar"><i class="part" style="width:36%"></i></span>
+            <span class="cap">One line per thing to produce or submit — online answer sheets, PDFs, documents, signatures. Channel per form, inside what IRCC accepts.</span>
+          </button>
+          <div class="recordp"><b>Then: record the filing</b><span class="cap">Route, reference, per-person application number + UCI. Warns, never blocks; makes the filing read-only.</span></div>
+        </div>
+
+        <div class="ready">
+          <span class="chip warn">5 of 14 ready to file</span>
+          <span class="hint">Next: confirm <b>Travel documents · Client B</b> (2 facts AI read from the passport upload).</span>
+          <span class="grow"></span>
+          <span>Showing <span class="seg" id="stageSeg">
+            <button data-s="1" aria-pressed="false">Stage 1 · Information</button>
+            <button data-s="2" aria-pressed="true">Stage 2 · Filing</button>
+            <button data-s="all" aria-pressed="false">Everything</button>
+          </span></span>
+          <span class="hint">Blocks: check errors, unconfirmed facts, changed facts on finished items, missing signature steps. Warns only: AI findings, missing documents.</span>
+        </div>
+
+        <div class="work">
+          <div class="items" aria-label="Checklist" id="splitItems">
+            <div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 12px 10px;border-bottom:1px solid var(--border)">
+              <button class="chip" style="cursor:default" title="Filter the list by person">Everyone ▾</button>
+              <button class="chip info" style="cursor:default" title="Only items that need you now">Needs attention · 5</button>
+              <span class="grow"></span>
+              <span class="hint" style="align-self:center">18 items</span>
+            </div>
+            <div class="group" data-stage="1">
+              <h2>Stage 1 · Get the information <span class="lbl c">Capability</span></h2>
+              <p class="none" style="margin-bottom:6px">Every fact is asked once per person — questionnaire, documents the AI reads, officer entry. Only <b>confirmed</b> facts fill Stage 2.</p>
+              <button class="item" data-v="facts"><span class="t1">Personal details · Client A</span><span class="t2"><span class="chip ok">Confirmed</span> questionnaire + passport</span></button>
+              <button class="item" data-v="facts"><span class="t1">Family and relationships · Client A</span><span class="t2"><span class="chip ok">Confirmed</span> questionnaire</span></button>
+              <button class="item" data-v="facts"><span class="t1">Travel documents · Client B</span><span class="t2"><span class="chip warn">2 proposed by AI</span> passport upload</span></button>
+              <button class="item" data-v="facts"><span class="t1">Background questions · Client A</span><span class="t2"><span class="chip muted">Client's own answers</span> cannot be confirmed for them</span></button>
+            </div>
+            <div class="group" data-stage="2">
+              <h2>Stage 2 · Prepare the filing <span class="lbl c">Capability</span></h2>
+              <p class="none" style="margin-bottom:6px">One line per deliverable. A form can carry two — e.g. <b>filed online</b> plus a <b>filled PDF copy, not for filing</b>.</p>
+              <button class="item" data-v="online" aria-current="true"><span class="t1">IMM 0008 · online form · Client A</span><span class="t2"><span class="chip info">Answer sheet · 5 of 8 screens</span> PR Portal <span class="lbl c">Capability</span></span></button>
+              <button class="item" data-v="pdf"><span class="t1">IMM 0008 · PDF copy · Client A</span><span class="t2"><span class="chip ok">Filled 43 of 43</span> not for filing — your copy</span></button>
+              <button class="item" data-v="pdf"><span class="t1">IMM 1344 · signed PDF · Client B</span><span class="t2"><span class="chip danger">1 check error</span> filled 61 of 61</span></button>
+              <button class="item" data-v="pdf"><span class="t1">IMM 5476 · signed PDF · Client A</span><span class="t2"><span class="chip warn">Sent for signature</span> representative form</span></button>
+              <button class="item" data-v="doc"><span class="t1">Passport · Client A</span><span class="t2"><span class="chip ok">Uploaded</span> read back ok</span></button>
+              <button class="item" data-v="doc"><span class="t1">Police certificate · Client A</span><span class="t2"><span class="chip muted">Requested</span> waiting on client</span></button>
+              <button class="item" data-v="sig"><span class="t1">Client e-signs in the client portal · Client B</span><span class="t2"><span class="chip warn">Waiting on the client</span> we only tick it</span></button>
+              <button class="item" data-v="sig"><span class="t1">IMM 5532 · pen signatures · Clients A + B</span><span class="t2"><span class="chip muted">After forms are final</span></span></button>
+              <button class="item" data-v="record"><span class="t1">Record the filing</span><span class="t2"><span class="chip muted">Waiting</span> route, reference, per-person numbers</span></button>
+            </div>
+          </div>
+          <div class="detail" id="detail-split"></div>
+        </div>
+      </section>
+
+      <!-- ==================== COMMAND VIEW ==================== -->
+      <section id="L-command" hidden>
+        <div class="bigstages">
+          <div class="bigstage">
+            <h2>1 · Get the information</h2>
+            <p class="hint" style="margin:0">Facts in — questionnaire, AI-read uploads, officer entry. Once per person, confirmed before use.</p>
+            <div class="meter"><b>9</b><span>of 11 facts confirmed</span><span class="grow"></span><span class="chip warn">2 proposed by AI</span></div>
+            <div class="stagebar"><i style="width:82%"></i></div>
+            <div class="acts" style="margin-top:8px"><button class="btn primary" data-goto="facts">Confirm Travel documents · Client B</button><button class="btn" data-goto="facts">All sections</button></div>
+          </div>
+          <div class="bigstage">
+            <h2>2 · Prepare the filing</h2>
+            <p class="hint" style="margin:0">Deliverables out — forms, documents, signatures. Channel per form inside what IRCC accepts.</p>
+            <div class="meter"><b>5</b><span>of 14 deliverables ready</span><span class="grow"></span><span class="chip danger">1 check error</span></div>
+            <div class="stagebar"><i class="part" style="width:36%"></i></div>
+            <div class="acts" style="margin-top:8px"><button class="btn primary" data-goto="pdf">Fix IMM 1344 check error</button><button class="btn" data-goto="record">Record the filing</button></div>
+          </div>
+        </div>
+        <div class="queue" aria-label="Needs attention">
+          <div class="group"><h2 style="margin:12px 20px 4px">Needs attention · 5</h2></div>
+          <button class="qitem" data-v="pdf"><span class="chip danger">Block</span><span class="what"><b>IMM 1344 · signed PDF · Client B</b><span class="why">Check error: "To" date before "from" date in address history</span></span><span class="hint">Open ›</span></button>
+          <button class="qitem" data-v="facts"><span class="chip warn">Stage 1</span><span class="what"><b>Travel documents · Client B</b><span class="why">2 facts AI read from the passport upload wait for confirmation — unblocks 3 items</span></span><span class="hint">Open ›</span></button>
+          <button class="qitem" data-v="online"><span class="chip warn">Stage 2</span><span class="what"><b>IMM 0008 · online form · Client A</b><span class="why">Marital status screen: fact changed after entry — re-check</span></span><span class="hint">Open ›</span></button>
+          <button class="qitem" data-v="sig"><span class="chip warn">Waiting</span><span class="what"><b>Client e-signs in the client portal · Client B</b><span class="why">Sent 24 Oct — nudge the client</span></span><span class="hint">Open ›</span></button>
+          <button class="qitem" data-v="doc"><span class="chip muted">Waiting</span><span class="what"><b>Police certificate · Client A</b><span class="why">Requested 22 Oct — documents warn, they never block</span></span><span class="hint">Open ›</span></button>
+        </div>
+        <div class="work" style="min-height:0;border-top:1px solid var(--border)">
+          <div class="detail" id="detail-command" style="grid-column:1/-1"></div>
+        </div>
+      </section>
+
+      <!-- ==================== CHECKLIST (v2 baseline) ==================== -->
+      <section id="L-checklist" hidden>
+        <ol class="steps" style="flex-direction:row;padding:8px 20px 0;gap:0;list-style:none">
+          <li style="flex:1;min-width:110px;font-size:12px;padding:6px 8px;border-top:3px solid var(--primary);color:var(--primary-700);font-weight:600"><b>1 · Get the information</b><br>3 of 4 sections confirmed</li>
+          <li style="flex:1;min-width:110px;font-size:12px;padding:6px 8px;border-top:3px solid var(--primary);color:var(--primary-700);font-weight:600"><b>2 · Prepare forms</b><br>4 of 9 ready</li>
+          <li style="flex:1;min-width:110px;font-size:12px;padding:6px 8px;border-top:3px solid var(--border);color:var(--muted)"><b>3 · Documents</b><br>4 of 6 received</li>
+          <li style="flex:1;min-width:110px;font-size:12px;padding:6px 8px;border-top:3px solid var(--border);color:var(--muted)"><b>4 · Signatures</b><br>1 of 3 done</li>
+          <li style="flex:1;min-width:110px;font-size:12px;padding:6px 8px;border-top:3px solid var(--border);color:var(--muted)"><b>5 · Record filing</b><br>waiting</li>
+        </ol>
+        <div class="ready">
+          <span class="chip warn">5 of 14 ready to file</span>
+          <span class="hint">Next: confirm <b>Travel documents · Client B</b>.</span>
+          <span class="grow"></span>
+          <span class="hint">v2 rendering of the same items — the two stages exist only as list group headings.</span>
+        </div>
+        <div class="work">
+          <div class="items" aria-label="Filing checklist">
+            <div class="group"><h2>Get the information</h2>
+              <button class="item" data-v="facts"><span class="t1">Personal details · Client A</span><span class="t2"><span class="chip ok">Confirmed</span></span></button>
+              <button class="item" data-v="facts"><span class="t1">Travel documents · Client B</span><span class="t2"><span class="chip warn">2 proposed by AI</span></span></button>
+            </div>
+            <div class="group"><h2>Prepare the filing</h2>
+              <button class="item" data-v="online"><span class="t1">IMM 0008 · online form · Client A</span><span class="t2"><span class="chip info">Answer sheet · 5 of 8</span></span></button>
+              <button class="item" data-v="pdf"><span class="t1">IMM 1344 · signed PDF · Client B</span><span class="t2"><span class="chip danger">1 check error</span></span></button>
+            </div>
+            <div class="group"><h2>Documents</h2>
+              <button class="item" data-v="doc"><span class="t1">Police certificate · Client A</span><span class="t2"><span class="chip muted">Requested</span></span></button>
+            </div>
+            <div class="group"><h2>Signatures</h2>
+              <button class="item" data-v="sig"><span class="t1">Client e-signs in the client portal · Client B</span><span class="t2"><span class="chip warn">Waiting</span></span></button>
+            </div>
+            <div class="group"><h2>File</h2>
+              <button class="item" data-v="record"><span class="t1">Record the filing</span><span class="t2"><span class="chip muted">Waiting</span></span></button>
+            </div>
+          </div>
+          <div class="detail" id="detail-checklist"></div>
+        </div>
+      </section>
+    </div>
+
+    <details class="notes"><summary>Design notes — alternatives weighed, research behind them (QA lane, 27 Oct)</summary>
+      <ul>
+        <li><b>Why two stages as structure, not headings:</b> the founder's direction is "information gathering" and "form population" clearly split. In v2 the split is only a list heading; here each stage is a first-class view with its own progress, its own blockers and its own next action — while "Everything" preserves the v2 nonlinear checklist.</li>
+        <li><b>Alternatives:</b> A Split view (this board's default) — stage cards + segment filter, recommended. B Command view — big stage cards + attention queue; best "what next", hides inventory one click down (shown as the second layout). C Side-by-side zones — facts left, deliverables right; most literal, but the item detail has no home and it crams at 1024 px. D Wizard — rejected: IRCC portals are wizards because the applicant enters data once; officer work is nonlinear (a fact change marks finished items stale), so a wizard would reopen constantly. E Checklist — the v2 baseline, kept for comparison.</li>
+        <li><b>Research (27 Oct, live):</b> Docketwise Smart Forms v3 runs exactly this model — <i>Assemble</i> (forms + files into a packet), <i>Intake</i> (one questionnaire populates every form), review, file. eimmigration: forms auto-fill from the case profile, "Party on Demand" switches the person a section draws from — our person × form matrix. INSZoom: questionnaires → auto-populated forms; automated data entry reads documents into case data — our AI-read uploads proposing facts. Document-generation pipeline pattern (HotDocs/Nintex/Anvil): Collect → Merge → Review → Approve → Distribute; Anvil's multi-party collection work confirms explicit per-section completion flags over inferred completeness — our "Confirm section" (AV-5).</li>
+        <li><b>What crosses the stage boundary:</b> only confirmed facts flow Stage 1 → Stage 2 (P-72); a changed fact marks finished Stage-2 items stale, never edits them (BR-7); an upload in Stage 2 can propose facts back into Stage 1 (read-back loop). The stage cards carry those badges so the loop is visible from either side.</li>
+        <li><b>Open:</b> whether a stale item blocks "ready to file" (challenge Q1 — board assumes yes); whether "Needs attention" belongs as a filter chip (split view) or a first-class queue (command view) — the two layouts let the founder feel both.</li>
+      </ul>
+    </details>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ---------- Right-pane views (shared by all layouts; all values Sample) ---------- */
+const VIEWS={
+
+facts:`
+<div class="dhead"><h2>Travel documents · Client B</h2><span class="chip warn">2 proposed by AI</span><span class="grow"></span><button class="btn primary">Confirm section</button></div>
+<p class="hint" style="margin-top:0">Confirming unblocks <b>3 items</b> in Stage 2: IMM 0008 answer sheet (Client B), IMM 0008 PDF copy, IMM 5476.</p>
+<table><tr><th>Fact</th><th>Answer</th><th>Source</th><th></th></tr>
+<tr><td>Family name</td><td class="ans">SAMPLE</td><td><button class="src">Passport · confirmed 20 Oct</button></td><td><span class="chip ok">Confirmed</span></td></tr>
+<tr><td>Passport number</td><td class="ans">P0000002</td><td><button class="src">Passport upload · read by AI</button></td><td><span class="chip warn">Proposed</span></td></tr>
+<tr><td>Passport expiry</td><td class="ans">2033-01-09</td><td><button class="src">Passport upload · read by AI</button></td><td><span class="chip warn">Proposed</span></td></tr>
+<tr><td>Ever refused a visa or permit?</td><td class="ans">No</td><td><button class="src">Client B · own answer</button></td><td><span class="chip muted">Client's own</span></td></tr></table>
+<div class="finding info"><span class="ico">i</span><div><b>Employer facts come in read-only when a case is linked.</b><p>On a worker's case: "Relies on employer case E-…" shows the employer's name, LMIA or offer number and documents here, marked "From employer case", never copied silently. A change there marks Stage-2 items stale.</p></div></div>
+<p class="hint">Background and declaration rows stay the client's (P-97): the officer sees them but cannot confirm them for the client. AI-read values stay proposed until confirmed; only confirmed facts fill forms (P-72).</p>`,
+
+pdf:`
+<div class="dhead"><h2>IMM 1344 · signed PDF · Client B</h2><span class="chip muted">Channel: PDF upload <span class="hint">(IRCC takes this form as a PDF only)</span></span><span class="grow"></span><span class="chip danger">1 check error</span></div>
+<div class="finding critical"><span class="ico">!</span><div><b>Check · Previous address (page 2)</b><p>"To" date 2021-08 is before "from" date 2021-06. <button class="src">Fix the fact in Address history · Client B</button></p></div></div>
+<div class="finding warn"><span class="ico">!</span><div><b>AI review finding</b><p>Address history ends 2021-08 but the questionnaire lists the current address from 2021-06.</p><p class="hint">Evidence: IMM 1344 · previous address to 2021-08 · Questionnaire · current address from 2021-06. AI findings warn; a person acknowledges with a reason — they never block filing (P-71).</p><div class="acts"><button class="btn small">Acknowledge with a reason…</button></div></div></div>
+<ol class="steps">
+<li class="step"><h3><span class="n done">✓</span> Fill from confirmed facts</h3><p class="hint">61 of 61 fields written by the append-only writer; signatures intact.</p></li>
+<li class="step"><h3><span class="n">2</span> Our check</h3><p class="hint">1 error above. Our engine — never called "Validate"; IRCC's Validate runs only in Adobe.</p><div class="acts"><button class="btn small">Re-run check</button></div></li>
+<li class="step"><h3><span class="n">3</span> Download → Validate in Adobe → upload back</h3><p class="hint">The validated copy comes back by upload; we read it back and compare with the facts.</p><div class="acts"><button class="btn small">Download</button><button class="btn small">Upload validated copy…</button></div></li>
+<li class="step"><h3><span class="n">4</span> Print for signature → signed scan back</h3><p class="hint">Barcode page on top; who signs comes from the form line.</p></li>
+<li class="step"><h3><span class="n">5</span> Ready to file · locked</h3><p class="hint">Locked copies never change; a fact change after locking marks this stale.</p></li>
+</ol>`,
+
+online:`
+<div class="dhead"><h2>IMM 0008 · Client A</h2>
+  <span class="chip info">Channel <select aria-label="Filing channel" style="font:inherit;border:0;background:none;color:inherit;font-weight:600"><option>Online form (PR Portal)</option><option disabled title="IRCC takes IMM 0008 as a digital form in the PR Portal only">PDF upload — IRCC takes this form as a digital form here</option></select></span>
+  <label class="tick" title="Adds a second line: the same facts written into the official PDF, marked not for filing"><input type="checkbox" checked> Also make a filled PDF — not for filing</label>
+  <span class="grow"></span><span class="chip warn">5 of 8 screens entered</span></div>
+<p class="hint" style="margin-top:0">Answer sheet in the portal's screen order, filled only from Stage-1 confirmed facts. "Entered" ticks freeze the answers that screen covers; a fact change after a tick marks the screen stale, never changes the portal.</p>
+<div class="screen"><header><button class="name">Personal details · 6 answers</button><span class="chip ok">Entered 21 Oct</span></header></div>
+<div class="screen"><header><button class="name">Contact information · 3 answers</button><span class="chip ok">Entered 21 Oct</span></header></div>
+<div class="screen"><header><button class="name">Marital status · 4 answers</button><span class="chip warn">Changed fact — re-check</span></header>
+  <div class="body"><table><tr><th>Portal question</th><th>Answer</th><th>Source</th></tr>
+  <tr><td>Current marital status</td><td class="ans">Married <button class="copy">Copy</button></td><td><button class="src">Questionnaire · Client A</button></td></tr>
+  <tr><td>Date of marriage</td><td class="ans">2019-06-16 <button class="copy">Copy</button></td><td><button class="src">Marriage certificate · confirmed 22 Oct</button></td></tr></table>
+  <label class="tick"><input type="checkbox"> Entered in the portal — freezes these answers</label></div></div>
+<div class="screen"><header><button class="name">Background and declaration · client answers only</button><span class="chip muted">Client answers</span></header></div>
+<div class="notbuilt">Later wave: the browser extension fills these screens from the answer sheet. Today the officer copies them in by hand.</div>`,
+
+doc:`
+<div class="dhead"><h2>Police certificate · Client A</h2><span class="chip muted">Requested</span><span class="grow"></span><button class="btn primary">Upload for the client…</button></div>
+<ol class="steps">
+<li class="step"><h3><span class="n done">✓</span> Requested</h3><p class="hint">Appears on the client's checklist with a plain-words explanation.</p></li>
+<li class="step"><h3><span class="n">2</span> Received</h3><p class="hint">Client uploads on their link, or the officer uploads here.</p></li>
+<li class="step"><h3><span class="n">3</span> AI reads it → proposes facts back in Stage 1</h3><p class="hint">New facts land proposed on the section card, never confirmed silently (P-72) — the read-back loop between the stages.</p></li>
+<li class="step"><h3><span class="n">4</span> Uploaded to IRCC</h3><p class="hint">The officer uploads to the portal's document slot; the tick records it. A portal checklist that differs from ours is a note, not a block.</p></li>
+</ol>`,
+
+sig:`
+<div class="dhead"><h2>Client e-signs in the client portal · Client B</h2><span class="chip warn">Waiting on the client</span></div>
+<div class="finding info"><span class="ico">i</span><div><b>Signatures follow the account — they are never ours.</b><p>PR Portal: the client e-signs in their own portal; the officer ticks this when the portal shows it. The product never asks for or stores the client's portal credentials. APR: the representative declaration is signed at submit. Paper: pen per person, who signs comes from the form line.</p></div></div>
+<table><tr><th>Signer</th><th>What they sign</th><th>State</th></tr>
+<tr><td>Client B (sponsor)</td><td>Consent and declaration · IMM 5669 web form</td><td><span class="chip warn">Waiting</span></td></tr>
+<tr><td>The representative</td><td>Declaration at submit</td><td><span class="chip muted">After client signs</span></td></tr></table>
+<div class="acts" style="margin-top:12px"><button class="btn">Tick: the portal shows the client's signature</button><button class="btn">Nudge the client…</button></div>`,
+
+record:`
+<div class="dhead"><h2>Record the filing</h2><span class="chip muted">Waiting — blocks until every item is ready or acknowledged</span></div>
+<div class="kv">
+<dt>Filed through</dt><dd><select><option>Representative PR Portal</option><option>APR Portal</option><option>IRCC Portal</option><option>Paper</option></select> <span class="hint">A fact to record, not a mode — channels were already chosen per form.</span></dd>
+<dt>Filing reference</dt><dd>ER-0203-01 <span class="hint">Type it as the portal's "case ID" — IRCC's own field links the application to this filing.</span></dd>
+<dt>Submitted on</dt><dd><input type="text" value="—" style="width:140px;border:1px solid var(--border-strong);border-radius:6px;padding:4px 8px"></dd>
+<dt>Per person</dt><dd>Application number and UCI as shown on IRCC's status page — one row per person.</dd>
+<dt>Fee receipt</dt><dd>Upload the "Transaction Approved" page as a document.</dd>
+<dt>Status</dt><dd>Submitted · Returned incomplete (PR Portal flags it) · Resubmitted</dd></div>
+<div class="finding warn"><span class="ico">!</span><div><b>Recording makes the filing read-only.</b><p>Only "Correct a number" stays open, and it keeps the history.</p></div></div>`
+};
+
+/* ---------- Board wiring ---------- */
+const seg=document.getElementById('viewSeg');
+const kinds=[['facts','Facts section'],['pdf','PDF form'],['online','Online form + PDF copy'],['doc','Document'],['sig','Signature'],['record','Record filing']];
+for(const [k,label] of kinds){const b=document.createElement('button');b.textContent=label;b.dataset.v=k;b.setAttribute('aria-pressed',k==='online');b.onclick=()=>show(k);seg.appendChild(b);}
+
+function show(k){
+  for(const id of ['detail-split','detail-command','detail-checklist']){
+    const d=document.getElementById(id); if(d) d.innerHTML=VIEWS[k];
+  }
+  seg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===k));
+  document.querySelectorAll('.item,.qitem').forEach(i=>i.setAttribute('aria-current',i.dataset.v===k));
+}
+document.querySelectorAll('.item,.qitem').forEach(i=>{if(i.dataset.v)i.onclick=()=>show(i.dataset.v);});
+document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>show(b.dataset.goto));
+
+/* Layout switcher */
+const layouts={split:'L-split',command:'L-command',checklist:'L-checklist'};
+document.querySelectorAll('#layoutSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#layoutSeg button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  for(const [k,id] of Object.entries(layouts)) document.getElementById(id).hidden=(k!==b.dataset.l);
+});
+
+/* Stage filter (split view): stage cards and the segment drive the same filter */
+function setStage(s){
+  document.querySelectorAll('#stageSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===s));
+  document.querySelectorAll('.stage[data-stage]').forEach(c=>c.setAttribute('aria-current',c.dataset.stage===s));
+  document.querySelectorAll('#splitItems .group[data-stage]').forEach(g=>{
+    g.hidden = s!=='all' && g.dataset.stage!==s;
+  });
+}
+document.querySelectorAll('#stageSeg button').forEach(b=>b.onclick=()=>setStage(b.dataset.s));
+document.querySelectorAll('.stage[data-stage]').forEach(c=>c.onclick=()=>setStage(c.dataset.stage));
+setStage('2');
+
+document.getElementById('lblToggle').onchange=e=>document.body.classList.toggle('labels',e.target.checked);
+show('online');
+</script>
+</body>
+</html>

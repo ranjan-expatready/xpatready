@@ -1,0 +1,768 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Draft board — Visual system for the Pathway Configurator (W1-visual-system, S2b, R-125)</title>
+<style>
+/* Team tokens copied from prototype/studio/web/src/styles/tokens.css (light + dark sheets; light muted = neutral-700 as the app does).
+   NEW (proposed, not yet a token): --lv* level colours and their tints. Contrast ratios on the board were computed with the WCAG 2.2 formula. */
+:root{--bg:#e9ecef;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--link:#054e9c;--primary:#0862c5;--on-primary:#fff;--p50:#e6f4ff;--p100:#cce9ff;--border:#d9d9d9;--border-s:#bfbfbf;--guide:#bfbfbf;
+--ok:#16a34a;--t-ok:#0f5c2e;--ok-tint:#e3f4e9;--warn:#ff8500;--t-warn:#663200;--warn-tint:#ffedd9;--danger:#dc2626;--t-danger:#991b1b;--danger-tint:#fbe5e5;--t-ai:#6d28d9;--ai-tint:#efe7fd;--neutral-tint:#eeeeee;--sel:#e6eff9;
+--lv0:#595959;--lv1:#37506e;--lv2:#0b6477;--lv3:#043a73;--lv1-t:#eff1f3;--lv2-t:#ebf3f4;--lv3-t:#f0f3f7;--lv1-b:#ebeef0;--lv2-b:#e7f0f1;--lv3-b:#ebeff4;
+--sh:0 1px 2px #0000000d;--sh-r:0 1px 3px #00000014,0 4px 10px #0000000a;--font:'Inter Variable',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+.dk{--bg:#0f1822;--surface:#14202c;--raised:#182634;--text:#eeeeee;--muted:#a9b7c4;--link:#2aa1ff;--primary:#0694ff38;--on-primary:#eeeeee;--p50:#143e61;--p100:#1d4f7a;--border:#2c3a48;--border-s:#46586c;--guide:#46586c;
+--t-ok:#4ade80;--ok-tint:#183537;--t-warn:#ffb454;--warn-tint:#3b342c;--t-danger:#f87171;--danger-tint:#302632;--t-ai:#c4b5fd;--ai-tint:#24284a;--neutral-tint:#293643;--sel:#143e61;
+--lv0:#a9b7c4;--lv1:#a9c0dc;--lv2:#5fd0de;--lv3:#9ccbff;--lv1-t:#263545;--lv2-t:#1f3745;--lv3-t:#233344;--lv1-b:#293848;--lv2-b:#213a48;--lv3-b:#253748;--sh:none;--sh-r:0 1px 3px #0006;color:var(--text)}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);font-size:14px;line-height:1.45;color:var(--text);background:var(--bg)}
+h1,h2,h3,h4{font-family:'Proxima Nova',var(--font);margin:0}
+.board{max-width:1500px;margin:0 auto;padding:24px}
+.top{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}.top h1{font-size:24px}.top p{margin:4px 0 0;color:var(--muted);max-width:980px}
+.sec{margin:36px 0 10px;border-top:2px solid var(--border-s);padding-top:16px}.sec h2{font-size:20px}.sec>p,.note{margin:6px 0;color:var(--muted);max-width:1180px}
+.sec h3.sub{font-size:16px;margin:18px 0 6px}
+/* board tags (P-33 / P-26 / decision markers) — board chrome, fixed light colours */
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;padding:1px 6px;border-radius:999px;border:1px solid;white-space:nowrap;font-weight:500;vertical-align:middle;font-family:var(--font)}
+.tag.cap{color:#054e9c;border-color:#cce9ff;background:#e6f4ff}.tag.scaf{color:#663200;border-color:#ffc773;background:#fff3e0}
+.tag.nb{color:#595959;border:1px dashed #bfbfbf;background:#fff}.tag.dec{color:#0f5c2e;border-color:#a7dcb9;background:#eefaf2}
+.tag.gap{color:#991b1b;border-color:#f3b4b4;background:#fdf0f0}.tag.con{color:#7a1f6b;border-color:#e5b3dc;background:#fbeef9}.tag.sample{color:#663200;border-color:#ffc773;background:#fff}
+.tag.rec{color:#fff;background:#0862c5;border-color:#0862c5;font-weight:600}
+.ann{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+.why{font-size:12px;color:var(--muted);margin:4px 0 0}.why b{color:var(--text)}
+.tbtn{font:inherit;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border-s);background:var(--raised);color:var(--text);cursor:pointer}
+/* option grid */
+.opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:10px;align-items:start}
+.opt{background:var(--raised);border:1px solid var(--border);border-radius:12px;padding:12px;min-width:0}
+.opt.is-rec{border:2px solid var(--primary);box-shadow:0 0 0 4px var(--p50)}
+.opt>h4{font-size:14px;margin:0 0 2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.opt .stage{background:var(--surface);border-radius:8px;padding:10px;margin-top:8px;overflow:hidden}
+.score{font-size:12px;margin-top:8px;display:grid;grid-template-columns:auto 1fr;gap:2px 8px}.score span:nth-child(odd){color:var(--muted)}
+/* app frame */
+.frame{background:var(--surface);border:1px solid var(--border-s);border-radius:12px;overflow:hidden;box-shadow:0 2px 8px #0000001a;margin-top:10px}
+.ftitle{font-size:12px;color:var(--muted);padding:6px 12px;background:var(--raised);border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.appbar{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--raised);border-bottom:1px solid var(--border);font-size:12px}
+.logo{font-weight:800;color:var(--primary);font-size:16px;display:flex;align-items:center;gap:6px}.dk .logo{color:#eeeeee}.logo i{width:20px;height:20px;border-radius:5px;background:#0862c5;display:inline-block}
+.prod b{display:block;font-size:13px;color:var(--text)}.prod{border-left:1px solid var(--border);padding-left:10px;color:var(--muted)}
+.demo{background:#fff3e0;color:#663200;border-radius:6px;padding:2px 8px}
+.shell{display:grid;grid-template-columns:184px 1fr}
+.side{background:var(--raised);border-right:1px solid var(--border);padding:12px 8px}
+.side .g{font-size:12px;color:var(--muted);margin:12px 8px 4px}.side .g:first-child{margin-top:0}
+.side a{display:block;padding:5px 8px;border-radius:6px;color:var(--text);text-decoration:none}.side a.on{background:var(--p50);color:var(--link);font-weight:600}
+.main{padding:18px 22px;min-width:0}
+.ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ph h1{font-size:24px}.ph .s{width:100%;color:var(--muted);margin-top:-4px}.sp{flex:1}
+.info{display:inline-flex;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--muted);color:var(--muted);font-size:11px;align-items:center;justify-content:center;font-weight:700;cursor:help}
+/* controls */
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border-s);background:var(--raised);color:var(--text);font:inherit;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}.dk .btn.pri{border-color:#2aa1ff}
+.btn.out{color:var(--link);border-color:var(--border-s)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--link);padding:0 6px;text-decoration:underline;text-underline-offset:2px}
+.btn[aria-disabled=true]{opacity:.55;cursor:not-allowed}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.seg{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.seg span{padding:5px 12px;border-radius:9px;display:inline-flex;gap:6px;align-items:center;color:var(--text)}.seg span.on{background:var(--primary);color:var(--on-primary);font-weight:600}
+.seg span em{font-style:normal;font-size:12px;font-weight:600;background:#0000000f;border-radius:99px;padding:0 6px}.seg span.on em{background:#ffffff33}
+.input{height:34px;border:1px solid var(--border-s);border-radius:8px;background:var(--raised);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--muted);min-width:0}
+.kbd{font-size:11px;border:1px solid var(--border);border-radius:4px;padding:0 4px;margin-left:auto}
+/* LEVEL SYSTEM */
+.lm{display:inline-block;flex:none;width:8px;height:8px;vertical-align:middle;margin-right:2px}
+.lm.l1{background:var(--lv1);border-radius:2px}.lm.l2{background:var(--lv2);border-radius:50%}
+.lm.l3{background:var(--lv3);transform:rotate(45deg);width:7px;height:7px;border-radius:1px}
+.lm.l4{border:1.5px solid var(--lv3);transform:rotate(45deg);width:7px;height:7px;border-radius:1px}
+.lm.add{background:transparent!important;border:1.5px dashed var(--muted);transform:none;border-radius:2px}
+.lb{display:inline-block;font-size:12px;line-height:16px;padding:1px 6px;border-radius:6px;font-weight:500;white-space:nowrap}
+.lb.l1{color:var(--lv1);background:var(--lv1-b)}.lb.l2{color:var(--lv2);background:var(--lv2-b)}.lb.l3,.lb.l4{color:var(--lv3);background:var(--lv3-b)}
+.c0{color:var(--lv0)}.c1{color:var(--lv1)}.c2{color:var(--lv2)}.c3{color:var(--lv3)}
+/* Trail component: context parts in their level colour (regular), the identity (Category › Sub-category) navy, kept together and wrapping as one block */
+.trail{color:var(--muted);overflow-wrap:anywhere}.trail .s{color:var(--muted);margin:0 4px;font-weight:400}
+.trail .p0{color:var(--lv0)}.trail .p1{color:var(--lv1)}.trail .p2{color:var(--lv2);font-weight:500}
+.trail .idn{display:inline-block;color:var(--lv3)}.trail .idn b{font-weight:600}.trail .idn .none{color:var(--muted);font-style:normal}
+.trail.sm{font-size:12px;line-height:17px}
+/* chips (status by shape + word, never colour alone) */
+.chip{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;line-height:18px}
+.chip .ic{font-size:12px;line-height:1}
+.chip.live{background:var(--ok-tint);color:var(--t-ok)}.chip.nr{background:var(--danger-tint);color:var(--t-danger)}
+.chip.set{background:var(--neutral-tint);color:var(--text)}.chip.ns{border:1px dashed var(--border-s);color:var(--muted);padding:0 7px}
+.chip.ai{background:var(--ai-tint);color:var(--t-ai)}.chip.need{background:var(--warn-tint);color:var(--t-warn);border-radius:6px}
+.chip.ret{background:var(--neutral-tint);color:var(--muted)}
+/* setup bar: 4 segments + caption on the same line */
+.setup{display:flex;align-items:center;gap:10px}.bar{display:flex;gap:3px;flex:0 0 46%}
+.bar i{flex:1;height:6px;border-radius:99px;background:var(--neutral-tint)}.dk .bar i{background:#2c3a48}
+.bar i.d{background:var(--ok)}.bar i.c{background:transparent;box-shadow:inset 0 0 0 1.5px var(--primary)}.dk .bar i.c{box-shadow:inset 0 0 0 1.5px #2aa1ff}
+.bar i.run{background:repeating-linear-gradient(-45deg,#0862c5 0 4px,#99c0ea 4px 8px);animation:mv 1.2s linear infinite;background-size:200% 100%}
+@keyframes mv{to{background-position:22px 0}}@media (prefers-reduced-motion:reduce){.bar i.run{animation:none}}
+.cap{font-size:12px;color:var(--muted);min-width:0}
+.tr>.chip,.lr>.chip,.lr>span>.chip{justify-self:start}.ann .tag{white-space:normal}
+/* setup card (recommended A) */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:12px;padding:12px 14px 0;display:flex;flex-direction:column;gap:6px;box-shadow:var(--sh-r);min-width:0}
+.card.flat{box-shadow:none}
+.card .hd{display:flex;align-items:flex-start;gap:8px}.card .hd h3{flex:1;min-width:0;font-size:16px;line-height:22px;font-weight:600;color:var(--lv3);overflow-wrap:anywhere}
+.card .subl{font-size:14px;color:var(--lv3);margin-top:-4px;display:flex;align-items:center;gap:6px}.card .subl.none{color:var(--muted)}
+.card .facts{font-size:12px;color:var(--muted)}
+.card .ft{margin-top:auto;border-top:1px solid var(--border);padding:8px 0 10px;display:flex;align-items:center;gap:8px;min-height:46px}
+.ovd{color:var(--t-warn);font-size:14px;margin-left:auto;cursor:help}
+/* list */
+.list{background:var(--raised);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.lh,.lr{display:grid;grid-template-columns:minmax(0,1fr) 128px 120px 210px;gap:12px;align-items:center;padding:0 14px}
+.lh{font-size:12px;font-weight:500;color:var(--muted);background:var(--surface);height:36px;border-bottom:1px solid var(--border)}
+.lr{min-height:44px;padding-top:6px;padding-bottom:6px;border-bottom:1px solid var(--border)}.lr:hover{background:#2d2d2d08}
+.lr .trail{font-size:14px}.lr .filed{font-size:12px;color:var(--muted)}
+.pg{display:flex;align-items:center;gap:8px;height:40px;padding:0 14px;background:var(--lv1-t);border-bottom:1px solid var(--border);border-left:4px solid var(--lv1);position:sticky;top:0}
+.pg b{color:var(--lv1);font-size:16px;font-weight:600}.pg .n{color:var(--muted)}
+/* tree */
+.tree{background:var(--raised);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.th,.tr{display:grid;grid-template-columns:minmax(0,1fr) 126px 128px 104px;gap:8px;align-items:center;padding:0 12px}
+.th{font-size:12px;font-weight:500;color:var(--muted);height:32px;background:var(--surface);border-bottom:1px solid var(--border)}
+.tr{min-height:40px}.tr:hover{background:#2d2d2d08}
+.tr .nm{display:flex;align-items:center;gap:6px;align-self:stretch;min-width:0}
+.tr .nm .t{overflow-wrap:anywhere;padding:9px 0}
+.tr.r1{background:var(--lv1-t);border-top:1px solid var(--border)}.tr.r1:first-of-type{border-top:0}
+.tr.r1 .t{font-size:16px;font-weight:600;color:var(--lv1)}.tr.r2 .t{font-weight:600;color:var(--lv2)}.tr.r3 .t{font-weight:600;color:var(--lv3)}.tr.r4 .t{color:var(--lv3)}
+.tr.addr .t{color:var(--muted)}.tr.sel{background:var(--sel);box-shadow:inset 3px 0 0 #0862c5}
+.tr .ct{font-size:12px;color:var(--muted);text-align:right}.tr .loc{font-size:12px;color:var(--muted)}
+.tree.mini .tr{grid-template-columns:minmax(0,1fr) auto 0 28px;gap:6px;padding:0 8px}.tree.mini .tr>:nth-child(3){overflow:hidden;width:0}.tree.mini .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{width:16px;flex:none;color:var(--muted);font-size:13px;text-align:center}
+.gd{width:22px;flex:none;align-self:stretch;position:relative}
+.gd.v::before,.gd.t::before,.gd.l::before{content:"";position:absolute;left:10px;top:0;border-left:1px solid var(--guide)}
+.gd.v::before,.gd.t::before{bottom:0}.gd.l::before{height:50%}
+.gd.t::after,.gd.l::after{content:"";position:absolute;left:10px;top:50%;width:10px;border-top:1px solid var(--guide)}
+/* pathway filter cards */
+.pcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.pc{border:1px solid var(--border);background:var(--raised);border-radius:12px;padding:9px 12px;display:flex;flex-direction:column;gap:3px;min-height:72px}
+.pc.on{border-color:#0862c5;background:var(--p50)}.pc b{font-size:14px;display:flex;align-items:center;gap:6px}.pc small{font-size:12px;color:var(--muted)}
+.pc.add{border-style:dashed;border-color:var(--border-s);align-items:center;justify-content:center;color:var(--muted)}
+/* section header in card view */
+.sh{display:flex;align-items:center;gap:8px;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--lv1-b)}
+.sh b{font-size:18px;font-weight:600;color:var(--lv1);font-family:'Proxima Nova',var(--font)}.sh .n{color:var(--muted)}
+/* misc */
+.sk{background:linear-gradient(90deg,var(--neutral-tint),var(--surface),var(--neutral-tint));border-radius:6px;height:10px}
+.callout{border:1px solid var(--border);border-radius:12px;background:var(--raised);padding:12px 14px}
+.panel{background:var(--raised);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;min-width:0}
+.panel .phd{padding:12px 16px;border-bottom:1px solid var(--border)}.panel .pbd{padding:12px 16px;display:grid;grid-template-columns:96px 1fr;gap:8px 10px;font-size:14px}
+.panel .pbd dt{color:var(--muted)}.panel .pbd dd{margin:0;min-width:0}.panel .pft{border-top:1px solid var(--border);padding:10px 16px;display:flex;gap:8px}
+table.tok{border-collapse:collapse;width:100%;background:var(--raised);font-size:12px;margin-top:8px}
+table.tok th,table.tok td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}table.tok th{background:var(--surface);font-weight:600}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #0002;vertical-align:-2px;margin-right:4px}
+.callno{display:inline-flex;width:18px;height:18px;border-radius:50%;background:#7a1f6b;color:#fff;font-size:11px;font-weight:700;align-items:center;justify-content:center;flex:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.split{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:14px;align-items:start}
+ul.tight{margin:6px 0;padding-left:18px}ul.tight li{margin:2px 0}
+.q{background:var(--raised);border:1px solid var(--border);border-left:4px solid #0862c5;border-radius:8px;padding:10px 14px;margin:8px 0}
+
+/* option C tree: connector lines take the parent level's colour */
+.cg{width:18px;flex:none;align-self:stretch;position:relative}.cg.k0{--c:var(--lv1)}.cg.k1{--c:var(--lv2)}.cg.k2{--c:var(--lv3)}
+.cg.v::before,.cg.t::before{content:"";position:absolute;left:8px;top:0;bottom:0;border-left:1.5px solid var(--c);opacity:.9}
+.cg.t::after{content:"";position:absolute;left:8px;top:50%;width:8px;border-top:1.5px solid var(--c);opacity:.9}
+.cg.l::before{content:"";position:absolute;left:8px;top:0;height:50%;width:8px;border-left:1.5px solid var(--c);border-bottom:1.5px solid var(--c);border-bottom-left-radius:6px;opacity:.9}
+.ctree{max-width:1000px}.ctree .th,.ctree .tr{grid-template-columns:minmax(0,1fr) 112px 128px 96px}.ctree .tr{min-height:30px}.ctree .tr .nm .t{padding:4px 0}.ctree .tr.r1 .t{font-size:16px}.ctree .tr.sticky{position:sticky;top:0;z-index:1}
+.ctree .tr.addr .t{font-size:12px}.chip.xs{font-size:12px;line-height:16px;padding:0 6px;font-weight:500}.chip.xs.ns{padding:0 5px}
+.ph1 .tr{grid-template-columns:minmax(0,1fr) auto;min-height:36px;padding:0 8px}.pl{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.phone{width:390px;max-width:100%;background:var(--surface);border:1px solid var(--border-s);border-radius:16px;padding:10px}
+.pgc{gap:2px}.pcr{display:flex;align-items:center;gap:6px;min-height:28px;font-size:14px;color:var(--lv3)}.pcr b{font-weight:600;flex:1}.pcr.sub{padding-left:16px}.pcr.sub>span:nth-child(2){flex:1}.addl{color:var(--muted);font-size:12px}
+@media (max-width:1100px){.opts{grid-template-columns:1fr}.two,.split{grid-template-columns:1fr}}
+</style></head><body>
+<div class="board">
+
+<div class="top"><div style="flex:1;min-width:300px">
+<h1>Visual system board — Structure, Immigration programs and every next screen</h1>
+<p>Item <b>W1-visual-system</b> (WAVE-1 S2b, founder request R-125, 27 Oct). Draft by the designer agent for the Lead; the Lead edits and decides. For each of the founder's five points: three options side by side, the recommended one marked, ranked by <b>scalability to 50+ combinations and ease of reading first, looks second</b> (EXPERIENCE §0). Nothing on today's screens is cut (checklist in §6). All names are Sample (the live sample and P-112) until the immigration expert confirms.</p>
+<div class="ann"><span class="tag cap">Capability · Needed</span><span class="tag scaf">Scaffolding</span><span class="tag nb">Not built</span><span class="tag dec">[F P-xx] followed a decision</span><span class="tag gap">[GAP] decision missing</span><span class="tag con">[CONFLICT] two sources disagree</span><span class="tag sample">Sample</span><span class="tag rec">★ Recommended</span></div>
+</div><button class="tbtn" type="button" onclick="document.body.classList.toggle('dk')" aria-pressed="false">Show the whole board in dark theme</button></div>
+
+<!-- ============ 0. LEVEL SYSTEM ============ -->
+<div class="sec"><h2>0 · The level system — one scale used by the tree, the trail, the list and the cards</h2>
+<p>Five levels, each with a <b>mark (shape)</b>, a <b>colour</b>, a <b>weight</b> and a <b>word</b>. The shape and the word carry the meaning; the colour only helps (WCAG 1.4.1). The team already does this: its program hierarchy uses colour-coded level badges and connector lines (<code>program-node-badge.tsx</code>, <code>program-tree-view.tsx</code>) <span class="tag dec">[F P-48] team precedent</span>.</p>
+<div class="opts">
+ <div class="opt"><h4>A · The team's four hues, as they are</h4><div class="why">Pathway amber · Program green · Category purple · Sub-category blue (team <code>TYPE_STYLES</code>).</div>
+  <div class="stage" style="line-height:2">
+   <span class="lb" style="background:#fffbeb;color:#b45309;border:1px solid #fcd34d">Pathway</span> Temporary residence <span class="chip need">2 need you</span><br>
+   <span class="lb" style="background:#ecfdf5;color:#047857;border:1px solid #6ee7b7">Program</span> Work permits <span class="chip live"><span class="ic">✓</span>Live</span><br>
+   <span class="lb" style="background:#faf5ff;color:#7e22ce;border:1px solid #d8b4fe">Category</span> Employer-specific work permit <span class="chip ai">✦ AI proposals (84)</span><br>
+   <span class="lb" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd">Sub-category</span> <a href="#" style="color:var(--link)">With an LMIA</a>
+  </div>
+  <div class="score"><span>50+ scan</span><span>Strong per-level identity</span><span>Reading</span><span><b>Each hue already means something:</b> amber = needs you, green = Live, purple = AI, blue = link. Side by side they compete.</span><span>Looks</span><span>Colourful, busy at 50</span></div>
+  <div class="ann"><span class="tag con">[CONFLICT] team palette vs our status colours</span></div></div>
+ <div class="opt is-rec"><h4><span class="tag rec">★ Recommended</span> B · Four calm hues that never reuse a status colour</h4><div class="why">Grey → slate → teal → navy, from context to identity. Slate and teal sit next to the brand's own secondary anchors (Slate #37506E, Turquoise, Sky).</div>
+  <div class="stage" style="line-height:2">
+   <span class="lm l1"></span> <span class="lb l1">Pathway</span> <b class="c1">Temporary residence</b> <span class="chip need">2 need you</span><br>
+   <span class="lm l2"></span> <span class="lb l2">Program</span> <b class="c2">Work permits</b> <span class="chip live"><span class="ic">✓</span>Live</span><br>
+   <span class="lm l3"></span> <span class="lb l3">Category</span> <b class="c3">Employer-specific work permit</b> <span class="chip ai">✦ AI proposals (84)</span><br>
+   <span class="lm l4"></span> <span class="lb l4">Sub-category</span> <span class="c3">With an LMIA</span>
+  </div>
+  <div class="score"><span>50+ scan</span><span>Levels read apart by shape + colour + weight; status chips stay the only loud colours, so work stands out</span><span>Reading</span><span>Category and Sub-category share navy: "the combination" reads as one unit</span><span>Looks</span><span>Calm, modern, on brand</span></div>
+  <div class="ann"><span class="tag gap">[GAP] new tokens --color-level-* need a decision (tokens.css is the team's copied file)</span></div></div>
+ <div class="opt"><h4>C · One neutral scale, weight and shape only</h4><div class="why">No new colours: grey levels from dark to light, marks and weights only.</div>
+  <div class="stage" style="line-height:2">
+   <span class="lm" style="background:#2d2d2d;border-radius:2px"></span> <b style="font-size:16px">Temporary residence</b> <span class="chip need">2 need you</span><br>
+   <span class="lm" style="background:#404040;border-radius:50%"></span> <b>Work permits</b> <span class="chip live"><span class="ic">✓</span>Live</span><br>
+   <span class="lm" style="background:#2d2d2d;transform:rotate(45deg)"></span> <b>Employer-specific work permit</b><br>
+   <span class="lm" style="border:1.5px solid #595959;transform:rotate(45deg)"></span> With an LMIA
+  </div>
+  <div class="score"><span>50+ scan</span><span>Fine, but levels look alike at a glance (the founder's complaint today)</span><span>Reading</span><span>Clear but flat</span><span>Looks</span><span>Plain</span></div>
+  <div class="ann"><span class="tag dec">[F P-48] tokens only</span></div></div>
+</div>
+<h3 class="sub">B in detail — the scale every screen uses <span class="tag cap">Capability · Needed (C11.3, C11.10)</span></h3>
+<table class="tok"><thead><tr><th>Level</th><th>Mark</th><th>Word (badge)</th><th>Proposed token</th><th>Light · contrast on white / #F7F7F7 / its tint</th><th>Dark · contrast on #182634 / #14202C / its tint</th><th>Tree</th><th>Trail</th><th>List</th><th>Card</th></tr></thead><tbody>
+<tr><td>Pathway type</td><td>— (the tab)</td><td>Retail · Corporate and employers</td><td><code>--color-level-type</code> = text-muted</td><td><span class="sw" style="background:#595959"></span>#595959 · 7.0 / 6.5</td><td><span class="sw" style="background:#a9b7c4"></span>#A9B7C4 · 7.5 / 8.1</td><td>tab only</td><td>regular</td><td>regular</td><td>context line</td></tr>
+<tr><td>Pathway</td><td><span class="lm l1"></span> square</td><td><span class="lb l1">Pathway</span></td><td><code>--color-level-pathway</code></td><td><span class="sw" style="background:#37506e"></span>#37506E · 8.3 / 7.7 / 7.3 on band #EFF1F3</td><td><span class="sw" style="background:#a9c0dc"></span>#A9C0DC · 8.3 / 8.9 / 6.7 on band #263545</td><td>16 semibold on band</td><td>regular</td><td>group band 16 semibold</td><td>section header 18</td></tr>
+<tr><td>Program</td><td><span class="lm l2"></span> circle</td><td><span class="lb l2">Program</span></td><td><code>--color-level-program</code></td><td><span class="sw" style="background:#0b6477"></span>#0B6477 · 6.8 / 6.3 / 6.0</td><td><span class="sw" style="background:#5fd0de"></span>#5FD0DE · 8.5 / 9.1 / 6.8</td><td>14 semibold</td><td>medium</td><td>medium</td><td>context line, medium</td></tr>
+<tr><td>Category</td><td><span class="lm l3"></span> diamond</td><td><span class="lb l3">Category</span></td><td rowspan="2"><code>--color-level-combination</code></td><td rowspan="2"><span class="sw" style="background:#043a73"></span>#043A73 · 11.3 / 10.6 / 10.2</td><td rowspan="2"><span class="sw" style="background:#9ccbff"></span>#9CCBFF · 9.1 / 9.7 / 7.4</td><td>14 semibold</td><td><b>semibold</b></td><td><b>semibold</b></td><td>title 16 semibold</td></tr>
+<tr><td>Sub-category</td><td><span class="lm l4"></span> open diamond</td><td><span class="lb l4">Sub-category</span></td><td>14 regular</td><td>regular</td><td>regular</td><td>line under the title, 14</td></tr>
+</tbody></table>
+<p class="note">Badges (12 px on their own 8–12 % tint): Pathway 7.1, Program 5.8, Category 9.8 (light); 6.4, 6.6, 7.2 (dark). Marks are 6.8–11.3 : 1 against white (non-text needs 3 : 1). "No sub-category" stays muted text, never blank <span class="tag dec">[F P-104 BR-7]</span>. Selection keeps the primary blue (tint + 3 px left bar) so "where I am" never looks like a level.</p>
+</div>
+
+<!-- ============ 1. STRUCTURE TREE ============ -->
+<div class="sec"><h2>1 · Structure tree — levels easy to tell apart</h2>
+<p>Today: every row is plain text with an outline badge; the badges and chips float right after the names, so nothing lines up; only indentation shows depth. Same Sample rows in each option.</p>
+<div class="opts">
+ <div class="opt is-rec"><h4><span class="tag rec">★ Recommended</span> A · Guide lines, level marks and aligned columns</h4><div class="why">The team's own tree pattern: connector lines, a mark and a tinted badge per level, the Pathway on a shaded band, and fixed columns for status, location and count.</div>
+  <div class="stage" style="padding:0"><div class="tree mini" style="border:0;border-radius:0">
+   <div class="tr r1"><div class="nm"><span class="chev">▾</span><span class="lm l1"></span><span class="t">Temporary residence</span></div><span></span><span></span><span class="ct">12</span></div>
+   <div class="tr r2"><div class="nm"><span class="gd t"></span><span class="chev">▾</span><span class="lm l2"></span><span class="t">Visitors</span></div><span></span><span></span><span class="ct">3</span></div>
+   <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="lm l3"></span><span class="t">Visitor visa</span></div><span class="chip set"><span class="ic">◌</span>In setup</span><span class="loc">Outside Canada</span><span></span></div>
+   <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd l"></span><span class="lm l3"></span><span class="t">Super visa</span></div><span class="chip set"><span class="ic">◌</span>In setup</span><span class="loc">Outside Canada</span><span></span></div>
+   <div class="tr r2"><div class="nm"><span class="gd l"></span><span class="chev">▾</span><span class="lm l2"></span><span class="t">Work permits</span></div><span></span><span></span><span class="ct">7</span></div>
+   <div class="tr r3"><div class="nm"><span class="gd"></span><span class="gd l"></span><span class="chev">▾</span><span class="lm l3"></span><span class="t">Employer-specific…</span></div><span></span><span></span><span class="ct">2</span></div>
+   <div class="tr r4"><div class="nm"><span class="gd"></span><span class="gd"></span><span class="gd t"></span><span class="lm l4"></span><span class="t">With an LMIA</span></div><span class="chip live"><span class="ic">✓</span>Live</span><span class="loc">Outside Canada</span><span></span></div>
+   <div class="tr addr"><div class="nm"><span class="gd"></span><span class="gd"></span><span class="gd l"></span><span class="lm add"></span><span class="t">+ Add sub-category</span></div><span></span><span></span><span></span></div>
+  </div></div>
+  <div class="score"><span>50+ scan</span><span>40 px rows stay; lines show the parent even 4 levels deep; columns let the eye run down Status</span><span>Reading</span><span>Mark + colour + weight + badge word per level</span><span>Looks</span><span>Clean, Linear/Notion-like</span></div>
+  <div class="ann"><span class="tag dec">[F P-115] outline you type into</span><span class="tag dec">[F P-48] team tree</span></div></div>
+ <div class="opt"><h4>B · Nested cards per level</h4><div class="why">Each Pathway is a card with a slate header; each Program an inset card with a teal edge; categories inside.</div>
+  <div class="stage">
+   <div style="border:1px solid var(--border);border-radius:10px;background:var(--raised);overflow:hidden">
+    <div style="background:var(--lv1-t);padding:8px 10px;font-weight:600;color:var(--lv1)"><span class="lm l1"></span> Temporary residence <span class="n" style="float:right;font-weight:400;font-size:12px;color:var(--muted)">12</span></div>
+    <div style="padding:8px">
+     <div style="border:1px solid var(--border);border-left:3px solid var(--lv2);border-radius:8px;padding:6px 8px;margin-bottom:6px"><b class="c2"><span class="lm l2"></span> Visitors</b>
+      <div style="padding:4px 0 0 14px" class="c3"><span class="lm l3"></span> <b>Visitor visa</b> <span class="chip set">◌ In setup</span><br><span class="lm l3"></span> <b>Super visa</b> <span class="chip set">◌ In setup</span></div></div>
+     <div style="border:1px solid var(--border);border-left:3px solid var(--lv2);border-radius:8px;padding:6px 8px"><b class="c2"><span class="lm l2"></span> Work permits</b>
+      <div style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;margin:4px 0 0 10px" class="c3"><b><span class="lm l3"></span> Employer-specific…</b><div style="padding-left:14px"><span class="lm l4"></span> With an LMIA <span class="chip live">✓ Live</span></div></div></div>
+    </div></div>
+  </div>
+  <div class="score"><span>50+ scan</span><span>Four boxes deep; about twice the height of A; at 1024 px the inner box leaves ~360 px for names</span><span>Reading</span><span>Very clear grouping</span><span>Looks</span><span>Most "designed"</span></div></div>
+ <div class="opt"><h4>C · Shaded depth bands, no lines</h4><div class="why">Each depth gets its own background shade; the shade, not a line, says how deep a row is.</div>
+  <div class="stage" style="padding:0;font-size:14px">
+   <div style="background:#e3e7ec;padding:8px 10px;font-weight:600;color:var(--lv1)">▾ Temporary residence</div>
+   <div style="background:#edf4f5;padding:8px 10px 8px 28px;font-weight:600;color:var(--lv2)">▾ Visitors</div>
+   <div style="background:#f6f8fb;padding:8px 10px 8px 48px;color:var(--lv3)"><b>Visitor visa</b> <span class="chip set">◌ In setup</span></div>
+   <div style="background:#f6f8fb;padding:8px 10px 8px 48px;color:var(--lv3)"><b>Super visa</b> <span class="chip set">◌ In setup</span></div>
+   <div style="background:#edf4f5;padding:8px 10px 8px 28px;font-weight:600;color:var(--lv2)">▾ Work permits</div>
+   <div style="background:#f6f8fb;padding:8px 10px 8px 48px;color:var(--lv3)"><b>▾ Employer-specific…</b></div>
+   <div style="background:#fff;padding:8px 10px 8px 68px;color:var(--lv3)">With an LMIA <span class="chip live">✓ Live</span></div>
+  </div>
+  <div class="score"><span>50+ scan</span><span>Dense; but four shades of near-white are hard to tell apart on many screens and fail as the only cue</span><span>Reading</span><span>Good at 2 levels, weak at 4</span><span>Looks</span><span>Soft</span></div></div>
+</div>
+
+<h3 class="sub">A drawn in full — Structure at 1440 px <span class="tag cap">Capability · Needed</span> <span class="tag sample">Sample names</span></h3>
+<div class="frame"><div class="ftitle">/structure · Retail · panel open on "Visitors" <span class="tag dec">[F P-104] Pathway type tab</span><span class="tag dec">[F P-116] remove · retire · reorder</span></div>
+<div class="appbar"><span class="logo"><i></i>ExpatReady</span><span class="prod"><b>Product Studio</b>Pathway Configurator</span><span class="demo">Prototype · demo workspace</span><span class="sp"></span><span class="btn sm">Demo ▾</span><span class="btn sm">Acting as Configuration author · Super Admin · content publisher ▾</span><span class="tag scaf">Scaffolding · Simulated</span><span>☾</span></div>
+<div style="background:var(--raised);border-bottom:1px solid var(--border);padding:5px 16px;font-size:12px">No unreleased changes. Firms use Release 2.</div>
+<div class="shell"><nav class="side"><div class="g">Configure</div><a>To review <span class="chip ai" style="float:right;padding:0 6px">1</span></a><a>Immigration programs</a><a class="on">Structure</a><div class="g">Shared library</div><a>Fields</a><a>Sections</a><a>Document types</a><a>Forms</a><a>Checks</a><div class="g">History</div><a>AI work</a><a>Releases</a><a>Activity</a>
+<div style="margin-top:16px;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:8px">Simulated people; local PostgreSQL demo database… Not production. <span class="tag scaf">Scaffolding</span></div></nav>
+<div class="main"><div class="split"><div style="min-width:0">
+ <div class="ph"><h1>Structure</h1><span class="info" title="The list of pathways, programs, categories and sub-categories. Every category without sub-categories, and every sub-category, is a combination.">i</span><div class="s">Where every combination sits: <span class="trail"><span class="p1">Pathway</span><span class="s">›</span><span class="p2">Program</span><span class="s">›</span><span class="idn"><b>Category</b><span class="s">›</span>Sub-category</span></span>.</div></div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"><span class="seg"><span class="on">Retail <em>21</em></span><span>Corporate and employers <em>8</em></span></span><span class="input" style="flex:1;min-width:180px">⌕ Find a name</span><span class="btn">Expand all</span><span class="btn">Collapse all</span></div>
+ <div class="pcs"><div class="pc on"><b>All pathways</b><small>21 combinations</small><span class="chip need" style="width:fit-content">2 need you</span></div><div class="pc"><b><span class="lm l1"></span>Temporary residence</b><small>12 combinations</small><span class="chip need" style="width:fit-content">2 need you</span></div><div class="pc"><b><span class="lm l1"></span>Permanent residence</b><small>8 combinations · none need you</small></div><div class="pc"><b><span class="lm l1"></span>Citizenship</b><small>1 combination · none need you</small></div><div class="pc add">+ Add pathway</div></div>
+ <p style="margin:10px 0 6px;color:var(--muted)">3 pathways · 7 programs · 15 categories · 11 sub-categories · <b style="color:var(--text)">21 combinations</b></p>
+ <div class="tree" role="tree" aria-label="Retail structure">
+  <div class="th"><span>Name</span><span>Status</span><span>Cases may be opened from</span><span style="text-align:right">Combinations</span></div>
+  <div class="tr r1"><div class="nm"><span class="chev">▾</span><span class="lm l1"></span><span class="t">Temporary residence</span><span class="lb l1">Pathway</span><span class="chip need">2 need you</span></div><span></span><span></span><span class="ct">12 combinations</span></div>
+  <div class="tr r2 sel"><div class="nm"><span class="gd t"></span><span class="chev">▾</span><span class="lm l2"></span><span class="t">Visitors</span><span class="lb l2">Program</span></div><span></span><span></span><span class="ct">3 combinations</span></div>
+  <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="chev"></span><span class="lm l3"></span><span class="t">Visitor visa</span><span class="lb l3">Category · combination</span></div><span class="chip set"><span class="ic">◌</span>In setup</span><span class="loc">Outside Canada</span><span></span></div>
+  <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="chev"></span><span class="lm l3"></span><span class="t">Super visa</span><span class="lb l3">Category · combination</span></div><span class="chip set"><span class="ic">◌</span>In setup</span><span class="loc">Outside Canada</span><span></span></div>
+  <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="chev"></span><span class="lm l3"></span><span class="t">Extend stay in Canada</span><span class="lb l3">Category · combination</span></div><span class="chip ns">Not started</span><span class="loc">Inside Canada</span><span></span></div>
+  <div class="tr addr"><div class="nm"><span class="gd v"></span><span class="gd l"></span><span class="chev"></span><span class="lm add"></span><span class="t">+ Add category</span></div><span></span><span></span><span></span></div>
+  <div class="tr r2"><div class="nm"><span class="gd t"></span><span class="chev">▾</span><span class="lm l2"></span><span class="t">Study permits</span><span class="lb l2">Program</span></div><span></span><span></span><span class="ct">2 combinations</span></div>
+  <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="chev">▾</span><span class="lm l3"></span><span class="t">Study permit</span><span class="lb l3">Category</span></div><span></span><span></span><span class="ct">1 combination</span></div>
+  <div class="tr r4"><div class="nm"><span class="gd v"></span><span class="gd v"></span><span class="gd t"></span><span class="lm l4"></span><span class="t">Outside Canada</span><span class="lb l4">Sub-category · combination</span></div><span class="chip set"><span class="ic">◌</span>In setup</span><span class="loc">Outside Canada</span><span></span></div>
+  <div class="tr addr"><div class="nm"><span class="gd v"></span><span class="gd v"></span><span class="gd l"></span><span class="lm add"></span><span class="t">+ Add sub-category</span></div><span></span><span></span><span></span></div>
+  <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="chev"></span><span class="lm l3"></span><span class="t">Study permit extension</span><span class="lb l3">Category · combination</span></div><span class="chip ns">Not started</span><span class="loc">Inside Canada</span><span></span></div>
+  <div class="tr addr"><div class="nm"><span class="gd v"></span><span class="gd l"></span><span class="chev"></span><span class="lm add"></span><span class="t">+ Add category</span></div><span></span><span></span><span></span></div>
+  <div class="tr r2"><div class="nm"><span class="gd t"></span><span class="chev">▾</span><span class="lm l2"></span><span class="t">Work permits</span><span class="lb l2">Program</span></div><span></span><span></span><span class="ct">7 combinations</span></div>
+  <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="chev">▾</span><span class="lm l3"></span><span class="t">Employer-specific work permit</span><span class="lb l3">Category</span></div><span></span><span></span><span class="ct">2 combinations</span></div>
+  <div class="tr r4"><div class="nm"><span class="gd v"></span><span class="gd v"></span><span class="gd t"></span><span class="lm l4"></span><span class="t">With an LMIA</span><span class="lb l4">Sub-category · combination</span></div><span class="chip live"><span class="ic">✓</span>Live · Release 1</span><span class="loc">Outside Canada</span><span></span></div>
+  <div class="tr r4"><div class="nm"><span class="gd v"></span><span class="gd v"></span><span class="gd t"></span><span class="lm l4"></span><span class="t">LMIA-exempt (employer offer)</span><span class="lb l4">Sub-category · combination</span></div><span class="chip ns">Not started</span><span class="loc">Outside Canada</span><span></span></div>
+  <div class="tr addr"><div class="nm"><span class="gd v"></span><span class="gd v"></span><span class="gd l"></span><span class="lm add"></span><span class="t">+ Add sub-category</span></div><span></span><span></span><span></span></div>
+  <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="chev">▸</span><span class="lm l3"></span><span class="t">Open work permit</span><span class="lb l3">Category</span></div><span></span><span></span><span class="ct">3 combinations</span></div>
+  <div class="tr r3" style="opacity:.7"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="chev">▸</span><span class="lm l3"></span><span class="t">International Experience Canada</span><span class="lb l3">Category</span><span class="chip ret">Retired</span></div><span></span><span></span><span class="ct">2 combinations</span></div>
+  <div class="tr addr"><div class="nm"><span class="gd v"></span><span class="gd l"></span><span class="chev"></span><span class="lm add"></span><span class="t">+ Add category</span></div><span></span><span></span><span></span></div>
+  <div class="tr addr"><div class="nm"><span class="gd l"></span><span class="chev"></span><span class="lm add"></span><span class="t">+ Add program</span></div><span></span><span></span><span></span></div>
+  <div class="tr r1"><div class="nm"><span class="chev">▸</span><span class="lm l1"></span><span class="t">Permanent residence</span><span class="lb l1">Pathway</span></div><span></span><span></span><span class="ct">8 combinations</span></div>
+  <div class="tr r1"><div class="nm"><span class="chev">▸</span><span class="lm l1"></span><span class="t">Citizenship</span><span class="lb l1">Pathway</span></div><span></span><span></span><span class="ct">1 combination</span></div>
+ </div>
+ <div class="ann"><span class="tag cap">Capability · Needed: guide lines, marks, badges, aligned columns, Pathway band</span><span class="tag cap">Capability · Needed: "+ Add …" rows typed in place (unchanged behaviour)</span><span class="tag nb">Not built: drag to reorder (Move up / down stays, P-116)</span></div>
+</div>
+<aside class="panel" aria-label="Visitors details"><div class="phd"><div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:1"><h3 style="font-size:18px;color:var(--lv2)"><span class="lm l2"></span> Visitors</h3><span class="lb l2">Program</span></div><span class="btn ghost" aria-label="Close the details">✕</span></div></div>
+ <dl class="pbd" style="margin:0"><dt>Trail</dt><dd><span class="trail"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Visitors</span></span></dd>
+ <dt>Used by</dt><dd>3 combinations<div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 8px;margin-top:4px;align-items:center;font-size:14px"><span class="c3"><span class="lm l3"></span> Visitor visa</span><span class="chip set">◌ In setup</span><a style="color:var(--link)">Open</a><span class="c3"><span class="lm l3"></span> Super visa</span><span class="chip set">◌ In setup</span><a style="color:var(--link)">Open</a><span class="c3"><span class="lm l3"></span> Extend stay in Canada</span><span class="chip ns">Not started</span><a style="color:var(--link)">Start setup</a></div></dd>
+ <dt>Meaning check</dt><dd><span class="chip ns" title="Only the spelling check ran; a reviewer compares the meaning by eye.">Not meaning-checked</span></dd>
+ <dt>Name <small>Required</small></dt><dd><span class="input" style="color:var(--text)">Visitors</span><div class="why">The new name shows in setup at once; firms see it after the next release. Open cases keep their names.</div></dd>
+ <dt>Order</dt><dd><span class="btn sm" aria-disabled="true">↑ Move up</span> <span class="btn sm">↓ Move down</span></dd>
+ <dt>Where used</dt><dd style="font-size:12px"><span class="trail sm"><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Visitors</span><span class="s">›</span><span class="idn"><b>Visitor visa</b></span></span><br><span style="color:var(--muted)">Category under it: remove or retire it first</span></dd>
+ <dt>History</dt><dd style="font-size:12px;color:var(--muted)">today 4:31 PM · Renamed by a content publisher</dd></dl>
+ <div class="pft"><span class="btn sm" style="color:var(--t-danger)">Remove</span><span class="btn sm" style="color:var(--t-danger)">Retire</span><span class="sp"></span><span class="btn sm">Close</span><span class="btn sm pri" aria-disabled="true">Save</span></div>
+ <div class="ann" style="padding:0 12px 10px"><span class="tag cap">Capability · Needed: panel header uses the level mark + badge; "Used by" and "Where used" use the Trail</span></div></aside>
+</div></div></div></div>
+</div>
+
+<!-- ============ 2. CARDS ============ -->
+<div class="sec"><h2>2 · Immigration programs cards</h2>
+<p>Today: the trail wraps beside the status chip ("Work / permits"), 15 of 21 cards are identical Not started cards with the same outline button, and the eye has nothing to land on. Same three combinations in each option.</p>
+<div class="opts">
+ <div class="opt is-rec"><h4><span class="tag rec">★ Recommended</span> A · Identity first, footer action, quiet Not started</h4><div class="why">Context trail on its own full-width line; Category title (navy) with the status chip on its right; sub-category under it; bar and step on one line; a footer holds the one next step. Filled button only where a person is needed.</div>
+  <div class="stage"><div class="cards" style="grid-template-columns:1fr">
+   <article class="card"><div class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Visitors</span></div>
+    <div class="hd"><h3>Super visa</h3><span class="chip set"><span class="ic">◌</span>In setup</span></div><div class="subl none">No sub-category</div>
+    <div class="setup"><span class="bar"><i class="d"></i><i class="d"></i><i class="c"></i><i></i></span><span class="cap">Step 3 of 4 · Review</span></div>
+    <div class="facts">2 forms found · 1 ready to add from the library · 1 needs a draft</div>
+    <div class="ft"><span class="btn pri">✦ Review 84 AI proposals</span></div></article>
+   <article class="card flat"><div class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Study permits</span></div>
+    <div class="hd"><h3>Study permit extension</h3><span class="chip ns">Not started</span></div><div class="subl none">No sub-category</div>
+    <div class="setup"><span class="bar"><i></i><i></i><i></i><i></i></span><span class="cap">Not started</span></div><div class="facts">No forms yet</div>
+    <div class="ft"><span class="btn out">Start setup</span></div></article>
+  </div></div>
+  <div class="score"><span>50+ scan</span><span>Same height as today; filled buttons = the "need you" count, so work pops out of 50 cards</span><span>Reading</span><span>Identity (navy) is the first strong thing; status next to it</span><span>Looks</span><span>Vercel/Linear calm</span></div>
+  <div class="ann"><span class="tag dec">[F P-115] design D card content</span><span class="tag gap">[GAP] filled button only on "need you" cards (Lead decision, §9)</span></div></div>
+ <div class="opt"><h4>B · Header band per Program</h4><div class="why">A teal band carries the Program and the status; the body has the identity; a grey footer has facts and action.</div>
+  <div class="stage"><div class="cards" style="grid-template-columns:1fr">
+   <article class="card" style="padding:0;gap:0;overflow:hidden"><div style="background:var(--lv2-t);padding:8px 12px;display:flex;gap:8px;align-items:center"><span class="lm l2"></span><span class="c2" style="font-weight:500;flex:1;font-size:12px">Retail › Temporary residence › Visitors</span><span class="chip set">◌ In setup</span></div>
+    <div style="padding:10px 12px"><h3 style="font-size:16px;color:var(--lv3)">Super visa</h3><div style="color:var(--muted)">No sub-category</div><div class="setup" style="margin-top:6px"><span class="bar"><i class="d"></i><i class="d"></i><i class="c"></i><i></i></span><span class="cap">Step 3 of 4 · Review</span></div></div>
+    <div style="background:var(--surface);padding:8px 12px;border-top:1px solid var(--border)"><div class="facts" style="margin-bottom:6px">2 forms found · 1 ready to add…</div><span class="btn pri">✦ Review 84 AI proposals</span></div></article>
+  </div></div>
+  <div class="score"><span>50+ scan</span><span>~30 px taller per card; 50 teal bands repeat the same colour, which stops meaning anything</span><span>Reading</span><span>Program very visible</span><span>Looks</span><span>Strongest "card" look</span></div></div>
+ <div class="opt"><h4>C · Compact tile (4 across at 1440)</h4><div class="why">Identity on one line, chip and a mini bar, the next step as a link. For 50+ in one screen.</div>
+  <div class="stage"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+   <article class="card" style="padding:8px 10px;gap:4px"><div class="trail sm" style="font-size:12px"><span class="p2">Visitors</span></div><b class="c3">Super visa</b><span class="chip set" style="width:fit-content">◌ In setup</span><span class="bar" style="flex:none"><i class="d"></i><i class="d"></i><i class="c"></i><i></i></span><a style="color:var(--link);font-size:12px;padding-bottom:8px">Review 84 AI proposals</a></article>
+   <article class="card flat" style="padding:8px 10px;gap:4px"><div class="trail sm"><span class="p2">Study permits</span></div><b class="c3">Study permit extension</b><span class="chip ns" style="width:fit-content">Not started</span><span class="bar" style="flex:none"><i></i><i></i><i></i><i></i></span><a style="color:var(--link);font-size:12px;padding-bottom:8px">Start setup</a></article>
+  </div></div>
+  <div class="score"><span>50+ scan</span><span>Densest</span><span>Reading</span><span>Cuts the full trail and the facts line (breaks BR-7 / BR-14); the List already does "dense"</span><span>Looks</span><span>Tidy</span></div>
+  <div class="ann"><span class="tag con">[CONFLICT] P-104 BR-7 full trail on every card</span></div></div>
+</div>
+
+<h3 class="sub">How the status chip, the setup bar and the next-step button sit on a card (A)</h3>
+<div class="two" style="align-items:start"><div class="cards" style="grid-template-columns:minmax(0,340px)"><article class="card" style="position:relative">
+ <div style="display:flex;gap:6px;align-items:flex-start"><span class="callno">1</span><div class="trail sm" style="flex:1"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Work permits</span></div></div>
+ <div class="hd"><span class="callno">2</span><h3>Open work permit</h3><span class="callno">3</span><span class="chip nr"><span class="ic">!</span>Not ready</span></div>
+ <div class="subl"><span class="lm l4"></span>Spouse of a student</div>
+ <div class="setup"><span class="callno">4</span><span class="bar"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i></span><span class="cap">Step 4 of 4 · Release</span></div>
+ <div class="facts"><span class="callno" style="vertical-align:middle">5</span> 1 form · Filed: PDF</div>
+ <div class="ft"><span class="callno">6</span><span class="btn pri">See 1 missing</span><span class="ovd" title="Check overdue: compare with IRCC's published forms and guides.">⚠<span class="callno" style="margin-left:4px">7</span></span></div></article></div>
+<ol style="margin:0;padding-left:20px;font-size:14px"><li><b>Context trail</b> (12 px, full width, may wrap): Pathway type grey · Pathway slate · Program teal. Never shares a line with the chip, so it never breaks into "Work / permits".</li>
+<li><b>Identity</b>: Category as the title (16 px semibold navy; a button that opens the combination); sub-category under it (14 px navy with the open diamond) or "No sub-category" in grey.</li>
+<li><b>Status chip</b> top-right of the title row, aligned across a row of cards; shape + icon + word (Live ✓ · Not ready ! · In setup ◌ · Not started dashed). Tooltip unchanged.</li>
+<li><b>Setup bar + step</b> on one line: done = green, current = blue outline, to do = grey; the words "Step 4 of 4 · Release" carry the meaning; while AI drafts, the current segment stripes (still when motion is reduced).</li>
+<li><b>Facts</b>: forms count and "Filed: PDF" / "PDF + answer sheet" <span class="tag dec">[F P-113]</span>, or "No forms yet"; search adds "Matches: IMM 5257".</li>
+<li><b>Footer: one next step</b>, left. <b>Filled</b> when the card counts in "need you" (review, missing, Not ready, AI waiting); <b>outline</b> for Start setup / Add forms; <b>link</b> "Open" when Live. Cards in one row line their footers up.</li>
+<li><b>Check overdue</b> ⚠ (orange text token) at the footer's right with its tooltip.</li></ol></div>
+
+<h3 class="sub">Every card state under the system <span class="tag cap">Capability · Needed (C11.10)</span> <span class="tag sample">Sample</span></h3>
+<div class="cards">
+ <article class="card flat"><div class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Permanent residence</span><span class="s">›</span><span class="p2">Economic immigration</span></div><div class="hd"><h3>Express Entry</h3><span class="chip ns">Not started</span></div><div class="subl"><span class="lm l4"></span>Permanent residence application</div><div class="setup"><span class="bar"><i></i><i></i><i></i><i></i></span><span class="cap">Not started</span></div><div class="facts">No forms yet</div><div class="ft"><span class="btn out">Start setup</span></div></article>
+ <article class="card"><div class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Study permits</span></div><div class="hd"><h3>Study permit</h3><span class="chip set"><span class="ic">◌</span>In setup</span></div><div class="subl"><span class="lm l4"></span>Outside Canada</div><div class="setup"><span class="bar"><i class="c"></i><i></i><i></i><i></i></span><span class="cap">Step 1 of 4 · Forms</span></div><div class="facts">3 forms found · 3 ready to add from the library</div><div class="ft"><span class="btn out">Add 3 forms from the library</span></div></article>
+ <article class="card"><div class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Visitors</span></div><div class="hd"><h3>Visitor visa</h3><span class="chip set"><span class="ic">◌</span>In setup</span></div><div class="subl none">No sub-category</div><div class="setup"><span class="bar"><i class="d"></i><i class="run"></i><i></i><i></i></span><span class="cap">Step 2 of 4 · AI draft · running</span></div><div class="facts">Reading IMM 5257 · form 1 of 2 <span class="tag sample">Sample</span></div><div class="ft"><span class="btn out">View</span><span class="btn ghost">Stop</span></div></article>
+ <article class="card"><div class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Work permits</span></div><div class="hd"><h3>Employer-specific work permit</h3><span class="chip live"><span class="ic">✓</span>Live</span></div><div class="subl"><span class="lm l4"></span>With an LMIA</div><div class="setup"><span class="bar"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i></span><span class="cap">Step 4 of 4 · Live</span></div><div class="facts">6 forms · Filed: PDF</div><div class="ft"><span class="btn ghost">Open</span><span class="ovd" title="Check overdue">⚠</span></div></article>
+ <article class="card"><div class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Permanent residence</span><span class="s">›</span><span class="p2">Family sponsorship</span></div><div class="hd"><h3>Spouse or partner</h3><span class="chip set"><span class="ic">◌</span>In setup</span></div><div class="subl"><span class="lm l4"></span>Applicant outside Canada</div><div class="setup"><span class="bar"><i class="c"></i><i></i><i></i><i></i></span><span class="cap">Step 1 of 4 · Forms</span></div><div class="facts">2 forms found · 2 ready to add from the library<br>Matches: IMM 5532 <span class="tag sample">search "5532"</span></div><div class="ft"><span class="btn out">Add 2 forms from the library</span></div></article>
+ <article class="card"><div class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Work permits</span></div><div class="hd"><h3>International Experience Canada</h3><span class="chip set"><span class="ic">◌</span>In setup</span></div><div class="subl"><span class="lm l4"></span>Young professionals</div><div class="setup"><span class="bar"><i class="c"></i><i></i><i></i><i></i></span><span class="cap">Step 1 of 4 · Forms</span></div><div class="facts">1 form · Filed: PDF</div><div class="ft"><span class="btn out" aria-disabled="true" title="Only a configuration author starts or changes setup. You can read.">Add 1 form from the library</span><span class="why" style="margin:0">Read-only</span></div></article>
+ <article class="card"><div class="trail sm"><span class="p0">Corporate and employers</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Labour market impact assessment</span></div><div class="hd"><h3>High-wage position</h3><span class="chip ns">Not started</span></div><div class="subl none">No sub-category</div><div class="setup"><span class="bar"><i></i><i></i><i></i><i></i></span><span class="cap">Not started</span></div><div class="facts">No forms yet</div><div class="ft"><span class="btn out">Start setup</span><span class="tag sample">Sample</span></div></article>
+ <article class="card flat" aria-busy="true"><div class="sk" style="width:70%"></div><div class="sk" style="width:50%;height:16px"></div><div class="sk"></div><div class="sk" style="width:40%"></div><div class="ft"><div class="sk" style="width:110px;height:28px"></div></div></article>
+</div>
+<div class="ann"><span class="tag cap">Not started · In setup (Forms) · AI running with View + Stop · Live + check overdue · search match · long names · read-only · Corporate · loading skeleton</span><span class="tag dec">[F P-110] Stop on every AI run</span><span class="tag cap">Not ready is drawn in the anatomy above</span></div>
+</div>
+
+<!-- ============ 3. LIST VIEW ============ -->
+<div class="sec"><h2>3 · List view — Pathway group rows stand out</h2>
+<p>Today: the group row is a light grey strip in 14 px, almost the same as a data row; at 50 rows the groups disappear.</p>
+<div class="opts">
+ <div class="opt is-rec"><h4><span class="tag rec">★ Recommended</span> A · Slate band with a left bar, sticky</h4><div class="why">Pathway rows use the Pathway level: slate band, 4 px slate left bar, square mark, 16 px semibold; counts and "need you" beside; the band sticks under the column header while you scroll.</div>
+  <div class="stage" style="padding:0"><div class="list" style="border:0;border-radius:0">
+   <div class="pg"><span class="chev">▾</span><span class="lm l1"></span><b>Temporary residence</b><span class="n">· 12</span><span class="chip need">2 need you</span></div>
+   <div class="lr" style="grid-template-columns:1fr 92px"><span class="trail"><span class="p2">Visitors</span><span class="s">›</span><span class="idn"><b>Super visa</b></span></span><span class="chip set">◌ In setup</span></div>
+   <div class="pg"><span class="chev">▾</span><span class="lm l1"></span><b>Permanent residence</b><span class="n">· 8</span></div>
+  </div></div>
+  <div class="score"><span>50+ scan</span><span>Groups visible while scrolling; same colour as the Pathway everywhere else</span><span>Reading</span><span>Instant</span><span>Looks</span><span>Clear, not loud</span></div></div>
+ <div class="opt"><h4>B · White header row, bold, heavy rule</h4><div class="why">No colour: 16 px bold name and a 2 px rule under it.</div>
+  <div class="stage" style="padding:0"><div class="list" style="border:0;border-radius:0">
+   <div style="display:flex;gap:8px;align-items:center;height:40px;padding:0 14px;border-bottom:2px solid var(--text)"><b style="font-size:16px">▾ Temporary residence</b><span style="color:var(--muted)">· 12</span><span class="chip need">2 need you</span></div>
+   <div class="lr" style="grid-template-columns:1fr 92px"><span>Visitors › <b>Super visa</b></span><span class="chip set">◌ In setup</span></div>
+   <div style="display:flex;gap:8px;align-items:center;height:40px;padding:0 14px;border-bottom:2px solid var(--text)"><b style="font-size:16px">▾ Permanent residence</b><span style="color:var(--muted)">· 8</span></div></div></div>
+  <div class="score"><span>50+ scan</span><span>Good</span><span>Reading</span><span>Clear, but unlinked to the tree and cards</span><span>Looks</span><span>Plain</span></div></div>
+ <div class="opt"><h4>C · Pathway band + Program sub-rows</h4><div class="why">Adds a teal Program row inside each Pathway; rows then show only Category › Sub-category.</div>
+  <div class="stage" style="padding:0"><div class="list" style="border:0;border-radius:0">
+   <div class="pg"><span class="chev">▾</span><span class="lm l1"></span><b>Temporary residence</b><span class="n">· 12</span></div>
+   <div style="height:32px;display:flex;align-items:center;gap:6px;padding:0 14px 0 34px;background:var(--lv2-t);border-bottom:1px solid var(--border)"><span class="lm l2"></span><b class="c2">Visitors</b><span style="color:var(--muted)">· 3</span></div>
+   <div class="lr" style="grid-template-columns:1fr 92px;padding-left:48px"><span class="c3"><b>Super visa</b></span><span class="chip set">◌ In setup</span></div></div></div>
+  <div class="score"><span>50+ scan</span><span>+1 row per Program (≈ +15 rows at 50)</span><span>Reading</span><span>Shortest rows, but each row loses its full trail</span><span>Looks</span><span>Tidy</span></div>
+  <div class="ann"><span class="tag con">[CONFLICT] P-104 BR-7 full trail on every row</span></div></div>
+</div>
+<h3 class="sub">A drawn in full — List at 1440 px <span class="tag cap">Capability · Needed (C11.10)</span> <span class="tag sample">Sample</span></h3>
+<div class="list">
+ <div class="lh"><span>Combination</span><span>Status ⇅</span><span title="Forms added · AI draft done · Review done · Released (Live).">Setup</span><span>Next step</span></div>
+ <div class="pg"><span class="chev">▾</span><span class="lm l1"></span><b>Temporary residence</b><span class="n">· 12</span><span class="chip need" title="Combinations waiting for a person: something to review, something missing or something blocking release.">2 need you</span></div>
+ <div class="lr"><div><span class="trail"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Study permits</span><span class="s">›</span><span class="idn"><b>Study permit</b><span class="s">›</span>Outside Canada</span></span></div><span class="chip set">◌ In setup</span><span class="bar" style="flex:none"><i class="c"></i><i></i><i></i><i></i></span><span><span class="btn out sm">Add 3 forms from the library</span></span></div>
+ <div class="lr"><div><span class="trail"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Visitors</span><span class="s">›</span><span class="idn"><b>Super visa</b><span class="s">›</span><span class="none">No sub-category</span></span></span></div><span class="chip set">◌ In setup</span><span class="bar" style="flex:none"><i class="d"></i><i class="d"></i><i class="c"></i><i></i></span><span><span class="btn pri sm">✦ Review 84 AI proposals</span></span></div>
+ <div class="lr"><div><span class="trail"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Work permits</span><span class="s">›</span><span class="idn"><b>Employer-specific work permit</b><span class="s">›</span>LMIA-exempt (employer offer)</span></span></div><span class="chip ns">Not started</span><span class="bar" style="flex:none"><i></i><i></i><i></i><i></i></span><span><span class="btn out sm">Start setup</span></span></div>
+ <div class="lr"><div><span class="trail"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Work permits</span><span class="s">›</span><span class="idn"><b>Employer-specific work permit</b><span class="s">›</span>With an LMIA</span></span><div class="filed">Filed: PDF</div></div><span class="chip live">✓ Live</span><span class="bar" style="flex:none"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i></span><span><span class="btn ghost sm">Open</span></span></div>
+ <div class="lr"><div><span class="trail"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Work permits</span><span class="s">›</span><span class="idn"><b>Open work permit</b><span class="s">›</span>Spouse of a student</span></span><div class="filed">Filed: PDF</div></div><span class="chip nr">! Not ready</span><span class="bar" style="flex:none"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i></span><span><span class="btn pri sm">See 1 missing</span></span></div>
+ <div class="pg"><span class="chev">▸</span><span class="lm l1"></span><b>Permanent residence</b><span class="n">· 8</span></div>
+ <div class="pg"><span class="chev">▸</span><span class="lm l1"></span><b>Citizenship</b><span class="n">· 1</span></div>
+</div>
+<p class="note">Rows stay 44 px where the trail fits on one line; where it does not (1024 px, long names), the identity (navy) moves <b>as a whole</b> to a second line instead of breaking in the middle — the founder's "may wrap to a second line". <span class="tag con">[CONFLICT] EXPERIENCE §1 "long text one line with full text on hover" vs the founder's wrap; the founder's ask is newer — Lead to amend §1</span></p>
+</div>
+
+<!-- ============ 4. TRAIL ============ -->
+<div class="sec"><h2>4 · The trail — the parts that matter in their own colour, wrapping to a second line</h2>
+<p>Founder's example: <i>Retail › Temporary residence › Study permits › Study permit › Outside Canada</i>. Each option shown at a card width (300 px) and a list width (560 px).</p>
+<div class="opts">
+ <div class="opt is-rec"><h4><span class="tag rec">★ Recommended</span> A · Level colours, identity kept together</h4><div class="why">Context parts in their level colour at regular weight; Category › Sub-category in navy (Category semibold) as one block that wraps whole.</div>
+  <div class="stage"><div style="width:300px;background:var(--raised);padding:8px;border-radius:8px;border:1px solid var(--border)"><span class="trail"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Study permits</span><span class="s">›</span><span class="idn"><b>Study permit</b><span class="s">›</span>Outside Canada</span></span></div>
+   <div style="margin-top:8px;max-width:560px;background:var(--raised);padding:8px;border-radius:8px;border:1px solid var(--border)"><span class="trail"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Study permits</span><span class="s">›</span><span class="idn"><b>Study permit</b><span class="s">›</span>Outside Canada</span></span></div></div>
+  <div class="score"><span>50+ scan</span><span>The eye reads down the navy parts; context fades</span><span>Reading</span><span>Same colours as the tree and cards</span><span>Looks</span><span>Quiet, precise</span></div></div>
+ <div class="opt"><h4>B · Grey context, only the identity coloured</h4><div class="why">Today's trail plus colour: first three parts grey, Category › Sub-category navy.</div>
+  <div class="stage"><div style="width:300px;background:var(--raised);padding:8px;border-radius:8px;border:1px solid var(--border)"><span class="trail"><span class="p0">Retail</span><span class="s">›</span><span class="p0">Temporary residence</span><span class="s">›</span><span class="p0">Study permits</span><span class="s">›</span><span class="idn"><b>Study permit</b><span class="s">›</span>Outside Canada</span></span></div>
+   <div style="margin-top:8px;max-width:560px;background:var(--raised);padding:8px;border-radius:8px;border:1px solid var(--border)"><span class="trail"><span class="p0">Retail › Temporary residence › Study permits</span><span class="s">›</span><span class="idn"><b>Study permit</b><span class="s">›</span>Outside Canada</span></span></div></div>
+  <div class="score"><span>50+ scan</span><span>Good</span><span>Reading</span><span>Simplest; but the Program does not match the tree's teal</span><span>Looks</span><span>Calm</span></div></div>
+ <div class="opt"><h4>C · A pill per part</h4><div class="why">Each part a tinted pill in its level colour.</div>
+  <div class="stage"><div style="width:300px;background:var(--raised);padding:8px;border-radius:8px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px"><span class="lb" style="color:var(--lv0);background:var(--neutral-tint)">Retail</span><span class="lb l1">Temporary residence</span><span class="lb l2">Study permits</span><span class="lb l3"><b>Study permit</b></span><span class="lb l4">Outside Canada</span></div>
+   <div style="margin-top:8px;max-width:560px;background:var(--raised);padding:8px;border-radius:8px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px"><span class="lb" style="color:var(--lv0);background:var(--neutral-tint)">Retail</span><span class="lb l1">Temporary residence</span><span class="lb l2">Study permits</span><span class="lb l3"><b>Study permit</b></span><span class="lb l4">Outside Canada</span></div></div>
+  <div class="score"><span>50+ scan</span><span>Heavy: 250 pills on a 50-row list; pills look like filters or buttons</span><span>Reading</span><span>Clear per part</span><span>Looks</span><span>Busy</span></div></div>
+</div>
+<h3 class="sub">One Trail component, everywhere a combination is named (S1–S7) <span class="tag cap">Capability · Needed (C11.3)</span></h3>
+<table class="tok"><thead><tr><th>Where</th><th>How it looks</th><th>Size</th></tr></thead><tbody>
+<tr><td>S2 card</td><td><span class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Study permits</span></span> then the identity as title + sub-line</td><td>12 / 16</td></tr>
+<tr><td>S2 list row · S1 panel "Where used" · S6 Shared library "Where used" · S4 Form library "Used in"</td><td><span class="trail"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Study permits</span><span class="s">›</span><span class="idn"><b>Study permit</b><span class="s">›</span>Outside Canada</span></span></td><td>14 (12 in dense tables)</td></tr>
+<tr><td>S3 New combination "You are opening"</td><td><span class="trail" style="font-size:16px"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Study permits</span><span class="s">›</span><span class="idn"><b>Study permit</b><span class="s">›</span>Outside Canada</span></span> <span class="chip ns">Not started</span> → <span class="btn pri sm">Start setup</span></td><td>16</td></tr>
+<tr><td>S5 Combination workspace header</td><td><span class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Study permits</span></span><br><b class="c3" style="font-size:24px;font-family:'Proxima Nova',var(--font)">Study permit</b> <span class="c3">› Outside Canada</span> <span class="chip set">◌ In setup</span></td><td>12 / 24 title</td></tr>
+<tr><td>S7 Reset / Load sample summary</td><td>"Loaded 5 combinations": one Trail per line, 14 px</td><td>14</td></tr>
+<tr><td>App header breadcrumb</td><td>Page names only ("Immigration programs › Study permit") in the team's header crumbs, not level colours <span class="tag dec">[F P-48] crumbs in the header</span></td><td>team</td></tr>
+</tbody></table>
+<p class="note">A screen reader hears the plain trail ("Retail, Temporary residence, Study permits, Study permit, Outside Canada"); separators are hidden. Long trails wrap; they are never cut at the start any more <span class="tag con">[CONFLICT] P-115/concept m4 "cut at the start" vs the founder's wrap — wrap wins if the founder agrees</span>.</p>
+</div>
+
+<!-- ============ 5. APP-WIDE SYSTEM ============ -->
+<div class="sec"><h2>5 · App-wide visual system — decided once, used by S1–S7</h2>
+<div class="opts">
+ <div class="opt is-rec"><h4><span class="tag rec">★ Recommended</span> A · Level tokens + a small set of shared components</h4><div class="why">Four <code>--color-level-*</code> tokens (light + dark, in the contrast test) and shared components: LevelMark, LevelBadge, Trail, StatusChip, NeedYouChip, SetupBar, NextStep, PathwaySection, SetupCard. Every screen imports them; a screen never styles a level itself.</div>
+  <div class="score"><span>Scale</span><span>One change restyles every screen</span><span>Risk</span><span>Low: no new technology, Tailwind utilities from tokens</span></div>
+  <div class="ann"><span class="tag dec">[F P-48] tokens only, team components first</span><span class="tag gap">[GAP] where the tokens live (Lead: tokens.css is copied from the team)</span></div></div>
+ <div class="opt"><h4>B · Written rules only, each screen applies them</h4><div class="why">EXPERIENCE.md gets the rules; each lane hand-styles.</div>
+  <div class="score"><span>Scale</span><span>Drifts by S5; reviewers must catch each difference</span><span>Risk</span><span>Medium</span></div></div>
+ <div class="opt"><h4>C · Adopt the team's program-node palette as is</h4><div class="why">Copy <code>TYPE_STYLES</code> (raw Tailwind hues) for levels.</div>
+  <div class="score"><span>Scale</span><span>Fine</span><span>Risk</span><span>Status colour clash (§0 A); raw hues need the team's allow-list exception</span></div>
+  <div class="ann"><span class="tag con">[CONFLICT] team lint bans raw hues outside its allow-list</span></div></div>
+</div>
+<h3 class="sub">Colour tokens with contrast (computed, WCAG 2.2: text 4.5 : 1, marks and focus 3 : 1)</h3>
+<table class="tok"><thead><tr><th>Token</th><th>Use</th><th>Light value</th><th>Light ratio</th><th>Dark value</th><th>Dark ratio</th></tr></thead><tbody>
+<tr><td>text</td><td>body, headings</td><td><span class="sw" style="background:#2d2d2d"></span>#2D2D2D</td><td>13.8 white · 12.9 surface</td><td><span class="sw" style="background:#eee"></span>#EEEEEE</td><td>13.3 raised · 14.2 surface</td></tr>
+<tr><td>text-muted</td><td>context, captions</td><td><span class="sw" style="background:#595959"></span>#595959</td><td>7.0 · 6.5</td><td><span class="sw" style="background:#a9b7c4"></span>#A9B7C4</td><td>7.5 · 8.1</td></tr>
+<tr><td>text-link</td><td>links, outline-button text</td><td><span class="sw" style="background:#054e9c"></span>#054E9C</td><td>8.2 · 7.6</td><td><span class="sw" style="background:#2aa1ff"></span>#2AA1FF</td><td>5.6 · 6.0</td></tr>
+<tr><td><b>level-pathway</b> (new)</td><td>Pathway text, mark, band bar</td><td><span class="sw" style="background:#37506e"></span>#37506E · band #EFF1F3</td><td>8.3 · 7.7 · 7.3 band</td><td><span class="sw" style="background:#a9c0dc"></span>#A9C0DC · band #263545</td><td>8.3 · 8.9 · 6.7 band</td></tr>
+<tr><td><b>level-program</b> (new)</td><td>Program text, mark</td><td><span class="sw" style="background:#0b6477"></span>#0B6477 · tint #EBF3F4</td><td>6.8 · 6.3 · 6.0</td><td><span class="sw" style="background:#5fd0de"></span>#5FD0DE · tint #1F3745</td><td>8.5 · 9.1 · 6.8</td></tr>
+<tr><td><b>level-combination</b> (new)</td><td>Category + Sub-category</td><td><span class="sw" style="background:#043a73"></span>#043A73 (team primary-800)</td><td>11.3 · 10.6</td><td><span class="sw" style="background:#9ccbff"></span>#9CCBFF</td><td>9.1 · 9.7</td></tr>
+<tr><td>chip Live</td><td>ok text on ok/12</td><td>#0F5C2E on #E3F4E9</td><td>7.1</td><td>#4ADE80 on #183537</td><td>7.5</td></tr>
+<tr><td>chip Not ready</td><td>danger text on danger/12</td><td>#991B1B on #FBE5E5</td><td>6.9</td><td>#F87171 on #302632</td><td>5.2</td></tr>
+<tr><td>chip In setup</td><td>text on text/8</td><td>#2D2D2D on #EEEEEE</td><td>11.9</td><td>#EEEEEE on #293643</td><td>10.6</td></tr>
+<tr><td>chip AI</td><td>AI marker</td><td>#6D28D9 on #EFE7FD</td><td>5.9</td><td>#C4B5FD on #24284A</td><td>7.7</td></tr>
+<tr><td>chip need you</td><td>warn text on warn/15</td><td>#663200 on #FFEDD9</td><td>9.1</td><td>#FFB454 on #3B342C</td><td>7.0</td></tr>
+<tr><td>primary button</td><td>filled next step</td><td>#FFFFFF on #0862C5</td><td>5.9</td><td>#EEEEEE on #0694FF38 over raised</td><td>9.6</td></tr>
+<tr><td>bar segments</td><td>done / current / to do</td><td>#16A34A 3.3 · #0862C5 5.9 · #EEEEEE (words carry it)</td><td>non-text</td><td>#16A34A 4.7 · #2AA1FF 5.6</td><td>non-text</td></tr>
+</tbody></table>
+<p class="note">Danger text on the dark teal tint is 4.49 : 1, so a status chip never sits on a level tint (it sits on the row or card). The app keeps the light muted override (#595959) the team's token needs <span class="tag con">[CONFLICT] team token-contrast note says 4.96 : 1, measured 4.42 : 1 (known, kept)</span>.</p>
+
+<h3 class="sub">Rules every screen follows</h3>
+<div class="two"><ul class="tight">
+<li><b>Levels</b> only through LevelMark / LevelBadge / Trail; never colour a level by hand.</li>
+<li><b>Status</b> only through StatusChip (shape + icon + word); status colours are never used for levels, and level colours never for status.</li>
+<li><b>Selection</b> = primary tint + 3 px primary left bar; hover = text/3 on rows, text/5 on items; focus = 3 px ring at 50 %.</li>
+<li><b>One next step per card or row</b>: filled when it counts in "need you", outline otherwise, link for Open; one filled page action (New combination) in the title row.</li>
+<li><b>Surfaces</b>: page #F7F7F7, cards and tables white with a 1 px border, radius 12 (cards) / 10 (tables) / 8 (controls); raised shadow only on cards with work in progress.</li>
+</ul><ul class="tight">
+<li><b>Type</b>: 24 page title · 18 section header · 16 card title and Pathway rows · 14 UI · 12 meta; Proxima Nova for headings; no 13 / 15 px <span class="tag dec">[F P-48]</span>.</li>
+<li><b>Spacing</b>: 4 px grid; card padding 12–14; row 40 (tree) / 44 (list); gaps 8 / 12.</li>
+<li><b>Motion</b>: 150 ms colour/shadow only; AI stripes stop under reduced motion.</li>
+<li><b>Widths</b>: 1440 three card columns · 1024 two · 390 one; list collapses to stacked rows at 390; 200 % zoom = the 720 px layout.</li>
+<li><b>Tooltips</b> on every level badge ("Program: a group of related applications, such as Work permits"), status, icon-only button and count.</li>
+</ul></div>
+
+<h3 class="sub">How S3–S7 use it <span class="tag cap">Capability · Needed</span></h3>
+<table class="tok"><thead><tr><th>Screen</th><th>Uses</th></tr></thead><tbody>
+<tr><td>S3 New combination</td><td>Four pickers each show the LevelMark in the option list; "You are opening" is the Trail at 16 px with StatusChip and one NextStep.</td></tr>
+<tr><td>S4 Form library</td><td>"Used in" column = Trail (12 px, identity navy); form status chips; the run card's progress uses SetupBar's stripes.</td></tr>
+<tr><td>S5 Combination workspace</td><td>Header = context Trail + identity title + StatusChip + one NextStep; the 4-step SetupBar as the header stepper.</td></tr>
+<tr><td>S6 Shared library</td><td>"Where used" = Trail list grouped by PathwaySection; AI chips; review rows 44 px.</td></tr>
+<tr><td>S7 Reset and sample</td><td>Summary lists each loaded combination as a Trail; empty states use the level mark of what to add first.</td></tr>
+</tbody></table>
+
+<h3 class="sub">Dark theme specimen (always dark) and 390 px</h3>
+<div class="two">
+ <div class="dk" style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid #2c3a48">
+  <div class="sh" style="margin-top:0"><span class="lm l1"></span><b>Temporary residence</b><span class="n">12 combinations</span><span class="chip need">2 need you</span></div>
+  <div class="cards" style="grid-template-columns:1fr 1fr">
+   <article class="card"><div class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Visitors</span></div><div class="hd"><h3>Super visa</h3><span class="chip set">◌ In setup</span></div><div class="subl none">No sub-category</div><div class="setup"><span class="bar"><i class="d"></i><i class="d"></i><i class="c"></i><i></i></span><span class="cap">Step 3 of 4 · Review</span></div><div class="ft"><span class="btn pri">✦ Review 84 AI proposals</span></div></article>
+   <article class="card"><div class="trail sm"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Work permits</span></div><div class="hd"><h3>Employer-specific work permit</h3><span class="chip live">✓ Live</span></div><div class="subl"><span class="lm l4"></span>With an LMIA</div><div class="setup"><span class="bar"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i></span><span class="cap">Step 4 of 4 · Live</span></div><div class="ft"><span class="btn ghost">Open</span></div></article>
+  </div>
+  <div class="tree mini" style="margin-top:10px"><div class="tr r1"><div class="nm"><span class="chev">▾</span><span class="lm l1"></span><span class="t">Temporary residence</span><span class="lb l1">Pathway</span></div><span></span><span></span><span class="ct">12</span></div><div class="tr r2"><div class="nm"><span class="gd t"></span><span class="chev">▾</span><span class="lm l2"></span><span class="t">Work permits</span><span class="lb l2">Program</span></div><span></span><span></span><span class="ct">7</span></div><div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd l"></span><span class="chev">▾</span><span class="lm l3"></span><span class="t">Employer-specific work permit</span></div><span></span><span></span><span></span></div><div class="tr r4"><div class="nm"><span class="gd"></span><span class="gd"></span><span class="gd l"></span><span class="lm l4"></span><span class="t">With an LMIA</span></div><span class="chip live">✓ Live</span><span class="loc">Outside Canada</span><span></span></div></div>
+ </div>
+ <div style="width:390px;max-width:100%;background:var(--surface);border:1px solid var(--border-s);border-radius:16px;padding:10px">
+  <div style="font-size:12px;color:var(--muted);margin-bottom:6px">390 px · list rows stack; cards one column</div>
+  <div class="list"><div class="pg"><span class="chev">▾</span><span class="lm l1"></span><b>Temporary residence</b><span class="n">· 12</span></div>
+   <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:grid;gap:6px"><span class="trail"><span class="p0">Retail</span><span class="s">›</span><span class="p1">Temporary residence</span><span class="s">›</span><span class="p2">Work permits</span><span class="s">›</span><span class="idn"><b>Open work permit</b><span class="s">›</span>Spouse of a student</span></span><div style="display:flex;gap:8px;align-items:center"><span class="chip nr">! Not ready</span><span class="bar" style="flex:1"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i></span></div><span class="btn pri sm" style="width:fit-content">See 1 missing</span></div></div>
+ </div>
+</div>
+
+<h3 class="sub">States under the system (every screen draws these, EXPERIENCE §4)</h3>
+<div class="cards">
+ <div class="callout"><b>Empty (after Reset)</b><p class="why">No combinations in Temporary residence yet. Add its programs and categories on the <a style="color:var(--link)">Structure</a>; each appears here as a card.</p><span class="btn out sm">Open Structure</span></div>
+ <div class="callout"><b>Nothing matches</b><p class="why">Nothing matches "visiter". 1 match in Corporate and employers: <a style="color:var(--link)">Show it</a></p><span class="btn sm">Clear search</span></div>
+ <div class="callout"><b>Error</b><p class="why" style="color:var(--t-danger)">The combinations did not load. Your filters are kept.</p><span class="btn sm">Retry</span></div>
+ <div class="callout"><b>Read-only (approver)</b><p class="why">Actions stay visible and disabled; the tooltip says "Only a configuration author can change setup. You can read."</p></div>
+ <div class="callout"><b>Conflict</b><p class="why">Someone else renamed "Visitors" while you edited it.</p><span class="btn sm">Reload</span> <span class="btn sm">Keep mine</span></div>
+ <div class="callout"><b>Loading</b><div class="sk" style="margin:8px 0;width:80%"></div><div class="sk" style="width:60%"></div><p class="why">Skeletons keep the card and row shapes.</p></div>
+</div>
+</div>
+
+<!-- ============ 6. WHAT ELSE + NOTHING CUT ============ -->
+<div class="sec"><h2>6 · What else improves on these two screens, and nothing is cut</h2>
+<div class="two"><div><h3 class="sub">Further improvements (founder point 5)</h3><ol style="padding-left:20px;margin:0">
+<li><b>Card view section headers</b> use the Pathway level (slate square, 18 px, 2 px slate rule) — same as the list band. <span class="tag cap">Capability · Needed</span></li>
+<li><b>Pathway filter cards</b> carry the slate square; the selected one keeps primary blue. <span class="tag cap">Capability · Needed</span></li>
+<li><b>Aligned columns in the tree</b> (Status · Cases may be opened from · Combinations) with a slim header. <span class="tag cap">Capability · Needed</span></li>
+<li><b>Card rows line up</b>: footers at the same height across a row (cards stretch); chips aligned top-right. <span class="tag cap">Capability · Needed</span></li>
+<li><b>Not started cards are flat</b> (no shadow) so cards in setup read as raised; information unchanged. <span class="tag cap">Capability · Needed</span></li>
+<li><b>Search takes the free width</b> (early-look item 5) and keeps ⌘K. <span class="tag dec">[F founder 27 Oct fix]</span></li>
+<li><b>Panel "Used by" and "Where used"</b> become Trail rows with chips, not underlined blue links. <span class="tag cap">Capability · Needed</span></li>
+<li><b>Sticky Pathway bands</b> in the list and sticky section headers in cards. <span class="tag cap">Capability · Needed</span></li>
+<li><b>Level badge tooltips</b> explain each level in one sentence (§5). <span class="tag cap">Capability · Needed</span></li>
+<li>Colour per Pathway: drawn in §8 as a 4 px accent stripe only (names stay slate). Not proposed: drag-to-reorder, icons per program (decoration without information). <span class="tag nb">Not built</span></li></ol></div>
+<div><h3 class="sub">Today's elements → where they sit now (no control or field cut)</h3>
+<table class="tok"><tbody>
+<tr><td>Title, ⓘ, subtitle, Structure, New combination</td><td>unchanged</td></tr>
+<tr><td>Retail / Corporate tabs with counts</td><td>unchanged (Pathway type)</td></tr>
+<tr><td>Pathway cards + Add pathway</td><td>+ slate mark</td></tr>
+<tr><td>Search ⌘K, Status menu, Cards / List</td><td>unchanged; search wider</td></tr>
+<tr><td>Counts line + "Names are Sample…"</td><td>unchanged</td></tr>
+<tr><td>Section: name, count, need you, collapse</td><td>Pathway level styling</td></tr>
+<tr><td>Card: trail, status, title, sub-category, bar, step text, forms / Filed, Matches, overdue ⚠, next step, AI View + Stop</td><td>all kept (anatomy 1–7)</td></tr>
+<tr><td>List: Combination, Status ⇅, Setup, Next step, Filed line</td><td>all kept</td></tr>
+<tr><td>Tree: chevrons, level badge, status, location, count, + Add rows, Retired, Find, Expand / Collapse all, counts line</td><td>all kept, aligned</td></tr>
+<tr><td>Panel: trail, used by, meaning check, name, order, where used, history, Remove, Retire, Close, Save</td><td>all kept</td></tr>
+<tr><td>Demo switch, Acting as, Simulated, Load sample / Reset, sidebar note</td><td>kept <span class="tag scaf">Scaffolding</span></td></tr>
+</tbody></table></div></div>
+</div>
+
+<!-- ============ 7. PAGE NAME ============ -->
+<div class="sec"><h2>7 · The Structure page's name (Lead ask, 27 Oct)</h2>
+<p>The name appears in four places: the left menu, the page title, the secondary button on Immigration programs, and the copy that sends people there ("Open Structure", "Add to structure" on New combination). Each option is drawn in the menu and the title. The team's own page is titled "Programs &amp; Streams" with the tree labelled "Program hierarchy" (<code>spineAuthoring.json</code>).</p>
+<div class="opts" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+ <div class="opt"><h4>Keep "Structure"</h4><div class="stage"><nav class="side" style="border:1px solid var(--border);border-radius:8px"><div class="g">Configure</div><a>To review</a><a>Immigration programs</a><a class="on">Structure</a></nav><h3 style="font-size:20px;margin-top:8px">Structure</h3><div class="why">Button: <span class="btn sm">Structure</span></div></div>
+  <div class="score"><span>Plain</span><span>Short, but structure of what? Needs the subtitle to make sense</span><span>Pairs</span><span>Unrelated to "Immigration programs" above it</span><span>Change</span><span>None</span></div></div>
+ <div class="opt is-rec"><h4><span class="tag rec">★ Recommended</span> "Program structure"</h4><div class="stage"><nav class="side" style="border:1px solid var(--border);border-radius:8px"><div class="g">Configure</div><a>To review</a><a>Immigration programs</a><a class="on">Program structure</a></nav><h3 style="font-size:20px;margin-top:8px">Program structure</h3><div class="why">Button: <span class="btn sm">Program structure</span></div></div>
+  <div class="score"><span>Plain</span><span>Says what it is: how the programs are arranged</span><span>Pairs</span><span>Reads as the companion of "Immigration programs": the list of what can be opened, and how it is arranged</span><span>Change</span><span>Menu, title, button, 3 copy lines</span></div>
+  <div class="ann"><span class="tag gap">[GAP] amends P-115 menu names</span></div></div>
+ <div class="opt"><h4>"Program combinations" (founder's idea)</h4><div class="stage"><nav class="side" style="border:1px solid var(--border);border-radius:8px"><div class="g">Configure</div><a>To review</a><a>Immigration programs</a><a class="on">Program combinations</a></nav><h3 style="font-size:20px;margin-top:8px">Program combinations</h3><div class="why">Button: <span class="btn sm">Program combinations</span></div></div>
+  <div class="score"><span>Plain</span><span>Familiar word</span><span>Pairs</span><span><b>Blurs:</b> Immigration programs already lists every combination; two menu items would both sound like "the combinations", and this page also holds Pathways and Programs that are not combinations</span><span>Change</span><span>Same as Program structure</span></div>
+  <div class="ann"><span class="tag con">[CONFLICT] PRODUCT §4: a combination is the last level only</span></div></div>
+ <div class="opt"><h4>"Pathways and programs" (one more)</h4><div class="stage"><nav class="side" style="border:1px solid var(--border);border-radius:8px"><div class="g">Configure</div><a>To review</a><a>Immigration programs</a><a class="on">Pathways and programs</a></nav><h3 style="font-size:20px;margin-top:8px">Pathways and programs</h3><div class="why">Button: <span class="btn sm">Pathways and programs</span></div></div>
+  <div class="score"><span>Plain</span><span>Names the top two levels the page holds</span><span>Pairs</span><span>"programs" twice in the menu; leaves out categories</span><span>Change</span><span>Same</span></div></div>
+</div>
+<p class="note">If "Program structure" is chosen, the copy changes are: menu item, page title, the Immigration programs button, the empty state link "Open Program structure", New combination "+ Add to program structure", and the tooltip "The program structure: pathways, programs, categories and sub-categories." The URL can stay <code>/structure</code>.</p>
+</div>
+
+<!-- ============ 8. PATHWAY CARDS AS THE WAY IN ============ -->
+<div class="sec"><h2>8 · Pathway cards as the main way into the Structure page (Lead asks, 27 Oct)</h2>
+<p><b>Three options: A cards beside the tree, B card grid with the tree in a panel, and C both views with a Cards / Tree switch (drawn below the first two; the reference they are compared against; recommended).</b> Large, styled Pathway cards (count, need you, a colour per Pathway); one click opens that Pathway's tree, so the page reads card → tree. Drawn next to today's layout. Every control stays: Pathway type tabs, Find a name, Expand all, Collapse all, All pathways, + Add pathway, the counts line, the tree with its "+ Add …" rows, and the details panel.</p>
+<div class="opts">
+ <div class="opt"><h4>Today · Cards row above the full tree</h4><div class="why">Small cards filter the tree below; "All pathways" shows every Pathway's tree in one long outline.</div>
+  <div class="stage" style="font-size:12px"><div class="pcs" style="grid-template-columns:repeat(4,1fr);gap:4px"><div class="pc on" style="min-height:44px;padding:4px 6px"><b style="font-size:12px">All</b><small>21</small></div><div class="pc" style="min-height:44px;padding:4px 6px"><b style="font-size:12px">Temporary</b><small>12</small></div><div class="pc" style="min-height:44px;padding:4px 6px"><b style="font-size:12px">Permanent</b><small>8</small></div><div class="pc" style="min-height:44px;padding:4px 6px"><b style="font-size:12px">Citizenship</b><small>1</small></div></div>
+   <div class="tree mini" style="margin-top:6px"><div class="tr r1"><div class="nm"><span class="chev">▾</span><span class="lm l1"></span><span class="t">Temporary residence</span></div><span></span><span></span><span class="ct">12</span></div><div class="tr r2"><div class="nm"><span class="gd t"></span><span class="lm l2"></span><span class="t">Visitors</span></div><span></span><span></span><span class="ct">3</span></div><div class="tr r2"><div class="nm"><span class="gd l"></span><span class="lm l2"></span><span class="t">Work permits</span></div><span></span><span></span><span class="ct">7</span></div><div class="tr r1"><div class="nm"><span class="chev">▾</span><span class="lm l1"></span><span class="t">Permanent residence</span></div><span></span><span></span><span class="ct">8</span></div><div class="tr r2"><div class="nm"><span class="gd l"></span><span class="lm l2"></span><span class="t">Economic immigration</span></div><span></span><span></span><span class="ct">3</span></div></div></div>
+  <div class="score"><span>50+</span><span>One outline of 70+ rows; cards only filter</span><span>Keyboard</span><span>Cards, then one tree tab stop</span><span>Find across Pathways</span><span>Easy: one tree</span><span>Reads</span><span>Cards look like filters, not the way in</span></div></div>
+ <div class="opt"><h4>A · Cards on the left, that Pathway's tree on the right</h4><div class="why">A column of large Pathway cards (master) and the open Pathway's tree beside it (detail); the details panel still opens on the right of the tree. "All pathways" stays as the first card and shows today's full outline.</div>
+  <div class="stage" style="display:grid;grid-template-columns:120px 1fr;gap:6px;font-size:12px">
+   <div style="display:grid;gap:4px"><div class="pc" style="min-height:40px;padding:4px 6px"><b style="font-size:12px">All pathways</b><small>21</small></div><div class="pc on" style="min-height:52px;padding:4px 6px;border-top:4px solid #50d0ff"><b style="font-size:12px"><span class="lm l1"></span>Temporary…</b><small>12 · <span class="chip need" style="padding:0 4px">2</span></small></div><div class="pc" style="min-height:52px;padding:4px 6px;border-top:4px solid #0694ff"><b style="font-size:12px"><span class="lm l1"></span>Permanent…</b><small>8</small></div><div class="pc" style="min-height:40px;padding:4px 6px;border-top:4px solid #2d2d2d"><b style="font-size:12px"><span class="lm l1"></span>Citizenship</b><small>1</small></div></div>
+   <div class="tree mini"><div class="tr r1" style="box-shadow:inset 4px 0 0 #50d0ff"><div class="nm"><span class="chev">▾</span><span class="lm l1"></span><span class="t">Temporary residence</span></div><span></span><span></span><span class="ct">12</span></div><div class="tr r2"><div class="nm"><span class="gd t"></span><span class="lm l2"></span><span class="t">Visitors</span></div><span></span><span></span><span class="ct">3</span></div><div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd l"></span><span class="lm l3"></span><span class="t">Visitor visa</span></div><span class="chip set">◌</span><span></span><span></span></div><div class="tr r2"><div class="nm"><span class="gd l"></span><span class="lm l2"></span><span class="t">Work permits</span></div><span></span><span></span><span class="ct">7</span></div></div></div>
+  <div class="score"><span>50+</span><span>One Pathway at a time (12–25 rows); the cards keep the whole picture in view</span><span>Keyboard</span><span>Cards are one radio group (arrows move, Enter opens); Tab to the tree; Esc from the panel returns to the row</span><span>Find across Pathways</span><span>Find searches every Pathway; each card shows "3 matches"; "No match in Temporary residence · 2 in Permanent residence: Show"</span><span>Reads</span><span>Card → tree, as asked</span></div>
+  <div class="ann"><span class="tag dec">[F team pane view: master column + detail]</span><span class="tag cap">Capability · Needed</span></div></div>
+ <div class="opt"><h4>B · Card grid; the tree opens in a side panel</h4><div class="why">The page is a grid of large Pathway cards; a click slides the tree in from the right over the cards.</div>
+  <div class="stage" style="position:relative;height:178px;font-size:12px"><div class="pcs" style="grid-template-columns:1fr 1fr;gap:6px"><div class="pc" style="border-top:4px solid #50d0ff"><b style="font-size:12px">Temporary residence</b><small>12 · 2 need you</small></div><div class="pc" style="border-top:4px solid #0694ff"><b style="font-size:12px">Permanent residence</b><small>8</small></div><div class="pc" style="border-top:4px solid #2d2d2d"><b style="font-size:12px">Citizenship</b><small>1</small></div><div class="pc add">+ Add pathway</div></div>
+   <div style="position:absolute;top:0;right:0;bottom:0;width:62%;background:var(--raised);border-left:1px solid var(--border);box-shadow:-6px 0 14px #0000001f;padding:6px"><b class="c1">Temporary residence</b><div class="c2" style="margin-top:4px"><span class="lm l2"></span> Visitors</div><div class="c3" style="padding-left:12px"><span class="lm l3"></span> Visitor visa</div><div class="c2"><span class="lm l2"></span> Work permits</div><div style="margin-top:6px;color:var(--t-danger)">Details would open a second panel on top</div></div></div>
+  <div class="score"><span>50+</span><span>Fine per Pathway; but the cards hide behind the panel</span><span>Keyboard</span><span>Focus moves into an overlay and back</span><span>Find across Pathways</span><span>Needs a separate search over the cards</span><span>Reads</span><span>Card → tree, but the details panel stacks on the tree panel</span></div>
+  <div class="ann"><span class="tag con">[CONFLICT] team: no stacked overlays (TEAM-PATTERNS "Overlays")</span></div></div>
+</div>
+
+<h3 class="sub" id="optc"><span class="tag rec">★ Recommended</span> C · Both views with a switch, like Immigration programs' Cards / List — the reference the other two are compared against</h3>
+<p class="note">One page, one switch <span class="seg" style="font-size:12px"><span class="on">▦ Cards</span><span>⋮ Tree</span></span> remembered per person (the same control and rule as Immigration programs, P-115). <b>Cards view</b>: large Pathway cards; opening one shows its Program cards, each listing its categories and sub-categories (the combinations) with small chips. <b>Tree view</b>: a light, compact outline whose connector lines take the colour of the level they come from (slate out of a Pathway, teal out of a Program, navy out of a Category), 1.5 px, softened; small chips; 30 px rows (36 px on phones); no boxes. Find a name, Expand all / Collapse all, the counts line, "+ Add …" rows and the details panel work the same in both views. <span class="tag cap">Capability · Needed</span> <span class="tag dec">[F P-115] Cards / List switch pattern</span> <span class="tag sample">Sample names: P-112 for 5; IRCC-style names for 50, all Sample</span></p>
+
+<h4 style="margin:14px 0 6px">C · Cards view at 1440 px (Temporary residence open)</h4>
+<div class="frame"><div class="ftitle">/structure?view=cards · Retail · Temporary residence open · the 50-combination Sample</div><div class="main">
+ <div class="ph"><h1>Program structure</h1><span class="info">i</span><span class="sp"></span><span class="seg"><span class="on">▦ Cards</span><span>⋮ Tree</span></span></div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"><span class="seg"><span class="on">Retail <em>50</em></span><span>Corporate and employers <em>8</em></span></span><span class="input" style="flex:1;min-width:180px">⌕ Find a name in every pathway</span><span class="btn">Expand all</span><span class="btn">Collapse all</span></div>
+ <p style="margin:0 0 10px;color:var(--muted)" id="c50line"></p>
+ <div class="pcs" style="grid-template-columns:180px repeat(3,minmax(0,1fr)) 150px">
+  <div class="pc"><b>All pathways</b><small>50 combinations</small><span class="chip need" style="width:fit-content">1 needs you</span></div>
+  <div class="pc on" style="border-top:4px solid #50d0ff;min-height:96px"><b style="font-size:16px;color:var(--lv1)"><span class="lm l1"></span>Temporary residence</b><small>5 programs · 24 combinations</small><small>1 Live · 3 In setup · 1 Not ready · 19 Not started</small><span class="chip need" style="width:fit-content">1 needs you</span></div>
+  <div class="pc" style="border-top:4px solid #0694ff"><b style="font-size:16px;color:var(--lv1)"><span class="lm l1"></span>Permanent residence</b><small>6 programs · 20 combinations</small><small>1 In setup · 19 Not started</small><small>none need you</small></div>
+  <div class="pc" style="border-top:4px solid #2d2d2d"><b style="font-size:16px;color:var(--lv1)"><span class="lm l1"></span>Citizenship</b><small>1 program · 6 combinations</small><small>6 Not started</small><small>none need you</small></div>
+  <div class="pc add">+ Add pathway</div></div>
+ <div style="margin:14px 0 8px;display:flex;gap:8px;align-items:center;border-bottom:2px solid var(--lv1-b);padding-bottom:6px"><span class="lm l1"></span><b style="font-size:18px;color:var(--lv1)">Temporary residence</b><span style="color:var(--muted)">5 programs · 24 combinations</span><span class="chip need">1 needs you</span></div>
+ <div id="pgcards" class="cards" style="grid-template-columns:repeat(3,minmax(0,1fr));align-items:start"></div>
+</div></div>
+
+<div style="margin-top:16px">
+ <div><h4 style="margin:0 0 6px">C · Tree view at 1440 px · 5 combinations (the founder's Retail five, P-112)</h4>
+  <div class="tree ctree" id="t5"></div></div>
+ <div style="margin-top:14px"><h4 style="margin:0 0 6px">C · Tree view at 1440 px · 50 combinations (scrolls; Pathways stay sticky)</h4>
+  <div class="tree ctree" id="t50" style="max-height:760px;overflow:auto"></div></div>
+</div>
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:16px">
+ <div class="phone"><div class="why">390 px · Tree · 5 combinations</div><div style="display:flex;gap:6px;margin:6px 0"><span class="seg" style="font-size:12px"><span>▦ Cards</span><span class="on">⋮ Tree</span></span><span class="input" style="flex:1;height:30px">⌕ Find</span></div><div class="tree ctree ph1" id="p5"></div></div>
+ <div class="phone"><div class="why">390 px · Tree · 50 combinations</div><div style="display:flex;gap:6px;margin:6px 0"><span class="seg" style="font-size:12px"><span>▦ Cards</span><span class="on">⋮ Tree</span></span><span class="input" style="flex:1;height:30px">⌕ Find</span></div><div class="tree ctree ph1" id="p50" style="max-height:640px;overflow:auto"></div></div>
+ <div class="phone"><div class="why">390 px · Cards · Temporary residence open</div><a style="color:var(--link)">‹ All pathways</a><div style="display:flex;gap:8px;align-items:center;margin:6px 0"><span class="lm l1"></span><b style="font-size:18px;color:var(--lv1)">Temporary residence</b><span class="chip need">1 needs you</span></div><div id="pgphone" class="cards" style="grid-template-columns:1fr;align-items:start"></div></div>
+</div>
+<div class="ann"><span class="tag cap">Capability · Needed: Cards / Tree switch remembered per person</span><span class="tag cap">Capability · Needed: connector lines in the parent level's colour</span><span class="tag cap">Capability · Needed: Program cards listing combinations with small chips</span><span class="tag nb">Not built: arrows on lines (the child's own mark ends each line, so an arrowhead adds noise)</span></div>
+<script>
+(function(){
+// [name, children] for Pathway/Program; category: [name, subs|null, status, location]; sub: [name, status, location]. All Sample.
+const D5=[["Temporary residence",[["Visitors",[["Visitor visa",null,"set","Outside Canada"]]],["Study permits",[["Study permit",[["Outside Canada","set","Outside Canada"]]]]],["Work permits",[["Employer-specific work permit",[["With an LMIA – inside Canada","live","Inside Canada"]]]]]]],
+ ["Permanent residence",[["Provincial nominees",[["Express Entry stream",null,"ns","Both"]]],["Family sponsorship",[["Spouse or common-law partner",null,"ns","Both"]]]]]];
+const D50=[["Temporary residence",[
+  ["Visitors",[["Visitor visa",null,"set","Outside Canada"],["Super visa",null,"set","Outside Canada"],["Extend stay in Canada",null,"ns","Inside Canada"],["Electronic travel authorization",null,"ns","Outside Canada"]]],
+  ["Study permits",[["Study permit",[["Outside Canada","set","Outside Canada"],["Inside Canada","ns","Inside Canada"]]],["Study permit extension",null,"ns","Inside Canada"]]],
+  ["Work permits",[["Employer-specific work permit",[["With an LMIA – inside Canada","live","Inside Canada"],["With an LMIA – outside Canada","ns","Outside Canada"],["LMIA-exempt (employer offer)","ns","Both"],["Intra-company transferee","ns","Both"]]],
+    ["International Experience Canada",[["Working holiday","ns","Outside Canada"],["Young professionals","ns","Outside Canada"],["International co-op","ns","Outside Canada"]]],
+    ["Open work permit",[["Post-graduation","ns","Inside Canada"],["Spouse of a skilled worker","ns","Both"],["Spouse of a student","nr","Both"],["Bridging","ns","Inside Canada"],["Vulnerable workers","ns","Inside Canada"]]],
+    ["Work permit extension",null,"ns","Inside Canada"]]],
+  ["Temporary resident permit",[["Temporary resident permit",null,"ns","Both"]]],
+  ["Restoration of status",[["Restoration",[["As a visitor","ns","Inside Canada"],["As a student","ns","Inside Canada"],["As a worker","ns","Inside Canada"]]]]]]],
+ ["Permanent residence",[
+  ["Economic immigration",[["Express Entry",[["Profile","ns","Both"],["Permanent residence application","ns","Both"]]],["Atlantic Immigration Program",null,"ns","Both"],["Rural community immigration",null,"ns","Both"],["Start-up visa",null,"ns","Outside Canada"],["Self-employed persons",null,"ns","Outside Canada"],["Agri-food pilot",null,"ns","Both"]]],
+  ["Provincial nominees",[["Express Entry stream",null,"ns","Both"],["Base stream (paper)",null,"ns","Both"]]],
+  ["Family sponsorship",[["Spouse or common-law partner",[["Applicant in Canada","ns","Inside Canada"],["Applicant outside Canada","set","Outside Canada"]]],["Dependent child",null,"ns","Both"],["Parents and grandparents",null,"ns","Outside Canada"],["Other relative",null,"ns","Outside Canada"]]],
+  ["Caregivers",[["Home child care provider",null,"ns","Both"],["Home support worker",null,"ns","Both"]]],
+  ["Humanitarian",[["Humanitarian and compassionate",null,"ns","Inside Canada"]]],
+  ["Permanent resident documents",[["PR card renewal",null,"ns","Inside Canada"],["Travel document",null,"ns","Outside Canada"]]]]],
+ ["Citizenship",[["Citizenship",[["Grant of citizenship",[["Adults","ns","Inside Canada"],["Minors","ns","Inside Canada"]]],["Proof of citizenship",null,"ns","Both"],["Search of citizenship records",null,"ns","Both"],["Resumption",null,"ns","Both"],["Renunciation",null,"ns","Both"]]]]]];
+const CH={live:'<span class="chip xs live">✓ Live</span>',set:'<span class="chip xs set">◌ In setup</span>',ns:'<span class="chip xs ns">Not started</span>',nr:'<span class="chip xs nr">! Not ready</span>'};
+const ADD=["program","category","sub-category"];
+function leaves(n,d){ if(d===2){return n[1]?n[1].length:1} return n[1].reduce((s,c)=>s+leaves(c,d+1),0)}
+function needs(n,d){ if(d===2){return n[1]?n[1].filter(s=>s[1]==="nr").length:(n[2]==="nr"?1:0)} return n[1].reduce((s,c)=>s+needs(c,d+1),0)}
+function guides(pre,last){let h="";pre.forEach((cont,k)=>{h+=`<span class="cg k${k} ${cont?"v":""}"></span>`});return h}
+function row(cls,pre,last,mark,name,extra,chip,loc,ct,phone){
+  const d=pre.length; let g=""; for(let k=0;k<d;k++){ if(k<d-1) g+=`<span class="cg k${k} ${pre[k]?"v":""}"></span>`; else g+=`<span class="cg k${k} ${last?"l":"t"}"></span>`; }
+  const nm=`<span class="t">${name}${phone&&loc?`<small class="pl">${loc}</small>`:""}</span>`;
+  return `<div class="tr cr ${cls}"><div class="nm">${g}${mark}${nm}${extra||""}</div>${chip||"<span></span>"}${phone?"":`<span class="loc">${loc||""}</span>`}${phone?"":`<span class="ct">${ct||""}</span>`}</div>`;
+}
+function render(data,phone){
+  let h=phone?"":'<div class="th"><span>Name</span><span>Status</span><span>Cases may be opened from</span><span style="text-align:right">Combinations</span></div>';
+  data.forEach(p=>{
+    const n=needs(p,0);
+    h+=row("r1 sticky",[],false,'<span class="chev">▾</span><span class="lm l1"></span>',p[0],n?` <span class="chip xs need">${n} needs you</span>`:"",null,null,`${leaves(p,0)}`,phone);
+    const progs=p[1];
+    progs.forEach((g,i)=>{
+      h+=row("r2",[true],false,'<span class="chev">▾</span><span class="lm l2"></span>',g[0],"",null,null,`${leaves(g,1)}`,phone);
+      const cats=g[1];
+      cats.forEach((c,j)=>{
+        if(c[1]){
+          h+=row("r3",[true,true],false,'<span class="chev">▾</span><span class="lm l3"></span>',c[0],"",null,null,`${c[1].length}`,phone);
+          c[1].forEach(s=>{h+=row("r4",[true,true,true],false,'<span class="lm l4"></span>',s[0],"",CH[s[1]],s[2],"",phone)});
+          h+=row("addr",[true,true,true],true,'<span class="lm add"></span>',"+ Add sub-category","",null,null,"",phone);
+        } else h+=row("r3",[true,true],false,'<span class="lm l3"></span>',c[0],"",CH[c[2]],c[3],"",phone);
+      });
+      h+=row("addr",[true,true],true,'<span class="lm add"></span>',"+ Add category","",null,null,"",phone);
+    });
+    h+=row("addr",[true],true,'<span class="lm add"></span>',"+ Add program","",null,null,"",phone);
+  });
+  h+=row("addr",[],true,'<span class="lm add"></span>',"+ Add pathway","",null,null,"",phone);
+  return h;
+}
+function progCard(g){
+  let rows="";
+  g[1].forEach(c=>{
+    if(c[1]){rows+=`<div class="pcr"><span class="lm l3"></span><b>${c[0]}</b></div>`;c[1].forEach(s=>{rows+=`<div class="pcr sub"><span class="lm l4"></span><span>${s[0]}</span>${CH[s[1]]}</div>`});rows+=`<div class="pcr sub addl">+ Add sub-category</div>`}
+    else rows+=`<div class="pcr"><span class="lm l3"></span><b>${c[0]}</b>${CH[c[2]]}</div>`;
+  });
+  return `<article class="card pgc"><div class="hd"><h3 style="color:var(--lv2)"><span class="lm l2"></span> ${g[0]}</h3><span class="cap">${leaves(g,1)} combinations</span></div>${rows}<div class="ft" style="min-height:36px;padding:6px 0"><span class="btn ghost sm" style="text-decoration:none">+ Add category</span></div></article>`;
+}
+const set=(id,h)=>{const e=document.getElementById(id); if(e) e.innerHTML=h};
+set("t5",render(D5,false)); set("t50",render(D50,false)); set("p5",render(D5,true)); set("p50",render(D50,true));
+const tr=D50[0][1];
+{let pw=D50.length,pg=0,ca=0,sc=0,co=0;D50.forEach(p=>p[1].forEach(g=>{pg++;g[1].forEach(c=>{ca++;if(c[1]){sc+=c[1].length;co+=c[1].length}else co++})}));set("c50line",`${pw} pathways · ${pg} programs · ${ca} categories · ${sc} sub-categories · <b style="color:var(--text)">${co} combinations</b>`);}
+set("pgcards",tr.map(progCard).join("")+'<div class="pc add" style="min-height:120px">+ Add program</div>');
+set("pgphone",tr.slice(0,2).map(progCard).join(""));
+})();
+</script>
+
+<h3 class="sub">A drawn in full at 1440 px <span class="tag cap">Capability · Needed</span> <span class="tag sample">Sample names and counts</span></h3>
+<div class="frame"><div class="ftitle">/structure · Retail · "Temporary residence" open · a name selected opens the details panel on the right (as in §1) <span class="tag dec">[F P-115] outline + side panel</span><span class="tag dec">[F P-116]</span></div>
+<div class="shell"><nav class="side"><div class="g">Configure</div><a>To review <span class="chip ai" style="float:right;padding:0 6px">1</span></a><a>Immigration programs</a><a class="on">Program structure</a><div class="g">Shared library</div><a>Fields</a><a>Sections</a><a>Document types</a><a>Forms</a><a>Checks</a><div class="g">History</div><a>AI work</a><a>Releases</a><a>Activity</a></nav>
+<div class="main">
+ <div class="ph"><h1>Program structure</h1><span class="info">i</span><div class="s">Where every combination sits: <span class="trail"><span class="p1">Pathway</span><span class="s">›</span><span class="p2">Program</span><span class="s">›</span><span class="idn"><b>Category</b><span class="s">›</span>Sub-category</span></span>. Pick a pathway to see its programs.</div></div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"><span class="seg"><span class="on">Retail <em>21</em></span><span>Corporate and employers <em>8</em></span></span><span class="input" style="flex:1;min-width:180px">⌕ Find a name in every pathway</span><span class="btn">Expand all</span><span class="btn">Collapse all</span></div>
+ <p style="margin:0 0 10px;color:var(--muted)">3 pathways · 7 programs · 15 categories · 11 sub-categories · <b style="color:var(--text)">21 combinations</b></p>
+ <div style="display:grid;grid-template-columns:260px minmax(0,1fr);gap:14px;align-items:start">
+  <div role="radiogroup" aria-label="Retail pathways" style="display:grid;gap:10px">
+   <div class="pc" style="min-height:64px"><b>All pathways</b><small>21 combinations · show every tree</small><span class="chip need" style="width:fit-content">2 need you</span></div>
+   <div class="pc on" style="border-top:4px solid #50d0ff;min-height:112px;padding:12px 14px"><b style="font-size:16px;color:var(--lv1)"><span class="lm l1"></span>Temporary residence</b><small>3 programs · 12 combinations</small><small>1 Live · 4 In setup · 1 Not ready · 6 Not started</small><span class="chip need" style="width:fit-content">2 need you</span></div>
+   <div class="pc" style="border-top:4px solid #0694ff;min-height:112px;padding:12px 14px"><b style="font-size:16px;color:var(--lv1)"><span class="lm l1"></span>Permanent residence</b><small>3 programs · 8 combinations</small><small>1 In setup · 7 Not started</small><small>none need you</small></div>
+   <div class="pc" style="border-top:4px solid #2d2d2d;min-height:100px;padding:12px 14px"><b style="font-size:16px;color:var(--lv1)"><span class="lm l1"></span>Citizenship</b><small>1 program · 1 combination</small><small>1 Not started</small><small>none need you</small></div>
+   <div class="pc add" style="min-height:56px">+ Add pathway</div>
+  </div>
+  <div class="tree" role="tree" aria-label="Temporary residence">
+   <div class="th"><span>Name</span><span>Status</span><span>Cases may be opened from</span><span style="text-align:right">Combinations</span></div>
+   <div class="tr r1" style="box-shadow:inset 4px 0 0 #50d0ff"><div class="nm"><span class="chev">▾</span><span class="lm l1"></span><span class="t">Temporary residence</span><span class="lb l1">Pathway</span><span class="chip need">2 need you</span></div><span></span><span></span><span class="ct">12 combinations</span></div>
+   <div class="tr r2"><div class="nm"><span class="gd t"></span><span class="chev">▾</span><span class="lm l2"></span><span class="t">Visitors</span><span class="lb l2">Program</span></div><span></span><span></span><span class="ct">3 combinations</span></div>
+   <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="chev"></span><span class="lm l3"></span><span class="t">Visitor visa</span><span class="lb l3">Category · combination</span></div><span class="chip set">◌ In setup</span><span class="loc">Outside Canada</span><span></span></div>
+   <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="chev"></span><span class="lm l3"></span><span class="t">Super visa</span><span class="lb l3">Category · combination</span></div><span class="chip set">◌ In setup</span><span class="loc">Outside Canada</span><span></span></div>
+   <div class="tr r3"><div class="nm"><span class="gd v"></span><span class="gd t"></span><span class="chev"></span><span class="lm l3"></span><span class="t">Extend stay in Canada</span><span class="lb l3">Category · combination</span></div><span class="chip ns">Not started</span><span class="loc">Inside Canada</span><span></span></div>
+   <div class="tr addr"><div class="nm"><span class="gd v"></span><span class="gd l"></span><span class="chev"></span><span class="lm add"></span><span class="t">+ Add category</span></div><span></span><span></span><span></span></div>
+   <div class="tr r2"><div class="nm"><span class="gd t"></span><span class="chev">▸</span><span class="lm l2"></span><span class="t">Study permits</span><span class="lb l2">Program</span></div><span></span><span></span><span class="ct">2 combinations</span></div>
+   <div class="tr r2"><div class="nm"><span class="gd t"></span><span class="chev">▸</span><span class="lm l2"></span><span class="t">Work permits</span><span class="lb l2">Program</span></div><span></span><span></span><span class="ct">7 combinations</span></div>
+   <div class="tr addr"><div class="nm"><span class="gd l"></span><span class="chev"></span><span class="lm add"></span><span class="t">+ Add program</span></div><span></span><span></span><span></span></div>
+  </div>
+ </div>
+ <div class="ann"><span class="tag cap">Capability · Needed: large Pathway cards (radio group) with counts by status and need you</span><span class="tag cap">Capability · Needed: Find across every Pathway with match counts on the cards</span><span class="tag con">[CONFLICT] VS-1 "every Pathway slate" vs the founder's colour per Pathway: the accent is only a 4 px stripe on the card and on its tree band; names stay slate</span></div>
+</div></div></div>
+<p class="note">Pathway accents (Sample, decorative only, from the brand palette's non-status anchors): Temporary residence Sky #50D0FF · Permanent residence Electric Blue #0694FF · Citizenship Iron #2D2D2D; a fourth Pathway takes Slate #37506E, then they repeat. The stripe is never text and never the only cue (the name is always there), so it carries no contrast duty; Orange, green, red and violet are excluded because they mean status or AI. At 1024 px the card column narrows to 200 px and the details panel overlays the tree.</p>
+
+<h3 class="sub">A at phone width (390 px): cards first, then the tree as its own view</h3>
+<div style="display:flex;gap:16px;flex-wrap:wrap">
+ <div style="width:390px;background:var(--surface);border:1px solid var(--border-s);border-radius:16px;padding:12px">
+  <div style="font-size:12px;color:var(--muted);margin-bottom:6px">1 · Program structure</div>
+  <h3 style="font-size:20px">Program structure</h3>
+  <div style="display:grid;gap:8px;margin-top:8px"><span class="seg" style="width:fit-content"><span class="on">Retail <em>21</em></span><span>Corporate… <em>8</em></span></span><span class="input">⌕ Find a name in every pathway</span>
+   <div class="pc"><b>All pathways</b><small>21 combinations</small><span class="chip need" style="width:fit-content">2 need you</span></div>
+   <div class="pc" style="border-top:4px solid #50d0ff"><b style="color:var(--lv1)"><span class="lm l1"></span>Temporary residence ›</b><small>3 programs · 12 combinations</small><span class="chip need" style="width:fit-content">2 need you</span></div>
+   <div class="pc" style="border-top:4px solid #0694ff"><b style="color:var(--lv1)"><span class="lm l1"></span>Permanent residence ›</b><small>3 programs · 8 combinations · none need you</small></div>
+   <div class="pc" style="border-top:4px solid #2d2d2d"><b style="color:var(--lv1)"><span class="lm l1"></span>Citizenship ›</b><small>1 program · 1 combination · none need you</small></div>
+   <div class="pc add" style="min-height:44px">+ Add pathway</div></div>
+ </div>
+ <div style="width:390px;background:var(--surface);border:1px solid var(--border-s);border-radius:16px;padding:12px">
+  <div style="font-size:12px;color:var(--muted);margin-bottom:6px">2 · after tapping Temporary residence</div>
+  <a style="color:var(--link);font-size:14px">‹ All pathways</a>
+  <h3 style="font-size:20px;color:var(--lv1);margin-top:4px"><span class="lm l1"></span> Temporary residence</h3><div class="why">12 combinations · <span class="chip need">2 need you</span></div>
+  <div style="display:flex;gap:6px;margin:8px 0"><span class="btn sm">Expand all</span><span class="btn sm">Collapse all</span></div>
+  <div class="tree mini">
+   <div class="tr r2"><div class="nm"><span class="chev">▾</span><span class="lm l2"></span><span class="t">Visitors</span></div><span></span><span></span><span class="ct">3</span></div>
+   <div class="tr r3"><div class="nm"><span class="gd t"></span><span class="lm l3"></span><span class="t">Visitor visa</span></div><span class="chip set">◌ In setup</span><span></span><span></span></div>
+   <div class="tr r3"><div class="nm"><span class="gd t"></span><span class="lm l3"></span><span class="t">Super visa</span></div><span class="chip set">◌ In setup</span><span></span><span></span></div>
+   <div class="tr r3"><div class="nm"><span class="gd t"></span><span class="lm l3"></span><span class="t">Extend stay in Canada</span></div><span class="chip ns">Not started</span><span></span><span></span></div>
+   <div class="tr addr"><div class="nm"><span class="gd l"></span><span class="lm add"></span><span class="t">+ Add category</span></div><span></span><span></span><span></span></div>
+   <div class="tr r2"><div class="nm"><span class="chev">▸</span><span class="lm l2"></span><span class="t">Study permits</span></div><span></span><span></span><span class="ct">2</span></div>
+   <div class="tr r2"><div class="nm"><span class="chev">▸</span><span class="lm l2"></span><span class="t">Work permits</span></div><span></span><span></span><span class="ct">7</span></div>
+  </div>
+  <div class="why">Location moves under the name on phones; tapping a name opens the details as a full-screen sheet with the same footer (Remove · Retire · Close · Save).</div>
+ </div>
+</div>
+<table class="tok"><thead><tr><th>Trade-off</th><th>C ★ Cards / Tree switch (reference)</th><th>Today (cards row above the full tree)</th><th>A cards left, tree right</th><th>B grid, tree in a panel</th></tr></thead><tbody>
+<tr><td>50+ combinations</td><td>Tree: one compact outline, 30 px rows, sticky Pathway rows (≈ 2.5 screens at 50); Cards: one Pathway at a time</td><td>One outline, 70+ rows with "+ Add" rows</td><td>12–25 rows per Pathway; the cards hold the totals</td><td>Same as A, cards hidden while the tree is open</td></tr>
+<tr><td>Keyboard</td><td>Switch is a 2-button group; Cards = radio group; Tree = one tab stop with arrows; same as Immigration programs</td><td>Cards then tree</td><td>Radio group of cards (arrows) → Tab → tree (arrows) → panel; Esc back</td><td>Focus trapped in the panel; a second panel would stack</td></tr>
+<tr><td>Find a name across Pathways</td><td>Tree: matches in place across all Pathways; Cards: match counts on Pathway cards, "Show" opens the Pathway</td><td>Natural: one tree</td><td>Searches all; match counts on cards; "Show" jumps; All pathways = full outline</td><td>Needs a separate search</td></tr>
+<tr><td>1024 px / 390 px</td><td>Cards 2 across, Tree columns hold / Cards stack, Tree shows location under the name</td><td>Fine / cards wrap above a long tree</td><td>Column 200 px, panel overlays / cards page → tree page</td><td>Panel covers most of the page / full screen</td></tr>
+<tr><td>Build cost</td><td>Two views, shared parts (Pathway card, tree rows, panel); two sets of keyboard and axe checks</td><td>None</td><td>One view</td><td>One view + overlay</td></tr>
+<tr><td>Information and controls kept</td><td>All, in both views (adds counts by status per Pathway)</td><td>All</td><td>All (adds counts by status per Pathway)</td><td>All, but details stack</td></tr>
+</tbody></table>
+</div>
+
+<!-- ============ 9. QUESTIONS ============ -->
+<div class="sec"><h2>9 · Questions for the founder (at most three, recommendation first)</h2>
+<div class="q"><b>Q1 · Level colours.</b> <b>Recommended: four calm hues — grey, slate, teal, navy — that never reuse a status colour</b> (§0 B; each Pathway may add its own accent stripe, §8), or the team's four hues as they are (amber, green, purple, blue; they clash with "need you", Live, AI and links)?</div>
+<div class="q"><b>Q2 · The Structure page.</b> <b>Recommended: both views with a switch, like Immigration programs — Cards (large Pathway cards that open into Program cards listing the combinations) and Tree (thin connector lines in each level's colour, small chips, 30 px rows)</b> (§8 C: the overview the founder asked for, and a tree that stays 2–3 screens at 50 with find across every Pathway; two views to build and test), or A cards beside one Pathway's tree (one view, cheaper), or B a card grid with the tree in a side panel (details would stack on it)?</div>
+<div class="q"><b>Q3 · The page's name.</b> <b>Recommended: "Program structure"</b> (says what it is and pairs with "Immigration programs"), or keep "Structure", or "Program combinations" (blurs with Immigration programs, which already lists every combination)?</div>
+<p class="note">Decided by the Lead unless the founder overrules (was Q3 before the Lead's 27 Oct additions): the next-step button is filled only on cards and rows that "need you"; Not started cards are flat. Lead items: where the level tokens live (tokens.css is the team's copied file) <span class="tag gap">[GAP]</span>; EXPERIENCE §1 "long text one line" and concept m4 "cut at the start" give way to the founder's wrap <span class="tag con">[CONFLICT]</span>; the page name amends P-115's menu names <span class="tag gap">[GAP]</span>; record the system in EXPERIENCE.md §1 once agreed.</p>
+</div>
+
+</div></body></html>
