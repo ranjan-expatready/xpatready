@@ -1,7 +1,7 @@
 {
- "at": "2026-10-26T14:44:53.585Z",
- "port": 4459,
- "database": "xr_studio_forms_aiorch",
+ "at": "2026-10-27T11:21:47.078Z",
+ "port": 4403,
+ "database": "xr_studio_aiorch",
  "paid_calls": 0,
  "test_switches": [
   "STUDIO_FAULT_SOURCE=imm5475e.pdf (phase 1)",
@@ -128,18 +128,18 @@
    "name": "compare again (no AI call) keeps every decision that still holds, including the person's change",
    "ok": true,
    "detail": {
-    "at": "2026-10-26T14:44:53.165Z",
+    "at": "2026-10-27T11:21:43.283Z",
     "by": "user-A",
-    "kept": 84,
-    "reopened": 0
+    "kept": 82,
+    "reopened": 2
    }
   },
   {
    "name": "apply twice at once: exactly one applies, the other is refused",
    "ok": true,
    "detail": [
-    409,
-    201
+    201,
+    409
    ]
   },
   {

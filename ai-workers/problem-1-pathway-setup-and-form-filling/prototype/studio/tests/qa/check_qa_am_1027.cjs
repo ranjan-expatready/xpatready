@@ -196,36 +196,36 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     // Removed endpoints answer 404, never 5xx.
     const gone = [["POST", "/captures"], ["GET", "/captures"], ["GET", "/extension/sessions"], ["POST", "/extension/pair"], ["GET", "/portals"], ["PATCH", `/combinations/${vv}/portal`], ["GET", `/combinations/${vv}/online-forms`], ["POST", "/online-versions/x/screen-map/draft"]];
     const res = []; for (const [m, u] of gone) res.push([`${m} ${u}`, (await call(m, u, m === "GET" ? undefined : {})).status]);
-    step("W1-02: capture, pairing, portal and screen-map endpoints are gone (404), none answers 5xx", res.every(([, s]) => s === 404), res);
+    step("C11.1 W1-02: capture, pairing, portal and screen-map endpoints are gone (404), none answers 5xx", res.every(([, s]) => s === 404), res);
     const a = await page(PB, "user-A", 1440);
     for (const u of ["/extension", "/review/capture/x", "/review/screen-map/x"]) {
       await a.goto(`${a.base}${u}`); await a.waitForLoadState("networkidle");
-      step(`W1-02: ${u} shows 'Page not found' with a way back, no page error`, await a.getByText("Page not found").count() === 1 && !errors.length, errors[0]);
+      step(`C11.1 W1-02: ${u} shows 'Page not found' with a way back, no page error`, await a.getByText("Page not found").count() === 1 && !errors.length, errors[0]);
     }
     await a.goto(`${a.base}/c/${vv}`); await a.getByRole("heading", { name: "Visitor visa", level: 1 }).waitFor();
     const body = await text(a, "body");
-    step("W1-02: no Extension, capture, pairing or 'Add an online form' anywhere on the menu or the combination page", !/Extension|Add an online form|Pair|Capture/i.test(body.replace(/browser extension \(later wave\)/gi, "")), body.match(/.{30}(Extension|Add an online form|Pair|Capture).{30}/i)?.[0]);
+    step("C11.1 W1-02: no Extension, capture, pairing or 'Add an online form' anywhere on the menu or the combination page", !/Extension|Add an online form|Pair|Capture/i.test(body.replace(/browser extension \(later wave\)/gi, "")), body.match(/.{30}(Extension|Add an online form|Pair|Capture).{30}/i)?.[0]);
     // An Online line shows the later-wave note (set through the API: the channel choice is not under test).
     await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "ONLINE" });
     await a.reload(); await a.getByRole("heading", { name: "Visitor visa", level: 1 }).waitFor();
     await a.getByText(/needs the browser extension \(later wave\)/i).first().waitFor({ timeout: 10000 }).catch(() => {});
-    step("W1-02: a line filed Online says it needs the browser extension (later wave)", /needs the browser extension \(later wave\)/i.test(await text(a)), (await text(a)).match(/.{40}later wave.{40}/i)?.[0]);
+    step("C11.1 W1-02: a line filed Online says it needs the browser extension (later wave)", /needs the browser extension \(later wave\)/i.test(await text(a)), (await text(a)).match(/.{40}later wave.{40}/i)?.[0]);
     await a.goto(`${a.base}/c/${vv}/preview`); await a.waitForLoadState("networkidle");
     await a.getByRole("button", { name: "Forms and coverage" }).click(); await a.waitForLoadState("networkidle");
     const prev = await text(a);
-    step("W1-02: Preview (draft) offers no Fill PDF on the Online line and says why", /needs the browser extension \(later wave\)/i.test(prev), prev.match(/.{60}IMM 5707.{80}/)?.[0] ?? prev.slice(0, 160));
+    step("C11.1 W1-02: Preview (draft) offers no Fill PDF on the Online line and says why", /needs the browser extension \(later wave\)/i.test(prev), prev.match(/.{60}IMM 5707.{80}/)?.[0] ?? prev.slice(0, 160));
     const refuse = await call("POST", `/combinations/${vv}/fill`, { form: "IMM 5707", person: "principal", mode: "draft" });
-    step("W1-02: the Studio fill of an Online line is refused (409) with the later-wave words", refuse.status === 409 && /later wave/.test(refuse.body?.detail ?? ""), `${refuse.status} ${refuse.body?.detail}`);
+    step("C11.1 W1-02: the Studio fill of an Online line is refused (409) with the later-wave words", refuse.status === 409 && /later wave/.test(refuse.body?.detail ?? ""), `${refuse.status} ${refuse.body?.detail}`);
     await shot(a, "w102-preview-online-line");
     await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "PDF_UPLOAD" });
     // Held file: an unapproved PDF is held, listed on To review, and the held page opens.
     const held = (await call("GET", "/intake/held")).body;
-    step("W1-02 intake: the held list answers (C2.2)", Array.isArray(held) || Array.isArray(held?.items), typeof held);
+    step("C11.1 W1-02 intake: the held list answers (C2.2)", Array.isArray(held) || Array.isArray(held?.items), typeof held);
     await a.goto(`${a.base}/review`); await a.getByRole("heading", { level: 1 }).waitFor();
     step("To review opens for the author with no page error", !errors.length, errors[0]);
     // PDF fill from the Studio still answers.
     const fill = await call("POST", `/combinations/${vv}/fill`, { form: "IMM 5257", person: "principal", mode: "release" });
-    step("W1-02 PDF fill: IMM 5257 from the release fills, reads back equal and stays intact", fill.status < 300 && fill.body?.report?.intact === true && fill.body.report.read_back_equal === fill.body.report.written, `${fill.status} ${fill.body?.report ? `${fill.body.report.read_back_equal}/${fill.body.report.written} intact ${fill.body.report.intact}` : fill.body?.detail}`);
+    step("C11.1 W1-02 PDF fill: IMM 5257 from the release fills, reads back equal and stays intact", fill.status < 300 && fill.body?.report?.intact === true && fill.body.report.read_back_equal === fill.body.report.written, `${fill.status} ${fill.body?.report ? `${fill.body.report.read_back_equal}/${fill.body.report.written} intact ${fill.body.report.intact}` : fill.body?.detail}`);
     const bad = await call("POST", `/combinations/${vv}/fill`, {});
     step("QA-47 STANDARDS §4: a fill request with no form or person is refused 400 in plain words (not 404 'undefined does not apply')", bad.status === 400 && !/undefined/.test(bad.body?.detail ?? ""), `${bad.status} ${bad.body?.detail}`);
 
