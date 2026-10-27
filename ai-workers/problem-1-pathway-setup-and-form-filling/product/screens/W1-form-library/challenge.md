@@ -102,6 +102,7 @@ Live AI tests after slice 1 (stated first, inside the US$40 cap): finder on 2 gu
 
 ## Agreement
 Agreed 2026-10-27 (Lead) for everything except M1, which is with the founder and affects slice 2 only. Builder agrees with the Lead response; slice 1 starts.
+Agreed 2026-10-27 (founder, through the Lead): **M1** — an upload is read rules first; AI with its checker round runs only when the rules cannot read the file, and the screen says "Rules read it: no AI call was made." Recorded on P-123. Slice 2 is built that way; slice 1 is unchanged.
 
 ## Build discoveries
 * **D1 · canada.ca answers plain requests from this Mac** (27 Oct): the forms index (231 rows), a form page and its PDF (IMM 1295, byte-identical to the manifest). The recorder then fetched 65 pages and PDFs, 0 failures, 0 redirects; 24 of 27 PDFs were identical to manifest rows; 3 new PDFs (IRM 0002, IMM 5782, IMM 0008 SCH4) got manifest rows. Guides are not rows of the index: they are linked from the application ("package") pages, which the index lists by name (88 links). M4 holds as built: package by sure rules match or AI pick, then its guide.
