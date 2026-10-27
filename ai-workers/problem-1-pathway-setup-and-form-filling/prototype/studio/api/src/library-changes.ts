@@ -7,10 +7,11 @@ import { createHash } from "node:crypto";
 import type { LibraryChange, Prisma } from "@prisma/client";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { ACTORS, type Actor, type Db } from "./core.ts";
+import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycle.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
-export const KIND_NOUN: Record<string, string> = { field: "shared field", section: "section", document_type: "document type", check: "check" };
+export const KIND_NOUN: Record<string, string> = { field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
 const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: "Delete", RETIRE: "Retire", RESTORE: "Restore", EDIT_RULE: "Change the rule of" };
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${status}`, title, status, detail }, status);
@@ -134,6 +135,7 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
   if (!(actor.duties as readonly string[]).includes("author")) throw problem(403, "Not allowed", `${actor.name} (simulated) does not hold the author duty.`);
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
+  if (isLifecycleKind(c.kind)) return withdrawLifecycle(db, actor, c, note); // W1-03: remove, retire or restore (P-116)
   if (c.kind !== "field" || c.action !== "ADD" || !["WAITING", "RETURNED"].includes(c.status)) throw problem(409, "Cannot withdraw", "Only a new shared field that is waiting or returned is withdrawn.");
   const why = (note ?? "").trim();
   if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
@@ -160,7 +162,13 @@ export async function publishLibraryChanges(tx: Prisma.TransactionClient, worksp
   const out: { kind: string; key: string; label: string; action: string }[] = [];
   for (const c of approved) {
     const rows = await versionsOf(tx, c.kind, workspaceId, c.key);
-    if (!rows) continue;
+    // W1-03 (P-116, api/src/lifecycle.ts): a structure name or a combination is retired or restored by this release.
+    if (!rows && !(await publishLifecycle(tx, c))) continue;
+    if (!rows) {
+      await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", releasedIn: pack } });
+      out.push({ kind: c.kind, key: c.key, label: c.label ?? c.key, action: c.action });
+      continue;
+    }
     if (c.action === "ADD") {
       for (const d of rows.filter((r) => r.status === "DRAFT")) { if (d.supersedesId) await setStatus(tx, c.kind, d.supersedesId, "SUPERSEDED"); await setStatus(tx, c.kind, d.id, "PUBLISHED"); }
     } else {

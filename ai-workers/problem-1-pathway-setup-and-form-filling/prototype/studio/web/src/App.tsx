@@ -1,6 +1,6 @@
 import * as React from "react";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Database, FileStack, FileText, Inbox, Layers, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
+import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/controls";
@@ -16,6 +16,7 @@ import { FieldsPage, FieldPage, SectionsPage, DocumentTypesPage } from "@/pages/
 import { ActivityPage, ReleasesPage } from "@/pages/history";
 import { AiBatchPage, AiWorkPage } from "@/pages/ai";
 import { ToReviewPage } from "@/pages/to-review";
+import { StructurePage } from "@/pages/structure";
 import { EditionImpactPage, HeldFilePage, LibraryChangePage, MergeReviewPage, FormFieldsPage } from "@/pages/review-items";
 import { RuntimeApp } from "@/runtime/cases";
 
@@ -33,6 +34,8 @@ function Shell() {
   const nav = [
     { to: "/review", label: "To review", icon: Inbox, badge: queue.data?.counts.needs || undefined },
     { to: "/", label: "Programs", icon: Layers, match: (p: string) => p === "/" || p === "/new" || p.startsWith("/c/") },
+    // W1-03 (P-115): the one place new names enter; "Programs" becomes "Immigration programs" with its redesign (slice 3).
+    { to: "/structure", label: "Structure", icon: ListTree },
     { to: "/library/fields", label: "Fields", icon: Database },
     { to: "/library/sections", label: "Sections", icon: Boxes },
     { to: "/library/documents", label: "Document types", icon: FileStack },
@@ -63,11 +66,11 @@ function Shell() {
       <div className="flex flex-1">
         <nav aria-label="Studio" className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 flex-col gap-0.5 border-r border-border bg-surface-raised p-3 md:flex">
           <p className="px-2 pb-1 pt-2 text-xs font-medium text-text-muted">Configure</p>
-          {nav.slice(0, 2).map((n) => <NavItem key={n.to} {...n} active={n.match ? n.match(loc.pathname) : undefined} />)}
+          {nav.slice(0, 3).map((n) => <NavItem key={n.to} {...n} active={n.match ? n.match(loc.pathname) : undefined} />)}
           <p className="px-2 pb-1 pt-4 text-xs font-medium text-text-muted">Shared library</p>
-          {nav.slice(2, 7).map((n) => <NavItem key={n.to} {...n} />)}
+          {nav.slice(3, 8).map((n) => <NavItem key={n.to} {...n} />)}
           <p className="px-2 pb-1 pt-4 text-xs font-medium text-text-muted">History</p>
-          {nav.slice(7).map((n) => <NavItem key={n.to} {...n} />)}
+          {nav.slice(8).map((n) => <NavItem key={n.to} {...n} />)}
           <div className="mt-auto rounded-lg border border-border bg-surface p-3 text-[11px] leading-relaxed text-text-muted">
             Simulated people; local PostgreSQL demo database. AI drafting uses the guarded prototype route (synthetic or public official inputs only). Not production.
           </div>
@@ -80,6 +83,7 @@ function Shell() {
           <Routes>
             <Route path="/" element={<ProgramsPage />} />
             <Route path="/review" element={<ToReviewPage />} />
+            <Route path="/structure" element={<StructurePage />} />
             <Route path="/review/change/:id" element={<LibraryChangePage />} />
             <Route path="/review/merge/:id" element={<MergeReviewPage />} />
             <Route path="/review/held/:id" element={<HeldFilePage />} />

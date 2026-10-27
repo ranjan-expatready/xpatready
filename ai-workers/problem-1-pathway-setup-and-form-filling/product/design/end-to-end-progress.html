@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wave 1 progress</title>
+<!--
+  End-to-end progress of the Pathway Configurator, Wave 1 (P-101). One template: the Lead edits only the DATA block
+  below at every merge or founder decision (same statuses as WAVE-1.md), then commits. The page draws itself.
+  Replaces the 26 Oct progress page (its 10 journey steps and "focus: ingestion and extension" are superseded by P-101).
+-->
+<style>
+:root{--bg:#f7f7f5;--card:#fff;--ink:#1d1d1b;--muted:#6b6b66;--line:#e4e3de;
+--done:#2f7d4f;--built:#5b8def;--agreed:#8e6bd8;--concept:#d9a23a;--research:#c9b48a;--todo:#e7e6e1;--parked:#b9b8b2;--open:#c8553d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--card:#20201f;--ink:#ecebe7;--muted:#a3a29c;--line:#34332f;--todo:#3a3935;--parked:#5a5955}}
+:root[data-theme="dark"]{--bg:#171716;--card:#20201f;--ink:#ecebe7;--muted:#a3a29c;--line:#34332f;--todo:#3a3935;--parked:#5a5955}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1040px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:32px 0 10px}
+.sub{color:var(--muted);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:10px 0 0}
+.legend i,.chip i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.row{display:grid;grid-template-columns:210px 1fr 230px;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row b{display:block}.row small{color:var(--muted)}
+.bar{display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--todo)}
+.bar span{display:block;height:100%;border-right:2px solid var(--card)}
+.cnt{font-size:13px;color:var(--muted);text-align:right}
+.now{border-left:4px solid var(--open);padding:10px 14px;background:var(--card);border-radius:6px;margin:6px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-top:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-top:0}
+.chip{white-space:nowrap;font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line)}
+details{background:var(--card);border:1px solid var(--line);border-radius:10px;margin:8px 0}
+summary{cursor:pointer;padding:10px 14px;font-weight:600}
+details .tw{padding:0 14px 10px;overflow-x:auto}
+.id{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+@media (max-width:700px){.row{grid-template-columns:1fr}.cnt{text-align:left}th:nth-child(3),td:nth-child(3){display:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>Pathway Configurator: Wave 1 progress</h1>
+<p class="sub" id="asof"></p>
+
+<div class="card" id="actors"></div>
+<div class="legend" id="legend"></div>
+
+<h2>Doing now, in order</h2>
+<div id="now"></div>
+
+<h2>Every item</h2>
+<div class="card" style="overflow-x:auto"><table id="items"><thead><tr><th>ID</th><th>Item</th><th>Lane</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+
+<h2>Founder asks of 26 Oct, one line each</h2>
+<p class="sub" id="askcount"></p>
+<div id="asks"></div>
+</main>
+
+<script>
+/* ===================== DATA: the Lead edits only this block (statuses as in WAVE-1.md) ===================== */
+const DATA = {
+  asOf: "27 Oct 2026",
+  focus: "Whole journey without the browser extension, actor by actor (P-101). Forms come in only as PDFs; the extension returns last, for online fill only.",
+  now: [
+    "Next /lead first asks the 8 saved grilling questions (founder-asks.md), one by one. Working surgically (P-117): one screen at a time; the Lead walks the founder through each one and moves on only on \"Founder OK\".",
+    "S1 Structure (merged 27 Oct): the Lead shows the founder a board for Pathway cards that open the tree, then the finish items are built: that layout, \"Used by\" names, toasts off the panel, menu background.",
+    "S2 Immigration programs, card layout (design D): next build after S1 is OK.",
+    "Alongside, no code: Lead checks the S4–S7 concept drafts so each is ready to show with 2–3 options."
+  ],
+  // status: done · built · agreed · concept · research · todo · parked
+  actors: [
+    { name: "Content publisher", sub: "structure, forms, AI drafts, curate, assemble", items: [
+      ["W1-01","Decisions, plan, lanes redirected, workflow trimmed","Lead","done","Merged"],
+      ["W1-02","Park the browser extension","forms","done","Merged 27 Oct; on :4400; qa next"],
+      ["W1-03","Structure page: five levels, Retail / Corporate tabs, duplicate and \"did you mean\" checks","screens","done","Merged 27 Oct; finish items are S1"],
+      ["W1-04","Immigration programs page redesign (design D)","screens","agreed","Agreed; slice 3 next"],
+      ["W1-05","New combination redesign (Rules / AI choice, mandatory marks, \"Linked to\" removed)","screens","agreed","Agreed; slice 4"],
+      ["W1-06","Form library as the one door, form finder, duplicate check, form × route channels","forms","concept","Concept draft; Lead check, then founder"],
+      ["W1-07","AI run experience: live steps, progress, plain errors, Stop","forms","concept","Concept draft"],
+      ["W1-08","Combination workspace cleanup (tabs, library-only forms, people explained, Configuration, Preview)","runtime","concept","Concept draft"],
+      ["W1-09","Shared library in setup order, AI duplicate check on manual adds","screens","concept","Concept draft"],
+      ["W1-10","AI drafts sections, document types, conditions, checks from the PDFs","forms","todo","Not started"],
+      ["W1-11","Reset empties everything; Load sample = the 5 combinations","runtime","concept","In the W1-08 concept draft"],
+      ["W1-12","Official forms for the 5 combinations identified and downloaded","Lead / evidence","research","Identified (Sample); PDFs not downloaded"],
+      ["W1-13","Content publisher end to end, tested like a person","qa","todo","Not started"],
+      ["W1-14","End-to-end map redrawn on today's decisions","Lead","todo","After W1-03–W1-09 concepts agreed"]
+    ]},
+    { name: "Immigration expert", sub: "second person, release, Sample values", items: [
+      ["W2","Second-person approvals, release gate, Sample values confirmed","screens · runtime","todo","Not started (approval and release mechanics exist on main)"]
+    ]},
+    { name: "AI everywhere designed", sub: "describe, propose, review, new editions", items: [
+      ["W3","Describe what you need, propose facts from documents, AI review, new-edition impact","forms","todo","Not started"]
+    ]},
+    { name: "Case officer / agent", sub: "open case, route, confirm, file", items: [
+      ["W4","Agent view: filing route per application, channel per form, confirm section by section, prepare and record the filing","m3","research","IRCC portal research done (P-113, P-114)"]
+    ]},
+    { name: "Client and prospect", sub: "PQR, SQR, sign", items: [
+      ["W5","PQR, SQR, sign","runtime","todo","Not started (R1 thin slice on main is reused)"]
+    ]},
+    { name: "Browser extension", sub: "online fill only", items: [
+      ["W6","Extension for online fill (capture does not return)","forms","parked","Parked on branch lead/parked-extension-2026-10-26"]
+    ]}
+  ],
+  // status: done · decided · partial · built · concept · todo · open
+  asks: [
+    { group: "Scope and way of working", rows: [
+      ["A1","Whole journey first without the extension, actor by actor","P-101","decided"],
+      ["A2","Remove all Chrome-extension work now","W1-02","done"],
+      ["A3","Forms come in only as PDFs; online fill later through the extension","P-102, P-113","decided"],
+      ["A4","Agent picks online, PDF or both per form; impossible choices refused","P-114 → W1-06 data, W4 screen","decided"],
+      ["A5","Decisions written so every /lead picks them up","WAVE-1.md, P-101–P-116","done"],
+      ["A6","Grill first; options before building","26 Oct grilling; every concept","done"],
+      ["A7","Simplify skills, rules, workflow","W1-01","done"],
+      ["A8","One ordered list to track","WAVE-1.md, its asks file, this page","done"]
+    ]},
+    { group: "Immigration programs and Structure", rows: [
+      ["B1","\"Individual\" renamed \"Retail\"","Structure built; Programs page in slice 3","partial"],
+      ["B2","Modern filled tabs","Structure built; Programs in slice 3","partial"],
+      ["B3","Menu and title \"Immigration programs\"","W1-04","todo"],
+      ["B4","Programs screen redesign: no filter-tab row, full trail, clear status","W1-04 design D","todo"],
+      ["B5","Masters for the five levels: where they live, add by hand, see links","W1-03 Structure page","done"],
+      ["B6","Only the 5 Retail combinations + 1 Corporate Sample on screen","Structure typed in on :4400 27 Oct; their forms come with W1-11","partial"]
+    ]},
+    { group: "New combination", rows: [
+      ["C1","Choose Rules, AI or Rules then AI, explained","P-105 → W1-05","todo"],
+      ["C2","Tooltips in plain words on every control","every slice","partial"],
+      ["C3","\"Linked to / Next step of / Supported by\" removed","P-106 → W1-05","todo"],
+      ["C4","Show what is mandatory and why Create is disabled","W1-05","todo"],
+      ["C5","\"Will be created as\" becomes \"You are opening\" (full trail confirmed)","W1-05","todo"]
+    ]},
+    { group: "Combination workspace", rows: [
+      ["D1","Forms added in one place, picked only from the library","W1-06 + W1-08","concept"],
+      ["D2","\"Add an online form\" and \"Portal: no portal yet\" removed","W1-02","done"],
+      ["D3","\"Filing: no forms yet\", Overview \"Add form\", \"Attach sample file\" removed","W1-08","concept"],
+      ["D4","\"People in this combination\" explained; Released / Recent steps only if useful","W1-08","concept"],
+      ["D5","Configuration (who fills, when) and Preview simplified","W1-08","concept"],
+      ["D6","Mark a form online, PDF or both","P-114 → W1-06","concept"]
+    ]},
+    { group: "Form library and the forms", rows: [
+      ["E1","AI adds a combination's forms; person may add; no duplicates; IRCC columns; find missing","P-103 → W1-06","concept"],
+      ["E2","Old forms deleted; fresh official copies for the 5 combinations","W1-12, W1-11","partial"]
+    ]},
+    { group: "Shared library and AI", rows: [
+      ["F1","Reset empties fields, sections, document types, forms, checks","P-108 → W1-11","concept"],
+      ["F2","Load sample = only the 5 combinations; masters arrive as AI proposals","P-108 → W1-11","concept"],
+      ["F3","Setup order combination → forms → fields; missing masters listed","W1-09","concept"],
+      ["F4","AI duplicate check when a person adds a field","W1-09","concept"],
+      ["F5","AI drafts the masters from the PDFs","W1-10","todo"],
+      ["F6","AI visible and working everywhere designed; never stuck; Stop","P-110 → W1-07, W3","concept"]
+    ]},
+    { group: "Later actors", rows: [
+      ["G1","Agent view inspired by IRCC's representative portals","m3 research → W4","partial"],
+      ["G2","Author, SQR per person role, review by person","runtime branch → W1-08, W2","partial"],
+      ["G3","Open case, confirm section by section, prepare and record the filing","W4","todo"],
+      ["G4","Case officer, then prospect, PQR, SQR, sign","W4, W5","todo"],
+      ["G5","Extension last, for online fill","W6","todo"],
+      ["G6","End-to-end map redrawn on today's decisions","W1-14","todo"]
+    ]},
+    { group: "Not yet decided (founder decides when the concept comes)", rows: [
+      ["H1","Bulk approve for AI proposals (demo needs 200+ clicks)","W1-09 / W1-10 concept","open"],
+      ["H2","\"Signed as\" per form (wet + scan, typed, portal declaration)","W4","open"],
+      ["H3","Filing prerequisites on the route (representative authorised, fee paid)","W4","open"],
+      ["H4","GitHub Actions blocked by billing (Lead runs suites locally)","founder","open"],
+      ["H5","Lead PRs #28 and #30 open since 25 Oct","founder","open"]
+    ]}
+  ]
+};
+/* ===================== end of DATA ===================== */
+
+const S = {
+  done:["Merged / done","var(--done)"], built:["Built, merge pending","var(--built)"], agreed:["Agreed, to build","var(--agreed)"],
+  concept:["Concept","var(--concept)"], research:["Research / partial","var(--research)"], todo:["Not started","var(--todo)"],
+  parked:["Parked","var(--parked)"], decided:["Decided","var(--agreed)"], partial:["Partial","var(--research)"], open:["Open: founder","var(--open)"]
+};
+const esc = t => String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const chip = k => `<span class="chip"><i style="background:${S[k][1]}"></i>${S[k][0]}</span>`;
+const order = ["done","built","agreed","concept","research","todo","parked"];
+
+document.getElementById("asof").textContent = `As of ${DATA.asOf}. ${DATA.focus}`;
+document.getElementById("actors").innerHTML = DATA.actors.map(a => {
+  const n = k => a.items.filter(i => i[3] === k).length;
+  const bar = order.map(k => n(k) ? `<span title="${S[k][0]}: ${n(k)}" style="flex:${n(k)};background:${S[k][1]}"></span>` : "").join("");
+  const parts = order.filter(n).map(k => `${n(k)} ${S[k][0].toLowerCase()}`).join(" · ");
+  return `<div class="row"><div><b>${esc(a.name)}</b><small>${esc(a.sub)}</small></div><div class="bar">${bar}</div><div class="cnt">${parts}</div></div>`;
+}).join("");
+document.getElementById("legend").innerHTML = order.map(k => `<span><i style="background:${S[k][1]}"></i>${S[k][0]}</span>`).join("");
+document.getElementById("now").innerHTML = DATA.now.map((t,i) => `<div class="now"><b>${i+1}.</b> ${esc(t)}</div>`).join("");
+document.querySelector("#items tbody").innerHTML = DATA.actors.flatMap(a => a.items).map(i =>
+  `<tr><td class="id">${esc(i[0])}</td><td>${esc(i[1])}<br><small style="color:var(--muted)">${esc(i[4])}</small></td><td>${esc(i[2])}</td><td>${chip(i[3])}</td></tr>`).join("");
+const all = DATA.asks.flatMap(g => g.rows), c = k => all.filter(r => r[3] === k).length;
+document.getElementById("askcount").textContent =
+  `${all.length} asks: ${c("done")} done · ${c("decided")} decided · ${c("built")} built · ${c("partial")} partial · ${c("concept")} concept · ${c("todo")} not started · ${c("open")} open for the founder.`;
+document.getElementById("asks").innerHTML = DATA.asks.map(g =>
+  `<details${g.rows.some(r => r[3] === "open") ? " open" : ""}><summary>${esc(g.group)} (${g.rows.length})</summary><div class="tw"><table><thead><tr><th>#</th><th>Ask</th><th>Where</th><th>Status</th></tr></thead><tbody>${
+    g.rows.map(r => `<tr><td class="id">${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${chip(r[3])}</td></tr>`).join("")
+  }</tbody></table></div></details>`).join("");
+</script>
+</body>
+</html>

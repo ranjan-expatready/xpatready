@@ -395,6 +395,8 @@ function pdf(title: string, text: string) {
   ok("round 3: two sample loads at once: one loads, the other is told it is already loading (never a 500)", twoLoads.filter((x) => x.status === 201).length === 1 && twoLoads.some((x) => x.status === 409 && /already loading|already exist/.test(x.body.message ?? x.body.detail)), twoLoads.map((x) => [x.status, x.body?.message ?? x.body?.seconds]));
   r = await call("POST", "/demo/reset", { confirm: "RESET" });
   ok("QA-12 setup: reset the demo copy", r.status === 201, r.body?.message);
+  // W1-03 (27 Oct): after a reset the Structure is empty in both tabs; a person adds the Pathway first.
+  await call("POST", "/structure/nodes", { pathwayType: "INDIVIDUAL", level: "pathway", label: "Individual" });
   r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "Hand-made" }, category: { create: "One row" } });
   ds = (await call("GET", "/demo/status")).body;
   const ses = (await call("GET", "/session")).body;

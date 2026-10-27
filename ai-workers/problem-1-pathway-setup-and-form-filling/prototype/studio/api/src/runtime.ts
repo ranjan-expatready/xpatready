@@ -71,6 +71,9 @@ export class Runtime {
     if (earlier) return earlier;
     const combination = await this.db.combination.findFirst({ where: { id: b.combinationId, workspaceId } });
     if (!combination) fail("No such combination.", HttpStatus.NOT_FOUND);
+    // W1-03 addendum A2 (P-116, Lead 26 Oct; screens lane): a release retired it, so no new case opens on it; cases
+    // already open keep their pinned release.
+    if (combination!.retiredAt) fail(`"${combination!.label}" was retired by a release: new cases are not opened on it. Cases already open keep their release.`, HttpStatus.CONFLICT);
     const release = await this.db.configRelease.findFirst({ where: { combinationId: b.combinationId }, orderBy: { version: "desc" } });
     if (!release) fail(`"${combination!.label}" has no released version yet: a case opens only on a released configuration.`, HttpStatus.CONFLICT);
     let client: Actor | null = null;
