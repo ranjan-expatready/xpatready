@@ -193,8 +193,9 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await p.getByRole("textbox", { name: /New pathway name in Retail/ }).fill("Temporary residence");
   await p.waitForFunction(() => /No exact match in Retail/.test(document.querySelector("[data-add-row]")?.textContent ?? ""));
   await p.getByRole("textbox", { name: /New pathway name in Retail/ }).press("Enter");
-  await p.getByRole("treeitem", { name: /^Temporary residence/ }).first().waitFor({ timeout: 15000 }).catch(() => {});
-  const pathways = (await api("/structure?pathwayType=INDIVIDUAL")).nodes.filter((n) => n.level === "pathway").map((n) => n.label);
+  // Waits for the saved row (the add row itself, which holds the typed name, is a treeitem too).
+  let pathways = [];
+  for (let i = 0; i < 40 && !pathways.length; i++) { pathways = (await api("/structure?pathwayType=INDIVIDUAL")).nodes.filter((n) => n.level === "pathway").map((n) => n.label); if (!pathways.length) await p.waitForTimeout(250); }
   step("B0b: the first Retail Pathway is added on the Structure page (P-112 name, typed in place)", pathways.join() === "Temporary residence", pathways.join());
   await go("/");
   // Layout v2 (P-35): no separate "Add program or category"; the New combination path builder (/new) picks or creates

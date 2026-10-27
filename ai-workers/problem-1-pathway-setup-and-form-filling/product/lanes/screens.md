@@ -8,13 +8,14 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 
 current_screen: W1-structure-programs
 stage: FIX
-owner: Builder
-next_action: FIX slices 1+2: studio journey Pass B adds its Retail Pathway on the Structure page first; B1 trail words; run the whole journey on an isolated copy (4445)
-then: FIX → Lead reruns and merges slices 1+2 to main → BUILD slice 3 (Immigration programs, design D) on a new branch from main, with the early look's three changes.
+owner: Lead
+next_action: Lead reruns the suites (with --demo) and merges slices 1+2 to main; then this lane starts BUILD slice 3 (Immigration programs, design D) on a new branch from main
+then: Lead merge → BUILD slice 3 with the early look's three changes (Used by names each combination with Open; toasts off the outline and panel; full-height left menu), then slice 4.
 blocked_by: none
 updated: 2026-10-27
 
 ## Log (last 10 lines)
+- 2026-10-27 · W1-structure-programs · FIX · studio journey (--demo suite) 45/45 on isolated copy 4445: Pass B adds the Retail Pathway 'Temporary residence' on the Structure page after Reset (B0b), B1 expects 'Individual › Temporary residence › Work permits (built from scratch) › …'; reset check now asserts both tabs empty; New combination trail names the type's one Pathway; check_screen01_browser 129/129, smallfix pass. AI US$0. Owner → Lead.
 - 2026-10-27 · W1-structure-programs · EARLY-LOOK → FIX · applied Lead note 2026-10-27 (founder Go on the Structure page; FIX the --demo studio journey: Pass B had no Pathway after Reset). AI US$0.
 - 2026-10-27 · W1-structure-programs · BUILD → EARLY-LOOK · slice 2 Structure page: all 33 suites PASS (incl. check_w1_structure 83/83, check_w1_structure_browser 61/61); 13 states × 1440/1024 screenshots, axe clean; any 434 = baseline; graph exit 0. AI US$0. Owner → Lead.
 - 2026-10-27 · W1-structure-programs · EARLY-LOOK → BUILD slice 2 · applied Lead note 2026-10-27 (slice 1 passed; L3 reading accepted; slices 1+2 merge together); Structure page built: outline with add rows and live checks, side panel (rename, locations, order, remove/retire/restore, history), every board state; check_w1_structure_browser 61/61, axe clean. AI US$0.
@@ -24,4 +25,3 @@ updated: 2026-10-27
 - 2026-10-25 · 02 · CHECK · journey re-scored to journey-test §6 rubric: 9.5/10 (was 8.5 un-rubriced); all four round-1 dead ends re-walked gone; report journey-test-reviewer-2026-10-25-r2.md; reviewer session also made the SC-2 one-line fix. AI US$0. Owner stays Lead.
 - 2026-10-25 · 02 · CHECK · applied Lead note 2026-10-25 12:30: synced main (F2 merge; conflicts resolved demo/main/App), committed the 3 granted test patches (246143f), SC-2 'used by n' added (was missing); reviewer Ship 8.5/10, breaker 0B/0M/3m (2 env: Chromium ArrowDown select, scout-check env-bound); 30 suites green incl. all F2. AI US$0. Owner → Lead.
 - 2026-10-25 · 02 · FIX → CHECK · all suites PASS with the other lanes' patches applied locally (23 + grounding 30 + studio journey 44 after approving new document types); main merged (e6c5958); reviewer + breaker round 2 started. AI US$0.
-- 2026-10-25 · 02 · FIX · pushed 5c1c814 (work in progress); Lead decided the other lanes' one-line test patches merge with this branch after forms merges.
