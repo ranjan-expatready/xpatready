@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-27 (Lead, Mac): **After-merge report read (b93d2ba). Lane assignments:** QA-44, QA-45 (Major), QA-46 → screens (in its FIX now); QA-48 (Gap, Major: retire and restore a Live combination) → screens, its own slice after S3; QA-47 → runtime (S5 slice 1). W1-02: clean, thank you. **Next: `/qa after-merge` on S2 Immigration programs (PR #53)** once it is on main: walk it like a content publisher (Pathway cards, Cards/List, Status, search incl. the other tab, need-you counts, Start setup never creates anything, Corporate callout, 1440/1024/390 px, keyboard, read-only role); the Form library and the combination workspace stay out of scope (being rebuilt). Own ports only; AI US$0.
+2026-10-27 22:50 (Lead, Mac): **Next: `/qa after-merge` on the screens S1/S2 FIX** (QA-44, 45, 46, 49, 50, review m1, break m8; Lead check passed, merged with the Lead's PR after the S2 report). Walk Program structure and Immigration programs like a content publisher: typed letters kept while a name saves, Add sub-category under a leaf category, "Remove" wording on approval and To review, the page follows the Structure's order (and a reorder), one Back after a double click on Start setup, the setup bar agrees with the next step, reads refused for case people and nobody (API). Close what passes, log what does not. Program structure is redrawn next (P-127), so log layout points as suggestions only. Own ports, AI US$0, put back by-products before you push.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

@@ -86,6 +86,9 @@ export function StructurePage() {
     const walk = (n: StructureNode, depth: number) => {
       if (matches && !matches.has(n.key)) return;
       out.push({ kind: "node", node: n, depth, expandable: expandable(n) });
+      // QA-45: a category with no sub-categories yet has no add row of its own; "Add sub-category" in the panel opens one
+      // under it, typed in place like every other.
+      if (!expandable(n) && n.level === "category" && adding?.level === "subCategory" && adding.parentKey === n.key) addRow("subCategory", n, depth + 1);
       if (!expandable(n) || (collapsed.has(n.key) && !matches)) return;
       for (const c of kids.get(n.key) ?? []) walk(c, depth + 1);
       const child = CHILD[n.level];
@@ -94,7 +97,7 @@ export function StructurePage() {
     for (const p of kids.get(null) ?? []) walk(p, 0);
     addRow("pathway", null, 0);
     return out;
-  }, [kids, collapsed, matches, canAuthor]);
+  }, [kids, collapsed, matches, canAuthor, adding]);
   const rowKey = (r: Row) => (r.kind === "node" ? r.node.key : r.key);
   const current = focusKey && rows.some((r) => rowKey(r) === focusKey) ? focusKey : rows[0] ? rowKey(rows[0]) : null;
   React.useEffect(() => { if (focusKey && treeRef.current?.contains(document.activeElement)) treeRef.current.querySelector<HTMLElement>(`[data-key="${CSS.escape(focusKey)}"]`)?.focus(); }, [focusKey, rows]);
@@ -314,8 +317,9 @@ function AddRow({ type, row, parent, onDone, onPick }: { type: PathwayType; row:
   const [busy, setBusy] = React.useState(false);
   const input = React.useRef<HTMLInputElement>(null);
   React.useEffect(() => { input.current?.focus(); }, []);
+  const refused = React.useRef<string | null>(null);
   React.useEffect(() => {
-    setError(null);
+    if (refused.current === label) refused.current = null; else setError(null); // a refused name put back keeps its reason
     if (!label.trim()) { setCheck(null); return; }
     setChecking(true);
     const t = setTimeout(() => api<Check>("/structure/name-check", { method: "POST", json: { pathwayType: type, level: row.level, parentKey: row.parentKey, label } })
@@ -325,14 +329,17 @@ function AddRow({ type, row, parent, onDone, onPick }: { type: PathwayType; row:
   const where = parent ? `under ${parent.label}` : `in ${TYPES.find((t) => t.value === type)!.label}`;
   const add = async (decision: "new" | "add_anyway") => {
     if (!label.trim() || busy) return;
-    setBusy(true); setError(null);
+    // QA-44: the box clears as the name is sent, so whatever is typed while it saves is kept; a refusal puts the name
+    // back only if nothing new was typed.
+    const sent = label;
+    setBusy(true); setError(null); setLabel(""); setCheck(null); setDone(`Adding "${sent.trim()}" ${where}…`);
     try {
-      const r = await api<{ key: string; label: string }>("/structure/nodes", { method: "POST", json: { pathwayType: type, level: row.level, parentKey: row.parentKey, label, decision, ...(hasLocs ? { allowedLocations: locs } : {}) } });
+      const r = await api<{ key: string; label: string }>("/structure/nodes", { method: "POST", json: { pathwayType: type, level: row.level, parentKey: row.parentKey, label: sent, decision, ...(hasLocs ? { allowedLocations: locs } : {}) } });
       setDone(`Added "${r.label}" ${where}.${row.level === "category" || row.level === "subCategory" ? " It is listed in Immigration programs as Not started." : ""} Type the next name, or Esc.`);
-      setLabel(""); setCheck(null);
       await Promise.all([qc.invalidateQueries({ queryKey: ["structure"] }), qc.invalidateQueries({ queryKey: ["catalogue"] })]);
       input.current?.focus();
     } catch (e) {
+      setDone(null); refused.current = sent; setLabel((now) => now || sent);
       const p: Refusal = e instanceof ApiError ? (e.problem as Refusal) : {};
       if (p.code === "close_names") setCheck({ exact: null, close: p.close ?? [] });
       else setError((e as Error).message);

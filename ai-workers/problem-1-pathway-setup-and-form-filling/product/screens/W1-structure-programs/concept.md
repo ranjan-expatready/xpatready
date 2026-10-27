@@ -64,6 +64,7 @@ Lead items, not founder questions: the challenger's M4 asks TAXONOMY §1 for a d
 | 15 | Only a configuration author adds, renames, sets locations and starts setup; everyone else reads, with the reason in the tooltip; enforced on the server. | STANDARDS §6 |
 
 ## 6. New combination (W1-05; board updated)
+**Superseded 27 Oct by P-125:** no New combination page; Start setup on a card opens the workspace with the place read-only; names enter only on Program structure. The text below is kept as history.
 A page (Immigration programs › New combination), so the "Add to structure" panel never stacks on another overlay. Card 1, "Describe it": the mode dropdown with tooltips; the cost is stated before the run. Card 2, "Where it sits": the Pathway type is a read-only chip from the tab, then four pickers listing Structure names only, light "Required" marks, sub-category "Required here" only when the category has sub-categories, "+ Add to structure" on each. The preview line **"You are opening"** (was "Will be created as") shows the full trail and its state (Not started → button "Start setup"; set up → "Open"). It stays because it is the one place the final trail is confirmed; the word "created" would now be untrue (M6). "Linked to" is removed. The disabled button says what is missing. At 1024 px the pickers sit 2 + 2 under the type chip.
 
 ## 7. States (all drawn)
