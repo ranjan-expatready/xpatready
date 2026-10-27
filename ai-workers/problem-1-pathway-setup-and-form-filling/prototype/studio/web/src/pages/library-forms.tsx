@@ -37,7 +37,7 @@ export function ChecksPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-5">
       <div><h1 className="text-2xl font-bold tracking-tight">Checks</h1><p className="mt-1 text-sm text-text-muted">Field validation, consistency checks, document validity and AI review objectives.</p></div>
-      <EmptyState title="Checks are set up on a later screen" description="This list is built with the shared-library screen (Screen 04). Combination rules and checks imported from the reviewed release are visible in each combination's full configuration." action={<Link className="text-sm text-text-link underline" to="/">Back to Programs</Link>} />
+      <EmptyState title="Checks are set up on a later screen" description="This list is built with the shared-library screen (Screen 04). Combination rules and checks imported from the reviewed release are visible in each combination's full configuration." action={<Link className="text-sm text-text-link underline" to="/">Back to Immigration programs</Link>} />
     </div>
   );
 }

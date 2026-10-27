@@ -32,6 +32,9 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   const b = await chromium.launch({ channel: "chrome", headless: true });
   const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "light", reducedMotion: "reduce" });
   const p = await ctx.newPage(); const errs = [];
+  // S2 (W1-04): Immigration programs opens as Cards by default; this suite checks the List view (the old Screen 01
+  // list: rows, roving focus, sort, Back), so every person starts with List remembered.
+  await p.addInitScript(() => { for (const a of ["user-A", "user-B", "user-C", "user-D"]) { try { localStorage.setItem(`xr-programs-view:${a}`, "list"); } catch { /* ignore */ } } });
   p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|status of 4\d\d/.test(m.text())) errs.push(m.text()); });
   const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json" }, data: init.data, timeout: init.timeout ?? 30000 }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   const idle = async () => { await p.waitForLoadState("networkidle").catch(() => {}); await p.waitForTimeout(120); };
@@ -97,20 +100,22 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   t0 = Date.now(); await p.goto(BASE); await grid().waitFor(); timings.first_view_ms = Date.now() - t0;
   step("performance: first view under 1 s with the sample data (app files cached)", timings.first_view_ms < 1000, `${timings.first_view_ms} ms (cold browser ${timings.cold_first_view_ms} ms)`);
   await idle();
-  const pressed = async () => (await p.getByRole("group", { name: "Show combinations" }).locator('[aria-pressed="true"]').textContent()) ?? "";
-  step("P-49: Needs work is the default view, with its count", /^Needs work · \d+$/.test(await pressed()), await pressed());
-  const labels = await p.getByRole("group", { name: "Show combinations" }).getByRole("button").allTextContents();
-  step("P-49: the three views are Needs work · Live · All, each with a count", labels.length === 3 && /^Needs work/.test(labels[0]) && /^Live · \d/.test(labels[1]) && /^All · \d/.test(labels[2]), labels.join(" | "));
+  // BR-13 (W1-04, amends P-49): every combination by default; the views are one "Status: All ▾" menu, no tab row.
+  step("BR-13: All is the default view; the status is one menu, no filter-tab row", await p.getByRole("button", { name: /^Status: All/ }).count() === 1 && await p.getByRole("group", { name: "Show combinations" }).count() === 0);
+  await p.getByRole("button", { name: /^Status: All/ }).click();
+  const labels = await p.getByRole("menuitemradio").allTextContents();
+  step("BR-13: Status offers All · Needs work · Not started · In setup · Not ready · Live, each with a count", labels.length === 6 && /^All · default\s*\d/.test(labels[0]) && /^Needs work\s*\d/.test(labels[1]) && /^Live\s*\d/.test(labels[5]), labels.join(" | ").slice(0, 200));
+  await p.keyboard.press("Escape");
   const heads = await grid().getByRole("columnheader").allTextContents();
   const upper = await grid().getByRole("columnheader").first().evaluate((e) => getComputedStyle(e.parentElement).textTransform);
-  step("item 4: sentence-case column headers (Combination · Status · Next step), no capitals styling", heads.map((h) => h.trim()).join("|") === "Combination|Status|Next step" && upper === "none", `${heads.join("|")} / ${upper}`);
+  step("item 4: sentence-case column headers (Combination · Status · Setup · Next step), no capitals styling", heads.map((h) => h.trim()).join("|") === "Combination|Status|Setup|Next step" && upper === "none", `${heads.join("|")} / ${upper}`);
   step("P-49: \"Ready\" never appears; statuses say In setup, Not ready or Live", !(await grid().textContent()).includes("Ready"));
   step("P-50: no side panel or sheet on Programs", await p.getByRole("complementary").count() === 0 && await p.getByRole("dialog").count() === 0);
   const svRow = row("Super visa");
   step("AI proposals waiting: the row's next step is Review N AI proposals", /^Review \d+ AI proposals?$/.test((await svRow.getByRole("button").textContent()) ?? ""), await svRow.getByRole("button").textContent());
   // item 3: two lines, nothing cut in the middle
-  const lines = await row("Permanent residence application").locator('[role="gridcell"]').first().evaluate((c) => [...c.children].map((e) => ({ t: e.textContent, cut: e.scrollWidth > e.clientWidth + 1, ell: getComputedStyle(e).textOverflow })));
-  step("item 3: path on two lines — muted Program › Category above, the combination's name below; nothing truncated", lines[0].t === "Economic immigration › Express Entry" && lines[1].t === "Permanent residence application" && lines.every((l) => !l.cut && l.ell !== "ellipsis"), JSON.stringify(lines.slice(0, 2)));
+  const lines = await row("Permanent residence application").locator('[role="gridcell"]').first().evaluate((c) => ({ t: c.textContent, bold: [...c.querySelectorAll("b, .font-semibold")].map((e) => e.textContent), cut: [...c.children].some((e) => e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === "ellipsis") }));
+  step("item 3 + BR-7 (S2): the full five-part trail in one line, first parts muted, the last levels bold; nothing truncated", lines.t.startsWith("Retail › Individual › Economic immigration › Express Entry › Permanent residence application") && lines.bold.includes("Permanent residence application") && !lines.cut, JSON.stringify(lines));
   await state("programs-needs-work-default");
   step("F3: AI steps carry the AI mark (Sparkles, labelled) in the Next step column", await svRow.getByRole("button").locator('[aria-label="AI step:"]').count() === 1 && await grid().locator('[data-next-step="add_from_library"] [aria-label="AI step:"]').count() === 0);
   // Keyboard path (as a person): focus the row, then Tab to its next step (the chip comes first).
@@ -124,13 +129,14 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await grid().locator('[role="row"][tabindex="0"]').first().focus();
   await p.keyboard.press("Tab"); await p.waitForTimeout(300);
   step("review #7: Tab from the active row reaches its status chip, which explains itself", (await p.evaluate(() => document.activeElement?.getAttribute("data-status"))) !== null && /firms can|released|setup|startable/i.test((await p.getByRole("tooltip").first().textContent().catch(() => "")) ?? ""));
-  step("item 5: Super visa is one row, Visitors › Super visa (no Parent / Grandparent)", await row("Parent").count() === 0 && await row("Grandparent").count() === 0 && (await svRow.textContent()).startsWith("VisitorsSuper visa"), await svRow.textContent());
+  step("item 5: Super visa is one row, Visitors › Super visa (no Parent / Grandparent)", await row("Parent").count() === 0 && await row("Grandparent").count() === 0 && (await svRow.textContent()).includes("Visitors › Super visa › No sub-category"), await svRow.textContent());
   await p.mouse.move(0, 0); await p.keyboard.press("Escape"); await p.evaluate(() => document.activeElement?.blur()); await idle();
 
   // Measured inside the page: from the click to the list showing the new view (request + render), no test-driver overhead.
+  await p.getByRole("button", { name: /^Status: All/ }).click(); await p.getByRole("menuitemradio").first().waitFor();
   timings.filter_ms = await p.evaluate(async () => {
-    const btn = [...document.querySelectorAll('[aria-label="Show combinations"] button')].find((x) => x.textContent.startsWith("Live"));
-    const done = () => btn.getAttribute("aria-pressed") === "true" && document.querySelectorAll('[role="row"][data-node]').length === 1;
+    const btn = [...document.querySelectorAll('[role="menuitemradio"]')].find((x) => x.textContent.startsWith("Live"));
+    const done = () => new URL(location.href).searchParams.get("f") === "live" && document.querySelectorAll('[role="row"][data-node]').length === 1;
     const t = performance.now(); btn.click();
     await new Promise((res) => { const o = new MutationObserver(() => { if (done()) { o.disconnect(); res(); } }); o.observe(document.body, { subtree: true, childList: true, attributes: true }); });
     return Math.round(performance.now() - t);
@@ -141,37 +147,39 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("F1: Live shows every row whose status is Live", liveRows === 1 && (await row("With an LMIA").textContent()).includes("Live"), liveRows);
   await state("programs-live");
 
-  await p.getByRole("button", { name: /^All · / }).click(); await idle();
-  await p.getByRole("button", { name: /^Status/ }).click(); await idle();
+  await p.getByRole("button", { name: /^Status: Live/ }).click(); await p.getByRole("menuitemradio", { name: /^All/ }).click(); await idle();
+  await grid().getByRole("button", { name: /^Status/ }).click(); await idle();
   const sortState = await grid().getByRole("columnheader", { name: /Status/ }).getAttribute("aria-sort");
   const firstStatus = await grid().locator('[role="row"][data-node]').first().locator("[data-status]").getAttribute("data-status");
   step("P-49: the Status column is sortable (Not ready / In setup first, then Live) and says so to screen readers", sortState === "ascending" && firstStatus !== "READY" && p.url().includes("sort=status"), `${sortState} ${firstStatus}`);
-  await p.getByRole("button", { name: /^Status/ }).click(); await idle();
+  await grid().getByRole("button", { name: /^Status/ }).click(); await idle();
   step("P-49: sorting again puts Live first (descending)", (await grid().locator('[role="row"][data-node]').first().locator("[data-status]").getAttribute("data-status")) === "READY" && (await grid().getByRole("columnheader", { name: /Status/ }).getAttribute("aria-sort")) === "descending");
   await state("programs-all-sorted-by-status");
-  await p.getByRole("button", { name: /^Status/ }).click(); await idle();
+  await grid().getByRole("button", { name: /^Status/ }).click(); await idle();
 
-  await p.getByRole("button", { name: /^Program:/ }).click(); await p.getByRole("menuitemradio", { name: /Work permits/ }).click(); await idle();
+  // S2: no Program menu (the board has none); a program in a combination's path still opens the list scoped to it.
+  await p.goto(`${BASE}/?prog=individual.work_permits`); await idle(); await listReady();
   await p.waitForFunction(() => location.search.includes("prog=") && [...document.querySelectorAll('[role="row"][data-node]')].every((r) => r.getAttribute("data-node").startsWith("individual.work_permits")), null, { timeout: 5000 }).catch(() => {}); // the filtered list has arrived (review round 3)
-  step("Program filter: only Work permits rows, in path order", (await grid().locator('[role="row"][data-node]').evaluateAll((rs) => rs.every((x) => x.getAttribute("data-node").startsWith("individual.work_permits")))) && p.url().includes("prog="));
+  step("Program scope: only Work permits rows, in path order, with a 'Showing: Work permits' chip", (await grid().locator('[role="row"][data-node]').evaluateAll((rs) => rs.every((x) => x.getAttribute("data-node").startsWith("individual.work_permits")))) && p.url().includes("prog=") && await p.getByRole("button", { name: "Stop showing only Work permits" }).count() === 1);
   await state("programs-program-filter-work-permits");
-  await p.getByRole("button", { name: /^Program:/ }).click(); await p.getByRole("menuitemradio", { name: /All programs/ }).click(); await idle();
+  await p.getByRole("button", { name: "Stop showing only Work permits" }).click(); await idle();
 
   await p.keyboard.press("Meta+k"); await p.keyboard.type("imm 5409"); await p.waitForTimeout(400); await idle();
   await grid().getByText("Matches: IMM 5409").first().waitFor({ timeout: 5000 }).catch(() => {}); // a busy machine answers late; the check below still decides
   step("⌘K search finds a form code and says what matched", (await grid().textContent()).includes("Matches: IMM 5409"));
   await state("programs-search-form-code");
   await p.getByRole("button", { name: "Clear search" }).click(); await idle();
-  await p.getByLabel("Search combinations, form codes and documents").fill("zzzz"); await p.waitForTimeout(400); await idle();
+  await p.getByLabel("Search combinations, form numbers and documents").fill("zzzz"); await p.waitForTimeout(400); await idle();
   step("nothing matches: an empty state with a way back", await p.getByRole("heading", { name: "Nothing matches" }).count() === 1);
   await state("programs-nothing-matches");
-  await p.getByRole("button", { name: "Show all" }).click(); await p.waitForTimeout(500); await idle();
-  step("regression: \"Show all\" keeps the All view after the search box settles (no stale URL rewrite)", new URL(p.url()).searchParams.get("f") === "all" && !new URL(p.url()).searchParams.get("q"), p.url());
+  await p.getByRole("main").getByRole("button", { name: "Clear search" }).last().click(); await p.waitForTimeout(500); await idle();
+  step("regression: \"Clear search\" keeps the All view after the search box settles (no stale URL rewrite)", !new URL(p.url()).searchParams.get("f") && !new URL(p.url()).searchParams.get("q") && await grid().count() === 1, p.url());
 
-  await p.getByRole("button", { name: /^Corporate and employers/ }).click(); await row("High-wage position").waitFor(); await idle();
-  step("item 5: Corporate shows the demo names (LMIA › High-wage position, Low-wage position, Global Talent Stream, In-home caregiver)", await row("High-wage position").count() === 1 && await row("Low-wage position").count() === 1 && await row("Global Talent Stream").count() === 1 && await row("In-home caregiver").count() === 1 && (await row("High-wage position").textContent()).startsWith("LMIA"));
+  const types = p.getByRole("group", { name: "Pathway type" });
+  await types.getByRole("button", { name: /^Corporate and employers/ }).click(); await row("High-wage position").waitFor(); await idle();
+  step("item 5: Corporate shows the demo names (LMIA › High-wage position, Low-wage position, Global Talent Stream, In-home caregiver)", await row("High-wage position").count() === 1 && await row("Low-wage position").count() === 1 && await row("Global Talent Stream").count() === 1 && await row("In-home caregiver").count() === 1 && (await row("High-wage position").textContent()).includes("› LMIA › High-wage position"));
   await state("programs-corporate");
-  await p.getByRole("button", { name: /^Individual/ }).click(); await idle();
+  await types.getByRole("button", { name: /^Retail/ }).click(); await idle();
 
   // ======================================================== keyboard: list → Enter opens the combination page
   await p.goto(`${BASE}/?f=all`); await idle(); await listReady();
@@ -185,7 +193,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   const scrollBefore = await p.evaluate(() => Math.round(window.scrollY));
   await p.keyboard.press("Enter"); await onCombination(focusedLabel);
   step("keyboard: one tab stop, ↑/↓/Home/End move, Enter opens the combination page (P-50)", /\/c\/[0-9a-f-]+$/.test(p.url()) && (await p.getByRole("heading", { level: 1 }).textContent()) === focusedLabel, `${focusedLabel} → ${p.url()}`);
-  await p.getByRole("navigation", { name: "Path" }).getByRole("link", { name: "Programs" }).click(); await idle(); await listReady();
+  await p.getByRole("navigation", { name: "Path" }).getByRole("link", { name: "Immigration programs" }).click(); await idle(); await listReady();
   await p.waitForFunction((l) => document.querySelector('[role="row"][aria-selected="true"]')?.getAttribute("data-label") === l && document.activeElement?.getAttribute("data-label") === l, focusedLabel, { timeout: 5000 }).catch(() => {}); // the check below decides
   const back = await p.evaluate(() => ({ url: location.search, sel: document.querySelector('[role="row"][aria-selected="true"]')?.getAttribute("data-label"), y: Math.round(window.scrollY), focus: document.activeElement?.getAttribute("data-label") }));
   step("P-50: Back keeps the view (All), highlights the opened row and restores the scroll", back.url.includes("f=all") && back.sel === focusedLabel && Math.abs(back.y - scrollBefore) < 40 && back.focus === focusedLabel, JSON.stringify({ ...back, scrollBefore }));
@@ -202,7 +210,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   const vvRowStep = (await row("Visitor visa").locator("[data-next-step]").textContent()).trim();
   await row("Visitor visa").click(); await onCombination("Visitor visa");
   const crumbs = await p.getByRole("navigation", { name: "Path" }).getByRole("link").allTextContents();
-  step("P-50: the page header carries the full path, every level a link (Programs › Individual › Visitors › Visitor visa)", crumbs.join(" › ") === "Programs › Individual › Visitors › Visitor visa", crumbs.join(" › "));
+  step("P-50: the page header carries the full path, every level a link (Immigration programs › Individual › Visitors › Visitor visa)", crumbs.join(" › ") === "Immigration programs › Individual › Visitors › Visitor visa", crumbs.join(" › "));
   // Lead check item 1: one next step on the page — the row, the header and the first missing line say the same thing.
   await p.getByRole("region", { name: /Missing before firms can use it/ }).locator("li").first().waitFor();
   const vvHeadStep = (await p.locator("main [data-next-step]").first().textContent()).trim();
@@ -261,11 +269,12 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   for (const pw of ["", "pw=CORPORATE&"]) {
     await p.goto(`${BASE}/?${pw}f=all`); await idle();
     const chips = await grid().locator('[data-status="READY"]').count();
-    const liveBtn = (await p.getByRole("button", { name: /^Live · / }).textContent()) ?? "";
-    await p.getByRole("button", { name: /^Live · / }).click(); await idle();
+    await p.getByRole("button", { name: /^Status: All/ }).click();
+    const liveBtn = (await p.getByRole("menuitemradio", { name: /^Live/ }).locator("span span").last().textContent()) ?? "";
+    await p.getByRole("menuitemradio", { name: /^Live/ }).click(); await idle();
     await p.waitForFunction(() => new URL(location.href).searchParams.get("f") === "live" && [...document.querySelectorAll('[role="row"][data-node]')].every((r) => r.querySelector('[data-status="READY"]')), null, { timeout: 5000 }).catch(() => {}); // the view has switched
     const shown = await grid().locator('[role="row"][data-node]').count().catch(() => 0);
-    step(`F1: ${pw ? "Corporate" : "Individual"}: the Live count equals the rows showing Live, and the Live view lists them`, Number(liveBtn.split("· ")[1]) === chips && (chips === 0 || shown === chips), `${liveBtn} · chips ${chips} · shown ${shown}`);
+    step(`F1: ${pw ? "Corporate" : "Retail"}: the Live count equals the rows showing Live, and the Live view lists them`, Number(liveBtn) === chips && (chips === 0 || shown === chips), `${liveBtn} · chips ${chips} · shown ${shown}`);
   }
   await p.goto(`${BASE}/?f=all`); await idle();
   await row("With an LMIA").click(); await p.waitForURL(/\/c\//); await idle();
@@ -301,7 +310,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await state("combination-page-not-started");
   await p.goto(`${BASE}/?f=all`); await idle();
   await as("user-B");
-  const muted = await row("Extend stay in Canada").locator('[role="gridcell"]').nth(2).locator("button").count();
+  const muted = await row("Extend stay in Canada").locator("[data-step-cell] button").count();
   await row("Extend stay in Canada").click(); await idle();
   step("non-author: author-only next steps are shown, not offered; a not-started row says who starts it", muted === 0 && /A configuration author starts it/.test(await p.locator('[aria-live="polite"]').textContent()) && !p.url().includes("/c/"));
   await state("programs-non-author", { viewport: true });
@@ -322,7 +331,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await p.getByRole("button", { name: "New combination" }).click(); await idle();
   step("New combination opens the path builder page", /\/new/.test(p.url()) && await p.getByRole("heading", { name: /New combination/ }).count() === 1);
   const placeholdersFit = await p.locator('input[role="combobox"]').evaluateAll((xs) => xs.every((x) => { const c = document.createElement("canvas").getContext("2d"); c.font = getComputedStyle(x).font; return c.measureText(x.placeholder).width <= x.clientWidth - 24; }));
-  step("review #10: a path back to Programs, no stray hint under Pathway, placeholders not cut", await p.getByRole("navigation", { name: "Path" }).getByRole("link", { name: "Programs" }).count() === 1 && !/^exists$/m.test(await p.locator("main").innerText()) && placeholdersFit);
+  step("review #10: a path back to Programs, no stray hint under Pathway, placeholders not cut", await p.getByRole("navigation", { name: "Path" }).getByRole("link", { name: "Immigration programs" }).count() === 1 && !/^exists$/m.test(await p.locator("main").innerText()) && placeholdersFit);
   await state("new-combination-path-builder");
 
   // ======================================================== fix pass (Lead note 23 Oct): QA-6, QA-7, QA-11, QA-1, QA-10, P-63
@@ -368,13 +377,13 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   // QA-9 scale finding: below 640 px (a phone, or 200 % zoom) the next step moves under the name; the name keeps its width.
   for (const w of [390, 512]) {
     await p.setViewportSize({ width: w, height: 844 }); await p.goto(`${BASE}/?f=all`); await grid().waitFor(); await idle();
-    const narrow = await p.evaluate(() => { const c = document.querySelector('[role="row"][data-node] [role="gridcell"]'); const steps = [...document.querySelectorAll('[role="row"][data-node] [role="gridcell"]:nth-child(3)')]; return { nameW: Math.round(c.getBoundingClientRect().width), over: document.documentElement.scrollWidth - innerWidth, clipped: steps.filter((x) => x.scrollWidth > x.clientWidth + 1).length }; });
+    const narrow = await p.evaluate(() => { const c = document.querySelector('[role="row"][data-node] [role="gridcell"]'); const steps = [...document.querySelectorAll('[role="row"][data-node] [data-step-cell]')]; return { nameW: Math.round(c.getBoundingClientRect().width), over: document.documentElement.scrollWidth - innerWidth, clipped: steps.filter((x) => x.scrollWidth > x.clientWidth + 1).length }; });
     step(`narrow ${w} px: the combination's name keeps its width (≥ 200 px), next steps are not clipped, no sideways scroll`, narrow.nameW >= 200 && narrow.over <= 0 && narrow.clipped === 0, JSON.stringify(narrow));
   }
   await p.setViewportSize({ width: 1440, height: 900 });
   // ======================================================== P-74: forms decisions visible (C1.6; P-107 Online stays a choice, W1-02)
   await p.goto(`${BASE}/?f=all`); await idle();
-  step("C1.6: the Programs row says how the combination is filed", /Filed: PDF only/.test(await row("With an LMIA").textContent()));
+  step("C1.6 BR-14 (S2): the row says how the combination is filed, in the card's words (Filed: PDF)", /Filed: PDF(?! only)/.test(await row("With an LMIA").textContent()), await row("With an LMIA").textContent());
   await p.goto(`${BASE}/c/${wpId}`); await idle();
   const forms = p.getByRole("region", { name: "Forms" });
   step("C1.6: the combination page shows the filing method and each line's channel", /Filing: PDF only/.test(await forms.textContent()) && await forms.getByRole("combobox", { name: /^How IMM \d+.* is filed$/ }).count() >= 6);

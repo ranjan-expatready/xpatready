@@ -23,7 +23,7 @@ export function AiWorkPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <div><h1 className="text-xl font-semibold">AI work</h1><p className="mt-1 text-sm text-text-muted">Every AI launch from the catalogue, a program, a combination or a source, with what each step did and cost. Decisions happen in <Link className="text-text-link underline" to="/review">To review</Link>: nothing reaches a draft until a person decides.</p></div>
-      {!list.data!.length ? <EmptyState title="No AI work yet" description="Start it from Programs (select combinations, then AI configuration…), a program's menu, a combination, or a form on Sources and forms." /> : (
+      {!list.data!.length ? <EmptyState title="No AI work yet" description="Start it from a combination on Immigration programs, a program's menu, a combination, or a form on Sources and forms." /> : (
         <Table head={["Scope", "How", "Steps and parts", "Status", "Spent / worst case", "Started"]}>
           {list.data!.map((b) => (
             <tr key={b.id}>

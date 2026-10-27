@@ -49,7 +49,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== empty after Reset; the first pathway typed in place
   await p.goto(BASE); await as("user-A"); await open();
   const navText = await p.getByRole("navigation", { name: "Studio" }).textContent();
-  step("C11.3 P-115: Structure is in the menu under Configure, after Programs", /Configure\s*To review.*Programs.*Structure\s*Shared library/.test(navText), navText.slice(0, 90));
+  step("C11.3 P-115: Structure is in the menu under Configure, after Immigration programs", /Configure\s*To review.*Immigration programs.*Structure\s*Shared library/.test(navText), navText.slice(0, 90));
   step("C11.3 empty: no structure yet, with Add pathway (both tabs empty after Reset)", await p.getByRole("heading", { name: "No structure yet" }).count() === 1 && await p.getByRole("button", { name: "Add pathway" }).count() === 1);
   await state("empty-after-reset");
   await p.getByRole("button", { name: "Add pathway" }).click();
