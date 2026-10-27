@@ -109,7 +109,7 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   r = await call("POST", "/demo/reset", { confirm: "RESET" });
   ok("isolated copy reset (its own database and files only)", r.status === 201 && r.body.preserved_unchanged === true, { preserved_unchanged: r.body.preserved_unchanged });
   r = await call("POST", "/demo/load");
-  ok("isolated copy: sample inputs load through the normal paths: 2 pathways, 11 programs, 6 combinations set up", r.status === 201 && sql(`select count(*) from program_def where node_kind='PROGRAM'`) === "11" && sql("select count(*) from combination") === "6" && sql(`select count(*) from program_def where node_kind='PATHWAY'`) === "2", r.body?.message ?? r.body?.seconds);
+  ok("isolated copy: sample inputs load through the normal paths: 5 P-112 pathways (S2 fix 1), 11 programs, 6 combinations set up", r.status === 201 && sql(`select count(*) from program_def where node_kind='PROGRAM'`) === "11" && sql("select count(*) from combination") === "6" && sql(`select count(*) from program_def where node_kind='PATHWAY'`) === "5", r.body?.message ?? r.body?.seconds);
   const wp = sql(`select id from combination where combination_key='wp.family'`);
   const pl = sql(`select section_key||'|'||collected_from||'|'||repeats from section_question where lineage_key='person.given_names' order by version desc limit 1`).split("|");
   const flag = sql(`select q.canonical_field_key from section_question q join canonical_field f on f.canonical_field_key=q.canonical_field_key and f.workspace_id=q.workspace_id where f.value_type='yes_no' and q.canonical_field_key like 'person.%' order by 1 limit 1`);

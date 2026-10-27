@@ -10,7 +10,7 @@ import { AddLineBody, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateN
 import { manifest } from "../../engine/import.ts";
 import { channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
-import { checkedOf, comparePaths, compareStatus, isLive, missingItems, needsWork, newestEdition, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
+import { checkedOf, comparePaths, compareStatus, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
 import { filedOf, setupProgress } from "../../engine/structure.ts";
 import { PATHWAY_TYPE_LABEL, type PathwayType } from "../../contracts/structure.ts";
@@ -123,7 +123,7 @@ export class Programs {
         held.length && next !== "see_new_edition" ? `New edition waiting: ${held.map((x) => x.edition).join(", ")}` : null, newToday ? "New today" : null].filter(Boolean).join(" · ");
       if (!c) {
         rows.push({ pathway, changes: 0, errors: 0, firstError: null, hasContent: false, searchText: path.join(" "), docNames: [],
-          leaf: { ...base, combinationId: null, forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Add sources", text: "Not started: no setup yet. Next step: Add sources." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, live: false, held: [], note: noteOf(0, "start") } });
+          leaf: { ...base, combinationId: null, forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") } });
         continue;
       }
       const { snapshot } = snaps.get(c.id)! as { snapshot: Snapshot };
@@ -166,7 +166,7 @@ export class Programs {
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
         leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
           missing, aiProposals, aiRunning: running, release: rel ? { pack: rel.packVersion?.version ?? 1, at: rel.releasedAt.toISOString() } : null, checked,
-          nextAction, needs: !retired && needsWork({ status, nextAction }), live: !retired && isLive({ status }), held, note: noteOf(aiProposals, nextAction?.kind, held) } });
+          nextAction, needs: !retired && needsWork({ status, nextAction }), needsYou: !retired && waitsForPerson({ status, nextAction, aiProposals, held: held.length }), live: !retired && isLive({ status }), held, note: noteOf(aiProposals, nextAction?.kind, held) } });
     }
     this.cache = { key, rows, nodes, at: Math.round(performance.now() - t0) };
     return this.cache;
@@ -175,7 +175,7 @@ export class Programs {
   /** Each last-level name's combination state, for the Structure outline (counts, Live, has setup, retired). */
   async leafStates() {
     const { rows } = await this.rows();
-    return new Map(rows.map((r) => [r.leaf.nodeKey, { combinationId: r.leaf.combinationId, live: r.leaf.live, needs: r.leaf.needs, retired: r.leaf.retired, status: r.leaf.status, statusText: r.leaf.statusText }]));
+    return new Map(rows.map((r) => [r.leaf.nodeKey, { combinationId: r.leaf.combinationId, live: r.leaf.live, needs: r.leaf.needsYou, retired: r.leaf.retired, status: r.leaf.status, statusText: r.leaf.statusText }]));
   }
 
   /** GET /catalogue: one request for the whole tree of one pathway, filtered and searched on the server. */
@@ -201,14 +201,15 @@ export class Programs {
     // Retired combinations (P-116) are left out of every view but "Retired" (addendum A2).
     const everyInPathway = rows.filter((r) => r.pathway === q.pathway);
     const inPathway = everyInPathway.filter((r) => q.filter === "retired" ? r.leaf.retired : !r.leaf.retired);
-    const inProgram = inPathway.filter((r) => (!q.program || r.leaf.programKey === q.program) && (!q.under || r.leaf.pathKeys.includes(q.under)));
+    const pwKey = nodes.some((n) => n.nodeKind === "PATHWAY" && n.clientType === q.pathway && !n.retiredAt && n.programNodeKey === q.pathwayKey) ? q.pathwayKey : "";
+    const inProgram = inPathway.filter((r) => (!pwKey || r.leaf.pathwayKey === pwKey) && (!q.program || r.leaf.programKey === q.program) && (!q.under || r.leaf.pathKeys.includes(q.under)));
     const searched = inProgram.map((r) => ({ r, m: hit(r) })).filter((x) => !words || x.m.length);
     // "Needs work" with nothing to do falls back to All, and says so (P-35, P-49).
     const fellBack = q.filter === "needs" && !searched.some((x) => x.r.leaf.needs);
     const filter = fellBack ? "all" : q.filter;
-    const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? r.leaf.needs : filter === "live" ? r.leaf.live : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : r.leaf.status === filter.toUpperCase());
+    const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? r.leaf.needs : filter === "live" ? r.leaf.live : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : filter === "not_started" ? !r.leaf.combinationId : filter === "in_setup" ? r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId : r.leaf.status === filter.toUpperCase());
     const shown = new Map(searched.filter((x) => pass(x.r)).map((x) => [x.r.leaf.nodeKey, { ...x.r.leaf, matches: x.m }]));
-    const count = (list: Row[]) => ({ needs: list.filter((r) => r.leaf.needs).length, live: list.filter((r) => r.leaf.live).length, all: list.filter((r) => !r.leaf.retired).length, ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "READY").length, not_ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "NOT_READY").length, in_setup: list.filter((r) => !r.leaf.retired && r.leaf.status === "IN_SETUP").length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
+    const count = (list: Row[]) => ({ needs: list.filter((r) => r.leaf.needs).length, live: list.filter((r) => r.leaf.live).length, all: list.filter((r) => !r.leaf.retired).length, ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "READY").length, not_ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "NOT_READY").length, in_setup: list.filter((r) => !r.leaf.retired && r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId).length, not_started: list.filter((r) => !r.leaf.retired && !r.leaf.combinationId).length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
     // W1-03 B1: every Pathway of the type, in Structure order (several per type).
     const pws = nodes.filter((n) => n.nodeKind === "PATHWAY" && n.clientType === q.pathway);
     const kids = (k: string) => nodes.filter((n) => n.parentNodeKey === k);
@@ -221,7 +222,7 @@ export class Programs {
       if (leaf) return leaf;
       if (allLeaves.has(n.programNodeKey) || everyLeaf.has(n.programNodeKey)) return null; // a leaf filtered out (or retired)
       const children = kids(n.programNodeKey).map(build).filter(Boolean) as CatalogueNode[];
-      const filtering = filter !== "all" || !!words || !!q.program || !!q.under;
+      const filtering = filter !== "all" || !!words || !!q.program || !!q.under || !!pwKey;
       if (filtering && !children.length) return null;
       // A retired name with nothing shown under it is left out (it holds only retired combinations).
       if (n.retiredAt && !children.length) return null;
@@ -230,7 +231,7 @@ export class Programs {
     const sections = pws.map((p) => {
       const t = kids(p.programNodeKey).map(build).filter(Boolean) as CatalogueGroup[];
       const mine = inPathway.filter((r) => r.leaf.pathwayKey === p.programNodeKey);
-      return { pathwayKey: p.programNodeKey, label: p.label, combinations: mine.length, needs: mine.filter((r) => r.leaf.needs).length, live: mine.filter((r) => r.leaf.live).length, tree: t };
+      return { pathwayKey: p.programNodeKey, label: p.label, combinations: mine.length, needs: mine.filter((r) => r.leaf.needsYou).length, live: mine.filter((r) => r.leaf.live).length, tree: t };
     });
     const tree = sections.flatMap((s) => s.tree);
     const other = q.pathway === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL";
@@ -239,12 +240,11 @@ export class Programs {
     const programs = progs.map((p) => ({ key: p.programNodeKey as string, label: p.label as string, combinations: inPathway.filter((r) => r.leaf.programKey === p.programNodeKey).length }))
       .sort((a, b) => a.label.localeCompare(b.label, "en-CA", { sensitivity: "base" }));
     return {
-      pathway: q.pathway, filter, requestedFilter: q.filter, fellBack, q: q.q, program: q.program, under: q.under, sort: q.sort,
+      pathway: q.pathway, filter, requestedFilter: q.filter, fellBack, q: q.q, program: q.program, under: q.under, sort: q.sort, pathwayKey: pwKey,
       underPath: q.under ? underPath(nodes, q.under) : null,
       /** Layout v2: one flat list in Program › Category › Sub-category order (route steps in step order), or by status. */
       rows: [...shown.values()].sort((x, y) => (q.sort === "path" ? 0 : (q.sort === "status" ? 1 : -1) * compareStatus(x, y)) || comparePaths(x, y)), programs,
-      // The type switch's words stay until slice 3 redraws the page with "Retail" (P-104); the trail already says it.
-      pathways: [["INDIVIDUAL", "Individual"], ["CORPORATE", "Corporate and employers"]].map(([v, l]) => ({ value: v, label: l, combinations: rows.filter((r) => r.pathway === v && !r.leaf.retired).length })),
+      pathways: [["INDIVIDUAL", "Retail"], ["CORPORATE", "Corporate and employers"]].map(([v, l]) => ({ value: v, label: l, combinations: rows.filter((r) => r.pathway === v && !r.leaf.retired).length })),
       counts: { ...count(searched.map((x) => x.r)), retired: everyInPathway.filter((r) => r.leaf.retired).length }, totals, tree, sections,
       otherPathwayMatches: words ? rows.filter((r) => r.pathway === other && !r.leaf.retired && hit(r).length).length : 0,
       timing_ms: { rows: at, total: Math.round(performance.now() - t0) },
