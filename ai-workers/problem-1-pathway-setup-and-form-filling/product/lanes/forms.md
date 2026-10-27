@@ -11,11 +11,12 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124)
 stage: FIX
 owner: Builder
-next_action: CI on the pushed commit and a last fresh re-score; then CHECK → Lead with the score (or FIX if a Major)
+next_action: S4 checks on the round 6 fix running; then commit, push, CI, and CHECK → Lead with the round 6 score (8.5/10, no Must or Major)
 blocked_by: none
 updated: 2026-10-27
 
 ## Log (last 10 lines)
+- 2026-10-27 · S4 · FIX (round 6) · fresh reviewer on 37f27d0: Ship after fixes, journey 8.5/10, no Must or Major, the round 5 source-use choice judged to conform to P-116; D18 at 3 (uploads said "loaded with the sample") fixed: an uploaded edition records its origin and the canada.ca page it matched; AI plan skips forms with an open retire. CI green on 37f27d0. runs 76/76. US$0.
 - 2026-10-27 · S4 · FIX (round 5) · checks green: finder 113/113, runs 75/75, browsers 20/20 and 51/51, canada 49/49, touched suites pass. CI on 06556ab failed only because a put-back script had reverted a test move (golden replay before the stand-in probe); fixed (69a2260) and the script limited to by-product paths. US$0.
 - 2026-10-27 · S4 · FIX (round 5) · fresh reviewer on 06556ab: 7.5/10 (both round 4 Majors confirmed fixed); one Major carried from break R4-1 (a form read as a source can never be retired) fixed by option a (source use blocks Delete only; AI never drafts a retired form's file in any scope), for the Lead to confirm; shoulds fixed (20 upload cards, focus not under the top bar, unread held card). CI green on e7cb63c. US$0.
 - 2026-10-27 · S4 · FIX (round 4) · all checks green on the round 4 code: finder 112/112, runs 71/71 (golden replay keeps IMM 5257), run browser 20/20, library browser 51/51, canada 49/49; touched suites pass; CI green on e7cb63c. US$0.
@@ -25,4 +26,3 @@ updated: 2026-10-27
 - 2026-10-27 · S4 · FIX (round 3) · breaker round 3 on 26a360e: N1, N3–N8, m-a, m-c confirmed; 2 Majors (R3-1 Undo, upload-for-row and "+ Add" still attach a retiring form, release did not re-check; R3-2 replay lost the committed real answers after the program rename) + 6 minors; fixed with tests (one guard in addFormLine, Undo refusal, release re-check, replay by the combination's own names, id-spelling key, busy answer, focus rings). US$0.
 - 2026-10-27 · S4 · FIX (round 3) · fresh reviewer on 26a360e: Ship after fixes, journey 8.5/10 (pass bar met) but D4 at 3 from one new Major (Undo could bring back a form whose retire is open; the release retired it anyway); fix written (Undo refuses in words; the release re-checks and hands the retire back) with tests; breaker re-run in progress. US$0.
 - 2026-10-27 · S4 · FIX (round 2) · fixes checked: finder 108/108, runs 64/64, run browser 20/20, library browser 51/51, canada 49/49; touched suites all pass (demo, p80, launch, s01 api, s02 ×3, channels, structure browser); any 433, graph G3 1 (older). US$0.
-- 2026-10-27 · S4 · FIX (round 2) · second pass done (m12, CHECK constraints, aria-label; 98d30b4, e58136e, CI green); fresh reviewer 7/10 (Ship after fixes; Must fixed; 5 Majors: 1024, guide routes, Used by for checklists, type of 5881/5905, focus ring) and breaker re-run (8 Majors: delete after approval, retire vs attach, same-named Stop, replay across combinations, 10 parallel Removes, Undo vs edit, guides, approve answer); round 2 fixes written with tests, checks running. US$0.

@@ -116,6 +116,7 @@ export class UploadRuns implements OnModuleInit {
       return { status: "NEEDS_PERSON", message: "Rules could not read its form number and edition. AI may read only a file from canada.ca or one a second person approved, so this file waits for a person to check it; no AI call was made." };
     });
     if (s2 === null) return this.finish(batchId, "CANCELLED", "Stopped.");
+    let matched: { formPage: string; pdfUrl: string; lastUpdated: string | null } | null = null; // round 6 should 1 (D18)
     const s3 = await this.step(batchId, "upload_compare", async () => {
       if (!id.ok || !id.code) return { status: "SKIPPED", message: "Not compared: the form number is not known." };
       const code = normaliseCode(id.code);
@@ -127,6 +128,7 @@ export class UploadRuns implements OnModuleInit {
         const page = parseFormPage((await this.canada.get(row.pageUrl, "html")).bytes.toString("utf8"));
         const pdfUrl = page.pdfUrls.find((u) => officialUrl(u).ok);
         const same = pdfUrl ? (await this.canada.get(pdfUrl, "pdf")).sha256 === sha(bytes) : false;
+        if (same && pdfUrl) matched = { formPage: row.pageUrl, pdfUrl, lastUpdated: page.lastUpdated ?? null };
         return { status: "COMPLETED", message: `${same ? "The very file canada.ca's form page links: no second person is needed." : `canada.ca shows ${code} last updated ${page.lastUpdated ?? "on an unknown date"}; this file is not the one its page links.`}${named}` };
       } catch (e) {
         if (!(e instanceof CanadaError)) throw e;
@@ -147,6 +149,15 @@ export class UploadRuns implements OnModuleInit {
       return { status: outcome === "refused" || outcome === "failed" ? "FAILED" : outcome.includes("held") ? "NEEDS_PERSON" : "COMPLETED", message: one?.message ?? "Nothing was added." };
     });
     if (s4 === null) return this.finish(batchId, "CANCELLED", "Stopped.");
+    // Round 6 should 1 (D18): the edition this upload added says which canada.ca page its file is (it matched, step 3).
+    const m = matched as { formPage: string; pdfUrl: string; lastUpdated: string | null } | null;
+    if (m && (outcome === "added" || outcome === "attached")) {
+      const ed = await this.db.formEdition.findFirst({ where: { sha256: sha(bytes) }, select: { id: true, govFormDefId: true, formPageUrl: true } });
+      if (ed && !ed.formPageUrl) {
+        await this.db.formEdition.update({ where: { id: ed.id }, data: { formPageUrl: m.formPage, sourceUrl: m.pdfUrl, canadaUpdated: m.lastUpdated, checkedAt: new Date() } });
+        await this.db.govFormDef.updateMany({ where: { id: ed.govFormDefId, formPageUrl: null }, data: { formPageUrl: m.formPage } });
+      }
+    }
     const done: Record<string, string> = { added: "Added to the library.", in_library: "Already in the library: nothing was added twice.", attached: "Added to the library." };
     await this.finish(batchId, s4 === "COMPLETED" ? "COMPLETED" : s4 === "NEEDS_PERSON" ? "NEEDS_PERSON" : "FAILED", s4 === "COMPLETED" ? done[outcome] ?? "In the library." : s4 === "NEEDS_PERSON" ? (unread ? "Held: the rules could not read its form number, so it cannot be approved. Upload the official PDF from canada.ca instead." : "Held: record the IRCC page it came from on To review; then a second person compares and approves it.") : "Not added.");
   }
