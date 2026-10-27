@@ -37,10 +37,10 @@ Status words as above, plus **Decided** (in DECISIONS, nothing to build) and **O
 **Combination workspace (Overview · Sources and forms · Configuration · Preview)**
 | # | Ask | Where | Status |
 |---|---|---|---|
-| D1 | Forms added in one place, picked only from the library | P-103, W1-06 + W1-08 | Concept drafts written; Lead check, then founder choice |
+| D1 | Forms added in one place, picked only from the library | P-103, P-118 Q2, W1-06 + W1-08 | Decided 27 Oct; S5 walkthrough |
 | D2 | Remove "Add an online form" and "Portal: no portal yet" | W1-02 | Done (checked on :4400) |
-| D3 | Remove "Filing: no forms yet", "Add form" on Overview, "Attach sample file" | W1-08 | Concept, not built |
-| D4 | Explain "People in this combination"; drop Released versions / Recent steps if not needed | W1-08 | Concept, not built |
+| D3 | Remove "Filing: no forms yet", "Add form" on Overview, "Attach sample file" | P-118 Q2/Q3/Q5, W1-08 | Decided 27 Oct; S5 walkthrough |
+| D4 | Explain "People in this combination"; drop Released versions / Recent steps if not needed | P-119 ("Who can be in this application", in Configuration), P-118 Q5 | Decided 27 Oct; S5 walkthrough |
 | D5 | Configuration (who fills, when) and Preview simplified | W1-08 (runtime S2 work reused) | Concept, not built |
 | D6 | Mark a form as fillable online, PDF or both | P-114, W1-06 | Concept, not built |
 
@@ -55,10 +55,10 @@ Status words as above, plus **Decided** (in DECISIONS, nothing to build) and **O
 |---|---|---|---|
 | F1 | Reset empties fields, sections, document types, forms, checks | P-108, W1-11 | Not started |
 | F2 | Load sample = only the 5 combinations and their PDFs; masters arrive as AI proposals | P-108, W1-11 | Not started |
-| F3 | Setup order combination → forms → fields; missing masters listed | W1-09 | Concept draft written |
-| F4 | A person adding a field gets an AI duplicate check | W1-09 | Concept draft written |
-| F5 | How masters are made: AI drafts them from the PDFs | W1-10 | Not started |
-| F6 | AI clearly visible and working everywhere it is designed; never looks stuck; Stop | P-110, W1-07; W3 | Concept draft written |
+| F3 | Setup order combination → forms → fields; missing masters listed | W1-09, P-120 | Decided 27 Oct; S6 walkthrough |
+| F4 | A person adding a field gets an AI duplicate check | P-120 (one Add in plain words: rules, then AI "did you mean", system name built for you) | Decided 27 Oct; S6 walkthrough |
+| F5 | How masters are made: AI drafts them from the PDFs | P-120, W1-10 | Decided 27 Oct (AI drafts when a form or checklist enters); not built |
+| F6 | AI clearly visible and working everywhere it is designed; never looks stuck; Stop | P-110, P-121 (two rounds), W1-07; W3 | Concept draft written; S4 walkthrough |
 
 **Later actors**
 | # | Ask | Where | Status |
@@ -73,22 +73,15 @@ Status words as above, plus **Decided** (in DECISIONS, nothing to build) and **O
 **Not yet decided (Lead raised them; the founder decides when the concept comes)**
 | # | Gap | Goes to |
 |---|---|---|
-| H1 | Bulk approve for AI proposals (a demo needs 200+ clicks today; P-43 allows bulk only for exact reuse) | W1-09 / W1-10 concept |
+| H1 | Bulk approve for AI proposals | **Decided 27 Oct: P-121** (two AI rounds; select all within a filter; High only; rules re-check each item; no demo bypass) |
 | H2 | "Signed as" per form (wet signature and scan, typed, portal declaration) | W4 |
 | H3 | Filing prerequisites on the route (representative authorised, fee paid) | W4 |
 | H4 | GitHub Actions blocked by account billing; the Lead runs suites locally meanwhile | founder |
 | H5 | Lead PRs #28 (roles audit) and #30 (archive non-POC folders) open since 25 Oct | founder |
-| H6 | Should AI draft the Structure itself (from a description or IRCC's pages), or only propose one name in New combination (P-105)? Fields and sections: "add by hand" and "ask AI" side by side | S6 (shared library); founder raised 27 Oct |
+| H6 | Should AI draft the Structure itself, or only propose one name? Fields and sections: how added | **Decided 27 Oct: P-118 Q1** (check only; branch drafting waits for W3) **and P-120** (AI from the form + one Add) |
 | H7 | Structure layout. Founder's idea (27 Oct): Pathway cards on top; a click opens the tree under that Pathway. Lead: yes, and use the same entry on Immigration programs (cards open the setup cards), so both pages share one visual language | S1 board, then S2; founder to confirm on the board |
 
 
-## Grilling round 1 (asked 27 Oct, not yet answered: the next /lead asks again, one by one, recommendation first)
-1. Q2 AI on the Structure: a person adds names, AI checks duplicates and "did you mean", New combination proposes one name (P-105); "Ask AI to draft a branch" waits for W3. Recommended.
-2. Q3 Forms enter only in Shared library › Forms (AI form finder, or upload with the number + edition + checksum check); a combination only picks from the library ("Find missing forms" opens the finder filtered to it); remove "Add form" on Overview, "Choose file" and "Attach official form / checklist / sample file" in the combination. Recommended (founder's own words, 27 Oct).
-3. Q4 The library also holds IRCC guides and document checklists (read by AI, never filled); "Attach sample file" goes. Recommended.
-4. Q5 "People in this combination" decides who is in the application and how many (questions per person, forms repeated per person, checks): rename "Who is in this application", move to Configuration, tooltip. Recommended.
-5. Q6 Overview only reports: status, next step, counts, "Missing before firms can use it"; no add buttons, no "Filing: no forms yet"; released versions become one line; "Recent steps" moves to History › AI work. Recommended.
-6. Q7 Every library master (fields, sections, document types, checks): "Add by hand" (free duplicate check + AI "did you mean") and "Ask AI to draft from the forms". Recommended.
-7. Q8 Bulk accept "all high-confidence in this group" with the count first and one Undo; medium and low stay one by one; the second person still checks at release (amends P-43). Recommended.
-8. Q9 Screen queue S1–S8 as in `WAVE-1.md`. Recommended.
-Next round after these: the Sources and forms tab name and the PDF / online / both choice per picked form; Configuration "who fills it, when"; Preview simplified.
+## Grilling round 1: answered 27 Oct (P-118–P-121)
+Q2 Structure AI: check only (as recommended) · Q3 forms enter only through the library (as recommended) · Q4 guides and checklists in the library (as recommended) · Q5 "Who can be in this application", in Configuration (founder asked how the engine uses it first; P-119) · Q6 Overview reports only (as recommended) · Q7 masters: AI drafts when a form or checklist enters + one Add in plain words, no technical names (founder pushed for one simple way; scored 18/20; P-120) · Q8 bulk: two AI rounds + rules, select all within a filter, High only, no demo bypass (founder asked for production behaviour; P-121) · Q9 queue S1–S8 kept.
+Next round (comes with the S3–S7 walkthrough page): the Sources and forms tab name and the PDF / online / both choice per picked form; Configuration "who fills it, when"; Preview simplified.
