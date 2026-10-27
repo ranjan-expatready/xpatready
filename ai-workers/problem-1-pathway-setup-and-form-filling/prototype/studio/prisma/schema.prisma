@@ -64,6 +64,9 @@ enum Origin {
   HUMAN
   /// F1: proposed by a deterministic match (PDF twin, form path, name or alias; no AI), accepted by a person.
   CODE_MATCH
+  /// S4 (P-123): picked by the form finder (both AI rounds agree and the rules pass) and attached with no confirm step;
+  /// "Picked by AI · Sample" until the immigration expert signs off at release review.
+  AI_FOUND
 }
 
 enum SourceBasis {
@@ -217,7 +220,14 @@ model GovFormDef {
   formKey     String  @map("form_key")
   displayName String  @map("display_name")
   /// "data_form" (an XFA form the system fills) or "document" (a checklist or instructions)
+  /// S4 (M5) adds "guide" and "checklist": stored once in the library, read by AI, never filled ("document" stays for rows
+  /// made before S4).
   formKind    String  @default("data_form") @map("form_kind")
+  /// S4: the form's own canada.ca page (where the edition and its PDF link are read; never a guide's link).
+  formPageUrl String? @map("form_page_url")
+  /// S4 (m2, P-116): retired by a release that carries an approved retire; hidden from pickers and AI, kept by releases.
+  retiredAt   DateTime? @map("retired_at") @db.Timestamptz
+  retiredBy   String?   @map("retired_by")
   /// Which source drafting reads for this form (P-62 §1, C2.10): PDF_FIRST (the PDF version first, then the online
   /// screens for what differs; the default) or ONLINE_ONLY (the online screens alone: the PDF version is not reused).
   draftFrom   String  @default("PDF_FIRST") @map("draft_from")
@@ -249,6 +259,22 @@ model FormEdition {
   /// The date the online version must be checked again (validator: an Online line needs a version within it).
   recheckBy      DateTime? @map("recheck_by") @db.Date
   contentSha256  String?   @map("content_sha256")
+  /// S4: where this edition came from: SAMPLE (Load sample, committed copies) · UPLOADED (a person) · DOWNLOADED
+  /// (the form finder, from canada.ca). Null on rows made before S4.
+  origin         String?
+  /// S4: the canada.ca form page and the PDF link the file was taken from, the "Last updated" (YYYY-MM) that page showed,
+  /// and when the library last compared it with canada.ca (EXPERIENCE §2.11 freshness).
+  formPageUrl    String?   @map("form_page_url")
+  sourceUrl      String?   @map("source_url")
+  canadaUpdated  String?   @map("canada_updated")
+  checkedAt      DateTime? @map("checked_at") @db.Timestamptz
+  /// S4 (m1, P-107): what IRCC accepts for this form: PDF · ONLINE · PDF_OR_ONLINE · READ_BY_AI (guides, checklists),
+  /// with its basis (SAMPLE until the expert confirms) and the line it was read from.
+  acceptedChannels String? @map("accepted_channels")
+  acceptedBasis  String?   @map("accepted_basis")
+  acceptedQuote  String?   @map("accepted_quote")
+  /// S4 (M6): canada.ca now serves a different file for this same printed edition; a person decides to Replace.
+  newerFileSha256 String?  @map("newer_file_sha256")
 
   form GovFormDef     @relation(fields: [govFormDefId], references: [id], onDelete: Cascade)
   maps FormFieldMap[]
@@ -293,6 +319,33 @@ model IntakeItem {
 
 /// P-80: a held file a second person approved in the product. The intake treats a file as approved when its checksum is
 /// on the official manifest or here; approver and uploader are different people (server rule).
+/// S4 (M2, Q-L1): a file the system downloaded from canada.ca, or a hand upload whose checksum equals the PDF behind the
+/// canada.ca form page's link. It carries the same evidence as the official manifest (official host, the form page, the
+/// PDF link, the checksum, when), so it needs no second person; who started the run is recorded, not "approved".
+model OfficialDownload {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  sha256      String
+  /// form · checklist · guide
+  kind        String
+  code        String?
+  edition     String?
+  title       String?
+  formPageUrl String   @map("form_page_url")
+  sourceUrl   String   @map("source_url")
+  fileName    String   @map("file_name")
+  storedPath  String   @map("stored_path")
+  bytes       Int
+  /// download (fetched by the finder) · fingerprint_match (a hand upload equal to canada.ca's file, Q-L1)
+  basis       String
+  batchId     String?  @map("batch_id") @db.Uuid
+  startedBy   String   @map("started_by")
+  fetchedAt   DateTime @default(now()) @map("fetched_at") @db.Timestamptz
+
+  @@unique([workspaceId, sha256])
+  @@map("official_download")
+}
+
 model ApprovedSource {
   id           String   @id @default(uuid()) @db.Uuid
   workspaceId  String   @map("workspace_id") @db.Uuid
@@ -363,6 +416,8 @@ model CombinationForm {
   origin        Origin
   /// F1 (P-61 §2): how this line is filed. Existing lines stay PDF upload (today's behaviour).
   channel       FilingChannel    @default(PDF_UPLOAD)
+  /// S4: the form-finder run that attached this line (AI_FOUND), for "Picked by AI" and its Undo.
+  finderBatchId String?          @map("finder_batch_id") @db.Uuid
   updatedBy     String           @map("updated_by")
   updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -371,6 +426,24 @@ model CombinationForm {
 
   @@unique([combinationId, lineageKey, version])
   @@map("combination_form")
+}
+
+/// S4 (P-123): one change to a combination's forms list (attach, remove, the finder's automatic attach), kept so "Undo
+/// last change" reverses exactly it while the draft is open. detail holds the forms and line versions it touched.
+model FormLineAction {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  combinationId String    @map("combination_id") @db.Uuid
+  /// attach · remove · finder_attach
+  action        String
+  detail        Json
+  by            String
+  at            DateTime  @default(now()) @db.Timestamptz
+  undoneAt      DateTime? @map("undone_at") @db.Timestamptz
+  undoneBy      String?   @map("undone_by")
+
+  @@index([combinationId, at])
+  @@map("form_line_action")
 }
 
 /// One box of one form edition and the fact that fills it. The team stores entries as Json on
@@ -742,7 +815,8 @@ model Check {
 model DraftingJob {
   id            String    @id @default(uuid()) @db.Uuid
   workspaceId   String    @map("workspace_id") @db.Uuid
-  combinationId String    @map("combination_id") @db.Uuid
+  /// S4 (M7): null for a library run that belongs to no combination (Upload PDF through AI).
+  combinationId String?   @map("combination_id") @db.Uuid
   attachmentId  String?   @map("attachment_id") @db.Uuid
   kind          String
   mode          String
@@ -762,7 +836,7 @@ model DraftingJob {
   fingerprint   String?
   attempt       Int       @default(1)
 
-  combination Combination         @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  combination Combination?        @relation(fields: [combinationId], references: [id], onDelete: Cascade)
   batch       AiBatch?            @relation(fields: [batchId], references: [id], onDelete: Cascade)
   items       NormalizationItem[]
 

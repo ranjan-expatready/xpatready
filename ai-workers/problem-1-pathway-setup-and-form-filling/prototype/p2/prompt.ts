@@ -41,7 +41,7 @@ export type Job = {
   settings: Record<string, unknown>;
   /** Facts already read from the official file without AI (the intake's printed edition, P-51), sent as given so the
    *  model never guesses them (Lead check A6). */
-  known?: { form_edition?: string };
+  known?: { form_edition?: string; combination_trail?: string };
 };
 
 /** System = screened template; user = the known facts, then each admitted input, in job order, wrapped with its path and hash. */
@@ -67,6 +67,7 @@ export function buildRequest(templateText: string, outputSchema: Record<string, 
     return `<input file="${a.file}" sha256="${a.sha256}" kind="${a.kind}">\n${compactInventory(a.bytes.toString("utf8"))}\n</input>`;
   });
   if (known?.form_edition) parts.unshift(`<known_fact name="form_edition" source="printed on the official file, read without AI">${known.form_edition}</known_fact>`);
+  if (known?.combination_trail) parts.unshift(`<known_fact name="combination_trail" source="the combination's place in the Structure, named by a person">${known.combination_trail}</known_fact>`);
   return { system: templateText, user: parts.join("\n\n"), output_schema: outputSchema };
 }
 

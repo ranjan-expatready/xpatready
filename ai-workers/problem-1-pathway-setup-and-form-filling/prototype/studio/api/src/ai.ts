@@ -73,6 +73,9 @@ export class Ai implements OnModuleInit {
     const jobs = await this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, attachmentId: true, status: true, kind: true, fingerprint: true, runId: true, mode: true } });
     // P-80: files a second person approved in the product are drafted like official ones (the guard checks the approval).
     const inProduct = new Set((await this.db.approvedSource.findMany({ where: { workspaceId, kind: "form" }, select: { sha256: true } })).map((x) => x.sha256));
+    // S4 (M3): an official download from canada.ca is admitted like the official library, live included.
+    const downloaded = new Set((await this.db.officialDownload.findMany({ where: { workspaceId, kind: "form" }, select: { sha256: true } })).map((x) => x.sha256));
+    for (const s of downloaded) inProduct.add(s);
     const order = new Map(combinationIds.map((id, i) => [id, i]));
     const targets: Target[] = [];
     const draftedHere = new Map<string, string>(); // form edition (file hash) → the combination whose draft covers it
@@ -105,7 +108,7 @@ export class Ai implements OnModuleInit {
         draftedHere.set(a.sha256, c.label);
         const read_first = a.status === "RECOGNISED" || a.status === "READ_FAILED";
         // A paid call admits official inputs only today (p2/runner.ts): an approved form's live call waits for that change.
-        if (approvedHere && mode === "LIVE") { targets.push({ ...base, action: "not_eligible", read_first, why: "Approved in the product by a second person: drafted through the guarded stub pass (no cost). A live AI call for it is not open yet: the paid route admits only the official library's files." }); continue; }
+        if (approvedHere && !downloaded.has(a.sha256) && mode === "LIVE") { targets.push({ ...base, action: "not_eligible", read_first, why: "Approved in the product by a second person: drafted through the guarded stub pass (no cost). A live AI call for it is not open yet: the paid route admits only the official library's files." }); continue; }
         const inventoryFile = this.sources.inventoryOf(a);
         const prepared = inventoryFile ? this.sources.ensureJobFile({ officialFile: this.sources.draftName(a), inventoryFile }, await this.sources.printedEdition(a)) : null;
         const fingerprint = prepared ? sha(JSON.stringify({ input: prepared.inputSha, template: prepared.template, settings: prepared.settings, known: prepared.known })) : undefined;
@@ -176,7 +179,7 @@ export class Ai implements OnModuleInit {
       const same = (await tx.sourceAttachment.findMany({ where: { workspaceId, sha256: sha }, select: { id: true } })).map((x) => x.id);
       const busy = await tx.draftingJob.findFirst({ where: { workspaceId, kind: "field_map", mode: { not: "STUB" }, status: { in: ["QUEUED", "RUNNING"] }, attachmentId: { in: same } }, include: { combination: { select: { label: true } } } });
       const other = busy ? null : elsewhereNow(sha, id);
-      if (busy || other) fail(other?.why ?? `Being mapped in ${busy!.combination.label}: a draft of this same form was started a moment ago. Nothing new was started; open it there.`, HttpStatus.CONFLICT);
+      if (busy || other) fail(other?.why ?? `Being mapped in ${busy!.combination?.label ?? "the library"}: a draft of this same form was started a moment ago. Nothing new was started; open it there.`, HttpStatus.CONFLICT);
     }
   }
 
@@ -329,7 +332,7 @@ export class Ai implements OnModuleInit {
     const atts = await this.db.sourceAttachment.findMany({ where: { id: { in: b!.jobs.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, edition: true, fileName: true } });
     const plan = b!.plan as any;
     return { ...b, started_by_name: personName(b!.startedBy), plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
-      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), parts: partsOf(j.detail), a4: a4Of(j.detail), id: j.id, combinationId: j.combinationId, combination: j.combination.label, program: j.combination.program.label, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
+      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), parts: partsOf(j.detail), a4: a4Of(j.detail), id: j.id, combinationId: j.combinationId, combination: j.combination?.label ?? "Library", program: j.combination?.program.label ?? null, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
   }
 
   async batches() {
@@ -358,6 +361,7 @@ export class Ai implements OnModuleInit {
     if (!batch) fail("This AI work no longer exists.", HttpStatus.NOT_FOUND);
     if (batch!.jobs.some((j) => j.status === "QUEUED" || j.status === "RUNNING")) fail("Wait until the running steps finish.", HttpStatus.CONFLICT);
     // W1-02 (break m1): a screen-map draft (online versions, parked with the browser extension) is never run again.
+    if (batch!.operation === "find_forms") fail("This was a form-finder run: start Find again on the combination instead.", HttpStatus.CONFLICT);
     if (batch!.operation === "screen_map") fail("This was a screen-map draft of an online version: online versions are parked with the browser extension (later wave), so it is not run again.", HttpStatus.CONFLICT);
     const latest = new Map<string, any>();
     for (const j of batch!.jobs) { const k = `${j.attachmentId}|${j.kind}`; const cur = latest.get(k); if (!cur || j.attempt > cur.attempt) latest.set(k, j); }

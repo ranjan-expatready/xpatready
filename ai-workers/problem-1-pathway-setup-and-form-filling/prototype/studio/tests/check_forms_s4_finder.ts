@@ -1,0 +1,253 @@
+// S4 slice 1 (W1-06, P-123; challenge.md M2–M7, m1–m6, Q-L1): the form finder and the library API as a scripted journey.
+// On the loaded demo's Visitor visa: rules only (lists, attaches nothing) → live AI through the stand-in launcher (two
+// rounds, rules on both, attach with no confirm step, download from the recorded canada.ca copies) → replay of saved
+// answers → Undo → hand attach and remove → library list, where used, delete and retire (second person) → a hand
+// upload equal to canada.ca's file (no second person) and one that is not (held) → a republished same-edition file.
+// canada.ca is the recorded copies (official-sources/ircc/canada), plus a test-made folder for two changed files. US$0:
+// the AI is tests/fixtures/fake-launch.mjs (honoured only in an isolated copy); nothing calls a model or canada.ca.
+//   zsh studio/tools/isolated.sh forms_s4 4455 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs STUDIO_CANADA_FIXTURES=canada-alt && tsx studio/tests/check_forms_s4_finder.ts 4455 xr_studio_forms_s4
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+
+const PORT = Number(process.argv[2] ?? 4455), DB = process.argv[3] ?? "xr_studio_forms_s4";
+const STUDIO = join(import.meta.dirname, ".."), P2 = join(STUDIO, "..", "p2"), OFFICIAL = join(STUDIO, "..", "..", "official-sources", "ircc");
+const VAR = join(STUDIO, "var", "isolated-forms_s4");
+let pass = 0, fail = 0;
+const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
+type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
+const call = async (method: string, path: string, body?: unknown, actor = "user-A"): Promise<Res> => {
+  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
+  return { status: r.status, body: j };
+};
+const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const upload = async (name: string, bytes: Buffer, actor = "user-A") => {
+  const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(bytes)], { type: "application/pdf" }), name);
+  const r = await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": actor }, body: fd });
+  return { status: r.status, body: await r.json() as any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+};
+const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? readdirSync(join(P2, "jobs")) : []);
+const madeRuns: string[] = [];
+
+/** The test-made canada.ca folder: the recorded copies, except two changed PDFs (IMM 5645 and IMM 5409). */
+function altFixtures() {
+  const idx = JSON.parse(readFileSync(join(OFFICIAL, "canada", "index.json"), "utf8"));
+  const root = join(VAR, "canada-alt");
+  rmSync(root, { recursive: true, force: true });
+  const changed: Record<string, Buffer> = {};
+  for (const it of idx.items) {
+    const src = join(OFFICIAL, it.path), dst = join(root, it.path);
+    mkdirSync(dirname(dst), { recursive: true });
+    const m = /\/(imm5645|imm5409)\/[^/]+\/[a-z0-9_]+\.pdf$/.exec(it.url);
+    if (m) { const b = Buffer.concat([readFileSync(src), Buffer.from(`\n% S4 check: same edition, another file (${m[1]})\n`)]); writeFileSync(dst, b); it.sha256 = sha(b); changed[m[1]] = b; }
+    else copyFileSync(src, dst);
+  }
+  writeFileSync(join(root, "canada", "index.json"), JSON.stringify(idx, null, 1));
+  return changed;
+}
+
+async function finish(id: string, limit = 90): Promise<Res> {
+  let r: Res = { status: 0, body: null };
+  for (let i = 0; i < limit * 2; i++) { r = await call("GET", `/form-finder/runs/${id}`); if (!["QUEUED", "RUNNING"].includes(r.body?.status)) return r; await sleep(500); }
+  return r;
+}
+const C5645 = encodeURIComponent("IMM 5645"), C0002 = encodeURIComponent("IRM 0002"), C5257 = encodeURIComponent("IMM 5257");
+const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status || ':' || origin, ',' order by lineage_key) from (select distinct on (lineage_key) * from combination_form where combination_id='${c}' order by lineage_key, version desc) x`);
+
+(async () => {
+  const changed = altFixtures();
+  let r = await call("POST", "/demo/load");
+  ok("setup: the demo loads", r.status < 300, r.status);
+  const vv = sql(`select id from combination where label = 'Visitor visa' limit 1`);
+  ok("setup: the Visitor visa combination exists", !!vv);
+  const fiveFiveBefore = sql(`select count(*) from gov_form_def where form_key='IMM 5645'`);
+  ok("setup: IMM 5645 is not in the library yet (the finder must download it)", fiveFiveBefore === "0");
+
+  // --- Guards on plan and launch
+  r = await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "rules", pageUrl: "https://www.example.com/guide.html" });
+  ok("C11.15: a chosen page off canada.ca is refused before anything runs (400, in words)", r.status === 400 && /canada\.ca/.test(r.body.detail), r.body.detail);
+  r = await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "turbo" });
+  ok("C11.15: an unknown mode is refused (400)", r.status === 400);
+  const rulesPlan = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "rules" })).body;
+  ok("C11.8: the rules plan costs US$0 and lists six steps", rulesPlan.totals?.worst_usd === 0 && rulesPlan.steps?.length === 6, rulesPlan.totals);
+  r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "rules", planSha256: rulesPlan.plan_sha256, idempotencyKey: "s4-check-approver" }, "user-B");
+  ok("C11.15: a person without the author duty cannot start the finder (403)", r.status === 403, r.status);
+  r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "rules", planSha256: "0".repeat(64), idempotencyKey: "s4-check-badplan" });
+  ok("C11.8: a launch whose plan fingerprint differs is refused (409 \"Look at the plan again\")", r.status === 409, r.body.title);
+
+  // --- Rules only: the printed numbers are listed, nothing is attached
+  const before = lines(vv);
+  r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "rules", planSha256: rulesPlan.plan_sha256, idempotencyKey: "s4-check-rules" });
+  let run = (await finish(r.body.id)).body;
+  ok("C11.15: rules found the application page by a sure match, with no AI call", run.steps?.[0]?.status === "COMPLETED" && /Rules found a sure match/.test(run.steps[0].message) && run.usd.spent === 0, run.steps?.[0]?.message);
+  ok("C11.15: the guide it links (Guide 5256) is read and stored once in the library as a guide (M5)", run.result?.pages?.some((p: any) => p.kind === "guide" && /5256/.test(p.url)) && sql(`select form_kind from gov_form_def where form_key='Guide 5256'`) === "guide", run.result?.pages);
+  const printed: { code: string; sentence: string }[] = run.result?.rules_only ?? [];
+  ok("C11.15: rules list every form number printed on the pages, each with its sentence (IMM 5257, IMM 5645, IMM 5409 …)", ["IMM 5257", "IMM 5645", "IMM 5409", "IMM 5476", "IMM 5782"].every((c) => printed.some((p) => p.code === c)), printed.map((p) => p.code));
+  ok("C11.15: rules only attach nothing (AI did not decide which apply)", lines(vv) === before && run.result.attach.length === 0);
+  r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "rules", planSha256: rulesPlan.plan_sha256, idempotencyKey: "s4-check-rules" });
+  ok("C11.8: the same launch key returns the same run (idempotent)", r.body.id === run.id, [r.body.id, run.id]);
+
+  // --- Live AI (stand-in launcher): two rounds, rules on both, agreement decides, attach with no confirm step.
+  // Safety first: a stub pass (free with any launcher) must reach the stand-in, or no live step runs at all (a wrong
+  // STUDIO_FAKE_LAUNCHER path makes the server use the real guarded launcher, which spends money).
+  rmSync(join(VAR, "fake-launch.log"), { force: true });
+  writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 1, err: "S4 check: stand-in probe" } }));
+  const probeAtt = sql(`select id from source_attachment where combination_id='${vv}' and edition like 'IMM 5257 (%' limit 1`);
+  await call("POST", `/attachments/${probeAtt}/draft`, { mode: "stub" });
+  for (let i = 0; i < 120 && !existsSync(join(VAR, "fake-launch.log")); i++) await sleep(500);
+  const standIn = existsSync(join(VAR, "fake-launch.log"));
+  ok("safety: the stand-in launcher answers (no live step runs otherwise; nothing is ever sent to a model)", standIn);
+  if (!standIn) throw new Error("the stand-in launcher is not active: start the copy with STUDIO_FAKE_LAUNCHER as the usage line says; live steps skipped");
+  const q = (c: string) => printed.find((p) => p.code === c)!.sentence;
+  const P = (code: string, applies: string, quote: string, condition: string | null = null, who = "each_applicant") => ({ code, title: null, applies, condition, who, quote, filed_note: null });
+  const draft = { forms: [P("IMM 5257", "always", q("IMM 5257")), P("IMM 5409", "condition", q("IMM 5409"), "If you are in a common-law union", "principal_applicant"), P("IMM 5645", "alternative", q("IMM 5645"), "The version in your country's package"),
+    P("IRM 0002", "condition", q("IRM 0002"), "If your gender identifier differs"), P("IMM 5782", "separate_application", q("IMM 5782")), P("IMM 5476", "condition", "You must always appoint a representative to apply.", "Has a representative", "principal_applicant"),
+    P("IMM 9999", "always", q("IMM 5257")), P("IMM 5707", "always", q("IMM 5707")), P("IMM 5256", "always", q("IMM 5257"))], unresolved: [] };
+  const check = { forms: [P("IMM 5257", "always", q("IMM 5257")), P("IMM 5409", "condition", q("IMM 5409"), "Common-law partner", "principal_applicant"), P("IMM 5645", "alternative", q("IMM 5645"), "Visa office package"),
+    P("IRM 0002", "condition", q("IRM 0002"), "Gender identifier differs"), P("IMM 5782", "separate_application", q("IMM 5782")), P("IMM 5476", "condition", q("IMM 5476"), "Has a representative", "principal_applicant"),
+    P("IMM 5707", "condition", q("IMM 5707"), "Each applicant 18 or older")], unresolved: [] };
+  const rec = (o: unknown, usd = 0.04) => ({ label: "S4 check", caller: "live", drafting_run: { run_id: "fake", status: "completed", usage: { cost_usd: usd, input_tokens: 9000, output_tokens: 800 } }, contract_valid: true, raw_output: JSON.stringify(o) });
+  const scenario = (extra: Record<string, unknown> = {}) => writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs: {
+    "studio-finder-forms-check-": { stub: { exit: 0, out: { exit: 0, status: "completed" } }, live: { exit: 0, record: rec(check) } },
+    "studio-finder-forms-": { stub: { exit: 0, out: { exit: 0, status: "completed" } }, live: { exit: 0, record: rec(draft), ...extra } } } }));
+  scenario();
+  const livePlan = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "live" })).body;
+  ok("C11.8: the live plan states its worst case first (above US$0, within the run cap) and uses the remembered page (no guide AI round)", livePlan.totals.worst_usd > 0 && livePlan.totals.worst_usd <= 5 && livePlan.totals.ai_rounds === 2 && /apply-visitor-visa/.test(livePlan.page_url ?? ""), livePlan.totals);
+  r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "live", planSha256: livePlan.plan_sha256, idempotencyKey: "s4-check-live" });
+  run = (await finish(r.body.id)).body;
+  const res = run.result ?? {};
+  ok("C11.14: both AI rounds ran through the guarded route and their cost is recorded (US$0.08 stand-in)", run.steps?.[2]?.status === "COMPLETED" && run.steps?.[3]?.status === "COMPLETED" && Math.abs(run.usd.spent - 0.08) < 1e-9, run.steps?.map((s: any) => `${s.kind}:${s.status}`));
+  const codes = (xs: any[]) => (xs ?? []).map((x: any) => x.code).sort();
+  ok("C11.15: forms both rounds read the same way are attached automatically, no confirm step (IMM 5257, 5409, 5645, IRM 0002)", JSON.stringify(codes(res.attach)) === JSON.stringify(["IMM 5257", "IMM 5409", "IMM 5645", "IRM 0002"]), codes(res.attach));
+  ok("C11.15: the attached lines are marked Picked by AI (AI_FOUND), conditions kept in plain words", /IMM 5409:DRAFT:AI_FOUND/.test(lines(vv)) && sql(`select attach_mode || '|' || coalesce(condition_plain,'') from combination_form where combination_id='${vv}' and lineage_key='IMM 5409' order by version desc limit 1`).startsWith("ANSWER_CONDITIONAL|If you are"), lines(vv));
+  ok("C11.15: the guide itself named in form style (\"IMM 5256\", as both live rounds did) is recognised: neither dropped nor attached", !res.dropped?.some((d: any) => d.code === "IMM 5256") && !codes(res.attach).includes("IMM 5256"), res.dropped);
+  ok("C11.14: a number not printed on the pages is dropped and listed (IMM 9999)", res.dropped?.some((d: any) => d.code === "IMM 9999" && /not printed/.test(d.why)), res.dropped);
+  ok("C11.14: a quote not on the page is dropped and listed (IMM 5476 first round), so only one round stands: Decide", res.dropped?.some((d: any) => d.code === "IMM 5476" && /quoted line/.test(d.why)) && res.decide?.some((d: any) => d.code === "IMM 5476" && /Only one AI round/.test(d.why)), res.decide);
+  ok("C11.14: the two rounds disagree (IMM 5707 always / condition): Decide, not attached", res.decide?.some((d: any) => d.code === "IMM 5707" && /read it differently/.test(d.why)) && !codes(res.attach).includes("IMM 5707"));
+  ok("C11.15: a separate application the guide mentions is listed, never attached (IMM 5782)", res.not_for?.some((n: any) => n.code === "IMM 5782") && !/IMM 5782/.test(lines(vv)));
+  ok("C11.2: IRM 0002 was downloaded from canada.ca (recorded copy) into the library once, with its page, PDF link and Last updated (M2)", sql(`select origin || '|' || form_page_url || '|' || source_url || '|' || coalesce(canada_updated,'') from form_edition where edition_label='IRM 0002 (03-2021)'`).startsWith("DOWNLOADED|https://www.canada.ca/") && res.attach.find((a: any) => a.code === "IRM 0002")?.source === "downloaded", sql(`select origin, source_url from form_edition where edition_label='IRM 0002 (03-2021)'`));
+  ok("C11.2: a canada.ca download needs no second person: no held file, recorded as an official download (M2)", sql(`select count(*) from intake_item where code='IRM 0002' and status='HELD'`) === "0" && sql(`select basis from official_download where code='IRM 0002'`) === "download");
+  ok("C11.2: IMM 5645 came from the test-made copy as a download too (the library had none)", res.attach.find((a: any) => a.code === "IMM 5645")?.source === "downloaded" && sql(`select sha256 from form_edition where edition_label like 'IMM 5645 (%'`) === sha(changed.imm5645));
+  ok("C11.2 (M6): IMM 5409 is in the library, but canada.ca now serves another file of the same edition: the library's edition stays, marked for a person", res.attach.find((a: any) => a.code === "IMM 5409")?.source === "newer_file" && sql(`select newer_file_sha256 from form_edition where edition_label='IMM 5409 (01-2023)'`) === sha(changed.imm5409), res.attach.find((a: any) => a.code === "IMM 5409"));
+  ok("C11.11: forms already in the library are used as they are (IMM 5257 from the library, compared with canada.ca: same file)", res.attach.find((a: any) => a.code === "IMM 5257")?.source === "library" && sql(`select checked_at is not null from form_edition where edition_label='IMM 5257 (09-2023)'`) === "t");
+  ok("C11.15: the run ends \"Done with problems\" (PARTIAL), with what was attached, missing and to decide", run.status === "PARTIAL" && /attached or already there/.test(run.message), run.message);
+
+  r = await call("GET", `/combinations/${vv}/forms/find`);
+  ok("C11.15: the combination's newest finder run is served (what S5's Forms tab reads)", r.status === 200 && r.body.id === run.id && r.body.result?.attach?.length === 4, r.body?.id);
+  r = await call("POST", `/library/forms/${C5257}/check-canada`);
+  ok("C11.2 (m5): Check canada.ca on a library form compares it with its own canada.ca page (US$0): still current", r.status < 300 && r.body.outcome === "current", r.body);
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5488")}/check-canada`);
+  ok("C11.2: Check canada.ca on a form with no recorded canada.ca page says what to do instead (409)", r.status === 409 && /Upload/.test(r.body.detail), r.body.detail);
+
+  // --- Library list (one lean list, filters), freshness, Sample basis
+  r = await call("GET", "/library/forms/list");
+  const row = (c: string) => r.body.rows.find((x: any) => x.code === c);
+  ok("C11.11: the library is one list with type counts, guides and checklists in it (P-118 Q3)", r.status === 200 && r.body.counts.guide >= 1 && r.body.counts.checklist >= 1 && row("Guide 5256")?.type === "guide" && row("IMM 5484")?.type === "checklist", r.body.counts);
+  ok("C11.11: a downloaded form shows where it came from, when canada.ca was checked, and IRCC accepts as Sample", row("IRM 0002")?.origin === "DOWNLOADED" && /^https:\/\/www\.canada\.ca\//.test(row("IRM 0002")?.downloaded_from ?? "") && !!row("IRM 0002")?.checked_at && row("IRM 0002")?.accepts_basis === "SAMPLE", row("IRM 0002"));
+  ok("C11.11: \"Used by\" names the combinations whose draft lists it, marked picked by AI", row("IRM 0002")?.used_by?.some((u: any) => u.label === "Visitor visa" && u.picked_by_ai), row("IRM 0002")?.used_by);
+  ok("C11.11 (M6): the status filter shows \"Newer file on canada.ca\" for IMM 5409", (await call("GET", "/library/forms/list?status=newer_file")).body.rows.map((x: any) => x.code).includes("IMM 5409"));
+  ok("C11.11: filters combine: type=guide lists guides only; search finds by number", (await call("GET", "/library/forms/list?type=guide")).body.rows.every((x: any) => x.type === "guide") && (await call("GET", "/library/forms/list?q=5645")).body.rows.length === 1);
+  ok("C11.11: a filter value outside the list is refused (400)", (await call("GET", "/library/forms/list?status=lost")).status === 400);
+
+  // --- Replay of saved answers: a saved real run of exactly these pages and prompt, US$0; none saved → stops with why
+  // Another application page (the study permit's): no answer was ever saved for those pages.
+  const otherPage = "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/apply.html";
+  const nonePlan = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "replay", pageUrl: otherPage })).body;
+  r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "replay", pageUrl: otherPage, planSha256: nonePlan.plan_sha256, idempotencyKey: "s4-check-replay-none" });
+  run = (await finish(r.body.id)).body;
+  ok("C11.8: replay with no saved answer for these pages stops with the reason and attaches nothing (US$0)", run.status === "FAILED" && /No saved AI answer/.test(run.steps[2].message) && run.usd.spent === 0, run.steps?.[2]?.message);
+  for (const [prefix, out, tpl] of [["studio-finder-forms-check-", check, "find-forms-check.v1.md"], ["studio-finder-forms-", draft, "find-forms.v1.md"]] as const) {
+    const job = readdirSync(join(P2, "jobs")).find((f) => f.startsWith(prefix) && (prefix.endsWith("check-") || !f.includes("-check-")))!;
+    const j = JSON.parse(readFileSync(join(P2, "jobs", job), "utf8"));
+    const file = join(P2, "runs", `${j.job_id}-live-29991231t000000000z-s4check.json`); // newest, so it is the one replayed
+    writeFileSync(file, JSON.stringify({ ...rec(out), drafting_run: { ...rec(out).drafting_run, inputs: { official_files: j.inputs } }, launch_evidence: { template_sha256: sha(readFileSync(join(P2, "prompts", tpl))) } }));
+    madeRuns.push(file);
+  }
+  const replayPlan = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "replay" })).body;
+  r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "replay", planSha256: replayPlan.plan_sha256, idempotencyKey: "s4-check-replay" });
+  run = (await finish(r.body.id)).body;
+  ok("C11.8: replay reuses the saved answers of exactly these pages and prompt: same result, US$0, nothing attached twice", run.usd.spent === 0 && run.result?.attach?.every((a: any) => a.line === "already") && run.result.attach.length === 4, run.result?.attach?.map((a: any) => `${a.code}:${a.line}`));
+
+  // --- Undo the finder's attach; hand attach and remove; Undo again
+  r = await call("POST", `/combinations/${vv}/forms/undo`);
+  ok("C11.15: Undo reverses the finder's attach exactly (IRM 0002 and IMM 5645 off the combination)", r.status < 300 && r.body.undone === "finder_attach" && !/IRM 0002:DRAFT|IMM 5645:DRAFT/.test(lines(vv)), lines(vv));
+  ok("C11.15: after Undo the forms stay in the library", sql(`select count(*) from gov_form_def where form_key in ('IRM 0002','IMM 5645')`) === "2");
+  r = await call("POST", `/combinations/${vv}/forms/undo`);
+  ok("C11.15: Undo with nothing left to undo says so (409)", r.status === 409, r.body.title);
+  r = await call("POST", `/combinations/${vv}/forms`, { formKey: "imm5645" });
+  ok("C11.15: a library form is attached by hand (its number written loosely is understood)", r.status < 300 && /IMM 5645:DRAFT:HUMAN/.test(lines(vv)), r.body);
+  r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 5645" });
+  ok("C11.15: attaching it again is refused (409, already on this combination)", r.status === 409);
+  r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 1294" });
+  ok("C11.15: a form not in the library cannot be attached (404, find or upload it)", r.status === 404 && /not in the library/.test(r.body.detail), r.body.detail);
+  r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 5645" }, "user-B");
+  ok("C11.15: attaching needs the author duty (403)", r.status === 403);
+  r = await call("DELETE", `/combinations/${vv}/forms/${C5645}`);
+  ok("C11.15: Remove takes it off this combination; it stays in the library", r.status < 300 && r.body.in_library && !/IMM 5645:DRAFT/.test(lines(vv)) && sql(`select count(*) from gov_form_def where form_key='IMM 5645'`) === "1", lines(vv));
+  r = await call("POST", `/combinations/${vv}/forms/undo`);
+  ok("C11.15: Undo brings the removed line back", r.status < 300 && /IMM 5645:DRAFT/.test(lines(vv)), lines(vv));
+  sql(`update combination_form set who='principal_applicant' where combination_id='${vv}' and lineage_key='IMM 5645'`);
+  sql(`insert into form_line_action (id, workspace_id, combination_id, action, detail, by) select gen_random_uuid(), workspace_id, id, 'attach', jsonb_build_object('codes', jsonb_build_array('IMM 5645'), 'before', '[]'::jsonb, 'after', '[]'::jsonb), 'user-A' from combination where id='${vv}'`);
+  r = await call("POST", `/combinations/${vv}/forms/undo`);
+  ok("C11.15: Undo refuses when the line changed since that step (409, change it by hand)", r.status === 409 && /changed after/.test(r.body.detail), r.body.detail);
+
+  // --- Lifecycle (P-116): where used; delete only unused and never released; retire only released; a second person
+  r = await call("GET", `/library/forms/${C5645}/uses`);
+  ok("C11.11: where used lists the Visitor visa draft and blocks delete", r.status === 200 && r.body.uses.some((u: any) => u.label === "Visitor visa" && u.blocks) && /Still used/.test(r.body.can.delete), r.body.can);
+  r = await call("DELETE", `/library/forms/${C5645}`, { reason: "Not needed" });
+  ok("C11.11: delete of a used form is refused with each use (409)", r.status === 409 && r.body.uses?.length > 0, r.body.detail);
+  r = await call("POST", `/library/forms/${C0002}/retire`, { reason: "Old" });
+  ok("C11.11: retire of a never-released form is refused: delete it instead (409)", r.status === 409 && /never released/.test(r.body.detail), r.body.detail);
+  r = await call("DELETE", `/library/forms/${C0002}`, { reason: "x" });
+  ok("C11.11: a reason is required (400)", r.status === 400);
+  r = await call("DELETE", `/library/forms/${C0002}`, { reason: "Not used by any combination" });
+  ok("C11.11: delete of an unused, never-released form waits for a second person", r.status < 300 && r.body.status === "WAITING", r.body);
+  const change = r.body.id;
+  r = await call("POST", `/library/changes/${change}/approve`, { note: "ok" }, "user-A");
+  ok("C11.11: the author cannot approve their own delete (author ≠ approver)", r.status >= 400, r.status);
+  r = await call("POST", `/library/changes/${change}/approve`, { note: "Checked: unused" }, "user-B");
+  ok("C11.11: a second person approves: the form leaves the library with its official-download record", r.status < 300 && sql(`select count(*) from gov_form_def where form_key='IRM 0002'`) === "0" && sql(`select count(*) from official_download where code='IRM 0002'`) === "0", r.body);
+  r = await call("POST", `/library/forms/${C5257}/restore`, { reason: "Needed again" });
+  ok("C11.11: restore of a form that is not retired is refused (409)", r.status === 409 && /not retired/.test(r.body.detail), r.body.detail);
+  sql(`update gov_form_def set retired_at = now(), retired_by = 'user-A' where form_key = 'IMM 5488'`);
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5488")}/restore`, { reason: "Needed again for a combination" });
+  ok("C11.11: restore of a retired form waits for a second person (P-116)", r.status < 300 && r.body.status === "WAITING" && r.body.action === "RESTORE", r.body);
+  ok("C11.11: a retired form is not attached by hand (409, restore it first)", (await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 5488" })).status === 409);
+  const released = sql(`select r.combination_id from config_release r where r.snapshot->'forms' @> '[{"form_number":"IMM 5257"}]' limit 1`);
+  r = await call("GET", `/library/forms/${C5257}/uses`);
+  ok("C11.11: a released form is never deleted (retire it instead)", !released || /never deleted/.test(r.body.can.delete), r.body.can);
+
+  // --- Q-L1: a hand upload equal to canada.ca's file is an official download; a different file is held
+  sql(`delete from combination_form where lineage_key='IMM 5645'`); sql(`delete from form_line_action where detail->'codes' ? 'IMM 5645'`);
+  sql(`delete from official_download where code='IMM 5645'`); sql(`delete from gov_form_def where form_key='IMM 5645'`);
+  let u = await upload("imm5645e.pdf", changed.imm5645);
+  ok("C11.2 (Q-L1): a hand upload whose checksum equals the PDF behind canada.ca's form page goes into the library with no second person", u.status < 300 && u.body.results?.[0]?.outcome === "added" && sql(`select basis from official_download where sha256='${sha(changed.imm5645)}'`) === "fingerprint_match", u.body.results?.[0]);
+  sql(`delete from official_download where code='IMM 5645'`); sql(`delete from gov_form_def where form_key='IMM 5645'`); sql(`delete from intake_item where code='IMM 5645'`);
+  u = await upload("imm5645e.pdf", Buffer.concat([changed.imm5645, Buffer.from("% one byte more\n")]));
+  ok("C11.2 (Q-L1): an upload that differs from canada.ca's file is held for a second person, as before (P-80)", u.status < 300 && u.body.results?.[0]?.outcome === "held" && sql(`select count(*) from official_download where code='IMM 5645'`) === "0", u.body.results?.[0]?.message);
+
+  // --- Two runs at once on one combination; Stop
+  scenario({ sleep_ms: 4000 });
+  const p2 = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "live" })).body;
+  const first = await call("POST", `/combinations/${vv}/forms/find`, { mode: "live", planSha256: p2.plan_sha256, idempotencyKey: "s4-check-race-1" });
+  const second = await call("POST", `/combinations/${vv}/forms/find`, { mode: "live", planSha256: p2.plan_sha256, idempotencyKey: "s4-check-race-2" });
+  ok("C11.8: a second run on the same combination while one runs is refused (409 \"Already finding\")", first.status < 300 && second.status === 409 && /already running/.test(second.body.detail), second.body);
+  await sleep(800);
+  r = await call("POST", `/form-finder/runs/${first.body.id}/stop`);
+  ok("C11.8: Stop is accepted while it runs", r.status < 300, r.status);
+  run = (await finish(first.body.id)).body;
+  ok("C11.8: a stopped run ends Stopped: no step starts after Stop and nothing is attached by it", run.status === "CANCELLED" && run.steps.slice(4).every((s: any) => ["CANCELLED", "SKIPPED", "WAITING"].includes(s.status)) && sql(`select count(*) from combination_form where finder_batch_id='${first.body.id}'`) === "0", run.steps?.map((s: any) => `${s.kind}:${s.status}`));
+  r = await call("POST", `/form-finder/runs/${first.body.id}/stop`);
+  ok("C11.8: Stop on an ended run says so (409)", r.status === 409);
+  r = await call("POST", `/ai/batches/${first.body.id}/retry`, {});
+  ok("C11.8: a finder run is not retried through the field-map retry (409, find again instead)", r.status === 409, r.body?.message ?? r.body);
+})().catch((e) => { fail++; console.log(`FAIL  the check stopped: ${(e as Error).stack}`); }).finally(() => {
+  for (const f of madeRuns) rmSync(f, { force: true });
+  for (const f of existsSync(join(P2, "jobs")) ? readdirSync(join(P2, "jobs")) : []) if (f.startsWith("studio-finder-") && !jobsBefore.has(f)) rmSync(join(P2, "jobs", f), { force: true });
+  console.log(`\n${pass} passed, ${fail} failed`);
+  process.exit(fail ? 1 : 0);
+});

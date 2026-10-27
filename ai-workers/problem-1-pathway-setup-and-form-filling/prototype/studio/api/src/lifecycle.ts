@@ -9,8 +9,10 @@ import type { LibraryChange, Prisma, ProgramDef } from "@prisma/client";
 import { LEVEL_OF, LEVEL_WORD, type LifecycleAction, type Use, type UsesView } from "../../contracts/structure.ts";
 import { ACTORS, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { changeView } from "./library-changes.ts";
+import { formUses } from "./form-uses.ts";
 
-export const LIFECYCLE_KINDS = ["structure_node", "combination"] as const;
+// S4 (m2): "library_form" is a Shared library › Forms entry, keyed by its form number (api/src/form-library.ts formUses).
+export const LIFECYCLE_KINDS = ["structure_node", "combination", "library_form"] as const;
 export type LifecycleKind = (typeof LIFECYCLE_KINDS)[number];
 export const isLifecycleKind = (k: string): k is LifecycleKind => (LIFECYCLE_KINDS as readonly string[]).includes(k);
 const OPEN = ["WAITING", "RETURNED", "APPROVED"]; // a change not yet applied or released: nothing else may start on it
@@ -101,7 +103,7 @@ export class Lifecycle {
     return rows.map((r) => ({ at: r.at.toISOString(), by: nameOf(r.actor) ?? (r.actor === "system" ? "The studio" : r.actor), what: r.summary }));
   }
 
-  private async usesOf(kind: LifecycleKind, key: string) { return kind === "structure_node" ? this.nodeUses(key) : this.combinationUses(key); }
+  private async usesOf(kind: LifecycleKind, key: string) { return kind === "structure_node" ? this.nodeUses(key) : kind === "library_form" ? formUses(this.db, await this.ws.id(), key) : this.combinationUses(key); }
   private refusal(u: UsesView, action: LifecycleAction) { return action === "DELETE" ? u.can.delete : action === "RETIRE" ? u.can.retire : u.can.restore; }
 
   /** Delete, retire or restore proposed by an author: checked now, waiting for a different person (L4). */
@@ -111,7 +113,7 @@ export class Lifecycle {
     const u = await this.usesOf(kind, key);
     const no = this.refusal(u, action);
     if (no) throw problem(409, `Cannot ${action.toLowerCase()}`, no, { uses: u.uses });
-    const label = kind === "structure_node" ? u.trail.join(" › ") : `${u.trail.join(" › ")}`;
+    const label = kind === "structure_node" ? u.trail.join(" › ") : kind === "library_form" ? u.label : `${u.trail.join(" › ")}`;
     const c = await this.db.libraryChange.create({ data: { workspaceId, kind, key, label, action, reason, status: "WAITING", proposedBy: actor.id, combinationId: kind === "combination" ? key : null } });
     // Two proposals at the same moment: the older one stands, the newer one is withdrawn and the caller is told.
     const open = await this.db.libraryChange.findMany({ where: { workspaceId, kind, key, status: { in: OPEN } }, orderBy: [{ proposedAt: "asc" }, { id: "asc" }] });
@@ -119,7 +121,7 @@ export class Lifecycle {
       await this.db.libraryChange.update({ where: { id: c.id }, data: { status: "WITHDRAWN", decisionNote: "Another change to it was proposed at the same moment." } });
       throw problem(409, "Already open", "Another change to it was proposed at the same moment: see it on To review.", { uses: u.uses });
     }
-    await this.audit.log(workspaceId, actor.id, "proposed", kind === "structure_node" ? "structure" : "combination", key, `${actor.name} proposed to ${action.toLowerCase()} "${label}": ${reason}`, undefined, kind === "combination" ? key : undefined);
+    await this.audit.log(workspaceId, actor.id, "proposed", kind === "structure_node" ? "structure" : kind === "library_form" ? "form" : "combination", key, `${actor.name} proposed to ${action.toLowerCase()} "${label}": ${reason}`, undefined, kind === "combination" ? key : undefined);
     return changeView(c);
   }
 
@@ -129,7 +131,7 @@ export class Lifecycle {
     const u = await this.usesOf(c.kind, c.key).catch(() => null);
     if (!u) throw problem(409, "No longer there", "It was removed meanwhile: return this change.");
     const others = { ...u, uses: u.uses.filter((x) => x.kind !== "draft_change"), can: { delete: null, retire: null, restore: null } as UsesView["can"] };
-    const again = c.kind === "structure_node" ? await this.recheckNode(c, others) : await this.recheckCombination(c, others);
+    const again = c.kind === "combination" ? await this.recheckCombination(c, others) : await this.recheckNode(c, others); // a library form is checked like a name: released, or used
     if (again) throw problem(409, "No longer allowed", `${again} Return this change with that reason.`, { uses: u.uses });
   }
   private async recheckNode(c: LibraryChange, u: UsesView) {
@@ -151,6 +153,13 @@ export class Lifecycle {
       if (c.kind === "structure_node") {
         const n = await tx.programDef.findFirst({ where: { workspaceId: c.workspaceId, programNodeKey: c.key }, include: { combination: true } });
         if (n && !n.combination && !(await tx.programDef.count({ where: { workspaceId: c.workspaceId, parentNodeKey: c.key } }))) await tx.programDef.delete({ where: { id: n.id } });
+      } else if (c.kind === "library_form") {
+        // Never released and used nowhere (checked again above): its editions and their stored rows go with it.
+        const def = await tx.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: c.key }, include: { editions: { select: { sha256: true } } } });
+        if (def && !(await tx.combinationForm.count({ where: { govFormDefId: def.id } }))) {
+          await tx.officialDownload.deleteMany({ where: { workspaceId: c.workspaceId, sha256: { in: def.editions.map((e) => e.sha256).filter(Boolean) as string[] } } });
+          await tx.govFormDef.delete({ where: { id: def.id } });
+        }
       } else {
         const subs = (await tx.reviewSubmission.findMany({ where: { combinationId: c.key }, select: { id: true } })).map((s) => s.id);
         await tx.reviewSignoff.deleteMany({ where: { submissionId: { in: subs } } });
@@ -160,7 +169,7 @@ export class Lifecycle {
       }
       await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? "Removed at approval (never released)." } });
     });
-    await this.audit.log(c.workspaceId, actor.id, "deleted", c.kind === "structure_node" ? "structure" : "combination", c.key, `${actor.name} approved removing "${c.label ?? c.key}": removed (never released, used nowhere)`);
+    await this.audit.log(c.workspaceId, actor.id, "deleted", c.kind === "structure_node" ? "structure" : c.kind === "library_form" ? "form" : "combination", c.key, `${actor.name} approved removing "${c.label ?? c.key}": removed (never released, used nowhere)`);
   }
 
 }
@@ -183,6 +192,7 @@ export async function publishLifecycle(tx: Prisma.TransactionClient, c: LibraryC
   if (!isLifecycleKind(c.kind) || (c.action !== "RETIRE" && c.action !== "RESTORE")) return false;
   const data = c.action === "RETIRE" ? { retiredAt: new Date(), retiredBy: c.proposedBy } : { retiredAt: null, retiredBy: null };
   if (c.kind === "structure_node") await tx.programDef.updateMany({ where: { workspaceId: c.workspaceId, programNodeKey: c.key }, data });
+  else if (c.kind === "library_form") await tx.govFormDef.updateMany({ where: { workspaceId: c.workspaceId, formKey: c.key }, data });
   else await tx.combination.updateMany({ where: { id: c.key, workspaceId: c.workspaceId }, data });
   return true;
 }

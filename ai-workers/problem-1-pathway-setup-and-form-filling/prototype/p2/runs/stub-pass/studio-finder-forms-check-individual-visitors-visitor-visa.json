@@ -1,0 +1,26 @@
+{
+ "job_id": "studio-finder-forms-check-individual-visitors-visitor-visa",
+ "path_code_sha256": "bec0afdae579a625e99aab05185c080d18545f14bc606d4e06f6cf1486d0afb4",
+ "screening_sources": [
+  {
+   "file": "prototype/expected/slice-1-field-map.json",
+   "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+  },
+  {
+   "file": "prototype/expected/slice-1-field-map.v2.json",
+   "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+  },
+  {
+   "file": "prototype/p1/e5-family-values.json",
+   "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+  },
+  {
+   "file": "prototype/p1/adobe-complete-1295-values.json",
+   "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+  }
+ ],
+ "digest_sha256": "8315658c0bc9c9039be3ba71116815567b416e97ce8ede7d64e56cd54bdbded7",
+ "run_id": "studio-finder-forms-check-individual-visitors-visitor-visa-stub-20261027t072458540z-73b29c",
+ "at": "2026-10-27T07:24:59.432Z",
+ "stub_calls": 1
+}

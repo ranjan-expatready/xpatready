@@ -77,18 +77,32 @@ function admitApproved(rel: string, abs: string, bytes: Buffer, h: string, opts:
   if (inv.summary.sha256 !== sum) no("its summary checksum is not the one its name gives");
   const plain = (name: string) => { const p = join(dir, name); let st; try { st = lstatSync(p); } catch { return no(`${name} is missing (no approval recorded for this checksum)`); } if (st.isSymbolicLink() || realpathSync(p) !== p) no(`${name} is a link`); return readFileSync(p); };
   const rec = json(plain(`${sum}.approval.json`), no);
-  closed(rec, ["contract", "sha256", "kind", "code", "edition", "file_name", "ircc_page", "uploaded_by", "approved_by", "approved_at"], [], "approval record", no);
-  if (rec.contract !== "approved-source/v1") no("its approval record is not an approved-source/v1 record");
+  const person = /^[A-Za-z0-9_-]{1,64}$/;
+  const pastTime = (t: unknown) => typeof t === "string" && !Number.isNaN(Date.parse(t)) && Date.parse(t) <= Date.now() + 300_000;
+  let who: { uploaded_by: string; approved_by: string };
+  if (rec?.contract === "official-download/v1") {
+    // S4 (M2, M3): downloaded from canada.ca by the form finder, from the form's own page, or a hand upload equal to
+    // that file (Q-L1). The same evidence as a manifest row: the official host, the form page, the PDF link, the checksum.
+    closed(rec, ["contract", "sha256", "kind", "code", "edition", "file_name", "form_page", "source_url", "fetched_at", "started_by"], [], "official download record", no);
+    const official = (u: unknown) => typeof u === "string" && /^https:\/\/(www|ircc)\.canada\.ca\/[^\s@]*$/.test(u);
+    if (!official(rec.form_page) || !official(rec.source_url)) no("its record does not show a download from canada.ca");
+    if (!person.test(rec.started_by)) no("the person named is not a plain id");
+    if (!pastTime(rec.fetched_at)) no("the download time is not a past date and time");
+    who = { uploaded_by: rec.started_by, approved_by: "official-download" };
+  } else {
+    closed(rec, ["contract", "sha256", "kind", "code", "edition", "file_name", "ircc_page", "uploaded_by", "approved_by", "approved_at"], [], "approval record", no);
+    if (rec.contract !== "approved-source/v1") no("its approval record is not an approved-source/v1 record");
+    if (!person.test(rec.uploaded_by) || !person.test(rec.approved_by)) no("the people named are not plain ids");
+    if (rec.uploaded_by.toLowerCase() === rec.approved_by.toLowerCase()) no("approved by the person who uploaded it (a second person approves, P-80)");
+    if (!pastTime(rec.approved_at)) no("the approval time is not a past date and time");
+    who = { uploaded_by: rec.uploaded_by, approved_by: rec.approved_by };
+  }
   if (rec.sha256 !== sum) no("its approval record is for another checksum");
   if (rec.kind !== "form" || typeof rec.edition !== "string" || !/^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(rec.edition)) no("the approval is not for a form with a printed edition");
-  const person = /^[A-Za-z0-9_-]{1,64}$/;
-  if (!person.test(rec.uploaded_by) || !person.test(rec.approved_by)) no("the people named are not plain ids");
-  if (rec.uploaded_by.toLowerCase() === rec.approved_by.toLowerCase()) no("approved by the person who uploaded it (a second person approves, P-80)");
-  if (typeof rec.approved_at !== "string" || Number.isNaN(Date.parse(rec.approved_at)) || Date.parse(rec.approved_at) > Date.now() + 300_000) no("the approval time is not a past date and time");
   const pdfName = `${sum}.pdf`;
   if (sha(plain(pdfName)) !== sum) no("the approved PDF no longer has the approved checksum");
   if (inv.summary.file !== relative(SOLUTION, join(dir, pdfName)).split(sep).join("/")) no("its inventory was not read from the approved PDF");
-  return { file: rel, sha256: h, kind: "inventory", bytes, approved: { sha256: sum, edition: rec.edition, uploaded_by: rec.uploaded_by, approved_by: rec.approved_by } };
+  return { file: rel, sha256: h, kind: "inventory", bytes, approved: { sha256: sum, edition: rec.edition, ...who } };
 }
 
 const json = (bytes: Buffer, no: (m: string) => never) => { try { return JSON.parse(bytes.toString("utf8")); } catch { return no("not JSON"); } };

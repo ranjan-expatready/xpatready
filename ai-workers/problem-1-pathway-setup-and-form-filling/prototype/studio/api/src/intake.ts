@@ -29,6 +29,7 @@ import { manifest } from "../../engine/import.ts";
 import { editionMonth, newestEdition } from "../../engine/programs.ts";
 import { ACTORS, Audit, Db, fail, need, OFFICIAL, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 import { recordApproval, Sources } from "./sources.ts";
+import { Finder } from "./finder.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
@@ -45,7 +46,7 @@ const KIND_WORD: Record<string, string> = { form: "form", checklist: "document c
 
 @Injectable()
 export class Intake {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Sources) private readonly sources: Sources) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Sources) private readonly sources: Sources, @Inject(Finder) private readonly finder: Finder) {}
 
   /** POST /intake: one or many files, optionally on a combination. Files are handled one after the other, so two copies
    *  of the same new form in one batch give "added" then "in_library", never two forms. */
@@ -88,7 +89,10 @@ export class Intake {
 
   private async approvedInProduct(workspaceId: string, hash: string) {
     const a = await this.db.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId, sha256: hash } } });
-    return a ? { approval: `Approved in the product by ${ACTORS.find((x) => x.id === a.approvedBy)?.name ?? "a second person"} (IRCC page ${a.irccPage})` } : undefined;
+    if (a) return { approval: `Approved in the product by ${ACTORS.find((x) => x.id === a.approvedBy)?.name ?? "a second person"} (IRCC page ${a.irccPage})` };
+    // S4 (M2, Q-L1): downloaded from canada.ca by the form finder, or a hand upload equal to canada.ca's file.
+    const d = await this.db.officialDownload.findUnique({ where: { workspaceId_sha256: { workspaceId, sha256: hash } } });
+    return d ? { approval: `${d.basis === "download" ? "Downloaded from canada.ca" : "Same file as canada.ca's"} (${d.formPageUrl})` } : undefined;
   }
 
   /** P-80: the uploader records the IRCC page a held file came from, for the second person to compare. */
@@ -257,9 +261,13 @@ export class Intake {
       await this.record(actor, workspaceId, combination?.id ?? null, name, stored, hash, file.buffer.length, r, "HELD", FRENCH);
       return r;
     }
+    // S4 (Q-L1): a hand upload whose checksum equals the PDF behind the canada.ca form page's link is an official
+    // download (P-123's own fallback): no second person. canada.ca not answering leaves it held, as before.
+    const matched = (read.kind === "form" || read.kind === "checklist") && !approved && id.code ? await this.finder.fingerprintMatch(workspaceId, String(id.code), hash, stored, name, file.buffer.length, actor.id) : null;
+    const official = approved ?? (matched ? { approval: `Same file as canada.ca's (${matched})` } : undefined);
     // Readable form identity is not proof of an official source. Hold before library creation,
     // combination attachment, edition-impact processing, or any downstream AI mapping.
-    if ((read.kind === "form" || read.kind === "checklist") && !approved) {
+    if ((read.kind === "form" || read.kind === "checklist") && !official) {
       // Said at once when the library already has this edition from another file: the second person rejects the copy.
       const have = id.edition_label ? await this.db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId, editionLabel: id.edition_label } } }) : null;
       const r: IntakeResult = { file: name, outcome: "held", ...read, message: `Held for source verification: ${read.edition ?? read.code ?? "This form"} is not on the approved source list. It was not added to the library, attached, or sent to AI.${have ? ` The library already holds ${id.edition_label} from ${have.officialFile ? "the official file" : "another file"}, so this copy is not needed: use the library's.` : ""}` };

@@ -51,13 +51,16 @@ const EDITION = /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
 /** P-80: where the drafting guard can check an approval made in the product (p2/policy.ts approvedSourcesDirOk): this
  *  copy's own workspace folder, so a demo reset removes it with the database row and test copies never share one. */
 export const APPROVED_DIR = () => join(VAR("demo"), "approved-sources");
-type Approval = { sha256: string; kind: string; code: string | null; edition: string | null; fileName: string; irccPage: string; uploadedBy: string; approvedBy: string; approvedAt: Date };
+type Approval = { sha256: string; kind: string; code: string | null; edition: string | null; fileName: string; irccPage: string; uploadedBy: string; approvedBy: string; approvedAt: Date;
+  /** S4 (M3): downloaded from canada.ca (or a hand upload equal to it): the record says so, not "a second person". */
+  official?: { sourceUrl: string } };
 /** P-80: the approval record and the approved PDF the guard checks (p2/guard.ts admitApproved), written when a second
  *  person approves a held file (intake.ts) and again from the database row when missing (approved before it existed). */
 export function recordApproval(row: Approval, bytes: Buffer) {
   if (sha(bytes) !== row.sha256) fail("The stored file no longer has the approved checksum; upload the official PDF again.", HttpStatus.CONFLICT);
   const dir = APPROVED_DIR(); mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, `${row.sha256}.pdf`), bytes);
+  if (row.official) { writeFileSync(join(dir, `${row.sha256}.approval.json`), JSON.stringify({ contract: "official-download/v1", sha256: row.sha256, kind: row.kind, code: row.code, edition: row.edition, file_name: row.fileName, form_page: row.irccPage, source_url: row.official.sourceUrl, fetched_at: row.approvedAt.toISOString(), started_by: row.uploadedBy }, null, 1) + "\n"); return; }
   writeFileSync(join(dir, `${row.sha256}.approval.json`), JSON.stringify({ contract: "approved-source/v1", sha256: row.sha256, kind: row.kind, code: row.code, edition: row.edition, file_name: row.fileName, ircc_page: row.irccPage, uploaded_by: row.uploadedBy, approved_by: row.approvedBy, approved_at: row.approvedAt.toISOString() }, null, 1) + "\n");
 }
 const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary Resident Visa", "IMM 1295": "Application for Work Permit made Outside of Canada", "IMM 5707": "Family Information", "IMM 5409": "Statutory Declaration of Common-law Union", "IMM 5476": "Use of a Representative", "IMM 5475": "Authority to Release Personal Information to a Designated Individual", "IMM 5257 SCH1": "Schedule 1: Background/Declaration" };
@@ -115,8 +118,13 @@ export class Sources {
   }
 
   /** P-80: the product approval of a file that is not in the official library (a second person approved it), or null. */
-  async approvedInProduct(a: { workspaceId: string; sha256: string; recognised: boolean }) {
-    return a.recognised ? null : this.db.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId: a.workspaceId, sha256: a.sha256 } } });
+  async approvedInProduct(a: { workspaceId: string; sha256: string; recognised: boolean }): Promise<Approval | null> {
+    if (a.recognised) return null;
+    const p = await this.db.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId: a.workspaceId, sha256: a.sha256 } } });
+    if (p) return p;
+    // S4 (M3): an official download carries the manifest's evidence, so it is read and drafted like an official file.
+    const d = await this.db.officialDownload.findUnique({ where: { workspaceId_sha256: { workspaceId: a.workspaceId, sha256: a.sha256 } } });
+    return d ? { sha256: d.sha256, kind: d.kind === "checklist" ? "checklist" : "form", code: d.code, edition: d.edition, fileName: d.fileName, irccPage: d.formPageUrl, uploadedBy: d.startedBy, approvedBy: "official-download", approvedAt: d.fetchedAt, official: { sourceUrl: d.sourceUrl } } : null;
   }
 
   /** The file name a form's drafting job is known by: the official file's, or for a form approved in the product its
@@ -702,14 +710,14 @@ export class Sources {
           evidenceQuote: e.reused_from ? `${e.evidence_quote ?? ""} (as released in ${e.reused_from})`.slice(0, 500) : e.evidence_quote ?? null, reason: returned ? `returned by ${d!.decidedBy}: ${d!.decisionNote}` : e.unresolved_reason ?? null, version: 1, status: "DRAFT", origin: e.reused_from ? "CODE_MATCH" : "AI_PROPOSAL", draftingRunId: job.runId, updatedBy: actor.id };
       }) });
       // On the combination already: kept as it is; removed earlier: added back (QA-13).
-      await addFormLine(tx, { workspaceId: ws, combinationId: job.combinationId, govFormDefId: def.id, formKey, who: b.who, origin: "AI_PROPOSAL", by: actor.id, sourceQuote: `${item.edition}: ${item.applicability}` });
+      await addFormLine(tx, { workspaceId: ws, combinationId: job.combinationId!, govFormDefId: def.id, formKey, who: b.who, origin: "AI_PROPOSAL", by: actor.id, sourceQuote: `${item.edition}: ${item.applicability}` });
       // Claimed inside the transaction: a second apply of the same draft (double click, two people) changes nothing.
       const claimed = await tx.draftingJob.updateMany({ where: { id: jobId, status: "COMPLETED" }, data: { status: "APPLIED", message: `${job.message} Applied to the draft by ${actor.name}.` } });
       if (!claimed.count) fail("Already applied.", HttpStatus.CONFLICT);
       await tx.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `Field map applied to the draft (${out.entries.length} form fields; ${created} new field definitions). Review and release it.` } });
       return { formKey, edition: item.edition, boxes: out.entries.length, new_fields: created, returned: job.items.filter((i) => i.decision === "RETURNED").length };
     });
-    await this.audit.log(ws, actor.id, "applied", "AI draft", job.runId, `${actor.name} applied the reviewed AI draft of ${item.edition} to the draft: ${res.boxes} form fields, ${res.new_fields} new fields, ${res.returned} returned`, undefined, job.combinationId);
+    await this.audit.log(ws, actor.id, "applied", "AI draft", job.runId, `${actor.name} applied the reviewed AI draft of ${item.edition} to the draft: ${res.boxes} form fields, ${res.new_fields} new fields, ${res.returned} returned`, undefined, job.combinationId ?? undefined);
     return res;
   }
 
@@ -742,7 +750,9 @@ export class Sources {
     const forms = await this.db.govFormDef.findMany({ where: { workspaceId }, orderBy: { formKey: "asc" }, include: { editions: { include: { _count: { select: { maps: true } } } }, usedBy: { where: { status: { not: "RETIRED" } }, select: { combinationId: true } } } });
     // P-80: a file a second person approved in the product is a library form too.
     const inProduct = new Set((await this.db.approvedSource.findMany({ where: { workspaceId }, select: { sha256: true } })).map((x) => x.sha256));
-    const approved = new Set([...manifest().map((i) => i.sha256), ...inProduct]);
+    // S4 (M2): a file the form finder downloaded from canada.ca (or a hand upload equal to it) is a library form too.
+    const downloaded = (await this.db.officialDownload.findMany({ where: { workspaceId }, select: { sha256: true } })).map((x) => x.sha256);
+    const approved = new Set([...manifest().map((i) => i.sha256), ...inProduct, ...downloaded]);
     // Historical workspaces may contain entries created before the source gate. Keep those out of
     // library pickers and usage summaries; a prior database row is not a source-verification decision.
     // W1-02 (P-102): forms come in only as PDFs; an online version (parked with the browser extension) is never listed as an

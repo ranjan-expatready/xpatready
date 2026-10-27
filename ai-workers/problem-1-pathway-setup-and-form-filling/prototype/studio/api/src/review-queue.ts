@@ -67,7 +67,7 @@ export class ReviewQueueService {
     for (const j of jobs) if (j.attachmentId && !newest.has(j.attachmentId)) newest.set(j.attachmentId, j);
     for (const j of newest.values()) {
       if (j.kind !== "field_map" || j.status !== "COMPLETED" || j.mode === "STUB") continue;
-      const n = waitingCount.get(j.id) ?? 0, c = combo.get(j.combinationId);
+      const n = waitingCount.get(j.id) ?? 0, c = j.combinationId ? combo.get(j.combinationId) : undefined;
       const a = atts.get(j.attachmentId!), counts = (j.detail as { counts?: Record<string, number> } | null)?.counts;
       const source = (a?.edition ?? a?.fileName ?? "A form").split(" (")[0];
       const what = counts ? `${source}: ${plural(counts.boxes, "form field")}, ${counts.mapped} mapped. ${plural(counts.proposed_fields, "shared field")} proposed: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.` : `${source}: an AI draft to review.`;
