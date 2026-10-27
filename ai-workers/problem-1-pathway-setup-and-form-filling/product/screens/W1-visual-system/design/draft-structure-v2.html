@@ -1,0 +1,559 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Draft board — Program structure round 2: one Add dialog and the page layout (W1-visual-system, 27 Oct)</title>
+<style>
+/* Team tokens and round-1 visual system copied from draft-visual-system.html (itself from prototype/studio/web/src/styles/tokens.css + the agreed level tokens). */
+/* Team tokens copied from prototype/studio/web/src/styles/tokens.css (light + dark sheets; light muted = neutral-700 as the app does).
+   NEW (proposed, not yet a token): --lv* level colours and their tints. Contrast ratios on the board were computed with the WCAG 2.2 formula. */
+:root{--bg:#e9ecef;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--link:#054e9c;--primary:#0862c5;--on-primary:#fff;--p50:#e6f4ff;--p100:#cce9ff;--border:#d9d9d9;--border-s:#bfbfbf;--guide:#bfbfbf;
+--ok:#16a34a;--t-ok:#0f5c2e;--ok-tint:#e3f4e9;--warn:#ff8500;--t-warn:#663200;--warn-tint:#ffedd9;--danger:#dc2626;--t-danger:#991b1b;--danger-tint:#fbe5e5;--t-ai:#6d28d9;--ai-tint:#efe7fd;--neutral-tint:#eeeeee;--sel:#e6eff9;
+--lv0:#595959;--lv1:#37506e;--lv2:#0b6477;--lv3:#043a73;--lv1-t:#eff1f3;--lv2-t:#ebf3f4;--lv3-t:#f0f3f7;--lv1-b:#ebeef0;--lv2-b:#e7f0f1;--lv3-b:#ebeff4;
+--sh:0 1px 2px #0000000d;--sh-r:0 1px 3px #00000014,0 4px 10px #0000000a;--font:'Inter Variable',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+.dk{--bg:#0f1822;--surface:#14202c;--raised:#182634;--text:#eeeeee;--muted:#a9b7c4;--link:#2aa1ff;--primary:#0694ff38;--on-primary:#eeeeee;--p50:#143e61;--p100:#1d4f7a;--border:#2c3a48;--border-s:#46586c;--guide:#46586c;
+--t-ok:#4ade80;--ok-tint:#183537;--t-warn:#ffb454;--warn-tint:#3b342c;--t-danger:#f87171;--danger-tint:#302632;--t-ai:#c4b5fd;--ai-tint:#24284a;--neutral-tint:#293643;--sel:#143e61;
+--lv0:#a9b7c4;--lv1:#a9c0dc;--lv2:#5fd0de;--lv3:#9ccbff;--lv1-t:#263545;--lv2-t:#1f3745;--lv3-t:#233344;--lv1-b:#293848;--lv2-b:#213a48;--lv3-b:#253748;--sh:none;--sh-r:0 1px 3px #0006;color:var(--text)}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);font-size:14px;line-height:1.45;color:var(--text);background:var(--bg)}
+h1,h2,h3,h4{font-family:'Proxima Nova',var(--font);margin:0}
+.board{max-width:1500px;margin:0 auto;padding:24px}
+.top{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}.top h1{font-size:24px}.top p{margin:4px 0 0;color:var(--muted);max-width:980px}
+.sec{margin:36px 0 10px;border-top:2px solid var(--border-s);padding-top:16px}.sec h2{font-size:20px}.sec>p,.note{margin:6px 0;color:var(--muted);max-width:1180px}
+.sec h3.sub{font-size:16px;margin:18px 0 6px}
+/* board tags (P-33 / P-26 / decision markers) — board chrome, fixed light colours */
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;padding:1px 6px;border-radius:999px;border:1px solid;white-space:nowrap;font-weight:500;vertical-align:middle;font-family:var(--font)}
+.tag.cap{color:#054e9c;border-color:#cce9ff;background:#e6f4ff}.tag.scaf{color:#663200;border-color:#ffc773;background:#fff3e0}
+.tag.nb{color:#595959;border:1px dashed #bfbfbf;background:#fff}.tag.dec{color:#0f5c2e;border-color:#a7dcb9;background:#eefaf2}
+.tag.gap{color:#991b1b;border-color:#f3b4b4;background:#fdf0f0}.tag.con{color:#7a1f6b;border-color:#e5b3dc;background:#fbeef9}.tag.sample{color:#663200;border-color:#ffc773;background:#fff}
+.tag.rec{color:#fff;background:#0862c5;border-color:#0862c5;font-weight:600}
+.ann{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+.why{font-size:12px;color:var(--muted);margin:4px 0 0}.why b{color:var(--text)}
+.tbtn{font:inherit;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border-s);background:var(--raised);color:var(--text);cursor:pointer}
+/* option grid */
+.opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:10px;align-items:start}
+.opt{background:var(--raised);border:1px solid var(--border);border-radius:12px;padding:12px;min-width:0}
+.opt.is-rec{border:2px solid var(--primary);box-shadow:0 0 0 4px var(--p50)}
+.opt>h4{font-size:14px;margin:0 0 2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.opt .stage{background:var(--surface);border-radius:8px;padding:10px;margin-top:8px;overflow:hidden}
+.score{font-size:12px;margin-top:8px;display:grid;grid-template-columns:auto 1fr;gap:2px 8px}.score span:nth-child(odd){color:var(--muted)}
+/* app frame */
+.frame{background:var(--surface);border:1px solid var(--border-s);border-radius:12px;overflow:hidden;box-shadow:0 2px 8px #0000001a;margin-top:10px}
+.ftitle{font-size:12px;color:var(--muted);padding:6px 12px;background:var(--raised);border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.appbar{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--raised);border-bottom:1px solid var(--border);font-size:12px}
+.logo{font-weight:800;color:var(--primary);font-size:16px;display:flex;align-items:center;gap:6px}.dk .logo{color:#eeeeee}.logo i{width:20px;height:20px;border-radius:5px;background:#0862c5;display:inline-block}
+.prod b{display:block;font-size:13px;color:var(--text)}.prod{border-left:1px solid var(--border);padding-left:10px;color:var(--muted)}
+.demo{background:#fff3e0;color:#663200;border-radius:6px;padding:2px 8px}
+.shell{display:grid;grid-template-columns:184px 1fr}
+.side{background:var(--raised);border-right:1px solid var(--border);padding:12px 8px}
+.side .g{font-size:12px;color:var(--muted);margin:12px 8px 4px}.side .g:first-child{margin-top:0}
+.side a{display:block;padding:5px 8px;border-radius:6px;color:var(--text);text-decoration:none}.side a.on{background:var(--p50);color:var(--link);font-weight:600}
+.main{padding:18px 22px;min-width:0}
+.ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ph h1{font-size:24px}.ph .s{width:100%;color:var(--muted);margin-top:-4px}.sp{flex:1}
+.info{display:inline-flex;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--muted);color:var(--muted);font-size:11px;align-items:center;justify-content:center;font-weight:700;cursor:help}
+/* controls */
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border-s);background:var(--raised);color:var(--text);font:inherit;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}.dk .btn.pri{border-color:#2aa1ff}
+.btn.out{color:var(--link);border-color:var(--border-s)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--link);padding:0 6px;text-decoration:underline;text-underline-offset:2px}
+.btn[aria-disabled=true]{opacity:.55;cursor:not-allowed}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.seg{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.seg span{padding:5px 12px;border-radius:9px;display:inline-flex;gap:6px;align-items:center;color:var(--text)}.seg span.on{background:var(--primary);color:var(--on-primary);font-weight:600}
+.seg span em{font-style:normal;font-size:12px;font-weight:600;background:#0000000f;border-radius:99px;padding:0 6px}.seg span.on em{background:#ffffff33}
+.input{height:34px;border:1px solid var(--border-s);border-radius:8px;background:var(--raised);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--muted);min-width:0}
+.kbd{font-size:11px;border:1px solid var(--border);border-radius:4px;padding:0 4px;margin-left:auto}
+/* LEVEL SYSTEM */
+.lm{display:inline-block;flex:none;width:8px;height:8px;vertical-align:middle;margin-right:2px}
+.lm.l1{background:var(--lv1);border-radius:2px}.lm.l2{background:var(--lv2);border-radius:50%}
+.lm.l3{background:var(--lv3);transform:rotate(45deg);width:7px;height:7px;border-radius:1px}
+.lm.l4{border:1.5px solid var(--lv3);transform:rotate(45deg);width:7px;height:7px;border-radius:1px}
+.lm.add{background:transparent!important;border:1.5px dashed var(--muted);transform:none;border-radius:2px}
+.lb{display:inline-block;font-size:12px;line-height:16px;padding:1px 6px;border-radius:6px;font-weight:500;white-space:nowrap}
+.lb.l1{color:var(--lv1);background:var(--lv1-b)}.lb.l2{color:var(--lv2);background:var(--lv2-b)}.lb.l3,.lb.l4{color:var(--lv3);background:var(--lv3-b)}
+.c0{color:var(--lv0)}.c1{color:var(--lv1)}.c2{color:var(--lv2)}.c3{color:var(--lv3)}
+/* Trail component: context parts in their level colour (regular), the identity (Category › Sub-category) navy, kept together and wrapping as one block */
+.trail{color:var(--muted);overflow-wrap:anywhere}.trail .s{color:var(--muted);margin:0 4px;font-weight:400}
+.trail .p0{color:var(--lv0)}.trail .p1{color:var(--lv1)}.trail .p2{color:var(--lv2);font-weight:500}
+.trail .idn{display:inline-block;color:var(--lv3)}.trail .idn b{font-weight:600}.trail .idn .none{color:var(--muted);font-style:normal}
+.trail.sm{font-size:12px;line-height:17px}
+/* chips (status by shape + word, never colour alone) */
+.chip{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;line-height:18px}
+.chip .ic{font-size:12px;line-height:1}
+.chip.live{background:var(--ok-tint);color:var(--t-ok)}.chip.nr{background:var(--danger-tint);color:var(--t-danger)}
+.chip.set{background:var(--neutral-tint);color:var(--text)}.chip.ns{border:1px dashed var(--border-s);color:var(--muted);padding:0 7px}
+.chip.ai{background:var(--ai-tint);color:var(--t-ai)}.chip.need{background:var(--warn-tint);color:var(--t-warn);border-radius:6px}
+.chip.ret{background:var(--neutral-tint);color:var(--muted)}
+/* setup bar: 4 segments + caption on the same line */
+.setup{display:flex;align-items:center;gap:10px}.bar{display:flex;gap:3px;flex:0 0 46%}
+.bar i{flex:1;height:6px;border-radius:99px;background:var(--neutral-tint)}.dk .bar i{background:#2c3a48}
+.bar i.d{background:var(--ok)}.bar i.c{background:transparent;box-shadow:inset 0 0 0 1.5px var(--primary)}.dk .bar i.c{box-shadow:inset 0 0 0 1.5px #2aa1ff}
+.bar i.run{background:repeating-linear-gradient(-45deg,#0862c5 0 4px,#99c0ea 4px 8px);animation:mv 1.2s linear infinite;background-size:200% 100%}
+@keyframes mv{to{background-position:22px 0}}@media (prefers-reduced-motion:reduce){.bar i.run{animation:none}}
+.cap{font-size:12px;color:var(--muted);min-width:0}
+.tr>.chip,.lr>.chip,.lr>span>.chip{justify-self:start}.ann .tag{white-space:normal}
+/* setup card (recommended A) */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:12px;padding:12px 14px 0;display:flex;flex-direction:column;gap:6px;box-shadow:var(--sh-r);min-width:0}
+.card.flat{box-shadow:none}
+.card .hd{display:flex;align-items:flex-start;gap:8px}.card .hd h3{flex:1;min-width:0;font-size:16px;line-height:22px;font-weight:600;color:var(--lv3);overflow-wrap:anywhere}
+.card .subl{font-size:14px;color:var(--lv3);margin-top:-4px;display:flex;align-items:center;gap:6px}.card .subl.none{color:var(--muted)}
+.card .facts{font-size:12px;color:var(--muted)}
+.card .ft{margin-top:auto;border-top:1px solid var(--border);padding:8px 0 10px;display:flex;align-items:center;gap:8px;min-height:46px}
+.ovd{color:var(--t-warn);font-size:14px;margin-left:auto;cursor:help}
+/* list */
+.list{background:var(--raised);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.lh,.lr{display:grid;grid-template-columns:minmax(0,1fr) 128px 120px 210px;gap:12px;align-items:center;padding:0 14px}
+.lh{font-size:12px;font-weight:500;color:var(--muted);background:var(--surface);height:36px;border-bottom:1px solid var(--border)}
+.lr{min-height:44px;padding-top:6px;padding-bottom:6px;border-bottom:1px solid var(--border)}.lr:hover{background:#2d2d2d08}
+.lr .trail{font-size:14px}.lr .filed{font-size:12px;color:var(--muted)}
+.pg{display:flex;align-items:center;gap:8px;height:40px;padding:0 14px;background:var(--lv1-t);border-bottom:1px solid var(--border);border-left:4px solid var(--lv1);position:sticky;top:0}
+.pg b{color:var(--lv1);font-size:16px;font-weight:600}.pg .n{color:var(--muted)}
+/* tree */
+.tree{background:var(--raised);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.th,.tr{display:grid;grid-template-columns:minmax(0,1fr) 126px 128px 104px;gap:8px;align-items:center;padding:0 12px}
+.th{font-size:12px;font-weight:500;color:var(--muted);height:32px;background:var(--surface);border-bottom:1px solid var(--border)}
+.tr{min-height:40px}.tr:hover{background:#2d2d2d08}
+.tr .nm{display:flex;align-items:center;gap:6px;align-self:stretch;min-width:0}
+.tr .nm .t{overflow-wrap:anywhere;padding:9px 0}
+.tr.r1{background:var(--lv1-t);border-top:1px solid var(--border)}.tr.r1:first-of-type{border-top:0}
+.tr.r1 .t{font-size:16px;font-weight:600;color:var(--lv1)}.tr.r2 .t{font-weight:600;color:var(--lv2)}.tr.r3 .t{font-weight:600;color:var(--lv3)}.tr.r4 .t{color:var(--lv3)}
+.tr.addr .t{color:var(--muted)}.tr.sel{background:var(--sel);box-shadow:inset 3px 0 0 #0862c5}
+.tr .ct{font-size:12px;color:var(--muted);text-align:right}.tr .loc{font-size:12px;color:var(--muted)}
+.tree.mini .tr{grid-template-columns:minmax(0,1fr) auto 0 28px;gap:6px;padding:0 8px}.tree.mini .tr>:nth-child(3){overflow:hidden;width:0}.tree.mini .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{width:16px;flex:none;color:var(--muted);font-size:13px;text-align:center}
+.gd{width:22px;flex:none;align-self:stretch;position:relative}
+.gd.v::before,.gd.t::before,.gd.l::before{content:"";position:absolute;left:10px;top:0;border-left:1px solid var(--guide)}
+.gd.v::before,.gd.t::before{bottom:0}.gd.l::before{height:50%}
+.gd.t::after,.gd.l::after{content:"";position:absolute;left:10px;top:50%;width:10px;border-top:1px solid var(--guide)}
+/* pathway filter cards */
+.pcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.pc{border:1px solid var(--border);background:var(--raised);border-radius:12px;padding:9px 12px;display:flex;flex-direction:column;gap:3px;min-height:72px}
+.pc.on{border-color:#0862c5;background:var(--p50)}.pc b{font-size:14px;display:flex;align-items:center;gap:6px}.pc small{font-size:12px;color:var(--muted)}
+.pc.add{border-style:dashed;border-color:var(--border-s);align-items:center;justify-content:center;color:var(--muted)}
+/* section header in card view */
+.sh{display:flex;align-items:center;gap:8px;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--lv1-b)}
+.sh b{font-size:18px;font-weight:600;color:var(--lv1);font-family:'Proxima Nova',var(--font)}.sh .n{color:var(--muted)}
+/* misc */
+.sk{background:linear-gradient(90deg,var(--neutral-tint),var(--surface),var(--neutral-tint));border-radius:6px;height:10px}
+.callout{border:1px solid var(--border);border-radius:12px;background:var(--raised);padding:12px 14px}
+.panel{background:var(--raised);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;min-width:0}
+.panel .phd{padding:12px 16px;border-bottom:1px solid var(--border)}.panel .pbd{padding:12px 16px;display:grid;grid-template-columns:96px 1fr;gap:8px 10px;font-size:14px}
+.panel .pbd dt{color:var(--muted)}.panel .pbd dd{margin:0;min-width:0}.panel .pft{border-top:1px solid var(--border);padding:10px 16px;display:flex;gap:8px}
+table.tok{border-collapse:collapse;width:100%;background:var(--raised);font-size:12px;margin-top:8px}
+table.tok th,table.tok td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}table.tok th{background:var(--surface);font-weight:600}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #0002;vertical-align:-2px;margin-right:4px}
+.callno{display:inline-flex;width:18px;height:18px;border-radius:50%;background:#7a1f6b;color:#fff;font-size:11px;font-weight:700;align-items:center;justify-content:center;flex:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.split{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:14px;align-items:start}
+ul.tight{margin:6px 0;padding-left:18px}ul.tight li{margin:2px 0}
+.q{background:var(--raised);border:1px solid var(--border);border-left:4px solid #0862c5;border-radius:8px;padding:10px 14px;margin:8px 0}
+
+/* option C tree: connector lines take the parent level's colour */
+.cg{width:18px;flex:none;align-self:stretch;position:relative}.cg.k0{--c:var(--lv1)}.cg.k1{--c:var(--lv2)}.cg.k2{--c:var(--lv3)}
+.cg.v::before,.cg.t::before{content:"";position:absolute;left:8px;top:0;bottom:0;border-left:1.5px solid var(--c);opacity:.9}
+.cg.t::after{content:"";position:absolute;left:8px;top:50%;width:8px;border-top:1.5px solid var(--c);opacity:.9}
+.cg.l::before{content:"";position:absolute;left:8px;top:0;height:50%;width:8px;border-left:1.5px solid var(--c);border-bottom:1.5px solid var(--c);border-bottom-left-radius:6px;opacity:.9}
+.ctree{max-width:1000px}.ctree .th,.ctree .tr{grid-template-columns:minmax(0,1fr) 112px 128px 96px}.ctree .tr{min-height:30px}.ctree .tr .nm .t{padding:4px 0}.ctree .tr.r1 .t{font-size:16px}.ctree .tr.sticky{position:sticky;top:0;z-index:1}
+.ctree .tr.addr .t{font-size:12px}.chip.xs{font-size:12px;line-height:16px;padding:0 6px;font-weight:500}.chip.xs.ns{padding:0 5px}
+.ph1 .tr{grid-template-columns:minmax(0,1fr) auto;min-height:36px;padding:0 8px}.pl{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.phone{width:390px;max-width:100%;background:var(--surface);border:1px solid var(--border-s);border-radius:16px;padding:10px}
+.pgc{gap:2px}.pcr{display:flex;align-items:center;gap:6px;min-height:28px;font-size:14px;color:var(--lv3)}.pcr b{font-weight:600;flex:1}.pcr.sub{padding-left:16px}.pcr.sub>span:nth-child(2){flex:1}.addl{color:var(--muted);font-size:12px}
+@media (max-width:1100px){.opts{grid-template-columns:1fr}.two,.split{grid-template-columns:1fr}}
+
+/* ===== ROUND 2 additions (Program structure: one Add dialog, three page layouts). Same tokens as round 1. ===== */
+:root{--iron:#2d2d2d}.dk{--iron:#8a99a8}
+.w14{overflow-x:auto;padding-bottom:8px}.w14>.frame{width:1440px}
+.tb{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.stat{margin:0 0 10px;color:var(--muted)}
+.foot{font-size:12px;color:var(--muted);margin-top:10px}
+.kebab{display:inline-flex;width:28px;height:28px;border-radius:6px;align-items:center;justify-content:center;color:var(--muted);border:1px solid transparent;font-weight:700;flex:none;cursor:pointer;position:relative}
+.kebab:hover{border-color:var(--border-s)}
+.lk{color:var(--link);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-weight:600}
+.info.sm{width:14px;height:14px;font-size:10px}
+/* A · Pathway cards */
+.pcA{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}.pcA>.pc{flex:1 1 200px}.pcA>.pc:first-child{flex:0 1 170px}.pcA>.pc.add{flex:0 0 130px}.pcA.ph{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.pcA.ph>.pc,.pcA.ph>.pc:first-child{flex:0 0 168px}.pcA.ph>.pc.add{flex:0 0 120px;min-height:0}
+.pc .chip,.cols>.chip,.meta>.chip{justify-self:start;width:fit-content}
+.idn .lm{margin:0 5px 0 1px}.idn .lm.l4{margin-left:2px}
+.pcA .pc{min-height:100px;padding:10px 34px 10px 14px;position:relative}
+.pcA .pc .kebab{position:absolute;right:4px;top:6px}
+.pcA.ph .pc{min-height:0;padding:8px 34px 8px 12px}
+/* A · column header, Pathway band, Program sections, one-liner rows */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 124px 176px 172px 32px;gap:12px;align-items:center}
+.cols.np{grid-template-columns:minmax(0,1fr) 124px 160px 32px}
+.colh{font-size:12px;font-weight:500;color:var(--muted);height:30px;padding:0 10px 0 16px;position:sticky;top:0;background:var(--surface);z-index:3;border-bottom:1px solid var(--border)}
+.pband{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px 0 12px;background:var(--lv1-t);border:1px solid var(--border);border-left:4px solid var(--lv1);border-radius:10px;margin-top:14px;position:sticky;top:30px;z-index:2}
+.pband b{color:var(--lv1);font-size:16px;font-weight:600}.pband .n{color:var(--muted);font-size:12px}
+.psec{background:var(--raised);border:1px solid var(--border);border-radius:12px;margin-top:6px}
+.psh{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px 0 12px;background:var(--lv2-t);border-radius:11px 11px 0 0}
+.psec.closed .psh{border-radius:11px}.psec>.orow:last-child{border-radius:0 0 11px 11px}
+.phone .pband{top:0}
+.psec:not(.closed) .psh{border-bottom:1px solid var(--border)}
+.psh h3{font-size:16px;font-weight:600;color:var(--lv2);font-family:var(--font)}.psh .n{font-size:12px;color:var(--muted)}
+.orow{min-height:36px;padding:2px 10px 2px 16px;border-top:1px solid var(--border)}
+.psh+.orow{border-top:0}
+.orow .trail{font-size:14px}.orow .loc,.orow .use{font-size:12px;color:var(--muted)}
+.orow.sel{background:var(--sel);box-shadow:inset 3px 0 0 #0862c5}
+.orow.new{background:var(--p50);box-shadow:inset 3px 0 0 #0862c5}
+.orow.ret .idn,.orow.ret .idn b{color:var(--muted)}
+.orow.empty{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.orow.p{display:grid;grid-template-columns:minmax(0,1fr) 30px;gap:6px;align-items:center;padding:6px 6px 6px 12px}
+.orow.p .meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px;font-size:12px;color:var(--muted)}
+.pill{display:inline-flex;font-size:11px;font-weight:600;border-radius:6px;padding:0 6px;line-height:16px;margin-left:6px;vertical-align:middle}
+.pill.wait{background:var(--warn-tint);color:var(--t-warn)}.pill.just{background:#0862c5;color:#fff}
+/* menu */
+.menu{position:absolute;right:0;top:30px;width:270px;background:var(--raised);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px #0002;padding:4px;z-index:5;font-size:14px;font-weight:400;color:var(--text);text-align:left}
+.menu div{padding:6px 10px;border-radius:6px}.menu div:hover,.menu div.hi{background:var(--sel)}.menu small{display:block;font-size:12px;color:var(--muted)}
+.menu hr{border:0;border-top:1px solid var(--border);margin:4px 0}.menu .dang{color:var(--t-danger)}.menu .off{color:var(--muted)}
+/* C · flat list */
+.cl{background:var(--raised);border:1px solid var(--border);border-radius:10px}
+.cl .colh{border-radius:10px 10px 0 0}
+.cband{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;background:var(--lv1-t);border-bottom:1px solid var(--border);border-left:4px solid var(--lv1);position:sticky;top:30px;z-index:2}
+.cband b{color:var(--lv1);font-size:16px;font-weight:600}.cband .n{color:var(--muted);font-size:12px}
+.crow{min-height:44px;padding:4px 10px 4px 16px;border-bottom:1px solid var(--border)}
+/* viewport boxes used to measure height at 1440 × 900 (760 px of page below the app bar) */
+.vp{height:760px;overflow:auto;position:relative}
+.vp.p{height:700px}
+.meas{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:600;color:#fff;background:#37506e;border-radius:6px;padding:2px 8px;margin-left:6px}
+/* dialog */
+.dlg{background:var(--raised);border:1px solid var(--border);border-radius:14px;box-shadow:0 16px 48px #00000033;width:560px;max-width:100%;display:flex;flex-direction:column;text-align:left}
+.dlg .dh{padding:16px 20px 8px;display:flex;gap:10px;align-items:flex-start}.dlg .dh h3{font-size:18px}.dlg .dh p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.dlg .db{padding:6px 20px 14px;display:grid;gap:10px}
+.dlg .df{border-top:1px solid var(--border);padding:12px 20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fld label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;margin-bottom:4px}.fld label .r{font-weight:400;color:var(--muted)}
+.fld.off label{color:var(--muted)}
+.cb{min-height:36px;border:1px solid var(--border-s);border-radius:8px;background:var(--raised);display:flex;align-items:center;gap:8px;padding:0 10px}
+.cb .v{flex:1;min-width:0;overflow-wrap:anywhere}.cb .plc{flex:1;color:var(--muted)}.cb .caret{color:var(--muted);font-size:12px}
+.cb.focus{border-color:#0862c5;box-shadow:0 0 0 3px #0862c540}.cb.err{border-color:var(--danger)}.cb.warn{border-color:var(--warn)}
+.cb.off{background:var(--surface);border-style:dashed}
+.cb.ai{border-color:var(--t-ai)}
+.cursor{display:inline-block;width:1px;height:16px;background:var(--text);vertical-align:-3px;margin-left:1px}
+.tg{font-size:11px;font-weight:600;border-radius:4px;padding:0 5px;line-height:16px;white-space:nowrap}
+.tg.new{background:#0862c5;color:#fff}.tg.ex{color:var(--muted);border:1px solid var(--border)}
+.chk{font-size:12px;margin:5px 0 0;line-height:17px}
+.chk.ok{color:var(--muted)}.chk.dup{color:var(--t-danger)}
+.chk.box{display:block;width:100%;border-radius:8px;padding:7px 9px;color:var(--text)}
+.chk.close{background:var(--warn-tint)}.chk.ai{background:var(--ai-tint)}.chk.note{background:var(--p50)}.chk.refuse{background:var(--neutral-tint)}
+.chk .acts{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.lst{border:1px solid var(--border);border-radius:8px;box-shadow:var(--sh-r);background:var(--raised);margin-top:4px;padding:4px;font-size:14px}
+.lst div{padding:6px 8px;border-radius:6px;display:flex;gap:8px;align-items:center}.lst div.hi{background:var(--sel)}
+.lst small{margin-left:auto;color:var(--muted);font-size:12px}.lst .newo{color:var(--link);border-top:1px solid var(--border);border-radius:0 0 6px 6px;margin-top:2px;font-weight:600}
+.lst .grp{font-size:12px;color:var(--muted);padding:4px 8px}
+.prev{border:1px dashed var(--border-s);border-radius:10px;padding:10px 12px;background:var(--surface)}
+.prev .k{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:2px}.prev p{margin:6px 0 0;font-size:12px;color:var(--muted)}
+.nmc{display:inline-block;border:1px dashed var(--border-s);border-radius:99px;padding:0 6px;font-size:12px;color:var(--muted);cursor:help}
+.ntc{border-radius:8px;padding:8px 10px;font-size:14px;width:100%}.ntc.err{background:var(--danger-tint);border:1px solid #dc262666}.ntc.ok{background:var(--ok-tint);border:1px solid #16a34a55}.ntc.inf{background:var(--p50);border:1px solid var(--p100)}
+.ovl{position:relative}.ovl>.dim{position:absolute;inset:0;background:#0f182270;z-index:6}.ovl>.dlg{position:absolute;left:50%;top:70px;transform:translateX(-50%);z-index:7}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(470px,1fr));gap:18px;align-items:start;margin-top:10px}
+.dgrid>div>h4{font-size:14px;margin:0 0 4px}
+.sheet{width:390px;height:800px;border:1px solid var(--border-s);border-radius:18px;overflow:hidden;background:var(--raised);display:flex;flex-direction:column;flex:none}
+.sheet .dh{padding:14px 16px 6px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}.sheet .dh h3{font-size:18px;flex:1}
+.sheet .db{flex:1;overflow:auto;padding:12px 16px;display:grid;gap:12px;align-content:start}
+.sheet .df{border-top:1px solid var(--border);padding:10px 16px 16px;display:grid;gap:8px}
+.sheet .df .btn{justify-content:center;height:40px}
+.spec{background:var(--bg);padding:14px;border-radius:12px}
+.ent{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:10px}
+.ent>div{background:var(--raised);border:1px solid var(--border);border-radius:12px;padding:10px}
+.ent .n{display:inline-flex;width:20px;height:20px;border-radius:50%;background:#0862c5;color:#fff;font-size:12px;font-weight:700;align-items:center;justify-content:center;margin-right:6px}
+table.cmp{border-collapse:collapse;width:100%;background:var(--raised);font-size:13px;margin-top:10px}
+table.cmp th,table.cmp td{border:1px solid var(--border);padding:7px 9px;text-align:left;vertical-align:top}table.cmp th{background:var(--surface);font-weight:600}
+table.cmp td.rec,table.cmp th.rec{background:var(--p50)}
+.phones{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;align-items:flex-start}
+.phone .main{padding:0}
+@media (max-width:1100px){.ent{grid-template-columns:1fr 1fr}}
+</style></head><body>
+<div class="board">
+
+<div class="top"><div style="flex:1;min-width:300px">
+<h1>Program structure, round 2 — one Add dialog and a calmer page</h1>
+<p>Item <b>W1-visual-system</b>, round 2 (founder feedback, 27 Oct, after the Cards / Tree pick that morning). Draft by the designer agent for the Lead; the Lead edits and decides. Drawn at <b>1440 px</b> (frames are 1440 px wide; scroll sideways on a smaller screen) and <b>390 px</b>, with the founder's five Retail combinations (P-112) and a <b>50-combination Sample</b>. Heights of the 50-combination pages are <b>measured on this board</b> (the dark-blue badges): one screen = 760 px of page below the app bar on a 1440 × 900 display. Every element is tagged Capability / Scaffolding (P-33) and Needed / Not built (P-26). Names are Sample (P-112 + Sample 50); no immigration value is added. Concept: <code>../concept-draft.md</code> § Round 2.</p>
+<div class="ann"><span class="tag cap">Capability · Needed</span><span class="tag scaf">Scaffolding</span><span class="tag nb">Not built</span><span class="tag dec">[F P-xx] followed a decision</span><span class="tag gap">[GAP] decision missing</span><span class="tag con">[CONFLICT] two sources disagree</span><span class="tag sample">Sample</span><span class="tag rec">★ Recommended</span></div>
+</div><button class="tbtn" type="button" onclick="document.body.classList.toggle('dk');this.setAttribute('aria-pressed',document.body.classList.contains('dk'))" aria-pressed="false">Show the whole board in dark theme</button></div>
+
+<!-- ============ 0 ============ -->
+<div class="sec"><h2>0 · What the founder asked, and where this board agrees or pushes back</h2>
+<div class="two">
+<div class="callout"><b>Founder, 27 Oct (condensed):</b> "When we click Add pathway, a row pops up at the bottom ('New pathway in Retail' + Add); it is very cumbersome. I want one pop-up where the person enters Pathway type, Pathway, Program, Category, Sub-category one by one, the way we used to create it, and then the tree and the cards fill in. Also the tree is vertically scattered; it looks too much. Should we have one-liners and a card layout? Think about it; do not follow me blindly."</div>
+<div class="callout"><b>This board's answer</b>
+<ul class="tight">
+<li><b>Agree: one dialog</b> (§1), five fields top-down, each picks an existing name or types a new one; the old path builder's checks (C1.2) come back, now with Pathway and "Cases may be opened from". The inline add row and every ghost "+ Add …" row go: one way to add. <span class="tag dec">[F P-125]</span></li>
+<li><b>Push back, small:</b> it is <b>one</b> dialog, not five steps (a 5-step wizard breaks EXPERIENCE §3 "≤3 steps" and hides the context above each choice); <b>Pathway type is a two-button switch</b>, not a box you type into (it is a fixed value, S1 §3); Add may <b>stop at a Program</b> so a new Program can exist before its categories.</li>
+<li><b>Agree: the tree is too much.</b> Recommended <b>A</b> (§2): Pathway cards, then the chosen Pathway's Programs as sections, one line per combination. Two visible levels instead of five indents; no add rows; nothing lost (§3). This <b>replaces this morning's Cards / Tree switch</b>, so it is founder question Q1. <span class="tag con">[CONFLICT] P-115 (27 Oct pick C)</span></li>
+</ul></div></div>
+</div>
+
+<!-- ============ 1 ============ -->
+<div class="sec"><h2>1 · "Add to Program structure" — one dialog <span class="tag cap">Capability · Needed (C11.3, C11.16; C1.2 reworded)</span></h2>
+<p>Opened from every "+ Add" on the page and from Immigration programs' link. Five fields stacked top-down; a field enables once the one above is set; each combobox lists the names under the field above in Structure order, typing filters, and the last option adds the typed name, tagged <span class="tg new">New</span>. Checks run under each field as you type (rules first, free). A live "You are adding" trail shows exactly which parts are new. One Add writes only the new parts, all or nothing; no setup is created. <span class="tag dec">[F P-104 one place for names]</span><span class="tag dec">[F P-118 rules first, AI "did you mean"]</span><span class="tag dec">[F EXPERIENCE §3 dialog: ≤3 steps, pickers, duplicate catch, "will be created as"]</span><span class="tag dec">[F P-48 team: create in a modal on desktop, bottom sheet on phones]</span></p>
+
+<h3 class="sub">1a · Recommended state "new parts shown", over the page at 1440 px (opened from the page's "+ Add")</h3>
+<div id="hero"></div>
+<div class="ann"><span class="tag cap">Capability · Needed: comboboxes that pick or add, New tags, checks per field, live trail, Cases may be opened from on the last level, all-or-nothing Add</span><span class="tag gap">[GAP] contract: one atomic write that may create a Pathway and stops at any level, with no setup (today's <code>POST /combinations/path</code> also creates the setup, needs an existing Pathway, and writes level by level)</span><span class="tag scaf">Scaffolding: Demo / Acting as / Simulated in the app bar</span></div>
+
+<h3 class="sub">1b · Why one dialog (three ways compared)</h3>
+<div class="opts">
+ <div class="opt is-rec"><h4><span class="tag rec">★ Recommended</span> One dialog, five fields</h4><div class="why">Everything above the field you are on stays in view; one Add.</div>
+  <div class="stage" style="font-size:12px;line-height:1.9"><span class="lm l1"></span> Pathway <b>Permanent residence</b><br><span class="lm l2"></span> Program <b>Economic immigration</b> <span class="tg new">New</span><br><span class="lm l3"></span> Category <b>Start-up visa</b> <span class="tg new">New</span><br><span class="lm l4"></span> Sub-category <i>None</i><br><span class="btn pri sm">Add 2 names</span></div>
+  <div class="score"><span>New branch</span><span>1 dialog, 1 Add</span><span>One more sub-category</span><span>Prefilled from its row's ⋯, type 1 name, Enter; "Add and add another" for a run</span><span>Errors</span><span>Under the field that has them, as you type</span><span>Build</span><span>The old builder's checks (C1.2) + the free name check; one new endpoint</span></div></div>
+ <div class="opt"><h4>Five-step wizard (one level per step)</h4><div class="why">"One by one" taken literally.</div>
+  <div class="stage" style="font-size:12px">Step 3 of 5 · Program<br><span class="input" style="height:28px">Economic immigration</span><br>‹ Back · Next ›</div>
+  <div class="score"><span>New branch</span><span>5 screens, 5 Next</span><span>One more sub-category</span><span>Still walks 5 steps (or skips with prefills that hide the context)</span><span>Errors</span><span>Found a step later</span><span>Rule</span><span><b>Breaks EXPERIENCE §3 "≤3 steps"</b></span></div></div>
+ <div class="opt"><h4>Today: the row typed in place</h4><div class="why">"+ Add …" at the end of each group; one level per row.</div>
+  <div class="stage" style="font-size:12px"><span class="input" style="height:28px">New pathway in Retail</span> <span class="btn sm">Add</span><br><span class="cap">Appears at the bottom of the group, under everything else</span></div>
+  <div class="score"><span>New branch</span><span>4 separate rows, 4 Adds, each in a different place</span><span>One more sub-category</span><span>Fast (its one strength)</span><span>Page</span><span>≈ 24 "+ Add" rows at 50 combinations</span><span>Founder</span><span>"Very cumbersome"</span></div></div>
+</div>
+
+<h3 class="sub">1c · Every state of the dialog</h3>
+<div class="dgrid" id="states"></div>
+
+<h3 class="sub">1d · Where the dialog opens from (one dialog, prefilled by where you click) <span class="tag dec">[F P-125 (1) (4)]</span></h3>
+<div class="ent">
+ <div><span class="n">1</span><b>Page "+ Add"</b> (primary, title row)<div class="why">Pathway type from the tab; focus on Pathway.</div><div style="margin-top:6px"><span class="btn pri sm">+ Add</span></div></div>
+ <div><span class="n">2</span><b>"+ Add pathway"</b> card at the end of the Pathway cards<div class="why">Same as 1, focus on Pathway with an empty box (the list shows what exists).</div><div class="pc add" style="min-height:36px;margin-top:6px">+ Add pathway</div></div>
+ <div><span class="n">3</span><b>"+ Add program"</b> on a Pathway band (and its card's ⋯)<div class="why">Pathway filled; focus on Program.</div><div style="margin-top:6px"><span class="btn ghost sm" style="text-decoration:none">+ Add program</span></div></div>
+ <div><span class="n">4</span><b>"+ Add category"</b> on a Program section<div class="why">Pathway and Program filled; focus on Category. The same link sits in an empty section.</div><div style="margin-top:6px"><span class="btn ghost sm" style="text-decoration:none">+ Add category</span></div></div>
+ <div><span class="n">5</span><b>"Add sub-category"</b> in a row's ⋯<div class="why">Down to the Category filled; "None" is not offered. Off with the reason when the category already has setup (P-26).</div></div>
+ <div><span class="n">6</span><b>Immigration programs</b>: "Add a program or combination in Program structure"<div class="why">Opens <code>/structure?add=1&amp;from=programs</code> with the dialog open and that tab's type; after Add, the page offers "‹ Back to Immigration programs", where the new card is highlighted as Not started.</div><div style="margin-top:6px"><span class="lk">Add a program or combination in Program structure</span></div></div>
+</div>
+<div class="ann"><span class="tag cap">Capability · Needed: 6 entry points, one dialog</span><span class="tag dec">[F P-125 (4): clicking a card on Immigration programs never comes here]</span><span class="tag nb">Not built: "Ask AI to draft a branch" (waits for W3, P-118)</span><span class="tag nb">Not built: Move (re-parenting) from the dialog: it never moves an existing name (P-116)</span></div>
+
+<h3 class="sub">1e · After Add · 390 px sheet · dark</h3>
+<div class="phones" id="after"></div>
+</div>
+
+<!-- ============ 2 ============ -->
+<div class="sec"><h2>2 · The page — three layouts, each with the 5 and the 50 combinations</h2>
+<p>Same controls in all three: Pathway type tabs with counts, Find a name in every pathway, Expand / Collapse all, the counts line, the details panel (unchanged), the Sample footnote. None has a "+ Add …" row any more: adding is the dialog. <b>Measured</b> heights are in the dark-blue badges; the comparison is in 2d.</p>
+
+<h3 class="sub" id="optA"><span class="tag rec">★ Recommended</span> A · Pathway cards → the Pathway's Programs as sections → one line per combination</h3>
+<p class="note">No tree and no switch. Pathway cards (stripe, counts by status, need you) choose what shows; each Program is a section card with its count and "+ Add category"; each combination is one line: <b>Category › Sub-category</b> (Trail identity, VS-3), status, cases may be opened from, used by, and a ⋯ menu (Open details, Rename, Cases may be opened from, Move up / down, Add sub-category, Remove or retire). Clicking a line, a section title or a card's name opens the same details panel as today. The page opens on the Pathway the person last chose (the first one on a first visit); “All pathways” shows every band. A Program with no categories shows as an empty section; a Pathway with no programs as a band with "No programs yet". <span class="tag dec">[F VS-1 level colours, VS-3 Trail, VS-9 stripe]</span><span class="tag dec">[F P-116 Move up / down, no drag]</span><span class="tag con">[CONFLICT] P-115 Cards / Tree (C) picked this morning → Q1</span></p>
+<div id="A5"></div>
+<div id="A50"></div>
+<div id="A50tr"></div>
+<div class="phones" id="Aph"></div>
+<div class="ann"><span class="tag cap">Capability · Needed: Pathway cards with counts by status (radio group), Program sections (collapsible), one-line rows with ⋯ menus, details panel</span><span class="tag cap">Capability · Needed: order on this page drives Immigration programs (QA-49)</span><span class="tag nb">Not built: drag to reorder (P-116 keeps Move up / down)</span></div>
+
+<h3 class="sub" id="optB">B · The Cards / Tree switch agreed this morning (for comparison)</h3>
+<p class="note">As drawn on <code>draft-visual-system.html</code> §8 C: Cards view (Pathway cards → Program cards listing their categories and sub-categories) or Tree view (thin connector lines in the parent level's colour). Drawn with its "+ Add …" rows as agreed; with the dialog they would go (≈ 24 rows fewer at 50). <span class="tag dec">[F P-115 27 Oct, C]</span></p>
+<div id="B5"></div>
+<div id="B50"></div>
+<div id="B50c"></div>
+<div class="phones" id="Bph"></div>
+
+<h3 class="sub" id="optC">C · One flat list of one-liners, full trail per row, under sticky Pathway bands (like Immigration programs' List)</h3>
+<p class="note">Cheapest to draw: the Immigration programs List with structure columns. But Programs are no longer rows, so renaming, ordering or removing a Program has nowhere to live except a filter; an empty Program needs a special row; and the page looks like Immigration programs, so the two pages blur (P-125 gives them different jobs).</p>
+<div id="C5"></div>
+<div id="C50"></div>
+<div class="phones" id="Cph"></div>
+
+<h3 class="sub">2d · Comparison (Recommended first)</h3>
+<table class="cmp"><thead><tr><th style="width:170px"></th><th class="rec">★ A · cards → Program sections → one-liners</th><th>B · Cards / Tree switch (agreed this morning)</th><th>C · flat list under Pathway bands</th></tr></thead><tbody>
+<tr><td>Height at 50, 1440 px (measured)</td><td class="rec">All pathways open: <b data-mo="A50">…</b><br>One Pathway (largest, 25 combinations): <b data-mo="A50tr">…</b><br>Collapse all: 3 bands + 13 section titles ≈ 1 screen</td><td>Tree: <b data-mo="B50">…</b> (with its 24 add rows; ≈ 1 screen less without them)<br>Cards (one Pathway): <b data-mo="B50c">…</b>, ragged columns</td><td><b data-mo="C50">…</b></td></tr>
+<tr><td>Honest reading of the heights</td><td class="rec">With <b>All pathways</b> open, A is about as tall as the tree without its add rows and ≈ 0.6 screen taller than C (13 Program titles cost height). A wins when one Pathway is chosen, so A opens on <b>the Pathway the person last chose</b> (the first in order on a first visit); All pathways stays one click away and Find always searches every Pathway.</td><td>Tree without its add rows ≈ 3.4 screens</td><td>Shortest at All pathways, but loses Program rows</td></tr>
+<tr><td>Height at 5</td><td class="rec"><b data-mo="A5">…</b> (with the details panel open)</td><td><b data-mo="B5">…</b></td><td><b data-mo="C5">…</b></td></tr>
+<tr><td>Rows at 50</td><td class="rec">50 one-liners + 13 Program titles + 3 bands; 2 visible levels</td><td>73 name rows + 24 "+ Add" rows; 4 indent levels</td><td>50 one-liners + 1 empty-Program row + 3 bands</td></tr>
+<tr><td>Pathway or Program with no combination</td><td class="rec">Empty section "No categories yet · + Add category"; Pathway band "No programs yet"; card says "0 combinations"</td><td>Its row in the tree; an empty Program card</td><td>Needs a special row; a Pathway with nothing is only a band</td></tr>
+<tr><td>Reorder (QA-49: this order drives Immigration programs)</td><td class="rec">⋯ Move up / down on a line (within its category or program), on a section (Programs), on a card (Pathways, left / right); a category moves with its sub-categories; the panel keeps its buttons</td><td>Panel's Move up / down per name (as today); in Cards view, per card</td><td>Lines can move; Programs and Pathways cannot from the list (no row for them)</td></tr>
+<tr><td>Find a name</td><td class="rec">Filters lines in every Pathway; cards show match counts; a Program-name match keeps its whole section; "2 matches in Corporate and employers: Show"</td><td>Tree: matches with their parents; Cards: counts on cards. Two behaviours to learn and test</td><td>Simplest: filter rows by trail</td></tr>
+<tr><td>A Category with sub-categories</td><td class="rec">Repeated on each of its lines ("Open work permit › Bridging"); its own rename / order / remove from any of those lines' ⋯ or the panel → Q3</td><td>One row, sub-categories under it</td><td>Repeated, as in A</td></tr>
+<tr><td>Build and test</td><td class="rec">One view. Reuses Pathway cards, Trail, StatusChip, details panel; adds ProgramSection, row, ⋯ menu. Drops the tree keyboard model, ghost rows and the add row. One set of keyboard, axe and 50-scale checks</td><td>Two views on shared parts; two keyboard models (tree + cards); two sets of checks; remembered view per person</td><td>Cheapest (reuse Immigration programs' List) but Program and Pathway actions need a new home</td></tr>
+<tr><td>Looks (founder: "too much")</td><td class="rec">Calm: one card shape for Pathways, one for Programs, one line per combination</td><td>Tree still five indents and lines; Cards ragged at 50</td><td>Dense, monotonous; looks like the other page</td></tr>
+<tr><td>Verdict</td><td class="rec"><b>Recommended.</b> Answers "scattered" and "one-liners and cards" without losing a level or an action; cheaper than B; keeps Program actions that C loses</td><td>Keep only if the founder wants the outline back</td><td>Not recommended</td></tr>
+</tbody></table>
+</div>
+
+<!-- ============ 3 ============ -->
+<div class="sec"><h2>3 · Every element on today's page (<code>pages/structure.tsx</code>) → where it lives in A</h2>
+<table class="cmp"><thead><tr><th>Today</th><th>In A</th><th>Tag</th></tr></thead><tbody>
+<tr><td>Title "Structure", ⓘ tip, one-line description</td><td>"Program structure" (agreed), same tip; description adds "Order here is the order on Immigration programs."</td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Pathway type switch Retail · Corporate and employers, tips; switching closes selection and add</td><td>Same, with counts; also a two-button field in the dialog (prefilled from the tab)</td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Find a name (matches keep their parents), Clear ✕, other-tab "N matches … Show"</td><td>Find filters lines in every Pathway of the tab; Pathway cards show match counts; a Program match keeps its section; ✕ and the other-tab line unchanged; match marked</td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Expand all · Collapse all</td><td>Open / close every Program section (and each section's chevron)</td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Pathway cards: All pathways, a card per Pathway (combinations, need you), "+ Add pathway"</td><td>Larger cards with the stripe, programs and counts by status; ⋯ (Rename, Move left / right, + Add program); "+ Add pathway" opens the dialog</td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Counts line (pathways · programs · categories · sub-categories · combinations)</td><td>Same</td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Loading skeleton · error with Retry · empty "No structure yet" + Add pathway · no-match state</td><td>Skeleton cards and lines · same error · same empty state, its button opens the dialog · same no-match state</td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Tree (WAI-ARIA, one tab stop, arrows, Enter selects), chevrons per Pathway / Program / Category</td><td>Cards = radio group (arrows); sections = buttons with aria-expanded; lines = a list, Up / Down between lines, Enter opens details, the ⋯ button for actions</td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Name row: name with match mark, level badge + tip ("Category · combination"), Retired pill, "Removal / Retire / Restore waiting" pill, status chip or Not started, location or "N combinations"</td><td>Line: level marks with tips (◆ Category, ◇ Sub-category), same pills and chips, location column; counts on section and band titles; level words in the panel</td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Ghost "+ Add …" rows; the add row (input, Cases may be opened from, Add, Cancel, checks under the row, "Not meaning-checked", Enter / Esc, "Added … type the next name")</td><td><b>Go.</b> The dialog holds all of it; "Add and add another" replaces "type the next name"; success shows on the new line ("Just added"), never a toast</td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Details panel: trail, used by (with each combination below and Open / Start setup), cases opened from, meaning check, name + rename checks + "Rename anyway", stale "Reload", Move up / down, Add sub-category, where used, pending + Withdraw, reason + Send for approval, history, status line, footer Remove / Retire / Restore · Close · Save, fits the screen</td><td><b>Unchanged.</b> Its "Add sub-category" opens the dialog prefilled. Its "Start setup" today opens New combination, which P-125 retires: it should run the same Start setup as the card <span class="tag gap">[GAP]</span></td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Footnote "Names and locations are Sample …" + meaning-check reason</td><td>Same</td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>URL: <code>t</code>, <code>node</code>, <code>q</code>, <code>p</code></td><td>Same, plus <code>add=1</code> (+ prefill keys) and <code>from=programs</code></td><td><span class="tag cap">Capability</span></td></tr>
+<tr><td>Demo switch, Acting as, Simulated, Load sample / Reset</td><td>Unchanged, not ported</td><td><span class="tag scaf">Scaffolding</span></td></tr>
+</tbody></table>
+</div>
+
+<!-- ============ 4 ============ -->
+<div class="sec"><h2>4 · Questions for the founder (at most three, recommendation first)</h2>
+<div class="q"><b>Q1 · The page.</b> <b>Recommended: A, Pathway cards then each Program as a section with one line per combination, and no tree</b> (2 visible levels instead of 5 indents; one view to build and test), or keep this morning's Cards / Tree switch (B), or one flat list (C)?</div>
+<div class="q"><b>Q2 · How names are added.</b> <b>Recommended: only the one "Add to Program structure" dialog, with "Add and add another" for a run of names; the rows typed in place go</b>, or keep the rows as a second, faster way for one name?</div>
+<div class="q"><b>Q3 · A category with sub-categories.</b> <b>Recommended: one line per combination, repeating the category ("Open work permit › Bridging")</b> (each line reads alone, as on Immigration programs), or the category as a small heading with its sub-categories indented under it (no repeat, but a third indent and 8 more lines at 50)?</div>
+</div>
+
+</div>
+<script>
+(function(){
+const AUTHOR_ONLY="Only a configuration author adds, renames, orders or removes names. You can read everything.";
+const STR={"Temporary residence":"#50d0ff","Permanent residence":"#0694ff","Citizenship":"var(--iron)"};
+const lw=l=>l==="Both"?"Inside or outside Canada":l;
+const USE={live:"1 release · 14 open cases",set:"Setup draft",nr:"Setup draft · blocks release",ns:"Nothing yet",ret:"1 release · 2 open cases",pend:"Nothing yet"};
+const CH={live:'<span class="chip live"><span class="ic">✓</span>Live</span>',set:'<span class="chip set"><span class="ic">◌</span>In setup</span>',nr:'<span class="chip nr"><span class="ic">!</span>Not ready</span>',ns:'<span class="chip ns">Not started</span>',ret:'<span class="chip ret">Retired</span>',pend:'<span class="chip ns">Not started</span>'};
+const CHX={live:'<span class="chip xs live">✓ Live</span>',set:'<span class="chip xs set">◌ In setup</span>',nr:'<span class="chip xs nr">! Not ready</span>',ns:'<span class="chip xs ns">Not started</span>',ret:'<span class="chip xs ret">Retired</span>',pend:'<span class="chip xs ns">Not started</span>'};
+const TIP={type:"Who applies: a person and their family (Retail), or an employer or organisation (Corporate and employers).",pw:"The outcome the application leads to, such as temporary or permanent residence.",pg:"A group of applications under a pathway, such as Visitors or Study permits.",cat:"One kind of application. A category without sub-categories is a combination.",sub:"A variant IRCC files as a different application; every sub-category is a combination. Choose None when IRCC files one application for the category.",loc:"Where a case for it may be opened. Sample until the immigration expert confirms.",nmc:"Only the spelling check ran; a reviewer compares the meaning by eye. The AI meaning check runs when paid runs are on."};
+// [Pathway,[Program,[Category, subs|null, status, location]]] · sub = [name,status,location] · all Sample (5 = P-112 Retail)
+const D5=[["Temporary residence",[["Visitors",[["Visitor visa",null,"set","Outside Canada"]]],["Study permits",[["Study permit",[["Outside Canada","set","Outside Canada"]]]]],["Work permits",[["Employer-specific work permit",[["With an LMIA – inside Canada","live","Inside Canada"]]]]]]],
+ ["Permanent residence",[["Provincial nominees",[["Express Entry stream",null,"ns","Both"]]],["Family sponsorship",[["Spouse or common-law partner",null,"ns","Both"]]]]]];
+const D50=[["Temporary residence",[
+ ["Visitors",[["Visitor visa",null,"set","Outside Canada"],["Super visa",null,"set","Outside Canada"],["Transit visa",null,"ns","Outside Canada"],["Extend stay in Canada",null,"ns","Inside Canada"],["Electronic travel authorization",null,"ns","Outside Canada"]]],
+ ["Study permits",[["Study permit",[["Outside Canada","set","Outside Canada"],["Inside Canada","ns","Inside Canada"]]],["Study permit extension",null,"ns","Inside Canada"]]],
+ ["Work permits",[["Employer-specific work permit",[["With an LMIA – inside Canada","live","Inside Canada"],["With an LMIA – outside Canada","ns","Outside Canada"],["LMIA-exempt (employer offer)","ns","Both"],["Intra-company transferee","ns","Both"]]],
+  ["International Experience Canada",[["Working holiday","ns","Outside Canada"],["Young professionals","ns","Outside Canada"],["International co-op","ns","Outside Canada"]]],
+  ["Open work permit",[["Post-graduation","ns","Inside Canada"],["Spouse of a skilled worker","ns","Both"],["Spouse of a student","nr","Both"],["Bridging","pend","Inside Canada"],["Vulnerable workers","ret","Inside Canada"]]],
+  ["Work permit extension",null,"ns","Inside Canada"]]],
+ ["Temporary resident permit",[["Temporary resident permit",null,"ns","Both"]]],
+ ["Restoration of status",[["Restoration",[["As a visitor","ns","Inside Canada"],["As a student","ns","Inside Canada"],["As a worker","ns","Inside Canada"]]]]]]],
+["Permanent residence",[
+ ["Economic immigration",[["Express Entry",[["Profile","ns","Both"],["Permanent residence application","ns","Both"]]],["Atlantic Immigration Program",null,"ns","Both"],["Rural community immigration",null,"ns","Both"],["Start-up visa",null,"ns","Outside Canada"],["Self-employed persons",null,"ns","Outside Canada"],["Agri-food pilot",null,"ns","Both"]]],
+ ["Economic pilots",[]],
+ ["Provincial nominees",[["Express Entry stream",null,"ns","Both"],["Base stream (paper)",null,"ns","Both"]]],
+ ["Family sponsorship",[["Spouse or common-law partner",null,"ns","Both"],["Dependent child",null,"ns","Both"],["Adopted child",null,"ns","Outside Canada"],["Parents and grandparents",null,"ns","Outside Canada"],["Other relative",null,"ns","Outside Canada"]]],
+ ["Caregivers",[["Home child care provider",null,"ns","Both"],["Home support worker",null,"ns","Both"]]],
+ ["Humanitarian",[["Humanitarian and compassionate",null,"ns","Inside Canada"]]],
+ ["Permanent resident documents",[["PR card renewal",null,"ns","Inside Canada"],["Travel document",null,"ns","Outside Canada"]]]]],
+["Citizenship",[["Citizenship",[["Grant of citizenship",[["Adults","ns","Inside Canada"],["Minors","ns","Inside Canada"]]],["Proof of citizenship",null,"ns","Both"],["Search of citizenship records",null,"ns","Both"],["Resumption",null,"ns","Both"],["Renunciation",null,"ns","Both"]]]]]];
+
+const plural=(n,a,b)=>`${n} ${n===1?a:b}`;
+const LG=g=>{const o=[];g[1].forEach(c=>{if(c[1])c[1].forEach(s=>o.push({g:g[0],c:c[0],s:s[0],st:s[1],loc:s[2]}));else o.push({g:g[0],c:c[0],s:null,st:c[2],loc:c[3]})});return o};
+const LP=p=>p[1].flatMap(LG);
+const needN=L=>L.filter(x=>x.st==="nr").length;
+const needChip=n=>n?`<span class="chip need">${n} need${n===1?"s":""} you</span>`:"";
+const keyOf=x=>x.c+"|"+(x.s||"");
+function stline(L){const W={live:"Live",set:"In setup",nr:"Not ready",ns:"Not started",pend:"Not started",ret:"Retired"};const c={};L.forEach(x=>{c[W[x.st]]=(c[W[x.st]]||0)+1});return ["Live","In setup","Not ready","Not started","Retired"].filter(k=>c[k]).map(k=>`${c[k]} ${k}`).join(" · ")}
+function stats(D){let pg=0,ca=0,sc=0,co=0;D.forEach(p=>p[1].forEach(g=>{pg++;g[1].forEach(c=>{ca++;if(c[1]){sc+=c[1].length;co+=c[1].length}else co++})}));return `${plural(D.length,"pathway","pathways")} · ${plural(pg,"program","programs")} · ${plural(ca,"category","categories")} · ${plural(sc,"sub-category","sub-categories")} · <b style="color:var(--text)">${plural(co,"combination","combinations")}</b>`}
+const S='<span class="s">›</span>', NEW=' <span class="tg new">New</span>';
+
+/* ---------- shared page chrome ---------- */
+const APPBAR='<div class="appbar"><span class="logo"><i></i>ExpatReady</span><span class="prod"><b>Product Studio</b>Pathway Configurator</span><span class="sp"></span><span class="demo" title="Scaffolding: not for porting">Demo · Acting as: Content publisher · Simulated</span></div>';
+const SIDE='<nav class="side"><div class="g">Set up, in order</div><a class="on">1 Program structure</a><a>2 Immigration programs</a><a>3 To review <span class="chip ai" style="float:right;padding:0 6px">1</span></a><div class="g">Shared library</div><a>Forms</a><a>Fields</a><a>Sections</a><a>Document types</a><a>Checks</a><div class="g">History</div><a>AI work</a><a>Releases</a><a>Activity</a></nav>';
+function frame(title,inner,m,extra,novp){return `<div class="w14"><div class="frame"><div class="ftitle">${title}${m?`<span class="meas" data-mo="${m}">measuring…</span>`:""}${extra||""}</div>${APPBAR}<div class="shell">${SIDE}<div class="main ${novp?"":"vp"}" ${m?`data-m="${m}"`:""} style="position:relative"><div class="mc">${inner}</div></div></div></div></div>`}
+function phone(title,inner,m){return `<div class="phone"><div class="why" style="margin-bottom:6px">${title}${m?`<span class="meas" data-mo="${m}">…</span>`:""}</div><div class="vp p" ${m?`data-m="${m}" data-ph="1"`:""}><div class="mc">${inner}</div></div></div>`}
+function head(o){return `<div class="ph"><h1 style="font-size:${o.phone?20:24}px">Program structure</h1><span class="info" title="The list of pathways, programs, categories and sub-categories. Every category without sub-categories, and every sub-category, is a combination.">i</span><span class="sp"></span>${o.seg||""}<span class="btn pri ${o.phone?"sm":""}" ${o.ro?`aria-disabled="true" title="${AUTHOR_ONLY}"`:'title="Add a pathway, program, category or sub-category. Checked against the names that exist first."'}>+ Add</span>${o.phone?"":`<div class="s">Where every combination sits: <span class="trail"><span class="p1">Pathway</span>${S}<span class="p2">Program</span>${S}<span class="idn"><b>Category</b>${S}Sub-category</span></span>. Order here is the order on Immigration programs.</div>`}</div>`}
+function toolbar(o){const t=o.types||[5,1];return `<div class="tb"><span class="seg" ${o.phone?'style="font-size:12px"':""}><span class="on" title="Who applies: a person and their family.">Retail <em>${t[0]}</em></span><span title="Who applies: an employer or organisation, such as for an LMIA.">${o.phone?"Corporate…":"Corporate and employers"} <em>${t[1]}</em></span></span><span class="input" style="flex:1;min-width:${o.phone?140:220}px">⌕ Find a name in every pathway</span>${o.phone?"":'<span class="btn" title="Open every program section">Expand all</span><span class="btn" title="Show the program titles only">Collapse all</span>'}</div>`}
+
+/* ---------- A ---------- */
+function idn(x,extra){return `<span class="trail"><span class="idn"><span class="lm l3" title="Category"></span><b>${x.c}</b>${x.s?`${S}<span class="lm l4" title="Sub-category"></span>${x.s}`:""}</span>${x.st==="pend"?'<span class="pill wait" title="Removing it waits for a second person on To review.">Removal waiting</span>':""}${extra||""}</span>`}
+function MENU(x){return `<div class="menu" role="menu"><div class="hi">Open details</div><div>Rename… <small>opens details at Name</small></div><div>Cases may be opened from…</div><hr><div>Move up <small>among the categories of ${x.g}</small></div><div>Move down</div><hr><div>Add sub-category… <small>${x.c} then stops being a combination; it has no setup yet, so this is allowed</small></div><hr><div class="dang">Remove or retire… <small>opens details: where used first; a second person approves</small></div></div>`}
+function arow(x,o){const k=keyOf(x);const cls=[x.st==="ret"?"ret":"",o.sel===k?"sel":"",o.just===k?"new":""].join(" ");const just=o.just===k?'<span class="pill just">Just added</span>':"";
+ if(o.phone)return `<div class="orow p ${cls}"><div>${idn(x,just)}<div class="meta">${CH[x.st]}<span>${lw(x.loc)}</span></div></div><span class="kebab" title="Actions">⋯</span></div>`;
+ return `<div class="orow cols ${o.panel?"np":""} ${cls}">${idn(x,just)}${CH[x.st]}<span class="loc">${lw(x.loc)}</span>${o.panel?"":`<span class="use">${USE[x.st]}</span>`}<span class="kebab" title="Open details, rename, move, add sub-category, remove or retire">⋯${o.menu===k?MENU(x):""}</span></div>`}
+function psec(g,pw,o){const L=LG(g);const closed=o.closeAll||(o.closed||[]).includes(g[0]);
+ let h=`<section class="psec ${closed?"closed":""}" aria-label="${g[0]}"><div class="psh"><span class="chev" aria-hidden="true">${closed?"▸":"▾"}</span><span class="lm l2" title="Program"></span><h3>${g[0]}</h3><span class="n">${L.length?plural(L.length,"combination","combinations"):"No combinations yet"}</span>${needChip(needN(L))}<span class="sp"></span>${o.phone?"":`<span class="btn ghost sm" style="text-decoration:none" title="Opens Add with ${pw} › ${g[0]} filled in">+ Add category</span>`}<span class="kebab" title="Rename, move up or down, add a category, remove or retire">⋯</span></div>`;
+ if(!closed){if(!L.length)h+=`<div class="orow empty">No categories yet. <span class="lk">+ Add category</span> opens Add with ${pw} › ${g[0]} filled in.</div>`;else L.forEach(x=>h+=arow(x,o))}
+ return h+"</section>"}
+function pband(p,o){const L=LP(p);return `<div class="pband" style="border-left-color:${STR[p[0]]}"><span class="lm l1" title="Pathway"></span><b>${p[0]}</b><span class="n">${plural(p[1].length,"program","programs")} · ${plural(L.length,"combination","combinations")}</span>${needChip(needN(L))}<span class="sp"></span>${o.phone?"":`<span class="btn ghost sm" style="text-decoration:none" title="Opens Add with ${p[0]} filled in">+ Add program</span>`}<span class="kebab" title="Rename, move, add a program, remove or retire">⋯</span></div>`}
+function pcards(D,o){const all=D.flatMap(LP);let h=`<div class="pcA ${o.phone?"ph":""}" role="radiogroup" aria-label="Retail pathways"><div class="pc ${o.open===null?"on":""}" role="radio" aria-checked="${o.open===null}"><b>All pathways</b><small>${plural(all.length,"combination","combinations")}</small>${needChip(needN(all))||"<small>none need you</small>"}</div>`;
+ D.forEach((p,i)=>{const L=LP(p);h+=`<div class="pc ${o.open===i?"on":""}" role="radio" aria-checked="${o.open===i}" style="border-top:4px solid ${STR[p[0]]}"><b class="c1" style="font-size:${o.phone?14:16}px"><span class="lm l1"></span>${p[0]}</b><small>${plural(p[1].length,"program","programs")} · ${plural(L.length,"combination","combinations")}</small>${o.phone?"":`<small>${stline(L)}</small>`}${needChip(needN(L))||"<small>none need you</small>"}<span class="kebab" title="Rename, move left or right, add a program">⋯</span></div>`});
+ return h+`<div class="pc add" ${o.ro?`style="opacity:.55;cursor:not-allowed" title="${AUTHOR_ONLY}"`:'title="Opens Add with Retail filled in"'}>+ Add pathway</div></div>`}
+function A(D,o){let list=pcards(D,o);
+ if(!o.phone)list+=`<div class="colh cols ${o.panel?"np":""}"><span>Combination: Category › Sub-category</span><span>Status</span><span>Cases may be opened from</span>${o.panel?"":"<span>Used by</span>"}<span></span></div>`;
+ (o.open===null?D.map((p,i)=>i):[o.open]).forEach(i=>{const p=D[i];list+=pband(p,o);if(!p[1].length)list+=`<div class="psec"><div class="orow empty">No programs yet. <span class="lk">+ Add program</span></div></div>`;p[1].forEach(g=>list+=psec(g,p[0],o))});
+ list+=`<p class="foot">Names, locations and "Used by" counts are Sample until the immigration expert confirms. <span class="nmc" title="${TIP.nmc}">Not meaning-checked</span></p>`;
+ const top=head(o)+toolbar(o)+`<p class="stat">${o.phone?"":stats(D)}</p>`+(o.notice||"");
+ return o.panel?top+`<div style="display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:16px;align-items:start"><div style="min-width:0">${list}</div>${o.panel}</div>`:top+list}
+const PANEL=`<aside class="panel" aria-label="Visitor visa details" style="position:sticky;top:0"><div class="phd" style="display:flex;gap:8px"><div style="flex:1"><h3 style="font-size:18px">Visitor visa</h3><div class="cap">Category · combination</div></div><span class="kebab" title="Close the details">✕</span></div>
+<dl class="pbd" style="grid-template-columns:110px 1fr"><dt>Trail</dt><dd><span class="trail"><span class="p0">Retail</span>${S}<span class="p1">Temporary residence</span>${S}<span class="p2">Visitors</span>${S}<span class="idn"><b>Visitor visa</b></span></span></dd>
+<dt>Used by</dt><dd>This combination: In setup <span class="lk">Open</span></dd>
+<dt>Cases opened from</dt><dd><span class="seg" style="font-size:12px"><span>Inside</span><span class="on">Outside</span><span>Both</span></span><div class="cap">Sample. A change needs the expert's tick at release.</div></dd>
+<dt>Meaning check</dt><dd><span class="nmc" title="${TIP.nmc}">Not meaning-checked</span></dd>
+<dt>Name</dt><dd><span class="input" style="color:var(--text)">Visitor visa</span><div class="cap">The new name shows in setup at once; firms see it after the next release.</div></dd>
+<dt>Order</dt><dd><span class="btn sm" aria-disabled="true">↑ Move up</span> <span class="btn sm" aria-disabled="true">↓ Move down</span><div style="margin-top:6px"><span class="btn sm" aria-disabled="true" title="Visitor visa already has its own setup, so it is the combination.">+ Add sub-category</span> <span class="cap">opens Add, prefilled</span></div></dd>
+<dt>Where used</dt><dd>Setup draft (In setup) · no release · no cases</dd>
+<dt>History</dt><dd class="cap">27 Oct · added by a content publisher (Sample)</dd></dl>
+<div class="pft"><span class="btn sm" style="color:var(--t-danger)">Remove</span><span class="sp" style="flex:1"></span><span class="btn sm">Close</span><span class="btn sm pri" aria-disabled="true">Save</span></div></aside>`;
+
+/* ---------- B (as drawn this morning) ---------- */
+function leaves(n,d){if(d===2)return n[1]?n[1].length:1;return n[1].reduce((s,c)=>s+leaves(c,d+1),0)}
+function needs(n,d){if(d===2)return n[1]?n[1].filter(s=>s[1]==="nr").length:(n[2]==="nr"?1:0);return n[1].reduce((s,c)=>s+needs(c,d+1),0)}
+function row(cls,pre,last,mark,name,extra,chip,loc,ct,ph){const d=pre.length;let g="";for(let k=0;k<d;k++){if(k<d-1)g+=`<span class="cg k${k} ${pre[k]?"v":""}"></span>`;else g+=`<span class="cg k${k} ${last?"l":"t"}"></span>`}
+ const nm=`<span class="t">${name}${ph&&loc?`<small class="pl">${loc}</small>`:""}</span>`;
+ return `<div class="tr cr ${cls}"><div class="nm">${g}${mark}${nm}${extra||""}</div>${chip||"<span></span>"}${ph?"":`<span class="loc">${loc||""}</span>`}${ph?"":`<span class="ct">${ct||""}</span>`}</div>`}
+function tree(data,ph){let h=ph?"":'<div class="th"><span>Name</span><span>Status</span><span>Cases may be opened from</span><span style="text-align:right">Combinations</span></div>';
+ data.forEach(p=>{const n=needs(p,0);h+=row("r1 sticky",[],false,'<span class="chev">▾</span><span class="lm l1"></span>',p[0],n?` <span class="chip xs need">${n} needs you</span>`:"",null,null,`${leaves(p,0)}`,ph);
+  p[1].forEach(g=>{h+=row("r2",[true],false,'<span class="chev">▾</span><span class="lm l2"></span>',g[0],"",null,null,`${leaves(g,1)}`,ph);
+   g[1].forEach(c=>{if(c[1]){h+=row("r3",[true,true],false,'<span class="chev">▾</span><span class="lm l3"></span>',c[0],"",null,null,`${c[1].length}`,ph);c[1].forEach(s=>{h+=row("r4",[true,true,true],false,'<span class="lm l4"></span>',s[0],"",CHX[s[1]],lw(s[2]),"",ph)});h+=row("addr",[true,true,true],true,'<span class="lm add"></span>',"+ Add sub-category","",null,null,"",ph)}
+    else h+=row("r3",[true,true],false,'<span class="lm l3"></span>',c[0],"",CHX[c[2]],lw(c[3]),"",ph)});
+   h+=row("addr",[true,true],true,'<span class="lm add"></span>',"+ Add category","",null,null,"",ph)});
+  h+=row("addr",[true],true,'<span class="lm add"></span>',"+ Add program","",null,null,"",ph)});
+ return h+row("addr",[],true,'<span class="lm add"></span>',"+ Add pathway","",null,null,"",ph)}
+function progCard(g){let rows="";g[1].forEach(c=>{if(c[1]){rows+=`<div class="pcr"><span class="lm l3"></span><b>${c[0]}</b></div>`;c[1].forEach(s=>{rows+=`<div class="pcr sub"><span class="lm l4"></span><span>${s[0]}</span>${CHX[s[1]]}</div>`});rows+='<div class="pcr sub addl">+ Add sub-category</div>'}else rows+=`<div class="pcr"><span class="lm l3"></span><b>${c[0]}</b>${CHX[c[2]]}</div>`});
+ if(!g[1].length)rows='<div class="pcr addl">No categories yet</div>';
+ return `<article class="card pgc"><div class="hd"><h3 style="color:var(--lv2)"><span class="lm l2"></span> ${g[0]}</h3><span class="cap">${leaves(g,1)} combinations</span></div>${rows}<div class="ft" style="min-height:36px;padding:6px 0"><span class="btn ghost sm" style="text-decoration:none">+ Add category</span></div></article>`}
+function Bpcs(D,open){const all=D.reduce((s,p)=>s+leaves(p,0),0);let h=`<div class="pcs" style="margin-bottom:12px"><div class="pc ${open===null?"on":""}"><b>All pathways</b><small>${all} combinations</small></div>`;D.forEach((p,i)=>{h+=`<div class="pc ${open===i?"on":""}" style="border-top:4px solid ${STR[p[0]]}"><b style="color:var(--lv1)"><span class="lm l1"></span>${p[0]}</b><small>${p[1].length} programs · ${leaves(p,0)} combinations</small></div>`});return h+'<div class="pc add">+ Add pathway</div></div>'}
+function B(D,o){const seg=`<span class="seg" style="margin-right:8px"><span class="${o.view==="cards"?"on":""}">▦ Cards</span><span class="${o.view==="tree"?"on":""}">⋮ Tree</span></span>`;
+ let h=head({...o,seg})+toolbar(o)+`<p class="stat">${stats(D)}</p>`+Bpcs(D,o.view==="cards"?0:null);
+ if(o.view==="tree")h+=`<div class="tree ctree">${tree(D,false)}</div>`;
+ else{const p=D[0];h+=`<div style="margin:6px 0 8px;display:flex;gap:8px;align-items:center;border-bottom:2px solid var(--lv1-b);padding-bottom:6px"><span class="lm l1"></span><b style="font-size:18px;color:var(--lv1)">${p[0]}</b><span style="color:var(--muted)">${p[1].length} programs · ${leaves(p,0)} combinations</span></div><div class="cards" style="grid-template-columns:repeat(3,minmax(0,1fr));align-items:start">${p[1].map(progCard).join("")}<div class="pc add" style="min-height:120px">+ Add program</div></div>`}
+ return h}
+
+/* ---------- C ---------- */
+function C(D,o){let h=head(o)+toolbar(o)+`<p class="stat">${o.phone?"":stats(D)}</p><div class="cl">`+(o.phone?"":'<div class="colh cols"><span>Combination: full trail</span><span>Status</span><span>Cases may be opened from</span><span>Used by</span><span></span></div>');
+ D.forEach(p=>{const L=LP(p);h+=`<div class="cband" style="border-left-color:${STR[p[0]]};${o.phone?"top:0":""}"><span class="lm l1"></span><b>${p[0]}</b><span class="n">${plural(L.length,"combination","combinations")}</span>${needChip(needN(L))}</div>`;
+  p[1].forEach(g=>{const G=LG(g);if(!G.length)h+=`<div class="crow orow empty" style="border-top:0"><span class="trail"><span class="p2">${g[0]}</span></span> · no categories yet · <span class="lk">+ Add category</span></div>`;
+   G.forEach(x=>{const t=`<span class="trail"><span class="p2">${x.g}</span>${S}<span class="idn"><span class="lm l3"></span><b>${x.c}</b>${x.s?`${S}<span class="lm l4"></span>${x.s}`:""}</span>${x.st==="pend"?'<span class="pill wait">Removal waiting</span>':""}</span>`;
+    h+=o.phone?`<div class="crow orow p ${x.st==="ret"?"ret":""}" style="border-top:0"><div>${t}<div class="meta">${CH[x.st]}<span>${lw(x.loc)}</span></div></div><span class="kebab">⋯</span></div>`:`<div class="crow orow cols ${x.st==="ret"?"ret":""}" style="border-top:0">${t}${CH[x.st]}<span class="loc">${lw(x.loc)}</span><span class="use">${USE[x.st]}</span><span class="kebab">⋯</span></div>`})})});
+ return h+"</div>"}
+
+/* ---------- dialog ---------- */
+const LV={pw:["l1","Pathway"],pg:["l2","Program"],cat:["l3","Category"],sub:["l4","Sub-category"]};
+function fType(v){return `<div class="fld" style="display:flex;align-items:center;gap:12px"><label style="margin:0">Pathway type <span class="info sm" title="${TIP.type}">i</span></label><span class="seg" style="font-size:13px"><span class="${v!=="C"?"on":""}">Retail</span><span class="${v==="C"?"on":""}">Corporate and employers</span></span></div>`}
+function f(k,o={}){const [m,w]=LV[k];const st=o.st||"";
+ const body=o.off?`<div class="cb off"><span class="plc">${o.off}</span></div>`:`<div class="cb ${st}" role="combobox" aria-expanded="${!!o.list}">${o.v?`<span class="v">${o.v}${st.includes("focus")?'<span class="cursor"></span>':""}</span>`:`<span class="plc">${st.includes("focus")?'<span class="cursor"></span> ':""}${o.plc||"Pick or type a "+w.toLowerCase()}</span>`}${o.tag==="new"?'<span class="tg new">New</span>':o.tag==="ex"?'<span class="tg ex">Exists</span>':""}<span class="caret">▾</span></div>`;
+ return `<div class="fld ${o.off?"off":""}"><label><span class="lm ${m}"></span>${w} <span class="info sm" title="${TIP[k]}">i</span>${k==="pw"?' <span class="r">Required</span>':""}${o.lab?` <span class="r">${o.lab}</span>`:""}</label>${body}${o.list||""}${o.chk||""}</div>`}
+function fLoc(name,v){return `<div class="fld"><label>Cases may be opened from <span class="r">for ${name}</span> <span class="info sm" title="${TIP.loc}">i</span></label><span class="seg" style="font-size:13px"><span class="${v==="I"?"on":""}">Inside Canada</span><span class="${v==="O"?"on":""}">Outside Canada</span><span class="${v==="B"?"on":""}">Both</span></span><p class="chk ok">Sample until the immigration expert confirms. Starts at Both, or from the category.</p></div>`}
+function pv(trail,line,mc){return `<div class="prev" aria-live="polite"><div class="k">You are adding</div><div class="trail" style="font-size:14px">${trail}</div><p>${line}${mc===false?"":` <span class="nmc" title="${TIP.nmc}">Not meaning-checked</span>`}</p></div>`}
+function ft(label,o={}){return `${o.extra||""}<span class="btn ghost" style="text-decoration:none;color:var(--text)">Cancel</span><span class="sp" style="flex:1"></span>${o.another===false?"":`<span class="btn" ${o.dis?`aria-disabled="true" title="${o.why}"`:'title="Adds, then keeps the levels above so you can type the next name"'}>Add and add another</span>`}<span class="btn pri" ${o.dis?`aria-disabled="true" title="${o.why}"`:`title="${o.tip||"Adds only the parts tagged New, all or nothing"}"`}>${label}</span>`}
+function DLG(sub,fields,foot,style){return `<div class="dlg" role="dialog" aria-modal="true" aria-label="Add to Program structure" ${style?`style="${style}"`:""}><div class="dh"><div style="flex:1"><h3>Add to Program structure</h3><p>${sub||"Pick what exists or type a new name, top to bottom. Only the new parts are added."}</p></div><span class="kebab" title="Close (Esc)">✕</span></div><div class="db">${fields}</div><div class="df">${foot}</div></div>`}
+const T=(...p)=>p.join(S);
+const heroFields=fType()+f("pw",{v:"Permanent residence",tag:"ex"})+f("pg",{v:"Economic immigration",tag:"new",chk:'<p class="chk ok">✓ New under Permanent residence · no exact match · no close spelling</p>'})+f("cat",{v:"Start-up visa",tag:"new",chk:'<p class="chk ok">✓ New · nothing exists under a new program yet</p>'})+f("sub",{v:"None: the category is the combination",chk:'<p class="chk ok">A sub-category only when IRCC files the variant as its own application.</p>'})+fLoc("Start-up visa","O")
+ +pv(`<span class="p0">Retail</span>${S}<span class="p1">Permanent residence</span>${S}<span class="p2">Economic immigration</span>${NEW}${S}<span class="idn"><b>Start-up visa</b>${NEW}</span> <span style="color:var(--muted)">· no sub-category</span>`,"2 new names · 1 new combination, listed on Immigration programs as Not started. Nothing else changes; no setup starts.");
+const HERO=DLG("",heroFields,ft("Add 2 names"));
+document.getElementById("hero").innerHTML=frame("/structure?add=1 · Retail · the 5 combinations (P-112) behind the dialog",`<div class="ovl" style="min-height:1010px">${A(D5,{open:null})}<div class="dim"></div>${HERO}</div>`,null,' <span class="tag cap">Capability · Needed</span> <span class="meas" id="dlgh">…</span>',true);
+
+const st=[];
+const card=(t,tags,html)=>st.push(`<div><h4>${t}</h4><div class="ann">${tags}</div>${html}</div>`);
+card("1 · Empty (page “+ Add”)",'<span class="tag cap">Capability · Needed</span><span class="tag dec">[F P-104 type from the tab]</span>',DLG("",fType()+f("pw",{st:"focus",plc:"Type to find or add a pathway",list:'<div class="lst" role="listbox"><div class="grp">In Retail, in structure order</div><div class="hi"><span class="lm l1"></span>Temporary residence<small>3 programs · 3 combinations</small></div><div><span class="lm l1"></span>Permanent residence<small>2 programs · 2 combinations</small></div><div class="newo">Type a name to add a new pathway</div></div>'})+f("pg",{off:"Pick a pathway first"})+f("cat",{off:"Pick a program first"})+f("sub",{off:"Pick a category first"})+pv(`<span class="p0">Retail</span>${S}<span style="color:var(--muted)">…</span>`,"Nothing yet.",false),ft("Add",{dis:true,why:"Pick or type a pathway first."})));
+card("2 · Prefilled (“+ Add category” on Work permits)",'<span class="tag cap">Capability · Needed</span>',DLG("Opened from Work permits: the levels above are filled in; change them if needed.",fType()+f("pw",{v:"Temporary residence",tag:"ex"})+f("pg",{v:"Work permits",tag:"ex"})+f("cat",{v:"Open work p",st:"focus",list:'<div class="lst" role="listbox"><div class="grp">In Work permits: no category starts with “Open work p”</div><div class="newo hi">+ Add “Open work p…” as a new category</div></div>'})+f("sub",{off:"Pick a category first"})+pv(`<span class="p0">Retail</span>${S}<span class="p1">Temporary residence</span>${S}<span class="p2">Work permits</span>${S}<span class="idn"><b>Open work p…</b>${NEW}</span>`,"1 new name so far."),ft("Add 1 name")));
+card("3 · Duplicate (exact twin under the same parent)",'<span class="tag cap">Capability · Needed</span><span class="tag dec">[F S1 BR-4: compared ignoring case, spaces and punctuation]</span>',DLG("",fType()+f("pw",{v:"Temporary residence",tag:"ex"})+f("pg",{v:"Visitors",tag:"ex"})+f("cat",{v:"visitor&nbsp;&nbsp;Visa",st:"err",chk:'<p class="chk dup" role="alert">✕ “Visitor visa” already exists under Visitors (names are compared ignoring case, spaces and punctuation). <span class="lk">Use it</span></p>'})+f("sub",{off:"Fix the category first"}),ft("Add 1 name",{dis:true,why:"Visitor visa already exists under Visitors: use it instead."})));
+card("4 · Did you mean (rules, free, as you type)",'<span class="tag cap">Capability · Needed</span><span class="tag dec">[F S1 BR-5: within 2 letters, same words, singular / plural]</span>',DLG("",fType()+f("pw",{v:"Temporary residence",tag:"ex"})+f("pg",{v:"Visitors",tag:"ex"})+f("cat",{v:"Visiter visa",tag:"new",st:"warn",chk:'<div class="chk box close" role="status"><b>Did you mean</b> <span class="trail sm"><span class="p1">Temporary residence</span>'+S+'<span class="p2">Visitors</span>'+S+'<span class="idn"><b>Visitor visa</b></span></span>? <span class="cap">(one letter apart)</span><div class="acts"><span class="btn sm">Use existing</span><span class="btn sm ghost" title="Adds yours; Activity records that a close name existed">Keep mine</span></div></div>'})+f("sub",{v:"None: the category is the combination"}),ft("Add 1 name",{dis:true,why:"Choose Use existing or Keep mine first."})));
+card("5 · Did you mean (AI meaning check, paid runs on)",'<span class="tag cap">Capability · Needed</span><span class="tag dec">[F P-118; S1 BR-5 off by default]</span><span class="tag dec">[F P-110 cost first, logged]</span>',DLG("Paid runs are on: Add first checks the meaning of the new names once, its cost shown before it runs.",fType()+f("pw",{v:"Permanent residence",tag:"ex"})+f("pg",{v:"Family sponsorship",tag:"ex"})+f("cat",{v:"Spousal sponsorship",tag:"new",st:"ai",chk:'<div class="chk box ai" role="status"><b style="color:var(--t-ai)">✦ AI:</b> “Spousal sponsorship” may mean the same as <span class="trail sm"><span class="p2">Family sponsorship</span>'+S+'<span class="idn"><b>Spouse or common-law partner</b></span></span>: both sponsor a husband, wife or partner. <div class="acts"><span class="btn sm">Use existing</span><span class="btn sm ghost">Keep mine</span></div><div class="cap" style="margin-top:4px">Ran once on Add for 1 new name; cost shown first and logged. The free spelling check found nothing close. Nothing was written.</div></div>'})+f("sub",{v:"None: the category is the combination"}),ft("Add 1 name",{dis:true,why:"Choose Use existing or Keep mine first."})));
+card("6 · New parts shown",'<span class="tag cap">Capability · Needed</span><span class="tag dec">[F EXPERIENCE §3 “will be created as”]</span>','<p class="why">The recommended state in 1a: Economic immigration and Start-up visa tagged New in the fields and in the trail; the count line says what Add will write and that no setup starts (P-125 (3)).</p>'+DLG("",heroFields,ft("Add 2 names")));
+card("7 · A category that has sub-categories",'<span class="tag cap">Capability · Needed</span><span class="tag dec">[F S1 BR-2, TAXONOMY §1]</span>',DLG("",fType()+f("pw",{v:"Temporary residence",tag:"ex"})+f("pg",{v:"Study permits",tag:"ex"})+f("cat",{v:"Study permit",tag:"ex"})+f("sub",{st:"focus",plc:"Pick or type a sub-category",list:'<div class="lst" role="listbox"><div class="grp">In Study permit</div><div><span class="lm l4"></span>Outside Canada<small>In setup</small></div><div style="color:var(--muted)" aria-disabled="true">None is not possible: Study permit has sub-categories, and each is its own combination</div><div class="newo">Type a name to add a new sub-category</div></div>'}),ft("Add",{dis:true,why:"Pick or type a sub-category."})));
+card("8 · A category that already has its setup",'<span class="tag cap">Capability · Needed</span><span class="tag dec">[F P-26, S1 BR-2]</span><span class="tag dec">[F S1 BR-11 same path opens the existing one]</span>',DLG("Opened from “Add sub-category” on Visitor visa (the ⋯ item is off with this reason; drawn here for the rule).",fType()+f("pw",{v:"Temporary residence",tag:"ex"})+f("pg",{v:"Visitors",tag:"ex"})+f("cat",{v:"Visitor visa",tag:"ex"})+f("sub",{off:"Off: Visitor visa already has its own setup, so it is the combination. A sub-category would leave that setup above a combination."})+'<div><div class="chk box note">Already in the structure: <span class="trail sm"><span class="p1">Temporary residence</span>'+S+'<span class="p2">Visitors</span>'+S+'<span class="idn"><b>Visitor visa</b></span></span> · In setup. <span class="lk">Show it</span></div></div>',ft("Add",{dis:true,why:"Nothing new to add."})));
+card("9 · Stops at a program (no combination yet)",'<span class="tag cap">Capability · Needed</span><span class="tag gap">[GAP] Lead: Add may stop at any level</span>',DLG("",fType()+f("pw",{v:"Permanent residence",tag:"ex"})+f("pg",{v:"Economic pilots",tag:"new",chk:'<p class="chk ok">✓ New under Permanent residence</p>'})+f("cat",{plc:"Optional now: add its first category now or later",lab:"Optional"})+f("sub",{off:"Pick a category first"})+pv(`<span class="p0">Retail</span>${S}<span class="p1">Permanent residence</span>${S}<span class="p2">Economic pilots</span>${NEW}`,"1 new name: a program with no combination yet. It shows on the page as an empty section with + Add category; Immigration programs lists nothing for it until it has one."),ft("Add program")));
+card("10 · Save error (nothing written)",'<span class="tag cap">Capability · Needed</span><span class="tag dec">[F EXPERIENCE §2.10 error on the field, with the fix]</span>',DLG("",fType()+f("pw",{v:"Permanent residence",tag:"ex"})+f("pg",{v:"Economic immigration",tag:"new",st:"err",chk:'<p class="chk dup" role="alert">✕ Someone else added “Economic immigration” under Permanent residence a moment ago. <span class="lk">Use theirs</span> (Start-up visa then goes under it), or change this name.</p>'})+f("cat",{v:"Start-up visa",tag:"new"})+f("sub",{v:"None: the category is the combination"}),ft("Add 2 names",{dis:true,why:"Fix Program first.",extra:'<div class="ntc err" role="alert" style="margin-bottom:6px"><b>Nothing was added.</b> Your entries are kept. If the server cannot be reached the line reads: “Could not reach the server. Nothing was added; your entries are kept.” with <span class="lk">Retry</span>.</div>'})));
+card("11 · Read-only role (why disabled)",'<span class="tag cap">Capability · Needed</span><span class="tag dec">[F S1 BR-15 author-only writes, on the server too]</span>',`<div class="callout"><div class="ph" style="gap:8px"><h1 style="font-size:20px">Program structure</h1><span class="sp"></span><span class="btn pri" aria-disabled="true">+ Add</span></div><div style="background:#2d2d2d;color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;width:fit-content;margin:6px 0 0 auto">${AUTHOR_ONLY}</div><p class="why" style="margin-top:10px">Every “+ Add” (page, cards, bands, sections, ⋯ items) shows disabled with this tooltip. The Immigration programs link, followed by a reader, opens the page with this line instead of the dialog:</p><div class="ntc inf">${AUTHOR_ONLY} <span class="lk">‹ Back to Immigration programs</span></div></div>`);
+document.getElementById("states").innerHTML=st.join("");
+
+/* after add · 390 sheet · dark */
+const D5x=JSON.parse(JSON.stringify(D5));D5x[1][1].unshift(["Economic immigration",[["Start-up visa",null,"ns","Outside Canada"]]]);
+const afterHtml=`<div style="flex:1;min-width:620px"><div class="why" style="margin-bottom:6px"><b>After Add, arriving from Immigration programs</b> (page part, 1440 px): the Pathway and Program open, the line is scrolled into view and tagged “Just added”; the page line offers the way back. No toast (S1-finish rule). <span class="tag cap">Capability · Needed</span></div><div class="frame"><div class="main">${A(D5x,{open:1,just:"Start-up visa|",types:[6,1],notice:'<div class="ntc ok" role="status" style="margin-bottom:12px">Added <b>Start-up visa</b> under Permanent residence › Economic immigration. It is on Immigration programs as Not started. <span class="lk">‹ Back to Immigration programs</span></div>'})}</div></div></div>`;
+const sheet=`<div><div class="why" style="margin-bottom:6px"><b>390 px:</b> a full-screen sheet; Add pinned at the bottom. <span class="tag cap">Capability · Needed</span><span class="tag dec">[F P-48 team mobile sheet]</span></div><div class="sheet" role="dialog" aria-label="Add to Program structure"><div class="dh"><h3>Add to Program structure</h3><span class="kebab" title="Close">✕</span></div><div class="db">${heroFields}</div><div class="df"><span class="btn pri">Add 2 names</span><span class="btn">Add and add another</span></div></div></div>`;
+const dark=`<div><div class="why" style="margin-bottom:6px"><b>Dark theme</b> (the same dialog, team dark tokens).</div><div class="dk spec">${DLG("",heroFields,ft("Add 2 names"),"width:500px")}</div></div>`;
+document.getElementById("after").innerHTML=afterHtml+sheet+dark;
+
+/* ---------- section 2 frames ---------- */
+const set=(id,h)=>{const e=document.getElementById(id);if(e)e.innerHTML=h};
+set("A5",`<h4 style="margin:8px 0 4px">A · 1440 px · 5 combinations (P-112) · All pathways · Visitor visa selected (details panel open, so “Used by” moves into it) · ⋯ open on Express Entry stream</h4>`+frame("/structure · Retail",A(D5,{open:null,sel:"Visitor visa|",panel:PANEL,menu:"Express Entry stream|"}),"A5"));
+set("A50",`<h4 style="margin:14px 0 4px">A · 1440 px · 50 Sample combinations · All pathways (the longest view; scroll inside the frame)</h4>`+frame("/structure · Retail · All pathways",A(D50,{open:null,types:[50,8]}),"A50"));
+set("A50tr",`<h4 style="margin:14px 0 4px">A · 1440 px · 50 Sample combinations · Temporary residence chosen (25 combinations, the largest Pathway)</h4>`+frame("/structure?p=temporary-residence · Retail",A(D50,{open:0,types:[50,8]}),"A50tr"));
+set("Aph",phone("A · 390 px · 5 combinations",A(D5,{open:null,phone:true}),"pA5")+phone("A · 390 px · 50 · Temporary residence",A(D50,{open:0,phone:true,types:[50,8]}),"pA50"));
+set("B5",`<h4 style="margin:8px 0 4px">B · 1440 px · Tree · 5 combinations</h4>`+frame("/structure?view=tree · Retail",B(D5,{view:"tree"}),"B5"));
+set("B50",`<h4 style="margin:14px 0 4px">B · 1440 px · Tree · 50 Sample combinations</h4>`+frame("/structure?view=tree · Retail",B(D50,{view:"tree",types:[50,8]}),"B50"));
+set("B50c",`<h4 style="margin:14px 0 4px">B · 1440 px · Cards · 50 Sample combinations · Temporary residence open</h4>`+frame("/structure?view=cards · Retail",B(D50,{view:"cards",types:[50,8]}),"B50c"));
+set("Bph",phone("B · 390 px · Tree · 50",`<div class="tree ctree ph1">${tree(D50,true)}</div>`,"pB50"));
+set("C5",`<h4 style="margin:8px 0 4px">C · 1440 px · 5 combinations</h4>`+frame("/structure · Retail",C(D5,{}),"C5"));
+set("C50",`<h4 style="margin:14px 0 4px">C · 1440 px · 50 Sample combinations</h4>`+frame("/structure · Retail",C(D50,{types:[50,8]}),"C50"));
+set("Cph",phone("C · 390 px · 50",C(D50,{phone:true,types:[50,8]}),"pC50"));
+
+/* measure: content height ÷ the viewport box (760 px at 1440 × 900; 700 px on a 390 × 844 phone) */
+function measure(){document.querySelectorAll("[data-m]").forEach(el=>{const h=el.querySelector(".mc").offsetHeight+(el.dataset.ph?0:36);const vh=el.clientHeight;const s=h/vh;const t=`${h} px · ${s<=1?"fits one screen":s.toFixed(1)+" screens"} of ${vh} px`;document.querySelectorAll(`[data-mo="${el.dataset.m}"]`).forEach(x=>x.textContent=t)})}
+const dh=document.querySelector('#hero .dlg');if(dh){const h=dh.offsetHeight;document.getElementById('dlgh').textContent=`dialog ${h} px tall; a 1440 × 900 window shows about 790 px: ${h<=760?'fits':'the body scrolls, title and buttons stay'}`;}
+measure();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(measure);
+})();
+</script>
+</body></html>

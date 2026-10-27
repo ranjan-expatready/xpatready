@@ -39,3 +39,6 @@
 | QA-37 | UX · Minor | C3.10 | 12e7207 | 8aef175, 25 Oct | `check_qa16_box_words.ts`: 0 in the web app, 0 in API messages |
 | QA-26 | UX · Minor | C6.2, C6.3, C6.6 | db468e38 | 8aef175, 25 Oct | `check_qa_r1a_probe.ts` 71/71: `applies` as text → "Say whether the person is travelling (true or false)." |
 | QA-19 | UX · Minor | C3.10, C1.4 | e742bc59 (shared demo) | 25 Oct (Mac, after the founder's demo reset; Lead note) | `check_qa19_demo_leftovers.ts` passed on the Mac :4400 after the reset (Lead's check; :4400 is not reachable from the cloud, P-88) |
+| QA-41 | UX · Minor | C6.1, C6.3 | 8360565 | 76628a4, 27 Oct | `check_qa_am_1027.cjs`: the Open a case dialog opens with focus on "Case reference" (an input), not Close |
+| QA-42 | UX · Minor | C1.4 | 8360565 | 76628a4, 27 Oct | `check_qa_am_1027.cjs`: Visitor visa (Live, forms released) no longer shows the "not set up yet" seed note |
+| QA-43 | Bug · Minor | C2.7 | 8360565 | 76628a4 (W1-02 removed the route, P-102), 27 Oct | `check_qa_am_1027.cjs`: `GET /combinations/:id/online-forms` is gone (404), with the other capture, pairing and portal routes |

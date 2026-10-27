@@ -31,7 +31,7 @@ The team merges these into the product's menus. A new item needs a screen in `SC
 ## 4. Words on screen (P-05)
 | Use | Not | Meaning |
 |---|---|---|
-| Pathway: Individual / Corporate and employers | client type, segment | Workspace switch; data value Corporate (P-06, P-16) |
+| Pathway type: Retail / Corporate and employers (P-104) | client type, segment | Workspace switch; data value Corporate (P-06, P-16) |
 | Program › Category › Sub-category | stream, level 3/4 | Masters of a combination (team enum STREAM = Category, CATEGORY = Sub-category: an adapter, not a rename) |
 | Combination | composition, combo, configuration row | The last level present; owns one configuration |
 | Person roles: Principal applicant, Spouse or partner, Dependent child, Representative | participants | Who a line applies to |
