@@ -1,16 +1,20 @@
 {
- "at": "2026-10-26T14:40:11.542Z",
- "port": 4453,
- "database": "xr_studio_forms_gdb",
- "pass": 30,
+ "at": "2026-10-26T18:59:30.996Z",
+ "port": 4402,
+ "database": "xr_studio_grounding",
+ "pass": 31,
  "fail": 0,
  "log": [
   {
-   "name": "the two pathways exist without sample data: one Individual, one Corporate",
+   "name": "no pathway exists without data, and a read creates none (W1-03)",
    "ok": true
   },
   {
-   "name": "a third pathway cannot be added",
+   "name": "an author adds one pathway per type on the Structure",
+   "ok": true
+  },
+  {
+   "name": "a pathway is not added through the path builder's node route (Structure only)",
    "ok": true,
    "detail": "Choose program, category or sub-category."
   },
@@ -183,7 +187,7 @@
   {
    "name": "isolated copy: sample inputs load through the normal paths: 2 pathways, 11 programs, 6 combinations set up",
    "ok": true,
-   "detail": 6.415
+   "detail": 3.64
   },
   {
    "name": "a person makes the given-names question conditional (saved as draft)",

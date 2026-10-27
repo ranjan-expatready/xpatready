@@ -40,7 +40,8 @@ export class Studio {
   // ------------------------------------------------------------------ session and programs
   async session(actor: Actor) {
     const workspaceId = await this.ws.id();
-    const [programs, fields, releases, jobs, sample] = await Promise.all([this.db.programDef.count({ where: { workspaceId, nodeKind: { not: "PATHWAY" } } }), this.db.canonicalField.count({ where: { workspaceId } }), this.db.configRelease.count({ where: { workspaceId } }), this.db.draftingJob.count({ where: { workspaceId } }), this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } })]);
+    // "Structure exists" counts any name, Pathways included (W1-03 B1: after Reset the Structure is empty in both tabs).
+    const [programs, fields, releases, jobs, sample] = await Promise.all([this.db.programDef.count({ where: { workspaceId } }), this.db.canonicalField.count({ where: { workspaceId } }), this.db.configRelease.count({ where: { workspaceId } }), this.db.draftingJob.count({ where: { workspaceId } }), this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } })]);
     // sampleLoaded: the sample inputs were loaded into this workspace, not merely "some program exists" (QA-12).
     return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0 };
   }
@@ -59,13 +60,13 @@ export class Studio {
     let parent: any = null;
     if (b.kind === "PATHWAY") {
       if (b.parentKey) fail("A pathway is the top level; it has no parent.");
-      if (!["INDIVIDUAL", "CORPORATE"].includes(b.clientType ?? "")) fail("A pathway says who the client is: Individual or Corporate (SA-1B-50).");
-      const same = await this.db.programDef.findFirst({ where: { workspaceId, nodeKind: "PATHWAY", clientType: b.clientType } });
-      if (same) fail(`The ${b.clientType!.toLowerCase()} pathway already exists ("${same.label}"); choose it instead of creating another.`, HttpStatus.CONFLICT);
+      // W1-03 (P-104, B1): several Pathways per Pathway type; the type itself is a fixed value, never a row.
+      if (!["INDIVIDUAL", "CORPORATE"].includes(b.clientType ?? "")) fail("A pathway belongs to a Pathway type: Retail or Corporate and employers (SA-1B-50).");
     } else {
       if (!b.parentKey) fail(`Choose the ${LEVEL[L.parent!].name.toLowerCase()} this ${L.name.toLowerCase()} belongs to.`);
       parent = await this.db.programDef.findFirst({ where: { workspaceId, programNodeKey: b.parentKey } });
       if (!parent) fail(`That ${LEVEL[L.parent!].name.toLowerCase()} does not exist.`, HttpStatus.NOT_FOUND);
+      if (parent.retiredAt) fail(`"${parent.label}" is retired: restore it first, or choose another (P-116).`, HttpStatus.CONFLICT);
       if (parent.nodeKind !== L.parent) fail(`A ${L.name.toLowerCase()} belongs under a ${LEVEL[L.parent!].name.toLowerCase()}, not under a ${LEVEL[parent.nodeKind].name.toLowerCase()}.`);
       if (b.kind === "CATEGORY") { const row = await this.db.combination.findFirst({ where: { programDefId: parent.id } }); if (row) fail(`"${parent.label}" already has its own configuration row ("${row.label}"), so it is a full combination. A sub-category would put that row above a full combination (SA-1B-55/56); add sub-categories to a category without a row.`, HttpStatus.CONFLICT); }
     }
@@ -75,7 +76,8 @@ export class Studio {
       if (!locations.length || locations.some((l) => !LOCATIONS.includes(l))) fail("Say where a case for it may be opened: inside Canada, outside Canada, or both (SA-1B-51: location is a case detail, allowed per category).");
     }
     // Same parent, same name (BR-6: compared ignoring case, spaces and punctuation): point to the existing record.
-    const siblings = await this.db.programDef.findMany({ where: { workspaceId, nodeKind: b.kind, parentNodeKey: parent?.programNodeKey ?? null } });
+    // Pathways are compared within their type (W1-03 BR-4): the same name may stand in both tabs.
+    const siblings = await this.db.programDef.findMany({ where: { workspaceId, nodeKind: b.kind, parentNodeKey: parent?.programNodeKey ?? null, ...(b.kind === "PATHWAY" ? { clientType: b.clientType } : {}) } });
     const dup = siblings.find((x) => normalizeLabel(x.label) === normalizeLabel(label));
     if (dup) { const detail = `"${dup.label}" already exists ${parent ? `under ${parent.label}` : "as a pathway"}: choose it instead.`; throw new HttpException({ type: "https://expatready.local/problems/name-already-used", title: "Name already used", status: 409, detail, errors: [{ field: "label", message: detail }], existing: { key: dup.programNodeKey, label: dup.label } }, HttpStatus.CONFLICT); }
     // The key is internal (BR-6 compares names, never keys): a name with no Latin letters or digits, or one that shares
@@ -85,7 +87,7 @@ export class Studio {
     // The database keeps one name per parent (QA-14): of two creates at the same moment, one wins and the other is told.
     const n = await this.db.programDef.create({ data: { workspaceId, programNodeKey: key, parentNodeKey: parent?.programNodeKey ?? null, nodeKind: b.kind, label, nameKey: normalizeLabel(label), description: b.description ?? null, sourceBasis: b.sourceBasis ?? parent?.sourceBasis ?? "SOURCE_BACKED", clientType: b.kind === "PATHWAY" ? b.clientType! : null, allowedLocations: locations, linkLabel: b.linkLabel ?? null, createdBy: actor.id, displayOrder: await this.db.programDef.count({ where: { workspaceId } }) } }).catch(async (e) => {
       if ((e as { code?: string }).code !== "P2002") throw e;
-      const twin = await this.db.programDef.findFirst({ where: { workspaceId, parentNodeKey: parent?.programNodeKey ?? null, nameKey: normalizeLabel(label) } });
+      const twin = await this.db.programDef.findFirst({ where: { workspaceId, parentNodeKey: parent?.programNodeKey ?? null, nameKey: normalizeLabel(label), ...(b.kind === "PATHWAY" ? { clientType: b.clientType } : {}) } });
       // The other unique value is the internal key: a different name that made the same key at the same moment.
       const detail = twin ? `"${twin.label}" already exists ${parent ? `under ${parent.label}` : "as a pathway"}: choose it instead.` : "Another item was created here at the same moment: try again.";
       throw new HttpException({ type: "https://expatready.local/problems/name-already-used", title: "Name already used", status: 409, detail, errors: [{ field: "label", message: detail }], ...(twin ? { existing: { key: twin.programNodeKey, label: twin.label } } : {}) }, HttpStatus.CONFLICT);
@@ -130,6 +132,7 @@ export class Studio {
     const workspaceId = await this.ws.id();
     const node = await this.db.programDef.findFirst({ where: { workspaceId, programNodeKey: b.programKey } });
     if (!node) fail("Choose the category (or sub-category) this configuration is for.", HttpStatus.NOT_FOUND);
+    if (node!.retiredAt) fail(`"${node!.label}" is retired: restore it on the Structure first (P-116).`, HttpStatus.CONFLICT);
     if (node!.nodeKind !== "STREAM" && node!.nodeKind !== "CATEGORY") fail(`A configuration row belongs to a full combination: a category, or its sub-category. "${node!.label}" is a ${LEVEL[node!.nodeKind].name.toLowerCase()} (SA-1B-55/56).`);
     if (await this.db.programDef.count({ where: { workspaceId, parentNodeKey: node!.programNodeKey } })) fail(`"${node!.label}" has sub-categories: choose one of them; each is its own full combination.`);
     const existing = await this.db.combination.findFirst({ where: { programDefId: node!.id } });

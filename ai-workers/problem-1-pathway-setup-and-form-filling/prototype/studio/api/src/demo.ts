@@ -28,7 +28,7 @@ const RELEASE = join(PROTOTYPE, "p3", "releases", "c1-v3");
 export const SAMPLES = join(STUDIO, "samples", "programs.json");
 type SampleSetup = { key: string; participants: any[]; sources: string[]; import?: "release"; note: string };
 type SampleNode = { key: string; label: string; locations: string[]; link?: string; setup?: SampleSetup; subcategories?: SampleNode[] };
-type SampleFile = { programs: { pathway: string; key: string; label: string; description: string; categories: SampleNode[] }[] };
+type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" | "CORPORATE"; description: string }[]; programs: { pathway: string; key: string; label: string; description: string; categories: SampleNode[] }[] };
 
 @Injectable()
 export class Demo {
@@ -37,7 +37,8 @@ export class Demo {
   async status() {
     const workspaceId = await this.ws.id();
     // loaded: the sample inputs are in this workspace; programsExist: something blocks loading them (QA-12).
-    const [sample, programs] = await Promise.all([this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } }), this.db.programDef.count({ where: { workspaceId, nodeKind: { not: "PATHWAY" } } })]);
+    const [sample, programs] = await Promise.all([this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } }), this.db.programDef.count({ where: { workspaceId } })]);
+    // programsExist: any name in the Structure, Pathways included (W1-03: a read or a reset creates none).
     return { loaded: sample > 0, programsExist: programs > 0, scope: await this.scope(workspaceId), preserved: this.preserved() };
   }
 
@@ -51,7 +52,7 @@ export class Demo {
     const t0 = Date.now();
     const log: string[] = [];
     try {
-      if (await this.db.programDef.count({ where: { workspaceId, nodeKind: { not: "PATHWAY" } } })) fail("Programs already exist in this workspace. Reset the demo first to load the sample inputs.", HttpStatus.CONFLICT);
+      if (await this.db.programDef.count({ where: { workspaceId } })) fail("The Structure already has names in this workspace. Reset the demo first to load the sample inputs.", HttpStatus.CONFLICT);
       return await this.loadSteps(actor, workspaceId, t0, log);
     }
     catch (e) {
@@ -66,8 +67,14 @@ export class Demo {
     const config = JSON.parse(readFileSync(join(RELEASE, "configuration.json"), "utf8"));
     const rel = JSON.parse(readFileSync(join(RELEASE, "release.json"), "utf8"));
     const sample = JSON.parse(readFileSync(SAMPLES, "utf8")) as SampleFile;
-    await this.programs.ensurePathways(workspaceId); // fixed values, present with or without sample data
     let rows = 0, nodes = 0;
+    // W1-03 (B1): Pathways are names in the sample file, added like a person adds them on the Structure (W1-11 renames
+    // them to the P-112 names); the Pathway type is a fixed value and never a row.
+    for (const p of sample.pathways) {
+      await this.studio.createNode(actor, { kind: "PATHWAY", label: p.label, key: p.key, clientType: p.type, description: p.description, sourceBasis: "ILLUSTRATIVE" });
+      nodes++;
+      log.push(`pathway "${p.label}" (Sample)`);
+    }
     const setUp = async (node: any, path: string, c: SampleSetup) => {
       const comp = await this.studio.createCombination(actor, { programKey: node.programNodeKey, label: node.label, key: c.key, participants: c.participants, description: c.note, sourceBasis: c.import ? "SOURCE_BACKED" : "ILLUSTRATIVE", basisNote: c.note });
       rows++;

@@ -7,7 +7,7 @@ export const PATHWAYS = ["INDIVIDUAL", "CORPORATE"] as const;
 export const STATUSES = ["IN_SETUP", "NOT_READY", "READY"] as const;
 export type Status = (typeof STATUSES)[number];
 /** Filters (P-49): "Needs work" (needs, the default), Live and All on screen; the status filters stay for API callers. */
-export const FILTERS = ["needs", "live", "all", "ready", "not_ready", "in_setup", "ai_proposals"] as const;
+export const FILTERS = ["needs", "live", "all", "ready", "not_ready", "in_setup", "ai_proposals", "retired"] as const;
 export const SORTS = ["path", "status", "-status"] as const;
 export type Filter = (typeof FILTERS)[number];
 
@@ -93,6 +93,8 @@ const PathLevel = z.union([z.object({ key: z.string().min(1) }), z.object({ crea
 export const LINK_KINDS = ["follows", "supported_by"] as const;
 export const CreatePathBody = z.object({
   pathway: z.enum(PATHWAYS),
+  /** W1-03: which Pathway of the type, when the program is new and the type has several (an existing program says it). */
+  pathwayKey: z.string().trim().min(1).max(200).optional(),
   program: PathLevel,
   category: PathLevel,
   subCategory: PathLevel.nullable().default(null),
@@ -154,6 +156,18 @@ export type CatalogueLeaf = {
   pathKeys: string[];
   /** One short line under the path: its link or route step, AI proposals when the next step is something else, "New today". */
   note: string;
+  /** W1-03/04 (BR-7): the Pathway it sits in and the full five-part trail: Pathway type › Pathway › Program › Category ›
+   *  Sub-category ("No sub-category" when the category is the combination, never blank). */
+  pathwayType: (typeof PATHWAYS)[number];
+  pathwayKey: string;
+  pathwayLabel: string;
+  trail: string[];
+  /** The four setup steps (addendum A3): Forms · Draft · Review · Release; all four done = Live. */
+  progress: { step: number; of: 4; label: string; done: boolean[]; live: boolean };
+  /** "Filed:" (addendum A4): PDF · PDF + answer sheet (later wave) · No forms yet. */
+  filed: string;
+  /** P-116: retired by a release (left out of All; shown under the Retired status). */
+  retired: boolean;
 };
 export type CatalogueGroup = { kind: "program" | "category"; nodeKey: string; label: string; linkLabel: string | null; children: CatalogueNode[]; summary: Record<Status, number> & { ai_proposals: number; combinations: number } };
 export type CatalogueNode = CatalogueGroup | CatalogueLeaf;
@@ -162,7 +176,9 @@ export type NextAction = { kind: "start" | "add_forms" | "add_from_library" | "d
 // ------------------------------------------------------------------ responses the Screen 01 pages read
 /** One person role on a combination (stored as JSON on the combination; see Participant above for the request shape). */
 export type ParticipantLine = { role: string; label: string; min: number; max: number; preview?: number; applies?: boolean };
-export type CatalogueCounts = Record<"needs" | "live" | "all" | "ready" | "not_ready" | "in_setup" | "ai_proposals", number>;
+export type CatalogueCounts = Record<"needs" | "live" | "all" | "ready" | "not_ready" | "in_setup" | "ai_proposals" | "retired", number>;
+/** W1-04 (design D): one section per Pathway of the tab, in Structure order, with its combinations' tree and counts. */
+export type CatalogueSection = { pathwayKey: string; label: string; combinations: number; needs: number; live: number; tree: CatalogueGroup[] };
 /** GET /catalogue. */
 export type CatalogueResponse = {
   pathway: (typeof PATHWAYS)[number]; filter: Filter; requestedFilter: Filter; fellBack: boolean; q: string; program: string; under: string; sort: (typeof SORTS)[number];
@@ -172,7 +188,9 @@ export type CatalogueResponse = {
   pathways: { value: string; label: string; combinations: number }[];
   counts: CatalogueCounts;
   totals: { programs: number; categories: number; combinations: number };
+  /** Every program of every Pathway of the tab (the flat tree the current page reads). */
   tree: CatalogueGroup[];
+  sections: CatalogueSection[];
   otherPathwayMatches: number;
   timing_ms: { rows: number; total: number };
 };
