@@ -9,12 +9,13 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 current_screen: W1-structure-programs
 stage: FIX
 owner: Builder
-next_action: Fix the seven S2 early-look items: P-112 sample Pathways, Start setup, no silent start, form counts, search width, need-you rule, Not started card
-then: FIX, then EARLY-LOOK of changed states, then CHECK (reviewer and breaker)
+next_action: Seven fixes built (bde5de3, S2 check 74/74); all suites and the studio journey running; then CHECK with reviewer and breaker
+then: FIX, then CHECK (reviewer and breaker), then owner Lead
 blocked_by: none
 updated: 2026-10-27
 
 ## Log (last 10 lines)
+- 2026-10-27 · W1-structure-programs · FIX · seven S2 early-look fixes built (P-112 sample Pathways, Start setup, no silent start, form counts agree, search full width, need-you = waiting on a person, Not started card); check_w1_programs_s2 74/74; build-notes 'S2 Fixes'. Suites running. AI US$0.
 - 2026-10-27 · W1-structure-programs · BUILD S2 → FIX · applied Lead note 2026-10-27 (S2 early look on 4e6b409; founder Go with all seven fixes; note read from the Lead branch lead/2026-10-27); synced main 01094c2. AI US$0.
 - 2026-10-27 · W1-structure-programs · EARLY-LOOK → BUILD S2 · applied Lead note 2026-10-27 (S1-finish merged PR #42 d393155; founder Go on S2); new branch screens/2026-10-27-s2-programs from main. AI US$0.
 - 2026-10-27 · W1-structure-programs · BUILD → EARLY-LOOK · S1-finish: Pathway cards (All + one per Pathway + Add; a card opens its tree, closes the others; in the address), Used by names each combination with Open, inline confirmations (no toast on Structure), full-height menu column app-wide; check_w1_structure_s1finish 33/33 (twice), all 34 suites PASS, studio journey 45/45 on 4445 (two overlapping runs earlier interfered; rerun alone clean). AI US$0. Owner → Lead.
@@ -24,4 +25,3 @@ updated: 2026-10-27
 - 2026-10-27 · W1-structure-programs · BUILD → EARLY-LOOK · slice 2 Structure page: all 33 suites PASS (incl. check_w1_structure 83/83, check_w1_structure_browser 61/61); 13 states × 1440/1024 screenshots, axe clean; any 434 = baseline; graph exit 0. AI US$0. Owner → Lead.
 - 2026-10-27 · W1-structure-programs · EARLY-LOOK → BUILD slice 2 · applied Lead note 2026-10-27 (slice 1 passed; L3 reading accepted; slices 1+2 merge together); Structure page built: outline with add rows and live checks, side panel (rename, locations, order, remove/retire/restore, history), every board state; check_w1_structure_browser 61/61, axe clean. AI US$0.
 - 2026-10-27 · W1-structure-programs · BUILD → EARLY-LOOK · slice 1 data and API: migration (index per parent and type; version, retired_at), ensurePathways removed (a read creates nothing; samples carry their Pathways), every-Pathway reads (catalogue sections, path-options, createPath pathwayKey, proposal), Structure endpoints (list, name-check, meaning-check off 403, add, rename/locations with version, reorder at once), P-116 lifecycle via LibraryChange + lifecycle.ts (uses, delete at approval, retire/restore at release), retired-case guard in runtime.ts, trail/progress/filed/retired on rows; check_w1_structure 83/83, all 32 suites PASS (check_screen01_api + check_grounding_db updated for the no-fixed-Pathway rule). AI US$0. Owner → Lead.
-- 2026-10-27 · W1-structure-programs · DESIGN → BUILD · applied Lead note 2026-10-27 (synced main 5e7c7b7 with W1-02; Lead response copied into challenge.md); slice 1 started. AI US$0.

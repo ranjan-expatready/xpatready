@@ -189,6 +189,11 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   // focus lands is read by the first row and does nothing.
   await p.keyboard.press("End"); await focusOn(rowLabels[rowLabels.length - 1]);
   await p.keyboard.press("ArrowUp"); await focusOn(rowLabels[rowLabels.length - 2]);
+  // S2 fix 3: a Not started row opens Start setup (checked below), so Enter is tried on a row that is set up: Home,
+  // then down to the first one with setup.
+  const setUp = new Set((await cat("pathway=INDIVIDUAL&filter=all")).rows.filter((x) => x.combinationId).map((x) => x.label));
+  await p.keyboard.press("Home"); await focusOn(rowLabels[0]);
+  for (let i = 1; i < rowLabels.length && !setUp.has(await p.evaluate(() => document.activeElement?.getAttribute("data-label"))); i++) { await p.keyboard.press("ArrowDown"); await focusOn(rowLabels[i]); }
   const focusedLabel = await p.evaluate(() => document.activeElement?.getAttribute("data-label"));
   const scrollBefore = await p.evaluate(() => Math.round(window.scrollY));
   await p.keyboard.press("Enter"); await onCombination(focusedLabel);
@@ -302,11 +307,12 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("F2: one cause, one line; the next step said once (under the list when shared, else on each line); no line per person role", (shared ? miss.length > 1 && !miss.some((x) => /Next step/.test(x)) : miss.every((x) => /Next step: /.test(x))) && !miss.some((x) => /has no questions/.test(x)) && miss.filter((x) => /No questions yet for/.test(x)).length <= 1, miss.join(" | "));
   await state("combination-page-show-missing");
 
-  // A not-started row opens a page too (the author starts it); a non-author is told who does.
+  // A not-started row opens the Start setup page for the author (S2 fix 3: nothing is created by the click); a
+  // non-author is told who starts it.
   await p.goto(`${BASE}/?f=all`); await idle();
-  await row("Grant of citizenship").click(); await p.waitForURL(/\/c\//); await p.getByText("No forms yet.", { exact: false }).first().waitFor(); await idle();
-  step("the header's draft count matches the list and draft bar (an empty draft shows no changes)", !/\d+ draft changes?/.test(await p.locator("h1").locator("xpath=../following-sibling::p[1]").textContent()));
-  step("a not-started row opens its (new, empty) combination page for the author", (await p.getByRole("heading", { level: 1 }).textContent()) === "Grant of citizenship" && /No forms yet/.test(await p.locator("main").textContent()));
+  const notStarted0 = (await cat("pathway=INDIVIDUAL&filter=all")).counts.not_started;
+  await row("Grant of citizenship").click(); await p.waitForURL(/\/new\?leaf=/); await idle();
+  step("S2 fix 3: a not-started row opens Start setup with its trail filled, and starts nothing by itself", /Citizenship › Grant of citizenship/.test(await p.locator("main").textContent()) && (await cat("pathway=INDIVIDUAL&filter=all")).counts.not_started === notStarted0);
   await state("combination-page-not-started");
   await p.goto(`${BASE}/?f=all`); await idle();
   await as("user-B");
