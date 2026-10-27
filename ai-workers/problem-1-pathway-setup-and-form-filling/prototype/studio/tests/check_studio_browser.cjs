@@ -214,7 +214,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   if (scratch) await p.getByRole("heading", { level: 1, name: "Employer-specific work permit" }).waitFor({ timeout: 15000 }).catch(() => {}); // the page header arrives with the combination
   const crumbs = scratch ? await p.getByRole("navigation", { name: "Path" }).getByRole("link").allTextContents().catch(() => []) : [];
   const made = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).rows.find((r) => r.combinationId === scratch);
-  step("B1: the path builder creates the program and category and the combination for that full path in one go", !!scratch && /Individual › Temporary residence › Work permits \(built from scratch\) › Employer-specific work permit/.test(willBe) && made?.path.join(" › ") === "Work permits (built from scratch) › Employer-specific work permit" && crumbs.join(" › ").includes("Work permits (built from scratch)"), `${willBe} → ${crumbs.join(" › ")}`);
+  step("B1: the path builder creates the program and category and the combination for that full path in one go", !!scratch && /Retail › Temporary residence › Work permits \(built from scratch\) › Employer-specific work permit/.test(willBe) && made?.path.join(" › ") === "Work permits (built from scratch) › Employer-specific work permit" && crumbs.join(" › ").includes("Work permits (built from scratch)"), `${willBe} → ${crumbs.join(" › ")}`);
   await go(`/c/${scratch}/sources`);
   await p.setInputFiles('input[type=file]', [path.join(OFFICIAL, "forms/imm1295e.pdf")]); await p.waitForTimeout(1500); await idle();
   const junk = path.join(OUT, "not-an-official-form.pdf"); fs.writeFileSync(junk, "%PDF-1.4 not an official form\n");
