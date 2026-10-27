@@ -46,6 +46,12 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
 }
 
 export const FINDER_OPERATION = "find_forms";
+/** What IRCC accepts, from the page's own words about how the form is filed (rules on AI's quoted line); null when it says nothing. */
+export function channelsFrom(note: string | null | undefined): "PDF" | "ONLINE" | "PDF_OR_ONLINE" | null {
+  if (!note) return null;
+  const online = /\bonline\b|portal/i.test(note), pdf = /\bpdf\b|paper|upload|download and fill|fill out the form on a computer/i.test(note);
+  return online && pdf ? "PDF_OR_ONLINE" : online ? "ONLINE" : pdf ? "PDF" : null;
+}
 export const INDEX_URL = "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides.html";
 const STEPS = [
   { kind: "finder_guide", label: "Find the application page and guide", ai: true },
@@ -473,8 +479,9 @@ export class Finder implements OnModuleInit {
     const code = /guide\s*(\d{3,5})/i.exec(title)?.[1] ?? /guide-(\d{3,5})/.exec(url)?.[1];
     if (!code) return;
     const key = `Guide ${code}`, fp = textFingerprint(html);
-    const modified = /dateModified[^0-9]*([0-9]{4}-[0-9]{2}-[0-9]{2})/.exec(html)?.[1] ?? /Date modified:[^0-9]*([0-9]{4}-[0-9]{2}-[0-9]{2})/.exec(html)?.[1] ?? new Date().toISOString().slice(0, 10);
-    const label = `${key} (${modified})`;
+    // The page's own "Date modified" when it prints one; otherwise the label says when it was read (never presented as IRCC's date).
+    const modified = /dateModified[^0-9]*([0-9]{4}-[0-9]{2}-[0-9]{2})/.exec(html)?.[1] ?? /Date modified:[^0-9]*([0-9]{4}-[0-9]{2}-[0-9]{2})/.exec(html)?.[1] ?? null;
+    const label = `${key} (${modified ?? `read ${new Date().toISOString().slice(0, 10)}`})`;
     const fileSha = sha(bytes);
     const stored = join(this.libDir(), `${fileSha.slice(0, 12)}-guide-${code}.html`);
     if (!existsSync(stored)) writeFileSync(stored, bytes);
@@ -482,7 +489,7 @@ export class Finder implements OnModuleInit {
       const def = await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId, formKey: key } }, update: { formPageUrl: url }, create: { workspaceId, formKey: key, displayName: title.replace(/^guide\s*\d+\s*[-–:]?\s*/i, "") || key, formKind: "guide", formPageUrl: url } });
       const have = await tx.formEdition.findFirst({ where: { workspaceId, govFormDefId: def.id, contentSha256: fp } });
       if (have) { await tx.formEdition.update({ where: { id: have.id }, data: { checkedAt: new Date() } }); return; }
-      await tx.formEdition.createMany({ data: [{ workspaceId, govFormDefId: def.id, editionLabel: label, sha256: fileSha, contentSha256: fp, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: url, sourceUrl: url, canadaUpdated: modified.slice(0, 7), checkedAt: new Date(), acceptedChannels: "READ_BY_AI", acceptedBasis: "SAMPLE" }], skipDuplicates: true });
+      await tx.formEdition.createMany({ data: [{ workspaceId, govFormDefId: def.id, editionLabel: label, sha256: fileSha, contentSha256: fp, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: url, sourceUrl: url, canadaUpdated: modified, checkedAt: new Date(), acceptedChannels: "READ_BY_AI", acceptedBasis: null }], skipDuplicates: true });
       await tx.officialDownload.createMany({ data: [{ workspaceId, sha256: fileSha, kind: "guide", code: key, edition: label, title, formPageUrl: url, sourceUrl: url, fileName: basename(stored), storedPath: stored.replace(`${ROOT}/`, ""), bytes: bytes.length, basis: "download", batchId, startedBy: by }], skipDuplicates: true });
     });
   }
@@ -553,11 +560,11 @@ export class Finder implements OnModuleInit {
     }
     if (pdfEditions.length) return { source: "library", edition: newestEdition(pdfEditions)!.editionLabel }; // older on canada.ca: keep ours
     await this.recordDownload(workspaceId, fileSha, kind, p.code, id.edition_label, id.title ?? row.title, row.pageUrl, pdfUrl, stored, bytes.length, by, batchId);
-    const accepted = p.filed_note && /online/i.test(p.filed_note) ? (/pdf|paper|upload/i.test(p.filed_note) ? "PDF_OR_ONLINE" : "ONLINE") : kind === "checklist" ? "READ_BY_AI" : "PDF";
+    const accepted = kind === "checklist" ? "READ_BY_AI" : channelsFrom(p.filed_note); // never invented: no line, no value
     try {
       await this.db.$transaction(async (tx) => {
         const d = def ?? (await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId, formKey: p.code } }, update: {}, create: { workspaceId, formKey: p.code, displayName: id.title || row.title || p.code, formKind: kind === "checklist" ? "checklist" : "data_form", formPageUrl: row.pageUrl } }));
-        await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, sha256: fileSha, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: row.pageUrl, sourceUrl: pdfUrl, canadaUpdated: page.lastUpdated, checkedAt: new Date(), acceptedChannels: accepted, acceptedBasis: "SAMPLE", acceptedQuote: p.filed_note ?? p.quote } });
+        await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, sha256: fileSha, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: row.pageUrl, sourceUrl: pdfUrl, canadaUpdated: page.lastUpdated, checkedAt: new Date(), acceptedChannels: accepted, acceptedBasis: accepted ? "AI_SAMPLE" : null, acceptedQuote: accepted ? p.filed_note : null } });
       });
     } catch (e) {
       // Another run stored the same edition a moment ago: use it (nothing is downloaded twice into the library).
@@ -600,6 +607,40 @@ export class Finder implements OnModuleInit {
     const current = steps.find((s) => s.status === "RUNNING") ?? null;
     return { id: b.id, label: plan.operation_label, combination: plan.combination, mode: plan.mode, status: b.status, message: b.message, step: current ? { n: current.n, m: steps.length, label: current.label } : null, steps,
       started_at: b.startedAt, finished_at: b.finishedAt, elapsed_ms: (b.finishedAt ?? new Date()).getTime() - b.startedAt.getTime(), usd: { spent, worst: b.worstCaseUsd }, result: plan.result ?? null, sample_note: "Which forms apply is Sample until the immigration expert confirms." };
+  }
+
+  /** Load sample (S4 change 4, US$0): each library form gets its canada.ca page, "Last updated" and PDF link from the
+   *  recorded copies (rules), and what IRCC accepts where a saved real finder answer quotes how it is filed (replay).
+   *  Nothing is invented: a form no saved answer speaks about stays "Not set yet" for a person to set (C11.18). */
+  async fillSample(workspaceId: string): Promise<{ pages: number; accepts: number; note: string | null }> {
+    let pages = 0, accepts = 0;
+    const defs = await this.db.govFormDef.findMany({ where: { workspaceId, formKind: { not: "guide" } }, include: { editions: true } });
+    let rows: { code: string; pageUrl: string }[] = [];
+    try { rows = parseFormsIndex((await this.canada.get(INDEX_URL, "html")).bytes.toString("utf8")).rows; } catch (e) { if (!(e instanceof CanadaError)) throw e; return { pages, accepts, note: `canada.ca's list could not be read (${e.message})` }; }
+    const notes = new Map<string, string>();
+    // Every saved real finder answer, of any combination (both rounds): file names studio-finder-forms[-check]-<place>-live-….
+    const saved = existsSync(RUNS) ? readdirSync(RUNS).filter((f) => /^studio-finder-forms-.+-live-.+\.json$/.test(f)).sort().reverse() : [];
+    for (const f of saved) {
+      let out: FormsOut | null = null; try { const r = JSON.parse(readFileSync(join(RUNS, f), "utf8")) as SavedRun; if (r.drafting_run?.status !== "completed" || r.contract_valid !== true) continue; out = JSON.parse(String(r.raw_output)) as FormsOut; } catch { continue; }
+      for (const f of out?.forms ?? []) { const c = normaliseCode(f.code); if (f.filed_note && channelsFrom(f.filed_note) && !notes.has(c)) notes.set(c, f.filed_note); }
+    }
+    for (const d of defs) {
+      const current = newestEdition(d.editions.filter((e) => e.channel !== "ONLINE"));
+      if (!current) continue;
+      const row = rows.find((x) => normaliseCode(x.code) === normaliseCode(d.formKey));
+      if (row && !d.formPageUrl) {
+        try {
+          const fp = parseFormPage((await this.canada.get(row.pageUrl, "html")).bytes.toString("utf8"));
+          const pdfUrl = fp.pdfUrls.find((u) => officialUrl(u).ok) ?? null;
+          await this.db.govFormDef.update({ where: { id: d.id }, data: { formPageUrl: row.pageUrl } });
+          await this.db.formEdition.update({ where: { id: current.id }, data: { formPageUrl: row.pageUrl, canadaUpdated: fp.lastUpdated, checkedAt: new Date(), ...(pdfUrl ? { sourceUrl: pdfUrl } : {}) } });
+          pages++;
+        } catch (e) { if (!(e instanceof CanadaError)) throw e; }
+      }
+      const note = notes.get(normaliseCode(d.formKey));
+      if (note && !current.acceptedChannels && d.formKind !== "document" && d.formKind !== "checklist") { await this.db.formEdition.update({ where: { id: current.id }, data: { acceptedChannels: channelsFrom(note), acceptedBasis: "AI_SAMPLE", acceptedQuote: note.slice(0, 400) } }); accepts++; }
+    }
+    return { pages, accepts, note: null };
   }
 
   /** Stop: no step starts after it and no AI call is sent after it; a call already sent is recorded at its cost (the

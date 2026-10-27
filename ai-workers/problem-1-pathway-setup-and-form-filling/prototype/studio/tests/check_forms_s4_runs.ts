@@ -49,6 +49,34 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
 
   let r = await call("POST", "/demo/load");
   ok("setup: the demo loads", r.status < 300, r.status);
+
+  // --- Slice 3 changes: Used by as a trail; Load sample fills canada.ca pages and what IRCC accepts (US$0, nothing invented)
+  let lib = (await call("GET", "/library/forms/list")).body;
+  const lrow = (c: string) => lib.rows.find((x: any) => x.code === c);
+  ok("C11.11 (change 1): Used by names each combination by its place (Program › Category › Sub-category)", lrow("IMM 1295")?.used_by?.[0]?.label?.includes(" › ") && /With an LMIA$/.test(lrow("IMM 1295").used_by[0].label) && lib.combinations.every((x: any) => x.label.includes(" › ")), lrow("IMM 1295")?.used_by);
+  ok("C11.11 (change 4): Load sample records each form's canada.ca page and Last updated from the recorded copies", !!lrow("IMM 1295")?.form_page_url && lrow("IMM 1295")?.canada_updated === "2023-09" && !!lrow("IMM 1295")?.checked_at, { page: lrow("IMM 1295")?.form_page_url, updated: lrow("IMM 1295")?.canada_updated });
+  ok("C11.11 (change 4): what IRCC accepts comes from a saved real finder answer where one quotes it (IMM 5257: PDF upload, AI · Sample)", lrow("IMM 5257")?.accepts === "PDF" && lrow("IMM 5257")?.accepts_basis === "AI_SAMPLE" && /fill out the form on a computer/i.test(lrow("IMM 5257")?.accepts_quote ?? ""), lrow("IMM 5257"));
+  ok("C11.11 (change 4): a form no saved answer speaks about stays Not set yet (never invented)", lrow("IMM 1295")?.accepts === null && lrow("IMM 1295")?.accepts_basis === null, lrow("IMM 1295")?.accepts);
+  ok("C11.11 (change 2): checklists are not filed (Read by AI on the server, \"Not filed\" on the page)", lrow("IMM 5484")?.accepts === "READ_BY_AI");
+
+  // --- C11.18: a person sets what IRCC accepts with the canada.ca line or a reason; a second person approves
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF" });
+  ok("C11.18 fail: neither the canada.ca line nor a reason is refused (400, on the field)", r.status === 400 && /canada\.ca line|say why/i.test(r.body.detail), r.body.detail);
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF", reason: "Paper and portal both take it" }, "user-B");
+  ok("C11.18 fail: a person without the author duty cannot propose it (403)", r.status === 403, r.status);
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5484")}/accepts`, { channels: "PDF", reason: "test" });
+  ok("C11.18 fail: a checklist is never filed, so it takes no channel (409, in words)", r.status === 409 && /never filed/.test(r.body.detail), r.body.detail);
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF_OR_ONLINE", quote: "You can apply online or on paper with this form." });
+  ok("C11.18 pass: with the canada.ca line, it waits for a second person on To review", r.status < 300 && r.body.status === "WAITING" && sql(`select count(*) from library_change where kind='form_accepts' and key='IMM 1295' and status='WAITING'`) === "1", r.body);
+  const acc = r.body.id;
+  ok("C11.18: the library shows the change waiting and keeps the old value until approved", (await call("GET", "/library/forms/list?q=1295")).body.rows[0]?.accepts_waiting === true && (await call("GET", "/library/forms/list?q=1295")).body.rows[0]?.accepts === null);
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF", reason: "another" });
+  ok("C11.18 fail: a second change while one waits is refused (409)", r.status === 409 && /already waits/.test(r.body.detail), r.body.detail);
+  ok("C11.18 fail: the proposer cannot approve it (author ≠ approver)", (await call("POST", `/library/changes/${acc}/approve`, { note: "ok" }, "user-A")).status >= 400);
+  r = await call("POST", `/library/changes/${acc}/approve`, { note: "Matches the form page" }, "user-B");
+  lib = (await call("GET", "/library/forms/list")).body;
+  ok("C11.18 pass: a second person approves: the form shows PDF upload · Online, set by a person · Sample, with the line", r.status < 300 && lrow("IMM 1295")?.accepts === "PDF_OR_ONLINE" && lrow("IMM 1295")?.accepts_basis === "PERSON_SAMPLE" && /apply online or on paper/.test(lrow("IMM 1295")?.accepts_quote ?? "") && !lrow("IMM 1295")?.accepts_waiting, lrow("IMM 1295"));
+  ok("C11.18: the change is closed (applied at approval) and its history says who", sql(`select status from library_change where id='${acc}'`) === "RELEASED" && /approved what IRCC accepts for IMM 1295/.test((await call("GET", `/library/forms/${encodeURIComponent("IMM 1295")}/uses`)).body.history.map((h: any) => h.what).join(" | ")));
   const vv = sql(`select id from combination where label = 'Visitor visa' limit 1`);
   r = await call("GET", "/ledger");
   ok("C11.8 (m4): the ledger summary states the Wave 1 cap, what it spent and what is left", r.body?.wave?.cap_usd === 60 && typeof r.body.wave.spent_usd === "number" && r.body.remaining_usd <= r.body.wave.remaining_usd, r.body?.wave);

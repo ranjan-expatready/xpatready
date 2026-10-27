@@ -10,6 +10,22 @@ const OPEN = ["WAITING", "RETURNED", "APPROVED"];
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 
 /** Where a library form is used (P-116, L3): combinations whose draft lists it, releases that carry it, held files. */
+/** Each combination's place as a trail, Program › Category › Sub-category (the Pathway is left out: the page is per type). */
+export async function combinationTrails(db: Db, workspaceId: string): Promise<Map<string, string>> {
+  const [nodes, combos] = await Promise.all([
+    db.programDef.findMany({ where: { workspaceId }, select: { programNodeKey: true, parentNodeKey: true, label: true, nodeKind: true } }),
+    db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true, program: { select: { programNodeKey: true } } } }),
+  ]);
+  const by = new Map(nodes.map((n) => [n.programNodeKey, n]));
+  const out = new Map<string, string>();
+  for (const c of combos) {
+    const trail: string[] = [];
+    for (let n = by.get(c.program.programNodeKey); n; n = n.parentNodeKey ? by.get(n.parentNodeKey) : undefined) if (n.nodeKind !== "PATHWAY") trail.unshift(n.label);
+    out.set(c.id, trail.length ? trail.join(" › ") : c.label);
+  }
+  return out;
+}
+
 export async function formUses(db: Db, workspaceId: string, code: string): Promise<UsesView> {
   const def = await db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } } });
   if (!def) throw problem(404, "Not in the library", `${code} is not in the library.`);
@@ -21,9 +37,10 @@ export async function formUses(db: Db, workspaceId: string, code: string): Promi
     FROM config_release r JOIN combination c ON c.id = r.combination_id
     WHERE r.workspace_id = ${workspaceId}::uuid AND r.snapshot->'forms' @> jsonb_build_array(jsonb_build_object('form_number', ${code}::text))`;
   const uses: Use[] = [];
-  for (const [cid, l] of newest) if (l.status !== "RETIRED") uses.push({ kind: "combination", label: l.combination.label, href: `/c/${cid}/forms`, blocks: true, why: l.status === "DRAFT" ? "Its current draft lists this form: remove it there first" : "It files this form" });
-  for (const r of released.filter((x) => Number(x.version) === Number(x.latest))) uses.push({ kind: "release", label: `${r.label} · release ${r.version}`, href: `/c/${r.combination_id}/review`, blocks: true, why: "Its latest release files this form: a later release must drop it first" });
-  for (const r of released.filter((x) => Number(x.version) !== Number(x.latest))) uses.push({ kind: "release", label: `${r.label} · release ${r.version}`, href: `/c/${r.combination_id}/review`, blocks: false, why: "An earlier release keeps this form for its cases" });
+  const trails = await combinationTrails(db, workspaceId);
+  for (const [cid, l] of newest) if (l.status !== "RETIRED") uses.push({ kind: "combination", label: trails.get(cid) ?? l.combination.label, href: `/c/${cid}/forms`, blocks: true, why: l.status === "DRAFT" ? "Its current draft lists this form: remove it there first" : "It files this form" });
+  for (const r of released.filter((x) => Number(x.version) === Number(x.latest))) uses.push({ kind: "release", label: `${trails.get(r.combination_id) ?? r.label} · release ${r.version}`, href: `/c/${r.combination_id}/review`, blocks: true, why: "Its latest release files this form: a later release must drop it first" });
+  for (const r of released.filter((x) => Number(x.version) !== Number(x.latest))) uses.push({ kind: "release", label: `${trails.get(r.combination_id) ?? r.label} · release ${r.version}`, href: `/c/${r.combination_id}/review`, blocks: false, why: "An earlier release keeps this form for its cases" });
   const held = await db.intakeItem.count({ where: { workspaceId, code, status: "HELD" } });
   if (held) uses.push({ kind: "draft_change", label: `${held} held file${held === 1 ? "" : "s"} waiting for a person`, href: "/review", blocks: false, why: "A new or held edition waits on To review" });
   const pending = await db.libraryChange.findFirst({ where: { workspaceId, kind: "library_form", key: code, status: { in: OPEN } }, orderBy: { proposedAt: "desc" } });

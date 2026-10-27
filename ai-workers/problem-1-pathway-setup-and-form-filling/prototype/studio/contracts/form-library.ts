@@ -48,5 +48,14 @@ export const LineVersionBody = z.object({ version: z.number().int().min(1).optio
 /** POST …/forms/undo: the change the person saw as "last" (409 when someone made a newer one; S5 ask). */
 export const UndoBody = z.object({ changeId: z.string().uuid().optional() });
 
+/** C11.18: what IRCC accepts for a form, set by a person with the canada.ca line it comes from, or a reason. */
+export const ACCEPTS_CHANNELS = ["PDF", "ONLINE", "PDF_OR_ONLINE"] as const;
+export const ACCEPTS_WORD: Record<(typeof ACCEPTS_CHANNELS)[number], string> = { PDF: "PDF upload", ONLINE: "Online", PDF_OR_ONLINE: "PDF upload · Online" };
+export const AcceptsBody = z.object({
+  channels: z.enum(ACCEPTS_CHANNELS, { message: "Choose what IRCC accepts: PDF upload, Online, or both." }),
+  quote: z.string().trim().min(8, "Paste the canada.ca line (at least 8 characters), or give a reason instead.").max(400).optional(),
+  reason: z.string().trim().min(3, "Say why (3 to 300 characters).").max(300).optional(),
+}).refine((b) => !!b.quote || !!b.reason, { message: "Paste the canada.ca line this comes from, or say why.", path: ["quote"] });
+
 /** POST /library/forms/:code/retire|restore and DELETE /library/forms/:code: the P-116 lifecycle, a second person approves. */
 export const LifecycleReasonBody = z.object({ reason: z.string().trim().min(3, "Say why (3 to 300 characters).").max(300, "Say why (3 to 300 characters).") });

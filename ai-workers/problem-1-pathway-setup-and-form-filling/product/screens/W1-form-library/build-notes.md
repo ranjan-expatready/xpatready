@@ -11,6 +11,27 @@ Forms lane, BUILD slice 1, 27 Oct 2026. Built to P-123 with the Lead response in
 * **M6**: the finder compares library forms with canada.ca too (US$0): same file → checked date only; same printed edition, other file → library edition stays, form marked "Newer file on canada.ca"; newer edition → held for today's edition impact review.
 * **canada.ca port** (`engine/canada.ts` pure parsers, `api/src/canada.ts` live/fixture adapters): official hosts only, on-host redirects (≤ 3), 20 s / 60 s, ≤ 25 MB, PDF magic; recorded copies by default (CI, tests, demo), live only with `STUDIO_CANADA=live` on the Mac.
 
+## FINISH: the five changes from the slice 3 early look (Lead and founder, 27 Oct 19:25), then every state at 1440, 1024 and 390 px
+* **(1) Used by** shows each combination's place as a trail: Program › Category › Sub-category, without the Pathway (`form-uses.ts combinationTrails`). The same trail appears in the Used by picker, in "Where it is used" and in the retire refusals. It is plain text for now; the shared Trail comes with the visual system.
+* **(2) IRCC accepts** shows the value: "PDF upload", "Online" or "PDF upload · Online". A tag says who said it: "AI · Sample" (read from IRCC's words), "Set by a person · Sample" (a second person approved it) or "Confirmed by the expert". Guides and checklists say "Not filed". The finder no longer assumes "PDF" when the page says nothing: no line, no value.
+* **(3) A guide's date** is "Updated on canada.ca <date>" when the page prints its "Date modified". Otherwise it is "Read from canada.ca on <date>", so a date is never presented as IRCC's when it isn't.
+* **(4) Load sample** (`finder.ts fillSample`, called at the end of `demo.ts load`, US$0):
+  * every library form gets its canada.ca page, "Last updated" and PDF link from the recorded copies (rules);
+  * "IRCC accepts" comes from a saved real finder answer that quotes how the form is filed (replay).
+  * **Build discovery D9:** the two saved real answers (Visitor visa) quote how a form is filed for one form only, IMM 5257 ("Download and fill out the form on a computer" → PDF upload). The other sample forms stay "Not set yet" rather than invented. A person sets them (5), or a live finder run per combination fills more (about US$0.30 each, stated first). Its "IRCC accepts" step reads IRCC's own words.
+* **(5) C11.18, set what IRCC accepts by hand.** In the side panel, an author chooses PDF upload / Online / both and pastes the canada.ca line, or gives a reason. It becomes a shared-library change (`form_accepts`) on To review. A different person approves it, and it is then applied to the form's current edition as "Set by a person · Sample". Refusals:
+  * neither a line nor a reason (400);
+  * no author duty (403);
+  * a guide or checklist ("never filed", 409);
+  * a second change while one waits (409);
+  * the proposer approving it.
+  The row shows "Change waiting" meanwhile.
+* **Errors said once:** in the side panel and the retire/delete dialog, a refusal shows on the form only, not also as a toast.
+* **390 px:** a long "Used by" trail is clamped to two lines (full trail on hover). Every check now saves its screenshots at 1440, 1024 and 390 px (`screenshots/slice2/`, `screenshots/slice3/`).
+* **Checks:**
+  * `check_forms_s4_runs.ts` 49/49: trails, Load sample fill, nothing invented, and C11.18 pass and fail;
+  * `check_forms_s4_library_browser.cjs` 41/41, axe clean on every state, including the C11.18 flow (screens 13–15).
+
 ## Slice 3: the library page, and the four fixes from the slice 2 early look (Lead and founder, 27 Oct 18:20)
 * **Fixes:**
   * (1) An empty file is refused at once ("is empty (0 bytes)"). A damaged PDF fails the first rules check ("damaged or incomplete: it could not be opened"), because the check now opens the file, and the same read feeds step 2. Sizes under 1 KB print in bytes.

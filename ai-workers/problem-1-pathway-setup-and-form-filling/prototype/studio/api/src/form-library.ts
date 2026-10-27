@@ -13,13 +13,13 @@ import { manifest } from "../../engine/import.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
 import { INDEX_URL } from "./finder.ts";
-import { AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
+import { AcceptsBody, ACCEPTS_WORD, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
 import { ACTORS, actorOf, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { Finder } from "./finder.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { addFormLine } from "./form-lines.ts";
-import { formUses, recordAction, snapshotLines, type LineRow } from "./form-uses.ts";
+import { combinationTrails, formUses, recordAction, snapshotLines, type LineRow } from "./form-uses.ts";
 import { Studio } from "./studio.ts";
 
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -55,17 +55,19 @@ export class FormLibrary {
     ]);
     // "Re-read with AI (fields and boxes)" drafts from a combination's copy of the file (today's field-map drafting).
     const atts = await this.db.sourceAttachment.findMany({ where: { workspaceId, kind: "Form" }, select: { id: true, sha256: true }, orderBy: { createdAt: "asc" } });
-    const combos = await this.db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true, label: true }, orderBy: { label: "asc" } });
+    const trails = await combinationTrails(this.db, workspaceId);
+    const combos = (await this.db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true, label: true } })).map((c) => ({ id: c.id, label: trails.get(c.id) ?? c.label })).sort((a, b) => a.label.localeCompare(b.label));
+    const waitingAccepts = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "form_accepts", status: { in: ["WAITING", "RETURNED"] } }, select: { key: true } })).map((x) => x.key));
     const rows = forms.map((f) => {
       const editions = f.editions.filter((e) => e.channel !== "ONLINE" && e.sha256 && approved.all.has(e.sha256));
       const current = newestEdition(editions);
       const newestPerCombination = new Map<string, (typeof f.usedBy)[number]>();
       for (const u of f.usedBy) if (!newestPerCombination.has(u.combinationId)) newestPerCombination.set(u.combinationId, u);
-      const using = [...newestPerCombination.entries()].filter(([, u]) => u.status !== "RETIRED").map(([id, u]) => ({ id, label: u.combination.label, picked_by_ai: u.origin === "AI_FOUND" }));
+      const using = [...newestPerCombination.entries()].filter(([, u]) => u.status !== "RETIRED").map(([id, u]) => ({ id, label: trails.get(id) ?? u.combination.label, picked_by_ai: u.origin === "AI_FOUND" }));
       const needsOk = held.some((h) => h.code === f.formKey);
       const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 ? "newer_file" : current ? "ready" : "needs_ok";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
-        accepts: current?.acceptedChannels ?? (TYPE_OF(f.formKind) === "form" ? null : "READ_BY_AI"), accepts_basis: current?.acceptedBasis ?? "SAMPLE", accepts_quote: current?.acceptedQuote ?? null,
+        accepts: current?.acceptedChannels ?? (TYPE_OF(f.formKind) === "form" ? null : "READ_BY_AI"), accepts_basis: current?.acceptedBasis === "SAMPLE" ? "AI_SAMPLE" : current?.acceptedBasis ?? null, accepts_quote: current?.acceptedQuote ?? null, accepts_waiting: waitingAccepts.has(f.formKey),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
         form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256)?.id ?? null : null,
         used_by: using, status, older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel) };
@@ -79,6 +81,27 @@ export class FormLibrary {
   }
 
   async uses(code: string) { return formUses(this.db, await this.ws.id(), code); }
+
+  /** C11.18 (P-123, founder 27 Oct): a person sets or corrects what IRCC accepts for a form, with the canada.ca line it
+   *  comes from or a reason. It waits for a second person on To review (P-79, P-116 pattern) and, once approved, applies to
+   *  the form's current edition, marked "Set by a person · Sample" until the immigration expert confirms. */
+  async proposeAccepts(actor: Actor, code: string, body: unknown) {
+    need(actor, "author");
+    const b = parse(AcceptsBody, body);
+    const workspaceId = await this.ws.id();
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } }, include: { editions: true } });
+    if (!def) throw problem(404, "Not in the library", `${code} is not in the library.`);
+    if (TYPE_OF(def.formKind) !== "form") throw problem(409, "Not filed", `${code} is a ${TYPE_OF(def.formKind)}: it is read by AI and never filed, so IRCC does not accept it in any way.`);
+    if (def.retiredAt) throw problem(409, "Retired", `${code} is retired: restore it first.`);
+    const current = newestEdition(def.editions.filter((e) => e.channel !== "ONLINE"));
+    if (!current) throw problem(409, "No edition yet", `${code} has no edition in the library yet.`);
+    if (current.acceptedChannels === b.channels && (current.acceptedQuote ?? "") === (b.quote ?? "")) throw problem(409, "Nothing changes", "That is already what the library says IRCC accepts for this form.");
+    if (await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })) throw problem(409, "Already waiting", `A change to what IRCC accepts for ${code} already waits for a second person on To review.`);
+    const label = `${code} · IRCC accepts: ${ACCEPTS_WORD[b.channels]}`;
+    const c = await this.db.libraryChange.create({ data: { workspaceId, kind: "form_accepts", key: code, label, action: "SET_ACCEPTS", reason: b.quote ? `canada.ca: "${b.quote}"` : b.reason!, matches: { channels: b.channels, quote: b.quote ?? null, reason: b.reason ?? null, edition: current.editionLabel, before: current.acceptedChannels ?? null } as Prisma.InputJsonValue, status: "WAITING", proposedBy: actor.id } });
+    await this.audit.log(workspaceId, actor.id, "proposed", "form", code, `${actor.name} proposed that IRCC accepts ${code} as ${ACCEPTS_WORD[b.channels]} (${b.quote ? "canada.ca line given" : `reason: ${b.reason}`}); waits for a second person`);
+    return { id: c.id, status: c.status, label };
+  }
 
   /** "Replace with a new edition" checked against canada.ca (M6): the form's own page and its PDF, rules only, US$0. A
    *  newer printed edition is held for today's edition impact review; the same edition from a new file is marked for a
@@ -215,6 +238,7 @@ export class FormLibraryController {
   @Delete("combinations/:id/forms/:code") remove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code") code: string, @Body() b: unknown) { return this.lib.remove(actorOf(a), id, code, b); }
   @Get("library/forms/list") list(@Query() q: unknown) { return this.lib.list(q); }
   @Get("library/forms/:code/uses") uses(@Param("code") code: string) { return this.lib.uses(code); }
+  @Post("library/forms/:code/accepts") accepts(@Headers("x-actor") a: H, @Param("code") code: string, @Body() b: unknown) { return this.lib.proposeAccepts(actorOf(a), code, b); }
   @Post("library/forms/:code/check-canada") check(@Headers("x-actor") a: H, @Param("code") code: string) { return this.lib.checkCanada(actorOf(a), code); }
   @Delete("library/forms/:code") del(@Headers("x-actor") a: H, @Param("code") code: string, @Body() b: unknown) { return this.lifecycle.propose(actorOf(a), "library_form", code, "DELETE", parse(LifecycleReasonBody, b).reason); }
   @Post("library/forms/:code/retire") retire(@Headers("x-actor") a: H, @Param("code") code: string, @Body() b: unknown) { return this.lifecycle.propose(actorOf(a), "library_form", code, "RETIRE", parse(LifecycleReasonBody, b).reason); }

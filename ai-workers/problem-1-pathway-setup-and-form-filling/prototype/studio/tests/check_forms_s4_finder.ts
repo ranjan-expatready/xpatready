@@ -156,8 +156,8 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   r = await call("GET", "/library/forms/list");
   const row = (c: string) => r.body.rows.find((x: any) => x.code === c);
   ok("C11.11: the library is one list with type counts, guides and checklists in it (P-118 Q3)", r.status === 200 && r.body.counts.guide >= 1 && r.body.counts.checklist >= 1 && row("Guide 5256")?.type === "guide" && row("IMM 5484")?.type === "checklist", r.body.counts);
-  ok("C11.11: a downloaded form shows where it came from, when canada.ca was checked, and IRCC accepts as Sample", row("IRM 0002")?.origin === "DOWNLOADED" && /^https:\/\/www\.canada\.ca\//.test(row("IRM 0002")?.downloaded_from ?? "") && !!row("IRM 0002")?.checked_at && row("IRM 0002")?.accepts_basis === "SAMPLE", row("IRM 0002"));
-  ok("C11.11: \"Used by\" names the combinations whose draft lists it, marked picked by AI", row("IRM 0002")?.used_by?.some((u: any) => u.label === "Visitor visa" && u.picked_by_ai), row("IRM 0002")?.used_by);
+  ok("C11.11: a downloaded form shows where it came from and when canada.ca was checked; IRCC accepts stays unset when the page says nothing about it (never invented)", row("IRM 0002")?.origin === "DOWNLOADED" && /^https:\/\/www\.canada\.ca\//.test(row("IRM 0002")?.downloaded_from ?? "") && !!row("IRM 0002")?.checked_at && row("IRM 0002")?.accepts === null && row("IRM 0002")?.accepts_basis === null, row("IRM 0002"));
+  ok("C11.11: \"Used by\" names the combinations whose draft lists it, marked picked by AI", row("IRM 0002")?.used_by?.some((u: any) => /(^| › )Visitor visa$/.test(u.label) && u.picked_by_ai), row("IRM 0002")?.used_by);
   ok("C11.11 (M6): the status filter shows \"Newer file on canada.ca\" for IMM 5409", (await call("GET", "/library/forms/list?status=newer_file")).body.rows.map((x: any) => x.code).includes("IMM 5409"));
   ok("C11.11: filters combine: type=guide lists guides only; search finds by number", (await call("GET", "/library/forms/list?type=guide")).body.rows.every((x: any) => x.type === "guide") && (await call("GET", "/library/forms/list?q=5645")).body.rows.length === 1);
   ok("C11.11: a filter value outside the list is refused (400)", (await call("GET", "/library/forms/list?status=lost")).status === 400);
@@ -220,7 +220,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
 
   // --- Lifecycle (P-116): where used; delete only unused and never released; retire only released; a second person
   r = await call("GET", `/library/forms/${C5645}/uses`);
-  ok("C11.11: where used lists the Visitor visa draft and blocks delete", r.status === 200 && r.body.uses.some((u: any) => u.label === "Visitor visa" && u.blocks) && /Still used/.test(r.body.can.delete), r.body.can);
+  ok("C11.11: where used lists the Visitor visa draft and blocks delete", r.status === 200 && r.body.uses.some((u: any) => /(^| › )Visitor visa$/.test(u.label) && u.blocks) && /Still used/.test(r.body.can.delete), r.body.can);
   r = await call("DELETE", `/library/forms/${C5645}`, { reason: "Not needed" });
   ok("C11.11: delete of a used form is refused with each use (409)", r.status === 409 && r.body.uses?.length > 0, r.body.detail);
   r = await call("POST", `/library/forms/${C0002}/retire`, { reason: "Old" });

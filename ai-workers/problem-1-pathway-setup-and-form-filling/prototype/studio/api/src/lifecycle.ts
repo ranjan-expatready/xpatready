@@ -10,6 +10,7 @@ import { LEVEL_OF, LEVEL_WORD, type LifecycleAction, type Use, type UsesView } f
 import { ACTORS, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { changeView } from "./library-changes.ts";
 import { formUses } from "./form-uses.ts";
+import { newestEdition } from "../../engine/programs.ts";
 
 // S4 (m2): "library_form" is a Shared library › Forms entry, keyed by its form number (api/src/form-library.ts formUses).
 export const LIFECYCLE_KINDS = ["structure_node", "combination", "library_form"] as const;
@@ -145,9 +146,22 @@ export class Lifecycle {
     return null;
   }
 
+  /** C11.18: the approved channels go on the form's current edition, "Set by a person · Sample" (the expert confirms later). */
+  private async applyAccepts(actor: Actor, c: LibraryChange) {
+    const m = c.matches as { channels?: string; quote?: string | null; reason?: string | null };
+    const def = await this.db.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: c.key }, include: { editions: true } });
+    const current = def ? newestEdition(def.editions.filter((e) => e.channel !== "ONLINE")) ?? null : null;
+    await this.db.$transaction(async (tx) => {
+      if (current) await tx.formEdition.update({ where: { id: current.id }, data: { acceptedChannels: m.channels ?? null, acceptedBasis: "PERSON_SAMPLE", acceptedQuote: m.quote ?? `Set by a person: ${m.reason ?? ""}`.slice(0, 400) } });
+      await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? "Applied at approval (what IRCC accepts; Sample until the expert confirms)." } });
+    });
+    await this.audit.log(c.workspaceId, actor.id, "approved", "form", c.key, `${actor.name} approved what IRCC accepts for ${c.key}: ${c.label ?? ""}`);
+  }
+
   /** After approval: a delete is applied at once (L1: never released, used nowhere). Retire and restore wait for the
    *  release (publishLifecycle). */
   async afterApprove(actor: Actor, c: LibraryChange) {
+    if (c.kind === "form_accepts") return this.applyAccepts(actor, c);
     if (!isLifecycleKind(c.kind) || c.action !== "DELETE") return;
     await this.db.$transaction(async (tx) => {
       if (c.kind === "structure_node") {
