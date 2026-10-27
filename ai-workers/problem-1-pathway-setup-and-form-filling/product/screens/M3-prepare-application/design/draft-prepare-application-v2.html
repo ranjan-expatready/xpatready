@@ -230,6 +230,15 @@ body.labels .lbl{display:inline-block}
       <div class="work">
         <!-- ============ LEFT: the deliverables checklist ============ -->
         <div class="items" aria-label="Filing checklist">
+          <!-- Research round 2 (27 Oct): a family filing runs ~20 items over days — BLAF nonlinear
+               grouped checklist + person filter + "needs attention" (Docketwise shows the same
+               per-person packet split). Chips filter; the strip's steps also filter by group. -->
+          <div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 12px 10px;border-bottom:1px solid var(--border)">
+            <button class="chip" style="cursor:default" title="Filter the list by person">Everyone ▾</button>
+            <button class="chip info" style="cursor:default" title="Only items that need you now">Needs attention · 5</button>
+            <span class="grow"></span>
+            <span class="hint" style="align-self:center">14 items</span>
+          </div>
           <div class="group">
             <h2>Get the information <span class="lbl c">Capability · stage 1</span></h2>
             <p class="none" style="margin-bottom:6px">Every fact is asked once per person — questionnaire, documents AI reads, officer entry. Only <b>confirmed</b> facts fill anything below.</p>
@@ -277,6 +286,8 @@ body.labels .lbl{display:inline-block}
         <li><b>Route vs channel:</b> no route step. Each form's channel is picked on its row, inside what the library says IRCC accepts (refused with the reason). The combination proposes the defaults. A form may carry a second line — "PDF copy, not for filing" — which is how "fill it online AND auto-populate the PDF" works without claiming it is filed twice.</li>
         <li><b>Why not a wizard:</b> IRCC's own portals are wizards because the applicant enters data once. The officer's work is not linear — a client signs late, a fact changes after upload, a document arrives mid-week. A wizard that keeps reopening is worse than a checklist that shows everything. The strip gives the order; the list gives the whole picture; the right side is one item at a time.</li>
         <li><b>Where this pattern comes from:</b> IRCC's portals (per-section "Not started · In progress · Complete" + a per-document upload checklist with a status per row); DocuSign/CLM envelopes (a packet of deliverables, each with its own state); Linear/Jira (list left, work right). Nobody combines them because their silos force one channel per case — ours doesn't, so the deliverable list is the model that stays clean.</li>
+        <li><b>Research round 2 (27 Oct, live):</b> <b>Docketwise</b> — the leading immigration-forms product — uses exactly this split: one intake questionnaire per client auto-completes every form ("smart forms"), then "packet assembly" bundles the forms and documents into a single filing package; AI/OCR reads uploaded documents into tagged facts. Our "facts once → deliverables list" is the same shape with channels added. <b>Clio</b>: forms fill from "client data you've approved" — our confirmed-facts-only rule (P-72). <b>Oracle BLAF checklist pattern</b>: a nonlinear grouped checklist is the proven pattern for many discrete items finished over days (the officer is interrupted, the client is slow) — wizards are only for ≤4-step data entry done in one sitting (Visa design system). <b>Master-detail</b> is the documented choice when a list item owns a full work destination and must keep selection/scroll across resizes.</li>
+        <li><b>What "modern" means here:</b> the board fixes the <i>model</i> (deliverables, two stages, states) — the hard part. The polish — exact components, density, motion, keyboard path, empty/error/conflict states — comes when the concept and the build apply EXPERIENCE.md (Workspace pattern §3, states §4) and the team's tokens. That is deliberately not decided by a static board.</li>
       </ul>
     </details>
   </main>
