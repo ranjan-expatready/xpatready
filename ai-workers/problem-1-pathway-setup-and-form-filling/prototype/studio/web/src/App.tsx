@@ -29,6 +29,8 @@ function Shell() {
   const actorId = useActorId();
   const session = useApi(["session", actorId], "/session");
   const loc = useLocation();
+  // QA-54: a case person who opens a Studio address is told the page is not theirs, with the way to their cases.
+  const me = session.data?.actor, casePerson = !!me && me.area !== "studio";
   // To review (P-79) shows what waits for the person acting.
   const queue = useApi<{ counts: { needs: number } }>(["review-queue", actorId, "count"], "/review-queue?filter=needs", { refetchInterval: 15_000 });
   const nav = [
@@ -59,14 +61,15 @@ function Shell() {
         <Pill tone="warn" className="ml-1 hidden xl:inline-flex" title="Working prototype on a local demo database: no sign-in, simulated people, not production">Prototype · demo workspace</Pill>
         <div className="ml-auto flex min-w-0 items-center gap-2">
           <DemoControls loaded={!!session.data?.sampleLoaded} programsExist={(session.data?.counts?.programs ?? 0) > 0} />
-          <PersonaSwitch actors={session.data?.actors ?? []} />
+          {/* QA-54: the list holds the Studio people; a case person who arrives here is shown too, so the header names them. */}
+          <PersonaSwitch actors={casePerson ? [...(session.data?.actors ?? []), me] : session.data?.actors ?? []} />
           <ThemeToggle />
         </div>
       </header>
-      <DraftBar />
+      {!casePerson && <DraftBar />}
       <div className="flex flex-1">
         {/* The menu column's white background and border run the full page height (S1-finish); the menu itself stays in view. */}
-        <div className="hidden w-56 shrink-0 border-r border-border bg-surface-raised md:block" data-menu-column>
+        <div className={cn("hidden w-56 shrink-0 border-r border-border bg-surface-raised", !casePerson && "md:block")} data-menu-column>
         <nav aria-label="Studio" className="sticky top-14 flex h-[calc(100vh-3.5rem)] flex-col gap-0.5 p-3">
           <p className="px-2 pb-1 pt-2 text-xs font-medium text-text-muted">Configure</p>
           {nav.slice(0, 3).map((n) => <NavItem key={n.to} {...n} active={n.match ? n.match(loc.pathname) : undefined} />)}
@@ -84,7 +87,7 @@ function Shell() {
             ? <Notice tone="danger" title="The studio did not accept the simulated person">Pick a person under Simulated person, then reload this page. ({(session.error as Error).message})</Notice>
             : <Notice tone="danger" title="The studio server is not answering">Start it with studio/start.sh, then reload this page. ({(session.error as Error).message})</Notice>
             : !session.isPending && !session.data?.actor ? <Notice tone="danger" title="The studio answered without a person">Something between this page and the studio changed its answer. Reload this page; if it stays, restart the studio.</Notice> : null}
-          <Routes>
+          {casePerson ? <Notice tone="warn" title="This page is for the configuration people" action={<Link className="whitespace-nowrap text-text-link underline" to="/cases">Open your cases</Link>}>{me.name} (simulated) works on cases. Programs, forms and rules are set up here by the configuration people; your work is in Cases.</Notice> : <Routes>
             <Route path="/" element={<ProgramsPage />} />
             <Route path="/review" element={<ToReviewPage />} />
             <Route path="/structure" element={<StructurePage />} />
@@ -109,7 +112,7 @@ function Shell() {
             <Route path="/releases" element={<ReleasesPage />} />
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/">Back to Immigration programs</Link></Notice>} />
-          </Routes>
+          </Routes>}
         </main>
       </div>
       <Toaster />

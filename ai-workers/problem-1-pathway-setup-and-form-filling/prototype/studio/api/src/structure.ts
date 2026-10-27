@@ -168,8 +168,8 @@ export class Structure {
       for (const x of plan) {
         if (x.existing) { parent = { key: x.existing.programNodeKey, locations: x.existing.allowedLocations }; continue; }
         const kind = KIND_OF[x.level];
-        const locations = kind === "STREAM" ? (x === last ? b.allowedLocations ?? BOTH : BOTH) : kind === "CATEGORY" ? (b.allowedLocations ?? (parent?.locations.length ? parent.locations : BOTH)) : [];
-        let key = `${parent ? `${parent.key}.` : ""}${slug(x.label) || "item"}`;
+        const locations: string[] = kind === "STREAM" ? (x === last ? b.allowedLocations ?? BOTH : BOTH) : kind === "CATEGORY" ? (b.allowedLocations ?? (parent?.locations.length ? parent.locations : BOTH)) : [];
+        let key: string = `${parent ?`${parent.key}.` : ""}${slug(x.label) || "item"}`;
         for (let i = 2; await tx.programDef.findFirst({ where: { workspaceId, programNodeKey: key }, select: { id: true } }); i++) key = `${key.replace(/-\d+$/, "")}-${i}`;
         await tx.programDef.create({ data: { workspaceId, programNodeKey: key, parentNodeKey: parent?.key ?? null, nodeKind: kind, label: x.label, nameKey: normalizeLabel(x.label), sourceBasis: "ILLUSTRATIVE", clientType: kind === "PATHWAY" ? b.pathwayType : null, allowedLocations: locations, createdBy: actor.id, displayOrder: order++ } });
         out.push({ level: x.level, key, label: x.label, parentKey: parent?.key ?? null });

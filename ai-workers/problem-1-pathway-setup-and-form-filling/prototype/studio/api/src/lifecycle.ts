@@ -6,7 +6,7 @@
 // with an audit line (Lead, 26 Oct), in api/src/structure.ts.
 import { HttpException, Inject, Injectable } from "@nestjs/common";
 import type { LibraryChange, Prisma, ProgramDef } from "@prisma/client";
-import { LEVEL_OF, LEVEL_WORD, type LifecycleAction, type Use, type UsesView } from "../../contracts/structure.ts";
+import { LEVEL_OF, LEVEL_WORD, PATHWAY_TYPE_LABEL, type LifecycleAction, type PathwayType, type Use, type UsesView } from "../../contracts/structure.ts";
 import { ACTORS, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { changeView } from "./library-changes.ts";
 
@@ -28,6 +28,11 @@ export function trailOf(g: Pick<Graph, "byKey">, key: string): string[] {
   const out: string[] = [];
   for (let n = g.byKey.get(key); n; n = n.parentNodeKey ? g.byKey.get(n.parentNodeKey) : undefined) out.unshift(n.label);
   return out;
+}
+/** The Pathway type (Retail or Corporate) a node sits under: its Pathway's client type. */
+function pathwayTypeOf(g: Pick<Graph, "byKey">, key: string): PathwayType | null {
+  for (let n = g.byKey.get(key); n; n = n.parentNodeKey ? g.byKey.get(n.parentNodeKey) : undefined) if (n.nodeKind === "PATHWAY") return (n.clientType as PathwayType) ?? null;
+  return null;
 }
 
 @Injectable()
@@ -111,7 +116,10 @@ export class Lifecycle {
     const u = await this.usesOf(kind, key);
     const no = this.refusal(u, action);
     if (no) throw problem(409, `Cannot ${action.toLowerCase()}`, no, { uses: u.uses });
-    const label = kind === "structure_node" ? u.trail.join(" › ") : `${u.trail.join(" › ")}`;
+    // QA-51 (BR-7): the trail starts with the Pathway type, as on the Structure: both types can hold the same names.
+    const at = kind === "structure_node" ? key : (await this.db.combination.findUnique({ where: { id: key }, select: { program: { select: { programNodeKey: true } } } }))?.program.programNodeKey;
+    const type = at ? pathwayTypeOf(await graph(this.db, workspaceId), at) : null;
+    const label = [...(type ? [PATHWAY_TYPE_LABEL[type]] : []), ...u.trail].join(" › ");
     const c = await this.db.libraryChange.create({ data: { workspaceId, kind, key, label, action, reason, status: "WAITING", proposedBy: actor.id, combinationId: kind === "combination" ? key : null } });
     // Two proposals at the same moment: the older one stands, the newer one is withdrawn and the caller is told.
     const open = await this.db.libraryChange.findMany({ where: { workspaceId, kind, key, status: { in: OPEN } }, orderBy: [{ proposedAt: "asc" }, { id: "asc" }] });
