@@ -213,7 +213,10 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("C11.15: a form not in the library cannot be attached (404, find or upload it)", r.status === 404 && /not in the library/.test(r.body.detail), r.body.detail);
   r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 5645" }, "user-B");
   ok("C11.15: attaching needs the author duty (403)", r.status === 403);
-  r = await call("DELETE", `/combinations/${vv}/forms/${C5645}`);
+  const v5645 = Number(sql(`select version from combination_form where combination_id='${vv}' and lineage_key='IMM 5645' order by version desc limit 1`));
+  const both = await Promise.all([0, 1].map(() => call("DELETE", `/combinations/${vv}/forms/${C5645}`, { version: v5645 })));
+  ok("break m12: two Removes at the same moment: one wins, the other gets a plain 409 (Already removed), one Undo step recorded", both.filter((x) => x.status < 300).length === 1 && both.some((x) => x.status === 409 && /Already removed/.test(x.body.title)) && sql(`select count(*) from form_line_action where combination_id='${vv}' and action='remove' and undone_at is null and detail->'codes' ? 'IMM 5645'`) === "1", both.map((x) => `${x.status} ${x.body?.title ?? ""}`));
+  r = both.find((x) => x.status < 300) ?? both[0];
   ok("C11.15: Remove takes it off this combination; it stays in the library", r.status < 300 && r.body.in_library && !/IMM 5645:DRAFT/.test(lines(vv)) && sql(`select count(*) from gov_form_def where form_key='IMM 5645'`) === "1", lines(vv));
   r = await call("POST", `/combinations/${vv}/forms/undo`);
   ok("C11.15: Undo brings the removed line back", r.status < 300 && /IMM 5645:DRAFT/.test(lines(vv)), lines(vv));

@@ -2,14 +2,16 @@
 
 ## From the Lead
 
+2026-10-27 20:10 (Lead, by message; full note on Lead PR #58): **S4 FIX read (c07f402): one short pass, then a fresh re-score.** The first CHECK scored 6.5/10 (bar 8), so a fresh reviewer scores the fixed code (journey ≥ 8, no dimension < 4) before the Lead checks and merges. m9 accepted as designed. Fix now: m12 parallel Removes (one wins, the other a plain 409); CHECK constraints on accepted_channels / accepted_basis / origin in the S4 migration; the table aria-label. Backlog in build-notes only: m11; the drafting dialog text. Then screen-reviewer (fresh, journey score) on the final commit and a breaker re-run on what the fixes touched (delete/uses, Undo, Stop, replay). Any Must or Major → FIX again; otherwise CHECK, owner Lead, score in the Paste, CI green on that commit.
+
 2026-10-27 19:25 (Lead, Mac): **S4 slice 3 early look (b35bff5): founder Go to FINISH and CHECK, with five changes.** (1) "Used by" shows only the last name ("With an LMIA"): show the combination's place as a trail (Program › Category › Sub-category; the shared Trail from the visual system when it lands, plain text until then). (2) "IRCC accepts" shows "Read by AI" instead of the answer: show the value (e.g. PDF upload · Online) with an "AI · Sample" tag; guides and checklists say "Not filed". (3) A guide's "edition" is the download date: label it "Updated on canada.ca <date>". (4) Sample forms show "Not set yet" and "No canada.ca page recorded": Load sample fills both from the saved finder run (US$0 replay). (5) **New, founder (added to P-123):** a person may set or correct "What IRCC accepts" by hand in the side panel, with the canada.ca line or a reason; it is held for a second person on To review (P-79, P-116 pattern); the value stays Sample until the expert confirms. A pass and a fail test each. Then FINISH (every state at 1440, 1024 and 390 px) and CHECK: reviewer and breaker on all of S4 (sync main first; report the AI spend). P-126: while your CHECK runs, no new slice code.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124)
-stage: CHECK
-owner: Lead
-next_action: Lead checks the S4 fixes (build-notes "Fixes after CHECK") and decides merge or another round
+stage: FIX
+owner: Builder
+next_action: Second pass (m12, CHECK constraints, aria-label), then a fresh reviewer score (≥ 8) and a breaker re-run on the touched parts
 blocked_by: none
 updated: 2026-10-27
 

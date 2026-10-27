@@ -16,6 +16,10 @@ ALTER TABLE "form_edition" ADD COLUMN "accepted_channels" TEXT;
 ALTER TABLE "form_edition" ADD COLUMN "accepted_basis" TEXT;
 ALTER TABLE "form_edition" ADD COLUMN "accepted_quote" TEXT;
 ALTER TABLE "form_edition" ADD COLUMN "newer_file_sha256" TEXT;
+-- The database refuses what the contracts refuse (Lead, 27 Oct): the same short lists, empty allowed.
+ALTER TABLE "form_edition" ADD CONSTRAINT "form_edition_origin" CHECK ("origin" IS NULL OR "origin" IN ('DOWNLOADED', 'UPLOADED', 'SAMPLE'));
+ALTER TABLE "form_edition" ADD CONSTRAINT "form_edition_accepted_channels" CHECK ("accepted_channels" IS NULL OR "accepted_channels" IN ('PDF', 'ONLINE', 'PDF_OR_ONLINE', 'READ_BY_AI'));
+ALTER TABLE "form_edition" ADD CONSTRAINT "form_edition_accepted_basis" CHECK ("accepted_basis" IS NULL OR "accepted_basis" IN ('AI_SAMPLE', 'PERSON_SAMPLE', 'EXPERT'));
 -- 4. Official downloads: the same evidence as the manifest, so no second person (M2, Q-L1).
 CREATE TABLE "official_download" (
   "id" UUID NOT NULL,
@@ -65,6 +69,8 @@ ALTER TABLE "drafting_job" ALTER COLUMN "combination_id" DROP NOT NULL;
 --   DELETE FROM "drafting_job" WHERE "combination_id" IS NULL; ALTER TABLE "drafting_job" ALTER COLUMN "combination_id" SET NOT NULL;
 --   DROP TABLE "form_line_action"; ALTER TABLE "combination_form" DROP COLUMN "finder_batch_id";
 --   DROP TABLE "official_download";
+--   ALTER TABLE "form_edition" DROP CONSTRAINT "form_edition_accepted_basis", DROP CONSTRAINT "form_edition_accepted_channels",
+--     DROP CONSTRAINT "form_edition_origin";
 --   ALTER TABLE "form_edition" DROP COLUMN "newer_file_sha256", DROP COLUMN "accepted_quote", DROP COLUMN "accepted_basis",
 --     DROP COLUMN "accepted_channels", DROP COLUMN "checked_at", DROP COLUMN "canada_updated", DROP COLUMN "source_url",
 --     DROP COLUMN "form_page_url", DROP COLUMN "origin";

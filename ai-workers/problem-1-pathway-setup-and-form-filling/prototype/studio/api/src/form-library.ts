@@ -180,9 +180,16 @@ export class FormLibrary {
     const b = parse(LineVersionBody, body);
     const c = await this.db.combination.findUnique({ where: { id: combinationId } });
     if (!c) throw problem(404, "Not found", "That combination does not exist.");
-    await this.sameVersion(combinationId, code, b.version);
-    await this.studio.saveForm(actor, combinationId, code, { retire: true });
-    return { removed: code, in_library: true };
+    // Break m12: two Removes at the same moment run one after the other (a lock per line); the second sees the line
+    // already removed and is refused, so only one removal and one Undo step are recorded.
+    return this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`form-line|${combinationId}|${code}`}))`;
+      const newest = await this.db.combinationForm.findFirst({ where: { combinationId, lineageKey: code }, orderBy: { version: "desc" } });
+      if (newest?.status === "RETIRED") throw problem(409, "Already removed", `${code} was just removed from this combination by ${nameOf(newest.updatedBy) ?? "someone"}. Reload to see it.`);
+      await this.sameVersion(combinationId, code, b.version);
+      await this.studio.saveForm(actor, combinationId, code, { retire: true });
+      return { removed: code, in_library: true };
+    }, { timeout: 20_000 });
   }
 
   /** POST /combinations/:id/forms/:code/replace: "Replace with a new edition" from a combination's line: compares the

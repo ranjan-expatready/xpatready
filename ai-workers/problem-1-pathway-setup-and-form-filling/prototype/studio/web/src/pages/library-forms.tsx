@@ -96,7 +96,7 @@ export function FormsPage() {
             ? <EmptyState title="No form matches" description="Nothing in the library matches these filters. Clear a filter or search for another number or title." action={<Button variant="secondary" onClick={() => { setType(""); setUsedBy(""); setStatus(""); setQ(""); }}>Clear filters</Button>} />
             : <EmptyState title="No forms yet" description="Forms come in by themselves when a combination's setup starts: the form finder reads its IRCC page and downloads each form from canada.ca. You can also upload IRCC PDFs. Every form is stored once and used by any combination." />)
           : (
-            <Table head={["Number", "Title", "Type", "Edition", <Tip key="ia" tip={ACCEPTS_TIP}><span tabIndex={0} className="underline decoration-dotted">IRCC accepts</span></Tip>, "Used by", "Status", <span key="a" className="sr-only">Actions</span>]}>
+            <Table label="Table: Number, Title, Type, Edition, IRCC accepts, Used by, Status" head={["Number", "Title", "Type", "Edition", <Tip key="ia" tip={ACCEPTS_TIP}><span tabIndex={0} className="underline decoration-dotted">IRCC accepts</span></Tip>, "Used by", "Status", <span key="a" className="sr-only">Actions</span>]}>
               {lib.data.rows.map((r) => (
                 <tr key={r.code} data-form={r.code} className={r.status === "retired" ? "text-text-muted" : undefined}>
                   <td className="mono whitespace-nowrap"><button type="button" className="text-text-link underline-offset-2 hover:underline" onClick={() => setOpen(r)}>{r.code}</button></td>

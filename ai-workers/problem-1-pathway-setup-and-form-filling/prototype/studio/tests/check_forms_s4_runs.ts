@@ -63,6 +63,9 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("C11.11 (change 2): checklists are not filed (Read by AI on the server, \"Not filed\" on the page)", lrow("IMM 5484")?.accepts === "READ_BY_AI");
   ok("review M2: Load sample also puts each sample combination's guide in the library, found by rules alone (US$0)", lib.rows.some((x: any) => x.type === "guide" && /^Guide \d+/.test(x.code) && /^https:\/\/www\.canada\.ca\//.test(x.form_page_url ?? "")), lib.rows.filter((x: any) => x.type === "guide").map((x: any) => x.code));
   ok("break minor: a number written loosely is understood in the path and in search (imm1295 is IMM 1295)", (await call("GET", "/library/forms/imm1295/uses")).body?.key === "IMM 1295" && (await call("GET", "/library/forms/list?q=imm1295")).body.rows?.[0]?.code === "IMM 1295");
+  const refused = (q: string) => { try { sql(q); return false; } catch { return true; } };
+  const ed = sql(`select id from form_edition limit 1`);
+  ok("Lead 27 Oct: the database refuses what the contracts refuse (IRCC accepts, who said it, where an edition came from)", refused(`update form_edition set accepted_channels='FAX' where id='${ed}'`) && refused(`update form_edition set accepted_basis='GUESS' where id='${ed}'`) && refused(`update form_edition set origin='EMAIL' where id='${ed}'`) && !refused(`update form_edition set accepted_channels=accepted_channels where id='${ed}'`));
   ok("break minor: a schedule with a letter is one number (IMM 5406 SCH4A)", normaliseCode("imm5406 sch4a") === "IMM 5406 SCH4A");
   r = await call("POST", `/combinations/${sql(`select id from combination where label = 'Visitor visa' limit 1`)}/forms`, { formKey: "IMM 0008 SCH4A" });
   ok("break minor: a real IRCC number with a lettered schedule passes the number check (404 not in the library, not 400)", r.status === 404, r.body?.detail);

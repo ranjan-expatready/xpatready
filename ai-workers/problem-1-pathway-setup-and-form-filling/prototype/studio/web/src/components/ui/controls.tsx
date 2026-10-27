@@ -142,10 +142,10 @@ export function Stat({ label, value, sub, tone }: { label: string; value: React.
   );
 }
 
-export function Table({ head, children, className, dense }: { head: React.ReactNode[]; children: React.ReactNode; className?: string; dense?: boolean }) {
+export function Table({ head, children, className, dense, label }: { head: React.ReactNode[]; children: React.ReactNode; className?: string; dense?: boolean; /** The table's name when a heading is not plain text. */ label?: string }) {
   return (
     // Focusable, so a keyboard can scroll it sideways on a narrow screen (WCAG 2.1.1; review 24 Oct should 1).
-    <div tabIndex={0} role="region" aria-label={`Table: ${head.filter((h) => typeof h === "string").join(", ")}`} className={cn("relative overflow-x-auto rounded-xl border border-border bg-surface-raised outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", className)}>
+    <div tabIndex={0} role="region" aria-label={label ?? `Table: ${head.filter((h) => typeof h === "string").join(", ")}`} className={cn("relative overflow-x-auto rounded-xl border border-border bg-surface-raised outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", className)}>
       <table className="w-full border-collapse text-left text-sm">
         <thead className="bg-surface text-xs text-text-muted"><tr>{head.map((h, i) => <th key={i} className={cn("border-b border-border px-3 font-medium", dense ? "py-1.5" : "py-2")}>{h}</th>)}</tr></thead>
         <tbody className="[&_td]:border-b [&_td]:border-border [&_tr:last-child_td]:border-b-0 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top">{children}</tbody>

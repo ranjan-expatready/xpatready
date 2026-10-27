@@ -103,6 +103,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await axe("row drawer"); await shot("07-drawer");
     await p.keyboard.press("Escape"); await sleep(300);
     step("review M8: closing the drawer puts focus back on the number that opened it", await p.evaluate(() => document.activeElement?.textContent === "IMM 1295"), await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)));
+    step("review minor: the table's name includes every column, IRCC accepts too", /IRCC accepts/.test((await p.locator('[role="region"][aria-label^="Table:"]').first().getAttribute("aria-label")) ?? ""));
     step("review M8: the hidden file input is not a stop of its own when tabbing", (await p.locator('input[type="file"]').getAttribute("tabindex")) === "-1");
     await p.setViewportSize({ width: 1024, height: 900 }); await sleep(300);
     const inView = await p.evaluate(() => { const r = document.querySelector('tr[data-form] td:last-child button')?.getBoundingClientRect(), t = [...document.querySelectorAll('tr[data-form] td')].find((td) => td.textContent?.match(/Ready|Needs your OK|Newer file|Retired/))?.getBoundingClientRect(); return !!r && !!t && r.right <= window.innerWidth && t.right <= window.innerWidth; });
