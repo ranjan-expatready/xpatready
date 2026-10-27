@@ -7,14 +7,15 @@
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_screen: W1-structure-programs
-stage: FIX
-owner: Builder
-next_action: Fix the CHECK findings (review M1, break M1-M3, minors); suites and journey; then owner Lead
-then: FIX, then owner Lead (merge), then S3
+stage: CHECK
+owner: Lead
+next_action: Lead check of S2 + fixes (branch screens/2026-10-27-s2-programs), then merge; Lead decides review m1 (bar vs next step), break m8 (reads without a person), m9 (payload at 400+)
+then: Lead check and merge, then S3 New combination
 blocked_by: none
 updated: 2026-10-27
 
 ## Log (last 10 lines)
+- 2026-10-27 · W1-structure-programs · FIX → CHECK · CHECK findings fixed (241e2b4): review M1 need-you counting tested with real waiting states; break M1 unknown/long p= ignored, M2 keys to 400, M3 other lanes' files back to main; minors; all 35 suites PASS, check_w1_programs_s2 87/87, studio journey 45/45 on 4445. AI US$0. Owner → Lead.
 - 2026-10-27 · W1-structure-programs · CHECK → FIX · breaker on b45ca44: 0 Blocker, 3 Major (bad p= shows empty Pathways; long keys fail own contracts; other lanes' files in the branch), 9 Minor; all three Majors and the reviewer's Major fixed with checks; check_w1_programs_s2 87/87. AI US$0.
 - 2026-10-27 · W1-structure-programs · CHECK · screen-reviewer on b45ca44: Ship after fixes, journey 9/10, 0 Blocker/Must, 1 Major (need-you counting untested), 10 Minor; review.md + journey-test-reviewer-2026-10-27-s2.md. Breaker running. AI US$0.
 - 2026-10-27 · W1-structure-programs · FIX → CHECK · b45ca44 pushed: seven fixes; check_w1_programs_s2 74/74, studio journey 45/45 on 4445, failed suites rerun alone clean (machine busy: load 15); screen-reviewer and screen-breaker launched. AI US$0.
@@ -24,4 +25,3 @@ updated: 2026-10-27
 - 2026-10-27 · W1-structure-programs · BUILD → EARLY-LOOK · S1-finish: Pathway cards (All + one per Pathway + Add; a card opens its tree, closes the others; in the address), Used by names each combination with Open, inline confirmations (no toast on Structure), full-height menu column app-wide; check_w1_structure_s1finish 33/33 (twice), all 34 suites PASS, studio journey 45/45 on 4445 (two overlapping runs earlier interfered; rerun alone clean). AI US$0. Owner → Lead.
 - 2026-10-27 · W1-structure-programs · FIX → BUILD S1-finish · applied Lead note 2026-10-27 (slices 1+2 merged in PR #40 ed3ef4a; P-117 one screen at a time); new branch screens/2026-10-27-s1-finish from main. AI US$0.
 - 2026-10-27 · W1-structure-programs · FIX · studio journey (--demo suite) 45/45 on isolated copy 4445: Pass B adds the Retail Pathway 'Temporary residence' on the Structure page after Reset (B0b), B1 expects 'Individual › Temporary residence › Work permits (built from scratch) › …'; reset check now asserts both tabs empty; New combination trail names the type's one Pathway; check_screen01_browser 129/129, smallfix pass. AI US$0. Owner → Lead.
-- 2026-10-27 · W1-structure-programs · EARLY-LOOK → FIX · applied Lead note 2026-10-27 (founder Go on the Structure page; FIX the --demo studio journey: Pass B had no Pathway after Reset). AI US$0.
