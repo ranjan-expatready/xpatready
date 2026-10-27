@@ -51,14 +51,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - **Page behaviour:** Program structure opens on the Pathway this person last chose (`xr-structure-pathway:<actor>` in browser storage; `p=all` is All pathways). A check that wants every band should open `/structure?p=all`.
 
 current_screen: W1-visual-system
-stage: BUILD
-owner: Builder
-next_action: Builder: drift check 1–5 fixed (25f1b12); AD-8 focus fixed (0c81bb7, Dialog initialFocus); structure screenshots regenerating with Used by; then full run-suites, the studio journey (4445), CI green on the exact commit, EARLY-LOOK and SendMessage to the Lead
-then: EARLY-LOOK for the founder; S3 BUILD after the founder's Go and S4's merge
+stage: EARLY-LOOK
+owner: Lead
+next_action: Lead: early look of the visual-system slice with the founder (screenshots in screens/W1-visual-system/screenshots/{structure,programs,qa}/ at 1440, 1024, 390; build-notes "Drift check" lists what is not done: drift 6–11, 13)
+then: S3 BUILD after the founder's Go and S4's merge (S3 re-check done, P-126)
 blocked_by: none
 updated: 2026-10-28
 
 ## Log (last 10 lines)
+- 2026-10-28 · W1-visual-system · BUILD → EARLY-LOOK · AD-8 focus race fixed at the cause (Dialog initialFocus); full run-suites 40/40 PASS (0b60e6a), studio journey 45/45 on 4445, CI suites green on f7124e9 (run 40562533734; later commits are screenshots and notes only); graph check passes. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-visual-system · BUILD · applied the Lead's drift check (Fix first, items 1–5): four CI-red suites fixed, Used by on each line, focus kept during Add and add another, POST /structure/path API check 28/28 (found and fixed: None on a category with sub-categories said "already there"); structure_path 28/28, s1s2_fix 30/30, programs_s2 87/87; 25f1b12. AI US$0.
 - 2026-10-28 · W1-visual-system · BUILD · applied Lead note 2026-10-28 00:30; synced main 8cfc043 (clean); QA-51, QA-52, QA-54 built with pass and fail checks (check_w1_qa51_52_54 21/21; qa check's three steps pass); 381b44e pushed; this copy's folder is named runtime-*, so it was bound to screens with .claude/lane. AI US$0.
 - 2026-10-28 · W1-visual-system · BUILD · handover to a fresh session (founder, via the Lead): slice built and pushed; full suites stopped unfinished and the studio journey not run on this branch; Handover section written. AI US$0.
@@ -68,4 +69,3 @@ updated: 2026-10-28
 - 2026-10-27 · W1-structure-programs · FIX → CHECK · CHECK findings fixed (241e2b4): review M1 need-you counting tested with real waiting states; break M1 unknown/long p= ignored, M2 keys to 400, M3 other lanes' files back to main; minors; all 35 suites PASS, check_w1_programs_s2 87/87, studio journey 45/45 on 4445. AI US$0. Owner → Lead.
 - 2026-10-27 · W1-structure-programs · CHECK → FIX · breaker on b45ca44: 0 Blocker, 3 Major (bad p= shows empty Pathways; long keys fail own contracts; other lanes' files in the branch), 9 Minor; all three Majors and the reviewer's Major fixed with checks; check_w1_programs_s2 87/87. AI US$0.
 - 2026-10-27 · W1-structure-programs · CHECK · screen-reviewer on b45ca44: Ship after fixes, journey 9/10, 0 Blocker/Must, 1 Major (need-you counting untested), 10 Minor; review.md + journey-test-reviewer-2026-10-27-s2.md. Breaker running. AI US$0.
-- 2026-10-27 · W1-structure-programs · FIX → CHECK · b45ca44 pushed: seven fixes; check_w1_programs_s2 74/74, studio journey 45/45 on 4445, failed suites rerun alone clean (machine busy: load 15); screen-reviewer and screen-breaker launched. AI US$0.
