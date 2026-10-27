@@ -163,7 +163,8 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
       }
     } catch (e) {
       const p = e instanceof ApiError ? (e.problem as { code?: string; existing?: { key: string }; errors?: { field: string; message: string }[] }) : {};
-      setErrors(Object.fromEntries((p.errors ?? []).map((x) => [x.field, x.message])));
+      // Close names keep their "Did you mean … Use it / Keep mine" box under the field instead of an error (AD-4).
+      if (p.code !== "close_names") setErrors(Object.fromEntries((p.errors ?? []).map((x) => [x.field, x.message])));
       setProblem({ text: `Nothing was added. ${(e as Error).message}`, existing: p.code === "exists" ? p.existing?.key : undefined });
     } finally { setBusy(false); }
   };
@@ -198,10 +199,10 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
             extra={lv === "subCategory" ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                 {subOff ? <span className="text-text-muted" data-sub-off>{subOff}</span> : (
-                  <label className={cn("inline-flex items-center gap-1.5", catHasSubs && "opacity-60")}>
+                  <label className={cn("flex flex-wrap items-center gap-x-1.5", catHasSubs && "opacity-60")}>
                     <input type="checkbox" checked={useNone} disabled={catHasSubs} onChange={(e) => { setNone(e.target.checked); if (!e.target.checked) requestAnimationFrame(() => refs.current.subCategory?.focus()); }} data-none />
                     None: the category is the combination
-                    <span className="text-text-muted">{catHasSubs ? `(${catNode!.label} has sub-categories: choose or add one)` : "(add one only when IRCC files it as its own application)"}</span>
+                    <span className="w-full pl-5 text-text-muted">{catHasSubs ? `(${catNode!.label} has sub-categories: choose or add one)` : "(add one only when IRCC files it as its own application)"}</span>
                   </label>)}
               </div>) : null} />
         ))}

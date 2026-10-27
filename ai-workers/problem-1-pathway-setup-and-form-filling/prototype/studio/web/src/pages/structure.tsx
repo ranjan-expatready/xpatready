@@ -284,7 +284,7 @@ function LineRow({ line, words, selected, justAdded, canAuthor, onOpen, onKey, o
   ];
   return (
     <li data-line={n.key} data-key={n.key} className={cn("flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5", selected && "bg-primary/10 shadow-[inset_3px_0_0_var(--color-primary)]", n.retired && "text-text-muted")}>
-      <button type="button" data-open onClick={() => onOpen(n.key)} onKeyDown={onKey} className="flex min-w-0 flex-1 items-center gap-1.5 rounded text-left text-sm outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
+      <button type="button" data-open onClick={() => onOpen(n.key)} onKeyDown={onKey} className="flex min-w-0 flex-1 basis-full items-center sm:basis-0 gap-1.5 rounded text-left text-sm outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
         <LevelMark level="category" tip={false} />
         <span className="min-w-0 [overflow-wrap:anywhere]">
           <span className="font-semibold text-lv3"><Mark text={line.category.label} words={words} /></span>
@@ -296,7 +296,7 @@ function LineRow({ line, words, selected, justAdded, canAuthor, onOpen, onKey, o
       {n.pending ? <Tip tip="A change to this name waits for a second person on To review."><Pill tone="warn">{PENDING_WORD[n.pending.action]}</Pill></Tip> : null}
       {c && !n.retired ? (c.id ? (c.retired ? <Pill tone="neutral">Retired</Pill> : <StatusChip status={c.status} text={c.statusText} />)
         : <Tip tip="Added to the Program structure; no setup yet. Start it from its card on Immigration programs or its details."><span className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-strong px-2 py-0.5 text-xs font-semibold text-text-muted">Not started</span></Tip>) : null}
-      <Tip tip={LOC_TIP}><span className="w-40 shrink-0 text-xs text-text-muted" data-loc>{locWords(n.allowedLocations)}</span></Tip>
+      <Tip tip={LOC_TIP}><span className="shrink-0 text-xs text-text-muted sm:w-40" data-loc>{locWords(n.allowedLocations)}</span></Tip>
       <RowMenu label={line.sub ? `${line.category.label} › ${line.sub.label}` : line.category.label} items={items} />
     </li>
   );
