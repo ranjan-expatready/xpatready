@@ -66,6 +66,10 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   const refused = (q: string) => { try { sql(q); return false; } catch { return true; } };
   const ed = sql(`select id from form_edition limit 1`);
   ok("Lead 27 Oct: the database refuses what the contracts refuse (IRCC accepts, who said it, where an edition came from)", refused(`update form_edition set accepted_channels='FAX' where id='${ed}'`) && refused(`update form_edition set accepted_basis='GUESS' where id='${ed}'`) && refused(`update form_edition set origin='EMAIL' where id='${ed}'`) && !refused(`update form_edition set accepted_channels=accepted_channels where id='${ed}'`));
+  r = await call("GET", `/library/forms/${encodeURIComponent("Guide 5256")}/uses`);
+  ok("break round 2 N7, review round 2 M2: a guide opens by its own key (Guide 5256), so it can be retired or deleted", r.status === 200 && r.body.key === "Guide 5256", r.body?.detail ?? r.body?.key);
+  ok("review round 2 M3: the list's Used by counts checklists attached as sources, as the drawer does (IMM 5484)", (lrow("IMM 5484")?.used_by?.length ?? 0) > 0 && lrow("IMM 5484").used_by.every((u: any) => u.label.includes(" › ")), lrow("IMM 5484")?.used_by);
+  ok("review round 2 M4: a visa-office checklist is a checklist (IMM 5881); an employer's form is a form (IMM 5802)", lrow("IMM 5881")?.type === "checklist" && lrow("IMM 5802")?.type === "form", [lrow("IMM 5881")?.type, lrow("IMM 5802")?.type]);
   ok("break minor: a schedule with a letter is one number (IMM 5406 SCH4A)", normaliseCode("imm5406 sch4a") === "IMM 5406 SCH4A");
   r = await call("POST", `/combinations/${sql(`select id from combination where label = 'Visitor visa' limit 1`)}/forms`, { formKey: "IMM 0008 SCH4A" });
   ok("break minor: a real IRCC number with a lettered schedule passes the number check (404 not in the library, not 400)", r.status === 404, r.body?.detail);

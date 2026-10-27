@@ -19,7 +19,7 @@ import { ACTORS, actorOf, Audit, Db, need, Workspace, type Actor } from "./core.
 import { Finder } from "./finder.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { addFormLine } from "./form-lines.ts";
-import { combinationTrails, formUses, lineSig, recordAction, snapshotLines, type LineRow } from "./form-uses.ts";
+import { closingChange, combinationTrails, formUses, lineSig, oneAtATime, recordAction, snapshotLines, type LineRow } from "./form-uses.ts";
 import { Studio } from "./studio.ts";
 
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -30,9 +30,10 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
   return r.data;
 }
 const nameOf = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "another person";
-/** Library type. Rows made before S4 say only "document": a document checklist by its title, otherwise a filed form (IMM
- *  5802, an employer's offer of employment, is filed; review major 9). */
-const TYPE_OF = (kind: string, title = "") => (kind === "guide" ? "guide" : kind === "checklist" || (kind === "document" && /checklist/i.test(title)) ? "checklist" : "form");
+/** Library type. Rows made before S4 say only "document": a filed form when its title says so (IMM 5802, an employer's
+ *  offer of employment form; review major 9), otherwise a checklist or instructions, read by AI and never filed (IMM 5881,
+ *  IMM 5905; round 2 major 4). */
+const TYPE_OF = (kind: string, title = "") => (kind === "guide" ? "guide" : kind === "checklist" || (kind === "document" && !(/\bform\b/i.test(title) && !/checklist/i.test(title))) ? "checklist" : "form");
 
 @Injectable()
 export class FormLibrary {
@@ -56,8 +57,8 @@ export class FormLibrary {
       this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, select: { code: true, outcome: true } }),
     ]);
     // "Re-read with AI (fields and boxes)" drafts from a combination's copy of the file (today's field-map drafting).
-    const atts = await this.db.sourceAttachment.findMany({ where: { workspaceId, kind: "Form" }, select: { id: true, sha256: true, combinationId: true }, orderBy: { createdAt: "asc" } });
-    const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { key: true, action: true } });
+    const atts = await this.db.sourceAttachment.findMany({ where: { workspaceId }, select: { id: true, sha256: true, combinationId: true, kind: true }, orderBy: { createdAt: "asc" } });
+    const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { key: true, action: true, status: true } });
     const trails = await combinationTrails(this.db, workspaceId);
     const combos = (await this.db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true, label: true } })).map((c) => ({ id: c.id, label: trails.get(c.id) ?? c.label })).sort((a, b) => a.label.localeCompare(b.label));
     const waitingAccepts = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "form_accepts", status: { in: ["WAITING", "RETURNED"] } }, select: { key: true } })).map((x) => x.key));
@@ -70,14 +71,14 @@ export class FormLibrary {
       // Review must 1: a combination with one of its files attached as a source uses it too.
       const shas = new Set(f.editions.map((e) => e.sha256).filter(Boolean));
       for (const cid of new Set(atts.filter((a) => shas.has(a.sha256)).map((a) => a.combinationId))) if (!using.some((u) => u.id === cid)) using.push({ id: cid, label: trails.get(cid) ?? "A combination", picked_by_ai: false, as_source: true });
-      const lifecycle = lifecyclePending.find((x) => x.key === f.formKey)?.action ?? null;
+      const pendingChange = lifecyclePending.find((x) => x.key === f.formKey), lifecycle = pendingChange?.action ?? null;
       const needsOk = held.some((h) => h.code === f.formKey);
       const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 ? "newer_file" : current ? "ready" : "needs_ok";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
         accepts: current?.acceptedChannels ?? (TYPE_OF(f.formKind, f.displayName) === "form" ? null : "READ_BY_AI"), accepts_basis: current?.acceptedBasis === "SAMPLE" ? "AI_SAMPLE" : current?.acceptedBasis ?? null, accepts_quote: current?.acceptedQuote ?? null, accepts_waiting: waitingAccepts.has(f.formKey),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
-        form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256)?.id ?? null : null,
-        used_by: using, status, lifecycle_waiting: lifecycle, older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel) };
+        form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256 && a.kind === "Form")?.id ?? null : null,
+        used_by: using, status, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel) };
     });
     const term = q.q?.toLowerCase(), termCode = q.q ? normaliseCode(q.q).toLowerCase() : undefined;
     // S5's "Add a form from the library" (for=picker): forms a combination may use now, never retired or still waiting.
@@ -148,7 +149,8 @@ export class FormLibrary {
 
   // ------------------------------------------------------------------ hand actions on a combination's forms
   /** POST /combinations/:id/forms: attach a library form by hand (also an unmapped one: reading its boxes comes after). */
-  async attach(actor: Actor, combinationId: string, body: unknown) {
+  attach(actor: Actor, combinationId: string, body: unknown) { return oneAtATime(combinationId, () => this.attachNow(actor, combinationId, body)); }
+  private async attachNow(actor: Actor, combinationId: string, body: unknown) {
     need(actor, "author");
     const b = parse(AttachBody, body);
     const c = await this.db.combination.findUnique({ where: { id: combinationId } });
@@ -156,6 +158,8 @@ export class FormLibrary {
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId: c.workspaceId, formKey: b.formKey } }, include: { editions: true } });
     if (!def) throw problem(404, "Not in the library", `${b.formKey} is not in the library. Find it with the form finder, or upload its PDF.`, { errors: [{ field: "formKey", message: "Choose a form from the library." }] });
     if (def.retiredAt) throw problem(409, "Retired", `${b.formKey} is retired in the library: restore it there first.`, { errors: [{ field: "formKey", message: "Retired." }] });
+    const closing = await closingChange(this.db, c.workspaceId, def.formKey);
+    if (closing) throw problem(409, "Being retired", `A request to ${closing.action.toLowerCase()} ${b.formKey} is open on To review: nothing new may use it until it is decided.`, { errors: [{ field: "formKey", message: "Being retired." }] });
     const ok = (await this.approvedShas(c.workspaceId)).all;
     if (!def.editions.some((e) => e.channel !== "ONLINE" && e.sha256 && ok.has(e.sha256))) throw problem(409, "Waiting for a person", `${b.formKey} has no edition a combination may use yet: its file waits for a second person on To review.`);
     const before = await snapshotLines(this.db, combinationId, [b.formKey]);
@@ -170,26 +174,27 @@ export class FormLibrary {
   private async sameVersion(combinationId: string, code: string, version: number | undefined) {
     if (version === undefined) return;
     const newest = await this.db.combinationForm.findFirst({ where: { combinationId, lineageKey: code }, orderBy: { version: "desc" } });
+    if (newest && version > newest.version) throw problem(409, "Changed since", `${code} is at version ${newest.version} on this combination, not ${version}. Reload to see it.`, { version: newest.version });
     if (newest && newest.version !== version) throw problem(409, "Changed since", `${code} was changed by ${nameOf(newest.updatedBy)} at ${newest.updatedAt.toISOString().slice(11, 16)} UTC after you opened it (now version ${newest.version}). Reload to see it.`, { version: newest.version });
   }
 
   /** DELETE /combinations/:id/forms/:code: remove from this combination; the form stays in the library. The removal is
    *  one change for Undo (written by saveForm, the one line-settings route), and Find again never attaches it back. */
-  async remove(actor: Actor, combinationId: string, code: string, body: unknown) {
+  remove(actor: Actor, combinationId: string, code: string, body: unknown) { return oneAtATime(combinationId, () => this.removeNow(actor, combinationId, code, body)); }
+  private async removeNow(actor: Actor, combinationId: string, code: string, body: unknown) {
     need(actor, "author");
     const b = parse(LineVersionBody, body);
     const c = await this.db.combination.findUnique({ where: { id: combinationId } });
     if (!c) throw problem(404, "Not found", "That combination does not exist.");
-    // Break m12: two Removes at the same moment run one after the other (a lock per line); the second sees the line
+    // Break m12, round 2 N5: Removes on one combination run one after the other (oneAtATime); the second sees the line
     // already removed and is refused, so only one removal and one Undo step are recorded.
-    return this.db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`form-line|${combinationId}|${code}`}))`;
+    {
       const newest = await this.db.combinationForm.findFirst({ where: { combinationId, lineageKey: code }, orderBy: { version: "desc" } });
       if (newest?.status === "RETIRED") throw problem(409, "Already removed", `${code} was just removed from this combination by ${nameOf(newest.updatedBy) ?? "someone"}. Reload to see it.`);
       await this.sameVersion(combinationId, code, b.version);
       await this.studio.saveForm(actor, combinationId, code, { retire: true });
       return { removed: code, in_library: true };
-    }, { timeout: 20_000 });
+    }
   }
 
   /** POST /combinations/:id/forms/:code/replace: "Replace with a new edition" from a combination's line: compares the
@@ -205,7 +210,8 @@ export class FormLibrary {
 
   /** POST /combinations/:id/forms/undo: reverses the last change on this combination's forms list, exactly, while the
    *  draft is open: refused when one of its lines changed since (someone else edited it) or was released meanwhile. */
-  async undo(actor: Actor, combinationId: string, body: unknown) {
+  undo(actor: Actor, combinationId: string, body: unknown) { return oneAtATime(combinationId, () => this.undoNow(actor, combinationId, body)); }
+  private async undoNow(actor: Actor, combinationId: string, body: unknown) {
     need(actor, "author");
     const b = parse(UndoBody, body);
     const a = await this.db.formLineAction.findFirst({ where: { combinationId, undoneAt: null }, orderBy: { at: "desc" } });
@@ -246,8 +252,16 @@ export class FormLibraryController {
     const actor = actorOf(a), forForm = b?.forCombination && b?.forCode ? { combinationId: String(b.forCombination), code: normaliseCode(String(b.forCode)) } : undefined;
     if (!files?.length) return this.uploads.start(actor, undefined, forForm);
     // One run per file, so each file has its own card, steps and Stop (one way in, many files: Lead 27 Oct).
-    const runs = []; for (const f of files) runs.push(await this.uploads.start(actor, f, forForm));
-    return { runId: runs[0].runId, runIds: runs.map((r) => r.runId) };
+    const runs: { runId: string }[] = [], refused: { file: string; why: string }[] = [];
+    for (const f of files) {
+      try { runs.push(await this.uploads.start(actor, f, forForm)); } catch (e) {
+        const r = e instanceof HttpException ? (e.getResponse() as { detail?: string }) : null;
+        if (!r?.detail || (e as HttpException).getStatus() !== 400) throw e;
+        refused.push({ file: f.originalname || "A file", why: r.detail });
+      }
+    }
+    if (!runs.length) throw problem(400, "Nothing uploaded", refused.map((x) => x.why).join(" "));
+    return { runId: runs[0].runId, runIds: runs.map((r) => r.runId), refused };
   }
   @Post("combinations/:id/forms/find/plan") plan(@Param("id") id: string, @Body() b: unknown) { return this.finder.plan(id, b); }
   @Post("combinations/:id/forms/find") find(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.finder.launch(actorOf(a), id, b); }

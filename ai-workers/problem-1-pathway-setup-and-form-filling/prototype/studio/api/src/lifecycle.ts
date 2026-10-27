@@ -9,7 +9,7 @@ import type { LibraryChange, Prisma, ProgramDef } from "@prisma/client";
 import { LEVEL_OF, LEVEL_WORD, type LifecycleAction, type Use, type UsesView } from "../../contracts/structure.ts";
 import { ACTORS, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { changeView } from "./library-changes.ts";
-import { formUses } from "./form-uses.ts";
+import { formUses, hasApprovedFile } from "./form-uses.ts";
 import { newestEdition } from "../../engine/programs.ts";
 
 // S4 (m2): "library_form" is a Shared library › Forms entry, keyed by its form number (api/src/form-library.ts formUses).
@@ -132,7 +132,12 @@ export class Lifecycle {
     const u = await this.usesOf(c.kind, c.key).catch(() => null);
     if (!u) throw problem(409, "No longer there", "It was removed meanwhile: return this change.");
     const others = { ...u, uses: u.uses.filter((x) => x.kind !== "draft_change"), can: { delete: null, retire: null, restore: null } as UsesView["can"] };
-    const again = c.kind === "combination" ? await this.recheckCombination(c, others) : await this.recheckNode(c, others); // a library form is checked like a name: released, or used
+    let again = c.kind === "combination" ? await this.recheckCombination(c, others) : await this.recheckNode(c, others); // a library form is checked like a name: released, or used
+    // Break round 2 N1: a file of the form approved since the delete was asked is kept (P-51): retire it instead.
+    if (!again && c.kind === "library_form" && c.action === "DELETE") {
+      const def = await this.db.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: c.key }, include: { editions: { select: { sha256: true } } } });
+      if (def && (await hasApprovedFile(this.db, c.workspaceId, def.editions.map((e) => e.sha256).filter((x): x is string => !!x)))) again = "Its file was approved meanwhile, so it is kept: retire it instead.";
+    }
     if (again) throw problem(409, "No longer allowed", `${again} Return this change with that reason.`, { uses: u.uses });
   }
   private async recheckNode(c: LibraryChange, u: UsesView) {
@@ -170,12 +175,11 @@ export class Lifecycle {
       } else if (c.kind === "library_form") {
         // Never released and used nowhere (checked again above): its editions and their stored rows go with it.
         const def = await tx.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: c.key }, include: { editions: { select: { sha256: true } } } });
-        if (def && !(await tx.combinationForm.count({ where: { govFormDefId: def.id } }))) {
-          await tx.officialDownload.deleteMany({ where: { workspaceId: c.workspaceId, sha256: { in: def.editions.map((e) => e.sha256).filter(Boolean) as string[] } } });
+        if (def && !(await tx.combinationForm.count({ where: { govFormDefId: def.id } })) && !(await hasApprovedFile(tx, c.workspaceId, def.editions.map((e) => e.sha256).filter((x): x is string => !!x)))) {
           await tx.govFormDef.delete({ where: { id: def.id } });
         } else {
           // Break M1: never report a delete that did not happen. It is handed back with the reason.
-          await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RETURNED", decisionNote: "Not deleted: a combination still has a line for this form (perhaps retired). Retire it instead." } });
+          await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RETURNED", decisionNote: "Not deleted: a combination still has a line for this form (perhaps retired), or its file is approved. Retire it instead." } });
           return false;
         }
       } else {

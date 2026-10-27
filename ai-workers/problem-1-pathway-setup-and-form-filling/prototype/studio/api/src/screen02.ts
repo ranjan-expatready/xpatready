@@ -104,6 +104,9 @@ export class Screen02 {
     const out = await decideChange(this.db, actor, id, decision, note);
     const c = (await this.db.libraryChange.findUnique({ where: { id } }))!;
     if (decision === "approve") await this.lifecycle.afterApprove(actor, c);
+    // S4 round 2 N8: an approved delete that could not be applied comes back RETURNED: say that, not "approved".
+    const now = decision === "approve" ? (await this.db.libraryChange.findUnique({ where: { id } }))! : c;
+    if (now.status === "RETURNED" && decision === "approve") { await this.audit.log(c.workspaceId, actor.id, "returned", `library ${c.kind}`, c.key, `${actor.name} approved "${c.label ?? c.key}" (${c.action.toLowerCase()}), but it could not be applied: ${now.decisionNote ?? ""}`, undefined, c.combinationId ?? undefined); return changeView(now); }
     await this.audit.log(c.workspaceId, actor.id, decision === "approve" ? "approved" : "returned", `library ${c.kind}`, c.key, `${actor.name} ${decision === "approve" ? "approved" : "returned"} "${c.label ?? c.key}" (${c.action.toLowerCase()})${note ? `: ${note}` : ""}`, undefined, c.combinationId ?? undefined);
     return out;
   }

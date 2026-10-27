@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; edition: string | null; canada_updated: string | null; accepts: string | null; accepts_basis: string | null; accepts_quote: string | null; accepts_waiting: boolean;
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
-  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; older_editions: string[] };
+  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; older_editions: string[] };
 type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string };
 type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
 
@@ -62,7 +62,7 @@ export function FormsPage() {
   const setRuns = (f: (r: string[]) => string[]) => setRunsState((r) => { const n = f(r); try { sessionStorage.setItem(RUNS_KEY, JSON.stringify(n)); } catch { /* storage blocked: cards last until reload */ } return n; });
   const c = lib.data?.counts ?? {};
   const chip = (active: boolean, label: string, n: number | undefined, on: () => void, tip: string) => (
-    <Tip tip={tip}><button type="button" aria-pressed={active} onClick={on} className={`rounded-full border px-3 py-1 text-sm ${active ? "border-primary bg-primary/10 text-text-link" : "border-border text-text"}`}>{label}{n !== undefined ? <span className="ml-1 tabular-nums text-text-muted">{n}</span> : null}</button></Tip>
+    <Tip tip={tip}><button type="button" aria-pressed={active} onClick={on} className={`rounded-full border px-3 py-1 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${active ? "border-primary bg-primary/10 text-text-link" : "border-border text-text"}`}>{label}{n !== undefined ? <span className="ml-1 tabular-nums text-text-muted">{n}</span> : null}</button></Tip>
   );
   const filtered = !!(type || usedBy || status || q.trim());
   return (
@@ -96,16 +96,17 @@ export function FormsPage() {
             ? <EmptyState title="No form matches" description="Nothing in the library matches these filters. Clear a filter or search for another number or title." action={<Button variant="secondary" onClick={() => { setType(""); setUsedBy(""); setStatus(""); setQ(""); }}>Clear filters</Button>} />
             : <EmptyState title="No forms yet" description="Forms come in by themselves when a combination's setup starts: the form finder reads its IRCC page and downloads each form from canada.ca. You can also upload IRCC PDFs. Every form is stored once and used by any combination." />)
           : (
-            <Table label="Table: Number, Title, Type, Edition, IRCC accepts, Used by, Status" head={["Number", "Title", "Type", "Edition", <Tip key="ia" tip={ACCEPTS_TIP}><span tabIndex={0} className="underline decoration-dotted">IRCC accepts</span></Tip>, "Used by", "Status", <span key="a" className="sr-only">Actions</span>]}>
+            <Table label="Table: Number, Title, Type, Edition, IRCC accepts, Used by, Status" headClass={[undefined, undefined, "hidden xl:table-cell", "hidden xl:table-cell"]} head={["Number", "Title", "Type", "Edition", <Tip key="ia" tip={ACCEPTS_TIP}><span tabIndex={0} className="underline decoration-dotted">IRCC accepts</span></Tip>, "Used by", "Status", <span key="a" className="sr-only">Actions</span>]}>
               {lib.data.rows.map((r) => (
                 <tr key={r.code} data-form={r.code} className={r.status === "retired" ? "text-text-muted" : undefined}>
-                  <td className="mono whitespace-nowrap"><button type="button" className="text-text-link underline-offset-2 hover:underline" onClick={() => setOpen(r)}>{r.code}</button></td>
-                  <td className="max-w-56 xl:max-w-80"><span className="line-clamp-2" title={r.title}>{r.title}</span></td>
-                  <td>{TYPE_WORD[r.type]}</td>
-                  <td className="whitespace-nowrap">{editionText(r) ?? <span className="text-text-muted">no usable edition yet</span>}</td>
-                  <td className="whitespace-nowrap"><AcceptsCell r={r} /></td>
+                  <td className="mono whitespace-nowrap"><button type="button" className="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setOpen(r)}>{r.code}</button></td>
+                  <td className="min-w-40 max-w-56 xl:max-w-80"><span className="line-clamp-2" title={r.title}>{r.title}</span>
+                    <span className="mt-0.5 block text-xs text-text-muted xl:hidden">{TYPE_WORD[r.type]} · {editionText(r) ?? "no usable edition yet"}</span></td>
+                  <td className="hidden xl:table-cell">{TYPE_WORD[r.type]}</td>
+                  <td className="hidden xl:table-cell">{editionText(r) ?? <span className="text-text-muted">no usable edition yet</span>}</td>
+                  <td className="max-w-36 xl:max-w-none"><AcceptsCell r={r} /></td>
                   <td className="max-w-48 xl:max-w-72">{r.used_by.length === 0 ? <span className="text-text-muted">Not used</span> : r.used_by.length === 1 ? <TrailText label={r.used_by[0].label} /> : <Tip tip={r.used_by.map((u) => u.label).join(", ")}><span tabIndex={0} className="underline decoration-dotted">{r.used_by.length} combinations</span></Tip>}</td>
-                  <td><span className="inline-flex flex-wrap gap-1"><Tip tip={STATUS[r.status].tip}><span tabIndex={0}><Pill tone={STATUS[r.status].tone}>{STATUS[r.status].word}</Pill></span></Tip>{r.lifecycle_waiting ? <Tip tip={`A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0}><Pill tone="warn">{LIFE_WORD[r.lifecycle_waiting].title} waiting</Pill></span></Tip> : null}</span></td>
+                  <td><span className="inline-flex flex-wrap gap-1"><Tip tip={STATUS[r.status].tip}><span tabIndex={0}><Pill tone={STATUS[r.status].tone}>{STATUS[r.status].word}</Pill></span></Tip>{r.lifecycle_waiting ? <Tip tip={r.lifecycle_approved ? `Approved: the form is ${r.lifecycle_waiting === "RESTORE" ? "restored" : "retired"} with the next release (Release, on the combination's Review page).` : `A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0}><Pill tone="warn">{LIFE_WORD[r.lifecycle_waiting].title} {r.lifecycle_approved ? "approved" : "waiting"}</Pill></span></Tip> : null}</span></td>
                   <td className="text-right"><RowActions row={r} canAuthor={canAuthor} onWhereUsed={() => setOpen(r)} /></td>
                 </tr>
               ))}
@@ -130,7 +131,7 @@ function TrailText({ label }: { label: string }) {
 function AcceptsCell({ r }: { r: Row }) {
   const basis = r.accepts_basis ? BASIS[r.accepts_basis] : null;
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
       {r.accepts ? ACCEPTS[r.accepts] ?? r.accepts : <span className="text-text-muted">Not set yet</span>}
       {r.type === "form" && r.accepts && basis ? <Tip tip={basis.tip}><span tabIndex={0}><Pill tone={r.accepts_basis === "AI_SAMPLE" ? "ai" : "neutral"}>{basis.tag}</Pill></span></Tip> : null}
       {r.accepts_waiting ? <Tip tip="A change to what IRCC accepts waits for a second person on To review."><span tabIndex={0}><Pill tone="warn">Change waiting</Pill></span></Tip> : null}
@@ -151,7 +152,7 @@ function UploadButton({ onRuns }: { onRuns: (ids: string[]) => void }) {
   const start = async (files: FileList) => {
     setError(null);
     const fd = new FormData(); for (const f of Array.from(files)) fd.append("files", f, f.name);
-    try { const r = await api<{ runId: string; runIds?: string[] }>("/library/forms/upload", { method: "POST", body: fd }); onRuns(r.runIds ?? [r.runId]); void queryClient.invalidateQueries({ queryKey: ["runs-active"] }); } catch (e) { setError((e as Error).message); }
+    try { const r = await api<{ runId: string; runIds?: string[]; refused?: { file: string; why: string }[] }>("/library/forms/upload", { method: "POST", body: fd }); onRuns(r.runIds ?? [r.runId]); void queryClient.invalidateQueries({ queryKey: ["runs-active"] }); if (r.refused?.length) setError(`Not uploaded: ${r.refused.map((x) => x.why).join(" ")}`); } catch (e) { setError((e as Error).message); }
   };
   return (
     <div className="flex flex-col items-end gap-1">

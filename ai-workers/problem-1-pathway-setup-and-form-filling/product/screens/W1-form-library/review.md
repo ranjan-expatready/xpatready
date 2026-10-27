@@ -1,94 +1,81 @@
-# S4 Form library (W1-06, W1-07 run card): independent review, 27 Oct 2026
+# S4 Form library (W1-06, W1-07 run card): independent review, round 2, 27 Oct 2026
 
-Reviewer: not the builder. Reviewed commit 6a32505 (`forms/2026-10-27-s4-form-library`) against:
-* walkthrough v2 S4 and P-123 (with the C11.18 addition and the M1/M2 annotations), P-116, P-121, P-110 and P-125;
-* C11.2, C11.8, C11.11, C11.14, C11.15 and C11.18;
-* challenge.md with the Lead response, build-notes.md, STANDARDS, EXPERIENCE and PRODUCT §3–4.
+Reviewer: not the builder. Commit e58136e (`forms/2026-10-27-s4-form-library`), judged as it is now against P-123 (with M1/M2 annotations and C11.18), P-116, P-121, P-110, P-125, challenge.md M1–M7 and m1–m6, STANDARDS, EXPERIENCE and PRODUCT §3–4. Build-notes' claims were checked in the app, not taken on trust.
 
-Method: an isolated copy on :4450 with the stand-in launcher (stub probe first; no paid call, no canada.ca), walked in headed Chrome. Journey test: `journey-test-reviewer-2026-10-27.md`. Screenshots: `review-shots/r01–r61`. US$0.
+**How.** Isolated copy `rev_s4` on :4461 with the stand-in launcher; a stub probe reached `fake-launch.log` before any live step; nothing went to a model or canada.ca (US$0). Walked in a visible Chrome as user-A (author) and user-B (second person), plus an API break pass. Journey test: `journey-test-reviewer-2026-10-27.md`. Screenshots: `review-shots/v3-*` (the `r*` files are round 1).
 
 ## Verdict: **Ship after fixes**
-The run card, Stop, Upload PDF (rules first) and the C11.18 server rules are solid. One Must, a data-loss path, and seven Majors stand between this and a clean ship. **Journey score 6.5/10: not a pass** (no criterion at 0).
+Round 1's Must is fixed (a used or approved official form can no longer be deleted), and 5 of its 8 Majors are fixed. Still blocking: one carried Major (1024 px), four new Majors (guide actions, Used by for checklists, Type of two visa-office files, invisible focus). Load sample is partly fixed and lowered to a Should. None loses data. **Journey score 7/10: not a pass** (8 needed); no criterion at 0.
 
-## Must
-1. **A form in use can be deleted, including an approved official edition.**
-   * Evidence (journey 9): IMM 5257 has its PDF attached as a source on Visitor visa and Super visa, with 3 field-map jobs. Its `uses` returns `[]` and `can.delete` is `null`. The author asked, user-B approved, and `gov_form_def` IMM 5257 was gone while its 2 attachments remained.
-   * The library itself shows this use: "Re-read with AI" on IMM 5257 targets Visitor visa's copy (`form-library.ts:57,72`). Yet the row and the drawer say "Not used / Nothing uses it" (r01, r05).
-   * It breaks P-116 ("Where used shows before any action"; "an approved official form edition is retired, never deleted (P-51)") and STANDARDS §3.5.
-   * Cause: `form-uses.ts:32-47` counts only form lines, releases, held files and open changes.
-   * Fix: count source attachments and their drafting jobs or field maps as uses that block. Refuse Delete for any edition on the manifest, approved, or an official download (offer Retire). Show the same uses in "Used by". Add a pass test and a fail test.
+## Round 1 findings now
+| Round 1 | Now | Evidence |
+|---|---|---|
+| Must 1: delete a used, approved form | **Fixed** | IMM 5257 and IMM 5484 delete → 409 "retire it instead"; uses count source attachments (`form-uses.ts:45-53`) |
+| M2: Load sample thin | **Partly → Should S1** | 2 guides added; source uses shown. No guide for 3 combinations; no finder replay attaches anything |
+| M3: drawer stale | **Fixed** | After Send: "Change waiting", no second Set (v3-j6) |
+| M4: To review wording | **Fixed** | "Not set yet → PDF upload · Online"; the change page links canada.ca and the library (v3-j7-change-IMM1295) |
+| M5: 1024 px | **Not fixed → Major 1** | below |
+| M6: held/failed next step | **Fixed** | Held → "Record the IRCC page it came from" at `/review/held/:id`; a failed card has no false link |
+| M7: job files in `p2/jobs` | **Fixed** | Stop after a hanging live call: `p2/jobs`, `runs` and `ledger` unchanged; no pid file left |
+| M8: focus and chip | **Fixed** | Focus returns to the number and to ⋯; file input `tabIndex=-1`; the chip shows at 390 px. New gap: Major 5 |
+| M9: IMM 5802 typed Checklist | **Fixed, with a regression** | Major 4 |
 
-## Major
-2. **Load sample leaves the library thin, against P-123.** After the load (journey 1):
-   * 12 rows, Guides 0.
-   * Only "With an LMIA" appears under Used by.
-   * Visitor visa, Super visa, Study permit and Spouse show nothing.
+## Major (each blocks the pass)
+1. **(carried) At 1024 px, Used by, Status and ⋯ are off-screen inside the table** with the Load sample data (v3-size-list-1024).
+   * The table is 1065 px wide in a 735 px area; ⋯ sits at x≈1254. Cause: `whitespace-nowrap` on Edition ("Read from canada.ca on 2026-10-27") and IRCC accepts (`library-forms.tsx:105-106`). The builder's "review M5" test passes only in its own data state.
+   * Fix: wrap Edition and IRCC accepts below 1280 px, or pin Status and ⋯; test on the Load sample state.
+2. **(new) Every per-guide route answers 404: a guide cannot be retired or deleted, and its drawer silently shows no uses and no history.**
+   * Cause: `normaliseCode` upper-cases anything it does not recognise (`contracts/form-library.ts:14`), so "Guide 5256" → "GUIDE 5256"; the routes apply it to `:code` (`form-library.ts:263-268`).
+   * Evidence: `GET /library/forms/Guide%205256/uses` → 404 "GUIDE 5256 is not in the library."; Retire in the UI says the same (v3-g-guide-retire, v3-g-guide-drawer). Breaks P-116 (retire on every master). No test opens a guide's drawer or retires one.
+   * Fix: keep unrecognised codes as they are (or match case-insensitively); a pass and a fail test for a guide.
+3. **(new) The list's "Used by" ignores checklists and other non-Form sources; the drawer counts them.**
+   * IMM 5484: "Not used", "See where it is used (0)", missing from the Visitor visa filter, yet its drawer lists Visitor visa and Super visa and Delete is refused (v3-r-IMM5484-drawer); IMM 5881 the same.
+   * Cause: `form-library.ts:59` reads only `kind: "Form"` attachments; `formUses` reads every kind. Breaks m6 and EXPERIENCE §2.7. Fix: one source-use query for both.
+4. **(new, regression of round 1's M9) IMM 5881 and IMM 5905 show Type "Form", IRCC accepts "Not set yet" and a "Set what IRCC accepts" button.**
+   * They are a New Delhi visa-office document checklist and visa-office instructions; the library's own History says "(document checklist)".
+   * Cause: `TYPE_OF` maps any `document` whose title lacks "checklist" to form (`form-library.ts:35`); their titles are "Temporary Resident Visa" and "Work Permit".
+   * Fix: take the type from the kind the intake recorded (checklist or instructions), not title words; a test with 5881.
+5. **(new) Keyboard focus is invisible on the Type and Status chips and on the row-number buttons** (the main way into the drawer).
+   * Computed outline `none`, no shadow (v3-k-focus-chip, v3-k-focus-row): WCAG 2.4.7, EXPERIENCE §2.12. axe does not catch it.
+   * Code: `library-forms.tsx:65` and `:102` have no `focus-visible` style. Fix: the team's focus ring, as `Button` has.
 
-   P-123 says "Load sample replays the finder and must pick up every PDF, checklist and guide the sample combinations need". `fillSample` only adds pages and dates. Fix: Load sample replays the saved finder runs at US$0, or the Lead records that this belongs to S5's Start setup.
-3. **The drawer goes stale after "Send for a second person".**
-   * It keeps "Not set yet" with no "Change waiting", and offers Set again; the second send gets a 409 (r31).
-   * Cause: `library-forms.tsx:51,105` passes a snapshot `Row`.
-   * Fix: the drawer reads its row by code from the live list query.
-4. **The C11.18 review wording and content.**
-   * To review reads "Set_accepts the what IRCC accepts." (r32).
-   * The change page title reads "Set what IRCC accepts for what IRCC accepts: IMM 1295 · IRCC accepts: …".
-   * The page has no before value and no link to the form or its canada.ca page for the second person to compare (r33). EXPERIENCE §3 "Change set" asks for before and after.
-
-   Fix: plain action words for `form_accepts`; show before → after; link the form page.
-5. **At 1024 px, Status and the ⋯ actions sit off-screen inside the table.**
-   * "Used by" reads only "Work permits ...", which hides the combination (r06-list-1024).
-   * EXPERIENCE §2.12 requires 1024 px to work.
-
-   Fix: keep Status and ⋯ visible (pin them, or drop or merge Type and Edition below 1280). Show the trail's last part first.
-6. **The held and failed upload cards give the wrong next step.**
-   * "See the details" links to `/library/forms`, the page already open (`runs.ts:61,65`).
-   * The held card says "Waiting for a second person on To review", while To review asks the uploader to "Record the IRCC page" first (journey 3).
-   * An unread held file never appears in the list's "Needs your OK".
-
-   Fix: link a held run to `/review/held/:id` with the uploader's real next step; for a failed run, offer "Upload another file".
-7. **A stopped finder run leaves job files in `prototype/p2/jobs` (the source tree), and they break a later replay.**
-   * Evidence: `check_forms_s4_finder` gave 81/83 with them present ("replay reuses the saved answers …" → `[]`; "Find again never attaches back …"). After removing them it gave 83/83.
-
-   Fix: write the job files under the copy's `var/`, or remove them when the run ends or stops. Add a test: replay works after a stopped run.
-8. **Focus and keyboard.**
-   * Closing the drawer, or a retire or delete dialog opened from ⋯, sends focus to the page top or to `body` (WCAG 2.4.3).
-   * The hidden file input is an invisible tab stop (2.4.7).
-   * The chip is `hidden md:inline-flex` (`run-card.tsx:88`): it is gone at 390 px and at 200 % zoom on a 1440 screen.
-
-   Fix: return focus to the trigger; `tabIndex={-1}` on the input; a compact chip at small widths.
-9. **IMM 5802 (an employer's offer form) shows as Type "Checklist", IRCC accepts "Not filed".** Cause: `TYPE_OF` maps `document` to checklist (`form-library.ts:33`). It is a wrong statement about a filed document. Fix: a Document type, or map `document` to form wording.
+## Should
+* **S1 Load sample** (P-123 "must pick up every PDF, checklist and guide"): 2 of 5 combinations get a guide; the finder is not replayed. The Lead records whether the rest belongs to S5 Start setup or a logged live pass (P-110).
+* **S2 One empty file in a multi-file upload sinks the batch.** Files before it run with no card shown; files after it are never uploaded; only "empty.pdf is empty" is said (ai_batch rows 20:34:33). Cause: `form-library.ts:249` with `upload-run.ts:55`. Fix: check every file first, or give the empty file its own failed card.
+* **S3 Decision number and hash on the main path:** "never deleted (P-51)" (`form-uses.ts:65`) and "fingerprint recorded (d6ba4cab0363…)" on the run card (PRODUCT §4, EXPERIENCE §5). Move them to Details.
+* **S4 After approval the row still says "Retire waiting"**, tooltip "waits for a second person". It is approved and waits for the next release: say so, and where to release it.
 
 ## Minor
-Chip appears up to 6 s late (idle poll; launch does not invalidate `runs-active`) · finder step 1 tagged "AI" while it says "No AI call was made" (r21) · table aria-label leaves out "IRCC accepts" · run cards lost on reload or leaving the page · a waiting retire or delete not shown on the row ("Ready") · "In the library (in library)." · Replace on a newer edition sends the person to "Find again on a combination" · `proposeAccepts` lacks the lifecycle's after-create guard (`form-library.ts:99-101`; a 20-way race still gave 1) · no CHECK constraints on `accepted_channels`, `accepted_basis`, `origin` (STANDARDS §3.4) · shared drafting dialog still says "A sent AI call cannot be recalled by Cancel", and a toast covers its footer (r51) · two routes read and stop a finder run (`/form-finder/runs/:id`, `/runs/:id`).
+An approved delete is not re-checked against "approved official file" (`lifecycle.ts:138-141`) · a held upload of a new form is in neither the list nor "Needs your OK" · search sends one request per keystroke · the chip appears about 5 s after a launch made outside the page (S5 should invalidate `runs-active`) · an edit refused after Undo says "removed by a reset" (shared `saveForm`).
 
 ## D1–D20 (1–5)
 | D | Score | Evidence |
 |---|---|---|
-| D1 Requirement fit | 3 | One list, filters, drawer, Upload rules first, C11.18 and Stop are built. Load sample (P-123) and P-116 delete do not meet the decisions (Must 1, Major 2) |
-| D2 Data integrity | 2 | Duplicates and races are refused, but a used, approved official form can be deleted (Must 1) |
-| D3 Reuse | 4 | Stored once; a duplicate upload adds nothing; one intake |
-| D4 Rule integrity | 3 | The "where used" rule is incomplete, so a delete leaves orphan attachments |
-| D5 Stability and recovery | 3 | Stop in 1.8 s with no process left, and restart recovery. Stale job files break replay; cards are lost on reload |
-| D6 Freshness and governance | 4 | Checked dates, "Updated on canada.ca", history, a second person. No before value on the change page |
-| D7 AI trust | 4 | AI · Sample, IRCC's words, Picked by AI, "no AI call was made". Step 1 is mis-tagged |
-| D8 Orientation | 3 | Breadcrumb and trails, but the trail is cut before the combination's own name |
-| D9 Flow | 3 | Upload to library is short. Held and failed uploads link nowhere useful |
-| D10 Language | 3 | Plain overall. "Set_accepts the what…", the doubled title, IMM 5802 "Checklist" |
-| D11 Feedback and state | 3 | The card is excellent. The drawer is stale; a waiting lifecycle change is not on the row |
-| D12 Visual quality | 4 | Calm, aligned, dense (r01, r21) |
-| D13 Accessibility and responsive | 3 | axe clean on 16 states, no sideways scroll. Focus loss, the 1024 table, no chip below 768 |
-| D14 Team look | 4 | Team tokens and components, the Studio shell |
-| D15 Speed | 4 | First view 412–690 ms, filter 136 ms. Search sends one request per keystroke |
-| D16 Testability | 3 | Runs 49/49, canada 49/49, finder 83/83 only on a clean folder. No test for source-attached use |
+| D1 Requirement fit | 3 | Library, drawer, Upload rules first, C11.18 and Stop work. Guide lifecycle broken (M2); Load sample partial (S1) |
+| D2 Data integrity | 4 | Delete guarded (P-51); 10-way races on accepts and retire give 1; Undo vs edit, 8 rounds, no lost edit; CHECK constraints |
+| D3 Reuse | 4 | Stored once; a duplicate upload: "Already in the library … nothing duplicated" |
+| D4 Rule integrity | 4 | Where-used on the server is complete; delete and retire refusals are right |
+| D5 Stability and recovery | 4 | Stop 104 ms, launcher ended, no pid or job file; cards survive a reload; S2 |
+| D6 Freshness and governance | 4 | Checked dates, history, second person on every change; the author cannot approve (403) |
+| D7 AI trust | 4 | "Rules read it: No AI call was made"; AI · Sample; IRCC's words; AI steps tagged |
+| D8 Orientation | 4 | Breadcrumb; the combination's name first, then its trail |
+| D9 Flow | 4 | Upload → library in 1 s; held → its To review item; change page → Approve |
+| D10 Language | 3 | Mostly plain; Type wrong for 5881/5905 (M4); "(P-51)" and hash (S3) |
+| D11 Feedback and state | 3 | Live drawer, Change and Retire waiting; guide drawer silently empty (M2); "Not used" vs 2 uses (M3); S4 |
+| D12 Visual quality | 4 | Calm, aligned, team tokens (v3-j1-list, v3-j4-card-running) |
+| D13 Accessibility and responsive | 3 | axe clean on 16 states; 390 px and 200 % with no page scroll. 1024 px (M1); focus visibility (M5) |
+| D14 Team look | 4 | Team components and the Studio shell |
+| D15 Speed | 4 | First view 118–166 ms; filter 125–131 ms; list API 86 ms |
+| D16 Testability | 3 | Rerun by me twice: runs 61/61, canada 49/49. The 1024 test passes on a state Load sample does not give; no guide-route or checklist-use test |
 | D17 First use | 3 | Simulated only |
-| D18 Provenance | 4 | Origin, PDF link, form page, fingerprint, who said what IRCC accepts |
-| D19 End-to-end | 3 | The library does not show the sample combinations as users of their forms (Major 2) |
-| D20 Pain and wow | 3 | Simulated only. The run card with a real Stop is the wow; a thin sample undercuts it |
+| D18 Provenance | 4 | Origin, page, PDF link, fingerprint in Details, who said what IRCC accepts |
+| D19 End-to-end | 3 | Load sample partial (S1); the finder's buttons come with S5 |
+| D20 Pain and wow | 3 | Simulated only; the run card with a real Stop and rules-first upload is the wow |
 
-## Standards [M], short
-**Met:** authorisation on every write (403 upload, Stop, delete by URL; author ≠ approver) · Problem Details with field errors · idempotent finder launch · expand-only migration with rollback · one request per list view · axe on every state · uploads outside the web root · cost stated first and capped (US$60 wave) · every state drawn (empty, loading, no match, error, read-only, long title, running). **Not met:** §3.5 referenced items retired, never deleted (Must 1); EXPERIENCE §2.12 at 1024 px and focus (Majors 5, 8); §3 Change set before and after (Major 4). **Not judged:** OpenAPI generation, as elsewhere. **Graph (P-86):** no S4 gaps (G3 shows only the older `/attachments/:id/file`).
+## Standards [M]
+**Met:** server authorisation (user-B 403 on upload, accepts, retire, delete, check-canada; 401 without an actor) · Problem Details with field errors · expand-only migration with CHECKs and rollback · one request per view · uploads checked (HTML, truncated and empty refused; name sanitised) · cost stated first · empty, no-match, read-only and running states drawn. **Not met:** EXPERIENCE §2.12 at 1024 px and visible focus (M1, M5) · §2.7 counts (M3) · STANDARDS §3.5 retire for guides (M2) · §5 copy (S3). **Graph (P-86):** G1–G6 clean for S4 (G3 only the older `/attachments/:id/file`). Spot check: the P-51 delete rule has a failing test (`check_forms_s4_finder.ts:239-241`).
 
 ## Could not check
-A paid live run, and whether a stopped real call is charged at its reserved cost (the stand-in has no ledger). A real screen reader, Firefox or Safari. Canada.ca live. D17 and D20 need the founder's or an intended user's walk.
+A paid run, and whether a stopped real call is charged at its reserved cost (the stand-in writes no ledger; the card shows US$0.00) · a real screen reader, Firefox, Safari, canada.ca live · the finder and browser suites (they write into the builder's screenshot folders) · D17 and D20 need an intended user's walk.
 
-**Housekeeping, for the Lead:** I removed five untracked finder job files from `prototype/p2/jobs`: two from my stopped run, and three of unknown origin that were present when the finder check failed. Two more appeared at 19:53, from another copy (`isolated-forms_brk` on :4451) working in this same worktree; I left them.
+**Housekeeping:** `p2/jobs/studio-finder-forms-…-super-visa-d107409f.json` (20:45) came from the breaker copy `brk_s4` (:4462, same worktree), not from this review; left in place. My copy, its database and var folders are removed.

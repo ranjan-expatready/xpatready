@@ -174,14 +174,21 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "replay", pageUrl: otherPage, planSha256: nonePlan.plan_sha256, idempotencyKey: "s4-check-replay-none" });
   run = (await finish(r.body.id)).body;
   ok("C11.8: replay with no saved answer for these pages stops with the reason and attaches nothing (US$0)", run.status === "FAILED" && /No saved AI answer/.test(run.steps[2].message) && run.usd.spent === 0, run.steps?.[2]?.message);
-  // Break M7: saved answers are found by what they read, not by the trail's words: these names match no combination.
+  // Break M7, round 2 N4: saved answers are found by everything the AI was given (pages, prompt, trail), not by file name.
+  const vvTrail = sql(`select split_part(scope_label, '|', 2) from ai_batch where id='${run.id}'`);
   for (const [prefix, out, tpl] of [["studio-finder-forms-check-", check, "find-forms-check.v1.md"], ["studio-finder-forms-", draft, "find-forms.v1.md"]] as const) {
     const file = join(P2, "runs", `${prefix}an-older-name-of-this-place-live-29991231t000000000z-s4check.json`); // newest, so it is the one replayed
-    writeFileSync(file, JSON.stringify({ ...rec(out), drafting_run: { ...rec(out).drafting_run, inputs: { official_files: res.ai_inputs } }, launch_evidence: { template_sha256: sha(readFileSync(join(P2, "prompts", tpl))) } }));
+    writeFileSync(file, JSON.stringify({ ...rec(out), drafting_run: { ...rec(out).drafting_run, inputs: { official_files: res.ai_inputs, combination: vvTrail } }, launch_evidence: { template_sha256: sha(readFileSync(join(P2, "prompts", tpl))), known: { combination_trail: vvTrail } } }));
     madeRuns.push(file);
   }
   r = await call("DELETE", `/combinations/${vv}/forms/${C5257}`, { version: 7 });
   ok("C11.15 (S5 ask 4): Remove with a stale line version is refused (409, reload)", r.status === 409 && /Changed since/.test(r.body.title), r.body.detail);
+  ok("break round 2 m-c: a version ahead of the line is said plainly (the line is at version 1, not 7)", /is at version 1 on this combination, not 7/.test(r.body.detail), r.body.detail);
+  const otherCombo = sql(`select id from combination where label = 'Super visa' limit 1`);
+  const op = (await call("POST", `/combinations/${otherCombo}/forms/find/plan`, { mode: "replay", pageUrl: livePlan.page_url })).body;
+  r = await call("POST", `/combinations/${otherCombo}/forms/find`, { mode: "replay", pageUrl: livePlan.page_url, planSha256: op.plan_sha256, idempotencyKey: "s4-check-replay-other" });
+  const otherRun = (await finish(r.body.id)).body;
+  ok("break round 2 N4: replay on another combination reading the same pages never reuses this one's answer (the AI was given the trail)", /No saved AI answer/.test(otherRun.steps?.[2]?.message ?? "") && !otherRun.result?.attach?.length, otherRun.steps?.[2]?.message);
   r = await call("DELETE", `/combinations/${vv}/forms/${C5257}`, { version: 1 });
   ok("C11.15: Remove with the line's version takes IMM 5257 off (it stays in the library)", r.status < 300 && /IMM 5257:RETIRED/.test(lines(vv)), lines(vv));
   const replayPlan = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "replay" })).body;
@@ -198,6 +205,15 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("C11.15 (S5 ask 4): a line setting saved on the Forms tab is one change for the same Undo", r.status < 300 && sql(`select action from form_line_action where combination_id='${vv}' and undone_at is null order by at desc limit 1`) === "edit");
   r = await call("POST", `/combinations/${vv}/forms/undo`);
   ok("C11.15: Undo reverses that setting exactly", r.status < 300 && r.body.undone === "edit" && sql(`select who from combination_form where combination_id='${vv}' and lineage_key='IMM 5257' order by version desc limit 1`) === "each_applicant", r.body);
+  for (let round = 0; round < 4; round++) {
+    await call("PATCH", `/combinations/${vv}/forms/${C5257}`, { who: "principal_applicant" });
+    const mine = sql(`select id from form_line_action where combination_id='${vv}' and undone_at is null order by at desc limit 1`);
+    const [u, e] = await Promise.all([call("POST", `/combinations/${vv}/forms/undo`, { changeId: mine }), call("PATCH", `/combinations/${vv}/forms/${C5257}`, { who: "spouse_or_partner" })]);
+    const who = sql(`select who from combination_form where combination_id='${vv}' and lineage_key='IMM 5257' order by version desc limit 1`);
+    if (round === 0 || who !== "spouse_or_partner" || u.status >= 500 || e.status >= 500) ok(`break round 2 N6: an edit and an Undo at the same moment: one after the other, the edit is never lost (round ${round + 1})`, who === "spouse_or_partner" && u.status < 500 && e.status < 300, { undo: u.status, edit: e.status, who });
+    while (sql(`select action from form_line_action where combination_id='${vv}' and undone_at is null order by at desc limit 1`) === "edit") if ((await call("POST", `/combinations/${vv}/forms/undo`)).status >= 300) break;
+  }
+  ok("setup: the edits made by the race are undone again (who back to each applicant)", sql(`select who from combination_form where combination_id='${vv}' and lineage_key='IMM 5257' order by version desc limit 1`) === "each_applicant");
 
   // --- Undo the finder's attach; hand attach and remove; Undo again
   r = await call("POST", `/combinations/${vv}/forms/undo`);
@@ -214,8 +230,8 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 5645" }, "user-B");
   ok("C11.15: attaching needs the author duty (403)", r.status === 403);
   const v5645 = Number(sql(`select version from combination_form where combination_id='${vv}' and lineage_key='IMM 5645' order by version desc limit 1`));
-  const both = await Promise.all([0, 1].map(() => call("DELETE", `/combinations/${vv}/forms/${C5645}`, { version: v5645 })));
-  ok("break m12: two Removes at the same moment: one wins, the other gets a plain 409 (Already removed), one Undo step recorded", both.filter((x) => x.status < 300).length === 1 && both.some((x) => x.status === 409 && /Already removed/.test(x.body.title)) && sql(`select count(*) from form_line_action where combination_id='${vv}' and action='remove' and undone_at is null and detail->'codes' ? 'IMM 5645'`) === "1", both.map((x) => `${x.status} ${x.body?.title ?? ""}`));
+  const both = await Promise.all(Array.from({ length: 10 }, () => call("DELETE", `/combinations/${vv}/forms/${C5645}`, { version: v5645 })));
+  ok("break m12, round 2 N5: ten Removes at the same moment: one wins, the nine others get a plain 409 (no 500), one Undo step recorded", both.filter((x) => x.status < 300).length === 1 && both.filter((x) => x.status === 409 && /Already removed/.test(x.body.title)).length === 9 && sql(`select count(*) from form_line_action where combination_id='${vv}' and action='remove' and undone_at is null and detail->'codes' ? 'IMM 5645'`) === "1", both.map((x) => `${x.status} ${x.body?.title ?? ""}`));
   r = both.find((x) => x.status < 300) ?? both[0];
   ok("C11.15: Remove takes it off this combination; it stays in the library", r.status < 300 && r.body.in_library && !/IMM 5645:DRAFT/.test(lines(vv)) && sql(`select count(*) from gov_form_def where form_key='IMM 5645'`) === "1", lines(vv));
   r = await call("POST", `/combinations/${vv}/forms/undo`);
@@ -236,7 +252,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("C11.11: delete of a used form is refused with each use (409)", r.status === 409 && r.body.uses?.length > 0, r.body.detail);
   // Review must 1 (P-51): IRM 0002 came from canada.ca (an official download): kept, retired, never deleted.
   r = await call("GET", `/library/forms/${C0002}/uses`);
-  ok("review must 1: an unused official download may be retired, never deleted", r.body.can?.retire === null && /never deleted \(P-51\)/.test(r.body.can?.delete ?? ""), r.body.can);
+  ok("review must 1: an unused official download may be retired, never deleted", r.body.can?.retire === null && /never deleted: retire it instead/.test(r.body.can?.delete ?? ""), r.body.can);
   r = await call("DELETE", `/library/forms/${C0002}`, { reason: "Not used by any combination" });
   ok("review must 1: delete of an official download is refused in words (409)", r.status === 409 && /retire it instead/.test(r.body.detail), r.body.detail);
   // A form never released, with no approved file (test-made): the delete path.
@@ -265,6 +281,19 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   r = await call("GET", `/library/forms/${C5257}/uses`);
   ok("C11.11: a released form is never deleted (retire it instead)", !released || /never deleted/.test(r.body.can.delete), r.body.can);
 
+  madeForm("IMM 0102");
+  r = await call("DELETE", `/library/forms/${encodeURIComponent("IMM 0102")}`, { reason: "Never used anywhere" });
+  const del2 = r.body.id;
+  sql(`insert into form_edition select (jsonb_populate_record(null::form_edition, to_jsonb(e) || jsonb_build_object('id', gen_random_uuid(), 'gov_form_def_id', (select id from gov_form_def where form_key='IMM 0102'), 'edition_label', 'IMM 0102 (01-2026)'))).* from form_edition e where gov_form_def_id=(select id from gov_form_def where form_key='IMM 5488') limit 1`);
+  r = await call("POST", `/library/changes/${del2}/approve`, { note: "Checked" }, "user-B");
+  ok("break round 2 N1: a file approved after the delete was asked keeps the form: the approval is refused in words (409), nothing deleted", r.status === 409 && /approved meanwhile/.test(r.body.detail) && sql(`select count(*) from gov_form_def where form_key='IMM 0102'`) === "1", r.body.detail);
+  sql(`delete from library_change where key='IMM 0102'`); sql(`delete from form_edition where edition_label='IMM 0102 (01-2026)'`); sql(`delete from gov_form_def where form_key='IMM 0102'`);
+  // N2: nothing new may use a form while a retire or delete of it is open
+  r = await call("POST", `/library/forms/${C0002}/retire`, { reason: "Replaced by a newer process" });
+  ok("setup: retire of the unused IRM 0002 waits for a second person", r.status < 300 && r.body.status === "WAITING", r.body);
+  r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IRM 0002" });
+  ok("break round 2 N2: a form being retired cannot be attached meanwhile (409, in words)", r.status === 409 && /Being retired/.test(r.body.title), r.body.detail);
+  sql(`delete from library_change where key='IRM 0002'`);
   madeForm("IMM 0101");
   r = await call("DELETE", `/library/forms/${encodeURIComponent("IMM 0101")}`, { reason: "Never used anywhere" });
   ok("setup: delete of an unused, never-released form waits for a second person", r.status < 300 && r.body.status === "WAITING", r.body);
@@ -272,6 +301,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   sql(`insert into combination_form select (jsonb_populate_record(null::combination_form, to_jsonb(f) || jsonb_build_object('id', gen_random_uuid(), 'lineage_key', 'IMM 0101', 'gov_form_def_id', (select id from gov_form_def where form_key='IMM 0101'), 'status', 'RETIRED', 'version', 1))).* from combination_form f where combination_id='${vv}' order by version desc limit 1`);
   ok("setup: a retired line now points to IMM 0101", sql(`select count(*) from combination_form where lineage_key='IMM 0101' and status='RETIRED'`) === "1");
   r = await call("POST", `/library/changes/${del}/approve`, { note: "Checked" }, "user-B");
+  ok("break round 2 N8: the approve answer says what happened (RETURNED with the reason), never \"approved\"", r.body?.status === "RETURNED" && /^Not deleted/.test(r.body.decision_note ?? ""), r.body?.status ?? r.body);
   ok("break M1: a delete approved while a retired line still points to the form is not marked done: the form stays and the change is handed back", sql(`select count(*) from gov_form_def where form_key='IMM 0101'`) === "1" && sql(`select status from library_change where id='${del}'`) !== "RELEASED", { status: r.status, change: sql(`select status || ' ' || coalesce(decision_note,'') from library_change where id='${del}'`) });
   sql(`delete from library_change where key='IMM 0101'`); // the handed-back change, so where used shows the rule itself
   r = await call("GET", `/library/forms/${encodeURIComponent("IMM 0101")}/uses`);
@@ -310,6 +340,8 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   run = (await finish(r.body.id)).body;
   ok("break minor 1: an AI answer of the wrong shape stops the step in words; nothing crashes, nothing is attached", ["FAILED", "NEEDS_PERSON", "PARTIAL"].includes(run.status) && /expected shape/.test(run.steps?.[2]?.message ?? ""), run.steps?.[2]?.message);
   r = await call("POST", `/combinations/${sql(`select id from combination where id <> '${vv}' limit 1`)}/forms/find`, { mode: "live", planSha256: bp.plan_sha256, idempotencyKey: "s4-check-bad-shape" });
+  const suffixes = new Set(readFileSync(join(VAR, "fake-launch.log"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l).job as string).filter((j) => j.startsWith("studio-finder-forms-") && !j.startsWith("studio-finder-forms-check-")).map((j) => j.slice(-8)));
+  ok("break round 2 N3: each run has its own job id, even on the same combination (so a same-named combination elsewhere never shares one)", suffixes.size >= 3, [...suffixes]);
   ok("break minor: a launch key already used on another combination is refused (409), never answered with that run", r.status === 409, r.body?.title);
 
   // --- Two runs at once on one combination; Stop

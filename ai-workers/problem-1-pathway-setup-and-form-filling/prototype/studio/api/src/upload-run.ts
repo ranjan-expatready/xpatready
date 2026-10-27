@@ -108,7 +108,7 @@ export class UploadRuns implements OnModuleInit {
       id = JSON.parse(stdout.trim().split("\n").pop()!) as Identity;
       if (!id.ok && /could not be (read|opened)|PdfReadError|EmptyFile|damaged/i.test(id.error ?? "")) return { status: "FAILED", message: "This PDF is damaged or incomplete: it could not be opened. Download it again from canada.ca and upload that file. Nothing was read." };
       const size = bytes.length < 1024 ? `${bytes.length} bytes` : bytes.length < 1024 * 1024 ? `${Math.round(bytes.length / 1024)} KB` : `${(bytes.length / 1024 / 1024).toFixed(1)} MB`;
-      return { status: "COMPLETED", message: `A PDF of ${size} that opens; fingerprint recorded (${sha(bytes).slice(0, 12)}…). US$0.` };
+      return { status: "COMPLETED", message: `A PDF of ${size} that opens; its fingerprint is recorded. US$0.`, detail: { sha256: sha(bytes) } };
     });
     if (s1 !== "COMPLETED") return this.finish(batchId, s1 === null ? "CANCELLED" : "FAILED", "The file could not be used.");
     const s2 = await this.step(batchId, "upload_identity", async () => {

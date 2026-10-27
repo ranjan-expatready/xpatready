@@ -49,8 +49,7 @@ export async function formUses(db: Db, workspaceId: string, code: string): Promi
   for (const cid of new Set(atts.map((a) => a.combinationId))) if (!newest.has(cid) || newest.get(cid)!.status === "RETIRED") uses.push({ kind: "combination", label: trails.get(cid) ?? "A combination", href: `/c/${cid}`, blocks: true, why: "Its file is attached here as a source (its fields are read from it): remove it there first" });
   // P-116 / P-51: an approved official file (on the manifest, approved by a second person, or downloaded from canada.ca) is
   // kept: it is retired, never deleted.
-  const [inProduct, downloaded] = shas.length ? await Promise.all([db.approvedSource.count({ where: { workspaceId, sha256: { in: shas } } }), db.officialDownload.count({ where: { workspaceId, sha256: { in: shas } } })]) : [0, 0];
-  const approved = inProduct + downloaded > 0 || manifest().some((i) => shas.includes(i.sha256));
+  const approved = await hasApprovedFile(db, workspaceId, shas);
   const held = await db.intakeItem.count({ where: { workspaceId, code, status: "HELD" } });
   if (held) uses.push({ kind: "draft_change", label: `${held} held file${held === 1 ? "" : "s"} waiting for a person`, href: "/review", blocks: false, why: "A new or held edition waits on To review" });
   const pending = await db.libraryChange.findFirst({ where: { workspaceId, kind: "library_form", key: code, status: { in: OPEN } }, orderBy: { proposedAt: "desc" } });
@@ -62,11 +61,34 @@ export async function formUses(db: Db, workspaceId: string, code: string): Promi
   const history = (await db.auditEvent.findMany({ where: { workspaceId, entityKey: code }, orderBy: { at: "desc" }, take: 10, select: { at: true, actor: true, summary: true } })).map((r) => ({ at: r.at.toISOString(), by: nameOf(r.actor) ?? (r.actor === "system" ? "The studio" : r.actor), what: r.summary }));
   return { key: code, label: `${code} · ${def.displayName}`, trail: [code], retired: !!def.retiredAt, released: wasReleased, uses,
     can: {
-      delete: p ?? (approved ? "Its approved official file is kept, never deleted (P-51): retire it instead." : wasReleased ? "It was released, so it is retired, never deleted (released versions and cases point to its exact edition)." : retiredOnly.length ? `A retired line on ${trails.get(retiredOnly[0].combinationId) ?? retiredOnly[0].combination.label} still points to it: retire it instead.` : blocking.length ? `Still used: ${blocking.slice(0, 3).map((u) => u.label).join("; ")}. Remove it there first.` : def.retiredAt ? "It is retired." : null),
+      delete: p ?? (approved ? "Its approved official file is kept, never deleted: retire it instead." : wasReleased ? "It was released, so it is retired, never deleted (released versions and cases point to its exact edition)." : retiredOnly.length ? `A retired line on ${trails.get(retiredOnly[0].combinationId) ?? retiredOnly[0].combination.label} still points to it: retire it instead.` : blocking.length ? `Still used: ${blocking.slice(0, 3).map((u) => u.label).join("; ")}. Remove it there first.` : def.retiredAt ? "It is retired." : null),
       retire: p ?? (def.retiredAt ? "It is already retired." : !wasReleased && !approved && !retiredOnly.length ? "It was never released and has no approved file: delete it instead." : blocking.length ? `Still used: ${blocking.slice(0, 3).map((u) => u.label).join("; ")}${blocking.length > 3 ? ` and ${blocking.length - 3} more` : ""}.` : null),
       restore: p ?? (!def.retiredAt ? "It is not retired." : null),
     },
     pending: pending ? { id: pending.id, action: pending.action as "DELETE" | "RETIRE" | "RESTORE", by: nameOf(pending.proposedBy) } : null, history };
+}
+
+/** P-51: one of these files is on the manifest, approved by a second person, or downloaded from canada.ca (kept). */
+export async function hasApprovedFile(db: Pick<Db, "approvedSource" | "officialDownload">, workspaceId: string, shas: string[]) {
+  if (!shas.length) return false;
+  const [inProduct, downloaded] = await Promise.all([db.approvedSource.count({ where: { workspaceId, sha256: { in: shas } } }), db.officialDownload.count({ where: { workspaceId, sha256: { in: shas } } })]);
+  return inProduct + downloaded > 0 || manifest().some((i) => shas.includes(i.sha256));
+}
+
+/** Break round 2 N5, N6: changes to one combination's forms list run one after the other in this server (attach, remove,
+ *  a line edit, Undo, the finder's attach), so a check and its write never interleave with another change. */
+const listLocks = new Map<string, Promise<unknown>>();
+export async function oneAtATime<T>(combinationId: string, fn: () => Promise<T>): Promise<T> {
+  const prev = listLocks.get(combinationId) ?? Promise.resolve();
+  const run = prev.catch(() => undefined).then(fn);
+  const tail = run.catch(() => undefined);
+  listLocks.set(combinationId, tail);
+  try { return await run; } finally { if (listLocks.get(combinationId) === tail) listLocks.delete(combinationId); }
+}
+
+/** Break round 2 N2: a retire or delete asked for this form and not yet decided or released (nothing new may use it). */
+export async function closingChange(db: Pick<Db, "libraryChange">, workspaceId: string, code: string) {
+  return db.libraryChange.findFirst({ where: { workspaceId, kind: "library_form", key: code, action: { in: ["RETIRE", "DELETE"] }, status: { in: OPEN } } });
 }
 
 // ------------------------------------------------------------------ Undo: one change on a forms list

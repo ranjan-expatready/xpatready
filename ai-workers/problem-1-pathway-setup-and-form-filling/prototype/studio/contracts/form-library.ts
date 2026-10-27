@@ -11,7 +11,8 @@ const code = z.string().trim().regex(/^(IMM|IRM|CIT|PPTC|EMP) *[0-9]{3,5}( *(SCH
 /** "imm5257", "IMM  5257 sch1" → "IMM 5257", "IMM 5257 SCH1" (one spelling everywhere). */
 export function normaliseCode(s: string): string {
   const m = /^(IMM|IRM|CIT|PPTC|EMP)\s*([0-9]{3,5})\s*(SCH\s*([0-9]+[A-Z]?)|DEP|[A-Z])?$/i.exec(s.trim());
-  if (!m) return s.trim().toUpperCase();
+  // Round 2 major 2: anything else keeps its own spelling (only spaces tidied), so "Guide 5256" is found; "guide5256" too.
+  if (!m) { const g = /^guide\s*([0-9]{3,5})$/i.exec(s.trim()); return g ? `Guide ${g[1]}` : s.trim().replace(/\s+/g, " "); }
   const tail = m[3] ? (m[4] ? ` SCH${m[4].toUpperCase()}` : ` ${m[3].toUpperCase()}`) : "";
   return `${m[1].toUpperCase()} ${m[2]}${tail}`;
 }

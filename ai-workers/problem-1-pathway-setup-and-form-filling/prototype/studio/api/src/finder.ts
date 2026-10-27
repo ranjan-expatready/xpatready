@@ -106,7 +106,7 @@ type FormsOut = { forms: Proposal[]; unresolved: { quote: string; reason: string
 type Candidate = { title: string; url: string };
 type GuideValue = { url: string; title: string | null; candidates?: Candidate[] };
 /** A saved run record of the guarded launcher, read loosely (only what replay compares). */
-type SavedRun = { file: string; drafting_run?: { status?: string; usage?: { cost_usd?: number }; inputs?: { official_files?: unknown } }; contract_valid?: boolean; launch_evidence?: { template_sha256?: string }; raw_output?: unknown };
+type SavedRun = { file: string; drafting_run?: { status?: string; usage?: { cost_usd?: number }; inputs?: { official_files?: unknown; combination?: string } }; contract_valid?: boolean; launch_evidence?: { template_sha256?: string; known?: { combination_trail?: string } }; raw_output?: unknown };
 /** The stored plan of a finder run, with its result once it ended. */
 type FinderPlan = Awaited<ReturnType<Finder["plan"]>> & { result?: FinderResult };
 const json = (v: unknown) => v as Prisma.InputJsonValue;
@@ -407,7 +407,7 @@ export class Finder implements OnModuleInit {
       const lines = await this.attachFound(b.workspaceId, combinationId, found, actor, batchId);
       for (const f of found) f.line = lines[f.code];
       const failed = found.filter((f) => !lines[f.code]);
-      for (const f of failed) result.missing.push({ code: f.code, title: f.title, why: `${f.code} could not be attached (its answer did not fit the line). Attach it by hand from the library.`, quote: f.quote });
+      for (const f of failed) result.missing.push({ code: f.code, title: f.title, why: `${f.code} was not attached: it is retired or being retired in the library, or its answer did not fit the line. Check it in Shared library › Forms.`, quote: f.quote });
       const added = Object.values(lines).filter((x) => x === "added").length;
       const removed = Object.values(lines).filter((x) => x === "removed_by_person").length;
       return { status: "COMPLETED", message: `${added} attached automatically (Picked by AI · Sample), ${found.length - added - removed} already on this combination${removed ? `, ${removed} not attached back (a person removed ${removed === 1 ? "it" : "them"})` : ""}.`, value: null };
@@ -450,14 +450,16 @@ export class Finder implements OnModuleInit {
     const template = isCheck ? s.check : s.template;
     const base = `studio-finder-${kind === "find_guide" ? "guide" : "forms"}${isCheck ? "-check" : ""}`;
     // Break M5: the trail's own fingerprint makes the job id unique (two siblings never share one, so Stop ends only this run).
-    const jobId = `${base}-${slug(trail).slice(0, 40).replace(/_/g, "-")}-${sha(trail).slice(0, 8)}`;
+    // Round 2 N3: and of this run, so two combinations with the same names (another pathway) never share one either.
+    const jobId = `${base}-${slug(trail).slice(0, 40).replace(/_/g, "-")}-${sha(`${batchId ?? ""}|${trail}`).slice(0, 8)}`;
     const tsha = sha(readFileSync(join(PROMPTS, template)));
-    const same = (r: SavedRun) => r?.drafting_run?.status === "completed" && r.contract_valid === true && r.launch_evidence?.template_sha256 === tsha && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(inputs) && typeof r.raw_output === "string";
+    const same = (r: SavedRun) => r?.drafting_run?.status === "completed" && r.contract_valid === true && r.launch_evidence?.template_sha256 === tsha && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(inputs) && (r.launch_evidence?.known?.combination_trail ?? r.drafting_run?.inputs?.combination) === trail && typeof r.raw_output === "string";
     if (mode === "replay") {
-      // Break M7: a saved answer is found by what it read (the same pages, the same prompt), never by the trail's words, so
-      // renaming a structure name or two combinations reading the same pages keep their replay.
+      // Break M7, round 2 N4: a saved answer is found by everything the AI was given (the same pages, the same prompt and the
+      // same combination trail), never by a file name; another combination's answer is never reused. Round 2 m-a: an
+      // unreadable or wrong-shape answer is skipped and an older good one is used.
       const mine = new RegExp(`^${base}-${isCheck ? "" : "(?!check-)"}.+-live-.+\\.json$`);
-      const r = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f)).sort(newestFirst) : []).map((f): SavedRun | null => { try { return { ...JSON.parse(readFileSync(join(RUNS, f), "utf8")), file: f }; } catch { return null; } }).find((x): x is SavedRun => !!x && same(x));
+      const r = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f)).sort(newestFirst) : []).map((f): SavedRun | null => { try { return { ...JSON.parse(readFileSync(join(RUNS, f), "utf8")), file: f }; } catch { return null; } }).find((x): x is SavedRun => !!x && same(x) && (() => { try { return shapeOk(kind, JSON.parse(String(x.raw_output))); } catch { return false; } })());
       if (!r) return { ok: false, costUsd: 0, reason: "No saved AI answer for these exact pages yet. Run it live once (its cost is shown first) or use rules only." };
       const saved = JSON.parse(String(r.raw_output)) as T;
       if (!shapeOk(kind, saved)) return { ok: false, costUsd: 0, reason: "The saved AI answer does not have the expected shape. Run it live or use rules only." };
@@ -633,6 +635,10 @@ export class Finder implements OnModuleInit {
 
   /** Attaches every found form as a draft line (AI_FOUND), as one change for Undo. Never raises a duplicate. */
   private async attachFound(workspaceId: string, combinationId: string, found: FinderResult["attach"], actor: Actor, batchId: string): Promise<Record<string, "added" | "already" | "removed_by_person">> {
+    const { oneAtATime } = await import("./form-uses.ts");
+    return oneAtATime(combinationId, () => this.attachFoundNow(workspaceId, combinationId, found, actor, batchId));
+  }
+  private async attachFoundNow(workspaceId: string, combinationId: string, found: FinderResult["attach"], actor: Actor, batchId: string): Promise<Record<string, "added" | "already" | "removed_by_person">> {
     const out: Record<string, "added" | "already" | "removed_by_person"> = {};
     const { addFormLine } = await import("./form-lines.ts");
     const { snapshotLines, recordAction } = await import("./form-uses.ts");
@@ -644,6 +650,8 @@ export class Finder implements OnModuleInit {
       if (newest?.status === "RETIRED") { out[f.code] = "removed_by_person"; continue; }
       const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: f.code } } });
       if (!def) continue;
+      // Round 2 N2: a retired form, or one with a retire or delete open, is not attached (listed as missing instead).
+      if (def.retiredAt || (await this.db.libraryChange.count({ where: { workspaceId, kind: "library_form", key: def.formKey, action: { in: ["RETIRE", "DELETE"] }, status: { in: ["WAITING", "RETURNED", "APPROVED"] } } }))) continue;
       try { out[f.code] = await addFormLine(this.db, { workspaceId, combinationId, govFormDefId: def.id, formKey: f.code, who: f.who, origin: "AI_FOUND", by: actor.id, sourceQuote: f.quote,
         attachMode: f.applies === "always" ? "COMBINATION_MANDATORY" : "ANSWER_CONDITIONAL", conditionPlain: f.applies === "always" ? null : (f.condition ?? f.quote).slice(0, 300), finderBatchId: batchId }); } catch { /* reported as not attached below */ }
     }
