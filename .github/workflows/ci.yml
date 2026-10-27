@@ -4,6 +4,11 @@
 # suites (product/tools/run-suites.sh, the same script the Lead and lanes run) on a machine set up by cloud-setup.sh.
 # A push whose files are all docs/evidence (.md, images, .pdf, .txt) skips the ~15-minute suites to keep the
 # GitHub Actions minutes bill low; the push guard still runs on every push (P-81).
+# Cost rule (founder, 27 Oct): the same code is tested once. The code fingerprint is every file except docs, images
+# and product/ (boards, notes, records), plus the two scripts that decide the suites (run-suites.sh, cloud-setup.sh).
+# A push whose fingerprint already passed the full suites in an earlier run (a lane commit the Lead merged, then the
+# merge reaching main) reuses that run and says which. Pull requests add the graph check, so a records-only change
+# is still checked for gaps; their PostgreSQL engine suite runs only when the pull request changes code.
 name: ci
 on:
   push:
@@ -25,13 +30,26 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    # A newer push to the same pull request replaces the older check run.
+    concurrency: { group: "checks-${{ github.ref }}", cancel-in-progress: true }
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: code
+        name: does this pull request change code?
+        run: |
+          code=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" | grep -ivE '\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$' || true)
+          if [ -n "$code" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
         with: { node-version-file: .nvmrc }
       - uses: actions/setup-python@v5
         with: { python-version: '3' }
       - name: PostgreSQL 18 (PGDG)
+        if: steps.code.outputs.changed == 'true'
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
@@ -44,6 +62,7 @@ jobs:
         run: npm ci
         working-directory: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
       - name: schema
+        if: steps.code.outputs.changed == 'true'
         run: |
           export DATABASE_URL="postgresql://xr_studio@127.0.0.1:54329/xr_studio_demo"
           ./node_modules/.bin/prisma migrate deploy && ./node_modules/.bin/prisma generate
@@ -55,7 +74,10 @@ jobs:
           P=ai-workers/problem-1-pathway-setup-and-form-filling/product
           bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && \
           node ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/count-any.mjs
+      - name: graph (P-86; fails on a page calling a missing API route or a missing decision)
+        run: node ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/graph.mjs --check
       - name: engine and contract suites
+        if: steps.code.outputs.changed == 'true'
         env: { DATABASE_URL: postgresql://xr_studio@127.0.0.1:54329/xr_studio_demo }
         run: |
           S=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
@@ -63,23 +85,44 @@ jobs:
   changes:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions: { contents: read, actions: read }
     outputs:
       run_suites: ${{ steps.d.outputs.run_suites }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - id: d
+        env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           B="${{ github.event.before }}"
           if [ "$B" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$B^{commit}" 2>/dev/null; then
             git fetch --quiet origin main || true
             B=$(git merge-base origin/main "${{ github.sha }}" 2>/dev/null || true)
           fi
-          if [ -z "$B" ] || git diff --name-only "$B..${{ github.sha }}" | grep -qivE '\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$'; then
-            echo "run_suites=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_suites=false" >> "$GITHUB_OUTPUT"
+          # No early-exit grep in a pipe: under pipefail its SIGPIPE would read as "no code changed".
+          code=$( [ -n "$B" ] && git diff --name-only "$B..${{ github.sha }}" | grep -ivE '\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$' || true)
+          if [ -n "$B" ] && [ -z "$code" ]; then
+            echo "run_suites=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
+          # Code changed: reuse an earlier full pass of exactly this code instead of running the suites again.
+          P=ai-workers/problem-1-pathway-setup-and-form-filling/product
+          fp() { { git ls-tree -r --full-tree "$1" | grep -vE $'\t'"$P/" | grep -ivE '\.(md|txt|png|jpe?g|gif|webp|svg)$'
+                   git ls-tree -r --full-tree "$1" -- "$P/tools/run-suites.sh" "$P/tools/cloud-setup.sh"; } | sha256sum | cut -c1-64; }
+          mine=$(fp "${{ github.sha }}")
+          gh api "repos/${{ github.repository }}/actions/runs?event=push&status=success&per_page=50" \
+            -q '.workflow_runs[] | select(.name == "ci") | "\(.id) \(.head_sha)"' > runs.txt || true
+          while read -r id sha; do
+            [ "$sha" = "${{ github.sha }}" ] && continue
+            git cat-file -e "$sha^{commit}" 2>/dev/null || continue
+            [ "$(fp "$sha")" = "$mine" ] || continue
+            ok=$(gh api "repos/${{ github.repository }}/actions/runs/$id/jobs" -q '.jobs[] | select(.name == "suites") | .conclusion' || true)
+            if [ "$ok" = success ]; then
+              echo "Full suites not run again: the same code (fingerprint ${mine:0:12}) passed them in run $id on ${sha:0:7}: ${{ github.server_url }}/${{ github.repository }}/actions/runs/$id" | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "run_suites=false" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+          done < runs.txt
+          echo "Code fingerprint ${mine:0:12}: no earlier full pass of this exact code; running the suites." >> "$GITHUB_STEP_SUMMARY"
+          echo "run_suites=true" >> "$GITHUB_OUTPUT"
   suites:
     # P-85: every push that changes code or config (lane branches, main); docs/evidence-only pushes are gated out
     # by the changes job to keep the Actions bill low. A newer push to the same branch cancels the older run.

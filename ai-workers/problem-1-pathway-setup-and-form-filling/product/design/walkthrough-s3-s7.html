@@ -288,14 +288,14 @@ footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);b
       <li><span class="tag pick">A file downloaded from canada.ca is approved by the person who confirms the combination's list; a hand upload needs a second person.</span> <span class="alt">Other option: a second person approves every file.</span></li>
     </ul></div>
   </div>
-  <div class="flag"><b>Good to know before you mark:</b> (1) canada.ca refused our scripted downloads (19–21 Oct), so the official PDFs on the Mac were fetched by hand. Downloading by itself in production must be tested from the team's servers. If canada.ca refuses there too, the finder gives one-click links: the person's browser downloads the file, and the library matches it by fingerprint. Status: Unconfirmed. (2) What IRCC accepts depends on the portal. For combinations 4 and 5, IMM 0008, 5669 and 5406 are online-only in the PR portal, so those cases get an answer sheet (P-113).</div>
+  <div class="flag"><b>Good to know before you mark:</b> (1) canada.ca refused scripted downloads on 19–21 Oct but accepted a plain request on 27 Oct (10 files, bytes identical to the browser's). It still has to be confirmed from the team's servers. If canada.ca refuses there, the finder gives one-click links and the library matches the file by fingerprint. (2) What IRCC accepts depends on the portal. For combinations 4 and 5, IMM 0008, 5669 and 5406 are online-only in the PR portal, so those cases get an answer sheet (P-113).</div>
   <div class="mark" data-for="s4"><span>S4:</span><label><input type="radio" name="s4" value="OK"> OK</label><label><input type="radio" name="s4" value="Change"> Change</label><textarea placeholder="What to change (optional for OK)"></textarea></div>
 </section>
 
 <!-- ======================= S5 ======================= -->
 <section class="scr" id="s5" data-name="S5 Combination workspace (v2)">
   <div class="scr-head"><span class="n">S5</span><h2>Combination workspace</h2><span class="st">v2 after your 27 Oct feedback</span></div>
-  <div class="v2"><b>What changed from v1:</b> <b>AI picks the forms and checklists itself</b> when setup starts. Each comes from the library, is downloaded from canada.ca, or is marked missing with an Upload button. You confirm the list once. Every form has <b>Redo with AI, Replace, Remove and Undo</b>, and each AI stage can be redone. "Who can be in this application" can now be <b>edited</b>.</div>
+  <div class="v2"><b>What changed from v1:</b> <b>AI picks the forms and checklists itself</b> when setup starts. Each comes from the library, is downloaded from canada.ca, or is marked missing with an Upload button. They are <b>attached automatically</b>, with no confirm step (founder, 27 Oct). Every form has <b>Redo with AI, Replace, Remove and Undo</b>, and each AI stage can be redone. "Who can be in this application" can now be <b>edited</b>.</div>
   <p class="job">Job: set up one combination in the order you work: its forms, who can be on a case, the questions, the documents, then preview and release. One row of tabs. Overview only reports.</p>
   <div class="frame"><div class="frame-title">Immigration programs › Visitor visa · Forms tab, right after Start setup · 1440 px</div><div class="scroll"><div class="app" style="min-width:1260px">
     <div class="topbar"><span class="logo"><i></i>Product Studio</span><span class="spacer"></span><span class="runchip">● Matching boxes to shared fields · stage 3 of 4</span><span class="demo">Demo ▾</span></div>
@@ -311,7 +311,7 @@ footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);b
           <div class="stg now"><b>3 Match to shared fields</b><span>● 76 proposals so far</span><a>Stop</a></div>
           <div class="stg"><b>4 Draft questions and documents</b><span>○ waits for 3</span></div>
         </div>
-        <div class="opening" style="margin:10px 0"><span><b>AI picked 6 forms and 1 checklist.</b> 4 were in the library, 1 was downloaded from canada.ca, 1 is missing. <span class="tag sample">Sample</span> until the immigration expert confirms.</span><span class="spacer"></span><span class="btn">Add a form from the library</span><span class="btn pr">Confirm the list</span></div>
+        <div class="opening" style="margin:10px 0"><span><b>AI picked 6 forms and 1 checklist.</b> 4 were in the library, 1 was downloaded from canada.ca, 1 is missing. <span class="tag sample">Sample</span> until the immigration expert confirms.</span><span class="spacer"></span><span class="btn">Add a form from the library</span><span class="chip ok">Attached automatically</span></div>
         <table class="t">
           <tr><th>Form</th><th>Why AI picked it (IRCC's words)</th><th>Who fills it</th><th>Only if</th><th>Filed as by default</th><th>In the library</th><th></th></tr>
           <tr><td><b>IMM 5257</b> Application for visitor visa</td><td class="hint">"must be completed by each person applying"</td><td>Each applicant</td><td>Always</td><td>PDF upload</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
@@ -328,7 +328,7 @@ footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);b
           <tr><td><b>IMM 5645</b> Family Information Form (other country package)</td><td class="hint">Named for some visa offices instead of IMM 5707</td><td>Each applicant 18+</td><td>Visa office asks for it</td><td>—</td><td><span class="chip bad">Not found</span> <span class="btn sm">Upload PDF</span> <span class="btn sm gh">Find again</span></td><td>⋯</td></tr>
           <tr><td><b>IMM 5484</b> Document Checklist</td><td class="hint">"Document Checklist: Temporary Resident Visa"</td><td colspan="3" class="hint">Checklist · not filed · AI reads it for the documents list</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
         </table>
-        <p class="hint" style="margin-top:8px">"Remove from this combination" never deletes the form from the library. "Confirm the list" records who confirmed it and when. A change after a release makes a new version.</p>
+        <p class="hint" style="margin-top:8px">"Remove from this combination" never deletes the form from the library. The immigration expert signs off which forms apply at release review, where the second person sees what AI picked. A change after a release makes a new version.</p>
       </div>
     </div>
   </div></div></div>
@@ -354,7 +354,7 @@ footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);b
       <li><span class="tag ans">P-118 Q2, Q3</span> No "Sources and forms" tab, no "Choose file". The checklist shows as "not filed · AI reads it".</li>
     </ul></div>
     <div class="box p"><h3>Lead's picks</h3><ul>
-      <li><span class="tag pick">Confirm the list once</span>, not each form. Which forms a combination needs is an immigration value, so a person confirms it (the expert in production). <span class="alt">Other option: no confirm. Faster, but AI would decide the forms on its own.</span></li>
+      <li><span class="tag ans">Founder, 27 Oct</span> <b>No confirm step</b>: AI downloads, stores and attaches the forms by itself. The expert signs off which forms apply at release review.</li>
       <li><span class="tag pick">"Who can be" edited at the top of Questionnaires</span>, where it decides each person's questions; Overview shows it read-only. <span class="alt">Other option: a separate Configuration tab.</span></li>
       <li><span class="tag pick">Tabs in setup order</span> Overview · Forms · Questionnaires · Documents · Preview · Review and release. <span class="alt">Other option: a guided step rail.</span></li>
       <li><span class="tag pick">"Filed as" default is one way per form</span>; the case officer may switch per case within what IRCC accepts. <span class="tag pick">Preview made simple</span> one sample family, person chips, three columns.</li>
@@ -435,7 +435,7 @@ footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);b
 <!-- ======================= S7 ======================= -->
 <section class="scr" id="s7" data-name="S7 Reset + Load sample (v2)">
   <div class="scr-head"><span class="n">S7</span><h2>Reset + Load sample</h2><span class="st">You marked OK on 27 Oct · v2 adds the coverage check · <span class="tag scaf">Scaffolding</span></span></div>
-  <div class="v2"><b>What changed from v1:</b> Load sample now runs the same <b>automatic form picking</b> as production (replayed at US$0). You land with each combination's forms picked and waiting for Confirm. You asked that every PDF and checklist be picked up. Below is the check against what is saved today: <b>11 files are still missing</b>.</div>
+  <div class="v2"><b>What changed from v1:</b> Load sample now runs the same <b>automatic form picking</b> as production (replayed at US$0). You land with each combination's forms picked and waiting for Confirm. You asked that every PDF and checklist be picked up. Below is the check against what is saved today: <b>11 files were missing on 27 Oct</b>; the 10 that canada.ca publishes are now saved, and EMP5626 is online-only.</div>
   <p class="job">Job (demo only): start from blank, or from the starting point of your 5 Retail combinations and 1 Corporate Sample, with the official PDFs. Everything after that goes through the real screens and rules.</p>
   <div class="g2">
     <div class="frame"><div class="frame-title">Top bar › Demo ▾ › Reset demo…</div><div style="padding:8px;position:relative">
@@ -454,7 +454,7 @@ footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);b
           <li>Their official PDFs, guides and checklists in the Form library (from saved copies)</li>
           <li>Form finder replayed for each combination: forms picked, waiting for your Confirm <span class="tag sample">Sample</span></li>
         </ul>
-        <p class="hint" style="margin:4px 0">Saved copies: 18 of the 29 files these combinations need. Missing files show as "Not found · Upload PDF" on that combination, never hidden.</p>
+        <p class="hint" style="margin:4px 0">Saved copies: 28 of the 29 files these combinations need (EMP5626 is online-only: answer sheet). A file that is still missing shows as "Not found · Upload PDF" on that combination, never hidden.</p>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><span class="btn">Cancel</span><span class="btn pr">Load sample</span></div>
       </div>
     </div></div>
@@ -462,14 +462,14 @@ footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);b
   <div class="frame"><div class="frame-title">Coverage check, 27 Oct: what IRCC names for each sample combination vs the official copies saved on the Mac</div><div style="padding:10px;background:#fff">
     <table class="t">
       <tr><th>Combination</th><th>Forms, checklists and guides IRCC names <span class="tag sample">Sample</span></th><th>Saved</th><th>Missing</th></tr>
-      <tr><td><b>1 Visitor visa</b></td><td>IMM 5257, 5257 SCH1, 5707 or 5645, 5409, 5476, 5475 · checklist 5484 · guide 5256</td><td>8 of 9</td><td>IMM 5645 <span class="hint">(5707 is saved)</span></td></tr>
-      <tr><td><b>2 Study permit › Outside Canada</b></td><td>IMM 1294, 5707, 5646, 5409, 5476, 5475 · checklist 5483 · guide 5269</td><td>6 of 8</td><td>IMM 5646 custodian form · guide 5269</td></tr>
-      <tr><td><b>3 Work permit › LMIA, inside Canada</b></td><td>IMM 5710, 5707, 5409, 5476, 5475 · checklist 5556 · guide 5553</td><td>5 of 7</td><td>Checklist IMM 5556 · guide 5553</td></tr>
-      <tr><td><b>4 Provincial nominee › Express Entry</b></td><td>IMM 0008, 5669, 5406, 0008 DEP, 5562, 5409, 5476, 5475 · checklist is personalised online</td><td>6 of 8</td><td>IMM 0008 DEP · IMM 5562</td></tr>
-      <tr><td><b>5 Spouse or common-law partner</b></td><td>IMM 0008, 5669, 5406, 5562, 1344, 5532, 5409, 5604, 5476, 5475 · checklists 5533, 5589 · guide 5289</td><td>9 of 13</td><td>IMM 5562 · IMM 5604 · checklist 5589 · guide 5289</td></tr>
+      <tr><td><b>1 Visitor visa</b></td><td>IMM 5257, 5257 SCH1, 5707 or 5645, 5409, 5476, 5475 · checklist 5484 · guide 5256</td><td>9 of 9</td><td>— <span class="hint">(IMM 5645 fetched 27 Oct)</span></td></tr>
+      <tr><td><b>2 Study permit › Outside Canada</b></td><td>IMM 1294, 5707, 5646, 5409, 5476, 5475 · checklist 5483 · guide 5269</td><td>8 of 8</td><td>— <span class="hint">(IMM 5646, guide 5269 fetched)</span></td></tr>
+      <tr><td><b>3 Work permit › LMIA, inside Canada</b></td><td>IMM 5710, 5707, 5409, 5476, 5475 · checklist 5556 · guide 5553</td><td>7 of 7</td><td>— <span class="hint">(IMM 5556, guide 5553 fetched)</span></td></tr>
+      <tr><td><b>4 Provincial nominee › Express Entry</b></td><td>IMM 0008, 5669, 5406, 0008 DEP, 5562, 5409, 5476, 5475 · checklist is personalised online</td><td>8 of 8</td><td>— <span class="hint">(IMM 0008 DEP, 5562 fetched)</span></td></tr>
+      <tr><td><b>5 Spouse or common-law partner</b></td><td>IMM 0008, 5669, 5406, 5562, 1344, 5532, 5409, 5604, 5476, 5475 · checklists 5533, 5589 · guide 5289</td><td>13 of 13</td><td>— <span class="hint">(IMM 5562, 5604, 5589, guide 5289 fetched)</span></td></tr>
       <tr><td><b>6 LMIA › High-wage</b> <span class="tag sample">Sample</span></td><td>EMP5626 (filled online in LMIA Online, no public PDF) · EMP5711 agreement</td><td>1 of 2</td><td>EMP5626 → answer sheet, as P-113</td></tr>
     </table>
-    <p class="hint" style="margin:8px 0 0">Source: research of 26 Oct (screens/W1-form-library/forms-for-5-combinations.md) compared with official-sources/ircc and esdc today. 11 different files are missing; IMM 5562 serves two combinations. canada.ca refuses scripted downloads, so they are fetched in a browser.</p>
+    <p class="hint" style="margin:8px 0 0">Source: research of 26 Oct (screens/W1-form-library/forms-for-5-combinations.md) compared with official-sources/ircc and esdc today. 27 Oct: the 10 published files were fetched (official-sources/ircc, manifest with SHA-256); canada.ca accepted a plain request that day, with bytes identical to the browser's. Guide 5289 also names IMM 1283 and IMM 1017 in some cases: the finder will propose them and the expert decides.</p>
   </div></div>
   <div class="cols">
     <div class="box a"><h3>Built in from your answers</h3><ul>
