@@ -84,7 +84,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("A2: the work-permit row (Individual › Work permits › Employer-specific work permit) shows it is in Release 1 (one release word, review #3) and no draft changes", /In Release 1/.test(await p.innerText("main")) && /draft matches the release/i.test(await p.innerText("main")));
   await shot("A2-overview.png");
 
-  await go(`/c/${wp}/preview`);
+  await go(`/c/${wp}/preview?view=studio`); // S5: the coverage and PDF-fill preview sits behind Preview (the tab itself is Preview by person)
   await p.getByText("Questions to ask").first().waitFor();
   let main = await p.innerText("main");
   step("A3: preview renders the released configuration with the sample family's confirmed facts", /Released version 1/.test(main) && /questions to ask/i.test(main), main.match(/forms\n(\d+)/i)?.[0]);
@@ -120,9 +120,17 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   if (await p.getByRole("dialog").count()) await click(p.getByRole("dialog").getByRole("button", { name: "Close" }).last());
 
   // a person adds a conditional document requirement (sample input instead of typing)
-  await go(`/c/${wp}/configuration`); await click(p.getByRole("tab", { name: /^Documents/ }));
+  // S5 (m5): the "Sample inputs" buttons are gone from the Documents tab; the person types the requirement.
+  await go(`/c/${wp}/configuration?area=documents`); await p.waitForURL(/\/documents/);
   await click(btn("Add a document requirement"));
-  await click(btn("Minor travelling alone (conditional): IMM 5484"));
+  { const dlg = p.getByRole("dialog");
+    await dlg.getByLabel("New document type name").fill("Custody documents or parental letter of authorization");
+    await dlg.getByLabel("Whose document").selectOption("each_dependent_child");
+    await dlg.getByLabel("Requirement").selectOption("ANSWER_CONDITIONAL");
+    await dlg.getByRole("button", { name: "Edit as JSON" }).click();
+    await dlg.getByLabel("Condition as JSON").fill(JSON.stringify({ subjectKind: "DEPENDENT", op: "eq", field: "person.travelling_alone_to_canada", value: true }));
+    await dlg.getByLabel("Why it is needed, in plain words").fill("Only for a minor travelling alone.");
+    await dlg.getByLabel("Source quote").fill("Minors travelling alone or with one parent must provide custody documents or a letter of authorization from the other non accompanying parent or a letter of authorization signed by both parents or legal guardians."); }
   await p.getByText("Condition is valid").waitFor();
   await click(p.getByRole("dialog").getByRole("button", { name: "Save to draft" }));
   { const t = await toastLike(/added to the draft/); step("A5: a person adds a conditional document requirement with a valid condition, saved as draft", /added to the draft/.test(t), t); }
@@ -131,7 +139,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("A5: the new requirement survives a reload, marked Draft and edited by a person", /Custody documents or parental letter of authorization/.test(main) && /Edited by a person/.test(main));
   await shot("A5-configuration-documents.png");
 
-  await go(`/c/${wp}/preview`);
+  await go(`/c/${wp}/preview?view=studio`);
   await p.getByLabel("Known facts", { exact: false }).selectOption("none").catch(async () => { await p.locator("select").nth(2).selectOption("none"); });
   await idle(); await click(btn("Document checklist"));
   const custody0 = await custodyStatus("Cannot tell yet");
@@ -171,14 +179,14 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await as("user-A");
 
   // guarded AI path for the added form IMM 5257
-  await go(`/c/${vv}/sources`);
+  await go(`/c/${vv}/forms`);
   await click(p.getByRole("row", { name: /IMM 5257/ }).getByRole("button", { name: "Draft with AI" }));
   await p.getByRole("dialog").getByText(LIVE ? "Live AI call" : "Stub pass only").click();
   await click(p.getByRole("dialog").getByRole("button", { name: LIVE ? "Start live AI draft" : "Run stub pass" }));
   for (let i = 0; i < 120; i++) { const d = await api(`/combinations/${vv}`); const j = d.jobs.find((x) => x.kind === "field_map"); if (j && j.status !== "RUNNING" && j.status !== "QUEUED") break; await p.waitForTimeout(2000); }
   const vvd = await api(`/combinations/${vv}`); const job = vvd.jobs.find((x) => x.kind === "field_map");
   step(`A8: IMM 5257 through the guarded AI path (${LIVE ? "live" : "stub pass"}) ends in an honest state`, job && ["COMPLETED", "BLOCKED"].includes(job.status), `${/Access to this API has been restricted/.test(job?.message ?? "") ? "known QA-8 (the AI step's child process is refused file access in this copy; not faked): " : ""}${job?.mode} ${job?.status}: ${job?.message?.slice(0, 160)}`);
-  await go(`/c/${vv}/sources`); await shot("A8-imm5257-guarded-path.png");
+  await go(`/c/${vv}/forms`); await shot("A8-imm5257-guarded-path.png");
 
   await go("/library/fields/person.date_of_birth");
   main = await p.innerText("main");
@@ -210,24 +218,30 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await level("Category", "Employer-specific work permit");
   const willBe = await p.getByText(/^Will be created as/).innerText();
   await click(btn("Create and add sources"));
-  await p.waitForURL(/\/c\/[0-9a-f-]+\/sources/, { timeout: 15000 }).catch(() => {}); const scratch = p.url().includes("/c/") ? p.url().split("/c/")[1].split("/")[0] : null;
+  await p.waitForURL(/\/c\/[0-9a-f-]+\/(sources|forms)/, { timeout: 15000 }).catch(() => {}); const scratch = p.url().includes("/c/") ? p.url().split("/c/")[1].split("/")[0] : null;
   if (scratch) await p.getByRole("heading", { level: 1, name: "Employer-specific work permit" }).waitFor({ timeout: 15000 }).catch(() => {}); // the page header arrives with the combination
   const crumbs = scratch ? await p.getByRole("navigation", { name: "Path" }).getByRole("link").allTextContents().catch(() => []) : [];
   const made = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).rows.find((r) => r.combinationId === scratch);
   step("B1: the path builder creates the program and category and the combination for that full path in one go", !!scratch && /Retail › Temporary residence › Work permits \(built from scratch\) › Employer-specific work permit/.test(willBe) && made?.path.join(" › ") === "Work permits (built from scratch) › Employer-specific work permit" && crumbs.join(" › ").includes("Work permits (built from scratch)"), `${willBe} → ${crumbs.join(" › ")}`);
-  await go(`/c/${scratch}/sources`);
-  await p.setInputFiles('input[type=file]', [path.join(OFFICIAL, "forms/imm1295e.pdf")]); await p.waitForTimeout(1500); await idle();
+  // S5 (P-118 Q2, m5): forms enter only through the Form library; the combination picks them from there.
+  await go("/library/forms");
+  await p.setInputFiles('input[type=file]', [path.join(OFFICIAL, "forms/imm1295e.pdf"), path.join(OFFICIAL, "forms/imm5476e.pdf")]);
+  await p.getByRole("list", { name: "Upload results" }).waitFor({ timeout: 60000 }); await idle();
   const junk = path.join(OUT, "not-an-official-form.pdf"); fs.writeFileSync(junk, "%PDF-1.4 not an official form\n");
   await p.setInputFiles('input[type=file]', [junk]);
-  const junkToast = await toastLike(/held for a person/); await idle();
-  await click(btn("Attach a sample file")); await click(p.getByRole("dialog").getByRole("row", { name: /IMM 5476/ }).getByRole("button", { name: "Attach" }).first()); await click(p.getByRole("dialog").getByRole("button", { name: "Done" })); // the current edition is listed first
+  await p.waitForFunction(() => /not-an-official-form\.pdf/.test(document.querySelector('[aria-label="Upload results"]')?.textContent ?? ""), null, { timeout: 60000 }).catch(() => {});
+  const junkToast = (await p.getByRole("list", { name: "Upload results" }).textContent()) ?? ""; await idle();
+  await go(`/c/${scratch}/forms`);
+  await click(btn("Add a form from the library"));
+  for (const code of ["IMM 1295", "IMM 5476"]) { await click(p.getByRole("dialog").getByRole("button", { name: `Add ${code}` })); await p.getByRole("dialog").getByText("Added").nth(code === "IMM 1295" ? 0 : 1).waitFor({ timeout: 30000 }).catch(() => {}); }
+  await click(p.getByRole("dialog").getByRole("button", { name: "Close" }).first());
   // Wait for the refreshed list (under machine load one immediate read could still show the previous list).
   // The one intake (P-51): a file that is not an approved official source is held for a person, never attached.
   for (let i = 0; i < 40; i++) { main = await p.innerText("main"); if (/Recognised: ready to read/.test(main) && /IMM 1295/.test(main) && /IMM 5476/.test(main)) break; await p.waitForTimeout(375); }
-  const heldJunk = () => api(`/intake/held?combination=${scratch}`).then((h) => h.some((x) => x.file === "not-an-official-form.pdf"));
+  const heldJunk = () => api("/intake/held").then((h) => h.some((x) => x.file === "not-an-official-form.pdf"));
   const junkAttached = () => api(`/combinations/${scratch}/attachments`).then((a) => a.some((x) => x.fileName === "not-an-official-form.pdf"));
-  step("B2: manual upload of an official form is recognised; a non-official file is held for a person, not attached; a sample attachment uses the same path", /Recognised: ready to read/.test(main) && /IMM 1295/.test(main) && /IMM 5476/.test(main) && /held for a person/.test(junkToast) && await heldJunk() && !(await junkAttached()), junkToast);
-  await shot("B2-sources.png");
+  step("B2 (S5): official forms uploaded in the Form library and picked into the combination are recognised; a non-official file is held for a person, not attached", /Recognised: ready to read/.test(main) && /IMM 1295/.test(main) && /IMM 5476/.test(main) && /held for a person/i.test(junkToast) && await heldJunk() && !(await junkAttached()), junkToast);
+  await shot("B2-forms-reading.png");
   // Read each recognised form, one click per form, waiting until the server records it as read.
   for (let i = 0; i < 4; i++) {
     const before = (await api(`/combinations/${scratch}/attachments`)).filter((a) => a.status === "READ").length; if (before >= 2) break;
@@ -281,7 +295,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const applied1295 = await afterApply();
   step("B3: IMM 1295 applied: its map and new definitions are in the draft", /applied to the draft/.test(applied1295), applied1295);
 
-  await go(`/c/${scratch}/sources`);
+  await go(`/c/${scratch}/forms`);
   await draftReplay("IMM 5476");
   main = await p.innerText("main");
   const counts = (await api(`/jobs/${p.url().split("/jobs/")[1]}`)).detail.counts;
@@ -300,7 +314,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const c5476 = draft.coverage.find((c) => c.form === "IMM 5476");
   const addrBox = c5476.boxes.find((x) => x.fact === "person.mailing_address");
   step("B5: draft preview: IMM 5476 boxes read reused definitions; new fields have no value source yet (unresolved, no placement)", !!addrBox && (c5476.counts.unresolved ?? 0) > 0, JSON.stringify(c5476.counts));
-  await click(btn("Forms and coverage")); await shot("B5-coverage-before-placement.png");
+  await go(`/c/${scratch}/preview?view=studio`); await click(btn("Forms and coverage")); await shot("B5-coverage-before-placement.png");
 
   await go("/library/sections"); await p.getByLabel("New section title").fill("Contact details"); await click(p.getByRole("button", { name: "Add", exact: true }));
   await go("/library/fields/person.email"); await p.getByLabel("Section").selectOption({ label: "Contact details" }); await p.getByLabel("Collected from").selectOption("client_questionnaire");

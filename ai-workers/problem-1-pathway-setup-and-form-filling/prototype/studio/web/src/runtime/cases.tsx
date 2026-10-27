@@ -100,7 +100,8 @@ function NewCaseDialog({ close }: { close: () => void }) {
   const releases = useApi<ReleaseRow[]>(["releases"], "/releases");
   const nav = useNavigate();
   const key = React.useMemo(() => crypto.randomUUID(), []);
-  const combos = [...new Map((releases.data ?? []).map((r) => [r.combination_id, r])).values()];
+  // QA-38: a case opens on the combination's latest release, so the list names that one (whatever order /releases uses).
+  const combos = [...(releases.data ?? []).reduce((m, r) => { const had = m.get(r.combination_id); if (!had || r.version > had.version) m.set(r.combination_id, r); return m; }, new Map<string, ReleaseRow>()).values()];
   const [f, setF] = React.useState({ combinationId: "", reference: "", principal: "", clientActor: "user-P" });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: f.combinationId || combos[0]?.combination_id, reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });

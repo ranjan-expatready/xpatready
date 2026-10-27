@@ -43,6 +43,8 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   // No forms is not a warning here: the missing list (BR-8, engine/programs.ts) says it once, with its next step.
   for (const f of s.forms) {
     for (const e of checkCondition(f.condition, types, derived)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Condition ${e}.` });
+    // S5 (challenge M1): "Only if" in words with no rule cannot be evaluated on a case, so it is never released as is.
+    if (f.status === "conditional" && !f.condition) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Turn "${f.condition_plain ?? "only if"}" into a rule: the condition is in words only, so a case cannot tell whom ${f.form_number} applies to. Open the form on the Forms tab and build the rule.` });
     if ((f.form_kind ?? "data_form") === "data_form" && !s.field_maps.some((m) => m.form_number === f.form_number)) out.push({ level: "warning", where: "Forms", item: f.form_number, message: "No field map yet: the form cannot be filled." });
   }
   const unplaced = new Map<string, number>();

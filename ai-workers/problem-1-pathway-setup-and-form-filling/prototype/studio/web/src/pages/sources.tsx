@@ -1,50 +1,38 @@
+// S5 Forms tab, "Reading and matching": each form attached to the combination is read (rules, US$0), then AI matches its
+// form fields to shared fields and a person reviews the proposals. Slice 1 keeps this existing pipeline on the Forms
+// tab; the Sources tab, its desktop upload and "Attach a sample file" are gone (P-118 Q2: forms enter only through the
+// Form library). Slice 3 turns it into the setup strip of the form finder (W1-07 run component).
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { FileUp, FolderOpen, Play, Recycle, ScanLine, Sparkles } from "lucide-react";
+import { Play, Recycle, ScanLine, Sparkles } from "lucide-react";
 import { api, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ModePill, StatusPill } from "@/pages/combination";
+import { fmtWhen } from "@/components/status";
 import { useQueryClient } from "@tanstack/react-query";
-import { IntakeResults, type IntakeResult } from "@/components/forms";
 
 const STATUS: Record<string, [string, string]> = {
   HELD: ["warn", "Not an approved source: not sent to AI"], RECOGNISED: ["info", "Recognised: ready to read"], READ: ["info", "Read: ready for AI drafting"], READ_FAILED: ["danger", "Could not be read"],
   DRAFTED: ["ai", "AI draft ready to review"], IN_LIBRARY: ["ok", "In the library"], ATTACHED: ["neutral", "Source document"],
 };
 
-export function SourcesTab({ d }: { d: any }) {
+export function ReadingSection({ d }: { d: any }) {
   const id = d.combination.id;
   const actorId = useActorId();
   const session = useApi<any>(["session", actorId], "/session");
   const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
   const qc = useQueryClient();
   const toast = useToast();
-  const [sample, setSample] = React.useState(false);
   const [draftFor, setDraftFor] = React.useState<any>(null);
-  const [drag, setDrag] = React.useState(false);
-  const [uploading, setUploading] = React.useState(false);
-  const fileRef = React.useRef<HTMLInputElement>(null);
   const invalidate = () => { void qc.invalidateQueries({ queryKey: ["combination", id] }); };
-  const [results, setResults] = React.useState<IntakeResult[] | null>(null);
-  const upload = useSourceUpload(id, setUploading, setResults);
   const read = useAction((aid: string) => api(`/attachments/${aid}/read`, { method: "POST" }), { success: (r: any) => `Form read: ${r.summary.entry_fields_bound} form fields`, invalidate: [["combination", id]] });
   const reuse = useAction((aid: string) => api(`/attachments/${aid}/reuse`, { method: "POST", json: {} }), { success: (r: any) => `${r.form} added from the library; no AI drafting needed`, invalidate: [["combination", id], ["preview"]] });
   const jobsFor = (aid: string) => d.jobs.filter((j: any) => j.attachmentId === aid);
   return (
-    <div className="space-y-5">
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); void upload(e.dataTransfer.files); }}
-        className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border-2 border-dashed px-5 py-4 ${drag ? "border-primary bg-primary/5" : "border-border bg-surface-raised"}`}>
-        <div className="flex items-center gap-3"><FileUp className="size-6 text-text-muted" /><div><p className="text-sm font-medium">Attach official forms, checklists and guides</p><p className="text-xs text-text-muted">Drop one or many files here or choose them. Each goes through the one form intake: code, edition and kind are read from the file; a new edition of a form the library has is held for review, never attached silently. Only files whose content matches the approved official library are read or sent to the AI.</p></div></div>
-        {canAuthor ? <div className="flex gap-2">
-          <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { void upload(e.target.files); e.target.value = ""; }} accept=".pdf,.html" aria-label="Choose files" />
-          <Button variant="secondary" onClick={() => fileRef.current?.click()} busy={uploading}><FolderOpen /> Choose files</Button>
-          <Button variant="secondary" onClick={() => setSample(true)}><FileUp /> Attach a sample file</Button>
-        </div> : <p className="text-sm text-text-muted">A configuration author attaches sources and starts drafting.</p>}
-      </div>
-      {results ? <IntakeResults results={results} /> : null}
-      {!d.attachments.length ? <EmptyState title="No sources attached" description="Attach the program's official forms and guides. Each recognised form can be read and drafted with AI." /> : (
+    <section aria-labelledby="reading" className="space-y-3" data-reading>
+      <div><h2 id="reading" className="font-semibold">Reading and matching</h2><p className="text-sm text-text-muted">Each form is read by rules (no AI call), then AI matches its form fields to shared fields and a person reviews what it proposes.{canAuthor ? "" : " A configuration author starts these steps."}</p></div>
+      {!d.attachments.length ? <EmptyState title="Nothing to read yet" description="Add a form from the library: it is read here, then matched to shared fields with AI." /> : (
         <Table head={["Source", "Status and steps", "Next"]}>
           {d.attachments.map((a: any) => {
             const [tone, label] = STATUS[a.status] ?? ["neutral", a.status];
@@ -52,8 +40,8 @@ export function SourcesTab({ d }: { d: any }) {
             const ai = jobs.find((j: any) => j.kind === "field_map" && ["COMPLETED", "RUNNING", "QUEUED", "APPLIED"].includes(j.status));
             return (
               <tr key={a.id}>
-                <td className="min-w-48"><p className="font-medium">{a.edition ?? a.fileName}</p><p className="text-xs text-text-muted">{a.kind} · {a.fileName} · {(a.bytes / 1024).toFixed(0)} KB · {a.uploadedVia === "SAMPLE" ? "sample button" : "uploaded by hand"}</p><a className="text-xs text-text-link underline" href={`/api/attachments/${a.id}/file`}>Open file</a></td>
-                <td className="min-w-64"><Pill tone={tone}>{label}</Pill><p className="mt-1 max-w-lg text-xs text-text-muted">{a.statusDetail}</p>{jobs.length ? <div className="mt-1.5">{jobs.slice(0, 3).map((j: any) => <div key={j.id} className="mb-1 flex flex-wrap items-center gap-1 text-xs">{j.kind === "field_map" ? "AI draft" : "Read"} <ModePill mode={j.mode} /><StatusPill status={j.status} />{j.kind === "field_map" && j.status !== "RUNNING" ? <Link className="text-text-link underline" to={`/c/${id}/jobs/${j.id}`}>details</Link> : null}</div>)}</div> : null}</td>
+                <td className="min-w-48"><p className="font-medium">{a.edition ?? a.fileName}</p><p className="text-xs text-text-muted">{a.kind} · {a.fileName} · {(a.bytes / 1024).toFixed(0)} KB · {a.uploadedVia === "SAMPLE" ? "from the sample" : "from the Form library"}</p><a className="text-xs text-text-link underline" href={`/api/attachments/${a.id}/file`}>Open file</a></td>
+                <td className="min-w-64"><Pill tone={tone}>{label}</Pill><p className="mt-1 max-w-lg text-xs text-text-muted">{a.statusDetail}</p>{jobs.length ? <div className="mt-1.5">{jobs.slice(0, 3).map((j: any) => <div key={j.id} className="mb-1 flex flex-wrap items-center gap-1 text-xs">{j.kind === "field_map" ? "AI draft" : "Read"} <ModePill mode={j.mode} /><StatusPill status={j.status} /><span className="text-text-muted">{fmtWhen(j.startedAt)}</span>{j.kind === "field_map" && j.status !== "RUNNING" ? <Link className="text-text-link underline" to={`/c/${id}/jobs/${j.id}`}>details</Link> : null}</div>)}</div> : null}</td>
                 <td className="w-px">{!canAuthor ? null : <>
                   {a.status === "RECOGNISED" || a.status === "READ_FAILED" ? <Button size="sm" onClick={() => read.mutate(a.id)} busy={read.isPending && read.variables === a.id}><ScanLine /> Read form</Button> : null}
                   {a.status === "READ" || (a.status === "DRAFTED" && !ai) ? <Button size="sm" onClick={() => setDraftFor(a)}><Sparkles /> Draft with AI</Button> : null}
@@ -68,9 +56,8 @@ export function SourcesTab({ d }: { d: any }) {
       )}
       {d.jobs.some((j: any) => j.status === "RUNNING" || j.status === "QUEUED") ? <Notice tone="ai" title="A step is running">{d.jobs.find((j: any) => j.status === "RUNNING" || j.status === "QUEUED").message} This page refreshes by itself; you can keep working elsewhere.</Notice> : null}
       {d.jobs.filter((j: any) => j.status === "BLOCKED" || j.status === "FAILED").slice(0, 1).map((j: any) => <Notice key={j.id} tone={j.status === "BLOCKED" ? "warn" : "danger"} title={j.status === "BLOCKED" ? "The AI step is blocked" : "A step failed"}>{j.message}</Notice>)}
-      {sample ? <SampleDialog id={id} onClose={() => { setSample(false); invalidate(); }} attached={d.attachments.map((a: any) => a.sha256)} /> : null}
       {draftFor ? <DraftDialog a={draftFor} onClose={() => { setDraftFor(null); invalidate(); }} /> : null}
-    </div>
+    </section>
   );
 }
 
@@ -84,36 +71,6 @@ function ReuseButton({ a, d, onReuse, busy }: { a: any; d: any; onReuse: () => v
 
 /** One file of the official library, as GET /official-library lists it. */
 type OfficialFile = { file: string; edition: string; kind: string; combination: string; sha256: string };
-
-function SampleDialog({ id, onClose, attached }: { id: string; onClose: () => void; attached: string[] }) {
-  const lib = useApi<OfficialFile[]>(["official"], "/official-library");
-  const toast = useToast();
-  const [busy, setBusy] = React.useState<string | null>(null);
-  // Scout SC-3: a kind filter and a search by code or title; the internal approval record ids (D229, D257) are not shown,
-  // since every file listed here is on the approved official list (by checksum) and that is what a person needs to know.
-  const [kind, setKind] = React.useState(""), [find, setFind] = React.useState("");
-  const kinds = [...new Set((lib.data ?? []).map((f) => f.kind))].sort();
-  const shown = (lib.data ?? []).filter((f) => (!kind || f.kind === kind) && (!find.trim() || `${f.edition} ${f.file}`.toLowerCase().includes(find.trim().toLowerCase())));
-  const attach = async (f: OfficialFile) => {
-    setBusy(f.file);
-    try { const r = await api(`/combinations/${id}/attachments/sample`, { method: "POST", json: { officialFile: f.file } }); toast.push({ tone: ["held", "new_edition_held", "older_edition_held", "refused", "failed"].includes(r.outcome) ? "danger" : "ok", text: `${f.edition}: ${r.message}` }); }
-    catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); }
-    setBusy(null);
-  };
-  return (
-    <Dialog wide open onOpenChange={(o) => !o && onClose()} title="Attach a sample file" description="Stands in for choosing a file from your computer: the file goes through the same upload, recognition and status handling." footer={<Button onClick={onClose}>Done</Button>}>
-      <p className="mb-3 text-sm text-text-muted">Every file here is on the approved official source list: its checksum matches the copy taken from the IRCC page.</p>
-      <div className="mb-3 flex flex-wrap items-end gap-3">
-        <Field label="Kind" className="w-48"><Select aria-label="Kind" value={kind} onChange={(e) => setKind(e.target.value)}><option value="">All kinds</option>{kinds.map((k) => <option key={k} value={k}>{k}</option>)}</Select></Field>
-        <Field label="Find" className="min-w-48 flex-1"><Input aria-label="Find a form code or title" type="search" placeholder="IMM 5257" value={find} onChange={(e) => setFind(e.target.value)} /></Field>
-      </div>
-      {!shown.length && lib.data ? <p className="text-sm text-text-muted">No official file matches: clear the filter.</p> : null}
-      <Table dense head={["Official file", "Kind", ""]}>
-        {shown.map((f) => <tr key={f.file}><td><p className="font-medium">{f.edition}</p><p className="text-xs text-text-muted">{f.combination}</p></td><td className="text-xs">{f.kind}</td><td>{attached.includes(f.sha256) ? <Pill tone="ok">Attached</Pill> : <Button size="sm" variant="secondary" busy={busy === f.file} onClick={() => attach(f)}>Attach</Button>}</td></tr>)}
-      </Table>
-    </Dialog>
-  );
-}
 
 type SavedRun = { file: string; run_id: string; valid: boolean; recheckable: boolean; rechecked: boolean; at?: string; cost_usd?: number | null };
 
@@ -143,24 +100,4 @@ function DraftDialog({ a, onClose }: { a: any; onClose: () => void }) {
       </div>
     </Dialog>
   );
-}
-
-/** The one source upload used by Sources and forms and by the Documents area's checklist entry (D283): every file goes
- *  through the one form intake (P-51) in one request, with one result per file. Official setup sources only; never case
- *  or client evidence. */
-export function useSourceUpload(id: string, setUploading: (b: boolean) => void, onResults?: (r: IntakeResult[]) => void) {
-  const qc = useQueryClient();
-  const toast = useToast();
-  return async (files: FileList | null) => {
-    if (!files?.length) return;
-    setUploading(true);
-    const fd = new FormData(); for (const f of Array.from(files)) fd.append("files", f);
-    try {
-      const r = await api(`/combinations/${id}/attachments`, { method: "POST", body: fd });
-      onResults?.(r.results);
-      const s = r.summary;
-      toast.push({ tone: s.held || s.refused ? "danger" : "ok", text: [s.added && `${s.added} added to the library`, s.in_library && `${s.in_library} already in the library`, s.attached && `${s.attached} guide${s.attached === 1 ? "" : "s"} attached`, s.held && `${s.held} held for a person`, s.refused && `${s.refused} refused`].filter(Boolean).join(" · ") });
-    } catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); }
-    setUploading(false); void qc.invalidateQueries();
-  };
 }

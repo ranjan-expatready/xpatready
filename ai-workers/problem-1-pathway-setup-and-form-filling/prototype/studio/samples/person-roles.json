@@ -1,0 +1,11 @@
+{
+  "_note": "S5 (challenge M3, P-119): the six built-in starting person roles, created with the workspace and kept by Reset (founder, P-108 note). Every value is Sample until the immigration expert confirms. The migration 20261027160000_s5_person_roles inserts the same rows for workspaces that already exist; tests/check_s5_slice1.ts checks they agree.",
+  "roles": [
+    { "key": "principal", "label": "Principal applicant", "meaning": "The person the application is about; exactly one on every case.", "takesPartInCase": true, "mayBeApplicant": true },
+    { "key": "spouse_or_partner", "label": "Spouse or partner", "meaning": "The principal applicant's spouse or common-law partner, when they are on the case.", "takesPartInCase": true, "mayBeApplicant": true },
+    { "key": "child", "label": "Child", "meaning": "A dependent child of the principal applicant; under 18 the principal answers for them.", "takesPartInCase": true, "mayBeApplicant": true },
+    { "key": "sponsor", "label": "Sponsor", "meaning": "The person in Canada who sponsors the principal applicant; on the case, never an applicant.", "takesPartInCase": true, "mayBeApplicant": false },
+    { "key": "representative", "label": "Representative", "meaning": "The person who represents the applicants (IMM 5476); on the case, never an applicant.", "takesPartInCase": true, "mayBeApplicant": false },
+    { "key": "parent", "label": "Parent", "meaning": "A parent named on a form (for example IMM 5707); described on forms only, never a person on the case.", "takesPartInCase": false, "mayBeApplicant": false }
+  ]
+}

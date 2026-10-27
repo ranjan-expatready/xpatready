@@ -61,31 +61,16 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   ok("setup: this check's own off-list copy (check data, not the demo) is approved by the second person and attached", checkApproved.status < 300 && sql(`select count(*) from source_attachment a join approved_source s on s.sha256 = a.sha256 where a.combination_id='${vv}'`) === "1", checkApproved.body?.message ?? checkApproved.status);
   ok("C2.6: DEMO row 7 the checklist drafting path ran its stub pass (US$0, nothing proposed until the founder's live run)", !!r.body.checklist_job_id && sql(`select kind || '|' || mode || '|' || cost_usd from drafting_job where id='${r.body.checklist_job_id}'`) === "checklist_draft|STUB|0", sql(`select kind || '|' || mode from drafting_job where id='${r.body.checklist_job_id}'`));
   ok("C1.6: P-102 the seed leaves IMM 5257 filed as a PDF upload on the Visitor visa, with no portal", sql(`select channel from combination_form where combination_id='${vv}' and lineage_key='IMM 5257' order by version desc limit 1`) === "PDF_UPLOAD" && sql(`select coalesce(portal_key,'') from combination where id='${vv}'`) === "");
-  // Scout SC-3: the sample-file picker on the combination's sources tab.
+  // Scout SC-3: the sample-file picker was on the combination's Sources tab (removed by S5, P-118 Q3).
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   try {
     const p = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await p.goto(`http://localhost:${PORT}/`); await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
-    await p.goto(`http://localhost:${PORT}/c/${vv}/sources`);
-    await p.getByRole("button", { name: "Attach a sample file" }).click();
-    const dlg = p.getByRole("dialog");
-    await dlg.getByText("Every file here is on the approved official source list").waitFor();
-    const rows = () => dlg.locator("tbody tr");
-    const all = await rows().count();
-    const text = await dlg.innerText();
-    ok("SC-3 C2.1: the picker says every file is on the approved official list and shows no internal approval id (D229, D257) or Approved column", !/\bD2\d\d\b/.test(text) && !/\bApproved\b/.test(await dlg.locator("thead").innerText()) && all > 10, all);
-    await dlg.getByRole("combobox", { name: "Kind" }).selectOption("Document checklist");
-    const kinds = await dlg.locator("tbody tr td:nth-child(2)").allInnerTexts();
-    ok("SC-3: the kind filter shows document checklists only", kinds.length > 0 && kinds.length < all && kinds.every((k) => /checklist/i.test(k)), kinds);
-    await dlg.getByRole("combobox", { name: "Kind" }).selectOption("");
-    await dlg.getByRole("searchbox", { name: "Find a form code or title" }).fill("imm 5257");
-    const found = await dlg.locator("tbody tr td:first-child p.font-medium").allInnerTexts();
-    ok("SC-3: a search by form code (any case) finds that form's files only", found.length > 0 && found.every((f) => /IMM 5257/.test(f)), found);
-    await dlg.getByRole("searchbox", { name: "Find a form code or title" }).fill("nothing like this");
-    ok("SC-3 fail: a search that matches nothing says so, with no rows", (await rows().count()) === 0 && /No official file matches/.test(await dlg.innerText()));
-    // Review-3 Minor 4: the approved copy (this check's own) is read on this computer, then its draft dialog starts on the stub pass
-    // and says why the paid call is closed for it.
-    await p.keyboard.press("Escape");
+    // S5 (P-118 Q3, m5): the sample-file picker left the combination with its Sources tab; the old address opens Forms,
+    // where each attached form is still read and drafted.
+    await p.goto(`http://localhost:${PORT}/c/${vv}/sources`); await p.waitForURL(/\/forms$/);
+    await p.locator("[data-reading]").waitFor();
+    ok("SC-3 → S5 m5: no 'Attach a sample file' on the combination; the old Sources address opens Forms with reading and matching", await p.getByRole("button", { name: "Attach a sample file" }).count() === 0 && /\/forms$/.test(p.url()));
     const row = p.locator("tr", { hasText: "imm1344e-check-copy.pdf" }).first(); // the row's status words change once it is read
     await row.getByRole("button", { name: "Read form" }).click();
     await row.getByRole("button", { name: "Draft with AI" }).click();

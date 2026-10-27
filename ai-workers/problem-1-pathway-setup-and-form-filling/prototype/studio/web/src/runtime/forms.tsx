@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, getActor, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Notice, Pill } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LOCK_KINDS, notReady, type CaseForm, type FormCopy } from "../../../contracts/runtime";
+import { LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../../contracts/runtime";
 import { noRetryOnRefusal } from "./questionnaire";
 
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -17,7 +17,7 @@ const busy = (c: FormCopy) => c.status === "QUEUED" || c.status === "RUNNING";
 /** The forms of one case. Under the questionnaire view's query key, so any answer change refreshes it too. */
 export function FormsPanel({ caseId }: { caseId: string }) {
   const actor = useActorId();
-  const q = useApi<{ forms: CaseForm[] }>(["runtime", "view", caseId, "forms", actor], `/runtime/cases/${caseId}/forms`, {
+  const q = useApi<{ forms: CaseForm[]; online?: CaseOnlineForm[] }>(["runtime", "view", caseId, "forms", actor], `/runtime/cases/${caseId}/forms`, {
     retry: noRetryOnRefusal, refetchInterval: (query) => ((query.state.data as { forms: CaseForm[] } | undefined)?.forms.some((f) => f.copies.some(busy)) ? 1000 : false),
   });
   return (
@@ -28,9 +28,22 @@ export function FormsPanel({ caseId }: { caseId: string }) {
       </header>
       {q.isLoading ? <div className="p-4"><Skeleton className="h-16 w-full" /></div>
         : q.isError ? <div className="p-4"><Notice tone="danger" title="The forms could not be loaded">{(q.error as Error).message}</Notice></div>
-        : !q.data!.forms.length ? <p className="px-4 py-3 text-sm text-text-muted">No PDF form applies to anyone on this case yet.</p>
-        : <ul className="divide-y divide-border">{q.data!.forms.map((f) => <FormRow key={`${f.form}|${f.subject_id}`} caseId={caseId} f={f} />)}</ul>}
+        : !q.data!.forms.length && !q.data!.online?.length ? <p className="px-4 py-3 text-sm text-text-muted">No form applies to anyone on this case yet.</p>
+        : <ul className="divide-y divide-border">
+            {q.data!.forms.map((f) => <FormRow key={`${f.form}|${f.subject_id}`} caseId={caseId} f={f} />)}
+            {(q.data!.online ?? []).map((f) => <OnlineRow key={f.form} f={f} />)}
+          </ul>}
     </section>
+  );
+}
+
+/** QA-40: a form filed Online has no PDF copy; it is named with its people, so it is never silently missing. */
+function OnlineRow({ f }: { f: CaseOnlineForm }) {
+  return (
+    <li className="px-4 py-3" data-online-form={f.form}>
+      <h3 className="text-sm font-semibold"><span className="mono">{f.form}</span> · filed Online <Pill tone="info">No PDF copy</Pill></h3>
+      <p className="text-[13px] text-text-muted">{f.title}, for {f.people.join(", ")}. Filed online: the case officer types it into the portal from the answer sheet; the browser extension fills it in a later wave.</p>
+    </li>
   );
 }
 

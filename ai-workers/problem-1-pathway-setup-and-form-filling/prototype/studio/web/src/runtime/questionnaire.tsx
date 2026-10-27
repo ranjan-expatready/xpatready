@@ -642,3 +642,33 @@ function EditDialog({ caseId, q, row, close }: { caseId: string; q: Question; ro
     </Dialog>
   );
 }
+
+// ------------------------------------------------------------------ S5 Preview (one Sample family, never saved)
+
+/** One person's questionnaire of a Sample family, from the runtime's own case view (engine/runtime/preview.ts): what the
+ *  client sees, with the same fields (typing tries them; nothing is kept). */
+export function PreviewQuestions({ view, person }: { view: QuestionnaireView; person: string }) {
+  const [drafts, setDrafts] = React.useState<Record<string, unknown>>({});
+  const parts = view.sections.filter((s) => s.subjectId === person || (person === "principal" && s.subjectId === "case"));
+  if (!parts.length) return <Notice tone="info" title="Nothing to ask">This person answers nothing in the client's questionnaire for this family.</Notice>;
+  return (
+    <div className="space-y-3" data-preview-questions>
+      {parts.map((s) => {
+        const asked = s.questions.filter((q) => !q.hidden), single = asked.filter((q) => !q.group), grouped = asked.filter((q) => q.group);
+        return (
+          <section key={`${s.subjectId}|${s.section}`} aria-labelledby={`pv-${s.subjectId}-${s.section}`} className="overflow-hidden rounded-xl border border-border bg-surface-raised">
+            <header className="border-b border-border px-4 py-2.5">
+              <h3 id={`pv-${s.subjectId}-${s.section}`} className="text-sm font-semibold">{s.title}</h3>
+              <p className="text-xs text-text-muted">{s.about_label === "The application" ? "once for the application" : `for ${s.about_label}`} · {asked.length} question{asked.length === 1 ? "" : "s"}{s.questions.length > asked.length ? ` · ${s.questions.length - asked.length} hidden by a rule` : ""}</p>
+            </header>
+            <div className="space-y-3 px-4 py-3">
+              {single.map((q) => <QuestionField key={q.fact} q={q} draft={drafts[keyOf(q)]} onChange={(d) => setDrafts((x) => ({ ...x, [keyOf(q)]: d }))} errors={[]} idBase={`pv-${s.subjectId}-${q.fact}`} compact />)}
+              {grouped.length ? <div className="rounded-lg border border-dashed border-border px-3 py-2 text-[13px]"><p className="font-medium">{groupLabel(s.title)}</p><p className="text-xs text-text-muted">Each entry asks: {grouped.map((q) => q.label).join(", ")}</p><p className="mt-1 text-xs text-text-muted">The client adds entries here, or says none apply.</p></div> : null}
+            </div>
+          </section>
+        );
+      })}
+      <p className="text-center text-xs text-text-muted">Only questions the client fills. Typing here tries the fields; nothing is saved.</p>
+    </div>
+  );
+}

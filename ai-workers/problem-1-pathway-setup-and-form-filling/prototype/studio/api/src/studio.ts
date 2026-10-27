@@ -9,12 +9,14 @@ import { slug } from "../../engine/import.ts";
 import { checkCondition, diff, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
-import { cleanLabel, normalizeLabel } from "../../contracts/programs.ts";
+import { cleanLabel, normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
+import { FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
+import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 
 const VALUE_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
 const COLLECTED = ["client_questionnaire", "verified_document", "staff_working_view", "profile_record", "existing_record"];
-export const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative"];
+export const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative", "sponsor"];
 
 /** Business level names over the team's stored node kinds (see createNode). */
 export const LEVEL: Record<string, { name: string; parent: string | null }> = { PATHWAY: { name: "Pathway", parent: null }, PROGRAM: { name: "Program", parent: "PATHWAY" }, STREAM: { name: "Category", parent: "PROGRAM" }, CATEGORY: { name: "Sub-category", parent: "STREAM" } };
@@ -32,6 +34,9 @@ function gateOf(sub: ReviewSubmission | null, signed: Set<string>, sha256: strin
   if (unsigned) return { ok: false, why: `${unsigned} change${unsigned > 1 ? "s need" : " needs"} the content reviewer's SME sign-off.` };
   return { ok: true, sub };
 }
+
+/** A role's label as this combination's list shows it. */
+const participantsLabel = (list: { role: string; label?: string }[], role: string) => list.find((p) => p.role === role)?.label ?? role.replace(/_/g, " ");
 
 @Injectable()
 export class Studio {
@@ -137,7 +142,7 @@ export class Studio {
     if (await this.db.programDef.count({ where: { workspaceId, parentNodeKey: node!.programNodeKey } })) fail(`"${node!.label}" has sub-categories: choose one of them; each is its own full combination.`);
     const existing = await this.db.combination.findFirst({ where: { programDefId: node!.id } });
     if (existing) throw new HttpException({ statusCode: 409, message: `This full combination already has its configuration ("${existing.label}"). Open it instead of creating another (one row per full combination, SA-1B-55).`, existingId: existing.id }, HttpStatus.CONFLICT);
-    const participants = this.checkParticipants(b.participants);
+    const participants = await this.checkParticipants(workspaceId, b.participants);
     const label = (b.label ?? "").trim() || node!.label;
     const key = b.key ?? node!.programNodeKey;
     const c = await this.db.combination.create({ data: { workspaceId, programDefId: node!.id, combinationKey: key, label, description: b.description ?? null, participants, sourceBasis: b.sourceBasis ?? node!.sourceBasis, basisNote: b.basisNote ?? null, createdBy: actor.id } })
@@ -147,17 +152,92 @@ export class Studio {
   }
 
   /** Who a row's lines can name (SA-1B-57 "who"): roles and how many, used by the per-person preview. Family shape is
-   *  applicability on one row, not a separate row (grounding audit finding 1). */
-  checkParticipants(list: any[]) {
+   *  applicability on one row, not a separate row (grounding audit finding 1). S5 (M3): the roles are the shared
+   *  library's person roles, never a list in code; older callers (New combination, the sample loader) are not strict, so
+   *  an applicant tick on a role that may not be an applicant is set to "no" rather than refused. */
+  async checkParticipants(workspaceId: string, list: any[], strict = false) {
     if (!Array.isArray(list) || !list.length) fail("Add at least the principal applicant.");
-    const roles = new Set(["principal", "spouse_or_partner", "child", "representative", "parent"]);
-    if (!list.some((p) => p.role === "principal")) fail("A configuration row needs a principal applicant role.");
-    return list.map((p) => {
-      if (!roles.has(p.role)) fail(`Unknown participant role ${p.role}.`);
-      const min = Number(p.min ?? 0), max = Number(p.max ?? 1);
-      if (min < 0 || max < min || max > 9) fail(`${p.label ?? p.role}: the number of people must be between 0 and 9, minimum no more than maximum.`);
-      return { role: p.role, label: String(p.label ?? p.role).slice(0, 60), min, max, preview: Math.max(min, Math.min(max, Number(p.preview ?? (min || 1)))), applies: p.role === "representative" ? false : p.applies !== false };
-    });
+    const lines = list.map((p) => ({ ...p, min: Number(p.min ?? 0), max: Number(p.max ?? 1), applies: p.applies !== false }));
+    if (lines.some((p) => !Number.isInteger(p.min) || !Number.isInteger(p.max) || p.min < 0 || p.max > 9)) fail("The number of people must be a whole number between 0 and 9, minimum no more than maximum.");
+    const { errors, lines: ok } = checkPeople(lines, await this.personRoles(workspaceId), strict);
+    if (errors.length) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: errors[0].message, errors }, HttpStatus.BAD_REQUEST);
+    return ok.map((p) => ({ role: p.role, label: String(p.label).slice(0, 60), min: p.min, max: p.max, preview: Math.max(p.min, Math.min(p.max, Number(p.preview ?? (p.min || 1)))), applies: p.applies, ...(p.quote ? { quote: p.quote } : {}), ...(p.origin ? { origin: p.origin } : {}) }));
+  }
+
+  /** The shared library's person roles (M3; GET /library/roles), in display order. */
+  async personRoles(workspaceId?: string): Promise<PersonRoleView[]> {
+    const ws = workspaceId ?? await this.ws.id();
+    const rows = await this.db.personRole.findMany({ where: { workspaceId: ws }, orderBy: [{ displayOrder: "asc" }, { label: "asc" }] });
+    return rows.map((r) => ({ key: r.roleKey, label: r.label, meaning: r.meaning, takesPartInCase: r.takesPartInCase, mayBeApplicant: r.mayBeApplicant, basis: r.basis, builtIn: r.builtIn, retired: !!r.retiredAt }));
+  }
+
+  /** "Who can be in this application" (S5, M4): saved only at the version read (a stale save is a 409 naming who saved
+   *  and when); a save that leaves form lines naming nobody asks first; every save is one audit row holding the list
+   *  before it, which Undo restores. */
+  async savePeople(actor: Actor, id: string, body: unknown) {
+    need(actor, "author");
+    const parsed = PeopleBody.safeParse(body);
+    if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
+    const b = parsed.data;
+    const c = await this.db.combination.findUnique({ where: { id } });
+    if (!c) fail("That combination does not exist (it may have been removed by a reset).", HttpStatus.NOT_FOUND);
+    if (c!.participantsVersion !== b.version) await this.stalePeople(c!);
+    const participants = await this.checkParticipants(c!.workspaceId, b.participants, true);
+    if (!b.confirmRemove) {
+      const lines = (await this.currentLines(id)).map((l) => ({ form: l.form.formKey, who: l.who }));
+      const hit = linesNamingRemoved(c!.participants as any[], participants, lines);
+      if (hit.length) throw new HttpException({ type: "https://expatready.local/problems/confirm", title: "Confirm the change", status: 409, detail: `${hit.map((h) => h.form).join(", ")} ${hit.length === 1 ? "names" : "name"} a person you removed (${[...new Set(hit.flatMap((h) => h.roles))].map((r) => participantsLabel(c!.participants as any[], r)).join(", ")}). Save anyway, or keep the person.`, confirm: true, lines: hit }, HttpStatus.CONFLICT);
+    }
+    return this.writePeople(actor, c!, participants, "updated");
+  }
+
+  /** Undo the last save of "Who can be in this application", while nothing was saved after it. */
+  async undoPeople(actor: Actor, id: string, body: unknown) {
+    need(actor, "author");
+    const parsed = UndoBody.safeParse(body);
+    if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
+    const c = await this.db.combination.findUnique({ where: { id } });
+    if (!c) fail("That combination does not exist (it may have been removed by a reset).", HttpStatus.NOT_FOUND);
+    if (c!.participantsVersion !== parsed.data.version) await this.stalePeople(c!);
+    const last = await this.lastPeopleSave(id);
+    if (!last || last.action !== "updated" || (last.detail as any)?.version !== c!.participantsVersion) fail("There is nothing to undo: the last change to who can be in this application was already undone, or was not made on this screen.", HttpStatus.CONFLICT);
+    return this.writePeople(actor, c!, (last!.detail as any).before, "undone");
+  }
+
+  /** When "Who can be in this application" was last saved, by whom, and whether Undo is offered. */
+  async peopleState(id: string) {
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id } });
+    const last = await this.lastPeopleSave(id);
+    const by = [...ACTORS].find((a) => a.id === (c.participantsBy ?? last?.actor))?.name ?? null;
+    return { version: c.participantsVersion, savedBy: c.participantsBy ? by : null, savedAt: c.participantsBy && last ? last.at.toISOString() : null, canUndo: !!last && last.action === "updated" && (last.detail as any)?.version === c.participantsVersion };
+  }
+
+  private async writePeople(actor: Actor, c: { id: string; workspaceId: string; combinationKey: string; label: string; participants: any; participantsVersion: number }, participants: any[], action: "updated" | "undone") {
+    const version = c.participantsVersion + 1;
+    const done = await this.db.combination.updateMany({ where: { id: c.id, participantsVersion: c.participantsVersion }, data: { participants, participantsVersion: version, participantsBy: actor.id } });
+    if (!done.count) await this.stalePeople(await this.db.combination.findUniqueOrThrow({ where: { id: c.id } }));
+    const words = participants.map((p) => `${p.label} (${p.min === p.max ? p.min : `${p.min}–${p.max}`}${p.applies ? ", applicant" : ""})`).join(", ");
+    await this.audit.log(c.workspaceId, actor.id, action, "people", c.combinationKey, `${actor.name} ${action === "undone" ? "undid the last change to" : "changed"} who can be in "${c.label}": ${words}`, { before: c.participants, after: participants, version }, c.id);
+    return { participants, version };
+  }
+
+  private lastPeopleSave(id: string) {
+    return this.db.auditEvent.findFirst({ where: { combinationId: id, entity: "people" }, orderBy: { at: "desc" } });
+  }
+
+  /** 409 with who saved last and when, and their version (STANDARDS §4). */
+  private async stalePeople(c: { id: string; participants: any; participantsVersion: number; participantsBy: string | null }): Promise<never> {
+    const last = await this.lastPeopleSave(c.id);
+    const who = [...ACTORS].find((a) => a.id === (c.participantsBy ?? last?.actor))?.name ?? "Someone else";
+    const when = last ? `at ${last.at.toISOString().slice(11, 16)} UTC` : "a moment ago";
+    throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed by someone else", status: 409, detail: `${who} changed who can be in this application ${when}. Reload their version, then make your change again.`, current: { participants: c.participants, version: c.participantsVersion } }, HttpStatus.CONFLICT);
+  }
+
+  /** The newest live row of each form line of a combination's draft. */
+  private async currentLines(combinationId: string) {
+    const rows = await this.db.combinationForm.findMany({ where: { combinationId }, include: { form: true }, orderBy: { version: "desc" } });
+    const seen = new Set<string>();
+    return rows.filter((r) => { if (seen.has(r.lineageKey)) return false; seen.add(r.lineageKey); return r.status !== "RETIRED"; });
   }
 
   async updateCombination(actor: Actor, id: string, b: { label?: string; description?: string; participants?: any[]; expectedLabel?: string; allowedLocations?: string[] }) {
@@ -174,7 +254,8 @@ export class Studio {
     const data: any = {};
     if (b.label !== undefined) data.label = b.label.trim() || fail("The name cannot be empty.");
     if (b.description !== undefined) data.description = b.description;
-    if (b.participants) data.participants = this.checkParticipants(b.participants);
+    // S5 (M4): people saved here too move the version on, so the editor's guard holds.
+    if (b.participants) { data.participants = await this.checkParticipants(c.workspaceId, b.participants); data.participantsVersion = c.participantsVersion + 1; data.participantsBy = actor.id; }
     const done = await this.db.combination.updateMany({ where: { id, label: c.label }, data });
     if (!done.count) fail("The combination changed while saving; reload and try again.", HttpStatus.CONFLICT);
     const u = await this.db.combination.findUniqueOrThrow({ where: { id } });
@@ -456,7 +537,7 @@ export class Studio {
     return row;
   }
 
-  async saveForm(actor: Actor, combinationId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean; baseRevision?: string }) {
+  async saveForm(actor: Actor, combinationId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean; baseRevision?: string; minAge?: number | null; signedBy?: string | null }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const rows = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: formKey } });
@@ -467,6 +548,13 @@ export class Studio {
     const changes: any = {};
     if (b.retire) changes.status = "RETIRED";
     if (b.who) { if (!WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
+    // S5: minimum age and who signs (contracts/workspace.ts); field errors as Problem Details.
+    const line = FormLineEdit.safeParse({ minAge: b.minAge, signedBy: b.signedBy });
+    if (!line.success) throw new HttpException(problemFromZod(line.error), HttpStatus.BAD_REQUEST);
+    for (const k of ["minAge", "signedBy"] as const) if (line.data[k] !== undefined) changes[k] = line.data[k];
+    // M1: "Only if" in words with no rule yet is allowed (a person turns it into a rule later); release refuses it
+    // until it has one (engine/validate.ts), and Preview says "Cannot tell yet: no rule".
+    if (b.conditionPlain !== undefined && b.condition === undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") changes.conditionPlain = b.conditionPlain.trim() || null;
     if (b.attachMode) { changes.attachMode = b.attachMode; if (b.attachMode === "COMBINATION_MANDATORY") { changes.predicateJson = null; changes.conditionPlain = null; } }
     if (b.condition !== undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") { const t = await this.libraryTypes(c.workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); changes.predicateJson = b.condition; changes.conditionPlain = b.conditionPlain ?? null; }
     const { row } = await revise(this.db.combinationForm, rows, { ...changes, origin: "HUMAN" }, actor.id, strip);
@@ -526,7 +614,7 @@ export class Studio {
   }
 
   async submit(actor: Actor, id: string, note?: string) {
-    need(actor, "review");
+    need(actor, "author"); // audit D-2: only the author submits (an approver submitting deadlocks release, BR-14)
     const c = await this.db.combination.findUniqueOrThrow({ where: { id } });
     const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     const last = await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" } });
@@ -543,12 +631,16 @@ export class Studio {
     return s;
   }
 
-  async signoff(actor: Actor, id: string, b: { items: string[]; action: "signed" | "returned"; note?: string }) {
+  async signoff(actor: Actor, id: string, body?: { items?: string[]; action?: "signed" | "returned"; note?: string }) {
+    // audit D-1: no body, or no action, is a 400 in plain words, never a TypeError (500).
+    const b = (body && typeof body === "object" ? body : {}) as { items: string[]; action: "signed" | "returned"; note?: string };
+    if (b.action !== undefined && b.action !== "signed" && b.action !== "returned") fail("Say whether you are signing these changes or returning them to the author.");
     const c = await this.db.combination.findUniqueOrThrow({ where: { id } });
     const sub = await this.db.reviewSubmission.findFirst({ where: { combinationId: id, status: "SUBMITTED" }, orderBy: { submittedAt: "desc" } });
     if (!sub) fail("Nothing is waiting for review.");
     // A sign-off names at least one item, and the person who submitted does not sign their own submission (break m1).
-    if (!b.items?.length) fail("Choose the changes you sign or return.");
+    if (!Array.isArray(b.items) || !b.items.length) fail("Choose the changes you sign or return.");
+    if (!b.action) fail("Say whether you are signing these changes or returning them to the author.");
     if (b.action === "signed" && sub!.submittedBy === actor.id) fail("You submitted this, so a different person signs it.", HttpStatus.FORBIDDEN);
     const changes = sub!.changeSummary as any[];
     const needsSme = (ref: string) => changes.find((x) => `${x.kind}|${x.key}` === ref)?.needs_sme;

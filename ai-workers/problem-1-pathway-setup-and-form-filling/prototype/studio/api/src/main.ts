@@ -24,6 +24,7 @@ import { Sources } from "./sources.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { Structure, StructureController } from "./structure.ts";
 import { Studio } from "./studio.ts";
+import { WorkspaceController, WorkspaceViews } from "./workspace.ts";
 
 type H = string | undefined;
 
@@ -159,7 +160,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, StructureController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists, Lifecycle, Structure] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, StructureController, WorkspaceController], providers: [WorkspaceViews, Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists, Lifecycle, Structure] })
 class AppModule {}
 
 async function main() {
