@@ -42,3 +42,8 @@
 | QA-41 | UX · Minor | C6.1, C6.3 | 8360565 | 76628a4, 27 Oct | `check_qa_am_1027.cjs`: the Open a case dialog opens with focus on "Case reference" (an input), not Close |
 | QA-42 | UX · Minor | C1.4 | 8360565 | 76628a4, 27 Oct | `check_qa_am_1027.cjs`: Visitor visa (Live, forms released) no longer shows the "not set up yet" seed note |
 | QA-43 | Bug · Minor | C2.7 | 8360565 | 76628a4 (W1-02 removed the route, P-102), 27 Oct | `check_qa_am_1027.cjs`: `GET /combinations/:id/online-forms` is gone (404), with the other capture, pairing and portal routes |
+| QA-45 | Bug · Major | C11.3 | 76628a4 | main 027174d (screens S1/S2 FIX, PR #59), 27 Oct | `check_qa_am_1027.cjs` QA-45 step; by hand: "Add sub-category" on Study permit extension opened a row under it (locations from the category), typed in place, added |
+| QA-44 | UX · Minor | C11.3 | 76628a4 | main 027174d (screens S1/S2 FIX, PR #59), 27 Oct | `check_qa_am_1027.cjs` QA-44 step passed 2 of 2 runs (was lost on 6 of 7); by hand: "Inside Canada" typed straight after Enter kept whole |
+| QA-46 | UX · Minor | C11.9 | 76628a4 | main 027174d (screens S1/S2 FIX, PR #59), 27 Oct | `check_qa_am_1027.cjs` and `check_qa_am_fix_1027.cjs`: To review list and item page say "Remove structure name" (trail wording: QA-51) |
+| QA-49 | Bug · Minor | C11.10 | f289ec7 | main 027174d (screens S1/S2 FIX, PR #59), 27 Oct | `check_qa_am_s2_1027.cjs` 3 QA-49 steps: sample order = Structure order; a reorder shows on cards and List, also after 'Back to Structure order' |
+| QA-50 | UX · Minor | C11.10 | f289ec7 | main 027174d (screens S1/S2 FIX, PR #59), 27 Oct | `check_qa_am_s2_1027.cjs` QA-50 step: one Back after a double click returns to Immigration programs; nothing created |

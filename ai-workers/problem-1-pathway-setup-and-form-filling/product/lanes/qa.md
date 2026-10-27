@@ -2,20 +2,61 @@
 
 ## From the Lead
 
-2026-10-27 22:50 (Lead, Mac): **Next: `/qa after-merge` on the screens S1/S2 FIX** (QA-44, 45, 46, 49, 50, review m1, break m8; Lead check passed, merged with the Lead's PR after the S2 report). Walk Program structure and Immigration programs like a content publisher: typed letters kept while a name saves, Add sub-category under a leaf category, "Remove" wording on approval and To review, the page follows the Structure's order (and a reorder), one Back after a double click on Start setup, the setup bar agrees with the next step, reads refused for case people and nobody (API). Close what passes, log what does not. Program structure is redrawn next (P-127), so log layout points as suggestions only. Own ports, AI US$0, put back by-products before you push.
+2026-10-28 00:30 (Lead, Mac): **Handover read (657c7f8).** For the fresh qa session: **WAITING** for the next merge, then `/qa after-merge` on it: first S4 Form library, then the screens visual-system slice (Program structure layout A with the Add pop-up, Immigration programs restyle, menu order, QA-51/52/54). Your Handover section below has the open findings, checks and lessons. QA-53 is decided (deny every configuration read now; forms lane after S4). Own ports, AI US$0, by-products put back, report summary to the Lead by message.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: after-merge on main f289ec7 (S2 Immigration programs, PR #53; Lead note 27 Oct)
+current_item: handover 27 Oct (founder: every session hands over tonight); last run after-merge on main 027174d (screens S1/S2 FIX), report read by the Lead
 stage: WAITING
 owner: Lead
-next_action: WAITING for the screens FIX (QA-44, QA-45, QA-46, QA-49, QA-50) to merge, then `/qa after-merge` on it (Lead note 27 Oct 17:55). S2 report `qa/reports/2026-10-27-after-merge-s2.md`: ready, QA-49/QA-50 Minor, QA-48 re-seen on Immigration programs; coverage api 97.10/82.17, engine 99.38/89.19 (floor 97/82 · 99/89).
+next_action: WAITING for the next merge: `/qa after-merge` on S4 Form library, then on the visual-system slice (Lead sends each). Read the Handover section below first.
 blocked_by: none
 updated: 2026-10-27
 
+## Handover (27 Oct, end of day; for the next qa session)
+* **Where things are:** branch `claude/qa-after-merge-s1-21bfdf`, in sync with main 4fb0749. The Lead copies `qa/`, `lanes/qa.md` and `tests/qa/` onto its own PR, so pushing this branch is enough. Latest report: `qa/reports/2026-10-27-after-merge-fix.md`.
+* **Open findings and their lanes:**
+  * QA-38 Major: runtime.
+  * QA-48 Major: screens, its own slice after S3; the fix should also show retired combinations on Immigration programs.
+  * QA-39: Screen 04.
+  * QA-40 and QA-47: runtime, S5 slice 1.
+  * QA-51, QA-52 and QA-54: screens.
+  * QA-53: forms, one shared guard after S4 merges (Lead 23:59). Retest it with the QA-53 step of `check_qa_am_fix_1027.cjs`.
+* **Next runs:**
+  * **S4:** after-merge on the Form library. It was out of scope until now, so there is no qa check for it yet. Build one from the S4 concept, and include the QA-53 guard if it lands with S4.
+  * **Visual-system slice:** after-merge on it. Rerun the three checks below to catch regressions.
+  * **P-127:** Program structure is being redrawn, so selectors in `check_qa_am_1027.cjs` (Structure part) may need updating. Only the selectors; never weaken a finding's step.
+* **Replayable checks (all reset and load their own data, US$0):**
+  * `check_qa_am_fix_1027.cjs`: :4472, `isolated.sh qa_fix 4472 start`.
+  * `check_qa_am_s2_1027.cjs`: :4472.
+  * `check_qa_am_1027.cjs`: :4471 empty, plus :4476 after `tests/runtime/setup_visitor_visa.ts 4476 xr_studio_qa_x1`.
+
+  Commands are in `tests/qa/README.md`. Today's results: 9/14, 45/46 and 54/58; every fail is an open finding.
+* **Learned, not written elsewhere:**
+  1. A copy needs `prisma generate` and a `vite build` of `web/` before `isolated.sh … start`. Start always drops and recreates its database.
+  2. The `gh pr merge` guard hook blocks compound Bash commands (pipes after `cat`, `for` loops, subshells, heredocs). Put them in a scratchpad script and run that alone.
+  3. Every suite or check run rewrites tracked files in other lanes' folders:
+     * evidence JSONs;
+     * `screens/*/screenshots`;
+     * `prototype/p2/ledger/spend.jsonl` and `used-launch-tickets/`;
+     * `p2/runs/stub-pass`;
+     * `canary-digest.json`;
+     * the S2 report's screenshots.
+
+     Put them back to HEAD before committing, and commit only qa files.
+  4. Coverage (`NODE_V8_COVERAGE` + `tests/qa/coverage-preload.mjs`, c8 in `.tools/solution-1-prototype/studio-node`) must run with nothing else running.
+     * Above a load average of about 10, timing steps go red.
+     * The sample load takes 21–25 s against the checks' 30 s request limit.
+     * `check_p2_guard` always fails under the coverage preload and passes plain.
+  5. CI reuses a full pass for identical code. To find the run that really covers a commit, search its log for "passed them in run N".
+  6. Browser pane:
+     * Screenshots can lag a step.
+     * `ref` click coordinates are in the 1440 frame, not the screenshot's, so prefer `find` refs or a URL like `/structure?node=<key>`.
+     * Toasts render outside `<main>`.
+     * The Studio's person menu lists only Studio people.
+  7. On 27 Oct another qa process wrote into this worktree. Only the session the Lead names as qa owner writes here.
+
 ## Log (last 10 lines)
-- 2026-10-23 · after-merge on main 65826022 (F1 slice 1): QA-2 closed, QA-4 half fixed, QA-1 still open; slice 1 sound through the API (probe 25/26, suite 106/106); new QA-13–QA-18 (QA-14 name race turns grounding red; QA-18 engine branches 84.7% < 85% floor); browser journeys not reliable at load 22–112.
-- 2026-10-24 · after-merge Screen 01 (1cb174a6) on main e742bc59: 12 findings closed (QA-1, 3, 5, 6, 7, 9, 10, 11, 12, 13, 16, 18); C1.6, C1.7, C2.7, C2.10, C3.10 walked; journeys 47/47 ×3; open 0 Critical · 3 Major · 5 Minor (new QA-19–21); floor api 95/79, engine 98/86; Screen 01 journey 9/10.
 - 2026-10-24 · applied Lead note 2026-10-24 22:00 (cloud session). after-merge on main db468e38: suites 16/16 (run 2 under coverage 15/16: p2 guard vs the coverage preload, 75/75 without); QA-8, 14, 17, 21 closed; QA-4, QA-20 open; forms slice 2 probe 45/57, R1a probe 59/69; new QA-22–QA-34 (Majors: QA-23 D1, QA-24 D2, QA-29 D3, QA-34 api coverage 93.97/77.67 < floor); engine floor 99/86; Screen 01 9/10. US$0.
 - 2026-10-24 · Lead request (PR #9 review): personal names in `check_qa_r1a_probe.ts` replaced with place and object phrases of the same scripts (rule 5); probe rerun 59/69 ×2, unchanged. QA-15 marked fixed on the forms branch (a145246), retest pending: closed only after a retest on main.
 - 2026-10-24 · applied Lead note 2026-10-24 21:10. after-merge on main 12e7207 (one run): suites 19/20 + p2 guard 75/75 plain; closed QA-4, 15, 20, 22–25, 27–34; QA-26 2 of 3; R1c walk 24/27 (officer and client, 1440 and 390 px); new QA-35 Major (blank case area from the Demo menu), QA-36, QA-37 Minor; coverage api 95.95/80.95, engine 99.39/87.53, floor 95/80 · 99/87. US$0.
@@ -24,3 +65,5 @@ updated: 2026-10-27
 - 2026-10-27 · applied Lead note 27 Oct (PR #51). after-merge on main 76628a4 (W1-02 + S1 Structure; app code = d393155): CI suites 35/35 on the same code; Mac plain reruns green; W1-02 clean (routes 404, pages 'Page not found', no extension words, later-wave note, PDF path end to end, fill 44/44); Structure walked by typing, journey 7/10; new QA-44–48 (Majors QA-45, QA-48, screens); closed QA-41, 42, 43; QA-38, 39, 40 open; coverage api 96.78/81.84, engine 99.38/89.05, floor 96/81 · 99/89; check `check_qa_am_1027.cjs` 50/57 then 51/57. US$0.
 - 2026-10-27 · applied Lead note 27 Oct (PR #53). after-merge on main f289ec7 (S2 Immigration programs), isolated `qa_s2` :4472: walked as a content publisher — empty after Reset, 1440/1024/390 px + 200 % zoom, keyboard only, search edges incl. cross-tab BR-8, Status counts vs cards, Structure⇄page agreement on add/rename/remove/retire, need-you counts, Start setup double click, approver read-only (403/401 plain), axe ×3; `check_qa_am_s2_1027.cjs` 40/46 (demo/load needed 240 s request timeout under load). New QA-49 (page draws alphabetical, not the Structure's order; 'Back to Structure order' tip does not deliver), QA-50 (Back needs two presses after a Start-setup double click); QA-48 re-seen + new facet (no Retired status or note on the page — a retired combination is unfindable except by API); QA-38, 39, 40, 44–47 open. Verdict ready: 0 Critical · 3 Major · 7 Minor. Timing step missed under load — environmental, noted not logged. Graph regenerated (18 Works; G5 lists C11.1, parked extension). Report `reports/2026-10-27-after-merge-s2.md`. US$0. Same session, founder request: two-stage design take on M3 Prepare application — `screens/M3-prepare-application/design/draft-prepare-application-v3.html` in the main copy (split view recommended; command view and v2 checklist as comparisons; Docketwise/eimmigration/INSZoom research); no code changed.
 - 2026-10-27 · fix-up (Lead answer 17:55: this session owns qa; the other qa process must not write): another process had committed 5e8b23f/15ae106 here with suite by-products (p2 ledger lines, stub tickets, other lanes' evidence JSONs, 26 Oct screenshots); all put back to main's version. S2 report restored with the coverage run (30/35 green under coverage, plain reruns noted; api 97.10/82.17, engine 99.38/89.19; api floor → 97/82); CAPABILITIES C11.10 Works, C1.1, C11.3, C11.5, C11.9 updated; QA-49/QA-50 → screens FIX; G5 0 (C11.1 named in the W1-02 check labels). US$0.
+- 2026-10-27 · applied Lead note 27 Oct 22:50. after-merge on main 027174d (screens S1/S2 FIX; CI 37/37 on the same code): the seven items walked headed then replayed; QA-44 (2/2), QA-45, QA-46, QA-49, QA-50 closed; review m1 and break m8 pass; new Minors QA-51 (To review trail without the type), QA-52 (approval message for a removal), QA-53 (16 other configuration reads open to nobody and case people), QA-54 (case person on a Studio page by URL: 'could not load … Retry'); checks: `check_qa_am_fix_1027.cjs` 9/14, `check_qa_am_s2_1027.cjs` 45/46, `check_qa_am_1027.cjs` 54/58 ×2; coverage api 97.09/82.10, engine 99.38/89.09 (floor kept), 35/36 under coverage (p2 guard, known). US$0.
+- 2026-10-27 · Lead 23:59: report on 027174d read; QA-51/52/54 → screens, QA-53 → forms (shared read guard after S4). Founder: hand over tonight. Handover section written; WAITING for S4, then the visual-system slice. US$0.
