@@ -43,6 +43,24 @@ export const CreateStructureNodeBody = z.object({
 });
 export type CreateStructureNodeBody = z.infer<typeof CreateStructureNodeBody>;
 
+/** POST /structure/path (P-127, AD-1…7): the one "Add to Program structure" dialog. Each level is an existing name ({ key })
+ *  or a new one ({ label }); the path may stop at any level (a Pathway or a Program alone); under a new name every level
+ *  is new. One transaction writes only the new parts, all or nothing, and starts no setup (the leaf is listed as Not
+ *  started). subCategory null = "None: the category is the combination". decision "new" is refused while close names
+ *  exist; "add_anyway" adds them and records that in Activity (BR-5). */
+const pick = z.union([z.object({ key }).strict(), z.object({ label }).strict()]);
+export const StructurePathBody = z.object({
+  pathwayType: z.enum(PATHWAY_TYPES, { message: "Choose the Pathway type: Retail or Corporate and employers." }),
+  pathway: pick,
+  program: pick.optional(),
+  category: pick.optional(),
+  subCategory: pick.nullable().optional(),
+  allowedLocations: locations.optional(),
+  decision: z.enum(["new", "add_anyway"]).default("new"),
+});
+export type StructurePathBody = z.infer<typeof StructurePathBody>;
+export type StructurePathResult = { created: { level: Level; key: string; label: string }[]; leaf: { level: Level; key: string }; trail: string[]; combination: "Not started" | null };
+
 /** PATCH /structure/nodes/:key: rename and/or where cases may be opened, against the version the person saw. */
 export const PatchStructureNodeBody = z.object({
   label: label.optional(),
