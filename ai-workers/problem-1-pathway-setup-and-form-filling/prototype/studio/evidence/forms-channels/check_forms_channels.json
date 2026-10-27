@@ -1,5 +1,5 @@
 {
- "at": "2026-10-26T14:35:19.373Z",
+ "at": "2026-10-27T11:23:45.154Z",
  "port": 4450,
  "database": "xr_studio_forms_f1",
  "paid_calls": 0,
@@ -120,8 +120,8 @@
    "name": "C1.6: a configuration without channels keeps its fingerprint (draft equals its release)",
    "ok": true,
    "detail": {
-    "wpRelease": "52b4c9159c9c4969dee69944a438b541ea93e70c8c61abe02ddf05fb928ae290",
-    "wpDraft": "52b4c9159c9c4969dee69944a438b541ea93e70c8c61abe02ddf05fb928ae290"
+    "wpRelease": "0c8fcb19c2d4d2e29ce11df05986275ac8a1aa8d8e58160961074008a1844124",
+    "wpDraft": "0c8fcb19c2d4d2e29ce11df05986275ac8a1aa8d8e58160961074008a1844124"
    }
   },
   {
@@ -133,6 +133,9 @@
    "name": "C2.1: intake pass: every IRCC public page in the official library still reads as a guide or checklist (none as a portal screen)",
    "ok": true,
    "detail": [
+    "guide",
+    "guide",
+    "guide",
     "guide",
     "guide",
     "guide",
@@ -493,8 +496,8 @@
    "name": "C3.5: merge fail: the same merge proposed twice at the same moment is stored once",
    "ok": true,
    "detail": [
-    409,
-    201
+    201,
+    409
    ]
   },
   {

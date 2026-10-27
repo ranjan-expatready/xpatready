@@ -1,12 +1,12 @@
 {
- "at": "2026-10-26T14:38:29.375Z",
+ "at": "2026-10-27T11:36:20.648Z",
  "pass": 16,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 5.935
+   "detail": 16.291
   },
   {
    "name": "C1.6 pass: every line shows its channel (PDF upload today) and the combination its filing method",
