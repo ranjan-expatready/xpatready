@@ -53,7 +53,7 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 current_screen: W1-visual-system
 stage: BUILD
 owner: Builder
-next_action: Builder: drift check 1–5 fixed (25f1b12); AD-8 focus race being fixed; then full run-suites, the studio journey (4445), CI green on the exact commit, EARLY-LOOK and SendMessage to the Lead
+next_action: Builder: drift check 1–5 fixed (25f1b12); AD-8 focus fixed (0c81bb7, Dialog initialFocus); structure screenshots regenerating with Used by; then full run-suites, the studio journey (4445), CI green on the exact commit, EARLY-LOOK and SendMessage to the Lead
 then: EARLY-LOOK for the founder; S3 BUILD after the founder's Go and S4's merge
 blocked_by: none
 updated: 2026-10-28
