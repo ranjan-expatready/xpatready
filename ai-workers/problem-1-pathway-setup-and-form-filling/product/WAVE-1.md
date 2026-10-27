@@ -11,7 +11,7 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 | S4 | Form library: one list, upload through AI, every action (P-123) | E1, D6, A4 data, F6 | Agreed 27 Oct: founder marked walkthrough v2 OK (P-123); builds after S2, one at a time | |
 | S5 | Combination workspace: forms picked by AI, editable "Who can be in this application" (P-123) | D1, D3–D5 | Agreed 27 Oct: founder marked walkthrough v2 OK (P-123); builds after S2, one at a time | |
 | S6 | Shared library: one review queue, one Add in plain words (P-120, P-121) | F3–F5, H1, H6 | Agreed 27 Oct: founder marked walkthrough v2 OK (P-123); builds after S2, one at a time | |
-| S7 | Reset + Load sample (5 combinations with their PDFs) | B6, E2, F1, F2 | Agreed 27 Oct: founder marked walkthrough v2 OK (P-123); builds after S2, one at a time | |
+| S7 | Reset + Load sample (5 combinations with their PDFs) | B6, E2, F1, F2 | Agreed 27 Oct: founder marked walkthrough v2 OK (P-123); builds after S2, one at a time; all published official files for the 6 combinations saved 27 Oct (28 of 29; EMP5626 online-only) | |
 | S8 | Content publisher walk-through (qa, like a person) | W1-13 | Not started | |
 **Walkthrough page (27 Oct): v2 marked OK on all of S3–S7 (P-123), so the S3–S7 designs are agreed.** `design/walkthrough-s3-s7.html` shows S3–S7 as they will look with the grilling answers (P-118–P-121) built in; the founder marks each OK or Change in one pass, and "Copy my marks" gives the text for the Lead. Then W2–W6 below, the same way. At the end of every screen the Lead asks: Is it working? Anything to change? OK to move on?
 
