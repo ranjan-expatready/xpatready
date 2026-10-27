@@ -1,6 +1,6 @@
 // Immigration programs (W1-04, S2; concept §2, §5, §7, §8; board design/draft-programs-v2.html design D; P-104, P-112,
 // P-113, P-115; founder 27 Oct): every combination of one Pathway type (Retail · Corporate and employers), opened by the
-// same Pathway cards as the Structure ("All pathways" shows every Pathway's section; a card shows only that Pathway's).
+// same Pathway cards as the Program structure ("All pathways" shows every Pathway's section; a card shows only that Pathway's).
 // Cards (default) or List, remembered per person: a card is the full five-part trail, a calculated status, the four
 // setup steps (Forms · Draft · Review · Release), how it is filed and one next step; the list is the same data as dense
 // rows grouped by Pathway. Above: search (⌘K) and "Status: All ▾" (every combination by default, BR-13 amends P-49);
@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SHOW_ONLY_STEPS, StepLabel, StepTip, useNextStep } from "@/components/next-step";
 import { PathwayCards } from "@/components/pathway-cards";
+import { LevelMark, pathwayAccent, Trail } from "@/components/levels";
 import { StatusChip, Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +37,7 @@ const TYPE_TIP: Record<string, string> = {
 const STATUSES = [
   ["all", "All", "Every combination of this tab."],
   ["needs", "Needs work", "Anything with a next step: not released yet, not ready, or waiting for you."],
-  ["not_started", "Not started", "Added to the Structure; no setup yet."],
+  ["not_started", "Not started", "Added to the Program structure; no setup yet."],
   ["in_setup", "In setup", "Setup has begun and is not released yet."],
   ["not_ready", "Not ready", "Something blocks release; the card says what."],
   ["live", "Live", "Firms can open cases on it."],
@@ -116,7 +117,7 @@ export function ProgramsPage() {
   const answered = cat.data?.pathwayKey ?? "";
   const shownSections = answered && sections.some((s) => s.pathwayKey === answered) ? sections.filter((s) => s.pathwayKey === answered) : sections;
   const filtering = filter !== "all" || !!q || !!program || !!under;
-  const groups = shownSections.map((s) => ({ s, rows: rows.filter((r) => r.pathwayKey === s.pathwayKey) })).filter((g) => g.rows.length || !filtering);
+  const groups = shownSections.map((s) => ({ s, i: sections.findIndex((x) => x.pathwayKey === s.pathwayKey), rows: rows.filter((r) => r.pathwayKey === s.pathwayKey) })).filter((g) => g.rows.length || !filtering);
   const [closed, setClosed] = React.useState<Set<string>>(new Set());
   React.useEffect(() => setClosed(new Set()), [pathway]);
   const toggle = (k: string) => setClosed((c) => { const n = new Set(c); if (n.has(k)) n.delete(k); else n.add(k); return n; });
@@ -173,9 +174,9 @@ export function ProgramsPage() {
           </Tip>
           <span className="flex-1" />
           <Tip tip="Add or rename pathways, programs, categories and sub-categories. New names enter only there.">
-            <Button variant="secondary" onClick={() => nav(`/structure${pathway === "CORPORATE" ? "?t=CORPORATE" : ""}`)}><ListTree /> Structure</Button>
+            <Button variant="secondary" onClick={() => nav(`/structure${pathway === "CORPORATE" ? "?t=CORPORATE" : ""}`)}><ListTree /> Program structure</Button>
           </Tip>
-          <Tip tip={!knowsPerson ? "Loading…" : noPerson ? "The studio could not tell who you are: see the notice above, then reload." : canAuthor ? "Pick a path from the Structure and start its setup, or open it if it is already set up." : "Only a configuration author starts combinations. Switch to the Configuration author."}>
+          <Tip tip={!knowsPerson ? "Loading…" : noPerson ? "The studio could not tell who you are: see the notice above, then reload." : canAuthor ? "Pick a path from the Program structure and start its setup, or open it if it is already set up." : "Only a configuration author starts combinations. Switch to the Configuration author."}>
             <span><Button disabled={!canAuthor} onClick={() => nav(`/new${pathway === "CORPORATE" ? "?pw=CORPORATE" : ""}`)}><Plus /> New combination</Button></span>
           </Tip>
         </div>
@@ -187,7 +188,7 @@ export function ProgramsPage() {
           <PathwayCards typeLabel={typeLabel} pathways={sections.map((s) => ({ key: s.pathwayKey, label: s.label, combinations: s.combinations, needs: s.needs }))}
             open={answered || null} onOpen={(k) => set({ p: k }, true)}
             allTip={`Shows every ${typeLabel} pathway's combinations, one section each.`} cardTip={(l) => `Shows only ${l}'s combinations. A Pathway is the outcome the application leads to, such as temporary or permanent residence.`}
-            add={{ enabled: canAuthor, tip: canAuthor ? `New names enter on the Structure: opens it to add a pathway to ${typeLabel}.` : AUTHOR_ONLY, onAdd: () => nav(`/structure${pathway === "CORPORATE" ? "?t=CORPORATE" : ""}`) }} />
+            add={{ enabled: canAuthor, tip: canAuthor ? `New names enter on the Program structure: opens its Add pop-up for ${typeLabel}.` : AUTHOR_ONLY, onAdd: () => nav(`/structure?add=1&from=programs${pathway === "CORPORATE" ? "&t=CORPORATE" : ""}`) }} />
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2">
@@ -218,16 +219,16 @@ export function ProgramsPage() {
         {cat.isError ? <Notice tone="danger" title="The combinations could not load" action={<Button size="sm" variant="secondary" onClick={() => void cat.refetch()}>Retry</Button>}>{(cat.error as Error).message} Your work is safe. If it keeps failing, restart the studio.</Notice>
           : cat.isLoading || !knowsPerson ? <CardsSkeleton />
           : nothingAtAll ? (
-            <EmptyState title={`Nothing set up in ${typeLabel} yet`} description={canAuthor ? "Start with the Structure: add the pathways, programs and categories you offer. Each category or sub-category you add appears here as a card." : noPerson ? "The studio could not tell who you are, so nothing can be added yet: see the notice above, then reload." : "A configuration author adds the pathways, programs and categories on the Structure; each one appears here as a card."}
-              action={<Button onClick={() => nav(`/structure${pathway === "CORPORATE" ? "?t=CORPORATE" : ""}`)}><ListTree /> Open Structure</Button>} />
+            <EmptyState title={`Nothing set up in ${typeLabel} yet`} description={canAuthor ? "Start with the Program structure: add the pathways, programs and categories you offer. Each category or sub-category you add appears here as a card." : noPerson ? "The studio could not tell who you are, so nothing can be added yet: see the notice above, then reload." : "A configuration author adds the pathways, programs and categories on the Program structure; each one appears here as a card."}
+              action={<Button onClick={() => nav(`/structure${pathway === "CORPORATE" ? "?t=CORPORATE" : ""}`)}><ListTree /> Open Program structure</Button>} />
           ) : !rows.length && filtering ? (
             <EmptyState title="Nothing matches" description={`${q ? `No combination matches “${q}”` : `No combination is ${statusWord}`}${pathwayLabel ? ` in ${pathwayLabel}` : ` in ${typeLabel}`}${q && filter !== "all" ? ` and is ${statusWord}` : ""}${scopeChip ? `, under ${scopeChip}` : ""}.`}
               action={<Button variant="secondary" onClick={() => { setTyped(""); set({ q: null, prog: null, under: null, f: null }); }}>{q ? "Clear search" : "Show all"}</Button>} />
           ) : view === "cards" ? (
             <div className={cn("flex flex-col gap-5 transition-opacity", busy && "opacity-60")} data-view="cards">
-              {groups.map(({ s, rows: mine }) => (
+              {groups.map(({ s, i, rows: mine }) => (
                 <section key={s.pathwayKey} aria-labelledby={`sec-${s.pathwayKey}`} data-section={s.pathwayKey}>
-                  <SectionHeader s={s} shown={mine.length} filtering={filtering} closed={closed.has(s.pathwayKey)} onToggle={() => toggle(s.pathwayKey)} />
+                  <SectionHeader s={s} accent={i} shown={mine.length} filtering={filtering} closed={closed.has(s.pathwayKey)} onToggle={() => toggle(s.pathwayKey)} />
                   {closed.has(s.pathwayKey) ? null : mine.length ? (
                     <ul className="mt-2.5 grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3" aria-label={`${s.label} combinations`}>
                       {mine.map((r) => <li key={r.nodeKey} className="flex min-w-0"><SetupCard r={r} lit={sel === r.nodeKey} q={q} canAuthor={canAuthor} onOpen={() => void open(r)} onAct={step.run} /></li>)}
@@ -302,12 +303,13 @@ function StatusFilter({ value, counts, onChange }: { value: StatusKey; counts?: 
   );
 }
 
-function SectionHeader({ s, shown, filtering, closed, onToggle }: { s: CatalogueSection; shown: number; filtering: boolean; closed: boolean; onToggle: () => void }) {
+function SectionHeader({ s, accent, shown, filtering, closed, onToggle }: { s: CatalogueSection; accent: number; shown: number; filtering: boolean; closed: boolean; onToggle: () => void }) {
   return (
-    <h2 id={`sec-${s.pathwayKey}`} className="text-base">
-      <button type="button" aria-expanded={!closed} onClick={onToggle} className="inline-flex items-center gap-2 rounded-md py-0.5 pr-2 text-left outline-none hover:text-text-link focus-visible:ring-[3px] focus-visible:ring-ring/50">
+    <h2 id={`sec-${s.pathwayKey}`} className="rounded-lg border border-lv1-b bg-lv1-t py-1 pl-2 text-base" style={{ borderLeft: `4px solid ${pathwayAccent(accent)}` }} data-band>
+      <button type="button" aria-expanded={!closed} onClick={onToggle} className="inline-flex items-center gap-2 rounded-md py-0.5 pr-2 text-left outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
         {closed ? <ChevronRight className="size-4 text-text-muted" aria-hidden /> : <ChevronDown className="size-4 text-text-muted" aria-hidden />}
-        <span className="font-semibold">{s.label}</span>
+        <LevelMark level="pathway" tip={false} />
+        <span className="font-semibold text-lv1">{s.label}</span>
         <span className="text-sm font-normal text-text-muted">{filtering ? `${shown} of ${s.combinations}` : many(s.combinations, "combination", "combinations")}</span>
         {s.needs ? <Tip tip={NEED_YOU}><span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn" data-need-you>{s.needs} need{s.needs === 1 ? "s" : ""} you</span></Tip> : null}
       </button>
@@ -316,11 +318,11 @@ function SectionHeader({ s, shown, filtering, closed, onToggle }: { s: Catalogue
 }
 
 function SectionEmpty({ label, pathway }: { label: string; pathway: string }) {
-  return <p className="mt-2 rounded-lg border border-dashed border-border-strong px-4 py-3 text-sm text-text-muted">No combinations in {label} yet. Add its programs and categories on the <Link className="text-text-link underline underline-offset-2" to={`/structure${pathway === "CORPORATE" ? "?t=CORPORATE" : ""}`}>Structure</Link>; each appears here as a card.</p>;
+  return <p className="mt-2 rounded-lg border border-dashed border-border-strong px-4 py-3 text-sm text-text-muted">No combinations in {label} yet. Add its programs and categories on the <Link className="text-text-link underline underline-offset-2" to={`/structure${pathway === "CORPORATE" ? "?t=CORPORATE" : ""}`}>Program structure</Link>; each appears here as a card.</p>;
 }
 
 function NotStartedChip({ tabIndex = 0 }: { tabIndex?: number }) {
-  return <Tip focusable={tabIndex} tip="Added to the Structure; no setup yet. Start by adding its forms."><span data-status="NOT_STARTED" className="inline-flex w-fit items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border-strong px-2 py-0.5 text-xs font-semibold text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">Not started</span></Tip>;
+  return <Tip focusable={tabIndex} tip="Added to the Program structure; no setup yet. Start by adding its forms."><span data-status="NOT_STARTED" className="inline-flex w-fit items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border-strong px-2 py-0.5 text-xs font-semibold text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">Not started</span></Tip>;
 }
 
 /** The four setup steps as shape and text, never colour alone ("Step 2 of 4: Draft" is read aloud). */
@@ -352,10 +354,12 @@ function SetupSteps({ r, compact, tabIndex = 0 }: { r: CatalogueLeaf; compact?: 
 function NextStep({ r, canAuthor, tabIndex, onAct, onOpen, primary }: { r: CatalogueLeaf; canAuthor: boolean; tabIndex?: number; onAct: (l: CatalogueLeaf, a: NextAction | null) => void; onOpen: () => void; primary?: boolean }) {
   const a = r.nextAction;
   const mine = !a || canAuthor || SHOW_ONLY_STEPS.includes(a.kind);
-  const cls = primary ? "inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-raised px-3 text-sm font-semibold text-text-link outline-none hover:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/50"
-    : "inline-flex items-center gap-1 text-left text-sm font-semibold text-text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50";
-  if (a && mine) return <StepTip a={a}><button type="button" tabIndex={tabIndex} data-next-step={a.kind} onClick={(e) => { e.stopPropagation(); onAct(r, a); }} className={cls}><StepLabel a={a} /></button></StepTip>;
-  if (r.combinationId) return <button type="button" tabIndex={tabIndex} data-next-step="open" onClick={(e) => { e.stopPropagation(); onOpen(); }} className={cls}>Open</button>;
+  const link = "inline-flex items-center gap-1 text-left text-sm font-semibold text-text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50";
+  const button = (filled: boolean) => cn("inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-sm font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+    filled ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 [&_svg]:text-current" : "border-border bg-surface-raised text-text-link hover:border-primary");
+  const cls = primary ? button(r.needsYou) : link;
+  if (a && mine) return <StepTip a={a}><button type="button" tabIndex={tabIndex} data-next-step={a.kind} data-filled={primary && r.needsYou ? "" : undefined} onClick={(e) => { e.stopPropagation(); onAct(r, a); }} className={cls}><StepLabel a={a} /></button></StepTip>;
+  if (r.combinationId) return <button type="button" tabIndex={tabIndex} data-next-step="open" onClick={(e) => { e.stopPropagation(); onOpen(); }} className={link}>Open</button>;
   return null;
 }
 
@@ -369,13 +373,13 @@ function SetupCard({ r, lit, q, canAuthor, onOpen, onAct }: { r: CatalogueLeaf; 
     <article data-node={r.nodeKey} data-label={r.label} aria-label={`${r.trail.join(" › ")}, ${isNotStarted(r) ? "Not started" : STATUS_WORD[r.status]}`}
       className={cn("flex w-full flex-col gap-2.5 rounded-xl border bg-surface-raised p-4 shadow-sm transition-colors", lit ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-border-strong")}>
       <div className="flex items-start gap-2">
-        <span className="min-w-0 flex-1 text-xs text-text-muted [overflow-wrap:anywhere]" data-trail>{[type, pw, prog].join(" › ")}</span>
+        <span className="min-w-0 flex-1 text-xs" data-trail><Trail parts={[type, pw, prog]} /></span>
         {isNotStarted(r) ? <NotStartedChip /> : <StatusChip status={r.status} text={STATUS_WORD[r.status]} />}
         {r.checked?.overdue ? <Tip focusable tip="Check overdue: compare with IRCC's published forms and guides."><span role="img" aria-label="Check overdue" className="inline-flex rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><TriangleAlert className="size-4 text-text-warn" aria-hidden /></span></Tip> : null}
       </div>
       <div className="min-w-0">
-        <h3 className="text-base leading-snug"><button type="button" data-open onClick={onOpen} className="text-left font-semibold [overflow-wrap:anywhere] outline-none hover:text-text-link hover:underline focus-visible:rounded focus-visible:ring-[3px] focus-visible:ring-ring/50">{catName}</button></h3>
-        <p className={cn("text-sm [overflow-wrap:anywhere]", sub === "No sub-category" ? "text-text-muted" : "font-medium")}>{sub}</p>
+        <h3 className="flex items-start gap-1.5 text-base leading-snug"><LevelMark level="category" className="mt-1.5" /><button type="button" data-open onClick={onOpen} className="text-left font-semibold text-lv3 [overflow-wrap:anywhere] outline-none hover:underline focus-visible:rounded focus-visible:ring-[3px] focus-visible:ring-ring/50">{catName}</button></h3>
+        <p className={cn("flex items-start gap-1.5 text-sm [overflow-wrap:anywhere]", sub === "No sub-category" ? "text-text-muted" : "font-medium text-lv3")}>{sub === "No sub-category" ? <span className="inline-block size-2.5 shrink-0" aria-hidden /> : <LevelMark level="subCategory" className="mt-1" />}{sub}</p>
       </div>
       <SetupSteps r={r} />
       <p className="break-words text-xs text-text-muted" data-filed>{r.filed !== "No forms yet" ? `${formsN ? `${many(formsN, "form", "forms")} · ` : ""}Filed: ${r.filed}` : found.length ? formsFound(found.length, ready) : "No forms yet"}</p>
@@ -411,7 +415,7 @@ function CardsSkeleton() {
 /** The list (concept §2: the same data as dense rows): group rows per Pathway that collapse, then one row per
  *  combination with the full trail (first parts muted, the last level bold), status, a compact setup bar and the
  *  next step. One tab stop for the rows (roving focus): ↑/↓ move, Home/End jump, Enter opens; Tab reaches the step. */
-function List({ groups, closed, onToggle, highlight, q, sort, filtering, pathway, canAuthor, onSort, onOpen, onAct }: { groups: { s: CatalogueSection; rows: CatalogueLeaf[] }[]; closed: Set<string>; onToggle: (k: string) => void; highlight: string | null; q: string; sort: string; filtering: boolean; pathway: string; canAuthor: boolean; onSort: () => void; onOpen: (r: CatalogueLeaf) => void; onAct: (l: CatalogueLeaf, a: NextAction | null) => void }) {
+function List({ groups, closed, onToggle, highlight, q, sort, filtering, pathway, canAuthor, onSort, onOpen, onAct }: { groups: { s: CatalogueSection; i: number; rows: CatalogueLeaf[] }[]; closed: Set<string>; onToggle: (k: string) => void; highlight: string | null; q: string; sort: string; filtering: boolean; pathway: string; canAuthor: boolean; onSort: () => void; onOpen: (r: CatalogueLeaf) => void; onAct: (l: CatalogueLeaf, a: NextAction | null) => void }) {
   const rows = groups.flatMap((g) => (closed.has(g.s.pathwayKey) ? [] : g.rows));
   const [focus, setFocus] = React.useState<string | null>(null);
   const refs = React.useRef(new Map<string, HTMLDivElement>());
@@ -434,22 +438,22 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, pathway
       <div role="row" className={cn(GRID, "border-b border-border bg-surface px-4 py-2.5 text-sm font-semibold text-text-muted")}>
         <span role="columnheader">Combination</span>
         <span role="columnheader" aria-sort={sort === "status" ? "ascending" : sort === "-status" ? "descending" : "none"}>
-          <Tip tip={sort === "path" ? "Sort by status: Not ready first, then In setup, then Live" : sort === "status" ? "Sort by status, Live first" : "Back to Structure order"}>
+          <Tip tip={sort === "path" ? "Sort by status: Not ready first, then In setup, then Live" : sort === "status" ? "Sort by status, Live first" : "Back to Program structure order"}>
             <button type="button" onClick={onSort} className="inline-flex items-center gap-1 rounded outline-none hover:text-text focus-visible:ring-[3px] focus-visible:ring-ring/50">Status <SortIcon className="size-3.5" aria-hidden /></button>
           </Tip>
         </span>
         <span role="columnheader" className="sr-only sm:not-sr-only"><Tip tip={SETUP_TIP}><span>Setup</span></Tip></span>
         <span role="columnheader" className="sr-only sm:not-sr-only">Next step</span>
       </div>
-      {groups.map(({ s, rows: mine }) => {
+      {groups.map(({ s, i: gi, rows: mine }) => {
         const shut = closed.has(s.pathwayKey);
         return (
           <React.Fragment key={s.pathwayKey}>
-            <div role="row" data-group={s.pathwayKey} className="border-b border-border bg-surface/60 px-2 py-1.5">
+            <div role="row" data-group={s.pathwayKey} className="sticky top-14 z-10 border-b border-lv1-b bg-lv1-t px-2 py-1.5" style={{ boxShadow: `inset 4px 0 0 ${pathwayAccent(gi)}` }}>
               <span role="rowheader" className="flex items-center">
                 <button type="button" aria-expanded={!shut} onClick={() => onToggle(s.pathwayKey)} className="inline-flex items-center gap-2 rounded-md px-2 py-0.5 text-sm outline-none hover:text-text-link focus-visible:ring-[3px] focus-visible:ring-ring/50">
                   {shut ? <ChevronRight className="size-4 text-text-muted" aria-hidden /> : <ChevronDown className="size-4 text-text-muted" aria-hidden />}
-                  <b className="font-semibold">{s.label}</b><span className="text-text-muted">· {filtering ? `${mine.length} of ${s.combinations}` : s.combinations}</span>
+                  <LevelMark level="pathway" tip={false} /><b className="font-semibold text-lv1">{s.label}</b><span className="text-text-muted">· {filtering ? `${mine.length} of ${s.combinations}` : s.combinations}</span>
                   {s.needs ? <Tip tip={NEED_YOU}><span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn" data-need-you>{s.needs} need{s.needs === 1 ? "s" : ""} you</span></Tip> : null}
                 </button>
               </span>
@@ -463,10 +467,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, pathway
                   onKeyDown={(e) => onKey(e, r)} onFocus={(e) => { if (e.target === e.currentTarget) setFocus(r.nodeKey); }} onClick={() => onOpen(r)}
                   className={cn(GRID, "min-h-11 cursor-pointer border-b border-border px-4 py-2 outline-none last:border-b-0 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/60", lit ? "bg-primary/10 shadow-[inset_3px_0_0_var(--color-primary)]" : "hover:bg-text/[0.03]")}>
                   <div role="gridcell" className="min-w-0 break-words text-sm" data-trail>
-                    <span className="text-text-muted">{[type, pw, prog].join(" › ")} › </span>
-                    <b className="font-semibold">{catName}</b>
-                    <span className="text-text-muted"> › </span>
-                    <span className={sub === "No sub-category" ? "text-text-muted" : "font-semibold"}>{sub}</span>
+                    <Trail parts={[type, pw, prog, catName, sub]} />
                     {r.filed !== "No forms yet" ? <span className="block text-xs text-text-muted" data-filed>Filed: {r.filed}</span> : null}
                     {q && r.matches.some((m) => m !== "name") ? <span className="block text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</span> : null}
                   </div>

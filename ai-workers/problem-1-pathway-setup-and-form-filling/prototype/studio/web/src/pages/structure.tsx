@@ -1,21 +1,25 @@
-// Structure (W1-03, slice 2; concept §2–§8, board design/draft-structure-v2.html; P-104, P-112, P-115, P-116): the one
-// place new names enter. An outline per Pathway type (Retail · Corporate and employers): Pathway › Program › Category ›
-// Sub-category, with a "+ Add …" row typed in place at the end of each group (the free name check runs as you type),
-// and a side panel for the selected name: trail, what uses it, where cases may be opened, rename, order, remove /
-// retire / restore (each approved by a second person), history. The outline is a WAI-ARIA tree with one tab stop.
-// Every write goes to /api/structure (contracts/structure.ts); the server decides and the page shows its reasons.
+// Program structure (W1-03; visual system and round 2, P-127, board screens/W1-visual-system/design/draft-structure-v2.html
+// layout A): the one place names enter. Pathway cards choose what shows (the one last chosen, or All pathways); each
+// Program is a section with one line per combination (a category without sub-categories, or each sub-category);
+// level marks and colours from the visual system. Every add is the one "Add to Program structure" pop-up
+// (components/add-to-structure.tsx, POST /structure/path); the inline add rows are gone. The details panel is
+// unchanged: trail, what uses it, where cases may be opened, rename, order, remove / retire / restore (each approved by
+// a second person), history. Every write goes to /api/structure (contracts/structure.ts); the server decides.
 import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Info, Plus, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, Info, MoreHorizontal, Plus, Search, X } from "lucide-react";
 import type { Level, LifecycleAction, PathwayType, StructureNode, UsesView } from "../../../contracts/structure";
-import { api, ApiError, useApi, useSessionView } from "@/lib/api";
+import { api, ApiError, useActorId, useApi, useSessionView } from "@/lib/api";
 import { Button, Input, Notice, Pill, Textarea } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtWhen, StatusChip, Tip, TipProvider } from "@/components/status";
 import { PathwayCards } from "@/components/pathway-cards";
+import { AddToStructure, LocationPicker, LOC_TIP, locKey, type AddPrefill } from "@/components/add-to-structure";
+import { LevelMark, pathwayAccent } from "@/components/levels";
 import { cn } from "@/lib/utils";
 
 type ListResp = { pathwayType: PathwayType; typeLabel: string; nodes: StructureNode[]; empty: boolean; meaningCheck: { on: boolean; why: string } };
@@ -29,100 +33,63 @@ const TYPES: { value: PathwayType; label: string; tip: string }[] = [
   { value: "CORPORATE", label: "Corporate and employers", tip: "Who applies: an employer or organisation, such as for an LMIA." },
 ];
 const LEVEL_WORD: Record<Level, string> = { pathway: "Pathway", program: "Program", category: "Category", subCategory: "Sub-category" };
-const CHILD: Record<Level, Level | null> = { pathway: "program", program: "category", category: "subCategory", subCategory: null };
 const LEVEL_TIP: Record<Level, string> = {
   pathway: "The outcome the application leads to, such as temporary or permanent residence.",
   program: "A group of applications under a pathway, such as Visitors or Study permits.",
   category: "One kind of application. A category without sub-categories is a combination.",
   subCategory: "A variant IRCC files as a different application. Every sub-category is a combination.",
 };
-const LOCS = [["inside_canada", "Inside"], ["outside_canada", "Outside"], ["both", "Both"]] as const;
-const locKey = (l: string[]) => (l.length === 2 ? "both" : l[0] ?? "both");
-const locList = (k: string) => (k === "both" ? ["inside_canada", "outside_canada"] : [k]);
 const locWords = (l: string[]) => (l.length === 2 ? "Inside or outside Canada" : l[0] === "inside_canada" ? "Inside Canada" : l[0] === "outside_canada" ? "Outside Canada" : "—");
-const LOC_TIP = "Where a case for it may be opened. Sample until the immigration expert confirms.";
 const NMC_TIP = "Only the spelling check ran; a reviewer compares the meaning by eye. The AI meaning check runs when paid runs are on.";
 const AUTHOR_ONLY = "Only a configuration author adds, renames, orders or removes names. You can read everything.";
+const NEED_YOU = "Combinations waiting for a person: something to review, something missing or something blocking release.";
 const PENDING_WORD: Record<LifecycleAction, string> = { DELETE: "Removal waiting", RETIRE: "Retire waiting", RESTORE: "Restore waiting" };
 const norm = (s: string) => s.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
-type Row = { kind: "node"; node: StructureNode; depth: number; expandable: boolean } | { kind: "add"; key: string; level: Level; parentKey: string | null; depth: number; parentLabel: string | null; disabled: string | null };
+const LAST_PATHWAY = (actor: string | null) => `xr-structure-pathway:${actor ?? "anyone"}`;
+type Line = { leaf: StructureNode; category: StructureNode; sub: StructureNode | null };
 
 export function StructurePage() {
   const [sp, setSp] = useSearchParams();
+  const actor = useActorId();
   const type: PathwayType = sp.get("t") === "CORPORATE" ? "CORPORATE" : "INDIVIDUAL";
   const typeLabel = TYPES.find((t) => t.value === type)!.label;
   const selected = sp.get("node");
+  const fromPrograms = sp.get("from") === "programs";
   const [q, setQ] = React.useState(sp.get("q") ?? "");
   const { canAuthor, known } = useSessionView();
+  const qc = useQueryClient();
   const list = useApi<ListResp>(["structure", type], `/structure?pathwayType=${type}`);
   const other = useApi<ListResp>(["structure", type === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL"], q.trim() ? `/structure?pathwayType=${type === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL"}` : null);
-  const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set());
-  const [adding, setAdding] = React.useState<{ level: Level; parentKey: string | null } | null>(null);
-  const [focusKey, setFocusKey] = React.useState<string | null>(null);
-  const treeRef = React.useRef<HTMLDivElement>(null);
+  const [closed, setClosed] = React.useState<Set<string>>(new Set());
+  const [adding, setAdding] = React.useState<AddPrefill | null>(sp.get("add") === "1" ? {} : null);
+  const [justAdded, setJustAdded] = React.useState<string | null>(null);
+  const [note, setNote] = React.useState<{ ok: boolean; text: string } | null>(null);
   const set = (patch: Record<string, string | null>) => setSp((p) => { const n = new URLSearchParams(p); for (const [k, v] of Object.entries(patch)) v ? n.set(k, v) : n.delete(k); return n; }, { replace: true });
 
   const nodes = list.data?.nodes ?? [];
   const byKey = React.useMemo(() => new Map(nodes.map((n) => [n.key, n])), [nodes]);
   const kids = React.useMemo(() => { const m = new Map<string | null, StructureNode[]>(); for (const n of nodes) m.set(n.parentKey, [...(m.get(n.parentKey) ?? []), n]); return m; }, [nodes]);
   const words = norm(q);
-  const matches = React.useMemo(() => {
-    if (!words) return null;
-    const keep = new Set<string>();
-    for (const n of nodes) if (norm(n.label).includes(words)) for (let x: StructureNode | undefined = n; x; x = x.parentKey ? byKey.get(x.parentKey) : undefined) keep.add(x.key);
-    return keep;
-  }, [words, nodes, byKey]);
-  const isLeaf = (n: StructureNode) => n.level === "subCategory" || (n.level === "category" && !(kids.get(n.key)?.length));
-  const expandable = (n: StructureNode) => n.level === "pathway" || n.level === "program" || (n.level === "category" && !!kids.get(n.key)?.length);
+  const pathways = (kids.get(null) ?? []).filter((n) => n.level === "pathway");
+  // P-127: the page opens on the Pathway the person last chose (the first one on a first visit); "All pathways" shows every band.
+  const saved = (() => { try { return localStorage.getItem(LAST_PATHWAY(actor)); } catch { return null; } })();
+  const pParam = sp.get("p");
+  const want = pParam ?? saved;
+  const chosen = want === "all" ? null : want && pathways.some((x) => x.key === want) ? want : pathways[0]?.key ?? null;
+  const choose = (key: string | null) => { try { localStorage.setItem(LAST_PATHWAY(actor), key ?? "all"); } catch { /* private window */ } set({ p: key ?? "all", node: null }); };
 
-  const rows = React.useMemo(() => {
-    const out: Row[] = [];
-    const addRow = (level: Level, parent: StructureNode | null, depth: number) => {
-      if (matches) return;
-      const disabled = !canAuthor ? AUTHOR_ONLY : parent?.retired ? `"${parent.label}" is retired: restore it first.` : null;
-      out.push({ kind: "add", key: `add:${parent?.key ?? "top"}`, level, parentKey: parent?.key ?? null, depth, parentLabel: parent?.label ?? null, disabled });
-    };
-    const walk = (n: StructureNode, depth: number) => {
-      if (matches && !matches.has(n.key)) return;
-      out.push({ kind: "node", node: n, depth, expandable: expandable(n) });
-      // QA-45: a category with no sub-categories yet has no add row of its own; "Add sub-category" in the panel opens one
-      // under it, typed in place like every other.
-      if (!expandable(n) && n.level === "category" && adding?.level === "subCategory" && adding.parentKey === n.key) addRow("subCategory", n, depth + 1);
-      if (!expandable(n) || (collapsed.has(n.key) && !matches)) return;
-      for (const c of kids.get(n.key) ?? []) walk(c, depth + 1);
-      const child = CHILD[n.level];
-      if (child) addRow(child, n, depth + 1);
-    };
-    for (const p of kids.get(null) ?? []) walk(p, 0);
-    addRow("pathway", null, 0);
-    return out;
-  }, [kids, collapsed, matches, canAuthor, adding]);
-  const rowKey = (r: Row) => (r.kind === "node" ? r.node.key : r.key);
-  const current = focusKey && rows.some((r) => rowKey(r) === focusKey) ? focusKey : rows[0] ? rowKey(rows[0]) : null;
-  React.useEffect(() => { if (focusKey && treeRef.current?.contains(document.activeElement)) treeRef.current.querySelector<HTMLElement>(`[data-key="${CSS.escape(focusKey)}"]`)?.focus(); }, [focusKey, rows]);
-
-  const toggle = (key: string, open?: boolean) => setCollapsed((c) => { const n = new Set(c); (open ?? n.has(key)) ? n.delete(key) : n.add(key); return n; });
-  const startAdd = (level: Level, parentKey: string | null) => { if (parentKey) toggle(parentKey, true); setAdding({ level, parentKey }); };
-  const onKey = (e: React.KeyboardEvent) => {
-    if ((e.target as HTMLElement).closest("[data-add-row]")) return; // typing in the add row
-    const i = rows.findIndex((r) => rowKey(r) === current);
-    if (i < 0) return;
-    const r = rows[i];
-    const go = (j: number) => { const t = rows[Math.max(0, Math.min(rows.length - 1, j))]; if (t) setFocusKey(rowKey(t)); };
-    const parentIndex = () => { const pk = r.kind === "node" ? r.node.parentKey : r.parentKey; return rows.findIndex((x) => x.kind === "node" && x.node.key === pk); };
-    switch (e.key) {
-      case "ArrowDown": go(i + 1); break;
-      case "ArrowUp": go(i - 1); break;
-      case "Home": go(0); break;
-      case "End": go(rows.length - 1); break;
-      case "ArrowRight": if (r.kind === "node" && r.expandable) { if (collapsed.has(r.node.key)) toggle(r.node.key, true); else go(i + 1); } break;
-      case "ArrowLeft": if (r.kind === "node" && r.expandable && !collapsed.has(r.node.key)) toggle(r.node.key, false); else { const p = parentIndex(); if (p >= 0) go(p); } break;
-      case "Enter": case " ": if (r.kind === "node") set({ node: r.node.key }); else if (!r.disabled) startAdd(r.level, r.parentKey); break;
-      default: return;
-    }
-    e.preventDefault();
-  };
+  /** One line per combination (Q3): a category without sub-categories, or each of its sub-categories. */
+  const linesOf = (program: StructureNode): Line[] => (kids.get(program.key) ?? []).flatMap((c): Line[] => {
+    const subs = kids.get(c.key) ?? [];
+    return subs.length ? subs.map((s) => ({ leaf: s, category: c, sub: s })) : [{ leaf: c, category: c, sub: null }];
+  });
+  const hit = (s: string) => !words || norm(s).includes(words);
+  /** Find (every Pathway of the tab): a Pathway or Program name match keeps everything under it; else the lines that match. */
+  const shownLines = (pw: StructureNode, program: StructureNode) => (hit(pw.label) || hit(program.label) ? linesOf(program) : linesOf(program).filter((l) => hit(l.category.label) || (l.sub && hit(l.sub.label))));
+  const programsOf = (pw: StructureNode) => (kids.get(pw.key) ?? []).filter((pr) => !words || hit(pw.label) || hit(pr.label) || shownLines(pw, pr).length);
+  const matchCount = (pw: StructureNode) => (kids.get(pw.key) ?? []).reduce((s, pr) => s + shownLines(pw, pr).length, 0);
+  const bands = words ? pathways.filter((pw) => hit(pw.label) || programsOf(pw).length) : chosen ? pathways.filter((x) => x.key === chosen) : pathways;
 
   const live = nodes.filter((n) => !n.retired);
   const count = (l: Level) => live.filter((n) => n.level === l).length;
@@ -130,35 +97,65 @@ export function StructurePage() {
   const many = (n: number, one: string, more: string) => `${n} ${n === 1 ? one : more}`;
   const otherMatches = words && other.data ? other.data.nodes.filter((n) => norm(n.label).includes(words)).length : 0;
   const selectedNode = selected ? byKey.get(selected) : undefined;
-  // S1-finish (founder, 27 Oct): the Pathway cards open one Pathway's tree and close the others; "All" opens everything.
-  const pathways = (kids.get(null) ?? []).filter((n) => n.level === "pathway");
-  const openPathway = sp.get("p");
   const below = (k: string): StructureNode[] => (kids.get(k) ?? []).flatMap((c) => [c, ...below(c.key)]);
-  const openOne = (key: string | null) => {
-    set({ p: key, node: null });
-    setCollapsed(new Set(key ? pathways.filter((x) => x.key !== key).map((x) => x.key) : []));
-  };
-  /** The combinations below a name, each with its path from just under that name ("Study permit › Outside Canada"). */
+  const isLeaf = (n: StructureNode) => n.level === "subCategory" || (n.level === "category" && !(kids.get(n.key)?.length));
   const leavesUnder = (k: string) => below(k).filter((n) => isLeaf(n)).map((n) => {
     const path: string[] = [];
     for (let x: StructureNode | undefined = n; x && x.key !== k; x = x.parentKey ? byKey.get(x.parentKey) : undefined) path.unshift(x.label);
     return { n, path };
   });
+  const pathwayOf = (k: string) => { let x = byKey.get(k); while (x?.parentKey) x = byKey.get(x.parentKey); return x; };
+  const detail = (pw: StructureNode) => {
+    const ls = leavesUnder(pw.key).map((x) => x.n).filter((n) => !n.retired);
+    const liveN = ls.filter((n) => n.combination?.status === "READY" && n.combination.id).length, notStarted = ls.filter((n) => !n.combination?.id).length;
+    const notReady = ls.filter((n) => n.combination?.id && n.combination.status === "NOT_READY").length, inSetup = ls.length - liveN - notStarted - notReady;
+    return [[liveN, "Live"], [notReady, "Not ready"], [inSetup, "In setup"], [notStarted, "Not started"]].filter(([n]) => n).map(([n, w]) => `${n} ${w}`).join(" · ") || `${many((kids.get(pw.key) ?? []).length, "program", "programs")}`;
+  };
+
+  // After Add: open the Pathway it went into, its section, and show the line, tagged "Just added" (no toast, AD-7).
+  React.useEffect(() => {
+    if (!justAdded || !byKey.get(justAdded)) return;
+    const pw = pathwayOf(justAdded);
+    if (pw && !words && chosen && chosen !== pw.key) { choose(pw.key); return; }
+    requestAnimationFrame(() => { const el = document.querySelector<HTMLElement>(`[data-key="${CSS.escape(justAdded)}"]`); el?.scrollIntoView({ block: "center" }); el?.querySelector<HTMLElement>("[data-open]")?.focus({ preventScroll: true }); });
+  }, [justAdded, byKey, chosen]);
+  const openAdd = (prefill: AddPrefill) => { if (canAuthor) setAdding(prefill); };
+  const closeAdd = () => { setAdding(null); if (sp.get("add")) set({ add: null }); };
+
+  // P-116 (Move up / down, at once with an audit line); the order here is the order on Immigration programs (QA-49).
+  const move = async (n: StructureNode, by: -1 | 1) => {
+    const sib = (kids.get(n.parentKey) ?? []).filter((x) => n.parentKey !== null || x.level === "pathway");
+    const i = sib.findIndex((x) => x.key === n.key), j = i + by;
+    if (i < 0 || j < 0 || j >= sib.length) return;
+    const keys = sib.map((x) => x.key); [keys[i], keys[j]] = [keys[j], keys[i]];
+    try { await api("/structure/reorder", { method: "POST", json: { pathwayType: type, parentKey: n.parentKey, keys } }); setNote({ ok: true, text: `Moved "${n.label}" ${by < 0 ? "up" : "down"}. Immigration programs follows this order.` }); await Promise.all([qc.invalidateQueries({ queryKey: ["structure"] }), qc.invalidateQueries({ queryKey: ["catalogue"] })]); }
+    catch (e) { setNote({ ok: false, text: (e as Error).message }); }
+  };
+  const canMove = (n: StructureNode, by: -1 | 1) => { const sib = (kids.get(n.parentKey) ?? []).filter((x) => n.parentKey !== null || x.level === "pathway"); const i = sib.findIndex((x) => x.key === n.key); return canAuthor && i + by >= 0 && i + by < sib.length; };
+  // Lines: one tab stop each; ↑ / ↓ move between them, Enter opens details (P-127 keyboard: no tree model any more).
+  const onLineKey = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    const all = [...document.querySelectorAll<HTMLButtonElement>("[data-line] [data-open]")];
+    const i = all.indexOf(e.currentTarget); all[i + (e.key === "ArrowDown" ? 1 : -1)]?.focus(); e.preventDefault();
+  };
 
   return (
     <TipProvider>
+      {fromPrograms ? <Link to="/" className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-text-link hover:underline" data-back-programs><ChevronLeft className="size-4" aria-hidden />Back to Immigration programs</Link> : null}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-semibold">Structure</h1>
-        <Tip focusable tip="The list of pathways, programs, categories and sub-categories. Every category without sub-categories, and every sub-category, is a combination."><span className="text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Info className="size-4" aria-label="About the Structure" /></span></Tip>
-        <p className="w-full text-sm text-text-muted">Where every combination sits: Pathway › Program › Category › Sub-category.</p>
+        <h1 className="text-2xl font-semibold">Program structure</h1>
+        <Tip focusable tip="Every pathway, program, category and sub-category your firm offers. Every category without sub-categories, and every sub-category, is a combination."><span className="text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Info className="size-4" aria-label="About the Program structure" /></span></Tip>
+        <span className="flex-1" />
+        <Tip tip={canAuthor ? "Add a pathway, program, category or sub-category: one pop-up, checked as you type." : AUTHOR_ONLY}><span><Button disabled={!canAuthor} onClick={() => openAdd({ pathwayKey: chosen ?? undefined })} data-add-open><Plus /> Add</Button></span></Tip>
+        <p className="w-full text-sm text-text-muted">Where every combination sits: Pathway › Program › Category › Sub-category. The order here is the order on Immigration programs.</p>
       </div>
       <div className={cn("grid gap-6", selectedNode && "xl:grid-cols-[minmax(0,1fr)_420px]")}>
-        <section aria-label={`${typeLabel} structure`} className="min-w-0 max-w-[780px]">
+        <section aria-label={`${typeLabel} program structure`} className="min-w-0">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <div role="group" aria-label="Pathway type" className="inline-flex w-fit items-center gap-0.5 rounded-xl border border-border bg-surface p-0.5">
               {TYPES.map((t) => (
                 <Tip key={t.value} tip={t.tip}>
-                  <button type="button" aria-pressed={type === t.value} onClick={() => { set({ t: t.value === "INDIVIDUAL" ? null : t.value, node: null, p: null }); setAdding(null); setCollapsed(new Set()); }}
+                  <button type="button" aria-pressed={type === t.value} onClick={() => { set({ t: t.value === "INDIVIDUAL" ? null : t.value, node: null, p: null }); setClosed(new Set()); }}
                     className={cn("inline-flex h-8 items-center rounded-lg px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", type === t.value ? "bg-primary font-semibold text-primary-foreground shadow-sm" : "text-text-muted hover:text-text")}>{t.label}</button>
                 </Tip>
               ))}
@@ -166,48 +163,142 @@ export function StructurePage() {
             <label className="relative min-w-[200px] flex-1">
               <span className="sr-only">Find a name</span>
               <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden />
-              <Tip tip="Find a name at any level in this tab. The names above a match stay shown."><Input value={q} onChange={(e) => { setQ(e.target.value); set({ q: e.target.value || null }); }} placeholder="Find a name" className="pl-8" /></Tip>
+              <Tip tip="Find a name in every pathway of this tab. A pathway or program that matches keeps everything under it; the cards count the matches."><Input value={q} onChange={(e) => { setQ(e.target.value); set({ q: e.target.value || null }); }} placeholder="Find a name" className="pl-8" /></Tip>
               {q ? <button type="button" aria-label="Clear the search" className="absolute right-1 top-1.5 flex size-6 items-center justify-center rounded text-text-muted hover:bg-text/5" onClick={() => { setQ(""); set({ q: null }); }}><X className="size-4" /></button> : null}
             </label>
-            <Tip tip="Open every group in this tab."><Button size="sm" variant="secondary" onClick={() => openOne(null)}>Expand all</Button></Tip>
-            <Tip tip="Show the pathways only; open a group with its arrow."><Button size="sm" variant="secondary" onClick={() => { set({ p: null }); setCollapsed(new Set(nodes.filter((n) => n.level === "pathway").map((n) => n.key))); }}>Collapse all</Button></Tip>
+            <Tip tip="Open every program section."><Button size="sm" variant="secondary" onClick={() => setClosed(new Set())}>Expand all</Button></Tip>
+            <Tip tip="Show the program titles only; open one with its arrow."><Button size="sm" variant="secondary" onClick={() => setClosed(new Set(nodes.filter((n) => n.level === "program").map((n) => n.key)))}>Collapse all</Button></Tip>
           </div>
           {list.data && !list.data.empty && pathways.length ? (
-            <div className="mb-3"><PathwayCards typeLabel={typeLabel} pathways={pathways} open={openPathway && pathways.some((x) => x.key === openPathway) ? openPathway : null} onOpen={openOne}
-              allTip={`Shows the whole ${typeLabel} outline, every pathway open.`} cardTip={(l) => `Opens ${l}'s tree and closes the other pathways.`}
-              add={{ enabled: canAuthor, tip: canAuthor ? `Add a pathway to ${typeLabel}, such as Citizenship. Typed in place at the end of the outline.` : AUTHOR_ONLY, onAdd: () => { openOne(null); startAdd("pathway", null); } }} /></div>
+            <div className="mb-3"><PathwayCards typeLabel={typeLabel} pathways={pathways.map((p) => ({ ...p, detail: detail(p), matches: words ? matchCount(p) : undefined }))} open={words ? null : chosen} onOpen={choose}
+              allTip={`Shows every ${typeLabel} pathway, one band each.`} cardTip={(l) => `Shows ${l}'s programs and combinations.`}
+              add={{ enabled: canAuthor, tip: canAuthor ? `Add a pathway to ${typeLabel}, such as Citizenship: opens the Add pop-up.` : AUTHOR_ONLY, onAdd: () => openAdd({ focus: "pathway" }) }} /></div>
           ) : null}
           {list.data && !list.data.empty ? (
             <p className="mb-2 text-sm text-text-muted" data-stats>
               {many(count("pathway"), "pathway", "pathways")} · {many(count("program"), "program", "programs")} · {many(count("category"), "category", "categories")} · {many(count("subCategory"), "sub-category", "sub-categories")} · <b className="font-semibold text-text">{combos}</b> {combos === 1 ? "combination" : "combinations"}
             </p>
           ) : null}
+          {note ? <p role={note.ok ? "status" : "alert"} className={cn("mb-2 text-sm", note.ok ? "text-text-ok" : "text-text-danger")} data-page-note>{note.text}</p> : null}
           {list.isError ? (
-            <ErrorState title="The structure could not load" description={`${(list.error as Error).message} Your work is safe.`} action={<Button size="sm" variant="secondary" onClick={() => void list.refetch()}>Retry</Button>} />
+            <ErrorState title="The program structure could not load" description={`${(list.error as Error).message} Your work is safe.`} action={<Button size="sm" variant="secondary" onClick={() => void list.refetch()}>Retry</Button>} />
           ) : list.isPending || !known ? (
-            <div className="space-y-2 rounded-xl border border-border bg-surface-raised p-3" aria-busy="true"><span className="sr-only" role="status">Loading the structure</span>{[0, 1, 1, 2, 2, 1, 0].map((d, i) => <Skeleton key={i} className="h-7" style={{ marginLeft: d * 22, width: `${70 - d * 8}%` }} />)}</div>
-          ) : list.data.empty && !adding ? (
+            <div className="space-y-2 rounded-xl border border-border bg-surface-raised p-3" aria-busy="true"><span className="sr-only" role="status">Loading the program structure</span>{[0, 1, 1, 1, 0, 1, 1].map((d, i) => <Skeleton key={i} className={d ? "h-9" : "h-7 w-1/3"} />)}</div>
+          ) : list.data.empty ? (
             <EmptyState title="No structure yet" description={`${typeLabel} has no names. After Reset both tabs are empty. Add your first pathway, for example Temporary residence.`}
-              action={canAuthor ? <Button onClick={() => startAdd("pathway", null)}><Plus /> Add pathway</Button> : <p className="text-sm text-text-muted">{AUTHOR_ONLY}</p>} />
-          ) : words && rows.length === 0 ? (
+              action={canAuthor ? <Button onClick={() => openAdd({ focus: "pathway" })}><Plus /> Add pathway</Button> : <p className="text-sm text-text-muted">{AUTHOR_ONLY}</p>} />
+          ) : words && !bands.length ? (
             <EmptyState title={`No name matches "${q.trim()}" in ${typeLabel}`} description={otherMatches ? undefined : "Check the spelling, or clear the search."}
               action={otherMatches ? <p className="text-sm">{otherMatches} {otherMatches === 1 ? "match" : "matches"} in {TYPES.find((t) => t.value !== type)!.label}. <button type="button" className="font-semibold text-text-link underline underline-offset-2" onClick={() => set({ t: type === "INDIVIDUAL" ? "CORPORATE" : null, node: null })}>Show {otherMatches === 1 ? "it" : "them"}</button></p> : <Button size="sm" variant="secondary" onClick={() => { setQ(""); set({ q: null }); }}>Clear the search</Button>} />
           ) : (
-            <div ref={treeRef} role="tree" aria-label={`${typeLabel} structure`} onKeyDown={onKey} className="rounded-xl border border-border bg-surface-raised py-2">
-              {rows.map((r) => r.kind === "node"
-                ? <NodeRow key={r.node.key} r={r} leaf={isLeaf(r.node)} focused={current === r.node.key} selected={selected === r.node.key} collapsed={collapsed.has(r.node.key) && !matches} words={words}
-                    onFocus={() => setFocusKey(r.node.key)} onToggle={() => toggle(r.node.key)} onSelect={() => set({ node: r.node.key })} />
-                : adding && adding.parentKey === r.parentKey && adding.level === r.level
-                  ? <AddRow key={r.key} type={type} row={r} parent={r.parentKey ? byKey.get(r.parentKey) : undefined} onDone={() => setAdding(null)} onPick={(k) => { setAdding(null); set({ node: k }); setFocusKey(k); }} />
-                  : <GhostRow key={r.key} r={r} focused={current === r.key} onFocus={() => setFocusKey(r.key)} onStart={() => startAdd(r.level, r.parentKey)} />)}
+            <div className="space-y-5" data-structure-a>
+              {bands.map((pw) => {
+                const progs = words ? programsOf(pw) : kids.get(pw.key) ?? [];
+                const idx = pathways.findIndex((x) => x.key === pw.key);
+                return (
+                  <section key={pw.key} aria-label={`${pw.label} pathway`} data-band={pw.key} data-key={pw.key}>
+                    <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-lv1-b bg-lv1-t py-1.5 pl-3 pr-2" style={{ borderLeft: `4px solid ${pathwayAccent(idx)}` }}>
+                      <button type="button" onClick={() => set({ node: pw.key })} className="inline-flex items-center gap-1.5 rounded text-base font-semibold text-lv1 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50" data-band-title><LevelMark level="pathway" tip={false} /><Mark text={pw.label} words={words} /></button>
+                      <span className="text-sm text-text-muted">{many(pw.combinations, "combination", "combinations")}</span>
+                      {pw.needs ? <Tip tip={NEED_YOU}><span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn">{pw.needs} need{pw.needs === 1 ? "s" : ""} you</span></Tip> : null}
+                      {pw.retired ? <Pill tone="neutral">Retired</Pill> : null}
+                      <span className="flex-1" />
+                      <Tip tip={canAuthor ? `Add a program under ${pw.label}.` : AUTHOR_ONLY}><span><Button size="sm" variant="ghost" disabled={!canAuthor || pw.retired} onClick={() => openAdd({ pathwayKey: pw.key, focus: "program" })} data-add-program><Plus /> Add program</Button></span></Tip>
+                    </div>
+                    {!progs.length ? <p className="rounded-xl border border-dashed border-border-strong px-4 py-3 text-sm text-text-muted" data-empty-pathway>No programs yet.{canAuthor ? <> <button type="button" className="font-semibold text-text-link underline underline-offset-2" onClick={() => openAdd({ pathwayKey: pw.key, focus: "program" })}>+ Add program</button></> : null}</p> : (
+                      <div className="space-y-3">
+                        {progs.map((pr) => {
+                          const lines = words ? shownLines(pw, pr) : linesOf(pr);
+                          const shut = closed.has(pr.key) && !words;
+                          return (
+                            <section key={pr.key} aria-label={`${pr.label} program`} data-section={pr.key} data-key={pr.key} className={cn("rounded-xl border border-border bg-surface-raised", selected === pr.key && "ring-2 ring-primary/30")}>
+                              <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
+                                <button type="button" aria-expanded={!shut} aria-label={`${shut ? "Open" : "Close"} ${pr.label}`} onClick={() => setClosed((c) => { const n = new Set(c); if (n.has(pr.key)) n.delete(pr.key); else n.add(pr.key); return n; })} className="flex size-6 items-center justify-center rounded text-text-muted outline-none hover:bg-text/5 focus-visible:ring-[3px] focus-visible:ring-ring/50">{shut ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}</button>
+                                <button type="button" onClick={() => set({ node: pr.key })} className="inline-flex items-center gap-1.5 rounded text-sm font-semibold text-lv2 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50" data-section-title><LevelMark level="program" tip={false} /><Mark text={pr.label} words={words} /></button>
+                                <span className="text-xs text-text-muted">{many(pr.combinations, "combination", "combinations")}</span>
+                                {pr.needs ? <Tip tip={NEED_YOU}><span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn">{pr.needs} need{pr.needs === 1 ? "s" : ""} you</span></Tip> : null}
+                                {pr.retired ? <Pill tone="neutral">Retired</Pill> : null}
+                                {pr.pending ? <Tip tip="A change to this name waits for a second person on To review."><Pill tone="warn">{PENDING_WORD[pr.pending.action]}</Pill></Tip> : null}
+                                <span className="flex-1" />
+                                <Tip tip={canAuthor ? `Add a category under ${pr.label}.` : AUTHOR_ONLY}><span><Button size="sm" variant="ghost" disabled={!canAuthor || pr.retired} onClick={() => openAdd({ pathwayKey: pw.key, programKey: pr.key, focus: "category" })} data-add-category><Plus /> Add category</Button></span></Tip>
+                                <RowMenu label={pr.label} items={[{ word: "Open details", run: () => set({ node: pr.key }) }, { word: "Move up", run: () => void move(pr, -1), off: !canMove(pr, -1) }, { word: "Move down", run: () => void move(pr, 1), off: !canMove(pr, 1) }]} />
+                              </div>
+                              {shut ? null : !lines.length ? <p className="px-4 py-3 text-sm text-text-muted" data-empty-program>No categories yet.{canAuthor ? <> <button type="button" className="font-semibold text-text-link underline underline-offset-2" onClick={() => openAdd({ pathwayKey: pw.key, programKey: pr.key, focus: "category" })}>+ Add category</button></> : null}</p> : (
+                                <ul aria-label={`${pr.label} combinations`} className="divide-y divide-border">
+                                  {lines.map((l) => <LineRow key={l.leaf.key} line={l} words={words} selected={selected === l.leaf.key || selected === l.category.key} justAdded={justAdded === l.leaf.key} canAuthor={canAuthor}
+                                    onOpen={(k) => set({ node: k })} onKey={onLineKey} onMove={(n, by) => void move(n, by)} canMove={canMove}
+                                    onAddSub={() => openAdd({ pathwayKey: pw.key, programKey: pr.key, categoryKey: l.category.key, focus: "subCategory" })} />)}
+                                </ul>)}
+                            </section>
+                          );
+                        })}
+                      </div>)}
+                  </section>
+                );
+              })}
             </div>
           )}
           {list.data && !list.data.empty ? <p className="mt-2 text-xs text-text-muted">Names and locations are Sample until the immigration expert confirms. {list.data.meaningCheck.why}</p> : null}
         </section>
         {selectedNode ? <DetailPanel key={selectedNode.key} node={selectedNode} type={type} siblings={kids.get(selectedNode.parentKey)?.filter((s) => selectedNode.parentKey !== null || s.level === "pathway") ?? []} leaf={isLeaf(selectedNode)} leaves={leavesUnder(selectedNode.key)} canAuthor={canAuthor}
-          onClose={() => set({ node: null })} onAddChild={() => { set({ node: null }); startAdd("subCategory", selectedNode.key); }} /> : null}
+          onClose={() => set({ node: null })} onAddChild={() => { const pr = selectedNode.parentKey ? byKey.get(selectedNode.parentKey) : undefined; openAdd({ pathwayKey: pr?.parentKey ?? undefined, programKey: pr?.key, categoryKey: selectedNode.key, focus: "subCategory" }); }} /> : null}
       </div>
+      <AddToStructure open={!!adding} onClose={closeAdd} type={type} prefill={adding ?? undefined}
+        onAdded={(r, again) => { setJustAdded(r.leaf.key); setNote({ ok: true, text: `Added ${r.created.map((c) => `"${c.label}"`).join(", ")}${r.combination ? ": listed on Immigration programs as Not started; no setup started." : "."}` }); if (!again) closeAdd(); }}
+        onShow={(k) => { closeAdd(); set({ node: k }); setJustAdded(k); }} />
     </TipProvider>
+  );
+}
+
+/** A ⋯ menu of row actions (P-127): each disabled one says why in its tooltip-free form (the panel has the reasons). */
+function RowMenu({ label, items }: { label: string; items: { word: string; run: () => void; off?: boolean }[] }) {
+  return (
+    <DropdownMenu.Root>
+      <Tip tip={`Actions for ${label}`}>
+        <DropdownMenu.Trigger asChild>
+          <button type="button" aria-label={`Actions for ${label}`} className="flex size-7 items-center justify-center rounded-md text-text-muted outline-none hover:bg-text/5 focus-visible:ring-[3px] focus-visible:ring-ring/50" data-row-menu><MoreHorizontal className="size-4" aria-hidden /></button>
+        </DropdownMenu.Trigger>
+      </Tip>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[200px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
+          {items.map((x) => <DropdownMenu.Item key={x.word} disabled={x.off} onSelect={x.run} className="cursor-pointer rounded-md px-2 py-1.5 outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-text/5">{x.word}</DropdownMenu.Item>)}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+/** One line per combination (P-127 Q3): ◆ Category › ◇ Sub-category (the identity in navy), its state, where cases may be
+ *  opened, and a ⋯ menu. Clicking it opens the same details panel as before. */
+function LineRow({ line, words, selected, justAdded, canAuthor, onOpen, onKey, onMove, canMove, onAddSub }: {
+  line: Line; words: string; selected: boolean; justAdded: boolean; canAuthor: boolean; onOpen: (k: string) => void; onKey: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
+  onMove: (n: StructureNode, by: -1 | 1) => void; canMove: (n: StructureNode, by: -1 | 1) => boolean; onAddSub: () => void;
+}) {
+  const n = line.leaf, c = n.combination;
+  const items = [
+    { word: "Open details", run: () => onOpen(n.key) },
+    ...(line.sub ? [{ word: `${line.category.label}: details`, run: () => onOpen(line.category.key) }] : []),
+    { word: line.sub ? "Add another sub-category" : "Add sub-category", run: onAddSub, off: !canAuthor || line.category.hasSetup || line.category.retired },
+    { word: "Move up", run: () => onMove(n, -1), off: !canMove(n, -1) },
+    { word: "Move down", run: () => onMove(n, 1), off: !canMove(n, 1) },
+  ];
+  return (
+    <li data-line={n.key} data-key={n.key} className={cn("flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5", selected && "bg-primary/10 shadow-[inset_3px_0_0_var(--color-primary)]", n.retired && "text-text-muted")}>
+      <button type="button" data-open onClick={() => onOpen(n.key)} onKeyDown={onKey} className="flex min-w-0 flex-1 items-center gap-1.5 rounded text-left text-sm outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
+        <LevelMark level="category" tip={false} />
+        <span className="min-w-0 [overflow-wrap:anywhere]">
+          <span className="font-semibold text-lv3"><Mark text={line.category.label} words={words} /></span>
+          {line.sub ? <><span className="text-text-muted" aria-hidden> › </span><LevelMark level="subCategory" tip={false} className="mx-0.5" /><span className="font-medium text-lv3"><Mark text={line.sub.label} words={words} /></span></> : null}
+        </span>
+      </button>
+      {justAdded ? <span className="rounded-full bg-ok/15 px-2 py-0.5 text-xs font-semibold text-text-ok" data-just-added>Just added</span> : null}
+      {n.retired ? <Tip tip="Retired by a release: hidden from pickers and AI; earlier releases and open cases keep it."><Pill tone="neutral">Retired</Pill></Tip> : null}
+      {n.pending ? <Tip tip="A change to this name waits for a second person on To review."><Pill tone="warn">{PENDING_WORD[n.pending.action]}</Pill></Tip> : null}
+      {c && !n.retired ? (c.id ? (c.retired ? <Pill tone="neutral">Retired</Pill> : <StatusChip status={c.status} text={c.statusText} />)
+        : <Tip tip="Added to the Program structure; no setup yet. Start it from its card on Immigration programs or its details."><span className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-strong px-2 py-0.5 text-xs font-semibold text-text-muted">Not started</span></Tip>) : null}
+      <Tip tip={LOC_TIP}><span className="w-40 shrink-0 text-xs text-text-muted" data-loc>{locWords(n.allowedLocations)}</span></Tip>
+      <RowMenu label={line.sub ? `${line.category.label} › ${line.sub.label}` : line.category.label} items={items} />
+    </li>
   );
 }
 
@@ -251,124 +342,6 @@ function Mark({ text, words }: { text: string; words: string }) {
   // The normalised match maps back only when the name is plain words; otherwise show it unmarked.
   if (i < 0 || norm(text) !== text.toLocaleLowerCase("en-CA").trim()) return <>{text}</>;
   return <>{text.slice(0, i)}<mark className="rounded-sm bg-warn/25 text-text">{text.slice(i, i + words.length)}</mark>{text.slice(i + words.length)}</>;
-}
-
-function NodeRow({ r, leaf, focused, selected, collapsed, words, onFocus, onToggle, onSelect }: { r: Extract<Row, { kind: "node" }>; leaf: boolean; focused: boolean; selected: boolean; collapsed: boolean; words: string; onFocus: () => void; onToggle: () => void; onSelect: () => void }) {
-  const n = r.node;
-  const strong = n.level === "pathway" || n.level === "program";
-  const c = n.combination;
-  return (
-    <div role="treeitem" data-key={n.key} aria-level={r.depth + 1} aria-expanded={r.expandable ? !collapsed : undefined} aria-selected={selected} tabIndex={focused ? 0 : -1} onFocus={onFocus} onClick={onSelect}
-      className={cn("mx-1.5 flex min-h-9 cursor-pointer flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md px-2 py-1 text-sm outline-none hover:bg-surface focus-visible:ring-[3px] focus-visible:ring-ring/50", selected && "bg-primary/10 ring-1 ring-primary/20", n.retired && "text-text-muted")}
-      style={{ paddingLeft: 8 + r.depth * 22 }}>
-      {r.expandable
-        ? <button type="button" tabIndex={-1} aria-hidden onClick={(e) => { e.stopPropagation(); onToggle(); }} className="flex size-5 items-center justify-center rounded text-text-muted hover:bg-text/5">{collapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}</button>
-        : <span className="size-5" aria-hidden />}
-      <span className={cn("min-w-0 break-words", strong && "font-semibold")}><Mark text={n.label} words={words} /></span>
-      <Tip tip={LEVEL_TIP[n.level]}><span className="rounded border border-border px-1.5 text-xs text-text-muted">{LEVEL_WORD[n.level]}{leaf ? " · combination" : ""}</span></Tip>
-      {n.retired ? <Tip tip="Retired by a release: hidden from pickers and AI; earlier releases and open cases keep it."><Pill tone="neutral">Retired</Pill></Tip> : null}
-      {n.pending ? <Tip tip="A change to this name waits for a second person on To review."><Pill tone="warn">{PENDING_WORD[n.pending.action]}</Pill></Tip> : null}
-      {leaf && c && !n.retired ? (c.id ? (c.retired ? <Pill tone="neutral">Retired</Pill> : <StatusChip status={c.status} text={c.statusText} tabIndex={-1} />)
-        : <Tip tip="Added to the Structure; no setup yet. Start by adding its forms."><span className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-strong px-2 py-0.5 text-xs font-semibold text-text-muted">Not started</span></Tip>) : null}
-      <span className="ml-auto whitespace-nowrap text-xs text-text-muted">{leaf ? <Tip tip={LOC_TIP}><span>{locWords(n.allowedLocations)}</span></Tip> : `${n.combinations} ${n.combinations === 1 ? "combination" : "combinations"}`}</span>
-    </div>
-  );
-}
-
-function GhostRow({ r, focused, onFocus, onStart }: { r: Extract<Row, { kind: "add" }>; focused: boolean; onFocus: () => void; onStart: () => void }) {
-  const tip = r.disabled ?? `Add a ${LEVEL_WORD[r.level].toLowerCase()} ${r.parentLabel ? `under ${r.parentLabel}` : "to this tab"}. Checked against the names that exist first.`;
-  return (
-    <Tip tip={tip}>
-      <div role="treeitem" data-key={r.key} aria-level={r.depth + 1} aria-disabled={!!r.disabled || undefined} tabIndex={focused ? 0 : -1} onFocus={onFocus} onClick={() => { if (!r.disabled) onStart(); }}
-        className={cn("mx-1.5 flex h-8 items-center gap-2 rounded-md px-2 text-sm text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", r.disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-surface hover:text-text-link")}
-        style={{ paddingLeft: 8 + r.depth * 22 }}>
-        <span className="size-5" aria-hidden /><Plus className="size-4" aria-hidden />Add {LEVEL_WORD[r.level].toLowerCase()}
-      </div>
-    </Tip>
-  );
-}
-
-function LocationPicker({ value, onChange, disabled, label }: { value: string[]; onChange: (l: string[]) => void; disabled?: boolean; label: string }) {
-  const cur = locKey(value);
-  return (
-    <Tip tip={LOC_TIP}>
-      <div role="radiogroup" aria-label={label} className="inline-flex overflow-hidden rounded-lg border border-border-strong text-xs">
-        {LOCS.map(([k, w]) => (
-          <button key={k} type="button" role="radio" aria-checked={cur === k} disabled={disabled} onClick={() => onChange(locList(k))}
-            className={cn("px-2.5 py-1 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 [&+&]:border-l [&+&]:border-border", cur === k ? "bg-primary font-semibold text-primary-foreground" : "bg-surface-raised text-text hover:bg-surface", disabled && "cursor-not-allowed opacity-60")}>{w}</button>
-        ))}
-      </div>
-    </Tip>
-  );
-}
-
-/** "+ Add …" typed in place (board A+): the free name check as you type, Enter to add, Esc to cancel; the row stays
- *  open for the next name. The server checks again on save. */
-function AddRow({ type, row, parent, onDone, onPick }: { type: PathwayType; row: Extract<Row, { kind: "add" }>; parent?: StructureNode; onDone: () => void; onPick: (key: string) => void }) {
-  const qc = useQueryClient();
-  // S1-finish: success is said on the row itself, never in a toast over the outline or the panel.
-  const [done, setDone] = React.useState<string | null>(null);
-  const [label, setLabel] = React.useState("");
-  const hasLocs = row.level === "category" || row.level === "subCategory";
-  const [locs, setLocs] = React.useState<string[]>(row.level === "subCategory" && parent?.allowedLocations.length ? parent.allowedLocations : ["inside_canada", "outside_canada"]);
-  const [check, setCheck] = React.useState<Check | null>(null);
-  const [checking, setChecking] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [busy, setBusy] = React.useState(false);
-  const input = React.useRef<HTMLInputElement>(null);
-  React.useEffect(() => { input.current?.focus(); }, []);
-  const refused = React.useRef<string | null>(null);
-  React.useEffect(() => {
-    if (refused.current === label) refused.current = null; else setError(null); // a refused name put back keeps its reason
-    if (!label.trim()) { setCheck(null); return; }
-    setChecking(true);
-    const t = setTimeout(() => api<Check>("/structure/name-check", { method: "POST", json: { pathwayType: type, level: row.level, parentKey: row.parentKey, label } })
-      .then(setCheck).catch((e) => setError((e as Error).message)).finally(() => setChecking(false)), 250);
-    return () => clearTimeout(t);
-  }, [label, type, row.level, row.parentKey]);
-  const where = parent ? `under ${parent.label}` : `in ${TYPES.find((t) => t.value === type)!.label}`;
-  const add = async (decision: "new" | "add_anyway") => {
-    if (!label.trim() || busy) return;
-    // QA-44: the box clears as the name is sent, so whatever is typed while it saves is kept; a refusal puts the name
-    // back only if nothing new was typed.
-    const sent = label;
-    setBusy(true); setError(null); setLabel(""); setCheck(null); setDone(`Adding "${sent.trim()}" ${where}…`);
-    try {
-      const r = await api<{ key: string; label: string }>("/structure/nodes", { method: "POST", json: { pathwayType: type, level: row.level, parentKey: row.parentKey, label: sent, decision, ...(hasLocs ? { allowedLocations: locs } : {}) } });
-      setDone(`Added "${r.label}" ${where}.${row.level === "category" || row.level === "subCategory" ? " It is listed in Immigration programs as Not started." : ""} Type the next name, or Esc.`);
-      await Promise.all([qc.invalidateQueries({ queryKey: ["structure"] }), qc.invalidateQueries({ queryKey: ["catalogue"] })]);
-      input.current?.focus();
-    } catch (e) {
-      setDone(null); refused.current = sent; setLabel((now) => now || sent);
-      const p: Refusal = e instanceof ApiError ? (e.problem as Refusal) : {};
-      if (p.code === "close_names") setCheck({ exact: null, close: p.close ?? [] });
-      else setError((e as Error).message);
-    } finally { setBusy(false); }
-  };
-  const exact = check?.exact, close = check?.close ?? [];
-  const id = React.useId();
-  return (
-    <div data-add-row role="treeitem" aria-level={row.depth + 1} className="mx-1.5 flex flex-wrap items-center gap-2 rounded-md bg-surface px-2 py-2" style={{ paddingLeft: 8 + row.depth * 22 }}>
-      <span className="size-5" aria-hidden />
-      <Input ref={input} value={label} onChange={(e) => { setLabel(e.target.value); setDone(null); }} aria-label={`New ${LEVEL_WORD[row.level].toLowerCase()} name ${where}`} aria-invalid={exact || error ? true : undefined} aria-describedby={`${id}-hint`}
-        placeholder={`New ${LEVEL_WORD[row.level].toLowerCase()} ${where}`} className={cn("h-8 w-auto min-w-[240px] flex-1", exact && "border-danger")}
-        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (!exact && !close.length) void add("new"); } if (e.key === "Escape") { e.preventDefault(); onDone(); } }} />
-      {hasLocs ? <LocationPicker value={locs} onChange={setLocs} label="Cases may be opened from" /> : null}
-      <Button size="sm" onClick={() => void add("new")} disabled={!label.trim() || !!exact || close.length > 0 || checking} busy={busy}>Add</Button>
-      <Button size="sm" variant="ghost" onClick={onDone}>Cancel</Button>
-      <div id={`${id}-hint`} className="w-full pl-7 text-xs" aria-live="polite">
-        {done && !label.trim() ? <p role="status" data-done className="font-medium text-text-ok">{done}</p>
-          : error ? <p role="alert" className="text-text-danger">{error}</p>
-          : exact ? <p role="alert" className="text-text-danger">"{exact.label}" already exists {where}. Choose it instead. <button type="button" className="font-semibold text-text-link underline underline-offset-2" onClick={() => onPick(exact.key)}>Show it</button></p>
-          : close.length ? (
-            <div className="rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-text">
-              Did you mean {close.slice(0, 3).map((c, i) => <span key={c.key}>{i ? ", " : ""}<b>{c.trail.join(" › ")}</b> <span className="text-xs text-text-muted">({c.why})</span></span>)}?
-              <span className="ml-2 inline-flex gap-1.5"><Button size="sm" variant="secondary" onClick={() => onPick(close[0].key)}>Use existing</Button><Tip tip="Adds it anyway; Activity records that close names existed."><Button size="sm" variant="ghost" onClick={() => void add("add_anyway")} busy={busy}>Add mine anyway</Button></Tip></span>
-            </div>)
-          : <p className="text-text-muted">{label.trim() ? (checking ? "Checking the names that exist…" : `No exact match ${where} · no close spelling · `) : "Type a name. "}<Tip tip={NMC_TIP} focusable><span className="rounded-full border border-dashed border-border-strong px-1.5">Not meaning-checked</span></Tip> · Enter to add, Esc to cancel</p>}
-      </div>
-    </div>
-  );
 }
 
 /** The selected name: what uses it, rename, where cases may be opened, order, remove / retire / restore, history. A side
@@ -476,8 +449,8 @@ function DetailPanel({ node, type, siblings, leaf, leaves, canAuthor, onClose, o
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-text-muted">Order</span>
-          <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i <= 0} onClick={() => void move(-1)}><ArrowUp /> Move up</Button></span></Tip>
-          <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i < 0 || i >= siblings.length - 1} onClick={() => void move(1)}><ArrowDown /> Move down</Button></span></Tip>
+          <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Program structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i <= 0} onClick={() => void move(-1)}><ArrowUp /> Move up</Button></span></Tip>
+          <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Program structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i < 0 || i >= siblings.length - 1} onClick={() => void move(1)}><ArrowDown /> Move down</Button></span></Tip>
           {node.level === "category" && leaf ? <Tip tip={no ?? (node.hasSetup ? `${node.label} already has its own setup, so it is the combination. A sub-category would leave that setup above a combination.` : `Add a sub-category under ${node.label}. It then becomes the combination instead.`)}><span><Button size="sm" variant="secondary" disabled={!!no || node.hasSetup || node.retired} onClick={onAddChild}><Plus /> Add sub-category</Button></span></Tip> : null}
         </div>
         <section aria-label="Where used" className="space-y-2 rounded-lg border border-border p-3">

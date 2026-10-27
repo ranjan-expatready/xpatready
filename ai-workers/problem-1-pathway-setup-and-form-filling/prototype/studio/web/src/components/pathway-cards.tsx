@@ -3,10 +3,12 @@
 // A card is a toggle (aria-pressed); what it opens is the page's own (Structure: that Pathway's tree; Immigration
 // programs: that Pathway's setup cards).
 import { Plus } from "lucide-react";
+import { LevelMark, pathwayAccent } from "@/components/levels";
 import { Tip } from "@/components/status";
 import { cn } from "@/lib/utils";
 
-export type PathwayCardItem = { key: string; label: string; combinations: number; needs: number; retired?: boolean };
+/** detail: a short line of counts by status ("1 Live · 2 In setup · 4 Not started"); matches: Find's hits in it. */
+export type PathwayCardItem = { key: string; label: string; combinations: number; needs: number; retired?: boolean; detail?: string; matches?: number };
 export const NEED_YOU_TIP = '"Need you": combinations waiting for a person: something to review, something missing or something blocking release.';
 
 export function PathwayCards({ typeLabel, pathways, open, onOpen, allTip, cardTip, add }: {
@@ -30,10 +32,14 @@ export function PathwayCards({ typeLabel, pathways, open, onOpen, allTip, cardTi
           <span className="text-sm font-semibold">All pathways</span><Counts n={total} k={needs} />
         </button>
       </Tip>
-      {pathways.map((p) => (
+      {pathways.map((p, i) => (
         <Tip key={p.key} tip={`${cardTip(p.label)} ${NEED_YOU_TIP}`}>
-          <button type="button" aria-pressed={open === p.key} onClick={() => onOpen(p.key)} data-pathway={p.key} className={cn(card, open === p.key ? "border-primary bg-primary/10" : "border-border bg-surface-raised hover:border-border-strong", p.retired && "opacity-70")}>
-            <span className="break-words text-sm font-semibold">{p.label}{p.retired ? <span className="ml-1 font-normal text-text-muted">(retired)</span> : null}</span><Counts n={p.combinations} k={p.needs} />
+          {/* VS-9: the Pathway's accent as a 4 px stripe; its name stays slate with the Pathway mark. */}
+          <button type="button" aria-pressed={open === p.key} onClick={() => onOpen(p.key)} data-pathway={p.key} style={{ borderLeftColor: pathwayAccent(i), borderLeftWidth: 4 }} className={cn(card, open === p.key ? "border-primary bg-primary/10" : "border-border bg-surface-raised hover:border-border-strong", p.retired && "opacity-70")}>
+            <span className="flex items-start gap-1.5 break-words text-sm font-semibold text-lv1"><LevelMark level="pathway" tip={false} className="mt-1" />{p.label}{p.retired ? <span className="ml-1 font-normal text-text-muted">(retired)</span> : null}</span>
+            <Counts n={p.combinations} k={p.needs} />
+            {p.detail ? <span className="text-xs text-text-muted" data-card-detail>{p.detail}</span> : null}
+            {p.matches !== undefined ? <span className="text-xs font-semibold text-text-link" data-card-matches>{p.matches} {p.matches === 1 ? "match" : "matches"}</span> : null}
           </button>
         </Tip>
       ))}

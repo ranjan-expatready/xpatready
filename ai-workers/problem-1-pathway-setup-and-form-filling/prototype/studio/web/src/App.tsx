@@ -29,13 +29,14 @@ function Shell() {
   const actorId = useActorId();
   const session = useApi(["session", actorId], "/session");
   const loc = useLocation();
-  // To review first under Configure (P-79), with what waits for the person acting.
+  // To review (P-79) shows what waits for the person acting.
   const queue = useApi<{ counts: { needs: number } }>(["review-queue", actorId, "count"], "/review-queue?filter=needs", { refetchInterval: 15_000 });
   const nav = [
-    { to: "/review", label: "To review", icon: Inbox, badge: queue.data?.counts.needs || undefined },
+    // P-125 (founder, 27 Oct): the menu in setup order: names first (the one place they enter), then the combinations,
+    // then what waits for a second person.
+    { to: "/structure", label: "Program structure", icon: ListTree },
     { to: "/", label: "Immigration programs", icon: Layers, match: (p: string) => p === "/" || p === "/new" || p.startsWith("/c/") },
-    // W1-03 (P-115): the one place new names enter.
-    { to: "/structure", label: "Structure", icon: ListTree },
+    { to: "/review", label: "To review", icon: Inbox, badge: queue.data?.counts.needs || undefined },
     { to: "/library/fields", label: "Fields", icon: Database },
     { to: "/library/sections", label: "Sections", icon: Boxes },
     { to: "/library/documents", label: "Document types", icon: FileStack },
