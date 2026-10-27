@@ -158,8 +158,19 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   run = (await settle(u.body.runId)).body;
   const step = (k: string) => run.steps?.find((s: any) => s.kind === k);
   ok("C11.11 (M1): rules read what the file is: \"Rules read it … No AI call was made\"", /^Rules read it: IMM 5604 \(\d{2}-\d{4}\).*No AI call was made\.$/.test(step("upload_identity")?.message ?? "") && step("upload_identity")?.uses === "rules", step("upload_identity"));
+  const lmia = sql(`select combination_id from combination_form where lineage_key='IMM 1295' limit 1`);
+  r = await call("PATCH", `/combinations/${lmia}/forms/imm1295`, { who: "principal_applicant" });
+  ok("round 3 m1: a line edit takes the number written loosely (imm1295)", r.status < 300, r.body?.detail ?? r.status);
   ok("C11.11: rules compare it with canada.ca: the very file the form page links", /The very file canada\.ca's form page links/.test(step("upload_compare")?.message ?? ""), step("upload_compare")?.message);
   ok("C11.11: it joins the library through the one intake, the run ends Done, US$0", run.status === "done" && step("upload_add")?.status === "COMPLETED" && sql(`select count(*) from gov_form_def where form_key='IMM 5604'`) === "1" && run.usd.spent === 0, { status: run.status, add: step("upload_add")?.message });
+  // Round 3 R3-1: upload for a combination's row while a retire of that form is open: kept in the library, not attached.
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5604")}/retire`, { reason: "Checking the open-retire rule" });
+  ok("setup: a retire of the unused IMM 5604 waits for a second person", r.status < 300 && r.body.status === "WAITING", r.body);
+  { const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(official)], { type: "application/pdf" }), "imm5604e.pdf"); fd.append("forCombination", vv); fd.append("forCode", "IMM 5604");
+    const up = await (await fetch(`http://localhost:${PORT}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json() as { runId: string };
+    run = (await settle(up.runId)).body;
+    ok("round 3 R3-1: an upload for a combination's row is not attached while the form's retire is open, and says so", !/IMM 5604:/.test(sql(`select string_agg(lineage_key || ':' || status, ',') from combination_form where combination_id='${vv}'`) ?? "") && /Not attached to the combination|open on To review/.test(JSON.stringify(run)), run.message ?? run.error); }
+  sql(`delete from library_change where key='IMM 5604'`);
   u = await upload("notes.pdf", Buffer.from("these are notes, not a PDF"));
   run = (await settle(u.body.runId)).body;
   ok("C11.11: a file that is not a PDF is refused at the first step; nothing is read", run.status === "failed" && /not a PDF/.test(run.steps[0].message) && run.steps.slice(1).every((s: any) => s.status === "SKIPPED"), run.steps?.map((s: any) => `${s.kind}:${s.status}`));

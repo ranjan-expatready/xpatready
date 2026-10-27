@@ -1,85 +1,90 @@
-# S4 Form library: break report, round 2 (independent breaker, 27 Oct 2026)
+# S4 Form library: break report, round 3 (independent breaker, 27 Oct 2026)
 
-**What was tested.** Commit e58136e on branch `forms/2026-10-27-s4-form-library`, run on the isolated copy `brk_s4` at :4462 with the sample loaded. Scope was only what the CHECK fixes and the second pass touched: delete and where used, retire, Undo and Remove, Stop, replay, and the S4 CHECK constraints. The earlier round is in git history.
-* **Spend: US$0.** The stand-in launcher answered a stub probe (`var/isolated-brk_s4/fake-launch.log`) before any live step, and canada.ca was never called. `p2/jobs`, `p2/runs` and `p2/ledger` hold the same files as before; I removed the one job file and the planted run files I created. The copy is stopped.
-* **One setup step went straight to the database:** a library form with no file (`INSERT gov_form_def 'IMM 5645'`, the state IMM 5802 is in after the sample loads). Everything else went through the API, or the UI where stated. Paths are relative to `prototype/studio/`.
+**What was tested.** Commit 26a360e on `forms/2026-10-27-s4-form-library`, isolated copy `brk3_s4` on :4462 with the sample loaded. Scope: the round 2 fixes (N1–N8, m-a–m-c) and their new code paths (`oneAtATime`, `closingChange`, `hasApprovedFile`, approve re-check, guide keys, replay match, per-run job ids, multi-file upload, the 1024 px table and focus ring). Earlier rounds are in git history. Paths are relative to `prototype/studio/`.
+* **Spend: US$0.** A stub probe reached `var/isolated-brk3_s4/fake-launch.log` before any live step. All 3 live calls went to the stand-in, and canada.ca was never called (recorded copies only). `p2/jobs`, `p2/runs` and `p2/ledger` are byte-identical to before: I planted 8 replay files in `p2/runs` for one test and removed them at once. The copy is stopped and its database dropped.
+* **Setup steps that went straight to the database:** for N1, an empty library row (`INSERT gov_form_def`, the state IMM 5802 is in after the sample loads). For N8, one RETIRED line. For the UI, one long title. Everything else went through the API or the browser.
 
 ## Major
-**N1 · A form whose file a second person approved after the Delete was proposed is still deleted (B1 rule).**
+**R3-1 · A form can still get a new use while its retire or delete is open, so a retire is released while combinations use it (N2 only partly fixed).**
 * **Steps:**
-  1. A form with no approved file (as above): user-A `DELETE /library/forms/IMM%205645`. It is allowed, although "1 held file waiting" is listed.
-  2. The uploader records the IRCC page of the held upload (`PATCH /intake/held/:id`), and user-B approves it. An approved edition now exists, with an `approved_source` row.
-  3. user-B approves the Delete.
-* **Broke:** The form and its edition are deleted, and the change is RELEASED ("Removed at approval"). The `approved_source` row is left pointing at nothing. Reproduced twice.
+  1. Upload PDF `forms/imm5645e.pdf`. It is canada.ca's file, so it is added at once.
+  2. Attach IMM 5645 to Super visa, then Remove it.
+  3. user-A `POST /library/forms/IMM%205645/retire`, and user-B approves.
+  4. A hand attach is refused (409 "Being retired"), as fixed.
+  5. Then:
+     * user-A `POST /combinations/<Super visa>/forms/undo` returns **201**, and the line is DRAFT again;
+     * user-A Upload PDF of the same file with `forCombination=<Visitor visa>&forCode=IMM 5645` says "Attached to the combination.";
+     * user-B `POST /pack/release` returns 201 and release 2 carries the RETIRE.
+* **Broke:** IMM 5645 is retired while two drafts file it. The list shows "Retired · Used by Visitors › Super visa; Visitors › Visitor visa", and the picker no longer offers it.
+* **Also: Combination › Forms "+ Add"** (`POST /combinations/<Study permit>/lines`, `web/src/components/forms.tsx:86`) returns 201. It attaches retired IMM 5645, and IMM 5562 while its Delete is WAITING, as sources ("Next: AI drafts its field map").
 * **Cause:**
-  * `api/src/lifecycle.ts:134-141`: at approval, `checkApprove` blanks `can` and `recheckNode` looks only at "released" and "blocking". The "approved official file" rule (`form-uses.ts:53,65`) is never checked again.
-  * `lifecycle.ts:173-175` checks only the number of lines and also deletes `official_download` rows. A canada.ca download that arrives between the proposal and the approval is deleted the same way.
+  * Only `attachNow` (`api/src/form-library.ts:161`) and the finder (`finder.ts:653`) check `closingChange`.
+  * Undo (`form-library.ts:223-236`) puts lines back with no check.
+  * `intake.ts:97-110 forForm` checks neither `retiredAt` nor `closingChange`, and runs outside `oneAtATime`.
+  * `programs.ts:358-372 addLine` checks neither; it is also not serialised and records no Undo step. After it, Undo says "There is no change on this combination's forms to undo".
+  * `lifecycle.ts:215-221 publishLifecycle` retires without checking uses again.
 
-**N2 · An approved Retire is released while a combination's draft uses the form.**
-* **Steps:**
-  1. IMM 5645: Retire (user-A), approved by user-B. It now waits for the release.
-  2. user-A `POST /combinations/<Super visa>/forms {formKey:"IMM 5645"}` returns 201. Where-used shows "Super visa" and "Retire waiting (approved)".
-  3. user-B `POST /pack/release`.
-* **Broke:** Release 2 carries the retire, so IMM 5645 is retired while Super visa's draft line still files it. The list shows "Retired · Used by Visitors › Super visa".
-* **Cause:** `api/src/form-library.ts:158`: attach checks only `retiredAt`, not an open retire. `lifecycle.ts:211-216` (`publishLifecycle`, called at `library-changes.ts:174`) retires without checking uses again.
-
-**N3 · Stop on one run still ends another combination's run (B-M5 only partly fixed).**
-* **Steps:**
-  1. Under Retail › Temporary residence, add Program "LMIA" › Sub-category "High-wage position" and its combination. Corporate already has the same names.
-  2. Plan and start both live runs with the same page (the stand-in sleeps 6 s).
-  3. Stop the Retail run only.
-* **Broke:** Both runs have the job id `studio-finder-forms-temporary-residence-lmia-high-wage-posit-9d023c2b`. The Corporate run, which nobody stopped, ended FAILED with "Stopped during the free stub pass". Both runs also write the same job file, and the first one to finish deletes it while the other's launch is still queued. The real launcher reads that file (`p2/launch.ts:58`).
-* **Cause:** `api/src/finder.ts:453` builds the id from the trail's words only. The type (Retail or Corporate) and the combination id are not in it. `finder.ts:479` and `sources.ts:464-467` then stop the job by that id.
-
-**N4 · Replay gives one combination another combination's AI answer.**
-* **Steps:** On the new "Temporary residence › LMIA › High-wage position" combination, plan and run in `replay` mode with `pageUrl` set to the visitor visa page.
-* **Broke:** At US$0 it reused the answer saved for "Individual › Visitors › Visitor visa" (`drafting_run.inputs.combination`). Six visitor-visa forms (IMM 5409, 5475, 5476, 5645, 5707, IRM 0002) were attached to an LMIA work permit as "Picked by AI · Sample", with that combination's conditions.
-* **Cause:** `finder.ts:455` (`same`) compares only the pages and the prompt checksum. The prompt is about one combination and gets `combination_trail` as a known fact (`p2/prompts/find-forms.v1.md:4`), stored in the record but never compared. Two siblings reading the same guide get each other's answer the same way.
-
-**N5 · Many Removes at once: the person who removed the line gets an error, and Undo steps are duplicated (m12 holds only for a few at once).**
-* **Steps:** 10 parallel `DELETE /combinations/<High-wage>/forms/IMM 5476`, then repeated with IMM 5707.
-* **Broke:**
-  * First run: no 200 at all, six 500s, and the line RETIRED with **six** "remove" Undo steps and six audit lines.
-  * Second run: nine 409s and one 500. The 500 went to the request that did remove the line.
-  * Every request took 20 s, and an unrelated `GET /library/forms/list` took 19.1 s while they waited. The server log shows P2028 "Unable to start a transaction in the given time". 2 and 5 parallel removes behaved correctly.
-* **Cause:** `api/src/form-library.ts:185-191`. Inside `$transaction(tx)`, the read (line 187) and `studio.saveForm` (line 190) use `this.db`, not `tx`. Each request therefore holds one connection while it needs a second (the pg pool has 10). The writes also commit outside the transaction, so they survive the timeout and the 500.
-
-**N6 · An edit made at the same moment silently overwrites an Undo, and the next Undo brings back the undone value (B-M4 reversed).**
-* **Steps:** 12 rounds on IRM 0002 (High-wage). In each round, `PATCH {who}`, then in parallel `POST …/forms/undo` and `PATCH {who:"each_applicant"}`.
-* **Broke:** In 11 of 12 rounds both calls succeeded (201 and 200), but the line ends with the edit's value: the Undo the person was told succeeded is gone. The edit's Undo record stores the pre-Undo state as its "before", so after round 12 `POST …/forms/undo` restored `spouse_or_partner`, the value that had just been undone.
-* **Cause:** `api/src/studio.ts:463-478`: saveForm reads the rows and checks `baseRevision` with no lock, then writes. Only Undo locks the rows (`form-library.ts:218`), so an edit that read before the lock writes after it.
-
-**N7 · Guides cannot be opened, retired or deleted, and guides and checklists used as sources show "Not used".**
-* **Steps (API and UI, 1440 px):** `GET /library/forms/Guide%205256/uses` and `POST …/retire` and `DELETE …`. In the UI: Guide 5256 › ⋯ › Delete.
-* **Broke:**
-  * All three calls return 404 "GUIDE 5256 is not in the library.", so the drawer's "Where it is used" and History are empty.
-  * The list says "Used by: Not used" for Guide 5256, although it is attached to Visitor visa as Instructions. Checklists IMM 5484 and IMM 5881 also show "Not used", although `/uses` blocks their retire with "Still used: Visitors › Visitor visa".
-  * The Delete dialog shows no uses and fails with the 404 only when sent (screenshot kept outside the repo: `r2-guide-delete-submit-1440.png`).
+**R3-2 · The finder's replay no longer finds the committed real Visitor visa answers, so no combination can show AI form finding at US$0 (regression from the N4 fix).**
+* **Steps:** Load the sample, then on Visitor visa plan and run with `{mode:"replay"}`.
+* **Broke:** finder_propose is FAILED: "No saved AI answer for these exact pages yet. Run it live once…". Planting copies of the same two records with the current trail made replay work (PARTIAL, 5 forms attached), so the trail is the only reason.
 * **Cause:**
-  * `contracts/form-library.ts:14`: `normaliseCode` upper-cases any code it cannot parse, and is applied at `form-library.ts:263-268`.
-  * `form-library.ts:59` counts only attachments of kind "Form" as uses, while `form-uses.ts:48` counts all kinds. `web/src/pages/library-forms.tsx:187` enables Delete from the list's count.
-
-**N8 · A Delete that could not be applied is still announced to the approver as approved (B-M1 only partly fixed).**
-* **Steps:**
-  1. Propose Delete on IMM 5645.
-  2. Approve its held file, attach the form to Visitor visa, then remove it.
-  3. user-B approves the Delete.
-* **Broke:** The database is right (RETURNED, "Not deleted: a combination still has a line…"). But the response says `status: "APPROVED"`, so the UI toast says "…approved: it is released with the next release" (`web/src/pages/review-items.tsx:58`), and the audit line says 'Approver approved "IMM 5645 …" (delete)'.
-* **Cause:** `api/src/screen02.ts:104-108` returns `out`, which was taken before `afterApprove`, and logs "approved" whatever happened.
+  * The two real records (the US$0.31 evidence, "kept … as the Visitor visa's replay", build-notes) carry `combination_trail` "Individual › Visitors › Visitor visa". The current trail is "Temporary residence › Visitors › Visitor visa".
+  * `finder.ts:455` (`same`) now requires an exact trail match.
+  * The check passes only because it plants records with the live trail (`tests/check_forms_s4_finder.ts:178-183`).
+  * The demo and CI are left with live (paid) or rules only.
 
 ## Minor
-* **m-a · A broken newer saved answer stops replay, even when an older good one exists.** I put a newer copy of the Visitor visa answer in `p2/runs` (removed after the test). With unreadable `raw_output`, the step fails as "This step stopped: Expected property name or '}' in JSON at position 1" (developer words, not plain words). With the wrong shape, it fails without trying the older valid answer. Cause: `finder.ts:460-463`: `.find` picks the newest match, and `JSON.parse` at line 462 is not guarded.
-* **m-b · A restart during a round leaves its job file in the source tree.** `p2/jobs/studio-finder-forms-temporary-residence-visitors-super-visa-d107409f.json` was left after an `isolated.sh restart` mid-round (I deleted it). `p2/jobs` is also shared by every copy (`finder.ts:75`), so two copies running the same trail delete each other's job file. Cause: the job file is removed only in the `finally` at `finder.ts:471-475`, and start-up (`sources.ts:70-81`) clears pid files, not job files.
-* **m-c · Wrong wording on an impossible version.** Remove with `{version:7}` when the line is at version 1 says "changed … after you opened it (now version 1)".
+* **m1 · The one-at-a-time line is keyed by how the id is spelled in the URL.**
+  * **Steps:** 10 parallel `DELETE /combinations/<id>/forms/IMM 5475`, using 5 spellings of the same uuid (lower, UPPER, no hyphens, `{…}`, `urn:uuid:`). Postgres treats them as one id.
+  * **Broke:** Two 200s, **two Undo steps** for one removal, and one 409 in developer words: "the database refused a duplicate".
+  * **Cause:** `form-uses.ts:81-86`, with the raw parameter passed at `main.ts:48` and `form-library.ts:271,274-275`.
+  * **Related:** `PATCH …/forms/imm5409` returns 404 ("imm5409 is not part of this combination"), while DELETE with the same code works. `main.ts:48` does not normalise `:form`.
+* **m2 · A slow request holds the line, and then answers with a generic error.**
+  * **Steps:** Another database session held Visitor visa's lines for 12 s (`SELECT … FOR UPDATE; pg_sleep(12)`).
+  * **Broke:**
+    * Undo waited 11.2 s, then returned **500 "Something went wrong on the server"** (P2028, the transaction expired after 5 s).
+    * An attach, an edit and a remove on that combination each waited 11 s behind it.
+    * Nothing was lost: the Undo rolled back.
+  * **Cause:** `form-library.ts:223-224` waits on `FOR UPDATE` with no `lock_timeout` and has no plain "busy, try again" answer.
+* **m3 · Upload with several files (refused files named):**
+  * **Non-English names are garbled.** An empty "फ़ॉर्म-签证.pdf" is listed as "à¤«à¤¼à¥à¤°à¥à¤®-ç­¾è¯.pdf is empty…". Multer reads names as latin1 (`form-library.ts:260`).
+  * **One file over 25 MB refuses the whole batch** (413 "Nothing was added"): the valid file beside it is neither run nor named. The multer limit is at `form-library.ts:250`. Build-notes say "refused files are named and the others still run".
+* **m4 · Focus ring.** At 1024 px, Tab stops on each row's Status pill ("Ready", `library-forms.tsx:109`) and on the "IRCC accepts" header (`:99`), but neither shows a visible focus indicator (outline none, box-shadow none). Only a tooltip appears. The ring was added to the chips and form numbers only.
+* **m5 · Table width at 1024 px.** A 120-character title with one long unbreakable word (German compound + CJK + Devanagari) widens the table by 27 px. The ⋯ button then sits outside the table's box at 1024 px (right edge 1026) and at 1280 px (1300). With the sample titles it fits. The title cell (`library-forms.tsx:103`) has no `break-words`.
+* **m6 · Code reading, not reproduced in the UI:**
+  * A RETURNED retire or delete still shows "Delete waiting" with the tooltip "waits for a second person", and attach says "nothing new may use it until it is decided" (`form-library.ts:61,74`, `form-uses.ts:91`), although a person has already decided it.
+  * A guide used as a source is refused with "its fields are read from it" (`form-uses.ts:49`), but a guide has no fields.
 
-## What held
-* **B1 at proposal:** Delete is refused for an approved or official edition ("…kept, never deleted (P-51): retire it instead") on IMM 5257, 5484 and 5881. Source attachments count as uses.
-* **B-M1 at proposal:** a retired line blocks Delete (IMM 5802), and an unappliable approved delete is stored as RETURNED with its reason.
-* **B-M5 for siblings:** the trail fingerprint separates siblings whose names differ.
-* **Stop:** a queued round reports "Stopped before the AI call was sent", and a stub round "Stopped during the free stub pass: nothing was sent".
-* **B-M6:** after a restart, the left-over stand-in launcher (pid 6300) was ended, the pid file removed, and the run says "The studio server stopped while finding forms. Find again."
-* **B-M7:** replay works under the new trail names, job files are removed after normal rounds, and the run result records `ai_inputs`.
-* **m12 for 2 and 5 parallel Removes:** exactly one 200 and the others 409 "Already removed", with one Undo step.
-* **B-M4, Undo side:** an Undo refuses when an edit landed first.
-* **Stale requests and roles:** a stale `version` or `changeId` gets 409 (naming the newer change). Remove and Undo as user-C or as client user-P get 403.
-* **CHECK constraints:** `origin` ('downloaded', ''), `accepted_channels` ('pdf', '', 'PDF ') and `accepted_basis` ('SAMPLE', '') are each refused by `form_edition_origin`, `…_accepted_channels` and `…_accepted_basis`. NULL is allowed, and the live data passes.
+## What held (fixes confirmed)
+* **N1:**
+  * **In order:** the held file of IMM 5562 was approved after its Delete was asked. Approving the Delete is refused with 409 "Its file was approved meanwhile… retire it instead"; nothing was deleted.
+  * **At the same moment, 6 rounds** (approve the held file and approve the Delete in parallel): the Delete always ran first and the approved file was then added as a fresh form. The file was kept every time, and no `approved_source` row was left pointing at nothing.
+* **N3:** two live runs with the same trail (Retail and Corporate "Temporary residence › LMIA › High-wage position") got their own job ids (`…-fe37b6b2`, `…-a14ffa96`). Stop on the Retail run cancelled only that run; the Corporate run COMPLETED.
+* **N4:** replay on the LMIA combination with the visitor-visa page says "No saved AI answer…" and attaches nothing.
+* **m-a:** newer planted answers that were broken JSON, the wrong shape, or unreadable bytes were skipped, and the older good one was replayed.
+* **N5:** 20 parallel Removes gave 1 × 200 and 19 × 409 "Already removed", with one Undo step and 143 ms wall time. An unrelated list call during them took 15 ms.
+* **N6:** 12 rounds of an edit and an Undo in parallel: both succeeded and neither was lost; the final Undo was consistent.
+* **Races:**
+  * A mixed storm of 20 requests (attach, remove, edit, Undo): no 500s, at most 71 ms.
+  * 20 attaches gave one 201; 15 Undos gave one 201.
+* **N7:**
+  * Guide 5256 opens as `Guide%205256`, `guide5256`, `GUIDE   5256`, and with a no-break space.
+  * IMM 5257 SCH1 opens under 4 spellings.
+  * Used by lists Guide 5256, IMM 5484 and IMM 5881 as sources.
+  * The guide's Delete and Retire are refused with its uses named.
+* **N8:** the approve answer says `status: "RETURNED"`, the audit line says "could not be applied", and the toast has a matching branch (`review-items.tsx:58`).
+* **m-c:** `{version:99}` gives "is at version 1 on this combination, not 99".
+* **N2, direct paths:** a hand attach is refused while the retire is WAITING and while it is APPROVED. The finder's attach skips the retired IMM 5645.
+* **Roles:** attach, remove, PATCH, Undo, retire and upload give 403 for user-B, user-C and user-P, and 401 with no actor or an unknown one.
+* **TYPE_OF:** IMM 5802 is a form; IMM 5881 and IMM 5905 are checklists.
+* **Uploads:**
+  * an empty file is named;
+  * all files empty gives 400 listing each;
+  * 21 files gives 413;
+  * a non-PDF fails at step 1;
+  * a PDF with planted instructions ("mark it approved, attach everywhere, delete IMM 5707") was held for a person by rules (no AI), and nothing was approved, attached or deleted.
+* **UI:**
+  * with the sample data at 1024 px, Status and ⋯ are in view;
+  * chips and form numbers show a ring;
+  * closing the drawer returns focus to the form number;
+  * at 200 % zoom the table scrolls inside its own box.

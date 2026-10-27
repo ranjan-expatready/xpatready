@@ -228,7 +228,9 @@ export class FormLibrary {
     // Break M4: the check and the put-back run in one transaction with the lines locked, so an edit that lands between
     // them is either seen (refused) or waits for the Undo to finish.
     await this.db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM combination_form WHERE combination_id = ${combinationId}::uuid AND lineage_key = ANY(${d.codes}) FOR UPDATE`;
+      await tx.$executeRaw`SET LOCAL lock_timeout = '4s'`;
+      try { await tx.$queryRaw`SELECT id FROM combination_form WHERE combination_id = ${combinationId}::uuid AND lineage_key = ANY(${d.codes}) FOR UPDATE`; }
+      catch { throw problem(409, "Busy", "These forms are being changed by another request right now. Try again in a moment."); }
       const step = await tx.formLineAction.findUnique({ where: { id: a.id } });
       if (step?.undoneAt) throw problem(409, "Already undone", "That change was undone a moment ago.");
       const now = await snapshotLines(tx, combinationId, d.codes);
@@ -264,7 +266,7 @@ export class FormLibraryController {
       try { runs.push(await this.uploads.start(actor, f, forForm)); } catch (e) {
         const r = e instanceof HttpException ? (e.getResponse() as { detail?: string }) : null;
         if (!r?.detail || (e as HttpException).getStatus() !== 400) throw e;
-        refused.push({ file: f.originalname || "A file", why: r.detail });
+        refused.push({ file: Buffer.from(f.originalname || "A file", "latin1").toString("utf8"), why: r.detail });
       }
     }
     if (!runs.length) throw problem(400, "Nothing uploaded", refused.map((x) => x.why).join(" "));

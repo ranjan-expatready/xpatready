@@ -85,7 +85,7 @@ export function RunChip() {
   const more = (q.data?.runs.length ?? 1) - 1;
   return (
     <TipProvider><Tip tip={`${r.label}${r.scope ? ` for ${r.scope}` : ""}: ${r.status_word.toLowerCase()}. Open it to watch its steps or stop it.${more ? ` ${more} more run${more === 1 ? "" : "s"} going on.` : ""}`}>
-      <Link to={r.href} aria-label={`${r.label}${r.step ? `, step ${r.step.n} of ${r.step.m}` : ""}`} className="inline-flex items-center gap-2 rounded-full border border-border px-2 py-1 text-xs md:px-3" data-run-chip>
+      <Link to={r.href} aria-label={`${r.label}${r.step ? ` · step ${r.step.n} of ${r.step.m}` : ""}${more ? ` · +${more}` : ""}`} className="inline-flex items-center gap-2 rounded-full border border-border px-2 py-1 text-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:px-3" data-run-chip>
         <Loader2 className="size-3.5 animate-spin text-primary motion-reduce:animate-none" aria-hidden />
         <span className="hidden max-w-64 truncate md:inline">{r.label}{r.step ? ` · step ${r.step.n} of ${r.step.m}` : ""}{more ? ` · +${more}` : ""}</span>
       </Link>

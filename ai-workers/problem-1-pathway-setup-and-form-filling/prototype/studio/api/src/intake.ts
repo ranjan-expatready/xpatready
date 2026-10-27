@@ -106,7 +106,9 @@ export class Intake {
     const { addFormLine } = await import("./form-lines.ts");
     const { snapshotLines, recordAction } = await import("./form-uses.ts");
     const before = await snapshotLines(this.db, t.combinationId, [t.code]);
-    const added = await addFormLine(this.db, { workspaceId, combinationId: t.combinationId, govFormDefId: def.id, formKey: t.code, origin: "HUMAN", by: actor.id, sourceQuote: `${r.edition ?? t.code}: uploaded for this combination` });
+    let added: "added" | "already";
+    try { added = await addFormLine(this.db, { workspaceId, combinationId: t.combinationId, govFormDefId: def.id, formKey: t.code, origin: "HUMAN", by: actor.id, sourceQuote: `${r.edition ?? t.code}: uploaded for this combination` }); }
+    catch (e) { return { ...r, message: `${r.message} Not attached to the combination: ${(e as Error).message}` }; }
     if (added === "added") await recordAction(this.db, { workspaceId, combinationId: t.combinationId, action: "attach", codes: [t.code], before, by: actor.id });
     return { ...r, message: `${r.message} ${added === "added" ? "Attached to the combination." : "Already on the combination."}` };
   }

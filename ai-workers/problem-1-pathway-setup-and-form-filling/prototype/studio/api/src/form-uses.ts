@@ -78,7 +78,8 @@ export async function hasApprovedFile(db: Pick<Db, "approvedSource" | "officialD
 /** Break round 2 N5, N6: changes to one combination's forms list run one after the other in this server (attach, remove,
  *  a line edit, Undo, the finder's attach), so a check and its write never interleave with another change. */
 const listLocks = new Map<string, Promise<unknown>>();
-export async function oneAtATime<T>(combinationId: string, fn: () => Promise<T>): Promise<T> {
+export async function oneAtATime<T>(id: string, fn: () => Promise<T>): Promise<T> {
+  const combinationId = id.toLowerCase().replace(/^urn:uuid:/, "").replace(/[^0-9a-f]/g, "") || id; // round 3 m1: one key per combination, however spelled
   const prev = listLocks.get(combinationId) ?? Promise.resolve();
   const run = prev.catch(() => undefined).then(fn);
   const tail = run.catch(() => undefined);
@@ -88,7 +89,7 @@ export async function oneAtATime<T>(combinationId: string, fn: () => Promise<T>)
 
 /** Break round 2 N2: a retire or delete asked for this form and not yet decided or released (nothing new may use it). */
 export async function closingChange(db: Pick<Db, "libraryChange">, workspaceId: string, code: string) {
-  return db.libraryChange.findFirst({ where: { workspaceId, kind: "library_form", key: code, action: { in: ["RETIRE", "DELETE"] }, status: { in: OPEN } } });
+  return db.libraryChange.findFirst({ where: { workspaceId, kind: "library_form", key: code, action: { in: ["RETIRE", "DELETE"] }, status: { in: ["WAITING", "APPROVED"] } } });
 }
 
 // ------------------------------------------------------------------ Undo: one change on a forms list

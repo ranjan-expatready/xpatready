@@ -175,7 +175,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   run = (await finish(r.body.id)).body;
   ok("C11.8: replay with no saved answer for these pages stops with the reason and attaches nothing (US$0)", run.status === "FAILED" && /No saved AI answer/.test(run.steps[2].message) && run.usd.spent === 0, run.steps?.[2]?.message);
   // Break M7, round 2 N4: saved answers are found by everything the AI was given (pages, prompt, trail), not by file name.
-  const vvTrail = sql(`select split_part(scope_label, '|', 2) from ai_batch where id='${run.id}'`);
+  const vvTrail = sql(`select split_part(scope_label, '|', 2) from ai_batch where id='${run.id}'`).replace(/^[^›]+›/, "Individual ›"); // round 3 R3-2: a renamed upper level still replays
   for (const [prefix, out, tpl] of [["studio-finder-forms-check-", check, "find-forms-check.v1.md"], ["studio-finder-forms-", draft, "find-forms.v1.md"]] as const) {
     const file = join(P2, "runs", `${prefix}an-older-name-of-this-place-live-29991231t000000000z-s4check.json`); // newest, so it is the one replayed
     writeFileSync(file, JSON.stringify({ ...rec(out), drafting_run: { ...rec(out).drafting_run, inputs: { official_files: res.ai_inputs, combination: vvTrail } }, launch_evidence: { template_sha256: sha(readFileSync(join(P2, "prompts", tpl))), known: { combination_trail: vvTrail } } }));
@@ -284,10 +284,11 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   madeForm("IMM 0102");
   r = await call("DELETE", `/library/forms/${encodeURIComponent("IMM 0102")}`, { reason: "Never used anywhere" });
   const del2 = r.body.id;
-  sql(`insert into form_edition select (jsonb_populate_record(null::form_edition, to_jsonb(e) || jsonb_build_object('id', gen_random_uuid(), 'gov_form_def_id', (select id from gov_form_def where form_key='IMM 0102'), 'edition_label', 'IMM 0102 (01-2026)'))).* from form_edition e where gov_form_def_id=(select id from gov_form_def where form_key='IMM 5488') limit 1`);
+  sql(`insert into form_edition select (jsonb_populate_record(null::form_edition, to_jsonb(e) || jsonb_build_object('id', gen_random_uuid(), 'gov_form_def_id', (select id from gov_form_def where form_key='IMM 0102'), 'edition_label', 'IMM 0102 (01-2026)', 'sha256', repeat('ab', 32), 'content_sha256', null))).* from form_edition e where gov_form_def_id=(select id from gov_form_def where form_key='IMM 5488') limit 1`);
+  sql(`insert into official_download select (jsonb_populate_record(null::official_download, to_jsonb(o) || jsonb_build_object('id', gen_random_uuid(), 'sha256', repeat('ab', 32), 'code', 'IMM 0102'))).* from official_download o limit 1`); // its file is now an official download (approved)
   r = await call("POST", `/library/changes/${del2}/approve`, { note: "Checked" }, "user-B");
   ok("break round 2 N1: a file approved after the delete was asked keeps the form: the approval is refused in words (409), nothing deleted", r.status === 409 && /approved meanwhile/.test(r.body.detail) && sql(`select count(*) from gov_form_def where form_key='IMM 0102'`) === "1", r.body.detail);
-  sql(`delete from library_change where key='IMM 0102'`); sql(`delete from form_edition where edition_label='IMM 0102 (01-2026)'`); sql(`delete from gov_form_def where form_key='IMM 0102'`);
+  sql(`delete from library_change where key='IMM 0102'`); sql(`delete from form_edition where edition_label='IMM 0102 (01-2026)'`); sql(`delete from official_download where code='IMM 0102'`); sql(`delete from gov_form_def where form_key='IMM 0102'`);
   // N2: nothing new may use a form while a retire or delete of it is open
   r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IRM 0002" });
   r = await call("DELETE", `/combinations/${vv}/forms/${C0002}`, { version: Number(sql(`select version from combination_form where combination_id='${vv}' and lineage_key='IRM 0002' order by version desc limit 1`)) });
@@ -296,6 +297,8 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("setup: retire of the unused IRM 0002 waits for a second person", r.status < 300 && r.body.status === "WAITING", r.body);
   r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IRM 0002" });
   ok("break round 2 N2: a form being retired cannot be attached meanwhile (409, in words)", r.status === 409 && /Being retired/.test(r.body.title), r.body.detail);
+  r = await call("POST", `/combinations/${vv}/lines`, { kind: "FORM", formKey: "IRM 0002" });
+  ok("round 3 R3-1: the workspace's \"+ Add\" refuses it too (409, in words): every attach path goes through one guard", r.status === 409 && /open on To review/.test(r.body.detail ?? r.body.message ?? ""), r.body?.detail ?? r.body);
   r = await call("POST", `/combinations/${vv}/forms/undo`);
   ok("round 3 major: Undo never brings back a form whose retire is open (409, in words); the line stays removed", r.status === 409 && /Being retired/.test(r.body.title) && /IRM 0002:RETIRED/.test(lines(vv)), r.body.detail);
   // The release checks again: a draft listing the form again (made by hand here) keeps it, and the retire goes back.

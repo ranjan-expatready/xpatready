@@ -47,6 +47,9 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
 }
 
 export const FINDER_OPERATION = "find_forms";
+/** Round 3 R3-2: a saved answer belongs to this combination when its own names (the last two levels of the trail) are
+ *  the same: renaming a level above it (a program) keeps its replay; another combination (other names) never gets it. */
+const sameCombination = (saved: string | undefined, trail: string) => !!saved && saved.split(" › ").slice(-2).join(" › ") === trail.split(" › ").slice(-2).join(" › ");
 /** Saved run files, newest first by the time in their name (after "-live-"), whatever the job id before it. */
 const newestFirst = (a: string, b: string) => b.slice(b.lastIndexOf("-live-")).localeCompare(a.slice(a.lastIndexOf("-live-")));
 /** Break minor 1: an answer is used only in the shape its schema promises (a wrong shape never crashes the run). */
@@ -453,10 +456,10 @@ export class Finder implements OnModuleInit {
     // Round 2 N3: and of this run, so two combinations with the same names (another pathway) never share one either.
     const jobId = `${base}-${slug(trail).slice(0, 40).replace(/_/g, "-")}-${sha(`${batchId ?? ""}|${trail}`).slice(0, 8)}`;
     const tsha = sha(readFileSync(join(PROMPTS, template)));
-    const same = (r: SavedRun) => r?.drafting_run?.status === "completed" && r.contract_valid === true && r.launch_evidence?.template_sha256 === tsha && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(inputs) && (r.launch_evidence?.known?.combination_trail ?? r.drafting_run?.inputs?.combination) === trail && typeof r.raw_output === "string";
+    const same = (r: SavedRun) => r?.drafting_run?.status === "completed" && r.contract_valid === true && r.launch_evidence?.template_sha256 === tsha && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(inputs) && sameCombination(r.launch_evidence?.known?.combination_trail ?? r.drafting_run?.inputs?.combination, trail) && typeof r.raw_output === "string";
     if (mode === "replay") {
-      // Break M7, round 2 N4: a saved answer is found by everything the AI was given (the same pages, the same prompt and the
-      // same combination trail), never by a file name; another combination's answer is never reused. Round 2 m-a: an
+      // Break M7, round 2 N4, round 3 R3-2: a saved answer is found by what the AI was given (the same pages, the same prompt,
+      // the same combination by its own names), never by a file name; another combination's answer is never reused. Round 2 m-a: an
       // unreadable or wrong-shape answer is skipped and an older good one is used.
       const mine = new RegExp(`^${base}-${isCheck ? "" : "(?!check-)"}.+-live-.+\\.json$`);
       const r = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f)).sort(newestFirst) : []).map((f): SavedRun | null => { try { return { ...JSON.parse(readFileSync(join(RUNS, f), "utf8")), file: f }; } catch { return null; } }).find((x): x is SavedRun => !!x && same(x) && (() => { try { return shapeOk(kind, JSON.parse(String(x.raw_output))); } catch { return false; } })());
@@ -651,7 +654,7 @@ export class Finder implements OnModuleInit {
       const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: f.code } } });
       if (!def) continue;
       // Round 2 N2: a retired form, or one with a retire or delete open, is not attached (listed as missing instead).
-      if (def.retiredAt || (await this.db.libraryChange.count({ where: { workspaceId, kind: "library_form", key: def.formKey, action: { in: ["RETIRE", "DELETE"] }, status: { in: ["WAITING", "RETURNED", "APPROVED"] } } }))) continue;
+      if (def.retiredAt || (await this.db.libraryChange.count({ where: { workspaceId, kind: "library_form", key: def.formKey, action: { in: ["RETIRE", "DELETE"] }, status: { in: ["WAITING", "APPROVED"] } } }))) continue;
       try { out[f.code] = await addFormLine(this.db, { workspaceId, combinationId, govFormDefId: def.id, formKey: f.code, who: f.who, origin: "AI_FOUND", by: actor.id, sourceQuote: f.quote,
         attachMode: f.applies === "always" ? "COMBINATION_MANDATORY" : "ANSWER_CONDITIONAL", conditionPlain: f.applies === "always" ? null : (f.condition ?? f.quote).slice(0, 300), finderBatchId: batchId }); } catch { /* reported as not attached below */ }
     }
