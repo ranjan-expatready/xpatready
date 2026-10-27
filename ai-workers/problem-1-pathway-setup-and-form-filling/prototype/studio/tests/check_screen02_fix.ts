@@ -47,6 +47,13 @@ const REASON = "Test: a different meaning from the library field that could fit.
   await call("POST", "/demo/reset", { confirm: "RESET" });
   let r = await call("POST", "/demo/load");
   ok("setup: sample inputs load", r.status === 201, r.body?.seconds);
+  // S5 slice 2 coverage gate (BR-11): every answer the applied forms need is asked of someone before a submit. This check
+  // is not about questions, so each answer the gate names is placed for the case officer to fill (a working view).
+  const coverAll = async (cid: string) => {
+    const sec = ((await call("GET", "/library/sections")).body as { key: string }[])[0]?.key;
+    for (const x of ((await call("GET", `/combinations/${cid}`)).body.draft.problems as { where: string; item: string }[]).filter((p) => p.where === "Questionnaires"))
+      await call("POST", `/library/fields/${encodeURIComponent(x.item)}/placement`, { sectionKey: sec, collectedFrom: "staff_working_view", repeats: x.item.startsWith("case.") ? "once_per_case" : "per_person" });
+  };
   const sv = sql("select id from combination where combination_key like '%super_visa%' limit 1");
   const att = (await call("GET", `/combinations/${sv}/attachments`)).body.find((a: any) => /IMM 5257 \(/.test(a.edition ?? ""));
   const saved = ((await call("GET", `/attachments/${att.id}/draft-options`)).body.saved_runs ?? []).find((x: any) => x.valid);
@@ -96,6 +103,7 @@ const REASON = "Test: a different meaning from the library field that could fit.
   ok("C2.2 m2 fail: a field-map draft is not applied as a checklist (4xx)", (await call("POST", `/jobs/${jobId}/apply-checklist`)).status === 404);
   r = await call("POST", `/jobs/${jobId}/apply`, { who: "each_applicant" }, "user-A");
   ok("setup: the decided draft is applied", r.status === 201, r.body?.detail ?? r.body);
+  await coverAll(sv);
   ok("C3.6 M1: the library holds one field per new name", sql("select count(distinct canonical_field_key) from canonical_field where label='Brk race name'") === "1" && sql("select count(distinct canonical_field_key) from canonical_field where lower(label)='brk duplicate name'") === "1");
   const changes = (await call("GET", "/library/changes?status=WAITING")).body as any[];
 

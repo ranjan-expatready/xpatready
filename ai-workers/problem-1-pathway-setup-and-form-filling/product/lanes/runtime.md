@@ -7,14 +7,16 @@
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: W1-combination-workspace (S5, W1-08, P-123)
-current_slice: slice 1 (shell and tabs, Overview, Forms settings, Person roles, Who can be, Preview; scaffolding removed)
+current_slice: slice 1 early-look fixes 1–4 + slice 2 (Questionnaires per person with coverage, Documents kept, Review shows AI picks)
 stage: EARLY-LOOK
 owner: Lead
-next_action: Lead early look at slice 1 (screens/W1-combination-workspace/screenshots/slice1/, build-notes.md, challenge "Build discoveries"); then Go for slice 2 (Questionnaires per person with coverage, Documents, Review shows AI picks).
-blocked_by: none for slice 2; slice 3 waits for forms S4 slices 1 and 2
+next_action: Lead early look at the four fixes and slice 2 (screens/W1-combination-workspace/screenshots/slice2/, build-notes.md top section); then Go for slice 3 when forms S4 slices 1 and 2 are merged.
+blocked_by: slice 3 waits for forms S4 slices 1 and 2
 updated: 2026-10-27
 
 ## Log (last 10 lines)
+- 2026-10-27 · Builder (Mac): applied Lead note 2026-10-27 23:05 (founder Go for slice 2 with four fixes); synced main 4fb0749 (break m8 in).
+- 2026-10-27 · Builder (Mac): fixes 1–4 + slice 2 → EARLY-LOOK: forms listed once (status and last step in each row, steps in the drawer, Sources line); list warning in business words (real example, none when empty; submit names gaps in words); Questionnaires per person (wording, who fills it, only if, needed by; codes only in the side panel), coverage gate (gap = release error; sample 0 gaps), sections fold; Preview one section + jump list; Review lists AI picks; workspace and roles reads need a configuration person (m8); check_s5_slice2 21/21, slice2 browser 33/33 (axe, 7 states × 1440/1024); full suites green alone (2 older drafts now ask needed answers first); demo journey 46/46 on its own copy; any 405; graph exit 0; AI US$0; owner Lead.
 - 2026-10-27 · Builder (Mac): applied Lead note 2026-10-27 (S2 merged, PR #53): synced main f289ec7; Lead response copied into challenge.md (Agreed 2026-10-27); BUILD slice 1.
 - 2026-10-27 · Builder (Mac): BUILD slice 1 → EARLY-LOOK: PersonRole + GET /api/library/roles (six built-in, kept by Reset; DB trigger replaces the fixed role check), Who can be (rules, version 409, confirm, Undo), runtime honours the release's people, tabs Overview · Forms · Questionnaires · Documents · Preview · Review and release, Forms drawer (from age, signed by, only if words-only M1), Preview on caseView; Sources upload/sample scaffolding removed, reading and matching kept on Forms (build discovery); QA-38/40/47, D-1/D-2; check_s5_slice1 51/51, browser 51/51 (axe, 11 states × 1440/1024); full suites green after moving 6 older checks to the new places; demo journey 45/45 on its own copy; any 424; graph exit 0; AI US$0; owner Lead.
 - 2026-10-27 · Builder (Mac): Lead message (S6 challenge m1): S5 creates the Person roles record; M3, back-end table, slice 1 and Q-L4 updated (PersonRole + GET /api/library/roles in slice 1; POST stays S6's); no code; AI US$0; owner Lead.
@@ -23,5 +25,3 @@ updated: 2026-10-27
 - 2026-10-25 · Builder (cloud): PR 13 fix verified on a fresh copy: journey 120/120, R1d 63/63, R1a 99/99, engine 50/50; run-suites --demo 21/21; any 437; copies stopped; CHECK owner Lead.
 - 2026-10-25 · Builder (cloud): break on the PR 13 fix: 0 Blocker/Major, 4 Minor; the change now names whose entries; lock race and old copies recorded; engine 50/50.
 - 2026-10-25 · Builder (cloud): applied Lead note 02:00 (PR 13 review): a copy keeps each group's live entry ids, so an added (even blank) or removed entry makes it stale; R1d 63/63, engine 50/50, mutations caught; review PASS (5 minors applied); break pending.
-- 2026-10-25 · Builder (cloud): "none apply" FIX verified on a fresh copy: journey 120/120, R1d 62/62, R1a 99/99, engine 48/48; run-suites --demo 21/21; any 437; copies stopped; CHECK owner Lead; lane stops.
-- 2026-10-25 · Builder (cloud): CHECK "none apply": review 8/10 (2 Majors), break 1 Major (filed copy not stale when none apply withdrawn) + 6 Minors; all fixed with tests, mutations caught; journey 120/120, R1d 62/62, engine 48/48.

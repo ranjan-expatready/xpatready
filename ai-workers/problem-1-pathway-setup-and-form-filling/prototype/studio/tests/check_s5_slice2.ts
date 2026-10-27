@@ -39,6 +39,9 @@ const CODE = /\b(case|person|relationship|organisation)\.[a-z_]+\b/;
   const leaves: any[] = []; const walk = (x: any) => { if (Array.isArray(x)) x.forEach(walk); else if (x && typeof x === "object") { if (x.combinationId && x.kind === "combination") leaves.push(x); Object.values(x).forEach(walk); } }; walk(cat);
   const C = leaves.find((l) => l.status === "READY")?.combinationId;
   if (!C) { console.error("STOP  no released sample combination"); process.exit(2); }
+  const officer = await call("GET", `/combinations/${C}/workspace?tab=questionnaires`, undefined, "user-O");
+  const roles0 = await fetch(`http://localhost:${PORT}/api/library/roles`).then((x) => x.status);
+  ok("break m8: the workspace and the person roles are read only by a configuration person (case officer 403, nobody 401)", officer.status === 403 && roles0 === 401 && (await call("GET", "/library/roles")).status === 200, `${officer.status} / ${roles0}`);
   const qv = async (role = "") => (await call("GET", `/combinations/${C}/workspace?tab=questionnaires${role ? `&role=${role}` : ""}`)).body;
 
   // ---------------------------------------------------------------- Questionnaires per person (C4.1, fix 3)

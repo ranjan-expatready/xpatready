@@ -11,7 +11,7 @@ import { wordsOnly } from "../../engine/render.ts";
 import { channelProblems, filingKind, filingMethod, signatureOf } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, CHANNELS, type Channel } from "../../contracts/forms.ts";
 import { answeredBy, signedByLabel, tabOf, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
-import { actorOf, Db, fail } from "./core.ts";
+import { actorOf, Db, fail, readerOf } from "./core.ts";
 import { Studio } from "./studio.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -113,8 +113,9 @@ type H = string | undefined;
 @Controller("api")
 export class WorkspaceController {
   constructor(@Inject(WorkspaceViews) private readonly w: WorkspaceViews, @Inject(Studio) private readonly s: Studio) {}
-  @Get("combinations/:id/workspace") view(@Param("id") id: string, @Query() q: Q) { return this.w.view(id, q); }
+  // Break m8: reads need a configuration person in x-actor (readerOf), like the catalogue.
+  @Get("combinations/:id/workspace") view(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: Q) { readerOf(a); return this.w.view(id, q); }
   @Patch("combinations/:id/people") savePeople(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.savePeople(actorOf(a), id, b); }
   @Post("combinations/:id/people/undo") undoPeople(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.undoPeople(actorOf(a), id, b); }
-  @Get("library/roles") roles() { return this.s.personRoles(); }
+  @Get("library/roles") roles(@Headers("x-actor") a: H) { readerOf(a); return this.s.personRoles(); }
 }
