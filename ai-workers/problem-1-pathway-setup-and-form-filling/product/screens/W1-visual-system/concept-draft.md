@@ -53,3 +53,8 @@ Decided by the Lead unless the founder overrules (was a founder question before 
 - [x] Data and API needs known (none; tokens and components only)
 - [ ] Every decision relied on agreed: P-48, P-104, P-113, P-115, P-116 yes; filled-button rule (Lead), token home, trail wrap vs m4 / EXPERIENCE §1, page name vs P-115 to record
 - [ ] No open questions (Q1–Q3; Lead items above)
+
+## Founder picks (27 Oct) — Agreed
+* Structure: **C, Cards / Tree switch**. Colours: **four calm level colours + a stripe per Pathway**. Page name: **"Program structure"**.
+* Lead decisions: the trail may wrap (EXPERIENCE §1 amended); level tokens live in a new studio stylesheet loaded after the team's `tokens.css`, which stays unchanged; PRODUCT §4 now says "Pathway type: Retail / Corporate and employers" (P-104); the menu-name change is recorded on P-115.
+* Build: screens lane, after its current FIX and before S3, on Program structure and Immigration programs; S3–S7 use it from the start.
