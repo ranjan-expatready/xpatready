@@ -151,7 +151,8 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
     // "Add and add another" (QA-44 kept for the pop-up): the last field clears as the name is sent, so whatever is typed
     // next while it saves is kept; a refusal puts the name back only if nothing new was typed.
     const lastLevel = last!, sentText = text[lastLevel];
-    if (again) { setText((t) => ({ ...t, [lastLevel]: "" })); setSel((s0) => ({ ...s0, [lastLevel]: null })); requestAnimationFrame(() => refs.current[lastLevel]?.focus()); }
+    // Focus moves in the click itself, before any state change: a frame later the first letters went to the button (drift 4).
+    if (again) { refs.current[lastLevel]?.focus(); setText((t) => ({ ...t, [lastLevel]: "" })); setSel((s0) => ({ ...s0, [lastLevel]: null })); }
     try {
       const r = await api<StructurePathResult>("/structure/path", { method: "POST", json: body });
       await Promise.all([qc.invalidateQueries({ queryKey: ["structure"] }), qc.invalidateQueries({ queryKey: ["catalogue"] })]);

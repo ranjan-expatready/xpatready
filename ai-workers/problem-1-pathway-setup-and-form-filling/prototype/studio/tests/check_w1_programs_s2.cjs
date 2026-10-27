@@ -53,7 +53,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } });
   await open();
   const emptyText = await p.locator("main").innerText();
-  step("C11.10 empty after Reset: says nothing is set up and points to the Structure (no cards, no Pathway cards)", /Nothing set up in Retail yet/.test(emptyText) && /Start with the Structure/.test(emptyText) && await p.getByRole("button", { name: "Open Structure" }).count() === 1 && await cards().count() === 0, emptyText.replace(/\s+/g, " ").slice(0, 200));
+  step("C11.10 empty after Reset: says nothing is set up and points to the Program structure (no cards, no Pathway cards)", /Nothing set up in Retail yet/.test(emptyText) && /Start with the Program structure/.test(emptyText) && await p.getByRole("button", { name: "Open Program structure" }).count() === 1 && await cards().count() === 0, emptyText.replace(/\s+/g, " ").slice(0, 200));
   await state("empty-after-reset");
   await api("/demo/load", { method: "POST" });
   const add = async (pathwayType, level, label, parentKey, allowedLocations) => (await api("/structure/nodes", { method: "POST", data: { pathwayType, level, label, parentKey, decision: "add_anyway", ...(allowedLocations ? { allowedLocations } : {}) } })).body.key;
@@ -298,7 +298,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   }
   await p.setViewportSize({ width: 1440, height: 900 });
   await p.goto(`${BASE}/new?leaf=nope`); await p.getByText("Check the path").waitFor({ timeout: 10000 }).catch(() => undefined);
-  step("break m6: a Start setup link with a key the page cannot use says why", /not in the Structure for Retail any more/.test(await p.locator("main").innerText()));
+  step("break m6: a Start setup link with a key the page cannot use says why", /not in the Program structure for Retail any more/.test(await p.locator("main").innerText()));
   await p.goto(`${BASE}/new?leaf=individual.work_permits.open`); await p.getByText("Check the path").waitFor({ timeout: 10000 }).catch(() => undefined);
   step("break m7: a category with sub-categories asks for one of them", /Open work permit has sub-categories: choose one of them below/.test(await p.locator("main").innerText()));
 

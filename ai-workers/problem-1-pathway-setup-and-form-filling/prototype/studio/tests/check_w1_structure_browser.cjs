@@ -125,6 +125,18 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   step("C11.3 P-127 Q3: a sub-category is its own line, the category repeated (Study permit › Outside Canada)", await line("Study permit › Outside Canada").count() === 1 && await line("Study permit").count() === 0);
   step("C11.3 BR-2: Visitor visa shows In setup; a just-added category is Not started", /In setup/.test(await line("Visitor visa").textContent()) && /Not started/.test(await line("Express Entry stream").textContent()));
   step("C11.3 M5: a line shows where cases may be opened", /Outside Canada/.test(await line("Visitor visa").locator("[data-loc]").textContent()) && /Inside or outside Canada/.test(await line("Express Entry stream").locator("[data-loc]").textContent()));
+  // Drift check 3 (P-127 (1)): each line says what uses it; the column names show at 1024 px and wider, panel closed.
+  const usedOf = async (name) => (await line(name).locator("[data-used-by-line]").textContent()).replace(/^Used by: /, "");
+  step("C11.3 P-127 used by pass: a started combination says 'Setup draft'; a Not started one 'Nothing yet'", await usedOf("Visitor visa") === "Setup draft" && await usedOf("Express Entry stream") === "Nothing yet", `${await usedOf("Visitor visa")} / ${await usedOf("Express Entry stream")}`);
+  const heads = p.locator("[data-line-heads]");
+  step("C11.3 P-127 used by: the column names (Status · Cases may be opened from · Used by) show at 1440 px with no panel open", await heads.isVisible() && /Status\s*Cases may be opened from\s*Used by/.test(await heads.textContent()));
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(200);
+  const vvBox = await line("Visitor visa").boundingBox(), useBox = await line("Visitor visa").locator("[data-used-by-line]").boundingBox();
+  step("C11.3 P-127 used by fail-guard: at 390 px the column names hide and Used by wraps inside its line (no sideways scroll)", !(await heads.isVisible()) && useBox.x + useBox.width <= vvBox.x + vvBox.width + 1 && !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), JSON.stringify({ vvBox, useBox }));
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await line("Visitor visa").locator("[data-open]").click(); await panel().waitFor();
+  step("C11.3 P-127 used by: with the details panel open the column names hide; the panel says what uses it", !(await heads.isVisible()) && /This combination/.test(await panel().locator("[data-used-by]").textContent()));
+  await open("?p=all");
   step("VS-1: the band, section and line carry the Pathway ■, Program ● and Category ◆ marks", await band("Temporary residence").locator('[data-level-mark="pathway"]').count() === 1 && await section("Visitors").locator('[data-level-mark="program"]').count() === 1 && await line("Study permit › Outside Canada").locator('[data-level-mark="category"], [data-level-mark="subCategory"]').count() === 2);
   step("VS-9: each Pathway card and band has its accent stripe", (await p.locator("[data-pathway-cards] [data-pathway]").evaluateAll((a) => a.map((x) => getComputedStyle(x).borderLeftWidth))).every((w) => w === "4px"));
   await state("layout-a-all-pathways");

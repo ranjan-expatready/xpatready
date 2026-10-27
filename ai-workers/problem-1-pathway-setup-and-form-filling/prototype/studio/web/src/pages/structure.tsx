@@ -192,6 +192,10 @@ export function StructurePage() {
               action={otherMatches ? <p className="text-sm">{otherMatches} {otherMatches === 1 ? "match" : "matches"} in {TYPES.find((t) => t.value !== type)!.label}. <button type="button" className="font-semibold text-text-link underline underline-offset-2" onClick={() => set({ t: type === "INDIVIDUAL" ? "CORPORATE" : null, node: null })}>Show {otherMatches === 1 ? "it" : "them"}</button></p> : <Button size="sm" variant="secondary" onClick={() => { setQ(""); set({ q: null }); }}>Clear the search</Button>} />
           ) : (
             <div className="space-y-5" data-structure-a>
+              {/* Column names for the lines, at 1024 px and wider while the details panel is closed (board A). */}
+              {!selected ? <div className="-mb-3 hidden items-center gap-x-3 px-4 text-xs font-medium text-text-muted lg:flex" aria-hidden data-line-heads>
+                <span className="flex-1">Combination: Category › Sub-category</span><span className="w-36">Status</span><span className="w-40">Cases may be opened from</span><span className="w-40">Used by</span><span className="w-8" />
+              </div> : null}
               {bands.map((pw) => {
                 const progs = words ? programsOf(pw) : kids.get(pw.key) ?? [];
                 const idx = pathways.findIndex((x) => x.key === pw.key);
@@ -268,8 +272,16 @@ function RowMenu({ label, items }: { label: string; items: { word: string; run: 
   );
 }
 
+/** "Used by" on a line (P-127 (1)): the releases that hold the combination and the cases open on it. */
+const USED_TIP = "What uses this combination: the releases firms have and the cases open on it. Its details list each one.";
+const usedBy = (c: StructureNode["combination"]) => {
+  if (!c?.id) return "Nothing yet";
+  const parts = [c.releases ? `${c.releases} release${c.releases === 1 ? "" : "s"}` : "", c.openCases ? `${c.openCases} open case${c.openCases === 1 ? "" : "s"}` : ""].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "Setup draft";
+};
+
 /** One line per combination (P-127 Q3): ◆ Category › ◇ Sub-category (the identity in navy), its state, where cases may be
- *  opened, and a ⋯ menu. Clicking it opens the same details panel as before. */
+ *  opened, what uses it, and a ⋯ menu. Clicking it opens the same details panel as before. */
 function LineRow({ line, words, selected, justAdded, canAuthor, onOpen, onKey, onMove, canMove, onAddSub }: {
   line: Line; words: string; selected: boolean; justAdded: boolean; canAuthor: boolean; onOpen: (k: string) => void; onKey: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
   onMove: (n: StructureNode, by: -1 | 1) => void; canMove: (n: StructureNode, by: -1 | 1) => boolean; onAddSub: () => void;
@@ -294,9 +306,10 @@ function LineRow({ line, words, selected, justAdded, canAuthor, onOpen, onKey, o
       {justAdded ? <span className="rounded-full bg-ok/15 px-2 py-0.5 text-xs font-semibold text-text-ok" data-just-added>Just added</span> : null}
       {n.retired ? <Tip tip="Retired by a release: hidden from pickers and AI; earlier releases and open cases keep it."><Pill tone="neutral">Retired</Pill></Tip> : null}
       {n.pending ? <Tip tip="A change to this name waits for a second person on To review."><Pill tone="warn">{PENDING_WORD[n.pending.action]}</Pill></Tip> : null}
-      {c && !n.retired ? (c.id ? (c.retired ? <Pill tone="neutral">Retired</Pill> : <StatusChip status={c.status} text={c.statusText} />)
-        : <Tip tip="Added to the Program structure; no setup yet. Start it from its card on Immigration programs or its details."><span className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-strong px-2 py-0.5 text-xs font-semibold text-text-muted">Not started</span></Tip>) : null}
+      <span className="flex shrink-0 items-center sm:w-36">{c && !n.retired ? (c.id ? (c.retired ? <Pill tone="neutral">Retired</Pill> : <StatusChip status={c.status} text={c.statusText} />)
+        : <Tip tip="Added to the Program structure; no setup yet. Start it from its card on Immigration programs or its details."><span className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-strong px-2 py-0.5 text-xs font-semibold text-text-muted">Not started</span></Tip>) : null}</span>
       <Tip tip={LOC_TIP}><span className="shrink-0 text-xs text-text-muted sm:w-40" data-loc>{locWords(n.allowedLocations)}</span></Tip>
+      <Tip tip={USED_TIP}><span className="shrink-0 text-xs text-text-muted sm:w-40" data-used-by-line><span className="sr-only">Used by: </span>{usedBy(c)}</span></Tip>
       <RowMenu label={line.sub ? `${line.category.label} › ${line.sub.label}` : line.category.label} items={items} />
     </li>
   );

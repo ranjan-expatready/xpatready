@@ -45,7 +45,7 @@ export function Trail({ parts, from = 0, identityClass, className, sep = "›" }
   return (
     <span className={cn("[overflow-wrap:anywhere]", className)} data-trail-parts={shown.length}>
       {context.map((x, i) => <span key={i}>{i ? <S /> : null}<span className={LEVEL_TEXT[x.level]}>{x.p}</span></span>)}
-      {identity.length ? <>{context.length ? <S /> : null}<span className={cn("inline-block max-w-full", identityClass)}>
+      {identity.length ? <>{context.length ? <S /> : null}<span className={cn("inline-block max-w-full", identityClass)} data-trail-identity>
         {identity.map((x, i) => <span key={i}>{i ? <S /> : null}<span className={x.p === "No sub-category" ? "font-normal text-text-muted" : cn(LEVEL_TEXT[x.level], x.level === "category" ? "font-semibold" : "font-medium")}>{x.p}</span></span>)}
       </span></> : null}
     </span>

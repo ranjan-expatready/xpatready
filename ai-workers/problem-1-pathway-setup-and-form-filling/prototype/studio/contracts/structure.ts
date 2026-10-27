@@ -98,7 +98,9 @@ export type StructureNode = {
   needs: number;
   meaningChecked: boolean; version: number; retired: boolean; pending: { id: string; action: LifecycleAction } | null;
   /** A last-level name is a combination (BR-2): its state, Not started when it has no setup yet (id null). */
-  combination: { id: string | null; status: "IN_SETUP" | "NOT_READY" | "READY"; statusText: string; retired: boolean } | null;
+  combination: { id: string | null; status: "IN_SETUP" | "NOT_READY" | "READY"; statusText: string; retired: boolean;
+    /** "Used by" on its line (P-127 (1)): releases that hold it and cases open on it. */
+    releases: number; openCases: number } | null;
 };
 
 /** The four setup steps on a card (addendum A3, Lead 26 Oct), calculated from data the app already keeps. */

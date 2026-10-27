@@ -48,6 +48,8 @@ export class Structure {
     const g = await this.graph(workspaceId);
     const leaves = await this.programs.leafStates();
     const pending = new Map((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "structure_node", status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })).map((c) => [c.key, { id: c.id, action: c.action as LifecycleAction }]));
+    // "Used by" on each line (P-127 (1)): the releases that hold a combination and the cases open on it.
+    const used = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, _count: { select: { releases: true, cases: { where: { status: "OPEN" } } } } } })).map((c) => [c.id, c._count]));
     const out: StructureNode[] = [];
     const walk = (n: ProgramDef): { combinations: number; live: number; needs: number } => {
       const kids = g.kids(n.programNodeKey);
@@ -56,7 +58,8 @@ export class Structure {
       let combinations = own && !own.retired ? 1 : 0, live = own?.live ? 1 : 0, needs = own?.needs ? 1 : 0;
       const view: StructureNode = { key: n.programNodeKey, level: LEVEL_OF[n.nodeKind], parentKey: n.parentNodeKey, label: n.label, pathwayType: q.pathwayType, allowedLocations: n.allowedLocations,
         order: n.displayOrder, combinations: 0, live: 0, needs: 0, hasSetup: !!own?.combinationId, meaningChecked: false, version: n.version, retired: !!n.retiredAt, pending: pending.get(n.programNodeKey) ?? null,
-        combination: own ? { id: own.combinationId, status: own.status, statusText: own.statusText, retired: own.retired } : null };
+        combination: own ? { id: own.combinationId, status: own.status, statusText: own.statusText, retired: own.retired,
+          releases: own.combinationId ? used.get(own.combinationId)?.releases ?? 0 : 0, openCases: own.combinationId ? used.get(own.combinationId)?.cases ?? 0 : 0 } : null };
       if (q.retired === "1" || !n.retiredAt) out.push(view);
       for (const k of kids) { const s = walk(k); combinations += s.combinations; live += s.live; needs += s.needs; }
       view.combinations = combinations; view.live = live; view.needs = needs;
@@ -153,11 +156,10 @@ export class Structure {
     }
     const fresh = plan.filter((x) => !x.existing);
     const last = plan[plan.length - 1];
-    if (!fresh.length) {
-      // "None" on a category that already has sub-categories cannot be the combination (AD-2).
-      throw problem(409, "Already in the structure", `${plan.map((x) => x.label).join(" › ")} is already in the Program structure.`, { code: "exists", existing: { key: last.existing!.programNodeKey, label: last.label } });
-    }
+    // "None" on a category that already has sub-categories cannot be the combination (AD-2): asked before "already
+    // there", which would wrongly call that category a combination (drift check 5).
     if (b.subCategory === null && last.level === "category" && last.existing && g.kids(last.existing.programNodeKey).length) throw problem(400, "Choose a sub-category", `"${last.label}" has sub-categories: choose one of them, or add a new one.`, { errors: [{ field: "subCategory", message: "Choose a sub-category." }] });
+    if (!fresh.length) throw problem(409, "Already in the structure", `${plan.map((x) => x.label).join(" › ")} is already in the Program structure.`, { code: "exists", existing: { key: last.existing!.programNodeKey, label: last.label } });
     const close = fresh.filter((x) => x.close.length);
     if (close.length && b.decision !== "add_anyway") throw problem(409, "Close names", `Did you mean ${close.flatMap((x) => x.close.slice(0, 2)).map((c) => `"${c.trail.join(" › ")}"`).join(", ")}? Use the existing name, or add yours anyway.`, { code: "close_names", close: close.flatMap((x) => x.close), errors: close.map((x) => ({ field: x.level, message: `Did you mean ${x.close.slice(0, 2).map((c) => `"${c.label}"`).join(" or ")}?` })) });
     if (b.allowedLocations && last.level !== "category" && last.level !== "subCategory") throw problem(400, "Not for this level", "Where cases may be opened is set on a category or sub-category.", { errors: [{ field: "allowedLocations", message: "Only categories and sub-categories have it." }] });
