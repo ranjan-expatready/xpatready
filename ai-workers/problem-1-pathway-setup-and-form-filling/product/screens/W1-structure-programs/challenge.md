@@ -118,5 +118,8 @@ Copied by the screens lane on 27 Oct, word for word in substance, from the Lead'
 
 ## Agreement
 
+## S1-finish layout suggestion (screens lane, 27 Oct; the Lead asked for one if a better layout showed)
+Built as asked: a card opens one Pathway's tree and collapses the others. **Suggestion for the founder's walkthrough, not built:** once a card is chosen, *show only* that Pathway's tree, rather than its siblings collapsed under it. The cards already list every Pathway with its counts, so the collapsed rows repeat them. Showing one tree removes that repetition and is the pattern of Linear's team switcher and Vercel's project scope. It is a two-line change in `structure.tsx` (filter the top-level rows by the chosen card). Recommendation: try it in the walkthrough; keep "collapse the others" if the founder prefers seeing every Pathway name in the outline.
+
 ## Build discoveries
 * **27 Oct, slice 1 (screens lane): my addendum A2 contradicted P-52 L3 on one point.** A2 said a structure name is "in use when … any combination below it has open cases". P-52 L3 says "Superseded releases and open cases do not count", and retiring a name only hides it from pickers: open cases read their pinned release, so they are not affected. I built it per L3. Open cases and earlier releases are listed as uses that do not block. Retire is blocked by a name or combination below it that is not retired, or by an open change. Test: `check_w1_structure.ts` "a released name whose combination is retired may be retired (earlier releases and cases listed, not blocking)". If the Lead wants A2 as written, it is a one-line change in `api/src/lifecycle.ts` (`case` uses with `blocks: true`).
