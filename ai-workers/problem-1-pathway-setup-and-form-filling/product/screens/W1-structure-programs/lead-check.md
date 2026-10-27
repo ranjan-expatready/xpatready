@@ -31,3 +31,10 @@
 * **Suites on the exact commit** (own detached worktree of d40c582, fresh web build, Lead run; CI fails in 3 s on every push, the billing block): `run-suites.sh` 34/34 PASS incl. check_w1_structure 83/83, check_w1_structure_browser 61/61, check_w1_structure_s1finish 33/33; studio journey `check_studio_browser.cjs` on isolated copy :4421 45/45 (79 clicks). US$0.
 * **Graph (P-86):** no gap caused by the lane (G1 0, G2 0, G3 1 existing). On the Lead branch one hard gap from register housekeeping (C11.6 cited the moved P-114) fixed by the Lead.
 * **Decision:** MERGE; S2 next with the two fixes.
+
+## S2 Immigration programs + 7 founder fixes — Lead check (27 Oct)
+Commit ec1e49f (screens/2026-10-27-s2-programs), merged into lead/2026-10-27, PR #53. **Pass → merge on green CI.**
+* Lane evidence: 35 suites PASS, check_w1_programs_s2 87/87, studio journey 45/45; reviewer Ship after fixes 9/10 (Major M1 need-you test gap fixed in 241e2b4); breaker report filed; other lanes' by-products put back (145baca).
+* Lead walk on an isolated copy of the merged code (:4420, Reset + Load sample, 1440): Pathways read Temporary residence · Permanent residence · Citizenship; "none need you" with nothing waiting; search full width; Not started cards say "Not started" with "Start setup"; clicking a Not started name opens Start setup and the counts stay 16 Not started (nothing created); form counts agree with the button ("2 forms found · 1 ready to add · 1 needs a draft" → "Add 1 form").
+* Lead decisions: **review m1** (bar vs next step) → the bar shows the stage the next-step button belongs to (next step wins); in the next screens FIX. **Break m8** (reads answer without a known person; already so on main) → Minor, next screens FIX (deny by default, STANDARDS §6). **Break m9** (465 combinations: 1.78 MB, over the 200 ms budget; fine at sample size) → recorded for the team's scale work; drop the duplicate `tree` copies when a suite no longer reads them.
+* Founder: Go given 27 Oct on the fix list; restart :4400 with S2 after merge (founder OK, 27 Oct).
