@@ -150,6 +150,8 @@ export type CatalogueLeaf = {
   programKey: string;
   /** "Needs work" (P-49): firms cannot use it yet, or it has a next step. */
   needs: boolean;
+  /** "Need you" (S2 fix 6): waiting on a person — something to review, something missing, or Not ready (engine waitsForPerson). */
+  needsYou: boolean;
   /** Live (founder finding F1): its status is Live (firms can open cases on it), with or without a next step. */
   live: boolean;
   /** New editions of its forms held for impact review (P-32), never used silently. */

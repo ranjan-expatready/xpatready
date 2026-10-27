@@ -8,12 +8,12 @@
 // combination page (P-50); Back returns here with it highlighted and the scroll where it was.
 import * as React from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Info, LayoutGrid, List as ListIcon, ListTree, Plus, Search, TriangleAlert, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { CatalogueLeaf, CatalogueResponse, CatalogueSection, NextAction } from "../../../contracts/programs";
 import { PATHWAY_TYPE_LABEL } from "../../../contracts/structure";
-import { api, useActorId, useApi, useSessionView, useToast } from "@/lib/api";
+import { useActorId, useApi, useSessionView, useToast } from "@/lib/api";
 import { Button, Input, Notice } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,6 +42,7 @@ const STATUSES = [
   ["live", "Live", "Firms can open cases on it."],
 ] as const;
 type StatusKey = (typeof STATUSES)[number][0];
+const NEED_YOU = "Combinations waiting for a person: something to review, something missing or something blocking release.";
 const SETUP_TIP = "The four setup steps: Forms added · Draft done (AI or by hand) · Review done · Released. All four done = Live.";
 const VIEW_TIP = "Cards show setup progress; the list fits more on screen. Remembered for you.";
 const AUTHOR_ONLY = "Only a configuration author starts setup or adds names. You can open and read everything.";
@@ -71,11 +72,13 @@ function useView(sp: URLSearchParams): ["cards" | "list", (v: "cards" | "list") 
 }
 
 const isNotStarted = (r: CatalogueLeaf) => !r.combinationId;
+/** S2 fix 4: the forms found for a combination, in the same numbers its next step uses ("Add 1 form from the library"). */
+const formsFound = (n: number, ready: number) => `${n} ${n === 1 ? "form" : "forms"} found${ready ? ` · ${ready} ready to add from the library` : ""}${n - ready ? ` · ${n - ready} ${n - ready === 1 ? "needs" : "need"} a draft` : ""}`;
 const many = (n: number, one: string, more: string) => `${n} ${n === 1 ? one : more}`;
 
 export function ProgramsPage() {
   const [sp, setSp] = useSearchParams();
-  const nav = useNavigate(); const qc = useQueryClient(); const toast = useToast();
+  const nav = useNavigate(); const toast = useToast();
   // Until the person is known the page is loading (QA-22): an author must not read "a configuration author adds…" first.
   const { known: knowsPerson, failed: noPerson, canAuthor } = useSessionView();
   const pathway = sp.get("pw") === "CORPORATE" ? "CORPORATE" : "INDIVIDUAL";
@@ -137,8 +140,9 @@ export function ProgramsPage() {
     rememberList(leaf.nodeKey);
     if (leaf.combinationId) return nav(`/c/${leaf.combinationId}${suffix}`);
     if (!canAuthor) return toast.push({ tone: "info", text: `${leaf.label} is not started yet. A configuration author starts it.` });
-    try { const r = await api("/combinations", { method: "POST", json: { nodeKey: leaf.nodeKey } }); void qc.invalidateQueries(); return nav(`/c/${r.combination.id}${suffix}`); }
-    catch (e) { return toast.push({ tone: "danger", text: (e as Error).message }); }
+    // S2 fix 3: never a silent start. A Not started name (or its Start setup step) opens the Start setup page with the
+    // trail filled; nothing is created until the person presses the button there.
+    return nav(`/new?${pathway === "CORPORATE" ? "pw=CORPORATE&" : ""}leaf=${encodeURIComponent(leaf.nodeKey)}`);
   };
   const step = useNextStep(open, (leaf) => rememberList(leaf.nodeKey));
   const progLabel = (cat.data?.programs ?? []).find((p) => p.key === (cat.data?.program ?? program))?.label;
@@ -179,7 +183,7 @@ export function ProgramsPage() {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full sm:w-[22rem]">
+          <div className="relative min-w-[16rem] flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden />
             <Input ref={search} maxLength={120} className="pl-8 pr-14" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Search names, form numbers, documents" aria-label="Search combinations, form numbers and documents" aria-keyshortcuts="Meta+K Control+K" />
             {typed ? <button type="button" className="absolute right-1 top-1 rounded p-1.5 text-text-muted hover:bg-text/5" aria-label="Clear search" onClick={() => { setTyped(""); set({ q: null }); }}><X className="size-4" /></button>
@@ -187,7 +191,6 @@ export function ProgramsPage() {
           </div>
           <StatusFilter value={filter} counts={counts} onChange={(k) => set({ f: k === "all" ? null : k })} />
           {scopeChip ? <span className="inline-flex h-8 items-center gap-1 rounded-full border border-primary/40 bg-primary/10 pl-3 pr-1 text-sm text-text-link">Showing: {scopeChip}<button type="button" className="rounded-full p-1 hover:bg-primary/15" aria-label={`Stop showing only ${scopeChip}`} onClick={() => set({ under: null, prog: null })}><X className="size-3.5" /></button></span> : null}
-          <span className="flex-1" />
           <ViewSwitch value={view} onChange={(v) => { setView(v); set({ v: null }); }} />
         </div>
 
@@ -296,7 +299,7 @@ function SectionHeader({ s, shown, filtering, closed, onToggle }: { s: Catalogue
         {closed ? <ChevronRight className="size-4 text-text-muted" aria-hidden /> : <ChevronDown className="size-4 text-text-muted" aria-hidden />}
         <span className="font-semibold">{s.label}</span>
         <span className="text-sm font-normal text-text-muted">{filtering ? `${shown} of ${s.combinations}` : many(s.combinations, "combination", "combinations")}</span>
-        {s.needs ? <span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn">{s.needs} need{s.needs === 1 ? "s" : ""} you</span> : null}
+        {s.needs ? <Tip tip={NEED_YOU}><span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn" data-need-you>{s.needs} need{s.needs === 1 ? "s" : ""} you</span></Tip> : null}
       </button>
     </h2>
   );
@@ -314,6 +317,15 @@ function NotStartedChip({ tabIndex = 0 }: { tabIndex?: number }) {
 function SetupSteps({ r, compact, tabIndex = 0 }: { r: CatalogueLeaf; compact?: boolean; tabIndex?: number }) {
   const p = r.progress;
   const running = !!r.aiRunning;
+  // S2 fix 7: no setup yet → an empty bar and the words "Not started", not "Step 1 of 4".
+  if (isNotStarted(r)) return (
+    <Tip focusable={tabIndex} tip={<>{SETUP_TIP}<br />Not started: no setup yet.</>}>
+      <span className="flex min-w-0 flex-col gap-1 rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-setup="0" aria-label="Setup: not started" role="img">
+        <span className="flex gap-1" aria-hidden>{[0, 1, 2, 3].map((i) => <span key={i} className={cn("h-1.5 flex-1 rounded-full bg-text/10", compact ? "min-w-4" : "min-w-6")} />)}</span>
+        {compact ? null : <span className="text-xs text-text-muted">Not started</span>}
+      </span>
+    </Tip>
+  );
   return (
     <Tip focusable={tabIndex} tip={<>{SETUP_TIP}<br />{p.label}{running ? " · AI drafting now" : ""}</>}>
       <span className="flex min-w-0 flex-col gap-1 rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-setup={p.step} aria-label={`Setup: ${p.label}${running ? ", AI drafting now" : ""}`} role="img">
@@ -342,6 +354,7 @@ function NextStep({ r, canAuthor, tabIndex, onAct, onOpen, primary }: { r: Catal
 function SetupCard({ r, lit, q, canAuthor, onOpen, onAct }: { r: CatalogueLeaf; lit: boolean; q: string; canAuthor: boolean; onOpen: () => void; onAct: (l: CatalogueLeaf, a: NextAction | null) => void }) {
   const [type, pw, prog, catName, sub] = r.trail;
   const formsN = r.forms.filter((f) => !f.document).length;
+  const found = r.forms.filter((f) => !f.document && !f.drafted), ready = found.filter((f) => f.inLibrary).length;
   return (
     <article data-node={r.nodeKey} data-label={r.label} aria-label={`${r.trail.join(" › ")}, ${isNotStarted(r) ? "Not started" : STATUS_WORD[r.status]}`}
       className={cn("flex w-full flex-col gap-2.5 rounded-xl border bg-surface-raised p-4 shadow-sm transition-colors", lit ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-border-strong")}>
@@ -355,7 +368,7 @@ function SetupCard({ r, lit, q, canAuthor, onOpen, onAct }: { r: CatalogueLeaf; 
         <p className={cn("break-words text-sm", sub === "No sub-category" ? "text-text-muted" : "font-medium")}>{sub}</p>
       </div>
       <SetupSteps r={r} />
-      <p className="break-words text-xs text-text-muted" data-filed>{r.filed !== "No forms yet" ? `${formsN ? `${many(formsN, "form", "forms")} · ` : ""}Filed: ${r.filed}` : formsN ? `${many(formsN, "form", "forms")} attached, not added yet` : "No forms yet"}</p>
+      <p className="break-words text-xs text-text-muted" data-filed>{r.filed !== "No forms yet" ? `${formsN ? `${many(formsN, "form", "forms")} · ` : ""}Filed: ${r.filed}` : found.length ? formsFound(found.length, ready) : "No forms yet"}</p>
       {q && r.matches.some((m) => m !== "name") ? <p className="text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</p> : null}
       <div className="mt-auto flex items-center gap-2 pt-1"><NextStep r={r} canAuthor={canAuthor} onAct={onAct} onOpen={onOpen} primary /></div>
     </article>
@@ -427,7 +440,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, pathway
                 <button type="button" aria-expanded={!shut} onClick={() => onToggle(s.pathwayKey)} className="inline-flex items-center gap-2 rounded-md px-2 py-0.5 text-sm outline-none hover:text-text-link focus-visible:ring-[3px] focus-visible:ring-ring/50">
                   {shut ? <ChevronRight className="size-4 text-text-muted" aria-hidden /> : <ChevronDown className="size-4 text-text-muted" aria-hidden />}
                   <b className="font-semibold">{s.label}</b><span className="text-text-muted">· {filtering ? `${mine.length} of ${s.combinations}` : s.combinations}</span>
-                  {s.needs ? <span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn">{s.needs} need{s.needs === 1 ? "s" : ""} you</span> : null}
+                  {s.needs ? <Tip tip={NEED_YOU}><span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn" data-need-you>{s.needs} need{s.needs === 1 ? "s" : ""} you</span></Tip> : null}
                 </button>
               </span>
             </div>

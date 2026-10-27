@@ -1,4 +1,6 @@
-// S2 Immigration programs (W1-04, design D, P-115; Lead note 27 Oct) walked in a real browser, plus the two S1 fixes.
+// S2 Immigration programs (W1-04, design D, P-115; Lead note 27 Oct) walked in a real browser, plus the two S1 fixes and
+// the seven S2 early-look fixes (P-112 sample Pathways, Start setup, no silent start, form counts, search width, the
+// need-you rule, the Not started card).
 // The page: menu and title "Immigration programs"; Retail · Corporate and employers tabs; the same Pathway cards as the
 // Structure (a card shows only that Pathway's combinations, "All pathways" every Pathway's section); Cards / List,
 // remembered per person; every card the full five-part trail, a calculated status, the four setup steps and "Filed:";
@@ -55,22 +57,19 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("empty-after-reset");
   await api("/demo/load", { method: "POST" });
   const add = async (pathwayType, level, label, parentKey, allowedLocations) => (await api("/structure/nodes", { method: "POST", data: { pathwayType, level, label, parentKey, decision: "add_anyway", ...(allowedLocations ? { allowedLocations } : {}) } })).body.key;
-  const tr = await add("INDIVIDUAL", "pathway", "Temporary residence", null), pr = await add("INDIVIDUAL", "pathway", "Permanent residence", null);
-  const visitors = await add("INDIVIDUAL", "program", "Visitors", tr);
-  const vv = await add("INDIVIDUAL", "category", "Visitor visa", visitors, ["outside_canada"]);
-  const studyP = await add("INDIVIDUAL", "program", "Study permits", tr);
-  const study = await add("INDIVIDUAL", "category", "Study permit", studyP, ["outside_canada"]);
-  const studyOut = await add("INDIVIDUAL", "subCategory", "Outside Canada", study);
-  const pnp = await add("INDIVIDUAL", "program", "Provincial nominees", pr);
-  const ees = await add("INDIVIDUAL", "category", "Express Entry stream", pnp);
-  const fam = await add("INDIVIDUAL", "program", "Family sponsorship", pr);
-  await add("INDIVIDUAL", "category", "Spouse or common-law partner", fam);
-  const ctr = await add("CORPORATE", "pathway", "Temporary residence", null);
-  const lmia = await add("CORPORATE", "program", "Labour market impact assessment", ctr);
-  await add("CORPORATE", "category", "High-wage position", lmia, ["inside_canada"]);
-  const combo = (await api("/combinations", { method: "POST", data: { nodeKey: vv } })).body.combination;
+  // The sample carries the P-112 Pathways (S2 fix 1): Retail · Temporary residence, Permanent residence, Citizenship;
+  // Corporate and employers · Temporary residence, Permanent residence.
+  const tr = "retail.temporary_residence", pr = "retail.permanent_residence", vv = "individual.visitors.visitor_visa";
   const cat = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body;
-  step("setup: sample inputs loaded and the P-112 names added (3 Retail Pathways), Visitor visa started", !!combo?.id && cat.sections.length === 3 && cat.rows.some((r) => r.status === "READY"), cat.sections.map((s) => `${s.label} ${s.combinations}`).join(", "));
+  const corpCat = (await api("/catalogue?pathway=CORPORATE&filter=all")).body;
+  const vvRow = cat.rows.find((r) => r.nodeKey === vv);
+  const nsTr = cat.rows.find((r) => r.pathwayKey === tr && !r.combinationId), ns = cat.rows.find((r) => r.pathwayKey === pr && !r.combinationId);
+  step("setup: sample inputs loaded with the P-112 Pathways (3 Retail, 2 Corporate); Visitor visa in setup; Not started ones in Temporary and Permanent residence", cat.sections.map((x) => x.label).join("|") === "Temporary residence|Permanent residence|Citizenship" && corpCat.sections.map((x) => x.label).join("|") === "Temporary residence|Permanent residence" && !!vvRow?.combinationId && !!nsTr && !!ns, `${cat.sections.map((x) => `${x.label} ${x.combinations}`).join(", ")} / ${corpCat.sections.map((x) => `${x.label} ${x.combinations}`).join(", ")}`);
+
+  // ======================================================== fix 1: the sample's Pathways are P-112 names
+  step("S2 fix 1: every Retail trail names a P-112 Pathway (never 'Individual'); Visitors reads Retail › Temporary residence › Visitors", cat.rows.every((r) => ["Temporary residence", "Permanent residence", "Citizenship"].includes(r.trail[1])) && vvRow.trail.slice(0, 3).join(" › ") === "Retail › Temporary residence › Visitors", vvRow.trail.join(" › "));
+  const lmiaRow = corpCat.rows.find((r) => r.trail[2] === "LMIA");
+  step("S2 fix 1: Corporate's programs sit under P-112 Pathways, never the type's name (Corporate and employers › Temporary residence › LMIA)", corpCat.rows.every((r) => ["Temporary residence", "Permanent residence"].includes(r.trail[1])) && lmiaRow?.trail.slice(0, 3).join(" › ") === "Corporate and employers › Temporary residence › LMIA", lmiaRow?.trail.join(" › "));
 
   // ======================================================== the page: menu, title, tabs, placement
   await open();
@@ -83,23 +82,42 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const titleRow = await p.evaluate(() => { const h = document.querySelector("h1").getBoundingClientRect(); const bs = [...document.querySelectorAll("main button")].filter((x) => /^(Structure|New combination)$/.test(x.textContent.trim())); return bs.map((x) => ({ t: x.textContent.trim(), top: Math.abs(x.getBoundingClientRect().top - h.top) < 24, x: Math.round(x.getBoundingClientRect().left) })); });
   step("C11.4: Structure and New combination sit in the title row, New combination last", titleRow.length === 2 && titleRow.every((x) => x.top) && titleRow[1].t === "New combination" && titleRow[1].x > titleRow[0].x, JSON.stringify(titleRow));
 
-  // ======================================================== Pathway cards
+  // ======================================================== fix 5: the search takes the free width, its hint never cut
+  for (const [w, h] of [[1440, 900], [1024, 768]]) {
+    await p.setViewportSize({ width: w, height: h }); await p.waitForTimeout(200);
+    const sb = await p.getByRole("textbox", { name: /Search combinations/ }).evaluate((x) => { const c = document.createElement("canvas").getContext("2d"); const cs = getComputedStyle(x); c.font = cs.font; const room = x.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); return { w: Math.round(x.getBoundingClientRect().width), need: Math.round(c.measureText(x.placeholder).width), room: Math.round(room) }; });
+    step(`S2 fix 5: at ${w} px the search takes the free width and its hint is not cut`, sb.need <= sb.room && sb.w >= (w === 1440 ? 600 : 300), JSON.stringify(sb));
+  }
+  await p.setViewportSize({ width: 1440, height: 900 });
+
+  // ======================================================== Pathway cards; fix 6: "need you" counts only what waits on a person
   const all = card("All pathways");
-  step("C11.4 S2: the same Pathway cards as the Structure: All pathways, one per Retail Pathway, + Add pathway", await all.count() === 1 && await card("Temporary residence").count() === 1 && await card("Permanent residence").count() === 1 && await card("Individual").count() === 1 && await cards().getByRole("button", { name: /Add pathway/ }).count() === 1);
-  const trS = cat.sections.find((s) => s.pathwayKey === tr);
-  step("C11.4 S2: a card's counts are the catalogue's (combinations, need you)", new RegExp(`${trS.combinations} combinations.*${trS.needs} need`).test(await card("Temporary residence").textContent()), await card("Temporary residence").textContent());
+  step("C11.4 S2: the same Pathway cards as the Structure: All pathways, one per Retail Pathway (no 'Individual'), + Add pathway", await all.count() === 1 && await card("Temporary residence").count() === 1 && await card("Permanent residence").count() === 1 && await card("Citizenship").count() === 1 && await card("Individual").count() === 0 && await cards().getByRole("button", { name: /Add pathway/ }).count() === 1);
+  const waiting = (key) => cat.rows.filter((r) => r.pathwayKey === key && r.needsYou).length;
+  const WAIT = ["review_proposals", "see_missing", "see_new_edition", "release"];
+  step("S2 fix 6: need you counts only combinations waiting on a person: never a Not started one, never a Live one with nothing waiting", cat.rows.every((r) => r.combinationId || !r.needsYou) && cat.rows.filter((r) => r.status === "READY" && !r.aiProposals && !r.held.length && !WAIT.includes(r.nextAction?.kind)).every((r) => !r.needsYou) && cat.sections.every((x) => x.needs === waiting(x.pathwayKey)), cat.sections.map((x) => `${x.label} ${x.needs}/${x.combinations}`).join(", "));
+  const trS = cat.sections.find((x) => x.pathwayKey === tr);
+  const trCard = (await card("Temporary residence").textContent()).replace(/\s+/g, " ");
+  step("S2 fix 6: a Pathway card's counts are the catalogue's (combinations, need you)", trCard.includes(`${trS.combinations} combinations`) && (trS.needs ? trCard.includes(`${trS.needs} need`) : /none need you/.test(trCard)), trCard);
+  const stPw = (await api("/structure?pathwayType=INDIVIDUAL")).body.nodes.filter((x) => x.level === "pathway");
+  step("S2 fix 6: the Structure's Pathway cards use the same rule (same need-you counts per Pathway)", cat.sections.every((x) => stPw.find((y) => y.key === x.pathwayKey)?.needs === x.needs), stPw.map((x) => `${x.label} ${x.needs}`).join(", "));
   const secs = await p.locator("[data-section]").evaluateAll((s) => s.map((x) => x.querySelector("h2").textContent));
-  step("C11.4 S2: 'All pathways' (the default) shows one section per Pathway, with its count and need-you count", await all.getAttribute("aria-pressed") === "true" && secs.length === 3 && secs.some((t) => /Temporary residence\s*2 combinations\s*2 need you/.test(t)), secs.join(" | "));
+  step("C11.4 S2: 'All pathways' (the default) shows one section per Pathway, with its count", await all.getAttribute("aria-pressed") === "true" && secs.length === 3 && cat.sections.every((x, i) => secs[i].startsWith(x.label) && secs[i].includes(`${x.combinations} combination`)), secs.join(" | "));
+  const chip = p.locator("[data-section] [data-need-you]").first();
+  if (await chip.count()) { await chip.hover(); await p.getByRole("tooltip").filter({ hasText: /waiting for a person/ }).first().waitFor({ timeout: 5000 }).catch(() => undefined); }
+  step("S2 fix 6: the section's need-you count explains itself", !(await chip.count()) || (await p.getByRole("tooltip").allTextContents()).some((t) => /Combinations waiting for a person: something to review, something missing or something blocking release\./.test(t)));
   step("C11.4 BR-13: every combination is shown by default (Status: All)", await p.locator("article[data-node]").count() === cat.rows.length, `${await p.locator("article[data-node]").count()} of ${cat.rows.length}`);
+  await p.mouse.move(0, 0);
   await state("cards-all-pathways");
+  const prS = cat.sections.find((x) => x.pathwayKey === pr);
   await card("Permanent residence").click();
   await p.waitForFunction(() => document.querySelectorAll("[data-section]").length === 1);
   const prText = await p.locator("main").innerText();
-  step("C11.4 S2: a Pathway card shows only that Pathway's combinations; the stats line names it; kept in the address", await card("Permanent residence").getAttribute("aria-pressed") === "true" && await p.locator("article[data-node]").count() === 2 && /2 combinations in Permanent residence/.test(prText) && /[?&]p=/.test(p.url()), `${await p.locator("article[data-node]").count()} cards; ${p.url()}; ${prText.slice(prText.indexOf("Status"), prText.indexOf("Status") + 120).replace(/\s+/g, " ")}`);
+  step("C11.4 S2: a Pathway card shows only that Pathway's combinations; the stats line names it; kept in the address", await card("Permanent residence").getAttribute("aria-pressed") === "true" && await p.locator("article[data-node]").count() === prS.combinations && new RegExp(`${prS.combinations} combinations in Permanent residence`).test(prText) && /[?&]p=/.test(p.url()), `${await p.locator("article[data-node]").count()} cards; ${p.url()}`);
   await all.focus(); await card("Permanent residence").focus();
   await p.getByRole("tooltip").filter({ hasText: /Shows only Permanent residence/ }).first().waitFor({ timeout: 5000 }).catch(() => undefined);
   const tips = await p.getByRole("tooltip").allTextContents();
-  step("C11.4 S2: the card's tooltip says what a click does and what 'need you' means", tips.some((t) => /Shows only Permanent residence's combinations\..*Need you/.test(t)), tips.join(" | "));
+  step("C11.4 S2: the card's tooltip says what a click does and what 'need you' means", tips.some((t) => /Shows only Permanent residence's combinations\..*waiting for a person/.test(t)), tips.join(" | "));
   await state("pathway-card-open");
   await all.click();
   await p.waitForFunction(() => document.querySelectorAll("[data-section]").length === 3);
@@ -113,13 +131,31 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const subs = await p.locator("article[data-node] h3 + p").allTextContents();
   step("C11.4 BR-7: 'No sub-category' is never blank", subs.every((t) => t.trim().length > 0) && subs.includes("No sub-category"));
   step("C11.10 A3: the Live card shows Step 4 of 4 · Live and Filed: PDF", /Step 4 of 4 · Live/.test(liveText) && /Filed: PDF/.test(liveText) && await liveCard.locator('[data-status="READY"]').count() === 1);
-  const nsCard = p.locator(`article[data-node="${ees}"]`);
+  const nsCard = p.locator(`article[data-node="${ns.nodeKey}"]`);
   const nsText = await nsCard.innerText();
-  step("C11.4 BR-2: a name just added on the Structure is a Not started card: Step 1 of 4, No forms yet, one next step", /Not started/.test(nsText) && /Step 1 of 4 · Forms/.test(nsText) && /No forms yet/.test(nsText) && await nsCard.locator("[data-next-step]").count() === 1, nsText.replace(/\s+/g, " "));
-  step("C11.4: the setup steps are read aloud as text, never colour alone", /^Setup: Step 1 of 4: Forms/.test(await nsCard.locator("[data-setup]").getAttribute("aria-label")));
-  await p.locator(`article[data-node="${vv}"]`).locator("[data-open]").click();
-  await p.waitForURL(new RegExp(`/c/${combo.id}`));
-  step("C11.4 P-50: the card's name opens the combination page", p.url().includes(`/c/${combo.id}`));
+  step("S2 fix 7: a Not started card shows 'Not started' under an empty bar, not 'Step 1 of 4'", /Not started/.test(nsText) && !/Step 1 of 4/.test(nsText) && await nsCard.locator('[data-setup="0"]').count() === 1 && (await nsCard.locator("[data-setup]").getAttribute("aria-label")) === "Setup: not started", nsText.replace(/\s+/g, " "));
+  step("S2 fix 2: a Not started card's one next step reads Start setup (no 'Add sources' anywhere on a Not started card)", (await nsCard.locator("[data-next-step]").textContent()).trim() === "Start setup" && !(await p.locator("article[data-node]").allInnerTexts()).some((t) => /Not started/.test(t) && /Add sources/.test(t)));
+  const vvCard = p.locator(`article[data-node="${vv}"]`);
+  const vvText = await vvCard.innerText(), vvStep = vvRow.nextAction;
+  const k = vvStep?.kind === "add_from_library" ? (vvStep.forms ?? []).length : 0;
+  step("S2 fix 4: an In setup card's form count agrees with its button in plain words", !/attached, not added yet/.test(vvText) && (!k || (vvText.includes(`${k} ready to add from the library`) && vvText.includes(`Add ${k} form`))), vvText.replace(/\s+/g, " "));
+  // fix 3: a Not started name never starts anything by itself
+  const before = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.counts;
+  const combos0 = sql("select count(*) from combination");
+  await nsCard.locator("[data-open]").click();
+  await p.waitForURL(/\/new\?leaf=/);
+  await p.waitForFunction((l) => (document.querySelector("main")?.textContent ?? "").includes(l), ns.label, { timeout: 10000 }).catch(() => undefined);
+  const after = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.counts;
+  step("S2 fix 3: clicking a Not started name opens Start setup with its trail filled; the counts do not change and nothing is created", p.url().includes(`leaf=${encodeURIComponent(ns.nodeKey)}`) && (await p.locator("main").innerText()).includes(ns.label) && after.not_started === before.not_started && after.in_setup === before.in_setup && sql("select count(*) from combination") === combos0, `${JSON.stringify({ ns: [before.not_started, after.not_started], setup: [before.in_setup, after.in_setup] })} ${p.url()} ${ns.label}: ${(await p.locator("main").innerText()).replace(/\s+/g, " ").slice(-300)}`);
+  await state("start-setup-from-card");
+  await open("?v=list");
+  await p.locator(`[role="row"][data-node="${ns.nodeKey}"]`).focus(); await p.keyboard.press("Enter");
+  await p.waitForURL(/\/new\?leaf=/);
+  step("S2 fix 3: Enter on a Not started row does the same (no start)", (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.counts.not_started === before.not_started && sql("select count(*) from combination") === combos0);
+  await open();
+  await vvCard.locator("[data-open]").click();
+  await p.waitForURL(new RegExp(`/c/${vvRow.combinationId}`));
+  step("C11.4 P-50: a set-up card's name opens the combination page", p.url().includes(`/c/${vvRow.combinationId}`));
   await p.goBack(); await ready();
   await p.waitForFunction((k) => document.activeElement?.closest("article")?.getAttribute("data-node") === k, vv, { timeout: 5000 }).catch(() => undefined);
   step("C11.4 P-50: Back returns with that card highlighted and focused", await p.evaluate((k) => document.activeElement?.closest("article")?.getAttribute("data-node") === k, vv) && /sel=/.test(p.url()));
@@ -143,7 +179,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator('[role="grid"][aria-label="Combinations"]').waitFor();
   const groupRows = await p.locator("[data-group]").count();
   const listRow = p.locator(`[role="row"][data-node="${live.nodeKey}"]`);
-  step("C11.4: List shows the same combinations as rows, grouped by Pathway (group rows collapse)", groupRows === 3 && await p.locator('[role="row"][data-node]').count() === cat.rows.length);
+  step("C11.4: List shows the same combinations as rows, grouped by Pathway (group rows collapse)", groupRows === cat.sections.length && await p.locator('[role="row"][data-node]').count() === cat.rows.length);
   step("C11.4 BR-7: a row carries the full five-part trail in one line, status, setup and next step", (await listRow.locator("[data-trail]").textContent()).startsWith(live.trail.join(" › ")) && await listRow.locator("[data-setup]").count() === 1 && await listRow.locator("[data-step-cell]").count() === 1, await listRow.locator("[data-trail]").textContent());
   await state("list-view");
   await p.reload(); await ready();
@@ -173,13 +209,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.4 BR-8: Show it opens Corporate and employers with the match", await setup("High-wage position").count() === 1);
   await open("?pw=CORPORATE");
   const corp = await p.locator("main").innerText();
-  step("C11.4 BR-8: the Corporate tab shows its callout (Sample examples) and its own Pathway cards", await p.locator("[data-corporate-callout]").count() === 1 && /Sample examples/.test(corp) && await card("Temporary residence").count() === 1 && await card("Corporate and employers").count() === 1);
+  step("C11.4 BR-8: the Corporate tab shows its callout (Sample examples) and its own Pathway cards", await p.locator("[data-corporate-callout]").count() === 1 && /Sample examples/.test(corp) && await card("Temporary residence").count() === 1 && await card("Permanent residence").count() === 1 && await card("Corporate and employers").count() === 0);
   await state("corporate-tab");
 
   // ======================================================== read-only approver
   await as("user-B"); await open();
-  const ro = await p.locator(`article[data-node="${ees}"]`).innerText();
-  step("BR-15 read-only: New combination is disabled; a Not started card has no step to take; a started card says Open", await p.getByRole("button", { name: "New combination" }).isDisabled() && !/Add sources/.test(ro) && await p.locator(`article[data-node="${vv}"]`).locator('[data-next-step="open"]').count() === 1, ro.replace(/\s+/g, " "));
+  const ro = await p.locator(`article[data-node="${ns.nodeKey}"]`).innerText();
+  step("BR-15 read-only: New combination is disabled; a Not started card has no step to take; a started card says Open", await p.getByRole("button", { name: "New combination" }).isDisabled() && !/Start setup|Add sources/.test(ro) && await p.locator(`article[data-node="${vv}"]`).locator('[data-next-step="open"]').count() === 1, ro.replace(/\s+/g, " "));
   step("BR-15 read-only: '+ Add pathway' is disabled for the approver", await cards().getByRole("button", { name: /Add pathway/ }).getAttribute("aria-disabled") === "true");
   await state("read-only");
   await as("user-A");
@@ -188,13 +224,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.goto(`${BASE}/structure?node=${encodeURIComponent(tr)}`);
   const panel = () => p.locator("aside[aria-label$='details']");
   await panel().locator("[data-used-by]").waitFor();
-  const start = panel().locator("[data-used-by]").getByRole("link", { name: "Start setup of Outside Canada" });
+  const start = panel().locator("[data-used-by]").getByRole("link", { name: `Start setup of ${nsTr.label}` }).first();
   step("S1 fix: under 'Used by' a Not started combination gets Start setup; one with setup keeps Open", await start.count() === 1 && await panel().locator("[data-used-by]").getByRole("link", { name: "Open Visitor visa" }).count() === 1);
   await start.click();
   await p.waitForURL(/\/new\?leaf=/);
-  await p.waitForFunction(() => /Study permits › Study permit › Outside Canada/.test(document.querySelector("main")?.textContent ?? ""), null, { timeout: 10000 }).catch(() => undefined);
-  step("S1 fix: Start setup opens New combination with that trail filled in", /Study permits › Study permit › Outside Canada/.test(await p.locator("main").innerText()), (await p.locator("main").innerText()).replace(/\s+/g, " ").slice(0, 240));
-  await p.goto(`${BASE}/structure?node=${encodeURIComponent(studyOut)}`);
+  const nsPath = nsTr.path.join(" › ");
+  await p.waitForFunction((x) => (document.querySelector("main")?.textContent ?? "").includes(x), nsPath, { timeout: 10000 }).catch(() => undefined);
+  step("S1 fix: Start setup opens New combination with that trail filled in", (await p.locator("main").innerText()).includes(nsPath), `${nsPath}: ${(await p.locator("main").innerText()).replace(/\s+/g, " ").slice(0, 240)}`);
+  await p.goto(`${BASE}/structure?node=${encodeURIComponent(nsTr.nodeKey)}`);
   await panel().locator("[data-used-by]").waitFor();
   step("S1 fix: a Not started combination's own panel offers Start setup too", await panel().locator("[data-used-by] [data-start-setup]").count() === 1);
 
@@ -218,10 +255,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.setViewportSize({ width: 1440, height: 900 });
 
   // ======================================================== scale: 50 combinations stay quick
-  for (let i = 0; i < 44; i++) await add("INDIVIDUAL", "category", `Scale sample ${String(i + 1).padStart(2, "0")}`, visitors);
+  for (let i = 0; i < 30; i++) await add("INDIVIDUAL", "category", `Scale sample ${String(i + 1).padStart(2, "0")}`, "individual.visitors");
   const t0 = Date.now(); await open(); const ms = Date.now() - t0;
   const fifty = await p.locator("article[data-node]").count();
-  const t1 = Date.now(); await p.getByRole("textbox", { name: /Search combinations/ }).fill("Scale sample 4"); await p.waitForFunction(() => document.querySelectorAll("article[data-node]").length === 5 + 0 || document.querySelectorAll("article[data-node]").length > 0 && [...document.querySelectorAll("article[data-node]")].every((a) => /Scale sample 4/.test(a.textContent))); const ms2 = Date.now() - t1;
+  const t1 = Date.now(); await p.getByRole("textbox", { name: /Search combinations/ }).fill("Scale sample 2"); await p.waitForFunction(() => document.querySelectorAll("article[data-node]").length === 10 && [...document.querySelectorAll("article[data-node]")].every((a) => /Scale sample 2/.test(a.textContent))); const ms2 = Date.now() - t1;
   step("C11.4 scale: 50+ combinations show as cards and a search narrows them quickly", fifty >= 50 && ms2 < 2000, `${fifty} cards, first view ${ms} ms, search ${ms2} ms`);
   step("sanity: database still holds every Structure name", Number(sql("select count(*) from program_def")) > 50);
 

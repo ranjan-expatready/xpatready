@@ -115,7 +115,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("AI proposals waiting: the row's next step is Review N AI proposals", /^Review \d+ AI proposals?$/.test((await svRow.getByRole("button").textContent()) ?? ""), await svRow.getByRole("button").textContent());
   // item 3: two lines, nothing cut in the middle
   const lines = await row("Permanent residence application").locator('[role="gridcell"]').first().evaluate((c) => ({ t: c.textContent, bold: [...c.querySelectorAll("b, .font-semibold")].map((e) => e.textContent), cut: [...c.children].some((e) => e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === "ellipsis") }));
-  step("item 3 + BR-7 (S2): the full five-part trail in one line, first parts muted, the last levels bold; nothing truncated", lines.t.startsWith("Retail › Individual › Economic immigration › Express Entry › Permanent residence application") && lines.bold.includes("Permanent residence application") && !lines.cut, JSON.stringify(lines));
+  step("item 3 + BR-7 (S2): the full five-part trail in one line, first parts muted, the last levels bold; nothing truncated", lines.t.startsWith("Retail › Permanent residence › Economic immigration › Express Entry › Permanent residence application") && lines.bold.includes("Permanent residence application") && !lines.cut, JSON.stringify(lines));
   await state("programs-needs-work-default");
   step("F3: AI steps carry the AI mark (Sparkles, labelled) in the Next step column", await svRow.getByRole("button").locator('[aria-label="AI step:"]').count() === 1 && await grid().locator('[data-next-step="add_from_library"] [aria-label="AI step:"]').count() === 0);
   // Keyboard path (as a person): focus the row, then Tab to its next step (the chip comes first).
@@ -210,7 +210,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   const vvRowStep = (await row("Visitor visa").locator("[data-next-step]").textContent()).trim();
   await row("Visitor visa").click(); await onCombination("Visitor visa");
   const crumbs = await p.getByRole("navigation", { name: "Path" }).getByRole("link").allTextContents();
-  step("P-50: the page header carries the full path, every level a link (Immigration programs › Individual › Visitors › Visitor visa)", crumbs.join(" › ") === "Immigration programs › Individual › Visitors › Visitor visa", crumbs.join(" › "));
+  step("P-50: the page header carries the full path, every level a link (Immigration programs › Temporary residence › Visitors › Visitor visa)", crumbs.join(" › ") === "Immigration programs › Temporary residence › Visitors › Visitor visa", crumbs.join(" › "));
   // Lead check item 1: one next step on the page — the row, the header and the first missing line say the same thing.
   await p.getByRole("region", { name: /Missing before firms can use it/ }).locator("li").first().waitFor();
   const vvHeadStep = (await p.locator("main [data-next-step]").first().textContent()).trim();

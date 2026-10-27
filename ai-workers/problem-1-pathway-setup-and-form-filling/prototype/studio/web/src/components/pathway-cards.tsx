@@ -7,7 +7,7 @@ import { Tip } from "@/components/status";
 import { cn } from "@/lib/utils";
 
 export type PathwayCardItem = { key: string; label: string; combinations: number; needs: number; retired?: boolean };
-export const NEED_YOU_TIP = '"Need you": combinations not released yet, not ready, or with a next step waiting.';
+export const NEED_YOU_TIP = '"Need you": combinations waiting for a person: something to review, something missing or something blocking release.';
 
 export function PathwayCards({ typeLabel, pathways, open, onOpen, allTip, cardTip, add }: {
   typeLabel: string; pathways: PathwayCardItem[]; open: string | null; onOpen: (key: string | null) => void;

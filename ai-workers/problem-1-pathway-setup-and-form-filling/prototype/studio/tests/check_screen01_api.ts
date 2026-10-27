@@ -310,11 +310,11 @@ function pdf(title: string, text: string) {
   ok("#4 fail: a malformed id is a plain 404, with no database call or server path in the answer", bad.every((x) => x.status === 404 && !/prisma|invalid|\/Users\/|node_modules|\.ts\b/i.test(x.text)), bad);
   const rel = (await call("GET", `/combinations/${wp.combinationId}`)).body.releases[0];
   ok("#3: a release shows \"Release N\", the approver's role name, and a basis without checksums", rel.release === 1 && rel.approver === "Approver" && !/[0-9a-f]{12}/.test(rel.basis) && !/user-[A-Z]/.test(rel.basis), { release: rel.release, approver: rel.approver, basis: rel.basis });
-  const n1 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "individual", label: "日本語プログラム" }), n2 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "individual", label: "中文项目" });
+  const n1 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "retail.temporary_residence", label: "日本語プログラム" }), n2 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "retail.temporary_residence", label: "中文项目" });
   const long = "A very long program name that goes on and on beyond sixty characters, ";
-  const n3 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "individual", label: `${long}first` }), n4 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "individual", label: `${long}second` });
+  const n3 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "retail.temporary_residence", label: `${long}first` }), n4 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "retail.temporary_residence", label: `${long}second` });
   ok("M3 pass: different names with no Latin letters, or sharing their first 60 characters, are all created with keys of their own", [n1, n2, n3, n4].every((x) => x.status === 201) && new Set([n1, n2, n3, n4].map((x) => x.body.programNodeKey)).size === 4, [n1, n2, n3, n4].map((x) => [x.status, x.body.programNodeKey ?? x.body.detail]));
-  const n5 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "individual", label: "日本語 プログラム" });
+  const n5 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "retail.temporary_residence", label: "日本語 プログラム" });
   ok("M3 fail: the same name again (ignoring spaces) is still refused (BR-6)", n5.status === 409, n5.body.detail);
   // QA-14: BR-6 holds in the database, also when the same name arrives four times at the same moment.
   const raced = await Promise.all(Array.from({ length: 4 }, () => call("POST", "/program-nodes", { kind: "STREAM", parentKey: "individual.visitors", label: "Race at once" })));
