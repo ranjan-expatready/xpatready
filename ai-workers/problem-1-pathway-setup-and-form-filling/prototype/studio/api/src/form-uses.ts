@@ -2,6 +2,7 @@
 // form-library.ts so the lifecycle (api/src/lifecycle.ts) can use it without an import cycle.
 import { HttpException } from "@nestjs/common";
 import type { Use, UsesView } from "../../contracts/structure.ts";
+import type { Prisma } from "@prisma/client";
 import { ACTORS, type Db } from "./core.ts";
 
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
@@ -37,4 +38,16 @@ export async function formUses(db: Db, workspaceId: string, code: string): Promi
       restore: p ?? (!def.retiredAt ? "It is not retired." : null),
     },
     pending: pending ? { id: pending.id, action: pending.action as "DELETE" | "RETIRE" | "RESTORE", by: nameOf(pending.proposedBy) } : null, history };
+}
+
+// ------------------------------------------------------------------ Undo: one change on a forms list
+export type LineRow = Prisma.CombinationFormGetPayload<object>;
+/** Every row of these forms' lines on a combination, as they are now (what Undo puts back). */
+export async function snapshotLines(db: Pick<Db, "combinationForm">, combinationId: string, codes: string[]) {
+  return (await db.combinationForm.findMany({ where: { combinationId, lineageKey: { in: codes } } })) as LineRow[];
+}
+/** Records one change with the rows it started from; the rows after it are read again when it is undone. */
+export async function recordAction(db: Pick<Db, "formLineAction" | "combinationForm">, a: { workspaceId: string; combinationId: string; action: "attach" | "remove" | "finder_attach" | "edit"; codes: string[]; before: LineRow[]; by: string; batchId?: string }) {
+  const after = await snapshotLines(db, a.combinationId, a.codes);
+  await db.formLineAction.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, action: a.action, by: a.by, detail: JSON.parse(JSON.stringify({ codes: a.codes, batch_id: a.batchId ?? null, before: a.before, after: after.map((r) => ({ id: r.id, status: r.status, version: r.version })) })) as Prisma.InputJsonValue } });
 }

@@ -39,7 +39,14 @@ export const LibraryQuery = z.object({
   usedBy: z.string().uuid().optional(),
   status: z.enum(LIBRARY_STATUSES).optional(),
   q: z.string().trim().max(80).optional(),
+  /** "picker": S5's "Add a form from the library" — usable forms only (no retired form, no form still waiting). */
+  for: z.enum(["picker"]).optional(),
 });
+
+/** DELETE …/forms/:code and POST …/forms/:code/replace: the line version the person saw (409 when stale; S5 ask). */
+export const LineVersionBody = z.object({ version: z.number().int().min(1).optional() });
+/** POST …/forms/undo: the change the person saw as "last" (409 when someone made a newer one; S5 ask). */
+export const UndoBody = z.object({ changeId: z.string().uuid().optional() });
 
 /** POST /library/forms/:code/retire|restore and DELETE /library/forms/:code: the P-116 lifecycle, a second person approves. */
 export const LifecycleReasonBody = z.object({ reason: z.string().trim().min(3, "Say why (3 to 300 characters).").max(300, "Say why (3 to 300 characters).") });

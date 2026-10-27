@@ -25,6 +25,7 @@ import { Lifecycle } from "./lifecycle.ts";
 import { Structure, StructureController } from "./structure.ts";
 import { Studio } from "./studio.ts";
 import { Finder } from "./finder.ts";
+import { normaliseCode } from "../../contracts/form-library.ts";
 import { FormLibrary, FormLibraryController } from "./form-library.ts";
 
 type H = string | undefined;
@@ -125,7 +126,7 @@ class ProgramsController {
   /** The one form intake (P-51): one or many files; with combinationId they are attached to it (door 1), without it
    *  they go to the library only (door 2, Screen 04). One result per file. */
   @Post("intake") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_BYTES, files: MAX_FILES } }))
-  upload(@Headers("x-actor") a: H, @UploadedFiles() files: any[], @Body() b: any) { return this.intake.intake(actorOf(a), files, b?.combinationId || undefined); }
+  upload(@Headers("x-actor") a: H, @UploadedFiles() files: any[], @Body() b: any) { return this.intake.intake(actorOf(a), files, b?.combinationId || undefined, "MANUAL", b?.forCombination && b?.forCode ? { combinationId: String(b.forCombination), code: normaliseCode(String(b.forCode)) } : undefined); }
   @Get("intake/held") held(@Query("combination") c?: string) { return this.intake.held(c || undefined); }
 }
 

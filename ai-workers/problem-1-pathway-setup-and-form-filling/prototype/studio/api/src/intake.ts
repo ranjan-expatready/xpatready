@@ -50,15 +50,19 @@ export class Intake {
 
   /** POST /intake: one or many files, optionally on a combination. Files are handled one after the other, so two copies
    *  of the same new form in one batch give "added" then "in_library", never two forms. */
-  async intake(actor: Actor, files: IntakeFile[] | undefined, combinationId?: string, via: "MANUAL" | "SAMPLE" = "MANUAL") {
+  async intake(actor: Actor, files: IntakeFile[] | undefined, combinationId?: string, via: "MANUAL" | "SAMPLE" = "MANUAL", forForm?: { combinationId: string; code: string }) {
     need(actor, "author");
     if (!files?.length) fail("Choose at least one file.");
     if (files!.length > MAX_FILES) fail(`Add at most ${MAX_FILES} files at a time.`, HttpStatus.PAYLOAD_TOO_LARGE);
     const workspaceId = await this.ws.id();
     const combination = combinationId ? await this.db.combination.findUnique({ where: { id: combinationId } }) : null;
     if (combinationId && !combination) fail("That combination does not exist (it may have been removed by a reset).", HttpStatus.NOT_FOUND);
+    if (forForm && !(await this.db.combination.findUnique({ where: { id: forForm.combinationId } }))) fail("That combination does not exist (it may have been removed by a reset).", HttpStatus.NOT_FOUND);
     const results: IntakeResult[] = [];
-    for (const f of files!) results.push(await this.oneSafely(actor, workspaceId, f, combination, via));
+    for (const f of files!) {
+      const r = await this.oneSafely(actor, workspaceId, f, combination, via);
+      results.push(forForm ? await this.forForm(actor, workspaceId, forForm, r) : r);
+    }
     const n = (o: IntakeOutcome) => results.filter((r) => r.outcome === o).length;
     return { results, summary: { files: results.length, in_library: n("in_library"), added: n("added"), attached: n("attached"), held: n("new_edition_held") + n("older_edition_held") + n("held"), refused: n("refused"), failed: n("failed") } };
   }
@@ -85,6 +89,26 @@ export class Intake {
     if (!item) fail("That sample is not in the official library.");
     const r = (await this.intake(actor, [{ originalname: item!.file, buffer: readFileSync(join(OFFICIAL, item!.path)) }], combinationId, "SAMPLE")).results[0];
     return r;
+  }
+
+  /** S4 (S5 ask): an upload from a combination's "Not found" row. Usable now (in the library, approved, or equal to
+   *  canada.ca's file) → attached to that combination as one change for Undo; held → remembered and attached when a second
+   *  person approves it; another form's file is added to the library, never attached in its place. */
+  private async forForm(actor: Actor, workspaceId: string, t: { combinationId: string; code: string }, r: IntakeResult): Promise<IntakeResult> {
+    if (r.outcome === "held" || r.outcome === "new_edition_held" || r.outcome === "older_edition_held") {
+      if (r.sha256) await this.db.intakeItem.updateMany({ where: { workspaceId, sha256: r.sha256, status: "HELD" }, data: { forCombinationId: t.combinationId, forCode: t.code } });
+      return { ...r, message: `${r.message} It is attached to the combination once a second person approves it.` };
+    }
+    if (r.outcome !== "added" && r.outcome !== "in_library") return r;
+    if (r.code && r.code !== t.code) return { ...r, message: `${r.message} This file is ${r.code}, not ${t.code}, so it was not attached in its place.` };
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: t.code } } });
+    if (!def) return r;
+    const { addFormLine } = await import("./form-lines.ts");
+    const { snapshotLines, recordAction } = await import("./form-uses.ts");
+    const before = await snapshotLines(this.db, t.combinationId, [t.code]);
+    const added = await addFormLine(this.db, { workspaceId, combinationId: t.combinationId, govFormDefId: def.id, formKey: t.code, origin: "HUMAN", by: actor.id, sourceQuote: `${r.edition ?? t.code}: uploaded for this combination` });
+    if (added === "added") await recordAction(this.db, { workspaceId, combinationId: t.combinationId, action: "attach", codes: [t.code], before, by: actor.id });
+    return { ...r, message: `${r.message} ${added === "added" ? "Attached to the combination." : "Already on the combination."}` };
   }
 
   private async approvedInProduct(workspaceId: string, hash: string) {
@@ -146,6 +170,7 @@ export class Intake {
     if (uploader && bytes) {
       const combination = h.combinationId ? await this.db.combination.findUnique({ where: { id: h.combinationId } }) : null;
       try { result = await this.oneSafely(uploader, h.workspaceId, { originalname: h.fileName, buffer: bytes }, combination, "MANUAL"); } catch { result = null; }
+      if (result && h.forCombinationId && h.forCode) result = await this.forForm(uploader, h.workspaceId, { combinationId: h.forCombinationId, code: h.forCode }, result);
     }
     return { outcome: "approved", result };
   }

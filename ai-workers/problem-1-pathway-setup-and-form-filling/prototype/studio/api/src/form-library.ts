@@ -9,13 +9,13 @@ import { z } from "zod";
 import { manifest } from "../../engine/import.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { officialUrl, parseFormPage } from "../../engine/canada.ts";
-import { AttachBody, LibraryQuery, LifecycleReasonBody } from "../../contracts/form-library.ts";
+import { AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, UndoBody } from "../../contracts/form-library.ts";
 import { canadaSource, type CanadaSource } from "./canada.ts";
-import { actorOf, Audit, Db, need, Workspace, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { Finder } from "./finder.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { addFormLine } from "./form-lines.ts";
-import { formUses } from "./form-uses.ts";
+import { formUses, recordAction, snapshotLines, type LineRow } from "./form-uses.ts";
 import { Studio } from "./studio.ts";
 
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -25,19 +25,8 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
   if (!r.success) throw problem(400, "Check the request", r.error.issues[0]?.message ?? "Some values are not valid.", { errors: r.error.issues.map((i) => ({ field: i.path.join("."), message: i.message })) });
   return r.data;
 }
+const nameOf = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "another person";
 const TYPE_OF = (kind: string) => (kind === "guide" ? "guide" : kind === "checklist" || kind === "document" ? "checklist" : "form");
-
-// ------------------------------------------------------------------ Undo: one change on a forms list
-type LineRow = Prisma.CombinationFormGetPayload<object>;
-/** Every row of these forms' lines on a combination, as they are now (what Undo puts back). */
-export async function snapshotLines(db: Pick<Db, "combinationForm">, combinationId: string, codes: string[]) {
-  return (await db.combinationForm.findMany({ where: { combinationId, lineageKey: { in: codes } } })) as LineRow[];
-}
-/** Records one change with the rows it started from; the rows after it are read again when it is undone. */
-export async function recordAction(db: Pick<Db, "formLineAction" | "combinationForm">, a: { workspaceId: string; combinationId: string; action: "attach" | "remove" | "finder_attach"; codes: string[]; before: LineRow[]; by: string; batchId?: string }) {
-  const after = await snapshotLines(db, a.combinationId, a.codes);
-  await db.formLineAction.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, action: a.action, by: a.by, detail: JSON.parse(JSON.stringify({ codes: a.codes, batch_id: a.batchId ?? null, before: a.before, after: after.map((r) => ({ id: r.id, status: r.status, version: r.version })) })) as Prisma.InputJsonValue } });
-}
 
 @Injectable()
 export class FormLibrary {
@@ -74,7 +63,8 @@ export class FormLibrary {
         used_by: using, status, older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel) };
     });
     const term = q.q?.toLowerCase();
-    const shown = rows.filter((r) => (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.title.toLowerCase().includes(term)));
+    // S5's "Add a form from the library" (for=picker): forms a combination may use now, never retired or still waiting.
+    const shown = rows.filter((r) => (q.for !== "picker" || (r.status !== "retired" && !!r.edition)) && (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.title.toLowerCase().includes(term)));
     const count = (pred: (r: (typeof rows)[number]) => boolean) => rows.filter(pred).length;
     return { rows: shown, counts: { all: rows.length, form: count((r) => r.type === "form"), guide: count((r) => r.type === "guide"), checklist: count((r) => r.type === "checklist"), needs_ok: count((r) => r.status === "needs_ok"), newer_file: count((r) => r.status === "newer_file"), retired: count((r) => r.status === "retired") },
       sample_note: "Which forms a combination needs and what IRCC accepts are Sample until the immigration expert confirms." };
@@ -120,23 +110,43 @@ export class FormLibrary {
     return { added: def.formKey };
   }
 
-  /** DELETE /combinations/:id/forms/:code: remove from this combination; the form stays in the library. */
-  async remove(actor: Actor, combinationId: string, code: string) {
+  /** The newest version of a form's line on a combination must be the one the person saw (S5: 409 when stale). */
+  private async sameVersion(combinationId: string, code: string, version: number | undefined) {
+    if (version === undefined) return;
+    const newest = await this.db.combinationForm.findFirst({ where: { combinationId, lineageKey: code }, orderBy: { version: "desc" } });
+    if (newest && newest.version !== version) throw problem(409, "Changed since", `${code} was changed by ${nameOf(newest.updatedBy)} at ${newest.updatedAt.toISOString().slice(11, 16)} UTC after you opened it (now version ${newest.version}). Reload to see it.`, { version: newest.version });
+  }
+
+  /** DELETE /combinations/:id/forms/:code: remove from this combination; the form stays in the library. The removal is
+   *  one change for Undo (written by saveForm, the one line-settings route), and Find again never attaches it back. */
+  async remove(actor: Actor, combinationId: string, code: string, body: unknown) {
     need(actor, "author");
+    const b = parse(LineVersionBody, body);
     const c = await this.db.combination.findUnique({ where: { id: combinationId } });
     if (!c) throw problem(404, "Not found", "That combination does not exist.");
-    const before = await snapshotLines(this.db, combinationId, [code]);
+    await this.sameVersion(combinationId, code, b.version);
     await this.studio.saveForm(actor, combinationId, code, { retire: true });
-    await recordAction(this.db, { workspaceId: c.workspaceId, combinationId, action: "remove", codes: [code], before, by: actor.id });
     return { removed: code, in_library: true };
+  }
+
+  /** POST /combinations/:id/forms/:code/replace: "Replace with a new edition" from a combination's line: compares the
+   *  form with canada.ca (rules, US$0). A newer edition goes to edition review, the same edition from a new file is
+   *  marked for a person; the line itself always files the library's current edition (lines point at the form). */
+  async replace(actor: Actor, combinationId: string, code: string, body: unknown) {
+    need(actor, "author");
+    const b = parse(LineVersionBody, body);
+    await this.sameVersion(combinationId, code, b.version);
+    return this.checkCanada(actor, code);
   }
 
   /** POST /combinations/:id/forms/undo: reverses the last change on this combination's forms list, exactly, while the
    *  draft is open: refused when one of its lines changed since (someone else edited it) or was released meanwhile. */
-  async undo(actor: Actor, combinationId: string) {
+  async undo(actor: Actor, combinationId: string, body: unknown) {
     need(actor, "author");
+    const b = parse(UndoBody, body);
     const a = await this.db.formLineAction.findFirst({ where: { combinationId, undoneAt: null }, orderBy: { at: "desc" } });
     if (!a) throw problem(409, "Nothing to undo", "There is no change on this combination's forms to undo.");
+    if (b.changeId && b.changeId !== a.id) throw problem(409, "Changed since", `The last change on these forms is now ${nameOf(a.by)}'s (${a.action}), not the one you saw. Reload, then undo.`, { changeId: a.id });
     const d = a.detail as unknown as { codes: string[]; before: LineRow[]; after: { id: string; status: string; version: number }[] };
     const now = await snapshotLines(this.db, combinationId, d.codes);
     const changed = now.length !== d.after.length || now.some((r) => { const x = d.after.find((y) => y.id === r.id); return !x || x.status !== r.status || x.version !== r.version; });
@@ -153,7 +163,7 @@ export class FormLibrary {
     });
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     await this.audit.log(c.workspaceId, actor.id, "undone", "form", d.codes.join(", ").slice(0, 120), `${actor.name} undid the last change on "${c.label}"'s forms (${a.action === "finder_attach" ? "the form finder's attach" : a.action}: ${d.codes.join(", ")})`, undefined, combinationId);
-    return { undone: a.action, codes: d.codes };
+    return { undone: a.action, codes: d.codes, changeId: a.id };
   }
 }
 
@@ -166,9 +176,11 @@ export class FormLibraryController {
   @Get("combinations/:id/forms/find") latest(@Param("id") id: string) { return this.finder.latest(id); }
   @Get("form-finder/runs/:id") run(@Param("id") id: string) { return this.finder.view(id); }
   @Post("form-finder/runs/:id/stop") stop(@Headers("x-actor") a: H, @Param("id") id: string) { return this.finder.stop(actorOf(a), id); }
-  @Post("combinations/:id/forms/undo") undo(@Headers("x-actor") a: H, @Param("id") id: string) { return this.lib.undo(actorOf(a), id); }
+  @Post("combinations/:id/forms/undo") undo(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.lib.undo(actorOf(a), id, b); }
+  @Get("combinations/:id/forms/find/latest") latestForms(@Param("id") id: string) { return this.finder.latestForms(id); }
+  @Post("combinations/:id/forms/:code/replace") replace(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code") code: string, @Body() b: unknown) { return this.lib.replace(actorOf(a), id, code, b); }
   @Post("combinations/:id/forms") attach(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.lib.attach(actorOf(a), id, b); }
-  @Delete("combinations/:id/forms/:code") remove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code") code: string) { return this.lib.remove(actorOf(a), id, code); }
+  @Delete("combinations/:id/forms/:code") remove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code") code: string, @Body() b: unknown) { return this.lib.remove(actorOf(a), id, code, b); }
   @Get("library/forms/list") list(@Query() q: unknown) { return this.lib.list(q); }
   @Get("library/forms/:code/uses") uses(@Param("code") code: string) { return this.lib.uses(code); }
   @Post("library/forms/:code/check-canada") check(@Headers("x-actor") a: H, @Param("code") code: string) { return this.lib.checkCanada(actorOf(a), code); }

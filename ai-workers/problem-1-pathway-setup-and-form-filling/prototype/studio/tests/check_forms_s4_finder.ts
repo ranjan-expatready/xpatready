@@ -25,8 +25,9 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const upload = async (name: string, bytes: Buffer, actor = "user-A") => {
+const upload = async (name: string, bytes: Buffer, actor = "user-A", extra: Record<string, string> = {}) => {
   const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(bytes)], { type: "application/pdf" }), name);
+  for (const [k, v] of Object.entries(extra)) fd.append(k, v);
   const r = await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": actor }, body: fd });
   return { status: r.status, body: await r.json() as any }; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
@@ -138,6 +139,14 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
 
   r = await call("GET", `/combinations/${vv}/forms/find`);
   ok("C11.15: the combination's newest finder run is served (what S5's Forms tab reads)", r.status === 200 && r.body.id === run.id && r.body.result?.attach?.length === 4, r.body?.id);
+  r = await call("GET", `/combinations/${vv}/forms/find/latest`);
+  const st = (c: string) => r.body.forms?.find((f: any) => f.code === c);
+  ok("C11.15 (S5 ask 1): one read gives every proposed form with its state now: downloaded, newer file, attached, to decide, not for this application", st("IRM 0002")?.state === "DOWNLOADED_ATTACHED" && st("IMM 5409")?.state === "NEWER_FILE_SAME_EDITION" && st("IMM 5257")?.state === "ATTACHED" && st("IMM 5707")?.state === "TO_DECIDE" && st("IMM 5782")?.state === "NOT_FOR_THIS_APPLICATION", r.body.forms?.map((f: any) => `${f.code}:${f.state}`));
+  ok("C11.15 (S5 ask 1): each attached form carries its line id and version, the quote, who and the run id", !!st("IMM 5409")?.lineId && st("IMM 5409")?.lineVersion === 1 && /common-law/.test(st("IMM 5409")?.quote) && st("IMM 5409")?.who === "principal_applicant" && st("IMM 5409")?.runId === run.id, st("IMM 5409"));
+  r = await call("POST", `/combinations/${vv}/forms/${C5257}/replace`, { version: 9 });
+  ok("C11.15 (S5 ask 4): Replace on a line with a stale version is refused (409)", r.status === 409, r.body.title);
+  r = await call("POST", `/combinations/${vv}/forms/${C5257}/replace`, { version: 1 });
+  ok("C11.15: Replace on a line compares the form with canada.ca (still the current edition: nothing to replace)", r.status < 300 && r.body.outcome === "current", r.body);
   r = await call("POST", `/library/forms/${C5257}/check-canada`);
   ok("C11.2 (m5): Check canada.ca on a library form compares it with its own canada.ca page (US$0): still current", r.status < 300 && r.body.outcome === "current", r.body);
   r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5488")}/check-canada`);
@@ -167,10 +176,24 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
     writeFileSync(file, JSON.stringify({ ...rec(out), drafting_run: { ...rec(out).drafting_run, inputs: { official_files: j.inputs } }, launch_evidence: { template_sha256: sha(readFileSync(join(P2, "prompts", tpl))) } }));
     madeRuns.push(file);
   }
+  r = await call("DELETE", `/combinations/${vv}/forms/${C5257}`, { version: 7 });
+  ok("C11.15 (S5 ask 4): Remove with a stale line version is refused (409, reload)", r.status === 409 && /Changed since/.test(r.body.title), r.body.detail);
+  r = await call("DELETE", `/combinations/${vv}/forms/${C5257}`, { version: 1 });
+  ok("C11.15: Remove with the line's version takes IMM 5257 off (it stays in the library)", r.status < 300 && /IMM 5257:RETIRED/.test(lines(vv)), lines(vv));
   const replayPlan = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "replay" })).body;
   r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "replay", planSha256: replayPlan.plan_sha256, idempotencyKey: "s4-check-replay" });
   run = (await finish(r.body.id)).body;
-  ok("C11.8: replay reuses the saved answers of exactly these pages and prompt: same result, US$0, nothing attached twice", run.usd.spent === 0 && run.result?.attach?.every((a: any) => a.line === "already") && run.result.attach.length === 4, run.result?.attach?.map((a: any) => `${a.code}:${a.line}`));
+  ok("C11.8: replay reuses the saved answers of exactly these pages and prompt: same result, US$0, nothing attached twice", run.usd.spent === 0 && run.result?.attach?.filter((a: any) => a.code !== "IMM 5257").every((a: any) => a.line === "already") && run.result.attach.length === 4, run.result?.attach?.map((a: any) => `${a.code}:${a.line}`));
+  ok("C11.15 (S5 ask 2): Find again never attaches back a form a person removed (IMM 5257 stays removed; shown \"Add back\")", run.result?.attach?.find((a: any) => a.code === "IMM 5257")?.line === "removed_by_person" && /IMM 5257:RETIRED/.test(lines(vv)) && (await call("GET", `/combinations/${vv}/forms/find/latest`)).body.forms.find((f: any) => f.code === "IMM 5257")?.state === "REMOVED_BY_PERSON", lines(vv));
+  r = await call("POST", `/combinations/${vv}/forms/undo`, { changeId: "00000000-0000-4000-8000-000000000000" });
+  ok("C11.15 (S5 ask 4): Undo naming a change that is no longer the last is refused (409)", r.status === 409, r.body.detail);
+  const lastChange = sql(`select id from form_line_action where combination_id='${vv}' and undone_at is null order by at desc limit 1`);
+  r = await call("POST", `/combinations/${vv}/forms/undo`, { changeId: lastChange });
+  ok("C11.15: Undo of the removal brings IMM 5257 back (the one Undo covers removals too)", r.status < 300 && r.body.undone === "remove" && /IMM 5257:DRAFT/.test(lines(vv)), lines(vv));
+  r = await call("PATCH", `/combinations/${vv}/forms/${C5257}`, { who: "principal_applicant" });
+  ok("C11.15 (S5 ask 4): a line setting saved on the Forms tab is one change for the same Undo", r.status < 300 && sql(`select action from form_line_action where combination_id='${vv}' and undone_at is null order by at desc limit 1`) === "edit");
+  r = await call("POST", `/combinations/${vv}/forms/undo`);
+  ok("C11.15: Undo reverses that setting exactly", r.status < 300 && r.body.undone === "edit" && sql(`select who from combination_form where combination_id='${vv}' and lineage_key='IMM 5257' order by version desc limit 1`) === "each_applicant", r.body);
 
   // --- Undo the finder's attach; hand attach and remove; Undo again
   r = await call("POST", `/combinations/${vv}/forms/undo`);
@@ -216,6 +239,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   sql(`update gov_form_def set retired_at = now(), retired_by = 'user-A' where form_key = 'IMM 5488'`);
   r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5488")}/restore`, { reason: "Needed again for a combination" });
   ok("C11.11: restore of a retired form waits for a second person (P-116)", r.status < 300 && r.body.status === "WAITING" && r.body.action === "RESTORE", r.body);
+  ok("C11.11 (S5 ask 5): the picker list leaves out retired forms (the library list still shows them, marked Retired)", !(await call("GET", "/library/forms/list?for=picker")).body.rows.some((x: any) => x.code === "IMM 5488") && (await call("GET", "/library/forms/list?status=retired")).body.rows.some((x: any) => x.code === "IMM 5488"));
   ok("C11.11: a retired form is not attached by hand (409, restore it first)", (await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 5488" })).status === 409);
   const released = sql(`select r.combination_id from config_release r where r.snapshot->'forms' @> '[{"form_number":"IMM 5257"}]' limit 1`);
   r = await call("GET", `/library/forms/${C5257}/uses`);
@@ -224,11 +248,18 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   // --- Q-L1: a hand upload equal to canada.ca's file is an official download; a different file is held
   sql(`delete from combination_form where lineage_key='IMM 5645'`); sql(`delete from form_line_action where detail->'codes' ? 'IMM 5645'`);
   sql(`delete from official_download where code='IMM 5645'`); sql(`delete from gov_form_def where form_key='IMM 5645'`);
-  let u = await upload("imm5645e.pdf", changed.imm5645);
+  let u = await upload("imm5645e.pdf", changed.imm5645, "user-A", { forCombination: vv, forCode: "IMM 5645" });
   ok("C11.2 (Q-L1): a hand upload whose checksum equals the PDF behind canada.ca's form page goes into the library with no second person", u.status < 300 && u.body.results?.[0]?.outcome === "added" && sql(`select basis from official_download where sha256='${sha(changed.imm5645)}'`) === "fingerprint_match", u.body.results?.[0]);
+  ok("C11.15 (S5 ask 3): uploaded from the combination's row for IMM 5645 and usable at once: attached to that combination", /IMM 5645:DRAFT:HUMAN/.test(lines(vv)) && /Attached to the combination/.test(u.body.results?.[0]?.message), u.body.results?.[0]?.message);
+  sql(`delete from combination_form where lineage_key='IMM 5645'`);
   sql(`delete from official_download where code='IMM 5645'`); sql(`delete from gov_form_def where form_key='IMM 5645'`); sql(`delete from intake_item where code='IMM 5645'`);
-  u = await upload("imm5645e.pdf", Buffer.concat([changed.imm5645, Buffer.from("% one byte more\n")]));
+  u = await upload("imm5645e.pdf", Buffer.concat([changed.imm5645, Buffer.from("% one byte more\n")]), "user-A", { forCombination: vv, forCode: "IMM 5645" });
   ok("C11.2 (Q-L1): an upload that differs from canada.ca's file is held for a second person, as before (P-80)", u.status < 300 && u.body.results?.[0]?.outcome === "held" && sql(`select count(*) from official_download where code='IMM 5645'`) === "0", u.body.results?.[0]?.message);
+  const heldId = sql(`select id from intake_item where code='IMM 5645' and status='HELD' and for_code='IMM 5645' and for_combination_id='${vv}'`);
+  ok("C11.15 (S5 ask 3): the held upload remembers the combination's row it came from, and is not attached yet", !!heldId && !/IMM 5645:DRAFT/.test(lines(vv)));
+  await call("PATCH", `/intake/held/${heldId}`, { irccPage: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5645.html" });
+  r = await call("POST", `/intake/held/${heldId}/approve`, {}, "user-B");
+  ok("C11.15 (S5 ask 3): once a second person approves it, it is attached to that combination", r.status < 300 && /IMM 5645:DRAFT:HUMAN/.test(lines(vv)), lines(vv));
 
   // --- Two runs at once on one combination; Stop
   scenario({ sleep_ms: 4000 });

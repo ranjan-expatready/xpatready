@@ -27,6 +27,7 @@ import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
 import { RUN_CAP_USD } from "../../../p2/policy.ts";
 import { manifest, slug } from "../../engine/import.ts";
 import { editionMonth, newestEdition } from "../../engine/programs.ts";
+import { compareRounds } from "../../engine/agreement.ts";
 import { mentionsOf, officialUrl, pageLinks, pageText, parseFormPage, parseFormsIndex, textFingerprint } from "../../engine/canada.ts";
 import { FinderBody, FinderLaunchBody, normaliseCode, type FinderMode } from "../../contracts/form-library.ts";
 import { canadaSource, CanadaError, type CanadaSource } from "./canada.ts";
@@ -72,7 +73,7 @@ type Proposal = { code: string; title: string | null; applies: string; condition
 export type FinderResult = {
   pages: { url: string; title: string; kind: string; read_by_ai: boolean }[];
   printed: string[];
-  attach: { code: string; title: string | null; applies: string; condition: string | null; who: string; quote: string; filed_note: string | null; source: "library" | "downloaded" | "newer_file" ; edition?: string | null; line?: "added" | "already" }[];
+  attach: { code: string; title: string | null; applies: string; condition: string | null; who: string; quote: string; filed_note: string | null; source: "library" | "downloaded" | "newer_file" ; edition?: string | null; line?: "added" | "already" | "removed_by_person" }[];
   missing: { code: string; title: string | null; why: string; quote: string }[];
   decide: { code: string; draft: Proposal | null; check: Proposal | null; why: string }[];
   not_for: { code: string; applies: string; quote: string }[];
@@ -335,22 +336,17 @@ export class Finder implements OnModuleInit {
     }
 
     // Rules on both rounds: the quote must be on the page and the number printed on it; then agreement decides.
-    const valid = (p: Proposal | undefined) => !!p && printedSet.has(p.code) && allText.includes(sameText(p.quote));
     // The guide read in step 2 is not a form to find: AI often names it in form style ("IMM 5256" for Guide 5256; seen
     // in both live rounds on 27 Oct). It is already in the library, so it is neither dropped nor attached here.
     const guideNumbers = new Set(pages.filter((p) => p.kind === "guide").map((p) => /guide-(\d{3,5})/.exec(p.url)?.[1]).filter(Boolean));
-    const codes = [...new Set([...draft, ...check].map((p) => p.code))].filter((c) => !guideNumbers.has(/^IMM (\d{3,5})$/.exec(c)?.[1] ?? ""));
-    const accepted: Proposal[] = [];
-    for (const code of codes) {
-      const d = draft.find((p) => p.code === code), k = check.find((p) => p.code === code);
-      const bad = [d, k].filter(Boolean).filter((p) => !valid(p)) as Proposal[];
-      for (const p of bad) result.dropped.push({ code, why: !printedSet.has(code) ? `${code} is not printed on the pages: AI named it from elsewhere, so it was dropped.` : `The quoted line for ${code} is not on the page, so the answer was dropped.` });
-      const dv = valid(d) ? d : undefined, kv = valid(k) ? k : undefined;
-      if (dv && kv && dv.applies === kv.applies) {
-        if (ATTACHABLE.has(dv.applies)) accepted.push(dv);
-        else result.not_for.push({ code, applies: dv.applies, quote: dv.quote });
-      } else if (dv || kv) result.decide.push({ code, draft: dv ?? null, check: kv ?? null, why: dv && kv ? `The two AI rounds read it differently (${dv.applies} / ${kv.applies}).` : `Only one AI round named it${bad.length ? " (the other's answer failed the rules)" : ""}.` });
-    }
+    const notGuide = (p: Proposal) => !guideNumbers.has(/^IMM (\d{3,5})$/.exec(p.code)?.[1] ?? "");
+    const answers = (xs: Proposal[]) => xs.filter(notGuide).map((p) => ({ key: p.code, reading: p.applies, item: p }));
+    // P-121 (engine/agreement.ts, shared with S6): rules on both rounds, agreement decides.
+    const rounds = compareRounds(answers(draft), answers(check), ({ item }) => !printedSet.has(item.code) ? `${item.code} is not printed on the pages: AI named it from elsewhere, so it was dropped.` : !allText.includes(sameText(item.quote)) ? `The quoted line for ${item.code} is not on the page, so the answer was dropped.` : null);
+    result.dropped.push(...rounds.dropped.map((d) => ({ code: d.key, why: d.why })));
+    result.decide.push(...rounds.decide.map((d) => ({ code: d.key, draft: d.draft, check: d.check, why: d.why })));
+    const accepted = rounds.agreed.filter((a) => ATTACHABLE.has(a.item.applies)).map((a) => a.item);
+    result.not_for.push(...rounds.agreed.filter((a) => !ATTACHABLE.has(a.item.applies)).map((a) => ({ code: a.key, applies: a.item.applies, quote: a.item.quote })));
     const only: string[] | null = plan.only;
     const toFetch = only ? accepted.filter((p) => only.includes(p.code)) : accepted;
 
@@ -380,7 +376,8 @@ export class Finder implements OnModuleInit {
       const lines = await this.attachFound(b.workspaceId, combinationId, found, actor, batchId);
       for (const f of found) f.line = lines[f.code];
       const added = Object.values(lines).filter((x) => x === "added").length;
-      return { status: "COMPLETED", message: `${added} attached automatically (Picked by AI · Sample), ${found.length - added} already on this combination.`, value: null };
+      const removed = Object.values(lines).filter((x) => x === "removed_by_person").length;
+      return { status: "COMPLETED", message: `${added} attached automatically (Picked by AI · Sample), ${found.length - added - removed} already on this combination${removed ? `, ${removed} not attached back (a person removed ${removed === 1 ? "it" : "them"})` : ""}.`, value: null };
     });
     result.attach = found;
     const problems = result.missing.length + result.decide.length + result.dropped.length;
@@ -573,13 +570,16 @@ export class Finder implements OnModuleInit {
   }
 
   /** Attaches every found form as a draft line (AI_FOUND), as one change for Undo. Never raises a duplicate. */
-  private async attachFound(workspaceId: string, combinationId: string, found: FinderResult["attach"], actor: Actor, batchId: string): Promise<Record<string, "added" | "already">> {
-    const out: Record<string, "added" | "already"> = {};
+  private async attachFound(workspaceId: string, combinationId: string, found: FinderResult["attach"], actor: Actor, batchId: string): Promise<Record<string, "added" | "already" | "removed_by_person">> {
+    const out: Record<string, "added" | "already" | "removed_by_person"> = {};
     const { addFormLine } = await import("./form-lines.ts");
-    const { snapshotLines, recordAction } = await import("./form-library.ts");
+    const { snapshotLines, recordAction } = await import("./form-uses.ts");
     const codes = found.map((f) => f.code);
     const before = await snapshotLines(this.db, combinationId, codes);
     for (const f of found) {
+      // S5 ask: a form a person removed from this combination is never attached back by Find again or Redo ("Add back").
+      const newest = before.filter((r) => r.lineageKey === f.code).sort((a, b) => b.version - a.version)[0];
+      if (newest?.status === "RETIRED") { out[f.code] = "removed_by_person"; continue; }
       const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: f.code } } });
       if (!def) continue;
       out[f.code] = await addFormLine(this.db, { workspaceId, combinationId, govFormDefId: def.id, formKey: f.code, who: f.who, origin: "AI_FOUND", by: actor.id, sourceQuote: f.quote,
@@ -611,6 +611,28 @@ export class Finder implements OnModuleInit {
     await this.db.aiBatch.update({ where: { id: batchId }, data: { cancelRequested: true, message: "Stopping" } });
     await this.audit.log(b.workspaceId, actor.id, "stopped", "form finder", batchId, `${actor.name} stopped the form finder for ${b.scopeLabel.split("|")[1] ?? "a combination"}`);
     return this.view(batchId);
+  }
+
+  /** GET /combinations/:id/forms/find/latest (S5's Forms tab, one read): every form the newest finder run proposed, with
+   *  its state now (a person may have removed it, or uploaded it, since the run). TO_DECIDE and NOT_FOR_THIS_APPLICATION
+   *  are added to S5's six states: the two AI rounds disagreed (a person decides, P-121), or the page names it as a
+   *  separate application. */
+  async latestForms(combinationId: string) {
+    const run = await this.latest(combinationId);
+    if (!run) return { run: null, forms: [] };
+    const r: FinderResult | null = run.result;
+    const codes = [...(r?.attach ?? []).map((a) => a.code), ...(r?.missing ?? []).map((m) => m.code), ...(r?.decide ?? []).map((d) => d.code), ...(r?.not_for ?? []).map((n) => n.code)];
+    const lines = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: { in: codes } }, orderBy: { version: "desc" } });
+    const line = (c: string) => lines.find((l) => l.lineageKey === c);
+    const held = await this.db.intakeItem.findMany({ where: { forCombinationId: combinationId, forCode: { in: codes }, status: "HELD" }, select: { forCode: true } });
+    const stateOf = (c: string, base: string) => { const l = line(c); if (l?.status === "RETIRED") return "REMOVED_BY_PERSON"; if (base === "NOT_FOUND" && l) return "ATTACHED"; if (base === "NOT_FOUND" && held.some((h) => h.forCode === c)) return "UPLOAD_WAITING_SECOND_PERSON"; return base; };
+    const forms = [
+      ...(r?.attach ?? []).map((a) => ({ code: a.code, title: a.title, quote: a.quote, conditionPlain: a.applies === "always" ? null : a.condition ?? a.quote, who: a.who, state: stateOf(a.code, a.source === "downloaded" ? "DOWNLOADED_ATTACHED" : a.source === "newer_file" ? "NEWER_FILE_SAME_EDITION" : "ATTACHED") })),
+      ...(r?.missing ?? []).map((m) => ({ code: m.code, title: m.title, quote: m.quote, conditionPlain: null, who: null, state: stateOf(m.code, "NOT_FOUND"), why: m.why })),
+      ...(r?.decide ?? []).map((d) => ({ code: d.code, title: (d.draft ?? d.check)?.title ?? null, quote: (d.draft ?? d.check)?.quote ?? null, conditionPlain: (d.draft ?? d.check)?.condition ?? null, who: (d.draft ?? d.check)?.who ?? null, state: stateOf(d.code, "TO_DECIDE"), why: d.why })),
+      ...(r?.not_for ?? []).map((n) => ({ code: n.code, title: null, quote: n.quote, conditionPlain: null, who: null, state: "NOT_FOR_THIS_APPLICATION" })),
+    ].map((f) => ({ ...f, lineId: line(f.code)?.id ?? null, lineVersion: line(f.code)?.version ?? null, runId: run.id }));
+    return { run: { id: run.id, status: run.status, mode: run.mode, finished_at: run.finished_at }, forms, sample_note: run.sample_note };
   }
 
   /** The combination's newest finder run (S5's Forms tab reads this; slice 1 serves it to the scripted journey). */

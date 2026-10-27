@@ -311,6 +311,9 @@ model IntakeItem {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
   /// P-80: the IRCC page the uploader says a held file came from, for the second person to compare.
   irccPage      String?  @map("ircc_page")
+  /// S4 (S5 ask): uploaded from this combination's "Not found" row for this form: attached when the file becomes usable.
+  forCombinationId String? @map("for_combination_id") @db.Uuid
+  forCode       String?  @map("for_code")
 
   @@index([workspaceId, status])
   @@index([workspaceId, sha256])
@@ -434,7 +437,7 @@ model FormLineAction {
   id            String    @id @default(uuid()) @db.Uuid
   workspaceId   String    @map("workspace_id") @db.Uuid
   combinationId String    @map("combination_id") @db.Uuid
-  /// attach · remove · finder_attach
+  /// attach · remove · finder_attach · edit (a line setting saved on the combination's Forms tab, S5)
   action        String
   detail        Json
   by            String

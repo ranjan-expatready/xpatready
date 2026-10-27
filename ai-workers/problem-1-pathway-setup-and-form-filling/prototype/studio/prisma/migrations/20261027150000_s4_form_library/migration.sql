@@ -52,12 +52,16 @@ CREATE TABLE "form_line_action" (
   "undone_at" TIMESTAMPTZ,
   "undone_by" TEXT,
   CONSTRAINT "form_line_action_pkey" PRIMARY KEY ("id"),
-  CONSTRAINT "form_line_action_kind" CHECK ("action" IN ('attach', 'remove', 'finder_attach'))
+  CONSTRAINT "form_line_action_kind" CHECK ("action" IN ('attach', 'remove', 'finder_attach', 'edit'))
 );
 CREATE INDEX "form_line_action_combination_id_at_idx" ON "form_line_action"("combination_id", "at");
--- 6. A library run (Upload PDF through AI) belongs to no combination (M7).
+-- 6. An upload started from a combination's "Not found" form: attached when the file becomes usable (S5 ask).
+ALTER TABLE "intake_item" ADD COLUMN "for_combination_id" UUID;
+ALTER TABLE "intake_item" ADD COLUMN "for_code" TEXT;
+-- 7. A library run (Upload PDF through AI) belongs to no combination (M7).
 ALTER TABLE "drafting_job" ALTER COLUMN "combination_id" DROP NOT NULL;
 -- Rollback (STANDARDS §5):
+--   ALTER TABLE "intake_item" DROP COLUMN "for_code", DROP COLUMN "for_combination_id";
 --   DELETE FROM "drafting_job" WHERE "combination_id" IS NULL; ALTER TABLE "drafting_job" ALTER COLUMN "combination_id" SET NOT NULL;
 --   DROP TABLE "form_line_action"; ALTER TABLE "combination_form" DROP COLUMN "finder_batch_id";
 --   DROP TABLE "official_download";
