@@ -27,8 +27,8 @@ const STEP_WORD: Record<string, string> = { COMPLETED: "Done", APPLIED: "Done", 
 const STOP_TIP = "Ends this run now. Steps already finished keep their results. An AI call already sent is ended too; it stays counted at its reserved worst case because the provider may still bill it.";
 
 /** Usual cost first, then the ceiling, then what it spent (P-123 cost line): "usually about US$0.20 · at most US$5.58". */
-export function costLine(r: Pick<RunView, "usd">, active: boolean) {
-  if (r.usd.worst === 0 && r.usd.spent === 0) return "US$0 · rules only, no AI";
+export function costLine(r: Pick<RunView, "usd"> & { steps?: RunView["steps"] }, active: boolean) {
+  if (r.usd.worst === 0 && r.usd.spent === 0) return r.steps?.some((s) => s.uses === "ai") ? "US$0 · saved AI answers, no new call" : "US$0 · rules only, no AI";
   const usual = r.usd.usual !== null ? `usually about US$${r.usd.usual.toFixed(2)}` : "no usual cost yet";
   return `${usual} · at most US$${r.usd.worst.toFixed(2)} · US$${r.usd.spent.toFixed(2)} ${active ? "so far" : "spent"}`;
 }

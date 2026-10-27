@@ -1,92 +1,90 @@
-# S4 Form library (W1-06, W1-07 run card): independent review, round 3, 27 Oct 2026
+# S4 Form library (W1-06, W1-07 run card): independent review, round 4, 27 Oct 2026
 
-Reviewer: did not build this screen. Commit 26a360e (`forms/2026-10-27-s4-form-library`), judged as it is now against P-116, P-121, P-123 (with its M1/M2 annotations and C11.18), P-124, P-125, challenge.md M1–M7 and m1–m6, STANDARDS, EXPERIENCE and PRODUCT §3–4. I checked the build notes' "Round 2" claims in the app and the code; I did not take them on trust.
+Reviewer: did not build this screen. Commit e7cb63c (`forms/2026-10-27-s4-form-library`), judged as it is now against P-116, P-121, P-123 (with its M1/M2 annotations and C11.18), P-124, P-125, challenge.md M1–M7 and m1–m6, STANDARDS, EXPERIENCE and PRODUCT §3–4. Round 3 claims in build-notes were checked in the app and the code, not taken on trust.
 
-**How.** Isolated copy `rev3_s4` on :4461 with the stand-in launcher. A stub probe reached `fake-launch.log` before every live step (twice). No model call and no canada.ca call (recorded copies only): **US$0**. Walked in a visible Chrome (Playwright, clicking and typing) as user-A (author) and user-B (second person), then an API break pass. Journey test: `journey-test-reviewer-2026-10-27.md`. Screenshots: `review-shots/v4-*`. `p2/jobs`, `runs` and `ledger` are unchanged (checksums before and after). Copy stopped, database dropped.
+**How.** Isolated copy `rev4_s4` on :4461 with the stand-in launcher. A stub probe reached `var/isolated-rev4_s4/fake-launch.log` before any live step; every launch in that log is the stand-in. No model call, no canada.ca call (recorded copies only): **US$0**. Walked in a visible Chromium (Playwright, clicking and typing) as user-A (author) and user-B (second person), then an API break pass. Journey test: `journey-test-reviewer-2026-10-27.md`. Screenshots: `review-shots/v5-*`. `p2/jobs`, `runs` and `ledger` checksums are the same before and after. Copy stopped, database dropped. After my walk, uncommitted edits marked "round 4 R4-1, R4-3, R4-5, R4-6" appeared in `intake.ts`, `lifecycle.ts`, `form-library.ts`, `form-uses.ts`, `programs.ts` (21:49, not mine). They are not part of e7cb63c and are not reviewed here. They touch Major 1 but not `launchSource`, and not Major 2.
 
 ## Verdict: **Ship after fixes**
-Every round 2 Major I re-checked is fixed: 1024 px, guide routes, Used by for checklists, the type of 5881/5905, and the focus ring on chips and form numbers. So are the breaker's N7 (guides) and N2 for attach, and the empty file in a multi-file upload; I did not re-run the breaker's N1, N3–N6 and N8 (the breaker is re-running them). One **new Major** remains: Undo reopens N2, so a form can be retired while a combination's draft still lists it. **Journey score 8.5/10** (pass on the journey bar). But D4 = 3 because of this Major, so the check passes only after it is fixed and re-tested.
+The round 3 fixes hold where they were made: Undo while a retire is open (409), "+ Add", upload for a row, replay of the committed Visitor visa answers, and focus rings on the chip and tooltip stops. Two **new Majors** were missed by earlier rounds:
+1. A retired form still gets a new use through the combination's own "Sources and forms" upload, and the release re-check ignores that use.
+2. On the real saved AI answers, the finder's quote rule drops IMM 5257, the Visitor visa application itself.
 
-## Round 2 findings now
-| Round 2 | Now | Evidence |
+**Journey score 8/10** (passes the journey bar). D1, D4, D7, D11, D16 and D19 are at 3, so the check does not pass until both Majors are fixed and re-tested.
+
+## Round 3 findings now
+| Round 3 | Now | Evidence |
 |---|---|---|
-| M1 1024 px | **Fixed** | Table 735 px in a 737 px area; ⋯ at x=972 (v4-j1-list-1024). No page scroll at 400 px or 200 % |
-| M2 guide routes 404 | **Fixed** | Guide 5256 drawer lists Visitor visa; Retire refused "Still used: Visitors › Visitor visa"; Guide 5269 delete refused in words (v4-j1-guide-*) |
-| M3 Used by misses checklists | **Fixed** | IMM 5484 "2 combinations", in the Visitor visa filter |
-| M4 5881/5905 typed Form | **Fixed** | Both "Checklist · Not filed" |
-| M5 focus on chips and numbers | **Fixed, partly** | Ring on chips and numbers (v4-k-focus-row). Other tab stops: Should S3 |
-| S2 empty file sinks the batch | **Fixed** | 6 files: empty named in an alert, other 5 each got a card (v4-j3) |
-| S3 "(P-51)" and hash | **Fixed** | Fingerprint only under Details |
-| S4 approved retire wording | **Fixed** | Row "Retire approved" (v4-j7) |
-| Breaker N2 attach during retire | **Fixed for attach, open through Undo** | Major 1 |
+| Major: Undo while a retire is open | **Fixed for form lines** | Undo → 409 "A request to retire IMM 5645 is open on To review…", line stays RETIRED. Release re-check read in code and the builder's test; it misses sources (Major 1) |
+| R3-1 "+ Add", upload for a row | **Fixed** | `POST …/lines` → 409. Upload: "Not attached … IMM 5645 is retired", but only in step 4; the summary says "Already in the library" (Minor) |
+| R3-2 replay of the real answers | **Fixed** | Visitor visa replay PARTIAL, US$0, 5 attached; exposes Major 2 |
+| S1 stopped call "US$0.00" | **Open** | v5-j4-card-stopped: "US$0.00 spent" beside "stays counted at its reserved worst case" (`finder.ts:494`) |
+| S2 "Needs your OK" | **Open** | IMM 5802 (no file) is still the only row, tooltip "A file … waits for a second person" (v5-j1-needsok-5802) |
+| S3 focus on chip and tooltip stops | **Fixed** | 3 px ring on the Status pill and the chip (v5-k-focus-after-tabs) |
+| S4 chip label "+n" | **Fixed in code** | `run-card.tsx:88`; five uploads at once not re-run |
 
 ## Major
-1. **(new; N2 reopened by another route) Undo brings a form back onto a draft while its retire is open, and the release then retires it.** This breaks P-116 ("retire is refused while a current draft … uses it").
-   * Steps (API):
+1. **(new) A retired form gets a new use through the combination's "Sources and forms" upload, and the release retires it anyway (P-116, STANDARDS §3.5).**
+   * Steps:
      1. Attach IMM 5645 to Super visa, then Remove it.
-     2. Ask to retire IMM 5645 (allowed: approved file, no uses). user-B approves it, so it is APPROVED and waits for the release.
-     3. Attach again → 409 "Being retired" (correct). **Undo of the Remove → 201**: the line is back as DRAFT v1.
-     4. user-B `POST /pack/release` → IMM 5645 is retired.
-   * Result: `retired_at` is set while Super visa's draft still lists the form. The list shows "Retired · Used by Visitors › Super visa".
+     2. Retire IMM 5645; user-B approves.
+     3. `POST /combinations/<Study permit>/attachments` with imm5645e.pdf → 201 "Already in the library … Attached to Study permit", status RECOGNISED ("Next: AI drafts its field map").
+     4. user-B releases → `retired_at` is set.
+   * Result: the list shows "Retired · Used by Study permits › Study permit".
+   * The browser does the same after the release: Super visa › Sources and forms › Choose files gives "Attached to Super visa" (v5-j8).
+   * A stub field-map draft on the retired file was accepted; P-116 hides retired forms from AI.
    * Cause:
-     * `api/src/form-library.ts:213-242` (`undoNow`) never checks `closingChange` or `retiredAt` before putting lines back.
-     * `api/src/lifecycle.ts:215-221` (`publishLifecycle`, called at `library-changes.ts:174`) retires without checking uses again.
-     * The only N2 test covers attach (`check_forms_s4_finder.ts:291-295`).
-   * Fix:
-     * Undo refuses (409, in words) to put back a line whose form is retired or has an open retire/delete.
-     * At release, re-check `formUses` and return the change if a draft or the latest release still uses the form.
-     * One pass and one fail test for each.
+     * `sources.ts:99 attach` (reached from `intake.ts:241`) checks neither `retiredAt` nor `closingChange`.
+     * The release re-check (`lifecycle.ts:220-224`) counts only `combination_form` lines. `formUses` (`form-uses.ts:45-49`) counts source attachments as blocking uses.
+   * Fix: the same guard in `sources.attach`; the release re-checks with `formUses` blocking uses; `launchSource` refuses a retired form's file; a pass and a fail test for each.
+2. **(new) The finder drops IMM 5257 from the real saved Visitor visa answers, so the automatic attach leaves out the application form (P-123, C11.15).**
+   * Both real rounds quote "This form must be completed by each person applying for a Temporary Resident Visa to visit Canada." In guide 5256 it is the line under the heading "Application for Temporary Resident Visa (IMM 5257)".
+   * `finder.ts:375` needs the digits in the quote, or the quote inside the sentence that prints the number. So the line is dropped twice: "does not speak about it (too short, or about something else)".
+   * The card says "5 forms attached or already there, 1 not found, 1 to decide" and never names IMM 5257 (v5-j5-replay-vv-card).
+   * The tests plant quotes equal to the printed sentence (`check_forms_s4_finder.ts:106-112`), so the rule never meets a real answer.
+   * Fix: accept a quote from the block under a line that prints the number (heading plus its paragraph), keep the length check; a golden test on the two committed answers (IMM 5257 attached, the "Form" snippet still dropped).
 
 ## Should
-* **S1 A stopped live AI call shows "US$0.00 spent" while its own step says it "stays counted at its reserved worst case".** The ledger keeps the reservation, but the card's total is the sum of the steps' `costUsd`, and `finder.ts:491` sets it to 0 (v4-j4-card-stopped). P-110 "states and logs its cost". Fix: show the reserved amount on the step and in the total ("US$x reserved, may be billed").
-* **S2 "Needs your OK" is wrong both ways.**
-  * IMM 5802 (no file, nothing on To review) shows "Needs your OK" with the tooltip "A file of this form waits for a second person on To review".
-  * The held upload IMM 5562, which does wait on To review, is in neither the list nor the filter.
-  * Cause: `form-library.ts:75-76` (no usable edition = needs_ok; held items only by `code` of an existing row).
-  * Fix: give a form with no file its own state ("No file yet: upload it"), and list a held new form under Needs your OK. (The second half is round 2's Minor, raised here with the 5802 evidence.)
-* **S3 Focus is still invisible on the run chip and on the table's tooltip stops.** The chip (`run-card.tsx:88`) and the Status, AI · Sample, "n combinations" and Change waiting spans (`library-forms.tsx:108-109, 136-137`) have no outline or shadow. Two or three such stops per row; only the tooltip shows where focus is (v4-k-focus-chip, v4-k-focus-status-pill). WCAG 2.4.7, EXPERIENCE §2.12. Fix: the same `focus-visible` ring the chips got.
-* **S4 axe `label-content-name-mismatch` during multi-file uploads:** once, on the chip while five upload runs were active. The visible "+n" is not in its `aria-label` (`run-card.tsx:88-90`). Clean when no run is active.
+* **S1, S2 above (carried, open).**
+* **(new) A held upload whose number could not be read is sent to a dead end.**
+  * The card says "Record the IRCC page it came from" (`runs.ts:72`), and the uploader's held page promises a second person will compare and approve it.
+  * user-B sees "This copy cannot be approved … Reject it and upload the official PDF" (v5-j9-*).
+  * Fix: for an unreadable file, say "We could not read its number: upload the official PDF from canada.ca".
+* **(new) A replayed finder run is labelled "US$0 · rules only, no AI"** (`run-card.tsx:31`) though two saved AI rounds were used (v5-j5). EXPERIENCE §2.6 needs AI marked. Fix: "US$0 · saved AI answers".
 
 ## Minor
-* An over-long quote gets Zod's "Too big: expected string to have <=400 characters". The textarea has no `maxLength` (`library-forms.tsx:266`).
-* A guide's drawer says "PDF link" for an HTML page, and "Downloaded … by the form finder" with an empty History, although Load sample added it.
-* Non-Latin file names become underscores ("____…script_x.pdf"): safe, but the person cannot tell which file a card is.
-* The upload's step 2 label says "AI only when the rules cannot", but AI never runs there (D8, agreed): the label promises a path that does not exist.
-* Search still sends one request per keystroke (round 2 Minor).
-* Carried, the Lead's call: Load sample adds guides for 2 of 5 combinations (round 2 S1).
+* New: History says "Configuration author: Configuration author added IMM 5257 …" (`library-forms.tsx:249` plus the audit summary) · Upload PDF jumps to the middle of the header when a refusal line shows (v5-j3).
+* Carried: one search request per keystroke (4 for "5257") · accepted non-Latin file names become underscores · a guide's drawer says "Downloaded … by the form finder · PDF link" · upload step 2 promises "AI only when the rules cannot" (D8) · a RETURNED retire still shows "… waiting" (`form-library.ts:61`) · Load sample adds guides for 2 of 5 combinations (Lead).
 
 ## D1–D20 (1–5)
 | D | Score | Evidence |
 |---|---|---|
-| D1 Requirement fit | 4 | One list, filters, drawer, rules-first upload, C11.18, guide lifecycle and real Stop all work; Load sample partial (Lead) |
-| D2 Data integrity | 4 | 5 parallel uploads of a new form: 1 added, 4 "Already in the library"; 10 parallel accepts: 1 created; records exact |
-| D3 Reuse | 4 | Stored once; duplicates refused in words |
-| D4 Rule integrity | **3** | Delete/retire rules and P-51 hold, but Undo + release break P-116 (Major 1) |
-| D5 Stability and recovery | 4 | Stop 116 ms, launcher ended, no pid file; cards survive a reload; a bad file never sinks the others |
-| D6 Freshness and governance | 4 | Checked dates; second person on accepts and retire; author 403 on their own change |
-| D7 AI trust | 4 | "Rules read it … No AI call was made"; AI steps tagged; S1 cost display |
-| D8 Orientation | 4 | Breadcrumb; trails with the combination's name first |
-| D9 Flow | 4 | Upload → library 1.7 s; held card → its To review item; change page → Approve → row updated |
-| D10 Language | 4 | Plain; Zod message and "PDF link" Minors |
-| D11 Feedback and state | 4 | Live waiting tags; S1, S2 |
-| D12 Visual quality | 4 | Calm, dense, aligned (v4-j1-list-1440) |
-| D13 Accessibility and responsive | 4 | axe clean on 13 states; 1024, 400 and 200 % fine; S3, S4 |
-| D14 Team look | 4 | Team components and shell |
-| D15 Speed | 5 | First view 243 ms, filter 69 ms, Stop 116 ms |
-| D16 Testability | 4 | N2 test fails if removed from attach; no test for Undo vs retire. Suites not rerun by me (instructed) |
+| D1 Requirement fit | 3 | Library, upload, C11.18, lifecycle and Stop work; the finder misses IMM 5257 on real answers (Major 2) |
+| D2 Data integrity | 4 | Duplicates refused ("Already in the library"); one intake row per file; roles enforced |
+| D3 Reuse | 4 | Stored once; the Sources-tab upload reuses the library row |
+| D4 Rule integrity | 3 | P-116 holds for lines and Undo, broken through sources and the release (Major 1) |
+| D5 Stability and recovery | 4 | Stop 112 ms, launcher gone; cards survive a reload; bad files never sink the batch |
+| D6 Freshness and governance | 4 | Checked dates; second person on retire and accepts |
+| D7 AI trust | 3 | Real AI evidence dropped and not shown; replay labelled "no AI"; stopped cost US$0.00 |
+| D8 Orientation | 4 | Breadcrumb; trails |
+| D9 Flow | 4 | Retire → To review → Approve → row "Retire approved"; unreadable-file dead end |
+| D10 Language | 4 | Plain; Minors only |
+| D11 Feedback and state | 3 | Needs your OK wrong; stopped cost; replay label; unreadable-file next step |
+| D12 Visual quality | 4 | Calm, aligned (v5-j1-list-1440) |
+| D13 Accessibility and responsive | 4 | axe clean on 12 states; 1024 (⋯ at 936–972), 400, 200 % with no page scroll; ring on every stop |
+| D14 Team look | 4 | Team shell and components |
+| D15 Speed | 5 | First view 203 ms; filter under 200 ms; Stop 112 ms |
+| D16 Testability | 3 | Undo and "+ Add" tests fail if removed (code read); no test for the source path; quote rule tested only on planted quotes |
 | D17 First use | 4 | Simulated only |
-| D18 Provenance | 4 | Origin, page, fingerprint in Details, who set what IRCC accepts |
-| D19 End-to-end | 4 | Library ↔ To review ↔ combination links work; finder buttons come with S5 |
-| D20 Pain and wow | 4 | Simulated only; rules-first upload and the real Stop |
+| D18 Provenance | 4 | Origin, page, IRCC's words, who set what IRCC accepts |
+| D19 End-to-end | 3 | Visitor visa's automatic forms list lacks IMM 5257 (Major 2) |
+| D20 Pain and wow | 4 | Simulated only |
 
 ## Standards [M]
-**Met:** server authorisation (user-B, user-C and client user-P 403 on accepts, retire, delete, check-canada, attach, undo, upload; no actor 401) · Problem Details with field errors · expand-only migration with CHECKs · one request per view · uploads checked (type, damage, empty, size; name sanitised; stored under var) · cost stated before launch · every EXPERIENCE §4 state drawn. The finder plan is unauthenticated but read-only.
-**Not met:** P-116 / STANDARDS §3.5 through Undo (Major 1) · EXPERIENCE §2.12 visible focus on the chip and tooltip stops (S3) · §2.7 "counts say what they count" for Needs your OK (S2).
+**Met:** server authorisation (users B, C, P 403 on undo, attach, "+ Add", retire, accepts, finder launch; none or unknown 401) · Problem Details · expand-only migration · one request per view · uploads checked · cost before a live run · EXPERIENCE §4 states.
 
-**Graph (P-86):** G1–G6 clean for S4 (G3 1 = the older `/attachments/:id/file`). Retrofit mapping: build-notes "Round 2" lists each finding and its test.
+**Not met:** P-116 / STANDARDS §3.5 (Major 1) · §3.8 AI evidence discarded (Major 2) · EXPERIENCE §2.7 counts (S2), §2.6 AI marked (replay label).
+
+**Graph (P-86):** G1, G2, G4–G6 clean; G3 1 (the older `/attachments/:id/file`). Retrofit mapping: build-notes "Round 3" lists each finding and its test.
 
 ## Could not check
-* A paid run, and what the ledger and card show after a real stopped call.
-* A real screen reader; Firefox or Safari; canada.ca live.
-* The builder's finder and browser suites (they write into the builder's screenshot folders).
-* D17 and D20 need an intended user's unaided walk.
+A paid run · a screen reader, Firefox, Safari, canada.ca live · five upload runs at once · the builder's finder and browser suites (instructed not to) · D17 and D20 need an intended user's unaided walk.

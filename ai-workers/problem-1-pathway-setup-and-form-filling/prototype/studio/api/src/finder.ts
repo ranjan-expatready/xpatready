@@ -367,12 +367,14 @@ export class Finder implements OnModuleInit {
     // P-121 (engine/agreement.ts, shared with S6): rules on both rounds, agreement decides.
     const sentenceOf = new Map(printed.map((x) => [x.code, sameText(x.sentence)]));
     const digits = (c: string) => /\d{3,5}/.exec(c)?.[0] ?? c;
+    // Round 4 review M2: or it sits right under a heading or line that prints the number (within 300 characters before it).
+    const underIt = (q: string, d: string) => { for (let i = allText.indexOf(q); i >= 0; i = allText.indexOf(q, i + 1)) if (allText.slice(Math.max(0, i - 300), i).includes(d)) return true; return false; };
     const rule = ({ item }: { item: Proposal }) => {
       if (!printedSet.has(item.code)) return `${item.code} is not printed on the pages: AI named it from elsewhere, so it was dropped.`;
       const q = sameText(item.quote ?? "");
       if (!q || !allText.includes(q)) return `The quoted line for ${item.code} is not on the page, so the answer was dropped.`;
       // Break M2: a snippet ("the", ".") is no evidence: the line must be a real phrase that speaks about this form.
-      if (q.length < 15 || !(q.includes(digits(item.code)) || (sentenceOf.get(item.code) ?? "").includes(q))) return `The quoted line for ${item.code} does not speak about it (too short, or about something else), so the answer was dropped.`;
+      if (q.length < 15 || !(q.includes(digits(item.code)) || (sentenceOf.get(item.code) ?? "").includes(q) || underIt(q, digits(item.code)))) return `The quoted line for ${item.code} does not speak about it (too short, or about something else), so the answer was dropped.`;
       if (!WHO.includes(item.who)) return `The answer for ${item.code} names a person the studio does not know ("${String(item.who).slice(0, 40)}"), so it was dropped.`;
       return null;
     };

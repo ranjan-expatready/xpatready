@@ -102,6 +102,20 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   r = await call("GET", "/ledger");
   ok("C11.8 (m4): the ledger summary states the Wave 1 cap, what it spent and what is left", r.body?.wave?.cap_usd === 60 && typeof r.body.wave.spent_usd === "number" && r.body.remaining_usd <= r.body.wave.remaining_usd, r.body?.wave);
 
+  // --- Round 4 review M2, golden: the two committed real AI answers (27 Oct, US$0.31) replay at US$0, and IMM 5257 (whose
+  // quote sits under the heading that prints its number in guide 5256) is attached, not dropped.
+  { const gp = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "replay" })).body;
+    const gl = await call("POST", `/combinations/${vv}/forms/find`, { mode: "replay", planSha256: gp.plan_sha256, idempotencyKey: "s4r-golden-replay" });
+    const g = (await settle(gl.body.id)).body;
+    const att = (await call("GET", `/combinations/${vv}/forms/find`)).body?.result?.attach ?? [];
+    ok("round 4 review M2 (golden): the committed real answers replay at US$0 and keep IMM 5257, the visitor visa application itself", g.usd?.spent === 0 && att.some((a: any) => a.code === "IMM 5257"), { status: g.status, attach: att.map((a: any) => a.code), dropped: (await call("GET", `/combinations/${vv}/forms/find`)).body?.result?.dropped?.map((d: any) => `${d.code}: ${d.why}`) });
+    ok("round 4 review should: a replayed run is not called \"rules only, no AI\" (its AI steps are marked)", g.steps?.some((s: any) => s.uses === "ai"), g.steps?.map((s: any) => s.uses)); }
+  { const attId = sql(`select id from source_attachment where combination_id='${vv}' and edition like 'IMM 5257 (%' limit 1`);
+    sql(`update gov_form_def set retired_at = now() where form_key = 'IMM 5257'`);
+    r = await call("POST", `/attachments/${attId}/draft`, { mode: "stub" });
+    sql(`update gov_form_def set retired_at = null where form_key = 'IMM 5257'`);
+    ok("round 4 review M1: AI does not draft a retired library form's file (409, in words)", r.status === 409 && /retired/.test(r.body?.detail ?? r.body?.message ?? ""), r.body?.detail ?? r.body); }
+
   // --- The run API on a rules finder run, twice ("usually about" comes from the run before)
   r = await call("GET", "/runs?active=1");
   ok("C11.8: nothing runs yet: the chip has nothing to show", r.status === 200 && r.body.runs.length === 0, r.body);
@@ -189,7 +203,7 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("C11.11 (M1): a PDF that opens but whose number the rules cannot read waits for a person; AI is not called on an unverified file", run.status === "needs_person" && run.steps[0].status === "COMPLETED" && /Rules could not read.*no AI call was made/.test(step("upload_identity")?.message ?? run.steps[1].message) && run.steps.every((s: any) => s.uses === "rules") && run.usd.spent === 0, run.steps?.map((s: any) => `${s.kind}:${s.status}`));
   ok("C11.11 (Lead fix 2): the waiting reason is said once: the run's box says what happens next, not the step's words again", run.error && run.error.what !== run.steps[1].message && /second person/.test(run.error.what), run.error);
   ok("C11.11: the unread upload is held for a second person (P-80), not in the library", sql(`select count(*) from intake_item where file_name='scan.pdf' and status='HELD'`) === "1");
-  ok("review M6: the held upload's next step opens its own To review item (record the IRCC page), not the page already open", run.error?.next?.href === `/review/held/${sql(`select id from intake_item where file_name='scan.pdf' and status='HELD'`)}` && /IRCC page/.test(run.error.next.label), run.error?.next);
+  ok("review M6, round 4 should: an unread held upload links to its To review item and says it cannot be approved (upload the official PDF), not the page already open", run.error?.next?.href === `/review/held/${sql(`select id from intake_item where file_name='scan.pdf' and status='HELD'`)}` && /cannot be approved, upload the official PDF/.test(run.error.next.label), run.error?.next);
   const fd = new FormData(); for (const [n, b] of [["imm5604e.pdf", official], ["damaged-2.pdf", Buffer.from("%PDF-1.4\n%%EOF\n")]] as const) fd.append("files", new Blob([new Uint8Array(b)], { type: "application/pdf" }), n);
   const many = await (await fetch(`http://localhost:${PORT}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json() as { runIds?: string[] };
   ok("C11.11 (Lead fix 4): one Upload PDF takes many files, one run (card) each", many.runIds?.length === 2, many);

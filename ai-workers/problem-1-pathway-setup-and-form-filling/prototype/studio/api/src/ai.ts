@@ -11,6 +11,7 @@
 //  - bounded concurrency (2 steps at once) and bounded retries (3 attempts per source);
 //  - cancel stops queued steps; a running paid call cannot be recalled, so its output is kept but never applied;
 //  - restart: queued steps resume, running steps are marked interrupted; reset: steps of a removed workspace stop.
+import { closingChange } from "./form-uses.ts";
 import { HttpException, HttpStatus, Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
@@ -263,6 +264,11 @@ export class Ai implements OnModuleInit {
     // QA-30: a request without a mode (or with another word) is a plain 400, never a 500 from reading a missing value.
     if (!["live", "replay", "stub"].includes(String(mode))) fail('Choose how to draft this form: live, replay or stub ("live" is a paid AI call, "replay" a saved run, "stub" no AI, US$0).', HttpStatus.BAD_REQUEST);
     const m = mode.toUpperCase() as Mode;
+    // S4 round 4 (P-116): a retired library form, or one whose retire or delete is open, is not drafted by AI.
+    const att = await this.db.sourceAttachment.findUnique({ where: { id: attachmentId }, select: { sha256: true, workspaceId: true } });
+    const ed = att?.sha256 ? await this.db.formEdition.findFirst({ where: { workspaceId: att.workspaceId, sha256: att.sha256 }, select: { form: { select: { formKey: true, retiredAt: true } } } }) : null;
+    if (ed?.form.retiredAt) fail(`${ed.form.formKey} is retired in the library: AI does not draft it. Restore it there first.`, HttpStatus.CONFLICT);
+    if (ed && (await closingChange(this.db, att!.workspaceId, ed.form.formKey))) fail(`A request to retire or delete ${ed.form.formKey} is open on To review: AI does not draft it until that is decided.`, HttpStatus.CONFLICT);
     const scope: Scope = { kind: "source", ids: [attachmentId] };
     const p = await this.plan(scope, m, { draftAgain: true });
     const t = p.targets[0];

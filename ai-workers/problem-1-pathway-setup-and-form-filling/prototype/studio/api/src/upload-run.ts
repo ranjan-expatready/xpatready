@@ -140,8 +140,8 @@ export class UploadRuns implements OnModuleInit {
       const one = r.results[0];
       outcome = one?.outcome ?? "failed";
       // Review major 6: a held file's card links to its own To review item, where the uploader records the IRCC page first.
-      const held = outcome.includes("held") ? await this.db.intakeItem.findFirst({ where: { sha256: sha(bytes), status: "HELD" }, orderBy: { createdAt: "desc" }, select: { id: true } }) : null;
-      if (held) { const b = await this.db.aiBatch.findUnique({ where: { id: batchId } }); await this.db.aiBatch.update({ where: { id: batchId }, data: { plan: { ...(b!.plan as object), held_id: held.id } } }); }
+      const held = outcome.includes("held") ? await this.db.intakeItem.findFirst({ where: { sha256: sha(bytes), status: "HELD" }, orderBy: { createdAt: "desc" }, select: { id: true, code: true } }) : null;
+      if (held) { const b = await this.db.aiBatch.findUnique({ where: { id: batchId } }); await this.db.aiBatch.update({ where: { id: batchId }, data: { plan: { ...(b!.plan as object), held_id: held.id, held_unread: !held.code } } }); }
       return { status: outcome === "refused" || outcome === "failed" ? "FAILED" : outcome.includes("held") ? "NEEDS_PERSON" : "COMPLETED", message: one?.message ?? "Nothing was added." };
     });
     if (s4 === null) return this.finish(batchId, "CANCELLED", "Stopped.");
