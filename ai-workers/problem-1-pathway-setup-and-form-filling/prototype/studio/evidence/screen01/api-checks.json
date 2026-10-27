@@ -1,12 +1,12 @@
 {
- "at": "2026-10-27T06:19:42.167Z",
+ "at": "2026-10-26T19:05:21.371Z",
  "pass": 135,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 8.635
+   "detail": 3.775
   },
   {
    "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
@@ -280,7 +280,7 @@
    "name": "QA-1 pass: submitted and signed, the combination will be released",
    "ok": true,
    "detail": {
-    "combinationId": "38c279b4-a16c-4eae-8d5d-f0a1aeb62e04",
+    "combinationId": "51cc831d-0a79-424a-a07a-0e029d21b025",
     "label": "Spouse of a student",
     "path": [
      "Work permits",
@@ -386,8 +386,7 @@
     "all": 23,
     "ready": 1,
     "not_ready": 1,
-    "in_setup": 5,
-    "not_started": 16,
+    "in_setup": 21,
     "ai_proposals": 0,
     "retired": 0
    }
@@ -701,8 +700,7 @@
     "all": 23,
     "ready": 1,
     "not_ready": 1,
-    "in_setup": 5,
-    "not_started": 16,
+    "in_setup": 21,
     "ai_proposals": 0,
     "retired": 0
    }
@@ -1009,7 +1007,7 @@
     "label": "With an LMIA",
     "combinations": 1,
     "hasSetup": true,
-    "combinationId": "f4e68ee1-eb76-48c9-9966-ad774c92124e"
+    "combinationId": "9cb782ec-0031-416b-b738-5ed05caf791b"
    }
   },
   {
@@ -1025,7 +1023,7 @@
   {
    "name": "QA-5: the app still shows it at the real time",
    "ok": true,
-   "detail": "2026-10-27T06:19:29.102Z"
+   "detail": "2026-10-26T19:05:17.173Z"
   },
   {
    "name": "QA-5 condition: the database's own zone is not UTC on this machine, so the check above is a real test of the fix",
@@ -1043,7 +1041,7 @@
    "detail": [
     [
      201,
-     11.542
+     3.569
     ],
     [
      409,

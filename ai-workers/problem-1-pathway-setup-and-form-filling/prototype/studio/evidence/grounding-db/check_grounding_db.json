@@ -1,5 +1,5 @@
 {
- "at": "2026-10-27T06:19:03.490Z",
+ "at": "2026-10-26T18:59:30.996Z",
  "port": 4402,
  "database": "xr_studio_grounding",
  "pass": 31,
@@ -63,8 +63,8 @@
    "name": "one combination per last-level node, also under concurrent creates: one created, the other returns it",
    "ok": true,
    "detail": [
-    201,
-    200
+    200,
+    201
    ]
   },
   {
@@ -187,7 +187,7 @@
   {
    "name": "isolated copy: sample inputs load through the normal paths: 2 pathways, 11 programs, 6 combinations set up",
    "ok": true,
-   "detail": 10.454
+   "detail": 3.64
   },
   {
    "name": "a person makes the given-names question conditional (saved as draft)",
