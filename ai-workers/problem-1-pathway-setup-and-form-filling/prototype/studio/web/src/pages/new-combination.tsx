@@ -28,7 +28,10 @@ export function NewCombinationPage() {
   const session = useApi<SessionView>(["session", actorId], "/session");
   const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
   const [pathway, setPathway] = React.useState(sp.get("pw") === "CORPORATE" ? "CORPORATE" : "INDIVIDUAL");
-  const opts = useApi<{ programs: ProgramOpt[]; combinations: { nodeKey: string; pathway: string; path: string[] }[] }>(["path-options", pathway], `/path-options?pathway=${pathway}`);
+  const opts = useApi<{ programs: ProgramOpt[]; pathways: { key: string; label: string }[]; combinations: { nodeKey: string; pathway: string; path: string[] }[] }>(["path-options", pathway], `/path-options?pathway=${pathway}`);
+  // W1-03 (slice 1): Pathways are names on the Structure; the trail names the type's Pathway when it has exactly one
+  // (slice 4 redraws this page with a Pathway picker).
+  const pathwayName = opts.data?.pathways?.length === 1 ? `${opts.data.pathways[0].label} › ` : "";
   const [program, setProgram] = React.useState<Val>(null);
   const [category, setCategory] = React.useState<Val>(null);
   const [sub, setSub] = React.useState<Val>(null);
@@ -114,10 +117,10 @@ export function NewCombinationPage() {
 
         {exists ? (
           <Notice tone="info" title="This combination already exists" action={<Button variant="secondary" onClick={() => nav(leafNode!.combinationId ? `/c/${leafNode!.combinationId}` : `/?${pathway === "CORPORATE" ? "pw=CORPORATE&" : ""}f=all&sel=${encodeURIComponent(leafNode!.key)}`)}>Open the existing combination</Button>}>
-            {PATHWAY_LABEL[pathway]} › {path.join(" › ")} is already set up. Open it instead of creating it again.
+            {PATHWAY_LABEL[pathway]} › {pathwayName}{path.join(" › ")} is already set up. Open it instead of creating it again.
           </Notice>
         ) : (
-          <div className="rounded-lg bg-surface px-3 py-2.5 text-sm" aria-live="polite">Will be created as <b className="font-semibold">{PATHWAY_LABEL[pathway]} › {path.length ? path.join(" › ") : "…"}</b></div>
+          <div className="rounded-lg bg-surface px-3 py-2.5 text-sm" aria-live="polite">Will be created as <b className="font-semibold">{PATHWAY_LABEL[pathway]} › {pathwayName}{path.length ? path.join(" › ") : "…"}</b></div>
         )}
         {problem ? <Notice tone="danger" title="Not created">{problem}</Notice> : null}
         <div className="flex gap-2">

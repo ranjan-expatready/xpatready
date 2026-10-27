@@ -49,7 +49,9 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     await shot(`${label}-reset.png`);
     await click(p.getByRole("dialog").getByRole("button", { name: "Close" }).last());
     const cat = await api("/catalogue?pathway=INDIVIDUAL");
-    step(`${label}: workspace empty after reset (no programs; the two fixed pathways only)`, cat.tree.length === 0 && cat.totals.combinations === 0);
+    // W1-03 (B1): after Reset the Structure is empty in both tabs; reads create no Pathway.
+    const structureEmpty = (await api("/structure?pathwayType=INDIVIDUAL")).empty && (await api("/structure?pathwayType=CORPORATE")).empty;
+    step(`${label}: workspace empty after reset (no Pathway, no program, no combination in either tab)`, cat.tree.length === 0 && cat.totals.combinations === 0 && structureEmpty);
   };
   const loadSamples = async (label) => {
     await go("/"); await click(btn("Demo")); await click(p.getByRole("menuitem", { name: /Load sample inputs/ }));
@@ -185,6 +187,16 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
 
   // ================================================================ PASS B: from scratch, after a reset
   await reset("B0");
+  // W1-03 (slices 1+2): after Reset no Pathway exists; a firm adds its first one on the Structure page, typed in place.
+  await go("/structure");
+  await click(btn("Add pathway"));
+  await p.getByRole("textbox", { name: /New pathway name in Retail/ }).fill("Temporary residence");
+  await p.waitForFunction(() => /No exact match in Retail/.test(document.querySelector("[data-add-row]")?.textContent ?? ""));
+  await p.getByRole("textbox", { name: /New pathway name in Retail/ }).press("Enter");
+  // Waits for the saved row (the add row itself, which holds the typed name, is a treeitem too).
+  let pathways = [];
+  for (let i = 0; i < 40 && !pathways.length; i++) { pathways = (await api("/structure?pathwayType=INDIVIDUAL")).nodes.filter((n) => n.level === "pathway").map((n) => n.label); if (!pathways.length) await p.waitForTimeout(250); }
+  step("B0b: the first Retail Pathway is added on the Structure page (P-112 name, typed in place)", pathways.join() === "Temporary residence", pathways.join());
   await go("/");
   // Layout v2 (P-35): no separate "Add program or category"; the New combination path builder (/new) picks or creates
   // each level (the server checks level, parent and duplicates) and creates the combination in one request.
@@ -202,7 +214,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   if (scratch) await p.getByRole("heading", { level: 1, name: "Employer-specific work permit" }).waitFor({ timeout: 15000 }).catch(() => {}); // the page header arrives with the combination
   const crumbs = scratch ? await p.getByRole("navigation", { name: "Path" }).getByRole("link").allTextContents().catch(() => []) : [];
   const made = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).rows.find((r) => r.combinationId === scratch);
-  step("B1: the path builder creates the program and category and the combination for that full path in one go", !!scratch && /Individual › Work permits \(built from scratch\) › Employer-specific work permit/.test(willBe) && made?.path.join(" › ") === "Work permits (built from scratch) › Employer-specific work permit" && crumbs.join(" › ").includes("Work permits (built from scratch)"), `${willBe} → ${crumbs.join(" › ")}`);
+  step("B1: the path builder creates the program and category and the combination for that full path in one go", !!scratch && /Individual › Temporary residence › Work permits \(built from scratch\) › Employer-specific work permit/.test(willBe) && made?.path.join(" › ") === "Work permits (built from scratch) › Employer-specific work permit" && crumbs.join(" › ").includes("Work permits (built from scratch)"), `${willBe} → ${crumbs.join(" › ")}`);
   await go(`/c/${scratch}/sources`);
   await p.setInputFiles('input[type=file]', [path.join(OFFICIAL, "forms/imm1295e.pdf")]); await p.waitForTimeout(1500); await idle();
   const junk = path.join(OUT, "not-an-official-form.pdf"); fs.writeFileSync(junk, "%PDF-1.4 not an official form\n");
