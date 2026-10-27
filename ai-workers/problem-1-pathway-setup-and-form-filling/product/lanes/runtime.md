@@ -6,15 +6,16 @@
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: 03-combination-workspace
-current_slice: DESIGN challenge
+current_item: W1-combination-workspace (S5, W1-08, P-123)
+current_slice: DESIGN challenge and slice plan
 stage: DESIGN
 owner: Lead
-next_action: Lead answers screens/03-combination-workspace/challenge.md (5 points: Preview on caseView, missing records, coverage gate, slices S1–S4, lane overlap; 1 founder question on Sample substitute sets), then moves the lane to BUILD slice 1.
-blocked_by: none
-updated: 2026-10-25
+next_action: Lead answers screens/W1-combination-workspace/challenge.md (5 Major, 7 Minor; Q-L1 words-only conditions, Q-L2 slice 1 start after S2, Q-L3 asks to the forms lane, Q-L4 one role list), passes the Forms-tab asks to the forms lane, then moves the lane to BUILD slice 1.
+blocked_by: Lead answer; slice 3 also waits for forms S4 slices 1 and 2
+updated: 2026-10-27
 
 ## Log (last 10 lines)
+- 2026-10-27 · Builder (Mac): applied Lead note 2026-10-27 (S5 Combination workspace, DESIGN only; read from origin/lead/2026-10-27); new branch runtime/2026-10-27-s5-workspace from main 76628a4; old Screen 03 branch already pushed (9dfe9b8), not built on; challenge written: Build after these changes (5 Major, 7 Minor), Forms-tab asks to the forms lane, slices 1–3; no code; AI US$0; owner Lead.
 - 2026-10-25 · Builder (cloud): applied Lead note (P-89, Screen 03 to this lane); DESIGN feasibility challenge written: Build after these changes, 5 Majors/Minor, slices S1–S4 proposed; no code; owner Lead.
 - 2026-10-25 · Builder (cloud): PR 13 fix verified on a fresh copy: journey 120/120, R1d 63/63, R1a 99/99, engine 50/50; run-suites --demo 21/21; any 437; copies stopped; CHECK owner Lead.
 - 2026-10-25 · Builder (cloud): break on the PR 13 fix: 0 Blocker/Major, 4 Minor; the change now names whose entries; lock race and old copies recorded; engine 50/50.
@@ -24,4 +25,3 @@ updated: 2026-10-25
 - 2026-10-25 · Builder (cloud): synced main e619113 (PR #12 merged); BUILD "none apply" for required groups: client_group_answer (append-only), PUT none-apply, Confirm section, readiness blocks empty required groups; engine 44/44, R1d 57/57, journey 116/116, R1a 99/99; mutations caught; CHECK started.
 - 2026-10-25 · Builder (cloud): PR #12 review (Lead): 3 fill-case defects fixed with tests caught by mutation (Online filing line → 422 and not listed; lock refuses a missing or changed file 409; cap counted under FOR UPDATE); R1d 43/43, run-suites --demo 21/21 at be16c22; told the Lead; WAIT.
 - 2026-10-24 · Builder (cloud): Lead accepted R1d (3d47004, 21/21); answers recorded: an empty required group that applies blocks ready to file, cleared by a confirmed "none apply" fact (P-71, P-72); STATUS.md verdict is the trial record (IMM 1344 not passed, IMM 5707 passed). Waiting for the Lead PR merge.
-- 2026-10-24 · Builder (cloud): FIX R1d done: review minors 1–2 wording too; fresh copy journey 107/107, R1d 38/38, R1a 99/99, engine 39/39; run-suites --demo 21/21; any 437; copies stopped; CHECK owner Lead.
