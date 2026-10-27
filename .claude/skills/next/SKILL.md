@@ -26,7 +26,8 @@ Screens follow the screen path; slices with no new page (forms, runtime backend,
 | FINISH (screens) | **screen-build** to its checklist; run the journey-test journeys as scripted checks (no score); set CHECK. |
 | CHECK | Launch **screen-reviewer** (the one journey score) and **screen-breaker** in parallel; backend: tell both to attack contracts, data, migrations, roles, concurrency and hostile files. Any Must/Blocker/Major, a dimension < 4 or a journey score < 8 → FIX; else owner Lead. |
 | FIX | Fix every Must, Blocker, Major, Lead and qa finding (P/`qa/BUGS.md` rows for your lane); a test per break; rerun tests; "Fixes" in build-notes or plan.md; set CHECK, owner Lead. |
-| EARLY-LOOK / READY / DEMO / MERGE | Lead's or founder's stage: step 1.3 already stopped you. |
+| EARLY-LOOK (waiting) | Build ahead (P-126): if the Lead note names your next item, do its fresh re-check (R-109) or DESIGN challenge only, in `screens/<next item>/challenge.md`; no code for it, no merge; owner stays Lead. Nothing named → stop as below. |
+| READY / DEMO / MERGE | Lead's or founder's stage: step 1.3 already stopped you. |
 Stop or pause requested: stop at the next safe point, write what is done and what remains, commit, give the report.
 
 ## 3. Always
