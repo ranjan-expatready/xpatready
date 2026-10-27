@@ -79,5 +79,16 @@ Status words as above, plus **Decided** (in DECISIONS, nothing to build) and **O
 | H4 | GitHub Actions blocked by account billing; the Lead runs suites locally meanwhile | founder |
 | H5 | Lead PRs #28 (roles audit) and #30 (archive non-POC folders) open since 25 Oct | founder |
 | H6 | Should AI draft the Structure itself (from a description or IRCC's pages), or only propose one name in New combination (P-105)? Fields and sections: "add by hand" and "ask AI" side by side | S6 (shared library); founder raised 27 Oct |
-| H7 | Structure layout: outline with a level switch (Pathways · Programs · Categories · All), or cards like Programs | S1; founder raised 27 Oct |
+| H7 | Structure layout. Founder's idea (27 Oct): Pathway cards on top; a click opens the tree under that Pathway. Lead: yes, and use the same entry on Immigration programs (cards open the setup cards), so both pages share one visual language | S1 board, then S2; founder to confirm on the board |
 
+
+## Grilling round 1 (asked 27 Oct, not yet answered: the next /lead asks again, one by one, recommendation first)
+1. Q2 AI on the Structure: a person adds names, AI checks duplicates and "did you mean", New combination proposes one name (P-105); "Ask AI to draft a branch" waits for W3. Recommended.
+2. Q3 Forms enter only in Shared library › Forms (AI form finder, or upload with the number + edition + checksum check); a combination only picks from the library ("Find missing forms" opens the finder filtered to it); remove "Add form" on Overview, "Choose file" and "Attach official form / checklist / sample file" in the combination. Recommended (founder's own words, 27 Oct).
+3. Q4 The library also holds IRCC guides and document checklists (read by AI, never filled); "Attach sample file" goes. Recommended.
+4. Q5 "People in this combination" decides who is in the application and how many (questions per person, forms repeated per person, checks): rename "Who is in this application", move to Configuration, tooltip. Recommended.
+5. Q6 Overview only reports: status, next step, counts, "Missing before firms can use it"; no add buttons, no "Filing: no forms yet"; released versions become one line; "Recent steps" moves to History › AI work. Recommended.
+6. Q7 Every library master (fields, sections, document types, checks): "Add by hand" (free duplicate check + AI "did you mean") and "Ask AI to draft from the forms". Recommended.
+7. Q8 Bulk accept "all high-confidence in this group" with the count first and one Undo; medium and low stay one by one; the second person still checks at release (amends P-43). Recommended.
+8. Q9 Screen queue S1–S8 as in `WAVE-1.md`. Recommended.
+Next round after these: the Sources and forms tab name and the PDF / online / both choice per picked form; Configuration "who fills it, when"; Preview simplified.
