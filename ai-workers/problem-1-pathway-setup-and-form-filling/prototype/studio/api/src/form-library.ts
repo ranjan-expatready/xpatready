@@ -218,6 +218,13 @@ export class FormLibrary {
     if (!a) throw problem(409, "Nothing to undo", "There is no change on this combination's forms to undo.");
     if (b.changeId && b.changeId !== a.id) throw problem(409, "Changed since", `The last change on these forms is now ${nameOf(a.by)}'s (${a.action}), not the one you saw. Reload, then undo.`, { changeId: a.id });
     const d = a.detail as unknown as { codes: string[]; before: LineRow[]; after: { id: string; status: string; version: number; sig?: string }[] };
+    // Round 3 major: Undo never brings back a form that is retired, or whose retire or delete is open (P-116).
+    for (const code of d.codes.filter((k) => d.before.some((r) => r.lineageKey === k && r.status !== "RETIRED"))) {
+      const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId: a.workspaceId, formKey: code } } });
+      if (def?.retiredAt) throw problem(409, "Retired", `${code} is retired in the library, so this Undo would bring it back: restore it in the library first.`);
+      const closing = await closingChange(this.db, a.workspaceId, code);
+      if (closing) throw problem(409, "Being retired", `A request to ${closing.action.toLowerCase()} ${code} is open on To review, so this Undo would bring it back. Decide that request first.`);
+    }
     // Break M4: the check and the put-back run in one transaction with the lines locked, so an edit that lands between
     // them is either seen (refused) or waits for the Undo to finish.
     await this.db.$transaction(async (tx) => {

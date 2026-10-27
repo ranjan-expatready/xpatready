@@ -216,7 +216,14 @@ export async function publishLifecycle(tx: Prisma.TransactionClient, c: LibraryC
   if (!isLifecycleKind(c.kind) || (c.action !== "RETIRE" && c.action !== "RESTORE")) return false;
   const data = c.action === "RETIRE" ? { retiredAt: new Date(), retiredBy: c.proposedBy } : { retiredAt: null, retiredBy: null };
   if (c.kind === "structure_node") await tx.programDef.updateMany({ where: { workspaceId: c.workspaceId, programNodeKey: c.key }, data });
-  else if (c.kind === "library_form") await tx.govFormDef.updateMany({ where: { workspaceId: c.workspaceId, formKey: c.key }, data });
+  else if (c.kind === "library_form") {
+    // Round 3 major: checked again at the release: a draft that lists the form again keeps it, and the retire goes back.
+    if (c.action === "RETIRE") {
+      const using = await tx.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM (SELECT DISTINCT ON (f.combination_id, f.lineage_key) f.status FROM combination_form f JOIN gov_form_def d ON d.id = f.gov_form_def_id WHERE d.workspace_id = ${c.workspaceId}::uuid AND d.form_key = ${c.key} ORDER BY f.combination_id, f.lineage_key, f.version DESC) x WHERE x.status <> 'RETIRED'`;
+      if (Number(using[0]?.n ?? 0) > 0) { await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RETURNED", decisionNote: "Not retired: a combination lists this form again. Remove it there, then ask again." } }); return false; }
+    }
+    await tx.govFormDef.updateMany({ where: { workspaceId: c.workspaceId, formKey: c.key }, data });
+  }
   else await tx.combination.updateMany({ where: { id: c.key, workspaceId: c.workspaceId }, data });
   return true;
 }

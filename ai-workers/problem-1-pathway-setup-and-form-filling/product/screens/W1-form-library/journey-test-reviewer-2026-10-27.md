@@ -1,47 +1,79 @@
-# S4 Form library (W1-06 + W1-07 run card): journey test, reviewer role, round 2, 27 Oct 2026
+# S4 Form library (W1-06 + W1-07 run card): journey test, reviewer role, round 3, 27 Oct 2026
 
-Commit e58136e (`forms/2026-10-27-s4-form-library`). Isolated copy `rev_s4` on :4461 with the stand-in launcher; a stub probe answered first; no model call, no canada.ca call (recorded copies). Walked in a visible Chrome through Playwright by clicking and typing; screenshots `review-shots/v3-*`. US$0. Round 1 (commit 6a32505, 6.5/10) is in git history.
+Commit 26a360e (`forms/2026-10-27-s4-form-library`). Isolated copy `rev3_s4` on :4461 with the stand-in launcher. A stub probe reached `fake-launch.log` before each live step. No model or canada.ca call (recorded copies only): **US$0**. Walked in a visible Chrome through Playwright by clicking, typing and the keyboard. Screenshots `review-shots/v4-*`. Round 2 (e58136e, 7/10) is in git history.
 
 ## Journeys (persona · goal · result)
-1. **Main.** Content publisher (user-A): "find a form, see what it is, where it is used and what IRCC accepts". Menu Forms → list (166 ms) → Guides chip (2 rows, 131 ms) → Used by Visitor visa → search "5257" and "imm5257" → no match → Clear filters → drawer for IMM 5257 → Esc. **Held** (v3-j1-*). Focus returns to the number. **Found:** Visitor visa's filter leaves out IMM 5484 and IMM 5881 (checklists it reads); both rows say "Not used" while their drawers list the uses (v3-r-IMM5484-drawer).
-2. **Upload one PDF.** "Add IMM 5645." Four rules steps, "Rules read it … No AI call was made", "The very file canada.ca's form page links: no second person is needed. Named by Guide 5256." Row Ready in 1.5 s. **Held** (v3-j2).
-3. **Upload many with bad ones.**
-   * (a) Text named .pdf + empty file + local copy + duplicate: the page said only "empty.pdf is empty"; no card; the two files after it were never uploaded, and the text file before it ran with no card (database: one failed run at 20:34:33). **Not held** (v3-j3).
-   * (b) Same without the empty file: three cards. "Not a PDF … Nothing was read." · held local copy of IMM 5562 with "Record the IRCC page it came from" → its To review item, which asks exactly that · duplicate "Already in the library: nothing was added twice". **Held** (v3-j3b-*). The held IMM 5562 is not in the library list.
-4. **Run card, chip and Stop (W1-07).** A live finder run on Visitor visa through the stand-in, hanging in its AI round, launched by API (the finder's button comes with S5). The chip appeared after 5.4 s, followed to Fields and showed at 390 px. Opened by keyboard → card "Step 3 of 6 · Running · first run of this kind · at most US$5.58". Stop → Stopped in 104 ms; launcher process gone; later steps "Not needed"; no pid file; `p2/jobs`, `runs` and `ledger` unchanged. **Held** (v3-j4-*).
-5. **Retire and delete.** Retire IMM 5645 (unused): where used first, a reason, then "Retire waiting" on the row, and focus back on ⋯. user-B approves; the row keeps "Retire waiting" with a tooltip that still says "waits for a second person". Delete of IMM 5257 and IMM 5484 is refused ("retire it instead"). **Held, one wording gap. Found:** Retire on Guide 5256 fails: "GUIDE 5256 is not in the library." (v3-g-guide-retire).
-6. **C11.18, set what IRCC accepts.** Empty send → error on the form. Then PDF upload · Online with the canada.ca line → drawer shows "Change waiting" at once. user-B: To review "What IRCC accepts for IMM 1295: Not set yet → PDF upload · Online. canada.ca: "…"" → the change page (Form · Now · Proposed · IRCC's words · links) → Approve → row "PDF upload · Online · Set by a person · Sample". **Held** (v3-j6, v3-j7-*).
-7. **Wrong role (user-B).** No Upload PDF; ⋯ has only "See where it is used" enabled; the drawer says Read-only. By URL: upload, accepts, retire, delete and check-canada all 403; no actor 401; the author approving their own change 403. **Held** (v3-j7-B-*).
-8. **Empty and error.** No match → "No form matches" + Clear filters. HTML named .pdf and a truncated PDF fail at step 1 in plain words. A bad run id → 404; `/runs` without the flag → 400. **Held.** (The empty library was tested in round 1; Load sample has no reset here.)
-9. **Break it.** 10 accepts proposals at once → 1 created, 9 × 409. 10 retires at once → 1. Undo vs edit at the same moment, 8 rounds → never both succeed with the edit lost. Two Removes → 200 + 409. A 5,000-character quote → 400. Channel "FAX" → 400 on the field. Hostile and non-English reason stored as text, rendered as text. "../../evil<script>.pdf" stored as `evil_script_.pdf`. **Held.** Guide routes 404 (journey 5).
-10. **Across the boundary.** Held card → `/review/held/:id`; To review → change page → back to the library; "Where it is used" links `/c/:id`. **Held.**
+1. **Main: content publisher (user-A), "find a form, see what it is, where it is used, what IRCC accepts".** **Held.**
+   * Menu Forms → list (243 ms) → Guides chip (2 rows, 69 ms) → Guide 5256 drawer → Esc → focus back on the number.
+   * Checklists → IMM 5484 drawer → Used by Visitor visa (5 rows, the checklists included) → search "imm5257" → "zzzz" → No form matches → Clear filters → IMM 5257 drawer.
+   * Shots: v4-j1-*.
+2. **Guide lifecycle (round 2 M2).** **Held.**
+   * Guide 5256 ⋯ → Retire: "Still used: Visitors › Visitor visa", listing the use. Cancel returns focus to ⋯.
+   * Guide 5269 Delete: "Its approved official file is kept … retire it instead".
+   * The lower-case "guide5269" also resolves (v4-j1-guide-retire).
+3. **Upload one PDF ("add IMM 5645").** **Held.**
+   * Card in 181 ms, chip shown, done in 1.7 s with four rules steps: "Rules read it: IMM 5645 (01-2021) … No AI call was made", "The very file canada.ca's form page links: no second person is needed. Named by Guide 5256".
+   * Row Ready (v4-j2).
+4. **Upload six with bad ones: text named .pdf, empty, local copy, duplicate, truncated, non-Latin name.** **Held.**
+   * The empty file is named in an alert; the other five each get a card:
+     * "This is not a PDF file … Nothing was read";
+     * held local IMM 5562 → "Record the IRCC page it came from" → its To review item, which asks exactly that;
+     * duplicate: "Already in the library … Nothing duplicated";
+     * truncated: "damaged or incomplete";
+     * IMM 5646 added.
+   * Cards survive a reload (v4-j3-*).
+   * **Found:** the held IMM 5562 is not listed under "Needs your OK". IMM 5802, which waits for nothing, is.
+5. **Run card, chip and Stop (W1-07).**
+   * A live finder run on Visitor visa through the stand-in, hanging in its AI round; launched by API, because its button comes with S5.
+   * The chip appeared after 1.1 s. Enter on the chip → `/ai/<id>` → "Step 3 of 6 · Running · first run of this kind … at most US$5.58".
+   * Stop → Stopped in 116 ms; launcher process gone; pid file removed; later steps "Not needed"; chip gone.
+   * Chip shows at 390 px (v4-j4-*).
+   * **Held, with S1:** the card says "US$0.00 spent" while the step says the call "stays counted at its reserved worst case".
+6. **C11.18, set what IRCC accepts for IMM 5475.** **Held** (v4-j5-*).
+   * Empty send → error on the form. Then PDF upload · Online with a canada.ca line → drawer "Change waiting"; the author sees no approve item.
+   * user-B: To review "What IRCC accepts for IMM 5475: Not set yet → PDF upload · Online. canada.ca: "…"" → the change page (Now / Proposed / IRCC's words / links) → Approve → row "PDF upload · Online · Set by a person · Sample".
+7. **Wrong role (user-B).** **Held** (v4-j6-B-drawer).
+   * UI: no Upload PDF; ⋯ has only "See where it is used" enabled; drawer "Read-only".
+   * By URL: user-B, user-C and client user-P get 403 on accepts, retire, delete, check-canada, attach, undo and upload; no actor gets 401.
+8. **Retire, then approve.** **Held** (v4-j7).
+   * IMM 5646 → Retire: "Nothing uses it" → reason → "Retire waiting", focus back on ⋯.
+   * user-B approves → "Retire approved".
+9. **Break it (API, 15 min).**
+   * 10 accepts proposals at once → 1 created, 9 × 409.
+   * 5 parallel uploads of a new form → 1 added, 4 "Already in the library".
+   * Bad channel, a 5,000-character quote, an 81-character search, a junk usedBy → 400; unknown form → 404.
+   * **Broke (Major):** attach IMM 5645 to Super visa, remove it, retire it (approved), then **Undo the remove → 201**, line back as DRAFT; release → IMM 5645 retired while Super visa's draft lists it. List: "Retired · Used by Visitors › Super visa".
+10. **Across the boundary.** **Held.** Held card → `/review/held/:id`; To review → change page → library; "Where it is used" links `/c/:id`; chip → `/ai/:id`.
 
 ## Automated replay and data
-* **axe WCAG 2.2 AA: clean on 16 states.** List at 1440, 1024 and 390; no match; drawer; three upload states; the held review page; the review queue; two change pages; card running and stopped; 200 % list and drawer. No page sideways scroll at 1024, 390 or 720 (200 %).
-* **1024 px: Used by, Status and ⋯ sit outside the table's visible area.** Table 1065 px in a 735 px area (v3-size-list-1024).
-* **Keyboard:** 29 tabs to the first row; Enter opens the drawer with focus inside; Esc returns it. Focus is not visible on the chips or row numbers (v3-k-focus-*).
-* **Data.** C11.18 stored exactly the channels and quote, basis PERSON_SAMPLE, the change RELEASED and an audit line. Each upload is one run; the duplicate added nothing; held files are on To review.
-* **Builder suites rerun twice on this commit:** `check_forms_s4_runs` 61/61, `check_forms_s4_canada` 49/49. Graph G1–G6 clean for S4.
+* **axe WCAG 2.2 AA: clean on 13 states:** list at 1440, 1024 and 400; no match; guide, 5484 and 5257 drawers; upload one; held page; review queue; change page; card running; library after approve. One transient `label-content-name-mismatch` on the chip while five upload runs were active (S4).
+* **Sizes:** 1024 px: table 735 px in 737, ⋯ at x=972. 400 px and 720 px (200 %): no page sideways scroll; the table scrolls inside its own labelled region; the drawer fits.
+* **Keyboard:** 28 tabs to the first row number; ring visible on chips, numbers and ⋯; Enter opens ⋯. No ring on the chip or the Status, AI · Sample, "n combinations" and Change waiting stops (v4-k-focus-*).
+* **Data:**
+  * C11.18 stored the exact channels and quote, PERSON_SAMPLE, the change RELEASED.
+  * Uploads: one intake row each; the race left one definition and one edition.
+  * Stop: the batch is CANCELLED, AI step CANCELLED, cost 0, no process left.
+  * `p2/jobs`, `runs` and `ledger` checksums are unchanged.
+* Journey 1 ran three times and Stop four times with the same results (no flakiness seen). Builder suites not run (instructed).
 
 ## Score (each 0, ½ or 1)
 | Criterion | Score | Evidence |
 |---|---|---|
-| Task completed | ½ | Every form task completes; a guide cannot be retired or deleted (journey 5) |
-| Next step obvious | 1 | Held card → its To review item with the right words; the change page has Approve and Return; refusals say what to do |
-| Plain words | ½ | IMM 5881 and IMM 5905 typed "Form", "Not set yet"; "(P-51)" and a hash prefix on the main path |
-| Feedback and state | ½ | Live drawer and waiting tags; the guide drawer silently shows no uses or history; "Retire waiting" tooltip wrong after approval |
-| Correct data | ½ | Records exact; the list's "Used by" misses checklist uses (IMM 5484 "Not used" vs 2) and the Type is wrong for two files |
-| Error recovery | ½ | Stop, races and bad files handled; one empty file sinks a multi-file upload silently (journey 3a) |
-| Accessibility and screen sizes | ½ | axe clean, focus return fixed, chip at 390; but 1024 px cut and invisible focus on chips and row numbers |
-| Speed | 1 | 118–166 ms first view, 125–131 ms filter |
-| Visual quality | 1 | Calm, dense, aligned, team tokens |
-| Trust and sources | 1 | "Rules read it: no AI call was made", AI · Sample, IRCC's words, who set what IRCC accepts, cost first |
+| Task completed | 1 | Every library task completes, guides included (journeys 1–8) |
+| Next step obvious | 1 | Held card → its To review item; refusals say what to do; the change page has Approve and Return |
+| Plain words | 1 | Types right; no hash or decision number on the main path; Minors only (a Zod message, "PDF link" on a guide) |
+| Feedback and state | ½ | "Needs your OK" wrong both ways (journey 4); stopped card "US$0.00 spent" against its own step text (journey 5) |
+| Correct data | ½ | Records exact and races hold, but Undo + release leave a retired form on a draft (journey 9) |
+| Error recovery | 1 | Bad files named, others still run; Stop ends the call; reload keeps cards |
+| Accessibility and screen sizes | ½ | 1024, 400 and 200 % fixed, axe clean; focus invisible on the chip and tooltip stops; transient axe hit |
+| Speed | 1 | 243 ms first view, 69 ms filter, 1.7 s upload, 116 ms Stop |
+| Visual quality | 1 | Calm, dense, aligned, team tokens (v4-j1-list-1440) |
+| Trust and sources | 1 | Rules-first upload says so; AI · Sample; IRCC's words; who set what IRCC accepts; cost stated first |
 
-**7 / 10: not a pass (below 8), no criterion at 0.** Fixes that raise it most, in order:
-1. Keep guide codes as they are in the routes (task completed, feedback).
-2. Count every source kind in the list's Used by, and type 5881 and 5905 from the intake's kind (correct data, plain words).
-3. Wrap Edition and IRCC accepts at 1024 px, and add the focus ring to the chips and row numbers (accessibility).
-4. Check every file before starting a multi-file upload (error recovery).
-5. Move "(P-51)" and the fingerprint into Details, and correct the approved-retire tooltip.
+**8.5 / 10: pass on the journey bar (8+), no criterion at 0.** Not yet a passing check: D4 is 3 (review.md, Major 1). Fixes, most valuable first:
+1. Undo refuses to restore a line whose form has an open retire or delete, or is retired; the release re-checks uses before retiring. Add a test (correct data).
+2. Fix "Needs your OK": no file is not a waiting file; list held new forms (feedback).
+3. Show the reserved cost of a stopped call in the step and the total (feedback, trust).
+4. Add the focus ring to the run chip and the tooltip spans; put "+n" into the chip's label (accessibility).
 
-Not tested: a real screen reader, Firefox or Safari, a paid live run (the cost after Stop), canada.ca live. D17 and D20 need the founder's or an intended user's unaided walk.
+Not tested: a real screen reader, Firefox or Safari, a paid live run, canada.ca live. D17 and D20 need the founder's or an intended user's unaided walk.

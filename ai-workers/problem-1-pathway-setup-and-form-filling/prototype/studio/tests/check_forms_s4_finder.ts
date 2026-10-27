@@ -289,11 +289,24 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("break round 2 N1: a file approved after the delete was asked keeps the form: the approval is refused in words (409), nothing deleted", r.status === 409 && /approved meanwhile/.test(r.body.detail) && sql(`select count(*) from gov_form_def where form_key='IMM 0102'`) === "1", r.body.detail);
   sql(`delete from library_change where key='IMM 0102'`); sql(`delete from form_edition where edition_label='IMM 0102 (01-2026)'`); sql(`delete from gov_form_def where form_key='IMM 0102'`);
   // N2: nothing new may use a form while a retire or delete of it is open
+  r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IRM 0002" });
+  r = await call("DELETE", `/combinations/${vv}/forms/${C0002}`, { version: Number(sql(`select version from combination_form where combination_id='${vv}' and lineage_key='IRM 0002' order by version desc limit 1`)) });
+  ok("setup: IRM 0002 attached by hand, then removed again (its Undo would bring it back)", r.status < 300, r.body?.detail);
   r = await call("POST", `/library/forms/${C0002}/retire`, { reason: "Replaced by a newer process" });
   ok("setup: retire of the unused IRM 0002 waits for a second person", r.status < 300 && r.body.status === "WAITING", r.body);
   r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IRM 0002" });
   ok("break round 2 N2: a form being retired cannot be attached meanwhile (409, in words)", r.status === 409 && /Being retired/.test(r.body.title), r.body.detail);
+  r = await call("POST", `/combinations/${vv}/forms/undo`);
+  ok("round 3 major: Undo never brings back a form whose retire is open (409, in words); the line stays removed", r.status === 409 && /Being retired/.test(r.body.title) && /IRM 0002:RETIRED/.test(lines(vv)), r.body.detail);
+  // The release checks again: a draft listing the form again (made by hand here) keeps it, and the retire goes back.
+  const retireId = sql(`select id from library_change where key='IRM 0002' and status='WAITING'`);
+  r = await call("POST", `/library/changes/${retireId}/approve`, { note: "Checked" }, "user-B");
+  sql(`update combination_form set status='DRAFT' where combination_id='${vv}' and lineage_key='IRM 0002' and version=(select max(version) from combination_form where combination_id='${vv}' and lineage_key='IRM 0002')`);
+  const shared = (await call("GET", "/draft")).body;
+  r = await call("POST", "/pack/release", { expectedChanges: shared.changes }, "user-B");
+  ok("round 3 major: the release re-checks: a retire whose form a draft lists again is handed back, the form is not retired", sql(`select retired_at is null from gov_form_def where form_key='IRM 0002'`) === "t" && sql(`select status from library_change where id='${retireId}'`) === "RETURNED", { release: r.status, change: sql(`select status from library_change where id='${retireId}'`) });
   sql(`delete from library_change where key='IRM 0002'`);
+  r = await call("DELETE", `/combinations/${vv}/forms/${C0002}`, { version: Number(sql(`select version from combination_form where combination_id='${vv}' and lineage_key='IRM 0002' order by version desc limit 1`)) });
   madeForm("IMM 0101");
   r = await call("DELETE", `/library/forms/${encodeURIComponent("IMM 0101")}`, { reason: "Never used anywhere" });
   ok("setup: delete of an unused, never-released form waits for a second person", r.status < 300 && r.body.status === "WAITING", r.body);
