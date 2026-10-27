@@ -64,7 +64,9 @@ function Shell() {
       </header>
       <DraftBar />
       <div className="flex flex-1">
-        <nav aria-label="Studio" className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 flex-col gap-0.5 border-r border-border bg-surface-raised p-3 md:flex">
+        {/* The menu column's white background and border run the full page height (S1-finish); the menu itself stays in view. */}
+        <div className="hidden w-56 shrink-0 border-r border-border bg-surface-raised md:block" data-menu-column>
+        <nav aria-label="Studio" className="sticky top-14 flex h-[calc(100vh-3.5rem)] flex-col gap-0.5 p-3">
           <p className="px-2 pb-1 pt-2 text-xs font-medium text-text-muted">Configure</p>
           {nav.slice(0, 3).map((n) => <NavItem key={n.to} {...n} active={n.match ? n.match(loc.pathname) : undefined} />)}
           <p className="px-2 pb-1 pt-4 text-xs font-medium text-text-muted">Shared library</p>
@@ -75,6 +77,7 @@ function Shell() {
             Simulated people; local PostgreSQL demo database. AI drafting uses the guarded prototype route (synthetic or public official inputs only). Not production.
           </div>
         </nav>
+        </div>
         <main className="min-w-0 flex-1 px-4 py-6 md:px-6">
           {session.isError ? ((session.error as ApiError).status ?? 500) < 500
             ? <Notice tone="danger" title="The studio did not accept the simulated person">Pick a person under Simulated person, then reload this page. ({(session.error as Error).message})</Notice>

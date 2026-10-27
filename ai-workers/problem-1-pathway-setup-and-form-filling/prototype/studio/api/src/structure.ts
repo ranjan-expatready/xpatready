@@ -48,17 +48,18 @@ export class Structure {
     const leaves = await this.programs.leafStates();
     const pending = new Map((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "structure_node", status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })).map((c) => [c.key, { id: c.id, action: c.action as LifecycleAction }]));
     const out: StructureNode[] = [];
-    const walk = (n: ProgramDef): { combinations: number; live: number } => {
+    const walk = (n: ProgramDef): { combinations: number; live: number; needs: number } => {
       const kids = g.kids(n.programNodeKey);
       const own = leaves.get(n.programNodeKey);
-      let combinations = own && !own.retired ? 1 : 0, live = own?.live ? 1 : 0;
+      // needs: combinations below it that need work ("Needs work", P-49), for the Pathway cards (S1-finish).
+      let combinations = own && !own.retired ? 1 : 0, live = own?.live ? 1 : 0, needs = own?.needs ? 1 : 0;
       const view: StructureNode = { key: n.programNodeKey, level: LEVEL_OF[n.nodeKind], parentKey: n.parentNodeKey, label: n.label, pathwayType: q.pathwayType, allowedLocations: n.allowedLocations,
-        order: n.displayOrder, combinations: 0, live: 0, hasSetup: !!own?.combinationId, meaningChecked: false, version: n.version, retired: !!n.retiredAt, pending: pending.get(n.programNodeKey) ?? null,
+        order: n.displayOrder, combinations: 0, live: 0, needs: 0, hasSetup: !!own?.combinationId, meaningChecked: false, version: n.version, retired: !!n.retiredAt, pending: pending.get(n.programNodeKey) ?? null,
         combination: own ? { id: own.combinationId, status: own.status, statusText: own.statusText, retired: own.retired } : null };
       if (q.retired === "1" || !n.retiredAt) out.push(view);
-      for (const k of kids) { const s = walk(k); combinations += s.combinations; live += s.live; }
-      view.combinations = combinations; view.live = live;
-      return { combinations, live };
+      for (const k of kids) { const s = walk(k); combinations += s.combinations; live += s.live; needs += s.needs; }
+      view.combinations = combinations; view.live = live; view.needs = needs;
+      return { combinations, live, needs };
     };
     for (const p of g.kids(null, q.pathwayType).filter((n) => n.nodeKind === "PATHWAY")) walk(p);
     return { pathwayType: q.pathwayType, typeLabel: PATHWAY_TYPE_LABEL[q.pathwayType], nodes: out, empty: !out.length,
