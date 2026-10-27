@@ -143,7 +143,7 @@ export class Lifecycle {
   private async recheckNode(c: LibraryChange, u: UsesView) {
     const blocking = u.uses.filter((x) => x.blocks);
     if (c.action === "DELETE") return u.released ? "It was released meanwhile." : blocking.length ? `Used meanwhile: ${blocking[0].label}.` : null;
-    if (c.action === "RETIRE") return blocking.length ? `Used meanwhile: ${blocking[0].label}.` : null;
+    if (c.action === "RETIRE") { const b = blocking.filter((x) => !x.retireOk); return b.length ? `Used meanwhile: ${b[0].label}.` : null; }
     return null;
   }
   private async recheckCombination(c: LibraryChange, u: UsesView) {
@@ -220,9 +220,8 @@ export async function publishLifecycle(tx: Prisma.TransactionClient, c: LibraryC
     // Round 3 major: checked again at the release: a draft that lists the form again keeps it, and the retire goes back.
     if (c.action === "RETIRE") {
       const using = await tx.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM (SELECT DISTINCT ON (f.combination_id, f.lineage_key) f.status FROM combination_form f JOIN gov_form_def d ON d.id = f.gov_form_def_id WHERE d.workspace_id = ${c.workspaceId}::uuid AND d.form_key = ${c.key} ORDER BY f.combination_id, f.lineage_key, f.version DESC) x WHERE x.status <> 'RETIRED'`;
-      const sources = await tx.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM source_attachment s JOIN form_edition e ON e.sha256 = s.sha256 AND e.workspace_id = s.workspace_id JOIN gov_form_def d ON d.id = e.gov_form_def_id WHERE d.workspace_id = ${c.workspaceId}::uuid AND d.form_key = ${c.key}`;
-      if (Number(using[0]?.n ?? 0) + Number(sources[0]?.n ?? 0) > 0) {
-        const note = "Not retired: a combination lists this form, or reads it as a source, again. Remove it there, then ask again.";
+      if (Number(using[0]?.n ?? 0) > 0) {
+        const note = "Not retired: a combination lists this form again. Remove it there, then ask again.";
         await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RETURNED", decisionNote: note } });
         await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: "system", action: "returned", entity: "form", entityKey: c.key, summary: `The release did not retire ${c.key}: ${note}` } }); // round 4 R4-3
         return false;

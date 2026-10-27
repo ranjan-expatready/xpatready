@@ -308,6 +308,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   const shared = (await call("GET", "/draft")).body;
   r = await call("POST", "/pack/release", { expectedChanges: shared.changes }, "user-B");
   ok("round 3 major: the release re-checks: a retire whose form a draft lists again is handed back, the form is not retired", sql(`select retired_at is null from gov_form_def where form_key='IRM 0002'`) === "t" && sql(`select status from library_change where id='${retireId}'`) === "RETURNED", { release: r.status, change: sql(`select status from library_change where id='${retireId}'`) });
+  ok("round 4 R4-3: the hand-back is written in History (the release did not retire it, and why)", Number(sql(`select count(*) from audit_event where entity_key='IRM 0002' and summary like 'The release did not retire IRM 0002%'`)) >= 1);
   sql(`delete from library_change where key='IRM 0002'`);
   r = await call("DELETE", `/combinations/${vv}/forms/${C0002}`, { version: Number(sql(`select version from combination_form where combination_id='${vv}' and lineage_key='IRM 0002' order by version desc limit 1`)) });
   madeForm("IMM 0101");

@@ -46,7 +46,7 @@ export async function formUses(db: Db, workspaceId: string, code: string): Promi
   const editions = await db.formEdition.findMany({ where: { workspaceId, govFormDefId: def.id }, select: { sha256: true } });
   const shas = editions.map((e) => e.sha256).filter((x): x is string => !!x);
   const atts = shas.length ? await db.sourceAttachment.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { combinationId: true } }) : [];
-  for (const cid of new Set(atts.map((a) => a.combinationId))) if (!newest.has(cid) || newest.get(cid)!.status === "RETIRED") uses.push({ kind: "combination", label: trails.get(cid) ?? "A combination", href: `/c/${cid}`, blocks: true, why: "Its file is attached here as a source (AI reads it from there): remove it there first" });
+  for (const cid of new Set(atts.map((a) => a.combinationId))) if (!newest.has(cid) || newest.get(cid)!.status === "RETIRED") uses.push({ kind: "combination", label: trails.get(cid) ?? "A combination", href: `/c/${cid}`, blocks: true, retireOk: true, why: "Its file is attached here as a source: it can be retired (the combination keeps its file; AI no longer drafts from it), never deleted" });
   // P-116 / P-51: an approved official file (on the manifest, approved by a second person, or downloaded from canada.ca) is
   // kept: it is retired, never deleted.
   const approved = await hasApprovedFile(db, workspaceId, shas);
@@ -62,7 +62,7 @@ export async function formUses(db: Db, workspaceId: string, code: string): Promi
   return { key: code, label: `${code} · ${def.displayName}`, trail: [code], retired: !!def.retiredAt, released: wasReleased, uses,
     can: {
       delete: p ?? (approved ? "Its approved official file is kept, never deleted: retire it instead." : wasReleased ? "It was released, so it is retired, never deleted (released versions and cases point to its exact edition)." : retiredOnly.length ? `A retired line on ${trails.get(retiredOnly[0].combinationId) ?? retiredOnly[0].combination.label} still points to it: retire it instead.` : blocking.length ? `Still used: ${blocking.slice(0, 3).map((u) => u.label).join("; ")}. Remove it there first.` : def.retiredAt ? "It is retired." : null),
-      retire: p ?? (def.retiredAt ? "It is already retired." : !wasReleased && !approved && !retiredOnly.length ? "It was never released and has no approved file: delete it instead." : blocking.length ? `Still used: ${blocking.slice(0, 3).map((u) => u.label).join("; ")}${blocking.length > 3 ? ` and ${blocking.length - 3} more` : ""}.` : null),
+      retire: p ?? (def.retiredAt ? "It is already retired." : !wasReleased && !approved && !retiredOnly.length && !blocking.some((u) => u.retireOk) ? "It was never released and has no approved file: delete it instead." : blocking.filter((u) => !u.retireOk).length ? `Still used: ${blocking.filter((u) => !u.retireOk).slice(0, 3).map((u) => u.label).join("; ")}${blocking.filter((u) => !u.retireOk).length > 3 ? ` and ${blocking.filter((u) => !u.retireOk).length - 3} more` : ""}.` : null),
       restore: p ?? (!def.retiredAt ? "It is not retired." : null),
     },
     pending: pending ? { id: pending.id, action: pending.action as "DELETE" | "RETIRE" | "RESTORE", by: nameOf(pending.proposedBy) } : null, history };

@@ -80,6 +80,8 @@ export class Ai implements OnModuleInit {
     const order = new Map(combinationIds.map((id, i) => [id, i]));
     const targets: Target[] = [];
     const draftedHere = new Map<string, string>(); // form edition (file hash) → the combination whose draft covers it
+    // S4 round 5 (P-116): a retired library form is hidden from AI: its file is never drafted, whatever the scope.
+    const retiredShas = new Set((await this.db.formEdition.findMany({ where: { workspaceId, form: { retiredAt: { not: null } } }, select: { sha256: true } })).map((e) => e.sha256).filter(Boolean));
     // F3 D4 (review Minor 5): who is mapping each file, read once for the whole plan, never once per source.
     const elsewhereOf = await this.mappingIndex(workspaceId, comps.flatMap((c) => c.attachments.map((a) => a.sha256)));
     for (const c of [...comps].sort((a, b) => order.get(a.id)! - order.get(b.id)!)) {
@@ -93,6 +95,7 @@ export class Ai implements OnModuleInit {
         const approvedHere = !a.recognised && inProduct.has(a.sha256);
         if (!a.recognised && !approvedHere) { if (attachmentId) targets.push({ ...base, action: "not_eligible", why: "Not an approved file (neither in the official library nor approved in the product by a second person): never read or sent to the AI." }); continue; }
         if (a.kind !== "Form") { if (attachmentId) targets.push({ ...base, action: "not_eligible", why: "Checklist or instructions: field-map drafting applies to fillable forms only. Document requirements are authored by people." }); continue; }
+        if (retiredShas.has(a.sha256)) { targets.push({ ...base, action: "not_eligible", why: "Retired in the library: AI does not draft it. Restore it there first." }); continue; }
         const formKey = (a.edition ?? "").split(" (")[0];
         const active = jobs.find((j) => j.attachmentId === a.id && (j.status === "QUEUED" || j.status === "RUNNING"));
         const waiting = jobs.find((j) => j.attachmentId === a.id && j.kind === "field_map" && j.status === "COMPLETED" && j.mode !== "STUB");
