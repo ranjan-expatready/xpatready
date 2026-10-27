@@ -187,16 +187,16 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
 
   // ================================================================ PASS B: from scratch, after a reset
   await reset("B0");
-  // W1-03 (slices 1+2): after Reset no Pathway exists; a firm adds its first one on the Structure page, typed in place.
+  // W1-03 (P-127): after Reset no Pathway exists; a firm adds its first one on Program structure, in the one Add pop-up.
   await go("/structure");
   await click(btn("Add pathway"));
-  await p.getByRole("textbox", { name: /New pathway name in Retail/ }).fill("Temporary residence");
-  await p.waitForFunction(() => /No exact match in Retail/.test(document.querySelector("[data-add-row]")?.textContent ?? ""));
-  await p.getByRole("textbox", { name: /New pathway name in Retail/ }).press("Enter");
-  // Waits for the saved row (the add row itself, which holds the typed name, is a treeitem too).
+  await p.locator('[data-field="pathway"] input[role="combobox"]').fill("Temporary residence");
+  await p.waitForFunction(() => /no exact match/.test(document.querySelector('[data-field="pathway"]')?.textContent ?? ""));
+  await click(p.locator("[data-add-submit]"));
+  // Waits for the saved name.
   let pathways = [];
   for (let i = 0; i < 40 && !pathways.length; i++) { pathways = (await api("/structure?pathwayType=INDIVIDUAL")).nodes.filter((n) => n.level === "pathway").map((n) => n.label); if (!pathways.length) await p.waitForTimeout(250); }
-  step("B0b: the first Retail Pathway is added on the Structure page (P-112 name, typed in place)", pathways.join() === "Temporary residence", pathways.join());
+  step("B0b: the first Retail Pathway is added on Program structure through the Add pop-up (P-112 name, P-127)", pathways.join() === "Temporary residence", pathways.join());
   await go("/");
   // Layout v2 (P-35): no separate "Add program or category"; the New combination path builder (/new) picks or creates
   // each level (the server checks level, parent and duplicates) and creates the combination in one request.

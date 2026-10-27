@@ -148,20 +148,23 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
     for (const lv of path) body[lv] = lvPick(lv);
     if (last === "category" && useNone) body.subCategory = null;
     if (showLocs) body.allowedLocations = locs;
+    // "Add and add another" (QA-44 kept for the pop-up): the last field clears as the name is sent, so whatever is typed
+    // next while it saves is kept; a refusal puts the name back only if nothing new was typed.
+    const lastLevel = last!, sentText = text[lastLevel];
+    if (again) { setText((t) => ({ ...t, [lastLevel]: "" })); setSel((s0) => ({ ...s0, [lastLevel]: null })); requestAnimationFrame(() => refs.current[lastLevel]?.focus()); }
     try {
       const r = await api<StructurePathResult>("/structure/path", { method: "POST", json: body });
       await Promise.all([qc.invalidateQueries({ queryKey: ["structure"] }), qc.invalidateQueries({ queryKey: ["catalogue"] })]);
       onAdded(r, again);
       if (again) {
-        // "Add and add another" keeps the levels above the last one written (AD-7).
-        const keepTo = FIELDS.indexOf(last!) - 1;
-        const t = { ...text }, s = { ...sel };
-        for (const c of r.created) { s[c.level] = c.key; t[c.level] = c.label; }
-        FIELDS.forEach((lv, i) => { if (i > keepTo) { t[lv] = ""; s[lv] = null; } });
-        setText(t); setSel(s); setKeep({}); setClose({});
-        requestAnimationFrame(() => refs.current[last!]?.focus());
+        // "Add and add another" keeps the levels above the last one written, now existing names (AD-7).
+        const above = r.created.filter((c) => c.level !== lastLevel);
+        setSel((s0) => ({ ...s0, ...Object.fromEntries(above.map((c) => [c.level, c.key])) }));
+        setText((t) => ({ ...t, ...Object.fromEntries(above.map((c) => [c.level, c.label])) }));
+        setKeep({}); setClose({});
       }
     } catch (e) {
+      if (again) setText((t) => (t[lastLevel] ? t : { ...t, [lastLevel]: sentText }));
       const p = e instanceof ApiError ? (e.problem as { code?: string; existing?: { key: string }; errors?: { field: string; message: string }[] }) : {};
       // Close names keep their "Did you mean … Use it / Keep mine" box under the field instead of an error (AD-4).
       if (p.code !== "close_names") setErrors(Object.fromEntries((p.errors ?? []).map((x) => [x.field, x.message])));

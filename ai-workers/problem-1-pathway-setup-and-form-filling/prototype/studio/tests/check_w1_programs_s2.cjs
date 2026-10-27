@@ -88,13 +88,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== the page: menu, title, tabs, placement
   await open();
   const navText = (await p.getByRole("navigation", { name: "Studio" }).innerText()).replace(/\s+/g, " ");
-  step("C11.10 P-115: the menu item and the page title say Immigration programs (Configure › To review · Immigration programs · Structure)", /To review.*Immigration programs.*Structure/.test(navText) && (await p.getByRole("heading", { level: 1 }).textContent()) === "Immigration programs", navText.slice(0, 90));
+  step("C11.10 P-115 P-125: the menu item and the page title say Immigration programs (Configure › Program structure · Immigration programs · To review)", /Program structure\s*Immigration programs\s*To review/.test(navText) && (await p.getByRole("heading", { level: 1 }).textContent()) === "Immigration programs", navText.slice(0, 90));
   step("C11.10: the description line says what the page is", /Every combination your firm can open, and where its setup stands\./.test(await p.locator("main").innerText()));
   const types = p.getByRole("group", { name: "Pathway type" });
   step("C11.10 P-104: the type tabs say Retail and Corporate and employers, each with its count", /^Retail\s*\d+$/.test((await types.getByRole("button").nth(0).textContent()).trim()) && /^Corporate and employers\s*\d+$/.test((await types.getByRole("button").nth(1).textContent()).trim()));
   step("C11.10: no filter-tab row; the status is one 'Status: All' menu next to the search", await p.getByRole("group", { name: "Show combinations" }).count() === 0 && await p.getByRole("button", { name: /^Status: All/ }).count() === 1 && await p.getByRole("textbox", { name: /Search combinations/ }).count() === 1);
-  const titleRow = await p.evaluate(() => { const h = document.querySelector("h1").getBoundingClientRect(); const bs = [...document.querySelectorAll("main button")].filter((x) => /^(Structure|New combination)$/.test(x.textContent.trim())); return bs.map((x) => ({ t: x.textContent.trim(), top: Math.abs(x.getBoundingClientRect().top - h.top) < 24, x: Math.round(x.getBoundingClientRect().left) })); });
-  step("C11.10: Structure and New combination sit in the title row, New combination last", titleRow.length === 2 && titleRow.every((x) => x.top) && titleRow[1].t === "New combination" && titleRow[1].x > titleRow[0].x, JSON.stringify(titleRow));
+  const titleRow = await p.evaluate(() => { const h = document.querySelector("h1").getBoundingClientRect(); const bs = [...document.querySelectorAll("main button")].filter((x) => /^(Program structure|New combination)$/.test(x.textContent.trim())); return bs.map((x) => ({ t: x.textContent.trim(), top: Math.abs(x.getBoundingClientRect().top - h.top) < 24, x: Math.round(x.getBoundingClientRect().left) })); });
+  step("C11.10: Structure and New combination sit in the title row, New combination last", titleRow.length === 2 && titleRow.every((x) => x.top) && titleRow[1].t === "New combination" && titleRow[0].t === "Program structure" && titleRow[1].x > titleRow[0].x, JSON.stringify(titleRow));
 
   // ======================================================== fix 5: the search takes the free width, its hint never cut
   for (const [w, h] of [[1440, 900], [1024, 768]]) {

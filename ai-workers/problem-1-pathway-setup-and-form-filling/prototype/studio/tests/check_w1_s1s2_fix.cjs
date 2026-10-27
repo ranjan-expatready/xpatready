@@ -1,6 +1,6 @@
 // S1/S2 FIX (Lead note 27 Oct): the qa after-merge findings and two S2 points, each walked in a real browser (or on the
-// API underneath) with a pass and a fail. QA-45 "Add sub-category" in the panel opens an add row under a category that
-// has none yet; QA-44 letters typed while a name saves are kept; QA-46 Remove is called Remove on To review too; QA-49
+// API underneath) with a pass and a fail. QA-45 "Add sub-category" in the panel opens the Add pop-up down to a category
+// that has none yet (P-127; it opened an add row before); QA-44 letters typed while a name saves are kept; QA-46 Remove is called Remove on To review too; QA-49
 // Immigration programs follows the Structure's order, also after a reorder; QA-50 a double click on Start setup leaves
 // one history entry; review m1 the setup bar shows the stage of the next step; break m8 reads are denied by default.
 // Sample inputs plus one saved AI replay (US$0) and one released-but-Not-ready combination. No model call.
@@ -94,19 +94,18 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("QA-50 pass: after a double click on Start setup, one Back returns to Immigration programs", new URL(p.url()).pathname === "/" && await p.getByRole("heading", { level: 1, name: "Immigration programs" }).count() === 1, p.url());
   step("QA-50 fail-guard: the double click created nothing (no silent start)", (await catOf()).counts.not_started === cat.counts.not_started);
 
-  // ======================================================== QA-45: Add sub-category in the panel opens an add row under it
+  // ======================================================== QA-45: Add sub-category in the panel (since P-127: the one Add pop-up)
   const nodes = await structOrder();
   const kidsOf = (k) => nodes.filter((n) => n.parentKey === k);
   const leafCat = nodes.find((n) => n.level === "category" && !kidsOf(n.key).length && !n.hasSetup && !n.retired);
+  const sub = p.locator('[data-field="subCategory"] input[role="combobox"]');
   await p.goto(`${BASE}/structure?node=${encodeURIComponent(leafCat.key)}`);
   await panel().getByRole("button", { name: "Add sub-category" }).waitFor();
   await panel().getByRole("button", { name: "Add sub-category" }).click();
-  const box = p.getByRole("textbox", { name: `New sub-category name under ${leafCat.label}` });
-  await box.waitFor({ timeout: 5000 }).catch(() => undefined);
-  step("QA-45 pass: 'Add sub-category' on a category with none yet opens an add row under it, focused", await box.count() === 1 && await box.evaluate((e) => e === document.activeElement), leafCat.label);
-  await box.fill("Inside Canada (test)"); await p.waitForFunction(() => /No exact match/.test(document.querySelector("[data-add-row]")?.textContent ?? ""), null, { timeout: 5000 }).catch(() => undefined);
-  await box.press("Enter");
-  await p.locator("[data-add-row] [data-done]").filter({ hasText: /^Added/ }).waitFor({ timeout: 10000 }).catch(() => undefined);
+  await sub.waitFor({ timeout: 5000 }).catch(() => undefined);
+  step("QA-45 pass: 'Add sub-category' on a category with none yet opens the Add pop-up down to it, focused on Sub-category", await sub.count() === 1 && await sub.evaluate((e) => e === document.activeElement) && (await p.locator('[data-field="category"] input').inputValue()) === leafCat.label, leafCat.label);
+  await sub.fill("Inside Canada (test)"); await p.waitForTimeout(500);
+  await p.locator("[data-add-submit]").click(); await p.locator("[data-add-dialog]").waitFor({ state: "detached" }).catch(() => undefined);
   const after = await structOrder();
   step("QA-45 pass: the first sub-category is added there, by the page", after.some((n) => n.parentKey === leafCat.key && n.label === "Inside Canada (test)"));
   const setUpCat = nodes.find((n) => n.level === "category" && !kidsOf(n.key).length && n.hasSetup && !n.retired);
@@ -114,24 +113,21 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await panel().getByRole("button", { name: "Add sub-category" }).waitFor();
   step("QA-45 fail: a category that has its own setup still cannot get a sub-category (button disabled)", await panel().getByRole("button", { name: "Add sub-category" }).isDisabled(), setUpCat.label);
 
-  // ======================================================== QA-44: letters typed while a name saves are kept
+  // ======================================================== QA-44: letters typed while a name saves are kept ("Add and add another")
   const leafCat2 = nodes.find((n) => n.level === "category" && !kidsOf(n.key).length && !n.hasSetup && !n.retired && n.key !== leafCat.key);
   await p.goto(`${BASE}/structure?node=${encodeURIComponent(leafCat2.key)}`);
   await panel().getByRole("button", { name: "Add sub-category" }).click();
-  const box2 = p.getByRole("textbox", { name: `New sub-category name under ${leafCat2.label}` });
-  await box2.waitFor();
-  await box2.fill("Outside Canada (test)"); await p.waitForFunction(() => /No exact match/.test(document.querySelector("[data-add-row]")?.textContent ?? ""), null, { timeout: 5000 }).catch(() => undefined);
-  await p.route("**/api/structure/nodes", async (r) => { await new Promise((x) => setTimeout(x, 800)); await r.continue(); });
-  await box2.press("Enter"); await p.keyboard.type("From abroad (test)", { delay: 15 });
-  await p.locator("[data-add-row] [data-done]").filter({ hasText: /^Added/ }).waitFor({ timeout: 10000 }).catch(() => undefined);
-  await p.waitForTimeout(400);
-  await p.unroute("**/api/structure/nodes");
-  step("QA-44 pass: the next name typed while the first one saves is kept, whole", await box2.inputValue() === "From abroad (test)", await box2.inputValue());
-  await box2.fill("Outside Canada (test)"); await p.waitForTimeout(600);
-  await p.getByRole("button", { name: "Add", exact: true }).click({ force: true }).catch(() => undefined);
-  await p.waitForTimeout(600);
-  step("QA-44 fail-guard: a refused name (an exact twin) stays in the box with its reason", await box2.inputValue() === "Outside Canada (test)" && /already exists under/.test(await p.locator("[data-add-row]").innerText()), (await p.locator("[data-add-row]").innerText()).replace(/\s+/g, " ").slice(0, 160));
-  await box2.press("Escape");
+  await sub.waitFor();
+  await sub.fill("Outside Canada (test)"); await p.waitForTimeout(500);
+  await p.route("**/api/structure/path", async (r) => { await new Promise((x) => setTimeout(x, 800)); await r.continue(); });
+  await p.locator("[data-add-again]").click(); await p.keyboard.type("From abroad (test)", { delay: 15 });
+  await p.waitForFunction(() => !document.querySelector("[data-add-submit]")?.closest("button")?.getAttribute("aria-busy"), null, { timeout: 10000 }).catch(() => undefined);
+  await p.waitForTimeout(1200);
+  await p.unroute("**/api/structure/path");
+  step("QA-44 pass: the next name typed while the first one saves is kept, whole", await sub.inputValue() === "From abroad (test)" && (await structOrder()).some((n) => n.parentKey === leafCat2.key && n.label === "Outside Canada (test)"), await sub.inputValue());
+  await sub.fill("Outside Canada (test)"); await p.waitForTimeout(600);
+  step("QA-44 fail-guard: an exact twin is picked as the existing name, so nothing new can be added twice", /Uses the existing sub-category/.test(await p.locator('[data-field="subCategory"]').innerText()) && await p.locator("[data-add-submit]").isDisabled(), (await p.locator('[data-field="subCategory"]').innerText()).replace(/\s+/g, " ").slice(0, 160));
+  await p.keyboard.press("Escape");
 
   // ======================================================== QA-46: Remove is Remove everywhere
   const extra = (await api("/structure/nodes", { method: "POST", data: { pathwayType: "INDIVIDUAL", level: "program", label: "Removable program (test)", parentKey: "retail.citizenship" } })).body.key;
