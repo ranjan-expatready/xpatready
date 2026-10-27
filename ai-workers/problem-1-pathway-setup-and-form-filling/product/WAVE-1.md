@@ -5,15 +5,15 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 ## Screen queue (P-117: one at a time; the Lead guides; "Founder OK" moves to the next)
 | # | Screen | Closes asks | Status | Founder OK |
 |---|---|---|---|---|
-| S1 | Structure (+ Pathway cards that open the tree; "Used by" names; toasts; menu background) | B5; B1, B2 in part | Merged 27 Oct; finish slice building (screens) | |
+| S1 | Structure (+ Pathway cards that open the tree; "Used by" names; toasts; menu background) | B5; B1, B2 in part | Merged 27 Oct; finish slice at EARLY-LOOK (d40c582: 34 suites, studio journey 45/45 claimed); founder Go next | |
 | S2 | Immigration programs, card layout (design D) | B1–B4, C2 | Agreed design; next build | |
-| S3 | New combination | C1–C5 | Agreed design | |
-| S4 | Form library + form finder + AI run panel | E1, D6, A4 data, F6 | Concept draft | |
-| S5 | Combination workspace | D1, D3–D5 | Concept draft | |
-| S6 | Shared library: add by hand or ask AI, setup order | F3–F5, H1, H6 | Concept draft | |
-| S7 | Reset + Load sample (5 combinations with their PDFs) | B6, E2, F1, F2 | Concept draft | |
+| S3 | New combination | C1–C5 | Agreed design; on the walkthrough page for founder marks | |
+| S4 | Form library + form finder + AI run panel | E1, D6, A4 data, F6 | Concept draft + P-118, P-120, P-121; on the walkthrough page | |
+| S5 | Combination workspace | D1, D3–D5 | Concept draft + P-118, P-119; on the walkthrough page | |
+| S6 | Shared library: setup order, one Add in plain words, bulk review (P-120, P-121) | F3–F5, H1, H6 | Concept draft + P-120, P-121; on the walkthrough page | |
+| S7 | Reset + Load sample (5 combinations with their PDFs) | B6, E2, F1, F2 | Concept draft; on the walkthrough page | |
 | S8 | Content publisher walk-through (qa, like a person) | W1-13 | Not started | |
-Then W2–W6 below, the same way. At the end of every screen the Lead asks: Is it working? Anything to change? OK to move on?
+**Walkthrough page (27 Oct):** `design/walkthrough-s3-s7.html` shows S3–S7 as they will look with the grilling answers (P-118–P-121) built in; the founder marks each OK or Change in one pass, and "Copy my marks" gives the text for the Lead. Then W2–W6 below, the same way. At the end of every screen the Lead asks: Is it working? Anything to change? OK to move on?
 
 ## Order of work (one actor at a time; engine work alongside)
 | ID | Business name | Lane | Depends on | Status |
