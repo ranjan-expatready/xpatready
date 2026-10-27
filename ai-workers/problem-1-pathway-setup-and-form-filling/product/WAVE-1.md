@@ -5,8 +5,8 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 ## Screen queue (P-117: one at a time; the Lead guides; "Founder OK" moves to the next)
 | # | Screen | Closes asks | Status | Founder OK |
 |---|---|---|---|---|
-| S1 | Structure (+ Pathway cards that open the tree; "Used by" names; toasts; menu background) | B5; B1, B2 in part | Merged 27 Oct; finish slice at EARLY-LOOK (d40c582: 34 suites, studio journey 45/45 claimed); founder Go next | |
-| S2 | Immigration programs, card layout (design D) | B1–B4, C2 | Agreed design; next build | |
+| S1 | Structure (+ Pathway cards that open the tree; "Used by" names; toasts; menu background) | B5; B1, B2 in part | Merged 27 Oct incl. S1-finish (Lead check d40c582: 34/34 suites, journey 45/45); Start setup link and panel footer fixed in S2 | |
+| S2 | Immigration programs, card layout (design D) | B1–B4, C2 | BUILD (screens lane, from 27 Oct): design D opened by the Pathway cards, plus the two S1 fixes | |
 | S3 | New combination | C1–C5 | Agreed 27 Oct: founder marked walkthrough v2 OK (P-123); builds after S2, one at a time | |
 | S4 | Form library: one list, upload through AI, every action (P-123) | E1, D6, A4 data, F6 | Agreed 27 Oct: founder marked walkthrough v2 OK (P-123); builds after S2, one at a time | |
 | S5 | Combination workspace: forms picked by AI, editable "Who can be in this application" (P-123) | D1, D3–D5 | Agreed 27 Oct: founder marked walkthrough v2 OK (P-123); builds after S2, one at a time | |
