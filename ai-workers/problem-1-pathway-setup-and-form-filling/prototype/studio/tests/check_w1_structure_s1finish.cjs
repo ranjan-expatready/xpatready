@@ -82,7 +82,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.waitForFunction(() => document.querySelector('[data-pathway-cards] [aria-pressed="true"]')?.textContent?.startsWith("Permanent residence"));
   step("S1-1 a card opens that Pathway's tree and closes the others", await prCard.getAttribute("aria-pressed") === "true" && await item("Permanent residence").getAttribute("aria-expanded") === "true" && await item("Temporary residence").getAttribute("aria-expanded") === "false" && await item("Provincial nominees").isVisible() && await item("Visitors").count() === 0);
   step("S1-1 the chosen Pathway is kept in the address (a reload or a shared link opens the same view)", /[?&]p=/.test(p.url()));
-  await p.mouse.move(5, 5); await p.waitForTimeout(200); await card("Permanent residence").hover(); await p.waitForTimeout(700);
+  // Keyboard focus opens the tooltip too (and does not depend on pointer timing): Tab away and back to the card.
+  await allCard.focus(); await card("Permanent residence").focus();
+  await p.getByRole("tooltip").filter({ hasText: /Opens Permanent residence/ }).first().waitFor({ timeout: 5000 }).catch(() => undefined);
   const tipText = await p.getByRole("tooltip").allTextContents().catch(() => []);
   step("S1-1 the card's tooltip says what a click does and what 'need you' means", tipText.some((t) => /Opens Permanent residence's tree and closes the other pathways/.test(t)), tipText.join(" | "));
   await state("pathway-card-open");
