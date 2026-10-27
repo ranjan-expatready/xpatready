@@ -26,7 +26,7 @@ A lane does one stage, commits, updates `lanes/<lane>.md` and ends with one **Pa
 | DESIGN | Lead (+ builder challenge) | board, `concept.md`, `challenge.md` | Founder clicks through and agrees → READY |
 | READY | Lead | Definition of Ready ticked | → BUILD |
 | BUILD | Builder | slice 1: real data, main path, screenshots | → EARLY-LOOK |
-| EARLY-LOOK | Founder + Lead | Go, or board changes | Go → FINISH |
+| EARLY-LOOK | Founder + Lead | Go, or board changes; meanwhile the lane re-checks or challenges its next item, no code, no merge (P-126) | Go → FINISH |
 | FINISH | Builder | all states, a pass and a fail test per rule, scripted journeys, axe, build-notes | → CHECK |
 | CHECK | Reviewer + breaker, then Lead | `review.md` (journey score), `break-report.md`, `lead-check.md` (suites rerun on the exact commit) | Clean → DEMO, else FIX |
 | FIX | Builder | fixes + a test per break (incl. qa bugs for the lane) | → CHECK |
