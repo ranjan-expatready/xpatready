@@ -193,8 +193,9 @@ export function StructurePage() {
           ) : (
             <div className="space-y-5" data-structure-a>
               {/* Column names for the lines, at 1024 px and wider while the details panel is closed (board A). */}
-              {!selected ? <div className="-mb-3 hidden items-center gap-x-3 px-4 text-xs font-medium text-text-muted lg:flex" aria-hidden data-line-heads>
-                <span className="flex-1">Combination: Category › Sub-category</span><span className="w-36">Status</span><span className="w-40">Cases may be opened from</span><span className="w-40">Used by</span><span className="w-8" />
+              {/* Same padding, gaps and widths as a line (section border 1 px + px-3; the ⋯ button is size-7). */}
+              {!selected ? <div className="-mb-2 mx-px hidden items-center gap-x-3 px-3 text-xs font-medium text-text-muted lg:flex" aria-hidden data-line-heads>
+                <span className="flex-1">Combination: Category › Sub-category</span><span className="w-36">Status</span><span className="w-40">Cases may be opened from</span><span className="w-40">Used by</span><span className="w-7" />
               </div> : null}
               {bands.map((pw) => {
                 const progs = words ? programsOf(pw) : kids.get(pw.key) ?? [];
