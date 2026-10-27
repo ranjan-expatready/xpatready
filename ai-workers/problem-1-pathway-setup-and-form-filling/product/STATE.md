@@ -18,6 +18,7 @@ updated: 2026-10-27
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-27 · Lead (Mac) · **S4 FIX back (forms c07f402):** first CHECK 6.5/10 (1 Must, 15 Majors across reviewer and breaker), all fixed with tests. Lead: m9 accepted as designed; m12, DB CHECK constraints and the table label fixed now; m11 and the shared dialog text to backlog; **a fresh re-score (≥ 8) before the Lead check**. PR #57 merged.
 - 2026-10-27 · Lead (Mac) · **PR #56 merged.** S4 slice 3 early look (forms b35bff5): founder Go to FINISH and CHECK with five changes (Used by as a trail, IRCC accepts shows the value, guide date label, sample replay fills IRCC accepts and the page, and **hand edit of IRCC accepts with a second person**, added to P-123).
 - 2026-10-27 · Lead (Mac) · **Founder picked Program structure round 2 (P-127):** layout A (Pathway cards, Program sections, one line per combination; no tree), one Add pop-up only, one line per sub-category; amends P-115. Screens builds it in the visual-system slice after its FIX. P-51 to history (superseded by P-103/P-123).
 - 2026-10-27 · Lead (Mac) · **PR #55 merged** (P-125, P-126, qa S2 report, S4 slice 2 Go, round 2 ordered). **Founder OK: four idle duplicate lane processes closed** (an agent-client helper had reopened the screens, forms, runtime and qa chats outside the Desktop app; one pushed run by-products onto qa's branch); the Desktop lane sessions keep running. Screens FIX committed locally (01e4f1f, e4f2377), not pushed yet.
