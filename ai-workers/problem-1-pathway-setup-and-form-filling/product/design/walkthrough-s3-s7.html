@@ -295,7 +295,7 @@ footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);b
 <!-- ======================= S5 ======================= -->
 <section class="scr" id="s5" data-name="S5 Combination workspace (v2)">
   <div class="scr-head"><span class="n">S5</span><h2>Combination workspace</h2><span class="st">v2 after your 27 Oct feedback</span></div>
-  <div class="v2"><b>What changed from v1:</b> <b>AI picks the forms and checklists itself</b> when setup starts. Each comes from the library, is downloaded from canada.ca, or is marked missing with an Upload button. You confirm the list once. Every form has <b>Redo with AI, Replace, Remove and Undo</b>, and each AI stage can be redone. "Who can be in this application" can now be <b>edited</b>.</div>
+  <div class="v2"><b>What changed from v1:</b> <b>AI picks the forms and checklists itself</b> when setup starts. Each comes from the library, is downloaded from canada.ca, or is marked missing with an Upload button. They are <b>attached automatically</b>, with no confirm step (founder, 27 Oct). Every form has <b>Redo with AI, Replace, Remove and Undo</b>, and each AI stage can be redone. "Who can be in this application" can now be <b>edited</b>.</div>
   <p class="job">Job: set up one combination in the order you work: its forms, who can be on a case, the questions, the documents, then preview and release. One row of tabs. Overview only reports.</p>
   <div class="frame"><div class="frame-title">Immigration programs › Visitor visa · Forms tab, right after Start setup · 1440 px</div><div class="scroll"><div class="app" style="min-width:1260px">
     <div class="topbar"><span class="logo"><i></i>Product Studio</span><span class="spacer"></span><span class="runchip">● Matching boxes to shared fields · stage 3 of 4</span><span class="demo">Demo ▾</span></div>
@@ -311,7 +311,7 @@ footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);b
           <div class="stg now"><b>3 Match to shared fields</b><span>● 76 proposals so far</span><a>Stop</a></div>
           <div class="stg"><b>4 Draft questions and documents</b><span>○ waits for 3</span></div>
         </div>
-        <div class="opening" style="margin:10px 0"><span><b>AI picked 6 forms and 1 checklist.</b> 4 were in the library, 1 was downloaded from canada.ca, 1 is missing. <span class="tag sample">Sample</span> until the immigration expert confirms.</span><span class="spacer"></span><span class="btn">Add a form from the library</span><span class="btn pr">Confirm the list</span></div>
+        <div class="opening" style="margin:10px 0"><span><b>AI picked 6 forms and 1 checklist.</b> 4 were in the library, 1 was downloaded from canada.ca, 1 is missing. <span class="tag sample">Sample</span> until the immigration expert confirms.</span><span class="spacer"></span><span class="btn">Add a form from the library</span><span class="chip ok">Attached automatically</span></div>
         <table class="t">
           <tr><th>Form</th><th>Why AI picked it (IRCC's words)</th><th>Who fills it</th><th>Only if</th><th>Filed as by default</th><th>In the library</th><th></th></tr>
           <tr><td><b>IMM 5257</b> Application for visitor visa</td><td class="hint">"must be completed by each person applying"</td><td>Each applicant</td><td>Always</td><td>PDF upload</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
@@ -328,7 +328,7 @@ footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);b
           <tr><td><b>IMM 5645</b> Family Information Form (other country package)</td><td class="hint">Named for some visa offices instead of IMM 5707</td><td>Each applicant 18+</td><td>Visa office asks for it</td><td>—</td><td><span class="chip bad">Not found</span> <span class="btn sm">Upload PDF</span> <span class="btn sm gh">Find again</span></td><td>⋯</td></tr>
           <tr><td><b>IMM 5484</b> Document Checklist</td><td class="hint">"Document Checklist: Temporary Resident Visa"</td><td colspan="3" class="hint">Checklist · not filed · AI reads it for the documents list</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
         </table>
-        <p class="hint" style="margin-top:8px">"Remove from this combination" never deletes the form from the library. "Confirm the list" records who confirmed it and when. A change after a release makes a new version.</p>
+        <p class="hint" style="margin-top:8px">"Remove from this combination" never deletes the form from the library. The immigration expert signs off which forms apply at release review, where the second person sees what AI picked. A change after a release makes a new version.</p>
       </div>
     </div>
   </div></div></div>
@@ -354,7 +354,7 @@ footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);b
       <li><span class="tag ans">P-118 Q2, Q3</span> No "Sources and forms" tab, no "Choose file". The checklist shows as "not filed · AI reads it".</li>
     </ul></div>
     <div class="box p"><h3>Lead's picks</h3><ul>
-      <li><span class="tag pick">Confirm the list once</span>, not each form. Which forms a combination needs is an immigration value, so a person confirms it (the expert in production). <span class="alt">Other option: no confirm. Faster, but AI would decide the forms on its own.</span></li>
+      <li><span class="tag ans">Founder, 27 Oct</span> <b>No confirm step</b>: AI downloads, stores and attaches the forms by itself. The expert signs off which forms apply at release review.</li>
       <li><span class="tag pick">"Who can be" edited at the top of Questionnaires</span>, where it decides each person's questions; Overview shows it read-only. <span class="alt">Other option: a separate Configuration tab.</span></li>
       <li><span class="tag pick">Tabs in setup order</span> Overview · Forms · Questionnaires · Documents · Preview · Review and release. <span class="alt">Other option: a guided step rail.</span></li>
       <li><span class="tag pick">"Filed as" default is one way per form</span>; the case officer may switch per case within what IRCC accepts. <span class="tag pick">Preview made simple</span> one sample family, person chips, three columns.</li>
