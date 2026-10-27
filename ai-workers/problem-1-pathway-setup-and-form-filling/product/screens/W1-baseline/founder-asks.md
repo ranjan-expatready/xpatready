@@ -22,7 +22,7 @@ Status words as above, plus **Decided** (in DECISIONS, nothing to build) and **O
 | B2 | Modern filled tabs | P-115 | Built on Structure (merge pending); Programs in slice 3 |
 | B3 | Menu and title "Immigration programs" | P-115, W1-04 | Slice 3, not built |
 | B4 | Programs screen redesign: no row of filter tabs, full five-part trail, clear status, all combinations shown, search and New combination placed | P-115 design D, W1-04 | Slice 3, not built (next after the 1+2 merge) |
-| B5 | Masters for Pathway type › Pathway › Program › Category › Sub-category: where they live, add by hand, see the links | P-104, W1-03 Structure page | Built; merge to main after the screens test fix |
+| B5 | Masters for Pathway type › Pathway › Program › Category › Sub-category: where they live, add by hand, see the links | P-104, W1-03 Structure page | Merged 27 Oct; on :4400 |
 | B6 | Corporate empty except one Sample; only the 5 Retail combinations | P-106, P-108, P-112 | Partial: :4400 reset 27 Oct (founder OK) and the P-112 structure typed in (5 Retail + 1 Corporate, no forms yet); Load sample with their PDFs is W1-11 |
 
 **New combination**

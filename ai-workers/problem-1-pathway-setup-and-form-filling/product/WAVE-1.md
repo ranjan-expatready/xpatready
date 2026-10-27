@@ -5,7 +5,7 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 ## Screen queue (P-117: one at a time; the Lead guides; "Founder OK" moves to the next)
 | # | Screen | Closes asks | Status | Founder OK |
 |---|---|---|---|---|
-| S1 | Structure (+ level switch; "Used by" names; toasts; menu background) | B5; B1, B2 in part | Built; merging; finish items next | |
+| S1 | Structure (+ Pathway cards that open the tree; "Used by" names; toasts; menu background) | B5; B1, B2 in part | Merged 27 Oct; board for the finish items next | |
 | S2 | Immigration programs, card layout (design D) | B1–B4, C2 | Agreed design; next build | |
 | S3 | New combination | C1–C5 | Agreed design | |
 | S4 | Form library + form finder + AI run panel | E1, D6, A4 data, F6 | Concept draft | |
@@ -20,8 +20,8 @@ Then W2–W6 below, the same way. At the end of every screen the Lead asks: Is i
 |---|---|---|---|---|
 | W1-01 | Decisions recorded, plan, lanes redirected, workflow trimmed | Lead | — | Merged |
 | W1-02 | Park the browser extension (branch `lead/parked-extension-2026-10-26`; remove capture, pairing, online fill, APR twin, Extension page, "Add an online form", portal fields; demo rows that need it) | forms | W1-01 | Merged 27 Oct (PR #39; local suites 32/32 + browser 44/44); qa after-merge next |
-| W1-03 | Structure: five levels, Pathway type as tab (Retail · Corporate and employers), Structure page with links, duplicate check, AI "did you mean" | screens | W1-01 | Founder Go 27 Oct; 33/33 suites pass on the merge; held for one studio-journey fix (B1 needs a Pathway after Reset), then 1+2 merge; three small changes ride in slice 3 |
-| W1-04 | Programs page redesign: modern tabs, full five-part trail, no filter-tab row, search and New combination placed, tooltips | screens | W1-03 | Build: slice 3 after the slices 1+2 merge (with the three Structure-page changes) |
+| W1-03 | Structure: five levels, Pathway type as tab (Retail · Corporate and employers), Structure page with links, duplicate check, AI "did you mean" | screens | W1-01 | Merged 27 Oct (slices 1+2 + journey fix; 33/33 suites, studio journey 45/45); finish items are S1 |
+| W1-04 | Programs page redesign: modern tabs, full five-part trail, no filter-tab row, search and New combination placed, tooltips | screens | W1-03 | S2: after the founder's OK on S1 |
 | W1-05 | New combination redesign: pick from Structure, Rules then AI proposal, mandatory markers, "Linked to" removed | screens | W1-03 | Agreed (P-115) → screens challenge, then BUILD |
 | W1-06 | Form library as the one door, with the **form finder** (founder's ask: pick a combination → AI suggests its forms from the official IRCC guide/checklist with the quoted line → the person ticks → the system downloads only from canada.ca and files them in the library). Honest split: AI chooses which forms and under what condition; the lookup, download, code/edition/checksum and duplicate check are deterministic; a person approves. Also: IRCC columns, duplicate check (number + edition + checksum), person upload, AI proposes forms → system downloads from canada.ca → person approves, "Find missing forms", the form edition × filing route mapping (online form · PDF upload · print and sign · not needed; P-114) | forms | W1-02 | Concept |
 | W1-07 | AI run experience (shared): steps shown live, progress bar, plain errors, Stop; live-tested within US$40 | forms (component) · all lanes use it | W1-01 | Concept |
