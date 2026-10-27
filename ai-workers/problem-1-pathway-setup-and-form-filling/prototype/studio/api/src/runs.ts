@@ -70,7 +70,7 @@ export class Runs {
     const plan = (b.plan ?? {}) as { held_id?: string; held_unread?: boolean };
     if (b.operation === FINDER_OPERATION) return { label: "Find again", href };
     // Round 4 review should: a file the rules could not read can never be approved: say so, and what to do instead.
-    if (b.operation === UPLOAD_OPERATION) return plan.held_id ? (plan.held_unread ? { label: "Open it on To review: it cannot be approved, upload the official PDF from canada.ca instead", href: `/review/held/${plan.held_id}` } : { label: "Record the IRCC page it came from", href: `/review/held/${plan.held_id}` }) : null;
+    if (b.operation === UPLOAD_OPERATION) return plan.held_id ? (plan.held_unread ? { label: "Open it on To review", href: `/review/held/${plan.held_id}` } : { label: "Record the IRCC page it came from", href: `/review/held/${plan.held_id}` }) : null;
     return { label: "See the details", href };
   }
 
