@@ -10,7 +10,7 @@ updated: 2026-10-27
 |---|---|---|---|---|
 | screens | W1-visual-system | BUILD | Builder | Lead note waiting for sync · Fresh session: follow the Handover above (run-suites, journey, QA-51/52/54, then EARLY-LOOK and SendMessage… |
 | forms | S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124) | CHECK | Lead | Lead note waiting for sync · Handover written below; Lead checks S4 (CI on 5825811 first), then QA-53 for the next session |
-| runtime | W1-combination-workspace (S5, W1-08, P-123) (slice 1 (shell and tabs, Overview, Forms settings, Person roles, Who can be, Preview; scaffolding removed)) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead early look at slice 1 (screens/W1-combination-workspace/screenshots/slice1/, build-notes.md, challenge… |
+| runtime | W1-combination-workspace (S5, W1-08, P-123) (slice 1 early-look fixes 1–4 + slice 2 (Questionnaires per person with coverage, Documents kept, Review shows AI picks)) | EARLY-LOOK | Lead | Lead note waiting for sync · Blocked: slice 3 waits for forms S4 slices 1 and 2 |
 | m3 | M3-prepare-application | DESIGN | Lead | Lead reads screens/M3-prepare-application/research-agent-view.md (three IRCC representative accounts, PDF v… |
 | evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
 | qa | handover 27 Oct (founder: every session hands over tonight); last run after-merge on main 027174d (screens S1/S2 FIX), report read by the Lead | WAITING | Lead | Lead note waiting for sync · WAITING for the next merge: /qa after-merge on S4 Form library, then on the visual-system slice (Lead sends… |
@@ -18,6 +18,7 @@ updated: 2026-10-27
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-28 · Lead (Mac) · **All four lanes handed over** (runtime f0166e5: S5 fixes 1–4 + slice 2 at EARLY-LOOK); sessions closed. Next chat: `/lead` (drift check, S4 Lead check, visual-system and S5 early looks).
 - 2026-10-28 · Lead (Mac) · **Handover:** forms (08eb170, S4 at CHECK), screens (f05a2e1, visual-system slice built, finishing), qa (657c7f8, WAITING) handed over and closed; runtime handover pending; LEAD.md "Where we are" rewritten for the next Lead.
 - 2026-10-27 · Lead (Mac) · **qa after-merge on the screens FIX: ready** (8c02ed6; QA-44/45/46/49/50 closed; QA-51/52/54 → screens visual-system slice; QA-53 → deny all configuration reads now, one shared guard, forms after S4). **Founder: full handover** — every lane stops at a safe point with a written handover, the Lead too; a fresh Lead resumes all lanes.
 - 2026-10-27 · Lead (Mac) · **PR #59 merged** (screens FIX; main's app code = 9fc749f, full suites green on CI). Screens → visual-system slice (P-127); qa → after-merge on the FIX; runtime and forms told to send hand-backs by message. Retro: missed hand-backs → lanes message the Lead, the Lead reads lane branches every pass.
