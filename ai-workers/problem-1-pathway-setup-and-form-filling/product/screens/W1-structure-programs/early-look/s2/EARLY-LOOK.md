@@ -26,3 +26,6 @@ Walked like a person by the Lead in the browser, on the screens lane's commit `4
 
 ## Verdict
 Close to design D. Lead recommends **Go with a small fix** (items 1–5 and 7; item 6 if the founder agrees), then CHECK and merge.
+
+## Founder outcome (27 Oct)
+**Go with all seven fixes**, including item 6: "need you" counts only combinations waiting on a person (review, missing, Not ready, an AI run waiting for a decision); Not started and Live do not count. Handed to the screens lane as FIX (lanes/screens.md, 27 Oct).

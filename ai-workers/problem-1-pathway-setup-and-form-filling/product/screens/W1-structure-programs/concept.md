@@ -110,3 +110,6 @@ Already decided by the Lead (the founder may overrule): renames reach firms with
 - [x] Data and API needs known (§3, §9; B1 code paths listed)
 - [ ] Every decision relied on agreed: P-95, P-104–P-106, P-110, P-112, P-113 yes; the P-49 amendment, the menu/title and the Lead's M1/M6 decisions to record
 - [ ] No open questions (Q1–Q3; expert: Corporate Pathway name, locations; Lead: P-24 vs row 4, TAXONOMY Pathway row, W1-08 Reset wording)
+
+## Founder changes at the S2 early look (27 Oct)
+"Need you" (Pathway cards, section headers, Structure Pathway cards) counts only combinations waiting on a person: something to review, something missing, Not ready, or an AI run waiting for a decision; Not started and Live do not count. A Not started combination opens Start setup (never created by a click on its name). Sample Pathways follow P-112. Details: `early-look/s2/EARLY-LOOK.md`.

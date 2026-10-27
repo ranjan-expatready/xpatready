@@ -6,7 +6,7 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 | # | Screen | Closes asks | Status | Founder OK |
 |---|---|---|---|---|
 | S1 | Structure (+ Pathway cards that open the tree; "Used by" names; toasts; menu background) | B5; B1, B2 in part | Merged 27 Oct incl. S1-finish (Lead check d40c582: 34/34 suites, journey 45/45); Start setup link and panel footer fixed in S2 | |
-| S2 | Immigration programs, card layout (design D) | B1–B4, C2 | Built on screens lane (4e6b409, not on :4400). Lead early look 27 Oct: close to D, 10 differences, small fix recommended (`screens/W1-structure-programs/early-look/s2/EARLY-LOOK.md`); founder Go or changes next | |
+| S2 | Immigration programs, card layout (design D) | B1–B4, C2 | Lead early look 27 Oct (`screens/W1-structure-programs/early-look/s2/EARLY-LOOK.md`); **founder: Go with all 7 fixes** (sample Pathway names, Start setup, no silent start, form counts, search width, "need you" = waiting on a person, Not started card) → screens lane FIX, then CHECK and merge. Not on :4400 yet | Go with fixes, 27 Oct |
 | S3 | New combination | C1–C5 | Agreed 27 Oct: founder marked walkthrough v2 OK (P-123); builds after S2, one at a time | |
 | S4 | Form library: one list, upload through AI, every action (P-123) | E1, D6, A4 data, F6 | Agreed (walkthrough v2, P-123). **Started 27 Oct in the forms lane, in parallel with S2 (P-124):** DESIGN (challenge + slice plan), then BUILD; includes the form finder engine (find, download, store, attach automatically) | |
 | S5 | Combination workspace: forms picked by AI, editable "Who can be in this application" (P-123) | D1, D3–D5 | Agreed 27 Oct: founder marked walkthrough v2 OK (P-123); builds after S2, one at a time | |
