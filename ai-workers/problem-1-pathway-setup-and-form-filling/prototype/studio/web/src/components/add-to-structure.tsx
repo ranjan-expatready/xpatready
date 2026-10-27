@@ -66,7 +66,7 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
   const [busy, setBusy] = React.useState(false);
   const refs = React.useRef<Record<string, HTMLInputElement | null>>({});
   const seeded = React.useRef(false);
-  const [aim, setAim] = React.useState<Level>("pathway"); const aimPending = React.useRef(false);
+  const [aim, setAim] = React.useState<Level>("pathway"); const aimPending = React.useRef<Level | null>(null);
 
   // Prefilled from where it was opened (AD-8): Pathway type from the tab, then the levels above the one to add.
   React.useEffect(() => {
@@ -84,13 +84,13 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
     setNone(!(prefill?.focus === "subCategory" || (cat && nodes.some((x) => x.parentKey === cat.key))));
     setLocs(cat?.allowedLocations.length ? cat.allowedLocations : ["inside_canada", "outside_canada"]);
     const focus = prefill?.focus ?? FIELDS.find((lv) => !s[lv]) ?? "pathway";
-    setAim(focus); aimPending.current = true;
+    setAim(focus); aimPending.current = focus;
   }, [open, list.data]);
   // The field to start in gets focus in the first render where it is enabled: after the dialog's own first-field focus,
   // never a frame later (drift check: under load the dialog's focus could land last, on Pathway).
   React.useEffect(() => {
-    const el = refs.current[aim];
-    if (open && aimPending.current && el && !el.disabled) { el.focus(); aimPending.current = false; }
+    const el = aimPending.current ? refs.current[aimPending.current] : null;
+    if (open && el && !el.disabled) { el.focus(); aimPending.current = null; }
   });
   React.useEffect(() => { if (open) setType(initialType); }, [open, initialType]);
 
