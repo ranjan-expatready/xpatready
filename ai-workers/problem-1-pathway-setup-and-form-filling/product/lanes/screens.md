@@ -7,14 +7,15 @@
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_screen: W1-structure-programs
-stage: EARLY-LOOK
-owner: Lead
-next_action: Lead early look at slice 2 (Structure page): screenshots/slice2/ next to design/draft-structure-v2.html, build-notes 'Slice 2' (top 5, deviations); then Go for slice 3 (Immigration programs design D)
-then: EARLY-LOOK → BUILD slice 3 (Immigration programs), slice 4 (New combination); slices 1+2 merge together.
+stage: FIX
+owner: Builder
+next_action: FIX slices 1+2: studio journey Pass B adds its Retail Pathway on the Structure page first; B1 trail words; run the whole journey on an isolated copy (4445)
+then: FIX → Lead reruns and merges slices 1+2 to main → BUILD slice 3 (Immigration programs, design D) on a new branch from main, with the early look's three changes.
 blocked_by: none
 updated: 2026-10-27
 
 ## Log (last 10 lines)
+- 2026-10-27 · W1-structure-programs · EARLY-LOOK → FIX · applied Lead note 2026-10-27 (founder Go on the Structure page; FIX the --demo studio journey: Pass B had no Pathway after Reset). AI US$0.
 - 2026-10-27 · W1-structure-programs · BUILD → EARLY-LOOK · slice 2 Structure page: all 33 suites PASS (incl. check_w1_structure 83/83, check_w1_structure_browser 61/61); 13 states × 1440/1024 screenshots, axe clean; any 434 = baseline; graph exit 0. AI US$0. Owner → Lead.
 - 2026-10-27 · W1-structure-programs · EARLY-LOOK → BUILD slice 2 · applied Lead note 2026-10-27 (slice 1 passed; L3 reading accepted; slices 1+2 merge together); Structure page built: outline with add rows and live checks, side panel (rename, locations, order, remove/retire/restore, history), every board state; check_w1_structure_browser 61/61, axe clean. AI US$0.
 - 2026-10-27 · W1-structure-programs · BUILD → EARLY-LOOK · slice 1 data and API: migration (index per parent and type; version, retired_at), ensurePathways removed (a read creates nothing; samples carry their Pathways), every-Pathway reads (catalogue sections, path-options, createPath pathwayKey, proposal), Structure endpoints (list, name-check, meaning-check off 403, add, rename/locations with version, reorder at once), P-116 lifecycle via LibraryChange + lifecycle.ts (uses, delete at approval, retire/restore at release), retired-case guard in runtime.ts, trail/progress/filed/retired on rows; check_w1_structure 83/83, all 32 suites PASS (check_screen01_api + check_grounding_db updated for the no-fixed-Pathway rule). AI US$0. Owner → Lead.
@@ -24,4 +25,3 @@ updated: 2026-10-27
 - 2026-10-25 · 02 · CHECK · applied Lead note 2026-10-25 12:30: synced main (F2 merge; conflicts resolved demo/main/App), committed the 3 granted test patches (246143f), SC-2 'used by n' added (was missing); reviewer Ship 8.5/10, breaker 0B/0M/3m (2 env: Chromium ArrowDown select, scout-check env-bound); 30 suites green incl. all F2. AI US$0. Owner → Lead.
 - 2026-10-25 · 02 · FIX → CHECK · all suites PASS with the other lanes' patches applied locally (23 + grounding 30 + studio journey 44 after approving new document types); main merged (e6c5958); reviewer + breaker round 2 started. AI US$0.
 - 2026-10-25 · 02 · FIX · pushed 5c1c814 (work in progress); Lead decided the other lanes' one-line test patches merge with this branch after forms merges.
-- 2026-10-25 · 02 · FIX (in progress) · B1/M1–M8, minors, review Musts 1–9 and Lead re-check 1–5 fixed with a failing case each (check_screen02_fix 59/59); migrations applied_by + field_name_unique; Must 7 partly (set aside; comparison waits on the forms reader); Must 3 needs a one-line patch in two forms suites and the runtime setup (proposed). AI US$0.
