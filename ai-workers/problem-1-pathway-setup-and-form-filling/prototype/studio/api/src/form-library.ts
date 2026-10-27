@@ -5,15 +5,16 @@
 // Buttons for these come with S3/S5 (combination) and slice 3 (library page); every action is server-checked here.
 import { Body, Controller, Delete, Get, Headers, HttpException, Inject, Injectable, Param, Post, Query, UploadedFiles, UseInterceptors } from "@nestjs/common";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
-import { MAX_BYTES } from "./intake.ts";
+import { MAX_BYTES, MAX_FILES } from "./intake.ts";
 import { UploadRuns } from "./upload-run.ts";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { manifest } from "../../engine/import.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
-import { officialUrl, parseFormPage } from "../../engine/canada.ts";
+import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
+import { INDEX_URL } from "./finder.ts";
 import { AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
-import { canadaSource, type CanadaSource } from "./canada.ts";
+import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
 import { ACTORS, actorOf, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { Finder } from "./finder.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -52,6 +53,9 @@ export class FormLibrary {
       this.approvedShas(workspaceId),
       this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, select: { code: true, outcome: true } }),
     ]);
+    // "Re-read with AI (fields and boxes)" drafts from a combination's copy of the file (today's field-map drafting).
+    const atts = await this.db.sourceAttachment.findMany({ where: { workspaceId, kind: "Form" }, select: { id: true, sha256: true }, orderBy: { createdAt: "asc" } });
+    const combos = await this.db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true, label: true }, orderBy: { label: "asc" } });
     const rows = forms.map((f) => {
       const editions = f.editions.filter((e) => e.channel !== "ONLINE" && e.sha256 && approved.all.has(e.sha256));
       const current = newestEdition(editions);
@@ -63,6 +67,7 @@ export class FormLibrary {
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
         accepts: current?.acceptedChannels ?? (TYPE_OF(f.formKind) === "form" ? null : "READ_BY_AI"), accepts_basis: current?.acceptedBasis ?? "SAMPLE", accepts_quote: current?.acceptedQuote ?? null,
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
+        form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256)?.id ?? null : null,
         used_by: using, status, older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel) };
     });
     const term = q.q?.toLowerCase();
@@ -70,7 +75,7 @@ export class FormLibrary {
     const shown = rows.filter((r) => (q.for !== "picker" || (r.status !== "retired" && !!r.edition)) && (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.title.toLowerCase().includes(term)));
     const count = (pred: (r: (typeof rows)[number]) => boolean) => rows.filter(pred).length;
     return { rows: shown, counts: { all: rows.length, form: count((r) => r.type === "form"), guide: count((r) => r.type === "guide"), checklist: count((r) => r.type === "checklist"), needs_ok: count((r) => r.status === "needs_ok"), newer_file: count((r) => r.status === "newer_file"), retired: count((r) => r.status === "retired") },
-      sample_note: "Which forms a combination needs and what IRCC accepts are Sample until the immigration expert confirms." };
+      combinations: combos, sample_note: "Which forms a combination needs and what IRCC accepts are Sample until the immigration expert confirms." };
   }
 
   async uses(code: string) { return formUses(this.db, await this.ws.id(), code); }
@@ -80,15 +85,30 @@ export class FormLibrary {
    *  person; the same file says so. Downloads go through the form finder's checks (official host, the form's page). */
   async checkCanada(actor: Actor, code: string) {
     need(actor, "author");
+    try { return await this.compareWithCanada(code); } catch (e) {
+      // canada.ca not answering (or a page not among the recorded copies) is said in words, never a server error.
+      if (e instanceof CanadaError) throw problem(409, "canada.ca could not be read", `${code}: ${e.message} Upload its new edition's PDF instead, or try again later.`);
+      throw e;
+    }
+  }
+
+  private async compareWithCanada(code: string) {
     const workspaceId = await this.ws.id();
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } }, include: { editions: true } });
     if (!def) throw problem(404, "Not in the library", `${code} is not in the library.`);
-    if (!def.formPageUrl) throw problem(409, "No canada.ca page", `${code} has no canada.ca form page recorded. Upload the new edition's PDF instead.`);
-    const page = parseFormPage((await this.canada.get(def.formPageUrl, "html")).bytes.toString("utf8"));
+    // A form without a recorded page (a sample copy, an upload) is looked up in canada.ca's list of forms (rules, US$0).
+    let pageUrl = def.formPageUrl;
+    if (!pageUrl) {
+      const row = parseFormsIndex((await this.canada.get(INDEX_URL, "html")).bytes.toString("utf8")).rows.find((r) => normaliseCode(r.code) === normaliseCode(code));
+      if (!row) throw problem(409, "Not on canada.ca's list", `${code} is not on canada.ca's list of forms (it may be a visa-office document). Upload its new edition's PDF instead.`);
+      pageUrl = row.pageUrl;
+      await this.db.govFormDef.update({ where: { id: def.id }, data: { formPageUrl: pageUrl } });
+    }
+    const page = parseFormPage((await this.canada.get(pageUrl, "html")).bytes.toString("utf8"));
     const pdfUrl = page.pdfUrls.find((u) => officialUrl(u).ok);
     if (!pdfUrl) throw problem(409, "No PDF on canada.ca", `${code}'s canada.ca page has no PDF to download.`);
     const current = newestEdition(def.editions.filter((e) => e.channel !== "ONLINE"));
-    await this.db.formEdition.updateMany({ where: { govFormDefId: def.id }, data: { checkedAt: new Date() } });
+    await this.db.formEdition.updateMany({ where: { govFormDefId: def.id }, data: { checkedAt: new Date(), formPageUrl: pageUrl } });
     if (current && current.canadaUpdated && page.lastUpdated && current.canadaUpdated === page.lastUpdated && current.sourceUrl === pdfUrl) return { outcome: "current", message: `${current.editionLabel} is still the current edition on canada.ca (last updated ${page.lastUpdated}).`, last_updated: page.lastUpdated };
     return { outcome: "check", message: `canada.ca shows ${code} last updated ${page.lastUpdated ?? "on an unknown date"}. Run "Find again" on a combination that uses it to download it: a newer edition goes to edition review, the same edition from a new file is marked for you to replace.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
   }
@@ -175,9 +195,13 @@ export class FormLibrary {
 export class FormLibraryController {
   constructor(@Inject(FormLibrary) private readonly lib: FormLibrary, @Inject(Finder) private readonly finder: Finder, @Inject(Lifecycle) private readonly lifecycle: Lifecycle, @Inject(UploadRuns) private readonly uploads: UploadRuns) {}
   /** Upload PDF through the shared run (one file; rules first, M1); optional forCombination + forCode (S5 ask). */
-  @Post("library/forms/upload") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_BYTES, files: 1 } }))
-  upload(@Headers("x-actor") a: H, @UploadedFiles() files: { originalname: string; buffer: Buffer }[] | undefined, @Body() b: { forCombination?: string; forCode?: string } | undefined) {
-    return this.uploads.start(actorOf(a), files?.[0], b?.forCombination && b?.forCode ? { combinationId: String(b.forCombination), code: normaliseCode(String(b.forCode)) } : undefined);
+  @Post("library/forms/upload") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_BYTES, files: MAX_FILES } }))
+  async upload(@Headers("x-actor") a: H, @UploadedFiles() files: { originalname: string; buffer: Buffer }[] | undefined, @Body() b: { forCombination?: string; forCode?: string } | undefined) {
+    const actor = actorOf(a), forForm = b?.forCombination && b?.forCode ? { combinationId: String(b.forCombination), code: normaliseCode(String(b.forCode)) } : undefined;
+    if (!files?.length) return this.uploads.start(actor, undefined, forForm);
+    // One run per file, so each file has its own card, steps and Stop (one way in, many files: Lead 27 Oct).
+    const runs = []; for (const f of files) runs.push(await this.uploads.start(actor, f, forForm));
+    return { runId: runs[0].runId, runIds: runs.map((r) => r.runId) };
   }
   @Post("combinations/:id/forms/find/plan") plan(@Param("id") id: string, @Body() b: unknown) { return this.finder.plan(id, b); }
   @Post("combinations/:id/forms/find") find(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.finder.launch(actorOf(a), id, b); }

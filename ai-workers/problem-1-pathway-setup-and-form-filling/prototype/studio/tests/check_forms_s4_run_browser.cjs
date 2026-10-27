@@ -32,20 +32,23 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.goto(`${BASE}/library/forms`);
     await p.getByRole("button", { name: "Upload PDF" }).waitFor();
     step("C11.11: Shared library › Forms offers Upload PDF to an author", true);
-    await p.setInputFiles('input[aria-label="Choose a PDF to upload"]', PDF);
+    await p.setInputFiles('input[aria-label="Choose PDFs to upload"]', PDF);
     const card = p.locator("section[data-run-status]").first();
     await card.waitFor();
     await p.locator('section[data-run-status="done"]').waitFor({ timeout: 60_000 });
     const text = await card.textContent();
     step("C11.8: the run card shows every step with its kind, and ends Done", /Reading an uploaded PDF/.test(text) && /Done/.test(text) && (await card.locator("[data-step]").count()) === 4, text.slice(0, 200));
     step("C11.11 (M1): the card says the rules read it and no AI call was made", /Rules read it: IMM 5604 .*No AI call was made\./.test(text));
-    step("C11.8: cost is shown in words on the card (US$0.00)", /US\$0\.00/.test(text));
+    step("C11.8: cost is shown in words on the card (US$0 · rules only, no AI)", /US\$0 · rules only, no AI/.test(text));
     await axe("upload run, done"); await shot("01-upload-done");
     await p.reload(); await p.getByRole("button", { name: "Upload PDF" }).waitFor();
-    fs.writeFileSync(path.join(require("node:os").tmpdir(), "s4-scan.pdf"), "%PDF-1.4\n% a scanned page the rules cannot read\n%%EOF\n");
-    await p.setInputFiles('input[aria-label="Choose a PDF to upload"]', path.join(require("node:os").tmpdir(), "s4-scan.pdf"));
+    step("C11.11 (Lead fix 4): the Forms page has one way in (no second \"Choose files\" box)", (await p.getByText("Add forms to the library").count()) === 0 && (await p.getByRole("button", { name: "Upload PDF" }).count()) === 1);
+    execFileSync(path.join(ROOT, "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python"), ["-I", "-c", "import pypdf,sys; w=pypdf.PdfWriter(); w.add_blank_page(200,200); w.write(sys.argv[1])", path.join(require("node:os").tmpdir(), "s4-scan.pdf")]); // a real PDF with no form on it
+    await p.setInputFiles('input[aria-label="Choose PDFs to upload"]', path.join(require("node:os").tmpdir(), "s4-scan.pdf"));
     await p.locator('section[data-run-status="needs_person"]').waitFor({ timeout: 60_000 });
-    step("C11.11 (M1): an unreadable PDF: \"Waiting for you\", no AI call", /Waiting for you/.test(await p.locator("section[data-run-status]").first().textContent()) && /no AI call was made/.test(await p.locator("section[data-run-status]").first().textContent()));
+    const waitText = await p.locator('section[data-run-status="needs_person"]').first().textContent();
+    step("C11.11 (M1): a PDF whose number the rules cannot read: \"Waiting for you\", no AI call", /Waiting for you/.test(waitText) && /no AI call was made/.test(waitText));
+    step("C11.11 (Lead fix 2): the waiting reason appears once on the card", (waitText.match(/Rules could not read its form number/g) ?? []).length === 1, waitText.slice(0, 300));
     await axe("upload run, waiting for a person"); await shot("02-upload-needs-person");
 
     // Live finder run through the stand-in launcher, whose AI call hangs (safety probe first: a stub pass only).

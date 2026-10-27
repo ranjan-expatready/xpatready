@@ -11,6 +11,28 @@ Forms lane, BUILD slice 1, 27 Oct 2026. Built to P-123 with the Lead response in
 * **M6**: the finder compares library forms with canada.ca too (US$0): same file → checked date only; same printed edition, other file → library edition stays, form marked "Newer file on canada.ca"; newer edition → held for today's edition impact review.
 * **canada.ca port** (`engine/canada.ts` pure parsers, `api/src/canada.ts` live/fixture adapters): official hosts only, on-host redirects (≤ 3), 20 s / 60 s, ≤ 25 MB, PDF magic; recorded copies by default (CI, tests, demo), live only with `STUDIO_CANADA=live` on the Mac.
 
+## Slice 3: the library page, and the four fixes from the slice 2 early look (Lead and founder, 27 Oct 18:20)
+* **Fixes:**
+  * (1) An empty file is refused at once ("is empty (0 bytes)"). A damaged PDF fails the first rules check ("damaged or incomplete: it could not be opened"), because the check now opens the file, and the same read feeds step 2. Sizes under 1 KB print in bytes.
+  * (2) The waiting reason is said once. The card's box gives the run's own summary ("Waiting for a second person on To review"), never the step's words again.
+  * (3) The cost line puts the usual cost first, then the ceiling: "usually about US$0.20 · at most US$5.58 · US$0.00 so far". "Usually" means the last finished run of the same kind and mode. A first run says "no usual cost yet"; rules runs say "US$0 · rules only, no AI".
+  * (4) There is one way in: Upload PDF with many files, one run card each. The old "Add forms to the library · Choose files" box is gone from the page.
+* **Library page** (`web/src/pages/library-forms.tsx`, walkthrough v2 S4):
+  * one list: forms, guides and checklists, never groups;
+  * filters: Type chips with counts, Used by (combination picker), Status chips (Needs your OK, Newer file on canada.ca, Retired), and a search on number or title;
+  * columns: Number · Title · Type · Edition · IRCC accepts (tooltip; Sample) · Used by · Status;
+  * the ⋯ menu per row: Replace with a new edition (compares with canada.ca; a form with no recorded page is now looked up in canada.ca's list), Re-read with AI (today's field-map drafting dialog on a combination's copy of the file), See where it is used, Retire / Restore, and Delete (offered only when nothing uses the form). Retire and delete show where the form is used and the rule's refusal in words, ask why, then wait for a second person (P-116);
+  * the row drawer: Definition (edition, where it came from, canada.ca page and when it was checked, older editions kept for released versions, fingerprint under Details) · What IRCC accepts (with IRCC's words, Sample) · Where it is used · History;
+  * states: empty, loading skeletons, error with Try again, no match with Clear filters, read-only (no author duty), long title (two lines plus the full title on hover).
+* **P-125:** the form finder already works from the combination's place alone (its trail); it never reads a description.
+* **Known gaps:**
+  * "IRCC accepts" says "Not set yet" for forms loaded with the sample. It is set from IRCC's words when the finder downloads a form; setting it by hand in the drawer is not built.
+  * A guide's edition is the date its page was read when canada.ca's page date is missing.
+  * "Being read" (an upload running) is not a status filter: the run card shows it.
+* **Checks:**
+  * `check_forms_s4_library_browser.cjs` (4458): 32/32, axe clean on every state, screenshots in `screenshots/slice3/` at 1440 and 1024. The first view takes under 1 s with the sample; the cold first page is reported, not judged.
+  * `check_forms_s4_runs.ts`: 35/35, now including the empty, damaged and readable-but-unknown files, the waiting reason said once, the usual cost, and many files in one upload.
+
 ## Slice 2: shared run experience and Upload PDF (W1-07, P-110; M1, M7, m4)
 * **Run API** (`api/src/runs.ts`): `GET /api/runs/:id` serves every background run the same way: the finder, Upload PDF and field-map drafting. It gives the status in words, step n of m, each step with its kind (rules or AI), status, words, times and counts, the elapsed time, and "usually about" taken from the newest finished run of the same kind (none on a first run, never invented). It also gives cost spent against the worst case, the error with its next step, and where the run's card is. `POST /api/runs/:id/stop` and `GET /api/runs?active=1` (for the chip) complete it.
 * **Real Stop (M7):** the guarded launcher now runs in its own process group (`sources.ts launchProcess`, `detached`). Stop sends it a terminate signal, then forces it after 10 s, which ends the launcher and the drafting process it started. No step or call starts after Stop. A call already sent stays counted at its reserved worst case, because the provider may still bill it, and nothing of it is used. The same Stop now ends running field-map calls (`ai.ts cancel`).

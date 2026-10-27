@@ -41,10 +41,11 @@ export class Runs {
     });
   }
 
-  /** "Usually about": the newest finished run of the same kind (and same scope when it has one); null on a first run. */
-  private async usualMs(b: AiBatch): Promise<number | null> {
-    const prev = await this.db.aiBatch.findFirst({ where: { workspaceId: b.workspaceId, operation: b.operation, id: { not: b.id }, status: { in: ["COMPLETED", "PARTIAL"] }, finishedAt: { not: null } }, orderBy: { finishedAt: "desc" } });
-    return prev?.finishedAt ? prev.finishedAt.getTime() - prev.startedAt.getTime() : null;
+  /** "Usually about" time and cost: the newest finished run of the same kind and mode; null on a first run (never invented). */
+  private async usual(b: AiBatch): Promise<{ ms: number | null; usd: number | null }> {
+    const prev = await this.db.aiBatch.findFirst({ where: { workspaceId: b.workspaceId, operation: b.operation, mode: b.mode, id: { not: b.id }, status: { in: ["COMPLETED", "PARTIAL"] }, finishedAt: { not: null } }, orderBy: { finishedAt: "desc" }, include: { jobs: { select: { costUsd: true } } } });
+    if (!prev?.finishedAt) return { ms: null, usd: null };
+    return { ms: prev.finishedAt.getTime() - prev.startedAt.getTime(), usd: Math.round(prev.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0) * 100) / 100 };
   }
 
   async view(id: string) {
@@ -52,15 +53,16 @@ export class Runs {
     if (!b) throw problem(404, "Not found", "This run no longer exists (the demo workspace may have been reset).");
     const steps = this.steps(b);
     const st = runStatus(b);
+    const usual = await this.usual(b);
     const cur = steps.find((s) => s.status === "RUNNING") ?? null;
     const last = Math.max(b.startedAt.getTime(), ...b.jobs.map((j) => Math.max(j.startedAt.getTime(), j.finishedAt?.getTime() ?? 0)));
     const failedStep = steps.find((s) => ["FAILED", "BLOCKED", "NEEDS_PERSON"].includes(s.status));
     // Where the run's card is: the library for an upload; its own page otherwise (S5 points a finder run at its Forms tab).
     const href = b.operation === UPLOAD_OPERATION ? "/library/forms" : `/ai/${b.id}`;
     return { id: b.id, operation: b.operation, label: LABEL[b.operation] ?? b.operation, scope: b.operation === FINDER_OPERATION ? b.scopeLabel.split("|")[1] ?? null : b.scopeLabel, status: st.code, status_word: st.word, message: b.message,
-      step: cur ? { n: cur.n, m: steps.length, label: cur.label } : null, steps, started_at: b.startedAt, finished_at: b.finishedAt, elapsed_ms: (b.finishedAt ?? new Date()).getTime() - b.startedAt.getTime(), usual_ms: await this.usualMs(b), last_activity_at: new Date(last),
-      usd: { spent: Math.round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0) * 100) / 100, worst: b.worstCaseUsd }, can_stop: ACTIVE.includes(b.status) && !b.cancelRequested,
-      error: failedStep ? { what: failedStep.message ?? `${failedStep.label}: ${failedStep.status.toLowerCase()}`, next: b.operation === FINDER_OPERATION ? { label: "Find again", href } : { label: "See the details", href } } : null, href };
+      step: cur ? { n: cur.n, m: steps.length, label: cur.label } : null, steps, started_at: b.startedAt, finished_at: b.finishedAt, elapsed_ms: (b.finishedAt ?? new Date()).getTime() - b.startedAt.getTime(), usual_ms: usual.ms, last_activity_at: new Date(last),
+      usd: { spent: Math.round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0) * 100) / 100, worst: b.worstCaseUsd, usual: usual.usd }, can_stop: ACTIVE.includes(b.status) && !b.cancelRequested,
+      error: failedStep ? { what: b.message && b.message !== failedStep.message ? b.message : `${failedStep.label}: see the step above.`, next: b.operation === FINDER_OPERATION ? { label: "Find again", href } : { label: "See the details", href } } : null, href };
   }
 
   /** Stop, whatever the run: the finder and Upload PDF end their running step; field-map drafting ends its running calls. */

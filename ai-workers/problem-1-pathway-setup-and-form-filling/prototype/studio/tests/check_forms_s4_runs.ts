@@ -25,6 +25,8 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
   return { status: r.status, body: j };
 };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const blankPdf = (): Buffer => { const out = join(tmpdir(), `s4-blank-${process.pid}.pdf`); execFileSync(join(STUDIO, "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python"), ["-I", "-c", "import pypdf,sys; w=pypdf.PdfWriter(); w.add_blank_page(200,200); w.write(sys.argv[1])", out]); return readFileSync(out); };
+/** A real one-page PDF with no form on it: it opens, but the rules find no form number (made with pypdf at run time). */
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const upload = async (name: string, bytes: Buffer, actor = "user-A") => {
   const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(bytes)], { type: "application/pdf" }), name);
@@ -61,8 +63,10 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("C11.8: a finished run reads as six steps, each with its kind (rules or AI), status, words and times", run.steps?.length === 6 && run.steps.every((s: any) => ["rules", "ai"].includes(s.uses) && s.status && "started_at" in s) && run.status === "done" && run.status_word === "Done", run.steps?.map((s: any) => `${s.kind}:${s.uses}:${s.status}`));
   ok("C11.8: a first run of its kind has no \"usually about\" yet (never an invented time)", run.usual_ms === null, run.usual_ms);
   ok("C11.8: cost is stated (US$0 spent, US$0 worst case for rules)", run.usd?.spent === 0 && run.usd?.worst === 0, run.usd);
+  ok("C11.8 (Lead fix 3): a first run of its kind has no usual cost yet (never invented)", run.usd?.usual === null, run.usd);
   run = await rulesRun("s4r-rules-2");
   ok("C11.8: the next run says \"usually about\" from the run before (a real duration)", typeof run.usual_ms === "number" && run.usual_ms >= 0, run.usual_ms);
+  ok("C11.8 (Lead fix 3): and its usual cost, from the run before (US$0 for rules)", run.usd?.usual === 0, run.usd);
   ok("C11.8: Stop on an ended run says so (409)", (await call("POST", `/runs/${run.id}/stop`)).status === 409);
 
   // --- Live finder run whose AI call hangs: active, then Stop really ends it (M7)
@@ -109,10 +113,19 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   u = await upload("notes.pdf", Buffer.from("these are notes, not a PDF"));
   run = (await settle(u.body.runId)).body;
   ok("C11.11: a file that is not a PDF is refused at the first step; nothing is read", run.status === "failed" && /not a PDF/.test(run.steps[0].message) && run.steps.slice(1).every((s: any) => s.status === "SKIPPED"), run.steps?.map((s: any) => `${s.kind}:${s.status}`));
-  u = await upload("scan.pdf", Buffer.from("%PDF-1.4\n% a scanned page the rules cannot read\n%%EOF\n"));
+  u = await upload("damaged.pdf", Buffer.from("%PDF-1.4\n% a header and nothing else\n%%EOF\n"));
   run = (await settle(u.body.runId)).body;
-  ok("C11.11 (M1): a PDF the rules cannot read waits for a person; AI is not called on an unverified file", run.status === "needs_person" && /Rules could not read.*no AI call was made/.test(step("upload_identity")?.message ?? run.steps[1].message) && run.steps.every((s: any) => s.uses === "rules") && run.usd.spent === 0, run.steps?.map((s: any) => `${s.kind}:${s.status}`));
+  ok("C11.11 (Lead fix 1): a damaged PDF fails the first rules check (it does not open); nothing else runs", run.status === "failed" && run.steps[0].status === "FAILED" && /damaged or incomplete/.test(run.steps[0].message) && run.steps.slice(1).every((s: any) => s.status === "SKIPPED"), run.steps?.map((s: any) => `${s.kind}:${s.status}`));
+  u = await upload("empty.pdf", Buffer.alloc(0));
+  ok("C11.11 (Lead fix 1): an empty file is refused at once, in words (400)", u.status === 400 && /empty \(0 bytes\)/.test(u.body.detail), u.body?.detail);
+  u = await upload("scan.pdf", blankPdf());
+  run = (await settle(u.body.runId)).body;
+  ok("C11.11 (M1): a PDF that opens but whose number the rules cannot read waits for a person; AI is not called on an unverified file", run.status === "needs_person" && run.steps[0].status === "COMPLETED" && /Rules could not read.*no AI call was made/.test(step("upload_identity")?.message ?? run.steps[1].message) && run.steps.every((s: any) => s.uses === "rules") && run.usd.spent === 0, run.steps?.map((s: any) => `${s.kind}:${s.status}`));
+  ok("C11.11 (Lead fix 2): the waiting reason is said once: the run's box says what happens next, not the step's words again", run.error && run.error.what !== run.steps[1].message && /second person/.test(run.error.what), run.error);
   ok("C11.11: the unread upload is held for a second person (P-80), not in the library", sql(`select count(*) from intake_item where file_name='scan.pdf' and status='HELD'`) === "1");
+  const fd = new FormData(); for (const [n, b] of [["imm5604e.pdf", official], ["damaged-2.pdf", Buffer.from("%PDF-1.4\n%%EOF\n")]] as const) fd.append("files", new Blob([new Uint8Array(b)], { type: "application/pdf" }), n);
+  const many = await (await fetch(`http://localhost:${PORT}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json() as { runIds?: string[] };
+  ok("C11.11 (Lead fix 4): one Upload PDF takes many files, one run (card) each", many.runIds?.length === 2, many);
 })().catch((e) => { fail++; console.log(`FAIL  the check stopped: ${(e as Error).stack}`); }).finally(() => {
   for (const f of existsSync(join(P2, "jobs")) ? execFileSync("ls", [join(P2, "jobs")], { encoding: "utf8" }).split("\n").filter(Boolean) : []) if (f.startsWith("studio-finder-") && !jobsBefore.has(f)) rmSync(join(P2, "jobs", f), { force: true });
   console.log(`\n${pass} passed, ${fail} failed`);

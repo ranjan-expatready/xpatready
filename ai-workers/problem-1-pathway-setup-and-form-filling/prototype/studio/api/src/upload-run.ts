@@ -51,7 +51,8 @@ export class UploadRuns implements OnModuleInit {
   /** POST /api/library/forms/upload (one PDF): starts the run and answers at once with its id; the card follows it. */
   async start(actor: Actor, file: { originalname: string; buffer: Buffer } | undefined, forForm?: { combinationId: string; code: string }) {
     need(actor, "author");
-    if (!file?.buffer?.length) throw problem(400, "Choose a file", "Choose one PDF to upload.");
+    if (!file) throw problem(400, "Choose a file", "Choose one or more PDFs to upload.");
+    if (!file.buffer?.length) throw problem(400, "Empty file", `${file.originalname || "The file"} is empty (0 bytes): nothing was read. Download it again from canada.ca.`);
     const workspaceId = await this.ws.id();
     if (forForm && !(await this.db.combination.findUnique({ where: { id: forForm.combinationId } }))) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
     const name = basename(file.originalname || "upload.pdf").replace(/[^A-Za-z0-9._-]/g, "_").slice(-80) || "upload.pdf";
@@ -100,13 +101,17 @@ export class UploadRuns implements OnModuleInit {
     let id: Identity = { ok: false };
     const s1 = await this.step(batchId, "upload_check", async () => {
       if (bytes.length > MAX_BYTES) return { status: "FAILED", message: "The file is larger than 25 MB. Nothing was read." };
+      if (!bytes.length) return { status: "FAILED", message: "The file is empty (0 bytes). Nothing was read." };
       if (!bytes.subarray(0, 5).toString("latin1").startsWith("%PDF-")) return { status: "FAILED", message: "This is not a PDF file. Only IRCC PDFs can be uploaded here. Nothing was read." };
-      return { status: "COMPLETED", message: `A PDF of ${(bytes.length / 1024).toFixed(0)} KB; fingerprint recorded (${sha(bytes).slice(0, 12)}…). US$0.` };
+      // Not damaged: the PDF opens (pages and structure readable); the same read gives step 2 its answer.
+      const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form_identity.py"), stored], { cwd: ROOT, timeout: 60_000 });
+      id = JSON.parse(stdout.trim().split("\n").pop()!) as Identity;
+      if (!id.ok && /could not be (read|opened)|PdfReadError|EmptyFile|damaged/i.test(id.error ?? "")) return { status: "FAILED", message: "This PDF is damaged or incomplete: it could not be opened. Download it again from canada.ca and upload that file. Nothing was read." };
+      const size = bytes.length < 1024 ? `${bytes.length} bytes` : bytes.length < 1024 * 1024 ? `${Math.round(bytes.length / 1024)} KB` : `${(bytes.length / 1024 / 1024).toFixed(1)} MB`;
+      return { status: "COMPLETED", message: `A PDF of ${size} that opens; fingerprint recorded (${sha(bytes).slice(0, 12)}…). US$0.` };
     });
     if (s1 !== "COMPLETED") return this.finish(batchId, s1 === null ? "CANCELLED" : "FAILED", "The file could not be used.");
     const s2 = await this.step(batchId, "upload_identity", async () => {
-      const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form_identity.py"), stored], { cwd: ROOT, timeout: 60_000 });
-      id = JSON.parse(stdout.trim().split("\n").pop()!) as Identity;
       if (id.ok && id.code && id.edition_label) return { status: "COMPLETED", message: `Rules read it: ${id.edition_label}${id.title ? ` · ${id.title}` : ""}. No AI call was made.` };
       return { status: "NEEDS_PERSON", message: "Rules could not read its form number and edition. AI may read only a file from canada.ca or one a second person approved, so this file waits for a person to check it; no AI call was made." };
     });
