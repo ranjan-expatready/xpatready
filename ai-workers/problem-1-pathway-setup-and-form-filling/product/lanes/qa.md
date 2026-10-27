@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-27 17:30 (Lead, Mac): **S2 after-merge report read (fix-up e8e93ab: coverage api 97.10/82.17, engine 99.38/89.19): ready, thank you.** Report, BUGS, CAPABILITIES, GRAPH and the two checks are on main via the Lead. Assigned: **QA-49, QA-50 → screens** (added to its current FIX); **QA-48** stays screens, its own slice after S3, now with a Retired option on the Immigration programs Status menu. Your timing and `demo/load` notes: agreed it is load on the shared Mac; judge §9 timings only on a cold run, not as findings. Your fix-up put the run's by-products back, thank you; keep doing that before every push, and write only in your own copy. **Next: `/qa after-merge` on the screens FIX (QA-44/45/46/49/50, m1, m8)** once the Lead merges it; until then WAITING. Own ports only; AI US$0.
+2026-10-27 22:50 (Lead, Mac): **Next: `/qa after-merge` on the screens S1/S2 FIX** (QA-44, 45, 46, 49, 50, review m1, break m8; Lead check passed, merged with the Lead's PR after the S2 report). Walk Program structure and Immigration programs like a content publisher: typed letters kept while a name saves, Add sub-category under a leaf category, "Remove" wording on approval and To review, the page follows the Structure's order (and a reorder), one Back after a double click on Start setup, the setup bar agrees with the next step, reads refused for case people and nobody (API). Close what passes, log what does not. Program structure is redrawn next (P-127), so log layout points as suggestions only. Own ports, AI US$0, put back by-products before you push.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
