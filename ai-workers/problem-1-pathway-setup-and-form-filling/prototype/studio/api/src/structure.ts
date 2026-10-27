@@ -51,7 +51,7 @@ export class Structure {
     const walk = (n: ProgramDef): { combinations: number; live: number; needs: number } => {
       const kids = g.kids(n.programNodeKey);
       const own = leaves.get(n.programNodeKey);
-      // needs: combinations below it that need work ("Needs work", P-49), for the Pathway cards (S1-finish).
+      // needs: combinations below it waiting on a person (S2 fix 6, engine waitsForPerson), for the Pathway cards.
       let combinations = own && !own.retired ? 1 : 0, live = own?.live ? 1 : 0, needs = own?.needs ? 1 : 0;
       const view: StructureNode = { key: n.programNodeKey, level: LEVEL_OF[n.nodeKind], parentKey: n.parentNodeKey, label: n.label, pathwayType: q.pathwayType, allowedLocations: n.allowedLocations,
         order: n.displayOrder, combinations: 0, live: 0, needs: 0, hasSetup: !!own?.combinationId, meaningChecked: false, version: n.version, retired: !!n.retiredAt, pending: pending.get(n.programNodeKey) ?? null,

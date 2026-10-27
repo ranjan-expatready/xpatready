@@ -29,7 +29,7 @@ export function CombinationPage() {
   const o = useApi<CombinationView>(["combination", id], `/combinations/${id}`, { refetchInterval: (q) => (q.state.data?.jobs?.some((j) => j.status === "RUNNING" || j.status === "QUEUED") ? 3000 : false) });
   const sum = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`, { refetchInterval: (q) => (q.state.data?.row?.aiRunning ? 3000 : false) });
   if (o.isLoading) return <Spinner label="Loading combination" />;
-  if (o.isError || !o.data) return <ErrorState title="This combination could not be opened" description={(o.error as Error | null)?.message ?? "No answer from the studio."} action={<Link className="text-text-link underline" to="/">Back to programs</Link>} />;
+  if (o.isError || !o.data) return <ErrorState title="This combination could not be opened" description={(o.error as Error | null)?.message ?? "No answer from the studio."} action={<Link className="text-text-link underline" to="/">Back to Immigration programs</Link>} />;
   const d = o.data;
   const c = d.combination;
   const last = d.releases[0];
@@ -54,7 +54,7 @@ export function CombinationPage() {
     <TipProvider>
     <div className="mx-auto max-w-7xl space-y-5">
       <nav aria-label="Path" className="flex flex-wrap items-center gap-1 text-sm text-text-muted">
-        <Link to={backTo} className="font-medium text-text-link hover:underline">Programs</Link>
+        <Link to={backTo} className="font-medium text-text-link hover:underline">Immigration programs</Link>
         {(d.path ?? []).map((n) => <React.Fragment key={n.key}><ChevronRight className="size-3.5" aria-hidden /><Link to={levelLink(n)} title={`${n.level}: show the list for ${n.label}`} className="hover:text-text hover:underline">{n.label}</Link></React.Fragment>)}
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-4">

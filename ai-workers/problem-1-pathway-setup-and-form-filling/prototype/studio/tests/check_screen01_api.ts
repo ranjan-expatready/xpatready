@@ -310,11 +310,11 @@ function pdf(title: string, text: string) {
   ok("#4 fail: a malformed id is a plain 404, with no database call or server path in the answer", bad.every((x) => x.status === 404 && !/prisma|invalid|\/Users\/|node_modules|\.ts\b/i.test(x.text)), bad);
   const rel = (await call("GET", `/combinations/${wp.combinationId}`)).body.releases[0];
   ok("#3: a release shows \"Release N\", the approver's role name, and a basis without checksums", rel.release === 1 && rel.approver === "Approver" && !/[0-9a-f]{12}/.test(rel.basis) && !/user-[A-Z]/.test(rel.basis), { release: rel.release, approver: rel.approver, basis: rel.basis });
-  const n1 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "individual", label: "日本語プログラム" }), n2 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "individual", label: "中文项目" });
+  const n1 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "retail.temporary_residence", label: "日本語プログラム" }), n2 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "retail.temporary_residence", label: "中文项目" });
   const long = "A very long program name that goes on and on beyond sixty characters, ";
-  const n3 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "individual", label: `${long}first` }), n4 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "individual", label: `${long}second` });
+  const n3 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "retail.temporary_residence", label: `${long}first` }), n4 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "retail.temporary_residence", label: `${long}second` });
   ok("M3 pass: different names with no Latin letters, or sharing their first 60 characters, are all created with keys of their own", [n1, n2, n3, n4].every((x) => x.status === 201) && new Set([n1, n2, n3, n4].map((x) => x.body.programNodeKey)).size === 4, [n1, n2, n3, n4].map((x) => [x.status, x.body.programNodeKey ?? x.body.detail]));
-  const n5 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "individual", label: "日本語 プログラム" });
+  const n5 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "retail.temporary_residence", label: "日本語 プログラム" });
   ok("M3 fail: the same name again (ignoring spaces) is still refused (BR-6)", n5.status === 409, n5.body.detail);
   // QA-14: BR-6 holds in the database, also when the same name arrives four times at the same moment.
   const raced = await Promise.all(Array.from({ length: 4 }, () => call("POST", "/program-nodes", { kind: "STREAM", parentKey: "individual.visitors", label: "Race at once" })));
@@ -370,7 +370,7 @@ function pdf(title: string, text: string) {
   ok("QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created", r.status === 400 && r.body.errors?.some((e: any) => e.field === "program.create" && /letters or digits/.test(e.message)) && sql("select count(*) from program_def where label in ('!!!','???')") === "0", r.body.errors);
   r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "A".repeat(60) + " " + "B".repeat(70) }, category: { create: "Long test" } });
   ok("QA-7 fail: a 131-character name is refused with \"Keep the name under 120 characters.\" on the Program field", r.status === 400 && r.body.errors?.[0]?.field === "program.create" && r.body.errors[0].message === "Keep the name under 120 characters." && sql("select count(*) from program_def where length(label) > 120") === "0", r.body.errors);
-  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "R\u00e9sidence temporaire" }, category: { create: "Visa d'\u00e9t\u00e9 \u2014 \u65e5\u672c\u8a9e" } });
+  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", pathwayKey: "retail.temporary_residence", program: { create: "R\u00e9sidence temporaire" }, category: { create: "Visa d'\u00e9t\u00e9 \u2014 \u65e5\u672c\u8a9e" } });
   ok("QA-6 pass: names in any script with punctuation around letters are created as typed", r.status === 201 && r.body.created === true, r.body?.nodeKey ?? r.body?.detail);
   const opts = (await call("GET", "/path-options?pathway=INDIVIDUAL")).body;
   const wpOpt = opts.programs.find((x: any) => x.key === "individual.work_permits")?.categories.find((x: any) => x.key === "individual.work_permits.employer_specific")?.subCategories.find((x: any) => x.key === "individual.work_permits.employer_specific.with_lmia");

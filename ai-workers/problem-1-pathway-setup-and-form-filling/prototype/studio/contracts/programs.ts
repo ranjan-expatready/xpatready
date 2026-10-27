@@ -7,7 +7,7 @@ export const PATHWAYS = ["INDIVIDUAL", "CORPORATE"] as const;
 export const STATUSES = ["IN_SETUP", "NOT_READY", "READY"] as const;
 export type Status = (typeof STATUSES)[number];
 /** Filters (P-49): "Needs work" (needs, the default), Live and All on screen; the status filters stay for API callers. */
-export const FILTERS = ["needs", "live", "all", "ready", "not_ready", "in_setup", "ai_proposals", "retired"] as const;
+export const FILTERS = ["needs", "live", "all", "ready", "not_ready", "in_setup", "not_started", "ai_proposals", "retired"] as const;
 export const SORTS = ["path", "status", "-status"] as const;
 export type Filter = (typeof FILTERS)[number];
 
@@ -43,9 +43,11 @@ export const CatalogueQuery = z.object({
   /** Longer text is cut to 120 characters, never refused (break m4). */
   q: z.string().trim().transform((s) => s.slice(0, 120)).default(""),
   /** A program's node key: only that program's combinations (the "Program ▾" filter). */
-  program: z.string().trim().max(200).default(""),
+  program: z.string().trim().transform((s) => s.slice(0, 400)).default(""),
   /** Any program, category or sub-category key: only the combinations under it (the clickable path on a combination). */
-  under: z.string().trim().max(200).default(""),
+  under: z.string().trim().transform((s) => s.slice(0, 400)).default(""),
+  /** S2: a Pathway's node key (a Pathway card): only its combinations, and the counts are its own; sections keep every Pathway's counts. */
+  pathwayKey: z.string().trim().transform((s) => s.slice(0, 400)).default(""),
   /** path (Program › Category › Sub-category, the default) or the Status column, ascending or descending. */
   sort: z.enum(SORTS).default("path"),
 });
@@ -94,7 +96,7 @@ export const LINK_KINDS = ["follows", "supported_by"] as const;
 export const CreatePathBody = z.object({
   pathway: z.enum(PATHWAYS),
   /** W1-03: which Pathway of the type, when the program is new and the type has several (an existing program says it). */
-  pathwayKey: z.string().trim().min(1).max(200).optional(),
+  pathwayKey: z.string().trim().min(1).max(400).optional(),
   program: PathLevel,
   category: PathLevel,
   subCategory: PathLevel.nullable().default(null),
@@ -148,6 +150,8 @@ export type CatalogueLeaf = {
   programKey: string;
   /** "Needs work" (P-49): firms cannot use it yet, or it has a next step. */
   needs: boolean;
+  /** "Need you" (S2 fix 6): waiting on a person — something to review, something missing, or Not ready (engine waitsForPerson). */
+  needsYou: boolean;
   /** Live (founder finding F1): its status is Live (firms can open cases on it), with or without a next step. */
   live: boolean;
   /** New editions of its forms held for impact review (P-32), never used silently. */
@@ -176,12 +180,15 @@ export type NextAction = { kind: "start" | "add_forms" | "add_from_library" | "d
 // ------------------------------------------------------------------ responses the Screen 01 pages read
 /** One person role on a combination (stored as JSON on the combination; see Participant above for the request shape). */
 export type ParticipantLine = { role: string; label: string; min: number; max: number; preview?: number; applies?: boolean };
-export type CatalogueCounts = Record<"needs" | "live" | "all" | "ready" | "not_ready" | "in_setup" | "ai_proposals" | "retired", number>;
+export type CatalogueCounts = Record<"needs" | "live" | "all" | "ready" | "not_ready" | "in_setup" | "not_started" | "ai_proposals" | "retired", number>;
 /** W1-04 (design D): one section per Pathway of the tab, in Structure order, with its combinations' tree and counts. */
 export type CatalogueSection = { pathwayKey: string; label: string; combinations: number; needs: number; live: number; tree: CatalogueGroup[] };
 /** GET /catalogue. */
 export type CatalogueResponse = {
   pathway: (typeof PATHWAYS)[number]; filter: Filter; requestedFilter: Filter; fellBack: boolean; q: string; program: string; under: string; sort: (typeof SORTS)[number];
+  /** S2: the Pathway card this answer is for ("" = All pathways, also for a key that is not a Pathway of this type), so the
+   *  page never pairs one Pathway's name with another view's counts. */
+  pathwayKey: string;
   underPath: string[] | null;
   rows: CatalogueLeaf[];
   programs: { key: string; label: string; combinations: number }[];

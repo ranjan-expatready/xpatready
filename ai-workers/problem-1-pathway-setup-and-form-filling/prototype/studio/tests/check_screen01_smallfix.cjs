@@ -5,7 +5,7 @@
 //   QA-20 (C1.6 · EXPERIENCE 400 px) the combination page with the author's "Filed as" selects has no sideways scroll
 //         (W1-02, P-102: the Portal select is parked with the browser extension; Online shows its later-wave note).
 //   QA-22 (C1.1 · EXPERIENCE feedback and state) while the session request is still on its way the author is never told
-//         "A configuration author adds combinations here." and never sees a disabled New combination in the empty state.
+//         "A configuration author adds the pathways, programs and categories." and never sees a disabled New combination in the empty state.
 //   CHECK 24 Oct fixes: break K1 (keyboard on the "Filed as" select: no save per arrow press, focus stays),
 //         m1 (a session that never answers does not hide Programs), m3 + review should 2 (a refused, failed or empty
 //         session: the right notice and neutral words), m4 (the combination page's forms wait for the person), m5 (ENOTDIR
@@ -34,13 +34,13 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
       const seen = []; let stop = false;
       await q.goto(`${BASE}/`);
       const looking = (async () => { while (!stop) { seen.push(((await q.innerText("main").catch(() => "")) || "").replace(/\s+/g, " ")); await q.waitForTimeout(50).catch(() => {}); } })();
-      await q.getByText(/No combinations in Individual yet/).waitFor({ timeout: 15000 }); await q.waitForTimeout(400); stop = true; await looking;
+      await q.getByText(/Nothing set up in Retail yet/).waitFor({ timeout: 15000 }); await q.waitForTimeout(400); stop = true; await looking;
       const final = (await q.innerText("main")).replace(/\s+/g, " ");
       if (who === "the author") {
-        step("C1.1 QA-22: while the session loads, the author never reads the non-author message", !seen.some((t) => /A configuration author adds combinations here/.test(t)), `${seen.length} looks`);
-        step("C1.1 QA-22: once the session arrives the author's own message and New combination show", /Create the first one with New combination/.test(final) && !(await q.getByRole("button", { name: "New combination" }).first().isDisabled()), final.slice(0, 160));
+        step("C1.1 QA-22: while the session loads, the author never reads the non-author message", !seen.some((t) => /A configuration author adds the pathways, programs and categories/.test(t)), `${seen.length} looks`);
+        step("C1.1 QA-22: once the session arrives the author's own message and New combination show", /Start with the Structure/.test(final) && !(await q.getByRole("button", { name: "New combination" }).first().isDisabled()), final.slice(0, 160));
       } else {
-        step("control QA-22: a non-author still reads the non-author message and New combination stays disabled", /A configuration author adds combinations here/.test(final) && await q.getByRole("button", { name: "New combination" }).first().isDisabled(), final.slice(0, 160));
+        step("control QA-22: a non-author still reads the non-author message and New combination stays disabled", /A configuration author adds the pathways, programs and categories/.test(final) && await q.getByRole("button", { name: "New combination" }).first().isDisabled(), final.slice(0, 160));
       }
       await c.close();
     }
@@ -49,14 +49,14 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
       const c = await b.newContext({ viewport: { width: 1440, height: 900 } }); const q = await c.newPage();
       await q.route("**/api/session**", route);
       await q.goto(`${BASE}/`);
-      await q.getByText(/No combinations in Individual yet/).waitFor({ timeout: wait }).catch(() => {});
+      await q.getByText(/Nothing set up in Retail yet/).waitFor({ timeout: wait }).catch(() => {});
       const text = (await q.innerText("body")).replace(/\s+/g, " "); await c.close().catch(() => {}); return text;
     };
     let tx = await sessionAs(() => { /* never answers */ }, 9000);
-    step("C1.1 break m1: a session that never answers does not hide Programs (the empty catalogue shows within 9 s)", /No combinations in Individual yet/.test(tx), tx.slice(0, 160));
+    step("C1.1 break m1: a session that never answers does not hide Immigration programs (the empty page shows within 9 s)", /Nothing set up in Retail yet/.test(tx), tx.slice(0, 160));
     for (const [what, status, body, notice] of [["refused (401)", 401, JSON.stringify({ detail: "Unknown person" }), /did not accept the simulated person/], ["failed (500)", 500, "{}", /server is not answering/], ["an answer with no person (200, not JSON)", 200, "<html>proxy</html>", /answered without a person/]]) {
       tx = await sessionAs((r) => r.fulfill({ status, contentType: status === 200 ? "text/html" : "application/json", body }));
-      step(`C1.1 break m3: a session ${what} shows its own notice and neutral words, not the non-author's`, notice.test(tx) && !/A configuration author adds combinations here/.test(tx) && /could not tell who you are/.test(tx), tx.slice(0, 200));
+      step(`C1.1 break m3: a session ${what} shows its own notice and neutral words, not the non-author's`, notice.test(tx) && !/A configuration author adds the pathways, programs and categories/.test(tx) && /could not tell who you are/.test(tx), tx.slice(0, 200));
     }
 
     // ---------------------------------------------------------------- the sample inputs (not under test, P-33)
