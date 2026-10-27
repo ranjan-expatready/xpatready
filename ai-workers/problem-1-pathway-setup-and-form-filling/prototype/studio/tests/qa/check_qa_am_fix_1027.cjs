@@ -1,0 +1,89 @@
+// qa after-merge on the screens S1/S2 FIX (PR #59, main 027174d), 27 Oct: what the two earlier qa checks do not cover.
+// Review m1: on every card the setup bar shows the stage of the card's next step (Not ready with something missing,
+// AI proposals to review, forms to add, Live). Break m8: every configuration read refuses nobody (401) and case people
+// (403) while the configuration people read (STANDARDS §6, deny by default). QA-51: To review names the Pathway type in
+// the trail. QA-52: approving a removal of an unused name says it is removed now, not "released with the next release".
+// QA-54: a case person who opens a Studio page by its address is told so, not "restart the studio".
+// Fails today mark findings. Real PostgreSQL; one saved replay (US$0).
+//   zsh studio/tools/isolated.sh qa_fix 4472 start && node studio/tests/qa/check_qa_am_fix_1027.cjs 4472
+const { chromium } = require("../../node_modules/playwright");
+const PORT = Number(process.argv[2] ?? 4472), BASE = `http://localhost:${PORT}`;
+let fail = 0, pass = 0;
+const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).replace(/\s+/g, " ").slice(0, 260)}` : ""}`); };
+const STAGE = { start: 1, add_forms: 1, add_from_library: 1, see_new_edition: 1, draft_ai: 2, view_progress: 2, review_proposals: 2, release: 4 };
+
+(async () => {
+  const b = await chromium.launch({ channel: "chrome", headless: true });
+  const p = await (await b.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" })).newPage();
+  const api = async (pth, init = {}) => { const h = { "content-type": "application/json" }; if (init.actor !== null) h["x-actor"] = init.actor ?? "user-A"; const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: h, data: init.data, timeout: 240000 }); return { status: r.status(), body: await r.json().catch(() => null) }; };
+  const cat = async () => (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body;
+
+  // ======================================================== setup: sample, then two combinations waiting on a person
+  await p.goto(BASE); await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
+  await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } });
+  await api("/demo/load", { method: "POST" });
+  const sv = (await cat()).rows.find((x) => x.nodeKey === "individual.visitors.super_visa");
+  const att = (await api(`/combinations/${sv.combinationId}/attachments`)).body.find((a) => /IMM 5257 \(/.test(a.edition ?? ""));
+  const run = ((await api(`/attachments/${att.id}/draft-options`)).body.saved_runs ?? []).find((x) => x.valid);
+  await api(`/attachments/${att.id}/draft`, { method: "POST", data: { mode: "replay", runFile: run.file } });
+  for (let i = 0; i < 60; i++) { if ((await cat()).rows.find((x) => x.nodeKey === sv.nodeKey).aiProposals > 0) break; await p.waitForTimeout(500); }
+  const ss = (await api("/combinations", { method: "POST", data: { nodeKey: "individual.work_permits.open.spouse_student" } })).body.combination;
+  await api(`/combinations/${ss.id}/lines`, { method: "POST", data: { kind: "FORM", formKey: "IMM 1295" } });
+  await api(`/combinations/${ss.id}/submit`, { method: "POST", data: {} });
+  const sme = ((await api(`/combinations/${ss.id}/review`)).body.submission?.changeSummary ?? []).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);
+  if (sme.length) await api(`/combinations/${ss.id}/signoff`, { method: "POST", actor: "user-C", data: { items: sme, action: "signed" } });
+  await api("/pack/release", { method: "POST", actor: "user-B", data: { expectedChanges: (await api("/draft")).body.changes } });
+  const c = await cat();
+  const svRow = c.rows.find((r) => r.nodeKey === sv.nodeKey), ssRow = c.rows.find((r) => r.nodeKey === "individual.work_permits.open.spouse_student");
+  step("setup: Super visa has AI proposals to review; Spouse of a student is released but Not ready", svRow.aiProposals > 0 && ssRow.status === "NOT_READY", `${svRow.nextAction?.kind} / ${ssRow.status} ${ssRow.nextAction?.kind}`);
+
+  // ======================================================== review m1: the bar and the next step agree, on every card
+  const bad = c.rows.filter((r) => r.combinationId && r.nextAction && STAGE[r.nextAction.kind] && r.progress.step !== STAGE[r.nextAction.kind]).map((r) => `${r.label}: ${r.nextAction.kind} vs step ${r.progress.step}`);
+  step("review m1 C11.10: for every started combination, the bar's step is the stage of its next step (API)", bad.length === 0, bad.join("; ") || `${c.rows.filter((r) => r.combinationId).length} started`);
+  step("review m1: Not ready with something missing is not shown as 'Step 4 of 4 · Release' (Spouse of a student)", ssRow.progress.step < 4 && !ssRow.progress.live, `${ssRow.progress.label} / next ${ssRow.nextAction?.kind}`);
+  step("review m1: AI proposals to review show Step 2 of 4 (Super visa)", svRow.progress.step === 2, svRow.progress.label);
+  await p.goto(BASE); await p.waitForSelector("article[data-node]");
+  const seen = await p.evaluate(() => [...document.querySelectorAll("article[data-node]")].map((a) => ({ label: a.getAttribute("data-label"), bar: a.querySelector("[data-setup]")?.getAttribute("aria-label") ?? "", next: a.querySelector("[data-next-step]")?.textContent?.trim() ?? "" })));
+  const pageBad = seen.filter((x) => /See \d+ missing/.test(x.next) && /Step 4 of 4/.test(x.bar) || /Review \d+ AI/.test(x.next) && !/Step 2 of 4/.test(x.bar) || /^Add \d+ form/.test(x.next) && !/Step 1 of 4/.test(x.bar)).map((x) => `${x.label}: "${x.bar}" beside "${x.next}"`);
+  step("review m1 C11.10: on the page no card's bar contradicts its button", pageBad.length === 0, pageBad.join("; ") || seen.filter((x) => x.next && x.next !== "Start setup").map((x) => `${x.label}: ${x.bar.replace("Setup: ", "")} · ${x.next}`).join("; "));
+  const live = seen.find((x) => x.label === "With an LMIA" &&/Live|4 of 4/.test(x.bar));
+  step("review m1: a Live card with nothing waiting keeps Step 4 of 4 · Live", !!live, live?.bar);
+
+  // ======================================================== break m8: configuration reads, deny by default
+  const id = svRow.combinationId;
+  const reads = ["/catalogue?pathway=INDIVIDUAL", "/structure?pathwayType=INDIVIDUAL", "/path-options?pathway=INDIVIDUAL", "/structure/nodes/individual.visitors/uses",
+    `/combinations/${id}`, `/combinations/${id}/config`, `/combinations/${id}/review`, `/combinations/${id}/preview`, `/combinations/${id}/attachments`,
+    "/library/fields", "/library/forms", "/library/sections", "/library/document-types", "/library/changes", "/review-queue", "/draft", "/masters", "/official-library", "/intake/held", "/ai/batches", "/ledger"];
+  const open = [];
+  for (const r of reads) {
+    const s = { none: (await api(r, { actor: null })).status, officer: (await api(r, { actor: "user-O" })).status, client: (await api(r, { actor: "user-P" })).status, author: (await api(r)).status };
+    if (s.author !== 200) open.push(`${r.split("?")[0]} author ${s.author}`);
+    else if (s.none !== 401 || s.officer !== 403 || s.client !== 403) open.push(`${r.split("?")[0].replace(id, ":id")} ${s.none}/${s.officer}/${s.client}`);
+  }
+  step("break m8 C11.10: the five S2 reads (catalogue, structure, path options, where used, name check) refuse nobody 401 and case people 403", !open.some((x) => /^\/(catalogue|structure|path-options)/.test(x)), open.filter((x) => /^\/(catalogue|structure|path-options)/.test(x)).join("; "));
+  step("QA-53 STANDARDS §6: every configuration read refuses nobody (401) and case people (403), not only the S2 ones", open.length === 0, `open to nobody/officer/client: ${open.join("; ")}`);
+  const refusal = await api("/catalogue?pathway=INDIVIDUAL", { actor: "user-P" });
+  step("break m8: the refusal is a Problem Details in plain words", refusal.status === 403 && /works on cases/.test(refusal.body?.detail ?? ""), refusal.body?.detail);
+  for (const page of ["/", "/structure"]) {
+    await p.evaluate(() => localStorage.setItem("xr-actor", "user-O")); await p.goto(`${BASE}${page}`); await p.waitForTimeout(2500);
+    const said = (await p.locator("main").innerText()).replace(/\s+/g, " ");
+    step(`QA-54: a case person who opens ${page} by its address is told it is for the configuration people (not 'could not load', Retry or 'restart the studio')`, /works on cases/.test(said) && !/could not load|restart the studio/.test(said), said.match(/could not load.*?Retry/)?.[0] ?? said.slice(0, 160));
+  }
+  await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
+
+  // ======================================================== QA-51, QA-52: To review words for a removal
+  const add = await api("/structure/nodes", { method: "POST", data: { pathwayType: "INDIVIDUAL", level: "category", parentKey: "individual.visitors", label: "Visitor record", decision: "add_anyway" } });
+  const del = await api(`/structure/nodes/${add.body.key}`, { method: "DELETE", data: { reason: "qa: added by mistake" } });
+  await p.evaluate(() => localStorage.setItem("xr-actor", "user-B"));
+  await p.goto(`${BASE}/review/change/${del.body.id}`); await p.waitForSelector("main h1");
+  const title = await p.locator("main h1").innerText();
+  step("QA-46: the approver's page says Remove, as the Structure does", /^Remove structure name/.test(title), title);
+  step("QA-51 BR-7: the To review trail names the Pathway type (Retail and Corporate both have a Temporary residence)", /Retail ›/.test(title), title);
+  await p.getByRole("button", { name: "Approve", exact: true }).click();
+  const toast = await p.getByText(/approved/).first().innerText({ timeout: 10000 }).catch(() => "");
+  const gone = !(await api("/structure?pathwayType=INDIVIDUAL")).body.nodes.some((n) => n.key === add.body.key);
+  step("QA-52 P-116: approving the removal of an unused name says it is removed now (it is), not 'released with the next release'", gone && !/next release/.test(toast), `removed at once: ${gone}; message "${toast}"`);
+
+  console.log(`${pass}/${pass + fail} passed`);
+  await b.close();
+})().catch((e) => { console.error(e); process.exit(1); });
