@@ -1,5 +1,16 @@
 # W1-structure-programs (W1-03/04/05) — build notes
 
+## S1/S2 FIX (FIX, 27 Oct): qa after-merge findings + review m1 + break m8 — Lead note 27 Oct
+| Item | Fix | Check (`tests/check_w1_s1s2_fix.cjs`, 30/30) |
+|---|---|---|
+| QA-45 Major: "Add sub-category" in the panel led nowhere | The outline draws an add row under a category with no sub-categories yet when the panel asks for one, typed in place and focused like every other add row (`structure.tsx` rows) | pass: the row opens under it, focused, and the first sub-category is added by the page · fail: a category with its own setup still has the button disabled |
+| QA-44: letters typed while a name saves were wiped | The box clears as the name is sent ("Adding … …"), so whatever is typed next is kept. A refused name comes back only if nothing new was typed, and it keeps its reason | pass: "From abroad (test)" typed during an 800 ms save is kept whole · fail-guard: an exact twin stays in the box with "already exists" |
+| QA-46: To review said "Delete" for Remove | The word map (`library-changes.ts`) and the queue line (`review-queue.ts`) now say Remove, as the Structure does (P-116) | the To review row and the approval page say Remove and never Delete |
+| QA-49: cards and List were alphabetical | The catalogue sorts by the Structure's own order: display order, then first added, walked depth first, the order the outline draws. A reorder on the Structure writes an audit line, which clears the catalogue cache, so it shows at once | cards and List equal the outline's order; a reverse of Visitors' categories reaches the cards · fail-guard: the sample's order differs from alphabetical, so the check can tell them apart |
+| QA-50: a double click on Start setup was two history entries | The page leaves once: the second click finds it already leaving | one Back returns to Immigration programs · nothing was created |
+| Review m1: the bar could contradict the next step | Lead decision: the next step wins. `engine/structure.ts progressFollows` puts the bar at the step's stage. Forms: start, add sources, add from the library, a new edition. Draft: draft with AI, AI at work, AI proposals to review, and what is missing in questions, filing or rules. Release: waiting to be released. No next step keeps the calculated bar (Live) | Super visa: "Step 2 of 4 · Draft" beside "Review 84 AI proposals"; released Not ready: "Step 2 of 4 · Draft" beside "See 1 missing", never "Step 4 of 4" · fail-guard: Live with nothing to do keeps all four done |
+| Break m8: reads answered anyone | `readerOf` (`core.ts`): the catalogue, Structure, path options, where used and the name check need a known configuration person (author, content reviewer, approver). Nobody or an unknown name gets 401 "Who is this?"; a case person gets 403 "Not for case people" | each of the five: 401 / 401 / 403 refused, and 200 for all three configuration people |
+
 ## S2 Fixes after CHECK (27 Oct): reviewer `review.md` (9/10, 1 Major) and breaker `break-report.md` (3 Major)
 | Finding | Fix | Check (`check_w1_programs_s2.cjs`, 87/87) |
 |---|---|---|
