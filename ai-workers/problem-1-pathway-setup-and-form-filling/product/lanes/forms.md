@@ -11,11 +11,12 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124)
 stage: FIX
 owner: Builder
-next_action: Round 3 fixes (R3-1 every attach path guarded, R3-2 replay by the combination's own names, minors) — checks running; then push, a last fresh re-score, CHECK → Lead
+next_action: Last fresh re-score (≥ 8, no dimension < 4) and a breaker check of the round 3 fixes on the pushed commit; then CHECK → Lead with the score and CI
 blocked_by: none
 updated: 2026-10-27
 
 ## Log (last 10 lines)
+- 2026-10-27 · S4 · FIX (round 3) · checks green: finder 112/112, runs 67/67, run browser 20/20, library browser 51/51, canada 49/49; touched suites pass (s01 API 135 after the "+ Add" guard). US$0.
 - 2026-10-27 · S4 · FIX (round 3) · breaker round 3 on 26a360e: N1, N3–N8, m-a, m-c confirmed; 2 Majors (R3-1 Undo, upload-for-row and "+ Add" still attach a retiring form, release did not re-check; R3-2 replay lost the committed real answers after the program rename) + 6 minors; fixed with tests (one guard in addFormLine, Undo refusal, release re-check, replay by the combination's own names, id-spelling key, busy answer, focus rings). US$0.
 - 2026-10-27 · S4 · FIX (round 3) · fresh reviewer on 26a360e: Ship after fixes, journey 8.5/10 (pass bar met) but D4 at 3 from one new Major (Undo could bring back a form whose retire is open; the release retired it anyway); fix written (Undo refuses in words; the release re-checks and hands the retire back) with tests; breaker re-run in progress. US$0.
 - 2026-10-27 · S4 · FIX (round 2) · fixes checked: finder 108/108, runs 64/64, run browser 20/20, library browser 51/51, canada 49/49; touched suites all pass (demo, p80, launch, s01 api, s02 ×3, channels, structure browser); any 433, graph G3 1 (older). US$0.
@@ -25,4 +26,3 @@ updated: 2026-10-27
 - 2026-10-27 · S4 · EARLY-LOOK → BUILD · applied Lead note 2026-10-27 19:25 (slice 3 early look: Go FINISH and CHECK after five changes, C11.18); synced main (2fbc0a9). US$0.
 - 2026-10-27 · S4 · BUILD → EARLY-LOOK · four slice 2 fixes (empty/damaged file fails check 1; waiting reason once; cost line usual then ceiling; one way in, many files) and slice 3 library page (one list, Type/Used by/Status filters, search, board columns, ⋯ Replace/Re-read with AI/Where used/Retire/Restore/Delete with P-116 second person, row drawer, all states). library browser 32/32 (axe clean, screenshots slice3), runs 35/35, run browser 19/19, finder 83/83, canada 49/49, touched suites pass (s01 browser 128, s01 api 135, channels 53, demo 26, w102 23, p80 41, launch 39, smallfix, structure browser 61); any 434→433 (baseline lowered); graph G3 1 (older). US$0.
 - 2026-10-27 · S4 · EARLY-LOOK → BUILD · applied Lead note 2026-10-27 18:20 (slice 2 early look: Go slice 3 after four fixes; P-125, P-126); synced main (57f6f8c). P-125 already holds: the finder works from the combination's place alone (trail), never from a description. US$0.
-- 2026-10-27 · S4 · BUILD → EARLY-LOOK · slice 2: run API (GET/POST stop, active list) for finder, upload and field-map runs; real Stop ends the launcher's process group (M7; field-map cancel too); Wave 1 cap US$60 in the ledger itself + plans (m4); Upload PDF run rules first (M1: 'Rules read it … No AI call was made'; unread upload held, no AI on unverified files, D8); RunCard + top-bar RunChip; other lanes' files put back (103). runs 29/29, run browser 17/17 (axe clean, screenshots slice2), finder 83/83, touched suites pass except s02 slice1 'To review first view < 1 s' (1.2–2.5 s, not from this slice: A/B without the chip still slow). Founder feedback on S3/menu/S5 routed to the Lead (shared note). US$0.
