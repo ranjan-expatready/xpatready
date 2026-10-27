@@ -11,6 +11,36 @@ Forms lane, BUILD slice 1, 27 Oct 2026. Built to P-123 with the Lead response in
 * **M6**: the finder compares library forms with canada.ca too (US$0): same file → checked date only; same printed edition, other file → library edition stays, form marked "Newer file on canada.ca"; newer edition → held for today's edition impact review.
 * **canada.ca port** (`engine/canada.ts` pure parsers, `api/src/canada.ts` live/fixture adapters): official hosts only, on-host redirects (≤ 3), 20 s / 60 s, ≤ 25 MB, PDF magic; recorded copies by default (CI, tests, demo), live only with `STUDIO_CANADA=live` on the Mac.
 
+## Slice 2: shared run experience and Upload PDF (W1-07, P-110; M1, M7, m4)
+* **Run API** (`api/src/runs.ts`): `GET /api/runs/:id` serves every background run the same way: the finder, Upload PDF and field-map drafting. It gives the status in words, step n of m, each step with its kind (rules or AI), status, words, times and counts, the elapsed time, and "usually about" taken from the newest finished run of the same kind (none on a first run, never invented). It also gives cost spent against the worst case, the error with its next step, and where the run's card is. `POST /api/runs/:id/stop` and `GET /api/runs?active=1` (for the chip) complete it.
+* **Real Stop (M7):** the guarded launcher now runs in its own process group (`sources.ts launchProcess`, `detached`). Stop sends it a terminate signal, then forces it after 10 s, which ends the launcher and the drafting process it started. No step or call starts after Stop. A call already sent stays counted at its reserved worst case, because the provider may still bill it, and nothing of it is used. The same Stop now ends running field-map calls (`ai.ts cancel`).
+* **Wave 1 cap (m4):** `p2/policy.ts WAVE1_CAP_USD = 60`, counted from 26 Oct. The ledger itself refuses a reservation above it, so no paid call can pass it. Plans show the cap, what was spent and what is left, and refuse when the worst case is above what is left.
+* **Upload PDF, rules first (M1):** `POST /api/library/forms/upload` runs four steps that are all rules and cost US$0:
+  * check the file;
+  * read what it is: "Rules read it: … No AI call was made.";
+  * compare it with canada.ca: is it the very file the form page links, and which library guides name it;
+  * add it through the one intake: into the library, or held for a second person, and attached for `forCombination` + `forCode`.
+* **Build discovery D8:** when the rules cannot read an upload, AI is not called either. The drafting guard admits only canada.ca or second-person-approved files, so an unread hand upload waits for a person. The planned AI fallback could only ever help a canada.ca file whose identity the rules fail to read; none of the 65 recorded files fails, so it is not built.
+* **Web:** `components/run-card.tsx` holds `RunCard` and `RunChip`:
+  * the card is a bar in step segments, with the step list, AI steps marked, real counts, elapsed and usual time, "Taking longer than usual" past twice the usual time, the cost line, and Stop with a tooltip;
+  * the chip sits in the top bar (`App.tsx`, one line) and follows the person to any page;
+  * the AI work page shows the card for finder and upload runs;
+  * Shared library › Forms has an Upload PDF button with the card under it (the slice 3 library page replaces the old list).
+* **Checks:**
+  * `check_forms_s4_runs.ts` (4456): 29/29. Covers the run API shape, "usually about", the chip list, Stop ending a hanging call in seconds with no launcher left, the Wave 1 cap on a scratch ledger, and the three upload outcomes.
+  * `check_forms_s4_run_browser.cjs` (4457): 17/17, axe clean on every state. Screenshots in `screenshots/slice2/`.
+  * `check_forms_s4_finder.ts`: 83/83.
+  * No AI spent.
+* **Suites after slice 2.** They were run under this lane's own copy names, because other copies were running the same suites.
+  * Passing: launch paths 39, with one check updated to the M7 behaviour (a cancel during the paid call now ends the call), orchestration 22, drafting 48, f3a1c 33, p80 41, pdf 49, demo 26, s01 api 135, s01 browser 128, s02 fix 59, s02 slice2 56, structure browser 61, smallfix, w102 23, grounding 31, runtime 120, 63 and 99, p2 guard 75, p2 launch 53. `graph --check` shows only its older gap; any count 434.
+  * **Not passing: `check_screen02_slice1.cjs`, one check only.** "To review first view under 1 s" took 1.2 to 2.5 s on this Mac, even with nothing else running; every other check in that suite passes.
+  * It is not from this slice. Built without the new top-bar chip it was still 2.5 s. The cold first call of `/draft?summary=1` takes 1.3 s on the copy just merged from main (S2), then 18 ms.
+  * For the Lead: check it on CI, or on main as it stands now.
+* **Other lanes' files put back to main's versions (Lead ask):** 103 files (44 screenshots in `screens/01-programs-catalogue`, 31 in `screens/02-ai-work`, 23 in `screens/R1-thin-slice`, and 5 field-map stub-pass snapshots). Kept on purpose:
+  * the 11 new text inventories in `p1/inventory`, which the AI guard reads;
+  * the six finder prompts and schemas plus two stubs in `p2/prompts` and `p2/stubs`;
+  * the two real finder run records, their stub passes, the five ledger lines and the five launch tickets (evidence of the US$0.31).
+
 ## S5 and S6 asks built into slice 1 (Lead, 27 Oct)
 * **(1)** `GET /api/combinations/:id/forms/find/latest`: one read, every proposed form with {code, title, quote, conditionPlain, who, state, lineId, lineVersion, runId}. States: ATTACHED · DOWNLOADED_ATTACHED · NOT_FOUND · UPLOAD_WAITING_SECOND_PERSON · NEWER_FILE_SAME_EDITION · REMOVED_BY_PERSON, plus **TO_DECIDE** (the two rounds disagreed, P-121) and **NOT_FOR_THIS_APPLICATION** (the page names it as a separate application). S5 should draw those two as well.
 * **(2)** Find again / Redo never attach a removed line again (`removed_by_person`, "Add back" is a hand attach).

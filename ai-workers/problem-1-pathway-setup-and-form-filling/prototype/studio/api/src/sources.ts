@@ -2,16 +2,16 @@
 // AI field-map draft (p2/launch.ts: stub pass, then the live call under the existing route, input allowlist, ledger
 // and caps), a labelled replay of a saved real run, comparison with the shared library and the person's decisions.
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
-import { execFile, spawn } from "node:child_process";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { normalize, type LibraryField } from "../../engine/normalize.ts";
-import { EXPERIMENT_CAP_USD, LABEL, PARTS_DIR, RUN_CAP_USD } from "../../../p2/policy.ts";
+import { EXPERIMENT_CAP_USD, LABEL, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
 import { canonical } from "../../../contracts/rules.ts";
-import { costUsd } from "../../../p2/ledger.ts";
+import { costUsd, SpendLedger } from "../../../p2/ledger.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { assembleMerged, flagNearDuplicates, partOutputTokens, planDraft, type DraftPlan, type Prior } from "../../engine/parts.ts";
 import { compareEditions } from "../../engine/programs.ts";
@@ -194,7 +194,11 @@ export class Sources {
     const res = new Map<string, number>();
     for (const l of readFileSync(join(PROTOTYPE, "p2", "ledger", "spend.jsonl"), "utf8").split("\n").filter(Boolean)) { const r = JSON.parse(l); if (r.type === "reserve") res.set(r.id, r.worst_usd); else if (r.type === "settle") res.set(r.id, r.actual_usd); }
     const committed = [...res.values()].reduce((a, b) => a + b, 0);
-    return { committed_usd: Math.round(committed * 100) / 100, cap_usd: EXPERIMENT_CAP_USD, remaining_usd: Math.round((EXPERIMENT_CAP_USD - committed) * 100) / 100, per_run_cap_usd: RUN_CAP_USD };
+    // S4 (m4, P-110): Wave 1's own cap (US$60) inside the experiment cap; plans show it and refuse above it.
+    const wave = new SpendLedger(join(PROTOTYPE, "p2", "ledger")).committedSince(WAVE1_START);
+    const remaining = Math.min(EXPERIMENT_CAP_USD - committed, WAVE1_CAP_USD - wave);
+    return { committed_usd: Math.round(committed * 100) / 100, cap_usd: EXPERIMENT_CAP_USD, remaining_usd: Math.round(remaining * 100) / 100, per_run_cap_usd: RUN_CAP_USD,
+      wave: { name: "Wave 1", cap_usd: WAVE1_CAP_USD, spent_usd: Math.round(wave * 100) / 100, remaining_usd: Math.round((WAVE1_CAP_USD - wave) * 100) / 100, since: WAVE1_START.slice(0, 10) } };
   }
 
   /** The guarded job file for one form's field-map draft (P2 launch reads it). Returns the job id and input hash. */
@@ -334,6 +338,7 @@ export class Sources {
       if (!(await wanted())) { s.status = "not started"; s.error = "cancelled or reset before this part started; nothing was sent"; return; }
       s.status = "running"; await progress();
       const stub = await this.launchOnce(s.job_id, "stub"), sj = lastJson(stub.out);
+      if (stub.stopped) { s.status = "not started"; s.error = "stopped during its stub pass (M7); nothing was sent"; return; }
       if (stub.code !== 0) { s.status = "failed"; s.error = `stub pass failed: ${this.plainRefusal(String(sj?.refused ?? stub.err).slice(-300))}`; return; }
       if (mode === "stub") { s.status = "done"; s.run_file = sj?.run_file ? String(sj.run_file).replace(`${SOLUTION}/`, "") : null; return; }
       const p = parts.find((x) => x.index === s.index)!;
@@ -403,7 +408,7 @@ export class Sources {
   /** One run of the guarded launcher (p2/launch.ts) for a job file: the only way the Studio starts a drafting call. One
    *  launch at a time in this server, and a launch the experiment ledger refused because another runner (another copy)
    *  holds it is started again after a pause: refused before any call, so nothing was spent (break B3). */
-  async launchOnce(jobId: string, mode: "stub" | "live", wanted?: () => Promise<boolean>): Promise<{ code: number; out: string; err: string; cancelled?: boolean }> {
+  async launchOnce(jobId: string, mode: "stub" | "live", wanted?: () => Promise<boolean>): Promise<{ code: number; out: string; err: string; cancelled?: boolean; stopped?: boolean }> {
     const turn = this.launching.then(async () => {
       for (let n = 0; ; n++) {
         // A cancel is honoured up to the moment a paid call starts (QA-31 break M1): a live launch can wait its turn behind
@@ -418,15 +423,32 @@ export class Sources {
     return turn;
   }
 
-  private launchProcess(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string }> {
+  private launchProcess(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string; stopped?: boolean }> {
     return new Promise((res) => {
       // P-80: a form approved in the product is admitted only from this copy's approved folder, named to the launcher.
       const approved = /^studio-fieldmap-approved-[0-9a-f]{12}/.test(jobId) ? ["--approved-dir", APPROVED_DIR()] : [];
-      const p = spawn(NODE, [LAUNCHER, "--job", jobId, `--${mode}`, ...approved], { cwd: ROOT, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
+      // S4 (M7, P-110): the launcher runs in its own process group, so Stop ends it and the drafting process it started.
+      const p = spawn(NODE, [LAUNCHER, "--job", jobId, `--${mode}`, ...approved], { cwd: ROOT, detached: true, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
+      this.children.set(jobId, p);
       let out = "", err = "";
       p.stdout.on("data", (d) => (out += d)); p.stderr.on("data", (d) => (err += d));
-      p.on("close", (code) => res({ code: code ?? 1, out, err }));
+      p.on("close", (code, signal) => { if (this.children.get(jobId) === p) this.children.delete(jobId); res({ code: code ?? 1, out, err, ...(signal ? { stopped: true } : {}) }); });
     });
+  }
+
+  /** Launches running now, by job id (one at a time per job). */
+  private children = new Map<string, ChildProcess>();
+  /** S4 (M7): Stop really ends a running AI call: terminate the launcher's process group, then force it after 10 s. No
+   *  call starts after it; a call already sent stays counted in the ledger at its reserved worst case (the provider
+   *  may still bill it). Returns the job ids it stopped. */
+  stopLaunches(match: (jobId: string) => boolean): string[] {
+    const hit = [...this.children.entries()].filter(([id]) => match(id));
+    for (const [, p] of hit) {
+      const group = (sig: NodeJS.Signals) => { try { process.kill(-p.pid!, sig); } catch { /* already ended */ } };
+      group("SIGTERM");
+      setTimeout(() => { if (p.exitCode === null && p.signalCode === null) group("SIGKILL"); }, 10_000).unref();
+    }
+    return hit.map(([id]) => id);
   }
 
   async launch(id: string, attachmentId: string, jobId: string, mode: "live" | "stub") {
@@ -434,6 +456,7 @@ export class Sources {
     const lastJson = (s: string) => { for (const l of s.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
     try {
       const stub = await this.launchOnce(jobId, "stub");
+      if (stub.stopped) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", costUsd: 0, finishedAt: new Date(), message: "Cancelled before it started its AI call (stopped during the stub pass): nothing was sent. US$0.", detail: { job_id: jobId, steps } } }); return; }
       const sj = lastJson(stub.out);
       steps.push({ step: "stub pass", exit: stub.code, result: sj, error: stub.code ? stub.err.slice(-600) : undefined });
       if (stub.code !== 0) throw new Error(`stub pass failed: ${(sj?.refused ?? stub.err).toString().slice(-300)}`);
@@ -442,6 +465,7 @@ export class Sources {
       await this.db.draftingJob.update({ where: { id }, data: { message: `Calling the AI (guarded path; Claude Opus 5.5; up to US$5). ${took ? `The last real run of this form took about ${Math.max(1, Math.round(took / 60_000))} minutes.` : "A large form can take several minutes."} The whole form is drafted in one call, so there is no part-by-part progress yet.`, detail: { job_id: jobId, steps } } });
       const live = await this.launchOnce(jobId, "live", () => this.stillWanted(id));
       if (live.cancelled) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", costUsd: 0, finishedAt: new Date(), message: "Cancelled before it started its AI call (after the stub pass): nothing was sent. US$0.", detail: { job_id: jobId, steps } } }); return; }
+      if (live.stopped) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", finishedAt: new Date(), message: "Stopped while the AI call ran: the call was ended (M7). It stays counted at its reserved worst case; nothing of it is applied.", detail: { job_id: jobId, steps } } }); return; }
       const lj = lastJson(live.out);
       steps.push({ step: "live call", exit: live.code, result: lj, error: live.code ? live.err.slice(-800) : undefined });
       if (!lj?.run_file) {

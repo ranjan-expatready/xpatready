@@ -348,8 +348,12 @@ export class Ai implements OnModuleInit {
     if (["COMPLETED", "PARTIAL", "FAILED", "CANCELLED"].includes(b!.status)) fail("This AI work has already finished.", HttpStatus.CONFLICT);
     await this.db.aiBatch.update({ where: { id }, data: { cancelRequested: true } });
     const stopped = await this.db.draftingJob.updateMany({ where: { batchId: id, status: "QUEUED" }, data: { status: "CANCELLED", message: "Cancelled before it started: nothing was sent.", finishedAt: new Date() } });
-    const running = await this.db.draftingJob.count({ where: { batchId: id, status: "RUNNING" } });
-    await this.audit.log(b!.workspaceId, actor.id, "cancelled", "AI work", id, `${actor.name} cancelled AI work for ${b!.scopeLabel}: ${stopped.count} queued steps stopped, ${running} already running (a sent AI call cannot be recalled; its output will not be applied)`);
+    // S4 (M7, P-110): a running step's AI call is ended too (its launcher's process group); counted at its reserved worst case.
+    const runningJobs = await this.db.draftingJob.findMany({ where: { batchId: id, status: "RUNNING" }, select: { detail: true } });
+    const ids = new Set(runningJobs.map((j) => (j.detail as { job_id?: string } | null)?.job_id).filter((x): x is string => !!x));
+    const ended = this.sources.stopLaunches((jobId) => [...ids].some((x) => jobId === x || jobId.startsWith(`${x}-p`)));
+    const running = runningJobs.length;
+    await this.audit.log(b!.workspaceId, actor.id, "cancelled", "AI work", id, `${actor.name} stopped AI work for ${b!.scopeLabel}: ${stopped.count} queued steps stopped, ${running} running (${ended.length} AI call${ended.length === 1 ? "" : "s"} ended; a call already sent is counted at its reserved worst case; nothing of it is applied)`);
     await this.settle(id);
     return { stopped: stopped.count, still_running: running, ...(await this.batch(id)) };
   }

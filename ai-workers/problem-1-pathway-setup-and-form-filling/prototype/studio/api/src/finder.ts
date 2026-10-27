@@ -427,6 +427,7 @@ export class Finder implements OnModuleInit {
     if (stub.code !== 0) return { ok: false, costUsd: 0, reason: `The guarded AI route refused the job before any call: ${String(sj?.refused ?? stub.err).slice(-300)}` };
     const live = await this.sources.launchOnce(jobId, "live", wanted);
     if (live.cancelled) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped before the AI call was sent: nothing was charged." };
+    if (live.stopped) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped while the AI call ran: the call was ended. It stays counted at its reserved worst case (the provider may still bill it); nothing of it is used." };
     const lj = last(live.out);
     if (!lj?.run_file) {
       const why = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).trim() || `the launcher stopped (exit ${live.code})`;
@@ -609,6 +610,9 @@ export class Finder implements OnModuleInit {
     if (!b || b.operation !== FINDER_OPERATION) throw problem(404, "Not found", "This form-finder run no longer exists.");
     if (!["QUEUED", "RUNNING"].includes(b.status)) throw problem(409, "Already ended", `This run has already ended (${b.status.toLowerCase()}).`);
     await this.db.aiBatch.update({ where: { id: batchId }, data: { cancelRequested: true, message: "Stopping" } });
+    // M7: an AI round running now is ended (its launcher's process group): terminate, then force after 10 s.
+    const key = slug(((b.plan as unknown as FinderPlan).combination.trail ?? []).join(" ")).slice(0, 40).replace(/_/g, "-");
+    this.sources.stopLaunches((jobId) => jobId.startsWith("studio-finder-") && jobId.endsWith(`-${key}`));
     await this.audit.log(b.workspaceId, actor.id, "stopped", "form finder", batchId, `${actor.name} stopped the form finder for ${b.scopeLabel.split("|")[1] ?? "a combination"}`);
     return this.view(batchId);
   }

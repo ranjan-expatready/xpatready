@@ -3,13 +3,16 @@
 // through api/src/lifecycle.ts), "Replace with a new edition" checked against canada.ca, and the hand actions on a
 // combination's forms list: attach from the library, remove (stays in the library) and Undo of the last change.
 // Buttons for these come with S3/S5 (combination) and slice 3 (library page); every action is server-checked here.
-import { Body, Controller, Delete, Get, Headers, HttpException, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, HttpException, Inject, Injectable, Param, Post, Query, UploadedFiles, UseInterceptors } from "@nestjs/common";
+import { AnyFilesInterceptor } from "@nestjs/platform-express";
+import { MAX_BYTES } from "./intake.ts";
+import { UploadRuns } from "./upload-run.ts";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { manifest } from "../../engine/import.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { officialUrl, parseFormPage } from "../../engine/canada.ts";
-import { AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, UndoBody } from "../../contracts/form-library.ts";
+import { AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { canadaSource, type CanadaSource } from "./canada.ts";
 import { ACTORS, actorOf, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { Finder } from "./finder.ts";
@@ -170,7 +173,12 @@ export class FormLibrary {
 /** S4 slice 1 routes (contract: contracts/form-library.ts). Kept in this lane's own file so shared API edits stay small. */
 @Controller("api")
 export class FormLibraryController {
-  constructor(@Inject(FormLibrary) private readonly lib: FormLibrary, @Inject(Finder) private readonly finder: Finder, @Inject(Lifecycle) private readonly lifecycle: Lifecycle) {}
+  constructor(@Inject(FormLibrary) private readonly lib: FormLibrary, @Inject(Finder) private readonly finder: Finder, @Inject(Lifecycle) private readonly lifecycle: Lifecycle, @Inject(UploadRuns) private readonly uploads: UploadRuns) {}
+  /** Upload PDF through the shared run (one file; rules first, M1); optional forCombination + forCode (S5 ask). */
+  @Post("library/forms/upload") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_BYTES, files: 1 } }))
+  upload(@Headers("x-actor") a: H, @UploadedFiles() files: { originalname: string; buffer: Buffer }[] | undefined, @Body() b: { forCombination?: string; forCode?: string } | undefined) {
+    return this.uploads.start(actorOf(a), files?.[0], b?.forCombination && b?.forCode ? { combinationId: String(b.forCombination), code: normaliseCode(String(b.forCode)) } : undefined);
+  }
   @Post("combinations/:id/forms/find/plan") plan(@Param("id") id: string, @Body() b: unknown) { return this.finder.plan(id, b); }
   @Post("combinations/:id/forms/find") find(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.finder.launch(actorOf(a), id, b); }
   @Get("combinations/:id/forms/find") latest(@Param("id") id: string) { return this.finder.latest(id); }
