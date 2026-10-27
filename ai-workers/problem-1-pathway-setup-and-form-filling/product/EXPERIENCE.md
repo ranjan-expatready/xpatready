@@ -4,6 +4,7 @@
 
 ## 0. Principle (founder, 21 Oct, P-37)
 * [M] **Persona first, proven patterns, nothing extra.** For each persona (content publisher, approver, case officer, client) use the best proven pattern from leading products (list + detail panel, task-first "Needs you" views, bulk accept with side-by-side review, ⌘K search, progressive disclosure); simple and effective; no novelty for its own sake and no over-engineering. Every screen is seen and agreed in the clickable journey before it is built (P-36).
+* [M] **Modern by default, information first (founder, 27 Oct).** Wherever a screen is built, choose the modern, sleek element over the plain one (cards, inline status, side panels, clear empty states, calm motion), but put scalability, ease of use and the quality and ease of information gathering first, with the look alongside, never instead. Anything complex gets a helpful explanation where it is used (a rich tooltip, an inline hint or a short "how it works" panel) so anyone can use it unaided. Neither over-engineered nor under-engineered: the right amount for the persona and the task.
 
 ## 1. Look
 * [M] **Coherent look, free layouts** (`design/TEAM-PATTERNS.md`, P-48): ExpatReady brand kit, tokens, type scale and the team's components keep one look; each screen's layout and flow follow its capability; the team's style guide is a reference, not a template.
