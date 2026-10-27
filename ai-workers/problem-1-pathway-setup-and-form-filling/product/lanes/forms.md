@@ -7,14 +7,14 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124)
-stage: FIX
-owner: Builder
-next_action: Finish the CHECK fixes (1 Must, 8 review Majors, 7 break Majors, cheap Minors; a test each), rerun the checks, then CHECK → Lead
+stage: CHECK
+owner: Lead
+next_action: Lead checks the S4 fixes (build-notes "Fixes after CHECK") and decides merge or another round
 blocked_by: none
 updated: 2026-10-27
 
 ## Log (last 10 lines)
-- 2026-10-27 · S4 · CHECK → FIX · reviewer Ship after fixes (6.5/10; 1 Must, 8 Majors) and breaker (1 Blocker = the Must, 7 Majors): fixes written with a test each (uses and delete rules, Undo lock, job ids, replay by content, pid files, quote rule, Load sample guides, drawer, focus, 1024, chip); runs 60/60, run browser 20/20, library browser 48/48, canada 49/49, finder rerun pending; any 433, graph G3 1 (older). US$0.
+- 2026-10-27 · S4 · CHECK → FIX → CHECK (owner Lead) · reviewer Ship after fixes (6.5/10; 1 Must, 8 Majors) and breaker (1 Blocker = the Must, 7 Majors): all Must/Blocker/Majors fixed with a test each (uses and delete rules P-51, delete never marked done when not done, quote and person rules, attach per line, Undo lock + line signature, unique job ids and exact Stop, launcher pid files, replay by content, no job files left, Load sample guides, live drawer, C11.18 review wording, held-upload next step, focus, 1024, compact chip, IMM 5802 type) + 11 Minors; 7 left for the Lead (build-notes). finder 98/98, runs 60/60, run browser 20/20, library browser 48/48, canada 49/49; touched suites pass (demo 26, p80 41, launch 39, s01 api 135, s02 slice2 56, s02 fix 59, s02 browser all, channels 53); any 433, graph G3 1 (older). AI US$0 new; S4 total US$0.31.
 - 2026-10-27 · S4 · BUILD → FINISH → CHECK · five changes: Used by as a trail (Program › Category › Sub-category); IRCC accepts value + AI · Sample / Set by a person · Sample tag, Not filed for guides/checklists, no invented PDF; guide date Updated on canada.ca / Read from canada.ca on; Load sample fills canada.ca pages for every form and IRCC accepts from saved real answers (1 form quotes it: D9); C11.18 set IRCC accepts by hand, second person on To review; errors said once; 390 px. runs 49/49, library browser 41/41 (axe clean, 1440/1024/390), run browser 19/19, finder 83/83, canada 49/49, touched suites pass (s01 browser 128, s01 api 135, channels 53, demo 26, w102 23, p80 41, launch 39, smallfix, structure browser 61); any 433; graph G3 1 (older). US$0.
 - 2026-10-27 · S4 · EARLY-LOOK → BUILD · applied Lead note 2026-10-27 19:25 (slice 3 early look: Go FINISH and CHECK after five changes, C11.18); synced main (2fbc0a9). US$0.
 - 2026-10-27 · S4 · BUILD → EARLY-LOOK · four slice 2 fixes (empty/damaged file fails check 1; waiting reason once; cost line usual then ceiling; one way in, many files) and slice 3 library page (one list, Type/Used by/Status filters, search, board columns, ⋯ Replace/Re-read with AI/Where used/Retire/Restore/Delete with P-116 second person, row drawer, all states). library browser 32/32 (axe clean, screenshots slice3), runs 35/35, run browser 19/19, finder 83/83, canada 49/49, touched suites pass (s01 browser 128, s01 api 135, channels 53, demo 26, w102 23, p80 41, launch 39, smallfix, structure browser 61); any 434→433 (baseline lowered); graph G3 1 (older). US$0.
