@@ -1,5 +1,14 @@
 # W1-structure-programs (W1-03/04/05) — build notes
 
+## S1-finish (BUILD, 27 Oct): Structure finish items — Lead note 27 Oct (P-117)
+| Item | Built | Browser check (`tests/check_w1_structure_s1finish.cjs`, 33/33) |
+|---|---|---|
+| 1 Pathway cards (founder's idea) | A row above the outline in each tab: "All pathways", one card per Pathway (name, combinations, "N need you" from the same counts as the outline), "+ Add pathway" (dashed; disabled with the reason for the approver). A card opens that Pathway's tree and closes the others; All opens all. The choice is in the address (`p=`); Expand all and Collapse all go back to All. Each card has a tooltip saying what a click does and what "need you" means. API: `needs` per name in `GET /structure`. | one card per Pathway + All + Add · counts match the API · All first · a card opens one and closes the other · in the address · tooltip · All reopens · Add opens the add row focused · Corporate has its own cards · approver: Add disabled, cards still open |
+| 2 "Used by" names each combination | Panel on a Pathway, program or category: "N combinations, M Live", then each combination below it by its path from there ("Study permits › Study permit › Outside Canada"), its state, and Open to its page (Not started ones have no setup, so no Open) | three paths listed · one Open with the right link, Not started has none · Open goes to the page |
+| 3 No toast over the outline or panel | The Structure page has no toasts: the add row says "Added "Tourist visa" under Visitors. … Type the next name, or Esc." The panel has its own status line above the footer ("Saved. …", "Moved …", "Sent to a second person …", errors in red). Other pages keep their toasts. | add, save and move each confirm inline and no toast is shown |
+| 4 Full-height left menu (app-wide) | The menu is now a white column with its border running the full page height. The menu inside it stays sticky and in view. | long page: the column reaches the page bottom, white · short page (Checks): fills the window · the menu is sticky |
+axe is clean on all 5 states at 1440 px, there is no sideways scroll at 1024 px, and no script errors. Screenshots are in `screenshots/s1-finish/`. Files: `web/src/pages/structure.tsx`, `web/src/App.tsx` (menu column), `api/src/structure.ts` + `programs.ts` + `contracts/structure.ts` (`needs`).
+
 ## Slice 2 (BUILD, 27 Oct): the Structure page — Lead Go 27 Oct (slice 1 passed; slices 1 and 2 merge together)
 
 ### Top 5 production improvements over the board (written before the page code)

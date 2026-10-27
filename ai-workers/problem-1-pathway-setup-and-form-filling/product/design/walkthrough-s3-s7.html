@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screens S3–S7 walkthrough</title>
+<!--
+  Wave 1 (P-117): how screens S3–S7 will look, with the founder's grilling answers of 27 Oct (P-118–P-121) and walkthrough feedback (P-123) built in. v2.
+  The founder marks each screen OK or Change in one pass; "Copy my marks" gives text to paste to the Lead.
+  Sources: screens/W1-structure-programs/concept.md §6 (S3), W1-form-library/concept-draft.md (S4),
+  W1-combination-workspace/concept-draft.md (S5, S7), W1-shared-library/concept-draft.md (S6).
+  Form numbers and titles are IRCC's; which forms a combination needs, counts and costs are Sample.
+-->
+<style>
+:root{--color-primary:#0862c5;--primary-50:#e6f4ff;--primary-100:#cce9ff;--color-surface:#f7f7f7;--color-surface-raised:#fff;--color-text:#2d2d2d;--color-text-muted:#737373;--color-text-link:#054e9c;--color-border:#d9d9d9;--color-border-strong:#bfbfbf;--orange-50:#fff3e0;--color-text-warn:#663200;--color-text-ok:#0f5c2e;--color-text-danger:#991b1b;--neutral-100:#eeeeee;--radius:8px;--font:'Inter Variable',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+--page:#e9ecef;--ink:#1f2328;--muted:#5f6670;--card:#fff;--line:#d9dce0;--ans:#0f5c2e;--ans-bg:#eefaf2;--ans-line:#a7dcb9;--pick:#5b3fa8;--pick-bg:#f3effc;--pick-line:#cfc2f0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#16181b;--ink:#e8eaed;--muted:#a2a8b0;--card:#202327;--line:#353a40;--ans:#8fe0ad;--ans-bg:#173323;--ans-line:#2e6b45;--pick:#c9b8ff;--pick-bg:#2a2340;--pick-line:#4d3f80}}
+:root[data-theme="dark"]{--page:#16181b;--ink:#e8eaed;--muted:#a2a8b0;--card:#202327;--line:#353a40;--ans:#8fe0ad;--ans-bg:#173323;--ans-line:#2e6b45;--pick:#c9b8ff;--pick-bg:#2a2340;--pick-line:#4d3f80}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.5 var(--font)}
+main{max-width:1240px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:20px;margin:0}h3{font-size:15px;margin:0 0 6px}
+.lede{color:var(--muted);margin:0 0 14px;max-width:900px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;color:var(--muted)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;padding:1px 7px;border-radius:999px;border:1px solid;white-space:nowrap;font-weight:600;vertical-align:middle}
+.tag.ans{color:var(--ans);border-color:var(--ans-line);background:var(--ans-bg)}
+.tag.pick{color:var(--pick);border-color:var(--pick-line);background:var(--pick-bg)}
+.tag.sample{color:#663200;border-color:#ffc773;background:#fff8ec}
+.tag.scaf{color:#663200;border-color:#ffc773;background:#fff3e0}
+nav.steps{position:sticky;top:0;z-index:5;background:var(--page);padding:10px 0;margin:14px 0 6px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+nav.steps a{display:flex;gap:8px;align-items:center;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:14px}
+nav.steps a b{font-size:12px;color:var(--muted)}
+nav.steps .mk{font-size:12px;font-weight:700;border-radius:999px;padding:0 7px;background:var(--neutral-100);color:#555}
+nav.steps .mk.ok{background:#dff5e7;color:#0f5c2e}nav.steps .mk.ch{background:#fde7e2;color:#8a2a17}
+section.scr{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin:22px 0;scroll-margin-top:70px}
+.scr-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.scr-head .n{font-weight:800;color:var(--color-primary);font-size:20px}
+.scr-head .st{font-size:13px;color:var(--muted)}
+.job{color:var(--muted);margin:4px 0 10px;max-width:980px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+@media (max-width:860px){.cols{grid-template-columns:1fr}}
+.box{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.box ul{margin:0;padding-left:18px}.box li{margin:4px 0}
+.box.a{border-color:var(--ans-line)}.box.p{border-color:var(--pick-line)}
+.box h3 .tag{margin-left:6px}
+.alt{color:var(--muted);font-size:13px}
+.mark{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--page)}
+.mark label{display:inline-flex;gap:6px;align-items:center;font-weight:600;cursor:pointer}
+.mark textarea{flex:1 1 100%;min-height:54px;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;background:var(--card);color:var(--ink)}
+.flag{border-left:4px solid #d9a23a;background:#fff8ec;color:#5a3d00;padding:8px 12px;border-radius:6px;margin-top:10px;font-size:14px}
+/* ---- app mockups (team brand, light, as the app is) ---- */
+.frame{background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border-strong);border-radius:12px;overflow:hidden;box-shadow:0 2px 8px #0000001a;margin-top:10px;font-size:13px}
+.frame-title{font-size:12px;color:var(--color-text-muted);padding:6px 12px;background:#fff;border-bottom:1px solid var(--color-border)}
+.scroll{overflow-x:auto}
+.app{min-width:1080px}
+.topbar{display:flex;align-items:center;gap:12px;padding:8px 14px;background:#fff;border-bottom:1px solid var(--color-border)}
+.logo{font-weight:800;color:var(--color-primary);font-size:16px;display:flex;align-items:center;gap:6px}.logo i{display:inline-block;width:20px;height:20px;border-radius:5px;background:var(--color-primary)}
+.spacer{flex:1}
+.runchip{font-size:12px;border:1px solid var(--primary-100);background:var(--primary-50);color:var(--color-text-link);border-radius:999px;padding:2px 10px;font-weight:600}
+.demo{font-size:12px;background:var(--orange-50);color:var(--color-text-warn);border-radius:6px;padding:3px 8px;position:relative}
+.shell{display:grid;grid-template-columns:190px 1fr}
+.side{background:#fff;border-right:1px solid var(--color-border);padding:12px 8px;min-height:100%}
+.side .grp{font-size:11px;color:var(--color-text-muted);margin:12px 8px 4px;text-transform:uppercase;letter-spacing:.03em}
+.side a{display:block;padding:5px 8px;border-radius:6px;color:var(--color-text);text-decoration:none}.side a.on{background:var(--primary-50);color:var(--color-text-link);font-weight:600}
+.side a .b{float:right;font-size:11px;background:var(--color-primary);color:#fff;border-radius:999px;padding:0 6px}
+.mainp{padding:16px 20px;position:relative;min-width:0}
+.crumb{font-size:12px;color:var(--color-text-muted);margin-bottom:4px}.crumb a{color:var(--color-text-link);text-decoration:none}
+.ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ph h1{font-size:21px;margin:0}
+.sub{color:var(--color-text-muted);margin:2px 0 10px}
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:var(--radius);border:1px solid var(--color-border-strong);background:#fff;color:var(--color-text);font:inherit;font-weight:500;white-space:nowrap}
+.btn.pr{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+.btn.pr.dis{background:#99c0ea;border-color:#99c0ea}
+.btn.sm{height:26px;padding:0 9px;font-size:12px}.btn.gh{border-color:transparent;background:transparent;color:var(--color-text-link)}
+.btn.dg{color:#fff;background:#dc2626;border-color:#dc2626}
+.i{display:inline-flex;width:15px;height:15px;border-radius:50%;border:1.5px solid var(--color-text-muted);color:var(--color-text-muted);font-size:10px;align-items:center;justify-content:center;font-weight:700;cursor:help}
+.card{background:#fff;border:1px solid var(--color-border);border-radius:10px;padding:14px;margin-bottom:12px}
+.card h4{margin:0 0 8px;font-size:14px}
+.fld{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fld .l{font-size:12px;font-weight:600;display:flex;gap:6px;align-items:center}
+.req{font-size:11px;color:var(--color-text-muted);font-weight:500}
+.in{height:32px;border:1px solid var(--color-border-strong);border-radius:var(--radius);background:#fff;padding:0 10px;display:flex;align-items:center;color:var(--color-text)}
+.in.dd:after{content:"▾";margin-left:auto;color:var(--color-text-muted)}
+.in.ro{background:var(--color-surface);color:var(--color-text-muted)}
+.ta{border:1px solid var(--color-border-strong);border-radius:var(--radius);background:#fff;padding:8px 10px;min-height:52px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{font-size:12px;color:var(--color-text-muted)}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;border:1px solid var(--color-border);background:#fff;white-space:nowrap}
+.chip.ok{color:var(--color-text-ok);border-color:#a7dcb9;background:#eefaf2}
+.chip.warn{color:var(--color-text-warn);border-color:#ffc773;background:var(--orange-50)}
+.chip.bad{color:var(--color-text-danger);border-color:#f3b4b4;background:#fdf0f0}
+.chip.ai{color:#5b3fa8;border-color:#cfc2f0;background:#f3effc}
+.chip.blue{color:var(--color-text-link);border-color:var(--primary-100);background:var(--primary-50)}
+.opening{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--primary-100);background:var(--primary-50);border-radius:10px;padding:10px 12px}
+.trail b{font-weight:600}.trail .sep{color:var(--color-text-muted);margin:0 5px}
+table.t{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--color-border);border-radius:var(--radius);overflow:hidden}
+table.t th{font-size:11px;font-weight:600;color:var(--color-text-muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--color-border)}
+table.t td:first-child,table.t td:nth-child(3){white-space:nowrap}
+table.t td{padding:7px 10px;border-bottom:1px solid var(--color-border);vertical-align:middle}
+table.t tr.gp td{background:var(--color-surface);font-size:11px;font-weight:700;color:var(--color-text-muted);padding:5px 10px}
+.panel{position:absolute;top:0;right:0;bottom:0;width:390px;background:#fff;border-left:1px solid var(--color-border-strong);box-shadow:-6px 0 18px #0000001f;padding:14px 16px;overflow:hidden}
+.panel h4{margin:0 0 6px;font-size:15px}
+.run{border:1px solid var(--primary-100);border-radius:10px;padding:10px;background:#fbfdff;margin:8px 0}
+.bar{display:flex;gap:3px;margin:6px 0}
+.bar span{flex:1;height:8px;border-radius:4px;background:#e3e7ec}
+.bar span.d{background:var(--color-primary)}
+.bar span.c{background:repeating-linear-gradient(45deg,#5aa0e8 0 6px,#8fc0f2 6px 12px)}
+.steplist{font-size:12px;margin:4px 0 0;padding-left:0;list-style:none}.steplist li{display:flex;gap:6px;margin:2px 0}
+.prop{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--color-border);border-radius:8px;padding:7px 9px;margin:6px 0}
+.prop .q{font-size:12px;color:var(--color-text-muted);font-style:italic}
+.cb{width:14px;height:14px;border:1.5px solid var(--color-border-strong);border-radius:3px;flex:none;margin-top:2px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff}
+.cb.on{background:var(--color-primary);border-color:var(--color-primary)}
+.cb.off{background:#eee;border-style:dashed}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--color-border);margin:10px 0 12px}
+.tabs span{padding:7px 12px;color:var(--color-text-muted);font-weight:500;border-bottom:2px solid transparent}
+.tabs span.on{color:var(--color-text-link);border-bottom-color:var(--color-primary);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.kpi{background:#fff;border:1px solid var(--color-border);border-radius:10px;padding:10px}.kpi .v{font-size:20px;font-weight:700}.kpi .s{font-size:12px;color:var(--color-text-muted)}
+.next{display:flex;gap:10px;align-items:center;border:1px solid var(--color-border);background:#fff;border-radius:10px;padding:10px 12px;margin:8px 0}
+.dialog{max-width:520px;background:#fff;border:1px solid var(--color-border-strong);border-radius:12px;box-shadow:0 8px 28px #0000002e;padding:16px;margin:10px auto}
+.dialog h4{margin:0 0 6px;font-size:16px}
+.menu{position:absolute;right:0;top:26px;background:#fff;border:1px solid var(--color-border-strong);border-radius:8px;box-shadow:0 6px 18px #00000026;width:260px;padding:4px;z-index:2;color:var(--color-text)}
+.menu div{padding:6px 10px;border-radius:6px}.menu div.h{background:var(--primary-50)}
+.toast{display:inline-flex;gap:10px;align-items:center;background:#1f2937;color:#fff;border-radius:8px;padding:7px 12px;font-size:12px}
+.toast a{color:#93c5fd;font-weight:600}
+.split{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+footer.bottom{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:22px}
+footer.bottom textarea{width:100%;min-height:60px;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;background:var(--card);color:var(--ink)}
+.copybtn{margin-top:10px;height:38px;padding:0 16px;border-radius:8px;border:0;background:var(--color-primary);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+#out{white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--page);border-radius:8px;padding:10px;margin-top:10px;display:none}
+.v2{border-left:4px solid var(--color-primary);background:var(--primary-50);color:#0b2e55;padding:8px 12px;border-radius:6px;margin:8px 0;font-size:14px}
+.stages{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0}
+.stg{border:1px solid var(--color-border);background:#fff;border-radius:8px;padding:6px 8px;font-size:12px;display:flex;flex-direction:column;gap:2px}
+.stg span{color:var(--color-text-muted)}.stg a{color:var(--color-text-link);font-weight:600;font-size:12px}
+.stg.done{border-color:#a7dcb9}.stg.now{border-color:var(--color-primary);background:#fbfdff}
+.chk{display:inline-block;font-size:11px;font-weight:600;color:var(--color-text-ok);background:#eefaf2;border:1px solid #a7dcb9;border-radius:999px;padding:0 6px;margin-right:3px;white-space:nowrap}
+</style>
+</head>
+<body>
+<main>
+<h1>Screens S3–S7: how they will look</h1>
+<p class="lede"><b>Version 2, 27 Oct:</b> rebuilt from your feedback. S4, S5 and S6 changed, and S3 and S7 gained small additions; each screen opens with a blue box saying what changed. Earlier: these are the five screens after Structure (S1) and Immigration programs (S2), in the order a content publisher works. Your answers of 27 Oct are built in. Mark each screen <b>OK</b> or <b>Change</b> with a line on what to change, then press <b>Copy my marks</b> at the bottom and paste the text to the Lead. Nothing is built until you say OK. Screens are built one at a time (P-117).</p>
+<div class="legend">
+  <span class="tag ans">Your answer · P-118…P-121</span> where one of your answers shows on the screen
+  <span class="tag pick">Lead's pick</span> a choice the Lead made from the concept; say Change to take the other option
+  <span class="tag sample">Sample</span> form lists, counts and costs until the immigration expert confirms or a live run measures them
+  <span class="tag scaf">Scaffolding</span> for the demo only, never in the product
+</div>
+
+<nav class="steps" aria-label="Screens">
+  <a href="#s3"><b>S3</b> New combination <span class="mk" data-mk="s3">—</span></a>
+  <a href="#s4"><b>S4</b> Form library <span class="mk" data-mk="s4">—</span></a>
+  <a href="#s5"><b>S5</b> Combination workspace <span class="mk" data-mk="s5">—</span></a>
+  <a href="#s6"><b>S6</b> Shared library <span class="mk" data-mk="s6">—</span></a>
+  <a href="#s7"><b>S7</b> Reset + Load sample <span class="mk" data-mk="s7">—</span></a>
+</nav>
+
+<!-- ======================= S3 ======================= -->
+<section class="scr" id="s3" data-name="S3 New combination">
+  <div class="scr-head"><span class="n">S3</span><h2>New combination</h2><span class="st">You marked OK on 27 Oct · v2 adds two small points</span></div>
+  <p class="job">Job: open a new combination by picking where it sits in the Structure. Opens from Immigration programs. It is a page, not a pop-up, so nothing stacks on top of it.</p>
+  <div class="frame"><div class="frame-title">Immigration programs › New combination · 1440 px</div><div class="scroll"><div class="app">
+    <div class="topbar"><span class="logo"><i></i>Product Studio</span><span class="spacer"></span><span class="demo">Demo ▾</span></div>
+    <div class="shell">
+      <div class="side"><a>To review</a><a class="on">Immigration programs</a><a>Structure</a><div class="grp">Shared library</div><a>Forms</a><a>Person roles</a><a>Fields</a><a>Sections</a><a>Document types</a><a>Conditions</a><a>Checks</a><div class="grp">History</div><a>AI work</a><a>Releases</a><a>Activity</a></div>
+      <div class="mainp">
+        <div class="crumb"><a>Immigration programs</a> › New combination</div>
+        <div class="ph"><h1>New combination</h1></div>
+        <p class="sub">Pick where it sits. Every name comes from the Structure; add a missing one right here.</p>
+        <div class="g2">
+          <div class="card"><h4>1 · Describe it <span class="hint">(optional)</span></h4>
+            <div class="ta">Visitor visa for a family applying from outside Canada</div>
+            <div class="g2" style="margin-top:8px">
+              <div class="fld"><span class="l">How to find where it sits <span class="i" title="Rules then AI: matches your words to the Structure for free; asks AI only if no sure match is found.">i</span></span><div class="in dd">Rules then AI</div></div>
+              <div class="fld"><span class="l">Cost</span><div class="in ro">Free first · AI only if needed, about US$0.01</div></div>
+            </div>
+            <p class="hint" style="margin:8px 0 0">Rules found a sure match: <b>Visitors › Visitor visa</b>. No AI call was made.</p>
+          </div>
+          <div class="card"><h4>2 · Where it sits</h4>
+            <div style="margin-bottom:8px"><span class="chip blue" title="Who applies: a person and their family, or an employer.">Pathway type: Retail</span></div>
+            <div class="g2">
+              <div class="fld"><span class="l">Pathway <span class="req">Required</span></span><div class="in dd">Temporary residence</div></div>
+              <div class="fld"><span class="l">Program <span class="req">Required</span></span><div class="in dd">Visitors</div></div>
+              <div class="fld"><span class="l">Category <span class="req">Required</span></span><div class="in dd">Visitor visa</div></div>
+              <div class="fld"><span class="l">Sub-category</span><div class="in ro">Not used under Visitor visa</div></div>
+            </div>
+            <div style="margin-top:8px;border:1px dashed var(--color-border-strong);border-radius:8px;padding:8px">
+              <div class="hint"><b>+ Add to structure</b> · Category under Visitors</div>
+              <div class="in" style="margin:4px 0">Visiter visa</div>
+              <div class="hint"><span class="chip ok">Rules: no exact name</span> <span class="chip ai">AI: did you mean "Visitor visa"? It exists under Visitors.</span> <a style="color:var(--color-text-link)">Use it</a> · <a style="color:var(--color-text-link)">Add mine anyway</a></div>
+            </div>
+          </div>
+        </div>
+        <div class="opening"><span class="hint"><b>You are opening</b></span><span class="trail"><b>Retail</b><span class="sep">›</span><b>Temporary residence</b><span class="sep">›</span><b>Visitors</b><span class="sep">›</span><b>Visitor visa</b><span class="sep">›</span><span class="hint">no sub-category</span></span><span class="chip">Not started</span><span class="spacer"></span><span class="btn pr">Start setup</span></div>
+        <p class="hint" style="margin-top:8px">If something is missing, the button says what: <span class="btn pr dis sm">Pick a category to continue</span>. "Linked to" is gone.</p>
+        <div class="v2" style="margin-top:8px"><b>New in v2</b>
+          <div class="hint" style="margin-top:4px">If this trail already exists, the button changes to <span class="btn sm">Open existing Visitor visa</span>, so a combination is never made twice.</div>
+          <div class="hint" style="margin-top:4px"><b>Start setup</b> also starts <b>finding its forms and checklists</b>: the workspace opens on its Forms tab with the finder already running (rules first, then AI, about US$0.20; US$0 replay in the demo).</div>
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="cols">
+    <div class="box a"><h3>Built in from your answers</h3><ul>
+      <li><span class="tag ans">P-118 Q1</span> AI only <b>checks</b> names here: duplicate check plus "did you mean". It proposes one name when nothing matches. It does not draft whole branches (that waits for W3).</li>
+      <li><span class="tag ans">P-105</span> Rules then AI, Rules only, AI only, each explained, with the cost shown before any AI call.</li>
+      <li><span class="tag ans">P-106</span> "Linked to / Next step of / Supported by" removed. A link to an employer's case is made on the case.</li>
+      <li><span class="tag ans">C4, C5</span> Light "Required" marks. The disabled button names what is missing. "You are opening" confirms the full trail.</li>
+    </ul></div>
+    <div class="box p"><h3>Lead's picks</h3><ul>
+      <li><span class="tag pick">Page, not pop-up</span> so "Add to structure" never opens on top of another overlay. <span class="alt">Other option: a side panel over Immigration programs.</span></li>
+      <li><span class="tag pick">"Start setup"</span> opens the new combination's workspace (S5) on its Forms tab, since forms come first.</li>
+      <li><span class="tag pick">v2: no duplicate combinations; finder starts by itself</span> from your 27 Oct feedback. <span class="alt">Left for later: "Start from a similar combination", which would copy forms and people from an existing one. It is useful once there are dozens of combinations; with six it adds a moving part.</span></li>
+    </ul></div>
+  </div>
+  <div class="mark" data-for="s3"><span>S3:</span><label><input type="radio" name="s3" value="OK"> OK</label><label><input type="radio" name="s3" value="Change"> Change</label><textarea placeholder="What to change (optional for OK)"></textarea></div>
+</section>
+
+<!-- ======================= S4 ======================= -->
+<section class="scr" id="s4" data-name="S4 Form library (v2)">
+  <div class="scr-head"><span class="n">S4</span><h2>Form library: one list, upload through AI, every action</h2><span class="st">v2 after your 27 Oct feedback</span></div>
+  <div class="v2"><b>What changed from v1:</b> the five groups (on this combination, in the library, missing, proposed, guides and checklists) are gone. The library is now <b>one list with three filters</b>. Finding the forms a combination needs now <b>happens by itself</b> on that combination's Forms tab (S5), so the library is only the catalogue. <b>Upload PDF</b> goes through AI. Every row has <b>Replace, Re-read with AI, Retire and Delete</b>.</div>
+  <p class="job">Job: keep every IRCC form, guide and checklist once, in one list, for any combination to use. A person comes here to upload a form AI could not find, to replace an edition, or to retire one.</p>
+  <div class="frame"><div class="frame-title">Shared library › Forms, with Upload PDF running · 1440 px</div><div class="scroll"><div class="app" style="min-width:1200px">
+    <div class="topbar"><span class="logo"><i></i>Product Studio</span><span class="spacer"></span><span class="runchip" title="A run is going. Click to see it; it keeps going while you work elsewhere.">● Reading IMM 5532 · step 2 of 3</span><span class="demo">Demo ▾</span></div>
+    <div class="shell">
+      <div class="side"><a>To review</a><a>Immigration programs</a><a>Structure</a><div class="grp">Shared library</div><a class="on">Forms</a><a>Person roles</a><a>Fields</a><a>Sections</a><a>Document types</a><a>Conditions</a><a>Checks</a><div class="grp">History</div><a>AI work</a><a>Releases</a><a>Activity</a></div>
+      <div class="mainp" style="min-height:600px;padding-right:405px">
+        <div class="crumb"><a>Shared library</a> › Forms</div>
+        <div class="ph"><h1>Forms</h1><span class="spacer"></span><span class="btn pr">Upload PDF</span></div>
+        <p class="sub">Every IRCC form, guide and checklist, stored once. Combinations pick from here by themselves.</p>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+          <span class="hint"><b>Type</b></span><span class="chip blue">All 24</span><span class="chip">Forms 14</span><span class="chip">Guides 4</span><span class="chip">Checklists 6</span>
+          <span class="hint" style="margin-left:10px"><b>Used by</b></span><span class="in dd" style="height:26px;min-width:150px">Any combination</span>
+          <span class="hint" style="margin-left:10px"><b>Status</b></span><span class="chip">Needs your OK 1</span><span class="chip">Being read 1</span>
+          <span class="spacer"></span><span class="in" style="height:26px;min-width:170px;color:var(--color-text-muted)">Search number or title</span>
+        </div>
+        <table class="t">
+          <tr><th>Number</th><th>Title</th><th>Type</th><th>Edition</th><th>IRCC accepts <span class="i" title="What IRCC takes for this form, per portal. Sample until the expert confirms.">i</span></th><th>Used by</th><th>Status</th><th></th></tr>
+          <tr><td><b>IMM 5257</b></td><td>Application for visitor visa</td><td>Form</td><td>09-2023</td><td>PDF or online</td><td>Visitor visa</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
+          <tr><td><b>IMM 5707</b></td><td>Family Information Form</td><td>Form</td><td>01-2023</td><td>PDF</td><td>3 combinations</td><td><span class="chip ok">Ready</span></td><td style="position:relative"><b>⋯</b>
+            <div class="menu" style="top:22px">
+              <div class="h">Replace with a new edition…</div>
+              <div>Re-read with AI (fields and boxes)</div>
+              <div>See where it is used (3)</div>
+              <div>Retire <span class="hint">· kept for released versions</span></div>
+              <div style="color:var(--color-text-muted)">Delete <span class="hint">· only when nothing uses it</span></div>
+            </div></td></tr>
+          <tr><td><b>IMM 5409</b></td><td>Statutory Declaration of Common-Law Union</td><td>Form</td><td>01-2023</td><td>PDF</td><td>5 combinations</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
+          <tr><td><b>IMM 0008</b></td><td>Generic Application Form for Canada</td><td>Form</td><td>05-2026</td><td>Online in PR portal · PDF twin read</td><td>2 combinations</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
+          <tr><td><b>IMM 5532</b></td><td>Relationship Information and Sponsorship Evaluation</td><td>Form</td><td>02-2021</td><td>PDF</td><td>Spouse or partner</td><td><span class="chip blue">● Being read</span></td><td>⋯</td></tr>
+          <tr><td><b>IMM 5475</b></td><td>Authority to Release Personal Information…</td><td>Form</td><td>12-2022</td><td>PDF</td><td>5 combinations</td><td><span class="chip warn">Needs your OK</span></td><td>⋯</td></tr>
+          <tr><td><b>Guide 5256</b></td><td>Applying for a visitor visa</td><td>Guide</td><td>2026</td><td>Read by AI</td><td>Visitor visa</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
+          <tr><td><b>IMM 5484</b></td><td>Document Checklist: Visitor visa</td><td>Checklist</td><td>05-2026</td><td>Read by AI</td><td>Visitor visa</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
+          <tr><td><b>IMM 5257</b></td><td>Application for visitor visa (old edition)</td><td>Form</td><td>before 2023</td><td>—</td><td>1 released version</td><td><span class="chip">Retired</span></td><td>⋯</td></tr>
+        </table>
+        <div class="panel">
+          <h4>Upload PDF</h4>
+          <div class="in" style="height:40px;border-style:dashed;justify-content:center">imm5532e.pdf · 1.2 MB</div>
+          <div class="run">
+            <div style="display:flex;align-items:center;gap:8px"><b>Step 2 of 3 · AI reads what this file is</b><span class="spacer"></span><span class="btn sm">Stop</span></div>
+            <div class="bar"><span class="d"></span><span class="c"></span><span></span></div>
+            <div class="hint">9 s · usually about 20 s · about US$0.02 <span class="tag sample">Sample</span></div>
+            <ul class="steplist"><li>✓ Rules: a real PDF form, not damaged, fingerprint recorded (US$0)</li><li>● AI reads the form number, edition and title; a second AI round checks it without seeing the first answer</li><li>○ Rules: compare with the canada.ca form page (is this edition current?) and find which guides name it</li></ul>
+          </div>
+          <div class="card" style="margin:8px 0;padding:10px">
+            <div><b>IMM 5532</b> · edition 02-2021 <span class="chip ok">Current on canada.ca</span></div>
+            <div class="hint" style="margin-top:4px">Named by Guide 5289 → <b>Spouse or common-law partner</b></div>
+            <div class="hint">Not in the library yet · no older edition</div>
+          </div>
+          <div style="display:flex;gap:8px"><span class="btn pr">Add to library</span><span class="btn">Cancel</span></div>
+          <p class="hint" style="margin-top:8px">A hand upload is approved by a second person before any combination uses it. Then AI reads its boxes into proposals for To review.</p>
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="cols">
+    <div class="box a"><h3>Built in from your answers</h3><ul>
+      <li><span class="tag ans">27 Oct feedback</span> One lean list: type, used by and status are filters, not groups. Missing forms are shown where they are missing, on the combination's Forms tab (S5).</li>
+      <li><span class="tag ans">27 Oct feedback</span> <b>Upload PDF goes through AI</b>: rules check the file, AI reads what it is, a second AI round checks it, then rules compare it with canada.ca and find which guides name it.</li>
+      <li><span class="tag ans">27 Oct feedback · P-116</span> Every row: <b>Replace</b> (new edition; the old one is kept for released versions), <b>Re-read with AI</b>, <b>Retire</b>, <b>Delete</b>. Delete is offered only when nothing uses the form; otherwise Retire, so a released version never loses its form.</li>
+      <li><span class="tag ans">P-118 Q2, Q3</span> Forms come in only through the library. Guides and checklists live here, marked "Read by AI", never filled.</li>
+      <li><span class="tag ans">P-121 · P-110</span> Every AI step has two rounds plus the rules, with real steps, time, cost and a Stop. The chip in the top bar follows you.</li>
+    </ul></div>
+    <div class="box p"><h3>Lead's picks</h3><ul>
+      <li><span class="tag pick">One list, three filters</span> (type · used by · status) and a search. <span class="alt">Other option: group by combination. That is what made v1 heavy, and S5 already shows each combination's list.</span></li>
+      <li><span class="tag pick">Delete only when unused, otherwise Retire</span> (P-116 rules). <span class="alt">Other option: always allow Delete. No: released versions and filed cases point to an exact edition.</span></li>
+      <li><span class="tag pick">A file downloaded from canada.ca is approved by the person who confirms the combination's list; a hand upload needs a second person.</span> <span class="alt">Other option: a second person approves every file.</span></li>
+    </ul></div>
+  </div>
+  <div class="flag"><b>Good to know before you mark:</b> (1) canada.ca refused our scripted downloads (19–21 Oct), so the official PDFs on the Mac were fetched by hand. Downloading by itself in production must be tested from the team's servers. If canada.ca refuses there too, the finder gives one-click links: the person's browser downloads the file, and the library matches it by fingerprint. Status: Unconfirmed. (2) What IRCC accepts depends on the portal. For combinations 4 and 5, IMM 0008, 5669 and 5406 are online-only in the PR portal, so those cases get an answer sheet (P-113).</div>
+  <div class="mark" data-for="s4"><span>S4:</span><label><input type="radio" name="s4" value="OK"> OK</label><label><input type="radio" name="s4" value="Change"> Change</label><textarea placeholder="What to change (optional for OK)"></textarea></div>
+</section>
+
+<!-- ======================= S5 ======================= -->
+<section class="scr" id="s5" data-name="S5 Combination workspace (v2)">
+  <div class="scr-head"><span class="n">S5</span><h2>Combination workspace</h2><span class="st">v2 after your 27 Oct feedback</span></div>
+  <div class="v2"><b>What changed from v1:</b> <b>AI picks the forms and checklists itself</b> when setup starts. Each comes from the library, is downloaded from canada.ca, or is marked missing with an Upload button. You confirm the list once. Every form has <b>Redo with AI, Replace, Remove and Undo</b>, and each AI stage can be redone. "Who can be in this application" can now be <b>edited</b>.</div>
+  <p class="job">Job: set up one combination in the order you work: its forms, who can be on a case, the questions, the documents, then preview and release. One row of tabs. Overview only reports.</p>
+  <div class="frame"><div class="frame-title">Immigration programs › Visitor visa · Forms tab, right after Start setup · 1440 px</div><div class="scroll"><div class="app" style="min-width:1260px">
+    <div class="topbar"><span class="logo"><i></i>Product Studio</span><span class="spacer"></span><span class="runchip">● Matching boxes to shared fields · stage 3 of 4</span><span class="demo">Demo ▾</span></div>
+    <div class="shell">
+      <div class="side"><a>To review <span class="b">76</span></a><a class="on">Immigration programs</a><a>Structure</a><div class="grp">Shared library</div><a>Forms</a><a>Person roles</a><a>Fields</a><a>Sections</a><a>Document types</a><a>Conditions</a><a>Checks</a><div class="grp">History</div><a>AI work</a><a>Releases</a><a>Activity</a></div>
+      <div class="mainp">
+        <div class="crumb"><a>Retail</a> › <a>Temporary residence</a> › <a>Visitors</a> › Visitor visa</div>
+        <div class="ph"><h1>Visitor visa</h1><span class="chip warn">Not ready</span></div>
+        <div class="tabs"><span>Overview</span><span class="on">Forms</span><span>Questionnaires</span><span>Documents</span><span>Preview</span><span>Review and release</span></div>
+        <div class="stages">
+          <div class="stg done"><b>1 Find forms</b><span>✓ from Guide 5256 and IMM 5484 · both AI rounds agree</span><a>Redo</a></div>
+          <div class="stg done"><b>2 Read each form</b><span>✓ 5 of 5 read</span><a>Redo</a></div>
+          <div class="stg now"><b>3 Match to shared fields</b><span>● 76 proposals so far</span><a>Stop</a></div>
+          <div class="stg"><b>4 Draft questions and documents</b><span>○ waits for 3</span></div>
+        </div>
+        <div class="opening" style="margin:10px 0"><span><b>AI picked 6 forms and 1 checklist.</b> 4 were in the library, 1 was downloaded from canada.ca, 1 is missing. <span class="tag sample">Sample</span> until the immigration expert confirms.</span><span class="spacer"></span><span class="btn">Add a form from the library</span><span class="btn pr">Confirm the list</span></div>
+        <table class="t">
+          <tr><th>Form</th><th>Why AI picked it (IRCC's words)</th><th>Who fills it</th><th>Only if</th><th>Filed as by default</th><th>In the library</th><th></th></tr>
+          <tr><td><b>IMM 5257</b> Application for visitor visa</td><td class="hint">"must be completed by each person applying"</td><td>Each applicant</td><td>Always</td><td>PDF upload</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
+          <tr><td><b>IMM 5707</b> Family Information Form</td><td class="hint">"the version in the application package for your country"</td><td>Each applicant 18+</td><td>Is 18 or older</td><td>PDF upload</td><td><span class="chip ok">Ready</span></td><td style="position:relative"><b>⋯</b>
+            <div class="menu" style="top:22px;width:280px">
+              <div class="h">Redo with AI › find again · read again · match again</div>
+              <div>Replace with a new edition…</div>
+              <div>Remove from this combination <span class="hint">· stays in the library</span></div>
+              <div>Undo last change</div>
+            </div></td></tr>
+          <tr><td><b>IMM 5409</b> Statutory Declaration of Common-Law Union</td><td class="hint">"If you are in a common-law union"</td><td>Principal + partner</td><td>Is in a common-law union</td><td>Signed PDF upload</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
+          <tr><td><b>IMM 5476</b> Use of a Representative Form</td><td class="hint">"only if you" appoint a representative</td><td>Principal</td><td>Has a representative</td><td>Signed PDF upload</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
+          <tr><td><b>IMM 5475</b> Authority to Release Personal Information</td><td class="hint">"someone who will not act as your representative"</td><td>Principal</td><td>Names a designated person</td><td>PDF upload</td><td><span class="chip warn">Downloaded · approve</span></td><td>⋯</td></tr>
+          <tr><td><b>IMM 5645</b> Family Information Form (other country package)</td><td class="hint">Named for some visa offices instead of IMM 5707</td><td>Each applicant 18+</td><td>Visa office asks for it</td><td>—</td><td><span class="chip bad">Not found</span> <span class="btn sm">Upload PDF</span> <span class="btn sm gh">Find again</span></td><td>⋯</td></tr>
+          <tr><td><b>IMM 5484</b> Document Checklist</td><td class="hint">"Document Checklist: Temporary Resident Visa"</td><td colspan="3" class="hint">Checklist · not filed · AI reads it for the documents list</td><td><span class="chip ok">Ready</span></td><td>⋯</td></tr>
+        </table>
+        <p class="hint" style="margin-top:8px">"Remove from this combination" never deletes the form from the library. "Confirm the list" records who confirmed it and when. A change after a release makes a new version.</p>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="frame"><div class="frame-title">Same combination · Questionnaires tab · top card, being edited</div><div class="scroll"><div class="app"><div class="mainp" style="background:var(--color-surface)">
+    <div class="tabs"><span>Overview</span><span>Forms</span><span class="on">Questionnaires</span><span>Documents</span><span>Preview</span><span>Review and release</span></div>
+    <div class="card"><h4>Who can be in this application <span class="i" title="Sets which people a case may include and how many; each person marked as applicant gets their own forms, questions and documents.">i</span> <span class="chip ai">AI filled this from Guide 5256 · both rounds agree</span></h4>
+      <table class="t"><tr><th>Person</th><th>How many</th><th>Applicant <span class="i" title="An applicant gets their own forms, questions and documents.">i</span></th><th>Answered by</th><th>IRCC's words</th><th></th></tr>
+        <tr><td><span class="in dd" style="height:26px">Principal applicant</span></td><td><span class="in ro" style="height:26px">exactly 1</span></td><td>Yes</td><td><span class="in dd" style="height:26px">Themselves</span></td><td class="hint">"each person applying"</td><td></td></tr>
+        <tr><td><span class="in dd" style="height:26px">Spouse or partner</span></td><td><span class="in" style="height:26px">0 to 1</span></td><td><span class="cb on">✓</span></td><td><span class="in dd" style="height:26px">Themselves</span></td><td class="hint">"family members… apply at the same time"</td><td>✕</td></tr>
+        <tr><td><span class="in dd" style="height:26px">Child</span></td><td><span class="in" style="height:26px">0 to 6</span></td><td><span class="cb on">✓</span></td><td><span class="in dd" style="height:26px">Principal, under 18</span></td><td class="hint">"dependent children"</td><td>✕</td></tr>
+        <tr><td><span class="in dd" style="height:26px">Representative</span></td><td><span class="in" style="height:26px">0 to 1</span></td><td><span class="cb"></span></td><td>—</td><td class="hint">IMM 5476</td><td>✕</td></tr>
+      </table>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><span class="btn sm">+ Add a person</span><span class="hint">Picks from Shared library › Person roles. A new kind of person is added there, with the one Add.</span><span class="spacer"></span><span class="btn sm">Undo</span><span class="btn sm pr">Save</span></div>
+      <p class="hint" style="margin:6px 0 0">Rules check on Save: exactly one principal applicant · counts within what the forms allow (for example IMM 0008 takes 5 dependants, then IMM 0008 DEP) · removing a person who has forms asks first. Numbers <span class="tag sample">Sample</span>.</p>
+    </div>
+  </div></div></div></div>
+  <div class="cols">
+    <div class="box a"><h3>Built in from your answers</h3><ul>
+      <li><span class="tag ans">27 Oct feedback</span> <b>Forms and checklists are picked by AI</b> when setup starts. Each one: already in the library → used; on canada.ca → downloaded into the library first, then used; not found → <b>Upload PDF</b> (through AI) or <b>Find again</b>. You confirm the list once. Nothing is uploaded by hand when AI can find it.</li>
+      <li><span class="tag ans">27 Oct feedback</span> Every form: <b>Redo with AI</b> (find, read or match again), <b>Replace</b>, <b>Remove</b> (stays in the library), <b>Undo</b>. Each of the four AI stages has its own Redo or Stop.</li>
+      <li><span class="tag ans">27 Oct feedback · P-119</span> "Who can be in this application" is <b>editable</b>: AI fills it from the guide with IRCC's words, and you add, remove or change people, numbers and applicant ticks. Rules check it on Save.</li>
+      <li><span class="tag ans">P-118 Q5</span> Overview only reports: status, next step, counts, "Missing before firms can use it", plus a read-only summary of who can be in the application.</li>
+      <li><span class="tag ans">P-118 Q2, Q3</span> No "Sources and forms" tab, no "Choose file". The checklist shows as "not filed · AI reads it".</li>
+    </ul></div>
+    <div class="box p"><h3>Lead's picks</h3><ul>
+      <li><span class="tag pick">Confirm the list once</span>, not each form. Which forms a combination needs is an immigration value, so a person confirms it (the expert in production). <span class="alt">Other option: no confirm. Faster, but AI would decide the forms on its own.</span></li>
+      <li><span class="tag pick">"Who can be" edited at the top of Questionnaires</span>, where it decides each person's questions; Overview shows it read-only. <span class="alt">Other option: a separate Configuration tab.</span></li>
+      <li><span class="tag pick">Tabs in setup order</span> Overview · Forms · Questionnaires · Documents · Preview · Review and release. <span class="alt">Other option: a guided step rail.</span></li>
+      <li><span class="tag pick">"Filed as" default is one way per form</span>; the case officer may switch per case within what IRCC accepts. <span class="tag pick">Preview made simple</span> one sample family, person chips, three columns.</li>
+    </ul></div>
+  </div>
+  <div class="mark" data-for="s5"><span>S5:</span><label><input type="radio" name="s5" value="OK"> OK</label><label><input type="radio" name="s5" value="Change"> Change</label><textarea placeholder="What to change (optional for OK)"></textarea></div>
+</section>
+
+<!-- ======================= S6 ======================= -->
+<section class="scr" id="s6" data-name="S6 Shared library (v2)">
+  <div class="scr-head"><span class="n">S6</span><h2>Shared library: one review queue, one Add</h2><span class="st">v2 after your 27 Oct feedback</span></div>
+  <div class="v2"><b>What changed from v1:</b> High / Medium / Low were <b>not settings</b>. They showed how sure the AI was about each proposal it made from a form. v2 names them in plain words, <b>Ready to accept · Check · Decide</b>, and shows the three checks behind each row. The review queue covers the whole library and is grouped by the form a proposal came from. <b>Setup order is no longer a separate page.</b> Its job moved into the menu, the Add box and one help panel (see the right-hand box).</div>
+  <p class="job">Job: accept or fix what AI drafted from forms and checklists, quickly and without skipping the rules. Add a missing item in plain words without creating a duplicate.</p>
+  <div class="frame"><div class="frame-title">To review · from IMM 5257 · Ready to accept · 1440 px</div><div class="scroll"><div class="app">
+    <div class="topbar"><span class="logo"><i></i>Product Studio</span><span class="spacer"></span><span class="demo">Demo ▾</span></div>
+    <div class="shell">
+      <div class="side"><a class="on">To review <span class="b">76</span></a><a>Immigration programs</a><a>Structure</a><div class="grp">Shared library · <span style="text-transform:none;color:var(--color-text-link)">how it fits ⓘ</span></div><a>1 Forms</a><a>2 Person roles</a><a>3 Fields <span class="b">49</span></a><a>4 Answer lists <span class="b">9</span></a><a>5 Sections <span class="b">6</span></a><a>6 Document types <span class="b">12</span></a><a>7 Conditions</a><a>8 Checks</a><div class="grp">History</div><a>AI work</a><a>Releases</a><a>Activity</a></div>
+      <div class="mainp">
+        <div class="ph"><h1>To review</h1><span class="spacer"></span><span class="hint"><b>From</b></span><span class="in dd" style="height:28px;min-width:230px">IMM 5257 · Visitor visa (49)</span><span class="hint"><b>Kind</b></span><span class="in dd" style="height:28px;min-width:120px">All kinds</span></div>
+        <p class="sub">What AI drafted from the forms and checklists. Nothing enters the library until a person accepts it.</p>
+        <div class="tabs" style="margin-top:4px"><span class="on">Ready to accept (34)</span><span>Check (9)</span><span>Decide (6)</span></div>
+        <p class="hint" style="margin:-4px 0 8px"><b>Ready to accept</b>: the drafting AI, the checking AI and the rules all agree. <b>Check</b>: they agree on the match, but one detail differs (kind of answer, section). <b>Decide</b>: they disagree or a rule fails, so these are done one at a time.</p>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><span class="cb on">✓</span><span class="hint">All 34 on this tab selected · <a style="color:var(--color-text-link)">Deselect all</a></span><span class="spacer"></span><span class="btn sm">Open one by one</span><span class="btn sm pr">Accept selected (34)</span></div>
+        <table class="t">
+          <tr><th></th><th>Box on the form</th><th>AI proposes</th><th>Kind</th><th>Checks</th><th></th></tr>
+          <tr><td><span class="cb on">✓</span></td><td><b>Family name</b> <span class="hint">· box 1a, page 1</span></td><td>Reuse <b>Family name</b> <span class="hint">· used in 9 forms</span></td><td>Field</td><td><span class="chk">Draft ✓</span><span class="chk">Checker ✓</span><span class="chk">Rules ✓</span></td><td><a class="hint" style="color:var(--color-text-link)">See on form</a></td></tr>
+          <tr><td><span class="cb on">✓</span></td><td><b>Date of birth</b> <span class="hint">· box 1c</span></td><td>Reuse <b>Date of birth</b> <span class="hint">· used in 11 forms</span></td><td>Field</td><td><span class="chk">Draft ✓</span><span class="chk">Checker ✓</span><span class="chk">Rules ✓</span></td><td><a class="hint" style="color:var(--color-text-link)">See on form</a></td></tr>
+          <tr><td><span class="cb on">✓</span></td><td><b>Purpose of my visit</b> <span class="hint">· box 3a, a list</span></td><td>New answer list <b>Purpose of visit</b> <span class="hint">· 6 choices read from the form</span></td><td>Answer list</td><td><span class="chk">Draft ✓</span><span class="chk">Checker ✓</span><span class="chk">Rules ✓</span></td><td><a class="hint" style="color:var(--color-text-link)">See on form</a></td></tr>
+          <tr><td><span class="cb on">✓</span></td><td><b>Section: Details of visit</b> <span class="hint">· page 2</span></td><td>New section <b>Your visit</b></td><td>Section</td><td><span class="chk">Draft ✓</span><span class="chk">Checker ✓</span><span class="chk">Rules ✓</span></td><td><a class="hint" style="color:var(--color-text-link)">See on form</a></td></tr>
+        </table>
+        <div style="margin-top:8px"><span class="toast">34 accepted · the rules re-checked each one on the server · <a>Undo</a></span></div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="g2" style="margin-top:4px">
+    <div class="frame"><div class="frame-title">The one Add (Fields › Add) · P-120</div><div style="padding:6px">
+      <div class="dialog" style="margin:6px auto">
+        <h4>Add a field</h4>
+        <div class="fld"><span class="l">What do you need?</span><div class="in">Mother's date of birth</div></div>
+        <div class="g2" style="margin-top:6px"><div class="fld"><span class="l">About whom?</span><div class="in dd">Parent</div></div><div class="fld"><span class="l">Kind of answer <span class="chip ai">AI</span></span><div class="in dd">Date</div></div></div>
+        <div style="margin-top:8px;border:1px solid #cfc2f0;background:#f8f5ff;border-radius:8px;padding:8px">
+          <div><span class="chip ok">Rules: no exact name · synonyms checked</span></div>
+          <div style="margin-top:4px"><b>Did you mean "Parent › Date of birth"?</b> <span class="hint">Used in IMM 5645, IMM 5406</span></div>
+          <div style="margin-top:6px;display:flex;gap:6px"><span class="btn sm pr">Use existing</span><span class="btn sm">It's different…</span></div>
+        </div>
+        <div class="g2" style="margin-top:8px"><div class="fld"><span class="l">System name <span class="i" title="Built for you from the naming convention. Nobody types it.">i</span></span><div class="in ro mono">person.parent.date_of_birth</div></div><div class="fld"><span class="l">Section <span class="chip ai">AI</span></span><div class="in dd">Family information</div></div></div>
+      </div>
+    </div></div>
+    <div class="frame"><div class="frame-title">Setup order lives on in the Add box · Conditions › Add</div><div style="padding:6px">
+      <div class="dialog" style="margin:6px auto">
+        <h4>Add a condition</h4>
+        <div class="fld"><span class="l">When should it apply?</span><div class="in">If the person is married or common-law</div></div>
+        <div style="margin-top:8px;border:1px solid #ffc773;background:#fff8ec;border-radius:8px;padding:8px">
+          <b>This needs an answer list first: "Marital status".</b>
+          <div class="hint">Conditions are built on answers. AI found the list on IMM 5257 (box 5), waiting in To review.</div>
+          <div style="margin-top:6px;display:flex;gap:6px"><span class="btn sm pr">Accept "Marital status" and continue</span><span class="btn sm">Cancel</span></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="cols">
+    <div class="box a"><h3>Built in from your answers</h3><ul>
+      <li><span class="tag ans">27 Oct feedback</span> The confidence words are plain: <b>Ready to accept / Check / Decide</b>. Each row shows the three checks (drafting AI, checking AI, rules), the box on the form it came from, and "See on form".</li>
+      <li><span class="tag ans">27 Oct feedback</span> <b>One queue for the whole library</b>, filtered by the form a proposal came from and by kind (field, answer list, section, document type, condition, check). Adding a form fills the queue; you finish one form at a time.</li>
+      <li><span class="tag ans">P-121</span> Select all / Deselect all within a tab; bulk accept only on "Ready to accept"; one Undo; each item re-checked by the rule engine on the server; the second person at release sees what was bulk-accepted.</li>
+      <li><span class="tag ans">P-120</span> One Add in plain words; rules refuse an exact duplicate; AI asks "did you mean"; the system builds the system name.</li>
+    </ul></div>
+    <div class="box p"><h3>Lead's picks: setup order</h3><ul>
+      <li><b>What it was for:</b> (a) showing the order masters depend on each other (fields before answer lists before conditions), and (b) showing what is left. With AI drafting the masters from forms (P-120), people no longer follow the order by hand; the system does.</li>
+      <li><span class="tag pick">Keep the purpose, drop the page</span>: (1) the menu lists the masters <b>numbered in setup order</b> with a count waiting on each; (2) the <b>Add box stops a missing prerequisite</b> and offers it (right-hand dialog); (3) "how it fits ⓘ" opens one diagram. "What is left" is the To review count and each combination's "Missing before firms can use it".</li>
+      <li><span class="alt">Other option: keep it as a help page, "How the library fits together", with the steps table, linked from the menu. It would not be a front page.</span></li>
+      <li><span class="tag pick">Added in wave 1</span> Answer lists, Conditions, Person roles (editable through the one Add). The other 11 masters are "Later".</li>
+    </ul></div>
+  </div>
+  <div class="mark" data-for="s6"><span>S6:</span><label><input type="radio" name="s6" value="OK"> OK</label><label><input type="radio" name="s6" value="Change"> Change</label><textarea placeholder="What to change (optional for OK)"></textarea></div>
+</section>
+
+<!-- ======================= S7 ======================= -->
+<section class="scr" id="s7" data-name="S7 Reset + Load sample (v2)">
+  <div class="scr-head"><span class="n">S7</span><h2>Reset + Load sample</h2><span class="st">You marked OK on 27 Oct · v2 adds the coverage check · <span class="tag scaf">Scaffolding</span></span></div>
+  <div class="v2"><b>What changed from v1:</b> Load sample now runs the same <b>automatic form picking</b> as production (replayed at US$0). You land with each combination's forms picked and waiting for Confirm. You asked that every PDF and checklist be picked up. Below is the check against what is saved today: <b>11 files are still missing</b>.</div>
+  <p class="job">Job (demo only): start from blank, or from the starting point of your 5 Retail combinations and 1 Corporate Sample, with the official PDFs. Everything after that goes through the real screens and rules.</p>
+  <div class="g2">
+    <div class="frame"><div class="frame-title">Top bar › Demo ▾ › Reset demo…</div><div style="padding:8px;position:relative">
+      <div class="dialog">
+        <h4>Reset to blank?</h4>
+        <p style="margin:4px 0">Empties all configuration: structure, combinations, the Form library, fields, sections, document types, conditions, checks, releases and cases.</p>
+        <p class="hint" style="margin:4px 0">Kept: the official PDF copies (for Load sample), saved AI answers (for replay at US$0), the spend record.</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><span class="btn">Cancel</span><span class="btn dg">Reset everything</span></div>
+      </div>
+    </div></div>
+    <div class="frame"><div class="frame-title">Top bar › Demo ▾ › Load sample</div><div style="padding:8px">
+      <div class="dialog">
+        <h4>Load the sample starting point?</h4>
+        <ul style="margin:4px 0;padding-left:18px">
+          <li>Structure: 5 Retail combinations + 1 Corporate Sample (P-112)</li>
+          <li>Their official PDFs, guides and checklists in the Form library (from saved copies)</li>
+          <li>Form finder replayed for each combination: forms picked, waiting for your Confirm <span class="tag sample">Sample</span></li>
+        </ul>
+        <p class="hint" style="margin:4px 0">Saved copies: 18 of the 29 files these combinations need. Missing files show as "Not found · Upload PDF" on that combination, never hidden.</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><span class="btn">Cancel</span><span class="btn pr">Load sample</span></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="frame"><div class="frame-title">Coverage check, 27 Oct: what IRCC names for each sample combination vs the official copies saved on the Mac</div><div style="padding:10px;background:#fff">
+    <table class="t">
+      <tr><th>Combination</th><th>Forms, checklists and guides IRCC names <span class="tag sample">Sample</span></th><th>Saved</th><th>Missing</th></tr>
+      <tr><td><b>1 Visitor visa</b></td><td>IMM 5257, 5257 SCH1, 5707 or 5645, 5409, 5476, 5475 · checklist 5484 · guide 5256</td><td>8 of 9</td><td>IMM 5645 <span class="hint">(5707 is saved)</span></td></tr>
+      <tr><td><b>2 Study permit › Outside Canada</b></td><td>IMM 1294, 5707, 5646, 5409, 5476, 5475 · checklist 5483 · guide 5269</td><td>6 of 8</td><td>IMM 5646 custodian form · guide 5269</td></tr>
+      <tr><td><b>3 Work permit › LMIA, inside Canada</b></td><td>IMM 5710, 5707, 5409, 5476, 5475 · checklist 5556 · guide 5553</td><td>5 of 7</td><td>Checklist IMM 5556 · guide 5553</td></tr>
+      <tr><td><b>4 Provincial nominee › Express Entry</b></td><td>IMM 0008, 5669, 5406, 0008 DEP, 5562, 5409, 5476, 5475 · checklist is personalised online</td><td>6 of 8</td><td>IMM 0008 DEP · IMM 5562</td></tr>
+      <tr><td><b>5 Spouse or common-law partner</b></td><td>IMM 0008, 5669, 5406, 5562, 1344, 5532, 5409, 5604, 5476, 5475 · checklists 5533, 5589 · guide 5289</td><td>9 of 13</td><td>IMM 5562 · IMM 5604 · checklist 5589 · guide 5289</td></tr>
+      <tr><td><b>6 LMIA › High-wage</b> <span class="tag sample">Sample</span></td><td>EMP5626 (filled online in LMIA Online, no public PDF) · EMP5711 agreement</td><td>1 of 2</td><td>EMP5626 → answer sheet, as P-113</td></tr>
+    </table>
+    <p class="hint" style="margin:8px 0 0">Source: research of 26 Oct (screens/W1-form-library/forms-for-5-combinations.md) compared with official-sources/ircc and esdc today. 11 different files are missing; IMM 5562 serves two combinations. canada.ca refuses scripted downloads, so they are fetched in a browser.</p>
+  </div></div>
+  <div class="cols">
+    <div class="box a"><h3>Built in from your answers</h3><ul>
+      <li><span class="tag ans">P-108</span> Reset empties everything. Load sample brings only the 5 combinations (+1 Corporate Sample) and their PDFs.</li>
+      <li><span class="tag ans">27 Oct feedback</span> Every PDF, checklist and guide for the sample combinations is picked up. The 11 missing files are fetched before S7 is built, and Load sample shows any still-missing file openly.</li>
+      <li><span class="tag ans">P-121 · P-120</span> No demo shortcut past the rules. Replayed AI goes through the same review, bulk accept and rule engine. Masters arrive as AI drafts.</li>
+    </ul></div>
+    <div class="box p"><h3>Lead's picks</h3><ul>
+      <li><span class="tag pick">Finder replayed, you Confirm</span>, so the demo shows production's automatic picking from the first click (US$0). <span class="alt">Other option: lists already confirmed, which is faster but skips the confirm step.</span></li>
+      <li><span class="tag pick">Stays in the Demo menu</span> with orange "Demo" styling. It is never offered to firms and never ported to the team's product.</li>
+    </ul></div>
+  </div>
+  <div class="mark" data-for="s7"><span>S7:</span><label><input type="radio" name="s7" value="OK"> OK</label><label><input type="radio" name="s7" value="Change"> Change</label><textarea placeholder="What to change (optional for OK)"></textarea></div>
+</section>
+
+<footer class="bottom">
+  <h3>Anything else across S3–S7?</h3>
+  <textarea id="general" placeholder="Optional"></textarea>
+  <button class="copybtn" id="copy">Copy my marks</button> <span id="copied" style="color:var(--muted);margin-left:8px"></span>
+  <div id="out"></div>
+  <p style="color:var(--muted);font-size:13px;margin:10px 0 0">Your marks stay in this browser while you work (if it allows). The Lead reads only what you paste.</p>
+</footer>
+</main>
+<script>
+(function(){
+  var KEY='w1-walkthrough-s3-s7-v2';
+  var marks=document.querySelectorAll('.mark');
+  function save(){var d={};marks.forEach(function(m){var id=m.dataset.for;var r=m.querySelector('input:checked');d[id]={v:r?r.value:'',t:m.querySelector('textarea').value};});d.general=document.getElementById('general').value;try{localStorage.setItem(KEY,JSON.stringify(d));}catch(e){}paint();}
+  function paint(){marks.forEach(function(m){var id=m.dataset.for;var r=m.querySelector('input:checked');var b=document.querySelector('[data-mk="'+id+'"]');if(!b)return;b.textContent=r?r.value:'—';b.className='mk'+(r?(r.value==='OK'?' ok':' ch'):'');});}
+  try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d){marks.forEach(function(m){var x=d[m.dataset.for];if(!x)return;if(x.v){var r=m.querySelector('input[value="'+x.v+'"]');if(r)r.checked=true;}m.querySelector('textarea').value=x.t||'';});document.getElementById('general').value=d.general||'';}}catch(e){}
+  paint();
+  document.addEventListener('input',save);document.addEventListener('change',save);
+  document.getElementById('copy').addEventListener('click',function(){
+    var lines=['Walkthrough S3–S7 v2 marks:'];
+    marks.forEach(function(m){var sec=m.closest('section');var r=m.querySelector('input:checked');var t=m.querySelector('textarea').value.trim();lines.push('- '+sec.dataset.name+': '+(r?r.value:'not marked')+(t?' — '+t:''));});
+    var g=document.getElementById('general').value.trim();if(g)lines.push('- Anything else: '+g);
+    var text=lines.join('\n');var out=document.getElementById('out');out.textContent=text;out.style.display='block';
+    var done=function(){document.getElementById('copied').textContent='Copied. Paste it to the Lead.';};
+    try{navigator.clipboard.writeText(text).then(done,function(){document.getElementById('copied').textContent='Select the text below and copy it.';});}catch(e){document.getElementById('copied').textContent='Select the text below and copy it.';}
+  });
+})();
+</script>
+</body>
+</html>

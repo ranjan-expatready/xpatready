@@ -75,6 +75,8 @@ export type UsesView = {
 export type StructureNode = {
   key: string; level: Level; parentKey: string | null; label: string; pathwayType: PathwayType;
   allowedLocations: string[]; order: number; combinations: number; live: number; hasSetup: boolean;
+  /** Combinations below it that need work ("Needs work", P-49): the "need you" count on a Pathway card. */
+  needs: number;
   meaningChecked: boolean; version: number; retired: boolean; pending: { id: string; action: LifecycleAction } | null;
   /** A last-level name is a combination (BR-2): its state, Not started when it has no setup yet (id null). */
   combination: { id: string | null; status: "IN_SETUP" | "NOT_READY" | "READY"; statusText: string; retired: boolean } | null;

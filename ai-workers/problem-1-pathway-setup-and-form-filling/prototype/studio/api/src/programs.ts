@@ -175,7 +175,7 @@ export class Programs {
   /** Each last-level name's combination state, for the Structure outline (counts, Live, has setup, retired). */
   async leafStates() {
     const { rows } = await this.rows();
-    return new Map(rows.map((r) => [r.leaf.nodeKey, { combinationId: r.leaf.combinationId, live: r.leaf.live, retired: r.leaf.retired, status: r.leaf.status, statusText: r.leaf.statusText }]));
+    return new Map(rows.map((r) => [r.leaf.nodeKey, { combinationId: r.leaf.combinationId, live: r.leaf.live, needs: r.leaf.needs, retired: r.leaf.retired, status: r.leaf.status, statusText: r.leaf.statusText }]));
   }
 
   /** GET /catalogue: one request for the whole tree of one pathway, filtered and searched on the server. */
