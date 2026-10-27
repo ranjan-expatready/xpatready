@@ -170,6 +170,10 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
     const up = await (await fetch(`http://localhost:${PORT}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json() as { runId: string };
     run = (await settle(up.runId)).body;
     ok("round 3 R3-1: an upload for a combination's row is not attached while the form's retire is open, and says so", !/IMM 5604:/.test(sql(`select string_agg(lineage_key || ':' || status, ',') from combination_form where combination_id='${vv}'`) ?? "") && /Not attached to the combination|open on To review/.test(JSON.stringify(run)), run.message ?? run.error); }
+  { const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(official)], { type: "application/pdf" }), "imm5604e.pdf"); fd.append("combinationId", vv);
+    const res = await (await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json() as { results?: { message: string }[] };
+    const sha5604 = sql(`select e.sha256 from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where d.form_key = 'IMM 5604' limit 1`);
+    ok("round 4 R4-1: a combination's own upload attaches no retiring form as a source, and says why", /Not attached to .*open on To review/.test(res.results?.[0]?.message ?? "") && sql(`select count(*) from source_attachment where combination_id='${vv}' and sha256='${sha5604}'`) === "0", res.results?.[0]?.message); }
   sql(`delete from library_change where key='IMM 5604'`);
   u = await upload("notes.pdf", Buffer.from("these are notes, not a PDF"));
   run = (await settle(u.body.runId)).body;

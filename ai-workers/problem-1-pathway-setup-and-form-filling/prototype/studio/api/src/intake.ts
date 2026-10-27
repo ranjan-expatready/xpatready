@@ -240,6 +240,12 @@ export class Intake {
     const hash = sha(file.buffer);
     const attach = async (r: IntakeResult): Promise<IntakeResult> => {
       if (!combination) return r;
+      // S4 round 4 R4-1 (P-116): a retired library form, or one whose retire or delete is open, gets no new use as a source.
+      if (r.code) {
+        const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: r.code } }, select: { retiredAt: true } });
+        const closing = def ? await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "library_form", key: r.code, action: { in: ["RETIRE", "DELETE"] }, status: { in: ["WAITING", "APPROVED"] } } }) : null;
+        if (def?.retiredAt || closing) return { ...r, message: `${r.message} Not attached to ${combination.label}: ${def?.retiredAt ? `${r.code} is retired in the library (restore it there first).` : `a request to ${closing!.action.toLowerCase()} ${r.code} is open on To review.`}` };
+      }
       const a = await this.sources.attach(actor, combination.id, file, via);
       return { ...r, attachmentId: a.attachment.id, attachmentStatus: a.attachment.status, message: `${r.message} ${a.duplicate ? `Already attached to ${combination.label}.` : `Attached to ${combination.label}.`}` };
     };

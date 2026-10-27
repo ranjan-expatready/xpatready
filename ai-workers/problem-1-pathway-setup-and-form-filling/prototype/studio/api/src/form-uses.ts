@@ -46,7 +46,7 @@ export async function formUses(db: Db, workspaceId: string, code: string): Promi
   const editions = await db.formEdition.findMany({ where: { workspaceId, govFormDefId: def.id }, select: { sha256: true } });
   const shas = editions.map((e) => e.sha256).filter((x): x is string => !!x);
   const atts = shas.length ? await db.sourceAttachment.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { combinationId: true } }) : [];
-  for (const cid of new Set(atts.map((a) => a.combinationId))) if (!newest.has(cid) || newest.get(cid)!.status === "RETIRED") uses.push({ kind: "combination", label: trails.get(cid) ?? "A combination", href: `/c/${cid}`, blocks: true, why: "Its file is attached here as a source (its fields are read from it): remove it there first" });
+  for (const cid of new Set(atts.map((a) => a.combinationId))) if (!newest.has(cid) || newest.get(cid)!.status === "RETIRED") uses.push({ kind: "combination", label: trails.get(cid) ?? "A combination", href: `/c/${cid}`, blocks: true, why: "Its file is attached here as a source (AI reads it from there): remove it there first" });
   // P-116 / P-51: an approved official file (on the manifest, approved by a second person, or downloaded from canada.ca) is
   // kept: it is retired, never deleted.
   const approved = await hasApprovedFile(db, workspaceId, shas);

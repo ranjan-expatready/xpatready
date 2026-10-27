@@ -58,7 +58,7 @@ export class FormLibrary {
     ]);
     // "Re-read with AI (fields and boxes)" drafts from a combination's copy of the file (today's field-map drafting).
     const atts = await this.db.sourceAttachment.findMany({ where: { workspaceId }, select: { id: true, sha256: true, combinationId: true, kind: true }, orderBy: { createdAt: "asc" } });
-    const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { key: true, action: true, status: true } });
+    const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "APPROVED"] } }, select: { key: true, action: true, status: true } });
     const trails = await combinationTrails(this.db, workspaceId);
     const combos = (await this.db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true, label: true } })).map((c) => ({ id: c.id, label: trails.get(c.id) ?? c.label })).sort((a, b) => a.label.localeCompare(b.label));
     const waitingAccepts = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "form_accepts", status: { in: ["WAITING", "RETURNED"] } }, select: { key: true } })).map((x) => x.key));
@@ -262,11 +262,12 @@ export class FormLibraryController {
     if (!files?.length) return this.uploads.start(actor, undefined, forForm);
     // One run per file, so each file has its own card, steps and Stop (one way in, many files: Lead 27 Oct).
     const runs: { runId: string }[] = [], refused: { file: string; why: string }[] = [];
+    for (const f of files) f.originalname = Buffer.from(f.originalname ?? "", "latin1").toString("utf8"); // round 4 R4-5
     for (const f of files) {
       try { runs.push(await this.uploads.start(actor, f, forForm)); } catch (e) {
         const r = e instanceof HttpException ? (e.getResponse() as { detail?: string }) : null;
         if (!r?.detail || (e as HttpException).getStatus() !== 400) throw e;
-        refused.push({ file: Buffer.from(f.originalname || "A file", "latin1").toString("utf8"), why: r.detail });
+        refused.push({ file: f.originalname || "A file", why: r.detail });
       }
     }
     if (!runs.length) throw problem(400, "Nothing uploaded", refused.map((x) => x.why).join(" "));
