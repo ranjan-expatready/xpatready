@@ -3,7 +3,7 @@
 current_milestone: M2 — Super Admin configuration (Screens 01–04 + forms channels F1), with the thin runtime slice R1 (P-67) and independent qa (P-68) alongside
 lanes: `LANES.md` · the founder types `/lead` only; the Lead runs `/next screens|forms|evidence|runtime` and `/qa <mode>` sessions
 journey and gaps: `history/AUDIT-2026-10-23.md` · capabilities and bugs: `qa/CAPABILITIES.md`, `qa/BUGS.md`
-updated: 2026-10-26
+updated: 2026-10-27
 
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
@@ -18,6 +18,7 @@ updated: 2026-10-26
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-27 · Lead (Mac) · **Founder Go on the Structure page.** Slices 1+2 merged onto `lead/2026-10-27` (3e950d8) and run on a fresh build: 33/33 suites PASS (structure 83/83, browser 61/61; a first run's 3 failures came from a stale Prisma client in this copy, cleared by `prisma generate`). The studio journey (CI-only `--demo` suite) stops at B1: Pass B builds from scratch after Reset, and Reset now leaves no Pathway. Not merged to main: screens FIX (Pass B adds a Pathway on the Structure page first), then the Lead reruns and merges; slice 3 after with the three early-look changes. qa note: after-merge on W1-02 now; its four checks add a Pathway once 1+2 land. :4400 still runs 26 Oct 19:27 code; refresh after the main merge.
 - 2026-10-27 · Lead (Mac) · Screens slice 2 (Structure page, b471938; journey 61/61, axe clean, 33 suites) at EARLY-LOOK: matches the board; three small changes go into slice 3 (Used by names the combination, toasts off the panel, left menu background, app-wide); Lead recommends Go, then suites rerun and slices 1+2 merge. Founder sees board vs build (`screens/W1-structure-programs/early-look/`).
 - 2026-10-27 · Lead (Mac) · Screens slice 1 (data and API, b5ccae8; 83/83 + 32 suites) passed the Lead check: deviation accepted (P-52 L3: open cases do not block retiring a name); held for merge with slice 2 because Reset would otherwise leave no way to add a Pathway in the app. Screens → BUILD slice 2 (Structure page). qa note: four qa checks need a Pathway first once 1+2 merge. qa after-merge card waits for the founder.
 - 2026-10-27 · Lead (Mac) · **PR #39 merged (W1-02, extension parked).** Run 2 on a fresh web build: 32/32 suites PASS + studio browser 44/44 on :4421, US$0; demo build restored; test by-products reset. Screens lane → BUILD slice 1; qa → `/qa after-merge` (PDF path only).
@@ -27,4 +28,3 @@ updated: 2026-10-26
 - 2026-10-26 night · Lead (Mac) · PR #38 merged. Screens lane DESIGN addendum (A1–A5, 5 Major) accepted: lifecycle via LibraryChange + `api/src/lifecycle.ts`, structure reorder applies at once, retired-combination guard in runtime.ts by screens, setup steps from existing data, answer sheet owned by W4; BUILD slice 1 waits for forms W1-02 merge. Forms W1-02 built (d575150), CHECK (reviewer + breaker) running.
 - 2026-10-26 night · Lead (Mac) · PR #38 review answered before merge: P-113 corrected (Express Entry via the APR Portal, spousal via the PR Portal); P-116 reconciled with P-51/P-52 (lifecycle L1–L6 on every master, approved forms retired not deleted); Structure concept gains §10b lifecycle contract and tests, location edits need the expert tick; W1-06 carries the form × route mapping (P-114).
 - 2026-10-26 night · Lead (Mac) · Founder agreed W1-03/04/05: Programs design D, Structure outline, menu names (P-115); Remove + Retire + Reorder on every master, no Move (P-116). `screens/W1-structure-programs/concept.md` written; screens lane → DESIGN (its own challenge), then BUILD in four slices.
-- 2026-10-26 night · Lead (Mac) · Structure v2 boards final: progress wording fixed ("… · Review · Release, all four done = Live"), `draft-new-combination` updated, and rendered previews added for the founder (`design/preview-structure-v2.png`, `preview-programs-v2.png`). Lead check next, then the founder sees the board with one recommendation. Founder review of the whole Wave-1 design noted four gaps to raise: the portal answer sheet has no owner and assumes portal questions match the PDF (needs its own item, portal-order research); bulk approve for AI proposals (200+ clicks in a demo); a "Signed as" method per form (wet+scan / typed / portal declaration); filing prerequisites on the route (rep authorized, fee paid).
