@@ -18,6 +18,7 @@ updated: 2026-10-27
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-27 · Lead (Mac) · **Founder picked Program structure round 2 (P-127):** layout A (Pathway cards, Program sections, one line per combination; no tree), one Add pop-up only, one line per sub-category; amends P-115. Screens builds it in the visual-system slice after its FIX. P-51 to history (superseded by P-103/P-123).
 - 2026-10-27 · Lead (Mac) · **PR #55 merged** (P-125, P-126, qa S2 report, S4 slice 2 Go, round 2 ordered). **Founder OK: four idle duplicate lane processes closed** (an agent-client helper had reopened the screens, forms, runtime and qa chats outside the Desktop app; one pushed run by-products onto qa's branch); the Desktop lane sessions keep running. Screens FIX committed locally (01e4f1f, e4f2377), not pushed yet.
 - 2026-10-27 · Lead (Mac) · **S4 slice 2 early look (forms 1da803b): founder Go for slice 3** with four fixes (empty file fails rule 1, reason once, usual cost before the ceiling, one way to add). qa fix-up e8e93ab taken (coverage restored). C11.4 dropped by P-125.
 - 2026-10-27 · Lead (Mac) · **Founder: Program structure add is cumbersome; tree too tall** → screen-designer drafting round 2 (one Add to Program structure dialog; layouts A Pathway cards + one-liner rows, B the agreed Cards/Tree, C flat list) before any visual-system code; screens FIX unaffected. P-10 moved to history (superseded by P-104). qa owner confirmed (f6e99b) for a fix-up commit; a second qa process had pushed run by-products.
