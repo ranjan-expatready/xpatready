@@ -1,13 +1,15 @@
-// S5 Questionnaires tab (W1-08, P-119, walkthrough v2 S5), slice 1: "Who can be in this application" edited at the top
-// (it decides each person's questions; challenge M3, M4), then the questions by section, the rules and the checks this
-// combination uses (slice 2 rebuilds these per person with coverage). People pick from the shared library's person roles;
-// a new kind of person is added there (S6), never here.
+// S5 Questionnaires tab (W1-08, P-119, walkthrough v2 S5): "Who can be in this application" edited at the top (it decides
+// each person's questions; challenge M3, M4), then slice 2's questions per person: wording, who fills it, only if, the
+// forms that need it, coverage (a gap blocks release), field codes only in a question's side panel (early-look fix 3);
+// the rules and checks used here fold below (m4). People pick from the shared library's person roles; a new kind of
+// person is added there (S6), never here.
 import * as React from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Undo2, X } from "lucide-react";
-import type { PeopleLine, PeopleView } from "../../../../contracts/workspace";
-import { api, ApiError, useSessionView, useToast } from "@/lib/api";
-import { Button, Dialog, Input, Notice, Pill, Select } from "@/components/ui/controls";
+import { FILLED_BY, type PeopleLine, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView } from "../../../../contracts/workspace";
+import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
+import { Button, Dialog, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
 import { Tip } from "@/components/status";
 import { ConfigArea } from "@/pages/configuration";
 import { cn } from "@/lib/utils";
@@ -20,11 +22,12 @@ const TIPS = {
   words: "The line in IRCC's guide this comes from, when AI filled it.",
 };
 
-export function QuestionnairesTab({ id, people }: { id: string; people: PeopleView }) {
+export function QuestionnairesTab({ id, people, questionnaire, available }: { id: string; people: PeopleView; questionnaire: QuestionnairesView | null; available: { key: string; title: string }[] }) {
   return (
     <div className="space-y-6">
       <WhoCanBe id={id} v={people} />
-      <ConfigArea id={id} areas={["questions", "rules", "checks"]} />
+      <QuestionsByPerson id={id} q={questionnaire} available={available} />
+      <ConfigArea id={id} areas={["rules", "checks"]} />
     </div>
   );
 }
@@ -127,5 +130,100 @@ function AddPerson({ offered, onAdd }: { offered: { key: string; label: string; 
       <Select aria-label="Person to add" className="h-8 w-56" value={k} onChange={(e) => setK(e.target.value)}><option value="">Choose a person…</option>{offered.map((r) => <option key={r.key} value={r.key} title={r.meaning}>{r.label}</option>)}</Select>
       <Button size="sm" variant="secondary" disabled={!k} onClick={() => { onAdd(k); setK(""); }}><Plus /> Add a person</Button>
     </span>
+  );
+}
+
+// ------------------------------------------------------------------ questions per person (slice 2, early-look fix 3)
+
+const SOURCE_WORDS: Record<string, string> = { client_questionnaire: "The client answers it in the questionnaire", profile_record: "From the client's profile", verified_document: "The case officer takes it from a document", staff_working_view: "The case officer fills it", existing_record: "From an existing record" };
+const TYPE_WORDS: Record<string, string> = { text: "Text", date: "Date", yes_no: "Yes or no", number: "Number", code: "A choice from a list", country: "A country", address: "An address", phone: "A phone number", email: "An email address" };
+
+/** One person role's questions as a case asks them: wording first, who fills it, only if, the forms that need it;
+ *  coverage on top (a gap blocks release). The field code shows only in a question's side panel (concept §7). */
+function QuestionsByPerson({ id, q, available }: { id: string; q: QuestionnairesView | null; available: { key: string; title: string }[] }) {
+  const [sp, setSp] = useSearchParams();
+  const { canAuthor } = useSessionView();
+  const [add, setAdd] = React.useState("");
+  const [shown, setShown] = React.useState<QuestionnaireQuestion | null>(null);
+  // Only the first section is open at first (146 questions on the work permit); each folds and "Open all" opens them all.
+  const [openIds, setOpenIds] = React.useState<Set<string> | null>(null);
+  const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["combination", id], ["config", id], ["preview"]] });
+  const addSection = canAuthor ? (
+    <div className="flex flex-wrap items-center gap-2" data-add-section>
+      <Select aria-label="Library section to add" className="h-8 w-72" value={add} onChange={(e) => setAdd(e.target.value)}><option value="">Add a library section…</option>{available.map((x) => <option key={x.key} value={x.key}>{x.title}</option>)}</Select>
+      <Button size="sm" variant="secondary" disabled={!add} busy={sel.isPending} onClick={() => { sel.mutate({ key: add, on: true }); setAdd(""); }}><Plus /> Add section</Button>
+    </div>
+  ) : null;
+  if (!q) return (
+    <section className="rounded-xl border border-border bg-surface-raised p-5" data-questions-empty>
+      <h2 className="font-semibold">No questions yet</h2>
+      <p className="mt-1 text-sm text-text-muted">The questions each person needs come from the facts their forms read. Add forms on the Forms tab, or a library section here.</p>
+      <div className="mt-3">{addSection}</div>
+    </section>
+  );
+  const role = q.roles.find((r) => r.role === q.role);
+  const opened = openIds ?? new Set(q.sections[0] ? [q.sections[0].id] : []);
+  const allOpen = q.sections.every((s) => opened.has(s.id));
+  const total = q.sections.reduce((n, s) => n + s.questions.length, 0);
+  return (
+    <section aria-labelledby="questions-head" className="space-y-4" data-questions>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="questions-head" className="font-semibold">Questions for each person</h2>
+        <span className="flex flex-wrap items-center gap-2"><Button size="sm" variant="ghost" onClick={() => setOpenIds(allOpen ? new Set() : new Set(q.sections.map((s) => s.id)))}>{allOpen ? "Close all sections" : "Open all sections"}</Button>{addSection}</span>
+      </div>
+      <div role="group" aria-label="Person" className="flex flex-wrap gap-1.5">
+        {q.roles.map((r) => <button key={r.role} type="button" aria-pressed={r.role === q.role} data-role-chip={r.role} onClick={() => { const n = new URLSearchParams(sp); n.set("role", r.role); setSp(n, { replace: true }); }}
+          className={cn("min-h-9 rounded-full border px-3 py-1 text-sm", r.role === q.role ? "border-primary bg-primary/10 font-medium text-text-link" : "border-border bg-surface-raised text-text-muted hover:bg-text/5")}>{r.label} · {r.questions} question{r.questions === 1 ? "" : "s"}{r.gaps ? <span className="ml-1 rounded bg-danger/12 px-1 text-xs text-text-danger">{r.gaps} not asked</span> : null}</button>)}
+      </div>
+      <p className="text-sm" data-coverage><span className="font-medium">{role?.label}:</span> the forms need {q.coverage.needed} answer{q.coverage.needed === 1 ? "" : "s"} about this person · {q.coverage.client} asked of the client · {q.coverage.officer} filled by the case officer{q.coverage.gaps.length ? <span className="text-text-danger"> · {q.coverage.gaps.length} asked of nobody</span> : null}</p>
+      {q.coverage.gaps.length ? (
+        <Notice tone="danger" title={`${q.coverage.gaps.length} answer${q.coverage.gaps.length === 1 ? " is" : "s are"} needed but asked of nobody: release waits for ${q.coverage.gaps.length === 1 ? "it" : "them"}`}>
+          <ul className="mt-1 space-y-0.5" data-gaps>{q.coverage.gaps.slice(0, 8).map((g) => <li key={g.fact}>"{g.meaning}", needed by {g.forms.join(", ")}</li>)}</ul>
+          <p className="mt-1">Fix: add the library section that asks it, or have the case officer fill it (set once in the shared library).</p>
+        </Notice>
+      ) : null}
+      {q.sections.map((s) => {
+        const isOpen = opened.has(s.id);
+        return (
+          <div key={s.id} className="rounded-xl border border-border bg-surface-raised" data-section={s.id}>
+            <div className="flex items-center justify-between gap-2 pr-2">
+              <button className="flex-1 px-4 py-3 text-left" aria-expanded={isOpen} onClick={() => { const n = new Set(opened); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); setOpenIds(n); }}>
+                <span className="font-medium">{s.title}</span> <span className="text-xs text-text-muted">· {s.questions.length} question{s.questions.length === 1 ? "" : "s"} for {role?.label ?? "this person"}</span>
+              </button>
+              {canAuthor ? <Button size="sm" variant="ghost" onClick={() => sel.mutate({ key: s.id, on: false })} aria-label={`Remove from questionnaire: ${s.title}`}>Remove from questionnaire</Button> : null}
+            </div>
+            {isOpen ? (s.questions.length ? (
+              <div className="border-t border-border px-4 py-3">
+                <Table dense head={["Question", "Who fills it", "Only if", "Needed by", ""]}>
+                  {s.questions.map((x) => (
+                    <tr key={x.fact} data-question>
+                      <td className="max-w-md"><span className="font-medium">{x.wording}</span>{x.group ? <span className="text-xs text-text-muted"> · asked for each entry</span> : null}{x.required ? null : <span className="text-xs text-text-muted"> (optional)</span>}</td>
+                      <td><Pill tone={x.filledBy === "CLIENT" ? "info" : "neutral"}>{FILLED_BY[x.filledBy]}</Pill></td>
+                      <td className="max-w-56 text-xs">{x.onlyIf ?? <span className="text-text-muted">Always</span>}</td>
+                      <td className="text-xs">{x.neededBy.length ? x.neededBy.join(", ") : <span className="text-text-muted">No form (decides what applies)</span>}</td>
+                      <td><Button size="sm" variant="ghost" aria-label={`Details of: ${x.wording}`} onClick={() => setShown(x)}>Details</Button></td>
+                    </tr>
+                  ))}
+                </Table>
+              </div>
+            ) : <p className="border-t border-border px-4 py-3 text-sm text-text-muted">This section asks {role?.label ?? "this person"} nothing for this combination.</p>) : null}
+          </div>
+        );
+      })}
+      <p className="text-xs text-text-muted">{total} question{total === 1 ? "" : "s"} for {role?.label}, from the largest Sample family the combination allows. {q.notAsked ? `${q.notAsked} placed question${q.notAsked === 1 ? " is" : "s are"} not asked: no form reads ${q.notAsked === 1 ? "it" : "them"} and ${q.notAsked === 1 ? "it decides" : "they decide"} nothing.` : ""}</p>
+      {shown ? (
+        <Panel open onOpenChange={(o) => !o && setShown(null)} title={shown.wording} description={shown.meaning} footer={<><span /><Button variant="ghost" onClick={() => setShown(null)}>Close</Button></>}>
+          <dl className="grid grid-cols-[10rem_1fr] gap-x-3 gap-y-2 text-sm" data-question-details>
+            {shown.help ? <><dt className="text-text-muted">Note</dt><dd className="text-xs">{shown.help}</dd></> : null}
+            <dt className="text-text-muted">Who fills it</dt><dd>{FILLED_BY[shown.filledBy]} · {SOURCE_WORDS[shown.collectedFrom ?? ""] ?? "Not placed"}<p className="text-xs text-text-muted">Set once in the shared library; a change needs a second person and reaches every combination that asks it.</p></dd>
+            <dt className="text-text-muted">Kind of answer</dt><dd>{TYPE_WORDS[shown.answerType] ?? shown.answerType}</dd>
+            <dt className="text-text-muted">Only if</dt><dd>{shown.onlyIf ?? "Always"}</dd>
+            <dt className="text-text-muted">Needed by</dt><dd>{shown.neededBy.join(", ") || "No form: it decides what applies"}</dd>
+            <dt className="text-text-muted">Used in</dt><dd>{shown.whereUsed} combination{shown.whereUsed === 1 ? "" : "s"}</dd>
+            <dt className="text-text-muted">System name</dt><dd><Link className="mono text-text-link underline" to={`/library/fields/${encodeURIComponent(shown.fact)}`}>{shown.fact}</Link></dd>
+          </dl>
+        </Panel>
+      ) : null}
+    </section>
   );
 }

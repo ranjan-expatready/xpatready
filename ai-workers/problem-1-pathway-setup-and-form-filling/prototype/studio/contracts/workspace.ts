@@ -87,6 +87,28 @@ export type WorkspaceFormLine = {
   signedBy: string | null; signedByLabel: string; origin: string; quote: string | null; revision: string; status: string;
 };
 
+// ------------------------------------------------------------------ Questionnaires per person (slice 2)
+
+/** Who fills a question is its placement's source, read-only here (C4.9 changes it in the shared library): the client
+ *  for a questionnaire or profile placement, the case officer for a document, record or working view. */
+export const FILLED_BY = { CLIENT: "Client", CASE_OFFICER: "Case officer" } as const;
+export type FilledBy = keyof typeof FILLED_BY;
+export const filledByOf = (placement: { collected_from?: string } | undefined): FilledBy =>
+  placement && ["client_questionnaire", "profile_record"].includes(placement.collected_from ?? "") ? "CLIENT" : "CASE_OFFICER";
+
+/** One question as the tab shows it: the wording first; the field code (`fact`) only for the side panel (fix 3). */
+export type QuestionnaireQuestion = {
+  fact: string; wording: string; meaning: string; help: string | null; answerType: string; filledBy: FilledBy; onlyIf: string | null;
+  neededBy: string[]; group: boolean; required: boolean; whereUsed: number; collectedFrom: string | null;
+};
+export type QuestionnaireSection = { id: string; title: string; questions: QuestionnaireQuestion[] };
+export type QuestionnaireRole = { role: string; label: string; questions: number; gaps: number };
+export type QuestionnairesView = {
+  roles: QuestionnaireRole[]; role: string;
+  coverage: { needed: number; client: number; officer: number; gaps: { fact: string; meaning: string; forms: string[]; boxes: number }[] };
+  sections: QuestionnaireSection[]; notAsked: number;
+};
+
 // ------------------------------------------------------------------ Preview (one Sample family, person chips)
 
 /** Sample families for Preview (P-37: preset families). Each is offered when the combination's people allow it; the
@@ -113,6 +135,6 @@ export type PreviewView = {
  *  page's existing reads. */
 export type WorkspaceView =
   | { tab: "forms"; asked: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[] }
-  | { tab: "questionnaires"; asked: string; people: PeopleView }
+  | { tab: "questionnaires"; asked: string; people: PeopleView; questionnaire: QuestionnairesView | null; available: { key: string; title: string }[] }
   | { tab: "preview"; asked: string; preview: PreviewView | null; empty: string | null }
   | { tab: Exclude<TabKey, "forms" | "questionnaires" | "preview">; asked: string };

@@ -71,9 +71,17 @@ export function channelProblems(s: Snapshot): Problem[] {
   // never an error, so configurations released before F1-P stay releasable.
   for (const m of pdfMaps) {
     const unset = m.entries.filter((e) => e.outcome === "mapped" && e.row != null && !e.list_purpose);
-    if (unset.length) out.push({ level: "warning", where: `Field map ${m.form_edition}`, item: m.form_number, message: `${unset.length} list row${unset.length > 1 ? "s have" : " has"} no purpose yet (for example ${unset[0].caption ?? unset[0].data_path}): choose what the list holds and what happens to rows the form has no room for.` });
+    if (unset.length) out.push({ level: "warning", where: `Field map ${m.form_edition}`, item: m.form_number, message: listRowsWords(m.form_number, unset.length, (unset.find((e) => e.caption?.trim())?.caption ?? "").trim()) }); // the form's own words, never a technical path
   }
   return out;
+}
+
+/** S5 early-look fix 2: the list-row warning in business words, saying what it means, what happens meanwhile and where it
+ *  is set; the example is left out when the form field has no caption (it was an empty "(for example )" before). */
+export function listRowsWords(form: string, n: number, example: string): string {
+  const rows = n === 1 ? "1 row of its lists" : `${n} rows of its lists`;
+  const short = example.length > 60 ? `${example.slice(0, 57).replace(/\s+\S*$/, "")}…` : example;
+  return `${form}: ${rows}${short ? ` (for example "${short}")` : ""} ${n === 1 ? "does" : "do"} not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library.`;
 }
 
 /** The channels view of one combination: every line, its channel, signature, and the derived filing method. */

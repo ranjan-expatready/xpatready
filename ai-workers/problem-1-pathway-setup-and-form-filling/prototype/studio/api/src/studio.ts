@@ -620,7 +620,7 @@ export class Studio {
     const last = await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" } });
     if (last?.sha256 === sha256) fail("Nothing has changed since the released version.");
     const errors = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
-    if (errors.length) fail(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map((e) => `${e.item}: ${e.message}`).join(" · ")}`);
+    if (errors.length) fail(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map((e) => (e.where === "Questionnaires" ? e.message : `${e.item}: ${e.message}`)).join(" · ")}`); // S5: a coverage gap is said in words, never by its field code
     const changes = diff((last?.snapshot as any) ?? null, snapshot);
     // W1-02 (break M2): nothing to sign is nothing to release, even when the fingerprint moved (an older release's keys).
     // Refused before anything is written (PR #39 review): a waiting submission is never withdrawn by a refused one.

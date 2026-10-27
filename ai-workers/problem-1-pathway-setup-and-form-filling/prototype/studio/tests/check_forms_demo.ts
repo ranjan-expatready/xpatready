@@ -69,7 +69,7 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
     // S5 (P-118 Q3, m5): the sample-file picker left the combination with its Sources tab; the old address opens Forms,
     // where each attached form is still read and drafted.
     await p.goto(`http://localhost:${PORT}/c/${vv}/sources`); await p.waitForURL(/\/forms$/);
-    await p.locator("[data-reading]").waitFor();
+    await p.locator("[data-pending]").first().waitFor(); // S5 fix 1: an attached form not set up yet is its own row
     ok("SC-3 → S5 m5: no 'Attach a sample file' on the combination; the old Sources address opens Forms with reading and matching", await p.getByRole("button", { name: "Attach a sample file" }).count() === 0 && /\/forms$/.test(p.url()));
     const row = p.locator("tr", { hasText: "imm1344e-check-copy.pdf" }).first(); // the row's status words change once it is read
     await row.getByRole("button", { name: "Read form" }).click();

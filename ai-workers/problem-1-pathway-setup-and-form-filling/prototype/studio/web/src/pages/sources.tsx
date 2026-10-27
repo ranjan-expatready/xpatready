@@ -1,81 +1,111 @@
-// S5 Forms tab, "Reading and matching": each form attached to the combination is read (rules, US$0), then AI matches its
-// form fields to shared fields and a person reviews the proposals. Slice 1 keeps this existing pipeline on the Forms
-// tab; the Sources tab, its desktop upload and "Attach a sample file" are gone (P-118 Q2: forms enter only through the
-// Form library). Slice 3 turns it into the setup strip of the form finder (W1-07 run component).
+// S5 Forms tab, reading and matching (early-look fix 1: each form listed once): a form attached to the combination is read
+// by rules (US$0), then AI matches its form fields to shared fields and a person reviews the proposals. Its status and
+// next step sit in the form's own row, its steps in the form's side panel; checklists, guides and pages that are not
+// form lines show as one compact "Sources" line. The Sources tab, its desktop upload and "Attach a sample file" are gone
+// (P-118 Q2: forms enter only through the Form library). Slice 3 turns this into the form finder's stage strip (W1-07).
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { Play, Recycle, ScanLine, Sparkles } from "lucide-react";
-import { api, useAction, useActorId, useApi, useToast } from "@/lib/api";
-import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
-import { EmptyState } from "@/components/ui/empty-state";
+import { api, useAction, useApi, useSessionView } from "@/lib/api";
+import { Button, Dialog, Field, Notice, Pill, Select } from "@/components/ui/controls";
 import { ModePill, StatusPill } from "@/pages/combination";
 import { fmtWhen } from "@/components/status";
 import { useQueryClient } from "@tanstack/react-query";
+
+/** One attached source as GET /combinations/:id lists it, and one reading or drafting step. */
+export type Attachment = { id: string; combinationId: string; kind: string; fileName: string; edition: string | null; status: string; statusDetail: string | null; recognised: boolean; uploadedVia: string; bytes: number };
+type Job = { id: string; attachmentId: string | null; kind: string; mode: string; status: string; message: string; startedAt: string };
+type Combo = { combination: { id: string }; attachments: Attachment[]; jobs: Job[] };
 
 const STATUS: Record<string, [string, string]> = {
   HELD: ["warn", "Not an approved source: not sent to AI"], RECOGNISED: ["info", "Recognised: ready to read"], READ: ["info", "Read: ready for AI drafting"], READ_FAILED: ["danger", "Could not be read"],
   DRAFTED: ["ai", "AI draft ready to review"], IN_LIBRARY: ["ok", "In the library"], ATTACHED: ["neutral", "Source document"],
 };
+/** The form code an attachment holds ("IMM 5257 SCH1 (09-2023)" → "IMM 5257 SCH1"). */
+export const codeOf = (a: Attachment) => (a.edition ?? "").split(" (")[0];
+/** The attached form file behind a line, if any (the newest one). */
+export const attachmentFor = (d: Combo, code: string) => [...d.attachments].reverse().find((a) => a.kind === "Form" && codeOf(a) === code);
 
-export function ReadingSection({ d }: { d: any }) {
+/** A form's reading status and its one next step, for its row. */
+export function ReadingCell({ d, a }: { d: Combo; a: Attachment | undefined }) {
+  if (!a) return <span className="text-text-muted">Not attached</span>;
+  const [tone, label] = STATUS[a.status] ?? ["neutral", a.status];
+  // The last step and when it ran (QA-17: the day when it was not today); every step is in the form's side panel.
+  const last = d.jobs.find((j) => j.attachmentId === a.id);
+  return <span className="inline-flex flex-col items-start gap-1"><Pill tone={tone}>{label}</Pill>{last ? <span className="text-text-muted">{last.kind === "field_map" ? "AI draft" : "Read"} {fmtWhen(last.startedAt)}</span> : null}<ReadingActions d={d} a={a} /></span>;
+}
+
+/** Read form · Draft with AI · Review AI proposals · Add from library: the step the form is waiting for. */
+export function ReadingActions({ d, a }: { d: Combo; a: Attachment }) {
+  const { canAuthor } = useSessionView();
   const id = d.combination.id;
-  const actorId = useActorId();
-  const session = useApi<any>(["session", actorId], "/session");
-  const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
   const qc = useQueryClient();
-  const toast = useToast();
-  const [draftFor, setDraftFor] = React.useState<any>(null);
-  const invalidate = () => { void qc.invalidateQueries({ queryKey: ["combination", id] }); };
-  const read = useAction((aid: string) => api(`/attachments/${aid}/read`, { method: "POST" }), { success: (r: any) => `Form read: ${r.summary.entry_fields_bound} form fields`, invalidate: [["combination", id]] });
-  const reuse = useAction((aid: string) => api(`/attachments/${aid}/reuse`, { method: "POST", json: {} }), { success: (r: any) => `${r.form} added from the library; no AI drafting needed`, invalidate: [["combination", id], ["preview"]] });
-  const jobsFor = (aid: string) => d.jobs.filter((j: any) => j.attachmentId === aid);
+  const [drafting, setDrafting] = React.useState(false);
+  const read = useAction(() => api(`/attachments/${a.id}/read`, { method: "POST" }), { success: (r: { summary: { entry_fields_bound: number } }) => `Form read: ${r.summary.entry_fields_bound} form fields`, invalidate: [["combination", id]] });
+  const reuse = useAction(() => api(`/attachments/${a.id}/reuse`, { method: "POST", json: {} }), { success: (r: { form: string }) => `${r.form} added from the library; no AI drafting needed`, invalidate: [["combination", id], ["preview"]] });
+  if (!canAuthor) return null;
+  const ai = d.jobs.find((j) => j.attachmentId === a.id && j.kind === "field_map" && ["COMPLETED", "RUNNING", "QUEUED", "APPLIED"].includes(j.status));
   return (
-    <section aria-labelledby="reading" className="space-y-3" data-reading>
-      <div><h2 id="reading" className="font-semibold">Reading and matching</h2><p className="text-sm text-text-muted">Each form is read by rules (no AI call), then AI matches its form fields to shared fields and a person reviews what it proposes.{canAuthor ? "" : " A configuration author starts these steps."}</p></div>
-      {!d.attachments.length ? <EmptyState title="Nothing to read yet" description="Add a form from the library: it is read here, then matched to shared fields with AI." /> : (
-        <Table head={["Source", "Status and steps", "Next"]}>
-          {d.attachments.map((a: any) => {
-            const [tone, label] = STATUS[a.status] ?? ["neutral", a.status];
-            const jobs = jobsFor(a.id);
-            const ai = jobs.find((j: any) => j.kind === "field_map" && ["COMPLETED", "RUNNING", "QUEUED", "APPLIED"].includes(j.status));
-            return (
-              <tr key={a.id}>
-                <td className="min-w-48"><p className="font-medium">{a.edition ?? a.fileName}</p><p className="text-xs text-text-muted">{a.kind} · {a.fileName} · {(a.bytes / 1024).toFixed(0)} KB · {a.uploadedVia === "SAMPLE" ? "from the sample" : "from the Form library"}</p><a className="text-xs text-text-link underline" href={`/api/attachments/${a.id}/file`}>Open file</a></td>
-                <td className="min-w-64"><Pill tone={tone}>{label}</Pill><p className="mt-1 max-w-lg text-xs text-text-muted">{a.statusDetail}</p>{jobs.length ? <div className="mt-1.5">{jobs.slice(0, 3).map((j: any) => <div key={j.id} className="mb-1 flex flex-wrap items-center gap-1 text-xs">{j.kind === "field_map" ? "AI draft" : "Read"} <ModePill mode={j.mode} /><StatusPill status={j.status} /><span className="text-text-muted">{fmtWhen(j.startedAt)}</span>{j.kind === "field_map" && j.status !== "RUNNING" ? <Link className="text-text-link underline" to={`/c/${id}/jobs/${j.id}`}>details</Link> : null}</div>)}</div> : null}</td>
-                <td className="w-px">{!canAuthor ? null : <>
-                  {a.status === "RECOGNISED" || a.status === "READ_FAILED" ? <Button size="sm" onClick={() => read.mutate(a.id)} busy={read.isPending && read.variables === a.id}><ScanLine /> Read form</Button> : null}
-                  {a.status === "READ" || (a.status === "DRAFTED" && !ai) ? <Button size="sm" onClick={() => setDraftFor(a)}><Sparkles /> Draft with AI</Button> : null}
-                  {a.status === "DRAFTED" && ai ? <Button size="sm" asChild><Link to={`/c/${id}/jobs/${ai.id}`}><Sparkles /> Review AI proposals</Link></Button> : null}
-                  {a.status === "IN_LIBRARY" && a.kind === "Form" ? <ReuseButton a={a} d={d} onReuse={() => reuse.mutate(a.id)} busy={reuse.isPending} /> : null}
-                </>}</td>
-
-              </tr>
-            );
-          })}
-        </Table>
-      )}
-      {d.jobs.some((j: any) => j.status === "RUNNING" || j.status === "QUEUED") ? <Notice tone="ai" title="A step is running">{d.jobs.find((j: any) => j.status === "RUNNING" || j.status === "QUEUED").message} This page refreshes by itself; you can keep working elsewhere.</Notice> : null}
-      {d.jobs.filter((j: any) => j.status === "BLOCKED" || j.status === "FAILED").slice(0, 1).map((j: any) => <Notice key={j.id} tone={j.status === "BLOCKED" ? "warn" : "danger"} title={j.status === "BLOCKED" ? "The AI step is blocked" : "A step failed"}>{j.message}</Notice>)}
-      {draftFor ? <DraftDialog a={draftFor} onClose={() => { setDraftFor(null); invalidate(); }} /> : null}
-    </section>
+    <>
+      {a.status === "RECOGNISED" || a.status === "READ_FAILED" ? <Button size="sm" onClick={() => read.mutate(undefined)} busy={read.isPending}><ScanLine /> Read form</Button> : null}
+      {a.status === "READ" || (a.status === "DRAFTED" && !ai) ? <Button size="sm" onClick={() => setDrafting(true)}><Sparkles /> Draft with AI</Button> : null}
+      {a.status === "DRAFTED" && ai ? <Button size="sm" asChild><Link to={`/c/${id}/jobs/${ai.id}`}><Sparkles /> Review AI proposals</Link></Button> : null}
+      {a.status === "IN_LIBRARY" && a.kind === "Form" ? <ReuseButton id={id} code={codeOf(a)} onReuse={() => reuse.mutate(undefined)} busy={reuse.isPending} /> : null}
+      {drafting ? <DraftDialog a={a} onClose={() => { setDrafting(false); void qc.invalidateQueries({ queryKey: ["combination", id] }); }} /> : null}
+    </>
   );
 }
 
-function ReuseButton({ a, d, onReuse, busy }: { a: any; d: any; onReuse: () => void; busy: boolean }) {
-  const formKey = (a.edition ?? "").split(" (")[0];
-  const cfg = useApi<any>(["config", d.combination.id, "draft"], `/combinations/${d.combination.id}/config?mode=draft`);
-  const has = cfg.data?.snapshot?.forms?.some((f: any) => f.form_number === formKey);
-  if (!cfg.data) return null;
-  return has ? <Pill tone="ok">In this configuration</Pill> : <Button size="sm" variant="secondary" onClick={onReuse} busy={busy}><Recycle /> Add from library</Button>;
+/** A form's reading and matching steps, newest first, for its side panel. */
+export function ReadingSteps({ d, a }: { d: Combo; a: Attachment | undefined }) {
+  if (!a) return <p className="text-sm text-text-muted">No file of this form is attached to the combination yet.</p>;
+  const jobs = d.jobs.filter((j) => j.attachmentId === a.id);
+  return (
+    <div className="space-y-2 text-sm" data-reading-steps>
+      <p className="text-xs text-text-muted">{a.statusDetail}</p>
+      {jobs.length ? <ul className="space-y-1">{jobs.slice(0, 5).map((j) => <li key={j.id} className="flex flex-wrap items-center gap-1 text-xs">{j.kind === "field_map" ? "AI draft" : "Read"} <ModePill mode={j.mode} /><StatusPill status={j.status} /><span className="text-text-muted">{fmtWhen(j.startedAt)}</span>{j.kind === "field_map" && j.status !== "RUNNING" ? <Link className="text-text-link underline" to={`/c/${d.combination.id}/jobs/${j.id}`}>details</Link> : null}</li>)}</ul> : null}
+      <p className="text-xs text-text-muted">File {a.fileName} · {(a.bytes / 1024).toFixed(0)} KB · <a className="text-text-link underline" href={`/api/attachments/${a.id}/file`}>Open file</a></p>
+    </div>
+  );
 }
 
-/** One file of the official library, as GET /official-library lists it. */
-type OfficialFile = { file: string; edition: string; kind: string; combination: string; sha256: string };
+/** Forms attached but not set up as lines yet: one row each, with the step they wait for. */
+export function pendingForms(d: Combo, lineCodes: string[]) {
+  return d.attachments.filter((a) => a.kind === "Form" && !lineCodes.includes(codeOf(a)));
+}
+
+/** Checklists, guides and pages that are not form lines: one compact line (read for documents and citations, never filed). */
+export function SourcesLine({ d, lineCodes }: { d: Combo; lineCodes: string[] }) {
+  const sources = d.attachments.filter((a) => a.kind !== "Form" && !lineCodes.includes(codeOf(a)));
+  if (!sources.length) return null;
+  return (
+    <p className="text-sm" data-sources><span className="font-medium">Sources</span> <span className="text-text-muted">(read for documents and citations, never filed):</span>{" "}
+      {sources.map((a, i) => <React.Fragment key={a.id}>{i ? " · " : null}<a className="text-text-link underline" href={`/api/attachments/${a.id}/file`} title={`${a.kind} · ${a.fileName}`}>{(a.edition ?? a.fileName).replace(/ \(edition read from the file\)/, "")}</a></React.Fragment>)}
+    </p>
+  );
+}
+
+/** Running, blocked or failed steps of the combination, said once above the forms. */
+export function StepNotices({ d }: { d: Combo }) {
+  const running = d.jobs.find((j) => j.status === "RUNNING" || j.status === "QUEUED");
+  const stuck = d.jobs.find((j) => j.status === "BLOCKED" || j.status === "FAILED");
+  return <>
+    {running ? <Notice tone="ai" title="A step is running">{running.message} This page refreshes by itself; you can keep working elsewhere.</Notice> : null}
+    {stuck ? <Notice tone={stuck.status === "BLOCKED" ? "warn" : "danger"} title={stuck.status === "BLOCKED" ? "The AI step is blocked" : "A step failed"}>{stuck.message}</Notice> : null}
+  </>;
+}
+
+function ReuseButton({ id, code, onReuse, busy }: { id: string; code: string; onReuse: () => void; busy: boolean }) {
+  const cfg = useApi<{ snapshot: { forms: { form_number: string }[] } }>(["config", id, "draft"], `/combinations/${id}/config?mode=draft`);
+  if (!cfg.data) return null;
+  return cfg.data.snapshot.forms.some((f) => f.form_number === code) ? null : <Button size="sm" variant="secondary" onClick={onReuse} busy={busy}><Recycle /> Add from library</Button>;
+}
 
 type SavedRun = { file: string; run_id: string; valid: boolean; recheckable: boolean; rechecked: boolean; at?: string; cost_usd?: number | null };
+type DraftOptions = { saved_runs: SavedRun[]; ledger?: { committed_usd: number; cap_usd: number; remaining_usd: number }; key_present: boolean; job_id: string };
 
-function DraftDialog({ a, onClose }: { a: any; onClose: () => void }) {
-  const opts = useApi<any>(["draft-options", a.id], `/attachments/${a.id}/draft-options`);
+function DraftDialog({ a, onClose }: { a: Attachment; onClose: () => void }) {
+  const opts = useApi<DraftOptions>(["draft-options", a.id], `/attachments/${a.id}/draft-options`);
   // The order the server uses: answers that pass today's check first, then ones it re-checks before use (Lead check A3).
   const runs: SavedRun[] = opts.data?.saved_runs ?? [];
   const saved = [...runs.filter((r) => r.valid), ...runs.filter((r) => r.recheckable)];

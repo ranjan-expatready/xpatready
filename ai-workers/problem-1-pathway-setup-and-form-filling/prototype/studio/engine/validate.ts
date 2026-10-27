@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { channelProblems } from "./channels.ts";
+import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 
 const schema = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "contracts", "predicate.v0.schema.json"), "utf8"));
 const ajv = new Ajv({ strict: false, allErrors: true });
@@ -53,6 +54,14 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     if (!types.has(e.fact)) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `The form field reads ${e.fact}, which is not in the library.` });
     else if (!placed.has(e.fact) && !docFacts.has(e.fact)) unplaced.set(e.fact, (unplaced.get(e.fact) ?? 0) + 1);
   }
+  // S5 slice 2 (coverage gate; Screen 03 challenge point 3, Lead 25 Oct): every fact a form field needs for a person the
+  // combination has is asked of someone or filled by the case officer; otherwise release is blocked, per person, naming
+  // the question's meaning, the forms that need it and the fix.
+  const roleWord = new Map(((s.combination.participants ?? []) as { role: string; label?: string }[]).map((p) => [p.role, p.label ?? p.role]));
+  const meaningOf = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, f.meaning ?? f.id]));
+  const gaps = coverageGaps(s);
+  for (const g of gaps) out.push({ level: "error", where: "Questionnaires", item: g.fact, message: `${g.role === "the application" ? "The application" : roleWord.get(g.role) ?? g.role}: "${meaningOf.get(g.fact) ?? g.fact}" is needed by ${g.forms.join(", ")}, but nobody is asked for it. Fix: ${COVERAGE_FIXES}.` });
+  for (const g of gaps) unplaced.delete(g.fact);
   for (const [fact, n] of unplaced) out.push({ level: "warning", where: "Library", item: fact, message: `${n} form field${n > 1 ? "s read" : " reads"} this field, but nobody is asked for it and no supported document supplies it: in a case it stays unresolved until a placement is added.` });
   for (const p of s.placements) {
     if (!sectionIds.has(p.section_id)) out.push({ level: "warning", where: "Questions", item: p.fact, message: `Placed in section ${p.section_id}, which this combination's questionnaire does not use.` });

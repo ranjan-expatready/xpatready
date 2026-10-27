@@ -1,8 +1,9 @@
 // S5 Forms tab (W1-08, walkthrough v2 S5), slice 1: the combination's form lines with who fills each, from what age,
 // only if (a rule, or words with no rule yet: M1), how it is filed by default within what IRCC accepts, and who signs.
 // A row opens a 560 px drawer to change them. "Add a form from the library" picks only forms the library holds (P-118 Q2:
-// forms enter only through the Form library); below, each form is read and matched to shared fields. Finding, replacing
-// and redoing forms with AI come with the form finder (slice 3, forms lane endpoints).
+// forms enter only through the Form library). Each form is listed once (early-look fix 1): its reading and matching
+// status and next step are in its row, its steps in its drawer; checklists, guides and pages that are not lines are one
+// "Sources" line. Finding, replacing and redoing forms with AI come with the form finder (slice 3, forms lane endpoints).
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,13 +16,14 @@ import { Spinner } from "@/components/ui/spinner";
 import { ConditionBuilder } from "@/components/conditions";
 import { Tip } from "@/components/status";
 import { useLibraryFields, WHO, whoLabel } from "@/pages/configuration";
-import { ReadingSection } from "@/pages/sources";
+import { attachmentFor, pendingForms, ReadingCell, ReadingSteps, SourcesLine, StepNotices } from "@/pages/sources";
 import { FormPicker } from "@/components/forms";
 import { useApi } from "@/lib/api";
 import { ChannelCell } from "@/components/channels";
+import type { CombinationSummary, CombinationView } from "../../../../contracts/programs";
 /** The fields of a summary line that ChannelCell reads. */
 type ChannelLine = CombinationSummary["forms"][number];
-import type { CombinationSummary, CombinationView } from "../../../../contracts/programs";
+type Combo = Parameters<typeof SourcesLine>[0]["d"];
 
 /** m3 (P-113): Online is a real way for portal-only forms; the product fills it in a later wave. */
 const ONLINE_WORDS = "Online: the case officer types it into the portal from the answer sheet (P-113); the browser extension fills it in a later wave.";
@@ -30,7 +32,7 @@ const TIPS = {
   onlyIf: "When the form is needed. A rule is checked on every case; words alone cannot be checked, so a case cannot tell until a rule is built.",
   filed: "How new cases file this form unless the case officer changes it. Only ways IRCC accepts are offered (Form library; Sample until the immigration expert confirms).",
   signed: "Who signs the form. Sample until the immigration expert confirms.",
-  library: "The edition this combination uses and how many of its form fields are matched to shared fields.",
+  library: "The edition this combination uses, how many of its form fields are matched to shared fields, and the step the form waits for (read it, draft with AI, review AI's proposals).",
 };
 
 export function FormsTab({ id, lines, filing, filingDetail, problems }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[] }) {
@@ -41,16 +43,18 @@ export function FormsTab({ id, lines, filing, filingDetail, problems }: { id: st
   const noRule = lines.filter((l) => l.onlyIf.kind === "words_only");
   const add = canAuthor ? <Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus /> Add a form from the library</Button> : null;
   const picker = adding ? <Panel open onOpenChange={(o) => !o && setAdding(false)} title="Add a form from the library" description="Only forms already in the Form library. A new form enters there first (upload, or the form finder)." footer={<><Button variant="ghost" onClick={() => setAdding(false)}>Close</Button><Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></>}><FormPicker combinationId={id} have={lines.map((l) => l.code)} /></Panel> : null;
-  const reading = d.data ? <ReadingSection d={d.data} /> : null;
+  const combo = d.data as unknown as Combo | undefined;
+  const codes = lines.map((l) => l.code);
+  const pending = combo ? pendingForms(combo, codes) : [];
   // Break m4 (Screen 01): an author never sees the channels as read-only words while the session loads.
-  if (!known) return <Spinner label="Loading forms" />;
-  if (!lines.length) return (
+  if (!known || !combo) return <Spinner label="Loading forms" />;
+  if (!lines.length && !pending.length) return (
     <div className="space-y-5">
       <div className="rounded-xl border border-border bg-surface-raised p-5" data-forms-empty>
         <div className="flex flex-wrap items-start justify-between gap-3"><h2 className="font-semibold">No forms yet</h2>{add}</div>
         <p className="mt-1 text-sm text-text-muted">Forms come from the <Link className="text-text-link underline" to="/library/forms">Form library</Link>. Add one here; when the form finder arrives, AI finds this combination's forms and attaches them by itself.</p>
       </div>
-      {reading}{picker}
+      <SourcesLine d={combo} lineCodes={codes} />{picker}
     </div>
   );
   return (
@@ -59,8 +63,9 @@ export function FormsTab({ id, lines, filing, filingDetail, problems }: { id: st
         <p className="text-sm" data-filing><span className="text-text-muted">Filing: </span><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null} <span className="text-text-muted">· {lines.length} form{lines.length === 1 ? "" : "s"} · Sample until the immigration expert confirms</span></p>
         <span className="flex items-center gap-3">{add}<Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></span>
       </div>
+      <StepNotices d={combo} />
       {noRule.length ? <Notice tone="warn" title={`${noRule.length} condition${noRule.length === 1 ? " is" : "s are"} in words only`}>A case cannot tell whom {noRule.map((l) => l.code).join(", ")} {noRule.length === 1 ? "applies" : "apply"} to until the words are turned into a rule. Release waits for it. Open the form to build the rule.</Notice> : null}
-      <Table head={["Form", "Why it is here (IRCC's words)", <Head key="w" tip={TIPS.who}>Who fills it</Head>, <Head key="o" tip={TIPS.onlyIf}>Only if</Head>, <Head key="f" tip={TIPS.filed}>Filed as by default</Head>, <Head key="s" tip={TIPS.signed}>Signed by</Head>, <Head key="l" tip={TIPS.library}>In the library</Head>, ""]}>
+      <Table head={["Form", "Why it is here (IRCC's words)", <Head key="w" tip={TIPS.who}>Who fills it</Head>, <Head key="o" tip={TIPS.onlyIf}>Only if</Head>, <Head key="f" tip={TIPS.filed}>Filed as by default</Head>, <Head key="s" tip={TIPS.signed}>Signed by</Head>, <Head key="l" tip={TIPS.library}>Read and matched</Head>, ""]}>
         {lines.map((l) => (
           <tr key={l.line} data-line={l.code}>
             <td><span className="mono font-medium">{l.code}</span><br /><span className="text-xs text-text-muted">{l.title}</span></td>
@@ -69,14 +74,22 @@ export function FormsTab({ id, lines, filing, filingDetail, problems }: { id: st
             <td className="max-w-56 text-xs"><OnlyIfCell l={l} /></td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
-            <td className="text-xs">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <><br /><span className="text-text-muted">{l.boxes} form fields matched</span></>}</td>
+            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <ReadingCell d={combo} a={attachmentFor(combo, l.code)} />}</td>
             <td>{canAuthor ? <Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button> : null}</td>
+          </tr>
+        ))}
+        {pending.map((a) => (
+          <tr key={a.id} data-pending={a.edition ?? a.fileName}>
+            <td><span className="mono font-medium">{(a.edition ?? a.fileName).split(" (")[0]}</span><br /><span className="text-xs text-text-muted">{a.edition} · {a.fileName}</span></td>
+            <td colSpan={5} className="text-xs text-text-muted">Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.</td>
+            <td className="text-xs"><ReadingCell d={combo} a={a} /></td>
+            <td />
           </tr>
         ))}
       </Table>
       {problems.length ? <ul className="space-y-1 text-sm" aria-label="Filing problems">{problems.map((x, i) => <li key={i} className="flex gap-2"><Pill tone={x.level === "error" ? "danger" : "warn"}>{x.level === "error" ? "Blocks release" : "Warning"}</Pill>{x.message}</li>)}</ul> : null}
-      {open ? <LineDrawer id={id} l={open} onClose={() => setOpen(null)} /> : null}
-      <div className="pt-2">{reading}</div>
+      <SourcesLine d={combo} lineCodes={codes} />
+      {open ? <LineDrawer id={id} l={open} d={combo} onClose={() => setOpen(null)} /> : null}
       {picker}
     </div>
   );
@@ -94,7 +107,7 @@ function OnlyIfCell({ l }: { l: WorkspaceFormLine }) {
 }
 
 /** The line drawer: who, minimum age, only if (rule builder and words), filed as within what IRCC accepts, signed by. */
-function LineDrawer({ id, l, onClose }: { id: string; l: WorkspaceFormLine; onClose: () => void }) {
+function LineDrawer({ id, l, d, onClose }: { id: string; l: WorkspaceFormLine; d: Combo; onClose: () => void }) {
   const qc = useQueryClient(); const toast = useToast();
   const fields = useLibraryFields();
   const [who, setWho] = React.useState(l.who);
@@ -159,6 +172,7 @@ function LineDrawer({ id, l, onClose }: { id: string; l: WorkspaceFormLine; onCl
           <Field label="Filed as by default" hint={channel === "ONLINE" ? ONLINE_WORDS : l.acceptedBasis}><Select value={channel} onChange={(e) => setChannel(e.target.value as Channel)}>{(["PDF_UPLOAD", "SIGNED_PDF_UPLOAD", "ONLINE"] as Channel[]).map((c) => <option key={c} value={c} disabled={!l.accepted.includes(c)}>{CHANNEL_WORDS[c]}{l.accepted.includes(c) ? "" : " (IRCC does not accept it)"}</option>)}</Select></Field>
           <Field label="Signed by" hint="Sample until the immigration expert confirms." error={errors.signedBy}><Select value={signedBy} onChange={(e) => setSignedBy(e.target.value)}><option value="">Not set</option>{SIGNED_BY.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}</Select></Field>
         </div> : null}
+        {!l.document ? <section aria-labelledby="drawer-reading" className="space-y-2 border-t border-border pt-4"><h3 id="drawer-reading" className="text-xs font-medium">Reading and matching</h3><ReadingSteps d={d} a={attachmentFor(d, l.code)} /></section> : null}
       </div>
     </Panel>
   );

@@ -4,17 +4,18 @@
 // Documents and Review read the combination page's existing reads. Preview reads the draft (or the latest release)
 // through the runtime's own caseView (engine/runtime/preview.ts).
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Patch, Post, Query } from "@nestjs/common";
-import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
+import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
+import { questionnairesView } from "../../engine/runtime/questionnaires.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
 import { wordsOnly } from "../../engine/render.ts";
 import { channelProblems, filingKind, filingMethod, signatureOf } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, CHANNELS, type Channel } from "../../contracts/forms.ts";
-import { answeredBy, signedByLabel, tabOf, type FamilyKey, type OnlyIf, type PeopleView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
+import { answeredBy, signedByLabel, tabOf, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { actorOf, Db, fail } from "./core.ts";
 import { Studio } from "./studio.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-type Q = { tab?: string; family?: string; person?: string; tweaks?: string; release?: string };
+type Q = { tab?: string; family?: string; person?: string; tweaks?: string; release?: string; role?: string };
 type SnapForm = { form_number: string; title: string; form_kind?: string; who: string; status: string; condition: unknown; condition_plain?: string | null; source_quote?: string | null; origin?: string; channel?: Channel; min_age?: number; signed_by?: string };
 
 @Injectable()
@@ -25,7 +26,7 @@ export class WorkspaceViews {
     const c = await this.combination(id);
     const asked = String(q.tab ?? "overview").slice(0, 40), tab = tabOf(asked);
     if (tab === "forms") return { tab, asked, ...(await this.forms(id, c.workspaceId)) };
-    if (tab === "questionnaires") return { tab, asked, people: await this.people(id, c.workspaceId) };
+    if (tab === "questionnaires") return { tab, asked, people: await this.people(id, c.workspaceId), ...(await this.questionnaires(id, c.workspaceId, q.role)) };
     if (tab === "preview") return { tab, asked, ...(await this.preview(id, c.workspaceId, q)) };
     return { tab, asked };
   }
@@ -63,6 +64,21 @@ export class WorkspaceViews {
     // The filing problems come in the same answer as the lines and the filing words, so they never disagree on screen.
     const problems = channelProblems(snapshot).map((x) => ({ level: x.level === "error" ? "error" as const : "warning" as const, item: x.item, message: x.message }));
     return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), problems };
+  }
+
+  /** Questionnaires (slice 2): one person role's questions as a case asks them, with coverage; the library sections the
+   *  combination can still add; where-used counts every combination's draft (a shared question changes everywhere). */
+  private async questionnaires(id: string, workspaceId: string, role?: string): Promise<{ questionnaire: QuestionnairesView | null; available: { key: string; title: string }[] }> {
+    const snapshot = (await buildSnapshot(this.db, workspaceId, id, "draft")).snapshot;
+    const sections = await this.db.logicalSection.findMany({ where: { workspaceId, status: { not: "RETIRED" } }, orderBy: [{ displayOrder: "asc" }, { version: "desc" }] });
+    const chosen = new Set((snapshot.sections as { id: string }[]).map((x) => x.id)), seen = new Set<string>();
+    const available = sections.filter((x) => !chosen.has(x.sectionKey) && !seen.has(x.sectionKey) && seen.add(x.sectionKey)).map((x) => ({ key: x.sectionKey, title: x.title }));
+    if (!snapshot.forms.length && !snapshot.sections.length) return { questionnaire: null, available };
+    const comps = await this.db.combination.findMany({ where: { workspaceId }, select: { id: true } });
+    const snaps = await buildSnapshots(this.db, workspaceId, comps.map((x) => x.id), "draft");
+    const whereUsed = new Map<string, number>();
+    for (const x of snaps.values()) for (const f of x.snapshot.canonical_fields as { id: string }[]) whereUsed.set(f.id, (whereUsed.get(f.id) ?? 0) + 1);
+    return { questionnaire: questionnairesView(snapshot, role, whereUsed), available };
   }
 
   /** "Who can be in this application" with the roles to pick from and whether Undo is offered. */

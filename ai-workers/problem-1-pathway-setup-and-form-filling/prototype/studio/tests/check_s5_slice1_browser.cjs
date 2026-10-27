@@ -70,7 +70,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await go("forms");
   const rows = await p.locator("[data-line]").count();
   step("C1.6: the Forms tab lists each line with who, only if, filed as and the library edition", rows === 8 && /PDF only/.test(await p.locator("[data-filing]").innerText()), rows);
-  step("Forms keeps the existing reading and matching (Read form · Draft with AI · Review AI proposals) below the lines", await p.locator("[data-reading]").count() === 1 && /Reading and matching/.test(await panel().innerText()));
+  // Early-look fix 1: each form listed once: its reading status and last step are in its row; no second list of forms.
+  const row1295 = await p.locator('[data-line="IMM 1295"]').innerText();
+  step("fix 1: each form's reading status and last step are in its own row; no second list repeats the forms", /In the library/.test(row1295) && /Read today/.test(row1295) && await p.locator("[data-reading]").count() === 0 && (await panel().innerText()).split("IMM 1295 (09-2023)").length <= 3, row1295.replace(/\s+/g, " ").slice(0, 160));
+  step("fix 1: checklists, guides and pages that are not lines show as one compact Sources line", await p.locator("[data-sources]").count() === 1 && /Guide 5487 page/.test(await p.locator("[data-sources]").innerText()), await p.locator("[data-sources]").innerText());
   step("m5: no desktop upload and no 'Attach a sample file' on the combination (forms enter only through the Form library)", await panel().locator('input[type="file"]').count() === 0 && !/Attach a sample file|Choose files/.test(await panel().innerText()));
   await state("forms");
   await p.getByRole("button", { name: "Add a form from the library" }).click();
