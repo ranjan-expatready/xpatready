@@ -6,6 +6,8 @@
 
 2026-10-27 17:50 (Lead, Mac) addition: **P-125 (founder):** the New combination page goes; Start setup on a card opens your workspace directly (Forms tab, finder running) with the combination's place read-only in the header: nobody changes Pathway, Program, Category or Sub-category in the workspace (the trail links lead to Program structure to view, not to edit here). **P-126:** while an early look of yours waits for the founder, re-check or challenge your next slice only; no code for it.
 
+2026-10-27 22:50 (Lead, Mac) addition: **S5 slice 1 early look seen by the Lead (68adc3b); founder early look next.** Your CI was red on one suite (`check_w1_programs_s2.cjs`: Status change with 50+ combinations under 2 s); the Lead re-ran it. If it is red again, find whether your `snapshot.ts` / `validate.ts` / `studio.ts` changes slowed the catalogue (time it on main and on your branch) and fix it before CHECK. **Break m8 merged:** catalogue, structure, path-options, name-check and uses now need a known configuration person in `x-actor`; your S5 tests that call them must send it after you sync main.
+
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: 03-combination-workspace
