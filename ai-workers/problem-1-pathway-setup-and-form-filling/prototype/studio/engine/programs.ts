@@ -28,7 +28,7 @@ export type SetupState = { exists: boolean; forms: number; sources: number; draf
 /** The setup steps of BR-13, in order, with their words (P-44). nextActionOf and the missing list both use this, so the
  *  page's missing list, the page header and the Programs row always name the same step (Lead check item 1). */
 export function setupActionOf(r: SetupState): NextAction | null {
-  if (!r.exists) return { kind: "start", label: "Add sources" };
+  if (!r.exists) return { kind: "start", label: "Start setup" };
   if (r.running) return { kind: "view_progress", label: "View AI progress", batchId: r.running };
   const items = r.proposals.reduce((s, p) => s + (p.n ?? 1), 0);
   if (items) return { kind: "review_proposals", label: `Review ${plural(items, "AI proposal")}`, jobId: r.proposals.find((p) => (p.n ?? 1) > 0)!.job };
@@ -142,6 +142,13 @@ export function needsWork(r: { status: Status; nextAction: NextAction | null }) 
   return r.status !== "READY" || r.nextAction !== null;
 }
 export const isLive = (r: { status: Status }) => r.status === "READY";
+/** "Need you" (S2 fix 6, founder 27 Oct): a combination waiting on a person: something to review (AI proposals, a new
+ *  edition, a release), something missing, or Not ready. Not started and Live with nothing waiting do not count; the
+ *  counts line already shows those. */
+const WAITING: NextAction["kind"][] = ["review_proposals", "see_missing", "see_new_edition", "release"];
+export function waitsForPerson(r: { status: Status; nextAction: NextAction | null; aiProposals: number; held: number }) {
+  return r.status === "NOT_READY" || r.aiProposals > 0 || r.held > 0 || (!!r.nextAction && WAITING.includes(r.nextAction.kind));
+}
 
 /** Status column sort (P-49): most urgent first — Not ready (released but firms cannot use it), In setup, Live; the
  *  path order breaks ties. Descending reverses the status order only. */

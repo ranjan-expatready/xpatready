@@ -75,7 +75,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("S1-1 one card per Retail Pathway plus 'All pathways' and '+ Add pathway'", await allCard.count() === 1 && await trCard.count() === 1 && await prCard.count() === 1 && await cards().getByRole("button", { name: /Add pathway/ }).count() === 1);
   const trText = await trCard.textContent(), prText = await prCard.textContent();
   const trApi = st.find((x) => x.key === tr), prApi = st.find((x) => x.key === pr);
-  step("S1-1 each card shows its combinations and how many need you, from the same counts as the outline", new RegExp(`${trApi.combinations} combinations.*${trApi.needs} need`).test(trText) && new RegExp(`${prApi.combinations} combinations.*${prApi.needs} need`).test(prText) && trApi.combinations === 3 && prApi.combinations === 2, `${trText} | ${prText}`);
+  step("S1-1 each card shows its combinations and how many need you, from the same counts as the outline", new RegExp(`${trApi.combinations} combinations.*${trApi.needs ? `${trApi.needs} need` : "none need you"}`).test(trText) && new RegExp(`${prApi.combinations} combinations.*${prApi.needs ? `${prApi.needs} need` : "none need you"}`).test(prText) && trApi.combinations === 3 && prApi.combinations === 2, `${trText} | ${prText}`);
   step("S1-1 'All pathways' is chosen at first and every pathway is open", await allCard.getAttribute("aria-pressed") === "true" && await item("Temporary residence").getAttribute("aria-expanded") === "true" && await item("Permanent residence").getAttribute("aria-expanded") === "true");
   await state("pathway-cards-all");
   await prCard.click();

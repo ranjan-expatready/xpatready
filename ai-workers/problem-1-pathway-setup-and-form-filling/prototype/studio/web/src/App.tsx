@@ -33,8 +33,8 @@ function Shell() {
   const queue = useApi<{ counts: { needs: number } }>(["review-queue", actorId, "count"], "/review-queue?filter=needs", { refetchInterval: 15_000 });
   const nav = [
     { to: "/review", label: "To review", icon: Inbox, badge: queue.data?.counts.needs || undefined },
-    { to: "/", label: "Programs", icon: Layers, match: (p: string) => p === "/" || p === "/new" || p.startsWith("/c/") },
-    // W1-03 (P-115): the one place new names enter; "Programs" becomes "Immigration programs" with its redesign (slice 3).
+    { to: "/", label: "Immigration programs", icon: Layers, match: (p: string) => p === "/" || p === "/new" || p.startsWith("/c/") },
+    // W1-03 (P-115): the one place new names enter.
     { to: "/structure", label: "Structure", icon: ListTree },
     { to: "/library/fields", label: "Fields", icon: Database },
     { to: "/library/sections", label: "Sections", icon: Boxes },
@@ -107,7 +107,7 @@ function Shell() {
             <Route path="/ai/:batchId" element={<AiBatchPage />} />
             <Route path="/releases" element={<ReleasesPage />} />
             <Route path="/activity" element={<ActivityPage />} />
-            <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/">Back to programs</Link></Notice>} />
+            <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/">Back to Immigration programs</Link></Notice>} />
           </Routes>
         </main>
       </div>
