@@ -102,20 +102,6 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   r = await call("GET", "/ledger");
   ok("C11.8 (m4): the ledger summary states the Wave 1 cap, what it spent and what is left", r.body?.wave?.cap_usd === 60 && typeof r.body.wave.spent_usd === "number" && r.body.remaining_usd <= r.body.wave.remaining_usd, r.body?.wave);
 
-  // --- Round 4 review M2, golden: the two committed real AI answers (27 Oct, US$0.31) replay at US$0, and IMM 5257 (whose
-  // quote sits under the heading that prints its number in guide 5256) is attached, not dropped.
-  { const gp = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "replay" })).body;
-    const gl = await call("POST", `/combinations/${vv}/forms/find`, { mode: "replay", planSha256: gp.plan_sha256, idempotencyKey: "s4r-golden-replay" });
-    const g = (await settle(gl.body.id)).body;
-    const att = (await call("GET", `/combinations/${vv}/forms/find`)).body?.result?.attach ?? [];
-    ok("round 4 review M2 (golden): the committed real answers replay at US$0 and keep IMM 5257, the visitor visa application itself", g.usd?.spent === 0 && att.some((a: any) => a.code === "IMM 5257"), { status: g.status, attach: att.map((a: any) => a.code), dropped: (await call("GET", `/combinations/${vv}/forms/find`)).body?.result?.dropped?.map((d: any) => `${d.code}: ${d.why}`) });
-    ok("round 4 review should: a replayed run is not called \"rules only, no AI\" (its AI steps are marked)", g.steps?.some((s: any) => s.uses === "ai"), g.steps?.map((s: any) => s.uses)); }
-  { const attId = sql(`select id from source_attachment where combination_id='${vv}' and edition like 'IMM 5257 (%' limit 1`);
-    sql(`update gov_form_def set retired_at = now() where form_key = 'IMM 5257'`);
-    r = await call("POST", `/attachments/${attId}/draft`, { mode: "stub" });
-    sql(`update gov_form_def set retired_at = null where form_key = 'IMM 5257'`);
-    ok("round 4 review M1: AI does not draft a retired library form's file (409, in words)", r.status === 409 && /retired/.test(r.body?.detail ?? r.body?.message ?? ""), r.body?.detail ?? r.body); }
-
   // --- The run API on a rules finder run, twice ("usually about" comes from the run before)
   r = await call("GET", "/runs?active=1");
   ok("C11.8: nothing runs yet: the chip has nothing to show", r.status === 200 && r.body.runs.length === 0, r.body);
@@ -178,6 +164,20 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
     sql(`update gov_form_def set retired_at = null where form_key = 'IMM 5257'`);
     const t5257 = (plan.targets ?? []).find((t: any) => /^IMM 5257 \(/.test(t.source ?? ""));
     ok("round 5 major: AI plans no draft of a retired form's file, whatever the scope (combination)", !!t5257 && t5257.action === "not_eligible" && /Retired in the library/.test(t5257.why), t5257 ?? plan); }
+
+  // --- Round 4 review M2, golden: the two committed real AI answers (27 Oct, US$0.31) replay at US$0, and IMM 5257 (whose
+  // quote sits under the heading that prints its number in guide 5256) is attached, not dropped.
+  { const gp = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "replay" })).body;
+    const gl = await call("POST", `/combinations/${vv}/forms/find`, { mode: "replay", planSha256: gp.plan_sha256, idempotencyKey: "s4r-golden-replay" });
+    const g = (await settle(gl.body.id)).body;
+    const att = (await call("GET", `/combinations/${vv}/forms/find`)).body?.result?.attach ?? [];
+    ok("round 4 review M2 (golden): the committed real answers replay at US$0 and keep IMM 5257, the visitor visa application itself", g.usd?.spent === 0 && att.some((a: any) => a.code === "IMM 5257"), { status: g.status, attach: att.map((a: any) => a.code), dropped: (await call("GET", `/combinations/${vv}/forms/find`)).body?.result?.dropped?.map((d: any) => `${d.code}: ${d.why}`) });
+    ok("round 4 review should: a replayed run is not called \"rules only, no AI\" (its AI steps are marked)", g.steps?.some((s: any) => s.uses === "ai"), g.steps?.map((s: any) => s.uses)); }
+  { const attId = sql(`select id from source_attachment where combination_id='${vv}' and edition like 'IMM 5257 (%' limit 1`);
+    sql(`update gov_form_def set retired_at = now() where form_key = 'IMM 5257'`);
+    r = await call("POST", `/attachments/${attId}/draft`, { mode: "stub" });
+    sql(`update gov_form_def set retired_at = null where form_key = 'IMM 5257'`);
+    ok("round 4 review M1: AI does not draft a retired library form's file (409, in words)", r.status === 409 && /retired/.test(r.body?.detail ?? r.body?.message ?? ""), r.body?.detail ?? r.body); }
 
   // --- Upload PDF read rules first (M1)
   const official = readFileSync(join(OFFICIAL, "forms", "imm5604e.pdf"));
