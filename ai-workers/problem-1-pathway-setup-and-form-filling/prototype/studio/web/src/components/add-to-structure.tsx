@@ -181,7 +181,7 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
   const verb = fresh.length === 1 ? `Add ${WORD[fresh[0]].toLowerCase()}` : `Add ${fresh.length} names`;
   const title = "Add to Program structure";
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }} title={title} description="Pick what exists or type a new name; each level is checked as you type. Only the new names are written, and no setup starts."
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }} initialFocus={() => { const el = aimPending.current ? refs.current[aimPending.current] : null; if (el && !el.disabled) aimPending.current = null; return el; }} title={title} description="Pick what exists or type a new name; each level is checked as you type. Only the new names are written, and no setup starts."
       footer={
         <div className="flex w-full flex-wrap items-center justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
