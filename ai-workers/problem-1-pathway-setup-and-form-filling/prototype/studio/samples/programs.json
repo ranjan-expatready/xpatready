@@ -1,22 +1,40 @@
 {
- "note": "Sample programs for the Programs screen (Screen 01). Names are illustrative and labelled Sample on screen; the immigration expert confirms the real lists and every value. Only the rows with a 'setup' block get a combination and official files when the sample inputs are loaded; the others show as Not started. 'import': 'release' starts that row from the reviewed work-permit release (the only released sample). The Pathway type (Retail; Corporate and employers) is a fixed value; the two pathways below are Sample names a person would add on the Structure (W1-03; W1-11 brings the P-112 names). Super visa is one combination (parent or grandparent is a condition, not a sub-category, P-35); demo names follow SCREENS.md \"Demo combinations\".",
+ "note": "Sample programs for the Programs screen (Screen 01). Names are illustrative and labelled Sample on screen; the immigration expert confirms the real lists and every value. Only the rows with a 'setup' block get a combination and official files when the sample inputs are loaded; the others show as Not started. 'import': 'release' starts that row from the reviewed work-permit release (the only released sample). The Pathway type (Retail; Corporate and employers) is a fixed value; the pathways below are the P-112 names (Sample), as a person would add them on the Structure (W1-03); S7 replaces this sample. Super visa is one combination (parent or grandparent is a condition, not a sub-category, P-35); demo names follow SCREENS.md \"Demo combinations\".",
  "pathways": [
   {
-   "key": "individual",
-   "label": "Individual",
+   "key": "retail.temporary_residence",
+   "label": "Temporary residence",
    "type": "INDIVIDUAL",
-   "description": "Sample pathway: applications a person makes for themselves and their family."
+   "description": "Sample pathway (P-112): visits, study and work in Canada for a limited time."
   },
   {
-   "key": "corporate",
-   "label": "Corporate and employers",
+   "key": "retail.permanent_residence",
+   "label": "Permanent residence",
+   "type": "INDIVIDUAL",
+   "description": "Sample pathway (P-112): applications that lead to permanent residence, and the documents that go with it."
+  },
+  {
+   "key": "retail.citizenship",
+   "label": "Citizenship",
+   "type": "INDIVIDUAL",
+   "description": "Sample pathway (P-112): applications that lead to Canadian citizenship."
+  },
+  {
+   "key": "corporate.temporary_residence",
+   "label": "Temporary residence",
    "type": "CORPORATE",
-   "description": "Sample pathway: applications an employer or organisation makes."
+   "description": "Sample pathway (P-112): what an employer files so a worker can come for a limited time."
+  },
+  {
+   "key": "corporate.permanent_residence",
+   "label": "Permanent residence",
+   "type": "CORPORATE",
+   "description": "Sample pathway (P-112): what an employer files to support a worker's permanent residence."
   }
  ],
  "programs": [
   {
-   "pathway": "individual",
+   "pathway": "retail.temporary_residence",
    "key": "individual.visitors",
    "label": "Visitors",
    "description": "Visiting Canada for a short stay.",
@@ -103,7 +121,7 @@
    ]
   },
   {
-   "pathway": "individual",
+   "pathway": "retail.temporary_residence",
    "key": "individual.work_permits",
    "label": "Work permits",
    "description": "Working in Canada for an employer or with an open permit.",
@@ -240,7 +258,7 @@
    ]
   },
   {
-   "pathway": "individual",
+   "pathway": "retail.temporary_residence",
    "key": "individual.study_permits",
    "label": "Study permits",
    "description": "Studying in Canada.",
@@ -286,7 +304,7 @@
    ]
   },
   {
-   "pathway": "individual",
+   "pathway": "retail.permanent_residence",
    "key": "individual.family_sponsorship",
    "label": "Family sponsorship",
    "description": "Sponsoring a family member to become a permanent resident.",
@@ -356,7 +374,7 @@
    ]
   },
   {
-   "pathway": "individual",
+   "pathway": "retail.permanent_residence",
    "key": "individual.economic",
    "label": "Economic immigration",
    "description": "Permanent residence through work experience and skills.",
@@ -401,7 +419,7 @@
    ]
   },
   {
-   "pathway": "individual",
+   "pathway": "retail.citizenship",
    "key": "individual.citizenship",
    "label": "Citizenship",
    "description": "Becoming a Canadian citizen.",
@@ -416,7 +434,7 @@
    ]
   },
   {
-   "pathway": "individual",
+   "pathway": "retail.permanent_residence",
    "key": "individual.pr_documents",
    "label": "Permanent resident documents",
    "description": "Cards and travel documents for permanent residents.",
@@ -438,7 +456,7 @@
    ]
   },
   {
-   "pathway": "corporate",
+   "pathway": "corporate.temporary_residence",
    "key": "corporate.lmia",
    "label": "LMIA",
    "description": "An employer asks to hire a foreign worker.",
@@ -494,7 +512,7 @@
    ]
   },
   {
-   "pathway": "corporate",
+   "pathway": "corporate.temporary_residence",
    "key": "corporate.employer_offers",
    "label": "Employer offers (LMIA-exempt)",
    "description": "An employer submits a job offer for a worker who needs no LMIA.",
@@ -525,7 +543,7 @@
    ]
   },
   {
-   "pathway": "corporate",
+   "pathway": "corporate.permanent_residence",
    "key": "corporate.designation",
    "label": "Designation and endorsement",
    "description": "An employer is designated or endorsed by a province.",
@@ -540,7 +558,7 @@
    ]
   },
   {
-   "pathway": "corporate",
+   "pathway": "corporate.temporary_residence",
    "key": "corporate.compliance",
    "label": "Compliance",
    "description": "An employer answers a government compliance review.",

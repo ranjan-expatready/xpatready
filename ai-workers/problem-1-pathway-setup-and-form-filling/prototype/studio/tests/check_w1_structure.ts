@@ -187,13 +187,13 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
   await call("GET", "/catalogue?pathway=INDIVIDUAL"); await call("GET", "/catalogue?pathway=CORPORATE"); await call("GET", "/session");
   ok("C11.7 Reset: 0 names after Reset and none recreated by reads (both tabs empty)", r.status === 201 && sql("select count(*) from program_def") === "0" && (await structure("CORPORATE")).empty === true);
   r = await call("POST", "/demo/load");
-  ok("setup: the sample inputs load, with their two Pathways added like a person adds them", r.status === 201 && r.body.log?.[0] === 'pathway "Individual" (Sample)', r.body.log?.slice(0, 2));
+  ok("setup: the sample inputs load, with their P-112 Pathways added like a person adds them", r.status === 201 && r.body.log?.[0] === 'pathway "Temporary residence" (Sample)', r.body.log?.slice(0, 2));
   r = await call("POST", "/demo/load");
   ok("C11.7 fail: loading again while the Structure has names is refused", r.status === 409, r.body.detail);
 
   // ---------------------------------------------------------------- released combination: rename = one name-only change
   const live = (await cat("pathway=INDIVIDUAL&filter=live")).rows[0];
-  ok("C11.10 A3: the released sample is Live with all four steps done and files as PDF", live?.progress?.live === true && live.filed === "PDF" && live.trail.join(" › ") === "Retail › Individual › Work permits › Employer-specific work permit › With an LMIA", [live?.progress?.label, live?.filed, live?.trail]);
+  ok("C11.10 A3: the released sample is Live with all four steps done and files as PDF", live?.progress?.live === true && live.filed === "PDF" && live.trail.join(" › ") === "Retail › Temporary residence › Work permits › Employer-specific work permit › With an LMIA", [live?.progress?.label, live?.filed, live?.trail]);
   const wp = "individual.work_permits";
   r = await call("PATCH", `/structure/nodes/${wp}`, { label: "Work permit programs", version: 1 });
   const rel = JSON.parse(sql(`select snapshot from config_release where combination_id='${live.combinationId}' order by version desc limit 1`));

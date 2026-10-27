@@ -28,10 +28,14 @@ export function NewCombinationPage() {
   const session = useApi<SessionView>(["session", actorId], "/session");
   const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
   const [pathway, setPathway] = React.useState(sp.get("pw") === "CORPORATE" ? "CORPORATE" : "INDIVIDUAL");
-  const opts = useApi<{ programs: ProgramOpt[]; pathways: { key: string; label: string }[]; combinations: { nodeKey: string; pathway: string; path: string[] }[] }>(["path-options", pathway], `/path-options?pathway=${pathway}`);
+  const opts = useApi<{ programs: ProgramOpt[]; pathways: { key: string; label: string; programs?: Opt[] }[]; combinations: { nodeKey: string; pathway: string; path: string[] }[] }>(["path-options", pathway], `/path-options?pathway=${pathway}`);
   // W1-03 (slice 1): Pathways are names on the Structure; the trail names the type's Pathway when it has exactly one
   // (slice 4 redraws this page with a Pathway picker).
-  const pathwayName = opts.data?.pathways?.length === 1 ? `${opts.data.pathways[0].label} › ` : "";
+  // S2 fix: with several Pathways in a type, the trail names the one the chosen program sits in.
+  const pwOf = (k: string | undefined) => opts.data?.pathways?.find((x) => x.programs?.some((y) => y.key === k));
+  const pathwayName = () => { const pw = pathwayOf(); return pw ? `${pw.label} › ` : ""; };
+  const pathwayOf = () => (program && "key" in program ? pwOf(program.key) : undefined) ?? (opts.data?.pathways?.length === 1 ? opts.data.pathways[0] : undefined);
+
   const [program, setProgram] = React.useState<Val>(null);
   const [category, setCategory] = React.useState<Val>(null);
   const [sub, setSub] = React.useState<Val>(null);
@@ -41,6 +45,23 @@ export function NewCombinationPage() {
   const [busy, setBusy] = React.useState(false);
   const [problem, setProblem] = React.useState<string | null>(null);
   const back = () => nav(-1);
+  // S2 (founder, 27 Oct): "Start setup" on a Not started combination (Structure's "Used by", Immigration programs)
+  // arrives with ?leaf=<node key>; the pickers are filled with its trail once, until S3 replaces this page.
+  const prefilled = React.useRef(false);
+  const [leafNote, setLeafNote] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const want = sp.get("leaf");
+    if (prefilled.current || !want || !opts.data) return;
+    prefilled.current = true;
+    for (const p of opts.data.programs) for (const c of p.categories) {
+      const s = c.subCategories.find((x) => x.key === want);
+      if (c.key !== want && !s) continue;
+      setProgram({ key: p.key, label: p.label }); setCategory({ key: c.key, label: c.label }); setSub(s ? { key: s.key, label: s.label } : null);
+      if (!s && c.subCategories.length) setLeafNote(`${c.label} has sub-categories: choose one of them below.`);
+      return;
+    }
+    setLeafNote(`That combination is not in the Structure for ${PATHWAY_LABEL[pathway]} any more (it may have been renamed, removed or belong to the other type). Pick the path below.`);
+  }, [opts.data, sp]);
 
   const progs = opts.data?.programs ?? [];
   const progNode = program && "key" in program ? progs.find((p) => p.key === program.key) : undefined;
@@ -78,13 +99,14 @@ export function NewCombinationPage() {
     <div className="mx-auto flex max-w-[860px] flex-col gap-4">
       {/* A way back to the list as it was left (review #10, EXPERIENCE §2.1). */}
       <nav aria-label="Path" className="flex items-center gap-1 text-sm text-text-muted">
-        <Link to={(() => { try { return sessionStorage.getItem(CATALOGUE_URL_KEY) ?? "/"; } catch { return "/"; } })()} className="font-medium text-text-link hover:underline">Programs</Link>
+        <Link to={(() => { try { return sessionStorage.getItem(CATALOGUE_URL_KEY) ?? "/"; } catch { return "/"; } })()} className="font-medium text-text-link hover:underline">Immigration programs</Link>
         <ChevronRight className="size-3.5" aria-hidden /><span aria-current="page">New combination</span>
       </nav>
       <h1 className="text-[22px] font-bold tracking-tight">New combination</h1>
       {!canAuthor && session.data ? <Notice tone="warn" title="Only a configuration author can create combinations">Switch to the Configuration author with "Acting as" at the top.</Notice> : null}
       {canAuthor ? <Describe pathway={pathway} onUse={(x) => { if (x.pathway !== pathway) setPathway(x.pathway); setProgram(x.program); setCategory(x.category); setSub(x.subCategory); }} /> : null}
       <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface-raised p-5">
+        {leafNote ? <Notice tone="warn" title="Check the path">{leafNote}</Notice> : null}
         <p className="text-sm text-text-muted">Pick what already exists, or type a new name and choose <b className="font-semibold text-text">Create</b>. Each level is checked for duplicates as you type.</p>
         {opts.isLoading ? <Skeleton className="h-16 w-full" /> : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -117,10 +139,10 @@ export function NewCombinationPage() {
 
         {exists ? (
           <Notice tone="info" title="This combination already exists" action={<Button variant="secondary" onClick={() => nav(leafNode!.combinationId ? `/c/${leafNode!.combinationId}` : `/?${pathway === "CORPORATE" ? "pw=CORPORATE&" : ""}f=all&sel=${encodeURIComponent(leafNode!.key)}`)}>Open the existing combination</Button>}>
-            {PATHWAY_LABEL[pathway]} › {pathwayName}{path.join(" › ")} is already set up. Open it instead of creating it again.
+            {PATHWAY_LABEL[pathway]} › {pathwayName()}{path.join(" › ")} is already set up. Open it instead of creating it again.
           </Notice>
         ) : (
-          <div className="rounded-lg bg-surface px-3 py-2.5 text-sm" aria-live="polite">Will be created as <b className="font-semibold">{PATHWAY_LABEL[pathway]} › {pathwayName}{path.length ? path.join(" › ") : "…"}</b></div>
+          <div className="rounded-lg bg-surface px-3 py-2.5 text-sm" aria-live="polite">Will be created as <b className="font-semibold">{PATHWAY_LABEL[pathway]} › {pathwayName()}{path.length ? path.join(" › ") : "…"}</b></div>
         )}
         {problem ? <Notice tone="danger" title="Not created">{problem}</Notice> : null}
         <div className="flex gap-2">
