@@ -41,6 +41,20 @@ export function NewCombinationPage() {
   const [busy, setBusy] = React.useState(false);
   const [problem, setProblem] = React.useState<string | null>(null);
   const back = () => nav(-1);
+  // S2 (founder, 27 Oct): "Start setup" on a Not started combination (Structure's "Used by", Immigration programs)
+  // arrives with ?leaf=<node key>; the pickers are filled with its trail once, until S3 replaces this page.
+  const prefilled = React.useRef(false);
+  React.useEffect(() => {
+    const want = sp.get("leaf");
+    if (prefilled.current || !want || !opts.data) return;
+    prefilled.current = true;
+    for (const p of opts.data.programs) for (const c of p.categories) {
+      const s = c.subCategories.find((x) => x.key === want);
+      if (c.key !== want && !s) continue;
+      setProgram({ key: p.key, label: p.label }); setCategory({ key: c.key, label: c.label }); setSub(s ? { key: s.key, label: s.label } : null);
+      return;
+    }
+  }, [opts.data, sp]);
 
   const progs = opts.data?.programs ?? [];
   const progNode = program && "key" in program ? progs.find((p) => p.key === program.key) : undefined;
@@ -78,7 +92,7 @@ export function NewCombinationPage() {
     <div className="mx-auto flex max-w-[860px] flex-col gap-4">
       {/* A way back to the list as it was left (review #10, EXPERIENCE §2.1). */}
       <nav aria-label="Path" className="flex items-center gap-1 text-sm text-text-muted">
-        <Link to={(() => { try { return sessionStorage.getItem(CATALOGUE_URL_KEY) ?? "/"; } catch { return "/"; } })()} className="font-medium text-text-link hover:underline">Programs</Link>
+        <Link to={(() => { try { return sessionStorage.getItem(CATALOGUE_URL_KEY) ?? "/"; } catch { return "/"; } })()} className="font-medium text-text-link hover:underline">Immigration programs</Link>
         <ChevronRight className="size-3.5" aria-hidden /><span aria-current="page">New combination</span>
       </nav>
       <h1 className="text-[22px] font-bold tracking-tight">New combination</h1>

@@ -201,14 +201,14 @@ export class Programs {
     // Retired combinations (P-116) are left out of every view but "Retired" (addendum A2).
     const everyInPathway = rows.filter((r) => r.pathway === q.pathway);
     const inPathway = everyInPathway.filter((r) => q.filter === "retired" ? r.leaf.retired : !r.leaf.retired);
-    const inProgram = inPathway.filter((r) => (!q.program || r.leaf.programKey === q.program) && (!q.under || r.leaf.pathKeys.includes(q.under)));
+    const inProgram = inPathway.filter((r) => (!q.pathwayKey || r.leaf.pathwayKey === q.pathwayKey) && (!q.program || r.leaf.programKey === q.program) && (!q.under || r.leaf.pathKeys.includes(q.under)));
     const searched = inProgram.map((r) => ({ r, m: hit(r) })).filter((x) => !words || x.m.length);
     // "Needs work" with nothing to do falls back to All, and says so (P-35, P-49).
     const fellBack = q.filter === "needs" && !searched.some((x) => x.r.leaf.needs);
     const filter = fellBack ? "all" : q.filter;
-    const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? r.leaf.needs : filter === "live" ? r.leaf.live : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : r.leaf.status === filter.toUpperCase());
+    const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? r.leaf.needs : filter === "live" ? r.leaf.live : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : filter === "not_started" ? !r.leaf.combinationId : filter === "in_setup" ? r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId : r.leaf.status === filter.toUpperCase());
     const shown = new Map(searched.filter((x) => pass(x.r)).map((x) => [x.r.leaf.nodeKey, { ...x.r.leaf, matches: x.m }]));
-    const count = (list: Row[]) => ({ needs: list.filter((r) => r.leaf.needs).length, live: list.filter((r) => r.leaf.live).length, all: list.filter((r) => !r.leaf.retired).length, ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "READY").length, not_ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "NOT_READY").length, in_setup: list.filter((r) => !r.leaf.retired && r.leaf.status === "IN_SETUP").length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
+    const count = (list: Row[]) => ({ needs: list.filter((r) => r.leaf.needs).length, live: list.filter((r) => r.leaf.live).length, all: list.filter((r) => !r.leaf.retired).length, ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "READY").length, not_ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "NOT_READY").length, in_setup: list.filter((r) => !r.leaf.retired && r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId).length, not_started: list.filter((r) => !r.leaf.retired && !r.leaf.combinationId).length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
     // W1-03 B1: every Pathway of the type, in Structure order (several per type).
     const pws = nodes.filter((n) => n.nodeKind === "PATHWAY" && n.clientType === q.pathway);
     const kids = (k: string) => nodes.filter((n) => n.parentNodeKey === k);
@@ -221,7 +221,7 @@ export class Programs {
       if (leaf) return leaf;
       if (allLeaves.has(n.programNodeKey) || everyLeaf.has(n.programNodeKey)) return null; // a leaf filtered out (or retired)
       const children = kids(n.programNodeKey).map(build).filter(Boolean) as CatalogueNode[];
-      const filtering = filter !== "all" || !!words || !!q.program || !!q.under;
+      const filtering = filter !== "all" || !!words || !!q.program || !!q.under || !!q.pathwayKey;
       if (filtering && !children.length) return null;
       // A retired name with nothing shown under it is left out (it holds only retired combinations).
       if (n.retiredAt && !children.length) return null;

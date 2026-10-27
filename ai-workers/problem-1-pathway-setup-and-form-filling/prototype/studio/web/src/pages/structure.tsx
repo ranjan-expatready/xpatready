@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtWhen, StatusChip, Tip, TipProvider } from "@/components/status";
+import { PathwayCards } from "@/components/pathway-cards";
 import { cn } from "@/lib/utils";
 
 type ListResp = { pathwayType: PathwayType; typeLabel: string; nodes: StructureNode[]; empty: boolean; meaningCheck: { on: boolean; why: string } };
@@ -169,8 +170,9 @@ export function StructurePage() {
             <Tip tip="Show the pathways only; open a group with its arrow."><Button size="sm" variant="secondary" onClick={() => { set({ p: null }); setCollapsed(new Set(nodes.filter((n) => n.level === "pathway").map((n) => n.key))); }}>Collapse all</Button></Tip>
           </div>
           {list.data && !list.data.empty && pathways.length ? (
-            <PathwayCards typeLabel={typeLabel} pathways={pathways} open={openPathway && pathways.some((x) => x.key === openPathway) ? openPathway : null} onOpen={openOne}
-              canAuthor={canAuthor} onAdd={() => { openOne(null); startAdd("pathway", null); }} />
+            <div className="mb-3"><PathwayCards typeLabel={typeLabel} pathways={pathways} open={openPathway && pathways.some((x) => x.key === openPathway) ? openPathway : null} onOpen={openOne}
+              allTip={`Shows the whole ${typeLabel} outline, every pathway open.`} cardTip={(l) => `Opens ${l}'s tree and closes the other pathways.`}
+              add={{ enabled: canAuthor, tip: canAuthor ? `Add a pathway to ${typeLabel}, such as Citizenship. Typed in place at the end of the outline.` : AUTHOR_ONLY, onAdd: () => { openOne(null); startAdd("pathway", null); } }} /></div>
           ) : null}
           {list.data && !list.data.empty ? (
             <p className="mb-2 text-sm text-text-muted" data-stats>
@@ -208,35 +210,28 @@ export function StructurePage() {
 
 /** S1-finish (founder's idea, 27 Oct; reused later on Immigration programs): one card per Pathway of the tab with its
  *  combinations and how many need work. A card opens that Pathway's tree and closes the others; "All" opens all. */
-function PathwayCards({ typeLabel, pathways, open, onOpen, canAuthor, onAdd }: { typeLabel: string; pathways: StructureNode[]; open: string | null; onOpen: (key: string | null) => void; canAuthor: boolean; onAdd: () => void }) {
-  const total = pathways.reduce((s, p) => s + p.combinations, 0), needs = pathways.reduce((s, p) => s + p.needs, 0);
-  const card = "flex min-h-[76px] flex-col items-start justify-between gap-1 rounded-xl border px-3.5 py-2.5 text-left outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50";
-  const Counts = ({ n, k }: { n: number; k: number }) => (
-    <span className="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
-      {n} {n === 1 ? "combination" : "combinations"}
-      {k ? <span className="rounded-full bg-warn/15 px-1.5 font-semibold text-text-warn">{k} need{k === 1 ? "s" : ""} you</span> : <span>· none need you</span>}
-    </span>
-  );
+/** S2 fix (founder, 27 Oct): beside the outline (1280 px and wider) the panel starts below the page header and only
+ *  sticks once scrolled, so a fixed height pushed its footer (Remove / Retire, Save) below the screen. Its height is
+ *  what is left of the window below its top edge; the body scrolls inside, the footer always shows. */
+function useFitToScreen() {
+  const [el, setEl] = React.useState<HTMLElement | null>(null);
+  React.useEffect(() => {
+    if (!el) return;
+    const wide = window.matchMedia("(min-width: 1280px)");
+    const run = () => { el.style.height = wide.matches ? `${Math.max(320, window.innerHeight - Math.max(80, el.getBoundingClientRect().top) - 16)}px` : ""; };
+    run();
+    window.addEventListener("scroll", run, { passive: true }); window.addEventListener("resize", run); wide.addEventListener("change", run);
+    return () => { window.removeEventListener("scroll", run); window.removeEventListener("resize", run); wide.removeEventListener("change", run); };
+  }, [el]);
+  return setEl;
+}
+
+/** S2 (founder, 27 Oct): a Not started combination gets a way to begin, New combination with its trail filled (S3 replaces it). */
+function StartSetup({ leafKey, type, label }: { leafKey: string; type: string; label: string }) {
   return (
-    <div role="group" aria-label={`${typeLabel} pathways`} className="mb-3 grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2.5" data-pathway-cards>
-      <Tip tip={`Shows the whole ${typeLabel} outline, every pathway open.`}>
-        <button type="button" aria-pressed={open === null} onClick={() => onOpen(null)} className={cn(card, open === null ? "border-primary bg-primary/10" : "border-border bg-surface-raised hover:border-border-strong")}>
-          <span className="text-sm font-semibold">All pathways</span><Counts n={total} k={needs} />
-        </button>
-      </Tip>
-      {pathways.map((p) => (
-        <Tip key={p.key} tip={`Opens ${p.label}'s tree and closes the other pathways. "Need you": combinations not released yet, not ready, or with a next step waiting.`}>
-          <button type="button" aria-pressed={open === p.key} onClick={() => onOpen(p.key)} data-pathway={p.key} className={cn(card, open === p.key ? "border-primary bg-primary/10" : "border-border bg-surface-raised hover:border-border-strong", p.retired && "opacity-70")}>
-            <span className="break-words text-sm font-semibold">{p.label}{p.retired ? <span className="ml-1 font-normal text-text-muted">(retired)</span> : null}</span><Counts n={p.combinations} k={p.needs} />
-          </button>
-        </Tip>
-      ))}
-      <Tip tip={canAuthor ? `Add a pathway to ${typeLabel}, such as Citizenship. Typed in place at the end of the outline.` : AUTHOR_ONLY}>
-        <button type="button" aria-disabled={!canAuthor || undefined} onClick={() => { if (canAuthor) onAdd(); }} className={cn(card, "items-center justify-center border-dashed border-border-strong text-sm text-text-muted", canAuthor ? "hover:border-primary hover:text-text-link" : "cursor-not-allowed opacity-60")}>
-          <span className="flex items-center gap-1.5"><Plus className="size-4" aria-hidden />Add pathway</span>
-        </button>
-      </Tip>
-    </div>
+    <Tip tip="Opens New combination with this trail filled in; setup starts with its forms.">
+      <Link className="font-semibold text-text-link underline underline-offset-2" data-start-setup to={`/new?${type === "CORPORATE" ? "pw=CORPORATE&" : ""}leaf=${encodeURIComponent(leafKey)}`} aria-label={`Start setup of ${label}`}>Start setup</Link>
+    </Tip>
   );
 }
 
@@ -366,6 +361,7 @@ function AddRow({ type, row, parent, onDone, onPick }: { type: PathwayType; row:
  *  panel beside the outline (non-modal, pinned header and footer). */
 function DetailPanel({ node, type, siblings, leaf, leaves, canAuthor, onClose, onAddChild }: { node: StructureNode; type: PathwayType; siblings: StructureNode[]; leaf: boolean; leaves: { n: StructureNode; path: string[] }[]; canAuthor: boolean; onClose: () => void; onAddChild: () => void }) {
   const qc = useQueryClient();
+  const fit = useFitToScreen();
   // S1-finish: what happened is said in the panel's own status line, never in a toast over the outline or the panel.
   const [note, setNote] = React.useState<{ ok: boolean; text: string } | null>(null);
   const say = (ok: boolean, text: string) => setNote({ ok, text });
@@ -427,17 +423,17 @@ function DetailPanel({ node, type, siblings, leaf, leaves, canAuthor, onClose, o
     { a: "RESTORE", word: "Restore", why: u?.can.restore, tip: "Brings a retired name back to pickers, by the same path: a second person approves, the release publishes." },
   ];
   return (
-    <aside aria-label={`${node.label} details`} className="fixed inset-y-14 right-0 z-40 flex w-full max-w-[440px] flex-col border-l border-border bg-surface-raised shadow-xl xl:sticky xl:top-20 xl:z-auto xl:h-[calc(100vh-6.5rem)] xl:max-w-none xl:rounded-xl xl:border xl:shadow-sm">
+    <aside ref={fit} data-panel aria-label={`${node.label} details`} className="fixed bottom-4 right-0 top-14 z-40 flex w-full max-w-[440px] flex-col border-l border-border bg-surface-raised shadow-xl xl:sticky xl:top-20 xl:z-auto xl:max-w-none xl:rounded-xl xl:border xl:shadow-sm">
       <div className="flex items-start gap-2 border-b border-border px-5 py-3">
         <div className="min-w-0 flex-1"><h2 className="break-words text-lg font-semibold">{node.label}</h2><p className="text-xs text-text-muted">{LEVEL_WORD[node.level]}{leaf ? " · combination" : ""}{node.retired ? " · Retired" : ""}</p></div>
         <Button size="icon" variant="ghost" aria-label="Close the details" onClick={onClose}><X /></Button>
       </div>
-      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
         <dl className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-2">
           <dt className="text-text-muted">Trail</dt>
           <dd data-trail>{[TYPES.find((t) => t.value === type)!.label, ...(u?.trail ?? [node.label])].map((t, k, a) => <span key={k}>{k ? <span className="text-text-muted"> › </span> : null}{k === a.length - 1 ? <b>{t}</b> : t}</span>)}</dd>
           <dt className="text-text-muted">Used by</dt>
-          <dd data-used-by>{leaf ? (node.combination?.id ? <>This combination: {node.combination.statusText} <Link className="font-semibold text-text-link underline underline-offset-2" to={`/c/${node.combination.id}`}>Open</Link></> : "This combination: Not started (no setup yet)") : (
+          <dd data-used-by>{leaf ? (node.combination?.id ? <>This combination: {node.combination.statusText} <Link className="font-semibold text-text-link underline underline-offset-2" to={`/c/${node.combination.id}`}>Open</Link></> : <>This combination: Not started (no setup yet){!node.retired && canAuthor ? <> <StartSetup leafKey={node.key} type={type} label={node.label} /></> : null}</>) : (
             <>
               <p>{node.combinations} combination{node.combinations === 1 ? "" : "s"}{node.live ? `, ${node.live} Live` : ""}</p>
               {/* S1-finish: each combination below it by name, its state and Open (Not started ones have no setup to open). */}
@@ -447,7 +443,8 @@ function DetailPanel({ node, type, siblings, leaf, leaves, canAuthor, onClose, o
                   <li key={l.key} className="flex flex-wrap items-center gap-x-2">
                     <span className="min-w-0 break-words">{path.join(" › ")}</span>
                     <span className="text-xs text-text-muted">{l.retired || c?.retired ? "Retired" : c?.statusText ?? "Not started"}</span>
-                    {c?.id ? <Link className="font-semibold text-text-link underline underline-offset-2" to={`/c/${c.id}`} aria-label={`Open ${l.label}`}>Open</Link> : null}
+                    {c?.id ? <Link className="font-semibold text-text-link underline underline-offset-2" to={`/c/${c.id}`} aria-label={`Open ${l.label}`}>Open</Link>
+                      : !l.retired && canAuthor ? <StartSetup leafKey={l.key} type={type} label={l.label} /> : null}
                   </li>
                 );
               })}</ul> : null}
@@ -474,8 +471,7 @@ function DetailPanel({ node, type, siblings, leaf, leaves, canAuthor, onClose, o
           {uses.isPending ? <Skeleton className="h-10" /> : uses.isError ? <p className="text-text-danger">{(uses.error as Error).message}</p> : u ? (
             <>
               {u.uses.filter((x) => x.kind !== "draft_change").length ? <ul className="space-y-1">{u.uses.filter((x) => x.kind !== "draft_change").map((x, k) => <li key={k} className="flex flex-wrap gap-x-2"><span>{x.href ? <Link to={x.href.replace(/^\/structure\?node=/, "/structure?node=")} className="text-text-link underline underline-offset-2">{x.label}</Link> : x.label}</span><span className={cn("text-xs", x.blocks ? "text-text-warn" : "text-text-muted")}>{x.why}</span></li>)}</ul> : <p className="text-text-muted">Used nowhere.</p>}
-              {u.pending ? <Notice tone="warn" title={`${PENDING_WORD[u.pending.action]} for a second person`} action={canAuthor ? <Button size="sm" variant="secondary" onClick={() => { setAction("WITHDRAW"); setReason(""); }}>Withdraw</Button> : undefined}>Proposed by {u.pending.by}. <Link to={`/review/change/${u.pending.id}`} className="text-text-link underline underline-offset-2">See it on To review</Link></Notice> : (
-                <div className="flex flex-wrap gap-2">{ACTIONS.map((x) => { const why = no ?? x.why; return <Tip key={x.a} tip={why ?? x.tip}><span><Button size="sm" variant={x.a === "RESTORE" ? "secondary" : "outline"} className={x.a !== "RESTORE" ? "text-text-danger" : undefined} disabled={!!why} onClick={() => { setAction(x.a); setReason(""); }}>{x.word}</Button></span></Tip>; })}</div>)}
+              {u.pending ? <Notice tone="warn" title={`${PENDING_WORD[u.pending.action]} for a second person`} action={canAuthor ? <Button size="sm" variant="secondary" onClick={() => { setAction("WITHDRAW"); setReason(""); }}>Withdraw</Button> : undefined}>Proposed by {u.pending.by}. <Link to={`/review/change/${u.pending.id}`} className="text-text-link underline underline-offset-2">See it on To review</Link></Notice> : null}
               {action ? (
                 <div className="space-y-2 rounded-lg bg-surface p-3">
                   <label htmlFor="structure-reason" className="text-xs font-medium">{action === "WITHDRAW" ? "Why withdraw it?" : `Why ${action === "DELETE" ? "remove" : action.toLowerCase()} "${node.label}"?`} <span className="font-normal text-text-muted">Required, for the second person</span></label>
@@ -489,7 +485,10 @@ function DetailPanel({ node, type, siblings, leaf, leaves, canAuthor, onClose, o
         ) : null}
       </div>
       {note ? <p role={note.ok ? "status" : "alert"} data-panel-note className={cn("border-t border-border px-5 py-2 text-sm", note.ok ? "text-text-ok" : "text-text-danger")}>{note.text}</p> : null}
-      <div className="flex items-center justify-between gap-2 border-t border-border px-5 py-3">
+      {/* S2 fix (founder, 27 Oct): the lifecycle buttons sit in the footer with Save, so all of them always show. */}
+      <div className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3" data-panel-footer>
+        {u && !u.pending ? ACTIONS.filter((x) => (x.a === "RESTORE") === node.retired).map((x) => { const why = no ?? x.why; return <Tip key={x.a} tip={why ?? x.tip}><span><Button size="sm" variant={x.a === "RESTORE" ? "secondary" : "outline"} className={x.a !== "RESTORE" ? "text-text-danger" : undefined} disabled={!!why} onClick={() => { setAction(x.a); setReason(""); requestAnimationFrame(() => document.getElementById("structure-reason")?.focus()); }}>{x.word}</Button></span></Tip>; }) : null}
+        <span className="flex-1" />
         <Button variant="ghost" onClick={onClose}>Close</Button>
         <Tip tip={no ?? (node.retired ? "It is retired: restore it first." : changed ? "Saves the name and where cases may be opened." : "Change the name or where cases may be opened first.")}><span><Button onClick={() => void save("new")} disabled={!!no || !changed || node.retired || !label.trim()} busy={busy}>Save</Button></span></Tip>
       </div>
