@@ -346,9 +346,12 @@ export class Intake {
       return r;
     }
     const item = approved;
+    const page = await this.db.officialDownload.findFirst({ where: { workspaceId, sha256: hash }, select: { formPageUrl: true, sourceUrl: true } });
     await this.db.$transaction(async (tx) => {
       const d = def ?? (await tx.govFormDef.create({ data: { workspaceId, formKey: id.code, displayName: id.title || id.code, formKind: read.kind === "form" ? "data_form" : "document" } }));
-      await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, officialFile: item?.file ?? null, sha256: hash, storedPath: stored.replace(`${ROOT}/`, "") } });
+      // S4 round 6 (D18): where it came from (a person's upload, or the sample load) and the canada.ca page it matched.
+      await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, officialFile: item?.file ?? null, sha256: hash, storedPath: stored.replace(`${ROOT}/`, ""), origin: via === "SAMPLE" ? "SAMPLE" : "UPLOADED", formPageUrl: page?.formPageUrl ?? null, sourceUrl: page?.sourceUrl ?? null, checkedAt: page ? new Date() : null } });
+      if (page?.formPageUrl && !d.formPageUrl) await tx.govFormDef.update({ where: { id: d.id }, data: { formPageUrl: page.formPageUrl } });
     });
     await this.audit.log(workspaceId, actor.id, "created", "form", id.code, `${actor.name} added ${id.edition_label} (${KIND_WORD[read.kind]}) to the library; code, title, edition and kind read from the file`, { sha256: hash, approved_source: item?.approval ?? null, via }, combination?.id);
     let r: IntakeResult = { file: name, outcome: "added", ...read, message: `${id.edition_label} added to the library as a new ${KIND_WORD[read.kind]} (read from the file).` };

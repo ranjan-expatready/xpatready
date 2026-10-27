@@ -194,6 +194,8 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("round 3 m1: a line edit takes the number written loosely (imm1295)", r.status < 300, r.body?.detail ?? r.status);
   ok("C11.11: rules compare it with canada.ca: the very file the form page links", /The very file canada\.ca's form page links/.test(step("upload_compare")?.message ?? ""), step("upload_compare")?.message);
   ok("C11.11: it joins the library through the one intake, the run ends Done, US$0", run.status === "done" && step("upload_add")?.status === "COMPLETED" && sql(`select count(*) from gov_form_def where form_key='IMM 5604'`) === "1" && run.usd.spent === 0, { status: run.status, add: step("upload_add")?.message });
+  { const row5604 = (await call("GET", "/library/forms/list?q=5604")).body.rows?.[0];
+    ok("round 6 should 1 (D18): a hand upload says it was uploaded by a person, with the canada.ca page its file matched", row5604?.origin === "UPLOADED" && /^https:\/\/www\.canada\.ca\//.test(row5604?.form_page_url ?? ""), { origin: row5604?.origin, page: row5604?.form_page_url }); }
   // Round 3 R3-1: upload for a combination's row while a retire of that form is open: kept in the library, not attached.
   r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5604")}/retire`, { reason: "Checking the open-retire rule" });
   ok("setup: a retire of the unused IMM 5604 waits for a second person", r.status < 300 && r.body.status === "WAITING", r.body);
