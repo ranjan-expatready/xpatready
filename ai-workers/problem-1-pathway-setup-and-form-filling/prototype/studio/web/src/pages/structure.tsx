@@ -221,10 +221,14 @@ function useFitToScreen() {
     const run = () => { el.style.height = wide.matches ? `${Math.max(320, window.innerHeight - Math.max(80, el.getBoundingClientRect().top) - 16)}px` : ""; };
     run();
     // Content above it (the Pathway cards, a notice) can arrive after it does and push it down: watch the page too.
-    // A slow check as well: a late row above it can move it without resizing anything observed.
-    const ro = new ResizeObserver(run); ro.observe(document.body); const tick = window.setInterval(run, 500);
+    // The page above it settles in its first moments (cards, notices, fonts): follow it frame by frame for two seconds,
+    // then only on size changes, scroll and resize.
+    const ro = new ResizeObserver(run); ro.observe(document.body);
+    const until = performance.now() + 2000; let frame = 0;
+    const follow = () => { run(); if (performance.now() < until) frame = requestAnimationFrame(follow); };
+    frame = requestAnimationFrame(follow);
     window.addEventListener("scroll", run, { passive: true }); window.addEventListener("resize", run); wide.addEventListener("change", run);
-    return () => { ro.disconnect(); window.clearInterval(tick); window.removeEventListener("scroll", run); window.removeEventListener("resize", run); wide.removeEventListener("change", run); };
+    return () => { ro.disconnect(); cancelAnimationFrame(frame); window.removeEventListener("scroll", run); window.removeEventListener("resize", run); wide.removeEventListener("change", run); };
   }, [el]);
   return setEl;
 }

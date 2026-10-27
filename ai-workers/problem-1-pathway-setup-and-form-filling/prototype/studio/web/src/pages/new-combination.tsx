@@ -48,6 +48,7 @@ export function NewCombinationPage() {
   // S2 (founder, 27 Oct): "Start setup" on a Not started combination (Structure's "Used by", Immigration programs)
   // arrives with ?leaf=<node key>; the pickers are filled with its trail once, until S3 replaces this page.
   const prefilled = React.useRef(false);
+  const [leafNote, setLeafNote] = React.useState<string | null>(null);
   React.useEffect(() => {
     const want = sp.get("leaf");
     if (prefilled.current || !want || !opts.data) return;
@@ -56,8 +57,10 @@ export function NewCombinationPage() {
       const s = c.subCategories.find((x) => x.key === want);
       if (c.key !== want && !s) continue;
       setProgram({ key: p.key, label: p.label }); setCategory({ key: c.key, label: c.label }); setSub(s ? { key: s.key, label: s.label } : null);
+      if (!s && c.subCategories.length) setLeafNote(`${c.label} has sub-categories: choose one of them below.`);
       return;
     }
+    setLeafNote(`That combination is not in the Structure for ${PATHWAY_LABEL[pathway]} any more (it may have been renamed, removed or belong to the other type). Pick the path below.`);
   }, [opts.data, sp]);
 
   const progs = opts.data?.programs ?? [];
@@ -103,6 +106,7 @@ export function NewCombinationPage() {
       {!canAuthor && session.data ? <Notice tone="warn" title="Only a configuration author can create combinations">Switch to the Configuration author with "Acting as" at the top.</Notice> : null}
       {canAuthor ? <Describe pathway={pathway} onUse={(x) => { if (x.pathway !== pathway) setPathway(x.pathway); setProgram(x.program); setCategory(x.category); setSub(x.subCategory); }} /> : null}
       <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface-raised p-5">
+        {leafNote ? <Notice tone="warn" title="Check the path">{leafNote}</Notice> : null}
         <p className="text-sm text-text-muted">Pick what already exists, or type a new name and choose <b className="font-semibold text-text">Create</b>. Each level is checked for duplicates as you type.</p>
         {opts.isLoading ? <Skeleton className="h-16 w-full" /> : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

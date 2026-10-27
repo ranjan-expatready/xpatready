@@ -22,7 +22,8 @@ export const PARENT_LEVEL: Record<Level, Level | null> = { pathway: null, progra
 export const LOCATIONS = ["inside_canada", "outside_canada"] as const;
 const locations = z.array(z.enum(LOCATIONS)).min(1, "Choose where a case for it may be opened: inside Canada, outside Canada, or both.").transform((l) => [...new Set(l)]);
 const label = z.string().transform(cleanLabel).superRefine((s, ctx) => { const m = labelProblem(s); if (m) ctx.addIssue({ code: "custom", message: m }); });
-const key = z.string().trim().min(1).max(200);
+/** Keys the server makes are the parent's key + "." + a slug of up to 60 characters, so four levels reach about 250 (break M2, 27 Oct). */
+const key = z.string().trim().min(1).max(400);
 
 /** GET /structure?pathwayType= */
 export const StructureQuery = z.object({ pathwayType: z.enum(PATHWAY_TYPES).default("INDIVIDUAL"), retired: z.enum(["0", "1"]).default("1") });

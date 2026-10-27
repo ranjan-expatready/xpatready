@@ -53,14 +53,28 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } });
   await open();
   const emptyText = await p.locator("main").innerText();
-  step("C11.4 empty after Reset: says nothing is set up and points to the Structure (no cards, no Pathway cards)", /Nothing set up in Retail yet/.test(emptyText) && /Start with the Structure/.test(emptyText) && await p.getByRole("button", { name: "Open Structure" }).count() === 1 && await cards().count() === 0, emptyText.replace(/\s+/g, " ").slice(0, 200));
+  step("C11.10 empty after Reset: says nothing is set up and points to the Structure (no cards, no Pathway cards)", /Nothing set up in Retail yet/.test(emptyText) && /Start with the Structure/.test(emptyText) && await p.getByRole("button", { name: "Open Structure" }).count() === 1 && await cards().count() === 0, emptyText.replace(/\s+/g, " ").slice(0, 200));
   await state("empty-after-reset");
   await api("/demo/load", { method: "POST" });
   const add = async (pathwayType, level, label, parentKey, allowedLocations) => (await api("/structure/nodes", { method: "POST", data: { pathwayType, level, label, parentKey, decision: "add_anyway", ...(allowedLocations ? { allowedLocations } : {}) } })).body.key;
   // The sample carries the P-112 Pathways (S2 fix 1): Retail · Temporary residence, Permanent residence, Citizenship;
   // Corporate and employers · Temporary residence, Permanent residence.
   const tr = "retail.temporary_residence", pr = "retail.permanent_residence", vv = "individual.visitors.visitor_visa";
-  const cat = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body;
+  const catOf = async () => (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body;
+  const sv = (await catOf()).rows.find((x) => x.nodeKey === "individual.visitors.super_visa");
+  const att = (await api(`/combinations/${sv.combinationId}/attachments`)).body.find((a) => /IMM 5257 \(/.test(a.edition ?? ""));
+  const run = ((await api(`/attachments/${att.id}/draft-options`)).body.saved_runs ?? []).find((x) => x.valid);
+  await api(`/attachments/${att.id}/draft`, { method: "POST", data: { mode: "replay", runFile: run.file } });
+  for (let i = 0; i < 60; i++) { if ((await catOf()).rows.find((x) => x.nodeKey === sv.nodeKey).aiProposals > 0) break; await p.waitForTimeout(500); }
+  const ss = (await api("/combinations", { method: "POST", data: { nodeKey: "individual.work_permits.open.spouse_student" } })).body.combination;
+  await api(`/combinations/${ss.id}/lines`, { method: "POST", data: { kind: "FORM", formKey: "IMM 1295" } });
+  await api(`/combinations/${ss.id}/submit`, { method: "POST", data: {} });
+  const ssSme = ((await api(`/combinations/${ss.id}/review`)).body.submission?.changeSummary ?? []).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);
+  if (ssSme.length) await api(`/combinations/${ss.id}/signoff`, { method: "POST", actor: "user-C", data: { items: ssSme, action: "signed" } });
+  const rel = await api("/pack/release", { method: "POST", actor: "user-B", data: { expectedChanges: (await api("/draft")).body.changes } });
+  const cat = await catOf();
+  const svRow = cat.rows.find((x) => x.nodeKey === sv.nodeKey), ssRow = cat.rows.find((x) => x.nodeKey === "individual.work_permits.open.spouse_student");
+  step("setup: two combinations wait on a person: Super visa has AI proposals (saved replay, US$0); Spouse of a student is released but Not ready", svRow?.aiProposals > 0 && ssRow?.status === "NOT_READY" && rel.status === 201, `${svRow?.aiProposals} proposals; ${ssRow?.status}`);
   const corpCat = (await api("/catalogue?pathway=CORPORATE&filter=all")).body;
   const vvRow = cat.rows.find((r) => r.nodeKey === vv);
   const nsTr = cat.rows.find((r) => r.pathwayKey === tr && !r.combinationId), ns = cat.rows.find((r) => r.pathwayKey === pr && !r.combinationId);
@@ -74,13 +88,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== the page: menu, title, tabs, placement
   await open();
   const navText = (await p.getByRole("navigation", { name: "Studio" }).innerText()).replace(/\s+/g, " ");
-  step("C11.4 P-115: the menu item and the page title say Immigration programs (Configure › To review · Immigration programs · Structure)", /To review.*Immigration programs.*Structure/.test(navText) && (await p.getByRole("heading", { level: 1 }).textContent()) === "Immigration programs", navText.slice(0, 90));
-  step("C11.4: the description line says what the page is", /Every combination your firm can open, and where its setup stands\./.test(await p.locator("main").innerText()));
+  step("C11.10 P-115: the menu item and the page title say Immigration programs (Configure › To review · Immigration programs · Structure)", /To review.*Immigration programs.*Structure/.test(navText) && (await p.getByRole("heading", { level: 1 }).textContent()) === "Immigration programs", navText.slice(0, 90));
+  step("C11.10: the description line says what the page is", /Every combination your firm can open, and where its setup stands\./.test(await p.locator("main").innerText()));
   const types = p.getByRole("group", { name: "Pathway type" });
-  step("C11.4 P-104: the type tabs say Retail and Corporate and employers, each with its count", /^Retail\s*\d+$/.test((await types.getByRole("button").nth(0).textContent()).trim()) && /^Corporate and employers\s*\d+$/.test((await types.getByRole("button").nth(1).textContent()).trim()));
-  step("C11.4: no filter-tab row; the status is one 'Status: All' menu next to the search", await p.getByRole("group", { name: "Show combinations" }).count() === 0 && await p.getByRole("button", { name: /^Status: All/ }).count() === 1 && await p.getByRole("textbox", { name: /Search combinations/ }).count() === 1);
+  step("C11.10 P-104: the type tabs say Retail and Corporate and employers, each with its count", /^Retail\s*\d+$/.test((await types.getByRole("button").nth(0).textContent()).trim()) && /^Corporate and employers\s*\d+$/.test((await types.getByRole("button").nth(1).textContent()).trim()));
+  step("C11.10: no filter-tab row; the status is one 'Status: All' menu next to the search", await p.getByRole("group", { name: "Show combinations" }).count() === 0 && await p.getByRole("button", { name: /^Status: All/ }).count() === 1 && await p.getByRole("textbox", { name: /Search combinations/ }).count() === 1);
   const titleRow = await p.evaluate(() => { const h = document.querySelector("h1").getBoundingClientRect(); const bs = [...document.querySelectorAll("main button")].filter((x) => /^(Structure|New combination)$/.test(x.textContent.trim())); return bs.map((x) => ({ t: x.textContent.trim(), top: Math.abs(x.getBoundingClientRect().top - h.top) < 24, x: Math.round(x.getBoundingClientRect().left) })); });
-  step("C11.4: Structure and New combination sit in the title row, New combination last", titleRow.length === 2 && titleRow.every((x) => x.top) && titleRow[1].t === "New combination" && titleRow[1].x > titleRow[0].x, JSON.stringify(titleRow));
+  step("C11.10: Structure and New combination sit in the title row, New combination last", titleRow.length === 2 && titleRow.every((x) => x.top) && titleRow[1].t === "New combination" && titleRow[1].x > titleRow[0].x, JSON.stringify(titleRow));
 
   // ======================================================== fix 5: the search takes the free width, its hint never cut
   for (const [w, h] of [[1440, 900], [1024, 768]]) {
@@ -92,9 +106,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== Pathway cards; fix 6: "need you" counts only what waits on a person
   const all = card("All pathways");
-  step("C11.4 S2: the same Pathway cards as the Structure: All pathways, one per Retail Pathway (no 'Individual'), + Add pathway", await all.count() === 1 && await card("Temporary residence").count() === 1 && await card("Permanent residence").count() === 1 && await card("Citizenship").count() === 1 && await card("Individual").count() === 0 && await cards().getByRole("button", { name: /Add pathway/ }).count() === 1);
+  step("C11.10 S2: the same Pathway cards as the Structure: All pathways, one per Retail Pathway (no 'Individual'), + Add pathway", await all.count() === 1 && await card("Temporary residence").count() === 1 && await card("Permanent residence").count() === 1 && await card("Citizenship").count() === 1 && await card("Individual").count() === 0 && await cards().getByRole("button", { name: /Add pathway/ }).count() === 1);
   const waiting = (key) => cat.rows.filter((r) => r.pathwayKey === key && r.needsYou).length;
   const WAIT = ["review_proposals", "see_missing", "see_new_edition", "release"];
+  const trS0 = cat.sections.find((x) => x.pathwayKey === tr);
+  step("S2 fix 6 (review M1): the two waiting combinations count, in their Pathway's section and card", svRow.needsYou && ssRow.needsYou && trS0.needs >= 2 && trS0.needs === waiting(tr), `${trS0.label} ${trS0.needs}`);
   step("S2 fix 6: need you counts only combinations waiting on a person: never a Not started one, never a Live one with nothing waiting", cat.rows.every((r) => r.combinationId || !r.needsYou) && cat.rows.filter((r) => r.status === "READY" && !r.aiProposals && !r.held.length && !WAIT.includes(r.nextAction?.kind)).every((r) => !r.needsYou) && cat.sections.every((x) => x.needs === waiting(x.pathwayKey)), cat.sections.map((x) => `${x.label} ${x.needs}/${x.combinations}`).join(", "));
   const trS = cat.sections.find((x) => x.pathwayKey === tr);
   const trCard = (await card("Temporary residence").textContent()).replace(/\s+/g, " ");
@@ -102,34 +118,35 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const stPw = (await api("/structure?pathwayType=INDIVIDUAL")).body.nodes.filter((x) => x.level === "pathway");
   step("S2 fix 6: the Structure's Pathway cards use the same rule (same need-you counts per Pathway)", cat.sections.every((x) => stPw.find((y) => y.key === x.pathwayKey)?.needs === x.needs), stPw.map((x) => `${x.label} ${x.needs}`).join(", "));
   const secs = await p.locator("[data-section]").evaluateAll((s) => s.map((x) => x.querySelector("h2").textContent));
-  step("C11.4 S2: 'All pathways' (the default) shows one section per Pathway, with its count", await all.getAttribute("aria-pressed") === "true" && secs.length === 3 && cat.sections.every((x, i) => secs[i].startsWith(x.label) && secs[i].includes(`${x.combinations} combination`)), secs.join(" | "));
-  const chip = p.locator("[data-section] [data-need-you]").first();
-  if (await chip.count()) { await chip.hover(); await p.getByRole("tooltip").filter({ hasText: /waiting for a person/ }).first().waitFor({ timeout: 5000 }).catch(() => undefined); }
-  step("S2 fix 6: the section's need-you count explains itself", !(await chip.count()) || (await p.getByRole("tooltip").allTextContents()).some((t) => /Combinations waiting for a person: something to review, something missing or something blocking release\./.test(t)));
-  step("C11.4 BR-13: every combination is shown by default (Status: All)", await p.locator("article[data-node]").count() === cat.rows.length, `${await p.locator("article[data-node]").count()} of ${cat.rows.length}`);
+  step("C11.10 S2: 'All pathways' (the default) shows one section per Pathway, with its count", await all.getAttribute("aria-pressed") === "true" && secs.length === 3 && cat.sections.every((x, i) => secs[i].startsWith(x.label) && secs[i].includes(`${x.combinations} combination`)), secs.join(" | "));
+  const chip = p.locator(`[data-section="${tr}"] [data-need-you]`);
+  const chipText = (await chip.textContent().catch(() => "")) ?? "";
+  await chip.hover().catch(() => undefined); await p.getByRole("tooltip").filter({ hasText: /waiting for a person/ }).first().waitFor({ timeout: 5000 }).catch(() => undefined);
+  step("S2 fix 6 (review M1): the section shows its need-you count, and the chip explains itself", chipText.startsWith(`${trS0.needs} need`) && (await p.getByRole("tooltip").allTextContents()).some((t) => /Combinations waiting for a person: something to review, something missing or something blocking release\./.test(t)), chipText);
+  step("C11.10 BR-13: every combination is shown by default (Status: All)", await p.locator("article[data-node]").count() === cat.rows.length, `${await p.locator("article[data-node]").count()} of ${cat.rows.length}`);
   await p.mouse.move(0, 0);
   await state("cards-all-pathways");
   const prS = cat.sections.find((x) => x.pathwayKey === pr);
   await card("Permanent residence").click();
   await p.waitForFunction(() => document.querySelectorAll("[data-section]").length === 1);
   const prText = await p.locator("main").innerText();
-  step("C11.4 S2: a Pathway card shows only that Pathway's combinations; the stats line names it; kept in the address", await card("Permanent residence").getAttribute("aria-pressed") === "true" && await p.locator("article[data-node]").count() === prS.combinations && new RegExp(`${prS.combinations} combinations in Permanent residence`).test(prText) && /[?&]p=/.test(p.url()), `${await p.locator("article[data-node]").count()} cards; ${p.url()}`);
+  step("C11.10 S2: a Pathway card shows only that Pathway's combinations; the stats line names it; kept in the address", await card("Permanent residence").getAttribute("aria-pressed") === "true" && await p.locator("article[data-node]").count() === prS.combinations && new RegExp(`${prS.combinations} combinations in Permanent residence`).test(prText) && /[?&]p=/.test(p.url()), `${await p.locator("article[data-node]").count()} cards; ${p.url()}`);
   await all.focus(); await card("Permanent residence").focus();
   await p.getByRole("tooltip").filter({ hasText: /Shows only Permanent residence/ }).first().waitFor({ timeout: 5000 }).catch(() => undefined);
   const tips = await p.getByRole("tooltip").allTextContents();
-  step("C11.4 S2: the card's tooltip says what a click does and what 'need you' means", tips.some((t) => /Shows only Permanent residence's combinations\..*waiting for a person/.test(t)), tips.join(" | "));
+  step("C11.10 S2: the card's tooltip says what a click does and what 'need you' means", tips.some((t) => /Shows only Permanent residence's combinations\..*waiting for a person/.test(t)), tips.join(" | "));
   await state("pathway-card-open");
   await all.click();
   await p.waitForFunction(() => document.querySelectorAll("[data-section]").length === 3);
-  step("C11.4 S2: All pathways brings every section back", !/[?&]p=/.test(p.url()));
+  step("C11.10 S2: All pathways brings every section back", !/[?&]p=/.test(p.url()));
 
   // ======================================================== a card: trail, status, setup steps, filed, next step
   const live = cat.rows.find((r) => r.status === "READY");
   const liveCard = p.locator(`article[data-node="${live.nodeKey}"]`);
   const liveText = await liveCard.innerText();
-  step("C11.4 BR-7: a card carries the full five-part trail: Type › Pathway › Program muted, the category bold, the sub-category below", (await liveCard.locator("[data-trail]").textContent()) === live.trail.slice(0, 3).join(" › ") && (await liveCard.locator("h3").textContent()) === live.trail[3] && liveText.includes(live.trail[4]), liveText.replace(/\s+/g, " ").slice(0, 160));
+  step("C11.10 BR-7: a card carries the full five-part trail: Type › Pathway › Program muted, the category bold, the sub-category below", (await liveCard.locator("[data-trail]").textContent()) === live.trail.slice(0, 3).join(" › ") && (await liveCard.locator("h3").textContent()) === live.trail[3] && liveText.includes(live.trail[4]), liveText.replace(/\s+/g, " ").slice(0, 160));
   const subs = await p.locator("article[data-node] h3 + p").allTextContents();
-  step("C11.4 BR-7: 'No sub-category' is never blank", subs.every((t) => t.trim().length > 0) && subs.includes("No sub-category"));
+  step("C11.10 BR-7: 'No sub-category' is never blank", subs.every((t) => t.trim().length > 0) && subs.includes("No sub-category"));
   step("C11.10 A3: the Live card shows Step 4 of 4 · Live and Filed: PDF", /Step 4 of 4 · Live/.test(liveText) && /Filed: PDF/.test(liveText) && await liveCard.locator('[data-status="READY"]').count() === 1);
   const nsCard = p.locator(`article[data-node="${ns.nodeKey}"]`);
   const nsText = await nsCard.innerText();
@@ -144,7 +161,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const combos0 = sql("select count(*) from combination");
   await nsCard.locator("[data-open]").click();
   await p.waitForURL(/\/new\?leaf=/);
-  await p.waitForFunction((l) => (document.querySelector("main")?.textContent ?? "").includes(l), ns.label, { timeout: 10000 }).catch(() => undefined);
+  await p.waitForFunction((l) => [...document.querySelectorAll('main [aria-live="polite"]')].some((x) => x.textContent.includes(`› ${l}`)), ns.label, { timeout: 10000 }).catch(() => undefined);
   const after = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.counts;
   step("S2 fix 3: clicking a Not started name opens Start setup with its trail filled; the counts do not change and nothing is created", p.url().includes(`leaf=${encodeURIComponent(ns.nodeKey)}`) && (await p.locator("main").innerText()).includes(ns.label) && after.not_started === before.not_started && after.in_setup === before.in_setup && sql("select count(*) from combination") === combos0, `${JSON.stringify({ ns: [before.not_started, after.not_started], setup: [before.in_setup, after.in_setup] })} ${p.url()} ${ns.label}: ${(await p.locator("main").innerText()).replace(/\s+/g, " ").slice(-300)}`);
   await state("start-setup-from-card");
@@ -155,22 +172,22 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await open();
   await vvCard.locator("[data-open]").click();
   await p.waitForURL(new RegExp(`/c/${vvRow.combinationId}`));
-  step("C11.4 P-50: a set-up card's name opens the combination page", p.url().includes(`/c/${vvRow.combinationId}`));
+  step("C11.10 P-50: a set-up card's name opens the combination page", p.url().includes(`/c/${vvRow.combinationId}`));
   await p.goBack(); await ready();
   await p.waitForFunction((k) => document.activeElement?.closest("article")?.getAttribute("data-node") === k, vv, { timeout: 5000 }).catch(() => undefined);
-  step("C11.4 P-50: Back returns with that card highlighted and focused", await p.evaluate((k) => document.activeElement?.closest("article")?.getAttribute("data-node") === k, vv) && /sel=/.test(p.url()));
+  step("C11.10 P-50: Back returns with that card highlighted and focused", await p.evaluate((k) => document.activeElement?.closest("article")?.getAttribute("data-node") === k, vv) && /sel=/.test(p.url()));
 
   // ======================================================== Status: All ▾
   await open();
   await p.getByRole("button", { name: /^Status: All/ }).click();
   const opts = await p.getByRole("menuitemradio").allTextContents();
-  step("C11.4 BR-13: Status offers All (default) · Needs work · Not started · In setup · Not ready · Live, each with its count and meaning", opts.length === 6 && /^All · default/.test(opts[0]) && /^Needs work/.test(opts[1]) && /^Not started/.test(opts[2]) && /^Live/.test(opts[5]) && /Firms can open cases on it/.test(opts[5]), opts.join(" | ").slice(0, 200));
+  step("C11.10 BR-13: Status offers All (default) · Needs work · Not started · In setup · Not ready · Live, each with its count and meaning", opts.length === 6 && /^All · default/.test(opts[0]) && /^Needs work/.test(opts[1]) && /^Not started/.test(opts[2]) && /^Live/.test(opts[5]) && /Firms can open cases on it/.test(opts[5]), opts.join(" | ").slice(0, 200));
   await p.getByRole("menuitemradio", { name: /^Not started/ }).click(); await p.waitForFunction(() => location.search.includes("f=not_started")); await ready(); await p.waitForTimeout(300);
   const nsApi = (await api("/catalogue?pathway=INDIVIDUAL&filter=not_started")).body;
   const shownNs = await p.locator("article[data-node]").evaluateAll((a) => a.map((x) => x.getAttribute("data-node")).sort());
-  step("C11.4 BR-13: Not started shows exactly the combinations with no setup yet", nsApi.rows.length > 0 && nsApi.rows.every((r) => !r.combinationId) && JSON.stringify(shownNs) === JSON.stringify(nsApi.rows.map((r) => r.nodeKey).sort()) && /showing \d+ Not started/.test(await p.locator("[data-stats]").textContent()), `${shownNs.length} shown, API ${nsApi.rows.length}`);
+  step("C11.10 BR-13: Not started shows exactly the combinations with no setup yet", nsApi.rows.length > 0 && nsApi.rows.every((r) => !r.combinationId) && JSON.stringify(shownNs) === JSON.stringify(nsApi.rows.map((r) => r.nodeKey).sort()) && /showing \d+ Not started/.test(await p.locator("[data-stats]").textContent()), `${shownNs.length} shown, API ${nsApi.rows.length}`);
   const inSetup = (await api("/catalogue?pathway=INDIVIDUAL&filter=in_setup")).body.rows;
-  step("C11.4 BR-13: In setup no longer counts Not started ones", inSetup.every((r) => !!r.combinationId) && inSetup.some((r) => r.nodeKey === vv));
+  step("C11.10 BR-13: In setup no longer counts Not started ones", inSetup.every((r) => !!r.combinationId) && inSetup.some((r) => r.nodeKey === vv));
   await state("status-not-started");
 
   // ======================================================== Cards / List, remembered per person
@@ -179,37 +196,37 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator('[role="grid"][aria-label="Combinations"]').waitFor();
   const groupRows = await p.locator("[data-group]").count();
   const listRow = p.locator(`[role="row"][data-node="${live.nodeKey}"]`);
-  step("C11.4: List shows the same combinations as rows, grouped by Pathway (group rows collapse)", groupRows === cat.sections.length && await p.locator('[role="row"][data-node]').count() === cat.rows.length);
-  step("C11.4 BR-7: a row carries the full five-part trail in one line, status, setup and next step", (await listRow.locator("[data-trail]").textContent()).startsWith(live.trail.join(" › ")) && await listRow.locator("[data-setup]").count() === 1 && await listRow.locator("[data-step-cell]").count() === 1, await listRow.locator("[data-trail]").textContent());
+  step("C11.10: List shows the same combinations as rows, grouped by Pathway (group rows collapse)", groupRows === cat.sections.length && await p.locator('[role="row"][data-node]').count() === cat.rows.length);
+  step("C11.10 BR-7: a row carries the full five-part trail in one line, status, setup and next step", (await listRow.locator("[data-trail]").textContent()).startsWith(live.trail.join(" › ")) && await listRow.locator("[data-setup]").count() === 1 && await listRow.locator("[data-step-cell]").count() === 1, await listRow.locator("[data-trail]").textContent());
   await state("list-view");
   await p.reload(); await ready();
-  step("C11.4: the List choice is remembered for this person after a reload", await p.locator('[role="grid"][aria-label="Combinations"]').count() === 1 && !/[?&]v=/.test(p.url()));
+  step("C11.10: the List choice is remembered for this person after a reload", await p.locator('[role="grid"][aria-label="Combinations"]').count() === 1 && !/[?&]v=/.test(p.url()));
   await as("user-B"); await p.reload(); await ready();
-  step("C11.4: another person still gets Cards (remembered per person)", await p.locator('[data-view="cards"]').count() === 1);
+  step("C11.10: another person still gets Cards (remembered per person)", await p.locator('[data-view="cards"]').count() === 1);
   await as("user-A"); await p.reload(); await ready();
   await p.locator('[data-group] button[aria-expanded]').first().click();
-  step("C11.4: a group row collapses its Pathway in the list", await p.locator('[data-group] button[aria-expanded="false"]').count() === 1 && await p.locator('[role="row"][data-node]').count() < cat.rows.length);
+  step("C11.10: a group row collapses its Pathway in the list", await p.locator('[data-group] button[aria-expanded="false"]').count() === 1 && await p.locator('[role="row"][data-node]').count() < cat.rows.length);
   await p.getByRole("group", { name: "Show as" }).getByRole("button", { name: "Cards" }).click();
   await p.locator('[data-view="cards"]').waitFor();
   const shut0 = await p.locator('[data-section] h2 button[aria-expanded="false"]').count(), cards0 = await p.locator("article[data-node]").count();
   await p.locator('[data-section] h2 button[aria-expanded="true"]').first().click();
-  step("C11.4: a section header collapses its cards, keeping its count (and the list's collapse carries over)", shut0 === 1 && await p.locator('[data-section] h2 button[aria-expanded="false"]').count() === 2 && await p.locator("article[data-node]").count() < cards0 && /\d+ combinations?/.test(await p.locator('[data-section] h2 button[aria-expanded="false"]').first().textContent()));
+  step("C11.10: a section header collapses its cards, keeping its count (and the list's collapse carries over)", shut0 === 1 && await p.locator('[data-section] h2 button[aria-expanded="false"]').count() === 2 && await p.locator("article[data-node]").count() < cards0 && /\d+ combinations?/.test(await p.locator('[data-section] h2 button[aria-expanded="false"]').first().textContent()));
 
   // ======================================================== search, other tab, Corporate
   await open();
   await p.getByRole("textbox", { name: /Search combinations/ }).fill("caregiver");
   await p.waitForFunction(() => /Nothing matches/.test(document.querySelector("main")?.textContent ?? ""));
-  step("C11.4: a search with no match says so for this tab, with Clear search", /No combination matches “caregiver” in Retail/.test(await p.locator("main").innerText()) && await p.getByRole("button", { name: "Clear search" }).count() >= 1);
+  step("C11.10: a search with no match says so for this tab, with Clear search", /No combination matches “caregiver” in Retail/.test(await p.locator("main").innerText()) && await p.getByRole("button", { name: "Clear search" }).count() >= 1);
   await p.getByRole("textbox", { name: /Search combinations/ }).fill("High-wage");
   await p.waitForFunction(() => /\d+ match(es)? in Corporate and employers/.test(document.querySelector("main")?.textContent ?? ""));
-  step("C11.4 BR-8: a match in the other tab is offered, never mixed in", /\d+ match(es)? in Corporate and employers\. Show (it|them)/.test(await p.locator("main").innerText()) && await p.locator("article[data-node]").count() === 0 && /^0 of \d+ combinations match/.test(await p.locator("[data-stats]").textContent()));
+  step("C11.10 BR-8: a match in the other tab is offered, never mixed in", /\d+ match(es)? in Corporate and employers\. Show (it|them)/.test(await p.locator("main").innerText()) && await p.locator("article[data-node]").count() === 0 && /^0 of \d+ combinations match/.test(await p.locator("[data-stats]").textContent()));
   await state("search-other-tab");
   await p.getByRole("button", { name: /^Show (it|them)$/ }).click();
   await p.waitForFunction(() => location.search.includes("pw=CORPORATE")); await ready(); await p.waitForTimeout(300);
-  step("C11.4 BR-8: Show it opens Corporate and employers with the match", await setup("High-wage position").count() === 1);
+  step("C11.10 BR-8: Show it opens Corporate and employers with the match", await setup("High-wage position").count() === 1);
   await open("?pw=CORPORATE");
   const corp = await p.locator("main").innerText();
-  step("C11.4 BR-8: the Corporate tab shows its callout (Sample examples) and its own Pathway cards", await p.locator("[data-corporate-callout]").count() === 1 && /Sample examples/.test(corp) && await card("Temporary residence").count() === 1 && await card("Permanent residence").count() === 1 && await card("Corporate and employers").count() === 0);
+  step("C11.10 BR-8: the Corporate tab shows its callout (Sample examples) and its own Pathway cards", await p.locator("[data-corporate-callout]").count() === 1 && /Sample examples/.test(corp) && await card("Temporary residence").count() === 1 && await card("Permanent residence").count() === 1 && await card("Corporate and employers").count() === 0);
   await state("corporate-tab");
 
   // ======================================================== read-only approver
@@ -254,12 +271,53 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   }
   await p.setViewportSize({ width: 1440, height: 900 });
 
+  // ======================================================== break-report S2: the address, Back, long names, keys
+  for (const [qs, what] of [["?p=nope", "an unknown"], ["?p=corporate.temporary_residence", "the other tab's"], [`?p=${"x".repeat(300)}`, "a 300-character"]]) {
+    await open(qs); await p.waitForFunction(() => !/[?&]p=/.test(location.search), null, { timeout: 5000 }).catch(() => undefined);
+    const st = await p.locator("[data-stats]").textContent();
+    step(`break M1/m1: ${what} Pathway in the address is ignored: All pathways, real counts, no error`, await card("All pathways").getAttribute("aria-pressed") === "true" && !/^0 combinations/.test(st) && await p.locator("[data-section]").count() === 3 && !/[?&]p=/.test(p.url()), st);
+  }
+  await open("?p=retail.citizenship%20");
+  step("break m2: a Pathway key with spaces opens that Pathway, and its card is the pressed one", await card("Citizenship").getAttribute("aria-pressed") === "true" && await p.locator("[data-section]").count() === 1);
+  await open();
+  await card("Permanent residence").click(); await p.waitForFunction(() => document.querySelectorAll("[data-section]").length === 1);
+  await card("Citizenship").click(); await p.waitForFunction(() => /p=retail\.citizenship/.test(location.search));
+  await p.goBack(); await p.waitForFunction(() => /p=retail\.permanent_residence/.test(location.search), null, { timeout: 5000 }).catch(() => undefined);
+  step("break m4: browser Back returns to the Pathway chosen before", /p=retail\.permanent_residence/.test(p.url()) && await card("Permanent residence").getAttribute("aria-pressed") === "true", p.url());
+  const longPw = await add("INDIVIDUAL", "pathway", "Permanent residence for highly skilled economic immigrants and their accompanying family members", null);
+  const longProg = await add("INDIVIDUAL", "program", "Programme fédéral des travailleurs qualifiés et des métiers spécialisés en Ontario", longPw);
+  const longCat = await add("INDIVIDUAL", "category", "Bulk category number 01 with a fairly long descriptive name for scale testing", longProg);
+  const longSub = await add("INDIVIDUAL", "subCategory", "Applicants who are currently living outside of Canada with family", longCat);
+  const unbroken = await add("INDIVIDUAL", "subCategory", "Supercalifragilisticexpialidocious".repeat(3) + "Abcdefghijklmn", longCat);
+  const under = await api(`/catalogue?pathway=INDIVIDUAL&filter=all&under=${encodeURIComponent(longSub)}`);
+  const reo = await api("/structure/reorder", { method: "POST", data: { pathwayType: "INDIVIDUAL", parentKey: longCat, keys: [unbroken, longSub] } });
+  step("break M2: keys the server makes from long names pass its own contracts (list under it, reorder)", longSub?.length > 200 && under.status === 200 && under.body.rows.length === 1 && reo.status < 300, `${longSub?.length} chars; under ${under.status}; reorder ${reo.status}`);
+  for (const w of [1440, 1024]) {
+    await p.setViewportSize({ width: w, height: 900 }); await open(`?p=${encodeURIComponent(longPw)}`);
+    step(`break m5: at ${w} px one long unbroken name wraps inside its card (no sideways scroll)`, await p.locator(`article[data-node="${unbroken}"]`).count() === 1 && !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), await p.evaluate(() => document.documentElement.scrollWidth));
+  }
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await p.goto(`${BASE}/new?leaf=nope`); await p.getByText("Check the path").waitFor({ timeout: 10000 }).catch(() => undefined);
+  step("break m6: a Start setup link with a key the page cannot use says why", /not in the Structure for Retail any more/.test(await p.locator("main").innerText()));
+  await p.goto(`${BASE}/new?leaf=individual.work_permits.open`); await p.getByText("Check the path").waitFor({ timeout: 10000 }).catch(() => undefined);
+  step("break m7: a category with sub-categories asks for one of them", /Open work permit has sub-categories: choose one of them below/.test(await p.locator("main").innerText()));
+
   // ======================================================== scale: 50 combinations stay quick
   for (let i = 0; i < 30; i++) await add("INDIVIDUAL", "category", `Scale sample ${String(i + 1).padStart(2, "0")}`, "individual.visitors");
   const t0 = Date.now(); await open(); const ms = Date.now() - t0;
   const fifty = await p.locator("article[data-node]").count();
+  await p.getByRole("button", { name: /^Status: All/ }).click(); await p.getByRole("menuitemradio").first().waitFor();
+  const filterMs = await p.evaluate(async () => {
+    const item = [...document.querySelectorAll('[role="menuitemradio"]')].find((x) => x.textContent.startsWith("Not started"));
+    const done = () => new URL(location.href).searchParams.get("f") === "not_started" && !document.querySelector('[data-stats][aria-busy="true"]') && [...document.querySelectorAll("article[data-node]")].every((a) => /Not started/.test(a.textContent));
+    const t = performance.now(); item.click();
+    await new Promise((res) => { const o = new MutationObserver(() => { if (done()) { o.disconnect(); res(); } }); o.observe(document.body, { subtree: true, childList: true, attributes: true }); });
+    return Math.round(performance.now() - t);
+  });
+  step("C11.10 scale (STANDARDS §9): with 50+ combinations a Status change answers within 200 ms in the page", filterMs < 200, `${filterMs} ms`);
+  await open();
   const t1 = Date.now(); await p.getByRole("textbox", { name: /Search combinations/ }).fill("Scale sample 2"); await p.waitForFunction(() => document.querySelectorAll("article[data-node]").length === 10 && [...document.querySelectorAll("article[data-node]")].every((a) => /Scale sample 2/.test(a.textContent))); const ms2 = Date.now() - t1;
-  step("C11.4 scale: 50+ combinations show as cards and a search narrows them quickly", fifty >= 50 && ms2 < 2000, `${fifty} cards, first view ${ms} ms, search ${ms2} ms`);
+  step("C11.10 scale: 50+ combinations show as cards and a search narrows them (120 ms typing pause included)", fifty >= 50 && ms2 < 1000, `${fifty} cards, first view ${ms} ms, search ${ms2} ms`);
   step("sanity: database still holds every Structure name", Number(sql("select count(*) from program_def")) > 50);
 
   step("no script error on any page", errs.length === 0, errs.join(" | "));

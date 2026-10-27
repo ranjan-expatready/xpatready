@@ -1,5 +1,30 @@
 # W1-structure-programs (W1-03/04/05) — build notes
 
+## S2 Fixes after CHECK (27 Oct): reviewer `review.md` (9/10, 1 Major) and breaker `break-report.md` (3 Major)
+| Finding | Fix | Check (`check_w1_programs_s2.cjs`, 87/87) |
+|---|---|---|
+| Review M1: the need-you count was tested only where it must not count | The check now puts two combinations in a waiting state, as `check_screen01_browser` does: Super visa gets AI proposals from the saved replay (US$0), and Spouse of a student is released but Not ready. It then asserts both count, the section and card show the count, and the chip's tooltip | three steps |
+| Break M1 / m1 / m2: an unknown, removed, other-tab, over-long or padded `p=` | The API uses `pathwayKey` only when it is a current Pathway of the tab; otherwise it answers All pathways and echoes `""`. The contract cuts the parameter instead of refusing it. The page drops a `p=` the answer did not use from the address, and the pressed card is the one the answer is for | four steps (unknown, other tab, 300 characters, trailing space) |
+| Break M2: keys from long names broke the server's own contracts | The key limit is now 400 everywhere (the server makes keys up to about 250); `program`, `under` and `pathwayKey` are cut, not refused | list under a 243-character key, reorder |
+| Break M3: the branch held other lanes' screenshots, evidence and AI run files | Every file outside this lane's set is back to main's version (`145baca`) | `git diff origin/main...HEAD` shows only W1, studio code and tests, and the lane file |
+| Break m3: nothing showed while a Pathway's answer was on its way | A small "Updating" spinner on the stats line; the cards dim; the pressed card follows the answer | with the scale step's in-page timing |
+| Break m4: Back skipped Pathway and Status choices | A Pathway card, Status and Cards/List are history steps; typing a search still replaces | Back returns to the Pathway chosen before |
+| Break m5: one long unbroken name widened the page | Card items `min-w-0`; title, trail and sub-category wrap anywhere | 1440 and 1024: no sideways scroll |
+| Break m6 / m7, review m9: `/new?leaf=` with a key it cannot use | A "Check the path" notice: not in the Structure for this type any more, or "<category> has sub-categories: choose one of them below" | both |
+| Review m3: no Pathway tooltip on Programs | The Pathway card tooltip adds "A Pathway is the outcome the application leads to, such as temporary or permanent residence." | — |
+| Review m4: Sample names unmarked | A line under the stats: "Names are Sample until the immigration expert confirms." | — |
+| Review m6: wrong capability ids | Programs-page steps now say C11.10 (`qa/CAPABILITIES.md`) | graph check exit 0 |
+| Review m7: timing in the check | The scale step measures a Status change inside the page against STANDARDS §9's 200 ms; the search step allows 1 s including the 120 ms typing pause; the fix-3 step waits for the prefilled preview line | — |
+| Review m8: the panel height ran on a 500 ms poll | It now follows the page frame by frame for two seconds after opening, then only on size changes, scroll and resize | footer steps at 1440×900 and 1024×768 |
+| Review m10: the approver's Not started card said "Not started" three times | The step slot stays empty | — |
+
+**Recorded deviation (review m5):** in the List, a long trail wraps onto a second line instead of being cut at the start. Nothing is hidden and the last level stays bold; cutting would hide the Pathway, which the founder asked to see.
+
+**Left for the Lead:**
+* Review m1: the bar can contradict the next step. A released but Not ready card shows "Step 4 of 4 · Release" beside "See 1 missing", and Super visa shows "Step 1 · Forms" beside "Review 84 AI proposals". This is a wording or rule choice; options are in `review.md`.
+* Break m8: reads (`/catalogue`, `/structure`, `/path-options`) answer without a known person. This was already so on main.
+* Break m9: at 465 combinations a view is 1.78 MB, because each leaf appears in `rows`, `tree` and `sections[].tree`, and the page is over budget. Three suites still read `tree`. It is within budget at sample size.
+
 ## S2 Fixes (FIX, 27 Oct): the seven early-look items — Lead note 27 Oct (founder: Go with all seven)
 | # | Fix | Browser check (`tests/check_w1_programs_s2.cjs`, 74/74) |
 |---|---|---|

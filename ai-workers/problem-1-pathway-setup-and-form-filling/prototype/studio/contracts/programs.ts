@@ -43,11 +43,11 @@ export const CatalogueQuery = z.object({
   /** Longer text is cut to 120 characters, never refused (break m4). */
   q: z.string().trim().transform((s) => s.slice(0, 120)).default(""),
   /** A program's node key: only that program's combinations (the "Program ▾" filter). */
-  program: z.string().trim().max(200).default(""),
+  program: z.string().trim().transform((s) => s.slice(0, 400)).default(""),
   /** Any program, category or sub-category key: only the combinations under it (the clickable path on a combination). */
-  under: z.string().trim().max(200).default(""),
+  under: z.string().trim().transform((s) => s.slice(0, 400)).default(""),
   /** S2: a Pathway's node key (a Pathway card): only its combinations, and the counts are its own; sections keep every Pathway's counts. */
-  pathwayKey: z.string().trim().max(200).default(""),
+  pathwayKey: z.string().trim().transform((s) => s.slice(0, 400)).default(""),
   /** path (Program › Category › Sub-category, the default) or the Status column, ascending or descending. */
   sort: z.enum(SORTS).default("path"),
 });
@@ -96,7 +96,7 @@ export const LINK_KINDS = ["follows", "supported_by"] as const;
 export const CreatePathBody = z.object({
   pathway: z.enum(PATHWAYS),
   /** W1-03: which Pathway of the type, when the program is new and the type has several (an existing program says it). */
-  pathwayKey: z.string().trim().min(1).max(200).optional(),
+  pathwayKey: z.string().trim().min(1).max(400).optional(),
   program: PathLevel,
   category: PathLevel,
   subCategory: PathLevel.nullable().default(null),
@@ -186,7 +186,8 @@ export type CatalogueSection = { pathwayKey: string; label: string; combinations
 /** GET /catalogue. */
 export type CatalogueResponse = {
   pathway: (typeof PATHWAYS)[number]; filter: Filter; requestedFilter: Filter; fellBack: boolean; q: string; program: string; under: string; sort: (typeof SORTS)[number];
-  /** S2: the Pathway card this answer is for ("" = All pathways), so the page never pairs one Pathway's name with another view's counts. */
+  /** S2: the Pathway card this answer is for ("" = All pathways, also for a key that is not a Pathway of this type), so the
+   *  page never pairs one Pathway's name with another view's counts. */
   pathwayKey: string;
   underPath: string[] | null;
   rows: CatalogueLeaf[];

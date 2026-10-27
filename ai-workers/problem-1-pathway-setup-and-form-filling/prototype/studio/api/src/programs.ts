@@ -201,7 +201,8 @@ export class Programs {
     // Retired combinations (P-116) are left out of every view but "Retired" (addendum A2).
     const everyInPathway = rows.filter((r) => r.pathway === q.pathway);
     const inPathway = everyInPathway.filter((r) => q.filter === "retired" ? r.leaf.retired : !r.leaf.retired);
-    const inProgram = inPathway.filter((r) => (!q.pathwayKey || r.leaf.pathwayKey === q.pathwayKey) && (!q.program || r.leaf.programKey === q.program) && (!q.under || r.leaf.pathKeys.includes(q.under)));
+    const pwKey = nodes.some((n) => n.nodeKind === "PATHWAY" && n.clientType === q.pathway && !n.retiredAt && n.programNodeKey === q.pathwayKey) ? q.pathwayKey : "";
+    const inProgram = inPathway.filter((r) => (!pwKey || r.leaf.pathwayKey === pwKey) && (!q.program || r.leaf.programKey === q.program) && (!q.under || r.leaf.pathKeys.includes(q.under)));
     const searched = inProgram.map((r) => ({ r, m: hit(r) })).filter((x) => !words || x.m.length);
     // "Needs work" with nothing to do falls back to All, and says so (P-35, P-49).
     const fellBack = q.filter === "needs" && !searched.some((x) => x.r.leaf.needs);
@@ -221,7 +222,7 @@ export class Programs {
       if (leaf) return leaf;
       if (allLeaves.has(n.programNodeKey) || everyLeaf.has(n.programNodeKey)) return null; // a leaf filtered out (or retired)
       const children = kids(n.programNodeKey).map(build).filter(Boolean) as CatalogueNode[];
-      const filtering = filter !== "all" || !!words || !!q.program || !!q.under || !!q.pathwayKey;
+      const filtering = filter !== "all" || !!words || !!q.program || !!q.under || !!pwKey;
       if (filtering && !children.length) return null;
       // A retired name with nothing shown under it is left out (it holds only retired combinations).
       if (n.retiredAt && !children.length) return null;
@@ -239,7 +240,7 @@ export class Programs {
     const programs = progs.map((p) => ({ key: p.programNodeKey as string, label: p.label as string, combinations: inPathway.filter((r) => r.leaf.programKey === p.programNodeKey).length }))
       .sort((a, b) => a.label.localeCompare(b.label, "en-CA", { sensitivity: "base" }));
     return {
-      pathway: q.pathway, filter, requestedFilter: q.filter, fellBack, q: q.q, program: q.program, under: q.under, sort: q.sort, pathwayKey: q.pathwayKey,
+      pathway: q.pathway, filter, requestedFilter: q.filter, fellBack, q: q.q, program: q.program, under: q.under, sort: q.sort, pathwayKey: pwKey,
       underPath: q.under ? underPath(nodes, q.under) : null,
       /** Layout v2: one flat list in Program › Category › Sub-category order (route steps in step order), or by status. */
       rows: [...shown.values()].sort((x, y) => (q.sort === "path" ? 0 : (q.sort === "status" ? 1 : -1) * compareStatus(x, y)) || comparePaths(x, y)), programs,

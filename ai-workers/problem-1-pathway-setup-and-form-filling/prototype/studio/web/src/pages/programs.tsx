@@ -102,13 +102,13 @@ export function ProgramsPage() {
     { placeholderData: keepPreviousData, refetchInterval: (x) => ((x.state.data?.rows ?? []).some((r) => r.aiRunning) ? 3000 : false) });
 
   // Always from the current URL, never a render's copy: the search box's delayed update must not undo a newer change.
-  function set(p: Record<string, string | null>) {
+  function set(p: Record<string, string | null>, push = false) {
     setSp((prev) => {
       const n = new URLSearchParams(prev);
       for (const [k, v] of Object.entries(p)) { if (v === null || v === "") n.delete(k); else n.set(k, v); }
       n.delete("sel"); // a changed view clears the Back highlight
       return n;
-    }, { replace: true });
+    }, { replace: !push });
   }
   const rows: CatalogueLeaf[] = cat.data?.rows ?? [];
   const sections: CatalogueSection[] = cat.data?.sections ?? [];
@@ -152,6 +152,10 @@ export function ProgramsPage() {
   const counts = cat.data?.counts;
   const other = pathway === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL";
   const nothingAtAll = !!cat.data && !sections.length && !q;
+  React.useEffect(() => {
+    if (cat.data && !cat.isPlaceholderData && pathwayKey && !answered) set({ p: null }); // not a Pathway of this tab (break M1)
+  }, [cat.data, cat.isPlaceholderData, pathwayKey, answered]);
+  const busy = cat.isPlaceholderData;
   const scopeTotal = pathwayLabel ? shownSections[0].combinations : cat.data?.pathways.find((x) => x.value === pathway)?.combinations ?? 0;
   const statusWord = STATUSES.find(([k]) => k === filter)![1];
 
@@ -177,8 +181,8 @@ export function ProgramsPage() {
 
         {cat.data && sections.length ? (
           <PathwayCards typeLabel={typeLabel} pathways={sections.map((s) => ({ key: s.pathwayKey, label: s.label, combinations: s.combinations, needs: s.needs }))}
-            open={pathwayKey && sections.some((s) => s.pathwayKey === pathwayKey) ? pathwayKey : null} onOpen={(k) => set({ p: k })}
-            allTip={`Shows every ${typeLabel} pathway's combinations, one section each.`} cardTip={(l) => `Shows only ${l}'s combinations.`}
+            open={answered || null} onOpen={(k) => set({ p: k }, true)}
+            allTip={`Shows every ${typeLabel} pathway's combinations, one section each.`} cardTip={(l) => `Shows only ${l}'s combinations. A Pathway is the outcome the application leads to, such as temporary or permanent residence.`}
             add={{ enabled: canAuthor, tip: canAuthor ? `New names enter on the Structure: opens it to add a pathway to ${typeLabel}.` : AUTHOR_ONLY, onAdd: () => nav(`/structure${pathway === "CORPORATE" ? "?t=CORPORATE" : ""}`) }} />
         ) : null}
 
@@ -189,16 +193,18 @@ export function ProgramsPage() {
             {typed ? <button type="button" className="absolute right-1 top-1 rounded p-1.5 text-text-muted hover:bg-text/5" aria-label="Clear search" onClick={() => { setTyped(""); set({ q: null }); }}><X className="size-4" /></button>
               : <kbd className="pointer-events-none absolute right-2 top-2 rounded border border-border px-1.5 text-xs text-text-muted">⌘K</kbd>}
           </div>
-          <StatusFilter value={filter} counts={counts} onChange={(k) => set({ f: k === "all" ? null : k })} />
+          <StatusFilter value={filter} counts={counts} onChange={(k) => set({ f: k === "all" ? null : k }, true)} />
           {scopeChip ? <span className="inline-flex h-8 items-center gap-1 rounded-full border border-primary/40 bg-primary/10 pl-3 pr-1 text-sm text-text-link">Showing: {scopeChip}<button type="button" className="rounded-full p-1 hover:bg-primary/15" aria-label={`Stop showing only ${scopeChip}`} onClick={() => set({ under: null, prog: null })}><X className="size-3.5" /></button></span> : null}
-          <ViewSwitch value={view} onChange={(v) => { setView(v); set({ v: null }); }} />
+          <ViewSwitch value={view} onChange={(v) => { setView(v); set({ v: null }, true); }} />
         </div>
 
         {counts && !nothingAtAll ? (
-          <p className="-mt-1 text-sm text-text-muted" data-stats>
+          <p className="-mt-1 text-sm text-text-muted" data-stats aria-busy={busy || undefined}>
+            {busy ? <span className="mr-1.5 inline-block size-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary align-[-1px]" role="status" aria-label="Updating" /> : null}
             <b className="font-semibold text-text">{q ? `${counts.all} of ${many(scopeTotal, "combination", "combinations")} match` : many(counts.all, "combination", "combinations")}</b>{pathwayLabel ? ` in ${pathwayLabel}` : ""}
             {([["live", "Live"], ["not_ready", "Not ready"], ["in_setup", "In setup"], ["not_started", "Not started"]] as const).filter(([k]) => counts[k]).map(([k, w]) => ` · ${counts[k]} ${w}`).join("")}
             {filter !== "all" ? ` · showing ${rows.length} ${statusWord}` : ""}
+            <span className="block text-xs" data-sample-note>Names are Sample until the immigration expert confirms.</span>
           </p>
         ) : null}
         {cat.data?.fellBack ? <p className="text-sm text-text-muted" role="status">Nothing needs work right now, so every combination is shown.</p> : null}
@@ -214,13 +220,13 @@ export function ProgramsPage() {
             <EmptyState title="Nothing matches" description={`${q ? `No combination matches “${q}”` : `No combination is ${statusWord}`}${pathwayLabel ? ` in ${pathwayLabel}` : ` in ${typeLabel}`}${q && filter !== "all" ? ` and is ${statusWord}` : ""}${scopeChip ? `, under ${scopeChip}` : ""}.`}
               action={<Button variant="secondary" onClick={() => { setTyped(""); set({ q: null, prog: null, under: null, f: null }); }}>{q ? "Clear search" : "Show all"}</Button>} />
           ) : view === "cards" ? (
-            <div className="flex flex-col gap-5" data-view="cards">
+            <div className={cn("flex flex-col gap-5 transition-opacity", busy && "opacity-60")} data-view="cards">
               {groups.map(({ s, rows: mine }) => (
                 <section key={s.pathwayKey} aria-labelledby={`sec-${s.pathwayKey}`} data-section={s.pathwayKey}>
                   <SectionHeader s={s} shown={mine.length} filtering={filtering} closed={closed.has(s.pathwayKey)} onToggle={() => toggle(s.pathwayKey)} />
                   {closed.has(s.pathwayKey) ? null : mine.length ? (
                     <ul className="mt-2.5 grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3" aria-label={`${s.label} combinations`}>
-                      {mine.map((r) => <li key={r.nodeKey} className="flex"><SetupCard r={r} lit={sel === r.nodeKey} q={q} canAuthor={canAuthor} onOpen={() => void open(r)} onAct={step.run} /></li>)}
+                      {mine.map((r) => <li key={r.nodeKey} className="flex min-w-0"><SetupCard r={r} lit={sel === r.nodeKey} q={q} canAuthor={canAuthor} onOpen={() => void open(r)} onAct={step.run} /></li>)}
                     </ul>
                   ) : <SectionEmpty label={s.label} pathway={pathway} />}
                 </section>
@@ -346,7 +352,7 @@ function NextStep({ r, canAuthor, tabIndex, onAct, onOpen, primary }: { r: Catal
     : "inline-flex items-center gap-1 text-left text-sm font-semibold text-text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50";
   if (a && mine) return <StepTip a={a}><button type="button" tabIndex={tabIndex} data-next-step={a.kind} onClick={(e) => { e.stopPropagation(); onAct(r, a); }} className={cls}><StepLabel a={a} /></button></StepTip>;
   if (r.combinationId) return <button type="button" tabIndex={tabIndex} data-next-step="open" onClick={(e) => { e.stopPropagation(); onOpen(); }} className={cls}>Open</button>;
-  return <Tip tip={AUTHOR_ONLY} focusable={tabIndex ?? 0}><span className="text-sm text-text-muted">Not started</span></Tip>;
+  return null;
 }
 
 /** A setup card (concept §2): muted trail, the category bold with its sub-category below, status, the four steps,
@@ -359,13 +365,13 @@ function SetupCard({ r, lit, q, canAuthor, onOpen, onAct }: { r: CatalogueLeaf; 
     <article data-node={r.nodeKey} data-label={r.label} aria-label={`${r.trail.join(" › ")}, ${isNotStarted(r) ? "Not started" : STATUS_WORD[r.status]}`}
       className={cn("flex w-full flex-col gap-2.5 rounded-xl border bg-surface-raised p-4 shadow-sm transition-colors", lit ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-border-strong")}>
       <div className="flex items-start gap-2">
-        <span className="min-w-0 flex-1 break-words text-xs text-text-muted" data-trail>{[type, pw, prog].join(" › ")}</span>
+        <span className="min-w-0 flex-1 text-xs text-text-muted [overflow-wrap:anywhere]" data-trail>{[type, pw, prog].join(" › ")}</span>
         {isNotStarted(r) ? <NotStartedChip /> : <StatusChip status={r.status} text={STATUS_WORD[r.status]} />}
         {r.checked?.overdue ? <Tip focusable tip="Check overdue: compare with IRCC's published forms and guides."><span role="img" aria-label="Check overdue" className="inline-flex rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><TriangleAlert className="size-4 text-text-warn" aria-hidden /></span></Tip> : null}
       </div>
       <div className="min-w-0">
-        <h3 className="text-base leading-snug"><button type="button" data-open onClick={onOpen} className="break-words text-left font-semibold outline-none hover:text-text-link hover:underline focus-visible:rounded focus-visible:ring-[3px] focus-visible:ring-ring/50">{catName}</button></h3>
-        <p className={cn("break-words text-sm", sub === "No sub-category" ? "text-text-muted" : "font-medium")}>{sub}</p>
+        <h3 className="text-base leading-snug"><button type="button" data-open onClick={onOpen} className="text-left font-semibold [overflow-wrap:anywhere] outline-none hover:text-text-link hover:underline focus-visible:rounded focus-visible:ring-[3px] focus-visible:ring-ring/50">{catName}</button></h3>
+        <p className={cn("text-sm [overflow-wrap:anywhere]", sub === "No sub-category" ? "text-text-muted" : "font-medium")}>{sub}</p>
       </div>
       <SetupSteps r={r} />
       <p className="break-words text-xs text-text-muted" data-filed>{r.filed !== "No forms yet" ? `${formsN ? `${many(formsN, "form", "forms")} · ` : ""}Filed: ${r.filed}` : found.length ? formsFound(found.length, ready) : "No forms yet"}</p>
