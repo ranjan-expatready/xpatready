@@ -8,6 +8,7 @@ import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rule
 import type { Snapshot } from "./snapshot.ts";
 import { channelProblems, type Accepts } from "./channels.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
+import { factSourceProblems } from "./sources.ts";
 
 const schema = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "contracts", "predicate.v0.schema.json"), "utf8"));
 const ajv = new Ajv({ strict: false, allErrors: true });
@@ -84,7 +85,8 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   // one nobody here uses is not this combination's warning.
   const reads = derivedRead(s);
   for (const d of derivedRows) if (reads.has(d.id) && !CALCULATIONS[d.calculation]) out.push({ level: "warning", where: "Derived fields", item: d.id, message: `Calculation ${d.calculation} has no tested helper: recorded, never evaluated.` });
-  out.push(...channelProblems(s, accepts)); // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
+  out.push(...channelProblems(s, accepts));
+  out.push(...factSourceProblems(s)); // W1-15 slice 1 (C4.10): where each answer comes from, and the PQR ticks // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
   // Drift check 2: an item that is a field code also carries its words (the question's meaning, a derived field's plain
   // words), so Review and the refusals never lead with the code.
   const plainOf = new Map((s.derived_fields as { id: string; plain?: string | null }[]).map((d) => [d.id, d.plain ?? ""]));
@@ -180,8 +182,17 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
       else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: label, key, change: "changed", needs_sme: behaviour, label: `${x.name ?? x.plain ?? key}: ${label === "Document type" ? `supplies ${(x.supplies_facts ?? []).join(", ") || "no facts"}` : `inputs ${(x.inputs ?? []).join(", ") || "none"}`}` });
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: behaviour, label: x.name ?? x.plain ?? key });
   }
+  // W1-15 slice 1 (challenge M5): each choice over the rules' source and each Pre-qualification tick is named on Review,
+  // and needs the immigration expert's sign-off (P-76: PQR picks are approved in the combination's one review).
+  {
+    const words = (x: any) => [x.source ? `comes from ${x.source === "DOCUMENT" ? `Document · ${x.document_type}` : x.source === "CLIENT" ? "Client" : "Agent"}` : "", x.prequalification ? "pre-qualification" : ""].filter(Boolean).join(", ") || "back to the rules' source";
+    const a = new Map(((prev?.fact_sources ?? []) as any[]).map((x) => [`${x.role}|${x.fact}`, x])), b = new Map(((next.fact_sources ?? []) as any[]).map((x) => [`${x.role}|${x.fact}`, x]));
+    for (const [key, x] of b) if (!a.has(key)) out.push({ kind: "Where an answer comes from", key, change: "added", origin: x.origin, needs_sme: true, label: `${x.fact} (${x.role}): ${words(x)}` });
+      else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: "Where an answer comes from", key, change: "changed", origin: x.origin, needs_sme: true, label: `${x.fact} (${x.role}): ${words(x)}` });
+    for (const [key, x] of a) if (!b.has(key)) out.push({ kind: "Where an answer comes from", key, change: "removed", needs_sme: true, label: `${x.fact} (${x.role}): back to the rules' source, no pre-qualification` });
+  }
   // Completeness guard: any other part of the released content that differs is listed rather than silently passed.
-  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "mode", "row_versions"]);
+  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "mode", "row_versions"]);
   for (const k of new Set([...Object.keys(prev ?? {}), ...Object.keys(next)])) if (prev && !covered.has(k) && canonical((prev as any)[k] ?? null) !== canonical((next as any)[k] ?? null)) out.push({ kind: "Configuration", key: k, change: "changed", needs_sme: true, label: `${k} changed` });
   return out;
 }

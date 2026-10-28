@@ -75,7 +75,16 @@ Every rule gets a pass and a fail test (STANDARDS §3.10). Test labels name C4.1
 3. **A document fact with no fallback question:** a warning for an always-needed document, a refusal for a conditional or alternative one (M2)? *Recommend yes.* A refusal everywhere would block today's imported release until fallback wording exists.
 
 ## Lead response
+29 Oct (Lead, by message, on da3c814c):
+- **M1–M6, m1, m2: all accepted** as written. M1: store only overrides and ticks; derive the rest. M2: one primary source, plus a reachable fallback question. M3: fix coverage per role first. M4: PQR ⊂ (SQR ∪ the client's checklist documents). M5: `fact_sources` in the snapshot only when rows exist, named in diff with needs_sme. M6: Sample `suppliesFacts` in samples/ as data. m1: a stable default for two suppliers, the others shown as "also supplied by". m2: `clientOnly` on LogicalSection.
+- **One addition to M6** (research `rules_provenance_model.md`): `suppliesFacts` needs a subject. Each supplied fact has a subject: the holder, the holder's parent, or the holder's spouse (a marriage certificate covers two people; a birth certificate names the parents). The smallest shape that works (a small child table or a {fact, subject} list); no per-combination copy.
+- **Q1: yes.** A PQR tick is allowed on a Document fact with a client placement. The PQR answer is declared; the SQR shows it as "please confirm", and a later document read that differs is a check, not an overwrite (P-72, P-77). A definition inside P-130, not a new founder choice.
+- **Q2: yes.** The library default plus a per-combination override, reviewed at that combination's release. Sections marked clientOnly (P-97) stay locked: release refuses Document or Agent there. C4.9 reworded in the build notes; the Lead updates CAPABILITIES.
+- **Q3: yes.** No fallback question on an always-needed document is a warning; on a conditional or alternative document, a refusal at release.
+- **Renderer gap** (the client view still asks every placed fact): slice 4 (Preview in three sets), with the named test; the Lead puts it in the concept's §10.
+- **Also in this pass:** QA-69 (Minor, qa after-merge on S5): the Forms tab offers Undo after a release; refuse it with "Released since", as people Undo does (L6). Pass and fail test.
 
 ## Agreement
+Agreed 29 Oct (Lead, within founder decisions P-130–P-134).
 
 ## Build discoveries

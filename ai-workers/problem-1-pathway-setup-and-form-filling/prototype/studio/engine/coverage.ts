@@ -4,6 +4,7 @@
 // sample data is fixed when a gap shows, never the rule. Carried by a linked case comes later (P-106, the case link).
 import { peopleFor, render } from "./render.ts";
 import type { Snapshot } from "./snapshot.ts";
+import { documentFacts } from "./sources.ts";
 
 export type CoverageGap = { fact: string; role: string; forms: string[]; boxes: number; why: string };
 export const COVERAGE_FIXES = "ask it in a library section this combination uses, or have the case officer fill it";
@@ -19,12 +20,14 @@ export function coverageGaps(s: Snapshot): CoverageGap[] {
   const roleOf = (about: string) => (about === "case" ? "the application" : people.find((p) => p.id === about.split("/")[0])?.role ?? about);
   const field = new Set((s.canonical_fields as { id: string }[]).map((f) => f.id));
   const placed = new Set((s.placements as { fact: string }[]).map((p) => p.fact));
-  const docFacts = new Set(((s.document_types ?? []) as { supplies_facts?: string[] }[]).flatMap((t) => t.supplies_facts ?? []));
+  // W1-15 challenge M3: a document covers a fact only for the people its checklist line names (a passport asked of the
+  // principal does not cover the spouse's passport number).
+  const docFacts = documentFacts(s, people);
   const gaps = new Map<string, CoverageGap>();
   for (const c of r.coverage) for (const b of c.boxes) {
     // Covered: placed in a selected section (asked of the client, or filled by the officer from a record or working
     // view), or supplied by a document type the combination asks for. A fact not in the library is already an error.
-    if (!b.fact || !b.about || !field.has(b.fact) || placed.has(b.fact) || docFacts.has(b.fact)) continue;
+    if (!b.fact || !b.about || !field.has(b.fact) || placed.has(b.fact) || docFacts.get(b.about)?.has(b.fact)) continue;
     const role = roleOf(b.about), k = `${role}|${b.fact}`;
     const g = gaps.get(k) ?? { fact: b.fact, role, forms: [], boxes: 0, why: "nobody is asked for it" };
     if (!g.forms.includes(c.form)) g.forms.push(c.form);

@@ -80,7 +80,8 @@ export class WorkspaceViews {
     const matched = new Set((await this.db.formEdition.findMany({ where: { workspaceId, sha256: { in: files.map((f) => f.sha256) }, maps: { some: {} } }, select: { sha256: true } })).map((e) => e.sha256));
     // Slice 3 (P-116 amended, one Undo for the page): the newest change on this combination's forms that Undo can still
     // reverse (the forms lane's POST …/forms/undo takes its id, so a change someone made since is never undone blind).
-    const last = await this.db.formLineAction.findFirst({ where: { combinationId: id, undoneAt: null }, orderBy: { at: "desc" } });
+    // QA-69: nothing to undo once a release came after it (the Undo bar is not offered; the API refuses it too).
+    const last = await this.db.formLineAction.findFirst({ where: { combinationId: id, undoneAt: null, ...(since ? { at: { gt: since } } : {}) }, orderBy: { at: "desc" } });
     const lastChange: LastFormChange | null = last ? { id: last.id, action: last.action as LastFormChange["action"], codes: ((last.detail as { codes?: string[] })?.codes ?? []), by: last.by, at: last.at.toISOString() } : null;
     return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), problems, removed, fromLibrary: files.filter((f) => matched.has(f.sha256)).map((f) => f.id), lastChange };
   }
