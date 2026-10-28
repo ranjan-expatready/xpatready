@@ -6,26 +6,19 @@
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
-current_item: R69-1..3 + takesEffect and QA-65..68 (with QA-61..64), for one Lead PR
-stage: CHECK
+current_item: W1-10 AI drafting (with W1-15's seven AI steps, B37, P-133/P-134), design only
+stage: DESIGN
 owner: Lead
-next_action: Lead re-merges the #73 review fix (channelsFrom by rule: conditions never count, affirmative instructions only) into PR #73
+next_action: Lead answers Q-L1..L3 and takes founder Q1 (experiment cap) and Q2 (filing channel) to an early look and grilling; no code before that
 blocked_by: none
 updated: 2026-10-29
 
-## Handover (28 Oct, late; resume from this section alone)
-* **Where it stands (28 Oct, late):** stage CHECK, owner Lead. Branch `claude/forms-r69-fix-4af07a`, pushed, clean tree, synced with main `38722933` (the run-suites prefix is main's; none carried). Holds QA-61..64 (fa653bec), the R69 fixes (`5250bed4`, `9e48029e`) and QA-65..68 (`5600ac06`):
-  * R69-1 / QA-66: the Forms list reads a RETURNED library form change (still open): "Retire returned" on the row, its author keeps Withdraw, anyone else sees it greyed.
-  * R69-2 / QA-67: the Forms list's query key carries the person (a switch without reload reads their own actions).
-  * R69-3: `rowActionOf` in `api/src/form-row-action.ts`; both-refused proved greyed (unit and every library row). qa did not reproduce it either.
-  * takesEffect: passed only for Retire and Restore.
-  * QA-65: the one read guard: a case read (`CaseRead`) still needs a known person (nobody 401); the three configuration reads made by POST (finder plan, AI plan, condition check) are marked `ConfigRead` and guarded like GETs; the check finds them in the code and proves every other write names its person. Closes the `/ai/plan` → file link chain.
-  * QA-68: a returned delete, retire or restore is sent again with "What you corrected" only (`SendAgain` on the change page, `review-items.tsx`, screens' page: minimal edit); the API refuses a name or meaning for these (400, in words) instead of dropping them.
-  * Full run-suites on `5600ac06`: 47/47 pass (studio browser skipped: :4400). Graph --check passes (soft G3 `GET /attachments/:id/file`, tested by a built address).
-  * Not done here: qa's own `tests/qa/check_qa_am_s4_1028.cjs` move to the written row action (qa's file; qa's report says qa does it).
-  * #73 review (Lead message): channelsFrom reads the clauses of a negated sentence (split on ";", ",", " but ", " instead"): a negated clause or a bare condition says nothing, an affirmative clause still counts. canada 68, finder 138, qa filing 9/9. The "Devin" comment point was rejected by the Lead (a tool, not a person).
-  * #73 review 🔴 (Lead message, by rule): every sentence read clause by clause (";", ",", ":", " but ", " instead"); a condition (if, when, unless, even if, even when, whether, except, in case) is cut to the clause end and never counts; a negated clause says nothing; PDF needs an affirmative upload clause; Online needs an affirmative file-online instruction (apply/submit/fill/complete/file … online, an online form, through/in the portal). canada 71, finder 138, qa filing 9/9.
-* **Next:** the Lead re-merges into PR #73; then apply any further findings.
+## Handover (29 Oct; resume from this section alone)
+* **Where it stands:** stage DESIGN, owner Lead. Branch `claude/forms-r69-fix-4af07a`, synced with main `32961d69` (PR #73 merged as 56f04113). W1-10 is design only: no app code until the founder's early look and grilling (design before build).
+  * `screens/W1-ai-drafting/challenge.md`: fresh re-check (R-109) and challenge. Redesign the run, then build in slices; 0 Blocker, 7 Major (A1 one step list; A2 four AI producers with four copies of the rounds; A3 no queue item contract or shared conditions yet; A4 filing channel inside the finder's rounds; A5 reader kind per document type; A6 the US$100 experiment cap leaves about US$5.8 after the US$50 plan; A7 steps that need unbuilt records), 6 Minor.
+  * `screens/W1-ai-drafting/plan.md`: one run of 9 steps (4 rules, 5 AI, each AI step with its own checker), 11 rules with pass and fail tests, 7 slices (0 step runner, 1 filing channel, 2 documents and supplies-facts, 3 who and when, 4 comes-from and PQR, 5 checks, 6 the live trial), Capability or Scaffolding labels.
+  * Founder questions: Q1 experiment cap (recommend US$120, each new AI step live once first); Q2 filing channel (recommend inside the finder's two rounds, as the existing "What IRCC accepts" change). Lead: Q-L1 runner by forms first, Q-L2 queue contract before slice 2, Q-L3 order.
+* **Next:** the Lead's answers; then the founder's early look; then BUILD from slice 0.
 * **Open for the Lead or founder:** whether guides must also be attached to their combinations; 5 of 7 sample forms are "Not set yet" until a person sets them (C11.18); the shared Button's primary hover contrast (4.4 at 12 px).
 * **How to run the checks (Mac, this copy):**
   * S4 checks: `forms_s4`, `forms_s4r`, `forms_s4b`, `forms_s4l` on ports 4455–4458; QA-53: `forms_qa53` on 4459.
@@ -36,6 +29,7 @@ updated: 2026-10-29
   * The Bash hook misfires on some compound commands: put them in a scratchpad script. No paid AI (US$0). Lane pushes run no CI (P-85).
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-10 · DESIGN (owner Lead) · applied Lead message (PR #73 merged; next W1-10, design only): synced main 32961d69; challenge.md (fresh re-check + challenge: 7 Major, 6 Minor, 2 founder and 3 Lead questions) and plan.md (one 9-step run, 11 rules, 7 slices). No code. US$0.
 - 2026-10-29 · #73 review 🔴 · FIX → CHECK (owner Lead) · channelsFrom by rule: conditions never count ("even if" included), negated clauses say nothing, PDF needs an affirmative upload clause, Online an affirmative file-online instruction; fail tests: the even-if sentence → nothing, "Do not upload …; if you apply online, fill it in the portal" → Online only. canada 71, finder 138, qa filing 9/9. US$0.
 - 2026-10-28 · #73 review · FIX → CHECK (owner Lead) · channelsFrom (QA-61): a negated sentence is read clause by clause (";", ",", " but ", " instead"); a negated clause or a bare condition says nothing, an affirmative clause counts ("Do not mail this form, upload it …" is PDF). Pass and fail tests: canada 68, finder 138, qa filing 9/9. US$0.
 - 2026-10-28 · R69 + QA-65..68 · FIX → CHECK (owner Lead) · applied Lead message (take QA-65..68): QA-65 case reads need a known person, POST configuration reads guarded (ConfigRead); QA-66/67 = R69-1/2 proved; QA-68 send again with what changed only (API 400 on a name or meaning). qa53 20, finder 138, library browser 65; full run-suites on 5600ac06 47/47. US$0.
@@ -45,4 +39,3 @@ updated: 2026-10-29
 - 2026-10-28 · QA-61..64 · BUILD · QA-61 the filing rule reads each sentence (canada 66, qa's filing check 9/9); QA-62 AI work names a finder run by its place in plain words; QA-63 a waiting finder card leads to the Sources page; QA-64 a library form's retire or restore takes effect at approval (one applyFormLifecycle for approval and an older approved change at release; the approval re-checks; the confirm says When it is approved). finder 129, runs 90, library browser 58, run browser 22. US$0.
 - 2026-10-28 · PR #67 review · BUILD → CHECK (owner Lead) · resend fix pushed (8939a822); touched suites alone on fx copies: finder 124, runs 88, structure r3 41, structure 83, screen02 fix 61 (its QA-53 officer step is in 1a975003: the edit was not in f56442a2 as reported). US$0.
 - 2026-10-28 · PR #67 review · BUILD · synced main 3858216e; a returned library form change (delete, retire, restore) is sent again by the form's own rule: Lifecycle.resubmit has a library_form branch that reads formUses leaving the change itself out of the open-change check, checks the action again and marks it WAITING (before: the form number was read as a combination id, 409). Pass and fail tests in the finder check, incl. a returned retire sent again after its last use was removed: finder 124/124. US$0.
-- 2026-10-28 · W1 lifecycle (forms) · BUILD · the form library on the shared lifecycle components (P-116 amended): one written row action from the guard (Delete, Retire, Restore, Withdraw for my own waiting change), greyed with the guard's reason as visible text under the row (aria-describedby), the confirm in the right panel (ImpactPanel) with Undo, Retire and Delete gone from the ⋯ menu; each earlier edition says what keeps it (Kept by Release N of … and K open cases; never deleted). library browser 57/57, runs 88/88. US$0.
