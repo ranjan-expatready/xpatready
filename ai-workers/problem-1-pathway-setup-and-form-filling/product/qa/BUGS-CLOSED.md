@@ -50,3 +50,4 @@
 | QA-51 | UX · Minor | C11.9 | 76628a4 | main dccd87e (PR #66), 28 Oct | `check_qa_am_fix_1027.cjs` QA-51 step: the To review title reads "Delete structure name: Retail › Temporary residence › Visitors › Visitor record" |
 | QA-52 | UX · Minor | C11.9 | 027174d | main dccd87e (PR #66), 28 Oct | `check_qa_am_fix_1027.cjs` QA-52 step: "… approved and deleted. The History line stays."; the name is gone at once |
 | QA-54 | UX · Minor | C11.10, C11.3 | 027174d | main dccd87e (PR #66), 28 Oct | `check_qa_am_fix_1027.cjs` 2 QA-54 steps: a case person on `/` and `/structure` is told the page is for the configuration people |
+| QA-57 | Bug · Minor | C11.3, C11.10 | dccd87e | main 06a8fc30 (PR #65, the forms lane's contrast fix in `structure.tsx`), 28 Oct | `check_qa_am_r3_1028.cjs` 5 axe steps clean (Tree, List, Impact panel, approver, 1024 px); 64/69 |

@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **S4 merged (06a8fc30): Go for S5 slice 3** (also by message): sync main (conflicts in studio.ts, main.ts, schema.prisma; keep the shared lifecycle guard), forms from the finder, guides linked to their combinations as sources, "Remove from …" with Undo on the shared components; tests; EARLY-LOOK by message. Save often.
+2026-10-28 (Lead, Mac): **Founder Go on slice 3 (28 Oct).** Stage BUILD → MERGE: remove the first-run "Find forms with AI" button and leave the `data-finder-start` slot for screens' S3; tab stays "Forms"; sync main after PR #69 (QA-53 refuses case people on configuration reads); run-suites; hand back by message; the Lead merges all of S5 (slices 1–3 + QA-38/40). Next pass: removes on Documents, rules, sections, people; "Add a form from the library"; AI "Who can be" with replay and Rules only (its live recording only inside the founder-approved Visitor visa trials). Save often.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
