@@ -13,7 +13,7 @@ import { channelProblems, channelsView, filingKind } from "../../engine/channels
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { checkedOf, comparePaths, compareStatus, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
-import { filedOf, setupProgress } from "../../engine/structure.ts";
+import { filedOf, progressFollows, setupProgress } from "../../engine/structure.ts";
 import { PATHWAY_TYPE_LABEL, type PathwayType } from "../../contracts/structure.ts";
 import { diff, validate } from "../../engine/validate.ts";
 import { readFileSync } from "node:fs";
@@ -162,7 +162,7 @@ export class Programs {
       const held = heldItems.filter((x) => x.combinationId === c.id || (x.code && codes.has(x.code))).map((x) => ({ code: x.code ?? "", edition: x.editionLabel ?? x.code ?? "" }))
         .filter((x, i, all) => all.findIndex((y) => y.edition === x.edition) === i);
       const nextAction = nextActionOf({ ...setup, status, changes, missing, held: held.length });
-      const progress = setupProgress({ forms: snapForms.length, allDrafted: forms.every((f) => f.drafted), reviewed: changes === 0 ? !!rel : !!gates.get(c.id)?.ok, aiProposals, live: isLive({ status }), changes });
+      const progress = progressFollows(setupProgress({ forms: snapForms.length, allDrafted: forms.every((f) => f.drafted), reviewed: changes === 0 ? !!rel : !!gates.get(c.id)?.ok, aiProposals, live: isLive({ status }), changes }), nextAction, missing);
       rows.push({ pathway, changes, errors: errors.length, firstError: errors[0] ? `${errors[0].item}: ${errors[0].message}` : null, hasContent, docNames,
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
         leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
@@ -187,6 +187,14 @@ export class Programs {
     // A program or path that is not in this pathway (an old link, a typed URL) is ignored, not shown as an empty
     // contradiction (break m5): the answer says which scope it used.
     const nodeOf = new Map(nodes.map((n) => [n.programNodeKey, n]));
+    // QA-49: the Structure's order (display order, then added first; the Structure reads nodes the same way), walked
+    // depth first, is the page's order everywhere: cards, List rows and sections. A reorder on the Structure shows here.
+    const childrenOf = new Map<string, typeof nodes>();
+    for (const n of nodes) { const k = n.parentNodeKey ?? ""; childrenOf.set(k, [...(childrenOf.get(k) ?? []), n]); }
+    const place = new Map<string, number>();
+    const visit = (n: (typeof nodes)[number]) => { place.set(n.programNodeKey, place.size); for (const c of childrenOf.get(n.programNodeKey) ?? []) visit(c); };
+    for (const n of childrenOf.get("") ?? []) visit(n);
+    const structureOrder = (x: CatalogueLeaf, y: CatalogueLeaf) => (place.get(x.nodeKey) ?? 0) - (place.get(y.nodeKey) ?? 0) || comparePaths(x, y);
     const inThisPathway = (k: string) => { let n = nodeOf.get(k); while (n?.parentNodeKey) n = nodeOf.get(n.parentNodeKey); return !!n && n.programNodeKey !== k && n.clientType === q.pathway; };
     if (q.program && !inThisPathway(q.program)) q.program = "";
     if (q.under && !inThisPathway(q.under)) q.under = "";
@@ -244,7 +252,7 @@ export class Programs {
       pathway: q.pathway, filter, requestedFilter: q.filter, fellBack, q: q.q, program: q.program, under: q.under, sort: q.sort, pathwayKey: pwKey,
       underPath: q.under ? underPath(nodes, q.under) : null,
       /** Layout v2: one flat list in Program › Category › Sub-category order (route steps in step order), or by status. */
-      rows: [...shown.values()].sort((x, y) => (q.sort === "path" ? 0 : (q.sort === "status" ? 1 : -1) * compareStatus(x, y)) || comparePaths(x, y)), programs,
+      rows: [...shown.values()].sort((x, y) => (q.sort === "path" ? 0 : (q.sort === "status" ? 1 : -1) * compareStatus(x, y)) || structureOrder(x, y)), programs,
       pathways: [["INDIVIDUAL", "Retail"], ["CORPORATE", "Corporate and employers"]].map(([v, l]) => ({ value: v, label: l, combinations: rows.filter((r) => r.pathway === v && !r.leaf.retired).length })),
       counts: { ...count(searched.map((x) => x.r)), retired: everyInPathway.filter((r) => r.leaf.retired).length }, totals, tree, sections,
       otherPathwayMatches: words ? rows.filter((r) => r.pathway === other && !r.leaf.retired && hit(r).length).length : 0,

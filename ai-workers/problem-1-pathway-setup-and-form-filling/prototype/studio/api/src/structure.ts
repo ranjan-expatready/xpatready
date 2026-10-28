@@ -8,7 +8,7 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { CreateStructureNodeBody, KIND_OF, LEVEL_OF, LEVEL_WORD, LifecycleBody, NameCheckBody, PARENT_LEVEL, PATHWAY_TYPE_LABEL, PatchStructureNodeBody, ReorderBody, StructureQuery,
   type Level, type LifecycleAction, type PathwayType, type StructureNode } from "../../contracts/structure.ts";
 import { checkName, type NameCandidate } from "../../engine/structure.ts";
-import { actorOf, Audit, Db, need, Workspace, type Actor } from "./core.ts";
+import { actorOf, Audit, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
 import { Lifecycle, trailOf } from "./lifecycle.ts";
 import { parse, Programs } from "./programs.ts";
 import { Studio } from "./studio.ts";
@@ -188,13 +188,13 @@ export class Structure {
 @Controller("api")
 export class StructureController {
   constructor(@Inject(Structure) private readonly s: Structure, @Inject(Lifecycle) private readonly l: Lifecycle) {}
-  @Get("structure") list(@Query() q: unknown) { return this.s.list(q); }
-  @Post("structure/name-check") nameCheck(@Body() b: unknown) { return this.s.nameCheck(b); }
+  @Get("structure") list(@Headers("x-actor") a: string | undefined, @Query() q: unknown) { readerOf(a); return this.s.list(q); }
+  @Post("structure/name-check") nameCheck(@Headers("x-actor") a: string | undefined, @Body() b: unknown) { readerOf(a); return this.s.nameCheck(b); }
   @Post("structure/meaning-check") meaning(@Headers("x-actor") a?: string) { return this.s.meaningCheck(actorOf(a)); }
   @Post("structure/nodes") create(@Headers("x-actor") a: string | undefined, @Body() b: unknown) { return this.s.create(actorOf(a), b); }
   @Patch("structure/nodes/:key") patch(@Headers("x-actor") a: string | undefined, @Param("key") k: string, @Body() b: unknown) { return this.s.patch(actorOf(a), k, b); }
   @Post("structure/reorder") reorder(@Headers("x-actor") a: string | undefined, @Body() b: unknown) { return this.s.reorder(actorOf(a), b); }
-  @Get("structure/nodes/:key/uses") nodeUses(@Param("key") k: string) { return this.l.nodeUses(k); }
+  @Get("structure/nodes/:key/uses") nodeUses(@Headers("x-actor") a: string | undefined, @Param("key") k: string) { readerOf(a); return this.l.nodeUses(k); }
   @Delete("structure/nodes/:key") del(@Headers("x-actor") a: string | undefined, @Param("key") k: string, @Body() b: unknown) { return this.s.propose(actorOf(a), "structure_node", k, "DELETE", b); }
   @Post("structure/nodes/:key/retire") retire(@Headers("x-actor") a: string | undefined, @Param("key") k: string, @Body() b: unknown) { return this.s.propose(actorOf(a), "structure_node", k, "RETIRE", b); }
   @Post("structure/nodes/:key/restore") restore(@Headers("x-actor") a: string | undefined, @Param("key") k: string, @Body() b: unknown) { return this.s.propose(actorOf(a), "structure_node", k, "RESTORE", b); }

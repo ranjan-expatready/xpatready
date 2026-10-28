@@ -12,7 +12,9 @@ import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycl
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
 export const KIND_NOUN: Record<string, string> = { library_form: "library form", form_accepts: "what IRCC accepts", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
-const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: "Delete", RETIRE: "Retire", RESTORE: "Restore", EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for" };
+const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: "Remove", RETIRE: "Retire", RESTORE: "Restore", EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for" };
+// P-123: a library form is Deleted (out of the library); everything else is Removed (QA-46), as a form line is Removed off a combination.
+export const actionWord = (action: string, kind: string) => (action === "DELETE" && kind === "library_form" ? "Delete" : ACTION_WORD[action] ?? action);
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${status}`, title, status, detail }, status);
 
@@ -47,7 +49,7 @@ export async function sameName(db: Pick<Db, "canonicalField" | "libraryChange" |
 }
 
 export function changeView(c: LibraryChange) {
-  return { id: c.id, kind: c.kind, kind_word: KIND_NOUN[c.kind] ?? c.kind, key: c.key, label: c.label ?? c.key, action: c.action, action_word: ACTION_WORD[c.action] ?? c.action, reason: c.reason,
+  return { id: c.id, kind: c.kind, kind_word: KIND_NOUN[c.kind] ?? c.kind, key: c.key, label: c.label ?? c.key, action: c.action, action_word: actionWord(c.action, c.kind), reason: c.reason,
     ai_verdict: c.aiVerdict, matches: c.matches, status: c.status, proposed_by: nameOf(c.proposedBy), proposed_by_id: c.proposedBy, proposed_at: c.proposedAt,
     decided_by: nameOf(c.decidedBy), decided_at: c.decidedAt, decision_note: c.decisionNote, released_in: c.releasedIn, combination_id: c.combinationId,
     ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}) };

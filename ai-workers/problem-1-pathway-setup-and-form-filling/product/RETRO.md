@@ -15,3 +15,10 @@ Owner: the Lead, at DEMO. At most one workflow change per retro, recorded in `DE
 * **Root cause:** we agreed text, not a clickable picture; nobody looked at the screen until it was finished.
 * **Change:** P-42 — design first in the clickable journey, Definition of Ready, show early after slice 1, change control through the board, demo + retro per screen.
 * **Watch next screen:** time from READY to EARLY-LOOK should be under 2 hours.
+
+## 2026-10-27 — Lead: missed hand-backs (screens FIX 3 h, runtime S5 slice 1 early look 4 h)
+* **Worked:** parallel lanes kept building; build-ahead (P-126) and one-question founder picks cleared S4, S5 and Program structure decisions in minutes.
+* **Did not work:** two lanes finished and waited hours; their "Paste to Lead" stayed in their own chats, and the Lead watched messages, not branches.
+* **Root cause:** hand-back depended on the founder copying text across chats; the Lead had no routine check of lane branches.
+* **Change:** lanes send their Paste to the Lead session with SendMessage; the Lead reads every lane's newest commit (`lane.sh status`) on every pass, not only when a message arrives.
+* **Watch next:** no lane waits more than 30 minutes at a Lead or founder stage.
