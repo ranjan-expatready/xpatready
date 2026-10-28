@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **qa after-merge on round 3 (main dccd87e): ready, with findings → one FIX pass before S3** (also by message): QA-60 Major (Add and add another loses the first letters typed during a save), QA-55 (greyed Retire names unused names as blocking), QA-56 (Enter on a new name in the pop-up), QA-58 (Undo for own delete vanishes after 10 s), QA-59 (returned deletion still says waiting); QA-57 already fixed in S4; the Button hover contrast. Each with pass and fail tests; then S3 Start setup (DESIGN). Save often.
+2026-10-28 (Lead, Mac): **PR #67 merged (qa fixes). S3 Start setup challenge answered, Agreed 28 Oct** (by message; copy under "Lead response"): M1 founder: saved finder result at US$0, else "Find forms with AI (about US$0.20)" on click only (P-125 amended); M2 remove `/new`, its routes, links, POST /combinations/path and /path-proposal, move the checks (qa's two in a commit named for qa); M3 "start" reason in the one guard, 409; M4 S3 owns POST /combinations/start and the landing on Sources and forms with the RunCard and read-only place, runtime slice 3 owns the forms list; m5–m7, m10 accepted; m8, m9 after runtime slice 2 is on main. Stage BUILD. Save often; EARLY-LOOK by message.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
