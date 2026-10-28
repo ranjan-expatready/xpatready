@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **Round 3 founder Go; Lead check passed (cf8f6ca6); merging via Lead PR** (`screens/W1-visual-system/lead-check.md`). Lead choices: List Edit opens the combination's panel; List starts in page order; chip choice not remembered (backlog). Next for this lane after the merge (stage DESIGN, owner Builder): **S3 Start setup** (P-125: Start setup opens the workspace, place read-only; `/new` retires): refresh your S3 re-check against main, write the concept challenge, then PLAN by message. The runtime "Left as it is" points (Programs next step wording during a removed released form; rule messages naming field codes) come into S3. Library lifecycle kinds come with S6. Desktop only; local run-suites evidence. **Also (28 Oct):** the shared Button's primary hover is white on bg-primary/90, contrast 4.4 at 12 px (below AA, found by forms): fix it in the S3 pass.
+2026-10-28 (Lead, Mac): **qa after-merge on round 3 (main dccd87e): ready, with findings → one FIX pass before S3** (also by message): QA-60 Major (Add and add another loses the first letters typed during a save), QA-55 (greyed Retire names unused names as blocking), QA-56 (Enter on a new name in the pop-up), QA-58 (Undo for own delete vanishes after 10 s), QA-59 (returned deletion still says waiting); QA-57 already fixed in S4; the Button hover contrast. Each with pass and fail tests; then S3 Start setup (DESIGN). Save often.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
