@@ -2,6 +2,16 @@
 
 **Read:** P-137, P-140, P-143, P-144, P-145 (`DECISIONS.md` on `lead/2026-10-29-r8`) and the research `research_notes/Agent view and filing UX/filing_channels.md` (there). **Code:** main 32961d69 plus slice 0 (`e3fe8770`). `app/` means `prototype/studio/`. Which channels IRCC accepts per form and account is **Sample** until the immigration expert confirms it. What a representative may do is Unconfirmed: no counsel. P-144 (barcode blocker) and P-145 (PDF copy) are M3 and are **not** in this slice.
 
+**Lead, 29 Oct morning (main db5e0208, which changed no app code since 32961d69, so this re-check stands):**
+* Q-L1 yes (the runner, done in slice 0). Q-L2 yes (the queue item contract lands before slice 2). Q-L3: the order in `plan.md` §3.
+* Founder: Q1 = P-139 (US$120 experiment cap); Q2 = P-140 (the channel inside the finder's rounds).
+
+**Reuse, never rebuild:**
+* PDF filling stays `prototype/p5/fill.py` through `studio/api/src/fill.ts`. A Not needed line is skipped there, like Online.
+* The barcode read-back (`prototype/evidence-lane/E1/tools/barcode_compare.py`) and the text inventory (`E1/tools/inventory.py`) belong to M3 for P-144; this slice does not call them.
+
+The questions in §8 are still open.
+
 ## 1. Fresh re-check: what exists today
 | Piece | Today (file) | P-143 needs |
 |---|---|---|
