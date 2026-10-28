@@ -14,11 +14,13 @@ import { AiLaunchDialog } from "@/components/ai-launch";
 import { Tip, TipProvider } from "@/components/status";
 import { Button, Dialog, Field, Input, Notice, Panel, Pill, Select, Table, Textarea } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
+import { BlockedLine, ImpactPanel, RowAction, useUndoToast } from "@/components/lifecycle";
+import { ACTION_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../../../contracts/lifecycle";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; edition: string | null; canada_updated: string | null; accepts: string | null; accepts_basis: string | null; accepts_quote: string | null; accepts_waiting: boolean;
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
-  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; older_editions: string[] };
+  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; older_editions: { label: string; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
 type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string };
 export type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
 
@@ -51,6 +53,23 @@ export function FormsPage() {
   const qs = new URLSearchParams(Object.entries({ type, usedBy, status, q: q.trim() }).filter(([, v]) => v)).toString();
   const lib = useApi<List>(["library-forms-list", qs], `/library/forms/list${qs ? `?${qs}` : ""}`, { placeholderData: (p) => p });
   const [opened, setOpened] = React.useState<Row | null>(null);
+  // P-116 amended (28 Oct): the row's one written action is confirmed in the right panel (ImpactPanel), then the Undo toast.
+  const [confirm, setConfirm] = React.useState<Row | null>(null);
+  const [acting, setActing] = React.useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
+  const undo = useUndoToast();
+  const sendAction = async (r: Row, reason: string) => {
+    const kind = r.action.kind, name = `${r.code} · ${r.title}`;
+    setActing({ busy: true, error: null });
+    try {
+      if (kind === "WITHDRAW") { await api(`/library/changes/${r.action.change_id}/withdraw`, { method: "POST", json: { note: reason } }); undo.show(SAY.withdrawn(name)); }
+      else {
+        const c = await api<{ id: string }>(`/library/forms/${encodeURIComponent(r.code)}${kind === "DELETE" ? "" : `/${kind.toLowerCase()}`}`, { method: kind === "DELETE" ? "DELETE" : "POST", json: { reason } });
+        undo.show(SAY.sent(kind, name), async () => { await api(`/library/changes/${c.id}/withdraw`, { method: "POST", json: { note: SAY.undone } }); await lib.refetch(); });
+      }
+      setConfirm(null); setActing({ busy: false, error: null });
+      void queryClient.invalidateQueries({ queryKey: ["form-uses", r.code] }); await lib.refetch();
+    } catch (e) { setActing({ busy: false, error: (e as Error).message }); }
+  };
   const open = opened ? lib.data?.rows.find((r) => r.code === opened.code) ?? opened : null;
   // Review major 8: focus goes back to what opened the drawer (the number), never to the top of the page.
   const back = React.useRef<HTMLElement | null>(null);
@@ -108,14 +127,26 @@ export function FormsPage() {
                   <td className="hidden xl:table-cell">{editionText(r) ?? <span className="text-text-muted">no usable edition yet</span>}</td>
                   <td className="max-w-36 xl:max-w-none"><AcceptsCell r={r} /></td>
                   <td className="max-w-48 xl:max-w-72">{r.used_by.length === 0 ? <span className="text-text-muted">Not used</span> : r.used_by.length === 1 ? <TrailText label={r.used_by[0].label} /> : <Tip tip={r.used_by.map((u) => u.label).join(", ")}><span tabIndex={0} className="underline decoration-dotted rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">{r.used_by.length} combinations</span></Tip>}</td>
-                  <td><span className="inline-flex flex-wrap gap-1"><Tip tip={STATUS[r.status].tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone={STATUS[r.status].tone}>{STATUS[r.status].word}</Pill></span></Tip>{r.lifecycle_waiting ? <Tip tip={r.lifecycle_approved ? `Approved: the form is ${r.lifecycle_waiting === "RESTORE" ? "restored" : "retired"} with the next release (Release, on the combination's Review page).` : `A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="warn">{LIFE_WORD[r.lifecycle_waiting].title} {r.lifecycle_approved ? "approved" : "waiting"}</Pill></span></Tip> : null}</span></td>
-                  <td className="text-right"><RowActions row={r} canAuthor={canAuthor} onWhereUsed={() => setOpen(r)} /></td>
+                  <td><span className="inline-flex flex-wrap gap-1"><Tip tip={STATUS[r.status].tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone={STATUS[r.status].tone}>{STATUS[r.status].word}</Pill></span></Tip>{r.lifecycle_waiting ? <Tip tip={r.lifecycle_approved ? `Approved: the form is ${r.lifecycle_waiting === "RESTORE" ? "restored" : "retired"} with the next release (Release, on the combination's Review page).` : `A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="warn">{r.lifecycle_approved ? `${ACTION_LABEL[r.lifecycle_waiting]} approved` : WAITING_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : null}</span></td>
+                  <td className="text-right">
+                    <div className="flex items-center justify-end gap-0.5">
+                      <RowAction kind={r.action.kind} why={canAuthor ? r.action.why : WHY.author} canEdit={canAuthor} name={r.code} reasonId={`why-${r.code.replace(/\W+/g, "-")}`}
+                        tip={r.action.kind === "DELETE" ? TIP.DELETE(0, false) : r.action.kind === "RETIRE" ? TIP.RETIRE(false) : r.action.kind === "RESTORE" ? TIP.RESTORE : TIP.WITHDRAW(r.code)}
+                        editTip="Open the form: its definition, what IRCC accepts, where it is used and its history." onEdit={() => setOpen(r)} onAction={() => { setActing({ busy: false, error: null }); setConfirm(r); }} />
+                      <RowActions row={r} canAuthor={canAuthor} onWhereUsed={() => setOpen(r)} />
+                    </div>
+                    {canAuthor && r.action.why ? <BlockedLine id={`why-${r.code.replace(/\W+/g, "-")}`} text={r.action.why} onWhere={() => setOpen(r)} className="ml-auto mt-0.5 max-w-[18rem] text-right" /> : null}
+                  </td>
                 </tr>
               ))}
             </Table>
           )}
         <p className="text-xs text-text-muted">{lib.data?.sample_note}</p>
         {open ? <FormDrawer row={open} onClose={() => setOpen(null)} canAuthor={canAuthor} /> : null}
+        {confirm ? <div className="xl:fixed xl:right-6 xl:top-20 xl:z-40 xl:w-[440px]"><ImpactPanel key={`impact-${confirm.code}`} kind={confirm.action.kind} name={`${confirm.code} · ${confirm.title}`}
+          kept={confirm.action.kind === "RETIRE" ? confirm.used_by.map((u) => u.label) : undefined} busy={acting.busy} error={acting.error}
+          onCancel={() => { const code = confirm.code; setConfirm(null); setTimeout(() => document.querySelector<HTMLElement>(`tr[data-form="${CSS.escape(code)}"] [data-action]`)?.focus(), 0); }} onSend={(reason) => void sendAction(confirm, reason)} /></div> : null}
+        {undo.node}
       </div>
     </TipProvider>
   );
@@ -167,9 +198,9 @@ function UploadButton({ onRuns }: { onRuns: (ids: string[]) => void }) {
   );
 }
 
-/** The ⋯ menu on a row: P-123's actions. Retire and delete wait for a second person (P-116); each refusal says why. */
+/** The ⋯ menu on a row: P-123's other actions (Replace, Re-read with AI, Where used). Delete, Retire, Restore and Withdraw
+ *  are the row's one written action (P-116 amended), not in this menu. */
 function RowActions({ row, canAuthor, onWhereUsed }: { row: Row; canAuthor: boolean; onWhereUsed: () => void }) {
-  const [life, setLife] = React.useState<"RETIRE" | "DELETE" | "RESTORE" | null>(null);
   const [reread, setReread] = React.useState(false);
   const trigger = React.useRef<HTMLButtonElement>(null);
   const refocus = () => setTimeout(() => trigger.current?.focus(), 0);
@@ -184,38 +215,11 @@ function RowActions({ row, canAuthor, onWhereUsed }: { row: Row; canAuthor: bool
             <DropdownMenu.Item className={item} disabled={!canAuthor || row.type === "guide" || row.status === "retired"} onSelect={() => check.mutate(undefined)}>Replace with a new edition…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} disabled={!canAuthor || !row.attachment_id || row.type !== "form"} onSelect={() => setReread(true)}>Re-read with AI (fields and boxes)</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={onWhereUsed}>See where it is used ({row.used_by.length})</DropdownMenu.Item>
-            {row.status === "retired"
-              ? <DropdownMenu.Item className={item} disabled={!canAuthor} onSelect={() => setLife("RESTORE")}>Restore</DropdownMenu.Item>
-              : <DropdownMenu.Item className={item} disabled={!canAuthor} onSelect={() => setLife("RETIRE")}>Retire · kept for released versions</DropdownMenu.Item>}
-            <DropdownMenu.Item className={item} disabled={!canAuthor || row.used_by.length > 0 || !!row.lifecycle_waiting} onSelect={() => setLife("DELETE")}>Delete · only when nothing uses it</DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
-      {life ? <LifecycleDialog row={row} action={life} onClose={() => { setLife(null); refocus(); }} /> : null}
       {reread && row.attachment_id ? <AiLaunchDialog scope={{ kind: "source", ids: [row.attachment_id], label: row.code }} onClose={() => { setReread(false); refocus(); }} initialMode="REPLAY" /> : null}
     </>
-  );
-}
-
-const LIFE_WORD = { RETIRE: { title: "Retire", verb: "Ask to retire", help: "Retired forms are hidden from pickers and AI; released versions and open cases keep them. A second person approves on To review; the next release carries it." },
-  DELETE: { title: "Delete", verb: "Ask to delete", help: "Only a form never released and used nowhere can be deleted. A second person approves on To review; it then leaves the library with its files." },
-  RESTORE: { title: "Restore", verb: "Ask to restore", help: "The form comes back to pickers and AI. A second person approves; the next release carries it." } } as const;
-
-/** Retire, delete or restore: where it is used first, the rule's refusal in words, a reason, then a second person (P-116). */
-function LifecycleDialog({ row, action, onClose }: { row: Row; action: "RETIRE" | "DELETE" | "RESTORE"; onClose: () => void }) {
-  const uses = useApi<Uses>(["form-uses", row.code], `/library/forms/${encodeURIComponent(row.code)}/uses`);
-  const [reason, setReason] = React.useState("");
-  const path = action === "DELETE" ? "" : `/${action.toLowerCase()}`;
-  const go = useAsk(() => api(`/library/forms/${encodeURIComponent(row.code)}${path}`, { method: action === "DELETE" ? "DELETE" : "POST", json: { reason } }), `${LIFE_WORD[action].title} asked: it waits for a second person on To review`, [["library-forms-list"], ["form-uses", row.code]], onClose);
-  const refusal = uses.data ? (action === "DELETE" ? uses.data.can.delete : action === "RETIRE" ? uses.data.can.retire : uses.data.can.restore) : null;
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title={`${LIFE_WORD[action].title} ${row.code}?`} description={LIFE_WORD[action].help}
-      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={() => go.mutate()} busy={go.isPending} disabled={!!refusal || reason.trim().length < 3 || uses.isLoading}>{LIFE_WORD[action].verb}</Button></>}>
-      {uses.isLoading ? <p className="text-sm text-text-muted">Looking up where it is used…</p> : refusal ? <Notice tone="warn" title="Not possible now">{refusal}</Notice> : null}
-      <UsesList uses={uses.data} />
-      {!refusal ? <Field label="Why" hint="3 to 300 characters; the second person reads it."><Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} /></Field> : null}
-      {go.error ? <p className="text-sm text-danger" role="alert">{(go.error as Error).message}</p> : null}
-    </Dialog>
   );
 }
 
@@ -235,7 +239,7 @@ function FormDrawer({ row, onClose, canAuthor }: { row: Row; onClose: () => void
         <p>{row.type === "guide" ? editionText(row) : <>Current edition: {row.edition ?? "none usable yet"}{row.canada_updated ? ` · canada.ca last updated ${row.canada_updated}` : ""}</>}</p>
         <p>{row.type === "guide" ? "Read from its canada.ca page" : row.origin ? ORIGIN[row.origin] ?? row.origin : "Where it came from is not recorded"}{row.downloaded_from && row.type !== "guide" ? <> · <a className="text-text-link underline" href={row.downloaded_from} target="_blank" rel="noreferrer">PDF link</a></> : null}</p>
         {row.form_page_url ? <p><a className="text-text-link underline" href={row.form_page_url} target="_blank" rel="noreferrer">{/\.pdf$/i.test(row.form_page_url) ? "Its file on IRCC's site (no form page)" : "Its page on canada.ca"}</a>{/\.pdf$/i.test(row.form_page_url) ? null : <> · checked {when(row.checked_at)}</>}</p> : <p className="text-text-muted">No canada.ca page recorded yet.</p>}
-        {row.older_editions.length ? <p className="text-text-muted">Older editions kept for released versions: {row.older_editions.join(", ")}</p> : null}
+        {row.older_editions.map((e) => <p key={e.label} className="text-text-muted" data-kept-by><span className="font-medium text-text">Earlier edition {e.label.replace(`${row.code} `, "")}</span> · {e.kept_by}</p>)}
         <details><summary className="cursor-pointer text-text-muted">Details</summary><p className="mono break-all text-xs">File fingerprint (SHA-256): {row.fingerprint ?? "none"}</p></details>
       </section>
       <section className="mt-4 space-y-2 text-sm" aria-labelledby="fd-acc"><h3 id="fd-acc" className="font-semibold">What IRCC accepts</h3>
