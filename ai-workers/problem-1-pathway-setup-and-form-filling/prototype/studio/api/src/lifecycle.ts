@@ -8,7 +8,10 @@ import { HttpException, Inject, Injectable } from "@nestjs/common";
 import type { LibraryChange, Prisma, ProgramDef } from "@prisma/client";
 import { LEVEL_OF, LEVEL_WORD, type LifecycleAction, type Use, type UsesView } from "../../contracts/structure.ts";
 import { ACTORS, Audit, Db, need, Workspace, type Actor } from "./core.ts";
-import { changeView } from "./library-changes.ts";
+import { actionVerb, changeView } from "./library-changes.ts";
+
+/** The entity an audit line names for a library change (the same on every line about it). */
+const entityOf = (kind: string) => (kind === "structure_node" ? "structure" : kind === "library_form" ? "form" : "combination");
 import { formUses, hasApprovedFile } from "./form-uses.ts";
 import { newestEdition } from "../../engine/programs.ts";
 
@@ -122,7 +125,7 @@ export class Lifecycle {
       await this.db.libraryChange.update({ where: { id: c.id }, data: { status: "WITHDRAWN", decisionNote: "Another change to it was proposed at the same moment." } });
       throw problem(409, "Already open", "Another change to it was proposed at the same moment: see it on To review.", { uses: u.uses });
     }
-    await this.audit.log(workspaceId, actor.id, "proposed", kind === "structure_node" ? "structure" : kind === "library_form" ? "form" : "combination", key, `${actor.name} proposed to ${action.toLowerCase()} "${label}": ${reason}`, undefined, kind === "combination" ? key : undefined);
+    await this.audit.log(workspaceId, actor.id, "proposed", entityOf(kind), key, `${actor.name} proposed to ${actionVerb(action, kind)} "${label}": ${reason}`, undefined, kind === "combination" ? key : undefined);
     return changeView(c);
   }
 
@@ -189,11 +192,11 @@ export class Lifecycle {
         await tx.intakeItem.updateMany({ where: { combinationId: c.key }, data: { combinationId: null } });
         await tx.combination.delete({ where: { id: c.key } });
       }
-      await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? "Removed at approval (never released)." } });
+      await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? (c.kind === "library_form" ? "Deleted at approval: it left the library (never released)." : "Removed at approval (never released).") } });
       return true;
     });
     if (!done) return;
-    await this.audit.log(c.workspaceId, actor.id, "deleted", c.kind === "structure_node" ? "structure" : c.kind === "library_form" ? "form" : "combination", c.key, `${actor.name} approved removing "${c.label ?? c.key}": removed (never released, used nowhere)`);
+    await this.audit.log(c.workspaceId, actor.id, "deleted", entityOf(c.kind), c.key, c.kind === "library_form" ? `${actor.name} approved deleting "${c.label ?? c.key}": it left the library (never released, used nowhere)` : `${actor.name} approved removing "${c.label ?? c.key}": removed (never released, used nowhere)`);
   }
 
 }
@@ -206,7 +209,7 @@ export async function withdrawLifecycle(db: Db, actor: Actor, c: LibraryChange, 
   if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
   const done = await db.libraryChange.updateMany({ where: { id: c.id, status: { in: OPEN } }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });
   if (!done.count) throw problem(409, "Cannot withdraw", `This change is ${c.status.toLowerCase()}: nothing to withdraw.`);
-  await db.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "withdrawn", entity: c.kind === "structure_node" ? "structure" : "combination", entityKey: c.key, summary: `${actor.name} withdrew "${c.action.toLowerCase()} ${c.label ?? c.key}": ${why}`.slice(0, 600) } });
+  await db.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "withdrawn", entity: entityOf(c.kind), entityKey: c.key, summary: `${actor.name} withdrew "${actionVerb(c.action, c.kind)} ${c.label ?? c.key}": ${why}`.slice(0, 600) } });
   return changeView((await db.libraryChange.findUnique({ where: { id: c.id } }))!);
 }
 

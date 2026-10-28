@@ -187,7 +187,10 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
     const decoyKey = join(P2, "runs", `${prefix}same-names-elsewhere-live-30001231t000000000z-s4check.json`), decoyNames = join(P2, "runs", `${prefix}names-only-live-30001230t000000000z-s4check.json`);
     writeFileSync(decoyKey, JSON.stringify(saved(empty, "xx.same_names_elsewhere")));
     writeFileSync(decoyNames, JSON.stringify(saved(empty, vvTrail)));
-    madeRuns.push(file, decoyKey, decoyNames);
+    // Break R5-1: a stub pass of a place whose own name holds "live" ends "-stub-…": never replayed as the AI's answer.
+    const decoyStub = join(P2, "runs", `${prefix}a-live-place-stub-30001231t000000000z-s4check.json`);
+    writeFileSync(decoyStub, JSON.stringify(saved(empty, vvKey)));
+    madeRuns.push(file, decoyKey, decoyNames, decoyStub);
   }
   r = await call("DELETE", `/combinations/${vv}/forms/${C5257}`, { version: 7 });
   ok("C11.15 (S5 ask 4): Remove with a stale line version is refused (409, reload)", r.status === 409 && /Changed since/.test(r.body.title), r.body.detail);
@@ -203,7 +206,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "replay", planSha256: replayPlan.plan_sha256, idempotencyKey: "s4-check-replay" });
   run = (await finish(r.body.id)).body;
   ok("C11.8: replay reuses the saved answers of exactly these pages and prompt: same result, US$0, nothing attached twice", run.usd.spent === 0 && run.result?.attach?.filter((a: any) => a.code !== "IMM 5257").every((a: any) => a.line === "already") && run.result.attach.length === 4, run.result?.attach?.map((a: any) => `${a.code}:${a.line}`));
-  ok("C11.8 (Lead 28 Oct): replay is keyed by the combination itself: newer saved answers with the same pages and names but another combination's key, or names only, are never used", run.result?.attach?.length === 4 && /29991231t/.test(sql(`select detail->>'run_file' from drafting_job where batch_id='${run.id}' and kind='finder_propose'`)), sql(`select detail->>'run_file' from drafting_job where batch_id='${run.id}' and kind='finder_propose'`));
+  ok("C11.8 (Lead 28 Oct), break R5-1: replay is keyed by the combination itself: newer saved answers with the same pages and names but another combination's key, names only, or a stub pass of this combination are never used", run.result?.attach?.length === 4 && /29991231t/.test(sql(`select detail->>'run_file' from drafting_job where batch_id='${run.id}' and kind='finder_propose'`)), sql(`select detail->>'run_file' from drafting_job where batch_id='${run.id}' and kind='finder_propose'`));
   ok("C11.15 (S5 ask 2): Find again never attaches back a form a person removed (IMM 5257 stays removed; shown \"Add back\")", run.result?.attach?.find((a: any) => a.code === "IMM 5257")?.line === "removed_by_person" && /IMM 5257:RETIRED/.test(lines(vv)) && (await call("GET", `/combinations/${vv}/forms/find/latest`)).body.forms.find((f: any) => f.code === "IMM 5257")?.state === "REMOVED_BY_PERSON", lines(vv));
   r = await call("POST", `/combinations/${vv}/forms/undo`, { changeId: "00000000-0000-4000-8000-000000000000" });
   ok("C11.15 (S5 ask 4): Undo naming a change that is no longer the last is refused (409)", r.status === 409, r.body.detail);
@@ -287,6 +290,8 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   r = await call("POST", `/library/changes/${change}/approve`, { note: "ok" }, "user-A");
   ok("C11.11: the author cannot approve their own delete (author ≠ approver)", r.status >= 400, r.status);
   r = await call("POST", `/library/changes/${change}/approve`, { note: "Checked: unused" }, "user-B");
+  const deleteLines = sql(`select string_agg(summary, ' | ' order by at) from audit_event where entity_key='IMM 0100'`);
+  ok("break R5-2: History says the form was deleted (it left the library), never removed", /proposed to delete "/.test(deleteLines) && /approved deleting "[^"]+": it left the library/.test(deleteLines) && !/remov/i.test(deleteLines), deleteLines);
   ok("C11.11: a second person approves: the form leaves the library", r.status < 300 && sql(`select count(*) from gov_form_def where form_key='IMM 0100'`) === "0" && sql(`select status from library_change where id='${change}'`) === "RELEASED", r.body);
   r = await call("POST", `/library/forms/${C5257}/restore`, { reason: "Needed again" });
   ok("C11.11: restore of a form that is not retired is refused (409)", r.status === 409 && /not retired/.test(r.body.detail), r.body.detail);

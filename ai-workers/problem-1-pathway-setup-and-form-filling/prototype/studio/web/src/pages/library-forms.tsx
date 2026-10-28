@@ -33,7 +33,7 @@ const BASIS: Record<string, { tag: string; tip: string }> = {
 };
 /** A guide's date is canada.ca's own "Date modified" when the page prints one; otherwise when the studio read it. */
 const editionText = (r: Row) => (r.type === "guide" ? (r.canada_updated ? `Updated on canada.ca ${r.canada_updated}` : r.checked_at ? `Read from canada.ca on ${new Date(r.checked_at).toISOString().slice(0, 10)}` : "Date not known") : r.edition ? r.edition.replace(`${r.code} `, "").replace(/[()]/g, "") : null);
-const ACCEPTS_TIP = "What IRCC accepts for this form: a PDF upload, an online form in the portal, or either. Guides and checklists are not filed: AI reads them. AI reads it from IRCC's page, or a person sets it with a second person's OK; Sample until the immigration expert confirms. Online filling needs the browser extension (later wave).";
+const ACCEPTS_TIP = "What IRCC accepts for this form: a PDF upload, an online form in the portal, or either. Guides and checklists are not filed: AI reads them. AI reads it from IRCC's page, the sample loads it with IRCC's own line from the page, or a person sets it with a second person's OK; Sample until the immigration expert confirms. Online filling needs the browser extension (later wave).";
 const STATUS: Record<Row["status"], { word: string; tone: string; tip: string }> = {
   ready: { word: "Ready", tone: "ok", tip: "Its current edition is in the library and may be used by any combination." },
   needs_ok: { word: "Needs your OK", tone: "warn", tip: "A file of this form waits for a second person on To review (a hand upload, or a newer edition to review)." },
@@ -134,7 +134,7 @@ function AcceptsCell({ r }: { r: Row }) {
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
       {r.accepts ? ACCEPTS[r.accepts] ?? r.accepts : <span className="text-text-muted">Not set yet</span>}
-      {r.type === "form" && r.accepts && basis ? <Tip tip={basis.tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone={r.accepts_basis === "AI_SAMPLE" ? "ai" : "neutral"}>{basis.tag}</Pill></span></Tip> : null}
+      {r.type === "form" && r.accepts && basis ? <Tip tip={basis.tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone={r.accepts_basis === "AI_SAMPLE" ? "ai" : "neutral"} className="max-w-full whitespace-normal">{basis.tag}</Pill></span></Tip> : null}
       {r.accepts_waiting ? <Tip tip="A change to what IRCC accepts waits for a second person on To review."><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="warn">Change waiting</Pill></span></Tip> : null}
     </span>
   );
@@ -197,7 +197,7 @@ function RowActions({ row, canAuthor, onWhereUsed }: { row: Row; canAuthor: bool
 }
 
 const LIFE_WORD = { RETIRE: { title: "Retire", verb: "Ask to retire", help: "Retired forms are hidden from pickers and AI; released versions and open cases keep them. A second person approves on To review; the next release carries it." },
-  DELETE: { title: "Delete", verb: "Ask to delete", help: "Only a form never released and used nowhere can be deleted. A second person approves on To review; it is then removed with its files." },
+  DELETE: { title: "Delete", verb: "Ask to delete", help: "Only a form never released and used nowhere can be deleted. A second person approves on To review; it then leaves the library with its files." },
   RESTORE: { title: "Restore", verb: "Ask to restore", help: "The form comes back to pickers and AI. A second person approves; the next release carries it." } } as const;
 
 /** Retire, delete or restore: where it is used first, the rule's refusal in words, a reason, then a second person (P-116). */
@@ -232,8 +232,8 @@ function FormDrawer({ row, onClose, canAuthor }: { row: Row; onClose: () => void
     <Panel open onOpenChange={(o) => !o && onClose()} title={`${row.code} · ${row.title}`} description={`${TYPE_WORD[row.type]}${row.edition ? ` · ${row.edition}` : ""}`} badge={<Pill tone={STATUS[row.status].tone}>{STATUS[row.status].word}</Pill>}>
       <section className="space-y-1 text-sm" aria-labelledby="fd-def"><h3 id="fd-def" className="font-semibold">Definition</h3>
         <p>{row.type === "guide" ? editionText(row) : <>Current edition: {row.edition ?? "none usable yet"}{row.canada_updated ? ` · canada.ca last updated ${row.canada_updated}` : ""}</>}</p>
-        <p>{row.origin ? ORIGIN[row.origin] ?? row.origin : "Where it came from is not recorded"}{row.downloaded_from ? <> · <a className="text-text-link underline" href={row.downloaded_from} target="_blank" rel="noreferrer">PDF link</a></> : null}</p>
-        {row.form_page_url ? <p><a className="text-text-link underline" href={row.form_page_url} target="_blank" rel="noreferrer">Its page on canada.ca</a> · checked {when(row.checked_at)}</p> : <p className="text-text-muted">No canada.ca page recorded yet.</p>}
+        <p>{row.type === "guide" ? "Read from its canada.ca page" : row.origin ? ORIGIN[row.origin] ?? row.origin : "Where it came from is not recorded"}{row.downloaded_from && row.type !== "guide" ? <> · <a className="text-text-link underline" href={row.downloaded_from} target="_blank" rel="noreferrer">PDF link</a></> : null}</p>
+        {row.form_page_url ? <p><a className="text-text-link underline" href={row.form_page_url} target="_blank" rel="noreferrer">{/\.pdf$/i.test(row.form_page_url) ? "Its file on IRCC's site (no form page)" : "Its page on canada.ca"}</a>{/\.pdf$/i.test(row.form_page_url) ? null : <> · checked {when(row.checked_at)}</>}</p> : <p className="text-text-muted">No canada.ca page recorded yet.</p>}
         {row.older_editions.length ? <p className="text-text-muted">Older editions kept for released versions: {row.older_editions.join(", ")}</p> : null}
         <details><summary className="cursor-pointer text-text-muted">Details</summary><p className="mono break-all text-xs">File fingerprint (SHA-256): {row.fingerprint ?? "none"}</p></details>
       </section>

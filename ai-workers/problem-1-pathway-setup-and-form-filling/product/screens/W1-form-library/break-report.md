@@ -1,93 +1,116 @@
-# S4 Form library: break report, round 4 (independent breaker, 27 Oct 2026)
+# S4 Form library: break report, round 5 (independent breaker, 28 Oct 2026)
 
-**What was tested.** Commit e7cb63c on `forms/2026-10-27-s4-form-library`, isolated copy `brk4_s4` on :4462 with the sample loaded (web build matches the commit). Scope: the round 3 fixes (R3-1, R3-2, m1–m6) and a quick regression on N1–N8. Earlier rounds are in git history. Paths are relative to `prototype/studio/`.
-* **Spend: US$0.** A stub probe reached `var/isolated-brk4_s4/fake-launch.log` (5 stub lines) before any finder run. Every finder run was a replay; no live call was made. canada.ca came from the recorded copies (`STUDIO_CANADA` unset).
-* **Left as found.** `p2/jobs`, `p2/runs` and `p2/ledger` are byte-identical to before. The source attach in R4-1 had read IMM 5645 into 5 job files and 4 `p2/parts` files; nothing was launched, and I removed them. The copy is stopped, its database dropped and its `var` folder removed.
-* **Setup steps that went straight to the database:** one removed line set back to DRAFT (IMM 5802 on With an LMIA, to reach the release re-check), one long title (IMM 5905) and one empty library row (IMM 9876). Everything else went through the API or the browser.
+**What was tested.** The drift-check fixes on `forms/2026-10-27-s4-form-library` at a660f7b. The app code is identical at d6469ca. Scope:
+1. The merge with main (8cfc043).
+2. Delete vs Remove (P-123 with QA-46).
+3. Load sample from the Sample fixtures, including migration `20261028090000_s4_sample_fixture_basis`.
+4. Replay keyed by the combination.
+
+Earlier rounds are in git history. Paths are relative to `prototype/studio/`.
+
+**How it was tested.**
+* **Copies.** `fxb_s4` on :4478 ran the real code with the sample loaded. The full suites were running in this copy at the same time, so the hostile-fixture and planted-run attacks ran in a scratch mirror instead: `fxb_s4m` on :4479, a copy of `api/engine/contracts/samples/prisma` with links to the rest, plus its own `p2/runs` folder. The only change to the mirror's code was to let the reset walk symlinked folders (`demo.ts walk`); without it, reset failed with EISDIR on the links.
+* **Changes to the repo.** None. `samples/form-library-sample.json`, `official-sources/` and `p2/runs` in the repo were never touched.
+* **Spend: US$0.** Both copies used `STUDIO_FAKE_LAUNCHER`, and neither copy logged a single launch. Every finder run was a replay.
+* **Clean-up.** Both copies are stopped, both databases dropped, `var/isolated-fxb_s4` and the mirror removed.
+* **Set up directly in the database.** One empty library row (IMM 9876), so that a Delete could be asked for.
 
 ## Major
-**R4-1 · Uploading a form's file on a combination still gives a retired or retiring form a new use, and the release retires it anyway (R3-1 is fixed for form lines, not for sources).**
-* **Steps, approved retire:**
-  1. Remove IRM 0002 from both Visitor visa lines.
-  2. user-A asks to retire it; user-B approves.
-  3. user-A `POST /api/intake` with the stored `irm0002e.pdf` and `combinationId=<Super visa>`. The combination's own upload, the "door 1" in `web/src/components/forms.tsx:34`, answers "Already in the library… **Attached to Super visa.**" (status RECOGNISED, "Next: AI drafts its field map").
-  4. user-B `POST /pack/release` returns 201: release 2 retires IRM 0002.
-* **Broke:** Uses lists "Visitors › Super visa — its file is attached here as a source", and the list row shows **Retired**, Used by Super visa. That is the state P-116 forbids.
-* **Steps, waiting retire:** while the IMM 5645 retire was WAITING, the same upload attached it to Super visa and Study permit.
-  * The approval was then refused: "Used meanwhile: Visitors › Super visa".
-  * No route removes a source attachment (no `sourceAttachment.delete` outside demo reset). The form can never be retired, although Uses says "remove it there first".
+**R5-1 · Replay can return a stub-pass record as "saved answer, US$0" for any combination whose names contain the word "live".**
+* **Steps (mirror):**
+  1. Create Visitors › "Live-in caregiver visit" and its combination.
+  2. Put the pair of records a real live pass leaves in `p2/runs`, both carrying this combination's key: `…-live-in-caregiver-vi-<h>-live-<ts>.json` (the real answer, 10 forms) and the earlier `…-stub-<ts>.json` (`forms: []`, "stub caller: no model was called").
+  3. Replay with the visitor-visa page.
+* **Broke:**
+  * Both rounds say "AI listed 0 forms (saved answer, US$0)".
+  * The run is **COMPLETED**: nothing attached, nothing missing.
+  * `drafting_job.detail.run_file` points at the `-stub-` files.
+  * The paid answer is never used.
 * **Cause:**
-  * `api/src/intake.ts:241-243` (`attach` inside `one`) calls `sources.attach` (`api/src/sources.ts:99`), which checks neither `retiredAt` nor `closingChange`.
-  * The same path runs when a second person approves a held file: `intake.ts:174` re-runs the intake on the file's combination.
-  * The release re-check (`api/src/lifecycle.ts:222`) counts `combination_form` lines only. `formUses` (`form-uses.ts:45-49`) counts source attachments as blocking uses.
+  * `finder.ts:489`: the replay filter `^…-.+-live-.+\.json$` also matches a stub file whose name contains "-live-".
+  * `finder.ts:57` `newestFirst` sorts from `lastIndexOf("-live-")`, which for the stub file is the name itself, so the stub sorts first ("-live-in…" > "-live-2026…").
+  * A stub record passes `same` (completed, contract_valid, same template, inputs and key; `finder.ts:485`).
+* **Note:** keying by the combination does not prevent this; any record whose job id contains "live" is affected.
+
+**R5-2 · History lines still use the wrong word (P-123, QA-46), and one shows a raw code.** To review, the approval page and the Release page are right (see What held). The Activity and History lines are not:
+* **Library form deleted:**
+  * `lifecycle.ts:196` writes "Approver approved **removing** "IMM 9876 · …": **removed** (never released, used nowhere)". That reads as if the form stays in the library, which is the meaning clash drift #2 was about.
+  * `lifecycle.ts:192`: an approval with no note is stored as "**Removed** at approval".
+* **Structure name removed:**
+  * `lifecycle.ts:125` writes "proposed to **delete** "Temporary residence › …"".
+  * `screen02.ts:110` writes "approved "…" (**delete**)".
+  * `lifecycle.ts:209` writes "withdrew "**delete** …"".
+  * QA-46 says "Remove, never Delete". These lines show in the Structure panel's History and in Activity.
+* **What IRCC accepts:** `screen02.ts:110` writes "Approver approved "IMM 1295 · IRCC accepts: Online" (**set_accepts**): ok" in the form's History drawer and in Activity. The same line says "(edit_rule)" for a check.
+* **Reproduction:** on :4478, ask to delete IMM 9876, remove a new structure name and set IRCC accepts on IMM 1295. Approve each as user-B, then read `audit_event` (all quoted above).
+* **Root cause:** these lines use `action.toLowerCase()` or hard-coded words instead of `actionWord(action, kind)` (`library-changes.ts:17`).
 
 ## Minor
-**R4-2 · The replay rule ("the last two names") is not sound as the build notes state it.**
-* **Steps:** I created Individual › Permanent residence › Visitors › Visitor visa, and Citizenship › Proofs › a category named "Visitors › Visitor visa".
-* **Broke:** Both replayed the real Visitor visa answers ("saved answer, US$0"). 6 and 5 forms were attached automatically as "Picked by AI".
-* **Why it matters:** the claim "another combination still never gets them" is false. The answers are about the same canada.ca pages, and the lines are drafts, so the harm is small. But:
-  * the AI was given a different `combination_trail`;
-  * a name may contain " › " (`finder.ts:52` splits on it);
-  * for a three-level trail the program *is* one of the last two levels, so renaming the program (the code comment's example) loses replay, and only a pathway rename keeps it.
-* **Also:** Super visa on the visitor-visa page is refused with "No saved AI answer for these exact pages" (`finder.ts:466`), although the pages are identical and only the name differs.
-* For the Lead: keep the rule and reword the claim, or key replay by the combination itself.
+**R5-3 · The Sample fixtures are not checked. One bad line breaks the whole Load sample, and a broken file is skipped without a word** (`finder.ts:135-141`, `:776`).
+* **One bad value:** `"channels": "BOGUS"` or a numeric `quote` gives a 500 ("Loading stopped … violates check constraint" or "fixed.quote.slice is not a function"). The Structure is half-loaded and needs a reset.
+* **Unreadable JSON:**
+  * the load gives 201;
+  * IRCC accepts is set for 1 of 7 forms;
+  * there are 2 guides, not 4;
+  * IMM 5881 and IMM 5905 have no page;
+  * the log never says the fixture file could not be read.
 
-**R4-3 · A release that hands a retire back is empty and silent.**
-* **Steps:** with IMM 5802's retire approved and a line listing it again, user-B releases.
+**R5-4 · A recorded copy is trusted on the fixture's own checksum, not the manifest** (`finder.ts:143-149`, `:723`, `:753-754`). Build notes: "used only while its manifest checksum matches".
+* **A link out of the folder is followed:** a link `instructions/evil-link.html` → `/etc/hosts`, with that file's checksum, was stored as **Guide 5487** and as an `official_download`.
+* **The recorded file is not checked against the URL:** `instructions/guide-5553.html` given with guide 5487's URL was stored as Guide 5553 (inside Canada) with 5487's (outside Canada) page.
+* **Fixture `pages` URLs are never checked against the canada.ca allow-list:**
+  * `javascript:alert(…)` and `https://evil.example.com/…` were stored and shown as "Its page on canada.ca";
+  * React 19 neutralises the `javascript:` link, but the other host is a live link.
+* **An off-host guide URL** is caught by the `official_download_https_canada` CHECK, but it stops the whole load with a 500 instead of skipping that one guide.
+* `..` and absolute paths are refused (see What held).
+
+**R5-5 · The approval page's "Now" is the value when the change was proposed, not the value now.**
+* **Steps:** propose IMM 5707 → "PDF upload · Online" before Load sample, then load.
 * **Broke:**
-  * The response `{pack:3, rows:[], library:[]}` does not mention the handed-back retire.
-  * Activity says "Approver released Release 3: " with nothing after the colon.
-  * The form's History ends at "approved"; no line says it was handed back.
-  * The change is correctly RETURNED.
-* **Cause:** `api/src/library-changes.ts:174` `continue`s, and `lifecycle.ts:223` writes no audit line.
+  * The library shows "PDF upload · Sample · canada.ca words · Change waiting".
+  * To review and the approval page still say "**Now: Not set yet** → PDF upload · Online" (screenshot at 1024 px).
+  * "Now" never says the value is Sample.
+* **Cause:** `form-library.ts:109` (`matches.before`) and `library-changes.ts acceptsView`.
 
-**R4-4 · m6 is only partly fixed.**
-* Attach while a change is RETURNED now works.
-* **Still wrong:**
-  * the list still shows a RETURNED retire as **"Retire waiting"**, with the tooltip "waits for a second person on To review" (`form-library.ts:61` still includes RETURNED; `web/src/pages/library-forms.tsx:109`). Seen on IMM 5645 and IMM 5802 at 1024 px.
-  * a guide used as a source is still refused with "its fields are read from it" (`form-uses.ts:49`).
+**R5-6 · Two fixture quotes do not say how the form is filed, yet they set "PDF upload".**
+* **The two quotes:**
+  * IMM 5257 SCH1's quote is the download link's label ("Download the form Schedule 1 … (PDF, 0.5 MB)");
+  * IMM 5409's is "fill out your forms on a computer and validate them".
+* **Why it matters:** this goes against the finder's own rule (FINISH (2): "no line, no value"). Both are labelled Sample, so the immigration expert decides; flagged so it is not taken as IRCC's word.
+* **Where:** `samples/form-library-sample.json`.
 
-**R4-5 · m3 is only partly fixed.**
-* The `refused[].file` field is UTF-8 now.
-* **Still wrong:**
-  * the page shows only `refused[].why` (`library-forms.tsx:155`), and `why` is built from the raw latin1 name (`api/src/upload-run.ts:55`). An empty "फ़ॉर्म-签证.pdf" still reads "à¤«à¤¼à¥à¤°à¥à¤®-ç­¾è¯.pdf is empty…"; "café-Ünïcode.pdf" reads "cafÃ©-ÃnÃ¯code.pdf".
-  * when every file is refused, the 400 detail is garbled the same way.
+**R5-7 · At 1024 px the "Sample · canada.ca words" pill runs into the Used by column.** It touches "With an LMIA · Work permits …" on IMM 5257 SCH1 and IMM 5409, and "Set by a person · Sample" does the same on IMM 1295 (`library-forms.tsx:137`). There is no page scroll.
 
-**R4-6 · Undo after the workspace "+ Add" undoes an older change** (raised in R3-1, not fixed).
-* **Steps:** on a fresh combination, hand attach IMM 5707, then `POST /combinations/:id/lines` with IMM 1295 (it becomes a form line), then Undo.
-* **Broke:** the answer is `{undone:"attach", codes:["IMM 5707"]}`; IMM 1295 stays.
-* **Cause:** `programs.ts:359-375 addLine` records no Undo step and does not run inside `oneAtATime`.
+**R5-8 · Other wording.**
+* `library-changes.ts:72` says "You proposed this **what IRCC accepts**, so…" for a form_accepts change and "this library form" for a delete.
+* The Delete dialog help says "it is then **removed** with its files" (`library-forms.tsx:200`).
+* A withdrawn library-form change is logged with the entity "combination" (`lifecycle.ts:209`).
 
-**R4-7 · A retired form the finder skips is reported as NOT_FOUND** (`finder.ts:657`, `/forms/find/latest`).
-* **Seen:** retired IRM 0002 was shown as not found on a fresh combination.
-* **Why it matters:** S5 will draw "not found: upload its PDF", which leads the person to the upload that R4-1 lets through.
-
-## What held (fixes confirmed)
-* **R3-1:**
-  * **While IMM 5645's retire was WAITING:**
-    * a hand attach gives 409 "Being retired";
-    * Undo of its removal gives 409, in words;
-    * "+ Add" (`/lines`) gives 409; the guard sits before both the form-line and the source branch;
-    * upload for a combination's row (`/intake` forForm) says "Not attached to the combination: …open on To review";
-    * the library Upload PDF with forCombination starts its run.
-  * The finder never attached retired IRM 0002.
-  * By code reading: `reuseForm` and the AI apply go through the `addFormLine` guard (`form-lines.ts:30-34`).
-  * **Release re-check:** IMM 5802 (planted line) went back as RETURNED, "Not retired: a combination lists this form again", and the form was not retired.
-* **R3-2:**
-  * Visitor visa replays the committed real answers: both rounds "saved answer, US$0", PARTIAL, 6 attached.
-  * Super visa gets nothing, with or without the visitor-visa page.
-* **m1:** 10 parallel DELETEs in 5 id spellings gave one 200 and one Undo step; the rest were 409 or 404, with no developer wording. PATCH `imm5707` and `IMM  5707` both work.
-* **m2:** with the lines held for 12 s from another session, Undo answered 409 "Busy" at 4.01 s. A PATCH waited 7 s and succeeded. A later Undo was exact.
-* **m4:** at 1024 px every table tab stop shows a ring (89 tab stops walked). Only the app shell's nav links show none, and they are outside S4.
-* **m5:** with a 120-character title containing one long unbroken word (German, CJK and Devanagari):
-  * at 1024 px the table ends at 999 px, inside its 1000 px box, and ⋯ ends at 987;
-  * at 1280 px they are 1255 and 1256;
-  * there is no page scroll at 1024, at 1280, or at 640 px (200 %).
-* **m6 (part):** attach while a retire is RETURNED gives 201.
-* **Regression:**
-  * **N5:** 20 parallel Removes gave 1 × 200 and 19 × 409, with one Undo step.
-  * **N6:** 5 parallel edit + Undo pairs: no 500s.
-  * **N7:** `Guide%205256`, `guide5256` and `GUIDE   5256` all open.
-  * **N2:** attaching an empty row with a Delete open gives 409. The approved Delete then applied cleanly.
-  * **Roles:** attach, "+ Add" and Undo give 403 for user-B, user-C and user-P, and 401 with no actor or an unknown one.
-  * N1, N3 and N8 were not re-run: their code is unchanged since round 3, which confirmed them.
+## What held
+* **Merge (1):**
+  * main's QA-46 is intact: `ACTION_WORD.DELETE` is "Remove", and `structure.tsx`, `programs.tsx`, `engine/structure.ts` and `core.ts` are byte-identical to 8cfc043. The S4 additions to `main.ts` and `programs.ts` are additive.
+  * To review reads "Delete the library form", "Remove the structure name" and "What IRCC accepts for IMM 5707: … → …".
+  * The API's `action_word` is "Delete" for library_form and "Remove" for structure_node.
+  * The Release page uses `action_word` (a delete never reaches a release).
+* **Load sample (3):**
+  * a fresh load sets 7 of 7 data forms (6 SAMPLE_FIXTURE, IMM 5257 AI_SAMPLE from the saved answer) and adds guides 5256, 5269, 5289 and 5487;
+  * the LMIA log line says why there is no guide;
+  * a person's approved value (IMM 1295 Online, PERSON_SAMPLE, set before the load) is not overwritten;
+  * three parallel loads give one 201 and two 409 "already loading", and a later load gives 409.
+* **Fixture paths:**
+  * a wrong checksum leaves that guide out, and the log gives the reason;
+  * `/../../etc/hosts` and `//etc/hosts` are refused;
+  * a 300-word Devanagari/CJK quote is cut to 400 characters;
+  * a `null` accepts entry is skipped.
+* **Migration:**
+  * the CHECK refuses `BOGUS` and lower-case `sample_fixture`;
+  * the recorded rollback (run in a transaction) clears only the 5 SAMPLE_FIXTURE rows, keeps AI_SAMPLE and PERSON_SAMPLE, and restores the old constraint, with no value left without a basis;
+  * as with the other migrations, the `_prisma_migrations` row stays.
+* **Labels:** "Sample · canada.ca words", "AI · Sample" and "Set by a person · Sample" show in the list at 1440 and 1024 px, with no page scroll, and the footer says the values are Sample.
+* **Replay (4):**
+  * after renaming Visitor visa to "Tourist visa ✈ 观光" and Visitors to "Visiting Canada", replay still gives 10/10 forms, US$0, with the page chosen;
+  * without a chosen page, the step that picks the page asks a person, because the rules no longer match the new name; this is not a key leak;
+  * Super visa on the same pages gets "No saved AI answer";
+  * a deleted Visitor visa recreated on the same node gets a new key, and nothing is replayed;
+  * the 27 Oct stub records (trail, not on the legacy list) are never replayed.
+* **Roles:** user-A approving their own change gives 403 ("A different person decides"); user-P approving gives 403; user-C proposing IRCC accepts gives 403; no actor gives 401.

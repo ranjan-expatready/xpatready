@@ -7,11 +7,12 @@
 //   cd prototype/studio && npx tsx tests/check_forms_s4_canada.ts
 // (by hand: tsx --tsconfig studio/api/tsconfig.json …, as run-suites.sh does)
 import { createHash } from "node:crypto";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { guideLinks, mentionsOf, officialUrl, pageLinks, pageText, parseFormPage, parseFormsIndex, textFingerprint } from "../engine/canada.ts";
 import { CanadaError, canadaSource, FixtureCanada, LiveCanada, MAX_BYTES, type CanadaCode } from "../api/src/canada.ts";
+import { channelsFrom, recordedCopy, sampleFixtures } from "../api/src/filing.ts";
 
 const STUDIO = join(import.meta.dirname, ".."), SOLUTION = join(STUDIO, "..", "..");
 const OFFICIAL = join(SOLUTION, "official-sources", "ircc"), INVENTORY = join(STUDIO, "..", "p1", "inventory");
@@ -153,6 +154,39 @@ async function main() {
   const down = fake(async () => { throw new TypeError("fetch failed", { cause: new Error("getaddrinfo ENOTFOUND www.canada.ca") }); });
   const downR = await refusal(down.live.get(PDF_1295, "pdf"));
   ok("C11.2: live: no connection is reported in plain words with the next step (network)", downR.code === "network" && /upload it here/.test(downR.message ?? ""), downR);
+
+  // --- Load sample's Sample fixtures (Lead note 28 Oct; review round 7 Major 1; break R5-3, R5-4, R5-6)
+  ok("C11.11: the filing rule reads a PDF upload from IRCC's upload line (IMM 5476), not Online", channelsFrom("Upload this form along with your online application") === "PDF");
+  ok("C11.11: the filing rule still reads Online from an online line, and a PDF from \"fill out the form on a computer\"", channelsFrom("You must apply online.") === "ONLINE" && channelsFrom("Download and fill out the form on a computer.") === "PDF" && channelsFrom("If you have filled out the form on a computer, click Validate.") === "PDF");
+  ok("review round 7 Major 1 fail: a paper line (send it to the office) says no PDF upload", channelsFrom("Send this form along with your application to the office listed in the guide of your application.") === null);
+  ok("review round 7 Major 1 fail: a download link's size label is not how the form is filed", channelsFrom("Download the form Schedule 1: Application for Temporary Residence [IMM 5257 SCH1] (PDF, 0.5 MB)") === null);
+  const shipped = sampleFixtures();
+  ok("C11.11: every shipped Sample fixture passes its checks (a line that says its value, canada.ca addresses)", !shipped.problems.length && Object.keys(shipped.accepts).length === 5 && Object.keys(shipped.guides).length === 6 && Object.keys(shipped.pages).length === 2, shipped.problems);
+  ok("break R5-6: forms whose pages never say how they are filed have no fixture (IMM 5257 SCH1, IMM 5409)", !shipped.accepts["IMM 5257 SCH1"] && !shipped.accepts["IMM 5409"]);
+  const tmpFx = mkdtempSync(join(tmpdir(), "s4-fixtures-"));
+  try {
+    const at = (name: string, body: string) => { const f = join(tmpFx, name); writeFileSync(f, body); return f; };
+    const broken = sampleFixtures(at("broken.json", "{ not json"));
+    ok("break R5-3 fail: an unreadable fixture file loads nothing and says so (never a 500)", /could not be read/.test(broken.problems[0] ?? "") && !Object.keys(broken.accepts).length, broken.problems);
+    const hostile = sampleFixtures(at("hostile.json", JSON.stringify({
+      accepts: { "IMM 1": { channels: "FAX", quote: "Fax it to us." }, "IMM 2": { channels: "ONLINE", quote: "Download and fill out the form on a computer." }, "IMM 3": { channels: "PDF", quote: "Download and fill out the form on a computer." } },
+      pages: { "IMM 4": { url: "javascript:alert(1)" }, "IMM 5": { url: "https://example.com/imm5.html" } },
+      guides: { a: { url: "https://example.com/guide-1234-x.html" }, b: { url: `${G}/guide-5487-applying-work-permit-outside-canada.html`, recorded: "../../../etc/hosts" }, c: { url: `${G}/imm1295.html` } } })));
+    ok("break R5-3, R5-4 fail: each bad entry is left out with its reason; the good one is kept", Object.keys(hostile.accepts).join() === "IMM 3" && !Object.keys(hostile.pages).length && !Object.keys(hostile.guides).length && hostile.problems.length === 7, hostile.problems);
+    ok("review round 7 Major 1 fail: a fixture whose line does not say its value is left out", hostile.problems.some((m) => /IMM 2: its line does not say ONLINE/.test(m)));
+    // recordedCopy: only the manifest's file for that address, inside the official sources, with the manifest's checksum
+    const G5487 = `${G}/guide-5487-applying-work-permit-outside-canada.html`;
+    const good = recordedCopy(G5487, "instructions/guide-5487.html");
+    ok("C11.11: a recorded guide is read from the manifest's own copy for its address", good.length > 1000);
+    ok("break R5-4 fail: another guide's file under this guide's address is refused (the manifest names a different file)", (await refusal((async () => recordedCopy(G5487, "instructions/guide-5553.html"))())).code === "not_in_fixtures");
+    const base = join(tmpFx, "ircc"); mkdirSync(join(base, "instructions"), { recursive: true });
+    const outside = at("outside.html", "<html>not official</html>");
+    symlinkSync(outside, join(base, "instructions", "guide-5487.html"));
+    writeFileSync(join(base, "manifest.json"), JSON.stringify({ items: [{ file: "guide-5487.html", url: G5487, sha256: sha(readFileSync(outside)) }] }));
+    ok("break R5-4 fail: a link out of the official sources is never followed, even with a matching checksum", /missing/.test((await refusal((async () => recordedCopy(G5487, "instructions/guide-5487.html", base))())).message ?? ""));
+    rmSync(join(base, "instructions", "guide-5487.html")); writeFileSync(join(base, "instructions", "guide-5487.html"), "<html>changed</html>");
+    ok("break R5-4 fail: a recorded copy that no longer matches the manifest's checksum is refused", /checksum/.test((await refusal((async () => recordedCopy(G5487, "instructions/guide-5487.html", base))())).message ?? ""));
+  } finally { rmSync(tmpFx, { recursive: true, force: true }); }
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

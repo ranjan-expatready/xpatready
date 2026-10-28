@@ -7,9 +7,9 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124)
-stage: CHECK
+stage: FIX
 owner: Builder
-next_action: Breaker still running on a660f7b; then FIX the reviewer's Major (two fixture lines do not support PDF upload) and the Shoulds, recheck, hand back to the Lead by message
+next_action: Finish FIX of the CHECK findings (review Major, break R5-1, R5-2 Majors, minors): S4 checks running, then full suites on the final commit, push, hand back to the Lead by message
 blocked_by: none
 updated: 2026-10-28
 
@@ -23,6 +23,7 @@ updated: 2026-10-28
 * **Next steps:** (1) confirm CI on `5825811` (and on the handover commit) is green; (2) the Lead checks S4 (optionally one more fresh re-score on the final commit, since D18 was fixed after the last score) and merges or sends a round; (3) then QA-53 (Lead decision): one shared guard denying Studio configuration reads to nobody (401) and to case people (403) on every Studio configuration route, case routes untouched — the Lead's note will be on its next PR.
 
 ## Log (last 10 lines)
+- 2026-10-28 · S4 · CHECK → FIX · breaker R5 (break-report.md): 0 Blocker, 2 Major (a stub pass replayed when the place's name holds "live"; History and Activity words), 6 Minor. All fixed with tests together with the review's Major (fixture lines must say their value: the finder's filing rule, line on the page; SCH1 and 5409 left Not set yet) and Shoulds; canada 62/62; other S4 checks running. US$0.
 - 2026-10-28 · S4 · CHECK · full suites on 26b1c40 (code = a660f7b): 41/41 pass (studio browser skipped: resets :4400). Fresh reviewer (review.md): Ship after fixes, journey 8.5/10, no Must, 1 Major (IMM 5476's fixture quotes a paper line; IMM 5257 SCH1's quotes a download label), D18 at 3; Shoulds: 1024 tag overlap, guide and visa-office origin words. Breaker running. US$0.
 - 2026-10-28 · S4 · FIX → CHECK · first full suites on the drift fix: 40 pass, 1 fail (screen 01 intake check uploaded guide 5487, which Load sample now loads; moved to guide 5553: 135/135, a660f7b); suites rerunning on a660f7b; reviewer (ports 4475–4477) and breaker (4478–4480) launched. US$0.
 - 2026-10-28 · S4 · CHECK → FIX · applied Lead note 2026-10-28 (drift check): synced main 8cfc043 (3 conflicts resolved, 3b2d9c8); Delete for a library form, Remove for the rest; Load sample from Sample fixtures (all 7 data forms' IRCC accepts with IRCC's line, pages, guides for 5 of 6 combinations; the LMIA has none); replay keyed by the combination's key (eb7c079). S4 checks: finder 117, runs 81, canada 49, library browser 51, run browser 20; S4 screenshots at 1440/1024 refreshed by the checks (390 put back, desktop only). Full suites running. US$0.
@@ -32,4 +33,3 @@ updated: 2026-10-28
 - 2026-10-27 · S4 · FIX (round 5) · fresh reviewer on 06556ab: 7.5/10 (both round 4 Majors confirmed fixed); one Major carried from break R4-1 (a form read as a source can never be retired) fixed by option a (source use blocks Delete only; AI never drafts a retired form's file in any scope), for the Lead to confirm; shoulds fixed (20 upload cards, focus not under the top bar, unread held card). CI green on e7cb63c. US$0.
 - 2026-10-27 · S4 · FIX (round 4) · all checks green on the round 4 code: finder 112/112, runs 71/71 (golden replay keeps IMM 5257), run browser 20/20, library browser 51/51, canada 49/49; touched suites pass; CI green on e7cb63c. US$0.
 - 2026-10-27 · S4 · FIX (round 4) · fresh reviewer on e7cb63c: 8/10 (journey bar met) but six dimensions at 3 from 2 new Majors (a retired form used as a source and drafted by AI; the real answers lost IMM 5257 to the quote rule) — fixed with tests (intake and AI-draft guards, quote under its heading, golden replay test on the committed real answers); shoulds fixed (replay not called rules-only, unread held upload says it cannot be approved). US$0.
-- 2026-10-27 · S4 · FIX (round 4) · breaker check on e7cb63c: R3-1, R3-2, m1–m5 confirmed, N5–N7 hold; 1 Major (R4-1 a combination's own upload attached a retiring form as a source; release counted only lines) + 6 minors; fixed with tests (intake guard, release counts sources and records the hand-back, returned changes not shown as waiting, UTF-8 names, "+ Add" recorded for Undo). R4-2 replay rule soundness for the Lead. US$0.

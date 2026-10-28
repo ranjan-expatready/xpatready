@@ -15,6 +15,10 @@ export const KIND_NOUN: Record<string, string> = { library_form: "library form",
 const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: "Remove", RETIRE: "Retire", RESTORE: "Restore", EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for" };
 // P-123: a library form is Deleted (out of the library); everything else is Removed (QA-46), as a form line is Removed off a combination.
 export const actionWord = (action: string, kind: string) => (action === "DELETE" && kind === "library_form" ? "Delete" : ACTION_WORD[action] ?? action);
+/** The same word inside a sentence ("approved remove …", "set what IRCC accepts for …"): only its first letter lowered. */
+export const actionVerb = (action: string, kind: string) => { const w = actionWord(action, kind); return w[0].toLowerCase() + w.slice(1); };
+/** What the change is about, as a noun ("this library form", "this change to what IRCC accepts"). */
+const changeNoun = (kind: string) => (kind === "form_accepts" ? "change to what IRCC accepts" : KIND_NOUN[kind] ?? "change");
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${status}`, title, status, detail }, status);
 
@@ -69,9 +73,9 @@ export async function decideChange(db: Db, actor: Actor, id: string, decision: "
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
   if (c.status !== "WAITING") throw problem(409, "Already decided", `This change is already ${c.status.toLowerCase()}.`);
-  if (c.proposedBy === actor.id) throw problem(403, "A different person decides", `You proposed this ${KIND_NOUN[c.kind] ?? "change"}, so a different person approves or returns it.`);
+  if (c.proposedBy === actor.id) throw problem(403, "A different person decides", `You proposed this ${changeNoun(c.kind)}, so a different person approves or returns it.`);
   // Break M2: the person who applied the draft that created it is not the second person either.
-  if (c.appliedBy === actor.id) throw problem(403, "A different person decides", `You applied the draft that created this ${KIND_NOUN[c.kind] ?? "change"}, so a different person approves or returns it.`);
+  if (c.appliedBy === actor.id) throw problem(403, "A different person decides", `You applied the draft that created this ${changeNoun(c.kind)}, so a different person approves or returns it.`);
   if (decision === "return" && !note?.trim()) throw problem(400, "Say why", "Say why it goes back, so the author can correct it.");
   if ((note ?? "").length > 300) throw problem(400, "Too long", "Keep the reason under 300 characters.");
   const done = await db.libraryChange.updateMany({ where: { id, status: "WAITING" }, data: { status: decision === "approve" ? "APPROVED" : "RETURNED", decidedBy: actor.id, decidedAt: new Date(), decisionNote: note?.trim() || null } });
