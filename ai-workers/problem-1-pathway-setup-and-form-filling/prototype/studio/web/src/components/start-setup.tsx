@@ -8,9 +8,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { START, type FinderOffer, type StartSetupResult } from "../../../contracts/start-setup";
 import { api, useApi, useSessionView, useToast } from "@/lib/api";
-import { Button, Notice } from "@/components/ui/controls";
+import { Button } from "@/components/ui/controls";
 import { Tip } from "@/components/status";
-import { RunCard } from "@/components/run-card";
 import { BlockedLine } from "@/components/lifecycle";
 
 /** Starts the setup of a last-level name and opens it on "Sources and forms". A double click leaves once (QA-50); the
@@ -24,7 +23,7 @@ export function useStartSetup() {
     try {
       const r = await api<StartSetupResult>("/combinations/start", { method: "POST", json: { nodeKey } });
       void qc.invalidateQueries();
-      nav(`/c/${r.combination.id}/sources`);
+      nav(`/c/${r.combination.id}/forms`);
     } catch (e) { going.current = false; toast.push({ tone: "danger", text: (e as Error).message }); }
   };
 }
@@ -44,37 +43,28 @@ export function StartSetupButton({ nodeKey, label, why, className, size = "sm", 
   );
 }
 
-/** Above "Sources and forms": the finder's newest run (the shared RunCard), or the one way to find the forms. After a run
- *  that attached nothing, the run card carries that one button (S3 early look (3)): never a second "Find again". */
-export function FinderStart({ combinationId }: { combinationId: string }) {
+/** S3 item 5: in S5's Forms tab slot while no find exists ("No form find yet"): the one way to find the forms, live AI
+ *  only on this click (founder, 28 Oct), its cost in the one wording. The run then shows on the Forms tab's own card. */
+export function FindFormsStart({ combinationId }: { combinationId: string }) {
   const qc = useQueryClient(); const toast = useToast(); const { canAuthor } = useSessionView();
   const q = useApi<FinderOffer>(["start-setup", combinationId], `/combinations/${combinationId}/start-setup`);
   const [busy, setBusy] = React.useState(false);
-  const refresh = () => { void qc.invalidateQueries({ queryKey: ["start-setup", combinationId] }); void qc.invalidateQueries(); };
   const o = q.data;
-  if (!o || (!o.run && !o.offer)) return null;
+  if (!o?.offer || o.run || !canAuthor) return null;
+  const offer = o.offer;
   const find = async () => {
-    if (!o.offer || busy) return;
+    if (busy) return;
     setBusy(true);
-    try { await api(`/combinations/${combinationId}/forms/find`, { method: "POST", json: { mode: o.offer.mode, planSha256: o.offer.planSha256, idempotencyKey: crypto.randomUUID() } }); refresh(); }
-    catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); refresh(); }
-    finally { setBusy(false); }
+    try {
+      const v = await api<{ id: string }>(`/combinations/${combinationId}/forms/find`, { method: "POST", json: { mode: offer.mode, planSha256: offer.planSha256, idempotencyKey: crypto.randomUUID() } });
+      window.dispatchEvent(new CustomEvent("s5-find-started", { detail: v.id }));
+    } catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); }
+    finally { setBusy(false); void qc.invalidateQueries(); }
   };
-  const button = o.offer && canAuthor ? <Tip tip={o.offer.tip}><span><Button size="sm" busy={busy} onClick={() => void find()} data-find-forms={o.offer.mode}>{o.offer.mode === "live" ? <Sparkles className="size-3.5" aria-hidden /> : null}{o.offer.label}</Button></span></Tip> : null;
-  const why = o.offer?.why && canAuthor ? <p className="text-sm text-text-muted" data-offer-why>{o.offer.why}</p> : null;
-  if (o.run) return (
-    <div className="space-y-2" data-finder-start>
-      <RunCard runId={o.run} onEnded={refresh} next={o.ended ? button ?? undefined : undefined} />
-      {o.ended && button ? <p className="text-sm text-text-muted" data-finder-again>{START.againBody}</p> : null}
-      {o.ended ? why : null}
+  return (
+    <div className="flex flex-col items-end gap-1" data-finder-start>
+      <Tip tip={offer.tip}><span><Button size="sm" busy={busy} onClick={() => void find()} data-find-forms={offer.mode}>{offer.mode === "live" ? <Sparkles className="size-3.5" aria-hidden /> : null}{offer.label}</Button></span></Tip>
+      {offer.why ? <p className="max-w-80 text-right text-xs text-text-muted" data-offer-why>{offer.why}</p> : null}
     </div>
   );
-  return button ? (
-    <div className="space-y-3" data-finder-start>
-      <Notice tone={o.offer!.mode === "live" ? "ai" : "info"} title={START.title} action={button}>
-        <p>{START.body}</p>
-        {why}
-      </Notice>
-    </div>
-  ) : null;
 }

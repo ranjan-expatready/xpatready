@@ -86,7 +86,15 @@ const card = async (key: string) => ((await call("GET", "/catalogue?pathway=INDI
   sql(`update drafting_job set message = 'AI could not pick the page: ${RAW.replace(/'/g, "''")}' where batch_id = '${v2?.id}' and kind = (select kind from drafting_job where batch_id = '${v2?.id}' order by started_at limit 1)`);
   const runView2 = JSON.stringify((await call("GET", `/runs/${v2?.id}`)).body);
   ok("fix 1 fail-guard: raw text already stored on a run (an older run) is replaced by plain words when shown", !TECH.test(runView2) && /Something went wrong on this computer/.test(runView2), runView2.slice(0, 300));
-  ok("fix 3: after a run that attached nothing there is one find button: the offer reads Find again, and the run's own link leads to it (QA-63)", /^Find again with AI \(/.test(after.offer?.label ?? "") && runView.error?.next?.href === `/c/${tvId}/sources`, { label: after.offer?.label, next: runView.error?.next });
+  const latestTv = (await call("GET", `/combinations/${tvId}/forms/find/latest`)).body;
+  ok("item 5 (QA-63): a run that could not pick the application page leads to the place to choose it: its link opens the Forms tab's page choice", runView.error?.next?.label === "Choose the application page" && runView.error?.next?.href === `/c/${tvId}/forms?find=page` && !!latestTv.page_choice && Array.isArray(latestTv.page_choice.candidates), { next: runView.error?.next, page_choice: latestTv.page_choice });
+  const PAGE = "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/apply-visitor-visa.html";
+  const chosen = (await call("POST", `/combinations/${tvId}/forms/find/plan`, { mode: "rules", pageUrl: PAGE })).body;
+  ok("item 5: a chosen canada.ca page is used as the application page (the plan reads it; no AI round to pick it)", chosen.page_url === PAGE && /^[0-9a-f]{64}$/.test(chosen.plan_sha256 ?? ""), { page: chosen.page_url });
+  const offsite = await call("POST", `/combinations/${tvId}/forms/find/plan`, { mode: "rules", pageUrl: "https://example.com/forms.html" });
+  ok("item 5 fail: a page outside canada.ca is refused in plain words (400)", offsite.status === 400 && /canada\.ca/.test(offsite.body?.detail ?? ""), offsite.body?.detail);
+  const livePlan = (await call("POST", `/combinations/${tvId}/forms/find/plan`, { mode: "live" })).body;
+  ok("fix 4: the Find dialog's plan says the same 'about' as the button (one rule)", (/about US\$(\d+\.\d\d)/.exec(words)?.[1] ?? null) === (livePlan.totals?.about_usd == null ? null : livePlan.totals.about_usd.toFixed(2)), livePlan.totals);
   ok("fix 4: the run card's cost words equal the button's (about US$x · at most US$y)", runView.usd?.worst === Number(/at most US\$(\d+\.\d\d)/.exec(words)?.[1]) && (/about US\$(\d+\.\d\d)/.exec(words)?.[1] ?? null) === (runView.usd?.about == null ? null : runView.usd.about.toFixed(2)), { words, usd: runView.usd });
   rmSync(join(VAR, "fake-launch.json"), { force: true });
 

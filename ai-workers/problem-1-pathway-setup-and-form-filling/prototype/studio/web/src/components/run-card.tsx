@@ -34,9 +34,8 @@ export function costLine(r: Pick<RunView, "usd"> & { steps?: RunView["steps"] },
   return `${costWords(r.usd.about !== undefined ? r.usd.about : r.usd.usual, r.usd.worst)} · US$${r.usd.spent.toFixed(2)} ${active ? "so far" : "spent"}`;
 }
 
-/** The run card: shown where the run was started; polls every 1.5 s while the run is active. `next`, when given, is the
- *  one way on once the run has ended (the place's own button, e.g. the finder's Find again), in place of the card's link. */
-export function RunCard({ runId, className, onEnded, next }: { runId: string; className?: string; onEnded?: (r: RunView) => void; next?: React.ReactNode }) {
+/** The run card: shown where the run was started; polls every 1.5 s while the run is active. */
+export function RunCard({ runId, className, onEnded }: { runId: string; className?: string; onEnded?: (r: RunView) => void }) {
   const q = useApi<RunView>(["run", runId], `/runs/${runId}`, { refetchInterval: (s) => (s.state.data && !ACTIVE.has(s.state.data.status) ? false : 1500) });
   const stop = useAction(() => api(`/runs/${runId}/stop`, { method: "POST" }), { success: "Stopping: no step starts after this", invalidate: [["run", runId], ["runs-active"]] });
   const ended = React.useRef(false);
@@ -73,9 +72,8 @@ export function RunCard({ runId, className, onEnded, next }: { runId: string; cl
           </li>
         ))}
       </ol>
-      {!active && r.error ? <Notice tone={r.status === "needs_person" ? "warn" : "danger"} title={r.status_word} action={next ?? (r.error.next ? <Link className="text-sm text-text-link underline" to={r.error.next.href}>{r.error.next.label}</Link> : undefined)}>{r.error.what}</Notice> : null}
+      {!active && r.error ? <Notice tone={r.status === "needs_person" ? "warn" : "danger"} title={r.status_word} action={r.error.next ? <Link className="text-sm text-text-link underline" to={r.error.next.href}>{r.error.next.label}</Link> : undefined}>{r.error.what}</Notice> : null}
       {!active && !r.error && r.message ? <p className="text-sm">{r.message}</p> : null}
-      {!active && !r.error && next ? <div className="flex justify-end">{next}</div> : null}
     </section></TipProvider>
   );
 }

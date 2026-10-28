@@ -248,8 +248,10 @@ export class FormLibrary {
       const keep = new Set(d.before.map((r) => r.id));
       await tx.combinationForm.deleteMany({ where: { id: { in: now.filter((r) => !keep.has(r.id)).map((r) => r.id) } } });
       for (const r of d.before) {
-        const { updatedAt, predicateJson, ...row } = r; void updatedAt;
-        await tx.combinationForm.upsert({ where: { id: r.id }, update: { status: r.status, who: r.who, attachMode: r.attachMode, conditionPlain: r.conditionPlain, origin: r.origin, finderBatchId: r.finderBatchId ?? null }, create: { ...row, predicateJson: predicateJson === null ? Prisma.DbNull : (predicateJson as Prisma.InputJsonValue) } });
+        // Lead check L1: every saved line setting comes back (age, signer, rule, channel …), not a fixed few.
+        const { updatedAt, predicateJson, id, ...row } = r; void updatedAt; void id;
+        const put = { ...row, predicateJson: predicateJson === null ? Prisma.DbNull : (predicateJson as Prisma.InputJsonValue) };
+        await tx.combinationForm.upsert({ where: { id: r.id }, update: put, create: { id: r.id, ...put } });
       }
       await tx.formLineAction.update({ where: { id: a.id }, data: { undoneAt: new Date(), undoneBy: actor.id } });
     });

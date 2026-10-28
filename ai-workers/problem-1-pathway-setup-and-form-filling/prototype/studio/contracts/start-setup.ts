@@ -22,16 +22,19 @@ export const costWords = (about: number | null, worst: number) => `${about !== n
 export const START = {
   label: "Start setup",
   tip: (name: string) => `Creates the setup of "${name}" and opens it. Its forms and checklists come from canada.ca: a saved AI answer is loaded free; otherwise you choose to run AI, with its cost shown first. Once released and Live, new cases for ${name} use this setup. Where it sits is set on Program structure, not here.`,
-  findLive: (about: number | null, worst: number, again = false) => `${again ? "Find again" : "Find forms"} with AI (${costWords(about, worst)})`,
+  findLive: (about: number | null, worst: number) => `Find forms with AI (${costWords(about, worst)})`,
   findLiveTip: (about: number | null, worst: number) => `AI reads the canada.ca application page and guide and lists the forms and checklists they ask for; a second AI round checks it. ${costWords(about, worst).replace(/^./, (c) => c.toUpperCase())}. Nothing is spent until you click.`,
   rulesOnly: "Find form numbers by rules (free)",
-  rulesAgain: "Find again by rules (free)",
   rulesTip: "Rules list every form number printed on the canada.ca pages, for you to attach by hand. Nothing is attached, because AI did not decide which apply.",
   overCap: (worst: number, left: number) => `AI can't run now: its worst case (${usd(worst)}) is above what is left of the AI spending cap (${usd(left)}). Rules only is free.`,
-  title: "Find this combination's forms",
   body: "Its forms and checklists come from canada.ca into the Form library and attach here. Nothing was spent yet.",
-  /** Under an ended run that attached nothing: the run card carries the one find button (S3 early look (3)). */
-  againBody: "The last run attached no forms. Find again, or attach forms from the Form library by hand.",
+  /** S3 item 5: the Forms tab when a run could not pick the application page. */
+  pageTitle: "Waiting for you: choose the application page",
+  pageBody: "The finder could not pick the canada.ca application page for sure, so it attached nothing. Choose the page, then it finds the forms again.",
+  pageButton: "Choose the page and find again",
+  pageLegend: "Application page on canada.ca",
+  pageOther: "Another canada.ca page",
+  pageHint: "The page that lists this application's forms (its application package or guide). AI then reads only that page: no AI round to pick it.",
   /** The page's Next step while nothing is attached points here (S3 early look (2)). */
   stepTip: "Takes you to finding this combination's forms from canada.ca, with the cost shown before anything runs.",
   saved: "A saved AI answer for this combination was loaded (US$0).",

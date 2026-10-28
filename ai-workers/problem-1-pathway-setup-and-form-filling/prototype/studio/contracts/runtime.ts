@@ -3,9 +3,9 @@
 // shapes the PDF filler already reads (p5/transforms.ts Address and Phone), so a stored answer is written unchanged.
 import { z } from "zod";
 
-/** The case roles a combination's participants carry (Combination.participants[].role). */
-export const ROLES = ["principal", "spouse_or_partner", "child"] as const;
-export type CaseRole = (typeof ROLES)[number];
+/** A case role is a person role key of the shared library (S5, M3: no list in code). The runtime accepts a role only
+ *  when the case's pinned release lists it in "Who can be in this application", within its maximum. */
+export type CaseRole = string;
 
 /** P-72 and P-78 (founder, 23 Oct: confirmed by who answered): a person's own answers and the principal's answers for a
  *  minor child count as confirmed; the principal's answers for an adult show "answered by the principal" and become
@@ -35,7 +35,7 @@ export const NewCase = z.object({
 });
 
 export const NewPerson = z.object({
-  role: z.enum(["spouse_or_partner", "child"], { message: "A person joins as a spouse or partner, or as a child." }),
+  role: z.string({ message: "Choose who the person is (a person the release lists)." }).trim().regex(/^[a-z][a-z0-9_]{1,40}$/, "Choose who the person is (a person the release lists).").refine((r) => r !== "principal", "The case already has its principal applicant."),
   displayName: text("Give the person a display name.", 2, 120),
   applies: z.boolean({ message: "Say whether the person is travelling (true or false)." }).default(true),
   /** The same key again answers with the person already added (a double press adds one person, QA-28). */
@@ -149,6 +149,19 @@ export type CaseForm = {
   /** The form no longer applies to this person (for example marked not travelling); its copies stay listed (break M4). */
   applies: boolean;
 };
+/** QA-40: a form this case's release files Online: no PDF copy is made here, but the officer still sees it and for
+ *  whom (P-113: an answer sheet in the portal's order; the browser extension fills it in a later wave). */
+export type CaseOnlineForm = { form: string; title: string; people: string[] };
+/** QA-40 (P-114, W1-02): how a case names a form filed Online, in the same words as the configuration's channel. */
+export const ONLINE_LATER_WAVE = "Online (later wave)";
+
+/** QA-38 (P-67): a new case opens on its combination's newest release (api/src/runtime.ts takes the highest version),
+ *  so the New case list names that one per combination, whatever order the release list comes in. */
+export function newestReleases<T extends { combination_id: string; version: number }>(rows: T[]): T[] {
+  const newest = new Map<string, T>();
+  for (const r of rows) { const had = newest.get(r.combination_id); if (!had || r.version > had.version) newest.set(r.combination_id, r); }
+  return [...newest.values()];
+}
 /** P-71: what blocks filing one form for one person. missing: a required fact not answered, answered but not confirmed,
  *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */

@@ -161,7 +161,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const ns = p.locator('article:has([data-next-step]):has-text("Not started")').first();
   const nsLabel = await ns.getAttribute("data-label");
   // S3 (P-125, routed by the screens lane 28 Oct): Start setup starts the setup and opens it; a double click starts one.
-  await ns.locator("[data-next-step]").dblclick(); await p.waitForURL(/\/c\/[0-9a-f-]+\/sources/);
+  await ns.locator("[data-next-step]").dblclick(); await p.waitForURL(/\/c\/[0-9a-f-]+\/(sources|forms)/); // S3 item 5: lands on the Forms tab
   step("C11.10 fix 3 (S3): a double click on Start setup starts one setup, not two", combos() === n0 + 1, `${nsLabel}: ${n0} → ${combos()}`);
   await p.goBack(); await p.waitForTimeout(800);
   step("QA-50 C11.10: after a double click on Start setup, one Back returns to Immigration programs", !/\/c\//.test(p.url()), p.url());

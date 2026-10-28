@@ -12,13 +12,12 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { START, StartSetupBody, type FinderOffer, type StartSetupResult } from "../../contracts/start-setup.ts";
 import { actorOf, Db, need, PROTOTYPE, STUDIO, Workspace, type Actor } from "./core.ts";
-import { Finder, FINDER_OPERATION } from "./finder.ts";
+import { Finder } from "./finder.ts";
 import { parse, Programs } from "./programs.ts";
 
 type H = string | undefined;
 const RUNS = join(PROTOTYPE, "p2", "runs");
 const ACTIVE = ["QUEUED", "RUNNING"];
-const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Whether a saved live answer of the form finder was made for this combination, by the finder's own rule (finder.ts
  *  runKey: the key the run records, or the saved-runs list for runs made before keys were recorded). A replay may still
@@ -30,22 +29,6 @@ function savedFor(combinationKey: string): boolean {
   return readdirSync(RUNS).filter((f) => f.startsWith("studio-finder-forms-") && !f.startsWith("studio-finder-forms-check-") && /-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/.test(f)).some((f) => {
     try { const c = JSON.parse(readFileSync(join(RUNS, f), "utf8"))?.drafting_run?.inputs?.combination; return (c && !String(c).includes(" › ") ? c : legacy[f]) === combinationKey; } catch { return false; }
   });
-}
-
-/** What a live finder run usually costs: the mean of the saved live answers (a list round plus its checker round); null
- *  when none is saved yet (the button then names the worst case only). */
-function usualLiveUsd(): number | null {
-  if (!existsSync(RUNS)) return null;
-  const cost = (check: boolean) => readdirSync(RUNS).filter((f) => f.startsWith(check ? "studio-finder-forms-check-" : "studio-finder-forms-") && (check || !f.startsWith("studio-finder-forms-check-")) && /-live-.*\.json$/.test(f))
-    .map((f) => { try { return Number(JSON.parse(readFileSync(join(RUNS, f), "utf8"))?.drafting_run?.usage?.cost_usd ?? NaN); } catch { return NaN; } }).filter((n) => Number.isFinite(n) && n > 0);
-  const [a, b] = [cost(false), cost(true)];
-  return a.length && b.length ? round2(a.reduce((s, n) => s + n, 0) / a.length + b.reduce((s, n) => s + n, 0) / b.length) : null;
-}
-
-/** S3 early look (4): the one "about" a finder run shows, on the button, its tip and the run card alike: the saved answer's
- *  cost for this combination, else the last finished run of the same kind, else (live) the saved live answers' mean. */
-export function aboutUsd(expected: number | null, lastFinished: number | null, live: boolean): number | null {
-  return expected ?? lastFinished ?? (live ? usualLiveUsd() : null);
 }
 
 @Injectable()
@@ -75,13 +58,12 @@ export class StartSetup {
     const live = await this.finder.plan(combinationId, { mode: "live" });
     const worst = live.totals.worst_usd, left = live.ledger.remaining_usd;
     if (worst <= left + 1e-9) {
-      // The run card's "about" for the run this starts (runs.ts): the same rule, so button, tip and card say one cost.
-      const prev = await this.db.aiBatch.findFirst({ where: { workspaceId, operation: FINDER_OPERATION, mode: "LIVE", status: { in: ["COMPLETED", "PARTIAL"] }, finishedAt: { not: null } }, orderBy: { finishedAt: "desc" }, include: { jobs: { select: { costUsd: true } } } });
-      const about = aboutUsd(live.totals.expected_usd, prev ? round2(prev.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)) : null, true);
-      return { run: last?.id ?? null, ended, offer: { mode: "live", planSha256: live.plan_sha256, label: START.findLive(about, worst, ended), tip: START.findLiveTip(about, worst), why: null } };
+      // The plan's "about" (finder-cost.ts): the same rule as the run card, so button, tip and card say one cost.
+      const about = live.totals.about_usd;
+      return { run: last?.id ?? null, ended, offer: { mode: "live", planSha256: live.plan_sha256, label: START.findLive(about, worst), tip: START.findLiveTip(about, worst), why: null } };
     }
     const rules = await this.finder.plan(combinationId, { mode: "rules" });
-    return { run: last?.id ?? null, ended, offer: { mode: "rules", planSha256: rules.plan_sha256, label: ended ? START.rulesAgain : START.rulesOnly, tip: START.rulesTip, why: START.overCap(worst, left) } };
+    return { run: last?.id ?? null, ended, offer: { mode: "rules", planSha256: rules.plan_sha256, label: START.rulesOnly, tip: START.rulesTip, why: START.overCap(worst, left) } };
   }
 }
 

@@ -83,7 +83,7 @@ const onlineEdition = (ws: string, defId: string, label: string) => sql(`insert 
   try {
     const p = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await p.goto(`http://localhost:${PORT}/`); await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
-    await p.goto(`http://localhost:${PORT}/c/${wp}/preview`);
+    await p.goto(`http://localhost:${PORT}/c/${wp}/preview?view=studio`); // S5: the coverage preview sits behind Preview by person
     await p.getByRole("button", { name: "Forms and coverage" }).click();
     await p.locator("[data-online-later]").first().waitFor({ timeout: 20000 }).catch(() => {});
     const later = await p.locator("[data-online-later]").count(), fills = await p.getByRole("button", { name: "Fill PDF from confirmed facts" }).count();

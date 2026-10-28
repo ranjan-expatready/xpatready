@@ -205,7 +205,11 @@ export type CombinationSummary = {
   held: HeldFile[];
 };
 /** A validator finding (engine/validate.ts): errors block release, warnings are shown and recorded. */
-export type ProblemLine = { level: "error" | "warning"; where: string; item: string; message: string };
+export type ProblemLine = { level: "error" | "warning"; where: string; item: string; message: string; label?: string };
+/** A problem in words for a person (drift check 2): a coverage gap's message already names the question, so it stands
+ *  alone; any other problem leads with its item's words (`label`, a question's meaning) or its item when it has none (a
+ *  form number, a rule id). Never a field code on its own. */
+export const problemWords = (p: ProblemLine) => (p.where === "Questionnaires" ? p.message : `${p.label ?? p.item}: ${p.message}`);
 /** GET /combinations/:id, the parts the combination page reads (the tabs below it read the rest until Screen 03). */
 export type CombinationView = {
   combination: { id: string; key: string; label: string; description: string | null; participants: ParticipantLine[]; source_basis: string; basis_note: string | null };

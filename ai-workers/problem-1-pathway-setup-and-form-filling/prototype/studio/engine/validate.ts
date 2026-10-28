@@ -6,7 +6,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
-import { channelProblems } from "./channels.ts";
+import { channelProblems, type Accepts } from "./channels.ts";
+import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 
 const schema = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "contracts", "predicate.v0.schema.json"), "utf8"));
 const ajv = new Ajv({ strict: false, allErrors: true });
@@ -14,8 +15,10 @@ ajv.addSchema(schema); // the same lookup as tests/check_conditions.ts
 const nodeValid = ajv.getSchema(`${schema.$id}#/definitions/node`)!;
 export const isNode = (n: unknown) => nodeValid(n) as boolean;
 
-export type Problem = { level: "error" | "warning"; where: string; item: string; message: string };
+/** `label` is the item in words (a question's meaning) where `item` is a field code; screens show it, never the code. */
+export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string };
 const ORDERED = new Set(["gt", "gte", "lt", "lte"]);
+const BIRTH = "person.date_of_birth";
 
 export function checkCondition(tree: any, fieldTypes: Map<string, string>, derived: Set<string>): string[] {
   if (!tree) return [];
@@ -33,7 +36,7 @@ export function checkCondition(tree: any, fieldTypes: Map<string, string>, deriv
   return errs;
 }
 
-export function validate(s: Snapshot, library: { key: string; valueType: string }[], derivedRows: { id: string; calculation: string }[]): Problem[] {
+export function validate(s: Snapshot, library: { key: string; valueType: string }[], derivedRows: { id: string; calculation: string }[], accepts?: Accepts): Problem[] {
   const out: Problem[] = [];
   const types = new Map(library.map((f) => [f.key, f.valueType]));
   const derived = new Set(derivedRows.map((d) => d.id));
@@ -43,6 +46,11 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   // No forms is not a warning here: the missing list (BR-8, engine/programs.ts) says it once, with its next step.
   for (const f of s.forms) {
     for (const e of checkCondition(f.condition, types, derived)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Condition ${e}.` });
+    // S5 (challenge M1): "Only if" in words with no rule cannot be evaluated on a case, so it is never released as is.
+    if (f.status === "conditional" && !f.condition) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Turn "${f.condition_plain ?? "only if"}" into a rule: the condition is in words only, so a case cannot tell whom ${f.form_number} applies to. Open the form on the Forms tab and build the rule.` });
+    // Lead check L5: a minimum age is decided by each person's date of birth (engine/render.ts ageGate asks it as a
+    // deciding question); with nobody asked for it the form could never be decided, so release is refused.
+    if (f.min_age && !placed.has(BIRTH) && !docFacts.has(BIRTH)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} applies from age ${f.min_age}, so each person's date of birth decides it, but nobody is asked for a date of birth in this combination. Add the date of birth question to this combination's questionnaire, or clear the minimum age.` });
     if ((f.form_kind ?? "data_form") === "data_form" && !s.field_maps.some((m) => m.form_number === f.form_number)) out.push({ level: "warning", where: "Forms", item: f.form_number, message: "No field map yet: the form cannot be filled." });
   }
   const unplaced = new Map<string, number>();
@@ -51,6 +59,14 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     if (!types.has(e.fact)) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `The form field reads ${e.fact}, which is not in the library.` });
     else if (!placed.has(e.fact) && !docFacts.has(e.fact)) unplaced.set(e.fact, (unplaced.get(e.fact) ?? 0) + 1);
   }
+  // S5 slice 2 (coverage gate; Screen 03 challenge point 3, Lead 25 Oct): every fact a form field needs for a person the
+  // combination has is asked of someone or filled by the case officer; otherwise release is blocked, per person, naming
+  // the question's meaning, the forms that need it and the fix.
+  const roleWord = new Map(((s.combination.participants ?? []) as { role: string; label?: string }[]).map((p) => [p.role, p.label ?? p.role]));
+  const meaningOf = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, f.meaning ?? f.id]));
+  const gaps = coverageGaps(s);
+  for (const g of gaps) out.push({ level: "error", where: "Questionnaires", item: g.fact, message: `${g.role === "the application" ? "The application" : roleWord.get(g.role) ?? g.role}: "${meaningOf.get(g.fact) ?? g.fact}" is needed by ${g.forms.join(", ")}, but nobody is asked for it. Fix: ${COVERAGE_FIXES}.` });
+  for (const g of gaps) unplaced.delete(g.fact);
   for (const [fact, n] of unplaced) out.push({ level: "warning", where: "Library", item: fact, message: `${n} form field${n > 1 ? "s read" : " reads"} this field, but nobody is asked for it and no supported document supplies it: in a case it stays unresolved until a placement is added.` });
   for (const p of s.placements) {
     if (!sectionIds.has(p.section_id)) out.push({ level: "warning", where: "Questions", item: p.fact, message: `Placed in section ${p.section_id}, which this combination's questionnaire does not use.` });
@@ -68,7 +84,14 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   // one nobody here uses is not this combination's warning.
   const reads = derivedRead(s);
   for (const d of derivedRows) if (reads.has(d.id) && !CALCULATIONS[d.calculation]) out.push({ level: "warning", where: "Derived fields", item: d.id, message: `Calculation ${d.calculation} has no tested helper: recorded, never evaluated.` });
-  out.push(...channelProblems(s)); // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
+  out.push(...channelProblems(s, accepts)); // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
+  // Drift check 2: an item that is a field code also carries its words (the question's meaning, a derived field's plain
+  // words), so Review and the refusals never lead with the code.
+  const plainOf = new Map((s.derived_fields as { id: string; plain?: string | null }[]).map((d) => [d.id, d.plain ?? ""]));
+  for (const p of out) {
+    const m = p.where === "Derived fields" ? plainOf.get(p.item) : ["Questionnaires", "Questions", "Library"].includes(p.where) ? meaningOf.get(p.item) : undefined;
+    if (m && m !== p.item) p.label = m.trim().replace(/\.$/, "");
+  }
   return out;
 }
 

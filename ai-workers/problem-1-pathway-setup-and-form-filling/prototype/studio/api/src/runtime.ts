@@ -115,7 +115,8 @@ export class Runtime {
     const b = parse(NewPerson, body);
     const limits = (this.snapshotOf(c).combination.participants ?? []) as { role: string; max?: number; label?: string }[];
     const limit = limits.find((p) => p.role === b.role);
-    if (!limit) fail(`This combination's released configuration has no ${b.role.replace(/_/g, " ")}.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    // S5 (M3): any role the pinned release lists, within its maximum; anything else is refused (P-119).
+    if (!limit || !(limit.max ?? 0)) fail(`This case's release does not list a ${b.role.replace(/_/g, " ")} in who can be in this application, so one cannot be added.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const workspaceId = c.workspaceId;
     // QA-28: the same idempotency key answers with the person it added; a different request with that key is refused.
     const { idempotencyKey: key, ...request } = b;
@@ -138,7 +139,7 @@ export class Runtime {
       if (limit!.max !== undefined && already >= limit!.max) fail(`The release allows at most ${limit!.max} ${(limit!.label ?? b.role).toLowerCase()} on a case; this case has ${already}.`, HttpStatus.UNPROCESSABLE_ENTITY);
       const principal = c.participants.find((p) => p.role === "principal")!;
       const party = await tx.party.create({ data: { workspaceId, profile: { create: { workspaceId, displayName: b.displayName } } } });
-      await tx.partyRelationship.create({ data: { workspaceId, fromPartyId: principal.subject.partyId, toPartyId: party.id, relationshipType: RELATIONSHIP[b.role] } });
+      await tx.partyRelationship.create({ data: { workspaceId, fromPartyId: principal.subject.partyId, toPartyId: party.id, relationshipType: RELATIONSHIP[b.role] ?? b.role.toUpperCase() } });
       const s = await tx.answerSubject.create({ data: { workspaceId, partyId: party.id, subjectKind: b.role, label: b.displayName } });
       await tx.caseParticipant.create({ data: { workspaceId, caseId, subjectId: s.id, role: b.role, applies: b.applies, order: Math.max(...now.map((p) => p.order)) + 1, idempotencyKey: key ?? null, idempotencyFingerprint: key ? fingerprint : null } });
       return s.id;

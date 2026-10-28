@@ -12,7 +12,7 @@ import { actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { Ai } from "./ai.ts";
 import { Finder, FINDER_OPERATION, FINDER_STEPS } from "./finder.ts";
 import { UPLOAD_OPERATION, UPLOAD_STEPS, UploadRuns } from "./upload-run.ts";
-import { aboutUsd } from "./start-setup.ts";
+import { aboutUsd } from "./finder-cost.ts";
 
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 const ACTIVE = ["QUEUED", "RUNNING"];
@@ -77,8 +77,12 @@ export class Runs {
   /** The one next step a stopped or waiting run offers (never a link to the page already open). */
   private nextOf(b: AiBatch, href: string): { label: string; href: string } | null {
     const plan = (b.plan ?? {}) as { held_id?: string; held_unread?: boolean };
-    // QA-63 / S3 early look (3): the finder's one find button is on the combination's "Sources and forms", never this card.
-    if (b.operation === FINDER_OPERATION) return { label: "Find again", href: `/c/${b.scopeLabel.split("|")[0]}/sources` };
+    // QA-63 / S3 item 5: the finder's next step is on the combination's Forms tab, never this card: a run that could not
+    // pick the application page opens the Find dialog at the page choice; any other opens it to find again.
+    if (b.operation === FINDER_OPERATION) {
+      const cid = b.scopeLabel.split("|")[0], page = !!(b.plan as { result?: { guide_choice?: unknown } } | null)?.result?.guide_choice;
+      return page ? { label: "Choose the application page", href: `/c/${cid}/forms?find=page` } : { label: "Find again", href: `/c/${cid}/forms?find=again` };
+    }
     // Round 4 review should: a file the rules could not read can never be approved: say so, and what to do instead.
     if (b.operation === UPLOAD_OPERATION) return plan.held_id ? (plan.held_unread ? { label: "Open it on To review", href: `/review/held/${plan.held_id}` } : { label: "Record the IRCC page it came from", href: `/review/held/${plan.held_id}` }) : null;
     return { label: "See the details", href };

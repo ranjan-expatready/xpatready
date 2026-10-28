@@ -65,7 +65,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     const counts = { pathways: ind.pathways.length, programs: ind.tree.length + cor.tree.length, rows: comps.length, attachments, released: comps.filter((c) => c.release).length };
     const fields = await api("/library/fields");
     const dupFields = fields.length - new Set(fields.map((f) => f.key)).size;
-    step(`${label}: Load sample inputs creates 11 programs over the 2 pathways and sets up 6 combinations, official files through the upload path, one released`, counts.pathways === 2 && counts.programs === 11 && counts.rows === 6 && counts.attachments === 24 && counts.released === 1, JSON.stringify(counts));
+    step(`${label}: Load sample inputs creates 11 programs over the 2 pathways and sets up 6 combinations, official files through the upload path, one released`, counts.pathways === 2 && counts.programs === 11 && counts.rows === 6 && counts.attachments === 27 /* 24 + 3 IRCC guides linked as sources (S5 slice 3) */ && counts.released === 1, JSON.stringify(counts));
     step(`${label}: no duplicate field definitions`, dupFields === 0, `${fields.length} fields`);
     return { counts, fields: fields.length, comps };
   };
@@ -84,7 +84,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("A2: the work-permit row (Individual › Work permits › Employer-specific work permit) shows it is in Release 1 (one release word, review #3) and no draft changes", /In Release 1/.test(await p.innerText("main")) && /draft matches the release/i.test(await p.innerText("main")));
   await shot("A2-overview.png");
 
-  await go(`/c/${wp}/preview`);
+  await go(`/c/${wp}/preview?view=studio`); // S5: the coverage and PDF-fill preview sits behind Preview (the tab itself is Preview by person)
   await p.getByText("Questions to ask").first().waitFor();
   let main = await p.innerText("main");
   step("A3: preview renders the released configuration with the sample family's confirmed facts", /Released version 1/.test(main) && /questions to ask/i.test(main), main.match(/forms\n(\d+)/i)?.[0]);
@@ -120,9 +120,17 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   if (await p.getByRole("dialog").count()) await click(p.getByRole("dialog").getByRole("button", { name: "Close" }).last());
 
   // a person adds a conditional document requirement (sample input instead of typing)
-  await go(`/c/${wp}/configuration`); await click(p.getByRole("tab", { name: /^Documents/ }));
+  // S5 (m5): the "Sample inputs" buttons are gone from the Documents tab; the person types the requirement.
+  await go(`/c/${wp}/configuration?area=documents`); await p.waitForURL(/\/documents/);
   await click(btn("Add a document requirement"));
-  await click(btn("Minor travelling alone (conditional): IMM 5484"));
+  { const dlg = p.getByRole("dialog");
+    await dlg.getByLabel("New document type name").fill("Custody documents or parental letter of authorization");
+    await dlg.getByLabel("Whose document").selectOption("each_dependent_child");
+    await dlg.getByLabel("Requirement").selectOption("ANSWER_CONDITIONAL");
+    await dlg.getByRole("button", { name: "Edit as JSON" }).click();
+    await dlg.getByLabel("Condition as JSON").fill(JSON.stringify({ subjectKind: "DEPENDENT", op: "eq", field: "person.travelling_alone_to_canada", value: true }));
+    await dlg.getByLabel("Why it is needed, in plain words").fill("Only for a minor travelling alone.");
+    await dlg.getByLabel("Source quote").fill("Minors travelling alone or with one parent must provide custody documents or a letter of authorization from the other non accompanying parent or a letter of authorization signed by both parents or legal guardians."); }
   await p.getByText("Condition is valid").waitFor();
   await click(p.getByRole("dialog").getByRole("button", { name: "Save to draft" }));
   { const t = await toastLike(/added to the draft/); step("A5: a person adds a conditional document requirement with a valid condition, saved as draft", /added to the draft/.test(t), t); }
@@ -131,7 +139,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("A5: the new requirement survives a reload, marked Draft and edited by a person", /Custody documents or parental letter of authorization/.test(main) && /Edited by a person/.test(main));
   await shot("A5-configuration-documents.png");
 
-  await go(`/c/${wp}/preview`);
+  await go(`/c/${wp}/preview?view=studio`);
   await p.getByLabel("Known facts", { exact: false }).selectOption("none").catch(async () => { await p.locator("select").nth(2).selectOption("none"); });
   await idle(); await click(btn("Document checklist"));
   const custody0 = await custodyStatus("Cannot tell yet");
@@ -171,14 +179,14 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await as("user-A");
 
   // guarded AI path for the added form IMM 5257
-  await go(`/c/${vv}/sources`);
+  await go(`/c/${vv}/forms`);
   await click(p.getByRole("row", { name: /IMM 5257/ }).getByRole("button", { name: "Draft with AI" }));
   await p.getByRole("dialog").getByText(LIVE ? "Live AI call" : "Stub pass only").click();
   await click(p.getByRole("dialog").getByRole("button", { name: LIVE ? "Start live AI draft" : "Run stub pass" }));
   for (let i = 0; i < 120; i++) { const d = await api(`/combinations/${vv}`); const j = d.jobs.find((x) => x.kind === "field_map"); if (j && j.status !== "RUNNING" && j.status !== "QUEUED") break; await p.waitForTimeout(2000); }
   const vvd = await api(`/combinations/${vv}`); const job = vvd.jobs.find((x) => x.kind === "field_map");
   step(`A8: IMM 5257 through the guarded AI path (${LIVE ? "live" : "stub pass"}) ends in an honest state`, job && ["COMPLETED", "BLOCKED"].includes(job.status), `${/Access to this API has been restricted/.test(job?.message ?? "") ? "known QA-8 (the AI step's child process is refused file access in this copy; not faked): " : ""}${job?.mode} ${job?.status}: ${job?.message?.slice(0, 160)}`);
-  await go(`/c/${vv}/sources`); await shot("A8-imm5257-guarded-path.png");
+  await go(`/c/${vv}/forms`); await shot("A8-imm5257-guarded-path.png");
 
   await go("/library/fields/person.date_of_birth");
   main = await p.innerText("main");
@@ -199,7 +207,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("B0b: the first Retail Pathway is added on Program structure through the Add pop-up (P-112 name, P-127)", pathways.join() === "Temporary residence", pathways.join());
   await go("/");
   // S3 (P-125): every name is added on Program structure, here through its Add pop-up opened in place from Immigration
-  // programs (P-128 (5)); Start setup on the new card creates the combination and opens it on Sources and forms.
+  // programs (P-128 (5)); Start setup on the new card creates the combination and opens it on its Forms tab (S5).
   await click(p.locator("[data-add-combination]")); await p.locator("[data-add-dialog]").waitFor();
   const name = async (lv, text) => { const f = p.locator(`[data-field="${lv}"] input[role="combobox"]`); await f.fill(text); await p.keyboard.press("Tab"); await p.waitForTimeout(600); };
   if (!(await p.locator('[data-field="pathway"] input[role="combobox"]').inputValue())) await name("pathway", "Temporary residence");
@@ -210,24 +218,32 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   let leafKey = null;
   for (let i = 0; i < 40 && !leafKey; i++) { leafKey = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).rows.find((r) => r.label === "Employer-specific work permit")?.nodeKey ?? null; if (!leafKey) await p.waitForTimeout(250); }
   await click(p.locator(`[data-node="${leafKey}"] [data-start-setup]`).first());
-  await p.waitForURL(/\/c\/[0-9a-f-]+\/sources/, { timeout: 15000 }).catch(() => {}); const scratch = p.url().includes("/c/") ? p.url().split("/c/")[1].split("/")[0] : null;
+  await p.waitForURL(/\/c\/[0-9a-f-]+\/(sources|forms)/, { timeout: 15000 }).catch(() => {}); const scratch = p.url().includes("/c/") ? p.url().split("/c/")[1].split("/")[0] : null;
   if (scratch) await p.getByRole("heading", { level: 1, name: "Employer-specific work permit" }).waitFor({ timeout: 15000 }).catch(() => {}); // the page header arrives with the combination
   const crumbs = scratch ? await p.getByRole("navigation", { name: "Path" }).getByRole("link").allTextContents().catch(() => []) : [];
   const made = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).rows.find((r) => r.combinationId === scratch);
   step("B1 (S3): the Add pop-up adds the program and category; Start setup creates the combination for that full path and opens it", !!scratch && /Retail › Temporary residence › Work permits \(built from scratch\) › Employer-specific work permit/.test(willBe) && made?.path.join(" › ") === "Work permits (built from scratch) › Employer-specific work permit" && crumbs.join(" › ").includes("Work permits (built from scratch)"), `${willBe} → ${crumbs.join(" › ")}`);
-  await go(`/c/${scratch}/sources`);
-  await p.setInputFiles('input[type=file]', [path.join(OFFICIAL, "forms/imm1295e.pdf")]); await p.waitForTimeout(1500); await idle();
+  // S5 (P-118 Q2, m5): forms enter only through the Form library; the combination picks them from there. The library's
+  // upload is S4's (P-123): one run card per file (rules check, then library or held for a person).
+  await go("/library/forms");
   const junk = path.join(OUT, "not-an-official-form.pdf"); fs.writeFileSync(junk, "%PDF-1.4 not an official form\n");
-  await p.setInputFiles('input[type=file]', [junk]);
-  const junkToast = await toastLike(/held for a person/); await idle();
-  await click(btn("Attach a sample file")); await click(p.getByRole("dialog").getByRole("row", { name: /IMM 5476/ }).getByRole("button", { name: "Attach" }).first()); await click(p.getByRole("dialog").getByRole("button", { name: "Done" })); // the current edition is listed first
+  await p.getByLabel("Choose PDFs to upload").setInputFiles([path.join(OFFICIAL, "forms/imm1295e.pdf"), path.join(OFFICIAL, "forms/imm5476e.pdf"), junk]);
+  await p.waitForTimeout(1000);
+  await p.waitForFunction(() => /not-an-official-form\.pdf[\s\S]{0,120}Failed/.test(document.querySelector("main")?.textContent ?? ""), null, { timeout: 120000 }).catch(() => {});
+  for (let i = 0; i < 240; i++) { if (!((await api("/runs?active=1")).runs ?? []).length) break; await p.waitForTimeout(500); }
+  await idle();
+  const junkToast = ((await p.innerText("main")).match(/[^\n]*not-an-official-form\.pdf[\s\S]{0,160}/) ?? [""])[0].replace(/\s+/g, " ");
+  await go(`/c/${scratch}/forms`);
+  await click(btn("Add a form from the library"));
+  for (const code of ["IMM 1295", "IMM 5476"]) { await click(p.getByRole("dialog").getByRole("button", { name: `Add ${code}` })); await p.getByRole("dialog").getByText("Added").nth(code === "IMM 1295" ? 0 : 1).waitFor({ timeout: 30000 }).catch(() => {}); }
+  await click(p.getByRole("dialog").getByRole("button", { name: "Close" }).first());
   // Wait for the refreshed list (under machine load one immediate read could still show the previous list).
   // The one intake (P-51): a file that is not an approved official source is held for a person, never attached.
   for (let i = 0; i < 40; i++) { main = await p.innerText("main"); if (/Recognised: ready to read/.test(main) && /IMM 1295/.test(main) && /IMM 5476/.test(main)) break; await p.waitForTimeout(375); }
-  const heldJunk = () => api(`/intake/held?combination=${scratch}`).then((h) => h.some((x) => x.file === "not-an-official-form.pdf"));
+  const refusedJunk = () => /Rules check the file/.test(junkToast) && api("/intake/held").then((h) => !h.some((x) => x.file === "not-an-official-form.pdf"));
   const junkAttached = () => api(`/combinations/${scratch}/attachments`).then((a) => a.some((x) => x.fileName === "not-an-official-form.pdf"));
-  step("B2: manual upload of an official form is recognised; a non-official file is held for a person, not attached; a sample attachment uses the same path", /Recognised: ready to read/.test(main) && /IMM 1295/.test(main) && /IMM 5476/.test(main) && /held for a person/.test(junkToast) && await heldJunk() && !(await junkAttached()), junkToast);
-  await shot("B2-sources.png");
+  step("B2 (S5): official forms uploaded in the Form library and picked into the combination are recognised; a damaged non-official file is refused at the rules check in words, never added or attached (S4)", /Recognised: ready to read/.test(main) && /IMM 1295/.test(main) && /IMM 5476/.test(main) && await refusedJunk() && !(await junkAttached()), junkToast);
+  await shot("B2-forms-reading.png");
   // Read each recognised form, one click per form, waiting until the server records it as read.
   for (let i = 0; i < 4; i++) {
     const before = (await api(`/combinations/${scratch}/attachments`)).filter((a) => a.status === "READ").length; if (before >= 2) break;
@@ -235,7 +251,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     for (let w = 0; w < 240 && (await api(`/combinations/${scratch}/attachments`)).filter((a) => a.status === "READ").length <= before; w++) await p.waitForTimeout(500); // up to 2 min: slow on a busy machine
   }
   const atts = await api(`/combinations/${scratch}/attachments`);
-  step("B2: both forms read on this computer (no AI); the non-official file stays held", atts.filter((a) => a.status === "READ").length === 2 && await heldJunk() && !(await junkAttached()), atts.map((a) => `${a.fileName}=${a.status}`).join(", "));
+  step("B2: both forms read on this computer (no AI); the refused file is still not attached", atts.filter((a) => a.status === "READ").length === 2 && await refusedJunk() && !(await junkAttached()), atts.map((a) => `${a.fileName}=${a.status}`).join(", "));
 
   // Screen 02 FIX (review Must 4): with form fields left to decide, apply stays on the job page and focuses their list;
   // with none left it goes on to the preview. The journey goes on to the preview either way.
@@ -281,7 +297,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const applied1295 = await afterApply();
   step("B3: IMM 1295 applied: its map and new definitions are in the draft", /applied to the draft/.test(applied1295), applied1295);
 
-  await go(`/c/${scratch}/sources`);
+  await go(`/c/${scratch}/forms`);
   await draftReplay("IMM 5476");
   main = await p.innerText("main");
   const counts = (await api(`/jobs/${p.url().split("/jobs/")[1]}`)).detail.counts;
@@ -300,7 +316,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const c5476 = draft.coverage.find((c) => c.form === "IMM 5476");
   const addrBox = c5476.boxes.find((x) => x.fact === "person.mailing_address");
   step("B5: draft preview: IMM 5476 boxes read reused definitions; new fields have no value source yet (unresolved, no placement)", !!addrBox && (c5476.counts.unresolved ?? 0) > 0, JSON.stringify(c5476.counts));
-  await click(btn("Forms and coverage")); await shot("B5-coverage-before-placement.png");
+  await go(`/c/${scratch}/preview?view=studio`); await click(btn("Forms and coverage")); await shot("B5-coverage-before-placement.png");
 
   await go("/library/sections"); await p.getByLabel("New section title").fill("Contact details"); await click(p.getByRole("button", { name: "Add", exact: true }));
   await go("/library/fields/person.email"); await p.getByLabel("Section").selectOption({ label: "Contact details" }); await p.getByLabel("Collected from").selectOption("client_questionnaire");
@@ -321,6 +337,15 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const waitingAdds = await api("/library/changes?status=WAITING");
   for (const c of waitingAdds) await p.request.fetch(`${URL}/api/library/changes/${c.id}/approve`, { method: "POST", headers: { "x-actor": "user-C", "content-type": "application/json" }, data: {} });
   step("B6b: every form field decided (K1) and each new shared field approved by a second person (B1)", (await api("/library/changes?status=WAITING")).length === 0, `${decidedFF} form fields · ${waitingAdds.length} new fields approved`);
+  // S5 slice 2 coverage gate (BR-11): release waits while an answer the forms need is asked of nobody. The Questionnaires
+  // tab names each one; the person has the case officer fill them (placed in a working view, the call the Fields page makes).
+  await go(`/c/${scratch}/questionnaires`);
+  const gapsShown = await p.locator("[data-gaps] li").count();
+  const sec = (await api("/library/sections"))[0]?.key;
+  for (const x of (await api(`/combinations/${scratch}`)).draft.problems.filter((q) => q.where === "Questionnaires"))
+    await p.request.fetch(`${URL}/api/library/fields/${encodeURIComponent(x.item)}/placement`, { method: "POST", headers: { "x-actor": "user-A", "content-type": "application/json" }, data: { sectionKey: sec, collectedFrom: "staff_working_view", repeats: x.item.startsWith("case.") ? "once_per_case" : "per_person" } });
+  const left = (await api(`/combinations/${scratch}`)).draft.problems.filter((q) => q.where === "Questionnaires").length;
+  step("B6c (S5 BR-11): the answers the forms need but nobody was asked are named on Questionnaires; once the case officer fills them, none is left", left === 0, `${gapsShown} shown, ${left} left`);
   await go(`/c/${scratch}/review`);
   await click(btn("Submit for review"));
   await as("user-C"); await click(btn("Select all I can sign")); await click(btn(/^Sign/));

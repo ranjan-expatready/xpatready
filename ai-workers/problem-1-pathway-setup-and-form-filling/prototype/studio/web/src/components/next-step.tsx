@@ -35,7 +35,7 @@ export function StepTip({ a, children }: { a: NextAction | null; children: React
   return tip ? <Tip tip={tip}>{children}</Tip> : children;
 }
 
-/** S3 early look (2): "Find forms" lands on the finder offer itself (its one button), not just the tab. */
+/** S3 early look (2): "Find forms" lands on the Forms tab's one find button (the slot's, or Find again), not just the tab. */
 function focusFindForms() {
   let n = 0;
   const t = window.setInterval(() => {
@@ -53,7 +53,7 @@ export function useNextStep(go: (leaf: CatalogueLeaf, suffix?: string) => unknow
   const run = async (leaf: CatalogueLeaf, a: NextAction | null) => {
     if (!a) return go(leaf);
     if (a.kind === "start") return start(leaf.nodeKey); // S3: one Start setup (P-125)
-    if (a.kind === "add_forms") { await go(leaf, "/sources"); return focusFindForms(); }
+    if (a.kind === "add_forms") { await go(leaf, "/forms"); return focusFindForms(); }
     if (a.kind === "draft_ai") return setAiFor(leaf);
     if (a.kind === "view_progress") { leaving(leaf); return nav(`/ai/${a.batchId}`); }
     if (a.kind === "review_proposals") { leaving(leaf); return nav(`/c/${leaf.combinationId}/jobs/${a.jobId}`); }
