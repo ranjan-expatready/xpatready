@@ -91,9 +91,11 @@ export function FinderPanel({ id, latest, onRedo, removed = [] }: { id: string; 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="text-sm">
           <p className="font-medium">{run ? `AI found ${attached} form${attached === 1 ? "" : "s"} for this combination${notFound ? `, ${notFound} not found` : ""}${decide ? `, ${decide} to decide` : ""}` : "No form find yet"}</p>
-          <p className="text-xs text-text-muted" data-finder-status>{run ? `Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · saved AI answers, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}. ` : "AI reads the application's canada.ca pages and guide and attaches the forms it finds. "}Which forms apply is Sample until the immigration expert confirms.</p>
+          <p className="text-xs text-text-muted" data-finder-status>{run ? `Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · saved AI answers, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}. ` : "Start setup runs the form finder: AI reads the application's canada.ca pages and guide and attaches the forms it finds. "}Which forms apply is Sample until the immigration expert confirms.</p>
         </div>
-        {canAuthor ? <Button size="sm" variant={run ? "secondary" : "default"} onClick={() => onRedo()} disabled={!!shown}>{run ? <><RefreshCw /> Find again</> : <><Sparkles /> Find forms with AI</>}</Button> : null}
+        {/* Lead split (28 Oct): the first find is started from Start setup (screens lane, S3): its "Find forms with AI"
+            button goes in this slot. Once a find exists, Find again is this list's own action. */}
+        {run ? (canAuthor ? <Button size="sm" variant="secondary" onClick={() => onRedo()} disabled={!!shown}><RefreshCw /> Find again</Button> : null) : <div data-finder-start />}
       </div>
       {shown ? <RunCard runId={shown} onEnded={() => { setRunId(null); for (const k of [...formsKeys(id), ["combination", id, "finder"]]) void qc.invalidateQueries({ queryKey: k }); }} /> : null}
       {/* A form removed in this draft is listed once, under "Removed in this draft" with Add back (forms.tsx). */}

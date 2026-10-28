@@ -46,16 +46,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== find the forms with AI
   await go(vv, "forms");
-  step("C11.15: before any find the Forms tab says so and offers Find forms with AI", /No form find yet/.test(await finder.innerText()) && await finder.getByRole("button", { name: "Find forms with AI" }).count() === 1);
+  step("C11.15 (Lead split 28 Oct): before any find the Forms tab says Start setup runs the finder and keeps the slot for its button, with no button of its own", /No form find yet/.test(await finder.innerText()) && /Start setup runs the form finder/.test(await finder.innerText()) && await finder.locator("[data-finder-start]").count() === 1 && await finder.getByRole("button").count() === 0);
   step("C11.15 guides: the guide is among Visitor visa's sources", /Guide 5256/.test(await p.locator("[data-sources]").innerText().catch(() => "")));
-  await finder.getByRole("button", { name: "Find forms with AI" }).click();
-  const dlg = p.getByRole("dialog"); await dlg.locator("[data-find-plan]").waitFor({ timeout: 30000 }).catch(() => {});
-  step("C11.15 plan: the dialog shows the steps and says the cost before anything runs (saved AI answers: US$0)", /Cost: US\$0/.test(await dlg.locator("[data-find-cost]").innerText().catch(() => "")) && await dlg.locator("[data-find-plan] li").count() > 2);
-  await dlg.getByLabel(/AI now/).check(); await dlg.locator("[data-find-plan]").waitFor({ timeout: 30000 }).catch(() => {}); await p.waitForTimeout(500);
-  step("C11.15 plan: choosing AI now says the most it can cost, inside the cap", /At most US\$\d+\.\d\d/.test(await dlg.locator("[data-find-cost]").innerText().catch(() => "")), await dlg.locator("[data-find-cost]").innerText().catch(() => ""));
-  await dlg.getByLabel(/Use saved AI answers/).check(); await dlg.locator("[data-find-plan]").waitFor(); await p.waitForTimeout(500);
-  await state("find-dialog-plan");
-  await dlg.getByRole("button", { name: "Start" }).click();
+  // The first find is Start setup's (screens lane): started here through the same API, saved AI answers (US$0).
+  const plan0 = (await api(`/combinations/${vv}/forms/find/plan`, { method: "POST", data: { mode: "replay" } })).body;
+  await api(`/combinations/${vv}/forms/find`, { method: "POST", data: { mode: "replay", planSha256: plan0.plan_sha256, idempotencyKey: `s5b-first-${Date.now()}` } });
+  await p.reload(); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   await p.locator('[data-line="IMM 5257"]').waitFor({ timeout: 90000 }).catch(() => {});
   await settle();
   const row = p.locator('[data-line="IMM 5257"]');
@@ -86,6 +82,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.getByRole("dialog").getByRole("button", { name: "Remove IMM 5257" }).click(); await settle();
   await finder.getByRole("button", { name: "Find again" }).click();
   const again = p.getByRole("dialog"); await again.locator("[data-find-plan]").waitFor({ timeout: 30000 }).catch(() => {});
+  step("C11.15 plan: Find again shows the steps and says the cost before anything runs (saved AI answers: US$0)", /Cost: US\$0/.test(await again.locator("[data-find-cost]").innerText().catch(() => "")) && await again.locator("[data-find-plan] li").count() > 2);
+  await again.getByLabel(/AI now/).check(); await p.waitForTimeout(800);
+  step("C11.15 plan: choosing AI now says the most it can cost, inside the cap", /At most US\$\d+\.\d\d/.test(await again.locator("[data-find-cost]").innerText().catch(() => "")), await again.locator("[data-find-cost]").innerText().catch(() => ""));
+  await again.getByLabel(/Use saved AI answers/).check(); await again.locator("[data-find-plan]").waitFor(); await p.waitForTimeout(800);
+  await state("find-again-plan");
   const before = (await api(`/combinations/${vv}/forms/find/latest`)).body.run?.id;
   await again.getByRole("button", { name: "Start" }).click();
   for (let i = 0; i < 180; i++) { const r = (await api(`/combinations/${vv}/forms/find/latest`)).body.run; if (r && r.id !== before && !["QUEUED", "RUNNING"].includes(r.status)) break; await p.waitForTimeout(500); }
