@@ -34,7 +34,8 @@ export function setupActionOf(r: SetupState): NextAction | null {
   if (items) return { kind: "review_proposals", label: `Review ${plural(items, "AI proposal")}`, jobId: r.proposals.find((p) => (p.n ?? 1) > 0)!.job };
   if (r.fromLibrary.length) return { kind: "add_from_library", label: `Add ${plural(r.fromLibrary.length, "form")} from the library`, forms: r.fromLibrary };
   if (r.draftable) return { kind: "draft_ai", label: "Draft setup" };
-  if (!r.forms) return { kind: "add_forms", label: "Add sources" };
+  // S3 early look (2): nothing attached → the one step is the finder offer on "Sources and forms" (one call to action).
+  if (!r.forms) return { kind: "add_forms", label: "Find forms" };
   return null;
 }
 
@@ -56,7 +57,7 @@ export function missingItems(s: Snapshot, participants: Participant[], problems:
   if (!forms.length) {
     const n = setup?.sources ?? 0;
     out.push(n ? line("no_forms", `${plural(n, "form")} attached as sources, 0 set up.`, "Add sources")
-      : line("no_forms", "No forms yet.", "Add sources", " (add the forms this application files)"));
+      : line("no_forms", "No forms yet.", "Find forms", " (find the forms this application files)"));
   }
   // W1-02 (P-102): every form is read from its PDF, so a line filed Online needs its PDF form fields mapped too.
   const unmapped = forms.filter((f) => (f.form_kind ?? "data_form") === "data_form" && !(s.field_maps as (FieldMap & { channel?: string })[]).some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length)).map((f) => f.form_number);

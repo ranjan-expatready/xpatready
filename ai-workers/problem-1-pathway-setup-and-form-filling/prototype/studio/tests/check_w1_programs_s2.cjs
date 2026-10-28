@@ -153,7 +153,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const nsCard = p.locator(`article[data-node="${ns.nodeKey}"]`);
   const nsText = await nsCard.innerText();
   step("S2 fix 7: a Not started card shows 'Not started' under an empty bar, not 'Step 1 of 4'", /Not started/.test(nsText) && !/Step 1 of 4/.test(nsText) && await nsCard.locator('[data-setup="0"]').count() === 1 && (await nsCard.locator("[data-setup]").getAttribute("aria-label")) === "Setup: not started", nsText.replace(/\s+/g, " "));
-  step("S2 fix 2: a Not started card's one next step reads Start setup (no 'Add sources' anywhere on a Not started card)", (await nsCard.locator("[data-next-step]").textContent()).trim() === "Start setup" && !(await p.locator("article[data-node]").allInnerTexts()).some((t) => /Not started/.test(t) && /Add sources/.test(t)));
+  step("S2 fix 2: a Not started card's one next step reads Start setup (no 'Add sources' anywhere on a Not started card)", (await nsCard.locator("[data-next-step]").textContent()).trim() === "Start setup" && !(await p.locator("article[data-node]").allInnerTexts()).some((t) => /Not started/.test(t) && /Add sources|Find forms/.test(t)));
   const vvCard = p.locator(`article[data-node="${vv}"]`);
   const vvText = await vvCard.innerText(), vvStep = vvRow.nextAction;
   const k = vvStep?.kind === "add_from_library" ? (vvStep.forms ?? []).length : 0;
@@ -162,14 +162,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const before = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.counts;
   const combos0 = sql("select count(*) from combination");
   await nsCard.locator("[data-open]").click();
-  await p.waitForURL(/\/new\?leaf=/);
-  await p.waitForFunction((l) => [...document.querySelectorAll('main [aria-live="polite"]')].some((x) => x.textContent.includes(`› ${l}`)), ns.label, { timeout: 10000 }).catch(() => undefined);
+  await p.waitForTimeout(400);
   const after = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.counts;
-  step("S2 fix 3: clicking a Not started name opens Start setup with its trail filled; the counts do not change and nothing is created", p.url().includes(`leaf=${encodeURIComponent(ns.nodeKey)}`) && (await p.locator("main").innerText()).includes(ns.label) && after.not_started === before.not_started && after.in_setup === before.in_setup && sql("select count(*) from combination") === combos0, `${JSON.stringify({ ns: [before.not_started, after.not_started], setup: [before.in_setup, after.in_setup] })} ${p.url()} ${ns.label}: ${(await p.locator("main").innerText()).replace(/\s+/g, " ").slice(-300)}`);
+  const said = await p.locator('[aria-live="polite"]').allTextContents();
+  step("S2 fix 3 / S3: clicking a Not started name opens no page and says Start setup begins it; the counts do not change and nothing is created", new URL(p.url()).pathname === "/" && said.some((t) => t.includes(`${ns.label} is not started yet. Start setup on it begins its setup.`)) && after.not_started === before.not_started && after.in_setup === before.in_setup && sql("select count(*) from combination") === combos0, `${JSON.stringify({ ns: [before.not_started, after.not_started], setup: [before.in_setup, after.in_setup] })} ${p.url()} ${ns.label}: ${(await p.locator("main").innerText()).replace(/\s+/g, " ").slice(-300)}`);
   await state("start-setup-from-card");
   await open("?v=list");
   await p.locator(`[role="row"][data-node="${ns.nodeKey}"]`).focus(); await p.keyboard.press("Enter");
-  await p.waitForURL(/\/new\?leaf=/);
+  await p.waitForTimeout(400);
   step("S2 fix 3: Enter on a Not started row does the same (no start)", (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.counts.not_started === before.not_started && sql("select count(*) from combination") === combos0);
   await open();
   await vvCard.locator("[data-open]").click();
@@ -234,7 +234,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== read-only approver
   await as("user-B"); await open();
   const ro = await p.locator(`article[data-node="${ns.nodeKey}"]`).innerText();
-  step("BR-15 read-only: Add combination is disabled; a Not started card has no step to take; a started card says Open", await p.getByRole("button", { name: "Add combination" }).isDisabled() && !/Start setup|Add sources/.test(ro) && await p.locator(`article[data-node="${vv}"]`).locator('[data-next-step="open"]').count() === 1, ro.replace(/\s+/g, " "));
+  step("BR-15 read-only: Add combination is disabled; a Not started card has no step to take; a started card says Open", await p.getByRole("button", { name: "Add combination" }).isDisabled() && !/Start setup|Add sources|Find forms/.test(ro) && await p.locator(`article[data-node="${vv}"]`).locator('[data-next-step="open"]').count() === 1, ro.replace(/\s+/g, " "));
   step("BR-15 read-only: no '+ Add pathway' on this page (P-128 (4)); adding is Add combination, off for the approver", await p.getByRole("button", { name: /Add pathway/ }).count() === 0 && await p.getByRole("button", { name: "Add combination" }).isDisabled());
   await state("read-only");
   await as("user-A");
@@ -243,16 +243,15 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.goto(`${BASE}/structure?node=${encodeURIComponent(tr)}`);
   const panel = () => p.locator("aside[aria-label$='details']");
   await panel().locator("[data-used-by]").waitFor();
-  const start = panel().locator("[data-used-by]").getByRole("link", { name: `Start setup of ${nsTr.label}` }).first();
+  const start = panel().locator("[data-used-by]").getByRole("button", { name: `Start setup: ${nsTr.label}` }).first();
   step("S1 fix: under 'Used by' a Not started combination gets Start setup; one with setup keeps Open", await start.count() === 1 && await panel().locator("[data-used-by]").getByRole("link", { name: "Open Visitor visa" }).count() === 1);
   await start.click();
-  await p.waitForURL(/\/new\?leaf=/);
-  const nsPath = nsTr.path.join(" › ");
-  await p.waitForFunction((x) => (document.querySelector("main")?.textContent ?? "").includes(x), nsPath, { timeout: 10000 }).catch(() => undefined);
-  step("S1 fix: Start setup opens New combination with that trail filled in", (await p.locator("main").innerText()).includes(nsPath), `${nsPath}: ${(await p.locator("main").innerText()).replace(/\s+/g, " ").slice(0, 240)}`);
+  await p.waitForURL(/\/c\/[0-9a-f-]+\/(sources|forms)/); // S3 item 5: Start setup opens the Forms tab
+  const place = await p.getByRole("navigation", { name: "Path" }).innerText().catch(() => "");
+  step("S3: Start setup in Edit creates the setup and opens it on its Forms tab, its place shown (read-only)", nsTr.path.every((x) => place.includes(x)) && await p.getByRole("heading", { level: 1, name: nsTr.label }).count() === 1, place);
   await p.goto(`${BASE}/structure?node=${encodeURIComponent(nsTr.nodeKey)}`);
   await panel().locator("[data-used-by]").waitFor();
-  step("S1 fix: a Not started combination's own panel offers Start setup too", await panel().locator("[data-used-by] [data-start-setup]").count() === 1);
+  step("S3: once started, its own panel offers Open, no Start setup", await panel().locator("[data-used-by] [data-start-setup]").count() === 0 && await panel().locator("[data-used-by]").getByRole("link", { name: "Open" }).count() >= 1);
 
   // ======================================================== S1 fix 2: the panel footer fully visible
   const footerFits = async () => p.evaluate(() => {
@@ -300,10 +299,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step(`break m5: at ${w} px one long unbroken name wraps inside its card (no sideways scroll)`, await p.locator(`article[data-node="${unbroken}"]`).count() === 1 && !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), await p.evaluate(() => document.documentElement.scrollWidth));
   }
   await p.setViewportSize({ width: 1440, height: 900 });
-  await p.goto(`${BASE}/new?leaf=nope`); await p.getByText("Check the path").waitFor({ timeout: 10000 }).catch(() => undefined);
-  step("break m6: a Start setup link with a key the page cannot use says why", /not in the Program structure for Retail any more/.test(await p.locator("main").innerText()));
-  await p.goto(`${BASE}/new?leaf=individual.work_permits.open`); await p.getByText("Check the path").waitFor({ timeout: 10000 }).catch(() => undefined);
-  step("break m7: a category with sub-categories asks for one of them", /Open work permit has sub-categories: choose one of them below/.test(await p.locator("main").innerText()));
+  // S3: Start setup is one request now (no page to open with a key); the same refusals come from it in plain words.
+  let st = await api("/combinations/start", { method: "POST", data: { nodeKey: "nope" } });
+  step("break m6 (S3): Start setup with a key that is not in the Program structure says so (404)", st.status === 404 && /does not exist/.test(st.body.detail), st.body.detail);
+  st = await api("/combinations/start", { method: "POST", data: { nodeKey: "individual.work_permits.open" } });
+  step("break m7 (S3): a category with sub-categories asks for one of them (400)", st.status === 400 && /Open work permit" has sub-categories: choose one of them/.test(st.body.detail), st.body.detail);
 
   // ======================================================== scale: 50 combinations stay quick
   for (let i = 0; i < 30; i++) await add("INDIVIDUAL", "category", `Scale sample ${String(i + 1).padStart(2, "0")}`, "individual.visitors");

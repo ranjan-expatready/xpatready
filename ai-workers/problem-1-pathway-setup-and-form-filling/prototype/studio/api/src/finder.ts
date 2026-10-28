@@ -32,6 +32,7 @@ import { mentionsOf, officialUrl, pageLinks, pageText, parseFormPage, parseForms
 import { FinderBody, FinderLaunchBody, normaliseCode, type FinderMode } from "../../contracts/form-library.ts";
 import { canadaSource, CanadaError, type CanadaSource } from "./canada.ts";
 import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
+import { aboutUsd, lastFinishedUsd } from "./finder-cost.ts";
 import { Sources } from "./sources.ts";
 import { channelsFrom, recordedCopy, sampleFixtures } from "./filing.ts";
 import { WHO } from "./studio.ts";
@@ -174,8 +175,10 @@ export class Finder implements OnModuleInit {
     const rounds = b.mode === "live" ? [...(remembered || b.pageUrl ? [] : ["find_guide", "find_guide"] as const), "find_forms", "find_forms"] as AiKind[] : [];
     const worst = round2(rounds.reduce((a, k) => a + Math.min(RUN_CAP_USD, costUsd(MODEL, inputTokenBound("x".repeat(k === "find_guide" ? 120_000 : 160_000)), AI_SETTINGS[k].max_output_tokens) * 2), 0));
     const expected = b.mode === "live" ? this.expectedUsd(c.trail) : 0;
+    // S3 early look (4): the one "about" (finder-cost.ts), the same on the Find button, this plan and the run card.
+    const about = b.mode === "live" ? aboutUsd(expected, await lastFinishedUsd(this.db, await this.ws.id(), FINDER_OPERATION, "LIVE"), true) : 0;
     const plan = { operation: FINDER_OPERATION, operation_label: "Find this combination's forms", combination: { id: c.id, label: c.label, trail: c.trail }, mode: b.mode, page_url: b.pageUrl ?? remembered?.package ?? null, only: b.only ?? null, steps,
-      totals: { worst_usd: worst, expected_usd: expected, ai_rounds: rounds.length }, ledger,
+      totals: { worst_usd: worst, expected_usd: expected, about_usd: about, ai_rounds: rounds.length }, ledger,
       note: b.mode === "rules" ? "Rules only: every form number printed on the pages is listed for you to attach by hand; nothing is attached, because AI did not decide which apply." : b.mode === "replay" ? "Saved AI answers for these exact pages are replayed: US$0. A page with no saved answer stops with the reason." : `Live AI: two rounds per question, at most US$${worst.toFixed(2)} (usually much less). Downloads from canada.ca cost nothing.`,
       targets: [] as unknown[] };
     const plan_sha256 = sha(JSON.stringify({ c: c.id, mode: b.mode, page: plan.page_url, only: plan.only, steps: steps.map((s) => s.kind + s.uses_ai), worst }));
@@ -298,7 +301,7 @@ export class Finder implements OnModuleInit {
     if (!index || index.status !== "COMPLETED") {
       const c = index?.value?.candidates ?? [];
       if (index?.status === "NEEDS_PERSON" || index?.status === "BLOCKED") result.guide_choice = { candidates: c, why: "Choose the application page: the finder could not pick one for sure." };
-      return this.finish(batchId, index?.status === "NEEDS_PERSON" || index?.status === "BLOCKED" ? "NEEDS_PERSON" : "FAILED", index?.status === "NEEDS_PERSON" ? "No application page could be chosen. Upload its forms' PDFs on the combination's Sources page; choosing the page comes with its Forms tab." : "The finder could not find the application page.", result);
+      return this.finish(batchId, index?.status === "NEEDS_PERSON" || index?.status === "BLOCKED" ? "NEEDS_PERSON" : "FAILED", index?.status === "NEEDS_PERSON" ? "No application page could be chosen. Choose it on the combination's Forms tab." : "The finder could not find the application page.", result);
     }
 
     // 2. Read the application page and the guide it links (rules: every form number printed on them).
@@ -496,7 +499,8 @@ export class Finder implements OnModuleInit {
     const stub = await this.sources.launchOnce(jobId, "stub");
     const sj = last(stub.out);
     if (stub.stopped) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped during the free stub pass: nothing was sent." };
-    if (stub.code !== 0) return { ok: false, costUsd: 0, reason: `The guarded AI route refused the job before any call: ${String(sj?.refused ?? stub.err).trim().slice(-300) || `the launcher stopped (exit ${stub.code})`}` };
+    // S3 early look (1): the launcher's own words (a stack, an error code, a server path) go to the server log only.
+    if (stub.code !== 0) { console.warn(`finder ${jobId}: stub refused:`, String(sj?.refused ?? stub.err).trim().slice(-600) || `exit ${stub.code}`); return { ok: false, costUsd: 0, reason: "The AI step could not start on this computer, so nothing was sent and nothing was charged" }; }
     const live = await this.sources.launchOnce(jobId, "live", wanted);
     if (live.cancelled) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped before the AI call was sent: nothing was charged." };
     if (live.stopped) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped while the AI call ran: the call was ended. It stays counted at its reserved worst case (the provider may still bill it); nothing of it is used." };
@@ -504,7 +508,8 @@ export class Finder implements OnModuleInit {
     if (!lj?.run_file) {
       const why = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).trim() || `the launcher stopped (exit ${live.code})`;
       const limit = /usage limit/i.test(why + live.err);
-      return { ok: false, blocked: limit, costUsd: 0, reason: limit ? "The AI provider's usage limit refused the call before any processing: nothing was charged. Use saved AI answers or rules only, or try later." : `The AI step did not run: ${why.slice(0, 300)}` };
+      if (!limit) console.warn(`finder ${jobId}: live call did not run:`, why.slice(0, 600));
+      return { ok: false, blocked: limit, costUsd: 0, reason: limit ? "The AI provider's usage limit refused the call before any processing: nothing was charged. Use saved AI answers or rules only, or try later." : "The AI step did not run, so nothing was charged" };
     }
     const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
     const cost = Number(rec.drafting_run?.usage?.cost_usd ?? 0);
@@ -801,7 +806,9 @@ export class Finder implements OnModuleInit {
       ...(r?.decide ?? []).map((d) => ({ code: d.code, title: (d.draft ?? d.check)?.title ?? null, quote: (d.draft ?? d.check)?.quote ?? null, conditionPlain: (d.draft ?? d.check)?.condition ?? null, who: (d.draft ?? d.check)?.who ?? null, state: stateOf(d.code, "TO_DECIDE"), why: d.why })),
       ...(r?.not_for ?? []).map((n) => ({ code: n.code, title: null, quote: n.quote, conditionPlain: null, who: null, state: "NOT_FOR_THIS_APPLICATION" })),
     ].map((f) => ({ ...f, lineId: line(f.code)?.id ?? null, lineVersion: line(f.code)?.version ?? null, runId: run.id }));
-    return { run: { id: run.id, status: run.status, mode: run.mode, finished_at: run.finished_at }, forms, sample_note: run.sample_note };
+    // S3 item 5: a run that could not pick the application page says so on the Forms tab, with the pages it saw, so the
+    // person chooses one there and finds again (never a dead end).
+    return { run: { id: run.id, status: run.status, mode: run.mode, finished_at: run.finished_at }, forms, sample_note: run.sample_note, page_choice: r?.guide_choice ?? null };
   }
 
   /** The combination's newest finder run (S5's Forms tab reads this; slice 1 serves it to the scripted journey). */

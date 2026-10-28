@@ -6,7 +6,7 @@ import { closingChange, recordAction, snapshotLines } from "./form-uses.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import type { ProgramDef } from "@prisma/client";
 import type { z } from "zod";
-import { AddLineBody, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateNodeBody, CreatePathBody, DEFAULT_PARTICIPANTS, LEVEL_NAME, normalizeLabel, problemFromZod, ReleaseBody,
+import { AddLineBody, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateNodeBody, DEFAULT_PARTICIPANTS, LEVEL_NAME, normalizeLabel, problemFromZod, ReleaseBody,
   type CatalogueGroup, type CatalogueLeaf, type CatalogueNode, type CatalogueResponse, type CombinationSummary, type ParticipantLine, type Status } from "../../contracts/programs.ts";
 import { manifest } from "../../engine/import.ts";
 import { acceptsOf, channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
@@ -21,6 +21,7 @@ import { join, resolve } from "node:path";
 import { Audit, Db, need, ROOT, Workspace, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
 import { changeView, itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
+import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 
@@ -102,6 +103,7 @@ export class Programs {
     // The date each official file was downloaded (its leading ISO part: a hand fetch adds a note after it).
     const official = new Map((manifest() as { sha256: string; downloaded_utc?: string }[]).map((m) => [m.sha256, String(m.downloaded_utc ?? "").split(" ")[0]]));
     const byKey = new Map(nodes.map((n) => [n.programNodeKey, n]));
+    const openNodes = await openNodeKeys(this.db, workspaceId); // S3 M3: names with an open change
     const chainOf = (key: string) => { const out: ProgramDef[] = []; for (let n = byKey.get(key); n; n = n.parentNodeKey ? byKey.get(n.parentNodeKey) : undefined) out.unshift(n); return out; };
     const now = new Date();
     const rows: Row[] = [];
@@ -124,7 +126,7 @@ export class Programs {
         held.length && next !== "see_new_edition" ? `New edition waiting: ${held.map((x) => x.edition).join(", ")}` : null, newToday ? "New today" : null].filter(Boolean).join(" · ");
       if (!c) {
         rows.push({ pathway, changes: 0, errors: 0, firstError: null, hasContent: false, searchText: path.join(" "), docNames: [],
-          leaf: { ...base, combinationId: null, forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") } });
+          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") } });
         continue;
       }
       const { snapshot } = snaps.get(c.id)! as { snapshot: Snapshot };
@@ -348,6 +350,10 @@ export class Programs {
     const node = await this.db.programDef.findFirst({ where: { workspaceId, programNodeKey: b.nodeKey }, include: { combination: true } });
     if (!node) throw problem(404, "Not found", "That category or sub-category does not exist.", { errors: [{ field: "nodeKey", message: "Choose an existing category or sub-category." }] });
     if (node.combination) return { created: false, combination: node.combination };
+    // S3 M3: never under a retired name or a waiting change (the one guard's reason, the same words as the greyed button).
+    const chain: ProgramDef[] = []; for (let x: ProgramDef | null = node; x; x = x.parentNodeKey ? await this.db.programDef.findFirst({ where: { workspaceId, programNodeKey: x.parentNodeKey } }) : null) chain.unshift(x);
+    const why = startWhy(chain, await openNodeKeys(this.db, workspaceId));
+    if (why) throw problem(409, "Can't start setup", why);
     if (node.nodeKind !== "STREAM" && node.nodeKind !== "CATEGORY") throw problem(400, "Wrong level", `A combination is a category or a sub-category, not a ${LEVEL_NAME[node.nodeKind].toLowerCase()} (BR-3).`, { errors: [{ field: "nodeKey", message: "Choose a category or sub-category." }] });
     if (await this.db.programDef.count({ where: { workspaceId, parentNodeKey: node.programNodeKey } })) throw problem(400, "Has sub-categories", `"${node.label}" has sub-categories: choose one of them. Each is its own combination (BR-3).`, { errors: [{ field: "nodeKey", message: "Choose a sub-category." }] });
     if (b.allowedLocations) await this.db.programDef.update({ where: { id: node.id }, data: { allowedLocations: b.allowedLocations } });
@@ -413,73 +419,6 @@ export class Programs {
     };
   }
 
-  /** POST /combinations/path: the path builder's one request. Every level is checked first (right level, a new name
-   *  not already used under its parent (BR-6), no sub-category under a category that has its own setup (P-26), a
-   *  category with sub-categories is not itself a combination (BR-3)); only then are the new levels and the combination
-   *  created. A path that already exists returns its combination (created: false), so the screen can open it. */
-  async createPath(actor: Actor, body: unknown) {
-    need(actor, "author");
-    const b = parse(CreatePathBody, body);
-    const workspaceId = await this.ws.id();
-    const all = await this.db.programDef.findMany({ where: { workspaceId }, include: { combination: true } });
-    const byKey = new Map(all.map((n) => [n.programNodeKey, n]));
-    const kidsOf = (k: string | null) => all.filter((n) => n.parentNodeKey === k);
-    // W1-03: the Pathway is the one asked for, the existing program's own, or the type's only Pathway.
-    const pathways = all.filter((n) => n.nodeKind === "PATHWAY" && n.clientType === b.pathway && !n.retiredAt);
-    const fromProgram = "key" in b.program ? byKey.get(byKey.get(b.program.key)?.parentNodeKey ?? "") : undefined;
-    const pathwayNode = b.pathwayKey ? pathways.find((p) => p.programNodeKey === b.pathwayKey) : fromProgram?.nodeKind === "PATHWAY" ? pathways.find((p) => p.id === fromProgram.id) : pathways.length === 1 ? pathways[0] : undefined;
-    if (!pathways.length) throw problem(409, "No pathway yet", `${PATHWAY_TYPE_LABEL[b.pathway]} has no pathway yet: add one on the Structure first.`, { errors: [{ field: "pathwayKey", message: "Add a pathway on the Structure." }] });
-    if (!pathwayNode) throw problem(400, "Choose the pathway", `Choose the pathway in ${PATHWAY_TYPE_LABEL[b.pathway]}: ${pathways.map((p) => p.label).join(", ")}.`, { errors: [{ field: "pathwayKey", message: "Choose the pathway." }] });
-    const errors: { field: string; message: string }[] = [];
-    type Level = { existing: (typeof all)[number] | null; label: string };
-    const pick = (field: string, want: string, parent: Level | null, lv: { key: string } | { create: string } | null): Level | null => {
-      if (!lv) return null;
-      if ("key" in lv) {
-        const n = byKey.get(lv.key);
-        if (!n || n.nodeKind !== want || n.retiredAt || (parent?.existing && n.parentNodeKey !== parent.existing.programNodeKey) || (parent && !parent.existing)) { errors.push({ field, message: `Choose a ${LEVEL_NAME[want].toLowerCase()} from the list.` }); return null; }
-        return { existing: n, label: n.label };
-      }
-      if (parent?.existing) {
-        const twin = kidsOf(parent.existing.programNodeKey).find((s) => normalizeLabel(s.label) === normalizeLabel(lv.create));
-        if (twin) { errors.push({ field, message: `"${twin.label}" already exists under ${parent.existing.label}: choose it instead (names are compared ignoring case, spaces and punctuation).` }); return null; }
-      }
-      return { existing: null, label: lv.create };
-    };
-    const pathwayLevel: Level = { existing: pathwayNode, label: pathwayNode.label };
-    const program = pick("program", "PROGRAM", pathwayLevel, b.program);
-    const category = program ? pick("category", "STREAM", program, b.category) : null;
-    const sub = category ? pick("subCategory", "CATEGORY", category, b.subCategory) : null;
-    if (category?.existing) {
-      const hasKids = kidsOf(category.existing.programNodeKey).length > 0;
-      if (!b.subCategory && hasKids) errors.push({ field: "subCategory", message: `"${category.label}" has sub-categories: choose one of them, or add a new one. Each is its own combination (BR-3).` });
-      if (b.subCategory && category.existing.combination) errors.push({ field: "subCategory", message: `"${category.label}" already has its own setup, so it is the combination. Sub-categories can only be added to a category without setup (P-26).` });
-    }
-    let linkLabel: string | null = null;
-    if (b.link) {
-      const target = byKey.get(b.link.nodeKey);
-      const chain: ProgramDef[] = [];
-      for (let n = target; n; n = n.parentNodeKey ? byKey.get(n.parentNodeKey) : undefined) chain.unshift(n);
-      if (!target || (target.nodeKind !== "STREAM" && target.nodeKind !== "CATEGORY") || kidsOf(target.programNodeKey).length) errors.push({ field: "link", message: "Choose an existing combination." });
-      else {
-        const otherPathway = chain[0]?.clientType && chain[0].clientType !== b.pathway ? `${chain[0].clientType === "CORPORATE" ? "Corporate" : "Individual"} › ` : "";
-        linkLabel = `${b.link.kind === "follows" ? "Follows" : "Supported by"}: ${otherPathway}${chain.filter((n) => n.nodeKind !== "PATHWAY").map((n) => n.label).join(" › ")}`;
-      }
-    }
-    if (errors.length) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "The path needs fixing", status: 400, detail: errors.map((e) => e.message).join(" "), errors }, HttpStatus.BAD_REQUEST);
-    const leafLevel = sub ?? category!;
-    if (leafLevel.existing?.combination) return { created: false, nodeKey: leafLevel.existing.programNodeKey, combination: leafLevel.existing.combination };
-    // Writes, in order; the checks above already passed for every level.
-    const locations = ["inside_canada", "outside_canada"];
-    const made = async (lv: Level, kind: "PROGRAM" | "STREAM" | "CATEGORY", parentKey: string, link?: string | null) =>
-      lv.existing ?? (await this.studio.createNode(actor, { kind, label: lv.label, parentKey, allowedLocations: kind === "PROGRAM" ? undefined : locations, linkLabel: link ?? undefined }));
-    const p = await made(program!, "PROGRAM", pathwayNode.programNodeKey);
-    const c = await made(category!, "STREAM", p.programNodeKey, sub ? null : linkLabel);
-    const leaf = sub ? await made(sub, "CATEGORY", c.programNodeKey, linkLabel) : c;
-    if (leaf.programNodeKey && linkLabel && (sub ? sub.existing : category!.existing)) await this.db.programDef.update({ where: { id: leaf.id }, data: { linkLabel } });
-    const r = await this.createCombination(actor, { nodeKey: leaf.programNodeKey });
-    this.cache = null;
-    return { created: r.created, nodeKey: leaf.programNodeKey, combination: r.combination };
-  }
 
   /** Files held by the form intake (P-51) that concern this combination: uploaded on it, or a new edition of one of its forms. */
   private async heldFor(workspaceId: string, combinationId: string, codes: Set<string>) {

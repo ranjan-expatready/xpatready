@@ -25,6 +25,7 @@ import { SHOW_ONLY_STEPS, StepLabel, StepTip, useNextStep } from "@/components/n
 import { LevelMark, pathwayAccent, Trail } from "@/components/levels";
 import { StatusChip, Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
+import { StartSetupButton } from "@/components/start-setup";
 
 /** Where Back on a combination page returns to: this page's URL (with the opened combination) and its scroll position. */
 export const CATALOGUE_URL_KEY = "xr-catalogue-url";
@@ -156,9 +157,9 @@ export function ProgramsPage() {
     if (!leaf.combinationId && !canAuthor) return toast.push({ tone: "info", text: `${leaf.label} is not started yet. A configuration author starts it.` });
     rememberList(leaf.nodeKey);
     if (leaf.combinationId) return go(`/c/${leaf.combinationId}${suffix}`);
-    // S2 fix 3: never a silent start. A Not started name (or its Start setup step) opens the Start setup page with the
-    // trail filled; nothing is created until the person presses the button there.
-    return go(`/new?${pathway === "CORPORATE" ? "pw=CORPORATE&" : ""}leaf=${encodeURIComponent(leaf.nodeKey)}`);
+    // S2 fix 3 kept: never a silent start. S3 (P-125): there is no New combination page; the name says how to begin, and
+    // nothing is created until the person presses Start setup.
+    return toast.push({ tone: "info", text: leaf.startWhy ?? `${leaf.label} is not started yet. Start setup on it begins its setup.` });
   };
   const step = useNextStep(open, (leaf) => rememberList(leaf.nodeKey));
   const progLabel = (cat.data?.programs ?? []).find((p) => p.key === (cat.data?.program ?? program))?.label;
@@ -417,6 +418,8 @@ function NextStep({ r, canAuthor, tabIndex, onAct, onOpen, primary }: { r: Catal
   const button = (filled: boolean) => cn("inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-sm font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
     filled ? "border-primary bg-primary text-primary-foreground hover:bg-primary-hover [&_svg]:text-current" : "border-border bg-surface-raised text-text-link hover:border-primary");
   const cls = primary ? button(r.needsYou) : link;
+  // S3: Start setup is one shared action, greyed with the one guard's reason written under it (M3, m5).
+  if (a?.kind === "start" && canAuthor) return <StartSetupButton nodeKey={r.nodeKey} label={r.label} why={r.startWhy} variant={primary ? "default" : "outline"} step />;
   if (a && mine) return <StepTip a={a}><button type="button" tabIndex={tabIndex} data-next-step={a.kind} data-filled={primary && r.needsYou ? "" : undefined} onClick={(e) => { e.stopPropagation(); onAct(r, a); }} className={cls}><StepLabel a={a} /></button></StepTip>;
   if (r.combinationId) return <button type="button" tabIndex={tabIndex} data-next-step="open" onClick={(e) => { e.stopPropagation(); onOpen(); }} className={link}>Open</button>;
   return null;

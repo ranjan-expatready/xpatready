@@ -14,12 +14,16 @@ import { Button, Dialog, Notice, Pill } from "@/components/ui/controls";
 import { RunCard } from "@/components/run-card";
 import { fmtWhen } from "@/components/status";
 import { irccWords } from "../../../../contracts/workspace";
+import { costWords, START } from "../../../../contracts/start-setup";
+import { FindFormsStart } from "@/components/start-setup";
 
 export type FinderState = "ATTACHED" | "DOWNLOADED_ATTACHED" | "NEWER_FILE_SAME_EDITION" | "NOT_FOUND" | "UPLOAD_WAITING_SECOND_PERSON" | "REMOVED_BY_PERSON" | "TO_DECIDE" | "NOT_FOR_THIS_APPLICATION";
 export type FinderForm = { code: string; title: string; quote: string | null; conditionPlain: string | null; who: string | null; state: FinderState; why?: string | null; lineId?: string | null; lineVersion?: number | null; runId: string };
-export type FinderLatest = { run: { id: string; status: string; mode: string; finished_at: string | null } | null; forms: FinderForm[]; sample_note?: string };
+/** S3 item 5: a run that could not pick the application page names the pages it saw; the person chooses one here. */
+export type PageChoice = { candidates: { title: string; url: string }[]; why: string };
+export type FinderLatest = { run: { id: string; status: string; mode: string; finished_at: string | null } | null; forms: FinderForm[]; sample_note?: string; page_choice?: PageChoice | null };
 type Mode = "replay" | "rules" | "live";
-type Plan = { steps: { n: number; label: string; uses_ai: boolean }[]; totals: { worst_usd: number | null; expected_usd: number | null; ai_rounds: number }; note?: string | null; plan_sha256: string };
+type Plan = { steps: { n: number; label: string; uses_ai: boolean }[]; totals: { worst_usd: number | null; expected_usd: number | null; about_usd?: number | null; ai_rounds: number }; note?: string | null; plan_sha256: string };
 
 const ACTIVE = new Set(["QUEUED", "RUNNING"]);
 const ON_LINE = new Set<FinderState>(["ATTACHED", "DOWNLOADED_ATTACHED", "NEWER_FILE_SAME_EDITION"]);
@@ -34,28 +38,44 @@ const MODES: [Mode, string, string][] = [
   ["live", "AI now (cost shown below)", "Two AI rounds read the pages and must agree; only forms both pick are attached."],
 ];
 
-/** Find forms with AI: the plan and its cost first, then the run (Find again, and Redo for one form with `only`). */
-export function FindDialog({ id, only, onClose, onStarted }: { id: string; only?: string[]; onClose: () => void; onStarted: (runId: string) => void }) {
-  const [mode, setMode] = React.useState<Mode>("replay");
+/** Find forms with AI: the plan and its cost first, then the run (Find again, and Redo for one form with `only`). With
+ *  `page` (S3 item 5), the person first chooses the application page the last run could not pick: from the pages it saw,
+ *  or another canada.ca address; the plan then reads only that page (the server refuses any other site). */
+export function FindDialog({ id, only, page, onClose, onStarted }: { id: string; only?: string[]; page?: PageChoice | null; onClose: () => void; onStarted: (runId: string) => void }) {
+  const [mode, setMode] = React.useState<Mode>(page ? "live" : "replay");
+  const [picked, setPicked] = React.useState<string>(page?.candidates[0]?.url ?? "");
+  const [other, setOther] = React.useState("");
+  const pageUrl = page ? (picked === "other" ? other.trim() : picked) || undefined : undefined;
   const key = React.useMemo(() => crypto.randomUUID(), []);
-  const plan = useQuery<Plan, ApiError>({ queryKey: ["finder-plan", id, mode, only?.join(",") ?? ""], queryFn: () => api<Plan>(`/combinations/${id}/forms/find/plan`, { method: "POST", json: { mode, ...(only ? { only } : {}) } }), retry: false });
+  const plan = useQuery<Plan, ApiError>({ queryKey: ["finder-plan", id, mode, only?.join(",") ?? "", pageUrl ?? ""], queryFn: () => api<Plan>(`/combinations/${id}/forms/find/plan`, { method: "POST", json: { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) } }), retry: false, enabled: !page || !!pageUrl });
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
   const qc = useQueryClient();
   const start = async () => {
     if (!plan.data) return;
     setBusy(true); setError(null);
     try {
-      const v = await api<{ id: string }>(`/combinations/${id}/forms/find`, { method: "POST", json: { mode, ...(only ? { only } : {}), planSha256: plan.data.plan_sha256, idempotencyKey: `s5-${key}-${mode}` } });
+      const v = await api<{ id: string }>(`/combinations/${id}/forms/find`, { method: "POST", json: { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}), planSha256: plan.data.plan_sha256, idempotencyKey: `s5-${key}-${mode}-${pageUrl ?? ""}` } });
       for (const k of formsKeys(id)) void qc.invalidateQueries({ queryKey: k });
       void qc.invalidateQueries({ queryKey: ["combination", id, "finder"] });
       onStarted(v.id); onClose();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
-  const title = only?.length ? `Redo with AI: ${only.join(", ")}` : "Find this combination's forms";
+  const title = only?.length ? `Redo with AI: ${only.join(", ")}` : page ? START.pageButton : "Find this combination's forms";
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} title={title} description="AI reads the application's canada.ca pages and its guide, names each form with IRCC's words, and attaches the ones both rounds agree on. Which forms apply is Sample until the immigration expert confirms."
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void start()} busy={busy} disabled={!plan.data}><Sparkles /> Start</Button></>}>
       <div className="space-y-4" data-find-dialog>
+        {page ? (
+          <fieldset className="space-y-2" data-page-choice>
+            <legend className="text-xs font-medium">{START.pageLegend}</legend>
+            <p className="text-xs text-text-muted">{START.pageHint}</p>
+            {page.candidates.map((c) => (
+              <label key={c.url} className="flex gap-2 text-sm"><input type="radio" name="find-page" checked={picked === c.url} onChange={() => setPicked(c.url)} className="mt-1" /><span><span className="font-medium">{c.title}</span><br /><span className="break-all text-xs text-text-muted">{c.url}</span></span></label>
+            ))}
+            <label className="flex gap-2 text-sm"><input type="radio" name="find-page" checked={picked === "other" || !page.candidates.length} onChange={() => setPicked("other")} className="mt-1" /><span className="flex-1"><span className="font-medium">{START.pageOther}</span>
+              <input type="url" aria-label={START.pageOther} placeholder="https://www.canada.ca/en/immigration-refugees-citizenship/…" value={other} onFocus={() => setPicked("other")} onChange={(e) => setOther(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm" data-page-other /></span></label>
+          </fieldset>
+        ) : null}
         <fieldset className="space-y-2">
           <legend className="text-xs font-medium">How AI answers</legend>
           {MODES.map(([m, label, hint]) => (
@@ -65,7 +85,7 @@ export function FindDialog({ id, only, onClose, onStarted }: { id: string; only?
         {plan.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p> : plan.error ? <Notice tone="danger" title="This find cannot start">{plan.error.message}</Notice> : plan.data ? (
           <div className="rounded-lg border border-border p-3 text-sm" data-find-plan>
             <ol className="list-decimal space-y-0.5 pl-5">{plan.data.steps.map((s) => <li key={s.n}>{s.label} {s.uses_ai ? <Pill tone="ai">AI</Pill> : <Pill>rules</Pill>}</li>)}</ol>
-            <p className="mt-2 font-medium" data-find-cost>{mode === "live" ? `At most US$${(plan.data.totals.worst_usd ?? 0).toFixed(2)}${plan.data.totals.expected_usd != null ? ` (usually about US$${plan.data.totals.expected_usd.toFixed(2)})` : " (no earlier run to say the usual cost)"}, inside the AI spending cap.` : "Cost: US$0 (no AI call)."}</p>
+            <p className="mt-2 font-medium" data-find-cost>{mode === "live" ? `${costWords(plan.data.totals.about_usd ?? null, plan.data.totals.worst_usd ?? 0).replace(/^./, (x) => x.toUpperCase())}, inside the AI spending cap. Nothing is spent until you click Start.` : "Cost: US$0 (no AI call)."}</p>
             {plan.data.note ? <p className="mt-1 text-xs text-text-muted">{plan.data.note}</p> : null}
           </div>
         ) : null}
@@ -76,13 +96,15 @@ export function FindDialog({ id, only, onClose, onStarted }: { id: string; only?
 }
 
 /** The finder's strip above the lines: what the latest find did, Find (again), and its run while it runs. */
-export function FinderPanel({ id, latest, onRedo, removed = [] }: { id: string; latest: FinderLatest | undefined; onRedo: (codes?: string[]) => void; removed?: string[] }) {
+export function FinderPanel({ id, latest, onRedo, onChoosePage, removed = [] }: { id: string; latest: FinderLatest | undefined; onRedo: (codes?: string[]) => void; onChoosePage: () => void; removed?: string[] }) {
   const { canAuthor } = useSessionView();
   const qc = useQueryClient();
   const [runId, setRunId] = React.useState<string | null>(null);
   const run = latest?.run ?? null;
   const shown = runId ?? (run && ACTIVE.has(run.status) ? run.id : null);
   const forms = latest?.forms ?? [];
+  // S3 item 5: the run waits for the application page: the one call to action is choosing it (never a dead end).
+  const waitsForPage = !!run && !ACTIVE.has(run.status) && !!latest?.page_choice;
   const attached = forms.filter((f) => ON_LINE.has(f.state)).length, notFound = forms.filter((f) => f.state === "NOT_FOUND" || f.state === "UPLOAD_WAITING_SECOND_PERSON").length, decide = forms.filter((f) => f.state === "TO_DECIDE").length;
   // A run started here (FindDialog) is shown at once; the strip keeps it until it ends, then refreshes the lines.
   React.useEffect(() => { const h = (e: Event) => setRunId((e as CustomEvent<string>).detail); window.addEventListener("s5-find-started", h); return () => window.removeEventListener("s5-find-started", h); }, []);
@@ -90,12 +112,13 @@ export function FinderPanel({ id, latest, onRedo, removed = [] }: { id: string; 
     <section aria-label="Forms found by AI" className="space-y-3 rounded-xl border border-border bg-surface-raised p-4" data-finder>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="text-sm">
-          <p className="font-medium">{run ? `AI found ${attached} form${attached === 1 ? "" : "s"} for this combination${notFound ? `, ${notFound} not found` : ""}${decide ? `, ${decide} to decide` : ""}` : "No form find yet"}</p>
-          <p className="text-xs text-text-muted" data-finder-status>{run ? `Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · saved AI answers, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}. ` : "Start setup runs the form finder: AI reads the application's canada.ca pages and guide and attaches the forms it finds. "}Which forms apply is Sample until the immigration expert confirms.</p>
+          <p className="font-medium">{waitsForPage ? START.pageTitle : run ? `AI found ${attached} form${attached === 1 ? "" : "s"} for this combination${notFound ? `, ${notFound} not found` : ""}${decide ? `, ${decide} to decide` : ""}` : "No form find yet"}</p>
+          <p className="text-xs text-text-muted" data-finder-status>{waitsForPage ? `${START.pageBody} ` : run ? `Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · saved AI answers, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}. ` : `${START.body} `}Which forms apply is Sample until the immigration expert confirms.</p>
         </div>
         {/* Lead split (28 Oct): the first find is started from Start setup (screens lane, S3): its "Find forms with AI"
-            button goes in this slot. Once a find exists, Find again is this list's own action. */}
-        {run ? (canAuthor ? <Button size="sm" variant="secondary" onClick={() => onRedo()} disabled={!!shown}><RefreshCw /> Find again</Button> : null) : <div data-finder-start />}
+            button is this slot. Once a find exists, Find again (or choosing the page it waits for) is this list's one action. */}
+        {run ? (canAuthor ? (waitsForPage ? <Button size="sm" onClick={onChoosePage} disabled={!!shown} data-find-forms="page">{START.pageButton}</Button>
+          : <Button size="sm" variant="secondary" onClick={() => onRedo()} disabled={!!shown} data-find-forms="again"><RefreshCw /> Find again</Button>) : null) : <FindFormsStart combinationId={id} />}
       </div>
       {shown ? <RunCard runId={shown} onEnded={() => { setRunId(null); for (const k of [...formsKeys(id), ["combination", id, "finder"]]) void qc.invalidateQueries({ queryKey: k }); }} /> : null}
       {/* A form removed in this draft is listed once, under "Removed in this draft" with Add back (forms.tsx). */}
