@@ -42,7 +42,7 @@ export class Structure {
   }
 
   /** GET /structure: the outline of one Pathway type, with what each name holds and any open lifecycle change. */
-  async list(query: unknown) {
+  async list(query: unknown, actorId?: string) {
     const q = parse(StructureQuery, query);
     const workspaceId = await this.ws.id();
     const g = await this.graph(workspaceId);
@@ -55,7 +55,7 @@ export class Structure {
     const comboOf = new Map(combos.map((c) => [c.programDefId, { id: c.id, programDefId: c.programDefId, released: c._count.releases > 0, retired: !!c.retiredAt }]));
     const open = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, status: { in: ["WAITING", "RETURNED", "APPROVED"] }, kind: { in: ["structure_node", "combination"] } }, select: { key: true } })).map((c) => c.key));
     const under = (k: string): ProgramDef[] => g.kids(k).flatMap((c) => [c, ...under(c.programNodeKey)]);
-    const actionOf = (n: ProgramDef) => { const below = under(n.programNodeKey); return rowAction({ node: n, below, parent: n.parentNodeKey ? g.byKey.get(n.parentNodeKey) ?? null : null, combos: [n, ...below].flatMap((x) => comboOf.get(x.id) ?? []), open }, pending.has(n.programNodeKey)); };
+    const actionOf = (n: ProgramDef) => { const below = under(n.programNodeKey); return rowAction({ node: n, below, parent: n.parentNodeKey ? g.byKey.get(n.parentNodeKey) ?? null : null, combos: [n, ...below].flatMap((x) => comboOf.get(x.id) ?? []), open }, pending.has(n.programNodeKey), actorId); };
     const out: StructureNode[] = [];
     const walk = (n: ProgramDef): { combinations: number; live: number; needs: number } => {
       const kids = g.kids(n.programNodeKey);
@@ -271,7 +271,7 @@ export class Structure {
 @Controller("api")
 export class StructureController {
   constructor(@Inject(Structure) private readonly s: Structure, @Inject(Lifecycle) private readonly l: Lifecycle) {}
-  @Get("structure") list(@Headers("x-actor") a: string | undefined, @Query() q: unknown) { readerOf(a); return this.s.list(q); }
+  @Get("structure") list(@Headers("x-actor") a: string | undefined, @Query() q: unknown) { return this.s.list(q, readerOf(a).id); }
   @Post("structure/name-check") nameCheck(@Headers("x-actor") a: string | undefined, @Body() b: unknown) { readerOf(a); return this.s.nameCheck(b); }
   @Post("structure/meaning-check") meaning(@Headers("x-actor") a?: string) { return this.s.meaningCheck(actorOf(a)); }
   @Post("structure/path") path(@Headers("x-actor") a: string | undefined, @Body() b: unknown) { return this.s.path(actorOf(a), b); }

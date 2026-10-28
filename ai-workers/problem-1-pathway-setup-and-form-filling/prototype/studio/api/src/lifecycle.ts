@@ -9,6 +9,7 @@ import type { LibraryChange, Prisma, ProgramDef } from "@prisma/client";
 import { LEVEL_OF, LEVEL_WORD, PATHWAY_TYPE_LABEL, type LifecycleAction, type PathwayType, type RowAction, type Use, type UsesView } from "../../contracts/structure.ts";
 import { ACTORS, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { changeView } from "./library-changes.ts";
+import { RECHECK, WHY } from "../../contracts/lifecycle.ts";
 
 export const LIFECYCLE_KINDS = ["structure_node", "combination"] as const;
 export type LifecycleKind = (typeof LIFECYCLE_KINDS)[number];
@@ -50,27 +51,32 @@ export function nodeCan(f: NodeFacts): UsesView["can"] & { withCombination: stri
   const { node, below, parent, combos, open } = f;
   const own = combos.find((c) => c.programDefId === node.id) ?? null;
   const released = combos.some((c) => c.released);
-  const opened = open.has(node.programNodeKey) ? "A change to it is already open." : own && open.has(own.id) ? "A change to its combination is already open." : null;
+  const opened = open.has(node.programNodeKey) ? WHY.waiting : own && open.has(own.id) ? WHY.waitingCombination : null;
   const setup = below.find((n) => combos.some((c) => c.programDefId === n.id)); // the first in page order
   const underOpen = below.find((n) => open.has(n.programNodeKey) || combos.some((c) => c.programDefId === n.id && open.has(c.id)));
   const underRetired = below.find((n) => n.retiredAt);
-  const active = [...below.filter((n) => !n.retiredAt).map((n) => `"${n.label}" under it`), ...combos.filter((c) => !c.retired && c !== own).map((c) => `the combination "${below.find((n) => n.id === c.programDefId)?.label ?? "under it"}"`)];
+  const active = [...new Set([...below.filter((n) => !n.retiredAt).map((n) => n.label), ...combos.filter((c) => !c.retired && c !== own).map((c) => below.find((n) => n.id === c.programDefId)?.label ?? node.label)])];
   return {
-    delete: opened ?? (released ? "It was released to firms, so it is retired, never deleted (L2)." : node.retiredAt ? "It is retired." : own ? "Its setup draft uses it." : setup ? `"${setup.label}" under it has a setup draft.` : underOpen ? `A change to "${underOpen.label}" under it is already open.` : underRetired ? `"${underRetired.label}" under it is retired.` : null),
-    retire: opened ?? (node.retiredAt ? "It is already retired." : !released ? "It was never released: delete it instead (L1)." : active.length ? `Still used: ${active.slice(0, 3).join("; ")}${active.length > 3 ? ` and ${active.length - 3} more` : ""}: retire those first (L3).` : null),
-    restore: opened ?? (!node.retiredAt ? "It is not retired." : parent?.retiredAt ? `"${parent.label}" above it is retired: restore it first.` : null),
+    delete: opened ?? (released ? WHY.released : node.retiredAt ? WHY.retiredNoDelete : own ? WHY.ownSetup : setup ? WHY.setupUnder(setup.label) : underOpen ? WHY.waitingUnder(underOpen.label) : underRetired ? WHY.retiredUnder(underRetired.label) : null),
+    retire: opened ?? (node.retiredAt ? WHY.alreadyRetired : !released ? WHY.neverReleased : active.length ? WHY.stillUsed(active) : null),
+    restore: opened ?? (!node.retiredAt ? WHY.notRetired : parent?.retiredAt ? WHY.parentRetired(parent.label) : null),
     withCombination: own && (node.retiredAt ? own.retired : !own.retired && own.released) ? own.id : null,
   };
 }
+/** An author's own never-approved draft (P-116 amended 28 Oct): deletable, and every name in the branch was added by
+ *  this person (names are never approved on their own; once released or used they are not deletable at all). */
+export const ownDraft = (f: NodeFacts, actorId: string | undefined) => !!actorId && !nodeCan(f).delete && [f.node, ...f.below].every((n) => n.createdBy === actorId);
 /** The row's one action (P-128 R3-2): Withdraw while a change waits, Restore when retired, Retire once released, else
- *  Delete; with why it cannot, and for a Delete the names that go with it. */
-export function rowAction(f: NodeFacts, pending: boolean): RowAction {
+ *  Delete; with why it cannot, for a Delete the names that go with it, and whether it is deleted at once. */
+export function rowAction(f: NodeFacts, pending: boolean, actorId?: string): RowAction {
   const can = nodeCan(f);
-  if (pending) return { kind: "WITHDRAW", why: null, below: [], withCombination: false };
-  if (f.node.retiredAt) return { kind: "RESTORE", why: can.restore, below: [], withCombination: !!can.withCombination };
-  if (f.combos.some((c) => c.released)) return { kind: "RETIRE", why: can.retire, below: [], withCombination: !!can.withCombination };
-  return { kind: "DELETE", why: can.delete, below: can.delete ? [] : f.below.map((n) => n.programNodeKey), withCombination: false };
+  if (pending) return { kind: "WITHDRAW", why: null, below: [], withCombination: false, immediate: false };
+  if (f.node.retiredAt) return { kind: "RESTORE", why: can.restore, below: [], withCombination: !!can.withCombination, immediate: false };
+  if (f.combos.some((c) => c.released)) return { kind: "RETIRE", why: can.retire, below: [], withCombination: !!can.withCombination, immediate: false };
+  return { kind: "DELETE", why: can.delete, below: can.delete ? [] : f.below.map((n) => n.programNodeKey), withCombination: false, immediate: ownDraft(f, actorId) };
 }
+const OWN_DRAFT_NOTE = "Deleted at once: the author's own draft, never approved, released or used.";
+const RECHECK_UNDONE = "Undone at once.";
 
 @Injectable()
 export class Lifecycle {
@@ -137,9 +143,9 @@ export class Lifecycle {
     if (p) uses.push({ kind: "draft_change", label: `${p.action[0]}${p.action.slice(1).toLowerCase()} waiting (${p.status.toLowerCase()})`, href: `/review/change/${p.id}`, blocks: true, why: "A change to it is already open: approve, return or withdraw it first" });
     const released = c.releases.length > 0;
     const can = {
-      delete: p ? "A change to it is already open." : released ? "It was released to firms, so it is retired, never deleted (L2)." : c._count.cases ? "It has cases." : c.retiredAt ? "It is retired." : null,
-      retire: p ? "A change to it is already open." : c.retiredAt ? "It is already retired." : !released ? "It was never released: delete it instead (L1)." : null,
-      restore: p ? "A change to it is already open." : !c.retiredAt ? "It is not retired." : c.program.retiredAt ? `"${c.program.label}" is retired: restore it on the Structure first.` : null,
+      delete: p ? WHY.waiting : released ? WHY.released : c._count.cases ? WHY.hasCases : c.retiredAt ? WHY.retiredNoDelete : null,
+      retire: p ? WHY.waiting : c.retiredAt ? WHY.alreadyRetired : !released ? WHY.neverReleased : null,
+      restore: p ? WHY.waiting : !c.retiredAt ? WHY.notRetired : c.program.retiredAt ? `"${c.program.label}" is retired: restore it on the Structure first.` : null,
     };
     return { key: id, label: c.label, trail, retired: !!c.retiredAt, released, uses, can, pending: p ? { id: p.id, action: p.action as LifecycleAction, by: nameOf(p.proposedBy) } : null, history: await this.history(workspaceId, id, false) };
   }
@@ -161,6 +167,10 @@ export class Lifecycle {
     const u = await this.usesOf(kind, key);
     const no = this.refusal(u, action);
     if (no) throw problem(409, `Cannot ${action.toLowerCase()}`, no, { uses: u.uses });
+    if (kind === "structure_node" && action === "DELETE") {
+      const g = await graph(this.db, workspaceId), f = await this.facts(workspaceId, g, key);
+      if (ownDraft(f, actor.id)) return this.deleteOwnDraft(actor, workspaceId, g, f, reason);
+    }
     // QA-51 (BR-7): the trail starts with the Pathway type, as on the Structure: both types can hold the same names.
     const at = kind === "structure_node" ? key : (await this.db.combination.findUnique({ where: { id: key }, select: { program: { select: { programNodeKey: true } } } }))?.program.programNodeKey;
     const type = at ? pathwayTypeOf(await graph(this.db, workspaceId), at) : null;
@@ -183,11 +193,54 @@ export class Lifecycle {
     return changeView(c);
   }
 
+  /** An author's own draft is deleted at once, branch included, leaves first (P-116 amended): the change is recorded as
+   *  done, with every row kept in it so Undo can bring them back exactly. */
+  private async deleteOwnDraft(actor: Actor, workspaceId: string, g: Graph, f: NodeFacts, reason: string) {
+    const rows = [f.node, ...f.below];
+    const depth = (n: ProgramDef) => { let d = 0; for (let x = n; x.parentNodeKey; x = g.byKey.get(x.parentNodeKey)!) d++; return d; };
+    const label = [PATHWAY_TYPE_LABEL[(pathwayTypeOf(g, f.node.programNodeKey) ?? "INDIVIDUAL") as PathwayType], ...trailOf(g, f.node.programNodeKey)].join(" › ");
+    const c = await this.db.$transaction(async (tx) => {
+      if (await tx.combination.count({ where: { programDefId: { in: rows.map((n) => n.id) } } })) throw problem(409, "Cannot delete", WHY.ownSetup);
+      for (const n of [...rows].sort((a, b) => depth(b) - depth(a))) await tx.programDef.delete({ where: { id: n.id } });
+      return tx.libraryChange.create({ data: { workspaceId, kind: "structure_node", key: f.node.programNodeKey, label, action: "DELETE", reason, status: "RELEASED", proposedBy: actor.id, decidedBy: actor.id, decidedAt: new Date(), decisionNote: OWN_DRAFT_NOTE,
+        matches: { keys: rows.map((n) => n.programNodeKey), rows: [...rows].sort((a, b) => depth(a) - depth(b)) } as unknown as Prisma.InputJsonValue } });
+    });
+    await this.audit.log(workspaceId, actor.id, "deleted", "structure", f.node.programNodeKey, `${actor.name} deleted "${label}"${f.below.length ? ` and the ${f.below.length} names under it` : ""}: their own draft, never approved, released or used`);
+    return { ...changeView(c), immediate: true };
+  }
+  /** Undo of an own-draft delete: the same rows come back, parents first, unless a name now holds one of their places. */
+  async undoOwnDelete(actor: Actor, id: string) {
+    need(actor, "author");
+    const c = await this.db.libraryChange.findUnique({ where: { id } });
+    if (!c || c.kind !== "structure_node" || c.action !== "DELETE" || c.status !== "RELEASED" || c.decisionNote !== OWN_DRAFT_NOTE) throw problem(409, "Cannot undo", "Only a delete of your own draft can be undone here.");
+    if (c.proposedBy !== actor.id) throw problem(403, "Not yours", "Only the person who deleted it can undo it.");
+    const rows = ((c.matches as { rows?: Record<string, unknown>[] }).rows ?? []) as (ProgramDef & Record<string, unknown>)[];
+    await this.db.$transaction(async (tx) => {
+      const g = await graph(tx, c.workspaceId);
+      const top = rows[0];
+      if (rows.some((r) => g.byKey.has(r.programNodeKey))) throw problem(409, "Cannot undo", "A name was added in its place meanwhile: add it again with Add.");
+      if (top?.parentNodeKey && (!g.byKey.has(top.parentNodeKey) || g.byKey.get(top.parentNodeKey)!.retiredAt)) throw problem(409, "Cannot undo", "The name above it is gone or retired: add it again with Add.");
+      for (const r of rows) await tx.programDef.create({ data: r as unknown as Prisma.ProgramDefUncheckedCreateInput });
+      await tx.libraryChange.update({ where: { id }, data: { status: "WITHDRAWN", decisionNote: RECHECK_UNDONE } });
+    }).catch((e) => { if ((e as { code?: string }).code === "P2002") throw problem(409, "Cannot undo", "A name was added in its place meanwhile: add it again with Add."); throw e; });
+    await this.audit.log(c.workspaceId, actor.id, "restored", "structure", c.key, `${actor.name} undid deleting "${c.label}": it is back`);
+    return changeView((await this.db.libraryChange.findUnique({ where: { id } }))!);
+  }
+  /** ReviewCard (P-116 amended): the approval re-check, run now, so the approver sees it before the click. */
+  async recheck(c: LibraryChange): Promise<{ ok: boolean; text: string; kept: string[] } | null> {
+    if (!isLifecycleKind(c.kind) || c.status !== "WAITING") return null;
+    const u = await this.usesOf(c.kind, c.key).catch(() => null);
+    if (!u) return { ok: false, text: RECHECK.gone, kept: [] };
+    const others = { ...u, uses: u.uses.filter((x) => x.kind !== "draft_change"), can: { delete: null, retire: null, restore: null } as UsesView["can"] };
+    const again = c.kind === "structure_node" ? await this.recheckNode(c) : await this.recheckCombination(c, others);
+    return { ok: !again, text: again ?? RECHECK.clear, kept: u.uses.filter((x) => !x.blocks && x.kind !== "draft_change").map((x) => x.label) };
+  }
+
   /** Checked again when a second person approves: something may have started using it since it was proposed. */
   async checkApprove(c: LibraryChange) {
     if (!isLifecycleKind(c.kind)) return;
     const u = await this.usesOf(c.kind, c.key).catch(() => null);
-    if (!u) throw problem(409, "No longer there", "It was deleted meanwhile: return this change.");
+    if (!u) throw problem(409, "No longer there", RECHECK.gone);
     const others = { ...u, uses: u.uses.filter((x) => x.kind !== "draft_change"), can: { delete: null, retire: null, restore: null } as UsesView["can"] };
     const again = c.kind === "structure_node" ? await this.recheckNode(c) : await this.recheckCombination(c, others);
     if (again) throw problem(409, "No longer allowed", `${again} Return this change with that reason.`, { uses: u.uses });
@@ -199,10 +252,10 @@ export class Lifecycle {
     if (c.action === "DELETE") {
       const listed = new Set(Array.isArray(c.matches) && c.matches.length ? (c.matches as string[]) : [c.key]);
       const extra = f.below.find((n) => !listed.has(n.programNodeKey));
-      if (extra) return `Changed since it was proposed: "${extra.label}" was added under it.`;
-      return can.delete ? `Used meanwhile: ${can.delete}` : null;
+      if (extra) return RECHECK.added(extra.label);
+      return can.delete ? RECHECK.used(can.delete) : null;
     }
-    if (c.action === "RETIRE") return can.retire ? `Used meanwhile: ${can.retire}` : null;
+    if (c.action === "RETIRE") return can.retire ? RECHECK.used(can.retire) : null;
     return can.restore;
   }
   private async recheckCombination(c: LibraryChange, u: UsesView) {

@@ -158,8 +158,8 @@ export function StructurePage() {
     if (e.key === "ArrowDown") go(i + 1); else if (e.key === "ArrowUp") go(i - 1); else if (e.key === "Home") go(0); else if (e.key === "End") go(rowKeys.length - 1);
     else if (e.key === "Delete" && (e.target as HTMLElement).dataset.edit !== undefined) { document.querySelector<HTMLElement>(`[data-row="${CSS.escape(key)}"] [data-action]`)?.click(); e.preventDefault(); }
   };
-  const rowProps = (n: StructureNode) => ({ n, num: num.get(n.key) ?? null, selected: selected === n.key, current: cur === n.key, justAdded: justAdded === n.key, canAuthor, words,
-    onEdit: () => { setCurrent(n.key); set({ node: n.key }); }, onAction: () => { setCurrent(n.key); setActing({ busy: false, error: null }); set({ node: null }); setConfirm({ key: n.key, kind: n.action.kind }); }, onKey: onRowKey(n.key), wide: !selectedNode });
+  const rowProps = (n: StructureNode) => ({ n, num: num.get(n.key) ?? null, selected: selected === n.key || confirm?.key === n.key, current: cur === n.key, justAdded: justAdded === n.key, canAuthor, words,
+    onEdit: () => { setCurrent(n.key); set({ node: n.key }); }, onAction: () => { setCurrent(n.key); setActing({ busy: false, error: null }); set({ node: null }); setConfirm({ key: n.key, kind: n.action.kind }); }, onKey: onRowKey(n.key), wide: !selectedNode && !confirm });
 
   // The confirm (ImpactPanel, the right panel), then the Undo toast (P-116 amended): an author's own draft is deleted at
   // once (Undo brings it back); anything else waits for a second person (Undo withdraws it).
@@ -287,7 +287,7 @@ export function StructurePage() {
               action={otherMatches ? <p className="text-sm">{otherMatches} {otherMatches === 1 ? "match" : "matches"} in {TYPES.find((t) => t.value !== type)!.label}. <button type="button" className="font-semibold text-text-link underline underline-offset-2" onClick={() => set({ t: type === "INDIVIDUAL" ? "CORPORATE" : null, node: null, p: null, prog: null })}>Show {otherMatches === 1 ? "it" : "them"}</button></p> : <Button size="sm" variant="secondary" onClick={() => { setQ(""); set({ p: null, prog: null, s: null, q: null }); }}>Clear all filters</Button>} />
           ) : view === "tree" ? (
             <div data-tree>
-              <Heads wide={!selectedNode} first="Name" />
+              <Heads wide={!selectedNode && !confirm} first="Name" />
               {pathways.filter((p) => shown.has(p.key)).map((p) => {
                 const shut = closed.has(p.key);
                 return (
@@ -316,7 +316,7 @@ export function StructurePage() {
             </div>
           ) : (
             <div className="rounded-xl border border-border bg-surface-raised" data-list>
-              <Heads wide={!selectedNode} first="Combination: Pathway type › Pathway › Program › Category › Sub-category" list />
+              <Heads wide={!selectedNode && !confirm} first="Combination: Pathway type › Pathway › Program › Category › Sub-category" list />
               {(sort === "az" ? [...leaves].sort((a, b) => trailOf(a).map((x) => x.label).join("|").localeCompare(trailOf(b).map((x) => x.label).join("|"), "en-CA")) : leaves).map((n) => (
                 <React.Fragment key={n.key}>
                   <Row {...rowProps(n)} list trail={[typeLabel, ...trailOf(n).map((x) => x.label)]} />

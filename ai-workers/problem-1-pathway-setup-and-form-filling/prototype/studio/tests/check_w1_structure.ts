@@ -154,6 +154,9 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
   ok("C11.4 B1: the free path proposal finds a combination under the second Retail Pathway", r.body.proposal?.pathwayKey === prR && r.body.proposal?.category?.label === "Federal skilled worker", r.body.proposal);
 
   // ---------------------------------------------------------------- lifecycle on a draft name (never released)
+  // These names count as another person's, so a delete waits for a second person (P-116 amended: an author's own
+  // draft is deleted at once, covered in check_w1_structure_r3.ts).
+  sql("update program_def set created_by = 'user-C'");
   let u = (await call("GET", `/structure/nodes/${typo}/uses`)).body;
   ok("C11.9 L1: 'where used' first: an unused draft name may be removed, not retired", u.can.delete === null && /never released/.test(u.can.retire) && u.uses.length === 0, u.can);
   r = await call("DELETE", `/structure/nodes/${typo}`, { reason: "Typing slip; Visitor visa already exists." });
@@ -216,7 +219,7 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
   u = (await call("GET", `/combinations/${live.combinationId}/uses`)).body;
   ok("C11.9 A2 pass: its own release and its open case do not block retiring a Live combination; they are listed", u.can.retire === null && u.can.delete !== null && u.uses.some((x: any) => x.kind === "case" && !x.blocks) && u.uses.some((x: any) => x.kind === "release" && !x.blocks), u.can);
   r = await call("DELETE", `/combinations/${live.combinationId}`, { reason: "Not used" });
-  ok("C11.9 L2 fail: a released combination is retired, never deleted", r.status === 409 && /retired, never deleted/.test(r.body.detail), r.body.detail);
+  ok("C11.9 L2 fail: a released combination is retired, never deleted", r.status === 409 && /^Can't delete: released items are kept. Retire it instead./.test(r.body.detail), r.body.detail);
   r = await call("POST", `/combinations/${live.combinationId}/retire`, { reason: "Replaced by the new route (Sample)" });
   const ret = r.body;
   const queue = (await call("GET", "/review-queue", undefined, "user-B")).body;

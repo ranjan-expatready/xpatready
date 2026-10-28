@@ -7,7 +7,9 @@
 // Sample inputs plus one saved AI replay (US$0) and one released-but-Not-ready combination. No model call.
 //   zsh studio/tools/isolated.sh screens_s1s2 4448 start && node studio/tests/check_w1_s1s2_fix.cjs 4448 xr_studio_screens_s1s2
 const { chromium } = require("../node_modules/playwright");
-const PORT = Number(process.argv[2] ?? 4448);
+const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_screens_s1s2";
+const { execFileSync } = require("node:child_process");
+const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 const BASE = `http://localhost:${PORT}`;
 let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 220)}` : ""}`); };
@@ -137,11 +139,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== QA-46: one word everywhere (since P-128: Delete)
   const extra = (await api("/structure/nodes", { method: "POST", data: { pathwayType: "INDIVIDUAL", level: "program", label: "Removable program (test)", parentKey: "retail.citizenship" } })).body.key;
+  sql(`update program_def set created_by = 'user-C' where program_node_key = '${extra}'`); // another person's: it goes to a second person
   await p.goto(`${BASE}/structure?node=${encodeURIComponent(extra)}`);
   await panel().getByRole("button", { name: "Delete" }).click();
-  await p.getByLabel(/Why delete/).fill("Added by mistake (test).");
-  await panel().getByRole("button", { name: "Send for approval" }).click();
-  await panel().locator("[data-panel-note]").waitFor();
+  await p.locator("[data-impact-panel]").getByLabel(/Why delete/).fill("Added by mistake (test).");
+  await p.locator("[data-impact-panel]").getByRole("button", { name: "Send for approval" }).click();
+  await p.locator("[data-page-note]").waitFor();
   await as("user-B"); await p.goto(`${BASE}/review`); await p.waitForTimeout(800);
   const row = p.locator('tr[data-kind="library_change"]').filter({ hasText: "Removable program (test)" });
   const rowText = (await row.innerText().catch(() => "")) ?? "";

@@ -2,8 +2,10 @@
 // option A) walked like a person in a real browser, desktop only (1440 and 1024 px). Empty after Reset → the first
 // Pathway through the one "Add to Program structure" pop-up → a branch with "Add and add another", prefilled from the
 // filters → the P-112 Sample names (the rest through the same POST /structure/path) → the Tree: numbered outline, Pathway
-// and Program blocks, names in text colour, Edit and one action on every row, Used by → row actions: a greyed Delete says
-// why, a branch Delete lists what goes, waits, is withdrawn, then approved on To review → the List: full trail, the same
+// and Program blocks, names in text colour, Edit and one action on every row, Used by → row actions on the shared pattern
+// (P-116 amended): a greyed Delete says why in visible text, See where used; the author's own draft deletes at once with
+// Undo; someone else's goes to a second person (ImpactPanel, Undo = Withdraw), approved on To review after the
+// re-check is shown → the List: full trail, the same
 // numbers, A to Z, remembered per person → the filter bar (Pathway chips, Program, Status, chips and Clear all, kept in
 // the address) → the pop-up's checks → the Edit panel (trail, where used, order, rename, conflict) → keyboard (one Tab
 // stop, ↑ / ↓, Enter, Delete) → Find and the other tab → Show retired (numbers never move) → read-only approver → long
@@ -139,32 +141,50 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   step("C11.3 minor 6: at 1024 px Edit and the action stay written; Used by moves to the Edit panel", words1024.join("|") === "Edit|Delete" && !(await row("Visitor visa").locator("[data-used-by-line]").isVisible()) && await noSideways(), words1024.join("|"));
   await p.setViewportSize({ width: 1440, height: 900 }); await p.waitForTimeout(150);
 
-  // ======================================================== row actions: why not; a branch Delete; Withdraw; approval
-  const vvTip = await tipOf(row("Visitor visa").locator("[data-action]"));
-  step("C11.9 R3-2 fail: a combination row with a setup draft has a greyed Delete that says why", (await row("Visitor visa").locator("[data-action]").getAttribute("aria-disabled")) === "true" && /Can.t delete: Its setup draft uses it/.test(vvTip), vvTip);
-  step("C11.9 R3-4 fail: a Program with a setup draft under it has a greyed Delete naming it", (await row("Visitors").locator("[data-action]").getAttribute("aria-disabled")) === "true" && /Visitor visa" under it has a setup draft/.test(await tipOf(row("Visitors").locator("[data-action]"))));
+  // ======================================================== row actions (P-116 amended, the shared pattern): why not, own draft, second person
+  const blocked = (name) => row(name).locator("[data-blocked-line]");
+  step("C11.9 P-116 amended fail: a combination row with a setup draft has a greyed Delete; the reason is visible text under it", (await row("Visitor visa").locator("[data-action]").getAttribute("aria-disabled")) === "true" && (await blocked("Visitor visa").innerText()).startsWith("Can't delete: its setup draft uses it.") && (await row("Visitor visa").locator("[data-action]").getAttribute("aria-describedby")) === `why-${vv}`, await blocked("Visitor visa").innerText().catch(() => ""));
+  step("C11.9 R3-4 fail: a Program with a setup draft under it has a greyed Delete naming it, in plain words (no rule codes)", /^Can't delete: "Visitor visa" under it has a setup draft\./.test(await blocked("Visitors").innerText()) && !/\(L\d\)/.test(await p.locator("[data-tree]").innerText()));
   await row("Visitors").locator("[data-action]").click({ force: true });
-  step("C11.9 R3-2 fail: clicking a greyed Delete opens nothing", await p.locator("[data-confirm]").count() === 0);
+  step("C11.9 R3-2 fail: clicking a greyed Delete opens nothing", await p.locator("[data-impact-panel]").count() === 0);
+  await blocked("Visitors").getByRole("button", { name: "See where used" }).click();
+  await panel().locator("[data-where-panel]").waitFor(); await p.waitForFunction(() => !document.querySelector("[data-where-panel] [role=status]"));
+  step("C11.9 WherePanel: 'See where used' opens Edit; what stops it is listed apart from what is kept", /Visitor visa/.test(await panel().locator("[data-where-panel] [data-stops]").innerText().catch(() => "")), await panel().locator("[data-where-panel]").innerText());
+  await panel().getByRole("button", { name: "Close the details" }).click();
+  // The author's own draft (every name here was added by this author): deleted at once, Undo brings it back.
   await row("Family sponsorship").locator("[data-action]").click();
-  const confirmBox = p.locator('[data-confirm]');
-  await confirmBox.waitFor();
-  step("C11.9 R3-3/R3-4 pass: Delete on an unused Program confirms in the page and lists what goes with it, numbered", /Delete "Family sponsorship" and everything under it\?/.test(await confirmBox.textContent()) && /2\.2\.1 Spouse or common-law partner/.test(await confirmBox.locator("[data-goes-with]").textContent()) && await confirmBox.locator("[data-confirm-send]").isDisabled());
+  const impact = p.locator("[data-impact-panel]");
+  await impact.waitFor();
+  step("C11.9 ImpactPanel pass (own draft): the confirm is in the right panel, lists what goes with it, numbered, and needs no reason", /Delete "Family sponsorship" and everything under it\?/.test(await impact.innerText()) && /2\.2\.1 Spouse or common-law partner/.test(await impact.locator("[data-goes-with]").innerText()) && await impact.locator("[data-own-draft]").count() === 1 && await impact.getByRole("textbox").count() === 0 && (await impact.locator("[data-confirm-send]").innerText()).trim() === "Delete");
+  await state("delete-own-draft");
+  await impact.locator("[data-confirm-send]").click();
+  await p.locator("[data-undo-toast]").waitFor();
+  await row("Family sponsorship").waitFor({ state: "detached", timeout: 8000 }).catch(() => undefined);
+  step("C11.9 P-116 amended pass: the author's own draft is deleted at once (nothing waits on To review); the Undo toast says so", await row("Family sponsorship").count() === 0 && sql(`select count(*) from program_def where label in ('Family sponsorship','Spouse or common-law partner')`) === "0" && sql("select count(*) from library_change where status='WAITING'") === "0" && /Deleted "Family sponsorship" and the 1 name under it\./.test(await p.locator("[data-undo-toast]").innerText()), `rows ${await row("Family sponsorship").count()} · db ${sql(`select count(*) from program_def where label in ('Family sponsorship','Spouse or common-law partner')`)} · waiting ${sql("select count(*) from library_change where status='WAITING'")} · toast ${await p.locator("[data-undo-toast]").innerText()}`);
+  await p.locator("[data-undo-toast] [data-undo]").click();
+  await row("Family sponsorship").waitFor();
+  step("C11.9 P-116 amended pass: Undo brings the names back in place (same numbers)", await numOf("Family sponsorship") === "2.2" && await numOf("Spouse or common-law partner") === "2.2.1" && /Undone: "Family sponsorship" is back/.test(await p.locator("[data-page-note]").innerText()));
+  // Someone else's draft: it goes to a second person.
+  sql(`update program_def set created_by = 'user-C' where label in ('Family sponsorship','Spouse or common-law partner')`);
+  await open();
+  await row("Family sponsorship").locator("[data-action]").click(); await impact.waitFor();
+  step("C11.9 ImpactPanel pass (second person): it says who approves and when it takes effect, and Send waits for a reason", /Approves\s*A second person, on To review/.test(await impact.innerText()) && /Takes effect\s*When it is approved/.test(await impact.innerText()) && await impact.locator("[data-confirm-send]").isDisabled() && (await impact.locator("[data-confirm-send]").innerText()).trim() === "Send for approval");
   await state("delete-branch-confirm");
-  await confirmBox.getByLabel(/Why\?/).fill("Not offered (Sample).");
-  await confirmBox.locator("[data-confirm-send]").click();
+  await impact.getByLabel(/Why delete it\?/).fill("Not offered (Sample).");
+  await impact.locator("[data-confirm-send]").click();
   await p.waitForFunction(() => /Deletion waiting/.test([...document.querySelectorAll("[data-row]")].find((r) => r.querySelector("[data-name]")?.textContent === "Family sponsorship")?.textContent ?? ""));
-  step("C11.9 L4: the deletion waits for a second person: marked on the row, the action is now Withdraw, nothing deleted", (await row("Family sponsorship").locator("[data-action]").getAttribute("data-action")) === "WITHDRAW" && sql(`select count(*) from program_def where label in ('Family sponsorship','Spouse or common-law partner')`) === "2" && /Sent to a second person on To review: "Family sponsorship" and the 1 names under it are deleted when approved/.test(await p.locator("[data-page-note]").textContent()));
-  await state("delete-waiting");
-  await row("Family sponsorship").locator("[data-action]").click();
-  await confirmBox.getByLabel(/Why withdraw/).fill("Keep it for now."); await confirmBox.locator("[data-confirm-send]").click();
+  step("C11.9 L4: the deletion waits for a second person: marked on the row, the action is now Withdraw, nothing deleted", (await row("Family sponsorship").locator("[data-action]").getAttribute("data-action")) === "WITHDRAW" && sql(`select count(*) from program_def where label in ('Family sponsorship','Spouse or common-law partner')`) === "2" && /Sent for approval: Delete "Family sponsorship"\./.test(await p.locator("[data-undo-toast]").innerText()));
+  await p.locator("[data-undo-toast] [data-undo]").click();
   await p.waitForFunction(() => [...document.querySelectorAll("[data-row]")].find((r) => r.querySelector("[data-name]")?.textContent === "Family sponsorship")?.querySelector("[data-action]")?.getAttribute("data-action") === "DELETE");
-  step("C11.9 L1 Undo: Withdraw on the row ends the waiting deletion; Delete is back", sql("select status from library_change where kind='structure_node' order by proposed_at desc limit 1") === "WITHDRAWN");
-  await row("Family sponsorship").locator("[data-action]").click();
-  await confirmBox.getByLabel(/Why\?/).fill("Not offered (Sample)."); await confirmBox.locator("[data-confirm-send]").click();
+  step("C11.9 Undo toast: Undo withdraws the waiting deletion at once; Delete is back", sql("select status from library_change where kind='structure_node' order by proposed_at desc limit 1") === "WITHDRAWN");
+  await row("Family sponsorship").locator("[data-action]").click(); await impact.waitFor();
+  await impact.getByLabel(/Why delete it\?/).fill("Not offered (Sample)."); await impact.locator("[data-confirm-send]").click();
   await p.waitForFunction(() => /Deletion waiting/.test(document.querySelector("[data-tree]")?.textContent ?? ""));
+  await state("delete-waiting");
   const chg = sql("select id from library_change where kind='structure_node' and status='WAITING'");
   await as("user-B"); await p.goto(`${BASE}/review/change/${chg}`); await p.locator("main h1").waitFor();
   step("C11.9 R3-4: the approver sees 'Delete structure name' and every name that goes with it", /^Delete structure name: Retail › Permanent residence › Family sponsorship/.test(await p.locator("main h1").textContent()) && /Spouse or common-law partner/.test(await p.locator("[data-goes-with]").textContent()));
+  step("C11.9 ReviewCard: the re-check is said before the click", /Checked again just now: nothing new uses it/.test(await p.locator('[data-recheck="ok"]').innerText().catch(() => "")));
   await p.getByRole("button", { name: "Approve", exact: true }).click();
   const toast = await p.getByText(/approved/).first().innerText({ timeout: 10000 }).catch(() => "");
   step("C11.9 R3-4 pass: approved, the Program and its category are deleted at once, and the message says so", /approved and deleted/.test(toast) && sql(`select count(*) from program_def where label in ('Family sponsorship','Spouse or common-law partner')`) === "0", toast);
@@ -286,8 +306,8 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await p.keyboard.press("End"); await p.waitForTimeout(100);
   step("keyboard: End goes to the last row", await focused() === "Start-up visa", await focused());
   await p.keyboard.press("Delete"); await p.waitForTimeout(200);
-  step("keyboard: the Delete key opens the row's own action (Delete on an unused line, confirmed in the page)", await p.locator('[data-confirm]').count() === 1 && /Delete "Start-up visa"\?/.test(await p.locator("[data-confirm]").textContent()));
-  await p.locator("[data-confirm]").getByRole("button", { name: "Cancel" }).click();
+  step("keyboard: the Delete key opens the row's own action (Delete on an unused line, confirmed in the right panel)", await p.locator("[data-impact-panel]").count() === 1 && /Delete "Start-up visa"\?/.test(await p.locator("[data-impact-panel]").innerText()));
+  await p.locator("[data-impact-panel]").getByRole("button", { name: "Cancel" }).click();
   await row("Start-up visa").locator("[data-edit]").focus(); await p.keyboard.press("Enter");
   await p.waitForFunction(() => document.querySelector("aside h2")?.textContent?.endsWith("Start-up visa"), null, { timeout: 5000 }).catch(() => undefined);
   step("keyboard: Enter on a row opens Edit", /Start-up visa$/.test(await panel().locator("h2").textContent()));

@@ -3,7 +3,9 @@
 // a branch delete lists every name, deletes exactly those (leaves first, all or nothing) and is refused when the branch
 // holds a setup, when a name was added under it after proposing, or when the database refuses one name midway; a
 // combination row's Retire and Restore take its combination with it, in one approval and one release; a parent is
-// not retired while a name under it is active; the word is Delete on To review. Sample inputs; no model call (US$0).
+// not retired while a name under it is active; the word is Delete on To review. The shared pattern (P-116 amended
+// 28 Oct): an author's own never-approved draft is deleted at once with Undo; anyone else's waits for a second person;
+// the approver sees the re-check before the click; no rule codes in any message. Sample inputs; no model call (US$0).
 //   zsh studio/tools/isolated.sh screens_r3 4438 start && tsx studio/tests/check_w1_structure_r3.ts 4438 xr_studio_screens_r3
 import { execFileSync } from "node:child_process";
 
@@ -27,6 +29,8 @@ const exists = (k: string) => sql(`select count(*) from program_def where progra
   if (!served || !inDb) { console.error(`STOP  the database ${DB} is not the one the server on port ${PORT} uses. Pass the copy's database: tsx <check> ${PORT} xr_studio_<name>.`); process.exit(2); }
   await call("POST", "/demo/reset", { confirm: "RESET" });
   ok("setup: sample inputs loaded", (await call("POST", "/demo/load")).status === 201);
+  // The Sample names count as another person's, so their deletes go to the second person; the author's own are below.
+  sql("update program_def set created_by = 'user-C'");
 
   // ---------------------------------------------------------------- R3-2: one rule for the row and the proposal
   let all = await nodes();
@@ -40,9 +44,12 @@ const exists = (k: string) => sql(`select count(*) from program_def where progra
   const row = (label: string) => all.find((n) => n.label === label);
   ok("C11.9 R3-2 pass: an unused Program offers Delete with the names that go with it", row("Permanent resident documents")?.action.kind === "DELETE" && !row("Permanent resident documents")?.action.why && row("Permanent resident documents")?.action.below.length === 2, row("Permanent resident documents")?.action);
   ok("C11.9 R3-2 fail: a Program with a setup draft under it offers Delete greyed, naming the name", row("Visitors")?.action.kind === "DELETE" && /under it has a setup draft/.test(row("Visitors")?.action.why ?? ""), row("Visitors")?.action.why);
-  ok("C11.9 R3-2 fail: a combination row with a setup draft: Delete greyed ('Its setup draft uses it')", row("Visitor visa")?.action.why === "Its setup draft uses it.", row("Visitor visa")?.action);
+  ok("C11.9 R3-2 fail: a combination row with a setup draft: Delete greyed, said in plain words", row("Visitor visa")?.action.why === "Can't delete: its setup draft uses it.", row("Visitor visa")?.action);
+  const codes = all.map((n) => n.action.why ?? "").filter((w) => /\(L\d\)/.test(w));
+  ok("C11.9 P-116 amended: no rule codes such as '(L3)' in any reason", codes.length === 0, codes.slice(0, 2));
+  ok("C11.9 P-116 amended: someone else's unused name is not deleted at once (it goes to a second person)", row("Permanent resident documents")?.action.immediate === false);
   ok("C11.9 Lead 28 Oct (1) pass: a Live combination row offers Retire, its combination going with it", row("With an LMIA")?.action.kind === "RETIRE" && !row("With an LMIA")?.action.why && row("With an LMIA")?.action.withCombination === true, row("With an LMIA")?.action);
-  ok("C11.9 L3 fail: the category above a Live line offers Retire greyed while that line is active", row("Employer-specific work permit")?.action.kind === "RETIRE" && /Still used/.test(row("Employer-specific work permit")?.action.why ?? ""), row("Employer-specific work permit")?.action.why);
+  ok("C11.9 L3 fail: the category above a Live line offers Retire greyed while that line is active", row("Employer-specific work permit")?.action.kind === "RETIRE" && /^Can't retire yet: "With an LMIA"/.test(row("Employer-specific work permit")?.action.why ?? ""), row("Employer-specific work permit")?.action.why);
 
   // ---------------------------------------------------------------- R3-4: branch delete, exact and all or nothing
   const prd = row("Permanent resident documents")!.key, card = row("PR card renewal")!.key, travel = row("Travel document")!.key;
@@ -55,6 +62,7 @@ const exists = (k: string) => sql(`select count(*) from program_def where progra
   ok("C11.9 QA-46 words: To review says 'Delete the structure name'", JSON.stringify(queue).includes("Delete the structure name"), JSON.stringify(queue).match(/"what":"[^"]*structure name[^"]*"/)?.[0]);
   all = await nodes();
   ok("C11.9 R3-2: while it waits, the row offers Withdraw", all.find((n) => n.key === prd)?.action.kind === "WITHDRAW", all.find((n) => n.key === prd)?.action);
+  ok("C11.9 ReviewCard: the approver sees the re-check before the click (nothing new uses it)", detail.recheck?.ok === true && /Checked again just now/.test(detail.recheck.text), detail.recheck);
   r = await approve(del.id);
   ok("C11.9 R3-4 pass: approved, the Program and both categories are deleted at once; Activity names the count", r.status === 201 && !exists(prd) && !exists(card) && !exists(travel) && sql(`select count(*) from audit_event where summary like '%approved deleting%and the 2 names under it%'`) === "1", r.body?.status);
 
@@ -62,6 +70,8 @@ const exists = (k: string) => sql(`select count(*) from program_def where progra
   r = await call("DELETE", `/structure/nodes/${eco}`, { reason: "Not offered (Sample)" });
   const late = r.body;
   await call("POST", "/structure/path", { pathwayType: "INDIVIDUAL", pathway: { key: row("Permanent residence")!.key }, program: { key: eco }, category: { label: "Start-up visa" }, subCategory: null });
+  const lateDetail = (await call("GET", `/library/changes/${late.id}`, undefined, "user-B")).body;
+  ok("C11.9 ReviewCard fail: the re-check before the click already says what changed", lateDetail.recheck?.ok === false && /Changed since it was proposed: "Start-up visa" was added under it/.test(lateDetail.recheck.text), lateDetail.recheck);
   r = await approve(late.id);
   ok("C11.9 R3-4 fail: a name added under the branch after proposing makes approval refuse; nothing is deleted", r.status === 409 && /Changed since it was proposed: "Start-up visa"/.test(r.body.detail) && exists(eco), r.body.detail);
   await call("POST", `/library/changes/${late.id}/withdraw`, { note: "Start-up visa was added." });
@@ -81,7 +91,7 @@ const exists = (k: string) => sql(`select count(*) from program_def where progra
   // ---------------------------------------------------------------- Lead 28 Oct (1): a combination row's Retire and Restore
   const lmia = row("With an LMIA")!, esw = row("Employer-specific work permit")!;
   r = await call("POST", `/structure/nodes/${esw.key}/retire`, { reason: "Not offered (Sample)" });
-  ok("C11.9 L3 fail: the category is refused while With an LMIA under it is active", r.status === 409 && /Still used/.test(r.body.detail), r.body.detail);
+  ok("C11.9 L3 fail: the category is refused while With an LMIA under it is active", r.status === 409 && /^Can't retire yet/.test(r.body.detail), r.body.detail);
   r = await call("POST", `/structure/nodes/${lmia.key}/retire`, { reason: "No longer offered (Sample)" });
   const ret = r.body;
   const retDetail = (await call("GET", `/library/changes/${ret.id}`, undefined, "user-B")).body;
@@ -95,6 +105,27 @@ const exists = (k: string) => sql(`select count(*) from program_def where progra
   r = await call("POST", `/structure/nodes/${lmia.key}/restore`, { reason: "Offered again (Sample)" });
   await approve(r.body.id); await releaseAll();
   ok("C11.9 Lead (1) pass: Restore brings both back with the next release", sql(`select retired_at is null from program_def where program_node_key='${lmia.key}'`) === "t" && sql(`select retired_at is null from combination where id='${lmia.combination.id}'`) === "t");
+
+  // ---------------------------------------------------------------- P-116 amended: the author's own draft, deleted at once with Undo
+  const pr = all.find((n) => n.label === "Permanent residence")!.key;
+  const own = (await call("POST", "/structure/path", { pathwayType: "INDIVIDUAL", pathway: { key: pr }, program: { label: "Own program (test)" }, category: { label: "Own category (test)" }, subCategory: null })).body;
+  const ownKey = own.created.find((x: any) => x.level === "program").key, ownCat = own.leaf.key;
+  all = await nodes();
+  ok("C11.9 P-116 amended pass: the author's own unused branch offers Delete at once (no second person)", all.find((n) => n.key === ownKey)?.action.immediate === true && all.find((n) => n.key === ownKey)?.action.below.length === 1);
+  ok("C11.9 P-116 amended fail-guard: for another author it is not immediate (it would go to a second person)", (await call("GET", "/structure?pathwayType=INDIVIDUAL", undefined, "user-C")).body.nodes.find((n: any) => n.key === ownKey)?.action.immediate === false);
+  const before = Number(sql("select count(*) from library_change where status = 'WAITING'"));
+  r = await call("DELETE", `/structure/nodes/${ownKey}`, { reason: "Added by mistake (test)" });
+  ok("C11.9 P-116 amended pass: deleted at once with the name under it; nothing waits on To review; Activity says so", r.status === 200 && r.body.immediate === true && r.body.status === "RELEASED" && !exists(ownKey) && !exists(ownCat) && Number(sql("select count(*) from library_change where status = 'WAITING'")) === before && sql("select count(*) from audit_event where summary like '%their own draft%'") === "1", r.body.status);
+  const gone = r.body.id;
+  ok("C11.9 P-116 amended fail: Undo by someone else is refused (403)", (await call("POST", `/library/changes/${gone}/undo`, {}, "user-B")).status === 403);
+  r = await call("POST", `/library/changes/${gone}/undo`, {});
+  ok("C11.9 P-116 amended pass: Undo brings the same names back, same keys, in place", r.status === 201 && r.body.status === "WITHDRAWN" && exists(ownKey) && exists(ownCat) && sql(`select parent_node_key from program_def where program_node_key='${ownCat}'`) === ownKey);
+  r = await call("POST", `/library/changes/${gone}/undo`, {});
+  ok("C11.9 P-116 amended fail: a second Undo is refused; nothing doubles", r.status === 409 && sql(`select count(*) from program_def where program_node_key='${ownKey}'`) === "1", r.status);
+  r = await call("DELETE", `/structure/nodes/${ownCat}`, { reason: "Added by mistake (test)" });
+  await call("POST", "/structure/path", { pathwayType: "INDIVIDUAL", pathway: { key: pr }, program: { key: ownKey }, category: { label: "Own category (test)" }, subCategory: null });
+  const taken = await call("POST", `/library/changes/${r.body.id}/undo`, {});
+  ok("C11.9 P-116 amended fail: Undo is refused once a name holds its place again", taken.status === 409 && /added in its place/.test(taken.body.detail), taken.body.detail);
 
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

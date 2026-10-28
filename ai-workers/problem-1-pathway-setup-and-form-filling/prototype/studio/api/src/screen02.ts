@@ -101,8 +101,9 @@ export class Screen02 {
     const names = listed.filter((k) => k !== c!.key && !k.startsWith("combination:"));
     const goesWith = names.length ? (await this.db.programDef.findMany({ where: { workspaceId: c!.workspaceId, programNodeKey: { in: names } }, select: { programNodeKey: true, label: true } })).sort((a, b) => names.indexOf(a.programNodeKey) - names.indexOf(b.programNodeKey)).map((n) => n.label) : [];
     return { ...changeView(c!), field: field ? { key: field.canonicalFieldKey, label: field.label, meaning: field.meaning, value_type: field.valueType, group: field.groupKey, status: field.status } : null,
-      goes_with: goesWith, with_combination: listed.some((k) => k.startsWith("combination:")) };
+      goes_with: goesWith, with_combination: listed.some((k) => k.startsWith("combination:")), recheck: await this.lifecycle.recheck(c!) };
   }
+  undoDelete(actor: Actor, id: string) { return this.lifecycle.undoOwnDelete(actor, id); }
   async decideLibraryChange(actor: Actor, id: string, decision: "approve" | "return", note?: string) {
     // W1-03 (P-116): a remove, retire or restore is checked again at approval; an approved remove applies at once.
     const before = decision === "approve" ? await this.db.libraryChange.findUnique({ where: { id } }) : null;
@@ -163,6 +164,8 @@ export class Screen02Controller {
   @Post("library/changes/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideLibraryChange(actorOf(a), id, "approve", noteOf(b)); }
   @Post("library/changes/:id/resubmit") resubmit(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const o = obj(b); const str = (v: unknown) => (typeof v === "string" ? v : undefined); return resubmitChange(this.s.db, actorOf(a), id, { label: str(o.label), meaning: str(o.meaning), reason: str(o.reason) }); }
   @Post("library/changes/:id/withdraw") withdraw(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return withdrawChange(this.s.db, actorOf(a), id, noteOf(b)); }
+  // P-116 amended: Undo of an author's own-draft delete (structure names; the library kinds come with S6).
+  @Post("library/changes/:id/undo") undo(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.undoDelete(actorOf(a), id); }
   @Get("intake/held/:id/file") async heldFile(@Param("id") id: string, @Res() res: Response) {
     const f = await this.intake.heldBytes(id);
     // Shown in the browser to compare, never run: a sandbox and no content sniffing (a held file is untrusted).

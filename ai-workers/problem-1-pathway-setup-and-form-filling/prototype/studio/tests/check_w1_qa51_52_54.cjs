@@ -4,10 +4,12 @@
 // retire still says it waits for the next release. QA-54 (STANDARDS §8): a case person who opens a Studio address is
 // told the page is for the configuration people, with a link to their cases, not a load error. Sample inputs, no model
 // call (US$0).
-//   zsh studio/tools/isolated.sh screens_qa51 4440 start && node studio/tests/check_w1_qa51_52_54.cjs 4440
+//   zsh studio/tools/isolated.sh screens_qa51 4440 start && node studio/tests/check_w1_qa51_52_54.cjs 4440 xr_studio_screens_qa51
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
-const PORT = Number(process.argv[2] ?? 4440), BASE = `http://localhost:${PORT}`;
+const PORT = Number(process.argv[2] ?? 4440), BASE = `http://localhost:${PORT}`, DB = process.argv[3] ?? "xr_studio_screens_qa51";
+const { execFileSync } = require("node:child_process");
+const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).replace(/\s+/g, " ").slice(0, 240)}` : ""}`); };
 
@@ -27,6 +29,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== QA-51: the trail names the Pathway type
   const addR = await api("/structure/nodes", { method: "POST", data: { pathwayType: "INDIVIDUAL", level: "category", parentKey: "individual.visitors", label: "Visitor record", decision: "add_anyway" } });
   const addC = await api("/structure/nodes", { method: "POST", data: { pathwayType: "CORPORATE", level: "category", parentKey: "corporate.lmia", label: "Visitor record", decision: "add_anyway" } });
+  // Another person's names, so the deletes wait for a second person (P-116 amended: an author's own draft goes at once).
+  sql(`update program_def set created_by = 'user-C' where program_node_key in ('${addR.body?.key}', '${addC.body?.key}')`);
   const delR = await api(`/structure/nodes/${addR.body?.key}`, { method: "DELETE", data: { reason: "screens check: added by mistake" } });
   const delC = await api(`/structure/nodes/${addC.body?.key}`, { method: "DELETE", data: { reason: "screens check: added by mistake" } });
   step("C11.9 QA-51 pass: a Retail removal's trail starts with the Pathway type (API)", delR.body?.label === "Retail › Temporary residence › Visitors › Visitor record", delR.body?.label);
