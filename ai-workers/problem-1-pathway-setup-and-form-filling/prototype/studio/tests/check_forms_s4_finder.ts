@@ -190,7 +190,10 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
     // Break R5-1: a stub pass of a place whose own name holds "live" ends "-stub-…": never replayed as the AI's answer.
     const decoyStub = join(P2, "runs", `${prefix}a-live-place-stub-30001231t000000000z-s4check.json`);
     writeFileSync(decoyStub, JSON.stringify(saved(empty, vvKey)));
-    madeRuns.push(file, decoyKey, decoyNames, decoyStub);
+    // Lead check 28 Oct (minor): the record's own mode is read too: a stub record named like a live run is not the AI's answer.
+    const decoyMode = join(P2, "runs", `${prefix}stub-mode-live-30001227t000000000z-s4check.json`);
+    writeFileSync(decoyMode, JSON.stringify({ ...saved(empty, vvKey), caller: "stub" }));
+    madeRuns.push(file, decoyKey, decoyNames, decoyStub, decoyMode);
   }
   r = await call("DELETE", `/combinations/${vv}/forms/${C5257}`, { version: 7 });
   ok("C11.15 (S5 ask 4): Remove with a stale line version is refused (409, reload)", r.status === 409 && /Changed since/.test(r.body.title), r.body.detail);
@@ -206,7 +209,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "replay", planSha256: replayPlan.plan_sha256, idempotencyKey: "s4-check-replay" });
   run = (await finish(r.body.id)).body;
   ok("C11.8: replay reuses the saved answers of exactly these pages and prompt: same result, US$0, nothing attached twice", run.usd.spent === 0 && run.result?.attach?.filter((a: any) => a.code !== "IMM 5257").every((a: any) => a.line === "already") && run.result.attach.length === 4, run.result?.attach?.map((a: any) => `${a.code}:${a.line}`));
-  ok("C11.8 (Lead 28 Oct), break R5-1: replay is keyed by the combination itself: newer saved answers with the same pages and names but another combination's key, names only, or a stub pass of this combination are never used", run.result?.attach?.length === 4 && /29991231t/.test(sql(`select detail->>'run_file' from drafting_job where batch_id='${run.id}' and kind='finder_propose'`)), sql(`select detail->>'run_file' from drafting_job where batch_id='${run.id}' and kind='finder_propose'`));
+  ok("C11.8 (Lead 28 Oct), break R5-1: replay is keyed by the combination itself: newer saved answers with the same pages and names but another combination's key, names only, or a stub pass of this combination (by its file name or its own mode) are never used", run.result?.attach?.length === 4 && /29991231t/.test(sql(`select detail->>'run_file' from drafting_job where batch_id='${run.id}' and kind='finder_propose'`)), sql(`select detail->>'run_file' from drafting_job where batch_id='${run.id}' and kind='finder_propose'`));
   ok("C11.15 (S5 ask 2): Find again never attaches back a form a person removed (IMM 5257 stays removed; shown \"Add back\")", run.result?.attach?.find((a: any) => a.code === "IMM 5257")?.line === "removed_by_person" && /IMM 5257:RETIRED/.test(lines(vv)) && (await call("GET", `/combinations/${vv}/forms/find/latest`)).body.forms.find((f: any) => f.code === "IMM 5257")?.state === "REMOVED_BY_PERSON", lines(vv));
   r = await call("POST", `/combinations/${vv}/forms/undo`, { changeId: "00000000-0000-4000-8000-000000000000" });
   ok("C11.15 (S5 ask 4): Undo naming a change that is no longer the last is refused (409)", r.status === 409, r.body.detail);
@@ -278,14 +281,14 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   r = await call("DELETE", `/library/forms/${C0100}`, { reason: "Not used by any combination" });
   ok("C11.11: delete of an unused, never-released form waits for a second person", r.status < 300 && r.body.status === "WAITING", r.body);
   const change = r.body.id;
-  // P-123 with QA-46: a library form is Deleted (it leaves the library); a structure name or field is Removed.
+  // P-123, P-116 amended (one word set, contracts/lifecycle.ts): a delete is Delete for every kind; Remove is a form line off a combination.
   r = await call("GET", `/library/changes/${change}`);
   ok("C11.11: the approval page names it Delete library form (P-123)", r.body.action_word === "Delete" && r.body.kind_word === "library form", r.body.action_word);
   const queued = ((await call("GET", "/review-queue?filter=all&kind=library_change", undefined, "user-B")).body.items as any[]).find((i) => i.id === `change:${change}`); // eslint-disable-line @typescript-eslint/no-explicit-any
   ok("C11.11: To review says Delete the library form, never Remove", /^Delete the library form/.test(queued?.what ?? "") && !/Remove/.test(queued?.what ?? ""), queued?.what);
   const other = sql(`insert into library_change (id, workspace_id, kind, key, action, status, proposed_by, reason) select gen_random_uuid(), workspace_id, 'structure_node', 's4-word-check', 'DELETE', 'WAITING', 'user-A', 'Word check' from library_change where id='${change}' returning id`).split("\n")[0];
   const otherWhat = ((await call("GET", "/review-queue?filter=all&kind=library_change", undefined, "user-B")).body.items as any[]).find((i) => i.id === `change:${other}`)?.what; // eslint-disable-line @typescript-eslint/no-explicit-any
-  ok("C11.11: fail case: a structure name delete still says Remove (QA-46), not Delete", /^Remove the structure name/.test(otherWhat ?? ""), otherWhat);
+  ok("C11.11 (P-116 amended, one word set): a structure name delete says Delete too, never Remove (Remove is a form line off a combination)", /^Delete the structure name/.test(otherWhat ?? "") && !/Remove/.test(otherWhat ?? ""), otherWhat);
   sql(`delete from library_change where id='${other}'`);
   r = await call("POST", `/library/changes/${change}/approve`, { note: "ok" }, "user-A");
   ok("C11.11: the author cannot approve their own delete (author ≠ approver)", r.status >= 400, r.status);

@@ -111,7 +111,7 @@ type FormsOut = { forms: Proposal[]; unresolved: { quote: string; reason: string
 type Candidate = { title: string; url: string };
 type GuideValue = { url: string; title: string | null; candidates?: Candidate[] };
 /** A saved run record of the guarded launcher, read loosely (only what replay compares). */
-type SavedRun = { file: string; drafting_run?: { status?: string; usage?: { cost_usd?: number }; inputs?: { official_files?: unknown; combination?: string } }; contract_valid?: boolean; launch_evidence?: { template_sha256?: string; known?: { combination_trail?: string } }; raw_output?: unknown };
+type SavedRun = { file: string; caller?: string; drafting_run?: { status?: string; usage?: { cost_usd?: number }; inputs?: { official_files?: unknown; combination?: string } }; contract_valid?: boolean; launch_evidence?: { template_sha256?: string; known?: { combination_trail?: string } }; raw_output?: unknown };
 /** The stored plan of a finder run, with its result once it ended. */
 type FinderPlan = Awaited<ReturnType<Finder["plan"]>> & { result?: FinderResult };
 const json = (v: unknown) => v as Prisma.InputJsonValue;
@@ -462,7 +462,7 @@ export class Finder implements OnModuleInit {
     // Round 2 N3: and of this run, so two combinations with the same names (another pathway) never share one either.
     const jobId = `${base}-${slug(trail).slice(0, 40).replace(/_/g, "-")}-${sha(`${batchId ?? ""}|${trail}`).slice(0, 8)}`;
     const tsha = sha(readFileSync(join(PROMPTS, template)));
-    const same = (r: SavedRun) => r?.drafting_run?.status === "completed" && r.contract_valid === true && r.launch_evidence?.template_sha256 === tsha && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(inputs) && runKey(r) === combinationKey && typeof r.raw_output === "string";
+    const same = (r: SavedRun) => r?.caller === "live" && r?.drafting_run?.status === "completed" && r.contract_valid === true && r.launch_evidence?.template_sha256 === tsha && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(inputs) && runKey(r) === combinationKey && typeof r.raw_output === "string";
     if (mode === "replay") {
       // Break M7, round 2 N4, round 3 R3-2: a saved answer is found by what the AI was given (the same pages, the same prompt)
       // and by the combination's key, never by a file name or names; another combination's answer is never reused. Round 2 m-a: an
@@ -723,7 +723,7 @@ export class Finder implements OnModuleInit {
     // What IRCC accepts is the form's own, whichever combination the answer was for.
     const saved = existsSync(RUNS) ? readdirSync(RUNS).filter((f) => f.startsWith("studio-finder-forms-") && LIVE_RUN.test(f)).sort(newestFirst) : [];
     for (const f of saved) {
-      let out: FormsOut | null = null; try { const r = JSON.parse(readFileSync(join(RUNS, f), "utf8")) as SavedRun; if (r.drafting_run?.status !== "completed" || r.contract_valid !== true) continue; out = JSON.parse(String(r.raw_output)) as FormsOut; } catch { continue; }
+      let out: FormsOut | null = null; try { const r = JSON.parse(readFileSync(join(RUNS, f), "utf8")) as SavedRun; if (r.caller !== "live" || r.drafting_run?.status !== "completed" || r.contract_valid !== true) continue; out = JSON.parse(String(r.raw_output)) as FormsOut; } catch { continue; }
       for (const f of out?.forms ?? []) { const c = normaliseCode(f.code); if (f.filed_note && channelsFrom(f.filed_note) && !notes.has(c)) notes.set(c, f.filed_note); }
     }
     for (const d of defs) {

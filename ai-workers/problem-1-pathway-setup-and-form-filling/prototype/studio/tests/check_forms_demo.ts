@@ -71,6 +71,7 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
     const dlg = p.getByRole("dialog");
     await dlg.getByText("Every file here is on the approved official source list").waitFor();
     const rows = () => dlg.locator("tbody tr");
+    await rows().first().waitFor(); // the rows render after the notice: count them once they are there
     const all = await rows().count();
     const text = await dlg.innerText();
     ok("SC-3 C2.1: the picker says every file is on the approved official list and shows no internal approval id (D229, D257) or Approved column", !/\bD2\d\d\b/.test(text) && !/\bApproved\b/.test(await dlg.locator("thead").innerText()) && all > 10, all);

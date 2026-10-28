@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { guideLinks, mentionsOf, officialUrl, pageLinks, pageText, parseFormPage, parseFormsIndex, textFingerprint } from "../engine/canada.ts";
 import { CanadaError, canadaSource, FixtureCanada, LiveCanada, MAX_BYTES, type CanadaCode } from "../api/src/canada.ts";
-import { channelsFrom, recordedCopy, sampleFixtures } from "../api/src/filing.ts";
+import { channelsFrom, filingWhy, recordedCopy, sampleFixtures } from "../api/src/filing.ts";
 
 const STUDIO = join(import.meta.dirname, ".."), SOLUTION = join(STUDIO, "..", "..");
 const OFFICIAL = join(SOLUTION, "official-sources", "ircc"), INVENTORY = join(STUDIO, "..", "p1", "inventory");
@@ -156,20 +156,21 @@ async function main() {
   ok("C11.2: live: no connection is reported in plain words with the next step (network)", downR.code === "network" && /upload it here/.test(downR.message ?? ""), downR);
 
   // --- Load sample's Sample fixtures (Lead note 28 Oct; review round 7 Major 1; break R5-3, R5-4, R5-6)
-  ok("C11.11: the filing rule reads a PDF upload from IRCC's upload line (IMM 5476), not Online", channelsFrom("Upload this form along with your online application") === "PDF");
-  ok("C11.11: the filing rule still reads Online from an online line, and a PDF from \"fill out the form on a computer\"", channelsFrom("You must apply online.") === "ONLINE" && channelsFrom("Download and fill out the form on a computer.") === "PDF" && channelsFrom("If you have filled out the form on a computer, click Validate.") === "PDF");
-  ok("review round 7 Major 1 fail: a paper line (send it to the office) says no PDF upload", channelsFrom("Send this form along with your application to the office listed in the guide of your application.") === null);
+  ok("C11.11 pass: the filing rule reads a PDF upload from IRCC's upload line, with its heading too (IMM 5476), not Online", channelsFrom("Upload this form along with your online application") === "PDF" && channelsFrom("How to submit this form Online applications If you have not yet submitted your immigration or citizenship application: Upload this form along with your online application") === "PDF");
+  ok("C11.11 pass: an online line is Online; a line with both is either", channelsFrom("You must apply online.") === "ONLINE" && channelsFrom("You can fill it out online in the portal, or upload the form.") === "PDF_OR_ONLINE");
+  ok("Lead check 28 Oct fail: a paper line is paper filing, never a PDF upload, with or without its heading (IMM 5476)", channelsFrom("Send this form along with your application to the office listed in the guide of your application.") === null && channelsFrom("Paper applications If you have not yet submitted your immigration or citizenship application: Send this form along with your application to the office listed in the guide of your application.") === null && channelsFrom("Mail the completed form to the visa office.") === null && /paper filing/.test(filingWhy("Paper applications If you have not yet submitted your immigration or citizenship application: Send this form along with your application to the office listed in the guide of your application.") ?? ""));
+  ok("Lead check 28 Oct (should): one rule, one outcome: filling the form in on a computer says nothing about how it is filed (IMM 5707, IMM 5409, IMM 1295 alike)", ["If you have filled out the form on a computer, click on the “Validate” button located at the top of the form.", "You should fill out your forms on a computer and validate them electronically to reduce mistakes and help you submit forms that are complete.", "Download and fill out the form on a computer."].every((l) => channelsFrom(l) === null && /how to fill the form in/.test(filingWhy(l) ?? "")));
   ok("review round 7 Major 1 fail: a download link's size label is not how the form is filed", channelsFrom("Download the form Schedule 1: Application for Temporary Residence [IMM 5257 SCH1] (PDF, 0.5 MB)") === null);
   const shipped = sampleFixtures();
-  ok("C11.11: every shipped Sample fixture passes its checks (a line that says its value, canada.ca addresses)", !shipped.problems.length && Object.keys(shipped.accepts).length === 5 && Object.keys(shipped.guides).length === 6 && Object.keys(shipped.pages).length === 2, shipped.problems);
-  ok("break R5-6: forms whose pages never say how they are filed have no fixture (IMM 5257 SCH1, IMM 5409)", !shipped.accepts["IMM 5257 SCH1"] && !shipped.accepts["IMM 5409"]);
+  ok("C11.11: every shipped Sample fixture passes its checks (a line that says its value, canada.ca addresses)", !shipped.problems.length && Object.keys(shipped.accepts).join() === "IMM 5475,IMM 5476" && Object.keys(shipped.guides).length === 6 && Object.keys(shipped.pages).length === 2, shipped.problems);
+  ok("break R5-6, Lead check 28 Oct: forms whose pages never say how they are filed have no fixture (IMM 1295, 5257, 5257 SCH1, 5409, 5707)", ["IMM 1295", "IMM 5257", "IMM 5257 SCH1", "IMM 5409", "IMM 5707"].every((c) => !shipped.accepts[c]));
   const tmpFx = mkdtempSync(join(tmpdir(), "s4-fixtures-"));
   try {
     const at = (name: string, body: string) => { const f = join(tmpFx, name); writeFileSync(f, body); return f; };
     const broken = sampleFixtures(at("broken.json", "{ not json"));
     ok("break R5-3 fail: an unreadable fixture file loads nothing and says so (never a 500)", /could not be read/.test(broken.problems[0] ?? "") && !Object.keys(broken.accepts).length, broken.problems);
     const hostile = sampleFixtures(at("hostile.json", JSON.stringify({
-      accepts: { "IMM 1": { channels: "FAX", quote: "Fax it to us." }, "IMM 2": { channels: "ONLINE", quote: "Download and fill out the form on a computer." }, "IMM 3": { channels: "PDF", quote: "Download and fill out the form on a computer." } },
+      accepts: { "IMM 1": { channels: "FAX", quote: "Fax it to us." }, "IMM 2": { channels: "ONLINE", quote: "Download and fill out the form on a computer." }, "IMM 3": { channels: "PDF", quote: "Upload this form along with your online application." } },
       pages: { "IMM 4": { url: "javascript:alert(1)" }, "IMM 5": { url: "https://example.com/imm5.html" } },
       guides: { a: { url: "https://example.com/guide-1234-x.html" }, b: { url: `${G}/guide-5487-applying-work-permit-outside-canada.html`, recorded: "../../../etc/hosts" }, c: { url: `${G}/imm1295.html` } } })));
     ok("break R5-3, R5-4 fail: each bad entry is left out with its reason; the good one is kept", Object.keys(hostile.accepts).join() === "IMM 3" && !Object.keys(hostile.pages).length && !Object.keys(hostile.guides).length && hostile.problems.length === 7, hostile.problems);

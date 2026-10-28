@@ -18,9 +18,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; edition: string | null; canada_updated: string | null; accepts: string | null; accepts_basis: string | null; accepts_quote: string | null; accepts_waiting: boolean;
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
-  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; older_editions: string[] };
+  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; older_editions: string[] };
 type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string };
-type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
+export type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
 
 const TYPE_WORD: Record<Row["type"], string> = { form: "Form", guide: "Guide", checklist: "Checklist" };
 const ACCEPTS: Record<string, string> = { PDF: "PDF upload", ONLINE: "Online", PDF_OR_ONLINE: "PDF upload · Online", READ_BY_AI: "Not filed" };
@@ -38,6 +38,7 @@ const STATUS: Record<Row["status"], { word: string; tone: string; tip: string }>
   ready: { word: "Ready", tone: "ok", tip: "Its current edition is in the library and may be used by any combination." },
   needs_ok: { word: "Needs your OK", tone: "warn", tip: "A file of this form waits for a second person on To review (a hand upload, or a newer edition to review)." },
   newer_file: { word: "Newer file on canada.ca", tone: "warn", tip: "canada.ca now serves another file of the same printed edition. Combinations keep using the library's file until a person replaces it." },
+  no_file: { word: "No file yet", tone: "neutral", tip: "No edition of this form is in the library yet: upload its PDF, or let the form finder download it from canada.ca." },
   retired: { word: "Retired", tone: "neutral", tip: "Hidden from pickers and AI; released versions and open cases keep it. Restore it to use it again." },
 };
 const ORIGIN: Record<string, string> = { DOWNLOADED: "Downloaded from canada.ca by the form finder", UPLOADED: "Uploaded by a person", SAMPLE: "Official copy loaded with the sample" };
@@ -218,7 +219,7 @@ function LifecycleDialog({ row, action, onClose }: { row: Row; action: "RETIRE" 
   );
 }
 
-function UsesList({ uses }: { uses: Uses | undefined }) {
+export function UsesList({ uses }: { uses: Uses | undefined }) {
   if (!uses) return null;
   if (!uses.uses.length) return <p className="text-sm text-text-muted">Nothing uses it: no combination, release or waiting change.</p>;
   return <ul className="space-y-1 text-sm">{uses.uses.map((u, i) => <li key={i}>{u.href ? <Link className="text-text-link underline" to={u.href}>{u.label}</Link> : u.label} <span className="text-text-muted">· {u.why}</span></li>)}</ul>;
