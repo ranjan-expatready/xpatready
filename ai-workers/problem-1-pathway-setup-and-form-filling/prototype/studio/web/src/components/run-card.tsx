@@ -4,7 +4,7 @@
 // and "usually about" from the last finished run of the same kind; no percentage, no countdown. Stop really ends it.
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { CircleAlert, CircleCheck, CircleDashed, CircleSlash, Loader2, Sparkles, Square } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleDashed, CircleSlash, Loader2, Sparkles, Square, X } from "lucide-react";
 import { api, useAction, useApi } from "@/lib/api";
 import { Button, Notice } from "@/components/ui/controls";
 import { Tip, TipProvider } from "@/components/status";
@@ -35,7 +35,8 @@ export function costLine(r: Pick<RunView, "usd"> & { steps?: RunView["steps"] },
 }
 
 /** The run card: shown where the run was started; polls every 1.5 s while the run is active. */
-export function RunCard({ runId, className, onEnded }: { runId: string; className?: string; onEnded?: (r: RunView) => void }) {
+/** `onDismiss`: where a page lists several runs (Form library uploads), a finished card can be put away (DV-bb-1). */
+export function RunCard({ runId, className, onEnded, onDismiss }: { runId: string; className?: string; onEnded?: (r: RunView) => void; onDismiss?: () => void }) {
   const q = useApi<RunView>(["run", runId], `/runs/${runId}`, { refetchInterval: (s) => (s.state.data && !ACTIVE.has(s.state.data.status) ? false : 1500) });
   const stop = useAction(() => api(`/runs/${runId}/stop`, { method: "POST" }), { success: "Stopping: no step starts after this", invalidate: [["run", runId], ["runs-active"]] });
   const ended = React.useRef(false);
@@ -56,7 +57,8 @@ export function RunCard({ runId, className, onEnded }: { runId: string; classNam
           </p>
           {slow ? <p className="mt-1 text-sm text-text-warn">Taking longer than usual.</p> : null}
         </div>
-        {active ? <Tip tip={STOP_TIP}><Button size="sm" variant="secondary" onClick={() => stop.mutate(undefined)} busy={stop.isPending} disabled={!r.can_stop}><Square /> {r.status === "stopping" ? "Stopping" : "Stop"}</Button></Tip> : null}
+        {active ? <Tip tip={STOP_TIP}><Button size="sm" variant="secondary" onClick={() => stop.mutate(undefined)} busy={stop.isPending} disabled={!r.can_stop}><Square /> {r.status === "stopping" ? "Stopping" : "Stop"}</Button></Tip>
+          : onDismiss ? <Tip tip="Put this result away. The run stays listed on AI work."><Button size="sm" variant="ghost" data-run-dismiss onClick={onDismiss} aria-label={`Dismiss: ${r.label}${r.scope ? `, ${r.scope}` : ""}`}><X /></Button></Tip> : null}
       </div>
       <ol className="flex gap-1" aria-hidden>{r.steps.map((s) => <li key={s.n} className={cn("h-1.5 flex-1 rounded-full", ["COMPLETED", "APPLIED"].includes(s.status) ? "bg-ok" : s.status === "RUNNING" ? "animate-pulse bg-primary motion-reduce:animate-none" : ["FAILED", "BLOCKED"].includes(s.status) ? "bg-danger" : s.status === "NEEDS_PERSON" || s.status === "PARTIAL" ? "bg-warn" : "bg-border")} />)}</ol>
       <ol className="space-y-2 text-sm">

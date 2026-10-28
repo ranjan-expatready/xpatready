@@ -75,7 +75,7 @@ export class Structure {
     };
     for (const p of g.kids(null, q.pathwayType).filter((n) => n.nodeKind === "PATHWAY")) walk(p);
     return { pathwayType: q.pathwayType, typeLabel: PATHWAY_TYPE_LABEL[q.pathwayType], nodes: out, empty: !out.length,
-      meaningCheck: { on: false, why: "The AI meaning check is off: only the spelling check runs, and names are shown as Not meaning-checked (P-95)." } };
+      meaningCheck: { on: false, why: "The AI meaning check is off: only the spelling check runs, and names are shown as Not meaning-checked." } };
   }
 
   /** The parent a new name goes under, checked (right level, same type, not retired). */
