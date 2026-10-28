@@ -27,6 +27,7 @@ The Lead is Claude Code in the main copy, started with `/lead` (skill `lead`). I
 | Capability page (P-29) | End of prototype | Lead writes it from the code |
 
 ## Watch list (check at every Lead check)
+* **Reuse the proof-of-concept work first (founder, 29 Oct):** before any research or design on form filling, auto-population, document reading or AI drafting, start from `prototype/evidence-lane/E1/*/STATUS.md`, `prototype/p1`–`p5`, `prototype/expected/source-text/` (XFA text of 7 forms), `research_notes/` and `reports/`; re-validate them, never redo them; brief every agent with these paths.
 * **CI (28 Oct, P-85 amended):** one job per pull request, nothing on a plain push (Actions used ~3,900 minutes in 4 days against 2,000 a month). Lanes give local `run-suites.sh` evidence on their exact commit; the Lead PR's CI runs the full suites on the merge result. When a job fails in 2–3 s read the annotation (billing) before calling it a code failure. 28 Oct: billing still blocked; founder fixing it.
 * P-26 scope test on every finding; P-33 capability or scaffolding on every element; P-60 no control cut.
 * **Demo story (P-93, `DEMO.md`):** every DEMO row has an owner; a feature is DONE only when its row shows in the story; the M2 gate walk is the configured checkpoint (C10.1), the M3 gate the finished story (C10.2).
