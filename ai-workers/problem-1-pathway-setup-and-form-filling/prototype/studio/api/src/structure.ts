@@ -8,7 +8,7 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { CreateStructureNodeBody, StructurePathBody, KIND_OF, LEVEL_OF, LEVEL_WORD, LifecycleBody, NameCheckBody, PARENT_LEVEL, PATHWAY_TYPE_LABEL, PatchStructureNodeBody, ReorderBody, StructureQuery,
   type Level, type LifecycleAction, type PathwayType, type StructureNode, type StructurePathResult } from "../../contracts/structure.ts";
 import { checkName, type NameCandidate } from "../../engine/structure.ts";
-import { actorOf, Audit, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Audit, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
 import { Lifecycle, rowAction, trailOf } from "./lifecycle.ts";
 import { parse, Programs } from "./programs.ts";
 import { Studio } from "./studio.ts";
@@ -47,7 +47,7 @@ export class Structure {
     const workspaceId = await this.ws.id();
     const g = await this.graph(workspaceId);
     const leaves = await this.programs.leafStates();
-    const pending = new Map((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "structure_node", status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })).map((c) => [c.key, { id: c.id, action: c.action as LifecycleAction }]));
+    const pending = new Map((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "structure_node", status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })).map((c) => [c.key, { id: c.id, action: c.action as LifecycleAction, status: c.status as "WAITING" | "RETURNED" | "APPROVED", by: c.status === "RETURNED" ? ACTORS.find((a) => a.id === c.decidedBy)?.name ?? null : null, note: c.status === "RETURNED" ? c.decisionNote : null }]));
     // "Used by" on each line (P-127 (1)): the releases that hold a combination and the cases open on it.
     const combos = await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, retiredAt: true, _count: { select: { releases: true, cases: { where: { status: "OPEN" } } } } } });
     const used = new Map(combos.map((c) => [c.id, c._count]));

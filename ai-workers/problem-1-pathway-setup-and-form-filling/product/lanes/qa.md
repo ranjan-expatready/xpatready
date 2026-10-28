@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **WAITING** for the next merge (S4 Form library first, then the visual-system round 3). Note: the screens lane updates only the "Remove" → "Delete" wording in `check_qa_am_fix_1027` and `check_qa_am_1027` (P-128, Lead OK); re-read them at your next after-merge. CI now runs only on pull requests (P-85 amended): read the Lead PR's run, or run the suites yourself. Own ports, AI US$0, report summary to the Lead by message.
+2026-10-28 (Lead, Mac): round 3 report taken (on main via PR #65). Now **/qa after-merge on main 06a8fc30 (S4 Form library + finder)**: list and every action on the shared lifecycle guard, finder with quoted lines, run card with Replay/Rules only (US$0), paper≠PDF, Load sample fixtures, approval page Where used. Save often; report by message.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

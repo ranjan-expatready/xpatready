@@ -415,7 +415,7 @@ function NextStep({ r, canAuthor, tabIndex, onAct, onOpen, primary }: { r: Catal
   const mine = !a || canAuthor || SHOW_ONLY_STEPS.includes(a.kind);
   const link = "inline-flex items-center gap-1 text-left text-sm font-semibold text-text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50";
   const button = (filled: boolean) => cn("inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-sm font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-    filled ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 [&_svg]:text-current" : "border-border bg-surface-raised text-text-link hover:border-primary");
+    filled ? "border-primary bg-primary text-primary-foreground hover:bg-primary-hover [&_svg]:text-current" : "border-border bg-surface-raised text-text-link hover:border-primary");
   const cls = primary ? button(r.needsYou) : link;
   if (a && mine) return <StepTip a={a}><button type="button" tabIndex={tabIndex} data-next-step={a.kind} data-filled={primary && r.needsYou ? "" : undefined} onClick={(e) => { e.stopPropagation(); onAct(r, a); }} className={cls}><StepLabel a={a} /></button></StepTip>;
   if (r.combinationId) return <button type="button" tabIndex={tabIndex} data-next-step="open" onClick={(e) => { e.stopPropagation(); onOpen(); }} className={link}>Open</button>;
