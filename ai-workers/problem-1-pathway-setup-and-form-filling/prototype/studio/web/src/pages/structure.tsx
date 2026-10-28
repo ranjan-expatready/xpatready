@@ -330,7 +330,7 @@ export function StructurePage() {
           goes={confirm!.kind === "DELETE" ? confirmNode.action.below.map((k) => ({ num: num.get(k) ?? null, label: byKey.get(k)?.label ?? k })) : undefined}
           kept={confirm!.kind === "RETIRE" && confirmNode.combination?.id && usedBy(confirmNode.combination) !== "Setup draft" ? [usedBy(confirmNode.combination)] : undefined}
           withCombination={confirmNode.action.withCombination} busy={acting.busy} error={acting.error} onCancel={() => setConfirm(null)} onSend={(reason) => void sendAction(confirmNode, confirm!.kind, reason)} />
-        : selectedNode ? <DetailPanel key={selectedNode.key} node={selectedNode} num={num.get(selectedNode.key) ?? null} type={type} siblings={kids.get(selectedNode.parentKey)?.filter((s) => (selectedNode.parentKey !== null || s.level === "pathway") && !s.retired) ?? []} leaf={isLeaf(selectedNode)}
+        : selectedNode ? <DetailPanel key={selectedNode.key} node={selectedNode} num={num.get(selectedNode.key) ?? null} type={type} siblings={kids.get(selectedNode.parentKey)?.filter((s) => selectedNode.parentKey !== null || s.level === "pathway") ?? []} leaf={isLeaf(selectedNode)}
           leaves={below(selectedNode.key).filter(isLeaf).map((x) => ({ n: x, path: trailOf(x).slice(trailOf(selectedNode).length).map((y) => y.label) }))} canAuthor={canAuthor} onClose={() => set({ node: null })}
           onAction={() => { setActing({ busy: false, error: null }); const k = selectedNode.key; set({ node: null }); setConfirm({ key: k, kind: selectedNode.action.kind }); }} /> : null}
       </div>
@@ -489,15 +489,19 @@ function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClo
       else setError((e as ApiError).field?.("label") ?? (e as Error).message);
     } finally { setBusy(false); }
   };
+  // The server wants every name under the parent, retired ones included (in their place); only active names move,
+  // past any retired one between them (lead review, 28 Oct).
+  const active = siblings.filter((s) => !s.retired);
   const move = async (dir: -1 | 1) => {
-    const keys = siblings.map((s) => s.key), i = keys.indexOf(node.key), j = i + dir;
-    if (i < 0 || j < 0 || j >= keys.length) return;
+    const a = active.findIndex((s) => s.key === node.key), other = active[a + dir];
+    if (a < 0 || !other) return;
+    const keys = siblings.map((s) => s.key), i = keys.indexOf(node.key), j = keys.indexOf(other.key);
     [keys[i], keys[j]] = [keys[j], keys[i]];
     try { await api("/structure/reorder", { method: "POST", json: { pathwayType: type, parentKey: node.parentKey, keys } }); await refresh(); say(true, `Moved "${node.label}" ${dir < 0 ? "up" : "down"}.` ); }
     catch (e) { say(false, (e as Error).message ); }
   };
   const u = uses.data;
-  const i = siblings.findIndex((s) => s.key === node.key);
+  const i = active.findIndex((s) => s.key === node.key);
   const no = !canAuthor ? AUTHOR_ONLY : null;
   return (
     <aside ref={fit} data-panel aria-label={`${node.label} details`} className="fixed bottom-4 right-0 top-14 z-40 flex w-full max-w-[440px] flex-col border-l border-border bg-surface-raised shadow-xl xl:sticky xl:top-20 xl:z-auto xl:max-w-none xl:rounded-xl xl:border xl:shadow-sm">
@@ -540,7 +544,7 @@ function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClo
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-text-muted">Order</span>
           <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Program structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i <= 0} onClick={() => void move(-1)}><ArrowUp /> Move up</Button></span></Tip>
-          <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Program structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i < 0 || i >= siblings.length - 1} onClick={() => void move(1)}><ArrowDown /> Move down</Button></span></Tip>
+          <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Program structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i < 0 || i >= active.length - 1} onClick={() => void move(1)}><ArrowDown /> Move down</Button></span></Tip>
         </div>
         <WherePanel uses={u} loading={uses.isPending} error={uses.isError ? (uses.error as Error).message : null} onRetry={() => void uses.refetch()} />
         {u?.pending ? <Notice tone="warn" title={`${PENDING_WORD[u.pending.action]} for a second person`}>Proposed by {u.pending.by}. <Link to={`/review/change/${u.pending.id}`} className="text-text-link underline underline-offset-2">See it on To review</Link></Notice> : null}

@@ -29,8 +29,11 @@ const exists = (k: string) => sql(`select count(*) from program_def where progra
   if (!served || !inDb) { console.error(`STOP  the database ${DB} is not the one the server on port ${PORT} uses. Pass the copy's database: tsx <check> ${PORT} xr_studio_<name>.`); process.exit(2); }
   await call("POST", "/demo/reset", { confirm: "RESET" });
   ok("setup: sample inputs loaded", (await call("POST", "/demo/load")).status === 201);
-  // The Sample names count as another person's, so their deletes go to the second person; the author's own are below.
-  sql("update program_def set created_by = 'user-C'");
+  // Lead review 1 (28 Oct): names that Load sample added are the sample's, never the loading person's own draft.
+  ok("C11.9 lead review 1 pass: Load sample records itself as the creator of every name it adds", sql("select string_agg(distinct created_by, ',') from program_def") === "sample-inputs", sql("select string_agg(distinct created_by, ',') from program_def"));
+  const sampleRows = await nodes();
+  const prdRow = sampleRows.find((n) => n.label === "Permanent resident documents")!;
+  ok("C11.9 lead review 1 fail-guard: for the person who loaded it, an unused sample branch is not deleted at once", prdRow.action.kind === "DELETE" && !prdRow.action.why && prdRow.action.immediate === false, prdRow.action);
 
   // ---------------------------------------------------------------- R3-2: one rule for the row and the proposal
   let all = await nodes();
@@ -55,7 +58,7 @@ const exists = (k: string) => sql(`select count(*) from program_def where progra
   const prd = row("Permanent resident documents")!.key, card = row("PR card renewal")!.key, travel = row("Travel document")!.key;
   let r = await call("DELETE", `/structure/nodes/${prd}`, { reason: "Not offered (Sample)" });
   const del = r.body;
-  ok("C11.9 R3-4: deleting an unused Program is one proposal that lists its branch (3 names), nothing deleted yet", r.status === 200 && del.status === "WAITING" && sql(`select matches::text from library_change where id='${del.id}'`).includes(card) && exists(prd) && exists(card), sql(`select matches::text from library_change where id='${del.id}'`));
+  ok("C11.9 R3-4 / lead review 1: the loading person's delete of an unused sample Program is one proposal for a second person, listing its branch (3 names); nothing deleted yet", r.status === 200 && del.status === "WAITING" && !del.immediate && sql(`select matches::text from library_change where id='${del.id}'`).includes(card) && exists(prd) && exists(card), sql(`select matches::text from library_change where id='${del.id}'`));
   const detail = (await call("GET", `/library/changes/${del.id}`, undefined, "user-B")).body;
   ok("C11.9 R3-4: the approver sees what goes with it, and the word is Delete", detail.action_word === "Delete" && detail.goes_with?.join("|") === "PR card renewal|Travel document", { word: detail.action_word, goes: detail.goes_with });
   const queue = (await call("GET", "/review-queue?filter=needs", undefined, "user-B")).body;

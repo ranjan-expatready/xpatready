@@ -6,59 +6,37 @@
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
-## Handover (screens lane, 28 Oct 00:15, to a fresh session; founder's decision via the Lead)
-**Stage BUILD (visual-system slice), owner Builder. Branch `screens/2026-10-27-visual-system`, pushed. Last code commit `3163224`, notes `d5e0e99`, this handover on top.** AI spent US$0.
+## Handover (screens lane, 28 Oct, kept current; a fresh session resumes from this file alone)
+**Item W1-visual-system, round 3 (P-128, the shared lifecycle pattern P-116 amended). Branch `screens/2026-10-27-visual-system`, pushed. Stage FIX for the Lead PR #66 review → back to the Lead.** AI spent US$0. Copy: this worktree's folder is named `runtime-*`, so it is bound to screens by `.claude/lane` (git-ignored).
 
-**Done (each committed and pushed):**
-- `POST /structure/path`: `contracts/structure.ts` (`StructurePathBody`, `StructurePathResult`) and `api/src/structure.ts` (`Structure.path`, the route). One transaction, new parts only, may stop at any level, no setup. Smoke-tested; covered in `check_w1_structure_browser.cjs`.
-- Level tokens: `web/src/styles/levels.css`, imported in `styles/index.css` after `tokens.css`. Shared parts: `components/levels.tsx` (`LevelMark`, `Trail`, `pathwayAccent`). `components/pathway-cards.tsx` has the stripe, mark, detail and match count.
-- The Add pop-up: `components/add-to-structure.tsx` (AD-1…AD-8). It also holds the `LocationPicker` moved from `structure.tsx`.
-- Program structure in layout A: `pages/structure.tsx`. The page is rewritten; `DetailPanel`, `StartSetup` and `useFitToScreen` are kept; the tree, `NodeRow`, `GhostRow` and `AddRow` are gone.
-- Immigration programs restyled: `pages/programs.tsx` (bands, Trail, marks, filled next step = need you, sticky List band). "+ Add pathway" goes to `/structure?add=1&from=programs`.
-- Menu in setup order: `App.tsx`. The "Program structure" wording is in the pages.
-- Checks: `check_w1_structure_browser.cjs` rewritten, 95/95. New `check_w1_visual_system.cjs` 21/21 and `check_w1_level_tokens.ts` 31/31. Updated to the new page, each passing alone: `check_w1_structure_s1finish.cjs` 33/33, `check_w1_s1s2_fix.cjs` 30/30. Updated for menu and wording, **not rerun yet**: `check_w1_programs_s2.cjs`, `check_screen02_slice1.cjs`, `check_studio_browser.cjs` (B0b: first Pathway through the pop-up).
-- Screenshots for the early look: `product/screens/W1-visual-system/screenshots/structure/` and `…/programs/` at 1440, 1024 and 390 px.
-- Notes: `product/screens/W1-visual-system/build-notes.md`. The S3 re-check (P-126, no code) is in `product/screens/W1-structure-programs/challenge.md`, last section.
+**Done and pushed:**
+- R3a Program structure 263bb9a; shared lifecycle pattern 93b0040b (one guard `api/src/lifecycle.ts`, one word set `contracts/lifecycle.ts`, components `web/src/components/lifecycle/`); R3b Immigration programs 776d4169; qa-lane words 2101164; main merged e36bf06e. Founder Go on round 3; Lead check passed; Lead PR #66 (`lead/2026-10-28-r3`) green CI.
+- FIX for the PR #66 review, 19e8911d: (1) Load sample records itself as creator (`SAMPLE_CREATOR`), so sample names are never an own draft; (2) Move past a retired sibling keeps it in place; (3) the Add pop-up seeds from the type it was opened for. Checks: structure_r3 34/34, structure_browser 123/123, structure 83/83, programs_r3 25/25, s1s2_fix 30/30, qa51 21/21.
+- Evidence so far: run-suites 41/41 on 776d4169; studio journey 45/45 (private copy).
 
-**Partly done:**
-- The full `run-suites.sh` run was **stopped for this handover before it finished**: no suite table on this branch yet.
-- The studio journey (`--demo` suite) has **not been run** on this branch.
-- CI on the branch: not looked at yet.
+- Follow-up b078f150: under load the full run caught Add combination prefilling the Program without the Pathway (the Pathway came from the catalogue's answer, the Program from the address); the Pathway now comes from the address and the pop-up fills an empty level from the one below.
+- Evidence: full run-suites on 19e8911d 40/41 (the one failure is that prefill race, fixed in b078f150); on b078f150 every touched check passes on private copies (programs_r3 26/26, programs_s2 87/87, structure_browser 123/123, s1s2_fix 30/30, qa51 21/21, visual_system 21/21, screen01_browser 128/128, smallfix) and the studio journey 45/45.
 
-**Not started:**
-- QA-51, QA-52 and QA-54 (the Lead adds them to this slice; details on the Lead's next PR, in lanes/screens.md).
-- EARLY-LOOK hand-back.
-- S3 code (waits for the founder's Go and S4's merge).
-
-**Next steps, in order:**
-1. `/next screens`: sync main; it may bring S4. `contracts/structure.ts` also changes on S4's branch (`Use.retireOk`), in a different place; expect a clean merge.
-2. `bash product/tools/run-suites.sh`, then fix what fails. Likely spots:
-   - `check_screen01_browser.cjs` step "item 3 + BR-7" expects the List row's last level bold; the sub-category is now `font-medium` navy, so update the check to the Trail's identity.
-   - `check_w1_programs_s2.cjs`: titles and classes changed (data attributes kept).
-3. Studio journey on an isolated copy: `zsh tools/isolated.sh journey 4445 start`, then `STUDIO_URL=http://localhost:4445 node tests/check_studio_browser.cjs` (45 steps).
-4. QA-51, QA-52, QA-54, each with a pass and a fail check.
-5. Restore run by-products (below), set EARLY-LOOK (owner Lead), push, and **send the Paste to Lead to the Lead session with SendMessage** (the Lead's rule since 27 Oct 23:40), not only in the reply.
+**Next:** the Lead re-merges PR #66 (hand-back sent by message). Then S3 (Start setup) after S4's merge. Then S3 (Start setup) after S4's merge, from the S3 re-check and addendum in `screens/W1-structure-programs/challenge.md`.
 
 **Learned, not written elsewhere:**
-- **Long Bash commands get refused by the merge guard.** The hook (`product/tools/merge-guard.sh`, matched on `gh pr merge*`) misfires on many long or multi-line Bash commands: heredocs, `$PWD`, long sed lines. It replies "Only the Lead merges pull requests". Workaround: put edits in a script file in the scratchpad and run that short command.
-- **Run by-products land in the working tree.** `run-suites.sh` and browser checks rewrite other lanes' screenshots (`product/screens/01-…`, `02-ai-work`, `R1-thin-slice`, `W1-structure-programs/*`), `prototype/p2/{ledger,runs,jobs,screening}` and `prototype/studio/evidence/`. Before every commit, run `git checkout --` on them, remove untracked files, and confirm `git diff --name-status origin/main...HEAD` lists only lane files (S2's break M3 came from this).
-- **Isolated copies:** each name has its own database; two checks on one name share data, so run them one at a time:
-  - `screens_s2` 4444 (structure browser) shares a name with `check_w1_programs_s2.cjs` (4447).
-  - `screens_s1s2` 4448 (FIX check).
-  - `screens_vs` 4449 (visual check).
-  - `journey` 4445.
-- **The machine is busy (load about 15).** Timing steps can fail in the full run and pass alone: rerun a failed suite alone before treating it as a defect.
-- **Page behaviour:** Program structure opens on the Pathway this person last chose (`xr-structure-pathway:<actor>` in browser storage; `p=all` is All pathways). A check that wants every band should open `/structure?p=all`.
+- Other lanes run this lane's checks under the same copy names and ports (`run-suites.sh` uses the usage lines), and all copies share one PostgreSQL server: two runs at once break each other. For reruns, use private names and ports (for example `<name>_mine` on 4460+), then drop those databases.
+- Long or multi-line Bash commands (heredocs, `$(…)` in some forms, loops) are refused by the merge guard hook (`gh pr merge*` matcher); put edits in a script file in the scratchpad and run it with a short command.
+- Run by-products land in the tree (other lanes' screenshots, `prototype/p2/*`, `prototype/studio/evidence/*`): restore them before each commit and stage only lane files.
+- The Prisma client in `node_modules` is shared with other copies: after switching branches run `./node_modules/.bin/prisma generate` if a column is reported missing.
+- An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-visual-system
-stage: EARLY-LOOK
+stage: FIX done (PR #66 review)
 owner: Lead
-next_action: Lead: early look of round 3 with the founder (R3a Program structure with the shared lifecycle pattern, R3b Immigration programs); screenshots in screens/W1-visual-system/screenshots/structure/ and programs/r3-* at 1440 and 1024; build-notes "Round 3" sections
+next_action: Lead: re-merge PR #66 with b078f150 (the three review fixes and one prefill follow-up; local evidence in build-notes "Fixes after the Lead PR #66 review")
 then: S3 BUILD after round 3, the founder's Go and S4's merge (S3 re-check and addendum done, P-126); wave 1 desktop only (1440, 1024)
 blocked_by: none
 updated: 2026-10-28
 
 ## Log (last 10 lines)
+- 2026-10-28 · W1-visual-system · FIX → Lead · PR #66 review fixes 19e8911d; run-suites 40/41 on it, the one failure (Add combination prefill race under load) fixed in b078f150 with a fail-guard; touched checks all pass on b078f150 and the journey 45/45. AI US$0. Owner → Lead.
+- 2026-10-28 · W1-visual-system · FIX (Lead PR #66 review) · three fixes with a pass and a fail check each: Load sample records itself as creator (sample names never an own draft), Move past a retired sibling keeps it in place, the Add pop-up seeds from the type it was opened for; structure_r3 34/34, structure_browser 123/123; full run-suites on the fix commit. AI US$0.
 - 2026-10-28 · W1-visual-system · BUILD → EARLY-LOOK · round 3 built: R3a Program structure (263bb9a) with the shared lifecycle pattern (93b0040b: one guard and word set, own draft deleted at once with Undo, re-check before Approve, RowAction / BlockedLine / WherePanel / ImpactPanel / Undo toast), R3b Immigration programs (776d4169); run-suites 41/41 on 776d4169, journey 45/45; main merged e36bf06e. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-visual-system · DESIGN → BUILD · applied Lead note (round 3 challenge agreed, Majors 1–4, Minors 5–10); R3a built: one row-action rule (nodeCan), branch delete exact and all or nothing, a combination row's Retire/Restore with its combination, Delete wording, the page (filter bar, Tree, List, Edit + action on every row); qa words in their own commit 2101164. AI US$0.
 - 2026-10-28 · W1-visual-system · EARLY-LOOK → DESIGN · applied Lead message (P-128 round 3 agreed; note on lead/2026-10-27 8e7d47f); screen-challenge written in W1-visual-system/challenge.md: Build after these changes, 4 Major, 6 Minor, back-end plan; no code. Owner → Lead. AI US$0.
@@ -67,5 +45,3 @@ updated: 2026-10-28
 - 2026-10-28 · W1-visual-system · BUILD · applied the Lead's drift check (Fix first, items 1–5): four CI-red suites fixed, Used by on each line, focus kept during Add and add another, POST /structure/path API check 28/28 (found and fixed: None on a category with sub-categories said "already there"); structure_path 28/28, s1s2_fix 30/30, programs_s2 87/87; 25f1b12. AI US$0.
 - 2026-10-28 · W1-visual-system · BUILD · applied Lead note 2026-10-28 00:30; synced main 8cfc043 (clean); QA-51, QA-52, QA-54 built with pass and fail checks (check_w1_qa51_52_54 21/21; qa check's three steps pass); 381b44e pushed; this copy's folder is named runtime-*, so it was bound to screens with .claude/lane. AI US$0.
 - 2026-10-28 · W1-visual-system · BUILD · handover to a fresh session (founder, via the Lead): slice built and pushed; full suites stopped unfinished and the studio journey not run on this branch; Handover section written. AI US$0.
-- 2026-10-27 · W1-visual-system · CHECK → BUILD · applied Lead note 2026-10-27 22:50 (FIX merged, 027174d); new branch screens/2026-10-27-visual-system from main; built level tokens, LevelMark/Trail/stripe, POST /structure/path, the Add to Program structure pop-up, Program structure layout A, Immigration programs restyled, menu in setup order; checks: structure 95/95, visual 21/21, tokens 31/31; S3 re-check in W1-structure-programs/challenge.md. AI US$0.
-- 2026-10-27 · W1-structure-programs · FIX → CHECK · seven items fixed (QA-44/45/46/49/50, review m1, break m8); check_w1_s1s2_fix 30/30; suites 34 PASS + 2 reruns alone PASS (s1finish now waits for 'Added'; forms_slice2b fetch flake 36/36); synced main 94d14ce, then s1s2_fix 30/30, programs_s2 87/87, s1finish 33/33; studio journey 45/45 on 4445; no by-products in the branch. AI US$0. Owner → Lead.

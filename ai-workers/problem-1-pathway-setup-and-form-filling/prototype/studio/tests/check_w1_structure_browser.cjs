@@ -224,7 +224,20 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await p.waitForTimeout(300);
   step("C11.3 R3-7: Add is prefilled from the Pathway and Program filters and starts at Category", (await field("program").inputValue()) === "Work permits" && await field("category").evaluate((e) => e === document.activeElement), `${await field("program").inputValue()} / focus ${await p.evaluate(() => document.activeElement?.closest("[data-field]")?.getAttribute("data-field") ?? document.activeElement?.tagName)}`);
   await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" });
+  // Lead review 3: Add on Retail, close, switch to Corporate with its Pathway chip: the pop-up is seeded from Corporate.
   await p.locator("[data-clear-all]").click(); await p.waitForTimeout(250);
+  await p.locator("[data-add-open]").click(); await dialog().waitFor(); await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" });
+  await p.getByRole("group", { name: "Pathway type" }).getByRole("button", { name: /^Corporate and employers/ }).click(); await ready();
+  await p.locator("[data-pathway-chip]").filter({ hasText: /^Temporary residence/ }).click(); await p.waitForFunction(() => /[?&]p=/.test(location.search));
+  await p.locator("[data-add-open]").click(); await dialog().waitFor(); await p.waitForTimeout(500);
+  const corpRadio = await p.getByRole("radiogroup", { name: "Pathway type" }).getByRole("radio", { name: "Corporate and employers" }).getAttribute("aria-checked");
+  step("C11.3 lead review 3 pass: after Retail, Add on Corporate is prefilled from the Corporate Pathway filter (type Corporate, Pathway filled, Program open)", corpRadio === "true" && (await field("pathway").inputValue()) === "Temporary residence" && !(await field("program").isDisabled()), `${corpRadio} · ${await field("pathway").inputValue()}`);
+  await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" });
+  await p.locator("[data-pathway-chip]").filter({ hasText: /^All/ }).click(); await p.waitForFunction(() => !/[?&]p=/.test(location.search));
+  await p.locator("[data-add-open]").click(); await dialog().waitFor(); await p.waitForTimeout(500);
+  step("C11.3 lead review 3 fail-guard: with no Pathway filter, Add on Corporate starts empty at Pathway (nothing carried over from Retail)", (await field("pathway").inputValue()) === "" && await field("pathway").evaluate((e) => e === document.activeElement) && (await p.getByRole("radiogroup", { name: "Pathway type" }).getByRole("radio", { name: "Corporate and employers" }).getAttribute("aria-checked")) === "true");
+  await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" });
+  await open();
   step("C11.3 R3-6: Clear all brings every row back", await p.locator("[data-row]").count() === 15 && !/[?&](p|prog)=/.test(p.url()), await p.locator("[data-row]").count());
 
   // ======================================================== the pop-up's checks (AD-2, AD-4, AD-7)
@@ -339,6 +352,23 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   step("C11.3 minor 5: a retired row shows '—' and every other number stays as it was", retiredNum === "—" && JSON.stringify(after) === JSON.stringify(before.filter((x) => x !== "2.1.1")), `${retiredNum} · ${after.join(" ")}`);
   await state("show-retired");
   sql(`update program_def set retired_at = null where label = 'Express Entry stream'`);
+
+  // ======================================================== lead review 2: reorder past a retired sibling (it keeps its place)
+  sql(`update program_def set retired_at = now() where label = 'Visitor visa'`);
+  await open("?r=1");
+  const order = () => sql(`select string_agg(label, '|' order by display_order) from program_def where parent_node_key = '${visitors}'`);
+  const before2 = order();
+  await edit("Visiter visa");
+  await panel().getByRole("button", { name: "Move up" }).click();
+  await p.waitForFunction(() => /^Moved/.test(document.querySelector("[data-panel-note]")?.textContent ?? ""), null, { timeout: 8000 }).catch(() => undefined);
+  const after2 = order();
+  step("C11.9 lead review 2 pass: with a retired sibling between them, Move up swaps the two active names; the retired one keeps its place", before2 === "Super visa|Visitor visa|Visiter visa" && after2 === "Visiter visa|Visitor visa|Super visa" && /^Moved/.test(await panel().locator("[data-panel-note]").innerText()), `${before2} → ${after2}`);
+  step("C11.9 lead review 2: now first of the active names, Move up is off", await panel().getByRole("button", { name: "Move up" }).isDisabled());
+  const activeKeys = (await api("/structure?pathwayType=INDIVIDUAL")).body.nodes.filter((n) => n.parentKey === visitors && !n.retired).map((n) => n.key);
+  const activeOnly = await api("/structure/reorder", { method: "POST", data: { pathwayType: "INDIVIDUAL", parentKey: visitors, keys: activeKeys } });
+  step("C11.9 lead review 2 fail: the server still refuses a list without the retired name (it must hold every name there)", activeOnly.status === 409, `${activeOnly.status} · sent ${activeKeys.length} keys · ${order()}`);
+  await panel().getByRole("button", { name: "Close the details" }).click();
+  sql(`update program_def set retired_at = null where label = 'Visitor visa'`);
 
   // ======================================================== read-only approver
   await as("user-B"); await open("?add=1");
