@@ -60,7 +60,8 @@ export class FormLibrary {
     ]);
     // "Re-read with AI (fields and boxes)" drafts from a combination's copy of the file (today's field-map drafting).
     const atts = await this.db.sourceAttachment.findMany({ where: { workspaceId }, select: { id: true, sha256: true, combinationId: true, kind: true }, orderBy: { createdAt: "asc" } });
-    const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "APPROVED"] } }, select: { id: true, key: true, action: true, status: true, proposedBy: true } });
+    // R69-1: a RETURNED change is still open (lifecycle.ts OPEN): the row keeps its state and its author keeps Withdraw.
+    const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { id: true, key: true, action: true, status: true, proposedBy: true } });
     const trails = await combinationTrails(this.db, workspaceId);
     const combos = (await this.db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true, label: true } })).map((c) => ({ id: c.id, label: trails.get(c.id) ?? c.label })).sort((a, b) => a.label.localeCompare(b.label));
     const waitingAccepts = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "form_accepts", status: { in: ["WAITING", "RETURNED"] } }, select: { key: true } })).map((x) => x.key));
@@ -81,7 +82,7 @@ export class FormLibrary {
         accepts: current?.acceptedChannels ?? (TYPE_OF(f.formKind, f.displayName) === "form" ? null : "READ_BY_AI"), accepts_basis: current?.acceptedBasis === "SAMPLE" ? "AI_SAMPLE" : current?.acceptedBasis ?? null, accepts_quote: current?.acceptedQuote ?? null, accepts_waiting: waitingAccepts.has(f.formKey),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
         form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256 && a.kind === "Form")?.id ?? null : null,
-        used_by: using, status, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
+        used_by: using, status, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", lifecycle_returned: pendingChange?.status === "RETURNED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
     });
     // P-116 amended (28 Oct): one written action per row, decided by the one guard (formUses); greyed with its reason.
     // An earlier edition says what keeps it ("Kept by Release 2 of Visitor visa and 3 open cases"; P-51, never deleted).

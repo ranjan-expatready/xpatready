@@ -149,6 +149,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await sleep(800);
     step("break minor: the row shows the request waiting (\"Retire waiting\"), not just Ready", /Retire waiting/.test(await row5604.innerText()));
     step("P-116 amended: the author's own waiting change makes the row's action Withdraw, and the Undo toast shows", (await act5604.getAttribute("data-action")) === "WITHDRAW" && (await p.locator("[data-undo-toast]").count()) === 1, await act5604.getAttribute("data-action"));
+    // takesEffect (Lead 28 Oct, with R69): only a library Retire or Restore says "When it is approved"; Withdraw has no Takes effect line.
+    await act5604.click(); await pane.waitFor();
+    const wText = await pane.innerText();
+    step("R69 takesEffect fail: the Withdraw confirm has no Takes effect line (the override is for Retire and Restore only)", /Withdraw/.test(wText) && !/Takes effect/.test(wText), wText.slice(0, 200));
+    await pane.getByRole("button", { name: "Cancel" }).click(); await sleep(200);
+    // R69-2: the list's cache is keyed by the person, so switching person (no reload) reads their own row actions.
+    await p.getByLabel("Simulated person").first().selectOption("user-B");
+    await p.waitForFunction(() => document.querySelector('tr[data-form="IMM 5604"] [data-action]')?.getAttribute("data-action") !== "WITHDRAW", null, { timeout: 5000 }).catch(() => {});
+    step("R69-2 fail: after switching to another person without reloading, the author's Withdraw is not shown to them (their own action, greyed)", (await act5604.getAttribute("data-action")) === "RETIRE" && (await act5604.getAttribute("aria-disabled")) === "true", await act5604.getAttribute("data-action"));
+    await p.getByLabel("Simulated person").first().selectOption("user-A");
+    await p.waitForFunction(() => document.querySelector('tr[data-form="IMM 5604"] [data-action]')?.getAttribute("data-action") === "WITHDRAW", null, { timeout: 5000 }).catch(() => {});
+    step("R69-2 pass: switching back to the author shows Withdraw of their own waiting change again", (await act5604.getAttribute("data-action")) === "WITHDRAW");
     await shot("10-delete-asked");
 
     // Read-only, long title

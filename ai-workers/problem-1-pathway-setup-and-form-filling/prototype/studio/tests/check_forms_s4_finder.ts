@@ -416,14 +416,38 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   sql(`update combination_form set status='DRAFT' where id=(select id from combination_form where combination_id='${vv}' and lineage_key='${F}' order by version desc limit 1)`);
   r = await call("POST", `/library/changes/${rid}/return`, { note: "Visitor visa lists it again" }, "user-B");
   ok("setup (PR #67): the second person returns it", sql(`select status from library_change where id='${rid}'`) === "RETURNED", r.body?.detail ?? r.status);
+  // R69-1 (Devin Review on #69): a RETURNED form change is still open, so its row keeps the state and its author keeps Withdraw.
+  const rowAs = async (actor: string) => ((await call("GET", `/library/forms/list?q=${encodeURIComponent("0002")}`, undefined, actor)).body.rows as any[]).find((x) => x.code === F); // eslint-disable-line @typescript-eslint/no-explicit-any
+  let fr = await rowAs("user-A");
+  ok("R69-1 pass: a returned retire stays on its form's row (Retire returned) and its author is offered Withdraw of that change", fr?.lifecycle_waiting === "RETIRE" && fr?.lifecycle_returned === true && fr?.lifecycle_approved === false && fr?.action?.kind === "WITHDRAW" && fr?.action?.change_id === rid, { waiting: fr?.lifecycle_waiting, returned: fr?.lifecycle_returned, action: fr?.action });
+  fr = await rowAs("user-B");
+  ok("R69-1 fail: anyone else sees the action greyed with its reason while the returned change is open (no second retire)", fr?.action?.kind === "RETIRE" && !!fr?.action?.why && fr?.action?.change_id === null, fr?.action);
   r = await call("POST", `/library/changes/${rid}/resubmit`, { reason: "Sent again unchanged" });
   ok("PR #67 fail: sending a returned form retire again while a combination still lists the form is refused in words (409, still used), never as a missing combination", r.status === 409 && /Still used/.test(r.body.detail ?? "") && /Visitor visa/.test(r.body.detail ?? "") && sql(`select status from library_change where id='${rid}'`) === "RETURNED", r.body?.detail);
   await removeLine();
   r = await call("POST", `/library/changes/${rid}/resubmit`, { reason: "Visitor visa no longer lists it" });
   ok("PR #67 pass: after its last use is removed, the returned retire is sent again and waits for a second person (its own open change is not counted against it)", r.status < 300 && sql(`select status from library_change where id='${rid}'`) === "WAITING", r.body?.detail ?? r.body?.status);
+  fr = await rowAs("user-A");
+  ok("R69-1: once sent again the row says waiting, not returned", fr?.lifecycle_waiting === "RETIRE" && fr?.lifecycle_returned === false && fr?.action?.kind === "WITHDRAW", { returned: fr?.lifecycle_returned, action: fr?.action });
   ok("PR #67: History says it was sent again, in words (a form, never a combination)", /sent again retire "/.test(sql(`select summary from audit_event where entity_key='${F}' and action='proposed' order by at desc limit 1`)) && sql(`select entity from audit_event where entity_key='${F}' and action='proposed' order by at desc limit 1`) === "form");
   r = await call("POST", `/library/changes/${rid}/resubmit`, { reason: "Again while it waits" });
   ok("PR #67 fail: a change that waits already is not sent again (409)", r.status === 409, r.body?.detail);
+
+  // --- R69-3 (Devin Review on #69): when both Delete and Retire are refused, the row's one action is greyed, never clickable.
+  const { rowActionOf } = await import("../api/src/form-library.ts");
+  const uv = (can: { delete: string | null; retire: string | null }, released: boolean) => ({ key: "k", label: "k", trail: [], retired: false, released, uses: [], can: { restore: null, ...can }, pending: null }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let ra = rowActionOf(false, uv({ delete: "Can't delete: released items are kept.", retire: "Can't retire yet: still used." }, true), null, "user-A");
+  ok("R69-3 pass: a released form that is still used (Delete and Retire both refused) shows Retire greyed with the retire reason", ra.kind === "RETIRE" && ra.why === "Can't retire yet: still used.", ra);
+  ra = rowActionOf(false, uv({ delete: "Can't delete: its setup draft uses it.", retire: "It was never released: delete it instead." }, false), null, "user-A");
+  ok("R69-3 pass: an unreleased form with both refused shows Delete greyed with the delete reason", ra.kind === "DELETE" && ra.why === "Can't delete: its setup draft uses it.", ra);
+  ra = rowActionOf(false, uv({ delete: "Can't delete: released items are kept.", retire: null }, true), null, "user-A");
+  ok("R69-3 fail: when Retire is allowed it is offered, not greyed", ra.kind === "RETIRE" && ra.why === null, ra);
+  ra = rowActionOf(false, uv({ delete: null, retire: "It was never released: delete it instead." }, false), null, "user-A");
+  ok("R69-3 fail: when Delete is allowed it is offered, not greyed", ra.kind === "DELETE" && ra.why === null, ra);
+  const listedRows = ((await call("GET", "/library/forms/list")).body.rows as any[]).filter((x) => x.action.kind !== "WITHDRAW" && x.status !== "retired"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const bothRefused: string[] = [], notGreyed: string[] = [];
+  for (const x of listedRows) { const u = (await call("GET", `/library/forms/${encodeURIComponent(x.code)}/uses`)).body; if (u?.can?.delete && u?.can?.retire) { bothRefused.push(x.code); if (!x.action.why) notGreyed.push(x.code); } }
+  ok("R69-3 (API): every library row whose Delete and Retire are both refused shows its action greyed with a reason", bothRefused.length >= 1 && notGreyed.length === 0, { bothRefused, notGreyed });
 
   // --- QA-62, QA-63 (qa after-merge on S4): a replay with nothing saved, on Super visa (no page chosen by rules)
   const sv = sql(`select id from combination where label = 'Super visa' limit 1`);

@@ -15,12 +15,12 @@ import { Tip, TipProvider } from "@/components/status";
 import { Button, Dialog, Field, Input, Notice, Panel, Pill, Select, Table, Textarea } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BlockedLine, ImpactPanel, RowAction, useUndoToast } from "@/components/lifecycle";
-import { ACTION_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../../../contracts/lifecycle";
+import { ACTION_LABEL, RETURNED_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../../../contracts/lifecycle";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; edition: string | null; canada_updated: string | null; accepts: string | null; accepts_basis: string | null; accepts_quote: string | null; accepts_waiting: boolean;
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
-  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; older_editions: { label: string; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
+  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
 type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string };
 export type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
 
@@ -51,7 +51,7 @@ export function FormsPage() {
   const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
   const [type, setType] = React.useState(""), [usedBy, setUsedBy] = React.useState(""), [status, setStatus] = React.useState(""), [q, setQ] = React.useState("");
   const qs = new URLSearchParams(Object.entries({ type, usedBy, status, q: q.trim() }).filter(([, v]) => v)).toString();
-  const lib = useApi<List>(["library-forms-list", qs], `/library/forms/list${qs ? `?${qs}` : ""}`, { placeholderData: (p) => p });
+  const lib = useApi<List>(["library-forms-list", actorId, qs], `/library/forms/list${qs ? `?${qs}` : ""}`, { placeholderData: (p) => p });
   const [opened, setOpened] = React.useState<Row | null>(null);
   // P-116 amended (28 Oct): the row's one written action is confirmed in the right panel (ImpactPanel), then the Undo toast.
   const [confirm, setConfirm] = React.useState<Row | null>(null);
@@ -127,7 +127,7 @@ export function FormsPage() {
                   <td className="hidden xl:table-cell">{editionText(r) ?? <span className="text-text-muted">no usable edition yet</span>}</td>
                   <td className="max-w-36 xl:max-w-none"><AcceptsCell r={r} /></td>
                   <td className="max-w-48 xl:max-w-72">{r.used_by.length === 0 ? <span className="text-text-muted">Not used</span> : r.used_by.length === 1 ? <TrailText label={r.used_by[0].label} /> : <Tip tip={r.used_by.map((u) => u.label).join(", ")}><span tabIndex={0} className="underline decoration-dotted rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">{r.used_by.length} combinations</span></Tip>}</td>
-                  <td><span className="inline-flex flex-wrap gap-1"><Tip tip={STATUS[r.status].tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone={STATUS[r.status].tone}>{STATUS[r.status].word}</Pill></span></Tip>{r.lifecycle_waiting ? <Tip tip={r.lifecycle_approved ? `Approved: the form is ${r.lifecycle_waiting === "RESTORE" ? "restored" : "retired"} with the next release (Release, on the combination's Review page).` : `A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="warn">{r.lifecycle_approved ? `${ACTION_LABEL[r.lifecycle_waiting]} approved` : WAITING_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : null}</span></td>
+                  <td><span className="inline-flex flex-wrap gap-1"><Tip tip={STATUS[r.status].tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone={STATUS[r.status].tone}>{STATUS[r.status].word}</Pill></span></Tip>{r.lifecycle_waiting && r.lifecycle_returned ? <Tip tip={TIP.returned}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="danger">{RETURNED_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : r.lifecycle_waiting ? <Tip tip={r.lifecycle_approved ? `Approved: the form is ${r.lifecycle_waiting === "RESTORE" ? "restored" : "retired"} with the next release (Release, on the combination's Review page).` : `A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="warn">{r.lifecycle_approved ? `${ACTION_LABEL[r.lifecycle_waiting]} approved` : WAITING_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : null}</span></td>
                   <td className="text-right">
                     <div className="flex items-center justify-end gap-0.5">
                       <RowAction kind={r.action.kind} why={canAuthor ? r.action.why : WHY.author} canEdit={canAuthor} name={r.code} reasonId={`why-${r.code.replace(/\W+/g, "-")}`}
@@ -146,7 +146,7 @@ export function FormsPage() {
         <p className="text-xs text-text-muted">{lib.data?.sample_note}</p>
         {open ? <FormDrawer row={open} onClose={() => setOpen(null)} canAuthor={canAuthor} /> : null}
         {confirm ? <div className="xl:fixed xl:right-6 xl:top-20 xl:z-40 xl:w-[440px]"><ImpactPanel key={`impact-${confirm.code}`} kind={confirm.action.kind} name={`${confirm.code} · ${confirm.title}`}
-          kept={confirm.action.kind === "RETIRE" ? confirm.used_by.map((u) => u.label) : undefined} takesEffect={SAY.takesEffect("DELETE")} busy={acting.busy} error={acting.error}
+          kept={confirm.action.kind === "RETIRE" ? confirm.used_by.map((u) => u.label) : undefined} takesEffect={confirm.action.kind === "RETIRE" || confirm.action.kind === "RESTORE" ? SAY.takesEffect("DELETE") : undefined} busy={acting.busy} error={acting.error}
           onCancel={() => { const code = confirm.code; setConfirm(null); setTimeout(() => document.querySelector<HTMLElement>(`tr[data-form="${CSS.escape(code)}"] [data-action]`)?.focus(), 0); }} onSend={(reason) => void sendAction(confirm, reason)} /></div> : null}
         {undo.node}
       </div>
