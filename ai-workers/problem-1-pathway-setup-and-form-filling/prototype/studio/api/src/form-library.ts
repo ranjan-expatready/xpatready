@@ -15,7 +15,9 @@ import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada
 import { INDEX_URL } from "./finder.ts";
 import { AcceptsBody, ACCEPTS_WORD, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
-import { ACTORS, actorOf, Audit, Db, need, Workspace, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Audit, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
+import { WHY } from "../../contracts/lifecycle.ts";
+import type { UsesView } from "../../contracts/structure.ts";
 import { Finder } from "./finder.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { addFormLine } from "./form-lines.ts";
@@ -48,7 +50,7 @@ export class FormLibrary {
   }
 
   /** GET /library/forms/list: one lean list with type, used-by and status filters and a search (P-123). One query set. */
-  async list(query: unknown) {
+  async list(query: unknown, actorId?: string) {
     const q = parse(LibraryQuery, query);
     const workspaceId = await this.ws.id();
     const [forms, approved, held] = await Promise.all([
@@ -58,7 +60,7 @@ export class FormLibrary {
     ]);
     // "Re-read with AI (fields and boxes)" drafts from a combination's copy of the file (today's field-map drafting).
     const atts = await this.db.sourceAttachment.findMany({ where: { workspaceId }, select: { id: true, sha256: true, combinationId: true, kind: true }, orderBy: { createdAt: "asc" } });
-    const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "APPROVED"] } }, select: { key: true, action: true, status: true } });
+    const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "APPROVED"] } }, select: { id: true, key: true, action: true, status: true, proposedBy: true } });
     const trails = await combinationTrails(this.db, workspaceId);
     const combos = (await this.db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true, label: true } })).map((c) => ({ id: c.id, label: trails.get(c.id) ?? c.label })).sort((a, b) => a.label.localeCompare(b.label));
     const waitingAccepts = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "form_accepts", status: { in: ["WAITING", "RETURNED"] } }, select: { key: true } })).map((x) => x.key));
@@ -79,13 +81,18 @@ export class FormLibrary {
         accepts: current?.acceptedChannels ?? (TYPE_OF(f.formKind, f.displayName) === "form" ? null : "READ_BY_AI"), accepts_basis: current?.acceptedBasis === "SAMPLE" ? "AI_SAMPLE" : current?.acceptedBasis ?? null, accepts_quote: current?.acceptedQuote ?? null, accepts_waiting: waitingAccepts.has(f.formKey),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
         form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256 && a.kind === "Form")?.id ?? null : null,
-        used_by: using, status, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel) };
+        used_by: using, status, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
     });
+    // P-116 amended (28 Oct): one written action per row, decided by the one guard (formUses); greyed with its reason.
+    // An earlier edition says what keeps it ("Kept by Release 2 of Visitor visa and 3 open cases"; P-51, never deleted).
+    const shaped = await Promise.all(rows.map(async ({ older_editions, retired, pending, ...r }) => ({ ...r,
+      action: rowActionOf(retired, await formUses(this.db, workspaceId, r.code), pending, actorId),
+      older_editions: await Promise.all(older_editions.map(async (label) => ({ label, kept_by: await keptBy(this.db, workspaceId, label) }))) })));
     const term = q.q?.toLowerCase(), termCode = q.q ? normaliseCode(q.q).toLowerCase() : undefined;
     // S5's "Add a form from the library" (for=picker): forms a combination may use now, never retired or still waiting.
-    const shown = rows.filter((r) => (q.for !== "picker" || (r.status !== "retired" && !!r.edition)) && (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.code.toLowerCase().includes(termCode!) || r.title.toLowerCase().includes(term)));
-    const count = (pred: (r: (typeof rows)[number]) => boolean) => rows.filter(pred).length;
-    return { rows: shown, counts: { all: rows.length, form: count((r) => r.type === "form"), guide: count((r) => r.type === "guide"), checklist: count((r) => r.type === "checklist"), needs_ok: count((r) => r.status === "needs_ok"), newer_file: count((r) => r.status === "newer_file"), retired: count((r) => r.status === "retired") },
+    const shown = shaped.filter((r) => (q.for !== "picker" || (r.status !== "retired" && !!r.edition)) && (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.code.toLowerCase().includes(termCode!) || r.title.toLowerCase().includes(term)));
+    const count = (pred: (r: (typeof shaped)[number]) => boolean) => shaped.filter(pred).length;
+    return { rows: shown, counts: { all: shaped.length, form: count((r) => r.type === "form"), guide: count((r) => r.type === "guide"), checklist: count((r) => r.type === "checklist"), needs_ok: count((r) => r.status === "needs_ok"), newer_file: count((r) => r.status === "newer_file"), retired: count((r) => r.status === "retired") },
       combinations: combos, sample_note: "Which forms a combination needs and what IRCC accepts are Sample until the immigration expert confirms." };
   }
 
@@ -253,6 +260,27 @@ export class FormLibrary {
 }
 
 /** S4 slice 1 routes (contract: contracts/form-library.ts). Kept in this lane's own file so shared API edits stay small. */
+/** The row's one written action (P-116 amended), from the one guard's answers: my own waiting change can be withdrawn;
+ *  anyone else's waiting change greys the row; a retired form is restored; otherwise Delete when nothing uses it, else
+ *  Retire, greyed with the guard's own reason when it cannot be taken now. */
+export function rowActionOf(retired: boolean, u: UsesView, pending: { id: string; action: string; proposedBy: string } | null, actorId?: string): { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } {
+  if (pending) return pending.proposedBy === actorId ? { kind: "WITHDRAW", why: null, change_id: pending.id } : { kind: pending.action as "DELETE" | "RETIRE" | "RESTORE", why: WHY.waiting, change_id: null };
+  if (retired) return { kind: "RESTORE", why: u.can.restore, change_id: null };
+  if (!u.can.delete) return { kind: "DELETE", why: null, change_id: null };
+  if (!u.can.retire) return { kind: "RETIRE", why: null, change_id: null };
+  return u.released ? { kind: "RETIRE", why: u.can.retire, change_id: null } : { kind: "DELETE", why: u.can.delete, change_id: null };
+}
+
+/** An earlier edition is kept by the releases that file it and the open cases pinned to them (P-51: never deleted). */
+async function keptBy(db: Db, workspaceId: string, edition: string): Promise<string> {
+  const releases = await db.$queryRaw<{ id: string; version: number; label: string }[]>`SELECT cr.id, cr.version, c.label FROM config_release cr JOIN combination c ON c.id = cr.combination_id WHERE cr.workspace_id = ${workspaceId}::uuid AND jsonb_path_exists(cr.snapshot, '$.**.form_edition ? (@ == $e)', jsonb_build_object('e', ${edition}::text)) ORDER BY c.label, cr.version`;
+  if (!releases.length) return "Kept for the record: no release or open case files it now. Never deleted.";
+  const open = await db.$queryRaw<{ n: bigint }[]>`SELECT count(DISTINCT p.case_id) AS n FROM pack_work_pin p JOIN runtime_case k ON k.id = p.case_id WHERE p.config_release_id = ANY(${releases.map((r) => r.id)}::uuid[]) AND k.status = 'OPEN'`;
+  const named = [...new Map(releases.map((r) => [r.label, r])).values()].map((r) => `Release ${releases.filter((x) => x.label === r.label).map((x) => x.version).join(", ")} of ${r.label}`);
+  const cases = Number(open[0]?.n ?? 0);
+  return `Kept by ${named.join(", ")}${cases ? ` and ${cases} open case${cases === 1 ? "" : "s"}` : ""}. Never deleted.`;
+}
+
 @Controller("api")
 export class FormLibraryController {
   constructor(@Inject(FormLibrary) private readonly lib: FormLibrary, @Inject(Finder) private readonly finder: Finder, @Inject(Lifecycle) private readonly lifecycle: Lifecycle, @Inject(UploadRuns) private readonly uploads: UploadRuns) {}
@@ -284,7 +312,7 @@ export class FormLibraryController {
   @Post("combinations/:id/forms/:code/replace") replace(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.replace(actorOf(a), id, code, b); }
   @Post("combinations/:id/forms") attach(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.lib.attach(actorOf(a), id, b); }
   @Delete("combinations/:id/forms/:code") remove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.remove(actorOf(a), id, code, b); }
-  @Get("library/forms/list") list(@Query() q: unknown) { return this.lib.list(q); }
+  @Get("library/forms/list") list(@Headers("x-actor") a: H, @Query() q: unknown) { return this.lib.list(q, readerOf(a).id); }
   @Get("library/forms/:code/uses") uses(@Param("code", { transform: normaliseCode }) code: string) { return this.lib.uses(code); }
   @Post("library/forms/:code/accepts") accepts(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.proposeAccepts(actorOf(a), code, b); }
   @Post("library/forms/:code/check-canada") check(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string) { return this.lib.checkCanada(actorOf(a), code); }

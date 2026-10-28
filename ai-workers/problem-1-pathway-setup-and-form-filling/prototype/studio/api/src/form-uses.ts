@@ -27,7 +27,9 @@ export async function combinationTrails(db: Db, workspaceId: string): Promise<Ma
   return out;
 }
 
-export async function formUses(db: Db, workspaceId: string, code: string): Promise<UsesView> {
+/** Where a library form is used (P-116), and what may be done with it now. `except` leaves one change out of the open-change
+ *  check: the returned change that is being sent again (Lead, PR #67 review). */
+export async function formUses(db: Db, workspaceId: string, code: string, except?: string): Promise<UsesView> {
   const def = await db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } } });
   if (!def) throw problem(404, "Not in the library", `${code} is not in the library.`);
   const lines = await db.combinationForm.findMany({ where: { workspaceId, lineageKey: code }, orderBy: { version: "desc" }, include: { combination: { select: { id: true, label: true } } } });
@@ -52,7 +54,7 @@ export async function formUses(db: Db, workspaceId: string, code: string): Promi
   const approved = await hasApprovedFile(db, workspaceId, shas);
   const held = await db.intakeItem.count({ where: { workspaceId, code, status: "HELD" } });
   if (held) uses.push({ kind: "draft_change", label: `${held} held file${held === 1 ? "" : "s"} waiting for a person`, href: "/review", blocks: false, why: "A new or held edition waits on To review" });
-  const pending = await db.libraryChange.findFirst({ where: { workspaceId, kind: "library_form", key: code, status: { in: OPEN } }, orderBy: { proposedAt: "desc" } });
+  const pending = await db.libraryChange.findFirst({ where: { workspaceId, kind: "library_form", key: code, status: { in: OPEN }, ...(except ? { id: { not: except } } : {}) }, orderBy: { proposedAt: "desc" } });
   if (pending) uses.push({ kind: "draft_change", label: `${pending.action[0]}${pending.action.slice(1).toLowerCase()} waiting (${pending.status.toLowerCase()})`, href: `/review/change/${pending.id}`, blocks: true, why: "A change to it is already open: approve, return or withdraw it first" });
   const wasReleased = released.length > 0, blocking = uses.filter((u) => u.blocks && u.kind !== "draft_change");
   // Break M1: a retired line still points to it (its history keeps the form), so it can only be retired, never deleted.

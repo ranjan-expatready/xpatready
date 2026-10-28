@@ -62,9 +62,23 @@ export function nodeCan(f: NodeFacts): UsesView["can"] & { withCombination: stri
   const underOpen = below.find((n) => open.has(n.programNodeKey) || combos.some((c) => c.programDefId === n.id && open.has(c.id)));
   const underRetired = below.find((n) => n.retiredAt);
   const active = [...new Set([...below.filter((n) => !n.retiredAt).map((n) => n.label), ...combos.filter((c) => !c.retired && c !== own).map((c) => below.find((n) => n.id === c.programDefId)?.label ?? node.label)])];
+  // What blocks a Retire, said apart (QA-55): a name with a released combination in its branch is retired first; the
+  // others were never released: a setup draft is released or discarded first; a branch with no combination at all is
+  // deleted first, naming only its top name (its Delete takes the rest).
+  const kids = new Map<string, ProgramDef[]>();
+  for (const n of below) if (n.parentNodeKey) kids.set(n.parentNodeKey, [...(kids.get(n.parentNodeKey) ?? []), n]);
+  const releasedAt = new Set(combos.filter((c) => c.released).map((c) => c.programDefId));
+  const wasReleased = (n: ProgramDef): boolean => releasedAt.has(n.id) || (kids.get(n.programNodeKey) ?? []).some(wasReleased);
+  const comboAt = new Set(combos.map((c) => c.programDefId));
+  const hasCombo = (n: ProgramDef): boolean => comboAt.has(n.id) || (kids.get(n.programNodeKey) ?? []).some(hasCombo);
+  const live = below.filter((n) => !n.retiredAt);
+  const inUse = [...new Set([...live.filter(wasReleased).map((n) => n.label), ...combos.filter((c) => c.released && !c.retired && c !== own && !live.some((n) => n.id === c.programDefId)).map((c) => below.find((n) => n.id === c.programDefId)?.label ?? node.label)])];
+  const drafts = [...new Set(live.filter((n) => comboAt.has(n.id) && !wasReleased(n)).map((n) => n.label))];
+  const unusedKeys = new Set(live.filter((n) => !hasCombo(n)).map((n) => n.programNodeKey));
+  const unused = [...new Set(live.filter((n) => unusedKeys.has(n.programNodeKey) && !unusedKeys.has(n.parentNodeKey ?? "")).map((n) => n.label))];
   return {
     delete: opened ?? (released ? WHY.released : node.retiredAt ? WHY.retiredNoDelete : own ? WHY.ownSetup : setup ? WHY.setupUnder(setup.label) : underOpen ? WHY.waitingUnder(underOpen.label) : underRetired ? WHY.retiredUnder(underRetired.label) : null),
-    retire: opened ?? (node.retiredAt ? WHY.alreadyRetired : !released ? WHY.neverReleased : active.length ? WHY.stillUsed(active) : null),
+    retire: opened ?? (node.retiredAt ? WHY.alreadyRetired : !released ? WHY.neverReleased : active.length ? (inUse.length || unused.length || drafts.length ? WHY.stillUsed(inUse, unused, drafts) : WHY.stillUsed(active)) : null),
     restore: opened ?? (!node.retiredAt ? WHY.notRetired : parent?.retiredAt ? WHY.parentRetired(parent.label) : null),
     withCombination: own && (node.retiredAt ? own.retired : !own.retired && own.released) ? own.id : null,
   };
@@ -202,6 +216,41 @@ export class Lifecycle {
     }
     await this.audit.log(workspaceId, actor.id, "proposed", entityOf(kind), key, `${actor.name} proposed to ${actionVerb(action, kind)} "${label}": ${reason}`, undefined, kind === "combination" ? key : undefined);
     return changeView(c);
+  }
+
+  /** Send again (QA-59): the author answers a returned change and sends it back to a second person, checked by the
+   *  same rule as a new proposal (nodeCan, read without this change); a branch delete lists its branch as it is now. */
+  async resubmit(actor: Actor, c: LibraryChange, reason: string) {
+    need(actor, "author");
+    if (c.status !== "RETURNED") throw problem(409, "Not returned", `Only a returned change is sent again; this one is ${c.status.toLowerCase()}.`);
+    const why = reason.trim();
+    if (why.length < 3 || why.length > 300) throw problem(400, "Say what changed", "Say what changed, for the second person (3 to 300 characters).");
+    let matches = Array.isArray(c.matches) ? (c.matches as string[]) : [];
+    if (c.kind === "structure_node") {
+      const g = await graph(this.db, c.workspaceId);
+      if (!g.byKey.get(c.key)) throw problem(409, "No longer there", RECHECK.gone);
+      const f = await this.facts(c.workspaceId, g, c.key, c.id), can = nodeCan(f);
+      const no = c.action === "DELETE" ? can.delete : c.action === "RETIRE" ? can.retire : can.restore;
+      if (no) throw problem(409, `Cannot ${c.action.toLowerCase()}`, no);
+      matches = c.action === "DELETE" ? [c.key, ...f.below.map((n) => n.programNodeKey)] : can.withCombination ? [`combination:${can.withCombination}`] : [];
+    } else if (c.kind === "library_form") {
+      // PR #67 review: a returned form delete, retire or restore is checked again by the form's own rule, leaving this
+      // change out of the open-change check (it is the change being sent again), never as a combination.
+      const u = await formUses(this.db, c.workspaceId, c.key, c.id).catch(() => null);
+      if (!u) throw problem(409, "No longer there", RECHECK.gone);
+      const no = c.action === "DELETE" ? u.can.delete : c.action === "RETIRE" ? u.can.retire : u.can.restore;
+      if (no) throw problem(409, `Cannot ${actionVerb(c.action, c.kind)}`, no, { uses: u.uses });
+      matches = []; // as proposed: a form's change lists nothing with it
+    } else {
+      const u = await this.combinationUses(c.key).catch(() => null);
+      if (!u) throw problem(409, "No longer there", RECHECK.gone);
+      const no = await this.recheckCombination(c, u);
+      if (no) throw problem(409, `Cannot ${c.action.toLowerCase()}`, no);
+    }
+    const done = await this.db.libraryChange.updateMany({ where: { id: c.id, status: "RETURNED" }, data: { status: "WAITING", reason: why, matches, decidedBy: null, decidedAt: null, version: { increment: 1 }, decisionNote: `Sent again after: ${c.decisionNote ?? "returned"}`.slice(0, 300) } });
+    if (!done.count) throw problem(409, "Changed meanwhile", "Someone changed this at the same moment. Refresh to see it.");
+    await this.audit.log(c.workspaceId, actor.id, "proposed", entityOf(c.kind), c.key, `${actor.name} sent again ${actionVerb(c.action, c.kind)} "${c.label}": ${why}`, undefined, c.kind === "combination" ? c.key : undefined);
+    return changeView((await this.db.libraryChange.findUnique({ where: { id: c.id } }))!);
   }
 
   /** An author's own draft is deleted at once, branch included, leaves first (P-116 amended): the change is recorded as
