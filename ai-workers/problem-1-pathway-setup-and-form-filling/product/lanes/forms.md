@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **S4 Lead check passed (3dedbee): merged into the Lead branch; MERGE to main after a fresh verification of the three Major fixes and green CI on the Lead PR** (`screens/W1-form-library/lead-check.md`). Lead decisions on your three points: guides are linked to combinations by S5 slice 3 (runtime); SCH1 and 5409 stay Not set yet, a person sets them; no full re-score. Next for this lane after the merge (stage FIX, owner Builder): the carried Shoulds (Where used on the retire approval page, To review words for an unread upload, IMM 5802 "Needs your OK"), then QA-53 (one shared guard: configuration reads 401 for nobody, 403 for case people). Desktop only; local run-suites evidence.
+2026-10-28 (Lead, Mac): **S4: one short FIX before MERGE** (also by message). Fresh verification on 3dedbee: `channelsFrom` reads "paper" as PDF upload (Major; a paper or mail line alone gives Not set yet, pass + fail tests incl. the heading case); IMM 5707 vs 5409 one rule, one outcome (Should); stub-replay guard also checks the run's recorded mode (Minor). Rerun S4 canada, finder, runs and touched suites; hand back by message; then MERGE (Lead PR #65). After the merge: the carried Shoulds, then QA-53.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

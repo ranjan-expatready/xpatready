@@ -8,7 +8,7 @@ updated: 2026-10-27
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | W1-visual-system | BUILD | Builder | Lead note waiting for sync · Builder: R3a Program structure committed 263bb9a (structure_browser 111/111, structure_r3 21/21, structure … |
+| screens | W1-visual-system | BUILD | Builder | Lead note waiting for sync · Builder: R3a (263bb9a + shared lifecycle pattern 93b0040b) and R3b (776d4169) built and pushed; full local … |
 | forms | S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124) | CHECK | Lead | Lead checks and merges S4 (code 4399c3b; suites 41/41 on it); optionally a fresh re-score after this FIX; t… |
 | runtime | W1-combination-workspace (S5, W1-08, P-123) (slice 2 drift-check Shoulds (Review in words, Forms counts and next step, IRCC's words, Preview names, Remove confirm + Undo, AI-picks Sample state)) | EARLY-LOOK | Lead | Lead note waiting for sync · Blocked: slice 3 waits for forms S4 to merge to main |
 | m3 | M3-prepare-application | DESIGN | Lead | Lead reads screens/M3-prepare-application/research-agent-view.md (three IRCC representative accounts, PDF v… |
