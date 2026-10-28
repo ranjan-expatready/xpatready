@@ -7,20 +7,16 @@
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 ## Handover (screens lane, 28 Oct, kept current; a fresh session resumes from this file alone)
-**Item W1-visual-system, round 3 (P-128, the shared lifecycle pattern P-116 amended). Branch `screens/2026-10-27-visual-system`, pushed. Stage: qa FIX done (in Lead PR #67); now S3 Start setup at BUILD.** AI spent US$0. Copy: this worktree's folder is named `runtime-*`, so it is bound to screens by `.claude/lane` (git-ignored).
+**Item W1-start-setup (S3 Start setup, P-125). Branch `screens/2026-10-27-visual-system`, pushed. Stage BUILD (agreed challenge: `screens/W1-start-setup/challenge.md`, Lead response recorded; founder: live AI only on a click).** AI spent US$0. Copy: this worktree's folder is named `runtime-*`, so it is bound to screens by `.claude/lane` (git-ignored). Earlier item W1-visual-system round 3 and its qa FIX are merged to main (PR #66, PR #67); main synced to 3858216e.
 
-**Done and pushed:**
-- R3a Program structure 263bb9a; shared lifecycle pattern 93b0040b (one guard `api/src/lifecycle.ts`, one word set `contracts/lifecycle.ts`, components `web/src/components/lifecycle/`); R3b Immigration programs 776d4169; qa-lane words 2101164; main merged e36bf06e. Founder Go on round 3; Lead check passed; Lead PR #66 (`lead/2026-10-28-r3`) green CI.
-- FIX for the PR #66 review, 19e8911d: (1) Load sample records itself as creator (`SAMPLE_CREATOR`), so sample names are never an own draft; (2) Move past a retired sibling keeps it in place; (3) the Add pop-up seeds from the type it was opened for. Checks: structure_r3 34/34, structure_browser 123/123, structure 83/83, programs_r3 25/25, s1s2_fix 30/30, qa51 21/21.
-- Evidence so far: run-suites 41/41 on 776d4169; studio journey 45/45 (private copy).
+**S3 done and pushed (WIP commits 50f50bd4, 81b6d14c, 838a5219; qa routing f8d6e0cb):**
+- M3 start guard: `startWhy` + `openNodeKeys` in `api/src/lifecycle.ts`, words `WHY.startRetired / startRetiredAbove / startWaiting` in `contracts/lifecycle.ts`; on Program structure rows (`combination.startWhy`), Immigration programs cards (`CatalogueLeaf.startWhy`) and `createCombination` (409).
+- M1/M4 `api/src/start-setup.ts` (own file, registered in `main.ts`): `POST /combinations/start {nodeKey}` creates (idempotent, 201/200) and replays a saved finder answer made for that combination key at US$0 (`savedFor`, the finder's own rule); `GET /combinations/:id/start-setup` = newest finder run + the one offer ("Find forms with AI (about US$x)", worst case in the tip; rules only when over the cap). Words in `contracts/start-setup.ts`.
+- Web: `web/src/components/start-setup.tsx` (`useStartSetup`, `StartSetupButton` greyed with BlockedLine, `FinderStart` with the shared RunCard) used by the card/List next step (`programs.tsx`, keeps `data-next-step="start"`), the Edit panel (`structure.tsx`) and above "Sources and forms" (`combination.tsx`); the place in level colours (`data-place`). A Not started name opens no page (toast).
+- M2: `/new` page, route, menu match removed; `POST /combinations/path`, `POST /path-proposal`, `CreatePathBody`, `PathProposal` removed; their checks moved (name rules to `/structure/nodes` and `/structure/path`).
+- Checks: new `check_w1_start_setup.ts` (17/17; scaffolding: copies the sample's saved finder answer under its own key, removes them after) and `check_w1_start_setup_browser.cjs` (written, not run yet). Passing after the change: structure 79/79, screen01_api 135/135, screen01_rules 67/67, screen02_slice2 52/52. Moved off /new, run in progress at the save: s1s2_fix, programs_s2, screen01_browser, screen02_slice2_browser, structure_browser, programs_r3, qa51; journey Pass B rewritten (Add pop-up, then Start setup on the card).
 
-- Follow-up b078f150: under load the full run caught Add combination prefilling the Program without the Pathway (the Pathway came from the catalogue's answer, the Program from the address); the Pathway now comes from the address and the pop-up fills an empty level from the one below.
-- Evidence: full run-suites on 19e8911d 40/41 (the one failure is that prefill race, fixed in b078f150); on b078f150 every touched check passes on private copies (programs_r3 26/26, programs_s2 87/87, structure_browser 123/123, s1s2_fix 30/30, qa51 21/21, visual_system 21/21, screen01_browser 128/128, smallfix) and the studio journey 45/45.
-
-- FIX for qa's after-merge on main dccd87e (qa branch `claude/qa-after-merge-s1-21bfdf` 9ad98f37; QA-57 was already fixed in S4's merge, not redone): QA-60 bccd7f26 (letters typed after "Add and add another" kept), QA-56 3da467e6 (Enter accepts a typed name), QA-55 3abc0a35 (Retire names what really blocks, with the way out), QA-58 691d7303 (Undo kept on the page note), QA-59 9ba1630d (Returned with the note; Send again), Button primary hover f4145a47 (darker, 8.15:1). Each with a pass step and a fail or fail-guard; table in `screens/W1-visual-system/build-notes.md` "Fixes after qa's after-merge".
-- Evidence on f4145a47 (fe225c6c adds notes only): full run-suites 41/41 PASS; studio journey 45/45 (private copy); qa's check_qa_am_r3_1028 63/69 and check_qa_am_1027 52/55 on private copies, every QA-55/56/58/59/60 step passes; the fails left are QA-57 (fixed on main by S4, not on this branch yet), QA-48 and runtime's QA-47/38/40 (not this lane). The branch merges cleanly with main 06a8fc30.
-
-**Next:** S3 built and pushed in WIP commits (50f50bd4, 81b6d14c, 838a5219; qa routing f8d6e0cb); synced main 3858216e (PR #67 merged); browser checks running, then full evidence and EARLY-LOOK by message.
+**Next (left for S3):** (1) rebuild web (`cd web && ../node_modules/.bin/vite build`) and run the moved browser checks plus `check_w1_start_setup_browser` on private copies, fix what fails; (2) full `run-suites.sh` and the studio journey on the exact commit; (3) build notes `screens/W1-start-setup/build-notes.md`; (4) EARLY-LOOK by message to the Lead with screenshots (`screens/W1-start-setup/screenshots/`). Tell the Lead: qa's `check_qa_m2_journeys.cjs` was already stale before S3 (its "New combination" button left main in round 3), so it needs qa's rewrite; m8 and m9 wait for runtime slice 2 on main.
 
 **Learned, not written elsewhere:**
 - Other lanes run this lane's checks under the same copy names and ports (`run-suites.sh` uses the usage lines), and all copies share one PostgreSQL server: two runs at once break each other. For reruns, use private names and ports (for example `<name>_mine` on 4460+), then drop those databases.
@@ -32,7 +28,7 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 current_screen: W1-start-setup (S3 Start setup)
 stage: BUILD
 owner: Builder
-next_action: S3: finish the browser checks off /new and check_w1_start_setup_browser, then full run-suites and the journey, screenshots, EARLY-LOOK by message
+next_action: S3: run the moved browser checks and check_w1_start_setup_browser, full run-suites and the journey, build notes, then EARLY-LOOK by message (Handover: Left for S3)
 then: EARLY-LOOK by message; desktop only (1440, 1024)
 blocked_by: none
 updated: 2026-10-28
