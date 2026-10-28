@@ -9,18 +9,37 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124)
 stage: FIX
 owner: Builder
-next_action: Waiting for the Lead's word that PR #66 has merged; then sync main keeping the shared guard and word set, rerun the S4 checks and full suites once, push, hand back by message
+next_action: Wait for the Lead's word that PR #66 merged; then sync main (keep the shared guard and word set), S4 checks and full suites once on the exact commit, push, hand back by message (see Handover → Next)
 blocked_by: none
 updated: 2026-10-28
 
-## Handover (27 Oct, end of session; Lead's 23:59 note)
-* **Stage:** S4 at CHECK, owner Lead. Last pushed commit `5825811` on `forms/2026-10-27-s4-form-library` (the handover commit follows it). CI: green on `37f27d0`; the run on `5825811` (id 40552675085) was still running at handover — look at it first (`gh run view 40552675085`); the only red run in this round was `06556ab` (a test-order slip, fixed in `69a2260`).
-* **Re-score:** six fresh reviews (6.5 → 7 → 8.5 → 8 → 7.5 → 8.5). The last one (`37f27d0`): Ship after fixes, journey **8.5/10**, **no Must and no Major**; one dimension (D18 provenance) at 3, since fixed in `ae02215`/`dd01677` (an uploaded edition records UPLOADED and the canada.ca page and PDF it matched; runs check covers it). No reviewer has scored the commit after that fix. Four break runs; their last Major (R4-1) is fixed. Reports: `screens/W1-form-library/review.md`, `journey-test-reviewer-2026-10-27.md`, `break-report.md`, `review-shots/v1…v7-*`.
-* **Done:** everything in `screens/W1-form-library/build-notes.md` ("Fixes after CHECK", "Second pass", "Round 2" … "Round 6"). Files: `api/src/{finder,form-library,form-uses,form-lines,lifecycle,intake,upload-run,runs,sources,ai,programs,screen02,library-changes,review-queue,main,demo}.ts`, `contracts/{form-library,screen02,structure}.ts`, `web/src/pages/{library-forms,review-items}.tsx`, `web/src/components/{run-card,ui/controls}.tsx`, `web/src/styles/index.css`, the S4 migration (CHECK constraints added), `p2/ledger.ts`, tests `check_forms_s4_{finder,runs,library_browser,run_browser}`.
-* **For the Lead to decide or confirm:** (1) round 5 choice: a source use blocks Delete only; a retired form's file stays where a combination reads it and AI never drafts it (reviewer round 6 judged it conforms to P-116); (2) R4-2 replay matches a combination by its last two names (another combination with the same two names would get the answers; tie replay to the combination itself later); (3) Load sample adds guides for 2 of 5 sample combinations (rest: S5 Start setup or a logged live pass); (4) m9 accepted as designed; m11 and the drafting dialog text are backlog.
-* **Partly done / not started (Should and Minor from the last review, none blocking):** the second person's retire page does not show Where used (`web/src/pages/review-items.tsx:90`); a stopped call shows US$0.00 though counted at its reserved worst case (`api/src/finder.ts` launchRound); "Needs your OK" for a form with no file (`api/src/form-library.ts` list status); To review still says "Record the IRCC page" for a file the rules could not read (`api/src/review-queue.ts:134-136`); the guide checker's free stub pass can start 0.25 s after Stop (`finder.ts:281-283`); m-b a job file can survive a server stop mid-round; "+ Add" runs outside `oneAtATime`; one file over 25 MB refuses a whole upload batch (413); search sends one request per keystroke.
-* **Learned (not written elsewhere):** run every S4 check under this lane's names (`forms_s4`, `forms_s4r`, `forms_s4b`, `forms_s4l` on 4455–4458) and touched suites under unique `fx*` names on 4471–4480 — other copies run the same suites at once; the finder check needs `STUDIO_FAKE_LAUNCHER` and `STUDIO_CANADA_FIXTURES=canada-alt`, the runs check only the launcher (its golden replay needs the default fixtures and must run after the stand-in probe). Rebuild `web/dist` (vite) before browser checks. Suites rewrite other screens' screenshots, `p2/ledger/spend.jsonl`, `used-launch-tickets/` and `evidence/screen01/api-checks.json`: put back only those paths, never with a script that restores every modified file (one such script silently reverted a test edit). The Bash hook for `gh pr merge` misfires on some compound commands: put edits in a script file and run it. Reviewers should use this lane's port range (they flagged 4461 as the evidence lane's).
-* **Next steps:** (1) confirm CI on `5825811` (and on the handover commit) is green; (2) the Lead checks S4 (optionally one more fresh re-score on the final commit, since D18 was fixed after the last score) and merges or sends a round; (3) then QA-53 (Lead decision): one shared guard denying Studio configuration reads to nobody (401) and to case people (403) on every Studio configuration route, case routes untouched — the Lead's note will be on its next PR.
+## Handover (28 Oct, Lead check FIX round; resume from this section alone)
+* **Where it stands:** S4 is at FIX, owner Builder, waiting only for the Lead's word that **Lead PR #66** has merged to main. #66 brings the shared lifecycle pattern: one guard in `api/src/lifecycle.ts`, one word set in `contracts/lifecycle.ts`, and changes to `review-queue.ts` and `library-changes.ts`. Branch `forms/2026-10-27-s4-form-library`, last pushed `f3c2c8c`, clean tree. The Lead re-merges S4 into Lead PR #65 after the hand-back.
+* **Next (do exactly this):**
+  1. `bash product/tools/lane.sh sync`. Resolve conflicts by **keeping main's shared guard and word set**, and fold S4's word rule into it (a library form is Deleted; everything else is Removed).
+  2. Rerun the five S4 checks with the scratchpad pattern below, then `run-suites.sh` once on the exact commit.
+  3. Put back the by-products, push, and hand back to the Lead by message (Paste to Lead).
+* **Done this round (all with tests, all pushed):**
+  * Drift fixes: main merged; Delete vs Remove in one word map, also used in History and Activity.
+  * Load sample from Sample fixtures (`samples/form-library-sample.json`), checked by `api/src/filing.ts`.
+  * Replay keyed by `combination_key`; stub passes never replayed, by file name and by the record's `caller`.
+  * Lead check: paper or mail is never a PDF upload, and "fill it on a computer" is not a filing line. Load sample now sets 2 of 7 data forms (IMM 5475, IMM 5476).
+  * Carried Shoulds: Where used on the approval page; an unread copy is never "Record the IRCC page"; "No file yet".
+  * The one edit outside this lane: `tests/check_screen02_fix.ts` now walks the record-the-page flow on its readable copy.
+* **Last evidence:**
+  * S4 checks on `f3c2c8c`: finder 118, runs 86, canada 63, library browser 53, run browser 20.
+  * screen02 suites: fix 61, slice1 59, slice2 56, slice2 browser 65.
+  * Full suites on `98b5102`: 39 passed in the run, 2 failed on test races. Both races are fixed (`11ced53`) and those suites pass alone.
+  * graph `--check`: G3 1 (the older gap).
+* **Open for the Lead or founder:** whether guides must also be attached to their combinations (review Should 2); 5 of 7 sample forms stay "Not set yet" until a person sets them (C11.18).
+* **How to run the checks (Mac, this copy):**
+  * S4 checks run under this lane's names `forms_s4`, `forms_s4r`, `forms_s4b`, `forms_s4l` on ports 4455–4458.
+  * Other suites run alone under `fx_*` names on ports 4471–4480, because `run-suites.sh` uses names other lanes share (a `screens_s1s2` clash happened once).
+  * Rebuild `web/dist` (`vite build web`) before the browser checks.
+  * After any run, put back only the by-products: other screens' screenshots, `evidence/*.json`, `p2/ledger`, `used-launch-tickets`, `p2/runs/stub-pass`, the canary digest, and S4's 390 px shots (wave 1 is desktop only).
+  * Drop this copy's `var/isolated-*` folders and their databases when nothing is connected to them.
+  * The Bash hook misfires on some compound commands: put them in a scratchpad script.
+  * No paid AI (US$0). Lane pushes run no CI (P-85): local `run-suites.sh` is the evidence.
 
 ## Log (last 10 lines)
 - 2026-10-28 · S4 · FIX · carried Shoulds (Lead 28 Oct) fixed with tests: Where used on the retire/delete approval page; an unread copy is never a "Record the IRCC page" step (screens' check_screen02_fix moved that flow to its readable copy: 61/61); a form with no file is "No file yet". S4: finder 118, runs 86, canada 63, library browser 53, run browser 20; screen02 slice1 59, slice2 56, slice2 browser 65. US$0.
