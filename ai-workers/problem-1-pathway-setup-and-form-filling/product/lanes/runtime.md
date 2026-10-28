@@ -8,9 +8,9 @@ Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes 
 
 current_item: W1-combination-workspace (S5, W1-08, P-123)
 current_slice: slice 3 — forms from the finder on the Forms tab, IRCC guides linked as sources, "Remove from …" with Undo on the shared components (P-116 amended)
-stage: EARLY-LOOK
-owner: Lead
-next_action: Lead early look at slice 3 (build-notes.md top section; screenshots/slice3/); decide Who can be filled by AI (needs a paid live run to record a replay). check_screen01_browser.cjs fails on main too (S4 renamed the library upload; screens lane's test), reported to the Lead.
+stage: BUILD
+owner: Builder
+next_action: Builder: slice 3 additions pushed (6a65309c; build-notes top section): first-run Find button gone for screens' slot, Who can be filled from the guide (rules, saved answers, AI now not run). Finish: full run-suites result into the log, demo journey on :4433, restore by-products, commit, push, EARLY-LOOK owner Lead by message.
 blocked_by: none
 updated: 2026-10-28
 
@@ -23,6 +23,7 @@ updated: 2026-10-28
 * **Slice 3 (built 28 Oct):** finder strip and dialog (`web/src/pages/workspace/finder.tsx`), Picked by AI · Sample, row ⋯ menu (Redo with AI, Replace edition, Remove from this combination), the one Undo bar on the forms lane's `POST …/forms/undo` plus the shared Undo toast, Removed in this draft with Add back, guides linked as sources (`api/src/guide-sources.ts`, hooks in `demo.ts` and one line in `finder.ts finish`). S5's own restore route is gone. Tests `check_s5_slice3.ts` (4436) and `check_s5_slice3_browser.cjs` (4437). Open for the Lead: Who can be filled by AI (needs a paid live run to record a replay); other tabs' removes; the older Add-from-library picker.
 
 ## Log (last 10 lines)
+- 2026-10-28 · Builder (Mac): Lead split with S3 applied (first-run Find button → slot data-finder-start for screens) and Who can be filled from the guide built (people-ai.ts, prompts, Fill from the guide; rules and saved answers at US$0, AI now shown, never run here); check_s5_people_ai 15/15, slice3 browser 35/35; full suites running. AI US$0.
 - 2026-10-28 · Builder (Mac): slice 3 → EARLY-LOOK: full run-suites 50/52 (check_forms_pdf_hardening passes alone on :4438, 49/49: port clash on the forms lane's 4450; check_screen01_browser fails on main too: S4 renamed the library upload, screens lane's test); demo journey 46/46 on :4433 after moving B2 to S4's upload (a damaged non-official file is refused) and A1 to 27 sources; graph exit 0; owner Lead. AI US$0.
 - 2026-10-28 · Builder (Mac): slice 3 built and pushed step by step (ad95230f … 6b6da6d5): finder strip and plan dialog, Picked by AI, row menu, Remove from this combination with the forms lane's DELETE and one Undo bar + shared toast, Add back, guides as sources; check_s5_slice3 23/23, browser 27/27; slice 1/2 checks moved to the forms lane's calls; graph exit 0; full suites running. AI US$0.
 - 2026-10-28 · Builder (Mac): Lead Go for slice 3 (S4 merged, PR #65): synced main (conflicts in main.ts, studio.ts, schema.prisma resolved, both sides kept; check_forms_demo.ts keeps S5's); prisma generate, typecheck clean; pushed a6531641; BUILD slice 3. AI US$0.
@@ -32,4 +33,3 @@ updated: 2026-10-28
 - 2026-10-27 · Builder (Mac): Lead message 23:40 + handover request: synced main 4cbdb74 (PR #59–#62); handover written above (fixes 1–4 and slice 2 done at 8346a37); lane stops. AI US$0.
 - 2026-10-27 · Builder (Mac): applied Lead note 2026-10-27 23:05 (founder Go for slice 2 with four fixes); synced main 4fb0749 (break m8 in).
 - 2026-10-27 · Builder (Mac): fixes 1–4 + slice 2 → EARLY-LOOK: forms listed once (status and last step in each row, steps in the drawer, Sources line); list warning in business words (real example, none when empty; submit names gaps in words); Questionnaires per person (wording, who fills it, only if, needed by; codes only in the side panel), coverage gate (gap = release error; sample 0 gaps), sections fold; Preview one section + jump list; Review lists AI picks; workspace and roles reads need a configuration person (m8); check_s5_slice2 21/21, slice2 browser 33/33 (axe, 7 states × 1440/1024); full suites green alone (2 older drafts now ask needed answers first); demo journey 46/46 on its own copy; any 405; graph exit 0; AI US$0; owner Lead.
-- 2026-10-27 · Builder (Mac): applied Lead note 2026-10-27 (S2 merged, PR #53): synced main f289ec7; Lead response copied into challenge.md (Agreed 2026-10-27); BUILD slice 1.
