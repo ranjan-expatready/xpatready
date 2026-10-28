@@ -19,7 +19,7 @@ export type FinderState = "ATTACHED" | "DOWNLOADED_ATTACHED" | "NEWER_FILE_SAME_
 export type FinderForm = { code: string; title: string; quote: string | null; conditionPlain: string | null; who: string | null; state: FinderState; why?: string | null; lineId?: string | null; lineVersion?: number | null; runId: string };
 export type FinderLatest = { run: { id: string; status: string; mode: string; finished_at: string | null } | null; forms: FinderForm[]; sample_note?: string };
 type Mode = "replay" | "rules" | "live";
-type Plan = { steps: { n: number; label: string; uses_ai: boolean }[]; totals: { worst_usd: number; expected_usd: number; ai_rounds: number }; note?: string | null; plan_sha256: string };
+type Plan = { steps: { n: number; label: string; uses_ai: boolean }[]; totals: { worst_usd: number | null; expected_usd: number | null; ai_rounds: number }; note?: string | null; plan_sha256: string };
 
 const ACTIVE = new Set(["QUEUED", "RUNNING"]);
 const ON_LINE = new Set<FinderState>(["ATTACHED", "DOWNLOADED_ATTACHED", "NEWER_FILE_SAME_EDITION"]);
@@ -65,7 +65,7 @@ export function FindDialog({ id, only, onClose, onStarted }: { id: string; only?
         {plan.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p> : plan.error ? <Notice tone="danger" title="This find cannot start">{plan.error.message}</Notice> : plan.data ? (
           <div className="rounded-lg border border-border p-3 text-sm" data-find-plan>
             <ol className="list-decimal space-y-0.5 pl-5">{plan.data.steps.map((s) => <li key={s.n}>{s.label} {s.uses_ai ? <Pill tone="ai">AI</Pill> : <Pill>rules</Pill>}</li>)}</ol>
-            <p className="mt-2 font-medium" data-find-cost>{mode === "live" ? `At most US$${plan.data.totals.worst_usd.toFixed(2)} (usually about US$${plan.data.totals.expected_usd.toFixed(2)}), inside the AI spending cap.` : "Cost: US$0 (no AI call)."}</p>
+            <p className="mt-2 font-medium" data-find-cost>{mode === "live" ? `At most US$${(plan.data.totals.worst_usd ?? 0).toFixed(2)}${plan.data.totals.expected_usd != null ? ` (usually about US$${plan.data.totals.expected_usd.toFixed(2)})` : " (no earlier run to say the usual cost)"}, inside the AI spending cap.` : "Cost: US$0 (no AI call)."}</p>
             {plan.data.note ? <p className="mt-1 text-xs text-text-muted">{plan.data.note}</p> : null}
           </div>
         ) : null}
