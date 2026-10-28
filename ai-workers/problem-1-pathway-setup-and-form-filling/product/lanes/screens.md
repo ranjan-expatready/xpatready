@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-29 night (Lead, sixth chat; founder asleep): Founder **Go on S3** (29 Oct). Stage CHECK, owner Lead: hand back the full run-suites on the exact commit; the Lead checks and opens the Lead PR. Next: **S6 Shared library** after S3 merges: the re-check (28 Oct) is answered in part (founder Q1 = P-138: drafting only on a click); S6 BUILD waits the forms lane's slice 0 (shared step runner) and the queue item contract (Lead approves). Until then only design work (P-126). US$0.
+2026-10-29 night (Lead, sixth chat; founder asleep): Founder **Go on S3** (29 Oct). Stage CHECK, owner Lead: hand back the full run-suites on the exact commit; the Lead checks and opens the Lead PR. Next: **S6 Shared library** after S3 merges: the re-check (28 Oct) is answered in part (founder Q1 = P-138: drafting only on a click); S6 BUILD waits the forms lane's slice 0 (shared step runner) and the queue item contract (Lead approves). Until then only design work (P-126). US$0. **29 Oct morning (Lead, seventh chat):** sync main and rerun the full run-suites on that exact commit first (asked by message). For the pass after S3 merges, outside review (Devin, `history/devin/2026-10-29-devin-backbone.md`): DV-bb-1 (upload result cards on the Form library stack forever: make them dismissible or collapse to one line), DV-bb-6b (Reset dialog says "0 rows remain" while the 6 built-in roles stay), DV-bb-6c ("(P-95)" shown in the Program structure footer: no decision numbers on screen); a pass and a fail test each.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

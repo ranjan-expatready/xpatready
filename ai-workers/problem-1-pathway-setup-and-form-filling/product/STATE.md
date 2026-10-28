@@ -3,21 +3,22 @@
 current_milestone: M2 — Super Admin configuration (Screens 01–04 + forms channels F1), with the thin runtime slice R1 (P-67) and independent qa (P-68) alongside
 lanes: `LANES.md` · the founder types `/lead` only; the Lead runs `/next screens|forms|evidence|runtime` and `/qa <mode>` sessions
 journey and gaps: `history/AUDIT-2026-10-23.md` · capabilities and bugs: `qa/CAPABILITIES.md`, `qa/BUGS.md`
-updated: 2026-10-27
+updated: 2026-10-29
 
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | W1-start-setup (S3 Start setup) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead: early look on S3 Start setup (build notes and screenshots in screens/W1-start-setup/; evidence in the… |
-| forms | QA-61..QA-64 (qa after-merge on S4), then the run-suites per-copy prefix | CHECK | Lead | Lead note waiting for sync · Lead checks QA-61..64 (cbfdab22) and takes the run-suites prefix from 5c2c4e82 onto a Lead PR; then this la… |
-| runtime | W1-combination-workspace (S5, W1-08, P-123) (slice 3 — forms from the finder on the Forms tab, IRCC guides linked as sources, "Remove from …" with Undo on the shared components (P-116 amended)) | READY | Lead | Lead note waiting for sync · Lead: MERGE all of S5 at 2d8989ec (or this branch's head; later commits only touch this lane file) (slices … |
-| m3 | M3-prepare-application | DESIGN | Lead | Lead reads screens/M3-prepare-application/research-agent-view.md (three IRCC representative accounts, PDF v… |
+| screens | W1-start-setup (S3 Start setup) | EARLY-LOOK (S3 items 1–5 done on S5) | Lead | Lead note waiting for sync · Lead: early look on S3 with item 5 (screens/W1-start-setup/screenshots 01–05 at 1440 and 1024; build-notes … |
+| forms | W1-10 AI drafting (with W1-15's seven AI steps, B37, P-133/P-134), design only | DESIGN | Lead | Lead note waiting for sync · Lead answers Q-L1..L3 and takes founder Q1 (experiment cap) and Q2 (filing channel) to an early look and gr… |
+| runtime | W1-questions-and-documents (W1-15, P-130–P-132) (slice 1 — data and rules (Comes from by rules, FactSource choices and PQR ticks, per-role coverage, C4.10 release rules); plus QA-69 and Devin Review's two PR #71 points) | BUILD | Builder | Lead note waiting for sync · Builder: synced main 32961d69 (df23c39d, pushed); full run-suites running on df23c39d (the uncommitted file… |
+| m3 | M3-agent-view (case officer / agent side end to end; builds on M3-prepare-application v2, P-122, P-130, P-133, P-134) | DESIGN | Lead | Lead note waiting for sync · Lead reads screens/M3-agent-view/concept-draft.md r5 + design/draft-agent-view.html r5 (16 frames; P-143 to… |
 | evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
-| qa | after-merge on main 06a8fc30 (PR #65: S4 Form library and form finder); report `qa/reports/2026-10-28-after-merge-s4.md` | WAITING | Lead | Lead note waiting for sync · (1) a clean coverage rerun on S4 (main 06a8fc30) when the Mac is quiet; (2) /qa after-merge on PR #69 when … |
+| qa | after-merge on main e2cb27a4 (PR #71: S5 Combination workspace); report 2026-10-29-after-merge-s5 (on the qa branch) | WAITING | Lead | Lead note waiting for sync · (1) the clean coverage rerun when the Mac is quiet (owed since S4; S5 added ~3,700 lines); (2) retest QA-61… |
 | scout | charter firm-admin-day-one done — report scout/reports/2026-10-25-firm-admin-day-one.md (5 findings SC-1..SC-5 with priorities P2/P3; SC-2 fix written+proven but reverted — new-combination.tsx busy on screens; ready patch noted) | EXPLORE | Scout | next run, charter ai-draft-review (GOOSE-TASKS.md G2) |
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-29 · Lead (Mac, seventh chat): PR #75 CI fixed (graph reads the foundation page; C1.6 Partial); Devin inbox (3 files) routed to screens, runtime, forms, qa and Lead records; runtime and screens resumed; board v2 being made clickable.
 - 2026-10-29 · Lead (Mac, sixth chat) · Founder decisions P-135–P-142 before sleeping; S3 **Go**; overnight: runtime W1-15 slice 1, forms W1-10 slice 0 + queue contract, qa coverage rerun, m3 r5 (full AG-03/AG-11 pages), Lead: channel research + W1-15 board v2. LEAD.md "Where we are" holds the full handover.
 - 2026-10-29 · Lead (Mac, sixth chat) · **PR #71 merged** (e2cb27a4: S5 Combination workspace, Lead check FIX L1–L12 passed, 56/56, CI green) and **PR #73 merged** (56f04113: forms QA-61..68, R69-1..3, takesEffect, channelsFrom condition rule; keyword parsing moved to backlog B37). **:4400 restarted on 56f04113** with a demo reset + Load sample (founder OK). Lanes: screens S3 item 5 on S5's Forms tab; runtime two 🟡 then W1-15 plan; qa after-merge on S5; m3 design session started (agent view, design only, with the agent-filing UX research).
 - 2026-10-29 · Lead (Mac, sixth chat) · Research: document-first intake and OCR choice, report done (`reports/Document first intake and OCR choice.md`;  notes in `research_notes/Document first intake and OCR choice/`, report to `reports/`); then questions-and-documents board v2 (Questionnaires, Documents, Preview; parameters and actions matrix; progressive disclosure: drawer, ⋯ menu, tooltips) for an early look and grilling.

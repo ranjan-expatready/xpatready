@@ -22,7 +22,7 @@ const seg = (p) => norm(p).split("/").filter(Boolean);
 const matches = (route, call) => { const a = seg(route), b = seg(call); return a.length === b.length && a.every((s, i) => s.startsWith(":") || b[i].startsWith(":") || s === b[i]); };
 
 // Decisions and capabilities (the files the Lead and the qa lane keep).
-const decisions = [...readFileSync(join(PH, "DECISIONS.md"), "utf8").matchAll(/^\| ~*(P-\d+)/gm)].map((m) => m[1]);
+const decisions = ["DECISIONS.md", "decisions/P-01-P-36-foundation.md"].flatMap((f) => [...readFileSync(join(PH, f), "utf8").matchAll(/^\| ~*(P-\d+)/gm)].map((m) => m[1]));
 const capabilities = readFileSync(join(PH, "qa/CAPABILITIES.md"), "utf8").split("\n").filter((l) => /^\| C\d+\.\d+ /.test(l)).map((l) => {
   const c = l.split("|").map((x) => x.trim());
   return { id: c[1], step: c[2], text: c[3], milestone: c[4], status: c[5], decisions: [...new Set(c[3].match(/P-\d+/g) ?? [])] };
