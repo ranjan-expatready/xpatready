@@ -14,7 +14,7 @@ import { Tip } from "@/components/status";
 import { cn } from "@/lib/utils";
 
 export type AddPrefill = { pathwayKey?: string; programKey?: string; categoryKey?: string; focus?: Level };
-type ListResp = { nodes: StructureNode[] };
+type ListResp = { pathwayType: PathwayType; nodes: StructureNode[] };
 type Close = { key: string; label: string; trail: string[]; why: string };
 
 const TYPES: { value: PathwayType; label: string; tip: string }[] = [
@@ -71,7 +71,8 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
   // Prefilled from where it was opened (AD-8): Pathway type from the tab, then the levels above the one to add.
   React.useEffect(() => {
     if (!open) { seeded.current = false; return; }
-    if (seeded.current || !list.data) return;
+    // Seed from the list of the type it was opened for, never the other type's cached list (lead review, 28 Oct).
+    if (seeded.current || !list.data || type !== initialType || list.data.pathwayType !== initialType) return;
     seeded.current = true;
     const t: Record<Level, string> = { pathway: "", program: "", category: "", subCategory: "" };
     const s: Record<Level, string | null> = { pathway: null, program: null, category: null, subCategory: null };
@@ -85,7 +86,7 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
     setLocs(cat?.allowedLocations.length ? cat.allowedLocations : ["inside_canada", "outside_canada"]);
     const focus = prefill?.focus ?? FIELDS.find((lv) => !s[lv]) ?? "pathway";
     setAim(focus); aimPending.current = focus; startAt.current = focus;
-  }, [open, list.data]);
+  }, [open, list.data, type, initialType]);
   // The field to start in gets focus in the first render where it is enabled: after the dialog's own first-field focus,
   // never a frame later (drift check: under load the dialog's focus could land last, on Pathway).
   React.useEffect(() => {

@@ -65,7 +65,10 @@ export function nodeCan(f: NodeFacts): UsesView["can"] & { withCombination: stri
 }
 /** An author's own never-approved draft (P-116 amended 28 Oct): deletable, and every name in the branch was added by
  *  this person (names are never approved on their own; once released or used they are not deletable at all). */
-export const ownDraft = (f: NodeFacts, actorId: string | undefined) => !!actorId && !nodeCan(f).delete && [f.node, ...f.below].every((n) => n.createdBy === actorId);
+export const ownDraft = (f: NodeFacts, actorId: string | undefined) => !!actorId && actorId !== SAMPLE_CREATOR && !nodeCan(f).delete && [f.node, ...f.below].every((n) => n.createdBy === actorId);
+/** The creator recorded on names that Load sample added (lead review, 28 Oct): never a person, so never an own draft;
+ *  their deletes go to the second person. */
+export const SAMPLE_CREATOR = "sample-inputs";
 /** The row's one action (P-128 R3-2): Withdraw while a change waits, Restore when retired, Retire once released, else
  *  Delete; with why it cannot, for a Delete the names that go with it, and whether it is deleted at once. */
 export function rowAction(f: NodeFacts, pending: boolean, actorId?: string): RowAction {
