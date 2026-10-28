@@ -3,7 +3,7 @@
 // usage. A crash or an error without usage leaves the worst case counted. Append-only JSON lines.
 import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, unlinkSync, writeSync } from "node:fs";
 import { join } from "node:path";
-import { EXPERIMENT_CAP_USD, PRICE_PER_MTOK } from "./policy.ts";
+import { EXPERIMENT_CAP_USD, PRICE_PER_MTOK, WAVE1_CAP_USD, WAVE1_START } from "./policy.ts";
 
 export class BudgetExceeded extends Error {}
 
@@ -48,6 +48,13 @@ export class SpendLedger {
     } finally { closeSync(fd); }
   }
 
+  /** S4 (m4): US$ counted against the Wave 1 cap: attempts reserved since the wave started, as committed() counts them. */
+  committedSince(sinceIso: string): number {
+    const es = this.entries();
+    const settled = new Map(es.filter((e) => e.type === "settle").map((e) => [e.id, (e as { actual_usd: number }).actual_usd]));
+    return es.filter((e): e is Extract<Entry, { type: "reserve" }> => e.type === "reserve" && e.at >= sinceIso).reduce((sum, r) => sum + (settled.get(r.id) ?? r.worst_usd), 0);
+  }
+
   /** US$ counted against the caps: settled attempts at their actual cost, unsettled ones at worst case. */
   committed(runId?: string): number {
     const es = this.entries();
@@ -58,9 +65,13 @@ export class SpendLedger {
 
   /** Reserves an attempt's worst case, or refuses when it would pass the run cap or the experiment cap. */
   reserve(runId: string, attempt: number, worstUsd: number, runCapUsd: number, caller?: string): string {
+    // S4 break minor: a worst case that is not a number, or below zero, would let any call through the caps.
+    if (!Number.isFinite(worstUsd) || worstUsd < 0) throw new BudgetExceeded(`worst case must be a number of US$ at or above 0 (got ${worstUsd})`);
     const total = this.committed(), run = this.committed(runId);
     if (total + worstUsd > this.capUsd) throw new BudgetExceeded(`experiment cap US$${this.capUsd}: committed ${total.toFixed(4)} + worst case ${worstUsd.toFixed(4)}`);
     if (run + worstUsd > runCapUsd) throw new BudgetExceeded(`run cap US$${runCapUsd}: committed ${run.toFixed(4)} + worst case ${worstUsd.toFixed(4)}`);
+    const wave = this.committedSince(WAVE1_START);
+    if (wave + worstUsd > WAVE1_CAP_USD) throw new BudgetExceeded(`Wave 1 cap US$${WAVE1_CAP_USD}: committed ${wave.toFixed(4)} since ${WAVE1_START.slice(0, 10)} + worst case ${worstUsd.toFixed(4)}`);
     const id = `${runId}#${attempt}#${Date.now()}`;
     this.append({ type: "reserve", id, run_id: runId, attempt, worst_usd: worstUsd, ...(caller ? { caller } : {}), at: new Date().toISOString() });
     return id;

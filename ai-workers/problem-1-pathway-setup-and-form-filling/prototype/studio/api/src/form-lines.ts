@@ -1,6 +1,7 @@
 // Small helpers other services use when they create a form line or take a field id from a person (F1, forms lane).
 // Kept apart from forms.ts so sources.ts can use them without an import cycle.
 import { Prisma } from "@prisma/client";
+import { HttpStatus } from "@nestjs/common";
 import { Db, fail } from "./core.ts";
 import { WHO } from "./studio.ts";
 
@@ -20,8 +21,16 @@ export async function resolveKey(db: Db, workspaceId: string, key: string) {
  *  becomes a draft again with its own who and when); after a released removal the form comes back as a new version
  *  with the content it had when removed. A new line is filed as a PDF upload (F1, P-102). Writes never raise a duplicate
  *  error, so a racing request inside a transaction (the AI apply) is answered "already" instead of aborting it. */
-export async function addFormLine(db: Pick<Db, "combinationForm">, l: { workspaceId: string; combinationId: string; govFormDefId: string; formKey: string; who?: string; origin: "HUMAN" | "AI_PROPOSAL"; by: string; sourceQuote: string }): Promise<"added" | "already"> {
+export async function addFormLine(db: Pick<Db, "combinationForm" | "govFormDef" | "libraryChange">, l: { workspaceId: string; combinationId: string; govFormDefId: string; formKey: string; who?: string; origin: "HUMAN" | "AI_PROPOSAL" | "AI_FOUND"; by: string; sourceQuote: string;
+  /** S4: the form finder's reading (always, or only if: its plain condition from the page) and its run. */
+  attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; conditionPlain?: string | null; finderBatchId?: string }): Promise<"added" | "already"> {
   if (l.who !== undefined && !WHO.includes(l.who)) fail("Choose whose form it is from the list.");
+  // S4 round 3 R3-1 (P-116): nothing new may use a retired form, or one whose retire or delete is open: every attach path
+  // (by hand, upload for a row, "+ Add", the finder, an AI apply) comes through here.
+  const def = await db.govFormDef.findUnique({ where: { id: l.govFormDefId }, select: { retiredAt: true } });
+  if (def?.retiredAt) fail(`${l.formKey} is retired in the library: restore it there first.`, HttpStatus.CONFLICT);
+  const closing = await db.libraryChange.findFirst({ where: { workspaceId: l.workspaceId, kind: "library_form", key: l.formKey, action: { in: ["RETIRE", "DELETE"] }, status: { in: ["WAITING", "APPROVED"] } } });
+  if (closing) fail(`A request to ${closing.action.toLowerCase()} ${l.formKey} is open on To review: nothing new may use it until it is decided.`, HttpStatus.CONFLICT);
   const history = await db.combinationForm.findMany({ where: { combinationId: l.combinationId, lineageKey: l.formKey }, orderBy: { version: "desc" } });
   const newest = history[0];
   if (newest && newest.status !== "RETIRED") return "already";
@@ -33,7 +42,7 @@ export async function addFormLine(db: Pick<Db, "combinationForm">, l: { workspac
     // After a released removal the line comes back with the content it had when removed; a new line gets the defaults.
     const row: Prisma.CombinationFormCreateManyInput = newest
       ? { workspaceId: newest.workspaceId, combinationId: newest.combinationId, lineageKey: newest.lineageKey, govFormDefId: newest.govFormDefId, who: newest.who, attachMode: newest.attachMode, predicateJson: newest.predicateJson ?? Prisma.DbNull, conditionPlain: newest.conditionPlain, sourceQuote: newest.sourceQuote, channel: newest.channel, origin: l.origin, updatedBy: l.by, status: "DRAFT", version: newest.version + 1, supersedesId: newest.id }
-      : { workspaceId: l.workspaceId, combinationId: l.combinationId, lineageKey: l.formKey, govFormDefId: l.govFormDefId, who: l.who ?? "each_applicant", attachMode: "COMBINATION_MANDATORY", sourceQuote: l.sourceQuote.slice(0, 500), channel: "PDF_UPLOAD", origin: l.origin, updatedBy: l.by, status: "DRAFT", version: 1 };
+      : { workspaceId: l.workspaceId, combinationId: l.combinationId, lineageKey: l.formKey, govFormDefId: l.govFormDefId, who: l.who ?? "each_applicant", attachMode: l.attachMode ?? "COMBINATION_MANDATORY", conditionPlain: l.conditionPlain ?? null, sourceQuote: l.sourceQuote.slice(0, 500), channel: "PDF_UPLOAD", origin: l.origin, finderBatchId: l.finderBatchId ?? null, updatedBy: l.by, status: "DRAFT", version: 1 };
     n = (await db.combinationForm.createMany({ data: [row], skipDuplicates: true })).count;
   }
   return n ? "added" : "already";

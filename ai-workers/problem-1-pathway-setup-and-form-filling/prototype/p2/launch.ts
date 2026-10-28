@@ -28,6 +28,15 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
 const NAME = /^[a-z0-9][a-z0-9._-]*$/;
 export { pathCodeSha }; // re-exported for existing callers; defined in pathcode.ts
 
+/** The only known facts a job may carry: one printed edition (field-map jobs), or one combination trail (form-finder jobs). */
+export function knownOk(known: Record<string, unknown>): boolean {
+  const keys = Object.keys(known);
+  if (keys.length !== 1) return false;
+  if (keys[0] === "form_edition") return /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(String(known.form_edition));
+  if (keys[0] === "combination_trail") return typeof known.combination_trail === "string" && /^[A-Za-z0-9][A-Za-z0-9 ,.()'\/&–-]{0,80}( › [A-Za-z0-9][A-Za-z0-9 ,.()'\/&–-]{0,80}){1,5}$/.test(known.combination_trail);
+  return false;
+}
+
 export type LaunchResult = { exit: number; run_file?: string; record?: Record<string, unknown>; refused?: string; child?: unknown };
 
 /** R4-R2-M1: writes the salted screening digest as the single-use launch ticket for one run (screen.ts), from
@@ -49,8 +58,9 @@ export function launch(jobId: string, mode: "stub" | "live", opts: { approvedDir
   const job = JSON.parse(readFileSync(join(JOBS_DIR, `${jobId}.json`), "utf8")) as Job;
   if (job.job_id !== jobId) throw new PolicyRefusal("job file names a different job id");
   if (!NAME.test(job.template) || !NAME.test(job.output_schema)) throw new PolicyRefusal("template and schema must be plain file names in p2/prompts");
-  // A6: a known fact goes into the prompt as given, so it must be exactly an edition label and nothing else.
-  if (job.known && (Object.keys(job.known).some((k) => k !== "form_edition") || !/^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(job.known.form_edition ?? ""))) throw new PolicyRefusal("a job's known facts may hold only a printed form edition such as IMM 0000 (MM-YYYY)");
+  // A6: a known fact goes into the prompt as given, so it must be exactly an edition label and nothing else; S4 adds the
+  // form finder's combination trail (structure names joined by " › ", letters, digits and plain punctuation only).
+  if (job.known && !knownOk(job.known)) throw new PolicyRefusal("a job's known facts may hold only a printed form edition such as IMM 0000 (MM-YYYY), or a form-finder job's combination trail of plain names joined by ›");
   const settings = job.settings as Parameters<typeof admitRun>[0]["settings"];
   const admitted = admitRun({ inputs: { official_files: job.inputs }, settings }, { allowStubDrafts: mode === "stub", approvedDir }); // (1) route and inputs
   // P-80: a form approved in the product is drafted with the edition its approval names, never another one the job claims.
