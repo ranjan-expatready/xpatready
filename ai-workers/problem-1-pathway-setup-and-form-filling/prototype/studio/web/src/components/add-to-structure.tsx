@@ -149,7 +149,13 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
     setKeep((k) => ({ ...k, [lv]: false }));
     if (lv === "category") { setNone(true); if (match?.allowedLocations.length) setLocs(match.allowedLocations); }
   };
-  const pick = (lv: Level, n: StructureNode) => { typeIn(lv, n.label); requestAnimationFrame(() => refs.current[FIELDS[FIELDS.indexOf(lv) + 1]]?.focus()); };
+  // The next level gets focus; when its field is off (Sub-category under None), the first control in its place (QA-56).
+  const next = (lv: Level) => requestAnimationFrame(() => {
+    const nx = FIELDS[FIELDS.indexOf(lv) + 1]; if (!nx) return;
+    const el = refs.current[nx];
+    (el && !el.disabled ? el : document.querySelector<HTMLElement>(`[data-add-dialog] [data-field="${nx}"] :is(input, button):not(:disabled)`))?.focus();
+  });
+  const pick = (lv: Level, n: StructureNode) => { typeIn(lv, n.label); next(lv); };
 
   const send = async (again: boolean) => {
     if (!fresh.length || busy) return;
@@ -209,7 +215,7 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
         {FIELDS.map((lv) => (
           <NameField key={lv} level={lv} label={WORD[lv]} value={text[lv]} options={optionsFor(lv)} isNew={isNew(lv)} underNew={underNew(lv)}
             enabled={enabled(lv) && !(lv === "subCategory" && (useNone || !!subOff))} inputRef={(el) => { refs.current[lv] = el; }}
-            onType={(v) => typeIn(lv, v)} onPick={(n) => pick(lv, n)} error={errors[lv]} close={close[lv] ?? []} keep={!!keep[lv]}
+            onType={(v) => typeIn(lv, v)} onPick={(n) => pick(lv, n)} onNext={() => next(lv)} error={errors[lv]} close={close[lv] ?? []} keep={!!keep[lv]}
             onKeep={() => setKeep((k) => ({ ...k, [lv]: true }))} onUse={(c) => { const n = optionsFor(lv).find((x) => x.key === c.key); if (n) pick(lv, n); }}
             extra={lv === "subCategory" ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -245,16 +251,19 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
 }
 
 /** One level: pick a name under the field above, or type a new one (tagged New); checks show under it as you type. */
-function NameField({ level, label, value, options, isNew, underNew, enabled, inputRef, onType, onPick, error, close, keep, onKeep, onUse, extra }: {
+function NameField({ level, label, value, options, isNew, underNew, enabled, inputRef, onType, onPick, onNext, error, close, keep, onKeep, onUse, extra }: {
   level: Level; label: string; value: string; options: StructureNode[]; isNew: boolean; underNew: boolean; enabled: boolean;
-  inputRef: (el: HTMLInputElement | null) => void; onType: (v: string) => void; onPick: (n: StructureNode) => void;
+  inputRef: (el: HTMLInputElement | null) => void; onType: (v: string) => void; onPick: (n: StructureNode) => void; onNext: () => void;
   error?: string; close: Close[]; keep: boolean; onKeep: () => void; onUse: (c: Close) => void; extra?: React.ReactNode;
 }) {
   const [show, setShow] = React.useState(false);
-  const [active, setActive] = React.useState(0);
+  // Nothing is highlighted until the arrows move into the list, so Enter keeps what was typed (QA-56).
+  const [active, setActive] = React.useState(-1);
   const id = React.useId();
   const shown = options.filter((n) => !value.trim() || norm(n.label).includes(norm(value))).slice(0, 12);
   const choose = (n: StructureNode) => { onPick(n); setShow(false); };
+  const typedNew = !!value.trim() && !options.some((n) => norm(n.label) === norm(value));
+  const items = shown.length + (typedNew ? 1 : 0);
   const levelName: LevelName = level;
   return (
     <div className="space-y-1" data-field={level}>
@@ -264,24 +273,27 @@ function NameField({ level, label, value, options, isNew, underNew, enabled, inp
       </label>
       {extra}
       <div className="relative">
-        <input id={`${id}-in`} ref={inputRef} role="combobox" aria-expanded={show && enabled && (shown.length > 0 || !!value.trim())} aria-controls={`${id}-list`} aria-autocomplete="list"
+        <input id={`${id}-in`} ref={inputRef} role="combobox" aria-expanded={show && enabled && (shown.length > 0 || !!value.trim())} aria-controls={`${id}-list`} aria-autocomplete="list" aria-activedescendant={show && active >= 0 ? `${id}-o${active}` : undefined}
           aria-invalid={error ? true : undefined} aria-describedby={`${id}-hint`} disabled={!enabled} value={value} placeholder={enabled ? (options.length ? `Pick or type a ${label.toLowerCase()}` : `Type a new ${label.toLowerCase()} (${EXAMPLE[level]})`) : ""}
-          onChange={(e) => { onType(e.target.value); setShow(true); setActive(0); }} onFocus={() => setShow(true)} onBlur={() => setTimeout(() => setShow(false), 150)}
+          onChange={(e) => { onType(e.target.value); setShow(true); setActive(-1); }} onFocus={() => setShow(true)} onBlur={() => setTimeout(() => setShow(false), 150)}
           onKeyDown={(e) => {
-            if (e.key === "ArrowDown") { e.preventDefault(); setShow(true); setActive((a) => Math.min(a + 1, shown.length - 1)); }
-            else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
-            else if (e.key === "Enter" && show && shown[active] && norm(shown[active].label) !== norm(value)) { e.preventDefault(); choose(shown[active]); }
+            if (e.key === "ArrowDown") { e.preventDefault(); setShow(true); setActive((a) => Math.min(a + 1, items - 1)); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, -1)); }
+            // Enter takes the highlighted name, or else what was typed (new or existing), and moves to the next level.
+            else if (e.key === "Enter" && show && shown[active]) { e.preventDefault(); choose(shown[active]); }
+            else if (e.key === "Enter" && value.trim()) { e.preventDefault(); setShow(false); onNext(); }
             else if (e.key === "Escape" && show) { e.stopPropagation(); setShow(false); }
           }}
           className={cn("h-9 w-full rounded-lg border bg-surface-raised px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-surface disabled:opacity-60", error ? "border-danger" : "border-border-strong")} />
         {show && enabled && (shown.length || value.trim()) ? (
           <ul id={`${id}-list`} role="listbox" aria-label={`${label} names`} className="absolute z-[70] mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
             {shown.map((n, i) => (
-              <li key={n.key} role="option" aria-selected={i === active} onMouseDown={(e) => { e.preventDefault(); choose(n); }}
+              <li key={n.key} id={`${id}-o${i}`} role="option" aria-selected={i === active} onMouseDown={(e) => { e.preventDefault(); choose(n); }}
                 className={cn("flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5", i === active ? "bg-text/5" : "hover:bg-text/5")}>{n.label}{n.retired ? <span className="text-xs text-text-muted">(retired)</span> : null}</li>
             ))}
-            {value.trim() && !options.some((n) => norm(n.label) === norm(value)) ? (
-              <li role="option" aria-selected={false} onMouseDown={(e) => { e.preventDefault(); setShow(false); }} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-text-link hover:bg-text/5">
+            {typedNew ? (
+              <li id={`${id}-o${shown.length}`} role="option" aria-selected={active === shown.length} onMouseDown={(e) => { e.preventDefault(); setShow(false); onNext(); }} data-add-new
+                className={cn("flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-text-link", active === shown.length ? "bg-text/5" : "hover:bg-text/5")}>
                 Add “{value.trim()}” <span className="rounded bg-primary/10 px-1 text-[11px] font-semibold">New</span>
               </li>) : null}
           </ul>) : null}

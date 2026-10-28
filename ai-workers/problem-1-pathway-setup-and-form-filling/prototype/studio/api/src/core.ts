@@ -2,7 +2,8 @@
 // versioned edits. Plain classes registered as NestJS providers (explicit @Inject, so no decorator metadata is needed).
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
-import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Inject, Injectable, SetMetadata, type CanActivate, type ExecutionContext } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
 import { join } from "node:path";
 
 export const STUDIO = join(import.meta.dirname, "..", "..");
@@ -54,6 +55,29 @@ export function readerOf(header: string | undefined): Actor {
   const a = actorOf(header);
   if (a.area !== "studio") throw new HttpException({ type: "https://expatready.local/problems/not-configuration", title: "Not for case people", status: 403, detail: `${a.name} (simulated) works on cases; the configuration is read in the Product Studio by its own people.` }, HttpStatus.FORBIDDEN);
   return a;
+}
+
+/** QA-53 (STANDARDS §6, deny by default): every GET under /api is a configuration read, refused to nobody (401) and to
+ *  case people (403) by the one guard below, unless the route is marked as one of the few reads that are not. A new
+ *  route is therefore guarded without anyone remembering to. Writes keep their own duty checks (need). */
+export const READ_SCOPE = "studio:read-scope";
+/** A read case people make as well, left exactly as it was: the runtime controllers, the releases Open a case lists, and
+ *  the activity feed (its own rule admits the case officer). */
+export const CaseRead = () => SetMetadata(READ_SCOPE, "case");
+/** A read with no person: who-am-I before a person is chosen (also the copies' health check), and file links the browser
+ *  opens without the person header (their ids are random and only reached from a guarded page). */
+export const OpenRead = (_why: string) => SetMetadata(READ_SCOPE, "open");
+@Injectable()
+export class ConfigReadGuard implements CanActivate {
+  constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
+  canActivate(ctx: ExecutionContext): boolean {
+    const req = ctx.switchToHttp().getRequest<{ method: string; headers: Record<string, string | string[] | undefined> }>();
+    if (req.method !== "GET" && req.method !== "HEAD") return true;
+    if (this.reflector.getAllAndOverride<string>(READ_SCOPE, [ctx.getHandler(), ctx.getClass()])) return true;
+    const h = req.headers["x-actor"];
+    readerOf(Array.isArray(h) ? h[0] : h);
+    return true;
+  }
 }
 
 export function need(a: Actor, duty: string) {

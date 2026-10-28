@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **Shoulds read (3964553): accepted; the founder's slice 2 Go already covered them, so no new early look.** Stage WAITING, owner Lead: (1) CI on 3964553 once GitHub Actions billing is unblocked; (2) S4 merges to main; then this lane syncs main and builds slice 3 (forms from the finder). The two "Left as it is" points (Programs next step wording during a removed released form; rule messages naming field codes) go to the screens lane's S3 pass. Wave 1 is desktop only. **Also (28 Oct, P-116 amended):** S5 line removes (form, document, rule, section, person role) use "Remove from …" with Undo and the shared components once screens has them; fold into slice 3.
+2026-10-28 (Lead, Mac, sixth chat, Claude Code): **S5 Lead check: FIX** (`screens/W1-combination-workspace/lead-check.md`; PR #71 holds the merge and stays open). Stage FIX, owner Builder. Main path walked and works; two independent reads found the same Undo defect. Fix L1–L5 (Majors: Undo keeps age/signer/rule edits; live "AI now" on Who can be not approved → hide or grey it; rules-only results labelled AI; Filed as ignores the edition's acceptedChannels; prove or fix the age gate without a date-of-birth question) and L6–L11 (Minors), each with a pass and a fail test. Answer Devin Review's 3 comments on PR #71 in the PR. Sync main first (run-suites now gives each copy its own names and ports). Local run-suites on the exact commit, hand back by message. US$0.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

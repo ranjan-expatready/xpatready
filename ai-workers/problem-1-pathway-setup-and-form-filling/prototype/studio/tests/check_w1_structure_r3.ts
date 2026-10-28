@@ -53,6 +53,13 @@ const exists = (k: string) => sql(`select count(*) from program_def where progra
   ok("C11.9 P-116 amended: someone else's unused name is not deleted at once (it goes to a second person)", row("Permanent resident documents")?.action.immediate === false);
   ok("C11.9 Lead 28 Oct (1) pass: a Live combination row offers Retire, its combination going with it", row("With an LMIA")?.action.kind === "RETIRE" && !row("With an LMIA")?.action.why && row("With an LMIA")?.action.withCombination === true, row("With an LMIA")?.action);
   ok("C11.9 L3 fail: the category above a Live line offers Retire greyed while that line is active", row("Employer-specific work permit")?.action.kind === "RETIRE" && /^Can't retire yet: "With an LMIA"/.test(row("Employer-specific work permit")?.action.why ?? ""), row("Employer-specific work permit")?.action.why);
+  // QA-55: the greyed Retire names what really blocks it, each with its way out.
+  const wpWhy = row("Work permits")?.action.why ?? "";
+  ok("C11.9 QA-55 pass: a released Program's Retire says which names are in use (retire first) and which were never released (delete first)", /"Employer-specific work permit" and "With an LMIA" under it are still in use: retire those first; "LMIA-exempt \(employer offer\)", "Open work permit" and 1 more under it were never released: delete those first\./.test(wpWhy) && row("Open work permit")?.action.kind === "DELETE", wpWhy);
+  const trWhy = row("Temporary residence")?.action.why ?? "";
+  ok("C11.9 QA-55 pass: a name with a setup draft is named apart (release or discard it), never under 'delete first'", /"Visitor visa", "Super visa" and 1 more under it have setup drafts: release or discard them first/.test(trWhy) && !/"Visitors"/.test(trWhy), trWhy);
+  const r0 = await call("POST", `/structure/nodes/${row("Work permits")!.key}/retire`, { reason: "qa-55 (Sample)" });
+  ok("C11.9 QA-55 fail-guard: the rule is unchanged: Retire is still refused while names under it are active, with the same words", r0.status === 409 && r0.body.detail === wpWhy, `${r0.status} ${r0.body.detail}`);
 
   // ---------------------------------------------------------------- R3-4: branch delete, exact and all or nothing
   const prd = row("Permanent resident documents")!.key, card = row("PR card renewal")!.key, travel = row("Travel document")!.key;
@@ -77,6 +84,19 @@ const exists = (k: string) => sql(`select count(*) from program_def where progra
   ok("C11.9 ReviewCard fail: the re-check before the click already says what changed", lateDetail.recheck?.ok === false && /Changed since it was proposed: "Start-up visa" was added under it/.test(lateDetail.recheck.text), lateDetail.recheck);
   r = await approve(late.id);
   ok("C11.9 R3-4 fail: a name added under the branch after proposing makes approval refuse; nothing is deleted", r.status === 409 && /Changed since it was proposed: "Start-up visa"/.test(r.body.detail) && exists(eco), r.body.detail);
+  // QA-59: the second person returns it with a note; the row says Returned and why; the author sends it again.
+  r = await call("POST", `/library/changes/${late.id}/return`, { note: "Start-up visa was added under it." }, "user-B");
+  all = await nodes();
+  const ecoRow = all.find((n) => n.key === eco);
+  ok("C11.9 QA-59 pass: a returned deletion is shown as returned, with who returned it and the note; the row still offers Withdraw", r.status < 300 && ecoRow?.pending?.status === "RETURNED" && /Start-up visa was added under it/.test(ecoRow?.pending?.note ?? "") && !!ecoRow?.pending?.by && ecoRow?.action.kind === "WITHDRAW", ecoRow?.pending);
+  r = await call("POST", `/library/changes/${late.id}/resubmit`, { reason: "" });
+  ok("C11.9 QA-59 fail: Send again without saying what changed is refused (400, plain words)", r.status === 400 && /Say what changed/.test(r.body.detail), `${r.status} ${r.body.detail}`);
+  r = await call("POST", `/library/changes/${late.id}/resubmit`, { reason: "Start-up visa goes with it too (Sample)." });
+  const again = (await call("GET", `/library/changes/${late.id}`, undefined, "user-B")).body;
+  all = await nodes();
+  ok("C11.9 QA-59 pass: Send again puts it back on To review, listing the branch as it is now (Start-up visa included); the re-check is clear", r.status < 300 && sql(`select status from library_change where id='${late.id}'`) === "WAITING" && all.find((n) => n.key === eco)?.pending?.status === "WAITING" && again.goes_with?.includes("Start-up visa") && again.recheck?.ok === true, { status: r.status, goes: again.goes_with, recheck: again.recheck });
+  r = await call("POST", `/library/changes/${late.id}/resubmit`, { reason: "Once more (Sample)." });
+  ok("C11.9 QA-59 fail-guard: only a returned change is sent again (a waiting one is refused, 409)", r.status === 409 && /Only a returned change is sent again/.test(r.body.detail), `${r.status} ${r.body.detail}`);
   await call("POST", `/library/changes/${late.id}/withdraw`, { note: "Start-up visa was added." });
 
   const fam = row("Family sponsorship")!.key, child = row("Dependent child")!.key;

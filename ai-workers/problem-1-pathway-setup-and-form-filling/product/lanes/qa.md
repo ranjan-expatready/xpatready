@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **WAITING** for the next merge (S4 Form library first, then the visual-system round 3). Note: the screens lane updates only the "Remove" → "Delete" wording in `check_qa_am_fix_1027` and `check_qa_am_1027` (P-128, Lead OK); re-read them at your next after-merge. CI now runs only on pull requests (P-85 amended): read the Lead PR's run, or run the suites yourself. Own ports, AI US$0, report summary to the Lead by message.
+2026-10-28 (Lead, Mac, sixth chat, Claude Code): PR #69 (368b8c32) and records PRs are on main; S5 is in FIX (not merged). Mode **/qa after-merge** on current main: QA-53 deny-by-default on every configuration read (case officer, client, nobody), the Form library on the shared lifecycle components, the returned form-change resend; check R69-1..3 (forms) as bugs if you reproduce them. Then the clean coverage rerun on S4 when the Mac is quiet. Report to `qa/reports/2026-10-28-after-merge-69.md`, new bugs to `qa/BUGS.md` by lane. US$0.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

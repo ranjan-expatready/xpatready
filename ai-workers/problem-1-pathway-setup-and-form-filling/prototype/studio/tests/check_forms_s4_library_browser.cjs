@@ -27,7 +27,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|status of 4\d\d/.test(m.text())) errs.push(m.text()); });
   const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json" }, data: init.json !== undefined ? JSON.stringify(init.json) : undefined }); let body = null; try { body = await r.json(); } catch { /* none */ } return { status: r.status(), body }; };
   const shot = async (name) => { for (const w of [1440, 1024, 390]) { await p.setViewportSize({ width: w, height: 900 }); await sleep(150); await p.screenshot({ path: path.join(SHOTS, `${name}-${w}.png`), fullPage: true }); } await p.setViewportSize({ width: 1440, height: 900 }); };
-  const axe = async (label) => { const r = await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze(); step(`axe (WCAG 2.2 AA): ${label}`, r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes.length}`).join("; ")); };
+  const axe = async (label) => { const r = await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze(); step(`axe (WCAG 2.2 AA): ${label}`, r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes.length} (${v.nodes.map((n) => `${n.target.join(" ")} ${(n.any[0]?.message ?? "").slice(0, 120)}`).join(" | ")})`).join("; ")); };
   const as = async (id) => { await p.evaluate((x) => localStorage.setItem("xr-actor", x), id); };
   const rows = () => p.locator("tr[data-form]");
   const forms = async () => (await rows().evaluateAll((els) => els.map((e) => e.getAttribute("data-form"))));
@@ -118,42 +118,44 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     step("review M5: Used by shows the combination's own name first, its place after it, muted", /^With an LMIA · /.test((await p.locator('tr[data-form="IMM 1295"] td').nth(5).innerText()).trim()), await p.locator('tr[data-form="IMM 1295"] td').nth(5).innerText());
     await p.setViewportSize({ width: 1440, height: 900 }); await sleep(200);
 
-    // Row menu, retire refused, delete asked
+    // P-116 amended (28 Oct): one written row action from the state, its reason as visible text; the ⋯ menu keeps the rest
     await p.getByLabel("Search number or title").fill(""); await sleep(400);
+    const row1295 = p.locator('tr[data-form="IMM 1295"]'), act1295 = row1295.locator("[data-action]");
+    const why1295 = await p.locator('tr[data-reason-for="IMM 1295"] [data-blocked-line]').innerText().catch(() => "no reason line");
+    step("P-116 amended: IMM 1295 (filed by a release) shows one written action, Retire, greyed with the guard's reason as visible text", (await act1295.getAttribute("data-action")) === "RETIRE" && (await act1295.getAttribute("aria-disabled")) === "true" && /Still used|Not possible|retire/i.test(why1295), why1295);
+    await act1295.click({ force: true }); await sleep(300); // aria-disabled: the click is forced to prove it opens nothing
+    step("P-116 amended fail: the greyed action is described by its reason (aria-describedby) and opens nothing", (await act1295.getAttribute("aria-describedby")) === (await p.locator('tr[data-reason-for="IMM 1295"] [data-blocked-line]').getAttribute("id")) && (await p.locator("[data-impact-panel]").count()) === 0);
     await p.getByRole("button", { name: "Actions for IMM 1295", exact: true }).click();
     const menu = p.getByRole("menu"); await menu.waitFor();
     const mt = await menu.innerText();
-    step("C11.11 (P-123): the ⋯ menu has Replace, Re-read with AI, See where it is used, Retire, Delete", ["Replace with a new edition", "Re-read with AI", "See where it is used", "Retire", "Delete"].every((x) => mt.includes(x)), mt);
-    step("C11.11 (P-116): Delete is offered only when nothing uses the form (IMM 1295 is used: disabled)", (await menu.getByRole("menuitem", { name: /Delete/ }).getAttribute("data-disabled")) !== null);
-    await shot("08-row-menu");
-    await menu.getByRole("menuitem", { name: /Retire/ }).click();
-    const rd = p.getByRole("dialog"); await rd.waitFor(); await rd.getByText(/Not possible now|Why/).first().waitFor();
-    step("C11.11 (P-116): Retire of a form the latest release still files is refused with the rule's reason and where it is used", /Not possible now/.test(await rd.innerText()) && /With an LMIA/.test(await rd.innerText()), (await rd.innerText()).slice(0, 240));
-    await axe("retire refused"); await shot("09-retire-refused");
-    await rd.getByRole("button", { name: "Cancel" }).click(); await sleep(300);
-    await p.getByRole("button", { name: "Actions for IMM 5604", exact: true }).click();
-    await p.getByRole("menu").getByRole("menuitem", { name: /Delete/ }).click();
-    const dd = p.getByRole("dialog"); await dd.getByText("Not possible now").waitFor({ timeout: 10_000 });
-    // Review must 1 (P-51): IMM 5604 is canada.ca's own file (its upload matched the form page), so it is kept: retired, never deleted.
-    step("review must 1: Delete of an official canada.ca file is refused in words (retire it instead), its button disabled", /never deleted: retire it instead/.test(await dd.innerText()) && await dd.getByRole("button", { name: "Ask to delete" }).isDisabled());
-    await dd.getByRole("button", { name: "Cancel" }).click(); await sleep(300);
-    await p.getByRole("button", { name: "Actions for IMM 5604", exact: true }).click();
-    await p.getByRole("menu").getByRole("menuitem", { name: /Retire/ }).click();
-    const rr = p.getByRole("dialog"); await rr.getByLabel("Why").waitFor();
-    await rr.getByLabel("Why").fill("Uploaded by mistake; no combination uses it");
-    await rr.getByRole("button", { name: "Ask to retire" }).click();
+    step("C11.11 (P-123, P-116 amended): the ⋯ menu keeps Replace, Re-read with AI and See where it is used; Retire and Delete are the row's written action, not in it", ["Replace with a new edition", "Re-read with AI", "See where it is used"].every((x) => mt.includes(x)) && !/Retire|Delete/.test(mt), mt);
+    await shot("08-row-menu"); await p.keyboard.press("Escape"); await sleep(200);
+    await axe("row actions with a reason shown"); await shot("09-retire-refused");
+    // Review must 1 (P-51): IMM 5604 is canada.ca's own file (its upload matched the form page), so its action is Retire, never Delete.
+    const row5604 = p.locator('tr[data-form="IMM 5604"]'), act5604 = row5604.locator("[data-action]");
+    step("review must 1 (P-51): an official canada.ca file's action is Retire, never Delete (it is kept)", (await act5604.getAttribute("data-action")) === "RETIRE" && (await act5604.getAttribute("aria-disabled")) === null);
+    await act5604.click();
+    const pane = p.locator("[data-impact-panel]"); await pane.waitFor();
+    const paneText = await pane.innerText();
+    step("P-116 amended: the confirm opens in the right panel: what happens, who approves and when (never a centred modal)", /Retire "IMM 5604/.test(paneText) && /A second person, on To review/.test(paneText) && (await p.getByRole("dialog").count()) === 0, paneText.slice(0, 200));
+    step("P-116 amended fail: Send for approval waits for a reason", await pane.locator("[data-confirm-send]").isDisabled());
+    await pane.getByLabel(/Why retire it/).fill("Uploaded by mistake; no combination uses it");
+    await sleep(400); // Send has just turned from disabled to enabled: scan after its colour transition, not mid-way
+    await axe("retire confirm (impact panel)");
+    await pane.locator("[data-confirm-send]").click();
     for (let i = 0; i < 20 && !sql(`select status from library_change where kind='library_form' and key='IMM 5604'`); i++) await sleep(250);
     step("C11.11 (P-116): Retire of an unused official form is asked of a second person (waiting on To review)", sql(`select status from library_change where kind='library_form' and key='IMM 5604'`) === "WAITING");
     await sleep(800);
-    step("break minor: the row shows the request waiting (\"Retire waiting\"), not just Ready", /Retire waiting/.test(await p.locator('tr[data-form="IMM 5604"]').innerText()));
-    step("review M8: closing the dialog puts focus back on the row's ⋯ button", await p.evaluate(() => document.activeElement?.getAttribute("aria-label") === "Actions for IMM 5604"));
+    step("break minor: the row shows the request waiting (\"Retire waiting\"), not just Ready", /Retire waiting/.test(await row5604.innerText()));
+    step("P-116 amended: the author's own waiting change makes the row's action Withdraw, and the Undo toast shows", (await act5604.getAttribute("data-action")) === "WITHDRAW" && (await p.locator("[data-undo-toast]").count()) === 1, await act5604.getAttribute("data-action"));
     await shot("10-delete-asked");
 
     // Read-only, long title
     await as("user-B"); await open();
     step("C11.11: a person without the author duty sees no Upload PDF", (await p.getByRole("button", { name: "Upload PDF" }).count()) === 0);
+    step("P-116 amended: and the row's action is greyed for them", (await p.locator('tr[data-form="IMM 1295"] [data-action]').getAttribute("aria-disabled")) === "true");
     await p.getByRole("button", { name: "Actions for IMM 1295", exact: true }).click();
-    step("C11.11: and every changing action is disabled; See where it is used stays", (await p.getByRole("menuitem", { name: /Retire/ }).getAttribute("data-disabled")) !== null && (await p.getByRole("menuitem", { name: /See where it is used/ }).getAttribute("data-disabled")) === null);
+    step("C11.11: and every changing menu action is disabled; See where it is used stays", (await p.getByRole("menuitem", { name: /Replace/ }).getAttribute("data-disabled")) !== null && (await p.getByRole("menuitem", { name: /See where it is used/ }).getAttribute("data-disabled")) === null);
     await p.keyboard.press("Escape"); await axe("read-only"); await shot("11-read-only");
     // Lead 28 Oct (carried should, P-116): the second person sees Where used on the retire's approval page before deciding
     const retireId = sql(`select id from library_change where kind='library_form' and key='IMM 5604' and status='WAITING' limit 1`);
