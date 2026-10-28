@@ -77,7 +77,7 @@ const STAGE = { start: 1, add_forms: 1, add_from_library: 1, see_new_edition: 1,
   await p.evaluate(() => localStorage.setItem("xr-actor", "user-B"));
   await p.goto(`${BASE}/review/change/${del.body.id}`); await p.waitForSelector("main h1");
   const title = await p.locator("main h1").innerText();
-  step("QA-46: the approver's page says Remove, as the Structure does", /^Remove structure name/.test(title), title);
+  step("QA-46: the approver's page says Delete, as the Structure does (P-128)", /^Delete structure name/.test(title), title);
   step("QA-51 BR-7: the To review trail names the Pathway type (Retail and Corporate both have a Temporary residence)", /Retail ›/.test(title), title);
   await p.getByRole("button", { name: "Approve", exact: true }).click();
   const toast = await p.getByText(/approved/).first().innerText({ timeout: 10000 }).catch(() => "");

@@ -9,6 +9,10 @@ export type LibraryChangeView = {
   released_in: number | null; combination_id: string | null;
 };
 export type LibraryChangeDetail = LibraryChangeView & { field: { key: string; label: string | null; meaning: string; value_type: string; group: string | null; status: string } | null;
+  /** A structure name (P-128): the names a branch delete takes with it, and whether a retire or restore takes its combination. */
+  goes_with: string[]; with_combination: boolean;
+  /** ReviewCard (P-116 amended): the approval re-check, run now and shown before the click; null when it does not apply. */
+  recheck: { ok: boolean; text: string; kept: string[] } | null;
   /** S4 C11.18: a change to what IRCC accepts for a form, in words (before → after, IRCC's line or the reason, its page). */
   accepts?: { form: string; edition: string | null; before: string; after: string; quote: string | null; reason: string | null; form_page: string | null } };
 

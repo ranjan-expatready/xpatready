@@ -10,10 +10,12 @@ import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
 import { fmtWhen } from "@/components/status";
 import { cn } from "@/lib/utils";
+import { UsesList, type Uses } from "@/pages/library-forms";
 import { ToReviewPage } from "@/pages/to-review";
 import { FormFieldDecisions } from "@/pages/job";
 import type { SessionView } from "../../../contracts/programs";
 import type { HeldFileView, ImpactAccepted, ImpactChange, ImpactReview, LibraryChangeDetail, LibraryChangeView, MergeSide, MergeView } from "../../../contracts/screen02";
+import { RECHECK, SAY } from "../../../contracts/lifecycle";
 
 const inv = [["review-queue"], ["draft"], ["catalogue"]];
 function useMe() {
@@ -55,13 +57,15 @@ function Decide({ yes, no, onYes, onNo, busy, noNeedsReason = true, disabledWhy,
 export function LibraryChangePage() {
   const { id } = useParams(); const nav = useNavigate(); const me = useMe();
   const c = useApi<LibraryChangeDetail>(["library-change", id], `/library/changes/${id}`);
-  const act = useAction((v: { d: "approve" | "return"; note?: string }) => api<LibraryChangeView>(`/library/changes/${id}/${v.d}`, { method: "POST", json: { note: v.note } }), { success: (r) => (r.status === "RELEASED" ? `"${r.label}" approved and applied` : r.status === "RETURNED" && /^Not /.test(r.decision_note ?? "") ? `"${r.label}" could not be applied: ${r.decision_note}` : r.status === "APPROVED" ? `"${r.label}" approved: it is released with the next release` : `"${r.label}" returned to ${r.proposed_by}`), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
+  // P-116 words for a delete, retire or restore (contracts/lifecycle.ts); S4: what IRCC accepts is applied, and a form delete that could not be applied says why.
+  const act = useAction((v: { d: "approve" | "return"; note?: string }) => api<LibraryChangeView>(`/library/changes/${id}/${v.d}`, { method: "POST", json: { note: v.note } }), { success: (r) => (r.status === "RELEASED" ? (r.action === "DELETE" ? SAY.approvedDeleted(r.label) : `"${r.label}" approved and applied`) : r.status === "RETURNED" && /^Not /.test(r.decision_note ?? "") ? `"${r.label}" could not be applied: ${r.decision_note}` : r.status === "APPROVED" ? (r.action === "RETIRE" || r.action === "RESTORE" ? SAY.approvedWaits(r.action, r.label) : SAY.approvedNow(r.label)) : SAY.returned(r.label, r.proposed_by)), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
   if (c.isLoading) return <Spinner label="Loading the change" />;
   if (c.isError) return <ErrorState title="This change could not be opened" description={(c.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />;
   const x = c.data!, mine = x.proposed_by_id === me.id;
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <Crumbs here={x.label} />
+      {x.kind === "library_form" ? <FormUses code={x.key} changeId={x.id} /> : null}
       <Head title={x.accepts ? `What IRCC accepts for ${x.accepts.form}` : `${x.action_word} ${x.kind_word}: ${x.label}`} chip={x.status === "WAITING" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "RETURNED" ? "Returned" : x.status === "APPROVED" ? "Approved · in the next release" : "Released"} tone={x.status === "WAITING" && !mine ? "warn" : "neutral"} sub={<>Proposed by {x.proposed_by}, {fmtWhen(x.proposed_at)}</>} />
       {x.accepts ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-accepts>
@@ -84,15 +88,36 @@ export function LibraryChangePage() {
       <div className="space-y-1 text-sm">
         {x.reason && !x.accepts ? <p><b>Reason:</b> {x.reason}</p> : null}
         {x.ai_verdict ? <p><b>Advisory check:</b> {x.ai_verdict}</p> : null}
-        {(x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
+        {x.goes_with?.length ? <div data-goes-with><p><b>These go with it</b> ({x.goes_with.length}; none is used):</p><ul className="ml-5 list-disc">{x.goes_with.map((g, i) => <li key={i}>{g}</li>)}</ul></div> : null}
+        {x.with_combination ? <p data-with-combination><b>Its combination</b> is {x.action === "RESTORE" ? "restored" : "retired"} with it, in the same release.</p> : null}
+        {x.kind === "field" && (x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
       </div>
       <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span> (generated from the group and the name)</p></details>
       {x.status === "RETURNED" && (mine || me.has("author")) ? <Correct change={x} /> : x.status !== "WAITING" ? null : mine || !me.has("review")
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
-        : <Decide yes="Approve" no="Return" busy={act.isPending} onYes={() => act.mutate({ d: "approve" })} onNo={(note) => act.mutate({ d: "return", note })} />}
+        : <>
+          {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
+          {x.recheck ? (x.recheck.ok
+            ? <p className="text-sm" data-recheck="ok">{RECHECK.clear}{x.recheck.kept.length ? <span className="text-text-muted"> Kept: {x.recheck.kept.join(" · ")}.</span> : null}</p>
+            : <div data-recheck="refused"><Notice tone="danger" title="Can't approve">{x.recheck.text} Return it with that reason.</Notice></div>) : null}
+          <Decide yes="Approve" no="Return" busy={act.isPending} onYes={() => act.mutate({ d: "approve" })} onNo={(note) => act.mutate({ d: "return", note })} onlyNo={x.recheck && !x.recheck.ok ? x.recheck.text : undefined} />
+        </>}
       {x.status === "WAITING" && me.has("author") && x.action === "ADD" ? <Withdraw id={x.id} /> : null}
     </div>
+  );
+}
+
+/** P-116 (Lead 28 Oct, carried should): Where used shows before any action, on the second person's page too. */
+function FormUses({ code, changeId }: { code: string; changeId: string }) {
+  const uses = useApi<Uses>(["form-uses", code], `/library/forms/${encodeURIComponent(code)}/uses`);
+  // This page is that open change: it is not listed as a use of the form.
+  const others = uses.data ? { ...uses.data, uses: uses.data.uses.filter((u) => u.href !== `/review/change/${changeId}`) } : undefined;
+  return (
+    <section aria-labelledby="change-uses" className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-uses>
+      <h2 id="change-uses" className="font-semibold">Where it is used</h2>
+      {uses.isLoading ? <Spinner label="Loading where it is used" /> : uses.isError ? <p className="text-text-muted">Where it is used could not be read: {(uses.error as Error).message}</p> : <UsesList uses={others} />}
+    </section>
   );
 }
 
@@ -181,18 +206,17 @@ export function HeldFilePage() {
         <dt className="text-text-muted">Edition</dt><dd>{h.edition ?? "Not read"}</dd>
         <dt className="text-text-muted">The file</dt><dd>{h.stored ? <a className="text-text-link underline" href={`/api/intake/held/${h.id}/file`} target="_blank" rel="noreferrer">Open the held PDF</a> : "Not stored"} <span className="text-xs text-text-muted">· checksum {h.sha256.slice(0, 12)}…</span></dd>
       </dl>
-      <Notice tone="warn" title="Not on the approved source list">It was not read into the library, attached or sent to AI. A second person compares it with the IRCC page it came from; approved, its checksum joins the approved list and the file goes through the intake again.</Notice>
+      {h.cannotApprove ? <Notice tone="warn" title="This copy cannot be approved">{h.cannotApprove} It was not read into the library, attached or sent to AI.</Notice> : <><Notice tone="warn" title="Not on the approved source list">It was not read into the library, attached or sent to AI. A second person compares it with the IRCC page it came from; approved, its checksum joins the approved list and the file goes through the intake again.</Notice>
       <section aria-labelledby="held-page" className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm">
         <h2 id="held-page" className="font-semibold">IRCC page it came from</h2>
         {h.irccPage ? <p><a className="break-all text-text-link underline" href={h.irccPage} target="_blank" rel="noreferrer">{h.irccPage}</a></p>
           : mine ? <div className="flex flex-wrap items-end gap-2"><label className="flex-1 text-sm">Paste the canada.ca page<input className="mt-1 h-9 w-full rounded-lg border border-border-strong bg-surface-raised px-3" value={page} onChange={(e) => setPage(e.target.value)} placeholder="https://www.canada.ca/…" /></label><Button busy={record.isPending} onClick={() => record.mutate(undefined)}>Record the page</Button></div>
           : <p className="text-text-muted">The person who uploaded it records the page first.</p>}
-      </section>
+      </section></>}
       {mine || !me.has("review")
-        ? <Notice title={mine ? "You uploaded this file" : "A content publisher decides"}>{mine ? "A different person compares it with the IRCC page and approves or rejects it." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
+        ? <Notice title={mine ? "You uploaded this file" : "A content publisher decides"}>{mine ? (h.cannotApprove ? "A different person rejects it. Upload the official PDF from canada.ca instead." : "A different person compares it with the IRCC page and approves or rejects it.") : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
         : h.cannotApprove
-          ? <><Notice tone="warn" title="This copy cannot be approved">{h.cannotApprove}</Notice>
-              <Decide yes="Approve as an official source" no="Reject" onlyNo={h.cannotApprove.split(":")[0].slice(0, 300)} busy={reject.isPending} onYes={() => undefined} onNo={(n) => reject.mutate(n)} /></>
+          ? <Decide yes="Approve as an official source" no="Reject" onlyNo={h.cannotApprove.split(":")[0].slice(0, 300)} busy={reject.isPending} onYes={() => undefined} onNo={(n) => reject.mutate(n)} />
           : <Decide yes="Approve as an official source" no="Reject" busy={approve.isPending || reject.isPending} disabledWhy={h.irccPage ? null : "Waiting for the uploader to record the IRCC page."} onYes={() => approve.mutate(undefined)} onNo={(n) => reject.mutate(n)} />}
     </div>
   );
