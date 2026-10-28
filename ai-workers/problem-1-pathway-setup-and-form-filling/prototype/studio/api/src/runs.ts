@@ -68,7 +68,12 @@ export class Runs {
   /** The one next step a stopped or waiting run offers (never a link to the page already open). */
   private nextOf(b: AiBatch, href: string): { label: string; href: string } | null {
     const plan = (b.plan ?? {}) as { held_id?: string; held_unread?: boolean };
-    if (b.operation === FINDER_OPERATION) return { label: "Find again", href };
+    // QA-63: no page chooses the application page yet (S5 brings the finder to the Forms tab), so "Find again" on the card
+    // itself was a dead end: the next step that works today is adding the forms' PDFs on the combination's Sources page.
+    if (b.operation === FINDER_OPERATION) {
+      const combinationId = (plan as { combination?: { id?: string } }).combination?.id ?? b.scopeLabel.split("|")[0];
+      return b.status === "NEEDS_PERSON" && combinationId ? { label: "Upload its forms on the Sources page", href: `/c/${combinationId}/sources` } : b.status === "NEEDS_PERSON" ? null : { label: "See the details", href };
+    }
     // Round 4 review should: a file the rules could not read can never be approved: say so, and what to do instead.
     if (b.operation === UPLOAD_OPERATION) return plan.held_id ? (plan.held_unread ? { label: "Open it on To review", href: `/review/held/${plan.held_id}` } : { label: "Record the IRCC page it came from", href: `/review/held/${plan.held_id}` }) : null;
     return { label: "See the details", href };

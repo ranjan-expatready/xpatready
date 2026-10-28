@@ -75,10 +75,12 @@ export function WherePanel({ uses, loading, error, onRetry }: { uses?: UsesView;
 
 /** The confirm, in the right panel (it may collect a reason, so never a centred modal): what goes or what is kept,
  *  who approves and when it takes effect, then the one button. An author's own draft deletes at once (no reason). */
-export function ImpactPanel({ kind, name, goes, kept, withCombination, immediate, again, busy, error, onCancel, onSend }: {
+export function ImpactPanel({ kind, name, goes, kept, withCombination, immediate, again, busy, error, onCancel, onSend, takesEffect }: {
   kind: LifecycleWord; name: string; goes?: { num?: string | null; label: string }[]; kept?: string[]; withCombination?: boolean; immediate?: boolean; busy?: boolean; error?: string | null;
   /** Send again (QA-59): a returned change goes back to a second person with what changed. */
   again?: boolean;
+  /** When it takes effect, if not the kind's usual (QA-64: a library retire or restore takes effect at approval, P-116 amended). */
+  takesEffect?: string;
   onCancel: () => void; onSend: (reason: string) => void;
 }) {
   const [reason, setReason] = React.useState("");
@@ -98,7 +100,7 @@ export function ImpactPanel({ kind, name, goes, kept, withCombination, immediate
         {kept?.length ? <div><p className="text-xs font-semibold text-text-ok">Kept</p><ul className="ml-5 list-disc" data-kept>{kept.map((k, i) => <li key={i}>{k}</li>)}</ul></div> : null}
         {withCombination && (kind === "RETIRE" || kind === "RESTORE") ? <p data-with-combination>{SAY.withCombination(kind)}</p> : null}
         {immediate ? <p className="rounded-lg bg-surface p-3" data-own-draft>{SAY.ownDraft}</p> : kind !== "WITHDRAW" ? (
-          <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1 rounded-lg bg-surface p-3 text-sm"><dt className="text-text-muted">Approves</dt><dd>{SAY.approves}</dd><dt className="text-text-muted">Takes effect</dt><dd>{SAY.takesEffect(kind)}</dd></dl>
+          <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1 rounded-lg bg-surface p-3 text-sm"><dt className="text-text-muted">Approves</dt><dd>{SAY.approves}</dd><dt className="text-text-muted">Takes effect</dt><dd>{takesEffect ?? SAY.takesEffect(kind)}</dd></dl>
         ) : null}
         {needsReason ? <>
           <label htmlFor="lifecycle-reason" className="block text-xs font-medium">{kind === "WITHDRAW" ? "Why withdraw it?" : again ? "What changed?" : `Why ${word.toLowerCase()} it?`} <span className="font-normal text-text-muted">Required, for the second person</span></label>
