@@ -10,9 +10,9 @@ For P-140's open point. Builds on, without repeating: `screens/M3-prepare-applic
 | Some forms both ways, and we want both for one form | **IRCC offers both editions, but the account decides which one; nobody files one form twice.** IMM 0008: "a digital version in the Permanent Residence Portal" and "a PDF version for paper applications" (same on IMM 5406, 5669). Our "both" can only mean: file online **and** keep an auto-filled PDF copy, not for filing (P-122) | IMM 0008 page (2026-09-11), IMM 5406 (2026-06-03), IMM 5669 (2025-06-26) |
 | Mixed: online application, with auto-filled PDFs downloaded and then uploaded into it | **True, and it is the normal case** for every APR Portal and PR Portal filing. It is not a channel: it is the filing's method, worked out from its lines (`filingMethod` already says "Online + PDF uploads") | PNP documents page lists three groups: portal forms; PDFs uploaded unsigned (IMM 0008 Schedule 4, IMM 0199); PDFs "Print, fill out and sign … by hand" then uploaded (IMM 5604, 5409, 5476) |
 
-Two things the founder did not list, both in scope:
-* **Paper by a representative is required for citizenship**: "If you want your representative to complete and submit your application for you, apply on paper" (citizenship: apply, 2026-04-21). Our code has no Paper value (`channelsFrom` returns null for paper lines).
-* **"Signed" mixes two ideas.** IMM 1344 is uploaded, "Do not print", and "typing your name is considered to be a digital signature" (IMM 1344 page, 2026-09-18); IMM 5532 is typed-signed after "print to PDF" (2026-01-08); IMM 5476 through a portal accepts a typed name, Adobe Fill & Sign, DocuSign or a scan, but outside a portal "a hand signature is required" (2025-12-12). So how a form is **signed** is a separate fact from how it is **filed**.
+Two more points, both in scope:
+* **Citizenship by a representative is paper only**: "If you want your representative to complete and submit your application for you, apply on paper" (citizenship: apply, 2026-04-21). Our code has no Paper value (`channelsFrom` returns null on paper lines).
+* **Signing is separate from filing.** IMM 1344 is uploaded, "Do not print", and a typed name "is considered to be a digital signature" (2026-09-18); IMM 5532 is typed-signed after print to PDF (2026-01-08); IMM 5476 in a portal accepts typed, DocuSign or scanned signatures, outside one a hand signature (2025-12-12).
 
 ## 2. (a) Recommended channel values
 Two separate fields per form line: **channel** (how IRCC receives it) and **signature** (from the form edition and the channel, never typed by us).
@@ -63,8 +63,6 @@ Portal fixed by the combination (P-137). Default is first; alternatives only ins
 | Spousal, parents and grandparents | PR Portal | Digital four: Online; IMM 1344, 5532: PDF upload with typed names; 5476 ×2 (sponsor and principal applicant): PDF upload signed | Online + PDF copy; Paper only on request ("braille, large print or paper", spouse: how to apply, 2026-09-11) |
 | Citizenship | Paper (representative) | CIT 0002 and others: Paper | None. Online is the client's own account; outside our filing |
 
-"Online application plus uploaded auto-filled PDFs" is simply every APR Portal and PR Portal row above: the filing's method shows "Online + PDF uploads", derived, never chosen.
-
 ## 5. (d) What the product does per channel
 | Channel | Steps on the deliverable (P-122) |
 |---|---|
@@ -89,18 +87,17 @@ Readiness on the case (P-136, unchanged in shape):
 * **Warns only**: AI findings, missing documents, a stale "PDF copy, not for filing", an Online line the extension cannot fill yet.
 
 ## 7. (f) Recommendation
-Adopt four channels (**Online · PDF upload · Paper · Not needed**), a separate derived **signature** per line, and "PDF copy, not for filing" as an optional extra deliverable on Online lines. Record "What IRCC accepts" per edition × account. Retire "Signed PDF upload" as a channel (it becomes PDF upload + signature "by hand, scanned"; the stored value can be migrated). "Both" and "online plus uploaded PDFs" are not values anyone picks: the first is the library saying an edition exists in two forms, the second is the derived filing method. It matches IRCC's own split, covers citizenship, and keeps one channel per filed form, so an officer can never file the same form twice.
+Adopt four channels (**Online · PDF upload · Paper · Not needed**), a derived **signature** per line, and "PDF copy, not for filing" as an optional extra deliverable on Online lines; record "What IRCC accepts" per edition × account; migrate "Signed PDF upload" to PDF upload + "Signed by hand, scanned". "Both" is the library saying an edition exists in two forms; "online plus uploaded PDFs" is the derived filing method: nobody picks either. This follows IRCC's own split, covers citizenship, and keeps one channel per filed form.
 
 Founder questions (one at a time, recommendation first):
 1. **Make the signature its own field and add Paper and Not needed as channels?** Recommended yes: IMM 1344's typed-name signature and citizenship's paper route do not fit today's three values.
 2. **Should a barcode form without a validated, read-back copy block "Ready to file"** (a third blocker, narrow amendment to P-136)? Recommended yes, for PDF upload and Paper only.
 3. **Is "PDF copy, not for filing" offered on every Online line, or only where IRCC has a PDF edition?** Recommended only where a PDF edition exists (IMM 0008, 5669, 5406, 5257), since the copy is written into IRCC's own PDF.
 
-For the immigration expert (not founder questions):
-* **Q-E1 Express Entry**: are IMM 5669 and IMM 5406 digital forms in the eAPR (P-113) or downloaded PDFs uploaded (the founder's brief)? The public Express Entry page (2026-10-16) lists only IMM 5476 and 5409 as uploads and names neither; the eAPR checklist is behind sign-in. P-113 stays until answered.
-* IMM 5257 on a super visa through the IRCC Portal: confirm "Not needed".
-* Citizenship: confirm the forms and that a paper package by a representative is the only route.
-* IMM 1344 and 5532: may the client type their own names into the file we prepare, and in what order with Validate (E1 F2: Validate fails until signatures are typed)?
+For the immigration expert:
+* **Q-E1 Express Entry**: are IMM 5669 and 5406 digital forms in the eAPR (P-113) or uploaded PDFs (the founder's brief)? The public page (2026-10-16) names only IMM 5476 and 5409 as uploads; the checklist is behind sign-in. P-113 stands until answered.
+* Super visa in the IRCC Portal: is IMM 5257 "Not needed"? Citizenship: which forms, and is paper the only representative route?
+* IMM 1344 and 5532: the client types their own names before Validate (E1 F2): confirm the order.
 
 ## 8. Limits
 Portals and their personalised checklists sit behind sign-in and were not seen. Page wording is summarised by a reading tool: check it on the page before quoting it in the product.
