@@ -75,8 +75,10 @@ export function WherePanel({ uses, loading, error, onRetry }: { uses?: UsesView;
 
 /** The confirm, in the right panel (it may collect a reason, so never a centred modal): what goes or what is kept,
  *  who approves and when it takes effect, then the one button. An author's own draft deletes at once (no reason). */
-export function ImpactPanel({ kind, name, goes, kept, withCombination, immediate, busy, error, onCancel, onSend }: {
+export function ImpactPanel({ kind, name, goes, kept, withCombination, immediate, again, busy, error, onCancel, onSend }: {
   kind: LifecycleWord; name: string; goes?: { num?: string | null; label: string }[]; kept?: string[]; withCombination?: boolean; immediate?: boolean; busy?: boolean; error?: string | null;
+  /** Send again (QA-59): a returned change goes back to a second person with what changed. */
+  again?: boolean;
   onCancel: () => void; onSend: (reason: string) => void;
 }) {
   const [reason, setReason] = React.useState("");
@@ -85,10 +87,12 @@ export function ImpactPanel({ kind, name, goes, kept, withCombination, immediate
   React.useEffect(() => { (immediate ? first.current : ref.current)?.focus(); }, [immediate]);
   const word = kind === "DELETE" ? "Delete" : kind === "WITHDRAW" ? "Withdraw" : ACTION_LABEL[kind];
   const needsReason = !immediate;
+  const title = again && kind !== "WITHDRAW" ? SAY.sendAgainTitle(kind, name) : SAY.confirmTitle(kind, name, goes?.length ?? 0);
   return (
-    <aside aria-label={SAY.confirmTitle(kind, name, goes?.length ?? 0)} className="fixed bottom-4 right-0 top-14 z-40 flex w-full max-w-[440px] flex-col border-l border-border bg-surface-raised shadow-xl xl:sticky xl:top-20 xl:z-auto xl:max-h-[calc(100vh-6rem)] xl:max-w-none xl:rounded-xl xl:border xl:shadow-sm" data-impact-panel={kind}>
-      <div className="border-b border-border px-5 py-3"><h2 className="break-words text-lg font-semibold">{SAY.confirmTitle(kind, name, goes?.length ?? 0)}</h2></div>
+    <aside aria-label={title} className="fixed bottom-4 right-0 top-14 z-40 flex w-full max-w-[440px] flex-col border-l border-border bg-surface-raised shadow-xl xl:sticky xl:top-20 xl:z-auto xl:max-h-[calc(100vh-6rem)] xl:max-w-none xl:rounded-xl xl:border xl:shadow-sm" data-impact-panel={kind}>
+      <div className="border-b border-border px-5 py-3"><h2 className="break-words text-lg font-semibold">{title}</h2></div>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4 text-sm">
+        {again ? <p data-send-again-body>{SAY.sendAgainBody}</p> : null}
         {kind === "DELETE" ? (goes?.length ? <><p>{SAY.deleteGoesWith}</p><ul className="ml-5 list-disc" data-goes-with>{goes.map((g, i) => <li key={i}>{g.num ? `${g.num} ` : ""}{g.label}</li>)}</ul></> : <p>{SAY.deleteNothingUses}</p>)
           : kind === "RETIRE" ? <p>{SAY.retireBody}</p> : kind === "RESTORE" ? <p>{SAY.restoreBody}</p> : <p>{SAY.withdrawBody}</p>}
         {kept?.length ? <div><p className="text-xs font-semibold text-text-ok">Kept</p><ul className="ml-5 list-disc" data-kept>{kept.map((k, i) => <li key={i}>{k}</li>)}</ul></div> : null}
@@ -97,14 +101,14 @@ export function ImpactPanel({ kind, name, goes, kept, withCombination, immediate
           <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1 rounded-lg bg-surface p-3 text-sm"><dt className="text-text-muted">Approves</dt><dd>{SAY.approves}</dd><dt className="text-text-muted">Takes effect</dt><dd>{SAY.takesEffect(kind)}</dd></dl>
         ) : null}
         {needsReason ? <>
-          <label htmlFor="lifecycle-reason" className="block text-xs font-medium">{kind === "WITHDRAW" ? "Why withdraw it?" : `Why ${word.toLowerCase()} it?`} <span className="font-normal text-text-muted">Required, for the second person</span></label>
+          <label htmlFor="lifecycle-reason" className="block text-xs font-medium">{kind === "WITHDRAW" ? "Why withdraw it?" : again ? "What changed?" : `Why ${word.toLowerCase()} it?`} <span className="font-normal text-text-muted">Required, for the second person</span></label>
           <Textarea ref={ref} id="lifecycle-reason" value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-16" />
         </> : null}
         {error ? <p role="alert" className="text-text-danger">{error}</p> : null}
       </div>
       <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button ref={first} variant={kind === "DELETE" ? "destructive" : "default"} disabled={needsReason && reason.trim().length < 3} busy={busy} onClick={() => onSend(reason.trim())} data-confirm-send>{immediate ? "Delete" : kind === "WITHDRAW" ? "Withdraw" : "Send for approval"}</Button>
+        <Button ref={first} variant={kind === "DELETE" ? "destructive" : "default"} disabled={needsReason && reason.trim().length < 3} busy={busy} onClick={() => onSend(reason.trim())} data-confirm-send>{immediate ? "Delete" : kind === "WITHDRAW" ? "Withdraw" : again ? "Send again" : "Send for approval"}</Button>
       </div>
     </aside>
   );

@@ -8,6 +8,8 @@ export type LifecycleWord = "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW";
 export const ACTION_LABEL: Record<LifecycleWord, string> = { DELETE: "Delete", RETIRE: "Retire", RESTORE: "Restore", WITHDRAW: "Withdraw" };
 /** The state a waiting change puts on its row. */
 export const WAITING_LABEL: Record<Exclude<LifecycleWord, "WITHDRAW">, string> = { DELETE: "Deletion waiting", RETIRE: "Retire waiting", RESTORE: "Restore waiting" };
+/** The state a returned change puts on its row (QA-59): the author withdraws it or sends it again. */
+export const RETURNED_LABEL: Record<Exclude<LifecycleWord, "WITHDRAW">, string> = { DELETE: "Deletion returned", RETIRE: "Retire returned", RESTORE: "Restore returned" };
 
 const q = (s: string) => `"${s}"`;
 const list = (names: string[]) => (names.length <= 2 ? names.map(q).join(" and ") : `${names.slice(0, 2).map(q).join(", ")} and ${names.length - 2} more`);
@@ -44,6 +46,7 @@ export const TIP = {
   RETIRE: (withCombination: boolean) => `Released, so it is kept: Retire hides it from pickers and new setups; open cases and earlier releases keep it.${withCombination ? " Its combination is retired with it." : ""}`,
   RESTORE: "Brings it back to pickers and new setups with the next release; a second person approves.",
   WITHDRAW: (name: string) => `Takes back your waiting change; ${q(name)} stays as it is.`,
+  returned: "A second person returned it to you: withdraw it, or send it again saying what changed.",
   edit: (leaf: boolean, canEdit: boolean) => !canEdit ? "See the name, where it is used and its history. Only a configuration author changes it." : leaf ? "Rename it, set where cases may be opened, reorder it, see where it is used and its history." : "Rename, reorder, see where it is used and its history.",
 } as const;
 
@@ -76,4 +79,8 @@ export const SAY = {
   approvedWaits: (kind: LifecycleWord, name: string) => `${ACTION_LABEL[kind]} ${q(name)} approved: it takes effect with the next release.`,
   approvedNow: (name: string) => `${q(name)} approved: it is released with the next release.`,
   returned: (name: string, to: string | null) => `${q(name)} returned to ${to ?? "its author"}.`,
+  returnedNote: (by: string | null, note: string | null) => `Returned by ${by ?? "a second person"}: ${note?.trim() || "no note"}`,
+  sendAgainTitle: (kind: Exclude<LifecycleWord, "WITHDRAW">, name: string) => `Send again: ${ACTION_LABEL[kind]} ${q(name)}?`,
+  sendAgainBody: "It goes back to a second person on To review, with what you changed.",
+  sentAgain: (kind: Exclude<LifecycleWord, "WITHDRAW">, name: string) => `Sent again for approval: ${ACTION_LABEL[kind]} ${q(name)}.`,
 } as const;

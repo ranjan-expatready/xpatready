@@ -210,6 +210,33 @@ export class Lifecycle {
     return changeView(c);
   }
 
+  /** Send again (QA-59): the author answers a returned change and sends it back to a second person, checked by the
+   *  same rule as a new proposal (nodeCan, read without this change); a branch delete lists its branch as it is now. */
+  async resubmit(actor: Actor, c: LibraryChange, reason: string) {
+    need(actor, "author");
+    if (c.status !== "RETURNED") throw problem(409, "Not returned", `Only a returned change is sent again; this one is ${c.status.toLowerCase()}.`);
+    const why = reason.trim();
+    if (why.length < 3 || why.length > 300) throw problem(400, "Say what changed", "Say what changed, for the second person (3 to 300 characters).");
+    let matches = Array.isArray(c.matches) ? (c.matches as string[]) : [];
+    if (c.kind === "structure_node") {
+      const g = await graph(this.db, c.workspaceId);
+      if (!g.byKey.get(c.key)) throw problem(409, "No longer there", RECHECK.gone);
+      const f = await this.facts(c.workspaceId, g, c.key, c.id), can = nodeCan(f);
+      const no = c.action === "DELETE" ? can.delete : c.action === "RETIRE" ? can.retire : can.restore;
+      if (no) throw problem(409, `Cannot ${c.action.toLowerCase()}`, no);
+      matches = c.action === "DELETE" ? [c.key, ...f.below.map((n) => n.programNodeKey)] : can.withCombination ? [`combination:${can.withCombination}`] : [];
+    } else {
+      const u = await this.combinationUses(c.key).catch(() => null);
+      if (!u) throw problem(409, "No longer there", RECHECK.gone);
+      const no = await this.recheckCombination(c, u);
+      if (no) throw problem(409, `Cannot ${c.action.toLowerCase()}`, no);
+    }
+    const done = await this.db.libraryChange.updateMany({ where: { id: c.id, status: "RETURNED" }, data: { status: "WAITING", reason: why, matches, decidedBy: null, decidedAt: null, version: { increment: 1 }, decisionNote: `Sent again after: ${c.decisionNote ?? "returned"}`.slice(0, 300) } });
+    if (!done.count) throw problem(409, "Changed meanwhile", "Someone changed this at the same moment. Refresh to see it.");
+    await this.audit.log(c.workspaceId, actor.id, "proposed", c.kind === "structure_node" ? "structure" : "combination", c.key, `${actor.name} sent again ${c.action.toLowerCase()} "${c.label}": ${why}`, undefined, c.kind === "combination" ? c.key : undefined);
+    return changeView((await this.db.libraryChange.findUnique({ where: { id: c.id } }))!);
+  }
+
   /** An author's own draft is deleted at once, branch included, leaves first (P-116 amended): the change is recorded as
    *  done, with every row kept in it so Undo can bring them back exactly. */
   private async deleteOwnDraft(actor: Actor, workspaceId: string, g: Graph, f: NodeFacts, reason: string) {

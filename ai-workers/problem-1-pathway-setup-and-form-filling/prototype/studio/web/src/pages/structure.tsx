@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { fmtWhen, StatusChip, Tip, TipProvider } from "@/components/status";
 import { AddToStructure, LocationPicker, LOC_TIP, locKey, type AddPrefill } from "@/components/add-to-structure";
 import { BlockedLine, ImpactPanel, RowAction, useUndoToast, WherePanel } from "@/components/lifecycle";
-import { ACTION_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../../../contracts/lifecycle";
+import { ACTION_LABEL, RETURNED_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../../../contracts/lifecycle";
 import { LevelMark, pathwayAccent } from "@/components/levels";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +58,7 @@ const usedBy = (c: StructureNode["combination"]) => {
 };
 
 const VIEW_KEY = (actor: string | null) => `xr-structure-view:${actor ?? "anyone"}`;
-type Confirm = { key: string; kind: LifecycleAction | "WITHDRAW" };
+type Confirm = { key: string; kind: LifecycleAction | "WITHDRAW"; again?: boolean };
 
 export function StructurePage() {
   const [sp, setSp] = useSearchParams();
@@ -162,17 +162,20 @@ export function StructurePage() {
     else if (e.key === "Delete" && (e.target as HTMLElement).dataset.edit !== undefined) { document.querySelector<HTMLElement>(`[data-row="${CSS.escape(key)}"] [data-action]`)?.click(); e.preventDefault(); }
   };
   const rowProps = (n: StructureNode) => ({ n, num: num.get(n.key) ?? null, selected: selected === n.key || confirm?.key === n.key, current: cur === n.key, justAdded: justAdded === n.key, canAuthor, words,
-    onEdit: () => { setCurrent(n.key); set({ node: n.key }); }, onAction: () => { setCurrent(n.key); setActing({ busy: false, error: null }); set({ node: null }); setConfirm({ key: n.key, kind: n.action.kind }); }, onKey: onRowKey(n.key), wide: !selectedNode && !confirm });
+    onEdit: () => { setCurrent(n.key); set({ node: n.key }); }, onAction: () => { setCurrent(n.key); setActing({ busy: false, error: null }); set({ node: null }); setConfirm({ key: n.key, kind: n.action.kind }); },
+    onSendAgain: () => { setCurrent(n.key); setActing({ busy: false, error: null }); set({ node: null }); setConfirm({ key: n.key, kind: n.pending!.action, again: true }); }, onKey: onRowKey(n.key), wide: !selectedNode && !confirm });
 
   // The confirm (ImpactPanel, the right panel), then the Undo toast (P-116 amended): an author's own draft is deleted at
   // once (Undo brings it back); anything else waits for a second person (Undo withdraws it).
   const undo = useUndoToast();
   const [acting, setActing] = React.useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
   const confirmNode = confirm ? byKey.get(confirm.key) : undefined;
-  const sendAction = async (n: StructureNode, kind: LifecycleAction | "WITHDRAW", reason: string) => {
+  const branchOf = (k: string): string[] => [...byKey.values()].filter((x) => x.parentKey === k && !x.retired).flatMap((x) => [x.key, ...branchOf(x.key)]);
+  const sendAction = async (n: StructureNode, kind: LifecycleAction | "WITHDRAW", reason: string, again = false) => {
     setActing({ busy: true, error: null });
     try {
-      if (kind === "WITHDRAW") { await api(`/library/changes/${n.pending!.id}/withdraw`, { method: "POST", json: { note: reason } }); setNote({ ok: true, text: SAY.withdrawn(n.label) }); undo.show(SAY.withdrawn(n.label)); }
+      if (again && kind !== "WITHDRAW") { await api(`/library/changes/${n.pending!.id}/resubmit`, { method: "POST", json: { reason } }); setNote({ ok: true, text: SAY.sentAgain(kind, n.label) }); undo.show(SAY.sentAgain(kind, n.label)); }
+      else if (kind === "WITHDRAW") { await api(`/library/changes/${n.pending!.id}/withdraw`, { method: "POST", json: { note: reason } }); setNote({ ok: true, text: SAY.withdrawn(n.label) }); undo.show(SAY.withdrawn(n.label)); }
       else {
         const r = await api<{ id: string; immediate?: boolean }>(`/structure/nodes/${encodeURIComponent(n.key)}${kind === "DELETE" ? "" : `/${kind.toLowerCase()}`}`, { method: kind === "DELETE" ? "DELETE" : "POST", json: { reason: reason || SAY.ownDraft } });
         const text = r.immediate ? SAY.deletedNow(n.label, n.action.below.length) : SAY.sent(kind, n.label);
@@ -332,10 +335,10 @@ export function StructurePage() {
           )}
           {list.data && !list.data.empty ? <p className="mt-2 text-xs text-text-muted">Names and locations are Sample until the immigration expert confirms. {list.data.meaningCheck.why}</p> : null}
         </section>
-        {confirmNode ? <ImpactPanel key={`impact-${confirmNode.key}`} kind={confirm!.kind} name={confirmNode.label} immediate={confirm!.kind === "DELETE" && confirmNode.action.immediate}
-          goes={confirm!.kind === "DELETE" ? confirmNode.action.below.map((k) => ({ num: num.get(k) ?? null, label: byKey.get(k)?.label ?? k })) : undefined}
+        {confirmNode ? <ImpactPanel key={`impact-${confirmNode.key}-${confirm!.again ? "again" : ""}`} kind={confirm!.kind} name={confirmNode.label} immediate={!confirm!.again && confirm!.kind === "DELETE" && confirmNode.action.immediate} again={confirm!.again}
+          goes={confirm!.kind === "DELETE" ? (confirm!.again ? branchOf(confirmNode.key) : confirmNode.action.below).map((k) => ({ num: num.get(k) ?? null, label: byKey.get(k)?.label ?? k })) : undefined}
           kept={confirm!.kind === "RETIRE" && confirmNode.combination?.id && usedBy(confirmNode.combination) !== "Setup draft" ? [usedBy(confirmNode.combination)] : undefined}
-          withCombination={confirmNode.action.withCombination} busy={acting.busy} error={acting.error} onCancel={() => setConfirm(null)} onSend={(reason) => void sendAction(confirmNode, confirm!.kind, reason)} />
+          withCombination={confirmNode.action.withCombination} busy={acting.busy} error={acting.error} onCancel={() => setConfirm(null)} onSend={(reason) => void sendAction(confirmNode, confirm!.kind, reason, confirm!.again)} />
         : selectedNode ? <DetailPanel key={selectedNode.key} node={selectedNode} num={num.get(selectedNode.key) ?? null} type={type} siblings={kids.get(selectedNode.parentKey)?.filter((s) => selectedNode.parentKey !== null || s.level === "pathway") ?? []} leaf={isLeaf(selectedNode)}
           leaves={below(selectedNode.key).filter(isLeaf).map((x) => ({ n: x, path: trailOf(x).slice(trailOf(selectedNode).length).map((y) => y.label) }))} canAuthor={canAuthor} onClose={() => set({ node: null })}
           onAction={() => { setActing({ busy: false, error: null }); const k = selectedNode.key; set({ node: null }); setConfirm({ key: k, kind: selectedNode.action.kind }); }} /> : null}
@@ -362,9 +365,9 @@ function Heads({ wide, first, list }: { wide: boolean; first: string; list?: boo
 
 /** One row of the Tree or the List: number, mark, name in text colour (level colour on the mark and number only,
  *  P-128 (6)), its state, where cases may be opened, Used by, then Edit and its one action (R3-2). */
-function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, onAction, onKey, wide, open, onToggle, meta, list, trail }: {
+function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, onAction, onSendAgain, onKey, wide, open, onToggle, meta, list, trail }: {
   n: StructureNode; num: string | null; selected: boolean; current: boolean; justAdded: boolean; canAuthor: boolean; words: string; wide: boolean;
-  onEdit: () => void; onAction: () => void; onKey: (e: React.KeyboardEvent) => void; open?: boolean; onToggle?: () => void; meta?: string; list?: boolean; trail?: string[];
+  onEdit: () => void; onAction: () => void; onSendAgain: () => void; onKey: (e: React.KeyboardEvent) => void; open?: boolean; onToggle?: () => void; meta?: string; list?: boolean; trail?: string[];
 }) {
   const leaf = !!n.combination, c = n.combination, a = n.action;
   const why = !canAuthor ? WHY.author : a.why;
@@ -383,14 +386,15 @@ function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, o
           <LevelMark level={n.level} />
           {/* The name keeps the width; its count wraps under it when the row is narrow (1024 px). */}
           <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-            <span className={cn("min-w-0 [overflow-wrap:break-word]", ["text-base font-semibold", "font-semibold", "font-medium", ""][level], n.pending?.action === "DELETE" && "line-through decoration-warn")} data-name><Mark text={n.label} words={words} /></span>
+            <span className={cn("min-w-0 [overflow-wrap:break-word]", ["text-base font-semibold", "font-semibold", "font-medium", ""][level], n.pending?.action === "DELETE" && n.pending.status !== "RETURNED" && "line-through decoration-warn")} data-name><Mark text={n.label} words={words} /></span>
             {meta ? <span className="whitespace-nowrap text-xs text-text-muted">{meta}</span> : null}
           </span>
         </>}
         {justAdded ? <span className="shrink-0 rounded-full bg-ok/15 px-2 py-0.5 text-xs font-semibold text-text-ok" data-just-added>Just added</span> : null}
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-1">
-        {n.pending ? <Tip tip={`Sent to a second person on To review. ${n.pending.action === "DELETE" ? "It is deleted when approved." : "It takes effect with the next release after approval."}`}><span><Pill tone="warn">{PENDING_WORD[n.pending.action]}</Pill></span></Tip> : null}
+        {n.pending?.status === "RETURNED" ? <Tip tip={TIP.returned}><span><Pill tone="danger">{RETURNED_LABEL[n.pending.action]}</Pill></span></Tip>
+          : n.pending ? <Tip tip={`Sent to a second person on To review. ${n.pending.action === "DELETE" ? "It is deleted when approved." : "It takes effect with the next release after approval."}`}><span><Pill tone="warn">{PENDING_WORD[n.pending.action]}</Pill></span></Tip> : null}
         {n.retired ? <Pill tone="neutral"><Archive className="size-3" aria-hidden /> Retired</Pill> : leaf && !n.pending ? (c!.id ? (c!.retired ? <Pill tone="neutral">Retired</Pill> : <StatusChip status={c!.status} text={c!.statusText} />)
           : <Tip tip="Added to the Program structure; no setup yet. Start it from its card on Immigration programs or its details."><span className="inline-flex items-center rounded-full border border-dashed border-border-strong px-2 py-0.5 text-xs font-semibold text-text-muted">Not started</span></Tip>) : null}
         {list && leaf ? <span className={cn("w-full text-xs text-text-muted", wide && "xl:hidden")} data-loc-stacked>{locWords(n.allowedLocations)}</span> : null}
@@ -400,6 +404,12 @@ function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, o
       <RowAction kind={a.kind} why={why} tip={a.kind === "DELETE" ? TIP.DELETE(a.below.length, a.immediate) : a.kind === "RETIRE" ? TIP.RETIRE(a.withCombination) : a.kind === "RESTORE" ? TIP.RESTORE : TIP.WITHDRAW(n.label)}
         canEdit={canAuthor} name={n.label} tabIndex={tab} reasonId={reasonId} onEdit={onEdit} onAction={onAction} editTip={TIP.edit(leaf, canAuthor)} />
       {/* The reason a state greys the action, as visible text under the row (P-116 amended); a reader's is the tooltip. */}
+      {/* A returned change (QA-59): who returned it and why, as visible text, with Send again beside the row's Withdraw. */}
+      {n.pending?.status === "RETURNED" ? (
+        <p className={cn("col-span-full -mt-0.5 pb-0.5 text-xs text-text-danger", list ? "pl-[4.25rem]" : ["pl-[3.25rem]", "pl-[3.75rem]", "pl-[5.5rem]", "pl-[7rem]"][level])} data-returned>
+          {SAY.returnedNote(n.pending.by, n.pending.note)}
+          {canAuthor ? <button type="button" onClick={onSendAgain} className="ml-2 rounded font-semibold text-text-link underline underline-offset-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-send-again>Send again</button> : null}
+        </p>) : null}
       {canAuthor && a.why ? <BlockedLine id={reasonId} text={a.why} onWhere={onEdit} className={cn("col-span-full -mt-0.5 pb-0.5", list ? "pl-[4.25rem]" : ["pl-[3.25rem]", "pl-[3.75rem]", "pl-[5.5rem]", "pl-[7rem]"][level])} /> : null}
     </div>
   );
@@ -553,7 +563,8 @@ function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClo
           <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Program structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i < 0 || i >= active.length - 1} onClick={() => void move(1)}><ArrowDown /> Move down</Button></span></Tip>
         </div>
         <WherePanel uses={u} loading={uses.isPending} error={uses.isError ? (uses.error as Error).message : null} onRetry={() => void uses.refetch()} />
-        {u?.pending ? <Notice tone="warn" title={`${PENDING_WORD[u.pending.action]} for a second person`}>Proposed by {u.pending.by}. <Link to={`/review/change/${u.pending.id}`} className="text-text-link underline underline-offset-2">See it on To review</Link></Notice> : null}
+        {node.pending?.status === "RETURNED" ? <Notice tone="danger" title={RETURNED_LABEL[node.pending.action]}>{SAY.returnedNote(node.pending.by, node.pending.note)}. <Link to={`/review/change/${node.pending.id}`} className="text-text-link underline underline-offset-2">See it on To review</Link></Notice>
+          : u?.pending ? <Notice tone="warn" title={`${PENDING_WORD[u.pending.action]} for a second person`}>Proposed by {u.pending.by}. <Link to={`/review/change/${u.pending.id}`} className="text-text-link underline underline-offset-2">See it on To review</Link></Notice> : null}
         {u?.history.length ? (
           <section aria-label="History"><h3 className="mb-1 text-sm font-semibold">History</h3><ul className="space-y-1 text-xs text-text-muted">{u.history.map((h, k) => <li key={k}><span className="text-text">{fmtWhen(h.at)}</span> · {h.what}</li>)}</ul></section>
         ) : null}

@@ -191,6 +191,17 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await p.waitForFunction(() => /Deletion waiting/.test(document.querySelector("[data-tree]")?.textContent ?? ""));
   await state("delete-waiting");
   const chg = sql("select id from library_change where kind='structure_node' and status='WAITING'");
+  // QA-59: returned with a note, the row says so and offers Send again beside Withdraw.
+  const ret = await p.request.fetch(`${BASE}/api/library/changes/${chg}/return`, { method: "POST", headers: { "x-actor": "user-B", "content-type": "application/json" }, data: { note: "Say which clients it was offered to (Sample)." } });
+  await open();
+  const fam = row("Family sponsorship");
+  step("C11.9 QA-59 pass: a returned deletion says 'Deletion returned', who returned it and why, as text on the row; Withdraw stays the action", ret.ok() && /Deletion returned/.test(await fam.innerText()) && !/Deletion waiting/.test(await fam.innerText()) && /Returned by .+: Say which clients it was offered to \(Sample\)\./.test(await fam.locator("[data-returned]").innerText()) && (await fam.locator("[data-action]").getAttribute("data-action")) === "WITHDRAW", await fam.innerText());
+  await fam.locator("[data-send-again]").click(); await impact.waitFor();
+  step("C11.9 QA-59: Send again opens the right panel: what goes with it, and it waits for what changed", /Send again: Delete "Family sponsorship"\?/.test(await impact.innerText()) && /Spouse or common-law partner/.test(await impact.locator("[data-goes-with]").innerText()) && await impact.locator("[data-confirm-send]").isDisabled(), await impact.innerText());
+  await impact.getByLabel(/What changed\?/).fill("Offered to no client since 2026 (Sample)."); await impact.locator("[data-confirm-send]").click();
+  await p.waitForFunction(() => /Deletion waiting/.test([...document.querySelectorAll("[data-row]")].find((r) => r.querySelector("[data-name]")?.textContent === "Family sponsorship")?.textContent ?? ""));
+  step("C11.9 QA-59 pass: sent again, the row waits again and the page says so", sql(`select status from library_change where id='${chg}'`) === "WAITING" && /Sent again for approval: Delete "Family sponsorship"/.test(await p.locator("[data-page-note]").innerText()));
+  step("C11.9 QA-59 fail-guard: a waiting row offers no Send again and shows no returned note", await fam.locator("[data-send-again], [data-returned]").count() === 0);
   await as("user-B"); await p.goto(`${BASE}/review/change/${chg}`); await p.locator("main h1").waitFor();
   step("C11.9 R3-4: the approver sees 'Delete structure name' and every name that goes with it", /^Delete structure name: Retail › Permanent residence › Family sponsorship/.test(await p.locator("main h1").textContent()) && /Spouse or common-law partner/.test(await p.locator("[data-goes-with]").textContent()));
   step("C11.9 ReviewCard: the re-check is said before the click", /Checked again just now: nothing new uses it/.test(await p.locator('[data-recheck="ok"]').innerText().catch(() => "")));
