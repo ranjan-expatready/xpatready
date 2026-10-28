@@ -51,14 +51,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - **Page behaviour:** Program structure opens on the Pathway this person last chose (`xr-structure-pathway:<actor>` in browser storage; `p=all` is All pathways). A check that wants every band should open `/structure?p=all`.
 
 current_screen: W1-visual-system
-stage: BUILD
-owner: Builder
-next_action: Builder: R3a (263bb9a + shared lifecycle pattern 93b0040b) and R3b (776d4169) built and pushed; full local run-suites on 776d4169 and the studio journey running; then EARLY-LOOK by message
+stage: EARLY-LOOK
+owner: Lead
+next_action: Lead: early look of round 3 with the founder (R3a Program structure with the shared lifecycle pattern, R3b Immigration programs); screenshots in screens/W1-visual-system/screenshots/structure/ and programs/r3-* at 1440 and 1024; build-notes "Round 3" sections
 then: S3 BUILD after round 3, the founder's Go and S4's merge (S3 re-check and addendum done, P-126); wave 1 desktop only (1440, 1024)
 blocked_by: none
 updated: 2026-10-28
 
 ## Log (last 10 lines)
+- 2026-10-28 · W1-visual-system · BUILD → EARLY-LOOK · round 3 built: R3a Program structure (263bb9a) with the shared lifecycle pattern (93b0040b: one guard and word set, own draft deleted at once with Undo, re-check before Approve, RowAction / BlockedLine / WherePanel / ImpactPanel / Undo toast), R3b Immigration programs (776d4169); run-suites 41/41 on 776d4169, journey 45/45; main merged e36bf06e. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-visual-system · DESIGN → BUILD · applied Lead note (round 3 challenge agreed, Majors 1–4, Minors 5–10); R3a built: one row-action rule (nodeCan), branch delete exact and all or nothing, a combination row's Retire/Restore with its combination, Delete wording, the page (filter bar, Tree, List, Edit + action on every row); qa words in their own commit 2101164. AI US$0.
 - 2026-10-28 · W1-visual-system · EARLY-LOOK → DESIGN · applied Lead message (P-128 round 3 agreed; note on lead/2026-10-27 8e7d47f); screen-challenge written in W1-visual-system/challenge.md: Build after these changes, 4 Major, 6 Minor, back-end plan; no code. Owner → Lead. AI US$0.
 - 2026-10-28 · W1-visual-system · EARLY-LOOK · Lead message: the founder's early look is Changes (do not merge; the Add pop-up stays; Program structure round 3 board coming; wave 1 desktop only). No code on Program structure or Immigration programs (P-126); the S3 re-check got an addendum (round 3 row actions, desktop only). Stopped at a safe point. AI US$0.
@@ -68,4 +69,3 @@ updated: 2026-10-28
 - 2026-10-28 · W1-visual-system · BUILD · handover to a fresh session (founder, via the Lead): slice built and pushed; full suites stopped unfinished and the studio journey not run on this branch; Handover section written. AI US$0.
 - 2026-10-27 · W1-visual-system · CHECK → BUILD · applied Lead note 2026-10-27 22:50 (FIX merged, 027174d); new branch screens/2026-10-27-visual-system from main; built level tokens, LevelMark/Trail/stripe, POST /structure/path, the Add to Program structure pop-up, Program structure layout A, Immigration programs restyled, menu in setup order; checks: structure 95/95, visual 21/21, tokens 31/31; S3 re-check in W1-structure-programs/challenge.md. AI US$0.
 - 2026-10-27 · W1-structure-programs · FIX → CHECK · seven items fixed (QA-44/45/46/49/50, review m1, break m8); check_w1_s1s2_fix 30/30; suites 34 PASS + 2 reruns alone PASS (s1finish now waits for 'Added'; forms_slice2b fetch flake 36/36); synced main 94d14ce, then s1s2_fix 30/30, programs_s2 87/87, s1finish 33/33; studio journey 45/45 on 4445; no by-products in the branch. AI US$0. Owner → Lead.
-- 2026-10-27 · W1-structure-programs · CHECK → FIX · applied Lead note 2026-10-27 (S2 merged PR #53; FIX QA-44, QA-45, QA-46, QA-49, QA-50, review m1, break m8); new branch screens/2026-10-27-s1s2-fix from main 57f6f8c; all seven built with a pass and a fail check each (check_w1_s1s2_fix 30/30). AI US$0.
