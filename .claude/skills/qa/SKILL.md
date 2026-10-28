@@ -29,7 +29,7 @@ Screenshot each decision point and every defect (`P/qa/reports/<date>-<mode>/`).
 **Against requirements and decisions:** every capability row names its sources (SA-1B / one-pager IDs from P/`history/TRACE-SA01B-2026-10-23.md`, P-decisions). For each, check the behaviour against the requirement and against our decision; where our decision differs, ours applies (P-70) and is what you test. Run `bash P/tools/decision-impact.sh`: a product decision with no capability row is a Gap finding (P-74).
 
 ## 3. Test underneath
-* Rerun every suite on the exact commit (`bash P/tools/run-suites.sh`, or read CI's `suites` run for it, P-85); report red suites first, with the failing check.
+* Rerun every suite on the exact commit (`bash P/tools/run-suites.sh`, or read the CI run of the Lead pull request that merged it, P-85); report red suites first, with the failing check.
 * **Graph** (P-86): `node P/tools/graph.mjs --write`, commit P/`qa/GRAPH.md`; every gap new since your last report becomes a P/`qa/BUGS.md` row (Gap) or one line in the report saying why it stays (API-only slice, scaffolding). Name capability ids (`C1.6:`) in your checks' labels.
 * API probes: each endpoint the capability uses, valid and invalid payloads, wrong role, stale version, concurrency (two requests at once); Problem Details shape and message.
 * **Coverage** (c8, P-69): run the API server under c8 while the API and browser suites click through it, then `c8 report`. Report line and branch % for `api/src` and `engine/`, and list business rules (concept BR-n, decisions) with no failing test. The floor may only rise; a fall is a Major finding.

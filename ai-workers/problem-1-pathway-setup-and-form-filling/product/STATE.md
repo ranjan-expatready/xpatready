@@ -18,6 +18,7 @@ updated: 2026-10-27
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-28 · Lead (Mac) · **CI cost cut (founder OK):** `ci.yml` now one job per pull request (guard, rules, graph, PDF checksums; full suites only when code changes), nothing on push; P-85 amended; lead and qa skills read local suite evidence for lane commits. Screens told round 3 (DESIGN).
 - 2026-10-28 · Lead (Mac) · **Founder Go on Program structure round 3 (P-128, supersedes P-127):** option A numbered outline, Tree + List, one Add, Edit/Delete per row, filter bar on both pages, Add combination opens the pop-up; Lead: branch delete yes, page-order sort, Delete not Remove. Screens → DESIGN (challenge), then BUILD.
 - 2026-10-28 · Lead (Mac) · Runtime S5 slice 2 Shoulds done (3964553; suites 40/40, journey 46/46, S5 checks 32/32 + 54/54); WAITING for CI (billing) and S4's merge. Round 3 boards sent to the founder (option A + filter bar recommended). CI cost: ~3,900 Actions minutes in 4 days; per-PR suites proposed to the founder.
 - 2026-10-28 · Lead (Mac) · Disk 6.9 → 11 GB free (founder OK): idle qa copy removed (657c7f8 on origin), 116 stale isolated test databases in lane copies removed. Forms copy rebound (runtime-r1 folder → forms lane, S4 branch). Program structure round 3 board being drafted (`screens/W1-visual-system/design/draft-r3-*`).
@@ -27,4 +28,3 @@ updated: 2026-10-27
 - 2026-10-28 · Lead (Mac) · **All four lanes handed over** (runtime f0166e5: S5 fixes 1–4 + slice 2 at EARLY-LOOK); sessions closed. Next chat: `/lead` (drift check, S4 Lead check, visual-system and S5 early looks).
 - 2026-10-28 · Lead (Mac) · **Handover:** forms (08eb170, S4 at CHECK), screens (f05a2e1, visual-system slice built, finishing), qa (657c7f8, WAITING) handed over and closed; runtime handover pending; LEAD.md "Where we are" rewritten for the next Lead.
 - 2026-10-27 · Lead (Mac) · **qa after-merge on the screens FIX: ready** (8c02ed6; QA-44/45/46/49/50 closed; QA-51/52/54 → screens visual-system slice; QA-53 → deny all configuration reads now, one shared guard, forms after S4). **Founder: full handover** — every lane stops at a safe point with a written handover, the Lead too; a fresh Lead resumes all lanes.
-- 2026-10-27 · Lead (Mac) · **PR #59 merged** (screens FIX; main's app code = 9fc749f, full suites green on CI). Screens → visual-system slice (P-127); qa → after-merge on the FIX; runtime and forms told to send hand-backs by message. Retro: missed hand-backs → lanes message the Lead, the Lead reads lane branches every pass.

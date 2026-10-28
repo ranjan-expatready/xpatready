@@ -27,7 +27,7 @@ The Lead is Claude Code in the main copy, started with `/lead` (skill `lead`). I
 | Capability page (P-29) | End of prototype | Lead writes it from the code |
 
 ## Watch list (check at every Lead check)
-* **CI (27 Oct):** billing restored (US$10 budget). Same code is tested once (P-85 note, PR #45): a push reuses an earlier green full-suite run of the same code fingerprint and names it — proven live on main 27 Oct. Merge only on green CI again; when a job fails in 2–3 s read the check-run annotation (billing) before calling it a code failure.
+* **CI (28 Oct, P-85 amended):** one job per pull request, nothing on a plain push (Actions used ~3,900 minutes in 4 days against 2,000 a month). Lanes give local `run-suites.sh` evidence on their exact commit; the Lead PR's CI runs the full suites on the merge result. When a job fails in 2–3 s read the annotation (billing) before calling it a code failure. 28 Oct: billing still blocked; founder fixing it.
 * P-26 scope test on every finding; P-33 capability or scaffolding on every element; P-60 no control cut.
 * **Demo story (P-93, `DEMO.md`):** every DEMO row has an owner; a feature is DONE only when its row shows in the story; the M2 gate walk is the configured checkpoint (C10.1), the M3 gate the finished story (C10.2).
 * Before any screen or slice starts BUILD: a fresh re-check of its agreed concept against `main` and the open lane branches that day (R-109). Mac-only work goes to the founder as a Goose prompt in `GOOSE-TASKS.md` (R-108).
