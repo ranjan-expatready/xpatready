@@ -14,11 +14,39 @@ export PATH="$ROOT/.tools/node-v24.21.0/bin:/opt/homebrew/opt/postgresql@18/bin:
 TIMEOUT="$(command -v timeout || command -v gtimeout || true)"
 [ -n "$TIMEOUT" ] || { echo "GNU timeout is missing (Mac: brew install coreutils, which provides gtimeout); no suite was run"; exit 2; }
 DEMO=0; [ "${1:-}" = "--demo" ] && DEMO=1
+NAMES=0; [ "${1:-}" = "--names" ] && NAMES=1   # print the names and ports this copy would use, run nothing
 # Not regression suites: the 100-program exercise needs its own fixture copy (run by hand, see its usage line).
 SKIP="check_catalogue_scale.cjs"
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
 DB="postgresql://xr_studio@127.0.0.1:54329"
+# Per-copy names (Lead, 28 Oct): copies on one Mac share the database server and localhost ports, and two copies running
+# the suites at once broke each other's isolated copies. Each copy now gives its isolated copies, their databases and
+# ports its own prefix: COPY_PREFIX when set, else this copy's lane (lane.sh whoami). CI has no prefix, so nothing there
+# changes. A lock (shared by every copy, under .tools) refuses a second run that would use the same names or ports.
+PREFIX="${COPY_PREFIX-}"
+if [ -z "${CI:-}" ] && [ -z "${COPY_PREFIX+x}" ]; then PREFIX=$(bash "$P/product/tools/lane.sh" whoami 2>/dev/null | tr -cd 'a-z0-9_'); [ "$PREFIX" = unbound ] && PREFIX=""; fi
+[[ "$PREFIX" =~ ^[a-z0-9_]{0,12}$ ]] || { echo "COPY_PREFIX: lower case letters, digits and _ only, at most 12"; exit 2; }
+SLOT=0
+if [ -n "$PREFIX" ]; then
+  # One slot per lane, so lanes never share ports; any other prefix hashes into slots 9 to 40. Ports move by 10000 +
+  # 1000 x (SLOT - 1): 14400 to 53480, clear of the demo :4400 and the database :54329.
+  case "$PREFIX" in lead) SLOT=1;; screens) SLOT=2;; forms) SLOT=3;; evidence) SLOT=4;; runtime) SLOT=5;; m3) SLOT=6;; qa) SLOT=7;; scout) SLOT=8;;
+    *) SLOT=$(( $(printf '%s' "$PREFIX" | cksum | cut -d' ' -f1) % 32 + 9 ));; esac
+  LOCK="${SUITES_LOCKS:-$ROOT/.tools/run-suites-locks}/slot-$SLOT"; mkdir -p "${LOCK%/*}"
+  claim() { mkdir "$LOCK" 2>/dev/null && printf '%s %s %s\n' "$$" "$PREFIX" "$ROOT" > "$LOCK/owner"; }
+  if [ "$NAMES" = 1 ]; then :; elif ! claim; then
+    read -r opid oprefix oroot < "$LOCK/owner" 2>/dev/null || true
+    if [ -n "${opid:-}" ] && kill -0 "$opid" 2>/dev/null; then
+      echo "Another run of the suites uses the same names or ports: prefix ${oprefix:-?} in ${oroot:-?} (pid $opid). Wait for it, or set COPY_PREFIX to another name. No suite was run."; exit 3
+    fi
+    rm -rf "$LOCK"; claim || { echo "Could not claim the suites lock $LOCK; no suite was run."; exit 3; }
+  fi
+  [ "$NAMES" = 1 ] || trap 'rm -rf "$LOCK"' EXIT
+fi
+iname() { if [ -n "$PREFIX" ]; then printf '%s_%s' "$PREFIX" "$1"; else printf '%s' "$1"; fi; }
+iport() { if [ "$SLOT" -gt 0 ]; then echo $(( $1 + 10000 + 1000 * (SLOT - 1) )); else echo "$1"; fi; }
+if [ "$NAMES" = 1 ]; then echo "prefix: ${PREFIX:-none} · slot: $SLOT · forms_s4 → $(iname forms_s4) on $(iport 4455) · runtime_r1 → $(iname runtime_r1) on $(iport 4430)"; exit 0; fi
 pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 || zsh "$S/start.sh" >/dev/null 2>&1 || { echo "the demo database is not running and start.sh failed"; exit 2; }
 
 rows=(); fail=0
@@ -40,8 +68,12 @@ for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
   fi
   # A usage line may pass server settings after "start" (isolated.sh start KEY=VALUE ..., e.g. a test-only pause).
   if [[ "$usage" =~ isolated\.sh\ ([a-z0-9_]+)\ ([0-9]+)\ start((\ [A-Z_][A-Z0-9_]*=[^ ]+)*)\ \&\&\ (tsx|node)\ studio/tests/$f(.*) ]]; then
-    name="${BASH_REMATCH[1]}"; port="${BASH_REMATCH[2]}"; env=(${BASH_REMATCH[3]}); tool="${BASH_REMATCH[5]}"
-    args=$(printf '%s' "${BASH_REMATCH[6]}" | sed -E 's/\[[^]]*\]//g; s/ {2,}.*//')
+    uname="${BASH_REMATCH[1]}"; uport="${BASH_REMATCH[2]}"; env=(${BASH_REMATCH[3]}); tool="${BASH_REMATCH[5]}"
+    name=$(iname "$uname"); port=$(iport "$uport")
+    # With a prefix, an optional database argument ([xr_studio_x]) is passed renamed, so the suite reads its own copy.
+    keep=""; [ -n "$PREFIX" ] && keep='s/\[(xr_studio_[a-z0-9_]+)\]/\1/g; '
+    args=$(printf '%s' "${BASH_REMATCH[6]}" | sed -E "${keep}"'s/\[[^]]*\]//g; s/ {2,}.*//')
+    [ -n "$PREFIX" ] && args=$(printf ' %s ' "$args" | sed -E "s/ ${uport} / ${port} /g; s/xr_studio_${uname}( |\$)/xr_studio_${name}\1/g")
     zsh "$S/tools/isolated.sh" "$name" "$port" start "${env[@]}" >/dev/null 2>&1 || { rows+=("| $f | FAIL | | isolated copy $name did not start |"); fail=1; continue; }
     if [ "$tool" = node ]; then run "$f" "$name" node "$path" $args; else run "$f" "$name" $TSX "$path" $args; fi
     zsh "$S/tools/isolated.sh" "$name" "$port" stop >/dev/null 2>&1
@@ -51,21 +83,21 @@ for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
 done
 # Suites outside tests/check_*: the runtime lane's (R1, two steps on one copy) and the drafting guard's (prototype/tests,
 # plain: they make their own temporary copies). Both lanes' Lead checks found CI skipping them (24 Oct).
-RT="$S/tests/runtime"
+RT="$S/tests/runtime"; RN=$(iname runtime_r1); RP=$(iport 4430)
 if [ -f "$RT/check_case_engine.ts" ]; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
 if [ -f "$RT/check_runtime_r1a.ts" ]; then
-  if zsh "$S/tools/isolated.sh" runtime_r1 4430 start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" 4430 xr_studio_runtime_r1 > "$OUT/setup_visitor_visa.log" 2>&1; then
+  if zsh "$S/tools/isolated.sh" "$RN" "$RP" start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" "$RP" "xr_studio_$RN" > "$OUT/setup_visitor_visa.log" 2>&1; then
     # R1c's browser journey first: it publishes a release 2 that R1a expects (runtime lane, 24 Oct).
-    [ -f "$RT/check_runtime_r1c.cjs" ] && run check_runtime_r1c.cjs runtime_r1 node "$RT/check_runtime_r1c.cjs" 4430
+    [ -f "$RT/check_runtime_r1c.cjs" ] && run check_runtime_r1c.cjs "$RN" node "$RT/check_runtime_r1c.cjs" "$RP"
     # R1d next on the same copy (it fills forms from the cases R1c made); R1a last: its --reset empties the workspace.
-    [ -f "$RT/check_runtime_r1d.ts" ] && run check_runtime_r1d.ts runtime_r1 $TSX "$RT/check_runtime_r1d.ts" 4430 xr_studio_runtime_r1
-    run check_runtime_r1a.ts runtime_r1 $TSX "$RT/check_runtime_r1a.ts" 4430 xr_studio_runtime_r1 --reset
+    [ -f "$RT/check_runtime_r1d.ts" ] && run check_runtime_r1d.ts "$RN" $TSX "$RT/check_runtime_r1d.ts" "$RP" "xr_studio_$RN"
+    run check_runtime_r1a.ts "$RN" $TSX "$RT/check_runtime_r1a.ts" "$RP" "xr_studio_$RN" --reset
   else rows+=("| check_runtime_r1a.ts | FAIL | | isolated copy runtime_r1 or setup_visitor_visa.ts failed (see setup_visitor_visa.log) |"); fail=1; fi
-  zsh "$S/tools/isolated.sh" runtime_r1 4430 stop >/dev/null 2>&1
+  zsh "$S/tools/isolated.sh" "$RN" "$RP" stop >/dev/null 2>&1
 fi
 for t in check_p2_guard check_p2_launch; do
   [ -f "$P/prototype/tests/$t.ts" ] && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
 done
 echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; printf '%s\n' "${rows[@]}"
-echo "commit $(git rev-parse --short HEAD) · logs in ${OUT#$ROOT/}"
+echo "commit $(git rev-parse --short HEAD) · logs in ${OUT#$ROOT/}${PREFIX:+ · copies named ${PREFIX}_*, ports +$(( 10000 + 1000 * (SLOT - 1) ))}"
 exit $fail
