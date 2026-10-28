@@ -107,7 +107,11 @@ export class Screen02 {
   /** Send again: a returned structure or combination change goes through the one guard (QA-59); a field as before. */
   async resubmitLibraryChange(actor: Actor, id: string, b: { label?: string; meaning?: string; reason?: string }) {
     const c = await this.db.libraryChange.findUnique({ where: { id } });
-    if (c && isLifecycleKind(c.kind)) return this.lifecycle.resubmit(actor, c, b.reason ?? "");
+    if (c && isLifecycleKind(c.kind)) {
+      // QA-68: a delete, retire or restore has no name or meaning to correct: refused in words, never dropped silently.
+      if (b.label !== undefined || b.meaning !== undefined) throw new HttpException({ type: "https://expatready.local/problems/nothing-to-rename", title: "Only what changed", status: 400, detail: `A ${actionVerb(c.action, c.kind)} is sent again with what changed only; its name and meaning stay as they are.` }, HttpStatus.BAD_REQUEST);
+      return this.lifecycle.resubmit(actor, c, b.reason ?? "");
+    }
     return resubmitChange(this.db, actor, id, b);
   }
   async decideLibraryChange(actor: Actor, id: string, decision: "approve" | "return", note?: string) {

@@ -291,7 +291,7 @@ export class Finder implements OnModuleInit {
       await set("A second AI round checks the pick without seeing the first (round 2 of 2)", { costUsd: d.costUsd });
       const k = await this.aiRound<GuideOut>("find_guide", true, trail, combinationKey, [inv], mode, wanted, batchId);
       const cost = round2(d.costUsd + k.costUsd);
-      if (!d.ok || !k.ok) return { status: (!d.ok && d.blocked) || (!k.ok && k.blocked) ? "BLOCKED" : "NEEDS_PERSON", message: `AI could not pick the page: ${!d.ok ? d.reason : !k.ok ? k.reason : ""}. Choose the application page.`, costUsd: cost, detail: { candidates: sure.candidates }, value: { url: "", title: null, candidates: sure.candidates } };
+      if (!d.ok || !k.ok) return { status: (!d.ok && d.blocked) || (!k.ok && k.blocked) ? "BLOCKED" : "NEEDS_PERSON", message: `${mode === "live" ? "AI could not pick the page: " : ""}${(!d.ok ? d.reason : !k.ok ? k.reason : "").replace(/\.+\s*$/, "")}. Choose the application page.`, costUsd: cost, detail: { candidates: sure.candidates }, value: { url: "", title: null, candidates: sure.candidates } };
       const byTitle = (t: string | null) => (t ? idx.packages.find((p) => sameText(p.title) === sameText(t)) : undefined);
       const a = byTitle(d.output.package_title), c = byTitle(k.output.package_title);
       const cands = [...new Map([a, c, ...[...(d.output.others ?? []), ...(k.output.others ?? [])].map(byTitle), ...sure.candidates].filter((p): p is Candidate => !!p).map((p) => [p.url, { title: p.title, url: p.url }] as const)).values()].slice(0, 10);
@@ -301,7 +301,7 @@ export class Finder implements OnModuleInit {
     if (!index || index.status !== "COMPLETED") {
       const c = index?.value?.candidates ?? [];
       if (index?.status === "NEEDS_PERSON" || index?.status === "BLOCKED") result.guide_choice = { candidates: c, why: "Choose the application page: the finder could not pick one for sure." };
-      return this.finish(batchId, index?.status === "NEEDS_PERSON" || index?.status === "BLOCKED" ? "NEEDS_PERSON" : "FAILED", index?.status === "NEEDS_PERSON" ? "Choose the application page, then Find again." : "The finder could not find the application page.", result);
+      return this.finish(batchId, index?.status === "NEEDS_PERSON" || index?.status === "BLOCKED" ? "NEEDS_PERSON" : "FAILED", index?.status === "NEEDS_PERSON" ? "No application page could be chosen. Choose it on the combination's Forms tab." : "The finder could not find the application page.", result);
     }
 
     // 2. Read the application page and the guide it links (rules: every form number printed on them).

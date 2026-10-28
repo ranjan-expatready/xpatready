@@ -376,6 +376,17 @@ export class Lifecycle {
    *  release (publishLifecycle). */
   async afterApprove(actor: Actor, c: LibraryChange) {
     if (c.kind === "form_accepts") return this.applyAccepts(actor, c);
+    // QA-64, P-116 amended (28 Oct): a library retire or restore takes effect at approval (a structure name or a
+    // combination waits for the release). The same check as at a release: a draft listing the form again hands it back.
+    if (c.kind === "library_form" && (c.action === "RETIRE" || c.action === "RESTORE")) {
+      const done = await this.db.$transaction(async (tx) => {
+        if (!(await applyFormLifecycle(tx, c))) return false;
+        await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? (c.action === "RETIRE" ? "Retired at approval: hidden from pickers and AI now; earlier releases and open cases keep it." : "Restored at approval: back in pickers and AI now.") } });
+        return true;
+      });
+      if (done) await this.audit.log(c.workspaceId, actor.id, c.action === "RETIRE" ? "retired" : "restored", "form", c.key, `${actor.name} approved ${actionVerb(c.action, c.kind)} "${c.label ?? c.key}": it takes effect now`);
+      return;
+    }
     if (!isLifecycleKind(c.kind) || c.action !== "DELETE") return;
     let gone = 1;
     const done = await this.db.$transaction(async (tx) => {
@@ -428,6 +439,23 @@ export async function withdrawLifecycle(db: Db, actor: Actor, c: LibraryChange, 
   return changeView((await db.libraryChange.findUnique({ where: { id: c.id } }))!);
 }
 
+/** A library form's retire or restore, applied (at approval since QA-64; at the release for one approved before). Checked
+ *  again first (round 3 major): a draft that lists the form again keeps it, and the retire goes back, said in History. */
+async function applyFormLifecycle(tx: Prisma.TransactionClient, c: LibraryChange, at: "approval" | "release" = "approval"): Promise<boolean> {
+  const data = c.action === "RETIRE" ? { retiredAt: new Date(), retiredBy: c.proposedBy } : { retiredAt: null, retiredBy: null };
+  if (c.action === "RETIRE") {
+    const using = await tx.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM (SELECT DISTINCT ON (f.combination_id, f.lineage_key) f.status FROM combination_form f JOIN gov_form_def d ON d.id = f.gov_form_def_id WHERE d.workspace_id = ${c.workspaceId}::uuid AND d.form_key = ${c.key} ORDER BY f.combination_id, f.lineage_key, f.version DESC) x WHERE x.status <> 'RETIRED'`;
+    if (Number(using[0]?.n ?? 0) > 0) {
+      const note = "Not retired: a combination lists this form again. Remove it there, then ask again.";
+      await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RETURNED", decisionNote: note } });
+      await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: "system", action: "returned", entity: "form", entityKey: c.key, summary: `The ${at} did not retire ${c.key}: ${note}` } }); // round 4 R4-3
+      return false;
+    }
+  }
+  await tx.govFormDef.updateMany({ where: { workspaceId: c.workspaceId, formKey: c.key }, data });
+  return true;
+}
+
 /** Called by the one library publisher inside the release transaction: an approved retire or restore of a structure
  *  name or a combination takes effect with this release. Returns false for any other kind. */
 export async function publishLifecycle(tx: Prisma.TransactionClient, c: LibraryChange): Promise<boolean> {
@@ -439,17 +467,8 @@ export async function publishLifecycle(tx: Prisma.TransactionClient, c: LibraryC
     const withC = (Array.isArray(c.matches) ? (c.matches as string[]) : []).find((m) => m.startsWith("combination:"))?.slice("combination:".length);
     if (withC) await tx.combination.updateMany({ where: { id: withC, workspaceId: c.workspaceId }, data });
   } else if (c.kind === "library_form") {
-    // Round 3 major: checked again at the release: a draft that lists the form again keeps it, and the retire goes back.
-    if (c.action === "RETIRE") {
-      const using = await tx.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM (SELECT DISTINCT ON (f.combination_id, f.lineage_key) f.status FROM combination_form f JOIN gov_form_def d ON d.id = f.gov_form_def_id WHERE d.workspace_id = ${c.workspaceId}::uuid AND d.form_key = ${c.key} ORDER BY f.combination_id, f.lineage_key, f.version DESC) x WHERE x.status <> 'RETIRED'`;
-      if (Number(using[0]?.n ?? 0) > 0) {
-        const note = "Not retired: a combination lists this form again. Remove it there, then ask again.";
-        await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RETURNED", decisionNote: note } });
-        await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: "system", action: "returned", entity: "form", entityKey: c.key, summary: `The release did not retire ${c.key}: ${note}` } }); // round 4 R4-3
-        return false;
-      }
-    }
-    await tx.govFormDef.updateMany({ where: { workspaceId: c.workspaceId, formKey: c.key }, data });
+    // A form's change approved before QA-64 (retire at approval) still takes effect with the release, by the same rule.
+    if (!(await applyFormLifecycle(tx, c, "release"))) return false;
   } else await tx.combination.updateMany({ where: { id: c.key, workspaceId: c.workspaceId }, data });
   return true;
 }

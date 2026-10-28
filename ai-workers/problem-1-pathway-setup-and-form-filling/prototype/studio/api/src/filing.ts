@@ -17,19 +17,37 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
  *  never a PDF upload, and a line about filling the form in on a computer says how to fill it, not how it is filed: both
  *  give null, "Not set yet", with filingWhy's reason. */
 export function channelsFrom(note: string | null | undefined): "PDF" | "ONLINE" | "PDF_OR_ONLINE" | null {
-  if (!note) return null;
-  // Review round 7: a download link's size label ("(PDF, 0.5 MB)") says what the file is, not how the form is filed.
-  const line = note.replace(/\((?:pdf|html)[^)]*\)/gi, " ");
-  const pdf = /\bupload(?:s|ed|ing)?\b/i.test(line);
-  // "Online applications … Upload this form along with your online application": the PDF goes into an online
-  // application (a PDF upload); only filing online itself (an online form, the portal) is Online.
-  const online = /\bonline\b|\bportal\b/i.test(pdf ? line.replace(/\bonline applications?\b/gi, " ") : line);
+  let pdf = false, online = false;
+  // QA-61 and the #73 review, by rule: each sentence is read clause by clause; a condition ("if", "even if", "unless" …)
+  // is never evidence of a channel, and a negated clause ("Do not upload this form") says nothing. What is left must be
+  // an affirmative instruction: "upload" for a PDF upload; filing online ("apply/submit/fill/complete … online", "an
+  // online form", "through the portal") for Online. "Your online application" is where an upload goes, not filing online.
+  for (const sentence of sentencesOf(note)) for (const clause of clausesOf(sentence)) {
+    const c = clause.replace(CONDITION, "").trim();
+    if (!c || NEGATED.test(c)) continue;
+    if (/\bupload(?:s|ed|ing)?\b/i.test(c)) pdf = true;
+    if (FILE_ONLINE.test(c.replace(/\bonline applications?\b/gi, " "))) online = true;
+  }
   return online && pdf ? "PDF_OR_ONLINE" : online ? "ONLINE" : pdf ? "PDF" : null;
+}
+/** A clause: split on ";", ",", ":", " but " and " instead" (a heading ends at its colon). */
+const clausesOf = (s: string) => s.split(/[;,:]|\s+but\s+|\s+instead\b/i).map((x) => x.trim()).filter(Boolean);
+/** A condition, from its first word to the end of its clause: never evidence of a channel. */
+const CONDITION = /\b(?:even if|even when|if|when|unless|whether|except|in case)\b.*$/i;
+/** An affirmative instruction to file online. */
+const FILE_ONLINE = /\b(?:apply|applies|applying|submit\w*|fill\w*|complet\w*|file)\b[^.;]*\bonline\b|\bonline form\b|\b(?:through|in|on|via|using)\s+(?:the|your|an?)\b[^.;]{0,40}?\bportal\b/i;
+/** QA-61: the rule reads each sentence, not single words. */
+const NEGATED = /\b(?:do not|don't|does not|doesn't|did not|didn't|no need to|not need to|need not|never|without)\b/i;
+function sentencesOf(note: string | null | undefined): string[] {
+  if (!note) return [];
+  // Review round 7: a download link's size label ("(PDF, 0.5 MB)") says what the file is, not how the form is filed.
+  return note.replace(/\((?:pdf|html)[^)]*\)/gi, " ").split(/(?<=[.;!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean);
 }
 /** Why a line gives no value (null when it gives one): shown with a fixture that is left out. */
 export function filingWhy(note: string | null | undefined): string | null {
   if (channelsFrom(note)) return null;
   const line = note ?? "";
+  if (sentencesOf(note).some((x) => NEGATED.test(x) && /\bupload/i.test(x))) return "IRCC's line says not to upload it";
   if (/\bpaper\b|\bmail(?:ed)?\b|\bsend (?:this|the|it|us)\b/i.test(line)) return "IRCC's page speaks of paper filing, not a PDF upload";
   if (/\bcomputer\b|\bvalidat\w*\b|\bdownload\b/i.test(line)) return "IRCC's line says how to fill the form in, not how it is filed";
   return "IRCC's line does not say how the form is filed";

@@ -50,6 +50,9 @@ const ACTION_TEXT: Record<Action, string> = { draft: "Draft field map", reuse_sa
 const retryable = (j: { status: string; message: string | null; detail: unknown }) => j.status === "FAILED" || j.status === "BLOCKED"
   || (j.status === "CANCELLED" && (!!j.message?.startsWith("Cancelled before it started") || ((j.detail as { a4?: { parts?: { status: string }[] } } | null)?.a4?.parts ?? []).some((p) => p.status === "not started")));
 
+/** QA-62: the form finder keeps "<combination id>|<place>" as its scope (to find a combination's runs); people see the place. */
+const scopeWords = (b: { operation: string; scopeLabel: string }) => (b.operation === "find_forms" && b.scopeLabel.includes("|") ? b.scopeLabel.slice(b.scopeLabel.indexOf("|") + 1) : b.scopeLabel);
+
 @Injectable()
 export class Ai implements OnModuleInit {
   private queue: string[] = [];
@@ -342,14 +345,14 @@ export class Ai implements OnModuleInit {
     if (!b) fail("This AI work no longer exists (the demo workspace may have been reset).", HttpStatus.NOT_FOUND);
     const atts = await this.db.sourceAttachment.findMany({ where: { id: { in: b!.jobs.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, edition: true, fileName: true } });
     const plan = b!.plan as any;
-    return { ...b, started_by_name: personName(b!.startedBy), plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
+    return { ...b, scopeLabel: scopeWords(b!), started_by_name: personName(b!.startedBy), plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
       spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), parts: partsOf(j.detail), a4: a4Of(j.detail), id: j.id, combinationId: j.combinationId, combination: j.combination?.label ?? "Library", program: j.combination?.program.label ?? null, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
   }
 
   async batches() {
     const workspaceId = await this.ws.id();
     const list = await this.db.aiBatch.findMany({ where: { workspaceId }, orderBy: { startedAt: "desc" }, take: 50, include: { jobs: { select: { status: true, costUsd: true, detail: true } } } });
-    return list.map((b) => ({ id: b.id, scopeKind: b.scopeKind, scopeLabel: b.scopeLabel, mode: b.mode, status: b.status, message: b.message, startedBy: b.startedBy, started_by_name: personName(b.startedBy), startedAt: b.startedAt, finishedAt: b.finishedAt, worstCaseUsd: b.worstCaseUsd, steps: b.jobs.length, parts: partsLine(b.jobs.flatMap((j) => partsOf(j.detail))), spent_usd: round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), counts: b.jobs.reduce((m: Record<string, number>, j) => ({ ...m, [j.status]: (m[j.status] ?? 0) + 1 }), {}) }));
+    return list.map((b) => ({ id: b.id, scopeKind: b.scopeKind, scopeLabel: scopeWords(b), mode: b.mode, status: b.status, message: b.message, startedBy: b.startedBy, started_by_name: personName(b.startedBy), startedAt: b.startedAt, finishedAt: b.finishedAt, worstCaseUsd: b.worstCaseUsd, steps: b.jobs.length, parts: partsLine(b.jobs.flatMap((j) => partsOf(j.detail))), spent_usd: round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), counts: b.jobs.reduce((m: Record<string, number>, j) => ({ ...m, [j.status]: (m[j.status] ?? 0) + 1 }), {}) }));
   }
 
   async cancel(actor: Actor, id: string) {
@@ -364,7 +367,7 @@ export class Ai implements OnModuleInit {
     const ids = new Set(runningJobs.map((j) => (j.detail as { job_id?: string } | null)?.job_id).filter((x): x is string => !!x));
     const ended = this.sources.stopLaunches((jobId) => [...ids].some((x) => jobId === x || jobId.startsWith(`${x}-p`)));
     const running = runningJobs.length;
-    await this.audit.log(b!.workspaceId, actor.id, "cancelled", "AI work", id, `${actor.name} stopped AI work for ${b!.scopeLabel}: ${stopped.count} queued steps stopped, ${running} running (${ended.length} AI call${ended.length === 1 ? "" : "s"} ended; a call already sent is counted at its reserved worst case; nothing of it is applied)`);
+    await this.audit.log(b!.workspaceId, actor.id, "cancelled", "AI work", id, `${actor.name} stopped AI work for ${scopeWords(b!)}: ${stopped.count} queued steps stopped, ${running} running (${ended.length} AI call${ended.length === 1 ? "" : "s"} ended; a call already sent is counted at its reserved worst case; nothing of it is applied)`);
     await this.settle(id);
     return { stopped: stopped.count, still_running: running, ...(await this.batch(id)) };
   }
@@ -402,7 +405,7 @@ export class Ai implements OnModuleInit {
       });
     } catch (e) { if ((e as any)?.code === "P2002") fail("One of these forms already has a step running.", HttpStatus.CONFLICT); throw e; }
     await this.db.aiBatch.update({ where: { id }, data: { status: "QUEUED", cancelRequested: false, finishedAt: null, message: `Retrying ${ids.length} step${ids.length > 1 ? "s" : ""}` } });
-    await this.audit.log(batch!.workspaceId, actor.id, "retried", "AI work", id, `${actor.name} retried ${ids.length} step${ids.length > 1 ? "s" : ""} (failed, blocked or cancelled before being sent) of the AI work for ${batch!.scopeLabel} (worst case US$${worst.toFixed(2)}); completed steps were not re-run`);
+    await this.audit.log(batch!.workspaceId, actor.id, "retried", "AI work", id, `${actor.name} retried ${ids.length} step${ids.length > 1 ? "s" : ""} (failed, blocked or cancelled before being sent) of the AI work for ${scopeWords(batch!)} (worst case US$${worst.toFixed(2)}); completed steps were not re-run`);
     this.enqueue(ids);
     return this.batch(id);
   }

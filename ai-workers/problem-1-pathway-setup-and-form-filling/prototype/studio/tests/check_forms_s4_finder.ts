@@ -327,14 +327,13 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("round 3 R3-1: the workspace's \"+ Add\" refuses it too (409, in words): every attach path goes through one guard", r.status === 409 && /open on To review/.test(r.body.detail ?? r.body.message ?? ""), r.body?.detail ?? r.body);
   r = await call("POST", `/combinations/${vv}/forms/undo`);
   ok("round 3 major: Undo never brings back a form whose retire is open (409, in words); the line stays removed", r.status === 409 && /Being retired/.test(r.body.title) && /IRM 0002:RETIRED/.test(lines(vv)), r.body.detail);
-  // The release checks again: a draft listing the form again (made by hand here) keeps it, and the retire goes back.
+  // QA-64 (P-116 amended): a library retire takes effect at approval, so the approval checks again: a draft listing the form
+  // again (made by hand here) keeps it, and the approval is refused in words.
   const retireId = sql(`select id from library_change where key='IRM 0002' and status='WAITING'`);
-  r = await call("POST", `/library/changes/${retireId}/approve`, { note: "Checked" }, "user-B");
   sql(`update combination_form set status='DRAFT' where combination_id='${vv}' and lineage_key='IRM 0002' and version=(select max(version) from combination_form where combination_id='${vv}' and lineage_key='IRM 0002')`);
-  const shared = (await call("GET", "/draft")).body;
-  r = await call("POST", "/pack/release", { expectedChanges: shared.changes }, "user-B");
-  ok("round 3 major: the release re-checks: a retire whose form a draft lists again is handed back, the form is not retired", sql(`select retired_at is null from gov_form_def where form_key='IRM 0002'`) === "t" && sql(`select status from library_change where id='${retireId}'`) === "RETURNED", { release: r.status, change: sql(`select status from library_change where id='${retireId}'`) });
-  ok("round 4 R4-3: the hand-back is written in History (the release did not retire it, and why)", Number(sql(`select count(*) from audit_event where entity_key='IRM 0002' and summary like 'The release did not retire IRM 0002%'`)) >= 1);
+  r = await call("POST", `/library/changes/${retireId}/approve`, { note: "Checked" }, "user-B");
+  ok("round 3 major, QA-64 fail: the approval re-checks: a retire whose form a draft lists again is refused in words (409) and the form is not retired", r.status === 409 && /Still used|Changed since/.test(r.body.detail ?? "") && sql(`select retired_at is null from gov_form_def where form_key='IRM 0002'`) === "t" && sql(`select status from library_change where id='${retireId}'`) === "WAITING", { approve: r.status, detail: r.body?.detail, change: sql(`select status from library_change where id='${retireId}'`) });
+  ok("round 4 R4-3: the refusal is said to the approver in words (the form is still listed), nothing is retired", /Visitor visa/.test(r.body.detail ?? ""), r.body?.detail);
   sql(`delete from library_change where key='IRM 0002'`);
   r = await call("DELETE", `/combinations/${vv}/forms/${C0002}`, { version: Number(sql(`select version from combination_form where combination_id='${vv}' and lineage_key='IRM 0002' order by version desc limit 1`)) });
   madeForm("IMM 0101");
@@ -417,14 +416,54 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   sql(`update combination_form set status='DRAFT' where id=(select id from combination_form where combination_id='${vv}' and lineage_key='${F}' order by version desc limit 1)`);
   r = await call("POST", `/library/changes/${rid}/return`, { note: "Visitor visa lists it again" }, "user-B");
   ok("setup (PR #67): the second person returns it", sql(`select status from library_change where id='${rid}'`) === "RETURNED", r.body?.detail ?? r.status);
+  // R69-1 (Devin Review on #69): a RETURNED form change is still open, so its row keeps the state and its author keeps Withdraw.
+  const rowAs = async (actor: string) => ((await call("GET", `/library/forms/list?q=${encodeURIComponent("0002")}`, undefined, actor)).body.rows as any[]).find((x) => x.code === F); // eslint-disable-line @typescript-eslint/no-explicit-any
+  let fr = await rowAs("user-A");
+  ok("R69-1 pass: a returned retire stays on its form's row (Retire returned) and its author is offered Withdraw of that change", fr?.lifecycle_waiting === "RETIRE" && fr?.lifecycle_returned === true && fr?.lifecycle_approved === false && fr?.action?.kind === "WITHDRAW" && fr?.action?.change_id === rid, { waiting: fr?.lifecycle_waiting, returned: fr?.lifecycle_returned, action: fr?.action });
+  fr = await rowAs("user-B");
+  ok("R69-1 fail: anyone else sees the action greyed with its reason while the returned change is open (no second retire)", fr?.action?.kind === "RETIRE" && !!fr?.action?.why && fr?.action?.change_id === null, fr?.action);
+  r = await call("POST", `/library/changes/${rid}/resubmit`, { label: "A new name", meaning: "A new meaning", reason: "Renamed it" });
+  ok("QA-68 fail: a returned form retire sent again with a name or meaning is refused in words (400), never dropped silently; it stays returned", r.status === 400 && /what changed only/.test(r.body.detail ?? "") && sql(`select status || '|' || label from library_change where id='${rid}'`).startsWith("RETURNED|") && !/A new name/.test(sql(`select label from library_change where id='${rid}'`)), r.body?.detail ?? r.status);
   r = await call("POST", `/library/changes/${rid}/resubmit`, { reason: "Sent again unchanged" });
   ok("PR #67 fail: sending a returned form retire again while a combination still lists the form is refused in words (409, still used), never as a missing combination", r.status === 409 && /Still used/.test(r.body.detail ?? "") && /Visitor visa/.test(r.body.detail ?? "") && sql(`select status from library_change where id='${rid}'`) === "RETURNED", r.body?.detail);
   await removeLine();
   r = await call("POST", `/library/changes/${rid}/resubmit`, { reason: "Visitor visa no longer lists it" });
   ok("PR #67 pass: after its last use is removed, the returned retire is sent again and waits for a second person (its own open change is not counted against it)", r.status < 300 && sql(`select status from library_change where id='${rid}'`) === "WAITING", r.body?.detail ?? r.body?.status);
+  fr = await rowAs("user-A");
+  ok("R69-1: once sent again the row says waiting, not returned", fr?.lifecycle_waiting === "RETIRE" && fr?.lifecycle_returned === false && fr?.action?.kind === "WITHDRAW", { returned: fr?.lifecycle_returned, action: fr?.action });
   ok("PR #67: History says it was sent again, in words (a form, never a combination)", /sent again retire "/.test(sql(`select summary from audit_event where entity_key='${F}' and action='proposed' order by at desc limit 1`)) && sql(`select entity from audit_event where entity_key='${F}' and action='proposed' order by at desc limit 1`) === "form");
   r = await call("POST", `/library/changes/${rid}/resubmit`, { reason: "Again while it waits" });
   ok("PR #67 fail: a change that waits already is not sent again (409)", r.status === 409, r.body?.detail);
+
+  // --- R69-3 (Devin Review on #69): when both Delete and Retire are refused, the row's one action is greyed, never clickable.
+  const { rowActionOf } = await import("../api/src/form-row-action.ts");
+  const uv = (can: { delete: string | null; retire: string | null }, released: boolean) => ({ key: "k", label: "k", trail: [], retired: false, released, uses: [], can: { restore: null, ...can }, pending: null }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let ra = rowActionOf(false, uv({ delete: "Can't delete: released items are kept.", retire: "Can't retire yet: still used." }, true), null, "user-A");
+  ok("R69-3 pass: a released form that is still used (Delete and Retire both refused) shows Retire greyed with the retire reason", ra.kind === "RETIRE" && ra.why === "Can't retire yet: still used.", ra);
+  ra = rowActionOf(false, uv({ delete: "Can't delete: its setup draft uses it.", retire: "It was never released: delete it instead." }, false), null, "user-A");
+  ok("R69-3 pass: an unreleased form with both refused shows Delete greyed with the delete reason", ra.kind === "DELETE" && ra.why === "Can't delete: its setup draft uses it.", ra);
+  ra = rowActionOf(false, uv({ delete: "Can't delete: released items are kept.", retire: null }, true), null, "user-A");
+  ok("R69-3 fail: when Retire is allowed it is offered, not greyed", ra.kind === "RETIRE" && ra.why === null, ra);
+  ra = rowActionOf(false, uv({ delete: null, retire: "It was never released: delete it instead." }, false), null, "user-A");
+  ok("R69-3 fail: when Delete is allowed it is offered, not greyed", ra.kind === "DELETE" && ra.why === null, ra);
+  const listedRows = ((await call("GET", "/library/forms/list")).body.rows as any[]).filter((x) => x.action.kind !== "WITHDRAW" && x.status !== "retired"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const bothRefused: string[] = [], notGreyed: string[] = [];
+  for (const x of listedRows) { const u = (await call("GET", `/library/forms/${encodeURIComponent(x.code)}/uses`)).body; if (u?.can?.delete && u?.can?.retire) { bothRefused.push(x.code); if (!x.action.why) notGreyed.push(x.code); } }
+  ok("R69-3 (API): every library row whose Delete and Retire are both refused shows its action greyed with a reason", bothRefused.length >= 1 && notGreyed.length === 0, { bothRefused, notGreyed });
+
+  // --- QA-62, QA-63 (qa after-merge on S4): a replay with nothing saved, on Super visa (no page chosen by rules)
+  const sv = sql(`select id from combination where label = 'Super visa' limit 1`);
+  const svPlan = (await call("POST", `/combinations/${sv}/forms/find/plan`, { mode: "replay" })).body;
+  r = await call("POST", `/combinations/${sv}/forms/find`, { mode: "replay", planSha256: svPlan.plan_sha256, idempotencyKey: "qa62-super-visa-replay" });
+  const svId = r.body.id, svRun = (await finish(svId)).body;
+  const guideMsg = svRun.steps?.[0]?.message ?? "";
+  ok("QA-62 fail: a replay with nothing saved never says AI could not pick the page, and has one full stop", svRun.status === "NEEDS_PERSON" && !/AI could not/.test(guideMsg) && !/\.\./.test(guideMsg) && /Choose the application page/.test(guideMsg), guideMsg);
+  const listed = ((await call("GET", "/ai/batches")).body as any[]).find((b) => b.id === svId); // eslint-disable-line @typescript-eslint/no-explicit-any
+  ok("QA-62 pass: AI work names the finder run by its place (no database id, no pipe)", !!listed && !/\|/.test(listed.scopeLabel) && !/[0-9a-f]{8}-[0-9a-f]{4}-/.test(listed.scopeLabel) && /Super visa$/.test(listed.scopeLabel), listed?.scopeLabel);
+  ok("QA-62: the run's own page names it the same way", !/\|/.test((await call("GET", `/ai/batches/${svId}`)).body.scopeLabel ?? "|"));
+  const card = (await call("GET", `/runs/${svId}`)).body;
+  ok("QA-63 pass (S3 item 5): the waiting run's card leads somewhere real (the page choice on the combination's Forms tab), never its own address", card.error?.next?.href === `/c/${sv}/forms?find=page` && !card.error.next.href.startsWith("/ai/") && card.error.next.label === "Choose the application page", card.error);
+  ok("QA-63: and its words say what to do (no dead \"Find again\")", !/then Find again/.test(card.error?.what ?? card.message ?? ""), card.error?.what ?? card.message);
 })().catch((e) => { fail++; console.log(`FAIL  the check stopped: ${(e as Error).stack}`); }).finally(() => {
   for (const f of madeRuns) rmSync(f, { force: true });
   for (const f of existsSync(join(P2, "jobs")) ? readdirSync(join(P2, "jobs")) : []) if (f.startsWith("studio-finder-") && !jobsBefore.has(f)) rmSync(join(P2, "jobs", f), { force: true });

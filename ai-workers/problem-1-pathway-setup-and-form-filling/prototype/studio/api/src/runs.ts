@@ -77,10 +77,10 @@ export class Runs {
   /** The one next step a stopped or waiting run offers (never a link to the page already open). */
   private nextOf(b: AiBatch, href: string): { label: string; href: string } | null {
     const plan = (b.plan ?? {}) as { held_id?: string; held_unread?: boolean };
-    // QA-63 / S3 item 5: the finder's next step is on the combination's Forms tab, never this card: a run that could not
+    // QA-63 / S3 item 5 (replaces the interim link to the Sources page now that the Forms tab chooses the page): the finder's next step is on the combination's Forms tab, never this card: a run that could not
     // pick the application page opens the Find dialog at the page choice; any other opens it to find again.
     if (b.operation === FINDER_OPERATION) {
-      const cid = b.scopeLabel.split("|")[0], page = !!(b.plan as { result?: { guide_choice?: unknown } } | null)?.result?.guide_choice;
+      const cid = (plan as { combination?: { id?: string } }).combination?.id ?? b.scopeLabel.split("|")[0], page = !!(b.plan as { result?: { guide_choice?: unknown } } | null)?.result?.guide_choice;
       return page ? { label: "Choose the application page", href: `/c/${cid}/forms?find=page` } : { label: "Find again", href: `/c/${cid}/forms?find=again` };
     }
     // Round 4 review should: a file the rules could not read can never be approved: say so, and what to do instead.
