@@ -13,7 +13,7 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
+        default: "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",
         destructive: "bg-danger text-danger-contrast hover:bg-danger/90 focus-visible:ring-danger/20 dark:bg-danger/30",
         outline: "border border-border-strong bg-gradient-to-b from-surface-raised to-surface-sunken shadow-sm hover:bg-text/5 hover:text-text dark:bg-none dark:bg-surface-raised dark:hover:bg-surface",
         secondary: "border border-border bg-surface-raised text-text shadow-sm hover:bg-text/5",
