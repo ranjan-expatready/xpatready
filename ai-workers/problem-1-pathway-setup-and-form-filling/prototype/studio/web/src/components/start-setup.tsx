@@ -30,13 +30,13 @@ export function useStartSetup() {
 }
 
 /** The Start setup button: its "i" says what it does, with an example (P-125 (3)); greyed, the reason is written under it. */
-export function StartSetupButton({ nodeKey, label, why, className, size = "sm", variant = "default" }: { nodeKey: string; label: string; why?: string | null; className?: string; size?: "sm" | "default"; variant?: "default" | "outline" }) {
+export function StartSetupButton({ nodeKey, label, why, className, size = "sm", variant = "default", step }: { nodeKey: string; label: string; why?: string | null; className?: string; size?: "sm" | "default"; variant?: "default" | "outline"; step?: boolean }) {
   const start = useStartSetup();
   const id = React.useId();
   return (
     <span className={className}>
       <Tip tip={START.tip(label)}>
-        <span><Button size={size} variant={variant} aria-disabled={why ? true : undefined} aria-describedby={why ? id : undefined} aria-label={`${START.label}: ${label}`} data-start-setup
+        <span><Button size={size} variant={variant} aria-disabled={why ? true : undefined} aria-describedby={why ? id : undefined} aria-label={`${START.label}: ${label}`} data-start-setup data-next-step={step ? "start" : undefined}
           className={why ? "cursor-not-allowed opacity-60" : undefined} onClick={(e) => { e.stopPropagation(); if (!why) void start(nodeKey); }}>{START.label}</Button></span>
       </Tip>
       {why ? <BlockedLine id={id} text={why} className="mt-1" /> : null}

@@ -91,11 +91,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const ns = cat.rows.find((r) => !r.combinationId);
   await p.goto(`${BASE}/`); await ready(); await p.waitForTimeout(300);
   await p.locator(`article[data-node="${ns.nodeKey}"] [data-next-step]`).dblclick();
-  await p.waitForURL(/\/new\?leaf=/);
+  await p.waitForURL(/\/c\/[0-9a-f-]+\/sources/);
   await p.waitForTimeout(400);
   await p.goBack(); await p.waitForTimeout(600);
   step("QA-50 pass: after a double click on Start setup, one Back returns to Immigration programs", new URL(p.url()).pathname === "/" && await p.getByRole("heading", { level: 1, name: "Immigration programs" }).count() === 1, p.url());
-  step("QA-50 fail-guard: the double click created nothing (no silent start)", (await catOf()).counts.not_started === cat.counts.not_started);
+  step("QA-50 fail-guard (S3): the double click started one setup, not two", (await catOf()).counts.not_started === cat.counts.not_started - 1 && sql(`select count(*) from combination c join program_def p on p.id=c.program_def_id where p.program_node_key='${ns.nodeKey}'`) === "1");
 
   // ======================================================== QA-45: the first sub-category (since P-128: the one Add, prefilled from the filters)
   const nodes = await structOrder();

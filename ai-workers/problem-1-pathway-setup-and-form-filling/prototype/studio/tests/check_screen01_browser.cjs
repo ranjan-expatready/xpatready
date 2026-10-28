@@ -307,12 +307,12 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("F2: one cause, one line; the next step said once (under the list when shared, else on each line); no line per person role", (shared ? miss.length > 1 && !miss.some((x) => /Next step/.test(x)) : miss.every((x) => /Next step: /.test(x))) && !miss.some((x) => /has no questions/.test(x)) && miss.filter((x) => /No questions yet for/.test(x)).length <= 1, miss.join(" | "));
   await state("combination-page-show-missing");
 
-  // A not-started row opens the Start setup page for the author (S2 fix 3: nothing is created by the click); a
-  // non-author is told who starts it.
+  // A not-started row opens no page and creates nothing (S2 fix 3; S3: no New combination page, P-125): it says Start setup
+  // begins it; a non-author is told who starts it.
   await p.goto(`${BASE}/?f=all`); await idle();
   const notStarted0 = (await cat("pathway=INDIVIDUAL&filter=all")).counts.not_started;
-  await row("Grant of citizenship").click(); await p.waitForURL(/\/new\?leaf=/); await idle();
-  step("S2 fix 3: a not-started row opens Start setup with its trail filled, and starts nothing by itself", /Citizenship › Grant of citizenship/.test(await p.locator("main").textContent()) && (await cat("pathway=INDIVIDUAL&filter=all")).counts.not_started === notStarted0);
+  await row("Grant of citizenship").click(); await idle();
+  step("S2 fix 3 / S3: a not-started row opens no page, says Start setup begins it, and starts nothing by itself", new URL(p.url()).pathname === "/" && /Grant of citizenship is not started yet\. Start setup on it begins its setup\./.test(await p.locator('[aria-live="polite"]').textContent()) && (await cat("pathway=INDIVIDUAL&filter=all")).counts.not_started === notStarted0);
   await state("combination-page-not-started");
   await p.goto(`${BASE}/?f=all`); await idle();
   await as("user-B");
@@ -333,36 +333,11 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("item 6: the global draft bar shows total changes and affected combination count, with one release-review link", /^Draft · \d+ changes? across \d+ combinations?/.test(bar) && /Review and release \(\d+\)/.test(bar), bar);
   await state("programs-draft-bar", { viewport: true });
 
-  // The New combination page stays until S3 (P-125 (5)); since P-128 (5) Programs' button is Add combination (the
-  // pop-up in place), so the page is opened by its address here.
+  // S3 (P-125 (5)): the New combination page is gone; its address is the app's "Page not found". Its name rules are checked
+  // on Program structure's endpoints (check_screen01_api) and in the Add pop-up (check_w1_structure_browser).
   await p.goto(`${BASE}/new`); await idle();
-  step("New combination opens the path builder page", /\/new/.test(p.url()) && await p.getByRole("heading", { name: /New combination/ }).count() === 1);
-  const placeholdersFit = await p.locator('input[role="combobox"]').evaluateAll((xs) => xs.every((x) => { const c = document.createElement("canvas").getContext("2d"); c.font = getComputedStyle(x).font; return c.measureText(x.placeholder).width <= x.clientWidth - 24; }));
-  step("review #10: a path back to Programs, no stray hint under Pathway, placeholders not cut", await p.getByRole("navigation", { name: "Path" }).getByRole("link", { name: "Immigration programs" }).count() === 1 && !/^exists$/m.test(await p.locator("main").innerText()) && placeholdersFit);
-  await state("new-combination-path-builder");
+  step("S3 M2: the New combination page is gone (Page not found, with the way back)", await p.getByText("Page not found").count() === 1 && await p.getByRole("link", { name: "Back to Immigration programs" }).count() === 1);
 
-  // ======================================================== fix pass (Lead note 23 Oct): QA-6, QA-7, QA-11, QA-1, QA-10, P-63
-  const level = async (i, text, choose = /^Create/) => {
-    const box = p.locator('main input[placeholder="Choose or type"]').nth(i);
-    await box.click(); await box.fill(text); await p.waitForTimeout(250);
-    const opt = p.getByRole("option", { name: choose }).first();
-    if (await opt.count()) await opt.click();
-    await idle();
-  };
-  await p.goto(`${BASE}/new`); await idle();
-  await level(0, "A".repeat(60) + " " + "B".repeat(70)); await level(1, "Long test");
-  const longMsg = await p.locator("#pk-program-hint").textContent();
-  step("QA-7: a 131-character program name shows \"Keep the name under 120 characters.\" on its field, and Create is not offered", longMsg === "Keep the name under 120 characters." && await p.getByRole("button", { name: "Create and add sources" }).isDisabled() && (await api("/path-options?pathway=INDIVIDUAL")).body.programs.every((x) => x.label.length <= 120), longMsg);
-  await state("new-combination-name-too-long", { viewport: true });
-  await p.goto(`${BASE}/new`); await idle();
-  await level(0, "!!!"); await level(1, "???");
-  const symMsg = await p.locator("#pk-program-hint").textContent();
-  step("QA-6: a name of symbols only says to use letters or digits; nothing can be created", /letters or digits/.test(symMsg) && await p.getByRole("button", { name: "Create and add sources" }).isDisabled(), symMsg);
-  await p.goto(`${BASE}/new`); await idle();
-  await level(0, "Work permits", /^Work permits/); await level(1, "Employer-specific", /^Employer-specific/); await level(2, "With an LMIA", /^With an LMIA/);
-  const wpId = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.nodeKey === "individual.work_permits.employer_specific.with_lmia").combinationId;
-  await p.getByRole("button", { name: "Open the existing combination" }).click(); await p.waitForURL(/\/c\//, { timeout: 5000 }).catch(() => {}); await idle();
-  step("QA-11: \"Open the existing combination\" opens that combination's page (not the list)", p.url().endsWith(`/c/${wpId}`), p.url());
   // QA-1 on the shared Release page: a changed combination nobody submitted is held back with the reason.
   await p.goto(`${BASE}/release`); await idle();
   const relRow = p.getByRole("row", { name: /Study permit/ }).first();

@@ -419,7 +419,7 @@ function NextStep({ r, canAuthor, tabIndex, onAct, onOpen, primary }: { r: Catal
     filled ? "border-primary bg-primary text-primary-foreground hover:bg-primary-hover [&_svg]:text-current" : "border-border bg-surface-raised text-text-link hover:border-primary");
   const cls = primary ? button(r.needsYou) : link;
   // S3: Start setup is one shared action, greyed with the one guard's reason written under it (M3, m5).
-  if (a?.kind === "start" && canAuthor) return <StartSetupButton nodeKey={r.nodeKey} label={r.label} why={r.startWhy} variant={primary ? "default" : "outline"} />;
+  if (a?.kind === "start" && canAuthor) return <StartSetupButton nodeKey={r.nodeKey} label={r.label} why={r.startWhy} variant={primary ? "default" : "outline"} step />;
   if (a && mine) return <StepTip a={a}><button type="button" tabIndex={tabIndex} data-next-step={a.kind} data-filled={primary && r.needsYou ? "" : undefined} onClick={(e) => { e.stopPropagation(); onAct(r, a); }} className={cls}><StepLabel a={a} /></button></StepTip>;
   if (r.combinationId) return <button type="button" tabIndex={tabIndex} data-next-step="open" onClick={(e) => { e.stopPropagation(); onOpen(); }} className={link}>Open</button>;
   return null;
