@@ -10,7 +10,7 @@ current_item: W1-combination-workspace (S5, W1-08, P-123)
 current_slice: slice 3 — forms from the finder on the Forms tab, IRCC guides linked as sources, "Remove from …" with Undo on the shared components (P-116 amended)
 stage: BUILD
 owner: Builder
-next_action: Builder: founder Go on slice 3 (28 Oct). The split change is done (49c139f7). Next: (1) when PR #69 (QA-53 deny by default, form library lifecycle) is on main, sync main and check the case-side calls (QA-53 refuses case people on configuration reads: check web/src/runtime/*.tsx and api/src/runtime.ts, fill-case.ts reads); (2) run-suites.sh locally + demo journey on :4433; (3) restore by-products, commit, push; (4) message the Lead for MERGE of all of S5 (slices 1–3, Shoulds, QA-38, QA-40, Who can be from the guide).
+next_action: Builder: synced main 368b8c32 (PR #67 screens qa fixes, PR #69 QA-53 deny by default + form library lifecycle) at 469366d9; case-side reads checked (only /releases, marked a case read, and /session). Next: full run-suites.sh (web built first) and the demo journey on :4433, restore by-products, commit, push, then message the Lead for MERGE of all of S5.
 blocked_by: none
 updated: 2026-10-28
 
@@ -23,6 +23,7 @@ updated: 2026-10-28
 * **Slice 3 (built 28 Oct):** finder strip and dialog (`web/src/pages/workspace/finder.tsx`), Picked by AI · Sample, row ⋯ menu (Redo with AI, Replace edition, Remove from this combination), the one Undo bar on the forms lane's `POST …/forms/undo` plus the shared Undo toast, Removed in this draft with Add back, guides linked as sources (`api/src/guide-sources.ts`, hooks in `demo.ts` and one line in `finder.ts finish`). S5's own restore route is gone. Tests `check_s5_slice3.ts` (4436) and `check_s5_slice3_browser.cjs` (4437). Open for the Lead: Who can be filled by AI (needs a paid live run to record a replay); other tabs' removes; the older Add-from-library picker.
 
 ## Log (last 10 lines)
+- 2026-10-28 · Builder (Mac): run-suites before the sync 51/53 (check_screen01_browser fails on main too, screens'; check_w1_programs_s2 timing under load); synced main 368b8c32 (PR #67, #69): conflicts in core.ts (imports) and main.ts (module: main's ConfigReadGuard kept, S5 providers added); typecheck clean; QA-53 checked for case pages. AI US$0.
 - 2026-10-28 · Builder (Mac): Lead: founder Go on slice 3; saved and pushed; next sync main after PR #69 (QA-53), suites, MERGE hand-back. AI US$0.
 - 2026-10-28 · Builder (Mac): Lead split with S3 applied (first-run Find button → slot data-finder-start for screens) and Who can be filled from the guide built (people-ai.ts, prompts, Fill from the guide; rules and saved answers at US$0, AI now shown, never run here); check_s5_people_ai 15/15, slice3 browser 35/35; full suites running. AI US$0.
 - 2026-10-28 · Builder (Mac): slice 3 → EARLY-LOOK: full run-suites 50/52 (check_forms_pdf_hardening passes alone on :4438, 49/49: port clash on the forms lane's 4450; check_screen01_browser fails on main too: S4 renamed the library upload, screens lane's test); demo journey 46/46 on :4433 after moving B2 to S4's upload (a damaged non-official file is refused) and A1 to 27 sources; graph exit 0; owner Lead. AI US$0.
@@ -32,4 +33,3 @@ updated: 2026-10-28
 - 2026-10-28 · Builder (Mac): Lead message (P-85 amended: CI per pull request only): local 40/40 on 3964553 is the evidence, no CI rerun; waiting for S4's merge, then slice 3.
 - 2026-10-28 · Builder (Mac): applied Lead note 2026-10-28 (founder Go on slice 2; read from origin/lead/2026-10-27, PR #64 open); synced main 8cfc043; drift-check Shoulds 2–8, 11, 12 built (build-notes top section): check_s5_slice2 32/32, browser 54/54 (axe, 11 states × 1440/1024); full run-suites.sh 40/40 PASS (demo-reset suite skipped there), demo journey 46/46 on its own copy :4433; graph exit 0 (G3 2, both older); by-products restored; desktop only (Lead 28 Oct); AI US$0; EARLY-LOOK owner Lead.
 - 2026-10-27 · Builder (Mac): Lead message 23:40 + handover request: synced main 4cbdb74 (PR #59–#62); handover written above (fixes 1–4 and slice 2 done at 8346a37); lane stops. AI US$0.
-- 2026-10-27 · Builder (Mac): applied Lead note 2026-10-27 23:05 (founder Go for slice 2 with four fixes); synced main 4fb0749 (break m8 in).
