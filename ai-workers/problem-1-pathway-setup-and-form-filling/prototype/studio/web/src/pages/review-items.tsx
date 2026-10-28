@@ -94,7 +94,7 @@ export function LibraryChangePage() {
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
       </div>
       <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span> (generated from the group and the name)</p></details>
-      {x.status === "RETURNED" && (mine || me.has("author")) ? <Correct change={x} /> : x.status !== "WAITING" ? null : mine || !me.has("review")
+      {x.status === "RETURNED" && (mine || me.has("author")) ? (LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
         : <>
           {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
@@ -117,6 +117,29 @@ function FormUses({ code, changeId }: { code: string; changeId: string }) {
     <section aria-labelledby="change-uses" className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-uses>
       <h2 id="change-uses" className="font-semibold">Where it is used</h2>
       {uses.isLoading ? <Spinner label="Loading where it is used" /> : uses.isError ? <p className="text-text-muted">Where it is used could not be read: {(uses.error as Error).message}</p> : <UsesList uses={others} />}
+    </section>
+  );
+}
+
+/** QA-68: a returned delete, retire or restore is sent again with what changed only (no name or meaning to edit), or withdrawn. */
+const LIFECYCLE_KINDS = ["structure_node", "combination", "library_form"];
+function SendAgain({ change }: { change: LibraryChangeDetail }) {
+  const nav = useNavigate();
+  const [reason, setReason] = React.useState(""), [why, setWhy] = React.useState(""), [withdrawing, setWithdrawing] = React.useState(false);
+  const kind = change.action as "DELETE" | "RETIRE" | "RESTORE";
+  const send = useAction(() => api<LibraryChangeView>(`/library/changes/${change.id}/resubmit`, { method: "POST", json: { reason } }), { success: () => SAY.sentAgain(kind, change.label), invalidate: [...inv, ["library-change", change.id]], onDone: () => nav("/review") });
+  const withdraw = useAction(() => api(`/library/changes/${change.id}/withdraw`, { method: "POST", json: { note: why } }), { success: () => SAY.withdrawn(change.label), invalidate: [...inv, ["library-change", change.id]], onDone: () => nav("/review") });
+  return (
+    <section aria-labelledby="again-h" className="space-y-3 rounded-lg border border-border bg-surface-raised p-4" data-send-again>
+      <h2 id="again-h" className="font-semibold">Send it again</h2>
+      <label className="block text-sm">What you corrected<Textarea className="mt-1" value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} placeholder="So the second person can check it" /></label>
+      <div className="flex justify-end"><Button busy={send.isPending} disabled={reason.trim().length < 3} onClick={() => send.mutate(undefined)}>Send again</Button></div>
+      {withdrawing ? (
+        <div className="flex flex-wrap items-end gap-2 border-t border-border pt-3" data-withdraw>
+          <label className="flex-1 text-sm">Why withdraw it<Input className="mt-1" value={why} maxLength={300} onChange={(e) => setWhy(e.target.value)} /></label>
+          <Button variant="destructive" busy={withdraw.isPending} disabled={why.trim().length < 3} onClick={() => withdraw.mutate(undefined)}>Withdraw it</Button>
+        </div>
+      ) : <div className="flex justify-end"><Button variant="ghost" onClick={() => setWithdrawing(true)}>Withdraw it instead…</Button></div>}
     </section>
   );
 }

@@ -170,17 +170,21 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("C11.8 (M7): no launcher process of that call is left running", alive === "", alive);
   ok("break M6: each running launcher is written down (so a restarted server ends any left over) and crossed off when it ends", !(existsSync(join(VAR, "launches")) ? readdirSync(join(VAR, "launches")) : []).some((f) => f.endsWith(".pid")));
 
-  // --- Round 5 major (option a): a form a combination reads only as a source can be retired (never deleted); the release
-  // retires it; AI no longer plans a draft from a retired form's file.
+  // --- Round 5 major (option a): a form a combination reads only as a source can be retired (never deleted); QA-64
+  // (P-116 amended): the approval retires it, no release needed; AI no longer plans a draft from a retired form's file.
   { r = await call("GET", `/library/forms/${encodeURIComponent("IMM 5881")}/uses`);
     ok("round 5 major: a form read only as a source may be retired, never deleted (the refusal names no missing action)", r.body.can?.retire === null && /never deleted|retire it instead|Still used/.test(r.body.can?.delete ?? "") && r.body.uses?.some((u: any) => u.retireOk), r.body.can);
     r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5881")}/retire`, { reason: "Replaced by the new visa-office checklist" });
     const rid = r.body.id;
     r = await call("POST", `/library/changes/${rid}/approve`, { note: "Checked" }, "user-B");
-    ok("round 5 major: the second person approves the retire although a combination reads its file", r.status < 300 && sql(`select status from library_change where id='${rid}'`) === "APPROVED", r.body?.detail ?? r.body?.status);
-    const shared = (await call("GET", "/draft")).body;
-    r = await call("POST", "/pack/release", { expectedChanges: shared.changes }, "user-B");
-    ok("round 5 major: the release retires it (a source use does not hand it back)", sql(`select retired_at is not null from gov_form_def where form_key='IMM 5881'`) === "t" && sql(`select status from library_change where id='${rid}'`) === "RELEASED", { release: r.status, change: sql(`select status from library_change where id='${rid}'`) });
+    ok("round 5 major: the second person approves the retire although a combination reads its file", r.status < 300, r.body?.detail ?? r.body?.status);
+    ok("QA-64 pass (P-116 amended): a library retire takes effect at approval: the form is retired now, the change is done, no release needed (a source use does not hand it back)", sql(`select retired_at is not null from gov_form_def where form_key='IMM 5881'`) === "t" && sql(`select status from library_change where id='${rid}'`) === "RELEASED" && /takes effect now/.test(sql(`select summary from audit_event where entity_key='IMM 5881' and action='retired' order by at desc limit 1`)), { change: sql(`select status from library_change where id='${rid}'`) });
+    r = await call("GET", "/library/forms/list?for=picker");
+    ok("QA-64: a form retired at approval is gone from the picker at once", !r.body.rows.some((x: any) => x.code === "IMM 5881"));
+    const rs = await call("POST", `/library/forms/${encodeURIComponent("IMM 5881")}/restore`, { reason: "Needed again for the sample" });
+    await call("POST", `/library/changes/${rs.body.id}/approve`, { note: "Checked" }, "user-B");
+    ok("QA-64 pass: a library restore takes effect at approval too", sql(`select retired_at is null from gov_form_def where form_key='IMM 5881'`) === "t" && sql(`select status from library_change where id='${rs.body.id}'`) === "RELEASED");
+    sql(`update gov_form_def set retired_at = now() where form_key = 'IMM 5881'`); // as before this step: the rest of the check reads it retired
     sql(`update gov_form_def set retired_at = now() where form_key = 'IMM 5257'`);
     const plan = (await call("POST", "/ai/plan", { scope: { kind: "combination", ids: [vv] }, mode: "STUB" })).body;
     sql(`update gov_form_def set retired_at = null where form_key = 'IMM 5257'`);

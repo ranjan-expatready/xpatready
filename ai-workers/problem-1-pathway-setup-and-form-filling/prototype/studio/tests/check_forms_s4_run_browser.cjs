@@ -89,6 +89,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await axe("run card, stopped"); await shot("05-run-card-stopped");
     await p.goto(`${BASE}/structure`); await sleep(2500);
     step("C11.8: with nothing running, the chip is gone", (await p.locator("[data-run-chip]").count()) === 0);
+    // QA-62: AI work lists the finder's runs by their place, with plain states and ways (no codes, no database ids)
+    await p.goto(`${BASE}/ai`); await p.locator("main table").first().waitFor(); await sleep(400);
+    const aiText = await p.locator("main").innerText();
+    step("QA-62: AI work shows each finder run by its place, with plain words (no NEEDS_PERSON, RULES or ids)", /Visitor visa/.test(aiText) && !/NEEDS_PERSON|\bRULES\b|\bREPLAY\b|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}|\|/.test(aiText) && /Rules only \(no AI\)|Live AI/.test(aiText), aiText.replace(/\s+/g, " ").slice(0, 200));
+    await axe("AI work list");
     step("no page errors", errs.length === 0, errs.join(" | "));
   } catch (e) { fail++; console.log(`FAIL  unexpected ${e.stack}`); } finally { await b.close(); }
   console.log(`\n${pass} passed, ${fail} failed`);
