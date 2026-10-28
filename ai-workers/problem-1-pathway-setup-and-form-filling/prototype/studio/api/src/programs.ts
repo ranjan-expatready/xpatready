@@ -9,7 +9,7 @@ import type { z } from "zod";
 import { AddLineBody, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateNodeBody, CreatePathBody, DEFAULT_PARTICIPANTS, LEVEL_NAME, normalizeLabel, problemFromZod, ReleaseBody,
   type CatalogueGroup, type CatalogueLeaf, type CatalogueNode, type CatalogueResponse, type CombinationSummary, type ParticipantLine, type Status } from "../../contracts/programs.ts";
 import { manifest } from "../../engine/import.ts";
-import { channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
+import { acceptsOf, channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { checkedOf, comparePaths, compareStatus, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
@@ -508,7 +508,7 @@ export class Programs {
     return {
       row: row?.leaf ?? null, changes: row?.changes ?? 0, allowedLocations: c.program.allowedLocations, participants: c.participants,
       filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: view.filing_method,
-      channelProblems: channelProblems(snapshot).filter((p) => p.where === "Forms"),
+      channelProblems: channelProblems(snapshot, await acceptsOf(this.db, c.workspaceId)).filter((p) => p.where === "Forms"),
       forms: lines.sort((x, y) => x.lineageKey.localeCompare(y.lineageKey)).map((f) => {
         const e = newestEdition(f.form.editions.filter((x) => x._count.maps > 0 && x.channel !== "ONLINE"));
         return { code: f.form.formKey, title: f.form.displayName, document: f.form.formKind !== "data_form", who: f.who, when: f.attachMode === "COMBINATION_MANDATORY" ? "always" : f.conditionPlain ?? "only if", edition: e?.editionLabel ?? null, boxes: e?._count.maps ?? 0,

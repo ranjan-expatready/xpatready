@@ -5,7 +5,9 @@
 import { CALCULATIONS, evaluate, type PredicateNode, type Truth } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
 
-export type Role = "principal" | "spouse_or_partner" | "child" | "representative" | "parent";
+/** A person role key from the shared library's person roles (S5, M3); principal, spouse_or_partner, child,
+ *  representative and sponsor keep their meaning in the rules below. */
+export type Role = string;
 export type Person = { id: string; role: Role; label: string; applies: boolean };
 /** Known values: key `${about}|${fact}` or `${about}|${fact}|${row}`. status: confirmed (existing sample record or
  *  staff-verified) or answered (a preview answer typed on screen; never confirmed). */
@@ -34,8 +36,9 @@ export function subjectsFor(people: Person[], who: string, subjectKind?: string)
     case "principal_applicant": return principal;
     case "spouse_or_partner": case "couple_once": return partner;
     case "each_dependent_child": return children;
-    case "each_person": return people.filter((p) => p.role !== "representative").map((p) => p.id);
+    case "each_person": return people.filter((p) => p.role !== "representative" && p.role !== "sponsor").map((p) => p.id);
     case "representative": return find(people, "representative").map((p) => p.id);
+    case "sponsor": return find(people, "sponsor").map((p) => p.id); // S5: Sample role, the immigration expert confirms
     case "case": return ["case"];
     default: return [];
   }
@@ -83,7 +86,27 @@ export function aboutOf(people: Person[], subject: string, entry: any, placement
 export type Coverage = "confirmed fact" | "answered on screen" | "document reading" | "client question" | "client profile" | "staff working view" | "unresolved";
 export type BoxRow = { box: string; caption: string; fact: string | null; meaning: string | null; about: string | null; about_label: string; row: number | null; coverage: Coverage; detail: string; value?: unknown; transform?: string | null; origin?: string };
 
-export function render(s: Snapshot, people: Person[], known: Known, opts: { documentFacts?: Map<string, string[]> } = {}) {
+/** S5: a line with a minimum age applies to a person once they have reached it on `today`; until their date of birth
+ *  is known it cannot be told (and the date of birth is asked, as a deciding question). */
+const BIRTH = "person.date_of_birth";
+function ageGate(known: Known, about: string, minAge: number | null | undefined, today: Date): Cond {
+  if (!minAge || about === "case") return { applies: true, missing: [] };
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(known.get(kkey(about, BIRTH))?.value ?? ""));
+  if (!m) return { applies: "cannot_tell", missing: [BIRTH] };
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  let age = today.getUTCFullYear() - y;
+  if (today.getUTCMonth() + 1 < mo || (today.getUTCMonth() + 1 === mo && today.getUTCDate() < d)) age--;
+  return { applies: age >= minAge, missing: [] };
+}
+/** Both must hold: false wins, then cannot tell (with both lists of missing facts). */
+const both = (a: Cond, b: Cond): Cond => a.applies === false || b.applies === false ? { applies: false, missing: [] } : a.applies === "cannot_tell" || b.applies === "cannot_tell" ? { applies: "cannot_tell", missing: [...a.missing, ...b.missing] } : { applies: true, missing: [] };
+/** S5 (challenge M1): a conditional line whose "Only if" is words with no rule yet never applies by default: it cannot
+ *  be told until a person turns the words into a rule (release refuses it until then). */
+export const NO_RULE = "(no rule yet)";
+export const wordsOnly = (line: { status?: string; condition?: unknown; condition_plain?: string | null }) => line.status === "conditional" && !line.condition;
+
+export function render(s: Snapshot, people: Person[], known: Known, opts: { documentFacts?: Map<string, string[]>; today?: Date } = {}) {
+  const today = opts.today ?? new Date();
   const field = new Map(s.canonical_fields.map((f) => [f.id, f]));
   const place = new Map<string, any>();
   for (const p of s.placements) if (!place.has(p.fact)) place.set(p.fact, p);
@@ -105,8 +128,10 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   const forms = s.forms.filter((f) => f.form_kind !== "document" || true).flatMap((f) => {
     const kind = f.condition?.subjectKind;
     return subjectsFor(people, f.who).map((person) => {
-      const c = evalCondition(s, known, f.condition, kind === "CASE" ? "case" : person);
-      return { form: f.form_number, title: f.title, form_kind: f.form_kind ?? "data_form", person, person_label: label(person), status: f.status, applies: c.applies, missing: c.missing, why: f.condition_plain ?? (f.status === "always" ? "always required for this combination" : "conditional"), origin: f.origin };
+      const rule: Cond = wordsOnly(f) ? { applies: "cannot_tell", missing: [NO_RULE] } : evalCondition(s, known, f.condition, kind === "CASE" ? "case" : person);
+      const c = both(rule, ageGate(known, person, f.min_age, today));
+      const why = wordsOnly(f) ? `Cannot tell yet: no rule ("${f.condition_plain ?? "only if"}" is in words only)` : f.condition_plain ?? (f.status === "always" ? "always required for this combination" : "conditional");
+      return { form: f.form_number, title: f.title, form_kind: f.form_kind ?? "data_form", person, person_label: label(person), status: f.status, applies: c.applies, missing: c.missing, why: f.min_age ? `${why}; from age ${f.min_age}` : why, origin: f.origin, no_rule: wordsOnly(f) };
     });
   });
 
@@ -207,7 +232,10 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     for (const d of [...deciders.values()]) pushQ(d.fact, d.about, `decides ${[...d.decides].slice(0, 3).join("; ")}`, [], [...d.decides], false);
     if (seen.size === before) break;
   }
-  questions.sort((a, b) => (sectionOrder.get(a.section) ?? 99) - (sectionOrder.get(b.section) ?? 99) || a.about.localeCompare(b.about) || a.label.localeCompare(b.label));
+  // Within a section for one person, the release's placement order (F-R1c-1: "started on" before "ends on"); the label
+  // only breaks a tie, so the studio preview and a case list questions the same way.
+  const placed = (fact: string) => place.get(fact)?.order ?? Number.MAX_SAFE_INTEGER;
+  questions.sort((a, b) => (sectionOrder.get(a.section) ?? 99) - (sectionOrder.get(b.section) ?? 99) || a.about.localeCompare(b.about) || placed(a.fact) - placed(b.fact) || a.label.localeCompare(b.label));
 
   // ------------------------------------------------------------ checks that the known facts trigger
   const checks = (s.checks ?? []).filter((c) => c.condition && c.group !== "form_native").flatMap((c) => {

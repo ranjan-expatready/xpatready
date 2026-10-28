@@ -99,7 +99,7 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
     const filedAs = () => p.getByRole("combobox", { name: /^How .* is filed$/ }).first();
     for (const w of [400, 390, 1024]) {
       await p.setViewportSize({ width: w, height: 900 });
-      await p.goto(`${BASE}/c/${wp}`); await filedAs().waitFor();
+      await p.goto(`${BASE}/c/${wp}/forms`); await filedAs().waitFor();
       const sw = await p.evaluate(() => document.documentElement.scrollWidth);
       step(`C1.6 QA-20: ${w} px, the combination page with the "Filed as" selects has no sideways scroll`, sw <= w, `page ${sw} px`);
     }
@@ -109,12 +109,12 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
     await filedAs().dispatchEvent("pointerdown"); await filedAs().selectOption("PDF_UPLOAD"); await p.waitForTimeout(800);
 
     // -------------------------------------------------------------- review should 1: the forms table scrolls by keyboard
-    await p.setViewportSize({ width: 400, height: 900 }); await p.goto(`${BASE}/c/${wp}`); await filedAs().waitFor();
+    await p.setViewportSize({ width: 400, height: 900 }); await p.goto(`${BASE}/c/${wp}/forms`); await filedAs().waitFor();
     const ax = await new AxeBuilder({ page: p }).withRules(["scrollable-region-focusable"]).analyze();
     step("C1.6 review should 1: at 400 px every sideways-scrolling area takes keyboard focus (axe scrollable-region-focusable)", ax.violations.length === 0, ax.violations.map((v) => v.nodes.map((n) => n.target.join(" ")).join("; ")).join(" | ") || "none");
 
     // -------------------------------------------------------------- break K1: keyboard on the "Filed as" select
-    await p.setViewportSize({ width: 1440, height: 900 }); await p.goto(`${BASE}/c/${wp}`); await filedAs().waitFor();
+    await p.setViewportSize({ width: 1440, height: 900 }); await p.goto(`${BASE}/c/${wp}/forms`); await filedAs().waitFor();
     const patches = []; p.on("request", (rq) => { if (rq.method() === "PATCH") patches.push(rq.url()); });
     const chan = p.getByRole("combobox", { name: /^How .* is filed$/ }).first(); const n0 = patches.filter((u) => /\/channel$/.test(u)).length;
     // Headless Chrome on the Mac opens a closed select's popup on ArrowDown instead of changing it, so each arrow press is
@@ -130,10 +130,10 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
     {
       const c = await b.newContext({ viewport: { width: 1440, height: 900 } }); const q = await c.newPage();
       await q.route("**/api/session**", async (r) => { await new Promise((res) => setTimeout(res, 1500)); await r.continue(); });
-      await q.goto(`${BASE}/c/${wp}`);
+      await q.goto(`${BASE}/c/${wp}/forms`); // S5: the channels are on the Forms tab
       let readOnly = 0; const until = Date.now() + 3000;
       const filed = () => q.getByRole("combobox", { name: /^How .* is filed$/ });
-      while (Date.now() < until) { if (await q.locator('[aria-labelledby="ov-forms"] table').count() && !(await filed().count())) readOnly++; await q.waitForTimeout(50); }
+      while (Date.now() < until) { if (await q.locator('[data-line]').count() && !(await filed().count())) readOnly++; await q.waitForTimeout(50); }
       step("C1.6 break m4: while the session loads, the author never sees the forms' channels as read-only words", readOnly === 0 && await filed().count() >= 1, `read-only looks ${readOnly}`);
       await c.close();
     }

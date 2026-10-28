@@ -35,6 +35,7 @@ import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, Wo
 import { Sources } from "./sources.ts";
 import { channelsFrom, recordedCopy, sampleFixtures } from "./filing.ts";
 import { WHO } from "./studio.ts";
+import { linkFinderGuides } from "./guide-sources.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
@@ -255,6 +256,7 @@ export class Finder implements OnModuleInit {
     const b = await this.db.aiBatch.findUnique({ where: { id: batchId } });
     const cancelled = b?.cancelRequested && cut > 0; // a Stop that came after the work was done does not call it stopped
     await this.db.aiBatch.update({ where: { id: batchId }, data: { status: cancelled ? "CANCELLED" : status, finishedAt: new Date(), message: cancelled ? `Stopped by a person. ${message}` : message, plan: json({ ...(b!.plan as object), result }) } });
+    await linkFinderGuides(this.db, batchId, b!.startedBy); // S5 slice 3 (runtime lane, Lead decision): the guides it read become the combination's sources
   }
 
   /** The six steps, in order; each records its status, words, cost and what it found. */

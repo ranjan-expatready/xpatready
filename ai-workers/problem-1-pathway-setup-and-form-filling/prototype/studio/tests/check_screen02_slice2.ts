@@ -67,6 +67,13 @@ function pdf(title: string, text: string) {
   r = await call("POST", "/demo/load");
   ok("setup: sample inputs load", r.status === 201, r.body?.seconds);
   ok("C3.6 M1: every shared field has a name and a group after the load (no blank names)", Number(sql("select count(*) from canonical_field where label is null or label='' or group_key is null")) === 0, sql("select count(*) from canonical_field"));
+  // S5 slice 2 coverage gate (BR-11): every answer the applied forms need is asked of someone before a submit. This check
+  // is not about questions, so each answer the gate names is placed for the case officer to fill (a working view).
+  const coverAll = async (cid: string) => {
+    const sec = ((await call("GET", "/library/sections")).body as { key: string }[])[0]?.key;
+    for (const x of ((await call("GET", `/combinations/${cid}`)).body.draft.problems as { where: string; item: string }[]).filter((p) => p.where === "Questionnaires"))
+      await call("POST", `/library/fields/${encodeURIComponent(x.item)}/placement`, { sectionKey: sec, collectedFrom: "staff_working_view", repeats: x.item.startsWith("case.") ? "once_per_case" : "per_person" });
+  };
   const sv = sql("select id from combination where combination_key like '%super_visa%' limit 1");
   const att = (await call("GET", `/combinations/${sv}/attachments`)).body.find((a: any) => /IMM 5257 \(/.test(a.edition ?? ""));
   const run = ((await call("GET", `/attachments/${att.id}/draft-options`)).body.saved_runs ?? []).find((x: any) => x.valid);
@@ -100,6 +107,7 @@ function pdf(title: string, text: string) {
   for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." });
   r = await call("POST", `/jobs/${jobId}/apply`, { who: "each_applicant" });
   ok("setup: the decided draft is applied", r.status === 201, r.body?.detail ?? r.body);
+  await coverAll(sv);
   const applied = r.body;
   const changes = (await call("GET", "/library/changes?status=WAITING")).body as any[];
   const mineChange = changes.find((c) => c.key === newKey);
