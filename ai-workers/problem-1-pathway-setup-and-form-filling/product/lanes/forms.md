@@ -7,9 +7,9 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: QA-53 (one guard on every Studio configuration read), then the form library on the shared lifecycle components (P-116 amended)
-stage: CHECK
-owner: Lead
-next_action: Lead checks and merges QA-53, the form library on the shared lifecycle components and the PR #67 resend fix; next in this lane: a library retire takes effect at approval (P-116 amended)
+stage: BUILD
+owner: Builder
+next_action: QA-61 done; QA-62, QA-63, QA-64 next (Lead message 28 Oct), each with a test; then hand back by message
 blocked_by: none
 updated: 2026-10-28
 
@@ -35,6 +35,7 @@ updated: 2026-10-28
   * No paid AI (US$0). Lane pushes run no CI (P-85): local `run-suites.sh` is the evidence.
 
 ## Log (last 10 lines)
+- 2026-10-28 · QA-61..64 · CHECK → BUILD · applied Lead message (qa after-merge on S4: four Minors). QA-61: the filing rule reads each sentence: a negated upload ("Do not upload", "don't need to upload") gives nothing, "if you apply online, upload it" is a PDF upload, "online application" is context; canada 66/66, qa's check_qa_s4_filing 9/9. US$0.
 - 2026-10-28 · PR #67 review · BUILD → CHECK (owner Lead) · resend fix pushed (8939a822); touched suites alone on fx copies: finder 124, runs 88, structure r3 41, structure 83, screen02 fix 61 (its QA-53 officer step is in 1a975003: the edit was not in f56442a2 as reported). US$0.
 - 2026-10-28 · PR #67 review · BUILD · synced main 3858216e; a returned library form change (delete, retire, restore) is sent again by the form's own rule: Lifecycle.resubmit has a library_form branch that reads formUses leaving the change itself out of the open-change check, checks the action again and marks it WAITING (before: the form number was read as a combination id, 409). Pass and fail tests in the finder check, incl. a returned retire sent again after its last use was removed: finder 124/124. US$0.
 - 2026-10-28 · W1 lifecycle (forms) · BUILD · the form library on the shared lifecycle components (P-116 amended): one written row action from the guard (Delete, Retire, Restore, Withdraw for my own waiting change), greyed with the guard's reason as visible text under the row (aria-describedby), the confirm in the right panel (ImpactPanel) with Undo, Retire and Delete gone from the ⋯ menu; each earlier edition says what keeps it (Kept by Release N of … and K open cases; never deleted). library browser 57/57, runs 88/88. US$0.
@@ -44,4 +45,3 @@ updated: 2026-10-28
 - 2026-10-28 · S4 · FIX · synced main dccd87e3 (PR #66, shared lifecycle pattern): 7 conflicts resolved keeping main's one guard and word set (Delete for every delete; Remove only for a form line off a combination); the library form's retire and delete run on it (recheckForm in the one re-check, before the click and at approval). Typecheck clean; S4 checks next. US$0.
 - 2026-10-28 · S4 · FIX · carried Shoulds (Lead 28 Oct) fixed with tests: Where used on the retire/delete approval page; an unread copy is never a "Record the IRCC page" step (screens' check_screen02_fix moved that flow to its readable copy: 61/61); a form with no file is "No file yet". S4: finder 118, runs 86, canada 63, library browser 53, run browser 20; screen02 slice1 59, slice2 56, slice2 browser 65. US$0.
 - 2026-10-28 · S4 · FIX · baseline full suites on 98b5102: 39 pass, 2 fail, both test races fixed (two approved lines in one instant; the picker counted before its rows rendered): runs 82/82, forms_demo 26/26 alone. Waiting for PR #66 to merge before the final sync. US$0.
-- 2026-10-28 · S4 · CHECK → FIX · applied Lead check 28 Oct (lead-check.md): a paper or mail line is never a PDF upload (Not set yet, reason given); filling the form in on a computer says nothing about how it is filed (one rule: 5707, 5409, 1295 and the saved AI line for 5257 alike); only an upload line is a PDF upload; replay and Load sample read the record's own mode. Load sample now sets 2 of 7 data forms (5475, 5476). S4: finder 118, runs 82, canada 63, library browser 51, run browser 20. US$0.

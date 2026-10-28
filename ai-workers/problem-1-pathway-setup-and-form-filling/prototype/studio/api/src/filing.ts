@@ -17,19 +17,32 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
  *  never a PDF upload, and a line about filling the form in on a computer says how to fill it, not how it is filed: both
  *  give null, "Not set yet", with filingWhy's reason. */
 export function channelsFrom(note: string | null | undefined): "PDF" | "ONLINE" | "PDF_OR_ONLINE" | null {
-  if (!note) return null;
-  // Review round 7: a download link's size label ("(PDF, 0.5 MB)") says what the file is, not how the form is filed.
-  const line = note.replace(/\((?:pdf|html)[^)]*\)/gi, " ");
-  const pdf = /\bupload(?:s|ed|ing)?\b/i.test(line);
-  // "Online applications … Upload this form along with your online application": the PDF goes into an online
-  // application (a PDF upload); only filing online itself (an online form, the portal) is Online.
-  const online = /\bonline\b|\bportal\b/i.test(pdf ? line.replace(/\bonline applications?\b/gi, " ") : line);
+  let pdf = false, online = false;
+  for (const s of sentencesOf(note)) {
+    // QA-61: a sentence that says not to ("Do not upload this form", "You don't need to upload it if you apply online")
+    // says nothing about how the form is filed.
+    if (NEGATED.test(s)) continue;
+    if (/\bupload(?:s|ed|ing)?\b/i.test(s)) {
+      pdf = true;
+      // "If you apply online, upload it" or "your online application": the PDF goes into an online application (a PDF
+      // upload). Only filling the form in online, or an online form, is Online as well.
+      if (/\b(?:fill|complet|submit)\w*\b[^.;]*\bonline\b|\bonline form\b/i.test(s.replace(/\bonline applications?\b/gi, " "))) online = true;
+    } else if (/\bonline\b|\bportal\b/i.test(s)) online = true;
+  }
   return online && pdf ? "PDF_OR_ONLINE" : online ? "ONLINE" : pdf ? "PDF" : null;
+}
+/** QA-61: the rule reads each sentence, not single words. */
+const NEGATED = /\b(?:do not|don't|does not|doesn't|did not|didn't|no need to|not need to|need not|never|without)\b/i;
+function sentencesOf(note: string | null | undefined): string[] {
+  if (!note) return [];
+  // Review round 7: a download link's size label ("(PDF, 0.5 MB)") says what the file is, not how the form is filed.
+  return note.replace(/\((?:pdf|html)[^)]*\)/gi, " ").split(/(?<=[.;!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean);
 }
 /** Why a line gives no value (null when it gives one): shown with a fixture that is left out. */
 export function filingWhy(note: string | null | undefined): string | null {
   if (channelsFrom(note)) return null;
   const line = note ?? "";
+  if (sentencesOf(note).some((x) => NEGATED.test(x) && /\bupload/i.test(x))) return "IRCC's line says not to upload it";
   if (/\bpaper\b|\bmail(?:ed)?\b|\bsend (?:this|the|it|us)\b/i.test(line)) return "IRCC's page speaks of paper filing, not a PDF upload";
   if (/\bcomputer\b|\bvalidat\w*\b|\bdownload\b/i.test(line)) return "IRCC's line says how to fill the form in, not how it is filed";
   return "IRCC's line does not say how the form is filed";
