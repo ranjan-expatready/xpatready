@@ -86,12 +86,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.getByRole("dialog").getByRole("button", { name: "Remove IMM 5257" }).click(); await settle();
   await finder.getByRole("button", { name: "Find again" }).click();
   const again = p.getByRole("dialog"); await again.locator("[data-find-plan]").waitFor({ timeout: 30000 }).catch(() => {});
+  const before = (await api(`/combinations/${vv}/forms/find/latest`)).body.run?.id;
   await again.getByRole("button", { name: "Start" }).click();
-  await p.locator('[data-finder-row="IMM 5257"][data-state="REMOVED_BY_PERSON"]').waitFor({ timeout: 90000 }).catch(() => {}); await settle();
-  const removedRow = p.locator('[data-finder-row="IMM 5257"]');
-  step("C11.15 M2c: Find again does not re-attach the removed form; it is \"Removed by a person\" with Add back", await row.count() === 0 && /Removed by a person/.test(await removedRow.innerText().catch(() => "")) && await removedRow.getByRole("button", { name: "Add back" }).count() === 1);
+  for (let i = 0; i < 180; i++) { const r = (await api(`/combinations/${vv}/forms/find/latest`)).body.run; if (r && r.id !== before && !["QUEUED", "RUNNING"].includes(r.status)) break; await p.waitForTimeout(500); }
+  await p.waitForTimeout(2500); await settle();
+  const latestStates = (await api(`/combinations/${vv}/forms/find/latest`)).body.forms.map((f) => `${f.code}:${f.state}`);
+  step("C11.15 M2c: Find again does not re-attach the removed form (the find says Removed by a person); the page lists it once, under Removed in this draft with Add back", await row.count() === 0 && latestStates.includes("IMM 5257:REMOVED_BY_PERSON") && await p.locator('[data-finder-row="IMM 5257"]').count() === 0 && await p.getByRole("button", { name: "Add back IMM 5257" }).count() === 1, latestStates.join(" "));
   await state("find-again-removed-by-person");
-  await removedRow.getByRole("button", { name: "Add back" }).click();
+  await p.getByRole("button", { name: "Add back IMM 5257" }).click();
   await row.waitFor({ timeout: 15000 }).catch(() => {}); await settle();
   step("P-116 pass: Add back puts the same line back", await row.count() === 1);
 

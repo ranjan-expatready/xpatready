@@ -54,7 +54,7 @@ export function FormsTab({ id, lines, filing, filingDetail, problems, removed = 
   const qc = useQueryClient();
   const undoLast = async (changeId?: string) => { await api(`/combinations/${id}/forms/undo`, { method: "POST", json: changeId ? { changeId } : {} }); for (const k of [...formsKeys(id), ["combination", id, "finder"]]) void qc.invalidateQueries({ queryKey: k }); };
   const redo = (codes?: string[]) => setFinding(codes ?? []);
-  const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} onClose={() => setFinding(null)} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
+  const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} removed={removed.map((r) => r.code)} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} onClose={() => setFinding(null)} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
   const onRemoved = (code: string) => toast.show(`${code} removed from this combination; it stays in the Form library`, () => undoLast());
   const noRule = lines.filter((l) => l.onlyIf.kind === "words_only");
   const add = canAuthor ? <Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus /> Add a form from the library</Button> : null;

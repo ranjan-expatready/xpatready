@@ -76,7 +76,7 @@ export function FindDialog({ id, only, onClose, onStarted }: { id: string; only?
 }
 
 /** The finder's strip above the lines: what the latest find did, Find (again), and its run while it runs. */
-export function FinderPanel({ id, latest, onRedo }: { id: string; latest: FinderLatest | undefined; onRedo: (codes?: string[]) => void }) {
+export function FinderPanel({ id, latest, onRedo, removed = [] }: { id: string; latest: FinderLatest | undefined; onRedo: (codes?: string[]) => void; removed?: string[] }) {
   const { canAuthor } = useSessionView();
   const qc = useQueryClient();
   const [runId, setRunId] = React.useState<string | null>(null);
@@ -96,7 +96,8 @@ export function FinderPanel({ id, latest, onRedo }: { id: string; latest: Finder
         {canAuthor ? <Button size="sm" variant={run ? "secondary" : "default"} onClick={() => onRedo()} disabled={!!shown}>{run ? <><RefreshCw /> Find again</> : <><Sparkles /> Find forms with AI</>}</Button> : null}
       </div>
       {shown ? <RunCard runId={shown} onEnded={() => { setRunId(null); for (const k of [...formsKeys(id), ["combination", id, "finder"]]) void qc.invalidateQueries({ queryKey: k }); }} /> : null}
-      <FinderRows id={id} forms={forms.filter((f) => !ON_LINE.has(f.state))} onRedo={onRedo} canAuthor={canAuthor} />
+      {/* A form removed in this draft is listed once, under "Removed in this draft" with Add back (forms.tsx). */}
+      <FinderRows id={id} forms={forms.filter((f) => !ON_LINE.has(f.state) && !(f.state === "REMOVED_BY_PERSON" && removed.includes(f.code)))} onRedo={onRedo} canAuthor={canAuthor} />
     </section>
   );
 }
