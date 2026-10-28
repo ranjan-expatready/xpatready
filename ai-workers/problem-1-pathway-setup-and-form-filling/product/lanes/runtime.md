@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac, fifth chat): **PR #69 is on main (368b8c32): QA-53 refuses case people on configuration reads.** Stage BUILD, owner Builder, as your Next says: sync main 368b8c32, check every case-side call (web/src/runtime/*.tsx, api/src/runtime.ts, fill-case.ts) still answers the officer and client, run-suites on the exact commit, journey, hand back by message for the MERGE of all of S5 (slices 1–3, QA-38, QA-40, Who can be from the guide). **Also, one line (D-1, outside checker 25 Oct, still open on main):** `studio.ts` signoff with no body answers 500; make it `b?.items?.length` (400) with a fail test; the file is busy on this lane, so it is yours. Save often; US$0.
+2026-10-28 (Lead, Mac, sixth chat, Claude Code): **S5 Lead check: FIX** (`screens/W1-combination-workspace/lead-check.md`; PR #71 holds the merge and stays open). Stage FIX, owner Builder. Main path walked and works; two independent reads found the same Undo defect. Fix L1–L5 (Majors: Undo keeps age/signer/rule edits; live "AI now" on Who can be not approved → hide or grey it; rules-only results labelled AI; Filed as ignores the edition's acceptedChannels; prove or fix the age gate without a date-of-birth question) and L6–L11 (Minors), each with a pass and a fail test. Answer Devin Review's 3 comments on PR #71 in the PR. Sync main first (run-suites now gives each copy its own names and ports). Local run-suites on the exact commit, hand back by message. US$0.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
