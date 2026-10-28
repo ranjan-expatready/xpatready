@@ -1,5 +1,22 @@
 # S5 Combination workspace (W1-08, P-123) — build notes
 
+## Drift-check Shoulds (BUILD, 28 Oct) → EARLY-LOOK
+Lead note 28 Oct (founder Go on the slice 2 early look): fold in the Shoulds of `drift-check.md`. Synced main 8cfc043; PR #64 (Lead) not merged yet, its note read from `origin/lead/2026-10-27`. AI US$0.
+
+| # | Should | What changed | Check |
+|---|---|---|---|
+| 2 | Review shows field codes for unasked questions | A problem whose item is a field code carries its words (`label`: the question's meaning, or a derived field's plain words; `engine/validate.ts`). `problemWords` (`contracts/programs.ts`) says a problem for a person: a coverage gap by its message alone, others led by their words. Review, the submit refusal and both release refusals use it. | API pass + fail; browser: Review gap state has no field code |
+| 5 | Forms tab "No forms yet · 0 forms" above attached forms | The header counts attached forms ("2 forms attached, 0 set up"; filing "not known until a form is set up") and a line says what each waits for. A file the library already matched now offers **Add from library** in its row (was Draft with AI), the same rule as the page's next step (`api/src/programs.ts` `fromLibrary`), so header, line and rows name one step. | browser: counts, next step = summary = row buttons |
+| 6 | Raw "applicableNote:" in IRCC's words | The checklist reader glued "if applicable" to the next "Note:". `irccWords` (`contracts/workspace.ts`) shows it as two sentences on Forms, the drawer, Review and Documents. The stored quote is unchanged (the release fingerprint covers it). | API pass + fail; browser: no glued label |
+| 4 | Preview jump list repeats names | A section asked once for the application and again about the person says whom it is about: "Residence and immigration status (the application)" / "(Principal applicant)". | browser: names unique |
+| 8 | Remove from a combination in one click (P-116) | The drawer asks first, naming the form ("It stays in the Form library, and you can undo it until the draft is released"; Keep it / Remove IMM 5475). Removed forms show at the top of Forms under "Removed in this draft" with **Undo**, brought into view. `POST /combinations/:id/forms/:form/restore` (author duty) puts the line back exactly: a removal of a released line is taken back (the released line stands, no draft change left); a draft line, or a released line changed in this draft, becomes that draft again with its change kept. Refused 409 when nothing is removed or the removal was released, 404 for a form never on it, 403 for a case officer. A removed form is no longer counted as "not set up yet". | API: 6 checks (pass, fail, roles); browser: confirm, Keep it, remove, Undo in view, Undo |
+| 3 | "Review shows AI picks" cannot be seen | Sample state in both checks: a draft line marked as AI's shows on Review with IRCC's words and "confirm they apply before release"; its change needs the SME duty. The finder that really picks forms is slice 3. Screenshot `11-review-ai-picked`. | API pass; browser pass + fail |
+| 11, 12 | ", D-2" on Review; screenshots unfit | Removed; slice 2 screenshots are now viewport-sized (11 states × 1440/1024). | browser |
+| 7 | P-125 not traced | Start setup still opens the old New combination page (`structure.tsx`, `programs.tsx`, `new-combination.tsx`): that is S3 on the screens lane (P-125), not this lane. The workspace shows the place read-only (path links only). | — |
+
+**Checks:** `check_s5_slice2.ts` 32/32, `check_s5_slice2_browser.cjs` 54/54 (axe on every state). Full suites: see the lane log.
+**Left as it is (not this lane's file):** while a released form is removed, the page's next step reads "Add 1 form from the library" (Programs counts its still-attached file); Undo or that step both restore the same line. Problems about questions inside rule messages (loops, hidden values) still name field codes in the message text; they are rare authoring errors, listed here for a later pass.
+
 ## Slice 1 early-look fixes and slice 2 (BUILD, 27–28 Oct) → EARLY-LOOK
 Lead note 27 Oct 23:05: founder Go for slice 2 with four fixes first. Synced main 4fb0749 (break m8, PR #59/#60). AI US$0.
 

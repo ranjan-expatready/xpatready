@@ -27,12 +27,13 @@ export const codeOf = (a: Attachment) => (a.edition ?? "").split(" (")[0];
 export const attachmentFor = (d: Combo, code: string) => [...d.attachments].reverse().find((a) => a.kind === "Form" && codeOf(a) === code);
 
 /** A form's reading status and its one next step, for its row. */
-export function ReadingCell({ d, a }: { d: Combo; a: Attachment | undefined }) {
+export function ReadingCell({ d, a, inLibrary = false }: { d: Combo; a: Attachment | undefined; inLibrary?: boolean }) {
   if (!a) return <span className="text-text-muted">Not attached</span>;
-  const [tone, label] = STATUS[a.status] ?? ["neutral", a.status];
+  // Drift check 5: a file the library already matched waits for "Add from library", the page's next step, not for AI.
+  const [tone, label] = inLibrary && a.status !== "IN_LIBRARY" ? STATUS.IN_LIBRARY : STATUS[a.status] ?? ["neutral", a.status];
   // The last step and when it ran (QA-17: the day when it was not today); every step is in the form's side panel.
   const last = d.jobs.find((j) => j.attachmentId === a.id);
-  return <span className="inline-flex flex-col items-start gap-1"><Pill tone={tone}>{label}</Pill>{last ? <span className="text-text-muted">{last.kind === "field_map" ? "AI draft" : "Read"} {fmtWhen(last.startedAt)}</span> : null}<ReadingActions d={d} a={a} /></span>;
+  return <span className="inline-flex flex-col items-start gap-1"><Pill tone={tone}>{label}</Pill>{last ? <span className="text-text-muted">{last.kind === "field_map" ? "AI draft" : "Read"} {fmtWhen(last.startedAt)}</span> : null}<ReadingActions d={d} a={inLibrary ? { ...a, status: "IN_LIBRARY" } : a} /></span>;
 }
 
 /** Read form · Draft with AI · Review AI proposals · Add from library: the step the form is waiting for. */

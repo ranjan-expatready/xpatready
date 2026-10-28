@@ -6,6 +6,7 @@ import { Button, Dialog, Field, Input, Notice, Pill, Select, Table, Textarea } f
 import { Spinner } from "@/components/ui/spinner";
 import { ConditionBuilder, plainCondition, type FieldInfo } from "@/components/conditions";
 import { cn } from "@/lib/utils";
+import { irccWords } from "../../../contracts/workspace";
 
 export const WHO: [string, string][] = [["each_applicant", "Each applicant"], ["principal_applicant", "Principal applicant"], ["spouse_or_partner", "Spouse or partner"], ["couple_once", "Once per couple"], ["each_dependent_child", "Each child"], ["each_person", "Each person"], ["case", "The application (once)"], ["representative", "The representative"], ["sponsor", "The sponsor"]];
 export const whoLabel = (w: string) => WHO.find(([v]) => v === w)?.[1] ?? w;
@@ -59,7 +60,7 @@ function Documents({ id, s, fields }: { id: string; s: any; fields: any }) {
             <td className="max-w-xs"><p className="font-medium">{r.document_type}</p><OriginPill origin={r.origin} status={r.status} /></td>
             <td className="text-xs">{whoLabel(r.who)}<br /><span className="text-text-muted">provided by {r.provided_by}</span></td>
             <td className="max-w-md text-xs">{r.base_or_conditional === "base" ? <Pill tone="ok">Base</Pill> : <><Pill tone="warn">Conditional</Pill><p className="mt-1">{r.condition_plain ?? plainCondition(r.condition, fields.meaning)}</p></>}</td>
-            <td className="max-w-sm text-xs text-text-muted">{r.source_quote ? `"${r.source_quote.slice(0, 160)}${r.source_quote.length > 160 ? "…" : ""}"` : "no source quote"}</td>
+            <td className="max-w-sm text-xs text-text-muted">{r.source_quote ? `"${irccWords(r.source_quote)!.slice(0, 160)}${r.source_quote.length > 160 ? "…" : ""}"` : "no source quote"}</td>
             <td><Button size="sm" variant="ghost" onClick={() => setEdit(r)}><Pencil /> Edit</Button></td>
           </tr>
         ))}

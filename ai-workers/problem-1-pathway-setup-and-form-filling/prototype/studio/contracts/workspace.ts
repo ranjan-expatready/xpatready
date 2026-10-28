@@ -20,6 +20,11 @@ const AREA_TAB: Record<string, TabKey> = { forms: "forms", documents: "documents
 export const tabOf = (t: string | undefined, area?: string | null): TabKey =>
   t === "configuration" ? (AREA_TAB[area ?? ""] ?? "forms") : t === "sources" ? "forms" : TABS.some((x) => x.key === t) ? (t as TabKey) : "overview";
 
+/** IRCC's words as a person reads them (drift check 6). The checklist reader joined a line and the note under it with
+ *  no break ("…, if applicableNote: Complete this form…"), so the note's label reads as a code glued to a word: it is
+ *  shown as two sentences. The stored quote stays as read (the release fingerprint covers it). */
+export const irccWords = (q: string | null | undefined): string | null => (q ? q.replace(/([a-z)])(Note|Notes|Important):\s*/g, "$1. $2: ") : null);
+
 // ------------------------------------------------------------------ person roles (M3) and who can be (P-119, M4)
 
 /** One person role of the shared library (GET /library/roles). */
@@ -131,10 +136,14 @@ export type PreviewView = {
   people: PreviewPerson[]; questionnaire: QuestionnaireView; documents: PreviewDocument[]; forms: PreviewForm[]; tweaks: PreviewTweak[];
 };
 
+/** A form removed from the combination since its last release: Undo puts the same line back while the draft is open (P-116).
+ *  `fromLibrary` (Forms tab) lists the attached form files the library has already matched: added from the library, no AI. */
+export type RemovedForm = { code: string; title: string; at: string };
+
 /** GET /combinations/:id/workspace?tab= — one request per tab view. Overview, Documents and Review read the combination
  *  page's existing reads. */
 export type WorkspaceView =
-  | { tab: "forms"; asked: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[] }
+  | { tab: "forms"; asked: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[] }
   | { tab: "questionnaires"; asked: string; people: PeopleView; questionnaire: QuestionnairesView | null; available: { key: string; title: string }[] }
   | { tab: "preview"; asked: string; preview: PreviewView | null; empty: string | null }
   | { tab: Exclude<TabKey, "forms" | "questionnaires" | "preview">; asked: string };

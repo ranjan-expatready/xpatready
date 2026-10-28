@@ -7,10 +7,10 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { CHANNEL_WORDS, type Channel } from "../../../../contracts/forms";
-import { SIGNED_BY, type WorkspaceFormLine } from "../../../../contracts/workspace";
-import { api, ApiError, useSessionView, useToast } from "@/lib/api";
+import { SIGNED_BY, type RemovedForm, type WorkspaceFormLine } from "../../../../contracts/workspace";
+import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
 import { Button, Field, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ConditionBuilder } from "@/components/conditions";
@@ -35,7 +35,9 @@ const TIPS = {
   library: "The edition this combination uses, how many of its form fields are matched to shared fields, and the step the form waits for (read it, draft with AI, review AI's proposals).",
 };
 
-export function FormsTab({ id, lines, filing, filingDetail, problems }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[] }) {
+const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+
+export function FormsTab({ id, lines, filing, filingDetail, problems, removed = [], fromLibrary = [] }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[]; removed?: RemovedForm[]; fromLibrary?: string[] }) {
   const { canAuthor, known } = useSessionView();
   const [open, setOpen] = React.useState<WorkspaceFormLine | null>(null);
   const [adding, setAdding] = React.useState(false);
@@ -45,11 +47,14 @@ export function FormsTab({ id, lines, filing, filingDetail, problems }: { id: st
   const picker = adding ? <Panel open onOpenChange={(o) => !o && setAdding(false)} title="Add a form from the library" description="Only forms already in the Form library. A new form enters there first (upload, or the form finder)." footer={<><Button variant="ghost" onClick={() => setAdding(false)}>Close</Button><Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></>}><FormPicker combinationId={id} have={lines.map((l) => l.code)} /></Panel> : null;
   const combo = d.data as unknown as Combo | undefined;
   const codes = lines.map((l) => l.code);
-  const pending = combo ? pendingForms(combo, codes) : [];
+  // A form removed in this draft is under "Removed in this draft" (Undo), not a form waiting to be set up.
+  const pending = combo ? pendingForms(combo, [...codes, ...removed.map((r) => r.code)]) : [];
   // Break m4 (Screen 01): an author never sees the channels as read-only words while the session loads.
   if (!known || !combo) return <Spinner label="Loading forms" />;
+  const undo = canAuthor && removed.length ? <RemovedNotice id={id} removed={removed} /> : null;
   if (!lines.length && !pending.length) return (
     <div className="space-y-5">
+      {undo}
       <div className="rounded-xl border border-border bg-surface-raised p-5" data-forms-empty>
         <div className="flex flex-wrap items-start justify-between gap-3"><h2 className="font-semibold">No forms yet</h2>{add}</div>
         <p className="mt-1 text-sm text-text-muted">Forms come from the <Link className="text-text-link underline" to="/library/forms">Form library</Link>. Add one here; when the form finder arrives, AI finds this combination's forms and attaches them by itself.</p>
@@ -57,12 +62,19 @@ export function FormsTab({ id, lines, filing, filingDetail, problems }: { id: st
       <SourcesLine d={combo} lineCodes={codes} />{picker}
     </div>
   );
+  // Drift check 5: forms attached but not set up are counted with the lines, so the header never says "No forms yet ·
+  // 0 forms" above them; what each waits for is said in the same steps as the rows (and the page's next step).
+  const inLibrary = (a: { id: string; status: string }) => a.status === "IN_LIBRARY" || fromLibrary.includes(a.id);
+  const ready = pending.filter(inLibrary).length, toDraft = pending.length - ready;
+  const count = pending.length ? `${plural(lines.length + pending.length, "form")} attached, ${lines.length} set up` : plural(lines.length, "form");
   return (
     <div className="space-y-4">
+      {undo}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm" data-filing><span className="text-text-muted">Filing: </span><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null} <span className="text-text-muted">· {lines.length} form{lines.length === 1 ? "" : "s"} · Sample until the immigration expert confirms</span></p>
+        <p className="text-sm" data-filing><span className="text-text-muted">Filing: </span>{lines.length ? <><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null}</> : <b className="font-semibold">not known until a form is set up</b>} <span className="text-text-muted">· {count} · Sample until the immigration expert confirms</span></p>
         <span className="flex items-center gap-3">{add}<Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></span>
       </div>
+      {pending.length ? <p className="text-sm" data-pending-summary><span className="font-medium">Not set up yet: </span>{[ready ? `${plural(ready, "form")} can be added from the library now (${ready === 1 ? "its" : "their"} form fields are already matched, no AI needed)` : "", toDraft ? `${plural(toDraft, "form")} ${toDraft === 1 ? "needs" : "need"} reading and drafting with AI` : ""].filter(Boolean).join("; ")}. Each row has its step.</p> : null}
       <StepNotices d={combo} />
       {noRule.length ? <Notice tone="warn" title={`${noRule.length} condition${noRule.length === 1 ? " is" : "s are"} in words only`}>A case cannot tell whom {noRule.map((l) => l.code).join(", ")} {noRule.length === 1 ? "applies" : "apply"} to until the words are turned into a rule. Release waits for it. Open the form to build the rule.</Notice> : null}
       <Table head={["Form", "Why it is here (IRCC's words)", <Head key="w" tip={TIPS.who}>Who fills it</Head>, <Head key="o" tip={TIPS.onlyIf}>Only if</Head>, <Head key="f" tip={TIPS.filed}>Filed as by default</Head>, <Head key="s" tip={TIPS.signed}>Signed by</Head>, <Head key="l" tip={TIPS.library}>Read and matched</Head>, ""]}>
@@ -82,7 +94,7 @@ export function FormsTab({ id, lines, filing, filingDetail, problems }: { id: st
           <tr key={a.id} data-pending={a.edition ?? a.fileName}>
             <td><span className="mono font-medium">{(a.edition ?? a.fileName).split(" (")[0]}</span><br /><span className="text-xs text-text-muted">{a.edition} · {a.fileName}</span></td>
             <td colSpan={5} className="text-xs text-text-muted">Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.</td>
-            <td className="text-xs"><ReadingCell d={combo} a={a} /></td>
+            <td className="text-xs"><ReadingCell d={combo} a={a} inLibrary={inLibrary(a)} /></td>
             <td />
           </tr>
         ))}
@@ -92,6 +104,21 @@ export function FormsTab({ id, lines, filing, filingDetail, problems }: { id: st
       {open ? <LineDrawer id={id} l={open} d={combo} onClose={() => setOpen(null)} /> : null}
       {picker}
     </div>
+  );
+}
+
+/** Forms removed since the last release, each with Undo (P-116): the same line comes back with its own settings. */
+function RemovedNotice({ id, removed }: { id: string; removed: RemovedForm[] }) {
+  const restore = useAction((code: string) => api(`/combinations/${id}/forms/${encodeURIComponent(code)}/restore`, { method: "POST" }), { success: (r: { form: string }) => `${r.form} is back on this combination`, invalidate: [["combination", id], ["combination-summary", id], ["config", id], ["catalogue"], ["draft"]] });
+  // A removal just made (the list grew, or the notice appeared) brings Undo into view, clear of the fixed top bar: the
+  // person removed it lower down the page.
+  const box = React.useRef<HTMLDivElement>(null), seen = React.useRef(0);
+  React.useEffect(() => { if (removed.length > seen.current) box.current?.scrollIntoView({ block: "center" }); seen.current = removed.length; }, [removed.length]);
+  return (
+    <div ref={box}><Notice tone="info" title={`Removed in this draft (${removed.length})`}>
+      <ul className="mt-1 space-y-1" data-removed>{removed.map((f) => <li key={f.code} className="flex flex-wrap items-center gap-2"><span><span className="mono font-medium">{f.code}</span> {f.title}</span><Button size="sm" variant="secondary" onClick={() => restore.mutate(f.code)} busy={restore.isPending && restore.variables === f.code} aria-label={`Undo removing ${f.code}`}><Undo2 /> Undo</Button></li>)}</ul>
+      <p className="mt-1 text-xs">Undo puts the form back as it was, until the draft is released. It stays in the Form library either way.</p>
+    </Notice></div>
   );
 }
 
@@ -139,15 +166,20 @@ function LineDrawer({ id, l, d, onClose }: { id: string; l: WorkspaceFormLine; d
       if (err.status === 409) refresh();
     } finally { setBusy(false); }
   };
+  // P-116 (drift check 8): removing asks first, naming the form; Undo stays on the Forms tab while the draft is open.
+  const [confirming, setConfirming] = React.useState(false);
   const remove = async () => {
     setBusy(true);
-    try { await api(`/combinations/${id}/forms/${encodeURIComponent(l.code)}`, { method: "PATCH", json: { retire: true, baseRevision: l.revision || undefined } }); toast.push({ tone: "ok", text: `${l.code} removed from this combination; it stays in the Form library` }); refresh(); onClose(); }
-    catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); } finally { setBusy(false); }
+    try { await api(`/combinations/${id}/forms/${encodeURIComponent(l.code)}`, { method: "PATCH", json: { retire: true, baseRevision: l.revision || undefined } }); toast.push({ tone: "ok", text: `${l.code} removed from this combination; it stays in the Form library. Undo is at the top of the Forms tab.` }); refresh(); onClose(); }
+    catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); setConfirming(false); } finally { setBusy(false); }
   };
+  const footer = confirming
+    ? <div className="flex w-full flex-wrap items-center justify-between gap-2" role="alert" data-confirm-remove><span className="text-sm">Remove <b>{l.code}</b> ({l.title}) from this combination? It stays in the Form library, and you can undo it until the draft is released.</span><span className="flex gap-2"><Button variant="ghost" onClick={() => setConfirming(false)} disabled={busy}>Keep it</Button><Button variant="destructive" onClick={() => void remove()} busy={busy}><Trash2 /> Remove {l.code}</Button></span></div>
+    : <><Button variant="ghost" className="text-text-danger" onClick={() => setConfirming(true)} disabled={busy}><Trash2 /> Remove from this combination</Button><span className="flex gap-2"><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void save()} busy={busy}>Save to draft</Button></span></>;
   return (
     <Panel open onOpenChange={(o) => !o && onClose()} title={`${l.code} · ${l.title}`} description={l.edition ? `Edition ${l.edition} · ${l.boxes} form fields matched` : "No edition read yet"}
       badge={l.origin === "AI_PROPOSAL" ? <Pill tone="ai">Picked by AI · Sample</Pill> : null}
-      footer={<><Button variant="ghost" className="text-text-danger" onClick={() => void remove()} disabled={busy}><Trash2 /> Remove from this combination</Button><span className="flex gap-2"><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void save()} busy={busy}>Save to draft</Button></span></>}>
+      footer={footer}>
       <div className="space-y-5">
         {l.quote ? <p className="rounded-lg bg-surface px-3 py-2 text-xs text-text-muted">IRCC's words: "{l.quote}"</p> : null}
         <div className="grid grid-cols-2 gap-3">

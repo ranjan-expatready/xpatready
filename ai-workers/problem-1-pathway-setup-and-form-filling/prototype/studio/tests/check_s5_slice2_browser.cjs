@@ -2,7 +2,9 @@
 // a person: Forms lists each form once with its reading status in its row and the sources in one line (fix 1); filing
 // warnings in business words (fix 2); Questionnaires per person with question wording, who fills it, the forms that need
 // it and a side panel that alone shows the field code (fix 3), a coverage gap blocking release; Preview with one section
-// open and a jump list (fix 4). Screenshots at 1440 and 1024 px into
+// open and a jump list (fix 4). The drift check's Shoulds (Lead note 28 Oct): counts for forms attached but not set up
+// (5), IRCC's words as sentences (6), Remove asks first and Undo puts it back (8, P-116), Review in words (2), Preview
+// names without repeats (4), a Sample state where Review shows a form AI picked (3). Screenshots at 1440 and 1024 px into
 // product/screens/W1-combination-workspace/screenshots/slice2/, axe (WCAG 2.2 AA) on each state. No model call (US$0).
 //   zsh studio/tools/isolated.sh runtime_s5e 4435 start && node studio/tests/check_s5_slice2_browser.cjs 4435 xr_studio_runtime_s5e
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
@@ -29,11 +31,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const state = async (name) => {
     n++; const base = `${String(n).padStart(2, "0")}-${name}`;
     await settle();
-    await p.screenshot({ path: path.join(SHOTS, `${base}-1440.png`), fullPage: true });
+    // Drift check 12: viewport-sized captures (no fixed bars painted mid-page, side panels in view).
+    await p.screenshot({ path: path.join(SHOTS, `${base}-1440.png`) });
     const r = await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
     step(`axe: ${name} has no WCAG A/AA violation`, r.violations.length === 0, r.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0]?.target?.join(" ")}`).join(" | "));
     await p.setViewportSize({ width: 1024, height: 768 }); await p.waitForTimeout(250);
-    await p.screenshot({ path: path.join(SHOTS, `${base}-1024.png`), fullPage: true });
+    await p.screenshot({ path: path.join(SHOTS, `${base}-1024.png`) });
     step(`1024 px: ${name} has no sideways page scroll`, !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)));
     await p.setViewportSize({ width: 1440, height: 900 });
   };
@@ -56,7 +59,25 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("fix 1: the row shows its reading status and last step; the sources are one compact line", /In the library/.test(await p.locator('[data-line="IMM 5409"]').innerText()) && await p.locator("[data-sources]").count() === 1);
   const warnings = await p.getByRole("list", { name: "Filing problems" }).innerText().catch(() => "");
   step("fix 2: the list warning says what it means and where it is set, with a real example (never \"no purpose yet\", never an empty or technical example)", /rows of its lists \(for example "[A-Z][^"]+"\) do not say yet what the list holds/.test(warnings) && !/no purpose yet|for example \)|for example "[A-Z_0-9]+\[/.test(warnings), warnings.split("\n")[0]);
+  step("C11.6 drift 6: IRCC's words show as sentences, never a label glued to a word (\"applicableNote:\")", !/[a-z][A-Z][a-z]+:/.test(text) && /if applicable\. Note:/.test(text), (text.match(/\S*[a-z][A-Z][a-z]+:/) ?? [""])[0]);
   await state("forms-listed-once");
+  // P-116 (drift 8): Remove asks first and names the form; Keep it changes nothing; after removing, Undo puts it back.
+  await p.getByRole("button", { name: "Change IMM 5475" }).click();
+  await p.getByRole("button", { name: "Remove from this combination" }).click();
+  const ask = p.locator("[data-confirm-remove]");
+  step("C11.9 P-116: Remove asks first, naming the form, and says it stays in the library and can be undone", /Remove IMM 5475 \(.+\) from this combination\? It stays in the Form library, and you can undo it/.test(await ask.innerText()));
+  await state("forms-remove-confirm");
+  await ask.getByRole("button", { name: "Keep it" }).click();
+  step("C11.9 P-116: Keep it closes the question and removes nothing", await ask.count() === 0 && (await api(`/combinations/${C}/workspace?tab=forms`)).body.lines.some((l) => l.code === "IMM 5475"));
+  await p.getByRole("button", { name: "Remove from this combination" }).click();
+  await p.locator("[data-confirm-remove]").getByRole("button", { name: "Remove IMM 5475" }).click(); await settle();
+  await p.locator("[data-removed]").waitFor({ timeout: 15000 }).catch(() => {});
+  step("C11.9 P-116: the removed form leaves the list and shows under \"Removed in this draft\" with Undo", await p.locator('[data-line="IMM 5475"]').count() === 0 && /IMM 5475/.test(await p.locator("[data-removed]").innerText()) && await p.getByRole("button", { name: "Undo removing IMM 5475" }).count() === 1);
+  step("C11.9 P-116: Undo is brought into view, and the removed form is not counted as a form waiting to be set up", await p.getByRole("button", { name: "Undo removing IMM 5475" }).isVisible() && await p.evaluate(() => { const r = document.querySelector("[data-removed]").getBoundingClientRect(), bar = document.querySelector("header")?.getBoundingClientRect().bottom ?? 0; return r.top >= bar && r.bottom <= window.innerHeight; }) && await p.locator("[data-pending-summary]").count() === 0 && await p.locator('[data-pending^="IMM 5475"]').count() === 0);
+  await state("forms-removed-undo");
+  await p.getByRole("button", { name: "Undo removing IMM 5475" }).click(); await settle();
+  await p.locator('[data-line="IMM 5475"]').waitFor({ timeout: 15000 }).catch(() => {});
+  step("C11.9 P-116: Undo puts the same line back and the notice goes", await p.locator('[data-line="IMM 5475"]').count() === 1 && await p.locator("[data-removed]").count() === 0);
   await p.getByRole("button", { name: "Change IMM 5409" }).click();
   const drawer = p.getByRole("dialog");
   step("fix 1: the form's side panel holds its reading and matching steps and its file", /Reading and matching/.test(await drawer.innerText()) && await drawer.locator("[data-reading-steps]").count() === 1);
@@ -64,6 +85,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await drawer.getByRole("button", { name: "Cancel" }).click();
   await go(VV, "forms");
   step("fix 1: forms attached but not set up yet are their own rows with their next step (Read form or Draft with AI)", await p.locator("[data-pending]").count() >= 1 && (await p.getByRole("button", { name: /Read form|Draft with AI|Add from library/ }).count()) >= 1, await p.locator("[data-pending]").count());
+  const filingLine = await p.locator("[data-filing]").innerText(), pendingN = await p.locator("[data-pending]").count();
+  step("C11.10 drift 5: the header counts the attached forms (never \"No forms yet · 0 forms\" above them) and says what each waits for", !/No forms yet|· 0 forms/.test(filingLine) && filingLine.includes(`${pendingN} form${pendingN === 1 ? "" : "s"} attached, 0 set up`) && /Not set up yet: .*(added from the library now|drafting with AI)/.test(await p.locator("[data-pending-summary]").innerText()), filingLine);
+  // The page's next step ("Add 1 form from the library") and the rows name the same step, for the same number of forms.
+  const nextStep = (await p.locator("button, a").filter({ hasText: /^\s*Add \d+ forms? from the library/ }).first().innerText().catch(() => "")).trim();
+  const k = Number((nextStep.match(/Add (\d+)/) ?? [])[1] ?? 0), summary = await p.locator("[data-pending-summary]").innerText();
+  step("C11.10 drift 5: the next step, the summary and the rows agree on the forms to add from the library (no AI for them)", k > 0 && summary.includes(`${k} form${k === 1 ? "" : "s"} can be added from the library now`) && await p.locator("[data-pending]").getByRole("button", { name: "Add from library" }).count() === k, `${nextStep} | ${summary}`);
   await state("forms-attached-not-set-up");
 
   // ======================================================== fix 3 and slice 2: Questionnaires per person
@@ -91,6 +118,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await go(C, "questionnaires");
   step("BR-11 fail: an answer the forms need but nobody is asked shows on the person's chip and in a notice that release waits", /not asked/.test(await p.locator("[data-role-chip]").first().innerText()) && /needed but asked of nobody: release waits/.test(await q.innerText()) && !CODE.test(await p.locator("[data-gaps]").innerText()));
   await state("questionnaires-coverage-gap");
+  // Drift 2: the second person reads the same gap on Review and release in words, never as a field code.
+  await go(C, "review");
+  const probs = await p.locator("[data-problem]").allInnerTexts();
+  step("C5.1 drift 2: Review lists the gap in words (the question's meaning, the forms, the fix) with no field code", probs.some((x) => /nobody is asked for it/.test(x)) && !probs.some((x) => CODE.test(x)), probs.find((x) => CODE.test(x)) ?? probs[0]);
+  step("C5.1 drift 11: no internal code on the review steps (\"D-2\")", !/\bD-2\b/.test(await panel().innerText()));
+  await state("review-gap-in-words");
   for (const pair of before.split(",")) { const [qid, st] = pair.split("="); sql(`update section_question set status='${st}' where id='${qid}'`); }
   await go(C, "questionnaires");
   step("BR-11 pass: asked again, the gap is gone", !/asked of nobody/.test(await p.locator("[data-coverage]").innerText()));
@@ -105,7 +138,24 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.getByRole("button", { name: "Next section" }).click();
   step("fix 4: Next section opens the fourth", /Section 4 of \d+/.test(await p.locator("[data-preview-section]").innerText()));
   step("fix 4: the phone column is about one screen long (under 1,800 px), not twelve", h0 < 1800, `${h0} px`);
+  const names = (await p.locator("[data-section-jump] button").allInnerTexts()).map((x) => x.replace(/^\d+\.\s*/, "").replace(/\s*·\s*\d+$/, ""));
+  step("C4.3 drift 4: the jump list never shows the same section name twice (a section asked about the application says so)", new Set(names).size === names.length && names.some((x) => /\(the application\)/.test(x)), names.join(" | "));
+  await p.locator("[data-section-jump]").scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -120));
   await state("preview-one-section");
+
+  // ======================================================== drift 3 (m7): a Sample state with a form AI picked
+  // The form finder (slice 3) is what picks forms; until then a draft line marked as AI's shows what Review gives the
+  // second person: the form, IRCC's words, and that it is Sample until the immigration expert confirms.
+  const L = "IMM 5476", who0 = (await api(`/combinations/${C}/workspace?tab=forms`)).body.lines.find((l) => l.code === L).who;
+  await api(`/combinations/${C}/forms/${encodeURIComponent(L)}`, { method: "PATCH", data: { who: who0 === "each_applicant" ? "principal_applicant" : "each_applicant" } });
+  sql(`update combination_form set origin='AI_PROPOSAL' where combination_id='${C}' and lineage_key='${L}' and status='DRAFT'`);
+  await go(C, "review");
+  const picked = await p.locator("[data-ai-picked]").innerText().catch(() => "");
+  step("C5.1 drift 3 pass: Review names the form AI picked with IRCC's words (as sentences) and asks to confirm before release", /IMM 5476/.test(picked) && /IRCC's words: "Use of a Representative \(IMM 5476\), if applicable\. Note:/.test(picked) && /confirm they apply before release/.test(await panel().innerText()), picked.slice(0, 160));
+  await state("review-ai-picked");
+  await api(`/combinations/${C}/forms/${encodeURIComponent(L)}`, { method: "PATCH", data: { who: who0 } });
+  await go(C, "review");
+  step("C5.1 drift 3 fail: with no form AI picked, Review shows no such notice", await p.locator("[data-ai-picked]").count() === 0);
 
   step("no page errors in the walk", errs.length === 0, errs.slice(0, 3).join(" | "));
   await b.close();

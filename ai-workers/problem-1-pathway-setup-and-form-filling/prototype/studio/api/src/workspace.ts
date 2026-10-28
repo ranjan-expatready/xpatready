@@ -10,7 +10,7 @@ import { previewFamily } from "../../engine/runtime/preview.ts";
 import { wordsOnly } from "../../engine/render.ts";
 import { channelProblems, filingKind, filingMethod, signatureOf } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, CHANNELS, type Channel } from "../../contracts/forms.ts";
-import { answeredBy, signedByLabel, tabOf, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
+import { answeredBy, irccWords, signedByLabel, tabOf, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { actorOf, Db, fail, readerOf } from "./core.ts";
 import { Studio } from "./studio.ts";
 
@@ -39,7 +39,7 @@ export class WorkspaceViews {
   }
 
   /** The Forms tab: each line of the draft with its settings, what IRCC accepts and its revision token. */
-  private async forms(id: string, workspaceId: string): Promise<{ lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[] }> {
+  private async forms(id: string, workspaceId: string): Promise<{ lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[] }> {
     const { snapshot } = await buildSnapshot(this.db, workspaceId, id, "draft");
     const revisions = await this.studio.revisions(id);
     const maps = snapshot.field_maps as { form_number: string; form_edition: string; entries: { outcome: string }[] }[];
@@ -56,14 +56,26 @@ export class WorkspaceViews {
         channel, channelWords: CHANNEL_WORDS[channel], signature: (f.form_kind ?? "data_form") === "document" ? null : signatureOf(channel),
         // What IRCC accepts comes from the Form library (forms lane, S4); until it records it, every way is offered as Sample.
         accepted: [...CHANNELS], acceptedBasis: "Sample: the Form library does not record what IRCC accepts for this form yet",
-        signedBy: f.signed_by ?? null, signedByLabel: signedByLabel(f.signed_by), origin: f.origin ?? "HUMAN", quote: f.source_quote ?? null,
+        signedBy: f.signed_by ?? null, signedByLabel: signedByLabel(f.signed_by), origin: f.origin ?? "HUMAN", quote: irccWords(f.source_quote),
         revision: revisions[`form:${f.form_number}`] ?? "", status: status.get(f.form_number) ?? "DRAFT",
       };
     });
     // C1.6: the short words ("PDF only", "Mixed: online and PDF") and, on hover, the line-by-line detail.
     // The filing problems come in the same answer as the lines and the filing words, so they never disagree on screen.
     const problems = channelProblems(snapshot).map((x) => ({ level: x.level === "error" ? "error" as const : "warning" as const, item: x.item, message: x.message }));
-    return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), problems };
+    // P-116 (drift check 8): a form removed since the last release can be put back (Undo) while the draft is open; adding
+    // it again from the library restores the same line (api/src/form-lines.ts addFormLine).
+    const since = (await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" }, select: { releasedAt: true } }))?.releasedAt;
+    const newest = new Map<string, (typeof rows)[number]>();
+    for (const r of rows) if (!newest.has(r.lineageKey)) newest.set(r.lineageKey, r);
+    const gone = [...newest.values()].filter((r) => r.status === "RETIRED" && (!since || r.updatedAt > since));
+    const titles = new Map((await this.db.govFormDef.findMany({ where: { id: { in: gone.map((r) => r.govFormDefId) } }, select: { id: true, displayName: true } })).map((f) => [f.id, f.displayName]));
+    const removed = gone.map((r): RemovedForm => ({ code: r.lineageKey, title: titles.get(r.govFormDefId) ?? "", at: r.updatedAt.toISOString() }));
+    // Drift check 5: an attached form whose file the library has already matched is added from the library, no AI; the
+    // same rule as the page's next step (api/src/programs.ts fromLibrary), so the row and the header name one step.
+    const files = await this.db.sourceAttachment.findMany({ where: { combinationId: id, kind: "Form", recognised: true }, select: { id: true, sha256: true } });
+    const matched = new Set((await this.db.formEdition.findMany({ where: { workspaceId, sha256: { in: files.map((f) => f.sha256) }, maps: { some: {} } }, select: { sha256: true } })).map((e) => e.sha256));
+    return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), problems, removed, fromLibrary: files.filter((f) => matched.has(f.sha256)).map((f) => f.id) };
   }
 
   /** Questionnaires (slice 2): one person role's questions as a case asks them, with coverage; the library sections the
@@ -117,5 +129,6 @@ export class WorkspaceController {
   @Get("combinations/:id/workspace") view(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: Q) { readerOf(a); return this.w.view(id, q); }
   @Patch("combinations/:id/people") savePeople(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.savePeople(actorOf(a), id, b); }
   @Post("combinations/:id/people/undo") undoPeople(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.undoPeople(actorOf(a), id, b); }
+  @Post("combinations/:id/forms/:form/restore") restoreForm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("form") f: string) { return this.s.restoreForm(actorOf(a), id, f); }
   @Get("library/roles") roles(@Headers("x-actor") a: H) { readerOf(a); return this.s.personRoles(); }
 }

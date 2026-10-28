@@ -15,7 +15,8 @@ ajv.addSchema(schema); // the same lookup as tests/check_conditions.ts
 const nodeValid = ajv.getSchema(`${schema.$id}#/definitions/node`)!;
 export const isNode = (n: unknown) => nodeValid(n) as boolean;
 
-export type Problem = { level: "error" | "warning"; where: string; item: string; message: string };
+/** `label` is the item in words (a question's meaning) where `item` is a field code; screens show it, never the code. */
+export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string };
 const ORDERED = new Set(["gt", "gte", "lt", "lte"]);
 
 export function checkCondition(tree: any, fieldTypes: Map<string, string>, derived: Set<string>): string[] {
@@ -80,6 +81,13 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   const reads = derivedRead(s);
   for (const d of derivedRows) if (reads.has(d.id) && !CALCULATIONS[d.calculation]) out.push({ level: "warning", where: "Derived fields", item: d.id, message: `Calculation ${d.calculation} has no tested helper: recorded, never evaluated.` });
   out.push(...channelProblems(s)); // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
+  // Drift check 2: an item that is a field code also carries its words (the question's meaning, a derived field's plain
+  // words), so Review and the refusals never lead with the code.
+  const plainOf = new Map((s.derived_fields as { id: string; plain?: string | null }[]).map((d) => [d.id, d.plain ?? ""]));
+  for (const p of out) {
+    const m = p.where === "Derived fields" ? plainOf.get(p.item) : ["Questionnaires", "Questions", "Library"].includes(p.where) ? meaningOf.get(p.item) : undefined;
+    if (m && m !== p.item) p.label = m.trim().replace(/\.$/, "");
+  }
   return out;
 }
 

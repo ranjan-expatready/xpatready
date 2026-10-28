@@ -1,15 +1,18 @@
 // S5 Combination workspace slice 2 (runtime lane, W1-08) and the slice 1 early-look fixes: Questionnaires per person
 // (question wording, who fills it, the forms that need it; field codes only for the side panel: fix 3), the coverage gate
 // (a needed answer asked of nobody blocks release; pass and fail), the list-row warning in business words with no empty
-// example (fix 2), and the release review naming forms AI picked (m7). A passing and a failing case per rule, on an
-// isolated copy with the sample loaded. No browser, no model call (US$0).
+// example (fix 2), and the release review naming forms AI picked (m7). The drift check's Shoulds (Lead note 28 Oct):
+// problems in words on Review (2), IRCC's words without glued labels (6), Remove with Undo while the draft is open
+// (8, P-116) and a Sample state with a form AI picked (3). A passing and a failing case per rule, on an isolated copy
+// with the sample loaded. No browser, no model call (US$0).
 //   zsh studio/tools/isolated.sh runtime_s5d 4434 start && tsx studio/tests/check_s5_slice2.ts 4434 xr_studio_runtime_s5d
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { listRowsWords } from "../engine/channels.ts";
 import { coverageGaps } from "../engine/coverage.ts";
-import { filledByOf } from "../contracts/workspace.ts";
+import { filledByOf, irccWords } from "../contracts/workspace.ts";
+import { problemWords } from "../contracts/programs.ts";
 
 const PORT = Number(process.argv[2] ?? 4434), DB = process.argv[3] ?? "xr_studio_runtime_s5d";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -91,6 +94,44 @@ const CODE = /\b(case|person|relationship|organisation)\.[a-z_]+\b/;
   ok("fix 2: no filing problem on the Forms tab has an empty or technical example, or says \"no purpose yet\"", f.problems.every((p: any) => !/for example \)|for example "[A-Z_0-9]+\[|no purpose yet/.test(p.message)), f.problems.map((p: any) => p.message.slice(0, 60)));
   const lines = sql(`select count(*) from combination_form where combination_id='${C}' and origin in ('AI_PROPOSAL')`);
   ok("m7: the review lists AI-picked forms only when there are some (none on the sample: no AI line here)", lines === "0");
+
+  // ---------------------------------------------------------------- drift check Shoulds (Lead note 28 Oct)
+  // 2: Review says a problem in words. A coverage gap stands on its message; a question problem leads with its meaning.
+  ok("C5.1 drift 2 pass: a coverage gap in words has no field code; a question problem leads with the question's meaning", !CODE.test(problemWords(gapErr ?? { level: "error", where: "Questionnaires", item: "x", message: "" })) && problemWords({ level: "warning", where: "Library", item: "person.family_name", label: "Family name", message: "m" }) === "Family name: m", gapErr ? problemWords(gapErr).slice(0, 80) : "no gap");
+  ok("C5.1 drift 2 fail → fixed: without words the item is said as before (a form number, a rule id)", problemWords({ level: "error", where: "Forms", item: "IMM 5409", message: "m" }) === "IMM 5409: m");
+  // 6: IRCC's words never carry a label glued to a word ("…if applicableNote: …").
+  const KEY = /[a-z][A-Z][a-z]+:/;
+  ok("C11.6 drift 6 fail → fixed: the raw quote has the glued label; shown, it is two sentences", KEY.test("Use of a Representative (IMM 5476), if applicableNote: Complete this form") && irccWords("Use of a Representative (IMM 5476), if applicableNote: Complete this form") === "Use of a Representative (IMM 5476), if applicable. Note: Complete this form" && irccWords(null) === null);
+  ok("C11.6 drift 6 pass: no form line's IRCC words on the Forms tab carry a glued label (camelCase key)", f.lines.every((l: any) => !KEY.test(l.quote ?? "")) && f.lines.some((l: any) => /if applicable\. Note:/.test(l.quote ?? "")), f.lines.filter((l: any) => KEY.test(l.quote ?? "")).map((l: any) => l.code));
+  // 8 (P-116): Remove, then Undo while the draft is open; the line comes back as it was.
+  const view = async () => (await call("GET", `/combinations/${C}/workspace?tab=forms`)).body;
+  const changes0 = (await call("GET", `/combinations/${C}`)).body.draft.changes.length;
+  const L1 = "IMM 5475", L2 = "IMM 5476";
+  r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent(L1)}`, { retire: true });
+  let fv = await view();
+  ok("C11.9 P-116 remove: the removed released form leaves the lines and is offered for Undo with its title", r.status < 300 && !fv.lines.some((l: any) => l.code === L1) && fv.removed.some((x: any) => x.code === L1 && x.title), fv.removed);
+  ok("C11.9 P-116 roles: a case officer cannot undo a removal (403)", (await call("POST", `/combinations/${C}/forms/${encodeURIComponent(L1)}/restore`, {}, "user-O")).status === 403);
+  r = await call("POST", `/combinations/${C}/forms/${encodeURIComponent(L1)}/restore`);
+  fv = await view();
+  ok("C11.9 P-116 undo pass: the released line stands again, unchanged (no draft change left)", r.status < 300 && r.body.restored === "released" && fv.lines.some((l: any) => l.code === L1 && l.status === "PUBLISHED") && !fv.removed.length && (await call("GET", `/combinations/${C}`)).body.draft.changes.length === changes0, r.body);
+  r = await call("POST", `/combinations/${C}/forms/${encodeURIComponent(L1)}/restore`);
+  ok("C11.9 P-116 undo fail: undoing again (or a form that was never removed) is refused in words, 409", r.status === 409 && /no removal to undo/.test(r.body.detail ?? r.body.message ?? ""), r.status);
+  ok("C11.9 P-116 undo fail: a form that is not on the combination is 404", (await call("POST", `/combinations/${C}/forms/IMM%209999/restore`)).status === 404);
+  // A released line changed in this draft, then removed: Undo keeps the change (never the released settings).
+  const who0 = fv.lines.find((l: any) => l.code === L2).who, who1 = who0 === "each_applicant" ? "principal_applicant" : "each_applicant";
+  await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent(L2)}`, { who: who1 });
+  await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent(L2)}`, { retire: true });
+  r = await call("POST", `/combinations/${C}/forms/${encodeURIComponent(L2)}/restore`);
+  fv = await view();
+  ok("C11.9 P-116 undo pass: a line changed in this draft comes back as that draft, with its change kept", r.body.restored === "draft" && fv.lines.find((l: any) => l.code === L2)?.who === who1 && fv.lines.find((l: any) => l.code === L2)?.status === "DRAFT", fv.lines.find((l: any) => l.code === L2));
+  // 3 (m7): a form AI picked shows on the release review with IRCC's words (a Sample state: the finder comes in slice 3).
+  const draftRow = sql(`select id from combination_form where combination_id='${C}' and lineage_key='${L2}' and status='DRAFT'`);
+  sql(`update combination_form set origin='AI_PROPOSAL' where id='${draftRow}'`);
+  const snap = (await call("GET", `/combinations/${C}/config?mode=draft`)).body.snapshot;
+  const picked = snap.forms.filter((x: any) => x.origin === "AI_PROPOSAL" || x.origin === "AI_FOUND");
+  const rev = (await call("GET", `/combinations/${C}`)).body.draft.changes as any[];
+  ok("C5.1 m7 pass: with a form AI picked, the review's draft names it with IRCC's words, and its change needs the SME duty", picked.length === 1 && picked[0].form_number === L2 && !!picked[0].source_quote && rev.some((c) => c.key === L2 && c.origin === "AI_PROPOSAL" && c.needs_sme), rev.filter((c) => c.key === L2));
+  await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent(L2)}`, { who: who0 });
 
   const out = join(import.meta.dirname, "..", "var", "suites"); mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "check_s5_slice2.json"), JSON.stringify({ at: new Date().toISOString(), pass, fail, log }, null, 1));

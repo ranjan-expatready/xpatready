@@ -9,7 +9,7 @@ import { slug } from "../../engine/import.ts";
 import { checkCondition, diff, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
-import { cleanLabel, normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
+import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../contracts/programs.ts";
 import { FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
@@ -564,6 +564,30 @@ export class Studio {
     return row;
   }
 
+  /** P-116 (drift check 8): Undo "Remove from this combination" while the draft is open; the line comes back exactly as
+   *  it was. A removal that only marked a released line is taken back, so the released line stands again; a draft line
+   *  (new, or a released line already changed in this draft) becomes a draft again with its own settings. A removal
+   *  already released is not undone here: the form is added again from the library. */
+  async restoreForm(actor: Actor, combinationId: string, formKey: string) {
+    need(actor, "author");
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    const rows = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: formKey }, orderBy: { version: "desc" } });
+    const newest = rows[0];
+    if (!newest) fail(`${formKey} is not part of this combination.`, HttpStatus.NOT_FOUND);
+    if (newest.status !== "RETIRED") fail(`${formKey} is on this combination: there is no removal to undo.`, HttpStatus.CONFLICT);
+    const since = (await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" }, select: { releasedAt: true } }))?.releasedAt;
+    if (since && newest.updatedAt <= since) fail(`${formKey} was removed in a released version. Add it again from the library.`, HttpStatus.CONFLICT);
+    const before = rows.find((r) => r.id === newest.supersedesId);
+    const settings = (r: typeof newest) => JSON.stringify([r.who, r.attachMode, r.predicateJson, r.conditionPlain, r.channel, r.minAge, r.signedBy, r.govFormDefId]);
+    const onlyRemoved = before?.status === "PUBLISHED" && settings(before) === settings(newest);
+    // Guarded on RETIRED, so a second Undo (another tab) changes nothing and is told so.
+    const n = onlyRemoved ? (await this.db.combinationForm.deleteMany({ where: { id: newest.id, status: "RETIRED" } })).count
+      : (await this.db.combinationForm.updateMany({ where: { id: newest.id, status: "RETIRED" }, data: { status: "DRAFT", updatedBy: actor.id } })).count;
+    if (!n) fail(`${formKey} was already put back.`, HttpStatus.CONFLICT);
+    await this.audit.log(c.workspaceId, actor.id, "undone", "form", formKey, `${actor.name} undid removing ${formKey} from "${c.label}"`, { restored: onlyRemoved ? "released line" : "draft line" }, combinationId);
+    return { form: formKey, restored: onlyRemoved ? "released" : "draft" };
+  }
+
   /** Optimistic concurrency for draft edits: the editor sends the revision it opened (the newest row's save time). If
    *  someone saved this item since, the change is refused rather than silently overwriting theirs. */
   private sameRevision(rows: { version: number; updatedAt: Date; updatedBy: string }[], base?: string) {
@@ -620,7 +644,7 @@ export class Studio {
     const last = await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" } });
     if (last?.sha256 === sha256) fail("Nothing has changed since the released version.");
     const errors = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
-    if (errors.length) fail(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map((e) => (e.where === "Questionnaires" ? e.message : `${e.item}: ${e.message}`)).join(" · ")}`); // S5: a coverage gap is said in words, never by its field code
+    if (errors.length) fail(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map(problemWords).join(" · ")}`); // S5: a coverage gap is said in words, never by its field code
     const changes = diff((last?.snapshot as any) ?? null, snapshot);
     // W1-02 (break M2): nothing to sign is nothing to release, even when the fingerprint moved (an older release's keys).
     // Refused before anything is written (PR #39 review): a waiting submission is never withdrawn by a refused one.
@@ -662,7 +686,7 @@ export class Studio {
     // Re-checked at approval, not only at submission: a row that has since fallen above a full combination, or a draft
     // that now has errors, is not released.
     const blocking = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
-    if (blocking.length) fail(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${blocking[0].item}: ${blocking[0].message})`, HttpStatus.CONFLICT);
+    if (blocking.length) fail(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, HttpStatus.CONFLICT);
     // The same review gate as the shared Release page (QA-1, review should 2).
     const gate = await this.releaseGate(id, sha256);
     if (!gate.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${gate.why}`); fail(`Release refused: ${gate.why}`, HttpStatus.CONFLICT); }
@@ -715,7 +739,7 @@ export class Studio {
       const c = await this.db.combination.findUniqueOrThrow({ where: { id }, include: { program: true } });
       const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, id, "draft");
       const blocking = (await this.problems(workspaceId, snapshot, id)).filter((p) => p.level === "error");
-      if (blocking.length) fail(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${blocking[0].item}: ${blocking[0].message})`, HttpStatus.CONFLICT);
+      if (blocking.length) fail(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${problemWords(blocking[0])})`, HttpStatus.CONFLICT);
       const gate = await this.releaseGate(id, sha256);
       if (!gate.ok) { await this.audit.log(workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: "${c.label}": ${gate.why}`); fail(`Release refused: "${c.label}": ${gate.why}`, HttpStatus.CONFLICT); }
       const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf(snapshot));
