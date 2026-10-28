@@ -187,6 +187,10 @@ td.mn{width:40px;text-align:right;position:relative}
 .from{display:inline-block}
 .has-tip+.tip{left:0}
 td{position:relative}
+body.labels .lab{white-space:normal;max-width:100%}
+.pv{grid-template-columns:250px minmax(0,1.25fr) minmax(0,1fr)}
+.ans.agent{grid-template-columns:1fr auto;row-gap:4px}
+.ans.agent>:last-child{grid-column:1 / -1}
 </style>
 </head>
 <body class="labels">
@@ -380,12 +384,12 @@ td{position:relative}
 
 <!-- ============ 5 ONE ADD DIALOG ============ -->
 <div class="frame"><div class="frame-cap"><span>5 · "+ Add › Add a question": the one Add dialog with the duplicate check (also opens from "Not in the list? Add new")</span><span>P-120 · plain words · the system builds the system name</span></div>
-<div style="padding:16px 24px" class="row" >
+<div style="padding:16px 24px;align-items:flex-start" class="row" >
 <div class="dlg"><header><h3 style="font-size:18px">Add a question</h3><p class="small muted" style="margin:2px 0 0">It goes into the shared library as a draft and is placed in a section of this questionnaire.</p></header>
 <div class="body"><div class="fld"><span>What you need, in plain words</span><div class="inp">Date the passport was issued</div></div>
 <div class="row"><div class="fld" style="flex:1"><span>About whom</span><div class="inp">The person (each applicant) ▾</div></div><div class="fld" style="flex:1"><span>Kind of answer</span><div class="inp">A date ▾</div></div><div class="fld" style="flex:1"><span>Place it in</span><div class="inp">Personal details ▾</div></div></div>
-<div class="notice danger small"><b>Already in the library:</b> "Passport issue date", used in 3 combinations. <a class="small">Use it instead</a></div>
-<div class="notice info small"><b>Did you mean?</b> "Date of issue of a travel document" · Personal details · a date. Keep yours only with a reason:<div class="inp" style="margin-top:6px">(one line, shown to the second person)</div></div>
+<div class="small muted">Two outcomes of the check, shown here together (only one appears at a time):</div><div class="notice danger small"><b>Exact duplicate · Already in the library:</b> "Passport issue date", used in 3 combinations. <a class="small">Use it instead</a></div>
+<div class="notice info small"><b>Near duplicate · Did you mean?</b> "Date of issue of a travel document" · Personal details · a date. Keep yours only with a reason:<div class="inp" style="margin-top:6px">(one line, shown to the second person)</div></div>
 <div class="small muted">Will be created as <span class="mono">person.passport_issue_date</span> · read-only · subject: the person</div></div>
 <footer><button class="btn ghost">Cancel</button><button class="btn primary" disabled>Add to the draft</button></footer></div>
 <div style="max-width:560px;padding-left:16px"><span class="lab cap">Capability C3 library Add (S6)</span><span class="lab nd">Needed: reused from S6, not rebuilt</span><span class="lab f">Follows P-120: exact duplicate refused with where used; near duplicate needs a reason; nobody types system names; "about whom" sets the subject, never the name</span>

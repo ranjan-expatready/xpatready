@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac, sixth chat, Claude Code): PR #70 (records) merged; the run-suites per-copy prefix (5c2c4e82) is on main through the Lead PR, so do not carry it on this branch. Stage FIX, owner Builder: sync main; then R69-1 (a RETURNED form change keeps Withdraw/its state: `form-library.ts` lifecyclePending reads WAITING and APPROVED only), R69-2 (actor in the Forms list query key), R69-3 (prove Retire greys when both delete and retire are refused), takesEffect only for RETIRE/RESTORE (`library-forms.tsx`); a pass and a fail test each. They do not block anything but go with QA-61..64 (fa653bec, not on main yet) in one Lead PR. Also note for S5: runtime will read the edition's acceptedChannels on the Forms tab (lead-check L4); keep that field's meaning stable. Local run-suites on the exact commit, `tools/graph.mjs`, hand back. US$0.
+2026-10-29 night (Lead, sixth chat; founder asleep): Stage BUILD, owner Builder. **W1-10 slice 0 only:** the shared AI step runner (draft, blind checker, rules, compareRounds, saved-result key, cost first, caps), no behaviour change, finder moves first; plus the review-queue **item contract proposal** in `contracts/` (no consumers) for the Lead. Then **PLAN** (not build) for slice 1: the channel change P-143 (Online · PDF upload · Paper · Not needed + signature value; accepts per edition and account; migration from SIGNED_PDF_UPLOAD; finder rounds propose the channel with IRCC's quote, B37/P-140; S5 "Filed as" picker in `workspace/forms.tsx`, which this lane owns for the change). Founder: P-138 (drafting on a click), P-139 (US$120 cap). No live AI. US$0.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

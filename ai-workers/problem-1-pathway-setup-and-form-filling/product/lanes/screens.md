@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac, sixth chat, Claude Code): **S3 early look: changes before the founder sees it.** Stage FIX, owner Builder. (1) A run error must never show raw technical text or a file path (screenshot 03 shows ENOENT and a Mac path; QA-63 words from forms apply); retake that screenshot with the isolated copy's fake launcher working. (2) One call to action on a just-started combination: the page's Next step points to the finder offer ("Find forms") while nothing is attached. (3) After a run, one find button: the run card's "Find again" and the "Find the forms again" offer are one. (4) Same cost words on the button, tip and run card (about US$x · at most US$y). (5) **S5 merges first** (runtime is in FIX); your branch conflicts with it in `api/src/main.ts`, `pages/combination.tsx`, `tests/check_studio_browser.cjs`: after S5 is on main, sync, put the Start setup block in S5's Forms tab slot ("No form find yet"), rerun, EARLY-LOOK again with 1440 screenshots. Do (1)–(4) now. US$0.
+2026-10-29 night (Lead, sixth chat; founder asleep): Founder **Go on S3** (29 Oct). Stage CHECK, owner Lead: hand back the full run-suites on the exact commit; the Lead checks and opens the Lead PR. Next: **S6 Shared library** after S3 merges: the re-check (28 Oct) is answered in part (founder Q1 = P-138: drafting only on a click); S6 BUILD waits the forms lane's slice 0 (shared step runner) and the queue item contract (Lead approves). Until then only design work (P-126). US$0.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
