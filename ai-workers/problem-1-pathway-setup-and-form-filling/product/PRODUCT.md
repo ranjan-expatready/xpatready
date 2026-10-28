@@ -34,6 +34,7 @@ The team merges these into the product's menus. A new item needs a screen in `SC
 | Pathway type: Retail / Corporate and employers (P-104) | client type, segment | Workspace switch; data value Corporate (P-06, P-16) |
 | Program › Category › Sub-category | stream, level 3/4 | Masters of a combination (team enum STREAM = Category, CATEGORY = Sub-category: an adapter, not a rename) |
 | Combination | composition, combo, configuration row | The last level present; owns one configuration |
+| Delete · Remove from … · Retire · Restore · Withdraw · Replace edition (P-116, 28 Oct) | Archive, Deactivate, Trash, "Remove" alone, rule codes such as "(L3)" | Delete: never released and used nowhere. Remove from …: a line out of one combination, section or questionnaire; the item stays in the library. Retire: hidden from pickers, AI and new setups; open cases and releases keep it. Restore: undoes a retire. Withdraw: cancels a waiting delete or retire. Replace edition: a new form edition; earlier releases keep the old one |
 | Person roles: Principal applicant, Spouse or partner, Dependent child, Representative | participants | Who a line applies to |
 | Field · Section · Document type · Form · Check | canonical field, logical section, predicate | Shared library masters |
 | Form field · Field map (P-63) | box, box map | A fillable spot on a PDF or input on a portal screen · which shared field fills it, for whom, how |

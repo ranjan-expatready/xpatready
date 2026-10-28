@@ -1,0 +1,339 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Draft board, round 3: top of Immigration programs and Add combination (W1-visual-system, 28 Oct)</title>
+<style>
+/* Team tokens copied from prototype/studio/web/src/styles/tokens.css and the agreed studio level sheet levels.css (branch 059dace).
+   Light only: desktop round (founder point 9). Dark values stay as built in levels.css. */
+:root{--bg:#e9ecef;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--faint:#8c8c8c;--link:#054e9c;--primary:#0862c5;--on-primary:#fff;--p50:#e6f4ff;--p100:#cce9ff;--border:#d9d9d9;--border-s:#bfbfbf;--line:#ececec;
+--ok:#16a34a;--t-ok:#0f5c2e;--ok-tint:#e3f4e9;--warn:#ff8500;--t-warn:#663200;--warn-tint:#ffedd9;--danger:#dc2626;--t-danger:#991b1b;--danger-tint:#fbe5e5;--neutral-tint:#eeeeee;
+--lv0:#595959;--lv1:#37506e;--lv2:#0b6477;--lv3:#043a73;--lv1-t:#f3f5f7;--lv2-t:#ebf3f4;--lv3-t:#f0f3f7;--lv1-b:#e3e8ed;
+--acc1:#50d0ff;--acc2:#0694ff;--acc3:#2d2d2d;--acc4:#37506e;
+--font:'Inter Variable',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);font-size:14px;line-height:1.45;color:var(--text);background:var(--bg)}
+h1,h2,h3,h4{font-family:'Proxima Nova',var(--font);margin:0}
+button{font:inherit}
+.board{max-width:1500px;margin:0 auto;padding:24px 30px 80px}
+.top h1{font-size:24px}.top p{margin:6px 0 0;color:var(--muted);max-width:1180px}
+.sec{margin:40px 0 10px;border-top:2px solid var(--border-s);padding-top:16px}.sec h2{font-size:20px}.sec>p,.note{margin:6px 0;color:var(--muted);max-width:1240px}
+.sec h3.sub{font-size:16px;margin:22px 0 6px}
+/* board tags (board chrome only) */
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;padding:1px 7px;border-radius:999px;border:1px solid;white-space:nowrap;font-weight:500;vertical-align:middle}
+.tag.cap{color:#054e9c;border-color:#cce9ff;background:#e6f4ff}.tag.scaf{color:#663200;border-color:#ffc773;background:#fff3e0}
+.tag.need{color:#0f5c2e;border-color:#a7dcb9;background:#fff}.tag.nb{color:#595959;border:1px dashed #bfbfbf;background:#fff}
+.tag.dec{color:#0f5c2e;border-color:#a7dcb9;background:#eefaf2}.tag.gap{color:#991b1b;border-color:#f3b4b4;background:#fdf0f0}
+.tag.con{color:#7a1f6b;border-color:#e5b3dc;background:#fbeef9}.tag.sample{color:#663200;border-color:#ffc773;background:#fff}
+.tag.rec{color:#fff;background:#0862c5;border-color:#0862c5;font-weight:600}
+.ann{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+table.t{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px;font-size:13px}
+table.t th,table.t td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.t th{background:#f4f6f8;font-weight:600;font-size:12px;color:var(--muted)}
+table.t tr.rec td{background:#f3f8fe}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.cap{font-size:12px;color:var(--muted);margin:6px 0 0}
+/* app frame */
+.frame{background:var(--surface);border:1px solid var(--border-s);border-radius:12px;overflow:hidden;box-shadow:0 2px 10px #0000001a;margin-top:10px;position:relative}
+.ftitle{font-size:12px;color:var(--muted);padding:6px 12px;background:#fbfbfb;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ftitle b{color:var(--text)}
+.appbar{display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;background:var(--raised);border-bottom:1px solid var(--border);font-size:12px}
+.logo{font-weight:800;color:var(--primary);font-size:16px;display:flex;align-items:center;gap:6px}.logo i{width:20px;height:20px;border-radius:5px;background:#0862c5;display:inline-block}
+.prod{border-left:1px solid var(--border);padding-left:10px;color:var(--muted);line-height:1.2}.prod b{display:block;font-size:13px;color:var(--text)}
+.demo{background:#fff3e0;color:#663200;border-radius:6px;padding:2px 8px}
+.shell{display:grid;grid-template-columns:200px minmax(0,1fr)}
+.side{background:var(--raised);border-right:1px solid var(--border);padding:14px 8px;min-height:100%}
+.side .g{font-size:12px;color:var(--muted);margin:14px 8px 4px}.side .g:first-child{margin-top:0}
+.side a{display:block;padding:6px 8px;border-radius:6px;color:var(--text);text-decoration:none}.side a.on{background:var(--p50);color:var(--link);font-weight:600}
+.main{padding:20px 24px 28px;min-width:0;position:relative}
+.ph{display:flex;align-items:flex-start;gap:10px}.ph h1{font-size:24px;display:flex;align-items:center;gap:8px}.ph .s{color:var(--muted);margin-top:2px}.sp{flex:1}
+/* controls */
+.btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--border-s);background:var(--raised);color:var(--text);font-weight:500;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:#fff}.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.btn.danger{background:#b91c1c;border-color:#b91c1c;color:#fff}
+.btn[aria-disabled=true]{opacity:.5;cursor:not-allowed}
+.btn.link{border:0;background:none;color:var(--link);padding:0 4px;height:auto}
+.seg{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--border);border-radius:10px;background:#f1f2f4}
+.seg button{border:0;background:transparent;padding:5px 12px;border-radius:8px;display:inline-flex;gap:6px;align-items:center;color:var(--text);cursor:pointer}
+.seg button.on{background:#fff;box-shadow:0 1px 2px #0000001f;font-weight:600;color:var(--link)}
+.seg.type button.on{background:var(--primary);color:#fff;box-shadow:none}
+.seg button em{font-style:normal;font-size:12px;font-weight:600;background:#0000000d;border-radius:99px;padding:0 6px}.seg.type button.on em{background:#ffffff33}
+.fbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.search{flex:1 1 260px;min-width:220px;display:flex;align-items:center;gap:8px;height:34px;border:1px solid var(--border-s);border-radius:8px;background:#fff;padding:0 10px;color:var(--muted)}
+.search input{border:0;outline:0;font:inherit;flex:1;min-width:0;background:transparent;color:var(--text)}
+.sel{height:34px;border:1px solid var(--border-s);border-radius:8px;background:#fff;padding:0 28px 0 10px;font:inherit;color:var(--text);appearance:none;background-image:linear-gradient(45deg,transparent 50%,#595959 50%),linear-gradient(135deg,#595959 50%,transparent 50%);background-position:calc(100% - 14px) 15px,calc(100% - 9px) 15px;background-size:5px 5px;background-repeat:no-repeat;cursor:pointer}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.fchip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border:1px solid var(--border-s);border-radius:999px;background:#fff;cursor:pointer;color:var(--text)}
+.fchip.on{background:var(--p50);border-color:#9ccfff;color:var(--link);font-weight:600}
+.fchip em{font-style:normal;font-size:12px;color:var(--muted);font-weight:500}.fchip.on em{color:var(--link)}
+.fchip .acc{width:4px;height:14px;border-radius:2px;background:var(--a)}
+.chk{display:inline-flex;gap:6px;align-items:center;color:var(--text);font-size:13px;cursor:pointer}
+.counts{margin:12px 0 6px;color:var(--muted);font-size:13px}.counts b{color:var(--text)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);align-items:center;flex-wrap:wrap}
+.ic{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ic.s{width:14px;height:14px}
+/* marks */
+.lm{display:inline-block;flex:none;width:8px;height:8px;margin:0 6px 0 2px}
+.lm.l1{background:var(--lv1);border-radius:2px}.lm.l2{background:var(--lv2);border-radius:50%}
+.lm.l3{background:var(--lv3);transform:rotate(45deg);width:7px;height:7px;border-radius:1px}
+.lm.l4{border:1.5px solid var(--lv3);transform:rotate(45deg);width:7px;height:7px;border-radius:1px}
+/* status chips */
+.chip{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;line-height:18px;width:fit-content}
+.chip.set{background:var(--neutral-tint);color:var(--text)}.chip.ns{border:1px dashed var(--border-s);color:var(--muted);padding:0 7px;font-weight:500}
+.chip.wait{background:var(--warn-tint);color:var(--t-warn)}.chip.ret{background:var(--neutral-tint);color:var(--muted)}.chip.just{background:var(--ok-tint);color:var(--t-ok)}
+.chip.live{background:var(--ok-tint);color:var(--t-ok)}
+/* tooltips */
+[data-tip]{position:relative}
+[data-tip]:hover::after,[data-tip]:focus-visible::after,[data-tip].showtip::after{content:attr(data-tip);position:absolute;right:0;top:calc(100% + 6px);z-index:40;width:max-content;max-width:300px;background:#2d2d2d;color:#fff;font-size:12px;line-height:16px;padding:7px 9px;border-radius:6px;white-space:normal;font-weight:400;text-align:left;box-shadow:0 4px 12px #0003;pointer-events:none}
+[data-tip].tl:hover::after,[data-tip].tl:focus-visible::after,[data-tip].tl.showtip::after{right:auto;left:0}
+.info{display:inline-flex;color:var(--muted);cursor:help}
+/* ---------- option A: numbered outline ---------- */
+.g5{display:grid;grid-template-columns:minmax(0,1fr) 116px 176px 108px 152px;align-items:center;column-gap:8px}
+.colhead{padding:6px 17px 6px 12px;font-size:12px;color:var(--muted);position:sticky;top:0;background:var(--surface);z-index:2}
+.band{background:var(--lv1-t);border:1px solid var(--lv1-b);border-left:4px solid var(--acc);border-radius:10px;padding:0 8px 8px 0;margin:10px 0 14px}
+.band>.r{min-height:48px;padding:0 9px 0 12px}
+.blk{margin:0 0 8px 24px;background:#fff;border:1px solid #e1e5ea;border-radius:8px;overflow:visible}
+.blk:last-child{margin-bottom:0}
+.r{min-height:40px;padding:0 8px 0 12px}
+.blk>.r+.r{border-top:1px solid var(--line)}
+.blk>.r.l2{min-height:42px;background:#fcfdfd;border-radius:8px 8px 0 0}
+.blk>.r.l2:only-child{border-radius:8px}
+.nmc{display:flex;align-items:center;min-width:0;gap:2px;position:relative}
+.chev{width:20px;height:20px;border:0;background:none;padding:0;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;flex:none}
+.chev:hover{background:#0000000d}.chev.none{cursor:default}.chev.none:hover{background:none}
+.num{font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;flex:none;margin-left:4px}
+.l1 .num{color:var(--lv1);min-width:16px}.l2 .num{color:var(--lv2);min-width:26px}.l3 .num{color:var(--lv3);min-width:38px}.l4 .num{color:var(--lv3);min-width:50px}
+.nm{overflow-wrap:anywhere}
+.l1 .nm{font-size:16px;font-weight:600;color:var(--text)}.l2 .nm{font-weight:600}.l3 .nm{font-weight:500}.l4 .nm{font-weight:400}
+.meta{color:var(--muted);font-size:12px;margin-left:8px;white-space:nowrap}
+.r.l3 .nmc{padding-left:24px}.r.l4 .nmc{padding-left:48px}
+.blk .r.l4 .nmc::before{content:"";position:absolute;left:34px;top:-20px;bottom:50%;border-left:1px solid #c9d1da;border-bottom:1px solid #c9d1da;width:10px;border-bottom-left-radius:4px}
+.loc,.used{font-size:13px;color:var(--text)}.used{color:var(--muted)}
+.acts{display:flex;gap:2px;justify-content:flex-end}
+.act{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 8px;border-radius:6px;border:0;background:transparent;color:#4a5866;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap}
+.act:hover,.act:focus-visible{background:#e9eef3;color:var(--link);outline:none}
+.act.dis{color:#a3a3a3;cursor:not-allowed}.act.dis:hover{background:#f3f3f3;color:#8c8c8c}
+.act.warn{color:var(--t-warn)}
+.r.retired .nm,.r.retired .num,.r.retired .loc{color:#8c8c8c}.r.retired .lm{opacity:.45}
+.r.waiting .nm{text-decoration:line-through;text-decoration-color:#c88a4a}
+.r.hl,.lr.hl{background:#f3f8fe!important}
+mark{background:#fff1a8;color:inherit;border-radius:2px;padding:0 1px}
+.emptyline{padding:10px 12px 10px 60px;color:var(--muted);font-size:13px}
+/* confirm popover */
+.pop{position:absolute;right:8px;top:calc(100% - 2px);z-index:30;width:380px;background:#fff;border:1px solid var(--border-s);border-radius:10px;box-shadow:0 10px 30px #00000029;padding:14px 16px;font-size:13px;text-align:left}
+.pop h4{font-size:14px;margin:0 0 6px}.pop p{margin:4px 0;color:var(--text)}.pop ul{margin:4px 0 6px 18px;padding:0;color:var(--muted)}
+.pop .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.r{position:relative}
+.tipbox{position:absolute;right:8px;top:calc(100% - 4px);z-index:30;max-width:320px;background:#2d2d2d;color:#fff;font-size:12px;line-height:16px;padding:8px 10px;border-radius:6px;box-shadow:0 4px 12px #0003}
+/* list view */
+.gl{display:grid;grid-template-columns:64px minmax(0,1fr) 112px 150px 100px 140px;align-items:center;column-gap:8px}
+.ltable{background:#fff;border:1px solid var(--border);border-radius:10px;margin-top:8px}
+.ltable .lh{padding:9px 12px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);background:#fafbfc;border-radius:10px 10px 0 0;position:sticky;top:0;z-index:2}
+.ltable .lr{padding:8px 12px;min-height:44px;border-bottom:1px solid var(--line);position:relative}.ltable .lr:last-child{border-bottom:0}
+.lr .num{color:var(--muted);font-weight:500}
+.trail{line-height:1.5}.trail .sep{color:#9aa4ae}
+.trail .t0{color:var(--lv0)}.trail .t1{color:var(--lv1)}.trail .t2{color:var(--lv2)}.trail .t3{color:var(--lv3);font-weight:600}.trail .t4{color:var(--lv3)}.trail .none{color:var(--muted)}
+.trail .t0,.trail .t1,.trail .t2,.trail .t3,.trail .t4,.trail .none{white-space:nowrap}
+.sorthd{display:inline-flex;gap:4px;align-items:center}
+/* right panel */
+.panel{position:absolute;top:78px;right:0;bottom:0;width:480px;background:#fff;border-left:1px solid var(--border-s);box-shadow:-8px 0 24px #00000014;display:flex;flex-direction:column;z-index:20}
+.panel header{display:flex;align-items:flex-start;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.panel header .k{font-size:12px;color:var(--muted)}.panel header h3{font-size:18px;display:flex;align-items:center;gap:4px;margin-top:2px}
+.panel .pb{padding:14px 20px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:14px}
+.panel footer{display:flex;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid var(--border)}
+.fld label{display:block;font-weight:600;font-size:13px;margin-bottom:4px}.fld label span{font-weight:400;color:var(--muted);font-size:12px}
+.inp{width:100%;height:36px;border:1px solid var(--border-s);border-radius:8px;padding:0 10px;font:inherit;color:var(--text);background:#fff}
+.inp.focus{border-color:var(--primary);box-shadow:0 0 0 3px #0862c533}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}.hint.ok{color:var(--t-ok)}
+.box{border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.box h5{margin:0 0 6px;font-size:13px}
+.alert{border:1px solid #f5c38b;background:#fff8ef;border-radius:8px;padding:10px 12px;font-size:13px}
+.lvrow{display:grid;grid-template-columns:118px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.lvrow:last-child{border-bottom:0}
+.lvrow .lw{font-size:12px;color:var(--muted)}
+/* modal */
+.scrim{position:absolute;inset:0;background:#1f2a3666;z-index:25;display:flex;align-items:flex-start;justify-content:center;padding-top:40px}
+.modal{width:512px;background:#fff;border-radius:12px;box-shadow:0 20px 50px #0000004d}
+.modal .mh{padding:18px 24px 12px;border-bottom:1px solid var(--border)}.modal .mh h3{font-size:18px;display:flex}.modal .mh p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.modal .mb{padding:14px 24px;display:flex;flex-direction:column;gap:10px}
+.modal .mf{padding:12px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.newt{font-size:11px;font-weight:600;color:var(--link);background:var(--p50);border-radius:4px;padding:0 5px;margin-left:6px}
+.preview{background:#f4f6f8;border-radius:8px;padding:10px 12px;font-size:13px}
+/* states */
+.empty{background:#fff;border:1px dashed var(--border-s);border-radius:12px;padding:40px 24px;text-align:center;margin-top:14px}
+.empty h3{font-size:18px;margin:10px 0 6px}.empty p{color:var(--muted);max-width:560px;margin:0 auto 14px}
+.sk{height:12px;border-radius:6px;background:linear-gradient(90deg,#eceff2,#f6f7f9,#eceff2);background-size:200% 100%;animation:sh 1.4s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+.frame.crop{max-height:var(--h,720px);overflow:hidden}
+.frame.crop::after{content:"";position:absolute;left:0;right:0;bottom:0;height:40px;background:linear-gradient(transparent,#f7f7f7);pointer-events:none;z-index:50}
+.compact .side,.compact .appbar{display:none}.compact .shell{grid-template-columns:minmax(0,1fr)}.compact .main{padding:16px}
+.compact .g5{grid-template-columns:minmax(0,1fr) 108px 148px 76px}.compact .used,.compact .hd-used{display:none}.compact .act .lbl{display:none}.compact .ph .s{display:none}
+/* 1024 */
+.w1024 .g5{grid-template-columns:minmax(0,1fr) 108px 148px 76px}.w1024 .used,.w1024 .hd-used{display:none}
+.w1024 .gl{grid-template-columns:62px minmax(0,1fr) 108px 148px 76px}
+.w1024 .act .lbl{display:none}.w1024 .shell{grid-template-columns:184px minmax(0,1fr)}.w1024 .main{padding:18px 18px 24px}
+.w1024 .colhead{padding-right:17px}
+/* option B: tree table */
+.tt{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:visible}
+.tt .r{min-height:36px;border-bottom:1px solid var(--line);padding:0 8px 0 12px}
+.tt .r.l1{background:var(--lv1-t);min-height:42px;border-left:4px solid var(--acc);padding-left:8px}
+.tt .gb{display:grid;grid-template-columns:minmax(0,1fr) 116px 176px 108px 72px;align-items:center;column-gap:8px}
+.tt .ind{display:inline-block;flex:none;width:24px;align-self:stretch;position:relative}
+.tt .ind::before{content:"";position:absolute;left:9px;top:-1px;bottom:-1px;border-left:1px solid #d3d9e0}
+.ib{width:28px;height:28px;border:0;background:transparent;border-radius:6px;color:#4a5866;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.ib:hover{background:#e9eef3;color:var(--link)}.ib.dis{color:#b3b3b3;cursor:not-allowed}
+.gb5{display:grid;grid-template-columns:76px 150px 160px minmax(0,1fr) minmax(0,1fr) 116px 72px;align-items:center;column-gap:10px}
+/* option C: program cards */
+.cgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 4px 0}
+.pcard{background:#fff;border:1px solid #e1e5ea;border-radius:10px}
+.pcard .ph2{display:flex;align-items:center;gap:4px;padding:10px 8px 10px 12px;border-bottom:1px solid var(--line)}
+.pcard .cl{display:flex;align-items:center;gap:4px;padding:7px 8px 7px 12px;border-bottom:1px solid #f4f4f4;font-size:13px}.pcard .cl:last-child{border-bottom:0}
+.pcard .cl.sub{padding-left:30px}
+.cband{display:flex;align-items:center;gap:6px;padding:10px 8px 10px 12px;border-left:4px solid var(--acc);background:var(--lv1-t);border-radius:8px;margin:12px 0 10px}
+</style>
+</head><body>
+<style>
+.pcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:10px}
+.scard{background:#fff;border:1px solid #e1e5ea;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-height:186px}
+.scard.just{border-color:#7fc79a;box-shadow:0 0 0 3px #e3f4e9}
+.scard .ctop{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;font-size:12px}
+.scard .ctitle{font-weight:600;color:var(--lv3);font-size:15px;display:flex;align-items:center;margin-top:4px}
+.scard .csub{font-size:13px;color:var(--lv3);display:flex;align-items:center;padding-left:2px}.scard .csub.none{color:var(--muted)}
+.sbar{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:8px 0 2px}.sbar i{height:4px;border-radius:2px;background:#e6e8eb}.sbar i.cur{background:#fff;border:1.5px solid #7aa7d9;height:6px;margin-top:-1px}
+.scard .cstep{font-size:12px;color:var(--muted)}.scard .cfact{font-size:12px;color:var(--muted)}
+.scard .cfoot{margin-top:auto;padding-top:8px}
+.btn.out{color:var(--link)}
+.pband{display:flex;align-items:center;gap:6px;padding:9px 12px;border-left:4px solid var(--acc);background:var(--lv1-t);border-radius:8px;margin:16px 0 0}
+.pband b{font-size:15px}
+.pwcards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.pwc{background:#fff;border:1px solid #dfe3e8;border-left:4px solid var(--acc,#bfc7d0);border-radius:10px;padding:12px 14px;min-height:104px;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+.pwc.on{background:var(--p50);border-color:#9ccfff;border-left-color:var(--acc,#0862c5)}
+.pwc b{font-size:14px;display:flex;align-items:center}.pwc span{font-size:12px;color:var(--muted)}
+.okline{color:var(--t-ok);font-size:13px;margin:8px 0 0;display:flex;gap:6px;align-items:center}
+.kbd{font-size:11px;border:1px solid var(--border-s);border-radius:4px;padding:0 4px;color:var(--muted)}
+.needchip{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 12px;border:1px solid var(--border-s);border-radius:999px;background:#fff;color:var(--text)}
+.needchip em{font-style:normal;background:var(--warn-tint);color:var(--t-warn);border-radius:6px;padding:0 6px;font-size:12px;font-weight:600}
+</style>
+<div class="board">
+<div class="top">
+<h1>Draft board, round 3: the top of Immigration programs, and one way to add</h1>
+<p>W1-visual-system · designer draft for the Lead, 28 Oct · desktop only (1440 and 1024). The founder is otherwise happy with Immigration programs; two questions remain: <b>cards on top or a modern filter</b> (point 7), and the <b>"New combination"</b> button, which should lead to adding in Program structure (point 8). Same data as the Program structure board: the 7 Retail combinations and the 1 Corporate Sample; names and locations are <b>Sample</b>. Cards and List below the top stay as built and agreed (P-115, C11.10).</p>
+<div class="ann"><span class="tag cap">Capability</span><span class="tag scaf">Scaffolding</span><span class="tag need">Needed for the proof</span><span class="tag nb">Not built</span><span class="tag dec">Followed P-xx</span><span class="tag gap">GAP</span><span class="tag con">CONFLICT</span><span class="tag sample">Sample</span><span class="tag rec">Recommended</span></div>
+</div>
+
+<div class="sec"><h2>1. Option P2 · One filter bar, the same as Program structure <span class="tag rec">Recommended</span></h2>
+<p>Pathway type tabs, then one row: Find (⌘K), Pathway chips with their counts (and an orange "need you" count when any), Program and Status dropdowns, a "Needs you" switch, and Cards / List. Active filters show as removable chips with Clear all. About 125 px shorter than the cards (measured on this board), it stays one row with many Pathways (chips past the sixth fold into "More"), and it reads exactly like Program structure.</p>
+<div class="ann"><span class="tag cap">Capability · filter bar</span><span class="tag need">Needed</span><span class="tag dec">F team FilterLayout: search + at most two primary filters + active-filter chips</span><span class="tag dec">F P-115 Cards / List, search, Status filter</span></div>
+<div class="frame" id="P2"></div>
+<h3 class="sub" style="font-size:16px;margin:22px 0 6px">P2 · Filtered: Temporary residence, Not started</h3>
+<div class="frame crop" style="--h:620px" id="P2-filtered"></div>
+<p class="cap">Counts say what they count ("Showing 3 of 7"); every filter is a chip you can remove; the filter is kept in the address so a link opens the same view (team rule).</p>
+</div>
+
+<div class="sec"><h2>2. Option P1 · Pathway cards on top (as built, refined)</h2>
+<p>Keeps today's Pathway cards (All pathways, one card per Pathway with its stripe, counts by status and need you), drops the "+ Add pathway" card (one way to add), and keeps search, Status and Cards / List under them. Familiar, and the counts per Pathway are large; but it is a second filter row, it differs from Program structure if that drops its cards, and with more than four Pathways the cards wrap to a second row.</p>
+<div class="ann"><span class="tag cap">Capability</span><span class="tag need">Needed if picked</span><span class="tag dec">F P-115 / C11.10 as built</span></div>
+<div class="frame" id="P1"></div>
+</div>
+
+<div class="sec"><h2>3. "New combination" becomes "Add combination", opening the same pop-up here</h2>
+<p>The button is renamed <b>Add combination</b> and opens the <b>same "Add to Program structure" pop-up</b> in place, prefilled with the tab and the Pathway filter. It writes through the same checks and the same save as Program structure, so there is still one way to add and one set of duplicate checks; the person stays where they were and the new card appears here, tagged Just added, Not started. The "Program structure" button stays beside it for renaming, reordering and deleting. <span class="tag dec">F P-125 (1) "names are created only by Program structure's pop-up": same component, same endpoint</span> <span class="tag con">CONFLICT P-125 (4): "one plain link Add a program or combination in Program structure"; P-127 AD-8: the link opens Program structure with the pop-up</span></p>
+<div class="frame crop" style="--h:860px" id="P2-add"></div>
+<h3 class="sub" style="font-size:16px;margin:22px 0 6px">After Add: the card appears in place</h3>
+<div class="frame crop" id="P2-after" style="--h:1010px"></div>
+<p class="cap">No toast: the line under the counts says what was added and that no setup started (as built on Program structure). The card's own next step is Start setup (P-125 (3)).</p>
+</div>
+
+<div class="sec"><h2>4. P2 at 1024</h2><div class="frame crop" id="P2-1024" style="width:1024px;--h:760px"></div></div>
+
+<div class="sec"><h2>5. Scores and recommendation</h2>
+<table class="t"><tr><th>Criterion</th><th>P2 filter bar</th><th>P1 Pathway cards</th></tr>
+<tr><td>Same top as Program structure (one pattern to learn)</td><td>5</td><td>2 (if Program structure takes the bar)</td></tr>
+<tr><td>Space above the first card at 1440</td><td>5 (≈ 145 px, measured)</td><td>3 (≈ 270 px, measured)</td></tr>
+<tr><td>Scales to many Pathways and Programs</td><td>5 (chips + Program dropdown)</td><td>3 (cards wrap; no Program filter)</td></tr>
+<tr><td>Per-Pathway counts and need you visible</td><td>4 (count + orange need you on the chip)</td><td>5 (by status)</td></tr>
+<tr><td>Build from today</td><td>4 (new bar, shared with Program structure)</td><td>5 (built)</td></tr>
+<tr class="rec"><td><b>Total / 25</b></td><td><b>23</b></td><td>18</td></tr></table>
+<p class="note"><b>Recommend P2</b>, together with option A on Program structure: one filter bar on both pages, the Pathway counts kept on the chips, and less height above the cards. If the founder keeps cards on one page, keep them on both (consistency beats either choice).</p>
+</div>
+
+<div class="sec"><h2>6. Every element, labelled (P2)</h2>
+<table class="t"><tr><th>Element</th><th>Capability / Scaffolding</th><th>Needed / Not built</th><th>Decision</th></tr>
+<tr><td>Title, ⓘ, description; "Program structure" button; "Add combination" (opens the shared pop-up)</td><td>Capability</td><td>Needed</td><td>P-125, founder point 8</td></tr>
+<tr><td>Pathway type tabs with counts</td><td>Capability</td><td>Needed</td><td>P-104</td></tr>
+<tr><td>Find (⌘K); Pathway chips with counts and need you; Program and Status dropdowns; Needs you switch; Cards / List</td><td>Capability</td><td>Needed</td><td>P-115; founder point 7</td></tr>
+<tr><td>Active-filter chips, Clear all, filter kept in the address</td><td>Capability</td><td>Needed</td><td>team FilterLayout</td></tr>
+<tr><td>Counts line; "Added …" line; Just added tag</td><td>Capability</td><td>Needed</td><td>EXPERIENCE §2.7; P-127 AD-7</td></tr>
+<tr><td>Pathway bands, setup cards, List (unchanged)</td><td>Capability</td><td>Needed (built)</td><td>P-115, C11.10</td></tr>
+<tr><td>"+ Add pathway" card</td><td>Capability</td><td>Removed</td><td>founder point 5</td></tr>
+<tr><td>Demo switch, Acting as, Simulated, Prototype badge</td><td>Scaffolding</td><td>Needed for the demo (not ported)</td><td>EXPERIENCE §1</td></tr>
+<tr><td>Saved views, "More" chip menu beyond six Pathways</td><td>Capability</td><td>Not built (only 2 Pathways today)</td><td>—</td></tr>
+</table></div>
+</div>
+<script>
+const IC={search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',plus:'<path d="M12 5v14M5 12h14"/>',tree:'<path d="M21 12h-8M21 6H8M21 18h-8M3 6v4c0 1.1.9 2 2 2h3M3 10v6c0 1.1.9 2 2 2h3"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',down:'<path d="m6 9 6 6 6-6"/>',spin:'<circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/>',check:'<path d="M20 6 9 17l-5-5"/>'};
+const ic=(n,c='')=>`<svg class="ic ${c}" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const mark=l=>`<span class="lm l${l}" aria-hidden="true"></span>`;
+const PW=[{n:'Temporary residence',acc:'var(--acc1)'},{n:'Permanent residence',acc:'var(--acc2)'}];
+const C=[
+ {pw:0,pg:'Visitors',c:'Visitor visa',st:'setup'},{pw:0,pg:'Visitors',c:'Super visa',st:'ns'},
+ {pw:0,pg:'Study permits',c:'Study permit',s:'Outside Canada',st:'ns'},{pw:0,pg:'Work permits',c:'Employer-specific work permit',s:'With an LMIA – inside Canada',st:'ns'},
+ {pw:1,pg:'Provincial nominees',c:'Express Entry stream',st:'ns'},{pw:1,pg:'Family sponsorship',c:'Spouse or common-law partner',st:'ns'},{pw:1,pg:'Economic immigration',c:'Start-up visa',st:'ns'}];
+function card(x){
+ const chip=x.st==='setup'?`<span class="chip set">${ic('spin','s')} In setup</span>`:x.just?`<span class="chip just">Just added</span>`:`<span class="chip ns">Not started</span>`;
+ const bar=x.st==='setup'?'<i class="cur"></i><i></i><i></i><i></i>':'<i></i><i></i><i></i><i></i>';
+ return `<div class="scard ${x.just?'just':''}"><div class="ctop"><span class="trail"><span class="t0">Retail</span> <span class="sep">›</span> <span class="t1">${esc(PW[x.pw].n)}</span> <span class="sep">›</span> <span class="t2">${esc(x.pg)}</span></span>${chip}</div>
+ <div class="ctitle">${mark(3)}${esc(x.c)}</div><div class="csub ${x.s?'':'none'}">${x.s?mark(4)+esc(x.s):'No sub-category'}</div>
+ <div class="sbar">${bar}</div><div class="cstep">${x.st==='setup'?'Step 1 of 4 · Forms':'Not started'}</div><div class="cfact">${x.st==='setup'?'Setup draft · forms not chosen yet <span class="tag sample">Sample</span>':'No forms yet'}</div>
+ <div class="cfoot"><button class="btn sm out" data-tip="${x.st==='setup'?'Opens this combination\'s setup where you left it.':'Opens this combination\'s setup with its place read-only and starts finding its forms. Once Live, firms can open cases for it.'}">${x.st==='setup'?'Continue setup':'Start setup'}</button></div></div>`;
+}
+function appbar(){return `<div class="appbar"><span class="logo"><i></i>ExpatReady</span><span class="prod"><b>Product Studio</b>Pathway Configurator</span><span class="demo">Prototype · demo workspace</span><span class="sp"></span><span class="btn sm">Demo ▾</span><span style="border:1px solid var(--border);border-radius:8px;padding:5px 10px">Acting as <b>Configuration author · content publisher</b> <span class="demo" style="background:#f1f1f1;color:#595959">Simulated</span></span></div>`}
+function side(){return `<nav class="side"><div class="g">Configure</div><a>Program structure</a><a class="on">Immigration programs</a><a>To review</a><div class="g">Shared library</div><a>Fields</a><a>Sections</a><a>Document types</a><a>Forms</a><a>Checks</a><div class="g">History</div><a>AI work</a><a>Releases</a><a>Activity</a></nav>`}
+function header(){return `<div class="ph"><div><h1>Immigration programs <span class="info tl" tabindex="0" data-tip="Each combination defined on Program structure shows here as a card. Start setup finds its forms and builds what cases need.">${ic('info')}</span></h1><div class="s">Every combination your firm can open, and where its setup stands.</div></div><span class="sp"></span>
+ <button class="btn" data-tip="Rename, reorder or delete Pathways, Programs, Categories and Sub-categories.">${ic('tree')} Program structure</button>
+ <button class="btn pri" data-tip="Opens the Add to Program structure pop-up here. Pick what exists or type new names; the new combination appears on this page as Not started.">${ic('plus')} Add combination</button></div>`}
+function tabs(A=0){return `<div class="seg type" role="tablist"><button class="on">Retail <em>${7+A}</em></button><button>Corporate and employers <em>1</em></button></div>`}
+function view(){return `<div class="seg"><button class="on">${ic('grid')} Cards</button><button>${ic('list')} List</button></div>`}
+function sections(list,o={}){
+ let h='';[0,1].forEach(i=>{const cs=list.filter(x=>x.pw===i);if(!cs.length)return;
+  h+=`<div class="pband" style="--acc:${PW[i].acc}">${ic('down','s')}${mark(1)}<b>${PW[i].n}</b><span class="meta">${cs.length} combination${cs.length===1?'':'s'}</span></div>`;
+  if(o.collapse1&&i===1)return;h+=`<div class="pcards">${cs.map(card).join('')}</div>`;});return h;}
+function P2top(o={}){
+ const f=o.filtered;const A=o.added?1:0;
+ return `<div class="fbar">${tabs(A)}<span class="sp"></span>${view()}</div>
+ <div class="fbar" style="margin-top:10px"><label class="search" style="flex:1 1 240px">${ic('search')}<input placeholder="Search names, forms, documents" aria-label="Search"><span class="kbd">⌘K</span></label>
+ <div class="chips" role="group" aria-label="Pathway"><button class="fchip ${f?'':'on'}">All <em>${7+A}</em></button><button class="fchip ${f?'on':''}" style="--a:var(--acc1)"><span class="acc"></span>Temporary residence <em>${4+A}</em></button><button class="fchip" style="--a:var(--acc2)"><span class="acc"></span>Permanent residence <em>3</em></button></div>
+ <select class="sel" aria-label="Program"><option>Program: All</option></select>
+ <select class="sel" aria-label="Status"><option>${f?'Status: Not started':'Status: All'}</option></select>
+ <button class="needchip" data-tip="Shows only combinations waiting for you: something to review, a missing item or a failed step. None today.">Needs you <em>0</em></button></div>
+ <div class="counts">${f?`Showing <b>3 of 7</b> combinations · 3 Not started &nbsp; <span class="fchip on" style="height:24px;font-size:12px">Temporary residence <span class="chev">${ic('x','s')}</span></span> <span class="fchip on" style="height:24px;font-size:12px">Not started <span class="chev">${ic('x','s')}</span></span> <button class="btn link">Clear all</button>`:`<b>${7+A} combinations</b> · 1 In setup · ${6+A} Not started · none need you`}<br><span style="font-size:12px">Names are Sample until the immigration expert confirms.</span></div>
+ ${o.added?`<div class="okline">${ic('check','s')} Added Retail › Temporary residence › Humanitarian › Temporary resident permit: listed here as Not started; no setup started.</div>`:''}`;
+}
+function P1top(){
+ return `<div class="fbar">${tabs()}</div>
+ <div class="pwcards"><div class="pwc on"><b>All pathways</b><span style="margin-top:auto">7 combinations</span><span>1 In setup · 6 Not started · none need you</span></div>
+ <div class="pwc" style="--acc:var(--acc1)"><b>${mark(1)}Temporary residence</b><span style="margin-top:auto">4 combinations</span><span>1 In setup · 3 Not started · none need you</span></div>
+ <div class="pwc" style="--acc:var(--acc2)"><b>${mark(1)}Permanent residence</b><span style="margin-top:auto">3 combinations</span><span>3 Not started · none need you</span></div><div></div></div>
+ <div class="fbar"><label class="search">${ic('search')}<input placeholder="Search names, form numbers, documents" aria-label="Search"><span class="kbd">⌘K</span></label><select class="sel"><option>Status: All</option></select>${view()}</div>
+ <div class="counts"><b>7 combinations</b> · 1 In setup · 6 Not started<br><span style="font-size:12px">Names are Sample until the immigration expert confirms.</span></div>`;
+}
+function modal(){return `<div class="scrim"><div class="modal" role="dialog" aria-label="Add to Program structure"><div class="mh"><h3>Add to Program structure<span class="sp"></span><span class="chev">${ic('x')}</span></h3><p>Pick what exists or type a new name; each level is checked as you type. Only the new names are written, and no setup starts.</p></div>
+ <div class="mb"><div class="fld"><label>Pathway type</label><div class="seg type"><button class="on">Retail</button><button>Corporate and employers</button></div></div>
+ <div class="fld"><label>${mark(1)}Pathway</label><input class="inp" value="Temporary residence"><div class="hint">Uses the existing pathway (from your filter).</div></div>
+ <div class="fld"><label>${mark(2)}Program <span class="newt">New</span></label><input class="inp" value="Humanitarian"><div class="hint">New program · no exact match · no close spelling</div></div>
+ <div class="fld"><label>${mark(3)}Category <span class="newt">New</span></label><input class="inp focus" value="Temporary resident permit"><div class="hint">New category · no exact match · no close spelling</div></div>
+ <div class="fld"><label>${mark(4)}Sub-category <span>(new, under a new name)</span></label><label class="chk" style="font-weight:400"><input type="checkbox" checked> None: the category is the combination</label></div>
+ <div class="fld" style="display:flex;align-items:center;gap:10px"><label style="margin:0">Cases may be opened from</label><div class="seg"><button>Inside</button><button>Outside</button><button class="on">Both</button></div></div>
+ <div class="preview">You are adding Retail › <span style="color:var(--lv1)">Temporary residence</span> › <span style="color:var(--lv2)">Humanitarian</span><span class="newt">New</span> › <b style="color:var(--lv3)">Temporary resident permit</b><span class="newt">New</span> › No sub-category<div style="color:var(--muted);margin-top:4px">2 new names · 1 combination, listed here as Not started; no setup starts.</div></div>
+ <div class="hint"><span class="tag sample">Sample</span> names typed for the board; not an immigration value.</div></div>
+ <div class="mf"><button class="btn" style="border:0">Cancel</button><button class="btn">Add and add another</button><button class="btn pri">Add 2 names</button></div></div></div>`}
+function frame(id,title,top,list,o={}){const el=document.getElementById(id);if(o.w===1024)el.classList.add('w1024');
+ el.innerHTML=`<div class="ftitle"><b>${title}</b> ${o.tags||''}</div>${appbar()}<div class="shell">${side()}<div class="main">${header()}${top}${sections(list,o)}</div></div>${o.modal?modal():''}`;}
+const added=C.slice(0,4).concat([{pw:0,pg:'Humanitarian',c:'Temporary resident permit',st:'ns',just:true}]).concat(C.slice(4));
+frame('P2','P2 · Filter bar · Retail · 1440',P2top(),C,{tags:'<span class="tag cap">Capability</span><span class="tag need">Needed</span>'});
+frame('P2-filtered','P2 · Filtered',P2top({filtered:true}),C.filter(x=>x.pw===0&&x.st==='ns'));
+frame('P1','P1 · Pathway cards · Retail · 1440',P1top(),C,{tags:'<span class="tag cap">Capability</span>'});
+frame('P2-add','Add combination: the same pop-up, opened here, prefilled from the Pathway filter',P2top({filtered:false}),C,{modal:true,tags:'<span class="tag dec">F P-127 pop-up</span>'});
+frame('P2-after','After Add: Just added, Not started',P2top({added:true}),added,{collapse1:true});
+frame('P2-1024','P2 · 1024',P2top(),C,{w:1024});
+</script>
+<style>.w1024 .pcards{grid-template-columns:repeat(2,minmax(0,1fr))}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style>
+</body></html>
