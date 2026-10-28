@@ -80,6 +80,35 @@ const REVIEWED: Record<string, "case" | "open"> = {
   ok("QA-53: a file link the browser opens needs no person header (an unknown file is 404, never 401)", await status("/api/attachments/00000000-0000-4000-8000-000000000000/file", null) === 404 || await status("/api/attachments/00000000-0000-4000-8000-000000000000/file", null) === 400);
   ok("QA-53: writes keep their own duty checks (a client cannot load the demo: 403)", (await fetch(`http://localhost:${PORT}/api/demo/load`, { method: "POST", headers: { "x-actor": "user-P" } })).status === 403);
 
+  // QA-65 (qa after-merge on #69): a case read still needs a known person, and a configuration read made by POST (a plan or
+  // a check) is guarded like a GET. The POST reads are found in the code (@ConfigRead), and every other write names its person.
+  const post = async (path: string, actor: string | null, body: unknown) => (await fetch(`http://localhost:${PORT}${path}`, { method: "POST", headers: { "content-type": "application/json", ...(actor ? { "x-actor": actor } : {}) }, body: JSON.stringify(body) })).status;
+  const configPosts: string[] = [], unnamed: string[] = [];
+  for (const f of readdirSync(API).filter((x) => x.endsWith(".ts"))) {
+    const text = readFileSync(join(API, f), "utf8"), lines = text.split("\n"), prefix = /@Controller\("([^"]*)"\)/.exec(text)?.[1] ?? "";
+    lines.forEach((l, i) => {
+      for (const m of l.matchAll(/(@ConfigRead\(\)\s*)?@(Post|Put|Patch|Delete)\("([^"]*)"\)/g)) {
+        const path = `/${prefix}/${m[3]}`.replace(/\/+/g, "/");
+        if (m[1]) configPosts.push(path);
+        else if (!/x-actor|actorOf|readerOf/.test(lines.slice(i, i + 3).join(" "))) unnamed.push(`${f}: ${path}`);
+      }
+    });
+  }
+  ok("QA-65: the configuration reads made by POST are exactly the reviewed three (finder plan, AI plan, condition check)", JSON.stringify(configPosts.sort()) === JSON.stringify(["/api/ai/plan", "/api/combinations/:id/forms/find/plan", "/api/conditions/check"]), configPosts);
+  ok("QA-65: every other write names its person (none answers nobody by default)", unnamed.length === 0, unnamed);
+  const bodies: Record<string, unknown> = { "/api/ai/plan": { scope: vv, mode: "stub" }, "/api/combinations/:id/forms/find/plan": { mode: "rules" }, "/api/conditions/check": { condition: "", answers: {} } };
+  const wrongPost: string[] = [];
+  for (const cp of configPosts) {
+    const path = fill(cp), b = bodies[cp];
+    const s = { none: await post(path, null, b), unknown: await post(path, "user-Z", b), officer: await post(path, "user-O", b), client: await post(path, "user-P", b), author: await post(path, "user-A", b) };
+    if (s.none !== 401 || s.unknown !== 401 || s.officer !== 403 || s.client !== 403 || s.author === 401 || s.author === 403) wrongPost.push(`${cp} ${JSON.stringify(s)}`);
+  }
+  ok("QA-65 fail: each POST configuration read refuses nobody and an unknown name (401) and case people (403); pass: the author is answered", configPosts.length === 3 && wrongPost.length === 0, wrongPost);
+  ok("QA-65 fail: the releases list (a case read) refuses nobody and an unknown name (401)", await status("/api/releases", null) === 401 && await status("/api/releases", "user-Z") === 401);
+  ok("QA-65 pass: the releases list still answers the case officer and the author (200)", await status("/api/releases", "user-O") === 200 && await status("/api/releases", "user-A") === 200);
+  ok("QA-65 fail: a runtime read (case read) refuses nobody (401); pass: the officer is answered", await status("/api/runtime/cases", null) === 401 && await status("/api/runtime/cases", "user-O") === 200);
+  ok("QA-65: the chain is closed: nobody gets no attachment ids from the AI plan (401)", await post("/api/ai/plan", null, { scope: vv, mode: "stub" }) === 401);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log(`FAIL  the check stopped: ${(e as Error).stack}`); process.exit(1); });

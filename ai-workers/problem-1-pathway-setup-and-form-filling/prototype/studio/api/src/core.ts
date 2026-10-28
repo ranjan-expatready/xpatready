@@ -68,15 +68,19 @@ export const CaseRead = () => SetMetadata(READ_SCOPE, "case");
 /** A read with no person: who-am-I before a person is chosen (also the copies' health check), and file links the browser
  *  opens without the person header (their ids are random and only reached from a guarded page). */
 export const OpenRead = (_why: string) => SetMetadata(READ_SCOPE, "open");
+/** QA-65: a configuration read made by POST (a plan or a check that changes nothing): guarded like a GET. */
+export const ConfigRead = () => SetMetadata(READ_SCOPE, "config");
 @Injectable()
 export class ConfigReadGuard implements CanActivate {
   constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
   canActivate(ctx: ExecutionContext): boolean {
     const req = ctx.switchToHttp().getRequest<{ method: string; headers: Record<string, string | string[] | undefined> }>();
-    if (req.method !== "GET" && req.method !== "HEAD") return true;
-    if (this.reflector.getAllAndOverride<string>(READ_SCOPE, [ctx.getHandler(), ctx.getClass()])) return true;
-    const h = req.headers["x-actor"];
-    readerOf(Array.isArray(h) ? h[0] : h);
+    const scope = this.reflector.getAllAndOverride<string>(READ_SCOPE, [ctx.getHandler(), ctx.getClass()]);
+    if (scope === "open") return true;
+    if (req.method !== "GET" && req.method !== "HEAD" && scope !== "config") return true;
+    const h = req.headers["x-actor"], who = Array.isArray(h) ? h[0] : h;
+    // QA-65: a case read still needs a known person (nobody and an unknown name 401); only an open read needs none.
+    if (scope === "case") actorOf(who); else readerOf(who);
     return true;
   }
 }
