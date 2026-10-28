@@ -13,6 +13,7 @@ import { CHANNEL_WORDS, CHANNELS, type Channel } from "../../contracts/forms.ts"
 import { answeredBy, irccWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { actorOf, Db, fail, readerOf } from "./core.ts";
 import { Studio } from "./studio.ts";
+import { PeopleFromGuide } from "./people-ai.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type Q = { tab?: string; family?: string; person?: string; tweaks?: string; release?: string; role?: string };
@@ -128,7 +129,10 @@ export class WorkspaceViews {
 type H = string | undefined;
 @Controller("api")
 export class WorkspaceController {
-  constructor(@Inject(WorkspaceViews) private readonly w: WorkspaceViews, @Inject(Studio) private readonly s: Studio) {}
+  constructor(@Inject(WorkspaceViews) private readonly w: WorkspaceViews, @Inject(Studio) private readonly s: Studio, @Inject(PeopleFromGuide) private readonly g: PeopleFromGuide) {}
+  // Slice 3: "Who can be" filled from the guide: the plan (cost first), then the proposal (never saved by itself).
+  @Post("combinations/:id/people/propose/plan") peoplePlan(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { readerOf(a); return this.g.plan(id, b); }
+  @Post("combinations/:id/people/propose") propose(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.g.propose(actorOf(a), id, b); }
   // Break m8: reads need a configuration person in x-actor (readerOf), like the catalogue.
   @Get("combinations/:id/workspace") view(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: Q) { readerOf(a); return this.w.view(id, q); }
   @Patch("combinations/:id/people") savePeople(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.savePeople(actorOf(a), id, b); }

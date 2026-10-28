@@ -141,6 +141,17 @@ export type PreviewView = {
 /** A form removed from the combination since its last release: Undo puts the same line back while the draft is open (P-116).
  *  `fromLibrary` (Forms tab) lists the attached form files the library has already matched: added from the library, no AI. */
 export type RemovedForm = { code: string; title: string; at: string };
+/** Slice 3: "Who can be in this application" filled from the combination's guide (api/src/people-ai.ts). The plan says
+ *  the steps and the most it can cost first; the proposal is never saved by itself (the person accepts it and saves). */
+export const ProposePeopleBody = z.object({ mode: z.enum(["rules", "replay", "live"], { error: "Choose how to fill it." }), planSha256: z.string().regex(/^[0-9a-f]{64}$/).optional() });
+export type PeoplePlan = { mode: "rules" | "replay" | "live"; guide: { code: string; title: string; url: string }; steps: { n: number; label: string; uses_ai: boolean }[]; totals: { worst_usd: number; remaining_usd: number }; note: string; plan_sha256: string };
+export type ProposedPerson = { role: string; label: string; min: number; max: number; applies: boolean; quote: string; why: string | null; agreed: boolean };
+export type PeopleProposal = {
+  mode: PeoplePlan["mode"]; guide: PeoplePlan["guide"]; people: ProposedPerson[];
+  to_decide: { role: string; draft: string; check: string; why: string }[]; dropped: { role: string; why: string }[];
+  usd: number; from: "rules" | "replay" | "live" | null; run_files: string[]; note: string;
+};
+
 /** Slice 3: the newest change on the combination's forms that Undo can still reverse (one Undo for the page, P-116). */
 export type LastFormChange = { id: string; action: "attach" | "remove" | "finder_attach" | "edit"; codes: string[]; by: string; at: string };
 /** The words for a last change, for the Undo bar ("Removed IMM 5475"). */
