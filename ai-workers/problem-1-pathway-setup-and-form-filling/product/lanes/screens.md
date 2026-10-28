@@ -26,9 +26,9 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-visual-system
-stage: EARLY-LOOK
-owner: Lead
-next_action: Lead: early look of round 3 with the founder (R3a Program structure with the shared lifecycle pattern, R3b Immigration programs); screenshots in screens/W1-visual-system/screenshots/structure/ and programs/r3-* at 1440 and 1024; build-notes "Round 3" sections
+stage: FIX
+owner: Builder
+next_action: Builder: full run-suites on 19e8911d (the PR #66 review fixes), then the FIX hand-back to the Lead by message; the Lead re-merges PR #66
 then: S3 BUILD after round 3, the founder's Go and S4's merge (S3 re-check and addendum done, P-126); wave 1 desktop only (1440, 1024)
 blocked_by: none
 updated: 2026-10-28
