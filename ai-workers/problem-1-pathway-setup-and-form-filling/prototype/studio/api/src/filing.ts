@@ -18,19 +18,25 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
  *  give null, "Not set yet", with filingWhy's reason. */
 export function channelsFrom(note: string | null | undefined): "PDF" | "ONLINE" | "PDF_OR_ONLINE" | null {
   let pdf = false, online = false;
-  for (const s of sentencesOf(note)) {
-    // QA-61: a sentence that says not to ("Do not upload this form", "You don't need to upload it if you apply online")
-    // says nothing about how the form is filed.
-    if (NEGATED.test(s)) continue;
+  const read = (s: string) => {
     if (/\bupload(?:s|ed|ing)?\b/i.test(s)) {
       pdf = true;
       // "If you apply online, upload it" or "your online application": the PDF goes into an online application (a PDF
       // upload). Only filling the form in online, or an online form, is Online as well.
       if (/\b(?:fill|complet|submit)\w*\b[^.;]*\bonline\b|\bonline form\b/i.test(s.replace(/\bonline applications?\b/gi, " "))) online = true;
     } else if (/\bonline\b|\bportal\b/i.test(s)) online = true;
+  };
+  for (const s of sentencesOf(note)) {
+    if (!NEGATED.test(s)) { read(s); continue; }
+    // QA-61: a clause that says not to ("Do not upload this form", "You don't need to upload it if you apply online")
+    // says nothing about how the form is filed. Lead (#73 review): the other clauses of the same sentence still count
+    // ("Do not mail this form; upload it online" is a PDF upload); a clause that is only a condition says nothing alone.
+    for (const c of clausesOf(s)) if (!NEGATED.test(c) && !/^(?:if|when|unless)\b/i.test(c)) read(c);
   }
   return online && pdf ? "PDF_OR_ONLINE" : online ? "ONLINE" : pdf ? "PDF" : null;
 }
+/** A negated sentence's clauses: split on ";", ",", " but " and " instead". */
+const clausesOf = (s: string) => s.split(/[;,]|\s+but\s+|\s+instead\b/i).map((x) => x.trim()).filter(Boolean);
 /** QA-61: the rule reads each sentence, not single words. */
 const NEGATED = /\b(?:do not|don't|does not|doesn't|did not|didn't|no need to|not need to|need not|never|without)\b/i;
 function sentencesOf(note: string | null | undefined): string[] {
