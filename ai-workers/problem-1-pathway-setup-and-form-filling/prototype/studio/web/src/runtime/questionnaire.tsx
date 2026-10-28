@@ -642,3 +642,51 @@ function EditDialog({ caseId, q, row, close }: { caseId: string; q: Question; ro
     </Dialog>
   );
 }
+
+// ------------------------------------------------------------------ S5 Preview (one Sample family, never saved)
+
+/** One person's questionnaire of a Sample family, from the runtime's own case view (engine/runtime/preview.ts): what the
+ *  client sees, with the same fields (typing tries them; nothing is kept). Early-look fix 4: one section open at a time,
+ *  with a jump list of every section and its question count, so the phone column stays one screen long. */
+export function PreviewQuestions({ view, person }: { view: QuestionnaireView; person: string }) {
+  const [drafts, setDrafts] = React.useState<Record<string, unknown>>({});
+  const parts = view.sections.filter((s) => s.subjectId === person || (person === "principal" && s.subjectId === "case"));
+  const keyOfPart = (s: (typeof parts)[number]) => `${s.subjectId}|${s.section}`;
+  const [openKey, setOpenKey] = React.useState<string | null>(null);
+  const open = parts.find((s) => keyOfPart(s) === openKey) ?? parts[0];
+  if (!parts.length) return <Notice tone="info" title="Nothing to ask">This person answers nothing in the client's questionnaire for this family.</Notice>;
+  const asked = (s: (typeof parts)[number]) => s.questions.filter((q) => !q.hidden);
+  // Drift check 4: a section asked once for the application and again about the person shares its title; the name then
+  // says whom each is about, so the jump list never shows the same name twice.
+  const twice = new Set(parts.map((s) => s.title).filter((t, i, all) => all.indexOf(t) !== i));
+  const nameOf = (s: (typeof parts)[number]) => (twice.has(s.title) ? `${s.title} (${s.subjectId === "case" ? "the application" : s.about_label.replace(/ \(Sample\)$/, "")})` : s.title);
+  return (
+    <div className="space-y-3" data-preview-questions>
+      <nav aria-label="Sections" className="flex flex-wrap gap-1.5" data-section-jump>
+        {parts.map((s, i) => <button key={keyOfPart(s)} type="button" aria-current={s === open ? "true" : undefined} onClick={() => setOpenKey(keyOfPart(s))}
+          className={cn("rounded-full border px-2.5 py-1 text-xs", s === open ? "border-primary bg-primary/10 font-medium text-text-link" : "border-border bg-surface-raised text-text-muted hover:bg-text/5")}>{i + 1}. {nameOf(s)} · {asked(s).length}</button>)}
+      </nav>
+      {(() => {
+        const s = open, list = asked(s), single = list.filter((q) => !q.group), grouped = list.filter((q) => q.group);
+        const at = parts.indexOf(s);
+        return (
+          <section key={keyOfPart(s)} aria-labelledby={`pv-${s.subjectId}-${s.section}`} className="overflow-hidden rounded-xl border border-border bg-surface-raised" data-preview-section={s.section}>
+            <header className="border-b border-border px-4 py-2.5">
+              <h3 id={`pv-${s.subjectId}-${s.section}`} className="text-sm font-semibold">{nameOf(s)}</h3>
+              <p className="text-xs text-text-muted">Section {at + 1} of {parts.length} · {s.about_label === "The application" ? "once for the application" : `for ${s.about_label}`} · {list.length} question{list.length === 1 ? "" : "s"}{s.questions.length > list.length ? ` · ${s.questions.length - list.length} hidden by a rule` : ""}</p>
+            </header>
+            <div className="space-y-3 px-4 py-3">
+              {single.map((q) => <QuestionField key={q.fact} q={q} draft={drafts[keyOf(q)]} onChange={(d) => setDrafts((x) => ({ ...x, [keyOf(q)]: d }))} errors={[]} idBase={`pv-${s.subjectId}-${q.fact}`} compact />)}
+              {grouped.length ? <div className="rounded-lg border border-dashed border-border px-3 py-2 text-[13px]"><p className="font-medium">{groupLabel(s.title)}</p><p className="text-xs text-text-muted">Each entry asks: {grouped.map((q) => q.label).join(", ")}</p><p className="mt-1 text-xs text-text-muted">The client adds entries here, or says none apply.</p></div> : null}
+            </div>
+            <footer className="flex justify-between border-t border-border px-4 py-2 text-xs">
+              <button type="button" className="text-text-link underline disabled:no-underline disabled:text-text-muted" disabled={at === 0} onClick={() => setOpenKey(keyOfPart(parts[at - 1]))}>Previous section</button>
+              <button type="button" className="text-text-link underline disabled:no-underline disabled:text-text-muted" disabled={at === parts.length - 1} onClick={() => setOpenKey(keyOfPart(parts[at + 1]))}>Next section</button>
+            </footer>
+          </section>
+        );
+      })()}
+      <p className="text-center text-xs text-text-muted">Only questions the client fills. Typing here tries the fields; nothing is saved.</p>
+    </div>
+  );
+}

@@ -164,6 +164,10 @@ model Combination {
   /// open cases keep their pinned release.
   retiredAt      DateTime?   @map("retired_at") @db.Timestamptz
   retiredBy      String?     @map("retired_by")
+  /// S5 (challenge M4): "Who can be in this application" is saved with the version it was read at; a stale save is a
+  /// 409 naming who saved last. Every save writes an audit row with the list before it, which Undo restores.
+  participantsVersion Int     @default(1) @map("participants_version")
+  participantsBy      String? @map("participants_by")
 
   program      ProgramDef            @relation(fields: [programDefId], references: [id], onDelete: Restrict)
   attachments  SourceAttachment[]
@@ -180,6 +184,29 @@ model Combination {
   @@unique([workspaceId, combinationKey])
   @@unique([programDefId])
   @@map("combination")
+}
+
+/// S5 (challenge M3, S6 m1, P-119): the kinds of person a combination's "Who can be in this application" may list, one
+/// list read by the editor, the validator and the runtime. takesPartInCase: the person joins a case (else they are only
+/// described on forms, e.g. a parent named on IMM 5707); mayBeApplicant: the person may file their own application.
+/// The six built-in starting roles (samples/person-roles.json) are created with the workspace and kept by Reset
+/// (founder, P-108 note); S6 adds the one Add for new roles. basis: SAMPLE until the immigration expert confirms.
+model PersonRole {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  roleKey         String    @map("role_key")
+  label           String
+  meaning         String
+  takesPartInCase Boolean   @map("takes_part_in_case")
+  mayBeApplicant  Boolean   @map("may_be_applicant")
+  basis           String    @default("SAMPLE")
+  builtIn         Boolean   @default(false) @map("built_in")
+  displayOrder    Int       @default(0) @map("display_order")
+  retiredAt       DateTime? @map("retired_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([workspaceId, roleKey])
+  @@map("person_role")
 }
 
 // ─── Sources and forms ──────────────────────────────────────────────────────────────────────────
@@ -419,6 +446,10 @@ model CombinationForm {
   origin        Origin
   /// F1 (P-61 §2): how this line is filed. Existing lines stay PDF upload (today's behaviour).
   channel       FilingChannel    @default(PDF_UPLOAD)
+  /// S5: the age a person must have reached for the line to apply to them (null: any age), and who signs it
+  /// (contracts/workspace.ts SIGNED_BY). Both Sample until the immigration expert confirms.
+  minAge        Int?             @map("min_age")
+  signedBy      String?          @map("signed_by")
   /// S4: the form-finder run that attached this line (AI_FOUND), for "Picked by AI" and its Undo.
   finderBatchId String?          @map("finder_batch_id") @db.Uuid
   updatedBy     String           @map("updated_by")

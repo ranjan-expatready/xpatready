@@ -4,6 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { HttpException, HttpStatus, Inject, Injectable, SetMetadata, type CanActivate, type ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const STUDIO = join(import.meta.dirname, "..", "..");
@@ -85,6 +86,9 @@ export function need(a: Actor, duty: string) {
 }
 export const fail = (msg: string, status = HttpStatus.BAD_REQUEST): never => { throw new HttpException(msg, status); };
 
+/** The built-in starting person roles, an import file (STANDARDS §3.1), not constants in code. */
+export const STARTING_ROLES = (JSON.parse(readFileSync(join(STUDIO, "samples", "person-roles.json"), "utf8")) as { roles: { key: string; label: string; meaning: string; takesPartInCase: boolean; mayBeApplicant: boolean }[] }).roles;
+
 @Injectable()
 export class Workspace {
   private cached: string | null = null;
@@ -92,6 +96,8 @@ export class Workspace {
   async id(): Promise<string> {
     if (this.cached) { const ok = await this.db.workspace.findUnique({ where: { id: this.cached } }); if (ok) return this.cached; }
     const w = await this.db.workspace.upsert({ where: { key: WORKSPACE_KEY }, update: {}, create: { key: WORKSPACE_KEY, label: "Demo workspace (disposable)" } });
+    // S5 (M3): a workspace starts with the six built-in person roles (Reset keeps them; Sample until the expert confirms).
+    if (!(await this.db.personRole.count({ where: { workspaceId: w.id } }))) await this.db.personRole.createMany({ skipDuplicates: true, data: STARTING_ROLES.map((r, i) => ({ workspaceId: w.id, roleKey: r.key, label: r.label, meaning: r.meaning, takesPartInCase: r.takesPartInCase, mayBeApplicant: r.mayBeApplicant, builtIn: true, displayOrder: i + 1 })) });
     this.cached = w.id;
     return w.id;
   }

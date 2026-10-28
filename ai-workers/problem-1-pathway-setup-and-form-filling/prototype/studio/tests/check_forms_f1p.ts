@@ -25,7 +25,7 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   // ──────────────────────────────────────────── engine (no server): the release warning
   const snap = (entries: Record<string, unknown>[]) => ({ combination: { portal: null }, canonical_fields: [], forms: [], field_maps: [{ form_number: "IMM 5257", form_edition: "IMM 5257 (Sample)", entries }] }) as unknown as Snapshot;
   const row = { data_path: "row1.employer", caption: "Employer", outcome: "mapped", fact: "employment.employer", row: 1 };
-  const warn = (s: Snapshot) => channelProblems(s).filter((p) => /no purpose yet/.test(p.message));
+  const warn = (s: Snapshot) => channelProblems(s).filter((p) => /do(es)? not say yet what the list holds/.test(p.message));
   ok("C3.2: release check: a list row with no purpose is a warning (\"Purpose: not set\"), never an error", warn(snap([row])).length === 1 && warn(snap([row]))[0].level === "warning", warn(snap([row]))[0]?.message);
   ok("C3.2: release check fail: once the list row has a purpose, or the field is not a list row, no warning is left", warn(snap([{ ...row, list_purpose: { kind: "all", overflow: "extra_sheet" } }])).length === 0 && warn(snap([{ ...row, row: null }])).length === 0 && warn(snap([{ ...row, outcome: "not_a_fact" }])).length === 0);
   ok("C3.2: the five purposes and two overflow choices are one constant each", LIST_PURPOSES.map((p) => p.key).join() === "current,for_post,all,latest,date_range" && LIST_OVERFLOWS.map((o) => o.key).join() === "extra_sheet,flag_officer");

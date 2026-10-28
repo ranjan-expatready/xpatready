@@ -186,7 +186,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const caseSubject = people.find((p) => p.role === "case")!;
   const { known, confirm } = knownOf(s, people, answers, rows, today);
-  const r = render(s, renderPeople, known);
+  const r = render(s, renderPeople, known, { today });
   const subjectOf = (about: string) => (about === "case" ? caseSubject.subjectId : about.split("/")[0]);
   const fills = new Map<string, Map<string, { form: string; person: string; subject: string; boxes: number }>>();
   for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about) {

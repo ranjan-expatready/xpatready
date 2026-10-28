@@ -187,10 +187,11 @@ function pdf(title, text) {
   const resetFocus = await focusIn();
   step("C6.3 QA-41: a dialog whose field is still loading opens on itself (its title is read), never on Close", resetFocus.inDialog && resetFocus.label !== "Close", JSON.stringify(resetFocus));
   await p.keyboard.press("Escape"); await p.getByRole("dialog").waitFor({ state: "detached" });
-  await p.goto(`${BASE}/c/${ss.id}`); await p.getByRole("button", { name: "Add form" }).click(); await p.getByRole("dialog").waitFor();
+  // S5 (P-118 Q2): "+ Add form" left the Overview; the Forms tab's "Add a form from the library" is the right panel now.
+  await p.goto(`${BASE}/c/${ss.id}/forms`); await p.getByRole("button", { name: "Add a form from the library" }).click(); await p.getByRole("dialog").waitFor();
   await p.waitForFunction(() => document.activeElement?.closest('[role="dialog"]'), null, { timeout: 5000 }).catch(() => {});
   const panel = await p.evaluate(() => ({ label: document.activeElement?.getAttribute("aria-label"), tag: document.activeElement?.tagName, close: document.activeElement?.getAttribute("aria-label") === "Close" }));
-  step("C6.1 QA-41: the right panel (+ Add form) opens on its first field, not on Close", !panel.close && ["INPUT", "SELECT", "TEXTAREA"].includes(panel.tag), JSON.stringify(panel));
+  step("C6.1 QA-41: the right panel (Add a form from the library) opens on its first field, not on Close", !panel.close && ["INPUT", "SELECT", "TEXTAREA"].includes(panel.tag), JSON.stringify(panel));
   await p.keyboard.press("Escape");
 
   // ======================================================== QA-42: the sample note on a combination a person changed

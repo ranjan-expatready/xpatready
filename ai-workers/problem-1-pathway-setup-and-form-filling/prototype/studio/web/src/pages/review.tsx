@@ -4,6 +4,8 @@ import { CheckCircle2, CornerUpLeft, Rocket, Send } from "lucide-react";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
 import { Button, Notice, Pill, Table, Textarea } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
+import { irccWords } from "../../../contracts/workspace";
+import { problemWords } from "../../../contracts/programs";
 
 /** The simulated person's name for an id the server stores (QA-10: never "user-A" on screen). */
 const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
@@ -21,6 +23,9 @@ export function ReviewTab({ d }: { d: any }) {
   const submit = useAction(() => api(`/combinations/${id}/submit`, { method: "POST", json: { note } }), { success: "Submitted for review", invalidate: inv, onDone: () => setNote("") });
   const sign = useAction((b: any) => api(`/combinations/${id}/signoff`, { method: "POST", json: b }), { success: (x: any) => "Recorded", invalidate: inv, onDone: () => { setPicked(new Set()); setNote(""); } });
   const approve = useAction(() => api(`/combinations/${id}/approve`, { method: "POST" }), { success: (x: any) => `Released version ${x.version} (${x.sha256.slice(0, 12)})`, invalidate: inv });
+  // S5 m7 (P-123, AGENTS rule 4): the second person sees which forms AI picked, with IRCC's words, and confirms they apply.
+  const cfg = useApi<{ snapshot: { forms: { form_number: string; title: string; origin?: string; source_quote?: string | null }[] } }>(["config", id, "draft"], `/combinations/${id}/config?mode=draft`);
+  const aiPicked = (cfg.data?.snapshot.forms ?? []).filter((f) => f.origin === "AI_PROPOSAL" || f.origin === "AI_FOUND");
   if (r.isLoading || !session.data) return <Spinner label="Loading review" />;
   const v = r.data;
   const me = session.data.actor;
@@ -33,8 +38,14 @@ export function ReviewTab({ d }: { d: any }) {
   const can = (duty: string) => me.duties.includes(duty);
   return (
     <div className="space-y-4">
+      {aiPicked.length ? (
+        <Notice tone="ai" title={`Forms AI picked (${aiPicked.length}): confirm they apply before release`}>
+          <ul className="mt-1 space-y-1" data-ai-picked>{aiPicked.map((f) => <li key={f.form_number}><span className="mono font-medium">{f.form_number}</span> {f.title}{f.source_quote ? <span className="text-text-muted"> · IRCC's words: "{irccWords(f.source_quote)!.slice(0, 140)}"</span> : null}</li>)}</ul>
+          <p className="mt-1 text-xs">Which forms apply is Sample until the immigration expert confirms it here.</p>
+        </Notice>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-3">
-        <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author or content reviewer" text={sub ? `Submitted by ${nameOf(session.data.actors, sub.submittedBy)}, ${fmtWhen(sub.submittedAt)}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${v.draft.changes.length} draft change${v.draft.changes.length === 1 ? "" : "s"}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
+        <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author (only the author submits)" text={sub ? `Submitted by ${nameOf(session.data.actors, sub.submittedBy)}, ${fmtWhen(sub.submittedAt)}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${v.draft.changes.length} draft change${v.draft.changes.length === 1 ? "" : "s"}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
         <StepCard n={2} title="SME duty signs content" done={!!sub && !unsignedSme.length} who="Content reviewer (Immigration SME duty)" text={sub ? `${needSme.length - unsignedSme.length} of ${needSme.length} rule, document, check or AI-proposed changes signed` : "Rules, document requirements, checks and AI proposals need the SME duty"} />
         <StepCard n={3} title="A second person releases" done={false} who="Approver (never the author or submitter)" text={v.releases[0] ? `Last release: Release ${v.releases[0].release} by ${v.releases[0].approver}` : "Nothing released yet"} />
       </div>
@@ -43,7 +54,7 @@ export function ReviewTab({ d }: { d: any }) {
         <div className="rounded-xl border border-border bg-surface-raised p-4">
           <p className="font-medium">Validation of the draft</p>
           <p className="mt-1 text-xs text-text-muted">{errors.length} error{errors.length === 1 ? "" : "s"} (block submission) · {warnings.length} warning{warnings.length === 1 ? "" : "s"} (shown and recorded)</p>
-          <ul className="mt-2 space-y-1 text-sm">{[...errors, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span><b>{p.where}</b> · <span className="mono">{p.item}</span>: {p.message}</span></li>)}</ul>
+          <ul className="mt-2 space-y-1 text-sm">{[...errors, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem><b>{p.where}</b> · {problemWords(p)}</span></li>)}</ul>
           {errors.length + warnings.length > 8 ? <Button size="sm" variant="ghost" className="mt-1" onClick={() => setAllProblems(!allProblems)}>{allProblems ? "Show fewer" : `Show all ${errors.length + warnings.length}`}</Button> : null}
         </div>
       ) : <Notice tone="ok" title="The draft passes validation" />}

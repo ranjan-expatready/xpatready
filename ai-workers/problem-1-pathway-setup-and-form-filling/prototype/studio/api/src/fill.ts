@@ -2,7 +2,7 @@
 // confirmed sample facts cover; the P5 transformation executor turns each value into the box's own format; the P5
 // filler (p5/fill.py, E5 append-only writer) writes a copy of the official form and reads every value back, checks
 // nothing else changed and that the IRCC signatures still verify. Only confirmed facts are written.
-import { HttpStatus, Inject, Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -72,7 +72,11 @@ export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, fo
 export class Fill {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Studio) private readonly studio: Studio, @Inject(Audit) private readonly audit: Audit) {}
 
-  async fill(actor: Actor, combinationId: string, b: { form: string; person: string; mode?: "draft" | "release"; profile?: string }) {
+  async fill(actor: Actor, combinationId: string, body: { form: string; person: string; mode?: "draft" | "release"; profile?: string }) {
+    // QA-47: a missing form or person is a 400 naming the field, never a 404 about "undefined".
+    const b = (body && typeof body === "object" ? body : {}) as typeof body;
+    const errors = [!(typeof b.form === "string" && b.form.trim()) ? { field: "form", message: "Choose the form to fill." } : null, !(typeof b.person === "string" && b.person.trim()) ? { field: "person", message: "Choose the person the form is for." } : null].filter(Boolean) as { field: string; message: string }[];
+    if (errors.length) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: errors.map((e) => e.message).join(" "), errors }, HttpStatus.BAD_REQUEST);
     const view = await this.studio.preview(combinationId, { mode: b.mode ?? "release", profile: b.profile ?? "client-a-family" });
     const cov = view.coverage.find((c: any) => c.form === b.form && c.person === b.person);
     if (!cov) fail(`${b.form} does not apply to that person in this ${view.mode === "release" ? "release" : "draft"}.`, HttpStatus.NOT_FOUND);
