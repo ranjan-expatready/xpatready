@@ -204,7 +204,7 @@ export function StructurePage() {
               return (
                 <Tip key={t.value} tip={t.tip}>
                   <button type="button" aria-pressed={type === t.value} onClick={() => { set({ t: t.value === "INDIVIDUAL" ? null : t.value, node: null, p: null, prog: null }); setClosed(new Set()); setConfirm(null); }}
-                    className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", type === t.value ? "bg-primary font-semibold text-primary-foreground shadow-sm" : "text-text-muted hover:text-text")}>{t.label}{c !== undefined ? <span className={cn("text-xs font-medium", type === t.value ? "text-primary-foreground/80" : "text-text-muted")}>{c}</span> : null}</button>
+                    className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", type === t.value ? "bg-primary font-semibold text-primary-foreground shadow-sm" : "text-text-muted hover:text-text")}>{t.label}{c !== undefined ? <span className={cn("text-xs font-medium", type === t.value ? "text-primary-foreground" : "text-text-muted")}>{c}</span> : null}</button>
                 </Tip>
               );
             })}

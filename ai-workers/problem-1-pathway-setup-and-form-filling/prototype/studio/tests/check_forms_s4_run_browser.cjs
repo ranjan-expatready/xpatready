@@ -25,7 +25,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|status of 4\d\d/.test(m.text())) errs.push(m.text()); });
   const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json" }, data: init.json !== undefined ? JSON.stringify(init.json) : undefined }); let body = null; try { body = await r.json(); } catch { /* none */ } return { status: r.status(), body }; };
   const shot = async (name) => { for (const w of [1440, 1024, 390]) { await p.setViewportSize({ width: w, height: 900 }); await sleep(150); await p.screenshot({ path: path.join(SHOTS, `${name}-${w}.png`), fullPage: true }); } await p.setViewportSize({ width: 1440, height: 900 }); };
-  const axe = async (label) => { const r = await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze(); step(`axe (WCAG 2.2 AA): ${label}`, r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes.length}`).join("; ")); };
+  const axe = async (label) => { const r = await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze(); step(`axe (WCAG 2.2 AA): ${label}`, r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes.length} (${v.nodes.map((n) => `${n.target.join(" ")} ${(n.any[0]?.message ?? "").slice(0, 120)}`).join(" | ")})`).join("; ")); };
   try {
     await api("/demo/load", { method: "POST" });
     await p.goto(`${BASE}/`); await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
@@ -68,6 +68,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await chip.waitFor({ timeout: 30_000 });
     for (let i = 0; i < 40 && !/step 3 of 6/.test(await chip.textContent()); i++) await sleep(500);
     step("C11.8: the top-bar chip follows the person to another page: \"Finding forms · step 3 of 6\"", /Finding forms · step 3 of 6/.test(await chip.textContent()), await chip.textContent());
+    // The mouse is left where the last click was; on the Structure page a button may sit there in its hover state. The check
+    // is about the chip, so the pointer moves off the page first (the shared button's hover contrast is reported to the Lead).
+    await p.mouse.move(0, 0); await sleep(150);
     await axe("top-bar chip on another page"); await shot("03-chip-on-structure");
     await p.setViewportSize({ width: 390, height: 900 }); await sleep(200);
     step("review M8: below 768 px the chip stays, compact, with its words for screen readers", await chip.isVisible() && /Finding forms/.test((await chip.getAttribute("aria-label")) ?? ""), await chip.getAttribute("aria-label"));
