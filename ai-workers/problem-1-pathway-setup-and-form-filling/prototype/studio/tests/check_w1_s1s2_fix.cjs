@@ -91,7 +91,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const ns = cat.rows.find((r) => !r.combinationId);
   await p.goto(`${BASE}/`); await ready(); await p.waitForTimeout(300);
   await p.locator(`article[data-node="${ns.nodeKey}"] [data-next-step]`).dblclick();
-  await p.waitForURL(/\/c\/[0-9a-f-]+\/sources/);
+  await p.waitForURL(/\/c\/[0-9a-f-]+\/(sources|forms)/); // S3 item 5: Start setup opens the Forms tab
   await p.waitForTimeout(400);
   await p.goBack(); await p.waitForTimeout(600);
   step("QA-50 pass: after a double click on Start setup, one Back returns to Immigration programs", new URL(p.url()).pathname === "/" && await p.getByRole("heading", { level: 1, name: "Immigration programs" }).count() === 1, p.url());

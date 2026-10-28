@@ -22,7 +22,9 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 
 **Build ahead (P-126), 28 Oct:** S6 Shared library re-check written, `screens/W1-shared-library/recheck-2026-10-28.md`: build after changes, 0 Blocker · 5 Major (R1 live drafting only on a click vs P-120 "when a form enters", R2 the two AI rounds and the agreement rule are finder-only: extract a shared `rounds.ts`, R3 the queue item contract first so W1-10 writes into it, R4 S6 slice 3 waits for S5 (Person roles [r]), R5 reuse the Add pop-up, lifecycle, run card, cost wording, deny-by-default) · 6 Minor; of the 8 accepted Majors 4 partly done, 4 open. No S6 code.
 
-**Next:** item 5 when S5 is on main (Lead says): sync, the block into S5's Forms tab slot, the three conflicts, rerun, EARLY-LOOK with 1440 shots. Earlier: Open points for the Lead: the page's own "Next step: Add sources" shows above the finder offer on a just-started combination (two calls to action; the shared next-step rule, next to runtime's forms); qa's `check_qa_m2_journeys` needs qa's rewrite (stale since round 3); m8 and m9 after runtime slice 2.
+**Item 5 (29 Oct), commit 267a3775 on main e2cb27a4:** three conflicts resolved (S5 tabs kept); Start setup's offer is the Forms tab's "No form find yet" slot (one block, one call to action); a run that could not pick the application page shows "Waiting for you: choose the application page" with one button opening the Find dialog's page choice (`pageUrl`), and the AI work card links to `/c/<id>/forms?find=page` (QA-63); one "about" rule in `api/src/finder-cost.ts`. Evidence: start_setup 26/26, start_setup_browser 39/39 (shots 02 just started, 03 nothing attached, 04 page choice, 05 saved replay), s5_slice3_browser 35/35; run-suites on 267a3775 running.
+
+**Earlier next:** item 5 when S5 is on main (Lead says): sync, the block into S5's Forms tab slot, the three conflicts, rerun, EARLY-LOOK with 1440 shots. Earlier: Open points for the Lead: the page's own "Next step: Add sources" shows above the finder offer on a just-started combination (two calls to action; the shared next-step rule, next to runtime's forms); qa's `check_qa_m2_journeys` needs qa's rewrite (stale since round 3); m8 and m9 after runtime slice 2.
 
 **Learned, not written elsewhere:**
 - Other lanes run this lane's checks under the same copy names and ports (`run-suites.sh` uses the usage lines), and all copies share one PostgreSQL server: two runs at once break each other. For reruns, use private names and ports (for example `<name>_mine` on 4460+), then drop those databases.
@@ -32,14 +34,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-start-setup (S3 Start setup)
-stage: FIX (items 1–4 done; item 5 waits for S5 on main)
+stage: EARLY-LOOK (S3 items 1–5 done on S5)
 owner: Lead
-next_action: Lead: answer the S6 re-check (screens/W1-shared-library/recheck-2026-10-28.md: founder Q1, Lead Q-L1..L3); tell the lane when S5 is on main for S3 item 5
-then: S3 item 5 (Forms tab slot, three conflicts, "Choose the application page" leads somewhere real), EARLY-LOOK; then S6 BUILD slice 1 after rounds.ts and the queue contract (re-check R2, R3)
-blocked_by: S5 on main (item 5 only)
-updated: 2026-10-28
+next_action: Lead: early look on S3 with item 5 (screens/W1-start-setup/screenshots 01–05 at 1440 and 1024; build-notes "Item 5"), then the founder
+then: Lead check and merge; S6 re-check answers (founder Q1, Lead Q-L1..L3); m8 and m9 after runtime slice 2
+blocked_by: none
+updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-start-setup (S3) · FIX → EARLY-LOOK · applied Lead message (S5 on main e2cb27a4): item 5 — sync, three conflicts, Start setup in S5's Forms tab slot, the page choice that "Choose the application page" leads to (QA-63), one cost rule; start_setup 26/26, browser 39/39, s5_slice3 35/35; run-suites on 267a3775 running. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-shared-library (S6) · build ahead (P-126) · applied Lead message (S3 items 1–4 OK): fresh re-check of S6 against main 38722933, S5 [r] bb853222, forms b619d3cb, S3 d63b7ca4 and the 28 Oct team capture (R-109): build after changes, 5 Major, 6 Minor, 1 founder question, 3 Lead questions; no code. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-start-setup (S3) · FIX · applied Lead note 2026-10-28 (early look items 1–4): plain words for launcher failures, Next step Find forms, one find button on the run card, one cost wording; start_setup 23/23, browser 26/26, screen01_rules 67/67; run-suites 49/49 on a6744c0b (2fc0f26c had 48/49: a timing race in the new browser step, fixed by waiting for the refreshed offer); item 5 waits for S5. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-start-setup (S3) · BUILD → EARLY-LOOK · S3 built (start guard, POST /combinations/start, landing offer live only on a click, one Start setup, /new and both path endpoints gone, checks moved); run-suites 47/48 (programs_r3 ECONNRESET, 26/26 alone), journey 45/45, start_setup 17/17, start_setup_browser 20/20. AI US$0. Owner → Lead.
@@ -49,4 +52,3 @@ updated: 2026-10-28
 - 2026-10-28 · W1-visual-system · FIX → Lead · qa after-merge on dccd87e: QA-60 (letters kept after Add and add another), QA-56 (Enter accepts a typed name), QA-55 (Retire names real blockers and the way out), QA-58 (Undo kept on the page note), QA-59 (Returned with note; Send again), Button primary hover 8.15:1; each with pass and fail checks; run-suites 41/41, journey 45/45, qa's steps for these pass. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-visual-system · FIX → Lead · PR #66 review fixes 19e8911d; run-suites 40/41 on it, the one failure (Add combination prefill race under load) fixed in b078f150 with a fail-guard; touched checks all pass on b078f150 and the journey 45/45. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-visual-system · FIX (Lead PR #66 review) · three fixes with a pass and a fail check each: Load sample records itself as creator (sample names never an own draft), Move past a retired sibling keeps it in place, the Add pop-up seeds from the type it was opened for; structure_r3 34/34, structure_browser 123/123; full run-suites on the fix commit. AI US$0.
-- 2026-10-28 · W1-visual-system · BUILD → EARLY-LOOK · round 3 built: R3a Program structure (263bb9a) with the shared lifecycle pattern (93b0040b: one guard and word set, own draft deleted at once with Undo, re-check before Approve, RowAction / BlockedLine / WherePanel / ImpactPanel / Undo toast), R3b Immigration programs (776d4169); run-suites 41/41 on 776d4169, journey 45/45; main merged e36bf06e. AI US$0. Owner → Lead.
