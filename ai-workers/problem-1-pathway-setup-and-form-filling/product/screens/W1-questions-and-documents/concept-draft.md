@@ -1,6 +1,6 @@
 # Questions and documents, document first — concept draft (Lead, 28 Oct)
 
-Status: **draft for the founder**. It builds on what is already decided. It does not replace it: P-47, P-62, P-72, P-76, P-77, P-97, P-110, P-119–P-121, P-123, P-129.
+Status: **Agreed 29 Oct** (founder: §8 Q1–Q3 as recommended → P-130, P-131, P-132). It builds on what is already decided. It does not replace it: P-47, P-62, P-72, P-76, P-77, P-97, P-110, P-119–P-121, P-123, P-129.
 Inputs: two read-only surveys, 28 Oct, covering every design file, Devin's work, the team's requirements (drive snapshot 19 Oct) and the team's code (dev, 28 Oct).
 Where it lands:
 * the Combination workspace's **Questionnaires** and **Documents** tabs (S5, runtime lane);
@@ -105,3 +105,13 @@ Lean cuts recommended (the team owns these):
 * AI form review (the team's AG-11 Checker): we show findings, acknowledged with a reason.
 
 M3's first open question: **what is a Filing?** One combination per case, or several filings per case (the team's AG-7-45)?
+
+## 10. How it builds up (after the founder's agreement; one slice at a time, each with an early look)
+1. **Data, runtime lane, after S5 merges:** a per-combination record per fact (comes from, PQR tick) plus coverage rules (one source each, PQR ⊂ SQR, a document fact's document on the checklist). Rules-only drafting, US$0.
+2. **Questionnaires tab, runtime:** the strip and the table (frame 2). Early look.
+3. **Documents tab, runtime:** "supplies n facts" and alternatives (frame 3). Early look.
+4. **Preview in three sets, runtime:** frame 4. Early look.
+5. **AI steps 2, 5, 6 and 7 in W1-10, forms lane:** in the shared run card, into S6's queue. The live trial runs once on Visitor visa (P-131).
+6. **qa:** after-merge on each slice; S8 walks it like a content publisher.
+
+Parallel: slices 1–4 (runtime) and slice 5 (forms) touch different files, so they can run at the same time. Slice 5 needs the S6 queue, and S6 is the screens lane's next item.
