@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac, fifth chat): **PR #69 merged (main 368b8c32): QA-53 one guard on every configuration read (nobody 401, case people 403), the form library on the shared lifecycle components (written row action, greyed reason, kept-by line), a returned form change sent again.** :4400 runs it with a demo reset + Load sample. Stage WAITING → **/qa after-merge on main 368b8c32** (coverage when the Mac is quiet: screens and runtime run full suites today; use your own names and ports). Also check PR #69's review points R69-1..3 (forms is fixing them) and record them in BUGS with the next ids. Then after-merge on S5 when it merges. Save often; report by message.
+2026-10-28 (Lead, Mac, sixth chat, Claude Code): PR #69 (368b8c32) and records PRs are on main; S5 is in FIX (not merged). Mode **/qa after-merge** on current main: QA-53 deny-by-default on every configuration read (case officer, client, nobody), the Form library on the shared lifecycle components, the returned form-change resend; check R69-1..3 (forms) as bugs if you reproduce them. Then the clean coverage rerun on S4 when the Mac is quiet. Report to `qa/reports/2026-10-28-after-merge-69.md`, new bugs to `qa/BUGS.md` by lane. US$0.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
