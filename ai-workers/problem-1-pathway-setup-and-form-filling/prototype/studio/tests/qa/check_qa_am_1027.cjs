@@ -134,8 +134,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
     // Remove an unused name: second person approves on To review, the name is gone.
     await item("Tourist visa (to remove)").click();
-    await p.getByRole("button", { name: "Remove" }).click();
-    await p.getByLabel(/Why remove/).fill("Added by mistake (qa walk)"); await p.getByRole("button", { name: "Send for approval" }).click();
+    await p.getByRole("button", { name: "Delete" }).click();
+    await p.getByLabel(/Why delete/).fill("Added by mistake (qa walk)"); await p.getByRole("button", { name: "Send for approval" }).click();
     await p.getByText(/Sent to a second person on To review/).waitFor({ timeout: 8000 }).catch(() => {});
     const chg = sql("select id from library_change where status='WAITING' order by proposed_at desc limit 1");
     step("C11.9 Remove waits for a second person (the name stays until approved)", !!chg && sql("select count(*) from program_def where label='Tourist visa (to remove)'") === "1");
@@ -148,7 +148,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await b.getByRole("button", { name: "Approve" }).click(); await b.waitForURL(/\/review$/);
     await wait(1500);
     step("C11.9 the approver approves on To review and the unused name is removed at once", sql("select count(*) from program_def where label='Tourist visa (to remove)'") === "0", sql(`select status from library_change where id='${chg}'`));
-    step("QA-46 P-116: To review names the action as the page does ('Remove', not 'Delete')", !/^Delete/.test(reviewTitle), reviewTitle);
+    step("QA-46 P-116: To review names the action as the page does ('Delete', not 'Remove'; P-128)", !/^Remove/.test(reviewTitle), reviewTitle);
     // Read-only approver on the Structure page; the server refuses writes.
     await b.goto(`${b.base}/structure`); await b.getByRole("treeitem").filter({ has: b.getByText("Temporary residence", { exact: true }) }).first().click();
     step("BR-15 approver: Add pathway, the name and Save are disabled on the page", await b.locator("[data-pathway-cards]").getByRole("button", { name: /Add pathway/ }).isDisabled() && await b.getByLabel(/^Name/).isDisabled() && await b.getByRole("button", { name: "Save" }).isDisabled());
@@ -274,7 +274,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     step("S1 Used by on a Live combination says its state with Open to its page", /Live/.test(usedLeaf) && await a.locator("[data-used-by]").getByRole("link", { name: "Open" }).getAttribute("href") === `/c/${vv}`, usedLeaf);
     const whereUsed = await text(a, "section[aria-label='Where used']");
     const retireLeafOff = await a.getByRole("button", { name: "Retire" }).isDisabled();
-    step("C11.9 a released name cannot be removed; its Retire waits until its combination is retired, and Where used says so", await a.getByRole("button", { name: "Remove" }).isDisabled() && retireLeafOff && /retire it first/.test(whereUsed), whereUsed.slice(0, 200));
+    step("C11.9 a released name cannot be removed; its Retire waits until its combination is retired, and Where used says so", await a.getByRole("button", { name: "Delete" }).isDisabled() && retireLeafOff && /retire it first/.test(whereUsed), whereUsed.slice(0, 200));
     // QA-48: "retire it first" — but no screen retires a combination (Structure panel on the leaf, combination page, Programs).
     await a.goto(`${a.base}/c/${vv}`); await a.getByRole("heading", { name: "Visitor visa", level: 1 }).waitFor();
     const comboRetire = await a.getByRole("button", { name: /^Retire/ }).count();
