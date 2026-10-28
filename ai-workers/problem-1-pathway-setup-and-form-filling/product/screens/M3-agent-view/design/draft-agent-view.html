@@ -128,7 +128,7 @@ body.labels .lab{display:inline-block}
 .k{font-size:12px;color:var(--faint)}
 </style>
 
-<div class="board-title"><div><h1>M3 · Agent view and filing: draft board, r2</h1><p>m3 lane, 29 Oct · r2: dependency graph and use cases first (frame 0), v3 Split view fixed, mixed channels, after filing · concept <code>screens/M3-agent-view/concept-draft.md</code> · builds on the agreed v2 board (P-122) and document first (P-130, P-133, P-134) · every name, value, form and channel is <span class="sample">Sample</span> until the immigration expert confirms · Unconfirmed: no counsel on signing and correction points</p></div>
+<div class="board-title"><div><h1>M3 · Agent view and filing: draft board, r3</h1><p>m3 lane, 29 Oct · r3 after the fresh challenge (challenge.md: B1, M1–M7, m1–m9): one filing per person who files their own application, items of three kinds, portal read-only (P-122) · concept <code>screens/M3-agent-view/concept-draft.md</code> · builds on the agreed v2 board (P-122) and document first (P-130, P-133, P-134) · every name, value, form and channel is <span class="sample">Sample</span> until the immigration expert confirms · Unconfirmed: no counsel on signing and correction points</p></div>
 <div class="toolbar"><button class="btn" onclick="document.body.classList.toggle('labels')">Show labels</button><span class="proto">Scaffolding · board only</span></div></div>
 <div class="legend">Labels: <span class="lab cap" style="display:inline-block">Capability</span> what the product does in production · <span class="lab scf" style="display:inline-block">Scaffolding</span> Sample data, demo or board aids · <span class="lab nb" style="display:inline-block">Team AG-xx</span> the team builds it; we show only its inputs or findings · <span class="lab f" style="display:inline-block">F P-xx</span> follows a decision · <span class="lab m" style="display:inline-block">Q1</span> waits on a founder question. Rule on every frame: <b>little on each row; detail in the side drawer, the ⋯ menu and tooltips.</b></div>
 
@@ -147,26 +147,26 @@ body.labels .lab{display:inline-block}
 <h3 style="font-size:16px;margin-bottom:8px">0a · Dependency graph of one filing</h3>
 <div class="dg">
  <div class="nd"><b>Combination</b>pinned release</div><div class="ar">→</div>
- <div class="nd"><b>Route</b>APR · IRCC · PR Portal · Paper <span class="lab m">Q2</span></div><div class="ar">→</div>
- <div class="nd" style="grid-column:span 2"><b>Channel per form</b>Online · PDF upload · Paper · Signed PDF · Step (video or phone)</div>
- <div class="nd"><b>People on the filing</b>role, age, accompanying <span class="lab m">Q1</span></div><div class="ar">→</div>
+ <div class="nd"><b>Portal</b>from the combination, read-only (P-122) <span class="lab m">Q3</span></div><div class="ar">→</div>
+ <div class="nd" style="grid-column:span 2"><b>Channel per form</b>Online · PDF upload · Paper (forms only, within what IRCC accepts)</div>
+ <div class="nd"><b>Filings and people</b>one filing per person who files their own application; accompanying people on it <span class="lab m">Q1</span></div><div class="ar">→</div>
  <div class="nd st1"><b>Documents per person</b>checklist from the release</div><div class="ar">→ read →</div>
  <div class="nd st1"><b>Facts</b>document › client › agent · Proposed → Confirmed by section</div><div class="ar">→ fill</div>
- <div class="nd st2" style="grid-column:1/3"><b>Deliverables</b> form line × person × channel: answer sheet + "entered" · PDF fill → our check → Adobe Validate → upload → read back · paper print → pen → mail · step booked → done</div><div class="ar">→</div>
- <div class="nd st2"><b>Signatures</b>follow the route: client e-signs in portal · representative's declaration · pen</div><div class="ar">→</div>
- <div class="nd gate"><b>Ready to file</b>only "needed before filing" items</div>
- <div class="nd"><b>Record the filing</b>per person: application number, UCI; fee receipt</div><div class="ar">→</div>
- <div class="nd post" style="grid-column:span 4"><b>After filing</b> acknowledgement · biometrics letter · medicals · document requests · interview (video or phone) · returned incomplete → fix → resubmit · decision</div>
+ <div class="nd st2" style="grid-column:1/3"><b>Items of three kinds</b> <b style="display:inline">form</b> (line × person × channel; signing is part of it) · <b style="display:inline">document</b> (upload to IRCC) · <b style="display:inline">IRCC step</b> (interview, biometrics)</div><div class="ar">→</div>
+ <div class="nd st2"><b>Signing steps</b>inside each form item, from the line's signer and the portal: client e-signs in the portal · pen · the representative's declaration</div><div class="ar">→</div>
+ <div class="nd gate"><b>Ready to file</b>blocks: our check, missing or conflicting facts (P-71) · out of date, missing signature: <span class="lab m">Q2</span></div>
+ <div class="nd"><b>Record the filings</b>together in one action; per filing: application number, UCI; fee receipt</div><div class="ar">→</div>
+ <div class="nd post" style="grid-column:span 4"><b>After filing</b> read-only · no second recording · "filed with an earlier value" + task. Milestones (acknowledgement, biometrics, requests, decision) are the team's AG-07: <i>not built here</i>. Filings in sequence ("Start next stage", AG-7-45 rule 2): <i>not built here</i>.</div>
  <div class="back" style="grid-column:1/7"><b>Back-edges (why a wizard fails):</b> a changed fact → every finished deliverable using it goes <b>Out of date</b>, never edited · a new upload → new proposals · a new person (newborn) → new documents, facts and deliverables · a change on the employer case → the worker's finished items go out of date.</div>
 </div>
 <p class="small muted">The screen answers one question at the top: <b>what stands between this filing and Submit, and who owes it</b> (officer, client, employer, IRCC).</p>
 
 <h3 style="font-size:16px;margin:14px 0 8px">0b · Use cases the design must carry (frame that shows each)</h3>
 <ol class="uc">
-<li>Visitor visa, family of three, one filing, a number and UCI per person (2, 7)</li>
+<li>Visitor visa, family of three: three filings on one screen, recorded together (1, 2, 7)</li>
 <li>Spousal sponsorship + child on the PR Portal: digital forms + PDF uploads + client e-signs (6, 7)</li>
 <li>Same on paper: pen per form and person, barcode page on top (7)</li>
-<li>Mixed in one application: online answer sheet, PDF upload, signed PDF, paper original, video interview (6)</li>
+<li>Mixed in one application: online form, PDF upload, form signed in pen, client e-sign, document on request, IRCC video interview (6)</li>
 <li>Work permit with an employer case linked (10)</li>
 <li>Passport read by rules; officer confirms beside the page (3)</li>
 <li>Client typed a different birth date from the passport (4)</li>
@@ -175,10 +175,10 @@ body.labels .lab{display:inline-block}
 <li>A form not needed on this route: "Not needed on the APR Portal", not hidden (6)</li>
 <li>A fact changes after the client signed: signed copy out of date, re-sign (8)</li>
 <li>A fact corrected after filing: "filed with an earlier value", task (8)</li>
-<li>Returned incomplete: reopen, fix, resubmit; history kept (9)</li>
-<li>Newborn added after submission (9)</li>
+<li>Returned incomplete: reopen, fix, resubmit (<i>not built here</i>, team AG-07)</li>
+<li>Newborn added after submission (<i>not built here</i>)</li>
 <li>Two officers, one edits while the other has it open (11)</li>
-<li>Work permit + spouse's open work permit + child's study permit in one case (Q1, 2)</li>
+<li>Work permit + spouse's open work permit + child's study permit in one case (Q1, 2)</li><li>Filings in sequence, e.g. a nomination then the federal application (<i>not built here</i>)</li><li>Address and travel history typed fast: keyboard, paste rows (<i>not built in M3</i>)</li>
 </ol>
 
 <h3 style="font-size:16px;margin:14px 0 8px">0c · Earlier designs compared: starting points, not templates</h3>
@@ -188,7 +188,7 @@ body.labels .lab{display:inline-block}
 <tr><td><b>v3</b> Split view (strongest)</td><td>each stage has its own progress, blocker and next action; "Needs attention" with reason and owner; "unblocks 3 items"</td><td>mixed units (facts vs sections); three navigation devices for one choice; Command view as a layout</td></tr>
 <tr><td><b>Team mock</b> (case-management)</td><td>blocker → "fix" link to the exact place; binder per applicant with states; waive with a reason</td><td>readiness is an average of four percentages (hides a blocker); form status has no channel or out-of-date; ten tabs for one job; submission per case and blocked</td></tr>
 <tr><td><b>This draft r1</b> (earlier today)</td><td>agent view section, fill from documents, check, checklist, record, out of date, employer link</td><td>five-part strip + filters + list = too many devices on the left; no step kind for video or phone; no route; no after filing</td></tr>
-<tr style="background:var(--ok-tint)"><td><b>Chosen: r2</b></td><td colspan="2">v3 Split view with its units fixed (stage 1 counts <b>sections</b>, stage 2 counts <b>deliverables</b>); one switch "Get the information · Prepare the filing · Everything"; the attention queue grouped by who owes it is the default; rows use one small set of words (<i>Cannot start yet · To do · In progress · Ready · Out of date · Done</i>) and a "Needed before" tag (signing · filing · after filing); a person × deliverable view; the route as a proposal (Q2); after filing in the same view.</td></tr></table></div>
+<tr style="background:var(--ok-tint)"><td><b>Chosen: r2</b></td><td colspan="2">v3 Split view with its units fixed (stage 1 counts <b>sections</b>, stage 2 counts <b>deliverables</b>); one switch "Get the information · Prepare the filing · Everything"; the attention queue grouped by who owes it is the default; rows use one small set of words (<i>Cannot start yet · To do · In progress · Ready · Out of date · Done</i>) and a "Needed before" tag (signing · filing · after filing); a person × deliverable view; the combination's portal read-only (P-122); a minimal after-filing state. <b>r3</b> (challenge): one filing per person who files their own application; items of three kinds; lean rows.</td></tr></table></div>
 </div></div>
 
 <!-- 1 OPEN A CASE -->
@@ -197,12 +197,12 @@ body.labels .lab{display:inline-block}
 <div class="panel" style="margin:16px"><header><h3 style="font-size:18px">Open a case</h3><div class="steps"><i class="d"></i><i class="d"></i><i class="r"></i></div><span class="small muted">1 What · 2 Who · <b>3 Check and open</b></span> <span class="lab cap">Capability</span><span class="lab f">F P-67, P-119</span></header>
 <div class="body">
  <div><div class="k">Filings in this case <span title="A filing is one application to IRCC on one released combination. A family can file several at once, e.g. a work permit and a spouse's open work permit.">ⓘ</span> <span class="lab m">Q1</span></div>
-  <div class="card" style="padding:10px;margin-top:4px"><b>Visitor visa</b> <span class="pill info">Release 2 · Live</span><div class="trail">Retail › Temporary residence › Visitors › Visitor visa</div><div class="small" style="margin-top:6px">People: <span class="role">Client A · Principal applicant</span> <span class="role">Client B · Spouse or partner</span> <span class="role">Client C · Child, 9</span></div><div class="small muted">Each is marked "Files own application" in the combination, so each gets their own forms, documents and application number (P-119).</div></div>
+  <div class="card" style="padding:10px;margin-top:4px"><b>Visitor visa · 3 filings</b> <span class="pill info">Release 2 · Live</span><div class="trail">Retail › Temporary residence › Visitors › Visitor visa</div><div class="small" style="margin-top:6px">People: <span class="role">Client A · Principal applicant</span> <span class="role">Client B · Spouse or partner</span> <span class="role">Client C · Child, 9</span></div><div class="small muted">Each is marked "Files own application" (P-119), so each gets their own filing: own forms, documents, application number and decision (team AG-7-45). People who do not file their own (e.g. a child on a PR application) go on the principal's filing.</div></div>
   <button class="btn ghost sm" style="margin-top:4px">+ Add another filing to this case</button> <span class="lab m">Q1</span></div>
- <div><div class="k">Route <span title="Where this filing goes. The combination proposes it from what IRCC accepts; each form's channel follows it.">ⓘ</span> <span class="lab m">Q2</span></div><div class="small">APR Portal <span class="muted">(proposed by Visitor visa; IRCC Portal and Paper also allowed)</span></div></div>
+ <div><div class="k">Filed through <span title="The portal the combination is set up for. It is not chosen here (P-122); each form's channel is set on its row.">ⓘ</span></div><div class="small">APR Portal <span class="muted">(from the combination)</span></div></div>
  <div><div class="k">Client login that answers</div><div class="small">Client A (sees the questionnaire after M3; P-129)</div></div>
  <div><div class="k">Relies on an employer case <span title="Only for employer-specific work permits. The worker's case reads the employer's name, address and LMIA or offer number from that case, read-only.">ⓘ</span></div><div class="small muted">Not offered: the Visitor visa has no employer facts</div> <span class="lab f">F P-106</span></div>
- <div class="notice info small"><b>Will be created as</b> case ER-0204 · 1 filing · 3 people · pinned to Visitor visa release 2 (the case keeps that release even when a new one goes out). Each person's document checklist is built from the release now.</div>
+ <div class="notice info small"><b>Will be created as</b> case ER-0204 · 3 filings (Client A, B, C) · each person pinned to Visitor visa release 2 (kept even when a new release goes out). Each person's document checklist is built from the release now.</div>
  <div class="notice warn small">Retired combinations are not offered. "Who can be in this application" allows 1 spouse at most: "Add spouse" is off once one is added, with the reason.</div>
 </div><footer><button class="btn">Back</button><button class="btn primary">Open case</button></footer></div></div></div>
 
@@ -219,20 +219,20 @@ body.labels .lab{display:inline-block}
 <div class="top"><div class="logo"><b>ExpatReady</b><span>Cases › ER-0204 · Client A family › Prepare application</span></div><span class="small muted">Case officer (Sample)</span></div>
 <div style="padding:12px 20px;background:var(--raised);border-bottom:1px solid var(--border)">
  <div class="ph" style="margin-bottom:2px"><div><h2>Client A family</h2><p class="trail">Retail › Temporary residence › Visitors › <b>Visitor visa</b> · release 2 · 3 people <span class="lab cap">Capability</span></p></div>
- <div class="row"><span class="fil on" title="One application to IRCC. A case can hold more than one (Q1).">Filing: Visitor visa ▾</span><span class="lab m">Q1</span><span class="fil" title="Where this filing goes. The combination proposed it; changing it re-derives each form's channel (Q2).">Route: APR Portal ▾</span><span class="lab m">Q2</span><span class="more" title="⋯ Add a filing · Person × deliverable view · History · Print checklist">⋯</span></div></div>
+ <div class="row"><span class="fil on" title="Three filings, one per person who files their own application (Q1). The list shows all three; filter by person.">Visitor visa · 3 filings ▾</span><span class="lab m">Q1</span><span class="fil" title="From the combination (P-122). Each form's channel is set on its row.">Filed through APR Portal</span><span class="lab m">Q3</span><span class="more" title="⋯ Add a filing · Person × deliverable view · History · Print checklist">⋯</span></div></div>
  <div class="stg"><div class="stc on"><h4>1 · Get the information</h4><b>3</b> of 9 sections confirmed · <span style="color:var(--danger-t)">1 to check</span><div class="muted">Next: Personal details · Client A</div></div>
- <div class="stc"><h4>2 · Prepare the filing</h4><b>1</b> of 12 deliverables done · 4 cannot start yet<div class="muted">Next: IMM 5476 back from Client A</div></div>
- <div class="stc"><h4>Everything</h4>21 rows · <b style="font-size:13px">6 need you</b></div></div>
+ <div class="stc"><h4>2 · Prepare the filing</h4><b>1</b> of 10 items done · 3 cannot start yet<div class="muted">Next: IMM 5476 back from Client A</div></div>
+ <div class="stc"><h4>Everything</h4>9 sections · 11 documents · 10 items · <b style="font-size:13px">5 need you</b></div></div>
  <div class="tabs" style="margin:10px 0 0"><a>Overview</a><a class="on">Prepare application</a><a>History</a></div></div>
 <div class="ws"><div class="list">
- <div style="padding:0 14px 4px" class="row small"><span class="chip on" style="height:26px">Needs you · 6</span><span class="chip" style="height:26px">All</span><span class="chip" style="height:26px">Everyone ▾</span></div>
+ <div style="padding:0 14px 4px" class="row small"><span class="chip on" style="height:26px">Needs you · 5</span><span class="chip" style="height:26px">All</span><span class="chip" style="height:26px">Everyone ▾</span></div>
  <div class="own">You (case officer) · 3</div>
  <div class="li on"><span>Personal details · Client A</span><span class="pill danger">To check</span><small>birth date differs from the passport · unblocks 2 forms</small></div>
- <div class="li"><span>Travel history · Client B</span><span class="pill warn">To do</span><small>2 proposed from the passport stamps</small></div>
+ <div class="li"><span>Travel history · Client B</span><span class="pill warn">To do</span><small>typed by the client · to confirm</small></div>
  <div class="li"><span>Family and relationships · Client C</span><span class="pill warn">To do</span><small>answered by the principal (P-78)</small></div>
  <div class="own">Client · 2</div>
- <div class="li"><span>Marriage certificate · Client A</span><span class="pill neutral">Requested</span><small>supplies date of marriage · asked 27 Oct · <a>Nudge</a></small></div>
- <div class="li"><span>Background and declarations · Client B</span><span class="pill neutral">In progress</span><small>the client's own; you can see, not confirm (P-97)</small></div>
+ <div class="li"><span>Marriage certificate · Client A</span><span class="pill neutral">Requested</span><small>supplies date of marriage · asked 27 Oct</small></div>
+ <div class="li"><span>Background and declarations · Client B</span><span class="pill neutral">In progress</span><small>on the family link (C6.2) · yours to see, not confirm (P-97)</small></div>
  <div class="own">Done · 3</div>
  <div class="li"><span>Family and relationships · Client A</span><span class="pill ok">Done</span><small>confirmed 28 Oct</small></div>
  <div class="small muted" style="padding:6px 14px">+ 2 more done · switch to "All" for the 9 sections and 11 documents</div>
@@ -264,8 +264,8 @@ body.labels .lab{display:inline-block}
 <div class="drawer-wrap"><div style="padding:16px"><div class="k" style="margin-bottom:6px">Client A · Passport · uploaded 27 Oct by the case officer · page 1 of 1</div>
  <div class="crop"><b>REPUBLIC OF INDIA · PASSPORT</b> <span class="sample">Synthetic document</span><br>Surname <mark>KUMAR</mark><br>Given names <mark>AARAV</mark><br>Nationality INDIAN · Sex M<br>Date of birth <mark>21/03/1990</mark> · Place of birth PUNE<br>Date of expiry 14/02/2033<br><div class="mrz">P&lt;INDKUMAR&lt;&lt;AARAV&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>Z1234567&lt;4IND9003215M3302146&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;06</div></div>
  <p class="small muted">Selecting a proposal highlights its place on the page. <span class="lab scf">Scaffolding · synthetic document (P-133)</span></p></div>
-<div class="panel" style="margin:12px"><header><div class="row sp"><h3 style="font-size:17px">Fill Personal details from documents</h3><span class="more">✕</span></div><div class="small muted">Read by <b>the passport's coded lines</b>, rules only: check digits passed ✓. Printed names compared with the coded names by the passport standard's spelling rules. No AI reads identity documents. <span class="lab cap">Capability</span><span class="lab f">F P-133, P-134</span></div></header>
-<div class="body"><div class="small"><b>Identity facts: look at each one</b> <span title="Names, date of birth, passport number and expiry are checked one by one against the page (research D5, open). Other facts can be accepted together.">ⓘ</span> <span class="lab m">Q3</span></div>
+<div class="panel" style="margin:12px"><header><div class="row sp"><h3 style="font-size:17px">Fill Personal details from documents</h3><span class="more">✕</span></div><div class="small muted">Read from <b>the passport's coded lines</b> in the PDF's text layer, rules only (the POC reader <code>p5/reader/mrz.ts</code>): check digits passed ✓. Only what the coded lines hold is proposed; place of birth is typed. No AI reads identity documents. <span class="lab cap">Capability</span><span class="lab f">F P-133, P-134</span></div></header>
+<div class="body"><div class="small"><b>Identity facts: look at each one</b> <span title="Names (P-134 D2), and by default date of birth, passport number and expiry (report D5, to confirm at the click-through), are checked one by one against the page.">ⓘ</span> <span class="lab f">F P-134 D2 · D5 default</span></div>
  <div class="prop"><span>Family name</span><b>KUMAR</b><span><button class="btn sm">✓ Matches page</button></span></div>
  <div class="prop"><span>Given names</span><b>AARAV</b><span><button class="btn sm">✓ Matches page</button></span></div>
  <div class="prop"><span>Date of birth</span><span><b>21 Mar 1990</b> <span class="pill danger">differs from typed 12 Mar 1990</span></span><span><button class="btn sm">Check…</button></span></div>
@@ -274,13 +274,12 @@ body.labels .lab{display:inline-block}
  <div class="small" style="margin-top:6px"><b>Other facts</b></div>
  <div class="prop"><span>Sex</span><b>M</b><span class="small muted">edit ✎</span></div>
  <div class="prop"><span>Country of citizenship</span><b>India</b><span class="small muted">edit ✎</span></div>
- <div class="prop"><span>Place of birth</span><b>Pune, India</b><span class="small muted">edit ✎</span></div>
  <div class="notice info small">Values go in as <b>Proposed</b>. They fill nothing until the section is confirmed (P-72). Correcting is one click and an edit in place, as quick as accepting.</div></div>
-<footer><button class="btn">Cancel</button><button class="btn primary">Use 7 values · 1 to check</button></footer></div></div>
+<footer><button class="btn">Cancel</button><button class="btn primary">Use 6 values · 1 to check</button></footer></div></div>
 <div style="padding:0 16px 16px" class="g3">
  <div class="state"><h4>Reading</h4>Reading the passport's coded lines… <div class="sk"></div><button class="btn sm">Stop</button><span class="small muted">Rules: no cost. Letters and foreign records: AI vision on synthetic documents, cost shown first (P-110, P-133).</span></div>
  <div class="state"><h4>No document yet</h4>Client A's passport is not uploaded. <button class="btn sm">Upload passport</button> <button class="btn sm ghost">Request from client</button><span class="small muted">Typing the facts always works.</span></div>
- <div class="state"><h4>Could not read</h4>The coded lines' check digits failed (photo blurred). Nothing was proposed. <button class="btn sm">Upload a clearer copy</button> or type the facts.</div>
+ <div class="state"><h4>Could not read</h4>No coded lines in the file's text, or a check digit failed. Nothing was proposed. Printed-zone reading needs Textract: not built in M3. <button class="btn sm">Upload a clearer copy</button> or type the facts.</div>
 </div></div>
 
 <!-- 4 MISMATCH -->
@@ -291,21 +290,23 @@ body.labels .lab{display:inline-block}
  <div><div class="k">Use</div><label class="small"><input type="radio" checked> The passport's value</label><br><label class="small"><input type="radio"> The client's value</label><br><label class="small"><input type="radio"> Another value: <input style="width:120px"></label></div>
  <div><div class="k">Reason (required)</div><select style="width:100%;height:32px"><option>Client typed day and month the wrong way round</option><option>The document is wrong; the client will get it corrected</option><option>Other (write a note)</option></select></div>
  <div class="notice info small">The other value stays on record with your reason. Names differing only by capitals, apostrophes or a shortened coded name do not raise a check (passport spelling rules).</div>
+ <div class="small muted">When it happens: a fact a document supplies is not asked of the client (P-130), so a clash appears only when a value was typed before the upload, or by the officer. This is our rule check (P-71); the team's AG-11 Checker's cross-checks stay advisory.</div>
  <div class="small muted">Variant: <b>two documents disagree</b> (passport vs birth certificate): same panel, two document columns, neither chosen for you.</div></div>
 <footer><button class="btn">Cancel</button><button class="btn primary">Resolve</button></footer></div></div></div>
 
 <!-- 5 DOCUMENT CHECKLIST -->
 <div class="frame"><div class="frame-cap"><span>5 · Documents · per person: the checklist read from the release, growing and shrinking with the answers</span><span>C6.4 · checklist line per person × requirement · document owned by the person (reusable across cases)</span></div>
 <div style="padding:16px 24px"><div class="row sp" style="margin-bottom:8px"><div class="row"><span class="chip on">Client A</span><span class="chip">Client B</span><span class="chip">Client C</span><span class="chip">Needs you · 3</span></div><button class="btn sm">Request all outstanding</button></div>
-<div class="tbl-wrap"><table><tr><th>Document</th><th>Why it is needed</th><th>Supplies</th><th>State</th><th>Uploaded to IRCC</th><th></th></tr>
-<tr><td><b>Passport</b> <span class="small muted">or travel document</span></td><td class="small">Always</td><td class="small"><a>9 facts</a></td><td><span class="pill info">Being checked · 7 proposed</span></td><td>☐</td><td class="more">⋯</td></tr>
-<tr><td><b>Marriage certificate</b></td><td class="small">Asked because marital status is Married</td><td class="small"><a>3 facts</a></td><td><span class="pill warn">Requested 27 Oct</span></td><td>—</td><td class="more">⋯</td></tr>
-<tr><td><b>Bank statements, 4 months</b></td><td class="small">Always</td><td class="small"><a>2 facts</a></td><td><span class="pill ok">Approved</span></td><td>☐</td><td class="more">⋯</td></tr>
-<tr><td><b>Photo</b></td><td class="small">Always</td><td class="small muted">none, filed as is</td><td><span class="pill ok">Received</span></td><td>☐</td><td class="more">⋯</td></tr>
-<tr><td><b>Employment letter</b></td><td class="small">Asked because occupation is Employed</td><td class="small"><a>4 facts</a></td><td><span class="pill neutral">Not requested</span></td><td>—</td><td class="more">⋯</td></tr>
-<tr style="color:var(--faint)"><td>Divorce certificate</td><td class="small">Not applicable now: previous marriage changed to No (file kept)</td><td></td><td><span class="pill neutral">Not applicable</span></td><td>—</td><td class="more">⋯</td></tr>
+<div class="tbl-wrap"><table><tr><th>Document</th><th>State</th><th>Uploaded to IRCC</th><th></th></tr>
+<tr><td title="Always · supplies: 9 facts"><b>Passport</b> <span class="small muted">or travel document</span></td><td><span class="pill info">Being checked · 7 proposed</span></td><td>☐</td><td class="more">⋯</td></tr>
+<tr><td title="Asked because marital status is Married · supplies: 3 facts"><b>Marriage certificate</b></td><td><span class="pill warn">Requested 27 Oct</span></td><td>—</td><td class="more">⋯</td></tr>
+<tr><td title="Always · supplies: 2 facts"><b>Bank statements, 4 months</b></td><td><span class="pill ok">Approved</span></td><td>☐</td><td class="more">⋯</td></tr>
+<tr><td title="Always · supplies: none, filed as is"><b>Photo</b></td><td><span class="pill ok">Received</span></td><td>☐</td><td class="more">⋯</td></tr>
+<tr><td title="Asked because occupation is Employed · supplies: 4 facts"><b>Employment letter</b></td><td><span class="pill neutral">Not requested</span></td><td>—</td><td class="more">⋯</td></tr>
+<tr style="color:var(--faint)"><td title="Not applicable now: previous marriage changed to No (file kept)">Divorce certificate</td><td><span class="pill neutral">Not applicable</span></td><td>—</td><td class="more">⋯</td></tr>
 </table></div>
-<div class="g3" style="margin-top:12px"><div class="state"><h4>States of a line</h4>The team's words (AG-09 binder): Not requested → Requested → Received → Being checked (read, values proposed) → Approved · or Rejected (reason) · Not applicable (file kept). "Uploaded to IRCC" is a separate tick. <span class="lab cap">Capability</span></div>
+<div class="g3" style="margin-top:12px"><div class="state"><h4>Why and what it supplies: on hover and in the drawer</h4>Rows stay lean: the reason ("Asked because marital status is Married") and the facts it supplies are in the tooltip and the drawer.</div>
+<div class="state"><h4>States of a line</h4>The team's words (AG-09 binder): Not requested → Requested → Received → Being checked (read, values proposed) → Approved · or Rejected (reason) · Not applicable (file kept). "Uploaded to IRCC" is a separate tick. <span class="lab cap">Capability</span></div>
 <div class="state"><h4>⋯ menu</h4>Upload · Request from client · Reuse from another case · Replace (new passport: old kept as history, "evidence replaced") · Reject with a reason · See facts it supplies</div>
 <div class="state"><h4>Missing documents warn, never block</h4>IRCC's own portal checklist can differ from ours (research AV-7). A missing document only blocks when a fact it supplies is missing on a form. <span class="lab f">F EXPERIENCE §2.9</span></div></div></div></div>
 
@@ -315,23 +316,25 @@ body.labels .lab{display:inline-block}
 .li.cant{color:var(--faint);cursor:default}.li.cant:hover{background:none}
 .mx2 td,.mx2 th{text-align:center;font-size:12px}.mx2 td:first-child,.mx2 th:first-child{text-align:left}
 </style>
-<div class="frame"><div class="frame-cap"><span>6 · Stage 2 "Prepare the filing": one row per deliverable, every channel in one list (online · PDF upload · paper · signed PDF · video or phone step)</span><span>C7.7 · C7.3 · C7.6 · P-122 · "needed before" tags (Encompass) · "Cannot start yet" (GOV.UK)</span></div>
+<div class="frame"><div class="frame-cap"><span>6 · Stage 2 "Prepare the filing": one row per item, three kinds (form · document · IRCC step), every channel in one list</span><span>C7.7 · C7.3 · C7.6 · P-122 · "needed before" tags (Encompass) · "Cannot start yet" (GOV.UK)</span></div>
 <div class="ws"><div class="list">
- <div style="padding:0 14px 4px" class="row small"><span class="chip" style="height:26px">Needs you · 4</span><span class="chip on" style="height:26px">All · 12</span><span class="chip" style="height:26px">Everyone ▾</span></div>
+ <div style="padding:0 14px 4px" class="row small"><span class="chip" style="height:26px">Needs you · 3</span><span class="chip on" style="height:26px">All · 10</span><span class="chip" style="height:26px">Everyone ▾</span></div>
  <div class="own">Forms</div>
  <div class="li"><span>IMM 5257 · Client A</span><span class="pill warn">In progress</span><small><span class="ch">Online</span> answer sheet · 5 of 8 screens entered · <span class="nb2">before filing</span></small></div>
+ <div class="li"><span>IMM 5257 · Clients B, C</span><span class="pill warn">To do</span><small><span class="ch">Online</span> 2 answer sheets</small></div>
  <div class="li"><span>IMM 5257 · PDF copy · Client A</span><span class="pill neutral">Ready</span><small><span class="ch">Copy</span> not for filing · your copy</small></div>
  <div class="li on"><span>IMM 5707 · Client A</span><span class="pill info">In progress</span><small><span class="ch">PDF upload</span> step 5 of 7: upload the validated copy</small></div>
  <div class="li cant"><span>IMM 5707 · Client B</span><span class="pill neutral" title="Waits for: date of marriage (marriage certificate requested from Client A)">Cannot start yet</span><small><span class="ch">PDF upload</span> waits for date of marriage</small></div>
- <div class="li"><span>IMM 5476 · Use of a representative</span><span class="pill warn">To do</span><small><span class="ch">Signed PDF</span> sent to Client A to sign in pen · <span class="nb2">before filing</span></small></div>
- <div class="own">Steps</div>
- <div class="li"><span>Video call: background answers · Client B</span><span class="pill warn">To do</span><small><span class="ch">Video</span> booked 30 Oct 10:00 · <span class="nb2">before signing</span></small></div>
- <div class="li cant"><span>Representative's declaration</span><span class="pill neutral">Cannot start yet</span><small><span class="ch">Portal</span> at Transmit · after every "before filing" row</small></div>
+ <div class="li"><span>IMM 5476 · Use of a representative</span><span class="pill info">In progress</span><small><span class="ch">PDF upload</span> signing: sent to Client A, pen · <span class="nb2">before filing</span></small></div>
+ <div class="own">Documents and IRCC steps</div>
  <div class="li"><span>Documents to upload · 6 of 11</span><span class="pill warn">In progress</span><small>opens stage 1 documents, filtered</small></div>
+ <div class="li cant"><span>Biometrics · Clients A, B</span><span class="pill neutral">Cannot start yet</span><small><span class="ch">IRCC step</span> after the instruction letter · <span class="nb2">after filing</span></small></div>
+ <div class="own">Send</div>
+ <div class="li cant"><span>Representative's declaration</span><span class="pill neutral">Cannot start yet</span><small>at Transmit, after every "before filing" row</small></div>
  <div class="own">Not needed on the APR Portal</div>
  <div class="li cant"><span>IMM 5257 · paper copy</span><span class="pill neutral">Not needed</span><small>this route takes the online form</small></div>
  <div class="own">Then</div>
- <div class="li cant"><span>Record the filing</span><span class="pill neutral">Cannot start yet</span><small>4 "before filing" rows open</small></div></div>
+ <div class="li cant"><span>Record the 3 filings</span><span class="pill neutral">Cannot start yet</span><small>after Transmit</small></div></div>
 <main style="padding:16px 20px;position:relative">
  <div class="row sp"><div><h3 style="font-size:17px">IMM 5707 · Family information · Client A</h3><div class="small muted"><span class="ch">PDF upload</span> · needed before filing · edition 01-2021 · fill trial passed (evidence E1) <span class="lab cap">Capability</span><span class="lab f">F P-122</span></div></div><span class="more" style="font-size:18px" title="Change channel · Add a PDF copy, not for filing · Download · Run AI review · Report a mapping problem · History">⋯</span></div>
  <div class="g4" style="grid-template-columns:1fr 1fr;margin-top:12px"><div class="card"><div class="stepper">
@@ -347,30 +350,30 @@ body.labels .lab{display:inline-block}
   <div class="prop" style="grid-template-columns:1fr auto"><span class="small">"Address history has a 3-month gap (Jan–Mar 2024)"</span><button class="btn sm">Acknowledge…</button></div>
   <div class="prop" style="grid-template-columns:1fr auto"><span class="small muted">"Sibling count differs from IMM 5257" · acknowledged: half-sibling</span><span class="pill ok">Done</span></div>
   <p class="small muted">Findings never block (P-71). Acknowledging needs a reason; "Other" needs a note.</p>
-  <hr style="border:0;border-top:1px solid var(--line)"><b>Eligibility</b> <span class="lab nb">Team AG-03 Qualifier · inputs only</span><div class="small">Inputs the Qualifier reads: 5 of 6 confirmed · <a>funds available</a> missing. <span class="muted">The result comes from the team's Qualifier.</span></div></div></div>
+  </div></div>
  <div class="g3" style="margin-top:12px">
-  <div class="state"><h4>⋯ Change channel</h4>Online <span class="pill neutral">off</span> "IRCC accepts this form as a PDF only." · Paper <span class="pill neutral">off</span> "Not taken on the APR Portal." Inside what the library and the route allow (Q2).</div>
-  <div class="state"><h4>Each channel's steps (in the drawer)</h4><b>Online:</b> answer sheet in portal order → "Entered" per screen (freezes its answers). <b>Paper:</b> fill → print with barcode page → pen → mailed (tracking number). <b>Signed PDF:</b> prepare → sent → signed scan received → uploaded. <b>Step:</b> booked → done, with a note.</div>
-  <div class="state"><h4>The same words on every row</h4>Cannot start yet (says what it waits for) · To do · In progress · Ready · Out of date · Done · Not needed on this route. Tags: needed before signing · before filing · after filing.</div></div>
+  <div class="state"><h4>⋯ Change channel (forms only)</h4>Online <span class="pill neutral">off</span> "IRCC accepts this form as a PDF only." · Paper <span class="pill neutral">off</span> "Not taken through the APR Portal." Documents and IRCC steps have no channel.</div>
+  <div class="state"><h4>Each kind's steps (in the drawer)</h4><b>Form · Online:</b> answer sheet → "Entered" per screen (freezes its answers). <b>Form · PDF upload:</b> the 7 steps here, plus signing when the line has a signer. <b>Form · Paper:</b> fill → print with barcode page → pen → mailed. <b>Document:</b> received → uploaded. <b>IRCC step:</b> letter → booked → done.</div>
+  <div class="state"><h4>The same words on every row</h4>Cannot start yet (says what it waits for) · To do · In progress · Ready · Out of date · Done · Not needed through this portal. Tags: needed before signing · before filing · after filing.</div></div>
 </main></div>
 <div style="padding:0 20px 16px" class="grid2"><div><h3 style="font-size:15px;margin:4px 0 6px">⋯ › Person × deliverable view <span class="lab cap">Capability</span></h3>
- <div class="tbl-wrap"><table class="mx2"><tr><th>Person</th><th>Information</th><th>Documents</th><th>Forms</th><th>Signatures and steps</th></tr>
+ <div class="tbl-wrap"><table class="mx2"><tr><th>Person</th><th>Information</th><th>Documents</th><th>Forms</th><th>Signing</th></tr>
  <tr><td>Client A · principal</td><td><span class="pill danger">1 to check</span></td><td>4 of 6</td><td>1 of 3</td><td>IMM 5476 out for signing</td></tr>
- <tr><td>Client B · spouse</td><td>2 of 3</td><td>3 of 4</td><td><span class="pill neutral">cannot start</span></td><td>video call 30 Oct</td></tr>
- <tr><td>Client C · child, 9</td><td>1 of 3</td><td>2 of 1 ✓</td><td>0 of 1</td><td>— (parent signs)</td></tr></table></div></div>
- <div class="card"><b>Mixed channels in one application</b> <span class="sample">Sample: spousal sponsorship, PR Portal</span><ul class="small" style="margin:6px 0 0;padding-left:18px"><li><span class="ch">Online</span> IMM 0008 digital form · answer sheet</li><li><span class="ch">Client e-sign</span> IMM 5669 in the client portal: we only tick "seen"</li><li><span class="ch">PDF upload</span> IMM 1344 sponsorship</li><li><span class="ch">Signed PDF</span> IMM 5532 · both sign in pen, scan uploaded</li><li><span class="ch">Paper</span> original police certificate posted by the client (if asked)</li><li><span class="ch">Phone</span> step: confirm the sponsor's income period with the client</li></ul><p class="small muted">One list, one set of row words; each channel's own steps live in the drawer.</p></div></div></div>
+ <tr><td>Client B · spouse</td><td>2 of 3</td><td>3 of 4</td><td><span class="pill neutral">cannot start</span></td><td>waits for forms</td></tr>
+ <tr><td>Client C · child, 9</td><td>1 of 3</td><td>2 of 2</td><td>0 of 1</td><td>— (parent signs)</td></tr></table></div></div>
+ <div class="card"><b>Mixed channels in one application</b> <span class="sample">Sample: spousal sponsorship, PR Portal</span><ul class="small" style="margin:6px 0 0;padding-left:18px"><li>Form <span class="ch">Online</span> IMM 0008 digital form · signing: client e-signs in the client portal (we tick "seen")</li><li>Form <span class="ch">PDF upload</span> IMM 1344 sponsorship</li><li>Form <span class="ch">PDF upload</span> IMM 5532 · signing: both in pen, scan uploaded</li><li>Document: police certificate, original posted if IRCC asks</li><li>IRCC step: interview by video or phone, if asked</li><li class="muted">The firm's own calls with the client are tasks (team AG-13), <i>not built here</i></li></ul><p class="small muted">One list, one set of row words; each kind's steps live in the drawer.</p></div></div></div>
 
 <!-- 7 SIGNATURES + FILING RECORD -->
 <div class="frame"><div class="frame-cap"><span>7 · Signatures per account, and the filing record (filing number and UCI per person)</span><span>C8.1 · C8.2 · research AV-3, AV-6 · the representative never signs for the client (Unconfirmed: no counsel)</span></div>
 <div style="padding:16px 24px"><div class="acc">
- <div class="card"><b>APR Portal</b> <span class="small muted">visitor, study, work</span><div class="stepper" style="margin-top:6px"><div><span class="ic d">✓</span>IMM 5476 signed by Client A and the representative, scan uploaded<span></span></div><div><span class="ic r">2</span>Representative's declaration at "Transmit"<span class="small muted">the representative's own</span></div></div><span class="lab cap">Capability</span></div>
+ <div class="card"><b>APR Portal</b> <span class="small muted">visitor, study, work · signing steps sit inside each form item</span><div class="stepper" style="margin-top:6px"><div><span class="ic d">✓</span>IMM 5476 signed by Client A and the representative, scan uploaded<span></span></div><div><span class="ic r">2</span>Representative's declaration at "Transmit"<span class="small muted">the representative's own</span></div></div><span class="lab cap">Capability</span></div>
  <div class="card"><b>Representative PR Portal</b> <span class="small muted">PR other than Express Entry</span><div class="stepper" style="margin-top:6px"><div><span class="ic x">!</span>Client B e-signs in the client portal<span><button class="btn sm">Seen in portal ✓</button></span></div><div><span class="ic">2</span>Representative ticks the declaration<span></span></div></div><p class="small muted">We only record that it happened. We never ask for or store the client's portal sign-in.</p><span class="lab cap">Capability</span></div>
  <div class="card"><b>Paper</b><div class="stepper" style="margin-top:6px"><div><span class="ic d">✓</span>Printed with the barcode page on top<span></span></div><div><span class="ic r">2</span>Signed in pen: Client A; Client B for Client C (child's signer)<span></span></div><div><span class="ic">3</span>Signed scan received<span></span></div></div><span class="lab f">F P-65 signed-PDF states</span></div></div>
-<div class="drawer-wrap" style="min-height:0;margin-top:14px;grid-template-columns:1fr 560px"><div class="small muted" style="padding:8px"><b style="color:var(--text)">Why per person.</b> IRCC gives every applicant in a family their own application number, and each person has their own UCI (SA-1B-74). The team's AG-7-45 puts the application number on the filing: we keep it per person on the filing's applicant row, and the filing shows them together. <span class="lab m">Q1</span><br><br><b style="color:var(--text)">After recording</b> the filing is read-only (ticks, sign states, copies, numbers). "Correct a number" keeps the history. A correction after filing never edits a filed copy: see frame 8.</div>
-<div class="panel"><header><h3 style="font-size:17px">Record the filing · Visitor visa</h3><span class="lab cap">Capability</span><span class="lab f">F P-65, P-122</span></header><div class="body">
- <div class="row"><div style="flex:1"><div class="k">Filed in</div>APR Portal <span class="small muted">(the filing's route)</span></div><div style="flex:1"><div class="k">Our filing reference <span title="Type this as the APR Portal's 'case ID'. IRCC does not use it; it is how you find the filing.">ⓘ</span></div><b>ER-0204-1</b></div></div>
+<div class="drawer-wrap" style="min-height:0;margin-top:14px;grid-template-columns:1fr 560px"><div class="small muted" style="padding:8px"><b style="color:var(--text)">One filing per person who files their own application.</b> IRCC gives each its own application number and decision (SA-1B-74); the team keeps the number on the filing (AG-7-45). The three filings are recorded together in one action (team BR-31). <span class="lab m">Q1</span><br><br><b style="color:var(--text)">After recording</b> the filing is read-only (ticks, sign states, copies, numbers). "Correct a number" keeps the history. A correction after filing never edits a filed copy: see frame 8.</div>
+<div class="panel"><header><h3 style="font-size:17px">Record the filings · Visitor visa · 3</h3><span class="lab cap">Capability</span><span class="lab f">F P-65, P-122</span></header><div class="body">
+ <div class="row"><div style="flex:1"><div class="k">Filed in</div>APR Portal <span class="small muted">(the filing's route)</span></div><div style="flex:1"><div class="k">Our filing reference <span title="Type this as the APR Portal's 'case ID'. IRCC does not use it; it is how you find the filing.">ⓘ</span></div><b>ER-0204-1 … -3</b></div></div>
  <div><div class="k">Submitted on</div><input value="29 Oct 2026" style="height:30px"> <span class="small muted">not after today</span></div>
- <table><tr><th>Person</th><th>Application number</th><th>UCI</th></tr>
+ <table><tr><th>Filing</th><th>Application number</th><th>UCI</th></tr>
  <tr><td>Client A</td><td><input value="V312345678" style="width:120px"></td><td><input value="1123-4567" style="width:100px"></td></tr>
  <tr><td>Client B</td><td><input value="V312345679" style="width:120px"></td><td><input placeholder="as on IRCC's page" style="width:100px"></td></tr>
  <tr><td>Client C</td><td><input placeholder="required" style="width:120px;border-color:var(--danger)"></td><td><input style="width:100px"></td></tr></table>
@@ -381,21 +384,19 @@ body.labels .lab{display:inline-block}
 
 <!-- 8 OUT OF DATE -->
 <div class="frame"><div class="frame-cap"><span>8 · A fact changes: drafts follow; signed, uploaded, entered or filed items are marked out of date and never rewritten</span><span>C9.2 · P-65 · built: changedFacts / out_of_date / stale in fill-case.ts</span></div>
-<div style="padding:16px 24px" class="g3" ><div class="state" style="grid-column:1/4"><div class="toast">Date of marriage updated for Client A and Client B. Drafts use the new value; 2 finished items are marked out of date and were not changed. <a>See them</a> <a>Undo</a></div></div>
- <div class="state"><h4>Before filing <span class="pill warn">Out of date</span></h4>IMM 5476 · signed copy uploaded 27 Oct. Date of marriage changed on 29 Oct (12 Jun 2015 → 21 Jun 2015). The signed copy was kept as it was. <div class="row"><button class="btn sm">Prepare again</button><button class="btn sm ghost">Undo the change</button></div><span class="small muted">Blocks "ready to file" until redone or undone (AV-7).</span></div>
+<div style="padding:16px 24px" class="g3" ><div class="state" style="grid-column:1/4"><div class="toast">Date of marriage updated for Client A and Client B. Drafts use the new value; 2 finished items (IMM 5707 · A and B) are marked out of date and were not changed. <a>See them</a> <a>Undo</a></div></div>
+ <div class="state"><h4>Before filing <span class="pill warn">Out of date</span></h4>IMM 5707 · Client A · validated copy uploaded 27 Oct. Date of marriage changed on 29 Oct (12 Jun 2015 → 21 Jun 2015). The uploaded copy was kept as it was. <div class="row"><button class="btn sm">Prepare again</button><button class="btn sm ghost">Undo the change</button></div><span class="small muted">Warns today (P-71); blocks "ready to file" if the founder says yes to Q2.</span> <span class="lab m">Q2</span></div>
  <div class="state"><h4>Entered in the portal <span class="pill warn">Out of date</span></h4>IMM 5257 screen "Marital status", ticked as entered 28 Oct. The answers it covered were frozen at the tick; one now differs. <button class="btn sm">Show what to re-enter</button></div>
  <div class="state"><h4>After filing <span class="pill danger">Filed with an earlier value</span></h4>Filed 29 Oct with 12 Jun 2015. Nothing filed was changed. A task asks the case officer to decide: re-sign, or tell IRCC (Unconfirmed: no counsel, research D7). <button class="btn sm">Open task</button></div></div></div>
 
 <!-- 9b AFTER FILING -->
-<div class="frame"><div class="frame-cap"><span>9 · After filing, in the same view: what IRCC sends back and what it asks for</span><span>research (f) 10 · team milestones (AOR, biometrics, medical, document requests) · double-filing guard</span></div>
-<div style="padding:16px 24px" class="grid2"><div class="tbl-wrap"><table><tr><th>After filing · Visitor visa</th><th>Who owes it</th><th>Due</th><th>State</th><th></th></tr>
-<tr><td>Acknowledgement of receipt · each person</td><td>IRCC</td><td>—</td><td><span class="pill ok">Received 30 Oct</span></td><td class="more">⋯</td></tr>
-<tr><td>Biometrics instruction letter · Clients A, B</td><td>Client</td><td>within 30 days</td><td><span class="pill warn">To do</span></td><td class="more">⋯</td></tr>
-<tr><td>Interview by video · Client A <span class="ch">Video</span></td><td>Client + you</td><td>12 Nov</td><td><span class="pill neutral">Booked</span></td><td class="more">⋯</td></tr>
-<tr><td>Document request: 2 more bank statements</td><td>Client</td><td>14 Nov</td><td><span class="pill warn">Requested</span></td><td class="more">⋯</td></tr>
-<tr><td>Returned incomplete → fix → submit again</td><td>You</td><td>—</td><td><span class="pill neutral">Not happened</span></td><td class="more">⋯</td></tr>
-<tr><td>Decision · each person</td><td>IRCC</td><td>—</td><td><span class="pill neutral">Waiting</span></td><td class="more">⋯</td></tr></table></div>
-<div class="card"><b>Rules</b> <span class="lab cap">Capability</span><ul class="small"><li>Rows come from the release's "after filing" lines; IRCC letters are uploaded as documents and add rows (a document request, a deadline).</li><li><b>Returned incomplete:</b> the filing reopens on a new round; the first round's copies and numbers stay in History.</li><li><b>Newborn added after filing:</b> a new person on the filing; new documents and facts; deliverables only through IRCC's web form (a step).</li><li><b>No double filing:</b> "Record the filing" is refused for a filing already recorded; "Correct a number" instead.</li></ul><span class="lab scf">Scaffolding · Sample letters and dates</span> <span class="lab nb">Detail of post-decision work: team AG-07</span></div></div></div>
+<div class="frame"><div class="frame-cap"><span>9 · After filing: kept minimal in M3 (P-129 gate); milestones are the team's AG-07</span><span>challenge M6</span></div>
+<div style="padding:16px 24px" class="g3">
+ <div class="state"><h4>Read-only filing</h4>Recorded 29 Oct by the case officer. Ticks, signing steps, copies and numbers no longer change. <a>Correct a number</a> keeps the history. <span class="lab cap">Capability</span></div>
+ <div class="state"><h4>No second recording</h4>"Record the filing" is refused for a filing already recorded, with "Correct a number" offered instead. <span class="lab cap">Capability</span></div>
+ <div class="state"><h4>Filed with an earlier value</h4>A later fact change marks the filed item, never edits it, and opens a task: re-sign or tell IRCC (Unconfirmed: no counsel). <span class="lab cap">Capability</span></div>
+ <div class="state" style="grid-column:1/4"><h4>Not built here</h4>Acknowledgement, biometrics letters, medicals, document requests, interviews, returned incomplete → resubmit, newborn added, decision: the team's AG-07 milestones and lifecycle (<code>CaseMilestone</code>, <code>Decision</code> per filing). <span class="lab nb">Team AG-07</span></div>
+</div></div>
 
 <!-- 9 EMPLOYER LINK -->
 <div class="frame"><div class="frame-cap"><span>10 · Employer case link on a worker's filing (P-106)</span><span>Retail › Temporary residence › Work permits › Employer-specific work permit › With an LMIA – inside Canada · employer case under Corporate (Sample)</span></div>
@@ -423,14 +424,14 @@ body.labels .lab{display:inline-block}
 <!-- 11 BUILD ORDER -->
 <div class="frame"><div class="frame-cap"><span>12 · Build order in slices (after the M2 gate; each with an early look)</span><span>details and back-end plan in concept-draft.md §8</span></div>
 <div style="padding:16px 24px" class="g4">
- <div class="state"><h4>M3-1 Filing and checklist</h4>Filing record per case (Q1), people on it, checklist lines per person from the release; "Prepare application" tab absorbs the Forms panel.</div>
- <div class="state"><h4>M3-2 Documents in, facts proposed</h4>Upload, passport coded lines by rules, read values as proposals; "Fill this from documents" per section; source chips.</div>
+ <div class="state"><h4>M3-1 Filing and checklist</h4>Filing per person who files their own application (Q1); pins re-keyed to filing × person with backfill (runtime lane owns; the pin check in runtime.ts is rewritten); checklist lines per person; "Prepare application" tab absorbs the Forms panel.</div>
+ <div class="state"><h4>M3-2 Documents in, facts proposed</h4>Upload, passport coded lines by rules (reuse <code>p5/reader/mrz.ts</code>, synthetic PDFs with a text layer), read values as proposals; "Fill this from documents" per section; source chips.</div>
  <div class="state"><h4>M3-3 Checks and confirm</h4>Typed vs document check with reason; identity facts one by one; Confirm section on the built route.</div>
- <div class="state"><h4>M3-4 Deliverables</h4>Route (Q2), items per form × person × channel, "Cannot start yet" and "needed before" tags, steps (video, phone), person view; PDF round trip with upload back and read-back; answer sheet; PDF copy.</div>
+ <div class="state"><h4>M3-4 Items</h4>Items of three kinds, channel on forms only, signing inside form items, "Cannot start yet" and "needed before" tags, person view; PDF round trip with upload back and read-back; answer sheet; PDF copy.</div>
  <div class="state"><h4>M3-5 Sign and record</h4>Signature steps per account; filing record with per-person numbers; read-only; Correct a number.</div>
- <div class="state"><h4>M3-6 Out of date and after filing</h4>Extend the built copy staleness to entered screens, signed scans, documents and filed items; task after filing; after-filing rows; returned incomplete → resubmit.</div>
+ <div class="state"><h4>M3-6 Out of date</h4>Extend the built copy staleness to entered screens, signed scans, documents and filed items; readiness per Q2; task after filing.</div>
  <div class="state"><h4>M3-7 Employer link</h4>Link a Corporate case; facts read-only; change marks out of date.</div>
- <div class="state"><h4>M3-8 Team inputs</h4>Show AG-11 findings with acknowledge; AG-03 inputs list. AI vision for letters on synthetic documents.</div></div></div>
+ <div class="state"><h4>M3-8 Eligibility and AI review</h4>As the founder rules on P-129 (Lead): a minimal eligibility page on our engine and one live AI review, or AG-03 inputs and AG-11 findings only. AI vision for letters on synthetic documents.</div></div></div>
 
 </body>
 </html>
