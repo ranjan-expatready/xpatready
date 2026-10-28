@@ -3,12 +3,12 @@
 import "reflect-metadata";
 import { oneAtATime } from "./form-uses.ts";
 import { Body, Catch, Controller, Delete, Get, Headers, HttpException, Inject, Module, Param, Patch, Post, Query, Res, UploadedFiles, UseInterceptors, type ArgumentsHost, type ExceptionFilter } from "@nestjs/common";
-import { NestFactory } from "@nestjs/core";
+import { APP_GUARD, NestFactory } from "@nestjs/core";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { actorOf, Audit, Db, readerOf, STUDIO, Workspace } from "./core.ts";
+import { actorOf, Audit, CaseRead, ConfigReadGuard, Db, OpenRead, readerOf, STUDIO, Workspace } from "./core.ts";
 import { Ai } from "./ai.ts";
 import { Demo } from "./demo.ts";
 import { Fill } from "./fill.ts";
@@ -36,7 +36,7 @@ type H = string | undefined;
 @Controller("api")
 class StudioController {
   constructor(@Inject(Studio) private readonly s: Studio) {}
-  @Get("session") session(@Headers("x-actor") a: H) { return this.s.session(actorOf(a)); }
+  @OpenRead("who-am-I before a person is chosen; the copies' health check") @Get("session") session(@Headers("x-actor") a: H) { return this.s.session(actorOf(a)); }
   @Get("combinations/:id") overview(@Param("id") id: string) { return this.s.combination(id); }
   @Patch("combinations/:id") updateComp(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.updateCombination(actorOf(a), id, b); }
   @Get("combinations/:id/config") config(@Param("id") id: string, @Query("mode") mode: any) { return this.s.config(id, mode === "published" ? "published" : "draft"); }
@@ -61,10 +61,10 @@ class StudioController {
   @Post("library/sections") addSection(@Headers("x-actor") a: H, @Body() b: any) { return this.s.createSection(actorOf(a), b); }
   @Get("library/document-types") types() { return this.s.documentTypes(); }
   @Post("conditions/check") check(@Body() b: any) { return this.s.checkCondition(b); }
-  @Get("releases") releases(@Query("combination") c?: string) { return this.s.releases(c); }
+  @CaseRead() @Get("releases") releases(@Query("combination") c?: string) { return this.s.releases(c); }
   // Runtime R1a FIX (review Must 1): the activity feed holds case events, so only configuration people and the case
   // officer read it; a client or an unknown caller is refused (STANDARDS §6 deny by default).
-  @Get("activity") activity(@Headers("x-actor") a: H) { const actor = actorOf(a); if (!(actor.duties as readonly string[]).some((d) => d === "review" || d === "case")) throw new HttpException("Activity is for staff.", 403); return this.s.activity(); }
+  @CaseRead() @Get("activity") activity(@Headers("x-actor") a: H) { const actor = actorOf(a); if (!(actor.duties as readonly string[]).some((d) => d === "review" || d === "case")) throw new HttpException("Activity is for staff.", 403); return this.s.activity(); }
 }
 
 @Controller("api")
@@ -76,7 +76,7 @@ class SourcesController {
   @Post("combinations/:id/attachments/sample") sample(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.intake.sample(actorOf(a), id, b.officialFile); }
   @Get("combinations/:id/attachments") list(@Param("id") id: string) { return this.s.attachmentsOf(id); }
   // dotfiles "allow" (QA-4): stored paths are the server's own, and a lane copy under .claude/worktrees/ made every download a 404.
-  @Get("attachments/:id/file") async file(@Param("id") id: string, @Res() res: any) { const d = await this.s.download(id); res.download(d.path, d.name, { dotfiles: "allow" }); }
+  @OpenRead("a file link the browser opens") @Get("attachments/:id/file") async file(@Param("id") id: string, @Res() res: any) { const d = await this.s.download(id); res.download(d.path, d.name, { dotfiles: "allow" }); }
   @Post("attachments/:id/read") read(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.read(actorOf(a), id); }
   @Get("attachments/:id/draft-options") opts(@Param("id") id: string) { return this.s.draftOptions(id); }
   @Post("attachments/:id/draft") draft(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.ai.launchSource(actorOf(a), id, b.mode, b.runFile, b.idempotencyKey); }
@@ -89,7 +89,7 @@ class SourcesController {
   @Get("ledger") ledger() { return this.s.ledger(); }
   @Get("official-library") official() { return this.s.officialLibrary(); }
   @Post("combinations/:id/fill") fill(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.f.fill(actorOf(a), id, b); }
-  @Get("artifacts/:id/file") async artifact(@Param("id") id: string, @Res() res: any) { const d = await this.f.artifact(id); res.download(d.path, d.name, { dotfiles: "allow" }); }
+  @OpenRead("a file link the browser opens") @Get("artifacts/:id/file") async artifact(@Param("id") id: string, @Res() res: any) { const d = await this.f.artifact(id); res.download(d.path, d.name, { dotfiles: "allow" }); }
 }
 
 @Controller("api/demo")
@@ -165,7 +165,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, StructureController, FormLibraryController, RunsController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, StructureController, FormLibraryController, RunsController], providers: [{ provide: APP_GUARD, useClass: ConfigReadGuard }, Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
 class AppModule {}
 
 async function main() {

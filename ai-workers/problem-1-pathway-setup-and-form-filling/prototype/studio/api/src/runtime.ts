@@ -11,7 +11,7 @@ import { ConfirmSection, fillsText, NewCase, NewPerson, NewRow, NoneApply, PutAn
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
-import { actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
+import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from "./core.ts";
 
 type H = string | undefined;
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -364,6 +364,7 @@ export class Runtime {
   }
 }
 
+@CaseRead()
 @Controller("api/runtime")
 export class RuntimeController {
   constructor(@Inject(Runtime) private readonly r: Runtime) {}
