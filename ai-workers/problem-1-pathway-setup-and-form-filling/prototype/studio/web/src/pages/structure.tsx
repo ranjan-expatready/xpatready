@@ -178,8 +178,11 @@ export function StructurePage() {
         const text = r.immediate ? SAY.deletedNow(n.label, n.action.below.length) : SAY.sent(kind, n.label);
         setNote({ ok: true, text });
         undo.show(text, async () => {
-          await api(r.immediate ? `/library/changes/${r.id}/undo` : `/library/changes/${r.id}/withdraw`, { method: "POST", json: r.immediate ? {} : { note: SAY.undone } });
-          setNote({ ok: true, text: r.immediate ? SAY.undoneDelete(n.label) : SAY.undone }); await refresh();
+          try {
+            await api(r.immediate ? `/library/changes/${r.id}/undo` : `/library/changes/${r.id}/withdraw`, { method: "POST", json: r.immediate ? {} : { note: SAY.undone } });
+            setNote({ ok: true, text: r.immediate ? SAY.undoneDelete(n.label) : SAY.undone });
+          } catch (e) { setNote({ ok: false, text: (e as Error).message }); }
+          await refresh();
         });
       }
       setConfirm(null); setActing({ busy: false, error: null }); await refresh();
@@ -274,7 +277,7 @@ export function StructurePage() {
         ) : null}
         {list.data && !list.data.empty ? <p className="flex flex-wrap items-center gap-x-3.5 text-xs text-text-muted" data-legend>{(["pathway", "program", "category", "subCategory"] as const).map((l) => <span key={l} className="inline-flex items-center gap-1"><LevelMark level={l} tip={false} />{LEVEL_WORD[l]}</span>)}<span>· Numbers show the order on this page, not IRCC codes.</span></p> : null}
       </div>
-      {note ? <p role={note.ok ? "status" : "alert"} className={cn("mt-2 text-sm", note.ok ? "text-text-ok" : "text-text-danger")} data-page-note>{note.text}</p> : null}
+      {note ? <p role={note.ok ? "status" : "alert"} className={cn("mt-2 text-sm", note.ok ? "text-text-ok" : "text-text-danger")} data-page-note>{note.text}{note.ok ? undo.link : null}</p> : null}
 
       <div className={cn("mt-3 grid gap-6", (selectedNode || confirmNode) && "xl:grid-cols-[minmax(0,1fr)_420px]")}>
         <section aria-label={`${typeLabel} program structure`} className="min-w-0">
@@ -338,7 +341,7 @@ export function StructurePage() {
           onAction={() => { setActing({ busy: false, error: null }); const k = selectedNode.key; set({ node: null }); setConfirm({ key: k, kind: selectedNode.action.kind }); }} /> : null}
       </div>
       <AddToStructure open={!!adding} onClose={() => setAdding(null)} type={type} prefill={adding ?? undefined}
-        onAdded={(r, again) => { setJustAdded(r.leaf.key); setNote({ ok: true, text: `Added ${r.created.map((c) => `"${c.label}"`).join(", ")}${r.combination ? ": listed on Immigration programs as Not started; no setup started." : "."}` }); if (!again) setAdding(null); }}
+        onAdded={(r, again) => { setJustAdded(r.leaf.key); undo.clear(); setNote({ ok: true, text: `Added ${r.created.map((c) => `"${c.label}"`).join(", ")}${r.combination ? ": listed on Immigration programs as Not started; no setup started." : "."}` }); if (!again) setAdding(null); }}
         onShow={(k) => { setAdding(null); set({ node: k }); setJustAdded(k); }} />
       {undo.node}
     </TipProvider>

@@ -166,9 +166,13 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await p.locator("[data-undo-toast]").waitFor();
   await row("Family sponsorship").waitFor({ state: "detached", timeout: 8000 }).catch(() => undefined);
   step("C11.9 P-116 amended pass: the author's own draft is deleted at once (nothing waits on To review); the Undo toast says so", await row("Family sponsorship").count() === 0 && sql(`select count(*) from program_def where label in ('Family sponsorship','Spouse or common-law partner')`) === "0" && sql("select count(*) from library_change where status='WAITING'") === "0" && /Deleted "Family sponsorship" and the 1 name under it\./.test(await p.locator("[data-undo-toast]").innerText()), `rows ${await row("Family sponsorship").count()} · db ${sql(`select count(*) from program_def where label in ('Family sponsorship','Spouse or common-law partner')`)} · waiting ${sql("select count(*) from library_change where status='WAITING'")} · toast ${await p.locator("[data-undo-toast]").innerText()}`);
-  await p.locator("[data-undo-toast] [data-undo]").click();
+  // QA-58: the toast goes after 10 s; the Undo stays on the page note (WCAG 2.2.1).
+  await p.locator("[data-undo-toast]").waitFor({ state: "detached", timeout: 13000 });
+  step("C11.9 QA-58 pass: after the 10 s toast has gone, Undo is still on the page note", await p.locator("[data-undo-toast]").count() === 0 && await p.locator("[data-page-note] [data-note-undo]").count() === 1, await p.locator("[data-page-note]").innerText());
+  await p.locator("[data-page-note] [data-note-undo]").click();
   await row("Family sponsorship").waitFor();
   step("C11.9 P-116 amended pass: Undo brings the names back in place (same numbers)", await numOf("Family sponsorship") === "2.2" && await numOf("Spouse or common-law partner") === "2.2.1" && /Undone: "Family sponsorship" is back/.test(await p.locator("[data-page-note]").innerText()));
+  step("C11.9 QA-58 fail-guard: once used, the Undo is gone (no second Undo offered)", await p.locator("[data-note-undo], [data-undo]").count() === 0);
   // Someone else's draft: it goes to a second person.
   sql(`update program_def set created_by = 'user-C' where label in ('Family sponsorship','Spouse or common-law partner')`);
   await open();

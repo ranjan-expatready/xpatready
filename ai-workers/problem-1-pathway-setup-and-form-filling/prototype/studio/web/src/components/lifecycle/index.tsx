@@ -110,18 +110,25 @@ export function ImpactPanel({ kind, name, goes, kept, withCombination, immediate
   );
 }
 
-/** The Undo toast: one at a time, 10 s, never the only copy (the row shows the new state too). */
+/** The Undo toast: one at a time, 10 s, never the only copy (the row shows the new state too). The Undo outlives the
+ *  toast (QA-58, WCAG 2.2.1): `link` puts it on the page note until it is used or `clear` drops it (another action). */
 export function useUndoToast() {
   const [t, setT] = React.useState<{ id: number; text: string; undo?: () => Promise<void> } | null>(null);
-  React.useEffect(() => { if (!t) return; const h = setTimeout(() => setT((x) => (x?.id === t.id ? null : x)), 10_000); return () => clearTimeout(h); }, [t]);
-  const show = (text: string, undo?: () => Promise<void>) => setT({ id: Date.now(), text, undo });
+  const [shown, setShown] = React.useState(false);
+  React.useEffect(() => { if (!t || !shown) return; const h = setTimeout(() => setShown(false), 10_000); return () => clearTimeout(h); }, [t, shown]);
+  const show = (text: string, undo?: () => Promise<void>) => { setT({ id: Date.now(), text, undo }); setShown(true); };
+  const clear = () => { setT(null); setShown(false); };
   const [busy, setBusy] = React.useState(false);
-  const node = t ? (
+  const run = async () => { if (!t?.undo || busy) return; setBusy(true); try { await t.undo(); } finally { setBusy(false); clear(); } };
+  const node = t && shown ? (
     <div role="status" className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg bg-text px-4 py-2.5 text-sm text-surface shadow-lg" data-undo-toast>
       <span>{t.text}</span>
-      {t.undo ? <button type="button" disabled={busy} onClick={async () => { setBusy(true); try { await t.undo!(); } finally { setBusy(false); setT(null); } }} className="rounded font-semibold underline underline-offset-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-undo>Undo</button> : null}
-      <button type="button" aria-label="Close" onClick={() => setT(null)} className="rounded p-0.5 opacity-80 hover:opacity-100"><X className="size-4" /></button>
+      {t.undo ? <button type="button" disabled={busy} onClick={() => void run()} className="rounded font-semibold underline underline-offset-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-undo>Undo</button> : null}
+      <button type="button" aria-label="Close" onClick={() => setShown(false)} className="rounded p-0.5 opacity-80 hover:opacity-100"><X className="size-4" /></button>
     </div>
   ) : null;
-  return { show, node };
+  const link = t?.undo ? (
+    <button type="button" disabled={busy} onClick={() => void run()} className="ml-2 rounded font-semibold text-text-link underline underline-offset-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-note-undo>Undo</button>
+  ) : null;
+  return { show, clear, node, link };
 }
