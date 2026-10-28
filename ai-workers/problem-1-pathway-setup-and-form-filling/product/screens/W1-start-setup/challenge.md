@@ -126,7 +126,15 @@
 1. **Start setup on a new combination with no saved answer: run live at once (about US$0.20, written on the tooltip and run card before the first AI call), or run rules only and wait for a "Find with AI" click?** *Recommendation: live at once, as you marked OK in the walkthrough v2. Pressing Start setup is the person running it live (P-110), and a free replay is used whenever one exists.*
 
 ## Lead response
+*Lead, 28 Oct (by message), agreed:*
+- **M1, founder: wait for a click.** Start setup loads a saved finder result at US$0 when one exists. Otherwise it shows one button, "Find forms with AI (about US$0.20)", with the worst case in its tooltip; the run starts only on that click. Rules only stays the fallback.
+- **M2:** remove `/new` now, with its route, its menu match and the `/new?leaf=` links, and move the checks that open it. Also remove `POST /combinations/path` and `POST /path-proposal` with their API steps. The screens lane may route qa's `check_qa_am_s2_1027` and `check_qa_m2_journeys` away from `/new` (only that change), in a commit named for qa.
+- **M3:** accepted. A "start" reason in the one guard (`lifecycle.ts`), words in `contracts/lifecycle.ts`, shown greyed; the API answers 409.
+- **M4:** split accepted. S3 owns the Start setup action and `POST /combinations/start` (create, then the finder plan, launched only on the click), landing on "Sources and forms" with the shared RunCard and the read-only place. Runtime slice 3 owns the forms list on that tab; both build in parallel on this contract.
+- **Minors** m5–m7 and m10 accepted; m8 and m9 wait until runtime slice 2 is on main.
+- Desktop only. Save often. EARLY-LOOK by message.
 
 ## Agreement
+Agreed 28 Oct (Lead): build M1–M4, m5–m7, m10; m8 and m9 later.
 
 ## Build discoveries

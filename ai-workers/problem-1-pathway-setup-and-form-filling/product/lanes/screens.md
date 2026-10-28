@@ -7,7 +7,7 @@
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 ## Handover (screens lane, 28 Oct, kept current; a fresh session resumes from this file alone)
-**Item W1-visual-system, round 3 (P-128, the shared lifecycle pattern P-116 amended). Branch `screens/2026-10-27-visual-system`, pushed. Stage: qa FIX done (in Lead PR #67); now S3 Start setup at DESIGN, challenge sent to the Lead.** AI spent US$0. Copy: this worktree's folder is named `runtime-*`, so it is bound to screens by `.claude/lane` (git-ignored).
+**Item W1-visual-system, round 3 (P-128, the shared lifecycle pattern P-116 amended). Branch `screens/2026-10-27-visual-system`, pushed. Stage: qa FIX done (in Lead PR #67); now S3 Start setup at BUILD.** AI spent US$0. Copy: this worktree's folder is named `runtime-*`, so it is bound to screens by `.claude/lane` (git-ignored).
 
 **Done and pushed:**
 - R3a Program structure 263bb9a; shared lifecycle pattern 93b0040b (one guard `api/src/lifecycle.ts`, one word set `contracts/lifecycle.ts`, components `web/src/components/lifecycle/`); R3b Immigration programs 776d4169; qa-lane words 2101164; main merged e36bf06e. Founder Go on round 3; Lead check passed; Lead PR #66 (`lead/2026-10-28-r3`) green CI.
@@ -20,7 +20,7 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - FIX for qa's after-merge on main dccd87e (qa branch `claude/qa-after-merge-s1-21bfdf` 9ad98f37; QA-57 was already fixed in S4's merge, not redone): QA-60 bccd7f26 (letters typed after "Add and add another" kept), QA-56 3da467e6 (Enter accepts a typed name), QA-55 3abc0a35 (Retire names what really blocks, with the way out), QA-58 691d7303 (Undo kept on the page note), QA-59 9ba1630d (Returned with the note; Send again), Button primary hover f4145a47 (darker, 8.15:1). Each with a pass step and a fail or fail-guard; table in `screens/W1-visual-system/build-notes.md` "Fixes after qa's after-merge".
 - Evidence on f4145a47 (fe225c6c adds notes only): full run-suites 41/41 PASS; studio journey 45/45 (private copy); qa's check_qa_am_r3_1028 63/69 and check_qa_am_1027 52/55 on private copies, every QA-55/56/58/59/60 step passes; the fails left are QA-57 (fixed on main by S4, not on this branch yet), QA-48 and runtime's QA-47/38/40 (not this lane). The branch merges cleanly with main 06a8fc30.
 
-**Next:** the Lead answers the S3 challenge (`screens/W1-start-setup/challenge.md`, sent by message); the qa FIX is in Lead PR #67.
+**Next:** build S3 Start setup (agreed 28 Oct), then EARLY-LOOK by message.
 
 **Learned, not written elsewhere:**
 - Other lanes run this lane's checks under the same copy names and ports (`run-suites.sh` uses the usage lines), and all copies share one PostgreSQL server: two runs at once break each other. For reruns, use private names and ports (for example `<name>_mine` on 4460+), then drop those databases.
@@ -30,14 +30,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-start-setup (S3 Start setup)
-stage: DESIGN (challenge sent)
-owner: Lead
-next_action: Lead: answer the S3 challenge (screens/W1-start-setup/challenge.md: M1 cost at Start setup with founder Q1, M2 end of /new and its endpoints, M3 start guard, M4 split with runtime slice 3; m8 and m9 wait for runtime slice 2); then this lane writes the PLAN
-then: S3 PLAN, then BUILD after the Lead's answers; desktop only (1440, 1024)
+stage: BUILD
+owner: Builder
+next_action: build S3 per the agreed challenge (screens/W1-start-setup/challenge.md): start guard, POST /combinations/start, one Start setup, landing with finder button and RunCard, end of /new and the path endpoints, checks moved
+then: EARLY-LOOK by message; desktop only (1440, 1024)
 blocked_by: none
 updated: 2026-10-28
 
 ## Log (last 10 lines)
+- 2026-10-28 · W1-start-setup (S3) · DESIGN → BUILD · Lead answered the challenge (founder: wait for a click; M2 remove /new and both path endpoints; M3 start guard; M4 split with runtime slice 3; m5–m7, m10 accepted; m8, m9 after runtime slice 2); Lead response recorded. AI US$0.
 - 2026-10-28 · W1-start-setup (S3) · DESIGN · synced main 06a8fc30 (S4 merged); screen-challenge in screens/W1-start-setup/challenge.md: Build after these changes, 4 Major (cost at Start setup, end of /new and its endpoints, a start guard for retired or waiting names, split with runtime slice 3), 6 Minor (incl. runtime's two Left-as-it-is points, after runtime slice 2), 1 founder question; no code. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-visual-system · FIX → Lead · qa after-merge on dccd87e: QA-60 (letters kept after Add and add another), QA-56 (Enter accepts a typed name), QA-55 (Retire names real blockers and the way out), QA-58 (Undo kept on the page note), QA-59 (Returned with note; Send again), Button primary hover 8.15:1; each with pass and fail checks; run-suites 41/41, journey 45/45, qa's steps for these pass. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-visual-system · FIX → Lead · PR #66 review fixes 19e8911d; run-suites 40/41 on it, the one failure (Add combination prefill race under load) fixed in b078f150 with a fail-guard; touched checks all pass on b078f150 and the journey 45/45. AI US$0. Owner → Lead.
@@ -47,4 +48,3 @@ updated: 2026-10-28
 - 2026-10-28 · W1-visual-system · EARLY-LOOK → DESIGN · applied Lead message (P-128 round 3 agreed; note on lead/2026-10-27 8e7d47f); screen-challenge written in W1-visual-system/challenge.md: Build after these changes, 4 Major, 6 Minor, back-end plan; no code. Owner → Lead. AI US$0.
 - 2026-10-28 · W1-visual-system · EARLY-LOOK · Lead message: the founder's early look is Changes (do not merge; the Add pop-up stays; Program structure round 3 board coming; wave 1 desktop only). No code on Program structure or Immigration programs (P-126); the S3 re-check got an addendum (round 3 row actions, desktop only). Stopped at a safe point. AI US$0.
 - 2026-10-28 · W1-visual-system · BUILD → EARLY-LOOK · AD-8 focus race fixed at the cause (Dialog initialFocus); full run-suites 40/40 PASS (0b60e6a), studio journey 45/45 on 4445, CI suites green on f7124e9 (run 40562533734; later commits are screenshots and notes only); graph check passes. AI US$0. Owner → Lead.
-- 2026-10-28 · W1-visual-system · BUILD · applied the Lead's drift check (Fix first, items 1–5): four CI-red suites fixed, Used by on each line, focus kept during Add and add another, POST /structure/path API check 28/28 (found and fixed: None on a category with sub-categories said "already there"); structure_path 28/28, s1s2_fix 30/30, programs_s2 87/87; 25f1b12. AI US$0.
