@@ -85,3 +85,6 @@ Followed: P-12, P-14, P-33, P-110, P-116 (28 Oct), P-119, P-120, P-121, P-123, P
 - [ ] Every decision agreed: Q1–Q3; Lead: C1, C2, M3
 - [ ] Immigration values confirmed by the expert (all Sample; Unconfirmed: no counsel)
 - [ ] Fresh challenge run (screen-challenge) before the founder sees it
+
+## Founder picks (28 Oct) — Agreed (P-110 amended, P-120 confirmed)
+Q1 **all five steps live 3 times on Visitor visa** (≈US$40; saved afterwards, live cost only when someone runs live) · Q2 **Live / Saved / Rules only per step** (production uses the same switch: results saved per form edition and reused) · Q3 **saved results + "Not drafted yet"** for the other 5 · [C1] **document types and checks stay in S6** (founder); W1-10 adds per-combination conditions, per-person checklists and cross-answer checks into S6's queue. [C2] recorded on P-110.
