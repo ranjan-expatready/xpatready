@@ -6,33 +6,28 @@
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
-current_item: QA-53 (one guard on every Studio configuration read), then the form library on the shared lifecycle components (P-116 amended)
+current_item: QA-61..QA-64 (qa after-merge on S4), then the run-suites per-copy prefix
 stage: BUILD
 owner: Builder
-next_action: QA-61 done; QA-62, QA-63, QA-64 next (Lead message 28 Oct), each with a test; then hand back by message
+next_action: Read the touched-suite results for QA-61..64 (cbfdab22), hand back to the Lead by message; then the run-suites per-copy prefix (Lead OK); sync main after PR #69 merges (see Handover → Next)
 blocked_by: none
 updated: 2026-10-28
 
-## Handover (28 Oct, Lead check FIX round; resume from this section alone)
-* **Where it stands:** QA-53 and the form library on the shared lifecycle components are built and handed to the Lead (stage CHECK, owner Lead). Branch `forms/2026-10-27-s4-form-library`, synced with main `06a8fc30` (S4 merged as PR #65), pushed, clean tree.
-* **Next:** the Lead checks and merges. Then, in this lane: a library form's retire and restore take effect at approval, not at the next release (P-116 amended; not built yet: the release-time retire tests change with it).
-* **Done this round (all with tests, all pushed):**
-  * Drift fixes: main merged; Delete vs Remove in one word map, also used in History and Activity.
-  * Load sample from Sample fixtures (`samples/form-library-sample.json`), checked by `api/src/filing.ts`.
-  * Replay keyed by `combination_key`; stub passes never replayed, by file name and by the record's `caller`.
-  * Lead check: paper or mail is never a PDF upload, and "fill it on a computer" is not a filing line. Load sample now sets 2 of 7 data forms (IMM 5475, IMM 5476).
-  * Carried Shoulds: Where used on the approval page; an unread copy is never "Record the IRCC page"; "No file yet".
-  * The one edit outside this lane: `tests/check_screen02_fix.ts` now walks the record-the-page flow on its readable copy.
-* **Last evidence (code `80504e33`):** full `run-suites.sh` 46/46 pass (only `check_studio_browser` skipped: it resets :4400). S4 checks: finder 118, runs 86, canada 63, library browser 53, run browser 20. graph `--check`: G3 1 (the older gap).
-* **Open for the Lead or founder:** whether guides must also be attached to their combinations (review Should 2); 5 of 7 sample forms stay "Not set yet" until a person sets them (C11.18).
+## Handover (28 Oct, late; resume from this section alone)
+* **Where it stands:** stage BUILD, owner Builder. Branch `forms/2026-10-27-s4-form-library`, last pushed `cbfdab22`, synced with main `3858216e`. Lead PR #69 holds `ef71eae8` (QA-53, the form library on the shared lifecycle components, the PR #67 resend fix). Built since then and pushed: **QA-64** (a library form's retire or restore takes effect at approval, the approval re-checks, the confirm says "When it is approved"), **QA-61** (the filing rule reads each sentence), **QA-62** (AI work names a finder run by its place in plain words), **QA-63** (a waiting finder card leads to the combination's Sources page). Checks on `cbfdab22`: finder 129, runs 90, library browser 58, run browser 22, canada 66, qa's check_qa_s4_filing 9/9. The suites these touch were started one by one on fx copies (structure, structure r3, screen02 fix and slice2, w1 s1s2 fix, structure browser, ai orchestration, qa53); their results are not in yet.
+* **Next (do exactly this):**
+  1. Read the touched-suite results (rerun any that did not finish: `FILES="<suite>" zsh <scratchpad>/s02.sh` pattern, or each suite's usage line under an fx name on ports 4471–4480). Put back the by-products.
+  2. Hand back to the Lead by message: QA-61..64 on `cbfdab22` (or later).
+  3. Then the Lead-approved run-suites per-copy prefix: `product/tools/run-suites.sh` gives each copy its own prefix for isolated names and ports, from `lane.sh whoami` or `COPY_PREFIX`; CI unchanged; a check that two copies cannot pick the same names; its own commit, named for the Lead.
+  4. Sync main after PR #69 merges.
+* **Open for the Lead or founder:** whether guides must also be attached to their combinations; 5 of 7 sample forms are "Not set yet" until a person sets them (C11.18); the shared Button's primary hover contrast (4.4 at 12 px).
 * **How to run the checks (Mac, this copy):**
-  * S4 checks run under this lane's names `forms_s4`, `forms_s4r`, `forms_s4b`, `forms_s4l` on ports 4455–4458.
-  * Other suites run alone under `fx_*` names on ports 4471–4480, because `run-suites.sh` uses names other lanes share (a `screens_s1s2` clash happened once).
+  * S4 checks: `forms_s4`, `forms_s4r`, `forms_s4b`, `forms_s4l` on ports 4455–4458; QA-53: `forms_qa53` on 4459.
+  * Other suites alone under `fx_*` names on 4471–4480 (pass the database name too: some suites read it from their 2nd argument). `run-suites.sh` uses names other lanes share: check `ps` for another run first.
   * Rebuild `web/dist` (`vite build web`) before the browser checks.
-  * After any run, put back only the by-products: other screens' screenshots, `evidence/*.json`, `p2/ledger`, `used-launch-tickets`, `p2/runs/stub-pass`, the canary digest, and S4's 390 px shots (wave 1 is desktop only).
-  * Drop this copy's `var/isolated-*` folders and their databases when nothing is connected to them.
-  * The Bash hook misfires on some compound commands: put them in a scratchpad script.
-  * No paid AI (US$0). Lane pushes run no CI (P-85): local `run-suites.sh` is the evidence.
+  * After any run, put back only the by-products (other screens' screenshots, `evidence/*.json`, `p2/ledger`, `used-launch-tickets`, `p2/runs/stub-pass`, the canary digest, S4's 390 px shots). Drop this copy's `var/isolated-*` and their databases when nothing is connected.
+  * Stop any run if free space falls below 3 GB (it was 3.2 GB at the last check).
+  * The Bash hook misfires on some compound commands: put them in a scratchpad script. No paid AI (US$0). Lane pushes run no CI (P-85).
 
 ## Log (last 10 lines)
 - 2026-10-28 · QA-61..64 · BUILD · QA-61 the filing rule reads each sentence (canada 66, qa's filing check 9/9); QA-62 AI work names a finder run by its place in plain words; QA-63 a waiting finder card leads to the Sources page; QA-64 a library form's retire or restore takes effect at approval (one applyFormLifecycle for approval and an older approved change at release; the approval re-checks; the confirm says When it is approved). finder 129, runs 90, library browser 58, run browser 22. US$0.
