@@ -29,15 +29,16 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - The Prisma client in `node_modules` is shared with other copies: after switching branches run `./node_modules/.bin/prisma generate` if a column is reported missing.
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
-current_screen: DV-bb-1, DV-bb-6b, DV-bb-6c (outside review fixes); S3 passed Lead check (PR #76)
-stage: CHECK (DV-bb fixes done)
+current_screen: W1-shared-library (S6 Shared library)
+stage: PLAN (S6 plan written; S3 and DV-bb in Lead PR #76)
 owner: Lead
-next_action: Lead: check afb86cde (DV-bb-1 Dismiss on Form library upload cards, DV-bb-6b reset names the 6 built-in roles, DV-bb-6c no "(P-95)"); then S6 BUILD once the queue item contract is approved
-then: Lead check and merge; S6 re-check answers (founder Q1, Lead Q-L1..L3); m8 and m9 after runtime slice 2
+next_action: Lead: answer S6 plan.md §6 (Q-L1 edition key in the runner, Q-L2 runner on main first, Q-L3 cap US$100 vs P-139, Q-L4 rule rows, Q-L5 menu) and founder Q1 (recording pass, about US$8–12 Sample); then S6 slice 1 BUILD
+then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
 blocked_by: none
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-shared-library (S6) · EARLY-LOOK → PLAN · applied Lead message (contract approved): fresh re-check on 28d78cdc (R-109, fresh agent) and plan.md (R1–R5 answered on P-138, the approved contract and the step runner 619eaac4; N1 edition key, N2 old kinds; back-end table; slices with Capability/Scaffolding labels; ownership; founder Q1, Lead Q-L1..L5). No code. US$0. Owner Lead.
 - 2026-10-29 · DV-bb-1/6b/6c · FIX → CHECK · applied Lead message (S3 Lead check PASS): finished upload cards dismissible (stay gone after reload); reset counts added roles, keeps and names the 6 built-in ones; no "(P-95)" in the structure footer; pass and fail check each (structure 81/81, library 67/67, studio_browser 49/49 on a copy); web rebuilt; run-suites on afb86cde 58 PASS 0 FAIL; graph passes. US$0. Owner Lead.
 - 2026-10-29 · W1-start-setup (S3) · EARLY-LOOK · applied Lead message (founder Go on item 5): synced main 32961d69 then db5e0208 (one conflict in runs.ts: item 5's page choice on the Forms tab replaces forms' interim QA-63 Sources link; finder's waiting words and check_forms_s4_finder QA-63 aligned); web rebuilt before the run; run-suites on fd5ac8ae (main db5e0208 merged): 58 PASS, 0 FAIL; graph.mjs --check passes (G3 2: older attachment routes, not this lane). AI US$0. Owner Lead.
 - 2026-10-29 · W1-start-setup (S3) · FIX → EARLY-LOOK · applied Lead message (S5 on main e2cb27a4): item 5 — sync, three conflicts, Start setup in S5's Forms tab slot, the page choice that "Choose the application page" leads to (QA-63), one cost rule; start_setup 26/26, browser 39/39, s5_slice3 35/35; run-suites on fd5ac8ae (main db5e0208 merged): 58 PASS, 0 FAIL; graph.mjs --check passes (G3 2: older attachment routes, not this lane). AI US$0. Owner → Lead.
@@ -47,4 +48,3 @@ updated: 2026-10-29
 - 2026-10-28 · W1-start-setup (S3) · BUILD · start guard, POST /combinations/start and the landing offer (live only on the click), one Start setup button, /new and both path endpoints removed, checks moved; check_w1_start_setup 17/17 and the touched API checks pass; qa's check_qa_am_s2_1027 routed (f8d6e0cb); synced main 3858216e. AI US$0.
 - 2026-10-28 · W1-start-setup (S3) · DESIGN → BUILD · Lead answered the challenge (founder: wait for a click; M2 remove /new and both path endpoints; M3 start guard; M4 split with runtime slice 3; m5–m7, m10 accepted; m8, m9 after runtime slice 2); Lead response recorded. AI US$0.
 - 2026-10-28 · W1-start-setup (S3) · DESIGN · synced main 06a8fc30 (S4 merged); screen-challenge in screens/W1-start-setup/challenge.md: Build after these changes, 4 Major (cost at Start setup, end of /new and its endpoints, a start guard for retired or waiting names, split with runtime slice 3), 6 Minor (incl. runtime's two Left-as-it-is points, after runtime slice 2), 1 founder question; no code. AI US$0. Owner → Lead.
-- 2026-10-28 · W1-visual-system · FIX → Lead · qa after-merge on dccd87e: QA-60 (letters kept after Add and add another), QA-56 (Enter accepts a typed name), QA-55 (Retire names real blockers and the way out), QA-58 (Undo kept on the page note), QA-59 (Returned with note; Send again), Button primary hover 8.15:1; each with pass and fail checks; run-suites 41/41, journey 45/45, qa's steps for these pass. AI US$0. Owner → Lead.
