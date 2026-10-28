@@ -1,0 +1,4 @@
+This page is for the configuration people
+
+Client A (simulated) works on cases. Programs, forms and rules are set up here by the configuration people; your work is in Cases.
+Open your cases

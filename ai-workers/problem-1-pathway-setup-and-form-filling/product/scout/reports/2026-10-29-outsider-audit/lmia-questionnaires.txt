@@ -1,0 +1,99 @@
+Immigration programs
+Temporary residence
+Work permits
+Employer-specific work permit
+With an LMIA
+Renamed by audit
+Live
+
+In Release 1 · 1 draft change · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)
+
+Next step
+
+Review and release
+Sample: from the sample inputs; its setup has changed since they were loaded.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+Who can be in this application
+i
+
+As set when the combination was created · numbers Sample until the immigration expert confirms
+
+Fill from the guide
+Edit
+Person	How many	Applicant	Answered by	IRCC's words
+Principal applicant	exactly 1	Yes	Themselves	—
+Spouse or partner	0 to 1	Yes	Themselves	—
+Child	0 to 4	—	Principal, under 18	—
+Representative
+
+never an applicant
+
+	0 to 1	—	The firm	—
+
+Rules check on Save: exactly one principal applicant · how many from 0 to 9, the fewest no more than the most · a sponsor or representative is never an applicant · removing a person a form names asks first.
+
+Questions for each person
+Open all sections
+Add a library section…
+Add section
+Principal applicant · 146 questions
+Spouse or partner · 111 questions
+Child · 12 questions
+Representative · 15 questions
+
+Principal applicant: the forms need 120 answers about this person · 82 asked of the client · 38 filled by the case officer
+
+Application details · 7 questions for Principal applicant
+Remove from questionnaire
+Question	Who fills it	Only if	Needed by	
+Official language (English or French) in which the person wants to receive service	Client	Always	IMM 1295	Details
+Whether the person the form is about is the principal applicant, rather than the principal applicant's spouse, common-law partner or dependent child	Case officer	Always	IMM 5257 SCH1	Details
+Kind of immigration application the case concerns (e.g. permanent residence, study permit extension)	Case officer	Always	IMM 5475, IMM 5476	Details
+IRCC application file number of the case	Case officer	Always	IMM 5476	Details
+Name of the office where the application was submitted	Case officer	Always	IMM 5475	Details
+Location (city/country) of the office where the application was submitted	Case officer	Always	IMM 5475	Details
+Date the application is (or will be) submitted; reference date for calculated values	Case officer	Always	No form (decides what applies)	Details
+Personal details · 12 questions for Principal applicant
+Remove from questionnaire
+Languages · 4 questions for Principal applicant
+Remove from questionnaire
+Travel and identity documents · 13 questions for Principal applicant
+Remove from questionnaire
+Contact details · 6 questions for Principal applicant
+Remove from questionnaire
+Residence and immigration status · 6 questions for Principal applicant
+Remove from questionnaire
+Spouse or partner relationship · 9 questions for Principal applicant
+Remove from questionnaire
+Family members · 4 questions for Principal applicant
+Remove from questionnaire
+Intended work in Canada · 23 questions for Principal applicant
+Remove from questionnaire
+Education history · 6 questions for Principal applicant
+Remove from questionnaire
+Employment and activity history · 6 questions for Principal applicant
+Remove from questionnaire
+Medical background · 3 questions for Principal applicant
+Remove from questionnaire
+Background declarations · 10 questions for Principal applicant
+Remove from questionnaire
+Service, membership and government position history · 17 questions for Principal applicant
+Remove from questionnaire
+Travel history · 5 questions for Principal applicant
+Remove from questionnaire
+Representative and authorizations · 10 questions for Principal applicant
+Remove from questionnaire
+Processing requirements · 4 questions for Principal applicant
+Remove from questionnaire
+Submitted documents · 1 question for Principal applicant
+Remove from questionnaire
+
+146 questions for Principal applicant, from the largest Sample family the combination allows. 38 placed questions are not asked: no form reads them and they decide nothing.
+
+Rules used here (39)
+Checks on these answers (64)

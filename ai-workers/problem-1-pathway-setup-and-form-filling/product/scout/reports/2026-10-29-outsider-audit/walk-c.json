@@ -1,0 +1,180 @@
+[
+ {
+  "actor": "user-A",
+  "url": "/c/87698aca-d743-4e79-997c-316be048c402",
+  "name": "visitor-overview",
+  "ms": 1888,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nVisitors\nVisitor visa\nVisitor visa\nIn setup\n\nNot released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample\n\nNext step\n\nAdd 1 form from the library\nSample: official visitor-visa forms and checklists attached; not set up yet.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\nMissing before firms can use it (2)\n2 forms attached as sources, 0 set up.\nNo questions yet for Applicant, Spouse or partner (travelling), Child (travelling).\n\nNext step for all of these: Add 1 form from the library.\n\nForms\n\n0\n\n0 form fields matched to shared fields · Forms\n\nQuestions\n\n0\n\nquestions across all people (each person role counted) · 0 sections\n\nDocuments\n\n0\n\nasked always or only if\n\nRules and checks\n\n0 · 0\n\nno problems\n\nWho can be in this application\nChange in Questionnaires\nApplicant · 1 · applicant\nSpouse or partner (travelling) · 0 to 1 · applicant\nChild (travelling) · 0 to 4 · applicant\n\nEach person marked as applicant gets their own forms, questions and documents. Numbers Sample until the immigration expert confirms.\n\nNothing released yet. Case work only ever uses a released version; drafts are previews."
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/87698aca-d743-4e79-997c-316be048c402/forms",
+  "name": "visitor-forms",
+  "ms": 1993,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "empty-table-header(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nVisitors\nVisitor visa\nVisitor visa\nIn setup\n\nNot released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample\n\nNext step\n\nAdd 1 form from the library\nSample: official visitor-visa forms and checklists attached; not set up yet.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\n\nNo form find yet\n\nStart setup runs the form finder: AI reads the application's canada.ca pages and guide and attaches the forms it finds. Which forms apply is Sample until the immigration expert confirms.\n\nFiling: not known until a form is set up · 2 forms attached, 0 set up · Sample until the immigration expert confirms\n\nAdd a form from the library\nOpen the Form library\n\nNot set up yet: 1 form can be added from the library now (its form fields are already matched, no AI needed); 1 form needs reading and drafting with AI. Each row has its step.\n\nForm\tWhy it is here (IRCC's words)\tWho fills it\tOnly if\tFiled as by default\tSigned by\tRead and matched\t\nIMM 5257\nIMM 5257 (09-2023) · imm5257e.pdf\tAttached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.\t\nRead: ready for AI drafting\nRead today 2:37 a.m.\nDraft with AI\n\t\nIMM 5707\nIMM 5707 (01-2023) · imm5707e.pdf\tAttached from the Form library: not set up as a line yet. It is read, then its form fields are matched to "
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/87698aca-d743-4e79-997c-316be048c402/questionnaires",
+  "name": "visitor-questionnaires",
+  "ms": 1602,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nVisitors\nVisitor visa\nVisitor visa\nIn setup\n\nNot released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample\n\nNext step\n\nAdd 1 form from the library\nSample: official visitor-visa forms and checklists attached; not set up yet.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\nWho can be in this application\ni\n\nAs set when the combination was created · numbers Sample until the immigration expert confirms\n\nFill from the guide\nEdit\nPerson\tHow many\tApplicant\tAnswered by\tIRCC's words\nPrincipal applicant\texactly 1\tYes\tThemselves\t—\nSpouse or partner\t0 to 1\tYes\tThemselves\t—\nChild\t0 to 4\tYes\tPrincipal, under 18\t—\n\nRules check on Save: exactly one principal applicant · how many from 0 to 9, the fewest no more than the most · a sponsor or representative is never an applicant · removing a person a form names asks first.\n\nNo questions yet\n\nThe questions each person needs come from the facts their forms read. Add forms on the Forms tab, or a library section here.\n\nAdd a library section…\nApplication details\nPersonal details\nLanguages\nTravel and identity documents\nContact details\nResidence and immigration status\nSpouse or partner relationship\nFamily members\nIntended work in Canada\nEducation history\nEmployment and activity history\nMedical background\nBackground declarations\nService, membership and government position history\nTravel history\nRepresentative and "
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/87698aca-d743-4e79-997c-316be048c402/documents",
+  "name": "visitor-documents",
+  "ms": 1664,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "empty-table-header(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nVisitors\nVisitor visa\nVisitor visa\nIn setup\n\nNot released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample\n\nNext step\n\nAdd 1 form from the library\nSample: official visitor-visa forms and checklists attached; not set up yet.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\nAdd a document requirement\nDocument\tWhose\tBase or conditional\tSource\t\nNo document requirements yet."
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/87698aca-d743-4e79-997c-316be048c402/preview",
+  "name": "visitor-preview",
+  "ms": 2122,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nVisitors\nVisitor visa\nVisitor visa\nIn setup\n\nNot released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample\n\nNext step\n\nAdd 1 form from the library\nSample: official visitor-visa forms and checklists attached; not set up yet.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\nNothing to preview yet\n\nNothing to preview yet: once this combination has forms, choose a Sample family to see each person's questions, documents and forms exactly as a case gets them."
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/87698aca-d743-4e79-997c-316be048c402/review",
+  "name": "visitor-review",
+  "ms": 2849,
+  "errs": [],
+  "leaks": [
+   "snake_case key: «applying_country_differs_from_citizenship»"
+  ],
+  "axe": [],
+  "bestPractice": [
+   "empty-table-header(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nVisitors\nVisitor visa\nVisitor visa\nIn setup\n\nNot released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample\n\nNext step\n\nAdd 1 form from the library\nSample: official visitor-visa forms and checklists attached; not set up yet.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\n1\n\nAuthor submits\n\nConfiguration author (only the author submits)\n\n22 draft changes; 0 problems to fix\n\n2\n\nSME duty signs content\n\nContent reviewer (Immigration SME duty)\n\nRules, document requirements, checks and AI proposals need the SME duty\n\n3\n\nA second person releases\n\nApprover (never the author or submitter)\n\nNothing released yet\n\nYou are acting as Configuration author (simulated): Super Admin · content publisher\n\nDuties: author, review. The server enforces them: an author or submitter can never approve, and a draft changed after submission cannot be released.\n\nThe draft passes validation\n\nChanges in the draft compared with nothing released (22)\n\n\tKind\tItem\tChange\tOrigin\tNeeds\tSigned\n\tDerived definition\tcase.applying_country_differs_from_citizenship\n\nTrue when the country or territory from which the person applies is not a country of their citizenship.\n\n\tadded\t—\tSME duty\t\n\tDerived definition\tcase.spouse_or_partner_count\n\nNumber of person records in the case holding the role subject_spouse_or_partner (current spouse, common-law or conjugal partner) on the applicati"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/bbefdb94-7cf9-4502-9bca-b30594a51df9",
+  "name": "lmia-overview",
+  "ms": 3693,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nWork permits\nEmployer-specific work permit\nWith an LMIA\nRenamed by audit\nLive\n\nIn Release 1 · 1 draft change · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)\n\nNext step\n\nReview and release\nSample: from the sample inputs; its setup has changed since they were loaded.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\n\nForms\n\n8\n\n461 form fields matched to shared fields · Forms\n\nQuestions\n\n295\n\nquestions across all people (each person role counted) · 18 sections\n\nDocuments\n\n26\n\nasked always or only if\n\nRules and checks\n\n39 · 64\n\n15 warnings: see them\n\nWho can be in this application\nChange in Questionnaires\nPrincipal applicant · 1 · applicant\nSpouse or partner · 0 to 1 · applicant\nChild · 0 to 4\nRepresentative · 0 to 1\n\nEach person marked as applicant gets their own forms, questions and documents. Numbers Sample until the immigration expert confirms.\n\nReleased versions: Release 1 on today 2:39 a.m., approved by Approver · Review and release"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/bbefdb94-7cf9-4502-9bca-b30594a51df9/forms",
+  "name": "lmia-forms",
+  "ms": 1952,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "empty-table-header(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nWork permits\nEmployer-specific work permit\nWith an LMIA\nRenamed by audit\nLive\n\nIn Release 1 · 1 draft change · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)\n\nNext step\n\nReview and release\nSample: from the sample inputs; its setup has changed since they were loaded.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\n\nNo form find yet\n\nStart setup runs the form finder: AI reads the application's canada.ca pages and guide and attaches the forms it finds. Which forms apply is Sample until the immigration expert confirms.\n\nFiling: PDF only · 8 forms · Sample until the immigration expert confirms\n\nAdd a form from the library\nOpen the Form library\nForm\tWhy it is here (IRCC's words)\tWho fills it\tOnly if\tFiled as by default\tSigned by\tRead and matched\t\nIMM 1295\nApplication for work permit made outside of Canada\t\"Application for Work Permit made Outside of Canada (IMM 1295)\"\tEach applicant\tAlways\t\nPDF upload\nOnline (later wave)\nSigned PDF upload\nNo signature in the file\n\tNot set\t\nIMM 1295 (09-2023) · 163 form fields matched\nIn the library\nRead today 2:38 a.m.\n\t\nChange\n\nIMM 5257 SCH1\nSchedule 1 - Application for temporary residence\t\"If you have answered “yes” to any of the background information questions on the application\"\tEach applicant\tNeeded for an applicant who answered yes to any background information question on the application form.\t\nPDF upl"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/bbefdb94-7cf9-4502-9bca-b30594a51df9/questionnaires",
+  "name": "lmia-questionnaires",
+  "ms": 3012,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "empty-table-header(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nWork permits\nEmployer-specific work permit\nWith an LMIA\nRenamed by audit\nLive\n\nIn Release 1 · 1 draft change · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)\n\nNext step\n\nReview and release\nSample: from the sample inputs; its setup has changed since they were loaded.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\nWho can be in this application\ni\n\nAs set when the combination was created · numbers Sample until the immigration expert confirms\n\nFill from the guide\nEdit\nPerson\tHow many\tApplicant\tAnswered by\tIRCC's words\nPrincipal applicant\texactly 1\tYes\tThemselves\t—\nSpouse or partner\t0 to 1\tYes\tThemselves\t—\nChild\t0 to 4\t—\tPrincipal, under 18\t—\nRepresentative\n\nnever an applicant\n\n\t0 to 1\t—\tThe firm\t—\n\nRules check on Save: exactly one principal applicant · how many from 0 to 9, the fewest no more than the most · a sponsor or representative is never an applicant · removing a person a form names asks first.\n\nQuestions for each person\nOpen all sections\nAdd a library section…\nAdd section\nPrincipal applicant · 146 questions\nSpouse or partner · 111 questions\nChild · 12 questions\nRepresentative · 15 questions\n\nPrincipal applicant: the forms need 120 answers about this person · 82 asked of the client · 38 filled by the case officer\n\nApplication details · 7 questions for Principal applicant\nRemove from questionnaire\nQuestion\tWho fills it\tOnly if\tNeeded "
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/bbefdb94-7cf9-4502-9bca-b30594a51df9/documents",
+  "name": "lmia-documents",
+  "ms": 3291,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "empty-table-header(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nWork permits\nEmployer-specific work permit\nWith an LMIA\nRenamed by audit\nLive\n\nIn Release 1 · 1 draft change · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)\n\nNext step\n\nReview and release\nSample: from the sample inputs; its setup has changed since they were loaded.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\nAdd a document requirement\nDocument\tWhose\tBase or conditional\tSource\t\n\n\nBirth certificate of accompanying dependent child\n\nImported release\n\tEach child\nprovided by client\tConditional\n\nFor each dependent child who will accompany the principal applicant to Canada.\n\n\t\"You must provide children’s birth certificates for accompanying dependents.\"\t\nEdit\n\n\nCertified translation of documents not in English or French\n\nImported release\n\tEach applicant\nprovided by other\tConditional\n\nFor each submitted document that is not in English or French.\n\n\t\"If your documents are in a language other than English or French, you must include a certified\"\t\nEdit\n\n\nCopy of IMM 5802 offer of employment and proof of employer compliance fee payment\n\nImported release\n\tPrincipal applicant\nprovided by employer\tConditional\n\nOnly when IRCC authorized the employer to submit the offer of employment using the IMM 5802 form.\n\n\t\"If IRCC authorized your employer to submit the offer of employment using the IMM 5802 form, provide a copy of the IMM 5802 and proof that the e"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/bbefdb94-7cf9-4502-9bca-b30594a51df9/preview",
+  "name": "lmia-preview",
+  "ms": 3240,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nWork permits\nEmployer-specific work permit\nWith an LMIA\nRenamed by audit\nLive\n\nIn Release 1 · 1 draft change · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)\n\nNext step\n\nReview and release\nSample: from the sample inputs; its setup has changed since they were loaded.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\nSample family\nSingle, no children\nCouple, no children\nCouple, one child\nCouple, two children\nDraft\nReleased\nDraft (not released) · Sample people, never saved · Every form field and a Sample filled PDF\nPrincipal applicant · 84 questions · 21 documents · 7 forms\nSpouse or partner · 76 questions · 9 documents · 4 forms\nChild 1 · 7 questions · 1 document · 0 forms\nChild 2 · 3 questions · 1 document · 0 forms\nRepresentative · 13 questions · 0 documents · 0 forms\nTry answers that change what applies for Principal applicant (31)\nWhat Principal applicant is asked\n1. Application details · 1\n2. Personal details · 3\n3. Languages · 4\n4. Travel and identity documents · 2\n5. Contact details · 6\n6. Residence and immigration status (the application) · 1\n7. Residence and immigration status (Principal applicant) · 5\n8. Spouse or partner relationship (the application) · 6\n9. Spouse or partner relationship (Principal applicant) · 2\n10. Family members · 4\n11. Intended work in Canada · 1\n12. Education history · 6\n13. Employment and activity history ·"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/bbefdb94-7cf9-4502-9bca-b30594a51df9/review",
+  "name": "lmia-review",
+  "ms": 2426,
+  "errs": [],
+  "leaks": [
+   "snake_case key: «subject_spouse_or_partner»"
+  ],
+  "axe": [],
+  "bestPractice": [
+   "empty-table-header(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nWork permits\nEmployer-specific work permit\nWith an LMIA\nRenamed by audit\nLive\n\nIn Release 1 · 1 draft change · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)\n\nNext step\n\nReview and release\nSample: from the sample inputs; its setup has changed since they were loaded.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\n1\n\nAuthor submits\n\nConfiguration author (only the author submits)\n\n1 draft change; 0 problems to fix\n\n2\n\nSME duty signs content\n\nContent reviewer (Immigration SME duty)\n\nRules, document requirements, checks and AI proposals need the SME duty\n\n3\n\nA second person releases\n\nApprover (never the author or submitter)\n\nLast release: Release 1 by Approver\n\nYou are acting as Configuration author (simulated): Super Admin · content publisher\n\nDuties: author, review. The server enforces them: an author or submitter can never approve, and a draft changed after submission cannot be released.\n\nValidation of the draft\n\n0 errors (block submission) · 15 warnings (shown and recorded)\n\nwarning\nDerived fields · True when the country or territory from which the person applies is not a country of their citizenship: Calculation other has no tested helper: recorded, never evaluated.\nwarning\nDerived fields · Number of person records in the case holding the role subject_spouse_or_partner (current spouse, common-law or conjugal partner) on the application "
+ },
+ {
+  "actor": "user-C",
+  "url": "/c/bbefdb94-7cf9-4502-9bca-b30594a51df9/review",
+  "name": "reviewer-lmia-review",
+  "ms": 1678,
+  "errs": [],
+  "leaks": [
+   "snake_case key: «subject_spouse_or_partner»"
+  ],
+  "axe": [],
+  "bestPractice": [
+   "empty-table-header(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Immigration programs\nTemporary residence\nWork permits\nEmployer-specific work permit\nWith an LMIA\nRenamed by audit\nLive\n\nIn Release 1 · 1 draft change · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)\n\nNext step\n\nReview and release\nSample: from the sample inputs; its setup has changed since they were loaded.\nOverview\nForms\nQuestionnaires\nDocuments\nPreview\nReview and release\n1\n\nAuthor submits\n\nConfiguration author (only the author submits)\n\n1 draft change; 0 problems to fix\n\n2\n\nSME duty signs content\n\nContent reviewer (Immigration SME duty)\n\nRules, document requirements, checks and AI proposals need the SME duty\n\n3\n\nA second person releases\n\nApprover (never the author or submitter)\n\nLast release: Release 1 by Approver\n\nYou are acting as Content reviewer (simulated): Content publisher · Immigration SME duty\n\nDuties: review, sme. The server enforces them: an author or submitter can never approve, and a draft changed after submission cannot be released.\n\nValidation of the draft\n\n0 errors (block submission) · 15 warnings (shown and recorded)\n\nwarning\nDerived fields · True when the country or territory from which the person applies is not a country of their citizenship: Calculation other has no tested helper: recorded, never evaluated.\nwarning\nDerived fields · Number of person records in the case holding the role subject_spouse_or_partner (current spouse, common-law or conjugal partner) on the applicatio"
+ }
+]

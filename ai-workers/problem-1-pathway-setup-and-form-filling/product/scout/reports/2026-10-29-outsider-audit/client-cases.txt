@@ -1,0 +1,3 @@
+Cases are for the case officer
+
+Clients open their questionnaire from the link their officer sends. Switch to the case officer to see the cases.

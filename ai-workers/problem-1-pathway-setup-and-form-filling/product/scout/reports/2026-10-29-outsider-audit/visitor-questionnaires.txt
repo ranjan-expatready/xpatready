@@ -1,0 +1,59 @@
+Immigration programs
+Temporary residence
+Visitors
+Visitor visa
+Visitor visa
+In setup
+
+Not released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample
+
+Next step
+
+Add 1 form from the library
+Sample: official visitor-visa forms and checklists attached; not set up yet.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+Who can be in this application
+i
+
+As set when the combination was created · numbers Sample until the immigration expert confirms
+
+Fill from the guide
+Edit
+Person	How many	Applicant	Answered by	IRCC's words
+Principal applicant	exactly 1	Yes	Themselves	—
+Spouse or partner	0 to 1	Yes	Themselves	—
+Child	0 to 4	Yes	Principal, under 18	—
+
+Rules check on Save: exactly one principal applicant · how many from 0 to 9, the fewest no more than the most · a sponsor or representative is never an applicant · removing a person a form names asks first.
+
+No questions yet
+
+The questions each person needs come from the facts their forms read. Add forms on the Forms tab, or a library section here.
+
+Add a library section…
+Application details
+Personal details
+Languages
+Travel and identity documents
+Contact details
+Residence and immigration status
+Spouse or partner relationship
+Family members
+Intended work in Canada
+Education history
+Employment and activity history
+Medical background
+Background declarations
+Service, membership and government position history
+Travel history
+Representative and authorizations
+Processing requirements
+Submitted documents
+Add section
+Rules used here (0)
+Checks on these answers (0)

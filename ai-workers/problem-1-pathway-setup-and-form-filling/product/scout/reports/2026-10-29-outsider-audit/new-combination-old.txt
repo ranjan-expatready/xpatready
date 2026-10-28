@@ -1,0 +1,23 @@
+Immigration programs
+New combination
+New combination
+Describe it
+What application is it?
+Propose a path · US$0
+
+Pick what already exists, or type a new name and choose Create. Each level is checked for duplicates as you type.
+
+Pathway
+Retail
+Corporate and employers
+Program
+Category
+Sub-category
+Linked to optional
+None
+Next step of…
+Supported by…
+A label on the row for now (for example "Supported by: Corporate › LMIA"); nothing carries across between linked applications yet.
+Will be created as Retail › …
+Create and add sources
+Cancel

@@ -1,0 +1,46 @@
+Immigration programs
+Temporary residence
+Visitors
+Visitor visa
+Visitor visa
+In setup
+
+Not released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample
+
+Next step
+
+Add 1 form from the library
+Sample: official visitor-visa forms and checklists attached; not set up yet.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+
+No form find yet
+
+Start setup runs the form finder: AI reads the application's canada.ca pages and guide and attaches the forms it finds. Which forms apply is Sample until the immigration expert confirms.
+
+Filing: not known until a form is set up · 2 forms attached, 0 set up · Sample until the immigration expert confirms
+
+Add a form from the library
+Open the Form library
+
+Not set up yet: 1 form can be added from the library now (its form fields are already matched, no AI needed); 1 form needs reading and drafting with AI. Each row has its step.
+
+Form	Why it is here (IRCC's words)	Who fills it	Only if	Filed as by default	Signed by	Read and matched	
+IMM 5257
+IMM 5257 (09-2023) · imm5257e.pdf	Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.	
+Read: ready for AI drafting
+Read today 2:37 a.m.
+Draft with AI
+	
+IMM 5707
+IMM 5707 (01-2023) · imm5707e.pdf	Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.	
+In the library
+Read today 2:38 a.m.
+Add from library
+	
+
+Sources (read for documents and citations, never filed): IMM 5484 (05-2026) · Guide 5256 page · Visitor visa application package, India · IMM 5881 E (05-2026), New Delhi visa additional document checklist

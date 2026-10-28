@@ -1,0 +1,6 @@
+Releases
+
+Frozen, fingerprinted configuration versions. Case work only ever uses a released version.
+
+Combination	Version	Fingerprint	Author / submitter / approver	Released	Basis
+With an LMIA	v1 current	0c8fcb19c2d4d2e2	user-A / user-A / user-B	10/29/2026, 2:39:00 AM	Imported reviewed release: AI-drafted under the guarded path, reviewed and approved by a second person. Prototype only; not specialist-confirmed.

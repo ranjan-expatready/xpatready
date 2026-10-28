@@ -1,0 +1,569 @@
+[
+ {
+  "actor": "user-A",
+  "url": "/",
+  "name": "programs",
+  "ms": 10124,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Immigration programs\nProgram structure\nAdd combination\n\nEvery combination your firm can open, and where its setup stands.\n\nRetail\n21\nCorporate and employers\n8\nCards\nList\n⌘K\nAll\n21\nTemporary residence\n12\nPermanent residence\n8\nCitizenship\n1\nProgram: All\nCitizenship (1)\nEconomic immigration (3)\nFamily sponsorship (3)\nPermanent resident documents (2)\nStudy permits (2)\nVisitors (3)\nWork permits (7)\nStatus: All\nNeeds you\n0\n\n21 combinations · 1 Live · 4 In setup · 16 Not started\nNames are Sample until the immigration expert confirms.\n\nTemporary residence\n12 combinations\nRetail › Temporary residence › Visitors\nIn setup\nVisitor visa\n\nNo sub-category\n\nStep 1 of 4 · Forms\n\n2 forms found · 1 ready to add from the library · 1 needs a draft\n\nAdd 1 form from the library\nRetail › Temporary residence › Visitors\nIn setup\nSuper visa\n\nNo sub-category\n\nStep 1 of 4 · Forms\n\n2 forms found · 1 ready to add from the library · 1 needs a draft\n\nAdd 1 form from the library\nRetail › Temporary residence › Visitors\nNot started\nExtend stay in Canada\n\nNo sub-category\n\nNot started\n\nNo forms yet\n\nStart setup\nRetail › Temporary residence › Work permits\nLive\nEmployer-specific work permit\n\nWith an LMIA\n\nStep 4 of 4 · Live\n\n6 forms · Filed: PDF\n\nOpen\nRetail › Temporary residence › Work permits\nNot started\nEmployer-specific work permit\n\nLMIA-exempt (employer offer)\n\nNot started\n\nNo forms yet\n\nStart setup\nRetail › Temporary residence › Work permits\nNot started\nOpen work permit\n\nSpouse of a skilled worker\n\nNot starte"
+ },
+ {
+  "actor": "user-A",
+  "url": "/structure",
+  "name": "structure",
+  "ms": 9295,
+  "errs": [],
+  "leaks": [
+   "decision number: «P-95»"
+  ],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Program structure\nAdd\n\nWhere every combination sits: Pathway › Program › Category › Sub-category. The order here is the order on Immigration programs.\n\nRetail\n21\nCorporate and employers\n8\nTree\nList\nFind a name\nExpand all\nCollapse all\nPathway\nAll\n21\nTemporary residence\n12\nPermanent residence\n8\nCitizenship\n1\nProgram: All\nVisitors\nWork permits\nStudy permits\nFamily sponsorship\nEconomic immigration\nPermanent resident documents\nCitizenship\nStatus: All\nIn setup\nNot ready\nLive\nNot started\nWaiting for approval\nShow retired (0)\n\n3 pathways · 7 programs · 15 categories · 11 sub-categories · 21 combinations\n\nPathway\nProgram\nCategory\nSub-category\n· Numbers show the order on this page, not IRCC codes.\n\nName\nStatus\nCases may be opened from\nUsed by\nActions\n1\nTemporary residence\n12 combinations\nEdit\nTemporary residence\nRetire\nTemporary residence\n\nCan't retire yet: \"Work permits\", \"Employer-specific work permit\" and 1 more under it are still in use: retire those first; \"Visitor visa\", \"Super visa\" and 1 more under it have setup drafts: release or discard them first; \"Extend stay in Canada\", \"LMIA-exempt (employer offer)\" and 3 more under it were never released: delete those first. Open cases and earlier releases keep everything either way. See where used\n\n1.1\nVisitors\n3 combinations\nEdit\nVisitors\nDelete\nVisitors\n\nCan't delete: \"Visitor visa\" under it has a setup draft. See where used\n\n1.1.1\nVisitor visa\nIn setup\nOutside Canada\nUsed by:\nSetup draft\nEdit\nVisitor visa\nDelete\nVisitor visa\n\nCan't d"
+ },
+ {
+  "actor": "user-A",
+  "url": "/review",
+  "name": "to-review",
+  "ms": 3283,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "heading-order(1)"
+  ],
+  "sideways1024": 0,
+  "text": "To review\n\nEverything that waits for a person: AI proposals, combinations to review and release, new editions, held files and merges. Nothing reaches a release until a person decides.\n\nNeeds you · 0\nWaiting for others · 0\nRunning · 0\nAll · 0\nKind\nAll\nNothing waits for you\n\nWhen you add sources to a combination, its AI draft, new editions and approvals appear here.\n\nOpen Immigration programs\n\n0 items shown"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined",
+  "name": "visitor-overview",
+  "ms": 9735,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined/forms",
+  "name": "visitor-forms",
+  "ms": 4200,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined/questionnaires",
+  "name": "visitor-questionnaires",
+  "ms": 6218,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined/documents",
+  "name": "visitor-documents",
+  "ms": 5496,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined/preview",
+  "name": "visitor-preview",
+  "ms": 6435,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined/review",
+  "name": "visitor-review",
+  "ms": 5070,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined",
+  "name": "lmia-overview",
+  "ms": 5458,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined/forms",
+  "name": "lmia-forms",
+  "ms": 6950,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined/questionnaires",
+  "name": "lmia-questionnaires",
+  "ms": 4050,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined/documents",
+  "name": "lmia-documents",
+  "ms": 4566,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined/preview",
+  "name": "lmia-preview",
+  "ms": 1592,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/c/undefined/review",
+  "name": "lmia-review",
+  "ms": 1440,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/library/forms",
+  "name": "library-forms",
+  "ms": 2756,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Shared library › Forms\n\nForms\n\nEvery IRCC form, guide and checklist, stored once. Combinations pick from here by themselves.\n\nUpload PDF\nType\nAll16\nForms8\nGuides4\nChecklists4\nUsed by\nAny combination\nFamily sponsorship › Spouse or partner › Applicant outside Canada\nLMIA › High-wage position\nStudy permits › Study permit\nVisitors › Super visa\nVisitors › Visitor visa\nWork permits › Employer-specific work permit › With an LMIA\nStatus\nNeeds your OK0\nNewer file on canada.ca0\nRetired0\nNumber\tTitle\tType\tEdition\tIRCC accepts\tUsed by\tStatus\t\nActions\n\nGuide 5256\t\nApplying for a visitor visa (temporary resident visa) - paper application\n\tGuide\tRead from canada.ca on 2026-10-28\tNot filed\t2 combinations\t\nReady\n\t\nEdit\nGuide 5256\nRetire\nGuide 5256\n\nGuide 5269\t\nApplying for a Study Permit outside Canada\n\tGuide\tRead from canada.ca on 2026-10-28\tNot filed\t\nStudy permit · Study permits\n\t\nReady\n\t\nEdit\nGuide 5269\nRetire\nGuide 5269\n\nGuide 5289\t\nSponsor your spouse, common-law partner, conjugal partner or dependent child – Complete Guide (IMM 5289)\n\tGuide\tRead from canada.ca on 2026-10-28\tNot filed\t\nApplicant outside Canada · Family sponsorship › Spouse or partner\n\t\nReady\n\t\nEdit\nGuide 5289\nRetire\nGuide 5289\n\nGuide 5487\t\nApplying for a Work Permit outside Canada\n\tGuide\tRead from canada.ca on 2026-10-28\tNot filed\t\nWith an LMIA · Work permits › Employer-specific work permit\n\t\nReady\n\t\nEdit\nGuide 5487\nRetire\nGuide 5487\n\nIMM 1295\t\nApplication for work permit made outside of Canada\n\tForm\t09-2023\t\nNot set ye"
+ },
+ {
+  "actor": "user-A",
+  "url": "/library/fields",
+  "name": "library-fields",
+  "ms": 1875,
+  "errs": [],
+  "leaks": [
+   "word canonical: «Canonical»",
+   "snake_case key: «application_date»"
+  ],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Canonical fields\n\nOne definition per meaning, shared by every form and program. Values about people and cases are never stored here.\n\nAdd a field\nAll fields\nUsed by more than one form\nWith a draft change\nAI-proposed\nNot asked anywhere\n164 of 164\nField\tMeaning\tType\tForms\tAsked in\tStatus\ncase.application_date\tDate the application is (or will be) submitted; reference date for calculated values\tdate\tnone · 0 form fields\tapplication details · staff working view\t\nv1\nImported release\n\ncase.application_number\tIRCC application file number of the case\ttext\tIMM 5476 · 1 form fields\tapplication details · staff working view\t\nv1\nImported release\n\ncase.application_type\tKind of immigration application the case concerns (e.g. permanent residence, study permit extension)\ttext\tIMM 5476, IMM 5475 · 2 form fields\tapplication details · staff working view\t\nv1\nImported release\n\ncase.applying_for_pgwp\tWhether the application is for a post-graduation work permit\tyes_no\tnone · 0 form fields\tintended work · staff working view\t\nv1\nImported release\n\ncase.authorizes_release_to_designated_individual\tWhether the applicant authorizes IRCC/CBSA to release case information to a designated individual\tyes_no\tnone · 0 form fields\trepresentative · client questionnaire\t\nv1\nImported release\n\ncase.country_where_applying\tCountry or territory from which the application is being made\tcountry\tIMM 1295 · 2 form fields\tresidence history · client questionnaire\t\nv1\nImported release\n\ncase.employer_exempt_from_compliance_regime"
+ },
+ {
+  "actor": "user-A",
+  "url": "/library/sections",
+  "name": "library-sections",
+  "ms": 911,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Sections\n\nReusable groups of questions. Each combination selects the sections its questionnaire uses.\n\nNew section title\nMeaning\nAdd\nSection\tMeaning\tQuestion placements\tUsed by combinations\tStatus\nApplication details\tCase-level facts about the application itself: type, dates, office, numbers and service language.\t7\t1\t\nImported release\n\nPersonal details\tIdentity facts about each person: names, sex, birth, citizenship, marital status and client identifiers.\t12\t1\t\nImported release\n\nLanguages\tEach person's native language and ability in English and French.\t4\t1\t\nImported release\n\nTravel and identity documents\tPassport, national identity document and US permanent resident card details for each person.\t13\t1\t\nImported release\n\nContact details\tEach client-side person's addresses, telephone, fax and e-mail.\t8\t1\t\nImported release\n\nResidence and immigration status\tPeriods of residence with the immigration status held, and the country the application is made from.\t7\t1\t\nImported release\n\nSpouse or partner relationship\tFacts about the subject's current and previous marriage or common-law relationship, including common-law evidence.\t9\t1\t\nImported release\n\nFamily members\tHow each family member relates to the subject, whether they accompany, and their plans in Canada.\t6\t1\t\nImported release\n\nIntended work in Canada\tThe work permit sought, the prospective employer, the job offer and its LMIA or nomination basis.\t23\t1\t\nImported release\n\nEducation history\tPeriods of post-secondary education, one r"
+ },
+ {
+  "actor": "user-A",
+  "url": "/library/documents",
+  "name": "library-documents",
+  "ms": 1129,
+  "errs": [],
+  "leaks": [
+   "snake_case key: «family_name»"
+  ],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Document types\n\nReusable document definitions. Facts a supported type can supply come from the reader profiles (a proposal until the reader proves them on a case).\n\nDocument type\tCategory\tFacts it can supply\tStatus\nBirth certificate of accompanying dependent child\tclient\tperson.family_name, person.given_names, person.sex, person.date_of_birth, person.place_of_birth_city, person.country_of_birth, mother.full_name, father.full_name\t\nImported release\n\nCertified translation of documents not in English or French\tother\tnone recorded\t\nImported release\n\nCopy of IMM 5802 offer of employment and proof of employer compliance fee payment\temployer\tnone recorded\t\nImported release\n\nCopy of LMIA and copy of employment contract from prospective employer\temployer\tperson.full_name, organisation.name, person.intended_job_title, person.intended_job_duties, person.intended_employment_start_date, person.intended_employment_end_date, person.intended_work_location, person.intended_work_province, person.lmia_or_offer_number\t\nImported release\n\nEducation and work experience evidence (New Delhi specification: certificates, diplomas or degrees with mark sheets; appointment and relieving letters; salary slips and Form 16; bank statements; reference letters with duration, duties and contact details)\tclient\tnone recorded\t\nImported release\n\nEmployment contract (LMIA-exempt job)\temployer\tperson.full_name, organisation.name, person.intended_job_title, person.intended_job_duties, person.intended_employment_start"
+ },
+ {
+  "actor": "user-A",
+  "url": "/library/checks",
+  "name": "library-checks",
+  "ms": 983,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "heading-order(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Checks\n\nField validation, consistency checks, document validity and AI review objectives.\n\nChecks are set up on a later screen\n\nThis list is built with the shared-library screen (Screen 04). Combination rules and checks imported from the reviewed release are visible in each combination's full configuration.\n\nBack to Immigration programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/release",
+  "name": "release",
+  "ms": 1062,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "heading-order(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Immigration programs › Review and release\nReview and release\n\nEveryone's changes are in one shared draft. Releasing publishes together every combination that has passed its review (submitted, and signed by the content reviewer where an expert must sign); firms keep what was approved until then. Last release: Release 1, Oct 28, 2026.\n\nNothing to release\n\nThe shared draft has no changes since the last release. Changes appear here as soon as someone edits a combination.\n\nBack to Immigration programs"
+ },
+ {
+  "actor": "user-A",
+  "url": "/releases",
+  "name": "releases",
+  "ms": 1079,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Releases\n\nFrozen, fingerprinted configuration versions. Case work only ever uses a released version.\n\nCombination\tVersion\tFingerprint\tAuthor / submitter / approver\tReleased\tBasis\nWith an LMIA\tv1 current\t0c8fcb19c2d4d2e2\tuser-A / user-A / user-B\t10/29/2026, 2:39:00 AM\tImported reviewed release: AI-drafted under the guarded path, reviewed and approved by a second person. Prototype only; not specialist-confirmed."
+ },
+ {
+  "actor": "user-A",
+  "url": "/ai",
+  "name": "ai-work",
+  "ms": 852,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "heading-order(1)"
+  ],
+  "sideways1024": 0,
+  "text": "AI work\n\nEvery AI launch from the catalogue, a program, a combination or a source, with what each step did and cost. Decisions happen in To review: nothing reaches a draft until a person decides.\n\nNo AI work yet\n\nStart it from a combination on Immigration programs, a program's menu, a combination, or a form on Sources and forms."
+ },
+ {
+  "actor": "user-A",
+  "url": "/activity",
+  "name": "activity",
+  "ms": 1115,
+  "errs": [],
+  "leaks": [
+   "word stream: «Stream»"
+  ],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Activity\n\nEvery create, change, AI step, decision, release, fill and reset in this demo workspace, newest first.\n\nWhen\tWho\tWhat\tItem\n10/29/2026, 2:57:14 AM\tuser-A\tConfiguration author created pathway \"Audit race2 1793222834532\"\tpathway\n10/29/2026, 2:57:13 AM\tuser-A\tConfiguration author updated combination \"With an LMIA\"\tcombination\n10/29/2026, 2:57:13 AM\tuser-A\tConfiguration author updated combination \"With an LMIA\"\tcombination\n10/29/2026, 2:56:54 AM\tuser-A\tConfiguration author created pathway \"Audit race 1793222814432\"\tpathway\n10/29/2026, 2:56:53 AM\tuser-A\tConfiguration author created pathway \"<img src=x onerror=alert(1)>\"\tpathway\n10/29/2026, 2:39:04 AM\tuser-A\tConfiguration author loaded the sample inputs in 71.7 s: 11 programs, 51 program nodes, 6 combinations set up, official files through the upload path, the reviewed work-permit release imported as Release 1, 1 sample profile\tsample inputs\n10/29/2026, 2:39:03 AM\tuser-A\tConfiguration author created category \"Inspection response\" under Compliance\tcategory\n10/29/2026, 2:39:03 AM\tuser-A\tConfiguration author created program \"Compliance\" under Temporary residence\tprogram\n10/29/2026, 2:39:03 AM\tuser-A\tConfiguration author created category \"Atlantic employer designation\" under Designation and endorsement\tcategory\n10/29/2026, 2:39:03 AM\tuser-A\tConfiguration author created program \"Designation and endorsement\" under Permanent residence\tprogram\n10/29/2026, 2:39:03 AM\tuser-A\tConfiguration author created sub-category \"Professional un"
+ },
+ {
+  "actor": "user-A",
+  "url": "/new",
+  "name": "new-combination-old",
+  "ms": 1213,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Immigration programs\nNew combination\nNew combination\nDescribe it\nWhat application is it?\nPropose a path · US$0\n\nPick what already exists, or type a new name and choose Create. Each level is checked for duplicates as you type.\n\nPathway\nRetail\nCorporate and employers\nProgram\nCategory\nSub-category\nLinked to optional\nNone\nNext step of…\nSupported by…\nA label on the row for now (for example \"Supported by: Corporate › LMIA\"); nothing carries across between linked applications yet.\nWill be created as Retail › …\nCreate and add sources\nCancel"
+ },
+ {
+  "actor": "user-C",
+  "url": "/review",
+  "name": "reviewer-to-review",
+  "ms": 947,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "heading-order(1)"
+  ],
+  "sideways1024": 0,
+  "text": "To review\n\nEverything that waits for a person: AI proposals, combinations to review and release, new editions, held files and merges. Nothing reaches a release until a person decides.\n\nNeeds you · 0\nWaiting for others · 0\nRunning · 0\nAll · 0\nKind\nAll\nNothing waits for you\n\nWhen you add sources to a combination, its AI draft, new editions and approvals appear here.\n\nOpen Immigration programs\n\n0 items shown"
+ },
+ {
+  "actor": "user-C",
+  "url": "/c/undefined/review",
+  "name": "reviewer-lmia-review",
+  "ms": 1319,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This combination could not be opened\n\nNot found (it may have been removed by a reset).\n\nBack to programs"
+ },
+ {
+  "actor": "user-B",
+  "url": "/review",
+  "name": "approver-to-review",
+  "ms": 2251,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "heading-order(1)"
+  ],
+  "sideways1024": 0,
+  "text": "To review\n\nEverything that waits for a person: AI proposals, combinations to review and release, new editions, held files and merges. Nothing reaches a release until a person decides.\n\nNeeds you · 0\nWaiting for others · 0\nRunning · 0\nAll · 0\nKind\nAll\nNothing waits for you\n\nWhen you add sources to a combination, its AI draft, new editions and approvals appear here.\n\nOpen Immigration programs\n\n0 items shown"
+ },
+ {
+  "actor": "user-B",
+  "url": "/release",
+  "name": "approver-release",
+  "ms": 1677,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "heading-order(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Immigration programs › Review and release\nReview and release\n\nEveryone's changes are in one shared draft. Releasing publishes together every combination that has passed its review (submitted, and signed by the content reviewer where an expert must sign); firms keep what was approved until then. Last release: Release 1, Oct 28, 2026.\n\nNothing to release\n\nThe shared draft has no changes since the last release. Changes appear here as soon as someone edits a combination.\n\nBack to Immigration programs"
+ },
+ {
+  "actor": "user-O",
+  "url": "/cases",
+  "name": "officer-cases",
+  "ms": 1063,
+  "errs": [],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [],
+  "sideways1024": 0,
+  "text": "Cases\n\nEach case works from one released configuration, frozen when the case opens.\n\nOpen a case\n\nNo cases yet\n\nOpen a case for a released combination; then add the family and send the client their questionnaire."
+ },
+ {
+  "actor": "user-O",
+  "url": "/",
+  "name": "officer-config-home",
+  "ms": 652,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This page is for the configuration people\n\nCase officer (simulated) works on cases. Programs, forms and rules are set up here by the configuration people; your work is in Cases.\nOpen your cases"
+ },
+ {
+  "actor": "user-O",
+  "url": "/library/forms",
+  "name": "officer-library",
+  "ms": 768,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This page is for the configuration people\n\nCase officer (simulated) works on cases. Programs, forms and rules are set up here by the configuration people; your work is in Cases.\nOpen your cases"
+ },
+ {
+  "actor": "user-P",
+  "url": "/cases",
+  "name": "client-cases",
+  "ms": 832,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "Cases are for the case officer\n\nClients open their questionnaire from the link their officer sends. Switch to the case officer to see the cases."
+ },
+ {
+  "actor": "user-P",
+  "url": "/",
+  "name": "client-config-home",
+  "ms": 818,
+  "errs": [
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+   "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  ],
+  "leaks": [],
+  "axe": [],
+  "bestPractice": [
+   "page-has-heading-one(1)"
+  ],
+  "sideways1024": 0,
+  "text": "This page is for the configuration people\n\nClient A (simulated) works on cases. Programs, forms and rules are set up here by the configuration people; your work is in Cases.\nOpen your cases"
+ }
+]

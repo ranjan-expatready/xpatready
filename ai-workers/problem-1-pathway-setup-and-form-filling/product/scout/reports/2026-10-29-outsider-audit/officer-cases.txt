@@ -1,0 +1,9 @@
+Cases
+
+Each case works from one released configuration, frozen when the case opens.
+
+Open a case
+
+No cases yet
+
+Open a case for a released combination; then add the family and send the client their questionnaire.

@@ -1,0 +1,86 @@
+Immigration programs
+Temporary residence
+Work permits
+Employer-specific work permit
+With an LMIA
+Renamed by audit
+Live
+
+In Release 1 · 1 draft change · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)
+
+Next step
+
+Review and release
+Sample: from the sample inputs; its setup has changed since they were loaded.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+1
+
+Author submits
+
+Configuration author (only the author submits)
+
+1 draft change; 0 problems to fix
+
+2
+
+SME duty signs content
+
+Content reviewer (Immigration SME duty)
+
+Rules, document requirements, checks and AI proposals need the SME duty
+
+3
+
+A second person releases
+
+Approver (never the author or submitter)
+
+Last release: Release 1 by Approver
+
+You are acting as Content reviewer (simulated): Content publisher · Immigration SME duty
+
+Duties: review, sme. The server enforces them: an author or submitter can never approve, and a draft changed after submission cannot be released.
+
+Validation of the draft
+
+0 errors (block submission) · 15 warnings (shown and recorded)
+
+warning
+Derived fields · True when the country or territory from which the person applies is not a country of their citizenship: Calculation other has no tested helper: recorded, never evaluated.
+warning
+Derived fields · Number of person records in the case holding the role subject_spouse_or_partner (current spouse, common-law or conjugal partner) on the application date: Calculation count_people_in_role has no tested helper: recorded, never evaluated.
+warning
+Derived fields · Sort the person's activity rows by start month; count calendar months up to the application date not covered by any row between the earliest row's start and the latest row's end (or the application date for an ongoing row). Zero when there is no gap: Calculation other has no tested helper: recorded, never evaluated.
+warning
+Derived fields · Whole years elapsed from the printed passport expiry date to the application date; zero or negative if not yet expired: Calculation other has no tested helper: recorded, never evaluated.
+warning
+Derived fields · True when the current country of residence on the application date is not a country of citizenship shown on the passport: Calculation other has no tested helper: recorded, never evaluated.
+warning
+Derived fields · Whole years of continuous cohabitation from the cohabitation start date to the application date (calculated like an age in years): Calculation other has no tested helper: recorded, never evaluated.
+warning
+Field map IMM 1295 (09-2023) · IMM 1295: IMM 1295: 37 rows of its lists (for example "Question 8 B Row 1 Country or Territory. If you replied…") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library.
+warning
+Field map IMM 5257 SCH1 (09-2023) · IMM 5257 SCH1: IMM 5257 SCH1: 30 rows of its lists (for example "Government Positions Activities and/or positions held") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library.
+Show all 15
+
+Changes in the draft compared with released version 1 (1)
+
+	Kind	Item	Change	Origin	Needs	Signed
+	Row details	wp.family
+
+name, path, portal, source basis or allowed locations (no line changed)
+
+	changed	—	review	
+Note (optional for submit and sign; required to return)
+Submit for review
+Approve and release
+
+Released versions
+
+Version	Fingerprint	Author / submitter / approver	Released	Basis
+v1 current	0c8fcb19c2d4d2e2	Configuration author / Configuration author / Approver	10/29/2026, 2:39:00 AM	Imported reviewed release: AI-drafted under the guarded path, reviewed and approved by a second person. Prototype only; not specialist-confirmed.

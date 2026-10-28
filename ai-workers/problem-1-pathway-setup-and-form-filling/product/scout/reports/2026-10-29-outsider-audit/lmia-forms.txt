@@ -1,0 +1,127 @@
+Immigration programs
+Temporary residence
+Work permits
+Employer-specific work permit
+With an LMIA
+Renamed by audit
+Live
+
+In Release 1 · 1 draft change · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)
+
+Next step
+
+Review and release
+Sample: from the sample inputs; its setup has changed since they were loaded.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+
+No form find yet
+
+Start setup runs the form finder: AI reads the application's canada.ca pages and guide and attaches the forms it finds. Which forms apply is Sample until the immigration expert confirms.
+
+Filing: PDF only · 8 forms · Sample until the immigration expert confirms
+
+Add a form from the library
+Open the Form library
+Form	Why it is here (IRCC's words)	Who fills it	Only if	Filed as by default	Signed by	Read and matched	
+IMM 1295
+Application for work permit made outside of Canada	"Application for Work Permit made Outside of Canada (IMM 1295)"	Each applicant	Always	
+PDF upload
+Online (later wave)
+Signed PDF upload
+No signature in the file
+	Not set	
+IMM 1295 (09-2023) · 163 form fields matched
+In the library
+Read today 2:38 a.m.
+	
+Change
+
+IMM 5257 SCH1
+Schedule 1 - Application for temporary residence	"If you have answered “yes” to any of the background information questions on the application"	Each applicant	Needed for an applicant who answered yes to any background information question on the application form.	
+PDF upload
+Online (later wave)
+Signed PDF upload
+No signature in the file
+	Not set	
+IMM 5257 SCH1 (09-2023) · 40 form fields matched
+In the library
+Read today 2:38 a.m.
+	
+Change
+
+IMM 5409
+STATUTORY DECLARATION OF COMMON-LAW UNION	"If you are in a common-law relationship and your common-law partner will accompany you to Canada, you must fill out and …"	Once per couple	Needed once per couple when the principal applicant has a common-law partner who will accompany them to Canada.	
+PDF upload
+Online (later wave)
+Signed PDF upload
+No signature in the file
+	Not set	
+IMM 5409 (01-2023) · 16 form fields matched
+In the library
+Read today 2:38 a.m.
+	
+Change
+
+IMM 5475
+Authority to release personal information to a designated individual	"Authority to Release Personal Information to a Designated Individual (IMM 5475), if applicable. Note: Complete this form…"	Principal applicant	Needed only when the applicant authorizes IRCC and CBSA to release case information to someone other than themselves.	
+PDF upload
+Online (later wave)
+Signed PDF upload
+No signature in the file
+	Not set	
+IMM 5475 (05-2021) · 20 form fields matched
+In the library
+Read today 2:38 a.m.
+	
+Change
+
+IMM 5476
+Use of Representative	"Use of a Representative (IMM 5476), if applicable. Note: Complete this form only if you are using the services of an aut…"	Principal applicant	Needed when the applicant uses an authorized representative, or is appointing, updating or cancelling a representative.	
+PDF upload
+Online (later wave)
+Signed PDF upload
+No signature in the file
+	Not set	
+IMM 5476 (11-2025) · 36 form fields matched
+In the library
+Read today 2:38 a.m.
+	
+Change
+
+IMM 5488
+DOCUMENT CHECKLIST FOR A WORK PERMIT (APPLIED OUTSIDE CANADA)	"This document checklist is one of the forms that you need to submit with your application."	Checklist · not filed	Always	—	—	
+No edition read yet
+	
+Change
+
+IMM 5707
+Family Information	"Family Information (IMM 5707). Note: Must be completed by those aged 18 years or older or a minor travelling alone to Ca…"	Each applicant	Needed for each applicant aged 18 or older at the application date, and for a minor who is travelling alone to Canada.	
+PDF upload
+Online (later wave)
+Signed PDF upload
+No signature in the file
+	Not set	
+IMM 5707 (01-2023) · 40 form fields matched
+In the library
+Read today 2:38 a.m.
+	
+Change
+
+IMM 5905
+Work Permit	"This additional document checklist is one of the forms that you need to submit with your application,"	Checklist · not filed	Always	—	—	
+No edition read yet
+	
+Change
+Warning
+IMM 1295: 37 rows of its lists (for example "Question 8 B Row 1 Country or Territory. If you replied…") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library.
+Warning
+IMM 5257 SCH1: 30 rows of its lists (for example "Government Positions Activities and/or positions held") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library.
+Warning
+IMM 5707: 9 rows of its lists (for example "Date of birth") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library.
+
+Sources (read for documents and citations, never filed): IMM 5905 E (03-2026), New Delhi work permit visa office instructions · Guide 5487 page · Work permit outside: forms and documents page

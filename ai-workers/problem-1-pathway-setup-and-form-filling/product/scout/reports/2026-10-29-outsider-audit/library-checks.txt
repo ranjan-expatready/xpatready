@@ -1,0 +1,9 @@
+Checks
+
+Field validation, consistency checks, document validity and AI review objectives.
+
+Checks are set up on a later screen
+
+This list is built with the shared-library screen (Screen 04). Combination rules and checks imported from the reviewed release are visible in each combination's full configuration.
+
+Back to Immigration programs
