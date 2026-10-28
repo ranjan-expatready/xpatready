@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-27 22:50 (Lead, Mac): **Next: `/qa after-merge` on the screens S1/S2 FIX** (QA-44, 45, 46, 49, 50, review m1, break m8; Lead check passed, merged with the Lead's PR after the S2 report). Walk Program structure and Immigration programs like a content publisher: typed letters kept while a name saves, Add sub-category under a leaf category, "Remove" wording on approval and To review, the page follows the Structure's order (and a reorder), one Back after a double click on Start setup, the setup bar agrees with the next step, reads refused for case people and nobody (API). Close what passes, log what does not. Program structure is redrawn next (P-127), so log layout points as suggestions only. Own ports, AI US$0, put back by-products before you push.
+2026-10-28 (Lead, Mac): **WAITING** for the next merge (S4 Form library first, then the visual-system round 3). Note: the screens lane updates only the "Remove" → "Delete" wording in `check_qa_am_fix_1027` and `check_qa_am_1027` (P-128, Lead OK); re-read them at your next after-merge. CI now runs only on pull requests (P-85 amended): read the Lead PR's run, or run the suites yourself. Own ports, AI US$0, report summary to the Lead by message.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

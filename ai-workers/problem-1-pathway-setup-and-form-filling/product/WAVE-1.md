@@ -7,10 +7,10 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 |---|---|---|---|---|
 | S1 | Structure (+ Pathway cards that open the tree; "Used by" names; toasts; menu background) | B5; B1, B2 in part | Merged 27 Oct incl. S1-finish (Lead check d40c582: 34/34 suites, journey 45/45); Start setup link and panel footer fixed in S2 | qa after-merge 27 Oct: PDF path clean; QA-45 (Major, add sub-category in the panel), QA-44, QA-46 in the screens FIX; QA-48 (retire a Live combination) queued after S3 |
 | S2 | Immigration programs, card layout (design D) | B1–B4, C2 | **Merged 27 Oct (PR #53) with the 7 founder fixes**; qa after-merge ready (2 Minors QA-49/50 → screens FIX); Lead check passed (lane: 35 suites, S2 check 87/87, journey 45/45; Lead walk on the merged code); :4400 restarted on it | Go with fixes, 27 Oct |
-| S2b | Visual system: tree levels, cards, list Pathway rows, trail colours, app-wide (R-125) | — | **Agreed 27 Oct:** "Program structure" in layout A with one Add pop-up (P-127), four calm level colours + Pathway stripe, wrapping trail (`screens/W1-visual-system/`); screens lane builds it after its FIX, before S3 | Picks made, 27 Oct |
+| S2b | Visual system: tree levels, cards, list Pathway rows, trail colours, app-wide (R-125) | — | **Round 3 agreed 28 Oct (P-128):** option A numbered outline, Tree + List views, one Add, Edit/Delete on every row, filter bar on both pages, Add combination opens the pop-up; screens lane challenges, then builds | Changes 28 Oct → round 3 Go |
 | S3 | Start setup (was New combination) | C1–C5 | **P-125:** no New combination page; Start setup opens the workspace, place read-only. After the FIX and visual system; re-check meanwhile (P-126) | |
-| S4 | Form library: one list, upload through AI, every action (P-123) | E1, D6, A4 data, F6 | Forms lane, parallel (P-124). Slice 1 (form finder + library API, no page) passed early look on CI (83/83); BUILD slice 2 (run card with real Stop, cap counter, Upload PDF rules-first) from 27 Oct; then slice 3 (the page) | |
-| S5 | Combination workspace: forms picked by AI, editable "Who can be in this application" (P-123) | D1, D3–D5 | Agreed (walkthrough v2). Challenge 27 Oct (runtime lane, 4e2f85f): Build after changes, all accepted; S5 creates the Person roles record; Reset keeps the six starting roles (founder, P-108). BUILD slice 1 started 27 Oct after the S2 merge; slice 3 after forms slices 1–2 | |
+| S4 | Form library: one list, upload through AI, every action (P-123) | E1, D6, A4 data, F6 | CHECK, re-score 8.5; drift check 28 Oct: merge after fixes (sync main, Delete/Remove words, Load sample fixtures, replay key); FIX then merge |
+| S5 | Combination workspace: forms picked by AI, editable "Who can be in this application" (P-123) | D1, D3–D5 | Slice 1 Go + 4 fixes; **slice 2 Go 28 Oct** (drift check clean); Shoulds now, slice 3 after S4 merges |
 | S6 | Shared library: one review queue, one Add in plain words (P-120, P-121) | F3–F5, H1, H6 | Agreed (walkthrough v2). Challenge 27 Oct (fresh agent): Build after changes, 8 Major accepted (`screens/W1-shared-library/challenge.md`); founder chose a US$60 Wave 1 AI cap (P-110); builds after S4 slice 1 and S2 merge | |
 | S7 | Reset + Load sample (5 combinations with their PDFs) | B6, E2, F1, F2 | Agreed 27 Oct: founder marked walkthrough v2 OK (P-123); builds after S2, one at a time; all published official files for the 6 combinations saved 27 Oct (28 of 29; EMP5626 online-only) | |
 | S8 | Content publisher walk-through (qa, like a person) | W1-13 | Not started | |
@@ -48,21 +48,9 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 * Screens the founder named by their place in the app (Programs › New combination; Programs › Individual › Citizenship › Grant of citizenship; Corporate › Compliance › Inspection response; Shared library) are saved as the "before" in `screens/W1-baseline/` (18 screenshots, 26 Oct). Forms come from the canada.ca forms page the founder gave (W1-12).
 * Structure names on the sheet: the Lead decides from IRCC's own naming (founder: "research what is the truth"); research in screens/W1-form-library/forms-for-5-combinations.md (Part B, being written); the expert confirms later.
 
-## Earlier parallel work: what happens to it (Lead audit 26 Oct)
-| Work | Where now | In wave 1 |
-|---|---|---|
-| Extension F2 + F3 slices 1–4 (capture, pairing, online fill, APR twin) | merged on `main` (PR #34–#36); saved on `lead/parked-extension-2026-10-26` | Removed by W1-02; fill parts return in W6; capture does not return |
-| PDF intake, held files, second-person approval, second-draft guard, PDF hardening (forms) | `main` | Kept; the base of W1-06 |
-| Screen 01 Programs and New combination | `main` | Redesigned in W1-03–W1-05 |
-| Screen 02 AI work, To review, merges, edition impact | `main` | Kept; reused by W1-06, W1-09, W2 |
-| Screen 04 slice 1 (library lists) | never built (session stopped) | Folded into W1-09 |
-| Screen 03 S1 + S2 (SQR tab, coverage per role, copies, minimum age, signed by, preview by person) | runtime branch, 5 commits, not merged | Reused by W1-08 where its concept keeps it; merged only after that |
-| R1 thin slice (case, family link, answers once, agent facts, PDF fill) | `main` | Reused in W4 and W5 |
-| M3 Prepare application challenge | m3 lane | Input to W4 research |
-| Evidence IMM 5409, IMM 5476 Adobe checks | `main` | Reused (IMM 5476 is in every combination) |
-| qa/Goose explore (real-portal proof plan), scout SC-1 Programs empty-state wording | own branches, not merged | Portal plan parked; SC-1 wording considered in W1-04 |
-| Lead PRs #28 (roles audit), #30 (archive non-POC folders) | open since 25 Oct | Founder decides later; not blocking |
+## Earlier parallel work
+The 26 Oct audit of earlier work (extension, PDF intake, Screens 01–04, R1, m3, evidence, qa/scout) is in `history/WAVE-1-earlier-work-2026-10-26.md`.
 
 ## Rules for this wave
 **Remove, retire, reorder (P-116):** one shared mechanism on every master (where used first; remove only unused, retire/restore used; reorder where order matters; no move), built with W1-03 and reused by W1-06, W1-08, W1-09. **Lanes (P-111, amended by P-117):** one build lane at a time on the demo path, qa after every merge; m3 research only; scout, evidence, Devin and Goose paused; one Lead chat at a time, a fresh /lead each day. Permanent-residence combinations: PDFs where IRCC takes them, an answer sheet for portal-only forms (P-113).
-Concepts offer the founder 2–3 options with a recommendation before BUILD (founder: "discuss the available solutions, then select one"), always including the Lead's best modern layout even where it departs from the founder's words (founder, 27 Oct: "feel free to suggest"). Tooltips in plain functional words on every control. Corporate stays empty except one Sample. AI only proposes; every AI action follows W1-07. Wave 1 AI cap US$60 (founder, 27 Oct; was US$40).
+Concepts offer the founder 2–3 options with a recommendation before BUILD (founder: "discuss the available solutions, then select one"), always including the Lead's best modern layout even where it departs from the founder's words (founder, 27 Oct: "feel free to suggest"). Tooltips in plain functional words on every control. Corporate stays empty except one Sample. AI only proposes; every AI action follows W1-07. Wave 1 AI cap US$60 (founder, 27 Oct; was US$40). **Desktop only in wave 1 (founder, 28 Oct):** screens are designed and checked at 1440 and 1024; phone width (390) waits for a later wave unless it is free.
