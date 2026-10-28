@@ -55,7 +55,7 @@ function Decide({ yes, no, onYes, onNo, busy, noNeedsReason = true, disabledWhy,
 export function LibraryChangePage() {
   const { id } = useParams(); const nav = useNavigate(); const me = useMe();
   const c = useApi<LibraryChangeDetail>(["library-change", id], `/library/changes/${id}`);
-  const act = useAction((v: { d: "approve" | "return"; note?: string }) => api<LibraryChangeView>(`/library/changes/${id}/${v.d}`, { method: "POST", json: { note: v.note } }), { success: (r) => (r.status === "RELEASED" ? `"${r.label}" approved and removed: it was never released and nothing used it` : r.status === "APPROVED" ? `"${r.label}" approved: it is released with the next release` : `"${r.label}" returned to ${r.proposed_by}`), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
+  const act = useAction((v: { d: "approve" | "return"; note?: string }) => api<LibraryChangeView>(`/library/changes/${id}/${v.d}`, { method: "POST", json: { note: v.note } }), { success: (r) => (r.status === "RELEASED" ? `"${r.label}" approved and deleted: it was never released and nothing used it` : r.status === "APPROVED" ? `"${r.label}" approved: it is released with the next release` : `"${r.label}" returned to ${r.proposed_by}`), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
   if (c.isLoading) return <Spinner label="Loading the change" />;
   if (c.isError) return <ErrorState title="This change could not be opened" description={(c.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />;
   const x = c.data!, mine = x.proposed_by_id === me.id;
@@ -74,7 +74,9 @@ export function LibraryChangePage() {
       <div className="space-y-1 text-sm">
         {x.reason ? <p><b>Reason:</b> {x.reason}</p> : null}
         {x.ai_verdict ? <p><b>Advisory check:</b> {x.ai_verdict}</p> : null}
-        {(x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
+        {x.goes_with?.length ? <div data-goes-with><p><b>These go with it</b> ({x.goes_with.length}; none is used):</p><ul className="ml-5 list-disc">{x.goes_with.map((g, i) => <li key={i}>{g}</li>)}</ul></div> : null}
+        {x.with_combination ? <p data-with-combination><b>Its combination</b> is {x.action === "RESTORE" ? "restored" : "retired"} with it, in the same release.</p> : null}
+        {x.kind === "field" && (x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
       </div>
       <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span> (generated from the group and the name)</p></details>

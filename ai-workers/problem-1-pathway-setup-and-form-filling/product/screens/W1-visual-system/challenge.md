@@ -47,7 +47,9 @@ Read: P-128 and the round 3 concept (`concept-draft.md` "Round 3" and "Founder p
 None needed. #1 and #3 are the Lead's calls, recommendation above. The rest follow P-128.
 
 ### Lead response
+2026-10-28 (Lead, Mac): **Round 3 challenge read (bdcf23e): all four Majors and the six Minors accepted; Agreed 28 Oct.** Stage BUILD, owner Builder. (1) A combination row's Retire/Restore acts on the combination and its name together, one proposal and one approval; Delete greyed while a setup draft exists; parent rows act on names (P-116). (2) Branch delete: one proposal stores the subtree's keys; approval refused if a name was added under it or anything became used; one transaction, leaves first. (3) You may change only the "Remove" → "Delete" expectations in `check_qa_am_fix_1027` and `check_qa_am_1027`, in their own commit named for the qa lane; the Lead tells qa. (4) Two commits, R3a Program structure and R3b Immigration programs, each green on the local full suite; one early look at the end. Minors as you proposed. Desktop only. Local `run-suites.sh` evidence on your exact commit (CI now runs only on the Lead PR, P-85 amended).
 
 ### Agreement
+Agreed 28 Oct (Lead): all ten points as written above.
 
 ### Build discoveries

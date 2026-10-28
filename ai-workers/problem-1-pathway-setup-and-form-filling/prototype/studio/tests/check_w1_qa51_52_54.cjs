@@ -37,13 +37,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.9 QA-51 BR-7: To review lists the two removals with different trails", list.includes("Retail › Temporary residence › Visitors › Visitor record") && list.includes("Corporate and employers › Temporary residence › LMIA › Visitor record"), list.match(/[^.]*Visitor record[^.]*/)?.[0]);
   await p.goto(`${BASE}/review/change/${delR.body.id}`); await p.waitForSelector("main h1");
   const title = await p.locator("main h1").innerText();
-  step("C11.9 QA-51: the approver's page title names the Pathway type", title === "Remove structure name: Retail › Temporary residence › Visitors › Visitor record", title);
+  step("C11.9 QA-51: the approver's page title names the Pathway type", title === "Delete structure name: Retail › Temporary residence › Visitors › Visitor record", title);
 
   // ======================================================== QA-52: the approval message says what happened
   await p.getByRole("button", { name: "Approve", exact: true }).click();
   const toast = await p.getByText(/approved/).first().innerText({ timeout: 10000 }).catch(() => "");
   const goneR = !(await api("/structure?pathwayType=INDIVIDUAL")).body.nodes.some((n) => n.key === addR.body.key);
-  step("C11.9 QA-52 pass P-116: approving an unused name's removal says it is removed now, and it is", goneR && /approved and removed/.test(toast) && !/next release/.test(toast), `removed: ${goneR}; "${toast}"`);
+  step("C11.9 QA-52 pass P-116: approving an unused name's removal says it is removed now, and it is", goneR && /approved and deleted/.test(toast) && !/next release/.test(toast), `removed: ${goneR}; "${toast}"`);
   const viaApi = await api(`/library/changes/${delC.body.id}/approve`, { method: "POST", actor: "user-B", data: {} });
   step("C11.9 QA-52: the approve answer carries the applied state (RELEASED), not only the decision", viaApi.status === 201 && viaApi.body?.status === "RELEASED", `${viaApi.status} ${viaApi.body?.status}`);
   const lmia = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.rows.find((r) => r.label === "With an LMIA");

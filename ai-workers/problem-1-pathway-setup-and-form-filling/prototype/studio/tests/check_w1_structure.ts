@@ -166,9 +166,9 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
   r = await approve(del.id);
   ok("C11.9 L1 pass: approved by a second person, an unused draft name is removed at once", r.status === 201 && sql(`select count(*) from program_def where program_node_key='${typo}'`) === "0" && sql(`select status from library_change where id='${del.id}'`) === "RELEASED");
   r = await call("DELETE", `/structure/nodes/${visitors}`, { reason: "Not needed" });
-  ok("C11.9 L6 fail: a program with names under it cannot be removed; each use is listed", r.status === 409 && r.body.uses?.some((x: any) => x.kind === "child" && x.blocks), r.body.detail);
+  ok("C11.9 L6 / R3-4 fail: a program whose branch holds a setup draft cannot be deleted; the setup is named and listed", r.status === 409 && /" under it has a setup draft/.test(r.body.detail) && r.body.uses?.some((x: any) => x.kind === "combination"), r.body.detail);
   r = await call("DELETE", `/structure/nodes/${vv}`, { reason: "Not needed" });
-  ok("C11.9 L6 fail: a name whose combination has setup cannot be removed (remove the combination first)", r.status === 409 && r.body.uses?.some((x: any) => x.kind === "combination" && x.href === `/c/${combo.id}`), r.body.detail);
+  ok("C11.9 L6 fail: a name whose combination has a setup draft cannot be deleted (its setup draft uses it)", r.status === 409 && /setup draft uses it/.test(r.body.detail) && r.body.uses?.some((x: any) => x.kind === "combination" && x.href === `/c/${combo.id}`), r.body.detail);
   const fsw = (await structure()).nodes.find((n: any) => n.label === "Federal skilled worker").key;
   r = await call("DELETE", `/structure/nodes/${fsw}`, { reason: "Wrong place" });
   const late = r.body;

@@ -1,6 +1,7 @@
 // S1/S2 FIX (Lead note 27 Oct): the qa after-merge findings and two S2 points, each walked in a real browser (or on the
-// API underneath) with a pass and a fail. QA-45 "Add sub-category" in the panel opens the Add pop-up down to a category
-// that has none yet (P-127; it opened an add row before); QA-44 letters typed while a name saves are kept; QA-46 Remove is called Remove on To review too; QA-49
+// API underneath) with a pass and a fail. QA-45 a category with none yet gets its first sub-category through the one Add
+// (since P-128: prefilled from the filters, pick the category, untick None); QA-44 letters typed while a name saves are
+// kept; QA-46 the word is the same everywhere (since P-128: Delete, on the row, To review and the approval page); QA-49
 // Immigration programs follows the Structure's order, also after a reorder; QA-50 a double click on Start setup leaves
 // one history entry; review m1 the setup bar shows the stage of the next step; break m8 reads are denied by default.
 // Sample inputs plus one saved AI replay (US$0) and one released-but-Not-ready combination. No model call.
@@ -94,30 +95,35 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("QA-50 pass: after a double click on Start setup, one Back returns to Immigration programs", new URL(p.url()).pathname === "/" && await p.getByRole("heading", { level: 1, name: "Immigration programs" }).count() === 1, p.url());
   step("QA-50 fail-guard: the double click created nothing (no silent start)", (await catOf()).counts.not_started === cat.counts.not_started);
 
-  // ======================================================== QA-45: Add sub-category in the panel (since P-127: the one Add pop-up)
+  // ======================================================== QA-45: the first sub-category (since P-128: the one Add, prefilled from the filters)
   const nodes = await structOrder();
   const kidsOf = (k) => nodes.filter((n) => n.parentKey === k);
+  const pathOf = (n) => { const t = [n]; while (t[0].parentKey) t.unshift(nodes.find((x) => x.key === t[0].parentKey)); return t; };
+  const sub = p.locator('[data-field="subCategory"] input[role="combobox"]'), catField = p.locator('[data-field="category"] input[role="combobox"]');
+  /** Opens Add from Program structure with the Pathway and Program filters of a category set, then picks that category. */
+  const addUnder = async (cat) => {
+    const [pw, pr] = pathOf(cat);
+    await p.goto(`${BASE}/structure?p=${encodeURIComponent(pw.key)}&prog=${encodeURIComponent(pr.key)}`); await p.locator("[data-row]").first().waitFor();
+    await p.locator("[data-add-open]").click(); await p.locator("[data-add-dialog]").waitFor();
+    await catField.fill(cat.label); await p.waitForTimeout(500);
+  };
   const leafCat = nodes.find((n) => n.level === "category" && !kidsOf(n.key).length && !n.hasSetup && !n.retired);
-  const sub = p.locator('[data-field="subCategory"] input[role="combobox"]');
-  await p.goto(`${BASE}/structure?node=${encodeURIComponent(leafCat.key)}`);
-  await panel().getByRole("button", { name: "Add sub-category" }).waitFor();
-  await panel().getByRole("button", { name: "Add sub-category" }).click();
-  await sub.waitFor({ timeout: 5000 }).catch(() => undefined);
-  step("QA-45 pass: 'Add sub-category' on a category with none yet opens the Add pop-up down to it, focused on Sub-category", await sub.count() === 1 && await sub.evaluate((e) => e === document.activeElement) && (await p.locator('[data-field="category"] input').inputValue()) === leafCat.label, leafCat.label);
+  await addUnder(leafCat);
+  step("QA-45 pass: Add opens with the Pathway and Program from the filters, and typing the category picks the existing one", (await p.locator('[data-field="program"] input').inputValue()) === pathOf(leafCat)[1].label && /Uses the existing category/.test(await p.locator('[data-field="category"]').innerText()), leafCat.label);
+  await p.locator("[data-none]").uncheck(); await sub.waitFor({ state: "visible" });
   await sub.fill("Inside Canada (test)"); await p.waitForTimeout(500);
   await p.locator("[data-add-submit]").click(); await p.locator("[data-add-dialog]").waitFor({ state: "detached" }).catch(() => undefined);
   const after = await structOrder();
-  step("QA-45 pass: the first sub-category is added there, by the page", after.some((n) => n.parentKey === leafCat.key && n.label === "Inside Canada (test)"));
+  step("QA-45 pass: the first sub-category is added there, and its row is tagged Just added", after.some((n) => n.parentKey === leafCat.key && n.label === "Inside Canada (test)") && await p.locator("[data-just-added]").count() === 1);
   const setUpCat = nodes.find((n) => n.level === "category" && !kidsOf(n.key).length && n.hasSetup && !n.retired);
-  await p.goto(`${BASE}/structure?node=${encodeURIComponent(setUpCat.key)}`);
-  await panel().getByRole("button", { name: "Add sub-category" }).waitFor();
-  step("QA-45 fail: a category that has its own setup still cannot get a sub-category (button disabled)", await panel().getByRole("button", { name: "Add sub-category" }).isDisabled(), setUpCat.label);
+  await addUnder(setUpCat);
+  step("QA-45 fail: a category that has its own setup still cannot get a sub-category (the field is off, with the reason)", /already has its own setup, so it is the combination/.test(await p.locator("[data-sub-off]").innerText().catch(() => "")), setUpCat.label);
+  await p.keyboard.press("Escape");
 
   // ======================================================== QA-44: letters typed while a name saves are kept ("Add and add another")
   const leafCat2 = nodes.find((n) => n.level === "category" && !kidsOf(n.key).length && !n.hasSetup && !n.retired && n.key !== leafCat.key);
-  await p.goto(`${BASE}/structure?node=${encodeURIComponent(leafCat2.key)}`);
-  await panel().getByRole("button", { name: "Add sub-category" }).click();
-  await sub.waitFor();
+  await addUnder(leafCat2);
+  await p.locator("[data-none]").uncheck(); await sub.waitFor({ state: "visible" });
   await sub.fill("Outside Canada (test)"); await p.waitForTimeout(500);
   await p.route("**/api/structure/path", async (r) => { await new Promise((x) => setTimeout(x, 800)); await r.continue(); });
   await p.locator("[data-add-again]").click(); await p.keyboard.type("From abroad (test)", { delay: 15 });
@@ -129,20 +135,20 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("QA-44 fail-guard: an exact twin is picked as the existing name, so nothing new can be added twice", /Uses the existing sub-category/.test(await p.locator('[data-field="subCategory"]').innerText()) && await p.locator("[data-add-submit]").isDisabled(), (await p.locator('[data-field="subCategory"]').innerText()).replace(/\s+/g, " ").slice(0, 160));
   await p.keyboard.press("Escape");
 
-  // ======================================================== QA-46: Remove is Remove everywhere
+  // ======================================================== QA-46: one word everywhere (since P-128: Delete)
   const extra = (await api("/structure/nodes", { method: "POST", data: { pathwayType: "INDIVIDUAL", level: "program", label: "Removable program (test)", parentKey: "retail.citizenship" } })).body.key;
   await p.goto(`${BASE}/structure?node=${encodeURIComponent(extra)}`);
-  await panel().getByRole("button", { name: "Remove" }).click();
-  await p.getByLabel(/Why remove/).fill("Added by mistake (test).");
+  await panel().getByRole("button", { name: "Delete" }).click();
+  await p.getByLabel(/Why delete/).fill("Added by mistake (test).");
   await panel().getByRole("button", { name: "Send for approval" }).click();
   await panel().locator("[data-panel-note]").waitFor();
   await as("user-B"); await p.goto(`${BASE}/review`); await p.waitForTimeout(800);
   const row = p.locator('tr[data-kind="library_change"]').filter({ hasText: "Removable program (test)" });
   const rowText = (await row.innerText().catch(() => "")) ?? "";
-  step("QA-46 pass: To review calls it Remove, the word the author pressed", /Remove/.test(rowText) && !/Delete/.test(rowText), rowText.replace(/\s+/g, " ").slice(0, 160));
+  step("QA-46 pass (P-128): To review calls it Delete, the word the author pressed", /Delete/.test(rowText) && !/Remove/.test(rowText), rowText.replace(/\s+/g, " ").slice(0, 160));
   await row.locator("[data-next] a").click().catch(() => undefined); await p.waitForURL(/\/review\/change\//, { timeout: 10000 }).catch(() => undefined); await p.waitForTimeout(600);
   const page = await p.locator("main").innerText();
-  step("QA-46 pass: the approval page says Remove, never Delete", /Remove/.test(page) && !/\bDelete\b/.test(page), page.replace(/\s+/g, " ").slice(0, 160));
+  step("QA-46 pass (P-128): the approval page says Delete, never Remove", /\bDelete\b/.test(page) && !/Remove/.test(page), page.replace(/\s+/g, " ").slice(0, 160));
   await as("user-A");
 
   step("no script error on any page", errs.length === 0, errs.join(" | "));

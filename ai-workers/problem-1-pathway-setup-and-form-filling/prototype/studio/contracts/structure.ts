@@ -85,6 +85,8 @@ export type UsesView = {
   key: string; label: string; trail: string[]; retired: boolean; released: boolean;
   uses: Use[];
   can: { delete: string | null; retire: string | null; restore: string | null };
+  /** A combination row: its own combination is retired or restored with the name, in one approval (P-128, Lead 28 Oct). */
+  withCombination?: boolean;
   pending: { id: string; action: LifecycleAction; by: string | null } | null;
   /** Its Activity lines, newest first (added, renamed, reordered, proposed, removed …). */
   history: { at: string; by: string | null; what: string }[];
@@ -101,7 +103,11 @@ export type StructureNode = {
   combination: { id: string | null; status: "IN_SETUP" | "NOT_READY" | "READY"; statusText: string; retired: boolean;
     /** "Used by" on its line (P-127 (1)): releases that hold it and cases open on it. */
     releases: number; openCases: number } | null;
+  /** The row's one lifecycle action (P-128 R3-2), decided by the server: why it cannot (null = it can), the names that go
+   *  with a Delete (R3-4), and whether a combination row's own combination goes with a Retire or Restore. */
+  action: RowAction;
 };
+export type RowAction = { kind: LifecycleAction | "WITHDRAW"; why: string | null; below: string[]; withCombination: boolean };
 
 /** The four setup steps on a card (addendum A3, Lead 26 Oct), calculated from data the app already keeps. */
 export const SETUP_STEPS = ["Forms", "Draft", "Review", "Release"] as const;

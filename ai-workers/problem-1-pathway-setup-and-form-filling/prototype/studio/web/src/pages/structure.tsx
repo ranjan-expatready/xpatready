@@ -1,15 +1,15 @@
-// Program structure (W1-03; visual system and round 2, P-127, board screens/W1-visual-system/design/draft-structure-v2.html
-// layout A): the one place names enter. Pathway cards choose what shows (the one last chosen, or All pathways); each
-// Program is a section with one line per combination (a category without sub-categories, or each sub-category);
-// level marks and colours from the visual system. Every add is the one "Add to Program structure" pop-up
-// (components/add-to-structure.tsx, POST /structure/path); the inline add rows are gone. The details panel is
-// unchanged: trail, what uses it, where cases may be opened, rename, order, remove / retire / restore (each approved by
-// a second person), history. Every write goes to /api/structure (contracts/structure.ts); the server decides.
+// Program structure, round 3 (P-128, supersedes P-127; board screens/W1-visual-system/design/draft-r3-program-structure.html
+// option A): the one place names enter. A filter bar (type tabs, Tree or List, Find, Pathway chips, Program, Status, Show
+// retired) on top; the Tree is a numbered outline (1, 1.1, 1.1.1: positions on this page, not IRCC codes), each Pathway
+// and Program a block; the List is one line per combination with its full trail. Every row shows Edit (the side panel:
+// name, cases may be opened from, order, where used, history) and its one lifecycle action, decided by the server
+// (contracts/structure.ts RowAction): Delete (a whole unused branch, R3-4), Retire, Restore or Withdraw, each confirmed in
+// the page and approved by a second person on To review. One Add opens the "Add to Program structure" pop-up
+// (components/add-to-structure.tsx, POST /structure/path), prefilled from the tab and filters.
 import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, Info, MoreHorizontal, Plus, Search, X } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, Eye, Info, List as ListIcon, ListTree, Pencil, Plus, RotateCcw, Search, Trash2, Undo2, X } from "lucide-react";
 import type { Level, LifecycleAction, PathwayType, StructureNode, UsesView } from "../../../contracts/structure";
 import { api, ApiError, useActorId, useApi, useSessionView } from "@/lib/api";
 import { Button, Input, Notice, Pill, Textarea } from "@/components/ui/controls";
@@ -17,14 +17,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtWhen, StatusChip, Tip, TipProvider } from "@/components/status";
-import { PathwayCards } from "@/components/pathway-cards";
 import { AddToStructure, LocationPicker, LOC_TIP, locKey, type AddPrefill } from "@/components/add-to-structure";
 import { LevelMark, pathwayAccent } from "@/components/levels";
 import { cn } from "@/lib/utils";
 
 type ListResp = { pathwayType: PathwayType; typeLabel: string; nodes: StructureNode[]; empty: boolean; meaningCheck: { on: boolean; why: string } };
 type Close = { key: string; label: string; trail: string[]; why: string };
-type Check = { exact: { key: string; label: string; trail: string[] } | null; close: Close[] };
 /** The parts of a refusal (Problem Details) this page acts on: close names to show, or a stale edit. */
 type Refusal = { code?: string; close?: Close[] };
 
@@ -33,21 +31,31 @@ const TYPES: { value: PathwayType; label: string; tip: string }[] = [
   { value: "CORPORATE", label: "Corporate and employers", tip: "Who applies: an employer or organisation, such as for an LMIA." },
 ];
 const LEVEL_WORD: Record<Level, string> = { pathway: "Pathway", program: "Program", category: "Category", subCategory: "Sub-category" };
-const LEVEL_TIP: Record<Level, string> = {
-  pathway: "The outcome the application leads to, such as temporary or permanent residence.",
-  program: "A group of applications under a pathway, such as Visitors or Study permits.",
-  category: "One kind of application. A category without sub-categories is a combination.",
-  subCategory: "A variant IRCC files as a different application. Every sub-category is a combination.",
-};
+const DEPTH: Record<Level, number> = { pathway: 0, program: 1, category: 2, subCategory: 3 };
 const locWords = (l: string[]) => (l.length === 2 ? "Inside or outside Canada" : l[0] === "inside_canada" ? "Inside Canada" : l[0] === "outside_canada" ? "Outside Canada" : "—");
 const NMC_TIP = "Only the spelling check ran; a reviewer compares the meaning by eye. The AI meaning check runs when paid runs are on.";
-const AUTHOR_ONLY = "Only a configuration author adds, renames, orders or removes names. You can read everything.";
-const NEED_YOU = "Combinations waiting for a person: something to review, something missing or something blocking release.";
-const PENDING_WORD: Record<LifecycleAction, string> = { DELETE: "Removal waiting", RETIRE: "Retire waiting", RESTORE: "Restore waiting" };
+const AUTHOR_ONLY = "Only a configuration author adds, renames, orders, deletes or retires names. You can read everything.";
+const NUM_TIP = "Position in this structure; it changes when you reorder. Not an IRCC code.";
+const PENDING_WORD: Record<LifecycleAction, string> = { DELETE: "Deletion waiting", RETIRE: "Retire waiting", RESTORE: "Restore waiting" };
+const USED_TIP = "What uses this combination: the releases firms have and the cases open on it. Its details list each one.";
+const STATUS: { value: string; label: string; test: (n: StructureNode) => boolean }[] = [
+  { value: "setup", label: "In setup", test: (n) => !!n.combination?.id && n.combination.status === "IN_SETUP" },
+  { value: "notready", label: "Not ready", test: (n) => !!n.combination?.id && n.combination.status === "NOT_READY" },
+  { value: "live", label: "Live", test: (n) => !!n.combination?.id && n.combination.status === "READY" },
+  { value: "ns", label: "Not started", test: (n) => !!n.combination && !n.combination.id },
+  { value: "waiting", label: "Waiting for approval", test: (n) => !!n.pending },
+];
 const norm = (s: string) => s.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+const many = (n: number, one: string, more: string) => `${n} ${n === 1 ? one : more}`;
+/** "Used by" (P-127 (1)): the releases that hold the combination and the cases open on it. */
+const usedBy = (c: StructureNode["combination"]) => {
+  if (!c?.id) return "Nothing yet";
+  const parts = [c.releases ? `${c.releases} release${c.releases === 1 ? "" : "s"}` : "", c.openCases ? `${c.openCases} open case${c.openCases === 1 ? "" : "s"}` : ""].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "Setup draft";
+};
 
-const LAST_PATHWAY = (actor: string | null) => `xr-structure-pathway:${actor ?? "anyone"}`;
-type Line = { leaf: StructureNode; category: StructureNode; sub: StructureNode | null };
+const VIEW_KEY = (actor: string | null) => `xr-structure-view:${actor ?? "anyone"}`;
+type Confirm = { key: string; kind: LifecycleAction | "WITHDRAW" };
 
 export function StructurePage() {
   const [sp, setSp] = useSearchParams();
@@ -59,267 +67,371 @@ export function StructurePage() {
   const [q, setQ] = React.useState(sp.get("q") ?? "");
   const { canAuthor, known } = useSessionView();
   const qc = useQueryClient();
-  const list = useApi<ListResp>(["structure", type], `/structure?pathwayType=${type}`);
-  const other = useApi<ListResp>(["structure", type === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL"], q.trim() ? `/structure?pathwayType=${type === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL"}` : null);
+  // Every name of the tab, retired ones included: Show retired only shows them (QA-48's missing view).
+  const list = useApi<ListResp>(["structure", type, "all"], `/structure?pathwayType=${type}&retired=1`);
+  const otherType: PathwayType = type === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL";
+  const other = useApi<ListResp>(["structure", otherType, "all"], `/structure?pathwayType=${otherType}&retired=1`);
   const [closed, setClosed] = React.useState<Set<string>>(new Set());
-  const [adding, setAdding] = React.useState<AddPrefill | null>(sp.get("add") === "1" ? {} : null);
+  const [adding, setAdding] = React.useState<AddPrefill | null>(null);
   const [justAdded, setJustAdded] = React.useState<string | null>(null);
   const [note, setNote] = React.useState<{ ok: boolean; text: string } | null>(null);
-  const set = (patch: Record<string, string | null>) => setSp((p) => { const n = new URLSearchParams(p); for (const [k, v] of Object.entries(patch)) v ? n.set(k, v) : n.delete(k); return n; }, { replace: true });
+  const [confirm, setConfirm] = React.useState<Confirm | null>(null);
+  // Built from the address as it is now, not as it was at the last render: two quick filter changes both stay.
+  const set = (patch: Record<string, string | null>) => setSp(() => { const n = new URLSearchParams(window.location.search); for (const [k, v] of Object.entries(patch)) v ? n.set(k, v) : n.delete(k); return n; }, { replace: true });
+
+  // The view is the person's own (remembered per person); the filters live in the address (P-115).
+  const savedView = (() => { try { return localStorage.getItem(VIEW_KEY(actor)); } catch { return null; } })();
+  const view: "tree" | "list" = (sp.get("v") ?? savedView) === "list" ? "list" : "tree";
+  const chooseView = (v: "tree" | "list") => { try { localStorage.setItem(VIEW_KEY(actor), v); } catch { /* private window */ } set({ v }); };
+  const pw = sp.get("p"), prog = sp.get("prog"), status = sp.get("s"), showRetired = sp.get("r") === "1", sort = sp.get("sort") === "az" ? "az" : "page";
+
+  // Drift 9 / round 3 minor: the pop-up opens from the address only for a person who can add.
+  React.useEffect(() => { if (known && sp.get("add") === "1") { if (canAuthor) setAdding({ pathwayKey: pw ?? undefined, programKey: prog ?? undefined }); set({ add: null }); } }, [known]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nodes = list.data?.nodes ?? [];
   const byKey = React.useMemo(() => new Map(nodes.map((n) => [n.key, n])), [nodes]);
   const kids = React.useMemo(() => { const m = new Map<string | null, StructureNode[]>(); for (const n of nodes) m.set(n.parentKey, [...(m.get(n.parentKey) ?? []), n]); return m; }, [nodes]);
-  const words = norm(q);
   const pathways = (kids.get(null) ?? []).filter((n) => n.level === "pathway");
-  // P-127: the page opens on the Pathway the person last chose (the first one on a first visit); "All pathways" shows every band.
-  const saved = (() => { try { return localStorage.getItem(LAST_PATHWAY(actor)); } catch { return null; } })();
-  const pParam = sp.get("p");
-  const want = pParam ?? saved;
-  const chosen = want === "all" ? null : want && pathways.some((x) => x.key === want) ? want : pathways[0]?.key ?? null;
-  const choose = (key: string | null) => { try { localStorage.setItem(LAST_PATHWAY(actor), key ?? "all"); } catch { /* private window */ } set({ p: key ?? "all", node: null }); };
-
-  /** One line per combination (Q3): a category without sub-categories, or each of its sub-categories. */
-  const linesOf = (program: StructureNode): Line[] => (kids.get(program.key) ?? []).flatMap((c): Line[] => {
-    const subs = kids.get(c.key) ?? [];
-    return subs.length ? subs.map((s) => ({ leaf: s, category: c, sub: s })) : [{ leaf: c, category: c, sub: null }];
-  });
-  const hit = (s: string) => !words || norm(s).includes(words);
-  /** Find (every Pathway of the tab): a Pathway or Program name match keeps everything under it; else the lines that match. */
-  const shownLines = (pw: StructureNode, program: StructureNode) => (hit(pw.label) || hit(program.label) ? linesOf(program) : linesOf(program).filter((l) => hit(l.category.label) || (l.sub && hit(l.sub.label))));
-  const programsOf = (pw: StructureNode) => (kids.get(pw.key) ?? []).filter((pr) => !words || hit(pw.label) || hit(pr.label) || shownLines(pw, pr).length);
-  const matchCount = (pw: StructureNode) => (kids.get(pw.key) ?? []).reduce((s, pr) => s + shownLines(pw, pr).length, 0);
-  const bands = words ? pathways.filter((pw) => hit(pw.label) || programsOf(pw).length) : chosen ? pathways.filter((x) => x.key === chosen) : pathways;
-
-  const live = nodes.filter((n) => !n.retired);
-  const count = (l: Level) => live.filter((n) => n.level === l).length;
-  const combos = live.filter((n) => n.level === "pathway").reduce((s, n) => s + n.combinations, 0);
-  const many = (n: number, one: string, more: string) => `${n} ${n === 1 ? one : more}`;
-  const otherMatches = words && other.data ? other.data.nodes.filter((n) => norm(n.label).includes(words)).length : 0;
-  const selectedNode = selected ? byKey.get(selected) : undefined;
-  const below = (k: string): StructureNode[] => (kids.get(k) ?? []).flatMap((c) => [c, ...below(c.key)]);
+  // R3-1 (and minor 5): numbers count the active names in page order; a retired name shows "—" and never shifts them.
+  const num = React.useMemo(() => {
+    const m = new Map<string, string>();
+    const walk = (parent: string | null, prefix: string) => (kids.get(parent) ?? []).filter((n) => !n.retired && (parent !== null || n.level === "pathway")).forEach((n, i) => { const s = prefix ? `${prefix}.${i + 1}` : `${i + 1}`; m.set(n.key, s); walk(n.key, s); });
+    walk(null, ""); return m;
+  }, [kids]);
   const isLeaf = (n: StructureNode) => n.level === "subCategory" || (n.level === "category" && !(kids.get(n.key)?.length));
-  const leavesUnder = (k: string) => below(k).filter((n) => isLeaf(n)).map((n) => {
-    const path: string[] = [];
-    for (let x: StructureNode | undefined = n; x && x.key !== k; x = x.parentKey ? byKey.get(x.parentKey) : undefined) path.unshift(x.label);
-    return { n, path };
-  });
-  const pathwayOf = (k: string) => { let x = byKey.get(k); while (x?.parentKey) x = byKey.get(x.parentKey); return x; };
-  const detail = (pw: StructureNode) => {
-    const ls = leavesUnder(pw.key).map((x) => x.n).filter((n) => !n.retired);
-    const liveN = ls.filter((n) => n.combination?.status === "READY" && n.combination.id).length, notStarted = ls.filter((n) => !n.combination?.id).length;
-    const notReady = ls.filter((n) => n.combination?.id && n.combination.status === "NOT_READY").length, inSetup = ls.length - liveN - notStarted - notReady;
-    return [[liveN, "Live"], [notReady, "Not ready"], [inSetup, "In setup"], [notStarted, "Not started"]].filter(([n]) => n).map(([n, w]) => `${n} ${w}`).join(" · ") || `${many((kids.get(pw.key) ?? []).length, "program", "programs")}`;
-  };
+  const below = (k: string): StructureNode[] => (kids.get(k) ?? []).flatMap((c) => [c, ...below(c.key)]);
+  const trailOf = (n: StructureNode) => { const t: StructureNode[] = []; for (let x: StructureNode | undefined = n; x; x = x.parentKey ? byKey.get(x.parentKey) : undefined) t.unshift(x); return t; };
+  const pathwayOf = (n: StructureNode) => trailOf(n)[0];
 
-  // After Add: open the Pathway it went into, its section, and show the line, tagged "Just added" (no toast, AD-7).
+  // Filters (R3-6): a combination shows when it passes them all, with every name above it; with no Find and no Status,
+  // a name with no combination under it shows too, so an empty Program can be found and filled.
+  const words = norm(q);
+  const statusOf = STATUS.find((s) => s.value === status);
+  const shown = React.useMemo(() => {
+    const keep = new Set<string>();
+    const add = (n: StructureNode) => { for (const x of trailOf(n)) keep.add(x.key); };
+    for (const n of nodes) {
+      const t = trailOf(n);
+      if (!showRetired && t.some((x) => x.retired)) continue;
+      if (pw && t[0]?.key !== pw) continue;
+      if (prog && !(t[1]?.key === prog || (n.level === "pathway" && byKey.get(prog)?.parentKey === n.key))) continue;
+      if (isLeaf(n)) {
+        if (statusOf && !statusOf.test(n)) continue;
+        if (words && !t.some((x) => norm(x.label).includes(words))) continue;
+        add(n);
+      } else if (!words && !statusOf && !below(n.key).some(isLeaf)) add(n);
+    }
+    return keep;
+  }, [nodes, pw, prog, status, showRetired, words]); // eslint-disable-line react-hooks/exhaustive-deps
+  const leaves = nodes.filter((n) => isLeaf(n) && shown.has(n.key));
+  const activeLeaves = nodes.filter((n) => isLeaf(n) && !trailOf(n).some((x) => x.retired));
+  const filtered = !!(pw || prog || statusOf || words);
+  const retiredCount = nodes.filter((n) => n.retired).length;
+  const otherMatches = words && other.data ? other.data.nodes.filter((n) => !n.retired && norm(n.label).includes(words)).length : 0;
+  const leafCount = (k: string) => below(k).filter((x) => isLeaf(x) && !trailOf(x).some((y) => y.retired)).length;
+  const typeCount = (d: ListResp | undefined) => (d ? d.nodes.filter((n) => (n.level === "subCategory" || (n.level === "category" && !d.nodes.some((x) => x.parentKey === n.key))) && !n.retired).length : undefined);
+  const levelCount = (l: Level) => nodes.filter((n) => n.level === l && shown.has(n.key)).length;
+  const programsFor = nodes.filter((n) => n.level === "program" && !n.retired && (!pw || n.parentKey === pw));
+  const selectedNode = selected ? byKey.get(selected) : undefined;
+
+  // After Add: the new line shows (filters that would hide it are cleared), scrolled to and tagged "Just added" (AD-7).
   React.useEffect(() => {
-    if (!justAdded || !byKey.get(justAdded)) return;
-    const pw = pathwayOf(justAdded);
-    if (pw && !words && chosen && chosen !== pw.key) { choose(pw.key); return; }
-    requestAnimationFrame(() => { const el = document.querySelector<HTMLElement>(`[data-key="${CSS.escape(justAdded)}"]`); el?.scrollIntoView({ block: "center" }); el?.querySelector<HTMLElement>("[data-open]")?.focus({ preventScroll: true }); });
-  }, [justAdded, byKey, chosen]);
-  const openAdd = (prefill: AddPrefill) => { if (canAuthor) setAdding(prefill); };
-  const closeAdd = () => { setAdding(null); if (sp.get("add")) set({ add: null }); };
+    const n = justAdded ? byKey.get(justAdded) : undefined;
+    if (!n) return;
+    if (!shown.has(n.key)) { setQ(""); set({ p: null, prog: null, s: null, q: null }); return; }
+    requestAnimationFrame(() => { const el = document.querySelector<HTMLElement>(`[data-row="${CSS.escape(n.key)}"]`); el?.scrollIntoView({ block: "center" }); el?.querySelector<HTMLElement>("[data-edit]")?.focus({ preventScroll: true }); });
+  }, [justAdded, byKey, shown]); // eslint-disable-line react-hooks/exhaustive-deps
+  const openAdd = () => { if (canAuthor) setAdding({ pathwayKey: pw ?? undefined, programKey: prog ?? undefined }); };
+  const refresh = () => Promise.all(["structure", "structure-uses", "catalogue", "draft", "review-queue"].map((k) => qc.invalidateQueries({ queryKey: [k] })));
 
-  // P-116 (Move up / down, at once with an audit line); the order here is the order on Immigration programs (QA-49).
-  const move = async (n: StructureNode, by: -1 | 1) => {
-    const sib = (kids.get(n.parentKey) ?? []).filter((x) => n.parentKey !== null || x.level === "pathway");
-    const i = sib.findIndex((x) => x.key === n.key), j = i + by;
-    if (i < 0 || j < 0 || j >= sib.length) return;
-    const keys = sib.map((x) => x.key); [keys[i], keys[j]] = [keys[j], keys[i]];
-    try { await api("/structure/reorder", { method: "POST", json: { pathwayType: type, parentKey: n.parentKey, keys } }); setNote({ ok: true, text: `Moved "${n.label}" ${by < 0 ? "up" : "down"}. Immigration programs follows this order.` }); await Promise.all([qc.invalidateQueries({ queryKey: ["structure"] }), qc.invalidateQueries({ queryKey: ["catalogue"] })]); }
-    catch (e) { setNote({ ok: false, text: (e as Error).message }); }
+  // Keyboard (minor 7): one Tab stop in the outline; ↑ / ↓ move between rows, Home / End to the ends, Enter is Edit,
+  // the Delete key is the row's action; Tab inside a row reaches its two buttons.
+  const rowKeys = view === "tree" ? nodes.filter((n) => shown.has(n.key) && !trailOf(n).slice(0, -1).some((x) => closed.has(x.key))).map((n) => n.key) : leaves.map((n) => n.key);
+  const [current, setCurrent] = React.useState<string | null>(null);
+  const cur = current && rowKeys.includes(current) ? current : rowKeys[0] ?? null;
+  const onRowKey = (key: string) => (e: React.KeyboardEvent) => {
+    const i = rowKeys.indexOf(key);
+    const go = (j: number) => { const k = rowKeys[Math.max(0, Math.min(rowKeys.length - 1, j))]; setCurrent(k); requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-row="${CSS.escape(k)}"] [data-edit]`)?.focus()); e.preventDefault(); };
+    if (e.key === "ArrowDown") go(i + 1); else if (e.key === "ArrowUp") go(i - 1); else if (e.key === "Home") go(0); else if (e.key === "End") go(rowKeys.length - 1);
+    else if (e.key === "Delete" && (e.target as HTMLElement).dataset.edit !== undefined) { document.querySelector<HTMLElement>(`[data-row="${CSS.escape(key)}"] [data-action]`)?.click(); e.preventDefault(); }
   };
-  const canMove = (n: StructureNode, by: -1 | 1) => { const sib = (kids.get(n.parentKey) ?? []).filter((x) => n.parentKey !== null || x.level === "pathway"); const i = sib.findIndex((x) => x.key === n.key); return canAuthor && i + by >= 0 && i + by < sib.length; };
-  // Lines: one tab stop each; ↑ / ↓ move between them, Enter opens details (P-127 keyboard: no tree model any more).
-  const onLineKey = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-    const all = [...document.querySelectorAll<HTMLButtonElement>("[data-line] [data-open]")];
-    const i = all.indexOf(e.currentTarget); all[i + (e.key === "ArrowDown" ? 1 : -1)]?.focus(); e.preventDefault();
-  };
+  const rowProps = (n: StructureNode) => ({ n, num: num.get(n.key) ?? null, selected: selected === n.key, current: cur === n.key, justAdded: justAdded === n.key, canAuthor, words,
+    onEdit: () => { setCurrent(n.key); set({ node: n.key }); }, onAction: () => { setCurrent(n.key); setConfirm({ key: n.key, kind: n.action.kind }); }, onKey: onRowKey(n.key), wide: !selectedNode });
+
+  const confirmBox = (n: StructureNode) => confirm?.key === n.key ? <ConfirmAction key={`c-${n.key}`} n={n} kind={confirm.kind} num={num} byKey={byKey} onClose={() => setConfirm(null)}
+    onDone={async (text) => { setConfirm(null); setNote({ ok: true, text }); await refresh(); }} /> : null;
+  const chip = (key: string, label: string, clear: () => void) => <span key={key} className="inline-flex h-6 items-center gap-1 rounded-full border border-primary/40 bg-primary/10 pl-2.5 pr-1 text-xs font-medium text-text-link">{label}<button type="button" aria-label={`Remove the filter ${label}`} onClick={clear} className="flex size-4 items-center justify-center rounded-full hover:bg-primary/15"><X className="size-3" /></button></span>;
 
   return (
     <TipProvider>
       {fromPrograms ? <Link to="/" className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-text-link hover:underline" data-back-programs><ChevronLeft className="size-4" aria-hidden />Back to Immigration programs</Link> : null}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-semibold">Program structure</h1>
-        <Tip focusable tip="Every pathway, program, category and sub-category your firm offers. Every category without sub-categories, and every sub-category, is a combination."><span className="text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Info className="size-4" aria-label="About the Program structure" /></span></Tip>
+        <Tip focusable tip="Every Pathway, Program, Category and Sub-category is created here, and only here. Each combination it defines appears on Immigration programs, where its setup starts."><span className="text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Info className="size-4" aria-label="About the Program structure" /></span></Tip>
         <span className="flex-1" />
-        <Tip tip={canAuthor ? "Add a pathway, program, category or sub-category: one pop-up, checked as you type." : AUTHOR_ONLY}><span><Button disabled={!canAuthor} onClick={() => openAdd({ pathwayKey: chosen ?? undefined })} data-add-open><Plus /> Add</Button></span></Tip>
+        <Tip tip={canAuthor ? "Add a Pathway, Program, Category or Sub-category, or a whole line at once. Pick what exists or type a new name." : AUTHOR_ONLY}><span><Button disabled={!canAuthor} onClick={openAdd} data-add-open><Plus /> Add</Button></span></Tip>
         <p className="w-full text-sm text-text-muted">Where every combination sits: Pathway › Program › Category › Sub-category. The order here is the order on Immigration programs.</p>
       </div>
-      <div className={cn("grid gap-6", selectedNode && "xl:grid-cols-[minmax(0,1fr)_420px]")}>
-        <section aria-label={`${typeLabel} program structure`} className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <div role="group" aria-label="Pathway type" className="inline-flex w-fit items-center gap-0.5 rounded-xl border border-border bg-surface p-0.5">
-              {TYPES.map((t) => (
+
+      {/* The filter bar (R3-6): the same pattern as Immigration programs. */}
+      <div className="space-y-2.5" data-filter-bar>
+        <div className="flex flex-wrap items-center gap-2">
+          <div role="group" aria-label="Pathway type" className="inline-flex items-center gap-0.5 rounded-xl border border-border bg-surface p-0.5">
+            {TYPES.map((t) => {
+              const c = typeCount(t.value === type ? list.data : other.data);
+              return (
                 <Tip key={t.value} tip={t.tip}>
-                  <button type="button" aria-pressed={type === t.value} onClick={() => { set({ t: t.value === "INDIVIDUAL" ? null : t.value, node: null, p: null }); setClosed(new Set()); }}
-                    className={cn("inline-flex h-8 items-center rounded-lg px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", type === t.value ? "bg-primary font-semibold text-primary-foreground shadow-sm" : "text-text-muted hover:text-text")}>{t.label}</button>
+                  <button type="button" aria-pressed={type === t.value} onClick={() => { set({ t: t.value === "INDIVIDUAL" ? null : t.value, node: null, p: null, prog: null }); setClosed(new Set()); setConfirm(null); }}
+                    className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", type === t.value ? "bg-primary font-semibold text-primary-foreground shadow-sm" : "text-text-muted hover:text-text")}>{t.label}{c !== undefined ? <span className={cn("text-xs font-medium", type === t.value ? "text-primary-foreground/80" : "text-text-muted")}>{c}</span> : null}</button>
                 </Tip>
+              );
+            })}
+          </div>
+          <Tip tip="Tree shows each Pathway and Program as a block; List shows one line per combination with its full trail. Remembered for you.">
+            <div role="group" aria-label="View" className="inline-flex items-center gap-0.5 rounded-xl border border-border bg-surface p-0.5">
+              {(["tree", "list"] as const).map((v) => (
+                <button key={v} type="button" aria-pressed={view === v} onClick={() => chooseView(v)} data-view-choice={v}
+                  className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", view === v ? "bg-surface-raised font-semibold text-text shadow-sm" : "text-text-muted hover:text-text")}>{v === "tree" ? <ListTree className="size-4" aria-hidden /> : <ListIcon className="size-4" aria-hidden />}{v === "tree" ? "Tree" : "List"}</button>
               ))}
             </div>
-            <label className="relative min-w-[200px] flex-1">
-              <span className="sr-only">Find a name</span>
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden />
-              <Tip tip="Find a name in every pathway of this tab. A pathway or program that matches keeps everything under it; the cards count the matches."><Input value={q} onChange={(e) => { setQ(e.target.value); set({ q: e.target.value || null }); }} placeholder="Find a name" className="pl-8" /></Tip>
-              {q ? <button type="button" aria-label="Clear the search" className="absolute right-1 top-1.5 flex size-6 items-center justify-center rounded text-text-muted hover:bg-text/5" onClick={() => { setQ(""); set({ q: null }); }}><X className="size-4" /></button> : null}
-            </label>
-            <Tip tip="Open every program section."><Button size="sm" variant="secondary" onClick={() => setClosed(new Set())}>Expand all</Button></Tip>
-            <Tip tip="Show the program titles only; open one with its arrow."><Button size="sm" variant="secondary" onClick={() => setClosed(new Set(nodes.filter((n) => n.level === "program").map((n) => n.key)))}>Collapse all</Button></Tip>
+          </Tip>
+          <label className="relative min-w-[200px] flex-1">
+            <span className="sr-only">Find a name</span>
+            <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden />
+            <Tip tip={`Find a name in every pathway of ${typeLabel}. A line shows when any of its names matches.`}><Input value={q} onChange={(e) => { setQ(e.target.value); set({ q: e.target.value || null }); }} placeholder={`Find a name in ${typeLabel}`} className="pl-8" /></Tip>
+            {q ? <button type="button" aria-label="Clear the search" className="absolute right-1 top-1 flex size-7 items-center justify-center rounded text-text-muted hover:bg-text/5" onClick={() => { setQ(""); set({ q: null }); }}><X className="size-4" /></button> : null}
+          </label>
+          {view === "tree" ? <>
+            <Tip tip="Open every Pathway and Program."><Button size="sm" variant="secondary" onClick={() => setClosed(new Set())}>Expand all</Button></Tip>
+            <Tip tip="Show the Pathways and Programs only; open one with its arrow."><Button size="sm" variant="secondary" onClick={() => setClosed(new Set(nodes.filter((n) => n.level === "program").map((n) => n.key)))}>Collapse all</Button></Tip>
+          </> : (
+            <Tip tip="Page order is the order set here, the one Immigration programs uses; A to Z sorts each line by its trail.">
+              <select aria-label="Sort" value={sort} onChange={(e) => set({ sort: e.target.value === "az" ? "az" : null })} className="h-8 rounded-lg border border-border bg-surface px-2 text-sm" data-sort>
+                <option value="page">Sort: page order</option><option value="az">Sort: A to Z</option>
+              </select>
+            </Tip>
+          )}
+        </div>
+        {list.data && !list.data.empty ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <div role="group" aria-label="Pathway" className="flex flex-wrap items-center gap-1.5">
+              <span className="mr-0.5 text-xs text-text-muted">Pathway</span>
+              {[{ key: null as string | null, label: "All", count: activeLeaves.length, idx: -1 }, ...pathways.filter((p) => !p.retired || showRetired).map((p, i) => ({ key: p.key as string | null, label: p.label, count: leafCount(p.key), idx: i }))].map((c) => (
+                <button key={c.key ?? "all"} type="button" aria-pressed={pw === c.key} onClick={() => set({ p: c.key, prog: null })} data-pathway-chip={c.key ?? "all"}
+                  className={cn("inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", pw === c.key ? "border-primary/40 bg-primary/10 font-semibold text-text-link" : "border-border-strong bg-surface-raised text-text hover:bg-text/5")}>
+                  {c.idx >= 0 ? <span className="h-3.5 w-1 rounded-sm" style={{ background: pathwayAccent(c.idx) }} aria-hidden /> : null}{c.label}<span className="text-xs font-medium text-text-muted">{c.count}</span>
+                </button>
+              ))}
+            </div>
+            <select aria-label="Program" value={prog ?? ""} onChange={(e) => set({ prog: e.target.value || null })} className="h-8 max-w-[16rem] rounded-lg border border-border bg-surface px-2 text-sm" data-program-filter>
+              <option value="">Program: All</option>{programsFor.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+            </select>
+            <select aria-label="Status" value={status ?? ""} onChange={(e) => set({ s: e.target.value || null })} className="h-8 rounded-lg border border-border bg-surface px-2 text-sm" data-status-filter>
+              <option value="">Status: All</option>{STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+            <span className="flex-1" />
+            <Tip tip="Retired names are hidden from Add and from new setups. Show them to restore one.">
+              <label className="inline-flex items-center gap-1.5 text-sm"><input type="checkbox" checked={showRetired} onChange={(e) => set({ r: e.target.checked ? "1" : null })} data-show-retired /> Show retired ({retiredCount})</label>
+            </Tip>
           </div>
-          {list.data && !list.data.empty && pathways.length ? (
-            <div className="mb-3"><PathwayCards typeLabel={typeLabel} pathways={pathways.map((p) => ({ ...p, detail: detail(p), matches: words ? matchCount(p) : undefined }))} open={words ? null : chosen} onOpen={choose}
-              allTip={`Shows every ${typeLabel} pathway, one band each.`} cardTip={(l) => `Shows ${l}'s programs and combinations.`}
-              add={{ enabled: canAuthor, tip: canAuthor ? `Add a pathway to ${typeLabel}, such as Citizenship: opens the Add pop-up.` : AUTHOR_ONLY, onAdd: () => openAdd({ focus: "pathway" }) }} /></div>
-          ) : null}
-          {list.data && !list.data.empty ? (
-            <p className="mb-2 text-sm text-text-muted" data-stats>
-              {many(count("pathway"), "pathway", "pathways")} · {many(count("program"), "program", "programs")} · {many(count("category"), "category", "categories")} · {many(count("subCategory"), "sub-category", "sub-categories")} · <b className="font-semibold text-text">{combos}</b> {combos === 1 ? "combination" : "combinations"}
-            </p>
-          ) : null}
-          {note ? <p role={note.ok ? "status" : "alert"} className={cn("mb-2 text-sm", note.ok ? "text-text-ok" : "text-text-danger")} data-page-note>{note.text}</p> : null}
+        ) : null}
+        {list.data && !list.data.empty ? (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-muted" data-stats>
+            <span>{filtered ? <>Showing <b className="font-semibold text-text">{leaves.filter((n) => !trailOf(n).some((x) => x.retired)).length} of {activeLeaves.length}</b> combinations · </> : null}{many(levelCount("pathway"), "pathway", "pathways")} · {many(levelCount("program"), "program", "programs")} · {many(levelCount("category"), "category", "categories")} · {many(levelCount("subCategory"), "sub-category", "sub-categories")}{filtered ? null : <> · <b className="font-semibold text-text">{activeLeaves.length}</b> {activeLeaves.length === 1 ? "combination" : "combinations"}</>}</span>
+            {filtered ? <>
+              {pw ? chip("p", byKey.get(pw)?.label ?? "Pathway", () => set({ p: null, prog: null })) : null}
+              {prog ? chip("prog", byKey.get(prog)?.label ?? "Program", () => set({ prog: null })) : null}
+              {statusOf ? chip("s", statusOf.label, () => set({ s: null })) : null}
+              {words ? chip("q", `"${q.trim()}"`, () => { setQ(""); set({ q: null }); }) : null}
+              <button type="button" className="text-sm font-medium text-text-link underline underline-offset-2" onClick={() => { setQ(""); set({ p: null, prog: null, s: null, q: null }); }} data-clear-all>Clear all</button>
+            </> : null}
+          </p>
+        ) : null}
+        {list.data && !list.data.empty ? <p className="flex flex-wrap items-center gap-x-3.5 text-xs text-text-muted" data-legend>{(["pathway", "program", "category", "subCategory"] as const).map((l) => <span key={l} className="inline-flex items-center gap-1"><LevelMark level={l} tip={false} />{LEVEL_WORD[l]}</span>)}<span>· Numbers show the order on this page, not IRCC codes.</span></p> : null}
+      </div>
+      {note ? <p role={note.ok ? "status" : "alert"} className={cn("mt-2 text-sm", note.ok ? "text-text-ok" : "text-text-danger")} data-page-note>{note.text}</p> : null}
+
+      <div className={cn("mt-3 grid gap-6", selectedNode && "xl:grid-cols-[minmax(0,1fr)_420px]")}>
+        <section aria-label={`${typeLabel} program structure`} className="min-w-0">
           {list.isError ? (
             <ErrorState title="The program structure could not load" description={`${(list.error as Error).message} Your work is safe.`} action={<Button size="sm" variant="secondary" onClick={() => void list.refetch()}>Retry</Button>} />
           ) : list.isPending || !known ? (
             <div className="space-y-2 rounded-xl border border-border bg-surface-raised p-3" aria-busy="true"><span className="sr-only" role="status">Loading the program structure</span>{[0, 1, 1, 1, 0, 1, 1].map((d, i) => <Skeleton key={i} className={d ? "h-9" : "h-7 w-1/3"} />)}</div>
           ) : list.data.empty ? (
             <EmptyState title="No structure yet" description={`${typeLabel} has no names. After Reset both tabs are empty. Add your first pathway, for example Temporary residence.`}
-              action={canAuthor ? <Button onClick={() => openAdd({ focus: "pathway" })}><Plus /> Add pathway</Button> : <p className="text-sm text-text-muted">{AUTHOR_ONLY}</p>} />
-          ) : words && !bands.length ? (
-            <EmptyState title={`No name matches "${q.trim()}" in ${typeLabel}`} description={otherMatches ? undefined : "Check the spelling, or clear the search."}
-              action={otherMatches ? <p className="text-sm">{otherMatches} {otherMatches === 1 ? "match" : "matches"} in {TYPES.find((t) => t.value !== type)!.label}. <button type="button" className="font-semibold text-text-link underline underline-offset-2" onClick={() => set({ t: type === "INDIVIDUAL" ? "CORPORATE" : null, node: null })}>Show {otherMatches === 1 ? "it" : "them"}</button></p> : <Button size="sm" variant="secondary" onClick={() => { setQ(""); set({ q: null }); }}>Clear the search</Button>} />
-          ) : (
-            <div className="space-y-5" data-structure-a>
-              {/* Column names for the lines, at 1024 px and wider while the details panel is closed (board A). */}
-              {/* Same padding, gaps and widths as a line (section border 1 px + px-3; the ⋯ button is size-7). */}
-              {!selected ? <div className="mx-px mb-1.5 hidden items-center gap-x-3 px-3 text-xs font-medium text-text-muted lg:flex" aria-hidden data-line-heads>
-                <span className="flex-1">Combination: Category › Sub-category</span><span className="w-36">Status</span><span className="w-40">Cases may be opened from</span><span className="w-40">Used by</span><span className="w-7" />
-              </div> : null}
-              {bands.map((pw) => {
-                const progs = words ? programsOf(pw) : kids.get(pw.key) ?? [];
-                const idx = pathways.findIndex((x) => x.key === pw.key);
+              action={canAuthor ? <Button onClick={() => setAdding({ focus: "pathway" })}><Plus /> Add pathway</Button> : <p className="text-sm text-text-muted">{AUTHOR_ONLY}</p>} />
+          ) : !shown.size ? (
+            <EmptyState title={words ? `No name matches "${q.trim()}" in ${typeLabel}` : "Nothing matches these filters"} description={otherMatches ? undefined : "Check the spelling, or clear the filters."}
+              action={otherMatches ? <p className="text-sm">{otherMatches} {otherMatches === 1 ? "match" : "matches"} in {TYPES.find((t) => t.value !== type)!.label}. <button type="button" className="font-semibold text-text-link underline underline-offset-2" onClick={() => set({ t: type === "INDIVIDUAL" ? "CORPORATE" : null, node: null, p: null, prog: null })}>Show {otherMatches === 1 ? "it" : "them"}</button></p> : <Button size="sm" variant="secondary" onClick={() => { setQ(""); set({ p: null, prog: null, s: null, q: null }); }}>Clear all filters</Button>} />
+          ) : view === "tree" ? (
+            <div data-tree>
+              <Heads wide={!selectedNode} first="Name" />
+              {pathways.filter((p) => shown.has(p.key)).map((p) => {
+                const shut = closed.has(p.key);
                 return (
-                  <section key={pw.key} aria-label={`${pw.label} pathway`} data-band={pw.key} data-key={pw.key}>
-                    <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-lv1-b bg-lv1-t py-1.5 pl-3 pr-2" style={{ borderLeft: `4px solid ${pathwayAccent(idx)}` }}>
-                      <button type="button" onClick={() => set({ node: pw.key })} className="inline-flex items-center gap-1.5 rounded text-base font-semibold text-lv1 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50" data-band-title><LevelMark level="pathway" tip={false} /><Mark text={pw.label} words={words} /></button>
-                      <span className="text-sm text-text-muted">{many(pw.combinations, "combination", "combinations")}</span>
-                      {pw.needs ? <Tip tip={NEED_YOU}><span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn">{pw.needs} need{pw.needs === 1 ? "s" : ""} you</span></Tip> : null}
-                      {pw.retired ? <Pill tone="neutral">Retired</Pill> : null}
-                      <span className="flex-1" />
-                      <Tip tip={canAuthor ? `Add a program under ${pw.label}.` : AUTHOR_ONLY}><span><Button size="sm" variant="ghost" disabled={!canAuthor || pw.retired} onClick={() => openAdd({ pathwayKey: pw.key, focus: "program" })} data-add-program><Plus /> Add program</Button></span></Tip>
-                    </div>
-                    {!progs.length ? <p className="rounded-xl border border-dashed border-border-strong px-4 py-3 text-sm text-text-muted" data-empty-pathway>No programs yet.{canAuthor ? <> <button type="button" className="font-semibold text-text-link underline underline-offset-2" onClick={() => openAdd({ pathwayKey: pw.key, focus: "program" })}>+ Add program</button></> : null}</p> : (
-                      <div className="space-y-3">
-                        {progs.map((pr) => {
-                          const lines = words ? shownLines(pw, pr) : linesOf(pr);
-                          const shut = closed.has(pr.key) && !words;
-                          return (
-                            <section key={pr.key} aria-label={`${pr.label} program`} data-section={pr.key} data-key={pr.key} className={cn("rounded-xl border border-border bg-surface-raised", selected === pr.key && "ring-2 ring-primary/30")}>
-                              <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-                                <button type="button" aria-expanded={!shut} aria-label={`${shut ? "Open" : "Close"} ${pr.label}`} onClick={() => setClosed((c) => { const n = new Set(c); if (n.has(pr.key)) n.delete(pr.key); else n.add(pr.key); return n; })} className="flex size-6 items-center justify-center rounded text-text-muted outline-none hover:bg-text/5 focus-visible:ring-[3px] focus-visible:ring-ring/50">{shut ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}</button>
-                                <button type="button" onClick={() => set({ node: pr.key })} className="inline-flex items-center gap-1.5 rounded text-sm font-semibold text-lv2 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50" data-section-title><LevelMark level="program" tip={false} /><Mark text={pr.label} words={words} /></button>
-                                <span className="text-xs text-text-muted">{many(pr.combinations, "combination", "combinations")}</span>
-                                {pr.needs ? <Tip tip={NEED_YOU}><span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn">{pr.needs} need{pr.needs === 1 ? "s" : ""} you</span></Tip> : null}
-                                {pr.retired ? <Pill tone="neutral">Retired</Pill> : null}
-                                {pr.pending ? <Tip tip="A change to this name waits for a second person on To review."><Pill tone="warn">{PENDING_WORD[pr.pending.action]}</Pill></Tip> : null}
-                                <span className="flex-1" />
-                                <Tip tip={canAuthor ? `Add a category under ${pr.label}.` : AUTHOR_ONLY}><span><Button size="sm" variant="ghost" disabled={!canAuthor || pr.retired} onClick={() => openAdd({ pathwayKey: pw.key, programKey: pr.key, focus: "category" })} data-add-category><Plus /> Add category</Button></span></Tip>
-                                <RowMenu label={pr.label} items={[{ word: "Open details", run: () => set({ node: pr.key }) }, { word: "Move up", run: () => void move(pr, -1), off: !canMove(pr, -1) }, { word: "Move down", run: () => void move(pr, 1), off: !canMove(pr, 1) }]} />
-                              </div>
-                              {shut ? null : !lines.length ? <p className="px-4 py-3 text-sm text-text-muted" data-empty-program>No categories yet.{canAuthor ? <> <button type="button" className="font-semibold text-text-link underline underline-offset-2" onClick={() => openAdd({ pathwayKey: pw.key, programKey: pr.key, focus: "category" })}>+ Add category</button></> : null}</p> : (
-                                <ul aria-label={`${pr.label} combinations`} className="divide-y divide-border">
-                                  {lines.map((l) => <LineRow key={l.leaf.key} line={l} words={words} selected={selected === l.leaf.key || selected === l.category.key} justAdded={justAdded === l.leaf.key} canAuthor={canAuthor}
-                                    onOpen={(k) => set({ node: k })} onKey={onLineKey} onMove={(n, by) => void move(n, by)} canMove={canMove}
-                                    onAddSub={() => openAdd({ pathwayKey: pw.key, programKey: pr.key, categoryKey: l.category.key, focus: "subCategory" })} />)}
-                                </ul>)}
-                            </section>
-                          );
-                        })}
-                      </div>)}
+                  <section key={p.key} aria-label={`${p.label} pathway`} data-band={p.key} className="mb-3.5 rounded-xl border border-lv1-b bg-lv1-t pb-2 pr-2" style={{ borderLeft: `4px solid ${pathwayAccent(pathways.findIndex((x) => x.key === p.key))}` }}>
+                    <Row {...rowProps(p)} open={!shut} onToggle={() => setClosed((c) => toggle(c, p.key))} meta={many(leafCount(p.key), "combination", "combinations")} />
+                    {confirmBox(p)}
+                    {shut ? null : !(kids.get(p.key) ?? []).some((x) => shown.has(x.key)) ? <p className="py-2 pl-10 text-sm text-text-muted" data-empty-pathway>Nothing under it yet. Use Add to add a program.</p> : (kids.get(p.key) ?? []).filter((x) => shown.has(x.key)).map((g) => {
+                      const gShut = closed.has(g.key);
+                      return (
+                        <div key={g.key} className="mb-2 ml-6 rounded-lg border border-border bg-surface-raised last:mb-0" data-block={g.key}>
+                          <Row {...rowProps(g)} open={!gShut} onToggle={() => setClosed((c) => toggle(c, g.key))} meta={many(leafCount(g.key), "combination", "combinations")} />
+                          {confirmBox(g)}
+                          {gShut ? null : !(kids.get(g.key) ?? []).some((x) => shown.has(x.key)) ? <p className="border-t border-border py-2 pl-12 text-sm text-text-muted" data-empty-program>Nothing under it yet. Use Add to add a category.</p> : (kids.get(g.key) ?? []).filter((x) => shown.has(x.key)).map((c) => {
+                            const subs = (kids.get(c.key) ?? []).filter((x) => shown.has(x.key)), cShut = closed.has(c.key);
+                            return (
+                              <React.Fragment key={c.key}>
+                                <Row {...rowProps(c)} open={subs.length ? !cShut : undefined} onToggle={() => setClosed((x) => toggle(x, c.key))} meta={subs.length ? many(subs.length, "sub-category", "sub-categories") : undefined} />
+                                {confirmBox(c)}
+                                {cShut ? null : subs.map((s) => <React.Fragment key={s.key}><Row {...rowProps(s)} />{confirmBox(s)}</React.Fragment>)}
+                              </React.Fragment>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
                   </section>
                 );
               })}
             </div>
+          ) : (
+            <div className="rounded-xl border border-border bg-surface-raised" data-list>
+              <Heads wide={!selectedNode} first="Combination: Pathway type › Pathway › Program › Category › Sub-category" list />
+              {(sort === "az" ? [...leaves].sort((a, b) => trailOf(a).map((x) => x.label).join("|").localeCompare(trailOf(b).map((x) => x.label).join("|"), "en-CA")) : leaves).map((n) => (
+                <React.Fragment key={n.key}>
+                  <Row {...rowProps(n)} list trail={[typeLabel, ...trailOf(n).map((x) => x.label)]} />
+                  {confirmBox(n)}
+                </React.Fragment>
+              ))}
+            </div>
           )}
           {list.data && !list.data.empty ? <p className="mt-2 text-xs text-text-muted">Names and locations are Sample until the immigration expert confirms. {list.data.meaningCheck.why}</p> : null}
         </section>
-        {selectedNode ? <DetailPanel key={selectedNode.key} node={selectedNode} type={type} siblings={kids.get(selectedNode.parentKey)?.filter((s) => selectedNode.parentKey !== null || s.level === "pathway") ?? []} leaf={isLeaf(selectedNode)} leaves={leavesUnder(selectedNode.key)} canAuthor={canAuthor}
-          onClose={() => set({ node: null })} onAddChild={() => { const pr = selectedNode.parentKey ? byKey.get(selectedNode.parentKey) : undefined; openAdd({ pathwayKey: pr?.parentKey ?? undefined, programKey: pr?.key, categoryKey: selectedNode.key, focus: "subCategory" }); }} /> : null}
+        {selectedNode ? <DetailPanel key={selectedNode.key} node={selectedNode} num={num.get(selectedNode.key) ?? null} type={type} siblings={kids.get(selectedNode.parentKey)?.filter((s) => (selectedNode.parentKey !== null || s.level === "pathway") && !s.retired) ?? []} leaf={isLeaf(selectedNode)}
+          leaves={below(selectedNode.key).filter(isLeaf).map((x) => ({ n: x, path: trailOf(x).slice(trailOf(selectedNode).length).map((y) => y.label) }))} canAuthor={canAuthor} onClose={() => set({ node: null })} /> : null}
       </div>
-      <AddToStructure open={!!adding} onClose={closeAdd} type={type} prefill={adding ?? undefined}
-        onAdded={(r, again) => { setJustAdded(r.leaf.key); setNote({ ok: true, text: `Added ${r.created.map((c) => `"${c.label}"`).join(", ")}${r.combination ? ": listed on Immigration programs as Not started; no setup started." : "."}` }); if (!again) closeAdd(); }}
-        onShow={(k) => { closeAdd(); set({ node: k }); setJustAdded(k); }} />
+      <AddToStructure open={!!adding} onClose={() => setAdding(null)} type={type} prefill={adding ?? undefined}
+        onAdded={(r, again) => { setJustAdded(r.leaf.key); setNote({ ok: true, text: `Added ${r.created.map((c) => `"${c.label}"`).join(", ")}${r.combination ? ": listed on Immigration programs as Not started; no setup started." : "."}` }); if (!again) setAdding(null); }}
+        onShow={(k) => { setAdding(null); set({ node: k }); setJustAdded(k); }} />
     </TipProvider>
   );
 }
 
-/** A ⋯ menu of row actions (P-127): each disabled one says why in its tooltip-free form (the panel has the reasons). */
-function RowMenu({ label, items }: { label: string; items: { word: string; run: () => void; off?: boolean }[] }) {
+const toggle = (s: Set<string>, k: string) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; };
+/** The row grid: name, status, cases may be opened from, Used by (1280 px and wider, panel closed: minor 6), actions. */
+const GRID = (wide: boolean, list?: boolean) => cn("grid items-center gap-x-2", list ? (wide ? "grid-cols-[3.5rem_minmax(0,1fr)_8rem_10rem_7rem_9.5rem] max-xl:grid-cols-[3.5rem_minmax(0,1fr)_10rem_9.5rem]" : "grid-cols-[3.5rem_minmax(0,1fr)_10rem_9.5rem]")
+  : (wide ? "grid-cols-[minmax(0,1fr)_8rem_10rem_7rem_9.5rem] max-xl:grid-cols-[minmax(0,1fr)_7rem_8rem_9.5rem]" : "grid-cols-[minmax(0,1fr)_7rem_8rem_9.5rem]"));
+function Heads({ wide, first, list }: { wide: boolean; first: string; list?: boolean }) {
   return (
-    <DropdownMenu.Root>
-      <Tip tip={`Actions for ${label}`}>
-        <DropdownMenu.Trigger asChild>
-          <button type="button" aria-label={`Actions for ${label}`} className="flex size-7 items-center justify-center rounded-md text-text-muted outline-none hover:bg-text/5 focus-visible:ring-[3px] focus-visible:ring-ring/50" data-row-menu><MoreHorizontal className="size-4" aria-hidden /></button>
-        </DropdownMenu.Trigger>
-      </Tip>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[200px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
-          {items.map((x) => <DropdownMenu.Item key={x.word} disabled={x.off} onSelect={x.run} className="cursor-pointer rounded-md px-2 py-1.5 outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-text/5">{x.word}</DropdownMenu.Item>)}
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
+    <div className={cn(GRID(wide, list), "py-1.5 text-xs font-medium text-text-muted", list ? "border-b border-border px-3" : "pl-3 pr-[1.375rem]")} aria-hidden data-line-heads>
+      {list ? <span>No.</span> : null}<span>{first}</span><span>Status{list ? <span className="xl:hidden"> · cases from</span> : null}</span><span className={cn(list && (wide ? "max-xl:hidden" : "hidden"))}>Cases may be opened from</span>{wide ? <span className="max-xl:hidden">Used by</span> : null}<span className="text-right"><span className="sr-only">Actions</span></span>
+    </div>
   );
 }
 
-/** "Used by" on a line (P-127 (1)): the releases that hold the combination and the cases open on it. */
-const USED_TIP = "What uses this combination: the releases firms have and the cases open on it. Its details list each one.";
-const usedBy = (c: StructureNode["combination"]) => {
-  if (!c?.id) return "Nothing yet";
-  const parts = [c.releases ? `${c.releases} release${c.releases === 1 ? "" : "s"}` : "", c.openCases ? `${c.openCases} open case${c.openCases === 1 ? "" : "s"}` : ""].filter(Boolean);
-  return parts.length ? parts.join(" · ") : "Setup draft";
+const ACTION: Record<LifecycleAction | "WITHDRAW", { word: string; icon: React.ReactNode; tip: (n: StructureNode) => string }> = {
+  DELETE: { word: "Delete", icon: <Trash2 className="size-3.5" aria-hidden />, tip: (n) => n.action.below.length ? `Deletes ${n.label} and the ${n.action.below.length} names under it; nothing uses them. A second person approves on To review.` : "Nothing uses it. A second person approves the deletion on To review." },
+  RETIRE: { word: "Retire", icon: <Archive className="size-3.5" aria-hidden />, tip: (n) => `Released, so it cannot be deleted. Retire hides it from Add and new setups; cases and earlier releases keep it.${n.action.withCombination ? " Its combination is retired with it." : ""}` },
+  RESTORE: { word: "Restore", icon: <RotateCcw className="size-3.5" aria-hidden />, tip: () => "Retired: hidden from Add and new setups; cases and earlier releases keep it. Restore brings it back (a second person approves)." },
+  WITHDRAW: { word: "Withdraw", icon: <Undo2 className="size-3.5" aria-hidden />, tip: (n) => `${n.pending ? PENDING_WORD[n.pending.action] : "A change waits"} for a second person on To review. Withdraw keeps ${n.label} as it is.` },
 };
 
-/** One line per combination (P-127 Q3): ◆ Category › ◇ Sub-category (the identity in navy), its state, where cases may be
- *  opened, what uses it, and a ⋯ menu. Clicking it opens the same details panel as before. */
-function LineRow({ line, words, selected, justAdded, canAuthor, onOpen, onKey, onMove, canMove, onAddSub }: {
-  line: Line; words: string; selected: boolean; justAdded: boolean; canAuthor: boolean; onOpen: (k: string) => void; onKey: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
-  onMove: (n: StructureNode, by: -1 | 1) => void; canMove: (n: StructureNode, by: -1 | 1) => boolean; onAddSub: () => void;
+/** One row of the Tree or the List: number, mark, name in text colour (level colour on the mark and number only,
+ *  P-128 (6)), its state, where cases may be opened, Used by, then Edit and its one action (R3-2). */
+function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, onAction, onKey, wide, open, onToggle, meta, list, trail }: {
+  n: StructureNode; num: string | null; selected: boolean; current: boolean; justAdded: boolean; canAuthor: boolean; words: string; wide: boolean;
+  onEdit: () => void; onAction: () => void; onKey: (e: React.KeyboardEvent) => void; open?: boolean; onToggle?: () => void; meta?: string; list?: boolean; trail?: string[];
 }) {
-  const n = line.leaf, c = n.combination;
-  const items = [
-    { word: "Open details", run: () => onOpen(n.key) },
-    ...(line.sub ? [{ word: `${line.category.label}: details`, run: () => onOpen(line.category.key) }] : []),
-    { word: line.sub ? "Add another sub-category" : "Add sub-category", run: onAddSub, off: !canAuthor || line.category.hasSetup || line.category.retired },
-    { word: "Move up", run: () => onMove(n, -1), off: !canMove(n, -1) },
-    { word: "Move down", run: () => onMove(n, 1), off: !canMove(n, 1) },
-  ];
+  const leaf = !!n.combination, c = n.combination, a = n.action;
+  const why = !canAuthor ? AUTHOR_ONLY : a.why ? (a.kind === "DELETE" ? `Can't delete: ${a.why.replace(/\.$/, "")}. A name in use can't be deleted; once it is released it can be retired instead.` : a.why) : null;
+  const tab = current ? 0 : -1;
+  const level = DEPTH[n.level];
+  const numText = <Tip tip={num ? NUM_TIP : "Retired: not numbered, so the numbers of the others never move."}><span className={cn("shrink-0 text-xs font-semibold tabular-nums", list ? "text-text-muted" : ["text-lv1", "text-lv2", "text-lv3", "text-lv3"][level])} data-num>{num ?? "—"}</span></Tip>;
   return (
-    <li data-line={n.key} data-key={n.key} className={cn("flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5", selected && "bg-primary/10 shadow-[inset_3px_0_0_var(--color-primary)]", n.retired && "text-text-muted")}>
-      <button type="button" data-open onClick={() => onOpen(n.key)} onKeyDown={onKey} className="flex min-w-0 flex-1 basis-full items-center sm:basis-0 gap-1.5 rounded text-left text-sm outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
-        <LevelMark level="category" tip={false} />
-        <span className="min-w-0 [overflow-wrap:anywhere]">
-          <span className="font-semibold text-lv3"><Mark text={line.category.label} words={words} /></span>
-          {line.sub ? <><span className="text-text-muted" aria-hidden> › </span><LevelMark level="subCategory" tip={false} className="mx-0.5" /><span className="font-medium text-lv3"><Mark text={line.sub.label} words={words} /></span></> : null}
-        </span>
-      </button>
-      {justAdded ? <span className="rounded-full bg-ok/15 px-2 py-0.5 text-xs font-semibold text-text-ok" data-just-added>Just added</span> : null}
-      {n.retired ? <Tip tip="Retired by a release: hidden from pickers and AI; earlier releases and open cases keep it."><Pill tone="neutral">Retired</Pill></Tip> : null}
-      {n.pending ? <Tip tip="A change to this name waits for a second person on To review."><Pill tone="warn">{PENDING_WORD[n.pending.action]}</Pill></Tip> : null}
-      <span className="flex shrink-0 items-center sm:w-36">{c && !n.retired ? (c.id ? (c.retired ? <Pill tone="neutral">Retired</Pill> : <StatusChip status={c.status} text={c.statusText} />)
-        : <Tip tip="Added to the Program structure; no setup yet. Start it from its card on Immigration programs or its details."><span className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-strong px-2 py-0.5 text-xs font-semibold text-text-muted">Not started</span></Tip>) : null}</span>
-      <Tip tip={LOC_TIP}><span className="shrink-0 text-xs text-text-muted sm:w-40" data-loc>{locWords(n.allowedLocations)}</span></Tip>
-      <Tip tip={USED_TIP}><span className="shrink-0 text-xs text-text-muted sm:w-40" data-used-by-line><span className="sr-only">Used by: </span>{usedBy(c)}</span></Tip>
-      <RowMenu label={line.sub ? `${line.category.label} › ${line.sub.label}` : line.category.label} items={items} />
-    </li>
+    <div role="group" aria-label={`${num ? `${num} ` : ""}${LEVEL_WORD[n.level]} ${n.label}`} data-row={n.key} data-level={n.level} onKeyDown={onKey}
+      className={cn(GRID(wide, list), "min-h-10 px-3 py-1", !list && level >= 2 && "border-t border-border", list && "border-t border-border first-of-type:border-t-0", selected && "bg-primary/10", n.retired && "text-text-muted")}>
+      {list ? numText : null}
+      <div className={cn("flex min-w-0 items-center gap-1.5", !list && ["", "", "pl-6", "pl-12"][level])}>
+        {!list ? (open !== undefined ? <button type="button" tabIndex={-1} aria-expanded={open} aria-label={`${open ? "Collapse" : "Expand"} ${n.label}`} onClick={onToggle} className="flex size-5 shrink-0 items-center justify-center rounded text-text-muted hover:bg-text/5">{open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}</button> : <span className="size-5 shrink-0" />) : null}
+        {!list ? numText : null}
+        {list && trail ? <TrailText parts={trail} words={words} /> : <>
+          <LevelMark level={n.level} />
+          {/* The name keeps the width; its count wraps under it when the row is narrow (1024 px). */}
+          <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+            <span className={cn("min-w-0 [overflow-wrap:break-word]", ["text-base font-semibold", "font-semibold", "font-medium", ""][level], n.pending?.action === "DELETE" && "line-through decoration-warn")} data-name><Mark text={n.label} words={words} /></span>
+            {meta ? <span className="whitespace-nowrap text-xs text-text-muted">{meta}</span> : null}
+          </span>
+        </>}
+        {justAdded ? <span className="shrink-0 rounded-full bg-ok/15 px-2 py-0.5 text-xs font-semibold text-text-ok" data-just-added>Just added</span> : null}
+      </div>
+      <div className="flex min-w-0 flex-wrap items-center gap-1">
+        {n.pending ? <Tip tip={`Sent to a second person on To review. ${n.pending.action === "DELETE" ? "It is deleted when approved." : "It takes effect with the next release after approval."}`}><span><Pill tone="warn">{PENDING_WORD[n.pending.action]}</Pill></span></Tip> : null}
+        {n.retired ? <Pill tone="neutral"><Archive className="size-3" aria-hidden /> Retired</Pill> : leaf && !n.pending ? (c!.id ? (c!.retired ? <Pill tone="neutral">Retired</Pill> : <StatusChip status={c!.status} text={c!.statusText} />)
+          : <Tip tip="Added to the Program structure; no setup yet. Start it from its card on Immigration programs or its details."><span className="inline-flex items-center rounded-full border border-dashed border-border-strong px-2 py-0.5 text-xs font-semibold text-text-muted">Not started</span></Tip>) : null}
+        {list && leaf ? <span className={cn("w-full text-xs text-text-muted", wide && "xl:hidden")} data-loc-stacked>{locWords(n.allowedLocations)}</span> : null}
+      </div>
+      <span className={cn("text-xs text-text-muted", list && (wide ? "max-xl:hidden" : "hidden"))} data-loc>{leaf ? <Tip tip={LOC_TIP}><span>{locWords(n.allowedLocations)}</span></Tip> : null}</span>
+      {wide ? <span className="text-xs text-text-muted max-xl:hidden" data-used-by-line>{leaf ? <Tip tip={USED_TIP}><span><span className="sr-only">Used by: </span>{usedBy(c)}</span></Tip> : null}</span> : null}
+      <div className="flex items-center justify-end gap-0.5">
+        <Tip tip={canAuthor ? (leaf ? "Rename it, set where cases may be opened, reorder it, see where it is used and its history." : "Rename, reorder, see where it is used and its history.") : "See the name, where it is used and its history. Only a configuration author changes it."}>
+          <button type="button" tabIndex={tab} onClick={onEdit} data-edit className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-text-muted outline-none hover:bg-text/5 hover:text-text-link focus-visible:ring-[3px] focus-visible:ring-ring/50">{canAuthor ? <Pencil className="size-3.5" aria-hidden /> : <Eye className="size-3.5" aria-hidden />}{canAuthor ? "Edit" : "View"}<span className="sr-only"> {n.label}</span></button>
+        </Tip>
+        <Tip tip={why ?? ACTION[a.kind].tip(n)}>
+          <button type="button" tabIndex={tab} aria-disabled={why ? true : undefined} onClick={() => { if (!why) onAction(); }} data-action={a.kind}
+            className={cn("inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", why ? "cursor-not-allowed text-text-muted/60" : a.kind === "WITHDRAW" ? "text-text-warn hover:bg-text/5" : "text-text-muted hover:bg-text/5 hover:text-text-link")}>{ACTION[a.kind].icon}{ACTION[a.kind].word}<span className="sr-only"> {n.label}{why ? `: ${why}` : ""}</span></button>
+        </Tip>
+      </div>
+    </div>
   );
 }
 
-/** S1-finish (founder's idea, 27 Oct; reused later on Immigration programs): one card per Pathway of the tab with its
- *  combinations and how many need work. A card opens that Pathway's tree and closes the others; "All" opens all. */
+/** The List's trail (R3-5): Pathway type › Pathway › Program › Category › Sub-category, wrapping whole at separators. */
+function TrailText({ parts, words }: { parts: string[]; words: string }) {
+  const [type, ...rest] = parts;
+  return (
+    <span className="min-w-0 text-sm [overflow-wrap:anywhere]" data-trail-line>
+      <span className="text-text-muted">{type}</span>
+      {rest.map((p, i) => <span key={i}><span className="text-text-muted" aria-hidden> › </span><span className={i >= 2 ? "font-medium" : undefined}><Mark text={p} words={words} /></span></span>)}
+      {rest.length === 3 ? <><span className="text-text-muted" aria-hidden> › </span><span className="text-text-muted">No sub-category</span></> : null}
+    </span>
+  );
+}
+
+/** The in-page confirm (R3-3): what goes or what uses it, a reason for the second person, and the one button. */
+function ConfirmAction({ n, kind, num, byKey, onClose, onDone }: { n: StructureNode; kind: LifecycleAction | "WITHDRAW"; num: Map<string, string>; byKey: Map<string, StructureNode>; onClose: () => void; onDone: (text: string) => Promise<void> }) {
+  const [reason, setReason] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const ref = React.useRef<HTMLTextAreaElement>(null);
+  React.useEffect(() => { ref.current?.focus(); }, []);
+  const send = async () => {
+    setBusy(true); setError(null);
+    try {
+      if (kind === "WITHDRAW") await api(`/library/changes/${n.pending!.id}/withdraw`, { method: "POST", json: { note: reason } });
+      else await api(`/structure/nodes/${encodeURIComponent(n.key)}${kind === "DELETE" ? "" : `/${kind.toLowerCase()}`}`, { method: kind === "DELETE" ? "DELETE" : "POST", json: { reason } });
+      await onDone(kind === "WITHDRAW" ? `Withdrawn. "${n.label}" stays as it was.` : `Sent to a second person on To review: ${kind === "DELETE" ? `"${n.label}"${n.action.below.length ? ` and the ${n.action.below.length} names under it are` : " is"} deleted when approved` : `"${n.label}"${n.action.withCombination ? " and its combination are" : " is"} ${kind === "RETIRE" ? "retired" : "restored"} with the next release after approval`}.`);
+    } catch (e) { setError((e as Error).message); setBusy(false); }
+  };
+  const title = kind === "DELETE" ? `Delete "${n.label}"${n.action.below.length ? " and everything under it" : ""}?` : kind === "RETIRE" ? `Retire "${n.label}"?` : kind === "RESTORE" ? `Restore "${n.label}"?` : `Withdraw the ${n.pending ? PENDING_WORD[n.pending.action].toLowerCase() : "change"}?`;
+  return (
+    <div role="region" aria-label={title} className="mx-3 my-2 space-y-2 rounded-lg border border-border-strong bg-surface p-3 text-sm shadow-sm" data-confirm={n.key}>
+      <p className="font-semibold">{title}</p>
+      {kind === "DELETE" ? (n.action.below.length ? <><p>These go with it; none is used:</p><ul className="ml-5 list-disc" data-goes-with>{n.action.below.map((k) => <li key={k}>{num.get(k) ? `${num.get(k)} ` : ""}{byKey.get(k)?.label ?? k}</li>)}</ul></> : <p>Nothing uses it: no setup, no cases, never released.</p>)
+        : kind === "RETIRE" ? <p>It was released{n.combination?.id ? ` and is used: ${usedBy(n.combination)}` : ""}. Retired, it is hidden from Add and from new setups. Open cases and earlier releases keep it. You can restore it.{n.action.withCombination ? " Its combination is retired with it." : ""}</p>
+        : kind === "RESTORE" ? <p>It comes back to Add and to new setups with the next release after approval.{n.action.withCombination ? " Its combination is restored with it." : ""}</p>
+        : <p>Nothing changes: the request leaves To review.</p>}
+      <label htmlFor={`reason-${n.key}`} className="block text-xs font-medium">{kind === "WITHDRAW" ? "Why withdraw it?" : "Why?"} <span className="font-normal text-text-muted">Required, for the second person</span></label>
+      <Textarea ref={ref} id={`reason-${n.key}`} value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-14" />
+      {kind !== "WITHDRAW" ? <p className="text-xs text-text-muted">A second person approves on To review. Until then it shows as {PENDING_WORD[kind].toLowerCase()} and you can withdraw it.</p> : null}
+      {error ? <p role="alert" className="text-text-danger">{error}</p> : null}
+      <div className="flex justify-end gap-2"><Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button><Button size="sm" variant={kind === "DELETE" ? "destructive" : "default"} onClick={() => void send()} disabled={reason.trim().length < 3} busy={busy} data-confirm-send>{kind === "DELETE" ? "Delete" : kind === "RETIRE" ? "Retire" : kind === "RESTORE" ? "Restore" : "Withdraw"}</Button></div>
+    </div>
+  );
+}
+
 /** S2 fix (founder, 27 Oct): beside the outline (1280 px and wider) the panel starts below the page header and only
- *  sticks once scrolled, so a fixed height pushed its footer (Remove / Retire, Save) below the screen. Its height is
+ *  sticks once scrolled, so a fixed height pushed its footer (Delete / Retire, Save) below the screen. Its height is
  *  what is left of the window below its top edge; the body scrolls inside, the footer always shows. */
 function useFitToScreen() {
   const [el, setEl] = React.useState<HTMLElement | null>(null);
@@ -358,9 +470,9 @@ function Mark({ text, words }: { text: string; words: string }) {
   return <>{text.slice(0, i)}<mark className="rounded-sm bg-warn/25 text-text">{text.slice(i, i + words.length)}</mark>{text.slice(i + words.length)}</>;
 }
 
-/** The selected name: what uses it, rename, where cases may be opened, order, remove / retire / restore, history. A side
- *  panel beside the outline (non-modal, pinned header and footer). */
-function DetailPanel({ node, type, siblings, leaf, leaves, canAuthor, onClose, onAddChild }: { node: StructureNode; type: PathwayType; siblings: StructureNode[]; leaf: boolean; leaves: { n: StructureNode; path: string[] }[]; canAuthor: boolean; onClose: () => void; onAddChild: () => void }) {
+/** Edit (R3-2): the selected name: what uses it, rename, where cases may be opened, order, delete / retire / restore,
+ *  history. A side panel beside the outline (non-modal, pinned header and footer). Adding goes through the one Add. */
+function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClose }: { node: StructureNode; num: string | null; type: PathwayType; siblings: StructureNode[]; leaf: boolean; leaves: { n: StructureNode; path: string[] }[]; canAuthor: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const fit = useFitToScreen();
   // S1-finish: what happened is said in the panel's own status line, never in a toast over the outline or the panel.
@@ -410,7 +522,7 @@ function DetailPanel({ node, type, siblings, leaf, leaves, canAuthor, onClose, o
     try {
       if (action === "WITHDRAW") await api(`/library/changes/${uses.data!.pending!.id}/withdraw`, { method: "POST", json: { note: reason } });
       else await api(`/structure/nodes/${encodeURIComponent(node.key)}${action === "DELETE" ? "" : `/${action!.toLowerCase()}`}`, { method: action === "DELETE" ? "DELETE" : "POST", json: { reason } });
-      say(true, action === "WITHDRAW" ? "Withdrawn. Nothing changed." : `Sent to a second person on To review. ${action === "DELETE" ? "It is removed when approved." : "It takes effect with the next release after approval."}` );
+      say(true, action === "WITHDRAW" ? "Withdrawn. Nothing changed." : `Sent to a second person on To review. ${action === "DELETE" ? "It is deleted when approved." : "It takes effect with the next release after approval."}` );
       setAction(null); setReason(""); await refresh();
     } catch (e) { say(false, (e as Error).message ); }
     finally { setBusy(false); }
@@ -419,14 +531,14 @@ function DetailPanel({ node, type, siblings, leaf, leaves, canAuthor, onClose, o
   const i = siblings.findIndex((s) => s.key === node.key);
   const no = !canAuthor ? AUTHOR_ONLY : null;
   const ACTIONS: { a: LifecycleAction; word: string; why: string | null | undefined; tip: string }[] = [
-    { a: "DELETE", word: "Remove", why: u?.can.delete, tip: "Removes a name that was never released and is used nowhere. A second person approves; Undo while it waits." },
-    { a: "RETIRE", word: "Retire", why: u?.can.retire, tip: "Hides a released name from pickers and AI. Earlier releases and open cases keep it. Takes effect with the next release." },
+    { a: "DELETE", word: "Delete", why: u?.can.delete, tip: "Deletes a name that was never released and is used nowhere, with every name under it. A second person approves; Withdraw while it waits." },
+    { a: "RETIRE", word: "Retire", why: u?.can.retire, tip: `Hides a released name from pickers and AI. Earlier releases and open cases keep it. Takes effect with the next release.${u?.withCombination ? " Its combination is retired with it." : ""}` },
     { a: "RESTORE", word: "Restore", why: u?.can.restore, tip: "Brings a retired name back to pickers, by the same path: a second person approves, the release publishes." },
   ];
   return (
     <aside ref={fit} data-panel aria-label={`${node.label} details`} className="fixed bottom-4 right-0 top-14 z-40 flex w-full max-w-[440px] flex-col border-l border-border bg-surface-raised shadow-xl xl:sticky xl:top-20 xl:z-auto xl:max-w-none xl:rounded-xl xl:border xl:shadow-sm">
       <div className="flex items-start gap-2 border-b border-border px-5 py-3">
-        <div className="min-w-0 flex-1"><h2 className="break-words text-lg font-semibold">{node.label}</h2><p className="text-xs text-text-muted">{LEVEL_WORD[node.level]}{leaf ? " · combination" : ""}{node.retired ? " · Retired" : ""}</p></div>
+        <div className="min-w-0 flex-1"><h2 className="break-words text-lg font-semibold">{num ? <span className="mr-1.5 text-sm tabular-nums text-text-muted" data-panel-num>{num}</span> : null}{node.label}</h2><p className="text-xs text-text-muted">{LEVEL_WORD[node.level]}{leaf ? " · combination" : ""}{node.retired ? " · Retired" : ""}</p></div>
         <Button size="icon" variant="ghost" aria-label="Close the details" onClick={onClose}><X /></Button>
       </div>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
@@ -465,7 +577,6 @@ function DetailPanel({ node, type, siblings, leaf, leaves, canAuthor, onClose, o
           <span className="text-xs text-text-muted">Order</span>
           <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Program structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i <= 0} onClick={() => void move(-1)}><ArrowUp /> Move up</Button></span></Tip>
           <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Program structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i < 0 || i >= siblings.length - 1} onClick={() => void move(1)}><ArrowDown /> Move down</Button></span></Tip>
-          {node.level === "category" && leaf ? <Tip tip={no ?? (node.hasSetup ? `${node.label} already has its own setup, so it is the combination. A sub-category would leave that setup above a combination.` : `Add a sub-category under ${node.label}. It then becomes the combination instead.`)}><span><Button size="sm" variant="secondary" disabled={!!no || node.hasSetup || node.retired} onClick={onAddChild}><Plus /> Add sub-category</Button></span></Tip> : null}
         </div>
         <section aria-label="Where used" className="space-y-2 rounded-lg border border-border p-3">
           <h3 className="text-sm font-semibold">Where used</h3>
@@ -475,7 +586,7 @@ function DetailPanel({ node, type, siblings, leaf, leaves, canAuthor, onClose, o
               {u.pending ? <Notice tone="warn" title={`${PENDING_WORD[u.pending.action]} for a second person`} action={canAuthor ? <Button size="sm" variant="secondary" onClick={() => { setAction("WITHDRAW"); setReason(""); }}>Withdraw</Button> : undefined}>Proposed by {u.pending.by}. <Link to={`/review/change/${u.pending.id}`} className="text-text-link underline underline-offset-2">See it on To review</Link></Notice> : null}
               {action ? (
                 <div className="space-y-2 rounded-lg bg-surface p-3">
-                  <label htmlFor="structure-reason" className="text-xs font-medium">{action === "WITHDRAW" ? "Why withdraw it?" : `Why ${action === "DELETE" ? "remove" : action.toLowerCase()} "${node.label}"?`} <span className="font-normal text-text-muted">Required, for the second person</span></label>
+                  <label htmlFor="structure-reason" className="text-xs font-medium">{action === "WITHDRAW" ? "Why withdraw it?" : `Why ${action.toLowerCase()} "${node.label}"?`} <span className="font-normal text-text-muted">Required, for the second person</span></label>
                   <Textarea id="structure-reason" value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-16" />
                   <div className="flex justify-end gap-2"><Button size="sm" variant="ghost" onClick={() => setAction(null)}>Cancel</Button><Button size="sm" onClick={() => void lifecycle()} disabled={reason.trim().length < 3} busy={busy}>{action === "WITHDRAW" ? "Withdraw" : "Send for approval"}</Button></div>
                 </div>) : null}

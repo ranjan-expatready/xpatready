@@ -1,7 +1,7 @@
 // Screen 02 slice 2 endpoints in the screens lane's own file (challenge point 1): a decision on one PDF form field (K1),
 // library changes approved by a second person (LibraryChange), the held-file decision (P-80) and the new-edition impact
 // review (P-32, C9.1). Merges keep their F1 endpoints (forms.ts); Screen 02 adds their pages.
-import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Patch, Post, Query, Res } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Query, Res } from "@nestjs/common";
 import type { Response } from "express";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -95,7 +95,13 @@ export class Screen02 {
     const c = await this.db.libraryChange.findUnique({ where: { id } }).catch(() => null);
     if (!c) fail("This library change does not exist (the demo may have been reset).", HttpStatus.NOT_FOUND);
     const field = c!.kind === "field" ? await this.db.canonicalField.findFirst({ where: { workspaceId: c!.workspaceId, canonicalFieldKey: c!.key }, orderBy: { version: "desc" } }) : null;
-    return { ...changeView(c!), field: field ? { key: field.canonicalFieldKey, label: field.label, meaning: field.meaning, value_type: field.valueType, group: field.groupKey, status: field.status } : null };
+    // P-128 (Lead, 28 Oct): what the approver approves with a structure name: the names a branch delete takes with it, or
+    // the combination a combination row's retire or restore takes with it.
+    const listed = c!.kind === "structure_node" && Array.isArray(c!.matches) ? (c!.matches as string[]) : [];
+    const names = listed.filter((k) => k !== c!.key && !k.startsWith("combination:"));
+    const goesWith = names.length ? (await this.db.programDef.findMany({ where: { workspaceId: c!.workspaceId, programNodeKey: { in: names } }, select: { programNodeKey: true, label: true } })).sort((a, b) => names.indexOf(a.programNodeKey) - names.indexOf(b.programNodeKey)).map((n) => n.label) : [];
+    return { ...changeView(c!), field: field ? { key: field.canonicalFieldKey, label: field.label, meaning: field.meaning, value_type: field.valueType, group: field.groupKey, status: field.status } : null,
+      goes_with: goesWith, with_combination: listed.some((k) => k.startsWith("combination:")) };
   }
   async decideLibraryChange(actor: Actor, id: string, decision: "approve" | "return", note?: string) {
     // W1-03 (P-116): a remove, retire or restore is checked again at approval; an approved remove applies at once.
@@ -103,7 +109,12 @@ export class Screen02 {
     if (before?.status === "WAITING") await this.lifecycle.checkApprove(before);
     const out = await decideChange(this.db, actor, id, decision, note);
     const c = (await this.db.libraryChange.findUnique({ where: { id } }))!;
-    if (decision === "approve") await this.lifecycle.afterApprove(actor, c);
+    // An approved delete is applied at once; if applying fails, nothing was deleted, so the change waits again (R3-4).
+    if (decision === "approve") await this.lifecycle.afterApprove(actor, c).catch(async (e) => {
+      await this.db.libraryChange.updateMany({ where: { id, status: "APPROVED" }, data: { status: "WAITING", decidedBy: null, decidedAt: null, decisionNote: null } });
+      if (e instanceof HttpException) throw e;
+      fail("Nothing was deleted: the database refused it. It still waits on To review; try again, or return it.", HttpStatus.CONFLICT);
+    });
     await this.audit.log(c.workspaceId, actor.id, decision === "approve" ? "approved" : "returned", `library ${c.kind}`, c.key, `${actor.name} ${decision === "approve" ? "approved" : "returned"} "${c.label ?? c.key}" (${c.action.toLowerCase()})${note ? `: ${note}` : ""}`, undefined, c.combinationId ?? undefined);
     // QA-52: an approved remove is applied at once (RELEASED), so the answer says what happened, not what was decided.
     return decision === "approve" ? changeView((await this.db.libraryChange.findUnique({ where: { id } }))!) : out;

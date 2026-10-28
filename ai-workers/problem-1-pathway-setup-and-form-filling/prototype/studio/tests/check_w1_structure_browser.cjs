@@ -1,12 +1,14 @@
-// W1-03 Program structure, round 2 (P-127, layout A; board screens/W1-visual-system/design/draft-structure-v2.html)
-// walked like a person in a real browser. Empty after Reset → the first Pathway through the one "Add to Program
-// structure" pop-up → a branch with "Add and add another" → the P-112 Sample names (the rest through the same
-// POST /structure/path the pop-up calls) → layout A: Pathway cards, Program sections, one line per combination → the
-// pop-up's checks (picks an exact twin, "Did you mean", Keep mine, already in the structure, None and a category with
-// setup, a failed save) → the details panel (trail, where used, rename, stale conflict, remove waiting and withdraw,
-// sub-category refused) → order from the ⋯ menus (and on Immigration programs) → keyboard → Find across Pathways and
-// the other tab → read-only approver → 390 px → long names, loading, error. Screenshots at 1440, 1024 and 390 px into
-// product/screens/W1-visual-system/screenshots/structure/, axe (WCAG 2.2 AA) on each. No model call (US$0).
+// W1-03 Program structure, round 3 (P-128, supersedes P-127; board screens/W1-visual-system/design/draft-r3-program-structure.html
+// option A) walked like a person in a real browser, desktop only (1440 and 1024 px). Empty after Reset → the first
+// Pathway through the one "Add to Program structure" pop-up → a branch with "Add and add another", prefilled from the
+// filters → the P-112 Sample names (the rest through the same POST /structure/path) → the Tree: numbered outline, Pathway
+// and Program blocks, names in text colour, Edit and one action on every row, Used by → row actions: a greyed Delete says
+// why, a branch Delete lists what goes, waits, is withdrawn, then approved on To review → the List: full trail, the same
+// numbers, A to Z, remembered per person → the filter bar (Pathway chips, Program, Status, chips and Clear all, kept in
+// the address) → the pop-up's checks → the Edit panel (trail, where used, order, rename, conflict) → keyboard (one Tab
+// stop, ↑ / ↓, Enter, Delete) → Find and the other tab → Show retired (numbers never move) → read-only approver → long
+// names, loading, error. Screenshots at 1440 and 1024 px into product/screens/W1-visual-system/screenshots/structure/,
+// axe (WCAG 2.2 AA) on each. No model call (US$0).
 //   zsh studio/tools/isolated.sh screens_s2 4444 start && node studio/tests/check_w1_structure_browser.cjs 4444 xr_studio_screens_s2
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
@@ -15,6 +17,7 @@ const PORT = Number(process.argv[2] ?? 4444), DB = process.argv[3] ?? "xr_studio
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const SHOTS = path.join(ROOT, "product", "screens", "W1-visual-system", "screenshots", "structure"); fs.mkdirSync(SHOTS, { recursive: true });
+for (const f of fs.readdirSync(SHOTS)) if (f.endsWith(".png")) fs.rmSync(path.join(SHOTS, f)); // this run's states only
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 220)}` : ""}`); };
@@ -28,34 +31,31 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json" }, data: init.data }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   const as = async (id) => { await p.evaluate((x) => { try { localStorage.setItem("xr-actor", x); } catch { /* ignore */ } }, id); };
   const panel = () => p.locator("aside[aria-label$='details']");
-  /** A line by its own name: "Visitor visa", or "Study permit › Outside Canada" for a sub-category. */
-  const line = (name) => p.locator("[data-line]").filter({ has: p.locator("[data-open]", { hasText: new RegExp(`^${esc(name)}$`) }) }).first();
-  const section = (name) => p.locator("[data-section]").filter({ has: p.locator("[data-section-title]", { hasText: new RegExp(`^${esc(name)}$`) }) }).first();
-  const band = (name) => p.locator("[data-band]").filter({ has: p.locator("[data-band-title]", { hasText: new RegExp(`^${esc(name)}$`) }) }).first();
+  /** A Tree row by its own name. */
+  const row = (name) => p.locator("[data-row]").filter({ has: p.locator("[data-name]", { hasText: new RegExp(`^${esc(name)}$`) }) }).first();
+  const numOf = async (name) => (await row(name).locator("[data-num]").textContent()).trim();
   const dialog = () => p.locator("[data-add-dialog]");
   const field = (lv) => p.locator(`[data-field="${lv}"] input[role="combobox"]`);
-  const ready = () => p.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && (document.querySelector("[data-structure-a]") || /No structure yet|No name matches|could not load/.test(document.querySelector("main")?.textContent ?? "")), null, { timeout: 30000 });
-  const open = async (qs = "") => { await p.goto(`${BASE}/structure${qs}`); await ready(); };
-  /** Opens the details panel by a person's click: the band, section or line title (a category with sub-categories through its line's ⋯). */
-  const details = async (name) => {
-    const t = p.locator("[data-band-title], [data-section-title], [data-line] [data-open]").filter({ hasText: new RegExp(`^${esc(name)}$`) }).first();
-    if (await t.count()) await t.click();
-    else { const l = p.locator("[data-line]").filter({ has: p.locator("[data-open]", { hasText: new RegExp(`^${esc(name)} › `) }) }).first(); await l.locator("[data-row-menu]").click(); await p.getByRole("menuitem", { name: `${name}: details` }).click(); }
-    await p.waitForFunction((x) => document.querySelector("aside h2")?.textContent === x && !document.querySelector("aside [aria-label='Where used'] .animate-pulse"), name); await p.waitForTimeout(150);
-  };
+  const ready = () => p.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && (document.querySelector("[data-tree], [data-list]") || /No structure yet|No name matches|Nothing matches|could not load/.test(document.querySelector("main")?.textContent ?? "")), null, { timeout: 30000 });
+  const open = async (qs = "") => { await p.goto(`${BASE}/structure${qs}`); await ready(); await p.waitForTimeout(150); };
+  const edit = async (name) => { await row(name).locator("[data-edit]").click(); await p.waitForFunction((x) => document.querySelector("aside h2")?.textContent?.endsWith(x) && !document.querySelector("aside [aria-label='Where used'] .animate-pulse"), name); await p.waitForTimeout(150); };
+  const tipOf = async (loc) => { await p.mouse.move(0, 0); await loc.focus(); await p.waitForTimeout(500); let t = (await p.getByRole("tooltip").allTextContents().catch(() => [])).join(" | "); if (!t) { await loc.hover(); await p.waitForTimeout(900); t = (await p.getByRole("tooltip").allTextContents().catch(() => [])).join(" | "); } await loc.evaluate((e) => e.blur()); await p.mouse.move(0, 0); await p.waitForTimeout(150); return t; };
   const typeIn = async (lv, text) => { await field(lv).fill(text); await p.waitForTimeout(450); };
+  const noSideways = () => p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+  /** The word a button shows (its screen-reader-only text left out). */
+  const shownWord = (loc) => loc.evaluate((x) => [...x.childNodes].filter((c) => !(c.classList && c.classList.contains("sr-only"))).map((c) => c.textContent).join("").trim());
   let n = 0;
   const state = async (name, opts = {}) => {
     n++; const base = `${String(n).padStart(2, "0")}-${name}`;
     await p.waitForTimeout(400); // colour transitions (150 ms) finish before axe reads contrast
+    if (!opts.dialog) await p.evaluate(() => window.scrollTo(0, 0)); // a full-page shot from the top keeps the sticky bar there
     await p.screenshot({ path: path.join(SHOTS, `${base}-1440.png`), fullPage: !opts.dialog });
     const r = await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
     step(`axe: ${name} has no WCAG A/AA violation`, r.violations.length === 0, r.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0]?.target?.join(" ")}`).join(" | "));
-    for (const [w, h] of [[1024, 768], [390, 844]]) {
-      await p.setViewportSize({ width: w, height: h }); await p.waitForTimeout(150);
-      await p.screenshot({ path: path.join(SHOTS, `${base}-${w}.png`), fullPage: !opts.dialog });
-      step(`${w} px: ${name} has no sideways scroll`, !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), await p.evaluate(() => document.documentElement.scrollWidth));
-    }
+    await p.setViewportSize({ width: 1024, height: 768 }); await p.waitForTimeout(150);
+    if (!opts.dialog) await p.evaluate(() => window.scrollTo(0, 0));
+    await p.screenshot({ path: path.join(SHOTS, `${base}-1024.png`), fullPage: !opts.dialog });
+    step(`1024 px: ${name} has no sideways scroll`, await noSideways(), await p.evaluate(() => document.documentElement.scrollWidth));
     await p.setViewportSize({ width: 1440, height: 900 });
   };
 
@@ -75,29 +75,29 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await state("pop-up-new-pathway", { dialog: true });
   await p.locator("[data-add-submit]").click();
   await dialog().waitFor({ state: "detached" });
-  await band("Temporary residence").waitFor();
-  step("C11.3 AD-3/AD-7: Add may stop at a Pathway; the pop-up closes and the Pathway shows with 'No programs yet' (no setup, nothing else)", sql("select count(*) from program_def where node_kind='PATHWAY' and label='Temporary residence'") === "1" && await p.locator("[data-empty-pathway]").count() === 1 && sql("select count(*) from combination") === "0");
+  await row("Temporary residence").waitFor();
+  step("C11.3 AD-3/AD-7: Add may stop at a Pathway; the pop-up closes and the Pathway shows with nothing under it (no setup)", sql("select count(*) from program_def where node_kind='PATHWAY' and label='Temporary residence'") === "1" && await p.locator("[data-empty-pathway]").count() === 1 && sql("select count(*) from combination") === "0");
   step("C11.3 S1-finish: success is said on the page, never in a toast", /Added "Temporary residence"/.test(await p.locator("[data-page-note]").textContent()) && await p.locator("div.fixed.bottom-4.right-4 > div").count() === 0);
 
-  // ======================================================== a branch with "Add and add another"
-  await band("Temporary residence").locator("[data-add-program]").click();
-  await dialog().waitFor();
-  step("C11.3 AD-8: '+ Add program' on a band opens the pop-up with the Pathway filled and the Program focused", (await field("pathway").inputValue()) === "Temporary residence" && await field("program").evaluate((e) => e === document.activeElement));
+  // ======================================================== a branch with "Add and add another", prefilled from the filters
+  await p.locator('[data-pathway-chip]').filter({ hasText: /^Temporary residence/ }).click();
+  await p.waitForFunction(() => /[?&]p=/.test(location.search));
+  await p.locator("[data-add-open]").click(); await dialog().waitFor();
+  step("C11.3 R3-7 / AD-8: the one Add is prefilled from the Pathway filter and starts at Program", (await field("pathway").inputValue()) === "Temporary residence" && await field("program").evaluate((e) => e === document.activeElement));
   await typeIn("program", "Visitors"); await typeIn("category", "Visitor visa");
   await p.getByRole("radiogroup", { name: "Cases may be opened from" }).getByRole("radio", { name: "Outside" }).click();
   const summary = (await p.locator("[data-adding-summary]").textContent()).trim();
   step("C11.3 AD-2/AD-6: Sub-category starts at None; the preview says 2 new names, 1 combination, Not started, no setup", await p.locator("[data-none]").isChecked() && summary === "2 new names · 1 combination, listed on Immigration programs as Not started; no setup starts." && (await p.locator("[data-add-submit]").textContent()) === "Add 2 names", summary);
-  step("C11.3 M5/AD-5: the last level gets 'Cases may be opened from' (Sample)", await p.getByRole("radiogroup", { name: "Cases may be opened from" }).count() === 1);
   await state("pop-up-branch", { dialog: true });
   await p.locator("[data-add-again]").click();
   await p.waitForFunction(() => (document.querySelector('[data-field="category"] input')?.value ?? "x") === "" && /Uses the existing program/.test(document.querySelector('[data-field="program"]')?.textContent ?? ""), null, { timeout: 10000 });
   step("C11.3 AD-7: 'Add and add another' keeps the levels above (Visitors, now existing) and clears the next one, focused", (await field("program").inputValue()) === "Visitors" && await field("category").evaluate((e) => e === document.activeElement), await field("program").inputValue());
   await typeIn("category", "Super visa");
   await p.locator("[data-add-submit]").click(); await dialog().waitFor({ state: "detached" });
-  await line("Super visa").waitFor();
+  await row("Super visa").waitFor();
   const vvRow = sql("select allowed_locations::text from program_def where label='Visitor visa'");
   step("C11.3 AD-7: one Add wrote only the new names (Visitors, Visitor visa outside Canada, Super visa); no setup started", sql("select count(*) from program_def where label in ('Visitors','Visitor visa','Super visa')") === "3" && /outside_canada/.test(vvRow) && !/inside/.test(vvRow) && sql("select count(*) from combination") === "0", vvRow);
-  step("C11.3 AD-7: the new line is tagged 'Just added' (no toast)", await line("Super visa").locator("[data-just-added]").count() === 1);
+  step("C11.3 AD-7: the new row is tagged 'Just added' (no toast)", await row("Super visa").locator("[data-just-added]").count() === 1);
 
   // ======================================================== the rest of the P-112 Sample names, through the same endpoint
   const path_ = async (body) => (await api("/structure/path", { method: "POST", data: body })).body;
@@ -117,39 +117,99 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const race = await Promise.all([0, 1, 2, 3].map(() => api("/structure/path", { method: "POST", data: { pathwayType: "INDIVIDUAL", pathway: { key: prKey }, program: { label: "Economic immigration" }, category: { label: "Start-up visa" } } })));
   step("C11.3 AD-7: four identical Adds at once store one branch; the others are refused, nothing doubled", race.filter((r) => r.status === 201).length === 1 && sql("select count(*) from program_def where label in ('Economic immigration','Start-up visa')") === "2", race.map((r) => r.status).join(" "));
 
-  // ======================================================== layout A: Pathway cards → Program sections → one line per combination
-  await open("?p=all");
+  // ======================================================== the Tree (option A): numbered outline, blocks, Edit and an action on every row
+  await open("?v=tree");
   const stats = await p.locator("[data-stats]").textContent();
   step("C11.3 stats line counts each level and the combinations", /2 pathways · 6 programs · 7 categories · 2 sub-categories · 7 combinations/.test(stats), stats);
-  step("C11.3 P-127 A: Program sections, one line per combination; no tree, no add rows", await p.getByRole("tree").count() === 0 && await p.locator("[data-add-row]").count() === 0 && await section("Visitors").locator("[data-line]").count() === 2 && await p.locator("[data-band]").count() === 2);
-  step("C11.3 P-127 Q3: a sub-category is its own line, the category repeated (Study permit › Outside Canada)", await line("Study permit › Outside Canada").count() === 1 && await line("Study permit").count() === 0);
-  step("C11.3 BR-2: Visitor visa shows In setup; a just-added category is Not started", /In setup/.test(await line("Visitor visa").textContent()) && /Not started/.test(await line("Express Entry stream").textContent()));
-  step("C11.3 M5: a line shows where cases may be opened", /Outside Canada/.test(await line("Visitor visa").locator("[data-loc]").textContent()) && /Inside or outside Canada/.test(await line("Express Entry stream").locator("[data-loc]").textContent()));
-  // Drift check 3 (P-127 (1)): each line says what uses it; the column names show at 1024 px and wider, panel closed.
-  const usedOf = async (name) => (await line(name).locator("[data-used-by-line]").textContent()).replace(/^Used by: /, "");
-  step("C11.3 P-127 used by pass: a started combination says 'Setup draft'; a Not started one 'Nothing yet'", await usedOf("Visitor visa") === "Setup draft" && await usedOf("Express Entry stream") === "Nothing yet", `${await usedOf("Visitor visa")} / ${await usedOf("Express Entry stream")}`);
+  step("C11.3 R3-1: the outline is numbered 1, 1.1, 1.1.1, 1.1.1.1 in page order", await numOf("Temporary residence") === "1" && await numOf("Visitors") === "1.1" && await numOf("Visitor visa") === "1.1.1" && await numOf("Super visa") === "1.1.2" && await numOf("Study permit") === "1.2.1" && await numOf("Outside Canada") === "1.2.1.1" && await numOf("Permanent residence") === "2", [await numOf("Visitors"), await numOf("Study permit"), await numOf("Outside Canada")].join(" "));
+  step("C11.3 R3-1: the number's tooltip says it is a position on this page, not an IRCC code", /Not an IRCC code/.test(await tipOf(row("Visitors").locator("[data-num]"))));
+  step("C11.3 P-128 (1): each Pathway is a tinted block with its stripe; each Program a block inside it", await p.locator("[data-band]").count() === 2 && await p.locator("[data-block]").count() === 6 && (await p.locator("[data-band]").first().evaluate((e) => getComputedStyle(e).borderLeftWidth)) === "4px");
+  const rows = await p.locator("[data-row]").count();
+  step("C11.3 R3-2: every row shows Edit and one action; no ⋯ menus, no row Add buttons", rows === 17 && await p.locator("[data-row] [data-edit]").count() === rows && await p.locator("[data-row] [data-action]").count() === rows && await p.locator("[data-row-menu], [data-add-program], [data-add-category]").count() === 0, rows);
+  step("C11.3 P-127: a category with sub-categories is its own row; its sub-category sits under it", await row("Study permit").count() === 1 && (await row("Study permit").getAttribute("data-level")) === "category" && (await row("Outside Canada").getAttribute("data-level")) === "subCategory");
+  step("C11.3 BR-2 / P-127 (1): Visitor visa is In setup, used by its Setup draft; Express Entry stream Not started, Nothing yet", /In setup/.test(await row("Visitor visa").textContent()) && /Setup draft/.test(await row("Visitor visa").locator("[data-used-by-line]").textContent()) && /Not started/.test(await row("Express Entry stream").textContent()) && /Nothing yet/.test(await row("Express Entry stream").locator("[data-used-by-line]").textContent()));
+  step("C11.3 M5: a combination row shows where cases may be opened", /Outside Canada/.test(await row("Visitor visa").locator("[data-loc]").textContent()) && /Inside or outside Canada/.test(await row("Express Entry stream").locator("[data-loc]").textContent()));
+  const colours = await p.evaluate(() => { const body = getComputedStyle(document.querySelector("main")).color; const r = [...document.querySelectorAll('[data-row][data-level="program"]')][0]; return { body, name: getComputedStyle(r.querySelector("[data-name]")).color, num: getComputedStyle(r.querySelector("[data-num]")).color }; });
+  step("C11.3 P-128 (6) calmer look: names in text colour; the level colour only on the mark and number", colours.name === colours.body && colours.num !== colours.body, JSON.stringify(colours));
   const heads = p.locator("[data-line-heads]");
-  step("C11.3 P-127 used by: the column names (Status · Cases may be opened from · Used by) show at 1440 px with no panel open", await heads.isVisible() && /Status\s*Cases may be opened from\s*Used by/.test(await heads.textContent()));
-  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(200);
-  const vvBox = await line("Visitor visa").boundingBox(), useBox = await line("Visitor visa").locator("[data-used-by-line]").boundingBox();
-  step("C11.3 P-127 used by fail-guard: at 390 px the column names hide and Used by wraps inside its line (no sideways scroll)", !(await heads.isVisible()) && useBox.x + useBox.width <= vvBox.x + vvBox.width + 1 && !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), JSON.stringify({ vvBox, useBox }));
-  await p.setViewportSize({ width: 1440, height: 900 });
-  await line("Visitor visa").locator("[data-open]").click(); await panel().waitFor();
-  step("C11.3 P-127 used by: with the details panel open the column names hide; the panel says what uses it", !(await heads.isVisible()) && /This combination/.test(await panel().locator("[data-used-by]").textContent()));
-  await open("?p=all");
-  step("VS-1: the band, section and line carry the Pathway ■, Program ● and Category ◆ marks", await band("Temporary residence").locator('[data-level-mark="pathway"]').count() === 1 && await section("Visitors").locator('[data-level-mark="program"]').count() === 1 && await line("Study permit › Outside Canada").locator('[data-level-mark="category"], [data-level-mark="subCategory"]').count() === 2);
-  step("VS-9: each Pathway card and band has its accent stripe", (await p.locator("[data-pathway-cards] [data-pathway]").evaluateAll((a) => a.map((x) => getComputedStyle(x).borderLeftWidth))).every((w) => w === "4px"));
-  await state("layout-a-all-pathways");
-  await p.locator("[data-pathway-cards]").getByRole("button", { name: /^Permanent residence/ }).click();
-  await p.waitForFunction(() => document.querySelectorAll("[data-band]").length === 1);
-  step("C11.3 P-127: a Pathway card shows that Pathway's band only; the choice is kept in the address", await band("Permanent residence").count() === 1 && /[?&]p=/.test(p.url()));
+  step("C11.3 P-127 (1): the column names show Status · Cases may be opened from · Used by at 1440 px", await heads.isVisible() && /Status\s*Cases may be opened from\s*Used by/.test(await heads.textContent()));
+  await state("tree");
+  await p.setViewportSize({ width: 1024, height: 768 }); await p.waitForTimeout(250);
+  const words1024 = [await shownWord(row("Visitor visa").locator("[data-edit]")), await shownWord(row("Visitor visa").locator("[data-action]"))];
+  step("C11.3 minor 6: at 1024 px Edit and the action stay written; Used by moves to the Edit panel", words1024.join("|") === "Edit|Delete" && !(await row("Visitor visa").locator("[data-used-by-line]").isVisible()) && await noSideways(), words1024.join("|"));
+  await p.setViewportSize({ width: 1440, height: 900 }); await p.waitForTimeout(150);
+
+  // ======================================================== row actions: why not; a branch Delete; Withdraw; approval
+  const vvTip = await tipOf(row("Visitor visa").locator("[data-action]"));
+  step("C11.9 R3-2 fail: a combination row with a setup draft has a greyed Delete that says why", (await row("Visitor visa").locator("[data-action]").getAttribute("aria-disabled")) === "true" && /Can.t delete: Its setup draft uses it/.test(vvTip), vvTip);
+  step("C11.9 R3-4 fail: a Program with a setup draft under it has a greyed Delete naming it", (await row("Visitors").locator("[data-action]").getAttribute("aria-disabled")) === "true" && /Visitor visa" under it has a setup draft/.test(await tipOf(row("Visitors").locator("[data-action]"))));
+  await row("Visitors").locator("[data-action]").click({ force: true });
+  step("C11.9 R3-2 fail: clicking a greyed Delete opens nothing", await p.locator("[data-confirm]").count() === 0);
+  await row("Family sponsorship").locator("[data-action]").click();
+  const confirmBox = p.locator('[data-confirm]');
+  await confirmBox.waitFor();
+  step("C11.9 R3-3/R3-4 pass: Delete on an unused Program confirms in the page and lists what goes with it, numbered", /Delete "Family sponsorship" and everything under it\?/.test(await confirmBox.textContent()) && /2\.2\.1 Spouse or common-law partner/.test(await confirmBox.locator("[data-goes-with]").textContent()) && await confirmBox.locator("[data-confirm-send]").isDisabled());
+  await state("delete-branch-confirm");
+  await confirmBox.getByLabel(/Why\?/).fill("Not offered (Sample).");
+  await confirmBox.locator("[data-confirm-send]").click();
+  await p.waitForFunction(() => /Deletion waiting/.test([...document.querySelectorAll("[data-row]")].find((r) => r.querySelector("[data-name]")?.textContent === "Family sponsorship")?.textContent ?? ""));
+  step("C11.9 L4: the deletion waits for a second person: marked on the row, the action is now Withdraw, nothing deleted", (await row("Family sponsorship").locator("[data-action]").getAttribute("data-action")) === "WITHDRAW" && sql(`select count(*) from program_def where label in ('Family sponsorship','Spouse or common-law partner')`) === "2" && /Sent to a second person on To review: "Family sponsorship" and the 1 names under it are deleted when approved/.test(await p.locator("[data-page-note]").textContent()));
+  await state("delete-waiting");
+  await row("Family sponsorship").locator("[data-action]").click();
+  await confirmBox.getByLabel(/Why withdraw/).fill("Keep it for now."); await confirmBox.locator("[data-confirm-send]").click();
+  await p.waitForFunction(() => [...document.querySelectorAll("[data-row]")].find((r) => r.querySelector("[data-name]")?.textContent === "Family sponsorship")?.querySelector("[data-action]")?.getAttribute("data-action") === "DELETE");
+  step("C11.9 L1 Undo: Withdraw on the row ends the waiting deletion; Delete is back", sql("select status from library_change where kind='structure_node' order by proposed_at desc limit 1") === "WITHDRAWN");
+  await row("Family sponsorship").locator("[data-action]").click();
+  await confirmBox.getByLabel(/Why\?/).fill("Not offered (Sample)."); await confirmBox.locator("[data-confirm-send]").click();
+  await p.waitForFunction(() => /Deletion waiting/.test(document.querySelector("[data-tree]")?.textContent ?? ""));
+  const chg = sql("select id from library_change where kind='structure_node' and status='WAITING'");
+  await as("user-B"); await p.goto(`${BASE}/review/change/${chg}`); await p.locator("main h1").waitFor();
+  step("C11.9 R3-4: the approver sees 'Delete structure name' and every name that goes with it", /^Delete structure name: Retail › Permanent residence › Family sponsorship/.test(await p.locator("main h1").textContent()) && /Spouse or common-law partner/.test(await p.locator("[data-goes-with]").textContent()));
+  await p.getByRole("button", { name: "Approve", exact: true }).click();
+  const toast = await p.getByText(/approved/).first().innerText({ timeout: 10000 }).catch(() => "");
+  step("C11.9 R3-4 pass: approved, the Program and its category are deleted at once, and the message says so", /approved and deleted/.test(toast) && sql(`select count(*) from program_def where label in ('Family sponsorship','Spouse or common-law partner')`) === "0", toast);
+  await as("user-A");
+
+  // ======================================================== the List: full trail, the Tree's numbers, A to Z, remembered
+  await open();
+  const treeNums = { vv: await numOf("Visitor visa"), oc: await numOf("Outside Canada") };
+  await p.locator('[data-view-choice="list"]').click(); await p.locator("[data-list]").waitFor();
+  const listRows = () => p.locator("[data-list] [data-row]");
+  const listText = async (k) => (await listRows().filter({ has: p.locator(`[data-trail-line]`, { hasText: k }) }).first().innerText()).replace(/\s+/g, " ");
+  step("C11.3 R3-5: the List is one line per combination (6 now) with the full trail", await listRows().count() === 6 && /Retail › Temporary residence › Visitors › Visitor visa › No sub-category/.test(await listText("Visitor visa")), await listRows().count());
+  step("C11.3 R3-1: the List's No. is the Tree number", (await listText("Visitor visa")).startsWith(treeNums.vv) && (await listText("Study permit › Outside Canada")).startsWith(treeNums.oc), [treeNums.vv, treeNums.oc].join(" "));
+  const firstTrail = async () => (await listRows().first().locator("[data-trail-line]").innerText()).replace(/\s+/g, " ");
+  const pageFirst = await firstTrail();
+  await p.locator("[data-sort]").selectOption("az"); await p.waitForTimeout(250);
+  step("C11.3 R3-5: page order by default; 'A to Z' sorts by the trail", /Visitors › Visitor visa/.test(pageFirst) && /Permanent residence › Economic immigration › Start-up visa/.test(await firstTrail()), `${pageFirst} → ${await firstTrail()}`);
+  await state("list");
   await p.goto(`${BASE}/structure`); await ready();
-  step("C11.3 P-127: the page opens on the Pathway this person last chose", await p.locator("[data-band]").count() === 1 && await band("Permanent residence").count() === 1);
-  await p.locator("[data-pathway-cards]").getByRole("button", { name: /^All pathways/ }).click(); await p.waitForFunction(() => document.querySelectorAll("[data-band]").length === 2);
+  step("C11.3 P-128 (1): the view is remembered for this person (List again on a plain open)", await p.locator("[data-list]").count() === 1);
+  await p.locator('[data-view-choice="tree"]').click(); await p.locator("[data-tree]").waitFor();
+
+  // ======================================================== the filter bar: Pathway chips, Program, Status, chips and Clear all
+  const chipText = (await p.locator("[data-pathway-chip]").allInnerTexts()).map((x) => x.replace(/\s+/g, " ").trim());
+  step("C11.3 R3-6: Pathway chips with their counts (All 6 · Temporary residence 4 · Permanent residence 2)", chipText.join("|") === "All 6|Temporary residence 4|Permanent residence 2", chipText.join("|"));
+  await p.locator("[data-status-filter]").selectOption("setup"); await p.waitForTimeout(250);
+  step("C11.3 R3-6: Status 'In setup' leaves only Visitor visa, with the names above it; the counts say so", await p.locator('[data-row][data-level="category"], [data-row][data-level="subCategory"]').count() === 1 && await row("Visitor visa").count() === 1 && /Showing 1 of 6 combinations/.test(await p.locator("[data-stats]").textContent()));
+  await p.locator("[data-status-filter]").selectOption("");
+  await p.locator("[data-pathway-chip]").filter({ hasText: /^Temporary residence/ }).click();
+  await p.locator("[data-program-filter]").selectOption({ label: "Work permits" });
+  await p.waitForFunction(() => document.querySelectorAll(`[data-row][data-level="program"]`).length === 1 && /[?&]prog=/.test(location.search), null, { timeout: 5000 }).catch(() => undefined);
+  step("C11.3 R3-6: a Pathway chip and a Program leave that Program only; both show as chips with Clear all", await p.locator('[data-row][data-level="program"]').count() === 1 && await row("Work permits").count() === 1 && /Temporary residence/.test(await p.locator("[data-stats]").textContent()) && await p.locator("[data-clear-all]").count() === 1);
+  await p.reload(); await ready();
+  step("C11.3 P-115: the filters live in the address and survive a reload", await p.locator('[data-row][data-level="program"]').count() === 1 && /[?&]prog=/.test(p.url()));
+  await state("filters");
+  await p.locator("[data-add-open]").click(); await dialog().waitFor();
+  await p.waitForTimeout(300);
+  step("C11.3 R3-7: Add is prefilled from the Pathway and Program filters and starts at Category", (await field("program").inputValue()) === "Work permits" && await field("category").evaluate((e) => e === document.activeElement), `${await field("program").inputValue()} / focus ${await p.evaluate(() => document.activeElement?.closest("[data-field]")?.getAttribute("data-field") ?? document.activeElement?.tagName)}`);
+  await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" });
+  await p.locator("[data-clear-all]").click(); await p.waitForTimeout(250);
+  step("C11.3 R3-6: Clear all brings every row back", await p.locator("[data-row]").count() === 15 && !/[?&](p|prog)=/.test(p.url()), await p.locator("[data-row]").count());
 
   // ======================================================== the pop-up's checks (AD-2, AD-4, AD-7)
-  await section("Visitors").locator("[data-add-category]").click(); await dialog().waitFor();
-  step("C11.3 AD-8: '+ Add category' on a section fills Pathway and Program and focuses Category", (await field("program").inputValue()) === "Visitors" && await field("category").evaluate((e) => e === document.activeElement));
+  await open(`?p=${encodeURIComponent(tr)}&prog=${encodeURIComponent(visitors)}`);
+  await p.locator("[data-add-open]").click(); await dialog().waitFor();
   await typeIn("category", "visitor-VISA");
   step("C11.3 AD-4: an exact twin (ignoring case and punctuation) picks the existing name: 'Already in the Program structure: Show it'", /Uses the existing category/.test(await p.locator('[data-field="category"]').textContent()) && await p.locator("[data-add-exists]").count() === 1 && await p.locator("[data-add-submit]").isDisabled());
   await typeIn("category", "Visiter visa");
@@ -161,12 +221,13 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await p.locator('[data-field="category"] [data-keep]').click();
   await p.locator("[data-add-submit]").click(); await dialog().waitFor({ state: "detached" });
   step("C11.3 AD-4 BR-5: 'Keep mine' adds it, and Activity records that close names existed", sql("select count(*) from program_def where label='Visiter visa'") === "1" && Number(sql("select count(*) from audit_event where summary like '%although close names exist%'")) === 1);
-  await section("Study permits").locator("[data-add-category]").click(); await dialog().waitFor();
+  await open(`?p=${encodeURIComponent(tr)}&prog=${encodeURIComponent(studyP)}`);
+  await p.locator("[data-add-open]").click(); await dialog().waitFor();
   await field("category").fill("Study permit"); await p.waitForTimeout(500);
   step("C11.3 AD-2: None is unavailable for a category that has sub-categories, with the reason", await p.locator("[data-none]").isDisabled() && /has sub-categories/.test(await p.locator('[data-field="subCategory"]').textContent()));
-  await field("category").fill("Visitor visa"); await p.waitForTimeout(300);
   await p.keyboard.press("Escape"); await dialog().waitFor({ state: "detached" }).catch(() => undefined);
-  await section("Visitors").locator("[data-add-category]").click(); await dialog().waitFor();
+  await open(`?p=${encodeURIComponent(tr)}&prog=${encodeURIComponent(visitors)}`);
+  await p.locator("[data-add-open]").click(); await dialog().waitFor();
   await typeIn("category", "Visitor visa");
   step("C11.3 AD-2 P-26: the Sub-category field is off with the reason for a category that has its own setup", /already has its own setup, so it is the combination/.test(await p.locator("[data-sub-off]").textContent().catch(() => "")));
   await typeIn("category", "Transit visa");
@@ -176,41 +237,26 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await p.unroute("**/api/structure/path");
   await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" });
 
-  // ======================================================== details panel: trail, where used, remove waiting, refused sub-category, rename, conflict
-  await details("Study permit");
-  step("C11.3 BR-7: the panel shows the full trail, the last part bold", /Retail › Temporary residence › Study permits › Study permit/.test(await panel().locator("[data-trail]").textContent()) && await panel().locator("[data-trail] b").textContent() === "Study permit");
-  step("C11.9: the panel shows where it is used", /1 combination/.test(await panel().textContent()) && await panel().getByRole("heading", { name: "Where used" }).count() === 1);
+  // ======================================================== the Edit panel: trail, where used, order, rename, conflict
+  await open();
+  await edit("Study permit");
+  step("C11.3 BR-7: Edit shows the full trail, the last part bold, and the row's number", /Retail › Temporary residence › Study permits › Study permit/.test(await panel().locator("[data-trail]").textContent()) && await panel().locator("[data-trail] b").textContent() === "Study permit" && (await panel().locator("[data-panel-num]").textContent()) === "1.2.1");
+  step("C11.9: Edit shows where it is used; adding goes through the one Add (no Add sub-category in the panel)", /1 combination/.test(await panel().textContent()) && await panel().getByRole("heading", { name: "Where used" }).count() === 1 && await panel().getByRole("button", { name: "Add sub-category" }).count() === 0);
   await panel().getByRole("button", { name: "Close the details" }).click();
-  await details("Visiter visa");
-  await p.waitForFunction(() => /Used nowhere/.test(document.querySelector("aside")?.textContent ?? ""));
-  step("C11.9 L1: an unused draft name may be removed; retire says why not", await panel().getByRole("button", { name: "Remove" }).isEnabled() && await panel().getByRole("button", { name: "Retire" }).isDisabled());
-  await panel().getByRole("button", { name: "Remove" }).click();
-  await panel().getByLabel(/Why remove/).fill("Typing slip; Visitor visa exists.");
-  await panel().getByRole("button", { name: "Send for approval" }).click();
-  await p.waitForFunction(() => /Removal waiting for a second person/.test(document.querySelector("aside")?.textContent ?? ""));
-  await p.waitForFunction(() => /Removal waiting/.test(document.querySelector("[data-structure-a]")?.textContent ?? ""), null, { timeout: 5000 }).catch(() => undefined);
-  step("C11.9 L4: the removal waits for a second person (still listed, marked on its line)", /Removal waiting/.test(await line("Visiter visa").textContent()) && sql("select count(*) from library_change where kind='structure_node' and status='WAITING'") === "1");
-  await state("remove-waiting");
-  await panel().getByRole("button", { name: "Withdraw" }).click();
-  await panel().getByLabel(/Why withdraw/).fill("Keep it for now.");
-  await panel().getByRole("button", { name: "Withdraw" }).last().click();
-  await p.waitForFunction(() => !/Removal waiting/.test(document.querySelector("[data-structure-a]")?.textContent ?? ""));
-  step("C11.9 L1 Undo: the author withdraws the waiting removal", sql("select status from library_change where kind='structure_node'") === "WITHDRAWN");
-  await details("Visitor visa");
-  const addSub = panel().getByRole("button", { name: "Add sub-category" });
-  step("C11.3 P-26: the panel's 'Add sub-category' is off on a category that has its own setup", await addSub.isDisabled());
-  await addSub.locator("..").hover(); await p.waitForTimeout(400);
-  step("C11.3 P-26: the reason is in the tooltip", /already has its own setup, so it is the combination/.test(await p.getByRole("tooltip").textContent().catch(() => "")));
-  await details("Super visa");
-  await panel().getByRole("button", { name: "Add sub-category" }).click(); await dialog().waitFor();
-  step("C11.3 AD-8 (QA-45): the panel's 'Add sub-category' opens the pop-up down to the category, focused on Sub-category", (await field("category").inputValue()) === "Super visa" && await field("subCategory").evaluate((e) => e === document.activeElement) && !(await p.locator("[data-none]").isChecked()));
-  await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" });
-  await details("Visitors");
+  await edit("Super visa");
+  await panel().getByRole("button", { name: "Move up" }).click();
+  await p.waitForFunction(() => { const t = [...document.querySelectorAll("[data-row] [data-name]")].map((x) => x.textContent); return t.indexOf("Super visa") < t.indexOf("Visitor visa"); });
+  step("C11.9 R3-2: Move up sits in the Edit panel; it reorders at once with an audit line; the numbers follow", sql("select count(*) from audit_event where action='reordered'") === "1" && await numOf("Super visa") === "1.1.1" && await numOf("Visitor visa") === "1.1.2");
+  const cat = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.rows.map((r) => r.label);
+  step("QA-49: Immigration programs follows: Super visa before Visitor visa", cat.indexOf("Super visa") < cat.indexOf("Visitor visa"), cat.join(", "));
+  await panel().getByRole("button", { name: "Close the details" }).click();
+  await edit("Visitors");
   await panel().getByLabel("Name Required").fill("Visitor programs");
   await panel().getByRole("button", { name: "Save" }).click();
-  await section("Visitor programs").waitFor();
-  step("C11.3 BR-6: a rename saves; the section shows the new name at once", sql(`select label from program_def where program_node_key='${visitors}'`) === "Visitor programs");
-  await details("Study permits");
+  await row("Visitor programs").waitFor();
+  step("C11.3 BR-6: a rename saves; the row shows the new name at once", sql(`select label from program_def where program_node_key='${visitors}'`) === "Visitor programs");
+  await panel().getByRole("button", { name: "Close the details" }).click().catch(() => undefined);
+  await edit("Study permits");
   await panel().getByLabel("Name Required").fill("Study permit programs");
   await api(`/structure/nodes/${studyP}`, { method: "PATCH", data: { label: "Study permits (students)", version: 1 } });
   await panel().getByRole("button", { name: "Save" }).click();
@@ -220,59 +266,76 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await panel().getByRole("button", { name: "Reload" }).click();
   await panel().getByRole("button", { name: "Close the details" }).click();
 
-  // ======================================================== order from the ⋯ menus (P-116); Immigration programs follows (QA-49)
-  await line("Super visa").locator("[data-row-menu]").click(); await p.getByRole("menuitem", { name: "Move up" }).click();
-  await p.waitForFunction(() => [...document.querySelectorAll("[data-line] [data-open]")].map((x) => x.textContent).indexOf("Super visa") < [...document.querySelectorAll("[data-line] [data-open]")].map((x) => x.textContent).indexOf("Visitor visa"));
-  step("C11.9: a line's ⋯ Move up reorders at once, with an audit line", sql("select count(*) from audit_event where action='reordered'") === "1" && /Immigration programs follows this order/.test(await p.locator("[data-page-note]").textContent()));
-  await section("Work permits").locator("[data-row-menu]").first().click(); await p.getByRole("menuitem", { name: "Move up" }).click();
-  await p.waitForFunction(() => [...document.querySelectorAll("[data-section-title]")].map((x) => x.textContent).indexOf("Work permits") < [...document.querySelectorAll("[data-section-title]")].map((x) => x.textContent).indexOf("Study permits (students)"));
-  const rows = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.rows.map((r) => r.label);
-  step("QA-49: Immigration programs follows: Super visa before Visitor visa, Work permits before Study permits", rows.indexOf("Super visa") < rows.indexOf("Visitor visa") && rows.indexOf("With an LMIA – inside Canada") < rows.indexOf("Outside Canada"), rows.join(", "));
+  // ======================================================== kept from S1-finish (its own check retired with P-128): Used by names each combination; the menu column
+  await edit("Temporary residence");
+  const usedText = await panel().locator("[data-used-by]").textContent();
+  const openLinks = panel().locator("[data-used-by]").getByRole("link", { name: /^Open / });
+  step("S1-2: Edit on a Pathway names each combination below it by its path; one with setup has Open, a Not started one says so", /Visitor programs › Visitor visa/.test(usedText) && /Study permit › Outside Canada/.test(usedText) && await openLinks.count() === 1 && await openLinks.first().getAttribute("href") === `/c/${combo.id}` && /Not started/.test(usedText), usedText.slice(0, 160));
+  await panel().getByRole("button", { name: "Close the details" }).click();
+  const column = await p.evaluate(() => { const c = document.querySelector("[data-menu-column]").getBoundingClientRect(), m = document.querySelector("main").getBoundingClientRect(); return { col: Math.round(c.bottom + scrollY), main: Math.round(m.bottom + scrollY), doc: document.documentElement.scrollHeight, bg: getComputedStyle(document.querySelector("[data-menu-column]")).backgroundColor }; });
+  step("S1-4: on a long page the menu column reaches the bottom of the page, white; the menu itself stays in view", column.col >= column.main - 1 && column.col >= column.doc - 1 && column.bg !== "rgba(0, 0, 0, 0)" && await p.evaluate(() => getComputedStyle(document.querySelector('nav[aria-label="Studio"]')).position) === "sticky", JSON.stringify(column));
 
-  // ======================================================== keyboard: ↑ / ↓ between lines, Enter opens details
-  await line("Super visa").locator("[data-open]").focus();
-  await p.keyboard.press("ArrowDown");
-  step("keyboard: Down moves to the next line", (await p.evaluate(() => document.activeElement?.textContent)) === "Visitor visa", await p.evaluate(() => document.activeElement?.textContent));
-  await p.keyboard.press("Enter");
-  await p.waitForFunction(() => document.querySelector("aside h2")?.textContent === "Visitor visa", null, { timeout: 5000 }).catch(() => undefined);
-  step("keyboard: Enter opens that line's details", (await panel().locator("h2").textContent()) === "Visitor visa");
+  // ======================================================== keyboard: one Tab stop; ↑ / ↓; Enter is Edit; Delete is the action
+  await open();
+  const tabbable = await p.locator("[data-tree] [data-edit][tabindex='0'], [data-tree] [data-action][tabindex='0']").count();
+  step("C11.3 minor 7: the outline is one Tab stop (only the current row's two buttons are in the Tab order)", tabbable === 2, tabbable);
+  await row("Temporary residence").locator("[data-edit]").focus();
+  await p.keyboard.press("ArrowDown"); await p.waitForTimeout(100);
+  const focused = async () => p.evaluate(() => document.activeElement?.closest("[data-row]")?.querySelector("[data-name]")?.textContent);
+  step("keyboard: Down moves to the next row's Edit", await focused() === "Visitor programs", await focused());
+  await p.keyboard.press("End"); await p.waitForTimeout(100);
+  step("keyboard: End goes to the last row", await focused() === "Start-up visa", await focused());
+  await p.keyboard.press("Delete"); await p.waitForTimeout(200);
+  step("keyboard: the Delete key opens the row's own action (Delete on an unused line, confirmed in the page)", await p.locator('[data-confirm]').count() === 1 && /Delete "Start-up visa"\?/.test(await p.locator("[data-confirm]").textContent()));
+  await p.locator("[data-confirm]").getByRole("button", { name: "Cancel" }).click();
+  await row("Start-up visa").locator("[data-edit]").focus(); await p.keyboard.press("Enter");
+  await p.waitForFunction(() => document.querySelector("aside h2")?.textContent?.endsWith("Start-up visa"), null, { timeout: 5000 }).catch(() => undefined);
+  step("keyboard: Enter on a row opens Edit", /Start-up visa$/.test(await panel().locator("h2").textContent()));
   await panel().getByRole("button", { name: "Close the details" }).click();
 
   // ======================================================== Find across Pathways; no match here, one in the other tab
-  await p.getByPlaceholder("Find a name").fill("visa");
-  await p.waitForTimeout(400);
-  step("C11.3 P-127: Find filters lines in every Pathway; the cards count the matches", /3 matches/.test(await p.locator("[data-pathway-cards]").getByRole("button", { name: /^Temporary residence/ }).textContent()) && /\d+ match/.test(await p.locator("[data-pathway-cards]").getByRole("button", { name: /^Permanent residence/ }).textContent()), await p.locator("[data-pathway-cards]").textContent());
-  await p.getByPlaceholder("Find a name").fill("High-wage");
+  await p.getByPlaceholder("Find a name in Retail").fill("visa"); await p.waitForTimeout(400);
+  step("C11.3 R3-6: Find keeps the combinations whose trail matches, in every Pathway", await p.locator('[data-row][data-level="category"]').count() === 4 && /Showing 4 of/.test(await p.locator("[data-stats]").textContent()), await p.locator('[data-row][data-level="category"]').count());
+  await p.getByPlaceholder("Find a name in Retail").fill("High-wage");
   await p.waitForFunction(() => /1 match in Corporate and employers/.test(document.querySelector("main")?.textContent ?? ""));
   step("C11.5: Find with no match in Retail says where it is", await p.getByRole("heading", { name: /No name matches "High-wage" in Retail/ }).count() === 1);
   await state("find-no-match");
   await p.getByRole("button", { name: "Show it" }).click();
-  await p.waitForFunction(() => /High-wage position/.test(document.querySelector("[data-structure-a]")?.textContent ?? ""));
-  step("C11.5 BR-8: 'Show it' opens the Corporate tab with the match and its section", await section("Labour market impact assessment").count() === 1 && await p.getByRole("group", { name: "Pathway type" }).getByRole("button", { name: "Corporate and employers" }).getAttribute("aria-pressed") === "true");
+  await p.waitForFunction(() => /High-wage position/.test(document.querySelector("[data-tree]")?.textContent ?? ""));
+  step("C11.5 BR-8: 'Show it' opens the Corporate tab with the match", await row("High-wage position").count() === 1 && await p.getByRole("group", { name: "Pathway type" }).getByRole("button", { name: /^Corporate and employers/ }).getAttribute("aria-pressed") === "true");
   await p.getByRole("button", { name: "Clear the search" }).click();
   await state("corporate-tab");
 
+  // ======================================================== Show retired (minor 5: the numbers never move)
+  await open();
+  const before = await p.locator("[data-row] [data-num]").allInnerTexts();
+  sql(`update program_def set retired_at = now() where label = 'Express Entry stream'`);
+  await open();
+  const hidden = await row("Express Entry stream").count();
+  await p.locator("[data-show-retired]").click(); await p.waitForFunction(() => /[?&]r=1/.test(location.search)); await p.waitForTimeout(300);
+  const retiredNum = (await row("Express Entry stream").locator("[data-num]").textContent()).trim();
+  const after = await p.locator("[data-row]").evaluateAll((a) => a.filter((r) => !/Express Entry stream/.test(r.querySelector("[data-name]")?.textContent ?? "")).map((r) => r.querySelector("[data-num]").textContent.trim()));
+  step("C11.9 Show retired: a retired name is hidden, then shown with Retired and Restore (QA-48's view)", hidden === 0 && /Retired/.test(await row("Express Entry stream").textContent()) && (await row("Express Entry stream").locator("[data-action]").getAttribute("data-action")) === "RESTORE");
+  step("C11.3 minor 5: a retired row shows '—' and every other number stays as it was", retiredNum === "—" && JSON.stringify(after) === JSON.stringify(before.filter((x) => x !== "2.1.1")), `${retiredNum} · ${after.join(" ")}`);
+  await state("show-retired");
+  sql(`update program_def set retired_at = null where label = 'Express Entry stream'`);
+
   // ======================================================== read-only approver
-  await as("user-B"); await open("?p=all");
-  step("BR-15 read-only: '+ Add', 'Add program' and 'Add category' are disabled for the approver", await p.locator("[data-add-open]").isDisabled() && await p.locator("[data-add-program]").first().isDisabled() && await p.locator("[data-add-category]").first().isDisabled());
-  await details("Express Entry stream");
-  step("BR-15 read-only: name, Save and lifecycle actions are disabled", await panel().getByLabel("Name Required").isDisabled() && await panel().getByRole("button", { name: "Save" }).isDisabled() && await panel().getByRole("button", { name: "Remove" }).isDisabled());
+  await as("user-B"); await open("?add=1");
+  step("C11.3 minor 8: a reader opening ?add=1 gets no pop-up", await dialog().count() === 0);
+  step("BR-15 read-only: Add is off; every row offers View and a greyed action", await p.locator("[data-add-open]").isDisabled() && (await shownWord(row("Visitor visa").locator("[data-edit]"))) === "View" && (await row("Start-up visa").locator("[data-action]").getAttribute("aria-disabled")) === "true");
+  step("BR-15 read-only: the greyed action says only an author changes names", /Only a configuration author/.test(await tipOf(row("Start-up visa").locator("[data-action]"))));
+  await edit("Express Entry stream");
+  step("BR-15 read-only: name, Save and the panel's actions are disabled", await panel().getByLabel("Name Required").isDisabled() && await panel().getByRole("button", { name: "Save" }).isDisabled() && await panel().getByRole("button", { name: "Delete" }).isDisabled());
   step("BR-15 server: the approver's Add is refused (403)", (await api("/structure/path", { method: "POST", actor: "user-B", data: { pathwayType: "INDIVIDUAL", pathway: { label: "Citizenship" } } })).status === 403);
   await state("read-only-approver");
   await as("user-A");
 
-  // ======================================================== the pop-up at 390 px; long names; loading; error
-  await open("?p=all");
-  await p.setViewportSize({ width: 390, height: 844 });
-  await p.locator("[data-add-open]").click(); await dialog().waitFor(); await p.waitForTimeout(300);
-  const box = await p.locator('[role="dialog"]').boundingBox();
-  step("390 px: the pop-up fills the phone's width and the page does not scroll sideways", box.width >= 350 && !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), JSON.stringify(box));
-  await p.screenshot({ path: path.join(SHOTS, `${String(++n).padStart(2, "0")}-pop-up-390.png`) });
-  await p.keyboard.press("Escape"); await p.setViewportSize({ width: 1440, height: 900 });
+  // ======================================================== long names; loading; error
   const longName = "With an LMIA – inside Canada, for a worker whose employer holds a positive assessment";
   await path_({ pathwayType: "INDIVIDUAL", pathway: { key: tr }, program: { key: key("Work permits") }, category: { key: esw }, subCategory: { label: longName } });
-  await open("?p=all");
-  step("long names wrap inside their line; no sideways scroll", (await line(`Employer-specific work permit › ${longName}`).boundingBox()).height > 40 && !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)));
+  await open();
+  step("long names wrap inside their row; no sideways scroll", (await row(longName).boundingBox()).height > 40 && await noSideways());
   await state("long-name");
   await p.route("**/api/structure?*", async (r) => { await new Promise((x) => setTimeout(x, 1500)); await r.continue().catch(() => undefined); });
   await p.goto(`${BASE}/structure`);
@@ -287,8 +350,8 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await state("error");
   await p.unroute("**/api/structure?*");
   await p.getByRole("button", { name: "Retry" }).click();
-  await p.locator("[data-structure-a]").waitFor();
-  step("error: Retry loads the page", await p.locator("[data-structure-a]").count() === 1);
+  await p.locator("[data-tree]").waitFor();
+  step("error: Retry loads the page", await p.locator("[data-tree]").count() === 1);
 
   step("no script error on any page", errs.length === 0, errs.join(" | "));
   await b.close();
