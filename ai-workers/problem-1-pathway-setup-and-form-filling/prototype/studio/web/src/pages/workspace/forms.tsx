@@ -100,7 +100,7 @@ export function FormsTab({ id, lines, filing, filingDetail, problems, removed = 
             <td className="max-w-56 text-xs"><OnlyIfCell l={l} /></td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
-            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} />}</td>
+            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}</td>
             <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code])} onRemove={() => setRemoving(l)} /></> : null}</td>
           </tr>
         ))}
@@ -123,12 +123,14 @@ export function FormsTab({ id, lines, filing, filingDetail, problems, removed = 
 }
 
 /** Lead check L11: a set-up line whose form fields the library already matched has no AI step left; a line still being
- *  read or drafted keeps its step. */
-function LineReading({ combo, l }: { combo: Combo; l: WorkspaceFormLine }) {
+ *  read or drafted keeps its step. Devin Review (PR #71): "matched" is the shown file's own edition (the server's
+ *  fromLibrary: its edition has a field map), never the line's count, so a newer unmapped edition keeps Draft with AI. */
+function LineReading({ combo, l, fromLibrary }: { combo: Combo; l: WorkspaceFormLine; fromLibrary: string[] }) {
   const a = attachmentFor(combo, l.code);
+  const mapped = a ? a.status === "IN_LIBRARY" || fromLibrary.includes(a.id) : l.boxes > 0;
   // The last step and when it ran stay (QA-17); only the next step, which would be AI, goes.
   const last = a ? combo.jobs.find((j) => j.attachmentId === a.id) : undefined;
-  if (l.boxes > 0 && (!a || ["RECOGNISED", "READ", "IN_LIBRARY"].includes(a.status))) return <span className="mt-1 inline-flex flex-col items-start gap-1" data-line-matched><Pill tone="ok">In the library</Pill>{last ? <span className="text-text-muted">{last.kind === "field_map" ? "AI draft" : "Read"} {fmtWhen(last.startedAt)}</span> : null}</span>;
+  if (mapped && (!a || ["RECOGNISED", "READ", "IN_LIBRARY"].includes(a.status))) return <span className="mt-1 inline-flex flex-col items-start gap-1" data-line-matched><Pill tone="ok">In the library</Pill>{last ? <span className="text-text-muted">{last.kind === "field_map" ? "AI draft" : "Read"} {fmtWhen(last.startedAt)}</span> : null}</span>;
   return <ReadingCell d={combo} a={a} />;
 }
 
