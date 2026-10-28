@@ -9,7 +9,7 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124)
 stage: FIX
 owner: Builder
-next_action: Finish FIX of the CHECK findings (review Major, break R5-1, R5-2 Majors, minors): S4 checks running, then full suites on the final commit, push, hand back to the Lead by message
+next_action: Full suites running on 4399c3b (all S4 checks green there: finder 118, runs 83, canada 62, library browser 51, run browser 20); their by-products (evidence JSON, other screens' screenshots, ledger) are put back when the run ends, never committed; then push and hand back to the Lead by message
 blocked_by: none
 updated: 2026-10-28
 
