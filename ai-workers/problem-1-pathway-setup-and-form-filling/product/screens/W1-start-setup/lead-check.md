@@ -14,3 +14,6 @@ Capability: Start setup on Programs, Structure and the combination page; the fin
 * Two buttons for one action on a just-started combination (Next step "Find forms" and the offer's button): agreed in early look item 2 (Next step focuses the offer); revisit with the shared next-step rule.
 * "Dependent child (0–6)" in the header: runtime's DV-bb-6a.
 * Lane suggestion: run-suites should rebuild `web/dist` first (a stale build failed 3 checks once): Lead tooling, with the next records PR.
+
+## Added to the same PR: outside review DV-bb-1, 6b, 6c (29 Oct)
+Code afb86cde, lane suites 58/58 (web rebuilt first), graph G1/G2 0. Diff read (29 lines): Dismiss on a finished upload card (kept after reload; none on a running card); Reset counts the 6 built-in person roles apart ("keeps only its 6 built-in person roles"); "(P-95)" gone from the structure footer. A pass and a fail test each. PASS.
