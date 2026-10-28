@@ -37,7 +37,8 @@ const written: string[] = [];
   let p = await call("POST", `/combinations/${vv}/people/propose/plan`, { mode: "rules" });
   ok("C11.12 plan pass: rules only names the combination's guide, its steps and US$0", p.status === 201 && p.body.guide?.code === "Guide 5256" && p.body.totals.worst_usd === 0 && p.body.steps.every((s: any) => !s.uses_ai), p.body?.guide);
   p = await call("POST", `/combinations/${vv}/people/propose/plan`, { mode: "live" });
-  ok("C11.12 plan pass: AI now says the most it can cost before anything runs (not run here)", p.status === 201 && p.body.totals.worst_usd > 0 && p.body.steps.some((s: any) => s.uses_ai), p.body?.totals);
+  // Lead check L2: AI now was not in the slice 3 Go; until the founder approves a live trial it is refused before any call.
+  ok("C11.12 L2 fail: AI now is refused (409) until the founder's Go for a live trial", p.status === 409 && /founder's Go for a live trial/.test(p.body?.detail ?? ""), p.body?.detail);
   p = await call("POST", `/combinations/${vv}/people/propose/plan`, { mode: "whatever" });
   ok("C11.12 plan fail: an unknown way is a 400 naming the field", p.status === 400 && p.body.errors?.[0]?.field === "mode", p.body?.detail);
   p = await call("POST", `/combinations/${lm}/people/propose/plan`, { mode: "rules" });

@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
-import { channelProblems } from "./channels.ts";
+import { channelProblems, type Accepts } from "./channels.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 
 const schema = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "contracts", "predicate.v0.schema.json"), "utf8"));
@@ -36,7 +36,7 @@ export function checkCondition(tree: any, fieldTypes: Map<string, string>, deriv
   return errs;
 }
 
-export function validate(s: Snapshot, library: { key: string; valueType: string }[], derivedRows: { id: string; calculation: string }[]): Problem[] {
+export function validate(s: Snapshot, library: { key: string; valueType: string }[], derivedRows: { id: string; calculation: string }[], accepts?: Accepts): Problem[] {
   const out: Problem[] = [];
   const types = new Map(library.map((f) => [f.key, f.valueType]));
   const derived = new Set(derivedRows.map((d) => d.id));
@@ -84,7 +84,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   // one nobody here uses is not this combination's warning.
   const reads = derivedRead(s);
   for (const d of derivedRows) if (reads.has(d.id) && !CALCULATIONS[d.calculation]) out.push({ level: "warning", where: "Derived fields", item: d.id, message: `Calculation ${d.calculation} has no tested helper: recorded, never evaluated.` });
-  out.push(...channelProblems(s)); // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
+  out.push(...channelProblems(s, accepts)); // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
   // Drift check 2: an item that is a field code also carries its words (the question's meaning, a derived field's plain
   // words), so Review and the refusals never lead with the code.
   const plainOf = new Map((s.derived_fields as { id: string; plain?: string | null }[]).map((d) => [d.id, d.plain ?? ""]));

@@ -111,8 +111,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await who.getByRole("button", { name: "Fill from the guide" }).click();
   const fill = p.getByRole("dialog"); await fill.locator("[data-people-cost]").waitFor({ timeout: 30000 }).catch(() => {});
   step("C11.12 plan: Fill from the guide names the guide and says the cost first (rules only: US$0)", /Guide 5256/.test(await fill.innerText()) && /Cost: US\$0/.test(await fill.locator("[data-people-cost]").innerText().catch(() => "")));
-  await fill.getByLabel(/AI now/).check(); await p.waitForTimeout(800);
-  step("C11.12 plan: AI now says the most it can cost before anything runs (not run here)", /At most US\$\d+\.\d\d/.test(await fill.locator("[data-people-cost]").innerText().catch(() => "")), await fill.locator("[data-people-cost]").innerText().catch(() => ""));
+  // Lead check L2: AI now is greyed (not in the slice 3 Go) until the founder approves a live trial.
+  step("C11.12 L2: AI now is greyed and says it waits for the founder's Go for a live trial", await fill.getByLabel(/AI now/).isDisabled() && /not approved yet/.test(await fill.locator('[data-fill-mode="live"]').innerText()) && /founder's Go for a live trial/.test(await fill.locator('[data-fill-mode="live"]').innerText()));
   await fill.getByLabel(/Use saved AI answers/).check(); await p.waitForTimeout(800);
   await fill.getByRole("button", { name: "Fill" }).click(); await fill.locator("[data-people-proposal]").waitFor({ timeout: 30000 }).catch(() => {});
   step("C11.12 fail: with no saved AI answer yet it says so and proposes nothing", /No saved AI answer/.test(await fill.innerText()) && await fill.getByRole("button", { name: "Use these lines" }).isDisabled());
@@ -122,10 +122,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.12 pass: rules propose the principal and the family the guide names, each with IRCC's words", await fill.locator('[data-proposed="principal"]').count() === 1 && await fill.locator('[data-proposed="spouse_or_partner"]').count() === 1 && /"[^"]{20,}"/.test(await fill.locator("[data-people-proposal]").innerText()));
   await state("who-can-be-from-guide");
   await fill.getByRole("button", { name: "Use these lines" }).click();
-  step("C11.12: Use these lines puts them in the editor, marked AI, not saved yet", await who.getByRole("button", { name: "Save" }).count() === 1 && await who.locator('[data-person="spouse_or_partner"]').getByText("AI").count() > 0);
+  // Lead check L3: lines from rules only are the rules' (no AI was used): marked Rules, never AI.
+  step("C11.12 L3: Use these lines puts them in the editor, marked Rules (not AI), not saved yet", await who.getByRole("button", { name: "Save" }).count() === 1 && await who.locator('[data-person="spouse_or_partner"] [data-origin-rules]').count() === 1 && await who.locator('[data-person="spouse_or_partner"]').getByText("AI", { exact: true }).count() === 0);
   await who.getByRole("button", { name: "Save" }).click(); await settle();
   const saved = (await api(`/combinations/${vv}/workspace?tab=questionnaires`)).body.people.lines;
-  step("C11.12 pass: saved through the rules on Save, the lines keep IRCC's words and their AI mark", saved.some((l) => l.role === "spouse_or_partner" && l.origin === "AI_PROPOSAL" && !!l.quote), saved.map((l) => `${l.role}:${l.origin}`).join(" "));
+  step("C11.12 L3 pass: saved through the rules on Save, the lines keep IRCC's words and say they came from rules (CODE_MATCH)", saved.some((l) => l.role === "spouse_or_partner" && l.origin === "CODE_MATCH" && !!l.quote), saved.map((l) => `${l.role}:${l.origin}`).join(" "));
 
   // ======================================================== the guide on a combination that did not have it before
   await go(sv, "forms");

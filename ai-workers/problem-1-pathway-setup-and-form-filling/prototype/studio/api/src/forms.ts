@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Prisma, type FormEdition } from "@prisma/client";
 import { CHANNEL_WORDS, type Channel, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewMerge, SetChannel } from "../../contracts/forms.ts";
-import { acceptedChannels, channelProblems, channelsView, notAcceptedWords } from "../../engine/channels.ts";
+import { acceptedChannels, acceptsOf, channelProblems, channelsView, notAcceptedWords } from "../../engine/channels.ts";
 import { compareEditions } from "../../engine/programs.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
@@ -104,7 +104,7 @@ export class Forms {
   async channels(combinationId: string) {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, combinationId, "draft");
-    return { ...channelsView(snapshot), problems: channelProblems(snapshot) };
+    return { ...channelsView(snapshot), problems: channelProblems(snapshot, await acceptsOf(this.db, c.workspaceId)) };
   }
 
   // ───────────────────────────────────────────────────────────── library: aliases, answer lists, option maps (P-65)

@@ -126,7 +126,9 @@ export function FormsTab({ id, lines, filing, filingDetail, problems, removed = 
  *  read or drafted keeps its step. */
 function LineReading({ combo, l }: { combo: Combo; l: WorkspaceFormLine }) {
   const a = attachmentFor(combo, l.code);
-  if (l.boxes > 0 && (!a || ["RECOGNISED", "READ", "IN_LIBRARY"].includes(a.status))) return <span className="mt-1 inline-flex" data-line-matched><Pill tone="ok">In the library</Pill></span>;
+  // The last step and when it ran stay (QA-17); only the next step, which would be AI, goes.
+  const last = a ? combo.jobs.find((j) => j.attachmentId === a.id) : undefined;
+  if (l.boxes > 0 && (!a || ["RECOGNISED", "READ", "IN_LIBRARY"].includes(a.status))) return <span className="mt-1 inline-flex flex-col items-start gap-1" data-line-matched><Pill tone="ok">In the library</Pill>{last ? <span className="text-text-muted">{last.kind === "field_map" ? "AI draft" : "Read"} {fmtWhen(last.startedAt)}</span> : null}</span>;
   return <ReadingCell d={combo} a={a} />;
 }
 

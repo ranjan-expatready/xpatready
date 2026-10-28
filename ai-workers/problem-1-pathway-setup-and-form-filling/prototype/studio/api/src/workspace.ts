@@ -8,7 +8,7 @@ import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snaps
 import { questionnairesView } from "../../engine/runtime/questionnaires.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
 import { wordsOnly } from "../../engine/render.ts";
-import { acceptedChannels, channelProblems, filingKind, filingMethod, signatureOf } from "../../engine/channels.ts";
+import { acceptedChannels, acceptsOf, channelProblems, filingKind, filingMethod, signatureOf } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, CHANNELS, type Channel } from "../../contracts/forms.ts";
 import { answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { actorOf, Db, fail, readerOf } from "./core.ts";
@@ -17,7 +17,7 @@ import { PeopleFromGuide } from "./people-ai.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type Q = { tab?: string; family?: string; person?: string; tweaks?: string; release?: string; role?: string };
-type SnapForm = { form_number: string; title: string; form_kind?: string; who: string; status: string; condition: unknown; condition_plain?: string | null; source_quote?: string | null; origin?: string; channel?: Channel; min_age?: number; signed_by?: string; accepted_channels?: string };
+type SnapForm = { form_number: string; title: string; form_kind?: string; who: string; status: string; condition: unknown; condition_plain?: string | null; source_quote?: string | null; origin?: string; channel?: Channel; min_age?: number; signed_by?: string };
 
 @Injectable()
 export class WorkspaceViews {
@@ -42,6 +42,7 @@ export class WorkspaceViews {
   /** The Forms tab: each line of the draft with its settings, what IRCC accepts and its revision token. */
   private async forms(id: string, workspaceId: string): Promise<{ lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }> {
     const { snapshot } = await buildSnapshot(this.db, workspaceId, id, "draft");
+    const accepts = await acceptsOf(this.db, workspaceId);
     const revisions = await this.studio.revisions(id);
     const maps = snapshot.field_maps as { form_number: string; form_edition: string; entries: { outcome: string }[] }[];
     const rows = await this.db.combinationForm.findMany({ where: { combinationId: id }, orderBy: { version: "desc" } });
@@ -57,14 +58,14 @@ export class WorkspaceViews {
         channel, channelWords: CHANNEL_WORDS[channel], signature: (f.form_kind ?? "data_form") === "document" ? null : signatureOf(channel),
         // Lead check L4: what IRCC accepts comes from the Form library (S4) for the current edition; only when nothing is
         // recorded is every way offered, as Sample.
-        accepted: acceptedChannels(f.accepted_channels) ?? [...CHANNELS], acceptedBasis: acceptedChannels(f.accepted_channels) ? "From the Form library: what IRCC accepts for this edition" : "Sample: the Form library does not record what IRCC accepts for this form yet",
+        accepted: acceptedChannels(accepts.get(f.form_number)) ?? [...CHANNELS], acceptedBasis: acceptedChannels(accepts.get(f.form_number)) ? "From the Form library: what IRCC accepts for this edition" : "Sample: the Form library does not record what IRCC accepts for this form yet",
         signedBy: f.signed_by ?? null, signedByLabel: signedByLabel(f.signed_by), origin: f.origin ?? "HUMAN", quote: irccWords(f.source_quote), added: ourWords(f.source_quote),
         revision: revisions[`form:${f.form_number}`] ?? "", status: status.get(f.form_number) ?? "DRAFT", version: version.get(f.form_number) ?? 1,
       };
     });
     // C1.6: the short words ("PDF only", "Mixed: online and PDF") and, on hover, the line-by-line detail.
     // The filing problems come in the same answer as the lines and the filing words, so they never disagree on screen.
-    const problems = channelProblems(snapshot).map((x) => ({ level: x.level === "error" ? "error" as const : "warning" as const, item: x.item, message: x.message }));
+    const problems = channelProblems(snapshot, accepts).map((x) => ({ level: x.level === "error" ? "error" as const : "warning" as const, item: x.item, message: x.message }));
     // P-116 (drift check 8): a form removed since the last release can be put back (Undo) while the draft is open; adding
     // it again from the library restores the same line (api/src/form-lines.ts addFormLine).
     const since = (await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" }, select: { releasedAt: true } }))?.releasedAt;

@@ -10,6 +10,7 @@ import { checkCondition, diff, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
+import { acceptsOf } from "../../engine/channels.ts";
 import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../contracts/programs.ts";
 import { FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
@@ -319,7 +320,7 @@ export class Studio {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"} (for example ${f.example}). Decide them when this edition is drafted again.` })) : [];
-    return [...structure, ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation }))), ...carried];
+    return [...structure, ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
   }
 
   async config(id: string, mode: Mode) {

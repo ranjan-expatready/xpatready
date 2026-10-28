@@ -100,11 +100,7 @@ export async function buildSnapshots(db: PrismaClient, workspaceId: string, comb
 function formEditions(f: { channel?: string | null; form: { editions: FormEdition[] } }, portalKey: string | null) {
   const eds = f.form.editions;
   const online = eds.filter((e) => e.channel === "ONLINE"), pdf = eds.filter((e) => e.channel !== "ONLINE");
-  // Lead check L4: what IRCC accepts for the current PDF edition (S4's Form library), only when it is recorded, so a
-  // configuration without it keeps its fingerprint; the channel rules refuse a line filed another way.
-  const accepts = [...pdf].sort(compareEditions).at(-1)?.acceptedChannels;
-  return { ...(f.channel === "ONLINE" ? { online_versions: online.filter((e) => e.portalKey === portalKey).length } : {}), ...(online.length && !pdf.length ? { online_only: true } : {}),
-    ...(accepts === "PDF" || accepts === "ONLINE" || accepts === "PDF_OR_ONLINE" ? { accepted_channels: accepts } : {}) };
+  return { ...(f.channel === "ONLINE" ? { online_versions: online.filter((e) => e.portalKey === portalKey).length } : {}), ...(online.length && !pdf.length ? { online_only: true } : {}) };
 }
 
 function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; sections: any[]; questions: any[]; doctypes: any[]; derived: any[]; selections: any[]; cforms: any[]; requirements: any[]; rules: any[]; checks: any[]; allMaps: any[]; shared: { lists: Map<string, { key: string; label: string }[]>; effFields: any[]; effSections: any[]; effQuestions: any[]; effTypes: any[]; entriesOf: (editionId: string) => any[] } }): { snapshot: Snapshot; sha256: string } {

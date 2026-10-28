@@ -243,13 +243,18 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   // identical file — in one go. The combination's Forms tab only picks from the library ("Add a form from the library").
   await p.goto(`${BASE}/c/${vvId}/forms`); await idle();
   step("S5: the Forms tab offers \"Add a form from the library\" (picks only; no upload on the combination)", await p.getByRole("button", { name: "Add a form from the library" }).count() === 1 && await p.locator('main input[type="file"]').count() === 0);
-  await p.goto(`${BASE}/library/forms`); await idle();
+  // S4 (merged, Lead fix 4): the Form library has one way in, Upload PDF, and each file runs on its own card (runtime
+  // FIX L12: this check still used the older intake box, "Choose files to upload" with an "Upload results" list).
+  await p.goto(`${BASE}/library/forms`); await p.getByRole("button", { name: "Upload PDF" }).waitFor(); await idle();
   const panel = p.locator("main");
-  await panel.getByLabel("Choose files to upload").setInputFiles([path.join(OFFICIAL, "forms", "imm1344e.pdf"), path.join(OFFICIAL, "previous-editions", "imm5257e-pre-2023.pdf"), path.join(OFFICIAL, "forms", "imm5707e.pdf")]);
-  await panel.getByRole("list", { name: "Upload results" }).waitFor(); await idle();
-  const res = await panel.getByRole("list", { name: "Upload results" }).getByRole("listitem").allTextContents();
-  step("item 9 / #5: one intake, many files, one result per file (added · older edition not used · already in the library)", res.length === 3 && /Added to the library/.test(res[0]) && /Older edition: not used/.test(res[1]) && /Already in the library/.test(res[2]), res.map((x) => x.slice(0, 70)).join(" | "));
-  step("item 9: what the file says is shown (code, kind, title, published date)", /IMM 1344 \(09-2024\)/.test(res[0]) && /Form/.test(res[0]) && /published 2026-09-17/.test(res[0]));
+  await panel.getByLabel("Choose PDFs to upload").setInputFiles([path.join(OFFICIAL, "forms", "imm1344e.pdf"), path.join(OFFICIAL, "previous-editions", "imm5257e-pre-2023.pdf"), path.join(OFFICIAL, "forms", "imm5707e.pdf")]);
+  await panel.locator("section[data-run-status]").nth(2).waitFor({ timeout: 30000 });
+  for (let i = 0; i < 120 && await panel.locator('section[data-run-status="running"], section[data-run-status="queued"]').count(); i++) await p.waitForTimeout(500);
+  await idle();
+  const res = await panel.locator("section[data-run-status]").allTextContents();
+  const card = (f) => res.find((x) => x.includes(f)) ?? "";
+  step("item 9 / #5: one way in, many files, one card per file (added · older edition not used · already in the library)", res.length === 3 && /Added to the library/.test(card("imm1344e.pdf")) && /Older edition: not used/.test(card("imm5257e-pre-2023.pdf")) && /Already in the library/.test(card("imm5707e.pdf")), res.map((x) => x.slice(-90)).join(" | "));
+  step("item 9: what the file says is shown (code, edition and title, read by rules)", /Rules read it: IMM 1344 \(09-2024\) · Application to sponsor/.test(card("imm1344e.pdf")));
   await state("add-form-panel-intake-results", { viewport: true });
   const lib = (await api("/library/forms")).body;
   step("item 8: the held edition is not in the library and not attached here (never silently)", !lib.find((f) => f.code === "IMM 5257").editions.some((e) => e.label === "IMM 5257 (06-2019)") && !(await api(`/combinations/${vvId}/attachments`)).body.some((a) => /06-2019/.test(a.edition ?? "")));

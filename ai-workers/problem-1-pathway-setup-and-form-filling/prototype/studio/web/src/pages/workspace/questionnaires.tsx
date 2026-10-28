@@ -109,7 +109,7 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
                 ) : howMany(l)}{err(i, "max") || err(i, "min") ? <p role="alert" className="text-xs text-text-danger">{err(i, "max") ?? err(i, "min")}</p> : null}</td>
                 <td className="py-2 pr-3">{editing && !principal && r?.mayBeApplicant ? <label className="flex items-center gap-2"><input type="checkbox" checked={l.applies} onChange={(e) => set(i, { applies: e.target.checked })} aria-label={`${r?.label ?? l.role} files their own application`} /> {l.applies ? "Yes" : "No"}</label> : l.applies ? "Yes" : <span className="text-text-muted">—</span>}{err(i, "applies") ? <p role="alert" className="text-xs text-text-danger">{err(i, "applies")}</p> : null}</td>
                 <td className="py-2 pr-3 text-text-muted">{v.lines.find((x) => x.role === l.role)?.answeredBy ?? (l.role === "child" ? "Principal, under 18" : "Themselves")}</td>
-                <td className="max-w-72 py-2 pr-3 text-xs text-text-muted">{l.quote ? `"${l.quote}"` : l.origin === "AI_PROPOSAL" || l.origin === "CODE_MATCH" ? "" : "—"}{l.origin === "AI_PROPOSAL" ? <Pill tone="ai" className="ml-1">AI</Pill> : l.origin === "CODE_MATCH" ? <Pill className="ml-1" data-origin-rules>Rules</Pill> : null}</td>
+                <td className="max-w-72 py-2 pr-3 text-xs text-text-muted">{l.quote ? `"${l.quote}"` : l.origin === "AI_PROPOSAL" || l.origin === "CODE_MATCH" ? "" : "—"}{l.origin === "AI_PROPOSAL" ? <Pill tone="ai" className="ml-1">AI</Pill> : l.origin === "CODE_MATCH" ? <span data-origin-rules><Pill className="ml-1" title="Found by rules in the guide's sentences; no AI">Rules</Pill></span> : null}</td>
                 {editing ? <td className="py-2">{principal ? null : <Button size="icon" variant="ghost" aria-label={`Remove ${r?.label ?? l.role}`} onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}><X /></Button>}</td> : null}
               </tr>
             );
@@ -123,7 +123,7 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
             {offered.length ? <AddPerson offered={offered} onAdd={(k) => { const r = role(k)!; setLines((ls) => [...ls, { role: k, label: r.label, min: 0, max: 1, applies: r.mayBeApplicant, origin: "HUMAN" }]); }} /> : <span className="text-xs text-text-muted">Every kind of person in the shared library is listed.</span>}
             <span className="text-xs text-text-muted">Picks from Shared library › Person roles. A new kind of person is added there.</span>
           </span>
-          <span className="flex gap-2"><Button variant="ghost" onClick={() => { setEditing(false); setErrors({}); }}>Cancel</Button><Button onClick={() => void save()} busy={busy}>Save</Button></span>
+          <span className="flex gap-2"><Button variant="ghost" onClick={() => setFilling(true)}><BookOpen /> Fill from the guide</Button><Button variant="ghost" onClick={() => { setEditing(false); setErrors({}); }}>Cancel</Button><Button onClick={() => void save()} busy={busy}>Save</Button></span>
         </div>
       ) : null}
       <p className={cn("mt-3 text-xs text-text-muted", editing ? "" : "sr-only")}>Rules check on Save: exactly one principal applicant · how many from 0 to 9, the fewest no more than the most · a sponsor or representative is never an applicant · removing a person a form names asks first.</p>

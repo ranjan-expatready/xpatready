@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-28T17:47:01.502Z",
+  "at": "2026-10-28T17:58:47.350Z",
   "port": 4434,
   "pass": 46,
   "fail": 0,
@@ -97,7 +97,7 @@
         "IMM 1295 is filed as Online, but the Form library records that IRCC accepts it only as a PDF upload. Choose a way IRCC accepts.",
         "IMM 1295 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.",
         "IMM 1295: 37 rows of its lists (for example \"Question 8 B Row 1 Country or Territory. If you replied…\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library.",
-        "Not decided yet (from an earlier release): 16 form fields (for example Family name). Decide them when this edition is drafted again."
+        "Not decided yet (from an earlier release): 16 form fields (for example *). Decide them when this edition is drafted again."
       ]
     },
     {
