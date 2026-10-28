@@ -99,7 +99,9 @@ export type StructureNode = {
   allowedLocations: string[]; order: number; combinations: number; live: number; hasSetup: boolean;
   /** Combinations below it that need work ("Needs work", P-49): the "need you" count on a Pathway card. */
   needs: number;
-  meaningChecked: boolean; version: number; retired: boolean; pending: { id: string; action: LifecycleAction } | null;
+  meaningChecked: boolean; version: number; retired: boolean;
+  /** An open change to it (QA-59): waiting, returned (with who and why) or approved and not yet released. */
+  pending: { id: string; action: LifecycleAction; status: "WAITING" | "RETURNED" | "APPROVED"; by: string | null; note: string | null } | null;
   /** A last-level name is a combination (BR-2): its state, Not started when it has no setup yet (id null). */
   combination: { id: string | null; status: "IN_SETUP" | "NOT_READY" | "READY"; statusText: string; retired: boolean;
     /** "Used by" on its line (P-127 (1)): releases that hold it and cases open on it. */
