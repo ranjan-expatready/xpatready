@@ -9,9 +9,9 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: R69-1..3 + takesEffect and QA-65..68 (with QA-61..64), for one Lead PR
 stage: CHECK
 owner: Lead
-next_action: Lead re-merges the #73 review fix (channelsFrom reads clauses in a negated sentence) into PR #73
+next_action: Lead re-merges the #73 review fix (channelsFrom by rule: conditions never count, affirmative instructions only) into PR #73
 blocked_by: none
-updated: 2026-10-28
+updated: 2026-10-29
 
 ## Handover (28 Oct, late; resume from this section alone)
 * **Where it stands (28 Oct, late):** stage CHECK, owner Lead. Branch `claude/forms-r69-fix-4af07a`, pushed, clean tree, synced with main `38722933` (the run-suites prefix is main's; none carried). Holds QA-61..64 (fa653bec), the R69 fixes (`5250bed4`, `9e48029e`) and QA-65..68 (`5600ac06`):
@@ -24,6 +24,7 @@ updated: 2026-10-28
   * Full run-suites on `5600ac06`: 47/47 pass (studio browser skipped: :4400). Graph --check passes (soft G3 `GET /attachments/:id/file`, tested by a built address).
   * Not done here: qa's own `tests/qa/check_qa_am_s4_1028.cjs` move to the written row action (qa's file; qa's report says qa does it).
   * #73 review (Lead message): channelsFrom reads the clauses of a negated sentence (split on ";", ",", " but ", " instead"): a negated clause or a bare condition says nothing, an affirmative clause still counts. canada 68, finder 138, qa filing 9/9. The "Devin" comment point was rejected by the Lead (a tool, not a person).
+  * #73 review 🔴 (Lead message, by rule): every sentence read clause by clause (";", ",", ":", " but ", " instead"); a condition (if, when, unless, even if, even when, whether, except, in case) is cut to the clause end and never counts; a negated clause says nothing; PDF needs an affirmative upload clause; Online needs an affirmative file-online instruction (apply/submit/fill/complete/file … online, an online form, through/in the portal). canada 71, finder 138, qa filing 9/9.
 * **Next:** the Lead re-merges into PR #73; then apply any further findings.
 * **Open for the Lead or founder:** whether guides must also be attached to their combinations; 5 of 7 sample forms are "Not set yet" until a person sets them (C11.18); the shared Button's primary hover contrast (4.4 at 12 px).
 * **How to run the checks (Mac, this copy):**
@@ -35,6 +36,7 @@ updated: 2026-10-28
   * The Bash hook misfires on some compound commands: put them in a scratchpad script. No paid AI (US$0). Lane pushes run no CI (P-85).
 
 ## Log (last 10 lines)
+- 2026-10-29 · #73 review 🔴 · FIX → CHECK (owner Lead) · channelsFrom by rule: conditions never count ("even if" included), negated clauses say nothing, PDF needs an affirmative upload clause, Online an affirmative file-online instruction; fail tests: the even-if sentence → nothing, "Do not upload …; if you apply online, fill it in the portal" → Online only. canada 71, finder 138, qa filing 9/9. US$0.
 - 2026-10-28 · #73 review · FIX → CHECK (owner Lead) · channelsFrom (QA-61): a negated sentence is read clause by clause (";", ",", " but ", " instead"); a negated clause or a bare condition says nothing, an affirmative clause counts ("Do not mail this form, upload it …" is PDF). Pass and fail tests: canada 68, finder 138, qa filing 9/9. US$0.
 - 2026-10-28 · R69 + QA-65..68 · FIX → CHECK (owner Lead) · applied Lead message (take QA-65..68): QA-65 case reads need a known person, POST configuration reads guarded (ConfigRead); QA-66/67 = R69-1/2 proved; QA-68 send again with what changed only (API 400 on a name or meaning). qa53 20, finder 138, library browser 65; full run-suites on 5600ac06 47/47. US$0.
 - 2026-10-28 · R69 · FIX · applied Lead note 28 Oct (sixth chat): synced main 38722933; R69-1 returned form change keeps its state and Withdraw, R69-2 person in the list key, R69-3 both-refused greyed (proved), takesEffect for Retire/Restore only; pass and fail tests: finder 137, library browser 61. Full run-suites stopped at 2.1 GB free (rule: 3 GB); old forms test databases dropped. US$0.
@@ -44,4 +46,3 @@ updated: 2026-10-28
 - 2026-10-28 · PR #67 review · BUILD → CHECK (owner Lead) · resend fix pushed (8939a822); touched suites alone on fx copies: finder 124, runs 88, structure r3 41, structure 83, screen02 fix 61 (its QA-53 officer step is in 1a975003: the edit was not in f56442a2 as reported). US$0.
 - 2026-10-28 · PR #67 review · BUILD · synced main 3858216e; a returned library form change (delete, retire, restore) is sent again by the form's own rule: Lifecycle.resubmit has a library_form branch that reads formUses leaving the change itself out of the open-change check, checks the action again and marks it WAITING (before: the form number was read as a combination id, 409). Pass and fail tests in the finder check, incl. a returned retire sent again after its last use was removed: finder 124/124. US$0.
 - 2026-10-28 · W1 lifecycle (forms) · BUILD · the form library on the shared lifecycle components (P-116 amended): one written row action from the guard (Delete, Retire, Restore, Withdraw for my own waiting change), greyed with the guard's reason as visible text under the row (aria-describedby), the confirm in the right panel (ImpactPanel) with Undo, Retire and Delete gone from the ⋯ menu; each earlier edition says what keeps it (Kept by Release N of … and K open cases; never deleted). library browser 57/57, runs 88/88. US$0.
-- 2026-10-28 · QA-53 · CHECK → BUILD · applied Lead message 28 Oct (S4 merged, PR #65 06a8fc30): synced main; QA-53 one shared guard (ConfigReadGuard, APP_GUARD): every GET under /api is a configuration read (nobody and an unknown name 401, case people 403) unless marked: CaseRead (runtime controllers, releases, activity), OpenRead (session, three file links). New check_forms_qa53.ts reads every GET route from the code (pass and fail per route; the exception list is reviewed): 13/13. US$0.
