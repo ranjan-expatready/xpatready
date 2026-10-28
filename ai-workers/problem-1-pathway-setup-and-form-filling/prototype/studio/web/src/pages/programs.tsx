@@ -99,6 +99,7 @@ export function ProgramsPage() {
   // P-128 (5): Add combination opens the one pop-up here; the new card is tagged Just added and said on the page.
   const [adding, setAdding] = React.useState<AddPrefill | null>(null);
   const [justAdded, setJustAdded] = React.useState<string | null>(null);
+  const showAdded = React.useRef<string | null>(null); // the card to bring into view once, right after an Add
   const [note, setNote] = React.useState<string | null>(null);
   const [typed, setTyped] = React.useState(q);
   React.useEffect(() => setTyped(q), [q]);
@@ -173,7 +174,9 @@ export function ProgramsPage() {
   const busy = cat.isPlaceholderData;
   // After Add: a filter that would hide the new card is cleared, so it shows in place (board P2, "After Add").
   React.useEffect(() => {
-    if (!justAdded || !cat.data || cat.isPlaceholderData || rows.some((r) => r.nodeKey === justAdded)) return;
+    const k = showAdded.current;
+    if (!k || !cat.data || cat.isPlaceholderData) return;
+    if (rows.some((r) => r.nodeKey === k)) { showAdded.current = null; return; }
     set({ q: null, n: null, prog: null, under: null, p: null, ...(filter !== "all" && filter !== "not_started" ? { f: null } : {}) });
   }, [justAdded, cat.data, cat.isPlaceholderData]); // eslint-disable-line react-hooks/exhaustive-deps
   React.useEffect(() => {
@@ -217,16 +220,16 @@ export function ProgramsPage() {
             <ViewSwitch value={view} onChange={(v) => { setView(v); set({ v: null }, true); }} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-[15rem] flex-[1_1_15rem]">
+            <div className="relative min-w-[19rem] flex-[1_1_19rem]">
               <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden />
-              <Input ref={search} maxLength={120} className="pl-8 pr-14" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Search names, form numbers, documents" aria-label="Search combinations, form numbers and documents" aria-keyshortcuts="Meta+K Control+K" />
+              <Input ref={search} maxLength={120} className="pl-8 pr-14" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Search names, forms, documents" aria-label="Search combinations, form numbers and documents" aria-keyshortcuts="Meta+K Control+K" />
               {typed ? <button type="button" className="absolute right-1 top-1 rounded p-1.5 text-text-muted hover:bg-text/5" aria-label="Clear search" onClick={() => { setTyped(""); set({ q: null }); }}><X className="size-4" /></button>
                 : <kbd className="pointer-events-none absolute right-2 top-2 rounded border border-border px-1.5 text-xs text-text-muted">⌘K</kbd>}
             </div>
             {cat.data && sections.length ? (
               <div role="group" aria-label="Pathway" className="flex flex-wrap items-center gap-1.5" data-pathway-chips>
                 {[{ key: "", label: "All", count: allCount, needs: sections.reduce((n, x) => n + x.needs, 0), idx: -1 }, ...sections.map((x, i) => ({ key: x.pathwayKey, label: x.label, count: x.combinations, needs: x.needs, idx: i }))].map((c) => (
-                  <Tip key={c.key || "all"} tip={c.key ? `Shows only ${c.label}'s combinations.${c.needs ? ` ${c.needs} need you.` : ""}` : `Shows every ${typeLabel} pathway's combinations.`}>
+                  <Tip key={c.key || "all"} tip={`${c.key ? `Shows only ${c.label}'s combinations.` : `Shows every ${typeLabel} pathway's combinations.`} The number counts them; "need you" counts those waiting for a person.`}>
                     <button type="button" aria-pressed={answered === c.key} onClick={() => set({ p: c.key || null, prog: null, under: null }, true)} data-pathway-chip={c.key || "all"}
                       className={cn("inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", answered === c.key ? "border-primary/40 bg-primary/10 font-semibold text-text-link" : "border-border-strong bg-surface-raised text-text hover:bg-text/5")}>
                       {c.idx >= 0 ? <span className="h-3.5 w-1 rounded-sm" style={{ background: pathwayAccent(c.idx) }} aria-hidden /> : null}{c.label}<span className="text-xs font-medium tabular-nums text-text-muted" data-count>{c.count}</span>
@@ -256,7 +259,7 @@ export function ProgramsPage() {
             {busy ? <span className="mr-1.5 inline-block size-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary align-[-1px]" role="status" aria-label="Updating" /> : null}
             <b className="font-semibold text-text">{q ? `${counts.all} of ${many(scopeTotal, "combination", "combinations")} match` : many(counts.all, "combination", "combinations")}</b>{pathwayLabel ? ` in ${pathwayLabel}` : ""}
             {([["live", "Live"], ["not_ready", "Not ready"], ["in_setup", "In setup"], ["not_started", "Not started"]] as const).filter(([k]) => counts[k]).map(([k, w]) => ` · ${counts[k]} ${w}`).join("")}
-            {filter !== "all" || needsOnly ? ` · showing ${rows.length} of ${allCount}` : ""}
+            {filter !== "all" ? ` · showing ${rows.length} ${statusWord}` : needsOnly ? ` · showing ${rows.length} that need you` : ""}
             {activeChips.length ? <span className="ml-2 inline-flex flex-wrap items-center gap-1.5 align-middle" data-active-filters>
               {activeChips.map((c) => <span key={c.key} className="inline-flex h-6 items-center gap-1 rounded-full border border-primary/40 bg-primary/10 pl-2.5 pr-1 text-xs font-medium text-text-link">{c.label}<button type="button" aria-label={`Remove the filter ${c.label}`} onClick={c.clear} className="flex size-4 items-center justify-center rounded-full hover:bg-primary/15"><X className="size-3" /></button></span>)}
               <button type="button" className="text-sm font-medium text-text-link underline underline-offset-2" onClick={() => { setTyped(""); set({ p: null, prog: null, under: null, f: null, n: null, q: null }); }} data-clear-all>Clear all</button>
@@ -295,8 +298,8 @@ export function ProgramsPage() {
       </div>
       {step.dialog}
       <AddToStructure open={!!adding} onClose={() => setAdding(null)} type={pathway as PathwayType} prefill={adding ?? undefined}
-        onAdded={(r, again) => { setJustAdded(r.leaf.key); setNote(`Added ${r.trail.join(" › ")}${r.combination ? ": listed here as Not started; no setup started." : ". Add a category under it to list a combination here."}`); if (!again) setAdding(null); }}
-        onShow={(k) => { setAdding(null); setJustAdded(k); }} />
+        onAdded={(r, again) => { showAdded.current = r.leaf.key; setJustAdded(r.leaf.key); setNote(`Added ${r.trail.join(" › ")}${r.combination ? ": listed here as Not started; no setup started." : ". Add a category under it to list a combination here."}`); if (!again) setAdding(null); }}
+        onShow={(k) => { setAdding(null); showAdded.current = k; setJustAdded(k); }} />
     </TipProvider>
   );
 }

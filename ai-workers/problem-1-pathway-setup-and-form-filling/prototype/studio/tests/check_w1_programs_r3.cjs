@@ -61,7 +61,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== the filter bar (P-128 (4), board P2)
   await open();
   step("C11.10 P-128 (4): no Pathway cards and no '+ Add pathway'; one filter bar with chips, Program, Status and Needs you", await p.locator("[data-pathway-cards]").count() === 0 && await p.getByRole("button", { name: /Add pathway/ }).count() === 0 && await p.locator("[data-filter-bar] [data-pathway-chips]").count() === 1 && await p.locator("[data-program-filter]").count() === 1 && await p.getByRole("button", { name: /^Status:/ }).count() === 1 && await p.locator("[data-needs-you]").count() === 1);
-  const chipCounts = await p.locator("[data-pathway-chip]").evaluateAll((a) => a.map((x) => `${x.getAttribute("data-pathway-chip")}:${x.querySelector("[data-count]")?.textContent}:${x.querySelector("[data-need]")?.textContent ?? 0}`));
+  const chipCounts = await p.locator("[data-pathway-chip]").evaluateAll((a) => a.map((x) => `${x.getAttribute("data-pathway-chip")}:${x.querySelector("[data-count]")?.textContent}:${parseInt(x.querySelector("[data-need]")?.textContent ?? "0", 10)}`));
   const want = ["all:" + cat.rows.filter((r) => !r.retired).length + ":" + needsYou, ...cat.sections.map((s) => `${s.pathwayKey}:${s.combinations}:${s.needs}`)];
   step("C11.10 R3-6: the chips' counts and need-you counts are the catalogue's", JSON.stringify(chipCounts) === JSON.stringify(want), `${chipCounts.join(" ")} vs ${want.join(" ")}`);
   step("C11.10 R3-6: Needs you shows how many wait on a person", (await p.locator("[data-needs-you]").innerText()).replace(/\s+/g, " ").trim() === `Needs you ${needsYou}`, await p.locator("[data-needs-you]").innerText());
@@ -88,7 +88,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== Add combination: the one pop-up, here (P-128 (5))
   await p.locator("[data-add-combination]").click(); await dialog().waitFor();
-  step("C11.3 P-128 (5): Add combination opens the Add to Program structure pop-up here, prefilled with the Pathway and Program filters", new URL(p.url()).pathname === "/" && (await field("pathway").inputValue()) === tr.label && (await field("program").inputValue()) === "Work permits");
+  step("C11.3 P-128 (5): Add combination opens the Add to Program structure pop-up here, prefilled with the Pathway and Program filters", new URL(p.url()).pathname === "/" && (await field("pathway").inputValue()) === tr.label && (await field("program").inputValue()) === "Work permits", `${new URL(p.url()).pathname} · ${await field("pathway").inputValue()} · ${await field("program").inputValue()}`);
   await p.waitForTimeout(300);
   step("C11.3 AD-8: it starts at the first empty level (Category)", await field("category").evaluate((e) => e === document.activeElement));
   await field("category").fill("Temporary resident permit (test)"); await p.waitForTimeout(500);
@@ -108,8 +108,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.waitForFunction(() => !new URLSearchParams(location.search).get("f"), null, { timeout: 8000 }).catch(() => undefined);
   await p.locator("article[data-node]").filter({ has: p.locator("[data-just-added]") }).first().waitFor({ timeout: 8000 }).catch(() => undefined);
   step("C11.3 board P2 'After Add': a Status filter that would hide the new card is cleared, so it shows in place", !new URLSearchParams(new URL(p.url()).search).get("f") && /Hidden by the filter \(test\)/.test(await p.locator("article[data-node]").filter({ has: p.locator("[data-just-added]") }).innerText().catch(() => "")), p.url());
+  await chip(tr.label).click(); await p.locator("[data-needs-you]").click();
   await p.locator("[data-clear-all]").click();
   await p.waitForFunction(() => !/[?&](p|prog|f|n|q)=/.test(location.search));
+  await p.waitForFunction((k) => document.querySelectorAll("article[data-node]").length === k, cat.rows.filter((r) => !r.retired).length + 2, { timeout: 8000 }).catch(() => undefined);
   step("C11.10 R3-6: Clear all brings back every combination of the tab", await cards().count() === cat.rows.filter((r) => !r.retired).length + 2, await cards().count());
 
   // ======================================================== a reader cannot add

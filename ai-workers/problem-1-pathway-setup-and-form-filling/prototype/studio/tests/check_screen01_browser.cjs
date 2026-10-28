@@ -160,9 +160,9 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   // S2: no Program menu (the board has none); a program in a combination's path still opens the list scoped to it.
   await p.goto(`${BASE}/?prog=individual.work_permits`); await idle(); await listReady();
   await p.waitForFunction(() => location.search.includes("prog=") && [...document.querySelectorAll('[role="row"][data-node]')].every((r) => r.getAttribute("data-node").startsWith("individual.work_permits")), null, { timeout: 5000 }).catch(() => {}); // the filtered list has arrived (review round 3)
-  step("Program scope: only Work permits rows, in path order, with a 'Showing: Work permits' chip", (await grid().locator('[role="row"][data-node]').evaluateAll((rs) => rs.every((x) => x.getAttribute("data-node").startsWith("individual.work_permits")))) && p.url().includes("prog=") && await p.getByRole("button", { name: "Stop showing only Work permits" }).count() === 1);
+  step("Program scope: only Work permits rows, in path order, with a 'Work permits' filter chip (P-128 (4))", (await grid().locator('[role="row"][data-node]').evaluateAll((rs) => rs.every((x) => x.getAttribute("data-node").startsWith("individual.work_permits")))) && p.url().includes("prog=") && await p.getByRole("button", { name: "Remove the filter Work permits" }).count() === 1);
   await state("programs-program-filter-work-permits");
-  await p.getByRole("button", { name: "Stop showing only Work permits" }).click(); await idle();
+  await p.getByRole("button", { name: "Remove the filter Work permits" }).click(); await idle();
 
   await p.keyboard.press("Meta+k"); await p.keyboard.type("imm 5409"); await p.waitForTimeout(400); await idle();
   await grid().getByText("Matches: IMM 5409").first().waitFor({ timeout: 5000 }).catch(() => {}); // a busy machine answers late; the check below still decides

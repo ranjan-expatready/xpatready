@@ -101,7 +101,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   for (const [w, h] of [[1440, 900], [1024, 768]]) {
     await p.setViewportSize({ width: w, height: h }); await p.waitForTimeout(200);
     const sb = await p.getByRole("textbox", { name: /Search combinations/ }).evaluate((x) => { const c = document.createElement("canvas").getContext("2d"); const cs = getComputedStyle(x); c.font = cs.font; const room = x.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); return { w: Math.round(x.getBoundingClientRect().width), need: Math.round(c.measureText(x.placeholder).width), room: Math.round(room) }; });
-    step(`S2 fix 5: at ${w} px the search takes the free width and its hint is not cut`, sb.need <= sb.room && sb.w >= (w === 1440 ? 600 : 300), JSON.stringify(sb));
+    // Since P-128 (4) (board P2) the search shares its line with the Pathway chips, Program, Status and Needs you.
+    step(`S2 fix 5 (P-128 board P2): at ${w} px the search grows into the free width of its line and its hint is not cut`, sb.need <= sb.room && sb.w >= 300, JSON.stringify(sb));
   }
   await p.setViewportSize({ width: 1440, height: 900 });
 
@@ -263,7 +264,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.setViewportSize({ width: w, height: h });
     await p.goto(`${BASE}/structure?node=${encodeURIComponent(tr)}`); await panel().locator("[data-used-by]").waitFor(); await p.waitForTimeout(400);
     let f = await footerFits();
-    step(`S1 fix: at ${w}×${h} the panel's footer (Remove, Retire, Close, Save) is fully on screen without scrolling`, f.ok && f.words.includes("Remove") && f.words.includes("Retire") && f.words.includes("Save"), JSON.stringify(f));
+    // Since P-128 the panel's footer holds the row's one action (here Retire), Close and Save.
+    step(`S1 fix: at ${w}×${h} the panel's footer (its action, Close, Save) is fully on screen without scrolling`, f.ok && f.words.includes("Retire") && f.words.includes("Close") && f.words.includes("Save"), JSON.stringify(f));
     await p.mouse.wheel(0, 600); await p.waitForTimeout(300);
     f = await footerFits();
     step(`S1 fix: at ${w}×${h} the footer stays fully on screen after scrolling the page`, f.ok, JSON.stringify(f));
