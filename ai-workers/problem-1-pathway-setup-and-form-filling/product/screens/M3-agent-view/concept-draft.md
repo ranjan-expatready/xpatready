@@ -31,55 +31,20 @@ Scope follows P-129: agent side only. The client and prospect screens come after
 ## 3. Business rules
 * **BR-1 Filing.** A filing is one application to IRCC on one released combination, with its people. A case holds one or more filings (team AG-7-45). Each filing person has their own pin, all on the filing's release. Facts belong to the person, not the filing, so a second filing reads them and copies nothing. Single-filing UI first. **→ Q1**
 * **BR-2 Open a case.** A case opens only on a combination that is released and not retired (built). People come only within "Who can be in this application" (role and maximum, P-119). "Will be created as" names the case, its filings, its people and the release.
-* **BR-3 Checklist per person.** The checklist comes from the release's document requirements × the person's role × the conditions on that person's facts. It is recomputed when answers change. Each line gives its reason ("Asked because marital status is Married").
-  * Line states use the team's words: Not requested · Requested · Received · Being checked · Approved · Rejected (with a reason) · Not applicable (file kept).
-  * "Uploaded to IRCC" is a separate tick.
-  * The document belongs to the person and can be reused across cases. A new passport keeps the old one as history ("evidence replaced").
-* **BR-4 Fill this from documents** (P-134 D4). This is offered per section and never runs on upload. One reader per kind (P-133):
-  * passport coded lines: rules, no AI;
-  * printed documents and tables: Textract in Canada (in production);
-  * letters and foreign records: AI vision on synthetic documents only.
+* **BR-3 Checklist per person.** The checklist comes from the release's document requirements × the person's role × the conditions on that person's facts. It is recomputed when answers change. Each line gives its reason ("Asked because marital status is Married"). Line states use the team's words: Not requested · Requested · Received · Being checked · Approved · Rejected (with a reason) · Not applicable (file kept). "Uploaded to IRCC" is a separate tick. The document belongs to the person and can be reused across cases. A new passport keeps the old one as history ("evidence replaced").
+* **BR-4 Fill this from documents** (P-134 D4). This is offered per section and never runs on upload. One reader per kind (P-133): passport coded lines: rules, no AI; printed documents and tables: Textract in Canada (in production); letters and foreign records: AI vision on synthetic documents only.
 
   Values are stored as proposals (`ReadValue`), apart from the answers, and fill nothing. Typing always works.
 * **BR-5 One row per fact.** Each row shows label · value · **Comes from** (Document · type / Client / Agent; "Employer case" for linked facts) · **state** (Missing · Proposed · Confirmed · To check). Everything else goes in the drawer and the ⋯ menu: page, reader, who, when, and the history of values.
-* **BR-6 Confirm section** (P-72). One action, on the built route; the 409 is kept when the client changed something meanwhile.
-  * A section with a **To check** fact cannot be confirmed.
-  * Identity facts read from a document need a one-click "Matches page" each first (**→ Q3**).
-  * Background and declaration answers are the client's: shown, never confirmed for the client (P-97).
-  * Confirming a document's value makes it VERIFIED, with that document as evidence (research D3: staff only).
-* **BR-7 Typed versus document.** A difference opens one check per person and fact, and it blocks (P-71: a conflicting fact).
-  * The officer picks the document's value, the client's, or another, with a reason; the other value stays on record.
-  * Name differences the passport standard explains (capitals, apostrophes, a shortened coded name) raise nothing.
-  * Equal values only add evidence. Two documents that disagree follow the same rule.
-* **BR-8 Deliverables** (P-122). There is one item per form line × filing person × channel.
-  * The channel is picked on the row (⋯) within what IRCC accepts, and a refused option says why. The combination proposes the default.
-  * A form may also carry a "PDF copy, not for filing".
-  * PDF steps: fill (confirmed facts only) → our check → download → Validate in Adobe → upload the validated copy → read back by position → Uploaded to IRCC.
-  * Our check never says "Validated" (P-46). A form whose fill trial has not passed is "Answer sheet only" (P-65).
-  * Online forms: an answer sheet in portal order; the "Entered" tick per screen freezes the answers it covers (challenge M6).
-* **BR-9 Ready to file** (AV-7).
-  * **Blocks:** an error in our check; a missing, unconfirmed or To check fact on that form; an out-of-date finished item; a missing signature step.
-  * **Warns only:** AI review findings (P-71) and missing documents.
-* **BR-10 Signatures follow the account** (AV-3).
-  * APR Portal: IMM 5476 signed and uploaded; the representative's own declaration at Transmit.
-  * PR Portal: "Client e-signed in the client portal", ticked by the officer from what the portal shows.
-  * Paper: pen signatures per form and signer. A child's signer is the line's `signedBy` or the person picked for the child.
-  * The product has no "sign for the client" action and never asks for or stores a client's portal sign-in.
-* **BR-11 Filing record** (AV-6).
-  * Fields: filed in (from the channels); our reference (typed as the APR "case ID"); submitted on (not after today); per person, the application number (required) and UCI; the fee receipt as a document.
-  * Recording warns, never blocks, and makes the filing read-only. "Correct a number" keeps the history.
-  * Several filings recorded together is one action (team BR-31).
-* **BR-12 Out of date** (P-65, C9.2).
-  * When a fact changes, drafts recompute; copies are never regenerated by themselves (built).
-  * Items that were signed, uploaded, entered or filed get "Out of date". They are never changed. The message names the fact, the old and new values, and the date, with Undo.
-  * After filing the item shows "Filed with an earlier value", and a task asks the officer to re-sign or tell IRCC (**Unconfirmed: no counsel**, research D7).
-* **BR-13 Employer case link** (P-106, AV-4).
-  * Offered only when the filing's forms need employer facts; the officer picks a case under Corporate.
-  * The employer facts show read-only as "Employer case" with a link to it.
-  * A change there marks this filing's finished items out of date. Unlinking asks for a reason, and the facts then show Missing.
-* **BR-14 Team cuts.**
-  * Eligibility: we show only the AG-03 Qualifier's inputs and which are missing. No verdict screen; C6.9 shrinks to inputs.
-  * AI form review: we show the AG-11 Checker's findings and acknowledge them with a reason ("Other" needs a note). Findings are advisory (P-71).
+* **BR-6 Confirm section** (P-72). One action, on the built route; the 409 is kept when the client changed something meanwhile. A section with a **To check** fact cannot be confirmed. Identity facts read from a document need a one-click "Matches page" each first (**→ Q3**). Background and declaration answers are the client's: shown, never confirmed for the client (P-97). Confirming a document's value makes it VERIFIED, with that document as evidence (research D3: staff only).
+* **BR-7 Typed versus document.** A difference opens one check per person and fact, and it blocks (P-71: a conflicting fact). The officer picks the document's value, the client's, or another, with a reason; the other value stays on record. Name differences the passport standard explains (capitals, apostrophes, a shortened coded name) raise nothing. Equal values only add evidence. Two documents that disagree follow the same rule.
+* **BR-8 Deliverables** (P-122). There is one item per form line × filing person × channel. The channel is picked on the row (⋯) within what IRCC accepts, and a refused option says why. The combination proposes the default. A form may also carry a "PDF copy, not for filing". PDF steps: fill (confirmed facts only) → our check → download → Validate in Adobe → upload the validated copy → read back by position → Uploaded to IRCC. Our check never says "Validated" (P-46). A form whose fill trial has not passed is "Answer sheet only" (P-65). Online forms: an answer sheet in portal order; the "Entered" tick per screen freezes the answers it covers (challenge M6).
+* **BR-9 Ready to file** (AV-7). **Blocks:** an error in our check; a missing, unconfirmed or To check fact on that form; an out-of-date finished item; a missing signature step. **Warns only:** AI review findings (P-71) and missing documents.
+* **BR-10 Signatures follow the account** (AV-3). APR Portal: IMM 5476 signed and uploaded; the representative's own declaration at Transmit. PR Portal: "Client e-signed in the client portal", ticked by the officer from what the portal shows. Paper: pen signatures per form and signer. A child's signer is the line's `signedBy` or the person picked for the child. The product has no "sign for the client" action and never asks for or stores a client's portal sign-in.
+* **BR-11 Filing record** (AV-6). Fields: filed in (from the channels); our reference (typed as the APR "case ID"); submitted on (not after today); per person, the application number (required) and UCI; the fee receipt as a document. Recording warns, never blocks, and makes the filing read-only. "Correct a number" keeps the history. Several filings recorded together is one action (team BR-31).
+* **BR-12 Out of date** (P-65, C9.2). When a fact changes, drafts recompute; copies are never regenerated by themselves (built). Items that were signed, uploaded, entered or filed get "Out of date". They are never changed. The message names the fact, the old and new values, and the date, with Undo. After filing the item shows "Filed with an earlier value", and a task asks the officer to re-sign or tell IRCC (**Unconfirmed: no counsel**, research D7).
+* **BR-13 Employer case link** (P-106, AV-4). Offered only when the filing's forms need employer facts; the officer picks a case under Corporate. The employer facts show read-only as "Employer case" with a link to it. A change there marks this filing's finished items out of date. Unlinking asks for a reason, and the facts then show Missing.
+* **BR-14 Team cuts.** Eligibility: we show only the AG-03 Qualifier's inputs and which are missing. No verdict screen; C6.9 shrinks to inputs. AI form review: we show the AG-11 Checker's findings and acknowledge them with a reason ("Other" needs a note). Findings are advisory (P-71).
 
 ## 4. Layout and states
 **Pattern.** Workspace (EXPERIENCE §3). The case tabs are one row: Overview · **Prepare application** · Filing record · History. The header holds the trail, a filing chip per filing, and one primary action ("Next: …").
@@ -100,33 +65,13 @@ Scope follows P-129: agent side only. The client and prospect screens come after
 
 ## 6. Contract sketch and tests
 **Reuse (challenge M2).**
-* `POST cases` gains `filings[]`.
-* `PUT cases/:id/answers/:subject/:field` gains `markedOutOfDate[]` in its response.
-* `POST cases/:id/sections/:section/confirm` refuses with 409 `open_checks` when a To check fact is open.
-* `GET cases/:id/forms`, generate and lock become the PDF item's steps 1–3 and 7.
+`POST cases` gains `filings[]`. · `PUT cases/:id/answers/:subject/:field` gains `markedOutOfDate[]` in its response. · `POST cases/:id/sections/:section/confirm` refuses with 409 `open_checks` when a To check fact is open. · `GET cases/:id/forms`, generate and lock become the PDF item's steps 1–3 and 7.
 
 **New.**
-* `GET filings/:fid/prepare` → `{filing, people[{subject, role, applicationNumber, uci}], stages[{key, done, total}], items[{id, kind, form?, subject, channel, state, blocks[]}], readiness, version}`.
-* `GET filings/:fid/checklist?subject=` and `POST checklist-lines/:id/{request|reject|not-applicable}`.
-* `POST documents` (upload, the person as owner, `onBehalfOf`); `POST sections/:s/read-documents` → `ReadValue[]`; `POST read-values/:id/{matches-page|use|ignore}`.
-* `POST conflicts/:id/resolve {use, value?, reason, note?}`.
-* `PATCH items/:id/channel` (refused with `reason` outside `acceptedChannels`); `POST items/:id/validated-copy` (read-back result); `POST items/:id/screens/:k/entered` (freezes the answers); `POST items/:id/sign-steps/:k`.
-* `PATCH filings/:fid/record`, `POST filings/:fid/record/corrections`.
-* `POST filings/:fid/employer-link {caseId}` / `DELETE … {reason}`.
-* `POST review-findings/:id/acknowledge`.
-* Every write carries a version (409 → Reload). Errors are Problem Details, shown on the field.
+`GET filings/:fid/prepare` → `{filing, people[{subject, role, applicationNumber, uci}], stages[{key, done, total}], items[{id, kind, form?, subject, channel, state, blocks[]}], readiness, version}`. · `GET filings/:fid/checklist?subject=` and `POST checklist-lines/:id/{request|reject|not-applicable}`. · `POST documents` (upload, the person as owner, `onBehalfOf`); `POST sections/:s/read-documents` → `ReadValue[]`; `POST read-values/:id/{matches-page|use|ignore}`. · `POST conflicts/:id/resolve {use, value?, reason, note?}`. · `PATCH items/:id/channel` (refused with `reason` outside `acceptedChannels`); `POST items/:id/validated-copy` (read-back result); `POST items/:id/screens/:k/entered` (freezes the answers); `POST items/:id/sign-steps/:k`. · `PATCH filings/:fid/record`, `POST filings/:fid/record/corrections`. · `POST filings/:fid/employer-link {caseId}` / `DELETE … {reason}`. · `POST review-findings/:id/acknowledge`. · Every write carries a version (409 → Reload). Errors are Problem Details, shown on the field.
 
 **Tests: one pass and one fail per rule, for example:**
-* BR-1: a family with three applicants gives one filing and three applicant rows; a fourth child above the maximum → refused.
-* BR-3: married → marriage certificate line; changed to single → line "Not applicable", file kept.
-* BR-4: upload alone proposes nothing; Fill → proposals; the form is unchanged until confirmed.
-* BR-6: confirming with an open check → 409; identity facts not matched → refused.
-* BR-7: an equal value → no check, evidence added; a different one → a check; resolving with no reason → refused.
-* BR-8: Online on a PDF-only form → refused with the reason; read-back with a shifted value → flagged.
-* BR-9: an AI finding open → still ready; an out-of-date signed scan → blocked.
-* BR-11: a missing application number → refused on the field; a date after today → refused; writes after recording → 409.
-* BR-12: a change after signing → the signed file is byte-identical and marked out of date; Undo clears the mark.
-* BR-13: a change on the employer case → the worker's uploaded item goes out of date.
+BR-1: a family with three applicants gives one filing and three applicant rows; a fourth child above the maximum → refused. · BR-3: married → marriage certificate line; changed to single → line "Not applicable", file kept. · BR-4: upload alone proposes nothing; Fill → proposals; the form is unchanged until confirmed. · BR-6: confirming with an open check → 409; identity facts not matched → refused. · BR-7: an equal value → no check, evidence added; a different one → a check; resolving with no reason → refused. · BR-8: Online on a PDF-only form → refused with the reason; read-back with a shifted value → flagged. · BR-9: an AI finding open → still ready; an out-of-date signed scan → blocked. · BR-11: a missing application number → refused on the field; a date after today → refused; writes after recording → 409. · BR-12: a change after signing → the signed file is byte-identical and marked out of date; Undo clears the mark. · BR-13: a change on the employer case → the worker's uploaded item goes out of date.
 
 Also: the keyboard path through the list and the drawers (Esc closes, focus returns); axe on every state; 1440 and 1024 px (P-101 amended).
 
