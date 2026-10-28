@@ -36,7 +36,7 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 | W2 | Immigration expert: second-person approvals, release gate, Sample values confirmed | screens · runtime | W1-13 | Not started |
 | W3 | AI wherever designed: describe what you need, propose facts from documents, AI review, new-edition impact | forms | W2 | Not started |
 | W4 | Case officer / agent view (includes the P-113 answer sheet in portal order for portal-only forms): open case, filing route per application, channel per form inside it (P-114), case link to an employer case (P-106), confirm section by section, prepare and record the filing | m3 (design now: IRCC representative-portal research) | W2 | Concept research |
-| W5 | Client and prospect: PQR, SQR, sign | runtime | W4 | Not started |
+| W5 | Client and prospect: PQR, SQR, sign — **after M3 (P-129: agent first)** | runtime | M3 gate | Not started |
 | W6 | Browser extension for online fill (unpark; capture does not return). Carry the PR #37 review findings: a repeated fill keeps Undo; portal option codes are checked for client details | forms | W5 | Parked |
 
 **Founder asks of 26 Oct, one line each** (44 asks, where each lives, status, and the gaps still open for the founder): `screens/W1-baseline/founder-asks.md`. Progress page for the founder: `design/end-to-end-progress.html`. Keep all three in step.
