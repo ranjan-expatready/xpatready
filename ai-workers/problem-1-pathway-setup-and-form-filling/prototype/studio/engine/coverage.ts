@@ -2,7 +2,7 @@
 // field needs, for a person role the combination has, is asked in a selected library section or filled by the case
 // officer. What is left is a gap, named by fact and role with the fix; a gap blocks release (engine/validate.ts). The
 // sample data is fixed when a gap shows, never the rule. Carried by a linked case comes later (P-106, the case link).
-import { peopleFor, render } from "./render.ts";
+import { peopleFor, render, type Person } from "./render.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { documentFacts } from "./sources.ts";
 
@@ -11,12 +11,24 @@ export const COVERAGE_FIXES = "ask it in a library section this combination uses
 
 /** The gaps for the largest household the combination allows (each role at its most, at least one, two at most), so a
  *  fact only a child's form needs is found too. Form fields about someone the combination does not have stay blank. */
+/** Whether any form field of the snapshot reads a fact (nothing mapped, nothing needed: no render). */
+export const anyMapped = (s: Snapshot) => (s.field_maps as { entries: { outcome: string; fact?: string | null }[] }[]).some((m) => m.entries.some((e) => e.outcome === "mapped" && e.fact));
+const previews = new WeakMap<Snapshot, { people: Person[]; r: ReturnType<typeof render> }>();
+/** The largest household the combination allows, rendered once per snapshot (the coverage gate and W1-15's sources
+ *  both read it; the catalogue validates every combination, STANDARDS §9). */
+export function previewRender(s: Snapshot) {
+  let x = previews.get(s);
+  if (!x) {
+    const participants = ((s.combination.participants ?? []) as { role: string; max?: number; min?: number }[]).filter((p) => (p.max ?? 0) > 0).map((p) => ({ ...p, preview: Math.max(1, Math.min(p.max ?? 1, 2)) }));
+    const people = peopleFor(participants);
+    x = { people, r: render(s, people, new Map()) }; previews.set(s, x);
+  }
+  return x;
+}
 export function coverageGaps(s: Snapshot): CoverageGap[] {
   // Nothing mapped, nothing needed: no render (the catalogue validates every combination, STANDARDS §9).
-  if (!(s.field_maps as { entries: { outcome: string; fact?: string | null }[] }[]).some((m) => m.entries.some((e) => e.outcome === "mapped" && e.fact))) return [];
-  const participants = ((s.combination.participants ?? []) as { role: string; max?: number; min?: number }[]).filter((p) => (p.max ?? 0) > 0).map((p) => ({ ...p, preview: Math.max(1, Math.min(p.max ?? 1, 2)) }));
-  const people = peopleFor(participants);
-  const r = render(s, people, new Map());
+  if (!anyMapped(s)) return [];
+  const { people, r } = previewRender(s);
   const roleOf = (about: string) => (about === "case" ? "the application" : people.find((p) => p.id === about.split("/")[0])?.role ?? about);
   const field = new Set((s.canonical_fields as { id: string }[]).map((f) => f.id));
   const placed = new Set((s.placements as { fact: string }[]).map((p) => p.fact));

@@ -2,7 +2,8 @@
 // each fact a combination's forms need comes from, per person role, worked out by rules from the snapshot:
 // a document on that role's checklist that supplies it › the client › the agent. A person's choice over that default and
 // the Pre-qualification tick are the snapshot's `fact_sources` (only when set). Pure: no database, no AI (US$0).
-import { peopleFor, render, subjectsFor, type Person } from "./render.ts";
+import { subjectsFor, type Person } from "./render.ts";
+import { anyMapped, previewRender } from "./coverage.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 
@@ -78,9 +79,9 @@ const isAgentFact = (fact: string) => fact.startsWith("representative.") || fact
 /** Every fact the combination's forms need, per person role, with where its answer comes from. The people are the
  *  combination's preview family (as the coverage gate uses), so a role the forms name is always present. */
 export function factSources(s: Snapshot): FactSourceView[] {
-  const participants = ((s.combination.participants ?? []) as { role: string; max?: number; min?: number }[]).filter((p) => (p.max ?? 0) > 0).map((p) => ({ ...p, preview: Math.max(1, Math.min(p.max ?? 1, 2)) }));
-  const people = peopleFor(participants);
-  const r = render(s, people, new Map());
+  // Nothing mapped and nothing chosen: nothing to work out (the catalogue validates every combination).
+  if (!anyMapped(s) && !(s.fact_sources ?? []).length) return [];
+  const { people, r } = previewRender(s);
   const docs = documentFacts(s, people);
   const place = new Map<string, any>(); for (const p of s.placements as any[]) if (!place.has(p.fact)) place.set(p.fact, p);
   const meaning = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, f.meaning ?? f.id]));
