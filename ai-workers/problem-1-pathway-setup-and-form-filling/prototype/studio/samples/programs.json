@@ -365,7 +365,7 @@
     },
     {
      "key": "individual.family_sponsorship.child",
-     "label": "Child",
+     "label": "Dependent child",
      "locations": [
       "inside_canada",
       "outside_canada"
