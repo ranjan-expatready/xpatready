@@ -56,7 +56,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("m5 / P-125 (3): a Not started card's next step is Start setup; its 'i' says what it does, with an example and how cases use it once Live", (await go.innerText()).trim() === "Start setup" && /Creates the setup of "Transit visa \(S3\)" and opens it/.test(tip) && /Once released and Live, new cases for Transit visa \(S3\) use this setup/.test(tip), tip);
   const heldText = (await card(held).innerText()).replace(/\s+/g, " ");
   step("M3: under a waiting deletion Start setup is greyed and the reason is written under it", (await card(held).locator("[data-start-setup]").getAttribute("aria-disabled")) === "true" && heldText.includes(`Can't start setup: a change to "Closing program (S3)" waits for a second person.`), heldText.slice(-200));
-  await card(held).locator("[data-start-setup]").click(); await p.waitForTimeout(500);
+  await card(held).locator("[data-start-setup]").click({ force: true }); await p.waitForTimeout(500);
   step("M3 fail: clicking the greyed Start setup starts nothing", new URL(p.url()).pathname === "/" && sql(`select count(*) from combination c join program_def d on d.id=c.program_def_id where d.program_node_key='${held}'`) === "0");
   await state("card-start-setup");
 

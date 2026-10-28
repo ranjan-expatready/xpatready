@@ -338,6 +338,9 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await p.goto(`${BASE}/new`); await idle();
   step("S3 M2: the New combination page is gone (Page not found, with the way back)", await p.getByText("Page not found").count() === 1 && await p.getByRole("link", { name: "Back to Immigration programs" }).count() === 1);
 
+  // The With an LMIA combination the steps below open (found on the New combination page before S3).
+  const wpId = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.nodeKey === "individual.work_permits.employer_specific.with_lmia").combinationId;
+
   // QA-1 on the shared Release page: a changed combination nobody submitted is held back with the reason.
   await p.goto(`${BASE}/release`); await idle();
   const relRow = p.getByRole("row", { name: /Study permit/ }).first();
