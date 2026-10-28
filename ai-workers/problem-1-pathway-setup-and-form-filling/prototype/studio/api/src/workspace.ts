@@ -8,16 +8,16 @@ import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snaps
 import { questionnairesView } from "../../engine/runtime/questionnaires.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
 import { wordsOnly } from "../../engine/render.ts";
-import { channelProblems, filingKind, filingMethod, signatureOf } from "../../engine/channels.ts";
+import { acceptedChannels, channelProblems, filingKind, filingMethod, signatureOf } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, CHANNELS, type Channel } from "../../contracts/forms.ts";
-import { answeredBy, irccWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
+import { answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { actorOf, Db, fail, readerOf } from "./core.ts";
 import { Studio } from "./studio.ts";
 import { PeopleFromGuide } from "./people-ai.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type Q = { tab?: string; family?: string; person?: string; tweaks?: string; release?: string; role?: string };
-type SnapForm = { form_number: string; title: string; form_kind?: string; who: string; status: string; condition: unknown; condition_plain?: string | null; source_quote?: string | null; origin?: string; channel?: Channel; min_age?: number; signed_by?: string };
+type SnapForm = { form_number: string; title: string; form_kind?: string; who: string; status: string; condition: unknown; condition_plain?: string | null; source_quote?: string | null; origin?: string; channel?: Channel; min_age?: number; signed_by?: string; accepted_channels?: string };
 
 @Injectable()
 export class WorkspaceViews {
@@ -55,9 +55,10 @@ export class WorkspaceViews {
         line: f.form_number, code: f.form_number, title: f.title, document: (f.form_kind ?? "data_form") === "document", edition: map?.form_edition ?? null,
         boxes: map ? map.entries.filter((e) => e.outcome === "mapped").length : 0, who: f.who, minAge: f.min_age ?? null, onlyIf, condition: f.condition ?? null,
         channel, channelWords: CHANNEL_WORDS[channel], signature: (f.form_kind ?? "data_form") === "document" ? null : signatureOf(channel),
-        // What IRCC accepts comes from the Form library (forms lane, S4); until it records it, every way is offered as Sample.
-        accepted: [...CHANNELS], acceptedBasis: "Sample: the Form library does not record what IRCC accepts for this form yet",
-        signedBy: f.signed_by ?? null, signedByLabel: signedByLabel(f.signed_by), origin: f.origin ?? "HUMAN", quote: irccWords(f.source_quote),
+        // Lead check L4: what IRCC accepts comes from the Form library (S4) for the current edition; only when nothing is
+        // recorded is every way offered, as Sample.
+        accepted: acceptedChannels(f.accepted_channels) ?? [...CHANNELS], acceptedBasis: acceptedChannels(f.accepted_channels) ? "From the Form library: what IRCC accepts for this edition" : "Sample: the Form library does not record what IRCC accepts for this form yet",
+        signedBy: f.signed_by ?? null, signedByLabel: signedByLabel(f.signed_by), origin: f.origin ?? "HUMAN", quote: irccWords(f.source_quote), added: ourWords(f.source_quote),
         revision: revisions[`form:${f.form_number}`] ?? "", status: status.get(f.form_number) ?? "DRAFT", version: version.get(f.form_number) ?? 1,
       };
     });

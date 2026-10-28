@@ -48,9 +48,10 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   const [stale, setStale] = React.useState<string | null>(null);
   const [filling, setFilling] = React.useState(false);
   // Slice 3: a proposal from the guide goes into the editor; nothing is saved until the person saves it.
+  // Lead check L8: it starts from the editor's lines, so unsaved edits stay; L3: rules-only lines are the rules', not AI's.
   const useProposal = (pr: PeopleProposal) => {
-    const base = toLines(v).filter((l) => !pr.people.some((x) => x.role === l.role));
-    setLines([...base, ...pr.people.map((x): Line => ({ role: x.role, label: x.label, min: x.min, max: x.max, applies: x.applies, quote: x.quote, origin: "AI_PROPOSAL" }))]);
+    const origin = pr.mode === "rules" ? "CODE_MATCH" : "AI_PROPOSAL";
+    setLines((now) => [...(editing ? now : toLines(v)).filter((l) => !pr.people.some((x) => x.role === l.role)), ...pr.people.map((x): Line => ({ role: x.role, label: x.label, min: x.min, max: x.max, applies: x.applies, quote: x.quote, origin }))]);
     setEditing(true); setFilling(false);
   };
   React.useEffect(() => { if (!editing) setLines(toLines(v)); }, [v, editing]);
@@ -61,7 +62,7 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   const save = async (confirmRemove = false) => {
     setBusy(true); setErrors({});
     try {
-      await api(`/combinations/${id}/people`, { method: "PATCH", json: { participants: lines.map(({ label: _l, ...x }) => x), version: v.version, confirmRemove } });
+      await api(`/combinations/${id}/people`, { method: "PATCH", json: { participants: lines, version: v.version, confirmRemove } });
       toast.push({ tone: "ok", text: "Who can be in this application saved to the draft" }); setEditing(false); setConfirm(null); setStale(null); refresh();
     } catch (e) {
       const err = e as ApiError;
@@ -108,7 +109,7 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
                 ) : howMany(l)}{err(i, "max") || err(i, "min") ? <p role="alert" className="text-xs text-text-danger">{err(i, "max") ?? err(i, "min")}</p> : null}</td>
                 <td className="py-2 pr-3">{editing && !principal && r?.mayBeApplicant ? <label className="flex items-center gap-2"><input type="checkbox" checked={l.applies} onChange={(e) => set(i, { applies: e.target.checked })} aria-label={`${r?.label ?? l.role} files their own application`} /> {l.applies ? "Yes" : "No"}</label> : l.applies ? "Yes" : <span className="text-text-muted">—</span>}{err(i, "applies") ? <p role="alert" className="text-xs text-text-danger">{err(i, "applies")}</p> : null}</td>
                 <td className="py-2 pr-3 text-text-muted">{v.lines.find((x) => x.role === l.role)?.answeredBy ?? (l.role === "child" ? "Principal, under 18" : "Themselves")}</td>
-                <td className="max-w-72 py-2 pr-3 text-xs text-text-muted">{l.quote ? `"${l.quote}"` : l.origin === "AI_PROPOSAL" ? "" : "—"}{l.origin === "AI_PROPOSAL" ? <Pill tone="ai" className="ml-1">AI</Pill> : null}</td>
+                <td className="max-w-72 py-2 pr-3 text-xs text-text-muted">{l.quote ? `"${l.quote}"` : l.origin === "AI_PROPOSAL" || l.origin === "CODE_MATCH" ? "" : "—"}{l.origin === "AI_PROPOSAL" ? <Pill tone="ai" className="ml-1">AI</Pill> : l.origin === "CODE_MATCH" ? <Pill className="ml-1" data-origin-rules>Rules</Pill> : null}</td>
                 {editing ? <td className="py-2">{principal ? null : <Button size="icon" variant="ghost" aria-label={`Remove ${r?.label ?? l.role}`} onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}><X /></Button>}</td> : null}
               </tr>
             );
@@ -136,8 +137,10 @@ type FillMode = "rules" | "replay" | "live";
 const FILL_MODES: [FillMode, string, string][] = [
   ["rules", "Rules only (US$0)", "No AI: rules find the guide's sentences that name each person. How many is a Sample default you check."],
   ["replay", "Use saved AI answers (US$0)", "Replays what AI answered for this exact guide before. Until a live trial records one, it says there is none."],
-  ["live", "AI now (cost shown below)", "Two AI rounds read the guide; only lines both agree on, with their sentence in the guide, are proposed."],
+  ["live", "AI now (not approved yet)", "Two AI rounds read the guide. Waits for the founder's Go for a live trial (P-110); rules only or saved AI answers meanwhile."],
 ];
+/** Lead check L2: AI now is greyed until the founder approves a live trial (the API refuses it too). */
+const LIVE_OFF = true;
 
 /** "Fill from the guide" (slice 3, P-121): the plan and its cost first, then the proposal with IRCC's words. */
 function FillFromGuide({ id, onClose, onUse }: { id: string; onClose: () => void; onUse: (p: PeopleProposal) => void }) {
@@ -166,7 +169,7 @@ function FillFromGuide({ id, onClose, onUse }: { id: string; onClose: () => void
       ) : (
         <div className="space-y-4" data-people-plan>
           <fieldset className="space-y-2"><legend className="text-xs font-medium">How to fill it</legend>
-            {FILL_MODES.map(([m, label, hint]) => <label key={m} className="flex gap-2 text-sm"><input type="radio" name="fill-mode" checked={mode === m} onChange={() => setMode(m)} className="mt-1" /><span><span className="font-medium">{label}</span><br /><span className="text-xs text-text-muted">{hint}</span></span></label>)}
+            {FILL_MODES.map(([m, label, hint]) => <label key={m} className={`flex gap-2 text-sm${m === "live" && LIVE_OFF ? " text-text-muted" : ""}`} data-fill-mode={m}><input type="radio" name="fill-mode" checked={mode === m} onChange={() => setMode(m)} disabled={m === "live" && LIVE_OFF} className="mt-1" /><span><span className="font-medium">{label}</span><br /><span className="text-xs text-text-muted">{hint}</span></span></label>)}
           </fieldset>
           {plan.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p> : plan.error ? <Notice tone="warn" title="It cannot be filled yet">{plan.error.message}</Notice> : plan.data ? (
             <div className="rounded-lg border border-border p-3 text-sm">

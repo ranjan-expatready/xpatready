@@ -8,7 +8,7 @@ import { hasCodes, optionMapProblems, type OptionMap } from "./options.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 
-type Line = { form_number: string; channel?: Channel; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean };
+type Line = { form_number: string; channel?: Channel; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean; accepted_channels?: string };
 /** The parts of the snapshot (engine/snapshot.ts) these rules read. */
 type MapEntry = { data_path: string; caption?: string | null; outcome: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null; row?: number | null; list_purpose?: { kind: string; overflow: string } | null };
 type FieldMap = { form_number: string; form_edition: string; channel?: string; entries: MapEntry[] };
@@ -16,6 +16,17 @@ type FieldDef = { id: string; answer_list?: { key: string; values: { key: string
 const mapsOf = (s: Snapshot) => s.field_maps as FieldMap[];
 const chOf = (l: Line): Channel => l.channel ?? "PDF_UPLOAD";
 export const signatureOf = (c: Channel) => SIGNATURE_WORDS[c];
+/** Lead check L4: the ways a line may be filed, from what the Form library records IRCC accepts for the edition
+ *  (PDF · ONLINE · PDF_OR_ONLINE); null when nothing is recorded (every way is offered, as Sample). */
+export function acceptedChannels(accepts: string | null | undefined): Channel[] | null {
+  if (accepts === "PDF") return ["PDF_UPLOAD", "SIGNED_PDF_UPLOAD"];
+  if (accepts === "ONLINE") return ["ONLINE"];
+  if (accepts === "PDF_OR_ONLINE") return ["PDF_UPLOAD", "ONLINE", "SIGNED_PDF_UPLOAD"];
+  return null;
+}
+const ACCEPTS_SAID: Record<string, string> = { PDF: "a PDF upload", ONLINE: "Online", PDF_OR_ONLINE: "a PDF upload or Online" };
+/** The words for a line filed in a way IRCC does not accept for its edition (on save and at release). */
+export const notAcceptedWords = (form: string, channel: Channel, accepts: string) => `${form} is filed as ${CHANNEL_WORDS[channel]}, but the Form library records that IRCC accepts it only as ${ACCEPTS_SAID[accepts] ?? accepts}. Choose a way IRCC accepts.`;
 
 /** "Online only", "PDF only", "Online + signed PDF uploads", …; a channel that only conditional lines add is said with
  *  its condition ("; plus PDF upload when …"). */
@@ -58,6 +69,8 @@ export function channelProblems(s: Snapshot): Problem[] {
     // W1-02 (break M1): every form is read and filled from its PDF (P-102). A form the library holds only as an online
     // version (parked with the extension, on an older database) has nothing to read or fill: release is refused.
     if ((f.form_kind ?? "data_form") === "data_form" && f.online_only) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} has no PDF edition in the library: forms come in only as their official PDF. Add ${f.form_number}'s PDF from IRCC (Add form), or remove the form from this combination.` });
+    const ok = (f.form_kind ?? "data_form") === "data_form" ? acceptedChannels(f.accepted_channels) : null;
+    if (ok && !ok.includes(chOf(f))) out.push({ level: "error", where: "Forms", item: f.form_number, message: notAcceptedWords(f.form_number, chOf(f), f.accepted_channels!) });
     if (chOf(f) === "ONLINE") out.push({ level: "warning", where: "Forms", item: f.form_number, message: `${f.form_number} is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.` });
   }
   const pdfMaps = mapsOf(s).filter((m) => m.channel !== "ONLINE"); // W1-02: an older release's online maps are parked

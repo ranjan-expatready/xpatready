@@ -27,7 +27,7 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
     if (p.role === PRINCIPAL && !p.applies) errors.push({ field: at("applies"), message: "The principal applicant always files their own application." });
     let applies = p.applies;
     if (applies && r && !r.mayBeApplicant) { if (strict) errors.push({ field: at("applies"), message: `${r.label} is never an applicant: they take part in the case but file no application of their own.` }); applies = false; }
-    return { ...p, applies, label: r?.label ?? p.label ?? p.role };
+    return { ...p, applies, label: p.label?.trim() || r?.label || p.role }; // Lead check L7: a typed label is kept
   });
   if (!list.some((p) => p.role === PRINCIPAL)) errors.push({ field: "participants", message: "Add the principal applicant: every case has exactly one." });
   return { errors, lines };

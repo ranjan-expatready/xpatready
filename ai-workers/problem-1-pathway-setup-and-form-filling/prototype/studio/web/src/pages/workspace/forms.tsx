@@ -95,12 +95,12 @@ export function FormsTab({ id, lines, filing, filingDetail, problems, removed = 
         {lines.map((l) => (
           <tr key={l.line} data-line={l.code}>
             <td><span className="mono font-medium">{l.code}</span><br /><span className="text-xs text-text-muted">{l.title}</span>{l.origin === "AI_FOUND" || l.origin === "AI_PROPOSAL" ? <><br /><Pill tone="ai">Picked by AI · Sample</Pill></> : null}</td>
-            <td className="max-w-56 text-xs text-text-muted">{l.quote ? `"${l.quote.slice(0, 120)}${l.quote.length > 120 ? "…" : ""}"` : "Added by a person"}</td>
+            <td className="max-w-56 text-xs text-text-muted">{l.quote ? `"${l.quote.slice(0, 120)}${l.quote.length > 120 ? "…" : ""}"` : l.added ?? "Added by a person"}</td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">Checklist · not filed</span> : <>{whoLabel(l.who)}{l.minAge ? <span className="text-text-muted"> · {l.minAge}+</span> : null}</>}</td>
             <td className="max-w-56 text-xs"><OnlyIfCell l={l} /></td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
-            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <ReadingCell d={combo} a={attachmentFor(combo, l.code)} />}</td>
+            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} />}</td>
             <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code])} onRemove={() => setRemoving(l)} /></> : null}</td>
           </tr>
         ))}
@@ -120,6 +120,14 @@ export function FormsTab({ id, lines, filing, filingDetail, problems, removed = 
       {picker}{toast.node}
     </div>
   );
+}
+
+/** Lead check L11: a set-up line whose form fields the library already matched has no AI step left; a line still being
+ *  read or drafted keeps its step. */
+function LineReading({ combo, l }: { combo: Combo; l: WorkspaceFormLine }) {
+  const a = attachmentFor(combo, l.code);
+  if (l.boxes > 0 && (!a || ["RECOGNISED", "READ", "IN_LIBRARY"].includes(a.status))) return <span className="mt-1 inline-flex" data-line-matched><Pill tone="ok">In the library</Pill></span>;
+  return <ReadingCell d={combo} a={a} />;
 }
 
 /** The one Undo of the page (P-116 amended): the newest change on this combination's forms, named, while the draft is

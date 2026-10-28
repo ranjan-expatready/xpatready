@@ -18,6 +18,7 @@ export const isNode = (n: unknown) => nodeValid(n) as boolean;
 /** `label` is the item in words (a question's meaning) where `item` is a field code; screens show it, never the code. */
 export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string };
 const ORDERED = new Set(["gt", "gte", "lt", "lte"]);
+const BIRTH = "person.date_of_birth";
 
 export function checkCondition(tree: any, fieldTypes: Map<string, string>, derived: Set<string>): string[] {
   if (!tree) return [];
@@ -47,6 +48,9 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     for (const e of checkCondition(f.condition, types, derived)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Condition ${e}.` });
     // S5 (challenge M1): "Only if" in words with no rule cannot be evaluated on a case, so it is never released as is.
     if (f.status === "conditional" && !f.condition) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Turn "${f.condition_plain ?? "only if"}" into a rule: the condition is in words only, so a case cannot tell whom ${f.form_number} applies to. Open the form on the Forms tab and build the rule.` });
+    // Lead check L5: a minimum age is decided by each person's date of birth (engine/render.ts ageGate asks it as a
+    // deciding question); with nobody asked for it the form could never be decided, so release is refused.
+    if (f.min_age && !placed.has(BIRTH) && !docFacts.has(BIRTH)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} applies from age ${f.min_age}, so each person's date of birth decides it, but nobody is asked for a date of birth in this combination. Add the date of birth question to this combination's questionnaire, or clear the minimum age.` });
     if ((f.form_kind ?? "data_form") === "data_form" && !s.field_maps.some((m) => m.form_number === f.form_number)) out.push({ level: "warning", where: "Forms", item: f.form_number, message: "No field map yet: the form cannot be filled." });
   }
   const unplaced = new Map<string, number>();

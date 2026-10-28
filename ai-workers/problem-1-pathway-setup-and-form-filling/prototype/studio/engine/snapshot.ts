@@ -100,7 +100,11 @@ export async function buildSnapshots(db: PrismaClient, workspaceId: string, comb
 function formEditions(f: { channel?: string | null; form: { editions: FormEdition[] } }, portalKey: string | null) {
   const eds = f.form.editions;
   const online = eds.filter((e) => e.channel === "ONLINE"), pdf = eds.filter((e) => e.channel !== "ONLINE");
-  return { ...(f.channel === "ONLINE" ? { online_versions: online.filter((e) => e.portalKey === portalKey).length } : {}), ...(online.length && !pdf.length ? { online_only: true } : {}) };
+  // Lead check L4: what IRCC accepts for the current PDF edition (S4's Form library), only when it is recorded, so a
+  // configuration without it keeps its fingerprint; the channel rules refuse a line filed another way.
+  const accepts = [...pdf].sort(compareEditions).at(-1)?.acceptedChannels;
+  return { ...(f.channel === "ONLINE" ? { online_versions: online.filter((e) => e.portalKey === portalKey).length } : {}), ...(online.length && !pdf.length ? { online_only: true } : {}),
+    ...(accepts === "PDF" || accepts === "ONLINE" || accepts === "PDF_OR_ONLINE" ? { accepted_channels: accepts } : {}) };
 }
 
 function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; sections: any[]; questions: any[]; doctypes: any[]; derived: any[]; selections: any[]; cforms: any[]; requirements: any[]; rules: any[]; checks: any[]; allMaps: any[]; shared: { lists: Map<string, { key: string; label: string }[]>; effFields: any[]; effSections: any[]; effQuestions: any[]; effTypes: any[]; entriesOf: (editionId: string) => any[] } }): { snapshot: Snapshot; sha256: string } {
@@ -133,6 +137,8 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   for (const m of fieldMaps) for (const e of m.entries) if (e.fact) used.add(e.fact);
   const conds = [...forms.map((f) => f.predicateJson), ...effReq.map((r) => r.predicateJson), ...effRules.map((r) => r.predicateJson), ...effQuestions.map((q) => q.predicateJson)];
   for (const c of conds) if (c) for (const m of JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)) used.add(m[1]);
+  // Lead check L5: a minimum age is decided by each person's date of birth, so its question travels with the forms.
+  if (forms.some((f) => f.minAge)) used.add("person.date_of_birth");
   for (const d of derived) if ([...used].includes(d.derivedKey)) for (const i of [...d.inputs, d.reference]) used.add(i);
   const placements = effQuestions.filter((q) => selected.has(q.sectionKey) || used.has(q.canonicalFieldKey));
   for (const p of placements) used.add(p.canonicalFieldKey);
