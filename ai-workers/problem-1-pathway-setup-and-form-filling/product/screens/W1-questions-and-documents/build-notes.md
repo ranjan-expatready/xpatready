@@ -1,5 +1,10 @@
 # W1-15 Questions and documents (P-130–P-132) — build notes (runtime lane)
 
+## Outside review items (29 Oct, Lead note; Devin backbone review DV-bb-3, DV-bb-6a)
+* **DV-bb-3:** "Add a form from the library" said "Upload an IRCC PDF below" with nothing below. With no form or no match it now says a new form enters the library first and links to the Form library ("upload it in the Form library"), where Upload PDF is. The older panel that has an upload under the picker keeps "Upload the IRCC PDF below" (`FormPicker uploadBelow`). `web/src/components/forms.tsx`.
+* **DV-bb-6a:** the default people and the sample combinations called the child role "Dependent child"; they now use the shared library's label, "Child" (P-108). A label typed on purpose ("Child (travelling)") is kept (L7). `contracts/programs.ts` DEFAULT_PARTICIPANTS, `samples/programs.json`.
+* Test `tests/check_dv_backbone_browser.cjs` 8/8 (port 4433): a pass and a fail for each.
+
 ## Slice 1: data and rules (BUILD, 29 Oct) → EARLY-LOOK
 Agreed plan: `plan.md`, challenge and Lead response: `challenge.md`. No screen in this slice; the evidence is the API and the engine. AI US$0 (rules only).
 
