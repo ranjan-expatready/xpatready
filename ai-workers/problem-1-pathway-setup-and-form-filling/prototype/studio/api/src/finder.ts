@@ -47,9 +47,12 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
 }
 
 export const FINDER_OPERATION = "find_forms";
-/** Round 3 R3-2: a saved answer belongs to this combination when its own names (the last two levels of the trail) are
- *  the same: renaming a level above it (a program) keeps its replay; another combination (other names) never gets it. */
-const sameCombination = (saved: string | undefined, trail: string) => !!saved && saved.split(" › ").slice(-2).join(" › ") === trail.split(" › ").slice(-2).join(" › ");
+/** Lead decision 28 Oct (drift check #9): a saved answer belongs to the combination itself, by its key, which no rename
+ *  changes (round 3 R3-2); a same-named combination anywhere else never gets it. A run records the key as its job's
+ *  combination; the 27 Oct live pass, made before that, is named in samples/finder-saved-runs.json. A run with neither
+ *  is never replayed. */
+const LEGACY_RUN_KEYS: Record<string, string> = (() => { try { return JSON.parse(readFileSync(join(STUDIO, "samples", "finder-saved-runs.json"), "utf8")).runs ?? {}; } catch { return {}; } })();
+const runKey = (r: SavedRun): string | null => { const c = r.drafting_run?.inputs?.combination; return c && !c.includes(" › ") ? c : LEGACY_RUN_KEYS[r.file] ?? null; };
 /** Saved run files, newest first by the time in their name (after "-live-"), whatever the job id before it. */
 const newestFirst = (a: string, b: string) => b.slice(b.lastIndexOf("-live-")).localeCompare(a.slice(a.lastIndexOf("-live-")));
 /** Break minor 1: an answer is used only in the shape its schema promises (a wrong shape never crashes the run). */
@@ -124,6 +127,25 @@ async function trailOf(db: Db, combinationId: string): Promise<{ id: string; wor
   const trail: string[] = [];
   for (let n = by.get(c.program.programNodeKey); n; n = n.parentNodeKey ? by.get(n.parentNodeKey) : undefined) trail.unshift(n.label);
   return { id: c.id, workspaceId: c.workspaceId, label: c.label, trail };
+}
+
+/** Load sample's Sample fixtures (samples/form-library-sample.json): what IRCC accepts per form, a page for a form canada.ca's
+ *  list does not carry, and each sample combination's guide by its key. Read on each Load sample; a broken file is none. */
+type SampleFixtures = { accepts: Record<string, { channels: "PDF" | "ONLINE" | "PDF_OR_ONLINE"; quote: string }>; pages: Record<string, { url: string; why?: string }>; guides: Record<string, { url: string | null; recorded?: string; sha256?: string; why?: string }> };
+export function sampleFixtures(): SampleFixtures {
+  try {
+    const f = JSON.parse(readFileSync(join(STUDIO, "samples", "form-library-sample.json"), "utf8"));
+    const keyed = <T>(o: Record<string, T> | undefined) => Object.fromEntries(Object.entries(o ?? {}).map(([k, v]) => [normaliseCode(k), v]));
+    return { accepts: keyed(f.accepts), pages: keyed(f.pages), guides: f.guides ?? {} };
+  } catch { return { accepts: {}, pages: {}, guides: {} }; }
+}
+/** A recorded official copy (official-sources/ircc/<path>), used only when its bytes still match the checksum recorded with it. */
+function recordedCopy(path: string, sha256?: string): Buffer {
+  const file = join(SOLUTION, "official-sources", "ircc", path);
+  if (!/^[a-z0-9/_.-]+$/i.test(path) || path.includes("..") || !existsSync(file)) throw new CanadaError("not_in_fixtures", `the recorded copy ${path} is missing`);
+  const bytes = readFileSync(file);
+  if (!sha256 || sha(bytes) !== sha256) throw new CanadaError("not_in_fixtures", `the recorded copy ${path} no longer matches its checksum`);
+  return bytes;
 }
 
 /** A text inventory under p1/inventory made from a manifest file whose URL is this page (the guard admits only these). */
@@ -262,6 +284,8 @@ export class Finder implements OnModuleInit {
     const mode: FinderMode = plan.mode;
     const combinationId: string = plan.combination.id;
     const trail = (plan.combination.trail as string[]).join(" › ");
+    // The combination itself (its key): what a saved answer belongs to (Lead decision 28 Oct).
+    const combinationKey = (await this.db.combination.findUnique({ where: { id: combinationId }, select: { combinationKey: true } }))?.combinationKey ?? combinationId;
     const actor = ACTORS.find((a) => a.id === b.startedBy) ?? ACTORS[0];
     const result: FinderResult = { pages: [], printed: [], attach: [], missing: [], decide: [], not_for: [], dropped: [] };
     const wanted = async () => !(await this.db.aiBatch.findUnique({ where: { id: batchId } }))?.cancelRequested;
@@ -278,9 +302,9 @@ export class Finder implements OnModuleInit {
       const inv = inventoryFor(INDEX_URL);
       if (!inv) return { status: "NEEDS_PERSON", message: "canada.ca's list is not among the recorded pages AI may read: choose the application page.", detail: { candidates: sure.candidates }, value: { url: "", title: null, candidates: sure.candidates } };
       await set("AI picks the application package (round 1 of 2)");
-      const d = await this.aiRound<GuideOut>("find_guide", false, trail, [inv], mode, wanted, batchId);
+      const d = await this.aiRound<GuideOut>("find_guide", false, trail, combinationKey, [inv], mode, wanted, batchId);
       await set("A second AI round checks the pick without seeing the first (round 2 of 2)", { costUsd: d.costUsd });
-      const k = await this.aiRound<GuideOut>("find_guide", true, trail, [inv], mode, wanted, batchId);
+      const k = await this.aiRound<GuideOut>("find_guide", true, trail, combinationKey, [inv], mode, wanted, batchId);
       const cost = round2(d.costUsd + k.costUsd);
       if (!d.ok || !k.ok) return { status: (!d.ok && d.blocked) || (!k.ok && k.blocked) ? "BLOCKED" : "NEEDS_PERSON", message: `AI could not pick the page: ${!d.ok ? d.reason : !k.ok ? k.reason : ""}. Choose the application page.`, costUsd: cost, detail: { candidates: sure.candidates }, value: { url: "", title: null, candidates: sure.candidates } };
       const byTitle = (t: string | null) => (t ? idx.packages.find((p) => sameText(p.title) === sameText(t)) : undefined);
@@ -340,13 +364,13 @@ export class Finder implements OnModuleInit {
       const r1 = await this.step<RoundOut<FormsOut> | null>(batchId, "finder_propose", async (set) => {
         if (noInputs) return { status: "FAILED", message: `${noInputs} Use rules only, or record the page first.`, value: null as RoundOut<FormsOut> | null };
         await set(mode === "live" ? "AI reads the pages (guarded live call; stub pass first)" : "Replaying the saved AI answer for these exact pages (US$0)");
-        const o = await this.aiRound<FormsOut>("find_forms", false, trail, inputs, mode, wanted, batchId);
+        const o = await this.aiRound<FormsOut>("find_forms", false, trail, combinationKey, inputs, mode, wanted, batchId);
         return o.ok ? { status: "COMPLETED", message: `AI listed ${o.output.forms.length} form${o.output.forms.length === 1 ? "" : "s"} (${o.from === "replay" ? "saved answer, US$0" : `US$${o.costUsd.toFixed(2)}`}).`, costUsd: o.costUsd, detail: { run_file: o.runFile, from: o.from }, value: o }
           : { status: o.blocked ? "BLOCKED" : o.cancelled ? "CANCELLED" : "FAILED", message: o.reason, costUsd: o.costUsd, value: o };
       });
       const r2 = r1?.status === "COMPLETED" ? await this.step<RoundOut<FormsOut> | null>(batchId, "finder_check", async (set) => {
         await set(mode === "live" ? "The checker reads the same pages without seeing the first answer" : "Replaying the saved checker answer (US$0)");
-        const o = await this.aiRound<FormsOut>("find_forms", true, trail, inputs, mode, wanted, batchId);
+        const o = await this.aiRound<FormsOut>("find_forms", true, trail, combinationKey, inputs, mode, wanted, batchId);
         return o.ok ? { status: "COMPLETED", message: `The checker listed ${o.output.forms.length} form${o.output.forms.length === 1 ? "" : "s"} (${o.from === "replay" ? "saved answer, US$0" : `US$${o.costUsd.toFixed(2)}`}).`, costUsd: o.costUsd, detail: { run_file: o.runFile, from: o.from }, value: o }
           : { status: o.blocked ? "BLOCKED" : o.cancelled ? "CANCELLED" : "FAILED", message: o.reason, costUsd: o.costUsd, value: o };
       }) : null;
@@ -450,7 +474,7 @@ export class Finder implements OnModuleInit {
   }
 
   /** One AI round: replay the newest saved real run of exactly this job (same pages, same prompt), or a guarded live call. */
-  async aiRound<T>(kind: AiKind, isCheck: boolean, trail: string, inputs: { file: string; sha256: string }[], mode: FinderMode, wanted: () => Promise<boolean>, batchId?: string): Promise<RoundOut<T>> {
+  async aiRound<T>(kind: AiKind, isCheck: boolean, trail: string, combinationKey: string, inputs: { file: string; sha256: string }[], mode: FinderMode, wanted: () => Promise<boolean>, batchId?: string): Promise<RoundOut<T>> {
     const s = AI_SETTINGS[kind];
     const template = isCheck ? s.check : s.template;
     const base = `studio-finder-${kind === "find_guide" ? "guide" : "forms"}${isCheck ? "-check" : ""}`;
@@ -458,10 +482,10 @@ export class Finder implements OnModuleInit {
     // Round 2 N3: and of this run, so two combinations with the same names (another pathway) never share one either.
     const jobId = `${base}-${slug(trail).slice(0, 40).replace(/_/g, "-")}-${sha(`${batchId ?? ""}|${trail}`).slice(0, 8)}`;
     const tsha = sha(readFileSync(join(PROMPTS, template)));
-    const same = (r: SavedRun) => r?.drafting_run?.status === "completed" && r.contract_valid === true && r.launch_evidence?.template_sha256 === tsha && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(inputs) && sameCombination(r.launch_evidence?.known?.combination_trail ?? r.drafting_run?.inputs?.combination, trail) && typeof r.raw_output === "string";
+    const same = (r: SavedRun) => r?.drafting_run?.status === "completed" && r.contract_valid === true && r.launch_evidence?.template_sha256 === tsha && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(inputs) && runKey(r) === combinationKey && typeof r.raw_output === "string";
     if (mode === "replay") {
-      // Break M7, round 2 N4, round 3 R3-2: a saved answer is found by what the AI was given (the same pages, the same prompt,
-      // the same combination by its own names), never by a file name; another combination's answer is never reused. Round 2 m-a: an
+      // Break M7, round 2 N4, round 3 R3-2: a saved answer is found by what the AI was given (the same pages, the same prompt)
+      // and by the combination's key, never by a file name or names; another combination's answer is never reused. Round 2 m-a: an
       // unreadable or wrong-shape answer is skipped and an older good one is used.
       const mine = new RegExp(`^${base}-${isCheck ? "" : "(?!check-)"}.+-live-.+\\.json$`);
       const r = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f)).sort(newestFirst) : []).map((f): SavedRun | null => { try { return { ...JSON.parse(readFileSync(join(RUNS, f), "utf8")), file: f }; } catch { return null; } }).find((x): x is SavedRun => !!x && same(x) && (() => { try { return shapeOk(kind, JSON.parse(String(x.raw_output))); } catch { return false; } })());
@@ -470,7 +494,7 @@ export class Finder implements OnModuleInit {
       if (!shapeOk(kind, saved)) return { ok: false, costUsd: 0, reason: "The saved AI answer does not have the expected shape. Run it live or use rules only." };
       return { ok: true, output: saved, costUsd: 0, from: "replay", runFile: `prototype/p2/runs/${r.file}` };
     }
-    const job = { job_id: jobId, kind, combination: trail, configuration_version: "s4-form-finder", template, output_schema: s.schema, inputs,
+    const job = { job_id: jobId, kind, combination: combinationKey, configuration_version: "s4-form-finder", template, output_schema: s.schema, inputs,
       settings: { provider_route: ROUTE, model: MODEL, effort: s.effort, timeout_ms: 300_000, max_attempts: 2, budget_usd: 1, max_output_tokens: s.max_output_tokens }, known: { combination_trail: trail } };
     mkdirSync(JOBS, { recursive: true });
     writeFileSync(join(JOBS, `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
@@ -676,33 +700,47 @@ export class Finder implements OnModuleInit {
       started_at: b.startedAt, finished_at: b.finishedAt, elapsed_ms: (b.finishedAt ?? new Date()).getTime() - b.startedAt.getTime(), usd: { spent, worst: b.worstCaseUsd }, result: plan.result ?? null, sample_note: "Which forms apply is Sample until the immigration expert confirms." };
   }
 
-  /** Load sample (S4 change 4, US$0): each library form gets its canada.ca page, "Last updated" and PDF link from the
-   *  recorded copies (rules), and what IRCC accepts where a saved real finder answer quotes how it is filed (replay).
-   *  Nothing is invented: a form no saved answer speaks about stays "Not set yet" for a person to set (C11.18). */
-  async fillSample(workspaceId: string): Promise<{ pages: number; accepts: number; guides: number; note: string | null }> {
-    let pages = 0, accepts = 0, guides = 0;
+  /** Load sample (S4 change 4, US$0; Lead note 28 Oct): each library form gets its canada.ca page, "Last updated" and PDF
+   *  link from the recorded copies (rules), and what IRCC accepts from a saved real finder answer that quotes how it is
+   *  filed (AI · Sample) or else from the Sample fixtures (samples/form-library-sample.json: IRCC's own sentence on the
+   *  recorded page). Each sample combination's guide comes from the fixtures too, by the combination's key; rules find
+   *  it for a combination the fixtures do not name. Nothing is invented: what neither names stays "Not set yet" (C11.18). */
+  async fillSample(workspaceId: string): Promise<{ pages: number; accepts: number; acceptsSaved: number; guides: number; noGuide: string[]; note: string | null }> {
+    let pages = 0, accepts = 0, acceptsSaved = 0, guides = 0;
+    const noGuide: string[] = [];
+    const fx = sampleFixtures();
     const defs = await this.db.govFormDef.findMany({ where: { workspaceId, formKind: { not: "guide" } }, include: { editions: true } });
     let rows: { code: string; pageUrl: string }[] = [];
     let packages: Candidate[] = [];
-    try { const idx = parseFormsIndex((await this.canada.get(INDEX_URL, "html")).bytes.toString("utf8")); rows = idx.rows; packages = idx.packages; } catch (e) { if (!(e instanceof CanadaError)) throw e; return { pages, accepts, guides, note: `canada.ca's list could not be read (${e.message})` }; }
-    // Review major 2: each sample combination's guide is in the library too, found by rules alone (a sure match, US$0).
-    for (const c of await this.db.combination.findMany({ where: { workspaceId }, select: { id: true } })) {
+    try { const idx = parseFormsIndex((await this.canada.get(INDEX_URL, "html")).bytes.toString("utf8")); rows = idx.rows; packages = idx.packages; } catch (e) { if (!(e instanceof CanadaError)) throw e; return { pages, accepts, acceptsSaved, guides, noGuide, note: `canada.ca's list could not be read (${e.message})` }; }
+    const guideCount = () => this.db.govFormDef.count({ where: { workspaceId, formKind: "guide" } });
+    for (const c of await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true, combinationKey: true } })) {
       try {
-        const { trail } = await trailOf(this.db, c.id);
-        const sure = this.sureMatch(trail, packages).match;
-        if (!sure) continue;
-        const html = (await this.canada.get(sure.url, "html")).bytes.toString("utf8");
-        const want = new Set(words(trail.slice(1).join(" ")));
-        const guide = pageLinks(html, sure.url).filter((l) => /\/guide-\d+/.test(l.url) || /^guide \d+/i.test(l.text)).map((l, i) => ({ l, i, s: words(`${l.text} ${l.url.split("/").pop()}`).filter((w) => want.has(w)).length })).sort((a, b) => b.s - a.s || a.i - b.i)[0]?.l;
-        if (!guide) continue;
-        const g = await this.canada.get(guide.url, "html"), gh = g.bytes.toString("utf8");
-        const before = await this.db.govFormDef.count({ where: { workspaceId, formKind: "guide" } });
-        await this.storeGuide(workspaceId, guide.url, (/<title>([^<]*)<\/title>/i.exec(gh)?.[1] ?? guide.text).replace(/\s*-\s*Canada\.ca\s*$/i, "").trim(), gh, g.bytes, "system", null);
-        guides += (await this.db.govFormDef.count({ where: { workspaceId, formKind: "guide" } })) - before;
-      } catch (e) { if (!(e instanceof CanadaError)) throw e; }
+        const named = fx.guides[c.combinationKey];
+        let guide: { url: string; bytes: Buffer; text: string } | null = null;
+        if (named) {
+          if (!named.url) { noGuide.push(`${c.label}: ${named.why ?? "no guide"}`); continue; }
+          const bytes = named.recorded ? recordedCopy(named.recorded, named.sha256) : (await this.canada.get(named.url, "html")).bytes;
+          guide = { url: named.url, bytes, text: named.url.split("/").pop()!.replace(/\.html$/, "") };
+        } else {
+          // Review major 2: a combination the fixtures do not name: its guide by rules alone (a sure match, US$0).
+          const { trail } = await trailOf(this.db, c.id);
+          const sure = this.sureMatch(trail, packages).match;
+          if (!sure) { noGuide.push(`${c.label}: no sure match on canada.ca's list`); continue; }
+          const html = (await this.canada.get(sure.url, "html")).bytes.toString("utf8");
+          const want = new Set(words(trail.slice(1).join(" ")));
+          const link = pageLinks(html, sure.url).filter((l) => /\/guide-\d+/.test(l.url) || /^guide \d+/i.test(l.text)).map((l, i) => ({ l, i, s: words(`${l.text} ${l.url.split("/").pop()}`).filter((w) => want.has(w)).length })).sort((a, b) => b.s - a.s || a.i - b.i)[0]?.l;
+          if (!link) { noGuide.push(`${c.label}: its application page links no guide`); continue; }
+          guide = { url: link.url, bytes: (await this.canada.get(link.url, "html")).bytes, text: link.text };
+        }
+        const gh = guide.bytes.toString("utf8"), before = await guideCount();
+        await this.storeGuide(workspaceId, guide.url, (/<title>([^<]*)<\/title>/i.exec(gh)?.[1] ?? guide.text).replace(/\s*-\s*Canada\.ca\s*$/i, "").trim(), gh, guide.bytes, "system", null);
+        guides += (await guideCount()) - before;
+      } catch (e) { if (!(e instanceof CanadaError)) throw e; noGuide.push(`${c.label}: ${e.message}`); }
     }
     const notes = new Map<string, string>();
     // Every saved real finder answer, of any combination (both rounds): file names studio-finder-forms[-check]-<place>-live-….
+    // What IRCC accepts is the form's own, whichever combination the answer was for.
     const saved = existsSync(RUNS) ? readdirSync(RUNS).filter((f) => /^studio-finder-forms-.+-live-.+\.json$/.test(f)).sort(newestFirst) : [];
     for (const f of saved) {
       let out: FormsOut | null = null; try { const r = JSON.parse(readFileSync(join(RUNS, f), "utf8")) as SavedRun; if (r.drafting_run?.status !== "completed" || r.contract_valid !== true) continue; out = JSON.parse(String(r.raw_output)) as FormsOut; } catch { continue; }
@@ -712,19 +750,32 @@ export class Finder implements OnModuleInit {
       const current = newestEdition(d.editions.filter((e) => e.channel !== "ONLINE"));
       if (!current) continue;
       const row = rows.find((x) => normaliseCode(x.code) === normaliseCode(d.formKey));
-      if (row && !d.formPageUrl) {
+      const fixedPage = fx.pages[normaliseCode(d.formKey)];
+      if (!d.formPageUrl && (row || fixedPage)) {
         try {
-          const fp = parseFormPage((await this.canada.get(row.pageUrl, "html")).bytes.toString("utf8"));
-          const pdfUrl = fp.pdfUrls.find((u) => officialUrl(u).ok) ?? null;
-          await this.db.govFormDef.update({ where: { id: d.id }, data: { formPageUrl: row.pageUrl } });
-          await this.db.formEdition.update({ where: { id: current.id }, data: { formPageUrl: row.pageUrl, canadaUpdated: fp.lastUpdated, checkedAt: new Date(), ...(pdfUrl ? { sourceUrl: pdfUrl } : {}) } });
+          if (row) {
+            const fp = parseFormPage((await this.canada.get(row.pageUrl, "html")).bytes.toString("utf8"));
+            const pdfUrl = fp.pdfUrls.find((u) => officialUrl(u).ok) ?? null;
+            await this.db.formEdition.update({ where: { id: current.id }, data: { formPageUrl: row.pageUrl, canadaUpdated: fp.lastUpdated, checkedAt: new Date(), ...(pdfUrl ? { sourceUrl: pdfUrl } : {}) } });
+          }
+          const url = row?.pageUrl ?? fixedPage!.url;
+          if (!row) await this.db.formEdition.update({ where: { id: current.id }, data: { formPageUrl: url } });
+          await this.db.govFormDef.update({ where: { id: d.id }, data: { formPageUrl: url } });
           pages++;
-        } catch (e) { if (!(e instanceof CanadaError)) throw e; }
+        } catch (e) {
+          if (!(e instanceof CanadaError)) throw e;
+          // The form's own page is not among the recorded copies: canada.ca's own list still names its address (rules).
+          await this.db.govFormDef.update({ where: { id: d.id }, data: { formPageUrl: row!.pageUrl } });
+          await this.db.formEdition.update({ where: { id: current.id }, data: { formPageUrl: row!.pageUrl } });
+          pages++;
+        }
       }
-      const note = notes.get(normaliseCode(d.formKey));
-      if (note && !current.acceptedChannels && d.formKind !== "document" && d.formKind !== "checklist") { await this.db.formEdition.update({ where: { id: current.id }, data: { acceptedChannels: channelsFrom(note), acceptedBasis: "AI_SAMPLE", acceptedQuote: note.slice(0, 400) } }); accepts++; }
+      if (current.acceptedChannels || d.formKind === "document" || d.formKind === "checklist") continue;
+      const note = notes.get(normaliseCode(d.formKey)), fixed = fx.accepts[normaliseCode(d.formKey)];
+      if (note) { await this.db.formEdition.update({ where: { id: current.id }, data: { acceptedChannels: channelsFrom(note), acceptedBasis: "AI_SAMPLE", acceptedQuote: note.slice(0, 400) } }); accepts++; acceptsSaved++; }
+      else if (fixed) { await this.db.formEdition.update({ where: { id: current.id }, data: { acceptedChannels: fixed.channels, acceptedBasis: "SAMPLE_FIXTURE", acceptedQuote: fixed.quote.slice(0, 400) } }); accepts++; }
     }
-    return { pages, accepts, guides, note: null };
+    return { pages, accepts, acceptsSaved, guides, noGuide, note: null };
   }
 
   /** Stop: no step starts after it and no AI call is sent after it; a call already sent is recorded at its cost (the

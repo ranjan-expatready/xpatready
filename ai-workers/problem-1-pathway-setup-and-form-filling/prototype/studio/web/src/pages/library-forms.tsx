@@ -28,6 +28,7 @@ const ACCEPTS: Record<string, string> = { PDF: "PDF upload", ONLINE: "Online", P
 const BASIS: Record<string, { tag: string; tip: string }> = {
   AI_SAMPLE: { tag: "AI · Sample", tip: "AI read this from IRCC's own words on the page. Sample until the immigration expert confirms." },
   PERSON_SAMPLE: { tag: "Set by a person · Sample", tip: "A person set this and a second person approved it. Sample until the immigration expert confirms." },
+  SAMPLE_FIXTURE: { tag: "Sample · canada.ca words", tip: "Loaded with the sample from IRCC's own sentence on this form's canada.ca page (no AI call). Sample until the immigration expert confirms." },
   EXPERT: { tag: "Confirmed by the expert", tip: "The immigration expert confirmed this." },
 };
 /** A guide's date is canada.ca's own "Date modified" when the page prints one; otherwise when the studio read it. */

@@ -9,6 +9,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { normaliseCode } from "../contracts/form-library.ts";
+import { pageText } from "../engine/canada.ts";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BudgetExceeded, SpendLedger } from "../../p2/ledger.ts";
@@ -52,6 +53,7 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
 
   let r = await call("POST", "/demo/load");
   ok("setup: the demo loads", r.status < 300, r.status);
+  const loadLog: string = (r.body?.log ?? []).join(" | ");
 
   // --- Slice 3 changes: Used by as a trail; Load sample fills canada.ca pages and what IRCC accepts (US$0, nothing invented)
   let lib = (await call("GET", "/library/forms/list")).body;
@@ -59,9 +61,24 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("C11.11 (change 1): Used by names each combination by its place (Program › Category › Sub-category)", lrow("IMM 1295")?.used_by?.[0]?.label?.includes(" › ") && /With an LMIA$/.test(lrow("IMM 1295").used_by[0].label) && lib.combinations.every((x: any) => x.label.includes(" › ")), lrow("IMM 1295")?.used_by);
   ok("C11.11 (change 4): Load sample records each form's canada.ca page and Last updated from the recorded copies", !!lrow("IMM 1295")?.form_page_url && lrow("IMM 1295")?.canada_updated === "2023-09" && !!lrow("IMM 1295")?.checked_at, { page: lrow("IMM 1295")?.form_page_url, updated: lrow("IMM 1295")?.canada_updated });
   ok("C11.11 (change 4): what IRCC accepts comes from a saved real finder answer where one quotes it (IMM 5257: PDF upload, AI · Sample)", lrow("IMM 5257")?.accepts === "PDF" && lrow("IMM 5257")?.accepts_basis === "AI_SAMPLE" && /fill out the form on a computer/i.test(lrow("IMM 5257")?.accepts_quote ?? ""), lrow("IMM 5257"));
-  ok("C11.11 (change 4): a form no saved answer speaks about stays Not set yet (never invented)", lrow("IMM 1295")?.accepts === null && lrow("IMM 1295")?.accepts_basis === null, lrow("IMM 1295")?.accepts);
+  // Lead note 28 Oct (founder change 4): the other forms from the Sample fixtures, each with IRCC's own sentence on its page.
+  const fx = JSON.parse(readFileSync(join(STUDIO, "samples", "form-library-sample.json"), "utf8"));
+  const canadaIdx = JSON.parse(readFileSync(join(OFFICIAL, "canada", "index.json"), "utf8")).items as { url: string; path: string }[];
+  const pageWords = (url: string) => { const it = canadaIdx.find((x) => x.url === url); return it ? pageText(readFileSync(join(OFFICIAL, it.path), "utf8")).replace(/\s+/g, " ") : ""; };
+  const fixed = Object.entries(fx.accepts as Record<string, { channels: string; quote: string }>).filter(([c]) => c !== "IMM 5257");
+  const wrong = fixed.filter(([c, f]) => lrow(c)?.accepts !== f.channels || lrow(c)?.accepts_basis !== "SAMPLE_FIXTURE" || lrow(c)?.accepts_quote !== f.quote).map(([c]) => [c, lrow(c)?.accepts, lrow(c)?.accepts_basis]);
+  ok("C11.11 (change 4): every other sample form gets what IRCC accepts from the Sample fixtures (Sample · canada.ca words, the line kept)", fixed.length === 6 && !wrong.length, wrong);
+  const notOnPage = Object.entries(fx.accepts as Record<string, { quote: string }>).filter(([c, f]) => !pageWords(lrow(c)?.form_page_url ?? "").includes(f.quote.replace(/\s+/g, " "))).map(([c]) => c);
+  ok("C11.11 (change 4): each fixture's line is IRCC's own sentence on that form's recorded canada.ca page (nothing invented)", !notOnPage.length, notOnPage);
+  ok("C11.11 (change 4): a saved real finder answer wins over the fixtures (IMM 5257 stays AI · Sample)", lrow("IMM 5257")?.accepts_basis === "AI_SAMPLE");
+  ok("C11.11 (change 4) fail: a form neither a saved answer nor a fixture speaks about stays Not set yet (IMM 5802, an employer form)", lrow("IMM 5802")?.type === "form" && lrow("IMM 5802")?.accepts === null && lrow("IMM 5802")?.accepts_basis === null, lrow("IMM 5802")?.accepts);
+  const noPage = lib.rows.filter((x: any) => x.type !== "guide" && !x.form_page_url).map((x: any) => x.code);
+  ok("C11.11 (change 4): every sample form has its canada.ca page: from its recorded page, canada.ca's own list (IMM 5488) or the fixture (visa-office files); only the employer form has none", noPage.join() === "IMM 5802" && /\/imm5488\.html$/.test(lrow("IMM 5488")?.form_page_url ?? "") && lrow("IMM 5905")?.form_page_url === fx.pages["IMM 5905"].url, noPage);
   ok("C11.11 (change 2): checklists are not filed (Read by AI on the server, \"Not filed\" on the page)", lrow("IMM 5484")?.accepts === "READ_BY_AI");
-  ok("review M2: Load sample also puts each sample combination's guide in the library, found by rules alone (US$0)", lib.rows.some((x: any) => x.type === "guide" && /^Guide \d+/.test(x.code) && /^https:\/\/www\.canada\.ca\//.test(x.form_page_url ?? "")), lib.rows.filter((x: any) => x.type === "guide").map((x: any) => x.code));
+  const guideRows = lib.rows.filter((x: any) => x.type === "guide");
+  const wantGuides = [...new Set(Object.values(fx.guides as Record<string, { url: string | null }>).map((g) => g.url).filter(Boolean))];
+  ok("review M2, Lead note 28 Oct: Load sample puts every sample combination's guide in the library (Guide 5256, 5269, 5289, 5487; US$0)", ["Guide 5256", "Guide 5269", "Guide 5289", "Guide 5487"].every((c) => guideRows.some((x: any) => x.code === c)) && wantGuides.every((u) => guideRows.some((x: any) => x.form_page_url === u)), guideRows.map((x: any) => x.code));
+  ok("Lead note 28 Oct fail: a combination IRCC publishes no guide for gets none, and Load sample says why (the LMIA, an ESDC application)", /no guide: High-wage position: An employer's application to ESDC/.test(loadLog) && guideRows.length === 4, loadLog.slice(loadLog.indexOf("library forms")));
   ok("break minor: a number written loosely is understood in the path and in search (imm1295 is IMM 1295)", (await call("GET", "/library/forms/imm1295/uses")).body?.key === "IMM 1295" && (await call("GET", "/library/forms/list?q=imm1295")).body.rows?.[0]?.code === "IMM 1295");
   const refused = (q: string) => { try { sql(q); return false; } catch { return true; } };
   const ed = sql(`select id from form_edition limit 1`);
@@ -86,8 +103,8 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("C11.18 pass: with the canada.ca line, it waits for a second person on To review", r.status < 300 && r.body.status === "WAITING" && sql(`select count(*) from library_change where kind='form_accepts' and key='IMM 1295' and status='WAITING'`) === "1", r.body);
   const acc = r.body.id;
   const detail = (await call("GET", `/library/changes/${acc}`)).body;
-  ok("review: the second person reads the change in words: before → after, IRCC's line and the form's canada.ca page", detail?.accepts?.before === "Not set yet" && detail.accepts.after === "PDF upload · Online" && /apply online or on paper/.test(detail.accepts.quote ?? "") && /^https:\/\/www\.canada\.ca\//.test(detail.accepts.form_page ?? ""), detail?.accepts);
-  ok("C11.18: the library shows the change waiting and keeps the old value until approved", (await call("GET", "/library/forms/list?q=1295")).body.rows[0]?.accepts_waiting === true && (await call("GET", "/library/forms/list?q=1295")).body.rows[0]?.accepts === null);
+  ok("review: the second person reads the change in words: before → after, IRCC's line and the form's canada.ca page", detail?.accepts?.before === "PDF upload" && detail.accepts.after === "PDF upload · Online" && /apply online or on paper/.test(detail.accepts.quote ?? "") && /^https:\/\/www\.canada\.ca\//.test(detail.accepts.form_page ?? ""), detail?.accepts);
+  ok("C11.18: the library shows the change waiting and keeps the old value until approved", (await call("GET", "/library/forms/list?q=1295")).body.rows[0]?.accepts_waiting === true && (await call("GET", "/library/forms/list?q=1295")).body.rows[0]?.accepts === "PDF");
   r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF", reason: "another" });
   ok("C11.18 fail: a second change while one waits is refused (409)", r.status === 409 && /already waits/.test(r.body.detail), r.body.detail);
   ok("C11.18 fail: the proposer cannot approve it (author ≠ approver)", (await call("POST", `/library/changes/${acc}/approve`, { note: "ok" }, "user-A")).status >= 400);

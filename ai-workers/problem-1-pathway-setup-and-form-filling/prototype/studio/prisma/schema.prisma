@@ -268,8 +268,8 @@ model FormEdition {
   sourceUrl      String?   @map("source_url")
   canadaUpdated  String?   @map("canada_updated")
   checkedAt      DateTime? @map("checked_at") @db.Timestamptz
-  /// S4 (m1, P-107): what IRCC accepts for this form: PDF · ONLINE · PDF_OR_ONLINE · READ_BY_AI (guides, checklists),
-  /// with its basis (SAMPLE until the expert confirms) and the line it was read from.
+  /// S4 (m1, P-122/P-123): what IRCC accepts for this form: PDF · ONLINE · PDF_OR_ONLINE · READ_BY_AI (guides, checklists),
+  /// with its basis (AI_SAMPLE · PERSON_SAMPLE · SAMPLE_FIXTURE until the expert confirms · EXPERT) and the line it was read from.
   acceptedChannels String? @map("accepted_channels")
   acceptedBasis  String?   @map("accepted_basis")
   acceptedQuote  String?   @map("accepted_quote")

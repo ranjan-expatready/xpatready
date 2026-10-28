@@ -7,11 +7,11 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124)
-stage: CHECK
-owner: Lead
-next_action: Handover written below; Lead checks S4 (CI on 5825811 first), then QA-53 for the next session
+stage: FIX
+owner: Builder
+next_action: Finish the drift-check FIX: S4 checks and full suites on the merged code, push, CI, then CHECK (reviewer + breaker) and hand back by message
 blocked_by: none
-updated: 2026-10-27
+updated: 2026-10-28
 
 ## Handover (27 Oct, end of session; Lead's 23:59 note)
 * **Stage:** S4 at CHECK, owner Lead. Last pushed commit `5825811` on `forms/2026-10-27-s4-form-library` (the handover commit follows it). CI: green on `37f27d0`; the run on `5825811` (id 40552675085) was still running at handover — look at it first (`gh run view 40552675085`); the only red run in this round was `06556ab` (a test-order slip, fixed in `69a2260`).
@@ -23,6 +23,7 @@ updated: 2026-10-27
 * **Next steps:** (1) confirm CI on `5825811` (and on the handover commit) is green; (2) the Lead checks S4 (optionally one more fresh re-score on the final commit, since D18 was fixed after the last score) and merges or sends a round; (3) then QA-53 (Lead decision): one shared guard denying Studio configuration reads to nobody (401) and to case people (403) on every Studio configuration route, case routes untouched — the Lead's note will be on its next PR.
 
 ## Log (last 10 lines)
+- 2026-10-28 · S4 · CHECK → FIX · applied Lead note 2026-10-28 (drift check): synced main 8cfc043 (3 conflicts resolved, 3b2d9c8); Delete for a library form, Remove for the rest; Load sample from Sample fixtures (every data form's IRCC accepts with IRCC's line, pages, guides for 5 of 6 combinations; the LMIA has none); replay keyed by the combination's key. Checks running. US$0.
 - 2026-10-27 · S4 · FIX → CHECK (owner Lead) · six review rounds (6.5 → 7 → 8.5 → 8 → 7.5 → 8.5) and four break runs; every Must/Major fixed with a test; final checks: finder 113/113, runs 76/76, run browser 20/20, library browser 51/51, canada 49/49, touched suites pass; any 433, graph G3 1 (older). AI US$0 new; S4 total US$0.31.
 - 2026-10-27 · S4 · FIX (round 6) · fresh reviewer on 37f27d0: Ship after fixes, journey 8.5/10, no Must or Major, the round 5 source-use choice judged to conform to P-116; D18 at 3 (uploads said "loaded with the sample") fixed: an uploaded edition records its origin and the canada.ca page it matched; AI plan skips forms with an open retire. CI green on 37f27d0. runs 76/76. US$0.
 - 2026-10-27 · S4 · FIX (round 5) · checks green: finder 113/113, runs 75/75, browsers 20/20 and 51/51, canada 49/49, touched suites pass. CI on 06556ab failed only because a put-back script had reverted a test move (golden replay before the stand-in probe); fixed (69a2260) and the script limited to by-product paths. US$0.
@@ -32,4 +33,3 @@ updated: 2026-10-27
 - 2026-10-27 · S4 · FIX (round 4) · breaker check on e7cb63c: R3-1, R3-2, m1–m5 confirmed, N5–N7 hold; 1 Major (R4-1 a combination's own upload attached a retiring form as a source; release counted only lines) + 6 minors; fixed with tests (intake guard, release counts sources and records the hand-back, returned changes not shown as waiting, UTF-8 names, "+ Add" recorded for Undo). R4-2 replay rule soundness for the Lead. US$0.
 - 2026-10-27 · S4 · FIX (round 3) · checks green: finder 112/112, runs 67/67, run browser 20/20, library browser 51/51, canada 49/49; touched suites pass (s01 API 135 after the "+ Add" guard). US$0.
 - 2026-10-27 · S4 · FIX (round 3) · breaker round 3 on 26a360e: N1, N3–N8, m-a, m-c confirmed; 2 Majors (R3-1 Undo, upload-for-row and "+ Add" still attach a retiring form, release did not re-check; R3-2 replay lost the committed real answers after the program rename) + 6 minors; fixed with tests (one guard in addFormLine, Undo refusal, release re-check, replay by the combination's own names, id-spelling key, busy answer, focus rings). US$0.
-- 2026-10-27 · S4 · FIX (round 3) · fresh reviewer on 26a360e: Ship after fixes, journey 8.5/10 (pass bar met) but D4 at 3 from one new Major (Undo could bring back a form whose retire is open; the release retired it anyway); fix written (Undo refuses in words; the release re-checks and hands the retire back) with tests; breaker re-run in progress. US$0.
