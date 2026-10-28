@@ -1,0 +1,12 @@
+{
+ "summary": {
+  "file": "official-sources/ircc/canada/pages/immigrate-canada-provincial-nominees-express-entry.html",
+  "sha256": "aba3577031939a2cd9bb0e4f27c3bc0a596e508c6fbb3a24ca160a87c9c7a7c2",
+  "edition": "Provincial nominees, Express Entry: overview page",
+  "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/provincial-nominees/express-entry.html",
+  "kind": "text",
+  "method": "page text without scripts, styles, navigation, header, footer",
+  "derived_by": "prototype/p1/source_text.py"
+ },
+ "text": "Provincial Nominee Program : Express Entry process - Canada.ca\nProvincial Nominee Program: Express Entry process\nThis is the Express Entry application process for the Provincial Nominee Program (PNP).\nIf you became a permanent resident through the PNP, the province that nominated you has chosen you to bring your skills to their province to live and work.\nFees\nStarting from: Error loading fee. Check the fee list.\nProcessing time ?\nWe couldn’t load the data. Try again.\nWhen you complete your Express Entry profile, you must use NOC code 93888 in the following NOC code fields:\nPrimary Occupation\nJob Offer in Canada\nCurrent Work Permit\nWork History (all fields)\nSpouse’s Work History (all fields)\nProcessing times will vary based on\nthe type of application\nif the application is complete\nhow quickly we expect to process applications we’ve already received\nhow easily we can verify your information\nhow long you take to respond to any requests or concerns\nother factors\nYour processing time may also be affected if more people apply to immigrate to Canada than we can bring in\neach year.\nLearn how processing times are calculated.\nPage details\n2026-04-17"
+}

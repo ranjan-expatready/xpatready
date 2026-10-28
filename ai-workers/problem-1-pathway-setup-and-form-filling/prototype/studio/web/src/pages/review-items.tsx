@@ -55,14 +55,24 @@ function Decide({ yes, no, onYes, onNo, busy, noNeedsReason = true, disabledWhy,
 export function LibraryChangePage() {
   const { id } = useParams(); const nav = useNavigate(); const me = useMe();
   const c = useApi<LibraryChangeDetail>(["library-change", id], `/library/changes/${id}`);
-  const act = useAction((v: { d: "approve" | "return"; note?: string }) => api<LibraryChangeView>(`/library/changes/${id}/${v.d}`, { method: "POST", json: { note: v.note } }), { success: (r) => (r.status === "APPROVED" ? `"${r.label}" approved: it is released with the next release` : `"${r.label}" returned to ${r.proposed_by}`), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
+  const act = useAction((v: { d: "approve" | "return"; note?: string }) => api<LibraryChangeView>(`/library/changes/${id}/${v.d}`, { method: "POST", json: { note: v.note } }), { success: (r) => (r.status === "RELEASED" ? `"${r.label}" approved and applied` : r.status === "RETURNED" && /^Not /.test(r.decision_note ?? "") ? `"${r.label}" could not be applied: ${r.decision_note}` : r.status === "APPROVED" ? `"${r.label}" approved: it is released with the next release` : `"${r.label}" returned to ${r.proposed_by}`), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
   if (c.isLoading) return <Spinner label="Loading the change" />;
   if (c.isError) return <ErrorState title="This change could not be opened" description={(c.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />;
   const x = c.data!, mine = x.proposed_by_id === me.id;
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <Crumbs here={x.label} />
-      <Head title={`${x.action_word} ${x.kind_word}: ${x.label}`} chip={x.status === "WAITING" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "RETURNED" ? "Returned" : x.status === "APPROVED" ? "Approved · in the next release" : "Released"} tone={x.status === "WAITING" && !mine ? "warn" : "neutral"} sub={<>Proposed by {x.proposed_by}, {fmtWhen(x.proposed_at)}</>} />
+      <Head title={x.accepts ? `What IRCC accepts for ${x.accepts.form}` : `${x.action_word} ${x.kind_word}: ${x.label}`} chip={x.status === "WAITING" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "RETURNED" ? "Returned" : x.status === "APPROVED" ? "Approved · in the next release" : "Released"} tone={x.status === "WAITING" && !mine ? "warn" : "neutral"} sub={<>Proposed by {x.proposed_by}, {fmtWhen(x.proposed_at)}</>} />
+      {x.accepts ? (
+        <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-accepts>
+          <dt className="text-text-muted">Form</dt><dd className="font-semibold">{x.accepts.form}{x.accepts.edition ? ` · ${x.accepts.edition}` : ""}</dd>
+          <dt className="text-text-muted">When proposed</dt><dd>{x.accepts.before}{x.accepts.before !== "Not set yet" ? " (Sample)" : ""}</dd>
+          <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{x.accepts.after}</dd>
+          <dt className="text-text-muted">{x.accepts.quote ? "IRCC's words" : "Reason"}</dt><dd>{x.accepts.quote ? `“${x.accepts.quote}”` : x.accepts.reason}</dd>
+          <dt className="text-text-muted">Compare with</dt><dd>{x.accepts.form_page ? <a className="text-text-link underline" href={x.accepts.form_page} target="_blank" rel="noreferrer">The form's page on canada.ca</a> : "No canada.ca page recorded"} · <Link className="text-text-link underline" to="/library/forms">Shared library › Forms</Link></dd>
+          <dd className="col-span-2 text-xs text-text-muted">Approving applies it to the form's current edition, marked "Set by a person · Sample" until the immigration expert confirms.</dd>
+        </dl>
+      ) : null}
       {x.field ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-field>
           <dt className="text-text-muted">Name</dt><dd className="font-semibold">{x.field.label}</dd>
@@ -72,7 +82,7 @@ export function LibraryChangePage() {
         </dl>
       ) : null}
       <div className="space-y-1 text-sm">
-        {x.reason ? <p><b>Reason:</b> {x.reason}</p> : null}
+        {x.reason && !x.accepts ? <p><b>Reason:</b> {x.reason}</p> : null}
         {x.ai_verdict ? <p><b>Advisory check:</b> {x.ai_verdict}</p> : null}
         {(x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}

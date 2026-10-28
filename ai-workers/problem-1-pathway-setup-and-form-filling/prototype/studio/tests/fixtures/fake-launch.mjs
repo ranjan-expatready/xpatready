@@ -17,7 +17,9 @@ const count = join(VAR, "fake-launch.count");
 const n = existsSync(count) ? Number(readFileSync(count, "utf8")) : 0;
 if (mode === "live") writeFileSync(count, String(n + 1));
 if (mode === "live" && scenario.locked_first && n === 0) { console.error("refused: ledger locked by another launch"); process.exit(1); }
-const step = scenario[mode] ?? { exit: 0, out: { ok: true } };
+// S4: a scenario may answer per job (the form finder runs four jobs); the longest matching job-id prefix wins.
+const byJob = scenario.jobs ? Object.keys(scenario.jobs).filter((k) => job.startsWith(k)).sort((a, b) => b.length - a.length)[0] : undefined;
+const step = (byJob ? scenario.jobs[byJob][mode] : scenario[mode]) ?? { exit: 0, out: { ok: true } };
 // A slow step, so a test can cancel while it runs (QA-31, QA-32).
 if (step.sleep_ms) await new Promise((r) => setTimeout(r, step.sleep_ms));
 let out = step.out ?? {};

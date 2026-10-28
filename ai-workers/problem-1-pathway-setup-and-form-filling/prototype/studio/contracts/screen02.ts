@@ -8,7 +8,9 @@ export type LibraryChangeView = {
   proposed_by: string | null; proposed_by_id: string; proposed_at: string; decided_by: string | null; decided_at: string | null; decision_note: string | null;
   released_in: number | null; combination_id: string | null;
 };
-export type LibraryChangeDetail = LibraryChangeView & { field: { key: string; label: string | null; meaning: string; value_type: string; group: string | null; status: string } | null };
+export type LibraryChangeDetail = LibraryChangeView & { field: { key: string; label: string | null; meaning: string; value_type: string; group: string | null; status: string } | null;
+  /** S4 C11.18: a change to what IRCC accepts for a form, in words (before → after, IRCC's line or the reason, its page). */
+  accepts?: { form: string; edition: string | null; before: string; after: string; quote: string | null; reason: string | null; form_page: string | null } };
 
 /** One side of a proposed merge (board view 8). */
 export type MergeSide = { key: string; label: string; meaning: string | null; value_type: string | null; aliases: string[]; form_fields: number; questions: number };

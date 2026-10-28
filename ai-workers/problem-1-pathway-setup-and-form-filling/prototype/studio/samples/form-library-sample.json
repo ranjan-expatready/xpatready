@@ -1,0 +1,59 @@
+{
+  "basis": "Load sample's Sample fixtures (founder change 4 of the S4 slice 3 early look; Lead note 28 Oct: from the saved finder run as Sample fixtures, US$0, no live pass). Recorded by the forms lane on 28 Oct 2026 from the recorded canada.ca copies (official-sources/ircc) and screens/W1-form-library/forms-for-5-combinations.md. Every line is IRCC's own sentence on the form's recorded canada.ca page and says how the form is filed; Load sample checks both (the finder's own rule, as for AI answers) and leaves out an entry that fails. IMM 5257 SCH1 and IMM 5409 are not here: their pages never say how they are filed, so they stay Not set yet for a person to set (C11.18). A form a saved real finder answer already speaks about keeps that answer (AI · Sample). Every value is Sample until the immigration expert confirms.",
+  "accepts": {
+    "IMM 1295": {
+      "channels": "PDF",
+      "quote": "Download and fill out the form on a computer."
+    },
+    "IMM 5257": {
+      "channels": "PDF",
+      "quote": "Download and fill out the form on a computer."
+    },
+    "IMM 5475": {
+      "channels": "PDF",
+      "quote": "upload this form along with your online application."
+    },
+    "IMM 5476": {
+      "channels": "PDF",
+      "quote": "Upload this form along with your online application"
+    },
+    "IMM 5707": {
+      "channels": "PDF",
+      "quote": "If you have filled out the form on a computer, click on the “Validate” button located at the top of the form."
+    }
+  },
+  "pages": {
+    "IMM 5881": {
+      "url": "https://ircc.canada.ca/english/pdf/kits/forms/IMM5881E.pdf",
+      "why": "Visa office instructions (New Delhi, visitor visa): IRCC publishes them as this file, with no form page of their own."
+    },
+    "IMM 5905": {
+      "url": "https://ircc.canada.ca/english/pdf/kits/forms/IMM5905E.pdf",
+      "why": "Visa office instructions (New Delhi, work permit): IRCC publishes them as this file, with no form page of their own."
+    }
+  },
+  "guides": {
+    "vv.single": {
+      "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5256-applying-visitor-visa-temporary-resident-visa.html"
+    },
+    "sv.super_visa": {
+      "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5256-applying-visitor-visa-temporary-resident-visa.html",
+      "why": "The super visa sample uses the general visitor forms (samples/programs.json), so its guide is the visitor visa's."
+    },
+    "wp.family": {
+      "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5487-applying-work-permit-outside-canada.html",
+      "recorded": "instructions/guide-5487.html",
+      "why": "Its recorded copy is the manifest's file (official-sources/ircc/instructions), used only while the manifest's checksum matches."
+    },
+    "sp.student": {
+      "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5269-applying-study-permit-outside-canada.html"
+    },
+    "fs.outside": {
+      "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5289-sponsor-your-spouse-common-law-partner-conjugal-partner-dependent-child-complete-guide.html"
+    },
+    "lm.high_wage": {
+      "url": null,
+      "why": "An employer's application to ESDC through LMIA Online: IRCC publishes no guide for it."
+    }
+  }
+}

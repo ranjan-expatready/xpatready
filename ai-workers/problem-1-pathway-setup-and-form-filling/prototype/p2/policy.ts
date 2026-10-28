@@ -69,6 +69,10 @@ export const PRICE_PER_MTOK: Record<string, { input: number; output: number }> =
  *  for the remaining real-model work; per-run cap, route, inputs, ledger and stub-pass rules unchanged. */
 export const EXPERIMENT_CAP_USD = 100;
 export const RUN_CAP_USD = 5;
+/** P-110 (founder, 26 Oct; raised from US$40 to US$60 on 27 Oct, Lead PR #52): what Wave 1's live AI tests may spend,
+ *  counted from the wave's start inside the experiment cap. The ledger refuses a reservation above it. */
+export const WAVE1_CAP_USD = 60;
+export const WAVE1_START = "2026-10-26T00:00:00.000Z";
 export const MAX_ATTEMPTS = 2;
 
 /** Label every screen and record of drafted output carries (AIW-D260, verbatim). */
