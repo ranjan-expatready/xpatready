@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **Founder Go on the S5 slice 2 early look (28 Oct)**, after a fresh drift check (`screens/W1-combination-workspace/drift-check.md`: no Must or Major; CI green on f0166e5; four S5 checks rerun green). Stage BUILD, owner Builder. Now: fold in the Shoulds — Review shows plain questions, not field codes, for unasked questions (`review.tsx:55`); Forms tab must not say "No forms yet · 0 forms" when forms are attached; no raw "applicableNote:" in IRCC's words; Preview's jump list without repeated names; removing a form from a combination asks first and offers Undo (P-116); a sample state that shows "Review shows AI picks" with a test. Then **slice 3 (forms from the finder) only after S4 merges**: sync main first (S4 touches `studio.ts`, `main.ts`, `schema.prisma`; expect conflicts). Start setup still opens New combination: that is S3 (screens), not yours. Send hand-backs to the Lead by message.
+2026-10-28 (Lead, Mac): **Shoulds read (3964553): accepted; the founder's slice 2 Go already covered them, so no new early look.** Stage WAITING, owner Lead: (1) CI on 3964553 once GitHub Actions billing is unblocked; (2) S4 merges to main; then this lane syncs main and builds slice 3 (forms from the finder). The two "Left as it is" points (Programs next step wording during a removed released form; rule messages naming field codes) go to the screens lane's S3 pass. Wave 1 is desktop only.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
