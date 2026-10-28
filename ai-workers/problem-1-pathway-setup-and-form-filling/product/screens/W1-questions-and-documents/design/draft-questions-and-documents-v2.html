@@ -474,4 +474,417 @@ body.labels .lab{white-space:normal;max-width:100%}
  <div class="state"><h4>Conflict</h4><div class="notice warn small"><b>Changed by someone else.</b> Their version changed where 2 answers come from. <button class="btn sm">Reload their version</button></div><span class="lab cap">Capability (built pattern)</span></div>
 </div></div>
 <div class="legend">Questions for the founder, labels and the changes from v1: <code>concept-draft-v2-notes.md</code> in this folder.</div>
+<!-- ============ Clickable board: plain inline JavaScript, no libraries, no network ============ -->
+<style>
+tr[data-rid] td:nth-child(2){cursor:pointer}
+.pop .it{cursor:pointer}.pop .it.off{cursor:default}
+.chip,.seg span,.tabs a,nav.menu a,.acc .hd,td .cbx,.radio label,aside label.row,.inp{cursor:pointer}
+.radio label.off{cursor:not-allowed}
+</style>
+<script>
+(function(){
+var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var F=function(){return $$('.frame')};
+var fr=function(el){return el.closest('.frame')};
+var fi=function(el){return F().indexOf(fr(el))};
+var SRC={doc:'Document',cli:'Client',agt:'Agent'};
+
+/* ---------- init: row data, drawer templates ---------- */
+F().slice(0,3).forEach(function(f,i){
+  $$('tr',f).forEach(function(tr,j){
+    if(!tr.querySelector('td.cb'))return;
+    tr.dataset.rid='f'+i+'r'+j; tr.dataset.kind=i<2?'q':'d';
+    if(i<2){
+      var c=tr.cells[2], fs=c.querySelector('.from');
+      if(fs){var k=fs.classList.contains('doc')?'doc':fs.classList.contains('agt')?'agt':'cli'; tr.dataset.def=k;
+        if(k==='doc')tr.dataset.doc=fs.textContent.replace('Document · ','').trim();}
+      else {tr.dataset.decide='1'; tr.dataset.def='cli'; tr.dataset.doc='Bank statement';}
+      if(c.textContent.indexOf('🔒')>-1)tr.dataset.lock='1';
+      var m=c.querySelector('.miss'); if(m)tr.dataset.miss='1';
+      var pop=tr.querySelector('.pop'); if(pop){var mm=pop.textContent.match(/Document · ([A-Za-z ]+) \(library\)/); if(mm)tr.dataset.doc=mm[1].trim();}
+      if(i===0){tr.dataset.section=tr.closest('.acc').querySelector('.hd b').textContent;}
+      else{var g=tr.previousElementSibling; while(g&&!g.classList.contains('group'))g=g.previousElementSibling; tr.dataset.section=g?g.cells[0].firstChild.textContent.trim():'';}
+    }
+  });
+  var m=$('main',f); m.dataset.person='Applicant'; m.dataset.src='all'; m.dataset.when='all'; m.dataset.need=i===1?'1':''; m.dataset.q='';
+});
+var rowBy=function(f,txt){return $$('tr[data-rid]',f).filter(function(t){return t.cells[1].textContent.trim().indexOf(txt)===0})[0]};
+var tplQRid=rowBy(F()[0],'Date of birth').dataset.rid, tplDRid=rowBy(F()[2],'Passport').dataset.rid;
+var a0=$('aside.drawer',F()[0]), a1=$('aside.drawer',F()[1]), a2=$('aside.drawer',F()[2]);
+a0.dataset.type='q'; a1.dataset.type='dec'; a2.dataset.type='doc';
+var TPL={q:a0.outerHTML, dec:a1.outerHTML, doc:a2.outerHTML};
+a0.dataset.rid=tplQRid; a1.dataset.rid=rowBy(F()[1],'Funds').dataset.rid; a2.dataset.rid=tplDRid;
+var QPOP=$('.pop',F()[0]).outerHTML, DPOP=$('.pop',F()[2]).outerHTML, BULK=$('.bulk',F()[1]).outerHTML;
+
+/* ---------- toast + one Undo ---------- */
+var last=null, tt=null;
+function showToast(msg,undo){
+  var t=document.getElementById('qd-toast');
+  if(!t){t=document.createElement('div');t.id='qd-toast';t.className='toast';t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;box-shadow:0 6px 18px #0003;max-width:900px';document.body.appendChild(t);}
+  t.innerHTML='<span></span>'+(undo?'<a data-undo="1">Undo</a>':'');
+  t.firstChild.textContent=msg+(undo?' ·':''); t.style.display='inline-flex';
+  clearTimeout(tt); tt=setTimeout(function(){t.style.display='none'},10000);
+}
+function act(fn){var snap=F().map(function(f){return f.innerHTML}); var msg=fn(); if(msg===false||msg==null)return; last=snap; showToast(msg,true);}
+function undo(){if(!last)return; F().forEach(function(f,i){f.innerHTML=last[i]}); last=null; showToast('Undone',false);}
+function flash(el){el.scrollIntoView({behavior:'smooth',block:'start'}); var o=el.style.boxShadow; el.style.boxShadow='0 0 0 3px var(--primary)'; setTimeout(function(){el.style.boxShadow=o},1600);}
+
+/* ---------- counts ---------- */
+function bumpLast(el,d){if(!el)return; el.innerHTML=el.innerHTML.replace(/(\d+)(?![\s\S]*\d)/,function(n){return Math.max(0,+n+d)});}
+function needKind(t){if(/Release check/.test(t))return 'rel'; if(/Decide/.test(t))return 'dec'; if(/Check/.test(t))return 'chk'; return null;}
+function isAI(t){return /^AI ·/.test(t.trim());}
+function pillOf(tr){return tr.cells[5].querySelector('.pill');}
+function bumpBreak(f,k,d){var s=$$('.toolrow .small.muted',f).filter(function(x){return /to check/.test(x.textContent)})[0]; if(!s)return;
+  var re={chk:/(\d+)( to check)/,dec:/(\d+)( to decide)/,rel:/(\d+)( release check)/}[k]; s.textContent=s.textContent.replace(re,function(_,n,w){return Math.max(0,+n+d)+w});}
+function setStatus(tr,cls,text){
+  var p=pillOf(tr), old=p.textContent, f=fr(tr); p.className='pill '+cls; p.textContent=text;
+  var nk=needKind(old), nn=needKind(text);
+  if(nk&&!nn){bumpLast($('.chip.need',f),-1); bumpBreak(f,nk,-1);}
+  if(isAI(old)&&!isAI(text))bumpLast($('nav.menu .count'),-1);
+  tr.style.opacity=(text==='Rejected'||/^Removed/.test(text))?'.5':'';
+}
+function curSrc(tr){var fs=tr.cells[2].querySelector('.from'); if(!fs)return null; return fs.classList.contains('doc')?'doc':fs.classList.contains('agt')?'agt':'cli';}
+function srcCount(f,k,d){
+  if(F().indexOf(f)!==0)return;
+  bumpLast($$('.toolrow .chip',f).filter(function(c){return c.querySelector('.dot')&&c.textContent.trim().indexOf(SRC[k])===0})[0],d);
+  bumpLast($$('.stat',f).filter(function(s){return s.querySelector('span.'+k)})[0],d);
+}
+function pqrOn(tr){return !!tr.cells[3].querySelector('.cbx.on');}
+function pqrCount(f,d){if(F().indexOf(f)!==0)return; bumpLast($$('.stat',f).filter(function(s){return /^Pre-qualification/.test(s.textContent)})[0],d);}
+function srcRefusal(tr,k){
+  if(tr.dataset.lock&&k!=='cli')return 'Declarations are always answered by the client.';
+  if(k==='agt'&&tr.dataset.def!=='agt')return "Not offered: the agent enters only the representative's, office's and case's own facts.";
+  if(k==='doc'&&!tr.dataset.doc)return "No document on Applicant's checklist supplies it.";
+  return null;
+}
+function setSource(tr,k){
+  var old=curSrc(tr), c=tr.cells[2], f=fr(tr), h;
+  if(k==='doc')h='<span class="from doc">Document · '+tr.dataset.doc+'</span>'+(tr.dataset.miss&&tr.dataset.def==='doc'?'<div class="miss">⚠ No fallback question</div>':'');
+  else if(k==='agt')h='<span class="from agt">Agent</span>';
+  else h=tr.dataset.lock?'<span class="from cli">Client 🔒</span><span class="reason">Declarations are always answered by the client.</span>':'<span class="from cli">Client</span>';
+  c.innerHTML=h;
+  if(old)srcCount(f,old,-1); srcCount(f,k,1);
+  if(old==='doc'&&k!=='doc'&&F().indexOf(f)===0)bumpLast(tr.closest('.acc').querySelector('.hd .small'),-1);
+  if(k==='doc'&&old!=='doc'&&F().indexOf(f)===0)bumpLast(tr.closest('.acc').querySelector('.hd .small'),1);
+  var pq=tr.cells[3];
+  if(k==='agt'){if(pqrOn(tr))pqrCount(f,-1); pq.innerHTML='<span class="cbx off"></span> <span class="reason">Not offered: the agent enters it</span>';}
+  else if(old==='agt'){pq.innerHTML='<span class="cbx"></span>';}
+}
+function setPqr(tr,on){if(pqrOn(tr)===on)return; tr.cells[3].querySelector('.cbx').classList.toggle('on',on); pqrCount(fr(tr),on?1:-1);}
+function pqrRefusal(tr,on){if(curSrc(tr)==='agt')return 'Not offered: the agent enters it.'; if(on&&tr.dataset.miss&&curSrc(tr)==='doc')return 'The prospect needs a question to answer. Add a fallback question first.'; return null;}
+function title(tr){var b=tr.cells[1].querySelector('b'); return tr.dataset.kind==='d'&&b?b.textContent:tr.cells[1].textContent.trim();}
+
+/* ---------- selection + bulk bar ---------- */
+function rowCb(tr){return tr.cells[0].querySelector('.cbx');}
+function selected(f){return $$('tr[data-rid]',f).filter(function(tr){return rowCb(tr).classList.contains('on')&&tr.style.display!=='none'});}
+function setSel(tr,on){rowCb(tr).classList.toggle('on',on); tr.classList.toggle('sel',on);}
+function syncBulk(f){
+  var i=F().indexOf(f); if(i>1)return; var bar=$('.bulk',f), s=selected(f);
+  if(!bar){if(!s.length)return; var m=$('main',f), tmp=document.createElement('div'); tmp.innerHTML=BULK; bar=tmp.firstElementChild; m.insertBefore(bar,$('.acc',m));}
+  bar.style.display=s.length?'':'none'; bar.querySelector('b').textContent=s.length+' selected';
+  var hi=s.filter(function(tr){var t=pillOf(tr).textContent; return isAI(t)&&/High/.test(t)}).length;
+  var a=bar.querySelector('.btn.primary'); a.textContent='Accept '+hi; a.disabled=!hi;
+}
+function bulkMenu(btn,items){
+  closePops(); var bar=btn.closest('.bulk'); bar.style.position='relative';
+  var p=document.createElement('div'); p.className='pop';
+  p.style.cssText='left:'+btn.offsetLeft+'px;top:'+(btn.offsetTop+btn.offsetHeight+4)+'px;right:auto;width:300px;color:var(--text)';
+  p.innerHTML=items.map(function(x){return '<div class="it" data-bulk="'+x[0]+'">'+x[1]+(x[2]?' <span class="reason">'+x[2]+'</span>':'')+'</div>'}).join('');
+  bar.appendChild(p);
+}
+function plural(n,w){return n+' '+w+(n===1?'':'s');}
+function runBulk(f,cmd){
+  act(function(){
+    var s=selected(f), done=0, kept=[], msg;
+    var k=cmd.split(':')[0], v=cmd.split(':')[1];
+    s.forEach(function(tr){
+      var t=pillOf(tr).textContent;
+      if(k==='accept'){if(isAI(t)&&/High/.test(t)){setStatus(tr,'ok','Accepted');done++;} else kept.push('not High: open it to accept');}
+      else if(k==='reject'){if(isAI(t)){setStatus(tr,'neutral','Rejected');done++;} else kept.push('not an AI proposal');}
+      else if(k==='src'){if(curSrc(tr)===v){return;} var r=srcRefusal(tr,v); if(r){kept.push(r);return;} setSource(tr,v); if(!isAI(t))setStatus(tr,'info','Changed here'); done++;}
+      else if(k==='pqr'){var on=v==='on', r2=pqrRefusal(tr,on); if(r2){kept.push(r2);return;} if(pqrOn(tr)!==on){setPqr(tr,on);done++;}}
+      setSel(tr,false);
+    });
+    s.forEach(function(tr){setSel(tr,false)}); syncBulk(f);
+    if(k==='accept')msg='Accepted '+plural(done,'question');
+    else if(k==='reject')msg='Rejected '+plural(done,'proposal');
+    else if(k==='src')msg='Where it comes from set to '+SRC[v]+' on '+plural(done,'question');
+    else msg='Pre-qualification '+v+' for '+plural(done,'question');
+    if(kept.length)msg+=' · '+kept.length+' kept: '+kept.filter(function(x,i,a){return a.indexOf(x)===i}).join(' ');
+    return msg;
+  });
+}
+
+/* ---------- ⋯ menus ---------- */
+function closePops(){$$('.pop').forEach(function(p){var k=p.parentElement.querySelector('.kebab'); if(k)k.classList.remove('on'); p.remove();});}
+function menuFor(tr){
+  var tmp=document.createElement('div'), t=pillOf(tr).textContent;
+  if(tr.dataset.kind==='q'){
+    tmp.innerHTML=QPOP; var p=tmp.firstElementChild;
+    $$('.it',p).forEach(function(it){if(it.firstChild.textContent.trim()==='Back to the library default'&&t!=='Changed here')it.remove();});
+    var bd=$$('.it',p).filter(function(it){return it.firstChild.textContent.trim()==='Back to the library default'})[0];
+    if(bd&&tr.dataset.doc)bd.querySelector('.reason').textContent='Document · '+tr.dataset.doc+' (library). Undo while the draft is open.';
+    var mv=$$('.it',p).filter(function(it){return it.firstChild.textContent.trim()==='Move up or down'})[0];
+    if(mv)mv.querySelector('.reason').textContent='The order is set in the library section '+tr.dataset.section+'. Change it there.';
+  } else {
+    tmp.innerHTML=DPOP; var p=tmp.firstElementChild;
+    var rm=$$('.it',p).filter(function(it){return it.firstChild.textContent.trim()==='Remove from checklist'})[0];
+    if(isAI(t)){rm.classList.add('off'); rm.querySelector('.reason').textContent='Reject instead';}
+    else if(t!=='Released'){rm.querySelector('.reason').textContent='Draft line: removed at once, with Undo.';}
+    if(/^Removed/.test(t)){rm.classList.add('off'); rm.querySelector('.reason').textContent='Already removed: it goes out with the next release.';}
+  }
+  return tmp.innerHTML;
+}
+
+/* ---------- drawers ---------- */
+function drawerOf(f){return $('aside.drawer',f);}
+function closeDrawer(f){var a=drawerOf(f); if(!a)return; a.style.display='none'; $('.ws',f).classList.add('nodrawer');}
+function isOpen(a){return a.style.display!=='none';}
+function openDrawer(tr,section,toggle){
+  var f=fr(tr), a=drawerOf(f);
+  if(toggle&&isOpen(a)&&a.dataset.rid===tr.dataset.rid){closeDrawer(f);return;}
+  var type=tr.dataset.kind==='d'?'doc':(tr.dataset.decide?'dec':'q');
+  var tmp=document.createElement('div'); tmp.innerHTML=TPL[type]; var n=tmp.firstElementChild; a.replaceWith(n); a=n;
+  a.dataset.rid=tr.dataset.rid; a.style.display=''; $('.ws',f).classList.remove('nodrawer');
+  if(type==='q')populateQ(a,tr); else if(type==='doc')populateD(a,tr); else populateDec(a,tr);
+  if(section){$$('details.sec',a).forEach(function(d){if(d.querySelector('summary').textContent.indexOf(section)===0){d.open=true; d.scrollIntoView({behavior:'smooth',block:'nearest'});}});}
+}
+function refreshDrawer(f){var a=drawerOf(f); if(!a||!isOpen(a))return; var tr=$('tr[data-rid="'+a.dataset.rid+'"]',f); if(!tr)return;
+  var open=$$('details.sec',a).map(function(d){return d.open}); openDrawer(tr); $$('details.sec',drawerOf(f)).forEach(function(d,i){d.open=open[i]});}
+function headPill(a,tr){var p=pillOf(tr), t=p.textContent.trim(), hp=a.querySelector('header .pill'); hp.className=p.className; hp.textContent=isAI(t)?t.replace(/^AI ·/,'AI proposal ·'):t; return hp;}
+function notDrawn(){return '<div class="small muted">Sample detail for this line is not drawn on this board.</div>';}
+function populateQ(a,tr){
+  var dob=tr.dataset.rid===tplQRid, ttl=title(tr), sec=tr.dataset.section, t=pillOf(tr).textContent.trim(), cur=curSrc(tr), lk=tr.dataset.lock, doc=tr.dataset.doc;
+  if(!dob)a.querySelector('header .small.muted').textContent='Applicant · '+sec;
+  a.querySelector('h3').textContent=ttl;
+  var hp=headPill(a,tr); hp.nextElementSibling.textContent=(isAI(t)&&/High/.test(t))?'Draft and checker agree; rules pass':'';
+  var opt=function(k,label,reason,off){var on=!off&&cur===k; return '<label data-k="'+k+'" class="'+(off?'off':on?'on':'')+'"><span class="cbx'+(off?' off':on?' on':'')+'" style="border-radius:50%"></span><span><b>'+label+'</b><span class="reason">'+reason+'</span></span></label>';};
+  var D=lk?opt('doc','Document','Declarations are always answered by the client.',1)
+    :doc?opt('doc','Document · '+doc,(tr.dataset.def==='doc'?'Default by the rules: the '+doc.toLowerCase()+" is on Applicant's checklist and supplies it.":'Library default: the '+doc.toLowerCase()+' supplies it.')+(dob?' Also supplied by: National identity card (information only).':''),0)
+    :opt('doc','Document',"No document on Applicant's checklist supplies it.",1);
+  var C=opt('cli','Client',lk?'Declarations are always answered by the client.':'Asked in the client questionnaire.',0);
+  var A=tr.dataset.def==='agt'?opt('agt','Agent',"The agent enters the representative's, office's and case's own facts.",0)
+    :opt('agt','Agent',lk?'Declarations are always answered by the client.':"Not offered: the agent enters only the representative's, office's and case's own facts.",1);
+  a.querySelector('.radio').innerHTML=D+C+A;
+  var secs=$$('details.sec',a);
+  var fb=$$('.in > .small',secs[0]).filter(function(d){return d.textContent.indexOf('Fallback')===0})[0];
+  if(fb){if(cur!=='doc')fb.style.display='none'; else if(!dob)fb.innerHTML=tr.dataset.miss?'Fallback question: <b>none</b> <span class="miss">⚠ No fallback question</span>':'Fallback question: <b>"'+ttl+'"</b> in '+sec+' <span class="pill ok">✓ reachable</span>';}
+  var pl=secs[1].querySelector('label.row');
+  pl.innerHTML=cur==='agt'?'<span class="cbx off"></span> Ask in pre-qualification <span class="reason">Not offered: the agent enters it.</span>':'<span class="cbx'+(pqrOn(tr)?' on':'')+'"></span> Ask in pre-qualification';
+  if(!dob){$$('.in > .small',secs[1]).forEach(function(d){if(/^Why/.test(d.textContent))d.style.display='none'}); var q=secs[1].querySelector('.quote'); if(q)q.style.display='none';}
+  secs[2].querySelector('dd').textContent=tr.cells[4].textContent.trim();
+  if(!dob){
+    secs[3].querySelector('dl').innerHTML='<dt>Kind of answer</dt><dd>Sample, not drawn on this board</dd>';
+    secs[4].querySelector('dd').textContent=sec;
+    secs[5].querySelector('summary').textContent='Used by'; secs[5].querySelector('.in').innerHTML=notDrawn();
+    secs[6].querySelector('.in').innerHTML=notDrawn();
+  }
+  secs[7].querySelector('.in').textContent=isAI(t)?'AI proposal · not yet accepted · nothing applies until accepted':t;
+  var ft=a.querySelector('footer'), ok=isAI(t)&&needKind(t)!=='rel';
+  ft.querySelector('.btn.ghost').disabled=!ok; ft.querySelector('.btn.primary').disabled=!ok;
+}
+function populateDec(a,tr){var t=pillOf(tr).textContent.trim(); if(!isAI(t)){headPill(a,tr); a.querySelector('header .pill').nextElementSibling.textContent=''; $$('footer .btn',a).forEach(function(b){b.disabled=true});}}
+function populateD(a,tr){
+  var pass=tr.dataset.rid===tplDRid, t=pillOf(tr).textContent.trim(), rows=$$('tr[data-rid]',fr(tr)), secs=$$('details.sec',a);
+  if(!pass){
+    a.querySelector('header .small.muted').textContent="Applicant's checklist · "+(rows.indexOf(tr)+1)+' of 6';
+    a.querySelector('h3').innerHTML=tr.cells[1].innerHTML;
+    var hp=headPill(a,tr); hp.nextElementSibling.textContent=t==='Released'?'Release 2 · changes go out with the next release':'';
+    var dd=$$('dd',secs[0]); dd[0].textContent=tr.cells[2].textContent.trim(); dd[1].textContent=tr.cells[3].textContent.trim();
+    secs[1].querySelector('.in > .small').textContent=/ or /.test(tr.cells[1].textContent)?tr.cells[1].textContent.trim():'None';
+    var nm=tr.cells[4].textContent.match(/\d+/); secs[2].querySelector('summary span').textContent='· '+(nm?nm[0]:'none')+' · from the library document type';
+    var tb=secs[2].querySelector('table'); if(tb)tb.outerHTML=notDrawn();
+    secs[6].querySelector('.in').innerHTML=notDrawn();
+  } else headPill(a,tr);
+  secs[7].querySelector('.in').textContent=pass&&t==='Released'?secs[7].querySelector('.in').textContent:t;
+  var ft=a.querySelector('footer');
+  if(isAI(t))ft.innerHTML='<button class="btn ghost">Reject</button><span class="row"><button class="btn">Edit</button><button class="btn primary">Accept</button></span>';
+  if(/^Removed|Rejected/.test(t))$$('.btn',ft).forEach(function(b){if(b.textContent!=='Edit')b.disabled=true});
+}
+function removeDoc(tr){
+  act(function(){
+    var t=pillOf(tr).textContent.trim(), n=(tr.cells[4].textContent.match(/\d+/)||[])[0], nm=title(tr);
+    if(isAI(t)){showToast('Reject instead',false);return false;}
+    if(t==='Released')setStatus(tr,'neutral','Removed at the next release');
+    else{tr.style.display='none'; tr.dataset.gone='1'; var a=drawerOf(fr(tr)); if(a.dataset.rid===tr.dataset.rid)closeDrawer(fr(tr));}
+    refreshDrawer(fr(tr));
+    return nm+' removed from checklist'+(n?' · '+n+' facts move to the client questionnaire':'');
+  });
+}
+
+/* ---------- filters ---------- */
+function applyFilters(f){
+  var st=$('main',f).dataset, kind=F().indexOf(f)===2?'d':'q';
+  $$('tr.qd-empty',f).forEach(function(e){e.remove()});
+  $$('tr[data-rid]',f).forEach(function(tr){
+    var ok=!tr.dataset.gone;
+    if(kind==='q'){if(st.person!=='Applicant')ok=false; if(st.src!=='all'&&curSrc(tr)!==st.src)ok=false;}
+    else{var who=tr.cells[2].textContent; if(st.person==='Spouse'&&!/Each applicant/.test(who))ok=false; if(st.person==='Child'&&!/Each (applicant|child)/.test(who))ok=false;
+      var w=tr.cells[3].textContent.trim(); if(st.when==='always'&&w!=='Always')ok=false; if(st.when==='onlyif'&&w==='Always')ok=false;}
+    if(st.need&&!needKind(pillOf(tr).textContent))ok=false;
+    if(st.q&&title(tr).toLowerCase().indexOf(st.q)<0)ok=false;
+    tr.style.display=ok?'':'none';
+  });
+  $$('table',f).forEach(function(tb){
+    var items=$$('tr[data-rid]',tb); if(!items.length)return;
+    var g=null,vis=0; $$('tr',tb).forEach(function(r){if(r.classList.contains('group')){if(g)g.style.display=vis?'':'none'; g=r;vis=0;} else if(r.dataset.rid&&r.style.display!=='none')vis++;}); if(g)g.style.display=vis?'':'none';
+    if(!items.some(function(r){return r.style.display!=='none'})){
+      var e=document.createElement('tr'); e.className='qd-empty';
+      e.innerHTML='<td colspan="7" class="small muted">'+(kind==='q'&&st.person!=='Applicant'?'Sample rows on this board are drawn for Applicant only.':'No '+(kind==='q'?'questions':'documents')+' match these filters.')+'</td>';
+      tb.appendChild(e);
+    }
+  });
+  syncBulk(f);
+}
+function chipClick(ch){
+  var f=fr(ch), st=$('main',f).dataset, t=ch.textContent.trim(), chips=$$('.toolrow .chip',f);
+  var setOn=function(group,el){group.forEach(function(c){c.classList.toggle('on',c===el)})};
+  var pm=t.match(/^(Applicant|Spouse|Child)/);
+  if(pm){st.person=pm[1]; setOn(chips.filter(function(c){return /^(Applicant|Spouse|Child)/.test(c.textContent.trim())}),ch);}
+  else if(ch.classList.contains('need')){st.need=st.need?'':'1'; ch.classList.toggle('on',!!st.need); ch.innerHTML=ch.innerHTML.replace(/ ✕$/,'')+(st.need?' ✕':'');}
+  else if(t==='All sources'||ch.querySelector('.dot')){st.src=t==='All sources'?'all':(/^Document/.test(t)?'doc':/^Client/.test(t)?'cli':'agt'); setOn(chips.filter(function(c){return c.textContent.trim()==='All sources'||c.querySelector('.dot')}),ch);}
+  else if(t==='All'||/^Always|^Only if/.test(t)){st.when=t==='All'?'all':/^Always/.test(t)?'always':'onlyif'; setOn(chips.filter(function(c){var x=c.textContent.trim();return x==='All'||/^Always|^Only if/.test(x)}),ch);}
+  applyFilters(f);
+}
+
+/* ---------- one click handler for the whole board ---------- */
+document.addEventListener('click',function(e){
+  var el=e.target, x;
+  if(el.closest('[data-undo]')){undo();return;}
+  if(el.closest('#qd-toast'))return;
+  /* bulk menu items */
+  if((x=el.closest('.pop .it[data-bulk]'))){var f=fr(x); closePops(); runBulk(f,x.dataset.bulk); return;}
+  /* + Add menu items */
+  if((x=el.closest('.pop .it[data-add]'))){closePops(); if(x.dataset.add==='q')flash(F()[4]); else showToast('Opens the library section picker, as built.',false); return;}
+  /* row ⋯ menu items */
+  if((x=el.closest('td.mn .pop .it'))){
+    if(x.classList.contains('off'))return;
+    var tr=x.closest('tr'), lab=x.firstChild.textContent.trim(), f=fr(tr); closePops();
+    if(lab==='Open details')openDrawer(tr);
+    else if(lab==='Change where it comes from…')openDrawer(tr,'Where the answer comes from');
+    else if(lab==='Back to the library default')act(function(){if(!tr.dataset.doc)return false; setSource(tr,'doc'); setStatus(tr,'neutral','From the library'); refreshDrawer(f); return title(tr)+': back to the library default, Document · '+tr.dataset.doc;});
+    else if(lab==='Change in the library…')showToast('Opens Shared library › Fields and Sections; a second person approves.',false);
+    else if(lab==='Change the document type in the library…')showToast('Opens Shared library › Document types; a second person approves.',false);
+    else if(lab==='Where used'){if(tr.dataset.kind==='q')openDrawer(tr,'Used by'); else showToast('Opens Where used for '+title(tr)+'.',false);}
+    else if(lab==='History')openDrawer(tr,'Status and history');
+    else if(lab==='Move up or down')act(function(){var p=tr.previousElementSibling, up=p&&p.dataset.rid; if(up)tr.parentNode.insertBefore(tr,p); else if(tr.nextElementSibling)tr.parentNode.insertBefore(tr.nextElementSibling,tr); return title(tr)+' moved '+(up?'up':'down')+" in Applicant's checklist · History line added";});
+    else if(lab==='Remove from checklist')removeDoc(tr);
+    return;
+  }
+  if(el.closest('.pop'))return;
+  /* kebab */
+  if((x=el.closest('td.mn .kebab'))){var td=x.closest('td'), had=td.querySelector('.pop'); closePops(); if(!had){td.insertAdjacentHTML('beforeend',menuFor(td.parentElement)); x.classList.add('on');} return;}
+  closePops();
+  /* drawer close */
+  if((x=el.closest('aside.drawer .kebab[aria-label="Close"]'))){closeDrawer(fr(x));return;}
+  /* bulk bar buttons */
+  if((x=el.closest('.bulk .btn'))){
+    var f=fr(x), t=x.textContent.trim();
+    if(/^Accept/.test(t))runBulk(f,'accept:');
+    else if(/^Set where/.test(t))bulkMenu(x,[['src:doc','Document','Only where a document on the checklist supplies it.'],['src:cli','Client','Asked in the client questionnaire.'],['src:agt','Agent',"Only for the representative's, office's and case's own facts."]]);
+    else if(/^Pre-qualification/.test(t))bulkMenu(x,[['pqr:on','On','Ask in pre-qualification'],['pqr:off','Off','']]);
+    else if(t==='Reject')runBulk(f,'reject:');
+    else if(/^Clear selection/.test(t)){selected(f).forEach(function(tr){setSel(tr,false)}); syncBulk(f);}
+    return;
+  }
+  /* row checkbox, header checkbox */
+  if((x=el.closest('td.cb .cbx'))){if(x.classList.contains('off'))return; var tr=x.closest('tr'); setSel(tr,!x.classList.contains('on')); syncBulk(fr(tr)); return;}
+  if((x=el.closest('th.cb .cbx'))){var tb=x.closest('table'), rows=$$('tr[data-rid]',tb).filter(function(r){return r.style.display!=='none'&&!rowCb(r).classList.contains('off')}), on=!x.classList.contains('on');
+    x.classList.toggle('on',on); rows.forEach(function(r){setSel(r,on)}); syncBulk(fr(x)); return;}
+  /* pre-qualification tick in a row */
+  if((x=el.closest('tr[data-rid] td:nth-child(4) .cbx'))){var tr=x.closest('tr'); if(tr.dataset.kind!=='q')return; var on=!pqrOn(tr), r=pqrRefusal(tr,on);
+    if(r||x.classList.contains('off')){showToast(r||'Not offered: the agent enters it.',false);return;}
+    act(function(){setPqr(tr,on); refreshDrawer(fr(tr)); return 'Pre-qualification '+(on?'on':'off')+' for '+title(tr);}); return;}
+  /* open the drawer from a row */
+  if((x=el.closest('tr[data-rid] td:nth-child(2)'))&&!el.closest('a.has-tip')){openDrawer(x.parentElement,null,true);return;}
+  if((x=el.closest('tr[data-rid] td:nth-child(5) a'))){openDrawer(x.closest('tr'),'Facts it supplies');return;}
+  /* drawer: question */
+  if((x=el.closest('aside.drawer[data-type="q"] .radio label'))){
+    var a=x.closest('aside'), f=fr(a), tr=$('tr[data-rid="'+a.dataset.rid+'"]',f), k=x.dataset.k;
+    if(x.classList.contains('off')){showToast(x.querySelector('.reason').textContent,false);return;}
+    if(curSrc(tr)===k)return;
+    act(function(){var t=pillOf(tr).textContent; setSource(tr,k); if(!isAI(t))setStatus(tr,'info','Changed here'); refreshDrawer(f); return 'Where it comes from set to '+(k==='doc'?'Document · '+tr.dataset.doc:SRC[k])+' on '+title(tr);}); return;}
+  if((x=el.closest('aside.drawer[data-type="q"] label.row'))){
+    var a=x.closest('aside'), f=fr(a), tr=$('tr[data-rid="'+a.dataset.rid+'"]',f), on=!pqrOn(tr), r=pqrRefusal(tr,on);
+    if(r){showToast(r,false);return;}
+    act(function(){setPqr(tr,on); refreshDrawer(f); return 'Pre-qualification '+(on?'on':'off')+' for '+title(tr);}); return;}
+  /* drawer: Decide */
+  if((x=el.closest('aside.drawer[data-type="dec"] .radio label'))){$$('label',x.parentElement).forEach(function(l){var on=l===x; l.classList.toggle('on',on); l.querySelector('.cbx').classList.toggle('on',on)}); return;}
+  /* drawer footer and in-drawer buttons */
+  if((x=el.closest('aside.drawer .btn'))){
+    if(x.disabled)return;
+    var a=x.closest('aside'), f=fr(a), tr=$('tr[data-rid="'+a.dataset.rid+'"]',f), t=x.textContent.trim(), type=a.dataset.type;
+    if(t==='Change in the library…'){showToast(type==='doc'?'Opens Shared library › Document types; a second person approves.':'Opens Shared library › Fields and Sections; a second person approves.',false);return;}
+    if(t==='Edit'){$$('details.sec',a).forEach(function(d){d.open=true});return;}
+    if(t==='Accept')act(function(){setStatus(tr,'ok','Accepted'); refreshDrawer(f); return title(tr)+' accepted';});
+    else if(t==='Reject')act(function(){setStatus(tr,'neutral','Rejected'); refreshDrawer(f); return title(tr)+' rejected';});
+    else if(t==='Save my choice')act(function(){var first=$$('.radio label',a)[0].classList.contains('on'), k=first?'doc':'cli';
+      setSource(tr,k); setStatus(tr,'ok','Accepted'); tr.cells[0].innerHTML='<span class="cbx"></span>'; refreshDrawer(f);
+      return title(tr)+': '+(first?'Document · '+tr.dataset.doc:'Client')+' saved · the reason goes to the second person';});
+    else if(t==='Reject both')act(function(){setStatus(tr,'neutral','Rejected'); refreshDrawer(f); return title(tr)+': both rounds rejected';});
+    else if(t==='Remove from checklist')removeDoc(tr);
+    return;
+  }
+  /* toolbar: + Add ▾, Add a document, Open all sections, AI button, Show and edit, section remove */
+  if((x=el.closest('.btn'))){
+    if(x.disabled)return;
+    var t=x.textContent.trim(), f=fr(x);
+    if(t==='+ Add ▾'){var sp=x.parentElement; sp.style.position='relative'; var p=document.createElement('div'); p.className='pop'; p.style.cssText='top:36px;right:0;width:260px';
+      p.innerHTML='<div class="it" data-add="s">Add a library section…</div><div class="it" data-add="q">Add a question <span class="reason">The one Add dialog (frame 5)</span></div>'; sp.appendChild(p); return;}
+    if(t==='+ Add a document'){flash(F()[4]); showToast('The one Add dialog, library type first (frame 5 shows it for a question).',false); return;}
+    if(t==='Open all sections'||t==='Close all sections'){var open=t==='Open all sections'; $$('.acc',f).forEach(function(acc){setAcc(acc,open)}); x.textContent=open?'Close all sections':'Open all sections'; return;}
+    if(/Draft questions and documents/.test(t)){showToast('Saved draft replayed at US$0: its proposals are the ones in this list.',false);return;}
+    if(t==='Show and edit'){showToast('Opens the full "Who can be in this application" table, as built.',false);return;}
+    if(t==='Remove from questionnaire'){var acc=x.closest('.acc'); act(function(){acc.style.opacity='.45'; var tb=acc.querySelector('table'); if(tb)tb.style.display='none'; x.disabled=true;
+      return acc.querySelector('.hd b').textContent+' removed from this questionnaire · its questions are no longer asked';}); return;}
+    /* preview (frame 4) */
+    if(t==='Upload passport'){showToast('Passport read: 7 answers proposed below; check each one.',false);return;}
+    if(t==='Type instead'){var c=x.closest('.client'); act(function(){$$('.inp.prop',c).forEach(function(i){i.classList.remove('prop'); i.textContent='';}); return 'Proposals cleared: type each answer';}); return;}
+    if(t==='Correct'){var r=x.closest('.ans'); act(function(){var i=r.querySelector('.inp'); i.classList.remove('prop'); x.textContent='✓ Correct'; x.disabled=true; return r.firstElementChild.textContent+' kept as your answer';}); return;}
+    if(t==='Change'){var i=x.closest('.ans').querySelector('.inp'); i.classList.remove('prop'); i.contentEditable='true'; i.focus(); return;}
+    if(t==='Checked against the page'){var card=x.closest('.card'); act(function(){x.parentElement.innerHTML='<span class="pill ok">checked against the page</span>';
+      var rs=$$('.reason',card).filter(function(s){return /^Confirm section waits/.test(s.textContent)})[0]; if(rs)rs.textContent='Confirm section waits for: date of birth, client and document differ.'; return 'Family name(s) checked against the page';}); return;}
+    if(t==='Change family'){showToast('The Sample family picker opens here (Scaffolding).',false);return;}
+    /* add dialog (frame 5) */
+    if(t==='Cancel'){showToast('Closed: nothing added.',false);return;}
+    /* states (frame 8) */
+    if(t==='Add a library section…'){showToast('Opens the library section picker, as built.',false);return;}
+    if(t==='Stop'){var s=x.closest('.state'); act(function(){var sp=$$('span',s).filter(function(z){return /^Step 4 of 7/.test(z.textContent)})[0]; if(sp)sp.textContent='Stopped at step 4 of 7.'; x.disabled=true; return 'Draft questions and documents stopped';}); return;}
+    if(t==='Reload their version'){var n=x.closest('.notice'); act(function(){n.className='notice ok small'; n.innerHTML='<b>Their version is loaded.</b>'; return 'Reloaded their version';}); return;}
+    return;
+  }
+  /* links */
+  if((x=el.closest('a'))){
+    var t=x.textContent.trim();
+    if(x.closest('.frame')===F()[1]&&x.closest('.toast')){x.closest('.toast').style.display='none';return;}
+    if(t==='Use it instead'){showToast('"Passport issue date" from the library is used instead; nothing new is created.',false);return;}
+    if(t==='Open it'){var li=x.closest('li'); if(/Date of marriage/.test(li.textContent)){var tr=rowBy(F()[1],'Date of marriage'); flash(F()[1]); openDrawer(tr);} else showToast('Spouse or partner rows are not drawn on this board.',false); return;}
+    if(x.closest('.tabs')){var map={'Questionnaires':0,'Documents':2,'Preview':3}; if(t in map)flash(F()[map[t]]); else showToast(t+' is not drawn on this board.',false); return;}
+    if(x.closest('nav.menu')){showToast(t.replace(/\s*\d+$/,'')+' is not drawn on this board.',false);return;}
+    return;
+  }
+  /* chips */
+  if((x=el.closest('.toolrow .chip'))){chipClick(x);return;}
+  /* search box */
+  if((x=el.closest('span.search'))){var f=fr(x), inp=document.createElement('input'); inp.className='search'; inp.placeholder=x.textContent; inp.style.color='var(--text)'; x.replaceWith(inp); inp.focus(); return;}
+  /* accordion headers */
+  if((x=el.closest('.acc .hd'))){setAcc(x.closest('.acc'),null);return;}
+  /* preview segmented switch */
+  if((x=el.closest('.seg span'))){var spans=$$('span',x.parentElement), i=spans.indexOf(x); spans.forEach(function(s){s.classList.toggle('on',s===x)}); var col=$('.pv',fr(x)).children[i]; if(col)flash(col); return;}
+  /* typed fields */
+  if((x=el.closest('.inp'))&&!x.classList.contains('err')){x.contentEditable='true'; x.focus(); return;}
+});
+function setAcc(acc,open){
+  var tb=acc.querySelector('table'), arrow=$$('.hd > span',acc).filter(function(s){return /^[▸▾]$/.test(s.textContent.trim())})[0];
+  if(tb){var show=open==null?tb.style.display==='none':open; if(acc.style.opacity==='0.45')return; tb.style.display=show?'':'none'; return;}
+  var note=acc.querySelector('.qd-note'), show=open==null?!note:open;
+  if(show&&!note){acc.insertAdjacentHTML('beforeend','<div class="qd-note small muted" style="padding:0 14px 10px">Sample rows for this section are not drawn on this board.</div>');}
+  if(!show&&note)note.remove();
+  if(arrow)arrow.textContent=show?'▾':'▸';
+}
+document.addEventListener('input',function(e){var x=e.target; if(x.matches&&x.matches('input.search')){var f=fr(x); $('main',f).dataset.q=x.value.trim().toLowerCase(); applyFilters(f);}});
+document.addEventListener('keydown',function(e){if(e.key!=='Escape')return; if($('.pop')){closePops();return;} F().slice(0,3).forEach(closeDrawer);});
+F().slice(0,3).forEach(function(f){var o=$$('details.sec',drawerOf(f)).map(function(d){return d.open}); refreshDrawer(f); $$('details.sec',drawerOf(f)).forEach(function(d,i){d.open=o[i]});});
+})();
+</script>
 </body></html>
