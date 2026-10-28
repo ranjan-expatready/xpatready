@@ -1,14 +1,6 @@
 {
-  "basis": "Load sample's Sample fixtures (founder change 4 of the S4 slice 3 early look; Lead note 28 Oct: from the saved finder run as Sample fixtures, US$0, no live pass). Recorded by the forms lane on 28 Oct 2026 from the recorded canada.ca copies (official-sources/ircc) and screens/W1-form-library/forms-for-5-combinations.md. Every line is IRCC's own sentence on the form's recorded canada.ca page and says how the form is filed; Load sample checks both (the finder's own rule, as for AI answers) and leaves out an entry that fails. IMM 5257 SCH1 and IMM 5409 are not here: their pages never say how they are filed, so they stay Not set yet for a person to set (C11.18). A form a saved real finder answer already speaks about keeps that answer (AI · Sample). Every value is Sample until the immigration expert confirms.",
+  "basis": "Load sample's Sample fixtures (founder change 4 of the S4 slice 3 early look; Lead note 28 Oct: from the saved finder run as Sample fixtures, US$0, no live pass). Recorded by the forms lane on 28 Oct 2026 from the recorded canada.ca copies (official-sources/ircc) and screens/W1-form-library/forms-for-5-combinations.md. Every line is IRCC's own sentence on the form's recorded canada.ca page and says how the form is filed; Load sample checks both with the finder's own rule (as for AI answers) and leaves out an entry that fails. Lead check 28 Oct: a paper or mail line is paper filing, not a PDF upload, and a line about filling the form in on a computer says nothing about how it is filed. So only IMM 5475 and IMM 5476 are here (their pages say to upload them with an online application); IMM 1295, IMM 5257, IMM 5257 SCH1, IMM 5409 and IMM 5707 stay Not set yet for a person to set (C11.18). Every value is Sample until the immigration expert confirms.",
   "accepts": {
-    "IMM 1295": {
-      "channels": "PDF",
-      "quote": "Download and fill out the form on a computer."
-    },
-    "IMM 5257": {
-      "channels": "PDF",
-      "quote": "Download and fill out the form on a computer."
-    },
     "IMM 5475": {
       "channels": "PDF",
       "quote": "upload this form along with your online application."
@@ -16,10 +8,6 @@
     "IMM 5476": {
       "channels": "PDF",
       "quote": "Upload this form along with your online application"
-    },
-    "IMM 5707": {
-      "channels": "PDF",
-      "quote": "If you have filled out the form on a computer, click on the “Validate” button located at the top of the form."
     }
   },
   "pages": {

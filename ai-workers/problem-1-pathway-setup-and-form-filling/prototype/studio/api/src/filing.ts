@@ -11,15 +11,28 @@ import { CanadaError } from "./canada.ts";
 const STUDIO = join(import.meta.dirname, "..", ".."), SOLUTION = join(STUDIO, "..", "..");
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 
-/** What IRCC accepts, from the page's own words about how the form is filed (rules on AI's quoted line); null when it says nothing. */
+/** What IRCC accepts, from IRCC's own line about how the form is filed (P-122/P-123): the one rule AI answers and the
+ *  Sample fixtures both pass. A PDF upload needs a line that says the form is uploaded; Online needs a line about filing
+ *  online or in a portal. Lead check 28 Oct: a paper or mail line ("Paper applications … send this form") is paper filing,
+ *  never a PDF upload, and a line about filling the form in on a computer says how to fill it, not how it is filed: both
+ *  give null, "Not set yet", with filingWhy's reason. */
 export function channelsFrom(note: string | null | undefined): "PDF" | "ONLINE" | "PDF_OR_ONLINE" | null {
   if (!note) return null;
   // Review round 7: a download link's size label ("(PDF, 0.5 MB)") says what the file is, not how the form is filed.
-  note = note.replace(/\((?:pdf|html)[^)]*\)/gi, " ");
-  // Review round 7: "Upload this form along with your online application" is a PDF uploaded into an online application.
-  const uploadsTheForm = /\bupload (?:this|the) form\b/i.test(note);
-  const online = !uploadsTheForm && /\bonline\b|portal/i.test(note), pdf = /\bpdf\b|paper|upload|download and fill|fill(?:ed)? out the form on a computer/i.test(note);
+  const line = note.replace(/\((?:pdf|html)[^)]*\)/gi, " ");
+  const pdf = /\bupload(?:s|ed|ing)?\b/i.test(line);
+  // "Online applications … Upload this form along with your online application": the PDF goes into an online
+  // application (a PDF upload); only filing online itself (an online form, the portal) is Online.
+  const online = /\bonline\b|\bportal\b/i.test(pdf ? line.replace(/\bonline applications?\b/gi, " ") : line);
   return online && pdf ? "PDF_OR_ONLINE" : online ? "ONLINE" : pdf ? "PDF" : null;
+}
+/** Why a line gives no value (null when it gives one): shown with a fixture that is left out. */
+export function filingWhy(note: string | null | undefined): string | null {
+  if (channelsFrom(note)) return null;
+  const line = note ?? "";
+  if (/\bpaper\b|\bmail(?:ed)?\b|\bsend (?:this|the|it|us)\b/i.test(line)) return "IRCC's page speaks of paper filing, not a PDF upload";
+  if (/\bcomputer\b|\bvalidat\w*\b|\bdownload\b/i.test(line)) return "IRCC's line says how to fill the form in, not how it is filed";
+  return "IRCC's line does not say how the form is filed";
 }
 
 /** Load sample's Sample fixtures (samples/form-library-sample.json): what IRCC accepts per form, a page for a form canada.ca's
@@ -38,7 +51,7 @@ export function sampleFixtures(file = join(STUDIO, "samples", "form-library-samp
   for (const [code, v] of Object.entries(f.accepts ?? {})) {
     const x = v as { channels?: unknown; quote?: unknown } | null;
     if (!x || !CHANNELS.has(String(x.channels)) || !str(x.quote, 400)) { out.problems.push(`${code}: what IRCC accepts is not a known value with its line`); continue; }
-    if (channelsFrom(String(x.quote)) !== x.channels) { out.problems.push(`${code}: its line does not say ${x.channels} ("${String(x.quote).slice(0, 60)}")`); continue; }
+    if (channelsFrom(String(x.quote)) !== x.channels) { out.problems.push(`${code}: its line does not say ${x.channels}: ${filingWhy(String(x.quote)) ?? `it says ${channelsFrom(String(x.quote))}`} ("${String(x.quote).slice(0, 60)}")`); continue; }
     out.accepts[normaliseCode(code)] = { channels: x.channels as "PDF", quote: String(x.quote) };
   }
   for (const [code, v] of Object.entries(f.pages ?? {})) {
