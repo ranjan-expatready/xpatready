@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **S4 merged (06a8fc30): Go for S5 slice 3** (also by message): sync main (conflicts in studio.ts, main.ts, schema.prisma; keep the shared lifecycle guard), forms from the finder, guides linked to their combinations as sources, "Remove from …" with Undo on the shared components; tests; EARLY-LOOK by message. Save often.
+2026-10-28 (Lead, Mac, sixth chat, Claude Code): **S5 Lead check: FIX** (`screens/W1-combination-workspace/lead-check.md`; PR #71 holds the merge and stays open). Stage FIX, owner Builder. Main path walked and works; two independent reads found the same Undo defect. Fix L1–L5 (Majors: Undo keeps age/signer/rule edits; live "AI now" on Who can be not approved → hide or grey it; rules-only results labelled AI; Filed as ignores the edition's acceptedChannels; prove or fix the age gate without a date-of-birth question) and L6–L11 (Minors), each with a pass and a fail test. Answer Devin Review's 3 comments on PR #71 in the PR. Sync main first (run-suites now gives each copy its own names and ports). Local run-suites on the exact commit, hand back by message. US$0.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

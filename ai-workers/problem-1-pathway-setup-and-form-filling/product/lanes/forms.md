@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **S4 merged (PR #65, main 06a8fc30); :4400 restarted on it.** Stage BUILD, owner Builder: (1) **QA-53**: one shared guard on every Studio configuration read (nobody 401, case people 403; case routes untouched), pass and fail tests; (2) then the form library on the shared lifecycle components (written row action, greyed reason as text, edition "kept by" line, P-116 amended). Desktop only; save often; hand back by message.
+2026-10-28 (Lead, Mac, sixth chat, Claude Code): PR #70 (records) merged; the run-suites per-copy prefix (5c2c4e82) is on main through the Lead PR, so do not carry it on this branch. Stage FIX, owner Builder: sync main; then R69-1 (a RETURNED form change keeps Withdraw/its state: `form-library.ts` lifecyclePending reads WAITING and APPROVED only), R69-2 (actor in the Forms list query key), R69-3 (prove Retire greys when both delete and retire are refused), takesEffect only for RETIRE/RESTORE (`library-forms.tsx`); a pass and a fail test each. They do not block anything but go with QA-61..64 (fa653bec, not on main yet) in one Lead PR. Also note for S5: runtime will read the edition's acceptedChannels on the Forms tab (lead-check L4); keep that field's meaning stable. Local run-suites on the exact commit, `tools/graph.mjs`, hand back. US$0.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
