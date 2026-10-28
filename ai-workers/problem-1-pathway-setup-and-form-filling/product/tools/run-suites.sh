@@ -36,6 +36,8 @@ if [ -n "$PREFIX" ]; then
   LOCK="${SUITES_LOCKS:-$ROOT/.tools/run-suites-locks}/slot-$SLOT"; mkdir -p "${LOCK%/*}"
   claim() { mkdir "$LOCK" 2>/dev/null && printf '%s %s %s\n' "$$" "$PREFIX" "$ROOT" > "$LOCK/owner"; }
   if [ "$NAMES" = 1 ]; then :; elif ! claim; then
+    # A lock just made may not have its owner line yet (claim is two steps): wait for it before calling it stale.
+    for _ in 1 2 3 4 5 6 7 8 9 10; do [ -s "$LOCK/owner" ] && break; sleep 0.3; done
     read -r opid oprefix oroot < "$LOCK/owner" 2>/dev/null || true
     if [ -n "${opid:-}" ] && kill -0 "$opid" 2>/dev/null; then
       echo "Another run of the suites uses the same names or ports: prefix ${oprefix:-?} in ${oroot:-?} (pid $opid). Wait for it, or set COPY_PREFIX to another name. No suite was run."; exit 3
@@ -78,7 +80,10 @@ for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
     if [ "$tool" = node ]; then run "$f" "$name" node "$path" $args; else run "$f" "$name" $TSX "$path" $args; fi
     zsh "$S/tools/isolated.sh" "$name" "$port" stop >/dev/null 2>&1
   else
-    case "$f" in *.cjs) run "$f" plain node "$path";; *) run "$f" plain env DATABASE_URL="$DB/xr_studio_demo" $TSX "$path";; esac
+    # A check that starts its own copy says so as "[port=N] [name=x]" (check_ai_orchestration): with a prefix it gets this
+    # copy's port and name, so two lanes never start the same copy (PR #72 review).
+    own=""; if [ -n "$PREFIX" ] && [[ "$usage" =~ \[port=([0-9]+)\]\ \[name=([a-z0-9_]+)\] ]]; then own="$(iport "${BASH_REMATCH[1]}") $(iname "${BASH_REMATCH[2]}")"; fi
+    case "$f" in *.cjs) run "$f" plain node "$path";; *) run "$f" plain env DATABASE_URL="$DB/xr_studio_demo" $TSX "$path" $own;; esac
   fi
 done
 # Suites outside tests/check_*: the runtime lane's (R1, two steps on one copy) and the drafting guard's (prototype/tests,

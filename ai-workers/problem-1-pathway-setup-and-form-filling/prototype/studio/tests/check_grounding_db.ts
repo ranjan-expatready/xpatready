@@ -1,6 +1,6 @@
 // Database-level checks for the 21 Oct grounding audit findings 1–3 (and D285 master rules), against an isolated copy
 // started by tools/isolated.sh (its own database and files; the demo is never touched). No browser, no model call.
-//   zsh studio/tools/isolated.sh grounding 4402 start && tsx studio/tests/check_grounding_db.ts 4402
+//   zsh studio/tools/isolated.sh grounding 4402 start && tsx studio/tests/check_grounding_db.ts 4402 [xr_studio_grounding]
 import { execFileSync } from "node:child_process";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
