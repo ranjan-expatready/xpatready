@@ -3,7 +3,7 @@
 import { z } from "zod";
 
 /** POST /combinations/start: begin the setup of one last-level name (idempotent: a second call returns the same one). */
-export const StartSetupBody = z.object({ nodeKey: z.string().trim().min(1, "Choose a category or sub-category to set up.") });
+export const StartSetupBody = z.object({ nodeKey: z.string({ message: "Choose a category or sub-category to set up." }).trim().min(1, "Choose a category or sub-category to set up.") });
 export type StartSetupResult = { created: boolean; combination: { id: string; label: string }; run: string | null; saved: boolean };
 
 /** GET /combinations/:id/start-setup: the finder's newest run on this combination, and the one way to find its forms when

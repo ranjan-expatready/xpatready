@@ -9,6 +9,7 @@ import type { CatalogueLeaf, NextAction } from "../../../contracts/programs";
 import { api, useToast } from "@/lib/api";
 import { AiLaunchDialog } from "@/components/ai-launch";
 import { Tip } from "@/components/status";
+import { useStartSetup } from "@/components/start-setup";
 
 /** Steps any role may follow (they only show something); the others are a configuration author's. */
 export const SHOW_ONLY_STEPS: NextAction["kind"][] = ["view_progress", "see_missing", "see_new_edition", "release"];
@@ -37,9 +38,11 @@ export function StepTip({ a, children }: { a: NextAction | null; children: React
 export function useNextStep(go: (leaf: CatalogueLeaf, suffix?: string) => unknown, leaving: (leaf: CatalogueLeaf) => void = () => {}) {
   const nav = useNavigate(); const qc = useQueryClient(); const toast = useToast();
   const [aiFor, setAiFor] = React.useState<CatalogueLeaf | null>(null);
+  const start = useStartSetup();
   const run = async (leaf: CatalogueLeaf, a: NextAction | null) => {
     if (!a) return go(leaf);
-    if (a.kind === "start" || a.kind === "add_forms") return go(leaf, "/sources");
+    if (a.kind === "start") return start(leaf.nodeKey); // S3: one Start setup (P-125)
+    if (a.kind === "add_forms") return go(leaf, "/sources");
     if (a.kind === "draft_ai") return setAiFor(leaf);
     if (a.kind === "view_progress") { leaving(leaf); return nav(`/ai/${a.batchId}`); }
     if (a.kind === "review_proposals") { leaving(leaf); return nav(`/c/${leaf.combinationId}/jobs/${a.jobId}`); }

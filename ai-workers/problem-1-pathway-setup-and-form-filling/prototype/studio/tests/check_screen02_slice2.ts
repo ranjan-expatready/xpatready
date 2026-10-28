@@ -176,14 +176,6 @@ function pdf(title: string, text: string) {
   ok("C3.5: a proposed merge reads both fields by name with what moves", mg.status === "PROPOSED" && !!mg.goes?.label && !!mg.stays?.label && typeof mg.goes.form_fields === "number", `${mg.goes?.label} → ${mg.stays?.label}`);
 
   // ─────────────────────────────── C1.2 board view 11: "Describe it" proposes a path (no AI until paid runs are agreed)
-  r = await call("POST", "/path-proposal", { pathway: "INDIVIDUAL", description: "Super visa for parents and grandparents" });
-  ok("C1.2 P-41: a description proposes an existing path by its words, says no AI, US$0, and that it already exists", r.status === 201 && r.body.mode === "no_ai" && r.body.cost_usd === 0 && r.body.proposal?.path.at(-1) === "Super visa" && r.body.proposal.exists === true, r.body?.proposal?.path);
-  r = await call("POST", "/path-proposal", { description: "short" });
-  ok("C1.2 fail: a description under 8 characters is refused (400)", r.status === 400, r.body?.detail);
-  r = await call("POST", "/path-proposal", { description: "Super visa for parents" }, "user-C");
-  ok("C1.2 fail: only a configuration author proposes a path (403)", r.status === 403, r.body?.detail);
-  r = await call("POST", "/path-proposal", { description: "zzzz qqqq xxxx" });
-  ok("C1.2: no matching words gives no proposal and says to build the path by hand", r.status === 201 && r.body.proposal === null && /by hand/.test(r.body.why), r.body?.why);
 
   // ─────────────────────────────── C3.4 K2: a checklist drafted into document requirements (stub pass only)
   const ck = (await call("GET", `/combinations/${sv}/attachments`)).body.find((a: any) => a.recognised && a.kind === "Document checklist");

@@ -6,7 +6,7 @@
 import fc from "fast-check";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CreateCombinationBody, CreateNodeBody, CreatePathBody, labelProblem, normalizeLabel, problemFromZod, sharedStep } from "../contracts/programs.ts";
+import { CreateCombinationBody, CreateNodeBody, labelProblem, normalizeLabel, problemFromZod, sharedStep } from "../contracts/programs.ts";
 import { checkedOf, compareEditions, compareStatus, editionMonth, isLive, missingItems, needsWork, newestEdition, nextActionOf, rowCounts, setupActionOf, statusOf, STATUS_TEXT, type SetupState } from "../engine/programs.ts";
 import { validate } from "../engine/validate.ts";
 import { CatalogueQuery } from "../contracts/programs.ts";
@@ -130,8 +130,8 @@ ok("round 3 pass: visible letters of any script still count", normalizeLabel("�
 // ---------------------------------------------------------------- QA-6, QA-7 the name rules, one place for server and page
 ok("QA-6 fail: a name of symbols only is refused in plain words (it has nothing to compare or key)", !CreateNodeBody.safeParse({ kind: "PROGRAM", parentKey: "individual", label: "!!!" }).success && labelProblem("!!!") === "Use letters or digits in the name, not only punctuation.");
 ok("QA-6 pass: letters in any script, digits and punctuation around them are kept", ["Résidence temporaire", "Visa d'été — 日本語", "H-1B", "2027"].every((x) => labelProblem(x) === null && CreateNodeBody.safeParse({ kind: "PROGRAM", parentKey: "individual", label: x }).success));
-const longName = CreatePathBody.safeParse({ pathway: "INDIVIDUAL", program: { create: "A".repeat(60) + " " + "B".repeat(70) }, category: { create: "Long test" } });
-ok("QA-7: a name over 120 characters is refused on its level's field with the message the page shows", !longName.success && problemFromZod(longName.error).errors?.[0]?.field === "program.create" && problemFromZod(longName.error).errors?.[0]?.message === "Keep the name under 120 characters." && labelProblem("A".repeat(121)) === "Keep the name under 120 characters.");
+const longName = CreateNodeBody.safeParse({ kind: "PROGRAM", parentKey: "individual", label: "A".repeat(60) + " " + "B".repeat(70) });
+ok("QA-7: a name over 120 characters is refused on its level's field with the message the page shows", !longName.success && problemFromZod(longName.error).errors?.[0]?.field === "label" && problemFromZod(longName.error).errors?.[0]?.message === "Keep the name under 120 characters." && labelProblem("A".repeat(121)) === "Keep the name under 120 characters.");
 ok("QA-7 pass: exactly 120 characters is accepted", labelProblem("A".repeat(120)) === null);
 ok("break m2 pass: names that differ only in vowel signs (Hindi, Thai) are different names", normalizeLabel("किसान वीज़ा") !== normalizeLabel("कसान वज़ा") && normalizeLabel("วีซ่า") !== normalizeLabel("วซา"));
 ok("break m2 fail: a name of combining marks only is refused; direction controls are removed before storing", labelProblem("\u0301\u0301") !== null && CreateNodeBody.parse({ kind: "PROGRAM", parentKey: "individual", label: "BR \u202Easiv" }).label === "BR asiv");

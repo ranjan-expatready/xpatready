@@ -8,7 +8,6 @@ import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/cont
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { ProgramsPage } from "@/pages/programs";
-import { NewCombinationPage } from "@/pages/new-combination";
 import { ReleasePage } from "@/pages/release";
 import { ChecksPage, FormsPage } from "@/pages/library-forms";
 import { CombinationPage } from "@/pages/combination";
@@ -38,7 +37,7 @@ function Shell() {
     // P-125 (founder, 27 Oct): the menu in setup order: names first (the one place they enter), then the combinations,
     // then what waits for a second person.
     { to: "/structure", label: "Program structure", icon: ListTree },
-    { to: "/", label: "Immigration programs", icon: Layers, match: (p: string) => p === "/" || p === "/new" || p.startsWith("/c/") },
+    { to: "/", label: "Immigration programs", icon: Layers, match: (p: string) => p === "/" || p.startsWith("/c/") },
     { to: "/review", label: "To review", icon: Inbox, badge: queue.data?.counts.needs || undefined },
     { to: "/library/fields", label: "Fields", icon: Database },
     { to: "/library/sections", label: "Sections", icon: Boxes },
@@ -98,7 +97,6 @@ function Shell() {
             <Route path="/review/held/:id" element={<HeldFilePage />} />
             <Route path="/review/edition/:id" element={<EditionImpactPage />} />
             <Route path="/review/form-fields/:id" element={<FormFieldsPage />} />
-            <Route path="/new" element={<NewCombinationPage />} />
             <Route path="/c/:id" element={<CombinationPage />} />
             <Route path="/c/:id/:tab" element={<CombinationPage />} />
             <Route path="/c/:id/jobs/:jobId" element={<JobPage />} />

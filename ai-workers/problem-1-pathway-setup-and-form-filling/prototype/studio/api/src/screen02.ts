@@ -131,39 +131,11 @@ export class Screen02 {
   }
 }
 
-const STOP = new Set(["the", "and", "for", "from", "with", "who", "are", "that", "this", "applied", "apply", "application", "applying", "person", "people", "outside", "inside", "canada", "visa"]);
-const words = (s: string) => [...new Set(s.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !STOP.has(w)).map((w) => w.replace(/s$/, "")))];
 
-/** Board view 11 (P-37, P-41): "Describe it" proposes the combination's path. Until the founder's OK for paid runs, the
- *  proposal is made without AI: the words of the description are matched with the existing paths (US$0), labelled so,
- *  and nothing is created until the author confirms. */
-export async function proposePath(programs: Programs, body: { pathway?: string; description?: string }) {
-  const description = String(body?.description ?? "").trim().slice(0, 400);
-  if (description.length < 8) fail("Describe the application in a few words (at least 8 characters).");
-  const opts = await programs.pathOptions(body?.pathway === "CORPORATE" ? "CORPORATE" : "INDIVIDUAL");
-  const want = words(description);
-  const leaves = opts.programs.flatMap((p) => p.categories.flatMap((c) => (c.subCategories.length ? c.subCategories.map((s) => ({ p, c, s })) : [{ p, c, s: null as null | (typeof c.subCategories)[number] }])));
-  const scored = leaves.map((l) => {
-    const path = [l.p.label, l.c.label, ...(l.s ? [l.s.label] : [])];
-    const have = words(path.join(" ")), own = words((l.s ?? l.c).label);
-    const hits = have.filter((w) => want.includes(w)), ownHits = own.filter((w) => want.includes(w));
-    // "Exempt" in a path that the description does not say is the opposite meaning ("with an LMIA" is not LMIA-exempt).
-    const opposite = have.includes("exempt") && !want.includes("exempt") ? 4 : 0;
-    return { l, path, hits, score: hits.length + ownHits.length * 2 + (own.length && ownHits.length === own.length ? 2 : 0) - opposite };
-  }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score || a.path.join().localeCompare(b.path.join()));
-  const best = scored[0];
-  if (!best) return { mode: "no_ai", cost_usd: 0, proposal: null, why: "No existing program, category or sub-category matches these words. Build the path by hand below." };
-  const leaf = best.l.s ?? best.l.c;
-  const close = scored[1] && scored[1].score === best.score;
-  return { mode: "no_ai", cost_usd: 0, why: `Matched by the words ${best.hits.map((w) => `"${w}"`).join(", ")} (no AI).`, confidence: close ? "Medium" : "High",
-    proposal: { pathway: opts.pathway, pathwayKey: best.l.p.pathway.key, pathwayLabel: best.l.p.pathway.label, path: best.path, program: { key: best.l.p.key, label: best.l.p.label }, category: { key: best.l.c.key, label: best.l.c.label }, subCategory: best.l.s ? { key: best.l.s.key, label: best.l.s.label } : null, exists: !!leaf.hasSetup, combinationId: leaf.combinationId ?? null },
-    others: scored.slice(1, 3).map((x) => x.path.join(" › ")) };
-}
 
 @Controller("api")
 export class Screen02Controller {
   constructor(@Inject(Screen02) private readonly s: Screen02, @Inject(Intake) private readonly intake: Intake, @Inject(Impact) private readonly impact: Impact, @Inject(Programs) private readonly programs: Programs) {}
-  @Post("path-proposal") pathProposal(@Headers("x-actor") a: H, @Body() b: unknown) { need(actorOf(a), "author"); return proposePath(this.programs, obj(b) as { pathway?: string; description?: string }); }
   @Get("jobs/:id/form-fields") jobFormFields(@Param("id") id: string) { return this.s.jobFormFields(id); }
   @Get("editions/:id/form-fields") formFields(@Param("id") id: string) { return this.s.formFields(id); }
   @Post("editions/:id/form-fields/decision") decide(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideFormField(actorOf(a), id, b); }

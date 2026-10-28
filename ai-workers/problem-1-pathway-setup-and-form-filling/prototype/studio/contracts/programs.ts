@@ -89,20 +89,6 @@ export type CreateCombinationBody = z.infer<typeof CreateCombinationBody>;
 export const AddLineBody = z.object({ kind: z.literal("FORM"), formKey: z.string().min(1, "Choose a form from the library.") });
 export type AddLineBody = z.infer<typeof AddLineBody>;
 
-/** POST /combinations/path (Layout v2 path builder): each level is an existing node (key) or a new name (create).
- *  The server checks every level before it writes anything; the whole path already existing returns that combination. */
-const PathLevel = z.union([z.object({ key: z.string().min(1) }), z.object({ create: label })]);
-export const LINK_KINDS = ["follows", "supported_by"] as const;
-export const CreatePathBody = z.object({
-  pathway: z.enum(PATHWAYS),
-  /** W1-03: which Pathway of the type, when the program is new and the type has several (an existing program says it). */
-  pathwayKey: z.string().trim().min(1).max(400).optional(),
-  program: PathLevel,
-  category: PathLevel,
-  subCategory: PathLevel.nullable().default(null),
-  link: z.object({ kind: z.enum(LINK_KINDS), nodeKey: z.string().min(1, "Choose the combination it is linked to.") }).nullable().default(null),
-});
-export type CreatePathBody = z.infer<typeof CreatePathBody>;
 
 export const ReleaseBody = z.object({ expectedChanges: z.number().int().min(0) });
 

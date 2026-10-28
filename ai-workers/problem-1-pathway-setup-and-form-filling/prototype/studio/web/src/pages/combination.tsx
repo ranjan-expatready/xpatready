@@ -17,6 +17,11 @@ import { SourcesTab } from "@/pages/sources";
 import { ConfigurationTab } from "@/pages/configuration";
 import { PreviewTab } from "@/pages/preview";
 import { ReviewTab } from "@/pages/review";
+import { FinderStart } from "@/components/start-setup";
+import { LEVEL_TEXT } from "@/components/levels";
+
+/** Where it sits, read-only here (P-125 (3)), in the level colours of the shared Trail (S3 m6). */
+const PLACE_TEXT: Record<string, string> = { Pathway: LEVEL_TEXT.pathway, Program: LEVEL_TEXT.program, Category: LEVEL_TEXT.category, "Sub-category": LEVEL_TEXT.subCategory };
 
 const TABS = [["overview", "Overview"], ["sources", "Sources and forms"], ["configuration", "Configuration"], ["preview", "Preview"], ["review", "Review and release"]] as const;
 
@@ -55,7 +60,7 @@ export function CombinationPage() {
     <div className="mx-auto max-w-7xl space-y-5">
       <nav aria-label="Path" className="flex flex-wrap items-center gap-1 text-sm text-text-muted">
         <Link to={backTo} className="font-medium text-text-link hover:underline">Immigration programs</Link>
-        {(d.path ?? []).map((n) => <React.Fragment key={n.key}><ChevronRight className="size-3.5" aria-hidden /><Link to={levelLink(n)} title={`${n.level}: show the list for ${n.label}`} className="hover:text-text hover:underline">{n.label}</Link></React.Fragment>)}
+        {(d.path ?? []).map((n) => <React.Fragment key={n.key}><ChevronRight className="size-3.5" aria-hidden /><Link to={levelLink(n)} title={`${n.level}: show the list for ${n.label}`} className={cn("hover:underline", PLACE_TEXT[n.level])} data-place={n.level}>{n.label}</Link></React.Fragment>)}
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
@@ -68,7 +73,7 @@ export function CombinationPage() {
       <div role="tablist" aria-label="Combination" className="flex gap-1 overflow-x-auto border-b border-border">
         {TABS.map(([k, l]) => <Link key={k} role="tab" aria-selected={tab === k} to={`/c/${id}/${k}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === k ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{l}{k === "review" && errorCount ? <span className="ml-1.5 rounded bg-danger/12 px-1 text-xs text-text-danger">{errorCount}</span> : null}</Link>)}
       </div>
-      {tab === "overview" ? <Overview d={d} sum={sum.data} show={sp.get("show")} /> : tab === "sources" ? <SourcesTab d={d} /> : tab === "configuration" ? <ConfigurationTab d={d} /> : tab === "preview" ? <PreviewTab d={d} /> : <ReviewTab d={d} />}
+      {tab === "overview" ? <Overview d={d} sum={sum.data} show={sp.get("show")} /> : tab === "sources" ? <div className="space-y-4"><FinderStart combinationId={d.combination.id} /><SourcesTab d={d} /></div> : tab === "configuration" ? <ConfigurationTab d={d} /> : tab === "preview" ? <PreviewTab d={d} /> : <ReviewTab d={d} />}
     </div>
     </TipProvider>
   );

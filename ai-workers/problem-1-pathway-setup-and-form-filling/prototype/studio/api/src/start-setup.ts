@@ -7,11 +7,11 @@
 //    3 owns that list, M4): the finder's newest run, or the one offer to find the forms. Live AI starts only on the person's
 //    click (founder, 28 Oct: wait for a click), with the worst case shown first; rules only is the fallback when AI can't run.
 // The finder itself (plan, fingerprint, launch, cap, Stop) is the forms lane's (api/src/finder.ts); this file only calls it.
-import { Body, Controller, Get, Headers, Inject, Injectable, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Inject, Injectable, Param, Post, Res } from "@nestjs/common";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { START, StartSetupBody, type FinderOffer, type StartSetupResult } from "../../contracts/start-setup.ts";
-import { actorOf, Db, need, PROTOTYPE, Workspace, type Actor } from "./core.ts";
+import { actorOf, Db, need, PROTOTYPE, STUDIO, Workspace, type Actor } from "./core.ts";
 import { Finder } from "./finder.ts";
 import { parse, Programs } from "./programs.ts";
 
@@ -19,6 +19,18 @@ type H = string | undefined;
 const RUNS = join(PROTOTYPE, "p2", "runs");
 const ACTIVE = ["QUEUED", "RUNNING"];
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Whether a saved live answer of the form finder was made for this combination, by the finder's own rule (finder.ts
+ *  runKey: the key the run records, or the saved-runs list for runs made before keys were recorded). A replay may still
+ *  stop when the pages differ; its run card then says so and the offer shows again. */
+function savedFor(combinationKey: string): boolean {
+  if (!existsSync(RUNS)) return false;
+  let legacy: Record<string, string> = {};
+  try { legacy = JSON.parse(readFileSync(join(STUDIO, "samples", "finder-saved-runs.json"), "utf8")).runs ?? {}; } catch { /* none */ }
+  return readdirSync(RUNS).filter((f) => f.startsWith("studio-finder-forms-") && !f.startsWith("studio-finder-forms-check-") && /-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/.test(f)).some((f) => {
+    try { const c = JSON.parse(readFileSync(join(RUNS, f), "utf8"))?.drafting_run?.inputs?.combination; return (c && !String(c).includes(" › ") ? c : legacy[f]) === combinationKey; } catch { return false; }
+  });
+}
 
 /** What a live finder run usually costs: the mean of the saved live answers (a list round plus its checker round); null
  *  when none is saved yet (the button then names the worst case). */
@@ -40,9 +52,8 @@ export class StartSetup {
     const r = await this.programs.createCombination(actor, { nodeKey: b.nodeKey });
     const id = r.combination.id;
     if (!r.created) return { created: false, combination: { id, label: r.combination.label }, run: (await this.finder.latest(id))?.id ?? null, saved: false };
-    // A saved answer for this trail (the plan's expected cost comes from it): replay it now, free (M1).
-    const live = await this.finder.plan(id, { mode: "live" });
-    if (live.totals.expected_usd === null) return { created: true, combination: { id, label: r.combination.label }, run: null, saved: false };
+    // A saved answer made for this combination: replay it now, free (M1). Otherwise nothing runs until the click.
+    if (!savedFor(r.combination.combinationKey)) return { created: true, combination: { id, label: r.combination.label }, run: null, saved: false };
     const replay = await this.finder.plan(id, { mode: "replay" });
     const run = await this.finder.launch(actor, id, { mode: "replay", planSha256: replay.plan_sha256, idempotencyKey: `start-setup:${id}` });
     return { created: true, combination: { id, label: r.combination.label }, run: run.id, saved: true };
@@ -69,6 +80,6 @@ export class StartSetup {
 @Controller("api")
 export class StartSetupController {
   constructor(@Inject(StartSetup) private readonly s: StartSetup) {}
-  @Post("combinations/start") start(@Headers("x-actor") a: H, @Body() b: unknown) { return this.s.start(actorOf(a), b); }
+  @Post("combinations/start") start(@Headers("x-actor") a: H, @Body() b: unknown, @Res({ passthrough: true }) res: { status: (n: number) => void }) { return this.s.start(actorOf(a), b).then((r) => { res.status(r.created ? 201 : 200); return r; }); }
   @Get("combinations/:id/start-setup") offer(@Param("id") id: string) { return this.s.offer(id); }
 }
