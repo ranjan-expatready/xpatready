@@ -2,16 +2,16 @@
 // AI field-map draft (p2/launch.ts: stub pass, then the live call under the existing route, input allowlist, ledger
 // and caps), a labelled replay of a saved real run, comparison with the shared library and the person's decisions.
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
-import { execFile, spawn } from "node:child_process";
+import { execFile, execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { normalize, type LibraryField } from "../../engine/normalize.ts";
-import { EXPERIMENT_CAP_USD, LABEL, PARTS_DIR, RUN_CAP_USD } from "../../../p2/policy.ts";
+import { EXPERIMENT_CAP_USD, LABEL, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
 import { canonical } from "../../../contracts/rules.ts";
-import { costUsd } from "../../../p2/ledger.ts";
+import { costUsd, SpendLedger } from "../../../p2/ledger.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { assembleMerged, flagNearDuplicates, partOutputTokens, planDraft, type DraftPlan, type Prior } from "../../engine/parts.ts";
 import { compareEditions } from "../../engine/programs.ts";
@@ -51,20 +51,40 @@ const EDITION = /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
 /** P-80: where the drafting guard can check an approval made in the product (p2/policy.ts approvedSourcesDirOk): this
  *  copy's own workspace folder, so a demo reset removes it with the database row and test copies never share one. */
 export const APPROVED_DIR = () => join(VAR("demo"), "approved-sources");
-type Approval = { sha256: string; kind: string; code: string | null; edition: string | null; fileName: string; irccPage: string; uploadedBy: string; approvedBy: string; approvedAt: Date };
+type Approval = { sha256: string; kind: string; code: string | null; edition: string | null; fileName: string; irccPage: string; uploadedBy: string; approvedBy: string; approvedAt: Date;
+  /** S4 (M3): downloaded from canada.ca (or a hand upload equal to it): the record says so, not "a second person". */
+  official?: { sourceUrl: string } };
 /** P-80: the approval record and the approved PDF the guard checks (p2/guard.ts admitApproved), written when a second
  *  person approves a held file (intake.ts) and again from the database row when missing (approved before it existed). */
 export function recordApproval(row: Approval, bytes: Buffer) {
   if (sha(bytes) !== row.sha256) fail("The stored file no longer has the approved checksum; upload the official PDF again.", HttpStatus.CONFLICT);
   const dir = APPROVED_DIR(); mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, `${row.sha256}.pdf`), bytes);
+  if (row.official) { writeFileSync(join(dir, `${row.sha256}.approval.json`), JSON.stringify({ contract: "official-download/v1", sha256: row.sha256, kind: row.kind, code: row.code, edition: row.edition, file_name: row.fileName, form_page: row.irccPage, source_url: row.official.sourceUrl, fetched_at: row.approvedAt.toISOString(), started_by: row.uploadedBy }, null, 1) + "\n"); return; }
   writeFileSync(join(dir, `${row.sha256}.approval.json`), JSON.stringify({ contract: "approved-source/v1", sha256: row.sha256, kind: row.kind, code: row.code, edition: row.edition, file_name: row.fileName, ircc_page: row.irccPage, uploaded_by: row.uploadedBy, approved_by: row.approvedBy, approved_at: row.approvedAt.toISOString() }, null, 1) + "\n");
 }
 const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary Resident Visa", "IMM 1295": "Application for Work Permit made Outside of Canada", "IMM 5707": "Family Information", "IMM 5409": "Statutory Declaration of Common-law Union", "IMM 5476": "Use of a Representative", "IMM 5475": "Authority to Release Personal Information to a Designated Individual", "IMM 5257 SCH1": "Schedule 1: Background/Declaration" };
 
+/** Break M6: one file per running launcher (its process group id), removed when it ends. */
+const LAUNCHES = () => join(VAR_ROOT, "launches");
+function endOrphanLaunches() {
+  if (!existsSync(LAUNCHES())) return;
+  for (const f of readdirSync(LAUNCHES()).filter((x) => x.endsWith(".pid"))) {
+    const pid = Number(readFileSync(join(LAUNCHES(), f), "utf8"));
+    rmSync(join(LAUNCHES(), f), { force: true });
+    if (!Number.isInteger(pid) || pid <= 1) continue;
+    // Only a process that is still a launcher of this copy is ended (a reused process id is left alone).
+    let cmd = ""; try { cmd = execFileSync("ps", ["-o", "command=", "-p", String(pid)], { encoding: "utf8" }); } catch { continue; }
+    if (!cmd.includes(LAUNCHER)) continue;
+    try { process.kill(-pid, "SIGTERM"); } catch { /* already ended */ }
+  }
+}
+
 @Injectable()
 export class Sources {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {
+    // Break M6: a launcher left running by a server that stopped is ended now, so no call outlives the run it belongs to.
+    endOrphanLaunches();
     // A job left "running" by a stopped server can never finish: say so instead of showing it as running forever.
     void this.db.draftingJob.updateMany({ where: { status: "RUNNING" }, data: { status: "FAILED", message: "The studio server stopped while this step was running; start it again.", finishedAt: new Date() } })
       // A screen-map draft's own AI work (QA-31) ends with it (none starts since W1-02 parked online versions; an older one
@@ -115,8 +135,13 @@ export class Sources {
   }
 
   /** P-80: the product approval of a file that is not in the official library (a second person approved it), or null. */
-  async approvedInProduct(a: { workspaceId: string; sha256: string; recognised: boolean }) {
-    return a.recognised ? null : this.db.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId: a.workspaceId, sha256: a.sha256 } } });
+  async approvedInProduct(a: { workspaceId: string; sha256: string; recognised: boolean }): Promise<Approval | null> {
+    if (a.recognised) return null;
+    const p = await this.db.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId: a.workspaceId, sha256: a.sha256 } } });
+    if (p) return p;
+    // S4 (M3): an official download carries the manifest's evidence, so it is read and drafted like an official file.
+    const d = await this.db.officialDownload.findUnique({ where: { workspaceId_sha256: { workspaceId: a.workspaceId, sha256: a.sha256 } } });
+    return d ? { sha256: d.sha256, kind: d.kind === "checklist" ? "checklist" : "form", code: d.code, edition: d.edition, fileName: d.fileName, irccPage: d.formPageUrl, uploadedBy: d.startedBy, approvedBy: "official-download", approvedAt: d.fetchedAt, official: { sourceUrl: d.sourceUrl } } : null;
   }
 
   /** The file name a form's drafting job is known by: the official file's, or for a form approved in the product its
@@ -186,7 +211,11 @@ export class Sources {
     const res = new Map<string, number>();
     for (const l of readFileSync(join(PROTOTYPE, "p2", "ledger", "spend.jsonl"), "utf8").split("\n").filter(Boolean)) { const r = JSON.parse(l); if (r.type === "reserve") res.set(r.id, r.worst_usd); else if (r.type === "settle") res.set(r.id, r.actual_usd); }
     const committed = [...res.values()].reduce((a, b) => a + b, 0);
-    return { committed_usd: Math.round(committed * 100) / 100, cap_usd: EXPERIMENT_CAP_USD, remaining_usd: Math.round((EXPERIMENT_CAP_USD - committed) * 100) / 100, per_run_cap_usd: RUN_CAP_USD };
+    // S4 (m4, P-110): Wave 1's own cap (US$60) inside the experiment cap; plans show it and refuse above it.
+    const wave = new SpendLedger(join(PROTOTYPE, "p2", "ledger")).committedSince(WAVE1_START);
+    const remaining = Math.min(EXPERIMENT_CAP_USD - committed, WAVE1_CAP_USD - wave);
+    return { committed_usd: Math.round(committed * 100) / 100, cap_usd: EXPERIMENT_CAP_USD, remaining_usd: Math.round(remaining * 100) / 100, per_run_cap_usd: RUN_CAP_USD,
+      wave: { name: "Wave 1", cap_usd: WAVE1_CAP_USD, spent_usd: Math.round(wave * 100) / 100, remaining_usd: Math.round((WAVE1_CAP_USD - wave) * 100) / 100, since: WAVE1_START.slice(0, 10) } };
   }
 
   /** The guarded job file for one form's field-map draft (P2 launch reads it). Returns the job id and input hash. */
@@ -326,6 +355,7 @@ export class Sources {
       if (!(await wanted())) { s.status = "not started"; s.error = "cancelled or reset before this part started; nothing was sent"; return; }
       s.status = "running"; await progress();
       const stub = await this.launchOnce(s.job_id, "stub"), sj = lastJson(stub.out);
+      if (stub.stopped) { s.status = "not started"; s.error = "stopped during its stub pass (M7); nothing was sent"; return; }
       if (stub.code !== 0) { s.status = "failed"; s.error = `stub pass failed: ${this.plainRefusal(String(sj?.refused ?? stub.err).slice(-300))}`; return; }
       if (mode === "stub") { s.status = "done"; s.run_file = sj?.run_file ? String(sj.run_file).replace(`${SOLUTION}/`, "") : null; return; }
       const p = parts.find((x) => x.index === s.index)!;
@@ -395,7 +425,7 @@ export class Sources {
   /** One run of the guarded launcher (p2/launch.ts) for a job file: the only way the Studio starts a drafting call. One
    *  launch at a time in this server, and a launch the experiment ledger refused because another runner (another copy)
    *  holds it is started again after a pause: refused before any call, so nothing was spent (break B3). */
-  async launchOnce(jobId: string, mode: "stub" | "live", wanted?: () => Promise<boolean>): Promise<{ code: number; out: string; err: string; cancelled?: boolean }> {
+  async launchOnce(jobId: string, mode: "stub" | "live", wanted?: () => Promise<boolean>): Promise<{ code: number; out: string; err: string; cancelled?: boolean; stopped?: boolean }> {
     const turn = this.launching.then(async () => {
       for (let n = 0; ; n++) {
         // A cancel is honoured up to the moment a paid call starts (QA-31 break M1): a live launch can wait its turn behind
@@ -410,15 +440,35 @@ export class Sources {
     return turn;
   }
 
-  private launchProcess(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string }> {
+  private launchProcess(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string; stopped?: boolean }> {
     return new Promise((res) => {
       // P-80: a form approved in the product is admitted only from this copy's approved folder, named to the launcher.
       const approved = /^studio-fieldmap-approved-[0-9a-f]{12}/.test(jobId) ? ["--approved-dir", APPROVED_DIR()] : [];
-      const p = spawn(NODE, [LAUNCHER, "--job", jobId, `--${mode}`, ...approved], { cwd: ROOT, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
+      // S4 (M7, P-110): the launcher runs in its own process group, so Stop ends it and the drafting process it started.
+      const p = spawn(NODE, [LAUNCHER, "--job", jobId, `--${mode}`, ...approved], { cwd: ROOT, detached: true, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
+      this.children.set(jobId, p);
+      const pidFile = join(LAUNCHES(), `${jobId}.pid`);
+      try { mkdirSync(LAUNCHES(), { recursive: true }); writeFileSync(pidFile, String(p.pid ?? "")); } catch { /* the in-memory Stop still works */ }
+      p.on("close", () => rmSync(pidFile, { force: true }));
       let out = "", err = "";
       p.stdout.on("data", (d) => (out += d)); p.stderr.on("data", (d) => (err += d));
-      p.on("close", (code) => res({ code: code ?? 1, out, err }));
+      p.on("close", (code, signal) => { if (this.children.get(jobId) === p) this.children.delete(jobId); res({ code: code ?? 1, out, err, ...(signal ? { stopped: true } : {}) }); });
     });
+  }
+
+  /** Launches running now, by job id (one at a time per job). */
+  private children = new Map<string, ChildProcess>();
+  /** S4 (M7): Stop really ends a running AI call: terminate the launcher's process group, then force it after 10 s. No
+   *  call starts after it; a call already sent stays counted in the ledger at its reserved worst case (the provider
+   *  may still bill it). Returns the job ids it stopped. */
+  stopLaunches(match: (jobId: string) => boolean): string[] {
+    const hit = [...this.children.entries()].filter(([id]) => match(id));
+    for (const [, p] of hit) {
+      const group = (sig: NodeJS.Signals) => { try { process.kill(-p.pid!, sig); } catch { /* already ended */ } };
+      group("SIGTERM");
+      setTimeout(() => { if (p.exitCode === null && p.signalCode === null) group("SIGKILL"); }, 10_000).unref();
+    }
+    return hit.map(([id]) => id);
   }
 
   async launch(id: string, attachmentId: string, jobId: string, mode: "live" | "stub") {
@@ -426,6 +476,7 @@ export class Sources {
     const lastJson = (s: string) => { for (const l of s.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
     try {
       const stub = await this.launchOnce(jobId, "stub");
+      if (stub.stopped) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", costUsd: 0, finishedAt: new Date(), message: "Cancelled before it started its AI call (stopped during the stub pass): nothing was sent. US$0.", detail: { job_id: jobId, steps } } }); return; }
       const sj = lastJson(stub.out);
       steps.push({ step: "stub pass", exit: stub.code, result: sj, error: stub.code ? stub.err.slice(-600) : undefined });
       if (stub.code !== 0) throw new Error(`stub pass failed: ${(sj?.refused ?? stub.err).toString().slice(-300)}`);
@@ -434,6 +485,7 @@ export class Sources {
       await this.db.draftingJob.update({ where: { id }, data: { message: `Calling the AI (guarded path; Claude Opus 5.5; up to US$5). ${took ? `The last real run of this form took about ${Math.max(1, Math.round(took / 60_000))} minutes.` : "A large form can take several minutes."} The whole form is drafted in one call, so there is no part-by-part progress yet.`, detail: { job_id: jobId, steps } } });
       const live = await this.launchOnce(jobId, "live", () => this.stillWanted(id));
       if (live.cancelled) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", costUsd: 0, finishedAt: new Date(), message: "Cancelled before it started its AI call (after the stub pass): nothing was sent. US$0.", detail: { job_id: jobId, steps } } }); return; }
+      if (live.stopped) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", finishedAt: new Date(), message: "Stopped while the AI call ran: the call was ended (M7). It stays counted at its reserved worst case; nothing of it is applied.", detail: { job_id: jobId, steps } } }); return; }
       const lj = lastJson(live.out);
       steps.push({ step: "live call", exit: live.code, result: lj, error: live.code ? live.err.slice(-800) : undefined });
       if (!lj?.run_file) {
@@ -702,14 +754,14 @@ export class Sources {
           evidenceQuote: e.reused_from ? `${e.evidence_quote ?? ""} (as released in ${e.reused_from})`.slice(0, 500) : e.evidence_quote ?? null, reason: returned ? `returned by ${d!.decidedBy}: ${d!.decisionNote}` : e.unresolved_reason ?? null, version: 1, status: "DRAFT", origin: e.reused_from ? "CODE_MATCH" : "AI_PROPOSAL", draftingRunId: job.runId, updatedBy: actor.id };
       }) });
       // On the combination already: kept as it is; removed earlier: added back (QA-13).
-      await addFormLine(tx, { workspaceId: ws, combinationId: job.combinationId, govFormDefId: def.id, formKey, who: b.who, origin: "AI_PROPOSAL", by: actor.id, sourceQuote: `${item.edition}: ${item.applicability}` });
+      await addFormLine(tx, { workspaceId: ws, combinationId: job.combinationId!, govFormDefId: def.id, formKey, who: b.who, origin: "AI_PROPOSAL", by: actor.id, sourceQuote: `${item.edition}: ${item.applicability}` });
       // Claimed inside the transaction: a second apply of the same draft (double click, two people) changes nothing.
       const claimed = await tx.draftingJob.updateMany({ where: { id: jobId, status: "COMPLETED" }, data: { status: "APPLIED", message: `${job.message} Applied to the draft by ${actor.name}.` } });
       if (!claimed.count) fail("Already applied.", HttpStatus.CONFLICT);
       await tx.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `Field map applied to the draft (${out.entries.length} form fields; ${created} new field definitions). Review and release it.` } });
       return { formKey, edition: item.edition, boxes: out.entries.length, new_fields: created, returned: job.items.filter((i) => i.decision === "RETURNED").length };
     });
-    await this.audit.log(ws, actor.id, "applied", "AI draft", job.runId, `${actor.name} applied the reviewed AI draft of ${item.edition} to the draft: ${res.boxes} form fields, ${res.new_fields} new fields, ${res.returned} returned`, undefined, job.combinationId);
+    await this.audit.log(ws, actor.id, "applied", "AI draft", job.runId, `${actor.name} applied the reviewed AI draft of ${item.edition} to the draft: ${res.boxes} form fields, ${res.new_fields} new fields, ${res.returned} returned`, undefined, job.combinationId ?? undefined);
     return res;
   }
 
@@ -742,7 +794,9 @@ export class Sources {
     const forms = await this.db.govFormDef.findMany({ where: { workspaceId }, orderBy: { formKey: "asc" }, include: { editions: { include: { _count: { select: { maps: true } } } }, usedBy: { where: { status: { not: "RETIRED" } }, select: { combinationId: true } } } });
     // P-80: a file a second person approved in the product is a library form too.
     const inProduct = new Set((await this.db.approvedSource.findMany({ where: { workspaceId }, select: { sha256: true } })).map((x) => x.sha256));
-    const approved = new Set([...manifest().map((i) => i.sha256), ...inProduct]);
+    // S4 (M2): a file the form finder downloaded from canada.ca (or a hand upload equal to it) is a library form too.
+    const downloaded = (await this.db.officialDownload.findMany({ where: { workspaceId }, select: { sha256: true } })).map((x) => x.sha256);
+    const approved = new Set([...manifest().map((i) => i.sha256), ...inProduct, ...downloaded]);
     // Historical workspaces may contain entries created before the source gate. Keep those out of
     // library pickers and usage summaries; a prior database row is not a source-verification decision.
     // W1-02 (P-102): forms come in only as PDFs; an online version (parked with the browser extension) is never listed as an

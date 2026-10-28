@@ -1,0 +1,499 @@
+{
+ "note": "Recorded canada.ca copies replayed by FixtureCanada (api/src/canada.ts) in tests, CI and Load sample; made by studio/tools/record_canada_fixtures.ts (P-123 recorded download, US$0). Each path is relative to official-sources/ircc/ and is checked by its SHA-256 on every read. Which forms a combination needs is Sample — the immigration expert confirms.",
+ "recorded_utc": "2026-10-27T07:09:42Z",
+ "items": [
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm0008-dep/01-10-2024/imm0008depe.pdf",
+   "path": "forms/imm0008depe.pdf",
+   "sha256": "76c6643a7704e221d4bce4e4cb19936f016fb2bebdb681463b1fd744fe7fe57b",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm0008-sch4/01-06-2020/imm0008_4e.pdf",
+   "path": "forms/imm0008_4e.pdf",
+   "sha256": "775f5eb58816550f752999b43d49235d5f58619cd5c29d069a18a092974054a2",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm0008/01-05-2026/imm0008e.pdf",
+   "path": "forms/imm0008e.pdf",
+   "sha256": "2560489b57160f59c54a58d2f837d220a0426285ec17465c487b6fe2a5f63285",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm1294/01-06-2026/imm1294e.pdf",
+   "path": "forms/imm1294e.pdf",
+   "sha256": "394c745501ef87e46a0b15618ca342387ca06c5b2f226face2956b0372047d09",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm1295/01-09-2023/imm1295e.pdf",
+   "path": "forms/imm1295e.pdf",
+   "sha256": "57fc256eef7d9d856e4ae85ebf8bfe80da41833ebde7a8c7ed78f2483470d7bb",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm1344/01-09-2024/imm1344e.pdf",
+   "path": "forms/imm1344e.pdf",
+   "sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5257-sch1/01-09-2023/imm5257_1e.pdf",
+   "path": "forms/imm5257_1e.pdf",
+   "sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5257/01-09-2023/imm5257e.pdf",
+   "path": "forms/imm5257e.pdf",
+   "sha256": "0dc03b24e7914a178ad29e2cfae811045835a1d36d7a3c35f040251d0aca562e",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5406/01-05-2026/imm5406e.pdf",
+   "path": "forms/imm5406e.pdf",
+   "sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5409/01-01-2023/imm5409e.pdf",
+   "path": "forms/imm5409e.pdf",
+   "sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5475/16-12-2022/imm5475e.pdf",
+   "path": "forms/imm5475e.pdf",
+   "sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5476/01-11-2025/imm5476e.pdf",
+   "path": "forms/imm5476e.pdf",
+   "sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5483/01-08-2025/imm5483e.pdf",
+   "path": "checklists/imm5483e.pdf",
+   "sha256": "6f885da2616f38c67d553bf140e994c357d087ae6de77e9bceb45afa2e6fb08d",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5484/01-05-2026/imm5484e.pdf",
+   "path": "checklists/imm5484e.pdf",
+   "sha256": "e48deef4a6343edda19e04b3ab598a275b12bb07047d4351f00c7c239f7883fc",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5532/01-02-2021/imm5532e.pdf",
+   "path": "forms/imm5532e.pdf",
+   "sha256": "c26963fdf157b32ace0bcb2e0e89afba4a9eb39b022218daa256a508a2c97e25",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5533/01-09-2022/imm5533e.pdf",
+   "path": "checklists/imm5533e.pdf",
+   "sha256": "dbefe411b48b4ad10368788d37a5cf0e6dcef1a8d11fd15daf114e0fc31b85d8",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5556/01-03-2024/imm5556e.pdf",
+   "path": "checklists/imm5556e.pdf",
+   "sha256": "52eea5757f3eec9533168311ee99b03d85a88e63c477a35dcdcbcc5854badb10",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5562/01-07-2024/imm5562e.pdf",
+   "path": "forms/imm5562e.pdf",
+   "sha256": "aeb0b9ae7322c847b03429fcf8c05efb595d59f5992bd54b1d67fd0b2bd3d52e",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5589/01-09-2022/imm5589e.pdf",
+   "path": "checklists/imm5589e.pdf",
+   "sha256": "1e7e966cb9b2e4860658b8470451ed0e889881f9f6bf95899c5570cd5cc86406",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5604/01-02-2023/imm5604e.pdf",
+   "path": "forms/imm5604e.pdf",
+   "sha256": "fabb955a8a12b0c581cc712dbc27ac941e6fd82fe9a37501e143df466512fe54",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5645/01-01-2021/imm5645e.pdf",
+   "path": "forms/imm5645e.pdf",
+   "sha256": "d6ba4cab0363c22135d4a28e6f8d7bc08814827f3bfb3fdb25a4d944ffac7096",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5646/01-01-2023/imm5646e.pdf",
+   "path": "forms/imm5646e.pdf",
+   "sha256": "d961f59402662f2bfe84b7efe40403f61c5d9324da8db92148ce6517823c138e",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5669/01-05-2021/imm5669e.pdf",
+   "path": "forms/imm5669e.pdf",
+   "sha256": "4bdc23bb6a9dfa3731927f9b93295fb14008ee504d02b3037e349c4cda421f7a",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5707/01-01-2023/imm5707e.pdf",
+   "path": "forms/imm5707e.pdf",
+   "sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5710/01-09-2023/imm5710e.pdf",
+   "path": "forms/imm5710e.pdf",
+   "sha256": "22073379f73a0bd31b1b37cda266e797be0e67b4e8693efcf6cf92325f985672",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/imm5782/01-07-2021/imm5782e.pdf",
+   "path": "forms/imm5782e.pdf",
+   "sha256": "b5532c3cd82245306d13814e4ad4ccf0c2eb0da4ee4686e496ef68c2180d8d89",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/content/dam/ircc/documents/pdf/english/kits/forms/irm0002/16-12-2022/irm0002e.pdf",
+   "path": "forms/irm0002e.pdf",
+   "sha256": "d6e314a730050fb48a8fbbfbdbe0a2a5f352f66f3ef195ddcbf7c1932b8a253e",
+   "content_type": "application/pdf",
+   "status": 200
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides.html",
+   "path": "canada/pages/application-forms-guides.html",
+   "sha256": "462a13f34ca93cd2e1cf74b2d8d5a8bdd27764908d3f160fc803e1e9f4b02d38",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5256-applying-visitor-visa-temporary-resident-visa.html",
+   "path": "instructions/guide-5256.html",
+   "sha256": "dc10d9878cc31d22d48059699c59b2a77ddb6b75ddb51c089cbe3d52ce766f5f",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Recorded copy is the official file saved 2026-10-19T12:24:55Z (instructions/guide-5256.html); today's page text is the same."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5269-applying-study-permit-outside-canada.html",
+   "path": "instructions/guide-5269.html",
+   "sha256": "ca6d6548a2f5533d49ff0e81244d62c02f04e143c2ce9f5ebe4a42d6fd30948c",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Recorded copy is the official file saved 2026-10-27T05:42:33Z (instructions/guide-5269.html); today's page text is the same."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5289-sponsor-your-spouse-common-law-partner-conjugal-partner-dependent-child-complete-guide.html",
+   "path": "instructions/guide-5289.html",
+   "sha256": "0db09e5c83d49750dc918993d9a00e914dfd16f6e7b945c6032af88247bf74db",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Recorded copy is the official file saved 2026-10-27T05:42:33Z (instructions/guide-5289.html); today's page text is the same."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5553-applying-change-conditions-extend-your-stay-canada-worker.html",
+   "path": "instructions/guide-5553.html",
+   "sha256": "e309c697946f511cc2c5ae307ff295f63cc54b421dea20f058c3de23a690fe84",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Recorded copy is the official file saved 2026-10-27T05:42:33Z (instructions/guide-5553.html); today's page text is the same."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm0008-dep.html",
+   "path": "canada/pages/imm0008-dep.html",
+   "sha256": "0a0a7a4e909f96fc0e3bfe98232b583a4b00c762b5a9471719d99f5f6d4dcb6c",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm0008-sch4.html",
+   "path": "canada/pages/imm0008-sch4.html",
+   "sha256": "ee6c14c7d75d2989f795a0487bdca3966ffbde9fd37ac6c1ad56279bb5eeeb22",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm0008.html",
+   "path": "canada/pages/imm0008.html",
+   "sha256": "d8aa2e57a388b3a4864ba25a3f858c1df69ed7cbc433ddd908ced6bfac9d7b6b",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm1294.html",
+   "path": "canada/pages/imm1294.html",
+   "sha256": "62bee1b65ff7c4ad2071debaab1d3d0484233b603e4dd5cbdd1e853313c27c8d",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm1295.html",
+   "path": "canada/pages/imm1295.html",
+   "sha256": "8c3b75502838b584abecc8176e7ad0c0cadbad75a44fae9a2b4bdb5ca3b924da",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm1344.html",
+   "path": "canada/pages/imm1344.html",
+   "sha256": "2988bfeafe69cf6a76085823425f11af0e01901b65bdb8f82e7fd717dd4c5487",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5257-sch1.html",
+   "path": "canada/pages/imm5257-sch1.html",
+   "sha256": "2d8405822f56e2561e89519e91738f0c163c6e0abd2ee22f3b2f2f9822d6c252",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5257.html",
+   "path": "canada/pages/imm5257.html",
+   "sha256": "ceba629be01421f55a8ff7e7e171f3163063f14a7a3033aa68468c0a810efb49",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5406.html",
+   "path": "canada/pages/imm5406.html",
+   "sha256": "c4bcef7a0494e4b0ff7cac5587cb6f42d73c052072a5cb43f8e5ecc4b390eac6",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5409.html",
+   "path": "canada/pages/imm5409.html",
+   "sha256": "c0783c26b60915eccd8e85cb1f0635635e6dbb097753f7828dbf8548f5ec01ad",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5475.html",
+   "path": "canada/pages/imm5475.html",
+   "sha256": "68b7c5709eb44de2b8cf4220fe68f0475e1e9fd2bbc5611661347738da4b97f6",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5476.html",
+   "path": "canada/pages/imm5476.html",
+   "sha256": "3f4fe657b333574136d6bc9942065f88c9dea28bb25c43ae5550b61ad0b7af4f",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5483.html",
+   "path": "canada/pages/imm5483.html",
+   "sha256": "58f9ee1d75ee7afd0f850bf40adf5596c7ee392c1fd125af6e2ed0ceebeab9a1",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5484.html",
+   "path": "canada/pages/imm5484.html",
+   "sha256": "2865989936d1e7ccdca9209d60ce70c32ad45fa1aecd4eae0a4e99f1e84c1788",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5532.html",
+   "path": "canada/pages/imm5532.html",
+   "sha256": "0262bff7f105f5b023f3ae4d1382a5f8093b44afd5221f6dfcc60722abce5b48",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5533.html",
+   "path": "canada/pages/imm5533.html",
+   "sha256": "798f845c1a37502c0e05b0e5fb55d9d33dbed0d5157dd64310ffa05aabb717a6",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5556.html",
+   "path": "canada/pages/imm5556.html",
+   "sha256": "ee9f09572fb8279747d0a396dd7dbf6ff9a3aa09e3380acb6c604589aeafe75e",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5562.html",
+   "path": "canada/pages/imm5562.html",
+   "sha256": "682f9dd8dc4a01b94a767340dd6e52d200ce9cfac31a60190330ace89dbc2ce3",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5589.html",
+   "path": "canada/pages/imm5589.html",
+   "sha256": "e35ef8d5cc76635e21f5bd77d6daa44a8abb5020291dcbb0e76cd1d7136bc252",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5604.html",
+   "path": "canada/pages/imm5604.html",
+   "sha256": "fd5e6c316ea832fcdb94f9929a7383d7980a8c9f73e90cbc32a95e21e8de640f",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5645.html",
+   "path": "canada/pages/imm5645.html",
+   "sha256": "7bb3ebb96ffe90849b1056c80c69803cb929caf13f42cb3fefd61ed36cc08dec",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5646.html",
+   "path": "canada/pages/imm5646.html",
+   "sha256": "79b3e3362fdba9e7ce101fbea58ae6aef4892c3f24adb74934e55deb27fc80fe",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5669.html",
+   "path": "canada/pages/imm5669.html",
+   "sha256": "043a8a6acc4cf14d0d99302b3758a1f905ef8df1665b2a1f2a23a012f88772bc",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5707.html",
+   "path": "canada/pages/imm5707.html",
+   "sha256": "db9016bc7b1fac319be108719d6fa287d61dc31bd9f7b929bf343a838ee9b98c",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5710.html",
+   "path": "canada/pages/imm5710.html",
+   "sha256": "8875ba32e94411403b5351b412777fd2f2f54d389b433722d089184cc8f6973f",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5782.html",
+   "path": "canada/pages/imm5782.html",
+   "sha256": "13d6812caa77e1c0cb36391b672e8fe5ee641dc79c3a9247c23bc6d05e4ab2af",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/irm0002.html",
+   "path": "canada/pages/irm0002.html",
+   "sha256": "ee90a7d4a38667613e5cfbc67cabf79bd98ccd0744ac48d6810a682f604fbb15",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/family-sponsorship/spouse-partner-children/apply.html",
+   "path": "canada/pages/immigrate-canada-family-sponsorship-spouse-partner-children-apply.html",
+   "sha256": "dcf53d72f924912a53d0dbc0b0803ba34d2431ab1a36792875aa550f5a67da1b",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/provincial-nominees/express-entry.html",
+   "path": "canada/pages/immigrate-canada-provincial-nominees-express-entry.html",
+   "sha256": "aba3577031939a2cd9bb0e4f27c3bc0a596e508c6fbb3a24ca160a87c9c7a7c2",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/provincial-nominees/express-entry/apply-permanent-residence.html",
+   "path": "canada/pages/immigrate-canada-provincial-nominees-express-entry-apply-permanent-residence.html",
+   "sha256": "2be19e4e20ea9daa29cffd460cf294158676fcc57cb7566ef7559eb51840a36c",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/apply.html",
+   "path": "canada/pages/study-canada-study-permit-apply.html",
+   "sha256": "3376a7cc9f92534cf61d34fa433498858eb0c69bc6c0a427cad9fd45e7fee361",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/apply-visitor-visa.html",
+   "path": "canada/pages/visit-canada-apply-visitor-visa.html",
+   "sha256": "15f8f64c70d6832bf0f7ea3df272bca13f232b43365d1e03ccb697b2acf7afe1",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  },
+  {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/work-canada/permit-inside/forms-documents.html",
+   "path": "canada/pages/work-canada-permit-inside-forms-documents.html",
+   "sha256": "6a6e2afaa852a823a27f2f5252741cbd69543a4ca1e830af75a817d179e3233e",
+   "content_type": "text/html;charset=utf-8",
+   "status": 200,
+   "note": "Saved without canada.ca's page-analytics script (per-request tokens); the rest is byte-identical to what was served."
+  }
+ ]
+}

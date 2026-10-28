@@ -183,7 +183,7 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   await call("POST", `/jobs/${reusedJob.id}/accept-clean`, { outcome: "REUSE" }); await call("POST", `/jobs/${reusedJob.id}/accept-clean`, { outcome: "NEW" });
   for (const i of (await call("GET", `/jobs/${reusedJob.id}`)).body.items.filter((x: { decision: string }) => x.decision === "PENDING")) await call("POST", `/jobs/${reusedJob.id}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit (BR-7)." });
   r = await call("POST", `/jobs/${reusedJob.id}/apply`, {});
-  const origins = sql("select string_agg(distinct origin::text, ',') from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5257 (09-2023)'");
+  const origins = sql("select string_agg(distinct m.origin::text, ',') from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5257 (09-2023)'");
   ok("A4 reuse apply: the reused form fields enter the library as code matches (origin CODE_MATCH, 'as released in IMM 5257 (01-2020)'), never as AI", r.status === 201 && origins === "CODE_MATCH" && sql("select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5257 (09-2023)' and m.evidence_quote like '%as released in IMM 5257 (01-2020)%'") !== "0", { status: r.status, origins });
 
   // ──────────────────────────────────────────── the filler: F1–F3 through the API (wp.family, IMM 1295, US$0)

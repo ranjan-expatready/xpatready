@@ -29,6 +29,7 @@ import { manifest } from "../../engine/import.ts";
 import { editionMonth, newestEdition } from "../../engine/programs.ts";
 import { ACTORS, Audit, Db, fail, need, OFFICIAL, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 import { recordApproval, Sources } from "./sources.ts";
+import { Finder } from "./finder.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
@@ -45,19 +46,23 @@ const KIND_WORD: Record<string, string> = { form: "form", checklist: "document c
 
 @Injectable()
 export class Intake {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Sources) private readonly sources: Sources) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Sources) private readonly sources: Sources, @Inject(Finder) private readonly finder: Finder) {}
 
   /** POST /intake: one or many files, optionally on a combination. Files are handled one after the other, so two copies
    *  of the same new form in one batch give "added" then "in_library", never two forms. */
-  async intake(actor: Actor, files: IntakeFile[] | undefined, combinationId?: string, via: "MANUAL" | "SAMPLE" = "MANUAL") {
+  async intake(actor: Actor, files: IntakeFile[] | undefined, combinationId?: string, via: "MANUAL" | "SAMPLE" = "MANUAL", forForm?: { combinationId: string; code: string }) {
     need(actor, "author");
     if (!files?.length) fail("Choose at least one file.");
     if (files!.length > MAX_FILES) fail(`Add at most ${MAX_FILES} files at a time.`, HttpStatus.PAYLOAD_TOO_LARGE);
     const workspaceId = await this.ws.id();
     const combination = combinationId ? await this.db.combination.findUnique({ where: { id: combinationId } }) : null;
     if (combinationId && !combination) fail("That combination does not exist (it may have been removed by a reset).", HttpStatus.NOT_FOUND);
+    if (forForm && !(await this.db.combination.findUnique({ where: { id: forForm.combinationId } }))) fail("That combination does not exist (it may have been removed by a reset).", HttpStatus.NOT_FOUND);
     const results: IntakeResult[] = [];
-    for (const f of files!) results.push(await this.oneSafely(actor, workspaceId, f, combination, via));
+    for (const f of files!) {
+      const r = await this.oneSafely(actor, workspaceId, f, combination, via);
+      results.push(forForm ? await this.forForm(actor, workspaceId, forForm, r) : r);
+    }
     const n = (o: IntakeOutcome) => results.filter((r) => r.outcome === o).length;
     return { results, summary: { files: results.length, in_library: n("in_library"), added: n("added"), attached: n("attached"), held: n("new_edition_held") + n("older_edition_held") + n("held"), refused: n("refused"), failed: n("failed") } };
   }
@@ -86,9 +91,34 @@ export class Intake {
     return r;
   }
 
+  /** S4 (S5 ask): an upload from a combination's "Not found" row. Usable now (in the library, approved, or equal to
+   *  canada.ca's file) → attached to that combination as one change for Undo; held → remembered and attached when a second
+   *  person approves it; another form's file is added to the library, never attached in its place. */
+  private async forForm(actor: Actor, workspaceId: string, t: { combinationId: string; code: string }, r: IntakeResult): Promise<IntakeResult> {
+    if (r.outcome === "held" || r.outcome === "new_edition_held" || r.outcome === "older_edition_held") {
+      if (r.sha256) await this.db.intakeItem.updateMany({ where: { workspaceId, sha256: r.sha256, status: "HELD" }, data: { forCombinationId: t.combinationId, forCode: t.code } });
+      return { ...r, message: `${r.message} It is attached to the combination once a second person approves it.` };
+    }
+    if (r.outcome !== "added" && r.outcome !== "in_library") return r;
+    if (r.code && r.code !== t.code) return { ...r, message: `${r.message} This file is ${r.code}, not ${t.code}, so it was not attached in its place.` };
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: t.code } } });
+    if (!def) return r;
+    const { addFormLine } = await import("./form-lines.ts");
+    const { snapshotLines, recordAction } = await import("./form-uses.ts");
+    const before = await snapshotLines(this.db, t.combinationId, [t.code]);
+    let added: "added" | "already";
+    try { added = await addFormLine(this.db, { workspaceId, combinationId: t.combinationId, govFormDefId: def.id, formKey: t.code, origin: "HUMAN", by: actor.id, sourceQuote: `${r.edition ?? t.code}: uploaded for this combination` }); }
+    catch (e) { return { ...r, message: `${r.message} Not attached to the combination: ${(e as Error).message}` }; }
+    if (added === "added") await recordAction(this.db, { workspaceId, combinationId: t.combinationId, action: "attach", codes: [t.code], before, by: actor.id });
+    return { ...r, message: `${r.message} ${added === "added" ? "Attached to the combination." : "Already on the combination."}` };
+  }
+
   private async approvedInProduct(workspaceId: string, hash: string) {
     const a = await this.db.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId, sha256: hash } } });
-    return a ? { approval: `Approved in the product by ${ACTORS.find((x) => x.id === a.approvedBy)?.name ?? "a second person"} (IRCC page ${a.irccPage})` } : undefined;
+    if (a) return { approval: `Approved in the product by ${ACTORS.find((x) => x.id === a.approvedBy)?.name ?? "a second person"} (IRCC page ${a.irccPage})` };
+    // S4 (M2, Q-L1): downloaded from canada.ca by the form finder, or a hand upload equal to canada.ca's file.
+    const d = await this.db.officialDownload.findUnique({ where: { workspaceId_sha256: { workspaceId, sha256: hash } } });
+    return d ? { approval: `${d.basis === "download" ? "Downloaded from canada.ca" : "Same file as canada.ca's"} (${d.formPageUrl})` } : undefined;
   }
 
   /** P-80: the uploader records the IRCC page a held file came from, for the second person to compare. */
@@ -142,6 +172,7 @@ export class Intake {
     if (uploader && bytes) {
       const combination = h.combinationId ? await this.db.combination.findUnique({ where: { id: h.combinationId } }) : null;
       try { result = await this.oneSafely(uploader, h.workspaceId, { originalname: h.fileName, buffer: bytes }, combination, "MANUAL"); } catch { result = null; }
+      if (result && h.forCombinationId && h.forCode) result = await this.forForm(uploader, h.workspaceId, { combinationId: h.forCombinationId, code: h.forCode }, result);
     }
     return { outcome: "approved", result };
   }
@@ -209,6 +240,12 @@ export class Intake {
     const hash = sha(file.buffer);
     const attach = async (r: IntakeResult): Promise<IntakeResult> => {
       if (!combination) return r;
+      // S4 round 4 R4-1 (P-116): a retired library form, or one whose retire or delete is open, gets no new use as a source.
+      if (r.code) {
+        const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: r.code } }, select: { retiredAt: true } });
+        const closing = def ? await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "library_form", key: r.code, action: { in: ["RETIRE", "DELETE"] }, status: { in: ["WAITING", "APPROVED"] } } }) : null;
+        if (def?.retiredAt || closing) return { ...r, message: `${r.message} Not attached to ${combination.label}: ${def?.retiredAt ? `${r.code} is retired in the library (restore it there first).` : `a request to ${closing!.action.toLowerCase()} ${r.code} is open on To review.`}` };
+      }
       const a = await this.sources.attach(actor, combination.id, file, via);
       return { ...r, attachmentId: a.attachment.id, attachmentStatus: a.attachment.status, message: `${r.message} ${a.duplicate ? `Already attached to ${combination.label}.` : `Attached to ${combination.label}.`}` };
     };
@@ -257,9 +294,13 @@ export class Intake {
       await this.record(actor, workspaceId, combination?.id ?? null, name, stored, hash, file.buffer.length, r, "HELD", FRENCH);
       return r;
     }
+    // S4 (Q-L1): a hand upload whose checksum equals the PDF behind the canada.ca form page's link is an official
+    // download (P-123's own fallback): no second person. canada.ca not answering leaves it held, as before.
+    const matched = (read.kind === "form" || read.kind === "checklist") && !approved && id.code ? await this.finder.fingerprintMatch(workspaceId, String(id.code), hash, stored, name, file.buffer.length, actor.id) : null;
+    const official = approved ?? (matched ? { approval: `Same file as canada.ca's (${matched})` } : undefined);
     // Readable form identity is not proof of an official source. Hold before library creation,
     // combination attachment, edition-impact processing, or any downstream AI mapping.
-    if ((read.kind === "form" || read.kind === "checklist") && !approved) {
+    if ((read.kind === "form" || read.kind === "checklist") && !official) {
       // Said at once when the library already has this edition from another file: the second person rejects the copy.
       const have = id.edition_label ? await this.db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId, editionLabel: id.edition_label } } }) : null;
       const r: IntakeResult = { file: name, outcome: "held", ...read, message: `Held for source verification: ${read.edition ?? read.code ?? "This form"} is not on the approved source list. It was not added to the library, attached, or sent to AI.${have ? ` The library already holds ${id.edition_label} from ${have.officialFile ? "the official file" : "another file"}, so this copy is not needed: use the library's.` : ""}` };
@@ -305,9 +346,12 @@ export class Intake {
       return r;
     }
     const item = approved;
+    const page = await this.db.officialDownload.findFirst({ where: { workspaceId, sha256: hash }, select: { formPageUrl: true, sourceUrl: true } });
     await this.db.$transaction(async (tx) => {
       const d = def ?? (await tx.govFormDef.create({ data: { workspaceId, formKey: id.code, displayName: id.title || id.code, formKind: read.kind === "form" ? "data_form" : "document" } }));
-      await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, officialFile: item?.file ?? null, sha256: hash, storedPath: stored.replace(`${ROOT}/`, "") } });
+      // S4 round 6 (D18): where it came from (a person's upload, or the sample load) and the canada.ca page it matched.
+      await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, officialFile: item?.file ?? null, sha256: hash, storedPath: stored.replace(`${ROOT}/`, ""), origin: via === "SAMPLE" ? "SAMPLE" : "UPLOADED", formPageUrl: page?.formPageUrl ?? null, sourceUrl: page?.sourceUrl ?? null, checkedAt: page ? new Date() : null } });
+      if (page?.formPageUrl && !d.formPageUrl) await tx.govFormDef.update({ where: { id: d.id }, data: { formPageUrl: page.formPageUrl } });
     });
     await this.audit.log(workspaceId, actor.id, "created", "form", id.code, `${actor.name} added ${id.edition_label} (${KIND_WORD[read.kind]}) to the library; code, title, edition and kind read from the file`, { sha256: hash, approved_source: item?.approval ?? null, via }, combination?.id);
     let r: IntakeResult = { file: name, outcome: "added", ...read, message: `${id.edition_label} added to the library as a new ${KIND_WORD[read.kind]} (read from the file).` };

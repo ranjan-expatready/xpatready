@@ -9,6 +9,7 @@ import { slug } from "../../engine/import.ts";
 import { checkCondition, diff, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
+import { recordAction, snapshotLines } from "./form-uses.ts";
 import { cleanLabel, normalizeLabel } from "../../contracts/programs.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 
@@ -464,6 +465,7 @@ export class Studio {
     // A removed line is not edited or removed again (break m5): add it back from the library first.
     if ([...rows].sort((x, y) => y.version - x.version)[0].status === "RETIRED") fail(`${formKey} was removed from this combination. Add it again from the library to change it.`, HttpStatus.CONFLICT);
     this.sameRevision(rows, b.baseRevision);
+    const before = await snapshotLines(this.db, combinationId, [formKey]); // S4: one Undo per combination draft
     const changes: any = {};
     if (b.retire) changes.status = "RETIRED";
     if (b.who) { if (!WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
@@ -473,6 +475,7 @@ export class Studio {
     // A released line's removal is a new version (revise makes it a draft): it must say RETIRED too, or the removal is lost.
     if (b.retire) await this.db.combinationForm.update({ where: { id: row.id }, data: { status: "RETIRED" } });
     await this.audit.log(c.workspaceId, actor.id, "updated", "form", formKey, `${actor.name} ${b.retire ? "removed" : "changed"} ${formKey} in "${c.label}" (draft v${row.version})`, changes, combinationId);
+    await recordAction(this.db, { workspaceId: c.workspaceId, combinationId, action: b.retire ? "remove" : "edit", codes: [formKey], before, by: actor.id });
     return row;
   }
 

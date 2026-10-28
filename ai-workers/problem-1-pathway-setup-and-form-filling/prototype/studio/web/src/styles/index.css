@@ -13,6 +13,8 @@
    corrects the token. The dark sheet is unchanged. */
 :root:not([data-theme='dark']) { --color-text-muted: var(--erv2-neutral-700); }
 html, body, #root { height: 100%; }
+/* S4 round 5 (WCAG 2.2 SC 2.4.11): a focused element is never hidden under the sticky 56 px top bar. */
+html, main { scroll-padding-top: 4.5rem; }
 body { background: var(--color-surface); color: var(--color-text); font-family: var(--font-sans); font-size: 14px; -webkit-font-smoothing: antialiased; }
 :focus-visible { outline: none; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }

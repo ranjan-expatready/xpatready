@@ -193,7 +193,8 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   await until(async () => calls().some((x) => x.mode === "live"));
   await call("POST", `/ai/batches/${(await call("GET", `/jobs/${wf}`)).body.batchId}/cancel`, {});
   wj = await finished(wf);
-  ok("M1 whole form (break m1): a cancel during the paid call keeps its cost but never compares or applies its answer", wj.status === "CANCELLED" && /while the AI call ran: its answer was kept in the run record but not compared or applied\. Cost US\$0\.42/.test(wj.message) && sql(`select count(*) from normalization_item where job_id='${wf}'`) === "0", { status: wj.status, message: wj.message });
+  // S4 M7 (P-110) replaces "a sent call cannot be recalled": Stop now ends the running call itself.
+  ok("C11.8 M7 whole form (break m1): a cancel during the paid call ends the call; it stays counted at its reserved worst case and its answer is never compared or applied", wj.status === "CANCELLED" && /Stopped while the AI call ran: the call was ended \(M7\)\. It stays counted at its reserved worst case; nothing of it is applied\./.test(wj.message) && sql(`select count(*) from normalization_item where job_id='${wf}'`) === "0", { status: wj.status, message: wj.message });
 
   ok("none of these paths wrote to the shared spend ledger (no reservation, no correction line)", statSync(LEDGER).size === ledgerBefore);
   ok("nothing was applied: IMM 5409 has no map rows from these drafts", sql(`select count(*) from drafting_job where attachment_id='${source}' and status='APPLIED'`) === "0");

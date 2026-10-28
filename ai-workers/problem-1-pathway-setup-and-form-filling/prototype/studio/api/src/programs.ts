@@ -2,6 +2,7 @@
 // attaching a library form to a row, the shared draft bar and one release for everything (P-23). Requests are parsed
 // with the shared zod contract (contracts/programs.ts); every write checks the person's duty on the server.
 // Row status and counts come from the same snapshots and validator the combination workspace uses (engine/programs.ts).
+import { closingChange, recordAction, snapshotLines } from "./form-uses.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import type { ProgramDef } from "@prisma/client";
 import type { z } from "zod";
@@ -370,9 +371,15 @@ export class Programs {
     if (!c) throw problem(404, "Not found", "That combination does not exist.");
     const form = await this.db.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: b.formKey }, include: { editions: { include: { _count: { select: { maps: true } } } } } });
     if (!form) throw problem(404, "Not in the library", `${b.formKey} is not in the library. Upload the IRCC PDF to add it.`, { errors: [{ field: "formKey", message: "Choose a form from the library." }] });
+    // S4 round 3 R3-1 (P-116): a retired form, or one whose retire or delete is open, gets no new use (form line or source).
+    if (form.retiredAt) throw problem(409, "Retired", `${form.formKey} is retired in the library: restore it there first.`, { errors: [{ field: "formKey", message: "Retired." }] });
+    const closing = await closingChange(this.db, c.workspaceId, form.formKey);
+    if (closing) throw problem(409, "Being retired", `A request to ${closing.action.toLowerCase()} ${form.formKey} is open on To review: nothing new may use it until it is decided.`, { errors: [{ field: "formKey", message: "Being retired." }] });
     const current = newestEdition(form.editions.filter((e) => e._count.maps > 0 && e.channel !== "ONLINE"));
     if (current) {
+      const before = await snapshotLines(this.db, combinationId, [form.formKey]);
       const r = await addFormLine(this.db, { workspaceId: c.workspaceId, combinationId, govFormDefId: form.id, formKey: form.formKey, origin: "HUMAN", by: actor.id, sourceQuote: `${current.editionLabel}: added from the library` });
+      if (r === "added") await recordAction(this.db, { workspaceId: c.workspaceId, combinationId, action: "attach", codes: [form.formKey], before, by: actor.id }); // S4 round 4 R4-6: one Undo covers it
       if (r === "already") throw problem(409, "Already on this combination", `${form.formKey} is already one of this combination's forms.`, { errors: [{ field: "formKey", message: "Already added." }] });
       await this.audit.log(c.workspaceId, actor.id, "reused", "form", form.formKey, `${actor.name} added ${current.editionLabel} to "${c.label}" from the library`, undefined, combinationId);
       this.cache = null;

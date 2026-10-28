@@ -254,9 +254,10 @@ function pdf(title: string, text: string) {
   sql(`insert into form_edition (id, workspace_id, gov_form_def_id, edition_label, official_file, sha256) select gen_random_uuid(), workspace_id, id, 'IMM 9101 (01-2026)', null, '${"e".repeat(64)}' from gov_form_def where id='${legacyFormId}'`);
   const unverifiedLibrary = (await call("GET", "/library/forms")).body;
   ok("source-trust: a legacy unapproved database entry is filtered out of the library picker", !unverifiedLibrary.some((f: any) => f.code === "IMM 9100" || f.code === "IMM 9101") && Number(sql(`select count(*) from gov_form_def where form_key='IMM 9101'`)) === 1);
-  r = await intake([file("instructions", "guide-5487.html")]);
+  // A guide Load sample does not put in the library (S4 Sample fixtures load 5256, 5269, 5289 and 5487): guide 5553's recorded page.
+  r = await intake([file("instructions", "guide-5553.html")]);
   ok("P-51 fail: a guide uploaded to the library alone is refused (a guide belongs to a combination)", r.one.outcome === "refused" && r.one.kind === "guide", r.one.message);
-  r = await intake([file("instructions", "guide-5487.html")], minorsId);
+  r = await intake([file("instructions", "guide-5553.html")], minorsId);
   ok("P-51 pass: a guide uploaded on a combination is attached to it as a source", r.one.outcome === "attached" && attachedTo(minorsId) === 1, r.one.message);
   r = await intake([file("forms", "imm5257e.pdf"), file("forms", "imm1295e.pdf"), ["blank.pdf", pdf("Untitled", "Nothing here")], ["x.exe", Buffer.from("MZ")]], minorsId);
   ok("P-51: many files in one request give one result per file, in order", r.status === 201 && r.body.results.map((x: any) => x.outcome).join() === "in_library,in_library,held,refused" && r.body.summary.files === 4, r.body.summary);
