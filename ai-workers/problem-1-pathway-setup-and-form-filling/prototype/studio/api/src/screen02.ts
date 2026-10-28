@@ -10,7 +10,7 @@ import { effective } from "../../engine/snapshot.ts";
 import { ACTORS, actorOf, Audit, Db, fail, need, OpenRead, revise, strip, Workspace, type Actor } from "./core.ts";
 import { actionVerb, changeView, decideChange, resubmitChange, withdrawChange } from "./library-changes.ts";
 import { Intake } from "./intake.ts";
-import { Lifecycle } from "./lifecycle.ts";
+import { isLifecycleKind, Lifecycle } from "./lifecycle.ts";
 import { Impact } from "./impact.ts";
 import { Programs } from "./programs.ts";
 
@@ -104,6 +104,12 @@ export class Screen02 {
       goes_with: goesWith, with_combination: listed.some((k) => k.startsWith("combination:")), recheck: await this.lifecycle.recheck(c!) };
   }
   undoDelete(actor: Actor, id: string) { return this.lifecycle.undoOwnDelete(actor, id); }
+  /** Send again: a returned structure or combination change goes through the one guard (QA-59); a field as before. */
+  async resubmitLibraryChange(actor: Actor, id: string, b: { label?: string; meaning?: string; reason?: string }) {
+    const c = await this.db.libraryChange.findUnique({ where: { id } });
+    if (c && isLifecycleKind(c.kind)) return this.lifecycle.resubmit(actor, c, b.reason ?? "");
+    return resubmitChange(this.db, actor, id, b);
+  }
   async decideLibraryChange(actor: Actor, id: string, decision: "approve" | "return", note?: string) {
     // W1-03 (P-116): a remove, retire or restore is checked again at approval; an approved remove applies at once.
     const before = decision === "approve" ? await this.db.libraryChange.findUnique({ where: { id } }) : null;
@@ -165,7 +171,7 @@ export class Screen02Controller {
   @Get("library/changes") changes(@Query("status") status?: string) { return this.s.libraryChanges(status || undefined); }
   @Get("library/changes/:id") change(@Param("id") id: string) { return this.s.libraryChange(id); }
   @Post("library/changes/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideLibraryChange(actorOf(a), id, "approve", noteOf(b)); }
-  @Post("library/changes/:id/resubmit") resubmit(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const o = obj(b); const str = (v: unknown) => (typeof v === "string" ? v : undefined); return resubmitChange(this.s.db, actorOf(a), id, { label: str(o.label), meaning: str(o.meaning), reason: str(o.reason) }); }
+  @Post("library/changes/:id/resubmit") resubmit(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const o = obj(b); const str = (v: unknown) => (typeof v === "string" ? v : undefined); return this.s.resubmitLibraryChange(actorOf(a), id, { label: str(o.label), meaning: str(o.meaning), reason: str(o.reason) }); }
   @Post("library/changes/:id/withdraw") withdraw(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return withdrawChange(this.s.db, actorOf(a), id, noteOf(b)); }
   // P-116 amended: Undo of an author's own-draft delete (structure names; the library kinds come with S6).
   @Post("library/changes/:id/undo") undo(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.undoDelete(actorOf(a), id); }

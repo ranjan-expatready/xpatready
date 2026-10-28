@@ -26,6 +26,29 @@ const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 1
   const ready = () => p.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && !!document.querySelector("[data-view]"), null, { timeout: 30000 });
   const open = async (qs = "") => { await p.goto(`${BASE}/${qs}`); await ready(); await p.waitForTimeout(300); };
   const theme = async (t) => { await p.evaluate((x) => { document.documentElement.dataset.theme = x; }, t); await p.waitForTimeout(250); };
+  // The contrast of a primary fill's text at rest and on hover, the fill composited over the first opaque background
+  // behind it: one ordinary Button and one filled next step.
+  const contrastOf = (el) => {
+    const px = (c) => (c.match(/[\d.]+/g) ?? []).map(Number);
+    const lum = ([r, g, b]) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+    let under = [255, 255, 255];
+    for (let a = el.parentElement; a; a = a.parentElement) { const c = px(getComputedStyle(a).backgroundColor); if (c.length === 3 || (c.length === 4 && c[3] === 1)) { under = c.slice(0, 3); break; } }
+    const f = px(getComputedStyle(el).backgroundColor), al = f.length === 4 ? f[3] : 1, fill = f.slice(0, 3).map((v, i) => v * al + under[i] * (1 - al));
+    const [hi, lo] = [lum(px(getComputedStyle(el).color)), lum(fill)].sort((x, y) => y - x);
+    return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100;
+  };
+  const primaryHover = async () => {
+    const out = [];
+    for (const sel of ["button.bg-primary:not([data-filled])", "[data-filled].bg-primary"]) {
+      const el = p.locator(sel).first(); if (!(await el.count())) continue;
+      await p.mouse.move(0, 0); await p.waitForTimeout(150);
+      const rest = await el.evaluate(contrastOf);
+      await el.hover(); await p.waitForTimeout(250);
+      out.push({ sel, rest, hover: await el.evaluate(contrastOf) });
+    }
+    await p.mouse.move(0, 0);
+    return out;
+  };
   let n = 0;
   const state = async (name) => {
     n++; const base = `${String(n).padStart(2, "0")}-${name}`;
@@ -93,8 +116,14 @@ const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 1
   await open("?v=cards"); await theme("dark");
   const darkTitle = await svCard.locator("h3 button").evaluate((x) => getComputedStyle(x).color);
   step("VS-8: in the dark theme the levels use their dark values (category navy becomes light blue)", darkTitle === rgb("#9ccbff"), darkTitle);
+  const darkHover = await primaryHover();
+  step("Button primary hover (dark): white text stays well above 4.5:1 on hover (at least 7:1)", darkHover.every((x) => x.hover >= 7), JSON.stringify(darkHover));
   await state("cards-dark");
   await theme("light");
+  // Button primary hover (Lead, 28 Oct): the fill goes darker on hover, never lighter, so its text keeps its contrast.
+  const lightHover = await primaryHover();
+  step("Button primary hover pass (light): white text is at least 7:1 on hover", lightHover.length >= 2 && lightHover.every((x) => x.hover >= 7), JSON.stringify(lightHover));
+  step("Button primary hover fail-guard (light): hover never lowers the contrast of the rest state (it went to 4.85:1 with primary/90)", lightHover.every((x) => x.hover >= x.rest), JSON.stringify(lightHover));
 
   // ======================================================== the approver: nothing filled they cannot do
   await as("user-B"); await open("?v=cards");

@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **S4: one short FIX before MERGE** (also by message). Fresh verification on 3dedbee: `channelsFrom` reads "paper" as PDF upload (Major; a paper or mail line alone gives Not set yet, pass + fail tests incl. the heading case); IMM 5707 vs 5409 one rule, one outcome (Should); stub-replay guard also checks the run's recorded mode (Minor). Rerun S4 canada, finder, runs and touched suites; hand back by message; then MERGE (Lead PR #65). After the merge: the carried Shoulds, then QA-53.
+2026-10-28 (Lead, Mac): **S4 merged (PR #65, main 06a8fc30); :4400 restarted on it.** Stage BUILD, owner Builder: (1) **QA-53**: one shared guard on every Studio configuration read (nobody 401, case people 403; case routes untouched), pass and fail tests; (2) then the form library on the shared lifecycle components (written row action, greyed reason as text, edition "kept by" line, P-116 amended). Desktop only; save often; hand back by message.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
