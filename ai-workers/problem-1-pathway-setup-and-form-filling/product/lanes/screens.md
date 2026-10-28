@@ -53,7 +53,7 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 current_screen: W1-visual-system
 stage: BUILD
 owner: Builder
-next_action: Builder: R3a Program structure committed 263bb9a (structure_browser 111/111, structure_r3 21/21, structure 83/83, s1s2_fix 30/30, qa51 21/21); full local run-suites on 263bb9a running (its by-products are restored when it ends); R3b code and check_w1_programs_r3 written, not built yet; then R3b Immigration programs (filter bar, Add combination in place), suites, journey, EARLY-LOOK by message
+next_action: Builder: R3a (263bb9a + shared lifecycle pattern 93b0040b) and R3b (776d4169) built and pushed; full local run-suites on 776d4169 and the studio journey running; then EARLY-LOOK by message
 then: S3 BUILD after round 3, the founder's Go and S4's merge (S3 re-check and addendum done, P-126); wave 1 desktop only (1440, 1024)
 blocked_by: none
 updated: 2026-10-28
