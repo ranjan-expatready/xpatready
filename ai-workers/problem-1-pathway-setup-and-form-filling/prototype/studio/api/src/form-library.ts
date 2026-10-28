@@ -15,9 +15,8 @@ import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada
 import { INDEX_URL } from "./finder.ts";
 import { AcceptsBody, ACCEPTS_WORD, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
-import { ACTORS, actorOf, Audit, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
-import { WHY } from "../../contracts/lifecycle.ts";
-import type { UsesView } from "../../contracts/structure.ts";
+import { ACTORS, actorOf, Audit, ConfigRead, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
+import { rowActionOf } from "./form-row-action.ts";
 import { Finder } from "./finder.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { addFormLine } from "./form-lines.ts";
@@ -60,7 +59,8 @@ export class FormLibrary {
     ]);
     // "Re-read with AI (fields and boxes)" drafts from a combination's copy of the file (today's field-map drafting).
     const atts = await this.db.sourceAttachment.findMany({ where: { workspaceId }, select: { id: true, sha256: true, combinationId: true, kind: true }, orderBy: { createdAt: "asc" } });
-    const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "APPROVED"] } }, select: { id: true, key: true, action: true, status: true, proposedBy: true } });
+    // R69-1: a RETURNED change is still open (lifecycle.ts OPEN): the row keeps its state and its author keeps Withdraw.
+    const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { id: true, key: true, action: true, status: true, proposedBy: true } });
     const trails = await combinationTrails(this.db, workspaceId);
     const combos = (await this.db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true, label: true } })).map((c) => ({ id: c.id, label: trails.get(c.id) ?? c.label })).sort((a, b) => a.label.localeCompare(b.label));
     const waitingAccepts = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "form_accepts", status: { in: ["WAITING", "RETURNED"] } }, select: { key: true } })).map((x) => x.key));
@@ -81,7 +81,7 @@ export class FormLibrary {
         accepts: current?.acceptedChannels ?? (TYPE_OF(f.formKind, f.displayName) === "form" ? null : "READ_BY_AI"), accepts_basis: current?.acceptedBasis === "SAMPLE" ? "AI_SAMPLE" : current?.acceptedBasis ?? null, accepts_quote: current?.acceptedQuote ?? null, accepts_waiting: waitingAccepts.has(f.formKey),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
         form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256 && a.kind === "Form")?.id ?? null : null,
-        used_by: using, status, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
+        used_by: using, status, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", lifecycle_returned: pendingChange?.status === "RETURNED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
     });
     // P-116 amended (28 Oct): one written action per row, decided by the one guard (formUses); greyed with its reason.
     // An earlier edition says what keeps it ("Kept by Release 2 of Visitor visa and 3 open cases"; P-51, never deleted).
@@ -262,16 +262,6 @@ export class FormLibrary {
 }
 
 /** S4 slice 1 routes (contract: contracts/form-library.ts). Kept in this lane's own file so shared API edits stay small. */
-/** The row's one written action (P-116 amended), from the one guard's answers: my own waiting change can be withdrawn;
- *  anyone else's waiting change greys the row; a retired form is restored; otherwise Delete when nothing uses it, else
- *  Retire, greyed with the guard's own reason when it cannot be taken now. */
-export function rowActionOf(retired: boolean, u: UsesView, pending: { id: string; action: string; proposedBy: string } | null, actorId?: string): { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } {
-  if (pending) return pending.proposedBy === actorId ? { kind: "WITHDRAW", why: null, change_id: pending.id } : { kind: pending.action as "DELETE" | "RETIRE" | "RESTORE", why: WHY.waiting, change_id: null };
-  if (retired) return { kind: "RESTORE", why: u.can.restore, change_id: null };
-  if (!u.can.delete) return { kind: "DELETE", why: null, change_id: null };
-  if (!u.can.retire) return { kind: "RETIRE", why: null, change_id: null };
-  return u.released ? { kind: "RETIRE", why: u.can.retire, change_id: null } : { kind: "DELETE", why: u.can.delete, change_id: null };
-}
 
 /** An earlier edition is kept by the releases that file it and the open cases pinned to them (P-51: never deleted). */
 async function keptBy(db: Db, workspaceId: string, edition: string): Promise<string> {
@@ -304,7 +294,7 @@ export class FormLibraryController {
     if (!runs.length) throw problem(400, "Nothing uploaded", refused.map((x) => x.why).join(" "));
     return { runId: runs[0].runId, runIds: runs.map((r) => r.runId), refused };
   }
-  @Post("combinations/:id/forms/find/plan") plan(@Param("id") id: string, @Body() b: unknown) { return this.finder.plan(id, b); }
+  @ConfigRead() @Post("combinations/:id/forms/find/plan") plan(@Param("id") id: string, @Body() b: unknown) { return this.finder.plan(id, b); }
   @Post("combinations/:id/forms/find") find(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.finder.launch(actorOf(a), id, b); }
   @Get("combinations/:id/forms/find") latest(@Param("id") id: string) { return this.finder.latest(id); }
   @Get("form-finder/runs/:id") run(@Param("id") id: string) { return this.finder.view(id); }

@@ -29,6 +29,7 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 | W1-08 | Combination workspace cleanup: tabs without overlap, forms picked from the library only, channel default per form, "People in this combination" explained, sample-file and portal scaffolding removed, Configuration (who fills, when) and Preview simplified, tooltips | runtime | W1-02, W1-06 | Concept |
 | W1-09 | Shared library in setup order (combination → forms → fields, sections, document types, checks); manual add with the AI duplicate check; missing masters listed | screens | W1-03 | Concept |
 | W1-10 | AI drafts the rest of the masters from the PDFs and checklists: sections, document types, conditions, checks (proposals only) | forms | W1-06, W1-07 | Requirements being drafted 28 Oct (`screens/W1-ai-drafting/`), incl. the AI demo plan: Visitor visa live 3 trials, saved results for the rest (R-131) |
+| W1-15 | Questions and documents, document first (P-130–P-132): Questionnaires tab with one source per fact and the PQR tick (C4.10), Documents tab with "supplies n facts", Preview in three sets; the AI run's 7 steps join W1-10 (C4.11) | runtime (tabs, after S5 merges) · forms (AI steps, with W1-10) | S5, W1-10 | **Concept agreed 29 Oct** (`screens/W1-questions-and-documents/`); build order in its §10 |
 | W1-11 | Reset empties everything; Load sample = structure + official PDFs of the 5 combinations (+1 Corporate Sample); AI proposals replay | runtime | W1-03, W1-06 | Not started |
 | W1-12 | Forms for the 5 combinations identified from IRCC guides (Sample until the expert confirms), downloaded, checked in Adobe | Lead research · evidence (Mac) | — | Research running |
 | W1-14 | End-to-end map v2: the complete scope (built and imagined) redrawn on today's decisions, as a new file beside the earlier map (founder: create our own version) | Lead | W1-03–W1-09 concepts agreed | Not started |
@@ -36,7 +37,7 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 | W2 | Immigration expert: second-person approvals, release gate, Sample values confirmed | screens · runtime | W1-13 | Not started |
 | W3 | AI wherever designed: describe what you need, propose facts from documents, AI review, new-edition impact | forms | W2 | Not started |
 | W4 | Case officer / agent view (includes the P-113 answer sheet in portal order for portal-only forms): open case, filing route per application, channel per form inside it (P-114), case link to an employer case (P-106), confirm section by section, prepare and record the filing | m3 (design now: IRCC representative-portal research) | W2 | Concept research |
-| W5 | Client and prospect: PQR, SQR, sign | runtime | W4 | Not started |
+| W5 | Client and prospect: PQR, SQR, sign — **after M3 (P-129: agent first)** | runtime | M3 gate | Not started |
 | W6 | Browser extension for online fill (unpark; capture does not return). Carry the PR #37 review findings: a repeated fill keeps Undo; portal option codes are checked for client details | forms | W5 | Parked |
 
 **Founder asks of 26 Oct, one line each** (44 asks, where each lives, status, and the gaps still open for the founder): `screens/W1-baseline/founder-asks.md`. Progress page for the founder: `design/end-to-end-progress.html`. Keep all three in step.
