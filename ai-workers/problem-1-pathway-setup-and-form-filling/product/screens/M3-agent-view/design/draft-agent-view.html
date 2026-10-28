@@ -128,7 +128,7 @@ body.labels .lab{display:inline-block}
 .k{font-size:12px;color:var(--faint)}
 </style>
 
-<div class="board-title"><div><h1>M3 · Agent view and filing: draft board, r4</h1><p>m3 lane, 29 Oct · r4 applies the founder's answers: P-135 filing mode per person role (the engine derives filings, groups, waits, fees), P-136 two more blockers, P-137 portal fixed · r3 answered the fresh challenge (challenge.md) · concept <code>screens/M3-agent-view/concept-draft.md</code> · builds on the agreed v2 board (P-122) and document first (P-130, P-133, P-134) · every name, value, form and channel is <span class="sample">Sample</span> until the immigration expert confirms · Unconfirmed: no counsel on signing and correction points</p></div>
+<div class="board-title"><div><h1>M3 · Agent view and filing: draft board, r5</h1><p>m3 lane, 29 Oct · r5: full Eligibility and Review pages from the team's AG-03 and AG-11 (P-141, frames 12, 13), P-142 document reading · r4 applies the founder's answers: P-135 filing mode per person role (the engine derives filings, groups, waits, fees), P-136 two more blockers, P-137 portal fixed · r3 answered the fresh challenge (challenge.md) · concept <code>screens/M3-agent-view/concept-draft.md</code> · builds on the agreed v2 board (P-122) and document first (P-130, P-133, P-134) · every name, value, form and channel is <span class="sample">Sample</span> until the immigration expert confirms · Unconfirmed: no counsel on signing and correction points</p></div>
 <div class="toolbar"><button class="btn" onclick="document.body.classList.toggle('labels')">Show labels</button><span class="proto">Scaffolding · board only</span></div></div>
 <div class="legend">Labels: <span class="lab cap" style="display:inline-block">Capability</span> what the product does in production · <span class="lab scf" style="display:inline-block">Scaffolding</span> Sample data, demo or board aids · <span class="lab nb" style="display:inline-block">Team AG-xx</span> the team builds it; we show only its inputs or findings · <span class="lab f" style="display:inline-block">F P-xx</span> follows a decision · <span class="lab m" style="display:inline-block">Expert Q4</span> waits on the immigration expert (Sample). Rule on every frame: <b>little on each row; detail in the side drawer, the ⋯ menu and tooltips.</b></div>
 
@@ -223,7 +223,7 @@ body.labels .lab{display:inline-block}
  <div class="stg"><div class="stc on"><h4>1 · Get the information</h4><b>3</b> of 9 sections confirmed · <span style="color:var(--danger-t)">1 to check</span><div class="muted">Next: Personal details · Client A</div></div>
  <div class="stc"><h4>2 · Prepare the filing</h4><b>1</b> of 10 items done · 3 cannot start yet<div class="muted">Next: IMM 5476 back from Client A</div></div>
  <div class="stc"><h4>Everything</h4>9 sections · 11 documents · 10 items · <b style="font-size:13px">5 need you</b></div></div>
- <div class="tabs" style="margin:10px 0 0"><a>Overview</a><a class="on">Prepare application</a><a>History</a></div></div>
+ <div class="tabs" style="margin:10px 0 0"><a>Overview</a><a class="on">Prepare application</a><a>Eligibility</a><a>Review</a><a>History</a></div></div>
 <div class="ws"><div class="list">
  <div style="padding:0 14px 4px" class="row small"><span class="chip on" style="height:26px">Needs you · 5</span><span class="chip" style="height:26px">All</span><span class="chip" style="height:26px">Everyone ▾</span></div>
  <div class="own">You (case officer) · 3</div>
@@ -265,7 +265,7 @@ body.labels .lab{display:inline-block}
  <div class="crop"><b>REPUBLIC OF INDIA · PASSPORT</b> <span class="sample">Synthetic document</span><br>Surname <mark>KUMAR</mark><br>Given names <mark>AARAV</mark><br>Nationality INDIAN · Sex M<br>Date of birth <mark>21/03/1990</mark> · Place of birth PUNE<br>Date of expiry 14/02/2033<br><div class="mrz">P&lt;INDKUMAR&lt;&lt;AARAV&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>Z1234567&lt;4IND9003215M3302146&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;06</div></div>
  <p class="small muted">Selecting a proposal highlights its place on the page. <span class="lab scf">Scaffolding · synthetic document (P-133)</span></p></div>
 <div class="panel" style="margin:12px"><header><div class="row sp"><h3 style="font-size:17px">Fill Personal details from documents</h3><span class="more">✕</span></div><div class="small muted">Read from <b>the passport's coded lines</b> in the PDF's text layer, rules only (the POC reader <code>p5/reader/mrz.ts</code>): check digits passed ✓. Only what the coded lines hold is proposed; place of birth is typed. No AI reads identity documents. <span class="lab cap">Capability</span><span class="lab f">F P-133, P-134</span></div></header>
-<div class="body"><div class="small"><b>Identity facts: look at each one</b> <span title="Names (P-134 D2), and by default date of birth, passport number and expiry (report D5, to confirm at the click-through), are checked one by one against the page.">ⓘ</span> <span class="lab f">F P-134 D2 · D5 default</span></div>
+<div class="body"><div class="small"><b>Identity facts: look at each one</b> <span title="Names, date of birth, passport number and expiry, and anything from handwritten or foreign certificates, are always checked one by one against the page (P-142 D5). Only staff mark a value as checked against the document (D3).">ⓘ</span> <span class="lab f">F P-142 D5</span></div>
  <div class="prop"><span>Family name</span><b>KUMAR</b><span><button class="btn sm">✓ Matches page</button></span></div>
  <div class="prop"><span>Given names</span><b>AARAV</b><span><button class="btn sm">✓ Matches page</button></span></div>
  <div class="prop"><span>Date of birth</span><span><b>21 Mar 1990</b> <span class="pill danger">differs from typed 12 Mar 1990</span></span><span><button class="btn sm">Check…</button></span></div>
@@ -290,6 +290,7 @@ body.labels .lab{display:inline-block}
  <div><div class="k">Use</div><label class="small"><input type="radio" checked> The passport's value</label><br><label class="small"><input type="radio"> The client's value</label><br><label class="small"><input type="radio"> Another value: <input style="width:120px"></label></div>
  <div><div class="k">Reason (required)</div><select style="width:100%;height:32px"><option>Client typed day and month the wrong way round</option><option>The document is wrong; the client will get it corrected</option><option>Other (write a note)</option></select></div>
  <div class="notice info small">The other value stays on record with your reason. Names differing only by capitals, apostrophes or a shortened coded name do not raise a check (passport spelling rules).</div>
+ <div class="small muted">The client sees only "please check" on that answer (after M3, P-142 D6); you resolve it here with a reason.</div>
  <div class="small muted">When it happens: a fact a document supplies is not asked of the client (P-130), so a clash appears only when a value was typed before the upload, or by the officer. This is our rule check (P-71); the team's AG-11 Checker's cross-checks stay advisory.</div>
  <div class="small muted">Variant: <b>two documents disagree</b> (passport vs birth certificate): same panel, two document columns, neither chosen for you.</div></div>
 <footer><button class="btn">Cancel</button><button class="btn primary">Resolve</button></footer></div></div></div>
@@ -346,7 +347,7 @@ body.labels .lab{display:inline-block}
   <div><span class="ic">6</span>Read back and compared<span class="small muted">by position</span></div>
   <div><span class="ic">7</span>Uploaded to IRCC<span class="small muted">a tick</span></div></div>
   <p class="small muted">Never says "Validated" for our own check (P-46). A form whose fill trial has not passed shows "Answer sheet only": fill in Adobe, then upload for read-back (P-65).</p></div>
- <div class="card"><b>AI review findings</b> <span class="pill neutral">advisory</span> <span class="lab nb">Team AG-11 Checker · we show findings only</span>
+ <div class="card"><b>Review findings for this form</b> <span class="pill neutral">advisory</span> <span class="small muted">· all findings: the Review page (frame 13)</span>
   <div class="prop" style="grid-template-columns:1fr auto"><span class="small">"Address history has a 3-month gap (Jan–Mar 2024)"</span><button class="btn sm">Acknowledge…</button></div>
   <div class="prop" style="grid-template-columns:1fr auto"><span class="small muted">"Sibling count differs from IMM 5257" · acknowledged: half-sibling</span><span class="pill ok">Done</span></div>
   <p class="small muted">Findings never block (P-71). Acknowledging needs a reason; "Other" needs a note.</p>
@@ -406,7 +407,7 @@ body.labels .lab{display:inline-block}
 <div style="padding:16px 24px" class="g3" ><div class="state" style="grid-column:1/4"><div class="toast">Date of marriage updated for Client A and Client B. Drafts use the new value; 2 finished items (IMM 5707 · A and B) are marked out of date and were not changed. <a>See them</a> <a>Undo</a></div></div>
  <div class="state"><h4>Before filing <span class="pill warn">Out of date</span></h4>IMM 5707 · Client A · validated copy uploaded 27 Oct. Date of marriage changed on 29 Oct (12 Jun 2015 → 21 Jun 2015). The uploaded copy was kept as it was. <div class="row"><button class="btn sm">Prepare again</button><button class="btn sm ghost">Undo the change</button></div><span class="small muted">Blocks "Ready to file" until prepared again or undone.</span> <span class="lab f">F P-136</span></div>
  <div class="state"><h4>Entered in the portal <span class="pill warn">Out of date</span></h4>IMM 5257 screen "Marital status", ticked as entered 28 Oct. The answers it covered were frozen at the tick; one now differs. <button class="btn sm">Show what to re-enter</button></div>
- <div class="state"><h4>After filing <span class="pill danger">Filed with an earlier value</span></h4>Filed 29 Oct with 12 Jun 2015. Nothing filed was changed. A task asks the case officer to decide: re-sign, or tell IRCC (Unconfirmed: no counsel, research D7). <button class="btn sm">Open task</button></div></div></div>
+ <div class="state"><h4>After filing <span class="pill danger">Filed with an earlier value</span></h4>Filed 29 Oct with 12 Jun 2015. Nothing filed was changed. A task asks the case officer to decide: re-sign, or tell IRCC (P-142 D7; whether IRCC must be told: Unconfirmed: no counsel). <button class="btn sm">Open task</button></div></div></div>
 
 <!-- 9b AFTER FILING -->
 <div class="frame"><div class="frame-cap"><span>9 · After filing: kept minimal in M3 (P-129 gate); milestones are the team's AG-07</span><span>challenge M6</span></div>
@@ -440,8 +441,69 @@ body.labels .lab{display:inline-block}
  <div class="state"><h4>Client's own answers</h4>Background and declaration answers are the client's: you can see them, not confirm them (P-97).</div>
  <div class="state"><h4>Long content</h4>A family of 6: person filter and "Needs you" keep the list short; names wrap, never cut.</div></div></div>
 
+<!-- 13 ELIGIBILITY -->
+<style>
+.elc{border:1px solid var(--border);border-radius:var(--r2);background:#fff;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:13px;cursor:pointer}
+.elc.on{border:2px solid var(--primary);background:var(--p50)}.elc small{grid-column:1/3;color:var(--muted);font-size:12px}
+.gate{display:grid;grid-template-columns:22px 1fr auto;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px;align-items:center}
+.sev{font-size:11px;font-weight:700;border-radius:4px;padding:0 6px}.sev.c{background:var(--danger-tint);color:var(--danger-t)}.sev.ma{background:var(--warn-tint);color:var(--warn-t)}.sev.mi{background:#eee;color:var(--muted)}.sev.i{background:var(--p50);color:var(--link)}
+</style>
+<div class="frame"><div class="frame-cap"><span>12 · Case › Eligibility: a full page from the team's AG-03 Qualifier (P-141), on our rules engine</span><span>C6.9 · P-76, P-77 · AG-3-10, -12, -13, -16, -25, -28, -32, -33, -34 · rules only, no AI</span></div>
+<div class="top"><div class="logo"><b>ExpatReady</b><span>Cases › ER-0204 · Client A family › Eligibility</span></div><span class="small muted">Case officer (Sample)</span></div>
+<div style="padding:10px 20px;background:var(--raised);border-bottom:1px solid var(--border)"><div class="tabs" style="margin:0"><a>Overview</a><a>Prepare application</a><a class="on">Eligibility</a><a>Review</a><a>History</a></div></div>
+<div class="notice warn small" style="margin:12px 20px 0"><b>Indicative eligibility, not a guarantee of approval.</b> Staff only; the client and prospect never see a verdict (P-77). <span class="sample">Sample rules</span> · wording with the immigration expert.</div>
+<div class="ws" style="grid-template-columns:400px 1fr"><div class="list" style="padding:12px 14px">
+ <div class="row sp small" style="margin-bottom:8px"><span><b>Client A</b> · assessed 29 Oct by the case officer</span><span class="more" title="⋯ Re-run with a reason · Earlier assessments (3) · Compare with the last run · Print for the file">⋯</span></div>
+ <div class="k" style="margin:0 0 6px">This case's combination</div>
+ <div class="elc on"><span><b>Visitor visa</b></span><span class="pill warn">Possibly eligible</span><small>needs: funds available, ties to home country</small></div>
+ <div class="k" style="margin:12px 0 6px">Other released programs, ranked <span title="Every released combination of this pathway type is checked on the same facts. Order: likely, then possibly (fewest missing), then not eligible. Indicative only.">ⓘ</span></div>
+ <div class="elc"><span>Super visa</span><span class="pill danger">Not eligible</span><small>not a parent or grandparent of a Canadian (1 gate)</small></div>
+ <div class="elc" style="margin-top:6px"><span>Study permit · outside Canada</span><span class="pill warn">Possibly eligible</span><small>needs 4 facts, incl. a letter of acceptance</small></div>
+ <div class="notice info small" style="margin-top:12px"><b>Missing facts</b> · funds available <span class="muted">(needed by 2 programs)</span> · ties to home country · letter of acceptance → <a>open in the agent view</a></div>
+ <p class="small muted">Cut from AG-03 (heavy): score grids such as CRS, "below cut-off" bands, what-if recommendations (§8b).</p></div>
+<main style="padding:16px 20px"><div class="sec"><header><div><h3 style="font-size:17px">Visitor visa · Client A</h3><span class="small muted">Gates as data on the release (rules engine, P-77). <span class="lab cap">Capability</span></span></div><span class="pill warn">Possibly eligible: needs 2 facts</span></header>
+ <div style="padding:6px 14px">
+ <div class="gate"><span class="ic d">✓</span><span>Valid passport for the whole stay <span class="small muted">· passport expiry 14 Feb 2033 (Document · Passport)</span></span><span class="pill ok">Met</span></div>
+ <div class="gate"><span class="ic d">✓</span><span>No inadmissibility declared <span class="small muted">· background answers (Client)</span></span><span class="pill ok">Met</span></div>
+ <div class="gate"><span class="ic">?</span><span>Enough funds for the stay <span class="small muted">· funds available: not answered</span></span><span class="pill neutral">Not answered</span></div>
+ <div class="gate"><span class="ic">?</span><span>Ties to the home country <span class="small muted">· employment, property: not answered</span></span><span class="pill neutral">Not answered</span></div>
+ <div class="gate"><span class="ic d">✓</span><span>Purpose of visit is a visit <span class="small muted">· purpose: tourism (Client)</span></span><span class="pill ok">Met</span></div></div>
+ <footer><span class="small muted">Rules: Visitor visa release 2 · rules as at 19 Oct 2026 · run by the case officer 29 Oct 10:12 · facts frozen with the run</span><div class="row"><button class="btn sm" title="Record your own view beside the result, with a reason. The result stays.">Override…</button><button class="btn sm" title="Stamp: reviewed by you, with a note.">Mark reviewed</button></div></footer></div>
+ <div class="g3" style="margin-top:12px">
+  <div class="state"><h4>Override (drawer)</h4>Your outcome · reason (required) · kept beside the engine's result, never replacing it; not carried into a re-run (AG-3-33). <span class="lab cap">Capability</span></div>
+  <div class="state"><h4>Out of date</h4>"Facts changed since this run (funds available, 29 Oct)." <button class="btn sm">Run again</button> A run is never edited; each run is kept (AG-3-1, AG-3-28).</div>
+  <div class="state"><h4>Where it starts</h4>The prospect's PQR answers (after M3, P-129) carry in; on the case, the officer runs it. No AI: identical with AI off (AG-03).</div></div>
+</main></div></div>
+
+<!-- 14 REVIEW -->
+<div class="frame"><div class="frame-cap"><span>13 · Case › Review: findings before filing, from rules and the AI review (team AG-11 Checker + AG-07 deficiencies), a full page (P-141)</span><span>C7.5 · P-71, P-121, P-136 · AG-11-69, -70, -71; AG-7-25, -26, -28</span></div>
+<div class="top"><div class="logo"><b>ExpatReady</b><span>Cases › ER-0204 · Client A family › Review</span></div><span class="small muted">Case officer (Sample)</span></div>
+<div style="padding:10px 20px;background:var(--raised);border-bottom:1px solid var(--border)"><div class="row sp"><div class="tabs" style="margin:0"><a>Overview</a><a>Prepare application</a><a>Eligibility</a><a class="on">Review</a><a>History</a></div>
+ <div class="row"><span class="live" title="Two AI rounds per form (a draft and an independent checker that does not see it) plus the rules. Cost shown before it starts; Stop ends it; saved runs replay at US$0.">✦ Run AI review · 3 forms · about US$0.30 · at most US$0.90</span><span class="lab cap">Capability</span><span class="lab f">F P-110, P-121</span></div></div></div>
+<div class="ws" style="grid-template-columns:400px 1fr"><div class="list">
+ <div style="padding:0 14px 6px" class="row small"><span class="chip on" style="height:26px">Open · 4</span><span class="chip" style="height:26px">All · 7</span><span class="chip" style="height:26px">Everyone ▾</span></div>
+ <div class="own">Client B · visitor visa filing</div>
+ <div class="li on"><span>Family name differs: passport vs marriage certificate</span><span class="sev ma">MAJOR</span><small>Rules · "KUMARI" vs "KUMAR" · IMM 5707</small></div>
+ <div class="li"><span>Sibling count differs between forms</span><span class="sev mi">MINOR</span><small>AI · both rounds agree · IMM 5257 vs IMM 5707</small></div>
+ <div class="own">Client A</div>
+ <div class="li"><span>Address history has a 3-month gap</span><span class="sev ma">MAJOR</span><small>AI · Low: the rounds disagree</small></div>
+ <div class="li"><span>IMM 5476 not signed</span><span class="sev c">CRITICAL</span><small>Rules · blocks Ready to file (P-136)</small></div>
+ <div class="own">Done · 3</div>
+ <div class="li"><span>Travel dates overlap</span><span class="pill ok">Acknowledged</span><small>"Same trip, two entries" · case officer</small></div>
+ <div class="small muted" style="padding:6px 14px">+ 2 resolved by a fact change</div></div>
+<main style="padding:16px 20px"><div class="sec"><header><div><h3 style="font-size:17px">Family name differs: passport vs marriage certificate</h3><span class="small muted">Client B · rules cross-check (name, date of birth, numbers, dates across documents, facts and forms; AG-11-69) <span class="lab cap">Capability</span></span></div><span class="sev ma">MAJOR</span></header>
+ <div style="padding:12px 14px" class="cmp"><div><h5>Passport · page 1 (Document)</h5><b>KUMARI</b><div class="small muted">confirmed 28 Oct, fills IMM 5257, IMM 5707</div></div><div><h5>Marriage certificate · page 1 (Document)</h5><b>KUMAR</b><div class="small muted">read 29 Oct, proposed</div></div></div>
+ <div style="padding:0 14px 12px" class="small muted">Why: IRCC asks for names exactly as on the passport; a different name on a supporting document may need an explanation letter. <span class="sample">Sample guidance</span></div>
+ <footer><span class="small muted">Advisory: AI and rule findings warn, never block, except the P-71 and P-136 blockers (e.g. a missing signature).</span><div class="row"><button class="btn sm">Fix the fact</button><button class="btn sm" title="Keep it on record with a reason; 'Other' needs a note.">Acknowledge…</button><span class="more" title="⋯ Waive a CRITICAL (permission + reason) · Dismiss (does not return for the same source) · History">⋯</span></div></footer></div>
+ <div class="g3" style="margin-top:12px">
+  <div class="state"><h4>AI finding (drawer)</h4>What · why · the quoted field on each form · <b>both rounds' readings</b>: High when draft, checker and rules agree; <b>Low</b> with both reasons when they disagree (P-121). <span class="lab cap">Capability</span></div>
+  <div class="state"><h4>States</h4>Open → Acknowledged (reason) → Resolved · Open → Waived (CRITICAL only; permission + reason) · a rule finding resolves by itself when the fact is fixed; a waiver reopens when its fact changes (AG-7-26).</div>
+  <div class="state"><h4>Out of date and AI off</h4>A fact or form changed since the run: "Findings from 29 Oct may be out of date. Run again." With AI off, the rules cross-checks and manual findings still work (AG-11-71).</div></div>
+ <p class="small muted">Severity words from the team (CRITICAL · MAJOR · MINOR · INFO; AG-7-25); sources Rules · AI · Added by hand. Cut from AG-11 (heavy): the "Needs you" routing, plan gating, retention (§8b). <span class="lab scf">Scaffolding · Sample findings, replayed AI runs</span></p>
+</main></div></div>
+
 <!-- 11 BUILD ORDER -->
-<div class="frame"><div class="frame-cap"><span>12 · Build order in slices (after the M2 gate; each with an early look)</span><span>concept-draft.md §8 · labels per P-33</span></div>
+<div class="frame"><div class="frame-cap"><span>14 · Build order in slices (after the M2 gate; each with an early look)</span><span>concept-draft.md §8 · labels per P-33</span></div>
 <div style="padding:16px 24px"><div class="tbl-wrap"><table><tr><th>Slice</th><th>What</th><th>Label</th></tr>
 <tr><td><b>M3-0</b> Filing modes</td><td class="small">mode per role on "Who can be in this application", linked combinations, co-filed companion, follows-with-trigger, fee lines, release check</td><td><span class="lab cap" style="display:inline-block">Capability</span> <span class="lab scf" style="display:inline-block">values Scaffolding</span></td></tr>
 <tr><td><b>M3-1</b> Filings and checklist</td><td class="small">derived filings, applicants, groups, waits; pins re-keyed with backfill (runtime lane); checklist lines; the tab with the filings chip</td><td><span class="lab cap" style="display:inline-block">Capability</span></td></tr>
@@ -451,8 +513,8 @@ body.labels .lab{display:inline-block}
 <tr><td><b>M3-5</b> Groups, fees, record</td><td class="small">split with reason, co-filed guard, fee lines, record per group, read-only, Correct a number</td><td><span class="lab cap" style="display:inline-block">Capability</span> <span class="lab scf" style="display:inline-block">amounts Scaffolding</span></td></tr>
 <tr><td><b>M3-6</b> Out of date and waits</td><td class="small">P-136 blockers; extend the built staleness; Start next stage on a recorded trigger; task after filing</td><td><span class="lab cap" style="display:inline-block">Capability</span></td></tr>
 <tr><td><b>M3-7</b> Employer link</td><td class="small">Corporate case link, read-only facts, out of date on change</td><td><span class="lab cap" style="display:inline-block">Capability</span></td></tr>
-<tr><td><b>M3-8</b> Eligibility, AI review, AI reader</td><td class="small">as the founder rules on P-129 scope; AI vision on synthetic letters (cost first, replay US$0)</td><td><span class="lab cap" style="display:inline-block">Capability</span> <span class="lab scf" style="display:inline-block">replays Scaffolding</span></td></tr>
-</table></div><p class="small muted">M3-0 first; M3-1 to M3-3 before M3-4 to M3-6; M3-7 and M3-8 alongside (different files).</p></div></div>
+<tr><td><b>M3-8</b> Eligibility page</td><td class="small">gates as data on the release (Sample, M2 configuration), assessment snapshot per run, three outcomes, ranking across released combinations, missing facts, override and review with a reason, re-run when out of date</td><td><span class="lab cap" style="display:inline-block">Capability</span> <span class="lab scf" style="display:inline-block">gates Scaffolding</span></td></tr><tr><td><b>M3-9</b> Review page</td><td class="small">findings with team severities and states; rules cross-checks (US$0); AI review in two rounds with cost first, Stop and replay (one live trial on Visitor visa); acknowledge, waive, dismiss; out of date; AI off</td><td><span class="lab cap" style="display:inline-block">Capability</span> <span class="lab scf" style="display:inline-block">replays Scaffolding</span></td></tr><tr><td><b>M3-10</b> AI reader for letters</td><td class="small">AI vision on synthetic letters and foreign records (P-133), cost first</td><td><span class="lab cap" style="display:inline-block">Capability</span></td></tr>
+</table></div><p class="small muted">M3-0 first; M3-1 to M3-3 before M3-4 to M3-6; M3-7 to M3-10 alongside (different files). M3-8 needs only facts (after M3-1); M3-9 needs filled forms (after M3-4).</p></div></div>
 
 </body>
 </html>
