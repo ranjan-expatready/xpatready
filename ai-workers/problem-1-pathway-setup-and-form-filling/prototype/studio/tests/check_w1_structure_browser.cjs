@@ -250,6 +250,17 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   await p.locator("[data-add-open]").click(); await dialog().waitFor();
   await typeIn("category", "visitor-VISA");
   step("C11.3 AD-4: an exact twin (ignoring case and punctuation) picks the existing name: 'Already in the Program structure: Show it'", /Uses the existing category/.test(await p.locator('[data-field="category"]').textContent()) && await p.locator("[data-add-exists]").count() === 1 && await p.locator("[data-add-submit]").isDisabled());
+  // QA-56: Enter on a newly typed name accepts it and moves on; a highlighted name still wins; the New line is reachable.
+  const focusIn = () => p.evaluate(() => document.activeElement?.closest("[data-field]")?.getAttribute("data-field"));
+  await typeIn("category", "Business visit"); await field("category").press("Enter"); await p.waitForTimeout(200);
+  step("C11.3 QA-56 pass: Enter on a new typed name keeps it and moves to the next level (None under Sub-category); nothing is added yet", await focusIn() === "subCategory" && (await field("category").inputValue()) === "Business visit" && await dialog().count() === 1 && sql("select count(*) from program_def where label='Business visit'") === "0", `focus in ${await focusIn()}`);
+  await typeIn("category", "Visi"); await field("category").press("ArrowDown"); await field("category").press("Enter"); await p.waitForTimeout(200);
+  step("C11.3 QA-56 fail-guard: ↓ then Enter takes the highlighted existing name, not the typed letters", (await field("category").inputValue()) === "Visitor visa" && /Uses the existing category/.test(await p.locator('[data-field="category"]').textContent()), await field("category").inputValue());
+  await typeIn("category", "Visi");
+  for (let i = 0; i < 5 && (await p.locator('[data-field="category"] [data-add-new]').getAttribute("aria-selected").catch(() => null)) !== "true"; i++) await field("category").press("ArrowDown");
+  step("C11.3 QA-56: the 'Add “…” New' line is reachable with ↓ (highlighted, named by the field)", (await p.locator('[data-field="category"] [data-add-new]').getAttribute("aria-selected")) === "true" && /-o\d+$/.test(await field("category").getAttribute("aria-activedescendant") ?? ""));
+  await field("category").press("Enter"); await p.waitForTimeout(200);
+  step("C11.3 QA-56: Enter on the New line keeps the typed name and moves on", (await field("category").inputValue()) === "Visi" && await focusIn() === "subCategory", `focus in ${await focusIn()}`);
   await typeIn("category", "Visiter visa");
   await p.locator('[data-field="category"] [data-close]').waitFor({ timeout: 5000 }).catch(() => undefined);
   step("C11.3 AD-4 BR-5: a close spelling warns under its field with the trail and why (free)", /Did you mean Retail › Temporary residence › Visitors › Visitor visa \(1 letter apart\)/.test(await p.locator('[data-field="category"] [data-close]').textContent().catch(() => "")));
