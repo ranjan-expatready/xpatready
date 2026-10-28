@@ -1,16 +1,87 @@
 # W1-10 AI drafts the rest — concept draft (designer, 28 Oct; the Lead decides)
-Status: DRAFT, in progress. Sections fill one by one.
+Board: `design/draft-ai-drafting.html` (1440; "Show labels" shows Capability/Scaffolding, Needed/Not built and the decision marks). Where this draft and the board differ, this draft wins.
 
 ## 1. Job and journey
-## 2. S6 vs W1-10 split
-## 3. Ten layers
-## 4. Business rules
-## 5. Layout and states
-## 6. Copy
-## 7. Contract and tests
-## 8. Capability or scaffolding
-## 9. POC evidence
-## 10. AI demo plan
-## 11. Followed, missing or conflicting decisions
-## 12. Founder questions
-## Definition of Ready
+After a combination's forms, guides and checklists are in the library (S4 finder), AI drafts **what makes this combination specialised**: who each question and document applies to and under which condition ("Only if"), the per-person document checklist, and the checks across answers. Every item is a proposal with its quoted source line, a draft round, an independent checker round and the rules check (P-121); a person accepts on **To review**; everything stays editable by hand (P-116 lifecycle). Persona: content publisher (author), content reviewer (second person). Wave 1 actor 1 (P-101). Capabilities: C2.6, C3.4, C11.13, C11.14, C11.8; S5 reads the result (C4.1, C6.4 later). Marks: **[F]** follows a decision · **[M]** missing · **[C]** conflict. All counts, costs, conditions and checklist lines are **Sample** until the immigration expert confirms; legal points Unconfirmed: no counsel.
+## 2. S6 vs W1-10 split (nothing built twice)
+| | S6 Shared library (W1-09, agreed + challenge) | W1-10 adds (this item) |
+|---|---|---|
+| Trigger | A form **edition** enters the library; one draft per edition fingerprint (S6 M2) | Start setup on a **combination**, after the finder (P-125 (3)); one draft per combination × source set |
+| Drafts | Fields + field map (AI + checker), answer lists and section groups (rules, US$0), section names (AI) | **Conditions per person role** on questions/sections ("Only if"), **requirement lines** from checklists (document × who × only if), **document types** new to the library, **checks** (tier 2) across answers and documents |
+| Owns | One queue, Ready/Check/Decide rule, bulk accept + Undo, second-person grouping, shared condition record (S6 M6), the one Add | Three producers writing into S6's item contract (S6 Q-L1 agreed); no second queue, no second agreement rule |
+| Reads | The PDF | The guide, the checklist (IMM 5484 / 5488 / 5905 …, Sample mapping), the form's own instructions, S5's "Who can be in this application" |
+Rule of thumb: S6 answers "what is on this form"; W1-10 answers "who must give it, when, and does it add up". [F] S6 challenge M4, Q-L1; RULES-MODEL §2 (kinds A–C), §7 tier 2. **[C1]** the brief and P-120 say S6 drafts document types and checks "when a form enters"; S6's challenge (M4, Lead-agreed) moved them to W1-10. Draft follows the challenge; the Lead confirms (§11 [C1]).
+## 3. Ten layers (exists → new)
+Masters: shared condition record (S6 M6), document type, check per combination, person roles (S5) → **new: none**; W1-10 only proposes into them. Links: form/section/document lines with `onlyIf` (inline today; words-only shows "No rule yet" in S5) → line references a shared condition. Engine: `checkCondition`, `compareRounds` (S4 `engine/agreement.ts`) → **new pure `compareWhoAndWhen`** (item, people, condition tree, quote) and `reachable` (the condition's answer is asked of that person first). Contract: runs API, S6 queue → three proposal kinds + saved-result read. Screen: no new page; S6's To review, S5's tabs, the run card. AI: `requirements` and `checks` prompts proven 20 Oct → add the blind checker prompt for each. Governance: as S6 (author ≠ approver; release).
+## 4. Business rules (each one pass + one fail test, §7)
+* BR-1 **Starts from Start setup, after the finder**, as steps of the same run; its cost is on the same cost line, stated before anything runs [F] P-125 (3), P-110, S6 M7. Each step can be redone or stopped alone [F] P-123.
+* BR-2 **Three producers, one queue:** "Who and when" (conditions on form lines, sections and questions), "Documents each person gives" (requirement lines from the checklist; a new document type goes to S6 as a library add), "Checks on the answers" (tier 2, warn never block) [F] RULES-MODEL §2, §7; P-14; S6 Q-L1.
+* BR-3 **Every proposal quotes its source line** (file, edition, page) and the rules confirm the quote is in that file; no quote → dropped and listed [F] P-121, S4 finder rule.
+* BR-4 **Draft + blind checker + rules.** The checker reads the line and the item, never the draft's answer. **Ready to accept** = rules pass and both rounds give the same item, same people, same condition; **Check** = same item and people, conditions differ; **Decide** = otherwise, one round only, or the source sends it elsewhere ("Refer to the responsible visa office") [F] P-121, P-123 words.
+* BR-5 **Rules on each condition:** valid in the condition language; every answer it reads is a shared field (else Decide with "Needs a shared field first", linked to the one Add); that answer is asked of the right person before it is needed; reuse an existing shared condition when the meaning matches [F] RULES-MODEL §5.2, P-120, S6 M6.
+* BR-6 **Where it lands is shown:** a fact rule true everywhere lands on the shared section ("changes every combination that uses Family"), a requirement on this combination; the scope test decides; a shared landing needs the second person [F] P-12, RULES-MODEL §2.
+* BR-7 **Who uses the roles of "Who can be in this application"**; a role not listed there is refused; "each applicant" follows "Files own application" [F] P-119.
+* BR-8 **Bulk accept for Ready only**, one Undo per batch, each item re-checked on the server [F] P-121, S6 M5.
+* BR-9 **Editable by hand after accept** through the lifecycle pattern: Edit, Remove from this combination, Delete own draft with Undo, Retire a released shared condition; a meaning edit makes a new version with a second person [F] P-116 (28 Oct).
+* BR-10 **Saved results never look live:** "Saved AI result, 27 Oct 2026, IMM 5484 (05-2026), US$0"; matched by the fingerprints and prompt it read; a newer edition of any file it read marks it "Out of date" and it is not replayed silently [F] founder 28 Oct; S4 replay rule.
+* BR-11 **Load sample replays through the same path:** rules and agreement run on replays; nothing skips them [F] P-121.
+* BR-12 **Cap:** a live step whose worst case exceeds what is left of the US$60 wave cap is refused before starting, with "use saved results or rules only" [F] P-110, S4 finder.
+## 5. Layout and states (Source + proposals; no new page)
+**To review › AI proposals** (S6's queue): filter by combination, kind (Who and when · Documents · Checks · Fields, Sections from S6), confidence tabs Ready · Check · Decide with counts; rows grouped by source file then section; each row: item, people chips, "Only if" sentence, quoted line, "Lands on", the three checks (Quote found · Rounds agree · Rules pass), Accept / Edit / Reject; side panel: the source page with the line highlighted, draft vs checker side by side. **S5 Combination:** Questionnaires per person (role chips; "Only if" column filled, origin "AI, accepted"), Forms "Only if", Documents per person, "Checks on these answers". **Run card** (S4): steps 1 Read the checklist and guide (rules) · 2 Match the library (rules) · 3 Draft (AI) · 4 Checker (AI) · 5 Rules check · 6 To review; Live / Saved / Rules only per step.
+States: empty ("Run Start setup to draft who and when") · loading · normal · long (a 33-line checklist) · needs work (Decide items, "Needs a shared field first") · running (step 4 of 6, real counts, Stop) · stopped (finished steps kept) · error (provider refused: nothing charged, next step) · over the cap · saved (label) · out of date · read-only (approver; released) · conflict (a person edited the line meanwhile: reload).
+## 6. Copy (tooltips, empty, errors)
+* Only if: "When this applies to this person. A rule is checked on every case; AI drafted it from the quoted line and a person accepted it."
+* Ready to accept: "Both AI rounds gave the same answer, the quote is in the file and every rule passed." Check: "Both rounds found the item for the same people but wrote the condition differently. Pick one or edit." Decide: "The rounds disagree, a rule failed, or IRCC sends this question to the visa office."
+* Lands on: "Shared section: changes every combination that uses it, needs a second person. This combination: only here."
+* Saved AI result: "An earlier real AI run on these exact files, replayed at no cost. It is not a new reading." Out of date: "IRCC has a newer edition of a file this result read. Run it live, or keep the old result for the demo only."
+* Errors: "This condition reads 'Who the child travels with', which is not a shared field yet. Add it, then accept." · "Not started: the worst case (US$3.10) is above what is left of the Wave 1 cap (US$2.40)."
+## 7. Contract and tests (zod, Problem Details, server authorisation)
+`POST /api/combinations/:id/draft/plan` {steps:[{kind: who_and_when|documents|checks, mode: live|saved|rules}]} → per step: cost (usual, worst), saved result {date, files+editions, usd 0, current|out_of_date}. `POST /api/combinations/:id/draft` {planSha256, idempotencyKey, spendLimitUsd} → run id; `GET /api/runs/:id` and Stop as S4. Proposals into S6: `GET /api/review-queue/proposals?combination=&kind=condition|requirement_line|check&tab=` item {item, who, onlyIf {sentence, tree, conditionId?, reuse}, landsOn, source {file, edition, page, quote}, draft, checker, rules[], confidence, reason}; accept/undo as S6. Scaffolding: `POST /api/ai/runs/compare` {runIds} → agreement per item, cost, time; `POST /api/ai/saved-results` {runId} (keep as saved).
+Tests: BR-1 plan shows finder + drafting cost / a run with no plan refused · BR-2 checklist line → requirement line / a line with no document refused · BR-3 quote in file / invented quote dropped and listed · BR-4 equal rounds → Ready; "18 or older" vs "18 or older or travelling alone" → Check; checker sees the draft → test fails · BR-5 unknown field → Decide; answer asked after it is needed → refused · BR-6 marital rule → shared section with second person / IMM 5707 line → combination · BR-7 role not in "Who can be" → refused · BR-8 Ready bulk / Decide not tickable · BR-9 edit → new version / approved item delete → refused · BR-10 new IMM 5484 edition → Out of date / same files → replay US$0 · BR-11 replay item fails a rule → stays queued · BR-12 worst case over cap → 409. Golden replay of the Visitor visa run (STANDARDS §7); 33-line checklist renders < 1 s; keyboard: tab → row → Accept → Undo; axe on every state; 1024 and 200 %.
+## 8. Capability or Scaffolding (P-33) · Needed or Not built (P-26)
+* **Capability · Needed:** three producers and checker prompts; `compareWhoAndWhen`, `reachable`; proposal kinds in S6's queue; Lands on; quoted line + source panel; S5 "Only if" filled per person; Documents per person (S5 tab, [M2]); saved-result label and Out of date (reuse at US$0 is a production behaviour); per-step mode; cap refusal.
+* **Capability · built elsewhere (reused):** run card and Stop (S4), queue, bulk accept, Undo, Add (S6), shared condition record (S6 M6), lifecycle actions (W1-lifecycle-pattern).
+* **Scaffolding · Needed for the proof:** Load sample, Reset, run comparison of 3 live runs, "Keep as saved result", Prototype badge. Never ported; the presenter's "Run live" uses the capability path (Start setup › Redo with AI).
+* **Not built:** shared check with a value per combination (S6 M6); tier-3 AI review; checks on documents' contents; country-specific visa-office lists; French editions.
+## 9. What the proofs of concept proved (file evidence; Sample)
+| Run (live, one model, structured output) | Result | Cost · time | Evidence (`prototype/p2/runs/`) |
+|---|---|---|---|
+| Field maps, 6 editions (work permit outside Canada, 20 Oct) | 461/461 boxes one entry, every quote found; checked slice 37–42/42, **0 wrong person, 0 invented in 5 trials** | US$0.16–0.51 per form (IMM 1295 US$1.48); 50–384 s | `c1-fieldmap-*-live-*`, `../p2-results-brief-2026-10-20.md` |
+| Requirements (forms, documents, "only if" rules) from IMM 5488 + 5905 + guide 5487 | 9 forms, 33 document lines (who + condition + quote), 39 rules, 9 unresolved named; **one miss** (IMM 1295 principal only, D20); conditions valid in the 11-operator language | US$1.52 · 430 s; **first attempt failed, held at worst case US$4.92** | `c1-requirements-live-20261020t053544388z.json`, `…053007880z` |
+| Sections and placements | 18 sections, 173 placements; representative's licence never asked of the client | US$1.05 · 231 s | `c1-sections-live-20261020t054254821z.json` |
+| Checks (tier 2) | 58 checks, warn not block; 16 cited a draft, not the official file (D21) | US$1.46 · 337 s | `c1-checks-live-20261020t054958915z.json` |
+| Form finder, Visitor visa (27 Oct), draft + blind checker | Both rounds agree with the Lead's research list; IMM 5484 read differently → Decide | US$0.153 + US$0.154 · ~30 s each | `studio-finder-forms-*visitor-visa-live-20261027*`; S4 `build-notes.md` "AI cost" |
+**Proved:** quoted, per-person drafting is accurate on the checked slice and cheap per form. **Not proved:** a second trial of requirements, sections or checks (one run each); any checker round on them; any visitor-visa requirements, sections or checks run (the 20 Oct set is the work permit); repeatability across runs (only field maps had 5 trials).
+## 10. AI demo plan (founder, 28 Oct)
+**Prove on one combination: Visitor visa, outside Canada** (principal, spouse or partner, dependent children; IMM 5257, 5257 SCH1, 5645/5707, 5409, 5476, 5475 + checklist IMM 5484 (05-2026) + guide 5256; Sample until the expert confirms). Each AI step runs **live 3 times**; History › AI work compares the runs (items agreed in all 3, differences listed, cost, time); the Lead keeps the best-reviewed run as the saved result. **Other 5 combinations:** the form finder runs live once each; everything else is a saved result (only where its files match by fingerprint) or "Not drafted yet" (Q3). **Flow:** Reset → Load sample (saved results replay through the rules, US$0) → presenter opens Visitor visa › Redo with AI › Live on one step (cost first, steps, Stop) → To review → S5 shows the "Only if" per person → Reset to repeat.
+| Step (Visitor visa; draft + checker) | One run, Sample estimate from POC | × 3 |
+|---|---|---|
+| Form finder | US$0.31 (measured 27 Oct) | 0.93 |
+| Field maps, 7 forms [S6 producer] | ~US$2.27 draft (measured 0.16–0.51 per form) × 2 = 4.55 | 13.65 |
+| Section names [S6] | ~0.20 | 0.60 |
+| Who and when + documents [W1-10] | 1.52 × 2 = 3.04 | 9.12 |
+| Checks [W1-10] | 1.46 × 2 = 2.92 | 8.76 |
+| Finder once for the other 5 · reserve for one failed call held at worst case (seen: US$4.92) | 1.55 · 5.00 | 6.55 |
+| **Plan total** | | **≈ US$39.6** |
+Wave 1 spent so far US$2.00 (ledger since 26 Oct: IMM 1344 US$1.69, finder US$0.31); left after the plan ≈ US$18 of US$60. The US$100 experiment cap also binds (ledger: about US$44 settled since 20 Oct). **[C2]** this plan replaces P-110's 27 Oct annotation (one pass drafting every form of all combinations, ~US$49): the Lead records the amendment.
+**Existing switch vs needed:** S4's finder API has live · replay · rules; the field-map dialog (`ai-launch.tsx`) offers Live · Replay saved runs · **Stub pass** (a test mode shown as a choice: P-33) with one mode per launch. Replay already matches by files, fingerprints and prompt; the run card says "US$0 · saved AI answers, no new call"; the dialog's cap line says "of US$100" though the wave cap is applied. **Missing:** per-step mode; Rules only for drafting steps; the saved-result label with date, edition and US$0; Out of date on a new edition (today replay just refuses); run comparison and "keep as saved"; a checker prompt for requirements and checks; the wave cap named on the cost line.
+## 11. Decisions followed, missing, in conflict
+Followed: P-12, P-14, P-33, P-110, P-116 (28 Oct), P-119, P-120, P-121, P-123, P-125, P-26; S6 M2–M7, Q-L1; RULES-MODEL §2, §5, §7; EXPERIENCE §2.6–2.8, §3 Source + proposals.
+* **[C1]** P-120 / the brief: S6 drafts document types and checks "when a form enters"; S6 challenge M4 (Lead-agreed) moves them to W1-10. Draft follows M4. *Lead confirms.*
+* **[C2]** Founder 28 Oct demo plan vs P-110 annotation (US$49 pass for all). *Lead records.*
+* **[M1]** Checks on combination 1 cited a draft, not the official file (POC D21): the quote rule (BR-3) fixes it; the expert sets check values.
+* **[M2]** S5's Documents tab is in its concept but not built (slice 2 has Overview, Forms, Questionnaires, Preview): W1-10's checklist result needs it. *Recommend S5 slice 3.*
+* **[M3]** A line whose only source says "Refer to the responsible visa office" (purpose of travel, any additional documents) is always Decide, for the expert; where another IRCC file is definite it is Check with both quotes ([M5]). No decision covers visa-office instructions per region.
+* **[M5]** Guide 5256 is definite ("If you are in a common-law union, you must also … fill out … [IMM 5409]") where IMM 5484 says "Refer to the responsible visa office": two IRCC sources differ; the row shows both quotes and sits in Check; the expert decides.
+* **[M4]** P-121 counts "two AI rounds" per proposal; three runs × two rounds for the demo plan is new spend; covered by §10 if agreed.
+## 12. Questions for the founder (recommendation first)
+1. **Which steps run live three times on Visitor visa?** *Recommend all five* (finder, field maps, section names, who and when with documents, checks), ≈ US$40 with a failure reserve, leaving ≈ US$18. *Else* W1-10's steps and the finder three times, field maps once (≈ US$30). *Scenario:* History › AI work shows "Who and when · 3 live runs · 31 of 33 lines agreed in all three · US$3.02–3.10 · 6–7 min each".
+2. **How the presenter picks Live or Saved.** *Recommend per step:* the launch panel lists each step with Live · Saved · Rules only, Saved preselected where a current saved result exists, cost per row. *Else* one choice per launch (today).
+3. **What the other 5 combinations show beyond the finder.** *Recommend* saved results only where the files match (IMM 5476, 5475, 5409 recur), the rest "Not drafted yet · about US$8–11 live", never hand-made proposals in the queue (P-33). *Else* hand-made Sample proposals, labelled "Sample, made by hand, not AI".
+## Definition of Ready (WORKFLOW.md)
+- [ ] Board agreed by the founder (Q1–Q3)
+- [x] Every element labelled Capability/Scaffolding and Needed/Not built (§8, board labels)
+- [x] Data and API needs known (§7); depends on S4 merge (run card, replay), S6 slice 1 (queue, checker), S6 M6 (shared condition), S5 slice 3 (Documents tab) [M2]
+- [ ] Every decision agreed: Q1–Q3; Lead: C1, C2, M3
+- [ ] Immigration values confirmed by the expert (all Sample; Unconfirmed: no counsel)
+- [ ] Fresh challenge run (screen-challenge) before the founder sees it

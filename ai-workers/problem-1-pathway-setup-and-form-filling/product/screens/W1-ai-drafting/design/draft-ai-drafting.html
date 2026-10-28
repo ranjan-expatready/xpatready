@@ -1,1 +1,325 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><title>W1-10 AI drafts the rest — draft board (in progress)</title></head><body><p>Board in progress.</p></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>W1-10 AI drafts the rest — draft board (designer, 28 Oct; the Lead decides)</title>
+<style>
+/* Team tokens (code/ERv2-frontend@5ccd9fa src/styles/tokens.css) + visual-system level colours (W1-visual-system r3). No one-off values. */
+:root{--primary:#0862c5;--p50:#e6f4ff;--p100:#cce9ff;--link:#054e9c;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--faint:#8c8c8c;
+--border:#d9d9d9;--border-s:#bfbfbf;--line:#ececec;--danger:#dc2626;--danger-t:#991b1b;--danger-tint:#fbe5e5;--warn:#ff8500;--warn-t:#663200;--warn-tint:#fff1e0;
+--ok:#16a34a;--ok-t:#0f5c2e;--ok-tint:#e3f4e9;--ai:#7c3aed;--ai-tint:#f3edfd;--lv1:#37506e;--lv2:#0b6477;--lv3:#043a73;--bg:#e9ecef;--r:8px;--r2:12px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif;color:var(--text)}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+.board-title{width:1440px;margin:24px auto 8px;padding:0 4px;display:flex;justify-content:space-between;align-items:flex-end}
+.board-title h1{font-size:24px}.board-title p{margin:4px 0 0;color:var(--muted)}
+.toolbar{display:flex;gap:8px;align-items:center}
+.btn{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--r);border:1px solid var(--border-s);background:var(--raised);color:var(--text);font:500 14px Inter,system-ui,sans-serif;cursor:pointer}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.sm{height:30px;padding:0 10px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--link)}.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.ai{border-color:#c9b3f5;color:var(--ai)}
+.frame{width:1440px;margin:0 auto 28px;background:var(--surface);border:1px solid var(--border-s);border-radius:var(--r2);overflow:hidden;box-shadow:0 2px 10px #0001}
+.frame-cap{background:#2d2d2d;color:#fff;padding:8px 16px;font-size:12px;display:flex;justify-content:space-between}
+.top{height:56px;background:var(--raised);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600}.logo b{color:var(--primary);font-size:18px}.logo span{color:var(--muted);font-weight:500}
+.crumbs{color:var(--muted);font-size:12px}
+.proto{font-size:12px;border:1px dashed var(--warn);color:var(--warn-t);background:var(--warn-tint);padding:2px 8px;border-radius:999px}
+.demo{display:flex;gap:6px;align-items:center;border:1px dashed var(--warn);border-radius:var(--r);padding:4px 8px;background:var(--warn-tint)}
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:640px}
+nav.menu{background:var(--raised);border-right:1px solid var(--border);padding:14px 10px;font-size:14px}
+nav.menu h4{margin:14px 8px 4px;font-size:12px;color:var(--faint);font-weight:600}
+nav.menu a{display:flex;justify-content:space-between;padding:7px 10px;border-radius:var(--r);color:var(--text);text-decoration:none}
+nav.menu a.on{background:var(--p50);color:var(--link);font-weight:600}
+.count{font-size:12px;background:var(--p100);color:var(--link);border-radius:999px;padding:0 7px}
+main{padding:20px 24px;min-width:0}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+.ph h2{font-size:24px}.ph p{margin:2px 0 0;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--raised);font-size:12px;color:var(--muted)}
+.chip.on{border-color:var(--primary);background:var(--p50);color:var(--link);font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:18px;padding:1px 8px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.pill.ok{background:var(--ok-tint);color:var(--ok-t);border-color:#b7e2c5}.pill.warn{background:var(--warn-tint);color:var(--warn-t);border-color:#ffd3a3}
+.pill.danger{background:var(--danger-tint);color:var(--danger-t);border-color:#f3b9b9}.pill.ai{background:var(--ai-tint);color:var(--ai);border-color:#dccbfa}
+.pill.info{background:var(--p50);color:var(--link);border-color:var(--p100)}.pill.neutral{background:#eee;color:var(--muted)}
+.role{font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--border-s);background:#fff;white-space:nowrap}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.grid2{display:grid;grid-template-columns:1fr 520px;gap:16px;align-items:start}
+table{width:100%;border-collapse:collapse;background:var(--raised)}
+th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--raised)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.sel td{background:var(--p50)}
+tr.group td{background:#fafafa;font-size:12px;color:var(--muted);font-weight:600;padding:7px 10px}
+.quote{font-size:12px;color:var(--muted);border-left:3px solid var(--p100);padding-left:8px;margin-top:4px;font-style:italic}
+.src{font-size:12px;color:var(--faint)}
+.checks3{display:flex;flex-direction:column;gap:2px;font-size:12px;white-space:nowrap}
+.y{color:var(--ok-t)}.n{color:var(--danger-t)}.q{color:var(--warn-t)}
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.notice{border-radius:var(--r);padding:10px 12px;font-size:14px;border:1px solid}
+.notice.info{background:var(--p50);border-color:var(--p100)}.notice.warn{background:var(--warn-tint);border-color:#ffd3a3}.notice.danger{background:var(--danger-tint);border-color:#f3b9b9}.notice.ok{background:var(--ok-tint);border-color:#b7e2c5}
+.saved{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px;border-radius:var(--r);background:#f1f1f1;border:1px solid var(--border-s);color:var(--text)}
+.saved.stale{background:var(--warn-tint);border-color:#ffd3a3;color:var(--warn-t)}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px;border-radius:var(--r);background:var(--ai-tint);border:1px solid #dccbfa;color:var(--ai);font-weight:600}
+.panel{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);display:flex;flex-direction:column;box-shadow:-4px 0 14px #0000000d}
+.panel header{padding:14px 16px;border-bottom:1px solid var(--border)}.panel .body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.panel footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cmp>div{border:1px solid var(--border);border-radius:var(--r);padding:10px;font-size:12px}
+.cmp h5{margin:0 0 4px;font-size:12px;color:var(--muted)}
+mark{background:#fff3a6;padding:0 2px}
+.page{border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:12px;background:#fcfcfc;max-height:180px;overflow:hidden}
+.muted{color:var(--muted)}.small{font-size:12px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:12px 0 14px}
+.tabs a{padding:8px 14px;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent}.tabs a.on{color:var(--link);border-color:var(--primary);font-weight:600}
+.trail{font-size:12px;color:var(--muted)}.trail b{color:var(--text)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.steps{display:flex;gap:4px;margin:8px 0}.steps i{flex:1;height:6px;border-radius:999px;background:var(--border)}.steps i.d{background:var(--ok)}.steps i.r{background:var(--primary)}
+ol.st{margin:6px 0 0;padding:0;list-style:none;font-size:12px}ol.st li{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed var(--line)}
+.mx td,.mx th{text-align:center}.mx td:first-child,.mx th:first-child{text-align:left}
+.cell-y{color:var(--ok-t);font-weight:600}.cell-n{color:var(--faint)}.cell-q{color:var(--warn-t)}
+.state{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);padding:12px;font-size:12px;display:flex;flex-direction:column;gap:6px}
+.state h4{margin:0;font-size:14px}
+.sk{height:12px;border-radius:6px;background:linear-gradient(90deg,#eee,#f6f6f6,#eee)}
+.row{display:flex;gap:12px;align-items:center}.wrap{flex-wrap:wrap}.sp{justify-content:space-between}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+/* Labels (P-33 Capability/Scaffolding, P-26 Needed/Not built, decision marks) */
+.lab{display:none;font:600 10px/14px Inter,system-ui,sans-serif;letter-spacing:.2px;padding:1px 6px;border-radius:4px;margin:2px 4px 2px 0;vertical-align:middle;white-space:nowrap}
+body.labels .lab{display:inline-block}
+.lab.cap{background:#e6f4ff;color:#054e9c;border:1px solid #9ccfff}.lab.scf{background:#fff1e0;color:#663200;border:1px dashed #ff8500}
+.lab.nb{background:#eee;color:#595959;border:1px solid #bfbfbf}.lab.f{background:#e3f4e9;color:#0f5c2e;border:1px solid #b7e2c5}
+.lab.m{background:#fbe5e5;color:#991b1b;border:1px solid #f3b9b9}
+.legend{width:1440px;margin:0 auto 12px;font-size:12px;color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.sample{font-size:12px;color:var(--warn-t);background:var(--warn-tint);border-radius:4px;padding:0 6px}
+</style>
+</head>
+<body>
+<div class="board-title">
+  <div><h1>W1-10 · AI drafts the rest: who and when, documents per person, checks</h1>
+  <p>Draft board for the Lead (designer, 28 Oct 2026). Desktop 1440. Every condition, count, date, cost and check is <b>Sample</b> until the immigration expert confirms; quoted lines are IRCC's own words from the saved files (IMM 5484 05-2026, guide 5256). Legal points: Unconfirmed: no counsel.</p></div>
+  <div class="toolbar"><button class="btn" onclick="document.body.classList.toggle('labels')" aria-pressed="false" id="lb">Show labels</button></div>
+</div>
+<p class="legend">Labels: <span class="lab cap" style="display:inline-block">Capability</span><span class="lab scf" style="display:inline-block">Scaffolding</span> · <span class="lab cap" style="display:inline-block">Needed</span><span class="lab nb" style="display:inline-block">Not built</span> · <span class="lab f" style="display:inline-block">[F] follows a decision</span><span class="lab m" style="display:inline-block">[M]/[C] missing or conflicting</span>. Boards: 1 To review queue · 2 S5 per-person "Only if" · 3 Demo controls (saved vs live) · 4 Other states.</p>
+
+<!-- BOARD 1 ─────────────────────────────────────────────────────────────── -->
+<section class="frame" aria-label="Board 1: To review, AI proposals">
+<div class="frame-cap"><span>Board 1 · To review › AI proposals · Visitor visa · normal state with one Check item open</span><span>Source + proposals pattern (EXPERIENCE §3)</span></div>
+<div class="top">
+  <div class="logo"><b>ExpatReady</b><span>Product Studio · Pathway Configurator</span><span class="proto">Prototype</span><span class="lab scf">Scaffolding · never ported</span></div>
+  <div class="crumbs">Configure › To review › AI proposals</div>
+  <div class="demo"><span class="small">Demo</span><button class="btn sm">Reset</button><button class="btn sm">Load sample</button><span class="lab scf">Scaffolding · Needed for the proof</span></div>
+</div>
+<div class="shell">
+<nav class="menu" aria-label="Main">
+  <h4>Configure</h4><a href="#">1 Program structure</a><a href="#">2 Immigration programs</a><a class="on" href="#">3 To review <span class="count">25</span></a>
+  <h4>Shared library</h4><a href="#">Fields</a><a href="#">Sections</a><a href="#">Document types</a><a href="#">Forms</a><a href="#">Checks</a>
+  <h4>History</h4><a href="#">AI work</a><a href="#">Releases</a><a href="#">Activity</a>
+</nav>
+<main>
+  <div class="ph">
+    <div><h2>AI proposals</h2><p>What AI drafted from the forms, guides and checklists. Nothing applies until a person accepts it.</p></div>
+    <div class="row"><span class="saved" title="An earlier real AI run on these exact files, replayed at no cost. It is not a new reading.">Saved AI result, 29 Oct 2026 · IMM 5484 (05-2026), guide 5256 · US$0 <span class="sample">Sample date</span></span><span class="lab cap">Capability · Needed · [F] founder 28 Oct, BR-10</span></div>
+  </div>
+  <div class="tabs" role="tablist" aria-label="To review"><a class="on" href="#">Needs you <span class="count">25</span></a><a href="#">Waiting for others 4</a><a href="#">Running 0</a><a href="#">All</a><span class="lab f">[F] P-79 one row of tabs; S6 m2</span></div>
+  <div class="row wrap sp" style="margin-bottom:10px">
+    <div class="chips" aria-label="Filters">
+      <span class="chip on">Combination: Visitor visa ✕</span>
+      <span class="chip on">Who and when 9</span><span class="chip on">Documents 11</span><span class="chip on">Checks 5</span><span class="chip">Fields (S6) 0</span><span class="chip">Sections (S6) 0</span>
+      <span class="lab cap">Capability · Needed · kinds from W1-10 into S6's queue [F] S6 Q-L1</span>
+    </div>
+    <div class="chips" aria-label="Confidence"><span class="chip on" title="Both AI rounds gave the same answer, the quote is in the file and every rule passed.">Ready to accept 14</span><span class="chip" title="Both rounds found the item for the same people but wrote the condition differently. Pick one or edit.">Check 6</span><span class="chip" title="The rounds disagree, a rule failed, or IRCC sends this question to the visa office.">Decide 5</span><span class="lab f">[F] P-121, P-123 words</span></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px">
+  <div>
+  <div class="row sp" style="margin-bottom:8px"><div class="row small"><label><input type="checkbox" checked> Select all Ready in this filter (3 shown)</label><button class="btn ghost sm">Deselect all</button></div><div class="row"><button class="btn primary sm">Accept selected (3)</button><span class="lab cap">Capability · Needed · bulk for Ready only [F] P-121</span></div></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th style="width:28px"></th><th style="width:38%">Proposal</th><th style="width:120px">Who</th><th style="width:20%">Only if</th><th style="width:150px">Lands on</th><th style="width:200px">Checks</th><th style="width:60px"></th></tr></thead>
+    <tbody>
+    <tr class="group"><td colspan="7">From IMM 5484 (05-2026) · Document checklist for a temporary resident visa · 11 lines</td></tr>
+    <tr><td><input type="checkbox" checked aria-label="Select Family Information form"></td>
+      <td><b>Form: Family Information (IMM 5645 or IMM 5707)</b> <span class="pill ok">Ready to accept</span><div class="quote">"Family Information form. Must be completed by those aged 18 years or older."</div><div class="src">IMM 5484 p.1 · Forms list</div></td>
+      <td><span class="role">Each applicant</span></td><td>Is 18 or older on the application date<div class="src">Reuses a shared condition · used in 2 combinations</div></td><td class="small">This combination</td>
+      <td><div class="checks3"><span class="y">✓ Quote found</span><span class="y">✓ Rounds agree</span><span class="y">✓ Rules pass</span></div></td><td><button class="btn ghost sm">Edit</button></td></tr>
+    <tr><td><input type="checkbox" checked aria-label="Select proof of legal status"></td>
+      <td><b>Document: Proof of legal status in the country of residence</b> <span class="pill ok">Ready to accept</span><div class="quote">"If your country of residence differs from the country of citizenship listed on your passport, you must provide proof of legal status in your country of residence."</div><div class="src">IMM 5484 p.1 · Document list</div></td>
+      <td><span class="role">Each applicant</span></td><td>Country of residence is not a country of citizenship<div class="src">New shared condition</div></td><td class="small">This combination</td>
+      <td><div class="checks3"><span class="y">✓ Quote found</span><span class="y">✓ Rounds agree</span><span class="y">✓ Rules pass</span></div></td><td><button class="btn ghost sm">Edit</button></td></tr>
+    <tr><td><input type="checkbox" disabled title="Check items are accepted one by one" aria-label="Photos: not selectable in bulk"></td>
+      <td><b>Document: Two photos</b> <span class="pill warn">Check</span><div class="quote">"Note: If you are required to provide biometric fingerprints and photo, you are not required to include paper photos with your application."</div><div class="src">IMM 5484 p.1</div></td>
+      <td><span class="role">Each applicant</span></td><td>Draft: <i>Does not give biometrics</i><br>Checker: <i>Always</i></td><td class="small">This combination</td>
+      <td><div class="checks3"><span class="y">✓ Quote found</span><span class="q">≠ Conditions differ</span><span class="y">✓ Rules pass</span></div></td><td><button class="btn ghost sm">Open</button></td></tr>
+    <tr><td><input type="checkbox" disabled title="Decide items are accepted one by one" aria-label="Letter of authorization: not selectable in bulk"></td>
+      <td><b>Document: Custody documents or a letter of authorization</b> <span class="pill danger">Decide</span><div class="quote">"Minors travelling alone or with one parent must provide custody documents or a letter of authorization from the other non accompanying parent…"</div><div class="src">IMM 5484 p.1</div></td>
+      <td><span class="role">Dependent child</span></td><td>Is under 18 and travels alone or with one parent</td><td class="small">This combination</td>
+      <td><div class="checks3"><span class="y">✓ Quote found</span><span class="y">✓ Rounds agree</span><span class="n">✕ Needs a shared field first: "Who the child travels with"</span></div><button class="btn ghost sm">Add the field</button><span class="lab f">[F] BR-5, P-120 one Add</span></td><td><button class="btn ghost sm">Open</button></td></tr>
+    <tr><td><input type="checkbox" disabled aria-label="Purpose of travel: not selectable"></td>
+      <td><b>Document: Purpose of travel</b> <span class="pill danger">Decide</span><div class="quote">"Purpose of Travel. Note: Refer to the responsible visa office for your region."</div><div class="src">IMM 5484 p.1</div></td>
+      <td><span class="role">Principal applicant</span></td><td class="muted">Not set: IRCC sends this to the visa office</td><td class="small">This combination</td>
+      <td><div class="checks3"><span class="y">✓ Quote found</span><span class="q">— Source refers elsewhere</span><span class="y">✓ Rules pass</span></div><span class="lab m">[M3] visa-office lines: expert</span></td><td><button class="btn ghost sm">Open</button></td></tr>
+    <tr class="group"><td colspan="7">From guide 5256 · Question 10, marital status · 4 proposals</td></tr>
+    <tr class="sel"><td><input type="checkbox" disabled aria-label="IMM 5409: not selectable in bulk"></td>
+      <td><b>Form: Statutory Declaration of Common-law Union (IMM 5409)</b> <span class="pill warn">Check</span><div class="quote">"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form…"</div><div class="src">Guide 5256 · Question 10 · also IMM 5484 (differs)</div></td>
+      <td><span class="role">Each applicant</span></td><td>Draft: <i>Marital status is Common-law</i><br>Checker: <i>Ask the visa office</i></td><td class="small">This combination</td>
+      <td><div class="checks3"><span class="y">✓ Quote found</span><span class="q">≠ Two IRCC files differ</span><span class="y">✓ Rules pass</span></div><span class="lab m">[M5] sources differ</span></td><td><button class="btn sm">Open ›</button></td></tr>
+    <tr><td><input type="checkbox" checked aria-label="Select spouse questions"></td>
+      <td><b>Questions: spouse's names and date of marriage or start of common-law</b> <span class="pill ok">Ready to accept</span><div class="quote">"Type the family names and given names of your current spouse or common-law partner."</div><div class="src">Guide 5256 · Question 10</div></td>
+      <td><span class="role">Each applicant</span></td><td>Marital status is Married or Common-law</td><td class="small"><b>Shared section: Marital status</b><div class="src">Changes 3 combinations · second person</div><span class="lab f">[F] P-12 scope test, BR-6</span></td>
+      <td><div class="checks3"><span class="y">✓ Quote found</span><span class="y">✓ Rounds agree</span><span class="y">✓ Rules pass</span></div></td><td><button class="btn ghost sm">Edit</button></td></tr>
+    <tr class="group"><td colspan="7">Checks on the answers · 5 proposals · warn, never block</td></tr>
+    <tr><td><input type="checkbox" disabled aria-label="Check: not selectable"></td>
+      <td><b>Check: common-law for less than one year</b> <span class="pill warn">Check</span><div class="quote">"This means that you have lived continuously with your partner in a marital-type relationship for a minimum of one year."</div><div class="src">Guide 5256 · Question 10 · Common-Law</div></td>
+      <td><span class="role">Each applicant</span></td><td>Warn when Marital status is Common-law and the start date is under 1 year before the application date</td><td class="small">This combination<div class="src">Value set by the expert</div></td>
+      <td><div class="checks3"><span class="y">✓ Quote found</span><span class="q">≠ Draft warns, checker blocks</span><span class="y">✓ Warn only (rule)</span></div><span class="lab f">[F] P-14 warn, never block</span></td><td><button class="btn ghost sm">Open</button></td></tr>
+    </tbody></table></div>
+  <p class="small muted" style="margin-top:8px">Showing 9 of 25 · grouped by source file, then section. A bulk accept is one approval per item; each is re-checked by the rules on the server; one Undo for the batch. <span class="lab cap">Capability · built by S6 (queue, Undo) — not rebuilt</span></p>
+  </div>
+
+  <p class="small muted" style="margin:0">Below: the right side panel (520 px) that opens over the page when the selected row "IMM 5409" is opened; the queue keeps its scroll, filters and selection.</p>
+  <aside class="panel" aria-label="Proposal details" style="width:520px;align-self:flex-end">
+    <header><div class="row sp"><h3 style="font-size:18px">IMM 5409 for a common-law couple</h3><span class="pill warn">Check</span></div><p class="small muted" style="margin:4px 0 0">Who and when · Visitor visa · drafted from 2 IRCC files</p><span class="lab cap">Capability · Needed · side panel 520 px [F] TEAM-PATTERNS</span></header>
+    <div class="body">
+      <div><p class="small muted" style="margin:0 0 4px">Guide 5256 · Question 10 (read 27 Oct 2026)</p><div class="page">Enter the date (year, month and day) you were married or you entered into your current common-law relationship. Type the family names and given names of your current spouse or common-law partner. <mark>If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form and include it with your application.</mark> If you are married, you must send a photocopy of your marriage licence or certificate with your application.</div></div>
+      <div><p class="small muted" style="margin:0 0 4px">IMM 5484 (05-2026) · Forms list</p><div class="page"><mark>Statutory Declaration of Common-law Union (IMM 5409). Note: Refer to the responsible visa office for your region.</mark></div></div>
+      <div class="cmp">
+        <div><h5>Draft round</h5><b>IMM 5409</b> · Each applicant<br>Only if: Marital status is Common-law<br><span class="src">Quoted guide 5256, Q10</span></div>
+        <div><h5>Checker round (did not see the draft)</h5><b>IMM 5409</b> · Each applicant<br>Only if: <i>not set, the checklist refers to the visa office</i><br><span class="src">Quoted IMM 5484</span></div>
+      </div>
+      <div class="checks3"><span class="y">✓ Quote found in both files</span><span class="q">≠ The rounds read different files: same form, same people, condition differs</span><span class="y">✓ Rules pass: "Marital status" is a shared field asked of each applicant in Question 10</span></div>
+      <p class="small" style="margin:0"><b>Lands on:</b> this combination (a requirement: the form list is per application). <span class="lab f">[F] RULES-MODEL §2 kind C</span></p>
+      <div class="notice warn small">Which file wins is an immigration value: Sample until the immigration expert confirms. The second person sees what you chose at release.</div>
+    </div>
+    <footer><button class="btn">Reject</button><div class="row"><button class="btn">Edit</button><button class="btn">Use checker's</button><button class="btn primary">Use draft's</button></div></footer>
+  </aside>
+  </div>
+</main>
+</div>
+</section>
+<!-- BOARD 2 ─────────────────────────────────────────────────────────────── -->
+<section class="frame" aria-label="Board 2: S5 combination workspace, per-person result">
+<div class="frame-cap"><span>Board 2 · S5 Combination workspace · Questionnaires and Documents · what each person gets after accepting</span><span>Workspace pattern; lines left, preview right</span></div>
+<div class="top"><div class="logo"><b>ExpatReady</b><span>Product Studio · Pathway Configurator</span><span class="proto">Prototype</span></div><div class="crumbs">Immigration programs › Visitor visa</div><span></span></div>
+<div class="shell">
+<nav class="menu" aria-label="Main"><h4>Configure</h4><a href="#">1 Program structure</a><a class="on" href="#">2 Immigration programs</a><a href="#">3 To review <span class="count">11</span></a><h4>Shared library</h4><a href="#">Fields</a><a href="#">Sections</a><a href="#">Document types</a><a href="#">Forms</a><a href="#">Checks</a><h4>History</h4><a href="#">AI work</a><a href="#">Releases</a><a href="#">Activity</a></nav>
+<main>
+  <div class="trail"><span class="dot" style="background:var(--lv1)"></span>Retail › Individual › <span class="dot" style="background:var(--lv2)"></span>Visitors › <span class="dot" style="background:var(--lv3)"></span><b>Visitor visa › Outside Canada</b> <span class="sample">Sample trail</span></div>
+  <div class="ph" style="margin-top:6px"><div><h2>Visitor visa, outside Canada</h2><p>Not released yet · 7 forms · 1 checklist · Who and when: 14 accepted, 11 to review</p></div><div class="row"><button class="btn ai">Redo with AI ▾</button><button class="btn primary">Review 11 proposals</button></div></div>
+  <div class="tabs"><a href="#">Overview</a><a href="#">Forms</a><a class="on" href="#">Questionnaires</a><a href="#">Documents</a><a href="#">Preview</a><a href="#">Review and release</a><span class="lab f">[F] S5 option A tabs</span></div>
+  <div class="row wrap sp" style="margin-bottom:10px">
+    <div class="chips" role="group" aria-label="Person"><span class="chip">Principal applicant · 41 questions</span><span class="chip">Spouse or partner · 33</span><span class="chip on">Dependent child · 18</span><span class="lab f">[F] P-119 roles from "Who can be in this application"</span></div>
+    <span class="small muted">Sample family: principal married, spouse, child aged 19, child aged 12</span>
+  </div>
+  <div class="grid2" style="grid-template-columns:1fr 560px">
+  <div class="card" style="padding:0">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border)"><h3 style="font-size:16px">Family and marital status · 6 questions for Dependent child</h3></div>
+    <table>
+      <thead><tr><th>Question</th><th>Who fills it</th><th title="When this applies to this person. A rule is checked on every case; AI drafted it from the quoted line and a person accepted it.">Only if</th><th>Origin</th><th>Needed by</th></tr></thead>
+      <tbody>
+      <tr><td><b>Marital status</b></td><td><span class="pill info">Client</span></td><td><span class="pill ok">Always</span></td><td class="small">From IMM 5257 form field</td><td class="small">IMM 5257, IMM 5707</td></tr>
+      <tr><td><b>Spouse's family and given names</b></td><td><span class="pill info">Client</span></td><td>Marital status is Married or Common-law</td><td class="small"><span class="pill ai">AI</span> accepted 29 Oct · from shared section Marital status</td><td class="small">IMM 5257</td></tr>
+      <tr><td><b>Who the child travels with</b></td><td><span class="pill info">Principal answers</span></td><td>Is under 18</td><td class="small"><span class="pill warn">Waiting</span> added through the one Add, second person</td><td class="small muted">No form (decides what applies)</td></tr>
+      <tr><td><b>Date of birth</b></td><td><span class="pill info">Client</span></td><td><span class="pill ok">Always</span></td><td class="small">From IMM 5257 form field</td><td class="small">IMM 5257, IMM 5707</td></tr>
+      </tbody>
+    </table>
+    <div style="padding:12px 16px;border-top:1px solid var(--border)">
+      <h3 style="font-size:16px;margin-bottom:6px">Checks on these answers · 3</h3>
+      <ul class="small" style="margin:0;padding-left:18px">
+        <li>Warn: a spouse or partner is on the case, but the principal's marital status is Single, Divorced or Widowed. <span class="pill ai">AI</span> accepted · <span class="src">guide 5256 Q10</span></li>
+        <li>Warn: common-law for less than one year before the application date. <span class="pill warn">To review</span></li>
+        <li>Warn: a dependent child aged 18 or older has no Family Information form. <span class="pill neutral">Rules (coverage)</span></li>
+      </ul>
+      <span class="lab cap">Capability · Needed · S5 "Checks on these answers" filled by W1-10</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row sp"><h3 style="font-size:16px">What each person gets</h3><span class="small muted">Draft · Sample family</span></div>
+    <p class="small muted" style="margin:4px 0 10px">Every cell says why. Reasons come from the accepted "Only if" rules.</p>
+    <table class="mx">
+      <thead><tr><th>Line</th><th>Principal<br><span class="src">married</span></th><th>Spouse</th><th>Child<br><span class="src">19</span></th><th>Child<br><span class="src">12</span></th></tr></thead>
+      <tbody>
+      <tr><td class="small"><b>IMM 5257</b> · Always, each applicant</td><td class="cell-y">✓</td><td class="cell-y">✓</td><td class="cell-y">✓</td><td class="cell-y">✓</td></tr>
+      <tr><td class="small"><b>IMM 5707</b> · Only if 18 or older</td><td class="cell-y">✓</td><td class="cell-y">✓</td><td class="cell-y" title="Asked because the child is 19 on the application date">✓</td><td class="cell-n" title="Not asked because the child is 12">—</td></tr>
+      <tr><td class="small"><b>IMM 5409</b> · Only if Common-law</td><td class="cell-n" title="Married, not common-law">—</td><td class="cell-n">—</td><td class="cell-n">—</td><td class="cell-n">—</td></tr>
+      <tr><td class="small"><b>Marriage certificate</b> · Only if Married, once per couple</td><td class="cell-y">✓</td><td class="cell-n" title="Once per couple: given by the principal">shared</td><td class="cell-n">—</td><td class="cell-n">—</td></tr>
+      <tr><td class="small"><b>Letter of authorization</b> · Only if under 18 and travels alone or with one parent</td><td class="cell-n">—</td><td class="cell-n">—</td><td class="cell-n">—</td><td class="cell-q" title="Cannot tell yet: 'Who the child travels with' is waiting for a second person">Cannot tell yet</td></tr>
+      <tr><td class="small"><b>Proof of legal status</b> · Only if residence is not citizenship</td><td class="cell-q" title="Answer not given in the Sample family">Not answered</td><td class="cell-q">Not answered</td><td class="cell-q">Not answered</td><td class="cell-q">Not answered</td></tr>
+      </tbody>
+    </table>
+    <div class="notice info small" style="margin-top:10px">Child, 12: <b>not asked IMM 5707</b> because "Is 18 or older on the application date" is false (born 14 Mar 2014). <span class="sample">Sample</span></div>
+    <span class="lab cap">Capability · Needed · reasons everywhere [F] EXPERIENCE §2.7, STANDARDS §3.9</span><span class="lab m">[M2] Documents tab not built in S5 slice 2</span>
+  </div>
+  </div>
+</main>
+</div>
+</section>
+<!-- BOARD 3 ─────────────────────────────────────────────────────────────── -->
+<section class="frame" aria-label="Board 3: demo controls, saved versus live">
+<div class="frame-cap"><span>Board 3 · Demo controls: Reset → Load sample (saved, US$0) → Run live on Visitor visa → Reset · launch panel per step · run card · compare 3 live runs</span><span>Founder demo plan, 28 Oct</span></div>
+<div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+  <div class="demo" style="justify-content:space-between;padding:10px 14px">
+    <div class="row"><b class="small">Demo</b><button class="btn sm">Reset</button><button class="btn sm">Load sample</button><span class="small">After Load sample: 6 combinations · 31 library files · <b>saved AI results: Visitor visa 5 of 5 steps current</b>; other 5: finder only · US$0</span></div>
+    <span class="lab scf">Scaffolding · Needed for the proof · never ported</span>
+  </div>
+  <div class="grid2" style="grid-template-columns:1fr 1fr">
+  <div class="panel">
+    <header><h3 style="font-size:18px">Redo with AI · Visitor visa</h3><p class="small muted" style="margin:4px 0 0">Choose for each step. Saved results are earlier real runs on these exact files; they cost nothing and are labelled.</p><span class="lab cap">Capability · Needed · per-step mode [M] not in ai-launch.tsx today (one mode per launch)</span></header>
+    <div class="body">
+      <table>
+        <thead><tr><th>Step</th><th>Live</th><th>Saved</th><th>Rules only</th></tr></thead>
+        <tbody>
+        <tr><td><b>1 Find the forms</b><div class="src">S4 finder</div></td><td class="small"><label><input type="radio" name="s1"> ~US$0.31</label></td><td class="small"><label><input type="radio" name="s1" checked> 29 Oct · guide 5256 · US$0</label></td><td class="small"><label><input type="radio" name="s1"> Lists printed numbers</label></td></tr>
+        <tr><td><b>2 Field maps, 7 forms</b><div class="src">S6 producer</div></td><td class="small"><label><input type="radio" name="s2"> ~US$4.55</label></td><td class="small"><label><input type="radio" name="s2" checked> 29 Oct · IMM 5257 (09-2023) … · US$0</label></td><td class="small muted">Not available</td></tr>
+        <tr><td><b>3 Section names</b><div class="src">S6 producer</div></td><td class="small"><label><input type="radio" name="s3"> ~US$0.20</label></td><td class="small"><label><input type="radio" name="s3" checked> 29 Oct · US$0</label></td><td class="small"><label><input type="radio" name="s3"> Groups from the PDF, no names</label></td></tr>
+        <tr class="sel"><td><b>4 Who and when, documents</b><div class="src">W1-10</div></td><td class="small"><label><input type="radio" name="s4" checked> ~US$3.04 · at most US$6.20</label></td><td class="small"><label><input type="radio" name="s4"> 29 Oct · IMM 5484 (05-2026) · US$0</label></td><td class="small"><label><input type="radio" name="s4"> Lists checklist lines, no conditions</label></td></tr>
+        <tr><td><b>5 Checks on the answers</b><div class="src">W1-10</div></td><td class="small"><label><input type="radio" name="s5"> ~US$2.92</label></td><td class="small"><span class="saved stale">Out of date: guide 5256 changed since 29 Oct</span><br><label><input type="radio" name="s5" checked> Keep for the demo only</label></td><td class="small muted">Not available</td></tr>
+        </tbody>
+      </table>
+      <p class="small" style="margin:0;border:1px solid var(--border);border-radius:var(--r);padding:8px 10px">Live steps: usually about US$3.04 · at most US$6.20 · <b>Wave 1: US$2.00 of US$60 spent, US$58.00 left</b> <span class="sample">Sample</span><span class="lab m">[M] dialog says "of US$100" today</span></p>
+      <div class="notice danger small" style="display:none">Not started: the worst case (US$6.20) is above what is left of the Wave 1 cap (US$2.40). Use saved results or rules only.</div>
+    </div>
+    <footer><button class="btn">Cancel</button><button class="btn primary">Start 1 live step, up to US$6.20</button></footer>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="card" aria-live="polite">
+      <div class="row sp"><div><b>Who and when, documents</b> <span class="muted">· Visitor visa</span> <span class="live">Live AI</span><p class="small muted" style="margin:2px 0 0">Step 4 of 6 · Running · 3 min 10 s · usually about 7 min · usually about US$3.04 · at most US$6.20 · US$1.52 so far</p></div><button class="btn sm" title="Ends this run now. Steps already finished keep their results. An AI call already sent is ended too; it stays counted at its reserved worst case because the provider may still bill it.">■ Stop</button></div>
+      <div class="steps" aria-hidden="true"><i class="d"></i><i class="d"></i><i class="d"></i><i class="r"></i><i></i><i></i></div>
+      <ol class="st"><li><span>1 Read the checklist and guide · rules</span><span class="y">Done · 33 lines</span></li><li><span>2 Match the library · rules</span><span class="y">Done · 12 conditions, 9 document types exist</span></li><li><span>3 Draft round · AI</span><span class="y">Done · 25 proposals · US$1.52</span></li><li><span>4 Checker round, blind · AI</span><span>Running · 14 of 25 lines</span></li><li><span>5 Rules check, both rounds</span><span class="muted">Waiting</span></li><li><span>6 Send to To review</span><span class="muted">Waiting</span></li></ol>
+      <span class="lab cap">Capability · reuses S4 run card [F] P-110, W1-07</span>
+    </div>
+    <div class="card"><div class="row wrap"><span class="saved">Saved AI result, 29 Oct 2026 · IMM 5484 (05-2026) · US$0</span><span class="saved stale">Out of date · IMM 5484 now 11-2026 · Run live, or keep for the demo only</span><span class="live">Live AI · 29 Oct 14:02 · US$3.07</span></div><p class="small muted" style="margin:8px 0 0">Saved never looks live: grey, the word "Saved", date, edition and US$0. Live is purple with its real cost. <span class="sample">Sample dates and editions</span></p><span class="lab cap">Capability · Needed · [F] founder 28 Oct · [M] label not built (run card says "US$0 · saved AI answers")</span></div>
+  </div>
+  </div>
+  <div class="card">
+    <div class="row sp"><h3 style="font-size:16px">History › AI work › Compare live runs · Who and when, Visitor visa</h3><span class="lab scf">Scaffolding · Needed for the proof (repeatability)</span></div>
+    <table style="margin-top:8px">
+      <thead><tr><th>Run</th><th>Proposals</th><th>Agreed in all 3 runs</th><th>Differences</th><th>Ready / Check / Decide</th><th>Accepted on review</th><th>Cost</th><th>Time</th><th></th></tr></thead>
+      <tbody>
+      <tr><td>Live 1 · 29 Oct 10:14</td><td>25</td><td rowspan="3" style="vertical-align:middle"><b>22 of 25</b><div class="src">same item, people, condition</div></td><td class="small">Photos: "Always" vs biometrics</td><td>14 / 6 / 5</td><td>23 of 25</td><td>US$3.02</td><td>6 min 58 s</td><td><button class="btn sm">Keep as saved result</button></td></tr>
+      <tr class="sel"><td>Live 2 · 29 Oct 11:40</td><td>25</td><td class="small">none beyond the 3 below</td><td>15 / 5 / 5</td><td><b>24 of 25</b></td><td>US$3.07</td><td>7 min 21 s</td><td><span class="pill ok">Kept as saved result</span></td></tr>
+      <tr><td>Live 3 · 29 Oct 14:02</td><td>26</td><td class="small">+1 "Any additional documents" line</td><td>14 / 6 / 6</td><td>23 of 26</td><td>US$3.10</td><td>7 min 05 s</td><td><button class="btn sm">Keep as saved result</button></td></tr>
+      </tbody>
+    </table>
+    <p class="small muted" style="margin:8px 0 0">Every number on this card is <span class="sample">Sample</span>, shaped from the 20 Oct proof (requirements US$1.52, 430 s per round). The kept run becomes the saved result Load sample replays.</p>
+  </div>
+</div>
+</section>
+
+<!-- BOARD 4 ─────────────────────────────────────────────────────────────── -->
+<section class="frame" aria-label="Board 4: other states">
+<div class="frame-cap"><span>Board 4 · Other states (EXPERIENCE §4)</span><span>Each state names the next step</span></div>
+<div style="padding:20px 24px" class="g4">
+  <div class="state"><h4>Empty</h4><p class="muted" style="margin:0">No proposals for Visitor visa yet. Start setup finds the forms, then drafts who and when, documents and checks.</p><button class="btn sm primary" style="align-self:start">Start setup</button></div>
+  <div class="state"><h4>Loading</h4><div class="sk" style="width:80%"></div><div class="sk"></div><div class="sk" style="width:60%"></div><span class="sr">Loading proposals</span></div>
+  <div class="state"><h4>Stopped</h4><p style="margin:0">Stopped at step 4. Steps 1–3 kept: 25 draft proposals wait as "Checker not run" in Check. US$1.52 spent.</p><button class="btn sm" style="align-self:start">Run the checker only</button></div>
+  <div class="state"><h4>Provider refused</h4><div class="notice danger">The AI provider's usage limit refused the call before any processing: nothing was charged. Use the saved result or rules only, or try later.</div></div>
+  <div class="state"><h4>Over the cap</h4><div class="notice danger">Not started: the worst case (US$6.20) is above what is left of the Wave 1 cap (US$2.40). Use saved results or rules only.</div></div>
+  <div class="state"><h4>Needs work</h4><p style="margin:0">5 Decide items. 1 needs a shared field first: "Who the child travels with".</p><a class="small" href="#" style="color:var(--link)">Add the field</a></div>
+  <div class="state"><h4>Read-only (approver)</h4><p style="margin:0">You drafted none of these; you approve. Shared section changes: 1, changes 3 combinations.</p><button class="btn sm" style="align-self:start">Approve selected (1)</button></div>
+  <div class="state"><h4>Conflict</h4><div class="notice warn">Someone edited IMM 5409's "Only if" while you reviewed. <a href="#" style="color:var(--link)">Reload their version</a></div></div>
+  <div class="state"><h4>Long content</h4><p style="margin:0" title="Document: Proof that your child or grandchild (and their co-signer, if applicable) is a Canadian citizen, permanent resident, or person registered as an Indian under the Indian Act">Document: Proof that your child or grandchild (and their co-signer, if applicable) is a Canadian citizen, perm…</p><span class="src">One line; full text on hover</span></div>
+  <div class="state"><h4>Out of date</h4><span class="saved stale">Out of date · IMM 5484 now 11-2026</span><p style="margin:0">Not replayed silently. Run live (about US$3.04) or keep it for the demo only.</p></div>
+  <div class="state"><h4>Not drafted yet (other 5)</h4><p style="margin:0">Study permit: forms found (live, 27–29 Oct). Who and when: not drafted yet · about US$8–11 live.</p><span class="lab m">Q3 founder</span></div>
+  <div class="state"><h4>After accept: edit by hand</h4><p style="margin:0">IMM 5707 · Only if 18 or older · <span class="pill ai">AI</span> accepted</p><div class="row"><button class="btn sm">Edit</button><button class="btn sm">Remove from this combination</button></div><span class="lab f">[F] P-116 lifecycle pattern</span></div>
+</div>
+</section>
+<script>document.getElementById('lb').addEventListener('click',e=>{const on=document.body.classList.contains('labels');e.target.setAttribute('aria-pressed',on);e.target.textContent=on?'Hide labels':'Show labels';});</script>
+</body>
+</html>
