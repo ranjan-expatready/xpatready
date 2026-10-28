@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **Drift check (fresh agent, `screens/W1-visual-system/drift-check.md`): Fix first.** Stage BUILD, owner Builder (also sent by message). Must: CI red on d5e0e99 in screen01_browser, screen01_smallfix, programs_s2, s1s2_fix: green on your exact final commit. Major: those suites still expect the old "Structure" words; each combination line shows "used by" (P-127 (1)), wrapping at 390; QA-44 focus stays in the field during a save (`add-to-structure.tsx:154`); real API tests for `POST /structure/path` refusals and the all-or-nothing save. Then QA-51/52/54, full suites, journey, EARLY-LOOK by message.
+2026-10-28 (Lead, Mac): **Early look on 059dace: founder said Changes** (also sent by message). Do not merge. Round 3 of Program structure comes as a board first (Tree view and List view, numbered program blocks, one Add button only, Edit and Delete visible on every row, simpler look, filter or cards on top; the Add pop-up stays). Until the founder agrees it: no new code on Program structure or Immigration programs (P-126); the S3 re-check (no code) is allowed. Wave 1 is desktop only (1440, 1024). Stage EARLY-LOOK, owner Lead.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
