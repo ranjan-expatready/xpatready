@@ -8,7 +8,7 @@ import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { actorOf, Audit, CaseRead, ConfigReadGuard, Db, OpenRead, readerOf, STUDIO, Workspace } from "./core.ts";
+import { actorOf, Audit, CaseRead, ConfigRead, ConfigReadGuard, Db, OpenRead, readerOf, STUDIO, Workspace } from "./core.ts";
 import { Ai } from "./ai.ts";
 import { Demo } from "./demo.ts";
 import { Fill } from "./fill.ts";
@@ -60,7 +60,7 @@ class StudioController {
   @Get("library/sections") sections() { return this.s.sections(); }
   @Post("library/sections") addSection(@Headers("x-actor") a: H, @Body() b: any) { return this.s.createSection(actorOf(a), b); }
   @Get("library/document-types") types() { return this.s.documentTypes(); }
-  @Post("conditions/check") check(@Body() b: any) { return this.s.checkCondition(b); }
+  @ConfigRead() @Post("conditions/check") check(@Body() b: any) { return this.s.checkCondition(b); }
   @CaseRead() @Get("releases") releases(@Query("combination") c?: string) { return this.s.releases(c); }
   // Runtime R1a FIX (review Must 1): the activity feed holds case events, so only configuration people and the case
   // officer read it; a client or an unknown caller is refused (STANDARDS §6 deny by default).
@@ -104,7 +104,7 @@ class DemoController {
 class AiController {
   constructor(@Inject(Ai) private readonly ai: Ai, @Inject(Studio) private readonly studio: Studio) {}
   @Get("masters") masters() { return this.studio.masters(); }
-  @Post("ai/plan") plan(@Body() b: any) { return this.ai.plan(b.scope, b.mode, { draftAgain: !!b.draftAgain }); }
+  @ConfigRead() @Post("ai/plan") plan(@Body() b: any) { return this.ai.plan(b.scope, b.mode, { draftAgain: !!b.draftAgain }); }
   @Post("ai/batches") launch(@Headers("x-actor") a: H, @Body() b: any) { return this.ai.launch(actorOf(a), b); }
   @Get("ai/batches") batches() { return this.ai.batches(); }
   @Get("ai/batches/:id") batch(@Param("id") id: string) { return this.ai.batch(id); }

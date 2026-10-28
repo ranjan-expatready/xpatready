@@ -15,7 +15,7 @@ import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada
 import { INDEX_URL } from "./finder.ts";
 import { AcceptsBody, ACCEPTS_WORD, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
-import { ACTORS, actorOf, Audit, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Audit, ConfigRead, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
 import { rowActionOf } from "./form-row-action.ts";
 import { Finder } from "./finder.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -292,7 +292,7 @@ export class FormLibraryController {
     if (!runs.length) throw problem(400, "Nothing uploaded", refused.map((x) => x.why).join(" "));
     return { runId: runs[0].runId, runIds: runs.map((r) => r.runId), refused };
   }
-  @Post("combinations/:id/forms/find/plan") plan(@Param("id") id: string, @Body() b: unknown) { return this.finder.plan(id, b); }
+  @ConfigRead() @Post("combinations/:id/forms/find/plan") plan(@Param("id") id: string, @Body() b: unknown) { return this.finder.plan(id, b); }
   @Post("combinations/:id/forms/find") find(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.finder.launch(actorOf(a), id, b); }
   @Get("combinations/:id/forms/find") latest(@Param("id") id: string) { return this.finder.latest(id); }
   @Get("form-finder/runs/:id") run(@Param("id") id: string) { return this.finder.view(id); }

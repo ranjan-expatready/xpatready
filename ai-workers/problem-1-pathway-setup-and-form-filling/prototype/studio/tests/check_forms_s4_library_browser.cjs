@@ -161,6 +161,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.getByLabel("Simulated person").first().selectOption("user-A");
     await p.waitForFunction(() => document.querySelector('tr[data-form="IMM 5604"] [data-action]')?.getAttribute("data-action") === "WITHDRAW", null, { timeout: 5000 }).catch(() => {});
     step("R69-2 pass: switching back to the author shows Withdraw of their own waiting change again", (await act5604.getAttribute("data-action")) === "WITHDRAW");
+    // QA-66 (R69-1) and QA-68: the second person returns the retire; the author's row says so and keeps Withdraw, and the
+    // change's page sends it again with what changed only (no Name or Meaning to edit).
+    const rid5604 = sql(`select id from library_change where kind='library_form' and key='IMM 5604' and status='WAITING' limit 1`);
+    await api(`/library/changes/${rid5604}/return`, { method: "POST", json: { note: "Say why it was uploaded by mistake" }, actor: "user-B" });
+    await open();
+    step("QA-66 pass: the author's row says the retire was returned and offers Withdraw (never a greyed Delete)", /Retire returned/.test(await row5604.innerText()) && (await act5604.getAttribute("data-action")) === "WITHDRAW" && (await act5604.getAttribute("aria-disabled")) === null, (await row5604.innerText()).replace(/\s+/g, " ").slice(0, 160));
+    await p.goto(`${BASE}/review/change/${rid5604}`); await p.locator("[data-send-again]").waitFor();
+    const again = p.locator("[data-send-again]");
+    step("QA-68 fail: a returned retire's page offers no Name or Meaning to edit (they would be dropped)", (await again.getByLabel("Name", { exact: true }).count()) === 0 && (await again.getByLabel("Meaning", { exact: true }).count()) === 0 && (await p.locator("[data-correct]").count()) === 0);
+    await axe("returned retire: send again");
+    await again.getByLabel("What you corrected").fill("Checked again: no combination uses it");
+    await again.getByRole("button", { name: "Send again" }).click();
+    for (let i = 0; i < 20 && sql(`select status from library_change where id='${rid5604}'`) !== "WAITING"; i++) await sleep(250);
+    step("QA-68 pass: Send again with only what changed puts it back with a second person", sql(`select status || '|' || reason from library_change where id='${rid5604}'`) === "WAITING|Checked again: no combination uses it");
+    await open();
     await shot("10-delete-asked");
 
     // Read-only, long title
