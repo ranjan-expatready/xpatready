@@ -23,3 +23,9 @@
 
 **P-33:** all of the above are Capability (Super Admin, Combination workspace). Scaffolding: the saved finder replay, Sample channels fallback.
 **Next:** runtime FIX L1–L11 with a pass and a fail test each, answer Devin Review's 3 comments on PR #71, local run-suites on the exact commit, hand back; the Lead re-merges into PR #71.
+
+## Re-check after FIX (29 Oct, sixth Lead chat): PASS, merged as PR #71 (main e2cb27a4)
+Runtime fixed L1–L12 at bb853222 (lane ad7a0604), each with a pass and a fail test (`check_s5_leadcheck.ts` 46/46, `check_s5_leadcheck_browser.cjs`); full run-suites 56/56; CI on PR #71 green (30 min). The Lead branch's app code is identical to the lane head. Devin Review's first 3 points are resolved (Undo restores the full row; age gate carries the birth date question; Filed as from the edition's accepted channels, L4). Its 3 new 🟡, answered by the Lead (PR comments not permitted from this session):
+* form-uses.ts:104, Undo steps recorded before deployment carry five-field signatures: **rejected**. Every :4400 restart does a demo reset, so no pre-deployment Undo step survives; production has no such steps.
+* forms.tsx:132, a newer unmapped edition hides Draft with AI because the matched count comes from an older edition: **accepted**, first item of runtime's next pass.
+* questionnaires.tsx:143, the browser keeps "AI now" greyed when the server approves a live trial: **accepted**, must be fixed before the W1-10 live trial (P-131); drive the radio from the server's plan.
