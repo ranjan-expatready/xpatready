@@ -567,30 +567,6 @@ export class Studio {
     return row;
   }
 
-  /** P-116 (drift check 8): Undo "Remove from this combination" while the draft is open; the line comes back exactly as
-   *  it was. A removal that only marked a released line is taken back, so the released line stands again; a draft line
-   *  (new, or a released line already changed in this draft) becomes a draft again with its own settings. A removal
-   *  already released is not undone here: the form is added again from the library. */
-  async restoreForm(actor: Actor, combinationId: string, formKey: string) {
-    need(actor, "author");
-    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
-    const rows = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: formKey }, orderBy: { version: "desc" } });
-    const newest = rows[0];
-    if (!newest) fail(`${formKey} is not part of this combination.`, HttpStatus.NOT_FOUND);
-    if (newest.status !== "RETIRED") fail(`${formKey} is on this combination: there is no removal to undo.`, HttpStatus.CONFLICT);
-    const since = (await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" }, select: { releasedAt: true } }))?.releasedAt;
-    if (since && newest.updatedAt <= since) fail(`${formKey} was removed in a released version. Add it again from the library.`, HttpStatus.CONFLICT);
-    const before = rows.find((r) => r.id === newest.supersedesId);
-    const settings = (r: typeof newest) => JSON.stringify([r.who, r.attachMode, r.predicateJson, r.conditionPlain, r.channel, r.minAge, r.signedBy, r.govFormDefId]);
-    const onlyRemoved = before?.status === "PUBLISHED" && settings(before) === settings(newest);
-    // Guarded on RETIRED, so a second Undo (another tab) changes nothing and is told so.
-    const n = onlyRemoved ? (await this.db.combinationForm.deleteMany({ where: { id: newest.id, status: "RETIRED" } })).count
-      : (await this.db.combinationForm.updateMany({ where: { id: newest.id, status: "RETIRED" }, data: { status: "DRAFT", updatedBy: actor.id } })).count;
-    if (!n) fail(`${formKey} was already put back.`, HttpStatus.CONFLICT);
-    await this.audit.log(c.workspaceId, actor.id, "undone", "form", formKey, `${actor.name} undid removing ${formKey} from "${c.label}"`, { restored: onlyRemoved ? "released line" : "draft line" }, combinationId);
-    return { form: formKey, restored: onlyRemoved ? "released" : "draft" };
-  }
-
   /** Optimistic concurrency for draft edits: the editor sends the revision it opened (the newest row's save time). If
    *  someone saved this item since, the change is refused rather than silently overwriting theirs. */
   private sameRevision(rows: { version: number; updatedAt: Date; updatedBy: string }[], base?: string) {

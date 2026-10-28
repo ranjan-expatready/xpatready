@@ -10,7 +10,7 @@ import { previewFamily } from "../../engine/runtime/preview.ts";
 import { wordsOnly } from "../../engine/render.ts";
 import { channelProblems, filingKind, filingMethod, signatureOf } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, CHANNELS, type Channel } from "../../contracts/forms.ts";
-import { answeredBy, irccWords, signedByLabel, tabOf, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
+import { answeredBy, irccWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { actorOf, Db, fail, readerOf } from "./core.ts";
 import { Studio } from "./studio.ts";
 
@@ -39,13 +39,13 @@ export class WorkspaceViews {
   }
 
   /** The Forms tab: each line of the draft with its settings, what IRCC accepts and its revision token. */
-  private async forms(id: string, workspaceId: string): Promise<{ lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[] }> {
+  private async forms(id: string, workspaceId: string): Promise<{ lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }> {
     const { snapshot } = await buildSnapshot(this.db, workspaceId, id, "draft");
     const revisions = await this.studio.revisions(id);
     const maps = snapshot.field_maps as { form_number: string; form_edition: string; entries: { outcome: string }[] }[];
     const rows = await this.db.combinationForm.findMany({ where: { combinationId: id }, orderBy: { version: "desc" } });
-    const status = new Map<string, string>();
-    for (const r of rows) if (!status.has(r.lineageKey)) status.set(r.lineageKey, r.status);
+    const status = new Map<string, string>(), version = new Map<string, number>();
+    for (const r of rows) if (!status.has(r.lineageKey)) { status.set(r.lineageKey, r.status); version.set(r.lineageKey, r.version); }
     const lines = (snapshot.forms as SnapForm[]).map((f): WorkspaceFormLine => {
       const map = maps.filter((m) => m.form_number === f.form_number).at(-1);
       const channel = f.channel ?? "PDF_UPLOAD";
@@ -57,7 +57,7 @@ export class WorkspaceViews {
         // What IRCC accepts comes from the Form library (forms lane, S4); until it records it, every way is offered as Sample.
         accepted: [...CHANNELS], acceptedBasis: "Sample: the Form library does not record what IRCC accepts for this form yet",
         signedBy: f.signed_by ?? null, signedByLabel: signedByLabel(f.signed_by), origin: f.origin ?? "HUMAN", quote: irccWords(f.source_quote),
-        revision: revisions[`form:${f.form_number}`] ?? "", status: status.get(f.form_number) ?? "DRAFT",
+        revision: revisions[`form:${f.form_number}`] ?? "", status: status.get(f.form_number) ?? "DRAFT", version: version.get(f.form_number) ?? 1,
       };
     });
     // C1.6: the short words ("PDF only", "Mixed: online and PDF") and, on hover, the line-by-line detail.
@@ -75,7 +75,11 @@ export class WorkspaceViews {
     // same rule as the page's next step (api/src/programs.ts fromLibrary), so the row and the header name one step.
     const files = await this.db.sourceAttachment.findMany({ where: { combinationId: id, kind: "Form", recognised: true }, select: { id: true, sha256: true } });
     const matched = new Set((await this.db.formEdition.findMany({ where: { workspaceId, sha256: { in: files.map((f) => f.sha256) }, maps: { some: {} } }, select: { sha256: true } })).map((e) => e.sha256));
-    return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), problems, removed, fromLibrary: files.filter((f) => matched.has(f.sha256)).map((f) => f.id) };
+    // Slice 3 (P-116 amended, one Undo for the page): the newest change on this combination's forms that Undo can still
+    // reverse (the forms lane's POST …/forms/undo takes its id, so a change someone made since is never undone blind).
+    const last = await this.db.formLineAction.findFirst({ where: { combinationId: id, undoneAt: null }, orderBy: { at: "desc" } });
+    const lastChange: LastFormChange | null = last ? { id: last.id, action: last.action as LastFormChange["action"], codes: ((last.detail as { codes?: string[] })?.codes ?? []), by: last.by, at: last.at.toISOString() } : null;
+    return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), problems, removed, fromLibrary: files.filter((f) => matched.has(f.sha256)).map((f) => f.id), lastChange };
   }
 
   /** Questionnaires (slice 2): one person role's questions as a case asks them, with coverage; the library sections the
@@ -129,6 +133,5 @@ export class WorkspaceController {
   @Get("combinations/:id/workspace") view(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: Q) { readerOf(a); return this.w.view(id, q); }
   @Patch("combinations/:id/people") savePeople(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.savePeople(actorOf(a), id, b); }
   @Post("combinations/:id/people/undo") undoPeople(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.undoPeople(actorOf(a), id, b); }
-  @Post("combinations/:id/forms/:form/restore") restoreForm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("form") f: string) { return this.s.restoreForm(actorOf(a), id, f); }
   @Get("library/roles") roles(@Headers("x-actor") a: H) { readerOf(a); return this.s.personRoles(); }
 }

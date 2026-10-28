@@ -90,6 +90,8 @@ export type WorkspaceFormLine = {
   who: string; minAge: number | null; onlyIf: OnlyIf; condition: unknown;
   channel: string; channelWords: string; signature: string | null; accepted: string[]; acceptedBasis: string;
   signedBy: string | null; signedByLabel: string; origin: string; quote: string | null; revision: string; status: string;
+  /** The line's version number: Remove and Replace edition send it (the forms lane refuses a stale one with 409). */
+  version: number;
 };
 
 // ------------------------------------------------------------------ Questionnaires per person (slice 2)
@@ -139,11 +141,15 @@ export type PreviewView = {
 /** A form removed from the combination since its last release: Undo puts the same line back while the draft is open (P-116).
  *  `fromLibrary` (Forms tab) lists the attached form files the library has already matched: added from the library, no AI. */
 export type RemovedForm = { code: string; title: string; at: string };
+/** Slice 3: the newest change on the combination's forms that Undo can still reverse (one Undo for the page, P-116). */
+export type LastFormChange = { id: string; action: "attach" | "remove" | "finder_attach" | "edit"; codes: string[]; by: string; at: string };
+/** The words for a last change, for the Undo bar ("Removed IMM 5475"). */
+export const changeWords = (c: LastFormChange) => `${({ attach: "Added", remove: "Removed", finder_attach: "AI attached", edit: "Changed" } as const)[c.action] ?? "Changed"} ${c.codes.join(", ")}`;
 
 /** GET /combinations/:id/workspace?tab= — one request per tab view. Overview, Documents and Review read the combination
  *  page's existing reads. */
 export type WorkspaceView =
-  | { tab: "forms"; asked: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[] }
+  | { tab: "forms"; asked: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }
   | { tab: "questionnaires"; asked: string; people: PeopleView; questionnaire: QuestionnairesView | null; available: { key: string; title: string }[] }
   | { tab: "preview"; asked: string; preview: PreviewView | null; empty: string | null }
   | { tab: Exclude<TabKey, "forms" | "questionnaires" | "preview">; asked: string };
