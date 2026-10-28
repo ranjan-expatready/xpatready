@@ -1,0 +1,593 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Draft board, round 3: Program structure, Tree and List views (W1-visual-system, 28 Oct)</title>
+<style>
+/* Team tokens copied from prototype/studio/web/src/styles/tokens.css and the agreed studio level sheet levels.css (branch 059dace).
+   Light only: desktop round (founder point 9). Dark values stay as built in levels.css. */
+:root{--bg:#e9ecef;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--faint:#8c8c8c;--link:#054e9c;--primary:#0862c5;--on-primary:#fff;--p50:#e6f4ff;--p100:#cce9ff;--border:#d9d9d9;--border-s:#bfbfbf;--line:#ececec;
+--ok:#16a34a;--t-ok:#0f5c2e;--ok-tint:#e3f4e9;--warn:#ff8500;--t-warn:#663200;--warn-tint:#ffedd9;--danger:#dc2626;--t-danger:#991b1b;--danger-tint:#fbe5e5;--neutral-tint:#eeeeee;
+--lv0:#595959;--lv1:#37506e;--lv2:#0b6477;--lv3:#043a73;--lv1-t:#f3f5f7;--lv2-t:#ebf3f4;--lv3-t:#f0f3f7;--lv1-b:#e3e8ed;
+--acc1:#50d0ff;--acc2:#0694ff;--acc3:#2d2d2d;--acc4:#37506e;
+--font:'Inter Variable',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);font-size:14px;line-height:1.45;color:var(--text);background:var(--bg)}
+h1,h2,h3,h4{font-family:'Proxima Nova',var(--font);margin:0}
+button{font:inherit}
+.board{max-width:1500px;margin:0 auto;padding:24px 30px 80px}
+.top h1{font-size:24px}.top p{margin:6px 0 0;color:var(--muted);max-width:1180px}
+.sec{margin:40px 0 10px;border-top:2px solid var(--border-s);padding-top:16px}.sec h2{font-size:20px}.sec>p,.note{margin:6px 0;color:var(--muted);max-width:1240px}
+.sec h3.sub{font-size:16px;margin:22px 0 6px}
+/* board tags (board chrome only) */
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;padding:1px 7px;border-radius:999px;border:1px solid;white-space:nowrap;font-weight:500;vertical-align:middle}
+.tag.cap{color:#054e9c;border-color:#cce9ff;background:#e6f4ff}.tag.scaf{color:#663200;border-color:#ffc773;background:#fff3e0}
+.tag.need{color:#0f5c2e;border-color:#a7dcb9;background:#fff}.tag.nb{color:#595959;border:1px dashed #bfbfbf;background:#fff}
+.tag.dec{color:#0f5c2e;border-color:#a7dcb9;background:#eefaf2}.tag.gap{color:#991b1b;border-color:#f3b4b4;background:#fdf0f0}
+.tag.con{color:#7a1f6b;border-color:#e5b3dc;background:#fbeef9}.tag.sample{color:#663200;border-color:#ffc773;background:#fff}
+.tag.rec{color:#fff;background:#0862c5;border-color:#0862c5;font-weight:600}
+.ann{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+table.t{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px;font-size:13px}
+table.t th,table.t td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.t th{background:#f4f6f8;font-weight:600;font-size:12px;color:var(--muted)}
+table.t tr.rec td{background:#f3f8fe}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.cap{font-size:12px;color:var(--muted);margin:6px 0 0}
+/* app frame */
+.frame{background:var(--surface);border:1px solid var(--border-s);border-radius:12px;overflow:hidden;box-shadow:0 2px 10px #0000001a;margin-top:10px;position:relative}
+.ftitle{font-size:12px;color:var(--muted);padding:6px 12px;background:#fbfbfb;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ftitle b{color:var(--text)}
+.appbar{display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;background:var(--raised);border-bottom:1px solid var(--border);font-size:12px}
+.logo{font-weight:800;color:var(--primary);font-size:16px;display:flex;align-items:center;gap:6px}.logo i{width:20px;height:20px;border-radius:5px;background:#0862c5;display:inline-block}
+.prod{border-left:1px solid var(--border);padding-left:10px;color:var(--muted);line-height:1.2}.prod b{display:block;font-size:13px;color:var(--text)}
+.demo{background:#fff3e0;color:#663200;border-radius:6px;padding:2px 8px}
+.shell{display:grid;grid-template-columns:200px minmax(0,1fr)}
+.side{background:var(--raised);border-right:1px solid var(--border);padding:14px 8px;min-height:100%}
+.side .g{font-size:12px;color:var(--muted);margin:14px 8px 4px}.side .g:first-child{margin-top:0}
+.side a{display:block;padding:6px 8px;border-radius:6px;color:var(--text);text-decoration:none}.side a.on{background:var(--p50);color:var(--link);font-weight:600}
+.main{padding:20px 24px 28px;min-width:0;position:relative}
+.ph{display:flex;align-items:flex-start;gap:10px}.ph h1{font-size:24px;display:flex;align-items:center;gap:8px}.ph .s{color:var(--muted);margin-top:2px}.sp{flex:1}
+/* controls */
+.btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--border-s);background:var(--raised);color:var(--text);font-weight:500;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:#fff}.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.btn.danger{background:#b91c1c;border-color:#b91c1c;color:#fff}
+.btn[aria-disabled=true]{opacity:.5;cursor:not-allowed}
+.btn.link{border:0;background:none;color:var(--link);padding:0 4px;height:auto}
+.seg{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--border);border-radius:10px;background:#f1f2f4}
+.seg button{border:0;background:transparent;padding:5px 12px;border-radius:8px;display:inline-flex;gap:6px;align-items:center;color:var(--text);cursor:pointer}
+.seg button.on{background:#fff;box-shadow:0 1px 2px #0000001f;font-weight:600;color:var(--link)}
+.seg.type button.on{background:var(--primary);color:#fff;box-shadow:none}
+.seg button em{font-style:normal;font-size:12px;font-weight:600;background:#0000000d;border-radius:99px;padding:0 6px}.seg.type button.on em{background:#ffffff33}
+.fbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.search{flex:1 1 260px;min-width:220px;display:flex;align-items:center;gap:8px;height:34px;border:1px solid var(--border-s);border-radius:8px;background:#fff;padding:0 10px;color:var(--muted)}
+.search input{border:0;outline:0;font:inherit;flex:1;min-width:0;background:transparent;color:var(--text)}
+.sel{height:34px;border:1px solid var(--border-s);border-radius:8px;background:#fff;padding:0 28px 0 10px;font:inherit;color:var(--text);appearance:none;background-image:linear-gradient(45deg,transparent 50%,#595959 50%),linear-gradient(135deg,#595959 50%,transparent 50%);background-position:calc(100% - 14px) 15px,calc(100% - 9px) 15px;background-size:5px 5px;background-repeat:no-repeat;cursor:pointer}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.fchip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border:1px solid var(--border-s);border-radius:999px;background:#fff;cursor:pointer;color:var(--text)}
+.fchip.on{background:var(--p50);border-color:#9ccfff;color:var(--link);font-weight:600}
+.fchip em{font-style:normal;font-size:12px;color:var(--muted);font-weight:500}.fchip.on em{color:var(--link)}
+.fchip .acc{width:4px;height:14px;border-radius:2px;background:var(--a)}
+.chk{display:inline-flex;gap:6px;align-items:center;color:var(--text);font-size:13px;cursor:pointer}
+.counts{margin:12px 0 6px;color:var(--muted);font-size:13px}.counts b{color:var(--text)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);align-items:center;flex-wrap:wrap}
+.ic{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ic.s{width:14px;height:14px}
+/* marks */
+.lm{display:inline-block;flex:none;width:8px;height:8px;margin:0 6px 0 2px}
+.lm.l1{background:var(--lv1);border-radius:2px}.lm.l2{background:var(--lv2);border-radius:50%}
+.lm.l3{background:var(--lv3);transform:rotate(45deg);width:7px;height:7px;border-radius:1px}
+.lm.l4{border:1.5px solid var(--lv3);transform:rotate(45deg);width:7px;height:7px;border-radius:1px}
+/* status chips */
+.chip{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;line-height:18px;width:fit-content}
+.chip.set{background:var(--neutral-tint);color:var(--text)}.chip.ns{border:1px dashed var(--border-s);color:var(--muted);padding:0 7px;font-weight:500}
+.chip.wait{background:var(--warn-tint);color:var(--t-warn)}.chip.ret{background:var(--neutral-tint);color:var(--muted)}.chip.just{background:var(--ok-tint);color:var(--t-ok)}
+.chip.live{background:var(--ok-tint);color:var(--t-ok)}
+/* tooltips */
+[data-tip]{position:relative}
+[data-tip]:hover::after,[data-tip]:focus-visible::after,[data-tip].showtip::after{content:attr(data-tip);position:absolute;right:0;top:calc(100% + 6px);z-index:40;width:max-content;max-width:300px;background:#2d2d2d;color:#fff;font-size:12px;line-height:16px;padding:7px 9px;border-radius:6px;white-space:normal;font-weight:400;text-align:left;box-shadow:0 4px 12px #0003;pointer-events:none}
+[data-tip].tl:hover::after,[data-tip].tl:focus-visible::after,[data-tip].tl.showtip::after{right:auto;left:0}
+.info{display:inline-flex;color:var(--muted);cursor:help}
+/* ---------- option A: numbered outline ---------- */
+.g5{display:grid;grid-template-columns:minmax(0,1fr) 116px 176px 108px 152px;align-items:center;column-gap:8px}
+.colhead{padding:6px 17px 6px 12px;font-size:12px;color:var(--muted);position:sticky;top:0;background:var(--surface);z-index:2}
+.band{background:var(--lv1-t);border:1px solid var(--lv1-b);border-left:4px solid var(--acc);border-radius:10px;padding:0 8px 8px 0;margin:10px 0 14px}
+.band>.r{min-height:48px;padding:0 9px 0 12px}
+.blk{margin:0 0 8px 24px;background:#fff;border:1px solid #e1e5ea;border-radius:8px;overflow:visible}
+.blk:last-child{margin-bottom:0}
+.r{min-height:40px;padding:0 8px 0 12px}
+.blk>.r+.r{border-top:1px solid var(--line)}
+.blk>.r.l2{min-height:42px;background:#fcfdfd;border-radius:8px 8px 0 0}
+.blk>.r.l2:only-child{border-radius:8px}
+.nmc{display:flex;align-items:center;min-width:0;gap:2px;position:relative}
+.chev{width:20px;height:20px;border:0;background:none;padding:0;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;flex:none}
+.chev:hover{background:#0000000d}.chev.none{cursor:default}.chev.none:hover{background:none}
+.num{font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;flex:none;margin-left:4px}
+.l1 .num{color:var(--lv1);min-width:16px}.l2 .num{color:var(--lv2);min-width:26px}.l3 .num{color:var(--lv3);min-width:38px}.l4 .num{color:var(--lv3);min-width:50px}
+.nm{overflow-wrap:anywhere}
+.l1 .nm{font-size:16px;font-weight:600;color:var(--text)}.l2 .nm{font-weight:600}.l3 .nm{font-weight:500}.l4 .nm{font-weight:400}
+.meta{color:var(--muted);font-size:12px;margin-left:8px;white-space:nowrap}
+.r.l3 .nmc{padding-left:24px}.r.l4 .nmc{padding-left:48px}
+.blk .r.l4 .nmc::before{content:"";position:absolute;left:34px;top:-20px;bottom:50%;border-left:1px solid #c9d1da;border-bottom:1px solid #c9d1da;width:10px;border-bottom-left-radius:4px}
+.loc,.used{font-size:13px;color:var(--text)}.used{color:var(--muted)}
+.acts{display:flex;gap:2px;justify-content:flex-end}
+.act{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 8px;border-radius:6px;border:0;background:transparent;color:#4a5866;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap}
+.act:hover,.act:focus-visible{background:#e9eef3;color:var(--link);outline:none}
+.act.dis{color:#a3a3a3;cursor:not-allowed}.act.dis:hover{background:#f3f3f3;color:#8c8c8c}
+.act.warn{color:var(--t-warn)}
+.r.retired .nm,.r.retired .num,.r.retired .loc{color:#8c8c8c}.r.retired .lm{opacity:.45}
+.r.waiting .nm{text-decoration:line-through;text-decoration-color:#c88a4a}
+.r.hl,.lr.hl{background:#f3f8fe!important}
+mark{background:#fff1a8;color:inherit;border-radius:2px;padding:0 1px}
+.emptyline{padding:10px 12px 10px 60px;color:var(--muted);font-size:13px}
+/* confirm popover */
+.pop{position:absolute;right:8px;top:calc(100% - 2px);z-index:30;width:380px;background:#fff;border:1px solid var(--border-s);border-radius:10px;box-shadow:0 10px 30px #00000029;padding:14px 16px;font-size:13px;text-align:left}
+.pop h4{font-size:14px;margin:0 0 6px}.pop p{margin:4px 0;color:var(--text)}.pop ul{margin:4px 0 6px 18px;padding:0;color:var(--muted)}
+.pop .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.r{position:relative}
+.tipbox{position:absolute;right:8px;top:calc(100% - 4px);z-index:30;max-width:320px;background:#2d2d2d;color:#fff;font-size:12px;line-height:16px;padding:8px 10px;border-radius:6px;box-shadow:0 4px 12px #0003}
+/* list view */
+.gl{display:grid;grid-template-columns:64px minmax(0,1fr) 112px 150px 100px 140px;align-items:center;column-gap:8px}
+.ltable{background:#fff;border:1px solid var(--border);border-radius:10px;margin-top:8px}
+.ltable .lh{padding:9px 12px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);background:#fafbfc;border-radius:10px 10px 0 0;position:sticky;top:0;z-index:2}
+.ltable .lr{padding:8px 12px;min-height:44px;border-bottom:1px solid var(--line);position:relative}.ltable .lr:last-child{border-bottom:0}
+.lr .num{color:var(--muted);font-weight:500}
+.trail{line-height:1.5}.trail .sep{color:#9aa4ae}
+.trail .t0{color:var(--lv0)}.trail .t1{color:var(--lv1)}.trail .t2{color:var(--lv2)}.trail .t3{color:var(--lv3);font-weight:600}.trail .t4{color:var(--lv3)}.trail .none{color:var(--muted)}
+.trail .t0,.trail .t1,.trail .t2,.trail .t3,.trail .t4,.trail .none{white-space:nowrap}
+.sorthd{display:inline-flex;gap:4px;align-items:center}
+/* right panel */
+.panel{position:absolute;top:78px;right:0;bottom:0;width:480px;background:#fff;border-left:1px solid var(--border-s);box-shadow:-8px 0 24px #00000014;display:flex;flex-direction:column;z-index:20}
+.panel header{display:flex;align-items:flex-start;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.panel header .k{font-size:12px;color:var(--muted)}.panel header h3{font-size:18px;display:flex;align-items:center;gap:4px;margin-top:2px}
+.panel .pb{padding:14px 20px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:14px}
+.panel footer{display:flex;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid var(--border)}
+.fld label{display:block;font-weight:600;font-size:13px;margin-bottom:4px}.fld label span{font-weight:400;color:var(--muted);font-size:12px}
+.inp{width:100%;height:36px;border:1px solid var(--border-s);border-radius:8px;padding:0 10px;font:inherit;color:var(--text);background:#fff}
+.inp.focus{border-color:var(--primary);box-shadow:0 0 0 3px #0862c533}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}.hint.ok{color:var(--t-ok)}
+.box{border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.box h5{margin:0 0 6px;font-size:13px}
+.alert{border:1px solid #f5c38b;background:#fff8ef;border-radius:8px;padding:10px 12px;font-size:13px}
+.lvrow{display:grid;grid-template-columns:118px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.lvrow:last-child{border-bottom:0}
+.lvrow .lw{font-size:12px;color:var(--muted)}
+/* modal */
+.scrim{position:absolute;inset:0;background:#1f2a3666;z-index:25;display:flex;align-items:flex-start;justify-content:center;padding-top:40px}
+.modal{width:512px;background:#fff;border-radius:12px;box-shadow:0 20px 50px #0000004d}
+.modal .mh{padding:18px 24px 12px;border-bottom:1px solid var(--border)}.modal .mh h3{font-size:18px;display:flex}.modal .mh p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.modal .mb{padding:14px 24px;display:flex;flex-direction:column;gap:10px}
+.modal .mf{padding:12px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.newt{font-size:11px;font-weight:600;color:var(--link);background:var(--p50);border-radius:4px;padding:0 5px;margin-left:6px}
+.preview{background:#f4f6f8;border-radius:8px;padding:10px 12px;font-size:13px}
+/* states */
+.empty{background:#fff;border:1px dashed var(--border-s);border-radius:12px;padding:40px 24px;text-align:center;margin-top:14px}
+.empty h3{font-size:18px;margin:10px 0 6px}.empty p{color:var(--muted);max-width:560px;margin:0 auto 14px}
+.sk{height:12px;border-radius:6px;background:linear-gradient(90deg,#eceff2,#f6f7f9,#eceff2);background-size:200% 100%;animation:sh 1.4s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+.frame.crop{max-height:var(--h,720px);overflow:hidden}
+.frame.crop::after{content:"";position:absolute;left:0;right:0;bottom:0;height:40px;background:linear-gradient(transparent,#f7f7f7);pointer-events:none;z-index:50}
+.compact .side,.compact .appbar{display:none}.compact .shell{grid-template-columns:minmax(0,1fr)}.compact .main{padding:16px}
+.compact .g5{grid-template-columns:minmax(0,1fr) 108px 148px 76px}.compact .used,.compact .hd-used{display:none}.compact .act .lbl{display:none}.compact .ph .s{display:none}
+/* 1024 */
+.w1024 .g5{grid-template-columns:minmax(0,1fr) 108px 148px 76px}.w1024 .used,.w1024 .hd-used{display:none}
+.w1024 .gl{grid-template-columns:62px minmax(0,1fr) 108px 148px 76px}
+.w1024 .act .lbl{display:none}.w1024 .shell{grid-template-columns:184px minmax(0,1fr)}.w1024 .main{padding:18px 18px 24px}
+.w1024 .colhead{padding-right:17px}
+/* option B: tree table */
+.tt{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:visible}
+.tt .r{min-height:36px;border-bottom:1px solid var(--line);padding:0 8px 0 12px}
+.tt .r.l1{background:var(--lv1-t);min-height:42px;border-left:4px solid var(--acc);padding-left:8px}
+.tt .gb{display:grid;grid-template-columns:minmax(0,1fr) 116px 176px 108px 72px;align-items:center;column-gap:8px}
+.tt .ind{display:inline-block;flex:none;width:24px;align-self:stretch;position:relative}
+.tt .ind::before{content:"";position:absolute;left:9px;top:-1px;bottom:-1px;border-left:1px solid #d3d9e0}
+.ib{width:28px;height:28px;border:0;background:transparent;border-radius:6px;color:#4a5866;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.ib:hover{background:#e9eef3;color:var(--link)}.ib.dis{color:#b3b3b3;cursor:not-allowed}
+.gb5{display:grid;grid-template-columns:76px 150px 160px minmax(0,1fr) minmax(0,1fr) 116px 72px;align-items:center;column-gap:10px}
+/* option C: program cards */
+.cgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 4px 0}
+.pcard{background:#fff;border:1px solid #e1e5ea;border-radius:10px}
+.pcard .ph2{display:flex;align-items:center;gap:4px;padding:10px 8px 10px 12px;border-bottom:1px solid var(--line)}
+.pcard .cl{display:flex;align-items:center;gap:4px;padding:7px 8px 7px 12px;border-bottom:1px solid #f4f4f4;font-size:13px}.pcard .cl:last-child{border-bottom:0}
+.pcard .cl.sub{padding-left:30px}
+.cband{display:flex;align-items:center;gap:6px;padding:10px 8px 10px 12px;border-left:4px solid var(--acc);background:var(--lv1-t);border-radius:8px;margin:12px 0 10px}
+</style></head><body><div class="board">
+
+<div class="top">
+<h1>Draft board, round 3: Program structure with a Tree view and a List view, one Add, Edit and Delete on every row</h1>
+<p>W1-visual-system · designer draft for the Lead, 28 Oct · desktop only (1440 and 1024, founder point 9). Built today (branch <code>screens/2026-10-27-visual-system</code>, 059dace): layout A of P-127. The founder's early look said <b>Changes</b>: simpler and calmer, a Tree view and a List view, numbered and correctly indented blocks, one Add button (the pop-up is liked and kept), Edit and Delete visible on every row, and a better way in than the Pathway cards. Data: the 7 Retail combinations on the built screen and the 1 Corporate Sample; names and locations are <b>Sample</b> until the immigration expert confirms; no immigration value is added.</p>
+<div class="ann"><span class="tag cap">Capability</span><span class="tag scaf">Scaffolding</span><span class="tag need">Needed for the proof</span><span class="tag nb">Not built</span><span class="tag dec">Followed P-xx</span><span class="tag gap">GAP: decision missing</span><span class="tag con">CONFLICT: two sources disagree</span><span class="tag sample">Sample</span><span class="tag rec">Recommended</span></div>
+<p class="note">Everything on the frames works by click: Retail / Corporate, Tree / List, Pathway chips, Program and Status filters, Find, Expand / Collapse, Edit (opens the side panel), Delete (opens the in-page confirm), Withdraw, and Add (opens the pop-up as built). Hover any greyed Delete to read why.</p>
+</div>
+
+<div class="sec"><h2>0. What changes from P-127, and why</h2>
+<table class="t"><tr><th style="width:26%">P-127 / built today</th><th style="width:34%">Round 3 (all options)</th><th>Why (founder 28 Oct point)</th></tr>
+<tr><td>No tree, no view switch; one layout</td><td><b>Tree / List switch</b>, remembered per person, like Cards / List on Immigration programs</td><td>Point 2 (amends P-127 (1)) <span class="tag con">CONFLICT P-127 (1): founder amends it</span></td></tr>
+<tr><td>Pathway cards on top choose what shows (opens on the last chosen Pathway)</td><td>A <b>filter bar</b>: Pathway type tabs, Pathway chips with counts, Program and Status dropdowns, Find, Show retired. The last chosen filter is remembered instead</td><td>Point 7; the tree itself now shows each Pathway as a block, so the cards repeat it (Q2)</td></tr>
+<tr><td>"+ Add pathway" card, "+ Add program" on bands, "+ Add category" on sections, "Add sub-category" in ⋯ and the panel</td><td><b>One Add</b> in the page header; it opens the same pop-up, prefilled with the tab and the Pathway / Program filter in use</td><td>Point 5 (amends P-127 (2) "every + Add opens it prefilled") <span class="tag con">CONFLICT P-127 (2)</span></td></tr>
+<tr><td>Edit, Move, Remove hidden in ⋯ menus and the details panel</td><td><b>Edit</b> and <b>Delete</b> written on every row at every level; Delete becomes Retire, Restore or Withdraw when that is what it can do, and a greyed Delete says why. Move up / down sits in the Edit panel. No ⋯ menus</td><td>Point 6; P-116 <span class="tag dec">F P-116</span>; team rows show Edit / Delete icons only on hover (<code>program-node-row.tsx</code>), we show them always <span class="tag dec">F P-48, noted difference</span></td></tr>
+<tr><td>Combinations as one-liners "Category › Sub-category" left-aligned under a Program</td><td>Tree: Pathway › Program › Category › Sub-category each <b>indented 24 px</b> and <b>numbered</b> 1, 1.1, 1.1.1, 1.1.1.1; a category with sub-categories is its own row with them beneath it</td><td>Point 3 (amends P-127 (3) "one line per sub-category, repeating the category" for the Tree; the List keeps one line per combination) <span class="tag con">CONFLICT P-127 (3)</span></td></tr>
+<tr><td>Teal Program names, navy category names, blue stripes, grey bands with white sections</td><td>Names in the text colour; the level colour only on the small mark and the number; one quiet slate tint per Pathway block with its 4 px stripe</td><td>Point 1 "colours and look not good"; EXPERIENCE §1 keeps one colour per level (now on marks and numbers in the Tree; full trail colours in the List) <span class="tag con">CONFLICT EXPERIENCE §1 / VS-1 wording</span></td></tr>
+<tr><td>—</td><td><b>List view</b>: one line per combination with the full trail Pathway type › Pathway › Program › Category › Sub-category, sorted by those five in turn</td><td>Point 4; C11.3 full trail <span class="tag dec">F P-104</span></td></tr>
+</table></div>
+
+<!-- ================= OPTION A ================= -->
+<div class="sec"><h2>1. Option A · Numbered outline <span class="tag rec">Recommended</span></h2>
+<p>Each Pathway is one quiet block with its stripe; each Program is a white block inside it, indented one step; categories and sub-categories are rows inside the Program block, indented one more step each and numbered. Status, where cases may be opened and Used by sit in fixed columns on the right, so every level lines up. Edit and Delete are written on every row. The List view is one flat table: one line per combination, the full trail written out.</p>
+<div class="ann"><span class="tag cap">Capability · Tree / List switch</span><span class="tag cap">Capability · numbered, indented outline</span><span class="tag cap">Capability · Edit + Delete on every row</span><span class="tag cap">Capability · filter bar</span><span class="tag need">Needed</span><span class="tag dec">F P-116</span><span class="tag dec">F P-127 pop-up</span></div>
+<h3 class="sub">1a · Tree view, Retail, 1440 (live: click anything)</h3>
+<div class="frame" id="A-tree"></div>
+<h3 class="sub">1b · List view, Retail, 1440</h3>
+<div class="frame" id="A-list"></div>
+<p class="cap">Sorted by Pathway type, then Pathway, Program, Category, Sub-category, each in the order set on this page (the order Immigration programs uses, QA-49); "A to Z" sorts each level alphabetically instead <span class="tag gap">GAP: default sort, Lead (recommend the page order)</span>. "No." is the line's number in the Tree, so the two views point at each other. A trail too long for its column wraps whole and keeps Category › Sub-category together (VS-3, agreed).</p>
+
+<h3 class="sub">1c · Edit, Delete, Retire: the actions on every row</h3>
+<div class="frame crop" id="A-edit" style="--h:660px"></div><p class="cap"><b>Edit on a Program</b> opens the existing side panel with the name ready to change: checks under the field as you type (exact twin, "did you mean"), order (Move up / Move down), where it is used and history. Pathway type cannot be edited (it is the tab, fixed). <span class="tag dec">F P-118 checks</span><span class="tag dec">F P-116 reorder</span></p>
+<div class="frame crop" id="A-del" style="--h:770px"></div><p class="cap"><b>Delete on an unused line</b>: an in-page confirm says what goes and that a second person approves on To review (as built). After it, the row reads <i>Deletion waiting</i> and Delete turns into Withdraw. Delete on a Pathway or Program deletes the whole branch only when nothing in it is used, listing every name <span class="tag gap">GAP: branch delete, Lead (recommend: allowed when the whole branch is unused)</span></p>
+<div class="frame crop" id="A-refused" style="--h:660px"></div><p class="cap"><b>Delete that cannot run</b> stays visible, greyed, and says why on hover or focus: Visitor visa has a setup draft, so neither it nor Visitors nor Temporary residence can be deleted. <span class="tag dec">F P-116 "say why"</span></p>
+<div class="frame crop" id="A-retire" style="--h:780px"></div><p class="cap"><b>What a retire looks like</b> <span class="tag sample">Sample state: nothing in the sample is released yet; shown as if Express Entry stream and Start-up visa had been released; Start-up visa already retired</span>. A released, used name offers <b>Retire</b> instead of Delete; the confirm lists its uses. With <i>Show retired</i> on, a retired line stays in place, greyed, tagged Retired, with <b>Restore</b>. Hidden from Add and new setups; cases and earlier releases keep it. A second person approves both. <span class="tag dec">F P-116, P-52</span></p>
+<div class="frame crop" id="A-line" style="--h:700px"></div><p class="cap"><b>Edit in the List view</b> opens the same panel for the whole line: each of its five levels with its own Rename and Delete (or the reason it cannot), then where cases may be opened, where used and history. So every level can be edited from either view.</p>
+<div class="frame crop" id="A-conflict" style="--h:660px"></div><p class="cap"><b>Conflict</b>: someone else renamed it while the panel was open. Words as built; the typed name is kept.</p>
+
+<h3 class="sub">1d · The one Add: the pop-up stays as built, prefilled from the filter</h3>
+<div class="frame" id="A-add"></div>
+<p class="cap">Opened from the header Add while the Pathway chip is Temporary residence: Pathway type and Pathway arrive filled in. Everything else is the pop-up the founder liked (P-127 AD-1…AD-7), unchanged. A Pathway or Program with nothing under it yet shows in the Tree with "Nothing under it yet. Use Add." <span class="tag dec">F P-127 (2)</span><span class="tag con">CONFLICT team "a pane that collects values is a right panel": founder chose the pop-up (P-127)</span></p>
+
+<h3 class="sub">1e · Other states</h3>
+<div class="grid2">
+<div><div class="frame compact crop" style="--h:560px" id="A-empty"></div><p class="cap"><b>Empty</b> (after Reset): teaches the first action; the button is the same Add.</p></div>
+<div><div class="frame compact crop" style="--h:560px" id="A-nomatch"></div><p class="cap"><b>No match</b>: says what was searched and offers the other tab's matches (C11.5: never mixed).</p></div>
+<div><div class="frame compact crop" style="--h:560px" id="A-loading"></div><p class="cap"><b>Loading</b>: skeleton rows; still under reduced motion.</p></div>
+<div><div class="frame compact crop" style="--h:560px" id="A-error"></div><p class="cap"><b>Error</b>: what happened, nothing changed, a real Retry.</p></div>
+</div>
+<div class="frame crop" style="--h:640px" id="A-ro"></div><p class="cap"><b>Read-only (approver)</b>: Add, Edit and Delete stay visible but off, each saying why; Edit becomes View.</p>
+<div class="frame" id="A-corp"></div><p class="cap"><b>Corporate and employers</b>: the Sample Corporate combination, numbered from 1 in its own tab.</p>
+<h3 class="sub">1f · Tree view at 1024</h3>
+<div class="frame" id="A-1024" style="width:1024px"></div>
+<p class="cap">At 1024 the Used by column moves into the Edit panel and Edit / Delete show as their icons with the word in a tooltip and for screen readers; nothing else changes.</p>
+</div>
+
+<!-- ================= OPTION B ================= -->
+<div class="sec"><h2>2. Option B · Tree table (one continuous table)</h2>
+<p>The classic tree table (Carbon, PatternFly): one white table, Pathway rows tinted with their stripe, every child indented 24 px with a thin guide line, numbered. Edit and Delete as icon buttons, always visible. The List view uses five separate columns, each sortable. Densest and cheapest, but a Program does not read as one block.</p>
+<div class="ann"><span class="tag cap">Capability</span><span class="tag need">Needed if picked</span><span class="tag dec">F team <code>program-tree-view.tsx</code> (guide lines)</span></div>
+<div class="frame" id="B-tree"></div><p class="cap">Tree view, Retail (content area shown; same header and filter bar as A).</p><div class="frame" id="B-list"></div><p class="cap">List view: five level columns. At 1024 the Category and Sub-category columns get about 150 px each and long names wrap to three lines.</p>
+</div>
+
+<!-- ================= OPTION C ================= -->
+<div class="sec"><h2>3. Option C · Program cards</h2>
+<p>Each Pathway is a heading band; its Programs are cards in a three-column grid; each card lists its categories and sub-categories, numbered, with small status chips and Edit / Delete icons. The most "block-like" and visual; uneven card heights and the narrow cards cut long names, and the columns for location and Used by do not fit, so those move into the panel. List view as A.</p>
+<div class="ann"><span class="tag cap">Capability</span><span class="tag need">Needed if picked</span></div>
+<div class="frame" id="C-tree"></div>
+</div>
+
+<div class="sec"><h2>4. Scores and recommendation</h2>
+<table class="t"><tr><th>Criterion (founder asks first, EXPERIENCE §0)</th><th>A Numbered outline</th><th>B Tree table</th><th>C Program cards</th></tr>
+<tr><td>Program as one block, numbered, indented (points 3)</td><td>5</td><td>3 (rows, no block)</td><td>5</td></tr>
+<tr><td>Simple and calm (point 1)</td><td>4</td><td>4</td><td>3 (many boxes)</td></tr>
+<tr><td>Edit / Delete findable on every level (point 6)</td><td>5 (words)</td><td>4 (icons)</td><td>3 (small icons in cards)</td></tr>
+<tr><td>Reads at 50 combinations (estimate: screens of 760 px at 1440)</td><td>4 (≈ 3.6)</td><td>5 (≈ 3.0)</td><td>3 (≈ 2.4 but ragged; columns lost)</td></tr>
+<tr><td>Fits 1024</td><td>5</td><td>5</td><td>2 (two columns, names cut)</td></tr>
+<tr><td>Build from today (059dace keeps bands and sections)</td><td>5 (restyle + list)</td><td>3 (new table)</td><td>3 (new cards)</td></tr>
+<tr class="rec"><td><b>Total / 30</b></td><td><b>28</b></td><td>24</td><td>19</td></tr></table>
+<p class="note"><b>Recommend A:</b> it is the one that does exactly what the founder described (a Program is one block with its combinations inside, numbered and indented), keeps Edit and Delete as words on every row, keeps the right-hand columns aligned at both widths, and reuses most of what is built (Pathway bands and Program sections become the blocks). B is denser but Programs stop reading as blocks; C looks most visual but breaks at 1024 and at 50 combinations.</p>
+</div>
+
+<div class="sec"><h2>5. Every element, labelled (option A)</h2>
+<table class="t"><tr><th>Element</th><th>Capability / Scaffolding</th><th>Needed / Not built</th><th>Decision</th></tr>
+<tr><td>Title, ⓘ, description, one Add (opens the pop-up)</td><td>Capability</td><td>Needed</td><td>P-127 (2), founder point 5</td></tr>
+<tr><td>Pathway type tabs with counts</td><td>Capability</td><td>Needed</td><td>P-104</td></tr>
+<tr><td>Tree / List switch (remembered per person)</td><td>Capability</td><td>Needed</td><td>founder point 2 (amends P-127)</td></tr>
+<tr><td>Find; Pathway chips; Program and Status dropdowns; active filter row; Show retired</td><td>Capability</td><td>Needed</td><td>founder point 7; P-116 (retired view, QA-48)</td></tr>
+<tr><td>Counts line, legend (marks, "numbers show the order, not IRCC codes")</td><td>Capability</td><td>Needed</td><td>EXPERIENCE §2.7</td></tr>
+<tr><td>Pathway block with stripe; Program block; numbered, indented rows; fixed right columns</td><td>Capability</td><td>Needed</td><td>founder point 3; VS-9</td></tr>
+<tr><td>Expand all / Collapse all; chevrons</td><td>Capability</td><td>Needed</td><td>as built</td></tr>
+<tr><td>Edit on every row → side panel (rename with checks, Move up / down, where used, history)</td><td>Capability</td><td>Needed</td><td>P-116, P-118</td></tr>
+<tr><td>Delete / Retire / Restore / Withdraw on every row; greyed Delete with the reason; in-page confirm; second person on To review</td><td>Capability</td><td>Needed</td><td>P-116, P-52</td></tr>
+<tr><td>Branch delete (whole unused Pathway or Program)</td><td>Capability</td><td>Needed if the Lead agrees</td><td>GAP</td></tr>
+<tr><td>List view: No., full trail, status, location, Used by, Edit / Delete; sort control</td><td>Capability</td><td>Needed</td><td>founder point 4; C11.3</td></tr>
+<tr><td>"Just added" tag after Add; "Deletion waiting" tag</td><td>Capability</td><td>Needed</td><td>P-127 AD-7; P-116</td></tr>
+<tr><td>Empty, no match, loading, error, read-only, conflict</td><td>Capability</td><td>Needed</td><td>EXPERIENCE §4</td></tr>
+<tr><td>Demo switch, Acting as, Simulated, sidebar note, Prototype badge</td><td>Scaffolding</td><td>Needed for the demo (not ported)</td><td>EXPERIENCE §1</td></tr>
+<tr><td>Drag to reorder; Move (re-parenting); "Ask AI to draft a branch"; Pathway type rename; numbers as stable codes</td><td>Capability</td><td>Not built</td><td>P-116, P-118</td></tr>
+</table></div>
+</div>
+
+<script>
+const IC={
+pencil:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+trash:'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>',
+archive:'<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>',
+restore:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+down:'<path d="m6 9 6 6 6-6"/>',right:'<path d="m9 6 6 6-6 6"/>',
+search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',plus:'<path d="M12 5v14M5 12h14"/>',
+tree:'<path d="M21 12h-8M21 6H8M21 18h-8M3 6v4c0 1.1.9 2 2 2h3M3 10v6c0 1.1.9 2 2 2h3"/>',
+list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',
+info:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',up:'<path d="M12 19V5M5 12l7-7 7 7"/>',dn:'<path d="M12 5v14M19 12l-7 7-7-7"/>',
+eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+lock:'<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+spin:'<circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/>',alert:'<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
+folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'};
+const ic=(n,c='')=>`<svg class="ic ${c}" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const ACC=['var(--acc1)','var(--acc2)','var(--acc3)','var(--acc4)'];
+const RETAIL=[
+ {n:'Temporary residence',acc:ACC[0],programs:[
+  {n:'Visitors',cats:[{n:'Visitor visa',st:'setup',loc:'Outside Canada',used:'Setup draft'},{n:'Super visa',st:'ns',loc:'Outside Canada',used:'Nothing yet'}]},
+  {n:'Study permits',cats:[{n:'Study permit',subs:[{n:'Outside Canada',st:'ns',loc:'Outside Canada',used:'Nothing yet'}]}]},
+  {n:'Work permits',cats:[{n:'Employer-specific work permit',subs:[{n:'With an LMIA – inside Canada',st:'ns',loc:'Inside Canada',used:'Nothing yet'}]}]}]},
+ {n:'Permanent residence',acc:ACC[1],programs:[
+  {n:'Provincial nominees',cats:[{n:'Express Entry stream',st:'ns',loc:'Inside or outside Canada',used:'Nothing yet'}]},
+  {n:'Family sponsorship',cats:[{n:'Spouse or common-law partner',st:'ns',loc:'Inside or outside Canada',used:'Nothing yet'}]},
+  {n:'Economic immigration',cats:[{n:'Start-up visa',st:'ns',loc:'Inside or outside Canada',used:'Nothing yet'}]}]}];
+const CORP=[{n:'Temporary residence',acc:ACC[0],programs:[{n:'Labour market impact assessment',cats:[{n:'High-wage position',st:'ns',loc:'Inside Canada',used:'Nothing yet'}]}]}];
+const TYPES={retail:{label:'Retail',data:RETAIL},corp:{label:'Corporate and employers',data:CORP}};
+const LVW=['','Pathway','Program','Category','Sub-category'];
+const TIPS={1:'Pathway: the outcome the application leads to, such as temporary or permanent residence.',2:'Program: a group of related applications, such as Work permits.',3:'Category: one kind of application; it is the combination when it has no sub-categories.',4:'Sub-category: a variant of the category that IRCC files as its own application; it is the combination.'};
+const mark=l=>`<span class="lm l${l}" role="img" aria-label="${LVW[l]}"></span>`;
+// ---------- model ----------
+function build(data){ // flat registry with numbers
+ const reg={},leaves=[];
+ data.forEach((pw,i)=>{const pn=`${i+1}`;reg[pn]={l:1,num:pn,n:pw.n,node:pw,trail:[pw.n]};
+  pw.programs.forEach((pg,j)=>{const gn=`${pn}.${j+1}`;reg[gn]={l:2,num:gn,n:pg.n,node:pg,trail:[pw.n,pg.n],parent:pn};
+   pg.cats.forEach((c,k)=>{const cn=`${gn}.${k+1}`;reg[cn]={l:3,num:cn,n:c.n,node:c,trail:[pw.n,pg.n,c.n],parent:gn,leaf:!c.subs};
+    if(!c.subs)leaves.push(cn);
+    (c.subs||[]).forEach((s,m)=>{const sn=`${cn}.${m+1}`;reg[sn]={l:4,num:sn,n:s.n,node:s,trail:[pw.n,pg.n,c.n,s.n],parent:cn,leaf:true};leaves.push(sn);});});});});
+ return {reg,leaves};
+}
+function kids(R,num){return Object.keys(R).filter(k=>R[k].parent===num)}
+function desc(R,num){let out=[];kids(R,num).forEach(k=>{out.push(k);out=out.concat(desc(R,k))});return out}
+function usedBelow(R,num){return [num].concat(desc(R,num)).filter(k=>R[k].leaf&&R[k].node.used&&R[k].node.used!=='Nothing yet')}
+function combos(R,num){return [num].concat(desc(R,num)).filter(k=>R[k].leaf).length}
+// ---------- actions ----------
+function stOf(S,R,num){return (S.st||{})[R[num].n]}
+function delBtn(S,R,num){
+ const r=R[num],st=stOf(S,R,num);
+ if(S.role==='approver')return `<button class="act dis" aria-disabled="true" data-tip="Approvers read only. A configuration author changes the structure.">${ic('trash','s')}<span class="lbl">Delete</span></button>`;
+ if(st==='waiting')return `<button class="act warn" data-act="withdraw" data-k="${num}" data-tip="Deletion waits for a second person on To review. Withdraw keeps ${esc(r.n)}.">${ic('restore','s')}<span class="lbl">Withdraw</span></button>`;
+ if(st==='retired')return `<button class="act" data-act="restore" data-k="${num}" data-tip="Retired: hidden from Add and new setups; cases and earlier releases keep it. Restore brings it back (a second person approves).">${ic('restore','s')}<span class="lbl">Restore</span></button>`;
+ if(st==='released')return `<button class="act" data-act="del" data-k="${num}" data-tip="Released, so it cannot be deleted. Retire hides it from Add and new setups; cases and earlier releases keep it.">${ic('archive','s')}<span class="lbl">Retire</span></button>`;
+ const u=usedBelow(R,num);
+ if(u.length){const why=r.leaf?`its setup draft uses it`:`${R[u[0]].n} under it has a setup draft`;
+  return `<button class="act dis ${S.tipOn===num?'showtip':''}" aria-disabled="true" data-tip="Can't delete: ${esc(why)}. A name in use can't be deleted; once it is released it can be retired instead.">${ic('trash','s')}<span class="lbl">Delete</span></button>`;}
+ const n=desc(R,num).length;
+ return `<button class="act" data-act="del" data-k="${num}" data-tip="${n?`Deletes ${esc(r.n)} and the ${n} names under it; nothing uses them.`:'Nothing uses it. A second person approves the deletion on To review.'}">${ic('trash','s')}<span class="lbl">Delete</span></button>`;
+}
+function editBtn(S,num,line){
+ if(S.role==='approver')return `<button class="act" data-act="${line?'line':'edit'}" data-k="${num}" data-tip="See the name, where it is used and its history. Approvers cannot change it.">${ic('eye','s')}<span class="lbl">View</span></button>`;
+ return `<button class="act" data-act="${line?'line':'edit'}" data-k="${num}" data-tip="${line?'Rename or delete any level of this line, set where cases may be opened, see where it is used.':'Rename, reorder, see where it is used and its history.'}">${ic('pencil','s')}<span class="lbl">Edit</span></button>`;
+}
+function statusChip(st,node){
+ if(st==='waiting')return `<span class="chip wait" data-tip="Sent to a second person on To review. It is deleted when approved." tabindex="0">Deletion waiting</span>`;
+ if(st==='retired')return `<span class="chip ret">${ic('archive','s')} Retired</span>`;
+ if(st==='just')return `<span class="chip just">Just added</span>`;
+ if(st==='released')return `<span class="chip live">✓ Live</span>`;
+ if(!node)return '';
+ return node.st==='setup'?`<span class="chip set">${ic('spin','s')} In setup</span>`:`<span class="chip ns">Not started</span>`;
+}
+function confirmPop(S,R,num){
+ const r=R[num],st=stOf(S,R,num);
+ if(st==='released')return `<div class="pop" role="dialog" aria-label="Retire"><h4>Retire "${esc(r.n)}"?</h4><p>It was released and is in use <span class="tag sample">Sample</span>:</p><ul><li>Release 2</li><li>3 open cases</li></ul><p>Retired, it is hidden from Add and from new setups. Open cases and earlier releases keep it. You can restore it.</p><p style="color:var(--muted)">A second person approves on To review.</p><div class="row"><button class="btn sm" data-act="cancel">Cancel</button><button class="btn sm pri" data-act="doretire" data-k="${num}">Retire</button></div></div>`;
+ const d=desc(R,num);
+ const list=d.length?`<p>These go with it; none is used:</p><ul>${d.map(k=>`<li>${k} ${esc(R[k].n)}</li>`).join('')}</ul>`:`<p>Nothing uses it: no setup, no cases, never released.</p>`;
+ return `<div class="pop" role="dialog" aria-label="Delete"><h4>Delete "${esc(r.n)}"${d.length?' and everything under it':''}?</h4>${list}<p style="color:var(--muted)">A second person approves the deletion on To review. Until then it shows as Deletion waiting and you can withdraw it.</p><div class="row"><button class="btn sm" data-act="cancel">Cancel</button><button class="btn sm danger" data-act="dodel" data-k="${num}">Delete</button></div></div>`;
+}
+// ---------- filtering ----------
+function visible(S,R,data){
+ const q=(S.q||'').trim().toLowerCase();const show=new Set();
+ Object.keys(R).forEach(k=>{const r=R[k];
+  if(S.pw!=='all'&&k.split('.')[0]!==S.pw)return;
+  if(S.prog!=='all'&&r.l>=2&&k.split('.').slice(0,2).join('.')!==S.prog)return;
+  if(S.prog!=='all'&&r.l===1&&!S.prog.startsWith(k+'.'))return;
+  const st=stOf(S,R,k);
+  if(st==='retired'&&!S.showRetired)return;
+  if(r.leaf){
+   if(S.status!=='all'){const s=st==='waiting'?'waiting':r.node.st;if(s!==S.status)return;}
+   if(q&&!r.trail.some(t=>t.toLowerCase().includes(q)))return;
+   let p=k;while(p){show.add(p);p=R[p].parent;}
+  } else if(!q&&S.status==='all'&&combos(R,k)===0){let p=k;while(p){show.add(p);p=R[p].parent;}}
+ });
+ return show;
+}
+const hl=(s,q)=>{if(!q)return esc(s);const i=s.toLowerCase().indexOf(q.toLowerCase());return i<0?esc(s):esc(s.slice(0,i))+'<mark>'+esc(s.slice(i,i+q.length))+'</mark>'+esc(s.slice(i+q.length))};
+// ---------- render A ----------
+function rowA(S,R,num){
+ const r=R[num],st=stOf(S,R,num),q=S.q||'';
+ const hasKids=kids(R,num).length>0;const col=(S.collapsed||{})[num];
+ const chev=(r.l<4&&hasKids&&r.l<3)||(r.l===3&&hasKids)?`<button class="chev" data-act="tog" data-k="${num}" aria-expanded="${!col}" aria-label="${col?'Expand':'Collapse'} ${esc(r.n)}">${ic(col?'right':'down','s')}</button>`:`<span class="chev none"></span>`;
+ const n=combos(R,num);
+ const meta=r.l<=2?`<span class="meta">${n} combination${n===1?'':'s'}</span>`:(r.l===3&&hasKids?`<span class="meta">${kids(R,num).length} sub-categor${kids(R,num).length===1?'y':'ies'}</span>`:'');
+ const leafCols=r.leaf?`<div>${statusChip(st,r.node)}</div><div class="loc">${esc(r.node.loc)}</div><div class="used">${esc(r.node.used)}</div>`:`<div>${st==='waiting'?statusChip(st):''}</div><div></div><div class="used"></div>`;
+ const pop=S.confirm===num?confirmPop(S,R,num):'';
+ const cls=`r l${r.l} g5 ${st==='retired'?'retired':''} ${st==='waiting'?'waiting':''} ${S.panel===num||S.panel==='line:'+num||S.confirm===num?'hl':''}`;
+ return `<div class="${cls}"><div class="nmc">${chev}<span class="num tl" data-tip="Position in this structure; it changes when you reorder. Not an IRCC code.">${num}</span><span class="tl" data-tip="${TIPS[r.l]}" style="display:inline-flex">${mark(r.l)}</span><span class="nm">${hl(r.n,q)}</span>${meta}</div>${leafCols}<div class="acts">${editBtn(S,num)}${delBtn(S,R,num)}</div>${pop}</div>`;
+}
+function treeA(S,R,data){
+ const vis=visible(S,R,data);if(!vis.size)return null;
+ let h=`<div class="colhead g5"><div>Name</div><div>Status</div><div>Cases may be opened from</div><div class="hd-used">Used by</div><div style="text-align:right"><span class="sr">Actions</span></div></div>`;
+ data.forEach((pw,i)=>{const pn=`${i+1}`;if(!vis.has(pn))return;
+  h+=`<section class="band" style="--acc:${pw.acc}">${rowA(S,R,pn)}`;
+  if(!(S.collapsed||{})[pn]){
+   const progs=kids(R,pn).filter(k=>vis.has(k));
+   if(!progs.length)h+=`<div class="emptyline" style="padding-left:40px">Nothing under it yet. Use Add to add a program.</div>`;
+   progs.forEach(gn=>{h+=`<div class="blk">${rowA(S,R,gn)}`;
+    if(!(S.collapsed||{})[gn]){const cs=kids(R,gn).filter(k=>vis.has(k));
+     if(!cs.length)h+=`<div class="emptyline">Nothing under it yet. Use Add to add a category.</div>`;
+     cs.forEach(cn=>{h+=rowA(S,R,cn);if(!(S.collapsed||{})[cn])kids(R,cn).filter(k=>vis.has(k)).forEach(sn=>{h+=rowA(S,R,sn)});});}
+    h+=`</div>`;});}
+  h+=`</section>`;});
+ return h;
+}
+function trailHtml(type,t,q){
+ const [pw,pg,c,s]=t;const sep=' <span class="sep">›</span> ';
+ return `<span class="trail"><span class="t0">${esc(type)}</span>${sep}<span class="t1">${hl(pw,q)}</span>${sep}<span class="t2">${hl(pg,q)}</span>${sep}<span class="id"><span class="t3">${hl(c,q)}</span>${sep}${s?`<span class="t4">${hl(s,q)}</span>`:'<span class="none">No sub-category</span>'}</span></span>`;
+}
+function listA(S,R,data){
+ const vis=visible(S,R,data);let leaves=Object.keys(R).filter(k=>R[k].leaf&&vis.has(k));if(!leaves.length)return null;
+ if(S.sort==='az')leaves.sort((a,b)=>R[a].trail.join('|').localeCompare(R[b].trail.join('|')));
+ let h=`<div class="ltable"><div class="lh gl"><div>No.</div><div class="sorthd">Combination: Pathway type › Pathway › Program › Category › Sub-category</div><div>Status</div><div>Cases may be opened from</div><div class="hd-used">Used by</div><div></div></div>`;
+ leaves.forEach(k=>{const r=R[k],st=stOf(S,R,k);
+  h+=`<div class="lr gl ${st==='retired'?'retired':''} ${S.panel==='line:'+k||S.confirm===k?'hl':''}"><div class="num">${k}</div><div>${trailHtml(TYPES[S.tab].label,r.trail,S.q)}</div><div>${statusChip(st,r.node)}</div><div class="loc">${esc(r.node.loc)}</div><div class="used">${esc(r.node.used)}</div><div class="acts">${editBtn(S,k,true)}${delBtn(S,R,k)}</div>${S.confirm===k?confirmPop(S,R,k):''}</div>`;});
+ return h+`</div>`;
+}
+function filterBar(S,R,data){
+ const pws=data.map((pw,i)=>({k:`${i+1}`,n:pw.n,acc:pw.acc,c:combos(R,`${i+1}`)}));
+ const all=Object.keys(R).filter(k=>R[k].leaf).length;
+ const progs=Object.keys(R).filter(k=>R[k].l===2&&(S.pw==='all'||k.split('.')[0]===S.pw));
+ const ro=S.role==='approver';
+ let h=`<div class="fbar"><div class="seg type" role="tablist" aria-label="Pathway type">${Object.entries(TYPES).map(([k,v])=>`<button role="tab" class="${S.tab===k?'on':''}" data-act="tab" data-k="${k}">${v.label} <em>${build(v.data).leaves.length}</em></button>`).join('')}</div>
+ <div class="seg tl" role="group" aria-label="View" data-tip="Tree shows each Pathway and Program as a block; List shows one line per combination with its full trail. Remembered for you."><button class="${S.view==='tree'?'on':''}" data-act="view" data-k="tree" aria-pressed="${S.view==='tree'}">${ic('tree')} Tree</button><button class="${S.view==='list'?'on':''}" data-act="view" data-k="list" aria-pressed="${S.view==='list'}">${ic('list')} List</button></div>
+ <label class="search">${ic('search')}<input aria-label="Find a name" placeholder="Find a name in ${TYPES[S.tab].label}" value="${esc(S.q||'')}" data-inp="q">${S.q?`<button class="chev" data-act="clearq" aria-label="Clear">${ic('x','s')}</button>`:''}</label>
+ ${S.view==='tree'?`<button class="btn sm" data-act="expand">Expand all</button><button class="btn sm" data-act="collapse">Collapse all</button>`:`<select class="sel" data-sel="sort" aria-label="Sort" data-tip="Each line is sorted by Pathway type, then Pathway, Program, Category and Sub-category. Page order is the order set here, the one Immigration programs uses."><option value="page" ${S.sort!=='az'?'selected':''}>Sort: page order</option><option value="az" ${S.sort==='az'?'selected':''}>Sort: A to Z</option></select>`}
+ </div>
+ <div class="fbar" style="margin-top:10px"><div class="chips" role="group" aria-label="Pathway"><span style="font-size:12px;color:var(--muted);margin-right:2px">Pathway</span><button class="fchip ${S.pw==='all'?'on':''}" data-act="pw" data-k="all">All <em>${all}</em></button>${pws.map(p=>`<button class="fchip ${S.pw===p.k?'on':''}" data-act="pw" data-k="${p.k}" style="--a:${p.acc}"><span class="acc"></span>${esc(p.n)} <em>${p.c}</em></button>`).join('')}</div>
+ <select class="sel" data-sel="prog" aria-label="Program"><option value="all">Program: All</option>${progs.map(k=>`<option value="${k}" ${S.prog===k?'selected':''}>${esc(R[k].n)}</option>`).join('')}</select>
+ <select class="sel" data-sel="status" aria-label="Status"><option value="all">Status: All</option><option value="setup" ${S.status==='setup'?'selected':''}>In setup</option><option value="ns" ${S.status==='ns'?'selected':''}>Not started</option><option value="waiting" ${S.status==='waiting'?'selected':''}>Deletion waiting</option></select>
+ <span class="sp"></span><label class="chk" data-tip="Retired names are hidden from Add and from new setups. Show them to restore one."><input type="checkbox" data-act="ret" ${S.showRetired?'checked':''}> Show retired (${Object.values(S.st||{}).filter(v=>v==='retired').length})</label></div>`;
+ const active=[];if(S.pw!=='all')active.push(['pw',R[S.pw].n]);if(S.prog!=='all')active.push(['prog',R[S.prog].n]);if(S.status!=='all')active.push(['status',{setup:'In setup',ns:'Not started',waiting:'Deletion waiting'}[S.status]]);if(S.q)active.push(['q',`"${S.q}"`]);
+ const shown=Object.keys(R).filter(k=>R[k].leaf&&visible(S,R,data).has(k)).length;
+ const c=(l)=>Object.keys(R).filter(k=>R[k].l===l&&visible(S,R,data).has(k)).length;
+ h+=`<div class="counts">${active.length?`Showing <b>${shown} of ${all}</b> combinations · `:''}${c(1)} pathway${c(1)===1?'':'s'} · ${c(2)} program${c(2)===1?'':'s'} · ${c(3)} categor${c(3)===1?'y':'ies'} · ${c(4)} sub-categor${c(4)===1?'y':'ies'}${active.length?'':` · <b>${shown}</b> combination${shown===1?'':'s'}`}${active.length?` &nbsp; ${active.map(a=>`<span class="fchip on" style="height:24px;font-size:12px">${esc(a[1])}<button class="chev" data-act="unf" data-k="${a[0]}" aria-label="Remove filter">${ic('x','s')}</button></span>`).join(' ')} <button class="btn link" data-act="clearall">Clear all</button>`:''}</div>
+ <div class="legend"><span>${mark(1)}Pathway</span><span>${mark(2)}Program</span><span>${mark(3)}Category</span><span>${mark(4)}Sub-category</span><span>· Numbers show the order on this page, not IRCC codes.</span></div>`;
+ return h;
+}
+function appbar(){return `<div class="appbar"><span class="logo"><i></i>ExpatReady</span><span class="prod"><b>Product Studio</b>Pathway Configurator</span><span class="demo">Prototype · demo workspace</span><span class="sp"></span><span class="btn sm">Demo ▾</span><span style="border:1px solid var(--border);border-radius:8px;padding:5px 10px">Acting as <b>${'Configuration author · content publisher'}</b> <span class="demo" style="background:#f1f1f1;color:#595959">Simulated</span></span></div>`}
+function side(on){return `<nav class="side"><div class="g">Configure</div><a class="${on==='s'?'on':''}">Program structure</a><a class="${on==='p'?'on':''}">Immigration programs</a><a>To review</a><div class="g">Shared library</div><a>Fields</a><a>Sections</a><a>Document types</a><a>Forms</a><a>Checks</a><div class="g">History</div><a>AI work</a><a>Releases</a><a>Activity</a></nav>`}
+function header(S){
+ const ro=S.role==='approver';
+ return `<div class="ph"><div><h1>Program structure <span class="info tl" tabindex="0" data-tip="Every Pathway, Program, Category and Sub-category is created here, and only here. Each combination it defines appears on Immigration programs, where its setup starts.">${ic('info')}</span></h1><div class="s">Where every combination sits: Pathway › Program › Category › Sub-category. The order here is the order on Immigration programs.</div></div><span class="sp"></span>
+ <button class="btn pri" ${ro?'aria-disabled="true" data-tip="Approvers read only. A configuration author adds to the structure."':'data-act="add" data-tip="Add a Pathway, Program, Category or Sub-category, or a whole line at once. Pick what exists or type a new name."'}>${ic('plus')} Add</button></div>`;
+}
+function panel(S,R){
+ if(!S.panel)return '';
+ const line=S.panel.startsWith('line:');const num=line?S.panel.slice(5):S.panel;const r=R[num];const ro=S.role==='approver';
+ const trailTxt=[TYPES[S.tab].label].concat(r.trail).join(' › ');
+ const conflict=S.conflict?`<div class="alert"><b>Someone else changed this name</b> 2 minutes ago, to "Visitor visas". Reload to see it; what you typed is kept. <div style="margin-top:8px"><button class="btn sm">Reload</button></div></div>`:'';
+ let body='';
+ if(!line){
+  const sibs=kids(R,r.parent||'')||[];const allSib=r.parent?kids(R,r.parent):Object.keys(R).filter(k=>R[k].l===1);const idx=allSib.indexOf(num);
+  const where=r.leaf?`<p style="margin:0">${esc(r.node.used)==='Setup draft'?'Its setup draft (In setup). No cases, never released.':'Used nowhere: no setup, no cases, never released.'}</p>`:`<p style="margin:0">${combos(R,num)} combination${combos(R,num)===1?'':'s'}: ${[num].concat(desc(R,num)).filter(k=>R[k].leaf).map(k=>`${esc(R[k].n)} (${esc(R[k].node.used==='Nothing yet'?'nothing yet':R[k].node.used.toLowerCase())})`).join(', ')}.</p>`;
+  body=`<div style="font-size:12px;color:var(--muted)">${esc(trailTxt)}</div>${conflict}
+  <div class="fld"><label>Name <span>Required</span></label><input class="inp focus" value="${esc(r.n)}" ${ro?'disabled':''}><div class="hint ok">✓ No exact match under ${esc(r.parent?R[r.parent].n:TYPES[S.tab].label)} · no close spelling</div><div class="hint">Not meaning-checked: the AI meaning check is off; only the spelling check ran. A new name shows in setup at once; firms see it after the next release. Open cases keep their names.</div></div>
+  ${r.leaf?`<div class="fld"><label>Cases may be opened from <span>Sample until the immigration expert confirms</span></label><div class="seg"><button class="${r.node.loc==='Inside Canada'?'on':''}">Inside Canada</button><button class="${r.node.loc==='Outside Canada'?'on':''}">Outside Canada</button><button class="${r.node.loc.startsWith('Inside or')?'on':''}">Both</button></div></div>`:''}
+  <div class="fld"><label>Order <span>the order here is the order on Immigration programs</span></label><div style="display:flex;gap:8px"><button class="btn sm" ${idx<=0?'aria-disabled="true" data-tip="Already first."':''}>${ic('up','s')} Move up</button><button class="btn sm" ${idx>=allSib.length-1?'aria-disabled="true" data-tip="Already last."':''}>${ic('dn','s')} Move down</button></div></div>
+  <div class="box"><h5>Where used</h5>${where}</div>
+  <div class="box"><h5>History</h5><div style="font-size:12px;color:var(--muted)">today 09:12 · Configuration author added ${LVW[r.l].toLowerCase()} "${esc(r.n)}" to Program structure <span class="tag sample">Sample</span></div></div>`;
+ } else {
+  const lv=[];let p=num;while(p){lv.unshift(p);p=R[p].parent;}
+  const rows=lv.map(k=>{const x=R[k];const ren=S.renaming===k;
+   return `<div class="lvrow"><div class="lw">${mark(x.l)}${LVW[x.l]} · ${k}</div><div>${ren?`<input class="inp focus" value="Visitor Visa" style="border-color:#b91c1c;box-shadow:0 0 0 3px #b91c1c22"><div class="hint" style="color:#991b1b">"Visitor visa" already exists under Visitors (1.1.1). Two names under one parent cannot be the same. <button class="btn link">Show it</button></div>`:`<b style="font-weight:${x.l<=2?600:500}">${esc(x.n)}</b>`}</div><div class="acts">${ren?`<button class="btn sm pri" aria-disabled="true">Save</button>`:`<button class="act" ${ro?'aria-disabled="true"':''}>${ic('pencil','s')}<span class="lbl">Rename</span></button>`}${ren?'':delBtn(S,R,k)}</div></div>`}).join('');
+  const leaf=R[num];
+  body=`<div style="font-size:13px">${trailHtml(TYPES[S.tab].label,leaf.trail,'')}</div>
+  <div class="box" style="padding:4px 12px"><div class="lvrow"><div class="lw">Pathway type</div><div><b style="font-weight:500">${TYPES[S.tab].label}</b></div><div class="acts"><span class="act dis" data-tip="Set by the tab; Retail and Corporate and employers are fixed.">${ic('lock','s')}<span class="lbl">Fixed</span></span></div></div>${rows}${leaf.l===3?`<div class="lvrow"><div class="lw">${mark(4)}Sub-category</div><div style="color:var(--muted)">None: the category is the combination</div><div class="acts"><span class="act dis" data-tip="Add a sub-category with Add, only when IRCC files it as its own application.">${ic('plus','s')}<span class="lbl">Use Add</span></span></div></div>`:''}</div>
+  <div class="fld"><label>Cases may be opened from <span>Sample</span></label><div class="seg"><button class="${leaf.node.loc==='Inside Canada'?'on':''}">Inside Canada</button><button class="${leaf.node.loc==='Outside Canada'?'on':''}">Outside Canada</button><button class="${leaf.node.loc.startsWith('Inside or')?'on':''}">Both</button></div></div>
+  <div class="box"><h5>Where used</h5><p style="margin:0">${leaf.node.used==='Setup draft'?'Its setup draft (In setup).':'Used nowhere: no setup, no cases, never released.'}</p></div>`;
+ }
+ return `<aside class="panel" aria-label="Edit"><header><div><div class="k">${line?'Edit this line':(ro?'View ':'Edit ')+LVW[r.l].toLowerCase()}</div><h3>${line?'':`<span class="num" style="font-size:14px;color:var(--lv${Math.min(r.l,3)});margin-right:4px">${num}</span>${mark(r.l)}`}${esc(line?'Line '+num+' · '+r.n:r.n)}</h3></div><span class="sp"></span><button class="chev" data-act="close" aria-label="Close">${ic('x')}</button></header><div class="pb">${body}</div><footer>${line?'':delBtn(S,R,num)}<span class="sp"></span><button class="btn" data-act="close">${ro?'Close':'Cancel'}</button>${ro?'':`<button class="btn pri">Save</button>`}</footer></aside>`;
+}
+function addModal(S,R){
+ if(!S.modal)return '';
+ const pw=S.pw!=='all'?R[S.pw].n:'';
+ return `<div class="scrim"><div class="modal" role="dialog" aria-label="Add to Program structure"><div class="mh"><h3>Add to Program structure<span class="sp"></span><button class="chev" data-act="closeadd" aria-label="Close">${ic('x')}</button></h3><p>Pick what exists or type a new name; each level is checked as you type. Only the new names are written, and no setup starts.</p></div>
+ <div class="mb"><div class="fld"><label>Pathway type</label><div class="seg type"><button class="${S.tab==='retail'?'on':''}">Retail</button><button class="${S.tab==='corp'?'on':''}">Corporate and employers</button></div></div>
+ <div class="fld"><label>${mark(1)}Pathway</label><input class="inp" value="${esc(pw)}" placeholder="Pick or type a pathway"><div class="hint">${pw?'Uses the existing pathway (from your filter).':'Pick a pathway first.'}</div></div>
+ <div class="fld"><label>${mark(2)}Program <span class="newt">New</span></label><input class="inp focus" value="Humanitarian"><div class="hint">New program · no exact match · no close spelling</div></div>
+ <div class="fld"><label>${mark(3)}Category <span class="newt">New</span></label><input class="inp" value="Temporary resident permit"><div class="hint">New category · no exact match · no close spelling</div></div>
+ <div class="fld"><label>${mark(4)}Sub-category <span>(new, under a new name)</span></label><label class="chk" style="font-weight:400"><input type="checkbox" checked> None: the category is the combination</label><div class="hint" style="margin-left:22px">add one only when IRCC files it as its own application</div></div>
+ <div class="fld" style="display:flex;align-items:center;gap:10px"><label style="margin:0">Cases may be opened from</label><div class="seg"><button>Inside</button><button>Outside</button><button class="on">Both</button></div></div><div class="hint" style="margin-top:-6px">Sample until the immigration expert confirms.</div>
+ <div class="preview">You are adding ${TYPES[S.tab].label} › <span style="color:var(--lv1)">${esc(pw||'…')}</span> › <span style="color:var(--lv2)">Humanitarian</span><span class="newt">New</span> › <b style="color:var(--lv3)">Temporary resident permit</b><span class="newt">New</span> › No sub-category<div style="color:var(--muted);margin-top:4px">2 new names · 1 combination, listed on Immigration programs as Not started; no setup starts.</div></div>
+ <div class="hint"><span class="tag sample">Sample</span> names typed for the board; not an immigration value.</div></div>
+ <div class="mf"><button class="btn" style="border:0" data-act="closeadd">Cancel</button><button class="btn">Add and add another</button><button class="btn pri" data-act="closeadd">Add 2 names</button></div></div></div>`;
+}
+function appA(S,o={}){
+ const T=TYPES[S.tab];const data=o.data||T.data;const {reg:R}=build(data);
+ let body;
+ if(o.variant==='empty')body=`<div class="empty">${ic('folder')}<h3>Nothing in ${T.label} yet</h3><p>Program structure holds every Pathway, Program, Category and Sub-category. Add builds a whole line at once: pick or type each level; only the new names are saved and no setup starts. Each combination then appears on Immigration programs.</p><button class="btn pri">${ic('plus')} Add</button></div>`;
+ else if(o.variant==='loading')body=`<div style="margin-top:14px">${[1,2,3,4,5,6].map(i=>`<div style="display:grid;grid-template-columns:${i%3===1?'0':i%3===2?'24px':'48px'} 1fr 110px 140px;gap:16px;padding:13px 12px;background:#fff;border-bottom:1px solid var(--line)"><span></span><div class="sk" style="width:${50+i*6}%"></div><div class="sk"></div><div class="sk"></div></div>`).join('')}<span class="sr" role="status">Loading Program structure</span></div>`;
+ else if(o.variant==='error')body=`<div class="empty" style="border-style:solid;border-color:#f3b4b4">${ic('alert')}<h3>Program structure could not load</h3><p>The server did not answer. Nothing was changed. Try again; if it keeps failing, Reset the demo.</p><button class="btn">Retry</button></div>`;
+ else{
+  const inner=S.view==='list'?listA(S,R,data):treeA(S,R,data);
+  body=inner||`<div class="empty"><h3>No names in ${T.label} match "${esc(S.q)}"</h3><p>Corporate and employers has 1 match: Labour market impact assessment.</p><button class="btn" data-act="tab" data-k="corp">Show it</button> <button class="btn link" data-act="clearall">Clear the search</button></div>`;
+ }
+ const top=o.variant&&o.variant!=='none'?(o.variant==='empty'?filterBarEmpty(S):filterBar(S,R,data)):filterBar(S,R,data);
+ return `<div class="ftitle">${o.title||''}</div>${appbar()}<div class="shell">${side('s')}<div class="main">${header(S)}${top}${body}</div></div>${panel(S,R)}${addModal(S,R)}`;
+}
+function filterBarEmpty(S){return `<div class="fbar"><div class="seg type"><button class="on">Retail <em>0</em></button><button>Corporate and employers <em>0</em></button></div><div class="seg"><button class="on">${ic('tree')} Tree</button><button>${ic('list')} List</button></div></div>`}
+// ---------- mount ----------
+const DEF=()=>({tab:'retail',view:'tree',pw:'all',prog:'all',status:'all',q:'',st:{},showRetired:false,collapsed:{},panel:null,confirm:null,modal:false,sort:'page',role:'author'});
+function mount(id,over,o,renderer=appA){
+ const el=document.getElementById(id);if(!el)return;const S=Object.assign(DEF(),over);if(o&&o.w===1024)el.classList.add('w1024');
+ const draw=()=>{el.innerHTML=renderer(S,o||{});};
+ el.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.getAttribute('aria-disabled')==='true')return;const a=b.dataset.act,k=b.dataset.k;const R=build((o&&o.data)||TYPES[S.tab].data).reg;
+  if(a==='tab'){S.tab=k;S.pw='all';S.prog='all';S.q='';S.panel=null;S.confirm=null;S.st={};}
+  else if(a==='view'){S.view=k;S.panel=null;S.confirm=null;}
+  else if(a==='pw'){S.pw=k;S.prog='all';}
+  else if(a==='tog'){S.collapsed[k]=!S.collapsed[k];}
+  else if(a==='expand'){S.collapsed={};}
+  else if(a==='collapse'){Object.keys(R).filter(x=>R[x].l===2).forEach(x=>S.collapsed[x]=true);}
+  else if(a==='edit'){S.panel=k;S.confirm=null;}
+  else if(a==='line'){S.panel='line:'+k;S.confirm=null;}
+  else if(a==='close'){S.panel=null;}
+  else if(a==='del'){S.confirm=S.confirm===k?null:k;}
+  else if(a==='cancel'){S.confirm=null;}
+  else if(a==='dodel'){S.st[R[k].n]='waiting';S.confirm=null;}
+  else if(a==='doretire'){S.st[R[k].n]='retired';S.confirm=null;S.showRetired=true;}
+  else if(a==='withdraw'){delete S.st[R[k].n];}
+  else if(a==='restore'){S.st[R[k].n]='released';}
+  else if(a==='add'){S.modal=true;}
+  else if(a==='closeadd'){S.modal=false;}
+  else if(a==='clearq'){S.q='';}
+  else if(a==='clearall'){S.q='';S.pw='all';S.prog='all';S.status='all';}
+  else if(a==='unf'){if(k==='q')S.q='';else S[k]='all';if(k==='pw')S.prog='all';}
+  else if(a==='ret'){S.showRetired=b.checked;}
+  else return;
+  draw();});
+ el.addEventListener('change',e=>{const s=e.target.dataset.sel;if(s){S[s]=e.target.value;draw();}});
+ el.addEventListener('input',e=>{if(e.target.dataset.inp==='q'){S.q=e.target.value;const pos=e.target.selectionStart;draw();const i=el.querySelector('[data-inp=q]');if(i){i.focus();i.setSelectionRange(pos,pos);}}});
+ draw();
+}
+const T=(s,tags)=>`<b>${s}</b> ${tags||''}`;
+mount('A-tree',{}, {title:T('A · Tree view · Retail · 1440','<span class="tag cap">Capability</span><span class="tag need">Needed</span>')});
+mount('A-list',{view:'list'},{title:T('A · List view · Retail · 1440','<span class="tag cap">Capability</span><span class="tag need">Needed</span>')});
+mount('A-edit',{panel:'1.1',pw:'1'},{title:T('Edit a Program (side panel)')});
+mount('A-del',{pw:'1',confirm:'1.1.2'},{title:T('Delete an unused line: in-page confirm')});
+mount('A-refused',{pw:'1',tipOn:'1.1.1'},{title:T('Delete that cannot run: greyed, with the reason')});
+mount('A-retire',{pw:'2',st:{'Start-up visa':'retired','Express Entry stream':'released'},confirm:'2.1.1',showRetired:true},{title:T('Retire a released line','<span class="tag sample">Sample state</span>')});
+mount('A-line',{view:'list',panel:'line:1.1.2',renaming:'1.1.2'},{title:T('List view: Edit this line')});
+mount('A-conflict',{pw:'1',panel:'1.1.1',conflict:true},{title:T('Conflict while editing')});
+mount('A-add',{pw:'1',modal:true},{title:T('Add (pop-up as built, prefilled from the filter)','<span class="tag dec">F P-127</span>')});
+mount('A-empty',{},{variant:'empty',data:[],title:T('Empty (after Reset)')});
+mount('A-nomatch',{q:'labour'},{title:T('Find: no match in this tab')});
+mount('A-loading',{},{variant:'loading',title:T('Loading')});
+mount('A-error',{},{variant:'error',title:T('Error')});
+mount('A-ro',{role:'approver',pw:'2'},{title:T('Read-only: approver')});
+mount('A-corp',{tab:'corp'},{title:T('Corporate and employers tab','<span class="tag sample">Sample</span>')});
+mount('A-1024',{},{w:1024,title:T('A · Tree view · 1024')});
+// Retired example: after mounting A-retire, mark Super visa retired too (Sample)
+
+// ---------- option B ----------
+function appB(S,o){
+ const data=TYPES[S.tab].data,{reg:R}=build(data);
+ if(S.view==='list'){
+  const leaves=Object.keys(R).filter(k=>R[k].leaf);
+  const hd=['Pathway type','Pathway','Program','Category','Sub-category','Status',''];
+  return `<div class="ftitle"><b>B · List view: five columns</b> <span class="tag cap">Capability</span></div><div class="main" style="background:var(--surface)"><div class="tt"><div class="r gb5" style="font-size:12px;color:var(--muted);min-height:34px;background:#fafbfc;border-radius:10px 10px 0 0">${hd.map((h,i)=>`<div>${h}${i<5?' <span style="color:#9aa4ae">↕</span>':''}</div>`).join('')}</div>${leaves.map(k=>{const t=R[k].trail;return `<div class="r gb5" style="font-size:13px"><div style="color:var(--lv0)">Retail</div><div style="color:var(--lv1)">${esc(t[0])}</div><div style="color:var(--lv2)">${esc(t[1])}</div><div style="color:var(--lv3);font-weight:600">${esc(t[2])}</div><div style="color:${t[3]?'var(--lv3)':'var(--muted)'}">${esc(t[3]||'No sub-category')}</div><div>${statusChip(null,R[k].node)}</div><div class="acts"><button class="ib" data-tip="Edit">${ic('pencil','s')}</button><button class="ib ${R[k].node.used!=='Nothing yet'?'dis':''}" data-tip="${R[k].node.used!=='Nothing yet'?"Can't delete: its setup draft uses it.":'Delete'}">${ic('trash','s')}</button></div></div>`}).join('')}</div></div>`;
+ }
+ let h='';
+ const row=(k)=>{const r=R[k];const ind='<span class="ind"></span>'.repeat(r.l-1);const u=usedBelow(R,k).length;
+  return `<div class="r gb l${r.l}" style="${r.l===1?`--acc:${data[+k.split('.')[0]-1].acc}`:''}"><div class="nmc" style="align-self:stretch">${ind}${(r.l<3||kids(R,k).length)?`<span class="chev">${ic('down','s')}</span>`:'<span class="chev none"></span>'}<span class="num">${k}</span>${mark(r.l)}<span class="nm" style="${r.l===1?'font-size:15px':''}">${esc(r.n)}</span>${r.l<=2?`<span class="meta">${combos(R,k)}</span>`:''}</div><div>${r.leaf?statusChip(null,r.node):''}</div><div class="loc">${r.leaf?esc(r.node.loc):''}</div><div class="used">${r.leaf?esc(r.node.used):''}</div><div class="acts"><button class="ib" data-tip="Edit ${esc(r.n)}">${ic('pencil','s')}</button><button class="ib ${u?'dis':''}" data-tip="${u?"Can't delete: something under it has a setup draft.":'Delete '+esc(r.n)}">${ic('trash','s')}</button></div></div>`};
+ Object.keys(R).sort((a,b)=>{const x=a.split('.').map(Number),y=b.split('.').map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){if(x[i]===undefined)return -1;if(y[i]===undefined)return 1;if(x[i]!==y[i])return x[i]-y[i];}return 0}).forEach(k=>h+=row(k));
+ return `<div class="ftitle"><b>B · Tree view: tree table</b> <span class="tag cap">Capability</span></div><div class="main" style="background:var(--surface)"><div class="tt"><div class="r gb" style="font-size:12px;color:var(--muted);min-height:34px;background:#fafbfc;border-radius:10px 10px 0 0"><div>Name</div><div>Status</div><div>Cases may be opened from</div><div>Used by</div><div></div></div>${h}</div></div>`;
+}
+mount('B-tree',{},{},appB);mount('B-list',{view:'list'},{},appB);
+// ---------- option C ----------
+function appC(S,o){
+ const data=TYPES[S.tab].data,{reg:R}=build(data);let h='';
+ data.forEach((pw,i)=>{const pn=`${i+1}`;
+  h+=`<div class="cband" style="--acc:${pw.acc}"><span class="num" style="color:var(--lv1);font-size:12px;font-weight:600">${pn}</span>${mark(1)}<b style="font-size:16px">${esc(pw.n)}</b><span class="meta">${combos(R,pn)} combinations</span><span class="sp"></span><button class="act">${ic('pencil','s')}<span class="lbl">Edit</span></button><button class="act ${usedBelow(R,pn).length?'dis':''}" data-tip="${usedBelow(R,pn).length?"Can't delete: Visitor visa under it has a setup draft.":'Delete '+esc(pw.n)+' and everything under it; nothing is used.'}">${ic('trash','s')}<span class="lbl">Delete</span></button></div><div class="cgrid">`;
+  kids(R,pn).forEach(gn=>{h+=`<div class="pcard"><div class="ph2"><span class="num" style="color:var(--lv2);font-size:12px;font-weight:600;margin-right:4px">${gn}</span>${mark(2)}<b>${esc(R[gn].n)}</b><span class="meta">${combos(R,gn)}</span><span class="sp"></span><button class="ib" data-tip="Edit">${ic('pencil','s')}</button><button class="ib ${usedBelow(R,gn).length?'dis':''}" data-tip="Delete">${ic('trash','s')}</button></div>`;
+   kids(R,gn).forEach(cn=>{const c=R[cn];h+=`<div class="cl"><span class="num" style="color:var(--lv3);font-size:12px;font-weight:600;min-width:38px">${cn}</span>${mark(3)}<span style="font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.n)}</span>${c.leaf?statusChip(null,c.node):''}<button class="ib">${ic('pencil','s')}</button><button class="ib ${usedBelow(R,cn).length?'dis':''}">${ic('trash','s')}</button></div>`;
+    kids(R,cn).forEach(sn=>{const s=R[sn];h+=`<div class="cl sub"><span class="num" style="color:var(--lv3);font-size:12px;min-width:46px">${sn}</span>${mark(4)}<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.n)}</span>${statusChip(null,s.node)}<button class="ib">${ic('pencil','s')}</button><button class="ib">${ic('trash','s')}</button></div>`});});
+   h+=`</div>`;});h+=`</div>`;});
+ return `<div class="ftitle"><b>C · Tree view: Program cards · Retail · 1440 content area</b> <span class="tag cap">Capability</span> <span class="tag con">long names cut: CONFLICT VS-3 (trail never cut)</span></div><div class="main" style="background:var(--surface)">${h}</div>`;
+}
+mount('C-tree',{},{},appC);
+</script>
+<style>.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style>
+</body></html>
