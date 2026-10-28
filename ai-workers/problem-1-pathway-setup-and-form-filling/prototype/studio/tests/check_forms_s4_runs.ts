@@ -115,7 +115,7 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   const twice = await Promise.all(["PDF", "ONLINE"].map((c) => call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: c, reason: `Both at once ${c}` })));
   ok("break minor: two people proposing at the same moment leave one change waiting; the other is refused (409)", twice.filter((x) => x.status < 300).length === 1 && twice.filter((x) => x.status === 409).length === 1 && sql(`select count(*) from library_change where kind='form_accepts' and key='IMM 1295' and status='WAITING'`) === "1", twice.map((x) => x.status));
   sql(`delete from library_change where kind='form_accepts' and key='IMM 1295' and status='WAITING'`);
-  const approvedLine = sql(`select summary from audit_event where action='approved' and entity_key='IMM 1295' order by at desc limit 1`);
+  const approvedLine = sql(`select string_agg(summary, ' | ' order by at) from audit_event where action='approved' and entity_key='IMM 1295'`); // two lines in one instant: read them all
   ok("break R5-2: Activity says what was approved in words (set what IRCC accepts for), never a raw code", /\(set what IRCC accepts for\)/.test(approvedLine) && !/set_accepts/.test(approvedLine), approvedLine);
   ok("C11.18: the change is closed (applied at approval) and its history says who", sql(`select status from library_change where id='${acc}'`) === "RELEASED" && /approved what IRCC accepts for IMM 1295/.test((await call("GET", `/library/forms/${encodeURIComponent("IMM 1295")}/uses`)).body.history.map((h: any) => h.what).join(" | ")));
   const vv = sql(`select id from combination where label = 'Visitor visa' limit 1`);
