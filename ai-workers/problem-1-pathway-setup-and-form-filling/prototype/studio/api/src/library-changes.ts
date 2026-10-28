@@ -8,15 +8,17 @@ import type { LibraryChange, Prisma } from "@prisma/client";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { ACTORS, type Actor, type Db } from "./core.ts";
 import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycle.ts";
+import { ACTION_LABEL } from "../../contracts/lifecycle.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
 export const KIND_NOUN: Record<string, string> = { library_form: "library form", form_accepts: "what IRCC accepts", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
-const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: "Remove", RETIRE: "Retire", RESTORE: "Restore", EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for" };
-// P-123: a library form is Deleted (out of the library); everything else is Removed (QA-46), as a form line is Removed off a combination.
-export const actionWord = (action: string, kind: string) => (action === "DELETE" && kind === "library_form" ? "Delete" : ACTION_WORD[action] ?? action);
-/** The same word inside a sentence ("approved remove …", "set what IRCC accepts for …"): only its first letter lowered. */
-export const actionVerb = (action: string, kind: string) => { const w = actionWord(action, kind); return w[0].toLowerCase() + w.slice(1); };
+// The lifecycle words come from the one word set (contracts/lifecycle.ts, P-116 amended 28 Oct): Delete, Retire, Restore.
+// "Remove" is kept for a form line taken off a combination (it stays in the library, P-123).
+const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for" };
+export const actionWord = (action: string, _kind?: string) => ACTION_WORD[action] ?? action;
+/** The same word inside a sentence ("approved delete …", "set what IRCC accepts for …"): only its first letter lowered. */
+export const actionVerb = (action: string, kind?: string) => { const w = actionWord(action, kind); return w[0].toLowerCase() + w.slice(1); };
 /** What the change is about, as a noun ("this library form", "this change to what IRCC accepts"). */
 const changeNoun = (kind: string) => (kind === "form_accepts" ? "change to what IRCC accepts" : KIND_NOUN[kind] ?? "change");
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);

@@ -15,6 +15,7 @@ import { ToReviewPage } from "@/pages/to-review";
 import { FormFieldDecisions } from "@/pages/job";
 import type { SessionView } from "../../../contracts/programs";
 import type { HeldFileView, ImpactAccepted, ImpactChange, ImpactReview, LibraryChangeDetail, LibraryChangeView, MergeSide, MergeView } from "../../../contracts/screen02";
+import { RECHECK, SAY } from "../../../contracts/lifecycle";
 
 const inv = [["review-queue"], ["draft"], ["catalogue"]];
 function useMe() {
@@ -56,7 +57,8 @@ function Decide({ yes, no, onYes, onNo, busy, noNeedsReason = true, disabledWhy,
 export function LibraryChangePage() {
   const { id } = useParams(); const nav = useNavigate(); const me = useMe();
   const c = useApi<LibraryChangeDetail>(["library-change", id], `/library/changes/${id}`);
-  const act = useAction((v: { d: "approve" | "return"; note?: string }) => api<LibraryChangeView>(`/library/changes/${id}/${v.d}`, { method: "POST", json: { note: v.note } }), { success: (r) => (r.status === "RELEASED" ? `"${r.label}" approved and applied` : r.status === "RETURNED" && /^Not /.test(r.decision_note ?? "") ? `"${r.label}" could not be applied: ${r.decision_note}` : r.status === "APPROVED" ? `"${r.label}" approved: it is released with the next release` : `"${r.label}" returned to ${r.proposed_by}`), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
+  // P-116 words for a delete, retire or restore (contracts/lifecycle.ts); S4: what IRCC accepts is applied, and a form delete that could not be applied says why.
+  const act = useAction((v: { d: "approve" | "return"; note?: string }) => api<LibraryChangeView>(`/library/changes/${id}/${v.d}`, { method: "POST", json: { note: v.note } }), { success: (r) => (r.status === "RELEASED" ? (r.action === "DELETE" ? SAY.approvedDeleted(r.label) : `"${r.label}" approved and applied`) : r.status === "RETURNED" && /^Not /.test(r.decision_note ?? "") ? `"${r.label}" could not be applied: ${r.decision_note}` : r.status === "APPROVED" ? (r.action === "RETIRE" || r.action === "RESTORE" ? SAY.approvedWaits(r.action, r.label) : SAY.approvedNow(r.label)) : SAY.returned(r.label, r.proposed_by)), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
   if (c.isLoading) return <Spinner label="Loading the change" />;
   if (c.isError) return <ErrorState title="This change could not be opened" description={(c.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />;
   const x = c.data!, mine = x.proposed_by_id === me.id;
@@ -86,13 +88,21 @@ export function LibraryChangePage() {
       <div className="space-y-1 text-sm">
         {x.reason && !x.accepts ? <p><b>Reason:</b> {x.reason}</p> : null}
         {x.ai_verdict ? <p><b>Advisory check:</b> {x.ai_verdict}</p> : null}
-        {(x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
+        {x.goes_with?.length ? <div data-goes-with><p><b>These go with it</b> ({x.goes_with.length}; none is used):</p><ul className="ml-5 list-disc">{x.goes_with.map((g, i) => <li key={i}>{g}</li>)}</ul></div> : null}
+        {x.with_combination ? <p data-with-combination><b>Its combination</b> is {x.action === "RESTORE" ? "restored" : "retired"} with it, in the same release.</p> : null}
+        {x.kind === "field" && (x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
       </div>
       <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span> (generated from the group and the name)</p></details>
       {x.status === "RETURNED" && (mine || me.has("author")) ? <Correct change={x} /> : x.status !== "WAITING" ? null : mine || !me.has("review")
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
-        : <Decide yes="Approve" no="Return" busy={act.isPending} onYes={() => act.mutate({ d: "approve" })} onNo={(note) => act.mutate({ d: "return", note })} />}
+        : <>
+          {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
+          {x.recheck ? (x.recheck.ok
+            ? <p className="text-sm" data-recheck="ok">{RECHECK.clear}{x.recheck.kept.length ? <span className="text-text-muted"> Kept: {x.recheck.kept.join(" · ")}.</span> : null}</p>
+            : <div data-recheck="refused"><Notice tone="danger" title="Can't approve">{x.recheck.text} Return it with that reason.</Notice></div>) : null}
+          <Decide yes="Approve" no="Return" busy={act.isPending} onYes={() => act.mutate({ d: "approve" })} onNo={(note) => act.mutate({ d: "return", note })} onlyNo={x.recheck && !x.recheck.ok ? x.recheck.text : undefined} />
+        </>}
       {x.status === "WAITING" && me.has("author") && x.action === "ADD" ? <Withdraw id={x.id} /> : null}
     </div>
   );

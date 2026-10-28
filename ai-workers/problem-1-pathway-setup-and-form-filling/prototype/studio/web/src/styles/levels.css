@@ -1,0 +1,26 @@
+/* Studio level tokens (W1-visual-system, founder 27 Oct, VS-1…VS-9; Lead: a studio sheet loaded after the team's
+ * tokens.css, which stays unchanged). Four calm level colours that never reuse a status colour (green Live, red Not
+ * ready, orange need you, violet AI, blue links and selection): Pathway type grey, Pathway slate, Program teal,
+ * Category and Sub-category navy. Shape + word carry the meaning (■ ● ◆ ◇); colour only helps (WCAG 1.4.1). Each text
+ * value is ≥ 4.5:1 on white, the light surface and its own tint, and on the dark surfaces (board contrast table).
+ * Tints (-t) sit behind a band or a mark, never behind a status chip (VS-4); -b is a band's border.
+ * Pathway accents (VS-9, Sample until the founder names them): a 4 px stripe on a Pathway's card, band and section,
+ * from the team palette; never text, never a status hue. */
+:root {
+  --lv0: #595959; --lv1: #37506e; --lv2: #0b6477; --lv3: #043a73;
+  --lv1-t: #eff1f3; --lv2-t: #ebf3f4; --lv3-t: #f0f3f7;
+  --lv1-b: #ebeef0; --lv2-b: #e7f0f1; --lv3-b: #ebeff4;
+  --pw-accent-1: var(--erv2-palette-sky); --pw-accent-2: var(--erv2-palette-electric-blue);
+  --pw-accent-3: var(--erv2-palette-iron); --pw-accent-4: var(--erv2-palette-slate);
+}
+[data-theme='dark'] {
+  --lv0: #a9b7c4; --lv1: #a9c0dc; --lv2: #5fd0de; --lv3: #9ccbff;
+  --lv1-t: #263545; --lv2-t: #1f3745; --lv3-t: #233344;
+  --lv1-b: #293848; --lv2-b: #213a48; --lv3-b: #253748;
+  --pw-accent-3: #8a99a8;
+}
+@theme inline {
+  --color-lv0: var(--lv0); --color-lv1: var(--lv1); --color-lv2: var(--lv2); --color-lv3: var(--lv3);
+  --color-lv1-t: var(--lv1-t); --color-lv2-t: var(--lv2-t); --color-lv3-t: var(--lv3-t);
+  --color-lv1-b: var(--lv1-b); --color-lv2-b: var(--lv2-b); --color-lv3-b: var(--lv3-b);
+}

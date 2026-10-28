@@ -16,6 +16,7 @@ import { ACTORS, Audit, Db, fail, need, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, 
 import { Programs } from "./programs.ts";
 import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
+import { SAMPLE_CREATOR } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 
@@ -105,6 +106,9 @@ export class Demo {
         if (cat.setup) await setUp(node, cat.label, cat.setup);
       }
     }
+    // Every name here came from the sample file (loading refuses a structure that already has names): they are the
+    // sample's, not the loading person's own drafts (P-116 amended), so deleting one goes to a second person.
+    await this.db.programDef.updateMany({ where: { workspaceId }, data: { createdBy: SAMPLE_CREATOR } });
     const fam = sampleFamilyFacts();
     const prof = await this.db.sampleProfile.create({ data: { workspaceId, profileKey: "client-a-family", label: "Client A family (existing sample record, made-up)", basis: "expected/p5-case-c1.json: made-up family prepared by the Lead; confirmed facts for previews and the PDF proof; never an AI result, never sent to a model", people: fam.people } });
     await this.db.sampleFact.createMany({ data: fam.facts.map((f) => ({ workspaceId, profileId: prof.id, personId: f.personId, canonicalFieldKey: f.key, row: f.row, value: f.value as any, status: "confirmed", source: f.source })) });

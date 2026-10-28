@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./tokens.css";
+@import "./levels.css"; /* studio level tokens, after the team's tokens (W1-visual-system) */
 @source "../";
 /* Same dark-mode key as the team's index.css: data-theme on <html>. */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));

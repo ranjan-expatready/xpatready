@@ -281,14 +281,14 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   r = await call("DELETE", `/library/forms/${C0100}`, { reason: "Not used by any combination" });
   ok("C11.11: delete of an unused, never-released form waits for a second person", r.status < 300 && r.body.status === "WAITING", r.body);
   const change = r.body.id;
-  // P-123 with QA-46: a library form is Deleted (it leaves the library); a structure name or field is Removed.
+  // P-123, P-116 amended (one word set, contracts/lifecycle.ts): a delete is Delete for every kind; Remove is a form line off a combination.
   r = await call("GET", `/library/changes/${change}`);
   ok("C11.11: the approval page names it Delete library form (P-123)", r.body.action_word === "Delete" && r.body.kind_word === "library form", r.body.action_word);
   const queued = ((await call("GET", "/review-queue?filter=all&kind=library_change", undefined, "user-B")).body.items as any[]).find((i) => i.id === `change:${change}`); // eslint-disable-line @typescript-eslint/no-explicit-any
   ok("C11.11: To review says Delete the library form, never Remove", /^Delete the library form/.test(queued?.what ?? "") && !/Remove/.test(queued?.what ?? ""), queued?.what);
   const other = sql(`insert into library_change (id, workspace_id, kind, key, action, status, proposed_by, reason) select gen_random_uuid(), workspace_id, 'structure_node', 's4-word-check', 'DELETE', 'WAITING', 'user-A', 'Word check' from library_change where id='${change}' returning id`).split("\n")[0];
   const otherWhat = ((await call("GET", "/review-queue?filter=all&kind=library_change", undefined, "user-B")).body.items as any[]).find((i) => i.id === `change:${other}`)?.what; // eslint-disable-line @typescript-eslint/no-explicit-any
-  ok("C11.11: fail case: a structure name delete still says Remove (QA-46), not Delete", /^Remove the structure name/.test(otherWhat ?? ""), otherWhat);
+  ok("C11.11 (P-116 amended, one word set): a structure name delete says Delete too, never Remove (Remove is a form line off a combination)", /^Delete the structure name/.test(otherWhat ?? "") && !/Remove/.test(otherWhat ?? ""), otherWhat);
   sql(`delete from library_change where id='${other}'`);
   r = await call("POST", `/library/changes/${change}/approve`, { note: "ok" }, "user-A");
   ok("C11.11: the author cannot approve their own delete (author ≠ approver)", r.status >= 400, r.status);
