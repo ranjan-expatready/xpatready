@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>Questions and documents — draft board v2</title>
+<style>
+/* Team tokens (code/ERv2-frontend@5ccd9fa src/styles/tokens.css) + visual-system level colours (W1-visual-system r3). No one-off values. */
+:root{--primary:#0862c5;--p50:#e6f4ff;--p100:#cce9ff;--link:#054e9c;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--faint:#8c8c8c;
+--border:#d9d9d9;--border-s:#bfbfbf;--line:#ececec;--danger:#dc2626;--danger-t:#991b1b;--danger-tint:#fbe5e5;--warn:#ff8500;--warn-t:#663200;--warn-tint:#fff1e0;
+--ok:#16a34a;--ok-t:#0f5c2e;--ok-tint:#e3f4e9;--ai:#7c3aed;--ai-tint:#f3edfd;--lv1:#37506e;--lv2:#0b6477;--lv3:#043a73;--bg:#e9ecef;--r:8px;--r2:12px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif;color:var(--text)}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+.board-title{width:1440px;margin:24px auto 8px;padding:0 4px;display:flex;justify-content:space-between;align-items:flex-end}
+.board-title h1{font-size:24px}.board-title p{margin:4px 0 0;color:var(--muted)}
+.toolbar{display:flex;gap:8px;align-items:center}
+.btn{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--r);border:1px solid var(--border-s);background:var(--raised);color:var(--text);font:500 14px Inter,system-ui,sans-serif;cursor:pointer}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.sm{height:30px;padding:0 10px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--link)}.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.ai{border-color:#c9b3f5;color:var(--ai)}
+.frame{width:1440px;margin:0 auto 28px;background:var(--surface);border:1px solid var(--border-s);border-radius:var(--r2);overflow:hidden;box-shadow:0 2px 10px #0001}
+.frame-cap{background:#2d2d2d;color:#fff;padding:8px 16px;font-size:12px;display:flex;justify-content:space-between}
+.top{height:56px;background:var(--raised);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600}.logo b{color:var(--primary);font-size:18px}.logo span{color:var(--muted);font-weight:500}
+.crumbs{color:var(--muted);font-size:12px}
+.proto{font-size:12px;border:1px dashed var(--warn);color:var(--warn-t);background:var(--warn-tint);padding:2px 8px;border-radius:999px}
+.demo{display:flex;gap:6px;align-items:center;border:1px dashed var(--warn);border-radius:var(--r);padding:4px 8px;background:var(--warn-tint)}
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:640px}
+nav.menu{background:var(--raised);border-right:1px solid var(--border);padding:14px 10px;font-size:14px}
+nav.menu h4{margin:14px 8px 4px;font-size:12px;color:var(--faint);font-weight:600}
+nav.menu a{display:flex;justify-content:space-between;padding:7px 10px;border-radius:var(--r);color:var(--text);text-decoration:none}
+nav.menu a.on{background:var(--p50);color:var(--link);font-weight:600}
+.count{font-size:12px;background:var(--p100);color:var(--link);border-radius:999px;padding:0 7px}
+main{padding:20px 24px;min-width:0}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+.ph h2{font-size:24px}.ph p{margin:2px 0 0;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--raised);font-size:12px;color:var(--muted)}
+.chip.on{border-color:var(--primary);background:var(--p50);color:var(--link);font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:18px;padding:1px 8px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.pill.ok{background:var(--ok-tint);color:var(--ok-t);border-color:#b7e2c5}.pill.warn{background:var(--warn-tint);color:var(--warn-t);border-color:#ffd3a3}
+.pill.danger{background:var(--danger-tint);color:var(--danger-t);border-color:#f3b9b9}.pill.ai{background:var(--ai-tint);color:var(--ai);border-color:#dccbfa}
+.pill.info{background:var(--p50);color:var(--link);border-color:var(--p100)}.pill.neutral{background:#eee;color:var(--muted)}
+.role{font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--border-s);background:#fff;white-space:nowrap}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.grid2{display:grid;grid-template-columns:1fr 520px;gap:16px;align-items:start}
+table{width:100%;border-collapse:collapse;background:var(--raised)}
+th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--raised)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.sel td{background:var(--p50)}
+tr.group td{background:#fafafa;font-size:12px;color:var(--muted);font-weight:600;padding:7px 10px}
+.quote{font-size:12px;color:var(--muted);border-left:3px solid var(--p100);padding-left:8px;margin-top:4px;font-style:italic}
+.src{font-size:12px;color:var(--faint)}
+.checks3{display:flex;flex-direction:column;gap:2px;font-size:12px;white-space:nowrap}
+.y{color:var(--ok-t)}.n{color:var(--danger-t)}.q{color:var(--warn-t)}
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.notice{border-radius:var(--r);padding:10px 12px;font-size:14px;border:1px solid}
+.notice.info{background:var(--p50);border-color:var(--p100)}.notice.warn{background:var(--warn-tint);border-color:#ffd3a3}.notice.danger{background:var(--danger-tint);border-color:#f3b9b9}.notice.ok{background:var(--ok-tint);border-color:#b7e2c5}
+.saved{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px;border-radius:var(--r);background:#f1f1f1;border:1px solid var(--border-s);color:var(--text)}
+.saved.stale{background:var(--warn-tint);border-color:#ffd3a3;color:var(--warn-t)}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px;border-radius:var(--r);background:var(--ai-tint);border:1px solid #dccbfa;color:var(--ai);font-weight:600}
+.panel{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);display:flex;flex-direction:column;box-shadow:-4px 0 14px #0000000d}
+.panel header{padding:14px 16px;border-bottom:1px solid var(--border)}.panel .body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.panel footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cmp>div{border:1px solid var(--border);border-radius:var(--r);padding:10px;font-size:12px}
+.cmp h5{margin:0 0 4px;font-size:12px;color:var(--muted)}
+mark{background:#fff3a6;padding:0 2px}
+.page{border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:12px;background:#fcfcfc;max-height:180px;overflow:hidden}
+.muted{color:var(--muted)}.small{font-size:12px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:12px 0 14px}
+.tabs a{padding:8px 14px;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent}.tabs a.on{color:var(--link);border-color:var(--primary);font-weight:600}
+.trail{font-size:12px;color:var(--muted)}.trail b{color:var(--text)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.steps{display:flex;gap:4px;margin:8px 0}.steps i{flex:1;height:6px;border-radius:999px;background:var(--border)}.steps i.d{background:var(--ok)}.steps i.r{background:var(--primary)}
+ol.st{margin:6px 0 0;padding:0;list-style:none;font-size:12px}ol.st li{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed var(--line)}
+.mx td,.mx th{text-align:center}.mx td:first-child,.mx th:first-child{text-align:left}
+.cell-y{color:var(--ok-t);font-weight:600}.cell-n{color:var(--faint)}.cell-q{color:var(--warn-t)}
+.state{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);padding:12px;font-size:12px;display:flex;flex-direction:column;gap:6px}
+.state h4{margin:0;font-size:14px}
+.sk{height:12px;border-radius:6px;background:linear-gradient(90deg,#eee,#f6f6f6,#eee)}
+.row{display:flex;gap:12px;align-items:center}.wrap{flex-wrap:wrap}.sp{justify-content:space-between}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+/* Labels (P-33 Capability/Scaffolding, P-26 Needed/Not built, decision marks) */
+.lab{display:none;font:600 10px/14px Inter,system-ui,sans-serif;letter-spacing:.2px;padding:1px 6px;border-radius:4px;margin:2px 4px 2px 0;vertical-align:middle;white-space:nowrap}
+body.labels .lab{display:inline-block}
+.lab.cap{background:#e6f4ff;color:#054e9c;border:1px solid #9ccfff}.lab.scf{background:#fff1e0;color:#663200;border:1px dashed #ff8500}
+.lab.nb{background:#eee;color:#595959;border:1px solid #bfbfbf}.lab.f{background:#e3f4e9;color:#0f5c2e;border:1px solid #b7e2c5}
+.lab.m{background:#fbe5e5;color:#991b1b;border:1px solid #f3b9b9}
+.legend{width:1440px;margin:0 auto 12px;font-size:12px;color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.sample{font-size:12px;color:var(--warn-t);background:var(--warn-tint);border-radius:4px;padding:0 6px}
+.nest{border:2px solid var(--lv3);border-radius:16px;padding:14px;background:#fff}.nest .nest{border-color:var(--lv2);background:#f4fafb}.nest .nest .nest{border-color:var(--ai);background:var(--ai-tint)}
+.nest h3{font-size:16px;margin-bottom:4px}.src3{display:flex;gap:10px;margin-top:10px}.srcb{flex:1;border-radius:var(--r2);padding:12px;border:1px solid var(--border);background:#fff}
+.srcb b{display:block;font-size:15px}.doc{color:#0b6477}.cli{color:var(--lv3)}.agt{color:#663200}
+.from{font-size:12px;padding:1px 8px;border-radius:999px;white-space:nowrap}.from.doc{background:#e1f2f5;border:1px solid #9fd3dc}.from.cli{background:var(--p50);border:1px solid var(--p100)}.from.agt{background:var(--warn-tint);border:1px solid #ffd3a3}
+.funnel{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.funnel .card{padding:10px 14px}.funnel b{font-size:20px}.arrow{color:var(--faint)}
+.col3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.col3 .card h4{margin:0 0 6px}.q1{padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.why{font-size:12px;color:var(--muted)}
+/* v2 additions: built only from the tokens above (no one-off colours). */
+.lab.nd{background:var(--ok-tint);color:var(--ok-t);border:1px solid #b7e2c5}
+.lab.f{background:#fff;color:var(--ok-t);border:1px solid #b7e2c5}
+.lab.m{background:var(--danger-tint);color:var(--danger-t);border:1px solid #f3b9b9}
+.labbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.labbar .lab{display:inline-block}
+.ws{display:grid;grid-template-columns:minmax(0,1fr) 480px;gap:0;min-height:640px}
+.ws.nodrawer{grid-template-columns:1fr}
+.drawer{background:var(--raised);border-left:1px solid var(--border);display:flex;flex-direction:column;box-shadow:-6px 0 18px #0000000f}
+.drawer header{padding:14px 16px;border-bottom:1px solid var(--border)}
+.drawer header h3{font-size:18px}
+.drawer .body{padding:6px 16px;flex:1}
+.drawer footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;align-items:center}
+details.sec{border-bottom:1px solid var(--line);padding:8px 0}
+details.sec>summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;gap:6px;align-items:center}
+details.sec>summary::after{content:"▸";color:var(--faint);font-size:12px;margin-left:auto}
+details.sec[open]>summary::after{content:"▾"}
+details.sec .in{padding:8px 0 4px;display:flex;flex-direction:column;gap:8px;font-size:13px}
+dl.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 10px;margin:0;font-size:13px}
+dl.kv dt{color:var(--muted)}dl.kv dd{margin:0}
+.radio{display:flex;flex-direction:column;gap:6px}
+.radio label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--border);border-radius:var(--r);padding:8px 10px}
+.radio label.on{border-color:var(--primary);background:var(--p50)}
+.radio label.off{color:var(--faint);background:#fafafa}
+.reason{font-size:12px;color:var(--muted);display:block}
+.lock{font-size:12px;color:var(--muted)}
+.statline{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;margin:10px 0}
+.stat{background:var(--raised);border:1px solid var(--border);border-radius:var(--r);padding:6px 12px;font-size:12px;color:var(--muted);position:relative}
+.stat b{display:block;font-size:18px;color:var(--text)}
+.toolrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.toolrow .sep{width:1px;height:22px;background:var(--border)}
+.chip.need{border-color:#ffd3a3;background:var(--warn-tint);color:var(--warn-t);font-weight:600}
+.search{height:32px;border:1px solid var(--border-s);border-radius:var(--r);padding:0 10px;font-size:13px;width:220px;color:var(--faint);display:inline-flex;align-items:center;background:#fff}
+.acc{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:8px;overflow:visible}
+.acc .hd{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
+.acc .hd b{font-weight:600}
+.acc table{border-top:1px solid var(--border)}
+td.cb,th.cb{width:34px;text-align:center}
+td.mn{width:40px;text-align:right;position:relative}
+.kebab{width:30px;height:30px;border-radius:var(--r);border:1px solid transparent;background:transparent;color:var(--muted);font-size:16px;cursor:pointer}
+.kebab.on{border-color:var(--border-s);background:#f1f1f1}
+.pop{position:absolute;right:6px;top:34px;z-index:5;width:330px;background:#fff;border:1px solid var(--border-s);border-radius:var(--r);box-shadow:0 8px 24px #0000001f;padding:6px;text-align:left}
+.pop .it{padding:7px 10px;border-radius:6px;font-size:13px}
+.pop .it:hover{background:var(--p50)}
+.pop .it.off{color:var(--faint)}
+.pop .it.off .reason{color:var(--muted)}
+.pop hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.tip{position:absolute;z-index:6;width:300px;background:#2d2d2d;color:#fff;border-radius:var(--r);padding:8px 10px;font-size:12px;line-height:1.4;box-shadow:0 6px 18px #0003}
+.tip::before{content:"";position:absolute;left:18px;top:-6px;border:6px solid transparent;border-top:0;border-bottom-color:#2d2d2d}
+.has-tip{position:relative;text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
+.bulk{display:flex;align-items:center;gap:8px;background:#2d2d2d;color:#fff;border-radius:var(--r2);padding:8px 12px;margin:8px 0;font-size:13px}
+.bulk .btn{height:30px;font-size:12px}
+.bulk .btn.dark{background:#444;border-color:#555;color:#fff}
+.toast{display:inline-flex;gap:12px;align-items:center;background:#2d2d2d;color:#fff;border-radius:var(--r);padding:8px 12px;font-size:13px}
+.toast a{color:#9ccfff;text-decoration:underline;cursor:pointer}
+.miss{font-size:12px;color:var(--warn-t)}
+.cbx{width:16px;height:16px;border:1.5px solid var(--border-s);border-radius:4px;display:inline-block;vertical-align:middle;background:#fff}
+.cbx.on{background:var(--primary);border-color:var(--primary);position:relative}
+.cbx.on::after{content:"✓";color:#fff;font-size:11px;position:absolute;left:2px;top:-2px}
+.cbx.off{background:#f1f1f1;border-color:var(--border)}
+.seg{display:inline-flex;border:1px solid var(--border-s);border-radius:var(--r);overflow:hidden}
+.seg span{padding:6px 14px;font-size:13px;border-right:1px solid var(--border-s);background:#fff}
+.seg span:last-child{border-right:0}.seg span.on{background:var(--p50);color:var(--link);font-weight:600}
+.pv{display:grid;grid-template-columns:300px 1fr 1fr;gap:12px;align-items:start}
+.client{background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:14px}
+.fill{border:1px solid #9fd3dc;background:#e1f2f5;border-radius:var(--r);padding:10px 12px;font-size:13px}
+.ans{display:grid;grid-template-columns:1fr 150px 130px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.ans.agent{grid-template-columns:1fr 120px 170px}
+.inp{height:30px;border:1px solid var(--border-s);border-radius:6px;padding:0 8px;display:flex;align-items:center;font-size:13px;background:#fff}
+.inp.prop{border-style:dashed;border-color:#9fd3dc;background:#f4fafb}
+.inp.err{border-color:var(--danger)}
+.mx{font-size:12px}
+.mx td,.mx th{text-align:left;padding:7px 8px;border:1px solid var(--line)}
+.mx th{background:#fafafa}
+.mx .k{font-weight:600;white-space:nowrap}
+.yes{color:var(--ok-t);font-weight:600}
+.no{color:var(--danger-t);font-weight:600}
+.na{color:var(--faint)}
+.ref{font-style:italic;color:var(--text)}
+.dlg{width:640px;background:#fff;border:1px solid var(--border-s);border-radius:var(--r2);box-shadow:0 10px 30px #0002}
+.dlg header{padding:14px 16px;border-bottom:1px solid var(--border)}.dlg .body{padding:14px 16px;display:flex;flex-direction:column;gap:10px}.dlg footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:13px}.fld>span{font-size:12px;color:var(--muted);font-weight:600}
+.st8{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.trunc{max-width:330px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:bottom}
+.ph h2{white-space:nowrap}
+.acc th:nth-child(2),.tbl-wrap th:nth-child(2){min-width:190px}
+.from{display:inline-block}
+.has-tip+.tip{left:0}
+td{position:relative}
+</style>
+</head>
+<body class="labels">
+<div class="board-title"><div><h1>Questions and documents, document first — draft board v2</h1><p>Draft for the Lead, 29 Oct · builds on the agreed concept (P-130–P-132) and board v1 · Combination workspace: Questionnaires, Documents, Preview (S5) · design only, US$0</p></div>
+<div class="toolbar"><button class="btn sm" onclick="document.body.classList.toggle('labels')">Show or hide labels</button></div></div>
+<div class="legend labbar"><span class="lab cap">Capability</span>what the product does · <span class="lab scf">Scaffolding</span>demo or setup only, never ported (P-33) · <span class="lab nd">Needed for the proof</span>build now · <span class="lab nb">Not built</span>shown so the design is whole; the team or a later milestone builds it (P-26) · <span class="lab f">Follows P-…</span>a decision this element obeys · <span class="lab m">Question / gap</span>a missing or conflicting decision (notes §5) · <span class="sample">Sample</span> every program, document, condition, count, cost and IRCC quote here is Sample until the immigration expert confirms.</div>
+
+<!-- ============ 1 QUESTIONNAIRES: normal, drawer open ============ -->
+<div class="frame"><div class="frame-cap"><span>1 · Questionnaires · normal · a row selected, side drawer open (one question line, every parameter)</span><span>Applicant · filter: all sources · 5 things per row</span></div>
+<div class="top"><div class="logo"><b>ExpatReady</b><span>Product Studio · Pathway Configurator</span></div><div class="row"><span class="demo small">Acting as: Content publisher <span class="lab scf">Scaffolding</span></span><span class="proto">Prototype</span></div></div>
+<div class="shell"><nav class="menu"><h4>Configure</h4><a>Program structure</a><a class="on">Immigration programs</a><a>To review <span class="count">23</span></a><h4>Shared library</h4><a>Fields</a><a>Sections</a><a>Document types</a><a>Forms</a><a>Checks</a></nav>
+<div class="ws"><main>
+<div class="crumbs">Retail › Temporary residence › Visitors › Visitor visa</div>
+<div class="ph"><div><h2>Visitor visa</h2><p>In setup · Sample</p></div><div class="row"><span class="saved">✓ Saved draft for these form editions · replays at US$0</span><button class="btn ai">✦ Draft questions and documents</button></div></div>
+<div><span class="lab cap">Capability C4.11</span><span class="lab nd">Needed (slice 5)</span><span class="lab f">Follows P-138: runs only on a click; saved replays at US$0, else "about US$0.40 · at most US$3.10" on the button</span></div>
+<div class="tabs"><a>Overview</a><a>Forms</a><a class="on">Questionnaires</a><a>Documents</a><a>Preview</a><a>Review and release</a></div>
+
+<div class="card" style="padding:10px 14px"><div class="row sp"><span><b>Who can be in this application</b> <span class="muted small">· Applicant 1 · Spouse or partner (travelling) 0–1 · Child (travelling) 0–4 · each files their own application</span></span><button class="btn sm ghost">Show and edit</button></div>
+<span class="lab cap">Capability (built, S5)</span><span class="lab f">Follows P-119; P-135 filing mode words</span><span class="lab m">Change from built: folded to one line by default (built shows the full table)</span></div>
+
+<div class="statline">
+ <div class="stat has-tip" style="text-decoration:none">Full form <b>186</b> facts</div><span class="arrow" style="align-self:center">=</span>
+ <div class="stat"><span class="doc">From documents</span><b>74</b></div><span class="arrow" style="align-self:center">+</span>
+ <div class="stat"><span class="cli">Client answers</span><b>88</b></div><span class="arrow" style="align-self:center">+</span>
+ <div class="stat"><span class="agt">Agent enters</span><b>24</b></div>
+ <div class="stat">Pre-qualification<b>12</b></div>
+ <span class="notice ok small" style="align-self:center">✓ Every fact has one source</span>
+ <span style="align-self:center"><span class="lab cap">Capability C4.10</span><span class="lab nd">Needed (slice 2)</span><span class="lab f">Follows P-130</span></span>
+</div>
+
+<div class="toolrow">
+ <span class="chip on">Applicant · 71</span><span class="chip">Spouse or partner · 58</span><span class="chip">Child · 14</span>
+ <span class="sep"></span>
+ <span class="chip on">All sources</span><span class="chip"><span class="dot" style="background:#0b6477"></span>Document 31</span><span class="chip"><span class="dot" style="background:var(--lv3)"></span>Client 34</span><span class="chip"><span class="dot" style="background:var(--warn)"></span>Agent 6</span>
+ <span class="sep"></span><span class="chip need">Needs you · 6</span>
+ <span class="search">Find a question…</span>
+ <span style="margin-left:auto" class="row"><button class="btn sm ghost">Open all sections</button><button class="btn sm">+ Add ▾</button></span>
+</div>
+<div><span class="lab cap">Capability C4.1</span><span class="lab nd">Needed (slice 2)</span><span class="lab f">Person chips as built · source chips + "Needs you" (EXPERIENCE §0)</span><span class="lab f">"+ Add": Add a library section (built) · Add a question (one Add dialog, frame 5, P-120)</span></div>
+
+<div class="acc" style="margin-top:8px"><div class="hd"><span><b>Personal details</b> <span class="small muted">· 9 questions for Applicant · 6 from documents</span></span><span class="row"><span class="pill info">Fill from documents offered</span><button class="btn sm ghost">Remove from questionnaire</button></span></div>
+<table><tr><th class="cb"><span class="cbx"></span></th><th>Question</th><th>Comes from</th><th>Pre-qualification</th><th>Only if</th><th>Status</th><th></th></tr>
+<tr><td class="cb"><span class="cbx"></span></td><td>Family name(s)</td><td><span class="from doc has-tip">Document · Passport</span>
+ <div class="tip" style="margin-top:8px">Read from the passport the client uploads; a person checks it field by field (names, P-142). If it is missing or unreadable, the client is asked: "We could not read it from your passport."</div></td><td><span class="cbx"></span></td><td class="small">Always</td><td><span class="pill ok">Released</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr class="sel"><td class="cb"><span class="cbx on"></span></td><td><b>Date of birth</b></td><td><span class="from doc">Document · Passport</span></td><td><span class="cbx on"></span></td><td class="small">Always</td><td><span class="pill ai">AI · High</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr><td class="cb"><span class="cbx"></span></td><td>Current marital status</td><td><span class="from cli">Client</span></td><td><span class="cbx on"></span></td><td class="small">Always</td><td><span class="pill ai">AI · High</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr><td class="cb"><span class="cbx"></span></td><td>Date of marriage</td><td><span class="from doc">Document · Marriage certificate</span><div class="miss">⚠ No fallback question</div></td><td><span class="cbx"></span></td><td class="small">if married</td><td><span class="pill warn">AI · Check</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr><td class="cb"><span class="cbx"></span></td><td>Ever married before?</td><td><span class="from cli">Client</span></td><td><span class="cbx"></span></td><td class="small">Always</td><td><span class="pill info">Changed here</span></td><td class="mn"><button class="kebab on">⋯</button>
+ <div class="pop"><div class="it">Open details</div><div class="it">Change where it comes from…</div><div class="it">Back to the library default <span class="reason">Document · Divorce certificate (library). Undo while the draft is open.</span></div><hr><div class="it">Change in the library… <span class="reason">Wording, answer and options are shared by 3 combinations; a second person approves.</span></div><div class="it off">Move up or down <span class="reason">The order is set in the library section Personal details. Change it there.</span></div><div class="it off">Retire <span class="reason">A question line is not retired here. Retire the question in the library.</span></div><hr><div class="it">Where used</div><div class="it">History</div></div></td></tr>
+</table></div>
+
+<div><span class="lab cap">Capability C4.10 · C4.2</span><span class="lab nd">Needed (slice 2)</span><span class="lab f">Row = Question · Comes from · Pre-qualification · Only if · Status (founder, 29 Oct: 4–5 things)</span><span class="lab f">⋯ menu: greyed items keep the reason as visible text (P-116 amended)</span><span class="lab m">Q1: ⋯ menu instead of one written row action</span></div>
+<div class="acc"><div class="hd"><span><b>Visit details</b> <span class="small muted">· 12 questions · all from the client</span></span><span class="small muted">▸</span></div></div>
+<div class="acc"><div class="hd"><span><b>Representative</b> <span class="small muted">· 4 questions · all entered by the agent</span></span><span class="small muted">▸</span></div></div>
+<div class="acc"><div class="hd"><span><b>Background and declarations</b> <span class="lock has-tip">🔒 Always the client</span> <span class="small muted">· 7 questions</span></span><span class="small muted">▸</span></div></div>
+<div><span class="lab cap">Capability C4.9 (reworded)</span><span class="lab nd">Needed (slice 1 marker, slice 2 lock)</span><span class="lab f">Follows P-97 + challenge m2: clientOnly sections locked</span></div>
+<p class="small muted">71 questions for Applicant, from the largest Sample family the combination allows. 5 placed questions are not asked: no form reads them and they decide nothing.</p>
+</main>
+
+<aside class="drawer"><header><div class="row sp"><span class="small muted">Applicant · Personal details · 3 of 9</span><button class="kebab" aria-label="Close">✕</button></div>
+<h3>Date of birth</h3><div class="row" style="margin-top:6px"><span class="pill ai">AI proposal · High</span><span class="small muted">Draft and checker agree; rules pass</span></div>
+<span class="lab cap">Capability C4.10</span><span class="lab nd">Needed (slice 2)</span><span class="lab f">Side panel 480–560 px, sections not tabs (EXPERIENCE §3)</span></header>
+<div class="body">
+<details class="sec" open><summary>Where the answer comes from</summary><div class="in">
+ <div class="radio"><label class="on"><span class="cbx on" style="border-radius:50%"></span><span><b>Document · Passport</b><span class="reason">Default by the rules: the passport is on Applicant's checklist and supplies it. Also supplied by: National identity card (information only).</span></span></label>
+ <label><span class="cbx" style="border-radius:50%"></span><span><b>Client</b><span class="reason">Asked in the client questionnaire.</span></span></label>
+ <label class="off"><span class="cbx off" style="border-radius:50%"></span><span><b>Agent</b><span class="reason">Not offered: the agent enters only the representative's, office's and case's own facts.</span></span></label></div>
+ <div class="small">Fallback question: <b>"What is your date of birth?"</b> in Personal details <span class="pill ok">✓ reachable</span></div>
+ <div class="small muted">Changing it here is an override for Visitor visa only, reviewed in this combination's release. The library default stays.</div>
+ <span><span class="lab f">Follows challenge M1, M2: store overrides only; one primary source + fallback</span></span></div></details>
+<details class="sec" open><summary>Pre-qualification</summary><div class="in">
+ <label class="row"><span class="cbx on"></span> Ask in pre-qualification</label>
+ <div class="small"><b>Why (AI):</b> the age decides which family rows and minor rules apply.</div>
+ <div class="quote">"…date of birth…" — guide 5256, eligibility <span class="sample">Sample</span></div>
+ <div class="small muted">The prospect's answer is their own. The client questionnaire shows it as "please confirm"; the passport read later is compared with it, and a difference is a check, not an overwrite.</div>
+ <span><span class="lab cap">Capability C4.2 · C4.7</span><span class="lab f">Follows P-76, P-77, challenge M4: PQR ⊂ SQR ∪ checklist documents</span></span></div></details>
+<details class="sec"><summary>When it is asked</summary><div class="in"><dl class="kv"><dt>Only if</dt><dd>Always</dd><dt>Required</dt><dd>Yes</dd></dl></div></details>
+<details class="sec"><summary>Answer <span class="small muted" style="font-weight:400">· from the library</span></summary><div class="in"><dl class="kv"><dt>Kind of answer</dt><dd>A date</dd><dt>Options</dt><dd>—</dd></dl><button class="btn sm">Change in the library…</button></div></details>
+<details class="sec"><summary>Where it sits</summary><div class="in"><dl class="kv"><dt>Section</dt><dd>Personal details · 3 of 9</dd><dt>Order</dt><dd>Set in the library section</dd></dl></div></details>
+<details class="sec"><summary>Used by <span class="small muted" style="font-weight:400">· 2 forms · 4 form fields</span></summary><div class="in"><dl class="kv"><dt>IMM 5257</dt><dd>Date of birth</dd><dt>IMM 5707</dt><dd>each family member's row (3)</dd><dt>Rules</dt><dd>Decides "under 18"</dd></dl></div></details>
+<details class="sec"><summary>Proposed by and IRCC's words</summary><div class="in"><div class="small">AI, 2 rounds agree · reviewed in To review</div><div class="quote">"Date of birth" — IMM 5257 <span class="sample">Sample</span></div></div></details>
+<details class="sec"><summary>Status and history</summary><div class="in small">AI proposal · not yet accepted · nothing applies until accepted</div></details>
+</div>
+<footer><button class="btn ghost">Reject</button><span class="row"><button class="btn">Edit</button><button class="btn primary">Accept</button></span></footer>
+<div style="padding:0 16px 10px"><span class="lab f">Follows EXPERIENCE §2.3, §2.6: edit in a drawer; Accept / Edit / Reject; one primary action</span></div>
+</aside></div></div></div>
+
+<!-- ============ 2 QUESTIONNAIRES: Needs you, selection, bulk, refusals ============ -->
+<div class="frame"><div class="frame-cap"><span>2 · Questionnaires · "Needs you" on · 3 rows selected → the bulk bar appears · locks and refusals in words · a Decide item side by side</span><span>bulk bar only while rows are selected</span></div>
+<div class="ws"><main>
+<div class="toolrow"><span class="chip on">Applicant · 71</span><span class="chip">Spouse or partner · 58</span><span class="chip">Child · 14</span><span class="sep"></span><span class="chip on">All sources</span><span class="sep"></span><span class="chip need on">Needs you · 6 ✕</span><span class="small muted">4 to check · 1 to decide · 1 release check</span></div>
+<div class="bulk"><b>3 selected</b><button class="btn primary">Accept 3</button><button class="btn dark">Set where it comes from ▾</button><button class="btn dark">Pre-qualification ▾</button><button class="btn dark">Reject</button><span style="margin-left:auto"><button class="btn sm ghost" style="color:#9ccfff">Clear selection</button></span></div>
+<div><span class="lab cap">Capability C4.11 review</span><span class="lab nd">Needed (slice 5)</span><span class="lab f">Follows P-121: Accept selected for High only, one Undo for the batch, each re-checked</span><span class="lab m">Q2: which bulk actions besides Accept</span></div>
+<div class="tbl-wrap" style="margin-top:8px"><table><tr><th class="cb"></th><th>Question</th><th>Comes from</th><th>Pre-qualification</th><th>Only if</th><th>Status</th><th></th></tr>
+<tr class="group"><td colspan="7">Personal details</td></tr>
+<tr class="sel"><td class="cb"><span class="cbx on"></span></td><td>Citizenship</td><td><span class="from doc">Document · Passport</span></td><td><span class="cbx on"></span></td><td class="small">Always</td><td><span class="pill ai">AI · High</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr class="sel"><td class="cb"><span class="cbx on"></span></td><td>Country of birth</td><td><span class="from doc">Document · Passport</span></td><td><span class="cbx"></span></td><td class="small">Always</td><td><span class="pill ai">AI · High</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr><td class="cb"><span class="cbx off"></span></td><td>Date of marriage</td><td><span class="from doc">Document · Marriage certificate</span><div class="miss">⚠ No fallback question: needed only if married, so a release refuses it</div></td><td><span class="cbx"></span></td><td class="small">if married</td><td><span class="pill danger">Release check</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr class="group"><td colspan="7">Visit details</td></tr>
+<tr class="sel"><td class="cb"><span class="cbx on"></span></td><td>Purpose of visit</td><td><span class="from cli">Client</span></td><td><span class="cbx on"></span></td><td class="small">Always</td><td><span class="pill ai">AI · High</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr><td class="cb"><span class="cbx off"></span><div class="reason" style="width:90px;text-align:left">Open it to choose</div></td><td><b>Funds available for the stay</b></td><td><span class="pill warn">Decide</span></td><td><span class="cbx"></span></td><td class="small">Always</td><td><span class="pill warn">AI · Decide</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr class="group"><td colspan="7">Representative</td></tr>
+<tr><td class="cb"><span class="cbx"></span></td><td>Representative's membership number</td><td><span class="from agt">Agent</span></td><td><span class="cbx off"></span> <span class="reason">Not offered: the agent enters it</span></td><td class="small">if represented</td><td><span class="pill warn">AI · Check</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr class="group"><td colspan="7">Background and declarations <span class="lock">🔒 Always the client</span></td></tr>
+<tr><td class="cb"><span class="cbx"></span></td><td>Ever refused a visa or permit?</td><td><span class="from cli">Client 🔒</span><span class="reason">Declarations are always answered by the client.</span></td><td><span class="cbx on"></span></td><td class="small">Always · if yes, "give details"</td><td><span class="pill warn">AI · Check</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+</table></div>
+<div style="margin-top:10px" class="toast">Where it comes from set to Client on 2 questions · <a>Undo</a></div>
+<div><span class="lab cap">Capability C4.10</span><span class="lab f">Follows P-97 lock · challenge M2 (no fallback + conditional document = refusal) · M4 (no tick on an Agent fact)</span><span class="lab f">Undo toast 10 s (lifecycle pattern)</span></div>
+</main>
+<aside class="drawer"><header><span class="small muted">Applicant · Visit details</span><h3>Funds available for the stay</h3><div class="row" style="margin-top:6px"><span class="pill warn">AI · Decide</span><span class="small muted">The two rounds disagree; a person chooses</span></div></header>
+<div class="body"><details class="sec" open><summary>Where the answer comes from</summary><div class="in">
+<div class="cmp"><div><h5>First round</h5><b>Document · Bank statement</b><div class="quote">"proof of financial support" — guide 5256 <span class="sample">Sample</span></div></div><div><h5>Checker round</h5><b>Client</b><div class="quote">"how much money you have for your stay" — IMM 5257 <span class="sample">Sample</span></div></div></div>
+<div class="radio"><label><span class="cbx" style="border-radius:50%"></span><span><b>Use the first round</b><span class="reason">Not asked of the client; read from the bank statement.</span></span></label><label class="on"><span class="cbx on" style="border-radius:50%"></span><span><b>Use the checker round</b><span class="reason">The client answers; the bank statement stays on the checklist as evidence.</span></span></label></div>
+<div class="fld"><span>Reason (shown to the second person)</span><div class="inp">The form asks an amount; statements show balances, not the amount for the trip.</div></div>
+</div></details>
+<details class="sec"><summary>Pre-qualification</summary></details><details class="sec"><summary>When it is asked</summary></details><details class="sec"><summary>Answer · from the library</summary></details><details class="sec"><summary>Used by · 1 form</summary></details></div>
+<footer><button class="btn ghost">Reject both</button><button class="btn primary">Save my choice</button></footer>
+<div style="padding:0 16px 10px"><span class="lab cap">Capability C4.11</span><span class="lab f">Follows P-121: Low or conflict is decided singly, never in bulk; HAX: show what AI did and why</span></div>
+</aside></div></div>
+
+<!-- ============ 3 DOCUMENTS ============ -->
+<div class="frame"><div class="frame-cap"><span>3 · Documents · "Documents each person gives" · drawer open on Passport (every document parameter)</span><span>per person · alternatives as one line · supplies n facts about whom</span></div>
+<div class="ws"><main>
+<div class="toolrow"><span class="chip on">Applicant · 6</span><span class="chip">Spouse or partner · 4</span><span class="chip">Child · 3</span><span class="sep"></span><span class="chip on">All</span><span class="chip">Always 4</span><span class="chip">Only if 2</span><span class="sep"></span><span class="chip need">Needs you · 2</span><span class="search">Find a document…</span><span style="margin-left:auto"><button class="btn sm">+ Add a document</button></span></div>
+<div><span class="lab cap">Capability C4.5 · C4.10</span><span class="lab nd">Needed (slice 3)</span><span class="lab f">"+ Add a document": the one Add dialog, library type first (P-120)</span></div>
+<div class="tbl-wrap" style="margin-top:8px;overflow:visible"><table><tr><th class="cb"><span class="cbx"></span></th><th>Document</th><th>Who</th><th>When</th><th>Supplies</th><th>Status</th><th></th></tr>
+<tr class="sel"><td class="cb"><span class="cbx on"></span></td><td><b>Passport</b> <span class="small muted">or travel document</span></td><td><span class="role">Each applicant</span></td><td class="small">Always</td><td><a class="small has-tip">9 facts</a></td><td><span class="pill ok">Released</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr><td class="cb"><span class="cbx"></span></td><td><b>Marriage certificate</b></td><td><span class="role">Applicant</span></td><td class="small">if married</td><td><a class="small">3 facts</a> <span class="small muted">· 2 about the spouse</span></td><td><span class="pill warn">AI · Check</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr><td class="cb"><span class="cbx"></span></td><td><b>Bank statements</b></td><td><span class="role">Applicant</span></td><td class="small">Always</td><td><a class="small">1 fact</a></td><td><span class="pill ai">AI · High</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr><td class="cb"><span class="cbx"></span></td><td><b>Birth certificate</b></td><td><span class="role">Each child</span></td><td class="small">Always</td><td><a class="small">8 facts</a> <span class="small muted">· 2 about the parents</span></td><td><span class="pill ai">AI · High</span></td><td class="mn"><button class="kebab">⋯</button></td></tr>
+<tr><td class="cb"><span class="cbx"></span></td><td><b>Photo</b></td><td><span class="role">Each applicant</span></td><td class="small">Always</td><td class="small muted">none · filed as is</td><td><span class="pill neutral">Rules</span></td><td class="mn"><button class="kebab on">⋯</button>
+<div class="pop"><div class="it">Open details</div><div class="it">Move up or down <span class="reason">Changes the checklist order for Applicant at once, with a History line.</span></div><div class="it">Remove from checklist <span class="reason">Released line: the removal goes out with the next release; open cases keep it.</span></div><hr><div class="it">Change the document type in the library… <span class="reason">What it supplies and about whom; a second person approves.</span></div><div class="it off">Retire <span class="reason">A checklist line is removed, not retired. Retire the document type in the library.</span></div><hr><div class="it">Where used</div><div class="it">History</div></div></td></tr>
+</table></div>
+
+<div style="height:190px"></div><p class="small muted">A document that supplies facts takes those questions out of the client questionnaire. Missing or unreadable at the case → the questionnaire asks them ("We could not read it from your passport").</p>
+<div><span class="lab cap">Capability C4.5</span><span class="lab f">Row = Document · Who · When · Supplies · Status; IRCC's words in the drawer and on hover</span><span class="lab f">Follows challenge m1: two suppliers, a stable default, the rest "also supplied by"</span></div>
+</main>
+<aside class="drawer"><header><span class="small muted">Applicant's checklist · 1 of 6</span><h3>Passport <span class="small muted" style="font-weight:400">or travel document</span></h3><div class="row" style="margin-top:6px"><span class="pill ok">Released</span><span class="small muted">Release 2 · changes go out with the next release</span></div></header>
+<div class="body">
+<details class="sec" open><summary>Who and when</summary><div class="in"><dl class="kv"><dt>Who</dt><dd>Each applicant</dd><dt>When</dt><dd>Always</dd><dt>Provided by</dt><dd>The client</dd></dl><span><span class="lab cap">Capability (built)</span></span></div></details>
+<details class="sec" open><summary>Alternatives <span class="small muted" style="font-weight:400">· any one counts</span></summary><div class="in"><div class="small">Passport · <b>or</b> Travel document</div><span><span class="lab cap">Capability</span><span class="lab nd">Needed (slice 3)</span></span></div></details>
+<details class="sec" open><summary>Facts it supplies <span class="small muted" style="font-weight:400">· 9 · from the library document type</span></summary><div class="in">
+<table class="mx"><tr><th>Fact</th><th>About whom</th><th>Taken out of the questionnaire</th></tr>
+<tr><td>Family name(s), given name(s)</td><td>The holder</td><td>Yes · checked field by field</td></tr>
+<tr><td>Date of birth · sex</td><td>The holder</td><td>Yes · date checked field by field</td></tr>
+<tr><td>Country of birth · citizenship</td><td>The holder</td><td>Yes</td></tr>
+<tr><td>Passport number · issue date · expiry date</td><td>The holder</td><td>Yes · number and expiry checked field by field</td></tr></table>
+<button class="btn sm">Change in the library…</button>
+<span><span class="lab cap">Capability C4.5 · C6.5</span><span class="lab nd">Needed (slice 1 data)</span><span class="lab f">Follows Lead M6 addition: each fact has a subject (holder, parent, spouse) · P-142 D5</span></span></div></details>
+<details class="sec"><summary>Copies</summary><div class="in small">1 copy of the information page <span class="sample">Sample</span><span><span class="lab nb">Not built</span><span class="lab m">Q3</span></span></div></details>
+<details class="sec"><summary>Translation</summary><div class="in small">Certified translation if not in English or French <span class="sample">Sample</span><span><span class="lab nb">Not built</span><span class="lab m">Q3</span></span></div></details>
+<details class="sec"><summary>Validity window</summary><div class="in small">Valid for the whole stay <span class="sample">Sample, expert to confirm (report D9)</span><span><span class="lab nb">Not built</span><span class="lab m">Q3</span></span></div></details>
+<details class="sec"><summary>IRCC's words</summary><div class="in"><div class="quote">"a copy of the passport bio-data page" — checklist 5484 <span class="sample">Sample</span></div></div></details>
+<details class="sec"><summary>Status and history</summary><div class="in small">Released in release 2 · proposed by AI, accepted by the content publisher, approved by a second person</div></details>
+</div>
+<footer><button class="btn ghost">Remove from checklist</button><button class="btn primary">Edit</button></footer></aside></div></div>
+
+<!-- ============ 4 PREVIEW: three sets ============ -->
+<div class="frame"><div class="frame-cap"><span>4 · Preview · the same Sample family in three sets · PQR · SQR (client) · Agent view</span><span>the shared renderer (P-47), three modes</span></div>
+<div style="padding:16px 24px">
+<div class="row sp" style="margin-bottom:12px"><div class="row"><span class="seg"><span>PQR</span><span class="on">SQR</span><span>Agent view</span></span><span class="small muted">The wide screen shows all three side by side; a narrow one shows the chosen set.</span></div><span class="row small">Sample family: <span class="role">Applicant</span><span class="role">Spouse or partner</span><span class="role">Child, 9</span><button class="btn sm ghost">Change family</button></span></div>
+<div><span class="lab cap">Capability C4.3</span><span class="lab nd">Needed (slice 4)</span><span class="lab f">Slice 4 also makes the client view skip document facts; a case pinned to an older release still asks them (challenge, renderer gap)</span></div>
+<div class="pv" style="margin-top:8px">
+ <div class="card"><h4 style="margin:0 0 6px">PQR · the prospect · 12</h4>
+  <div class="q1">Date of birth</div><div class="q1">Citizenship</div><div class="q1">Current marital status</div><div class="q1">Purpose of visit</div><div class="q1">Funds available for the stay</div><div class="q1">Ever refused a visa or permit?</div><div class="q1 muted">+ 6 more</div>
+  <p class="why">No verdict is shown to the prospect; the firm sees the gate results (P-77).</p>
+  <span class="lab cap">Capability C4.2</span><span class="lab f">Follows P-76, P-132</span></div>
+
+ <div class="client"><div class="row sp"><h4 style="margin:0">SQR · what Applicant sees</h4><span class="small muted">Section 1 of 6</span></div>
+  <div class="small" style="margin:8px 0"><b>Your documents</b> · ⬆ Passport (fills 7 answers) · ⬆ Marriage certificate (fills 1) · ⬆ Bank statements</div>
+  <div class="row sp" style="margin-top:6px"><b>Personal details</b><span class="lab cap">Capability C4.5 · C6.5</span></div>
+  <div class="fill" style="margin-top:6px"><b>Fill this from my documents</b><br>Upload your passport and we fill 7 answers in this section. You check each one; you can always type instead.<div class="row" style="margin-top:8px"><button class="btn sm primary">Upload passport</button><button class="btn sm ghost">Type instead</button></div></div>
+  <div><span class="lab f">Follows P-134 D4: offered per section, never automatic on upload; typing always possible</span></div>
+  <div class="small muted" style="margin:10px 0 2px">After the upload (proposals, nothing saved yet):</div>
+  <div class="ans"><span>Family name(s)</span><span class="inp prop">CLIENT A (Sample)</span><span class="row"><button class="btn sm">Correct</button><button class="btn sm ghost">Change</button></span></div>
+  <div class="ans"><span>Date of birth</span><span class="inp prop">21 Mar 1985</span><span class="row"><button class="btn sm">Correct</button><button class="btn sm ghost">Change</button></span></div>
+  <div class="ans"><span>Current marital status <span class="pill info">please confirm</span></span><span class="inp">Married</span><span class="small muted">from your first answers</span></div>
+  <div class="notice warn small" style="margin-top:6px"><b>Please check:</b> you typed 12 Mar 1985 earlier; your passport shows 21 Mar 1985. Keep one; your representative reviews it.</div>
+  <div class="ans"><span>Date of marriage<span class="reason">We could not read it from your marriage certificate.</span></span><span class="inp">dd / mm / yyyy</span><span></span></div>
+  <div><span class="lab f">P-142 D3: the client's "Correct" is their own declaration · D5: names, date of birth, passport number and expiry one by one · D6: "please check"</span><span class="lab f">P-77: PQR answers "please confirm"</span></div>
+  <div class="row" style="margin-top:8px"><span class="small muted">Sample person and values</span></div></div>
+
+ <div class="card"><div class="row sp"><h4 style="margin:0">Agent view · the full form · 186</h4><span class="small muted">Applicant · Personal details</span></div>
+  <div class="ans agent" style="margin-top:6px"><span>Family name(s)</span><span class="from doc">Passport</span><span class="row"><span class="pill warn">proposed</span><button class="btn sm">Checked against the page</button></span></div>
+  <div class="ans agent"><span>Date of birth</span><span class="from doc">Passport</span><span class="pill danger">Client and document differ</span></div>
+  <div class="ans agent"><span>Current marital status</span><span class="from cli">Client</span><span class="pill ok">client declared</span></div>
+  <div class="ans agent"><span>Representative's membership number</span><span class="from agt">Agent</span><span class="inp">enter</span></div>
+  <div class="row sp" style="margin-top:10px"><span class="reason">Confirm section waits for: family name and date of birth, checked one by one.</span><button class="btn sm primary" disabled>Confirm section</button></div>
+  <span class="lab cap">Capability (M3)</span><span class="lab nb">Not built here: M3 builds it (P-129, P-141)</span><span class="lab f">P-72, P-142 D3, D5, D6: only staff mark "checked against the page"; a difference is resolved with a reason</span></div>
+</div></div></div>
+
+<!-- ============ 5 ONE ADD DIALOG ============ -->
+<div class="frame"><div class="frame-cap"><span>5 · "+ Add › Add a question": the one Add dialog with the duplicate check (also opens from "Not in the list? Add new")</span><span>P-120 · plain words · the system builds the system name</span></div>
+<div style="padding:16px 24px" class="row" >
+<div class="dlg"><header><h3 style="font-size:18px">Add a question</h3><p class="small muted" style="margin:2px 0 0">It goes into the shared library as a draft and is placed in a section of this questionnaire.</p></header>
+<div class="body"><div class="fld"><span>What you need, in plain words</span><div class="inp">Date the passport was issued</div></div>
+<div class="row"><div class="fld" style="flex:1"><span>About whom</span><div class="inp">The person (each applicant) ▾</div></div><div class="fld" style="flex:1"><span>Kind of answer</span><div class="inp">A date ▾</div></div><div class="fld" style="flex:1"><span>Place it in</span><div class="inp">Personal details ▾</div></div></div>
+<div class="notice danger small"><b>Already in the library:</b> "Passport issue date", used in 3 combinations. <a class="small">Use it instead</a></div>
+<div class="notice info small"><b>Did you mean?</b> "Date of issue of a travel document" · Personal details · a date. Keep yours only with a reason:<div class="inp" style="margin-top:6px">(one line, shown to the second person)</div></div>
+<div class="small muted">Will be created as <span class="mono">person.passport_issue_date</span> · read-only · subject: the person</div></div>
+<footer><button class="btn ghost">Cancel</button><button class="btn primary" disabled>Add to the draft</button></footer></div>
+<div style="max-width:560px;padding-left:16px"><span class="lab cap">Capability C3 library Add (S6)</span><span class="lab nd">Needed: reused from S6, not rebuilt</span><span class="lab f">Follows P-120: exact duplicate refused with where used; near duplicate needs a reason; nobody types system names; "about whom" sets the subject, never the name</span>
+<p class="small">Comes from is not asked here: the rules work it out from the checklist (document › client › agent); the person changes it afterwards in the drawer. A new question in a "Background and declarations" section is always the client's.</p></div>
+</div></div>
+
+<!-- ============ 6 PARAMETERS ============ -->
+<div class="frame"><div class="frame-cap"><span>6 · Every parameter, where it shows, and where it is changed</span><span>row = at most 5 things · the rest in the drawer, the ⋯ menu or a tooltip</span></div>
+<div style="padding:16px 24px" class="grid2" >
+<div><h3 style="font-size:16px;margin-bottom:6px">Question line (one fact, one person role, one combination)</h3>
+<table class="mx"><tr><th>Parameter</th><th>Shown</th><th>Changed where</th><th>Proposed by</th></tr>
+<tr><td class="k">Wording</td><td>Row</td><td>Library (direct, versioned)</td><td>Library / AI</td></tr>
+<tr><td class="k">Person role</td><td>Chip filter · drawer header</td><td>Who can be in this application</td><td>Rules</td></tr>
+<tr><td class="k">Comes from</td><td>Row · tooltip · drawer</td><td>This combination (override, reviewed at its release)</td><td>Rules; AI on Decide</td></tr>
+<tr><td class="k">Fallback question</td><td>Drawer</td><td>Library placement</td><td>Rules</td></tr>
+<tr><td class="k">Pre-qualification</td><td>Row · drawer (reason, quote)</td><td>This combination</td><td>AI with reason</td></tr>
+<tr><td class="k">Only if</td><td>Row · drawer</td><td>This combination, per person role</td><td>AI with quote</td></tr>
+<tr><td class="k">Used by (forms, rules)</td><td>Drawer · tooltip on count</td><td>— (calculated)</td><td>Rules</td></tr>
+<tr><td class="k">Required</td><td>Drawer</td><td>Library placement</td><td>Library</td></tr>
+<tr><td class="k">Answer type and options</td><td>Drawer</td><td>Library, second person (meaning)</td><td>Library / AI</td></tr>
+<tr><td class="k">Section and order</td><td>Accordion · drawer</td><td>Library section</td><td>Library</td></tr>
+<tr><td class="k">Proposed by + IRCC's quote</td><td>Status pill · drawer</td><td>—</td><td>AI · Rules · Person</td></tr>
+<tr><td class="k">Status</td><td>Row</td><td>— (calculated)</td><td>—</td></tr></table></div>
+<div><h3 style="font-size:16px;margin-bottom:6px">Document line (one checklist line, one combination)</h3>
+<table class="mx"><tr><th>Parameter</th><th>Shown</th><th>Changed where</th><th>Proposed by</th></tr>
+<tr><td class="k">Document</td><td>Row</td><td>Pick a library type</td><td>AI with quote</td></tr>
+<tr><td class="k">Who</td><td>Row · chip filter</td><td>This combination</td><td>AI</td></tr>
+<tr><td class="k">When (Always / Only if)</td><td>Row</td><td>This combination</td><td>AI with quote</td></tr>
+<tr><td class="k">Alternatives</td><td>Row ("or …") · drawer</td><td>This combination</td><td>AI</td></tr>
+<tr><td class="k">Facts it supplies + about whom</td><td>Row count · tooltip · drawer</td><td>Library document type, second person</td><td>Rules; AI for new types</td></tr>
+<tr><td class="k">Copies</td><td>Drawer</td><td>This combination <span class="lab nb">Not built</span></td><td>AI with quote</td></tr>
+<tr><td class="k">Translation</td><td>Drawer</td><td>This combination <span class="lab nb">Not built</span></td><td>AI with quote</td></tr>
+<tr><td class="k">Validity window</td><td>Drawer</td><td>This combination <span class="lab nb">Not built</span></td><td>AI with quote</td></tr>
+<tr><td class="k">IRCC's words</td><td>Tooltip · drawer</td><td>With the line</td><td>AI</td></tr>
+<tr><td class="k">Status</td><td>Row</td><td>— (calculated)</td><td>—</td></tr></table>
+<p class="small muted">Copies, translation and validity window follow the report's split: the combination line says how many, how old and which alternatives count; the library document type says what it is and which facts it supplies, about whom.</p></div>
+</div></div>
+
+<!-- ============ 7 ACTIONS MATRIX ============ -->
+<div class="frame"><div class="frame-cap"><span>7 · What each item allows, by state · refusals in the exact words shown</span><span>follows P-116 amended (lifecycle pattern) · P-97 · P-120 · P-121 · challenge M1–M4</span></div>
+<div style="padding:16px 24px">
+<table class="mx"><tr><th style="width:150px">Item · state</th><th>Edit</th><th>Delete (with Undo)</th><th>Retire · Restore</th><th>Add</th><th>Reorder</th><th>This combination or the library</th></tr>
+<tr class="group"><td colspan="7">Question line on a combination (a library question as this combination uses it)</td></tr>
+<tr><td class="k">Draft, never released</td><td class="yes">Comes from, Pre-qualification, Only if: direct, Undo</td><td class="na">— a single question is not deleted here: <span class="ref">"This question comes from the section Personal details. To stop asking it, change where it comes from or remove the section."</span></td><td class="na">—</td><td class="yes">Add a question (frame 5) or a library section</td><td class="no"><span class="ref">"The order is set in the library section Personal details. Change it there."</span></td><td>Wording, answer, required, section: <span class="ref">"Shared by 3 combinations. Change it in the library; a second person approves."</span></td></tr>
+<tr><td class="k">Released</td><td class="yes">As draft; firms see it at the next release; open cases keep theirs</td><td class="na">as above</td><td class="na">—</td><td class="yes">as above</td><td class="no">as above</td><td>as above</td></tr>
+<tr><td class="k">Retired in the library</td><td class="no"><span class="ref">"Retired in the library. Restore it there, or pick another question."</span></td><td class="na">—</td><td class="na">kept by earlier releases and open cases</td><td class="na">—</td><td class="na">—</td><td>Restore in the library (second person)</td></tr>
+<tr><td class="k">AI proposal</td><td class="yes">Accept · Edit · Reject; bulk Accept for High only</td><td>Reject instead</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td>Applies to this combination only</td></tr>
+<tr><td class="k">From the library (default)</td><td class="yes">Override here</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="no">as above</td><td>Override here · or change in the library (second person)</td></tr>
+<tr><td class="k">Combination override</td><td class="yes">Edit; "Changed here" badge</td><td class="yes">Back to the library default, Undo while the draft is open</td><td class="na">—</td><td class="na">—</td><td class="no">as above</td><td>Reviewed in this combination's release (second person)</td></tr>
+<tr class="group"><td colspan="7">Library question (Shared library › Fields and Sections)</td></tr>
+<tr><td class="k">Draft, never released</td><td class="yes">Direct</td><td class="yes">Author's own, never approved: at once, Undo. Used by a draft: <span class="ref">"Can't delete: used by 2 drafts"</span> + list</td><td class="no"><span class="ref">"Never released: delete it instead"</span></td><td class="yes">One Add dialog, duplicate check</td><td class="yes">In its section: direct, History line</td><td>Library only</td></tr>
+<tr><td class="k">Released</td><td class="yes">Wording: direct, versioned · meaning (answer, options, subject, default source): new version, second person</td><td class="no"><span class="ref">"Released items are kept. Retire it instead."</span></td><td class="yes">Retire → second person · in use: <span class="ref">"Can't retire yet: 2 current setups use it"</span> + list</td><td class="na">—</td><td class="yes">as above</td><td>Library only</td></tr>
+<tr><td class="k">Retired</td><td class="no"><span class="ref">"Restore it to change it"</span></td><td class="na">never</td><td class="yes">Restore → second person</td><td class="na">hidden from pickers and AI</td><td class="na">—</td><td>—</td></tr>
+<tr><td class="k">AI proposal</td><td class="yes">Accept (reuse existing or new) · Edit · Reject</td><td>Reject instead</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td>Library, second person at approval</td></tr>
+<tr class="group"><td colspan="7">Document line on a combination (checklist line)</td></tr>
+<tr><td class="k">Draft, never released</td><td class="yes">Direct, Undo</td><td class="yes">Remove from checklist, Undo · warns: <span class="ref">"9 facts move to the client questionnaire"</span></td><td class="no"><span class="ref">"A checklist line is removed, not retired. Retire the document type in the library."</span></td><td class="yes">Add a document (one Add dialog, library type first)</td><td class="yes">Per person: at once, History line</td><td>What it supplies: library type (second person)</td></tr>
+<tr><td class="k">Released</td><td class="yes">As draft; at the next release</td><td class="yes">Remove from checklist; at the next release; open cases keep it</td><td class="no">as above</td><td class="yes">as above</td><td class="yes">as above</td><td>as above</td></tr>
+<tr><td class="k">AI proposal</td><td class="yes">Accept · Edit · Reject, with IRCC's line</td><td>Reject instead</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td>This combination</td></tr>
+<tr><td class="k">Type retired</td><td class="no"><span class="ref">"This document type is retired. Pick another, or restore it in the library."</span></td><td class="yes">Remove from checklist</td><td class="na">—</td><td class="na">—</td><td class="na">—</td><td>—</td></tr>
+<tr class="group"><td colspan="7">Document type (Shared library › Document types)</td></tr>
+<tr><td class="k">Draft, never released</td><td class="yes">Direct</td><td class="yes">Own, never approved: at once, Undo · used: <span class="ref">"Can't delete: used by 2 checklists"</span></td><td class="no"><span class="ref">"Never released: delete it instead"</span></td><td class="yes">One Add dialog</td><td class="na">—</td><td>Library only</td></tr>
+<tr><td class="k">Released</td><td class="yes">Name: direct · facts it supplies and about whom: new version, second person, impact list</td><td class="no"><span class="ref">"Released items are kept. Retire it instead."</span></td><td class="yes">Retire / Restore → second person · <span class="ref">"Can't retire yet: 3 checklists use it"</span></td><td class="na">—</td><td class="na">—</td><td>Library only</td></tr>
+<tr class="group"><td colspan="7">Locks that hold in every state</td></tr>
+<tr><td class="k">Background and declarations (clientOnly)</td><td colspan="6">Comes from stays Client: Document and Agent are greyed with <span class="ref">"Declarations are always answered by the client."</span> A release refuses any other source there. Changing the section's marker is a library change with a second person (P-97).</td></tr>
+<tr><td class="k">Pre-qualification</td><td colspan="6">Refused on an Agent fact: <span class="ref">"Not offered: the agent enters it."</span> Refused with no client wording: <span class="ref">"The prospect needs a question to answer. Add a fallback question first."</span></td></tr>
+<tr><td class="k">Comes from: Document</td><td colspan="6">Refused at save when the role's checklist has no such document: <span class="ref">"No passport is on Spouse or partner's checklist. Add it on Documents, or choose Client."</span> A release warns on an always-needed document with no fallback question and refuses on a conditional or alternative one.</td></tr>
+<tr><td class="k">Someone else saved</td><td colspan="6"><span class="ref">"Changed by someone else"</span> · Reload their version (as built).</td></tr>
+</table>
+<div style="margin-top:6px"><span class="lab cap">Capability C4.9 · C4.10 · lifecycle (C3.x)</span><span class="lab nd">Needed: line actions (slices 2–3); library actions reuse S6</span><span class="lab nb">Not built: bulk delete and bulk retire (lifecycle pattern)</span></div>
+</div></div>
+
+<!-- ============ 8 STATES ============ -->
+<div class="frame"><div class="frame-cap"><span>8 · States each tab draws (EXPERIENCE §4)</span><span>Questionnaires and Documents alike</span></div>
+<div style="padding:16px 24px" class="st8">
+ <div class="state"><h4>Empty (Visitor visa on :4400 today)</h4><b>No questions yet</b><span class="muted">The questions each person needs come from the facts their forms read. Add forms on the Forms tab, or a library section here.</span><button class="btn sm">Add a library section…</button><span class="muted">Documents: "No documents yet. Draft them from IRCC's checklist, or add one."</span><span class="lab cap">Capability (built)</span></div>
+ <div class="state"><h4>Loading</h4><div class="sk" style="width:60%"></div><div class="sk"></div><div class="sk"></div><div class="sk" style="width:80%"></div><span class="muted">Skeleton rows; filters stay usable.</span></div>
+ <div class="state"><h4>Long content</h4><span class="trunc">Date the two partners began living together continuously in a conjugal relationship</span><span class="muted">One line, full text on hover and in the drawer.</span></div>
+ <div class="state"><h4>Needs work (release checks)</h4><div class="notice danger small">2 things stop the release<ul style="margin:4px 0 0;padding-left:16px"><li>Date of marriage: no fallback question, and the marriage certificate is needed only if married. <a>Open it</a></li><li>Spouse or partner: date of birth comes from no document on their checklist. <a>Open it</a></li></ul></div><span class="lab f">Challenge M2, M3</span></div>
+ <div class="state"><h4>Running</h4><b>Draft questions and documents</b><div class="steps"><i class="d"></i><i class="d"></i><i class="d"></i><i class="r"></i><i></i><i></i><i></i></div><span>Step 4 of 7 · where each fact comes from · rules · US$0</span><button class="btn sm">Stop</button><span class="lab f">P-131, P-138</span></div>
+ <div class="state"><h4>Error on the field</h4><div class="inp err">Document · Passport</div><span class="n">No passport is on Spouse or partner's checklist. Add it on Documents, or choose Client.</span></div>
+ <div class="state"><h4>Read-only</h4><span class="pill neutral">Released · Release 2</span><span class="muted">Approver or a released combination: no checkboxes, no ⋯ edits; "Start a change" opens a draft.</span></div>
+ <div class="state"><h4>Conflict</h4><div class="notice warn small"><b>Changed by someone else.</b> Their version changed where 2 answers come from. <button class="btn sm">Reload their version</button></div><span class="lab cap">Capability (built pattern)</span></div>
+</div></div>
+<div class="legend">Questions for the founder, labels and the changes from v1: <code>concept-draft-v2-notes.md</code> in this folder.</div>
+</body></html>
