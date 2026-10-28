@@ -10,7 +10,7 @@ current_item: W1-questions-and-documents (W1-15, P-130–P-132)
 current_slice: slice 1 — data and rules (Comes from by rules, FactSource choices and PQR ticks, per-role coverage, C4.10 release rules); plus QA-69 and Devin Review's two PR #71 points
 stage: EARLY-LOOK
 owner: Lead
-next_action: Lead: early look at W1-15 slice 1 (data and rules, no screen) at df23c39d, synced main 32961d69: build-notes `screens/W1-questions-and-documents/build-notes.md`, API evidence `tests/check_w115_slice1.json` (39/39); also QA-69 and Devin Review's two PR #71 points. Full run-suites on df23c39d: 53 pass in the run, the other 5 pass alone (load in the run). Then slice 2 (Questionnaires tab: the strip and the table) on the Lead's Go.
+next_action: Lead: W1-15 slice 1 (data and rules) plus DV-bb-3 and DV-bb-6a at a506048d, synced main db5e0208; full run-suites 59/59 on that one commit (check_studio_browser skipped, it resets :4400). Slice 2 (Questionnaires tab) waits for board v2 and the founder's grilling.
 blocked_by: none
 updated: 2026-10-29
 
@@ -26,6 +26,7 @@ updated: 2026-10-29
 * **Slice 3 (built 28 Oct):** finder strip and dialog (`web/src/pages/workspace/finder.tsx`), Picked by AI · Sample, row ⋯ menu (Redo with AI, Replace edition, Remove from this combination), the one Undo bar on the forms lane's `POST …/forms/undo` plus the shared Undo toast, Removed in this draft with Add back, guides linked as sources (`api/src/guide-sources.ts`, hooks in `demo.ts` and one line in `finder.ts finish`). S5's own restore route is gone. Tests `check_s5_slice3.ts` (4436) and `check_s5_slice3_browser.cjs` (4437). Open for the Lead: Who can be filled by AI (needs a paid live run to record a replay); other tabs' removes; the older Add-from-library picker.
 
 ## Log (last 10 lines)
+- 2026-10-29 · Builder (Mac): applied Lead message (synced main db5e0208; outside review DV-bb-3: the picker links to the Form library; DV-bb-6a: the person role says Child, the Family sponsorship category keeps 'Dependent child'); check_dv_backbone_browser 8/8; full run-suites 59/59 on a506048d; by-products restored; EARLY-LOOK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): the five suites that failed in the full run pass alone (slice3 browser 35/35, p80 guard 41/41 with the project's Node, launch paths 39/39, s4 runs 90/90, orchestration 22/22); W1-15 slice 1 → EARLY-LOOK, owner Lead; by-products restored. AI US$0.
 - 2026-10-29 · Builder (Mac): full run-suites on df23c39d 53 pass / 5 fail (load: isolated copy did not start, launcher timeouts; slice3 browser Undo toast); rerunning the five alone; by-products restored. AI US$0.
 - 2026-10-29 · Builder (Mac): Lead (seventh chat) resume message applied; one shared preview render for coverage and sources (16d0fdf9; check_engine 38/38); synced main 32961d69 (df23c39d); full suites running on df23c39d. AI US$0.
@@ -35,4 +36,3 @@ updated: 2026-10-29
 - 2026-10-28 · Builder (Mac): after the sync (web built first) run-suites 53/54 (check_screen01_browser: screens', fails on main too), demo journey 46/46 on :4433; by-products restored; READY for MERGE, owner Lead. AI US$0.
 - 2026-10-28 · Builder (Mac): run-suites before the sync 51/53 (check_screen01_browser fails on main too, screens'; check_w1_programs_s2 timing under load); synced main 368b8c32 (PR #67, #69): conflicts in core.ts (imports) and main.ts (module: main's ConfigReadGuard kept, S5 providers added); typecheck clean; QA-53 checked for case pages. AI US$0.
 - 2026-10-28 · Builder (Mac): Lead: founder Go on slice 3; saved and pushed; next sync main after PR #69 (QA-53), suites, MERGE hand-back. AI US$0.
-- 2026-10-28 · Builder (Mac): Lead split with S3 applied (first-run Find button → slot data-finder-start for screens) and Who can be filled from the guide built (people-ai.ts, prompts, Fill from the guide; rules and saved answers at US$0, AI now shown, never run here); check_s5_people_ai 15/15, slice3 browser 35/35; full suites running. AI US$0.
