@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **PR #67 merged (qa fixes). S3 Start setup challenge answered, Agreed 28 Oct** (by message; copy under "Lead response"): M1 founder: saved finder result at US$0, else "Find forms with AI (about US$0.20)" on click only (P-125 amended); M2 remove `/new`, its routes, links, POST /combinations/path and /path-proposal, move the checks (qa's two in a commit named for qa); M3 "start" reason in the one guard, 409; M4 S3 owns POST /combinations/start and the landing on Sources and forms with the RunCard and read-only place, runtime slice 3 owns the forms list; m5–m7, m10 accepted; m8, m9 after runtime slice 2 is on main. Stage BUILD. Save often; EARLY-LOOK by message.
+2026-10-28 (Lead, Mac, fifth chat): **PR #69 merged (main 368b8c32; QA-53 refuses nobody and case people on every configuration read).** Stage BUILD on S3 as agreed: sync main 368b8c32 before the full suites (your calls must name a Studio person); then EARLY-LOOK by message. Save often; US$0.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

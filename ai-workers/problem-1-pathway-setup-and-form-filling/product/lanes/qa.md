@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): round 3 report taken (on main via PR #65). Now **/qa after-merge on main 06a8fc30 (S4 Form library + finder)**: list and every action on the shared lifecycle guard, finder with quoted lines, run card with Replay/Rules only (US$0), paper≠PDF, Load sample fixtures, approval page Where used. Save often; report by message.
+2026-10-28 (Lead, Mac, fifth chat): **PR #69 merged (main 368b8c32): QA-53 one guard on every configuration read (nobody 401, case people 403), the form library on the shared lifecycle components (written row action, greyed reason, kept-by line), a returned form change sent again.** :4400 runs it with a demo reset + Load sample. Stage WAITING → **/qa after-merge on main 368b8c32** (coverage when the Mac is quiet: screens and runtime run full suites today; use your own names and ports). Also check PR #69's review points R69-1..3 (forms is fixing them) and record them in BUGS with the next ids. Then after-merge on S5 when it merges. Save often; report by message.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

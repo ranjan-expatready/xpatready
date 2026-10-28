@@ -8,9 +8,9 @@ updated: 2026-10-27
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | W1-start-setup (S3 Start setup) | BUILD | Builder | Lead note waiting for sync · build S3 per the agreed challenge (screens/W1-start-setup/challenge.md): start guard, POST /combinations/st… |
-| forms | QA-53 (one guard on every Studio configuration read), then the form library on the shared lifecycle components (P-116 amended) | BUILD | Builder | Lead note waiting for sync · QA-61 done; QA-62, QA-63, QA-64 next (Lead message 28 Oct), each with a test; then hand back by message |
-| runtime | W1-combination-workspace (S5, W1-08, P-123) (slice 3 — forms from the finder on the Forms tab, IRCC guides linked as sources, "Remove from …" with Undo on the shared components (P-116 amended)) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead early look at slice 3 (build-notes.md top section; screenshots/slice3/); decide Who can be filled by A… |
+| screens | W1-start-setup (S3 Start setup) | BUILD | Builder | Lead note waiting for sync · S3: run the moved browser checks and check_w1_start_setup_browser, full run-suites and the journey, build n… |
+| forms | QA-61..QA-64 (qa after-merge on S4), then the run-suites per-copy prefix | CHECK | Lead | Lead note waiting for sync · Lead checks QA-61..64 (cbfdab22) and takes the run-suites prefix from 5c2c4e82 onto a Lead PR; then this la… |
+| runtime | W1-combination-workspace (S5, W1-08, P-123) (slice 3 — forms from the finder on the Forms tab, IRCC guides linked as sources, "Remove from …" with Undo on the shared components (P-116 amended)) | BUILD | Builder | Lead note waiting for sync · Builder: synced main 368b8c32 (PR #67 screens qa fixes, PR #69 QA-53 deny by default + form library lifecyc… |
 | m3 | M3-prepare-application | DESIGN | Lead | Lead reads screens/M3-prepare-application/research-agent-view.md (three IRCC representative accounts, PDF v… |
 | evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
 | qa | after-merge on main 06a8fc30 (PR #65: S4 Form library and form finder); report `qa/reports/2026-10-28-after-merge-s4.md` | WAITING | Lead | Lead note waiting for sync · (1) a clean coverage rerun on S4 (main 06a8fc30) when the Mac is quiet; (2) /qa after-merge on PR #69 when … |
@@ -18,6 +18,7 @@ updated: 2026-10-27
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-28 · Lead (Mac, fifth chat, Devin) · **PR #69 merged** (368b8c32: QA-53 deny-by-default reads, form library on the lifecycle components, form-change resend; CI green) and **PR #68 merged** (fcbbcede, records). :4400 restarted on 368b8c32 (demo reset + Load sample; Form library 200). Lead check of forms fa653bec + 5c2c4e82 passed; forms → R69-1..3 (PR #69 review) + takesEffect, then a Lead PR. Runtime → sync main, MERGE hand-back of S5 + D-1 signoff 500. qa → after-merge on 368b8c32. Inbox: Goose/Devin 25 Oct drops filed in history/devin/ (mostly superseded); fix-signoff branch not merged (studio.ts busy on runtime; runtime does D-1). C11.16 says finder on click (PR #68 review).
 - 2026-10-28 · Lead (Mac) · **End of the fourth Lead chat (founder credit nearly out).** Founder Go on S5 slice 3; PRs #68 (records) and #69 (forms QA-53 + library lifecycle) testing; every lane told to save and update its Handover; LEAD.md "Where we are" holds every open item. Resume: new chat, `/lead`.
 - 2026-10-28 · Lead (Mac) · qa after-merge on S4 (06a8fc30): **ready**, no Blocker/Critical/Major; QA-61–64 Minors → forms; qa files taken into the records PR #68.
 - 2026-10-28 · Lead (Mac) · **PR #67 merged** (3858216e: QA-55/56/58/59/60, button hover); :4400 restarted on it. S3 challenge agreed (founder: finder on click only, P-125 amended); screens → S3 BUILD; runtime slice 3 owns the forms list; forms adds the returned form-change resubmit fix (PR #67 review).
@@ -27,4 +28,3 @@ updated: 2026-10-27
 - 2026-10-28 · Lead (Mac) · **W1-10 requirements + AI demo plan agreed** (P-110 amended: Visitor visa all steps live ×3 ≈US$40, saved after, per-step Live/Saved/Rules only, same in production; P-120 confirmed: document types and checks stay in S6).
 - 2026-10-28 · Lead (Mac) · Save-often rule sent to every lane and agent (founder: credit nearly used); W1-10 draft in progress in `screens/W1-ai-drafting/` (partial, saved as written); Lead records backed up to `lead/backup-2026-10-28` (no PR, no CI).
 - 2026-10-28 · Lead (Mac) · Founder Go on round 3 (PR #66: CI green, 3 review issues → screens FIX); S4 FIX (paper ≠ PDF) and carried Shoulds done, waits for #66; runtime fixes QA-38/40 in parallel; W1-10 requirements + AI demo plan (Visitor visa live ×3, saved results for the rest) being drafted (R-131).
-- 2026-10-28 · Lead (Mac) · PR #64 merged (83e658b). Mac power loss recovered (lanes resumed). **S4 Lead check passed** (3dedbee, suites 41/41 local, graph clean); merged into the Lead branch; fresh verification of the 3 Majors + CI on the Lead PR before MERGE; then :4400 restart, qa after-merge, runtime slice 3.
