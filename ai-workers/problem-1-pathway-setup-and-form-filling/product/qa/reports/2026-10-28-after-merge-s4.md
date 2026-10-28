@@ -71,7 +71,12 @@ There are four new Minors. One is a Conflict with the amended P-116: a library r
 
 ## Suites and coverage
 * **CI on the Lead PR #65:** `run-suites.sh --demo` passed **47 of 47**, on a tree identical to main 06a8fc30. Devin Review on that PR shows "fail", but it is an outside reviewer, not CI.
-* **Mac under coverage:** COVERAGE_LINE
+* **Mac under coverage:** **41 of 46 passed** (c8 12.0.0; load average 4.3 at the start, 8.4 at the end, with other sessions running). The fails:
+  * `check_p2_guard`: the known clash with the coverage preload.
+  * Three M7 "Stop during the paid call" steps (`check_ai_launch_paths`, `check_forms_s4_runs`, `check_forms_s4_run_browser`): under the preload, a stop signal becomes a clean exit.
+  * `check_w1_programs_s2`: its server stopped answering mid-run.
+  * **Plain reruns on qa ports:** `check_ai_launch_paths` 39/39 and `check_w1_programs_s2` passed. `check_forms_s4_runs` and `check_forms_s4_run_browser` refused to start because their stand-in launcher did not answer at load 8.5 (their own safety guard). That is not judged here; CI passed both on the same tree.
+  * **Coverage on this incomplete run:** api/src **96.88% lines / 81.69% branches**, under the 97/82 floor; engine **99.44% / 88.96%**, under 99/89 on branches. Two S4 suites stopped early, so finder and run code went unexercised, and the numbers understate. **Not judged as a fall:** I owe a clean coverage rerun when the Mac is quiet, before the next merge.
 
 ## Graph (P-86)
 * **G1–G6:** G1 0 · G2 0 · G3 1 · G4 0 · G5 0 · G6 0. G3 is `GET /attachments/:id/file`, the same route as before.
