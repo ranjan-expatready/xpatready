@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { noRetryOnRefusal, Questionnaire, useCaseView, type CaseInfo, type CasePerson } from "./questionnaire";
 import { FormsPanel } from "./forms";
+import { newestReleases } from "../../../contracts/runtime";
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
 const PEOPLE = [
@@ -100,7 +101,8 @@ function NewCaseDialog({ close }: { close: () => void }) {
   const releases = useApi<ReleaseRow[]>(["releases"], "/releases");
   const nav = useNavigate();
   const key = React.useMemo(() => crypto.randomUUID(), []);
-  const combos = [...new Map((releases.data ?? []).map((r) => [r.combination_id, r])).values()];
+  // QA-38: a case opens on the combination's newest release, so the list names that one (the server's rule).
+  const combos = newestReleases(releases.data ?? []);
   const [f, setF] = React.useState({ combinationId: "", reference: "", principal: "", clientActor: "user-P" });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: f.combinationId || combos[0]?.combination_id, reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });

@@ -230,29 +230,32 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("item 7: no floating \"AI for this combination\" button (one AI place: the next step)", await p.getByRole("button", { name: /AI for this combination/ }).count() === 0);
   const facts = await p.locator("h1 + *, h1").first().locator("xpath=../following-sibling::p[1]").textContent().catch(() => "");
   step("item 7: the facts sit in one muted line under the title", /Not released yet|In Release \d|Released/.test(facts) && !/Released v\d/.test(facts) && /people:/.test(facts) && !/\b[a-z]+\.[a-z_]+\.[a-z_]+\b/.test(facts), facts);
-  step("item 1: \"+ Add form\" lives on the combination page", await p.getByRole("button", { name: "Add form" }).count() === 1);
+  // S5 (P-118 Q2, Q5): Overview only reports; forms are picked on the Forms tab and uploaded in the Form library.
+  step("item 1 → S5: no \"+ Add form\" on the Overview (it only reports)", await p.getByRole("button", { name: "Add form" }).count() === 0);
+  const vvId = p.url().split("/c/")[1].split("/")[0];
   const vvList = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.nodeKey === "individual.visitors.visitor_visa").nextAction;
   const vvPage = (await p.locator("[data-next-step]").first().textContent())?.trim();
   step("review #1: the page's next step is the row's (same words, same action)", vvList && vvPage === vvList.label && (await p.locator("[data-next-step]").first().getAttribute("data-next-step")) === vvList.kind, `${vvList?.label} / ${vvPage}`);
-  step("review #1: a form already mapped in the library is not called unmapped", !/IMM 5707[^\n]*not mapped yet/.test(await p.locator("main").textContent()) && /already mapped in the library/.test(await p.locator("main").textContent()));
+  step("review #1: a form already mapped in the library is not called unmapped", !/IMM 5707[^\n]*not mapped yet/.test(await p.locator("main").textContent()));
   await state("combination-page-overview");
 
-  // "+ Add form" through the one intake: one new approved form, one approved older edition (held), one identical file — in one go.
-  await p.getByRole("button", { name: "Add form" }).click();
-  const panel = p.getByRole("dialog", { name: "Add a form" });
-  await panel.waitFor();
-  step("+ Add form opens a right panel (team pattern), not a centred modal", await panel.evaluate((e) => { const r = e.getBoundingClientRect(); return Math.abs(r.right - window.innerWidth) < 2 && r.height >= window.innerHeight - 2; }));
+  // The one intake (S5: in the Form library, P-118 Q2): one new approved form, one approved older edition (held), one
+  // identical file — in one go. The combination's Forms tab only picks from the library ("Add a form from the library").
+  await p.goto(`${BASE}/c/${vvId}/forms`); await idle();
+  step("S5: the Forms tab offers \"Add a form from the library\" (picks only; no upload on the combination)", await p.getByRole("button", { name: "Add a form from the library" }).count() === 1 && await p.locator('main input[type="file"]').count() === 0);
+  await p.goto(`${BASE}/library/forms`); await idle();
+  const panel = p.locator("main");
   await panel.getByLabel("Choose files to upload").setInputFiles([path.join(OFFICIAL, "forms", "imm1344e.pdf"), path.join(OFFICIAL, "previous-editions", "imm5257e-pre-2023.pdf"), path.join(OFFICIAL, "forms", "imm5707e.pdf")]);
   await panel.getByRole("list", { name: "Upload results" }).waitFor(); await idle();
   const res = await panel.getByRole("list", { name: "Upload results" }).getByRole("listitem").allTextContents();
   step("item 9 / #5: one intake, many files, one result per file (added · older edition not used · already in the library)", res.length === 3 && /Added to the library/.test(res[0]) && /Older edition: not used/.test(res[1]) && /Already in the library/.test(res[2]), res.map((x) => x.slice(0, 70)).join(" | "));
   step("item 9: what the file says is shown (code, kind, title, published date)", /IMM 1344 \(09-2024\)/.test(res[0]) && /Form/.test(res[0]) && /published 2026-09-17/.test(res[0]));
   await state("add-form-panel-intake-results", { viewport: true });
-  await panel.getByRole("button", { name: "Close" }).first().click(); await idle();
   const lib = (await api("/library/forms")).body;
-  step("item 8: the held edition is not in the library and not attached here (never silently)", !lib.find((f) => f.code === "IMM 5257").editions.some((e) => e.label === "IMM 5257 (06-2019)") && !(await api(`/combinations/${p.url().split("/c/")[1]}/attachments`)).body.some((a) => /06-2019/.test(a.edition ?? "")));
-  const heldText = await p.getByRole("region", { name: /Held for a person/ }).textContent();
-  step("held for a person: the page lists the older edition as not used", heldText.includes("IMM 5257 (06-2019)") && /Older edition: not used/.test(heldText), heldText);
+  step("item 8: the held edition is not in the library and not attached here (never silently)", !lib.find((f) => f.code === "IMM 5257").editions.some((e) => e.label === "IMM 5257 (06-2019)") && !(await api(`/combinations/${vvId}/attachments`)).body.some((a) => /06-2019/.test(a.edition ?? "")));
+  const held = (await api("/intake/held")).body;
+  step("held for a person: the older edition waits for a person (To review and the Form library; S5: no longer on the combination)", held.some((h) => /IMM 5257 \(06-2019\)/.test(h.edition ?? "") && /older_edition/.test(h.outcome ?? "")), JSON.stringify(held.map((h) => `${h.edition}:${h.outcome}`)));
+  await p.goto(`${BASE}/c/${vvId}`); await onCombination("Visitor visa");
   step("review #3: no technical words on the page (screen numbers, error names, hashes, user ids, \"inventory\")", !/Screen 0\d|Error\b|inventory|user-[A-Z]\b|\b[0-9a-f]{10}\b/.test(await p.locator("main").textContent()));
   await state("combination-page-held-new-edition");
 
@@ -288,7 +291,10 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("source-trust: unverified upload remains outside the combination's release workflow", (await api("/draft")).body.rows.every((r) => r.label !== "With an LMIA"));
   // Lead check item 6: the sample note names every form and checklist the page lists.
   const lmiaMain = await p.locator("main").textContent();
-  const lmiaCodes = (await p.getByRole("region", { name: "Forms" }).locator("tbody tr td:first-child .mono").allTextContents()).map((c) => c.trim());
+  // S5: the form lines are on the Forms tab (the Overview only reports).
+  const lmiaUrl = p.url(); await p.goto(lmiaUrl.replace(/\/c\/([^/?]+).*$/, "/c/$1/forms")); await p.locator("[data-line]").first().waitFor();
+  const lmiaCodes = (await p.locator("[data-line] td:first-child .mono").allTextContents()).map((c) => c.trim());
+  await p.goto(lmiaUrl); await p.getByText(/In Release \d/).first().waitFor(); await idle();
   step("item 6: the With an LMIA sample note lists the six forms and two checklists the page shows", lmiaCodes.length === 8 && lmiaCodes.every((c) => lmiaMain.includes(`Sample: starts from`) && new RegExp(`\\(forms [^)]*${c.replace(/ /g, "\\s")}`).test(lmiaMain)), lmiaCodes.join(", "));
   // Lead check item 3: a Live row's warnings are its own and lead to where each one is listed.
   const warnLink = p.getByRole("link", { name: /\d+ warnings?: see them/ });
@@ -391,17 +397,17 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   // ======================================================== P-74: forms decisions visible (C1.6; P-107 Online stays a choice, W1-02)
   await p.goto(`${BASE}/?f=all`); await idle();
   step("C1.6 BR-14 (S2): the row says how the combination is filed, in the card's words (Filed: PDF)", /Filed: PDF(?! only)/.test(await row("With an LMIA").textContent()), await row("With an LMIA").textContent());
-  await p.goto(`${BASE}/c/${wpId}`); await idle();
-  const forms = p.getByRole("region", { name: "Forms" });
+  await p.goto(`${BASE}/c/${wpId}/forms`); await idle();
+  const forms = p.getByRole("tabpanel"); // S5: the channels moved from the Overview to the Forms tab
   step("C1.6: the combination page shows the filing method and each line's channel", /Filing: PDF only/.test(await forms.textContent()) && await forms.getByRole("combobox", { name: /^How IMM \d+.* is filed$/ }).count() >= 6);
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("SIGNED_PDF_UPLOAD"); await idle();
-  await p.waitForFunction(() => /signed by hand, scanned/.test(document.querySelector('[aria-labelledby="ov-forms"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
+  await p.waitForFunction(() => /signed by hand, scanned/.test(document.querySelector('[role="tabpanel"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
   step("C1.6: the author sets a line's channel; the line's signature follows and the filing method stays in C1.6's short words", /Filing: PDF only/.test(await p.locator("[data-filing]").textContent()) && /some signed by hand/.test((await p.locator("[data-filing] [title]").getAttribute("title")) ?? "") && /signed by hand, scanned/.test(await forms.textContent()));
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("PDF_UPLOAD"); await idle();
   // P-107, W1-02 (P-102): Online stays selectable and says it needs the browser extension (later wave); no portal choice,
   // no "Add an online form", no drafting-source choice (parked with the extension).
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("ONLINE"); await idle();
-  await p.waitForFunction(() => /is filed Online: it needs the browser extension/.test(document.querySelector('[aria-labelledby="ov-forms"]')?.textContent ?? ""), null, { timeout: 8000 }).catch(() => {}); // the option itself says "(later wave)": wait for the page's own words
+  await p.waitForFunction(() => /is filed Online: it needs the browser extension/.test(document.querySelector('[role="tabpanel"]')?.textContent ?? ""), null, { timeout: 8000 }).catch(() => {}); // the option itself says "(later wave)": wait for the page's own words
   step("C1.6 P-107: the author files a line Online; the line says it needs the browser extension (later wave) and the filing method is Mixed", /Needs the browser extension \(later wave\)/.test(await forms.textContent()) && /Filing: Mixed: online and PDF/.test(await p.locator("[data-filing]").textContent()) && /Warning/.test(await forms.textContent()));
   await state("combination-online-later-wave");
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("PDF_UPLOAD"); await idle();
@@ -419,8 +425,8 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   const sql17 = (q) => require("node:child_process").execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${process.argv[3] ?? "xr_studio_s01ui"}`, "-Atc", q], { encoding: "utf8" }).trim();
   const wpJob = sql17(`select id from drafting_job where combination_id='${wpId}' order by started_at limit 1`);
   if (wpJob) sql17(`update drafting_job set started_at = timestamptz '2026-10-21 17:23:20+00' where id='${wpJob}'`);
-  await p.goto(`${BASE}/c/${wpId}`); await idle();
-  const steps = await p.getByRole("region", { name: "Recent steps" }).textContent().catch(async () => (await p.locator("main").textContent()));
+  await p.goto(`${BASE}/c/${wpId}/forms`); await idle(); // S5 (P-118 Q5): the steps moved from the Overview to each form's row in Forms › Reading and matching
+  const steps = await p.locator("main").textContent();
   step("QA-17: a step run on another day shows its date (\"Oct 21, …\"); one run today says \"today\"", !!wpJob && /Oct 21, \d/.test(steps) && /today \d/.test(steps), (steps.match(/(Oct 21, [^R]{0,12}|today [^R]{0,10})/g) ?? []).slice(0, 3).join(" | "));
 
   // P-63: no "box" on the pages a person reads (form field, field map).
