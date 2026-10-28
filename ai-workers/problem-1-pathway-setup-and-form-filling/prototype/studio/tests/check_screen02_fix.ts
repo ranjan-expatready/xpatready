@@ -109,7 +109,9 @@ const REASON = "Test: a different meaning from the library field that could fit.
   // ─────────────────────────────── K1 (Musts 4, 5): the form fields have their own To review row
   let ffRow = (await queue("user-C", "form_fields")).find((i) => i.state === "needs");
   ok("C3.8 K1 (Must 4): To review lists the applied edition's undecided form fields with a page to decide them", !!ffRow && /^\/review\/form-fields\//.test(ffRow.next?.href) && /no decision/.test(ffRow.what), ffRow?.what);
-  ok("C3.8 K1 (Must 4) fail: a person without the review duty waits on that row", (await queue("user-O", "form_fields")).every((i) => i.state === "waiting"));
+  // QA-53 (28 Oct): a case person (the officer) is not shown To review at all now (403); every Studio person holds the review duty.
+  const officerQueue = await call("GET", "/review-queue?filter=all&kind=form_fields", undefined, "user-O");
+  ok("C3.8 K1 (Must 4) fail: a person without the review duty does not decide that row (the case officer is refused To review, QA-53)", officerQueue.status === 403, officerQueue.status);
   r = await call("POST", `/combinations/${sv}/submit`, {});
   ok("C3.8 K1 (Must 4): the refusal says where to decide them", r.status === 400 && /To review › Form fields/.test(r.body?.detail), r.body?.detail);
   const edId = ffRow!.next.href.split("/").pop();

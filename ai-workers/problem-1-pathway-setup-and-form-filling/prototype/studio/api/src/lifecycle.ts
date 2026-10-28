@@ -233,6 +233,14 @@ export class Lifecycle {
       const no = c.action === "DELETE" ? can.delete : c.action === "RETIRE" ? can.retire : can.restore;
       if (no) throw problem(409, `Cannot ${c.action.toLowerCase()}`, no);
       matches = c.action === "DELETE" ? [c.key, ...f.below.map((n) => n.programNodeKey)] : can.withCombination ? [`combination:${can.withCombination}`] : [];
+    } else if (c.kind === "library_form") {
+      // PR #67 review: a returned form delete, retire or restore is checked again by the form's own rule, leaving this
+      // change out of the open-change check (it is the change being sent again), never as a combination.
+      const u = await formUses(this.db, c.workspaceId, c.key, c.id).catch(() => null);
+      if (!u) throw problem(409, "No longer there", RECHECK.gone);
+      const no = c.action === "DELETE" ? u.can.delete : c.action === "RETIRE" ? u.can.retire : u.can.restore;
+      if (no) throw problem(409, `Cannot ${actionVerb(c.action, c.kind)}`, no, { uses: u.uses });
+      matches = []; // as proposed: a form's change lists nothing with it
     } else {
       const u = await this.combinationUses(c.key).catch(() => null);
       if (!u) throw problem(409, "No longer there", RECHECK.gone);
@@ -241,7 +249,7 @@ export class Lifecycle {
     }
     const done = await this.db.libraryChange.updateMany({ where: { id: c.id, status: "RETURNED" }, data: { status: "WAITING", reason: why, matches, decidedBy: null, decidedAt: null, version: { increment: 1 }, decisionNote: `Sent again after: ${c.decisionNote ?? "returned"}`.slice(0, 300) } });
     if (!done.count) throw problem(409, "Changed meanwhile", "Someone changed this at the same moment. Refresh to see it.");
-    await this.audit.log(c.workspaceId, actor.id, "proposed", c.kind === "structure_node" ? "structure" : "combination", c.key, `${actor.name} sent again ${c.action.toLowerCase()} "${c.label}": ${why}`, undefined, c.kind === "combination" ? c.key : undefined);
+    await this.audit.log(c.workspaceId, actor.id, "proposed", entityOf(c.kind), c.key, `${actor.name} sent again ${actionVerb(c.action, c.kind)} "${c.label}": ${why}`, undefined, c.kind === "combination" ? c.key : undefined);
     return changeView((await this.db.libraryChange.findUnique({ where: { id: c.id } }))!);
   }
 
