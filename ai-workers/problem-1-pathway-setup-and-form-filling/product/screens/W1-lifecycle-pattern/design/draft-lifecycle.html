@@ -1,0 +1,354 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=1440">
+<title>Draft board: one lifecycle pattern — edit, delete, retire, restore (W1-lifecycle-pattern, 28 Oct)</title>
+<style>
+/* Team tokens copied from prototype/studio/web/src/styles/tokens.css and levels.css (as in the round 3 boards). Light only, desktop. */
+:root{--bg:#e9ecef;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--faint:#8c8c8c;--link:#054e9c;--primary:#0862c5;--p50:#e6f4ff;--p100:#cce9ff;--border:#d9d9d9;--border-s:#bfbfbf;--line:#ececec;
+--ok:#16a34a;--t-ok:#0f5c2e;--ok-tint:#e3f4e9;--warn:#ff8500;--t-warn:#663200;--warn-tint:#ffedd9;--danger:#dc2626;--t-danger:#991b1b;--danger-tint:#fbe5e5;--neutral-tint:#eeeeee;
+--lv1:#37506e;--lv2:#0b6477;--lv3:#043a73;
+--font:'Inter Variable',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);font-size:14px;line-height:1.45;color:var(--text);background:var(--bg)}
+h1,h2,h3,h4{font-family:'Proxima Nova',var(--font);margin:0}
+button{font:inherit}
+.board{width:1440px;margin:0 auto;padding:24px 30px 80px}
+.top h1{font-size:24px}.top p{margin:6px 0 0;color:var(--muted);max-width:1200px}
+.sec{margin:40px 0 10px;border-top:2px solid var(--border-s);padding-top:16px}.sec h2{font-size:20px}.sec>p,.note{margin:6px 0;color:var(--muted);max-width:1260px}
+h3.sub{font-size:16px;margin:22px 0 6px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;padding:1px 7px;border-radius:999px;border:1px solid;white-space:nowrap;font-weight:500;vertical-align:middle}
+.tag.cap{color:#054e9c;border-color:#cce9ff;background:#e6f4ff}.tag.scaf{color:#663200;border-color:#ffc773;background:#fff3e0}
+.tag.need{color:#0f5c2e;border-color:#a7dcb9;background:#fff}.tag.nb{color:#595959;border:1px dashed #bfbfbf;background:#fff}
+.tag.dec{color:#0f5c2e;border-color:#a7dcb9;background:#eefaf2}.tag.gap{color:#991b1b;border-color:#f3b4b4;background:#fdf0f0}
+.tag.con{color:#7a1f6b;border-color:#e5b3dc;background:#fbeef9}.tag.sample{color:#663200;border-color:#ffc773;background:#fff}
+.tag.q{color:#fff;background:#0862c5;border-color:#0862c5;font-weight:600}
+.ann{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+table.t{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px;font-size:12px}
+table.t th,table.t td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.t th{background:#f4f6f8;font-weight:600;color:var(--muted)}
+table.t td.st{font-weight:600;font-size:14px;width:250px}
+table.t td .ok{color:var(--t-ok);font-weight:600}table.t td .no{color:var(--t-danger);font-weight:600}table.t td .grey{color:var(--muted);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
+.cap{font-size:12px;color:var(--muted);margin:6px 0 0}
+/* words */
+.word{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.word h4{font-size:16px;display:flex;gap:8px;align-items:center}.word p{margin:6px 0 0;font-size:12px;color:var(--muted)}
+.word.not{border-style:dashed;background:#fafafa}.word.not h4{color:var(--muted);text-decoration:line-through}
+/* app frame */
+.frame{background:var(--surface);border:1px solid var(--border-s);border-radius:12px;overflow:hidden;box-shadow:0 2px 10px #0000001a;margin-top:10px;position:relative}
+.ftitle{font-size:12px;color:var(--muted);padding:6px 12px;background:#fbfbfb;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center;flex-wrap:wrap}.ftitle b{color:var(--text)}
+.appbar{display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;background:var(--raised);border-bottom:1px solid var(--border);font-size:12px}
+.logo{font-weight:800;color:var(--primary);font-size:16px;display:flex;align-items:center;gap:6px}.logo i{width:20px;height:20px;border-radius:5px;background:#0862c5;display:inline-block}
+.prod{border-left:1px solid var(--border);padding-left:10px;color:var(--muted);line-height:1.2}.prod b{display:block;font-size:14px;color:var(--text)}
+.demo{background:#fff3e0;color:#663200;border-radius:6px;padding:2px 8px}
+.shell{display:grid;grid-template-columns:200px minmax(0,1fr) 440px}
+.shell.nopanel{grid-template-columns:200px minmax(0,1fr)}
+.side{background:var(--raised);border-right:1px solid var(--border);padding:14px 8px}
+.side .g{font-size:12px;color:var(--muted);margin:14px 8px 4px}.side .g:first-child{margin-top:0}
+.side a{display:block;padding:6px 8px;border-radius:6px;color:var(--text);text-decoration:none}.side a.on{background:var(--p50);color:var(--link);font-weight:600}
+.main{padding:20px 24px 28px;min-width:0}
+.ph{display:flex;align-items:flex-start;gap:10px}.ph h1{font-size:24px}.ph .s{color:var(--muted);margin-top:2px}.sp{flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--border-s);background:var(--raised);color:var(--text);font-weight:500;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:#fff}.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.btn.danger{background:#b91c1c;border-color:#b91c1c;color:#fff}.btn.dout{color:var(--t-danger);border-color:#f3b4b4}
+.btn[aria-disabled=true]{opacity:.5;cursor:not-allowed}.btn.link{border:0;background:none;color:var(--link);padding:0 4px;height:auto;text-decoration:underline;text-underline-offset:2px}
+.fbar{display:flex;gap:10px;align-items:center;margin-top:14px}
+.search{flex:1;display:flex;align-items:center;gap:8px;height:34px;border:1px solid var(--border-s);border-radius:8px;background:#fff;padding:0 10px;color:var(--muted)}
+.switch{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--text)}.switch i{width:28px;height:16px;border-radius:99px;background:#bfbfbf;position:relative;display:inline-block}.switch i:after{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#fff}.switch.on i{background:var(--primary)}.switch.on i:after{left:14px}
+/* list rows */
+.list{background:#fff;border:1px solid var(--border);border-radius:10px;margin-top:12px;overflow:hidden}
+.lh,.lr{display:grid;grid-template-columns:minmax(0,1fr) 140px 112px 150px;gap:10px;align-items:center;padding:0 14px}
+.lh{height:36px;background:#f4f6f8;font-size:12px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
+.lr{min-height:52px;border-bottom:1px solid var(--line);padding-top:6px;padding-bottom:6px}.lr:last-child{border-bottom:0}
+.lr.sel{background:#f3f8fe;box-shadow:inset 3px 0 0 var(--primary)}.lr.ret{color:var(--muted);background:#fafafa}
+.lr .n b{display:block}.lr .n span{display:block;font-size:12px;color:var(--muted)}.lr>span{font-size:12px}
+.acts{display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.why{grid-column:1 / -1;font-size:12px;color:var(--muted);margin:-2px 0 2px;display:flex;gap:6px;align-items:center}
+.why b{color:var(--t-danger);font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px;border:1px solid}
+.chip.draft{color:#595959;border-color:#bfbfbf;background:#fff;border-style:dashed}.chip.live{color:var(--t-ok);border-color:#a7dcb9;background:var(--ok-tint)}
+.chip.ret{color:#595959;border-color:#d9d9d9;background:var(--neutral-tint)}.chip.wait{color:var(--t-warn);border-color:#ffc773;background:var(--warn-tint)}
+.chip.old{color:var(--lv1);border-color:#c9d3df;background:#f3f5f7}
+.chip:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}.chip.draft:before{background:none;border:1.5px solid currentColor;width:5px;height:5px}
+.chip.ret:before{border-radius:1px}.chip.wait:before{border-radius:0;transform:rotate(45deg);width:6px;height:6px}
+/* side panel */
+.panel{background:var(--raised);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:100%}
+.panel .hd{padding:14px 18px;border-bottom:1px solid var(--border)}.panel .hd h3{font-size:18px}.panel .hd p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+.panel .bd{padding:14px 18px;flex:1;display:flex;flex-direction:column;gap:14px}
+.panel .ft{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center}
+.box{border:1px solid var(--border);border-radius:10px;padding:12px}.box h4{font-size:14px;margin-bottom:6px;display:flex;gap:6px;align-items:center}
+.grp{font-size:12px;font-weight:600;color:var(--muted);margin:10px 0 4px;display:flex;gap:6px;align-items:center}.grp:first-of-type{margin-top:0}
+.grp.stop{color:var(--t-danger)}
+.uses{list-style:none;margin:0;padding:0}.uses li{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px dashed var(--line);font-size:14px}.uses li:last-child{border-bottom:0}
+.uses li a{color:var(--link);text-underline-offset:2px}.uses li .it{margin:0;font-size:14px;color:var(--text);text-align:left}.uses li span{font-size:12px;color:var(--muted);margin-left:auto;text-align:right}
+.uses li .mk{width:16px;flex:none;text-align:center;font-weight:700}.mk.s{color:var(--t-danger)}.mk.k{color:var(--t-ok)}
+.notice{border-radius:10px;padding:10px 12px;font-size:14px;border:1px solid}.notice b{display:block;margin-bottom:2px}
+.notice.info{background:var(--p50);border-color:var(--p100)}.notice.warn{background:#fff8ef;border-color:#ffc773}.notice.danger{background:#fdf0f0;border-color:#f3b4b4}.notice.ok{background:#eefaf2;border-color:#a7dcb9}
+.notice p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.ta{border:1px solid var(--border-s);border-radius:8px;min-height:56px;padding:8px;font-size:14px;color:var(--text);background:#fff}
+.lbl{font-size:12px;font-weight:600}.lbl span{font-weight:400;color:var(--muted)}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 10px;font-size:14px}.kv dt{color:var(--muted)}.kv dd{margin:0}
+.skel{height:14px;border-radius:6px;background:linear-gradient(90deg,#eee,#f6f6f6,#eee);margin:6px 0}
+/* components */
+.comp{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px}.comp>h4{font-size:14px;margin-bottom:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tip{position:relative;display:inline-block;background:#2d2d2d;color:#fff;font-size:12px;border-radius:8px;padding:8px 10px;max-width:300px;margin-top:8px}
+.tip:before{content:"";position:absolute;top:-5px;left:24px;border:5px solid transparent;border-top:0;border-bottom-color:#2d2d2d}
+.toast{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--border);border-left:4px solid var(--ok);border-radius:10px;padding:10px 12px;box-shadow:0 4px 14px #0000001f;font-size:14px}
+.toast.info{border-left-color:var(--primary)}.toast .x{color:var(--muted);margin-left:auto}
+.toast .bar{height:3px;background:var(--p100);border-radius:2px;margin-top:6px;position:relative;overflow:hidden}.toast .bar:after{content:"";position:absolute;left:0;top:0;bottom:0;width:62%;background:var(--primary)}
+.card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.card .k{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}.card h5{font-size:16px;margin:4px 0 2px;font-family:'Proxima Nova',var(--font)}
+.card .w{font-size:14px;margin:4px 0}.card .row{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.trail{font-size:12px;color:var(--muted)}.trail b{color:var(--text)}
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:10px}
+.step{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.step .no{font-size:12px;font-weight:700;color:#fff;background:var(--primary);border-radius:99px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center}
+.step h4{font-size:14px;display:flex;gap:8px;align-items:center}
+.step .s{font-size:12px;color:var(--muted)}
+.mini{border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;background:var(--surface)}
+.mini .r{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:3px 0}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px}.cmp div{border:1px solid var(--border);border-radius:6px;padding:6px 8px;background:#fff}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.qbox{background:#fff;border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;padding:12px 14px;margin-top:10px}
+.qbox h4{font-size:16px}.qbox p{margin:6px 0 0;font-size:14px}.qbox .alt{color:var(--muted);font-size:12px}
+</style></head><body><div class="board">
+
+<div class="top">
+<h1>One lifecycle pattern: edit, delete, retire and restore, the same on every master</h1>
+<p>Draft for the Lead (W1-lifecycle-pattern, 28 Oct). How every master and reusable part (structure names, combinations, fields, sections, document types, forms and editions, checks, lines on a combination) is changed when it may be used elsewhere, and what the person sees. Desktop 1440. Built on P-52, P-116, P-123, P-128, P-34 §4, P-96, P-97; industry practice in the concept. Every name, count and release number below is <span class="tag sample">Sample</span> unless it is a structure name from P-112 or an IRCC form code.</p>
+<div class="legend"><span class="tag cap">Capability</span><span class="tag scaf">Scaffolding</span><span class="tag need">Needed for the proof</span><span class="tag nb">Not built</span><span class="tag dec">Follows a decision</span><span class="tag gap">Missing: Lead settles</span><span class="tag con">Two sources conflict</span><span class="tag q">Founder question</span><span class="tag sample">Sample</span></div>
+</div>
+
+<!-- 1 WORDS -->
+<div class="sec"><h2>1 · The words: one set, each with one meaning</h2>
+<p>Every button, message, To review card and History line uses these words and no others. A greyed action always shows why in words beside it.</p>
+<div class="grid4" style="grid-template-columns:repeat(6,1fr)">
+<div class="word"><h4>Delete</h4><p>Ends an item that was <b>never released and is used nowhere</b>. A second person approves; it is gone then. The History line stays.</p><div class="ann"><span class="tag dec">P-52 L1 · P-128 (3)</span></div></div>
+<div class="word"><h4>Remove from …</h4><p>Takes a line out of <b>one</b> combination, section or questionnaire. The item stays in the library. Undo while the draft is open.</p><div class="ann"><span class="tag dec">P-123 · P-116</span></div></div>
+<div class="word"><h4>Retire</h4><p>Hides a <b>released</b> item from pickers, AI and new setups. Releases and open cases keep it. Reversible.</p><div class="ann"><span class="tag dec">P-52 L2</span></div></div>
+<div class="word"><h4>Restore</h4><p>Brings a retired item back to pickers and AI, by the same path: a second person approves.</p><div class="ann"><span class="tag dec">P-52 L4</span></div></div>
+<div class="word"><h4>Withdraw</h4><p>The author takes back <b>their own</b> waiting change before it is decided. Nothing changes.</p><div class="ann"><span class="tag dec">built</span></div></div>
+<div class="word"><h4>Replace edition</h4><p>A newer IRCC edition takes over through impact review. The earlier one is kept for releases and cases.</p><div class="ann"><span class="tag dec">P-32 · P-123</span></div></div>
+</div>
+<div class="grid4" style="grid-template-columns:repeat(6,1fr);margin-top:10px">
+<div class="word not"><h4>Archive</h4><p>Same job as Retire: one word only.</p></div>
+<div class="word not"><h4>Deactivate · Disable</h4><p>Same job as Retire.</p></div>
+<div class="word not"><h4>Trash · Discard</h4><p>Suggests a bin we do not have.</p></div>
+<div class="word not"><h4>Remove (alone)</h4><p>Today it means Delete on Program structure and To review.</p><div class="ann"><span class="tag con">C1 code vs P-128</span></div></div>
+<div class="word not"><h4>"(L1)" "(L3)" "(L6)"</h4><p>Rule codes in today's messages: plain words instead.</p><div class="ann"><span class="tag con">C2 code vs PRODUCT §4</span></div></div>
+<div class="word"><h4>Undo</h4><p>On the toast, 10 s, after any reversible step. On a waiting change it is a Withdraw with no reason asked.</p><div class="ann"><span class="tag gap">M2</span></div></div>
+</div></div>
+
+<!-- 2 RULE TABLE -->
+<div class="sec"><h2>2 · The rule table: state × action</h2>
+<p>The state is calculated from where it is used, never set by hand. "Used" means a section placement, field map, condition, check, document line, form line, structure child or combination (P-52). "Current" means a draft or the latest release; earlier releases and open cases never stop an action, they are listed as "kept".</p>
+<table class="t">
+<tr><th>State of the item</th><th>Edit wording<br>(name, help, order)</th><th>Edit meaning<br>(type, answer list, subject, filled by, condition, edition)</th><th>Delete</th><th>Retire</th><th>Restore</th><th>Who approves · when it takes effect</th></tr>
+<tr><td class="st">A · Never released, used nowhere <span class="chip draft">Draft</span></td><td>Direct, versioned</td><td>Direct (still a draft)</td><td><span class="ok">Allowed</span> → second person <span class="tag q">Q1</span></td><td><span class="grey">Greyed:</span> "Never released: delete it instead."</td><td>—</td><td>Second person on To review · deleted at approval</td></tr>
+<tr><td class="st">B · Never released, used by a draft <span class="chip draft">Draft</span></td><td>Direct</td><td>New draft version + impact list</td><td><span class="no">Blocked:</span> "Can't delete: used by 2 drafts." + list with links</td><td><span class="grey">Greyed</span> (never released)</td><td>—</td><td>Remove it from each draft first</td></tr>
+<tr><td class="st">C · Released, no current use <span class="chip live">Released</span><br><span class="cap">only earlier releases and open cases keep it</span></td><td>Direct; shows in setup now, firms see it at each next release</td><td>New version · impact preview · second person</td><td><span class="no">Blocked:</span> "Released items are kept. Retire it instead."</td><td><span class="ok">Allowed</span> → second person</td><td>—</td><td>Second person · next release today <span class="tag q">Q2</span></td></tr>
+<tr><td class="st">D · Released, used by a current setup <span class="chip live">In use</span></td><td>As C</td><td>As C</td><td><span class="no">Blocked</span></td><td><span class="no">Blocked:</span> "Can't retire yet: 2 current setups use it." + list</td><td>—</td><td>Remove it there, release without it, then retire</td></tr>
+<tr><td class="st">E · Retired <span class="chip ret">Retired</span></td><td>Read-only: "Restore it to change it."</td><td>Read-only</td><td>Never</td><td>—</td><td><span class="ok">Allowed</span> → second person; greyed while the level above is retired</td><td>Second person · next release today <span class="tag q">Q2</span></td></tr>
+<tr><td class="st">F · A change is waiting <span class="chip wait">Retire waiting</span></td><td colspan="2">Allowed, except on a Delete waiting (item frozen)</td><td colspan="3">Every action greyed: "A change is waiting for a second person." The author sees <b>Withdraw</b>. Pickers show "Being retired" and refuse new uses <span class="tag gap">M3: forms only today</span></td><td>Approval checks again: refused if a use appeared</td></tr>
+<tr><td class="st">Any line on a combination<br><span class="cap">form, document, rule, section, question, person role</span></td><td colspan="2">Edited in the combination's draft</td><td colspan="3"><b>Remove from this combination</b>: a draft change, Undo, the line's history kept</td><td>Inside the combination's one review and release (P-76)</td></tr>
+</table>
+<div class="ann"><span class="tag dec">P-52 L1–L6</span><span class="tag dec">P-116</span><span class="tag dec">P-34 §4 · P-96 · P-97 (edits)</span><span class="tag dec">STANDARDS §3.5, §3.7</span><span class="tag cap">Capability</span><span class="tag need">Needed for the proof</span></div>
+<table class="t">
+<tr><th style="width:250px">Exception</th><th>Rule</th><th>Mark</th></tr>
+<tr><td><b>Combination (Live)</b></td><td>Its own releases do not stop its retire. Retire stops new cases; open cases keep their release ("was retired by a release: new cases are not opened on it", built).</td><td><span class="tag dec">addendum A2 · C6.1</span></td></tr>
+<tr><td><b>Combination row on Program structure</b></td><td>One action: Retire takes the name and its combination together in one approval; Restore brings both back.</td><td><span class="tag dec">challenge #1 (Lead decides)</span></td></tr>
+<tr><td><b>Pathway or Program branch</b></td><td>Deletes as a whole only when nothing in it is used; the proposal stores the exact list; approval refuses if the branch changed.</td><td><span class="tag dec">P-128 (3) · challenge #2</span></td></tr>
+<tr><td><b>Approved official form file</b></td><td>Never deleted, only retired; a held, unapproved file can be rejected.</td><td><span class="tag dec">P-51 · P-116</span> <span class="tag sample">Retention period: Unconfirmed: no counsel</span></td></tr>
+<tr><td><b>Pathway type</b> (Retail · Corporate and employers)</td><td>Fixed; no edit, delete or retire.</td><td><span class="tag dec">P-104 · P-108</span></td></tr>
+<tr><td><b>Release</b></td><td>Frozen; never edited or deleted; cases pin it. Rollback is not built.</td><td><span class="tag dec">STANDARDS §3.7</span> <span class="tag nb">Not built: rollback</span></td></tr>
+</table></div>
+
+<!-- 3 COMPONENTS -->
+<div class="sec"><h2>3 · The shared components, in every state</h2>
+<p>Built once (web <code>components/lifecycle/</code>, API one guard in <code>lifecycle.ts</code>) and used by Program structure, Immigration programs, To review, every Shared library list and the combination workspace. Shown here on Shared library › Sections with the panel open.</p>
+
+<div class="frame">
+<div class="ftitle"><b>RowAction + WherePanel + ImpactPanel</b> · Shared library › Sections, "Travel history" selected, Retire refused · <span class="tag cap">Capability</span><span class="tag need">Needed for the proof</span><span class="tag dec">P-116 "where used first"</span></div>
+<div class="appbar"><span class="logo"><i></i>ExpatReady</span><span class="prod"><b>Product Studio</b>Pathway Configurator</span><span class="sp"></span><span class="demo">Prototype · Acting as: Author <span class="tag scaf">Scaffolding</span></span></div>
+<div class="shell">
+<nav class="side"><div class="g">Configure</div><a>1 Program structure</a><a>2 Immigration programs</a><a>3 To review</a><div class="g">Shared library</div><a>Fields</a><a class="on">Sections</a><a>Document types</a><a>Forms</a><a>Checks</a><a>Rules</a><div class="g">History</div><a>AI work</a><a>Releases</a><a>Activity</a></nav>
+<div class="main">
+<div class="ph"><div><h1>Sections</h1><div class="s">Groups of questions asked together. Each section is defined once and reused by every combination.</div></div><span class="sp"></span><button class="btn pri">Add</button></div>
+<div class="fbar"><div class="search">⌕ <input placeholder="Find a section" aria-label="Find a section"></div><span class="switch"><i></i>Show retired</span></div>
+<div class="list" role="table" aria-label="Sections">
+<div class="lh" role="row"><span>Section</span><span>Used by</span><span>Status</span><span style="text-align:right">Actions</span></div>
+<!-- A -->
+<div class="lr" role="row"><div class="n"><b>Second citizenship</b><span>3 questions · added by a person</span></div><span>Used nowhere</span><span><span class="chip draft">Draft</span></span><span class="acts"><button class="btn sm">Edit</button><button class="btn sm dout">Delete</button></span></div>
+<!-- B -->
+<div class="lr" role="row"><div class="n"><b>Proof of funds</b><span>6 questions · AI · reviewed</span></div><span>2 drafts</span><span><span class="chip draft">Draft</span></span><span class="acts"><button class="btn sm">Edit</button><button class="btn sm dout" aria-disabled="true" aria-describedby="w-b">Delete</button></span>
+<div class="why" id="w-b"><b>Can't delete:</b> used by 2 drafts. <button class="btn link">See where used</button></div></div>
+<!-- D selected -->
+<div class="lr sel" role="row"><div class="n"><b>Travel history</b><span>9 questions · AI · reviewed</span></div><span>2 combinations · 6 open cases</span><span><span class="chip live">In use</span></span><span class="acts"><button class="btn sm">Edit</button><button class="btn sm dout" aria-disabled="true" aria-describedby="w-d">Retire</button></span>
+<div class="why" id="w-d"><b>Can't retire yet:</b> 2 current setups use it. <button class="btn link">See where used</button></div></div>
+<!-- C -->
+<div class="lr" role="row"><div class="n"><b>Previous visa refusals (old wording)</b><span>4 questions · person</span></div><span>Release 1 of 1 combination · 2 open cases</span><span><span class="chip live">Released</span></span><span class="acts"><button class="btn sm">Edit</button><button class="btn sm dout">Retire</button></span></div>
+<!-- F -->
+<div class="lr" role="row"><div class="n"><b>Military service</b><span>5 questions · AI · reviewed</span></div><span>Release 2 of 1 combination</span><span><span class="chip wait">Retire waiting</span></span><span class="acts"><button class="btn sm">Edit</button><button class="btn sm">Withdraw</button></span>
+<div class="why">You asked to retire it. Waiting for a second person on <button class="btn link">To review</button>.</div></div>
+<!-- E -->
+<div class="lr ret" role="row"><div class="n"><b>Education before 2010</b><span>3 questions · retired by a release</span></div><span>Kept by Release 1 of 1 combination</span><span><span class="chip ret">Retired</span></span><span class="acts"><button class="btn sm">View</button><button class="btn sm">Restore</button></span></div>
+</div>
+<p class="cap">Shown with "Show retired" on, to draw the retired row. Rows: one written action from the state, never a ⋯ menu for it; the reason under a greyed action is visible text (also <code>aria-describedby</code>), not tooltip only. Keyboard: ↑/↓ rows, Enter = Edit, Delete key or Shift+F10 = the row's action. <span class="tag dec">P-128 (3)</span> <span class="tag dec">challenge #7</span></p>
+</div>
+<aside class="panel" aria-label="Travel history details">
+<div class="hd"><h3>Travel history</h3><p>Section · 9 questions · <span class="chip live">In use</span></p></div>
+<div class="bd">
+<section class="box" aria-label="Where used"><h4>Where used</h4>
+<div class="grp stop">✕ Stops Retire (2)</div>
+<ul class="uses">
+<li><span class="mk s">✕</span><a href="#">Retail › Temporary residence › Visitors › Visitor visa</a><span>Draft and Release 3 ask it</span></li>
+<li><span class="mk s">✕</span><a href="#">Retail › Temporary residence › Study permits › Study permit › Outside Canada</a><span>Release 2 asks it</span></li>
+</ul>
+<div class="grp">✓ Kept, does not stop it (3)</div>
+<ul class="uses">
+<li><span class="mk k">✓</span><a href="#">Visitor visa · Release 2</a><span>earlier release, never changed</span></li>
+<li><span class="mk k">✓</span><span class="it">Visitor visa · 4 open cases</span><span>keep their release</span></li>
+<li><span class="mk k">✓</span><span class="it">Study permit · 2 open cases</span><span>keep their release</span></li>
+</ul>
+</section>
+<div class="notice danger"><b>Can't retire yet: 2 current setups use it.</b>Remove it from each one's questionnaire, release them without it, then retire it. Open cases and earlier releases keep it either way.<p>Each line above opens that combination's questionnaire.</p></div>
+<section aria-label="History"><h4 style="font-size:14px">History</h4><p class="cap">27 Oct · Accepted from AI, approved by a second person<br>26 Oct · Added by AI from IMM 5257 (Sample)</p></section>
+</div>
+<div class="ft"><button class="btn dout" aria-disabled="true">Retire</button><span class="sp"></span><button class="btn">Close</button><button class="btn pri" aria-disabled="true">Save</button></div>
+</aside>
+</div></div>
+
+<div class="grid3" style="margin-top:16px">
+<div class="comp"><h4>WherePanel · used nowhere <span class="tag cap">Capability</span></h4>
+<section class="box"><h4>Where used</h4><p style="margin:0">Used nowhere: no combination, form field, rule or check reads it.</p><p class="cap">You can delete it. Nothing else changes.</p></section></div>
+<div class="comp"><h4>WherePanel · loading and error <span class="tag cap">Capability</span></h4>
+<section class="box"><h4>Where used</h4><div class="skel" style="width:90%"></div><div class="skel" style="width:70%"></div><div class="skel" style="width:80%"></div><span class="cap" role="status">Finding every use…</span></section>
+<div class="notice danger" style="margin-top:8px"><b>Couldn't load where it is used.</b>Actions stay greyed until we know. <button class="btn link">Retry</button></div></div>
+<div class="comp"><h4>BlockedLine + tooltip <span class="tag cap">Capability</span><span class="tag dec">EXPERIENCE §2.10</span></h4>
+<button class="btn sm dout" aria-disabled="true">Delete</button> <span class="cap" style="display:inline"><b style="color:var(--t-danger)">Can't delete:</b> used by 3 combinations.</span><br>
+<div class="tip">Can't delete: used by 3 combinations and 12 form fields. Released items are kept: retire it once nothing current uses it. <u>See where used</u></div></div>
+</div>
+
+<h3 class="sub">ImpactPanel: the confirm, in the right panel (it collects a reason, so never a centred modal) <span class="tag dec">TEAM-PATTERNS Overlays</span> <span class="tag cap">Capability</span> <span class="tag need">Needed for the proof</span></h3>
+<div class="grid3">
+<div class="comp"><h4>Delete (state A)</h4>
+<div class="notice info"><b>Delete "Second citizenship"?</b>It was never released and nothing uses it. A second person approves; it is deleted then. Until then you can withdraw it.</div>
+<div style="margin-top:10px" class="lbl">Why delete it? <span>Required, for the second person</span></div><div class="ta">Added by mistake: the citizenship section already asks it.</div>
+<div class="row" style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end"><button class="btn">Cancel</button><button class="btn danger">Send for approval</button></div>
+<p class="cap">If Q1 = yes and it is your own unapproved draft: button "Delete", no reason box, Undo toast.</p><div class="ann"><span class="tag q">Q1</span></div></div>
+<div class="comp"><h4>Retire (state C)</h4>
+<div class="notice warn"><b>Retire "Previous visa refusals (old wording)"?</b>It disappears from pickers and AI suggestions for new setups. Kept: Release 1 of Visitor visa and its 2 open cases. You can restore it.</div>
+<dl class="kv" style="margin-top:10px"><dt>Approves</dt><dd>A second person, on To review</dd><dt>Takes effect</dt><dd>With the next release <span class="tag q">Q2</span></dd></dl>
+<div style="margin-top:10px" class="lbl">Why retire it? <span>Required</span></div><div class="ta">Replaced by "Previous visa refusals".</div>
+<div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end"><button class="btn">Cancel</button><button class="btn danger">Send for approval</button></div></div>
+<div class="comp"><h4>Restore (state E)</h4>
+<div class="notice info"><b>Restore "Education before 2010"?</b>It comes back to pickers and AI suggestions. Nothing that uses it today changes.</div>
+<div style="margin-top:10px" class="lbl">Why restore it? <span>Required</span></div><div class="ta">Needed again for the study permit questionnaire.</div>
+<div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end"><button class="btn">Cancel</button><button class="btn pri">Send for approval</button></div>
+<div class="notice danger" style="margin-top:10px"><b>Can't restore yet.</b>"Permanent residence" above it is retired: restore it first.</div></div>
+</div>
+
+<h3 class="sub">UndoToast and conflict notices <span class="tag cap">Capability</span></h3>
+<div class="grid3">
+<div class="comp"><h4>After sending <span class="tag gap">M2: Undo with no reason</span></h4>
+<div class="toast info"><div><b>Sent for approval:</b> Delete "Second citizenship".<div class="bar"></div></div><button class="btn sm">Undo</button><span class="x">✕</span></div>
+<div class="toast" style="margin-top:8px"><div><b>Removed from Visitor visa:</b> IMM 5476. It stays in the library.</div><button class="btn sm">Undo</button></div>
+<p class="cap">10 s, one per action, never the only copy: the row also shows "Delete waiting".</p></div>
+<div class="comp"><h4>Edit saved by someone else <span class="tag dec">STANDARDS §4 (409)</span></h4>
+<div class="notice danger"><b>Changed meanwhile.</b>Someone saved "Travel history" at 14:02 (its help text). Your change is not saved.<p><button class="btn sm">Reload</button> <button class="btn sm">Copy my text</button></p></div></div>
+<div class="comp"><h4>Done, said plainly <span class="tag gap">QA-52</span></h4>
+<div class="toast"><div><b>Approved and deleted:</b> "Second citizenship". The History line stays.</div><span class="x">✕</span></div>
+<div class="toast" style="margin-top:8px"><div><b>Approved:</b> Retire "Military service". It takes effect with the next release.</div><span class="x">✕</span></div></div>
+</div>
+
+<h3 class="sub">ReviewCard on To review: approver, author, re-check failed <span class="tag cap">Capability</span><span class="tag dec">P-79 · P-52 L4</span></h3>
+<div class="grid3">
+<div class="card"><div class="k">Library change · Section · <span class="chip wait">Needs you</span></div><h5>Retire "Previous visa refusals (old wording)"</h5>
+<p class="w">Proposed by the author, 28 Oct. Reason: Replaced by "Previous visa refusals".</p>
+<div class="mini"><div class="r"><span>Checked again just now</span><b style="color:var(--t-ok)">No current use</b></div><div class="r"><span>Kept</span><span>Release 1 · 2 open cases</span></div></div>
+<div class="row"><button class="btn sm">Return…</button><span class="sp"></span><button class="btn sm pri">Approve</button></div></div>
+<div class="card"><div class="k">Library change · Section · <span class="chip wait">Waiting for others</span></div><h5>Retire "Military service"</h5>
+<p class="w">You proposed it, so a different person approves or returns it.</p>
+<div class="row"><button class="btn sm">Withdraw</button></div></div>
+<div class="card" style="border-color:#f3b4b4"><div class="k">Library change · Field · <span class="chip wait">Needs you</span></div><h5>Delete "Second passport expiry date"</h5>
+<div class="notice danger"><b>Can't approve: changed since it was proposed.</b>Study permit's draft started using it at 14:06. Return it with that reason.</div>
+<div class="row"><button class="btn sm pri">Return with this reason</button></div>
+<p class="cap">The approval re-check (built for names, combinations and forms) shown before the click, not only after.</p></div>
+</div></div>
+
+<!-- 4 EDIT RULES -->
+<div class="sec"><h2>4 · Edits: what changes in place, what makes a new version, what releases keep</h2>
+<div class="grid2">
+<table class="t">
+<tr><th>Kind of edit</th><th>Examples</th><th>What happens</th><th>Second person</th></tr>
+<tr><td><b>Wording</b></td><td>Name, help text, tooltip, order</td><td>Direct, versioned, exact-duplicate check. Shows in setup at once; firms see it at each combination's next release; open cases keep their words.</td><td>No (seen in the release change set) <span class="tag dec">P-96 · BR-6</span></td></tr>
+<tr><td><b>Meaning</b></td><td>Answer type, answer list, subject, filled by, split, merge, a check's condition, a document type's rules</td><td>New version. Impact preview names every section, rule, form field and combination. Drafts take it on approval; released combinations at their next release; cases keep theirs.</td><td>Yes, on To review <span class="tag dec">P-34 §4 · P-97</span></td></tr>
+<tr><td><b>Edition</b></td><td>A form's new IRCC edition</td><td>Replace edition → field-by-field comparison → impact → accept → release. The earlier edition stays.</td><td>Hand upload yes; canada.ca download no <span class="tag dec">P-123</span></td></tr>
+<tr><td><b>Identity</b></td><td>System name, form number, Pathway type</td><td>Never edited. Add a new one and retire the old.</td><td>— <span class="tag dec">P-120</span></td></tr>
+</table>
+<div class="frame" style="margin-top:8px"><div class="ftitle"><b>Edit panel, a shared field</b> · wording vs meaning · <span class="tag cap">Capability</span><span class="tag need">Needed</span><span class="tag gap">Today: meaning edits apply without impact or second person</span></div>
+<div style="background:#fff;padding:14px 18px;display:flex;flex-direction:column;gap:10px">
+<div><div class="lbl">Name <span>Wording: saved directly</span></div><div class="ta" style="min-height:34px">Marital status</div></div>
+<div><div class="lbl">Help text <span>Wording: saved directly</span></div><div class="ta" style="min-height:34px">Your status today, as on your documents.</div></div>
+<div><div class="lbl">Answer list <span>Meaning: needs a second person</span></div><div class="ta" style="min-height:34px">Single · Married · Common-law · Separated · Divorced · Widowed · <b>+ Annulled</b> <span class="tag sample">Sample list</span></div></div>
+<div class="notice warn"><b>This changes what 3 combinations ask.</b>Visitor visa (draft takes it on approval) · Study permit and Spouse or common-law partner (released: they take it at their next release). 18 open cases keep their release. IMM 5257 and IMM 0008 fill it in 4 form fields.<p><button class="btn link">See every use</button></p></div>
+<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn">Cancel</button><button class="btn">Save wording</button><button class="btn pri">Send the meaning change for approval</button></div>
+</div></div>
+</div></div>
+
+<!-- 5 WORKED EXAMPLES -->
+<div class="sec"><h2>5 · Three worked examples</h2>
+
+<h3 class="sub">Example 1 · An unused field is deleted <span class="tag sample">"Second passport expiry date" is Sample</span><span class="tag dec">P-52 L1, L4</span></h3>
+<div class="steps">
+<div class="step"><h4><span class="no">1</span>Fields list</h4><div class="mini"><div class="r"><b>Second passport expiry date</b><span class="chip draft">Draft</span></div><div class="r"><span>Used nowhere</span><span><button class="btn sm">Edit</button> <button class="btn sm dout">Delete</button></span></div></div><p class="s">State A: never released, no form field, rule or section reads it.</p></div>
+<div class="step"><h4><span class="no">2</span>Where used, then confirm</h4><div class="notice info"><b>Delete "Second passport expiry date"?</b>It was never released and nothing uses it. A second person approves; it is deleted then.</div><div class="ta" style="min-height:34px">Added twice by mistake.</div><p class="s">Reason required (today) <span class="tag q">Q1</span></p></div>
+<div class="step"><h4><span class="no">3</span>Toast, row waits</h4><div class="toast info"><div><b>Sent for approval:</b> Delete.</div><button class="btn sm">Undo</button></div><div class="mini"><div class="r"><b>Second passport expiry date</b><span class="chip wait">Delete waiting</span></div></div><p class="s">Pickers refuse it while it waits <span class="tag gap">M3</span></p></div>
+<div class="step"><h4><span class="no">4</span>Second person approves</h4><div class="mini"><div class="r"><span>Checked again just now</span><b style="color:var(--t-ok)">Used nowhere</b></div></div><div class="toast"><div><b>Approved and deleted.</b> The History line stays.</div></div><p class="s">Activity: "Deleted field 'Second passport expiry date' (never released, used nowhere). Proposed by the author, approved by a second person."</p></div>
+</div>
+
+<h3 class="sub">Example 2 · A section used by two released combinations is retired <span class="tag sample">"Travel history", releases and case counts Sample</span><span class="tag dec">P-52 L3, L4 · P-76</span></h3>
+<div class="steps">
+<div class="step"><h4><span class="no">1</span>Retire is refused</h4><div class="notice danger"><b>Can't retire yet: 2 current setups use it.</b><ul class="uses" style="margin-top:4px"><li><span class="mk s">✕</span><a href="#">Visitor visa</a><span>Release 3</span></li><li><span class="mk s">✕</span><a href="#">Study permit › Outside Canada</a><span>Release 2</span></li></ul></div><p class="s">State D. Each line links to that questionnaire.</p></div>
+<div class="step"><h4><span class="no">2</span>Remove from each questionnaire</h4><div class="mini"><div class="r"><b>Travel history</b><button class="btn sm dout">Remove from questionnaire</button></div></div><div class="toast"><div><b>Removed from Visitor visa.</b> It stays in the library.</div><button class="btn sm">Undo</button></div><p class="s">A draft change in each combination; Undo while the draft is open.</p></div>
+<div class="step"><h4><span class="no">3</span>Each combination releases without it</h4><div class="mini"><div class="r"><span>Visitor visa</span><b>Release 4</b></div><div class="r"><span>Study permit › Outside Canada</span><b>Release 3</b></div></div><p class="s">Approved inside each combination's one review and release. Now state C: only earlier releases and 6 open cases keep it.</p></div>
+<div class="step"><h4><span class="no">4</span>Retire is allowed</h4><div class="notice warn"><b>Retire "Travel history"?</b>Hidden from pickers and AI for new setups. Kept: Release 3 of Visitor visa, Release 2 of Study permit and 6 open cases. You can restore it.</div><p class="s">Second person approves; takes effect with the next release <span class="tag q">Q2</span>. Row: <span class="chip ret">Retired</span></p></div>
+</div>
+<p class="note">Faster path, not built: "Replace with…" would swap both drafts to another section in one step <span class="tag nb">Not built (P-52)</span> <span class="tag q">Q3</span></p>
+
+<h3 class="sub">Example 3 · A form edition is replaced while cases use the old one <span class="tag sample">Edition labels, combinations using it and counts Sample</span><span class="tag dec">P-32 · P-38 · P-51 · P-123</span></h3>
+<div class="steps">
+<div class="step"><h4><span class="no">1</span>Forms list: Replace edition</h4><div class="mini"><div class="r"><b>IMM 5476 · Use of a Representative</b><span class="chip live">Ready</span></div><div class="r"><span>2021 edition · used by 3</span><button class="btn sm">Replace edition…</button></div></div><p class="s">canada.ca shows a newer file; it is downloaded and held for impact review (rules, US$0).</p></div>
+<div class="step"><h4><span class="no">2</span>Review impact</h4><div class="cmp"><div><b>2021 edition</b><br>34 form fields</div><div><b>2025 edition</b><br>31 unchanged · 2 reworded · 1 new</div></div><div class="mini"><div class="r"><span>Visitor visa</span><span>draft: takes 2025 on accept</span></div><div class="r"><span>Study permit, Spouse or partner</span><span>released: 2025 at next release</span></div><div class="r"><span>Open cases</span><b>7 stay on 2021</b></div></div></div>
+<div class="step"><h4><span class="no">3</span>Accept, then release</h4><div class="notice info"><b>Accept the 2025 edition?</b>31 form fields keep their field map; 3 wait for a person. Released combinations change only when they are released again.</div><p class="s">Person accepts; each combination's release carries it.</p></div>
+<div class="step"><h4><span class="no">4</span>The earlier edition is kept</h4><div class="mini"><div class="r"><b>2025 edition</b><span class="chip live">Current</span></div><div class="r"><b>2021 edition</b><span class="chip old">Earlier edition</span></div><div class="r"><span colspan="2" style="color:var(--muted)">Kept by Release 3 of Study permit and 7 open cases. Never deleted.</span></div></div><p class="s">No Delete on an approved edition <span class="tag dec">P-51</span>. "Kept by" line <span class="tag gap">missing today</span></p></div>
+</div></div>
+
+<!-- 6 AUDIT -->
+<div class="sec"><h2>6 · Today against the pattern (main c541347 · forms branch 26b1c40 · screens branch bdcf23e)</h2>
+<table class="t">
+<tr><th>Item</th><th>Edit</th><th>Delete / Remove</th><th>Retire · Restore</th><th>Where used</th><th>Gap</th><th>Lane</th></tr>
+<tr><td><b>Structure names</b></td><td>Rename, versioned, checks</td><td>Labelled "Remove"; second person; at approval</td><td>Yes; at release</td><td>Panel with links</td><td><span class="tag con">"Remove" vs Delete</span> <span class="tag gap">"(L1)/(L6)" in text</span> <span class="tag gap">no branch delete</span></td><td>screens</td></tr>
+<tr><td><b>Combination</b></td><td>Setup edits</td><td>API only</td><td>API only; Live leaf refused</td><td>API, no reader check</td><td><span class="tag gap">no page (QA-48)</span></td><td>screens</td></tr>
+<tr><td><b>Field</b></td><td>Meaning, type direct</td><td>None</td><td><code>retire:true</code>: no where-used check, no second person, no Restore</td><td>Drawer lists uses</td><td><span class="tag gap">breaks P-52 L3/L4, P-34 §4</span></td><td>screens (S6)</td></tr>
+<tr><td><b>Section · Document type</b></td><td>None</td><td>None</td><td>None</td><td>Count only · none</td><td><span class="tag gap">no lifecycle (C3.7)</span> <span class="tag gap">silent create</span></td><td>screens (S6)</td></tr>
+<tr><td><b>Form · checklist · guide</b></td><td>What IRCC accepts</td><td>Delete when unused (forms branch)</td><td>Retire · Restore · "Being retired" lock</td><td>Drafts, releases, source files</td><td><span class="tag gap">⋯ menu, greyed without reason</span></td><td>forms (S4)</td></tr>
+<tr><td><b>Form edition</b></td><td>Replace edition</td><td>Never</td><td>—</td><td>Combinations</td><td><span class="tag gap">no "kept by" releases and cases</span></td><td>forms</td></tr>
+<tr><td><b>Lines on a combination</b> (form, document, rule, section, question, person role)</td><td>Dialogs</td><td>"Remove", "Remove from …": at once; Undo only for forms (branch)</td><td>—</td><td>—</td><td><span class="tag gap">no Undo, mixed words</span></td><td>runtime (S5)</td></tr>
+<tr><td><b>To review</b></td><td>—</td><td>"Remove the …"</td><td>Withdraw asks a reason</td><td>Re-check on failure only</td><td><span class="tag gap">words, QA-52</span></td><td>screens · qa</td></tr>
+</table></div>
+
+<!-- 7 QUESTIONS -->
+<div class="sec"><h2>7 · Founder questions (recommendation first) and the Lead's calls</h2>
+<div class="qbox"><h4><span class="tag q">Q1</span> Delete your own never-approved draft item at once, with Undo?</h4><p><b>Recommended: yes.</b> Nothing reached a second person or firms; the History line stays (Linear, Contentful drafts). Anything approved or AI-made and accepted still needs a second person.</p><p class="alt">Or: keep a second person for every delete (P-52 L4, today).</p></div>
+<div class="qbox"><h4><span class="tag q">Q2</span> When does a retire take effect?</h4><p><b>Recommended: at approval for library items; with the release for a combination or a structure name firms see.</b> The guard already proves no current setup uses it, and "next release" for an unused field confuses people (QA-52).</p><p class="alt">Or: every retire and restore waits for a release (today).</p></div>
+<div class="qbox"><h4><span class="tag q">Q3</span> "Replace with…" for fields, sections and document types?</h4><p><b>Recommended: keep it Not built for the proof.</b> The block lists each use with a link; form editions already have Replace edition.</p><p class="alt">Or: build it now, picking a substitute that every draft use moves to in one step (Salesforce, Jira).</p></div>
+<table class="t" style="margin-top:14px"><tr><th>Lead settles</th><th>Recommendation</th></tr>
+<tr><td><span class="tag con">C1</span> Code says "Remove" for Delete; P-128 says Delete</td><td>Delete for masters; "Remove from …" only for lines; qa regexes updated in the same merge (challenge #3)</td></tr>
+<tr><td><span class="tag con">C2</span> Rule codes "(L1)", "(L3)", "(L6)" in messages vs PRODUCT §4</td><td>Plain words from section 3; codes only in the admin "Details"</td></tr>
+<tr><td><span class="tag gap">M2</span> Undo toast vs Withdraw that asks a reason</td><td>Undo within 10 s withdraws with the note "Undone at once"; later Withdraw asks why</td></tr>
+<tr><td><span class="tag gap">M3</span> "Being retired" lock only on forms</td><td>Every master: pickers refuse new uses while a Delete or Retire waits</td></tr>
+</table>
+<div class="ann" style="margin-top:10px"><span class="tag scaf">Scaffolding: "Acting as" switch, Load sample, Reset</span><span class="tag nb">Not built (team, P-26): bulk lifecycle, deleted-items bin, move, release rollback, translations</span><span class="tag sample">How long retired items and cases are kept: Unconfirmed: no counsel</span></div>
+</div>
+
+</div></body></html>
