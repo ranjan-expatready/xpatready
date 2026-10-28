@@ -29,15 +29,16 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - The Prisma client in `node_modules` is shared with other copies: after switching branches run `./node_modules/.bin/prisma generate` if a column is reported missing.
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
-current_screen: W1-start-setup (S3 Start setup)
-stage: EARLY-LOOK (S3 items 1–5 done on S5)
+current_screen: DV-bb-1, DV-bb-6b, DV-bb-6c (outside review fixes); S3 passed Lead check (PR #76)
+stage: CHECK (DV-bb fixes done)
 owner: Lead
-next_action: Lead: early look on S3 with item 5 (screens/W1-start-setup/screenshots 01–05 at 1440 and 1024; build-notes "Item 5"), then the founder
+next_action: Lead: check afb86cde (DV-bb-1 Dismiss on Form library upload cards, DV-bb-6b reset names the 6 built-in roles, DV-bb-6c no "(P-95)"); then S6 BUILD once the queue item contract is approved
 then: Lead check and merge; S6 re-check answers (founder Q1, Lead Q-L1..L3); m8 and m9 after runtime slice 2
 blocked_by: none
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · DV-bb-1/6b/6c · FIX → CHECK · applied Lead message (S3 Lead check PASS): finished upload cards dismissible (stay gone after reload); reset counts added roles, keeps and names the 6 built-in ones; no "(P-95)" in the structure footer; pass and fail check each (structure 81/81, library 67/67, studio_browser 49/49 on a copy); web rebuilt; run-suites on afb86cde 58 PASS 0 FAIL; graph passes. US$0. Owner Lead.
 - 2026-10-29 · W1-start-setup (S3) · EARLY-LOOK · applied Lead message (founder Go on item 5): synced main 32961d69 then db5e0208 (one conflict in runs.ts: item 5's page choice on the Forms tab replaces forms' interim QA-63 Sources link; finder's waiting words and check_forms_s4_finder QA-63 aligned); web rebuilt before the run; run-suites on fd5ac8ae (main db5e0208 merged): 58 PASS, 0 FAIL; graph.mjs --check passes (G3 2: older attachment routes, not this lane). AI US$0. Owner Lead.
 - 2026-10-29 · W1-start-setup (S3) · FIX → EARLY-LOOK · applied Lead message (S5 on main e2cb27a4): item 5 — sync, three conflicts, Start setup in S5's Forms tab slot, the page choice that "Choose the application page" leads to (QA-63), one cost rule; start_setup 26/26, browser 39/39, s5_slice3 35/35; run-suites on fd5ac8ae (main db5e0208 merged): 58 PASS, 0 FAIL; graph.mjs --check passes (G3 2: older attachment routes, not this lane). AI US$0. Owner → Lead.
 - 2026-10-28 · W1-shared-library (S6) · build ahead (P-126) · applied Lead message (S3 items 1–4 OK): fresh re-check of S6 against main 38722933, S5 [r] bb853222, forms b619d3cb, S3 d63b7ca4 and the 28 Oct team capture (R-109): build after changes, 5 Major, 6 Minor, 1 founder question, 3 Lead questions; no code. AI US$0. Owner → Lead.
@@ -47,4 +48,3 @@ updated: 2026-10-29
 - 2026-10-28 · W1-start-setup (S3) · DESIGN → BUILD · Lead answered the challenge (founder: wait for a click; M2 remove /new and both path endpoints; M3 start guard; M4 split with runtime slice 3; m5–m7, m10 accepted; m8, m9 after runtime slice 2); Lead response recorded. AI US$0.
 - 2026-10-28 · W1-start-setup (S3) · DESIGN · synced main 06a8fc30 (S4 merged); screen-challenge in screens/W1-start-setup/challenge.md: Build after these changes, 4 Major (cost at Start setup, end of /new and its endpoints, a start guard for retired or waiting names, split with runtime slice 3), 6 Minor (incl. runtime's two Left-as-it-is points, after runtime slice 2), 1 founder question; no code. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-visual-system · FIX → Lead · qa after-merge on dccd87e: QA-60 (letters kept after Add and add another), QA-56 (Enter accepts a typed name), QA-55 (Retire names real blockers and the way out), QA-58 (Undo kept on the page note), QA-59 (Returned with note; Send again), Button primary hover 8.15:1; each with pass and fail checks; run-suites 41/41, journey 45/45, qa's steps for these pass. AI US$0. Owner → Lead.
-- 2026-10-28 · W1-visual-system · FIX → Lead · PR #66 review fixes 19e8911d; run-suites 40/41 on it, the one failure (Add combination prefill race under load) fixed in b078f150 with a fail-guard; touched checks all pass on b078f150 and the journey 45/45. AI US$0. Owner → Lead.
