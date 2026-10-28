@@ -155,6 +155,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.getByRole("button", { name: "Actions for IMM 1295", exact: true }).click();
     step("C11.11: and every changing action is disabled; See where it is used stays", (await p.getByRole("menuitem", { name: /Retire/ }).getAttribute("data-disabled")) !== null && (await p.getByRole("menuitem", { name: /See where it is used/ }).getAttribute("data-disabled")) === null);
     await p.keyboard.press("Escape"); await axe("read-only"); await shot("11-read-only");
+    // Lead 28 Oct (carried should, P-116): the second person sees Where used on the retire's approval page before deciding
+    const retireId = sql(`select id from library_change where kind='library_form' and key='IMM 5604' and status='WAITING' limit 1`);
+    await p.goto(`${BASE}/review/change/${retireId}`); await p.locator("[data-change-uses]").getByText(/Nothing uses it|·/).first().waitFor();
+    const usesText = await p.locator("[data-change-uses]").innerText();
+    step("P-116: the second person's retire page shows Where it is used before Approve (IMM 5604: nothing uses it)", /Where it is used/.test(usesText) && /Nothing uses it/.test(usesText) && !/Retire waiting/.test(usesText) && (await p.getByRole("button", { name: "Approve" }).count()) === 1, usesText.replace(/\s+/g, " ").slice(0, 160));
+    await axe("retire approval with where used");
     await as("user-A");
     sql(`update gov_form_def set display_name = 'Application to Change Conditions, Extend my Stay or Remain in Canada as a Worker, with a much longer title than any IRCC form usually has, for the long-content state' where form_key = 'IMM 1344'`);
     await open();

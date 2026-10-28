@@ -132,6 +132,15 @@ export class ReviewQueueService {
         // Review Must 6: the second person cannot approve until the uploader records the IRCC page, so that is the
         // uploader's step.
         const noPage = !h.irccPage;
+        // Lead 28 Oct (carried should, drift #7): a file whose form code and edition the rules could not read can never be
+        // approved (intake cannotApprove), so nobody records its IRCC page: a second person rejects it, as its card says.
+        if (!h.code || !h.editionLabel) {
+          out.push({ id: `held:${h.id}`, kind: "held_file", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null,
+            what: "Held: the rules could not read its form number and edition, so it cannot be approved and AI was not called. Upload the official PDF from canada.ca instead.",
+            ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Reject the copy", href: `/review/held/${h.id}`, note: null } }
+              : { state: "waiting" as const, waiting_on: mine ? "A different person rejects it; upload the official PDF from canada.ca instead." : "A content publisher rejects it.", next: null }) });
+          continue;
+        }
         out.push({ id: `held:${h.id}`, kind: "held_file", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null,
           what: `Not on the approved source list: not read into the library, attached or sent to AI.${noPage ? " The person who uploaded it records the IRCC page it came from first." : ""}`,
           ...(mine && noPage ? { state: "needs" as const, waiting_on: null, next: { label: "Record the IRCC page", href: `/review/held/${h.id}`, note: null } }

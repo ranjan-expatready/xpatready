@@ -86,6 +86,8 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   r = await call("GET", `/library/forms/${encodeURIComponent("Guide 5256")}/uses`);
   ok("break round 2 N7, review round 2 M2: a guide opens by its own key (Guide 5256), so it can be retired or deleted", r.status === 200 && r.body.key === "Guide 5256", r.body?.detail ?? r.body?.key);
   ok("review round 2 M3: the list's Used by counts checklists attached as sources, as the drawer does (IMM 5484)", (lrow("IMM 5484")?.used_by?.length ?? 0) > 0 && lrow("IMM 5484").used_by.every((u: any) => u.label.includes(" › ")), lrow("IMM 5484")?.used_by);
+  ok("Lead 28 Oct fail: a form with no file is \"No file yet\", never \"Needs your OK\" (IMM 5802: nothing waits for anyone)", lrow("IMM 5802")?.status === "no_file" && !(await call("GET", "/library/forms/list?status=needs_ok")).body.rows.some((x: any) => x.code === "IMM 5802"), lrow("IMM 5802")?.status);
+  ok("Lead 28 Oct pass: the No file yet filter lists it, and a form with a file is never in it", (await call("GET", "/library/forms/list?status=no_file")).body.rows.map((x: any) => x.code).join() === "IMM 5802");
   ok("review round 2 M4: a visa-office checklist is a checklist (IMM 5881); an employer's form is a form (IMM 5802)", lrow("IMM 5881")?.type === "checklist" && lrow("IMM 5802")?.type === "form", [lrow("IMM 5881")?.type, lrow("IMM 5802")?.type]);
   ok("break minor: a schedule with a letter is one number (IMM 5406 SCH4A)", normaliseCode("imm5406 sch4a") === "IMM 5406 SCH4A");
   r = await call("POST", `/combinations/${sql(`select id from combination where label = 'Visitor visa' limit 1`)}/forms`, { formKey: "IMM 0008 SCH4A" });
@@ -243,6 +245,12 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("C11.11 (Lead fix 2): the waiting reason is said once: the run's box says what happens next, not the step's words again", run.error && run.error.what !== run.steps[1].message && /second person|cannot be approved/.test(run.error.what), run.error);
   ok("C11.11: the unread upload is held for a second person (P-80), not in the library", sql(`select count(*) from intake_item where file_name='scan.pdf' and status='HELD'`) === "1");
   ok("review M6, round 4 should: an unread held upload links to its To review item and says it cannot be approved (upload the official PDF), not the page already open", run.error?.next?.href === `/review/held/${sql(`select id from intake_item where file_name='scan.pdf' and status='HELD'`)}` && /Open it on To review/.test(run.error.next.label) && /cannot be approved/.test(run.error.what), run.error?.next);
+  // Lead 28 Oct (carried should, drift #7): To review says what its card says; nobody records an IRCC page for it.
+  const heldScan = sql(`select id from intake_item where file_name='scan.pdf' and status='HELD'`);
+  const qItem = async (actor: string) => ((await call("GET", "/review-queue?filter=all", undefined, actor)).body.items as any[]).find((i) => i.id === `held:${heldScan}`); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const forUploader = await qItem("user-A"), forReviewer = await qItem("user-B");
+  ok("Lead 28 Oct fail: To review never asks the uploader to record the IRCC page of a copy the rules could not read", /cannot be approved/.test(forUploader?.what ?? "") && !/IRCC page/.test(forUploader?.what ?? "") && forUploader?.state === "waiting" && forUploader?.next === null && /upload the official PDF/.test(forUploader?.waiting_on ?? ""), forUploader);
+  ok("Lead 28 Oct pass: the second person's To review step for that copy is to reject it", forReviewer?.state === "needs" && forReviewer?.next?.label === "Reject the copy" && forReviewer?.next?.href === `/review/held/${heldScan}`, forReviewer?.next);
   const fd = new FormData(); for (const [n, b] of [["imm5604e.pdf", official], ["damaged-2.pdf", Buffer.from("%PDF-1.4\n%%EOF\n")]] as const) fd.append("files", new Blob([new Uint8Array(b)], { type: "application/pdf" }), n);
   const many = await (await fetch(`http://localhost:${PORT}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json() as { runIds?: string[] };
   ok("C11.11 (Lead fix 4): one Upload PDF takes many files, one run (card) each", many.runIds?.length === 2, many);

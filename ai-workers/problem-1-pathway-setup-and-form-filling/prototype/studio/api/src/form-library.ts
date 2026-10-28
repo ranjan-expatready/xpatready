@@ -73,7 +73,8 @@ export class FormLibrary {
       for (const cid of new Set(atts.filter((a) => shas.has(a.sha256)).map((a) => a.combinationId))) if (!using.some((u) => u.id === cid)) using.push({ id: cid, label: trails.get(cid) ?? "A combination", picked_by_ai: false, as_source: true });
       const pendingChange = lifecyclePending.find((x) => x.key === f.formKey), lifecycle = pendingChange?.action ?? null;
       const needsOk = held.some((h) => h.code === f.formKey);
-      const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 ? "newer_file" : current ? "ready" : "needs_ok";
+      // Lead 28 Oct (carried should): "Needs your OK" only when something waits for a person; a form with no file is "No file yet".
+      const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 ? "newer_file" : current ? "ready" : "no_file";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
         accepts: current?.acceptedChannels ?? (TYPE_OF(f.formKind, f.displayName) === "form" ? null : "READ_BY_AI"), accepts_basis: current?.acceptedBasis === "SAMPLE" ? "AI_SAMPLE" : current?.acceptedBasis ?? null, accepts_quote: current?.acceptedQuote ?? null, accepts_waiting: waitingAccepts.has(f.formKey),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
