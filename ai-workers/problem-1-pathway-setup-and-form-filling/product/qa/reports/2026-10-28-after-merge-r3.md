@@ -52,7 +52,7 @@ Independent qa lane, own copies (:4471, :4472, :4473, :4476; databases `xr_studi
 
 ## Suites and coverage
 * **CI on the Lead PR #66:** `run-suites.sh --demo` passed **42 of 42** (job 122683816307) on refs/pull/66/merge. Its tree equals main dccd87e (empty diff), so this is the exact code.
-* **Mac, under coverage:** COVERAGE_LINE
+* **Mac, under coverage (c8 12.0.0; nothing else of mine running, load 3.4–5.1):** 40 of 41 passed, and `check_studio_browser` was skipped because it resets :4400. The one red is `check_p2_guard`, the known clash with the coverage preload; it passed in CI. Results: **api/src 97.21% lines, 82.75% branches** (was 97.09 / 82.10); **engine 99.38%, 89.08%** (was 99.38 / 89.09, so 0.01 point lower and still above the floor). Both floors stay where they were: api 97/82, engine 99/89. Suite by-products were put back to HEAD.
 * No app code changed in this lane.
 
 ## Graph (P-86)
