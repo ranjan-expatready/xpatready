@@ -9,11 +9,16 @@ Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes eve
 current_item: after-merge on main 06a8fc30 (PR #65: S4 Form library and form finder); report `qa/reports/2026-10-28-after-merge-s4.md`
 stage: WAITING
 owner: Lead
-next_action: Lead reads the S4 report (QA-61–64 Minor → forms; QA-63 → runtime S5 slice 3 or forms; two questions: Load sample 2 of 7 vs the brief's 5 of 7, QA-64 retire timing). qa owes a clean coverage rerun when the Mac is quiet (this run stopped two S4 suites early). Then WAITING for the next merge (runtime S5 slice 3, or the screens FIX for QA-60).
+next_action: (1) a clean coverage rerun on S4 (main 06a8fc30) when the Mac is quiet; (2) `/qa after-merge` on PR #69 when it merges; (3) `/qa after-merge` on S5 (runtime) when it merges. Read the Handover section first.
 blocked_by: none
 updated: 2026-10-28
 
 ## Handover (27 Oct, end of day; for the next qa session)
+* **Next, in order (Lead, 28 Oct, founder's credit nearly gone):**
+  1. **Clean coverage rerun on S4 (main 06a8fc30).** The 28 Oct run was incomplete: load about 8.5, two S4 suites stopped early, api 96.88/81.69 and engine 99.44/88.96 (under the 97/82 · 99/89 floor, not judged). Rerun with nothing else running (scratchpad pattern: stop qa copies → `NODE_V8_COVERAGE` + `NODE_OPTIONS=--import tests/qa/coverage-preload.mjs` → `run-suites.sh` → `c8 report --include api/src/** | engine/**`). The three M7 "Stop during the paid call" steps always fail under the preload (it turns a stop signal into a clean exit), like `check_p2_guard`; rerun those plainly on qa ports (4475, 4477, 4478) with `STUDIO_FAKE_LAUNCHER=…/tests/fixtures/fake-launch.mjs`. Then put back the by-products.
+  2. **`/qa after-merge` on PR #69** when it merges: smoke with `check_qa_am_r3_1028.cjs`, `check_qa_am_s4_1028.cjs`, `check_qa_am_fix_1027.cjs`, `check_qa_s4_filing.ts`, plus a new check for what #69 changes.
+  3. **`/qa after-merge` on S5 (runtime)** when it merges: QA-63 (Find again), the finder from the combination's Forms tab, Stop on a running run, QA-38, QA-40, QA-47.
+* **Open findings now:** QA-60 Major and QA-55, 56, 58, 59, 48 (screens); QA-38 Major, QA-40, QA-47 (runtime); QA-53, QA-61, QA-62, QA-64 (forms); QA-63 (runtime or forms); QA-39 (Screen 04). Two questions are with the Lead: Load sample sets 2 of 7 (brief said 5 of 7), and QA-64's retire timing.
 * **Where things are (28 Oct):** branch `claude/qa-after-merge-s1-21bfdf`, in sync with main 06a8fc30. This copy is the worktree `vigilant-nobel-cb0120` (bound qa 28 Oct). The Lead copies `qa/`, `lanes/qa.md` and `tests/qa/` onto its own PR, so pushing this branch is enough. Latest report: `qa/reports/2026-10-27-after-merge-fix.md`.
 * **Open findings and their lanes:**
   * QA-38 Major: runtime.
