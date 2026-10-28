@@ -112,6 +112,9 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
   r = await call("POST", "/structure/meaning-check", { pathwayType: "INDIVIDUAL", label: "Visiter visa" });
   ok("C11.3 BR-5 (P-95): the AI meaning check is off: 403 paid_runs_off, no AI job, nothing spent", r.status === 403 && r.body.code === "paid_runs_off" && sql("select count(*) from drafting_job") === "0", r.body.detail);
   ok("C11.3 BR-5: every name shows 'Not meaning-checked' while the switch is off", (await structure()).nodes.every((n: any) => n.meaningChecked === false));
+  const footer = ((await structure()).meaningCheck?.why ?? "") as string;
+  ok("DV-bb-6c pass: the Program structure footer says in plain words that the meaning check is off", /AI meaning check is off/.test(footer), footer);
+  ok("DV-bb-6c fail: the footer carries no decision number (PRODUCT §4: no ids on the main path)", !/\b[PD]-\d+/.test(footer), footer);
 
   // ---------------------------------------------------------------- BR-15 roles
   const asB = await Promise.all([node("INDIVIDUAL", "program", "Approver program", trR, {}, "user-B"), call("PATCH", `/structure/nodes/${visitors}`, { label: "X", version: 1 }, "user-B"),

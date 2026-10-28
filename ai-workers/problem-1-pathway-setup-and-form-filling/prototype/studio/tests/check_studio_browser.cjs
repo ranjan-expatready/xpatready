@@ -45,7 +45,8 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     await click(p.getByRole("dialog").getByRole("button", { name: "Reset demo" }));
     await p.getByRole("dialog").getByText(/rows and \d+ working files removed/).waitFor({ timeout: 60000 });
     const txt = await p.getByRole("dialog").innerText();
-    step(`${label}: reset removes the workspace rows and files, preserved evidence byte-identical`, /byte-identical/.test(txt) && /0 rows remain/.test(txt), txt.split("\n").slice(1, 3).join(" "));
+    step(`${label} (DV-bb-6b pass): reset removes the workspace rows and files, keeps only the 6 built-in person roles, preserved evidence byte-identical`, /byte-identical/.test(txt) && /keeps only its 6 built-in person roles/.test(txt), txt.split("\n").slice(1, 3).join(" "));
+    step(`DV-bb-6b fail (${label}): the reset never says "0 rows remain" while the 6 built-in person roles stay`, !/\b0 rows remain/.test(txt), txt.split("\n").slice(1, 3).join(" "));
     await shot(`${label}-reset.png`);
     await click(p.getByRole("dialog").getByRole("button", { name: "Close" }).last());
     const cat = await api("/catalogue?pathway=INDIVIDUAL");
