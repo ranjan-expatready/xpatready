@@ -23,7 +23,14 @@ export const tabOf = (t: string | undefined, area?: string | null): TabKey =>
 /** IRCC's words as a person reads them (drift check 6). The checklist reader joined a line and the note under it with
  *  no break ("…, if applicableNote: Complete this form…"), so the note's label reads as a code glued to a word: it is
  *  shown as two sentences. The stored quote stays as read (the release fingerprint covers it). */
-export const irccWords = (q: string | null | undefined): string | null => (q ? q.replace(/([a-z)])(Note|Notes|Important):\s*/g, "$1. $2: ") : null);
+export const irccWords = (q: string | null | undefined): string | null => (q && !ourWords(q) ? q.replace(/([a-z)])(Note|Notes|Important):\s*/g, "$1. $2: ") : null);
+/** Lead check L11: the words the product itself writes on a line added by a person ("IMM 5257: added from the library"),
+ *  which are never shown as IRCC's; said instead as how the line was added. */
+const OURS = /: (added from the library|reused from the library|uploaded for this combination)$/;
+export const ourWords = (q: string | null | undefined): string | null => {
+  const m = q ? OURS.exec(q) : null;
+  return m ? (m[1] === "uploaded for this combination" ? "Uploaded for this combination by a person" : "Added from the library by a person") : null;
+};
 
 // ------------------------------------------------------------------ person roles (M3) and who can be (P-119, M4)
 
@@ -40,7 +47,7 @@ export const PeopleLine = z.object({
   applies: z.boolean({ error: "Say whether this person files their own application." }),
   preview: z.number().int().min(0).max(9).optional(),
   quote: z.string().trim().max(400).nullable().optional(),
-  origin: z.enum(["HUMAN", "AI_PROPOSAL", "SAMPLE"]).optional(),
+  origin: z.enum(["HUMAN", "AI_PROPOSAL", "CODE_MATCH", "SAMPLE"]).optional(), // CODE_MATCH: found by rules from the guide, no AI (Lead check L3)
 });
 export type PeopleLine = z.infer<typeof PeopleLine>;
 /** PATCH /combinations/:id/people. `version` is the one read (a stale save is a 409); `confirmRemove` answers the
@@ -90,6 +97,8 @@ export type WorkspaceFormLine = {
   who: string; minAge: number | null; onlyIf: OnlyIf; condition: unknown;
   channel: string; channelWords: string; signature: string | null; accepted: string[]; acceptedBasis: string;
   signedBy: string | null; signedByLabel: string; origin: string; quote: string | null; revision: string; status: string;
+  /** How a person added the line when there is no IRCC quote ("Added from the library by a person"; Lead check L11). */
+  added?: string | null;
   /** The line's version number: Remove and Replace edition send it (the forms lane refuses a stale one with 409). */
   version: number;
 };

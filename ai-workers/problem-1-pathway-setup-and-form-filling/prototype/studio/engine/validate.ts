@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
-import { channelProblems } from "./channels.ts";
+import { channelProblems, type Accepts } from "./channels.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 
 const schema = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "contracts", "predicate.v0.schema.json"), "utf8"));
@@ -18,6 +18,7 @@ export const isNode = (n: unknown) => nodeValid(n) as boolean;
 /** `label` is the item in words (a question's meaning) where `item` is a field code; screens show it, never the code. */
 export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string };
 const ORDERED = new Set(["gt", "gte", "lt", "lte"]);
+const BIRTH = "person.date_of_birth";
 
 export function checkCondition(tree: any, fieldTypes: Map<string, string>, derived: Set<string>): string[] {
   if (!tree) return [];
@@ -35,7 +36,7 @@ export function checkCondition(tree: any, fieldTypes: Map<string, string>, deriv
   return errs;
 }
 
-export function validate(s: Snapshot, library: { key: string; valueType: string }[], derivedRows: { id: string; calculation: string }[]): Problem[] {
+export function validate(s: Snapshot, library: { key: string; valueType: string }[], derivedRows: { id: string; calculation: string }[], accepts?: Accepts): Problem[] {
   const out: Problem[] = [];
   const types = new Map(library.map((f) => [f.key, f.valueType]));
   const derived = new Set(derivedRows.map((d) => d.id));
@@ -47,6 +48,9 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     for (const e of checkCondition(f.condition, types, derived)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Condition ${e}.` });
     // S5 (challenge M1): "Only if" in words with no rule cannot be evaluated on a case, so it is never released as is.
     if (f.status === "conditional" && !f.condition) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Turn "${f.condition_plain ?? "only if"}" into a rule: the condition is in words only, so a case cannot tell whom ${f.form_number} applies to. Open the form on the Forms tab and build the rule.` });
+    // Lead check L5: a minimum age is decided by each person's date of birth (engine/render.ts ageGate asks it as a
+    // deciding question); with nobody asked for it the form could never be decided, so release is refused.
+    if (f.min_age && !placed.has(BIRTH) && !docFacts.has(BIRTH)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} applies from age ${f.min_age}, so each person's date of birth decides it, but nobody is asked for a date of birth in this combination. Add the date of birth question to this combination's questionnaire, or clear the minimum age.` });
     if ((f.form_kind ?? "data_form") === "data_form" && !s.field_maps.some((m) => m.form_number === f.form_number)) out.push({ level: "warning", where: "Forms", item: f.form_number, message: "No field map yet: the form cannot be filled." });
   }
   const unplaced = new Map<string, number>();
@@ -80,7 +84,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   // one nobody here uses is not this combination's warning.
   const reads = derivedRead(s);
   for (const d of derivedRows) if (reads.has(d.id) && !CALCULATIONS[d.calculation]) out.push({ level: "warning", where: "Derived fields", item: d.id, message: `Calculation ${d.calculation} has no tested helper: recorded, never evaluated.` });
-  out.push(...channelProblems(s)); // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
+  out.push(...channelProblems(s, accepts)); // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
   // Drift check 2: an item that is a field code also carries its words (the question's meaning, a derived field's plain
   // words), so Review and the refusals never lead with the code.
   const plainOf = new Map((s.derived_fields as { id: string; plain?: string | null }[]).map((d) => [d.id, d.plain ?? ""]));

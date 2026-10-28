@@ -9,7 +9,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Prisma, type FormEdition } from "@prisma/client";
 import { CHANNEL_WORDS, type Channel, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewMerge, SetChannel } from "../../contracts/forms.ts";
-import { channelProblems, channelsView } from "../../engine/channels.ts";
+import { acceptedChannels, acceptsOf, channelProblems, channelsView, notAcceptedWords } from "../../engine/channels.ts";
+import { compareEditions } from "../../engine/programs.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
 import { normLabel } from "../../engine/twin.ts";
@@ -84,13 +85,17 @@ export class Forms {
 
   /** One line's channel, claimed on the channel the screen showed. A checklist is not filed, so it has no channel. */
   private async channelOf(tx: Prisma.TransactionClient, c: { id: string; workspaceId: string; label: string }, lineKey: string, channel: Channel, from: Channel | undefined, actor: Actor) {
-    const rows = await tx.combinationForm.findMany({ where: { combinationId: c.id, lineageKey: lineKey }, include: { form: { select: { formKind: true } } } });
+    const rows = await tx.combinationForm.findMany({ where: { combinationId: c.id, lineageKey: lineKey }, include: { form: { select: { formKind: true, editions: true } } } });
     if (!rows.length) fail(`${lineKey} is not a form of this combination.`, HttpStatus.NOT_FOUND);
     const newest = [...rows].sort((x, y) => y.version - x.version)[0];
     if (newest.status === "RETIRED") fail(`${lineKey} was removed from this combination.`, HttpStatus.NOT_FOUND);
     if (newest.form.formKind !== "data_form") fail(`${lineKey} is a checklist: it is not filed, so it has no channel.`);
     if (from && newest.channel !== from) conflict(`${lineKey} was changed to ${CHANNEL_WORDS[newest.channel]} while you were choosing. Your choice was not saved; check it and choose again.`);
     if (newest.channel === channel) return;
+    // Lead check L4: never a way IRCC does not accept for the form's current edition (the library's record, S4).
+    const accepts = newest.form.editions.filter((e) => e.channel !== "ONLINE").sort(compareEditions).at(-1)?.acceptedChannels;
+    const ok = acceptedChannels(accepts);
+    if (ok && !ok.includes(channel)) fail(notAcceptedWords(lineKey, channel, accepts!));
     if (newest.status === "DRAFT") { const n = await tx.combinationForm.updateMany({ where: { id: newest.id, channel: newest.channel }, data: { channel, origin: "HUMAN", updatedBy: actor.id } }); if (!n.count) conflict(`${lineKey} was changed at the same moment: refresh to see it.`); }
     else await revise(tx.combinationForm, rows.map(({ form, ...r }) => { void form; return r; }), { channel }, actor.id, strip);
     await this.audit.log(c.workspaceId, actor.id, "changed", "form line", lineKey, `${actor.name} set how ${lineKey} is filed in "${c.label}": ${CHANNEL_WORDS[newest.channel]} → ${CHANNEL_WORDS[channel]}`, undefined, c.id);
@@ -99,7 +104,7 @@ export class Forms {
   async channels(combinationId: string) {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, combinationId, "draft");
-    return { ...channelsView(snapshot), problems: channelProblems(snapshot) };
+    return { ...channelsView(snapshot), problems: channelProblems(snapshot, await acceptsOf(this.db, c.workspaceId)) };
   }
 
   // ───────────────────────────────────────────────────────────── library: aliases, answer lists, option maps (P-65)

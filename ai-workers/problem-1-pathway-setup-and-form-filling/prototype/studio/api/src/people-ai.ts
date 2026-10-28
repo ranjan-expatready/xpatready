@@ -29,6 +29,9 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
 const RUNS = join(PROTOTYPE, "p2", "runs"), JOBS = join(PROTOTYPE, "p2", "jobs"), PROMPTS = join(PROTOTYPE, "p2", "prompts");
 const ROUTE = "anthropic-api/aiw-d261-prototype-exception-aiw-d260", MODEL = "claude-opus-5-5";
 const AI = { template: "who-can-be.v1.md", check: "who-can-be-check.v1.md", schema: "who-can-be-output.v1.schema.json", effort: "low", max_output_tokens: 3000 } as const;
+/** Lead check L2: on only when the founder approved a live trial for Who can be (set by the Lead for that trial). */
+const LIVE_APPROVED = () => process.env.STUDIO_PEOPLE_AI_LIVE === "approved";
+export const LIVE_WAITING = "AI now waits for the founder's Go for a live trial (P-110). Use rules only, or saved AI answers, meanwhile.";
 const LIVE_RUN = /-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/;
 const sameText = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
 const STEPS_AI = [
@@ -85,6 +88,8 @@ export class PeopleFromGuide {
   async plan(combinationId: string, body: unknown): Promise<PeoplePlan> {
     const b = ProposePeopleBody.safeParse(body ?? {});
     if (!b.success) throw problem(400, "Check the request", "Choose rules only, saved AI answers or AI now.", { errors: [{ field: "mode", message: "Choose how to fill it." }] });
+    // Lead check L2: AI now was not in the slice 3 Go; it stays off until the founder approves a live trial (P-110 plan).
+    if (b.data.mode === "live" && !LIVE_APPROVED()) throw problem(409, "AI now is not approved yet", LIVE_WAITING);
     const g = await this.guide(combinationId);
     const worst = b.data.mode === "live" ? round2(2 * Math.min(RUN_CAP_USD, costUsd(MODEL, inputTokenBound(g.text), AI.max_output_tokens) * 2)) : 0;
     const steps = b.data.mode === "rules" ? STEPS_RULES : STEPS_AI;

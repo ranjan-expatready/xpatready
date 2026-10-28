@@ -7,6 +7,8 @@ import { CHANNEL_WORDS, SIGNATURE_WORDS, type Channel } from "../contracts/forms
 import { hasCodes, optionMapProblems, type OptionMap } from "./options.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
+import { compareEditions } from "./programs.ts";
+import type { PrismaClient } from "@prisma/client";
 
 type Line = { form_number: string; channel?: Channel; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean };
 /** The parts of the snapshot (engine/snapshot.ts) these rules read. */
@@ -16,6 +18,26 @@ type FieldDef = { id: string; answer_list?: { key: string; values: { key: string
 const mapsOf = (s: Snapshot) => s.field_maps as FieldMap[];
 const chOf = (l: Line): Channel => l.channel ?? "PDF_UPLOAD";
 export const signatureOf = (c: Channel) => SIGNATURE_WORDS[c];
+/** Lead check L4: the ways a line may be filed, from what the Form library records IRCC accepts for the edition
+ *  (PDF · ONLINE · PDF_OR_ONLINE); null when nothing is recorded (every way is offered, as Sample). */
+export function acceptedChannels(accepts: string | null | undefined): Channel[] | null {
+  if (accepts === "PDF") return ["PDF_UPLOAD", "SIGNED_PDF_UPLOAD"];
+  if (accepts === "ONLINE") return ["ONLINE"];
+  if (accepts === "PDF_OR_ONLINE") return ["PDF_UPLOAD", "ONLINE", "SIGNED_PDF_UPLOAD"];
+  return null;
+}
+/** What the Form library records IRCC accepts, per form, for its current PDF edition (only forms with a record). It is
+ *  the library's, not the combination's, so it is read beside the snapshot and never changes its fingerprint. */
+export type Accepts = Map<string, string>;
+export async function acceptsOf(db: Pick<PrismaClient, "formEdition">, workspaceId: string): Promise<Accepts> {
+  const eds = await db.formEdition.findMany({ where: { workspaceId, channel: { not: "ONLINE" } }, select: { editionLabel: true, acceptedChannels: true, form: { select: { formKey: true } } } });
+  const newest = new Map<string, (typeof eds)[number]>();
+  for (const e of eds) { const n = newest.get(e.form.formKey); if (!n || compareEditions(n, e) < 0) newest.set(e.form.formKey, e); }
+  return new Map([...newest].filter(([, e]) => acceptedChannels(e.acceptedChannels)).map(([k, e]) => [k, e.acceptedChannels!]));
+}
+const ACCEPTS_SAID: Record<string, string> = { PDF: "a PDF upload", ONLINE: "Online", PDF_OR_ONLINE: "a PDF upload or Online" };
+/** The words for a line filed in a way IRCC does not accept for its edition (on save and at release). */
+export const notAcceptedWords = (form: string, channel: Channel, accepts: string) => `${form} is filed as ${CHANNEL_WORDS[channel]}, but the Form library records that IRCC accepts it only as ${ACCEPTS_SAID[accepts] ?? accepts}. Choose a way IRCC accepts.`;
 
 /** "Online only", "PDF only", "Online + signed PDF uploads", …; a channel that only conditional lines add is said with
  *  its condition ("; plus PDF upload when …"). */
@@ -49,7 +71,7 @@ export function filingKind(lines: (Line & { form_kind?: string | null })[]): str
 }
 
 /** Channel and option-map problems of one combination's snapshot. */
-export function channelProblems(s: Snapshot): Problem[] {
+export function channelProblems(s: Snapshot, accepts?: Accepts): Problem[] {
   const out: Problem[] = [];
   const lists = new Map<string, string[]>((s.canonical_fields as FieldDef[]).flatMap((f) => (f.answer_list ? [[f.id, f.answer_list.values.map((v) => v.key)] as [string, string[]]] : [])));
   // P-107: a line filed Online is allowed (what IRCC accepts is the library's, W1-06); the product cannot fill it until
@@ -58,6 +80,8 @@ export function channelProblems(s: Snapshot): Problem[] {
     // W1-02 (break M1): every form is read and filled from its PDF (P-102). A form the library holds only as an online
     // version (parked with the extension, on an older database) has nothing to read or fill: release is refused.
     if ((f.form_kind ?? "data_form") === "data_form" && f.online_only) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} has no PDF edition in the library: forms come in only as their official PDF. Add ${f.form_number}'s PDF from IRCC (Add form), or remove the form from this combination.` });
+    const said = accepts?.get(f.form_number), ok = (f.form_kind ?? "data_form") === "data_form" ? acceptedChannels(said) : null;
+    if (ok && !ok.includes(chOf(f))) out.push({ level: "error", where: "Forms", item: f.form_number, message: notAcceptedWords(f.form_number, chOf(f), said!) });
     if (chOf(f) === "ONLINE") out.push({ level: "warning", where: "Forms", item: f.form_number, message: `${f.form_number} is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.` });
   }
   const pdfMaps = mapsOf(s).filter((m) => m.channel !== "ONLINE"); // W1-02: an older release's online maps are parked

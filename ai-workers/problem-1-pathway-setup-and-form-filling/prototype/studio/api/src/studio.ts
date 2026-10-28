@@ -10,6 +10,7 @@ import { checkCondition, diff, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
+import { acceptsOf } from "../../engine/channels.ts";
 import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../contracts/programs.ts";
 import { FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
@@ -38,6 +39,11 @@ function gateOf(sub: ReviewSubmission | null, signed: Set<string>, sha256: strin
 
 /** A role's label as this combination's list shows it. */
 const participantsLabel = (list: { role: string; label?: string }[], role: string) => list.find((p) => p.role === role)?.label ?? role.replace(/_/g, " ");
+
+/** Lead check L10: a retired combination is read-only; who can be in it changes only once it is restored. */
+function retiredPeople(c: { label: string; retiredAt: Date | null }) {
+  if (c.retiredAt) fail(`"${c.label}" is retired: who can be in it is not changed. Restore it on Structure first; open cases keep their release.`, HttpStatus.CONFLICT);
+}
 
 @Injectable()
 export class Studio {
@@ -182,6 +188,7 @@ export class Studio {
     const b = parsed.data;
     const c = await this.db.combination.findUnique({ where: { id } });
     if (!c) fail("That combination does not exist (it may have been removed by a reset).", HttpStatus.NOT_FOUND);
+    retiredPeople(c!);
     if (c!.participantsVersion !== b.version) await this.stalePeople(c!);
     const participants = await this.checkParticipants(c!.workspaceId, b.participants, true);
     if (!b.confirmRemove) {
@@ -199,9 +206,12 @@ export class Studio {
     if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
     const c = await this.db.combination.findUnique({ where: { id } });
     if (!c) fail("That combination does not exist (it may have been removed by a reset).", HttpStatus.NOT_FOUND);
+    retiredPeople(c!);
     if (c!.participantsVersion !== parsed.data.version) await this.stalePeople(c!);
     const last = await this.lastPeopleSave(id);
     if (!last || last.action !== "updated" || (last.detail as any)?.version !== c!.participantsVersion) fail("There is nothing to undo: the last change to who can be in this application was already undone, or was not made on this screen.", HttpStatus.CONFLICT);
+    // Lead check L6: a release is never undone, as on the Forms tab ("Released since").
+    if (await this.releasedSince(id, last!.at)) fail("Released since: that change was released meanwhile, and a release is never undone. Change who can be in a new draft.", HttpStatus.CONFLICT);
     return this.writePeople(actor, c!, (last!.detail as any).before, "undone");
   }
 
@@ -210,7 +220,8 @@ export class Studio {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id } });
     const last = await this.lastPeopleSave(id);
     const by = [...ACTORS].find((a) => a.id === (c.participantsBy ?? last?.actor))?.name ?? null;
-    return { version: c.participantsVersion, savedBy: c.participantsBy ? by : null, savedAt: c.participantsBy && last ? last.at.toISOString() : null, canUndo: !!last && last.action === "updated" && (last.detail as any)?.version === c.participantsVersion };
+    const canUndo = !c.retiredAt && !!last && last.action === "updated" && (last.detail as any)?.version === c.participantsVersion && !(await this.releasedSince(id, last.at));
+    return { version: c.participantsVersion, savedBy: c.participantsBy ? by : null, savedAt: c.participantsBy && last ? last.at.toISOString() : null, canUndo };
   }
 
   private async writePeople(actor: Actor, c: { id: string; workspaceId: string; combinationKey: string; label: string; participants: any; participantsVersion: number }, participants: any[], action: "updated" | "undone") {
@@ -220,6 +231,11 @@ export class Studio {
     const words = participants.map((p) => `${p.label} (${p.min === p.max ? p.min : `${p.min}–${p.max}`}${p.applies ? ", applicant" : ""})`).join(", ");
     await this.audit.log(c.workspaceId, actor.id, action, "people", c.combinationKey, `${actor.name} ${action === "undone" ? "undid the last change to" : "changed"} who can be in "${c.label}": ${words}`, { before: c.participants, after: participants, version }, c.id);
     return { participants, version };
+  }
+
+  /** Whether a release of the combination was made after `at` (Lead check L6). */
+  private async releasedSince(id: string, at: Date) {
+    return !!(await this.db.configRelease.findFirst({ where: { combinationId: id, releasedAt: { gt: at } }, select: { id: true } }));
   }
 
   private lastPeopleSave(id: string) {
@@ -304,7 +320,7 @@ export class Studio {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"} (for example ${f.example}). Decide them when this edition is drafted again.` })) : [];
-    return [...structure, ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation }))), ...carried];
+    return [...structure, ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
   }
 
   async config(id: string, mode: Mode) {

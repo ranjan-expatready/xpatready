@@ -133,6 +133,8 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   for (const m of fieldMaps) for (const e of m.entries) if (e.fact) used.add(e.fact);
   const conds = [...forms.map((f) => f.predicateJson), ...effReq.map((r) => r.predicateJson), ...effRules.map((r) => r.predicateJson), ...effQuestions.map((q) => q.predicateJson)];
   for (const c of conds) if (c) for (const m of JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)) used.add(m[1]);
+  // Lead check L5: a minimum age is decided by each person's date of birth, so its question travels with the forms.
+  if (forms.some((f) => f.minAge)) used.add("person.date_of_birth");
   for (const d of derived) if ([...used].includes(d.derivedKey)) for (const i of [...d.inputs, d.reference]) used.add(i);
   const placements = effQuestions.filter((q) => selected.has(q.sectionKey) || used.has(q.canonicalFieldKey));
   for (const p of placements) used.add(p.canonicalFieldKey);
