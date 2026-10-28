@@ -8,7 +8,7 @@ import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { effective } from "../../engine/snapshot.ts";
 import { ACTORS, actorOf, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
-import { changeView, decideChange, resubmitChange, withdrawChange } from "./library-changes.ts";
+import { actionVerb, changeView, decideChange, resubmitChange, withdrawChange } from "./library-changes.ts";
 import { Intake } from "./intake.ts";
 import { isLifecycleKind, Lifecycle } from "./lifecycle.ts";
 import { Impact } from "./impact.ts";
@@ -122,9 +122,12 @@ export class Screen02 {
       if (e instanceof HttpException) throw e;
       fail("Nothing was deleted: the database refused it. It still waits on To review; try again, or return it.", HttpStatus.CONFLICT);
     });
-    await this.audit.log(c.workspaceId, actor.id, decision === "approve" ? "approved" : "returned", `library ${c.kind}`, c.key, `${actor.name} ${decision === "approve" ? "approved" : "returned"} "${c.label ?? c.key}" (${c.action.toLowerCase()})${note ? `: ${note}` : ""}`, undefined, c.combinationId ?? undefined);
-    // QA-52: an approved remove is applied at once (RELEASED), so the answer says what happened, not what was decided.
-    return decision === "approve" ? changeView((await this.db.libraryChange.findUnique({ where: { id } }))!) : out;
+    // S4 round 2 N8: an approved delete that could not be applied comes back RETURNED: say that, not "approved".
+    const now = decision === "approve" ? (await this.db.libraryChange.findUnique({ where: { id } }))! : c;
+    if (now.status === "RETURNED" && decision === "approve") { await this.audit.log(c.workspaceId, actor.id, "returned", `library ${c.kind}`, c.key, `${actor.name} approved "${c.label ?? c.key}" (${actionVerb(c.action, c.kind)}), but it could not be applied: ${now.decisionNote ?? ""}`, undefined, c.combinationId ?? undefined); return changeView(now); }
+    await this.audit.log(c.workspaceId, actor.id, decision === "approve" ? "approved" : "returned", `library ${c.kind}`, c.key, `${actor.name} ${decision === "approve" ? "approved" : "returned"} "${c.label ?? c.key}" (${actionVerb(c.action, c.kind)})${note ? `: ${note}` : ""}`, undefined, c.combinationId ?? undefined);
+    // QA-52: an approved delete is applied at once (RELEASED), so the answer says what happened, not what was decided.
+    return decision === "approve" ? changeView(now) : out;
   }
 }
 

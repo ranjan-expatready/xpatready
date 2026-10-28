@@ -5,9 +5,12 @@
 // the trail. QA-52: approving a removal of an unused name says it is removed now, not "released with the next release".
 // QA-54: a case person who opens a Studio page by its address is told so, not "restart the studio".
 // Fails today mark findings. Real PostgreSQL; one saved replay (US$0).
-//   zsh studio/tools/isolated.sh qa_fix 4472 start && node studio/tests/qa/check_qa_am_fix_1027.cjs 4472
+//   zsh studio/tools/isolated.sh qa_fix 4472 start && node studio/tests/qa/check_qa_am_fix_1027.cjs 4472 [xr_studio_qa_fix]
 const { chromium } = require("../../node_modules/playwright");
-const PORT = Number(process.argv[2] ?? 4472), BASE = `http://localhost:${PORT}`;
+const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
+const PORT = Number(process.argv[2] ?? 4472), BASE = `http://localhost:${PORT}`, DB = process.argv[3] ?? "xr_studio_qa_fix";
+const PSQL = ["/opt/homebrew/opt/postgresql@18/bin/psql", "/usr/local/bin/psql"].find((x) => fs.existsSync(x));
+const sql = (q) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).replace(/\s+/g, " ").slice(0, 260)}` : ""}`); };
 const STAGE = { start: 1, add_forms: 1, add_from_library: 1, see_new_edition: 1, draft_ai: 2, view_progress: 2, review_proposals: 2, release: 4 };
@@ -73,6 +76,9 @@ const STAGE = { start: 1, add_forms: 1, add_from_library: 1, see_new_edition: 1,
 
   // ======================================================== QA-51, QA-52: To review words for a removal
   const add = await api("/structure/nodes", { method: "POST", data: { pathwayType: "INDIVIDUAL", level: "category", parentKey: "individual.visitors", label: "Visitor record", decision: "add_anyway" } });
+  // P-116 amended (28 Oct): an author's own never-approved name is deleted at once; to reach the second person, the name
+  // is marked as another author's first (as the screens lane's own checks do).
+  sql(`update program_def set created_by='user-C' where program_node_key='${add.body.key}'`);
   const del = await api(`/structure/nodes/${add.body.key}`, { method: "DELETE", data: { reason: "qa: added by mistake" } });
   await p.evaluate(() => localStorage.setItem("xr-actor", "user-B"));
   await p.goto(`${BASE}/review/change/${del.body.id}`); await p.waitForSelector("main h1");

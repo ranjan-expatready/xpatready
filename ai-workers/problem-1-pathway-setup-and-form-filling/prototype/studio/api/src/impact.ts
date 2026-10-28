@@ -13,6 +13,7 @@ import { manifest } from "../../engine/import.ts";
 import { newestEdition } from "../../engine/programs.ts";
 import { effective } from "../../engine/snapshot.ts";
 import { ACTORS, Audit, Db, fail, need, PY, ROOT, SOLUTION, STUDIO, Workspace, type Actor } from "./core.ts";
+import { APPROVED_DIR, recordApproval, Sources } from "./sources.ts";
 
 const run = promisify(execFile);
 type InvField = { data_path?: string; caption?: string; section?: string };
@@ -21,12 +22,12 @@ const norm = (s: string | undefined) => (s ?? "").replace(/\s+/g, " ").trim().to
 
 @Injectable()
 export class Impact {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Sources) private readonly sources: Sources) {}
 
   /** The comparison and its impact for one held new edition (no AI, US$0). */
   async review(id: string) {
     const { h, item, def, old } = await this.held(id);
-    const inventory = await this.readInventory(item.file);
+    const inventory = await this.readInventory(item.file, h);
     const fresh = (JSON.parse(readFileSync(join(SOLUTION, inventory), "utf8")).fields as InvField[]).filter((f) => f.data_path);
     // The library edition's form fields: its stored inventory, or read from its official file (an edition added through
     // the intake has none stored yet).
@@ -65,12 +66,12 @@ export class Impact {
     const r = await this.review(id);
     if (body.expected !== r.counts.form_fields) fail("The comparison changed since you opened it. Look at it again, then accept.", HttpStatus.CONFLICT);
     const { h, item, def, old } = await this.held(id);
-    const inventory = await this.readInventory(item.file);
+    const inventory = await this.readInventory(item.file, h);
     const oldMaps = old ? new Map(effective(await this.db.formFieldMap.findMany({ where: { formEditionId: old.id } }), (m) => m.dataPath, "draft").map((m) => [m.dataPath, m])) : new Map();
     const res = await this.db.$transaction(async (tx) => {
       const claimed = await tx.intakeItem.updateMany({ where: { id, status: "HELD", outcome: "new_edition_held" }, data: { status: "DONE", outcome: "added", reason: `Accepted after impact review by ${actor.name}` } });
       if (!claimed.count) fail("Someone decided this edition at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
-      const ed = await tx.formEdition.create({ data: { workspaceId: h.workspaceId, govFormDefId: def.id, editionLabel: h.editionLabel!, officialFile: item.file, sha256: h.sha256, storedPath: h.storedPath || null, inventoryFile: inventory, dataBoundBoxes: r.counts.form_fields } });
+      const ed = await tx.formEdition.create({ data: { workspaceId: h.workspaceId, govFormDefId: def.id, editionLabel: h.editionLabel!, officialFile: item.file, sha256: h.sha256, storedPath: h.storedPath || null, inventoryFile: inventory, dataBoundBoxes: r.counts.form_fields, ...(item.download ? { origin: "DOWNLOADED", formPageUrl: item.download.formPageUrl, sourceUrl: item.download.sourceUrl, checkedAt: item.download.fetchedAt } : {}) } });
       const data: Prisma.FormFieldMapCreateManyInput[] = r.rows.filter((x) => x.change !== "removed").map((x) => {
         const m = x.change === "unchanged" ? oldMaps.get(x.dataPath) : undefined;
         return m ? { workspaceId: h.workspaceId, formEditionId: ed.id, dataPath: x.dataPath, caption: x.caption, heading: x.section, outcome: m.outcome, person: m.person, row: m.row, canonicalFieldKey: m.canonicalFieldKey, transform: m.transform, condition: m.condition, confidence: m.confidence,
@@ -88,7 +89,10 @@ export class Impact {
     const h = await this.db.intakeItem.findUnique({ where: { id } }).catch(() => null);
     if (!h) fail("This held edition does not exist (the demo may have been reset).", HttpStatus.NOT_FOUND);
     if (h!.status !== "HELD" || h!.outcome !== "new_edition_held") fail("This file is not a new edition waiting for its impact review.", HttpStatus.CONFLICT);
-    const item = manifest().find((i) => i.sha256 === h!.sha256);
+    const listed = manifest().find((i) => i.sha256 === h!.sha256);
+    // S4 (M3): a newer edition the form finder downloaded from canada.ca is reviewed like an official file.
+    const download = listed ? null : await this.db.officialDownload.findUnique({ where: { workspaceId_sha256: { workspaceId: h!.workspaceId, sha256: h!.sha256 } } });
+    const item: { file: string | null; download: typeof download } | null = listed ? { file: listed.file as string, download: null } : download ? { file: null, download } : null;
     // An edition approved in the product (not on the official manifest) cannot be read field by field yet: the form
     // reader takes official files only. It can be set aside with a reason (break M5), never left stuck.
     if (!item) fail("This edition was approved in the product, not taken from the official library, so its form fields cannot be compared yet. Set it aside with a reason, or keep it held until the official file is in the library.", HttpStatus.CONFLICT);
@@ -98,8 +102,16 @@ export class Impact {
     return { h: h!, item: item!, def: def!, old };
   }
 
-  private async readInventory(file: string) {
-    const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form.py"), file], { cwd: ROOT, timeout: 120_000 });
+  private async readInventory(file: string | null, h?: { workspaceId: string; sha256: string; storedPath: string }) {
+    let args = [file ?? ""];
+    if (!file && h) {
+      // An official download: its record and PDF go where the reader and the guard check them (sources.ts recordApproval).
+      const a = await this.sources.approvedInProduct({ workspaceId: h.workspaceId, sha256: h.sha256, recognised: false });
+      if (!a) fail("This edition's source is not verified.", HttpStatus.CONFLICT);
+      recordApproval(a!, readFileSync(join(ROOT, h.storedPath)));
+      args = ["--approved", APPROVED_DIR(), h.sha256];
+    }
+    const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form.py"), ...args], { cwd: ROOT, timeout: 120_000 });
     const r = JSON.parse(stdout.trim().split("\n").pop()!);
     if (!r.inventory_file) fail(`The new edition's form fields could not be read: ${r.error ?? r.status}.`, HttpStatus.UNPROCESSABLE_ENTITY);
     return r.inventory_file as string;

@@ -1,0 +1,128 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-finder-forms-individual-visitors-visitor-visa-live-20261027t072426546z-4d8a0d",
+  "idempotency_key": "7159359a3c993b1375da704da228f54441527d8e821a37896dc6540cf7f649c7",
+  "contract_version": "drafting-run/v0",
+  "kind": "find_forms",
+  "output_sha256": "a4d5906795691dbd295494686f97e2ca30c760aee849a3b1dddd268e51e2ed36",
+  "inputs": {
+   "combination": "Individual › Visitors › Visitor visa",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/visit-canada-apply-visitor-visa.text.inventory.json",
+     "sha256": "d2920b6a3d68f687ddc6081fd1f30360ba7a339928c839096e3d1372abaa5fd8"
+    },
+    {
+     "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+     "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2"
+    }
+   ],
+   "configuration_version": "s4-form-finder"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "medium",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 10000,
+   "prompt_version": "find-forms.v1.md",
+   "prompt_sha256": "db0ba1541972e2ef3d02c2e04bc0e8120b62002eeed0d4c85be079bf463adcc3"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 22542,
+    "output_tokens": 3145,
+    "duration_ms": 29734
+   }
+  ],
+  "usage": {
+   "input_tokens": 22542,
+   "output_tokens": 3145,
+   "cost_usd": 0.153068,
+   "duration_ms": 29734
+  },
+  "started_at": "2026-10-27T07:24:26.562Z",
+  "ended_at": "2026-10-27T07:24:57.942Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "b89a0cb09e020b1f7ff3aa95fe72d266cabe98792448e2e3fc28691555b2c084",
+  "template_sha256": "f2e3829b0e26a5b0f2bac53cece6cce46fa3ac5eed216c86a2546ecdb44494ef",
+  "schema_file": "find-forms-output.v1.schema.json",
+  "schema_sha256": "2f4958634c499340fe685bc976788450e75c8bfe6e22cd246d12e78e624c88b6",
+  "known": {
+   "combination_trail": "Individual › Visitors › Visitor visa"
+  },
+  "screened": true,
+  "output_sha256": "a4d5906795691dbd295494686f97e2ca30c760aee849a3b1dddd268e51e2ed36",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/runtime-r1-8f1db8/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "b4f5d28d639213f66d41399fb9a15c00e6c6e870448495f5d55428c72fa63e1f",
+  "request_bytes": 72387,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/runtime-r1-8f1db8/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 100,
+   "committed_usd": 37.610699999999994
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/visit-canada-apply-visitor-visa.text.inventory.json",
+    "sha256": "d2920b6a3d68f687ddc6081fd1f30360ba7a339928c839096e3d1372abaa5fd8",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+    "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "8e57c14b2951689eafe7e87c1e0bc93326460dfd844a53ef28aa81657aff1b66",
+   "digest_made_at": "2026-10-27T07:24:26.552Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "6b847464334c25afbde61864fca9ae3f",
+   "ticket_expires_at": "2026-10-27T07:26:26.552Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"forms\":[{\"code\":\"IMM 5256\",\"title\":\"Guide 5256 - Applying for a visitor visa (temporary resident visa) - paper application\",\"applies\":\"always\",\"condition\":null,\"who\":\"case\",\"quote\":\"Use this guide to apply for: visitor visa and transit visa\",\"filed_note\":\"Read\\nthe instruction guide before you complete your application. As an online\\napplicant, you can ignore steps 3 and 4 of the guide (paying the fees and submitting your\\napplication).\"},{\"code\":\"IMM 5484\",\"title\":\"Document Checklist\",\"applies\":\"always\",\"condition\":null,\"who\":\"case\",\"quote\":\"Make sure you complete the Document Checklist [IMM 5484] and include it with your application forms and supporting documents.\",\"filed_note\":\"When you apply online, you’ll get a personalized document checklist in the portal.\"},{\"code\":\"IMM 5257\",\"title\":\"Application for Temporary Resident Visa\",\"applies\":\"always\",\"condition\":null,\"who\":\"each_applicant\",\"quote\":\"This form must be completed by each person applying for a Temporary Resident Visa to visit Canada.\",\"filed_note\":\"Download and fill out the form on a computer.\"},{\"code\":\"IMM 5645\",\"title\":\"Family Information\",\"applies\":\"alternative\",\"condition\":\"IMM 5645 or IMM 5707, whichever is listed in the application package for your country; completed by each person 18 years of age or older\",\"who\":\"each_applicant\",\"quote\":\"You must complete the Family Information form (IMM 5707 or IMM 5645) listed in the application package for your country.\",\"filed_note\":null},{\"code\":\"IMM 5707\",\"title\":\"Family Information\",\"applies\":\"alternative\",\"condition\":\"IMM 5707 or IMM 5645, whichever is listed in the application package for your country; completed by each person 18 years of age or older\",\"who\":\"each_applicant\",\"quote\":\"You must complete the Family Information form (IMM 5707 or IMM 5645) listed in the application package for your country.\",\"filed_note\":null},{\"code\":\"IMM 5409\",\"title\":\"Statutory Declaration of Common-law Union\",\"applies\":\"condition\",\"condition\":\"if you are in a common-law union\",\"who\":\"each_applicant\",\"quote\":\"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union [IMM 5409] form and include it with your application.\",\"filed_note\":null},{\"code\":\"IMM 5476\",\"title\":\"Use of a Representative\",\"applies\":\"condition\",\"condition\":\"if using an authorized representative (appointing, updating or cancelling a representative); dependent children 18 or older fill out their own copy if the representative also acts for them\",\"who\":\"each_applicant\",\"quote\":\"Use of a representative (IMM 5476) (opens in a new tab) (if using an authorized representative)\",\"filed_note\":null},{\"code\":\"IMM 5475\",\"title\":\"Authority to Release Personal Information to a Designated Individual\",\"applies\":\"condition\",\"condition\":\"if authorizing information from your case file to be released to someone other than yourself\",\"who\":\"each_applicant\",\"quote\":\"Authority to Release Personal Information to a Designated Individual (IMM 5475) form (opens in a new tab) (if authorizing information from your case file to be released to someone other than yourself)\",\"filed_note\":null},{\"code\":\"IRM 0002\",\"title\":\"Request for a Change of Sex or Gender Identifier\",\"applies\":\"condition\",\"condition\":\"if you choose a gender identifier different from the one on your Canadian temporary resident document, or, with no prior Canadian document, different from your passport or travel document\",\"who\":\"each_applicant\",\"quote\":\"Note: If you choose a gender identifier that is different than what you currently have or have had on your Canadian temporary resident document (visa, electronic travel authorization, work permit, study permit or visitor record), you need to complete the Request for a Change of Sex or Gender Identifier (IRM 0002) form and send it with your application.\",\"filed_note\":null},{\"code\":\"IMM 5782\",\"title\":\"application for PR renunciation\",\"applies\":\"separate_application\",\"condition\":\"if you are a permanent resident who has decided to renounce permanent resident status\",\"who\":\"each_applicant\",\"quote\":\"If you are a permanent resident (PR) overseas, and have decided to renounce (relinquish) your permanent resident status, you must request and submit the application for PR renunciation [IMM 5782] in a separate envelope from your Temporary Resident application.\",\"filed_note\":\"Temporary Resident applications may be submitted through a Visa Application Centre (VAC) or online, while the PR applications must be sent by mail separately to the visa office.\"}],\"unresolved\":[{\"quote\":\"Most people must apply online. You can only apply on paper if you can’t apply online, including for reasons of a disability, or if you’re travelling with an identity or travel document that was issued to a refugee, a stateless person or a non-citizen.\",\"reason\":\"Guide 5256 and the IMM 5484 checklist are the paper-application versions; online applicants get a personalized checklist in the portal instead. The expert should confirm whether these paper documents belong on this combination by default.\"},{\"quote\":\"US Permit to Re-Enter (Form I-327)\",\"reason\":\"Form I-327 (and Form I-571) are US government travel documents accepted as passports, not IRCC forms; not listed as forms.\"}]}"
+}

@@ -1,4 +1,5 @@
 import * as React from "react";
+import { RunChip } from "@/components/run-card";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -60,6 +61,7 @@ function Shell() {
         <div className="hidden shrink-0 leading-tight sm:block"><p className="text-sm font-semibold">Product Studio</p><p className="text-[11px] text-text-muted">Pathway Configurator</p></div>
         <Pill tone="warn" className="ml-1 hidden xl:inline-flex" title="Working prototype on a local demo database: no sign-in, simulated people, not production">Prototype · demo workspace</Pill>
         <div className="ml-auto flex min-w-0 items-center gap-2">
+          <RunChip />
           <DemoControls loaded={!!session.data?.sampleLoaded} programsExist={(session.data?.counts?.programs ?? 0) > 0} />
           {/* QA-54: the list holds the Studio people; a case person who arrives here is shown too, so the header names them. */}
           <PersonaSwitch actors={casePerson ? [...(session.data?.actors ?? []), me] : session.data?.actors ?? []} />

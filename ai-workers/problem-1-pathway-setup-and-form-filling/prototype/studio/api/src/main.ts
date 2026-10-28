@@ -1,6 +1,7 @@
 // Product Studio API (NestJS 11, as the team's backend) and the built web app on one local port.
 //   node --tsconfig-raw is not used: run with tsx (see studio/start.sh), http://localhost:4400
 import "reflect-metadata";
+import { oneAtATime } from "./form-uses.ts";
 import { Body, Catch, Controller, Delete, Get, Headers, HttpException, Inject, Module, Param, Patch, Post, Query, Res, UploadedFiles, UseInterceptors, type ArgumentsHost, type ExceptionFilter } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
@@ -24,6 +25,11 @@ import { Sources } from "./sources.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { Structure, StructureController } from "./structure.ts";
 import { Studio } from "./studio.ts";
+import { Finder } from "./finder.ts";
+import { normaliseCode } from "../../contracts/form-library.ts";
+import { FormLibrary, FormLibraryController } from "./form-library.ts";
+import { Runs, RunsController } from "./runs.ts";
+import { UploadRuns } from "./upload-run.ts";
 
 type H = string | undefined;
 
@@ -39,7 +45,7 @@ class StudioController {
   @Patch("combinations/:id/requirements/:lineage") updReq(@Headers("x-actor") a: H, @Param("id") id: string, @Param("lineage") l: string, @Body() b: any) { return this.s.saveRequirement(actorOf(a), id, l, b); }
   @Post("combinations/:id/rules") addRule(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, null, b); }
   @Patch("combinations/:id/rules/:key") updRule(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, k, b); }
-  @Patch("combinations/:id/forms/:form") updForm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("form") f: string, @Body() b: any) { return this.s.saveForm(actorOf(a), id, f, b); }
+  @Patch("combinations/:id/forms/:form") updForm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("form") f: string, @Body() b: any) { return oneAtATime(id, () => this.s.saveForm(actorOf(a), id, normaliseCode(f), b)); } // S4 round 2 N6: one change at a time
   @Post("combinations/:id/sections/:key") selOn(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string) { return this.s.selectSection(actorOf(a), id, k, true); }
   @Delete("combinations/:id/sections/:key") selOff(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string) { return this.s.selectSection(actorOf(a), id, k, false); }
   @Get("combinations/:id/review") review(@Param("id") id: string) { return this.s.review(id); }
@@ -123,7 +129,7 @@ class ProgramsController {
   /** The one form intake (P-51): one or many files; with combinationId they are attached to it (door 1), without it
    *  they go to the library only (door 2, Screen 04). One result per file. */
   @Post("intake") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_BYTES, files: MAX_FILES } }))
-  upload(@Headers("x-actor") a: H, @UploadedFiles() files: any[], @Body() b: any) { return this.intake.intake(actorOf(a), files, b?.combinationId || undefined); }
+  upload(@Headers("x-actor") a: H, @UploadedFiles() files: any[], @Body() b: any) { return this.intake.intake(actorOf(a), files, b?.combinationId || undefined, "MANUAL", b?.forCombination && b?.forCode ? { combinationId: String(b.forCombination), code: normaliseCode(String(b.forCode)) } : undefined); }
   @Get("intake/held") held(@Query("combination") c?: string) { return this.intake.held(c || undefined); }
 }
 
@@ -159,7 +165,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, StructureController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists, Lifecycle, Structure] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, StructureController, FormLibraryController, RunsController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
 class AppModule {}
 
 async function main() {

@@ -1,6 +1,7 @@
 // AI work (D280): every scoped launch with its steps, persisted on the server, so a reload or another screen never loses
 // it. Progress is per step and stated as it is (queued, running, done, failed, cancelled); no invented percentage or ETA.
 import * as React from "react";
+import { RunCard } from "@/components/run-card";
 import { fmtWhen } from "@/components/status";
 import { Link, useParams } from "react-router-dom";
 import { ChevronRight, CircleStop, RotateCw, Sparkles } from "lucide-react";
@@ -47,6 +48,8 @@ export function AiBatchPage() {
   if (b.isLoading) return <Spinner label="Loading AI work" />;
   if (b.isError) return <ErrorState title="This AI work could not be opened" description={(b.error as Error).message} action={<Link className="text-text-link underline" to="/ai">All AI work</Link>} />;
   const d = b.data;
+  // S4 slice 2: the form finder and Upload PDF are shown with the shared run card (their steps are not field-map steps).
+  if (d.operation === "find_forms" || d.operation === "upload_form") return <div className="mx-auto max-w-4xl space-y-4"><Link className="text-sm text-text-link underline" to="/ai">All AI work</Link><RunCard runId={d.id} /></div>;
   const running = active(d.status) || d.jobs.some((j: any) => active(j.status));
   const latest = new Map<string, any>(); for (const j of d.jobs) { const k = `${j.attachmentId}|${j.kind}`; const cur = latest.get(k); if (!cur || j.attempt > cur.attempt) latest.set(k, j); }
   // The server says which steps its retry runs again (cancelled part-way included, screen-map work never).

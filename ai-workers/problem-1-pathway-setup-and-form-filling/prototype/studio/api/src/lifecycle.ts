@@ -8,10 +8,16 @@ import { HttpException, Inject, Injectable } from "@nestjs/common";
 import type { LibraryChange, Prisma, ProgramDef } from "@prisma/client";
 import { LEVEL_OF, LEVEL_WORD, PATHWAY_TYPE_LABEL, type LifecycleAction, type PathwayType, type RowAction, type Use, type UsesView } from "../../contracts/structure.ts";
 import { ACTORS, Audit, Db, need, Workspace, type Actor } from "./core.ts";
-import { changeView } from "./library-changes.ts";
+import { actionVerb, changeView } from "./library-changes.ts";
 import { RECHECK, WHY } from "../../contracts/lifecycle.ts";
 
-export const LIFECYCLE_KINDS = ["structure_node", "combination"] as const;
+/** The entity an audit line names for a library change (the same on every line about it). */
+const entityOf = (kind: string) => (kind === "structure_node" ? "structure" : kind === "library_form" ? "form" : "combination");
+import { formUses, hasApprovedFile } from "./form-uses.ts";
+import { newestEdition } from "../../engine/programs.ts";
+
+// S4 (m2): "library_form" is a Shared library › Forms entry, keyed by its form number (api/src/form-library.ts formUses).
+export const LIFECYCLE_KINDS = ["structure_node", "combination", "library_form"] as const;
 export type LifecycleKind = (typeof LIFECYCLE_KINDS)[number];
 export const isLifecycleKind = (k: string): k is LifecycleKind => (LIFECYCLE_KINDS as readonly string[]).includes(k);
 const OPEN = ["WAITING", "RETURNED", "APPROVED"]; // a change not yet applied or released: nothing else may start on it
@@ -174,7 +180,7 @@ export class Lifecycle {
     return rows.map((r) => ({ at: r.at.toISOString(), by: nameOf(r.actor) ?? (r.actor === "system" ? "The studio" : r.actor), what: r.summary }));
   }
 
-  private async usesOf(kind: LifecycleKind, key: string) { return kind === "structure_node" ? this.nodeUses(key) : this.combinationUses(key); }
+  private async usesOf(kind: LifecycleKind, key: string) { return kind === "structure_node" ? this.nodeUses(key) : kind === "library_form" ? formUses(this.db, await this.ws.id(), key) : this.combinationUses(key); }
   private refusal(u: UsesView, action: LifecycleAction) { return action === "DELETE" ? u.can.delete : action === "RETIRE" ? u.can.retire : u.can.restore; }
 
   /** Delete, retire or restore proposed by an author: checked now, waiting for a different person (L4). */
@@ -188,13 +194,15 @@ export class Lifecycle {
       const g = await graph(this.db, workspaceId), f = await this.facts(workspaceId, g, key);
       if (ownDraft(f, actor.id)) return this.deleteOwnDraft(actor, workspaceId, g, f, reason);
     }
-    // QA-51 (BR-7): the trail starts with the Pathway type, as on the Structure: both types can hold the same names.
-    const at = kind === "structure_node" ? key : (await this.db.combination.findUnique({ where: { id: key }, select: { program: { select: { programNodeKey: true } } } }))?.program.programNodeKey;
-    const type = at ? pathwayTypeOf(await graph(this.db, workspaceId), at) : null;
-    const label = [...(type ? [PATHWAY_TYPE_LABEL[type]] : []), ...u.trail].join(" › ");
+    let label = u.label, matches: string[] = [];
+    if (kind !== "library_form") {
+      // QA-51 (BR-7): the trail starts with the Pathway type, as on the Structure: both types can hold the same names.
+      const at = kind === "structure_node" ? key : (await this.db.combination.findUnique({ where: { id: key }, select: { program: { select: { programNodeKey: true } } } }))?.program.programNodeKey;
+      const type = at ? pathwayTypeOf(await graph(this.db, workspaceId), at) : null;
+      label = [...(type ? [PATHWAY_TYPE_LABEL[type]] : []), ...u.trail].join(" › ");
+    }
     // What the approver approves, stored with the change (Lead, 28 Oct): a Delete lists every name of its branch (R3-4);
     // a combination row's Retire or Restore names the combination that goes with it.
-    let matches: string[] = [];
     if (kind === "structure_node") {
       const g = await graph(this.db, workspaceId), f = await this.facts(workspaceId, g, key), withC = nodeCan(f).withCombination;
       matches = action === "DELETE" ? [key, ...f.below.map((n) => n.programNodeKey)] : withC ? [`combination:${withC}`] : [];
@@ -206,7 +214,7 @@ export class Lifecycle {
       await this.db.libraryChange.update({ where: { id: c.id }, data: { status: "WITHDRAWN", decisionNote: "Another change to it was proposed at the same moment." } });
       throw problem(409, "Already open", "Another change to it was proposed at the same moment: see it on To review.", { uses: u.uses });
     }
-    await this.audit.log(workspaceId, actor.id, "proposed", kind === "structure_node" ? "structure" : "combination", key, `${actor.name} proposed to ${action.toLowerCase()} "${label}": ${reason}`, undefined, kind === "combination" ? key : undefined);
+    await this.audit.log(workspaceId, actor.id, "proposed", entityOf(kind), key, `${actor.name} proposed to ${actionVerb(action, kind)} "${label}": ${reason}`, undefined, kind === "combination" ? key : undefined);
     return changeView(c);
   }
 
@@ -276,7 +284,7 @@ export class Lifecycle {
     const u = await this.usesOf(c.kind, c.key).catch(() => null);
     if (!u) return { ok: false, text: RECHECK.gone, kept: [] };
     const others = { ...u, uses: u.uses.filter((x) => x.kind !== "draft_change"), can: { delete: null, retire: null, restore: null } as UsesView["can"] };
-    const again = c.kind === "structure_node" ? await this.recheckNode(c) : await this.recheckCombination(c, others);
+    const again = await this.againFor(c, others);
     return { ok: !again, text: again ?? RECHECK.clear, kept: u.uses.filter((x) => !x.blocks && x.kind !== "draft_change").map((x) => x.label) };
   }
 
@@ -286,8 +294,27 @@ export class Lifecycle {
     const u = await this.usesOf(c.kind, c.key).catch(() => null);
     if (!u) throw problem(409, "No longer there", RECHECK.gone);
     const others = { ...u, uses: u.uses.filter((x) => x.kind !== "draft_change"), can: { delete: null, retire: null, restore: null } as UsesView["can"] };
-    const again = c.kind === "structure_node" ? await this.recheckNode(c) : await this.recheckCombination(c, others);
+    const again = await this.againFor(c, others);
     if (again) throw problem(409, "No longer allowed", `${again} Return this change with that reason.`, { uses: u.uses });
+  }
+  /** The one approval re-check, for the ReviewCard before the click and for the approval itself (P-116 amended). */
+  private async againFor(c: LibraryChange, others: UsesView): Promise<string | null> {
+    if (c.kind === "structure_node") return this.recheckNode(c);
+    if (c.kind !== "library_form") return this.recheckCombination(c, others);
+    const again = this.recheckForm(c, others);
+    // Break round 2 N1: a file of the form approved since the delete was asked is kept (P-51): retire it instead.
+    if (!again && c.action === "DELETE") {
+      const def = await this.db.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: c.key }, include: { editions: { select: { sha256: true } } } });
+      if (def && (await hasApprovedFile(this.db, c.workspaceId, def.editions.map((e) => e.sha256).filter((x): x is string => !!x)))) return RECHECK.used("Can't delete: its file was approved meanwhile, so it is kept. Retire it instead.");
+    }
+    return again;
+  }
+  /** S4: a library form is checked again as it was proposed (P-116): released, or used somewhere it was not before. */
+  private recheckForm(c: LibraryChange, u: UsesView) {
+    const blocking = u.uses.filter((x) => x.blocks);
+    if (c.action === "DELETE") return u.released ? RECHECK.used(WHY.released) : blocking.length ? RECHECK.used(`Can't delete: ${blocking[0].label} uses it.`) : null;
+    if (c.action === "RETIRE") { const b = blocking.filter((x) => !x.retireOk); return b.length ? RECHECK.used(WHY.stillUsed([b[0].label])) : null; }
+    return null;
   }
   /** The same rule as the proposal (nodeCan), read again without this change; a Delete also refuses a branch that holds
    *  a name it did not list (R3-4: approval deletes exactly what was proposed). */
@@ -307,12 +334,25 @@ export class Lifecycle {
     return null;
   }
 
+  /** C11.18: the approved channels go on the form's current edition, "Set by a person · Sample" (the expert confirms later). */
+  private async applyAccepts(actor: Actor, c: LibraryChange) {
+    const m = c.matches as { channels?: string; quote?: string | null; reason?: string | null };
+    const def = await this.db.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: c.key }, include: { editions: true } });
+    const current = def ? newestEdition(def.editions.filter((e) => e.channel !== "ONLINE")) ?? null : null;
+    await this.db.$transaction(async (tx) => {
+      if (current) await tx.formEdition.update({ where: { id: current.id }, data: { acceptedChannels: m.channels ?? null, acceptedBasis: "PERSON_SAMPLE", acceptedQuote: m.quote ?? `Set by a person: ${m.reason ?? ""}`.slice(0, 400) } });
+      await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? "Applied at approval (what IRCC accepts; Sample until the expert confirms)." } });
+    });
+    await this.audit.log(c.workspaceId, actor.id, "approved", "form", c.key, `${actor.name} approved what IRCC accepts for ${c.key}: ${c.label ?? ""}`);
+  }
+
   /** After approval: a delete is applied at once (L1: never released, used nowhere). Retire and restore wait for the
    *  release (publishLifecycle). */
   async afterApprove(actor: Actor, c: LibraryChange) {
+    if (c.kind === "form_accepts") return this.applyAccepts(actor, c);
     if (!isLifecycleKind(c.kind) || c.action !== "DELETE") return;
     let gone = 1;
-    await this.db.$transaction(async (tx) => {
+    const done = await this.db.$transaction(async (tx) => {
       if (c.kind === "structure_node") {
         // R3-4: exactly the listed branch, leaves first, all or nothing; a setup or a name added meanwhile stops it all.
         const listed = Array.isArray(c.matches) && c.matches.length ? (c.matches as string[]) : [c.key];
@@ -324,6 +364,16 @@ export class Lifecycle {
         const depth = (n: ProgramDef) => { let d = 0; for (let x = n; x.parentNodeKey; x = g.byKey.get(x.parentNodeKey)!) d++; return d; };
         for (const n of [...branch].sort((a, b) => depth(b) - depth(a))) await tx.programDef.delete({ where: { id: n.id } });
         gone = branch.length;
+      } else if (c.kind === "library_form") {
+        // Never released and used nowhere (checked again above): its editions and their stored rows go with it.
+        const def = await tx.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: c.key }, include: { editions: { select: { sha256: true } } } });
+        if (def && !(await tx.combinationForm.count({ where: { govFormDefId: def.id } })) && !(await hasApprovedFile(tx, c.workspaceId, def.editions.map((e) => e.sha256).filter((x): x is string => !!x)))) {
+          await tx.govFormDef.delete({ where: { id: def.id } });
+        } else {
+          // Break M1: never report a delete that did not happen. It is handed back with the reason.
+          await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RETURNED", decisionNote: "Not deleted: a combination still has a line for this form (perhaps retired), or its file is approved. Retire it instead." } });
+          return false;
+        }
       } else {
         const subs = (await tx.reviewSubmission.findMany({ where: { combinationId: c.key }, select: { id: true } })).map((s) => s.id);
         await tx.reviewSignoff.deleteMany({ where: { submissionId: { in: subs } } });
@@ -331,9 +381,11 @@ export class Lifecycle {
         await tx.intakeItem.updateMany({ where: { combinationId: c.key }, data: { combinationId: null } });
         await tx.combination.delete({ where: { id: c.key } });
       }
-      await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? "Deleted at approval (never released)." } });
+      await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? (c.kind === "library_form" ? "Deleted at approval: it left the library (never released)." : "Deleted at approval (never released).") } });
+      return true;
     });
-    await this.audit.log(c.workspaceId, actor.id, "deleted", c.kind === "structure_node" ? "structure" : "combination", c.key, `${actor.name} approved deleting "${c.label ?? c.key}"${gone > 1 ? ` and the ${gone - 1} names under it` : ""}: deleted (never released, used nowhere)`);
+    if (!done) return;
+    await this.audit.log(c.workspaceId, actor.id, "deleted", entityOf(c.kind), c.key, c.kind === "library_form" ? `${actor.name} approved deleting "${c.label ?? c.key}": it left the library (never released, used nowhere)` : `${actor.name} approved deleting "${c.label ?? c.key}"${gone > 1 ? ` and the ${gone - 1} names under it` : ""}: deleted (never released, used nowhere)`);
   }
 
 }
@@ -346,7 +398,7 @@ export async function withdrawLifecycle(db: Db, actor: Actor, c: LibraryChange, 
   if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
   const done = await db.libraryChange.updateMany({ where: { id: c.id, status: { in: OPEN } }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });
   if (!done.count) throw problem(409, "Cannot withdraw", `This change is ${c.status.toLowerCase()}: nothing to withdraw.`);
-  await db.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "withdrawn", entity: c.kind === "structure_node" ? "structure" : "combination", entityKey: c.key, summary: `${actor.name} withdrew "${c.action.toLowerCase()} ${c.label ?? c.key}": ${why}`.slice(0, 600) } });
+  await db.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "withdrawn", entity: entityOf(c.kind), entityKey: c.key, summary: `${actor.name} withdrew "${actionVerb(c.action, c.kind)} ${c.label ?? c.key}": ${why}`.slice(0, 600) } });
   return changeView((await db.libraryChange.findUnique({ where: { id: c.id } }))!);
 }
 
@@ -360,6 +412,18 @@ export async function publishLifecycle(tx: Prisma.TransactionClient, c: LibraryC
     // A combination row's own combination goes with its name (P-128, Lead 28 Oct), named in the change when proposed.
     const withC = (Array.isArray(c.matches) ? (c.matches as string[]) : []).find((m) => m.startsWith("combination:"))?.slice("combination:".length);
     if (withC) await tx.combination.updateMany({ where: { id: withC, workspaceId: c.workspaceId }, data });
+  } else if (c.kind === "library_form") {
+    // Round 3 major: checked again at the release: a draft that lists the form again keeps it, and the retire goes back.
+    if (c.action === "RETIRE") {
+      const using = await tx.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM (SELECT DISTINCT ON (f.combination_id, f.lineage_key) f.status FROM combination_form f JOIN gov_form_def d ON d.id = f.gov_form_def_id WHERE d.workspace_id = ${c.workspaceId}::uuid AND d.form_key = ${c.key} ORDER BY f.combination_id, f.lineage_key, f.version DESC) x WHERE x.status <> 'RETIRED'`;
+      if (Number(using[0]?.n ?? 0) > 0) {
+        const note = "Not retired: a combination lists this form again. Remove it there, then ask again.";
+        await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RETURNED", decisionNote: note } });
+        await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: "system", action: "returned", entity: "form", entityKey: c.key, summary: `The release did not retire ${c.key}: ${note}` } }); // round 4 R4-3
+        return false;
+      }
+    }
+    await tx.govFormDef.updateMany({ where: { workspaceId: c.workspaceId, formKey: c.key }, data });
   } else await tx.combination.updateMany({ where: { id: c.key, workspaceId: c.workspaceId }, data });
   return true;
 }

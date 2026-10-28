@@ -1,0 +1,7 @@
+{
+  "basis": "The form finder replays a saved AI answer only for the combination it was made for, by the combination's key (Lead decision 28 Oct, drift check #9). Runs made since then record the key themselves. These are the saved live runs made before that: the one approved live pass of 27 Oct 2026 (US$0.31), run for the demo's Visitor visa (Individual › Visitors › Visitor visa), whose key is vv.single in samples/programs.json. Sample until the immigration expert confirms which forms apply.",
+  "runs": {
+    "studio-finder-forms-individual-visitors-visitor-visa-live-20261027t072426546z-4d8a0d.json": "vv.single",
+    "studio-finder-forms-check-individual-visitors-visitor-visa-live-20261027t072500006z-a569fb.json": "vv.single"
+  }
+}
