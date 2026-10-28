@@ -18,25 +18,24 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
  *  give null, "Not set yet", with filingWhy's reason. */
 export function channelsFrom(note: string | null | undefined): "PDF" | "ONLINE" | "PDF_OR_ONLINE" | null {
   let pdf = false, online = false;
-  const read = (s: string) => {
-    if (/\bupload(?:s|ed|ing)?\b/i.test(s)) {
-      pdf = true;
-      // "If you apply online, upload it" or "your online application": the PDF goes into an online application (a PDF
-      // upload). Only filling the form in online, or an online form, is Online as well.
-      if (/\b(?:fill|complet|submit)\w*\b[^.;]*\bonline\b|\bonline form\b/i.test(s.replace(/\bonline applications?\b/gi, " "))) online = true;
-    } else if (/\bonline\b|\bportal\b/i.test(s)) online = true;
-  };
-  for (const s of sentencesOf(note)) {
-    if (!NEGATED.test(s)) { read(s); continue; }
-    // QA-61: a clause that says not to ("Do not upload this form", "You don't need to upload it if you apply online")
-    // says nothing about how the form is filed. Lead (#73 review): the other clauses of the same sentence still count
-    // ("Do not mail this form; upload it online" is a PDF upload); a clause that is only a condition says nothing alone.
-    for (const c of clausesOf(s)) if (!NEGATED.test(c) && !/^(?:if|when|unless)\b/i.test(c)) read(c);
+  // QA-61 and the #73 review, by rule: each sentence is read clause by clause; a condition ("if", "even if", "unless" …)
+  // is never evidence of a channel, and a negated clause ("Do not upload this form") says nothing. What is left must be
+  // an affirmative instruction: "upload" for a PDF upload; filing online ("apply/submit/fill/complete … online", "an
+  // online form", "through the portal") for Online. "Your online application" is where an upload goes, not filing online.
+  for (const sentence of sentencesOf(note)) for (const clause of clausesOf(sentence)) {
+    const c = clause.replace(CONDITION, "").trim();
+    if (!c || NEGATED.test(c)) continue;
+    if (/\bupload(?:s|ed|ing)?\b/i.test(c)) pdf = true;
+    if (FILE_ONLINE.test(c.replace(/\bonline applications?\b/gi, " "))) online = true;
   }
   return online && pdf ? "PDF_OR_ONLINE" : online ? "ONLINE" : pdf ? "PDF" : null;
 }
-/** A negated sentence's clauses: split on ";", ",", " but " and " instead". */
-const clausesOf = (s: string) => s.split(/[;,]|\s+but\s+|\s+instead\b/i).map((x) => x.trim()).filter(Boolean);
+/** A clause: split on ";", ",", ":", " but " and " instead" (a heading ends at its colon). */
+const clausesOf = (s: string) => s.split(/[;,:]|\s+but\s+|\s+instead\b/i).map((x) => x.trim()).filter(Boolean);
+/** A condition, from its first word to the end of its clause: never evidence of a channel. */
+const CONDITION = /\b(?:even if|even when|if|when|unless|whether|except|in case)\b.*$/i;
+/** An affirmative instruction to file online. */
+const FILE_ONLINE = /\b(?:apply|applies|applying|submit\w*|fill\w*|complet\w*|file)\b[^.;]*\bonline\b|\bonline form\b|\b(?:through|in|on|via|using)\s+(?:the|your|an?)\b[^.;]{0,40}?\bportal\b/i;
 /** QA-61: the rule reads each sentence, not single words. */
 const NEGATED = /\b(?:do not|don't|does not|doesn't|did not|didn't|no need to|not need to|need not|never|without)\b/i;
 function sentencesOf(note: string | null | undefined): string[] {
