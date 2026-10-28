@@ -51,14 +51,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - **Page behaviour:** Program structure opens on the Pathway this person last chose (`xr-structure-pathway:<actor>` in browser storage; `p=all` is All pathways). A check that wants every band should open `/structure?p=all`.
 
 current_screen: W1-visual-system
-stage: EARLY-LOOK
+stage: DESIGN
 owner: Lead
-next_action: Lead: founder's Changes on the visual system (28 Oct): Program structure round 3 board (Tree and List views, numbered program blocks, one Add, Edit and Delete on every row, simpler look, filter or cards on top); the lane builds it once the founder agrees the board
-then: S3 BUILD after round 3's board, the founder's Go and S4's merge (S3 re-check and addendum done, P-126); wave 1 desktop only (1440, 1024)
+next_action: Lead: answer the round 3 challenge (screens/W1-visual-system/challenge.md: 4 Major — combination row's lifecycle action, exact branch delete, qa checks that say Remove, test rewrite in two commits R3a/R3b; 6 Minor), then BUILD round 3 (P-128)
+then: S3 BUILD after round 3, the founder's Go and S4's merge (S3 re-check and addendum done, P-126); wave 1 desktop only (1440, 1024)
 blocked_by: none
 updated: 2026-10-28
 
 ## Log (last 10 lines)
+- 2026-10-28 · W1-visual-system · EARLY-LOOK → DESIGN · applied Lead message (P-128 round 3 agreed; note on lead/2026-10-27 8e7d47f); screen-challenge written in W1-visual-system/challenge.md: Build after these changes, 4 Major, 6 Minor, back-end plan; no code. Owner → Lead. AI US$0.
 - 2026-10-28 · W1-visual-system · EARLY-LOOK · Lead message: the founder's early look is Changes (do not merge; the Add pop-up stays; Program structure round 3 board coming; wave 1 desktop only). No code on Program structure or Immigration programs (P-126); the S3 re-check got an addendum (round 3 row actions, desktop only). Stopped at a safe point. AI US$0.
 - 2026-10-28 · W1-visual-system · BUILD → EARLY-LOOK · AD-8 focus race fixed at the cause (Dialog initialFocus); full run-suites 40/40 PASS (0b60e6a), studio journey 45/45 on 4445, CI suites green on f7124e9 (run 40562533734; later commits are screenshots and notes only); graph check passes. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-visual-system · BUILD · applied the Lead's drift check (Fix first, items 1–5): four CI-red suites fixed, Used by on each line, focus kept during Add and add another, POST /structure/path API check 28/28 (found and fixed: None on a category with sub-categories said "already there"); structure_path 28/28, s1s2_fix 30/30, programs_s2 87/87; 25f1b12. AI US$0.
@@ -68,4 +69,3 @@ updated: 2026-10-28
 - 2026-10-27 · W1-structure-programs · FIX → CHECK · seven items fixed (QA-44/45/46/49/50, review m1, break m8); check_w1_s1s2_fix 30/30; suites 34 PASS + 2 reruns alone PASS (s1finish now waits for 'Added'; forms_slice2b fetch flake 36/36); synced main 94d14ce, then s1s2_fix 30/30, programs_s2 87/87, s1finish 33/33; studio journey 45/45 on 4445; no by-products in the branch. AI US$0. Owner → Lead.
 - 2026-10-27 · W1-structure-programs · CHECK → FIX · applied Lead note 2026-10-27 (S2 merged PR #53; FIX QA-44, QA-45, QA-46, QA-49, QA-50, review m1, break m8); new branch screens/2026-10-27-s1s2-fix from main 57f6f8c; all seven built with a pass and a fail check each (check_w1_s1s2_fix 30/30). AI US$0.
 - 2026-10-27 · W1-structure-programs · FIX → CHECK · CHECK findings fixed (241e2b4): review M1 need-you counting tested with real waiting states; break M1 unknown/long p= ignored, M2 keys to 400, M3 other lanes' files back to main; minors; all 35 suites PASS, check_w1_programs_s2 87/87, studio journey 45/45 on 4445. AI US$0. Owner → Lead.
-- 2026-10-27 · W1-structure-programs · CHECK → FIX · breaker on b45ca44: 0 Blocker, 3 Major (bad p= shows empty Pathways; long keys fail own contracts; other lanes' files in the branch), 9 Minor; all three Majors and the reviewer's Major fixed with checks; check_w1_programs_s2 87/87. AI US$0.
