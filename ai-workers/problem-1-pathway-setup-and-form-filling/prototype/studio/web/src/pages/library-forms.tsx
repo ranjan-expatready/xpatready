@@ -146,7 +146,7 @@ export function FormsPage() {
         <p className="text-xs text-text-muted">{lib.data?.sample_note}</p>
         {open ? <FormDrawer row={open} onClose={() => setOpen(null)} canAuthor={canAuthor} /> : null}
         {confirm ? <div className="xl:fixed xl:right-6 xl:top-20 xl:z-40 xl:w-[440px]"><ImpactPanel key={`impact-${confirm.code}`} kind={confirm.action.kind} name={`${confirm.code} · ${confirm.title}`}
-          kept={confirm.action.kind === "RETIRE" ? confirm.used_by.map((u) => u.label) : undefined} busy={acting.busy} error={acting.error}
+          kept={confirm.action.kind === "RETIRE" ? confirm.used_by.map((u) => u.label) : undefined} takesEffect={SAY.takesEffect("DELETE")} busy={acting.busy} error={acting.error}
           onCancel={() => { const code = confirm.code; setConfirm(null); setTimeout(() => document.querySelector<HTMLElement>(`tr[data-form="${CSS.escape(code)}"] [data-action]`)?.focus(), 0); }} onSend={(reason) => void sendAction(confirm, reason)} /></div> : null}
         {undo.node}
       </div>

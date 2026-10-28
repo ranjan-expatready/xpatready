@@ -139,6 +139,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const paneText = await pane.innerText();
     step("P-116 amended: the confirm opens in the right panel: what happens, who approves and when (never a centred modal)", /Retire "IMM 5604/.test(paneText) && /A second person, on To review/.test(paneText) && (await p.getByRole("dialog").count()) === 0, paneText.slice(0, 200));
     step("P-116 amended fail: Send for approval waits for a reason", await pane.locator("[data-confirm-send]").isDisabled());
+    step("QA-64: the confirm says a library retire takes effect when it is approved, not with the next release", /When it is approved/.test(paneText) && !/next release/.test(paneText), paneText.slice(0, 300));
     await pane.getByLabel(/Why retire it/).fill("Uploaded by mistake; no combination uses it");
     await sleep(400); // Send has just turned from disabled to enabled: scan after its colour transition, not mid-way
     await axe("retire confirm (impact panel)");

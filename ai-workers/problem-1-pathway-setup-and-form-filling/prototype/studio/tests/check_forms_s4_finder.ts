@@ -327,14 +327,13 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("round 3 R3-1: the workspace's \"+ Add\" refuses it too (409, in words): every attach path goes through one guard", r.status === 409 && /open on To review/.test(r.body.detail ?? r.body.message ?? ""), r.body?.detail ?? r.body);
   r = await call("POST", `/combinations/${vv}/forms/undo`);
   ok("round 3 major: Undo never brings back a form whose retire is open (409, in words); the line stays removed", r.status === 409 && /Being retired/.test(r.body.title) && /IRM 0002:RETIRED/.test(lines(vv)), r.body.detail);
-  // The release checks again: a draft listing the form again (made by hand here) keeps it, and the retire goes back.
+  // QA-64 (P-116 amended): a library retire takes effect at approval, so the approval checks again: a draft listing the form
+  // again (made by hand here) keeps it, and the approval is refused in words.
   const retireId = sql(`select id from library_change where key='IRM 0002' and status='WAITING'`);
-  r = await call("POST", `/library/changes/${retireId}/approve`, { note: "Checked" }, "user-B");
   sql(`update combination_form set status='DRAFT' where combination_id='${vv}' and lineage_key='IRM 0002' and version=(select max(version) from combination_form where combination_id='${vv}' and lineage_key='IRM 0002')`);
-  const shared = (await call("GET", "/draft")).body;
-  r = await call("POST", "/pack/release", { expectedChanges: shared.changes }, "user-B");
-  ok("round 3 major: the release re-checks: a retire whose form a draft lists again is handed back, the form is not retired", sql(`select retired_at is null from gov_form_def where form_key='IRM 0002'`) === "t" && sql(`select status from library_change where id='${retireId}'`) === "RETURNED", { release: r.status, change: sql(`select status from library_change where id='${retireId}'`) });
-  ok("round 4 R4-3: the hand-back is written in History (the release did not retire it, and why)", Number(sql(`select count(*) from audit_event where entity_key='IRM 0002' and summary like 'The release did not retire IRM 0002%'`)) >= 1);
+  r = await call("POST", `/library/changes/${retireId}/approve`, { note: "Checked" }, "user-B");
+  ok("round 3 major, QA-64 fail: the approval re-checks: a retire whose form a draft lists again is refused in words (409) and the form is not retired", r.status === 409 && /Still used|Changed since/.test(r.body.detail ?? "") && sql(`select retired_at is null from gov_form_def where form_key='IRM 0002'`) === "t" && sql(`select status from library_change where id='${retireId}'`) === "WAITING", { approve: r.status, detail: r.body?.detail, change: sql(`select status from library_change where id='${retireId}'`) });
+  ok("round 4 R4-3: the refusal is said to the approver in words (the form is still listed), nothing is retired", /Visitor visa/.test(r.body.detail ?? ""), r.body?.detail);
   sql(`delete from library_change where key='IRM 0002'`);
   r = await call("DELETE", `/combinations/${vv}/forms/${C0002}`, { version: Number(sql(`select version from combination_form where combination_id='${vv}' and lineage_key='IRM 0002' order by version desc limit 1`)) });
   madeForm("IMM 0101");
