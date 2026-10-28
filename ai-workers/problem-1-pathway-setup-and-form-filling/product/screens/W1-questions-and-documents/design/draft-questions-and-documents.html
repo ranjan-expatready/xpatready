@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>Questions and documents — draft board</title>
+<style>
+/* Team tokens (code/ERv2-frontend@5ccd9fa src/styles/tokens.css) + visual-system level colours (W1-visual-system r3). No one-off values. */
+:root{--primary:#0862c5;--p50:#e6f4ff;--p100:#cce9ff;--link:#054e9c;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--faint:#8c8c8c;
+--border:#d9d9d9;--border-s:#bfbfbf;--line:#ececec;--danger:#dc2626;--danger-t:#991b1b;--danger-tint:#fbe5e5;--warn:#ff8500;--warn-t:#663200;--warn-tint:#fff1e0;
+--ok:#16a34a;--ok-t:#0f5c2e;--ok-tint:#e3f4e9;--ai:#7c3aed;--ai-tint:#f3edfd;--lv1:#37506e;--lv2:#0b6477;--lv3:#043a73;--bg:#e9ecef;--r:8px;--r2:12px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif;color:var(--text)}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+.board-title{width:1440px;margin:24px auto 8px;padding:0 4px;display:flex;justify-content:space-between;align-items:flex-end}
+.board-title h1{font-size:24px}.board-title p{margin:4px 0 0;color:var(--muted)}
+.toolbar{display:flex;gap:8px;align-items:center}
+.btn{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--r);border:1px solid var(--border-s);background:var(--raised);color:var(--text);font:500 14px Inter,system-ui,sans-serif;cursor:pointer}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.sm{height:30px;padding:0 10px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--link)}.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.ai{border-color:#c9b3f5;color:var(--ai)}
+.frame{width:1440px;margin:0 auto 28px;background:var(--surface);border:1px solid var(--border-s);border-radius:var(--r2);overflow:hidden;box-shadow:0 2px 10px #0001}
+.frame-cap{background:#2d2d2d;color:#fff;padding:8px 16px;font-size:12px;display:flex;justify-content:space-between}
+.top{height:56px;background:var(--raised);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600}.logo b{color:var(--primary);font-size:18px}.logo span{color:var(--muted);font-weight:500}
+.crumbs{color:var(--muted);font-size:12px}
+.proto{font-size:12px;border:1px dashed var(--warn);color:var(--warn-t);background:var(--warn-tint);padding:2px 8px;border-radius:999px}
+.demo{display:flex;gap:6px;align-items:center;border:1px dashed var(--warn);border-radius:var(--r);padding:4px 8px;background:var(--warn-tint)}
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:640px}
+nav.menu{background:var(--raised);border-right:1px solid var(--border);padding:14px 10px;font-size:14px}
+nav.menu h4{margin:14px 8px 4px;font-size:12px;color:var(--faint);font-weight:600}
+nav.menu a{display:flex;justify-content:space-between;padding:7px 10px;border-radius:var(--r);color:var(--text);text-decoration:none}
+nav.menu a.on{background:var(--p50);color:var(--link);font-weight:600}
+.count{font-size:12px;background:var(--p100);color:var(--link);border-radius:999px;padding:0 7px}
+main{padding:20px 24px;min-width:0}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+.ph h2{font-size:24px}.ph p{margin:2px 0 0;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--raised);font-size:12px;color:var(--muted)}
+.chip.on{border-color:var(--primary);background:var(--p50);color:var(--link);font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:18px;padding:1px 8px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.pill.ok{background:var(--ok-tint);color:var(--ok-t);border-color:#b7e2c5}.pill.warn{background:var(--warn-tint);color:var(--warn-t);border-color:#ffd3a3}
+.pill.danger{background:var(--danger-tint);color:var(--danger-t);border-color:#f3b9b9}.pill.ai{background:var(--ai-tint);color:var(--ai);border-color:#dccbfa}
+.pill.info{background:var(--p50);color:var(--link);border-color:var(--p100)}.pill.neutral{background:#eee;color:var(--muted)}
+.role{font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--border-s);background:#fff;white-space:nowrap}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.grid2{display:grid;grid-template-columns:1fr 520px;gap:16px;align-items:start}
+table{width:100%;border-collapse:collapse;background:var(--raised)}
+th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--raised)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.sel td{background:var(--p50)}
+tr.group td{background:#fafafa;font-size:12px;color:var(--muted);font-weight:600;padding:7px 10px}
+.quote{font-size:12px;color:var(--muted);border-left:3px solid var(--p100);padding-left:8px;margin-top:4px;font-style:italic}
+.src{font-size:12px;color:var(--faint)}
+.checks3{display:flex;flex-direction:column;gap:2px;font-size:12px;white-space:nowrap}
+.y{color:var(--ok-t)}.n{color:var(--danger-t)}.q{color:var(--warn-t)}
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.notice{border-radius:var(--r);padding:10px 12px;font-size:14px;border:1px solid}
+.notice.info{background:var(--p50);border-color:var(--p100)}.notice.warn{background:var(--warn-tint);border-color:#ffd3a3}.notice.danger{background:var(--danger-tint);border-color:#f3b9b9}.notice.ok{background:var(--ok-tint);border-color:#b7e2c5}
+.saved{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px;border-radius:var(--r);background:#f1f1f1;border:1px solid var(--border-s);color:var(--text)}
+.saved.stale{background:var(--warn-tint);border-color:#ffd3a3;color:var(--warn-t)}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px;border-radius:var(--r);background:var(--ai-tint);border:1px solid #dccbfa;color:var(--ai);font-weight:600}
+.panel{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);display:flex;flex-direction:column;box-shadow:-4px 0 14px #0000000d}
+.panel header{padding:14px 16px;border-bottom:1px solid var(--border)}.panel .body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.panel footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cmp>div{border:1px solid var(--border);border-radius:var(--r);padding:10px;font-size:12px}
+.cmp h5{margin:0 0 4px;font-size:12px;color:var(--muted)}
+mark{background:#fff3a6;padding:0 2px}
+.page{border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:12px;background:#fcfcfc;max-height:180px;overflow:hidden}
+.muted{color:var(--muted)}.small{font-size:12px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:12px 0 14px}
+.tabs a{padding:8px 14px;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent}.tabs a.on{color:var(--link);border-color:var(--primary);font-weight:600}
+.trail{font-size:12px;color:var(--muted)}.trail b{color:var(--text)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.steps{display:flex;gap:4px;margin:8px 0}.steps i{flex:1;height:6px;border-radius:999px;background:var(--border)}.steps i.d{background:var(--ok)}.steps i.r{background:var(--primary)}
+ol.st{margin:6px 0 0;padding:0;list-style:none;font-size:12px}ol.st li{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed var(--line)}
+.mx td,.mx th{text-align:center}.mx td:first-child,.mx th:first-child{text-align:left}
+.cell-y{color:var(--ok-t);font-weight:600}.cell-n{color:var(--faint)}.cell-q{color:var(--warn-t)}
+.state{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);padding:12px;font-size:12px;display:flex;flex-direction:column;gap:6px}
+.state h4{margin:0;font-size:14px}
+.sk{height:12px;border-radius:6px;background:linear-gradient(90deg,#eee,#f6f6f6,#eee)}
+.row{display:flex;gap:12px;align-items:center}.wrap{flex-wrap:wrap}.sp{justify-content:space-between}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+/* Labels (P-33 Capability/Scaffolding, P-26 Needed/Not built, decision marks) */
+.lab{display:none;font:600 10px/14px Inter,system-ui,sans-serif;letter-spacing:.2px;padding:1px 6px;border-radius:4px;margin:2px 4px 2px 0;vertical-align:middle;white-space:nowrap}
+body.labels .lab{display:inline-block}
+.lab.cap{background:#e6f4ff;color:#054e9c;border:1px solid #9ccfff}.lab.scf{background:#fff1e0;color:#663200;border:1px dashed #ff8500}
+.lab.nb{background:#eee;color:#595959;border:1px solid #bfbfbf}.lab.f{background:#e3f4e9;color:#0f5c2e;border:1px solid #b7e2c5}
+.lab.m{background:#fbe5e5;color:#991b1b;border:1px solid #f3b9b9}
+.legend{width:1440px;margin:0 auto 12px;font-size:12px;color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.sample{font-size:12px;color:var(--warn-t);background:var(--warn-tint);border-radius:4px;padding:0 6px}
+</style>
+<style>
+.nest{border:2px solid var(--lv3);border-radius:16px;padding:14px;background:#fff}.nest .nest{border-color:var(--lv2);background:#f4fafb}.nest .nest .nest{border-color:var(--ai);background:var(--ai-tint)}
+.nest h3{font-size:16px;margin-bottom:4px}.src3{display:flex;gap:10px;margin-top:10px}.srcb{flex:1;border-radius:var(--r2);padding:12px;border:1px solid var(--border);background:#fff}
+.srcb b{display:block;font-size:15px}.doc{color:#0b6477}.cli{color:var(--lv3)}.agt{color:#663200}
+.from{font-size:12px;padding:1px 8px;border-radius:999px;white-space:nowrap}.from.doc{background:#e1f2f5;border:1px solid #9fd3dc}.from.cli{background:var(--p50);border:1px solid var(--p100)}.from.agt{background:var(--warn-tint);border:1px solid #ffd3a3}
+.funnel{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.funnel .card{padding:10px 14px}.funnel b{font-size:20px}.arrow{color:var(--faint)}
+.col3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.col3 .card h4{margin:0 0 6px}.q1{padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.why{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="board-title"><div><h1>Questions and documents, document first — draft board</h1><p>Lead, 28 Oct · concept <code>screens/W1-questions-and-documents/concept-draft.md</code> · Combination workspace tabs (S5) + W1-10 AI steps · numbers are Sample</p></div></div>
+
+<!-- 1 the idea -->
+<div class="frame"><div class="frame-cap"><span>1 · The idea: every fact once, from the cheapest reliable source</span><span>PQR ⊂ SQR ⊂ Agent view (full form)</span></div>
+<div style="padding:20px 24px" class="grid2">
+ <div class="nest"><h3>Agent view = the full form · 186 facts</h3><p class="why">Everything every form needs. The agent confirms it section by section (P-72); only confirmed facts fill forms.</p>
+  <div class="nest" style="margin-top:10px"><h3>SQR · client questionnaire · 88 questions + checklist</h3><p class="why">What only the client can give, plus the documents they upload. Facts a document gives are <b>not asked</b>.</p>
+   <div class="nest" style="margin-top:10px"><h3>PQR · pre-qualification · 12</h3><p class="why">The bare minimum the eligibility gates test. Carried into the SQR as "please confirm"; the prospect sees no verdict (P-77).</p></div>
+  </div>
+ </div>
+ <div class="card"><h3 style="font-size:16px">Where each fact comes from: in this order</h3>
+  <div class="src3" style="flex-direction:column">
+   <div class="srcb"><b class="doc">1 · A document · 74 facts</b>The client uploads a passport, a marriage certificate…; AI reads it into <i>proposed</i> values; the agent confirms. Fallback: unreadable or missing → asked in the SQR.</div>
+   <div class="srcb"><b class="cli">2 · The client · 88 facts</b>What no document holds: travel plans, family details, background and declarations (always the client's, P-97).</div>
+   <div class="srcb"><b class="agt">3 · The agent · 24 facts</b>The representative's, office's and case's own facts: the representative's details, the application number, the fee.</div>
+  </div></div>
+</div></div>
+
+<!-- 2 questionnaires tab -->
+<div class="frame"><div class="frame-cap"><span>2 · Combination workspace › Questionnaires: "Questions and where each answer comes from"</span><span>runtime lane (S5) · builds on the built tab</span></div>
+<div class="shell"><nav class="menu"><h4>Configure</h4><a>Program structure</a><a class="on">Immigration programs</a><a>To review <span class="count">23</span></a><h4>Shared library</h4><a>Fields</a><a>Sections</a><a>Document types</a><a>Forms</a><a>Checks</a></nav>
+<main><div class="crumbs">Immigration programs › Temporary residence › Visitors › Visitor visa</div>
+<div class="ph"><div><h2>Visitor visa</h2><p>In setup · Sample</p></div><button class="btn ai">✦ Draft questions and documents (about US$0.40 · at most US$3.10)</button></div>
+<div class="tabs"><a>Overview</a><a>Forms</a><a class="on">Questionnaires</a><a>Documents</a><a>Preview</a><a>Review and release</a></div>
+<div class="card" style="margin-bottom:12px"><b>Who can be in this application</b> <span class="muted small">— Principal applicant 1 · Spouse or partner 0–1 · Child 0–4 (unchanged, built in S5)</span></div>
+<div class="funnel" style="margin-bottom:12px"><div class="card">Full form<br><b>186</b> facts</div><span class="arrow">=</span><div class="card"><span class="doc">From documents</span><br><b>74</b></div><span class="arrow">+</span><div class="card"><span class="cli">Client answers</span><br><b>88</b></div><span class="arrow">+</span><div class="card"><span class="agt">Agent enters</span><br><b>24</b></div><span class="arrow">·</span><div class="card">Pre-qualification<br><b>12</b> <span class="small muted">of the client's and documents'</span></div><span class="notice ok" style="margin-left:auto">✓ Every form field has exactly one source</span></div>
+<div class="chips" style="margin-bottom:8px"><span class="chip on">Principal applicant</span><span class="chip">Spouse or partner</span><span class="chip">Child</span><span class="chip">All sources</span><span class="chip">Needs you · 6</span></div>
+<div class="tbl-wrap"><table><tr><th>Question</th><th>Comes from</th><th>Pre-qualification</th><th>Only if</th><th>Used by</th><th>Proposed by</th></tr>
+<tr class="group"><td colspan="6">Personal details</td></tr>
+<tr><td>Family name, given names</td><td><span class="from doc">Document · Passport</span></td><td>☐</td><td>Always</td><td class="small">IMM 5257 · IMM 5707</td><td><span class="pill neutral">Rules</span></td></tr>
+<tr><td>Date of birth</td><td><span class="from doc">Document · Passport</span></td><td>☑ <span class="why">age gate</span></td><td>Always</td><td class="small">IMM 5257 · IMM 5707</td><td><span class="pill ai">AI · High</span></td></tr>
+<tr><td>Current marital status</td><td><span class="from cli">Client</span></td><td>☑</td><td>Always</td><td class="small">IMM 5257 · IMM 5707</td><td><span class="pill ai">AI · High</span></td></tr>
+<tr><td>Date of marriage</td><td><span class="from doc">Document · Marriage certificate</span><div class="why">asked if unreadable</div></td><td>☐</td><td>if married</td><td class="small">IMM 5257</td><td><span class="pill ai">AI · Check</span></td></tr>
+<tr class="group"><td colspan="6">Visit</td></tr>
+<tr><td>Purpose of visit</td><td><span class="from cli">Client</span></td><td>☑</td><td>Always</td><td class="small">IMM 5257</td><td><span class="pill ai">AI · High</span><div class="quote">"Tell us why you want to visit Canada" — guide 5256</div></td></tr>
+<tr><td>Funds available for the stay</td><td><span class="from doc">Document · Bank statement</span></td><td>☑</td><td>Always</td><td class="small">IMM 5257</td><td><span class="pill warn">Decide</span><div class="why">AI and checker disagree: client or document</div></td></tr>
+<tr class="group"><td colspan="6">Representative</td></tr>
+<tr><td>Representative's membership number</td><td><span class="from agt">Agent</span></td><td>—</td><td>if represented</td><td class="small">IMM 5476</td><td><span class="pill neutral">Rules</span></td></tr>
+<tr class="group"><td colspan="6">Background and declarations</td></tr>
+<tr><td>Ever refused a visa or permit?</td><td><span class="from cli">Client</span> <span class="why">always the client's (P-97)</span></td><td>☑</td><td>Always · if yes → "give details"</td><td class="small">IMM 5257</td><td><span class="pill ai">AI · High</span></td></tr>
+</table></div></main></div></div>
+
+<!-- 3 documents tab -->
+<div class="frame"><div class="frame-cap"><span>3 · Combination workspace › Documents: "Documents each person gives"</span><span>the per-person checklist is the root of document first</span></div>
+<div style="padding:16px 24px"><div class="tbl-wrap"><table><tr><th>Document</th><th>Who</th><th>When</th><th>Supplies</th><th>IRCC's words</th><th>Proposed by</th></tr>
+<tr><td><b>Passport</b> <span class="small muted">or travel document</span></td><td><span class="role">Each applicant</span></td><td>Always</td><td><a class="small">9 facts</a> <span class="small muted">name, birth date, number, expiry…</span></td><td><div class="quote">"a copy of the passport bio-data page" — checklist 5484</div></td><td><span class="pill ai">AI · High</span></td></tr>
+<tr><td><b>Marriage certificate</b></td><td><span class="role">Principal applicant</span></td><td>if married</td><td><a class="small">3 facts</a></td><td><div class="quote">"proof of your relationship" — checklist 5484</div></td><td><span class="pill ai">AI · Check</span></td></tr>
+<tr><td><b>Bank statements (4 months)</b></td><td><span class="role">Principal applicant</span></td><td>Always</td><td><a class="small">2 facts</a></td><td><div class="quote">"proof of financial support" — guide 5256</div></td><td><span class="pill ai">AI · High</span></td></tr>
+<tr><td><b>Photo</b></td><td><span class="role">Each applicant</span></td><td>Always</td><td class="small muted">none (filed as is)</td><td><div class="quote">"two photos" — checklist 5484</div></td><td><span class="pill neutral">Rules</span></td></tr>
+</table></div>
+<p class="small muted">A document that supplies facts takes those questions out of the SQR. Missing or unreadable at the case → the SQR asks them ("we could not read it from your passport").</p></div></div>
+
+<!-- 4 preview -->
+<div class="frame"><div class="frame-cap"><span>4 · Preview: the same sample family in the three sets</span><span>the shared renderer (P-47), three modes</span></div>
+<div style="padding:16px 24px" class="col3">
+ <div class="card"><h4>PQR · the prospect · 12</h4><div class="q1">Date of birth</div><div class="q1">Marital status</div><div class="q1">Purpose of visit</div><div class="q1">Funds available</div><div class="q1">Ever refused?</div><p class="why">No verdict shown; the firm sees the gates (P-77).</p></div>
+ <div class="card"><h4>SQR · the client · 88 + 4 uploads</h4><div class="q1">⬆ Passport (fills 9 answers)</div><div class="q1">⬆ Marriage certificate</div><div class="q1">Marital status <span class="pill info">please confirm</span></div><div class="q1">Travel dates</div><div class="q1">Ever refused? → give details</div><p class="why">Nothing a document gives is typed.</p></div>
+ <div class="card"><h4>Agent view · the full form · 186</h4><div class="q1">Family name <span class="from doc">Passport</span> <span class="pill warn">proposed</span></div><div class="q1">Marital status <span class="from cli">Client</span> <span class="pill ok">confirmed</span></div><div class="q1">Representative's number <span class="from agt">Agent</span></div><div class="q1"><button class="btn sm primary">Confirm section</button></div><p class="why">M3 (P-129): agent side first.</p></div>
+</div></div>
+
+<!-- 5 AI run, R&R, tuning -->
+<div class="frame"><div class="frame-cap"><span>5 · What AI does, who decides, how it gets better</span><span>proposals only (P-62) · one review queue (S6) · Ready / Check / Decide (P-121)</span></div>
+<div style="padding:16px 24px" class="grid2">
+ <div class="card"><b>Draft questions and documents</b> <span class="small muted">· Visitor visa · about US$0.40 · at most US$3.10 · Stop</span>
+  <div class="steps"><i class="d"></i><i class="d"></i><i class="d"></i><i class="r"></i><i></i><i></i><i></i></div>
+  <ol class="st"><li><span>1 Facts per person from the forms' field maps</span><span class="pill neutral">Rules · US$0</span></li><li><span>2 Documents per person and when, from the guide and checklist (quoted)</span><span class="pill ai">AI · Saved</span></li><li><span>3 Which facts each document supplies</span><span class="pill neutral">Rules (+AI for new types)</span></li><li><span>4 Where each fact comes from (document › client › agent)</span><span class="pill info">running · Rules</span></li><li><span>5 Conditional questions ("if yes, give details" + the guide)</span><span class="pill ai">AI · Live</span></li><li><span>6 Pre-qualification picks with a reason each</span><span class="pill ai">AI · Live</span></li><li><span>7 Independent checker + rules (one source each; order; PQR ⊂ SQR)</span><span class="pill ai">AI + Rules</span></li></ol></div>
+ <div><div class="tbl-wrap"><table><tr><th>Who</th><th>Does</th><th>Never</th></tr>
+  <tr><td><span class="pill ai">AI</span></td><td>Proposes documents, conditions, PQR picks and sources, each with IRCC's line; reads uploads into proposed values (M3)</td><td>decides, releases, fills from an unconfirmed value</td></tr>
+  <tr><td><span class="pill neutral">Rules</span></td><td>facts from field maps, source order, coverage, PQR gates</td><td>guesses</td></tr>
+  <tr><td><span class="role">Content publisher</span></td><td>accepts, edits or rejects each proposal; ticks PQR</td><td>approves their own library change</td></tr>
+  <tr><td><span class="role">Second person · expert</span></td><td>approves library changes; confirms Sample (W2)</td><td>—</td></tr>
+  <tr><td><span class="role">Agent</span></td><td>confirms read and client facts by section; enters agent facts</td><td>signs for the client</td></tr></table></div>
+  <div class="card" style="margin-top:12px"><b>How it gets better (no model training)</b><ol class="small" style="margin:6px 0 0;padding-left:18px"><li>Saved per form edition: a re-run costs US$0.</li><li>Every accept, edit or reject is kept with its reason; the next run on the same form family gets them as examples.</li><li>Acceptance rate per step on AI work; under 70 % is flagged for a prompt fix.</li><li>Expert-confirmed items are never proposed again.</li></ol></div></div>
+</div></div>
+<div class="legend">Questions for the founder are in the concept §8 (one at a time).</div>
+</body></html>
