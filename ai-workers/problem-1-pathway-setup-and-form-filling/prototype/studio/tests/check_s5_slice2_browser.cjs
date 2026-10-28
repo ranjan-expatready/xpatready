@@ -157,6 +157,38 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await go(C, "review");
   step("C5.1 drift 3 fail: with no form AI picked, Review shows no such notice", await p.locator("[data-ai-picked]").count() === 0);
 
+  // ======================================================== QA-38 and QA-40 on the case side (Lead, 28 Oct)
+  // The officer's New case list names the release a case opens on; a form a release files Online is still on the case.
+  const o = await ctx.newPage(); o.on("pageerror", (e) => errs.push(e.message));
+  await o.goto(BASE); await o.evaluate(() => { try { localStorage.setItem("xr-actor", "user-O"); } catch { /* ignore */ } });
+  const label = async () => { await o.goto(`${BASE}/cases`); await o.getByRole("button", { name: "Open a case" }).click(); const d = o.getByRole("dialog"); await d.waitFor(); await o.waitForTimeout(300); return (await d.locator("select").first().locator("option").allInnerTexts()).find((x) => x.startsWith("With an LMIA")); };
+  const l1 = await label(); await o.keyboard.press("Escape");
+  step("C6.1 QA-38 fail-guard: with one release the New case list names release 1", l1 === "With an LMIA · release 1", l1);
+  // Release 2: IMM 1295 filed Online (later wave), through the same submit, sign-off and second-person approval.
+  await api(`/combinations/${C}/forms/${encodeURIComponent("IMM 1295")}/channel`, { method: "PATCH", data: { channel: "ONLINE", from: "PDF_UPLOAD" } });
+  await api(`/combinations/${C}/submit`, { method: "POST", data: { note: "IMM 1295 filed Online (later wave)" } });
+  const sub2 = (await api(`/combinations/${C}/review`, { actor: "user-C" })).body?.submission;
+  await api(`/combinations/${C}/signoff`, { method: "POST", data: { items: (sub2?.changeSummary ?? []).map((x) => `${x.kind}|${x.key}`), action: "signed" }, actor: "user-C" });
+  const ap2 = await api(`/combinations/${C}/approve`, { method: "POST", actor: "user-B" });
+  step("setup: release 2 files IMM 1295 Online (a second person released it)", ap2.status === 201 && ap2.body?.version === 2, ap2.body?.detail ?? ap2.status);
+  const l2 = await label();
+  step("C6.1 QA-38 pass: after release 2 the New case list names release 2, the one the case will use", l2 === "With an LMIA · release 2", l2);
+  const dlg = o.getByRole("dialog");
+  await dlg.locator("select").first().selectOption({ label: "With an LMIA · release 2" });
+  await dlg.getByLabel("Case reference").fill("S5-QA38"); await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant Q");
+  await dlg.getByRole("button", { name: "Open case" }).click();
+  await o.waitForURL(/\/cases\/[0-9a-f-]{36}$/, { timeout: 30000 }).catch(() => {});
+  await o.getByText(/^Release \d+$/).first().waitFor({ timeout: 15000 }).catch(() => {});
+  step("C6.1 QA-38 pass: the case opens pinned to release 2, as the list said", await o.getByText("Release 2", { exact: true }).count() > 0 && await o.getByText("Release 1", { exact: true }).count() === 0);
+  await o.locator('[data-online-form="IMM 1295"]').waitFor({ timeout: 15000 }).catch(() => {});
+  const onl = await o.locator('[data-online-form="IMM 1295"]').innerText().catch(() => "");
+  step("C7.6 QA-40 pass: the case still names IMM 1295 and says in words it is filed Online in a later wave (no PDF copy)", /IMM 1295 · filed Online \(later wave\)/.test(onl.replace(/\s+/g, " ")) && /filed online, in a later wave/.test(onl), onl.replace(/\s+/g, " ").slice(0, 200));
+  step("C7.6 QA-40 fail-guard: a form filed as a PDF (IMM 5257 SCH1) is not in the Online rows", await o.locator('[data-online-form="IMM 5257 SCH1"]').count() === 0);
+  await o.locator('[data-online-form="IMM 1295"]').scrollIntoViewIfNeeded();
+  n++; await o.screenshot({ path: path.join(SHOTS, `${String(n).padStart(2, "0")}-case-online-form-1440.png`) });
+  const ax = await new AxeBuilder({ page: o }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
+  step("axe: the case page with an Online form has no WCAG A/AA violation", ax.violations.length === 0, ax.violations.map((v) => `${v.id}: ${v.nodes[0]?.target?.join(" ")}`).join(" | "));
+
   step("no page errors in the walk", errs.length === 0, errs.slice(0, 3).join(" | "));
   await b.close();
   console.log(`\n${pass}/${pass + fail} passed`);

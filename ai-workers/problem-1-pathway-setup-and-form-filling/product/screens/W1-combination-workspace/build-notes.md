@@ -1,5 +1,15 @@
 # S5 Combination workspace (W1-08, P-123) — build notes
 
+## QA-38 and QA-40 (FIX, 28 Oct, Lead message: founder Go while S4 is pending)
+Both were already fixed on this branch in slice 1 (68adc3b3), which is not on main yet; qa saw them on main. This pass gives each one shared rule and a pass and a fail test. Case side only, no Studio configuration file touched. Synced main 83e658bc (PR #64).
+
+| Finding | What changed | Check |
+|---|---|---|
+| QA-38 (Major, C6.1): New case list said release 1, the case opened on release 2 | `newestReleases` (`contracts/runtime.ts`): the newest release per combination, the server's rule (`api/src/runtime.ts` takes the highest version). `NewCaseDialog` uses it, so the list and the pin agree in any list order. | slice1 API: one release → list 1 = pin 1; release 2 → list 2 = new pin 2, earlier case keeps 1; the old last-entry rule named 1, the shared rule names 2 in either order. slice2 browser: the dialog names release 1, then release 2; the case opens on Release 2 |
+| QA-40 (Minor, C7.6/C7.7): a form filed Online silently missing from the case | Listed since slice 1 (`api/src/fill-case.ts` `online`); now titled in W1-02's words, "IMM 1295 · filed Online (later wave)", with "It is filed online, in a later wave: until then the case officer types it into the portal from the answer sheet; no PDF copy is made here." (`ONLINE_LATER_WAVE`, `web/src/runtime/forms.tsx`) | slice1 API: on release 1 (PDF) it is a copy row, not Online; on release 2 it is Online, not a copy row. slice2 browser: the words on the case page; a PDF form is never an Online row; axe. Screenshot `slice2/12-case-online-form-1440.png` |
+
+The qa checks that found them (`tests/qa/check_qa_am_1027.cjs`, `check_qa_explore_1025.cjs`) were written for main's older combination page and stop before these steps on this branch ("Forms and coverage" is gone with S5); they are the qa lane's to move when S5 merges.
+
 ## Drift-check Shoulds (BUILD, 28 Oct) → EARLY-LOOK
 Lead note 28 Oct (founder Go on the slice 2 early look): fold in the Shoulds of `drift-check.md`. Synced main 8cfc043; PR #64 (Lead) not merged yet, its note read from `origin/lead/2026-10-27`. AI US$0.
 

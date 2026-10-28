@@ -152,6 +152,16 @@ export type CaseForm = {
 /** QA-40: a form this case's release files Online: no PDF copy is made here, but the officer still sees it and for
  *  whom (P-113: an answer sheet in the portal's order; the browser extension fills it in a later wave). */
 export type CaseOnlineForm = { form: string; title: string; people: string[] };
+/** QA-40 (P-114, W1-02): how a case names a form filed Online, in the same words as the configuration's channel. */
+export const ONLINE_LATER_WAVE = "Online (later wave)";
+
+/** QA-38 (P-67): a new case opens on its combination's newest release (api/src/runtime.ts takes the highest version),
+ *  so the New case list names that one per combination, whatever order the release list comes in. */
+export function newestReleases<T extends { combination_id: string; version: number }>(rows: T[]): T[] {
+  const newest = new Map<string, T>();
+  for (const r of rows) { const had = newest.get(r.combination_id); if (!had || r.version > had.version) newest.set(r.combination_id, r); }
+  return [...newest.values()];
+}
 /** P-71: what blocks filing one form for one person. missing: a required fact not answered, answered but not confirmed,
  *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */

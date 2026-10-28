@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, getActor, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Notice, Pill } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../../contracts/runtime";
+import { LOCK_KINDS, notReady, ONLINE_LATER_WAVE, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../../contracts/runtime";
 import { noRetryOnRefusal } from "./questionnaire";
 
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -41,8 +41,8 @@ export function FormsPanel({ caseId }: { caseId: string }) {
 function OnlineRow({ f }: { f: CaseOnlineForm }) {
   return (
     <li className="px-4 py-3" data-online-form={f.form}>
-      <h3 className="text-sm font-semibold"><span className="mono">{f.form}</span> · filed Online <Pill tone="info">No PDF copy</Pill></h3>
-      <p className="text-[13px] text-text-muted">{f.title}, for {f.people.join(", ")}. Filed online: the case officer types it into the portal from the answer sheet; the browser extension fills it in a later wave.</p>
+      <h3 className="text-sm font-semibold"><span className="mono">{f.form}</span> · filed {ONLINE_LATER_WAVE} <Pill tone="info">No PDF copy</Pill></h3>
+      <p className="text-[13px] text-text-muted">{f.title}, for {f.people.join(", ")}. It is filed online, in a later wave: until then the case officer types it into the portal from the answer sheet; no PDF copy is made here.</p>
     </li>
   );
 }

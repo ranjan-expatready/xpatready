@@ -1,13 +1,14 @@
 // S5 Combination workspace slice 1 (runtime lane, W1-08, P-123; challenge M1, M3, M4, m5): person roles from the shared
 // library (built in, kept by Reset), "Who can be in this application" (rules on Save, version guard, confirm, Undo), the
 // runtime honouring the release's people, form line settings (minimum age, signed by, "Only if" in words with no rule),
-// Preview on caseView, and the carried fixes QA-40, QA-47, D-1, D-2. A passing and a failing case per rule, on an isolated
+// Preview on caseView, and the carried fixes QA-38, QA-40, QA-47, D-1, D-2. A passing and a failing case per rule, on an isolated
 // copy with the sample loaded. No browser, no model call (US$0).
 //   zsh studio/tools/isolated.sh runtime_s5 4431 start && tsx studio/tests/check_s5_slice1.ts 4431 xr_studio_runtime_s5
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tabOf } from "../contracts/workspace.ts";
+import { newestReleases } from "../contracts/runtime.ts";
 import { checkPeople, linesNamingRemoved } from "../engine/people.ts";
 
 const PORT = Number(process.argv[2] ?? 4431), DB = process.argv[3] ?? "xr_studio_runtime_s5";
@@ -124,6 +125,13 @@ const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, ma
   ok("M1: back to always", r.status === 200);
 
   // ---------------------------------------------------------------- D-2, D-1, QA-47, QA-40, runtime roles
+  // QA-38 and QA-40 before release 2: a case on release 1, where IMM 1295 is still filed as a PDF.
+  const pinOf = (k: string) => Number(sql(`select r.version from pack_work_pin p join config_release r on r.id=p.config_release_id where p.case_id='${k}'`));
+  const listed = async () => newestReleases((await call("GET", "/releases", undefined, "user-O")).body as { combination_id: string; version: number }[]).find((x) => x.combination_id === C)?.version;
+  const k1 = (await call("POST", "/runtime/cases", { combinationId: C, reference: "S5-QA38-R1", clientActor: "user-P", principal: { displayName: "Client B" }, idempotencyKey: `s5-r1-${Date.now()}` }, "user-O")).body?.id;
+  ok("C6.1 QA-38 pass: with one release, the New case list and the opened case both name release 1", (await listed()) === 1 && pinOf(k1) === 1, { listed: await listed(), pinned: pinOf(k1) });
+  r = await call("GET", `/runtime/cases/${k1}/forms`, undefined, "user-O");
+  ok("C7.6 QA-40 fail: on a release that files IMM 1295 as a PDF it is a PDF copy row, never in the Online list", r.status === 200 && r.body.forms.some((f: any) => f.form === "IMM 1295") && !(r.body.online ?? []).some((f: any) => f.form === "IMM 1295"), r.body.online);
   f0 = await forms();
   r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent("IMM 1295")}/channel`, { channel: "ONLINE", from: line("IMM 1295").channel });
   ok("setup: IMM 1295 filed Online (as a portal-only form would be, P-113)", r.status === 200, r.body?.detail ?? r.status);
@@ -153,7 +161,12 @@ const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, ma
   r = await call("POST", `/runtime/cases/${K}/people`, { role: "parent", displayName: "Parent P", applies: false }, "user-O");
   ok("C11.12 fail: a role the release does not list (Parent) is refused", r.status === 422 && /does not list/.test(r.body.detail), r.body.detail);
   r = await call("GET", `/runtime/cases/${K}/forms`, undefined, "user-O");
-  ok("QA-40 pass: a form filed Online is listed on the case with its people (no PDF copy)", r.status === 200 && (r.body.online ?? []).some((f: any) => f.form === "IMM 1295" && f.people.length), r.body.online);
+  ok("C7.6 QA-40 pass: a form filed Online is listed on the case with its people, and not as a PDF copy row", r.status === 200 && (r.body.online ?? []).some((f: any) => f.form === "IMM 1295" && f.people.length) && !r.body.forms.some((f: any) => f.form === "IMM 1295"), r.body.online);
+  // QA-38: the list the officer picks from and the release the server pins agree, whatever order the list comes in.
+  ok("C6.1 QA-38 pass: after release 2 the New case list names release 2 and the new case is pinned to release 2; the earlier case keeps release 1", (await listed()) === 2 && pinOf(K) === 2 && pinOf(k1) === 1, { listed: await listed(), pinned: pinOf(K), earlier: pinOf(k1) });
+  const rows = [{ combination_id: "x", version: 2 }, { combination_id: "x", version: 1 }, { combination_id: "y", version: 1 }];
+  const lastWins = [...new Map(rows.map((x) => [x.combination_id, x])).values()].find((x) => x.combination_id === "x")?.version;
+  ok("C6.1 QA-38 fail → fixed: the old rule (last entry per combination) named release 1 from a newest-first list; the shared rule names release 2 in either order", lastWins === 1 && newestReleases(rows).find((x) => x.combination_id === "x")?.version === 2 && newestReleases([...rows].reverse()).find((x) => x.combination_id === "x")?.version === 2 && newestReleases(rows).length === 2);
 
   // ---------------------------------------------------------------- Reset keeps the built-in roles (founder, P-108 note)
   r = await call("POST", "/demo/reset", { confirm: "RESET" });
