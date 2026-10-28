@@ -99,6 +99,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const blockText = await block.innerText();
   step("S3 fix 1: the stand-in launcher answered with raw text (an error code, a server path, a stack line)", fs.readFileSync(path.join(VAR, "fake-launch.log"), "utf8").includes('"mode":"stub"') && TECH.test(RAW));
   step("S3 fix 1: the run card shows none of it: plain words, nothing sent, nothing charged", !TECH.test(await p.locator("main").innerText()) && /could not start on this computer, so nothing was sent and nothing was charged/.test(blockText), blockText.slice(0, 300));
+  // The offer is read again once the card sees the run end: under load it arrives a moment after the card (run-suites).
+  await block.locator("[data-run-status] [data-find-forms]").waitFor({ timeout: 15000 }).catch(() => undefined);
   const finds = block.locator("[data-find-forms]");
   step("S3 fix 3: after the run there is one find button, on the run card (no second 'Find again' link, no second offer)", await finds.count() === 1 && await block.locator("[data-run-status] [data-find-forms]").count() === 1 && await block.getByRole("link", { name: /Find again/ }).count() === 0 && /^Find again with AI \(/.test((await finds.innerText()).trim()), (await finds.allInnerTexts()).join(" | "));
   const cardCost = (await block.locator("[data-run-cost]").innerText()).trim();
