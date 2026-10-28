@@ -124,5 +124,12 @@
 * **Q-L4 (N2) · `rule` rows.** *Recommend:* drop them in the move (no producer, none in Sample data). *Else:* map them to `condition`.
 * **Q-L5 · Menu numbering (re-check r1, still open).** *Recommend:* one numbering through Configure and Shared library in setup order.
 
-## Lead response
-_(for the Lead)_
+## Lead response, agreed 29 Oct
+* **Q-L1 yes:** the forms lane adds the edition key (`edition:<code>:<edition>`) to the runner and names the field.
+* **Q-L2 yes:** forms slice 0 (the runner and the contract) reaches main by Lead PR before S6 slice 1 BUILD. S6 branches from main after that.
+* **Q-L3 yes:** the forms lane sets `p2/policy.ts` to US$120 (P-139), with a test.
+* **Q-L4 yes:** the move drops the `rule` rows (no producer, none in Sample data). The migration logs how many it dropped.
+* **Q-L5 yes:** one numbering through Configure and Shared library, in setup order.
+* **N1 and N2 accepted.**
+* **Founder Q1:** goes to the founder with the Lead's recommendation, yes. Slice R waits for that answer; slice 1 does not.
+* **Stage:** the Lead agreed the PLAN within decisions already agreed. BUILD slice 1 starts once forms slice 0 is on main; the Lead messages the lane. Nothing to build until then. US$0.

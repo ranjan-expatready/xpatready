@@ -30,14 +30,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: PLAN (S6 plan written; S3 and DV-bb in Lead PR #76)
+stage: PLAN agreed (Lead, 29 Oct); waiting for forms slice 0 on main
 owner: Lead
-next_action: Lead: answer S6 plan.md §6 (Q-L1 edition key in the runner, Q-L2 runner on main first, Q-L3 cap US$100 vs P-139, Q-L4 rule rows, Q-L5 menu) and founder Q1 (recording pass, about US$8–12 Sample); then S6 slice 1 BUILD
+next_action: Lead: message the lane when forms slice 0 (runner with edition key, contract, cap US$120) is on main; then S6 slice 1 BUILD from main
 then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
-blocked_by: none
+blocked_by: forms slice 0 on main (Lead PR)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-shared-library (S6) · PLAN agreed · applied Lead message: Q-L1..L5 yes, N1/N2 accepted, founder Q1 with the Lead (slice R waits; slice 1 does not); written under "Lead response, agreed 29 Oct" in plan.md. Nothing to build until forms slice 0 is on main. US$0.
 - 2026-10-29 · W1-shared-library (S6) · EARLY-LOOK → PLAN · applied Lead message (contract approved): fresh re-check on 28d78cdc (R-109, fresh agent) and plan.md (R1–R5 answered on P-138, the approved contract and the step runner 619eaac4; N1 edition key, N2 old kinds; back-end table; slices with Capability/Scaffolding labels; ownership; founder Q1, Lead Q-L1..L5). No code. US$0. Owner Lead.
 - 2026-10-29 · DV-bb-1/6b/6c · FIX → CHECK · applied Lead message (S3 Lead check PASS): finished upload cards dismissible (stay gone after reload); reset counts added roles, keeps and names the 6 built-in ones; no "(P-95)" in the structure footer; pass and fail check each (structure 81/81, library 67/67, studio_browser 49/49 on a copy); web rebuilt; run-suites on afb86cde 58 PASS 0 FAIL; graph passes. US$0. Owner Lead.
 - 2026-10-29 · W1-start-setup (S3) · EARLY-LOOK · applied Lead message (founder Go on item 5): synced main 32961d69 then db5e0208 (one conflict in runs.ts: item 5's page choice on the Forms tab replaces forms' interim QA-63 Sources link; finder's waiting words and check_forms_s4_finder QA-63 aligned); web rebuilt before the run; run-suites on fd5ac8ae (main db5e0208 merged): 58 PASS, 0 FAIL; graph.mjs --check passes (G3 2: older attachment routes, not this lane). AI US$0. Owner Lead.
@@ -47,4 +48,3 @@ updated: 2026-10-29
 - 2026-10-28 · W1-start-setup (S3) · BUILD → EARLY-LOOK · S3 built (start guard, POST /combinations/start, landing offer live only on a click, one Start setup, /new and both path endpoints gone, checks moved); run-suites 47/48 (programs_r3 ECONNRESET, 26/26 alone), journey 45/45, start_setup 17/17, start_setup_browser 20/20. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-start-setup (S3) · BUILD · start guard, POST /combinations/start and the landing offer (live only on the click), one Start setup button, /new and both path endpoints removed, checks moved; check_w1_start_setup 17/17 and the touched API checks pass; qa's check_qa_am_s2_1027 routed (f8d6e0cb); synced main 3858216e. AI US$0.
 - 2026-10-28 · W1-start-setup (S3) · DESIGN → BUILD · Lead answered the challenge (founder: wait for a click; M2 remove /new and both path endpoints; M3 start guard; M4 split with runtime slice 3; m5–m7, m10 accepted; m8, m9 after runtime slice 2); Lead response recorded. AI US$0.
-- 2026-10-28 · W1-start-setup (S3) · DESIGN · synced main 06a8fc30 (S4 merged); screen-challenge in screens/W1-start-setup/challenge.md: Build after these changes, 4 Major (cost at Start setup, end of /new and its endpoints, a start guard for retired or waiting names, split with runtime slice 3), 6 Minor (incl. runtime's two Left-as-it-is points, after runtime slice 2), 1 founder question; no code. AI US$0. Owner → Lead.
