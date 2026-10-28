@@ -43,6 +43,24 @@ export const CreateStructureNodeBody = z.object({
 });
 export type CreateStructureNodeBody = z.infer<typeof CreateStructureNodeBody>;
 
+/** POST /structure/path (P-127, AD-1…7): the one "Add to Program structure" dialog. Each level is an existing name ({ key })
+ *  or a new one ({ label }); the path may stop at any level (a Pathway or a Program alone); under a new name every level
+ *  is new. One transaction writes only the new parts, all or nothing, and starts no setup (the leaf is listed as Not
+ *  started). subCategory null = "None: the category is the combination". decision "new" is refused while close names
+ *  exist; "add_anyway" adds them and records that in Activity (BR-5). */
+const pick = z.union([z.object({ key }).strict(), z.object({ label }).strict()]);
+export const StructurePathBody = z.object({
+  pathwayType: z.enum(PATHWAY_TYPES, { message: "Choose the Pathway type: Retail or Corporate and employers." }),
+  pathway: pick,
+  program: pick.optional(),
+  category: pick.optional(),
+  subCategory: pick.nullable().optional(),
+  allowedLocations: locations.optional(),
+  decision: z.enum(["new", "add_anyway"]).default("new"),
+});
+export type StructurePathBody = z.infer<typeof StructurePathBody>;
+export type StructurePathResult = { created: { level: Level; key: string; label: string }[]; leaf: { level: Level; key: string }; trail: string[]; combination: "Not started" | null };
+
 /** PATCH /structure/nodes/:key: rename and/or where cases may be opened, against the version the person saw. */
 export const PatchStructureNodeBody = z.object({
   label: label.optional(),
@@ -61,12 +79,15 @@ export const LifecycleBody = z.object({ reason: z.string().trim().min(3, "Say wh
 
 export type LifecycleAction = "DELETE" | "RETIRE" | "RESTORE";
 /** One use of a name or a combination, with where to see it (P-52 L3: each use with a link). */
-export type Use = { kind: "combination" | "release" | "case" | "child" | "draft_change"; label: string; href: string | null; blocks: boolean; why: string };
+export type Use = { kind: "combination" | "release" | "case" | "child" | "draft_change"; label: string; href: string | null; blocks: boolean; why: string;
+  /** S4 round 5: this use blocks Delete but not Retire (a combination reads the form's file as a source; it keeps it). */ retireOk?: boolean };
 /** GET …/uses: everything that uses it, and what may be done now with the reason when it may not. */
 export type UsesView = {
   key: string; label: string; trail: string[]; retired: boolean; released: boolean;
   uses: Use[];
   can: { delete: string | null; retire: string | null; restore: string | null };
+  /** A combination row: its own combination is retired or restored with the name, in one approval (P-128, Lead 28 Oct). */
+  withCombination?: boolean;
   pending: { id: string; action: LifecycleAction; by: string | null } | null;
   /** Its Activity lines, newest first (added, renamed, reordered, proposed, removed …). */
   history: { at: string; by: string | null; what: string }[];
@@ -80,8 +101,16 @@ export type StructureNode = {
   needs: number;
   meaningChecked: boolean; version: number; retired: boolean; pending: { id: string; action: LifecycleAction } | null;
   /** A last-level name is a combination (BR-2): its state, Not started when it has no setup yet (id null). */
-  combination: { id: string | null; status: "IN_SETUP" | "NOT_READY" | "READY"; statusText: string; retired: boolean } | null;
+  combination: { id: string | null; status: "IN_SETUP" | "NOT_READY" | "READY"; statusText: string; retired: boolean;
+    /** "Used by" on its line (P-127 (1)): releases that hold it and cases open on it. */
+    releases: number; openCases: number } | null;
+  /** The row's one lifecycle action (P-128 R3-2), decided by the server: why it cannot (null = it can), the names that go
+   *  with a Delete (R3-4), and whether a combination row's own combination goes with a Retire or Restore. */
+  action: RowAction;
 };
+export type RowAction = { kind: LifecycleAction | "WITHDRAW"; why: string | null; below: string[]; withCombination: boolean;
+  /** The author's own never-approved draft: deleted at once, with Undo (P-116 amended 28 Oct). */
+  immediate: boolean };
 
 /** The four setup steps on a card (addendum A3, Lead 26 Oct), calculated from data the app already keeps. */
 export const SETUP_STEPS = ["Forms", "Draft", "Review", "Release"] as const;

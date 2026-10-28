@@ -39,7 +39,10 @@ def approved_source(folder, checksum):
     r = json.loads(rec.read_text())
     if r.get("sha256") != checksum or r.get("kind") != "form":
         return None, "the approval record is for another file"
-    if not r.get("uploaded_by") or str(r.get("uploaded_by")).lower() == str(r.get("approved_by", "")).lower():
+    if r.get("contract") == "official-download/v1":  # S4 (M3): downloaded from canada.ca (the guard checks it again)
+        if not all(re.fullmatch(r"https://(www|ircc)\.canada\.ca/[^\s@]*", str(r.get(k, ""))) for k in ("form_page", "source_url")):
+            return None, "the official download record does not show canada.ca"
+    elif not r.get("uploaded_by") or str(r.get("uploaded_by")).lower() == str(r.get("approved_by", "")).lower():
         return None, "the approval does not name a second person"
     if not pdf.is_file() or pdf.is_symlink() or hashlib.sha256(pdf.read_bytes()).hexdigest() != checksum:
         return None, "the approved PDF is missing or no longer has the approved checksum"

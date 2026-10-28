@@ -11,6 +11,7 @@
 //  - bounded concurrency (2 steps at once) and bounded retries (3 attempts per source);
 //  - cancel stops queued steps; a running paid call cannot be recalled, so its output is kept but never applied;
 //  - restart: queued steps resume, running steps are marked interrupted; reset: steps of a removed workspace stop.
+import { closingChange } from "./form-uses.ts";
 import { HttpException, HttpStatus, Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
@@ -73,9 +74,15 @@ export class Ai implements OnModuleInit {
     const jobs = await this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, attachmentId: true, status: true, kind: true, fingerprint: true, runId: true, mode: true } });
     // P-80: files a second person approved in the product are drafted like official ones (the guard checks the approval).
     const inProduct = new Set((await this.db.approvedSource.findMany({ where: { workspaceId, kind: "form" }, select: { sha256: true } })).map((x) => x.sha256));
+    // S4 (M3): an official download from canada.ca is admitted like the official library, live included.
+    const downloaded = new Set((await this.db.officialDownload.findMany({ where: { workspaceId, kind: "form" }, select: { sha256: true } })).map((x) => x.sha256));
+    for (const s of downloaded) inProduct.add(s);
     const order = new Map(combinationIds.map((id, i) => [id, i]));
     const targets: Target[] = [];
     const draftedHere = new Map<string, string>(); // form edition (file hash) → the combination whose draft covers it
+    // S4 round 5 (P-116): a retired library form is hidden from AI: its file is never drafted, whatever the scope.
+    const retiredShas = new Set((await this.db.formEdition.findMany({ where: { workspaceId, form: { retiredAt: { not: null } } }, select: { sha256: true } })).map((e) => e.sha256).filter(Boolean));
+    const closingKeys = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", action: { in: ["RETIRE", "DELETE"] }, status: { in: ["WAITING", "APPROVED"] } }, select: { key: true } })).map((x) => x.key));
     // F3 D4 (review Minor 5): who is mapping each file, read once for the whole plan, never once per source.
     const elsewhereOf = await this.mappingIndex(workspaceId, comps.flatMap((c) => c.attachments.map((a) => a.sha256)));
     for (const c of [...comps].sort((a, b) => order.get(a.id)! - order.get(b.id)!)) {
@@ -89,7 +96,9 @@ export class Ai implements OnModuleInit {
         const approvedHere = !a.recognised && inProduct.has(a.sha256);
         if (!a.recognised && !approvedHere) { if (attachmentId) targets.push({ ...base, action: "not_eligible", why: "Not an approved file (neither in the official library nor approved in the product by a second person): never read or sent to the AI." }); continue; }
         if (a.kind !== "Form") { if (attachmentId) targets.push({ ...base, action: "not_eligible", why: "Checklist or instructions: field-map drafting applies to fillable forms only. Document requirements are authored by people." }); continue; }
+        if (retiredShas.has(a.sha256)) { targets.push({ ...base, action: "not_eligible", why: "Retired in the library: AI does not draft it. Restore it there first." }); continue; }
         const formKey = (a.edition ?? "").split(" (")[0];
+        if (closingKeys.has(formKey)) { targets.push({ ...base, action: "not_eligible", why: "A request to retire or delete it is open on To review: AI does not draft it until that is decided." }); continue; }
         const active = jobs.find((j) => j.attachmentId === a.id && (j.status === "QUEUED" || j.status === "RUNNING"));
         const waiting = jobs.find((j) => j.attachmentId === a.id && j.kind === "field_map" && j.status === "COMPLETED" && j.mode !== "STUB");
         if (inConfig.has(formKey)) { targets.push({ ...base, action: "skip", why: `${formKey} is already in this combination's configuration.` }); continue; }
@@ -105,7 +114,7 @@ export class Ai implements OnModuleInit {
         draftedHere.set(a.sha256, c.label);
         const read_first = a.status === "RECOGNISED" || a.status === "READ_FAILED";
         // A paid call admits official inputs only today (p2/runner.ts): an approved form's live call waits for that change.
-        if (approvedHere && mode === "LIVE") { targets.push({ ...base, action: "not_eligible", read_first, why: "Approved in the product by a second person: drafted through the guarded stub pass (no cost). A live AI call for it is not open yet: the paid route admits only the official library's files." }); continue; }
+        if (approvedHere && !downloaded.has(a.sha256) && mode === "LIVE") { targets.push({ ...base, action: "not_eligible", read_first, why: "Approved in the product by a second person: drafted through the guarded stub pass (no cost). A live AI call for it is not open yet: the paid route admits only the official library's files." }); continue; }
         const inventoryFile = this.sources.inventoryOf(a);
         const prepared = inventoryFile ? this.sources.ensureJobFile({ officialFile: this.sources.draftName(a), inventoryFile }, await this.sources.printedEdition(a)) : null;
         const fingerprint = prepared ? sha(JSON.stringify({ input: prepared.inputSha, template: prepared.template, settings: prepared.settings, known: prepared.known })) : undefined;
@@ -176,7 +185,7 @@ export class Ai implements OnModuleInit {
       const same = (await tx.sourceAttachment.findMany({ where: { workspaceId, sha256: sha }, select: { id: true } })).map((x) => x.id);
       const busy = await tx.draftingJob.findFirst({ where: { workspaceId, kind: "field_map", mode: { not: "STUB" }, status: { in: ["QUEUED", "RUNNING"] }, attachmentId: { in: same } }, include: { combination: { select: { label: true } } } });
       const other = busy ? null : elsewhereNow(sha, id);
-      if (busy || other) fail(other?.why ?? `Being mapped in ${busy!.combination.label}: a draft of this same form was started a moment ago. Nothing new was started; open it there.`, HttpStatus.CONFLICT);
+      if (busy || other) fail(other?.why ?? `Being mapped in ${busy!.combination?.label ?? "the library"}: a draft of this same form was started a moment ago. Nothing new was started; open it there.`, HttpStatus.CONFLICT);
     }
   }
 
@@ -260,6 +269,11 @@ export class Ai implements OnModuleInit {
     // QA-30: a request without a mode (or with another word) is a plain 400, never a 500 from reading a missing value.
     if (!["live", "replay", "stub"].includes(String(mode))) fail('Choose how to draft this form: live, replay or stub ("live" is a paid AI call, "replay" a saved run, "stub" no AI, US$0).', HttpStatus.BAD_REQUEST);
     const m = mode.toUpperCase() as Mode;
+    // S4 round 4 (P-116): a retired library form, or one whose retire or delete is open, is not drafted by AI.
+    const att = await this.db.sourceAttachment.findUnique({ where: { id: attachmentId }, select: { sha256: true, workspaceId: true } });
+    const ed = att?.sha256 ? await this.db.formEdition.findFirst({ where: { workspaceId: att.workspaceId, sha256: att.sha256 }, select: { form: { select: { formKey: true, retiredAt: true } } } }) : null;
+    if (ed?.form.retiredAt) fail(`${ed.form.formKey} is retired in the library: AI does not draft it. Restore it there first.`, HttpStatus.CONFLICT);
+    if (ed && (await closingChange(this.db, att!.workspaceId, ed.form.formKey))) fail(`A request to retire or delete ${ed.form.formKey} is open on To review: AI does not draft it until that is decided.`, HttpStatus.CONFLICT);
     const scope: Scope = { kind: "source", ids: [attachmentId] };
     const p = await this.plan(scope, m, { draftAgain: true });
     const t = p.targets[0];
@@ -329,7 +343,7 @@ export class Ai implements OnModuleInit {
     const atts = await this.db.sourceAttachment.findMany({ where: { id: { in: b!.jobs.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, edition: true, fileName: true } });
     const plan = b!.plan as any;
     return { ...b, started_by_name: personName(b!.startedBy), plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
-      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), parts: partsOf(j.detail), a4: a4Of(j.detail), id: j.id, combinationId: j.combinationId, combination: j.combination.label, program: j.combination.program.label, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
+      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), parts: partsOf(j.detail), a4: a4Of(j.detail), id: j.id, combinationId: j.combinationId, combination: j.combination?.label ?? "Library", program: j.combination?.program.label ?? null, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
   }
 
   async batches() {
@@ -345,8 +359,12 @@ export class Ai implements OnModuleInit {
     if (["COMPLETED", "PARTIAL", "FAILED", "CANCELLED"].includes(b!.status)) fail("This AI work has already finished.", HttpStatus.CONFLICT);
     await this.db.aiBatch.update({ where: { id }, data: { cancelRequested: true } });
     const stopped = await this.db.draftingJob.updateMany({ where: { batchId: id, status: "QUEUED" }, data: { status: "CANCELLED", message: "Cancelled before it started: nothing was sent.", finishedAt: new Date() } });
-    const running = await this.db.draftingJob.count({ where: { batchId: id, status: "RUNNING" } });
-    await this.audit.log(b!.workspaceId, actor.id, "cancelled", "AI work", id, `${actor.name} cancelled AI work for ${b!.scopeLabel}: ${stopped.count} queued steps stopped, ${running} already running (a sent AI call cannot be recalled; its output will not be applied)`);
+    // S4 (M7, P-110): a running step's AI call is ended too (its launcher's process group); counted at its reserved worst case.
+    const runningJobs = await this.db.draftingJob.findMany({ where: { batchId: id, status: "RUNNING" }, select: { detail: true } });
+    const ids = new Set(runningJobs.map((j) => (j.detail as { job_id?: string } | null)?.job_id).filter((x): x is string => !!x));
+    const ended = this.sources.stopLaunches((jobId) => [...ids].some((x) => jobId === x || jobId.startsWith(`${x}-p`)));
+    const running = runningJobs.length;
+    await this.audit.log(b!.workspaceId, actor.id, "cancelled", "AI work", id, `${actor.name} stopped AI work for ${b!.scopeLabel}: ${stopped.count} queued steps stopped, ${running} running (${ended.length} AI call${ended.length === 1 ? "" : "s"} ended; a call already sent is counted at its reserved worst case; nothing of it is applied)`);
     await this.settle(id);
     return { stopped: stopped.count, still_running: running, ...(await this.batch(id)) };
   }
@@ -358,6 +376,7 @@ export class Ai implements OnModuleInit {
     if (!batch) fail("This AI work no longer exists.", HttpStatus.NOT_FOUND);
     if (batch!.jobs.some((j) => j.status === "QUEUED" || j.status === "RUNNING")) fail("Wait until the running steps finish.", HttpStatus.CONFLICT);
     // W1-02 (break m1): a screen-map draft (online versions, parked with the browser extension) is never run again.
+    if (batch!.operation === "find_forms") fail("This was a form-finder run: start Find again on the combination instead.", HttpStatus.CONFLICT);
     if (batch!.operation === "screen_map") fail("This was a screen-map draft of an online version: online versions are parked with the browser extension (later wave), so it is not run again.", HttpStatus.CONFLICT);
     const latest = new Map<string, any>();
     for (const j of batch!.jobs) { const k = `${j.attachmentId}|${j.kind}`; const cur = latest.get(k); if (!cur || j.attempt > cur.attempt) latest.set(k, j); }

@@ -201,15 +201,15 @@ const REASON = "Test: a different meaning from the library field that could fit.
   const junk = await intake("brk-junk.pdf", Buffer.from("%PDF-1.4 junk"), sv);
   const jid = sql("select id from intake_item where file_name='brk-junk.pdf' and status='HELD' limit 1");
   ok("setup: an unreadable file is held", junk?.outcome === "held" && !!jid, junk?.outcome);
+  // Lead 28 Oct (S4 carried should): a copy whose code and edition could not be read can never be approved (M4), so
+  // nobody records its IRCC page: the uploader waits and the second person rejects it. The readable copy below records it.
   let hr = (await queue("user-A", "held_file")).find((i) => i.id === `held:${jid}`);
-  ok("C2.3 P-80 (Must 6): the uploader's step is to record the IRCC page", hr?.state === "needs" && hr?.next?.label === "Record the IRCC page", hr?.next);
+  ok("C2.3 P-80 (Lead 28 Oct) fail: an unreadable copy is never the uploader's \"record the IRCC page\" step", hr?.state === "waiting" && hr?.next === null && /cannot be approved/.test(hr?.what ?? ""), hr);
   hr = (await queue("user-C", "held_file")).find((i) => i.id === `held:${jid}`);
-  ok("C2.3 P-80 (Must 6) fail: the second person waits until the page is recorded", hr?.state === "waiting" && /records the IRCC page/.test(hr?.waiting_on), hr?.waiting_on);
+  ok("C2.3 P-80 (Lead 28 Oct): the second person's step for it is to reject the copy", hr?.state === "needs" && hr?.next?.label === "Reject the copy", hr?.next);
   r = await call("PATCH", `/intake/held/${jid}`, { irccPage: `${PAGE}?${"a".repeat(600)}` });
   ok("C2.3 m5 fail: a page over 500 characters is refused, not cut (400)", r.status === 400, r.body?.detail);
   await call("PATCH", `/intake/held/${jid}`, { irccPage: PAGE });
-  hr = (await queue("user-C", "held_file")).find((i) => i.id === `held:${jid}`);
-  ok("C2.3 P-80: once recorded, the second person checks the source", hr?.state === "needs" && hr?.next?.label === "Check the source", hr?.next);
   r = await call("POST", `/intake/held/${jid}/approve`, { irccPage: PAGE }, "user-C");
   ok("C2.3 M4 fail: a file whose code and edition could not be read is not approved (409), nothing written", r.status === 409 && sql("select count(*) from approved_source") === "0" && sql(`select status from intake_item where id='${jid}'`) === "HELD", r.body?.detail);
   await call("POST", `/intake/held/${jid}/reject`, { note: "Not an official file." }, "user-C");
@@ -223,7 +223,13 @@ const REASON = "Test: a different meaning from the library field that could fit.
   ok("C2.3 M6: the held PDF opens to compare, sandboxed and never sniffed", file.status === 200 && file.headers.get("content-security-policy") === "sandbox" && file.headers.get("x-content-type-options") === "nosniff");
   r = await call("GET", `/intake/held/${jid}/file`);
   ok("C2.3 M6 fail: a decided (rejected) file is no longer served (404)", r.status === 404, r.body?.detail);
+  hr = (await queue("user-A", "held_file")).find((i) => i.id === `held:${hid}`);
+  ok("C2.3 P-80 (Must 6): the uploader's step is to record the IRCC page (a readable copy)", hr?.state === "needs" && hr?.next?.label === "Record the IRCC page", hr?.next);
+  hr = (await queue("user-C", "held_file")).find((i) => i.id === `held:${hid}`);
+  ok("C2.3 P-80 (Must 6) fail: the second person waits until the page is recorded", hr?.state === "waiting" && /records the IRCC page/.test(hr?.waiting_on), hr?.waiting_on);
   await call("PATCH", `/intake/held/${hid}`, { irccPage: PAGE });
+  hr = (await queue("user-C", "held_file")).find((i) => i.id === `held:${hid}`);
+  ok("C2.3 P-80: once recorded, the second person checks the source", hr?.state === "needs" && hr?.next?.label === "Check the source", hr?.next);
   await call("PATCH", `/intake/held/${hid}`, { irccPage: `${PAGE}#changed` });
   r = await call("POST", `/intake/held/${hid}/approve`, { irccPage: PAGE }, "user-C");
   ok("C2.3 m5 fail: a page changed after the second person opened it is not approved (409)", r.status === 409 && /changed after you opened/.test(r.body?.detail), r.body?.detail);

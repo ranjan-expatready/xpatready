@@ -38,9 +38,9 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
       const final = (await q.innerText("main")).replace(/\s+/g, " ");
       if (who === "the author") {
         step("C1.1 QA-22: while the session loads, the author never reads the non-author message", !seen.some((t) => /A configuration author adds the pathways, programs and categories/.test(t)), `${seen.length} looks`);
-        step("C1.1 QA-22: once the session arrives the author's own message and New combination show", /Start with the Structure/.test(final) && !(await q.getByRole("button", { name: "New combination" }).first().isDisabled()), final.slice(0, 160));
+        step("C1.1 QA-22: once the session arrives the author's own message and Add combination show (P-128 (5))", /Start with the Program structure/.test(final) && !(await q.getByRole("button", { name: "Add combination" }).first().isDisabled()), final.slice(0, 160));
       } else {
-        step("control QA-22: a non-author still reads the non-author message and New combination stays disabled", /A configuration author adds the pathways, programs and categories/.test(final) && await q.getByRole("button", { name: "New combination" }).first().isDisabled(), final.slice(0, 160));
+        step("control QA-22: a non-author still reads the non-author message and Add combination stays disabled", /A configuration author adds the pathways, programs and categories/.test(final) && await q.getByRole("button", { name: "Add combination" }).first().isDisabled(), final.slice(0, 160));
       }
       await c.close();
     }

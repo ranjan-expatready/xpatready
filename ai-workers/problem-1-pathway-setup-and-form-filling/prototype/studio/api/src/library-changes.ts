@@ -8,11 +8,19 @@ import type { LibraryChange, Prisma } from "@prisma/client";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { ACTORS, type Actor, type Db } from "./core.ts";
 import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycle.ts";
+import { ACTION_LABEL } from "../../contracts/lifecycle.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
-export const KIND_NOUN: Record<string, string> = { field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
-const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: "Remove", RETIRE: "Retire", RESTORE: "Restore", EDIT_RULE: "Change the rule of" };
+export const KIND_NOUN: Record<string, string> = { library_form: "library form", form_accepts: "what IRCC accepts", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
+// The lifecycle words come from the one word set (contracts/lifecycle.ts, P-116 amended 28 Oct): Delete, Retire, Restore.
+// "Remove" is kept for a form line taken off a combination (it stays in the library, P-123).
+const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for" };
+export const actionWord = (action: string, _kind?: string) => ACTION_WORD[action] ?? action;
+/** The same word inside a sentence ("approved delete …", "set what IRCC accepts for …"): only its first letter lowered. */
+export const actionVerb = (action: string, kind?: string) => { const w = actionWord(action, kind); return w[0].toLowerCase() + w.slice(1); };
+/** What the change is about, as a noun ("this library form", "this change to what IRCC accepts"). */
+const changeNoun = (kind: string) => (kind === "form_accepts" ? "change to what IRCC accepts" : KIND_NOUN[kind] ?? "change");
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${status}`, title, status, detail }, status);
 
@@ -47,9 +55,17 @@ export async function sameName(db: Pick<Db, "canonicalField" | "libraryChange" |
 }
 
 export function changeView(c: LibraryChange) {
-  return { id: c.id, kind: c.kind, kind_word: KIND_NOUN[c.kind] ?? c.kind, key: c.key, label: c.label ?? c.key, action: c.action, action_word: ACTION_WORD[c.action] ?? c.action, reason: c.reason,
+  return { id: c.id, kind: c.kind, kind_word: KIND_NOUN[c.kind] ?? c.kind, key: c.key, label: c.label ?? c.key, action: c.action, action_word: actionWord(c.action, c.kind), reason: c.reason,
     ai_verdict: c.aiVerdict, matches: c.matches, status: c.status, proposed_by: nameOf(c.proposedBy), proposed_by_id: c.proposedBy, proposed_at: c.proposedAt,
-    decided_by: nameOf(c.decidedBy), decided_at: c.decidedAt, decision_note: c.decisionNote, released_in: c.releasedIn, combination_id: c.combinationId };
+    decided_by: nameOf(c.decidedBy), decided_at: c.decidedAt, decision_note: c.decisionNote, released_in: c.releasedIn, combination_id: c.combinationId,
+    ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}) };
+}
+
+/** C11.18: what the second person compares: before → after, IRCC's line or the reason, and the form's canada.ca page. */
+export function acceptsView(c: Pick<LibraryChange, "key" | "matches">) {
+  const m = (c.matches ?? {}) as { channels?: string; before?: string | null; quote?: string | null; reason?: string | null; form_page?: string | null; edition?: string };
+  const w = (x?: string | null) => (x ? ({ PDF: "PDF upload", ONLINE: "Online", PDF_OR_ONLINE: "PDF upload · Online" } as Record<string, string>)[x] ?? x : "Not set yet");
+  return { form: c.key, edition: m.edition ?? null, before: w(m.before), after: w(m.channels), quote: m.quote ?? null, reason: m.reason ?? null, form_page: m.form_page ?? null };
 }
 
 /** A second person decides (P-53 item 4, BR-9): never the person who proposed it. Claimed on its status, so two
@@ -59,9 +75,9 @@ export async function decideChange(db: Db, actor: Actor, id: string, decision: "
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
   if (c.status !== "WAITING") throw problem(409, "Already decided", `This change is already ${c.status.toLowerCase()}.`);
-  if (c.proposedBy === actor.id) throw problem(403, "A different person decides", `You proposed this ${KIND_NOUN[c.kind] ?? "change"}, so a different person approves or returns it.`);
+  if (c.proposedBy === actor.id) throw problem(403, "A different person decides", `You proposed this ${changeNoun(c.kind)}, so a different person approves or returns it.`);
   // Break M2: the person who applied the draft that created it is not the second person either.
-  if (c.appliedBy === actor.id) throw problem(403, "A different person decides", `You applied the draft that created this ${KIND_NOUN[c.kind] ?? "change"}, so a different person approves or returns it.`);
+  if (c.appliedBy === actor.id) throw problem(403, "A different person decides", `You applied the draft that created this ${changeNoun(c.kind)}, so a different person approves or returns it.`);
   if (decision === "return" && !note?.trim()) throw problem(400, "Say why", "Say why it goes back, so the author can correct it.");
   if ((note ?? "").length > 300) throw problem(400, "Too long", "Keep the reason under 300 characters.");
   const done = await db.libraryChange.updateMany({ where: { id, status: "WAITING" }, data: { status: decision === "approve" ? "APPROVED" : "RETURNED", decidedBy: actor.id, decidedAt: new Date(), decisionNote: note?.trim() || null } });

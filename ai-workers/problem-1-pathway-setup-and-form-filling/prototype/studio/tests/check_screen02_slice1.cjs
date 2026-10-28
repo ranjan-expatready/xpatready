@@ -55,7 +55,7 @@ function pdf(title, text) {
   await open();
   step("C5.3: an empty workspace says nothing waits for you, with a way to Immigration programs", /Nothing waits for you/.test(await p.locator("main").textContent()) && await p.getByRole("link", { name: "Open Immigration programs" }).count() === 1);
   const navText = await p.getByRole("navigation", { name: "Studio" }).textContent();
-  step("C5.3 P-79: To review is the first item under Configure, above Immigration programs", /Configure\s*To review.*Immigration programs/.test(navText), navText.slice(0, 80));
+  step("C5.3 P-79 P-125: To review is under Configure, after Program structure and Immigration programs (setup order)", /Configure\s*Program structure\s*Immigration programs\s*To review/.test(navText), navText.slice(0, 80));
   await state("empty");
 
   // ======================================================== setup (scaffolding): sample inputs + one item of each kind

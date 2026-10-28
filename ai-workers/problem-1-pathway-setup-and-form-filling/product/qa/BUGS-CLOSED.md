@@ -47,3 +47,6 @@
 | QA-46 | UX · Minor | C11.9 | 76628a4 | main 027174d (screens S1/S2 FIX, PR #59), 27 Oct | `check_qa_am_1027.cjs` and `check_qa_am_fix_1027.cjs`: To review list and item page say "Remove structure name" (trail wording: QA-51) |
 | QA-49 | Bug · Minor | C11.10 | f289ec7 | main 027174d (screens S1/S2 FIX, PR #59), 27 Oct | `check_qa_am_s2_1027.cjs` 3 QA-49 steps: sample order = Structure order; a reorder shows on cards and List, also after 'Back to Structure order' |
 | QA-50 | UX · Minor | C11.10 | f289ec7 | main 027174d (screens S1/S2 FIX, PR #59), 27 Oct | `check_qa_am_s2_1027.cjs` QA-50 step: one Back after a double click returns to Immigration programs; nothing created |
+| QA-51 | UX · Minor | C11.9 | 76628a4 | main dccd87e (PR #66), 28 Oct | `check_qa_am_fix_1027.cjs` QA-51 step: the To review title reads "Delete structure name: Retail › Temporary residence › Visitors › Visitor record" |
+| QA-52 | UX · Minor | C11.9 | 027174d | main dccd87e (PR #66), 28 Oct | `check_qa_am_fix_1027.cjs` QA-52 step: "… approved and deleted. The History line stays."; the name is gone at once |
+| QA-54 | UX · Minor | C11.10, C11.3 | 027174d | main dccd87e (PR #66), 28 Oct | `check_qa_am_fix_1027.cjs` 2 QA-54 steps: a case person on `/` and `/structure` is told the page is for the configuration people |

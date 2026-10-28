@@ -64,7 +64,7 @@ export class Checklists {
     let added = 0;
     try {
       for (const { item, typeKey, p } of plan) {
-        await this.studio.saveRequirement(actor, job!.combinationId, null, { documentTypeKey: typeKey, attachMode: p.base_or_conditional === "conditional" ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY", conditionPlain: p.condition_plain ?? undefined, appliesToRoles: p.who, providedBy: p.provided_by ?? "client", sourceQuote: item.sourceQuote ?? undefined, sourceFile: a.officialFile ?? a.fileName });
+        await this.studio.saveRequirement(actor, job!.combinationId!, null, { documentTypeKey: typeKey, attachMode: p.base_or_conditional === "conditional" ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY", conditionPlain: p.condition_plain ?? undefined, appliesToRoles: p.who, providedBy: p.provided_by ?? "client", sourceQuote: item.sourceQuote ?? undefined, sourceFile: a.officialFile ?? a.fileName });
         added++;
       }
     } catch (e) {
@@ -72,7 +72,7 @@ export class Checklists {
       await this.db.draftingJob.update({ where: { id: jobId }, data: { status: "COMPLETED" } });
       throw e;
     }
-    await this.audit.log(job!.workspaceId, actor.id, "applied", "checklist draft", a.edition ?? a.fileName, `${actor.name} applied the reviewed checklist draft of ${a.edition ?? a.fileName}: ${added} document requirements added to the draft${skipped.length ? `; not applied: ${skipped.join(", ")}` : ""}`, undefined, job!.combinationId);
+    await this.audit.log(job!.workspaceId, actor.id, "applied", "checklist draft", a.edition ?? a.fileName, `${actor.name} applied the reviewed checklist draft of ${a.edition ?? a.fileName}: ${added} document requirements added to the draft${skipped.length ? `; not applied: ${skipped.join(", ")}` : ""}`, undefined, job!.combinationId ?? undefined);
     return { added, skipped };
   }
 }

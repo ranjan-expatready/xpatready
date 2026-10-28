@@ -66,15 +66,16 @@ function openOnFirstField(e: Event) {
   (field ?? box)?.focus();
 }
 
-/** guard: once a field in the dialog was changed, closing it by Escape, the X or the overlay asks before discarding. */
-export function Dialog({ open, onOpenChange, title, description, children, footer, wide, guard }: { open: boolean; onOpenChange: (o: boolean) => void; title: string; description?: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean; guard?: boolean }) {
+/** guard: once a field in the dialog was changed, closing it by Escape, the X or the overlay asks before discarding.
+ *  initialFocus: the field to start in, asked when the content mounts (else the first field). */
+export function Dialog({ open, onOpenChange, title, description, children, footer, wide, guard, initialFocus }: { open: boolean; onOpenChange: (o: boolean) => void; title: string; description?: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean; guard?: boolean; initialFocus?: () => HTMLInputElement | null | undefined }) {
   const touched = React.useRef(false);
   const change = (o: boolean) => { if (!o && guard && touched.current && !window.confirm("Discard your unsaved changes?")) return; if (!o) touched.current = false; onOpenChange(o); };
   return (
     <DialogPrimitive.Root open={open} onOpenChange={change}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]" />
-        <DialogPrimitive.Content onOpenAutoFocus={openOnFirstField} className={cn("fixed left-1/2 top-1/2 z-50 flex max-h-[88vh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-border bg-surface-raised shadow-xl outline-none", wide ? "max-w-4xl" : "max-w-lg")}>
+        <DialogPrimitive.Content onOpenAutoFocus={(e) => { const el = initialFocus?.(); if (el && !el.disabled) { e.preventDefault(); el.focus(); } else openOnFirstField(e); }} className={cn("fixed left-1/2 top-1/2 z-50 flex max-h-[88vh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-border bg-surface-raised shadow-xl outline-none", wide ? "max-w-4xl" : "max-w-lg")}>
           <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
             <div>
               <DialogPrimitive.Title className="text-base font-semibold">{title}</DialogPrimitive.Title>
@@ -142,12 +143,12 @@ export function Stat({ label, value, sub, tone }: { label: string; value: React.
   );
 }
 
-export function Table({ head, children, className, dense }: { head: React.ReactNode[]; children: React.ReactNode; className?: string; dense?: boolean }) {
+export function Table({ head, children, className, dense, label, headClass }: { head: React.ReactNode[]; children: React.ReactNode; className?: string; dense?: boolean; /** The table's name when a heading is not plain text. */ label?: string; /** Extra classes per heading cell (a column hidden at some widths). */ headClass?: (string | undefined)[] }) {
   return (
     // Focusable, so a keyboard can scroll it sideways on a narrow screen (WCAG 2.1.1; review 24 Oct should 1).
-    <div tabIndex={0} role="region" aria-label={`Table: ${head.filter((h) => typeof h === "string").join(", ")}`} className={cn("relative overflow-x-auto rounded-xl border border-border bg-surface-raised outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", className)}>
+    <div tabIndex={0} role="region" aria-label={label ?? `Table: ${head.filter((h) => typeof h === "string").join(", ")}`} className={cn("relative overflow-x-auto rounded-xl border border-border bg-surface-raised outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", className)}>
       <table className="w-full border-collapse text-left text-sm">
-        <thead className="bg-surface text-xs text-text-muted"><tr>{head.map((h, i) => <th key={i} className={cn("border-b border-border px-3 font-medium", dense ? "py-1.5" : "py-2")}>{h}</th>)}</tr></thead>
+        <thead className="bg-surface text-xs text-text-muted"><tr>{head.map((h, i) => <th key={i} className={cn("border-b border-border px-3 font-medium", dense ? "py-1.5" : "py-2", headClass?.[i])}>{h}</th>)}</tr></thead>
         <tbody className="[&_td]:border-b [&_td]:border-border [&_tr:last-child_td]:border-b-0 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top">{children}</tbody>
       </table>
     </div>

@@ -29,7 +29,7 @@ export function NewCombinationPage() {
   const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
   const [pathway, setPathway] = React.useState(sp.get("pw") === "CORPORATE" ? "CORPORATE" : "INDIVIDUAL");
   const opts = useApi<{ programs: ProgramOpt[]; pathways: { key: string; label: string; programs?: Opt[] }[]; combinations: { nodeKey: string; pathway: string; path: string[] }[] }>(["path-options", pathway], `/path-options?pathway=${pathway}`);
-  // W1-03 (slice 1): Pathways are names on the Structure; the trail names the type's Pathway when it has exactly one
+  // W1-03 (slice 1): Pathways are names on the Program structure; the trail names the type's Pathway when it has exactly one
   // (slice 4 redraws this page with a Pathway picker).
   // S2 fix: with several Pathways in a type, the trail names the one the chosen program sits in.
   const pwOf = (k: string | undefined) => opts.data?.pathways?.find((x) => x.programs?.some((y) => y.key === k));
@@ -60,7 +60,7 @@ export function NewCombinationPage() {
       if (!s && c.subCategories.length) setLeafNote(`${c.label} has sub-categories: choose one of them below.`);
       return;
     }
-    setLeafNote(`That combination is not in the Structure for ${PATHWAY_LABEL[pathway]} any more (it may have been renamed, removed or belong to the other type). Pick the path below.`);
+    setLeafNote(`That combination is not in the Program structure for ${PATHWAY_LABEL[pathway]} any more (it may have been renamed, removed or belong to the other type). Pick the path below.`);
   }, [opts.data, sp]);
 
   const progs = opts.data?.programs ?? [];
