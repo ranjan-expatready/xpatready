@@ -7,15 +7,15 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: QA-53 (one guard on every Studio configuration read), then the form library on the shared lifecycle components (P-116 amended)
-stage: BUILD
-owner: Builder
-next_action: Form library on the shared lifecycle components done (library browser 57/57, runs 88/88); full suites next, then hand back by message
+stage: CHECK
+owner: Lead
+next_action: Lead checks and merges QA-53 and the form library on the shared lifecycle components; next in this lane: a library retire takes effect at approval (P-116 amended)
 blocked_by: none
 updated: 2026-10-28
 
 ## Handover (28 Oct, Lead check FIX round; resume from this section alone)
-* **Where it stands:** S4 is at CHECK, owner Lead: handed back for the re-merge into Lead PR #65. Branch `forms/2026-10-27-s4-form-library`, code `80504e33`, synced with main `dccd87e3` (PR #66), clean tree, pushed.
-* **Next:** the Lead re-merges S4 into PR #65 and merges on green; then QA-53, and the form library moves onto the shared lifecycle components (P-116 amended; a library retire takes effect at approval). Nothing waits on this lane.
+* **Where it stands:** QA-53 and the form library on the shared lifecycle components are built and handed to the Lead (stage CHECK, owner Lead). Branch `forms/2026-10-27-s4-form-library`, synced with main `06a8fc30` (S4 merged as PR #65), pushed, clean tree.
+* **Next:** the Lead checks and merges. Then, in this lane: a library form's retire and restore take effect at approval, not at the next release (P-116 amended; not built yet: the release-time retire tests change with it).
 * **Done this round (all with tests, all pushed):**
   * Drift fixes: main merged; Delete vs Remove in one word map, also used in History and Activity.
   * Load sample from Sample fixtures (`samples/form-library-sample.json`), checked by `api/src/filing.ts`.
@@ -35,6 +35,7 @@ updated: 2026-10-28
   * No paid AI (US$0). Lane pushes run no CI (P-85): local `run-suites.sh` is the evidence.
 
 ## Log (last 10 lines)
+- 2026-10-28 · QA-53 + forms lifecycle · BUILD → CHECK (owner Lead) · full run-suites on d817d3d9: 42 pass, 5 fail, of which 4 passed alone (p80 41, pdf hardening 49, structure browser 123, screen01 browser: another lane's run-suites shared their names and ports) and 1 was QA-53's intended effect (check_screen02_fix used the case officer as a person without the review duty on To review; now 403: test updated, 61/61). New check_forms_qa53 13/13, qa after-merge 14/14, library browser 57/57, runs 88/88. US$0.
 - 2026-10-28 · W1 lifecycle (forms) · BUILD · the form library on the shared lifecycle components (P-116 amended): one written row action from the guard (Delete, Retire, Restore, Withdraw for my own waiting change), greyed with the guard's reason as visible text under the row (aria-describedby), the confirm in the right panel (ImpactPanel) with Undo, Retire and Delete gone from the ⋯ menu; each earlier edition says what keeps it (Kept by Release N of … and K open cases; never deleted). library browser 57/57, runs 88/88. US$0.
 - 2026-10-28 · QA-53 · CHECK → BUILD · applied Lead message 28 Oct (S4 merged, PR #65 06a8fc30): synced main; QA-53 one shared guard (ConfigReadGuard, APP_GUARD): every GET under /api is a configuration read (nobody and an unknown name 401, case people 403) unless marked: CaseRead (runtime controllers, releases, activity), OpenRead (session, three file links). New check_forms_qa53.ts reads every GET route from the code (pass and fail per route; the exception list is reviewed): 13/13. US$0.
 - 2026-10-28 · S4 · FIX → CHECK (owner Lead) · synced main dccd87e3 (PR #66): S4's form retire and delete on the shared guard and word set (Delete everywhere; Remove only off a combination; one re-check, before the click and at approval, with the library form's rule). Full run-suites on 80504e33: 46/46 pass (studio browser skipped). S4: finder 118, runs 86, canada 63, library browser 53, run browser 20. Outside this lane: structure.tsx tab count contrast (one token) and tests/check_screen02_fix.ts (earlier). US$0.
@@ -44,4 +45,3 @@ updated: 2026-10-28
 - 2026-10-28 · S4 · FIX · baseline full suites on 98b5102: 39 pass, 2 fail, both test races fixed (two approved lines in one instant; the picker counted before its rows rendered): runs 82/82, forms_demo 26/26 alone. Waiting for PR #66 to merge before the final sync. US$0.
 - 2026-10-28 · S4 · CHECK → FIX · applied Lead check 28 Oct (lead-check.md): a paper or mail line is never a PDF upload (Not set yet, reason given); filling the form in on a computer says nothing about how it is filed (one rule: 5707, 5409, 1295 and the saved AI line for 5257 alike); only an upload line is a PDF upload; replay and Load sample read the record's own mode. Load sample now sets 2 of 7 data forms (5475, 5476). S4: finder 118, runs 82, canada 63, library browser 51, run browser 20. US$0.
 - 2026-10-28 · S4 · FIX → CHECK (owner Lead) · CHECK findings fixed with tests (4399c3b): fixture lines must say their value (filing rule, line on the page; 5 of 7 data forms set, SCH1 and 5409 Not set yet), stub passes never replayed (R5-1), one word in History and Activity (R5-2), fixtures checked against the manifest (R5-3, R5-4), 1024 tag wrap and origin words. Full suites on 4399c3b: 39 pass in the run + 2 rerun alone (forms_demo 26/26; w1_s1s2_fix 30/30, which collided with another copy on screens_s1s2) = 41/41; S4 finder 118, runs 83, canada 62, library browser 51, run browser 20; graph G3 1 (older). Synced main 83e658b (docs and CI only). No CI on lane pushes (P-85). US$0.
-- 2026-10-28 · S4 · CHECK → FIX · breaker R5 (break-report.md): 0 Blocker, 2 Major (a stub pass replayed when the place's name holds "live"; History and Activity words), 6 Minor. All fixed with tests together with the review's Major (fixture lines must say their value: the finder's filing rule, line on the page; SCH1 and 5409 left Not set yet) and Shoulds; canada 62/62; other S4 checks running. US$0.
