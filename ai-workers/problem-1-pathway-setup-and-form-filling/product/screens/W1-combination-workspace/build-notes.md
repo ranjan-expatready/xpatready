@@ -14,7 +14,7 @@ Lead note 28 Oct (founder Go on the slice 2 early look): fold in the Shoulds of 
 | 11, 12 | ", D-2" on Review; screenshots unfit | Removed; slice 2 screenshots are now viewport-sized (11 states × 1440/1024). | browser |
 | 7 | P-125 not traced | Start setup still opens the old New combination page (`structure.tsx`, `programs.tsx`, `new-combination.tsx`): that is S3 on the screens lane (P-125), not this lane. The workspace shows the place read-only (path links only). | — |
 
-**Checks:** `check_s5_slice2.ts` 32/32, `check_s5_slice2_browser.cjs` 54/54 (axe on every state). Full suites: see the lane log.
+**Checks:** `check_s5_slice2.ts` 32/32, `check_s5_slice2_browser.cjs` 54/54 (axe on every state, 1440 and 1024: Wave 1 is desktop only). Full `run-suites.sh` 40/40 PASS (the demo-reset suite is skipped there); demo journey `check_studio_browser.cjs` 46/46 on this lane's own copy (:4433). Labels name capability ids (C5.1, C11.6, C11.9, C11.10, C4.3).
 **Left as it is (not this lane's file):** while a released form is removed, the page's next step reads "Add 1 form from the library" (Programs counts its still-attached file); Undo or that step both restore the same line. Problems about questions inside rule messages (loops, hidden values) still name field codes in the message text; they are rare authoring errors, listed here for a later pass.
 
 ## Slice 1 early-look fixes and slice 2 (BUILD, 27–28 Oct) → EARLY-LOOK
