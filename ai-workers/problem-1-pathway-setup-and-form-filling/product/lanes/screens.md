@@ -20,7 +20,7 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - FIX for qa's after-merge on main dccd87e (qa branch `claude/qa-after-merge-s1-21bfdf` 9ad98f37; QA-57 was already fixed in S4's merge, not redone): QA-60 bccd7f26 (letters typed after "Add and add another" kept), QA-56 3da467e6 (Enter accepts a typed name), QA-55 3abc0a35 (Retire names what really blocks, with the way out), QA-58 691d7303 (Undo kept on the page note), QA-59 9ba1630d (Returned with the note; Send again), Button primary hover f4145a47 (darker, 8.15:1). Each with a pass step and a fail or fail-guard; table in `screens/W1-visual-system/build-notes.md` "Fixes after qa's after-merge".
 - Evidence on f4145a47 (fe225c6c adds notes only): full run-suites 41/41 PASS; studio journey 45/45 (private copy); qa's check_qa_am_r3_1028 63/69 and check_qa_am_1027 52/55 on private copies, every QA-55/56/58/59/60 step passes; the fails left are QA-57 (fixed on main by S4, not on this branch yet), QA-48 and runtime's QA-47/38/40 (not this lane). The branch merges cleanly with main 06a8fc30.
 
-**Next:** build S3 Start setup (agreed 28 Oct), then EARLY-LOOK by message.
+**Next:** S3 built and pushed in WIP commits (50f50bd4, 81b6d14c, 838a5219; qa routing f8d6e0cb); synced main 3858216e (PR #67 merged); browser checks running, then full evidence and EARLY-LOOK by message.
 
 **Learned, not written elsewhere:**
 - Other lanes run this lane's checks under the same copy names and ports (`run-suites.sh` uses the usage lines), and all copies share one PostgreSQL server: two runs at once break each other. For reruns, use private names and ports (for example `<name>_mine` on 4460+), then drop those databases.
@@ -32,12 +32,13 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 current_screen: W1-start-setup (S3 Start setup)
 stage: BUILD
 owner: Builder
-next_action: build S3 per the agreed challenge (screens/W1-start-setup/challenge.md): start guard, POST /combinations/start, one Start setup, landing with finder button and RunCard, end of /new and the path endpoints, checks moved
+next_action: S3: finish the browser checks off /new and check_w1_start_setup_browser, then full run-suites and the journey, screenshots, EARLY-LOOK by message
 then: EARLY-LOOK by message; desktop only (1440, 1024)
 blocked_by: none
 updated: 2026-10-28
 
 ## Log (last 10 lines)
+- 2026-10-28 · W1-start-setup (S3) · BUILD · start guard, POST /combinations/start and the landing offer (live only on the click), one Start setup button, /new and both path endpoints removed, checks moved; check_w1_start_setup 17/17 and the touched API checks pass; qa's check_qa_am_s2_1027 routed (f8d6e0cb); synced main 3858216e. AI US$0.
 - 2026-10-28 · W1-start-setup (S3) · DESIGN → BUILD · Lead answered the challenge (founder: wait for a click; M2 remove /new and both path endpoints; M3 start guard; M4 split with runtime slice 3; m5–m7, m10 accepted; m8, m9 after runtime slice 2); Lead response recorded. AI US$0.
 - 2026-10-28 · W1-start-setup (S3) · DESIGN · synced main 06a8fc30 (S4 merged); screen-challenge in screens/W1-start-setup/challenge.md: Build after these changes, 4 Major (cost at Start setup, end of /new and its endpoints, a start guard for retired or waiting names, split with runtime slice 3), 6 Minor (incl. runtime's two Left-as-it-is points, after runtime slice 2), 1 founder question; no code. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-visual-system · FIX → Lead · qa after-merge on dccd87e: QA-60 (letters kept after Add and add another), QA-56 (Enter accepts a typed name), QA-55 (Retire names real blockers and the way out), QA-58 (Undo kept on the page note), QA-59 (Returned with note; Send again), Button primary hover 8.15:1; each with pass and fail checks; run-suites 41/41, journey 45/45, qa's steps for these pass. AI US$0. Owner → Lead.
@@ -47,4 +48,3 @@ updated: 2026-10-28
 - 2026-10-28 · W1-visual-system · DESIGN → BUILD · applied Lead note (round 3 challenge agreed, Majors 1–4, Minors 5–10); R3a built: one row-action rule (nodeCan), branch delete exact and all or nothing, a combination row's Retire/Restore with its combination, Delete wording, the page (filter bar, Tree, List, Edit + action on every row); qa words in their own commit 2101164. AI US$0.
 - 2026-10-28 · W1-visual-system · EARLY-LOOK → DESIGN · applied Lead message (P-128 round 3 agreed; note on lead/2026-10-27 8e7d47f); screen-challenge written in W1-visual-system/challenge.md: Build after these changes, 4 Major, 6 Minor, back-end plan; no code. Owner → Lead. AI US$0.
 - 2026-10-28 · W1-visual-system · EARLY-LOOK · Lead message: the founder's early look is Changes (do not merge; the Add pop-up stays; Program structure round 3 board coming; wave 1 desktop only). No code on Program structure or Immigration programs (P-126); the S3 re-check got an addendum (round 3 row actions, desktop only). Stopped at a safe point. AI US$0.
-- 2026-10-28 · W1-visual-system · BUILD → EARLY-LOOK · AD-8 focus race fixed at the cause (Dialog initialFocus); full run-suites 40/40 PASS (0b60e6a), studio journey 45/45 on 4445, CI suites green on f7124e9 (run 40562533734; later commits are screenshots and notes only); graph check passes. AI US$0. Owner → Lead.
