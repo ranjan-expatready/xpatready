@@ -18,7 +18,9 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 
 **Evidence on 2a802b0b (code as 099eacce):** run-suites 47/48, the one fail `check_w1_programs_r3` a dropped connection 6 s in (ECONNRESET, before any step), 26/26 alone on a private copy; studio journey 45/45 (Pass B through the Add pop-up and Start setup); `check_w1_start_setup` 17/17, `check_w1_start_setup_browser` 20/20 (screenshots 1440/1024 in `screens/W1-start-setup/screenshots/`). Build notes: `screens/W1-start-setup/build-notes.md`.
 
-**Next:** the Lead's early look on S3 (sent by message). Open points for the Lead: the page's own "Next step: Add sources" shows above the finder offer on a just-started combination (two calls to action; the shared next-step rule, next to runtime's forms); qa's `check_qa_m2_journeys` needs qa's rewrite (stale since round 3); m8 and m9 after runtime slice 2.
+**Fix pass (Lead early look 1–4), branch `claude/screens-s3-fix-a78d1d`:** synced main 38722933 (main.ts: StartSetup beside the new ConfigReadGuard, 1bb2ba58); fixes 13244ba0, shots and rules 2fc0f26c. (1) plain words for a launcher failure, `plainRunText` backstop in the run view; (2) Next step **Find forms** (engine `add_forms`) focuses the finder button; (3) one find button: the run card's `next` slot carries "Find again with AI (…)", no second notice, the AI work card's Find again leads to `/c/<id>/sources` (QA-63 loop); (4) one cost wording `costWords` (about · at most) on button, tip and card, one `aboutUsd` rule. Evidence: `check_w1_start_setup` 23/23, `check_w1_start_setup_browser` 26/26 (screenshots 1440/1024 retaken with the stand-in launcher answering), `check_screen01_rules` 67/67; run-suites on 2fc0f26c running. Cross-lane touches listed in build-notes "Fixes". AI US$0.
+
+**Next:** item 5 when S5 is on main (Lead says): sync, the block into S5's Forms tab slot, the three conflicts, rerun, EARLY-LOOK with 1440 shots. Earlier: Open points for the Lead: the page's own "Next step: Add sources" shows above the finder offer on a just-started combination (two calls to action; the shared next-step rule, next to runtime's forms); qa's `check_qa_m2_journeys` needs qa's rewrite (stale since round 3); m8 and m9 after runtime slice 2.
 
 **Learned, not written elsewhere:**
 - Other lanes run this lane's checks under the same copy names and ports (`run-suites.sh` uses the usage lines), and all copies share one PostgreSQL server: two runs at once break each other. For reruns, use private names and ports (for example `<name>_mine` on 4460+), then drop those databases.
@@ -28,14 +30,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-start-setup (S3 Start setup)
-stage: EARLY-LOOK
+stage: FIX (items 1–4 done; item 5 waits for S5 on main)
 owner: Lead
-next_action: Lead: early look on S3 Start setup (build notes and screenshots in screens/W1-start-setup/; evidence in the Handover)
-then: Lead check and merge; m8 and m9 after runtime slice 2 is on main
-blocked_by: none
+next_action: Lead: look at fixes 1–4 (build-notes "Fixes", screenshots 02/03); tell the lane when S5 is on main for item 5
+then: item 5 (Forms tab slot, three conflicts), EARLY-LOOK; m8 and m9 after runtime slice 2
+blocked_by: S5 on main (item 5 only)
 updated: 2026-10-28
 
 ## Log (last 10 lines)
+- 2026-10-28 · W1-start-setup (S3) · FIX · applied Lead note 2026-10-28 (early look items 1–4): plain words for launcher failures, Next step Find forms, one find button on the run card, one cost wording; start_setup 23/23, browser 26/26, screen01_rules 67/67; run-suites on 2fc0f26c running; item 5 waits for S5. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-start-setup (S3) · BUILD → EARLY-LOOK · S3 built (start guard, POST /combinations/start, landing offer live only on a click, one Start setup, /new and both path endpoints gone, checks moved); run-suites 47/48 (programs_r3 ECONNRESET, 26/26 alone), journey 45/45, start_setup 17/17, start_setup_browser 20/20. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-start-setup (S3) · BUILD · start guard, POST /combinations/start and the landing offer (live only on the click), one Start setup button, /new and both path endpoints removed, checks moved; check_w1_start_setup 17/17 and the touched API checks pass; qa's check_qa_am_s2_1027 routed (f8d6e0cb); synced main 3858216e. AI US$0.
 - 2026-10-28 · W1-start-setup (S3) · DESIGN → BUILD · Lead answered the challenge (founder: wait for a click; M2 remove /new and both path endpoints; M3 start guard; M4 split with runtime slice 3; m5–m7, m10 accepted; m8, m9 after runtime slice 2); Lead response recorded. AI US$0.
@@ -45,4 +48,3 @@ updated: 2026-10-28
 - 2026-10-28 · W1-visual-system · FIX (Lead PR #66 review) · three fixes with a pass and a fail check each: Load sample records itself as creator (sample names never an own draft), Move past a retired sibling keeps it in place, the Add pop-up seeds from the type it was opened for; structure_r3 34/34, structure_browser 123/123; full run-suites on the fix commit. AI US$0.
 - 2026-10-28 · W1-visual-system · BUILD → EARLY-LOOK · round 3 built: R3a Program structure (263bb9a) with the shared lifecycle pattern (93b0040b: one guard and word set, own draft deleted at once with Undo, re-check before Approve, RowAction / BlockedLine / WherePanel / ImpactPanel / Undo toast), R3b Immigration programs (776d4169); run-suites 41/41 on 776d4169, journey 45/45; main merged e36bf06e. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-visual-system · DESIGN → BUILD · applied Lead note (round 3 challenge agreed, Majors 1–4, Minors 5–10); R3a built: one row-action rule (nodeCan), branch delete exact and all or nothing, a combination row's Retire/Restore with its combination, Delete wording, the page (filter bar, Tree, List, Edit + action on every row); qa words in their own commit 2101164. AI US$0.
-- 2026-10-28 · W1-visual-system · EARLY-LOOK → DESIGN · applied Lead message (P-128 round 3 agreed; note on lead/2026-10-27 8e7d47f); screen-challenge written in W1-visual-system/challenge.md: Build after these changes, 4 Major, 6 Minor, back-end plan; no code. Owner → Lead. AI US$0.
