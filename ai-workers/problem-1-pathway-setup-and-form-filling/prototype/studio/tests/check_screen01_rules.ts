@@ -112,7 +112,7 @@ m = missingItems(empty, people, [], visitor);
 ok("step once pass: every line shares the step → the lines carry only causes and the step is named once (sharedStep)", m.length > 1 && sharedStep(m) === "Add 1 form from the library" && m.every((x) => !/Next step/.test(x.text)), m.map((x) => x.text));
 m = missingItems(empty, people, []);
 ok("step once fail: lines with different steps each keep their own (nothing is merged away)", sharedStep(m) === null && m.length === 2 && m.every((x) => /Next step: /.test(x.text)) && new Set(m.map((x) => x.step)).size === 2, m.map((x) => x.text));
-ok("step once: a single line keeps its step in the sentence (nothing to repeat)", sharedStep([{ step: "Add sources" }]) === null && missingItems({ ...empty, sections: full.sections, placements: full.placements } as Snapshot, people, [], setupOf({})).every((x) => /Next step: Add sources\./.test(x.text)));
+ok("step once: a single line keeps its step in the sentence (nothing to repeat)", sharedStep([{ step: "Find forms" }]) === null && missingItems({ ...empty, sections: full.sections, placements: full.placements } as Snapshot, people, [], setupOf({})).every((x) => /Next step: Find forms\./.test(x.text)));
 
 // ---------------------------------------------------------------- round 3: invisible characters never make a twin
 ok("round 3 fail: a name with an invisible character is the same name (no look-alike twin)", normalizeLabel("Super\u2060 visa") === normalizeLabel("Super visa") && normalizeLabel("Super\u3164visa") === normalizeLabel("Supervisa") && CreateNodeBody.parse({ kind: "PROGRAM", parentKey: "individual", label: "Super\u200d visa" }).label === "Super visa");
