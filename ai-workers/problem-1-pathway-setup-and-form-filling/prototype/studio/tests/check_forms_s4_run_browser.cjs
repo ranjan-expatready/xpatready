@@ -10,7 +10,7 @@ const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const PORT = Number(process.argv[2] ?? 4457), DB = process.argv[3] ?? "xr_studio_forms_s4b";
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
-const VAR = path.join(__dirname, "..", "var", "isolated-forms_s4b");
+const VAR = path.join(__dirname, "..", "var", `isolated-${DB.replace(/^xr_studio_/, "")}`); // the copy's own folder, whatever its name
 const SHOTS = path.join(ROOT, "product", "screens", "W1-form-library", "screenshots", "slice2"); fs.mkdirSync(SHOTS, { recursive: true });
 const PDF = path.join(ROOT, "official-sources", "ircc", "forms", "imm5604e.pdf");
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();

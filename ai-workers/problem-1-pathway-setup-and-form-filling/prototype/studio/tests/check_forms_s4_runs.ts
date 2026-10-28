@@ -17,7 +17,7 @@ import { WAVE1_CAP_USD } from "../../p2/policy.ts";
 
 const PORT = Number(process.argv[2] ?? 4456), DB = process.argv[3] ?? "xr_studio_forms_s4r";
 const STUDIO = join(import.meta.dirname, ".."), OFFICIAL = join(STUDIO, "..", "..", "official-sources", "ircc"), P2 = join(STUDIO, "..", "p2");
-const VAR = join(STUDIO, "var", "isolated-forms_s4r");
+const VAR = join(STUDIO, "var", `isolated-${DB.replace(/^xr_studio_/, "")}`); // the copy's own folder, whatever its name (run-suites prefixes it)
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
