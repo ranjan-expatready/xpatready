@@ -10,7 +10,7 @@ current_item: W1-questions-and-documents (W1-15, P-130–P-132)
 current_slice: slice 1 — data and rules (Comes from by rules, FactSource choices and PQR ticks, per-role coverage, C4.10 release rules); plus QA-69 and Devin Review's two PR #71 points
 stage: BUILD
 owner: Builder
-next_action: Builder: synced main 32961d69 (df23c39d, pushed); full run-suites running on df23c39d (the uncommitted files meanwhile are its by-products, restored when it ends); then EARLY-LOOK by message with the API evidence (slice 1 has no screen).
+next_action: Builder: full run-suites on df23c39d: 53 pass, 5 fail (copies that did not start or timed out under load, plus check_s5_slice3_browser's Undo toast step); rerunning those five one at a time; then EARLY-LOOK by message with the API evidence.
 blocked_by: none
 updated: 2026-10-29
 
@@ -25,6 +25,7 @@ updated: 2026-10-29
 * **Slice 3 (built 28 Oct):** finder strip and dialog (`web/src/pages/workspace/finder.tsx`), Picked by AI · Sample, row ⋯ menu (Redo with AI, Replace edition, Remove from this combination), the one Undo bar on the forms lane's `POST …/forms/undo` plus the shared Undo toast, Removed in this draft with Add back, guides linked as sources (`api/src/guide-sources.ts`, hooks in `demo.ts` and one line in `finder.ts finish`). S5's own restore route is gone. Tests `check_s5_slice3.ts` (4436) and `check_s5_slice3_browser.cjs` (4437). Open for the Lead: Who can be filled by AI (needs a paid live run to record a replay); other tabs' removes; the older Add-from-library picker.
 
 ## Log (last 10 lines)
+- 2026-10-29 · Builder (Mac): full run-suites on df23c39d 53 pass / 5 fail (load: isolated copy did not start, launcher timeouts; slice3 browser Undo toast); rerunning the five alone; by-products restored. AI US$0.
 - 2026-10-29 · Builder (Mac): Lead (seventh chat) resume message applied; one shared preview render for coverage and sources (16d0fdf9; check_engine 38/38); synced main 32961d69 (df23c39d); full suites running on df23c39d. AI US$0.
 - 2026-10-29 · Builder (Mac): applied Lead messages (S5 merged; Devin Review points; W1-15 PLAN agreed): Devin fixes 7237832b (browser 21/21, live approval 5/5); challenge + plan da3c814c; W1-15 slice 1 built 96f97e62/37f946af (check_w115_slice1 39/39), QA-69 (leadcheck 49/49); full suites: 56 pass, check_engine fixture updated, check_forms_s4_library_browser under check. AI US$0.
 - 2026-10-28 · Builder (Mac): applied Lead note 2026-10-28 (sixth chat, S5 Lead check FIX); synced main 38722933; fixed L1–L11 with a pass and a fail test each (check_s5_leadcheck 46/46, check_s5_leadcheck_browser 18/18) and L12 by updating check_screen01_browser's upload step to S4's Upload PDF (128/128; S5 unchanged); full run-suites 56/56 on bb853222; graph exit 0; by-products restored; CHECK, owner Lead. AI US$0.
@@ -34,4 +35,3 @@ updated: 2026-10-29
 - 2026-10-28 · Builder (Mac): Lead: founder Go on slice 3; saved and pushed; next sync main after PR #69 (QA-53), suites, MERGE hand-back. AI US$0.
 - 2026-10-28 · Builder (Mac): Lead split with S3 applied (first-run Find button → slot data-finder-start for screens) and Who can be filled from the guide built (people-ai.ts, prompts, Fill from the guide; rules and saved answers at US$0, AI now shown, never run here); check_s5_people_ai 15/15, slice3 browser 35/35; full suites running. AI US$0.
 - 2026-10-28 · Builder (Mac): slice 3 → EARLY-LOOK: full run-suites 50/52 (check_forms_pdf_hardening passes alone on :4438, 49/49: port clash on the forms lane's 4450; check_screen01_browser fails on main too: S4 renamed the library upload, screens lane's test); demo journey 46/46 on :4433 after moving B2 to S4's upload (a damaged non-official file is refused) and A1 to 27 sources; graph exit 0; owner Lead. AI US$0.
-- 2026-10-28 · Builder (Mac): slice 3 built and pushed step by step (ad95230f … 6b6da6d5): finder strip and plan dialog, Picked by AI, row menu, Remove from this combination with the forms lane's DELETE and one Undo bar + shared toast, Add back, guides as sources; check_s5_slice3 23/23, browser 27/27; slice 1/2 checks moved to the forms lane's calls; graph exit 0; full suites running. AI US$0.
