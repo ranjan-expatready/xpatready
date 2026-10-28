@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac, sixth chat, Claude Code): PR #69 (368b8c32) and records PRs are on main; S5 is in FIX (not merged). Mode **/qa after-merge** on current main: QA-53 deny-by-default on every configuration read (case officer, client, nobody), the Form library on the shared lifecycle components, the returned form-change resend; check R69-1..3 (forms) as bugs if you reproduce them. Then the clean coverage rerun on S4 when the Mac is quiet. Report to `qa/reports/2026-10-28-after-merge-69.md`, new bugs to `qa/BUGS.md` by lane. US$0.
+2026-10-29 night (Lead, sixth chat; founder asleep): Mode: clean **coverage rerun on S4 and S5** (main 32961d69+), report `qa/reports/2026-10-29-coverage-s4-s5.md`, update CAPABILITIES statuses you tested (C11.2, C11.9, C11.11, C11.12, C1.8 …), new bugs by lane. Then after-merge on S3 when it merges. Isolated copies only. US$0. **29 Oct morning (Lead, seventh chat):** first, before the coverage rerun (it waits until screens and runtime finish their suites): outside review DV-doc-1 (`history/devin/2026-10-29-devin-static-docs.md`): retest and close the bugs fixed by merged PRs (QA-55/56/58/59/60 PR #67, QA-53 PR #69, QA-61–64 PR #73), bring QA-65–68 onto main, and re-status the capabilities that merged tests name but still say Not built (C5.3, C11.12, C11.15, C11.17, C2.3, C3.7, C1.8), each from a run, not from the file names.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
