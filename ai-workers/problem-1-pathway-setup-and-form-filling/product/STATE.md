@@ -8,7 +8,7 @@ updated: 2026-10-27
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | W1-visual-system | BUILD | Builder | Lead note waiting for sync · Fresh session: follow the Handover above (run-suites, journey, QA-51/52/54, then EARLY-LOOK and SendMessage… |
+| screens | W1-visual-system | EARLY-LOOK | Lead | Lead note waiting for sync · Lead: early look of the visual-system slice with the founder (screenshots in screens/W1-visual-system/scree… |
 | forms | S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124) | CHECK | Lead | Lead note waiting for sync · Handover written below; Lead checks S4 (CI on 5825811 first), then QA-53 for the next session |
 | runtime | W1-combination-workspace (S5, W1-08, P-123) (slice 1 early-look fixes 1–4 + slice 2 (Questionnaires per person with coverage, Documents kept, Review shows AI picks)) | EARLY-LOOK | Lead | Lead note waiting for sync · Blocked: slice 3 waits for forms S4 slices 1 and 2 |
 | m3 | M3-prepare-application | DESIGN | Lead | Lead reads screens/M3-prepare-application/research-agent-view.md (three IRCC representative accounts, PDF v… |
@@ -18,6 +18,8 @@ updated: 2026-10-27
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-28 · Lead (Mac) · **Founder Go on S5 slice 2** (drift check clean, CI green f0166e5); runtime → BUILD (Shoulds, then slice 3 after S4). **Forms drift check: Merge after fixes** (sync main, Delete/Remove words, Load sample fixtures for change 4, replay keyed by the combination); P-123 amended: an unread hand upload waits for a person. Fresh forms and runtime sessions next.
+- 2026-10-28 · Lead (Mac) · **Fourth Lead chat resumed after the handover:** fresh screens session started (visual-system finish); drift checks by fresh agents on forms S4, runtime S5 and screens. Screens drift check: **Fix first** (CI red on d5e0e99 in 4 suites; "used by" missing on each line per P-127; QA-44 focus lag; no API refusal tests for the Add pop-up), sent to the screens session. Forms and runtime checks running.
 - 2026-10-28 · Lead (Mac) · **All four lanes handed over** (runtime f0166e5: S5 fixes 1–4 + slice 2 at EARLY-LOOK); sessions closed. Next chat: `/lead` (drift check, S4 Lead check, visual-system and S5 early looks).
 - 2026-10-28 · Lead (Mac) · **Handover:** forms (08eb170, S4 at CHECK), screens (f05a2e1, visual-system slice built, finishing), qa (657c7f8, WAITING) handed over and closed; runtime handover pending; LEAD.md "Where we are" rewritten for the next Lead.
 - 2026-10-27 · Lead (Mac) · **qa after-merge on the screens FIX: ready** (8c02ed6; QA-44/45/46/49/50 closed; QA-51/52/54 → screens visual-system slice; QA-53 → deny all configuration reads now, one shared guard, forms after S4). **Founder: full handover** — every lane stops at a safe point with a written handover, the Lead too; a fresh Lead resumes all lanes.

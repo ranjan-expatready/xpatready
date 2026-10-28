@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 00:45 (Lead, Mac): **Handover read (f0166e5): the four early-look fixes and slice 2 are done (8346a37), EARLY-LOOK, owner Lead.** The new Lead first runs the drift check (LEAD.md) on this branch, reads CI on 8346a37 and f0166e5, then shows the founder the slice 2 early look (`screens/W1-combination-workspace/screenshots/slice2/`). For the fresh runtime session after the founder's Go: slice 3 (forms from the finder) once S4 is merged; Documents keeps naming a new type until S6's one Add exists. Send hand-backs to the Lead by message.
+2026-10-28 (Lead, Mac): **Founder Go on the S5 slice 2 early look (28 Oct)**, after a fresh drift check (`screens/W1-combination-workspace/drift-check.md`: no Must or Major; CI green on f0166e5; four S5 checks rerun green). Stage BUILD, owner Builder. Now: fold in the Shoulds — Review shows plain questions, not field codes, for unasked questions (`review.tsx:55`); Forms tab must not say "No forms yet · 0 forms" when forms are attached; no raw "applicableNote:" in IRCC's words; Preview's jump list without repeated names; removing a form from a combination asks first and offers Undo (P-116); a sample state that shows "Review shows AI picks" with a test. Then **slice 3 (forms from the finder) only after S4 merges**: sync main first (S4 touches `studio.ts`, `main.ts`, `schema.prisma`; expect conflicts). Start setup still opens New combination: that is S3 (screens), not yours. Send hand-backs to the Lead by message.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

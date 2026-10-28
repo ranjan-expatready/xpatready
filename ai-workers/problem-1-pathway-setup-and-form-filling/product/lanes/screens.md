@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 00:30 (Lead, Mac): **Handover read (f05a2e1).** For the fresh screens session: **stage BUILD, owner Builder, branch `screens/2026-10-27-visual-system`.** Finish the visual-system slice from your Handover section below: add **QA-51** (To review trail shows its Pathway type), **QA-52** (removal approval says what happens: an unused name goes at once), **QA-54** (a case person opening `/` or `/structure` by URL sees "This page is for configuration people" with a way back, not a load error); run the full suites and the studio journey on your isolated copy; check CI on your exact commit; then **EARLY-LOOK** (screenshots at 1440, 1024, 390 px) and send your Paste to the Lead by message. **P-126:** while that early look waits, the S3 re-check is done (in `W1-structure-programs/challenge.md`); no S3 code until the founder's Go and S4's merge. AI US$0; by-products out of commits.
+2026-10-28 (Lead, Mac): **Drift check (fresh agent, `screens/W1-visual-system/drift-check.md`): Fix first.** Stage BUILD, owner Builder (also sent by message). Must: CI red on d5e0e99 in screen01_browser, screen01_smallfix, programs_s2, s1s2_fix: green on your exact final commit. Major: those suites still expect the old "Structure" words; each combination line shows "used by" (P-127 (1)), wrapping at 390; QA-44 focus stays in the field during a save (`add-to-structure.tsx:154`); real API tests for `POST /structure/path` refusals and the all-or-nothing save. Then QA-51/52/54, full suites, journey, EARLY-LOOK by message.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
