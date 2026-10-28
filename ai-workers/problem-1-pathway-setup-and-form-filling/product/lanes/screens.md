@@ -7,7 +7,7 @@
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 ## Handover (screens lane, 28 Oct, kept current; a fresh session resumes from this file alone)
-**Item W1-visual-system, round 3 (P-128, the shared lifecycle pattern P-116 amended). Branch `screens/2026-10-27-visual-system`, pushed. Stage FIX for the Lead PR #66 review → back to the Lead.** AI spent US$0. Copy: this worktree's folder is named `runtime-*`, so it is bound to screens by `.claude/lane` (git-ignored).
+**Item W1-visual-system, round 3 (P-128, the shared lifecycle pattern P-116 amended). Branch `screens/2026-10-27-visual-system`, pushed. Stage FIX for qa's after-merge on main dccd87e (Lead message 28 Oct) → back to the Lead; then S3.** AI spent US$0. Copy: this worktree's folder is named `runtime-*`, so it is bound to screens by `.claude/lane` (git-ignored).
 
 **Done and pushed:**
 - R3a Program structure 263bb9a; shared lifecycle pattern 93b0040b (one guard `api/src/lifecycle.ts`, one word set `contracts/lifecycle.ts`, components `web/src/components/lifecycle/`); R3b Immigration programs 776d4169; qa-lane words 2101164; main merged e36bf06e. Founder Go on round 3; Lead check passed; Lead PR #66 (`lead/2026-10-28-r3`) green CI.
@@ -17,7 +17,10 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - Follow-up b078f150: under load the full run caught Add combination prefilling the Program without the Pathway (the Pathway came from the catalogue's answer, the Program from the address); the Pathway now comes from the address and the pop-up fills an empty level from the one below.
 - Evidence: full run-suites on 19e8911d 40/41 (the one failure is that prefill race, fixed in b078f150); on b078f150 every touched check passes on private copies (programs_r3 26/26, programs_s2 87/87, structure_browser 123/123, s1s2_fix 30/30, qa51 21/21, visual_system 21/21, screen01_browser 128/128, smallfix) and the studio journey 45/45.
 
-**Next:** the Lead re-merges PR #66 (hand-back sent by message). Then S3 (Start setup) after S4's merge. Then S3 (Start setup) after S4's merge, from the S3 re-check and addendum in `screens/W1-structure-programs/challenge.md`.
+- FIX for qa's after-merge on main dccd87e (qa branch `claude/qa-after-merge-s1-21bfdf` 9ad98f37; QA-57 was already fixed in S4's merge, not redone): QA-60 bccd7f26 (letters typed after "Add and add another" kept), QA-56 3da467e6 (Enter accepts a typed name), QA-55 3abc0a35 (Retire names what really blocks, with the way out), QA-58 691d7303 (Undo kept on the page note), QA-59 9ba1630d (Returned with the note; Send again), Button primary hover f4145a47 (darker, 8.15:1). Each with a pass step and a fail or fail-guard; table in `screens/W1-visual-system/build-notes.md` "Fixes after qa's after-merge".
+- Evidence: touched checks on private copies (structure_browser 135/135, structure_r3 41/41, structure 83/83, visual_system 24/24); full run-suites on f4145a47 running.
+
+**Next:** finish the evidence on f4145a47 (run-suites, qa's two checks, studio journey), then hand back to the Lead by message
 
 **Learned, not written elsewhere:**
 - Other lanes run this lane's checks under the same copy names and ports (`run-suites.sh` uses the usage lines), and all copies share one PostgreSQL server: two runs at once break each other. For reruns, use private names and ports (for example `<name>_mine` on 4460+), then drop those databases.
@@ -27,10 +30,10 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-visual-system
-stage: FIX done (PR #66 review)
-owner: Lead
-next_action: Lead: re-merge PR #66 with b078f150 (the three review fixes and one prefill follow-up; local evidence in build-notes "Fixes after the Lead PR #66 review")
-then: S3 BUILD after round 3, the founder's Go and S4's merge (S3 re-check and addendum done, P-126); wave 1 desktop only (1440, 1024)
+stage: FIX (qa after-merge dccd87e)
+owner: Builder
+next_action: finish the evidence on f4145a47 (run-suites, qa's two checks, studio journey), then hand back to the Lead by message
+then: S3 Start setup (stage DESIGN): refresh the S3 re-check against main, concept challenge, PLAN by message; desktop only (1440, 1024)
 blocked_by: none
 updated: 2026-10-28
 
