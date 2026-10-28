@@ -1,6 +1,8 @@
 // Immigration programs (W1-04, S2; concept §2, §5, §7, §8; board design/draft-programs-v2.html design D; P-104, P-112,
-// P-113, P-115; founder 27 Oct): every combination of one Pathway type (Retail · Corporate and employers), opened by the
-// same Pathway cards as the Program structure ("All pathways" shows every Pathway's section; a card shows only that Pathway's).
+// P-113, P-115; founder 27 Oct; round 3 P-128 (4)(5), board W1-visual-system/design/draft-r3-immigration-programs-top.html
+// option P2): every combination of one Pathway type (Retail · Corporate and employers), under the same filter bar as
+// Program structure (Pathway chips, Program, Status, Needs you, active-filter chips and Clear all, all in the address).
+// "Add combination" opens the one "Add to Program structure" pop-up here; the new card shows in place, Just added.
 // Cards (default) or List, remembered per person: a card is the full five-part trail, a calculated status, the four
 // setup steps (Forms · Draft · Review · Release), how it is filed and one next step; the list is the same data as dense
 // rows grouped by Pathway. Above: search (⌘K) and "Status: All ▾" (every combination by default, BR-13 amends P-49);
@@ -14,11 +16,12 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { CatalogueLeaf, CatalogueResponse, CatalogueSection, NextAction } from "../../../contracts/programs";
 import { PATHWAY_TYPE_LABEL } from "../../../contracts/structure";
 import { useActorId, useApi, useSessionView, useToast } from "@/lib/api";
+import type { PathwayType } from "../../../contracts/structure";
+import { AddToStructure, type AddPrefill } from "@/components/add-to-structure";
 import { Button, Input, Notice } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SHOW_ONLY_STEPS, StepLabel, StepTip, useNextStep } from "@/components/next-step";
-import { PathwayCards } from "@/components/pathway-cards";
 import { LevelMark, pathwayAccent, Trail } from "@/components/levels";
 import { StatusChip, Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
@@ -43,6 +46,7 @@ const STATUSES = [
   ["live", "Live", "Firms can open cases on it."],
 ] as const;
 type StatusKey = (typeof STATUSES)[number][0];
+const statusWordOf = (k: StatusKey) => STATUSES.find(([x]) => x === k)![1];
 const NEED_YOU = "Combinations waiting for a person: something to review, something missing or something blocking release.";
 const SETUP_TIP = "The four setup steps: Forms added · Draft done (AI or by hand) · Review done · Released. All four done = Live.";
 const VIEW_TIP = "Cards show setup progress; the list fits more on screen. Remembered for you.";
@@ -90,7 +94,12 @@ export function ProgramsPage() {
   const sort = sp.get("sort") === "status" ? "status" : sp.get("sort") === "-status" ? "-status" : "path";
   const q = sp.get("q") ?? "";
   const sel = sp.get("sel");
+  const needsOnly = sp.get("n") === "1";
   const [view, setView] = useView(sp);
+  // P-128 (5): Add combination opens the one pop-up here; the new card is tagged Just added and said on the page.
+  const [adding, setAdding] = React.useState<AddPrefill | null>(null);
+  const [justAdded, setJustAdded] = React.useState<string | null>(null);
+  const [note, setNote] = React.useState<string | null>(null);
   const [typed, setTyped] = React.useState(q);
   React.useEffect(() => setTyped(q), [q]);
   React.useEffect(() => { const t = setTimeout(() => { if (typed !== q) set({ q: typed || null }); }, 120); return () => clearTimeout(t); }, [typed]);
@@ -111,12 +120,13 @@ export function ProgramsPage() {
       return n;
     }, { replace: !push });
   }
-  const rows: CatalogueLeaf[] = cat.data?.rows ?? [];
+  // "Needs you" (P-128 (4)): only the combinations waiting for a person, on this answer.
+  const rows: CatalogueLeaf[] = (cat.data?.rows ?? []).filter((r) => !needsOnly || r.needsYou);
   const sections: CatalogueSection[] = cat.data?.sections ?? [];
   // From the answer, not the address: while a new Pathway's answer is on its way, the page keeps showing the last one whole.
   const answered = cat.data?.pathwayKey ?? "";
   const shownSections = answered && sections.some((s) => s.pathwayKey === answered) ? sections.filter((s) => s.pathwayKey === answered) : sections;
-  const filtering = filter !== "all" || !!q || !!program || !!under;
+  const filtering = filter !== "all" || !!q || !!program || !!under || needsOnly;
   const groups = shownSections.map((s) => ({ s, i: sections.findIndex((x) => x.pathwayKey === s.pathwayKey), rows: rows.filter((r) => r.pathwayKey === s.pathwayKey) })).filter((g) => g.rows.length || !filtering);
   const [closed, setClosed] = React.useState<Set<string>>(new Set());
   React.useEffect(() => setClosed(new Set()), [pathway]);
@@ -161,8 +171,25 @@ export function ProgramsPage() {
     if (cat.data && !cat.isPlaceholderData && pathwayKey && !answered) set({ p: null }); // not a Pathway of this tab (break M1)
   }, [cat.data, cat.isPlaceholderData, pathwayKey, answered]);
   const busy = cat.isPlaceholderData;
+  // After Add: a filter that would hide the new card is cleared, so it shows in place (board P2, "After Add").
+  React.useEffect(() => {
+    if (!justAdded || !cat.data || cat.isPlaceholderData || rows.some((r) => r.nodeKey === justAdded)) return;
+    set({ q: null, n: null, prog: null, under: null, p: null, ...(filter !== "all" && filter !== "not_started" ? { f: null } : {}) });
+  }, [justAdded, cat.data, cat.isPlaceholderData]); // eslint-disable-line react-hooks/exhaustive-deps
+  React.useEffect(() => {
+    if (!justAdded || !rows.some((r) => r.nodeKey === justAdded)) return;
+    requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-node="${CSS.escape(justAdded)}"]`)?.scrollIntoView({ block: "center" }));
+  }, [justAdded, rows.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const allCount = cat.data?.pathways.find((x) => x.value === pathway)?.combinations ?? 0;
+  const activeChips: { key: string; label: string; clear: () => void }[] = [
+    ...(pathwayLabel ? [{ key: "p", label: pathwayLabel, clear: () => set({ p: null, prog: null, under: null }) }] : []),
+    ...(scopeChip ? [{ key: "prog", label: scopeChip, clear: () => set({ prog: null, under: null }) }] : []),
+    ...(filter !== "all" ? [{ key: "f", label: statusWordOf(filter), clear: () => set({ f: null }) }] : []),
+    ...(needsOnly ? [{ key: "n", label: "Needs you", clear: () => set({ n: null }) }] : []),
+    ...(q ? [{ key: "q", label: `"${q}"`, clear: () => { setTyped(""); set({ q: null }); } }] : []),
+  ];
   const scopeTotal = pathwayLabel ? shownSections[0].combinations : cat.data?.pathways.find((x) => x.value === pathway)?.combinations ?? 0;
-  const statusWord = STATUSES.find(([k]) => k === filter)![1];
+  const statusWord = statusWordOf(filter);
 
   return (
     <TipProvider>
@@ -173,34 +200,55 @@ export function ProgramsPage() {
             <button type="button" className="inline-flex cursor-help rounded-full text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" aria-label="About this page"><Info className="size-4" aria-hidden /></button>
           </Tip>
           <span className="flex-1" />
-          <Tip tip="Add or rename pathways, programs, categories and sub-categories. New names enter only there.">
+          <Tip tip="Rename, reorder or delete Pathways, Programs, Categories and Sub-categories.">
             <Button variant="secondary" onClick={() => nav(`/structure${pathway === "CORPORATE" ? "?t=CORPORATE" : ""}`)}><ListTree /> Program structure</Button>
           </Tip>
-          <Tip tip={!knowsPerson ? "Loading…" : noPerson ? "The studio could not tell who you are: see the notice above, then reload." : canAuthor ? "Pick a path from the Program structure and start its setup, or open it if it is already set up." : "Only a configuration author starts combinations. Switch to the Configuration author."}>
-            <span><Button disabled={!canAuthor} onClick={() => nav(`/new${pathway === "CORPORATE" ? "?pw=CORPORATE" : ""}`)}><Plus /> New combination</Button></span>
+          <Tip tip={!knowsPerson ? "Loading…" : noPerson ? "The studio could not tell who you are: see the notice above, then reload." : canAuthor ? "Opens the Add to Program structure pop-up here. Pick what exists or type new names; the new combination appears on this page as Not started." : "Only a configuration author adds combinations. Switch to the Configuration author."}>
+            <span><Button disabled={!canAuthor} onClick={() => { if (canAuthor) setAdding({ pathwayKey: answered || undefined, programKey: program || undefined }); }} data-add-combination><Plus /> Add combination</Button></span>
           </Tip>
         </div>
         <p className="-mt-3 text-sm text-text-muted">Every combination your firm can open, and where its setup stands.</p>
 
-        <TypeSwitch value={pathway} pathways={cat.data?.pathways} onChange={(v) => setSp(v === "CORPORATE" ? { pw: "CORPORATE" } : {}, { replace: false })} />
-
-        {cat.data && sections.length ? (
-          <PathwayCards typeLabel={typeLabel} pathways={sections.map((s) => ({ key: s.pathwayKey, label: s.label, combinations: s.combinations, needs: s.needs }))}
-            open={answered || null} onOpen={(k) => set({ p: k }, true)}
-            allTip={`Shows every ${typeLabel} pathway's combinations, one section each.`} cardTip={(l) => `Shows only ${l}'s combinations. A Pathway is the outcome the application leads to, such as temporary or permanent residence.`}
-            add={{ enabled: canAuthor, tip: canAuthor ? `New names enter on the Program structure: opens its Add pop-up for ${typeLabel}.` : AUTHOR_ONLY, onAdd: () => nav(`/structure?add=1&from=programs${pathway === "CORPORATE" ? "&t=CORPORATE" : ""}`) }} />
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[16rem] flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden />
-            <Input ref={search} maxLength={120} className="pl-8 pr-14" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Search names, form numbers, documents" aria-label="Search combinations, form numbers and documents" aria-keyshortcuts="Meta+K Control+K" />
-            {typed ? <button type="button" className="absolute right-1 top-1 rounded p-1.5 text-text-muted hover:bg-text/5" aria-label="Clear search" onClick={() => { setTyped(""); set({ q: null }); }}><X className="size-4" /></button>
-              : <kbd className="pointer-events-none absolute right-2 top-2 rounded border border-border px-1.5 text-xs text-text-muted">⌘K</kbd>}
+        {/* The filter bar (P-128 (4), board P2): the same pattern as Program structure. */}
+        <div className="flex flex-col gap-2.5" data-filter-bar>
+          <div className="flex flex-wrap items-center gap-2">
+            <TypeSwitch value={pathway} pathways={cat.data?.pathways} onChange={(v) => setSp(v === "CORPORATE" ? { pw: "CORPORATE" } : {}, { replace: false })} />
+            <span className="flex-1" />
+            <ViewSwitch value={view} onChange={(v) => { setView(v); set({ v: null }, true); }} />
           </div>
-          <StatusFilter value={filter} counts={counts} onChange={(k) => set({ f: k === "all" ? null : k }, true)} />
-          {scopeChip ? <span className="inline-flex h-8 items-center gap-1 rounded-full border border-primary/40 bg-primary/10 pl-3 pr-1 text-sm text-text-link">Showing: {scopeChip}<button type="button" className="rounded-full p-1 hover:bg-primary/15" aria-label={`Stop showing only ${scopeChip}`} onClick={() => set({ under: null, prog: null })}><X className="size-3.5" /></button></span> : null}
-          <ViewSwitch value={view} onChange={(v) => { setView(v); set({ v: null }, true); }} />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[15rem] flex-[1_1_15rem]">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden />
+              <Input ref={search} maxLength={120} className="pl-8 pr-14" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Search names, form numbers, documents" aria-label="Search combinations, form numbers and documents" aria-keyshortcuts="Meta+K Control+K" />
+              {typed ? <button type="button" className="absolute right-1 top-1 rounded p-1.5 text-text-muted hover:bg-text/5" aria-label="Clear search" onClick={() => { setTyped(""); set({ q: null }); }}><X className="size-4" /></button>
+                : <kbd className="pointer-events-none absolute right-2 top-2 rounded border border-border px-1.5 text-xs text-text-muted">⌘K</kbd>}
+            </div>
+            {cat.data && sections.length ? (
+              <div role="group" aria-label="Pathway" className="flex flex-wrap items-center gap-1.5" data-pathway-chips>
+                {[{ key: "", label: "All", count: allCount, needs: sections.reduce((n, x) => n + x.needs, 0), idx: -1 }, ...sections.map((x, i) => ({ key: x.pathwayKey, label: x.label, count: x.combinations, needs: x.needs, idx: i }))].map((c) => (
+                  <Tip key={c.key || "all"} tip={c.key ? `Shows only ${c.label}'s combinations.${c.needs ? ` ${c.needs} need you.` : ""}` : `Shows every ${typeLabel} pathway's combinations.`}>
+                    <button type="button" aria-pressed={answered === c.key} onClick={() => set({ p: c.key || null, prog: null, under: null }, true)} data-pathway-chip={c.key || "all"}
+                      className={cn("inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", answered === c.key ? "border-primary/40 bg-primary/10 font-semibold text-text-link" : "border-border-strong bg-surface-raised text-text hover:bg-text/5")}>
+                      {c.idx >= 0 ? <span className="h-3.5 w-1 rounded-sm" style={{ background: pathwayAccent(c.idx) }} aria-hidden /> : null}{c.label}<span className="text-xs font-medium tabular-nums text-text-muted" data-count>{c.count}</span>
+                      {c.needs ? <span className="rounded-full bg-warn/15 px-1.5 text-xs font-semibold text-text-warn" data-need>{c.needs}<span className="sr-only"> need you</span></span> : null}
+                    </button>
+                  </Tip>
+                ))}
+              </div>
+            ) : null}
+            {cat.data?.programs.length ? (
+              <select aria-label="Program" value={program} onChange={(e) => set({ prog: e.target.value || null, under: null }, true)} className="h-9 max-w-[15rem] rounded-lg border border-border bg-surface px-2 text-sm" data-program-filter>
+                <option value="">Program: All</option>{cat.data.programs.map((x) => <option key={x.key} value={x.key}>{x.label} ({x.combinations})</option>)}
+              </select>
+            ) : null}
+            <StatusFilter value={filter} counts={counts} onChange={(k) => set({ f: k === "all" ? null : k }, true)} />
+            <Tip tip={NEED_YOU}>
+              <button type="button" aria-pressed={needsOnly} onClick={() => set({ n: needsOnly ? null : "1" }, true)} data-needs-you
+                className={cn("inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", needsOnly ? "border-warn bg-warn/10 font-semibold text-text-warn" : "border-border bg-surface-raised text-text hover:bg-text/5")}>
+                Needs you<span className="tabular-nums text-xs font-semibold">{(cat.data?.rows ?? []).filter((r) => r.needsYou).length}</span>
+              </button>
+            </Tip>
+          </div>
         </div>
 
         {counts && !nothingAtAll ? (
@@ -208,10 +256,15 @@ export function ProgramsPage() {
             {busy ? <span className="mr-1.5 inline-block size-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary align-[-1px]" role="status" aria-label="Updating" /> : null}
             <b className="font-semibold text-text">{q ? `${counts.all} of ${many(scopeTotal, "combination", "combinations")} match` : many(counts.all, "combination", "combinations")}</b>{pathwayLabel ? ` in ${pathwayLabel}` : ""}
             {([["live", "Live"], ["not_ready", "Not ready"], ["in_setup", "In setup"], ["not_started", "Not started"]] as const).filter(([k]) => counts[k]).map(([k, w]) => ` · ${counts[k]} ${w}`).join("")}
-            {filter !== "all" ? ` · showing ${rows.length} ${statusWord}` : ""}
+            {filter !== "all" || needsOnly ? ` · showing ${rows.length} of ${allCount}` : ""}
+            {activeChips.length ? <span className="ml-2 inline-flex flex-wrap items-center gap-1.5 align-middle" data-active-filters>
+              {activeChips.map((c) => <span key={c.key} className="inline-flex h-6 items-center gap-1 rounded-full border border-primary/40 bg-primary/10 pl-2.5 pr-1 text-xs font-medium text-text-link">{c.label}<button type="button" aria-label={`Remove the filter ${c.label}`} onClick={c.clear} className="flex size-4 items-center justify-center rounded-full hover:bg-primary/15"><X className="size-3" /></button></span>)}
+              <button type="button" className="text-sm font-medium text-text-link underline underline-offset-2" onClick={() => { setTyped(""); set({ p: null, prog: null, under: null, f: null, n: null, q: null }); }} data-clear-all>Clear all</button>
+            </span> : null}
             <span className="block text-xs" data-sample-note>Names are Sample until the immigration expert confirms.</span>
           </p>
         ) : null}
+        {note ? <p role="status" className="-mt-1 text-sm text-text-ok" data-page-note>{note}</p> : null}
         {cat.data?.fellBack ? <p className="text-sm text-text-muted" role="status">Nothing needs work right now, so every combination is shown.</p> : null}
         {q && cat.data?.otherPathwayMatches ? <p className="text-sm text-text-muted" role="status">{many(cat.data.otherPathwayMatches, "match", "matches")} in {PATHWAY_LABEL[other]}. <button type="button" className="text-text-link underline" onClick={() => set({ pw: other === "CORPORATE" ? "CORPORATE" : null, p: null, prog: null, under: null })}>Show {cat.data.otherPathwayMatches === 1 ? "it" : "them"}</button></p> : null}
         {pathway === "CORPORATE" && !nothingAtAll ? <CorporateCallout /> : null}
@@ -231,16 +284,19 @@ export function ProgramsPage() {
                   <SectionHeader s={s} accent={i} shown={mine.length} filtering={filtering} closed={closed.has(s.pathwayKey)} onToggle={() => toggle(s.pathwayKey)} />
                   {closed.has(s.pathwayKey) ? null : mine.length ? (
                     <ul className="mt-2.5 grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3" aria-label={`${s.label} combinations`}>
-                      {mine.map((r) => <li key={r.nodeKey} className="flex min-w-0"><SetupCard r={r} lit={sel === r.nodeKey} q={q} canAuthor={canAuthor} onOpen={() => void open(r)} onAct={step.run} /></li>)}
+                      {mine.map((r) => <li key={r.nodeKey} className="flex min-w-0"><SetupCard r={r} lit={sel === r.nodeKey || justAdded === r.nodeKey} justAdded={justAdded === r.nodeKey} q={q} canAuthor={canAuthor} onOpen={() => void open(r)} onAct={step.run} /></li>)}
                     </ul>
                   ) : <SectionEmpty label={s.label} pathway={pathway} />}
                 </section>
               ))}
             </div>
-          ) : <List groups={groups} closed={closed} onToggle={toggle} highlight={sel} q={q} sort={sort} filtering={filtering} pathway={pathway} canAuthor={canAuthor} onSort={() => set({ sort: sort === "path" ? "status" : sort === "status" ? "-status" : null })} onOpen={(r) => void open(r)} onAct={step.run} />}
+          ) : <List groups={groups} closed={closed} onToggle={toggle} highlight={sel ?? justAdded} q={q} sort={sort} filtering={filtering} pathway={pathway} canAuthor={canAuthor} onSort={() => set({ sort: sort === "path" ? "status" : sort === "status" ? "-status" : null })} onOpen={(r) => void open(r)} onAct={step.run} />}
         {rows.length && knowsPerson ? <p className="sr-only" role="status">{many(rows.length, "combination", "combinations")} shown</p> : null}
       </div>
       {step.dialog}
+      <AddToStructure open={!!adding} onClose={() => setAdding(null)} type={pathway as PathwayType} prefill={adding ?? undefined}
+        onAdded={(r, again) => { setJustAdded(r.leaf.key); setNote(`Added ${r.trail.join(" › ")}${r.combination ? ": listed here as Not started; no setup started." : ". Add a category under it to list a combination here."}`); if (!again) setAdding(null); }}
+        onShow={(k) => { setAdding(null); setJustAdded(k); }} />
     </TipProvider>
   );
 }
@@ -365,7 +421,7 @@ function NextStep({ r, canAuthor, tabIndex, onAct, onOpen, primary }: { r: Catal
 
 /** A setup card (concept §2): muted trail, the category bold with its sub-category below, status, the four steps,
  *  forms and how it is filed, one next step. The name opens the combination page. */
-function SetupCard({ r, lit, q, canAuthor, onOpen, onAct }: { r: CatalogueLeaf; lit: boolean; q: string; canAuthor: boolean; onOpen: () => void; onAct: (l: CatalogueLeaf, a: NextAction | null) => void }) {
+function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onAct }: { r: CatalogueLeaf; lit: boolean; justAdded?: boolean; q: string; canAuthor: boolean; onOpen: () => void; onAct: (l: CatalogueLeaf, a: NextAction | null) => void }) {
   const [type, pw, prog, catName, sub] = r.trail;
   const formsN = r.forms.filter((f) => !f.document).length;
   const found = r.forms.filter((f) => !f.document && !f.drafted), ready = found.filter((f) => f.inLibrary).length;
@@ -374,6 +430,7 @@ function SetupCard({ r, lit, q, canAuthor, onOpen, onAct }: { r: CatalogueLeaf; 
       className={cn("flex w-full flex-col gap-2.5 rounded-xl border bg-surface-raised p-4 shadow-sm transition-colors", lit ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-border-strong")}>
       <div className="flex items-start gap-2">
         <span className="min-w-0 flex-1 text-xs" data-trail><Trail parts={[type, pw, prog]} /></span>
+        {justAdded ? <span className="shrink-0 rounded-full bg-ok/15 px-2 py-0.5 text-xs font-semibold text-text-ok" data-just-added>Just added</span> : null}
         {isNotStarted(r) ? <NotStartedChip /> : <StatusChip status={r.status} text={STATUS_WORD[r.status]} />}
         {r.checked?.overdue ? <Tip focusable tip="Check overdue: compare with IRCC's published forms and guides."><span role="img" aria-label="Check overdue" className="inline-flex rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><TriangleAlert className="size-4 text-text-warn" aria-hidden /></span></Tip> : null}
       </div>

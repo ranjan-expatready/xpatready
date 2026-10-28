@@ -333,8 +333,9 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("item 6: the global draft bar shows total changes and affected combination count, with one release-review link", /^Draft · \d+ changes? across \d+ combinations?/.test(bar) && /Review and release \(\d+\)/.test(bar), bar);
   await state("programs-draft-bar", { viewport: true });
 
-  // New combination (unchanged since the early look) still opens and lands back in the list.
-  await p.getByRole("button", { name: "New combination" }).click(); await idle();
+  // The New combination page stays until S3 (P-125 (5)); since P-128 (5) Programs' button is Add combination (the
+  // pop-up in place), so the page is opened by its address here.
+  await p.goto(`${BASE}/new`); await idle();
   step("New combination opens the path builder page", /\/new/.test(p.url()) && await p.getByRole("heading", { name: /New combination/ }).count() === 1);
   const placeholdersFit = await p.locator('input[role="combobox"]').evaluateAll((xs) => xs.every((x) => { const c = document.createElement("canvas").getContext("2d"); c.font = getComputedStyle(x).font; return c.measureText(x.placeholder).width <= x.clientWidth - 24; }));
   step("review #10: a path back to Programs, no stray hint under Pathway, placeholders not cut", await p.getByRole("navigation", { name: "Path" }).getByRole("link", { name: "Immigration programs" }).count() === 1 && !/^exists$/m.test(await p.locator("main").innerText()) && placeholdersFit);

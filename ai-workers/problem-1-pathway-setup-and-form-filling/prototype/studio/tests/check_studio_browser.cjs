@@ -200,7 +200,8 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await go("/");
   // Layout v2 (P-35): no separate "Add program or category"; the New combination path builder (/new) picks or creates
   // each level (the server checks level, parent and duplicates) and creates the combination in one request.
-  await click(btn("New combination").first()); await p.waitForURL(/\/new/); // the empty list offers it twice (header and empty state)
+  // P-128 (5): Programs' button is Add combination (the pop-up in place); the path builder page stays until S3 (P-125 (5)).
+  await go("/new"); await p.waitForURL(/\/new/);
   const level = async (label, name) => {
     const box = p.getByRole("combobox", { name: label, exact: true });
     await box.click(); await box.fill(name);

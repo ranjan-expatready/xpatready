@@ -18,6 +18,8 @@ import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtWhen, StatusChip, Tip, TipProvider } from "@/components/status";
 import { AddToStructure, LocationPicker, LOC_TIP, locKey, type AddPrefill } from "@/components/add-to-structure";
+import { BlockedLine, ImpactPanel, RowAction, useUndoToast, WherePanel } from "@/components/lifecycle";
+import { ACTION_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../../../contracts/lifecycle";
 import { LevelMark, pathwayAccent } from "@/components/levels";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +38,8 @@ const locWords = (l: string[]) => (l.length === 2 ? "Inside or outside Canada" :
 const NMC_TIP = "Only the spelling check ran; a reviewer compares the meaning by eye. The AI meaning check runs when paid runs are on.";
 const AUTHOR_ONLY = "Only a configuration author adds, renames, orders, deletes or retires names. You can read everything.";
 const NUM_TIP = "Position in this structure; it changes when you reorder. Not an IRCC code.";
-const PENDING_WORD: Record<LifecycleAction, string> = { DELETE: "Deletion waiting", RETIRE: "Retire waiting", RESTORE: "Restore waiting" };
+const PENDING_WORD: Record<LifecycleAction, string> = WAITING_LABEL; // the one word set (contracts/lifecycle.ts)
+const ACTION_WORDS = ACTION_LABEL;
 const USED_TIP = "What uses this combination: the releases firms have and the cases open on it. Its details list each one.";
 const STATUS: { value: string; label: string; test: (n: StructureNode) => boolean }[] = [
   { value: "setup", label: "In setup", test: (n) => !!n.combination?.id && n.combination.status === "IN_SETUP" },
@@ -156,10 +159,29 @@ export function StructurePage() {
     else if (e.key === "Delete" && (e.target as HTMLElement).dataset.edit !== undefined) { document.querySelector<HTMLElement>(`[data-row="${CSS.escape(key)}"] [data-action]`)?.click(); e.preventDefault(); }
   };
   const rowProps = (n: StructureNode) => ({ n, num: num.get(n.key) ?? null, selected: selected === n.key, current: cur === n.key, justAdded: justAdded === n.key, canAuthor, words,
-    onEdit: () => { setCurrent(n.key); set({ node: n.key }); }, onAction: () => { setCurrent(n.key); setConfirm({ key: n.key, kind: n.action.kind }); }, onKey: onRowKey(n.key), wide: !selectedNode });
+    onEdit: () => { setCurrent(n.key); set({ node: n.key }); }, onAction: () => { setCurrent(n.key); setActing({ busy: false, error: null }); set({ node: null }); setConfirm({ key: n.key, kind: n.action.kind }); }, onKey: onRowKey(n.key), wide: !selectedNode });
 
-  const confirmBox = (n: StructureNode) => confirm?.key === n.key ? <ConfirmAction key={`c-${n.key}`} n={n} kind={confirm.kind} num={num} byKey={byKey} onClose={() => setConfirm(null)}
-    onDone={async (text) => { setConfirm(null); setNote({ ok: true, text }); await refresh(); }} /> : null;
+  // The confirm (ImpactPanel, the right panel), then the Undo toast (P-116 amended): an author's own draft is deleted at
+  // once (Undo brings it back); anything else waits for a second person (Undo withdraws it).
+  const undo = useUndoToast();
+  const [acting, setActing] = React.useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
+  const confirmNode = confirm ? byKey.get(confirm.key) : undefined;
+  const sendAction = async (n: StructureNode, kind: LifecycleAction | "WITHDRAW", reason: string) => {
+    setActing({ busy: true, error: null });
+    try {
+      if (kind === "WITHDRAW") { await api(`/library/changes/${n.pending!.id}/withdraw`, { method: "POST", json: { note: reason } }); setNote({ ok: true, text: SAY.withdrawn(n.label) }); undo.show(SAY.withdrawn(n.label)); }
+      else {
+        const r = await api<{ id: string; immediate?: boolean }>(`/structure/nodes/${encodeURIComponent(n.key)}${kind === "DELETE" ? "" : `/${kind.toLowerCase()}`}`, { method: kind === "DELETE" ? "DELETE" : "POST", json: { reason: reason || SAY.ownDraft } });
+        const text = r.immediate ? SAY.deletedNow(n.label, n.action.below.length) : SAY.sent(kind, n.label);
+        setNote({ ok: true, text });
+        undo.show(text, async () => {
+          await api(r.immediate ? `/library/changes/${r.id}/undo` : `/library/changes/${r.id}/withdraw`, { method: "POST", json: r.immediate ? {} : { note: SAY.undone } });
+          setNote({ ok: true, text: r.immediate ? SAY.undoneDelete(n.label) : SAY.undone }); await refresh();
+        });
+      }
+      setConfirm(null); setActing({ busy: false, error: null }); await refresh();
+    } catch (e) { setActing({ busy: false, error: (e as Error).message }); }
+  };
   const chip = (key: string, label: string, clear: () => void) => <span key={key} className="inline-flex h-6 items-center gap-1 rounded-full border border-primary/40 bg-primary/10 pl-2.5 pr-1 text-xs font-medium text-text-link">{label}<button type="button" aria-label={`Remove the filter ${label}`} onClick={clear} className="flex size-4 items-center justify-center rounded-full hover:bg-primary/15"><X className="size-3" /></button></span>;
 
   return (
@@ -251,7 +273,7 @@ export function StructurePage() {
       </div>
       {note ? <p role={note.ok ? "status" : "alert"} className={cn("mt-2 text-sm", note.ok ? "text-text-ok" : "text-text-danger")} data-page-note>{note.text}</p> : null}
 
-      <div className={cn("mt-3 grid gap-6", selectedNode && "xl:grid-cols-[minmax(0,1fr)_420px]")}>
+      <div className={cn("mt-3 grid gap-6", (selectedNode || confirmNode) && "xl:grid-cols-[minmax(0,1fr)_420px]")}>
         <section aria-label={`${typeLabel} program structure`} className="min-w-0">
           {list.isError ? (
             <ErrorState title="The program structure could not load" description={`${(list.error as Error).message} Your work is safe.`} action={<Button size="sm" variant="secondary" onClick={() => void list.refetch()}>Retry</Button>} />
@@ -271,20 +293,17 @@ export function StructurePage() {
                 return (
                   <section key={p.key} aria-label={`${p.label} pathway`} data-band={p.key} className="mb-3.5 rounded-xl border border-lv1-b bg-lv1-t pb-2 pr-2" style={{ borderLeft: `4px solid ${pathwayAccent(pathways.findIndex((x) => x.key === p.key))}` }}>
                     <Row {...rowProps(p)} open={!shut} onToggle={() => setClosed((c) => toggle(c, p.key))} meta={many(leafCount(p.key), "combination", "combinations")} />
-                    {confirmBox(p)}
                     {shut ? null : !(kids.get(p.key) ?? []).some((x) => shown.has(x.key)) ? <p className="py-2 pl-10 text-sm text-text-muted" data-empty-pathway>Nothing under it yet. Use Add to add a program.</p> : (kids.get(p.key) ?? []).filter((x) => shown.has(x.key)).map((g) => {
                       const gShut = closed.has(g.key);
                       return (
                         <div key={g.key} className="mb-2 ml-6 rounded-lg border border-border bg-surface-raised last:mb-0" data-block={g.key}>
                           <Row {...rowProps(g)} open={!gShut} onToggle={() => setClosed((c) => toggle(c, g.key))} meta={many(leafCount(g.key), "combination", "combinations")} />
-                          {confirmBox(g)}
                           {gShut ? null : !(kids.get(g.key) ?? []).some((x) => shown.has(x.key)) ? <p className="border-t border-border py-2 pl-12 text-sm text-text-muted" data-empty-program>Nothing under it yet. Use Add to add a category.</p> : (kids.get(g.key) ?? []).filter((x) => shown.has(x.key)).map((c) => {
                             const subs = (kids.get(c.key) ?? []).filter((x) => shown.has(x.key)), cShut = closed.has(c.key);
                             return (
                               <React.Fragment key={c.key}>
                                 <Row {...rowProps(c)} open={subs.length ? !cShut : undefined} onToggle={() => setClosed((x) => toggle(x, c.key))} meta={subs.length ? many(subs.length, "sub-category", "sub-categories") : undefined} />
-                                {confirmBox(c)}
-                                {cShut ? null : subs.map((s) => <React.Fragment key={s.key}><Row {...rowProps(s)} />{confirmBox(s)}</React.Fragment>)}
+                                {cShut ? null : subs.map((s) => <Row key={s.key} {...rowProps(s)} />)}
                               </React.Fragment>
                             );
                           })}
@@ -301,19 +320,24 @@ export function StructurePage() {
               {(sort === "az" ? [...leaves].sort((a, b) => trailOf(a).map((x) => x.label).join("|").localeCompare(trailOf(b).map((x) => x.label).join("|"), "en-CA")) : leaves).map((n) => (
                 <React.Fragment key={n.key}>
                   <Row {...rowProps(n)} list trail={[typeLabel, ...trailOf(n).map((x) => x.label)]} />
-                  {confirmBox(n)}
                 </React.Fragment>
               ))}
             </div>
           )}
           {list.data && !list.data.empty ? <p className="mt-2 text-xs text-text-muted">Names and locations are Sample until the immigration expert confirms. {list.data.meaningCheck.why}</p> : null}
         </section>
-        {selectedNode ? <DetailPanel key={selectedNode.key} node={selectedNode} num={num.get(selectedNode.key) ?? null} type={type} siblings={kids.get(selectedNode.parentKey)?.filter((s) => (selectedNode.parentKey !== null || s.level === "pathway") && !s.retired) ?? []} leaf={isLeaf(selectedNode)}
-          leaves={below(selectedNode.key).filter(isLeaf).map((x) => ({ n: x, path: trailOf(x).slice(trailOf(selectedNode).length).map((y) => y.label) }))} canAuthor={canAuthor} onClose={() => set({ node: null })} /> : null}
+        {confirmNode ? <ImpactPanel key={`impact-${confirmNode.key}`} kind={confirm!.kind} name={confirmNode.label} immediate={confirm!.kind === "DELETE" && confirmNode.action.immediate}
+          goes={confirm!.kind === "DELETE" ? confirmNode.action.below.map((k) => ({ num: num.get(k) ?? null, label: byKey.get(k)?.label ?? k })) : undefined}
+          kept={confirm!.kind === "RETIRE" && confirmNode.combination?.id && usedBy(confirmNode.combination) !== "Setup draft" ? [usedBy(confirmNode.combination)] : undefined}
+          withCombination={confirmNode.action.withCombination} busy={acting.busy} error={acting.error} onCancel={() => setConfirm(null)} onSend={(reason) => void sendAction(confirmNode, confirm!.kind, reason)} />
+        : selectedNode ? <DetailPanel key={selectedNode.key} node={selectedNode} num={num.get(selectedNode.key) ?? null} type={type} siblings={kids.get(selectedNode.parentKey)?.filter((s) => (selectedNode.parentKey !== null || s.level === "pathway") && !s.retired) ?? []} leaf={isLeaf(selectedNode)}
+          leaves={below(selectedNode.key).filter(isLeaf).map((x) => ({ n: x, path: trailOf(x).slice(trailOf(selectedNode).length).map((y) => y.label) }))} canAuthor={canAuthor} onClose={() => set({ node: null })}
+          onAction={() => { setActing({ busy: false, error: null }); const k = selectedNode.key; set({ node: null }); setConfirm({ key: k, kind: selectedNode.action.kind }); }} /> : null}
       </div>
       <AddToStructure open={!!adding} onClose={() => setAdding(null)} type={type} prefill={adding ?? undefined}
         onAdded={(r, again) => { setJustAdded(r.leaf.key); setNote({ ok: true, text: `Added ${r.created.map((c) => `"${c.label}"`).join(", ")}${r.combination ? ": listed on Immigration programs as Not started; no setup started." : "."}` }); if (!again) setAdding(null); }}
         onShow={(k) => { setAdding(null); set({ node: k }); setJustAdded(k); }} />
+      {undo.node}
     </TipProvider>
   );
 }
@@ -330,13 +354,6 @@ function Heads({ wide, first, list }: { wide: boolean; first: string; list?: boo
   );
 }
 
-const ACTION: Record<LifecycleAction | "WITHDRAW", { word: string; icon: React.ReactNode; tip: (n: StructureNode) => string }> = {
-  DELETE: { word: "Delete", icon: <Trash2 className="size-3.5" aria-hidden />, tip: (n) => n.action.below.length ? `Deletes ${n.label} and the ${n.action.below.length} names under it; nothing uses them. A second person approves on To review.` : "Nothing uses it. A second person approves the deletion on To review." },
-  RETIRE: { word: "Retire", icon: <Archive className="size-3.5" aria-hidden />, tip: (n) => `Released, so it cannot be deleted. Retire hides it from Add and new setups; cases and earlier releases keep it.${n.action.withCombination ? " Its combination is retired with it." : ""}` },
-  RESTORE: { word: "Restore", icon: <RotateCcw className="size-3.5" aria-hidden />, tip: () => "Retired: hidden from Add and new setups; cases and earlier releases keep it. Restore brings it back (a second person approves)." },
-  WITHDRAW: { word: "Withdraw", icon: <Undo2 className="size-3.5" aria-hidden />, tip: (n) => `${n.pending ? PENDING_WORD[n.pending.action] : "A change waits"} for a second person on To review. Withdraw keeps ${n.label} as it is.` },
-};
-
 /** One row of the Tree or the List: number, mark, name in text colour (level colour on the mark and number only,
  *  P-128 (6)), its state, where cases may be opened, Used by, then Edit and its one action (R3-2). */
 function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, onAction, onKey, wide, open, onToggle, meta, list, trail }: {
@@ -344,7 +361,8 @@ function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, o
   onEdit: () => void; onAction: () => void; onKey: (e: React.KeyboardEvent) => void; open?: boolean; onToggle?: () => void; meta?: string; list?: boolean; trail?: string[];
 }) {
   const leaf = !!n.combination, c = n.combination, a = n.action;
-  const why = !canAuthor ? AUTHOR_ONLY : a.why ? (a.kind === "DELETE" ? `Can't delete: ${a.why.replace(/\.$/, "")}. A name in use can't be deleted; once it is released it can be retired instead.` : a.why) : null;
+  const why = !canAuthor ? WHY.author : a.why;
+  const reasonId = `why-${n.key}`;
   const tab = current ? 0 : -1;
   const level = DEPTH[n.level];
   const numText = <Tip tip={num ? NUM_TIP : "Retired: not numbered, so the numbers of the others never move."}><span className={cn("shrink-0 text-xs font-semibold tabular-nums", list ? "text-text-muted" : ["text-lv1", "text-lv2", "text-lv3", "text-lv3"][level])} data-num>{num ?? "—"}</span></Tip>;
@@ -373,15 +391,10 @@ function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, o
       </div>
       <span className={cn("text-xs text-text-muted", list && (wide ? "max-xl:hidden" : "hidden"))} data-loc>{leaf ? <Tip tip={LOC_TIP}><span>{locWords(n.allowedLocations)}</span></Tip> : null}</span>
       {wide ? <span className="text-xs text-text-muted max-xl:hidden" data-used-by-line>{leaf ? <Tip tip={USED_TIP}><span><span className="sr-only">Used by: </span>{usedBy(c)}</span></Tip> : null}</span> : null}
-      <div className="flex items-center justify-end gap-0.5">
-        <Tip tip={canAuthor ? (leaf ? "Rename it, set where cases may be opened, reorder it, see where it is used and its history." : "Rename, reorder, see where it is used and its history.") : "See the name, where it is used and its history. Only a configuration author changes it."}>
-          <button type="button" tabIndex={tab} onClick={onEdit} data-edit className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-text-muted outline-none hover:bg-text/5 hover:text-text-link focus-visible:ring-[3px] focus-visible:ring-ring/50">{canAuthor ? <Pencil className="size-3.5" aria-hidden /> : <Eye className="size-3.5" aria-hidden />}{canAuthor ? "Edit" : "View"}<span className="sr-only"> {n.label}</span></button>
-        </Tip>
-        <Tip tip={why ?? ACTION[a.kind].tip(n)}>
-          <button type="button" tabIndex={tab} aria-disabled={why ? true : undefined} onClick={() => { if (!why) onAction(); }} data-action={a.kind}
-            className={cn("inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", why ? "cursor-not-allowed text-text-muted/60" : a.kind === "WITHDRAW" ? "text-text-warn hover:bg-text/5" : "text-text-muted hover:bg-text/5 hover:text-text-link")}>{ACTION[a.kind].icon}{ACTION[a.kind].word}<span className="sr-only"> {n.label}{why ? `: ${why}` : ""}</span></button>
-        </Tip>
-      </div>
+      <RowAction kind={a.kind} why={why} tip={a.kind === "DELETE" ? TIP.DELETE(a.below.length, a.immediate) : a.kind === "RETIRE" ? TIP.RETIRE(a.withCombination) : a.kind === "RESTORE" ? TIP.RESTORE : TIP.WITHDRAW(n.label)}
+        canEdit={canAuthor} name={n.label} tabIndex={tab} reasonId={reasonId} onEdit={onEdit} onAction={onAction} editTip={TIP.edit(leaf, canAuthor)} />
+      {/* The reason a state greys the action, as visible text under the row (P-116 amended); a reader's is the tooltip. */}
+      {canAuthor && a.why ? <BlockedLine id={reasonId} text={a.why} onWhere={onEdit} className={cn("col-span-full -mt-0.5 pb-0.5", list ? "pl-[4.25rem]" : ["pl-[3.25rem]", "pl-[3.75rem]", "pl-[5.5rem]", "pl-[7rem]"][level])} /> : null}
     </div>
   );
 }
@@ -395,38 +408,6 @@ function TrailText({ parts, words }: { parts: string[]; words: string }) {
       {rest.map((p, i) => <span key={i}><span className="text-text-muted" aria-hidden> › </span><span className={i >= 2 ? "font-medium" : undefined}><Mark text={p} words={words} /></span></span>)}
       {rest.length === 3 ? <><span className="text-text-muted" aria-hidden> › </span><span className="text-text-muted">No sub-category</span></> : null}
     </span>
-  );
-}
-
-/** The in-page confirm (R3-3): what goes or what uses it, a reason for the second person, and the one button. */
-function ConfirmAction({ n, kind, num, byKey, onClose, onDone }: { n: StructureNode; kind: LifecycleAction | "WITHDRAW"; num: Map<string, string>; byKey: Map<string, StructureNode>; onClose: () => void; onDone: (text: string) => Promise<void> }) {
-  const [reason, setReason] = React.useState("");
-  const [busy, setBusy] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const ref = React.useRef<HTMLTextAreaElement>(null);
-  React.useEffect(() => { ref.current?.focus(); }, []);
-  const send = async () => {
-    setBusy(true); setError(null);
-    try {
-      if (kind === "WITHDRAW") await api(`/library/changes/${n.pending!.id}/withdraw`, { method: "POST", json: { note: reason } });
-      else await api(`/structure/nodes/${encodeURIComponent(n.key)}${kind === "DELETE" ? "" : `/${kind.toLowerCase()}`}`, { method: kind === "DELETE" ? "DELETE" : "POST", json: { reason } });
-      await onDone(kind === "WITHDRAW" ? `Withdrawn. "${n.label}" stays as it was.` : `Sent to a second person on To review: ${kind === "DELETE" ? `"${n.label}"${n.action.below.length ? ` and the ${n.action.below.length} names under it are` : " is"} deleted when approved` : `"${n.label}"${n.action.withCombination ? " and its combination are" : " is"} ${kind === "RETIRE" ? "retired" : "restored"} with the next release after approval`}.`);
-    } catch (e) { setError((e as Error).message); setBusy(false); }
-  };
-  const title = kind === "DELETE" ? `Delete "${n.label}"${n.action.below.length ? " and everything under it" : ""}?` : kind === "RETIRE" ? `Retire "${n.label}"?` : kind === "RESTORE" ? `Restore "${n.label}"?` : `Withdraw the ${n.pending ? PENDING_WORD[n.pending.action].toLowerCase() : "change"}?`;
-  return (
-    <div role="region" aria-label={title} className="mx-3 my-2 space-y-2 rounded-lg border border-border-strong bg-surface p-3 text-sm shadow-sm" data-confirm={n.key}>
-      <p className="font-semibold">{title}</p>
-      {kind === "DELETE" ? (n.action.below.length ? <><p>These go with it; none is used:</p><ul className="ml-5 list-disc" data-goes-with>{n.action.below.map((k) => <li key={k}>{num.get(k) ? `${num.get(k)} ` : ""}{byKey.get(k)?.label ?? k}</li>)}</ul></> : <p>Nothing uses it: no setup, no cases, never released.</p>)
-        : kind === "RETIRE" ? <p>It was released{n.combination?.id ? ` and is used: ${usedBy(n.combination)}` : ""}. Retired, it is hidden from Add and from new setups. Open cases and earlier releases keep it. You can restore it.{n.action.withCombination ? " Its combination is retired with it." : ""}</p>
-        : kind === "RESTORE" ? <p>It comes back to Add and to new setups with the next release after approval.{n.action.withCombination ? " Its combination is restored with it." : ""}</p>
-        : <p>Nothing changes: the request leaves To review.</p>}
-      <label htmlFor={`reason-${n.key}`} className="block text-xs font-medium">{kind === "WITHDRAW" ? "Why withdraw it?" : "Why?"} <span className="font-normal text-text-muted">Required, for the second person</span></label>
-      <Textarea ref={ref} id={`reason-${n.key}`} value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-14" />
-      {kind !== "WITHDRAW" ? <p className="text-xs text-text-muted">A second person approves on To review. Until then it shows as {PENDING_WORD[kind].toLowerCase()} and you can withdraw it.</p> : null}
-      {error ? <p role="alert" className="text-text-danger">{error}</p> : null}
-      <div className="flex justify-end gap-2"><Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button><Button size="sm" variant={kind === "DELETE" ? "destructive" : "default"} onClick={() => void send()} disabled={reason.trim().length < 3} busy={busy} data-confirm-send>{kind === "DELETE" ? "Delete" : kind === "RETIRE" ? "Retire" : kind === "RESTORE" ? "Restore" : "Withdraw"}</Button></div>
-    </div>
   );
 }
 
@@ -472,7 +453,7 @@ function Mark({ text, words }: { text: string; words: string }) {
 
 /** Edit (R3-2): the selected name: what uses it, rename, where cases may be opened, order, delete / retire / restore,
  *  history. A side panel beside the outline (non-modal, pinned header and footer). Adding goes through the one Add. */
-function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClose }: { node: StructureNode; num: string | null; type: PathwayType; siblings: StructureNode[]; leaf: boolean; leaves: { n: StructureNode; path: string[] }[]; canAuthor: boolean; onClose: () => void }) {
+function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClose, onAction }: { node: StructureNode; num: string | null; type: PathwayType; siblings: StructureNode[]; leaf: boolean; leaves: { n: StructureNode; path: string[] }[]; canAuthor: boolean; onClose: () => void; onAction: () => void }) {
   const qc = useQueryClient();
   const fit = useFitToScreen();
   // S1-finish: what happened is said in the panel's own status line, never in a toast over the outline or the panel.
@@ -491,8 +472,6 @@ function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClo
   const [close, setClose] = React.useState<Close[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [stale, setStale] = React.useState<string | null>(null);
-  const [action, setAction] = React.useState<LifecycleAction | "WITHDRAW" | null>(null);
-  const [reason, setReason] = React.useState("");
   const hasLocs = node.level === "category" || node.level === "subCategory";
   const changed = label.trim() !== base.label || (hasLocs && locKey(locs) !== locKey(base.locs));
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ["structure"] }), qc.invalidateQueries({ queryKey: ["structure-uses"] }), qc.invalidateQueries({ queryKey: ["catalogue"] }), qc.invalidateQueries({ queryKey: ["draft"] }), qc.invalidateQueries({ queryKey: ["review-queue"] })]);
@@ -517,24 +496,9 @@ function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClo
     try { await api("/structure/reorder", { method: "POST", json: { pathwayType: type, parentKey: node.parentKey, keys } }); await refresh(); say(true, `Moved "${node.label}" ${dir < 0 ? "up" : "down"}.` ); }
     catch (e) { say(false, (e as Error).message ); }
   };
-  const lifecycle = async () => {
-    setBusy(true);
-    try {
-      if (action === "WITHDRAW") await api(`/library/changes/${uses.data!.pending!.id}/withdraw`, { method: "POST", json: { note: reason } });
-      else await api(`/structure/nodes/${encodeURIComponent(node.key)}${action === "DELETE" ? "" : `/${action!.toLowerCase()}`}`, { method: action === "DELETE" ? "DELETE" : "POST", json: { reason } });
-      say(true, action === "WITHDRAW" ? "Withdrawn. Nothing changed." : `Sent to a second person on To review. ${action === "DELETE" ? "It is deleted when approved." : "It takes effect with the next release after approval."}` );
-      setAction(null); setReason(""); await refresh();
-    } catch (e) { say(false, (e as Error).message ); }
-    finally { setBusy(false); }
-  };
   const u = uses.data;
   const i = siblings.findIndex((s) => s.key === node.key);
   const no = !canAuthor ? AUTHOR_ONLY : null;
-  const ACTIONS: { a: LifecycleAction; word: string; why: string | null | undefined; tip: string }[] = [
-    { a: "DELETE", word: "Delete", why: u?.can.delete, tip: "Deletes a name that was never released and is used nowhere, with every name under it. A second person approves; Withdraw while it waits." },
-    { a: "RETIRE", word: "Retire", why: u?.can.retire, tip: `Hides a released name from pickers and AI. Earlier releases and open cases keep it. Takes effect with the next release.${u?.withCombination ? " Its combination is retired with it." : ""}` },
-    { a: "RESTORE", word: "Restore", why: u?.can.restore, tip: "Brings a retired name back to pickers, by the same path: a second person approves, the release publishes." },
-  ];
   return (
     <aside ref={fit} data-panel aria-label={`${node.label} details`} className="fixed bottom-4 right-0 top-14 z-40 flex w-full max-w-[440px] flex-col border-l border-border bg-surface-raised shadow-xl xl:sticky xl:top-20 xl:z-auto xl:max-w-none xl:rounded-xl xl:border xl:shadow-sm">
       <div className="flex items-start gap-2 border-b border-border px-5 py-3">
@@ -578,20 +542,8 @@ function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClo
           <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Program structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i <= 0} onClick={() => void move(-1)}><ArrowUp /> Move up</Button></span></Tip>
           <Tip tip={no ?? "Moves it among the names under the same parent. Shown on the Program structure and in Immigration programs; applies at once."}><span><Button size="sm" variant="secondary" disabled={!!no || i < 0 || i >= siblings.length - 1} onClick={() => void move(1)}><ArrowDown /> Move down</Button></span></Tip>
         </div>
-        <section aria-label="Where used" className="space-y-2 rounded-lg border border-border p-3">
-          <h3 className="text-sm font-semibold">Where used</h3>
-          {uses.isPending ? <Skeleton className="h-10" /> : uses.isError ? <p className="text-text-danger">{(uses.error as Error).message}</p> : u ? (
-            <>
-              {u.uses.filter((x) => x.kind !== "draft_change").length ? <ul className="space-y-1">{u.uses.filter((x) => x.kind !== "draft_change").map((x, k) => <li key={k} className="flex flex-wrap gap-x-2"><span>{x.href ? <Link to={x.href.replace(/^\/structure\?node=/, "/structure?node=")} className="text-text-link underline underline-offset-2">{x.label}</Link> : x.label}</span><span className={cn("text-xs", x.blocks ? "text-text-warn" : "text-text-muted")}>{x.why}</span></li>)}</ul> : <p className="text-text-muted">Used nowhere.</p>}
-              {u.pending ? <Notice tone="warn" title={`${PENDING_WORD[u.pending.action]} for a second person`} action={canAuthor ? <Button size="sm" variant="secondary" onClick={() => { setAction("WITHDRAW"); setReason(""); }}>Withdraw</Button> : undefined}>Proposed by {u.pending.by}. <Link to={`/review/change/${u.pending.id}`} className="text-text-link underline underline-offset-2">See it on To review</Link></Notice> : null}
-              {action ? (
-                <div className="space-y-2 rounded-lg bg-surface p-3">
-                  <label htmlFor="structure-reason" className="text-xs font-medium">{action === "WITHDRAW" ? "Why withdraw it?" : `Why ${action.toLowerCase()} "${node.label}"?`} <span className="font-normal text-text-muted">Required, for the second person</span></label>
-                  <Textarea id="structure-reason" value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-16" />
-                  <div className="flex justify-end gap-2"><Button size="sm" variant="ghost" onClick={() => setAction(null)}>Cancel</Button><Button size="sm" onClick={() => void lifecycle()} disabled={reason.trim().length < 3} busy={busy}>{action === "WITHDRAW" ? "Withdraw" : "Send for approval"}</Button></div>
-                </div>) : null}
-            </>) : null}
-        </section>
+        <WherePanel uses={u} loading={uses.isPending} error={uses.isError ? (uses.error as Error).message : null} onRetry={() => void uses.refetch()} />
+        {u?.pending ? <Notice tone="warn" title={`${PENDING_WORD[u.pending.action]} for a second person`}>Proposed by {u.pending.by}. <Link to={`/review/change/${u.pending.id}`} className="text-text-link underline underline-offset-2">See it on To review</Link></Notice> : null}
         {u?.history.length ? (
           <section aria-label="History"><h3 className="mb-1 text-sm font-semibold">History</h3><ul className="space-y-1 text-xs text-text-muted">{u.history.map((h, k) => <li key={k}><span className="text-text">{fmtWhen(h.at)}</span> · {h.what}</li>)}</ul></section>
         ) : null}
@@ -599,7 +551,9 @@ function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClo
       {note ? <p role={note.ok ? "status" : "alert"} data-panel-note className={cn("border-t border-border px-5 py-2 text-sm", note.ok ? "text-text-ok" : "text-text-danger")}>{note.text}</p> : null}
       {/* S2 fix (founder, 27 Oct): the lifecycle buttons sit in the footer with Save, so all of them always show. */}
       <div className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3" data-panel-footer>
-        {u && !u.pending ? ACTIONS.filter((x) => (x.a === "RESTORE") === node.retired).map((x) => { const why = no ?? x.why; return <Tip key={x.a} tip={why ?? x.tip}><span><Button size="sm" variant={x.a === "RESTORE" ? "secondary" : "outline"} className={x.a !== "RESTORE" ? "text-text-danger" : undefined} disabled={!!why} onClick={() => { setAction(x.a); setReason(""); requestAnimationFrame(() => document.getElementById("structure-reason")?.focus()); }}>{x.word}</Button></span></Tip>; }) : null}
+        {/* The row's one action, the same guard and words; it opens the same confirm (ImpactPanel). */}
+        {u ? <div className="flex min-w-0 flex-col items-start gap-0.5"><Button size="sm" variant="outline" className={node.action.kind === "DELETE" ? "text-text-danger" : undefined} disabled={!!no || !!node.action.why} aria-describedby={node.action.why ? "panel-why" : undefined} onClick={onAction} data-panel-action={node.action.kind}>{ACTION_WORDS[node.action.kind]}</Button>
+          {canAuthor && node.action.why ? <BlockedLine id="panel-why" text={node.action.why} className="max-w-[16rem]" /> : null}</div> : null}
         <span className="flex-1" />
         <Button variant="ghost" onClick={onClose}>Close</Button>
         <Tip tip={no ?? (node.retired ? "It is retired: restore it first." : changed ? "Saves the name and where cases may be opened." : "Change the name or where cases may be opened first.")}><span><Button onClick={() => void save("new")} disabled={!!no || !changed || node.retired || !label.trim()} busy={busy}>Save</Button></span></Tip>

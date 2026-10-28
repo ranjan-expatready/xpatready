@@ -107,7 +107,9 @@ export type StructureNode = {
    *  with a Delete (R3-4), and whether a combination row's own combination goes with a Retire or Restore. */
   action: RowAction;
 };
-export type RowAction = { kind: LifecycleAction | "WITHDRAW"; why: string | null; below: string[]; withCombination: boolean };
+export type RowAction = { kind: LifecycleAction | "WITHDRAW"; why: string | null; below: string[]; withCombination: boolean;
+  /** The author's own never-approved draft: deleted at once, with Undo (P-116 amended 28 Oct). */
+  immediate: boolean };
 
 /** The four setup steps on a card (addendum A3, Lead 26 Oct), calculated from data the app already keeps. */
 export const SETUP_STEPS = ["Forms", "Draft", "Review", "Release"] as const;
