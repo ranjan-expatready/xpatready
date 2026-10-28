@@ -494,7 +494,8 @@ export class Finder implements OnModuleInit {
     const stub = await this.sources.launchOnce(jobId, "stub");
     const sj = last(stub.out);
     if (stub.stopped) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped during the free stub pass: nothing was sent." };
-    if (stub.code !== 0) return { ok: false, costUsd: 0, reason: `The guarded AI route refused the job before any call: ${String(sj?.refused ?? stub.err).trim().slice(-300) || `the launcher stopped (exit ${stub.code})`}` };
+    // S3 early look (1): the launcher's own words (a stack, an error code, a server path) go to the server log only.
+    if (stub.code !== 0) { console.warn(`finder ${jobId}: stub refused:`, String(sj?.refused ?? stub.err).trim().slice(-600) || `exit ${stub.code}`); return { ok: false, costUsd: 0, reason: "The AI step could not start on this computer, so nothing was sent and nothing was charged" }; }
     const live = await this.sources.launchOnce(jobId, "live", wanted);
     if (live.cancelled) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped before the AI call was sent: nothing was charged." };
     if (live.stopped) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped while the AI call ran: the call was ended. It stays counted at its reserved worst case (the provider may still bill it); nothing of it is used." };
@@ -502,7 +503,8 @@ export class Finder implements OnModuleInit {
     if (!lj?.run_file) {
       const why = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).trim() || `the launcher stopped (exit ${live.code})`;
       const limit = /usage limit/i.test(why + live.err);
-      return { ok: false, blocked: limit, costUsd: 0, reason: limit ? "The AI provider's usage limit refused the call before any processing: nothing was charged. Use saved AI answers or rules only, or try later." : `The AI step did not run: ${why.slice(0, 300)}` };
+      if (!limit) console.warn(`finder ${jobId}: live call did not run:`, why.slice(0, 600));
+      return { ok: false, blocked: limit, costUsd: 0, reason: limit ? "The AI provider's usage limit refused the call before any processing: nothing was charged. Use saved AI answers or rules only, or try later." : "The AI step did not run, so nothing was charged" };
     }
     const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
     const cost = Number(rec.drafting_run?.usage?.cost_usd ?? 0);

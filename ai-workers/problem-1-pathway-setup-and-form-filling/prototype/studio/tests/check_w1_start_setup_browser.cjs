@@ -13,6 +13,12 @@ const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const PORT = Number(process.argv[2] ?? 4437), BASE = `http://localhost:${PORT}`, DB = process.argv[3] ?? "xr_studio_screens_s3b";
 const SHOTS = path.join(__dirname, "..", "..", "..", "product", "screens", "W1-start-setup", "screenshots"); fs.mkdirSync(SHOTS, { recursive: true });
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+// Fix pass (S3 early look): the stand-in launcher's answer, in this copy's own folder: the raw text a real launcher failure
+// prints (an error code, a server path, a stack line), which the page must never show (fix 1).
+const VAR = path.join(__dirname, "..", "var", `isolated-${DB.replace(/^xr_studio_/, "")}`);
+const RAW = "Error: ENOENT: no such file or directory, open '/Users/someone/studio/var/fake-launch.json'\n    at Object.openSync (node:fs:573:18) { errno: -2, syscall: 'open' } Node.js v24.21.0";
+const TECH = /ENOENT|errno|syscall|\/Users\/|node:fs|Node\.js v/;
+const COST = /(about US\$\d+\.\d\d · )?at most US\$\d+\.\d\d/;
 let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).replace(/\s+/g, " ").slice(0, 260)}` : ""}`); };
 
@@ -68,11 +74,18 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const place = p.getByRole("navigation", { name: "Path" });
   const colours = await place.locator("[data-place]").evaluateAll((xs) => xs.map((x) => getComputedStyle(x).color));
   step("m6: the place is shown in its level colours, as links back to the lists, with nothing to change it here", (await place.innerText()).includes("Visitors") && new Set(colours).size >= 2 && await p.locator("main").getByRole("textbox", { name: /Program|Category|Pathway/ }).count() === 0, colours.join(" | "));
+  const head = p.locator("main [data-next-step]").first();
+  step("S3 fix 2: one call to action: the page's Next step is Find forms (no Add sources) while nothing is attached", (await head.innerText()).trim() === "Find forms" && await p.getByText("Add sources").count() === 0, await head.innerText());
+  await p.locator("main").click({ position: { x: 5, y: 5 } }); await head.click(); await p.waitForTimeout(800);
+  step("S3 fix 2: Find forms takes the person to the finder offer's one button (focused)", await p.evaluate(() => document.activeElement?.hasAttribute("data-find-forms") ?? false));
   const offerBtn = p.locator("[data-find-forms]");
   const label = (await offerBtn.innerText()).trim();
   const offerTip = await tipOf(offerBtn);
-  step("M1 founder (wait for a click): with no saved answer the landing offers one button, 'Find forms with AI (about US$…)', and nothing has run", /^Find forms with AI \(about US\$\d+\.\d\d\)$/.test(label) && (await offerBtn.getAttribute("data-find-forms")) === "live" && sql(`select count(*) from ai_batch where scope_label like '${cid}|%'`) === "0", label);
-  step("M1: its tip states the worst case before anything is spent", /At most US\$\d+\.\d\d\. Nothing is spent until you click\./.test(offerTip), offerTip);
+  const words = /\((.*)\)$/.exec(label)?.[1] ?? "";
+  step("M1 founder (wait for a click): with no saved answer the landing offers one button, 'Find forms with AI (about US$… · at most US$…)', and nothing has run", /^Find forms with AI \(/.test(label) && new RegExp(`^${COST.source}$`).test(words) && (await offerBtn.getAttribute("data-find-forms")) === "live" && sql(`select count(*) from ai_batch where scope_label like '${cid}|%'`) === "0", label);
+  step("M1 / S3 fix 4: its tip states the cost in the button's words, before anything is spent", offerTip.toLowerCase().includes(`${words.toLowerCase()}. nothing is spent until you click.`), { words, offerTip });
+  fs.writeFileSync(path.join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 1, err: RAW } }));
+  await p.evaluate(() => document.activeElement?.blur?.());
   await state("landing-offer");
 
   // ======================================================== the click: the shared run card
@@ -82,7 +95,17 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const batches = sql(`select count(*) from ai_batch where scope_label like '${cid}|%' and mode = 'LIVE'`);
   step("M1 / M4: the click starts the live run (the fake launcher here, US$0) and the shared run card shows it", batches === "1" && /Find this combination's forms|form finder|Find the application page/i.test(await p.locator("[data-finder-start]").innerText()), (await p.locator("[data-finder-start]").innerText()).slice(0, 200));
   for (let i = 0; i < 60 && /Running|Queued|Stopping/i.test(await p.locator("[data-finder-start]").innerText()); i++) await p.waitForTimeout(500);
+  const block = p.locator("[data-finder-start]");
+  const blockText = await block.innerText();
+  step("S3 fix 1: the stand-in launcher answered with raw text (an error code, a server path, a stack line)", fs.readFileSync(path.join(VAR, "fake-launch.log"), "utf8").includes('"mode":"stub"') && TECH.test(RAW));
+  step("S3 fix 1: the run card shows none of it: plain words, nothing sent, nothing charged", !TECH.test(await p.locator("main").innerText()) && /could not start on this computer, so nothing was sent and nothing was charged/.test(blockText), blockText.slice(0, 300));
+  const finds = block.locator("[data-find-forms]");
+  step("S3 fix 3: after the run there is one find button, on the run card (no second 'Find again' link, no second offer)", await finds.count() === 1 && await block.locator("[data-run-status] [data-find-forms]").count() === 1 && await block.getByRole("link", { name: /Find again/ }).count() === 0 && /^Find again with AI \(/.test((await finds.innerText()).trim()), (await finds.allInnerTexts()).join(" | "));
+  const cardCost = (await block.locator("[data-run-cost]").innerText()).trim();
+  const againWords = /\((.*)\)$/.exec((await finds.innerText()).trim())?.[1] ?? "";
+  step("S3 fix 4: the run card's cost says the button's words (about US$x · at most US$y), then what it spent", cardCost.startsWith(`${words} · US$`) && againWords === words, { cardCost, words, againWords });
   await state("landing-after-run");
+  fs.rmSync(path.join(VAR, "fake-launch.json"), { force: true });
 
   // ======================================================== the end of the New combination page (M2)
   await p.goto(`${BASE}/new`); await p.waitForTimeout(600);

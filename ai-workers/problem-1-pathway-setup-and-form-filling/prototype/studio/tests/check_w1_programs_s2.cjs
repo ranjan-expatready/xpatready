@@ -153,7 +153,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const nsCard = p.locator(`article[data-node="${ns.nodeKey}"]`);
   const nsText = await nsCard.innerText();
   step("S2 fix 7: a Not started card shows 'Not started' under an empty bar, not 'Step 1 of 4'", /Not started/.test(nsText) && !/Step 1 of 4/.test(nsText) && await nsCard.locator('[data-setup="0"]').count() === 1 && (await nsCard.locator("[data-setup]").getAttribute("aria-label")) === "Setup: not started", nsText.replace(/\s+/g, " "));
-  step("S2 fix 2: a Not started card's one next step reads Start setup (no 'Add sources' anywhere on a Not started card)", (await nsCard.locator("[data-next-step]").textContent()).trim() === "Start setup" && !(await p.locator("article[data-node]").allInnerTexts()).some((t) => /Not started/.test(t) && /Add sources/.test(t)));
+  step("S2 fix 2: a Not started card's one next step reads Start setup (no 'Add sources' anywhere on a Not started card)", (await nsCard.locator("[data-next-step]").textContent()).trim() === "Start setup" && !(await p.locator("article[data-node]").allInnerTexts()).some((t) => /Not started/.test(t) && /Add sources|Find forms/.test(t)));
   const vvCard = p.locator(`article[data-node="${vv}"]`);
   const vvText = await vvCard.innerText(), vvStep = vvRow.nextAction;
   const k = vvStep?.kind === "add_from_library" ? (vvStep.forms ?? []).length : 0;
@@ -234,7 +234,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== read-only approver
   await as("user-B"); await open();
   const ro = await p.locator(`article[data-node="${ns.nodeKey}"]`).innerText();
-  step("BR-15 read-only: Add combination is disabled; a Not started card has no step to take; a started card says Open", await p.getByRole("button", { name: "Add combination" }).isDisabled() && !/Start setup|Add sources/.test(ro) && await p.locator(`article[data-node="${vv}"]`).locator('[data-next-step="open"]').count() === 1, ro.replace(/\s+/g, " "));
+  step("BR-15 read-only: Add combination is disabled; a Not started card has no step to take; a started card says Open", await p.getByRole("button", { name: "Add combination" }).isDisabled() && !/Start setup|Add sources|Find forms/.test(ro) && await p.locator(`article[data-node="${vv}"]`).locator('[data-next-step="open"]').count() === 1, ro.replace(/\s+/g, " "));
   step("BR-15 read-only: no '+ Add pathway' on this page (P-128 (4)); adding is Add combination, off for the approver", await p.getByRole("button", { name: /Add pathway/ }).count() === 0 && await p.getByRole("button", { name: "Add combination" }).isDisabled());
   await state("read-only");
   await as("user-A");

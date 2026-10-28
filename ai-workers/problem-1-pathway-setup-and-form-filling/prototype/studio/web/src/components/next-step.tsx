@@ -9,6 +9,7 @@ import type { CatalogueLeaf, NextAction } from "../../../contracts/programs";
 import { api, useToast } from "@/lib/api";
 import { AiLaunchDialog } from "@/components/ai-launch";
 import { Tip } from "@/components/status";
+import { START } from "../../../contracts/start-setup";
 import { useStartSetup } from "@/components/start-setup";
 
 /** Steps any role may follow (they only show something); the others are a configuration author's. */
@@ -20,6 +21,7 @@ export function stepTip(a: NextAction): string | null {
   if (a.kind === "draft_ai") return "AI reads the attached forms and proposes their field maps, questions and fields. Nothing changes until a person accepts each proposal.";
   if (a.kind === "view_progress") return "AI is drafting now. Nothing changes until a person accepts its proposals.";
   if (a.kind === "review_proposals") return "AI proposed these. A person accepts, changes or rejects each one; nothing changes until then.";
+  if (a.kind === "add_forms") return START.stepTip;
   if (a.kind === "add_from_library") return `${(a.forms ?? []).join(", ")}: reuses field maps already in the library. No AI. Adds to the draft only; nothing changes for firms until release.`;
   return null;
 }
@@ -33,6 +35,15 @@ export function StepTip({ a, children }: { a: NextAction | null; children: React
   return tip ? <Tip tip={tip}>{children}</Tip> : children;
 }
 
+/** S3 early look (2): "Find forms" lands on the finder offer itself (its one button), not just the tab. */
+function focusFindForms() {
+  let n = 0;
+  const t = window.setInterval(() => {
+    const b = document.querySelector<HTMLElement>("[data-find-forms]");
+    if (b || ++n > 40) { window.clearInterval(t); b?.scrollIntoView({ block: "center" }); b?.focus(); }
+  }, 100);
+}
+
 /** `go(leaf, suffix)` opens the combination page with a tab or `?show=` (the list starts a not-started row there);
  *  `leaving(leaf)` runs before a step leaves for another page (the list remembers itself for Back). */
 export function useNextStep(go: (leaf: CatalogueLeaf, suffix?: string) => unknown, leaving: (leaf: CatalogueLeaf) => void = () => {}) {
@@ -42,7 +53,7 @@ export function useNextStep(go: (leaf: CatalogueLeaf, suffix?: string) => unknow
   const run = async (leaf: CatalogueLeaf, a: NextAction | null) => {
     if (!a) return go(leaf);
     if (a.kind === "start") return start(leaf.nodeKey); // S3: one Start setup (P-125)
-    if (a.kind === "add_forms") return go(leaf, "/sources");
+    if (a.kind === "add_forms") { await go(leaf, "/sources"); return focusFindForms(); }
     if (a.kind === "draft_ai") return setAiFor(leaf);
     if (a.kind === "view_progress") { leaving(leaf); return nav(`/ai/${a.batchId}`); }
     if (a.kind === "review_proposals") { leaving(leaf); return nav(`/c/${leaf.combinationId}/jobs/${a.jobId}`); }

@@ -91,9 +91,9 @@ m = missingItems(empty, people, [], visitor);
 const head = nextActionOf({ ...visitor, status: "IN_SETUP", changes: 0, missing: m });
 ok("item 1 pass: Visitor visa — header \"Add 1 form from the library\" = first missing line's step; sources and set-up forms counted apart",
   head?.label === "Add 1 form from the library" && m[0].step === head.label && m[0].text === "2 forms attached as sources, 0 set up." && m.every((x) => x.step === head.label), m.map((x) => x.text));
-ok("item 1 fail: the old contradiction (\"No forms yet … Add sources\" while forms are attached) is gone", !m.some((x) => /No forms yet|Add sources/.test(x.text)), m.map((x) => x.text));
+ok("item 1 fail: the old contradiction (\"No forms yet … Add sources\" while forms are attached) is gone", !m.some((x) => /No forms yet|Add sources|Find forms/.test(x.text)), m.map((x) => x.text));
 m = missingItems(empty, people, [], setupOf({}));
-ok("item 1: nothing attached → \"No forms yet\" and Add sources, the same as the header", m[0].text === "No forms yet." && sharedStep(m) === "Add sources" && nextActionOf({ ...setupOf({}), status: "IN_SETUP", changes: 0, missing: m })?.label === m[0].step, m.map((x) => x.text));
+ok("item 1 / S3 fix 2: nothing attached → \"No forms yet\" and Find forms (the finder offer), the same as the header", m[0].text === "No forms yet." && sharedStep(m) === "Find forms" && nextActionOf({ ...setupOf({}), status: "IN_SETUP", changes: 0, missing: m })?.label === m[0].step, m.map((x) => x.text));
 fc.assert(fc.property(fc.nat(4), fc.nat(3), fc.nat(3), fc.boolean(), fc.nat(5), fc.boolean(), (sources, lib, draftable, running, proposals, released) => {
   const st = setupOf({ forms: sources, sources, draftable, fromLibrary: Array.from({ length: lib }, (_, i) => `IMM ${i}`), running: running ? "b" : null, proposals: proposals ? [{ job: "j", n: proposals }] : [] });
   const miss = missingItems(empty, people, [], st);

@@ -25,6 +25,12 @@ const nodes = async () => (await call("GET", "/structure?pathwayType=INDIVIDUAL"
 // Scaffolding (P-33, said here): the only saved finder answer is the sample's Visitor visa (key vv.single). To prove that
 // Start setup loads a saved answer by itself, the check copies it under its own combination's key, then removes the copies.
 const RUNS = join(import.meta.dirname, "..", "..", "p2", "runs");
+// Fix pass (S3 early look 1): the stand-in launcher's answer, written to this copy's own folder; it answers with the kind
+// of raw text a real launcher failure prints (an error code, a server path, a stack line), which must never be shown.
+const VAR = join(import.meta.dirname, "..", "var", `isolated-${DB.replace(/^xr_studio_/, "")}`);
+const RAW = "Error: ENOENT: no such file or directory, open '/Users/someone/studio/var/fake-launch.json'\n    at Object.openSync (node:fs:573:18) { errno: -2, syscall: 'open' } Node.js v24.21.0";
+const TECH = /ENOENT|errno|syscall|\/Users\/|node:fs|Node\.js v/;
+const COST = /^(about US\$\d+\.\d\d · )?at most US\$\d+\.\d\d$/;
 const SAVED = ["studio-finder-forms-individual-visitors-visitor-visa-live-20261027t072426546z-4d8a0d.json", "studio-finder-forms-check-individual-visitors-visitor-visa-live-20261027t072500006z-a569fb.json"];
 const copies: string[] = [];
 const saveFor = (key: string) => SAVED.forEach((f, i) => {
@@ -63,13 +69,26 @@ const card = async (key: string) => ((await call("GET", "/catalogue?pathway=INDI
   const tvId = r.body?.combination?.id;
   ok("M1 founder (wait for a click): with no saved answer Start setup creates the combination and starts no run", r.status === 201 && r.body.created === true && r.body.saved === false && r.body.run === null && sql(`select count(*) from ai_batch where scope_label like '${tvId}|%'`) === "0", r.body);
   const offer = (await call("GET", `/combinations/${tvId}/start-setup`)).body;
-  ok("M1: the landing offers one button 'Find forms with AI (about US$…)', the worst case in its tip", offer.run === null && offer.offer?.mode === "live" && /^Find forms with AI \(about US\$\d+\.\d\d\)$/.test(offer.offer.label) && /At most US\$\d+\.\d\d\. Nothing is spent until you click\./.test(offer.offer.tip) && /^[0-9a-f]{64}$/.test(offer.offer.planSha256), offer.offer);
+  const words = /\((.*)\)$/.exec(offer.offer?.label ?? "")?.[1] ?? "";
+  ok("M1: the landing offers one button 'Find forms with AI (about US$… · at most US$…)', the worst case in its tip", offer.run === null && offer.offer?.mode === "live" && /^Find forms with AI \(/.test(offer.offer.label) && COST.test(words) && /at most US\$\d+\.\d\d\. Nothing is spent until you click\./i.test(offer.offer.tip) && /^[0-9a-f]{64}$/.test(offer.offer.planSha256), offer.offer);
+  ok("fix 4: the button and its tip say the cost in the same words (about US$x · at most US$y)", offer.offer.tip.toLowerCase().includes(`${words.toLowerCase()}.`), { words, tip: offer.offer.tip });
+  writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 1, err: RAW } }));
   r = await call("POST", `/combinations/${tvId}/forms/find`, { mode: "live", planSha256: offer.offer.planSha256, idempotencyKey: `check-s3-${Date.now()}` });
   const v2 = r.body?.id ? await ended(r.body.id) : null;
   const after = (await call("GET", `/combinations/${tvId}/start-setup`)).body;
   const formsTv = Number(sql(`select count(*) from combination_form where combination_id='${tvId}'`));
   ok("M1: the click starts the live run (the fake launcher here, US$0); the landing then shows that run", r.status < 300 && v2?.mode === "live" && after.run === v2?.id, { status: r.status, run: v2?.status, after });
   ok("M1 fail-guard: a run that attached nothing shows the offer again under it; one that attached forms does not", formsTv ? after.offer === null && after.ended === false : after.ended === true && !!after.offer, { forms: formsTv, ended: after.ended, offer: after.offer?.label });
+  const runView = (await call("GET", `/runs/${v2?.id}`)).body;
+  const shown = JSON.stringify([runView.message, runView.error, runView.steps?.map((s: any) => s.message)]);
+  ok("fix 1: the launcher really answered with raw text (an error code, a server path, a stack line)", TECH.test(RAW) && /"mode":"stub"/.test(readFileSync(join(VAR, "fake-launch.log"), "utf8")));
+  ok("fix 1: the run card shows none of it: plain words, nothing sent, nothing charged", !TECH.test(shown) && /could not start on this computer, so nothing was sent and nothing was charged/.test(shown), shown);
+  sql(`update drafting_job set message = 'AI could not pick the page: ${RAW.replace(/'/g, "''")}' where batch_id = '${v2?.id}' and kind = (select kind from drafting_job where batch_id = '${v2?.id}' order by started_at limit 1)`);
+  const runView2 = JSON.stringify((await call("GET", `/runs/${v2?.id}`)).body);
+  ok("fix 1 fail-guard: raw text already stored on a run (an older run) is replaced by plain words when shown", !TECH.test(runView2) && /Something went wrong on this computer/.test(runView2), runView2.slice(0, 300));
+  ok("fix 3: after a run that attached nothing there is one find button: the offer reads Find again, and the run's own link leads to it (QA-63)", /^Find again with AI \(/.test(after.offer?.label ?? "") && runView.error?.next?.href === `/c/${tvId}/sources`, { label: after.offer?.label, next: runView.error?.next });
+  ok("fix 4: the run card's cost words equal the button's (about US$x · at most US$y)", runView.usd?.worst === Number(/at most US\$(\d+\.\d\d)/.exec(words)?.[1]) && (/about US\$(\d+\.\d\d)/.exec(words)?.[1] ?? null) === (runView.usd?.about == null ? null : runView.usd.about.toFixed(2)), { words, usd: runView.usd });
+  rmSync(join(VAR, "fake-launch.json"), { force: true });
 
   // ---------------------------------------------------------------- M3: the start guard, same words everywhere
   r = await call("POST", "/structure/path", { pathwayType: "INDIVIDUAL", pathway: { key: tr }, program: { label: "Old visits (test)" }, category: { label: "Old visit (test)" }, subCategory: null });

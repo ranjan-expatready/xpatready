@@ -44,7 +44,8 @@ export function StartSetupButton({ nodeKey, label, why, className, size = "sm", 
   );
 }
 
-/** Above "Sources and forms": the finder's newest run (the shared RunCard), or the one way to find the forms. */
+/** Above "Sources and forms": the finder's newest run (the shared RunCard), or the one way to find the forms. After a run
+ *  that attached nothing, the run card carries that one button (S3 early look (3)): never a second "Find again". */
 export function FinderStart({ combinationId }: { combinationId: string }) {
   const qc = useQueryClient(); const toast = useToast(); const { canAuthor } = useSessionView();
   const q = useApi<FinderOffer>(["start-setup", combinationId], `/combinations/${combinationId}/start-setup`);
@@ -59,16 +60,21 @@ export function FinderStart({ combinationId }: { combinationId: string }) {
     catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); refresh(); }
     finally { setBusy(false); }
   };
-  return (
-    <div className="space-y-3" data-finder-start>
-      {o.run ? <RunCard runId={o.run} onEnded={refresh} /> : null}
-      {o.offer && canAuthor ? (
-        <Notice tone={o.offer.mode === "live" ? "ai" : "info"} title={o.ended ? START.againTitle : START.title}
-          action={<Tip tip={o.offer.tip}><span><Button size="sm" busy={busy} onClick={() => void find()} data-find-forms={o.offer.mode}>{o.offer.mode === "live" ? <Sparkles className="size-3.5" aria-hidden /> : null}{o.offer.label}</Button></span></Tip>}>
-          <p>{o.ended ? START.againBody : START.body}</p>
-          {o.offer.why ? <p className="mt-1 text-text-muted" data-offer-why>{o.offer.why}</p> : null}
-        </Notice>
-      ) : null}
+  const button = o.offer && canAuthor ? <Tip tip={o.offer.tip}><span><Button size="sm" busy={busy} onClick={() => void find()} data-find-forms={o.offer.mode}>{o.offer.mode === "live" ? <Sparkles className="size-3.5" aria-hidden /> : null}{o.offer.label}</Button></span></Tip> : null;
+  const why = o.offer?.why && canAuthor ? <p className="text-sm text-text-muted" data-offer-why>{o.offer.why}</p> : null;
+  if (o.run) return (
+    <div className="space-y-2" data-finder-start>
+      <RunCard runId={o.run} onEnded={refresh} next={o.ended ? button ?? undefined : undefined} />
+      {o.ended && button ? <p className="text-sm text-text-muted" data-finder-again>{START.againBody}</p> : null}
+      {o.ended ? why : null}
     </div>
   );
+  return button ? (
+    <div className="space-y-3" data-finder-start>
+      <Notice tone={o.offer!.mode === "live" ? "ai" : "info"} title={START.title} action={button}>
+        <p>{START.body}</p>
+        {why}
+      </Notice>
+    </div>
+  ) : null;
 }

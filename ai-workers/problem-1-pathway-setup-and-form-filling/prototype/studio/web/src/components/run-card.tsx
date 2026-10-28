@@ -9,10 +9,11 @@ import { api, useAction, useApi } from "@/lib/api";
 import { Button, Notice } from "@/components/ui/controls";
 import { Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
+import { costWords } from "../../../contracts/start-setup";
 
 type RunStep = { n: number; kind: string; label: string; uses: "rules" | "ai"; status: string; message: string | null; usd: number; started_at: string | null; finished_at: string | null; counts: { done: number; total: number; unit: string } | null };
 export type RunView = { id: string; operation: string; label: string; scope: string | null; status: string; status_word: string; message: string | null; step: { n: number; m: number; label: string } | null; steps: RunStep[];
-  elapsed_ms: number; usual_ms: number | null; usd: { spent: number; worst: number; usual: number | null }; can_stop: boolean; error: { what: string; next: { label: string; href: string } | null } | null; href: string };
+  elapsed_ms: number; usual_ms: number | null; usd: { spent: number; worst: number; usual: number | null; about?: number | null }; can_stop: boolean; error: { what: string; next: { label: string; href: string } | null } | null; href: string };
 
 const ACTIVE = new Set(["queued", "running", "stopping"]);
 /** "9 s", "1 min 5 s": plain elapsed time. */
@@ -26,15 +27,16 @@ const STEP_ICON: Record<string, React.ReactElement> = {
 const STEP_WORD: Record<string, string> = { COMPLETED: "Done", APPLIED: "Done", RUNNING: "Running", FAILED: "Failed", BLOCKED: "Blocked", PARTIAL: "Done with problems", NEEDS_PERSON: "Waiting for you", CANCELLED: "Stopped", SKIPPED: "Not needed", WAITING: "Waiting", QUEUED: "Waiting" };
 const STOP_TIP = "Ends this run now. Steps already finished keep their results. An AI call already sent is ended too; it stays counted at its reserved worst case because the provider may still bill it.";
 
-/** Usual cost first, then the ceiling, then what it spent (P-123 cost line): "usually about US$0.20 · at most US$5.58". */
+/** About first, then the ceiling, then what it spent (P-123 cost line), in the same words as the button that started it
+ *  (S3 early look (4)): "about US$0.31 · at most US$5.58 · US$0.00 spent". */
 export function costLine(r: Pick<RunView, "usd"> & { steps?: RunView["steps"] }, active: boolean) {
   if (r.usd.worst === 0 && r.usd.spent === 0) return r.steps?.some((s) => s.uses === "ai") ? "US$0 · saved AI answers, no new call" : "US$0 · rules only, no AI";
-  const usual = r.usd.usual !== null ? `usually about US$${r.usd.usual.toFixed(2)}` : "no usual cost yet";
-  return `${usual} · at most US$${r.usd.worst.toFixed(2)} · US$${r.usd.spent.toFixed(2)} ${active ? "so far" : "spent"}`;
+  return `${costWords(r.usd.about !== undefined ? r.usd.about : r.usd.usual, r.usd.worst)} · US$${r.usd.spent.toFixed(2)} ${active ? "so far" : "spent"}`;
 }
 
-/** The run card: shown where the run was started; polls every 1.5 s while the run is active. */
-export function RunCard({ runId, className, onEnded }: { runId: string; className?: string; onEnded?: (r: RunView) => void }) {
+/** The run card: shown where the run was started; polls every 1.5 s while the run is active. `next`, when given, is the
+ *  one way on once the run has ended (the place's own button, e.g. the finder's Find again), in place of the card's link. */
+export function RunCard({ runId, className, onEnded, next }: { runId: string; className?: string; onEnded?: (r: RunView) => void; next?: React.ReactNode }) {
   const q = useApi<RunView>(["run", runId], `/runs/${runId}`, { refetchInterval: (s) => (s.state.data && !ACTIVE.has(s.state.data.status) ? false : 1500) });
   const stop = useAction(() => api(`/runs/${runId}/stop`, { method: "POST" }), { success: "Stopping: no step starts after this", invalidate: [["run", runId], ["runs-active"]] });
   const ended = React.useRef(false);
@@ -51,7 +53,7 @@ export function RunCard({ runId, className, onEnded }: { runId: string; classNam
           <p className="font-semibold">{r.label}{r.scope ? <span className="font-normal text-text-muted"> · {r.scope}</span> : null}</p>
           <p className="mt-0.5 text-sm text-text-muted" data-run-line>
             {r.step ? `Step ${r.step.n} of ${r.step.m} · ` : ""}{r.status_word} · {fmtDuration(r.elapsed_ms)}{r.usual_ms !== null ? ` · usually about ${fmtDuration(r.usual_ms)}` : active ? " · first run of this kind, no usual time yet" : ""}
-            {" · "}<Tip tip="What a run like this usually costs (the last finished one), then the most it can cost (its worst case, stated before it started), then what it has spent. Rules steps cost nothing."><span tabIndex={0} className="tabular-nums underline decoration-dotted" data-run-cost>{costLine(r, active)}</span></Tip>
+            {" · "}<Tip tip="About: what a run like this usually costs. At most: the most it can cost (its worst case, stated before it started). Then what it has spent. Rules steps cost nothing."><span tabIndex={0} className="tabular-nums underline decoration-dotted" data-run-cost>{costLine(r, active)}</span></Tip>
           </p>
           {slow ? <p className="mt-1 text-sm text-text-warn">Taking longer than usual.</p> : null}
         </div>
@@ -71,8 +73,9 @@ export function RunCard({ runId, className, onEnded }: { runId: string; classNam
           </li>
         ))}
       </ol>
-      {!active && r.error ? <Notice tone={r.status === "needs_person" ? "warn" : "danger"} title={r.status_word} action={r.error.next ? <Link className="text-sm text-text-link underline" to={r.error.next.href}>{r.error.next.label}</Link> : undefined}>{r.error.what}</Notice> : null}
+      {!active && r.error ? <Notice tone={r.status === "needs_person" ? "warn" : "danger"} title={r.status_word} action={next ?? (r.error.next ? <Link className="text-sm text-text-link underline" to={r.error.next.href}>{r.error.next.label}</Link> : undefined)}>{r.error.what}</Notice> : null}
       {!active && !r.error && r.message ? <p className="text-sm">{r.message}</p> : null}
+      {!active && !r.error && next ? <div className="flex justify-end">{next}</div> : null}
     </section></TipProvider>
   );
 }
