@@ -434,7 +434,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("PR #67 fail: a change that waits already is not sent again (409)", r.status === 409, r.body?.detail);
 
   // --- R69-3 (Devin Review on #69): when both Delete and Retire are refused, the row's one action is greyed, never clickable.
-  const { rowActionOf } = await import("../api/src/form-library.ts");
+  const { rowActionOf } = await import("../api/src/form-row-action.ts");
   const uv = (can: { delete: string | null; retire: string | null }, released: boolean) => ({ key: "k", label: "k", trail: [], retired: false, released, uses: [], can: { restore: null, ...can }, pending: null }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
   let ra = rowActionOf(false, uv({ delete: "Can't delete: released items are kept.", retire: "Can't retire yet: still used." }, true), null, "user-A");
   ok("R69-3 pass: a released form that is still used (Delete and Retire both refused) shows Retire greyed with the retire reason", ra.kind === "RETIRE" && ra.why === "Can't retire yet: still used.", ra);
