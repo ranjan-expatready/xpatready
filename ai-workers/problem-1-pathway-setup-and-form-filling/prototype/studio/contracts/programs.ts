@@ -131,6 +131,8 @@ export type CatalogueLeaf = {
   path: string[];
   linkLabel: string | null;
   combinationId: string | null;
+  /** Not started: why Start setup cannot run (S3 M3: retired, or a change waits), null when it can. */
+  startWhy?: string | null;
   /** drafted: the form's boxes are mapped (or it is a checklist, which has none); false = attached, not set up yet.
    *  inLibrary (attached sources only): its boxes are already mapped in the library, so it is added without AI. */
   forms: { code: string; drafted: boolean; document: boolean; inLibrary?: boolean; channel?: "PDF_UPLOAD" | "ONLINE" | "SIGNED_PDF_UPLOAD" }[];

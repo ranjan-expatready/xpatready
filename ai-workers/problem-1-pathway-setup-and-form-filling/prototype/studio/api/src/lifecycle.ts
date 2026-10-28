@@ -83,6 +83,24 @@ export function nodeCan(f: NodeFacts): UsesView["can"] & { withCombination: stri
     withCombination: own && (node.retiredAt ? own.retired : !own.retired && own.released) ? own.id : null,
   };
 }
+/** S3 Start setup (M3): why a last-level name cannot begin its setup: it or a name above it is retired, or a change to it
+ *  or a name above it is open (a waiting deletion would then be refused at approval). `chain` runs from the Pathway down
+ *  to the name; `open` holds the keys of names with an open change. Null means it can. */
+export function startWhy(chain: Pick<ProgramDef, "label" | "retiredAt" | "programNodeKey">[], open: Set<string>): string | null {
+  const node = chain[chain.length - 1], above = chain.slice(0, -1).reverse();
+  if (!node) return null;
+  if (node.retiredAt) return WHY.startRetired;
+  const gone = above.find((n) => n.retiredAt);
+  if (gone) return WHY.startRetiredAbove(gone.label);
+  if (open.has(node.programNodeKey)) return WHY.startWaiting(null);
+  const waits = above.find((n) => open.has(n.programNodeKey));
+  return waits ? WHY.startWaiting(waits.label) : null;
+}
+/** The keys of structure names with an open change (waiting, returned or approved and not yet applied). */
+export async function openNodeKeys(db: Db | Prisma.TransactionClient, workspaceId: string) {
+  return new Set((await db.libraryChange.findMany({ where: { workspaceId, kind: "structure_node", status: { in: OPEN } }, select: { key: true } })).map((c) => c.key));
+}
+
 /** An author's own never-approved draft (P-116 amended 28 Oct): deletable, and every name in the branch was added by
  *  this person (names are never approved on their own; once released or used they are not deletable at all). */
 export const ownDraft = (f: NodeFacts, actorId: string | undefined) => !!actorId && actorId !== SAMPLE_CREATOR && !nodeCan(f).delete && [f.node, ...f.below].every((n) => n.createdBy === actorId);

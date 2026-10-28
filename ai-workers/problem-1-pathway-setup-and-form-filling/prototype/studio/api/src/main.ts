@@ -30,6 +30,7 @@ import { normaliseCode } from "../../contracts/form-library.ts";
 import { FormLibrary, FormLibraryController } from "./form-library.ts";
 import { Runs, RunsController } from "./runs.ts";
 import { UploadRuns } from "./upload-run.ts";
+import { StartSetup, StartSetupController } from "./start-setup.ts";
 
 type H = string | undefined;
 
@@ -165,7 +166,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, StructureController, FormLibraryController, RunsController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, StructureController, FormLibraryController, RunsController, StartSetupController], providers: [Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
 class AppModule {}
 
 async function main() {

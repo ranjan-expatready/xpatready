@@ -21,6 +21,7 @@ import { join, resolve } from "node:path";
 import { Audit, Db, need, ROOT, Workspace, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
 import { changeView, itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
+import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 
@@ -102,6 +103,7 @@ export class Programs {
     // The date each official file was downloaded (its leading ISO part: a hand fetch adds a note after it).
     const official = new Map((manifest() as { sha256: string; downloaded_utc?: string }[]).map((m) => [m.sha256, String(m.downloaded_utc ?? "").split(" ")[0]]));
     const byKey = new Map(nodes.map((n) => [n.programNodeKey, n]));
+    const openNodes = await openNodeKeys(this.db, workspaceId); // S3 M3: names with an open change
     const chainOf = (key: string) => { const out: ProgramDef[] = []; for (let n = byKey.get(key); n; n = n.parentNodeKey ? byKey.get(n.parentNodeKey) : undefined) out.unshift(n); return out; };
     const now = new Date();
     const rows: Row[] = [];
@@ -124,7 +126,7 @@ export class Programs {
         held.length && next !== "see_new_edition" ? `New edition waiting: ${held.map((x) => x.edition).join(", ")}` : null, newToday ? "New today" : null].filter(Boolean).join(" · ");
       if (!c) {
         rows.push({ pathway, changes: 0, errors: 0, firstError: null, hasContent: false, searchText: path.join(" "), docNames: [],
-          leaf: { ...base, combinationId: null, forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") } });
+          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") } });
         continue;
       }
       const { snapshot } = snaps.get(c.id)! as { snapshot: Snapshot };
@@ -348,6 +350,10 @@ export class Programs {
     const node = await this.db.programDef.findFirst({ where: { workspaceId, programNodeKey: b.nodeKey }, include: { combination: true } });
     if (!node) throw problem(404, "Not found", "That category or sub-category does not exist.", { errors: [{ field: "nodeKey", message: "Choose an existing category or sub-category." }] });
     if (node.combination) return { created: false, combination: node.combination };
+    // S3 M3: never under a retired name or a waiting change (the one guard's reason, the same words as the greyed button).
+    const chain: ProgramDef[] = []; for (let x: ProgramDef | null = node; x; x = x.parentNodeKey ? await this.db.programDef.findFirst({ where: { workspaceId, programNodeKey: x.parentNodeKey } }) : null) chain.unshift(x);
+    const why = startWhy(chain, await openNodeKeys(this.db, workspaceId));
+    if (why) throw problem(409, "Can't start setup", why);
     if (node.nodeKind !== "STREAM" && node.nodeKind !== "CATEGORY") throw problem(400, "Wrong level", `A combination is a category or a sub-category, not a ${LEVEL_NAME[node.nodeKind].toLowerCase()} (BR-3).`, { errors: [{ field: "nodeKey", message: "Choose a category or sub-category." }] });
     if (await this.db.programDef.count({ where: { workspaceId, parentNodeKey: node.programNodeKey } })) throw problem(400, "Has sub-categories", `"${node.label}" has sub-categories: choose one of them. Each is its own combination (BR-3).`, { errors: [{ field: "nodeKey", message: "Choose a sub-category." }] });
     if (b.allowedLocations) await this.db.programDef.update({ where: { id: node.id }, data: { allowedLocations: b.allowedLocations } });
