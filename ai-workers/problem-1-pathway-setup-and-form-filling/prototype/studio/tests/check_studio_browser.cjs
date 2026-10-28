@@ -65,7 +65,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     const counts = { pathways: ind.pathways.length, programs: ind.tree.length + cor.tree.length, rows: comps.length, attachments, released: comps.filter((c) => c.release).length };
     const fields = await api("/library/fields");
     const dupFields = fields.length - new Set(fields.map((f) => f.key)).size;
-    step(`${label}: Load sample inputs creates 11 programs over the 2 pathways and sets up 6 combinations, official files through the upload path, one released`, counts.pathways === 2 && counts.programs === 11 && counts.rows === 6 && counts.attachments === 24 && counts.released === 1, JSON.stringify(counts));
+    step(`${label}: Load sample inputs creates 11 programs over the 2 pathways and sets up 6 combinations, official files through the upload path, one released`, counts.pathways === 2 && counts.programs === 11 && counts.rows === 6 && counts.attachments === 27 /* 24 + 3 IRCC guides linked as sources (S5 slice 3) */ && counts.released === 1, JSON.stringify(counts));
     step(`${label}: no duplicate field definitions`, dupFields === 0, `${fields.length} fields`);
     return { counts, fields: fields.length, comps };
   };
@@ -224,14 +224,16 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const crumbs = scratch ? await p.getByRole("navigation", { name: "Path" }).getByRole("link").allTextContents().catch(() => []) : [];
   const made = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).rows.find((r) => r.combinationId === scratch);
   step("B1: the path builder creates the program and category and the combination for that full path in one go", !!scratch && /Retail › Temporary residence › Work permits \(built from scratch\) › Employer-specific work permit/.test(willBe) && made?.path.join(" › ") === "Work permits (built from scratch) › Employer-specific work permit" && crumbs.join(" › ").includes("Work permits (built from scratch)"), `${willBe} → ${crumbs.join(" › ")}`);
-  // S5 (P-118 Q2, m5): forms enter only through the Form library; the combination picks them from there.
+  // S5 (P-118 Q2, m5): forms enter only through the Form library; the combination picks them from there. The library's
+  // upload is S4's (P-123): one run card per file (rules check, then library or held for a person).
   await go("/library/forms");
-  await p.setInputFiles('input[type=file]', [path.join(OFFICIAL, "forms/imm1295e.pdf"), path.join(OFFICIAL, "forms/imm5476e.pdf")]);
-  await p.getByRole("list", { name: "Upload results" }).waitFor({ timeout: 60000 }); await idle();
   const junk = path.join(OUT, "not-an-official-form.pdf"); fs.writeFileSync(junk, "%PDF-1.4 not an official form\n");
-  await p.setInputFiles('input[type=file]', [junk]);
-  await p.waitForFunction(() => /not-an-official-form\.pdf/.test(document.querySelector('[aria-label="Upload results"]')?.textContent ?? ""), null, { timeout: 60000 }).catch(() => {});
-  const junkToast = (await p.getByRole("list", { name: "Upload results" }).textContent()) ?? ""; await idle();
+  await p.getByLabel("Choose PDFs to upload").setInputFiles([path.join(OFFICIAL, "forms/imm1295e.pdf"), path.join(OFFICIAL, "forms/imm5476e.pdf"), junk]);
+  await p.waitForTimeout(1000);
+  await p.waitForFunction(() => /not-an-official-form\.pdf[\s\S]{0,120}Failed/.test(document.querySelector("main")?.textContent ?? ""), null, { timeout: 120000 }).catch(() => {});
+  for (let i = 0; i < 240; i++) { if (!((await api("/runs?active=1")).runs ?? []).length) break; await p.waitForTimeout(500); }
+  await idle();
+  const junkToast = ((await p.innerText("main")).match(/[^\n]*not-an-official-form\.pdf[\s\S]{0,160}/) ?? [""])[0].replace(/\s+/g, " ");
   await go(`/c/${scratch}/forms`);
   await click(btn("Add a form from the library"));
   for (const code of ["IMM 1295", "IMM 5476"]) { await click(p.getByRole("dialog").getByRole("button", { name: `Add ${code}` })); await p.getByRole("dialog").getByText("Added").nth(code === "IMM 1295" ? 0 : 1).waitFor({ timeout: 30000 }).catch(() => {}); }
@@ -239,9 +241,9 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   // Wait for the refreshed list (under machine load one immediate read could still show the previous list).
   // The one intake (P-51): a file that is not an approved official source is held for a person, never attached.
   for (let i = 0; i < 40; i++) { main = await p.innerText("main"); if (/Recognised: ready to read/.test(main) && /IMM 1295/.test(main) && /IMM 5476/.test(main)) break; await p.waitForTimeout(375); }
-  const heldJunk = () => api("/intake/held").then((h) => h.some((x) => x.file === "not-an-official-form.pdf"));
+  const refusedJunk = () => /Rules check the file/.test(junkToast) && api("/intake/held").then((h) => !h.some((x) => x.file === "not-an-official-form.pdf"));
   const junkAttached = () => api(`/combinations/${scratch}/attachments`).then((a) => a.some((x) => x.fileName === "not-an-official-form.pdf"));
-  step("B2 (S5): official forms uploaded in the Form library and picked into the combination are recognised; a non-official file is held for a person, not attached", /Recognised: ready to read/.test(main) && /IMM 1295/.test(main) && /IMM 5476/.test(main) && /held for a person/i.test(junkToast) && await heldJunk() && !(await junkAttached()), junkToast);
+  step("B2 (S5): official forms uploaded in the Form library and picked into the combination are recognised; a damaged non-official file is refused at the rules check in words, never added or attached (S4)", /Recognised: ready to read/.test(main) && /IMM 1295/.test(main) && /IMM 5476/.test(main) && await refusedJunk() && !(await junkAttached()), junkToast);
   await shot("B2-forms-reading.png");
   // Read each recognised form, one click per form, waiting until the server records it as read.
   for (let i = 0; i < 4; i++) {
@@ -250,7 +252,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     for (let w = 0; w < 240 && (await api(`/combinations/${scratch}/attachments`)).filter((a) => a.status === "READ").length <= before; w++) await p.waitForTimeout(500); // up to 2 min: slow on a busy machine
   }
   const atts = await api(`/combinations/${scratch}/attachments`);
-  step("B2: both forms read on this computer (no AI); the non-official file stays held", atts.filter((a) => a.status === "READ").length === 2 && await heldJunk() && !(await junkAttached()), atts.map((a) => `${a.fileName}=${a.status}`).join(", "));
+  step("B2: both forms read on this computer (no AI); the refused file is still not attached", atts.filter((a) => a.status === "READ").length === 2 && await refusedJunk() && !(await junkAttached()), atts.map((a) => `${a.fileName}=${a.status}`).join(", "));
 
   // Screen 02 FIX (review Must 4): with form fields left to decide, apply stays on the job page and focuses their list;
   // with none left it goes on to the preview. The journey goes on to the preview either way.
