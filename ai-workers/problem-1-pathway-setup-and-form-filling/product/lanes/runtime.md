@@ -7,15 +7,15 @@
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: W1-combination-workspace (S5, W1-08, P-123)
-current_slice: QA-38 and QA-40 (case side, founder Go 28 Oct while S4 is pending); before it, slice 2 drift-check Shoulds (accepted by the Lead)
-stage: WAITING
-owner: Lead
-next_action: Lead reads QA-38 and QA-40 (build-notes.md top section; evidence the local run: run-suites 40/40, demo journey 46/46). Then WAITING for forms S4 to merge to main; slice 3 on the Lead's Go (sync main first: studio.ts, main.ts, schema.prisma will conflict).
-blocked_by: slice 3 waits for forms S4 to merge to main
+current_slice: slice 3 — forms from the finder on the Forms tab, IRCC guides linked as sources, "Remove from …" with Undo on the shared components (P-116 amended)
+stage: BUILD
+owner: Builder
+next_action: Builder: synced main a6531641 (S4, PR #65; conflicts resolved, typecheck clean). Build slice 3 per challenge.md slice plan 3 and the Lead's Go (28 Oct): finder result rows on Forms, guides as sources, Remove from … + Undo; pass and fail tests; run-suites locally; commit and push after each step; then EARLY-LOOK by message.
+blocked_by: none
 updated: 2026-10-28
 
 ## Handover (28 Oct, to a fresh runtime session; keep current — the founder asked to save after every step)
-* **Where it stands:** branch `runtime/2026-10-27-s5-workspace`, synced with main 83e658bc (PR #64). Slice 1, slice 2 and the drift-check Shoulds are done and accepted (Lead, 28 Oct; evidence the local run on 3964553: run-suites 40/40, demo journey 46/46). QA-38 and QA-40 (Lead message 28 Oct) are fixed with pass and fail tests (build-notes.md top section), run-suites 40/40 and demo journey 46/46, handed back by message. Nothing half-done.
+* **Where it stands:** branch `runtime/2026-10-27-s5-workspace`, synced with main a6531641 (S4 merged, PR #65; conflicts in main.ts, studio.ts, schema.prisma resolved by keeping both sides; check_forms_demo.ts keeps S5's version because S5 removed the Sources picker). Slices 1, 2, the Shoulds, QA-38 and QA-40 are done. Slice 3 (Lead Go 28 Oct) is being built: see next_action and the Slice 3 bullet below.
 * **QA-38:** `newestReleases` in `contracts/runtime.ts` (newest release per combination = the server's rule in `api/src/runtime.ts`); `NewCaseDialog` (`web/src/runtime/cases.tsx`) uses it. Tests: `check_s5_slice1.ts` (list = pin, before and after release 2; old rule vs shared rule), `check_s5_slice2_browser.cjs` (dialog names release 1, then 2; the case opens on Release 2).
 * **QA-40:** the case's Online forms (`api/src/fill-case.ts` `online`) say "IMM 1295 · filed Online (later wave)" (`ONLINE_LATER_WAVE`, `web/src/runtime/forms.tsx`). Tests: same two files (PDF on release 1 is a copy row, Online on release 2 is an Online row; words on the case page; screenshot `slice2/12-case-online-form-1440.png`).
 * **Running checks (runtime ports 4430–4439 only):** scripts were in the session scratchpad; the commands are the usage lines at the top of each test, e.g. `zsh studio/tools/isolated.sh runtime_s5 4431 start && tsx studio/tests/check_s5_slice1.ts 4431 xr_studio_runtime_s5`; full suites `bash product/tools/run-suites.sh` (no `--demo`: it resets :4400); demo journey on an own copy with `STUDIO_URL=http://localhost:4433`. Build the web app first (`cd studio/web && ../node_modules/.bin/vite build`). In a fresh copy run `node_modules/.bin/prisma generate` once.
@@ -23,6 +23,7 @@ updated: 2026-10-28
 * **Slice 3 (after S4 merges):** the finder's result rows, "Picked by AI · Sample" with IRCC's words, the forms lane's actions (Redo, Replace, Remove, Undo), its run component replacing the reading status, "Who can be" filled by AI from the guide (`challenge.md` slice plan 3). Fold in P-116 amended: S5 line removes use "Remove from …" with Undo and the shared components once screens has them.
 
 ## Log (last 10 lines)
+- 2026-10-28 · Builder (Mac): Lead Go for slice 3 (S4 merged, PR #65): synced main (conflicts in main.ts, studio.ts, schema.prisma resolved, both sides kept; check_forms_demo.ts keeps S5's); prisma generate, typecheck clean; pushed a6531641; BUILD slice 3. AI US$0.
 - 2026-10-28 · Builder (Mac): Lead message (founder Go): QA-38 and QA-40 on the case side; synced main 83e658bc (PR #64); both already fixed in slice 1, now one shared rule each (`newestReleases`, "Online (later wave)") with pass and fail tests: slice1 55/55, slice1 browser 52/52, slice2 32/32, slice2 browser 61/61; full run-suites.sh 40/40, demo journey 46/46 on :4433; by-products restored; WAITING owner Lead. AI US$0.
 - 2026-10-28 · Builder (Mac): Lead message (P-85 amended: CI per pull request only): local 40/40 on 3964553 is the evidence, no CI rerun; waiting for S4's merge, then slice 3.
 - 2026-10-28 · Builder (Mac): applied Lead note 2026-10-28 (founder Go on slice 2; read from origin/lead/2026-10-27, PR #64 open); synced main 8cfc043; drift-check Shoulds 2–8, 11, 12 built (build-notes top section): check_s5_slice2 32/32, browser 54/54 (axe, 11 states × 1440/1024); full run-suites.sh 40/40 PASS (demo-reset suite skipped there), demo journey 46/46 on its own copy :4433; graph exit 0 (G3 2, both older); by-products restored; desktop only (Lead 28 Oct); AI US$0; EARLY-LOOK owner Lead.
@@ -32,4 +33,3 @@ updated: 2026-10-28
 - 2026-10-27 · Builder (Mac): applied Lead note 2026-10-27 (S2 merged, PR #53): synced main f289ec7; Lead response copied into challenge.md (Agreed 2026-10-27); BUILD slice 1.
 - 2026-10-27 · Builder (Mac): BUILD slice 1 → EARLY-LOOK: PersonRole + GET /api/library/roles (six built-in, kept by Reset; DB trigger replaces the fixed role check), Who can be (rules, version 409, confirm, Undo), runtime honours the release's people, tabs Overview · Forms · Questionnaires · Documents · Preview · Review and release, Forms drawer (from age, signed by, only if words-only M1), Preview on caseView; Sources upload/sample scaffolding removed, reading and matching kept on Forms (build discovery); QA-38/40/47, D-1/D-2; check_s5_slice1 51/51, browser 51/51 (axe, 11 states × 1440/1024); full suites green after moving 6 older checks to the new places; demo journey 45/45 on its own copy; any 424; graph exit 0; AI US$0; owner Lead.
 - 2026-10-27 · Builder (Mac): Lead message (S6 challenge m1): S5 creates the Person roles record; M3, back-end table, slice 1 and Q-L4 updated (PersonRole + GET /api/library/roles in slice 1; POST stays S6's); no code; AI US$0; owner Lead.
-- 2026-10-27 · Builder (Mac): applied Lead note 2026-10-27 (S5 Combination workspace, DESIGN only; read from origin/lead/2026-10-27); new branch runtime/2026-10-27-s5-workspace from main 76628a4; old Screen 03 branch already pushed (9dfe9b8), not built on; challenge written: Build after these changes (5 Major, 7 Minor), Forms-tab asks to the forms lane, slices 1–3; no code; AI US$0; owner Lead.
