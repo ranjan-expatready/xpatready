@@ -7,7 +7,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { effective } from "../../engine/snapshot.ts";
-import { ACTORS, actorOf, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Audit, Db, fail, need, OpenRead, revise, strip, Workspace, type Actor } from "./core.ts";
 import { actionVerb, changeView, decideChange, resubmitChange, withdrawChange } from "./library-changes.ts";
 import { Intake } from "./intake.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -169,7 +169,7 @@ export class Screen02Controller {
   @Post("library/changes/:id/withdraw") withdraw(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return withdrawChange(this.s.db, actorOf(a), id, noteOf(b)); }
   // P-116 amended: Undo of an author's own-draft delete (structure names; the library kinds come with S6).
   @Post("library/changes/:id/undo") undo(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.undoDelete(actorOf(a), id); }
-  @Get("intake/held/:id/file") async heldFile(@Param("id") id: string, @Res() res: Response) {
+  @OpenRead("a file link the browser opens") @Get("intake/held/:id/file") async heldFile(@Param("id") id: string, @Res() res: Response) {
     const f = await this.intake.heldBytes(id);
     // Shown in the browser to compare, never run: a sandbox and no content sniffing (a held file is untrusted).
     res.setHeader("Content-Type", "application/pdf"); res.setHeader("X-Content-Type-Options", "nosniff"); res.setHeader("Content-Security-Policy", "sandbox");
