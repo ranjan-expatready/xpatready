@@ -32,3 +32,9 @@ The filing channel (B37, P-140) is **not** a queue item. It lands as today's "Wh
 1. **Storage.** `NormalizationItem` holds field proposals today. Recommend one new table for `ProposalItem` (S6 slice 1), with field proposals moved onto it, not a second table beside the old one.
 2. **Rules-only items** (comes-from by precedence, answer lists read from the PDF) have `agreement: "rules_only"`. Recommend that they can be Ready, since no AI is involved, but not bulk-accepted when they land on the library.
 3. **Channel values** wait for the founder's research answer (P-140 note). Nothing in this contract depends on them.
+
+## Lead response, agreed 29 Oct
+**Approved** as the shared contract for S6 and W1-10. From now on it stays stable: any change goes through the Lead, together with the screens lane.
+1. **Storage: yes.** One new table for `ProposalItem` in S6 slice 1. The field proposals move onto it; there is no second table beside `NormalizationItem`.
+2. **Rules-only items: yes.** They may be Ready. They are never bulk-accepted when they land on the library; the second person still approves every library landing.
+3. **Channel values: settled by P-143** (Online · PDF upload · Paper · Not needed, with the signature as its own value). The filing channel stays a `form_accepts` change, not a queue item.

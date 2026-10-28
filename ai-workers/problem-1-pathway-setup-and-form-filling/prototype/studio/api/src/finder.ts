@@ -439,7 +439,7 @@ export class Finder implements OnModuleInit {
   /** One AI round on the shared step runner: replay the newest saved real run of exactly this job (same pages, same
    *  prompt, same combination), or a guarded live call. */
   async aiRound<T>(kind: AiKind, isCheck: boolean, trail: string, combinationKey: string, inputs: { file: string; sha256: string }[], mode: FinderMode, wanted: () => Promise<boolean>, batchId?: string): Promise<RoundOut<T>> {
-    return this.rounds.round<T>(AI_SETTINGS[kind], isCheck, { trail, combinationKey, inputs, mode, wanted, batchId });
+    return this.rounds.round<T>(AI_SETTINGS[kind], isCheck, { trail, contextKey: combinationKey, inputs, mode, wanted, batchId });
   }
 
   /** Q-L1: a hand upload is an official download when its checksum equals the PDF behind the canada.ca form page's link

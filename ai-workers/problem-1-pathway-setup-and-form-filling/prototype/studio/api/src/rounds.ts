@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
 import { RUN_CAP_USD } from "../../../p2/policy.ts";
-import { isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, replayPattern, type SavedRun } from "../../engine/rounds.ts";
+import { editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, replayPattern, type SavedRun } from "../../engine/rounds.ts";
 import { PROTOTYPE, SOLUTION } from "./core.ts";
 import type { Sources } from "./sources.ts";
 
@@ -33,7 +33,9 @@ export type AiStep = {
 };
 /** One AI round's outcome: an answer (live or replayed) or a plain reason it has none. */
 export type RoundOut<T> = { ok: true; output: T; costUsd: number; from: "live" | "replay"; runFile: string } | { ok: false; reason: string; costUsd: number; blocked?: boolean; cancelled?: boolean };
-export type RoundContext = { trail: string; combinationKey: string; inputs: { file: string; sha256: string }[]; mode: "live" | "replay" | "rules"; wanted: () => Promise<boolean>; batchId?: string };
+/** One round's context. `contextKey` is what its saved answer belongs to: a combination's key, or a form edition
+ *  (`edition:<code>:<edition>`, engine/rounds.ts editionContextKey). `trail` is the plain place name the job carries. */
+export type RoundContext = { trail: string; contextKey: string; inputs: { file: string; sha256: string }[]; mode: "live" | "replay" | "rules"; wanted: () => Promise<boolean>; batchId?: string };
 
 /** A round's worst case as the ledger reserves it: inputs bounded by characters, both attempts, never above the run cap. */
 export const worstRoundUsd = (step: AiStep, inputChars: number) => Math.min(RUN_CAP_USD, costUsd(MODEL, inputTokenBound("x".repeat(inputChars)), step.max_output_tokens) * 2);
@@ -62,7 +64,7 @@ export class StepRunner {
   async round<T>(step: AiStep, isCheck: boolean, ctx: RoundContext): Promise<RoundOut<T>> {
     const template = isCheck ? step.check : step.template;
     const jobId = jobIdFor(step.jobBase, isCheck, ctx.trail, ctx.batchId);
-    const want = { templateSha256: sha(readFileSync(join(PROMPTS, template))), inputs: ctx.inputs, combinationKey: ctx.combinationKey, legacy: step.legacyKeys ?? {} };
+    const want = { templateSha256: sha(readFileSync(join(PROMPTS, template))), inputs: ctx.inputs, contextKey: ctx.contextKey, legacy: step.legacyKeys ?? {} };
     if (ctx.mode === "replay") {
       // Round 2 m-a: an unreadable or wrong-shape answer is skipped and an older good one is used.
       const mine = replayPattern(step.jobBase, isCheck);
@@ -73,8 +75,11 @@ export class StepRunner {
       if (!step.shapeOk(saved)) return { ok: false, costUsd: 0, reason: step.words.badSaved };
       return { ok: true, output: saved, costUsd: 0, from: "replay", runFile: `prototype/p2/runs/${r.file}` };
     }
-    const job = { job_id: jobId, kind: step.kind, combination: ctx.combinationKey, configuration_version: step.configurationVersion, template, output_schema: step.schema, inputs: ctx.inputs,
-      settings: { provider_route: ROUTE, model: MODEL, effort: step.effort, timeout_ms: 300_000, max_attempts: 2, budget_usd: 1, max_output_tokens: step.max_output_tokens }, known: { combination_trail: ctx.trail } };
+    // The launcher admits one known fact (p2/launch.ts knownOk): a combination's trail, or a printed form edition.
+    const edition = editionOfContextKey(ctx.contextKey);
+    const job = { job_id: jobId, kind: step.kind, combination: ctx.contextKey, configuration_version: step.configurationVersion, template, output_schema: step.schema, inputs: ctx.inputs,
+      settings: { provider_route: ROUTE, model: MODEL, effort: step.effort, timeout_ms: 300_000, max_attempts: 2, budget_usd: 1, max_output_tokens: step.max_output_tokens },
+      known: edition ? { form_edition: `${edition.code} (${edition.edition})` } : { combination_trail: ctx.trail } };
     mkdirSync(JOBS, { recursive: true });
     writeFileSync(join(JOBS, `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
     if (ctx.batchId) this.liveJobs.set(ctx.batchId, jobId);

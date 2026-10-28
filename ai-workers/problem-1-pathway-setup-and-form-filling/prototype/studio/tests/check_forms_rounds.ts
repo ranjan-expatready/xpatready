@@ -9,9 +9,11 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, replayPattern, savedRunKey, type SavedRun } from "../engine/rounds.ts";
+import { editionContextKey, editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, replayPattern, savedRunKey, type SavedRun } from "../engine/rounds.ts";
 import { RUNS, StepRunner, worstRoundUsd, type AiStep } from "../api/src/rounds.ts";
-import { RUN_CAP_USD } from "../../p2/policy.ts";
+import { EXPERIMENT_CAP_USD, RUN_CAP_USD, WAVE1_CAP_USD } from "../../p2/policy.ts";
+import { BudgetExceeded, SpendLedger } from "../../p2/ledger.ts";
+import { knownOk } from "../../p2/launch.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
@@ -28,7 +30,7 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   ok("C11.8 fail (round 3 R3-2): a trail of names is not a key; a run with neither key nor a reviewed legacy entry belongs to no combination", savedRunKey({ file: "x", drafting_run: { inputs: { combination: "Individual › Visitors › Visitor visa" } } }, {}) === null && savedRunKey({ file: "old-live-20261027t000000000z-a.json", drafting_run: { inputs: { combination: "Individual › Visitors" } } }, legacy) === "individual.visitors.visitor_visa");
   const inputs = [{ file: "prototype/p1/inventory/a.text.inventory.json", sha256: "a".repeat(64) }, { file: "prototype/p1/inventory/b.text.inventory.json", sha256: "b".repeat(64) }];
   const good: SavedRun = { file: "f", caller: "live", contract_valid: true, raw_output: "{}", launch_evidence: { template_sha256: "t1" }, drafting_run: { status: "completed", inputs: { official_files: inputs, combination: "k1" } } };
-  const want = { templateSha256: "t1", inputs, combinationKey: "k1", legacy: {} };
+  const want = { templateSha256: "t1", inputs, contextKey: "k1", legacy: {} };
   ok("C11.8 pass: the same prompt, the same files in order and the same combination may be replayed", isSameSavedRun(good, want));
   const variants: [string, SavedRun][] = [
     ["another prompt", { ...good, launch_evidence: { template_sha256: "t2" } }],
@@ -58,13 +60,13 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   const never = { launchOnce: async () => { throw new Error("replay must not launch"); } };
   const runner = new StepRunner(never);
   const trail = "Individual › Visitors › Visitor visa";
-  let r = await runner.round<{ forms: unknown[] }>(step, false, { trail, combinationKey: key, inputs: savedInputs, mode: "replay", wanted: async () => true });
+  let r = await runner.round<{ forms: unknown[] }>(step, false, { trail, contextKey: key, inputs: savedInputs, mode: "replay", wanted: async () => true });
   ok("C11.8 pass: replay returns the saved real answer of exactly these pages, prompt and combination, at US$0, with no launch", r.ok && r.from === "replay" && r.costUsd === 0 && r.runFile.startsWith("prototype/p2/runs/studio-finder-forms-") && Array.isArray(r.output.forms), r.ok ? r.runFile : r.reason);
-  r = await runner.round(step, false, { trail, combinationKey: "individual.other.place", inputs: savedInputs, mode: "replay", wanted: async () => true });
+  r = await runner.round(step, false, { trail, contextKey: "individual.other.place", inputs: savedInputs, mode: "replay", wanted: async () => true });
   ok("C11.8 fail: replay for another combination finds no saved answer and says so in words", !r.ok && r.reason === step.words.noSaved && r.costUsd === 0, r);
-  r = await runner.round(step, false, { trail, combinationKey: key, inputs: [...savedInputs].reverse(), mode: "replay", wanted: async () => true });
+  r = await runner.round(step, false, { trail, contextKey: key, inputs: [...savedInputs].reverse(), mode: "replay", wanted: async () => true });
   ok("C11.8 fail: replay with other input files (or order) finds no saved answer", savedInputs.length < 2 || (!r.ok && r.reason === step.words.noSaved));
-  const rWrongShape = await new StepRunner(never).round({ ...step, shapeOk: () => false }, false, { trail, combinationKey: key, inputs: savedInputs, mode: "replay", wanted: async () => true });
+  const rWrongShape = await new StepRunner(never).round({ ...step, shapeOk: () => false }, false, { trail, contextKey: key, inputs: savedInputs, mode: "replay", wanted: async () => true });
   ok("C11.14 fail: a saved answer not in the step's shape is never used", !rWrongShape.ok && rWrongShape.reason === step.words.noSaved);
 
   // --- the runner: live rounds on a fake launcher (no process, no network, no spend)
@@ -74,7 +76,7 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   const fake = (plan: (c: Call) => { code: number; out: string; err?: string; cancelled?: boolean; stopped?: boolean }, calls: Call[] = [], jobSeen: string[] = []) => ({
     launchOnce: async (jobId: string, mode: "stub" | "live") => { calls.push({ jobId, mode }); if (existsSync(join(JOBS, `${jobId}.json`))) jobSeen.push(jobId); const p = plan({ jobId, mode }); return { err: "", ...p }; },
   });
-  const live = (launcher: ReturnType<typeof fake>, s: AiStep = step, batchId?: string) => new StepRunner(launcher).round<{ forms: unknown[] }>(s, false, { trail, combinationKey: "k1", inputs, mode: "live", wanted: async () => true, batchId });
+  const live = (launcher: ReturnType<typeof fake>, s: AiStep = step, batchId?: string) => new StepRunner(launcher).round<{ forms: unknown[] }>(s, false, { trail, contextKey: "k1", inputs, mode: "live", wanted: async () => true, batchId });
   const okRec = record({ drafting_run: { status: "completed", usage: { cost_usd: 0.153 } }, contract_valid: true, raw_output: JSON.stringify({ forms: [] }) });
   const calls: Call[] = [], seen: string[] = [];
   r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: okRec }) }), calls, seen));
@@ -95,9 +97,38 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   // Stop finds the round running now for its run, and no other.
   let during: string | undefined;
   const watcher = new StepRunner({ launchOnce: async (jobId: string, mode: "stub" | "live") => { if (mode === "live") during = watcher.liveJob("batch-9"); return { code: 0, err: "", out: mode === "stub" ? "{}" : JSON.stringify({ run_file: okRec }) }; } });
-  await watcher.round(step, false, { trail, combinationKey: "k1", inputs, mode: "live", wanted: async () => true, batchId: "batch-9" });
+  await watcher.round(step, false, { trail, contextKey: "k1", inputs, mode: "live", wanted: async () => true, batchId: "batch-9" });
   ok("M7 pass: while a round runs, Stop finds its exact job for that run", during === jobIdFor("studio-finder-forms", false, trail, "batch-9"), during);
   ok("M7 fail: after the round, and for any other run, there is nothing to stop", watcher.liveJob("batch-9") === undefined && watcher.liveJob("batch-other") === undefined);
+
+  // --- screens N1 (Lead, 29 Oct): a saved answer may belong to a form edition, so S6 drafts once per edition
+  const ek = editionContextKey("IMM 5257", "09-2023");
+  ok("N1 pass: an edition context key names the form and the edition (edition:<code>:<edition>)", ek === "edition:IMM 5257:09-2023" && JSON.stringify(editionOfContextKey(ek)) === JSON.stringify({ code: "IMM 5257", edition: "09-2023" }), ek);
+  ok("N1 fail: a combination's key, or a malformed one, is not an edition", editionOfContextKey("individual.visitors.visitor_visa") === null && editionOfContextKey("edition:IMM 5257") === null && editionOfContextKey("edition:IMM 5257:2023-09") === null && editionOfContextKey("edition:IMM 5257:09-2023:x") === null);
+  const edRun: SavedRun = { ...good, drafting_run: { ...good.drafting_run, inputs: { official_files: inputs, combination: ek } } };
+  ok("N1 pass: a saved answer for this edition is replayed for the same edition, whichever combination asks", isSameSavedRun(edRun, { ...want, contextKey: ek }));
+  ok("N1 fail: never for another edition of the form, another form, or a combination's key", !isSameSavedRun(edRun, { ...want, contextKey: editionContextKey("IMM 5257", "01-2025") }) && !isSameSavedRun(edRun, { ...want, contextKey: editionContextKey("IMM 5645", "09-2023") }) && !isSameSavedRun(edRun, { ...want, contextKey: "k1" }));
+  let edJob: { combination?: string; known?: Record<string, unknown> } = {};
+  const edRunner = new StepRunner({ launchOnce: async (jobId: string, mode: "stub" | "live") => { if (mode === "stub") edJob = JSON.parse(readFileSync(join(JOBS, `${jobId}.json`), "utf8")); return { code: 0, err: "", out: mode === "stub" ? "{}" : JSON.stringify({ run_file: okRec }) }; } });
+  r = await edRunner.round(step, false, { trail: "IMM 5257 (09-2023)", contextKey: ek, inputs, mode: "live", wanted: async () => true });
+  ok("N1 pass: a live round for an edition writes the edition key on its job and names only the printed edition as its known fact (the launcher admits it)", r.ok && edJob.combination === ek && JSON.stringify(edJob.known) === JSON.stringify({ form_edition: "IMM 5257 (09-2023)" }) && knownOk(edJob.known ?? {}), edJob);
+  ok("N1 (for S6): the launcher admits printed IMM editions only; a guide edition is refused as a known fact", !knownOk({ form_edition: "Guide 5256 (05-2026)" }));
+  await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: okRec }) }), [], []));
+  let cJob: { known?: Record<string, unknown> } = {};
+  await new StepRunner({ launchOnce: async (jobId: string, mode: "stub" | "live") => { if (mode === "stub") cJob = JSON.parse(readFileSync(join(JOBS, `${jobId}.json`), "utf8")); return { code: 0, err: "", out: mode === "stub" ? "{}" : JSON.stringify({ run_file: okRec }) }; } }).round(step, false, { trail, contextKey: "k1", inputs, mode: "live", wanted: async () => true });
+  ok("N1 fail: a combination's round never claims a form edition as its known fact", JSON.stringify(cJob.known) === JSON.stringify({ combination_trail: trail }), cJob.known);
+
+  // --- P-139 (founder, 29 Oct): the experiment cap is US$120; the Wave 1 cap stays US$60
+  ok("P-139 pass: the experiment cap is US$120 and the Wave 1 cap US$60", EXPERIMENT_CAP_USD === 120 && WAVE1_CAP_USD === 60, { EXPERIMENT_CAP_USD, WAVE1_CAP_USD });
+  const ledgerDir = mkdtempSync(join(tmpdir(), "ledger-"));
+  // US$115 settled before the wave started (so only the experiment cap counts), then a run asks for more.
+  writeFileSync(join(ledgerDir, "spend.jsonl"), Array.from({ length: 23 }, (_, i) => [JSON.stringify({ type: "reserve", id: `old#${i}`, run_id: `old-${i}`, attempt: 1, worst_usd: 5, at: "2026-10-20T00:00:00.000Z" }), JSON.stringify({ type: "settle", id: `old#${i}`, actual_usd: 5, outcome: "ok", at: "2026-10-20T00:00:01.000Z" })].join("\n")).join("\n") + "\n");
+  const ledger = new SpendLedger(ledgerDir);
+  let reserved = false; try { ledger.reserve("p139-a", 1, 4, RUN_CAP_USD); reserved = true; } catch { /* refused */ }
+  ok("P-139 pass: with US$115 spent, a US$4 run fits under the US$120 cap (it was refused at US$100)", reserved && ledger.capUsd === 120);
+  let refusal = ""; try { ledger.reserve("p139-b", 1, 2, RUN_CAP_USD); } catch (e) { refusal = e instanceof BudgetExceeded ? e.message : String(e); }
+  ok("P-139 fail: a reservation above US$120 is refused before any call, naming the cap", /experiment cap US\$120/.test(refusal), refusal);
+  rmSync(ledgerDir, { recursive: true, force: true });
 
   // --- cost first: the worst case as the ledger reserves it, never above the run cap
   const w = worstRoundUsd(step, 160_000);

@@ -14,7 +14,16 @@ export const newestFirst = (a: string, b: string) => b.slice(b.lastIndexOf("-liv
 /** A saved run record of the guarded launcher, read loosely (only what replay compares). */
 export type SavedRun = { file: string; caller?: string; drafting_run?: { status?: string; usage?: { cost_usd?: number }; inputs?: { official_files?: unknown; combination?: string } }; contract_valid?: boolean; launch_evidence?: { template_sha256?: string; known?: { combination_trail?: string } }; raw_output?: unknown };
 
-/** The combination a saved run belongs to: its job's key, or (runs made before keys) the reviewed list of legacy runs. A
+/** A round's context key (`contextKey`): what a saved answer belongs to. A combination's key (the finder, W1-10), or a
+ *  form edition, `edition:<code>:<edition>` (S6 drafts once per edition and every combination reuses it; screens N1). */
+export const editionContextKey = (code: string, edition: string) => `edition:${code}:${edition}`;
+/** The form and edition of an edition context key; null for a combination's key or anything malformed. */
+export function editionOfContextKey(key: string): { code: string; edition: string } | null {
+  const m = /^edition:([A-Za-z][A-Za-z0-9 ]{1,30}):([0-9]{2}-[0-9]{4})$/.exec(key);
+  return m ? { code: m[1], edition: m[2] } : null;
+}
+
+/** The context a saved run belongs to: its job's key, or (runs made before keys) the reviewed list of legacy runs. A
  *  trail written with " › " is a name, not a key, so it never counts. */
 export function savedRunKey(r: SavedRun, legacy: Record<string, string>): string | null {
   const c = r.drafting_run?.inputs?.combination;
@@ -22,10 +31,10 @@ export function savedRunKey(r: SavedRun, legacy: Record<string, string>): string
 }
 
 /** A saved run may stand in for this round: a completed, valid live answer of the same prompt, the same input files (in
- *  order) and the same combination. */
-export function isSameSavedRun(r: SavedRun, want: { templateSha256: string; inputs: { file: string; sha256: string }[]; combinationKey: string; legacy: Record<string, string> }): boolean {
+ *  order) and the same context (combination or form edition). */
+export function isSameSavedRun(r: SavedRun, want: { templateSha256: string; inputs: { file: string; sha256: string }[]; contextKey: string; legacy: Record<string, string> }): boolean {
   return r?.caller === "live" && r?.drafting_run?.status === "completed" && r.contract_valid === true && r.launch_evidence?.template_sha256 === want.templateSha256
-    && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(want.inputs) && savedRunKey(r, want.legacy) === want.combinationKey && typeof r.raw_output === "string";
+    && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(want.inputs) && savedRunKey(r, want.legacy) === want.contextKey && typeof r.raw_output === "string";
 }
 
 /** A round's job base: the step's own, with "-check" for the checker round. */
