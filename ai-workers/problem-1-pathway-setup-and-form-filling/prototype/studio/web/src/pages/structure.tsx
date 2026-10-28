@@ -142,7 +142,10 @@ export function StructurePage() {
     const n = justAdded ? byKey.get(justAdded) : undefined;
     if (!n) return;
     if (!shown.has(n.key)) { setQ(""); set({ p: null, prog: null, s: null, q: null }); return; }
-    requestAnimationFrame(() => { const el = document.querySelector<HTMLElement>(`[data-row="${CSS.escape(n.key)}"]`); el?.scrollIntoView({ block: "center" }); el?.querySelector<HTMLElement>("[data-edit]")?.focus({ preventScroll: true }); });
+    // Focus goes to the row only once the pop-up is closed: during "Add and add another" the pop-up's focus trap took it
+    // back and selected the letters already typed, so the next key replaced them (QA-60).
+    const stay = !!adding;
+    requestAnimationFrame(() => { const el = document.querySelector<HTMLElement>(`[data-row="${CSS.escape(n.key)}"]`); el?.scrollIntoView({ block: "center" }); if (!stay) el?.querySelector<HTMLElement>("[data-edit]")?.focus({ preventScroll: true }); });
   }, [justAdded, byKey, shown]); // eslint-disable-line react-hooks/exhaustive-deps
   const openAdd = () => { if (canAuthor) setAdding({ pathwayKey: pw ?? undefined, programKey: prog ?? undefined }); };
   const refresh = () => Promise.all(["structure", "structure-uses", "catalogue", "draft", "review-queue"].map((k) => qc.invalidateQueries({ queryKey: [k] })));
