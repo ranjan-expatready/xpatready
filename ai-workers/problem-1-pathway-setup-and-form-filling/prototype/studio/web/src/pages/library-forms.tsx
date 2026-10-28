@@ -118,10 +118,10 @@ export function FormsPage() {
             : <EmptyState title="No forms yet" description="Forms come in by themselves when a combination's setup starts: the form finder reads its IRCC page and downloads each form from canada.ca. You can also upload IRCC PDFs. Every form is stored once and used by any combination." />)
           : (
             <Table label="Table: Number, Title, Type, Edition, IRCC accepts, Used by, Status" headClass={[undefined, undefined, "hidden xl:table-cell", "hidden xl:table-cell"]} head={["Number", "Title", "Type", "Edition", <Tip key="ia" tip={ACCEPTS_TIP}><span tabIndex={0} className="underline decoration-dotted rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">IRCC accepts</span></Tip>, "Used by", "Status", <span key="a" className="sr-only">Actions</span>]}>
-              {lib.data.rows.map((r) => (
-                <tr key={r.code} data-form={r.code} className={r.status === "retired" ? "text-text-muted" : undefined}>
+              {lib.data.rows.map((r) => (<React.Fragment key={r.code}>
+                <tr data-form={r.code} className={r.status === "retired" ? "text-text-muted" : undefined}>
                   <td className="mono whitespace-nowrap"><button type="button" className="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setOpen(r)}>{r.code}</button></td>
-                  <td className="min-w-40 max-w-56 break-words xl:max-w-80"><span className="line-clamp-2" title={r.title}>{r.title}</span>
+                  <td className="min-w-32 max-w-56 break-words xl:max-w-80"><span className="line-clamp-2" title={r.title}>{r.title}</span>
                     <span className="mt-0.5 block text-xs text-text-muted xl:hidden">{TYPE_WORD[r.type]} · {editionText(r) ?? "no usable edition yet"}</span></td>
                   <td className="hidden xl:table-cell">{TYPE_WORD[r.type]}</td>
                   <td className="hidden xl:table-cell">{editionText(r) ?? <span className="text-text-muted">no usable edition yet</span>}</td>
@@ -135,9 +135,11 @@ export function FormsPage() {
                         editTip="Open the form: its definition, what IRCC accepts, where it is used and its history." onEdit={() => setOpen(r)} onAction={() => { setActing({ busy: false, error: null }); setConfirm(r); }} />
                       <RowActions row={r} canAuthor={canAuthor} onWhereUsed={() => setOpen(r)} />
                     </div>
-                    {canAuthor && r.action.why ? <BlockedLine id={`why-${r.code.replace(/\W+/g, "-")}`} text={r.action.why} onWhere={() => setOpen(r)} className="ml-auto mt-0.5 max-w-[18rem] text-right" /> : null}
                   </td>
                 </tr>
+                {/* The greyed action's reason, as visible text under its row (P-116 amended; aria-describedby on the action). */}
+                {canAuthor && r.action.why ? <tr data-reason-for={r.code}><td colSpan={8} className="pt-0 text-right"><BlockedLine id={`why-${r.code.replace(/\W+/g, "-")}`} text={r.action.why} onWhere={() => setOpen(r)} className="ml-auto max-w-[40rem]" /></td></tr> : null}
+              </React.Fragment>
               ))}
             </Table>
           )}
