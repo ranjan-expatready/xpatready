@@ -81,3 +81,6 @@ Lead settles: [C1] "Remove" in code vs Delete (P-128) → Delete for masters, "R
 - [x] Data and API needs known (guard kinds to add; one uses route per kind)
 - [ ] Every decision relied on agreed: Q1–Q3 open; C1, C2, M2, M3 for the Lead
 - [ ] No open questions
+
+## Founder picks (28 Oct) — Agreed (P-116 amended)
+Q1 **own never-approved draft: delete at once with Undo** · Q2 **library retire at approval; structure names and combinations at release** · Q3 **Replace with… not now**. Lead: C1 Delete for masters, "Remove from …" for lines; C2 plain words, no rule codes; M2 Undo toast as drawn; M3 "Being retired" lock on every master. Word set in PRODUCT §4. Lanes per §5.

@@ -9,7 +9,7 @@ updated: 2026-10-27
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
 | screens | W1-visual-system | DESIGN | Lead | Lead note waiting for sync · Lead: answer the round 3 challenge (screens/W1-visual-system/challenge.md: 4 Major — combination row's life… |
-| forms | S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124) | FIX | Builder | Finish the drift-check FIX: S4 checks and full suites on the merged code, push, CI, then CHECK (reviewer + … |
+| forms | S4-form-library (W1-06 Form library + form finder, with the W1-07 run component; P-123, P-124) | CHECK | Builder | Lead note waiting for sync · Breaker still running on a660f7b; then FIX the reviewer's Major (two fixture lines do not support PDF uploa… |
 | runtime | W1-combination-workspace (S5, W1-08, P-123) (slice 2 drift-check Shoulds (Review in words, Forms counts and next step, IRCC's words, Preview names, Remove confirm + Undo, AI-picks Sample state)) | EARLY-LOOK | Lead | Lead note waiting for sync · Blocked: slice 3 waits for forms S4 to merge to main |
 | m3 | M3-prepare-application | DESIGN | Lead | Lead reads screens/M3-prepare-application/research-agent-view.md (three IRCC representative accounts, PDF v… |
 | evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
@@ -18,6 +18,7 @@ updated: 2026-10-27
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-28 · Lead (Mac) · **Lifecycle pattern agreed (P-116 amended, R-130):** Where used, one written row action, impact list, Undo, one word set (PRODUCT §4); own drafts delete at once; library retire at approval, names and combinations at release; Replace with… not now. Gaps assigned: screens (shared components + guard), forms (library after S4), runtime (S5 line removes). CI change merged into PR #64 review fixes.
 - 2026-10-28 · Lead (Mac) · Screens round 3 challenge (bdcf23e): 4 Majors + 6 Minors accepted (combination row retires with its name, exact branch delete, qa wording checks updated by screens with Lead OK, two green commits R3a/R3b); screens → BUILD. Runtime WAITING for S4 (c215bae). Forms finishing suites (2ca6d86).
 - 2026-10-28 · Lead (Mac) · **CI cost cut (founder OK):** `ci.yml` now one job per pull request (guard, rules, graph, PDF checksums; full suites only when code changes), nothing on push; P-85 amended; lead and qa skills read local suite evidence for lane commits. Screens told round 3 (DESIGN).
 - 2026-10-28 · Lead (Mac) · **Founder Go on Program structure round 3 (P-128, supersedes P-127):** option A numbered outline, Tree + List, one Add, Edit/Delete per row, filter bar on both pages, Add combination opens the pop-up; Lead: branch delete yes, page-order sort, Delete not Remove. Screens → DESIGN (challenge), then BUILD.
@@ -27,4 +28,3 @@ updated: 2026-10-27
 - 2026-10-28 · Lead (Mac) · **Founder Go on S5 slice 2** (drift check clean, CI green f0166e5); runtime → BUILD (Shoulds, then slice 3 after S4). **Forms drift check: Merge after fixes** (sync main, Delete/Remove words, Load sample fixtures for change 4, replay keyed by the combination); P-123 amended: an unread hand upload waits for a person. Fresh forms and runtime sessions next.
 - 2026-10-28 · Lead (Mac) · **Fourth Lead chat resumed after the handover:** fresh screens session started (visual-system finish); drift checks by fresh agents on forms S4, runtime S5 and screens. Screens drift check: **Fix first** (CI red on d5e0e99 in 4 suites; "used by" missing on each line per P-127; QA-44 focus lag; no API refusal tests for the Add pop-up), sent to the screens session. Forms and runtime checks running.
 - 2026-10-28 · Lead (Mac) · **All four lanes handed over** (runtime f0166e5: S5 fixes 1–4 + slice 2 at EARLY-LOOK); sessions closed. Next chat: `/lead` (drift check, S4 Lead check, visual-system and S5 early looks).
-- 2026-10-28 · Lead (Mac) · **Handover:** forms (08eb170, S4 at CHECK), screens (f05a2e1, visual-system slice built, finishing), qa (657c7f8, WAITING) handed over and closed; runtime handover pending; LEAD.md "Where we are" rewritten for the next Lead.
