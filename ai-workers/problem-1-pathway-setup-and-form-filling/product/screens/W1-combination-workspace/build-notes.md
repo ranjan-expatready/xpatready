@@ -1,5 +1,26 @@
 # S5 Combination workspace (W1-08, P-123) — build notes
 
+## Slice 3: forms from the finder (BUILD, 28 Oct, Lead Go after S4 merged, PR #65) → EARLY-LOOK
+Synced main a6531641 (conflicts in `main.ts`, `studio.ts`, `schema.prisma`: both sides kept; `check_forms_demo.ts` keeps S5's, the Sources picker is gone). All endpoints are the forms lane's; S5 adds no finder, attach, remove or undo route. AI US$0 (saved AI answers replayed).
+
+| Part | What is built | Check |
+|---|---|---|
+| Find forms with AI (M2, M5) | `web/src/pages/workspace/finder.tsx`: a strip above the lines says what the latest find did ("AI found 7 forms for this combination, 1 to decide · saved AI answers, US$0 · Sample until the immigration expert confirms") with **Find forms with AI** / **Find again**. The dialog shows the plan's steps and its cost before anything runs: saved AI answers (US$0), rules only (US$0) or AI now ("At most US$5.58 …"). The run shows on the forms lane's `RunCard`; the lines refresh when it ends. | slice3 API: plan US$0, run ends, AI_FOUND lines with IRCC's words; a combination with no saved answer attaches nothing at US$0. Browser: dialog, cost words, lines, finder words |
+| What the find named that is not a line | Rows from `GET …/forms/find/latest`: Not found (**Upload PDF** for that code with `forCombination`/`forCode`, **Find again**), uploaded and waiting for a second person (link to To review), AI's rounds disagree (**Add to this combination**), not for this application (folded). A form a person removed is listed once, under Removed in this draft. | browser: to-decide row, removed form shown once |
+| Lines AI picked | "Picked by AI · Sample" on the row with IRCC's words (as sentences). | API + browser |
+| Row ⋯ menu | **Redo with AI** (the same plan for that one form, `only`), **Replace edition…** (checks canada.ca, with the line's version), **Remove from this combination**. | browser: Redo dialog for IMM 5257 at US$0 |
+| Remove from this combination + Undo (P-116 amended) | Asked first, naming the form (dialog from the menu, footer in the drawer); the forms lane's `DELETE …/forms/:code` with the line's version (stale → 409). After it: the **shared Undo toast** (`useUndoToast`, `components/lifecycle`) and **one Undo bar** for the page, "Last change: Removed IMM 5257 · today 2:38 p.m. · Undo", calling the forms lane's `POST …/forms/undo` with that change's id (a newer change by someone else → 409). Removed in this draft lists each with **Add back**. S5's own restore route (slice 2 Should 8) is gone: one Undo path, recorded and serialised by the forms lane. Find again never re-attaches a removed form. | slice3 API: stale version 409, officer 403, Removed list, last change words, Find again keeps it out (REMOVED_BY_PERSON), Add back, Undo with an old id 409, Undo twice reverses Add back then the removal. slice2 API and browser moved to the same calls |
+| IRCC guides as sources (Lead decision on S4's open point) | `api/src/guide-sources.ts`: a guide stays in the library and is linked to each combination whose forms it explains, as a source attachment carrying the guide edition's own file and fingerprint (kind Instructions, "read by AI to find this combination's forms; never filed"). Linked by Load sample (each sample combination's guide, `samples/form-library-sample.json`) and when a find ends (the guide pages it read; one call in `finder.ts finish`). Never twice for the same file. The library then counts the combination as using the guide (Guide 5256: Visitor visa and Super visa). | slice3 API: pass, fail (With an LMIA has none), no duplicate, library used-by. Browser: Super visa's Sources line |
+| Forms view | `GET …/workspace?tab=forms` also returns each line's `version` and `lastChange` (the newest change Undo can still reverse). | API |
+
+**Checks:** `check_s5_slice3.ts` 23/23, `check_s5_slice3_browser.cjs` 27/27 (axe on 5 states × 1440/1024), slice 1 and 2 checks moved to the forms lane's calls. Screenshots `screenshots/slice3/`. Full suites: see the lane log.
+
+**Not built here, for the Lead:**
+* "Who can be in this application" filled by AI from the guide (challenge slice plan 3): a new AI step (draft and checker round, P-121) with no saved answer to replay, so it needs a paid live run (about US$0.01–0.02 per guide) to record one. Not in the Lead's slice 3 Go; waiting for a decision.
+* The shared `ImpactPanel` knows only Delete, Retire, Restore and Withdraw, so "Remove from this combination" uses its own short confirm with the PRODUCT §4 words; the Undo toast is the shared one. Documents, rules, sections and person-role removes on the other tabs are not moved yet (they have no forms-lane-style undo record).
+* "Add a form from the library" still uses the older picker (`components/forms.tsx`, `POST …/lines`, which also records an Undo step), not `?for=picker`.
+* `finder.ts` (forms lane's file) has one added line: the guide link at the end of a run.
+
 ## QA-38 and QA-40 (FIX, 28 Oct, Lead message: founder Go while S4 is pending)
 Both were already fixed on this branch in slice 1 (68adc3b3), which is not on main yet; qa saw them on main. This pass gives each one shared rule and a pass and a fail test. Case side only, no Studio configuration file touched. Synced main 83e658bc (PR #64).
 
