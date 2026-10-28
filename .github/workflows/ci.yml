@@ -39,7 +39,12 @@ jobs:
           fi
           echo "changed=true" >> "$GITHUB_OUTPUT"; echo "suites=true" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
-        with: { node-version-file: .nvmrc }
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: packages (npm ci; the graph and any-count checks read TypeScript from them)
+        run: cd "$S" && npm ci --no-fund --no-audit
       - name: rules files, decision impact, graph (P-86)
         run: |
           bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
