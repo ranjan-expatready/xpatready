@@ -48,20 +48,8 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 * Screens the founder named by their place in the app (Programs › New combination; Programs › Individual › Citizenship › Grant of citizenship; Corporate › Compliance › Inspection response; Shared library) are saved as the "before" in `screens/W1-baseline/` (18 screenshots, 26 Oct). Forms come from the canada.ca forms page the founder gave (W1-12).
 * Structure names on the sheet: the Lead decides from IRCC's own naming (founder: "research what is the truth"); research in screens/W1-form-library/forms-for-5-combinations.md (Part B, being written); the expert confirms later.
 
-## Earlier parallel work: what happens to it (Lead audit 26 Oct)
-| Work | Where now | In wave 1 |
-|---|---|---|
-| Extension F2 + F3 slices 1–4 (capture, pairing, online fill, APR twin) | merged on `main` (PR #34–#36); saved on `lead/parked-extension-2026-10-26` | Removed by W1-02; fill parts return in W6; capture does not return |
-| PDF intake, held files, second-person approval, second-draft guard, PDF hardening (forms) | `main` | Kept; the base of W1-06 |
-| Screen 01 Programs and New combination | `main` | Redesigned in W1-03–W1-05 |
-| Screen 02 AI work, To review, merges, edition impact | `main` | Kept; reused by W1-06, W1-09, W2 |
-| Screen 04 slice 1 (library lists) | never built (session stopped) | Folded into W1-09 |
-| Screen 03 S1 + S2 (SQR tab, coverage per role, copies, minimum age, signed by, preview by person) | runtime branch, 5 commits, not merged | Reused by W1-08 where its concept keeps it; merged only after that |
-| R1 thin slice (case, family link, answers once, agent facts, PDF fill) | `main` | Reused in W4 and W5 |
-| M3 Prepare application challenge | m3 lane | Input to W4 research |
-| Evidence IMM 5409, IMM 5476 Adobe checks | `main` | Reused (IMM 5476 is in every combination) |
-| qa/Goose explore (real-portal proof plan), scout SC-1 Programs empty-state wording | own branches, not merged | Portal plan parked; SC-1 wording considered in W1-04 |
-| Lead PRs #28 (roles audit), #30 (archive non-POC folders) | open since 25 Oct | Founder decides later; not blocking |
+## Earlier parallel work
+The 26 Oct audit of earlier work (extension, PDF intake, Screens 01–04, R1, m3, evidence, qa/scout) is in `history/WAVE-1-earlier-work-2026-10-26.md`.
 
 ## Rules for this wave
 **Remove, retire, reorder (P-116):** one shared mechanism on every master (where used first; remove only unused, retire/restore used; reorder where order matters; no move), built with W1-03 and reused by W1-06, W1-08, W1-09. **Lanes (P-111, amended by P-117):** one build lane at a time on the demo path, qa after every merge; m3 research only; scout, evidence, Devin and Goose paused; one Lead chat at a time, a fresh /lead each day. Permanent-residence combinations: PDFs where IRCC takes them, an answer sheet for portal-only forms (P-113).
