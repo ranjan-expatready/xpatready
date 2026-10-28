@@ -80,6 +80,11 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
       const n = k ? nodes.find((x) => x.key === k) : undefined;
       if (n) { t[lv] = n.label; s[lv] = n.key; }
     }
+    // A level given without the one above it is filled upwards from its parent (a Program filter without its Pathway).
+    for (const [lv, up] of [["category", "program"], ["program", "pathway"]] as const) {
+      const n = s[lv] ? nodes.find((x) => x.key === s[lv]) : undefined, parent = n?.parentKey ? nodes.find((x) => x.key === n.parentKey) : undefined;
+      if (parent && !s[up]) { t[up] = parent.label; s[up] = parent.key; }
+    }
     setText(t); setSel(s); setKeep({}); setClose({}); setErrors({}); setProblem(null);
     const cat = s.category ? nodes.find((x) => x.key === s.category) : undefined;
     setNone(!(prefill?.focus === "subCategory" || (cat && nodes.some((x) => x.parentKey === cat.key))));

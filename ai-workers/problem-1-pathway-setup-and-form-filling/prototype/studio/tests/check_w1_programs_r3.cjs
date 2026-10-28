@@ -88,9 +88,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== Add combination: the one pop-up, here (P-128 (5))
   await p.locator("[data-add-combination]").click(); await dialog().waitFor();
+  await p.waitForFunction(() => !!document.querySelector('[data-field="pathway"] input')?.value, null, { timeout: 8000 }).catch(() => undefined); // the pop-up's list loads first
   step("C11.3 P-128 (5): Add combination opens the Add to Program structure pop-up here, prefilled with the Pathway and Program filters", new URL(p.url()).pathname === "/" && (await field("pathway").inputValue()) === tr.label && (await field("program").inputValue()) === "Work permits", `${new URL(p.url()).pathname} · ${await field("pathway").inputValue()} · ${await field("program").inputValue()}`);
   await p.waitForTimeout(300);
   step("C11.3 AD-8: it starts at the first empty level (Category)", await field("category").evaluate((e) => e === document.activeElement));
+  await p.getByRole("button", { name: "Cancel" }).click(); await dialog().waitFor({ state: "detached" });
+  // Lead review follow-up: a Program filter alone (no Pathway in the address) still fills the Pathway above it.
+  await open(`?prog=${encodeURIComponent(wp.key)}`);
+  await p.locator("[data-add-combination]").click(); await dialog().waitFor();
+  await p.waitForFunction(() => !!document.querySelector('[data-field="program"] input')?.value, null, { timeout: 8000 }).catch(() => undefined);
+  step("C11.3 R3-7 fail-guard: a Program filter alone prefills its Pathway too, so Category is open", (await field("pathway").inputValue()) === tr.label && (await field("program").inputValue()) === "Work permits" && !(await field("category").isDisabled()), `${await field("pathway").inputValue()} · ${await field("program").inputValue()}`);
   await field("category").fill("Temporary resident permit (test)"); await p.waitForTimeout(500);
   await state("add-combination-pop-up", { dialog: true });
   await p.locator("[data-add-submit]").click(); await dialog().waitFor({ state: "detached" });
