@@ -47,24 +47,24 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step(`setup: ${extra} added in the editor, not saved yet`, (await who.locator("[data-person]").count()) === before + 1);
   await who.getByRole("button", { name: "Fill from the guide" }).click();
   const fill = p.getByRole("dialog"); await fill.locator("[data-people-cost]").waitFor({ timeout: 30000 }).catch(() => {});
-  step("L8: Fill from the guide can be opened while editing (it adds to the editor's lines)", /Guide 5256/.test(await fill.innerText()));
-  step("L2 fail: AI now is greyed, saying it waits for the founder's Go for a live trial", await fill.getByLabel(/AI now/).isDisabled() && /founder's Go for a live trial/.test(await fill.locator('[data-fill-mode="live"]').innerText()));
-  step("L2 pass: Rules only is chosen and costs US$0", await fill.getByLabel(/Rules only/).isChecked() && /Cost: US\$0/.test(await fill.locator("[data-people-cost]").innerText()));
+  step("C11.12 L8: Fill from the guide can be opened while editing (it adds to the editor's lines)", /Guide 5256/.test(await fill.innerText()));
+  step("C11.12 L2 fail: AI now is greyed, saying it waits for the founder's Go for a live trial", await fill.getByLabel(/AI now/).isDisabled() && /founder's Go for a live trial/.test(await fill.locator('[data-fill-mode="live"]').innerText()));
+  step("C11.12 L2 pass: Rules only is chosen and costs US$0", await fill.getByLabel(/Rules only/).isChecked() && /Cost: US\$0/.test(await fill.locator("[data-people-cost]").innerText()));
   await state("fill-from-guide-ai-now-greyed");
   await fill.getByRole("button", { name: "Fill" }).click(); await fill.locator("[data-people-proposal]").waitFor({ timeout: 30000 }).catch(() => {});
   const proposed = await fill.locator("[data-proposed]").evaluateAll((xs) => xs.map((x) => x.getAttribute("data-proposed")));
   await fill.getByRole("button", { name: "Use these lines" }).click(); await settle();
   const rows = await who.locator("[data-person]").evaluateAll((xs) => xs.map((x) => x.getAttribute("data-person")));
-  step(`L8 pass: after Use these lines the unsaved ${extra} line is still in the editor`, key ? rows.includes(key) : rows.length > proposed.length, rows.join(", "));
-  step("L8: the guide's lines are in the editor too", proposed.every((r) => rows.includes(r)), proposed.join(", "));
+  step(`C11.12 L8 pass: after Use these lines the unsaved ${extra} line is still in the editor`, key ? rows.includes(key) : rows.length > proposed.length, rows.join(", "));
+  step("C11.12 L8: the guide's lines are in the editor too", proposed.every((r) => rows.includes(r)), proposed.join(", "));
   const spouse = who.locator('[data-person="spouse_or_partner"]');
-  step("L3 pass: a line from rules only is marked Rules", await spouse.locator("[data-origin-rules]").count() === 1);
-  step("L3 fail: and never AI", await spouse.getByText("AI", { exact: true }).count() === 0);
+  step("C11.12 L3 pass: a line from rules only is marked Rules", await spouse.locator("[data-origin-rules]").count() === 1);
+  step("C11.12 L3 fail: and never AI", await spouse.getByText("AI", { exact: true }).count() === 0);
   await state("who-can-be-rules-lines-kept-edit");
   await who.getByRole("button", { name: "Save" }).click(); await settle();
   const dlg = p.getByRole("dialog"); if (await dlg.count()) { await dlg.getByRole("button", { name: "Save anyway" }).click().catch(() => {}); await settle(); }
   const saved = (await api(`/combinations/${sv}/workspace?tab=questionnaires`)).body.people.lines;
-  step(`L8 pass: saved, the list holds the guide's lines and the ${extra} line`, (!key || saved.some((l) => l.role === key)) && saved.some((l) => l.role === "spouse_or_partner" && l.origin === "CODE_MATCH"), saved.map((l) => `${l.role}:${l.origin ?? "-"}`).join(" "));
+  step(`C11.12 L8 pass: saved, the list holds the guide's lines and the ${extra} line`, (!key || saved.some((l) => l.role === key)) && saved.some((l) => l.role === "spouse_or_partner" && l.origin === "CODE_MATCH"), saved.map((l) => `${l.role}:${l.origin ?? "-"}`).join(" "));
 
   // ======================================================== L11: a line added from the library
   const plan0 = (await api(`/combinations/${vv}/forms/find/plan`, { method: "POST", data: { mode: "replay" } })).body;
@@ -80,12 +80,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await settle(); await p.keyboard.press("Escape"); await settle();
   const row = p.locator(`[data-line="${lib}"]`); await row.waitFor({ timeout: 20000 }).catch(() => {});
   const text = await row.innerText().catch(() => "");
-  step(`L11 pass: ${lib}, added from the library, says "Added from the library by a person" where IRCC's words go`, /Added from the library by a person/.test(text), text.split("\n").slice(0, 3).join(" | "));
-  step(`L11 fail: it never shows our own words as IRCC's (no quoted "added from the library")`, !/"[^"]*added from the library/.test(text));
+  step(`C11.10 L11 pass: ${lib}, added from the library, says "Added from the library by a person" where IRCC's words go`, /Added from the library by a person/.test(text), text.split("\n").slice(0, 3).join(" | "));
+  step(`C11.10 L11 fail: it never shows our own words as IRCC's (no quoted "added from the library")`, !/"[^"]*added from the library/.test(text));
   const boxes = Number((/(\d+) form fields matched/.exec(text) ?? [])[1] ?? 0);
-  step(`L11: a line the library already matched (${boxes} form fields) has no "Draft with AI" step, it says In the library`, boxes === 0 || (await row.getByRole("button", { name: "Draft with AI" }).count() === 0 && await row.locator("[data-line-matched]").count() === 1), `${boxes} matched`);
+  step(`C11.10 L11: a line the library already matched (${boxes} form fields) has no "Draft with AI" step, it says In the library`, boxes === 0 || (await row.getByRole("button", { name: "Draft with AI" }).count() === 0 && await row.locator("[data-line-matched]").count() === 1), `${boxes} matched`);
   const found = p.locator('[data-line="IMM 5257"]');
-  step("L11 fail-guard: a line the finder picked keeps IRCC's words (quoted)", /"[^"]{20,}/.test(await found.innerText().catch(() => "")));
+  step("C11.10 L11 fail-guard: a line the finder picked keeps IRCC's words (quoted)", /"[^"]{20,}/.test(await found.innerText().catch(() => "")));
   await state("forms-added-from-library");
 
   step("no page errors on the way", errs.length === 0, errs.join(" | "));
