@@ -1,6 +1,6 @@
 # W1-10 AI drafting: updated plan (forms lane, 29 Oct; design only, no code yet)
 
-Follows `challenge.md` (A1–A7, a1–a6). The Lead decides; the founder sees it at an early look before any build (design before build). Every count, condition, document line, channel and cost is **Sample** until the immigration expert confirms it. Legal points: Unconfirmed: no counsel. Labels: **Capability** (production keeps it) or **Scaffolding** (proof only, never ported; P-33).
+Follows `challenge.md` (A1–A7, a1–a6; **agreed 29 Oct**, founder P-138, P-139, P-140). Slice 0 and the queue item contract proposal are Go; slices 1–6 wait for the founder's early look (design before build). Every count, condition, document line, channel and cost is **Sample** until the immigration expert confirms it. Legal points: Unconfirmed: no counsel. Labels: **Capability** (production keeps it) or **Scaffolding** (proof only, never ported; P-33).
 
 ## 1. One run: "Draft questions and documents" (A1)
 It runs on one combination after its forms are attached (S4 finder). Every AI step has its own blind checker round and the rules (P-121). Each step can be Live, Saved or Rules only (P-110 amended), and live runs only on a click (P-125).
@@ -27,7 +27,7 @@ Paid steps: 1 (a few tokens inside the finder), 3, 4 (new types only), 6, 7, 8. 
 * **R-5** A condition reads only shared fields, asked of that person before it is needed (`reachable`); it reuses a shared condition when the meaning matches; never copied per combination (S6 M6).
 * **R-6** People are roles from "Who can be in this application" (P-119); any other role is refused.
 * **R-7** An identity document's reader kind is never AI vision (P-134). *Fail test:* AI proposes "Letter or record" for Passport → refused, shown as Decide with the reason.
-* **R-8** `acceptedChannels` keeps its three values and adds PAPER and SIGNED_PDF; nothing is renamed (S5 reads it; lead-check L4).
+* **R-8** `acceptedChannels` keeps its three values and their meaning; nothing is renamed (S5 reads it; lead-check L4). New values wait for the founder's answer on the channel research (PDF only, online only, both, online plus auto-filled PDFs uploaded online).
 * **R-9** PQR ⊂ SQR; a PQR tick only on facts that come from the client or a document (P-130).
 * **R-10** Bulk accept for Ready only, one Undo per batch, each item re-checked on the server (P-121; S6's queue).
 * **R-11** Every accept, edit and reject is stored with its step and reason; AI work shows the acceptance rate per step and flags a step under 70 % (P-130 §6.3, a6).
@@ -36,7 +36,7 @@ Paid steps: 1 (a few tokens inside the finder), 3, 4 (new types only), 6, 7, 8. 
 | Slice | What | Depends on | Label | Cost |
 |---|---|---|---|---|
 | 0 | **One step runner** (`api/src/rounds.ts` + pure `engine/` parts): draft round, blind checker round, rules, `compareRounds`, saved-result key (R-1), cost first and both caps (R-2), saved label and Out of date. The finder moves onto it; its checks stay green. `people-ai.ts` follows (runtime lane reviews). | nothing | Capability | US$0 (stub, replay) |
-| 1 | **Filing channel (B37):** `find_forms` output gains `channel` and its quote in both rounds; agreement plus the `channelsFrom` contradiction flag; the proposal lands as a `form_accepts` change; PAPER and SIGNED_PDF added (R-8). | slice 0 | Capability | US$0 (replay); live in slice 6 |
+| 1 | **Filing channel (B37):** `find_forms` output gains `channel` and its quote in both rounds; agreement plus the `channelsFrom` contradiction flag; the proposal lands as a `form_accepts` change; the channel values follow the founder's research answer (R-8). | slice 0 | Capability | US$0 (replay); live in slice 6 |
 | 2 | **Documents per person and what each supplies** (steps 3, 4): `checklist.ts`'s stub becomes this producer; requirement lines and document-type proposals (facts and reader kind, R-7) on the queue item contract. | slice 0; Lead-approved contract (Q-L2) | Capability | US$0 (stub, replay) |
 | 3 | **Who and when, and conditional questions** (step 6): `sameCondition` and `reachable` (a5); condition proposals referencing shared conditions. | S6 slice 3 (shared conditions) | Capability | US$0 (stub, replay) |
 | 4 | **Comes from and PQR picks** (steps 5, 7, 9). | W1-15 slice 1 (fact record); S6 slice 1 (field maps) | Capability | US$0 |
@@ -48,6 +48,7 @@ Slices 0 and 1 need nothing from other lanes and can start as soon as the Lead a
 Each slice ends with scripted API journeys, a pass and a fail test per rule, check labels naming capability ids (C2.6, C3.4, C4.10, C4.11, C11.8, C11.13, C11.14; P-86), a fresh reviewer and breaker at CHECK, and the full run-suites. The run card, queue, Undo and lifecycle are reused, never rebuilt (S6 re-check R5).
 
 ## 4. Questions (from `challenge.md`)
-* **Founder Q1, the experiment cap.** *Recommend:* US$120 experiment cap (Wave 1 cap stays US$60), and each new AI step live once before repeating.
-* **Founder Q2, the filing channel.** *Recommend:* inside the finder's two rounds, landing as the existing second-person "What IRCC accepts" change; Paper and Signed PDF added.
-* **Lead Q-L1 to Q-L3:** the runner by the forms lane first; the queue item contract approved before slice 2; the order above.
+* **Founder Q1, answered (P-139):** US$120 experiment cap, Wave 1 cap US$60; each new step live once before repeating.
+* **Founder Q2, answered (P-140):** the finder's two rounds propose the channel with IRCC's quote. The channel values are not decided yet (research asked).
+* **P-138:** drafting a form's masters runs only on a click; a saved draft replays at US$0.
+* **Lead Q-L1 to Q-L3, yes:** the runner by the forms lane first (slice 0); the queue item contract proposal in `contracts/` before slice 2; the order above.

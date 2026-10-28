@@ -68,4 +68,17 @@ The code also has **four AI producers with four copies of the round logic**, and
 * **Q-L3 · The steps' order (A3, A7).** *Recommend:* as in `plan.md` §3. Channel and documents first; conditions, PQR picks and checks after S6 slice 3 and W1-15 slice 1.
 
 ## Lead response
-_(for the Lead)_
+29 Oct (Lead, by message).
+* **A1–A7 and a1–a6: accepted.**
+* **Founder answers:**
+  * **P-138:** AI drafting of a form's masters runs only on a click; a saved draft replays at US$0.
+  * **P-139 (Q1):** the experiment cap is US$120; the Wave 1 cap stays US$60. Each new step runs once live before it is repeated.
+  * **P-140 (Q2):** the finder's two rounds propose the channel with IRCC's quote.
+* **Not decided yet:** the channel values themselves. The founder asked for research on PDF only, online only, both, and online plus auto-filled PDFs uploaded online. **Paper and Signed PDF are not added yet** (A4, R-8 wait for that answer).
+* **Q-L1, yes:** the shared step runner is slice 0; the finder moves to it first; the runtime lane moves `people-ai.ts` later.
+* **Q-L2, yes:** the review-queue item contract is written in `contracts/` as a proposal (kinds, payload, source and quote, both rounds, agreement, confidence) and handed to the Lead before slice 2. S6 uses the same contract.
+* **Q-L3, yes:** the order is as in `plan.md` §3.
+* **Overnight (founder asleep):** BUILD slice 0 only (the runner refactor, no behaviour change, US$0) and the contract proposal with no consumers. No channel work and no live AI.
+
+## Agreement
+**Agreed 29 Oct** (Lead; founder P-138, P-139, P-140): A1–A7, a1–a6, Q-L1–Q-L3, slice 0 and the contract proposal **Go**. The channel values wait for the founder's research answer.
