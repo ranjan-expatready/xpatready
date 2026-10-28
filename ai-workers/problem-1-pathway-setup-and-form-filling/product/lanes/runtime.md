@@ -10,7 +10,7 @@ current_item: W1-combination-workspace (S5, W1-08, P-123)
 current_slice: slice 2 drift-check Shoulds (Review in words, Forms counts and next step, IRCC's words, Preview names, Remove confirm + Undo, AI-picks Sample state)
 stage: EARLY-LOOK
 owner: Lead
-next_action: Lead checks the Shoulds (build-notes.md top section; screens/W1-combination-workspace/screenshots/slice2/, 11 states); CI on the exact commit when Actions is unblocked. Then Go for slice 3 once forms S4 is merged to main (sync first: studio.ts, main.ts, schema.prisma will conflict).
+next_action: Waiting for forms S4 to merge to main; the Lead then says Go for slice 3 (sync main first: studio.ts, main.ts, schema.prisma will conflict). Evidence for 3964553 is the local run (P-85 amended 28 Oct: CI runs per pull request, not on a push).
 blocked_by: slice 3 waits for forms S4 to merge to main
 updated: 2026-10-28
 
@@ -23,6 +23,7 @@ updated: 2026-10-28
 * **Next steps:** wait for the Lead's early look on the fixes and slice 2 (screenshots in `screens/W1-combination-workspace/screenshots/slice2/`, `build-notes.md` top section). Then slice 3 once forms S4 slices 1 and 2 are merged: the finder's results rows, "Picked by AI · Sample" with IRCC's words, the forms lane's actions (Redo, Replace, Remove, Undo), its run component replacing the reading status, "Who can be" filled by AI from the guide (`challenge.md` slice plan 3 and the asks table). Also open for other lanes (in `build-notes.md` known gaps): the Online warning wording in `contracts/forms.ts`/`engine/channels.ts` (forms), `FormPicker` empty text (forms), `contracts/programs.ts` `Participant.role` enum (screens).
 
 ## Log (last 10 lines)
+- 2026-10-28 · Builder (Mac): Lead message (P-85 amended: CI per pull request only): local 40/40 on 3964553 is the evidence, no CI rerun; waiting for S4's merge, then slice 3.
 - 2026-10-28 · Builder (Mac): applied Lead note 2026-10-28 (founder Go on slice 2; read from origin/lead/2026-10-27, PR #64 open); synced main 8cfc043; drift-check Shoulds 2–8, 11, 12 built (build-notes top section): check_s5_slice2 32/32, browser 54/54 (axe, 11 states × 1440/1024); full run-suites.sh 40/40 PASS (demo-reset suite skipped there), demo journey 46/46 on its own copy :4433; graph exit 0 (G3 2, both older); by-products restored; desktop only (Lead 28 Oct); AI US$0; EARLY-LOOK owner Lead.
 - 2026-10-27 · Builder (Mac): Lead message 23:40 + handover request: synced main 4cbdb74 (PR #59–#62); handover written above (fixes 1–4 and slice 2 done at 8346a37); lane stops. AI US$0.
 - 2026-10-27 · Builder (Mac): applied Lead note 2026-10-27 23:05 (founder Go for slice 2 with four fixes); synced main 4fb0749 (break m8 in).
@@ -32,4 +33,3 @@ updated: 2026-10-28
 - 2026-10-27 · Builder (Mac): Lead message (S6 challenge m1): S5 creates the Person roles record; M3, back-end table, slice 1 and Q-L4 updated (PersonRole + GET /api/library/roles in slice 1; POST stays S6's); no code; AI US$0; owner Lead.
 - 2026-10-27 · Builder (Mac): applied Lead note 2026-10-27 (S5 Combination workspace, DESIGN only; read from origin/lead/2026-10-27); new branch runtime/2026-10-27-s5-workspace from main 76628a4; old Screen 03 branch already pushed (9dfe9b8), not built on; challenge written: Build after these changes (5 Major, 7 Minor), Forms-tab asks to the forms lane, slices 1–3; no code; AI US$0; owner Lead.
 - 2026-10-25 · Builder (cloud): applied Lead note (P-89, Screen 03 to this lane); DESIGN feasibility challenge written: Build after these changes, 5 Majors/Minor, slices S1–S4 proposed; no code; owner Lead.
-- 2026-10-25 · Builder (cloud): PR 13 fix verified on a fresh copy: journey 120/120, R1d 63/63, R1a 99/99, engine 50/50; run-suites --demo 21/21; any 437; copies stopped; CHECK owner Lead.
