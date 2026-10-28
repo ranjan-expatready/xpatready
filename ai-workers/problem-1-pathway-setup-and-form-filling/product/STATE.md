@@ -18,6 +18,7 @@ updated: 2026-10-27
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-28 · Lead (Mac) · qa after-merge on S4 (06a8fc30): **ready**, no Blocker/Critical/Major; QA-61–64 Minors → forms; qa files taken into the records PR #68.
 - 2026-10-28 · Lead (Mac) · **PR #67 merged** (3858216e: QA-55/56/58/59/60, button hover); :4400 restarted on it. S3 challenge agreed (founder: finder on click only, P-125 amended); screens → S3 BUILD; runtime slice 3 owns the forms list; forms adds the returned form-change resubmit fix (PR #67 review).
 - 2026-10-28 · Lead (Mac) · **PR #65 merged** (06a8fc30: S4 Form library + finder, qa round 3 report). **:4400 restarted on it** (demo reset + Load sample; Form library opens). Runtime → slice 3; qa → after-merge on S4; forms → QA-53 then library lifecycle; screens → QA-60 FIX then S3.
 - 2026-10-28 · Lead (Mac) · qa after-merge on round 3 (dccd87e): ready; QA-60 Major + QA-55/56/58/59 → screens FIX before S3; QA-57 fixed by S4; QA-51/52/54 closed. S4 re-merged into PR #65 (code 80504e33, 46/46 local), CI running.
@@ -27,4 +28,3 @@ updated: 2026-10-27
 - 2026-10-28 · Lead (Mac) · Founder Go on round 3 (PR #66: CI green, 3 review issues → screens FIX); S4 FIX (paper ≠ PDF) and carried Shoulds done, waits for #66; runtime fixes QA-38/40 in parallel; W1-10 requirements + AI demo plan (Visitor visa live ×3, saved results for the rest) being drafted (R-131).
 - 2026-10-28 · Lead (Mac) · PR #64 merged (83e658b). Mac power loss recovered (lanes resumed). **S4 Lead check passed** (3dedbee, suites 41/41 local, graph clean); merged into the Lead branch; fresh verification of the 3 Majors + CI on the Lead PR before MERGE; then :4400 restart, qa after-merge, runtime slice 3.
 - 2026-10-28 · Lead (Mac) · **Lifecycle pattern agreed (P-116 amended, R-130):** Where used, one written row action, impact list, Undo, one word set (PRODUCT §4); own drafts delete at once; library retire at approval, names and combinations at release; Replace with… not now. Gaps assigned: screens (shared components + guard), forms (library after S4), runtime (S5 line removes). CI change merged into PR #64 review fixes.
-- 2026-10-28 · Lead (Mac) · Screens round 3 challenge (bdcf23e): 4 Majors + 6 Minors accepted (combination row retires with its name, exact branch delete, qa wording checks updated by screens with Lead OK, two green commits R3a/R3b); screens → BUILD. Runtime WAITING for S4 (c215bae). Forms finishing suites (2ca6d86).
