@@ -1,0 +1,275 @@
+{
+  "at": "2026-10-28T19:52:57.516Z",
+  "port": 4434,
+  "pass": 39,
+  "fail": 0,
+  "log": [
+    {
+      "name": "C4.10 M5 pass: after Load sample, With an LMIA's draft still equals its release (the sample library data is inside Release 1)",
+      "ok": true,
+      "detail": {
+        "matches": true,
+        "changes": 0
+      }
+    },
+    {
+      "name": "C4.10 M5: no fact_sources key in a snapshot with no choice",
+      "ok": true
+    },
+    {
+      "name": "C4.10 M6 (rule): a supplied fact is about the holder unless the library says otherwise",
+      "ok": true
+    },
+    {
+      "name": "C4.10 M6 pass: the principal's marriage certificate supplies the spouse's family name (holder.spouse), and the date of the relationship for the principal",
+      "ok": true
+    },
+    {
+      "name": "C4.10 M6 fail: it does not supply the principal's own family name",
+      "ok": true
+    },
+    {
+      "name": "C4.10 M6 pass: a child's birth certificate supplies the child's date of birth and the parents' family name (holder.parent)",
+      "ok": true
+    },
+    {
+      "name": "C4.10 M3 pass: a passport asked of each applicant covers each one's passport number (no gap)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "C4.10 M3 fail: a passport asked of the principal only leaves the spouse's passport number uncovered (a coverage gap, release refused)",
+      "ok": true,
+      "detail": [
+        "spouse_or_partner"
+      ]
+    },
+    {
+      "name": "C4.10 precedence pass: the principal's date of birth comes from the passport (Document, by Rules)",
+      "ok": true
+    },
+    {
+      "name": "C4.10 precedence pass: a representative's fact comes from the agent",
+      "ok": true,
+      "detail": "case|representative.licensing_province"
+    },
+    {
+      "name": "C4.10 m2 (P-97) pass: a declaration or background answer comes from the client",
+      "ok": true,
+      "detail": "principal|person.criminal_history"
+    },
+    {
+      "name": "C4.10 precedence fail-guard: a fact no checklist document supplies comes from the client",
+      "ok": true,
+      "detail": "case|case.country_where_applying"
+    },
+    {
+      "name": "C4.10 m1 pass: with two documents supplying it, the always-needed passport is the source and the identity card is 'also supplied by'",
+      "ok": true,
+      "detail": {
+        "doc": "Passport or travel document information page photocopy",
+        "also": [
+          "zz_national_id"
+        ]
+      }
+    },
+    {
+      "name": "C4.10 M2 (Q3) warning: a fact from an always-needed passport with no fallback question is a warning",
+      "ok": true,
+      "detail": [
+        "Principal applicant: \"Number of the passport or travel document used\" comes from Passport or travel document information page photocopy; if it cannot be read, nobody is asked for it. Add a question for it as the fallback.",
+        "Spouse or partner: \"Number of the passport or travel document used\" comes from Passport or travel document information page photocopy; if it cannot be read, nobody is asked for it. Add a question for it as the fallback."
+      ]
+    },
+    {
+      "name": "C4.10 M2 (Q3) fail: the same fact from a passport asked only in some cases is an error (nobody would give it)",
+      "ok": true,
+      "detail": [
+        "error",
+        "error"
+      ]
+    },
+    {
+      "name": "C4.10 M2 pass: on the sample as loaded, no source problem blocks release",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "C4.10 m2 (P-97) fail: Agent on a client-only fact is refused at release",
+      "ok": true
+    },
+    {
+      "name": "C4.2 M4 fail: a pre-qualification tick on an agent fact is refused at release",
+      "ok": true
+    },
+    {
+      "name": "C4.2 M4 (Q1) pass: a tick on the passport's date of birth (it has a question) is allowed",
+      "ok": true
+    },
+    {
+      "name": "C4.10 M5: a tick is one named line on Review, needing the immigration expert's sign-off",
+      "ok": true,
+      "detail": [
+        "Where an answer comes from: person.date_of_birth (principal): pre-qualification"
+      ]
+    },
+    {
+      "name": "C4.10 API read: the list says where each fact comes from, with counts (Sample)",
+      "ok": true,
+      "detail": {
+        "facts": 245,
+        "document": 32,
+        "client": 178,
+        "agent": 35,
+        "prequalification": 0
+      }
+    },
+    {
+      "name": "C4.10 roles fail: a case officer cannot change where an answer comes from (403)",
+      "ok": true,
+      "detail": 403
+    },
+    {
+      "name": "C4.10 M1 pass: the author chooses Client over the passport; saved as a draft choice by a person",
+      "ok": true,
+      "detail": {
+        "role": "principal",
+        "fact": "person.date_of_birth",
+        "label": "Date of birth",
+        "forms": [
+          "IMM 1295",
+          "IMM 5257 SCH1",
+          "IMM 5475",
+          "IMM 5476",
+          "IMM 5707"
+        ],
+        "source": "CLIENT",
+        "document": null,
+        "also": [
+          {
+            "key": "passport_or_travel_document_information_page_photocopy",
+            "name": "Passport or travel document information page photocopy",
+            "base": true
+          }
+        ],
+        "proposedBy": "Person",
+        "ruleSource": "DOCUMENT",
+        "ruleDocument": {
+          "key": "passport_or_travel_document_information_page_photocopy",
+          "name": "Passport or travel document information page photocopy",
+          "base": true
+        },
+        "prequalification": false,
+        "reason": "Sample: asked on the form as well",
+        "clientOnly": false,
+        "placed": true,
+        "version": 1
+      }
+    },
+    {
+      "name": "C4.10 M1 fail: a choice sent from an old version is 409 (someone changed it)",
+      "ok": true,
+      "detail": "Someone changed where \"person.date_of_birth\" comes from after you looked. Reload, then choose again."
+    },
+    {
+      "name": "C4.10 M5: the choice is one named change on Review (needs the immigration expert); the draft no longer equals the release",
+      "ok": true,
+      "detail": [
+        "Where an answer comes from: person.date_of_birth (principal): comes from Client"
+      ]
+    },
+    {
+      "name": "C4.10 Undo fail: someone else cannot undo the author's draft choice",
+      "ok": true,
+      "detail": "403 Approver (simulated) does not hold the author duty"
+    },
+    {
+      "name": "C4.10 Undo pass: the author undoes it at once: back to the passport, and the draft equals the release again",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "src": "DOCUMENT",
+        "matches": true
+      }
+    },
+    {
+      "name": "C4.10 M2 fail: a document that does not supply the fact is refused at save (422, on its field)",
+      "ok": true,
+      "detail": "That document is not on this person's checklist, or it does not supply \"Date of birth\". Add it on the Documents tab first."
+    },
+    {
+      "name": "C4.10 m2 (P-97) fail: Agent on a declaration is refused at save (422)",
+      "ok": true,
+      "detail": "\"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it (P-97)."
+    },
+    {
+      "name": "C4.2 M4 fail: a pre-qualification tick on an agent fact is refused at save (422)",
+      "ok": true,
+      "detail": "\"Canadian province or territory of the law society the representative belongs to\" comes from the agent: a prospect is asked only what they can answer."
+    },
+    {
+      "name": "C4.2 M4 (Q1) pass: the passport's date of birth is ticked for pre-qualification; it stays a Document fact and is in the PQR",
+      "ok": true,
+      "detail": [
+        {
+          "role": "principal",
+          "fact": "person.date_of_birth",
+          "label": "Date of birth",
+          "source": "DOCUMENT",
+          "document": "Passport or travel document information page photocopy"
+        }
+      ]
+    },
+    {
+      "name": "C4.10 M1: the rules' own source is not stored as a choice (only the tick)",
+      "ok": true
+    },
+    {
+      "name": "C4.10 fail: release is refused while a client-only fact says Agent (an error on the page, in words)",
+      "ok": true,
+      "detail": [
+        "Principal applicant: \"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it (P-97), never the agent. Set Comes from to Client."
+      ]
+    },
+    {
+      "name": "C4.10 fail: submitting for review is refused with that error",
+      "ok": true,
+      "detail": "Fix 1 problem before submitting: Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence: Principal applicant: \"Whe"
+    },
+    {
+      "name": "C4.10 pass: with the tick only, it is submitted, signed off and released (Release 2)",
+      "ok": true,
+      "detail": 2
+    },
+    {
+      "name": "C4.2 pass: Release 2 carries the pre-qualification tick",
+      "ok": true,
+      "detail": [
+        {
+          "fact": "person.date_of_birth",
+          "role": "principal",
+          "origin": "HUMAN",
+          "reason": "Sample: the guide's age test",
+          "source": null,
+          "document_type": null,
+          "prequalification": true
+        }
+      ]
+    },
+    {
+      "name": "C4.10 Undo fail: a released choice is not undone (409 Released since)",
+      "ok": true,
+      "detail": "409 That choice was released meanwhile: a release is never undone. Change it in a new draft."
+    },
+    {
+      "name": "C4.10 fail: a retired combination's sources are not changed (409, restore it first)",
+      "ok": true,
+      "detail": "\"With an LMIA\" is retired: where its answers come from is not changed. Restore it on Structure first; open cases keep their release."
+    },
+    {
+      "name": "C4.10 fail: an unknown combination is 404 in words (never a 500)",
+      "ok": true,
+      "detail": 404
+    }
+  ]
+}
