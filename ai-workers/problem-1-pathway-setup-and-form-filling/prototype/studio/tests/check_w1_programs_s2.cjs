@@ -4,7 +4,7 @@
 // The page: menu and title "Immigration programs"; Retail · Corporate and employers tabs; the same Pathway cards as the
 // Structure (a card shows only that Pathway's combinations, "All pathways" every Pathway's section); Cards / List,
 // remembered per person; every card the full five-part trail, a calculated status, the four setup steps and "Filed:";
-// "Status: All ▾" instead of a filter-tab row; search and New combination placed; Corporate callout; read-only and
+// "Status: All ▾" instead of a filter-tab row; search and Add combination placed (P-128: Pathway chips replace the cards); Corporate callout; read-only and
 // empty states. S1 fixes: "Start setup" for a Not started combination under "Used by" (New combination with the trail
 // filled), and the panel's footer (Remove / Retire, Save) fully visible at 1440×900 and 1024×768. The sample inputs and
 // the P-112 Sample names are added through the API the pages call. Screenshots at 1440 and 1024 px into
@@ -28,7 +28,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|status of 4\d\d/.test(m.text())) errs.push(m.text()); });
   const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json" }, data: init.data }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   const as = async (id) => { await p.evaluate((x) => { try { localStorage.setItem("xr-actor", x); } catch { /* ignore */ } }, id); };
-  const cards = () => p.locator("[data-pathway-cards]");
+  // P-128 (4): the Pathway chips of the filter bar replace the Pathway cards (same choice, same counts).
+  const cards = () => p.locator("[data-pathway-chips]");
   const card = (name) => cards().getByRole("button", { name: new RegExp(`^${name}`) });
   const setup = (label) => p.locator(`article[data-label="${label}"]`).first();
   const ready = () => p.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && !!document.querySelector('[data-view], [data-slot="empty-state"]'), null, { timeout: 30000 });
@@ -53,7 +54,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } });
   await open();
   const emptyText = await p.locator("main").innerText();
-  step("C11.10 empty after Reset: says nothing is set up and points to the Structure (no cards, no Pathway cards)", /Nothing set up in Retail yet/.test(emptyText) && /Start with the Structure/.test(emptyText) && await p.getByRole("button", { name: "Open Structure" }).count() === 1 && await cards().count() === 0, emptyText.replace(/\s+/g, " ").slice(0, 200));
+  step("C11.10 empty after Reset: says nothing is set up and points to the Program structure (no cards, no Pathway cards)", /Nothing set up in Retail yet/.test(emptyText) && /Start with the Program structure/.test(emptyText) && await p.getByRole("button", { name: "Open Program structure" }).count() === 1 && await cards().count() === 0, emptyText.replace(/\s+/g, " ").slice(0, 200));
   await state("empty-after-reset");
   await api("/demo/load", { method: "POST" });
   const add = async (pathwayType, level, label, parentKey, allowedLocations) => (await api("/structure/nodes", { method: "POST", data: { pathwayType, level, label, parentKey, decision: "add_anyway", ...(allowedLocations ? { allowedLocations } : {}) } })).body.key;
@@ -88,33 +89,34 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== the page: menu, title, tabs, placement
   await open();
   const navText = (await p.getByRole("navigation", { name: "Studio" }).innerText()).replace(/\s+/g, " ");
-  step("C11.10 P-115: the menu item and the page title say Immigration programs (Configure › To review · Immigration programs · Structure)", /To review.*Immigration programs.*Structure/.test(navText) && (await p.getByRole("heading", { level: 1 }).textContent()) === "Immigration programs", navText.slice(0, 90));
+  step("C11.10 P-115 P-125: the menu item and the page title say Immigration programs (Configure › Program structure · Immigration programs · To review)", /Program structure\s*Immigration programs\s*To review/.test(navText) && (await p.getByRole("heading", { level: 1 }).textContent()) === "Immigration programs", navText.slice(0, 90));
   step("C11.10: the description line says what the page is", /Every combination your firm can open, and where its setup stands\./.test(await p.locator("main").innerText()));
   const types = p.getByRole("group", { name: "Pathway type" });
   step("C11.10 P-104: the type tabs say Retail and Corporate and employers, each with its count", /^Retail\s*\d+$/.test((await types.getByRole("button").nth(0).textContent()).trim()) && /^Corporate and employers\s*\d+$/.test((await types.getByRole("button").nth(1).textContent()).trim()));
   step("C11.10: no filter-tab row; the status is one 'Status: All' menu next to the search", await p.getByRole("group", { name: "Show combinations" }).count() === 0 && await p.getByRole("button", { name: /^Status: All/ }).count() === 1 && await p.getByRole("textbox", { name: /Search combinations/ }).count() === 1);
-  const titleRow = await p.evaluate(() => { const h = document.querySelector("h1").getBoundingClientRect(); const bs = [...document.querySelectorAll("main button")].filter((x) => /^(Structure|New combination)$/.test(x.textContent.trim())); return bs.map((x) => ({ t: x.textContent.trim(), top: Math.abs(x.getBoundingClientRect().top - h.top) < 24, x: Math.round(x.getBoundingClientRect().left) })); });
-  step("C11.10: Structure and New combination sit in the title row, New combination last", titleRow.length === 2 && titleRow.every((x) => x.top) && titleRow[1].t === "New combination" && titleRow[1].x > titleRow[0].x, JSON.stringify(titleRow));
+  const titleRow = await p.evaluate(() => { const h = document.querySelector("h1").getBoundingClientRect(); const bs = [...document.querySelectorAll("main button")].filter((x) => /^(Program structure|Add combination)$/.test(x.textContent.trim())); return bs.map((x) => ({ t: x.textContent.trim(), top: Math.abs(x.getBoundingClientRect().top - h.top) < 24, x: Math.round(x.getBoundingClientRect().left) })); });
+  step("C11.10 P-128 (5): Program structure and Add combination sit in the title row, Add combination last", titleRow.length === 2 && titleRow.every((x) => x.top) && titleRow[1].t === "Add combination" && titleRow[0].t === "Program structure" && titleRow[1].x > titleRow[0].x, JSON.stringify(titleRow));
 
   // ======================================================== fix 5: the search takes the free width, its hint never cut
   for (const [w, h] of [[1440, 900], [1024, 768]]) {
     await p.setViewportSize({ width: w, height: h }); await p.waitForTimeout(200);
     const sb = await p.getByRole("textbox", { name: /Search combinations/ }).evaluate((x) => { const c = document.createElement("canvas").getContext("2d"); const cs = getComputedStyle(x); c.font = cs.font; const room = x.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); return { w: Math.round(x.getBoundingClientRect().width), need: Math.round(c.measureText(x.placeholder).width), room: Math.round(room) }; });
-    step(`S2 fix 5: at ${w} px the search takes the free width and its hint is not cut`, sb.need <= sb.room && sb.w >= (w === 1440 ? 600 : 300), JSON.stringify(sb));
+    // Since P-128 (4) (board P2) the search shares its line with the Pathway chips, Program, Status and Needs you.
+    step(`S2 fix 5 (P-128 board P2): at ${w} px the search grows into the free width of its line and its hint is not cut`, sb.need <= sb.room && sb.w >= 300, JSON.stringify(sb));
   }
   await p.setViewportSize({ width: 1440, height: 900 });
 
   // ======================================================== Pathway cards; fix 6: "need you" counts only what waits on a person
-  const all = card("All pathways");
-  step("C11.10 S2: the same Pathway cards as the Structure: All pathways, one per Retail Pathway (no 'Individual'), + Add pathway", await all.count() === 1 && await card("Temporary residence").count() === 1 && await card("Permanent residence").count() === 1 && await card("Citizenship").count() === 1 && await card("Individual").count() === 0 && await cards().getByRole("button", { name: /Add pathway/ }).count() === 1);
+  const all = card("All");
+  step("C11.10 P-128 (4): Pathway chips: All, one per Retail Pathway (no 'Individual'), and no '+ Add pathway'", await all.count() === 1 && await card("Temporary residence").count() === 1 && await card("Permanent residence").count() === 1 && await card("Citizenship").count() === 1 && await card("Individual").count() === 0 && await p.getByRole("button", { name: /Add pathway/ }).count() === 0);
   const waiting = (key) => cat.rows.filter((r) => r.pathwayKey === key && r.needsYou).length;
   const WAIT = ["review_proposals", "see_missing", "see_new_edition", "release"];
   const trS0 = cat.sections.find((x) => x.pathwayKey === tr);
   step("S2 fix 6 (review M1): the two waiting combinations count, in their Pathway's section and card", svRow.needsYou && ssRow.needsYou && trS0.needs >= 2 && trS0.needs === waiting(tr), `${trS0.label} ${trS0.needs}`);
   step("S2 fix 6: need you counts only combinations waiting on a person: never a Not started one, never a Live one with nothing waiting", cat.rows.every((r) => r.combinationId || !r.needsYou) && cat.rows.filter((r) => r.status === "READY" && !r.aiProposals && !r.held.length && !WAIT.includes(r.nextAction?.kind)).every((r) => !r.needsYou) && cat.sections.every((x) => x.needs === waiting(x.pathwayKey)), cat.sections.map((x) => `${x.label} ${x.needs}/${x.combinations}`).join(", "));
   const trS = cat.sections.find((x) => x.pathwayKey === tr);
-  const trCard = (await card("Temporary residence").textContent()).replace(/\s+/g, " ");
-  step("S2 fix 6: a Pathway card's counts are the catalogue's (combinations, need you)", trCard.includes(`${trS.combinations} combinations`) && (trS.needs ? trCard.includes(`${trS.needs} need`) : /none need you/.test(trCard)), trCard);
+  const trCard = await card("Temporary residence").evaluate((b) => ({ n: b.querySelector("[data-count]")?.textContent, need: b.querySelector("[data-need]")?.textContent ?? "" }));
+  step("S2 fix 6: a Pathway chip's counts are the catalogue's (combinations, need you)", trCard.n === String(trS.combinations) && (trS.needs ? trCard.need.startsWith(String(trS.needs)) : !trCard.need), JSON.stringify(trCard));
   const stPw = (await api("/structure?pathwayType=INDIVIDUAL")).body.nodes.filter((x) => x.level === "pathway");
   step("S2 fix 6: the Structure's Pathway cards use the same rule (same need-you counts per Pathway)", cat.sections.every((x) => stPw.find((y) => y.key === x.pathwayKey)?.needs === x.needs), stPw.map((x) => `${x.label} ${x.needs}`).join(", "));
   const secs = await p.locator("[data-section]").evaluateAll((s) => s.map((x) => x.querySelector("h2").textContent));
@@ -130,7 +132,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await card("Permanent residence").click();
   await p.waitForFunction(() => document.querySelectorAll("[data-section]").length === 1);
   const prText = await p.locator("main").innerText();
-  step("C11.10 S2: a Pathway card shows only that Pathway's combinations; the stats line names it; kept in the address", await card("Permanent residence").getAttribute("aria-pressed") === "true" && await p.locator("article[data-node]").count() === prS.combinations && new RegExp(`${prS.combinations} combinations in Permanent residence`).test(prText) && /[?&]p=/.test(p.url()), `${await p.locator("article[data-node]").count()} cards; ${p.url()}`);
+  step("C11.10 S2: a Pathway chip shows only that Pathway's combinations; the stats line names it; kept in the address", await card("Permanent residence").getAttribute("aria-pressed") === "true" && await p.locator("article[data-node]").count() === prS.combinations && new RegExp(`${prS.combinations} combinations in Permanent residence`).test(prText) && /[?&]p=/.test(p.url()), `${await p.locator("article[data-node]").count()} cards; ${p.url()}`);
   await all.focus(); await card("Permanent residence").focus();
   await p.getByRole("tooltip").filter({ hasText: /Shows only Permanent residence/ }).first().waitFor({ timeout: 5000 }).catch(() => undefined);
   const tips = await p.getByRole("tooltip").allTextContents();
@@ -226,14 +228,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.10 BR-8: Show it opens Corporate and employers with the match", await setup("High-wage position").count() === 1);
   await open("?pw=CORPORATE");
   const corp = await p.locator("main").innerText();
-  step("C11.10 BR-8: the Corporate tab shows its callout (Sample examples) and its own Pathway cards", await p.locator("[data-corporate-callout]").count() === 1 && /Sample examples/.test(corp) && await card("Temporary residence").count() === 1 && await card("Permanent residence").count() === 1 && await card("Corporate and employers").count() === 0);
+  step("C11.10 BR-8: the Corporate tab shows its callout (Sample examples) and its own Pathway chips", await p.locator("[data-corporate-callout]").count() === 1 && /Sample examples/.test(corp) && await card("Temporary residence").count() === 1 && await card("Permanent residence").count() === 1 && await card("Corporate and employers").count() === 0);
   await state("corporate-tab");
 
   // ======================================================== read-only approver
   await as("user-B"); await open();
   const ro = await p.locator(`article[data-node="${ns.nodeKey}"]`).innerText();
-  step("BR-15 read-only: New combination is disabled; a Not started card has no step to take; a started card says Open", await p.getByRole("button", { name: "New combination" }).isDisabled() && !/Start setup|Add sources/.test(ro) && await p.locator(`article[data-node="${vv}"]`).locator('[data-next-step="open"]').count() === 1, ro.replace(/\s+/g, " "));
-  step("BR-15 read-only: '+ Add pathway' is disabled for the approver", await cards().getByRole("button", { name: /Add pathway/ }).getAttribute("aria-disabled") === "true");
+  step("BR-15 read-only: Add combination is disabled; a Not started card has no step to take; a started card says Open", await p.getByRole("button", { name: "Add combination" }).isDisabled() && !/Start setup|Add sources/.test(ro) && await p.locator(`article[data-node="${vv}"]`).locator('[data-next-step="open"]').count() === 1, ro.replace(/\s+/g, " "));
+  step("BR-15 read-only: no '+ Add pathway' on this page (P-128 (4)); adding is Add combination, off for the approver", await p.getByRole("button", { name: /Add pathway/ }).count() === 0 && await p.getByRole("button", { name: "Add combination" }).isDisabled());
   await state("read-only");
   await as("user-A");
 
@@ -262,7 +264,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.setViewportSize({ width: w, height: h });
     await p.goto(`${BASE}/structure?node=${encodeURIComponent(tr)}`); await panel().locator("[data-used-by]").waitFor(); await p.waitForTimeout(400);
     let f = await footerFits();
-    step(`S1 fix: at ${w}×${h} the panel's footer (Remove, Retire, Close, Save) is fully on screen without scrolling`, f.ok && f.words.includes("Remove") && f.words.includes("Retire") && f.words.includes("Save"), JSON.stringify(f));
+    // Since P-128 the panel's footer holds the row's one action (here Retire), Close and Save.
+    step(`S1 fix: at ${w}×${h} the panel's footer (its action, Close, Save) is fully on screen without scrolling`, f.ok && f.words.includes("Retire") && f.words.includes("Close") && f.words.includes("Save"), JSON.stringify(f));
     await p.mouse.wheel(0, 600); await p.waitForTimeout(300);
     f = await footerFits();
     step(`S1 fix: at ${w}×${h} the footer stays fully on screen after scrolling the page`, f.ok, JSON.stringify(f));
@@ -275,7 +278,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   for (const [qs, what] of [["?p=nope", "an unknown"], ["?p=corporate.temporary_residence", "the other tab's"], [`?p=${"x".repeat(300)}`, "a 300-character"]]) {
     await open(qs); await p.waitForFunction(() => !/[?&]p=/.test(location.search), null, { timeout: 5000 }).catch(() => undefined);
     const st = await p.locator("[data-stats]").textContent();
-    step(`break M1/m1: ${what} Pathway in the address is ignored: All pathways, real counts, no error`, await card("All pathways").getAttribute("aria-pressed") === "true" && !/^0 combinations/.test(st) && await p.locator("[data-section]").count() === 3 && !/[?&]p=/.test(p.url()), st);
+    step(`break M1/m1: ${what} Pathway in the address is ignored: All pathways, real counts, no error`, await card("All").getAttribute("aria-pressed") === "true" && !/^0 combinations/.test(st) && await p.locator("[data-section]").count() === 3 && !/[?&]p=/.test(p.url()), st);
   }
   await open("?p=retail.citizenship%20");
   step("break m2: a Pathway key with spaces opens that Pathway, and its card is the pressed one", await card("Citizenship").getAttribute("aria-pressed") === "true" && await p.locator("[data-section]").count() === 1);
@@ -298,7 +301,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   }
   await p.setViewportSize({ width: 1440, height: 900 });
   await p.goto(`${BASE}/new?leaf=nope`); await p.getByText("Check the path").waitFor({ timeout: 10000 }).catch(() => undefined);
-  step("break m6: a Start setup link with a key the page cannot use says why", /not in the Structure for Retail any more/.test(await p.locator("main").innerText()));
+  step("break m6: a Start setup link with a key the page cannot use says why", /not in the Program structure for Retail any more/.test(await p.locator("main").innerText()));
   await p.goto(`${BASE}/new?leaf=individual.work_permits.open`); await p.getByText("Check the path").waitFor({ timeout: 10000 }).catch(() => undefined);
   step("break m7: a category with sub-categories asks for one of them", /Open work permit has sub-categories: choose one of them below/.test(await p.locator("main").innerText()));
 

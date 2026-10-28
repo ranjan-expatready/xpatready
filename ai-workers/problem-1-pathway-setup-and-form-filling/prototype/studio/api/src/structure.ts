@@ -5,13 +5,14 @@
 import { Body, Controller, Delete, Get, Headers, HttpException, Inject, Injectable, Param, Patch, Post, Query } from "@nestjs/common";
 import type { ProgramDef } from "@prisma/client";
 import { normalizeLabel } from "../../contracts/programs.ts";
-import { CreateStructureNodeBody, KIND_OF, LEVEL_OF, LEVEL_WORD, LifecycleBody, NameCheckBody, PARENT_LEVEL, PATHWAY_TYPE_LABEL, PatchStructureNodeBody, ReorderBody, StructureQuery,
-  type Level, type LifecycleAction, type PathwayType, type StructureNode } from "../../contracts/structure.ts";
+import { CreateStructureNodeBody, StructurePathBody, KIND_OF, LEVEL_OF, LEVEL_WORD, LifecycleBody, NameCheckBody, PARENT_LEVEL, PATHWAY_TYPE_LABEL, PatchStructureNodeBody, ReorderBody, StructureQuery,
+  type Level, type LifecycleAction, type PathwayType, type StructureNode, type StructurePathResult } from "../../contracts/structure.ts";
 import { checkName, type NameCandidate } from "../../engine/structure.ts";
 import { actorOf, Audit, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
-import { Lifecycle, trailOf } from "./lifecycle.ts";
+import { Lifecycle, rowAction, trailOf } from "./lifecycle.ts";
 import { parse, Programs } from "./programs.ts";
 import { Studio } from "./studio.ts";
+import { slug } from "../../engine/import.ts";
 
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
   new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail, ...extra }, status);
@@ -41,12 +42,20 @@ export class Structure {
   }
 
   /** GET /structure: the outline of one Pathway type, with what each name holds and any open lifecycle change. */
-  async list(query: unknown) {
+  async list(query: unknown, actorId?: string) {
     const q = parse(StructureQuery, query);
     const workspaceId = await this.ws.id();
     const g = await this.graph(workspaceId);
     const leaves = await this.programs.leafStates();
     const pending = new Map((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "structure_node", status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })).map((c) => [c.key, { id: c.id, action: c.action as LifecycleAction }]));
+    // "Used by" on each line (P-127 (1)): the releases that hold a combination and the cases open on it.
+    const combos = await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, retiredAt: true, _count: { select: { releases: true, cases: { where: { status: "OPEN" } } } } } });
+    const used = new Map(combos.map((c) => [c.id, c._count]));
+    // Each row's one action (P-128 R3-2), by the same rule as a proposal (lifecycle.ts nodeCan), read in bulk here.
+    const comboOf = new Map(combos.map((c) => [c.programDefId, { id: c.id, programDefId: c.programDefId, released: c._count.releases > 0, retired: !!c.retiredAt }]));
+    const open = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, status: { in: ["WAITING", "RETURNED", "APPROVED"] }, kind: { in: ["structure_node", "combination"] } }, select: { key: true } })).map((c) => c.key));
+    const under = (k: string): ProgramDef[] => g.kids(k).flatMap((c) => [c, ...under(c.programNodeKey)]);
+    const actionOf = (n: ProgramDef) => { const below = under(n.programNodeKey); return rowAction({ node: n, below, parent: n.parentNodeKey ? g.byKey.get(n.parentNodeKey) ?? null : null, combos: [n, ...below].flatMap((x) => comboOf.get(x.id) ?? []), open }, pending.has(n.programNodeKey), actorId); };
     const out: StructureNode[] = [];
     const walk = (n: ProgramDef): { combinations: number; live: number; needs: number } => {
       const kids = g.kids(n.programNodeKey);
@@ -54,8 +63,9 @@ export class Structure {
       // needs: combinations below it waiting on a person (S2 fix 6, engine waitsForPerson), for the Pathway cards.
       let combinations = own && !own.retired ? 1 : 0, live = own?.live ? 1 : 0, needs = own?.needs ? 1 : 0;
       const view: StructureNode = { key: n.programNodeKey, level: LEVEL_OF[n.nodeKind], parentKey: n.parentNodeKey, label: n.label, pathwayType: q.pathwayType, allowedLocations: n.allowedLocations,
-        order: n.displayOrder, combinations: 0, live: 0, needs: 0, hasSetup: !!own?.combinationId, meaningChecked: false, version: n.version, retired: !!n.retiredAt, pending: pending.get(n.programNodeKey) ?? null,
-        combination: own ? { id: own.combinationId, status: own.status, statusText: own.statusText, retired: own.retired } : null };
+        order: n.displayOrder, combinations: 0, live: 0, needs: 0, hasSetup: !!own?.combinationId, meaningChecked: false, version: n.version, retired: !!n.retiredAt, pending: pending.get(n.programNodeKey) ?? null, action: actionOf(n),
+        combination: own ? { id: own.combinationId, status: own.status, statusText: own.statusText, retired: own.retired,
+          releases: own.combinationId ? used.get(own.combinationId)?.releases ?? 0 : 0, openCases: own.combinationId ? used.get(own.combinationId)?.cases ?? 0 : 0 } : null };
       if (q.retired === "1" || !n.retiredAt) out.push(view);
       for (const k of kids) { const s = walk(k); combinations += s.combinations; live += s.live; needs += s.needs; }
       view.combinations = combinations; view.live = live; view.needs = needs;
@@ -112,6 +122,79 @@ export class Structure {
     if (check.close.length) await this.audit.log(workspaceId, actor.id, "added anyway", "structure", n.programNodeKey, `${actor.name} added "${n.label}" although close names exist: ${check.close.map((c) => `${c.trail.join(" › ")} (${c.why})`).join("; ")}`.slice(0, 600));
     return { key: n.programNodeKey, level: b.level, parentKey: n.parentNodeKey, label: n.label, pathwayType: b.pathwayType, allowedLocations: n.allowedLocations, version: n.version, meaningChecked: false,
       combination: kind === "STREAM" || kind === "CATEGORY" ? "Not started" : null, close: check.close };
+  }
+
+  /** POST /structure/path (P-127): the "Add to Program structure" dialog. Every level is checked first (right parent,
+   *  same type, not retired, no exact twin, close names unless "add anyway", P-26 for a category with setup); then one
+   *  transaction writes only the new names, all or nothing. No setup is created: the leaf is listed as Not started. */
+  async path(actor: Actor, body: unknown): Promise<StructurePathResult> {
+    need(actor, "author");
+    const b = parse(StructurePathBody, body);
+    const workspaceId = await this.ws.id();
+    const g = await this.graph(workspaceId);
+    const steps: { level: Level; pick: { key: string } | { label: string } | null | undefined }[] = [
+      { level: "pathway", pick: b.pathway }, { level: "program", pick: b.program }, { level: "category", pick: b.category }, { level: "subCategory", pick: b.subCategory }];
+    const used = steps.filter((x) => x.pick);
+    // A level needs the one above it (AD-1); "None" ends the path at its category.
+    for (let i = 1; i < steps.length; i++) if (steps[i].pick && !steps[i - 1].pick) throw problem(400, "Fill the level above", `Choose the ${LEVEL_WORD[steps[i - 1].level].toLowerCase()} first.`, { errors: [{ field: steps[i - 1].level, message: `Choose the ${LEVEL_WORD[steps[i - 1].level].toLowerCase()}.` }] });
+    if (b.subCategory === null && !b.category) throw problem(400, "Fill the level above", "Choose the category first.", { errors: [{ field: "category", message: "Choose the category." }] });
+    type Plan = { level: Level; existing: ProgramDef | null; label: string; parentKey: string | null; parentNew: boolean; close: ReturnType<typeof checkName>["close"] };
+    const plan: Plan[] = [];
+    for (const step of used) {
+      const above = plan[plan.length - 1];
+      const field = step.level;
+      if ("key" in step.pick!) {
+        if (above && !above.existing) throw problem(400, "Under a new name", `Under a new ${LEVEL_WORD[above.level].toLowerCase()} every level is new: type the ${LEVEL_WORD[step.level].toLowerCase()}'s name.`, { errors: [{ field, message: "Type a new name here." }] });
+        const n = g.byKey.get(step.pick!.key);
+        if (!n || n.nodeKind !== KIND_OF[step.level]) throw problem(404, "Not found", `That ${LEVEL_WORD[step.level].toLowerCase()} is not in the Program structure (it may have been removed or renamed).`, { errors: [{ field, message: "Choose one from the list." }] });
+        if ((n.parentNodeKey ?? null) !== (above?.existing?.programNodeKey ?? null) || (step.level === "pathway" && n.clientType !== b.pathwayType)) throw problem(400, "Not under the level above", `"${n.label}" is not under the ${above ? `${LEVEL_WORD[above.level].toLowerCase()} "${above.label}"` : `Pathway type ${PATHWAY_TYPE_LABEL[b.pathwayType]}`}.`, { errors: [{ field, message: "Choose one from the list." }] });
+        if (n.retiredAt) throw problem(409, "Retired", `"${n.label}" is retired: restore it first, or choose another.`, { errors: [{ field, message: `"${n.label}" is retired.` }] });
+        plan.push({ level: step.level, existing: n, label: n.label, parentKey: n.parentNodeKey, parentNew: false, close: [] });
+      } else {
+        const label = step.pick!.label;
+        const parentKey = above ? (above.existing?.programNodeKey ?? `new:${above.level}`) : null;
+        if (step.level === "subCategory" && above?.existing && (await this.db.combination.count({ where: { programDefId: above.existing.id } }))) throw problem(409, "Category already set up", `"${above.label}" already has its own setup, so it is the combination. A sub-category would leave that setup above a combination.`, { code: "category_has_setup", errors: [{ field, message: `"${above.label}" already has setup.` }] });
+        const check = checkName(label, parentKey, this.sameLevel(g, b.pathwayType, step.level));
+        const at = above ? `under ${above.label}` : `in ${PATHWAY_TYPE_LABEL[b.pathwayType]}`;
+        if (check.exact) throw problem(409, "Name already used", `"${check.exact.label}" already exists ${at}: choose it instead.`, { existing: check.exact, errors: [{ field, message: `"${check.exact.label}" already exists ${at}.` }] });
+        plan.push({ level: step.level, existing: null, label, parentKey, parentNew: !!above && !above.existing, close: check.close });
+      }
+    }
+    const fresh = plan.filter((x) => !x.existing);
+    const last = plan[plan.length - 1];
+    // "None" on a category that already has sub-categories cannot be the combination (AD-2): asked before "already
+    // there", which would wrongly call that category a combination (drift check 5).
+    if (b.subCategory === null && last.level === "category" && last.existing && g.kids(last.existing.programNodeKey).length) throw problem(400, "Choose a sub-category", `"${last.label}" has sub-categories: choose one of them, or add a new one.`, { errors: [{ field: "subCategory", message: "Choose a sub-category." }] });
+    if (!fresh.length) throw problem(409, "Already in the structure", `${plan.map((x) => x.label).join(" › ")} is already in the Program structure.`, { code: "exists", existing: { key: last.existing!.programNodeKey, label: last.label } });
+    const close = fresh.filter((x) => x.close.length);
+    if (close.length && b.decision !== "add_anyway") throw problem(409, "Close names", `Did you mean ${close.flatMap((x) => x.close.slice(0, 2)).map((c) => `"${c.trail.join(" › ")}"`).join(", ")}? Use the existing name, or add yours anyway.`, { code: "close_names", close: close.flatMap((x) => x.close), errors: close.map((x) => ({ field: x.level, message: `Did you mean ${x.close.slice(0, 2).map((c) => `"${c.label}"`).join(" or ")}?` })) });
+    if (b.allowedLocations && last.level !== "category" && last.level !== "subCategory") throw problem(400, "Not for this level", "Where cases may be opened is set on a category or sub-category.", { errors: [{ field: "allowedLocations", message: "Only categories and sub-categories have it." }] });
+    const created = await this.db.$transaction(async (tx) => {
+      const out: { level: Level; key: string; label: string; parentKey: string | null }[] = [];
+      let parent: { key: string; locations: string[] } | null = null;
+      let order = await tx.programDef.count({ where: { workspaceId } });
+      for (const x of plan) {
+        if (x.existing) { parent = { key: x.existing.programNodeKey, locations: x.existing.allowedLocations }; continue; }
+        const kind = KIND_OF[x.level];
+        const locations: string[] = kind === "STREAM" ? (x === last ? b.allowedLocations ?? BOTH : BOTH) : kind === "CATEGORY" ? (b.allowedLocations ?? (parent?.locations.length ? parent.locations : BOTH)) : [];
+        let key: string = `${parent ?`${parent.key}.` : ""}${slug(x.label) || "item"}`;
+        for (let i = 2; await tx.programDef.findFirst({ where: { workspaceId, programNodeKey: key }, select: { id: true } }); i++) key = `${key.replace(/-\d+$/, "")}-${i}`;
+        await tx.programDef.create({ data: { workspaceId, programNodeKey: key, parentNodeKey: parent?.key ?? null, nodeKind: kind, label: x.label, nameKey: normalizeLabel(x.label), sourceBasis: "ILLUSTRATIVE", clientType: kind === "PATHWAY" ? b.pathwayType : null, allowedLocations: locations, createdBy: actor.id, displayOrder: order++ } });
+        out.push({ level: x.level, key, label: x.label, parentKey: parent?.key ?? null });
+        parent = { key, locations };
+      }
+      return out;
+    }).catch((e) => {
+      if ((e as { code?: string }).code === "P2002") throw problem(409, "Added at the same moment", "Someone added one of these names at the same moment, so nothing was added. Look again and choose the existing name.", { code: "race" });
+      throw e;
+    });
+    for (const c of created) {
+      const x = plan.find((p) => p.label === c.label && p.level === c.level)!;
+      await this.audit.log(workspaceId, actor.id, "created", LEVEL_WORD[c.level].toLowerCase(), c.key, `${actor.name} added ${LEVEL_WORD[c.level].toLowerCase()} "${c.label}" to the Program structure${c.parentKey ? ` under ${g.byKey.get(c.parentKey)?.label ?? created.find((y) => y.key === c.parentKey)?.label ?? c.parentKey}` : ` in ${PATHWAY_TYPE_LABEL[b.pathwayType]}`}${x.close.length ? ` although close names exist: ${x.close.map((k) => k.trail.join(" › ")).join("; ")}` : ""}`.slice(0, 600));
+    }
+    const leafKey = last.existing?.programNodeKey ?? created[created.length - 1].key;
+    const isLeaf = (last.level === "category" && b.subCategory !== undefined) || last.level === "subCategory" || (last.level === "category" && !last.existing);
+    return { created: created.map(({ level, key, label }) => ({ level, key, label })), leaf: { level: last.level, key: leafKey }, trail: [PATHWAY_TYPE_LABEL[b.pathwayType], ...plan.map((x) => x.label)], combination: isLeaf ? "Not started" : null };
   }
 
   /** PATCH /structure/nodes/:key: rename (BR-6: setup shows it at once; each combination under it gets one name-only
@@ -188,9 +271,10 @@ export class Structure {
 @Controller("api")
 export class StructureController {
   constructor(@Inject(Structure) private readonly s: Structure, @Inject(Lifecycle) private readonly l: Lifecycle) {}
-  @Get("structure") list(@Headers("x-actor") a: string | undefined, @Query() q: unknown) { readerOf(a); return this.s.list(q); }
+  @Get("structure") list(@Headers("x-actor") a: string | undefined, @Query() q: unknown) { return this.s.list(q, readerOf(a).id); }
   @Post("structure/name-check") nameCheck(@Headers("x-actor") a: string | undefined, @Body() b: unknown) { readerOf(a); return this.s.nameCheck(b); }
   @Post("structure/meaning-check") meaning(@Headers("x-actor") a?: string) { return this.s.meaningCheck(actorOf(a)); }
+  @Post("structure/path") path(@Headers("x-actor") a: string | undefined, @Body() b: unknown) { return this.s.path(actorOf(a), b); }
   @Post("structure/nodes") create(@Headers("x-actor") a: string | undefined, @Body() b: unknown) { return this.s.create(actorOf(a), b); }
   @Patch("structure/nodes/:key") patch(@Headers("x-actor") a: string | undefined, @Param("key") k: string, @Body() b: unknown) { return this.s.patch(actorOf(a), k, b); }
   @Post("structure/reorder") reorder(@Headers("x-actor") a: string | undefined, @Body() b: unknown) { return this.s.reorder(actorOf(a), b); }

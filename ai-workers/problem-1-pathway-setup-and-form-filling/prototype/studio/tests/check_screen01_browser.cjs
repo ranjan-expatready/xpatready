@@ -114,8 +114,8 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   const svRow = row("Super visa");
   step("AI proposals waiting: the row's next step is Review N AI proposals", /^Review \d+ AI proposals?$/.test((await svRow.getByRole("button").textContent()) ?? ""), await svRow.getByRole("button").textContent());
   // item 3: two lines, nothing cut in the middle
-  const lines = await row("Permanent residence application").locator('[role="gridcell"]').first().evaluate((c) => ({ t: c.textContent, bold: [...c.querySelectorAll("b, .font-semibold")].map((e) => e.textContent), cut: [...c.children].some((e) => e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === "ellipsis") }));
-  step("item 3 + BR-7 (S2): the full five-part trail in one line, first parts muted, the last levels bold; nothing truncated", lines.t.startsWith("Retail › Permanent residence › Economic immigration › Express Entry › Permanent residence application") && lines.bold.includes("Permanent residence application") && !lines.cut, JSON.stringify(lines));
+  const lines = await row("Permanent residence application").locator('[role="gridcell"]').first().evaluate((c) => ({ t: c.textContent, bold: [...c.querySelectorAll("b, .font-semibold")].map((e) => e.textContent), identity: c.querySelector("[data-trail-identity]")?.textContent ?? "", cut: [...c.children].some((e) => e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === "ellipsis") }));
+  step("item 3 + BR-7 (S2, visual system): the full five-part trail in one line, context muted, the category bold and the last levels the Trail's identity; nothing truncated", lines.t.startsWith("Retail › Permanent residence › Economic immigration › Express Entry › Permanent residence application") && lines.bold.includes("Express Entry") && lines.identity.replace(/\s+/g, " ").trim() === "Express Entry › Permanent residence application" && !lines.cut, JSON.stringify(lines));
   await state("programs-needs-work-default");
   step("F3: AI steps carry the AI mark (Sparkles, labelled) in the Next step column", await svRow.getByRole("button").locator('[aria-label="AI step:"]').count() === 1 && await grid().locator('[data-next-step="add_from_library"] [aria-label="AI step:"]').count() === 0);
   // Keyboard path (as a person): focus the row, then Tab to its next step (the chip comes first).
@@ -160,9 +160,9 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   // S2: no Program menu (the board has none); a program in a combination's path still opens the list scoped to it.
   await p.goto(`${BASE}/?prog=individual.work_permits`); await idle(); await listReady();
   await p.waitForFunction(() => location.search.includes("prog=") && [...document.querySelectorAll('[role="row"][data-node]')].every((r) => r.getAttribute("data-node").startsWith("individual.work_permits")), null, { timeout: 5000 }).catch(() => {}); // the filtered list has arrived (review round 3)
-  step("Program scope: only Work permits rows, in path order, with a 'Showing: Work permits' chip", (await grid().locator('[role="row"][data-node]').evaluateAll((rs) => rs.every((x) => x.getAttribute("data-node").startsWith("individual.work_permits")))) && p.url().includes("prog=") && await p.getByRole("button", { name: "Stop showing only Work permits" }).count() === 1);
+  step("Program scope: only Work permits rows, in path order, with a 'Work permits' filter chip (P-128 (4))", (await grid().locator('[role="row"][data-node]').evaluateAll((rs) => rs.every((x) => x.getAttribute("data-node").startsWith("individual.work_permits")))) && p.url().includes("prog=") && await p.getByRole("button", { name: "Remove the filter Work permits" }).count() === 1);
   await state("programs-program-filter-work-permits");
-  await p.getByRole("button", { name: "Stop showing only Work permits" }).click(); await idle();
+  await p.getByRole("button", { name: "Remove the filter Work permits" }).click(); await idle();
 
   await p.keyboard.press("Meta+k"); await p.keyboard.type("imm 5409"); await p.waitForTimeout(400); await idle();
   await grid().getByText("Matches: IMM 5409").first().waitFor({ timeout: 5000 }).catch(() => {}); // a busy machine answers late; the check below still decides
@@ -333,8 +333,9 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("item 6: the global draft bar shows total changes and affected combination count, with one release-review link", /^Draft · \d+ changes? across \d+ combinations?/.test(bar) && /Review and release \(\d+\)/.test(bar), bar);
   await state("programs-draft-bar", { viewport: true });
 
-  // New combination (unchanged since the early look) still opens and lands back in the list.
-  await p.getByRole("button", { name: "New combination" }).click(); await idle();
+  // The New combination page stays until S3 (P-125 (5)); since P-128 (5) Programs' button is Add combination (the
+  // pop-up in place), so the page is opened by its address here.
+  await p.goto(`${BASE}/new`); await idle();
   step("New combination opens the path builder page", /\/new/.test(p.url()) && await p.getByRole("heading", { name: /New combination/ }).count() === 1);
   const placeholdersFit = await p.locator('input[role="combobox"]').evaluateAll((xs) => xs.every((x) => { const c = document.createElement("canvas").getContext("2d"); c.font = getComputedStyle(x).font; return c.measureText(x.placeholder).width <= x.clientWidth - 24; }));
   step("review #10: a path back to Programs, no stray hint under Pathway, placeholders not cut", await p.getByRole("navigation", { name: "Path" }).getByRole("link", { name: "Immigration programs" }).count() === 1 && !/^exists$/m.test(await p.locator("main").innerText()) && placeholdersFit);
