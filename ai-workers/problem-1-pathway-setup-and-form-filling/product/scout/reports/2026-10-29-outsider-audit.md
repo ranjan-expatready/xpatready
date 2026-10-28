@@ -63,6 +63,7 @@ Classes: (a) defect in merged work · (b) gap against an agreed decision or capa
 | OA-37 | a · Minor | `tools/any-baseline.json` allows 433 `any`, the code has 404: 29 new ones can slip in | `code-health.md` §G | Ratchet the baseline down |
 | OA-38 | a · Minor | Suite `check_ai_launch_paths` failed on a fetch header timeout while 4 lanes shared the Mac | suite log | Per-request timeout + retry in the harness |
 | OA-39 | a · Minor | Merge guard hook fires on any shell command with `$VAR`, `$(…)`, loops or `{a,b}`, so explorers cannot run ordinary commands | `.claude/settings.json:84` `if: Bash(gh pr merge*)` | Match the command text inside the guard script instead |
+| OA-41 | a · Major | A full suite run rewrites **289 tracked files and adds 34 new ones** in the copy: screenshots and JSON in `product/screens/*` (W1-combination-workspace 60, W1-form-library 55, 01-programs-catalogue 44, …), US$0 stub rows appended to the append-only spend ledger (`prototype/p2/ledger/spend.jsonl`), stub runs and `evidence/` reports. Screen evidence a Lead accepted is silently replaced by a later run's. A lane that runs suites then `git add -A` commits test noise into the ledger and evidence | `git status` after `run-suites.sh` on a clean 32961d69 copy | Suites write to `var/` (or `SUITES_OUT`) only; ledger path taken from the environment in tests |
 | OA-40 | c · — | `/new` route, S6 one Add, S7 reset/sample, W1-10 AI drafting, W1-15 questions and documents, C11.8 run panel | WAVE-1 S3, S6, S7, W1-10, W1-15, W1-07 | As planned |
 
 **Unclear requirements (d) — quote both sides, founder decides**
@@ -111,4 +112,15 @@ All npm versions are the newest at least 14 days old; checksums are the registry
 Suggested order: the two no-install steps, then knip + Biome (cheap, immediate), then zod-to-openapi + Schemathesis (finds the most real defects here), then Stryker on the engine, then Guidepup before the client screens (W5).
 
 ## Suites
-`COPY_PREFIX=audit bash product/tools/run-suites.sh` on 32961d69: see the table at the end of this file (appended when the run finished).
+`COPY_PREFIX=audit bash product/tools/run-suites.sh` on 32961d69 (+ this report), 29 Oct 02:40–04:05, Mac load average 15–24 with four other lanes running: **50 PASS · 7 FAIL · 1 skipped** (studio browser: resets :4400). Full logs: `scripts/` holds the probes; the suite table is in the session's scratch log, summarised here.
+
+| Failing suite | Why (read from its log) | Real defect? |
+|---|---|---|
+| check_ai_launch_paths.ts | `fetch failed` (UND_ERR_HEADERS_TIMEOUT) after 328 s | No: load; OA-38 |
+| check_ai_orchestration.ts | isolated copy "did not start" within the script's 30 s wait; its log shows it started later | No: load; startup wait too short |
+| check_forms_channels.ts · check_forms_demo.ts | isolated copy did not start (same cause) | No: load |
+| check_screen01_browser.cjs | view change 213 ms against a 200 ms budget | No: load (budget missed by 13 ms) |
+| check_runtime_r1c.cjs | client part first view 1,302 ms against 1 s | Borderline: load; rerun quiet |
+| check_s5_slice3_browser.cjs | step "the shared Undo toast and the one Undo bar name the removal" failed; Undo itself passed. By hand the toast and bar were both correct (`pane-remove-dialog.jpg` walk) | Likely timing of the 10 s toast under load (see QA-58); rerun quiet |
+
+**Reading:** no merged rule failed; the harness is load-sensitive (fixed 30 s startup wait, wall-clock budgets on a shared Mac). Fix in one line: startup wait from the environment (60 s on the Mac), budgets checked only in CI or with a quiet-Mac guard, and Playwright traces on failure (Part 3). Rerun the seven on a quiet Mac before trusting either verdict.
