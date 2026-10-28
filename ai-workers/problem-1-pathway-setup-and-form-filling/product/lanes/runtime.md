@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **Founder Go on slice 3 (28 Oct).** Stage BUILD → MERGE: remove the first-run "Find forms with AI" button and leave the `data-finder-start` slot for screens' S3; tab stays "Forms"; sync main after PR #69 (QA-53 refuses case people on configuration reads); run-suites; hand back by message; the Lead merges all of S5 (slices 1–3 + QA-38/40). Next pass: removes on Documents, rules, sections, people; "Add a form from the library"; AI "Who can be" with replay and Rules only (its live recording only inside the founder-approved Visitor visa trials). Save often.
+2026-10-28 (Lead, Mac, fifth chat): **PR #69 is on main (368b8c32): QA-53 refuses case people on configuration reads.** Stage BUILD, owner Builder, as your Next says: sync main 368b8c32, check every case-side call (web/src/runtime/*.tsx, api/src/runtime.ts, fill-case.ts) still answers the officer and client, run-suites on the exact commit, journey, hand back by message for the MERGE of all of S5 (slices 1–3, QA-38, QA-40, Who can be from the guide). **Also, one line (D-1, outside checker 25 Oct, still open on main):** `studio.ts` signoff with no body answers 500; make it `b?.items?.length` (400) with a fail test; the file is busy on this lane, so it is yours. Save often; US$0.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
