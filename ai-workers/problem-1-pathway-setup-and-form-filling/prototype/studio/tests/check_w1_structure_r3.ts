@@ -53,6 +53,13 @@ const exists = (k: string) => sql(`select count(*) from program_def where progra
   ok("C11.9 P-116 amended: someone else's unused name is not deleted at once (it goes to a second person)", row("Permanent resident documents")?.action.immediate === false);
   ok("C11.9 Lead 28 Oct (1) pass: a Live combination row offers Retire, its combination going with it", row("With an LMIA")?.action.kind === "RETIRE" && !row("With an LMIA")?.action.why && row("With an LMIA")?.action.withCombination === true, row("With an LMIA")?.action);
   ok("C11.9 L3 fail: the category above a Live line offers Retire greyed while that line is active", row("Employer-specific work permit")?.action.kind === "RETIRE" && /^Can't retire yet: "With an LMIA"/.test(row("Employer-specific work permit")?.action.why ?? ""), row("Employer-specific work permit")?.action.why);
+  // QA-55: the greyed Retire names what really blocks it, each with its way out.
+  const wpWhy = row("Work permits")?.action.why ?? "";
+  ok("C11.9 QA-55 pass: a released Program's Retire says which names are in use (retire first) and which were never released (delete first)", /"Employer-specific work permit" and "With an LMIA" under it are still in use: retire those first; "LMIA-exempt \(employer offer\)", "Open work permit" and 1 more under it were never released: delete those first\./.test(wpWhy) && row("Open work permit")?.action.kind === "DELETE", wpWhy);
+  const trWhy = row("Temporary residence")?.action.why ?? "";
+  ok("C11.9 QA-55 pass: a name with a setup draft is named apart (release or discard it), never under 'delete first'", /"Visitor visa", "Super visa" and 1 more under it have setup drafts: release or discard them first/.test(trWhy) && !/"Visitors"/.test(trWhy), trWhy);
+  const r0 = await call("POST", `/structure/nodes/${row("Work permits")!.key}/retire`, { reason: "qa-55 (Sample)" });
+  ok("C11.9 QA-55 fail-guard: the rule is unchanged: Retire is still refused while names under it are active, with the same words", r0.status === 409 && r0.body.detail === wpWhy, `${r0.status} ${r0.body.detail}`);
 
   // ---------------------------------------------------------------- R3-4: branch delete, exact and all or nothing
   const prd = row("Permanent resident documents")!.key, card = row("PR card renewal")!.key, travel = row("Travel document")!.key;

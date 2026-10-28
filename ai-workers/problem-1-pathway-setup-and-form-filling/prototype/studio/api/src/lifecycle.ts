@@ -56,9 +56,23 @@ export function nodeCan(f: NodeFacts): UsesView["can"] & { withCombination: stri
   const underOpen = below.find((n) => open.has(n.programNodeKey) || combos.some((c) => c.programDefId === n.id && open.has(c.id)));
   const underRetired = below.find((n) => n.retiredAt);
   const active = [...new Set([...below.filter((n) => !n.retiredAt).map((n) => n.label), ...combos.filter((c) => !c.retired && c !== own).map((c) => below.find((n) => n.id === c.programDefId)?.label ?? node.label)])];
+  // What blocks a Retire, said apart (QA-55): a name with a released combination in its branch is retired first; the
+  // others were never released: a setup draft is released or discarded first; a branch with no combination at all is
+  // deleted first, naming only its top name (its Delete takes the rest).
+  const kids = new Map<string, ProgramDef[]>();
+  for (const n of below) if (n.parentNodeKey) kids.set(n.parentNodeKey, [...(kids.get(n.parentNodeKey) ?? []), n]);
+  const releasedAt = new Set(combos.filter((c) => c.released).map((c) => c.programDefId));
+  const wasReleased = (n: ProgramDef): boolean => releasedAt.has(n.id) || (kids.get(n.programNodeKey) ?? []).some(wasReleased);
+  const comboAt = new Set(combos.map((c) => c.programDefId));
+  const hasCombo = (n: ProgramDef): boolean => comboAt.has(n.id) || (kids.get(n.programNodeKey) ?? []).some(hasCombo);
+  const live = below.filter((n) => !n.retiredAt);
+  const inUse = [...new Set([...live.filter(wasReleased).map((n) => n.label), ...combos.filter((c) => c.released && !c.retired && c !== own && !live.some((n) => n.id === c.programDefId)).map((c) => below.find((n) => n.id === c.programDefId)?.label ?? node.label)])];
+  const drafts = [...new Set(live.filter((n) => comboAt.has(n.id) && !wasReleased(n)).map((n) => n.label))];
+  const unusedKeys = new Set(live.filter((n) => !hasCombo(n)).map((n) => n.programNodeKey));
+  const unused = [...new Set(live.filter((n) => unusedKeys.has(n.programNodeKey) && !unusedKeys.has(n.parentNodeKey ?? "")).map((n) => n.label))];
   return {
     delete: opened ?? (released ? WHY.released : node.retiredAt ? WHY.retiredNoDelete : own ? WHY.ownSetup : setup ? WHY.setupUnder(setup.label) : underOpen ? WHY.waitingUnder(underOpen.label) : underRetired ? WHY.retiredUnder(underRetired.label) : null),
-    retire: opened ?? (node.retiredAt ? WHY.alreadyRetired : !released ? WHY.neverReleased : active.length ? WHY.stillUsed(active) : null),
+    retire: opened ?? (node.retiredAt ? WHY.alreadyRetired : !released ? WHY.neverReleased : active.length ? (inUse.length || unused.length || drafts.length ? WHY.stillUsed(inUse, unused, drafts) : WHY.stillUsed(active)) : null),
     restore: opened ?? (!node.retiredAt ? WHY.notRetired : parent?.retiredAt ? WHY.parentRetired(parent.label) : null),
     withCombination: own && (node.retiredAt ? own.retired : !own.retired && own.released) ? own.id : null,
   };

@@ -25,7 +25,14 @@ export const WHY = {
   hasCases: "Can't delete: cases were opened on it. Retire it instead.",
   alreadyRetired: "It is already retired.",
   neverReleased: "It was never released: delete it instead.",
-  stillUsed: (names: string[]) => `Can't retire yet: ${list(names)} ${names.length === 1 ? "is" : "are"} still in use. Retire ${names.length === 1 ? "it" : "those"} first; open cases and earlier releases keep everything either way.`,
+  /** What blocks a Retire, with the way out for each (QA-55): released names still in use are retired first; names
+   *  never released are deleted first (only the top of each unused branch is named: its Delete takes the rest); a
+   *  setup draft is released or discarded first. */
+  stillUsed: (inUse: string[], unused: string[] = [], drafts: string[] = []) => `Can't retire yet: ${[
+    inUse.length ? `${list(inUse)} under it ${inUse.length === 1 ? "is" : "are"} still in use: retire ${inUse.length === 1 ? "it" : "those"} first` : "",
+    drafts.length ? `${list(drafts)} under it ${drafts.length === 1 ? "has a setup draft" : "have setup drafts"}: release or discard ${drafts.length === 1 ? "it" : "them"} first` : "",
+    unused.length ? `${list(unused)} under it ${unused.length === 1 ? "was" : "were"} never released: delete ${unused.length === 1 ? "it" : "those"} first` : "",
+  ].filter(Boolean).join("; ")}. Open cases and earlier releases keep everything either way.`,
   notRetired: "It is not retired.",
   parentRetired: (name: string) => `Can't restore yet: ${q(name)} above it is retired. Restore it first.`,
   author: "Only a configuration author deletes, retires or restores names. You can read everything.",
