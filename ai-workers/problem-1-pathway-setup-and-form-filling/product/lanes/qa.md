@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 00:30 (Lead, Mac): **Handover read (657c7f8).** For the fresh qa session: **WAITING** for the next merge, then `/qa after-merge` on it: first S4 Form library, then the screens visual-system slice (Program structure layout A with the Add pop-up, Immigration programs restyle, menu order, QA-51/52/54). Your Handover section below has the open findings, checks and lessons. QA-53 is decided (deny every configuration read now; forms lane after S4). Own ports, AI US$0, by-products put back, report summary to the Lead by message.
+2026-10-28 (Lead, Mac): **WAITING** for the next merge (S4 Form library first, then the visual-system round 3). Note: the screens lane updates only the "Remove" → "Delete" wording in `check_qa_am_fix_1027` and `check_qa_am_1027` (P-128, Lead OK); re-read them at your next after-merge. CI now runs only on pull requests (P-85 amended): read the Lead PR's run, or run the suites yourself. Own ports, AI US$0, report summary to the Lead by message.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

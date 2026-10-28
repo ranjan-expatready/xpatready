@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 00:45 (Lead, Mac): **Handover read (f0166e5): the four early-look fixes and slice 2 are done (8346a37), EARLY-LOOK, owner Lead.** The new Lead first runs the drift check (LEAD.md) on this branch, reads CI on 8346a37 and f0166e5, then shows the founder the slice 2 early look (`screens/W1-combination-workspace/screenshots/slice2/`). For the fresh runtime session after the founder's Go: slice 3 (forms from the finder) once S4 is merged; Documents keeps naming a new type until S6's one Add exists. Send hand-backs to the Lead by message.
+2026-10-28 (Lead, Mac): **Shoulds read (3964553): accepted; the founder's slice 2 Go already covered them, so no new early look.** Stage WAITING, owner Lead: (1) CI on 3964553 once GitHub Actions billing is unblocked; (2) S4 merges to main; then this lane syncs main and builds slice 3 (forms from the finder). The two "Left as it is" points (Programs next step wording during a removed released form; rule messages naming field codes) go to the screens lane's S3 pass. Wave 1 is desktop only. **Also (28 Oct, P-116 amended):** S5 line removes (form, document, rule, section, person role) use "Remove from …" with Undo and the shared components once screens has them; fold into slice 3.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

@@ -1,153 +1,74 @@
-# CI (P-81, P-82): the push guard on every push and pull request; on pull requests also the rules-file checks,
-# the decision-impact check, the explicit-any count and the engine/contract suites on PostgreSQL 18; the
-# official IRCC PDFs are committed (P-83) and verified by manifest checksum. On every code push (P-85): the full studio
-# suites (product/tools/run-suites.sh, the same script the Lead and lanes run) on a machine set up by cloud-setup.sh.
-# A push whose files are all docs/evidence (.md, images, .pdf, .txt) skips the ~15-minute suites to keep the
-# GitHub Actions minutes bill low; the push guard still runs on every push (P-81).
-# Cost rule (founder, 27 Oct): the same code is tested once. The code fingerprint is every file except docs, images
-# and product/ (boards, notes, records), plus the two scripts that decide the suites (run-suites.sh, cloud-setup.sh).
-# A push whose fingerprint already passed the full suites in an earlier run (a lane commit the Lead merged, then the
-# merge reaching main) reuses that run and says which. Pull requests add the graph check, so a records-only change
-# is still checked for gaps; their PostgreSQL engine suite runs only when the pull request changes code.
+# CI (P-81, P-82, P-85 as amended 28 Oct): one job per pull request, nothing on a plain push.
+# Cost rule (founder, 28 Oct): GitHub Actions minutes stay within the monthly allowance with no loss of quality.
+# Every lane and the Lead already run the same full suites on the Mac (tools/run-suites.sh) and the push guard runs
+# locally before every push (.githooks/pre-push), so GitHub gives the one independent check where it matters: the
+# pull request to main, tested on its merge result. Per pull request, in one job (each job bills at least a minute):
+#   * always: the push guard on the pull request's commits, the rules-file checks, the decision-impact check, the
+#     graph check (P-86) and the official IRCC PDF checksums (P-31);
+#   * when the pull request changes code (anything but docs, images and PDFs): the explicit-any count and the full studio suites (run-suites.sh --demo, which includes the engine
+#     suite; no model call, US$0) on a machine set up by cloud-setup.sh.
+# A lane opens its pull request when its work is ready for the Lead's check, so a code change is tested about once;
+# a newer push to the pull request cancels the older run. Docs-only pull requests (most Lead PRs) take about a minute.
 name: ci
 on:
-  push:
   pull_request:
 jobs:
-  guard:
+  ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions: { contents: read }
+    concurrency: { group: "ci-${{ github.event.pull_request.number }}", cancel-in-progress: true }
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - name: push guard (excluded paths, PDFs, secrets, personal names)
         run: |
-          G="ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/push-guard.sh"; chmod +x "$G"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            "$G" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
-          else
-            "$G" --unpushed HEAD
-          fi
-  checks:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    # A newer push to the same pull request replaces the older check run.
-    concurrency: { group: "checks-${{ github.ref }}", cancel-in-progress: true }
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+          chmod +x "$P/tools/push-guard.sh"
+          "$P/tools/push-guard.sh" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
       - id: code
         name: does this pull request change code?
         run: |
+          # No early-exit grep in a pipe: under pipefail its SIGPIPE would read as "no code changed".
           code=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" | grep -ivE '\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$' || true)
-          if [ -n "$code" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          if [ -z "$code" ]; then
+            echo "Docs and records only: suites not needed." >> "$GITHUB_STEP_SUMMARY"
+            echo "changed=false" >> "$GITHUB_OUTPUT"; echo "suites=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"; echo "suites=true" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
-        with: { node-version-file: .nvmrc }
-      - uses: actions/setup-python@v5
-        with: { python-version: '3' }
-      - name: PostgreSQL 18 (PGDG)
-        if: steps.code.outputs.changed == 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: packages (npm ci; the graph and any-count checks read TypeScript from them)
+        run: cd "$S" && npm ci --no-fund --no-audit
+      - name: rules files, decision impact, graph (P-86)
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-common
-          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-18
-          PGB=/usr/lib/postgresql/18/bin
-          sudo -u postgres "$PGB/initdb" -D /tmp/pg18 -A trust -U xr_studio
-          sudo -u postgres "$PGB/pg_ctl" -D /tmp/pg18 -o "-p 54329 -k /tmp" -l /tmp/pg18.log -w start
-          sudo -u postgres "$PGB/createdb" -h 127.0.0.1 -p 54329 -U xr_studio xr_studio_demo
-      - name: npm ci
-        run: npm ci
-        working-directory: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
-      - name: schema
-        if: steps.code.outputs.changed == 'true'
-        run: |
-          export DATABASE_URL="postgresql://xr_studio@127.0.0.1:54329/xr_studio_demo"
-          ./node_modules/.bin/prisma migrate deploy && ./node_modules/.bin/prisma generate
-        working-directory: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+          bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
       - name: official IRCC PDFs (manifest checksums, P-31)
         run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
-      - name: rules files, decision impact, any-count
-        run: |
-          P=ai-workers/problem-1-pathway-setup-and-form-filling/product
-          bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && \
-          node ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/count-any.mjs
-      - name: graph (P-86; fails on a page calling a missing API route or a missing decision)
-        run: node ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/graph.mjs --check
-      - name: engine and contract suites
-        if: steps.code.outputs.changed == 'true'
-        env: { DATABASE_URL: postgresql://xr_studio@127.0.0.1:54329/xr_studio_demo }
-        run: |
-          S=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
-          "$S/node_modules/.bin/tsx" --tsconfig "$S/api/tsconfig.json" "$S/tests/check_engine.ts"
-  changes:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    permissions: { contents: read, actions: read }
-    outputs:
-      run_suites: ${{ steps.d.outputs.run_suites }}
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - id: d
-        env: { GH_TOKEN: "${{ github.token }}" }
-        run: |
-          B="${{ github.event.before }}"
-          if [ "$B" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$B^{commit}" 2>/dev/null; then
-            git fetch --quiet origin main || true
-            B=$(git merge-base origin/main "${{ github.sha }}" 2>/dev/null || true)
-          fi
-          # No early-exit grep in a pipe: under pipefail its SIGPIPE would read as "no code changed".
-          code=$( [ -n "$B" ] && git diff --name-only "$B..${{ github.sha }}" | grep -ivE '\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$' || true)
-          if [ -n "$B" ] && [ -z "$code" ]; then
-            echo "run_suites=false" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          # Code changed: reuse an earlier full pass of exactly this code instead of running the suites again.
-          P=ai-workers/problem-1-pathway-setup-and-form-filling/product
-          fp() { { git ls-tree -r --full-tree "$1" | grep -vE $'\t'"$P/" | grep -ivE '\.(md|txt|png|jpe?g|gif|webp|svg)$'
-                   git ls-tree -r --full-tree "$1" -- "$P/tools/run-suites.sh" "$P/tools/cloud-setup.sh"; } | sha256sum | cut -c1-64; }
-          mine=$(fp "${{ github.sha }}")
-          gh api "repos/${{ github.repository }}/actions/runs?event=push&status=success&per_page=50" \
-            -q '.workflow_runs[] | select(.name == "ci") | "\(.id) \(.head_sha)"' > runs.txt || true
-          while read -r id sha; do
-            [ "$sha" = "${{ github.sha }}" ] && continue
-            git cat-file -e "$sha^{commit}" 2>/dev/null || continue
-            [ "$(fp "$sha")" = "$mine" ] || continue
-            ok=$(gh api "repos/${{ github.repository }}/actions/runs/$id/jobs" -q '.jobs[] | select(.name == "suites") | .conclusion' || true)
-            if [ "$ok" = success ]; then
-              echo "Full suites not run again: the same code (fingerprint ${mine:0:12}) passed them in run $id on ${sha:0:7}: ${{ github.server_url }}/${{ github.repository }}/actions/runs/$id" | tee -a "$GITHUB_STEP_SUMMARY"
-              echo "run_suites=false" >> "$GITHUB_OUTPUT"; exit 0
-            fi
-          done < runs.txt
-          echo "Code fingerprint ${mine:0:12}: no earlier full pass of this exact code; running the suites." >> "$GITHUB_STEP_SUMMARY"
-          echo "run_suites=true" >> "$GITHUB_OUTPUT"
-  suites:
-    # P-85: every push that changes code or config (lane branches, main); docs/evidence-only pushes are gated out
-    # by the changes job to keep the Actions bill low. A newer push to the same branch cancels the older run.
-    needs: changes
-    if: github.event_name == 'push' && needs.changes.outputs.run_suites == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    concurrency: { group: "suites-${{ github.ref }}", cancel-in-progress: true }
-    steps:
-      - uses: actions/checkout@v4
       - name: set up like a cloud session (cloud-setup.sh)
-        run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/cloud-setup.sh
-      - name: Playwright's own Chromium (the F2 extension check loads an unpacked extension; branded Chrome refuses)
-        run: cd ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio && ./node_modules/.bin/playwright install chromium
-      - name: graph (P-86; fails on a page calling a missing API route or a missing decision)
-        run: node ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/graph.mjs --check
+        if: steps.code.outputs.changed == 'true'
+        run: bash "$P/tools/cloud-setup.sh"
+      - name: explicit-any count
+        if: steps.code.outputs.changed == 'true'
+        run: node "$S/tools/count-any.mjs"
+      - name: Playwright's own Chromium
+        if: steps.code.outputs.suites == 'true'
+        run: cd "$S" && ./node_modules/.bin/playwright install chromium
       - name: studio suites (run-suites.sh --demo; no model call, US$0)
+        if: steps.code.outputs.suites == 'true'
         run: |
-          bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/run-suites.sh --demo | tee suites.md
+          bash "$P/tools/run-suites.sh" --demo | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
-        if: always()
+        if: always() && steps.code.outputs.suites == 'true'
         run: '[ -f suites.md ] && cat suites.md >> "$GITHUB_STEP_SUMMARY" || true'
-      - name: logs
-        if: always()
+      - name: logs (only when something failed)
+        if: failure() && steps.code.outputs.suites == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: suite-logs
