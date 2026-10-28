@@ -16,7 +16,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
 import { changedFacts, changedGroups, formCoverage, groupFacts, inputHash, pdfForms, readiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import type { BoxRow } from "../../engine/render.ts";
-import { actorOf, Audit, Db, fail, PROTOTYPE, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
+import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
 import { writeForm } from "./fill.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 
@@ -243,6 +243,7 @@ export class CaseForms implements OnModuleInit {
   }
 }
 
+@CaseRead()
 @Controller("api/runtime")
 export class CaseFormsController {
   constructor(@Inject(CaseForms) private readonly f: CaseForms) {}

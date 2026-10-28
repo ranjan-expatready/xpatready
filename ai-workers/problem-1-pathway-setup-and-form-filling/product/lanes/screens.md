@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-28 (Lead, Mac): **qa after-merge on round 3 (main dccd87e): ready, with findings → one FIX pass before S3** (also by message): QA-60 Major (Add and add another loses the first letters typed during a save), QA-55 (greyed Retire names unused names as blocking), QA-56 (Enter on a new name in the pop-up), QA-58 (Undo for own delete vanishes after 10 s), QA-59 (returned deletion still says waiting); QA-57 already fixed in S4; the Button hover contrast. Each with pass and fail tests; then S3 Start setup (DESIGN). Save often.
+2026-10-28 (Lead, Mac, sixth chat, Claude Code): **S3 early look: changes before the founder sees it.** Stage FIX, owner Builder. (1) A run error must never show raw technical text or a file path (screenshot 03 shows ENOENT and a Mac path; QA-63 words from forms apply); retake that screenshot with the isolated copy's fake launcher working. (2) One call to action on a just-started combination: the page's Next step points to the finder offer ("Find forms") while nothing is attached. (3) After a run, one find button: the run card's "Find again" and the "Find the forms again" offer are one. (4) Same cost words on the button, tip and run card (about US$x · at most US$y). (5) **S5 merges first** (runtime is in FIX); your branch conflicts with it in `api/src/main.ts`, `pages/combination.tsx`, `tests/check_studio_browser.cjs`: after S5 is on main, sync, put the Start setup block in S5's Forms tab slot ("No form find yet"), rerun, EARLY-LOOK again with 1440 screenshots. Do (1)–(4) now. US$0.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

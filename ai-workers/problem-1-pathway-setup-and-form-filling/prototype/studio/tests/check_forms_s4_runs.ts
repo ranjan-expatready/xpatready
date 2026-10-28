@@ -17,7 +17,7 @@ import { WAVE1_CAP_USD } from "../../p2/policy.ts";
 
 const PORT = Number(process.argv[2] ?? 4456), DB = process.argv[3] ?? "xr_studio_forms_s4r";
 const STUDIO = join(import.meta.dirname, ".."), OFFICIAL = join(STUDIO, "..", "..", "official-sources", "ircc"), P2 = join(STUDIO, "..", "p2");
-const VAR = join(STUDIO, "var", "isolated-forms_s4r");
+const VAR = join(STUDIO, "var", `isolated-${DB.replace(/^xr_studio_/, "")}`); // the copy's own folder, whatever its name (run-suites prefixes it)
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
@@ -251,6 +251,17 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   const forUploader = await qItem("user-A"), forReviewer = await qItem("user-B");
   ok("Lead 28 Oct fail: To review never asks the uploader to record the IRCC page of a copy the rules could not read", /cannot be approved/.test(forUploader?.what ?? "") && !/IRCC page/.test(forUploader?.what ?? "") && forUploader?.state === "waiting" && forUploader?.next === null && /upload the official PDF/.test(forUploader?.waiting_on ?? ""), forUploader);
   ok("Lead 28 Oct pass: the second person's To review step for that copy is to reject it", forReviewer?.state === "needs" && forReviewer?.next?.label === "Reject the copy" && forReviewer?.next?.href === `/review/held/${heldScan}`, forReviewer?.next);
+  // P-116 amended (28 Oct): an earlier edition says what keeps it. A test-made earlier edition of IMM 1295 that no release
+  // files, then the With an LMIA release made to file it (its snapshot names that edition).
+  const cur1295 = sql(`select e.id from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where d.form_key = 'IMM 1295' order by e.edition_label desc limit 1`);
+  sql(`insert into form_edition select (jsonb_populate_record(null::form_edition, to_jsonb(e) || jsonb_build_object('id', gen_random_uuid(), 'edition_label', 'IMM 1295 (01-2019)'))).* from form_edition e where e.id = '${cur1295}'`);
+  const keptLine = async () => ((await call("GET", "/library/forms/list?q=1295")).body.rows[0]?.older_editions ?? []).find((e: any) => e.label === "IMM 1295 (01-2019)")?.kept_by as string | undefined; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const noneKeeps = await keptLine();
+  ok("P-116 amended fail: an earlier edition no release files says so (kept for the record, never deleted)", /no release or open case files it now\. Never deleted\./.test(noneKeeps ?? ""), noneKeeps);
+  const rel = sql(`select cr.id from config_release cr join combination c on c.id = cr.combination_id where c.label = 'With an LMIA' order by cr.version desc limit 1`);
+  if (rel) sql(`update config_release set snapshot = replace(snapshot::text, '"form_edition": "IMM 1295 (09-2023)"', '"form_edition": "IMM 1295 (01-2019)"')::jsonb where id = '${rel}'`);
+  const kept = await keptLine();
+  ok("P-116 amended pass: an earlier edition says which release keeps it (\"Kept by Release N of With an LMIA\")", !!rel && /^Kept by Release \d+ of With an LMIA(\.| and \d+ open case)/.test(kept ?? ""), kept);
   const fd = new FormData(); for (const [n, b] of [["imm5604e.pdf", official], ["damaged-2.pdf", Buffer.from("%PDF-1.4\n%%EOF\n")]] as const) fd.append("files", new Blob([new Uint8Array(b)], { type: "application/pdf" }), n);
   const many = await (await fetch(`http://localhost:${PORT}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json() as { runIds?: string[] };
   ok("C11.11 (Lead fix 4): one Upload PDF takes many files, one run (card) each", many.runIds?.length === 2, many);

@@ -13,7 +13,7 @@ import { dirname, join } from "node:path";
 
 const PORT = Number(process.argv[2] ?? 4455), DB = process.argv[3] ?? "xr_studio_forms_s4";
 const STUDIO = join(import.meta.dirname, ".."), P2 = join(STUDIO, "..", "p2"), OFFICIAL = join(STUDIO, "..", "..", "official-sources", "ircc");
-const VAR = join(STUDIO, "var", "isolated-forms_s4");
+const VAR = join(STUDIO, "var", `isolated-${DB.replace(/^xr_studio_/, "")}`); // the copy's own folder, whatever its name (run-suites prefixes it)
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
@@ -402,6 +402,29 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("C11.8: Stop on an ended run says so (409)", r.status === 409);
   r = await call("POST", `/ai/batches/${first.body.id}/retry`, {});
   ok("C11.8: a finder run is not retried through the field-map retry (409, find again instead)", r.status === 409, r.body?.message ?? r.body);
+
+  // --- PR #67 review (Lead, 28 Oct): a returned library form change is sent again by the form's own rule, never as a
+  // combination; the change being sent again is not counted as an open change of its own form.
+  const F = "IRM 0002", CF = encodeURIComponent(F);
+  const lineOn = () => sql(`select status || ':' || version from combination_form where combination_id='${vv}' and lineage_key='${F}' order by version desc limit 1`);
+  const removeLine = async () => { const [st, v] = lineOn().split(":"); return st && st !== "RETIRED" ? call("DELETE", `/combinations/${vv}/forms/${CF}`, { version: Number(v) }) : null; };
+  await removeLine();
+  sql(`delete from library_change where kind='library_form' and key='${F}' and status in ('WAITING','RETURNED','APPROVED')`);
+  r = await call("POST", `/library/forms/${CF}/retire`, { reason: "Not needed by any combination now" });
+  ok("setup (PR #67): a retire of the unused official form waits for a second person", r.status < 300 && r.body.status === "WAITING", r.body?.detail ?? r.body);
+  const rid = r.body.id;
+  // Used again meanwhile: its line comes back on Visitor visa (as a person adding it again; Undo and + Add refuse while a retire is open).
+  sql(`update combination_form set status='DRAFT' where id=(select id from combination_form where combination_id='${vv}' and lineage_key='${F}' order by version desc limit 1)`);
+  r = await call("POST", `/library/changes/${rid}/return`, { note: "Visitor visa lists it again" }, "user-B");
+  ok("setup (PR #67): the second person returns it", sql(`select status from library_change where id='${rid}'`) === "RETURNED", r.body?.detail ?? r.status);
+  r = await call("POST", `/library/changes/${rid}/resubmit`, { reason: "Sent again unchanged" });
+  ok("PR #67 fail: sending a returned form retire again while a combination still lists the form is refused in words (409, still used), never as a missing combination", r.status === 409 && /Still used/.test(r.body.detail ?? "") && /Visitor visa/.test(r.body.detail ?? "") && sql(`select status from library_change where id='${rid}'`) === "RETURNED", r.body?.detail);
+  await removeLine();
+  r = await call("POST", `/library/changes/${rid}/resubmit`, { reason: "Visitor visa no longer lists it" });
+  ok("PR #67 pass: after its last use is removed, the returned retire is sent again and waits for a second person (its own open change is not counted against it)", r.status < 300 && sql(`select status from library_change where id='${rid}'`) === "WAITING", r.body?.detail ?? r.body?.status);
+  ok("PR #67: History says it was sent again, in words (a form, never a combination)", /sent again retire "/.test(sql(`select summary from audit_event where entity_key='${F}' and action='proposed' order by at desc limit 1`)) && sql(`select entity from audit_event where entity_key='${F}' and action='proposed' order by at desc limit 1`) === "form");
+  r = await call("POST", `/library/changes/${rid}/resubmit`, { reason: "Again while it waits" });
+  ok("PR #67 fail: a change that waits already is not sent again (409)", r.status === 409, r.body?.detail);
 })().catch((e) => { fail++; console.log(`FAIL  the check stopped: ${(e as Error).stack}`); }).finally(() => {
   for (const f of madeRuns) rmSync(f, { force: true });
   for (const f of existsSync(join(P2, "jobs")) ? readdirSync(join(P2, "jobs")) : []) if (f.startsWith("studio-finder-") && !jobsBefore.has(f)) rmSync(join(P2, "jobs", f), { force: true });
