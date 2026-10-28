@@ -75,13 +75,17 @@ const row = async (code, a = "user-A") => (await call("GET", `/api/library/forms
   ok("C11.9 pass: only an author sends again (approver, SME, officer 403; nobody 401)", by.approver === 403 && by.sme === 403 && by.officer === 403 && by.nobody === 401, by);
   const short = await call("POST", `/api/library/changes/${id}/resubmit`, "user-A", { reason: "x" });
   ok("C11.9 pass: a reason under 3 characters is refused in words (400)", short.s === 400 && /3 to 300/.test(short.j.detail ?? ""), short.j.detail);
-  const twice = await Promise.all([1, 2].map(() => call("POST", `/api/library/changes/${id}/resubmit`, "user-A", { reason: "Named: Guide 5269 (2026)", label: "Guide 5269 (2026 edition)" })));
+  // QA-68 (fixed by PR #73, 29 Oct): a Name sent with a form change's resend is refused in words; the resend itself
+  // carries only what changed.
+  const named = await call("POST", `/api/library/changes/${id}/resubmit`, "user-A", { reason: "Named: Guide 5269 (2026)", label: "Guide 5269 (2026 edition)" });
+  const twice = await Promise.all([1, 2].map(() => call("POST", `/api/library/changes/${id}/resubmit`, "user-A", { reason: "Named: Guide 5269 (2026)" })));
   ok("C11.9 pass: Send again twice at once: one waits again, the other is told (409)", twice.map((x) => x.s).sort().join(",") === "201,409", twice.map((x) => x.s));
   const ch = await call("GET", `/api/library/changes/${id}`, "user-A");
   ok("C11.9 pass: the change waits again with the new reason and the earlier note kept", ch.j.status === "WAITING" && /Named/.test(ch.j.reason) && /Which newer guide/.test(JSON.stringify(ch.j)), { status: ch.j.status, reason: ch.j.reason });
-  ok("C11.9 QA-68 fail: a Name sent with a form change's resend is applied or refused, never silently dropped", ch.j.label === "Guide 5269 (2026 edition)" || twice.every((x) => x.s >= 400), { label: ch.j.label });
+  ok("C11.9 QA-68 fail: a Name sent with a form change's resend is applied or refused in words, never silently dropped", (named.s === 400 && (named.j.detail ?? "").length > 10 && ch.j.label !== "Guide 5269 (2026 edition)") || ch.j.label === "Guide 5269 (2026 edition)", { named: `${named.s} ${named.j.detail ?? ""}`, label: ch.j.label });
   const ap = await call("POST", `/api/library/changes/${id}/approve`, "user-B", { note: "ok" });
-  ok("C11.9 pass: the second person approves the resent change", ap.s < 300 && ap.j.status === "APPROVED", ap.j.status ?? ap.j.detail);
+  // Since QA-64's fix (PR #73) a library change takes effect at approval: APPROVED or already RELEASED.
+  ok("C11.9 pass: the second person approves the resent change", ap.s < 300 && /^(APPROVED|RELEASED)$/.test(ap.j.status ?? ""), ap.j.status ?? ap.j.detail);
 
   // ── R69-3: both delete and retire refused → the one action is greyed with its reason (pass) ──────────────────────────
   const both = await row("IMM 1295");

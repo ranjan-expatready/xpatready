@@ -6,10 +6,10 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: coverage rerun on main 32961d69 (S4 + S5 + forms fixes); report `qa/reports/2026-10-29-coverage-s4-s5.md`
-stage: TESTING
-owner: qa
-next_action: finish the rerun of the suites that did not start under load (isolated copies, coverage on), rerun M7 Stop and p2_guard plainly, write the report, update CAPABILITIES (C11.2, C11.9, C11.11, C11.12, C1.8, C11.15), commit, push, Paste to Lead.
+current_item: DV-doc-1 retest on main db5e0208; report `qa/reports/2026-10-29-dv-doc-1.md`
+stage: WAITING
+owner: Lead
+next_action: (1) the coverage rerun on S4+S5 once screens and runtime finish their suites (first pass on 32961d69 incomplete: 7 copies did not start under load; report `2026-10-29-coverage-s4-s5.md`); (2) after-merge on S3 when it merges; (3) QA-69 and QA-48 when their fixes merge; (4) Lead answers: C1.8 copies per line, QA-69 rule. Read the Handover section first.
 blocked_by: none
 updated: 2026-10-29
 
@@ -63,5 +63,4 @@ updated: 2026-10-29
 - 2026-10-28 · Lead message (after PR #65). after-merge on main 06a8fc30 (S4): CI 47/47 on the same tree; headed walk + `check_qa_am_s4_1028.cjs` 55/61 ×2, `check_qa_s4_filing.ts` 6/9; r3 64/69 (QA-57 closed), fix 13/14; new QA-61–64 Minor (QA-64 Conflict: form retire waits for the release, P-116 amended says approval); Load sample sets 2 of 7 (brief said 5 of 7: question); journey 8/10; under coverage 41/46 (p2 guard; three M7 Stop steps clash with the preload; a lost server), api 96.88/81.69 and engine 99.44/88.96 on that incomplete run, not judged: clean coverage rerun owed. US$0.
 - 2026-10-28 · Lead brief (after PR #69). after-merge on main 38722933 (qa_r69 :4471): CI 48/48 on the same app code; QA-53 closed (GETs incl. HEAD/case/slash variants 401/403; fix 14/14); Form library lifecycle walked headed (panel, reason, toast, Withdraw); resend pass/fail paths good; R69-1 → QA-66 and R69-2 → QA-67 reproduced, R69-3 not reproduced; new QA-65 (`/releases` + three POST reads open to nobody, chain to a file download), QA-68 (resend drops Name/Meaning); r3 68/69, filing 6/9, s4 check stale after #69; new `check_qa_am_r69_1028.cjs` 21/33; graph G3 1 (tested route, not parsed); coverage not rerun. US$0.
 - 2026-10-29 · Lead message (after PR #71). after-merge on main e2cb27a4 (S5; qa_s5/s5b/s5c :4472–4474): CI 57/57 on the same app code; QA-53 holds on every S5 route; QA-38 and QA-40 closed; new QA-69 UX Minor (Forms Undo offered after a release); `check_qa_am_s5_1029.cjs` 50/50; s4 check moved to the row action 58/62 (QA-62/63/64 only); explore_1025 retired (W1-02 fixtures gone); new G3 `POST /combinations/:id/attachments`; coverage not rerun. Report `qa/reports/2026-10-29-after-merge-s5.md`.
-
-- 2026-10-29 · Lead overnight brief (main 32961d69). Coverage run 1 under c8 (load 24 → 9, 86 min): 42 suites pass; 7 copies did not start under load, so those suites are being rerun into the same coverage data.
+- 2026-10-29 · Lead message (PR #75, main db5e0208): coverage paused; DV-doc-1: 13 bugs closed by replay, 4 open; C2.3, C5.3, C3.7, C11.17, C11.11 Works; C1.8, C11.15 Partial (no copies per line); `check_qa_dv_1029.cjs` 24/25.

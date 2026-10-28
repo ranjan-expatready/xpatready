@@ -241,9 +241,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await axe(p, "Run card (replay) at 1440 px");
   await shot(p, "s4-run-card-replay");
   await p.goto(`${BASE}/ai/${svRep.l.body.id}`); await p.locator("[data-run-status]").first().waitFor();
-  const next = p.locator("[data-run-status]").getByRole("link", { name: /Find again/ });
-  const href = await next.getAttribute("href").catch(() => null);
-  step("QA-63 P-110: a run waiting for a person gives a next step that leads somewhere ('Find again' does not reload the same card)", !!href && href !== `/ai/${svRep.l.body.id}`, `Find again → ${href}`);
+  // QA-63 fix (forms f2dfa1e9): the waiting card's next step leads to the Sources page; any link off this card counts.
+  const links = await p.locator("[data-run-status] a").evaluateAll((as) => as.map((a) => `${a.textContent.trim()} → ${a.getAttribute("href")}`));
+  const onward = links.filter((l) => !l.endsWith(` → /ai/${svRep.l.body.id}`) && /→ \//.test(l));
+  step("QA-63 P-110: a run waiting for a person gives a next step that leads somewhere (not the same card)", onward.length > 0, links);
   await p.goto(`${BASE}/ai`); await p.locator("main table").waitFor({ timeout: 30000 });
   const aiList = await text(p, "main table");
   step("QA-62 plain words: AI work names a finder run by its place, without the combination's database id or internal codes (NEEDS_PERSON, RULES)", !/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/.test(aiList) && !/NEEDS_PERSON|\bRULES\b/.test(aiList), aiList.match(/[0-9a-f]{8}-[0-9a-f-]{27}\|[^ ]+|NEEDS_PERSON|RULES/g)?.slice(0, 3));
