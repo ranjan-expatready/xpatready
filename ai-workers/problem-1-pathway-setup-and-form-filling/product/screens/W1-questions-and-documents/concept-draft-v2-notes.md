@@ -9,46 +9,23 @@ Every program, document, condition, count, cost and IRCC quote on the board is *
   * Questionnaires: Question · Comes from · Pre-qualification · Only if · Status.
   * Documents: Document · Who · When · Supplies · Status.
   * Everything else is in four places: a side drawer (480 px, collapsible sections, the first two open), the row's ⋯ menu, tooltips, and the "Used by" counts.
-* **Filters:**
-  * person chips (as built);
-  * source chips (Document · Client · Agent);
-  * "Needs you · n" (to check, to decide, release checks).
+* **Filters:** person chips (as built); source chips (Document · Client · Agent); "Needs you · n" (to check, to decide, release checks).
 * **The bulk bar appears only when rows are selected.**
-* **Three screens:**
-  * Questionnaires (frames 1–2);
-  * Documents (frame 3);
-  * Preview in three sets, PQR · SQR · Agent view (frame 4). On a wide screen all three show side by side; a segmented switch picks one when narrow.
-* **Full parameters list (frame 6).** Each parameter has three things:
-  * where it shows (row, drawer, tooltip, ⋯ menu);
-  * where it is changed (this combination, or the library with a second person);
-  * who proposes it.
+* **Three screens:** Questionnaires (frames 1–2); Documents (frame 3); Preview in three sets, PQR · SQR · Agent view (frame 4): side by side when wide, a segmented switch when narrow.
+* **Full parameters list (frame 6):** for each parameter, where it shows (row, drawer, tooltip, ⋯ menu), where it is changed (this combination, or the library with a second person) and who proposes it.
 * **Actions matrix (frame 7).** Four kinds of item × six states (draft, released, retired, AI proposal, from library, combination override). It covers edit, delete with Undo, retire and restore, add, reorder, and this combination versus the library. Each refusal is written in the exact words the screen shows. It also lists the locks: clientOnly, pre-qualification, Document not on the checklist, and someone else saved.
-* **"Fill this from my documents"** is offered per section in Preview › SQR (P-134 D4). Frame 4 shows:
-  * the upload;
-  * the proposals, checked one by one (P-142 D5);
-  * "please check" on a mismatch (D6);
-  * the fallback when a document cannot be read;
-  * the agent's "Checked against the page" (D3).
+* **"Fill this from my documents"** per section in Preview › SQR (P-134 D4). Frame 4 shows the upload, the proposals checked one by one (P-142 D5), "please check" on a mismatch (D6), the fallback when a document cannot be read, and the agent's "Checked against the page" (D3).
 
 ## 2. Decisions followed (marked green on the board)
 * **P-130:** the strip; document › client › agent.
-* **Challenge M1, M2:**
-  * the drawer shows the rules' default plus an override "for Visitor visa only, reviewed in this combination's release";
-  * the fallback question shows as "reachable".
+* **Challenge M1, M2:** the drawer shows the rules' default plus an override "for Visitor visa only, reviewed in this combination's release"; the fallback question shows as "reachable".
 * **M3:** "Spouse or partner: date of birth comes from no document on their checklist" is a release check.
 * **M4:** no pre-qualification tick on an Agent fact. A tick on a Document fact is allowed when a client question exists.
 * **m2 and P-97:** the "Background and declarations" section shows 🔒 "Always the client"; Document and Agent are greyed with the reason.
 * **Lead M6 addition:** "Facts it supplies" has an "About whom" column.
-* **P-116 amended:**
-  * "Remove from checklist", not Delete, for a line;
-  * the author deletes their own never-approved draft at once with Undo;
-  * a released item is retired, never deleted;
-  * the four standard messages, word for word.
+* **P-116 amended:** "Remove from checklist", not Delete, for a line; the author deletes their own never-approved draft at once with Undo; a released item is retired, never deleted; the four standard messages, word for word.
 * **P-120:** the one Add dialog (frame 5): exact duplicate refused, a near duplicate needs a reason, the system name is read-only, "about whom" sets the subject.
-* **P-121:**
-  * bulk Accept for High only;
-  * a Decide item is chosen singly, side by side;
-  * the checkbox is disabled with "Open it to choose".
+* **P-121:** bulk Accept for High only; a Decide item is chosen singly, side by side; its checkbox is disabled with "Open it to choose".
 * **P-138:** the AI button runs only on a click; a saved draft replays at US$0.
 * **P-119, P-135:** the "Who can be in this application" summary uses the filing-mode words.
 
@@ -68,13 +45,7 @@ Every program, document, condition, count, cost and IRCC quote on the board is *
 
 ## 5. Questions for the founder (one at a time, recommendation first)
 1. **Row actions in a ⋯ menu.** Put each row's actions in a ⋯ menu and the drawer footer, with every greyed action's reason written underneath it in the menu? *Recommend yes.* The row stays at 5 things, and the reason is still visible text, not a tooltip only. This amends P-116's "one written row action from the state" for these two tabs. The other option is a sixth column holding the one written action.
-2. **Bulk actions besides Accept.** Offer four actions on selected rows:
-   * Accept (High only);
-   * Set where it comes from (locks respected; each row re-checked);
-   * Pre-qualification on or off;
-   * Reject.
-
-   No bulk Remove, Delete or Retire. *Recommend yes.* P-121 already allows bulk Accept. The lifecycle pattern leaves bulk delete and bulk retire Not built (P-26). Each bulk change has one Undo.
+2. **Bulk actions besides Accept.** On selected rows offer: Accept (High only), Set where it comes from (locks respected, each row re-checked), Pre-qualification on or off, and Reject. No bulk Remove, Delete or Retire. *Recommend yes.* P-121 already allows bulk Accept. The lifecycle pattern leaves bulk delete and bulk retire Not built (P-26). Each bulk change has one Undo.
 3. **Copies, translation and validity window.** Show them in the document drawer, read from IRCC's line as Sample, but not as editable settings in the reference build (Not built, P-26)? *Recommend yes.* No case rule in the proof reads them, and their values need the immigration expert (report D9). Who, When, Alternatives and "Facts it supplies, about whom" are built.
 
 ## 6. Capability or Scaffolding (P-33)
@@ -87,31 +58,14 @@ Every program, document, condition, count, cost and IRCC quote on the board is *
   * C4.11: the AI button and the Needs you, Check and Decide review;
   * C4.1: the person chips;
   * the lifecycle actions; the one Add dialog (reused from S6).
-* **Capability, Not built here:**
-  * Agent view confirmation (M3, P-129, P-141);
-  * Copies, Translation and Validity window as settings (Q3);
-  * bulk Remove and bulk Retire;
-  * section order per combination.
+* **Capability, Not built here:** Agent view confirmation (M3, P-129, P-141); Copies, Translation and Validity window as settings (Q3); bulk Remove and bulk Retire; section order per combination.
 * **Scaffolding:** "Acting as", the Prototype badge and the Sample family picker in Preview. These are never ported.
 
 ## 7. What changed from v1
 * **v1 frame 1 (the idea)** moves into the strip and its tooltips. The concept already holds the idea.
-* **Rows:**
-  * v1 had 6 columns on Questionnaires and showed IRCC quotes in the row;
-  * v2 has 5, adds checkboxes, a ⋯ menu and a status pill;
-  * Used by, Proposed by and the quotes move to the drawer.
-* **New:**
-  * source chips and the "Needs you" filter;
-  * the bulk bar;
-  * the side drawer with every parameter;
-  * the Decide item side by side;
-  * the clientOnly lock;
-  * release checks in words;
-  * the Undo toast.
-* **Documents:** per-person chips; the drawer with alternatives, "Facts it supplies" with About whom, copies, translation, validity window; the ⋯ menu.
-* **Preview:**
-  * v1 was three columns of plain lines;
-  * v2 SQR shows "Fill this from my documents", the proposals, "please check" and the unreadable fallback;
-  * the Agent view shows "Checked against the page" and Confirm section waiting with its reason.
+* **Rows:** v1 had 6 columns with IRCC quotes in the row; v2 has 5 plus checkboxes, a ⋯ menu and a status pill; Used by, Proposed by and the quotes move to the drawer.
+* **New:** source chips and "Needs you"; the bulk bar; the side drawer with every parameter; the Decide item side by side; the clientOnly lock; release checks in words; the Undo toast.
+* **Documents:** per-person chips; the built "Add a document requirement" becomes "+ Add a document" (the one Add dialog); the drawer with alternatives, "Facts it supplies" with About whom, copies, translation, validity window; the ⋯ menu.
+* **Preview:** v1 was three columns of plain lines; v2's SQR shows "Fill this from my documents", the proposals, "please check" and the unreadable fallback; the Agent view shows "Checked against the page" and Confirm section waiting with its reason.
 * **Added frames:** the one Add dialog (5), the parameters list (6), the actions matrix (7), the eight states (8).
 * **v1 frame 5** (the AI run and who does what) is left out: it is unchanged in the concept §4–§6. Its running state is in frame 8.

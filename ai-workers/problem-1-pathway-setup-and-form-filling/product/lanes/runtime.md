@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-29 night (Lead, sixth chat; founder asleep): Stage BUILD, owner Builder. **W1-15 slice 1** (Questions and documents: data and rules; Lead response in challenge.md, agreed within P-130–P-134) + **QA-69** (Forms tab Undo refused after a release). Keep out of `engine/channels.ts`, `api/src/filing.ts`, `web/src/pages/workspace/forms.tsx`: the forms lane owns the channel change (P-143). Then EARLY-LOOK for the founder with API evidence. Slice 2 (Questionnaires tab UI) waits board v2 (`screens/W1-questions-and-documents/design/draft-questions-and-documents-v2.html`) and the founder's grilling. US$0.
+2026-10-29 night (Lead, sixth chat; founder asleep): Stage BUILD, owner Builder. **W1-15 slice 1** (Questions and documents: data and rules; Lead response in challenge.md, agreed within P-130–P-134) + **QA-69** (Forms tab Undo refused after a release). Keep out of `engine/channels.ts`, `api/src/filing.ts`, `web/src/pages/workspace/forms.tsx`: the forms lane owns the channel change (P-143). Then EARLY-LOOK for the founder with API evidence. Slice 2 (Questionnaires tab UI) waits board v2 (`screens/W1-questions-and-documents/design/draft-questions-and-documents-v2.html`) and the founder's grilling. US$0. **Reuse, never rebuild:** PDF filling = `prototype/p5/fill.py` (via `studio/api/src/fill.ts`); barcode read-back = `prototype/evidence-lane/E1/tools/barcode_compare.py`; inventory = `E1/tools/inventory.py`.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
