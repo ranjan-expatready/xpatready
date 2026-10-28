@@ -66,25 +66,17 @@ Portal fixed by the combination (P-137). Default is first; alternatives only ins
 ## 5. (d) What the product does per channel
 | Channel | Steps on the deliverable (P-122) |
 |---|---|
-| Online | Answer sheet in portal screen order (answer, Copy, source) → "Entered in the portal" per screen, freezing those answers → signature step "Client e-signed in the portal" (PR Portal) or "Representative declaration" (APR). Extension fills screens later (P-102) |
-| PDF upload | Fill from confirmed facts → our Check (never called "Validated", P-46) → Download → Validate in Adobe → person steps the edition needs (typed signatures on IMM 1344, oath block on IMM 5409) → Upload the validated copy back → Read back (barcodes against facts) → "Uploaded to IRCC". Never printed, never the signature panel |
-| PDF upload, signed by hand | As PDF upload until Read back, then Print → Signed (who, from `signedBy`) → Scan received → Uploaded |
-| Paper | As PDF upload until Read back, then Print with barcode page (laser, white paper) → Signed in pen → Barcode page on top → Mailed (date, tracking) |
+| Online | Answer sheet in portal screen order (answer, Copy, source) → "Entered" per screen, freezing its answers → "Client e-signed in the portal" (PR) or "Representative declaration" (APR). Extension later (P-102) |
+| PDF upload | Fill from confirmed facts → our Check (never "Validated", P-46) → Download → Validate in Adobe → person steps (typed names on IMM 1344, oath on 5409) → upload the validated copy back → Read back → "Uploaded to IRCC". Never printed |
+| PDF upload, signed by hand | As above to Read back → Print → Signed (who: `signedBy`) → Scan received → Uploaded |
+| Paper | As above to Read back → Print with barcode page → Signed in pen → barcode page on top → Mailed |
 | Not needed | No steps; reason shown |
-| PDF copy, not for filing | Fill → Check → Download; label and file name say "copy, not for filing"; never Validate-gated, never counted |
+| PDF copy, not for filing | Fill → Check → Download, named "copy, not for filing"; never counted |
 
 ## 6. (e) Rules the engine applies
-Checks at configuration (release):
-1. A line's channel must be one IRCC accepts for that edition **on the combination's portal** (today's `notAcceptedWords` error, extended to the portal). A form with no record: every channel offered, marked Sample (today's null).
-2. Paper is allowed only on a combination whose portal is Paper, or on a line marked "exception" with its reason.
-3. Not needed only where the library says the portal replaces the form.
-4. The signature is derived from edition × channel; a channel/signature pair the edition does not allow is refused.
-5. P-140: the finder proposes "What IRCC accepts" with IRCC's quoted line; `channelsFrom` only flags a contradiction; a second person confirms.
+At release (errors): a line's channel must be one IRCC accepts for the edition **on the combination's portal** (today's `notAcceptedWords`, extended to the portal; no record = all offered, Sample); Paper only on a Paper combination or on a line marked "exception" with a reason; Not needed only where the library says the portal replaces the form; the signature is derived from edition × channel. "What IRCC accepts" comes from the finder with IRCC's quoted line, `channelsFrom` flags contradictions, a second person confirms (P-140).
 
-Readiness on the case (P-136, unchanged in shape):
-* **Blocks**: an Entered, Uploaded or Signed item out of date because a fact changed after it; a missing required signature step.
-* **Recommended to block as well** (founder Q2): a barcode form on PDF upload or Paper without a validated copy read back. IRCC returns a paper package "without being processed" if barcodes are missing (IMM 0008 page).
-* **Warns only**: AI findings, missing documents, a stale "PDF copy, not for filing", an Online line the extension cannot fill yet.
+On the case (P-136): **blocks** an Entered, Uploaded or Signed item made stale by a later fact change, and a missing required signature step. **Recommended third blocker** (Q2): a barcode form on PDF upload or Paper without a validated copy read back; IRCC returns such a package "without being processed" (IMM 0008 page). **Warns**: AI findings, missing documents, a stale PDF copy, an Online line the extension cannot fill yet.
 
 ## 7. (f) Recommendation
 Adopt four channels (**Online · PDF upload · Paper · Not needed**), a derived **signature** per line, and "PDF copy, not for filing" as an optional extra deliverable on Online lines; record "What IRCC accepts" per edition × account; migrate "Signed PDF upload" to PDF upload + "Signed by hand, scanned". "Both" is the library saying an edition exists in two forms; "online plus uploaded PDFs" is the derived filing method: nobody picks either. This follows IRCC's own split, covers citizenship, and keeps one channel per filed form.
