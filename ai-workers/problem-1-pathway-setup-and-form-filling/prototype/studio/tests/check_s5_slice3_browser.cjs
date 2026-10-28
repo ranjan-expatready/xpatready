@@ -105,6 +105,28 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.15: Redo with AI opens the same plan for that one form, its cost said first", /Redo with AI: IMM 5257/.test(await redo.innerText()) && /Cost: US\$0/.test(await redo.locator("[data-find-cost]").innerText().catch(() => "")));
   await redo.getByRole("button", { name: "Cancel" }).click();
 
+  // ======================================================== Who can be, filled from the guide (P-121; Lead 28 Oct)
+  await go(vv, "questionnaires");
+  const who = p.locator("[data-who-can-be]");
+  await who.getByRole("button", { name: "Fill from the guide" }).click();
+  const fill = p.getByRole("dialog"); await fill.locator("[data-people-cost]").waitFor({ timeout: 30000 }).catch(() => {});
+  step("C11.12 plan: Fill from the guide names the guide and says the cost first (rules only: US$0)", /Guide 5256/.test(await fill.innerText()) && /Cost: US\$0/.test(await fill.locator("[data-people-cost]").innerText().catch(() => "")));
+  await fill.getByLabel(/AI now/).check(); await p.waitForTimeout(800);
+  step("C11.12 plan: AI now says the most it can cost before anything runs (not run here)", /At most US\$\d+\.\d\d/.test(await fill.locator("[data-people-cost]").innerText().catch(() => "")), await fill.locator("[data-people-cost]").innerText().catch(() => ""));
+  await fill.getByLabel(/Use saved AI answers/).check(); await p.waitForTimeout(800);
+  await fill.getByRole("button", { name: "Fill" }).click(); await fill.locator("[data-people-proposal]").waitFor({ timeout: 30000 }).catch(() => {});
+  step("C11.12 fail: with no saved AI answer yet it says so and proposes nothing", /No saved AI answer/.test(await fill.innerText()) && await fill.getByRole("button", { name: "Use these lines" }).isDisabled());
+  await fill.getByRole("button", { name: "Back" }).click();
+  await fill.getByLabel(/Rules only/).check(); await p.waitForTimeout(800);
+  await fill.getByRole("button", { name: "Fill" }).click(); await fill.locator("[data-people-proposal]").waitFor({ timeout: 30000 }).catch(() => {});
+  step("C11.12 pass: rules propose the principal and the family the guide names, each with IRCC's words", await fill.locator('[data-proposed="principal"]').count() === 1 && await fill.locator('[data-proposed="spouse_or_partner"]').count() === 1 && /"[^"]{20,}"/.test(await fill.locator("[data-people-proposal]").innerText()));
+  await state("who-can-be-from-guide");
+  await fill.getByRole("button", { name: "Use these lines" }).click();
+  step("C11.12: Use these lines puts them in the editor, marked AI, not saved yet", await who.getByRole("button", { name: "Save" }).count() === 1 && await who.locator('[data-person="spouse_or_partner"]').getByText("AI").count() > 0);
+  await who.getByRole("button", { name: "Save" }).click(); await settle();
+  const saved = (await api(`/combinations/${vv}/workspace?tab=questionnaires`)).body.people.lines;
+  step("C11.12 pass: saved through the rules on Save, the lines keep IRCC's words and their AI mark", saved.some((l) => l.role === "spouse_or_partner" && l.origin === "AI_PROPOSAL" && !!l.quote), saved.map((l) => `${l.role}:${l.origin}`).join(" "));
+
   // ======================================================== the guide on a combination that did not have it before
   await go(sv, "forms");
   step("C11.15 guides: Super visa lists Guide 5256 among its sources (linked by Load sample)", /Guide 5256/.test(await p.locator("[data-sources]").innerText().catch(() => "")));

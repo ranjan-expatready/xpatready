@@ -6,8 +6,9 @@
 import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Undo2, X } from "lucide-react";
-import { FILLED_BY, type PeopleLine, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView } from "../../../../contracts/workspace";
+import { BookOpen, Plus, Undo2, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { FILLED_BY, type PeopleLine, type PeoplePlan, type PeopleProposal, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
 import { Tip } from "@/components/status";
@@ -45,6 +46,13 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   const [busy, setBusy] = React.useState(false);
   const [confirm, setConfirm] = React.useState<{ text: string; roles: string[] } | null>(null);
   const [stale, setStale] = React.useState<string | null>(null);
+  const [filling, setFilling] = React.useState(false);
+  // Slice 3: a proposal from the guide goes into the editor; nothing is saved until the person saves it.
+  const useProposal = (pr: PeopleProposal) => {
+    const base = toLines(v).filter((l) => !pr.people.some((x) => x.role === l.role));
+    setLines([...base, ...pr.people.map((x): Line => ({ role: x.role, label: x.label, min: x.min, max: x.max, applies: x.applies, quote: x.quote, origin: "AI_PROPOSAL" }))]);
+    setEditing(true); setFilling(false);
+  };
   React.useEffect(() => { if (!editing) setLines(toLines(v)); }, [v, editing]);
   const role = (k: string) => v.roles.find((r) => r.key === k);
   const offered = v.roles.filter((r) => r.takesPartInCase && !r.retired && !lines.some((l) => l.role === r.key));
@@ -77,7 +85,7 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
           <h2 id="who-can-be" className="flex items-center gap-2 font-semibold">Who can be in this application <Tip tip={TIPS.card} focusable><span aria-label="What this sets" className="inline-flex size-4 cursor-help items-center justify-center rounded-full border border-border-strong text-[10px] text-text-muted">i</span></Tip></h2>
           <p className="mt-0.5 text-xs text-text-muted">{v.savedBy ? `Last changed by ${v.savedBy}${v.savedAt ? ` at ${new Date(v.savedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}` : "As set when the combination was created"} · numbers Sample until the immigration expert confirms</p>
         </div>
-        {canAuthor && !editing ? <div className="flex gap-2">{v.canUndo ? <Button size="sm" variant="ghost" onClick={() => void undo()} busy={busy}><Undo2 /> Undo last change</Button> : null}<Button size="sm" variant="secondary" onClick={() => { setLines(toLines(v)); setEditing(true); }}>Edit</Button></div> : null}
+        {canAuthor && !editing ? <div className="flex gap-2">{v.canUndo ? <Button size="sm" variant="ghost" onClick={() => void undo()} busy={busy}><Undo2 /> Undo last change</Button> : null}<Button size="sm" variant="ghost" onClick={() => setFilling(true)}><BookOpen /> Fill from the guide</Button><Button size="sm" variant="secondary" onClick={() => { setLines(toLines(v)); setEditing(true); }}>Edit</Button></div> : null}
       </div>
       {stale ? <Notice tone="warn" className="mt-3" title="Changed by someone else" action={<Button size="sm" variant="secondary" onClick={() => { setStale(null); setEditing(false); refresh(); }}>Reload their version</Button>}>{stale}</Notice> : null}
       <table className="mt-3 w-full text-sm">
@@ -118,8 +126,59 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
         </div>
       ) : null}
       <p className={cn("mt-3 text-xs text-text-muted", editing ? "" : "sr-only")}>Rules check on Save: exactly one principal applicant · how many from 0 to 9, the fewest no more than the most · a sponsor or representative is never an applicant · removing a person a form names asks first.</p>
+      {filling ? <FillFromGuide id={id} onClose={() => setFilling(false)} onUse={useProposal} /> : null}
       {confirm ? <Dialog open onOpenChange={(o) => !o && setConfirm(null)} title="Remove a person that forms name?" description={confirm.text} footer={<><Button variant="ghost" onClick={() => { const back = toLines(v).filter((l) => confirm.roles.includes(l.role) && !lines.some((x) => x.role === l.role)); setLines((ls) => [...ls, ...back]); setConfirm(null); }}>Keep the person</Button><Button variant="destructive" onClick={() => void save(true)} busy={busy}>Save anyway</Button></>}><p className="text-sm text-text-muted">Those forms stay in the combination but name nobody until you add the person back or change whose form it is.</p></Dialog> : null}
     </section>
+  );
+}
+
+type FillMode = "rules" | "replay" | "live";
+const FILL_MODES: [FillMode, string, string][] = [
+  ["rules", "Rules only (US$0)", "No AI: rules find the guide's sentences that name each person. How many is a Sample default you check."],
+  ["replay", "Use saved AI answers (US$0)", "Replays what AI answered for this exact guide before. Until a live trial records one, it says there is none."],
+  ["live", "AI now (cost shown below)", "Two AI rounds read the guide; only lines both agree on, with their sentence in the guide, are proposed."],
+];
+
+/** "Fill from the guide" (slice 3, P-121): the plan and its cost first, then the proposal with IRCC's words. */
+function FillFromGuide({ id, onClose, onUse }: { id: string; onClose: () => void; onUse: (p: PeopleProposal) => void }) {
+  const [mode, setMode] = React.useState<FillMode>("rules");
+  const plan = useQuery<PeoplePlan, ApiError>({ queryKey: ["people-plan", id, mode], queryFn: () => api<PeoplePlan>(`/combinations/${id}/people/propose/plan`, { method: "POST", json: { mode } }), retry: false });
+  const [result, setResult] = React.useState<PeopleProposal | null>(null);
+  const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
+  const run = async () => {
+    if (!plan.data) return;
+    setBusy(true); setError(null);
+    try { setResult(await api<PeopleProposal>(`/combinations/${id}/people/propose`, { method: "POST", json: { mode, planSha256: plan.data.plan_sha256 } })); }
+    catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+  const footer = result
+    ? <><Button variant="ghost" onClick={() => setResult(null)}>Back</Button><Button onClick={() => onUse(result)} disabled={!result.people.length}>Use these lines</Button></>
+    : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void run()} busy={busy} disabled={!plan.data}><BookOpen /> Fill</Button></>;
+  return (
+    <Dialog open wide onOpenChange={(o) => { if (!o) onClose(); }} title="Fill who can be in this application from the guide" description={plan.data ? `From ${plan.data.guide.code}: ${plan.data.guide.title}. Nothing is saved until you use the lines and save. Sample until the immigration expert confirms.` : "From the IRCC guide linked to this combination."} footer={footer}>
+      {result ? (
+        <div className="space-y-3 text-sm" data-people-proposal>
+          <p>{result.note}</p>
+          {result.people.length ? <Table dense head={["Person", "How many", "Applicant", "IRCC's words"]}>{result.people.map((x) => <tr key={x.role} data-proposed={x.role}><td>{x.label}</td><td>{howMany(x)}</td><td>{x.applies ? "Yes" : "No"}</td><td className="max-w-md text-xs text-text-muted">"{x.quote}"{x.why ? <p className="mt-0.5">{x.why}</p> : null}</td></tr>)}</Table> : null}
+          {result.to_decide.length ? <Notice tone="warn" title={`To decide (${result.to_decide.length})`}><ul className="space-y-0.5">{result.to_decide.map((x) => <li key={x.role}>{x.role.replace(/_/g, " ")}: first round {x.draft}, second round {x.check}. {x.why}</li>)}</ul></Notice> : null}
+          {result.dropped.length ? <p className="text-xs text-text-muted">Not proposed: {result.dropped.map((x) => `${x.role.replace(/_/g, " ")} (${x.why})`).join(" · ")}</p> : null}
+        </div>
+      ) : (
+        <div className="space-y-4" data-people-plan>
+          <fieldset className="space-y-2"><legend className="text-xs font-medium">How to fill it</legend>
+            {FILL_MODES.map(([m, label, hint]) => <label key={m} className="flex gap-2 text-sm"><input type="radio" name="fill-mode" checked={mode === m} onChange={() => setMode(m)} className="mt-1" /><span><span className="font-medium">{label}</span><br /><span className="text-xs text-text-muted">{hint}</span></span></label>)}
+          </fieldset>
+          {plan.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p> : plan.error ? <Notice tone="warn" title="It cannot be filled yet">{plan.error.message}</Notice> : plan.data ? (
+            <div className="rounded-lg border border-border p-3 text-sm">
+              <ol className="list-decimal space-y-0.5 pl-5">{plan.data.steps.map((x) => <li key={x.n}>{x.label} {x.uses_ai ? <Pill tone="ai">AI</Pill> : <Pill>rules</Pill>}</li>)}</ol>
+              <p className="mt-2 font-medium" data-people-cost>{mode === "live" ? `At most US$${plan.data.totals.worst_usd.toFixed(2)}, inside the AI spending cap (US$${plan.data.totals.remaining_usd.toFixed(2)} left).` : "Cost: US$0 (no AI call)."}</p>
+              <p className="mt-1 text-xs text-text-muted">{plan.data.note}</p>
+            </div>
+          ) : null}
+          {error ? <p role="alert" className="text-sm text-text-danger">{error}</p> : null}
+        </div>
+      )}
+    </Dialog>
   );
 }
 
