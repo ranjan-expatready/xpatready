@@ -149,7 +149,7 @@ export class Demo {
       log.push(`pathway "${p.label}" (${p.type === "CORPORATE" ? "Corporate" : "Retail"}, Sample)`);
     }
     const official = new Set(officialFiles());
-    const setUp = async (node: any, path: string, c: SixSetup) => {
+    const setUp = async (node: { programNodeKey: string; label: string }, path: string, c: SixSetup) => {
       const comp = await this.studio.createCombination(actor, { programKey: node.programNodeKey, label: node.label, key: c.key, participants: c.participants, description: c.note, sourceBasis: "ILLUSTRATIVE", basisNote: c.note });
       const absent = c.sources.filter((f) => !official.has(f));
       const refused: { code: string; why: string }[] = [];
@@ -200,8 +200,8 @@ export class Demo {
     // Library drafts (P-108, P-138): each read form with a saved AI field-map answer on exactly that file is replayed
     // through the one door; a form without one waits for "Draft with AI" (a paid click, never here).
     const plan = await this.ai.plan({ kind: "catalogue", ids: made.map((m) => m.id) }, "REPLAY");
-    const replay = plan.targets.filter((t: any) => t.action === "reuse_saved_output");
-    const waiting = plan.targets.filter((t: any) => t.action !== "reuse_saved_output" && t.action !== "skip").map((t: any) => t.source);
+    const replay = plan.targets.filter((t) => t.action === "reuse_saved_output");
+    const waiting = plan.targets.filter((t) => t.action !== "reuse_saved_output" && t.action !== "skip").map((t) => t.source);
     let drafts: { status: string; message: string } = { status: "NONE", message: "No saved AI answer matched these forms." };
     if (replay.length) {
       const b = await this.ai.launch(actor, { scope: { kind: "catalogue", ids: made.map((m) => m.id) }, mode: "REPLAY", idempotencyKey: `sample-six-drafts-${workspaceId}`, planSha256: plan.plan_sha256 });

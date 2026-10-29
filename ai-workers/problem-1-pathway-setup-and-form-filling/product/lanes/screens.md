@@ -6,48 +6,23 @@
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
-## Handover (screens lane, 29 Oct evening, kept current; a fresh session resumes from this file alone)
-**Branch `claude/screens-1b-queue` (from `claude/screens-1a-34cb66` e3483c7d; worktree `kind-mendel-ef9c9c`), pushed; main a9fe60c0 synced.** AI spent US$0.
-* Node: `.tools/node-v24.21.0`, since Prisma refuses Homebrew's node 23. A fresh worktree needs `npm ci` with that node on PATH, then `prisma generate`, then **`vite build` in `web/`** (without it, every browser suite times out).
-* (2a) and **1a passed the Lead check** and are folded into Lead PR #96 (merges on green CI). The Lead backs up :4400 before the restart that runs the migration.
+## Handover (screens lane, 28 Oct, kept current; a fresh session resumes from this file alone)
+**Item W1-start-setup (S3 Start setup, P-125). Branch `screens/2026-10-27-visual-system`, pushed. Stage EARLY-LOOK, sent to the Lead by message (agreed challenge: `screens/W1-start-setup/challenge.md`, Lead response recorded; founder: live AI only on a click).** AI spent US$0. Copy: this worktree's folder is named `runtime-*`, so it is bound to screens by `.claude/lane` (git-ignored). Earlier item W1-visual-system round 3 and its qa FIX are merged to main (PR #66, PR #67); main synced to 3858216e.
 
-**Agreed by the Lead on 29 Oct: `screens/W1-shared-library/plan-slice1.md` as 1a → 1b → 1c, each with its own hand-back.**
+**S3 done and pushed (WIP commits 50f50bd4, 81b6d14c, 838a5219; qa routing f8d6e0cb):**
+- M3 start guard: `startWhy` + `openNodeKeys` in `api/src/lifecycle.ts`, words `WHY.startRetired / startRetiredAbove / startWaiting` in `contracts/lifecycle.ts`; on Program structure rows (`combination.startWhy`), Immigration programs cards (`CatalogueLeaf.startWhy`) and `createCombination` (409).
+- M1/M4 `api/src/start-setup.ts` (own file, registered in `main.ts`): `POST /combinations/start {nodeKey}` creates (idempotent, 201/200) and replays a saved finder answer made for that combination key at US$0 (`savedFor`, the finder's own rule); `GET /combinations/:id/start-setup` = newest finder run + the one offer ("Find forms with AI (about US$x)", worst case in the tip; rules only when over the cap). Words in `contracts/start-setup.ts`.
+- Web: `web/src/components/start-setup.tsx` (`useStartSetup`, `StartSetupButton` greyed with BlockedLine, `FinderStart` with the shared RunCard) used by the card/List next step (`programs.tsx`, keeps `data-next-step="start"`), the Edit panel (`structure.tsx`) and above "Sources and forms" (`combination.tsx`); the place in level colours (`data-place`). A Not started name opens no page (toast).
+- M2: `/new` page, route, menu match removed; `POST /combinations/path`, `POST /path-proposal`, `CreatePathBody`, `PathProposal` removed; their checks moved (name rules to `/structure/nodes` and `/structure/path`).
+- Checks: new `check_w1_start_setup.ts` (17/17; scaffolding: copies the sample's saved finder answer under its own key, removes them after) and `check_w1_start_setup_browser.cjs` (written, not run yet). Passing after the change: structure 79/79, screen01_api 135/135, screen01_rules 67/67, screen02_slice2 52/52. Moved off /new, run in progress at the save: s1s2_fix, programs_s2, screen01_browser, screen02_slice2_browser, structure_browser, programs_r3, qa51; journey Pass B rewritten (Add pop-up, then Start setup on the card).
 
-**1a, the table and the door: DONE** (code 50224b01; build-notes.md "Slice 1a"). What 1b builds on:
-* `api/src/proposals.ts` holds `insertProposals(db, ws, items)`, `decide(db, audit, actor, ws, ids, {action, reason, payload})` (≤ 200 items, one batch id), `undo(…, batchId)` (10 s, decider only), `LANDERS` (field, section, answer_list, document_type), `identityKeyOf`, `sameInLibrary`, `recordChoice` and `reviewRow`.
-* **None of these has an HTTP route yet.** `check_s6_p149.ts` calls them directly.
-* The field-map review page (`job.tsx`) still reads the old row shape through `reviewRow`.
-* `ProposalItem` has the server columns `choice`, `decided_key` and `work`. `LibraryChange` has `batch_id` and `proposal_item_id`.
+**Fix pass (Lead early look 1–4), branch `claude/screens-s3-fix-a78d1d`:** synced main 38722933 (main.ts: StartSetup beside the new ConfigReadGuard, 1bb2ba58); fixes 13244ba0, shots and rules 2fc0f26c. (1) plain words for a launcher failure, `plainRunText` backstop in the run view; (2) Next step **Find forms** (engine `add_forms`) focuses the finder button; (3) one find button: the run card's `next` slot carries "Find again with AI (…)", no second notice, the AI work card's Find again leads to `/c/<id>/sources` (QA-63 loop); (4) one cost wording `costWords` (about · at most) on button, tip and card, one `aboutUsd` rule. Evidence: `check_w1_start_setup` 23/23, `check_w1_start_setup_browser` 26/26 (screenshots 1440/1024 retaken with the stand-in launcher answering), `check_screen01_rules` 67/67; run-suites 49/49 on a6744c0b (2fc0f26c had 48/49: a timing race in the new browser step, fixed by waiting for the refreshed offer). Cross-lane touches listed in build-notes "Fixes". AI US$0.
 
-**1b, the queue page: BUILT, at EARLY-LOOK** (build-notes.md "Slice 1b": routes, door rules, pages, what was decided and why; steps 1–5 and 7b done, 6, 7a and 7c decided there). Original steps (plan-slice1.md, row 1b):
-1. **`GET /review/proposals`:** grouped by form edition or combination, in three bands: Ready · Check · Decide.
-   * Add `POST /review/proposals/decide` and `POST /review/proposals/undo/:batch`, both calling `proposals.ts`.
-2. **The page and its side panel:** both readings, the quote and the rules. On the EXPERIENCE.md bar; tooltips on complex parts.
-3. **Bulk accept:** only for Ready items, never a rules item that lands on the library, at most 200 per batch, with one Undo (10 s).
-4. **To review:** `ai_proposals` becomes one `proposals` row per group, linking to the queue (review-queue.ts:65-80).
-5. **Grouped second-person approval:**
-   * `GET /review/changes?group=batch` and `POST /review/changes/batch/:id`.
-   * Each row goes through `decideChange`'s guards. The same person cannot approve their own batch.
-6. **"Draft fields with AI" on the form row:** through the runner's `field_map_edition` step (slice R), replay or stub only. Its items enter through `insertProposals`.
-7. **Owed from 1a:**
-   * Move `tests/seed_library.cjs` onto the door's route.
-   * Check that an approved `answer_list` ADD publishes: `unapprovedAdds` does not list answer_list yet.
-   * Decide whether the field-map review page (`job.tsx`) folds into the queue.
-8. **Tests:** `check_s6_p149.ts` grows the route cases; add `check_s6_queue_browser.cjs` with a pass and a fail per rule.
-   * Run your own checks. Run the full local suites only when no other lane is running them (load is high); CI is the full check.
+**Build ahead (P-126), 28 Oct:** S6 Shared library re-check written, `screens/W1-shared-library/recheck-2026-10-28.md`: build after changes, 0 Blocker · 5 Major (R1 live drafting only on a click vs P-120 "when a form enters", R2 the two AI rounds and the agreement rule are finder-only: extract a shared `rounds.ts`, R3 the queue item contract first so W1-10 writes into it, R4 S6 slice 3 waits for S5 (Person roles [r]), R5 reuse the Add pop-up, lifecycle, run card, cost wording, deny-by-default) · 6 Minor; of the 8 accepted Majors 4 partly done, 4 open. No S6 code.
 
-**Agreed answers:**
-* **N-1:** forms drops `origin: person` and `addReason` and adds `rule: {key, sentence} | null` to `ProposalSource` after its slice 1. 1c item 5 waits for it.
-* **N-2:** runtime exports `acceptPqrPick(tx, actor, item)` and drops the pick's own Accept (PR #94). 1c registers it as the `pqr_pick` lander.
-* **N-3:** no stop-gap; sections come from the forms' parts in slice 2, and the checks seed until then.
-* **P-97:** after #94, the field page's "Collected from" becomes read-only for an existing placement, with "Change who fills" calling `POST /library/fields/:key/fills`. That is our page (library.tsx).
-
-**Queue after slice 1 (P-173):** (3) one setup checklist per combination (P-157, P-161); (4) linking combinations and copying a line (C1.3, C1.5).
-
-**Not screens' (routed in the hand-backs):** runtime.ts "opened case <id>" (QA-74); engine/validate.ts messages with codes (QA-73); section meanings are release c1-v3 content (QA-71); QA-82 to forms W1-10 / S6 slice 1; qa's `check_qa_am_r69_1028.cjs:123` selects the person by the old label.
+**Item 5 (29 Oct), commit 267a3775 on main e2cb27a4:** three conflicts resolved (S5 tabs kept); Start setup's offer is the Forms tab's "No form find yet" slot (one block, one call to action); a run that could not pick the application page shows "Waiting for you: choose the application page" with one button opening the Find dialog's page choice (`pageUrl`), and the AI work card links to `/c/<id>/forms?find=page` (QA-63); one "about" rule in `api/src/finder-cost.ts`. Evidence: start_setup 26/26, start_setup_browser 39/39 (shots 02 just started, 03 nothing attached, 04 page choice, 05 saved replay), s5_slice3_browser 35/35; run-suites on fd5ac8ae (main db5e0208 merged): 58 PASS, 0 FAIL; graph.mjs --check passes (G3 2: older attachment routes, not this lane).
 
 **Learned, not written elsewhere:**
-- Bash here refuses heredocs, `$(…)`, loops and some long `&&` chains (merge-guard hook): write a script to the scratchpad and run it. The catalogue caches rows keyed on activity counts: a check that changes the database by SQL also inserts an `audit_event` row.
 - Other lanes run this lane's checks under the same copy names and ports (`run-suites.sh` uses the usage lines), and all copies share one PostgreSQL server: two runs at once break each other. For reruns, use private names and ports (for example `<name>_mine` on 4460+), then drop those databases.
 - Long or multi-line Bash commands (heredocs, `$(…)` in some forms, loops) are refused by the merge guard hook (`gh pr merge*` matcher); put edits in a script file in the scratchpad and run it with a short command.
 - Run by-products land in the tree (other lanes' screenshots, `prototype/p2/*`, `prototype/studio/evidence/*`): restore them before each commit and stage only lane files.
@@ -55,21 +30,21 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: EARLY-LOOK 1b — queue page, side panel, bulk accept (Ready only, ≤ 200, one Undo), To review group and batch rows, grouped second-person approval built on `claude/screens-1b-queue`
+stage: CHECK — PR #91 review fixes at 89822be7; main a7f96890 synced + SI-11 chip at 1b810203 (local suites blocked by machine load; CI on the push)
 owner: Lead
-next_action: Lead: fold 1b (claude/screens-1b-queue) into #96 after the toast fix; then 1b-2 or 1c
-then: 1b-2 (Draft fields with AI on the form row → contract items with both readings; job.tsx folds in) → 1c (pqr_pick, rule-sourced field) → S6 slices 2 → 3 → 4 (plan.md §4)
-blocked_by: nothing for 1b; 1c waits for runtime PR #94 (acceptPqrPick, N-2) and forms' rule reference (N-1)
+next_action: Lead: check 89822be7 + 1b810203 on CI (local run impossible under load 16–22); confirm SI-14–16 chips go to the runtime lane and SI-1, 6, 9, 10 stay listed until built; then message when the forms branch is on main → S6 slice 1 BUILD from main (one ProposalItem table)
+then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
+blocked_by: forms runner package and contract v2 on main (Lead merge)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
-- 2026-10-29 · W1-shared-library (S6) · EARLY-LOOK 1b FIX · Lead early look: toasts covered the side panel's footer; toaster moves beside an open panel (above its footer when the panel is full width), every side panel; browser step at 1440, 1024 and 800 proves Accept and Reject stay clear and clickable; check_s6_queue_browser 26/26. 1a fix 0a5b09dd: six named suites green on its own branch. US$0.
-- 2026-10-29 · W1-shared-library (S6) · BUILD 1b → EARLY-LOOK · new session from e3483c7d, main a9fe60c0 synced (contract v2.1: three small fixes in 1a code); review-proposals.ts routes (queue grouped, decide, undo, grouped approval), door rules (bulk Ready only and never rules→library, reuse adds nothing, field-map items on their page, Undo back to waiting), To review group and batch rows, proposals.tsx (queue, side panel, batch page), answer list publishes; check_s6_p149 65/65, check_s6_queue_browser 23/23, check_screen02_slice1 passed, tsc clean, any 423, graph G4 0. US$0.
-- 2026-10-29 · W1-shared-library (S6) · applied Lead message: 1a Lead check PASS (folded into Lead PR #96); next 1b. Handover rewritten for a fresh session (1b steps, what 1a gives it, owed items); this session's context is spent. No code. US$0.
-- 2026-10-29 · W1-shared-library (S6) · BUILD 1a → CHECK · full run-suites 74 PASS 0 FAIL on 3d006452 (the first run's browser failures were this new copy's missing web build); check_s6_p149 37/37; graph G3 2 (older); migration clean on a copy of :4400 (no proposal rows there; the seeded replay covers every kind). US$0.
-- 2026-10-29 · W1-shared-library (S6) · BUILD 1a · merged origin/claude/screens-2a-22c0e2 and main c545f84e; 50224b01: proposal_item table + migration (copies, drops rule rows, logs both; clean on a copy of :4400), proposals.ts one door (insertProposals, decide with landers, undo 10 s), readers switched; check_s6_p149 37/37; full run-suites running. US$0.
-- 2026-10-29 · W1-shared-library (S6) · applied Lead message: plan-slice1.md agreed (1a → 1b → 1c, each its own hand-back); N-1, N-2 and N-3 accepted; the migration logs its copies and drops and runs on a copy of the :4400 data. Handover rewritten for a fresh session (this one's context is spent). No code. US$0.
-- 2026-10-29 · W1-shared-library (S6) · PLAN (2b) + slice 1 · applied Lead message ((2a) PASS in Lead PR #96); main deda0e6b synced. Plan in plan-slice1.md: 1a ProposalItem table + migration off NormalizationItem + proposals.ts one door with a lander per kind and the free-add scan; 1b queue page, To review row, grouped approval, Draft fields with AI; 1c pqr_pick lander (acceptPqrPick, PR #94) and "Add the fact this rule needs" (needs forms' rule reference). placement_fills stays a LibraryChange (allowlisted). N-1..N-3 to the Lead. No code. US$0.
-- 2026-10-29 · W1-shared-library (S6) · BUILD (2a) → CHECK · full run-suites on 5b00ae99: 67 PASS 4 FAIL, all four from (2a): P-63 "box" on Fields (sources now say "form field"), QA-65 (the 410 routes name their person first, nobody 401), A1 (Studio typed-key check gone with createField: ≥1), QA-71 (the check reads the Category column; a name may end in "employer"); checklist file names in words; seed_library.d.cts. Rerun: ai_drafting 48/48, s6 sources 24/24, s6 pages 33/33, forms_qa53 20/20, screen01_browser 120/120, qa_1029 51/51; tsc api and web clean; any 419; graph G3 2 (older). US$0.
-- 2026-10-29 · W1-shared-library (S6) · BUILD (2a) · 38cc245d: POST /library/fields, /sections, /answer-lists → 410; GET /library/:kind/:key/sources and row sources and where used; field and section rename (C3.15); origin line per page; check_s6_library_sources 24/24, pages browser 33/33; seed_library.cjs for checks that used the adds (forms, runtime files listed). US$0.
-- 2026-10-29 · Handover · applied Lead message (P-173 queue): item (2) sized (heavy, half waits on #90), Handover rewritten for a fresh session; context of this one spent. US$0.
+- 2026-10-29 · PR #91 review + P-165 · FIX · applied Lead message: 89822be7 Restore keeps the Pathway type (t=CORPORATE), a retired row announces Retired (qa_1029 49/49); main a7f96890 synced, STAND-INS gained SI-11, 14–16: 1b810203 SI-11 chip on Releases, SI-14–16 listed for the runtime lane; check_stand_ins 9/9; browser and full suites blocked by load (demo load > 30 s). US$0.
+- 2026-10-29 · qa batch + P-165 · CHECK · run on 4c4b9dd5 found BR-13's Status menu changed by Retired (screen01_browser, programs_s2): 044a7092 offers Retired only while one is retired; full run-suites on 044a7092 69 PASS 0 FAIL 1 skipped (demo reset). US$0.
+- 2026-10-29 · qa batch + P-165 · FIX/BUILD · main d50d87f9 synced; 7a60c011 QA-39, 48, 70–74, 79, 80 in plain words (check_screens_qa_1029_browser 43/43 at 1440 and 1024; QA-81 screens part 4/4 on main); 4c4b9dd5 StandIn chip + check_stand_ins 9/9 (no page uses it yet). Run on 9428a3fd: 63 PASS 4 FAIL, solo rerun 2 of 4 pass; count sent to the Lead. US$0.
+- 2026-10-29 · W1-shared-library (S6) · FIX · applied Lead message (outside review on PR #87): 9428a3fd (a) recording pass sends only missing rounds (draftEdition "fill"), worst case reserved before sending; (b) an answer naming another edition is never used (replay skips, live refused in plain words); check_s6_field_drafts 26/26; pushed, Lead told; run-suites running. US$0.
+- 2026-10-29 · W1-shared-library (S6) · slice R Lead check PASS at 164ef658 (Lead PR #87). Idle until the forms merge. US$0.
+- 2026-10-29 · W1-shared-library (S6) · BUILD slice R (US$0) → CHECK · full run-suites 67 PASS 0 FAIL (started 038add4f, ended d9c8be97: code = 21556f3a; Prisma client regenerated after the main sync, first run failed on a stale client); check_s6_field_drafts 19/19, check_p154_words 4/4; graph G3 2 (older). No live call. US$0.
+- 2026-10-29 · W1-shared-library (S6) · PLAN · applied Lead message: P-158 delta agreed (items 1–10, notes a person roles from guides, b answer lists only from a source, c conditions cite a source + sme); written to plan-p158.md (moved out of plan-p149.md, line limit). US$0.
+- 2026-10-29 · W1-shared-library (S6) · BUILD slice R (US$0) · 21556f3a: field_map_edition step on the runner (edition key, box-count output limit, runner budget check), field-map-check.v1.md, stub, run-contract kind, tools/record-field-drafts.ts (Scaffolding; plan first, both caps, --max-usd), check_s6_field_drafts 19/19; schema v2 passes qa lint part A. P-158: manual-add inventory in plan-p149.md, 10-line delta sent; those parts on hold. No live call. US$0.
+- 2026-10-29 · QA-81 (P-154) · applied Lead message: configuration.tsx edit dropped (runtime slice 2, Lead PR #80, makes it "The firm"); check_p154_words expects "The firm" — 2 PASS, 2 FAIL (configuration.tsx) until #80 is synced; programs.tsx fix kept. US$0.
+- 2026-10-29 · QA-81 (P-154) · FIX (words only) · programs.tsx Corporate panel "the agent picks" → "the case officer picks"; configuration.tsx "Provided by" "The firm (agent)" → "The firm (case officer)" (stored code unchanged); tests/check_p154_words.ts 4/4 (and 0/4 on the old text). To name in the S6 hand-back. US$0.

@@ -172,13 +172,16 @@ function ThemeToggle() {
   return <Button variant="ghost" size="icon" aria-label={t === "dark" ? "Use the light theme" : "Use the dark theme"} onClick={() => { const n = t === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = n; try { localStorage.setItem("xr-theme", n); } catch { /* ignore */ } setT(n); }}>{t === "dark" ? <Sun /> : <Moon />}</Button>;
 }
 
+/** What POST /demo/load {"sample":"six"} answers (api/src/demo.ts loadSix). */
+type SixLoad = { seconds: number; combinations: { id: string; label: string; files: number }[]; drafts: { replayed: number; proposals_waiting: number; waiting_for_draft_with_ai: string[]; status: string }; missing: { combination: string; code: string; why: string }[]; log: string[] };
+
 function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExist: boolean }) {
   const [resetOpen, setResetOpen] = React.useState(false);
   const navTo = useNavigate();
   const [loadOpen, setLoadOpen] = React.useState(false);
-  const [loaded6, setLoaded6] = React.useState<any>(null);
+  const [loaded6, setLoaded6] = React.useState<SixLoad | null>(null);
   // S7 (P-148): the menu loads the six agreed combinations; the older sample is the suites' fixture only, never offered here.
-  const load = useAction(() => api("/demo/load", { method: "POST", json: { sample: "six" } }), { success: (r: any) => `Sample starting point loaded in ${r.seconds.toFixed(1)} s`, invalidate: [[]], onDone: (r: any) => { setLoadOpen(false); setLoaded6(r); navTo("/"); } });
+  const load = useAction(() => api<SixLoad>("/demo/load", { method: "POST", json: { sample: "six" } }), { success: (r) => `Sample starting point loaded in ${r.seconds.toFixed(1)} s`, invalidate: [[]], onDone: (r) => { setLoadOpen(false); setLoaded6(r); navTo("/"); } });
   // Demo-only controls in one menu (P-35): scaffolding, never part of the product.
   const item = "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 outline-none data-[highlighted]:bg-text/5 data-[disabled]:cursor-default data-[disabled]:opacity-50";
   return (
@@ -208,11 +211,11 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
         {loaded6 ? (
           <div className="space-y-3 text-sm" data-load-result>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-              {[["Combinations", loaded6.combinations.length], ["Official files on them", loaded6.combinations.reduce((a: number, c: any) => a + c.files, 0)], ["AI proposals waiting for review", loaded6.drafts.proposals_waiting], ["Forms waiting for Draft with AI", loaded6.drafts.waiting_for_draft_with_ai.length]].map(([k, v]) => <div key={k} className="flex justify-between border-b border-border py-1"><span className="text-text-muted">{k}</span><span className="font-medium" data-count={k}>{v}</span></div>)}
+              {[["Combinations", loaded6.combinations.length], ["Official files on them", loaded6.combinations.reduce((a, c) => a + c.files, 0)], ["AI proposals waiting for review", loaded6.drafts.proposals_waiting], ["Forms waiting for Draft with AI", loaded6.drafts.waiting_for_draft_with_ai.length]].map(([k, v]) => <div key={k} className="flex justify-between border-b border-border py-1"><span className="text-text-muted">{k}</span><span className="font-medium" data-count={k}>{v}</span></div>)}
             </div>
-            {loaded6.missing.length ? <Notice tone="warn" title={`Not found · Upload PDF: ${loaded6.missing.length}`}><ul className="space-y-1" data-load-missing>{loaded6.missing.map((m: any) => <li key={`${m.combination}${m.code}`}><b>{m.code}</b> on {m.combination}: {m.why}</li>)}</ul></Notice> : null}
+            {loaded6.missing.length ? <Notice tone="warn" title={`Not found · Upload PDF: ${loaded6.missing.length}`}><ul className="space-y-1" data-load-missing>{loaded6.missing.map((m) => <li key={`${m.combination}${m.code}`}><b>{m.code}</b> on {m.combination}: {m.why}</li>)}</ul></Notice> : null}
             <details><summary className="cursor-pointer text-text-muted">What the loader did, step by step</summary>
-              <ul className="mt-2 space-y-1">{loaded6.log.map((l: string, i: number) => <li key={i} className={l.startsWith("  ") ? "pl-4 text-text-muted" : "font-medium"}>{l.trim()}</li>)}</ul>
+              <ul className="mt-2 space-y-1">{loaded6.log.map((l, i) => <li key={i} className={l.startsWith("  ") ? "pl-4 text-text-muted" : "font-medium"}>{l.trim()}</li>)}</ul>
             </details>
           </div>
         ) : null}
