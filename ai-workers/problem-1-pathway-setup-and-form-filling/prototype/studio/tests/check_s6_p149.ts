@@ -1,8 +1,11 @@
-// S6 slice 1a (screens lane; P-149 one door, contract v2; C11.13, C11.14, C3.2, C3.6): the ProposalItem table, the
+// S6 slices 1a and 1b (screens lane; P-149 one door, contract v2; C11.13, C11.14, C3.2, C3.6): the ProposalItem table, the
 // migration off NormalizationItem (copies, drops `rule` rows, logs both), the one door insertProposals (contract parse,
 // identity at write), decide (landers, identity at approval, no in-place edit), undo within 10 s, the field-map review
 // reading the new table, and the free-add scan. A passing and a failing case per rule, on an isolated copy with the
-// sample inputs loaded and a scratch database for the migration (the demo is never touched). NO model call (US$0).
+// sample inputs loaded and a scratch database for the migration (the demo is never touched). 1b adds the queue's routes:
+// GET /review/proposals in Ready · Check · Decide, bulk accept for Ready only (never rules → library, at most 200),
+// one Undo, To review's group and batch rows, grouped second-person approval, a reuse that adds nothing, and an
+// approved answer list that publishes. NO model call (US$0).
 //   zsh studio/tools/isolated.sh screens_p149 4447 start && tsx studio/tests/check_s6_p149.ts 4447 xr_studio_screens_p149
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
@@ -30,8 +33,8 @@ const refused = async (f: () => Promise<unknown>) => { try { await f(); return {
 /** A valid AI item of a kind, as a producer would write it (contract v2 without the server's ids). */
 const SHA = "a".repeat(64), RUN = crypto.randomUUID();
 const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN, step: "field_map_edition", scope: { formEdition: "IMM 0000 (01-2026)", combinationId: null }, landsOn: "library",
-  reuse: { match: "new", existingKey: null }, payload, source: { file: "imm0000e.pdf", sha256: SHA, edition: "01-2026", page: 1, quote: "Your family name", quoteFound: true },
-  rounds: { draft: null, check: null }, rules: [], agreement: "rules_only", confidence: "ready", reason: null, origin: "ai", addReason: null, identity: { key: "", near: [], nearReason: null },
+  reuse: { match: "new", existingKey: null }, payload, source: { file: "imm0000e.pdf", sha256: SHA, edition: "01-2026", page: 1, quote: "Your family name", quoteFound: true, rule: null },
+  rounds: { draft: null, check: null }, rules: [], agreement: "rules_only", confidence: "ready", reason: null, origin: "ai", identity: { key: "", near: [], nearReason: null },
   relatesTo: null, revision: null, basis: "SAMPLE", ...over });
 
 (async () => {
@@ -138,7 +141,9 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   e = await refused(() => P.undo(db, audit, B, ws, du.batchId));
   ok("C11.14 undo fail: another person cannot undo someone's decision (403)", e.status === 403, e);
   const un = await P.undo(db, audit, A, ws, du.batchId);
-  ok("C11.14 undo pass: within 10 s the landed draft field and its waiting ADD are removed, the item is undone", un.undone === 1 && sql(`select count(*) from canonical_field where canonical_field_key = '${du.items[0].landedAs}'`) === "0" && sql(`select count(*) from library_change where batch_id = '${du.batchId}'`) === "0" && sql(`select status from proposal_item where id = '${u1}'`) === "undone");
+  ok("C11.14 undo pass: within 10 s the landed draft field and its waiting ADD are removed, the item waits again (1b)", un.undone === 1 && sql(`select count(*) from canonical_field where canonical_field_key = '${du.items[0].landedAs}'`) === "0" && sql(`select count(*) from library_change where batch_id = '${du.batchId}'`) === "0" && sql(`select status || '|' || coalesce(decided_by, '-') || '|' || coalesce(batch_id::text, '-') from proposal_item where id = '${u1}'`) === "waiting|-|-");
+  e = await refused(() => P.undo(db, audit, A, ws, du.batchId));
+  ok("C11.14 undo fail: the same batch is not undone twice (404)", e.status === 404, e);
   const [u2] = await P.insertProposals(db, ws, [field("Too late to undo")]);
   const dl = await P.decide(db, audit, A, ws, [u2], { action: "accept" });
   sql(`update proposal_item set decided_at = now() - interval '20 seconds' where batch_id = '${dl.batchId}'`);
@@ -158,6 +163,91 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   ok("C11.13 reader pass: accepting on the review records the contract status (accepted) and the chosen key", r.status === 201 && sql(`select status || '|' || choice || '|' || decided_key from proposal_item where id = '${fm}'`) === "accepted|ACCEPTED|person.field_map_item", r.body);
   const queue = await call("GET", "/review-queue");
   ok("C11.13 reader pass: To review and the catalogue answer with the new table (no error)", queue.status === 200 && (await call("GET", "/catalogue")).status === 200, queue.status);
+
+  // ─────────────────── 1b: the queue's routes (GET /review/proposals, decide, undo, grouped approval)
+  const ED = "IMM 1111 (02-2026)", combo = sql("select id from combination limit 1");
+  const inEd = (it: any) => ({ ...it, scope: { formEdition: ED, combinationId: null } });
+  const reading = (label: string, words: string) => ({ reading: words, payload: { kind: "field", label, aliases: [], meaning: `What ${label} means on the form.`, valueType: "text", subject: "person", formBox: null }, from: "replay", runFile: "runs/test.json", costUsd: 0 });
+  const [q1, q2, qc, qd, qr] = await P.insertProposals(db, ws, [
+    inEd(field("Queue ready one")), inEd(field("Queue ready two")),
+    inEd(field("Queue check one", { confidence: "check", reason: "A rule failed: the quote was not found in the file.", rules: [{ rule: "quote_found", passed: false, why: "Not in the file." }] })),
+    inEd(field("Queue decide one", { confidence: "decide", agreement: "differ", reason: "The two readings differ on the name.", rounds: { draft: reading("Queue decide one", "Family name of the applicant"), check: reading("Queue decided by checker", "Surname as on the passport") } })),
+    inEd(field("Queue rules one", { origin: "rules" })),
+  ]);
+  const [qReuse] = await P.insertProposals(db, ws, [field(libLabel, { scope: { formEdition: null, combinationId: combo }, reuse: { match: "reuse", existingKey: "person.family_name" } })]);
+  r = await call("GET", "/review/proposals");
+  const gEd = r.body.groups?.find((g: any) => g.id === `edition:${ED}`), gCombo = r.body.groups?.find((g: any) => g.id === `combination:${combo}`);
+  ok("C11.13 queue pass: GET /review/proposals groups by form edition (3 ready, 1 check, 1 decide) and by combination (titled by its path)", r.status === 200 && gEd?.counts.ready === 3 && gEd.counts.check === 1 && gEd.counts.decide === 1 && gEd.kind === "edition" && / › /.test(gCombo?.title ?? ""), [gEd, gCombo?.title]);
+  r = await call("GET", `/review/proposals?group=${encodeURIComponent(`edition:${ED}`)}`);
+  const bands = r.body.group?.bands ?? {}, byId = (id: string) => [...(bands.ready ?? []), ...(bands.check ?? []), ...(bands.decide ?? [])].find((x: any) => x.id === id);
+  ok("C11.13 queue pass: a group's items come in their three bands with both readings, the quote and the rules for the side panel", bands.ready?.length === 3 && bands.check?.length === 1 && bands.decide?.length === 1
+    && byId(qd)?.readings.draft.text === "Family name of the applicant" && byId(qd)?.readings.check.text === "Surname as on the passport" && byId(q1)?.source.quote === "Your family name" && byId(qc)?.rules[0].passed === false, byId(qd));
+  ok("C11.14 queue pass: a Ready AI item can be accepted with others; a Ready rules item that adds to the library cannot, and says why", byId(q1)?.bulk_why === null && /rules item/.test(byId(qr)?.bulk_why ?? ""), byId(qr)?.bulk_why);
+  r = await call("GET", "/review/proposals?group=edition%3Anothing");
+  ok("C11.13 queue fail: a group with nothing waiting answers 404 in words", r.status === 404 && /Nothing waits/.test(JSON.stringify(r.body)), r.body);
+  r = await call("POST", "/review/proposals/decide", { ids: [q1, qc], action: "accept" });
+  ok("C11.14 bulk fail: a Check item in a bulk accept is refused (409) and nothing is accepted", r.status === 409 && /Only Ready items/.test(r.body.message) && sql(`select string_agg(status, ',') from proposal_item where id in ('${q1}', '${qc}')`) === "waiting,waiting", r.body);
+  r = await call("POST", "/review/proposals/decide", { ids: [q1, qd], action: "accept" });
+  ok("C11.14 bulk fail: a Decide item in a bulk accept is refused (409)", r.status === 409 && /readings differ/.test(r.body.message), r.body);
+  r = await call("POST", "/review/proposals/decide", { ids: [q1, qr], action: "accept" });
+  ok("C11.14 bulk fail: a rules item landing on the library is never bulk-accepted (409)", r.status === 409 && /rules item/.test(r.body.message) && sql(`select status from proposal_item where id = '${qr}'`) === "waiting", r.body);
+  r = await call("POST", "/review/proposals/decide", { ids: Array.from({ length: 201 }, () => crypto.randomUUID()), action: "accept" });
+  ok("C11.14 bulk fail: more than 200 in one batch is refused (400)", r.status === 400 && /200/.test(JSON.stringify(r.body)), r.body);
+  r = await call("POST", "/review/proposals/decide", { ids: [q1, q2], action: "accept" }, "user-C");
+  const bulk = r.body;
+  ok("C11.14 bulk pass: two Ready items are accepted together as one batch; each lands with an ADD waiting for a second person", r.status === 201 && bulk.items?.length === 2 && sql(`select count(*) from library_change where batch_id = '${bulk.batchId}' and status = 'WAITING'`) === "2", bulk);
+  r = await call("POST", `/review/proposals/undo/${bulk.batchId}`, undefined, "user-B");
+  ok("C11.14 undo fail (route): another person cannot undo the batch (403)", r.status === 403, r.body);
+  r = await call("POST", `/review/proposals/undo/${bulk.batchId}`, undefined, "user-C");
+  ok("C11.14 undo pass (route): the person who decided undoes the whole batch with one Undo; both wait again", r.status === 201 && r.body.undone === 2 && sql(`select count(*) from library_change where batch_id = '${bulk.batchId}'`) === "0", r.body);
+  const [q1b, q2b] = await P.insertProposals(db, ws, [inEd(field("Queue ready again one")), inEd(field("Queue ready again two"))]);
+  r = await call("POST", "/review/proposals/decide", { ids: [q1b, q2b], action: "accept" }, "user-C");
+  const batch = r.body.batchId;
+  sql("insert into audit_event (id, workspace_id, actor, action, entity, entity_key, summary) select gen_random_uuid(), id, 'user-A', 'created', 'test', 'p149-1b', 'test setup' from workspace where key='demo'");
+  let qB = await call("GET", "/review-queue?filter=all", undefined, "user-B"), qC = await call("GET", "/review-queue?filter=all", undefined, "user-C");
+  const rowB = qB.body.items?.find((i: any) => i.id === `change-batch:${batch}`), rowC = qC.body.items?.find((i: any) => i.id === `change-batch:${batch}`);
+  ok("C11.14 To review pass: one row per decision batch for the second person, linking to its batch page; the decider sees it waiting on others", rowB?.state === "needs" && rowB.next.href === `/review/batch/${batch}` && rowC?.state === "waiting" && !qB.body.items.some((i: any) => i.kind === "library_change" && i.id.startsWith("change:") && /Queue ready again/.test(i.title)), [rowB, rowC]);
+  const pRow = qB.body.items?.find((i: any) => i.id === `proposals:edition:${ED}`);
+  ok("C11.13 To review pass: the queue's group is one Proposals row with its counts, linking to the queue", pRow?.kind === "proposals" && /5 proposals waiting: 3 ready to accept, 1 to check, 1 to decide/.test(pRow.what) && pRow.next.href === `/review/proposals?group=${encodeURIComponent(`edition:${ED}`)}`, pRow);
+  r = await call("GET", "/review/changes");
+  ok("C11.14 grouped approval fail: the changes list asks for group=batch (400)", r.status === 400, r.body);
+  r = await call("GET", "/review/changes?group=batch", undefined, "user-C");
+  const ownBatch = r.body.batches?.find((b: any) => b.id === batch);
+  ok("C11.14 grouped approval pass: GET /review/changes?group=batch lists the batch; its decider cannot decide it and is told why", r.status === 200 && ownBatch?.count === 2 && ownBatch.can_decide === false && /different person/.test(ownBatch.why_not), ownBatch);
+  r = await call("GET", `/review/changes/batch/${batch}`, undefined, "user-B");
+  ok("C11.14 grouped approval pass: GET /review/changes/batch/:id shows a second person the two items and lets them decide", r.status === 200 && r.body.items?.length === 2 && r.body.can_decide === true, r.body);
+  r = await call("GET", `/review/changes/batch/${crypto.randomUUID()}`, undefined, "user-B");
+  ok("C11.14 grouped approval fail: an unknown batch answers 404 in words", r.status === 404, r.body);
+  r = await call("POST", `/review/changes/batch/${batch}`, { decision: "approve" }, "user-C");
+  ok("C11.14 grouped approval fail: the same person cannot approve their own batch (403), nothing changes", r.status === 403 && sql(`select count(*) from library_change where batch_id = '${batch}' and status = 'WAITING'`) === "2", r.body);
+  r = await call("POST", `/review/changes/batch/${batch}`, { decision: "return" }, "user-B");
+  ok("C11.14 grouped approval fail: a return without a reason is refused (400)", r.status === 400, r.body);
+  r = await call("POST", `/review/changes/batch/${batch}`, { decision: "approve", note: "Both read right" }, "user-B");
+  ok("C11.14 grouped approval pass: a second person approves the batch, each row through decideChange (both APPROVED)", r.status === 201 && r.body.decided?.length === 2 && !r.body.refused.length && sql(`select string_agg(status, ',') from library_change where batch_id = '${batch}'`) === "APPROVED,APPROVED", r.body);
+  r = await call("POST", `/review/changes/batch/${batch}`, { decision: "approve" }, "user-B");
+  ok("C11.14 grouped approval fail: a batch already decided is not decided again (409)", r.status === 409, r.body);
+  const checkerPayload = byId(qd).readings.check.payload;
+  r = await call("POST", "/review/proposals/decide", { ids: [qd], action: "edit", payload: checkerPayload }, "user-B");
+  ok("C11.14 side panel pass: accepting the checker's reading of a Decide item lands that reading (edited)", r.status === 201 && sql(`select status || '|' || (payload->>'label') from proposal_item where id = '${qd}'`) === "edited|Queue decided by checker", r.body);
+  const undoEdit = await call("POST", `/review/proposals/undo/${r.body.batchId}`, undefined, "user-B");
+  ok("C11.14 undo pass: undoing an edit puts the item back as it was proposed (its own reading, waiting)", undoEdit.status === 201 && sql(`select status || '|' || (payload->>'label') || '|' || (work ? 'beforeEdit')::text from proposal_item where id = '${qd}'`) === "waiting|Queue decide one|false", undoEdit.body);
+  const fields0 = sql("select count(*) from canonical_field"), changes0 = sql("select count(*) from library_change");
+  r = await call("POST", "/review/proposals/decide", { ids: [qReuse], action: "accept" }, "user-B");
+  ok("C3.2 reuse pass: accepting a reuse adds nothing to the library; it records the item it reuses", r.status === 201 && r.body.items[0].landedAs === "person.family_name" && sql("select count(*) from canonical_field") === fields0 && sql("select count(*) from library_change") === changes0, r.body);
+  const fmCombo = sql(`select combination_id from drafting_job where id = '${jobId}'`);
+  const [fm2] = await P.insertProposals(db, ws, [field("Field map item two", { runId: jobId, step: "field_map", scope: { formEdition: "IMM 0000 (01-2026)", combinationId: fmCombo }, work: { proposedKey: "person.field_map_item_two", outcome: "NEW" } })]);
+  r = await call("POST", "/review/proposals/decide", { ids: [fm2], action: "accept" }, "user-B");
+  ok("C11.13 queue fail: a field-map item is decided on its form-field page, not here (409)", r.status === 409 && /form-field page/.test(r.body.message), r.body);
+  r = await call("GET", `/review/proposals?group=${encodeURIComponent("edition:IMM 0000 (01-2026)")}`);
+  const fmView = [...(r.body.group?.bands.ready ?? []), ...(r.body.group?.bands.check ?? []), ...(r.body.group?.bands.decide ?? [])].find((x: any) => x.id === fm2);
+  ok("C11.13 queue pass: a field-map item is listed with the link to its form-field page and is never chosen in bulk", fmView?.decide_on === `/c/${fmCombo}/jobs/${jobId}` && !!fmView.bulk_why, fmView);
+  // Owed from 1a: an approved answer list ADD publishes with the release.
+  const listChange = sql(`select id from library_change where kind = 'answer_list' and batch_id = '${d1.batchId}'`);
+  r = await call("POST", `/library/changes/${listChange}/approve`, {}, "user-B");
+  const { publishLibraryChanges } = await import("../api/src/library-changes.ts");
+  await db.$transaction((tx) => publishLibraryChanges(tx, ws, 9999, { ids: [listChange] }));
+  const listKey = d1.items.find((x) => x.id === listId)!.landedAs;
+  ok("C3.2 answer list pass (owed from 1a): an approved new answer list is published by the release", r.status === 201 && sql(`select status from answer_list where answer_list_key = '${listKey}'`) === "PUBLISHED" && sql(`select status from library_change where id = '${listChange}'`) === "RELEASED", [r.status, listKey]);
 
   // ─────────────────── the free-add scan (P-149 one door)
   const ALLOW: { file: string; near: RegExp; why: string }[] = [

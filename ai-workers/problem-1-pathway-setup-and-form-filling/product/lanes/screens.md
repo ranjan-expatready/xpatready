@@ -7,7 +7,7 @@
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 ## Handover (screens lane, 29 Oct evening, kept current; a fresh session resumes from this file alone)
-**Branch `claude/screens-1a-34cb66` (worktree `screens-1a-34cb66`), pushed at the commit below; main c545f84e synced.** AI spent US$0.
+**Branch `claude/screens-1b-queue` (from `claude/screens-1a-34cb66` e3483c7d; worktree `kind-mendel-ef9c9c`), pushed; main a9fe60c0 synced.** AI spent US$0.
 * Node: `.tools/node-v24.21.0`, since Prisma refuses Homebrew's node 23. A fresh worktree needs `npm ci` with that node on PATH, then `prisma generate`, then **`vite build` in `web/`** (without it, every browser suite times out).
 * (2a) and **1a passed the Lead check** and are folded into Lead PR #96 (merges on green CI). The Lead backs up :4400 before the restart that runs the migration.
 
@@ -19,7 +19,7 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 * The field-map review page (`job.tsx`) still reads the old row shape through `reviewRow`.
 * `ProposalItem` has the server columns `choice`, `decided_key` and `work`. `LibraryChange` has `batch_id` and `proposal_item_id`.
 
-**1b, the queue page. Next, not started. Its own hand-back.** Steps (plan-slice1.md, row 1b):
+**1b, the queue page: BUILT, at EARLY-LOOK** (build-notes.md "Slice 1b": routes, door rules, pages, what was decided and why; steps 1–5 and 7b done, 6, 7a and 7c decided there). Original steps (plan-slice1.md, row 1b):
 1. **`GET /review/proposals`:** grouped by form edition or combination, in three bands: Ready · Check · Decide.
    * Add `POST /review/proposals/decide` and `POST /review/proposals/undo/:batch`, both calling `proposals.ts`.
 2. **The page and its side panel:** both readings, the quote and the rules. On the EXPERIENCE.md bar; tooltips on complex parts.
@@ -55,14 +55,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: BUILD 1b (not started) — 1a passed the Lead check (in Lead PR #96); this session's context is spent, so a fresh session builds 1b from this Handover
-owner: Builder
-next_action: fresh screens session: /next screens, BUILD 1b (Handover steps 1–8), hand back 1b; then 1c
-then: 1b (queue page, grouped approval, seeds through the door) → 1c (pqr_pick, rule-sourced field) → S6 slices 2 → 3 → 4 (plan.md §4)
+stage: EARLY-LOOK 1b — queue page, side panel, bulk accept (Ready only, ≤ 200, one Undo), To review group and batch rows, grouped second-person approval built on `claude/screens-1b-queue`
+owner: Lead
+next_action: Lead: early look at 1b (screenshots/slice1b/; the check builds its own copy) and answer the three calls in build-notes "Decided here" (job.tsx stays, item 6 as 1b-2, seed_library stays SQL); then 1b-2 or 1c
+then: 1b-2 (Draft fields with AI on the form row → contract items with both readings; job.tsx folds in) → 1c (pqr_pick, rule-sourced field) → S6 slices 2 → 3 → 4 (plan.md §4)
 blocked_by: nothing for 1b; 1c waits for runtime PR #94 (acceptPqrPick, N-2) and forms' rule reference (N-1)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-shared-library (S6) · BUILD 1b → EARLY-LOOK · new session from e3483c7d, main a9fe60c0 synced (contract v2.1: three small fixes in 1a code); review-proposals.ts routes (queue grouped, decide, undo, grouped approval), door rules (bulk Ready only and never rules→library, reuse adds nothing, field-map items on their page, Undo back to waiting), To review group and batch rows, proposals.tsx (queue, side panel, batch page), answer list publishes; check_s6_p149 65/65, check_s6_queue_browser 23/23, check_screen02_slice1 passed, tsc clean, any 423, graph G4 0. US$0.
 - 2026-10-29 · W1-shared-library (S6) · applied Lead message: 1a Lead check PASS (folded into Lead PR #96); next 1b. Handover rewritten for a fresh session (1b steps, what 1a gives it, owed items); this session's context is spent. No code. US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD 1a → CHECK · full run-suites 74 PASS 0 FAIL on 3d006452 (the first run's browser failures were this new copy's missing web build); check_s6_p149 37/37; graph G3 2 (older); migration clean on a copy of :4400 (no proposal rows there; the seeded replay covers every kind). US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD 1a · merged origin/claude/screens-2a-22c0e2 and main c545f84e; 50224b01: proposal_item table + migration (copies, drops rule rows, logs both; clean on a copy of :4400), proposals.ts one door (insertProposals, decide with landers, undo 10 s), readers switched; check_s6_p149 37/37; full run-suites running. US$0.
@@ -72,4 +73,3 @@ updated: 2026-10-29
 - 2026-10-29 · W1-shared-library (S6) · BUILD (2a) · 38cc245d: POST /library/fields, /sections, /answer-lists → 410; GET /library/:kind/:key/sources and row sources and where used; field and section rename (C3.15); origin line per page; check_s6_library_sources 24/24, pages browser 33/33; seed_library.cjs for checks that used the adds (forms, runtime files listed). US$0.
 - 2026-10-29 · Handover · applied Lead message (P-173 queue): item (2) sized (heavy, half waits on #90), Handover rewritten for a fresh session; context of this one spent. US$0.
 - 2026-10-29 · PR #91 review + P-165 · FIX · applied Lead message: 89822be7 Restore keeps the Pathway type (t=CORPORATE), a retired row announces Retired (qa_1029 49/49); main a7f96890 synced, STAND-INS gained SI-11, 14–16: 1b810203 SI-11 chip on Releases, SI-14–16 listed for the runtime lane; check_stand_ins 9/9; browser and full suites blocked by load (demo load > 30 s). US$0.
-- 2026-10-29 · qa batch + P-165 · CHECK · run on 4c4b9dd5 found BR-13's Status menu changed by Retired (screen01_browser, programs_s2): 044a7092 offers Retired only while one is retired; full run-suites on 044a7092 69 PASS 0 FAIL 1 skipped (demo reset). US$0.

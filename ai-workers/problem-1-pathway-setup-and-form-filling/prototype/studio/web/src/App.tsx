@@ -18,6 +18,7 @@ import { AiBatchPage, AiWorkPage } from "@/pages/ai";
 import { ToReviewPage } from "@/pages/to-review";
 import { StructurePage } from "@/pages/structure";
 import { EditionImpactPage, HeldFilePage, LibraryChangePage, MergeReviewPage, FormFieldsPage } from "@/pages/review-items";
+import { ChangeBatchPage, ProposalsPage } from "@/pages/proposals";
 import { RuntimeApp } from "@/runtime/cases";
 
 export default function App() {
@@ -96,6 +97,8 @@ function Shell() {
             <Route path="/review" element={<ToReviewPage />} />
             <Route path="/structure" element={<StructurePage />} />
             <Route path="/review/change/:id" element={<LibraryChangePage />} />
+            <Route path="/review/proposals" element={<ProposalsPage />} />
+            <Route path="/review/batch/:id" element={<ChangeBatchPage />} />
             <Route path="/review/merge/:id" element={<MergeReviewPage />} />
             <Route path="/review/held/:id" element={<HeldFilePage />} />
             <Route path="/review/edition/:id" element={<EditionImpactPage />} />

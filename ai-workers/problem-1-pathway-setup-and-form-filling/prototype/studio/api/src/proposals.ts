@@ -84,7 +84,7 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
     }
     rows.push({ id: x.id, workspaceId, kind: x.kind, runId: x.runId, step: x.step, formEdition: x.scope.formEdition, combinationId: x.scope.combinationId, landsOn: x.landsOn,
       reuse: x.reuse, payload: x.payload as Prisma.InputJsonValue, source: (x.source ?? undefined) as Prisma.InputJsonValue | undefined, rounds: x.rounds as Prisma.InputJsonValue,
-      rules: x.rules, agreement: x.agreement, confidence: x.confidence, reason: x.reason, origin: x.origin, addReason: x.addReason, identity: x.identity, identityKey: key,
+      rules: x.rules, agreement: x.agreement, confidence: x.confidence, reason: x.reason, origin: x.origin, identity: x.identity, identityKey: key,
       relatesTo: x.relatesTo, revision: (x.revision ?? undefined) as Prisma.InputJsonValue | undefined, basis: x.basis,
       choice: choice ?? null, decidedKey: decidedKey ?? null, work: (work ?? undefined) as Prisma.InputJsonValue | undefined });
   }
@@ -134,7 +134,7 @@ export async function landField(tx: Tx, l: Landing, f: { key: string; meaning: s
 
 const taken = async (tx: Tx, ws: string) => new Set((await tx.canonicalField.findMany({ where: { workspaceId: ws }, select: { canonicalFieldKey: true } })).map((x) => x.canonicalFieldKey));
 const slugKey = (label: string, used: Set<string>) => keyFor("x", label, used).slice(2);
-const sourceRef = (r: Row, actor: Actor) => `${r.origin === "person" ? "added by hand" : `${r.origin === "rules" ? "rules" : "AI"} run ${r.runId}`}; accepted by ${actor.id} on the review queue (item ${r.id})`;
+const sourceRef = (r: Row, actor: Actor) => `${r.origin === "rules" ? "rules" : "AI"} run ${r.runId}; accepted by ${actor.id} on the review queue (item ${r.id})`;
 
 /** LANDERS[kind]: what accepting an item writes, inside decide's transaction. A kind with no lander yet is refused. */
 export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<string>>> = {
@@ -150,7 +150,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const used = new Set((await tx.logicalSection.findMany({ where: { workspaceId: l.ws }, select: { sectionKey: true } })).map((x) => `x.${x.sectionKey}`));
     const key = slugKey(s.label, used);
     const order = 100 + (await tx.logicalSection.count({ where: { workspaceId: l.ws } }));
-    await tx.logicalSection.create({ data: { workspaceId: l.ws, sectionKey: key, version: 1, status: "DRAFT", title: s.label, displayOrder: order, origin: r.origin === "person" ? "HUMAN" : "AI_PROPOSAL", updatedBy: l.actor.id } });
+    await tx.logicalSection.create({ data: { workspaceId: l.ws, sectionKey: key, version: 1, status: "DRAFT", title: s.label, displayOrder: order, origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
     await waitingAdd(tx, l, "section", key, s.label);
     return key;
   },
@@ -158,7 +158,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const a = p as Extract<ProposalPayload, { kind: "answer_list" }>;
     const used = new Set((await tx.answerList.findMany({ where: { workspaceId: l.ws }, select: { answerListKey: true } })).map((x) => `x.${x.answerListKey}`));
     const key = slugKey(a.label, used);
-    await tx.answerList.create({ data: { workspaceId: l.ws, answerListKey: key, version: 1, status: "DRAFT", label: a.label, origin: r.origin === "person" ? "HUMAN" : "AI_PROPOSAL", updatedBy: l.actor.id,
+    await tx.answerList.create({ data: { workspaceId: l.ws, answerListKey: key, version: 1, status: "DRAFT", label: a.label, origin: "AI_PROPOSAL", updatedBy: l.actor.id,
       values: { create: a.values.map((v, i) => ({ valueKey: v.code, label: v.label, sortOrder: i + 1 })) } } });
     await waitingAdd(tx, l, "answer_list", key, a.label);
     return key;
@@ -168,7 +168,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const used = new Set((await tx.documentType.findMany({ where: { workspaceId: l.ws }, select: { documentTypeKey: true } })).map((x) => `x.${x.documentTypeKey}`));
     const key = slugKey(d.name, used);
     await tx.documentType.create({ data: { workspaceId: l.ws, documentTypeKey: key, name: d.name, category: d.category || "client", suppliesFacts: d.suppliesFacts,
-      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT", origin: r.origin === "person" ? "HUMAN" : "AI_PROPOSAL", updatedBy: l.actor.id } });
+      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
     await waitingAdd(tx, l, "document_type", key, d.name);
     return key;
   },
@@ -183,6 +183,18 @@ const LANDED: Record<string, (tx: Tx, ws: string, key: string) => Promise<unknow
 };
 
 export const UNDO_SECONDS = 10;
+export const BATCH_MAX = 200;
+/** The field-map step's items map form fields as well, so they are decided on their form-field page (job.tsx) until
+ *  that page folds into the queue with the edition drafts (1b, build-notes). */
+export const ON_ITS_PAGE = new Set(["field_map"]);
+/** Why an item cannot be accepted with others (P-121, P-158): only Ready items, never a rules item landing on the
+ *  library. null when it can. */
+export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step">): string | null {
+  if (ON_ITS_PAGE.has(r.step)) return "It is decided on its form-field page.";
+  if (r.confidence !== "ready") return r.confidence === "check" ? "It needs a check first: open it and decide it on its own." : "Its two readings differ: open it and choose.";
+  if (r.origin === "rules" && r.landsOn === "library") return "A rules item that adds to the shared library is accepted on its own.";
+  return null;
+}
 export type Decision = { action: "accept" | "edit" | "reject"; reason?: string | null; payload?: unknown };
 
 /** Accept, edit or reject waiting items together (one batch, one Undo). Every item is checked before anything is
@@ -191,7 +203,7 @@ export type Decision = { action: "accept" | "edit" | "reject"; reason?: string |
 export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: string, ids: string[], d: Decision) {
   need(actor, "review");
   if (!["accept", "edit", "reject"].includes(d.action)) fail("Choose accept, edit or reject.");
-  if (!ids.length || ids.length > 200) fail("Choose between 1 and 200 proposals.");
+  if (!ids.length || ids.length > BATCH_MAX) fail(`Choose between 1 and ${BATCH_MAX} proposals.`);
   if (d.action === "edit" && ids.length !== 1) fail("Edit one proposal at a time.");
   const reason = d.reason?.trim() || null;
   if (d.action === "reject" && (!reason || reason.length < 3)) fail("Say why it is rejected (3 characters or more): the producer learns from it.");
@@ -202,6 +214,13 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
     if (rows.length !== new Set(ids).size) fail("A proposal was not found (the demo may have been reset).", HttpStatus.NOT_FOUND);
     const done = rows.filter((r) => r.status !== "waiting");
     if (done.length) fail(`${done.length === 1 ? "A proposal is" : `${done.length} proposals are`} already decided (${done[0].status}); an approved item changes only as a revision.`, HttpStatus.CONFLICT);
+    const elsewhere = rows.find((r) => ON_ITS_PAGE.has(r.step));
+    if (elsewhere) fail(`"${identityKeyOf(elsewhere.payload as ProposalPayload, elsewhere.identityKey)}" is decided on its form-field page, where its form fields are mapped too.`, HttpStatus.CONFLICT);
+    // P-121: several at once is for Ready items only, and never a rules item that adds to the library (1b).
+    if (d.action === "accept" && rows.length > 1) {
+      const no = rows.map((r) => [r, bulkWhy(r)] as const).filter(([, why]) => why);
+      if (no.length) fail(`Only Ready items are accepted together. ${no.length === 1 ? "One item" : `${no.length} items`} cannot be: "${identityKeyOf(no[0][0].payload as ProposalPayload, no[0][0].identityKey)}" (${no[0][1]}). Nothing was accepted.`, HttpStatus.CONFLICT);
+    }
     const out: { id: string; landedAs: string | null }[] = [];
     for (const r of rows) {
       let payload = r.payload as ProposalPayload;
@@ -217,12 +236,19 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
           const twin = await sameInLibrary(tx, workspaceId, payload);
           if (twin) fail(`"${identityKeyOf(payload, r.identityKey)}" is already in the library as ${twin} (added since it was proposed): reject this one, or reuse that item.`, HttpStatus.CONFLICT);
         }
-        const land = LANDERS[r.kind as ProposalKind];
-        if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
-        landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: r.addReason ?? reason ?? r.reason, proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+        const reuse = r.reuse as { match: string; existingKey: string | null };
+        // P-120: a reuse adds nothing to the library; it records the existing item it uses.
+        if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") landedAs = reuse.existingKey;
+        else {
+          const land = LANDERS[r.kind as ProposalKind];
+          if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
+          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason, proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+        }
       }
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(),
-        decisionReason: reason, batchId, decidedKey: landedAs, ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey) } : {}) } });
+        decisionReason: reason, batchId, decidedKey: landedAs,
+        // An edit keeps the item's own reading beside it, so Undo puts the item back as it was proposed (1b).
+        ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey), work: { ...((r.work ?? {}) as object), beforeEdit: r.payload } as Prisma.InputJsonValue } : {}) } });
       out.push({ id: r.id, landedAs });
     }
     return out;
@@ -231,8 +257,9 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
   return { batchId, items: landed };
 }
 
-/** Undo a decision batch within 10 s: its landed draft rows and waiting ADDs are removed and its items become undone.
- *  Only the person who decided, only while every ADD is still waiting. */
+/** Undo a decision batch within 10 s: its landed draft rows and waiting ADDs are removed and its items wait again on
+ *  the queue as they were proposed (1b: "undone" left them nowhere; the activity log keeps the undo). Only the person
+ *  who decided, only while every ADD is still waiting. */
 export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: string, batchId: string) {
   need(actor, "review");
   const res = await db.$transaction(async (tx) => {
@@ -246,7 +273,11 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     if (adds.some((c) => c.status !== "WAITING")) fail("A second person has already decided one of these items: it cannot be undone here.", HttpStatus.CONFLICT);
     for (const c of adds) await LANDED[c.kind]?.(tx, workspaceId, c.key);
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
-    await tx.proposalItem.updateMany({ where: { workspaceId, batchId }, data: { status: "undone" } });
+    for (const r of rows) {
+      const { beforeEdit, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload };
+      await tx.proposalItem.update({ where: { id: r.id }, data: { status: "waiting", decidedBy: null, decidedAt: null, decisionReason: null, batchId: null, decidedKey: null,
+        ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey), work: work as Prisma.InputJsonValue } : {}) } });
+    }
     return rows.length;
   });
   await audit.log(workspaceId, actor.id, "undone", "proposals", batchId, `${actor.name} undid a decision on ${res} proposal${res === 1 ? "" : "s"}`);

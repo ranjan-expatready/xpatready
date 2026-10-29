@@ -73,3 +73,27 @@ Built on main's tables, before forms PR #90 (the one door, item 5 and the rule s
 * `seed_library.cjs` still writes by SQL. The door has no HTTP route until 1b's queue; the seeds move to it then.
 * The 1b page, bulk accept and grouped approval.
 * Release publish of an approved `answer_list` ADD: it is not yet in `unapprovedAdds`. 1b checks it with the queue.
+
+## Slice 1b, 29 Oct: the review queue page (P-149, P-121, P-123; C11.13, C11.14, C3.2)
+**Routes** (`api/src/review-proposals.ts`, contract `contracts/review-proposals.ts`):
+* `GET /review/proposals[?group=]`: waiting items grouped by form edition, else combination (titled by its path), else run; oldest group first. The asked group comes in Ready to accept · Check · Decide, each item with both readings, IRCC's quote (file, edition, page, found or not, rule sentence), the rules, near matches, and `bulk_why` (null when it can go in a bulk accept). An empty or unknown group answers 404 in words.
+* `POST /review/proposals/decide` and `POST /review/proposals/undo/:batch` call the door (`proposals.ts`).
+* `GET /review/changes?group=batch`, `GET /review/changes/batch/:id`, `POST /review/changes/batch/:id`: what one decision landed, approved or returned together. The whole batch is checked first (its decider never approves it, 403; a return needs a reason), then each row goes through `Screen02.decideLibraryChange` (so `decideChange`'s and the lifecycle's guards). Rows refused meanwhile are listed in the answer.
+
+**Rules added in the door** (`proposals.ts`):
+* Bulk accept (more than one id): Ready only, never a rules item landing on the library; anything else refuses the whole call (409, nothing accepted). At most 200 (`BATCH_MAX`).
+* A reuse adds nothing to the library: accepting it records the existing key (1a's field lander made a new field for a reuse).
+* Field-map step items (`ON_ITS_PAGE`) are refused here (409): they are decided on their form-field page.
+* **Undo now puts the items back to waiting**, as proposed (an edit keeps the item's own reading in `work.beforeEdit` and Undo restores it). 1a set them `undone`, which left them on no page: found by the browser check. The contract's `undone` status is no longer written (forms' contract; a proposal in the hand-back).
+
+**To review** (`review-queue.ts`): one `proposals` row per queue group, linking to `/review/proposals?group=…`; one row per decision batch of two or more for the second person, linking to `/review/batch/:id` (its decider sees it waiting on others).
+
+**Pages** (`web/src/pages/proposals.tsx`): the queue (groups on the left, three bands with tooltips; Ready rows have a checkbox, a rules item a dash with its reason; "Choose all", "Accept N items", an Undo bar counting down 10 s); the side panel (why a person looks, what it means, both readings, IRCC's words, rules, close to, a reason box; Reject needs the reason, "Accept the checker's reading" when the readings differ); the batch page (items, Approve N, Return N with a reason, or why this person cannot).
+
+**Decided here, with reasons:**
+* **The field-map page (`job.tsx`) does not fold in yet.** Its items also map form fields and are applied to the draft by an author, which the queue's landers do not do. They are listed in their group with "Decide on its form-field page", never chosen in bulk, and keep their own To review row. They fold in when the edition draft step (item 6) writes contract items with both readings.
+* **"Draft fields with AI" on the form row (item 6) is not in 1b.** The Lead's brief named five parts; item 6 converts the runner's two rounds (`field-drafts.ts draftEdition`) into contract items and is the queue's first real producer. Proposed as 1b-2, before 1c.
+* **`seed_library.cjs` stays SQL.** Its callers (forms, runtime checks) need fixed keys synchronously; moving them is a cross-lane change. New checks seed through the door instead (`tests/seed_proposals.ts`, `insertProposals`).
+* **Owed from 1a, done:** an approved answer list ADD now publishes with the release (`versionsOf`, `setStatus`).
+
+**Checks** (own copies, private ports; US$0): `check_s6_p149.ts` 65/65 (28 new route cases, a pass and a fail per rule); `check_s6_queue_browser.cjs` 23/23 (private port) (axe on the queue, the panel and the batch page; 1440 and 1024 without sideways scroll); `check_screen02_slice1.cjs` all passed; `tsc` api and web clean; any 423 (baseline 433); graph G1 0, G4 0, G3 2 (older attachment routes). Screenshots: `screenshots/slice1b/`. Contract v2.1 from main (no `addReason`, no `person` origin, `source.rule`) needed three small fixes in 1a's code.

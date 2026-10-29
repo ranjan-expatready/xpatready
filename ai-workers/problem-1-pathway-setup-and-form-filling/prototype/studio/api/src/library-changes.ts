@@ -206,10 +206,13 @@ async function versionsOf(tx: Prisma.TransactionClient, kind: string, workspaceI
   if (kind === "field") return tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key }, select: pick });
   if (kind === "section") return tx.logicalSection.findMany({ where: { workspaceId, sectionKey: key }, select: pick });
   if (kind === "document_type") return tx.documentType.findMany({ where: { workspaceId, documentTypeKey: key }, select: pick });
+  // S6 1b (owed from 1a): an answer list has no supersedes link; a new version replaces the older published one.
+  if (kind === "answer_list") return (await tx.answerList.findMany({ where: { workspaceId, answerListKey: key }, select: { id: true, status: true, version: true } })).map((r) => ({ ...r, supersedesId: null }));
   return null;
 }
 async function setStatus(tx: Prisma.TransactionClient, kind: string, id: string, status: Status) {
   if (kind === "field") await tx.canonicalField.update({ where: { id }, data: { status } });
   else if (kind === "section") await tx.logicalSection.update({ where: { id }, data: { status } });
   else if (kind === "document_type") await tx.documentType.update({ where: { id }, data: { status } });
+  else if (kind === "answer_list") await tx.answerList.update({ where: { id }, data: { status } });
 }
