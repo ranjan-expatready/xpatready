@@ -126,7 +126,24 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const card = p.locator('article[data-label="Visitor visa"]');
     step("QA-48: the retired card says Retired and offers Restore on Program structure, never a setup step", /^1 retired combination/m.test(rt) && await card.locator('[data-status="RETIRED"]').count() === 1 && await card.getByRole("link", { name: "Restore on Program structure" }).count() === 1 && !/In setup|Add \d+ form/.test(await card.innerText()), (await card.innerText()).replace(/\n/g, " / "));
     await p.screenshot({ path: path.join(SHOTS, "retired-1440.png") });
+    // PR #91 outside review (2): the row announces what its chip shows.
+    const label = await card.getAttribute("aria-label");
+    step("QA-48: the retired card's accessible name says Retired, as its chip does", /, Retired$/.test(label ?? ""), label);
+    step("QA-48 fail case: it never announces Live, In setup or Not started", !/(Live|Not ready|In setup|Not started)$/.test(label ?? ""), label);
+    // PR #91 outside review (1): Restore opens Program structure on the combination's own Pathway type.
+    step("QA-48: a retired Retail combination's Restore opens Program structure on Retail (no t=CORPORATE)", (await card.getByRole("link", { name: "Restore on Program structure" }).getAttribute("href")) === "/structure?r=1");
     sql(`update combination set retired_at = null where id = '${visitor}'`);
+    const corpRow = ((await api("/catalogue?pathway=CORPORATE&filter=all")).body?.rows ?? []).find((r) => r.combinationId);
+    const corp = [corpRow?.combinationId, corpRow?.label];
+    step("setup: the sample has a Corporate combination to retire", !!corpRow, corpRow?.label);
+    sql(`update combination set retired_at = now() where id = '${corp[0]}'; insert into audit_event (id, workspace_id, actor, action, entity, entity_key, summary) select gen_random_uuid(), workspace_id, 'user-B', 'retired', 'combination', id::text, 'Approver retired a Corporate combination (check)' from combination where id = '${corp[0]}'`);
+    await go("/?pw=CORPORATE&f=retired");
+    const corpCard = p.locator(`article[data-label="${corp[1]}"]`);
+    const href = await corpCard.getByRole("link", { name: "Restore on Program structure" }).getAttribute("href");
+    step("QA-48: a retired Corporate combination's Restore opens Program structure on Corporate and employers", href === "/structure?r=1&t=CORPORATE", `${corp[1]}: ${href}`);
+    await corpCard.getByRole("link", { name: "Restore on Program structure" }).click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(400);
+    step("QA-48: there it is listed (Show retired on), so it can be restored", (await main()).includes(corp[1]), p.url().replace(BASE, ""));
+    sql(`update combination set retired_at = null where id = '${corp[0]}'`);
 
     step("no page error", !errs.length, errs.join(" | "));
     const all = [ov, rel, act, ck, sc, dt, rv].join("\n");

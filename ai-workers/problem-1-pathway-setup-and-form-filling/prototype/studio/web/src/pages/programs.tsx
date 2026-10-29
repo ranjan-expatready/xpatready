@@ -436,7 +436,7 @@ function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onAct }: { r: Cata
   const formsN = r.forms.filter((f) => !f.document).length;
   const found = r.forms.filter((f) => !f.document && !f.drafted), ready = found.filter((f) => f.inLibrary).length;
   return (
-    <article data-node={r.nodeKey} data-label={r.label} aria-label={`${r.trail.join(" › ")}, ${isNotStarted(r) ? "Not started" : STATUS_WORD[r.status]}`}
+    <article data-node={r.nodeKey} data-label={r.label} aria-label={`${r.trail.join(" › ")}, ${statusWordFor(r)}`}
       className={cn("flex w-full flex-col gap-2.5 rounded-xl border bg-surface-raised p-4 shadow-sm transition-colors", lit ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-border-strong")}>
       <div className="flex items-start gap-2">
         <span className="min-w-0 flex-1 text-xs" data-trail><Trail parts={[type, pw, prog]} /></span>
@@ -451,14 +451,16 @@ function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onAct }: { r: Cata
       <SetupSteps r={r} />
       <p className="break-words text-xs text-text-muted" data-filed>{r.filed !== "No forms yet" ? `${formsN ? `${many(formsN, "form", "forms")} · ` : ""}Filed: ${r.filed}` : found.length ? formsFound(found.length, ready) : "No forms yet"}</p>
       {q && r.matches.some((m) => m !== "name") ? <p className="text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</p> : null}
-      <div className="mt-auto flex items-center gap-2 pt-1">{r.retired ? <RestoreLink /> : <NextStep r={r} canAuthor={canAuthor} onAct={onAct} onOpen={onOpen} primary />}</div>
+      <div className="mt-auto flex items-center gap-2 pt-1">{r.retired ? <RestoreLink type={r.pathwayType} /> : <NextStep r={r} canAuthor={canAuthor} onAct={onAct} onOpen={onOpen} primary />}</div>
     </article>
   );
 }
 
 /** QA-48: a retired combination says so; it is restored from its row on Program structure (P-116), not set up here. */
 const RetiredChip = () => <span data-status="RETIRED" className="inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-full bg-text/8 px-2 py-0.5 text-xs font-medium text-text-muted">Retired</span>;
-const RestoreLink = ({ tabIndex }: { tabIndex?: number }) => <Link tabIndex={tabIndex} to="/structure?r=1" className="text-sm text-text-link underline">Restore on Program structure</Link>;
+const RestoreLink = ({ type, tabIndex }: { type: string; tabIndex?: number }) => <Link tabIndex={tabIndex} to={`/structure?r=1${type === "CORPORATE" ? "&t=CORPORATE" : ""}`} className="text-sm text-text-link underline">Restore on Program structure</Link>;
+/** The status a row announces and shows: Retired, Not started, or its setup status. */
+const statusWordFor = (r: CatalogueLeaf) => r.retired ? "Retired" : isNotStarted(r) ? "Not started" : STATUS_WORD[r.status];
 
 function CorporateCallout() {
   return (
@@ -533,7 +535,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, pathway
               const active = current?.nodeKey === r.nodeKey, lit = highlight === r.nodeKey, ti = active ? 0 : -1;
               const [type, pw, prog, catName, sub] = r.trail;
               return (
-                <div key={r.nodeKey} role="row" aria-selected={lit} tabIndex={ti} data-node={r.nodeKey} data-label={r.label} aria-label={`${r.trail.join(" › ")}, ${isNotStarted(r) ? "Not started" : STATUS_WORD[r.status]}`}
+                <div key={r.nodeKey} role="row" aria-selected={lit} tabIndex={ti} data-node={r.nodeKey} data-label={r.label} aria-label={`${r.trail.join(" › ")}, ${statusWordFor(r)}`}
                   ref={(el) => { if (el) refs.current.set(r.nodeKey, el); else refs.current.delete(r.nodeKey); }}
                   onKeyDown={(e) => onKey(e, r)} onFocus={(e) => { if (e.target === e.currentTarget) setFocus(r.nodeKey); }} onClick={() => onOpen(r)}
                   className={cn(GRID, "min-h-11 cursor-pointer border-b border-border px-4 py-2 outline-none last:border-b-0 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/60", lit ? "bg-primary/10 shadow-[inset_3px_0_0_var(--color-primary)]" : "hover:bg-text/[0.03]")}>
@@ -547,7 +549,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, pathway
                     {r.checked?.overdue ? <Tip focusable={ti} tip="Check overdue: compare with IRCC's published forms and guides."><span role="img" aria-label="Check overdue" className="inline-flex rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><TriangleAlert className="size-4 text-text-warn" aria-hidden /></span></Tip> : null}
                   </div>
                   <div role="gridcell" className="hidden sm:block"><SetupSteps r={r} compact tabIndex={ti} /></div>
-                  <div role="gridcell" className="col-span-2 sm:col-span-1" data-step-cell>{r.retired ? <RestoreLink tabIndex={ti} /> : <NextStep r={r} canAuthor={canAuthor} tabIndex={ti} onAct={onAct} onOpen={() => onOpen(r)} />}</div>
+                  <div role="gridcell" className="col-span-2 sm:col-span-1" data-step-cell>{r.retired ? <RestoreLink type={r.pathwayType} tabIndex={ti} /> : <NextStep r={r} canAuthor={canAuthor} tabIndex={ti} onAct={onAct} onOpen={() => onOpen(r)} />}</div>
                 </div>
               );
             })}
