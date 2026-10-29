@@ -9,7 +9,7 @@ Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes eve
 current_item: after-merge on main deda0e6b (PR #90 forms, #91 screens), branch `claude/qa-after-merge-deda0e6`, copy qa_am :4471
 stage: WAITING
 owner: Lead
-next_action: (1) live smoke option (a), founder: steps 1-3, hard ceiling US$6.49 (expected about US$0.75), step 4 skipped (no form outside the library) — run only after the Lead says forms' cost-wording fix (QA-97) is on main, and only once the user allows the paid call in this qa session (the permission check refused it on 29 Oct); own copy qa_live :4478 with STUDIO_PEOPLE_AI_LIVE=approved; stop before any reservation past US$6.49; report cost per step against its reservation; (2) Lead: route QA-96 (runtime), QA-97 and QA-98 (forms); answer the :4400 reset question; merge this branch's qa files
+next_action: (1) live smoke option (a), founder: steps 1-3, hard ceiling US$6.49 (expected about US$0.75), step 4 skipped (no form outside the library) — run only after the Lead says forms' cost-wording fix (QA-97) is on main, the user allowed the paid calls in this qa session (29 Oct, "Allow, when Lead says"); own copy qa_live :4478 with STUDIO_PEOPLE_AI_LIVE=approved; stop before any reservation past US$6.49; report cost per step against its reservation; (2) Lead: route QA-96 (runtime), QA-97 and QA-98 (forms); answer the :4400 reset question; merge this branch's qa files
 blocked_by: none
 updated: 2026-10-29
 
