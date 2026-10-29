@@ -45,6 +45,9 @@ const STATUSES = [
   ["in_setup", "In setup", "Setup has begun and is not released yet."],
   ["not_ready", "Not ready", "Something blocks release; the card says what."],
   ["live", "Live", "Firms can open cases on it."],
+  // QA-48: retired combinations are left out of every other view (P-116); here they can be found again. Offered only
+  // while one is retired, so the menu stays BR-13's six otherwise.
+  ["retired", "Retired", "Retired at a release: hidden from the other views. Restore one from its row on Program structure."],
 ] as const;
 type StatusKey = (typeof STATUSES)[number][0];
 const statusWordOf = (k: StatusKey) => STATUSES.find(([x]) => x === k)![1];
@@ -258,9 +261,10 @@ export function ProgramsPage() {
         {counts && !nothingAtAll ? (
           <p className="-mt-1 text-sm text-text-muted" data-stats aria-busy={busy || undefined}>
             {busy ? <span className="mr-1.5 inline-block size-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary align-[-1px]" role="status" aria-label="Updating" /> : null}
-            <b className="font-semibold text-text">{q ? `${counts.all} of ${many(scopeTotal, "combination", "combinations")} match` : many(counts.all, "combination", "combinations")}</b>{pathwayLabel ? ` in ${pathwayLabel}` : ""}
+            <b className="font-semibold text-text">{filter === "retired" ? many(counts.retired, "retired combination", "retired combinations") : q ? `${counts.all} of ${many(scopeTotal, "combination", "combinations")} match` : many(counts.all, "combination", "combinations")}</b>{pathwayLabel ? ` in ${pathwayLabel}` : ""}
             {([["live", "Live"], ["not_ready", "Not ready"], ["in_setup", "In setup"], ["not_started", "Not started"]] as const).filter(([k]) => counts[k]).map(([k, w]) => ` · ${counts[k]} ${w}`).join("")}
-            {filter !== "all" ? ` · showing ${rows.length} ${statusWord}` : needsOnly ? ` · showing ${rows.length} that need you` : ""}
+            {counts.retired && filter !== "retired" ? ` · ${counts.retired} retired, not shown (Status: Retired)` : ""}
+            {filter !== "all" && filter !== "retired" ? ` · showing ${rows.length} ${statusWord}` : needsOnly ? ` · showing ${rows.length} that need you` : ""}
             {activeChips.length ? <span className="ml-2 inline-flex flex-wrap items-center gap-1.5 align-middle" data-active-filters>
               {activeChips.map((c) => <span key={c.key} className="inline-flex h-6 items-center gap-1 rounded-full border border-primary/40 bg-primary/10 pl-2.5 pr-1 text-xs font-medium text-text-link">{c.label}<button type="button" aria-label={`Remove the filter ${c.label}`} onClick={c.clear} className="flex size-4 items-center justify-center rounded-full hover:bg-primary/15"><X className="size-3" /></button></span>)}
               <button type="button" className="text-sm font-medium text-text-link underline underline-offset-2" onClick={() => { setTyped(""); set({ p: null, prog: null, under: null, f: null, n: null, q: null }); }} data-clear-all>Clear all</button>
@@ -350,7 +354,7 @@ function StatusFilter({ value, counts, onChange }: { value: StatusKey; counts?: 
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="start" sideOffset={4} className="z-50 min-w-[280px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
           <DropdownMenu.RadioGroup value={value} onValueChange={(v) => onChange(v as StatusKey)}>
-            {STATUSES.map(([k, w, tip]) => (
+            {STATUSES.filter(([k]) => k !== "retired" || counts?.retired || value === "retired").map(([k, w, tip]) => (
               <DropdownMenu.RadioItem key={k} value={k} className="flex cursor-pointer flex-col gap-0.5 rounded-md px-2 py-1.5 outline-none data-[highlighted]:bg-text/5 data-[state=checked]:text-text-link">
                 <span className="flex items-center justify-between gap-4"><span className={cn(value === k && "font-semibold")}>{w}{k === "all" ? " · default" : ""}</span><span className="tabular-nums text-text-muted">{counts ? counts[k === "all" ? "all" : k] : "…"}</span></span>
                 <span className="text-xs text-text-muted">{tip}</span>
@@ -437,7 +441,7 @@ function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onAct }: { r: Cata
       <div className="flex items-start gap-2">
         <span className="min-w-0 flex-1 text-xs" data-trail><Trail parts={[type, pw, prog]} /></span>
         {justAdded ? <span className="shrink-0 rounded-full bg-ok/15 px-2 py-0.5 text-xs font-semibold text-text-ok" data-just-added>Just added</span> : null}
-        {isNotStarted(r) ? <NotStartedChip /> : <StatusChip status={r.status} text={STATUS_WORD[r.status]} />}
+        {r.retired ? <RetiredChip /> : isNotStarted(r) ? <NotStartedChip /> : <StatusChip status={r.status} text={STATUS_WORD[r.status]} />}
         {r.checked?.overdue ? <Tip focusable tip="Check overdue: compare with IRCC's published forms and guides."><span role="img" aria-label="Check overdue" className="inline-flex rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><TriangleAlert className="size-4 text-text-warn" aria-hidden /></span></Tip> : null}
       </div>
       <div className="min-w-0">
@@ -447,10 +451,14 @@ function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onAct }: { r: Cata
       <SetupSteps r={r} />
       <p className="break-words text-xs text-text-muted" data-filed>{r.filed !== "No forms yet" ? `${formsN ? `${many(formsN, "form", "forms")} · ` : ""}Filed: ${r.filed}` : found.length ? formsFound(found.length, ready) : "No forms yet"}</p>
       {q && r.matches.some((m) => m !== "name") ? <p className="text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</p> : null}
-      <div className="mt-auto flex items-center gap-2 pt-1"><NextStep r={r} canAuthor={canAuthor} onAct={onAct} onOpen={onOpen} primary /></div>
+      <div className="mt-auto flex items-center gap-2 pt-1">{r.retired ? <RestoreLink /> : <NextStep r={r} canAuthor={canAuthor} onAct={onAct} onOpen={onOpen} primary />}</div>
     </article>
   );
 }
+
+/** QA-48: a retired combination says so; it is restored from its row on Program structure (P-116), not set up here. */
+const RetiredChip = () => <span data-status="RETIRED" className="inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-full bg-text/8 px-2 py-0.5 text-xs font-medium text-text-muted">Retired</span>;
+const RestoreLink = ({ tabIndex }: { tabIndex?: number }) => <Link tabIndex={tabIndex} to="/structure?r=1" className="text-sm text-text-link underline">Restore on Program structure</Link>;
 
 function CorporateCallout() {
   return (
@@ -535,11 +543,11 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, pathway
                     {q && r.matches.some((m) => m !== "name") ? <span className="block text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</span> : null}
                   </div>
                   <div role="gridcell" className="flex items-center gap-1.5">
-                    {isNotStarted(r) ? <NotStartedChip tabIndex={ti} /> : <StatusChip tabIndex={ti} status={r.status} text={STATUS_WORD[r.status]} />}
+                    {r.retired ? <RetiredChip /> : isNotStarted(r) ? <NotStartedChip tabIndex={ti} /> : <StatusChip tabIndex={ti} status={r.status} text={STATUS_WORD[r.status]} />}
                     {r.checked?.overdue ? <Tip focusable={ti} tip="Check overdue: compare with IRCC's published forms and guides."><span role="img" aria-label="Check overdue" className="inline-flex rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><TriangleAlert className="size-4 text-text-warn" aria-hidden /></span></Tip> : null}
                   </div>
                   <div role="gridcell" className="hidden sm:block"><SetupSteps r={r} compact tabIndex={ti} /></div>
-                  <div role="gridcell" className="col-span-2 sm:col-span-1" data-step-cell><NextStep r={r} canAuthor={canAuthor} tabIndex={ti} onAct={onAct} onOpen={() => onOpen(r)} /></div>
+                  <div role="gridcell" className="col-span-2 sm:col-span-1" data-step-cell>{r.retired ? <RestoreLink tabIndex={ti} /> : <NextStep r={r} canAuthor={canAuthor} tabIndex={ti} onAct={onAct} onOpen={() => onOpen(r)} />}</div>
                 </div>
               );
             })}

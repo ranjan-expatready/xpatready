@@ -48,6 +48,9 @@ function Shell() {
     { to: "/releases", label: "Releases", icon: BookOpen },
     { to: "/activity", label: "Activity", icon: Activity },
   ];
+  // QA-80: the browser tab names the page ("<page> · Product Studio"), from the menu item the address belongs to.
+  const here = nav.find((n) => n.match ? n.match(loc.pathname) : loc.pathname.startsWith(n.to));
+  React.useEffect(() => { document.title = here ? `${here.label} · Product Studio` : "Product Studio"; }, [here?.label]);
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
@@ -58,7 +61,7 @@ function Shell() {
         </Link>
         <span className="hidden h-6 w-px bg-border sm:block" />
         <div className="hidden shrink-0 leading-tight sm:block"><p className="text-sm font-semibold">Product Studio</p><p className="text-[11px] text-text-muted">Pathway Configurator</p></div>
-        <Pill tone="warn" className="ml-1 hidden xl:inline-flex" title="Working prototype on a local demo database: no sign-in, simulated people, not production">Prototype · demo workspace</Pill>
+        <Pill tone="warn" className="ml-1 hidden lg:inline-flex" title="Working prototype on a local demo database: no sign-in, simulated people, not production">Prototype · demo workspace</Pill>
         <div className="ml-auto flex min-w-0 items-center gap-2">
           <RunChip />
           <DemoControls loaded={!!session.data?.sampleLoaded} programsExist={(session.data?.counts?.programs ?? 0) > 0} />
@@ -138,7 +141,7 @@ function DraftBar() {
 
 function NavItem({ to, label, icon: Icon, active, badge }: { to: string; label: string; icon: any; active?: boolean; badge?: number }) {
   return (
-    <NavLink to={to} end={to === "/"} className={({ isActive }) => cn("flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-text-muted hover:bg-text/5 hover:text-text", (active ?? isActive) && "bg-primary/10 font-medium text-text-link")}>
+    <NavLink to={to} end={to === "/"} className={({ isActive }) => cn("flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-text-muted outline-none hover:bg-text/5 hover:text-text focus-visible:ring-[3px] focus-visible:ring-ring/50",(active ?? isActive) && "bg-primary/10 font-medium text-text-link")}>
       <Icon className="size-4" />{label}
       {badge ? <span className="ml-auto rounded-md bg-[#7c3aed]/12 px-1.5 text-[11px] font-semibold tabular-nums text-[#6d28d9] dark:text-[#c4b5fd]" aria-label={`${badge} waiting for you`}>{badge}</span> : null}
     </NavLink>
@@ -153,9 +156,10 @@ function PersonaSwitch({ actors }: { actors: any[] }) {
     <label className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface px-2 py-1">
       <span className="hidden whitespace-nowrap text-[11px] text-text-muted lg:inline">Acting as</span>
       <select className="min-w-0 max-w-[13rem] truncate bg-transparent text-xs font-medium outline-none xl:max-w-[22rem]" value={id} onChange={(e) => { setActor(e.target.value); const a = actors.find((x) => x.id === e.target.value); qc.push({ tone: "info", text: `Now acting as ${a?.name} (simulated): ${a?.role}` }); }} aria-label="Simulated person">
-        {actors.map((a) => <option key={a.id} value={a.id}>{a.name} · {a.role}</option>)}
+        {/* QA-80: one name per person in the header; the staff role and duties are in the tip of "Simulated". */}
+        {actors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
       </select>
-      <Pill tone="neutral" title={me?.duties?.join(", ")}>Simulated</Pill>
+      <Pill tone="neutral" title={me ? `${me.role}. Duties: ${me.duties.join(", ")}` : undefined}>Simulated</Pill>
     </label>
   );
 }

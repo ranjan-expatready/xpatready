@@ -412,7 +412,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   if (wpJob) sql17(`update drafting_job set started_at = timestamptz '2026-10-21 17:23:20+00' where id='${wpJob}'`);
   await p.goto(`${BASE}/c/${wpId}/forms`); await idle(); // S5 (P-118 Q5): the steps moved from the Overview to each form's row in Forms › Reading and matching
   const steps = await p.locator("main").textContent();
-  step("QA-17: a step run on another day shows its date (\"Oct 21, …\"); one run today says \"today\"", !!wpJob && /Oct 21, \d/.test(steps) && /today \d/.test(steps), (steps.match(/(Oct 21, [^R]{0,12}|today [^R]{0,10})/g) ?? []).slice(0, 3).join(" | "));
+  step("QA-17: a step run on another day shows its date (\"Oct 21, …\"); one run today says \"today\"", !!wpJob && /Oct 21, \d/.test(steps) && /today at \d/.test(steps), (steps.match(/(Oct 21, [^R]{0,12}|today [^R]{0,10})/g) ?? []).slice(0, 3).join(" | "));
 
   // P-63: no "box" on the pages a person reads (form field, field map).
   const boxPages = [];
