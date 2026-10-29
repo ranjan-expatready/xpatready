@@ -7,15 +7,17 @@
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: M2 queue item 5, S7 Reset + Load sample (C10.1, C11.7; P-148, P-108, P-109, P-112)
-current_slice: plan written (screens/W1-reset-and-sample/plan.md); step 1 (Reset empties every workspace table) built and tested; steps 2–6 next
-stage: BUILD
-owner: Builder
-next_action: a fresh runtime session builds plan.md steps 2–6 (wave1.json with the six, the new loader, replay through the one door, Demo dialogs, the suites' fixture)
-blocked_by: step 4 needs the one door (api/src/proposals.ts), on Lead branch lead/2026-10-29-s2a, not yet on main
+current_slice: S7 steps 1–6 built (branch claude/runtime-s7-6d5965); next M2 item (6) the validator (C3.8)
+stage: CHECK
+owner: Lead
+next_action: Lead: check S7 (plan.md "Built"), decide the findings there; then a fresh runtime session builds item (6), the validator (C3.8)
+blocked_by: none
 updated: 2026-10-29
 
-## Handover (to a fresh runtime session, 29 Oct night; this session stops at a safe point, context near its limit)
-* **S7 state (start here):** branch `claude/runtime-preview-9fd91e`, pushed. Plan: `screens/W1-reset-and-sample/plan.md` (steps, tests, two product questions). Step 1 done: `api/src/demo.ts` Reset also empties `official_download` and `form_line_action` (both kept the old workspace's rows); `tests/check_s7_reset.ts` 4/4 checks every table with a workspace id. Next: steps 2–6 in plan order. The agreed words of both dialogs are in `design/walkthrough-s3-s7.html` §S7 v2; the forms per combination in `screens/W1-form-library/forms-for-5-combinations.md` and that page's coverage table. `finder.fillSample` already replays saved finder answers or Sample fixtures (US$0); `sources.ts` on s2a replays a saved field-map run into `insertProposals`. 60 test files call `/demo/load` (36 need the work-permit release): keep the old sample as the suites' fixture (plan step 6).
+## Handover (to a fresh runtime session, 29 Oct late night; S7 built, this session stops near its context limit)
+* **S7 state (start here):** branch `claude/runtime-s7-6d5965`, pushed; S7 steps 1–6 built (plan.md "Built"). It holds `origin/claude/runtime-preview-9fd91e` (eaa1a525), main, and Lead branch `lead/2026-10-29-s2a` (the one door, needed by step 4; three union conflicts resolved). Load sample: `POST /demo/load {"sample":"six"}` (Demo menu); no body = the suites' fixture (older sample). Checks: `check_s7_load.ts` 16/16 (4435), `check_s7_dialogs_browser.cjs` 12/12 (4437), `check_s7_reset.ts` 4/4; `check_studio_browser.cjs` now loads the fixture by API (A0–B3 pass; B4's draft replay timed out once under load, passed the run before). Next: item (6) validator (C3.8), then QA-91 where it fits.
+* **Careful:** `check_studio_browser.cjs` writes to `STUDIO_DB` (default `xr_studio_demo`): always pass `STUDIO_URL` and `STUDIO_DB` of an isolated copy. This session once ran it without `STUDIO_DB` and wrote one test section to the demo database; those three rows (section, waiting change, activity line) were deleted by id.
+* **Worktree setup:** a fresh worktree has no `.tools`: `ln -s /Users/ranjansingh/Desktop/Xpatready/.tools .tools` at the worktree root (git-ignored), then `npm install`, `prisma generate`, `vite build`.
 * **Earlier in this branch (Lead PR #94):** Preview (C4.3, C4.6) and N-2 at 6f105da4, QA-99 at e0680dbd, the check_pqr v2.1 fix at 0e0030b3.
 * **Before that:** branch `claude/runtime-m2q-b52c9a`, folded by the Lead up to **ec552135** into Lead PR #94 (Documents tab, PQR, who fills, A5 test fix).
 * **Done in this session (all passed the Lead check, in PR #94):**
@@ -44,6 +46,7 @@ updated: 2026-10-29
   * On the Questionnaires tab, scope `[data-section]` with `[data-questions]`; the Undo toast lasts 10 s, so wait on the change, not the toast.
 
 ## Log (last 10 lines)
+- 2026-10-29 · Builder (Mac, fresh session): took runtime-preview (eaa1a525), main and Lead s2a (one door); built S7 steps 2–6: samples/wave1.json (six, P-112), Demo.loadSix (Structure services, intake, finder replay, field-map REPLAY batch through insertProposals; no release, no live call), the two dialogs, suites' fixture kept; check_s7_load 16/16, s7_dialogs_browser 12/12, s7_reset 4/4; findings in plan.md; CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): applied Lead message (S7 next, heavy: plan first): plan in screens/W1-reset-and-sample/plan.md (6 steps, 2 product questions); step 1 built: Reset empties official_download and form_line_action too; check_s7_reset 4/4 (every table with a workspace id); Handover written, session stops (context near limit); BUILD, owner Builder (fresh session). AI US$0.
 - 2026-10-29 · Builder (Mac): Lead message (PR #94 CI, check_pqr ZodError): pqrPicksByRules still wrote contract v2's `addReason`, which v2.1 (P-158, main a9fe60c0) drops from the strict item; removed it (engine/sources.ts); the check already held the v2.1 shape; check_pqr 38/38 on 4436; CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): Lead message QA-99 (Critical): synced main a9fe60c0 (09c6c635); Who can be › AI now sends the finder's full trail (people-ai.ts whoCanBeTrail via finder trailOf), its own commit e0680dbd; check_qa99_who_can_be_trail 3/3, qa check_qa_ai_paths 22/22 (step E), check_s5_people_ai 15/15; CHECK, owner Lead. AI US$0.
@@ -53,4 +56,3 @@ updated: 2026-10-29
 - 2026-10-29 · Builder (Mac): Lead answers applied: QA-93 decided (P-174, kept as built); C4.7 one door (P-149), no runtime pick store. Synced main 54f25ae4; built pqrPicksByRules (contract v2 pqr_pick items, origin rules) and acceptPqrPick (tick through the same draft row; AI_PROPOSAL for AI, CODE_MATCH for rules), unrouted until S6 slice 1; order in plan.md "PQR"; check_pqr 37/37, check_pqr_browser 20/20; CHECK, owner Lead; next (3) who fills. AI US$0.
 - 2026-10-29 · Builder (Mac, fresh session): applied Lead note (ninth chat, read from origin/lead/2026-10-29-m3go): PQR plan in plan.md "PQR"; C4.7 question sent to the Lead (where a pending AI pick lives); built C4.2 (Pre-qualification chip on the Questionnaires tab; country PQR view GET /api/combinations/:id/pqr/country, P-132) and proved C4.8; check_pqr 25/25, check_pqr_browser 20/20, slice1 47/47, slice2 35/35, engine 38/38 on 4436; CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): FIX pass 2 handed back at 3839ddf4: QA-92, QA-93 (Remove only where it changes something; finding for the Lead), QA-94, QA-95, race; own checks green (check_qa92_95_browser 23/23 x3, s5_slice3_browser 35/35 x5, w115_slice2_browser 56/56, s5_slice2_browser 61/61, w115_slice2 35/35); full Handover written; session stops (P-173). AI US$0.
-- 2026-10-29 · Builder (Mac): FIX pass 2 built: QA-92 the drawer saves a case fact under 'case'; QA-93 confirm and Undo in place, Remove offered only where it changes something (found: placed questions stay asked whatever sections are chosen; question for the Lead); QA-94 no system names; QA-95 'Write at least 5 characters'; race test waits on the row. check_qa92_95_browser 23/23 locally; full suites next. AI US$0.

@@ -175,8 +175,10 @@ function ThemeToggle() {
 function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExist: boolean }) {
   const [resetOpen, setResetOpen] = React.useState(false);
   const navTo = useNavigate();
-  const [log, setLog] = React.useState<string[] | null>(null);
-  const load = useAction(() => api("/demo/load", { method: "POST" }), { success: (r: any) => `Sample inputs loaded in ${r.seconds.toFixed(1)} s`, onDone: (r: any) => { setLog(r.log); navTo("/"); } });
+  const [loadOpen, setLoadOpen] = React.useState(false);
+  const [loaded6, setLoaded6] = React.useState<any>(null);
+  // S7 (P-148): the menu loads the six agreed combinations; the older sample is the suites' fixture only, never offered here.
+  const load = useAction(() => api("/demo/load", { method: "POST", json: { sample: "six" } }), { success: (r: any) => `Sample starting point loaded in ${r.seconds.toFixed(1)} s`, invalidate: [[]], onDone: (r: any) => { setLoadOpen(false); setLoaded6(r); navTo("/"); } });
   // Demo-only controls in one menu (P-35): scaffolding, never part of the product.
   const item = "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 outline-none data-[highlighted]:bg-text/5 data-[disabled]:cursor-default data-[disabled]:opacity-50";
   return (
@@ -185,15 +187,35 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
         <DropdownMenu.Trigger asChild><Button size="sm" variant="secondary" busy={load.isPending}>Demo <ChevronDown /></Button></DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[260px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
-            <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => load.mutate(undefined)}><Upload className="size-4" />{loaded ? "Sample inputs loaded (reset to load again)" : programsExist ? "Load sample inputs (programs exist: reset first)" : "Load sample inputs"}</DropdownMenu.Item>
+            <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setLoadOpen(true)}><Upload className="size-4" />{loaded ? "Sample loaded (reset to load again)" : programsExist ? "Load sample (the Structure has names: reset first)" : "Load sample…"}</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => setResetOpen(true)}><RotateCcw className="size-4" />Reset demo…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => navTo("/cases")}><FileText className="size-4" />Open the case area (runtime preview)</DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
       <ResetDialog open={resetOpen} onOpenChange={setResetOpen} />
-      <Dialog open={!!log} onOpenChange={() => setLog(null)} title="Sample inputs loaded" description="Every step used the same services as the screens. Nothing was approved, filled or AI-drafted by the loader." footer={<Button onClick={() => setLog(null)}>Continue</Button>}>
-        <ul className="space-y-1 text-sm">{log?.map((l, i) => <li key={i} className={l.startsWith("  ") ? "pl-4 text-text-muted" : "font-medium"}>{l.trim()}</li>)}</ul>
+      <Dialog open={loadOpen} onOpenChange={(o) => { if (!load.isPending) setLoadOpen(o); }} title="Load the sample starting point?" description="Everything after this goes through the real screens and rules. US$0: no live AI call."
+        footer={<><Button variant="ghost" disabled={load.isPending} onClick={() => setLoadOpen(false)}>Cancel</Button><Button busy={load.isPending} onClick={() => load.mutate(undefined)}><Upload /> Load sample</Button></>}>
+        <ul className="list-disc space-y-1 pl-5 text-sm" data-load-brings>
+          <li>Structure: 5 Retail combinations + 1 Corporate <Pill tone="warn">Sample</Pill> (P-112)</li>
+          <li>Their official PDFs, guides and checklists in the Form library (from saved copies)</li>
+          <li>Form finder replayed for each combination: forms picked, waiting for your Confirm <Pill tone="warn">Sample</Pill></li>
+          <li>Saved AI answers for the forms' fields replayed into the review queue, waiting for people to accept; a form without one waits for Draft with AI</li>
+        </ul>
+        <p className="mt-3 text-sm text-text-muted">A file that is still missing shows as "Not found · Upload PDF" on that combination, never hidden. Nothing is released: a second person approves every library item.</p>
+      </Dialog>
+      <Dialog open={!!loaded6} onOpenChange={() => setLoaded6(null)} wide title="Sample starting point loaded" description="The same services as the screens. Nothing was approved, released or filled; no live AI call was made (US$0)." footer={<Button onClick={() => setLoaded6(null)}>Continue</Button>}>
+        {loaded6 ? (
+          <div className="space-y-3 text-sm" data-load-result>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+              {[["Combinations", loaded6.combinations.length], ["Official files on them", loaded6.combinations.reduce((a: number, c: any) => a + c.files, 0)], ["AI proposals waiting for review", loaded6.drafts.proposals_waiting], ["Forms waiting for Draft with AI", loaded6.drafts.waiting_for_draft_with_ai.length]].map(([k, v]) => <div key={k} className="flex justify-between border-b border-border py-1"><span className="text-text-muted">{k}</span><span className="font-medium" data-count={k}>{v}</span></div>)}
+            </div>
+            {loaded6.missing.length ? <Notice tone="warn" title={`Not found · Upload PDF: ${loaded6.missing.length}`}><ul className="space-y-1" data-load-missing>{loaded6.missing.map((m: any) => <li key={`${m.combination}${m.code}`}><b>{m.code}</b> on {m.combination}: {m.why}</li>)}</ul></Notice> : null}
+            <details><summary className="cursor-pointer text-text-muted">What the loader did, step by step</summary>
+              <ul className="mt-2 space-y-1">{loaded6.log.map((l: string, i: number) => <li key={i} className={l.startsWith("  ") ? "pl-4 text-text-muted" : "font-medium"}>{l.trim()}</li>)}</ul>
+            </details>
+          </div>
+        ) : null}
       </Dialog>
     </div>
   );
@@ -207,8 +229,8 @@ function ResetDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: 
   const reset = useAction(() => api("/demo/reset", { method: "POST", json: { confirm } }), { success: "Demo reset", invalidate: [[]], onDone: (r) => { setResult(r); setConfirm(""); nav("/"); } });
   const s = status.data?.scope;
   return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setResult(null); }} wide title={result ? "Demo reset" : "Reset the demo workspace?"} description="Removes everything the disposable demo workspace created. Keeps the engine, official originals, fixtures, AI run records, the spend ledger and review evidence."
-      footer={result ? <Button onClick={() => onOpenChange(false)}>Close</Button> : <><Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button><Button variant="destructive" disabled={confirm !== "RESET"} busy={reset.isPending} onClick={() => reset.mutate(undefined)}><RotateCcw /> Reset demo</Button></>}>
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setResult(null); }} wide title={result ? "Demo reset" : "Reset to blank?"} description="Empties all configuration: structure, combinations, the Form library, fields, sections, document types, conditions, checks, releases and cases. Kept: the official PDF copies (for Load sample), saved AI answers (for replay at US$0), the spend record."
+      footer={result ? <Button onClick={() => onOpenChange(false)}>Close</Button> : <><Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button><Button variant="destructive" disabled={confirm !== "RESET"} busy={reset.isPending} onClick={() => reset.mutate(undefined)}><RotateCcw /> Reset everything</Button></>}>
       {result ? (
         <div className="space-y-3">
           <Notice tone={result.preserved_unchanged ? "ok" : "danger"} title={`${result.removed_rows} rows and ${result.removed_files} working files removed in ${result.seconds.toFixed(1)} s`}>{result.remaining_rows === 0 ? `The new workspace keeps only its ${result.remaining_built_in} built-in person roles.` : `${result.remaining_rows} rows remain in the new workspace, besides its ${result.remaining_built_in} built-in person roles.`} Preserved evidence {result.preserved_unchanged ? "is byte-identical before and after (fingerprints below)" : "CHANGED: investigate before continuing"}.</Notice>

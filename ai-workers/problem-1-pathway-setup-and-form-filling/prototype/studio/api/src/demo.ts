@@ -31,6 +31,10 @@ const RELEASE = join(PROTOTYPE, "p3", "releases", "c1-v3");
 export const SAMPLES = join(STUDIO, "samples", "programs.json");
 type SampleSetup = { key: string; participants: any[]; sources: string[]; import?: "release"; note: string };
 type SampleNode = { key: string; label: string; locations: string[]; link?: string; setup?: SampleSetup; subcategories?: SampleNode[] };
+/** S7 (P-148): the six agreed combinations the Demo menu loads (samples/wave1.json). */
+export const SAMPLES_SIX = join(STUDIO, "samples", "wave1.json");
+type SixSetup = SampleSetup & { page: string | null; missing: { code: string; title: string; why: string }[] };
+const officialFiles = (): string[] => JSON.parse(readFileSync(join(SOLUTION, "official-sources", "ircc", "manifest.json"), "utf8")).items.map((i: { file: string }) => i.file);
 type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" | "CORPORATE"; description: string }[]; programs: { pathway: string; key: string; label: string; description: string; categories: SampleNode[] }[] };
 
 @Injectable()
@@ -45,8 +49,12 @@ export class Demo {
     return { loaded: sample > 0, programsExist: programs > 0, scope: await this.scope(workspaceId), preserved: this.preserved() };
   }
 
-  async load(actor: Actor) {
+  /** body.sample "six" (the Demo menu, S7): the six agreed combinations (P-148). No body: the suites' fixture, today's
+   *  older sample kept as test data only so the other lanes' suites keep running until each moves to the six (plan step 6). */
+  async load(actor: Actor, body?: { sample?: string } | null) {
     need(actor, "author");
+    const six = body?.sample === "six";
+    if (body?.sample !== undefined && !six) fail('Say which sample to load: "six".');
     const workspaceId = await this.ws.id();
     // One load at a time (break round 3): claimed before anything awaits, so a second click while loading is told so,
     // never a half-load and a 500.
@@ -56,10 +64,13 @@ export class Demo {
     const log: string[] = [];
     try {
       if (await this.db.programDef.count({ where: { workspaceId } })) fail("The Structure already has names in this workspace. Reset the demo first to load the sample inputs.", HttpStatus.CONFLICT);
-      return await this.loadSteps(actor, workspaceId, t0, log);
+      return six ? await this.loadSix(actor, workspaceId, t0, log) : await this.loadSteps(actor, workspaceId, t0, log);
     }
     catch (e) {
       if (e instanceof HttpException && e.getStatus() === HttpStatus.CONFLICT && !log.length) throw e;
+      // A problem response (a service's own words in an object) is told in those words, never "Http Exception".
+      const said = e instanceof HttpException ? (e.getResponse() as { detail?: string; message?: string | string[] }) : null;
+      if (said && typeof said === "object" && (said.detail || said.message)) (e as Error).message = String(said.detail ?? [said.message].flat().join("; "));
       await this.audit.log(workspaceId, actor.id, "failed", "sample inputs", null, `Loading the sample inputs stopped: ${(e as Error).message.slice(0, 300)}`, { log });
       fail(`Loading stopped after: ${log.slice(-1)[0] ?? "the start"}. Reason: ${(e as Error).message.slice(0, 240)}. Reset the demo, then load again.`, HttpStatus.INTERNAL_SERVER_ERROR);
     } finally { this.loading = false; }
@@ -120,6 +131,97 @@ export class Demo {
     log.push(`library forms: ${filled.pages} canada.ca pages recorded, what IRCC accepts set for ${filled.accepts} (${filled.acceptsSaved} from saved finder answers, ${filled.accepts - filled.acceptsSaved} from the Sample fixtures), ${filled.guides} guide${filled.guides === 1 ? "" : "s"} added${filled.noGuide.length ? ` (no guide, Sample: ${filled.noGuide.join("; ")})` : ""}${filled.notUsed.length ? `; Sample fixtures not used: ${filled.notUsed.join("; ")}` : ""}${filled.note ? ` (${filled.note})` : ""}`);
     await this.audit.log(workspaceId, actor.id, "loaded", "sample inputs", null, `${actor.name} loaded the sample inputs in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${sample.programs.length} programs, ${nodes} names in the Program structure, ${rows} combinations set up, official files through the upload path, the reviewed work-permit release imported as Release 1, 1 sample profile`, { log });
     return { ok: true, seconds: (Date.now() - t0) / 1000, log };
+  }
+
+  /** S7 Load sample (P-108, P-148, P-120/P-121): the six combinations through the same services as the screens, and
+   *  nothing past the rules. Names through the Structure services; each official file through the normal intake (forms
+   *  read on this computer, no AI); the form finder replayed on each combination's recorded canada.ca page (saved AI
+   *  answers, US$0; a combination with none stops with the reason, for a person); each read form's saved AI field-map
+   *  answer replayed through the one door (insertProposals) as waiting proposals. No live AI call, no release, no
+   *  library row written directly: the library fills only when people accept and a second person approves. */
+  private async loadSix(actor: Actor, workspaceId: string, t0: number, log: string[]) {
+    const sample = JSON.parse(readFileSync(SAMPLES_SIX, "utf8")) as SampleFile;
+    let nodes = 0;
+    const made: { id: string; label: string; page: string | null; missing: { code: string; why: string }[]; files: number; absent: string[] }[] = [];
+    for (const p of sample.pathways) {
+      await this.studio.createNode(actor, { kind: "PATHWAY", label: p.label, key: p.key, clientType: p.type, description: p.description, sourceBasis: "ILLUSTRATIVE" });
+      nodes++;
+      log.push(`pathway "${p.label}" (${p.type === "CORPORATE" ? "Corporate" : "Retail"}, Sample)`);
+    }
+    const official = new Set(officialFiles());
+    const setUp = async (node: any, path: string, c: SixSetup) => {
+      const comp = await this.studio.createCombination(actor, { programKey: node.programNodeKey, label: node.label, key: c.key, participants: c.participants, description: c.note, sourceBasis: "ILLUSTRATIVE", basisNote: c.note });
+      const absent = c.sources.filter((f) => !official.has(f));
+      const refused: { code: string; why: string }[] = [];
+      for (const f of c.sources.filter((x) => official.has(x))) {
+        const r = await this.intake.sample(actor, comp.id, f);
+        if (!r.attachmentId) refused.push({ code: f, why: r.message }); // the intake's own words: shown, never hidden
+        else if (r.attachmentStatus === "RECOGNISED") await this.sources.read(actor, r.attachmentId);
+      }
+      const missing = [...(c.missing ?? []).map((m) => ({ code: m.code, why: m.why })), ...refused];
+      made.push({ id: comp.id, label: path, page: c.page ?? null, missing, files: c.sources.length - absent.length - refused.length, absent });
+      const out = [...absent, ...missing.map((m) => m.code)];
+      log.push(`  ${path}: ${c.sources.length - absent.length - refused.length} official files through the form intake${out.length ? `; Not found · Upload PDF: ${out.join(", ")}` : ""}`);
+    };
+    for (const p of sample.programs) {
+      const prog = await this.studio.createNode(actor, { kind: "PROGRAM", label: p.label, parentKey: p.pathway, key: p.key, description: p.description, sourceBasis: "ILLUSTRATIVE" });
+      nodes++;
+      log.push(`program "${prog.label}" (Sample)`);
+      for (const cat of p.categories) {
+        const node = await this.studio.createNode(actor, { kind: "STREAM", label: cat.label, parentKey: prog.programNodeKey, key: cat.key, sourceBasis: "ILLUSTRATIVE", allowedLocations: cat.locations, linkLabel: cat.link });
+        nodes++;
+        for (const sub of cat.subcategories ?? []) {
+          const leaf = await this.studio.createNode(actor, { kind: "CATEGORY", label: sub.label, parentKey: node.programNodeKey, key: sub.key, sourceBasis: "ILLUSTRATIVE", allowedLocations: sub.locations, linkLabel: sub.link });
+          nodes++;
+          if (sub.setup) await setUp(leaf, `${p.label} › ${cat.label} › ${sub.label}`, sub.setup as SixSetup);
+        }
+        if (cat.setup) await setUp(node, `${p.label} › ${cat.label}`, cat.setup as SixSetup);
+      }
+    }
+    await this.db.programDef.updateMany({ where: { workspaceId }, data: { createdBy: SAMPLE_CREATOR } });
+    // The sample family stays: preview test data, never configuration (plan "Technical choices").
+    const fam = sampleFamilyFacts();
+    const prof = await this.db.sampleProfile.create({ data: { workspaceId, profileKey: "client-a-family", label: "Client A family (existing sample record, made-up)", basis: "expected/p5-case-c1.json: made-up family prepared by the Lead; confirmed facts for previews and the PDF proof; never an AI result, never sent to a model", people: fam.people } });
+    await this.db.sampleFact.createMany({ data: fam.facts.map((f) => ({ workspaceId, profileId: prof.id, personId: f.personId, canonicalFieldKey: f.key, row: f.row, value: f.value as any, status: "confirmed", source: f.source })) });
+    log.push(`sample profile "${prof.label}": ${fam.facts.length} confirmed facts for ${fam.people.length} people`);
+    const filled = await this.finder.fillSample(workspaceId);
+    const guides = await linkSampleGuides(this.db, workspaceId);
+    log.push(`library forms: ${filled.pages} canada.ca pages recorded, what IRCC accepts set for ${filled.accepts}; IRCC guides linked as sources: ${guides}`);
+    // The form finder, replayed (saved AI answers, US$0) from each combination's recorded application page.
+    const finder: { combination: string; status: string; message: string }[] = [];
+    for (const c of made) {
+      if (!c.page) { finder.push({ combination: c.label, status: "NO_PAGE", message: "No canada.ca application page: an employer files it online (Sample)." }); continue; }
+      const plan = await this.finder.plan(c.id, { mode: "replay", pageUrl: c.page });
+      const run = await this.finder.launch(actor, c.id, { mode: "replay", pageUrl: c.page, planSha256: plan.plan_sha256, idempotencyKey: `sample-six-finder-${c.id}` });
+      const done = await this.settled(run.id);
+      finder.push({ combination: c.label, status: done.status, message: done.message ?? "" });
+      log.push(`  form finder (saved AI answers, US$0) on ${c.label}: ${done.status.toLowerCase()}${done.message ? `: ${done.message.slice(0, 200)}` : ""}`);
+    }
+    // Library drafts (P-108, P-138): each read form with a saved AI field-map answer on exactly that file is replayed
+    // through the one door; a form without one waits for "Draft with AI" (a paid click, never here).
+    const plan = await this.ai.plan({ kind: "catalogue", ids: made.map((m) => m.id) }, "REPLAY");
+    const replay = plan.targets.filter((t: any) => t.action === "reuse_saved_output");
+    const waiting = plan.targets.filter((t: any) => t.action !== "reuse_saved_output" && t.action !== "skip").map((t: any) => t.source);
+    let drafts: { status: string; message: string } = { status: "NONE", message: "No saved AI answer matched these forms." };
+    if (replay.length) {
+      const b = await this.ai.launch(actor, { scope: { kind: "catalogue", ids: made.map((m) => m.id) }, mode: "REPLAY", idempotencyKey: `sample-six-drafts-${workspaceId}`, planSha256: plan.plan_sha256 });
+      drafts = await this.settled(b.id!);
+    }
+    const proposals = await this.db.proposalItem.count({ where: { workspaceId, status: "waiting" } });
+    log.push(`library drafts: ${replay.length} saved AI field-map answers replayed through the review queue (US$0): ${proposals} proposals waiting for review; ${[...new Set(waiting)].length} forms wait for "Draft with AI"${waiting.length ? ` (${[...new Set(waiting)].join(", ")})` : ""}`);
+    const missing = made.flatMap((c) => [...c.absent.map((f) => ({ combination: c.label, code: f, why: "No saved copy." })), ...c.missing.map((m) => ({ combination: c.label, code: m.code, why: m.why }))]);
+    await this.audit.log(workspaceId, actor.id, "loaded", "sample inputs", null, `${actor.name} loaded the sample starting point in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${made.length} combinations (5 Retail, 1 Corporate Sample), ${nodes} names in the Structure, official files through the form intake, the form finder replayed (US$0), ${proposals} AI proposals waiting for review; nothing released`, { log });
+    return { ok: true, sample: "six", seconds: (Date.now() - t0) / 1000, combinations: made.map((m) => ({ id: m.id, label: m.label, files: m.files })), finder, drafts: { replayed: replay.length, proposals_waiting: proposals, waiting_for_draft_with_ai: [...new Set(waiting)], status: drafts.status }, missing, cost_usd: 0, log };
+  }
+
+  /** Waits for a background run (form finder or AI batch) to end; a run still going after 3 minutes is reported as such. */
+  private async settled(batchId: string): Promise<{ status: string; message: string }> {
+    for (const until = Date.now() + 180_000; Date.now() < until;) {
+      const b = await this.db.aiBatch.findUnique({ where: { id: batchId }, select: { status: true, message: true } });
+      if (!b || !["QUEUED", "RUNNING"].includes(b.status)) return { status: b?.status ?? "GONE", message: b?.message ?? "" };
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    return { status: "RUNNING", message: "Still running: watch it on the AI work page." };
   }
 
   /** What reset will remove (rows of the demo workspace, working files) and what it keeps. */

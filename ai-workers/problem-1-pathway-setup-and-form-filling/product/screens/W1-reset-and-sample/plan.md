@@ -33,6 +33,29 @@ Order: 1 now (independent). Step 4 needs the one door (`api/src/proposals.ts`), 
 * Saved AI runs exist for IMM 5257, 5257 SCH1, 1295, 5707, 5409, 5475, 5476, 1344 only. IMM 1294, 5710, 0008, 5669,
   5406, 5532 and others would need paid drafts (about US$1–5 each). Built as P-138: they wait for a click.
 
+## Built (29 Oct, fresh runtime session; branch claude/runtime-s7-6d5965)
+* Synced Lead branch `lead/2026-10-29-s2a` for the one door (step 4); its three conflicts were unions (imports, module lists, KIND_NOUN).
+* Step 2: `samples/wave1.json`, the six with P-112's names, pages and files. Step 3–4: `Demo.loadSix` (api/src/demo.ts):
+  names through the Structure services; files through `intake.sample` (forms read on this computer); the form finder in
+  replay mode on each combination's recorded canada.ca page (`FixtureCanada`, US$0); the field-map batch in REPLAY mode
+  (`Ai.plan`/`Ai.launch`, the same path as "Use saved answers"), which lands through `insertProposals`. No release import,
+  no direct library row, no live call. Step 5: the two dialogs in `web/src/App.tsx` with the design's words. Step 6: no
+  sample named = the suites' fixture (the older sample), so the 60 suites run unchanged; the menu sends `{"sample":"six"}`.
+* Tests: `check_s7_load.ts` 16/16, `check_s7_dialogs_browser.cjs` 12/12, `check_s7_reset.ts` 4/4.
+  `check_studio_browser.cjs` loads the fixture through the API (the menu now loads the six) and presses "Reset everything".
+* Found while building (for the Lead):
+  * The intake holds IMM 5669 and IMM 0008 DEP for a person: it cannot read their edition dates (forms lane's intake).
+    Load shows both as "Not found · Upload PDF" with the intake's words.
+  * The form finder has saved answers only for the Visitor visa. On the other four it reads the pages and stops with
+    "AI did not finish" (no live call, R-143). Their forms are attached as sources; finding them needs a paid run or a
+    person.
+  * Combination participants take no Sponsor role (contracts/programs.ts allows principal, spouse_or_partner, child,
+    representative, parent), and Parent "never joins a case". So the spouse sponsorship has no Sponsor and the study
+    permit no Parent. P-171 (4), the two filings of a sponsorship, is where this is settled.
+  * "Not found" on the Forms tab comes only from a finder run. The LMIA's EMP5626 is shown in the Load result and the
+    log, not as a Forms tab row.
+  * `tests/qa/check_qa_m2_journeys.cjs` (qa lane) clicks "Load sample inputs" and "Reset demo": the qa lane updates it.
+
 ## Technical choices
 * The suites' fixture (step 6) keeps today's sample as test data only; the six are what a person loads.
 * The sample family (Client A) stays: it is preview test data, not configuration.

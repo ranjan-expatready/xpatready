@@ -43,7 +43,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const reset = async (label) => {
     await go("/"); await click(btn("Demo")); await click(p.getByRole("menuitem", { name: /Reset demo/ })); // demo controls live in one menu (P-35)
     await p.getByLabel("Type RESET to confirm").fill("RESET");
-    await click(p.getByRole("dialog").getByRole("button", { name: "Reset demo" }));
+    await click(p.getByRole("dialog").getByRole("button", { name: "Reset everything" }));
     await p.getByRole("dialog").getByText(/rows and \d+ working files removed/).waitFor({ timeout: 60000 });
     const txt = await p.getByRole("dialog").innerText();
     step(`${label} (DV-bb-6b pass): reset removes the workspace rows and files, keeps only the 6 built-in person roles, preserved evidence byte-identical`, /byte-identical/.test(txt) && /keeps only its 6 built-in person roles/.test(txt), txt.split("\n").slice(1, 3).join(" "));
@@ -56,9 +56,10 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     step(`${label}: workspace empty after reset (no Pathway, no program, no combination in either tab)`, cat.tree.length === 0 && cat.totals.combinations === 0 && structureEmpty);
   };
   const loadSamples = async (label) => {
-    await go("/"); await click(btn("Demo")); await click(p.getByRole("menuitem", { name: /Load sample inputs/ }));
-    await p.getByText("Sample inputs loaded", { exact: false }).first().waitFor({ timeout: 180000 }); // setup, not a timed budget: slow on a busy machine
-    await click(btn("Continue"));
+    // S7 (P-148): the Demo menu loads the six; this suite runs on the suites' fixture (the older sample with the reviewed
+    // work-permit release), loaded through the API as test data (plan step 6), never from the menu.
+    await p.request.fetch(`${URL}/api/demo/load`, { method: "POST", headers: { "x-actor": "user-A" }, timeout: 180000 });
+    await go("/");
     // Screen 01 catalogue: one tree per pathway; a combination is a last-level row with combinationId.
     const leaves = (ns) => ns.flatMap((n) => (n.kind === "combination" ? [n] : leaves(n.children)));
     const ind = await api("/catalogue?pathway=INDIVIDUAL"), cor = await api("/catalogue?pathway=CORPORATE");
