@@ -169,6 +169,25 @@ export function prequalification(s: Snapshot): { role: string; fact: string; lab
   return factSources(s).filter((f) => f.prequalification && f.source !== "AGENT" && f.placed).map((f) => ({ role: f.role, fact: f.fact, label: f.label, source: f.source, document: f.document?.name ?? null }));
 }
 
+/** P-132: the country PQR is a view, never a record: each combination's released PQR ticks (its newest release), one line
+ *  per fact and person role, with the combinations that ask it. A draft tick is not in it until its combination releases. */
+export type CountryPqrLine = { role: string; roleLabel: string; fact: string; label: string; combinations: { id: string; label: string; release: number }[] };
+export function countryPqr(released: { combinationId: string; version: number; snapshot: Snapshot }[]): { lines: CountryPqrLine[]; combinations: number } {
+  const lines = new Map<string, CountryPqrLine>();
+  let asking = 0;
+  for (const r of [...released].sort((a, b) => a.snapshot.combination.label.localeCompare(b.snapshot.combination.label))) {
+    const ticks = prequalification(r.snapshot);
+    if (ticks.length) asking++;
+    for (const t of ticks) {
+      const k = `${t.role}|${t.fact}`;
+      const line = lines.get(k) ?? { role: t.role, roleLabel: who(r.snapshot, t.role), fact: t.fact, label: factWords(r.snapshot, t.fact), combinations: [] };
+      line.combinations.push({ id: r.combinationId, label: r.snapshot.combination.label, release: r.version });
+      lines.set(k, line);
+    }
+  }
+  return { lines: [...lines.values()].sort((a, b) => b.combinations.length - a.combinations.length || a.roleLabel.localeCompare(b.roleLabel) || a.label.localeCompare(b.label)), combinations: asking };
+}
+
 // ------------------------------------------------------------------ W1-15 slice 3: each person's checklist (board v2 frame 3)
 
 export type ChecklistFact = { fact: string; label: string; about: About; aboutRole: string | null; takenOut: boolean };

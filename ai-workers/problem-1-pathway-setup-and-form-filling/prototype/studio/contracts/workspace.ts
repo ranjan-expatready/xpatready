@@ -199,6 +199,14 @@ export type FactSourcesView = {
   problems: { level: "error" | "warning"; where: string; item: string; label?: string; role?: string; message: string }[];
   basis: string;
 };
+/** P-132: the country PQR, a view of the newest releases (GET /api/combinations/:id/pqr/country). */
+export type CountryPqrView = {
+  lines: { role: string; roleLabel: string; fact: string; label: string; combinations: { id: string; label: string; release: number }[] }[];
+  /** Released combinations that ask at least one PQR question, and all released ones. */
+  combinations: number; released: number;
+  thisCombination: { draftAdds: { role: string; fact: string; label: string }[]; draftRemoves: { role: string; fact: string; label: string }[] };
+  basis: string;
+};
 export type BulkSourceResult = { saved: number; batchId: string | null; what: string; refused: { role: string; fact: string; label: string; message: string }[] };
 
 // ------------------------------------------------------------------ W1-15 slice 3: each person's checklist (board v2 frame 3)

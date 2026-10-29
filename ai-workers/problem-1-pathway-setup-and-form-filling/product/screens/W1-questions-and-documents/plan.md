@@ -67,3 +67,16 @@ Fit check against today's data: a checklist line is a `document_requirement` (ty
 * Undo of an own-draft removal: a small route that takes back the author's own Removed-in-draft line (403 "Only the person who made this draft can undo it."; 409 "Released since").
 * Not in slice 3: library document type edits (S6), AI proposals (slice 5), Preview (slice 4), the P-143 channel files.
 * Tests: `check_w115_slice3.ts` (API: checklist per person, supplies and about whom, taken out, order, alternatives, remove and its Undo, locks; a pass and a fail each) and `check_w115_slice3_browser.cjs` (1440 and 1024, axe).
+
+## PQR (M2 queue item 2; C4.2, C4.7, C4.8; P-76, P-130, P-132): runtime lane, 29 Oct, fresh session
+**Already there (slices 1–2):** the per-combination PQR tick is a `fact_source` row (one PQR record per combination, P-132). Save, bulk change and release refuse a tick on a Case officer fact or on a fact no question asks (PQR ⊂ SQR ∪ checklist documents, Lead Q1). Each tick is a Review line with `needs_sme` and goes out in the combination's one release (P-76). The row shows "Ask"; the strip counts the ticks.
+
+**What this pass adds (US$0, no AI call):**
+| Element | Record | API | Rule | Test (pass / fail) |
+|---|---|---|---|---|
+| C4.2 the combination's PQR as a set: a "Pre-qualification n" chip on the Questionnaires tab shows only that person's ticked questions | `fact_source` (no change) | `GET …/fact-sources` (exists) | PQR ⊂ SQR ∪ documents (exists) | the chip lists exactly the ticked rows / an unticked row is not listed |
+| C4.2 country PQR (P-132): assembled from released combinations, never stored | `config_release.snapshot.fact_sources` | `GET /api/pqr/country` | newest release per combination; a draft tick is not in it until released | a released tick appears with the combinations that ask it / a draft-only tick does not |
+| C4.8 one review and release | none | release (exists) | a tick or untick is a Review line in words with `needs_sme`; there is no PQR-only approval route | Review names the tick; the released snapshot carries it / an untick after release shows as removed |
+| C4.7 AI picks with a reason, accept or remove each | **question below** | intake for W1-10 step 7 | identity = fact + role (W1-10 plan (2)); the same refusals as a tick | — |
+
+**Question for the Lead (C4.7, before it is built):** the producer is W1-10 step 7 (forms lane, `W1-ai-drafting/plan.md` slice 4), and the queue-item contract has every producer write into S6's queue (screens lane), which no branch has built. Board v2 shows the pick on the Questionnaires row ("AI proposal · not yet accepted", Accept / Reject, reason and quote in the drawer). Where does a pending pick live until S6's queue exists? *Recommend:* runtime adds a small per-combination pick record (fact + role, reason, quote, producer, Pending / Accepted / Removed) with an intake route taking the agreed `ProposalPayload` `pqr_pick` + `ProposalSource`. Accept writes the tick through the same save (origin AI_PROPOSAL, reason kept), so it joins the one release; Remove keeps who and when; a pending pick changes nothing. S6's queue later lists these rows instead of copying them. Until W1-10 step 7 runs, a rules producer proposes picks (the facts a rule of the combination reads, "Proposed by Rules"), never labelled AI.

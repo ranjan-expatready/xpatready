@@ -41,7 +41,7 @@ export function useFactSources(id: string) {
 }
 export function useRefreshSources(id: string) {
   const qc = useQueryClient();
-  return () => { for (const k of [["fact-sources", id], ["combination", id], ["combination-summary", id], ["config", id], ["draft"], ["preview"]]) void qc.invalidateQueries({ queryKey: k }); };
+  return () => { for (const k of [["fact-sources", id], ["pqr-country", id], ["combination", id], ["combination-summary", id], ["config", id], ["draft"], ["preview"]]) void qc.invalidateQueries({ queryKey: k }); };
 }
 
 /** The strip (C4.10, P-130): the full form = from documents + client answers + case officer enters, with pre-qualification
@@ -69,7 +69,7 @@ export function SourceStrip({ v }: { v: FactSourcesView | undefined }) {
   );
 }
 
-export type Filter = "all" | AnswerSource | "needs";
+export type Filter = "all" | AnswerSource | "needs" | "pqr";
 /** Source chips and "Needs you" for one person role (EXPERIENCE §0). */
 export function SourceChips({ rows, needs, value, onChange }: { rows: FactSourceRow[]; needs: number; value: Filter; onChange: (f: Filter) => void }) {
   const n = (s: AnswerSource) => rows.filter((r) => r.source === s).length;
@@ -79,7 +79,7 @@ export function SourceChips({ rows, needs, value, onChange }: { rows: FactSource
   );
   return (
     <div role="group" aria-label="Where it comes from" className="flex flex-wrap gap-1.5">
-      {chip("all", "All sources")}{chip("DOCUMENT", `Document ${n("DOCUMENT")}`)}{chip("CLIENT", `Client ${n("CLIENT")}`)}{chip("AGENT", `Case officer ${n("AGENT")}`)}{chip("needs", `Needs you · ${needs}`)}
+      {chip("all", "All sources")}{chip("DOCUMENT", `Document ${n("DOCUMENT")}`)}{chip("CLIENT", `Client ${n("CLIENT")}`)}{chip("AGENT", `Case officer ${n("AGENT")}`)}{chip("pqr", `Pre-qualification ${rows.filter((r) => r.prequalification).length}`)}{chip("needs", `Needs you · ${needs}`)}
     </div>
   );
 }

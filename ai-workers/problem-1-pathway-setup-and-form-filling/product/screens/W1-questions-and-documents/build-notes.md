@@ -119,3 +119,11 @@ Agreed plan: `plan.md`, challenge and Lead response: `challenge.md`. No screen i
 * **QA-95:** a reason that is written but shorter than 5 characters now says "Write at least 5 characters: why the case officer enters it." (`CASE_OFFICER_REASON_SHORT`, `engine/sources.ts`). An empty reason keeps the "write why" words. The box's `aria-describedby` points at its message.
 * **Undo-bar race (forms audit):** `check_s5_slice3_browser.cjs` now waits on the row leaving, the Undo bar and the Removed list, not on the toast. The app's order is in `forms.tsx`, which is the forms lane's file, so it was left alone.
 * **Tests:** `check_qa92_95_browser.cjs` (new): a pass and a fail per finding. `check_w115_slice2_browser.cjs` and `check_s5_slice2_browser.cjs` now assert that no system name is on screen and that the library link carries it.
+
+## PQR, part 1: C4.2 and C4.8 (29 Oct; M2 queue item 2; plan.md "PQR")
+* **Already built before this pass:** the per-combination tick (`fact_source.prequalification`, slice 1) with its save, bulk and release refusals, and its line on Review with `needs_sme` (P-76).
+* **C4.2, the PQR as a set:** a "Pre-qualification n" chip beside the source chips on the Questionnaires tab shows only that person's ticked questions. Above them, a panel says how a PQR answer is asked and confirmed (P-77, Lead Q1). There is no separate PQR tab: board v2 (P-147) puts the tick on the row and the PQR set in Preview (Preview is queue item 4), so the set is a filter of the same rows.
+* **C4.2, country PQR (P-132):** `engine/sources.ts countryPqr` builds one line per fact and person from the newest release of every combination in the country pack that is not retired. It is never stored. `GET /api/combinations/:id/pqr/country` adds this combination's draft adds and removes, named as changing at its next release. A retired combination is left out, because prospects are not asked for it.
+* **C4.8:** no new code. `check_pqr.ts` proves a tick is one named change, waits for the immigration expert's sign-off, goes out in the one release with everything else, and has no PQR-only route.
+* **C4.7 (AI picks): not built.** Where a pending pick lives is a question for the Lead (plan.md "PQR").
+* **Tests:** `check_pqr.ts` (API and engine, 25/25) and `check_pqr_browser.cjs` (20/20, axe and 1024 px; screenshots in `screenshots/pqr/`).

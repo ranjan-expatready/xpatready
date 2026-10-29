@@ -5,8 +5,8 @@
 import { randomUUID } from "node:crypto";
 import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
 import { z } from "zod";
-import { buildSnapshot } from "../../engine/snapshot.ts";
-import { agentRefusal, CASE_OFFICER_NEEDS_REASON, factSourceProblems, factSources, prequalification, SOURCES, type FactSourceView } from "../../engine/sources.ts";
+import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
+import { agentRefusal, CASE_OFFICER_NEEDS_REASON, countryPqr, factSourceProblems, factSources, prequalification, SOURCES, type FactSourceView } from "../../engine/sources.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
 
@@ -108,6 +108,20 @@ export class FactSources {
     return (await this.list(id)).facts.find((x) => x.role === role && x.fact === fact) ?? null;
   }
 
+  /** P-132: the country PQR, assembled from the newest release of every combination in this combination's country pack
+   *  that is not retired; this combination's draft ticks are counted apart, as "goes in at its next release". */
+  async country(id: string) {
+    const c = await this.combination(id, false);
+    const rows = await this.db.configRelease.findMany({ where: { workspaceId: c.workspaceId, combination: { retiredAt: null } }, select: { combinationId: true, version: true, snapshot: true }, orderBy: { version: "desc" } });
+    const newest = new Map<string, (typeof rows)[number]>(); for (const r of rows) if (!newest.has(r.combinationId)) newest.set(r.combinationId, r);
+    const view = countryPqr([...newest.values()].map((r) => ({ combinationId: r.combinationId, version: r.version, snapshot: r.snapshot as unknown as Snapshot })));
+    const { snapshot } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
+    const asked = new Set(view.lines.filter((l) => l.combinations.some((x) => x.id === id)).map((l) => `${l.role}|${l.fact}`));
+    const draft = prequalification(snapshot).filter((t) => !asked.has(`${t.role}|${t.fact}`)).map((t) => ({ role: t.role, fact: t.fact, label: t.label }));
+    const gone = view.lines.filter((l) => l.combinations.some((x) => x.id === id) && !prequalification(snapshot).some((t) => t.role === l.role && t.fact === l.fact)).map((l) => ({ role: l.role, fact: l.fact, label: l.label }));
+    return { ...view, released: newest.size, thisCombination: { draftAdds: draft, draftRemoves: gone }, basis: "Sample until the immigration expert confirms" };
+  }
+
   async bulk(actor: Actor, id: string, body: unknown) {
     need(actor, "author");
     return bulkSet(this.db, this.audit, actor, await this.combination(id), body);
@@ -207,6 +221,7 @@ function refusals(f: FactSourceView, source: FactSourceView["source"] | null, do
 export class FactSourcesController {
   constructor(@Inject(FactSources) private readonly f: FactSources) {}
   @Get("combinations/:id/fact-sources") list(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.f.list(id); }
+  @Get("combinations/:id/pqr/country") country(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.f.country(id); }
   @Put("combinations/:id/fact-sources/:role/:fact") set(@Headers("x-actor") a: H, @Param("id") id: string, @Param("role") role: string, @Param("fact") fact: string, @Body() b: unknown) { return this.f.set(actorOf(a), id, role, fact, b); }
   @Post("combinations/:id/fact-sources/bulk") @HttpCode(200) bulk(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.bulk(actorOf(a), id, b); }
   @Post("combinations/:id/fact-sources/bulk/undo") @HttpCode(200) bulkUndo(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.bulkUndo(actorOf(a), id, b); }
