@@ -38,6 +38,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== L8, L2, L3: Who can be, filled from the guide while editing
   await go(sv, "questionnaires");
   const who = p.locator("[data-who-can-be]");
+  // Board v2 (P-147 §3): the card is folded to one line; "Show and edit" opens the built table.
+  await who.getByRole("button", { name: "Show and edit" }).click();
   await who.getByRole("button", { name: "Edit" }).click();
   const before = await who.locator("[data-person]").count();
   const offered = await who.getByLabel("Person to add").locator("option").allTextContents();

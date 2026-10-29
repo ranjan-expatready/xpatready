@@ -108,6 +108,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== Who can be, filled from the guide (P-121; Lead 28 Oct)
   await go(vv, "questionnaires");
   const who = p.locator("[data-who-can-be]");
+  // Board v2 (P-147 §3): the card is folded to one line; "Show and edit" opens the built table.
+  await who.getByRole("button", { name: "Show and edit" }).click();
   await who.getByRole("button", { name: "Fill from the guide" }).click();
   const fill = p.getByRole("dialog"); await fill.locator("[data-people-cost]").waitFor({ timeout: 30000 }).catch(() => {});
   step("C11.12 plan: Fill from the guide names the guide and says the cost first (rules only: US$0)", /Guide 5256/.test(await fill.innerText()) && /Cost: US\$0/.test(await fill.locator("[data-people-cost]").innerText().catch(() => "")));
