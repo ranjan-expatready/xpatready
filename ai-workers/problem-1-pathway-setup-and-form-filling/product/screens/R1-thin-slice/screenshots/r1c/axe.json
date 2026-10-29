@@ -40,19 +40,19 @@
   "violations": []
  },
  {
-  "state": "11-agent-view-confirmed",
+  "state": "11-case-view-confirmed",
   "violations": []
  },
  {
-  "state": "12-agent-section-check",
+  "state": "12-case-view-section-check",
   "violations": []
  },
  {
-  "state": "13-agent-edit-dialog",
+  "state": "13-case-view-edit-dialog",
   "violations": []
  },
  {
-  "state": "14-agent-conflict",
+  "state": "14-case-view-conflict",
   "violations": []
  },
  {
@@ -60,7 +60,7 @@
   "violations": []
  },
  {
-  "state": "16-agent-group-none-apply",
+  "state": "16-case-view-group-none-apply",
   "violations": []
  },
  {

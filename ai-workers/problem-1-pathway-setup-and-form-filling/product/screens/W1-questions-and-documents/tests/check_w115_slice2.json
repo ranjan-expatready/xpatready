@@ -1,0 +1,340 @@
+{
+  "at": "2026-10-29T04:48:35.160Z",
+  "port": 18436,
+  "pass": 35,
+  "fail": 0,
+  "log": [
+    {
+      "name": "slice 2 row status pass: with nothing changed, every row's change is null (the rules)",
+      "ok": true,
+      "detail": 245
+    },
+    {
+      "name": "slice 2 Needs you pass: the list carries the release checks",
+      "ok": true,
+      "detail": "object"
+    },
+    {
+      "name": "fixture: three placed document facts, a declaration and an agent fact for the principal",
+      "ok": true,
+      "detail": {
+        "docs": 3,
+        "decl": true,
+        "agent": "organisation.address"
+      }
+    },
+    {
+      "name": "P-155(3) rule pass: the case officer's own fact needs no reason (offered by default)",
+      "ok": true,
+      "detail": "organisation.address"
+    },
+    {
+      "name": "P-155(3) rule fail: a fact read from a document needs a written reason (the one message)",
+      "ok": true,
+      "detail": "organisation.name"
+    },
+    {
+      "name": "P-155(3) rule pass: with a written reason it is allowed",
+      "ok": true
+    },
+    {
+      "name": "P-155(3) rule: a declaration is never the case officer's (its own refusal speaks for it)",
+      "ok": true
+    },
+    {
+      "name": "P-154 words pass: the refusal reads \"case officer\" in plain English, never \"agent\"",
+      "ok": true
+    },
+    {
+      "name": "bulk roles fail: a case officer cannot change the ticked rows (403)",
+      "ok": true,
+      "detail": 403
+    },
+    {
+      "name": "bulk shape fail: no ticked rows is 400, in words",
+      "ok": true,
+      "detail": "{\"type\":\"https://expatready.local/problems/validation\",\"title\":\"Some details need fixing\",\"status\":400,\"detail\":\"Tick the rows to change.\",\"message\":\"Tick the r"
+    },
+    {
+      "name": "bulk shape fail: nothing chosen to change is 400, in words",
+      "ok": true,
+      "detail": "{\"type\":\"https://expatready.local/problems/validation\",\"title\":\"Some details need fixing\",\"status\":400,\"detail\":\"Choose what to change on the ticked rows.\",\"mes"
+    },
+    {
+      "name": "P-155(3) fail (bulk): the case officer on document facts is refused per row (a bulk change carries no reason), and nothing is saved",
+      "ok": true,
+      "detail": {
+        "saved": 0,
+        "batchId": null,
+        "what": "where the answer comes from set to the case officer",
+        "refused": [
+          {
+            "role": "principal",
+            "fact": "organisation.name",
+            "label": "Legal or operating name of an organisation (here the prospective employer)",
+            "message": "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot."
+          },
+          {
+            "role": "principal",
+            "fact": "person.citizenship",
+            "label": "Country of citizenship",
+            "message": "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot."
+          },
+          {
+            "role": "principal",
+            "fact": "person.date_of_birth",
+            "label": "Date of birth",
+            "message": "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot."
+          },
+          {
+            "role": "principal",
+            "fact": "person.criminal_history",
+            "label": "Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence",
+            "message": "\"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it."
+          }
+        ]
+      }
+    },
+    {
+      "name": "lock fail (declaration): the declaration's refusal says only the client gives it",
+      "ok": true,
+      "detail": [
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
+        "\"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it."
+      ]
+    },
+    {
+      "name": "words fail-guard: no refusal carries a decision code or the word agent (P-154)",
+      "ok": true,
+      "detail": [
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
+        "\"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it."
+      ]
+    },
+    {
+      "name": "P-155(3) fail: the case officer on a document fact without a reason is refused (422, on the reason field, in words)",
+      "ok": true,
+      "detail": "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release."
+    },
+    {
+      "name": "P-155(3) pass: with a written reason it is saved; the row carries the reason",
+      "ok": true,
+      "detail": {
+        "role": "principal",
+        "fact": "organisation.name",
+        "label": "Legal or operating name of an organisation (here the prospective employer)",
+        "forms": [
+          "IMM 1295",
+          "IMM 5475",
+          "IMM 5476"
+        ],
+        "source": "AGENT",
+        "document": null,
+        "also": [
+          {
+            "key": "copy_of_lmia_and_copy_of_employment_contract_from_prospectiv",
+            "name": "Copy of LMIA and copy of employment contract from prospective employer",
+            "base": false
+          },
+          {
+            "key": "employment_contract_lmia_exempt_job",
+            "name": "Employment contract (LMIA-exempt job)",
+            "base": false
+          },
+          {
+            "key": "job_offer_letter",
+            "name": "Job offer letter",
+            "base": false
+          }
+        ],
+        "proposedBy": "Person",
+        "ruleSource": "DOCUMENT",
+        "ruleDocument": {
+          "key": "copy_of_lmia_and_copy_of_employment_contract_from_prospectiv",
+          "name": "Copy of LMIA and copy of employment contract from prospective employer",
+          "base": false
+        },
+        "prequalification": false,
+        "reason": null,
+        "sourceReason": "Sample: the officer copies it from the LMIA file.",
+        "clientOnly": false,
+        "placed": true,
+        "agentOffered": false,
+        "version": 1,
+        "change": {
+          "status": "DRAFT",
+          "by": "user-A",
+          "at": "2026-10-29T04:48:33.700Z",
+          "batchId": null
+        }
+      }
+    },
+    {
+      "name": "P-155(3) pass: Review names it with the reason, for the second person at release",
+      "ok": true,
+      "detail": [
+        "Legal or operating name of an organisation (here the prospective employer) (Principal applicant): comes from the case officer (why: Sample: the officer copies it from the LMIA file.)"
+      ]
+    },
+    {
+      "name": "P-155(3) fail-guard: with its reason it is no release check",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "P-155(3) fail: a case officer choice without its reason (an older save) is a release check, in words",
+      "ok": true,
+      "detail": [
+        "Principal applicant: \"Legal or operating name of an organisation (here the prospective employer)\" comes from the case officer without a written reason. Write why in its details, or choose the client or a document."
+      ]
+    },
+    {
+      "name": "lock fail (C4.2 M4): pre-qualification on an agent fact is refused in the bulk change too",
+      "ok": true,
+      "detail": [
+        {
+          "role": "principal",
+          "fact": "organisation.address",
+          "label": "Complete address of an organisation",
+          "message": "\"Complete address of an organisation\" comes from the case officer: a prospect is asked only what they can answer."
+        }
+      ]
+    },
+    {
+      "name": "bulk pass: three document facts set to the client in one change, one batch id; the declaration is already the client's (no change, not refused)",
+      "ok": true,
+      "detail": {
+        "saved": 3,
+        "batchId": "b4919de1-9359-4dcd-986d-c1b9bf534dac",
+        "what": "where the answer comes from set to the client",
+        "refused": []
+      }
+    },
+    {
+      "name": "bulk pass: the rows' status says Changed here (a draft by user-A)",
+      "ok": true,
+      "detail": [
+        {
+          "status": "DRAFT",
+          "by": "user-A",
+          "at": "2026-10-29T04:48:34.175Z",
+          "batchId": "b4919de1-9359-4dcd-986d-c1b9bf534dac"
+        },
+        {
+          "status": "DRAFT",
+          "by": "user-A",
+          "at": "2026-10-29T04:48:34.176Z",
+          "batchId": "b4919de1-9359-4dcd-986d-c1b9bf534dac"
+        },
+        {
+          "status": "DRAFT",
+          "by": "user-A",
+          "at": "2026-10-29T04:48:34.177Z",
+          "batchId": "b4919de1-9359-4dcd-986d-c1b9bf534dac"
+        }
+      ]
+    },
+    {
+      "name": "bulk: one History line for the whole change",
+      "ok": true
+    },
+    {
+      "name": "bulk stale fail: rows sent from an old version are refused (changed by someone else), nothing saved",
+      "ok": true,
+      "detail": [
+        "\"Legal or operating name of an organisation (here the prospective employer)\": changed by someone else after you looked. Reload, then choose again.",
+        "\"Country of citizenship\": changed by someone else after you looked. Reload, then choose again.",
+        "\"Date of birth\": changed by someone else after you looked. Reload, then choose again."
+      ]
+    },
+    {
+      "name": "Undo fail: someone else cannot undo the bulk change (403, in words)",
+      "ok": true,
+      "detail": "403 Only the person who made this draft can undo it."
+    },
+    {
+      "name": "Undo shape fail: an unknown batch id is 400 in words",
+      "ok": true,
+      "detail": 400
+    },
+    {
+      "name": "Undo pass: one Undo takes the three rows back to the rules (the document)",
+      "ok": true,
+      "detail": {
+        "undone": 3,
+        "kept": []
+      }
+    },
+    {
+      "name": "Undo fail: the same change is not undone twice (409 Nothing to undo)",
+      "ok": true,
+      "detail": "409 Nothing to undo"
+    },
+    {
+      "name": "Undo pass (mixed): a row changed again since keeps that later change; the other row is undone",
+      "ok": true,
+      "detail": {
+        "body": {
+          "undone": 1,
+          "kept": []
+        },
+        "d0": {
+          "status": "DRAFT",
+          "by": "user-A",
+          "at": "2026-10-29T04:48:34.479Z",
+          "batchId": null
+        }
+      }
+    },
+    {
+      "name": "Needs you pass: the release check names its person role and fact, so it lands on its row",
+      "ok": true,
+      "detail": [
+        {
+          "level": "error",
+          "where": "Questions",
+          "item": "person.criminal_history",
+          "label": "Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence",
+          "role": "principal",
+          "message": "Principal applicant: \"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it, never the case officer. Set Comes from to Client."
+        }
+      ]
+    },
+    {
+      "name": "Needs you fail-guard: no release check is about another role's row",
+      "ok": true,
+      "detail": [
+        "principal"
+      ]
+    },
+    {
+      "name": "release pass: the bulk change is released (Release 2)",
+      "ok": true,
+      "detail": 2
+    },
+    {
+      "name": "row status pass: after the release the row says released (PUBLISHED)",
+      "ok": true,
+      "detail": {
+        "status": "PUBLISHED",
+        "by": "user-A",
+        "at": "2026-10-29T04:48:35.015Z",
+        "batchId": "9aee79e2-816e-45ee-8c69-9ea1048c6258"
+      }
+    },
+    {
+      "name": "Undo fail: a released bulk change is not undone (409 Released since)",
+      "ok": true,
+      "detail": "409 That bulk change was released or changed again meanwhile: a release is never undone. Change it in a new draft."
+    },
+    {
+      "name": "bulk fail: a retired combination's sources are not changed (409, restore it first)",
+      "ok": true,
+      "detail": "\"With an LMIA\" is retired: where its answers come from is not changed. Restore it on Structure first; open cases keep their release."
+    }
+  ]
+}
