@@ -22,6 +22,7 @@ import { BlockedLine, ImpactPanel, RowAction, useUndoToast, WherePanel } from "@
 import { ACTION_LABEL, RETURNED_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../../../contracts/lifecycle";
 import { LevelMark, pathwayAccent } from "@/components/levels";
 import { cn } from "@/lib/utils";
+import { StartSetupButton } from "@/components/start-setup";
 
 type ListResp = { pathwayType: PathwayType; typeLabel: string; nodes: StructureNode[]; empty: boolean; meaningCheck: { on: boolean; why: string } };
 type Close = { key: string; label: string; trail: string[]; why: string };
@@ -450,14 +451,6 @@ function useFitToScreen() {
   return setEl;
 }
 
-/** S2 (founder, 27 Oct): a Not started combination gets a way to begin, New combination with its trail filled (S3 replaces it). */
-function StartSetup({ leafKey, type, label }: { leafKey: string; type: string; label: string }) {
-  return (
-    <Tip tip="Opens New combination with this trail filled in; setup starts with its forms.">
-      <Link className="font-semibold text-text-link underline underline-offset-2" data-start-setup to={`/new?${type === "CORPORATE" ? "pw=CORPORATE&" : ""}leaf=${encodeURIComponent(leafKey)}`} aria-label={`Start setup of ${label}`}>Start setup</Link>
-    </Tip>
-  );
-}
 
 function Mark({ text, words }: { text: string; words: string }) {
   if (!words) return <>{text}</>;
@@ -530,7 +523,7 @@ function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClo
           <dt className="text-text-muted">Trail</dt>
           <dd data-trail>{[TYPES.find((t) => t.value === type)!.label, ...(u?.trail ?? [node.label])].map((t, k, a) => <span key={k}>{k ? <span className="text-text-muted"> › </span> : null}{k === a.length - 1 ? <b>{t}</b> : t}</span>)}</dd>
           <dt className="text-text-muted">Used by</dt>
-          <dd data-used-by>{leaf ? (node.combination?.id ? <>This combination: {node.combination.statusText} <Link className="font-semibold text-text-link underline underline-offset-2" to={`/c/${node.combination.id}`}>Open</Link></> : <>This combination: Not started (no setup yet){!node.retired && canAuthor ? <> <StartSetup leafKey={node.key} type={type} label={node.label} /></> : null}</>) : (
+          <dd data-used-by>{leaf ? (node.combination?.id ? <>This combination: {node.combination.statusText} <Link className="font-semibold text-text-link underline underline-offset-2" to={`/c/${node.combination.id}`}>Open</Link></> : <>This combination: Not started (no setup yet){!node.retired && canAuthor ? <> <StartSetupButton nodeKey={node.key} label={node.label} why={node.combination?.startWhy} variant="outline" /></> : null}</>) : (
             <>
               <p>{node.combinations} combination{node.combinations === 1 ? "" : "s"}{node.live ? `, ${node.live} Live` : ""}</p>
               {/* S1-finish: each combination below it by name, its state and Open (Not started ones have no setup to open). */}
@@ -541,7 +534,7 @@ function DetailPanel({ node, num, type, siblings, leaf, leaves, canAuthor, onClo
                     <span className="min-w-0 break-words">{path.join(" › ")}</span>
                     <span className="text-xs text-text-muted">{l.retired || c?.retired ? "Retired" : c?.statusText ?? "Not started"}</span>
                     {c?.id ? <Link className="font-semibold text-text-link underline underline-offset-2" to={`/c/${c.id}`} aria-label={`Open ${l.label}`}>Open</Link>
-                      : !l.retired && canAuthor ? <StartSetup leafKey={l.key} type={type} label={l.label} /> : null}
+                      : !l.retired && canAuthor ? <StartSetupButton nodeKey={l.key} label={l.label} why={c?.startWhy} variant="outline" /> : null}
                   </li>
                 );
               })}</ul> : null}

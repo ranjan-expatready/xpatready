@@ -30,6 +30,7 @@ import { mentionsOf, officialUrl, pageLinks, pageText, parseFormPage, parseForms
 import { FinderBody, FinderLaunchBody, normaliseCode, type FinderMode } from "../../contracts/form-library.ts";
 import { canadaSource, CanadaError, type CanadaSource } from "./canada.ts";
 import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
+import { aboutUsd, lastFinishedUsd } from "./finder-cost.ts";
 import { Sources } from "./sources.ts";
 import { channelsFrom, recordedCopy, sampleFixtures } from "./filing.ts";
 import { WHO } from "./studio.ts";
@@ -167,8 +168,10 @@ export class Finder implements OnModuleInit {
     const rounds = b.mode === "live" ? [...(remembered || b.pageUrl ? [] : ["find_guide", "find_guide"] as const), "find_forms", "find_forms"] as AiKind[] : [];
     const worst = round2(rounds.reduce((a, k) => a + worstRoundUsd(AI_SETTINGS[k], k === "find_guide" ? 120_000 : 160_000), 0));
     const expected = b.mode === "live" ? this.expectedUsd(c.trail) : 0;
+    // S3 early look (4): the one "about" (finder-cost.ts), the same on the Find button, this plan and the run card.
+    const about = b.mode === "live" ? aboutUsd(expected, await lastFinishedUsd(this.db, await this.ws.id(), FINDER_OPERATION, "LIVE"), true) : 0;
     const plan = { operation: FINDER_OPERATION, operation_label: "Find this combination's forms", combination: { id: c.id, label: c.label, trail: c.trail }, mode: b.mode, page_url: b.pageUrl ?? remembered?.package ?? null, only: b.only ?? null, steps,
-      totals: { worst_usd: worst, expected_usd: expected, ai_rounds: rounds.length }, ledger,
+      totals: { worst_usd: worst, expected_usd: expected, about_usd: about, ai_rounds: rounds.length }, ledger,
       note: b.mode === "rules" ? "Rules only: every form number printed on the pages is listed for you to attach by hand; nothing is attached, because AI did not decide which apply." : b.mode === "replay" ? "Saved AI answers for these exact pages are replayed: US$0. A page with no saved answer stops with the reason." : `Live AI: two rounds per question, at most US$${worst.toFixed(2)} (usually much less). Downloads from canada.ca cost nothing.`,
       targets: [] as unknown[] };
     const plan_sha256 = sha(JSON.stringify({ c: c.id, mode: b.mode, page: plan.page_url, only: plan.only, steps: steps.map((s) => s.kind + s.uses_ai), worst }));
@@ -291,7 +294,7 @@ export class Finder implements OnModuleInit {
     if (!index || index.status !== "COMPLETED") {
       const c = index?.value?.candidates ?? [];
       if (index?.status === "NEEDS_PERSON" || index?.status === "BLOCKED") result.guide_choice = { candidates: c, why: "Choose the application page: the finder could not pick one for sure." };
-      return this.finish(batchId, index?.status === "NEEDS_PERSON" || index?.status === "BLOCKED" ? "NEEDS_PERSON" : "FAILED", index?.status === "NEEDS_PERSON" ? "No application page could be chosen. Upload its forms' PDFs on the combination's Sources page; choosing the page comes with its Forms tab." : "The finder could not find the application page.", result);
+      return this.finish(batchId, index?.status === "NEEDS_PERSON" || index?.status === "BLOCKED" ? "NEEDS_PERSON" : "FAILED", index?.status === "NEEDS_PERSON" ? "No application page could be chosen. Choose it on the combination's Forms tab." : "The finder could not find the application page.", result);
     }
 
     // 2. Read the application page and the guide it links (rules: every form number printed on them).
@@ -726,7 +729,9 @@ export class Finder implements OnModuleInit {
       ...(r?.decide ?? []).map((d) => ({ code: d.code, title: (d.draft ?? d.check)?.title ?? null, quote: (d.draft ?? d.check)?.quote ?? null, conditionPlain: (d.draft ?? d.check)?.condition ?? null, who: (d.draft ?? d.check)?.who ?? null, state: stateOf(d.code, "TO_DECIDE"), why: d.why })),
       ...(r?.not_for ?? []).map((n) => ({ code: n.code, title: null, quote: n.quote, conditionPlain: null, who: null, state: "NOT_FOR_THIS_APPLICATION" })),
     ].map((f) => ({ ...f, lineId: line(f.code)?.id ?? null, lineVersion: line(f.code)?.version ?? null, runId: run.id }));
-    return { run: { id: run.id, status: run.status, mode: run.mode, finished_at: run.finished_at }, forms, sample_note: run.sample_note };
+    // S3 item 5: a run that could not pick the application page says so on the Forms tab, with the pages it saw, so the
+    // person chooses one there and finds again (never a dead end).
+    return { run: { id: run.id, status: run.status, mode: run.mode, finished_at: run.finished_at }, forms, sample_note: run.sample_note, page_choice: r?.guide_choice ?? null };
   }
 
   /** The combination's newest finder run (S5's Forms tab reads this; slice 1 serves it to the scripted journey). */

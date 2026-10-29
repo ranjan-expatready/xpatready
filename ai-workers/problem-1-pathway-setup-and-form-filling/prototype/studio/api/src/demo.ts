@@ -140,10 +140,13 @@ export class Demo {
       // F1 (forms lane): answer lists and field merges (rows parked by W1-02 on an older database are removed too)
       "Answer lists and merges": (await t.answerList.count({ where: ws })) + (await t.fieldMerge.count({ where: ws })),
       "Library changes and sources approved in the product": (await t.libraryChange.count({ where: ws })) + (await t.approvedSource.count({ where: ws })),
+      // DV-bb-6b: person roles someone added are removed; the built-in ones (S5) are counted apart, since a new workspace starts with them.
+      "Person roles added here": await t.personRole.count({ where: { ...ws, builtIn: false } }),
     };
+    const builtIn = await t.personRole.count({ where: { ...ws, builtIn: true } });
     const dir = VAR("demo");
     const files = existsSync(dir) ? this.walk(dir) : [];
-    return { rows, total_rows: Object.values(rows).reduce((a, b) => a + b, 0), files: files.length, bytes: files.reduce((a, f) => a + statSync(f).size, 0), folder: dir.replace(`${ROOT}/`, ""), generated_scripts: "none: rules and conditions are stored as data and evaluated by the engine; nothing generates executable code" };
+    return { rows, total_rows: Object.values(rows).reduce((a, b) => a + b, 0), built_in_rows: builtIn, files: files.length, bytes: files.reduce((a, f) => a + statSync(f).size, 0), folder: dir.replace(`${ROOT}/`, ""), generated_scripts: "none: rules and conditions are stored as data and evaluated by the engine; nothing generates executable code" };
   }
 
   walk(dir: string): string[] { return readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? this.walk(join(dir, d.name)) : [join(dir, d.name)])); }
@@ -195,7 +198,7 @@ export class Demo {
     const fresh = await this.ws.id();
     const after = { scope: await this.scope(fresh), preserved: this.preserved() };
     const unchanged = before.preserved.every((p, i) => p.sha256 === after.preserved[i].sha256);
-    const result = { removed_rows: before.scope.total_rows, removed_files: before.scope.files, remaining_rows: after.scope.total_rows, remaining_files: after.scope.files, preserved_unchanged: unchanged, preserved: after.preserved, seconds: (Date.now() - t0) / 1000, new_workspace: fresh };
+    const result = { removed_rows: before.scope.total_rows, removed_files: before.scope.files, remaining_rows: after.scope.total_rows, remaining_built_in: after.scope.built_in_rows, remaining_files: after.scope.files, preserved_unchanged: unchanged, preserved: after.preserved, seconds: (Date.now() - t0) / 1000, new_workspace: fresh };
     mkdirSync(VAR_ROOT, { recursive: true });
     appendFileSync(join(VAR_ROOT, "reset-log.jsonl"), JSON.stringify({ at: new Date().toISOString(), by: actor.id, old_workspace: workspaceId, ...result, removed: before.scope.rows }) + "\n");
     await this.audit.log(fresh, actor.id, "reset", "demo workspace", null, `${actor.name} reset the demo: ${result.removed_rows} rows and ${result.removed_files} working files removed; ${result.remaining_rows} rows remain; preserved evidence ${unchanged ? "byte-identical" : "CHANGED"} (${after.preserved.map((p) => p.files).reduce((a, b) => a + b, 0)} files fingerprinted)`, result);

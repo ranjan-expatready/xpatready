@@ -93,7 +93,7 @@ export function FormsPage() {
           <div><p className="text-sm text-text-muted">Shared library › Forms</p><h1 className="text-2xl font-bold tracking-tight">Forms</h1><p className="mt-1 text-sm text-text-muted">Every IRCC form, guide and checklist, stored once. Combinations pick from here by themselves.</p></div>
           {canAuthor ? <UploadButton onRuns={(ids) => setRuns((r) => [...ids, ...r].slice(0, 20))} /> : null}
         </div>
-        {runs.length ? <div className="space-y-3">{runs.map((id) => <RunCard key={id} runId={id} onEnded={() => void queryClient.invalidateQueries({ queryKey: ["library-forms-list"] })} />)}</div> : null}
+        {runs.length ? <div className="space-y-3">{runs.map((id) => <RunCard key={id} runId={id} onEnded={() => void queryClient.invalidateQueries({ queryKey: ["library-forms-list"] })} onDismiss={() => setRuns((r) => r.filter((x) => x !== id))} />)}</div> : null}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3" role="group" aria-label="Filters">
           <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">Type</span>
             {chip(!type, "All", c.all, () => setType(""), "Every form, guide and checklist in the library.")}

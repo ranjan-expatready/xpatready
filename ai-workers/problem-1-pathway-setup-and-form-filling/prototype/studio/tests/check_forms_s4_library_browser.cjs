@@ -62,7 +62,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.locator("section[data-run-status]").nth(1).waitFor({ timeout: 30_000 });
     for (let i = 0; i < 120 && (await p.locator('section[data-run-status="done"]').count()) < 2; i++) await sleep(500);
     step("C11.11: two files, two run cards, both Done (rules read them, no AI call)", (await p.locator('section[data-run-status="done"]').count()) === 2 && (await p.locator("section[data-run-status]").allInnerTexts()).every((t) => /No AI call was made/.test(t)));
+    // DV-bb-1 (outside review, screens lane): finished upload results can be put away, one at a time; they do not stack forever.
+    const cards = p.locator("section[data-run-status]"), firstName = await cards.first().getAttribute("aria-label");
+    await cards.first().locator("[data-run-dismiss]").click(); await sleep(300);
+    step("DV-bb-1 pass: a finished upload card has Dismiss; it removes that card only", (await cards.count()) === 1 && (await cards.first().getAttribute("aria-label")) !== firstName && (await cards.first().locator("[data-run-dismiss]").count()) === 1, `${await cards.count()} card(s) left`);
     await open();
+    step("DV-bb-1 fail: a dismissed card does not come back after the page reloads", (await cards.count()) === 1, `${await cards.count()} card(s) after reload`);
+    await cards.first().locator("[data-run-dismiss]").click(); await sleep(300);
     step("C11.11: the uploaded forms are in the list afterwards", (await forms()).includes("IMM 5604") && (await forms()).includes("IMM 1344"));
     // DV-bb-5 (outside review): the form number is in the row's own typeface (same family as the title), not a mono type.
     const fonts = await p.locator("tr[data-form]").first().evaluate((tr) => [...tr.querySelectorAll("td")].slice(0, 2).map((td) => getComputedStyle(td.querySelector("button, span") ?? td).fontFamily));
