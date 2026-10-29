@@ -108,3 +108,29 @@ Fit check against today's data: a checklist line is a `document_requirement` (ty
 3. **The library field page.** Make its "Collected from" read-only for an existing placement, with the same "Change who fills" door? *Recommend yes;* otherwise P-97 has a side door.
 
 **Size:** medium: one route, one apply step, one lock, a drawer section, two checks (API and browser). It does not wait on S6.
+
+## Preview by person and by channel (M2 queue item 4; C4.3, C4.6; board v2 frame 4; P-47, P-62 §7): short plan for the Lead, 29 Oct (no code yet)
+**What is there (S5 Preview, `web/src/pages/workspace/preview.tsx`, `api/src/workspace.ts preview` → `previewFamily`):** a Sample family, person chips, tried answers in the address, and three columns: "What <person> is asked" (the runtime renderer), Documents, and Forms with a channel pill.
+
+**Gaps against board v2 frame 4 and the journey review (item 8):**
+* There are no three sets. Only the client's questionnaire is shown; there is no PQR and no Agent view.
+* The client's set still asks facts that a document on that person's checklist supplies (board: "the client view skips document facts").
+* Forms are not grouped by what the person gets on each channel (C4.6: portal screens, filled PDFs, PDFs to sign).
+* The question count differs from the Questionnaires tab: a third number.
+* The journey review saw a child get all 7 forms, IMM 5409 (common-law) included. To check before building: a real fault in who a form applies to, or a form filed once per couple shown under every person.
+
+**The plan (US$0, read-only, no new table; one engine function, one view change):**
+| Element | From | API | Rule | Test (pass / fail) |
+|---|---|---|---|---|
+| A switch with three sets (side by side at 1440 px, one at a time below 1280 px), per person | — | `GET …/workspace?tab=preview` gains `sets` | — | three sets at 1440 px; one with the switch at 1024 px |
+| **PQR:** the person's ticked questions (the per-combination record), "please confirm" later, no verdict shown to the prospect (P-77) | `prequalification(snapshot)` (built) | `sets.pqr` | PQR ⊂ SQR ∪ documents | ticked → listed / unticked or Case officer → not listed |
+| **SQR (client):** the shared renderer as today, but a fact whose source for this person is a document is not asked. Above the sections: "From your documents: Passport fills 7 answers" (information only) | `factSources` + the renderer | `sets.sqr` | P-130: a document fact is asked only as the fallback when the document is missing or unreadable | a passport fact is not asked when the passport is on the checklist / it is asked when the passport line is removed |
+| **Agent view:** the full form for the person, each fact with its source (Document · type / Client / Case officer); the count equals the Questionnaires tab's | `factSources` | `sets.agent` | one count (journey item 8) | the count equals that person's chip on Questionnaires / no system key on screen |
+| **C4.6 outputs per channel:** the person's forms grouped as "Filled on the portal (Online)", "Filled PDF to upload", "PDF to print and sign", plus "Filed once for the application" (by the principal applicant) | the filing channels (forms lane, read only) | `outputs` per person | signature line from the channel (as built) | each form in exactly one group / a form filed for the application is not repeated for every person |
+
+**Questions for the Lead:**
+1. **"Fill this from my documents"** (frame 4's upload, proposals and "please check") is C4.5/C6.5 client behaviour, which P-129 moves after M3. *Recommend:* Preview shows only the information line ("Passport fills 7 answers") now, with no upload interaction; the interactive part comes with W5.
+2. **Renderer gap:** skipping document facts in the client view is a renderer change (`engine/render.ts`, `web/src/runtime/questionnaire.tsx`), and real cases use the same renderer. *Recommend:* add a "skip facts a document supplies" option that only Preview sets for now. A case pinned to an older release keeps asking them (challenge note). It becomes the case default with M3's documents-first intake (C6.5).
+3. **The IMM 5409 finding:** if a form filed once per couple shows under every person, I fix it in Preview's grouping (C4.6), not in who a form applies to. If who it applies to is wrong, that is a rules fault; I report it before changing it.
+
+**Size:** heavy-medium: one engine function (`previewSets`), the preview view, one renderer option, and two checks (API and browser at 1440 and 1024 px with the accessibility check). It does not touch the forms lane's channel files.
