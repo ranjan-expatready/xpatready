@@ -30,14 +30,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: PLAN addendum P-149 sent; waiting for Lead answers Q-A1..A4 and forms slice 0 on main
+stage: PLAN + P-149 addendum agreed (Lead, 29 Oct); waiting for forms slice 0 on main
 owner: Lead
-next_action: Lead: answer plan-p149.md §D (Q-A1 placement AI on Send, Q-A2 contract changes in slice 0, Q-A3 identity for lists and sections, Q-A4 no bulk for person items); message the lane when forms slice 0 is on main; then S6 slice 1 BUILD from main
+next_action: Lead: message when forms slice 0 is on main → slice R on it (recording pass; founder Q1 amount, about US$8–12 Sample, confirmed before any spend); slice 1 after forms contract v2 merges
 then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
-blocked_by: forms slice 0 on main (Lead PR)
+blocked_by: forms slice 0 on main (Lead PR); forms contract v2 for slice 1
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-shared-library (S6) · PLAN addendum agreed · applied Lead message: Q-A1 yes (Send is the click, placement AI in background after it), Q-A2 no (contract v2 by forms after slice 0, before slice 1), Q-A3 Lead decision (answer list = value codes, order ignored; section = name or synonym only), Q-A4 yes; order slice R then slice 1. Recorded in plan-p149.md. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN addendum · applied Lead message (P-149): plan-p149.md (moved out of plan.md, line limit) — what holds on main (versions, release freeze, file-only forms, sme duty), changes per slice (one door, identity rule at write and approval, versions guard, meaning question, example cases, placements, coverage gap), forms contract changes and W1-10 producers, Lead Q-A1..A4. No code. US$0.
 - 2026-10-29 · sync · main f7cb40d9 merged (PR #76: S3 Start setup and DV-bb-1/6b/6c on main); no conflicts. S6 BUILD still waits for forms slice 0 on main. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN agreed · applied Lead message: Q-L1..L5 yes, N1/N2 accepted, founder Q1 with the Lead (slice R waits; slice 1 does not); written under "Lead response, agreed 29 Oct" in plan.md. Nothing to build until forms slice 0 is on main. US$0.
@@ -47,4 +48,3 @@ updated: 2026-10-29
 - 2026-10-29 · W1-start-setup (S3) · FIX → EARLY-LOOK · applied Lead message (S5 on main e2cb27a4): item 5 — sync, three conflicts, Start setup in S5's Forms tab slot, the page choice that "Choose the application page" leads to (QA-63), one cost rule; start_setup 26/26, browser 39/39, s5_slice3 35/35; run-suites on fd5ac8ae (main db5e0208 merged): 58 PASS, 0 FAIL; graph.mjs --check passes (G3 2: older attachment routes, not this lane). AI US$0. Owner → Lead.
 - 2026-10-28 · W1-shared-library (S6) · build ahead (P-126) · applied Lead message (S3 items 1–4 OK): fresh re-check of S6 against main 38722933, S5 [r] bb853222, forms b619d3cb, S3 d63b7ca4 and the 28 Oct team capture (R-109): build after changes, 5 Major, 6 Minor, 1 founder question, 3 Lead questions; no code. AI US$0. Owner → Lead.
 - 2026-10-28 · W1-start-setup (S3) · FIX · applied Lead note 2026-10-28 (early look items 1–4): plain words for launcher failures, Next step Find forms, one find button on the run card, one cost wording; start_setup 23/23, browser 26/26, screen01_rules 67/67; run-suites 49/49 on a6744c0b (2fc0f26c had 48/49: a timing race in the new browser step, fixed by waiting for the refreshed offer); item 5 waits for S5. AI US$0. Owner → Lead.
-- 2026-10-28 · W1-start-setup (S3) · BUILD → EARLY-LOOK · S3 built (start guard, POST /combinations/start, landing offer live only on a click, one Start setup, /new and both path endpoints gone, checks moved); run-suites 47/48 (programs_r3 ECONNRESET, 26/26 alone), journey 45/45, start_setup 17/17, start_setup_browser 20/20. AI US$0. Owner → Lead.

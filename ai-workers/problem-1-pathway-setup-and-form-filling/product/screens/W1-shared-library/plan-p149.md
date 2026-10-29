@@ -15,7 +15,7 @@ Founder decision P-149 (Lead PR #77; research `research-authoring-model.md`) ame
 | (1) One door | 1 | `POST /library/add` writes a `ProposalItem` with origin person into the one queue, never a `LibraryChange` directly. It gets the same rules, the same Ready · Check · Decide words and the same second person. Accept writes the `LibraryChange` as for AI items. A person's item is never Ready for bulk accept: it is accepted alone. | Add lands in To review as "Added by a person" / a direct `LibraryChange` write outside the accept service fails the source scan |
 | (1) Shown at release | 1 | Release review lists every "Added by a person" item with its reason, beside AI items. | released item shows the reason / Add with no reason → 400 |
 | (2) Identity rule | 1 (field), 2, 4 (document type) | One `identityOf(kind, payload)` in `engine/`. Field: name or synonym (label, `aliases`) + about whom (`subject`) + answer type (`valueType`). Document type: name + what it proves. Form: number + edition + fingerprint (upload already). It runs at write **and again at approval** on the server. An exact duplicate is refused. A near one (same subject and type, label or alias shortlist by rules) needs a reason, kept on the item. "Did you mean" by AI runs only on the rules shortlist, on a click, cost shown (P-138 style). | exact twin refused at write; also refused at approval when the twin was approved in between (race) / near one without a reason → 400; with a reason → waits |
-| (2) Answer lists, sections | 2 | Not named in P-149. Proposed: an answer list's identity is its set of choices (an Add offers "use an existing list" first); a section's is name + form. Lead Q-A3. | same choice set → offered the existing list / a different set → new |
+| (2) Answer lists, sections | 2 | Lead decision (Q-A3, within P-149): an answer list's identity is its set of value codes, order ignored (an Add offers "use an existing list" first); a section's identity is its name or synonym only, never name + form (sections are shared across forms, P-62/P-120). | same codes in another order → the existing list / a different set → new; "Personal details" on a second form → the existing section / a new name → new |
 | (3) Versions | 1, then each kind | Accepting an edit always makes a new version (`supersedesId`). No `update` touches meaning, answer type or values of an approved row (source scan plus a test). A combination's draft reads the latest approved version, and its release freezes it (exists). Where used is the impact list on every edit and retire. | edit → v2 approved, an open draft shows v2, a released combination still shows v1 / an in-place update of an approved row fails the scan |
 | (4) The meaning question | 1 (fields), 2 (lists), 3 (roles, conditions) | Every edit asks "Does this change the meaning, answer type or allowed values?". The server forces yes when `valueType`, `answerListKey` or the choices changed; the browser cannot send no. Yes → the second person **and** the `sme` sign-off, with a written line on what happens to its users (Where used counts, filled in). No → the second person only. | type changed and answered no → recorded as yes, needs `sme` / yes without the users line → 400 |
 | (5) Example cases | 3 (shared conditions), 4 (form and cross checks) | A condition or check carries examples (facts → expected yes/no), drafted by AI, confirmed by the `sme` duty. S6 builds `SharedConditionExample` and one `runExamples(tree, examples)` on the engine evaluator. Before approval, any change re-runs the examples for **every** combination using the rule. Approval is refused while one fails, naming the combination and the case. | all pass → approvable / one combination fails → approval refused and says which |
@@ -51,3 +51,19 @@ S6 renders and enforces all of these; it does not draft them.
   * *Else:* they come as a contract v2 before S6 slice 1, and slice 0 merges as is.
 * **Q-A3 · Identity for answer lists and sections** (not in P-149). *Recommend:* as in B, with the founder's later confirmation.
 * **Q-A4 · Bulk accept.** *Recommend:* a person's item is never bulk-accepted, the same as rules-only library items.
+
+### Lead response, agreed 29 Oct
+* **The addendum is agreed, with slice 1 kept as one slice.**
+* **Q-A1 yes.**
+  * The Add's Send is the click (P-138), with the cost line on the dialog (Sample).
+  * The placement AI then runs in the background after Send.
+  * The rules matcher always runs.
+* **Q-A2 no.** Slice 0 merges as it is. The forms lane then makes the contract changes (C) as a small contract v2, right after slice 0 merges and before S6 slice 1.
+* **Q-A3, a Lead decision within P-149** (recorded in B):
+  * an answer list's identity is its set of value codes, order ignored;
+  * a section's identity is its name or synonym only.
+* **Q-A4 yes.** A person's item is never bulk-accepted.
+* **BUILD order:**
+  * slice R on slice 0, once slice 0 is on main (the Lead messages);
+  * slice 1 after the forms contract v2 merges.
+* US$0 until then.
