@@ -6,10 +6,10 @@
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
-current_item: PR #90 outside-review fixes + P-171 (a) data fix, handed back; next the M2 queue (P-173) in a fresh session
-stage: CHECK
-owner: Lead
-next_action: Lead merges the branch into PR #90 (fix 6617ccdd, P-171 (a) title fix after it; audit `screens/W1-ai-drafting/handover-audit-2026-10-29.md` §9); answers slice 1 §8 Q1–Q6 (Q5 P-145 vs P-171 d, Q6 build C-9/C-10 here); then a fresh forms session starts M2 item 1 (slice 1 channels)
+current_item: M2 queue (1) W1-10 slice 1 channels (P-140, P-143–P-145, P-171; C1.6, C11.6, C11.15) on branch `claude/infallible-hermann-5e51d4`
+stage: BUILD
+owner: Builder
+next_action: finish slice 1 (plan-slice1-channels.md §9 "Not done"): check_forms_channels_browser.cjs, C-11 release check, then reviewer + breaker at CHECK; Lead may check the branch now (all named API checks green) and answer whether the barcode decode stays M3
 blocked_by: none
 updated: 2026-10-29
 
@@ -37,6 +37,7 @@ updated: 2026-10-29
   * The Bash hook misfires on some compound commands: put them in a scratchpad script. No paid AI (US$0). Lane pushes run no CI (P-85).
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-10 slice 1 channels · BUILD (owner Builder) · applied Lead note 2026-10-29 (P-173 queue item 1, Q5 P-171 (3), Q6 build C-9/C-10): four channels + signature, accepts per IRCC account, finder proposes (C-5), validated copy read back + out of date (C-9/C-10), copy not for filing (P-145), C-12; channels 78, migration 9, S5 lead 49, s4 runs 90, screen01 16, canada 80, finder 144, rounds 70, R1d green. Left: channels browser check, C-11 release check, CHECK agents. US$0.
 - 2026-10-29 · PR #90 review fixes · CHECK (owner Lead) · run-suites on 6617ccdd: 60 pass, 7 fail with another lane's run in parallel, all 7 pass alone (finder 142, slice2 41, s5 slice3 35, screen01 120, programs s2 87, s1s2 fix 30, w115 s2 56); P-171 (a) title fixed with a pass and fail check; M2 queue (P-173) written into Handover for a fresh session
 - 2026-10-29 · P-170 / P-171 · PLAN (owner Lead) · applied Lead message: (a) library already IMM 5257 SCH1 (09-2023), its title fixed (one line, after the suite run); (b) Validate last + out of date after a change → slice 1 plan §8a C-9/C-10 with P-144; (c) IMM 5409 oath already blank (F6, tested) → C-11 release check; (d) Express Entry IMM 5669/5406 Online → C-12; 2 new Lead questions (§8 Q5 P-145 vs P-171 d, Q6 build C-9/C-10 here)
 - 2026-10-29 · outside review of PR #90 · FIX → CHECK (owner Lead) · applied Lead message: 3 points checked in code, all real; fixed at 6617ccdd with pass and fail tests (fail tests fail on old files): 4 paid attempts per form across batches; usage limit found per attempt, earlier counted cost kept (finder rounds also BLOCKED for a limit alone); guide round's request id in step Details (API; run card UI is screens'). Audit §9
@@ -46,4 +47,3 @@ updated: 2026-10-29
 - 2026-10-29 · demo bug (guide pick) · FIX → CHECK (owner Lead) · maxItems dropped from the guide schema (5 kept in code), who-can-be min/max likewise, 4xx refusals settle at US$0, plain refusal words; schema lint check in run-suites; touched checks green. No live call (founder approval needed). US$0.
 - 2026-10-29 · slice 0 sync (2) · CHECK (owner Lead) · applied Lead message (main 170659bc): clean merge at 3c7255ef; named checks green (rounds 38, contract 20, finder 138, run browser 22, library browser 69, start setup 26 + browser 39) plus W1-15 slice 1 47; typecheck, graph. US$0.
 - 2026-10-29 · P-153 · DESIGN (owner Lead) · applied Lead message (P-153): shared rules file and its injection planned as W1-16 slice r (plan §5), with pass and fail tests and one Lead question. No code. US$0.
-- 2026-10-29 · slice 0 sync · CHECK (owner Lead) · applied Lead message (slice 0 PASS; merge conflict with S3): merged main f7cb40d9 at 3ca624ef; finder rounds on the runner, S3's plain words moved into rounds.ts (fail tests added); rounds 38, finder 138, run browser 22, library browser 69, start setup 26 + browser 39, typecheck, graph. US$0.

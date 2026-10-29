@@ -183,10 +183,13 @@ async function main() {
   ok("C11.6 C-9 fail: a barcode form with no validated copy read back is not filed or uploaded (409, in words)", r.status === 409 && /Validate it in Adobe/.test(r.body?.detail ?? ""), r.body?.detail);
   const sendValidated = async (copy: string, file: Buffer, name: string, actor = OFFICER) => {
     const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(file)]), name);
-    const res = await fetch(`http://127.0.0.1:${PORT}/api/runtime/form-copies/${copy}/validated`, { method: "POST", headers: { "x-actor": actor }, body: fd });
+    const path = `/runtime/form-copies/${copy}/validated`; // POST, multipart: the one validated PDF
+    const res = await fetch(`http://127.0.0.1:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd });
     return { status: res.status, body: await res.json().catch(() => null) };
   };
   const copyFile = readFileSync(join(ROOT, row1.path));
+  r = await call("POST", `/runtime/form-copies/${locked1}/validated`, {}, OFFICER);
+  ok("C11.6 C-9 fail: sending no file is refused in words (400), nothing recorded", r.status === 400 && /validated PDF/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
   r = await sendValidated(locked1, Buffer.from("not a pdf"), "notes.txt");
   ok("C11.6 C-9 fail: a file that is not the validated PDF is refused and nothing is recorded", r.status === 422 && /not a PDF/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
   r = await sendValidated(locked1, readFileSync(join(ROOT, "ai-workers", "problem-1-pathway-setup-and-form-filling", "official-sources", "ircc", "forms", "imm5257e.pdf")), "imm5257e.pdf");

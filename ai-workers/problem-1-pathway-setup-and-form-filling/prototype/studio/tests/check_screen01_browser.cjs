@@ -383,9 +383,9 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await p.goto(`${BASE}/c/${wpId}/forms`); await idle();
   const forms = p.getByRole("tabpanel"); // S5: the channels moved from the Overview to the Forms tab
   step("C1.6: the combination page shows the filing method and each line's channel", /Filing: PDF only/.test(await forms.textContent()) && await forms.getByRole("combobox", { name: /^How IMM \d+.* is filed$/ }).count() >= 6);
-  await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("SIGNED_PDF_UPLOAD"); await idle();
-  await p.waitForFunction(() => /signed by hand, scanned/.test(document.querySelector('[role="tabpanel"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
-  step("C1.6: the author sets a line's channel; the line's signature follows and the filing method stays in C1.6's short words", /Filing: PDF only/.test(await p.locator("[data-filing]").textContent()) && /some signed by hand/.test((await p.locator("[data-filing] [title]").getAttribute("title")) ?? "") && /signed by hand, scanned/.test(await forms.textContent()));
+  await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("PAPER"); await idle(); // P-143: four channels; the signature is its own value
+  await p.waitForFunction(() => /Signed in pen/.test(document.querySelector('[role="tabpanel"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
+  step("C1.6: the author sets a line's channel; the line's signature follows and the filing method stays in C1.6's short words", /Filing: Mixed: PDF and paper/.test(await p.locator("[data-filing]").textContent()) && /PDF uploads \+ paper forms/.test((await p.locator("[data-filing] [title]").getAttribute("title")) ?? "") && /Signed in pen/.test(await forms.textContent()));
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("PDF_UPLOAD"); await idle();
   // P-107, W1-02 (P-102): Online stays selectable and says it needs the browser extension (later wave); no portal choice,
   // no "Add an online form", no drafting-source choice (parked with the extension).
