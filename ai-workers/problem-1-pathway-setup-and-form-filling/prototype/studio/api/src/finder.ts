@@ -178,7 +178,9 @@ export class Finder implements OnModuleInit {
       totals: { worst_usd: worst, expected_usd: expected, about_usd: about, ai_rounds: rounds.length }, ledger,
       note: b.mode === "rules" ? "Rules only: every form number printed on the pages is listed for you to attach by hand; nothing is attached, because AI did not decide which apply." : b.mode === "replay" ? "Saved AI answers for these exact pages are replayed: US$0. A page with no saved answer stops with the reason." : `Live AI: two rounds per question, at most US$${worst.toFixed(2)} (usually much less; at most ${MAX_ATTEMPTS} paid attempts per round). Downloads from canada.ca cost nothing.`,
       targets: [] as unknown[] };
-    const plan_sha256 = sha(JSON.stringify({ c: c.id, mode: b.mode, page: plan.page_url, only: plan.only, steps: steps.map((s) => s.kind + s.uses_ai), worst }));
+    // Lead 29 Oct (CI on #94/#96): the plan's "about" is part of what the person saw, so a click on a button whose cost words
+    // changed meanwhile is refused ("Look at the plan again"), never started with other words.
+    const plan_sha256 = sha(JSON.stringify({ c: c.id, mode: b.mode, page: plan.page_url, only: plan.only, steps: steps.map((s) => s.kind + s.uses_ai), worst, about }));
     return { ...plan, plan_sha256 };
   }
 
