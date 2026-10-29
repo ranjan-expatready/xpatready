@@ -41,6 +41,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.15 DV-bb-3 pass: with no match, the picker says a new form enters the library first and links to the Form library", /No form in the library matches/.test(text) && await link.count() === 1 && (await link.getAttribute("href")) === "/library/forms", text);
   step("C11.15 DV-bb-3 fail: it never says to upload \"below\" (there is no upload in this panel)", !/below/i.test(text) && await panel.locator('input[type="file"]').count() === 0, text);
   await link.click(); await p.waitForURL(/\/library\/forms$/, { timeout: 10000 }).catch(() => {});
+  // Upload PDF shows once the session says who is acting (author only): wait for it rather than count at once (load).
+  await p.getByRole("button", { name: "Upload PDF" }).waitFor({ timeout: 15000 }).catch(() => {});
   step("C11.15 DV-bb-3: the link opens the Form library, which has the upload", /\/library\/forms$/.test(p.url()) && await p.getByRole("button", { name: "Upload PDF" }).count() === 1, p.url());
 
   await b.close();
