@@ -6,10 +6,10 @@
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
-current_item: M2 queue (1) W1-10 slice 1 channels (P-140, P-143–P-145, P-171; C1.6, C11.6, C11.15) on branch `claude/infallible-hermann-5e51d4`
-stage: BUILD
+current_item: M2 queue (1) W1-10 slice 1 channels (P-140, P-143–P-145, P-171; C1.6, C11.6, C11.15) on branch `claude/forms-slice1-finish` (from `claude/infallible-hermann-5e51d4` c33f20d2)
+stage: CHECK
 owner: Builder
-next_action: a fresh forms session resumes from the Handover: QA-98 (one stated cost), channels browser check, C-11 release check, then CHECK
+next_action: Builder: the reviewer and breaker are running on d42414a6 with the touched suites; then FIX or hand back to the Lead
 blocked_by: none
 updated: 2026-10-29
 
@@ -21,6 +21,7 @@ updated: 2026-10-29
 * **How to run (Mac, this copy):** Node 24 first on PATH (`/Users/ranjansingh/Desktop/Xpatready/.tools/node-v24.21.0/bin`; the default Node 23 is refused by Prisma); `npx prisma generate` and `vite build web` after each sync. One check on its own copy: `zsh studio/tools/isolated.sh fx_<name> <port 4471–4482> start [STUDIO_FAKE_LAUNCHER=…/tests/fixtures/fake-launch.mjs] [STUDIO_CANADA_FIXTURES=canada-alt]`, then `tsx --tsconfig studio/api/tsconfig.json <check> <port> xr_studio_fx_<name>` (browser checks: `node`). Runtime R1d needs `tests/runtime/setup_visitor_visa.ts` first. After a run put back the by-products (`git checkout --` studio/evidence and screenshots). The Bash hook refuses heredocs, `for` loops and many compound commands: put them in a scratchpad script or a Python file. Never touch :4400. No live AI.
 
 ## Log (last 10 lines)
+- 2026-10-29 · slice 1 channels · BUILD → CHECK (owner Builder) · fresh session, branch `claude/forms-slice1-finish`, synced main a9fe60c0: QA-98 37b2b278 (each AI step's reserve stated on the tip and in the Find dialog, sum = one 'at most'; page step not AI once chosen; start setup browser 43/43); channels browser check 8f768ff8 (25/25, Not needed greyed); C-11 d42414a6 (channels 81/81); finder 144/144; graph G3 2 (main.ts). Reviewer and breaker launched. US$0.
 - 2026-10-29 · slice 1 channels · BUILD (owner Builder) · applied Lead note (PR #98 merged: run card cost fix 7ade24c6, contract v2.1 59923277); synced main a9fe60c0; QA-98 added; context high, Handover written for a fresh session. US$0.
 - 2026-10-29 · W1-10 slice 1 channels · BUILD (owner Builder) · applied Lead note 2026-10-29 (P-173 queue item 1, Q5 P-171 (3), Q6 build C-9/C-10): four channels + signature, accepts per IRCC account, finder proposes (C-5), validated copy read back + out of date (C-9/C-10), copy not for filing (P-145), C-12; channels 78, migration 9, S5 lead 49, s4 runs 90, screen01 16, canada 80, finder 144, rounds 70, R1d green. Left: channels browser check, C-11 release check, CHECK agents. US$0.
 - 2026-10-29 · PR #90 review fixes · CHECK (owner Lead) · run-suites on 6617ccdd: 60 pass, 7 fail with another lane's run in parallel, all 7 pass alone (finder 142, slice2 41, s5 slice3 35, screen01 120, programs s2 87, s1s2 fix 30, w115 s2 56); P-171 (a) title fixed with a pass and fail check; M2 queue (P-173) written into Handover for a fresh session
@@ -30,4 +31,3 @@ updated: 2026-10-29
 - 2026-10-29 · runner package · FIX → CHECK (owner Lead) · QA-83, QA-85–89 and per-step budget/timeout done; P-156 and QA-90 plans written; full run-suites on 8ff87e5e 67/67. Lane handed to a fresh session (Lead). US$0.
 - 2026-10-29 · AI safety follow-ups · CHECK (owner Lead) · lint per the official docs (pattern, $ref, enum), one paid-attempt budget per form (4) in policy and the cost shown, request size cap 800 KB refused at US$0; full run-suites on c17615ec 64/64. US$0.
 - 2026-10-29 · demo bug (guide pick) · FIX → CHECK (owner Lead) · maxItems dropped from the guide schema (5 kept in code), who-can-be min/max likewise, 4xx refusals settle at US$0, plain refusal words; schema lint check in run-suites; touched checks green. No live call (founder approval needed). US$0.
-- 2026-10-29 · slice 0 sync (2) · CHECK (owner Lead) · applied Lead message (main 170659bc): clean merge at 3c7255ef; named checks green (rounds 38, contract 20, finder 138, run browser 22, library browser 69, start setup 26 + browser 39) plus W1-15 slice 1 47; typecheck, graph. US$0.
