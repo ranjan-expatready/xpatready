@@ -1,0 +1,351 @@
+URL /c/e09ac0ca-1399-421e-a611-8e8817317c64/documents as user-A
+TITLE Immigration programs · Product Studio
+H1 ["With an LMIA"]
+HEADS ["Overview","Forms","Questionnaires","Documents","Preview","Review and release","Document","Whose","Base or conditional","Source",""]
+CUT []
+ERRORS []
+---
+Immigration programs
+Temporary residence
+Work permits
+Employer-specific work permit
+With an LMIA
+With an LMIA
+Live
+
+In Release 1 · draft matches the release · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)
+
+Next step
+
+Nothing to do: firms can open cases on it
+
+Sample: from the sample inputs; its setup has changed since they were loaded.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+Add a document requirement
+Document	Whose	Base or conditional	Source	
+
+
+Birth certificate of accompanying dependent child
+
+Imported release
+	Each child
+provided by client	Conditional
+
+For each dependent child who will accompany the principal applicant to Canada.
+
+	"You must provide children’s birth certificates for accompanying dependents."	
+Edit
+
+
+Certified translation of documents not in English or French
+
+Imported release
+	Each applicant
+provided by other	Conditional
+
+For each submitted document that is not in English or French.
+
+	"If your documents are in a language other than English or French, you must include a certified"	
+Edit
+
+
+Copy of IMM 5802 offer of employment and proof of employer compliance fee payment
+
+Imported release
+	Principal applicant
+provided by employer	Conditional
+
+Only when IRCC authorized the employer to submit the offer of employment using the IMM 5802 form.
+
+	"If IRCC authorized your employer to submit the offer of employment using the IMM 5802 form, provide a copy of the IMM 5802 and proof that the employer complianc…"	
+Edit
+
+
+Copy of LMIA and copy of employment contract from prospective employer
+
+Imported release
+	Principal applicant
+provided by employer	Conditional
+
+Only when the employer obtained an LMIA from ESDC for the job.
+
+	"If your employer obtained a Labour Market Impact Assessment (LMIA) from Employment and Social Development Canada (ESDC), provide a copy of the LMIA AND a copy o…"	
+Edit
+
+
+Education and work experience evidence (New Delhi specification: certificates, diplomas or degrees with mark sheets; appointment and relieving letters; salary slips and Form 16; bank statements; reference letters with duration, duties and contact details)
+
+Imported release
+	Principal applicant
+provided by client	Conditional
+
+When there is a job offered (employer-specific work permit).
+
+	"You must submit evidence that you meet the requirements of the job offered:"	
+Edit
+
+
+Employment contract (LMIA-exempt job)
+
+Imported release
+	Principal applicant
+provided by employer	Conditional
+
+When the job is LMIA-exempt.
+
+	"If your job is LMIA-exempt, your employer must give you:"	
+Edit
+
+
+Evidence of exemption from the work permit processing fee
+
+Imported release
+	Each applicant
+provided by client	Conditional
+
+Only for an applicant who is exempt from paying the work permit processing fee.
+
+	"Note: If you are exempt from paying the work permit processing fee, you must submit documents proving so."	
+Edit
+
+
+Job offer letter
+
+Imported release
+	Principal applicant
+provided by employer	Conditional
+
+Only when the job requires an LMIA.
+
+	"a job offer letter"	
+Edit
+
+
+Letter from current employer
+
+Imported release
+	Principal applicant
+provided by client	Conditional
+
+Only for an employer-specific work permit.
+
+	"a letter from your current employer"	
+Edit
+
+
+Letter of explanation - exceptional situation, no valid travel document (Venezuelan passport)
+
+Imported release
+	Each applicant
+provided by client	Conditional
+
+Venezuelan passport issued before 7 June 2019, expired for 5 years or more, where the applicant has an exceptional situation and cannot get a new passport or other acceptable travel document.
+
+	"Include a letter of explanation with details of your exceptional situation and why you can’t get a valid travel document."	
+Edit
+
+
+Letter of explanation - Venezuelan passport extended 5 years
+
+Imported release
+	Each applicant
+provided by client	Conditional
+
+Venezuelan passport issued before 7 June 2019, whose printed expiry date has passed, and that has been expired for less than 5 years at the application date.
+
+	"Include a letter of explanation with your application stating: “I am a Venezuelan national with a Venezuelan passport, which has been extended for 5 years past …"	
+Edit
+
+
+Marriage certificate or licence (photocopy)
+
+Imported release
+	Once per couple
+provided by client	Conditional
+
+Drafted from 'if applicable': the principal applicant is married and the spouse accompanies them to Canada.
+
+	"Photocopy of your Marriage license or Certificate, if applicable. Note: Refer to the responsible visa office for your region."	
+Edit
+
+
+Passport or travel document information page photocopy
+
+Imported release
+	Each applicant
+provided by client	Base	"A photocopy of the information page of your valid passport or travel document which includes:the passport number;the issuance and expiry dates;your photo, name,…"	
+Edit
+
+
+Proof of common-law relationship (evidence listed on IMM 5409)
+
+Imported release
+	Once per couple
+provided by client	Conditional
+
+When the principal applicant's common-law partner will accompany them to Canada.
+
+	"send proof listed on the form to support your relationship."	
+Edit
+
+
+Proof of completed upfront medical exam
+
+Imported release
+	Each applicant
+provided by other	Conditional
+
+Only for an applicant who had an upfront medical exam with a panel physician.
+
+	"If you have an upfront medical exam, you must submit proof that you completed the medical exam with your application."	
+Edit
+
+
+Proof of completion of program of study (final transcript, or institution letter / formal notice of graduation)
+
+Imported release
+	Principal applicant
+provided by client	Conditional
+
+Only when applying for a post-graduation work permit.
+
+	"If applying for a post-graduation work permit, submit proof that you have completed all the requirements of your program of study:a final transcript; ora letter…"	
+Edit
+
+
+Proof of fee payment (processing fee and other applicable fees receipt)
+
+Imported release
+	Principal applicant
+provided by client	Base	"Proof of payment showing the amount paid."	
+Edit
+
+
+Proof of legal immigration status in country of residence
+
+Imported release
+	Each applicant
+provided by client	Conditional
+
+Only when the applicant's country or territory of residence differs from the citizenship on their passport.
+
+	"Proof of current immigration status: If your country or territory of residence differs from the citizenship listed on your passport, you must provide proof of l…"	
+Edit
+
+
+Proof of meeting the requirements of the offered job
+
+Imported release
+	Principal applicant
+provided by client	Conditional
+
+When the application is for an employer-specific work permit (there is a job being offered).
+
+	"Proof indicating you meet the requirements of the job being offered."	
+Edit
+
+
+Proof of past work experience (e.g. pay stubs)
+
+Imported release
+	Principal applicant
+provided by client	Conditional
+
+Only for an employer-specific work permit.
+
+	"proof of past work experience (for example, pay stubs)"	
+Edit
+
+
+Provincial/territorial confirmation of nomination and R204(c) letter
+
+Imported release
+	Principal applicant
+provided by government	Conditional
+
+When the applicant is a provincial nominee with an LMIA-exempt offer of employment from an employer in the nominating province or territory.
+
+	"If you are a Provincial Nominee and have an offer of employment to a Foreign National exempt from an LMIA (either a form [IMM 5802] or the offer of employment I…"	
+Edit
+
+
+Québec Acceptance Certificate (CAQ) evidence
+
+Imported release
+	Principal applicant
+provided by employer	Conditional
+
+When the intended work is in Québec and the job has an LMIA.
+
+	"If working in the province of Québec with an LMIA, provide evidence of a valid Québec Acceptance Certificate (CAQ) issued by the Québec Ministère de l’Immigrati…"	
+Edit
+
+
+Résumé
+
+Imported release
+	Principal applicant
+provided by client	Conditional
+
+Only for an employer-specific work permit.
+
+	"a résumé"	
+Edit
+
+
+Reference letter from past employers
+
+Imported release
+	Principal applicant
+provided by client	Conditional
+
+Only for an employer-specific work permit.
+
+	"a reference letter from past employers"	
+Edit
+
+
+Translator's affidavit
+
+Imported release
+	Each applicant
+provided by other	Conditional
+
+For a translated document whose translator is not a Canadian certified translator.
+
+	"If the translation isn’t done by a Canadian certified translator, the person who completed the translation must provide an affidavit swearing to their language …"	
+Edit
+
+
+Visa application photographs
+
+Imported release
+	Each applicant
+provided by client	Conditional
+
+Paper photos only when the applicant is not required to give biometric fingerprints and photo.
+
+	"Two photos meeting the requirements of the Visa application photograph specifications."	
+Edit
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+Path
+Pathway: show the list for Temporary residence
+Program: show the list for Work permits
+Category: show the list for Employer-specific work permit
+Sub-category: show the list for With an LMIA
+Combination
+Documents
+Table: Document, Whose, Base or conditional, Source, 
+From the reviewed release c1-v3

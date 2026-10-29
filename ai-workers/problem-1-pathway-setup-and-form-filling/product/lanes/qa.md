@@ -6,11 +6,11 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: explore coverage on main 52117004 (branch `claude/qa-coverage-1029`): coverage rerun on S4+S5, retest of open bugs, Questionnaires tab walk (W1-15 slice 2); report `qa/reports/2026-10-29-coverage-s4-s5.md`
-stage: WAITING
-owner: Lead
-next_action: (1) Lead: route QA-92–95 to runtime (QA-92 is a one-line fix: the drawer uses `f.role`), QA-81 to screens; answer the report's two questions (case questions' count, raise the coverage floor); merge this branch's qa files; (2) qa: retest with `check_qa_qn_1029.cjs` when runtime's fix merges; QA-83, 86–89 after the forms merge, QA-84/85/91 after runtime's fix; the live smoke only on the founder's OK. Note: this copy still holds untracked screenshots written by the suites and the wording check (never committed; removing them was refused by the permission check); the next qa session deletes them before its run.
-blocked_by: this session's context is long: the Lead moves qa to a fresh session for `/qa after-merge` on deda0e6b (Handover below)
+current_item: after-merge on main deda0e6b (PR #90 forms, #91 screens), branch `claude/qa-after-merge-deda0e6`, copy qa_am :4471
+stage: TEST
+owner: qa
+next_action: qa: finish the retest checks and the suites on deda0e6b (CI for #90 ran without #91), then report `qa/reports/2026-10-29-after-merge-deda0e6.md`
+blocked_by: none
 updated: 2026-10-29
 
 ## Handover (29 Oct, ~16:00; for the next qa session: read this first)
@@ -78,6 +78,7 @@ updated: 2026-10-29
   9. S4: the finder has no button until S5 slice 3: test it through `POST /combinations/:id/forms/find/plan` then `/find` (Rules or Replay only, never `live`); only Visitor visa (`vv.single`) has saved answers. No product route makes an unused, unapproved form, so Delete is walked on a seeded form (the builders' own way). The guard hook blocks `for` loops and heredocs: put them in a scratchpad script.
 
 ## Log (last 8 lines)
+- 2026-10-29 · after-merge deda0e6b started (fresh qa session): ai paths 21/21, r3 69/69, s3 39/39; wording sweep rerun on a loaded sample; regression checks running.
 - 2026-10-29 · stop hook: BUGS-CLOSED over 12 KB; 37 rows closed up to 26 Oct moved to `history/qa-bugs-closed-to-2026-10-26.md`; suite screenshots removed.
 - 2026-10-29 · Lead message (PR #76, main f7cb40d9): after-merge S3 started on qa_s3 :4477; DV-doc-1 already done.
 - 2026-10-29 · after-merge S3 (f7cb40d9): ready; all merged suites green (run as run-suites runs them); new `check_qa_am_s3_1029.cjs` 37/39; QA-70 new (Major, menu links show no focus ring, screens); C11.2 Works, C11.15 Partial; G5 back to 0.

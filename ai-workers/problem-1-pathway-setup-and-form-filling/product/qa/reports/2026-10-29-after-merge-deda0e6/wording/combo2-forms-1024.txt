@@ -1,0 +1,75 @@
+URL /c/77c8c9ec-2f0a-4d87-9c06-12c7855a5fef/forms as user-A
+TITLE Immigration programs · Product Studio
+H1 ["Visitor visa"]
+HEADS ["Overview","Forms","Questionnaires","Documents","Preview","Review and release","Form","Why it is here (IRCC's words)","Who fills it","Only if","Filed as by default","Signed by","Read and matched",""]
+CUT []
+ERRORS []
+---
+Immigration programs
+Temporary residence
+Visitors
+Visitor visa
+Visitor visa
+In setup
+
+Not released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample
+
+Next step
+
+Add 1 form from the library
+Sample: official visitor-visa forms and checklists attached; not set up yet.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+
+No form find yet
+
+Its forms and checklists come from canada.ca into the Form library and attach here. Nothing was spent yet. Which forms apply is Sample until the immigration expert confirms.
+
+Find forms with AI (about US$0.31 · at most US$5.58)
+
+Filing: not known until a form is set up · 2 forms attached, 0 set up · Sample until the immigration expert confirms
+
+Add a form from the library
+Open the Form library
+
+Not set up yet: 1 form can be added from the library now (its form fields are already matched, no AI needed); 1 form needs reading and drafting with AI. Each row has its step.
+
+Form	Why it is here (IRCC's words)	Who fills it	Only if	Filed as by default	Signed by	Read and matched	
+IMM 5257
+IMM 5257 (09-2023) · imm5257e.pdf	Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.	
+Read: ready for AI drafting
+Read today at 8:33 p.m.
+Draft with AI
+	
+IMM 5707
+IMM 5707 (01-2023) · imm5707e.pdf	Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.	
+In the library
+Read today at 8:34 p.m.
+Add from library
+	
+
+Sources (read for documents and citations, never filed): IMM 5484 (05-2026) · Guide 5256 page · Visitor visa application package, India · IMM 5881 E (05-2026), New Delhi visa additional document checklist
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+Path
+Pathway: show the list for Temporary residence
+Program: show the list for Visitors
+Category: show the list for Visitor visa
+Combination
+Forms
+Forms found by AI
+Table: Form, Why it is here (IRCC's words), 
+Document checklist · imm5484e.pdf
+Instructions · guide-5256.html
+Web page · visa-package-india.html
+Document checklist · IMM5881E.pdf

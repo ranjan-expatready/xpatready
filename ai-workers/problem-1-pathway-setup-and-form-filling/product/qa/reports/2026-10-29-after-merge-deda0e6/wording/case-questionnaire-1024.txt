@@ -1,0 +1,62 @@
+URL /cases/48d2e92e-8fbd-4a16-bacb-237075efaba2/questionnaire as user-P
+TITLE Product Studio
+H1 ["Your questionnaire"]
+HEADS ["About representative","About the application","About Client A"]
+CUT []
+ERRORS []
+---
+Your questionnaire
+
+Case QA-WORDING-1. You answer for everyone travelling on this application. Each answer is saved when you press Save; you can stop and come back at any time.
+
+0 of 20 parts done
+
+Start
+About representative
+Contact details
+Not started
+Representative and authorizations
+Not started
+About the application
+Application details
+Not started
+Residence and immigration status
+Not started
+Representative and authorizations
+Not started
+About Client A
+Personal details
+Not started
+Languages
+Not started
+Travel and identity documents
+Not started
+Contact details
+Not started
+Residence and immigration status
+Not started
+Spouse or partner relationship
+Not started
+Family members
+Not started
+Intended work in Canada
+Not started
+Education history
+Not started
+Employment and activity history
+Not started
+Medical background
+Not started
+Background declarations
+Not started
+Service, membership and government position history
+Not started
+Travel history
+Not started
+Processing requirements
+Not started
+--- labels ---
+Cases home
+Simulated people for the prototype: not part of the product
+Simulated person
+Parts done

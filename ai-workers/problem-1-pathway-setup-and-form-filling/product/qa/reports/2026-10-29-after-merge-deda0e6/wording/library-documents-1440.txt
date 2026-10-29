@@ -1,0 +1,47 @@
+URL /library/documents as user-A
+TITLE Document types · Product Studio
+H1 ["Document types"]
+HEADS ["Document type","Category","Facts it can supply","Status"]
+CUT []
+ERRORS []
+---
+Document types
+
+Reusable document definitions. The facts a supported document can supply are a proposal until reading that document proves them on a case.
+
+Document type	Category	Facts it can supply	Status
+Birth certificate of accompanying dependent child	Client	Family name, Given names, Sex, Date of birth, Place of birth city, Country of birth, Full name, Full name	
+Certified translation of documents not in English or French	Someone else	none recorded	
+Copy of IMM 5802 offer of employment and proof of employer compliance fee payment	Employer	none recorded	
+Copy of LMIA and copy of employment contract from prospective employer	Employer	Full name, Name, Intended job title, Intended job duties, Intended employment start date, Intended employment end date, Intended work location, Intended work province, LMIA or offer number	
+Education and work experience evidence (New Delhi specification: certificates, diplomas or degrees with mark sheets; appointment and relieving letters; salary slips and Form 16; bank statements; reference letters with duration, duties and contact details)	Client	none recorded	
+Employment contract (LMIA-exempt job)	Employer	Full name, Name, Intended job title, Intended job duties, Intended employment start date, Intended employment end date, Intended work location, Intended work province, LMIA or offer number	
+Evidence of exemption from the work permit processing fee	Client	none recorded	
+Job offer letter	Employer	Full name, Name, Intended job title, Intended job duties, Intended employment start date, Intended employment end date, Intended work location, Intended work province, LMIA or offer number	
+Letter from current employer	Client	none recorded	
+Letter of explanation - exceptional situation, no valid travel document (Venezuelan passport)	Client	none recorded	
+Letter of explanation - Venezuelan passport extended 5 years	Client	none recorded	
+Marriage certificate or licence (photocopy)	Client	Family name, Given names, Start date	
+Passport or travel document information page photocopy	Client	Family name, Given names, Sex, Date of birth, Place of birth city, Citizenship, Passport number, Passport country of issue, Passport issue date, Passport expiry date	
+Proof of common-law relationship (evidence listed on IMM 5409)	Client	none recorded	
+Proof of completed upfront medical exam	Someone else	none recorded	
+Proof of completion of program of study (final transcript, or institution letter / formal notice of graduation)	Client	none recorded	
+Proof of fee payment (processing fee and other applicable fees receipt)	Client	none recorded	
+Proof of legal immigration status in country of residence	Client	none recorded	
+Proof of meeting the requirements of the offered job	Client	none recorded	
+Proof of past work experience (e.g. pay stubs)	Client	none recorded	
+Provincial/territorial confirmation of nomination and R204(c) letter	Government	none recorded	
+Québec Acceptance Certificate (CAQ) evidence	Employer	none recorded	
+Reference letter from past employers	Client	none recorded	
+Résumé	Client	none recorded	
+Translator's affidavit	Someone else	none recorded	
+Visa application photographs	Client	none recorded	
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+Table: Document type, Category, Facts it can supply, Status

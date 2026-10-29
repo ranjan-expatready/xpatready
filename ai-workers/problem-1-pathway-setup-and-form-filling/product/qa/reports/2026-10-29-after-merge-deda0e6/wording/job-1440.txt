@@ -1,0 +1,25 @@
+URL /c/e09ac0ca-1399-421e-a611-8e8817317c64/jobs/0cf9907f-a504-4d93-abf6-e1d3db3fa509 as user-A
+TITLE Immigration programs · Product Studio
+H1 ["Form: AI-proposed field map"]
+HEADS []
+CUT []
+ERRORS []
+---
+Sources and forms
+AI field-map draft
+Form: AI-proposed field map
+On this computer
+NEEDS_PERSON
+US$0.00
+0s
+
+AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route. The AI saw only the public list of the form's fields; it never saw the library, a family or an answer key. The comparison with the library below is deterministic.
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+No AI
