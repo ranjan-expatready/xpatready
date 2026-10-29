@@ -11,6 +11,7 @@
 //   C3.6         decisions validated (M8, m1, m3, m4, m7, m8)
 //   zsh studio/tools/isolated.sh screens_fix 4444 start && tsx studio/tests/check_screen02_fix.ts 4444 xr_studio_screens_fix
 import { execFileSync } from "node:child_process";
+import { seedField, seedSection } from "./seed_library.cjs";
 
 const PORT = Number(process.argv[2] ?? 4444), DB = process.argv[3] ?? "xr_studio_screens_fix";
 let pass = 0, fail = 0;
@@ -164,7 +165,7 @@ const REASON = "Test: a different meaning from the library field that could fit.
   rel = (await queue("user-B", "release")).find((i) => i.title.includes("Super visa"));
   ok("C5.3 P-79 (Must 1): once every new field is approved, To review offers Release", rel?.state === "needs" && rel?.next?.label === "Release", rel?.what);
   // Lead re-check item 1: an approved change this combination does not use waits for the shared Release page.
-  r = await call("POST", "/library/fields", { key: "person.brk_unrelated", meaning: "A test field no combination uses.", valueType: "text" });
+  seedField(sql, { key: "person.brk_unrelated", meaning: "A test field no combination uses." }); // P-158: no free add; written as a source would
   const unrelated = sql("select id from library_change where key='person.brk_unrelated'");
   await call("POST", `/library/changes/${unrelated}/approve`, {}, "user-C");
   r = await call("POST", `/combinations/${sv}/approve`, undefined, "user-B");
@@ -172,9 +173,8 @@ const REASON = "Test: a different meaning from the library field that could fit.
   ok("C5.3 B1: after a return and a correction the combination is released (not frozen)", r.status === 201 && r.body.library?.some((l: any) => l.key === back.key) && sql(`select status from library_change where id='${back.id}'`) === "RELEASED", r.body?.detail ?? r.body?.library?.length);
 
   // ─────────────────────────────── Lead item 2: new sections and document types are reviewed before release too
-  r = await call("POST", "/library/sections", { title: "Brk section", meaning: "A test section." });
-  const secKey = r.body?.sectionKey;
-  ok("C5.3 (Lead item 2): a new section waits as an ADD for a second person", r.status === 201 && sql(`select status from library_change where kind='section' and key='${secKey}'`) === "WAITING", r.body?.detail ?? secKey);
+  const secKey = seedSection(sql, { title: "Brk section", meaning: "A test section." }); // P-158: proposed from the forms' parts, not added by hand
+  ok("C5.3 (Lead item 2): a new section waits as an ADD for a second person", sql(`select status from library_change where kind='section' and key='${secKey}'`) === "WAITING", secKey);
   await call("POST", `/combinations/${sv}/sections/${secKey}`);
   r = await call("POST", `/combinations/${sv}/requirements`, { newTypeName: "Brk document", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant", providedBy: "client" });
   ok("C5.3 (Lead item 2): a document type named with a requirement waits as an ADD", r.status === 201 && sql("select status from library_change where kind='document_type' and label='Brk document'") === "WAITING", r.body?.detail ?? r.status);
@@ -197,7 +197,7 @@ const REASON = "Test: a different meaning from the library field that could fit.
 
   // ─────────────────────────────── M3: every new shared field has an ADD, whichever route made it
   r = await call("POST", "/library/fields", { key: "person.brk_bypass", meaning: "A test field made on the Library page.", valueType: "text" });
-  ok("C5.3 M3: a field made on the Library page waits as an ADD for a second person", r.status === 201 && sql("select status from library_change where key='person.brk_bypass'") === "WAITING", r.body?.detail ?? sql("select count(*) from library_change where key='person.brk_bypass'"));
+  ok("C3.6 P-158 fail (was M3): no field is made on the Library page at all (410), so none skips the ADD", r.status === 410 && sql("select count(*) from canonical_field where canonical_field_key='person.brk_bypass'") === "0", r.status);
 
   // ─────────────────────────────── Must 6, M4, M6, m5: held files
   const junk = await intake("brk-junk.pdf", Buffer.from("%PDF-1.4 junk"), sv);

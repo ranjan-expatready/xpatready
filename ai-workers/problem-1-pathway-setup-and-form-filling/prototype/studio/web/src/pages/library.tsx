@@ -1,6 +1,6 @@
 import * as React from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { ChevronRight, Plus, Save, Search } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { ChevronRight, Pencil, Save, Search } from "lucide-react";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table, Textarea } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
@@ -21,16 +21,25 @@ export const fieldName = (key: string) => { const w = (key.split(".").pop() ?? k
 /** QA-71: lists show a draft or AI-proposed mark only; the version and "Imported release" are on the item's page. */
 const ListPill = ({ origin, status }: { origin?: string; status?: string }) => <OriginPill origin={origin === "IMPORTED_RELEASE" ? undefined : origin} status={status} />;
 const CATEGORY_WORD: Record<string, string> = { client: "Client", employer: "Employer", government: "Government", other: "Someone else" };
+/** S6 (2a), P-158: one line per library page on where its items come from; nothing is added by hand. */
+const Origin = ({ children }: { children: React.ReactNode }) => <p data-origin className="mt-1 text-sm text-text-muted"><span className="font-medium text-text">Where these come from:</span> {children}</p>;
+/** A list row's source (P-158 item 6): never blank; an item with none is flagged. */
+const SourceNote = ({ r }: { r: { source?: string | null; more_sources?: number; unsourced?: boolean } }) => r.unsourced
+  ? <p data-source className="mt-1 text-[11px] text-text-warn">No source recorded</p>
+  : <p data-source className="mt-1 text-[11px] text-text-muted">{r.source}{r.more_sources ? ` · ${r.more_sources} more` : ""}</p>;
+/** GET /library/:kind/:key/sources (api/src/library-sources.ts). */
+type SourcesView = { name: string; sources: { kind: string; text: string; quote?: string | null }[]; unsourced: boolean; used_in: string[] };
+/** Where used (C3.13): the combinations by name, the first two and a count. */
+const usedWords = (used: string[] | undefined) => !used?.length ? <span className="text-text-muted">none</span> : <span title={used.join(", ")}>{used.slice(0, 2).join(", ")}{used.length > 2 ? ` and ${used.length - 2} more` : ""}</span>;
 
 export function FieldsPage() {
   const [q, setQ] = React.useState("");
   const [only, setOnly] = React.useState("all");
-  const [add, setAdd] = React.useState(false);
   const list = useApi<any[]>(["fields"], "/library/fields");
-  const rows = (list.data ?? []).filter((f) => (!q || f.key.includes(q.toLowerCase()) || fieldName(f.key).toLowerCase().includes(q.toLowerCase()) || f.meaning.toLowerCase().includes(q.toLowerCase())) && (only === "all" || (only === "draft" && f.has_draft) || (only === "ai" && f.origin === "AI_PROPOSAL") || (only === "unplaced" && !f.placement) || (only === "shared" && f.forms.length > 1)));
+  const rows = (list.data ?? []).filter((f) => (!q || f.key.includes(q.toLowerCase()) || (f.name ?? fieldName(f.key)).toLowerCase().includes(q.toLowerCase()) || f.meaning.toLowerCase().includes(q.toLowerCase())) && (only === "all" || (only === "draft" && f.has_draft) || (only === "ai" && f.origin === "AI_PROPOSAL") || (only === "unplaced" && !f.placement) || (only === "shared" && f.forms.length > 1)));
   return (
     <div className="mx-auto max-w-7xl space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="text-xl font-semibold">Fields</h1><p className="mt-1 text-sm text-text-muted">One definition per meaning, shared by every form and program. Values about people and cases are never stored here.</p></div><Button onClick={() => setAdd(true)}><Plus /> Add a field</Button></div>
+      <div><h1 className="text-xl font-semibold">Fields</h1><p className="mt-1 text-sm text-text-muted">One definition per meaning, shared by every form and program. Values about people and cases are never stored here.</p><Origin>each field is read from a form box (proposed by AI, confirmed by a person), a document checklist line, or a rule that needs it. Nothing is added by hand.</Origin></div>
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-96"><Search className="absolute left-2.5 top-2.5 size-4 text-text-muted" /><Input className="pl-8" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a field or its meaning" aria-label="Search fields" /></div>
         <Select className="w-64" value={only} onChange={(e) => setOnly(e.target.value)} aria-label="Filter"><option value="all">All fields</option><option value="shared">Used by more than one form</option><option value="draft">With a draft change</option><option value="ai">AI-proposed</option><option value="unplaced">Not asked anywhere</option></Select>
@@ -38,26 +47,10 @@ export function FieldsPage() {
       </div>
       {list.isLoading ? <Spinner label="Loading fields" /> : !list.data?.length ? <EmptyState title="The library is empty" description="Load sample inputs, or add a form with AI drafting; reviewed fields land here." /> : (
         <Table head={["Field", "Meaning", "Type", "Forms", "Asked in", "Status"]}>
-          {rows.slice(0, 400).map((f) => <tr key={f.key}><td><Link className="font-medium text-text-link hover:underline" to={`/library/fields/${encodeURIComponent(f.key)}`}>{fieldName(f.key)}</Link><p className="mono break-all text-[11px] text-text-muted">{f.key}</p></td><td className="max-w-md text-xs">{f.meaning}</td><td className="text-xs">{TYPE_WORD[f.value_type] ?? f.value_type}</td><td className="text-xs">{f.forms.join(", ") || <span className="text-text-muted">none</span>}<span className="text-text-muted"> · {f.boxes} form field{f.boxes === 1 ? "" : "s"}</span></td><td className="text-xs">{f.placement ? `${f.placement.section.replace(/_/g, " ")} · ${collectedWord(f.placement.collected_from)}` : <span className="text-text-warn">not placed</span>}</td><td><ListPill origin={f.origin} status={f.status} /></td></tr>)}
+          {rows.slice(0, 400).map((f) => <tr key={f.key}><td><Link className="font-medium text-text-link hover:underline" to={`/library/fields/${encodeURIComponent(f.key)}`}>{f.name ?? fieldName(f.key)}</Link><p className="mono break-all text-[11px] text-text-muted">{f.key}</p></td><td className="max-w-md text-xs">{f.meaning}<SourceNote r={f} /></td><td className="text-xs">{TYPE_WORD[f.value_type] ?? f.value_type}</td><td className="text-xs">{f.forms.join(", ") || <span className="text-text-muted">none</span>}<span className="text-text-muted"> · {f.boxes} form field{f.boxes === 1 ? "" : "s"}{f.used_in?.length ? ` · ${f.used_in.length} combination${f.used_in.length === 1 ? "" : "s"}` : ""}</span></td><td className="text-xs">{f.placement ? `${f.placement.section.replace(/_/g, " ")} · ${collectedWord(f.placement.collected_from)}` : <span className="text-text-warn">not placed</span>}</td><td><ListPill origin={f.origin} status={f.status} /></td></tr>)}
         </Table>
       )}
-      {add ? <AddField onClose={() => setAdd(false)} /> : null}
     </div>
-  );
-}
-
-function AddField({ onClose }: { onClose: () => void }) {
-  const nav = useNavigate();
-  const [key, setKey] = React.useState("person."), [meaning, setMeaning] = React.useState(""), [type, setType] = React.useState("text");
-  const save = useAction(() => api("/library/fields", { method: "POST", json: { key, meaning, valueType: type } }), { success: "Field added as a draft", invalidate: [["fields"]], onDone: () => { onClose(); nav(`/library/fields/${encodeURIComponent(key)}`); } });
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title="Add a field" description="Check the library first: one meaning has one field, whoever it is about." footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => save.mutate(undefined)} busy={save.isPending}>Add as draft</Button></>}>
-      <div className="space-y-3">
-        <Field label="Key" hint="area.name in lower case; areas: person, relationship, case, organisation, representative"><Input className="mono" value={key} onChange={(e) => setKey(e.target.value)} /></Field>
-        <Field label="Meaning"><Textarea value={meaning} onChange={(e) => setMeaning(e.target.value)} placeholder="Country that refused the person's previous visa application" /></Field>
-        <Field label="Value type"><Select value={type} onChange={(e) => setType(e.target.value)}>{TYPES.map((t) => <option key={t} value={t}>{TYPE_WORD[t]}</option>)}</Select></Field>
-      </div>
-    </Dialog>
   );
 }
 
@@ -76,17 +69,23 @@ export function FieldPage() {
   React.useEffect(() => { if (f.data) setP(place ? { sectionKey: place.sectionKey, collectedFrom: place.collectedFrom, repeats: place.repeats, tier: place.tier, questionText: place.questionText ?? "", helpText: place.helpText ?? "", condition: place.predicateJson, conditionEffect: place.conditionEffect, conditionPlain: place.conditionPlain ?? "" } : { sectionKey: "", collectedFrom: "client_questionnaire", repeats: key.startsWith("case.") ? "once_per_case" : "per_person", tier: "case", questionText: "", helpText: "", condition: null, conditionEffect: null, conditionPlain: "" }); }, [f.data?.current?.id, place?.id]);
   const inv = [["field", key], ["fields"], ["preview"], ["config"], ["combination"]];
   const saveDef = useAction(() => api(`/library/fields/${encodeURIComponent(key)}`, { method: "PATCH", json: { meaning, valueType: type } }), { success: "Definition saved as a draft version", invalidate: inv });
+  const [name, setName] = React.useState("");
+  React.useEffect(() => { if (cur) setName((cur.labelChecked && cur.label) || fieldName(key)); }, [cur?.id, cur?.label]);
+  const src = useApi<SourcesView>(["field-sources", key], `/library/fields/${encodeURIComponent(key)}/sources`);
+  const rename = useAction(() => api(`/library/fields/${encodeURIComponent(key)}/name`, { method: "PATCH", json: { name } }), { success: "Renamed (a new draft version)", invalidate: [...inv, ["field-sources", key]] });
   const savePlace = useAction(() => api(`/library/fields/${encodeURIComponent(key)}/placement`, { method: "POST", json: p }), { success: "Placement saved as a draft version", invalidate: inv });
   if (f.isLoading) return <Spinner label="Loading field" />;
   if (f.isError) return <Notice tone="danger" title="Field not found">{(f.error as Error).message}</Notice>;
   const v = f.data;
+  const shown = (cur.labelChecked && cur.label) || fieldName(key);
   return (
     <div className="mx-auto max-w-7xl space-y-5">
-      <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/library/fields" className="hover:underline">Fields</Link><ChevronRight className="size-3" /><span>{fieldName(key)}</span></nav>
-      <div><h1 className="text-xl font-semibold">{fieldName(key)}</h1><p className="mono text-xs text-text-muted">{key}</p><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill><OriginPill origin={cur.origin} status={cur.status} /><Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div></div>
+      <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/library/fields" className="hover:underline">Fields</Link><ChevronRight className="size-3" /><span>{shown}</span></nav>
+      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mono text-xs text-text-muted">{key}</p><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill><OriginPill origin={cur.origin} status={cur.status} /><Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div></div>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
           <h2 className="font-semibold">Definition</h2>
+          <div className="flex items-start gap-2"><Field label="Name" className="flex-1" hint="Renaming is direct and makes a new draft version; a name another field in this group already has is refused."><Input value={name} onChange={(e) => setName(e.target.value)} /></Field><Button className="mt-6" variant="secondary" onClick={() => rename.mutate(undefined)} busy={rename.isPending} disabled={!name.trim() || name.trim() === shown}><Pencil /> Rename</Button></div>
           <Field label="Meaning" hint="What reviewers and the comparison rely on; one meaning per field."><Textarea value={meaning} onChange={(e) => setMeaning(e.target.value)} /></Field>
           <Field label="Value type"><Select value={type} onChange={(e) => setType(e.target.value)}>{TYPES.map((t) => <option key={t} value={t}>{TYPE_WORD[t]}</option>)}</Select></Field>
           <div className="flex justify-end"><Button onClick={() => saveDef.mutate(undefined)} busy={saveDef.isPending} disabled={meaning === cur.meaning && type === cur.valueType}><Save /> Save as draft</Button></div>
@@ -108,6 +107,11 @@ export function FieldPage() {
           </> : null}
         </section>
       </div>
+      <section data-sources className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
+        <h2 className="font-semibold">Where it comes from</h2>
+        {src.isLoading ? <Spinner label="Loading sources" /> : src.data?.unsourced ? <Notice tone="warn">No source recorded: this field was not read from a form box, a checklist line or a rule.</Notice> : <ul className="mt-2 space-y-1 text-sm">{(src.data?.sources ?? []).slice(0, 30).map((l) => <li key={l.text}>{l.text}{l.quote ? <span className="text-xs text-text-muted"> · {l.kind === "release" ? l.quote : `"${l.quote}"`}</span> : null}</li>)}</ul>}
+        <p className="mt-3 text-sm"><span className="text-text-muted">Used in combinations:</span> {src.data?.used_in?.length ? src.data.used_in.join(", ") : "none"}</p>
+      </section>
       <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
         <h2 className="font-semibold">Form fields that read it, and whose value each form field needs</h2>
         {!v.used_by.length ? <p className="mt-2 text-sm text-text-muted">No form field reads this field.</p> : v.used_by.map((u: any) => (
@@ -127,14 +131,23 @@ export function FieldPage() {
 
 export function SectionsPage() {
   const s = useApi<any[]>(["sections"], "/library/sections");
-  const [title, setTitle] = React.useState(""), [meaning, setMeaning] = React.useState("");
-  const add = useAction(() => api("/library/sections", { method: "POST", json: { title, meaning } }), { success: "Section added as a draft", invalidate: [["sections"]], onDone: () => { setTitle(""); setMeaning(""); } });
+  const [editing, setEditing] = React.useState<{ key: string; title: string } | null>(null);
   return (
     <div className="mx-auto max-w-6xl space-y-4">
-      <div><h1 className="text-xl font-semibold">Sections</h1><p className="mt-1 text-sm text-text-muted">Reusable groups of questions. Each combination selects the sections its questionnaire uses.</p></div>
-      <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-surface-raised p-4"><Field label="New section title" className="w-72"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Travel history" /></Field><Field label="Meaning" className="min-w-80 flex-1"><Input value={meaning} onChange={(e) => setMeaning(e.target.value)} /></Field><Button onClick={() => add.mutate(undefined)} disabled={!title.trim()} busy={add.isPending}><Plus /> Add</Button></div>
-      {s.isLoading ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" /> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status"]}>{s.data.map((x) => <tr key={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}</td><td>{x.questions}</td><td>{x.combinations}</td><td><ListPill origin={x.origin} status={x.status} /></td></tr>)}</Table>}
+      <div><h1 className="text-xl font-semibold">Sections</h1><p className="mt-1 text-sm text-text-muted">Reusable groups of questions. Each combination selects the sections its questionnaire uses.</p><Origin>the forms' own parts, each confirmed on To review. Nothing is added by hand; a combination picks its sections on its Questionnaires tab.</Origin></div>
+      {s.isLoading ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status", ""]}>{s.data.map((x) => <tr key={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><ListPill origin={x.origin} status={x.status} /></td><td><Button variant="ghost" size="sm" aria-label={`Rename ${x.title}`} onClick={() => setEditing({ key: x.key, title: x.title })}><Pencil /> Rename</Button></td></tr>)}</Table>}
+      {editing ? <RenameSection section={editing} onClose={() => setEditing(null)} /> : null}
     </div>
+  );
+}
+
+function RenameSection({ section, onClose }: { section: { key: string; title: string }; onClose: () => void }) {
+  const [title, setTitle] = React.useState(section.title);
+  const save = useAction(() => api(`/library/sections/${encodeURIComponent(section.key)}`, { method: "PATCH", json: { name: title } }), { success: "Section renamed (a new draft version)", invalidate: [["sections"]], onDone: onClose });
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()} title={`Rename "${section.title}"`} description="Renaming is direct and makes a new draft version; another section's title is refused." footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => save.mutate(undefined)} busy={save.isPending} disabled={!title.trim() || title.trim() === section.title}>Rename</Button></>}>
+      <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
+    </Dialog>
   );
 }
 
@@ -142,8 +155,8 @@ export function DocumentTypesPage() {
   const t = useApi<any[]>(["doc-types"], "/library/document-types");
   return (
     <div className="mx-auto max-w-6xl space-y-4">
-      <div><h1 className="text-xl font-semibold">Document types</h1><p className="mt-1 text-sm text-text-muted">Reusable document definitions. The facts a supported document can supply are a proposal until reading that document proves them on a case.</p></div>
-      {t.isLoading ? <Spinner label="Loading" /> : !t.data?.length ? <EmptyState title="No document types yet" /> : <Table head={["Document type", "Category", "Facts it can supply", "Status"]}>{t.data.map((x) => <tr key={x.documentTypeKey}><td className="max-w-md font-medium">{x.name}</td><td className="text-xs">{CATEGORY_WORD[x.category] ?? x.category}</td><td className="max-w-lg text-xs">{x.suppliesFacts?.length ? x.suppliesFacts.map(fieldName).join(", ") : <span className="text-text-muted">none recorded</span>}</td><td><ListPill origin={x.origin} status={x.status} /></td></tr>)}</Table>}
+      <div><h1 className="text-xl font-semibold">Document types</h1><p className="mt-1 text-sm text-text-muted">Reusable document definitions. The facts a supported document can supply are a proposal until reading that document proves them on a case.</p><Origin>the document checklist lines of each combination (its official checklist, quoted), applied on the combination's Documents tab. Nothing is added by hand.</Origin></div>
+      {t.isLoading ? <Spinner label="Loading" /> : !t.data?.length ? <EmptyState title="No document types yet" /> : <Table head={["Document type", "Category", "Facts it can supply", "Used by combinations", "Status"]}>{t.data.map((x) => <tr key={x.documentTypeKey}><td className="max-w-md font-medium">{x.name}<SourceNote r={x} /></td><td className="text-xs">{CATEGORY_WORD[x.category] ?? x.category}</td><td className="max-w-lg text-xs">{x.suppliesFacts?.length ? x.suppliesFacts.map(fieldName).join(", ") : <span className="text-text-muted">none recorded</span>}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><ListPill origin={x.origin} status={x.status} /></td></tr>)}</Table>}
     </div>
   );
 }
