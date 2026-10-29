@@ -32,3 +32,9 @@ Agreed plan: `plan.md`, challenge and Lead response: `challenge.md`. No screen i
 **Checks:** `tests/check_w115_slice1.ts` 39/39 (port 4434; engine on the sample's own draft snapshot changed in memory, and the API); record `tests/check_w115_slice1.json`. Labels name C4.10 and C4.2.
 
 **Not in this slice (named):** the client view still asks every placed fact, including those a document supplies (`engine/render.ts`): slice 4, Preview in three sets, with a test that a case on an older release keeps asking as before. Facts about a person who is not on the case (a parent named on a birth certificate) are attributed to that person's place (`child-1/parent_1`), as form fields are today; nothing more until the immigration expert needs it.
+
+## Fixes: Lead check after the founder's early look (29 Oct, W1–W3)
+* **W1:** Review's "Where an answer comes from" lines use the fact's words and the role's label, never system keys: "Date of birth (Principal applicant): comes from the client", "…: pre-qualification", a document by its name ("comes from the Passport"). `engine/validate.ts` diff, with `factWords` and `who` from `engine/sources.ts`.
+* **W2:** an Undo by anyone but the draft's author answers "Only the person who made this draft can undo it." (403 without the author duty, 409 for another author), never the duty name. `api/src/fact-sources.ts`.
+* **W3:** no decision code in a user-facing message: the client-only refusal at save and the release check drop "(P-97)". Swept `api/src/fact-sources.ts` and `engine/sources.ts` (factSourceProblems): no other code left.
+* Tests, a pass and a fail each: `tests/check_w115_slice1.ts` 47/47 (8 new "Lead check W…" steps); `check_engine` 38/38. US$0.

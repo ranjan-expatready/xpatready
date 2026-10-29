@@ -15,6 +15,8 @@ import { diff } from "../engine/validate.ts";
 const PORT = Number(process.argv[2] ?? 4434), DB = process.argv[3] ?? "xr_studio_runtime_w115";
 const log: any[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 220)}` : ""}`); };
+/** Lead check W1: a system key (person.date_of_birth) or a role key ("(principal)") in words meant for people. */
+const KEYS = /\b[a-z_]+\.[a-z_]+\b|\((principal|spouse_or_partner|child|representative)\)/;
 const call = async (method: string, path: string, body?: unknown, actor = "user-A") => {
   const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: any = null; try { j = JSON.parse(t); } catch { j = t; }
@@ -90,6 +92,9 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   ok("C4.2 M4 (Q1) pass: a tick on the passport's date of birth (it has a question) is allowed", !factSourceProblems(pqDoc).some((p) => p.item === "person.date_of_birth" && p.level === "error") && get(factSources(pqDoc), "principal", "person.date_of_birth")?.prequalification === true);
   const d1 = diff(S0 as any, pqDoc);
   ok("C4.10 M5: a tick is one named line on Review, needing the immigration expert's sign-off", d1.filter((x) => x.kind === "Where an answer comes from").length === 1 && d1.find((x) => x.kind === "Where an answer comes from")!.needs_sme === true && !d1.some((x) => x.kind === "Configuration"), d1.map((x) => `${x.kind}: ${x.label}`));
+  { const t = d1.find((x) => x.kind === "Where an answer comes from")!.label;
+    ok("Lead check W1 pass: the tick's Review line uses the fact's words and the role's label (\"…: pre-qualification\")", /^[A-Z][^:]* \([A-Z][^)]*\): pre-qualification$/.test(t), t);
+    ok("Lead check W1 fail: the tick's Review line shows no system key or role key", !KEYS.test(t), t); }
 
   // ---------------------------------------------------------------- API: list, choose, refuse, undo, release
   let L = (await call("GET", `/combinations/${wp}/fact-sources`)).body;
@@ -104,9 +109,14 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   r = await put("principal", "person.date_of_birth", { source: "AGENT", version: 0 });
   ok("C4.10 M1 fail: a choice sent from an old version is 409 (someone changed it)", r.status === 409 && /changed/.test(words(r)), words(r));
   c = (await call("GET", `/combinations/${wp}`)).body;
-  ok("C4.10 M5: the choice is one named change on Review (needs the immigration expert); the draft no longer equals the release", c.draft.matches_release === false && c.draft.changes.some((x: any) => x.kind === "Where an answer comes from" && /person.date_of_birth \(principal\): comes from Client/.test(x.label) && x.needs_sme), c.draft.changes.map((x: any) => `${x.kind}: ${x.label}`));
+  ok("C4.10 M5: the choice is one named change on Review (needs the immigration expert); the draft no longer equals the release", c.draft.matches_release === false && c.draft.changes.some((x: any) => x.kind === "Where an answer comes from" && x.needs_sme), c.draft.changes.map((x: any) => `${x.kind}: ${x.label}`));
+  { const lines = c.draft.changes.filter((x: any) => x.kind === "Where an answer comes from").map((x: any) => x.label);
+    ok("Lead check W1 pass: the Review line reads \"Date of birth (<role label>): comes from the client\"", lines.some((t: string) => /^Date of birth \([A-Z][^)]*\): comes from the client$/.test(t)), lines);
+    ok("Lead check W1 fail: no Review line shows a system key (person.date_of_birth) or a role key (principal)", lines.length > 0 && !lines.some((t: string) => KEYS.test(t)), lines); }
   r = await call("DELETE", `/combinations/${wp}/fact-sources/principal/${encodeURIComponent("person.date_of_birth")}`, { version: 1 }, "user-B");
   ok("C4.10 Undo fail: someone else cannot undo the author's draft choice", r.status === 403 || (r.status === 409 && /Only the person/.test(words(r))), `${r.status} ${words(r)}`);
+  ok("Lead check W2 pass: the refusal says \"Only the person who made this draft can undo it.\"", words(r).includes("Only the person who made this draft can undo it."), words(r));
+  ok("Lead check W2 fail: the refusal does not talk about duties or \"(simulated)\"", !/duty|simulated/i.test(words(r)), words(r));
   r = await call("DELETE", `/combinations/${wp}/fact-sources/principal/${encodeURIComponent("person.date_of_birth")}`, { version: 1 });
   c = (await call("GET", `/combinations/${wp}`)).body;
   ok("C4.10 Undo pass: the author undoes it at once: back to the passport, and the draft equals the release again", r.status === 200 && r.body?.source === "DOCUMENT" && r.body?.proposedBy === "Rules" && c.draft.matches_release === true, { status: r.status, src: r.body?.source, matches: c.draft.matches_release });
@@ -114,6 +124,7 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   ok("C4.10 M2 fail: a document that does not supply the fact is refused at save (422, on its field)", r.status === 422 && r.body?.errors?.[0]?.field === "documentTypeKey", words(r));
   r = await put(decl!.role, decl!.fact, { source: "AGENT", version: 0 });
   ok("C4.10 m2 (P-97) fail: Agent on a declaration is refused at save (422)", r.status === 422 && /only the client gives it/.test(words(r)), words(r));
+  ok("Lead check W3 fail: the refusal at save carries no decision code (P-…)", !/\(P-\d+\)|\bP-\d+\b/.test(JSON.stringify(r.body)), words(r));
   r = await put(rep!.role, rep!.fact, { prequalification: true, version: 0 });
   ok("C4.2 M4 fail: a pre-qualification tick on an agent fact is refused at save (422)", r.status === 422 && r.body?.errors?.some((e: any) => e.field === "prequalification"), words(r));
   const unplaced = L.facts.find((f: any) => !f.placed && f.source !== "AGENT" && !f.clientOnly);
@@ -125,7 +136,8 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   // Release: a choice nobody can reach blocks it (set in the data, as an older save would be).
   sql(`insert into fact_source (workspace_id, combination_id, lineage_key, role, canonical_field_key, source, version, status, origin, updated_by) values ('${served}', '${wp}', '${decl!.role}|${decl!.fact}', '${decl!.role}', '${decl!.fact}', 'AGENT', 1, 'DRAFT', 'HUMAN', 'user-A')`);
   c = (await call("GET", `/combinations/${wp}`)).body;
-  ok("C4.10 fail: release is refused while a client-only fact says Agent (an error on the page, in words)", c.draft.problems.some((p: any) => p.level === "error" && p.item === decl!.fact && /P-97/.test(p.message)), c.draft.problems.filter((p: any) => p.item === decl!.fact).map((p: any) => p.message));
+  ok("C4.10 fail: release is refused while a client-only fact says Agent (an error on the page, in words)", c.draft.problems.some((p: any) => p.level === "error" && p.item === decl!.fact && /only the client gives it/.test(p.message)), c.draft.problems.filter((p: any) => p.item === decl!.fact).map((p: any) => p.message));
+  ok("Lead check W3 pass: the release check says it in words and carries no decision code; no source check on the page does", c.draft.problems.some((p: any) => p.item === decl!.fact && /Set Comes from to Client/.test(p.message)) && !c.draft.problems.some((p: any) => p.where === "Questions" && /\bP-\d+\b/.test(p.message)), c.draft.problems.filter((p: any) => p.where === "Questions").map((p: any) => p.message).slice(0, 3));
   r = await call("POST", `/combinations/${wp}/submit`, {});
   ok("C4.10 fail: submitting for review is refused with that error", r.status === 400 && /only the client gives it/.test(words(r)), words(r).slice(0, 160));
   sql(`delete from fact_source where combination_id='${wp}' and lineage_key='${decl!.role}|${decl!.fact}'`);

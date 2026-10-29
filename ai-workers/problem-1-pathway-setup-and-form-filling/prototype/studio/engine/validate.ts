@@ -8,7 +8,7 @@ import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rule
 import type { Snapshot } from "./snapshot.ts";
 import { channelProblems, type Accepts } from "./channels.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
-import { factSourceProblems } from "./sources.ts";
+import { factSourceProblems, factWords, who } from "./sources.ts";
 
 const schema = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "contracts", "predicate.v0.schema.json"), "utf8"));
 const ajv = new Ajv({ strict: false, allErrors: true });
@@ -185,11 +185,14 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   // W1-15 slice 1 (challenge M5): each choice over the rules' source and each Pre-qualification tick is named on Review,
   // and needs the immigration expert's sign-off (P-76: PQR picks are approved in the combination's one review).
   {
-    const words = (x: any) => [x.source ? `comes from ${x.source === "DOCUMENT" ? `Document · ${x.document_type}` : x.source === "CLIENT" ? "Client" : "Agent"}` : "", x.prequalification ? "pre-qualification" : ""].filter(Boolean).join(", ") || "back to the rules' source";
+    // Lead check W1: the fact's own words and the role's label, never system keys.
+    const docName = (key: string) => [...(next.document_types as any[]), ...((prev?.document_types ?? []) as any[])].find((t) => t.key === key)?.name ?? key;
+    const words = (x: any) => [x.source ? `comes from ${x.source === "DOCUMENT" ? `the ${docName(x.document_type)}` : x.source === "CLIENT" ? "the client" : "the agent"}` : "", x.prequalification ? "pre-qualification" : ""].filter(Boolean).join(", ") || "back to the rules' source";
+    const line = (s: Snapshot, x: any, rest: string) => `${factWords(s, x.fact)} (${who(s, x.role)}): ${rest}`;
     const a = new Map(((prev?.fact_sources ?? []) as any[]).map((x) => [`${x.role}|${x.fact}`, x])), b = new Map(((next.fact_sources ?? []) as any[]).map((x) => [`${x.role}|${x.fact}`, x]));
-    for (const [key, x] of b) if (!a.has(key)) out.push({ kind: "Where an answer comes from", key, change: "added", origin: x.origin, needs_sme: true, label: `${x.fact} (${x.role}): ${words(x)}` });
-      else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: "Where an answer comes from", key, change: "changed", origin: x.origin, needs_sme: true, label: `${x.fact} (${x.role}): ${words(x)}` });
-    for (const [key, x] of a) if (!b.has(key)) out.push({ kind: "Where an answer comes from", key, change: "removed", needs_sme: true, label: `${x.fact} (${x.role}): back to the rules' source, no pre-qualification` });
+    for (const [key, x] of b) if (!a.has(key)) out.push({ kind: "Where an answer comes from", key, change: "added", origin: x.origin, needs_sme: true, label: line(next, x, words(x)) });
+      else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: "Where an answer comes from", key, change: "changed", origin: x.origin, needs_sme: true, label: line(next, x, words(x)) });
+    for (const [key, x] of a) if (!b.has(key)) out.push({ kind: "Where an answer comes from", key, change: "removed", needs_sme: true, label: line(prev!, x, "back to the rules' source, no pre-qualification") });
   }
   // Completeness guard: any other part of the released content that differs is listed rather than silently passed.
   const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "mode", "row_versions"]);

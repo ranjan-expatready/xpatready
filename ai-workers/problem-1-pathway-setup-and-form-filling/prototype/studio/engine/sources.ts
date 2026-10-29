@@ -112,7 +112,12 @@ export function factSources(s: Snapshot): FactSourceView[] {
 }
 
 const ROLE_WORDS: Record<string, string> = { case: "The application", principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child", representative: "Representative", sponsor: "Sponsor" };
-const who = (s: Snapshot, role: string) => ((s.combination.participants ?? []) as { role: string; label?: string }[]).find((p) => p.role === role)?.label ?? ROLE_WORDS[role] ?? role;
+export const who = (s: Snapshot, role: string) => ((s.combination.participants ?? []) as { role: string; label?: string }[]).find((p) => p.role === role)?.label ?? ROLE_WORDS[role] ?? role;
+/** A fact in its own words for Review lines ("Organisation name"), never its system key (Lead check W1). */
+export const factWords = (s: Snapshot, fact: string) => {
+  const m = ((s.canonical_fields as { id: string; meaning?: string }[]).find((f) => f.id === fact)?.meaning ?? fact).trim().replace(/\.$/, "");
+  return m.charAt(0).toUpperCase() + m.slice(1);
+};
 
 /** C4.10 (P-130, challenge M2, M4, m2; Lead Q1–Q3): release refuses a source nobody can reach, a Pre-qualification tick
  *  with nothing to ask it, and a document or agent source on a client-only fact; a document fact with no fallback
@@ -123,7 +128,7 @@ export function factSourceProblems(s: Snapshot): Problem[] {
   for (const f of factSources(s)) {
     const person = f.proposedBy === "Person";
     if (!f.forms.length && (person || f.prequalification)) say("warning", f, "has a choice saved, but no form of this combination needs it any more. Clear it.");
-    if (f.clientOnly && f.source !== "CLIENT") say("error", f, `is a declaration or background answer: only the client gives it (P-97), never ${f.source === "DOCUMENT" ? "a document" : "the agent"}. Set Comes from to Client.`);
+    if (f.clientOnly && f.source !== "CLIENT") say("error", f, `is a declaration or background answer: only the client gives it, never ${f.source === "DOCUMENT" ? "a document" : "the agent"}. Set Comes from to Client.`);
     if (f.source === "DOCUMENT") {
       if (person && !f.also.concat(f.ruleDocument ? [f.ruleDocument] : []).some((x) => x.key === f.document?.key)) say("error", f, `comes from ${f.document?.name ?? "a document"}, but that document is not on this person's checklist or does not supply it. Add it to the Documents tab, or choose Client or Agent.`);
       else if (!f.placed) say(f.document?.base ? "warning" : "error", f, f.document?.base ? `comes from ${f.document.name}; if it cannot be read, nobody is asked for it. Add a question for it as the fallback.` : `comes from ${f.document?.name}, which is asked only in some cases: when it is not asked, nobody gives this answer. Add a question for it, or choose Client.`);

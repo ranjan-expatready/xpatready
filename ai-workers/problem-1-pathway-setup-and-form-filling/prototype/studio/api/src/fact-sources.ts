@@ -21,7 +21,8 @@ export const SetFactSource = z.object({
   /** The version read (0 when the rules' default was shown): a stale one is a 409. */
   version: z.number({ error: "Reload: the version you read is missing." }).int().min(0),
 });
-const UndoFactSource = z.object({ version: z.number({ error: "Reload: the version you read is missing." }).int().min(1) });
+const NOT_YOURS = "Only the person who made this draft can undo it.";
+const UndoFactSource =z.object({ version: z.number({ error: "Reload: the version you read is missing." }).int().min(1) });
 
 @Injectable()
 export class FactSources {
@@ -78,14 +79,15 @@ export class FactSources {
 
   /** Undo: the author's own draft choice goes at once (P-116 amended); a published one stays until the next release. */
   async undo(actor: Actor, id: string, role: string, fact: string, body: unknown) {
-    need(actor, "author");
+    // Lead check W2: the refusal says who may undo, not which duty is missing.
+    if (!(actor.duties as readonly string[]).includes("author")) throw problem(403, "Not yours", NOT_YOURS);
     const parsed = UndoFactSource.safeParse(body);
     if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
     const c = await this.combination(id);
     const newest = await this.db.factSource.findFirst({ where: { combinationId: id, lineageKey: `${role}|${fact}` }, orderBy: { version: "desc" } });
     if (!newest || newest.status !== "DRAFT") throw problem(409, newest ? "Released since" : "Nothing to undo", newest ? "That choice was released meanwhile: a release is never undone. Change it in a new draft." : "There is no choice on this fact to undo.");
     if (newest.version !== parsed.data.version) throw problem(409, "Changed since", "Someone changed this fact's source after you looked. Reload first.", { version: newest.version });
-    if (newest.updatedBy !== actor.id) throw problem(409, "Not yours", "Only the person who made this draft choice can undo it; change it instead.");
+    if (newest.updatedBy !== actor.id) throw problem(409, "Not yours", NOT_YOURS);
     await this.db.factSource.delete({ where: { id: newest.id } });
     await this.audit.log(c.workspaceId, actor.id, "undone", "fact source", `${role}|${fact}`, `${actor.name} undid their choice of where "${fact}" (${role}) comes from in "${c.label}"`, undefined, id);
     return (await this.list(id)).facts.find((x) => x.role === role && x.fact === fact) ?? null;
@@ -96,7 +98,7 @@ export class FactSources {
 function refusals(f: FactSourceView, source: FactSourceView["source"] | null, documentTypeKey: string | null, tick: boolean): { field: string; message: string }[] {
   const out: { field: string; message: string }[] = [];
   const s = source ?? f.ruleSource;
-  if (f.clientOnly && s !== "CLIENT") out.push({ field: "source", message: `"${f.label}" is a declaration or background answer: only the client gives it (P-97).` });
+  if (f.clientOnly && s !== "CLIENT") out.push({ field: "source", message: `"${f.label}" is a declaration or background answer: only the client gives it.` });
   if (source === "DOCUMENT") {
     if (!documentTypeKey) out.push({ field: "documentTypeKey", message: "Choose which document supplies it." });
     else if (![f.ruleDocument, ...f.also].some((x) => x?.key === documentTypeKey)) out.push({ field: "documentTypeKey", message: `That document is not on this person's checklist, or it does not supply "${f.label}". Add it on the Documents tab first.` });
