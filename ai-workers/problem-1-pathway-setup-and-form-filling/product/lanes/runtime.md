@@ -7,10 +7,10 @@
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: W1-questions-and-documents (W1-15, P-130–P-132)
-current_slice: slice 2 (Questionnaires tab) with the Lead as PR #80 at ff4d9cce; slice 3 (Documents tab) handed back at dfd1a018 with open points (1)-(3) settled
-stage: EARLY-LOOK
-owner: Lead
-next_action: Lead: early look and check of W1-15 slice 3 at dfd1a018 (full run-suites 64 pass; check_w1_programs_s2 failed on time under load, 87/87 twice alone). Builder next: QA-84, QA-85, QA-91 FIX (Lead message, after this hand-back).
+current_slice: slice 3 Lead check PASS at 740ef734 (founder's early look next); FIX pass at d824e53f: QA-84, QA-85, QA-88 runtime part, QA-91 as a plan, Lead check minors
+stage: FIX
+owner: Builder
+next_action: Builder: full run-suites running on d824e53f; then hand back by message (CHECK, owner Lead).
 blocked_by: none
 updated: 2026-10-29
 
@@ -25,6 +25,7 @@ updated: 2026-10-29
 * **Learned, not written elsewhere:** the guard hook (`merge-guard.sh`) refuses commands that have variable expansion, `eval`, `$(…)` or words like "merge": put commands in a scratchpad script and run `zsh <file>`. Test runs rewrite other lanes' screenshots, `product/qa/reports`, `prototype/p2` ledgers and `studio/evidence`: commit only this lane's files by path, then `git checkout --` and `git clean` those folders. The qa checks `tests/qa/check_qa_am_1027.cjs` and `check_qa_explore_1025.cjs` stop on this branch at main's older "Forms and coverage" button (S5 replaced it): qa moves them when S5 merges.
 
 ## Log (last 10 lines)
+- 2026-10-29 · Builder (Mac): applied Lead message (slice 3 check PASS; FIX pass): synced main d50d87f9; QA-84 schema limits checked in code, QA-85 stub, plain failure words (QA-88 runtime part), QA-91 written as a plan; release supersedes retired checks; drawer alternatives, 'From the sample setup'; check_who_can_be_qa 9/9, slice3 34/34, browser 35/35 (d824e53f); full suites running. AI US$0.
 - 2026-10-29 · Builder (Mac): full run-suites on dfd1a018: 64 pass, check_w1_programs_s2 failed one timing check under load (87/87 twice alone on 4436); graph exit 0; by-products restored; slice 3 EARLY-LOOK, owner Lead; Lead message received: QA-84/85/91 FIX next. AI US$0.
 - 2026-10-29 · Builder (Mac): fresh runtime session (Lead's move): open point 3 fixed in engine/snapshot.ts (a draft removal stays out of the published view until a release; fact sources and placements have none), open point 1 said on the Documents tab, (2) information only; check_w115_slice3 31/31, browser 32/32, check_engine 38/38 (dfd1a018, pushed); full suites running. AI US$0.
 - 2026-10-29 · Builder (Mac): slice 3 (Documents tab) built at b5c46535 (check_w115_slice3 26/26, browser 31/31) before the Lead's hold; full suites not run on it; handover written for a fresh session; slice 2 at ff4d9cce with the Lead. AI US$0.
@@ -34,4 +35,3 @@ updated: 2026-10-29
 - 2026-10-29 · Builder (Mac): slice 2 (Questionnaires tab, board v2 P-147) built: API bulk and bulk/undo (batch_id), row status, release checks with role, Agent offered only for agent facts; UI strip, chips, Needs you, rows of five, ⋯ menu with reasons, drawer, bulk bar, Who can be folded; check_w115_slice2 26/26, browser 46/46; older S5 browser tests being updated for the fold. AI US$0.
 - 2026-10-29 · Builder (Mac): full run-suites 60/60 on cbb1a57a (W1–W3 fixes; check_studio_browser skipped); by-products restored; CHECK, owner Lead; slice 2 BUILD starts (Lead: founder's OK covers it). AI US$0.
 - 2026-10-29 · Builder (Mac): founder OK on W1-15 slice 1; Lead check W1 (Review lines in words), W2 (Undo refusal words), W3 (no decision codes) fixed with a pass and a fail test each (check_w115_slice1 47/47, check_engine 38/38); full suites next. AI US$0.
-- 2026-10-29 · Builder (Mac): Lead message (P-147 board v2 agreed) applied: fit check of slice 1 against board v2 in plan.md (no data change; slice 2 adds row status and Only if, role on release checks, bulk route with one Undo per batch, ⋯ menu and drawer); EARLY-LOOK, owner Lead. AI US$0.
