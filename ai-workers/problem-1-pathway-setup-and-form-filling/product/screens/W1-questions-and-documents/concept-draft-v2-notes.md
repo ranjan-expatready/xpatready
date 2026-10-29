@@ -1,6 +1,6 @@
 # Questions and documents, board v2: notes for the Lead (draft, 29 Oct)
 
-Status: **draft for the Lead.** It does not change the agreed concept (`concept-draft.md`, P-130–P-132) or its build order (§10). Board: `design/draft-questions-and-documents-v2.html` (8 frames; "Show or hide labels" at the top). Design only, US$0.
+Status: **board v2 agreed 29 Oct (P-147); §3 points settled by the Lead as recommended.** It does not change the agreed concept (`concept-draft.md`, P-130–P-132) or its build order (§10). Board: `design/draft-questions-and-documents-v2.html` (8 frames; "Show or hide labels" at the top). Design only, US$0.
 Basis: the concept and board v1; P-97, P-116 (amended 28 Oct), P-119–P-121, P-130–P-135, P-138, P-142; the report "Document first intake and OCR choice"; the runtime lane's slice 1 challenge with the Lead's answers (overrides and ticks only; PQR ⊂ SQR ∪ checklist documents; clientOnly sections locked; supplies-facts with a subject); EXPERIENCE, STANDARDS; the built S5 tabs on :4400.
 Every program, document, condition, count, cost and IRCC quote on the board is **Sample** until the immigration expert confirms.
 
@@ -40,7 +40,7 @@ Every program, document, condition, count, cost and IRCC quote on the board is *
 - [x] Every state drawn: empty (as :4400 today), loading, long content, needs work, running, error, read-only, conflict
 - [x] Words from PRODUCT §4; no codes on the main path (the system name only in the Add dialog's "will be created as")
 - [x] The look matches the built tabs (tabs, chips, section folds, "Remove from questionnaire", empty text)
-- [ ] The founder answers §5 Q1–Q3
+- [x] The founder answers §5 Q1–Q3 (29 Oct, all as recommended: P-147)
 - [ ] The Lead adds the Copies, Translation and Validity window values to the immigration expert's list (report D9)
 
 ## 5. Questions for the founder (one at a time, recommendation first)

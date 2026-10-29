@@ -12,6 +12,8 @@ export const PROTOTYPE = join(import.meta.dirname, "..", "..");
 export const SOLUTION = join(PROTOTYPE, "..");
 export const OFFICIAL = join(SOLUTION, "official-sources", "ircc");
 export const manifest = () => JSON.parse(readFileSync(join(OFFICIAL, "manifest.json"), "utf8")).items as any[];
+/** W1-15 slice 1 (P-130, P-97; challenge M6, m2): Sample library data applied with the sample library (samples/). */
+const QD = () => JSON.parse(readFileSync(join(import.meta.dirname, "..", "samples", "questions-and-documents.json"), "utf8")) as { clientOnlySections: string[]; documentSupplies: Record<string, { facts: string[]; about: Record<string, string> }> };
 export const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 60);
 
 /** Which facts each supported document type can supply: the P5 reader profiles (a maker Proposal, D36). */
@@ -41,7 +43,8 @@ export async function importConfiguration(db: PrismaClient, workspaceId: string,
   inc("canonical fields added", newFields.length); inc("canonical fields reused", config.canonical_fields.length - newFields.length);
 
   const existingSections = new Set((await db.logicalSection.findMany({ where: ws, select: { sectionKey: true } })).map((s) => s.sectionKey));
-  await db.logicalSection.createMany({ data: config.sections.filter((s: any) => !existingSections.has(s.id)).map((s: any, i: number) => ({ ...ws, sectionKey: s.id, version: 1, status: "PUBLISHED", title: s.title, meaning: s.meaning, displayOrder: i, origin: "IMPORTED_RELEASE", updatedBy: o.by })) });
+  const qd = QD();
+  await db.logicalSection.createMany({ data: config.sections.filter((s: any) => !existingSections.has(s.id)).map((s: any, i: number) => ({ ...ws, sectionKey: s.id, version: 1, status: "PUBLISHED", title: s.title, meaning: s.meaning, displayOrder: i, clientOnly: qd.clientOnlySections.includes(s.id), origin: "IMPORTED_RELEASE", updatedBy: o.by })) });
   await db.sqrSectionSelection.createMany({ data: config.sections.map((s: any, i: number) => ({ ...ws, combinationId, sectionKey: s.id, sectionOrder: i })), skipDuplicates: true });
 
   const existingPlacements = new Set((await db.sectionQuestion.findMany({ where: ws, select: { lineageKey: true } })).map((q) => q.lineageKey));
@@ -62,8 +65,8 @@ export async function importConfiguration(db: PrismaClient, workspaceId: string,
     const key = slug(d.document_type);
     if (typeKeys.has(key)) continue;
     typeKeys.add(key);
-    const prof = profiles.get(d.document_type);
-    await db.documentType.create({ data: { ...ws, documentTypeKey: key, name: d.document_type, category: d.provided_by ?? "client", version: 1, status: "PUBLISHED", origin: "IMPORTED_RELEASE", updatedBy: o.by, suppliesFacts: prof?.facts ?? [], readerProfile: prof ? { kind: prof.kind, basis: "P5 reader profile (maker Proposal; the release does not record it, D36)" } : undefined } });
+    const prof = profiles.get(d.document_type), more = qd.documentSupplies[key];
+    await db.documentType.create({ data: { ...ws, documentTypeKey: key, name: d.document_type, category: d.provided_by ?? "client", version: 1, status: "PUBLISHED", origin: "IMPORTED_RELEASE", updatedBy: o.by, suppliesFacts: [...new Set([...(prof?.facts ?? []), ...(more?.facts ?? [])])], ...(more && Object.keys(more.about).length ? { suppliesAbout: more.about } : {}), readerProfile: prof ? { kind: prof.kind, basis: "P5 reader profile (maker Proposal; the release does not record it, D36)" } : undefined } });
     inc("document types added");
   }
 

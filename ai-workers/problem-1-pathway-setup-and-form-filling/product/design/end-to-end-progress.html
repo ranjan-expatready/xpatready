@@ -62,13 +62,14 @@ details .tw{padding:0 14px 10px;overflow-x:auto}
 <script>
 /* ===================== DATA: the Lead edits only this block (statuses as in WAVE-1.md) ===================== */
 const DATA = {
-  asOf: "27 Oct 2026",
-  focus: "Whole journey without the browser extension, actor by actor (P-101). Forms come in only as PDFs; the extension returns last, for online fill only.",
+  asOf: "29 Oct 2026",
+  focus: "Whole journey without the browser extension, actor by actor (P-101). Forms come in only as PDFs; the extension returns last, for online fill only. Documents come before questions: a fact a document supplies is not asked (P-130).",
   now: [
-    "S1 Structure merged with its finish (Pathway cards that open the tree, \"Used by\" names, no toasts over the page, full-height menu): Lead check 34/34 suites and the 45-step journey on the exact version.",
-    "S2 Immigration programs (design D, opened by the same Pathway cards) is being built by the screens lane, with two small S1 fixes.",
-    "S3–S7 agreed: walkthrough v2 marked OK on every screen (P-123: AI picks each combination's forms; lean library; plain-words review; setup order folded into the menu and the Add box).",
-    "Every official file the 6 sample combinations need is saved (28 of 29; EMP5626 is online-only, so an answer sheet). canada.ca accepted a plain download on 27 Oct, a good sign for automatic form download."
+    "The content-publisher setup path is on main: S1 Structure, S2 Immigration programs, S3 Start setup and S5 Combination workspace merged 29 Oct (PRs #76, #71), S4 Form library merged 28 Oct (#65, #69, #73).",
+    "W1-15 Questions and documents agreed (board v2, P-147): Comes from per fact, PQR tick, Documents tab, Preview in three sets. Runtime slice 1 (data and rules) built on the lane branch; founder early look next.",
+    "Forms lane: W1-10 slice 0 — the 7-step \"Draft questions and documents\" runner — at Lead check for merge; slice 1 brings the four-channel + signature change (P-143).",
+    "M3 agent view in design (P-129: staff side first): 16-frame draft r5 with full eligibility (AG-03) and AI form review (AG-11) pages (P-141).",
+    "End-to-end map redrawn on today's decisions: design/end-to-end-map-2026-10-29.html (W1-14)."
   ],
   // status: done · built · agreed · concept · research · todo · parked
   actors: [
@@ -76,17 +77,18 @@ const DATA = {
       ["W1-01","Decisions, plan, lanes redirected, workflow trimmed","Lead","done","Merged"],
       ["W1-02","Park the browser extension","forms","done","Merged 27 Oct; on :4400; qa next"],
       ["W1-03","Structure page: five levels, Retail / Corporate tabs, duplicate and \"did you mean\" checks","screens","done","Merged 27 Oct; finish items are S1"],
-      ["W1-04","Immigration programs page redesign (design D)","screens","agreed","Agreed; slice 3 next"],
-      ["W1-05","New combination redesign (Rules / AI choice, mandatory marks, \"Linked to\" removed)","screens","agreed","Agreed; slice 4"],
-      ["W1-06","Form library as the one door, form finder, duplicate check, form × route channels","forms","concept","Concept draft; Lead check, then founder"],
-      ["W1-07","AI run experience: live steps, progress, plain errors, Stop","forms","concept","Concept draft"],
-      ["W1-08","Combination workspace cleanup (tabs, library-only forms, people explained, Configuration, Preview)","runtime","concept","Concept draft"],
-      ["W1-09","Shared library in setup order, AI duplicate check on manual adds","screens","concept","Concept draft"],
-      ["W1-10","AI drafts sections, document types, conditions, checks from the PDFs","forms","todo","Not started"],
-      ["W1-11","Reset empties everything; Load sample = the 5 combinations","runtime","concept","In the W1-08 concept draft"],
-      ["W1-12","Official forms for the 5 combinations identified and downloaded","Lead / evidence","research","Identified (Sample); PDFs not downloaded"],
+      ["W1-04","Immigration programs page redesign (design D)","screens","done","Merged 27 Oct (PR #53) + round 3 (PR #66)"],
+      ["W1-05","Start setup (was New combination): card → workspace, finder's saved result or live on click","screens","done","Merged 29 Oct (S3, PR #76)"],
+      ["W1-06","Form library as the one door, form finder, duplicate check, form × route channels","forms","done","Merged (S4, PRs #65, #69, #73); channel change P-143 in slice 1 PLAN"],
+      ["W1-07","AI run experience: live steps, progress, plain errors, Stop","forms","concept","Component next; the W1-10 runner is its vehicle"],
+      ["W1-08","Combination workspace cleanup (tabs, library-only forms, people explained, Configuration, Preview)","runtime","done","Merged 29 Oct (S5, PR #71)"],
+      ["W1-09","Shared library in setup order, AI duplicate check on manual adds","screens","agreed","S6 agreed; BUILD after forms slice 0 lands on main"],
+      ["W1-10","AI drafts sections, document types, conditions, checks from the PDFs","forms","built","Slice 0 step runner at Lead check for merge; slice 1 PLAN"],
+      ["W1-11","Reset empties everything; Load sample = only the agreed 6 combinations (P-148)","runtime","agreed","Scope fixed 29 Oct (P-148); builds after S2, one at a time"],
+      ["W1-12","Official forms for the 6 combinations identified and downloaded","Lead / evidence","research","28 of 29 saved; EMP5626 online-only (answer sheet)"],
       ["W1-13","Content publisher end to end, tested like a person","qa","todo","Not started"],
-      ["W1-14","End-to-end map redrawn on today's decisions","Lead","todo","After W1-03–W1-09 concepts agreed"]
+      ["W1-14","End-to-end map redrawn on today's decisions","Lead","done","design/end-to-end-map-2026-10-29.html"],
+      ["W1-15","Questions and documents, document first (P-130–P-132): Comes from per fact, PQR tick, Documents tab, Preview","runtime","built","Board v2 agreed (P-147); slice 1 data + rules on the lane branch"]
     ]},
     { name: "Immigration expert", sub: "second person, release, Sample values", items: [
       ["W2","Second-person approvals, release gate, Sample values confirmed","screens · runtime","todo","Not started (approval and release mechanics exist on main)"]
@@ -95,10 +97,10 @@ const DATA = {
       ["W3","Describe what you need, propose facts from documents, AI review, new-edition impact","forms","todo","Not started"]
     ]},
     { name: "Case officer / agent", sub: "open case, route, confirm, file", items: [
-      ["W4","Agent view: filing route per application, channel per form, confirm section by section, prepare and record the filing","m3","research","IRCC portal research done (P-113, P-114)"]
+      ["W4","Agent view: filing route per application, channel per form, confirm section by section, prepare and record the filing","m3","concept","Design r5 — 16 frames; staff side first (P-129), AG-03 + AG-11 full pages (P-141)"]
     ]},
     { name: "Client and prospect", sub: "PQR, SQR, sign", items: [
-      ["W5","PQR, SQR, sign","runtime","todo","Not started (R1 thin slice on main is reused)"]
+      ["W5","PQR, SQR, sign — after M3 (P-129: agent first)","runtime","todo","Not started (R1 thin slice on main is reused)"]
     ]},
     { name: "Browser extension", sub: "online fill only", items: [
       ["W6","Extension for online fill (capture does not return)","forms","parked","Parked on branch lead/parked-extension-2026-10-26"]
@@ -117,53 +119,53 @@ const DATA = {
       ["A8","One ordered list to track","WAVE-1.md, its asks file, this page","done"]
     ]},
     { group: "Immigration programs and Structure", rows: [
-      ["B1","\"Individual\" renamed \"Retail\"","Structure built; Programs page in slice 3","partial"],
-      ["B2","Modern filled tabs","Structure built; Programs in slice 3","partial"],
-      ["B3","Menu and title \"Immigration programs\"","W1-04","todo"],
-      ["B4","Programs screen redesign: no filter-tab row, full trail, clear status","W1-04 design D","todo"],
+      ["B1","\"Individual\" renamed \"Retail\"","S1+S2 merged","done"],
+      ["B2","Modern filled tabs","S1+S2 merged","done"],
+      ["B3","Menu and title \"Immigration programs\"","W1-04 merged (S2)","done"],
+      ["B4","Programs screen redesign: no filter-tab row, full trail, clear status","W1-04 design D + round 3 (PR #66)","done"],
       ["B5","Masters for the five levels: where they live, add by hand, see links","W1-03 Structure page","done"],
-      ["B6","Only the 5 Retail combinations + 1 Corporate Sample on screen","Structure typed in on :4400 27 Oct; their forms come with W1-11","partial"]
+      ["B6","Only the agreed 6 combinations on screen (P-148)","Sample still shows the old set; S7 replaces it","partial"]
     ]},
     { group: "New combination", rows: [
-      ["C1","Choose Rules, AI or Rules then AI, explained","P-105 → W1-05","todo"],
+      ["C1","Choose Rules, AI or Rules then AI, explained","P-105 → S3 merged 29 Oct","done"],
       ["C2","Tooltips in plain words on every control","every slice","partial"],
-      ["C3","\"Linked to / Next step of / Supported by\" removed","P-106 → W1-05","todo"],
-      ["C4","Show what is mandatory and why Create is disabled","W1-05","todo"],
-      ["C5","\"Will be created as\" becomes \"You are opening\" (full trail confirmed)","W1-05","todo"]
+      ["C3","\"Linked to / Next step of / Supported by\" removed","P-106 → S3 merged 29 Oct","done"],
+      ["C4","Show what is mandatory and why Create is disabled","S3 merged 29 Oct","done"],
+      ["C5","\"Will be created as\" becomes \"You are opening\" (full trail confirmed)","S3 merged 29 Oct","done"]
     ]},
     { group: "Combination workspace", rows: [
-      ["D1","Forms added in one place, picked only from the library","P-118 → S5 walkthrough","decided"],
+      ["D1","Forms added in one place, picked only from the library","S5 merged 29 Oct","done"],
       ["D2","\"Add an online form\" and \"Portal: no portal yet\" removed","W1-02","done"],
-      ["D3","\"Filing: no forms yet\", Overview \"Add form\", \"Attach sample file\" removed","P-118 → S5 walkthrough","decided"],
-      ["D4","\"People in this combination\" explained; Released / Recent steps only if useful","P-119, P-118 → S5 walkthrough","decided"],
-      ["D5","Configuration (who fills, when) and Preview simplified","W1-08","concept"],
-      ["D6","Mark a form online, PDF or both","P-114 → W1-06","concept"]
+      ["D3","\"Filing: no forms yet\", Overview \"Add form\", \"Attach sample file\" removed","S5 merged 29 Oct","done"],
+      ["D4","\"Who can be in this application\" explained; Released / Recent steps only if useful","P-119 → S5 merged 29 Oct","done"],
+      ["D5","Configuration (who fills, when) and Preview simplified","W1-08 merged (S5)","done"],
+      ["D6","Channel per form: four channels + signature value (P-143)","P-114 → P-143, forms slice 1","decided"]
     ]},
     { group: "Form library and the forms", rows: [
-      ["E1","AI adds a combination's forms; person may add; no duplicates; IRCC columns; find missing","P-103 → W1-06","concept"],
-      ["E2","Old forms deleted; fresh official copies for the 5 combinations","W1-12, W1-11","partial"]
+      ["E1","AI adds a combination's forms; person may add; no duplicates; IRCC columns; find missing","P-103 → S4 merged 28 Oct","done"],
+      ["E2","Old forms deleted; fresh official copies for the 6 combinations","W1-12 (28/29 saved), W1-11","partial"]
     ]},
     { group: "Shared library and AI", rows: [
-      ["F1","Reset empties fields, sections, document types, forms, checks","P-108 → W1-11","concept"],
-      ["F2","Load sample = only the 5 combinations; masters arrive as AI proposals","P-108 → W1-11","concept"],
-      ["F3","Setup order combination → forms → fields; missing masters listed","P-120 → S6 walkthrough","decided"],
-      ["F4","AI duplicate check when a person adds a field","P-120 (one Add in plain words) → S6","decided"],
-      ["F5","AI drafts the masters from the PDFs","P-120 → W1-10","decided"],
+      ["F1","Reset empties fields, sections, document types, forms, checks","P-108 → W1-11 (S7 agreed)","decided"],
+      ["F2","Load sample = only the agreed 6; masters arrive as AI proposals","P-108, P-148 → W1-11","decided"],
+      ["F3","Setup order combination → forms → fields; missing masters listed","P-120 → S6 agreed","decided"],
+      ["F4","AI duplicate check when a person adds a field","P-120 (one Add in plain words) → S6 agreed","decided"],
+      ["F5","AI drafts the masters from the PDFs","P-120 → W1-10 (slice 0 on branch)","decided"],
       ["F6","AI visible and working everywhere designed; never stuck; Stop","P-110 → W1-07, W3","concept"]
     ]},
     { group: "Later actors", rows: [
-      ["G1","Agent view inspired by IRCC's representative portals","m3 research → W4","partial"],
-      ["G2","Author, SQR per person role, review by person","runtime branch → W1-08, W2","partial"],
-      ["G3","Open case, confirm section by section, prepare and record the filing","W4","todo"],
-      ["G4","Case officer, then prospect, PQR, SQR, sign","W4, W5","todo"],
-      ["G5","Extension last, for online fill","W6","todo"],
-      ["G6","End-to-end map redrawn on today's decisions","W1-14","todo"]
+      ["G1","Agent view inspired by IRCC's representative portals","m3 design r5 → W4","partial"],
+      ["G2","Author, SQR per person role, review by person","W1-15 slice 1 on branch → W2","partial"],
+      ["G3","Open case, confirm section by section, prepare and record the filing","W4 (case open + confirm work in R1 thin slice)","partial"],
+      ["G4","Case officer, then prospect, PQR, SQR, sign — agent side first (P-129)","W4, W5","todo"],
+      ["G5","Extension last, for online fill only — capture does not return","W6 parked","todo"],
+      ["G6","End-to-end map redrawn on today's decisions","W1-14 — map 29 Oct drawn","done"]
     ]},
     { group: "Not yet decided (founder decides when the concept comes)", rows: [
       ["H1","Bulk approve for AI proposals","P-121 (two AI rounds; High only; no demo bypass)","decided"],
-      ["H2","\"Signed as\" per form (wet + scan, typed, portal declaration)","W4","open"],
+      ["H2","\"Signed as\" per form — now a signature value per line (P-143)","P-143 → forms slice 1","decided"],
       ["H3","Filing prerequisites on the route (representative authorised, fee paid)","W4","open"],
-      ["H4","GitHub Actions blocked by billing (Lead runs suites locally)","founder","open"],
+      ["H4","GitHub Actions blocked by billing","CI green on merged PRs (#71, #73, #75, #76)","done"],
       ["H5","Lead PRs #28 and #30 open since 25 Oct","founder","open"]
     ]}
   ]

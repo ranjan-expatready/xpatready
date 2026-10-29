@@ -7,14 +7,14 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 |---|---|---|---|---|
 | **Lead** | main copy on `lead/*` (cloud: its session branch); every change to `main` by PR, merged by the Lead (P-87) | Concepts, decisions, requests, checks, merges, rules, skills, `STATE.md`, shared demo :4400 | `/lead` | 4420–4429 · `lead_*` |
 | **screens** | own worktree | Milestone 2 screens, screen path (`WORKFLOW.md`) | `/next screens` | 4440–4449 · `screens_*` |
-| **forms** | own worktree | PDF and online forms (P-61–P-66): intake, form versions, field and screen maps, answer lists, capture, extension | `/next forms` | 4450–4459 · `forms_*` |
+| **forms** | own worktree | PDF and online forms (P-61–P-66): intake, form versions, field and screen maps, answer lists (capture and the extension are parked, P-102) | `/next forms` | 4450–4459 · `forms_*` |
 | **evidence** | own worktree | Fills each real form and checks it in Adobe (P-46, P-65 fill trial); AI scoring set. Never app code | `/next evidence` | 4460–4469 · `evidence_*` |
 | **runtime** | own worktree | Thin end-to-end slice (P-67); in M2, Screen 03 on the screen path (P-89); then M3 runtime: case, people, answers, renderer, agent view, fill from case facts | `/next runtime` | 4430–4439 · `runtime_*` |
 | **m3** | own worktree, or a cloud session on `claude/m3-*` (P-94) | Milestone 3 "Prepare application" per filing (portal sheet, filled PDFs, signed copies, documents, filing record; `screens/M3-prepare-application/`), on the screen path; new files only until it merges after runtime | `/next m3` | 4410–4419 · `m3_*` |
 | **qa** | own worktree, synced to `main` | Independent testing of `main`: `qa/` (capabilities, bugs, reports) and `prototype/studio/tests/qa/`. Never app code | `/qa <mode>` | 4470–4479 · `qa_*` |
-| **scout** | own worktree `xpatready-scout` on `scout/<date>`, Mac; **Goose on Ollama Cloud**, not Claude Code (P-91) | Outside-in exploration against best-in-class practice: `scout/` (charters, findings, reports) and `prototype/studio/tests/scout/`; small fixes only (≤ 40 app lines, files no open lane branch touches; `tools/scout.sh scope` in the pre-push guard). Skill `.agents/skills/scout/`, recipe `.goose/recipes/scout.yaml` | founder: `tools/scout.sh open` (a session in Goose), `save`, or `tools/scout.sh [charter]` | 4480–4489 · `scout_*` |
+| ~~scout~~ | retired 29 Oct (P-146) | Goose and the scout lane are retired; `scout/` and `tools/scout.sh` stay as history | — | — |
 **A lane runs on the Mac or in the cloud** — each an ordinary clone, pull at start (automatic: the session-start hook fast-forwards a clean copy), push at end; one session per lane at a time. The evidence lane and anything needing `sources/` or `code/` runs on the Mac (those folders are Mac-only, P-82).
-**Outside checkers (Devin, team members) and the inbox:** they never push `main` and never edit lane files; findings arrive on a `devin/*` branch as one file in `inbox/` (`inbox/README.md`), and the Lead drains the inbox at the start of every `/lead` chat (`lane.sh inbox`), so the founder never relays findings. Small fixes by an outside checker only when the founder allows it, under the scout's small-fix rules, one `devin/fix-<id>` branch per fix, merged by the Lead by PR.
+**Outside checkers and the inbox:** Devin is the outside reviewer, report only (P-146); team members may check the same way; they never push `main` and never edit lane files; findings arrive on a `devin/*` branch as one file in `inbox/` (`inbox/README.md`), and the Lead drains the inbox at the start of every `/lead` chat (`lane.sh inbox`), so the founder never relays findings. Outside checkers write no fixes; the Lead routes each finding to the lane that owns it.
 **Where work can run, and why** (so nothing is started where it cannot finish):
 | Work | Where | Why |
 |---|---|---|
@@ -22,12 +22,11 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 | Evidence: filling forms and reading them back (pypdf) | Cloud or Mac | The official blank PDFs are on GitHub (P-83) |
 | Getting a new official form (IRCC or ESDC PDF) | Mac downloads, then everyone has it | canada.ca refuses cloud requests. The Mac downloads the form, records its checksum in `official-sources/*/manifest.json` and pushes a branch; the Lead merges it by PR (P-83, P-87). From then on cloud sessions and CI have it |
 | Evidence: Adobe Reader Validate and the save round trip | **Mac only** | Adobe Reader is a desktop app; a cloud container cannot run it |
-| Scout (Goose on Ollama Cloud) | **Mac only** | Goose, the Ollama key and the visible browser are on the Mac (P-91) |
 | Reading the team's requirements (`sources/`) or code (`code/`) | **Mac only** | The team's own material stays off GitHub (P-82) |
 | Live paid AI drafts (each spend approved by the founder) | **Mac only** (founder, 25 Oct: simple and proven; runs are rare) | The guarded route reads the key from a protected key file on the Mac. If paid runs become frequent: the founder adds `ANTHROPIC_API_KEY` as an environment secret, `cloud-setup.sh` writes the key file from it, and one test call proves it. Never paste a key into a chat |
 | The shared demo on :4400 (restart, demo reset) | **Mac only** | P-88 |
 | A Lead chat | Cloud or Mac, **one at a time** | Two Leads would overwrite each other (P-87); a lane may run beside either |
-The cloud Lead can start only cloud sessions: work marked Mac only waits for the founder, who can hand it to Goose on the Mac with a ready prompt from `GOOSE-TASKS.md` (the Lead writes them; pasting one is the founder's go for it), or open a Mac session (`/next evidence` in the evidence copy, `tools/scout.sh` for the scout). Whatever runs on the Mac reaches everyone the same way as cloud work: its own branch is pushed, and the Lead reviews and merges it by PR.
+The cloud Lead can start only cloud sessions: work marked Mac only waits for the founder, who opens a Claude Code session on the Mac (`/lead`, or `/next evidence` in the evidence copy); Goose is retired (P-146). Whatever runs on the Mac reaches everyone the same way as cloud work: its own branch is pushed, and the Lead reviews and merges it by PR.
 **The founder uses one chat: the Lead (`/lead`).** The Lead starts or continues each lane's session itself (prompt `/next <lane>` or `/qa <mode>`; on the Mac an own worktree, in the cloud a session on the lane's branch — skill `lead`), is told when a stage ends, checks it, and asks the founder only for decisions, walkthroughs, paid-AI go-aheads and installs. The founder may open a lane session to watch, or a qa session to test together (`/qa with-me`).
 **Fresh context, any time:** state lives in files and commits, never in a chat. A long Lead chat → the Lead says so; open a new chat and type `/lead`. A lane session is disposable: the Lead starts a fresh one per stage when its context is long, cut from the lane's branch (or `main` once merged); `/next` binds the new copy.
 
@@ -52,7 +51,7 @@ The cloud Lead can start only cloud sessions: work marked Mac only waits for the
 | `screens/<item>/review.md`, `break-report.md`, journey-test report | Reviewer and breaker agents launched by the lane |
 | `screens/<item>/concept-draft.md`, `design/draft-*` | `screen-designer` agent, launched by the Lead |
 | `qa/`, `prototype/studio/tests/qa/` | qa lane |
-| `scout/`, `prototype/studio/tests/scout/`, and small fixes that pass `tools/scout.sh scope` | scout lane (Goose); the Lead triages its findings and merges its branch by PR |
+| `scout/`, `prototype/studio/tests/scout/` | nobody: the scout lane is retired (P-146); kept as history |
 | `prototype/evidence-lane/` | evidence lane |
 A lane needing a rule, decision or concept change proposes it in its block; it never edits Lead files. A founder request about the workflow made in a lane session is passed to the Lead.
 
