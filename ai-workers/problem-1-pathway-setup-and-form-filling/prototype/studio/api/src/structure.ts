@@ -9,7 +9,7 @@ import { CreateStructureNodeBody, StructurePathBody, KIND_OF, LEVEL_OF, LEVEL_WO
   type Level, type LifecycleAction, type PathwayType, type StructureNode, type StructurePathResult } from "../../contracts/structure.ts";
 import { checkName, type NameCandidate } from "../../engine/structure.ts";
 import { ACTORS, actorOf, Audit, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
-import { Lifecycle, rowAction, trailOf } from "./lifecycle.ts";
+import { Lifecycle, rowAction, startWhy, trailOf } from "./lifecycle.ts";
 import { parse, Programs } from "./programs.ts";
 import { Studio } from "./studio.ts";
 import { slug } from "../../engine/import.ts";
@@ -55,6 +55,8 @@ export class Structure {
     const comboOf = new Map(combos.map((c) => [c.programDefId, { id: c.id, programDefId: c.programDefId, released: c._count.releases > 0, retired: !!c.retiredAt }]));
     const open = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, status: { in: ["WAITING", "RETURNED", "APPROVED"] }, kind: { in: ["structure_node", "combination"] } }, select: { key: true } })).map((c) => c.key));
     const under = (k: string): ProgramDef[] => g.kids(k).flatMap((c) => [c, ...under(c.programNodeKey)]);
+    const chainOf = (n: ProgramDef) => { const out: ProgramDef[] = []; for (let x: ProgramDef | undefined = n; x; x = x.parentNodeKey ? g.byKey.get(x.parentNodeKey) : undefined) out.unshift(x); return out; };
+    const openNodes = new Set(pending.keys());
     const actionOf = (n: ProgramDef) => { const below = under(n.programNodeKey); return rowAction({ node: n, below, parent: n.parentNodeKey ? g.byKey.get(n.parentNodeKey) ?? null : null, combos: [n, ...below].flatMap((x) => comboOf.get(x.id) ?? []), open }, pending.has(n.programNodeKey), actorId); };
     const out: StructureNode[] = [];
     const walk = (n: ProgramDef): { combinations: number; live: number; needs: number } => {
@@ -64,7 +66,7 @@ export class Structure {
       let combinations = own && !own.retired ? 1 : 0, live = own?.live ? 1 : 0, needs = own?.needs ? 1 : 0;
       const view: StructureNode = { key: n.programNodeKey, level: LEVEL_OF[n.nodeKind], parentKey: n.parentNodeKey, label: n.label, pathwayType: q.pathwayType, allowedLocations: n.allowedLocations,
         order: n.displayOrder, combinations: 0, live: 0, needs: 0, hasSetup: !!own?.combinationId, meaningChecked: false, version: n.version, retired: !!n.retiredAt, pending: pending.get(n.programNodeKey) ?? null, action: actionOf(n),
-        combination: own ? { id: own.combinationId, status: own.status, statusText: own.statusText, retired: own.retired,
+        combination: own ? { id: own.combinationId, status: own.status, statusText: own.statusText, retired: own.retired, startWhy: own.combinationId ? null : startWhy(chainOf(n), openNodes),
           releases: own.combinationId ? used.get(own.combinationId)?.releases ?? 0 : 0, openCases: own.combinationId ? used.get(own.combinationId)?.cases ?? 0 : 0 } : null };
       if (q.retired === "1" || !n.retiredAt) out.push(view);
       for (const k of kids) { const s = walk(k); combinations += s.combinations; live += s.live; needs += s.needs; }
@@ -73,7 +75,7 @@ export class Structure {
     };
     for (const p of g.kids(null, q.pathwayType).filter((n) => n.nodeKind === "PATHWAY")) walk(p);
     return { pathwayType: q.pathwayType, typeLabel: PATHWAY_TYPE_LABEL[q.pathwayType], nodes: out, empty: !out.length,
-      meaningCheck: { on: false, why: "The AI meaning check is off: only the spelling check runs, and names are shown as Not meaning-checked (P-95)." } };
+      meaningCheck: { on: false, why: "The AI meaning check is off: only the spelling check runs, and names are shown as Not meaning-checked." } };
   }
 
   /** The parent a new name goes under, checked (right level, same type, not retired). */

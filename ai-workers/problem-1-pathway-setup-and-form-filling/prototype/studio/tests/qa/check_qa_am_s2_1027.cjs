@@ -160,10 +160,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const n0 = combos();
   const ns = p.locator('article:has([data-next-step]):has-text("Not started")').first();
   const nsLabel = await ns.getAttribute("data-label");
-  await ns.locator("[data-next-step]").dblclick(); await p.waitForURL(/\/new\?leaf=/);
-  step("C11.10 fix 3: a double click on Start setup opens Start setup and still creates nothing", combos() === n0, `${nsLabel}: ${n0} → ${combos()}`);
+  // S3 (P-125, routed by the screens lane 28 Oct): Start setup starts the setup and opens it; a double click starts one.
+  await ns.locator("[data-next-step]").dblclick(); await p.waitForURL(/\/c\/[0-9a-f-]+\/(sources|forms)/); // S3 item 5: lands on the Forms tab
+  step("C11.10 fix 3 (S3): a double click on Start setup starts one setup, not two", combos() === n0 + 1, `${nsLabel}: ${n0} → ${combos()}`);
   await p.goBack(); await p.waitForTimeout(800);
-  step("QA-50 C11.10: after a double click on Start setup, one Back returns to Immigration programs", !/\/new/.test(p.url()), p.url());
+  step("QA-50 C11.10: after a double click on Start setup, one Back returns to Immigration programs", !/\/c\//.test(p.url()), p.url());
   await open();
   await card("Add pathway").click(); await p.waitForURL(/\/structure/);
   step("C11.10: + Add pathway opens the Structure (new names enter only there)", /\/structure/.test(p.url()), p.url());
@@ -196,9 +197,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const said = (await p.locator("body").innerText()).replace(/\s+/g, " ");
   step("BR-15 read-only: the approver clicking a Not started name gets the reason, stays on the page and nothing is created", combos() === nb && /A configuration author starts it/.test(said) && !/\/new/.test(p.url()), said.match(/[^.]*configuration author starts it\./)?.[0]);
   const leaf = (await cat()).rows.find((r) => !r.combinationId && r.level === "Category");
-  const body = { pathway: "INDIVIDUAL", program: { key: leaf.pathKeys[0] }, category: { key: leaf.pathKeys[1] }, subCategory: null };
-  const asB = await api("/combinations/path", { method: "POST", actor: "user-B", data: body });
-  const asNone = await api("/combinations/path", { method: "POST", actor: null, data: body });
+  const body = { nodeKey: leaf.nodeKey }; // S3: the one server-side start (the path builder's request went with its page)
+  const asB = await api("/combinations/start", { method: "POST", actor: "user-B", data: body });
+  const asNone = await api("/combinations/start", { method: "POST", actor: null, data: body });
   step("BR-15 server: a start by the approver is refused 403 and by nobody 401, in plain words", asB.status === 403 && asNone.status === 401 && typeof asB.body?.detail === "string", `${asB.status} ${asB.body?.detail ?? asB.body?.title} / ${asNone.status}`);
   await axe("approver cards");
   await as("user-A");

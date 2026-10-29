@@ -462,7 +462,7 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   ok("QA-62 pass: AI work names the finder run by its place (no database id, no pipe)", !!listed && !/\|/.test(listed.scopeLabel) && !/[0-9a-f]{8}-[0-9a-f]{4}-/.test(listed.scopeLabel) && /Super visa$/.test(listed.scopeLabel), listed?.scopeLabel);
   ok("QA-62: the run's own page names it the same way", !/\|/.test((await call("GET", `/ai/batches/${svId}`)).body.scopeLabel ?? "|"));
   const card = (await call("GET", `/runs/${svId}`)).body;
-  ok("QA-63 pass: the waiting run's card gives a next step that leads somewhere real (the combination's Sources page), never its own address", card.error?.next?.href === `/c/${sv}/sources` && !card.error.next.href.startsWith("/ai/") && /Sources page/.test(card.error.next.label), card.error);
+  ok("QA-63 pass (S3 item 5): the waiting run's card leads somewhere real (the page choice on the combination's Forms tab), never its own address", card.error?.next?.href === `/c/${sv}/forms?find=page` && !card.error.next.href.startsWith("/ai/") && card.error.next.label === "Choose the application page", card.error);
   ok("QA-63: and its words say what to do (no dead \"Find again\")", !/then Find again/.test(card.error?.what ?? card.message ?? ""), card.error?.what ?? card.message);
 })().catch((e) => { fail++; console.log(`FAIL  the check stopped: ${(e as Error).stack}`); }).finally(() => {
   for (const f of madeRuns) rmSync(f, { force: true });

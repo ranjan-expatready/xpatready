@@ -3,7 +3,7 @@
 // copy; the test builds its own data through the screens' endpoints (one saved AI answer replayed: no model call, US$0).
 //   new edition → impact (three tabs) → accept · To review as the second person · a new shared field approved ·
 //   merge panel (W1-02, P-102: the portal capture and screen map views are parked with the browser extension) · held file (uploader records the IRCC page, second person approves) · K1 form-field decisions and a new
-//   shared field on the proposals page (J/K keys) · Draft setup panel · Describe it on New combination · checklist stub
+//   shared field on the proposals page (J/K keys) · Draft setup panel · checklist stub
 //   pass · Release page with its Library changes group
 //   zsh studio/tools/isolated.sh screens_s02c 4443 start && node studio/tests/check_screen02_slice2_browser.cjs 4443 xr_studio_screens_s02c
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
@@ -213,12 +213,7 @@ function pdf(title, text) {
     await state("draft-setup-panel");
     await p.keyboard.press("Escape");
   } else step("C3.3 view 2: a combination with forms to draft exists in the sample", false, "none");
-  await asWho("user-A"); await p.goto(`${BASE}/new`); await ready("New combination");
-  await p.locator("[data-describe]").getByLabel("What application is it?").fill("Super visa for parents and grandparents");
-  await p.getByRole("button", { name: /Propose a path/ }).click();
-  await p.getByText("Proposal without AI").waitFor();
-  step("C1.2 view 11: Describe it proposes the path, says no AI and US$0, and offers the existing combination", /Visitors › Super visa/.test(await p.locator("[data-describe]").textContent()) && /already exists/.test(await p.locator("[data-describe]").textContent()));
-  await state("new-combination-describe");
+  // S3 (P-125 (5)): "Describe it" went with the New combination page; names are checked in the Add pop-up (AD-4).
 
   // ======================================================== K2: checklist stub pass; Release page Library changes
   const ck = (await api(`/combinations/${sv}/attachments`)).body.find((a) => a.recognised && a.kind === "Document checklist");

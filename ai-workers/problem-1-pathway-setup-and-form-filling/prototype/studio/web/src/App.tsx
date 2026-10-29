@@ -8,7 +8,6 @@ import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/cont
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { ProgramsPage } from "@/pages/programs";
-import { NewCombinationPage } from "@/pages/new-combination";
 import { ReleasePage } from "@/pages/release";
 import { ChecksPage, FormsPage } from "@/pages/library-forms";
 import { CombinationPage } from "@/pages/combination";
@@ -38,7 +37,7 @@ function Shell() {
     // P-125 (founder, 27 Oct): the menu in setup order: names first (the one place they enter), then the combinations,
     // then what waits for a second person.
     { to: "/structure", label: "Program structure", icon: ListTree },
-    { to: "/", label: "Immigration programs", icon: Layers, match: (p: string) => p === "/" || p === "/new" || p.startsWith("/c/") },
+    { to: "/", label: "Immigration programs", icon: Layers, match: (p: string) => p === "/" || p.startsWith("/c/") },
     { to: "/review", label: "To review", icon: Inbox, badge: queue.data?.counts.needs || undefined },
     { to: "/library/fields", label: "Fields", icon: Database },
     { to: "/library/sections", label: "Sections", icon: Boxes },
@@ -98,7 +97,6 @@ function Shell() {
             <Route path="/review/held/:id" element={<HeldFilePage />} />
             <Route path="/review/edition/:id" element={<EditionImpactPage />} />
             <Route path="/review/form-fields/:id" element={<FormFieldsPage />} />
-            <Route path="/new" element={<NewCombinationPage />} />
             <Route path="/c/:id" element={<CombinationPage />} />
             <Route path="/c/:id/:tab" element={<CombinationPage />} />
             <Route path="/c/:id/jobs/:jobId" element={<JobPage />} />
@@ -206,13 +204,13 @@ function ResetDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: 
       footer={result ? <Button onClick={() => onOpenChange(false)}>Close</Button> : <><Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button><Button variant="destructive" disabled={confirm !== "RESET"} busy={reset.isPending} onClick={() => reset.mutate(undefined)}><RotateCcw /> Reset demo</Button></>}>
       {result ? (
         <div className="space-y-3">
-          <Notice tone={result.preserved_unchanged ? "ok" : "danger"} title={`${result.removed_rows} rows and ${result.removed_files} working files removed in ${result.seconds.toFixed(1)} s`}>{result.remaining_rows} rows remain in the new empty workspace. Preserved evidence {result.preserved_unchanged ? "is byte-identical before and after (fingerprints below)" : "CHANGED: investigate before continuing"}.</Notice>
+          <Notice tone={result.preserved_unchanged ? "ok" : "danger"} title={`${result.removed_rows} rows and ${result.removed_files} working files removed in ${result.seconds.toFixed(1)} s`}>{result.remaining_rows === 0 ? `The new workspace keeps only its ${result.remaining_built_in} built-in person roles.` : `${result.remaining_rows} rows remain in the new workspace, besides its ${result.remaining_built_in} built-in person roles.`} Preserved evidence {result.preserved_unchanged ? "is byte-identical before and after (fingerprints below)" : "CHANGED: investigate before continuing"}.</Notice>
           <Preserved list={result.preserved} />
         </div>
       ) : status.isLoading ? <Spinner label="Counting" /> : s ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">{Object.entries<number>(s.rows).filter(([, v]) => v > 0).map(([k, v]) => <div key={k} className="flex justify-between border-b border-border py-1"><span className="text-text-muted">{k}</span><span className="font-medium">{v}</span></div>)}</div>
-          {s.total_rows === 0 ? <Notice title="The workspace is already empty">Nothing to remove.</Notice> : null}
+          {s.total_rows === 0 ? <Notice title="The workspace is already empty">Nothing to remove. Its {s.built_in_rows} built-in person roles stay.</Notice> : null}
           <p className="text-sm">Working files: <b>{s.files}</b> ({Math.round(s.bytes / 1024)} KB) in <span className="mono">{s.folder}</span>. Generated scripts: {s.generated_scripts}.</p>
           <div><p className="mb-1 text-xs font-medium">Kept, and checked unchanged after the reset</p><Preserved list={status.data.preserved} /></div>
           <label className="block text-sm">Type <b>RESET</b> to confirm<Input className="mt-1 w-48" value={confirm} onChange={(e) => setConfirm(e.target.value)} aria-label="Type RESET to confirm" /></label>

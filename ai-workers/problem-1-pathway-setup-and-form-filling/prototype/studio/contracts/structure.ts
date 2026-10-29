@@ -104,6 +104,8 @@ export type StructureNode = {
   pending: { id: string; action: LifecycleAction; status: "WAITING" | "RETURNED" | "APPROVED"; by: string | null; note: string | null } | null;
   /** A last-level name is a combination (BR-2): its state, Not started when it has no setup yet (id null). */
   combination: { id: string | null; status: "IN_SETUP" | "NOT_READY" | "READY"; statusText: string; retired: boolean;
+    /** Not started: why Start setup cannot run here (S3 M3), null when it can. */
+    startWhy?: string | null;
     /** "Used by" on its line (P-127 (1)): releases that hold it and cases open on it. */
     releases: number; openCases: number } | null;
   /** The row's one lifecycle action (P-128 R3-2), decided by the server: why it cannot (null = it can), the names that go

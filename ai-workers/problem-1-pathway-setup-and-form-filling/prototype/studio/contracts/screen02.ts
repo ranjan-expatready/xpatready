@@ -38,10 +38,5 @@ export type ImpactAccepted = { edition: string; carried: number; for_a_person: n
 export type FormFieldRow = { dataPath: string; caption: string | null; heading: string | null; outcome: string; outcome_word: string; field: string | null; reason: string | null; status: string; carried: boolean };
 export type FormFieldsView = { edition: { id: string; label: string; form: string } | null; fields: FormFieldRow[] };
 
-/** Board view 11: "Describe it" (no AI until paid runs are agreed). */
-export type PathLevel = { key: string; label: string };
-export type PathProposal = { mode: "no_ai"; cost_usd: 0; why: string; confidence?: "High" | "Medium";
-  proposal: { pathway: "INDIVIDUAL" | "CORPORATE"; path: string[]; program: PathLevel; category: PathLevel; subCategory: PathLevel | null; exists: boolean; combinationId: string | null } | null; others?: string[] };
-
 /** A4: one part of a step drafted in parts (read-only). */
 export type BatchPart = { index: number; sections: string[]; fields: number; status: string; cost_usd: number; message: string | null };
