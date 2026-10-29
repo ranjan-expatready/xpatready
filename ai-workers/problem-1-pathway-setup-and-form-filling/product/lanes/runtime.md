@@ -7,24 +7,50 @@
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: W1-questions-and-documents (W1-15, P-130–P-132)
-current_slice: FIX pass 2: QA-92 to QA-95 (Questionnaires tab) and the check_s5_slice3_browser Undo-bar race
-stage: FIX
-owner: Builder
-next_action: Builder: finish the checks for QA-92 to QA-95 and the race fix, run the full run-suites on the exact commit, then hand back to the Lead.
+current_slice: FIX pass 2 done at 3839ddf4 (QA-92 to QA-95, Undo-bar race); handover written; session stopped (P-173)
+stage: CHECK
+owner: Lead
+next_action: Lead: check FIX pass 2 at 3839ddf4 for the Documents tab merge (CI is the full check); decide the QA-93 finding (does choosing a section decide what is asked?); then start a fresh runtime session on the M2 queue (PQR, who fills, preview by person and channel, S7 Reset + Load sample, validator).
 blocked_by: none
 updated: 2026-10-29
 
-## Handover (to a fresh runtime session; keep current — the founder asked to save after every step; earlier S5 notes are in screens/W1-combination-workspace/build-notes.md)
-* **Where it stands (29 Oct, evening; for the fresh runtime session):** branch `runtime/2026-10-27-s5-workspace` (pushed from the worktree branch claude/runtime-s5-fix-083cd5). Slice 1 is on main (PR #78). **Slice 2** (Questionnaires tab, board v2 P-147, with S2-1, P-154, P-155(3)) is with the Lead for check and merge at **ff4d9cce** (synced main 170659bc; full run-suites 64/64 on that commit). **Slice 3** (Documents tab) was built before the Lead's hold arrived: **b5c46535**, tests `check_w115_slice3.ts` 26/26 (4438) and `check_w115_slice3_browser.cjs` 31/31 (4439); the full suites were NOT run on it and it was not handed back. Nothing half-done; by-products restored.
-* **Slice 3 scope (plan.md "Slice 3", build-notes "Slice 3"):** "Documents each person gives": person chips, All · Always · Only if · Needs you, Find, "+ Add a document" (the add dialog with Alternatives); rows Document · Who · When · Supplies · Status; ⋯ menu (Open details, Move up, Move down, Remove from checklist, Change the document type in the library, Retire greyed with its reason); drawer (who and when, alternatives, facts it supplies about whom and taken out of the questionnaire, Copies · Translation · Validity window read-only "Not set · Sample", IRCC's words). Engine `checklist(s)` in `engine/sources.ts`; API `api/src/person-checklist.ts` (`GET …/checklist`, `POST …/checklist/move`, `POST …/checklist/undo-remove`); UI `web/src/pages/workspace/documents.tsx` (wired in `pages/combination.tsx`); `RequirementDialog` exported from `pages/configuration.tsx`.
-* **Slice 3 data (neither held back, the Lead):** `document_requirement.position` (a move sets only the two swapped lines; others keep the default order: always first, then by name) and `document_requirement.alternatives` (library type keys, never the line's own), migration `20261029170000_w115_checklist`, expand only, each in the snapshot only when set (released fingerprints unchanged).
-* **Slice 3 open points:** (1) a position belongs to the line, so a line on several people's checklists (Each applicant) moves on each; (2) alternatives are information only: the facts read are the line's own document's, using an alternative at the case is slice 4 or later; (3) found, not changed: removing a released line writes a newer RETIRED row and `effective(…, "published")` in `engine/snapshot.ts` picks the newest PUBLISHED-or-RETIRED row, so the published view drops the line before the release (cases pin their release snapshot); the Lead to decide; (4) Lead to check `check_studio_browser.cjs` (CI only) now clicks "Add a document".
-* **Slice 2 decisions to keep:** P-154 (no "agent" in user-facing words; internal AGENT and `mode=agent` stay); P-155(3) one rule `agentRefusal(f, reason)` in `engine/sources.ts`, reason in `fact_source.source_reason` (slice 2 migration `20261029150000_w115_bulk_batch`, with `batch_id`). `web/src/pages/programs.tsx` "the agent picks …" is the screens lane's.
-* **Learned 29 Oct:** check a file name is free before writing a new file (an existing `api/src/checklist.ts` was nearly overwritten; restored from git). Browser tests: the Undo toast lasts 10 s, so after a screenshot use the page note's Undo (`[data-note-undo]`); wait for the rows to change after an action, not a fixed pause. Full runs under load: `check_runtime_r1c` budget and `check_dv_backbone_browser` can fail on time alone; rerun alone.
-* **Running checks (runtime ports 4430–4439 only):** scripts were in the session scratchpad; the commands are the usage lines at the top of each test, e.g. `zsh studio/tools/isolated.sh runtime_s5 4431 start && tsx studio/tests/check_s5_slice1.ts 4431 xr_studio_runtime_s5`; full suites `bash product/tools/run-suites.sh` (no `--demo`: it resets :4400); demo journey on an own copy with `STUDIO_URL=http://localhost:4433`. Build the web app first (`cd studio/web && ../node_modules/.bin/vite build`). In a fresh copy run `node_modules/.bin/prisma generate` once.
-* **Learned, not written elsewhere:** the guard hook (`merge-guard.sh`) refuses commands that have variable expansion, `eval`, `$(…)` or words like "merge": put commands in a scratchpad script and run `zsh <file>`. Test runs rewrite other lanes' screenshots, `product/qa/reports`, `prototype/p2` ledgers and `studio/evidence`: commit only this lane's files by path, then `git checkout --` and `git clean` those folders. The qa checks `tests/qa/check_qa_am_1027.cjs` and `check_qa_explore_1025.cjs` stop on this branch at main's older "Forms and coverage" button (S5 replaced it): qa moves them when S5 merges.
+## Handover (to a fresh runtime session, 29 Oct late; this session stops here per the Lead, P-173)
+* **Exact state:** branch `runtime/2026-10-27-s5-workspace`, last code commit **3839ddf4** (main synced at d59bf029; the contract conflict there was resolved by keeping both `field_map_edition` (forms) and `who_can_be` (runtime) in `contracts/drafting-run.v0`). The worktree is clean; by-products are restored. Nothing is half-done.
+* **Done and with the Lead (Documents tab merge):** slice 3 (Documents tab, Lead check PASS at 740ef734). FIX pass 1 at ccc7b18d covered QA-84, QA-85, QA-88 runtime part, QA-91 as a plan, and the Lead minors; full run-suites gave 68/68 there. FIX pass 2 at 3839ddf4 covered:
+  * QA-92: the drawer saves a case fact under `case`.
+  * QA-93: confirm and Undo in place.
+  * QA-94: no system names.
+  * QA-95: the 5-character reason words, linked to the box.
+  * The `check_s5_slice3_browser` Undo-bar race: the test waits on the row; the app's order is in `forms.tsx`, the forms lane's file, and was left alone.
+* **Checks on 3839ddf4 (own named checks only; CI is the full check, per the Lead):**
+  * `check_qa92_95_browser.cjs` 23/23, three runs (4436).
+  * `check_s5_slice3_browser.cjs` 35/35, five runs in a row (the race).
+  * `check_w115_slice2_browser.cjs` 56/56 and `check_s5_slice2_browser.cjs` 61/61 (their System name assertions now check that no key is on screen).
+  * `check_w115_slice2.ts` 35/35.
+  * A local full run-suites on 3839ddf4 was started and stopped on the Lead's word.
+* **Open for the Lead/founder:**
+  * (1) **QA-93 finding:** choosing a section per combination does not decide what is asked. A question placed in a section in the shared library is asked whatever is chosen, so "Remove" only moved the section to the end. Remove is now offered only for a section that asks this person nothing; elsewhere the reason is written in its place. Should selection decide what is asked, or only order and titles?
+  * (2) QA-91 (Who can be › AI as a run card) is a plan only: build-notes "Fixes: Lead check of slice 3 and qa ai-paths".
+  * (3) `contracts/drafting-run.v0` lists `who_can_be` (expand only).
+* **Next (the Lead's ordered M2 queue, in "From the Lead" on origin/lead/2026-10-29-m3go):**
+  1. PQR (C4.2, C4.7, C4.8).
+  2. Who fills (C4.9).
+  3. Preview by person and channel (C4.3, C4.6).
+  4. S7 Reset + Load sample with the six combinations (C10.1, C11.7).
+  5. Validator (C3.8).
+* **Running checks (runtime ports 4430–4439 only):** the commands are the usage lines at the top of each test, e.g. `zsh studio/tools/isolated.sh runtime_qa9x 4436 start && node studio/tests/check_qa92_95_browser.cjs 4436 xr_studio_runtime_qa9x`.
+  * Build the web app first (`cd studio/web && npx vite build`); an isolated server serves that build.
+  * Use Node 24 from `.tools/node-v24.21.0/bin`. In a fresh copy, run `node_modules/.bin/prisma generate` once.
+  * Never reset :4400.
+* **Learned, not written elsewhere:**
+  * The guard hook refuses many commands (variable expansion, `$(…)`, words like "merge", some branch names): put commands in a scratchpad script and run `zsh <file>`.
+  * Test runs rewrite other lanes' screenshots, `product/qa/reports`, `prototype/p2` runs, jobs and `ledger/used-launch-tickets`, and `studio/evidence`. Commit only this lane's files by path, then `git checkout --` and `git clean` those folders.
+  * On the Questionnaires tab, `[data-section="x"]` also matches the rules and checks area: scope it with `[data-questions]`.
+  * The Undo toast lasts 10 s, so wait on what the action changes, not on the toast.
+  * Earlier slice notes are in screens/W1-questions-and-documents/build-notes.md and screens/W1-combination-workspace/build-notes.md.
 
 ## Log (last 10 lines)
+- 2026-10-29 · Builder (Mac): FIX pass 2 handed back at 3839ddf4: QA-92, QA-93 (Remove only where it changes something; finding for the Lead), QA-94, QA-95, race; own checks green (check_qa92_95_browser 23/23 x3, s5_slice3_browser 35/35 x5, w115_slice2_browser 56/56, s5_slice2_browser 61/61, w115_slice2 35/35); full Handover written; session stops (P-173). AI US$0.
 - 2026-10-29 · Builder (Mac): FIX pass 2 built: QA-92 the drawer saves a case fact under 'case'; QA-93 confirm and Undo in place, Remove offered only where it changes something (found: placed questions stay asked whatever sections are chosen; question for the Lead); QA-94 no system names; QA-95 'Write at least 5 characters'; race test waits on the row. check_qa92_95_browser 23/23 locally; full suites next. AI US$0.
 - 2026-10-29 · Builder (Mac): FIX pass done: QA-84 (schema without numeric limits, counts checked in code), QA-85 (stub plus who_can_be in contracts/drafting-run.v0: the stub run was refused as an unknown kind on Node 24), plain failure words, QA-91 as a plan; release supersedes retired checks; drawer alternatives, 'From the sample setup'; full run-suites 68/68 on ccc7b18d; by-products restored; CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): applied Lead message (slice 3 check PASS; FIX pass): synced main d50d87f9; QA-84 schema limits checked in code, QA-85 stub, plain failure words (QA-88 runtime part), QA-91 written as a plan; release supersedes retired checks; drawer alternatives, 'From the sample setup'; check_who_can_be_qa 9/9, slice3 34/34, browser 35/35 (d824e53f); full suites running. AI US$0.
@@ -34,4 +60,3 @@ updated: 2026-10-29
 - 2026-10-29 · Builder (Mac): slice 2 FIX with S2-1, P-154 (Agent retired: Case officer, case view), P-155(3) (case officer with a written reason; one rule agentRefusal; fact_source.source_reason); synced main 170659bc; full run-suites 64/64 on ff4d9cce; slice-1 DV test fix 37e66a2e on the sync branch; CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): founder OK on slice 2 with S2-1: per-person line uses slice 1's sources (chips' numbers); Agent lock kept, now one rule (engine/sources.ts agentRefusal); check_w115_slice2 29/29, browser 48/48, s5 slice2 61/61, slice1 47/47 (b33b941b); full suites running; slice 3 plan written. AI US$0.
 - 2026-10-29 · Builder (Mac): Lead asked for a slice-1 sync: 915aa186 (00444a35 + main f7cb40d9; main.ts keeps FactSources and StartSetup; slice1 47/47, S3 26/26 and 39/39) on runtime/2026-10-29-w115-slice1-sync; brought into slice 2 (dbfde76b); full run-suites 61 pass, check_dv_backbone_browser waited too little for Upload PDF under load (test now waits; 8/8); slice 2 EARLY-LOOK, owner Lead. AI US$0.
-- 2026-10-29 · Builder (Mac): slice 2 (Questionnaires tab, board v2 P-147) built: API bulk and bulk/undo (batch_id), row status, release checks with role, Agent offered only for agent facts; UI strip, chips, Needs you, rows of five, ⋯ menu with reasons, drawer, bulk bar, Who can be folded; check_w115_slice2 26/26, browser 46/46; older S5 browser tests being updated for the fold. AI US$0.
