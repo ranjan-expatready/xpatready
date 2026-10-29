@@ -22,3 +22,9 @@ Owner: the Lead, at DEMO. At most one workflow change per retro, recorded in `DE
 * **Root cause:** hand-back depended on the founder copying text across chats; the Lead had no routine check of lane branches.
 * **Change:** lanes send their Paste to the Lead session with SendMessage; the Lead reads every lane's newest commit (`lane.sh status`) on every pass, not only when a message arrives.
 * **Watch next:** no lane waits more than 30 minutes at a Lead or founder stage.
+
+## 29 Oct, ninth Lead chat: a shared contract change broke two lane PRs
+* **What happened:** PR #98 changed contract v2 (`addReason` dropped, `source.rule` added) and merged first; runtime's #94 and screens' #96, built on the old shape, then failed CI (check_pqr; six replay suites).
+* **Root cause:** the Lead merged a shared contract change before the lanes that use it had synced and rerun their checks on it.
+* **Change:** a change to a shared contract (`contracts/`) merges together with, or after, each dependent lane's fix; the Lead names the dependent lanes in the contract PR.
+* **Also:** disk fell to 5.2 GB unnoticed (R-142: `tools/disk.sh` at every Lead check).
