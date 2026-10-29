@@ -65,6 +65,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("QA-74: Releases name the people (author / submitter / approver), never user ids", /Configuration author|Approver|Content reviewer/.test(rel) && !/\buser-[A-Z]\b/.test(rel), rel.slice(0, 200));
     step("QA-74: Releases show no fingerprint column or hash", !/Fingerprint/.test(rel) && !/[0-9a-f]{16}/.test(rel));
     step("QA-74: Releases dates in the one format (no \"10/29/2026, 7:53:23 AM\")", !/\d+\/\d+\/\d{4}/.test(rel));
+    // P-165 SI-11: the Releases page carries the one Stand-in chip; its tip says today and later in plain words.
+    const chip = p.locator('[data-stand-in="SI-11"]');
+    await chip.focus(); await p.waitForTimeout(500);
+    const tip = (await p.locator('[role="tooltip"]').first().innerText().catch(() => "")).replace(/\s+/g, " ");
+    step("P-165: Releases shows one Stand-in chip for SI-11; on focus its tip says what it does today and what replaces it", await chip.count() === 1 && (await chip.innerText()) === "Stand-in" && /Today: our own draft/.test(tip) && /Later: the team's content pack container/.test(tip) && /Row SI-11/.test(tip), tip);
+    await p.mouse.click(5, 5);
     await axe("Releases");
     await go("/activity");
     const act = await main();
@@ -75,6 +81,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
     // QA-72: Checks says where the checks are, no screen number
     await go("/library/checks");
+    step("P-165 fail case: a page with no stand-in shows no chip (Checks)", await p.locator("[data-stand-in]").count() === 0);
     const ck = await main();
     step("QA-72: Checks says where they are listed, with no screen number or \"later screen\"", /Questionnaires tab/.test(ck) && !/Screen 0\d|later screen/.test(ck), ck.slice(0, 200));
 

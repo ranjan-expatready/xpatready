@@ -10,10 +10,12 @@ const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++
 const STUDIO = join(import.meta.dirname, "..");
 const REGISTER = join(STUDIO, "..", "..", "product", "STAND-INS.md");
 
-/** Stand-in rows whose screen is not built yet (29 Oct: all are M3 items). A row leaves this list in the change that
- *  builds its screen and adds its chip; the check fails while a listed row has a chip, so the list cannot go stale. */
+/** Stand-in rows with no chip yet, each with why: its screen is not built, or another lane owns the page and adds the
+ *  chip there. A row leaves this list in the change that adds its chip; the check fails while a listed row has a chip,
+ *  so the list cannot go stale. */
 const NOT_ON_SCREEN_YET: Record<string, string> = {
-  "SI-1": "M3-8 Eligibility page", "SI-6": "M3-9 AI form review", "SI-9": "M3-11 firm, users and case team", "SI-10": "M3-7 employer case link",
+  "SI-1": "M3-8 Eligibility page, not built", "SI-6": "M3-9 AI form review, not built", "SI-9": "M3-11 firm, users and case team, not built", "SI-10": "M3-7 employer case link, not built",
+  "SI-14": "case documents: the runtime lane's page adds the chip", "SI-15": "client list and case shell: the runtime lane's page adds the chip", "SI-16": "case page frame: the runtime lane's page adds the chip",
 };
 
 /** The register's rows: id → status ("Stand-in", "Deferred", "Consumed"). */
