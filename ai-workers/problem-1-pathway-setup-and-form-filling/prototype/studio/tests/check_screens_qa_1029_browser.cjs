@@ -108,7 +108,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("QA-71: Sections: \"Questions\", not \"Question placements\"; no \"Imported release\" or version badge in the list", /Questions/.test(sc) && !/Question placements|Imported release|\bv1\b/.test(sc));
     await go("/library/documents");
     const dt = await main();
-    step("QA-71: Document types: facts in words, categories in words, no \"reader profiles\"", !KEY.test(dt) && !/\b(client|employer|government|other)\b\s*$/m.test(dt) && !/reader profiles|Imported release/.test(dt), (dt.match(KEY) ?? [])[0]);
+    step("QA-71: Document types: facts in words, categories in words, no \"reader profiles\"", !KEY.test(dt) && (await p.locator("main table tbody td:nth-child(2)").allInnerTexts()).every((c) => /^(Client|Employer|Government|Someone else)$/.test(c.trim())) && !/reader profiles|Imported release/.test(dt), (dt.match(KEY) ?? [])[0]);
     await axe("Document types"); await p.screenshot({ path: path.join(SHOTS, "documents-1440.png") });
 
     // QA-73: Review and release in words
