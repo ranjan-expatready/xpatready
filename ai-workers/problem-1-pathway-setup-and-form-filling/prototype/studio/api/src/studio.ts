@@ -793,6 +793,7 @@ export class Studio {
       sections: await publish(tx.logicalSection, { workspaceId: ws, sectionKey: { in: snapshot.sections.map((x) => x.id) } }),
       documentTypes: await publish(tx.documentType, { workspaceId: ws, documentTypeKey: { in: snapshot.document_requirements.map((d) => d.document_type_key) } }),
       requirements: await publish(tx.documentRequirement, { combinationId: id }), rules: await publish(tx.predicate, { combinationId: id }), forms: await publish(tx.combinationForm, { combinationId: id }), checks: await publish(tx.check, { combinationId: id }),
+      factSources: await publish(tx.factSource, { combinationId: id }), // W1-15 slice 1
       boxes: await publish(tx.formFieldMap, { workspaceId: ws, edition: { form: { usedBy: { some: { combinationId: id } } } } }),
       // The answer lists its choice fields take (F1): published with them, or the published copy loses them (runtime R1a, S-9).
       lists: await publish(tx.answerList, { workspaceId: ws, answerListKey: { in: snapshot.canonical_fields.flatMap((f) => (f.answer_list ? [f.answer_list.key] : [])) } }),
