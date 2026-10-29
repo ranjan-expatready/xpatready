@@ -102,7 +102,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const qText = await q.innerText();
   step("fix 3: the questions show their wording; no field code and no \"(uses the field meaning)\" on the main path", (await p.locator("[data-question]").count()) > 20 && !CODE.test(qText) && !/uses the field meaning/.test(qText), (qText.match(CODE) ?? [""])[0]);
   step("C4.1: one chip per person with a question count; who fills each question and the forms that need it are shown", await p.locator("[data-role-chip]").count() === 4 && /Client|Case officer/.test(qText) && /IMM \d{4}/.test(qText));
-  step("coverage: the person's line says how many answers the forms need and who gives them (none asked of nobody on the sample)", /the forms need \d+ answers for this person · \d+ from documents · \d+ asked of the client · \d+ entered by the agent/.test(await p.locator("[data-coverage]").innerText()) && !/asked of nobody/.test(await p.locator("[data-coverage]").innerText()));
+  step("coverage: the person's line says how many answers the forms need and who gives them (none asked of nobody on the sample)", /the forms need \d+ answers for this person · \d+ from documents · \d+ asked of the client · \d+ entered by the case officer/.test(await p.locator("[data-coverage]").innerText()) && !/asked of nobody/.test(await p.locator("[data-coverage]").innerText()));
   await p.locator("[data-question]").first().getByRole("button", { name: /^Details of/ }).click();
   const det = p.getByRole("dialog");
   step("fix 3: the field code shows only in the question's side panel, as its System name", /System name/.test(await det.innerText()) && CODE.test(await det.locator("[data-question-details]").innerText()));

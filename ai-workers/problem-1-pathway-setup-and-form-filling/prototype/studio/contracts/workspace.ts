@@ -186,8 +186,10 @@ export type FactSourceRow = {
   source: AnswerSource; document: FactSupplier | null; also: FactSupplier[];
   proposedBy: "Rules" | "Person"; ruleSource: AnswerSource; ruleDocument: FactSupplier | null;
   prequalification: boolean; reason: string | null; clientOnly: boolean; placed: boolean; version: number;
-  /** The agent may be chosen as its source (one rule: engine/sources.ts agentRefusal). */
+  /** The case officer is offered as its source by default (one rule: engine/sources.ts agentRefusal); any other fact
+   *  takes the case officer only with a written reason (P-155(3)). */
   agentOffered: boolean;
+  sourceReason: string | null;
   /** The newest saved choice: none (the rules), a draft (its author may undo it at once) or published. */
   change: { status: "DRAFT" | "PUBLISHED"; by: string; at: string; batchId: string | null } | null;
 };

@@ -1,7 +1,8 @@
 // W1-15 Questions and documents, slice 2 (runtime lane; board v2 agreed P-147): the Questionnaires tab walked like a
 // content publisher in a real browser. The strip, source chips and "Needs you"; "Who can be" folded to one line; rows of
 // five things; the ⋯ menu whose greyed actions keep their reason as visible text; the side drawer with its locks in words
-// (a declaration is always the client's, the agent is not offered for a passport fact); a save that the row then shows;
+// (a declaration is always the client's; the case officer for a passport fact only with a written reason, P-155(3)); a
+// save that the row then shows;
 // the bulk bar on ticked rows with refusals in words and one Undo; an approver sees no ticks and no edits. A pass and a
 // fail per rule; screenshots at 1440 and 1024 in screens/W1-questions-and-documents/screenshots/slice2/, axe (WCAG 2.2
 // AA) on each state. No model call (US$0).
@@ -43,27 +44,29 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } });
   step("setup: the sample inputs load", (await api("/demo/load", { method: "POST" })).status === 201);
   const wp = sql("select id from combination where combination_key='wp.family'");
+  const openAll = async () => { const b = p.getByRole("button", { name: "Open all sections" }); if (await b.count()) { await b.click(); await settle(); } };
   const go = async () => { await p.goto(`${BASE}/c/${wp}/questionnaires`); await p.getByRole("tablist", { name: "Combination" }).waitFor(); await p.locator("[data-source-strip]").waitFor(); await settle(); };
   await go();
 
   // ======================================================== the strip, the chips, the fold
   const strip = await p.locator("[data-source-strip]").innerText();
   const L = (await api(`/combinations/${wp}/fact-sources`)).body;
-  step("C4.10 strip pass: full form = from documents + client answers + agent enters, with the server's counts", strip.includes(String(L.counts.facts)) && strip.includes(String(L.counts.document)) && L.counts.facts === L.counts.document + L.counts.client + L.counts.agent && /✓ Every fact has one source/.test(strip), strip.replace(/\n/g, " "));
+  step("C4.10 strip pass: full form = from documents + client answers + case officer enters, with the server's counts", strip.includes(String(L.counts.facts)) && strip.includes(String(L.counts.document)) && L.counts.facts === L.counts.document + L.counts.client + L.counts.agent && /✓ Every fact has one source/.test(strip), strip.replace(/\n/g, " "));
   step("C4.10 strip fail-guard: it shows no system key", !/\b[a-z_]+\.[a-z_]+\b/.test(strip));
   const who = p.locator("[data-who-can-be]");
   step("P-147 §3 pass: Who can be in this application is folded to one line with Show and edit", await who.getAttribute("data-folded") !== null && await who.getByRole("button", { name: "Show and edit" }).count() === 1 && await who.locator("table").count() === 0);
   await who.getByRole("button", { name: "Show and edit" }).click(); await settle();
   step("P-147 §3: Show and edit opens the full table (built S5 card)", await p.locator("[data-who-can-be] table").count() === 1 && await p.locator('[data-who-can-be] [data-person="principal"]').count() === 1);
   const chips = await p.locator('[role="group"][aria-label="Where it comes from"]').innerText();
-  step("EXPERIENCE §0 pass: source chips Document · Client · Agent and Needs you · 0", /Document \d+/.test(chips) && /Client \d+/.test(chips) && /Agent \d+/.test(chips) && /Needs you · 0/.test(chips), chips.replace(/\n/g, " "));
+  step("EXPERIENCE §0 pass: source chips Document · Client · Case officer and Needs you · 0", /Document \d+/.test(chips) && /Client \d+/.test(chips) && /Case officer \d+/.test(chips) && /Needs you · 0/.test(chips), chips.replace(/\n/g, " "));
+  step("P-154 fail-guard: the strip, the chips and the person line never say agent", !/\bagents?\b/i.test(`${strip} ${chips} ${await p.locator("[data-coverage]").innerText()}`) && /Case officer enters/.test(strip));
   // S2-1 (Lead, 29 Oct): the person's line uses slice 1's sources, with the chips' numbers.
   await p.waitForFunction(() => /from documents/.test(document.querySelector("[data-coverage]")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
   const line = await p.locator("[data-coverage]").innerText();
   const num = (re, t) => Number((t.match(re) ?? [])[1] ?? -1);
-  const [cd, cc, ca] = [num(/Document (\d+)/, chips), num(/Client (\d+)/, chips), num(/Agent (\d+)/, chips)];
-  const [ld, lc, la, ln] = [num(/(\d+) from documents/, line), num(/(\d+) asked of the client/, line), num(/(\d+) entered by the agent/, line), num(/need (\d+) answers/, line)];
-  step("S2-1 pass: the person's line says documents · client · agent with the chips' numbers, and they add up", ld === cd && lc === cc && la === ca && ln === cd + cc + ca, `${line} | chips ${cd}/${cc}/${ca}`);
+  const [cd, cc, ca] = [num(/Document (\d+)/, chips), num(/Client (\d+)/, chips), num(/Case officer (\d+)/, chips)];
+  const [ld, lc, la, ln] = [num(/(\d+) from documents/, line), num(/(\d+) asked of the client/, line), num(/(\d+) entered by the case officer/, line), num(/need (\d+) answers/, line)];
+  step("S2-1 pass: the person's line says documents · client · case officer with the chips' numbers, and they add up", ld === cd && lc === cc && la === ca && ln === cd + cc + ca, `${line} | chips ${cd}/${cc}/${ca}`);
   step("S2-1 fail: the line no longer uses the older split (\"filled by the case officer\")", !/filled by the case officer/.test(line), line);
   await state("questionnaires-strip-and-rows");
 
@@ -87,15 +90,31 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await dob.getByRole("button", { name: /^Details of/ }).click();
   const drawer = p.getByRole("dialog"); await drawer.locator("[data-fact-drawer]").waitFor();
   const agentOpt = drawer.locator('[data-source-option="AGENT"]');
-  step("lock fail (P-147 frame 1): Agent is greyed for a passport fact, with the reason in words", await agentOpt.locator("input").isDisabled() && /Not offered: the agent enters only/.test(await agentOpt.innerText()), await agentOpt.innerText());
+  step("P-155(3) pass: Case officer may be chosen for a passport fact, saying it needs a written reason", !(await agentOpt.locator("input").isDisabled()) && /Case officer/.test(await agentOpt.innerText()) && /only with a written reason/.test(await agentOpt.innerText()), await agentOpt.innerText());
   step("M2 pass: the drawer says the fallback question is reachable and the override is for this combination only", /Fallback question reachable/.test(await drawer.locator("[data-fallback]").innerText()) && /override for this combination only/.test(await drawer.innerText()));
   step("drawer: the system name shows only here, with where it is changed", /System name/.test(await drawer.locator("[data-question-details]").innerText()) && /person\.family_name/.test(await drawer.locator("[data-question-details]").innerText()));
   await state("drawer-passport-fact");
+  // P-155(3): Case officer asks why; Save without it is refused in words; with it the row shows the reason.
+  await agentOpt.locator("input").check();
+  step("P-155(3) pass: choosing Case officer shows the required reason box", await drawer.locator("[data-officer-why] textarea").count() === 1);
+  await drawer.getByRole("button", { name: "Save" }).click(); await settle();
+  step("P-155(3) fail: Save without a reason is refused in plain words (write why)", /write why/.test(await drawer.locator("[data-drawer-error]").innerText().catch(() => "")), await drawer.locator("[data-drawer-error]").innerText().catch(() => ""));
+  await state("drawer-case-officer-needs-why");
+  await drawer.locator("[data-officer-why] textarea").fill("Sample: the officer copies it from the LMIA file.");
+  await drawer.getByRole("button", { name: "Save" }).click(); await settle();
+  await p.locator('[data-source-chip="all"]').click(); await settle();
+  await openAll();
+  const oRow = p.locator('[data-question][data-fact="person.family_name"]').first();
+  step("P-155(3) pass: the row says Case officer with \"Why: …\" under it", /Case officer/.test(await oRow.locator("[data-comes-from]").innerText()) && /Why: Sample: the officer copies it/.test(await oRow.locator("[data-source-reason]").innerText().catch(() => "")), await oRow.innerText());
+  await state("row-case-officer-with-why");
+  await p.locator("[data-undo-toast] [data-undo]").click(); await settle();
+  await oRow.getByRole("button", { name: /^Details of/ }).click();
+  await drawer.locator("[data-fact-drawer]").waitFor();
   await drawer.locator('[data-source-option="CLIENT"] input').check();
   await drawer.locator("[data-pq-tick]").check();
   await drawer.getByRole("button", { name: "Save" }).click(); await settle();
   await p.locator('[data-source-chip="all"]').click(); await settle();
-  await p.getByRole("button", { name: "Open all sections" }).click(); await settle();
+  await openAll();
   const row = p.locator('[data-question][data-fact="person.family_name"]').first();
   await row.waitFor();
   step("C4.10 M1 pass: the row now says Client, Ask, Changed here", /Client/.test(await row.locator("[data-comes-from]").innerText()) && /Ask/.test(await row.innerText()) && await row.locator('[data-row-status="draft"]').count() === 1, await row.innerText());
@@ -123,7 +142,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("bulk-bar-two-ticked");
   await bar.getByLabel("Set where it comes from").selectOption("AGENT"); await settle();
   const refused = p.locator("[data-bulk-refused]");
-  step("P-147 Q2 fail: Agent on two passport facts is refused per row, each in words with its question", await refused.locator("li").count() === 2 && /Not offered: the agent enters only/.test(await refused.innerText()), await refused.innerText());
+  step("P-155(3) fail (bulk): Case officer on two passport facts is refused per row, each in words with its question (write why in its details)", await refused.locator("li").count() === 2 && /The case officer enters only .+ Open its details to write why/.test(await refused.innerText()), await refused.innerText());
   await state("bulk-refused-in-words");
   await bar.getByLabel("Set where it comes from").selectOption("CLIENT"); await settle();
   const toast = p.locator("[data-undo-toast]");

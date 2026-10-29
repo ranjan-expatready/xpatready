@@ -1,7 +1,7 @@
 {
-  "at": "2026-10-29T03:51:48.596Z",
+  "at": "2026-10-29T04:04:48.006Z",
   "port": 4436,
-  "pass": 29,
+  "pass": 35,
   "fail": 0,
   "log": [
     {
@@ -24,17 +24,25 @@
       }
     },
     {
-      "name": "agent rule pass: the agent's own fact may come from the agent (no refusal; the list says agentOffered)",
+      "name": "P-155(3) rule pass: the case officer's own fact needs no reason (offered by default)",
       "ok": true,
       "detail": "organisation.address"
     },
     {
-      "name": "agent rule fail: a passport fact may not (the one message), and the list says so",
+      "name": "P-155(3) rule fail: a fact read from a document needs a written reason (the one message)",
       "ok": true,
       "detail": "organisation.name"
     },
     {
-      "name": "agent rule: a declaration is never offered the agent (its own refusal speaks for it)",
+      "name": "P-155(3) rule pass: with a written reason it is allowed",
+      "ok": true
+    },
+    {
+      "name": "P-155(3) rule: a declaration is never the case officer's (its own refusal speaks for it)",
+      "ok": true
+    },
+    {
+      "name": "P-154 words pass: the refusal reads \"case officer\" in plain English, never \"agent\"",
       "ok": true
     },
     {
@@ -53,30 +61,30 @@
       "detail": "{\"type\":\"https://expatready.local/problems/validation\",\"title\":\"Some details need fixing\",\"status\":400,\"detail\":\"Choose what to change on the ticked rows.\",\"mes"
     },
     {
-      "name": "lock fail (P-147 frame 1): Agent on a client or document fact is refused per row, in words, and nothing is saved",
+      "name": "P-155(3) fail (bulk): the case officer on document facts is refused per row (a bulk change carries no reason), and nothing is saved",
       "ok": true,
       "detail": {
         "saved": 0,
         "batchId": null,
-        "what": "where the answer comes from set to the agent",
+        "what": "where the answer comes from set to the case officer",
         "refused": [
           {
             "role": "principal",
             "fact": "organisation.name",
             "label": "Legal or operating name of an organisation (here the prospective employer)",
-            "message": "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document."
+            "message": "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot."
           },
           {
             "role": "principal",
             "fact": "person.citizenship",
             "label": "Country of citizenship",
-            "message": "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document."
+            "message": "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot."
           },
           {
             "role": "principal",
             "fact": "person.date_of_birth",
             "label": "Date of birth",
-            "message": "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document."
+            "message": "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot."
           },
           {
             "role": "principal",
@@ -91,26 +99,98 @@
       "name": "lock fail (declaration): the declaration's refusal says only the client gives it",
       "ok": true,
       "detail": [
-        "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document.",
-        "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document.",
-        "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document.",
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
         "\"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it."
       ]
     },
     {
-      "name": "words fail-guard: no refusal carries a decision code",
+      "name": "words fail-guard: no refusal carries a decision code or the word agent (P-154)",
       "ok": true,
       "detail": [
-        "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document.",
-        "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document.",
-        "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document.",
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
+        "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release. Open its details to write why: a bulk change cannot.",
         "\"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it."
       ]
     },
     {
-      "name": "lock fail: a single save of Agent on a document fact is refused the same way (422, on its field)",
+      "name": "P-155(3) fail: the case officer on a document fact without a reason is refused (422, on the reason field, in words)",
       "ok": true,
-      "detail": "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document."
+      "detail": "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release."
+    },
+    {
+      "name": "P-155(3) pass: with a written reason it is saved; the row carries the reason",
+      "ok": true,
+      "detail": {
+        "role": "principal",
+        "fact": "organisation.name",
+        "label": "Legal or operating name of an organisation (here the prospective employer)",
+        "forms": [
+          "IMM 1295",
+          "IMM 5475",
+          "IMM 5476"
+        ],
+        "source": "AGENT",
+        "document": null,
+        "also": [
+          {
+            "key": "copy_of_lmia_and_copy_of_employment_contract_from_prospectiv",
+            "name": "Copy of LMIA and copy of employment contract from prospective employer",
+            "base": false
+          },
+          {
+            "key": "employment_contract_lmia_exempt_job",
+            "name": "Employment contract (LMIA-exempt job)",
+            "base": false
+          },
+          {
+            "key": "job_offer_letter",
+            "name": "Job offer letter",
+            "base": false
+          }
+        ],
+        "proposedBy": "Person",
+        "ruleSource": "DOCUMENT",
+        "ruleDocument": {
+          "key": "copy_of_lmia_and_copy_of_employment_contract_from_prospectiv",
+          "name": "Copy of LMIA and copy of employment contract from prospective employer",
+          "base": false
+        },
+        "prequalification": false,
+        "reason": null,
+        "sourceReason": "Sample: the officer copies it from the LMIA file.",
+        "clientOnly": false,
+        "placed": true,
+        "agentOffered": false,
+        "version": 1,
+        "change": {
+          "status": "DRAFT",
+          "by": "user-A",
+          "at": "2026-10-29T04:04:46.603Z",
+          "batchId": null
+        }
+      }
+    },
+    {
+      "name": "P-155(3) pass: Review names it with the reason, for the second person at release",
+      "ok": true,
+      "detail": [
+        "Legal or operating name of an organisation (here the prospective employer) (Principal applicant): comes from the case officer (why: Sample: the officer copies it from the LMIA file.)"
+      ]
+    },
+    {
+      "name": "P-155(3) fail-guard: with its reason it is no release check",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "P-155(3) fail: a case officer choice without its reason (an older save) is a release check, in words",
+      "ok": true,
+      "detail": [
+        "Principal applicant: \"Legal or operating name of an organisation (here the prospective employer)\" comes from the case officer without a written reason. Write why in its details, or choose the client or a document."
+      ]
     },
     {
       "name": "lock fail (C4.2 M4): pre-qualification on an agent fact is refused in the bulk change too",
@@ -120,7 +200,7 @@
           "role": "principal",
           "fact": "organisation.address",
           "label": "Complete address of an organisation",
-          "message": "\"Complete address of an organisation\" comes from the agent: a prospect is asked only what they can answer."
+          "message": "\"Complete address of an organisation\" comes from the case officer: a prospect is asked only what they can answer."
         }
       ]
     },
@@ -129,7 +209,7 @@
       "ok": true,
       "detail": {
         "saved": 3,
-        "batchId": "9562474b-4f97-4958-b09c-5a9a178debac",
+        "batchId": "9e448581-6d96-42cb-ab19-d86f00409b38",
         "what": "where the answer comes from set to the client",
         "refused": []
       }
@@ -141,20 +221,20 @@
         {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T03:51:47.711Z",
-          "batchId": "9562474b-4f97-4958-b09c-5a9a178debac"
+          "at": "2026-10-29T04:04:46.992Z",
+          "batchId": "9e448581-6d96-42cb-ab19-d86f00409b38"
         },
         {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T03:51:47.713Z",
-          "batchId": "9562474b-4f97-4958-b09c-5a9a178debac"
+          "at": "2026-10-29T04:04:46.993Z",
+          "batchId": "9e448581-6d96-42cb-ab19-d86f00409b38"
         },
         {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T03:51:47.713Z",
-          "batchId": "9562474b-4f97-4958-b09c-5a9a178debac"
+          "at": "2026-10-29T04:04:46.994Z",
+          "batchId": "9e448581-6d96-42cb-ab19-d86f00409b38"
         }
       ]
     },
@@ -205,7 +285,7 @@
         "d0": {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T03:51:47.959Z",
+          "at": "2026-10-29T04:04:47.244Z",
           "batchId": null
         }
       }
@@ -220,7 +300,7 @@
           "item": "person.criminal_history",
           "label": "Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence",
           "role": "principal",
-          "message": "Principal applicant: \"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it, never the agent. Set Comes from to Client."
+          "message": "Principal applicant: \"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it, never the case officer. Set Comes from to Client."
         }
       ]
     },
@@ -242,8 +322,8 @@
       "detail": {
         "status": "PUBLISHED",
         "by": "user-A",
-        "at": "2026-10-29T03:51:48.464Z",
-        "batchId": "adb59287-7432-44ad-8799-1188fa31492b"
+        "at": "2026-10-29T04:04:47.819Z",
+        "batchId": "989a9841-b406-4b22-975d-1b4324505e56"
       }
     },
     {

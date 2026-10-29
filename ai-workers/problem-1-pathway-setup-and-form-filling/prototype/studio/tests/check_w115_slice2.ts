@@ -1,13 +1,14 @@
 // W1-15 Questions and documents, slice 2 (runtime lane; board v2 agreed P-147; plan.md "Slice 2 against board v2"):
 // the API under the Questionnaires tab: each row's status (its newest saved choice), the release checks carrying the
 // person role (for "Needs you"), the bulk change on ticked rows (each row re-checked against the same locks, refused
-// rows in words, one batch id) and its one Undo, and the agent offered only for the agent's own facts. A passing and a
+// rows in words, one batch id) and its one Undo, and the case officer as a source (P-154 words; P-155(3): by default only
+// for the case officer's own facts, any other with a written reason reviewed at release, never declarations). A passing and a
 // failing case per rule, on an isolated copy with the sample loaded. Rules only: no AI call (US$0).
 //   zsh studio/tools/isolated.sh runtime_w115b 4436 start && tsx studio/tests/check_w115_slice2.ts 4436 xr_studio_runtime_w115b
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { AGENT_NOT_OFFERED, agentRefusal } from "../engine/sources.ts";
+import { agentRefusal, CASE_OFFICER_NEEDS_REASON } from "../engine/sources.ts";
 
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_runtime_w115b";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -43,10 +44,12 @@ const CODES = /\bP-\d+\b/;
   const agentFact = L.facts.find((f: any) => f.ruleSource === "AGENT" && f.role !== "case" && !f.clientOnly);
   ok("fixture: three placed document facts, a declaration and an agent fact for the principal", docs.length === 3 && !!decl && !!agentFact, { docs: docs.length, decl: !!decl, agent: agentFact?.fact });
 
-  // ---------------------------------------------------------------- the agent: one rule (engine/sources.ts agentRefusal)
-  ok("agent rule pass: the agent's own fact may come from the agent (no refusal; the list says agentOffered)", agentRefusal(agentFact) === null && agentFact.agentOffered === true, agentFact.fact);
-  ok("agent rule fail: a fact read from a document may not (the one message), and the list says so", agentRefusal(docs[0]) === AGENT_NOT_OFFERED && docs[0].agentOffered === false, docs[0].fact);
-  ok("agent rule: a declaration is never offered the agent (its own refusal speaks for it)", decl.agentOffered === false && agentRefusal(decl) === null);
+  // ---------------------------------------------------------------- the case officer: one rule (engine/sources.ts agentRefusal, P-155(3))
+  ok("P-155(3) rule pass: the case officer's own fact needs no reason (offered by default)", agentRefusal(agentFact) === null && agentFact.agentOffered === true, agentFact.fact);
+  ok("P-155(3) rule fail: a fact read from a document needs a written reason (the one message)", agentRefusal(docs[0]) === CASE_OFFICER_NEEDS_REASON && agentRefusal(docs[0], "  ") === CASE_OFFICER_NEEDS_REASON && docs[0].agentOffered === false, docs[0].fact);
+  ok("P-155(3) rule pass: with a written reason it is allowed", agentRefusal(docs[0], "Sample: the officer copies it from the LMIA file.") === null);
+  ok("P-155(3) rule: a declaration is never the case officer's (its own refusal speaks for it)", decl.agentOffered === false && agentRefusal(decl) === null);
+  ok("P-154 words pass: the refusal reads \"case officer\" in plain English, never \"agent\"", /case officer/.test(CASE_OFFICER_NEEDS_REASON) && !/\bagents?\b/i.test(CASE_OFFICER_NEEDS_REASON) && !CODES.test(CASE_OFFICER_NEEDS_REASON));
 
   // ---------------------------------------------------------------- bulk: roles, shape, locks
   const items = (fs: any[]) => fs.map((f) => ({ role: f.role, fact: f.fact, version: f.version }));
@@ -58,11 +61,25 @@ const CODES = /\bP-\d+\b/;
   ok("bulk shape fail: nothing chosen to change is 400, in words", r.status === 400 && /Choose what to change/.test(JSON.stringify(r.body)), JSON.stringify(r.body).slice(0, 160));
   r = await bulk({ items: items([...docs, decl]), source: "AGENT" });
   L = await list();
-  ok("lock fail (P-147 frame 1): Agent on a client or document fact is refused per row, in words, and nothing is saved", r.status === 200 && r.body.saved === 0 && r.body.batchId === null && r.body.refused.length === 4 && r.body.refused.filter((x: any) => /Not offered: the agent enters only/.test(x.message)).length === 3 && L.facts.every((f: any) => f.change === null), r.body);
+  ok("P-155(3) fail (bulk): the case officer on document facts is refused per row (a bulk change carries no reason), and nothing is saved", r.status === 200 && r.body.saved === 0 && r.body.batchId === null && r.body.refused.length === 4 && r.body.refused.filter((x: any) => /The case officer enters only .+ Open its details to write why/.test(x.message)).length === 3 && L.facts.every((f: any) => f.change === null), r.body);
   ok("lock fail (declaration): the declaration's refusal says only the client gives it", r.body.refused.some((x: any) => x.fact === decl.fact && /only the client gives it/.test(x.message)), r.body.refused.map((x: any) => x.message));
-  ok("words fail-guard: no refusal carries a decision code", !r.body.refused.some((x: any) => CODES.test(x.message)), r.body.refused.map((x: any) => x.message));
-  r = await call("PUT", `/combinations/${wp}/fact-sources/${docs[0].role}/${encodeURIComponent(docs[0].fact)}`, { source: "AGENT", version: 0 });
-  ok("lock fail: a single save of Agent on a document fact is refused the same way (422, on its field)", r.status === 422 && r.body?.errors?.[0]?.field === "source" && /Not offered/.test(words(r)), words(r));
+  ok("words fail-guard: no refusal carries a decision code or the word agent (P-154)", !r.body.refused.some((x: any) => CODES.test(x.message) || /\bagents?\b/i.test(x.message)), r.body.refused.map((x: any) => x.message));
+  const put0 = (b: any) => call("PUT", `/combinations/${wp}/fact-sources/${docs[0].role}/${encodeURIComponent(docs[0].fact)}`, b);
+  r = await put0({ source: "AGENT", version: 0 });
+  ok("P-155(3) fail: the case officer on a document fact without a reason is refused (422, on the reason field, in words)", r.status === 422 && r.body?.errors?.[0]?.field === "sourceReason" && /write why/.test(words(r)), words(r));
+  r = await put0({ source: "AGENT", sourceReason: "Sample: the officer copies it from the LMIA file.", version: 0 });
+  L = await list();
+  const withWhy = get(docs[0].role, docs[0].fact);
+  ok("P-155(3) pass: with a written reason it is saved; the row carries the reason", r.status === 200 && withWhy.source === "AGENT" && withWhy.sourceReason === "Sample: the officer copies it from the LMIA file.", r.body ?? words(r));
+  const cfg = (await call("GET", `/combinations/${wp}`)).body;
+  const line = (cfg.draft.changes as any[]).find((x) => x.kind === "Where an answer comes from" && /why: Sample: the officer copies it/.test(x.label));
+  ok("P-155(3) pass: Review names it with the reason, for the second person at release", !!line && line.needs_sme === true && /the case officer \(why: /.test(line.label), (cfg.draft.changes as any[]).filter((x) => x.kind === "Where an answer comes from").map((x) => x.label));
+  ok("P-155(3) fail-guard: with its reason it is no release check", !L.problems.some((p: any) => p.item === docs[0].fact && p.role === docs[0].role && p.level === "error"), L.problems.filter((p: any) => p.item === docs[0].fact).map((p: any) => p.message));
+  sql(`update fact_source set source_reason=null where combination_id='${wp}' and lineage_key='${docs[0].role}|${docs[0].fact}' and status='DRAFT'`);
+  L = await list();
+  ok("P-155(3) fail: a case officer choice without its reason (an older save) is a release check, in words", L.problems.some((p: any) => p.item === docs[0].fact && p.role === docs[0].role && p.level === "error" && /without a written reason/.test(p.message)), L.problems.filter((p: any) => p.item === docs[0].fact).map((p: any) => p.message));
+  await call("DELETE", `/combinations/${wp}/fact-sources/${docs[0].role}/${encodeURIComponent(docs[0].fact)}`, { version: get(docs[0].role, docs[0].fact).version });
+  L = await list();
   r = await bulk({ items: items([agentFact]), prequalification: true });
   ok("lock fail (C4.2 M4): pre-qualification on an agent fact is refused in the bulk change too", r.body.saved === 0 && /prospect is asked only what they can answer/.test(r.body.refused[0]?.message ?? ""), r.body.refused);
 

@@ -12,7 +12,8 @@ export type Source = (typeof SOURCES)[number];
 /** Whom a supplied fact is about, from the holder of the document (the person the checklist line names). */
 export const ABOUTS = ["holder", "holder.spouse", "holder.parent"] as const;
 export type About = (typeof ABOUTS)[number];
-export const SOURCE_WORDS: Record<Source, string> = { DOCUMENT: "Document", CLIENT: "Client", AGENT: "Agent" };
+/** P-154: the words people read; AGENT stays the internal name (no data migration for a name). */
+export const SOURCE_WORDS: Record<Source, string> = { DOCUMENT: "Document", CLIENT: "Client", AGENT: "Case officer" };
 
 export type Supplier = { key: string; name: string; base: boolean };
 type Req = { document_type_key?: string; document_type: string; who: string; base_or_conditional: string; condition?: any };
@@ -66,22 +67,25 @@ export type FactSourceView = {
   proposedBy: "Rules" | "Person";
   ruleSource: Source; ruleDocument: Supplier | null;
   prequalification: boolean; reason: string | null;
+  /** P-155(3): why the case officer enters a fact that is not a case officer's own (required for that choice). */
+  sourceReason: string | null;
   /** P-97: placed in a section only the client answers. */
   clientOnly: boolean;
   /** A question is placed for it (the client can be asked; the fallback for a document fact). */
   placed: boolean;
-  /** The agent may be chosen as its source (agentRefusal). */
+  /** The case officer is offered as its source by default (agentRefusal without a reason). */
   agentOffered: boolean;
 };
 
-/** The one rule for the agent as a source (board v2 frame 1, P-147; the Lead, 29 Oct: keep it as built for now). The agent
- *  is offered only for the facts the rules give the agent; a declaration is the client's (its own refusal). The founder is
- *  weighing an exception "with a written reason, reviewed at release, never declarations": it joins here, as a reason
- *  argument, so the save, the bulk change and the screen keep one answer. */
-export const AGENT_NOT_OFFERED = "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document.";
-export function agentRefusal(f: Pick<FactSourceView, "ruleSource" | "clientOnly">): string | null {
-  if (f.clientOnly) return null;
-  return f.ruleSource === "AGENT" ? null : AGENT_NOT_OFFERED;
+/** The one rule for the case officer as a source (P-155(3), founder 29 Oct): offered by default only for the case
+ *  officer's own facts (the representative's, the office's and the case's); any other fact only with a written reason,
+ *  shown on the row and named on Review for the second person at release; never a declaration (its own refusal). The
+ *  save, the bulk change, the release check and the screen all read this. */
+export const CASE_OFFICER_NEEDS_REASON = "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release.";
+const REASON_MIN = 5;
+export function agentRefusal(f: Pick<FactSourceView, "ruleSource" | "clientOnly">, reason?: string | null): string | null {
+  if (f.clientOnly || f.ruleSource === "AGENT") return null;
+  return (reason ?? "").trim().length >= REASON_MIN ? null : CASE_OFFICER_NEEDS_REASON;
 }
 
 const roleOf = (people: Person[], about: string) => about === "case" ? "case" : people.find((p) => p.id === about.split("/")[0])?.role ?? about;
@@ -119,7 +123,7 @@ export function factSources(s: Snapshot): FactSourceView[] {
     const document = source === "DOCUMENT" ? (c?.source === "DOCUMENT" ? suppliers.find((x) => x.key === c.document_type) ?? { key: c.document_type!, name: c.document_type!, base: false } : ruleDocument) : null;
     return { role: n.role, fact: n.fact, label: (meaning.get(n.fact) ?? n.fact).trim().replace(/\.$/, ""), forms: [...n.forms].sort(),
       source, document, also: suppliers.filter((x) => x.key !== document?.key), proposedBy: c?.source ? "Person" : "Rules", ruleSource, ruleDocument,
-      prequalification: !!c?.prequalification, reason: c?.reason ?? null, clientOnly, placed: !!p && !p.rule_only,
+      prequalification: !!c?.prequalification, reason: c?.reason ?? null, sourceReason: c?.source === "AGENT" ? c?.source_reason ?? null : null, clientOnly, placed: !!p && !p.rule_only,
       agentOffered: !clientOnly && agentRefusal({ ruleSource, clientOnly }) === null };
   });
 }
@@ -141,15 +145,16 @@ export function factSourceProblems(s: Snapshot): Problem[] {
   for (const f of factSources(s)) {
     const person = f.proposedBy === "Person";
     if (!f.forms.length && (person || f.prequalification)) say("warning", f, "has a choice saved, but no form of this combination needs it any more. Clear it.");
-    if (f.clientOnly && f.source !== "CLIENT") say("error", f, `is a declaration or background answer: only the client gives it, never ${f.source === "DOCUMENT" ? "a document" : "the agent"}. Set Comes from to Client.`);
+    if (f.clientOnly && f.source !== "CLIENT") say("error", f, `is a declaration or background answer: only the client gives it, never ${f.source === "DOCUMENT" ? "a document" : "the case officer"}. Set Comes from to Client.`);
     if (f.source === "DOCUMENT") {
-      if (person && !f.also.concat(f.ruleDocument ? [f.ruleDocument] : []).some((x) => x.key === f.document?.key)) say("error", f, `comes from ${f.document?.name ?? "a document"}, but that document is not on this person's checklist or does not supply it. Add it to the Documents tab, or choose Client or Agent.`);
+      if (person && !f.also.concat(f.ruleDocument ? [f.ruleDocument] : []).some((x) => x.key === f.document?.key)) say("error", f, `comes from ${f.document?.name ?? "a document"}, but that document is not on this person's checklist or does not supply it. Add it to the Documents tab, or choose Client or Case officer.`);
       else if (!f.placed) say(f.document?.base ? "warning" : "error", f, f.document?.base ? `comes from ${f.document.name}; if it cannot be read, nobody is asked for it. Add a question for it as the fallback.` : `comes from ${f.document?.name}, which is asked only in some cases: when it is not asked, nobody gives this answer. Add a question for it, or choose Client.`);
     }
     if (person && f.source === "CLIENT" && !f.placed) say("error", f, "comes from the client, but no question asks it. Add the question, or choose another source.");
-    if (person && f.source === "AGENT" && !f.placed && !isAgentFact(f.fact) && f.role !== "representative") say("error", f, "comes from the agent, but no place lets the agent enter it. Add it to the case officer's view, or choose another source.");
+    if (person && f.source === "AGENT" && !f.placed && !isAgentFact(f.fact) && f.role !== "representative") say("error", f, "comes from the case officer, but no place lets the case officer enter it. Add it to the case view, or choose another source.");
+    if (person && f.source === "AGENT" && agentRefusal(f, f.sourceReason)) say("error", f, "comes from the case officer without a written reason. Write why in its details, or choose the client or a document.");
     if (f.prequalification) {
-      if (f.source === "AGENT") say("error", f, "is ticked for pre-qualification, but it comes from the agent: a prospect is asked only what they can answer. Untick it, or choose Client or Document.");
+      if (f.source === "AGENT") say("error", f, "is ticked for pre-qualification, but it comes from the case officer: a prospect is asked only what they can answer. Untick it, or choose Client or Document.");
       else if (!f.placed) say("error", f, "is ticked for pre-qualification, but no question asks it, so the prospect cannot be asked. Add the question, or untick it.");
     }
   }

@@ -49,7 +49,7 @@ export type Snapshot = {
   document_requirements: any[]; document_types: any[]; rules: any[]; derived_fields: any[]; checks: any[];
   /** W1-15 slice 1: a person's choices over the rules' source per fact and person role, and the Pre-qualification
    *  ticks; present only when the combination has any (engine/sources.ts), so other configurations keep their fingerprint. */
-  fact_sources?: { role: string; fact: string; source: "DOCUMENT" | "CLIENT" | "AGENT" | null; document_type: string | null; prequalification: boolean; reason: string | null; origin: string }[];
+  fact_sources?: { role: string; fact: string; source: "DOCUMENT" | "CLIENT" | "AGENT" | null; document_type: string | null; prequalification: boolean; reason: string | null; source_reason?: string; origin: string }[];
   row_versions: Record<string, string>;
 };
 
@@ -163,7 +163,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
     rules: effRules.sort((a, b) => a.predicateKey.localeCompare(b.predicateKey)).map((r) => { note("rule", r.predicateKey, r); return { id: r.predicateKey, when: r.predicateJson, when_plain: r.whenPlain, then: r.thenPlain, for_whom: r.forWhom, source_quote: r.sourceQuote, item_version: r.version, status: r.status, origin: r.origin }; }),
     derived_fields: [...derived].sort((a, b) => a.derivedKey.localeCompare(b.derivedKey)).map((d) => ({ id: d.derivedKey, calculation: d.calculation, inputs: d.inputs, reference: d.reference, plain: d.plain, executable: d.executable })),
     checks: effChecks.sort((a, b) => a.checkKey.localeCompare(b.checkKey)).map((c) => ({ id: c.checkKey, group: c.checkGroup, applies_to: c.appliesTo, condition: c.predicateJson, severity: c.severity, message: c.message, source_quote: c.sourceQuote, illustrative: c.illustrative, item_version: c.version })),
-    ...(effSources.length ? { fact_sources: effSources.sort((a: any, b: any) => a.lineageKey.localeCompare(b.lineageKey)).map((r: any) => { note("fact source", r.lineageKey, r); return { role: r.role, fact: r.canonicalFieldKey, source: r.source ?? null, document_type: r.documentTypeKey ?? null, prequalification: r.prequalification, reason: r.reason ?? null, origin: r.origin }; }) } : {}),
+    ...(effSources.length ? { fact_sources: effSources.sort((a: any, b: any) => a.lineageKey.localeCompare(b.lineageKey)).map((r: any) => { note("fact source", r.lineageKey, r); return { role: r.role, fact: r.canonicalFieldKey, source: r.source ?? null, document_type: r.documentTypeKey ?? null, prequalification: r.prequalification, reason: r.reason ?? null, ...(r.sourceReason ? { source_reason: r.sourceReason } : {}), origin: r.origin }; }) } : {}),
     row_versions: rv,
   };
   const { row_versions: _rv, mode: _m, ...hashed } = snapshot;

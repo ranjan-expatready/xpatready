@@ -16,14 +16,16 @@ import { Tip } from "@/components/status";
 import { useUndoToast } from "@/components/lifecycle";
 import { cn } from "@/lib/utils";
 
-export const SOURCE_LABEL: Record<AnswerSource, string> = { DOCUMENT: "Document", CLIENT: "Client", AGENT: "Agent" };
+/** P-154: the words people read ("Agent" is retired as a role word); AGENT stays the internal name. */
+export const SOURCE_LABEL: Record<AnswerSource, string> = { DOCUMENT: "Document", CLIENT: "Client", AGENT: "Case officer" };
 const TYPE_WORDS: Record<string, string> = { text: "Text", date: "A date", yes_no: "Yes or no", number: "A number", code: "A choice from a list", country: "A country", address: "An address", phone: "A phone number", email: "An email address" };
 /** The words the screen shows for each lock (board v2 frame 7), the same the API answers with. */
 export const SAY = {
   clientOnly: "Declarations are always answered by the client.",
-  agentNotOffered: "Not offered: the agent enters only the representative's, the office's and the case's own facts.",
+  /** P-155(3): the case officer on a fact that is not theirs needs a written reason (the API's words). */
+  officerNeedsReason: "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release.",
   clientNotPlaced: "No question asks it, so the client cannot give it. Add the question first.",
-  pqAgent: "Not offered: the agent enters it.",
+  pqAgent: "Not offered: the case officer enters it.",
   pqNoQuestion: "The prospect needs a question to answer. Add a fallback question first.",
   order: (section: string) => `The order is set in the library section ${section}. Change it there.`,
   retire: "A question line is not retired here. Retire the question in the library.",
@@ -42,7 +44,7 @@ export function useRefreshSources(id: string) {
   return () => { for (const k of [["fact-sources", id], ["combination", id], ["combination-summary", id], ["config", id], ["draft"], ["preview"]]) void qc.invalidateQueries({ queryKey: k }); };
 }
 
-/** The strip (C4.10, P-130): the full form = from documents + client answers + agent enters, with pre-qualification
+/** The strip (C4.10, P-130): the full form = from documents + client answers + case officer enters, with pre-qualification
  *  and whether every fact has one source. */
 export function SourceStrip({ v }: { v: FactSourcesView | undefined }) {
   if (!v) return <div className="h-16 animate-pulse rounded-xl border border-border bg-surface" aria-hidden />;
@@ -58,7 +60,7 @@ export function SourceStrip({ v }: { v: FactSourcesView | undefined }) {
       <span aria-hidden className="text-text-muted">+</span>
       <Part n={v.counts.client} label="Client answers" tip="Asked in the client questionnaire." />
       <span aria-hidden className="text-text-muted">+</span>
-      <Part n={v.counts.agent} label="Agent enters" tip="The representative's, the office's and the case's own facts." />
+      <Part n={v.counts.agent} label="Case officer enters" tip="The representative's, the office's and the case's own facts." />
       <span className="mx-1 h-8 w-px bg-border" aria-hidden />
       <Part n={v.counts.prequalification} label="Pre-qualification" tip="Asked of a prospect before the case starts; the answer is later confirmed." />
       <span className="ml-auto text-sm" data-strip-state>{errors.length ? <span className="font-medium text-text-danger">{errors.length} release check{errors.length === 1 ? "" : "s"} to fix</span> : <span className="text-text-ok">✓ Every fact has one source</span>}</span>
@@ -77,7 +79,7 @@ export function SourceChips({ rows, needs, value, onChange }: { rows: FactSource
   );
   return (
     <div role="group" aria-label="Where it comes from" className="flex flex-wrap gap-1.5">
-      {chip("all", "All sources")}{chip("DOCUMENT", `Document ${n("DOCUMENT")}`)}{chip("CLIENT", `Client ${n("CLIENT")}`)}{chip("AGENT", `Agent ${n("AGENT")}`)}{chip("needs", `Needs you · ${needs}`)}
+      {chip("all", "All sources")}{chip("DOCUMENT", `Document ${n("DOCUMENT")}`)}{chip("CLIENT", `Client ${n("CLIENT")}`)}{chip("AGENT", `Case officer ${n("AGENT")}`)}{chip("needs", `Needs you · ${needs}`)}
     </div>
   );
 }
@@ -96,6 +98,7 @@ export function ComesFrom({ f, fallbackless }: { f: FactSourceRow | undefined; f
     <span className="flex flex-col gap-0.5" data-comes-from={f.source}>
       <span className="inline-flex items-center gap-1">{f.clientOnly ? <Lock className="size-3.5 text-text-muted" aria-label="Always the client" /> : null}{sourceText(f)}{f.proposedBy === "Person" ? <span className="sr-only"> (changed here)</span> : null}</span>
       {fallbackless ? <span className="inline-flex items-center gap-1 text-xs text-text-warn"><TriangleAlert className="size-3.5" aria-hidden /> No fallback question</span> : null}
+      {f.sourceReason ? <span className="text-xs text-text-muted" data-source-reason>Why: {f.sourceReason}</span> : null}
     </span>
   );
 }
@@ -146,17 +149,19 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
   const [choice, setChoice] = React.useState(start);
   const [tick, setTick] = React.useState(f?.prequalification ?? false);
   const [reason, setReason] = React.useState(f?.reason ?? "");
+  const [officerWhy, setOfficerWhy] = React.useState(f?.sourceReason ?? "");
   const [error, setError] = React.useState<{ field: string; message: string } | null>(null);
   const [stale, setStale] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const title = q?.wording ?? f?.label ?? "Question";
   const editable = canAuthor && !!f;
-  const changed = !!f && (choice !== start || tick !== f.prequalification || (tick && reason.trim() !== (f.reason ?? "")));
+  // P-155(3): the case officer on a fact that is not theirs needs a written reason (required; reviewed at release).
+  const needsWhy = !!f && choice === "AGENT" && !f.agentOffered;
+  const changed = !!f && (choice !== start || tick !== f.prequalification || (tick && reason.trim() !== (f.reason ?? "")) || (needsWhy && officerWhy.trim() !== (f.sourceReason ?? "")));
   const why = (s: string): string | null => {
     if (!f) return null;
     const src = s.split(":")[0] as AnswerSource;
     if (f.clientOnly && src !== "CLIENT") return SAY.clientOnly;
-    if (src === "AGENT" && !f.agentOffered) return SAY.agentNotOffered;
     if (src === "CLIENT" && !f.placed) return SAY.clientNotPlaced;
     return null;
   };
@@ -167,7 +172,7 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
     const [src, doc] = choice.split(":");
     const wasDraft = f.change?.status === "DRAFT";
     try {
-      await api(`/combinations/${id}/fact-sources/${encodeURIComponent(role)}/${encodeURIComponent(f.fact)}`, { method: "PUT", json: { source: src, documentTypeKey: src === "DOCUMENT" ? doc : null, prequalification: tick, reason: tick ? reason.trim() || null : f.reason, version: f.version } });
+      await api(`/combinations/${id}/fact-sources/${encodeURIComponent(role)}/${encodeURIComponent(f.fact)}`, { method: "PUT", json: { source: src, documentTypeKey: src === "DOCUMENT" ? doc : null, sourceReason: needsWhy ? officerWhy.trim() || null : null, prequalification: tick, reason: tick ? reason.trim() || null : f.reason, version: f.version } });
       refresh();
       // One Undo (P-116 amended): only when there was no draft before, so Undo returns exactly to what was shown.
       onSaved(`"${title}" saved for this combination`, wasDraft ? undefined : async () => { await api(`/combinations/${id}/fact-sources/${encodeURIComponent(role)}/${encodeURIComponent(f.fact)}`, { method: "DELETE", json: { version: f.version + 1 } }); refresh(); });
@@ -192,7 +197,7 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
               {[...docs.map((d) => ({ value: `DOCUMENT:${d.key}`, label: `Document · ${d.name}`, hint: d.key === f.ruleDocument?.key ? `Default by the rules: it is on ${roleLabel}'s checklist and supplies it.` : "Also supplied by it." })),
                 ...(docs.length ? [] : [{ value: "DOCUMENT:", label: "Document", hint: `No document on ${roleLabel}'s checklist supplies it. Add one on Documents.` }]),
                 { value: "CLIENT", label: "Client", hint: f.placed ? "Asked in the client questionnaire." : "" },
-                { value: "AGENT", label: "Agent", hint: f.agentOffered ? "The agent enters it." : "" }].map((o) => {
+                { value: "AGENT", label: "Case officer", hint: f.agentOffered ? "The case officer enters it." : f.clientOnly ? "" : "Not one of the case officer's own details: only with a written reason, reviewed at release." }].map((o) => {
                 const off = o.value === "DOCUMENT:" ? "No document supplies it." : why(o.value);
                 return (
                   <label key={o.value} className={cn("flex gap-2 rounded-lg border p-2", choice === o.value ? "border-primary bg-primary/5" : "border-border", off ? "text-text-muted" : "")} data-source-option={o.value}>
@@ -202,7 +207,12 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
                 );
               })}
             </fieldset>
-            {error?.field === "source" || error?.field === "documentTypeKey" ? <p role="alert" className="text-text-danger" data-drawer-error>{error.message}</p> : null}
+            {needsWhy ? (
+              <label className="block text-xs font-medium" data-officer-why>Why the case officer enters it <span className="font-normal text-text-muted">(required; shown on the row and to the second person at release)</span>
+                <Textarea className="mt-1 min-h-14" value={officerWhy} disabled={!editable} onChange={(e) => setOfficerWhy(e.target.value)} aria-invalid={error?.field === "sourceReason" ? true : undefined} />
+              </label>
+            ) : null}
+            {error?.field === "source" || error?.field === "documentTypeKey" || error?.field === "sourceReason" ? <p role="alert" className="text-text-danger" data-drawer-error>{error.message}</p> : null}
             <p className="text-xs" data-fallback>{f.placed ? <span className="text-text-ok">✓ Fallback question reachable{section ? ` in ${section}` : ""}: the client is asked if the document is missing or cannot be read.</span> : <span className="text-text-warn">No fallback question: if the document is missing or cannot be read, nobody is asked.</span>}</p>
             {f.also.length ? <p className="text-xs text-text-muted" data-also>Also supplied by: {f.also.map((x) => x.name).join(", ")} (information only).</p> : null}
             <p className="rounded-lg bg-surface p-2 text-xs text-text-muted">Changing it here is an override for this combination only, reviewed in this combination's release. The library default stays.</p>
@@ -253,7 +263,7 @@ export function BulkBar({ id, picked, onClear, onDone }: { id: string; picked: F
     <div role="region" aria-label="Change the ticked rows" className="fixed bottom-4 right-4 z-40 flex w-[calc(100vw-2rem)] max-w-[960px] flex-wrap md:w-[calc(100vw-14rem-3rem)] items-center gap-2 rounded-xl border border-primary/40 bg-surface-raised p-2 shadow-lg" data-bulk-bar>
       <span className="px-1 text-sm font-medium" data-bulk-count>{picked.length} selected</span>
       <Select aria-label="Set where it comes from" className="h-8 w-60" value="" disabled={busy} onChange={(e) => { const v = e.target.value as AnswerSource | "RULES"; if (v) void run({ source: v }); }} data-bulk-source>
-        <option value="">Set where it comes from…</option><option value="CLIENT">Client</option><option value="AGENT">Agent</option><option value="RULES">Back to the rules' default</option>
+        <option value="">Set where it comes from…</option><option value="CLIENT">Client</option><option value="AGENT">Case officer</option><option value="RULES">Back to the rules' default</option>
       </Select>
       <Select aria-label="Pre-qualification" className="h-8 w-52" value="" disabled={busy} onChange={(e) => { if (e.target.value) void run({ prequalification: e.target.value === "on" }); }} data-bulk-pq>
         <option value="">Pre-qualification…</option><option value="on">Ask in pre-qualification</option><option value="off">Do not ask</option>

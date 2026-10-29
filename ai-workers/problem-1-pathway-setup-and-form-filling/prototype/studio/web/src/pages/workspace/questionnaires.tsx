@@ -211,7 +211,7 @@ function AddPerson({ offered, onAdd }: { offered: { key: string; label: string; 
 
 /** One person role's questions as a case asks them, each row five things: Question · Comes from · Pre-qualification ·
  *  Only if · Status (board v2 frames 1–2). The strip and the chips on top; ⋯ menu and the side drawer per row; the bulk
- *  bar while rows are ticked. Facts no question asks (from a document or the agent) are listed after the sections. */
+ *  bar while rows are ticked. Facts no question asks (from a document or the case officer) are listed after the sections. */
 function QuestionsByPerson({ id, q, available }: { id: string; q: QuestionnairesView | null; available: { key: string; title: string }[] }) {
   const [sp, setSp] = useSearchParams();
   const { canAuthor } = useSessionView();
@@ -311,7 +311,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
       {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
       {/* S2-1 (Lead, 29 Oct): the same sources and numbers as the chips and the strip (slice 1's rules), not the older
           placement count (client or case officer). */}
-      <p className="text-sm" data-coverage><span className="font-medium">{role?.label}:</span> {fs.data ? <>the forms need {mine.length} answer{mine.length === 1 ? "" : "s"} for this person · {count("DOCUMENT")} from documents · {count("CLIENT")} asked of the client · {count("AGENT")} entered by the agent</> : "working out where each answer comes from…"}{q.coverage.gaps.length ? <span className="text-text-danger"> · {q.coverage.gaps.length} asked of nobody</span> : null}</p>
+      <p className="text-sm" data-coverage><span className="font-medium">{role?.label}:</span> {fs.data ? <>the forms need {mine.length} answer{mine.length === 1 ? "" : "s"} for this person · {count("DOCUMENT")} from documents · {count("CLIENT")} asked of the client · {count("AGENT")} entered by the case officer</> : "working out where each answer comes from…"}{q.coverage.gaps.length ? <span className="text-text-danger"> · {q.coverage.gaps.length} asked of nobody</span> : null}</p>
       {q.coverage.gaps.length ? (
         <Notice tone="danger" title={`${q.coverage.gaps.length} answer${q.coverage.gaps.length === 1 ? " is" : "s are"} needed but asked of nobody: release waits for ${q.coverage.gaps.length === 1 ? "it" : "them"}`}>
           <ul className="mt-1 space-y-0.5" data-gaps>{q.coverage.gaps.slice(0, 8).map((g) => <li key={g.fact}>"{g.meaning}", needed by {g.forms.join(", ")}</li>)}</ul>
@@ -344,7 +344,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
       })}
       {unasked.filter((f) => keep(f.fact)).length ? (
         <div className="rounded-xl border border-border bg-surface-raised" data-section="unasked">
-          <p className="px-4 pt-3 font-medium">Answered without a question <span className="text-xs font-normal text-text-muted">· {unasked.length} fact{unasked.length === 1 ? "" : "s"} for {role?.label}: read from a document or entered by the agent</span></p>
+          <p className="px-4 pt-3 font-medium">Answered without a question <span className="text-xs font-normal text-text-muted">· {unasked.length} fact{unasked.length === 1 ? "" : "s"} for {role?.label}: read from a document or entered by the case officer</span></p>
           <div className="px-4 py-3">
             <Table dense head={head(unasked.filter((f) => keep(f.fact)).map((f) => f.fact))} label="Answered without a question">
               {unasked.filter((f) => keep(f.fact)).map((f) => row(f.fact, f.label, null, null))}

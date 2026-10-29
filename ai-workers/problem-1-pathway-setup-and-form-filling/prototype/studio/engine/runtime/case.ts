@@ -44,7 +44,7 @@ export function ageOn(birth: unknown, today: Date): number | null {
  *  adult or the officer confirms; everything else waits for "Confirm section". */
 export function confirmation(s: Snapshot, a: Answer, who: Participant | undefined, birthDate: unknown, today: Date): Confirmation {
   if (a.status === "VERIFIED") return { confirmed: true, why: CONFIRM_WORDS.officer };
-  if (a.channel !== "questionnaire") return { confirmed: false, why: `${CONFIRM_WORDS.waits} (entered in the agent view)` };
+  if (a.channel !== "questionnaire") return { confirmed: false, why: `${CONFIRM_WORDS.waits} (entered in the case view)` };
   if (!isClientField(s, a.field)) return { confirmed: false, why: `${CONFIRM_WORDS.waits} (a fact the officer confirms from a document or record)` };
   if (who?.role === "principal" || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own };
   if (who?.role === "child") {
