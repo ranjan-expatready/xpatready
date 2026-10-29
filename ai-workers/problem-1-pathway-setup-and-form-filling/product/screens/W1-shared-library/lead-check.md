@@ -14,3 +14,8 @@
 1. At today's runner job budget (US$1 per attempt) the larger Sample forms are refused before any call (IMM 1295: about US$2.75 an attempt). The recording pass becomes useful only after the forms lane's per-step `budget_usd` merges; then `runnerBudgetUsd`'s fallback cast can go.
 2. Recording plan today: 8 Sample editions, about US$21 at the output limit, worst US$40 (earlier estimate about US$13, worst US$30). The founder's amount is asked after the forms runner fixes and QA-90 merge.
 3. Next for screens: S6 slice 1 (the one review queue on contract v2, one `ProposalItem` table) after the forms merge.
+
+## Lead check 2 — qa batch and Stand-in chip (29 Oct, screens at 95a013b7) · PASS → Lead PR
+* **qa batch** (7a60c011, 044a7092): QA-39, 48, 70–74, 79, 80 — plain words instead of system values (people's names instead of ids in Releases and Activity, "started setting up …", "today at …"), focus ring on menu links, Retired in the Status menu only while one is retired; `check_screens_qa_1029_browser.cjs` 43/43 at 1440 and 1024.
+* **Stand-in chip** (4c4b9dd5, P-165, B49): one `StandIn` component (tooltip: today, later, its register row) and `check_stand_ins.ts`, rerun by the Lead on 95a013b7: 9/9. No page uses it yet; M3 slices add the chips.
+* **Evidence:** lane full run-suites on 044a7092 (= 95a013b7 code) 69 pass, 0 fail; CI reruns on the merge result. Slice R's two outside-review fixes merged with PR #87.
