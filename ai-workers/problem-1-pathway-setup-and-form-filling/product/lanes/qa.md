@@ -9,7 +9,7 @@ Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes eve
 current_item: explore coverage on main 52117004 (branch `claude/qa-coverage-1029`): coverage rerun on S4+S5, retest of open bugs, Questionnaires tab walk (W1-15 slice 2); report `qa/reports/2026-10-29-coverage-s4-s5.md`
 stage: TEST
 owner: qa
-next_action: (1) finish the coverage run (c8, background; 41/61 at 14:13) and rerun `check_qa_am_r3_1028.cjs` when quiet; (2) write the report (BUGS and CAPABILITIES done: QA-47, QA-69 closed, QA-92–95 new); (3) put back the suites' by-products, commit qa files only, push, Paste to Lead. Earlier: QA-83–91 wait for the forms merge and runtime's fix (not retested here).
+next_action: (1) coverage done (api 97.49/82.52, engine 99.45/89.65, floor held; 56/65 under c8); plain reruns of the 9 fails running, then `check_qa_am_r3_1028.cjs` again; (2) fill the report's two placeholders (draft written; BUGS and CAPABILITIES done: QA-47, QA-69 closed, QA-92–95 new); (3) put back the suites' by-products, commit qa files only, push, Paste to Lead. Earlier: QA-83–91 wait for the forms merge and runtime's fix (not retested here).
 blocked_by: none
 updated: 2026-10-29
 
