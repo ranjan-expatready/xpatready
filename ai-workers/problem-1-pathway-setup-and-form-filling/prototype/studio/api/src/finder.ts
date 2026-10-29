@@ -20,23 +20,22 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
-import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
-import { RUN_CAP_USD } from "../../../p2/policy.ts";
 import { manifest, slug } from "../../engine/import.ts";
 import { editionMonth, newestEdition } from "../../engine/programs.ts";
 import { compareRounds } from "../../engine/agreement.ts";
 import { mentionsOf, officialUrl, pageLinks, pageText, parseFormPage, parseFormsIndex, textFingerprint } from "../../engine/canada.ts";
 import { FinderBody, FinderLaunchBody, normaliseCode, type FinderMode } from "../../contracts/form-library.ts";
 import { canadaSource, CanadaError, type CanadaSource } from "./canada.ts";
-import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 import { aboutUsd, lastFinishedUsd } from "./finder-cost.ts";
 import { Sources } from "./sources.ts";
 import { channelsFrom, recordedCopy, sampleFixtures } from "./filing.ts";
 import { WHO } from "./studio.ts";
 import { linkFinderGuides } from "./guide-sources.ts";
+import { LIVE_RUN, newestFirst, StepRunner, worstRoundUsd, type AiStep, type RoundOut, type SavedRun } from "./rounds.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
@@ -55,12 +54,7 @@ export const FINDER_OPERATION = "find_forms";
  *  combination; the 27 Oct live pass, made before that, is named in samples/finder-saved-runs.json. A run with neither
  *  is never replayed. */
 const LEGACY_RUN_KEYS: Record<string, string> = (() => { try { return JSON.parse(readFileSync(join(STUDIO, "samples", "finder-saved-runs.json"), "utf8")).runs ?? {}; } catch { return {}; } })();
-const runKey = (r: SavedRun): string | null => { const c = r.drafting_run?.inputs?.combination; return c && !c.includes(" › ") ? c : LEGACY_RUN_KEYS[r.file] ?? null; };
-/** Break R5-1: a saved real run ends "-live-<time>-<id>.json"; a stub pass ends "-stub-…", even when the place's own
- *  name holds the word "live" (a "Live-in caregiver" combination), so it is never replayed as the AI's answer. */
-const LIVE_RUN = /-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/;
-/** Saved run files, newest first by the time in their name (after "-live-"), whatever the job id before it. */
-const newestFirst = (a: string, b: string) => b.slice(b.lastIndexOf("-live-")).localeCompare(a.slice(a.lastIndexOf("-live-")));
+// Break R5-1 (a stub pass is never replayed) and the saved-run key: engine/rounds.ts, shared by every AI step.
 /** Break minor 1: an answer is used only in the shape its schema promises (a wrong shape never crashes the run). */
 function shapeOk(kind: "find_guide" | "find_forms", o: unknown): boolean {
   const x = o as Record<string, unknown> | null;
@@ -79,12 +73,13 @@ const STEPS = [
   { kind: "finder_attach", label: "Attach the forms to this combination", ai: false },
 ] as const;
 type StepKind = (typeof STEPS)[number]["kind"];
-const JOBS = join(PROTOTYPE, "p2", "jobs"), RUNS = join(PROTOTYPE, "p2", "runs"), PROMPTS = join(PROTOTYPE, "p2", "prompts"), INVENTORY = join(PROTOTYPE, "p1", "inventory");
-const ROUTE = "anthropic-api/aiw-d261-prototype-exception-aiw-d260", MODEL = "claude-opus-5-5";
-const AI_SETTINGS = {
-  find_guide: { template: "find-guide.v1.md", check: "find-guide-check.v1.md", schema: "find-guide-output.v1.schema.json", effort: "low", max_output_tokens: 3000 },
-  find_forms: { template: "find-forms.v1.md", check: "find-forms-check.v1.md", schema: "find-forms-output.v1.schema.json", effort: "medium", max_output_tokens: 10000 },
-} as const;
+const RUNS = join(PROTOTYPE, "p2", "runs"), INVENTORY = join(PROTOTYPE, "p1", "inventory");
+/** The finder's two AI steps on the shared step runner (api/src/rounds.ts): a draft and a blind checker round each. */
+const FINDER_WORDS = { noSaved: "No saved AI answer for these exact pages yet. Run it live once (its cost is shown first) or use rules only.", badSaved: "The saved AI answer does not have the expected shape. Run it live or use rules only.", nothingUsed: "Nothing was attached." };
+const AI_SETTINGS: Record<"find_guide" | "find_forms", AiStep> = {
+  find_guide: { kind: "find_guide", jobBase: "studio-finder-guide", configurationVersion: "s4-form-finder", template: "find-guide.v1.md", check: "find-guide-check.v1.md", schema: "find-guide-output.v1.schema.json", effort: "low", max_output_tokens: 3000, shapeOk: (o) => shapeOk("find_guide", o), legacyKeys: LEGACY_RUN_KEYS, words: FINDER_WORDS },
+  find_forms: { kind: "find_forms", jobBase: "studio-finder-forms", configurationVersion: "s4-form-finder", template: "find-forms.v1.md", check: "find-forms-check.v1.md", schema: "find-forms-output.v1.schema.json", effort: "medium", max_output_tokens: 10000, shapeOk: (o) => shapeOk("find_forms", o), legacyKeys: LEGACY_RUN_KEYS, words: FINDER_WORDS },
+};
 type AiKind = keyof typeof AI_SETTINGS;
 const ATTACHABLE = new Set(["always", "condition", "alternative"]);
 const STOPWORDS = new Set(["and", "or", "the", "a", "an", "of", "for", "to", "in", "with", "your", "retail", "corporate", "employers", "temporary", "residence", "permanent", "canada", "application", "apply"]);
@@ -106,14 +101,10 @@ export type FinderResult = {
   ai_inputs?: { file: string; sha256: string }[];
 };
 
-/** One AI round's outcome: an answer (live or replayed) or a plain reason it has none. */
-type RoundOut<T> = { ok: true; output: T; costUsd: number; from: "live" | "replay"; runFile: string } | { ok: false; reason: string; costUsd: number; blocked?: boolean; cancelled?: boolean };
 type GuideOut = { package_title: string | null; confidence: "high" | "low"; reason: string; others: string[] };
 type FormsOut = { forms: Proposal[]; unresolved: { quote: string; reason: string }[] };
 type Candidate = { title: string; url: string };
 type GuideValue = { url: string; title: string | null; candidates?: Candidate[] };
-/** A saved run record of the guarded launcher, read loosely (only what replay compares). */
-type SavedRun = { file: string; caller?: string; drafting_run?: { status?: string; usage?: { cost_usd?: number }; inputs?: { official_files?: unknown; combination?: string } }; contract_valid?: boolean; launch_evidence?: { template_sha256?: string; known?: { combination_trail?: string } }; raw_output?: unknown };
 /** The stored plan of a finder run, with its result once it ended. */
 type FinderPlan = Awaited<ReturnType<Finder["plan"]>> & { result?: FinderResult };
 const json = (v: unknown) => v as Prisma.InputJsonValue;
@@ -148,7 +139,9 @@ export function inventoryFor(url: string): { file: string; sha256: string } | nu
 @Injectable()
 export class Finder implements OnModuleInit {
   private canada: CanadaSource = canadaSource();
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Sources) private readonly sources: Sources) {}
+  /** The shared step runner (W1-10 slice 0): every AI round of the finder goes through it. */
+  private readonly rounds: StepRunner;
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Sources) private readonly sources: Sources) { this.rounds = new StepRunner(sources); }
 
   /** A finder run left running by a stopped server can never finish: say so, instead of showing it as running forever. */
   async onModuleInit() {
@@ -173,7 +166,7 @@ export class Finder implements OnModuleInit {
     const steps = STEPS.map((s, i) => ({ n: i + 1, kind: s.kind, label: s.label, uses_ai: s.ai && b.mode !== "rules" }));
     // Cost: each AI round's worst case as the ledger reserves it (inputs bounded by bytes, both attempts); replay and rules US$0.
     const rounds = b.mode === "live" ? [...(remembered || b.pageUrl ? [] : ["find_guide", "find_guide"] as const), "find_forms", "find_forms"] as AiKind[] : [];
-    const worst = round2(rounds.reduce((a, k) => a + Math.min(RUN_CAP_USD, costUsd(MODEL, inputTokenBound("x".repeat(k === "find_guide" ? 120_000 : 160_000)), AI_SETTINGS[k].max_output_tokens) * 2), 0));
+    const worst = round2(rounds.reduce((a, k) => a + worstRoundUsd(AI_SETTINGS[k], k === "find_guide" ? 120_000 : 160_000), 0));
     const expected = b.mode === "live" ? this.expectedUsd(c.trail) : 0;
     // S3 early look (4): the one "about" (finder-cost.ts), the same on the Find button, this plan and the run card.
     const about = b.mode === "live" ? aboutUsd(expected, await lastFinishedUsd(this.db, await this.ws.id(), FINDER_OPERATION, "LIVE"), true) : 0;
@@ -189,7 +182,7 @@ export class Finder implements OnModuleInit {
     const key = slug(trail.join(" ")).slice(0, 40);
     let total = 0, found = false;
     for (const prefix of [`studio-finder-forms-${key}`, `studio-finder-forms-check-${key}`]) {
-      const r = this.savedRuns(prefix)[0] ?? this.savedRunsLike(prefix)[0];
+      const r = this.rounds.savedRuns(prefix)[0] ?? this.rounds.savedRunsLike(prefix)[0];
       if (r) { total += Number(r.drafting_run?.usage?.cost_usd ?? 0); found = true; }
     }
     return found ? round2(total) : null;
@@ -446,80 +439,10 @@ export class Finder implements OnModuleInit {
   }
 
   // ------------------------------------------------------------------ AI rounds (guarded route only)
-  /** Saved runs whose job id starts with this prefix and has the trail fingerprint after it (job ids since the fix). */
-  private savedRunsLike(prefix: string): SavedRun[] {
-    if (!existsSync(RUNS)) return [];
-    return readdirSync(RUNS).filter((f) => f.startsWith(`${prefix}-`) && LIVE_RUN.test(f)).sort(newestFirst).map((f): SavedRun | null => { try { return { ...JSON.parse(readFileSync(join(RUNS, f), "utf8")), file: f }; } catch { return null; } }).filter((r): r is SavedRun => !!r);
-  }
-
-  private savedRuns(prefix: string): SavedRun[] {
-    if (!existsSync(RUNS)) return [];
-    return readdirSync(RUNS).filter((f) => f.startsWith(`${prefix}-live-`) && f.endsWith(".json")).sort().reverse()
-      .map((f): SavedRun | null => { try { return { ...JSON.parse(readFileSync(join(RUNS, f), "utf8")), file: f }; } catch { return null; } }).filter((r): r is SavedRun => !!r);
-  }
-
-  /** One AI round: replay the newest saved real run of exactly this job (same pages, same prompt), or a guarded live call. */
+  /** One AI round on the shared step runner: replay the newest saved real run of exactly this job (same pages, same
+   *  prompt, same combination), or a guarded live call. */
   async aiRound<T>(kind: AiKind, isCheck: boolean, trail: string, combinationKey: string, inputs: { file: string; sha256: string }[], mode: FinderMode, wanted: () => Promise<boolean>, batchId?: string): Promise<RoundOut<T>> {
-    const s = AI_SETTINGS[kind];
-    const template = isCheck ? s.check : s.template;
-    const base = `studio-finder-${kind === "find_guide" ? "guide" : "forms"}${isCheck ? "-check" : ""}`;
-    // Break M5: the trail's own fingerprint makes the job id unique (two siblings never share one, so Stop ends only this run).
-    // Round 2 N3: and of this run, so two combinations with the same names (another pathway) never share one either.
-    const jobId = `${base}-${slug(trail).slice(0, 40).replace(/_/g, "-")}-${sha(`${batchId ?? ""}|${trail}`).slice(0, 8)}`;
-    const tsha = sha(readFileSync(join(PROMPTS, template)));
-    const same = (r: SavedRun) => r?.caller === "live" && r?.drafting_run?.status === "completed" && r.contract_valid === true && r.launch_evidence?.template_sha256 === tsha && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(inputs) && runKey(r) === combinationKey && typeof r.raw_output === "string";
-    if (mode === "replay") {
-      // Break M7, round 2 N4, round 3 R3-2: a saved answer is found by what the AI was given (the same pages, the same prompt)
-      // and by the combination's key, never by a file name or names; another combination's answer is never reused. Round 2 m-a: an
-      // unreadable or wrong-shape answer is skipped and an older good one is used.
-      const mine = new RegExp(`^${base}-${isCheck ? "" : "(?!check-)"}.+-live-\\d{8}t\\d{9}z-[a-z0-9]+\\.json$`);
-      const r = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f)).sort(newestFirst) : []).map((f): SavedRun | null => { try { return { ...JSON.parse(readFileSync(join(RUNS, f), "utf8")), file: f }; } catch { return null; } }).find((x): x is SavedRun => !!x && same(x) && (() => { try { return shapeOk(kind, JSON.parse(String(x.raw_output))); } catch { return false; } })());
-      if (!r) return { ok: false, costUsd: 0, reason: "No saved AI answer for these exact pages yet. Run it live once (its cost is shown first) or use rules only." };
-      const saved = JSON.parse(String(r.raw_output)) as T;
-      if (!shapeOk(kind, saved)) return { ok: false, costUsd: 0, reason: "The saved AI answer does not have the expected shape. Run it live or use rules only." };
-      return { ok: true, output: saved, costUsd: 0, from: "replay", runFile: `prototype/p2/runs/${r.file}` };
-    }
-    const job = { job_id: jobId, kind, combination: combinationKey, configuration_version: "s4-form-finder", template, output_schema: s.schema, inputs,
-      settings: { provider_route: ROUTE, model: MODEL, effort: s.effort, timeout_ms: 300_000, max_attempts: 2, budget_usd: 1, max_output_tokens: s.max_output_tokens }, known: { combination_trail: trail } };
-    mkdirSync(JOBS, { recursive: true });
-    writeFileSync(join(JOBS, `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
-    if (batchId) this.liveJobs.set(batchId, jobId);
-    try { return await this.launchRound<T>(kind, jobId, wanted); } finally {
-      // Review major 7: the job file is only the launcher's input; the run record keeps it. Nothing is left in the source tree.
-      if (batchId) this.liveJobs.delete(batchId);
-      rmSync(join(JOBS, `${jobId}.json`), { force: true });
-    }
-  }
-
-  /** The job running now for each finder run (its exact launcher job id), so Stop ends that call and no other. */
-  private liveJobs = new Map<string, string>();
-
-  private async launchRound<T>(kind: AiKind, jobId: string, wanted: () => Promise<boolean>): Promise<RoundOut<T>> {
-    const last = (out: string) => { for (const l of out.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
-    const stub = await this.sources.launchOnce(jobId, "stub");
-    const sj = last(stub.out);
-    if (stub.stopped) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped during the free stub pass: nothing was sent." };
-    // S3 early look (1): the launcher's own words (a stack, an error code, a server path) go to the server log only.
-    if (stub.code !== 0) { console.warn(`finder ${jobId}: stub refused:`, String(sj?.refused ?? stub.err).trim().slice(-600) || `exit ${stub.code}`); return { ok: false, costUsd: 0, reason: "The AI step could not start on this computer, so nothing was sent and nothing was charged" }; }
-    const live = await this.sources.launchOnce(jobId, "live", wanted);
-    if (live.cancelled) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped before the AI call was sent: nothing was charged." };
-    if (live.stopped) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped while the AI call ran: the call was ended. It stays counted at its reserved worst case (the provider may still bill it); nothing of it is used." };
-    const lj = last(live.out);
-    if (!lj?.run_file) {
-      const why = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).trim() || `the launcher stopped (exit ${live.code})`;
-      const limit = /usage limit/i.test(why + live.err);
-      if (!limit) console.warn(`finder ${jobId}: live call did not run:`, why.slice(0, 600));
-      return { ok: false, blocked: limit, costUsd: 0, reason: limit ? "The AI provider's usage limit refused the call before any processing: nothing was charged. Use saved AI answers or rules only, or try later." : "The AI step did not run, so nothing was charged" };
-    }
-    const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
-    const cost = Number(rec.drafting_run?.usage?.cost_usd ?? 0);
-    if (rec.drafting_run?.status !== "completed" || rec.contract_valid !== true || typeof rec.raw_output !== "string") {
-      const limit = /usage limit/i.test(JSON.stringify(rec.drafting_run?.attempts ?? []));
-      return { ok: false, blocked: limit, costUsd: limit ? 0 : cost, reason: limit ? "The AI provider's usage limit refused the call before any processing: nothing was charged." : `The AI answer could not be used (${rec.drafting_run?.status ?? "no status"}${rec.output_errors ? ": it did not match the expected shape" : ""}). Nothing was attached.` };
-    }
-    let output: T; try { output = JSON.parse(rec.raw_output); } catch { return { ok: false, costUsd: cost, reason: "The AI answer was not readable. Nothing was attached." }; }
-    if (!shapeOk(kind, output)) return { ok: false, costUsd: cost, reason: "The AI answer did not have the expected shape. Nothing was attached." };
-    return { ok: true, output, costUsd: cost, from: "live", runFile: String(lj.run_file).replace(`${SOLUTION}/`, "") };
+    return this.rounds.round<T>(AI_SETTINGS[kind], isCheck, { trail, contextKey: combinationKey, inputs, mode, wanted, batchId });
   }
 
   /** Q-L1: a hand upload is an official download when its checksum equals the PDF behind the canada.ca form page's link
@@ -781,7 +704,7 @@ export class Finder implements OnModuleInit {
     if (!["QUEUED", "RUNNING"].includes(b.status)) throw problem(409, "Already ended", `This run has already ended (${b.status.toLowerCase()}).`);
     await this.db.aiBatch.update({ where: { id: batchId }, data: { cancelRequested: true, message: "Stopping" } });
     // M7: an AI round running now is ended (its launcher's process group): terminate, then force after 10 s.
-    const live = this.liveJobs.get(batchId);
+    const live = this.rounds.liveJob(batchId);
     if (live) this.sources.stopLaunches((jobId) => jobId === live);
     await this.audit.log(b.workspaceId, actor.id, "stopped", "form finder", batchId, `${actor.name} stopped the form finder for ${b.scopeLabel.split("|")[1] ?? "a combination"}`);
     return this.view(batchId);

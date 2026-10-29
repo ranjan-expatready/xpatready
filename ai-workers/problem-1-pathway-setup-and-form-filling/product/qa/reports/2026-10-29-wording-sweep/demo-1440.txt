@@ -1,0 +1,69 @@
+MENU
+Sample inputs loaded (reset to load again)
+Reset demo…
+Open the case area (runtime preview)
+--- RESET DIALOG ---
+Reset the demo workspace?
+
+Removes everything the disposable demo workspace created. Keeps the engine, official originals, fixtures, AI run records, the spend ledger and review evidence.
+
+Pathways and programs
+51
+Combinations
+6
+Releases
+1
+Source attachments
+27
+Form intake records
+25
+Field definitions (all versions)
+164
+Sections
+18
+Question placements
+164
+Forms and editions
+31
+Field map entries (form fields)
+461
+Forms in combinations
+9
+Document types and requirements
+52
+Rules (conditions)
+39
+Checks
+64
+Derived fields
+22
+AI and reading steps
+14
+Reviews, sign-offs and releases
+1
+Sample profiles and facts
+150
+Activity entries
+106
+Cases
+1
+People on cases
+1
+Library changes and sources approved in the product
+1
+
+Working files: 36 (29639 KB) in ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/isolated-qa_wd/workspaces/demo. Generated scripts: none: rules and conditions are stored as data and evaluated by the engine; nothing generates executable code.
+
+Kept, and checked unchanged after the reset
+
+Kept	Files	Fingerprint (SHA-256)
+Spend ledger and launch tickets (append-only)	149	5059eea0100771cf…
+AI run records (P2 drafting and P5 reader)	312	82ca346a2bc61467…
+AI job definitions and form inventories (inputs of the saved runs)	48	f0b0ede9e101db85…
+Official source originals and manifest	95	5ea3ba1e2620441a…
+Released configurations and review evidence (P3/P4)	34	10ed468e0a1dcc72…
+Fixtures and independent answer keys	18	89bf4615ff174010…
+Engine and application source	168	ba3c6ab9f041dbcb…
+Type RESET to confirm
+Cancel
+Reset demo

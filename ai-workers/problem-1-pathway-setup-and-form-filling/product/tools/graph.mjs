@@ -22,7 +22,7 @@ const seg = (p) => norm(p).split("/").filter(Boolean);
 const matches = (route, call) => { const a = seg(route), b = seg(call); return a.length === b.length && a.every((s, i) => s.startsWith(":") || b[i].startsWith(":") || s === b[i]); };
 
 // Decisions and capabilities (the files the Lead and the qa lane keep).
-const decisions = ["DECISIONS.md", "decisions/P-01-P-36-foundation.md", "decisions/P-37-P-42-journey.md", "decisions/P-43-P-47-journey-v3.md"].flatMap((f) => [...readFileSync(join(PH, f), "utf8").matchAll(/^\| ~*(P-\d+)/gm)].map((m) => m[1]));
+const decisions = ["DECISIONS.md", "decisions/P-01-P-36-foundation.md", "decisions/P-37-P-42-journey.md", "decisions/P-43-P-47-journey-v3.md", "decisions/P-48-P-53-21-oct.md", "decisions/P-54-P-58-22-oct.md", "decisions/P-60-P-61-23-oct.md", "decisions/P-62-P-69-23-oct.md"].flatMap((f) => [...readFileSync(join(PH, f), "utf8").matchAll(/^\| ~*(P-\d+)/gm)].map((m) => m[1]));
 const capabilities = readFileSync(join(PH, "qa/CAPABILITIES.md"), "utf8").split("\n").filter((l) => /^\| C\d+\.\d+ /.test(l)).map((l) => {
   const c = l.split("|").map((x) => x.trim());
   return { id: c[1], step: c[2], text: c[3], milestone: c[4], status: c[5], decisions: [...new Set(c[3].match(/P-\d+/g) ?? [])] };

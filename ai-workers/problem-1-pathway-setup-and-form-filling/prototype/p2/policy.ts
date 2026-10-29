@@ -66,8 +66,9 @@ export const PRICE_PER_MTOK: Record<string, { input: number; output: number }> =
 
 /** Spend caps. AIW-D261: about US$15-40 for the comparison, US$5 cap per run. The experiment cap covers every
  *  attempt and retry of every run, failed or not. AIW-D282 (founder, 21 Oct 2026): total raised from US$40 to US$100
- *  for the remaining real-model work; per-run cap, route, inputs, ledger and stub-pass rules unchanged. */
-export const EXPERIMENT_CAP_USD = 100;
+ *  for the remaining real-model work; per-run cap, route, inputs, ledger and stub-pass rules unchanged. P-139 (founder,
+ *  29 Oct): raised to US$120 for the W1-10 live trial; the Wave 1 cap stays US$60. */
+export const EXPERIMENT_CAP_USD = 120;
 export const RUN_CAP_USD = 5;
 /** P-110 (founder, 26 Oct; raised from US$40 to US$60 on 27 Oct, Lead PR #52): what Wave 1's live AI tests may spend,
  *  counted from the wave's start inside the experiment cap. The ledger refuses a reservation above it. */
