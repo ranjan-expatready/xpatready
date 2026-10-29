@@ -3,6 +3,7 @@
 // studio's renderer consume one format. mode "draft" takes each lineage's newest DRAFT row, else its PUBLISHED row;
 // mode "published" takes PUBLISHED rows only. A released version is this snapshot frozen and hashed (ConfigRelease).
 // Every list is sorted by its key so the same content always gives the same fingerprint.
+import { fingerprintLine } from "./channels.ts";
 import type { FormEdition, PrismaClient } from "@prisma/client";
 import { canonical, sha256 } from "../../contracts/rules.ts";
 import { compareEditions } from "./programs.ts";
@@ -154,7 +155,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
     canonical_fields: effFields.filter((f) => used.has(f.canonicalFieldKey)).sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey)).map((f) => { note("field", f.canonicalFieldKey, f); return { id: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, data_type: f.dataType, scope: f.scope, item_version: f.version, status: f.status, origin: f.origin, ...(f.answerListKey && shared.lists.has(f.answerListKey) ? { answer_list: { key: f.answerListKey, values: shared.lists.get(f.answerListKey) } } : {}) }; }),
     sections: selections.map((s) => effSections.find((x) => x.sectionKey === s.sectionKey)).filter(Boolean).map((s) => { note("section", s!.sectionKey, s!); return { id: s!.sectionKey, title: s!.title, meaning: s!.meaning, item_version: s!.version, status: s!.status }; }),
     placements: placements.sort((a, b) => a.sectionKey.localeCompare(b.sectionKey) || a.displayOrder - b.displayOrder).map((q) => { note("placement", q.lineageKey, q); return { lineage: q.lineageKey, fact: q.canonicalFieldKey, section_id: q.sectionKey, order: q.displayOrder, question_text: q.questionText, help_text: q.helpText, repeats: q.repeats, tier: q.tier, collected_from: q.collectedFrom, client_visible: q.clientVisible, condition: q.predicateJson, condition_effect: q.conditionEffect, condition_plain: q.conditionPlain, rule_only: q.ruleOnly, ...(clientOnly.has(q.sectionKey) ? { client_only: true } : {}), item_version: q.version, status: q.status }; }),
-    forms: forms.sort((a, b) => a.lineageKey.localeCompare(b.lineageKey)).map((f) => { note("form", f.lineageKey, f); return { form_number: f.form.formKey, title: f.form.displayName, form_kind: f.form.formKind, who: f.who, status: f.attachMode === "COMBINATION_MANDATORY" ? "always" : "conditional", condition: f.predicateJson, condition_plain: f.conditionPlain, source_quote: f.sourceQuote, item_version: f.version, origin: f.origin, ...(f.channel && f.channel !== "PDF_UPLOAD" ? { channel: f.channel } : {}), ...formEditions(f, comp.portalKey),
+    forms: forms.sort((a, b) => a.lineageKey.localeCompare(b.lineageKey)).map((f) => { note("form", f.lineageKey, f); return { form_number: f.form.formKey, title: f.form.displayName, form_kind: f.form.formKind, who: f.who, status: f.attachMode === "COMBINATION_MANDATORY" ? "always" : "conditional", condition: f.predicateJson, condition_plain: f.conditionPlain, source_quote: f.sourceQuote, item_version: f.version, origin: f.origin, ...(f.channel && f.channel !== "PDF_UPLOAD" ? { channel: f.channel } : {}), ...(f.signature && f.signature !== "NONE" ? { signature: f.signature } : {}), ...formEditions(f, comp.portalKey),
       // S5: only when set, so a line that keeps the defaults keeps its fingerprint (no draft change appears).
       ...(f.minAge ? { min_age: f.minAge } : {}), ...(f.signedBy ? { signed_by: f.signedBy } : {}) }; }),
     field_maps: fieldMaps,
@@ -167,5 +168,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
     row_versions: rv,
   };
   const { row_versions: _rv, mode: _m, ...hashed } = snapshot;
-  return { snapshot, sha256: sha256(canonical(content(hashed) as any)) };
+  // C-8 (W1-10 slice 1): a PDF upload signed by hand and scanned is fingerprinted in its old spelling, so a combination
+  // released before the slice does not show "changed since release".
+  return { snapshot, sha256: sha256(canonical(content({ ...hashed, forms: hashed.forms.map(fingerprintLine) }) as any)) };
 }

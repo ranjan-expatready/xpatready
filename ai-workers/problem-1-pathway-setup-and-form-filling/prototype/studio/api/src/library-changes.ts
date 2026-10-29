@@ -2,6 +2,8 @@
 // that a second person approves (LibraryChange), the one key generator (keyFor) and the one publisher both release paths
 // call inside their transaction (publishLibraryChanges). A combination whose draft uses an item whose ADD is still
 // waiting (or was returned) is not released: the item review cannot be skipped by releasing a combination.
+import { ACCOUNT_WORDS } from "../../contracts/forms.ts";
+import { acceptsWords } from "../../contracts/form-library.ts";
 import { HttpException } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import type { LibraryChange, Prisma } from "@prisma/client";
@@ -63,9 +65,10 @@ export function changeView(c: LibraryChange) {
 
 /** C11.18: what the second person compares: before → after, IRCC's line or the reason, and the form's canada.ca page. */
 export function acceptsView(c: Pick<LibraryChange, "key" | "matches">) {
-  const m = (c.matches ?? {}) as { channels?: string; before?: string | null; quote?: string | null; reason?: string | null; form_page?: string | null; edition?: string };
-  const w = (x?: string | null) => (x ? ({ PDF: "PDF upload", ONLINE: "Online", PDF_OR_ONLINE: "PDF upload · Online" } as Record<string, string>)[x] ?? x : "Not set yet");
-  return { form: c.key, edition: m.edition ?? null, before: w(m.before), after: w(m.channels), quote: m.quote ?? null, reason: m.reason ?? null, form_page: m.form_page ?? null };
+  const m = (c.matches ?? {}) as { account?: string; channels?: string[]; before?: string[] | null; quote?: string | null; reason?: string | null; form_page?: string | null; edition?: string; readings?: unknown; check?: string | null };
+  // P-143: the account it is for; P-140 (C-5): the finder's two readings and, when they or the keyword rule disagree, why to check.
+  return { form: c.key, edition: m.edition ?? null, account: ACCOUNT_WORDS[(m.account ?? "ANY") as "ANY"] ?? m.account, before: acceptsWords(m.before), after: acceptsWords(m.channels), quote: m.quote ?? null, reason: m.reason ?? null, form_page: m.form_page ?? null,
+    ...(m.readings ? { readings: m.readings } : {}), check: m.check ?? null };
 }
 
 /** A second person decides (P-53 item 4, BR-9): never the person who proposed it. Claimed on its status, so two

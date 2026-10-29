@@ -121,7 +121,7 @@ export type CatalogueLeaf = {
   startWhy?: string | null;
   /** drafted: the form's boxes are mapped (or it is a checklist, which has none); false = attached, not set up yet.
    *  inLibrary (attached sources only): its boxes are already mapped in the library, so it is added without AI. */
-  forms: { code: string; drafted: boolean; document: boolean; inLibrary?: boolean; channel?: "PDF_UPLOAD" | "ONLINE" | "SIGNED_PDF_UPLOAD" }[];
+  forms: { code: string; drafted: boolean; document: boolean; inLibrary?: boolean; channel?: "PDF_UPLOAD" | "ONLINE" | "PAPER" | "NOT_NEEDED" }[];
   /** How the application is filed, worked out from its lines (C1.6, engine/channels.ts filingKind): "PDF only", "Online only" or "Mixed: online and PDF"; null with no lines. */
   filing: string | null;
   counts: { documents: number; documentsAlways: number; documentsIf: number; questions: number; sections: number; rules: number } | null;
@@ -194,10 +194,10 @@ export type SessionView = { actor: { id: string; name: string; role: string; dut
 /** A file held by the form intake (P-51) that concerns a combination. */
 export type HeldFile = { id: string; file: string; code: string | null; edition: string | null; outcome: string | null; reason: string | null; at: string | Date };
 /** GET /combinations/:id/summary (P-50): the combination page's header and Overview. */
-type Channel = "PDF_UPLOAD" | "ONLINE" | "SIGNED_PDF_UPLOAD";
+type Channel = "PDF_UPLOAD" | "ONLINE" | "PAPER" | "NOT_NEEDED";
 export type CombinationSummary = {
   row: CatalogueLeaf | null; changes: number; allowedLocations: string[]; participants: unknown;
-  forms: { code: string; title: string; document: boolean; who: string; when: string; edition: string | null; boxes: number; channel: Channel; channelWords: string; signature: string | null }[];
+  forms: { code: string; title: string; document: boolean; who: string; when: string; edition: string | null; boxes: number; channel: Channel; channelWords: string; signature: string | null; signatureKind?: string }[];
   /** C1.6's words: "PDF only", "Online only", "Mixed: online and PDF"; filingDetail says it line by line. */
   filing: string; filingDetail: string;
   channelProblems: ProblemLine[];

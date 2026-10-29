@@ -15,6 +15,8 @@
 //  - downloads only from canada.ca (engine/canada.ts officialUrl), from the form's own page, checked like a manifest file
 //    and recorded as an official download (M2): no second person. Same printed edition, different file: the library's
 //    edition stays and the form is marked "Newer file on canada.ca" (M6); a newer edition is held for impact review.
+import { ACCOUNT_WORDS } from "../../contracts/forms.ts";
+import { acceptsWords } from "../../contracts/form-library.ts";
 import { HttpException, HttpStatus, Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -32,7 +34,7 @@ import { canadaSource, CanadaError, type CanadaSource } from "./canada.ts";
 import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 import { aboutUsd, lastFinishedUsd } from "./finder-cost.ts";
 import { Sources } from "./sources.ts";
-import { channelsFrom, recordedCopy, sampleFixtures } from "./filing.ts";
+import { channelProposal, channelsFrom, channelsRead, recordedCopy, sampleFixtures, type ChannelProposal, type ChannelReading } from "./filing.ts";
 import { WHO } from "./studio.ts";
 import { linkFinderGuides } from "./guide-sources.ts";
 import { LIVE_RUN, newestFirst, StepRunner, worstRoundUsd, type AiStep, type RoundOut, type SavedRun } from "./rounds.ts";
@@ -80,7 +82,7 @@ const RUNS = join(PROTOTYPE, "p2", "runs"), INVENTORY = join(PROTOTYPE, "p1", "i
 const FINDER_WORDS = { noSaved: "No saved AI answer for these exact pages yet. Run it live once (its cost is shown first) or use rules only.", badSaved: "The saved AI answer does not have the expected shape. Run it live or use rules only.", nothingUsed: "Nothing was attached." };
 const AI_SETTINGS: Record<"find_guide" | "find_forms", AiStep> = {
   find_guide: { kind: "find_guide", jobBase: "studio-finder-guide", configurationVersion: "s4-form-finder", template: "find-guide.v1.md", check: "find-guide-check.v1.md", schema: "find-guide-output.v1.schema.json", effort: "low", max_output_tokens: 3000, shapeOk: (o) => shapeOk("find_guide", o), legacyKeys: LEGACY_RUN_KEYS, words: FINDER_WORDS },
-  find_forms: { kind: "find_forms", jobBase: "studio-finder-forms", configurationVersion: "s4-form-finder", template: "find-forms.v1.md", check: "find-forms-check.v1.md", schema: "find-forms-output.v1.schema.json", effort: "medium", max_output_tokens: 10000, shapeOk: (o) => shapeOk("find_forms", o), legacyKeys: LEGACY_RUN_KEYS, words: FINDER_WORDS },
+  find_forms: { kind: "find_forms", jobBase: "studio-finder-forms", configurationVersion: "s4-form-finder", template: "find-forms.v2.md", check: "find-forms-check.v2.md", schema: "find-forms-output.v2.schema.json", replays: [{ template: "find-forms.v1.md", check: "find-forms-check.v1.md", label: "Saved before channels" }], effort: "medium", max_output_tokens: 10000, shapeOk: (o) => shapeOk("find_forms", o), legacyKeys: LEGACY_RUN_KEYS, words: FINDER_WORDS },
 };
 type AiKind = keyof typeof AI_SETTINGS;
 const ATTACHABLE = new Set(["always", "condition", "alternative"]);
@@ -89,7 +91,8 @@ const words = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9
 const sameText = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
 
 type Page = { url: string; title: string; kind: "package" | "guide"; text: string; sha256: string; inventory: { file: string; sha256: string } | null };
-type Proposal = { code: string; title: string | null; applies: string; condition: string | null; who: string; quote: string; filed_note: string | null };
+/** W1-10 slice 1 (prompt v2): each form also says how IRCC says it is filed (`channel`); answers saved with v1 have none. */
+type Proposal = { code: string; title: string | null; applies: string; condition: string | null; who: string; quote: string; filed_note: string | null; channel?: ChannelReading };
 export type FinderResult = {
   pages: { url: string; title: string; kind: string; read_by_ai: boolean }[];
   printed: string[];
@@ -101,6 +104,8 @@ export type FinderResult = {
   rules_only?: { code: string; sentence: string }[];
   guide_choice?: { candidates: { title: string; url: string }[]; why: string };
   ai_inputs?: { file: string; sha256: string }[];
+  /** C-5 (P-140): per attached form, the channel proposed for a second person (ready or check) or listed (no change). */
+  channels?: { code: string; outcome: "ready" | "check" | "listed" | "kept"; why: string | null; change_id?: string }[];
 };
 
 type GuideOut = { package_title: string | null; confidence: "high" | "low"; reason: string; others: string[] };
@@ -339,7 +344,7 @@ export class Finder implements OnModuleInit {
     const printedSet = new Set(printed.map((p) => p.code));
 
     // 3–4. Two AI rounds over the recorded pages (rules only: the printed numbers are listed for a person, none attached).
-    let draft: Proposal[] = [], check: Proposal[] = [];
+    let draft: Proposal[] = [], check: Proposal[] = [], earlier: string | undefined;
     if (mode === "rules") {
       result.rules_only = printed;
       for (const k of ["finder_propose", "finder_check"] as const) await this.db.draftingJob.updateMany({ where: { batchId, kind: k }, data: { status: "SKIPPED", finishedAt: new Date(), costUsd: 0, message: "Rules only: AI did not run." } });
@@ -365,6 +370,7 @@ export class Finder implements OnModuleInit {
         return this.finish(batchId, r1?.status === "BLOCKED" || r2?.status === "BLOCKED" ? "FAILED" : "FAILED", `AI did not finish (${(r2 ?? r1)?.status?.toLowerCase() ?? "stopped"}): the form numbers printed on the pages are listed for you; nothing was attached.`, result);
       }
       draft = (r1.value as Extract<RoundOut<FormsOut>, { ok: true }>).output.forms.map((p) => ({ ...p, code: normaliseCode(p.code) }));
+      earlier = (r1.value as Extract<RoundOut<FormsOut>, { ok: true }>).earlier ?? (r2.value as Extract<RoundOut<FormsOut>, { ok: true }>).earlier;
       check = (r2.value as Extract<RoundOut<FormsOut>, { ok: true }>).output.forms.map((p) => ({ ...p, code: normaliseCode(p.code) }));
     }
 
@@ -428,9 +434,35 @@ export class Finder implements OnModuleInit {
       return { status: "COMPLETED", message: `${added} attached automatically (Picked by AI · Sample), ${found.length - added - removed} already on this combination${removed ? `, ${removed} not attached back (a person removed ${removed === 1 ? "it" : "them"})` : ""}.`, value: null };
     });
     result.attach = found.filter((f) => f.line);
+    // C-5 (P-140): each attached form's channel is proposed for a second person, never written here.
+    if (mode !== "rules") {
+      result.channels = [];
+      for (const f of result.attach) {
+        const p = channelProposal(draft.find((x) => x.code === f.code)?.channel, check.find((x) => x.code === f.code)?.channel, f.filed_note, (q) => !!sameText(q) && allText.includes(sameText(q)), earlier);
+        result.channels.push(await this.proposeChannel(b.workspaceId, f.code, p, actor.id));
+      }
+    }
     const problems = result.missing.length + result.decide.length + result.dropped.length;
     await this.audit.log(b.workspaceId, actor.id, "found", "form finder", combinationId, `The form finder attached ${found.filter((f) => f.line === "added").length} form${found.length === 1 ? "" : "s"} to "${plan.combination.label}" (Picked by AI · Sample); ${result.missing.length} not found, ${result.decide.length} to decide`, { attach: found.map((f) => f.code), missing: result.missing.map((m) => m.code) }, combinationId);
     return this.finish(batchId, problems ? "PARTIAL" : "COMPLETED", `${found.length} form${found.length === 1 ? "" : "s"} attached or already there, ${result.missing.length} not found, ${result.decide.length} to decide.`, result);
+  }
+
+  /** C-5 (P-140): one form's proposed channel as a "what IRCC accepts" change waiting for a second person, with IRCC's
+   *  sentence and both readings; Check when they or the keyword rule disagree. Nothing when no sentence was found, when a
+   *  change for the form already waits, or when the library already says the same for that account ("kept"). */
+  private async proposeChannel(workspaceId: string, code: string, p: ChannelProposal, by: string): Promise<NonNullable<FinderResult["channels"]>[number]> {
+    if (p.outcome === "listed") return { code, outcome: "listed", why: p.why };
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } }, include: { editions: { include: { accepts: true } } } });
+    const current = def ? newestEdition(def.editions.filter((e) => e.channel !== "ONLINE")) : null;
+    if (!def || !current || def.formKind !== "data_form") return { code, outcome: "listed", why: `${code} is not a form that is filed, so nothing was proposed.` };
+    const same = current.accepts.find((a) => a.account === p.account);
+    if (same && [...same.channels].sort().join() === [...p.channels].sort().join()) return { code, outcome: "kept", why: "The library already records this." };
+    if (await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })) return { code, outcome: "kept", why: "A change to what IRCC accepts already waits for a second person." };
+    const label = `${code} · IRCC accepts${p.account === "ANY" ? "" : ` through the ${ACCOUNT_WORDS[p.account as "ANY"] ?? p.account}`}: ${acceptsWords(p.channels)}${p.outcome === "check" ? " · Check" : ""}`;
+    const c = await this.db.libraryChange.create({ data: { workspaceId, kind: "form_accepts", key: code, label, action: "SET_ACCEPTS", reason: `canada.ca: "${p.quote.slice(0, 380)}"`, status: "WAITING", proposedBy: by,
+      matches: { source: "finder", account: p.account, channels: p.channels, quote: p.quote.slice(0, 400), reason: null, edition: current.editionLabel, before: same?.channels ?? null, form_page: def.formPageUrl ?? current.formPageUrl ?? null, readings: p.readings, check: p.why } as Prisma.InputJsonValue } });
+    await this.audit.log(workspaceId, by, "proposed", "form", code, `The form finder proposed that IRCC accepts ${code} as ${acceptsWords(p.channels)} (${p.outcome === "check" ? `Check: ${p.why}` : "both rounds agree"}); waits for a second person`);
+    return { code, outcome: p.outcome, why: p.why, change_id: c.id };
   }
 
   /** A sure rules match: the one package whose name covers the trail's last names better than any other (US$0). */
@@ -563,11 +595,10 @@ export class Finder implements OnModuleInit {
     }
     if (pdfEditions.length) return { source: "library", edition: newestEdition(pdfEditions)!.editionLabel }; // older on canada.ca: keep ours
     await this.recordDownload(workspaceId, fileSha, kind, p.code, id.edition_label, id.title ?? row.title, row.pageUrl, pdfUrl, stored, bytes.length, by, batchId);
-    const accepted = kind === "checklist" ? "READ_BY_AI" : channelsFrom(p.filed_note); // never invented: no line, no value
     try {
       await this.db.$transaction(async (tx) => {
         const d = def ?? (await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId, formKey: p.code } }, update: {}, create: { workspaceId, formKey: p.code, displayName: id.title || row.title || p.code, formKind: kind === "checklist" ? "checklist" : "data_form", formPageUrl: row.pageUrl } }));
-        await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, sha256: fileSha, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: row.pageUrl, sourceUrl: pdfUrl, canadaUpdated: page.lastUpdated, checkedAt: new Date(), acceptedChannels: accepted, acceptedBasis: accepted ? "AI_SAMPLE" : null, acceptedQuote: accepted ? p.filed_note : null } });
+        await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, sha256: fileSha, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: row.pageUrl, sourceUrl: pdfUrl, canadaUpdated: page.lastUpdated, checkedAt: new Date() } }); // C-5: what IRCC accepts is proposed for a person after attach, never written here
       });
     } catch (e) {
       // Another run stored the same edition a moment ago: use it (nothing is downloaded twice into the library).
@@ -662,7 +693,7 @@ export class Finder implements OnModuleInit {
     const saved = existsSync(RUNS) ? readdirSync(RUNS).filter((f) => f.startsWith("studio-finder-forms-") && LIVE_RUN.test(f)).sort(newestFirst) : [];
     for (const f of saved) {
       let out: FormsOut | null = null; try { const r = JSON.parse(readFileSync(join(RUNS, f), "utf8")) as SavedRun; if (r.caller !== "live" || r.drafting_run?.status !== "completed" || r.contract_valid !== true) continue; out = JSON.parse(String(r.raw_output)) as FormsOut; } catch { continue; }
-      for (const f of out?.forms ?? []) { const c = normaliseCode(f.code); if (f.filed_note && channelsFrom(f.filed_note) && !notes.has(c)) notes.set(c, f.filed_note); }
+      for (const f of out?.forms ?? []) { const c = normaliseCode(f.code); if (f.filed_note && channelsRead(f.filed_note) && !notes.has(c)) notes.set(c, f.filed_note); }
     }
     for (const d of defs) {
       const current = newestEdition(d.editions.filter((e) => e.channel !== "ONLINE"));
@@ -688,16 +719,18 @@ export class Finder implements OnModuleInit {
           pages++;
         }
       }
-      if (current.acceptedChannels || d.formKind === "document" || d.formKind === "checklist") continue;
+      if ((await this.db.formEditionAccept.count({ where: { formEditionId: current.id } })) || d.formKind === "document" || d.formKind === "checklist") continue;
       const note = notes.get(normaliseCode(d.formKey)), fixed = fx.accepts[normaliseCode(d.formKey)];
-      if (note) { await this.db.formEdition.update({ where: { id: current.id }, data: { acceptedChannels: channelsFrom(note), acceptedBasis: "AI_SAMPLE", acceptedQuote: note.slice(0, 400) } }); accepts++; acceptsSaved++; }
+      // P-140 (C-5): a saved AI answer's line is proposed for a second person (Check: read by the keyword rule), never written.
+      if (note && !fixed) { const r = await this.proposeChannel(workspaceId, d.formKey, channelProposal(undefined, undefined, note, () => true, "Saved before channels"), "system"); if (r.outcome !== "listed") acceptsSaved++; }
       else if (fixed) {
         // Nothing invented: the fixture's line must be on this form's own recorded canada.ca page.
         const page = d.formPageUrl ?? (await this.db.govFormDef.findUnique({ where: { id: d.id }, select: { formPageUrl: true } }))?.formPageUrl;
         let said = false;
         if (page) try { said = sameText(pageText((await this.canada.get(page, "html")).bytes.toString("utf8"))).includes(sameText(fixed.quote)); } catch (e) { if (!(e instanceof CanadaError)) throw e; }
         if (!said) { notUsed.push(`${d.formKey}: its line is not on its recorded canada.ca page`); continue; }
-        await this.db.formEdition.update({ where: { id: current.id }, data: { acceptedChannels: fixed.channels, acceptedBasis: "SAMPLE_FIXTURE", acceptedQuote: fixed.quote.slice(0, 400) } }); accepts++;
+        const channels = ({ PDF: ["PDF_UPLOAD"], ONLINE: ["ONLINE"], PDF_OR_ONLINE: ["PDF_UPLOAD", "ONLINE"] } as const)[fixed.channels];
+        await this.db.formEditionAccept.create({ data: { workspaceId, formEditionId: current.id, account: "ANY", channels: [...channels], basis: "SAMPLE_FIXTURE", quote: fixed.quote.slice(0, 400), sourceUrl: page, readOn: new Date(), setBy: "system" } }); accepts++;
       }
     }
     return { pages, accepts, acceptsSaved, guides, noGuide, notUsed, note: null };

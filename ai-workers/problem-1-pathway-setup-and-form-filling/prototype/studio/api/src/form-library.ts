@@ -13,7 +13,8 @@ import { manifest } from "../../engine/import.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
 import { INDEX_URL } from "./finder.ts";
-import { AcceptsBody, ACCEPTS_WORD, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
+import { ACCOUNT_WORDS } from "../../contracts/forms.ts";
+import { AcceptsBody, acceptsWords, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
 import { ACTORS, actorOf, Audit, ConfigRead, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
 import { rowActionOf } from "./form-row-action.ts";
@@ -36,6 +37,16 @@ const nameOf = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "another
  *  IMM 5905; round 2 major 4). */
 const TYPE_OF = (kind: string, title = "") => (kind === "guide" ? "guide" : kind === "checklist" || (kind === "document" && !(/\bform\b/i.test(title) && !/checklist/i.test(title))) ? "checklist" : "form");
 
+/** P-143 (C-3): a form's records of what IRCC accepts, per IRCC account, for the Form library row (ANY first). A guide
+ *  or checklist is read by AI and never filed. */
+export function acceptsRow(records: { account: string; channels: string[]; basis: string; quote: string | null; sourceUrl?: string | null }[], filed: boolean) {
+  if (!filed) return { accepts: "READ_BY_AI", accepts_basis: null, accepts_quote: null, accepts_accounts: [] };
+  const list = [...records].sort((a, b) => (a.account === "ANY" ? -1 : b.account === "ANY" ? 1 : a.account.localeCompare(b.account)))
+    .map((r) => ({ account: r.account, account_words: ACCOUNT_WORDS[r.account as "ANY"] ?? r.account, channels: r.channels, words: acceptsWords(r.channels), basis: r.basis === "SAMPLE" ? "AI_SAMPLE" : r.basis, quote: r.quote, source_url: r.sourceUrl ?? null }));
+  const first = list[0];
+  return { accepts: first ? list.map((r) => (r.account === "ANY" && list.length === 1 ? r.words : `${r.account_words}: ${r.words}`)).join(" · ") : null, accepts_basis: first?.basis ?? null, accepts_quote: first?.quote ?? null, accepts_accounts: list };
+}
+
 @Injectable()
 export class FormLibrary {
   private canada: CanadaSource = canadaSource();
@@ -53,7 +64,7 @@ export class FormLibrary {
     const q = parse(LibraryQuery, query);
     const workspaceId = await this.ws.id();
     const [forms, approved, held] = await Promise.all([
-      this.db.govFormDef.findMany({ where: { workspaceId }, orderBy: { formKey: "asc" }, include: { editions: true, usedBy: { orderBy: { version: "desc" }, select: { combinationId: true, status: true, version: true, origin: true, combination: { select: { label: true } } } } } }),
+      this.db.govFormDef.findMany({ where: { workspaceId }, orderBy: { formKey: "asc" }, include: { editions: { include: { accepts: true } }, usedBy: { orderBy: { version: "desc" }, select: { combinationId: true, status: true, version: true, origin: true, combination: { select: { label: true } } } } } }),
       this.approvedShas(workspaceId),
       this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, select: { code: true, outcome: true } }),
     ]);
@@ -78,7 +89,8 @@ export class FormLibrary {
       // Lead 28 Oct (carried should): "Needs your OK" only when something waits for a person; a form with no file is "No file yet".
       const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 ? "newer_file" : current ? "ready" : "no_file";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
-        accepts: current?.acceptedChannels ?? (TYPE_OF(f.formKind, f.displayName) === "form" ? null : "READ_BY_AI"), accepts_basis: current?.acceptedBasis === "SAMPLE" ? "AI_SAMPLE" : current?.acceptedBasis ?? null, accepts_quote: current?.acceptedQuote ?? null, accepts_waiting: waitingAccepts.has(f.formKey),
+        // P-143 (C-3): one record per IRCC account (ANY first); the column says them in words, one line per account.
+        ...acceptsRow(current?.accepts ?? [], TYPE_OF(f.formKind, f.displayName) === "form"), accepts_waiting: waitingAccepts.has(f.formKey),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
         form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256 && a.kind === "Form")?.id ?? null : null,
         used_by: using, status, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", lifecycle_returned: pendingChange?.status === "RETURNED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
@@ -105,20 +117,21 @@ export class FormLibrary {
     need(actor, "author");
     const b = parse(AcceptsBody, body);
     const workspaceId = await this.ws.id();
-    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } }, include: { editions: true } });
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } }, include: { editions: { include: { accepts: true } } } });
     if (!def) throw problem(404, "Not in the library", `${code} is not in the library.`);
     if (TYPE_OF(def.formKind, def.displayName) !== "form") throw problem(409, "Not filed", `${code} is a ${TYPE_OF(def.formKind, def.displayName)}: it is read by AI and never filed, so IRCC does not accept it in any way.`);
     if (def.retiredAt) throw problem(409, "Retired", `${code} is retired: restore it first.`);
     const current = newestEdition(def.editions.filter((e) => e.channel !== "ONLINE"));
     if (!current) throw problem(409, "No edition yet", `${code} has no edition in the library yet.`);
-    if (current.acceptedChannels === b.channels && (current.acceptedQuote ?? "") === (b.quote ?? "")) throw problem(409, "Nothing changes", "That is already what the library says IRCC accepts for this form.");
+    const before = current.accepts.find((a) => a.account === b.account) ?? null;
+    if (before && [...before.channels].sort().join() === [...b.channels].sort().join() && (before.quote ?? "") === (b.quote ?? "")) throw problem(409, "Nothing changes", "That is already what the library says IRCC accepts for this form and account.");
     if (await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })) throw problem(409, "Already waiting", `A change to what IRCC accepts for ${code} already waits for a second person on To review.`);
-    const label = `${code} · IRCC accepts: ${ACCEPTS_WORD[b.channels]}`;
-    const c = await this.db.libraryChange.create({ data: { workspaceId, kind: "form_accepts", key: code, label, action: "SET_ACCEPTS", reason: b.quote ? `canada.ca: "${b.quote}"` : b.reason!, matches: { channels: b.channels, quote: b.quote ?? null, reason: b.reason ?? null, edition: current.editionLabel, before: current.acceptedChannels ?? null, form_page: def.formPageUrl ?? current.formPageUrl ?? null } as Prisma.InputJsonValue, status: "WAITING", proposedBy: actor.id } });
+    const label = `${code} · IRCC accepts${b.account === "ANY" ? "" : ` through the ${ACCOUNT_WORDS[b.account]}`}: ${acceptsWords(b.channels)}`;
+    const c = await this.db.libraryChange.create({ data: { workspaceId, kind: "form_accepts", key: code, label, action: "SET_ACCEPTS", reason: b.quote ? `canada.ca: "${b.quote}"` : b.reason!, matches: { account: b.account, channels: b.channels, quote: b.quote ?? null, reason: b.reason ?? null, edition: current.editionLabel, before: before?.channels ?? null, form_page: def.formPageUrl ?? current.formPageUrl ?? null } as Prisma.InputJsonValue, status: "WAITING", proposedBy: actor.id } });
     // Break minor: two people proposing at once both pass the check above; the earlier one stays, the later is refused.
     const first = await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: "WAITING" }, orderBy: [{ proposedAt: "asc" }, { id: "asc" }] });
     if (first && first.id !== c.id) { await this.db.libraryChange.delete({ where: { id: c.id } }); throw problem(409, "Already waiting", `A change to what IRCC accepts for ${code} already waits for a second person on To review.`); }
-    await this.audit.log(workspaceId, actor.id, "proposed", "form", code, `${actor.name} proposed that IRCC accepts ${code} as ${ACCEPTS_WORD[b.channels]} (${b.quote ? "canada.ca line given" : `reason: ${b.reason}`}); waits for a second person`);
+    await this.audit.log(workspaceId, actor.id, "proposed", "form", code, `${actor.name} proposed that IRCC accepts ${code}${b.account === "ANY" ? "" : ` through the ${ACCOUNT_WORDS[b.account]}`} as ${acceptsWords(b.channels)} (${b.quote ? "canada.ca line given" : `reason: ${b.reason}`}); waits for a second person`);
     return { id: c.id, status: c.status, label };
   }
 

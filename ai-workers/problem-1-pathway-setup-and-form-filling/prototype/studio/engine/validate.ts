@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
-import { channelProblems, type Accepts } from "./channels.ts";
+import { channelProblems, fingerprintLine, type Accepts } from "./channels.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
 
@@ -150,7 +150,8 @@ const KINDS: [keyof Snapshot, (x: any) => string, string][] = [
   ["canonical_fields", (x) => x.id, "Field"], ["sections", (x) => x.id, "Section"], ["placements", (x) => x.lineage, "Question placement"], ["forms", (x) => x.form_number, "Form"],
   ["document_requirements", (x) => x.lineage, "Document requirement"], ["rules", (x) => x.id, "Rule"], ["checks", (x) => x.id, "Check"],
 ];
-const bare = (x: any) => { const { item_version, status, origin, ...r } = x; void item_version; void status; void origin; return canonical(r); };
+// C-8 (W1-10 slice 1): a line released as "Signed PDF upload" and now PDF upload + signed by hand and scanned is unchanged.
+const bare = (x: any) => { const { item_version, status, origin, ...r } = fingerprintLine(x); void item_version; void status; void origin; return canonical(r); };
 export type Change = { kind: string; key: string; change: "added" | "changed" | "removed"; origin?: string; needs_sme: boolean; label: string };
 export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const out: Change[] = [];

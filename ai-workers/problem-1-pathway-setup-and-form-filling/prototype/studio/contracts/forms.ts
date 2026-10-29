@@ -1,22 +1,60 @@
-// F1 forms channels contract (forms lane, P-61, P-65, P-107), shared by the API, the engine and the web app: the filing
+// F1 forms channels contract (forms lane, P-61, P-65, P-107; W1-10 slice 1: P-143 four channels and a signature value), shared by the API, the engine and the web app: the filing
 // channels and their plain words, and the request shapes of the channel, answer-list, option-map and merge endpoints
 // (STANDARDS §6: contract first, zod). W1-02 (P-102): the portal list, capture and screen-map shapes are parked with the
 // browser extension on branch lead/parked-extension-2026-10-26.
 import { z } from "zod";
 
-export const CHANNELS = ["PDF_UPLOAD", "ONLINE", "SIGNED_PDF_UPLOAD"] as const;
+/** P-143 (W1-10 slice 1): the four ways a form line is filed. Sample until the immigration expert confirms per form. */
+export const CHANNELS = ["ONLINE", "PDF_UPLOAD", "PAPER", "NOT_NEEDED"] as const;
 export type Channel = (typeof CHANNELS)[number];
-export const CHANNEL_WORDS: Record<Channel, string> = { PDF_UPLOAD: "PDF upload", ONLINE: "Online", SIGNED_PDF_UPLOAD: "Signed PDF upload" };
-/** Worked out from the channel, never stored (challenge point 4; immigration expert to confirm per form). */
-export const SIGNATURE_WORDS: Record<Channel, string> = {
-  ONLINE: "The client signs the declaration in the portal",
-  SIGNED_PDF_UPLOAD: "Printed, signed by hand, scanned and uploaded",
-  PDF_UPLOAD: "No signature in the file",
+export const CHANNEL_WORDS: Record<Channel, string> = { ONLINE: "Online", PDF_UPLOAD: "PDF upload", PAPER: "Paper", NOT_NEEDED: "Not needed" };
+/** What each channel means for the person filing (P-143, research filing_channels.md). */
+export const CHANNEL_MEANS: Record<Channel, string> = {
+  ONLINE: "Typed into the IRCC account's own screens from the answer sheet",
+  PDF_UPLOAD: "IRCC's PDF filled, validated, saved and uploaded into the online application",
+  PAPER: "IRCC's PDF filled, validated with its barcode page, printed, signed in pen and mailed",
+  NOT_NEEDED: "The IRCC account asks these questions itself: nothing to file",
+};
+/** P-143: how a line is signed, its own value per line (never worked out from the channel any more). */
+export const SIGNATURES = ["TYPED_NAME", "HAND_SCANNED", "PEN", "NONE"] as const;
+export type Signature = (typeof SIGNATURES)[number];
+export const SIGNATURE_WORDS: Record<Signature, string> = { TYPED_NAME: "Typed name", HAND_SCANNED: "Signed by hand and scanned", PEN: "Signed in pen", NONE: "No signature" };
+/** C-2: the signatures that fit each channel. Paper is signed in pen; signed in pen only on paper; signed by hand and
+ *  scanned only on a PDF upload; Not needed has none; Online has none or a typed name (the portal's own declaration is
+ *  the portal's, not ours to record). The first is the default for a new line. */
+export const SIGNATURE_FITS: Record<Channel, readonly Signature[]> = {
+  ONLINE: ["NONE", "TYPED_NAME"], PDF_UPLOAD: ["NONE", "HAND_SCANNED", "TYPED_NAME"], PAPER: ["PEN"], NOT_NEEDED: ["NONE"],
+};
+export const signatureFits = (c: Channel, s: Signature) => SIGNATURE_FITS[c].includes(s);
+/** The words when a signature does not fit its channel (on save and at release). */
+export const signatureMisfitWords = (form: string, c: Channel, s: Signature) =>
+  `${form}: "${SIGNATURE_WORDS[s]}" does not fit a line filed as ${CHANNEL_WORDS[c]}. A ${CHANNEL_WORDS[c]} line is ${SIGNATURE_FITS[c].map((x) => SIGNATURE_WORDS[x].toLowerCase()).join(" or ")}.`;
+/** P-143, plan §8 Q1: the IRCC accounts a filing goes through (Sample until the immigration expert confirms). Names as
+ *  canada.ca uses them, read 29 Oct (immigration-facts-2026-10-29.md rows 5c–5f): the IRCC secure account (work
+ *  permits inside Canada, Express Entry), the PR Portal (spouse or partner sponsorship), LMIA Online (ESDC's employer
+ *  account); the IRCC Portal and the APR Portal (authorized paid representatives) from the same research notes; PAPER is
+ *  "no account: paper filing". ANY is only for what IRCC accepts: "for every account". */
+export const IRCC_ACCOUNTS = ["IRCC_SECURE_ACCOUNT", "PR_PORTAL", "IRCC_PORTAL", "APR_PORTAL", "LMIA_ONLINE", "PAPER"] as const;
+export type IrccAccount = (typeof IRCC_ACCOUNTS)[number];
+export const ACCOUNT_WORDS: Record<IrccAccount | "ANY", string> = {
+  IRCC_SECURE_ACCOUNT: "IRCC secure account", PR_PORTAL: "PR Portal", IRCC_PORTAL: "IRCC Portal", APR_PORTAL: "APR Portal", LMIA_ONLINE: "LMIA Online (ESDC)",
+  PAPER: "No account (paper filing)", ANY: "Any account",
 };
 /** P-102, P-107 (P-114: the channel follows the filing route): Online stays selectable per line; the product fills it only once the browser extension returns. */
 export const ONLINE_LATER = "Needs the browser extension (later wave)";
 
-export const SetChannel = z.object({ channel: z.enum(CHANNELS, { message: "Choose PDF upload, Online or Signed PDF upload." }), from: z.enum(CHANNELS).optional() });
+/** C-1: a line's channel and signature. The old spelling "Signed PDF upload" is refused with its new name. */
+const channelError = (iss: { input?: unknown }) => (iss.input === "SIGNED_PDF_UPLOAD"
+  ? "Signed PDF upload is now PDF upload, signed by hand and scanned: choose PDF upload and that signature."
+  : "Choose Online, PDF upload, Paper or Not needed.");
+export const SetChannel = z.object({
+  channel: z.enum(CHANNELS, { error: channelError }),
+  signature: z.enum(SIGNATURES, { error: "Choose typed name, signed by hand and scanned, signed in pen, or no signature." }).optional(),
+  from: z.enum(CHANNELS, { error: channelError }).optional(),
+  fromSignature: z.enum(SIGNATURES).optional(),
+});
+/** Plan §8 Q1: the IRCC account a combination files through (null: not set, every channel offered as Sample). */
+export const SetAccount = z.object({ account: z.enum(IRCC_ACCOUNTS, { error: `Choose one of: ${IRCC_ACCOUNTS.map((a) => ACCOUNT_WORDS[a]).join(", ")}.` }).nullable() });
 export const NewAlias = z.object({ alias: z.string().trim().min(2).max(200) });
 export const NewAnswerList = z.object({
   key: z.string().trim().regex(/^[a-z][a-z0-9_]{1,60}$/, "A list key in lower case, for example sex or marital_status."),

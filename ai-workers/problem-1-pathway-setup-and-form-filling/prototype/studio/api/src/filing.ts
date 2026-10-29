@@ -7,6 +7,7 @@ import { basename, join, sep } from "node:path";
 import { officialUrl } from "../../engine/canada.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 import { CanadaError } from "./canada.ts";
+import type { Channel } from "../../contracts/forms.ts";
 
 const STUDIO = join(import.meta.dirname, "..", ".."), SOLUTION = join(STUDIO, "..", "..");
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
@@ -17,7 +18,19 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
  *  never a PDF upload, and a line about filling the form in on a computer says how to fill it, not how it is filed: both
  *  give null, "Not set yet", with filingWhy's reason. */
 export function channelsFrom(note: string | null | undefined): "PDF" | "ONLINE" | "PDF_OR_ONLINE" | null {
-  let pdf = false, online = false;
+  const { pdf, online } = readLine(note);
+  return online && pdf ? "PDF_OR_ONLINE" : online ? "ONLINE" : pdf ? "PDF" : null;
+}
+/** C-6 (W1-10 slice 1, P-143): the same rule in the four channels, adding an affirmative paper instruction ("mail it to",
+ *  "apply on paper", "print, sign and mail"); conditions and negations are read as for the others. Used only to flag a
+ *  contradiction with the finder's two rounds (C-5), never to set a value. */
+export function channelsRead(note: string | null | undefined): Channel[] | null {
+  const { pdf, online, paper } = readLine(note);
+  const out: Channel[] = [...(online ? ["ONLINE" as const] : []), ...(pdf ? ["PDF_UPLOAD" as const] : []), ...(paper ? ["PAPER" as const] : [])];
+  return out.length ? out : null;
+}
+function readLine(note: string | null | undefined) {
+  let pdf = false, online = false, paper = false;
   // QA-61 and the #73 review, by rule: each sentence is read clause by clause; a condition ("if", "even if", "unless" …)
   // is never evidence of a channel, and a negated clause ("Do not upload this form") says nothing. What is left must be
   // an affirmative instruction: "upload" for a PDF upload; filing online ("apply/submit/fill/complete … online", "an
@@ -27,8 +40,40 @@ export function channelsFrom(note: string | null | undefined): "PDF" | "ONLINE" 
     if (!c || NEGATED.test(c)) continue;
     if (/\bupload(?:s|ed|ing)?\b/i.test(c)) pdf = true;
     if (FILE_ONLINE.test(c.replace(/\bonline applications?\b/gi, " "))) online = true;
+    if (FILE_PAPER.test(c)) paper = true;
   }
-  return online && pdf ? "PDF_OR_ONLINE" : online ? "ONLINE" : pdf ? "PDF" : null;
+  return { pdf, online, paper };
+}
+/** C-6: an affirmative instruction to file on paper. */
+const FILE_PAPER = /\b(?:apply|applies|applying|submit\w*|file)\s+(?:\w+\s+){0,3}?on paper\b|\bpaper applications? (?:must|should)\b|\bprint(?:ed)?,? sign(?:ed)?,? and (?:mail|send)\b|\bmail (?:it|this form|the form|your (?:application|form|completed application))\b|\bsend (?:it|this form|the form|your (?:application|form|completed application)) by mail\b/i;
+
+/** C-5 (P-140): one round's reading of how a form is filed: the channel, the IRCC account, IRCC's sentence. */
+export type ChannelReading = { value: Channel; account: string; quote: string } | null;
+export type ChannelProposal =
+  | { outcome: "ready" | "check"; channels: Channel[]; account: string; quote: string; why: string | null; readings: { draft: ChannelReading; check: ChannelReading; keyword: Channel[] | null } }
+  | { outcome: "listed"; why: string; readings: { draft: ChannelReading; check: ChannelReading; keyword: Channel[] | null } };
+const ch = (cs: Channel[] | null) => (cs ?? []).map((c) => ({ ONLINE: "Online", PDF_UPLOAD: "PDF upload", PAPER: "Paper", NOT_NEEDED: "Not needed" }[c])).join(" or ");
+/** C-5 (P-140): the finder proposes, a person confirms. Both rounds name the same channel and account with a sentence found
+ *  on the page and the keyword rule does not read it otherwise → Ready. The rounds differ, only one names it, or the
+ *  keyword rule reads the line otherwise → Check, both readings kept. No sentence found on the page → listed, no change.
+ *  An answer saved before channels (`earlier`) has no reading: the keyword rule reads its IRCC line, as Check. */
+export function channelProposal(draft: ChannelReading | undefined, check: ChannelReading | undefined, note: string | null, onPage: (quote: string) => boolean, earlier?: string): ChannelProposal {
+  const keyword = channelsRead(note);
+  if (earlier || (draft === undefined && check === undefined)) {
+    const readings = { draft: null, check: null, keyword };
+    if (!keyword || !note || !onPage(note)) return { outcome: "listed", why: `${earlier ?? "Saved before channels"}: channel not proposed, and no line on the page says how it is filed.`, readings };
+    return { outcome: "check", channels: keyword, account: "ANY", quote: note, why: `${earlier ?? "Saved before channels"}: channel not proposed. The keyword rule reads IRCC's line as ${ch(keyword)}: check it.`, readings };
+  }
+  const d = draft && onPage(draft.quote) ? draft : null, c = check && onPage(check.quote) ? check : null;
+  const readings = { draft: draft ?? null, check: check ?? null, keyword };
+  const first = d ?? c;
+  if (!first) return { outcome: "listed", why: draft || check ? "The sentence AI quoted for how it is filed is not on the page, so nothing was proposed." : "Neither round found a sentence on the page saying how it is filed.", readings };
+  const agree = !!d && !!c && d.value === c.value && d.account === c.account;
+  const read = channelsRead(first.quote);
+  const contradicts = first.value !== "NOT_NEEDED" && !!read && !read.includes(first.value);
+  const why = !agree ? (d && c ? `The two rounds differ: ${ch([d.value])} (${d.account}) and ${ch([c.value])} (${c.account}).` : "Only one round said how it is filed.")
+    : contradicts ? `The keyword rule reads IRCC's line as ${ch(read)}, not ${ch([first.value])}.` : null;
+  return { outcome: why ? "check" : "ready", channels: [first.value], account: first.account, quote: first.quote, why, readings };
 }
 /** A clause: split on ";", ",", ":", " but " and " instead" (a heading ends at its colon). */
 const clausesOf = (s: string) => s.split(/[;,:]|\s+but\s+|\s+instead\b/i).map((x) => x.trim()).filter(Boolean);

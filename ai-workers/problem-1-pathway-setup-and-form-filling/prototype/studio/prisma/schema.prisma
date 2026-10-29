@@ -74,12 +74,23 @@ enum SourceBasis {
   ILLUSTRATIVE
 }
 
-/// F1 (P-61 §2): how one form line of a combination is filed. Signature method and the combination's filing method are
-/// worked out from it (engine/channels.ts), never stored.
+/// F1 (P-61 §2) as amended by P-143 (W1-10 slice 1): how one form line of a combination is filed. Online (typed into the
+/// portal's screens) · PDF upload (IRCC's PDF filled, validated, uploaded) · Paper (filled, validated, printed, signed in
+/// pen, mailed) · Not needed (the IRCC account asks it itself). The combination's filing method is worked out from the
+/// lines (engine/channels.ts), never stored. "Signed PDF upload" became PDF upload + HAND_SCANNED.
 enum FilingChannel {
   PDF_UPLOAD
   ONLINE
-  SIGNED_PDF_UPLOAD
+  PAPER
+  NOT_NEEDED
+}
+
+/// P-143: how a line is signed, its own value beside the channel (contracts/forms.ts SIGNATURE_FITS says which fit).
+enum SignatureKind {
+  TYPED_NAME
+  HAND_SCANNED
+  PEN
+  NONE
 }
 
 /// F1 (challenge point 2): an edition is the PDF file, or an online version read from captured portal screens.
@@ -155,8 +166,8 @@ model Combination {
   participants   Json
   sourceBasis    SourceBasis @default(SOURCE_BACKED) @map("source_basis")
   basisNote      String?     @map("basis_note")
-  /// F1 (challenge point 4): the one portal this filing goes through (contracts/forms.ts PORTALS, Sample until the
-  /// immigration expert confirms). Every Online line uses the form's online version captured from this portal.
+  /// W1-10 slice 1 (P-143, plan §8 Q1): the IRCC account this filing goes through (contracts/forms.ts IRCC_ACCOUNTS,
+  /// Sample until the immigration expert confirms). What IRCC accepts is read for this account (C-3). Null: not set.
   portalKey      String?     @map("portal_key")
   createdBy      String      @map("created_by")
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
@@ -267,6 +278,29 @@ model GovFormDef {
   @@map("gov_form_def")
 }
 
+/// W1-10 slice 1 (P-143, C-3): what IRCC accepts for one form edition through one IRCC account (contracts/forms.ts
+/// IRCC_ACCOUNTS, or ANY: every account). Basis AI_SAMPLE · PERSON_SAMPLE · SAMPLE_FIXTURE · FOUNDER_SAMPLE · EXPERT,
+/// with IRCC's line it was read from (P-170: page, quote, date read), or null where none was found.
+model FormEditionAccept {
+  id            String          @id @default(uuid()) @db.Uuid
+  workspaceId   String          @map("workspace_id") @db.Uuid
+  formEditionId String          @map("form_edition_id") @db.Uuid
+  account       String
+  channels      FilingChannel[]
+  basis         String
+  quote         String?
+  sourceUrl     String?         @map("source_url")
+  readOn        DateTime?       @map("read_on") @db.Date
+  setBy         String          @map("set_by")
+  setAt         DateTime        @default(now()) @map("set_at") @db.Timestamptz
+
+  edition FormEdition @relation(fields: [formEditionId], references: [id], onDelete: Cascade)
+
+  @@unique([formEditionId, account])
+  @@index([workspaceId])
+  @@map("form_edition_accept")
+}
+
 model FormEdition {
   id             String  @id @default(uuid()) @db.Uuid
   workspaceId    String  @map("workspace_id") @db.Uuid
@@ -296,17 +330,13 @@ model FormEdition {
   sourceUrl      String?   @map("source_url")
   canadaUpdated  String?   @map("canada_updated")
   checkedAt      DateTime? @map("checked_at") @db.Timestamptz
-  /// S4 (m1, P-122/P-123): what IRCC accepts for this form: PDF · ONLINE · PDF_OR_ONLINE · READ_BY_AI (guides, checklists),
-  /// with its basis (AI_SAMPLE · PERSON_SAMPLE · SAMPLE_FIXTURE until the expert confirms · EXPERT) and the line it was read from.
-  acceptedChannels String? @map("accepted_channels")
-  acceptedBasis  String?   @map("accepted_basis")
-  acceptedQuote  String?   @map("accepted_quote")
   /// S4 (M6): canada.ca now serves a different file for this same printed edition; a person decides to Replace.
   newerFileSha256 String?  @map("newer_file_sha256")
 
   form GovFormDef     @relation(fields: [govFormDefId], references: [id], onDelete: Cascade)
   maps FormFieldMap[]
   recaptureTasks RecaptureTask[]
+  accepts        FormEditionAccept[]
 
   @@unique([workspaceId, editionLabel])
   @@map("form_edition")
@@ -447,6 +477,8 @@ model CombinationForm {
   origin        Origin
   /// F1 (P-61 §2): how this line is filed. Existing lines stay PDF upload (today's behaviour).
   channel       FilingChannel    @default(PDF_UPLOAD)
+  /// P-143: how the line is signed (C-2: it must fit the channel).
+  signature     SignatureKind    @default(NONE)
   /// S5: the age a person must have reached for the line to apply to them (null: any age), and who signs it
   /// (contracts/workspace.ts SIGNED_BY). Both Sample until the immigration expert confirms.
   minAge        Int?             @map("min_age")
@@ -1353,12 +1385,34 @@ model FormInstance {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
   finishedAt      DateTime? @map("finished_at") @db.Timestamptz
 
-  case     Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  snapshot AnswerSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  case      Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  snapshot  AnswerSnapshot  @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  validated ValidatedCopy[]
 
   @@unique([caseId, idempotencyKey])
   @@index([caseId, formNumber, subjectId, createdAt])
   @@map("form_instance")
+}
+
+/// W1-10 slice 1 C-9/C-10 (P-144, P-171 (1)): the filled PDF after the person's Validate, read back into the case. Its
+/// file checksum and the fingerprint of the form's facts when it was read back; a later change to those facts makes it
+/// "Out of date: validate again". Insert-only: kept as history, never deleted.
+model ValidatedCopy {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  formInstanceId String   @map("form_instance_id") @db.Uuid
+  path           String
+  sha256         String   @db.VarChar(64)
+  factsHash      String   @map("facts_hash") @db.VarChar(64)
+  /// What the read-back found: the form fields compared, those that match the copy, and any that differ (by question).
+  readBack       Json     @map("read_back")
+  readBy         String   @map("read_by")
+  readAt         DateTime @default(now()) @map("read_at") @db.Timestamptz
+
+  copy FormInstance @relation(fields: [formInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([formInstanceId, readAt])
+  @@map("validated_copy")
 }
 
 

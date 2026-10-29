@@ -6,7 +6,10 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { channelProblems, filingMethod } from "../engine/channels.ts";
+import { acceptedFor, allowedChannels, channelProblems, filingKind, filingMethod, fingerprintLine, lineOf, type AcceptRecord } from "../engine/channels.ts";
+import { diff } from "../engine/validate.ts";
+import { SetChannel, signatureFits } from "../contracts/forms.ts";
+import { AcceptsBody } from "../contracts/form-library.ts";
 import { codeForValue, draftOptionMap, optionMapProblems, pdfOptions } from "../engine/options.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { normLabel } from "../engine/twin.ts";
@@ -45,10 +48,41 @@ const intake = async (file: string, combinationId: string) => {
   // ──────────────────────────────────────────── engine (no server)
   ok("C3.5: labels compare as people read them", normLabel("*Family name (as shown on your passport)") === normLabel("Family name") && normLabel("* City/Town") !== normLabel("City or town"));
   ok("C3.5: labels: curly apostrophes, full-width letters and invisible spaces compare as people read them", normLabel("Mother’s maiden name") === normLabel("Mother's maiden name") && normLabel("Ｆamily​ name") === normLabel("Family name") && normLabel("Place of birth › City") === normLabel("Place of birth City"));
-  ok("C1.6: filing method: PDF only · Online only · mixed · online with signed PDFs, worked out from the lines",
+  ok("C1.6: filing method: PDF only · Online only · mixed, worked out from the lines (a hand-signed PDF upload is a PDF upload)",
     filingMethod([{ form_number: "A" }]) === "PDF only" && filingMethod([{ form_number: "A", channel: "ONLINE" }]) === "Online only"
     && filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B" }]) === "Online + PDF uploads"
-    && filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", channel: "SIGNED_PDF_UPLOAD" }]) === "Online + signed PDF uploads");
+    && filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", channel: "PDF_UPLOAD", signature: "HAND_SCANNED" }]) === "Online + PDF uploads");
+  const snap = (forms: unknown[]) => ({ combination: {}, forms, field_maps: [], canonical_fields: [] }) as unknown as Snapshot;
+  // ──────────────────────────────────────────── W1-10 slice 1: four channels and a signature value (P-143), engine
+  ok("C1.6 C-7: filing method: Paper only · Online + paper forms · Not needed lines left out · nothing to file",
+    filingMethod([{ form_number: "A", channel: "PAPER" }]) === "Paper only" && filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", channel: "PAPER" }]) === "Online + paper forms"
+    && filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", channel: "NOT_NEEDED" }]) === "Online only" && /^Nothing to file/.test(filingMethod([{ form_number: "A", channel: "NOT_NEEDED" }])),
+    [filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", channel: "PAPER" }])]);
+  ok("C1.6 C-7: filing kind: Paper only; Not needed is not filed; Online + PDF is mixed", filingKind([{ form_number: "A", channel: "PAPER" }]) === "Paper only" && filingKind([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", channel: "NOT_NEEDED" }]) === "Online only" && filingKind([{ form_number: "A", channel: "ONLINE" }, { form_number: "B" }]) === "Mixed: online and PDF");
+  ok("C1.6 C-2 pass: the signatures that fit: Paper in pen, PDF upload signed by hand and scanned, Online typed or none, Not needed none",
+    signatureFits("PAPER", "PEN") && signatureFits("PDF_UPLOAD", "HAND_SCANNED") && signatureFits("ONLINE", "TYPED_NAME") && signatureFits("ONLINE", "NONE") && signatureFits("NOT_NEEDED", "NONE"));
+  ok("C1.6 C-2 fail: pen only on Paper, hand-scanned only on a PDF upload, Paper never unsigned, Not needed never signed",
+    !signatureFits("PDF_UPLOAD", "PEN") && !signatureFits("ONLINE", "HAND_SCANNED") && !signatureFits("PAPER", "NONE") && !signatureFits("NOT_NEEDED", "TYPED_NAME") && !signatureFits("ONLINE", "PEN"));
+  const misfit = channelProblems(snap([{ form_number: "IMM 5257", channel: "PAPER", signature: "NONE" }]));
+  ok("C1.6 C-2 fail: at release a Paper line with no signature is an error in words", misfit.some((x) => x.level === "error" && /does not fit a line filed as Paper/.test(x.message)), misfit);
+  ok("C1.6 C-1 fail: the old spelling SIGNED_PDF_UPLOAD is refused with its new name", (() => { const r = SetChannel.safeParse({ channel: "SIGNED_PDF_UPLOAD" }); return !r.success && /PDF upload, signed by hand and scanned/.test(r.error.issues[0].message); })());
+  ok("C1.6 C-1 pass: each of the four channels and four signatures is a value", ["ONLINE", "PDF_UPLOAD", "PAPER", "NOT_NEEDED"].every((c) => SetChannel.safeParse({ channel: c }).success) && ["TYPED_NAME", "HAND_SCANNED", "PEN", "NONE"].every((x) => SetChannel.safeParse({ channel: "PDF_UPLOAD", signature: x }).success));
+  const recs: AcceptRecord[] = [{ account: "ANY", channels: ["PDF_UPLOAD", "ONLINE"], basis: "AI_SAMPLE", quote: "q" }, { account: "IRCC_SECURE_ACCOUNT", channels: ["ONLINE"], basis: "FOUNDER_SAMPLE", quote: null }, { account: "PR_PORTAL", channels: ["NOT_NEEDED"], basis: "PERSON_SAMPLE", quote: "q" }];
+  ok("C1.6 C-3 pass: the combination's account's own record wins; without one, the record for every account", acceptedFor(recs, "IRCC_SECURE_ACCOUNT")?.channels.join() === "ONLINE" && acceptedFor(recs, "APR_PORTAL")?.account === "ANY" && acceptedFor(recs, null)?.account === "ANY");
+  ok("C1.6 C-3 fail: another account's record never applies, and no record offers Online, PDF upload and Paper (Sample), never Not needed",
+    acceptedFor([recs[1]], "PR_PORTAL") === null && allowedChannels(undefined, "PR_PORTAL").channels.join() === "ONLINE,PDF_UPLOAD,PAPER" && allowedChannels(undefined, "PR_PORTAL").record === null);
+  ok("C1.6 C-4 pass and fail: Not needed only from the account's own record", allowedChannels(recs, "PR_PORTAL").channels.join() === "NOT_NEEDED" && !allowedChannels([{ ...recs[2], account: "ANY" }], "PR_PORTAL").channels.includes("NOT_NEEDED"));
+  const acc = new Map([["IMM 5669", recs.slice(1, 2)]]);
+  const ee = (ch: string) => channelProblems({ ...snap([{ form_number: "IMM 5669", channel: ch }]), combination: { portal: "IRCC_SECURE_ACCOUNT" } } as unknown as Snapshot, acc);
+  ok("C1.6 C-12 pass and fail: IMM 5669 through the IRCC secure account is Online only; a PDF upload line is refused at release in words",
+    !ee("ONLINE").some((x) => x.level === "error") && ee("PDF_UPLOAD").some((x) => x.level === "error" && /through the IRCC secure account only as Online/.test(x.message)), ee("PDF_UPLOAD"));
+  const nn = channelProblems({ ...snap([{ form_number: "IMM 5669", channel: "NOT_NEEDED" }]), combination: { portal: "APR_PORTAL" } } as unknown as Snapshot, new Map([["IMM 5669", recs]]));
+  ok("C1.6 C-4 fail: a Not needed line without its account's record is an error at release", nn.some((x) => x.level === "error" && /marked Not needed/.test(x.message)), nn);
+  ok("C1.6 C-8 pass: an older release's SIGNED_PDF_UPLOAD reads as PDF upload, signed by hand and scanned", JSON.stringify(lineOf({ channel: "SIGNED_PDF_UPLOAD" })) === '{"channel":"PDF_UPLOAD","signature":"HAND_SCANNED"}' && lineOf({ channel: "PAPER" }).signature === "PEN");
+  const old = { forms: [{ form_number: "IMM 5707", channel: "SIGNED_PDF_UPLOAD", title: "T" }] }, now = { forms: [{ form_number: "IMM 5707", signature: "HAND_SCANNED", title: "T" }] };
+  ok("C1.6 C-8 pass: the same line in the new spelling is not a change since release (fingerprint and comparison)", fingerprintLine(now.forms[0]).channel === "SIGNED_PDF_UPLOAD" && !("signature" in fingerprintLine(now.forms[0])) && !diff(old as unknown as Snapshot, now as unknown as Snapshot).some((c) => c.kind === "Form"));
+  ok("C1.6 C-8 fail: a real change (hand-scanned to typed name) is still a change", diff(old as unknown as Snapshot, { forms: [{ form_number: "IMM 5707", signature: "TYPED_NAME", title: "T" }] } as unknown as Snapshot).some((c) => c.kind === "Form"));
+  ok("C11.18 C-3 fail: Not needed for every account is refused (it is said for one account)", !AcceptsBody.safeParse({ account: "ANY", channels: ["NOT_NEEDED"], reason: "test" }).success && AcceptsBody.safeParse({ account: "PR_PORTAL", channels: ["NOT_NEEDED"], reason: "test" }).success);
   ok("C1.6: filing method: a channel only a conditional line adds is said with its condition",
     filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", status: "conditional", condition_plain: "the applicant has a representative" }]) === "Online only; plus PDF upload when the applicant has a representative");
   const sexList = [{ key: "female", label: "Female" }, { key: "male", label: "Male" }, { key: "another_gender", label: "Another gender" }, { key: "unknown", label: "Unknown" }];
@@ -59,11 +93,10 @@ const intake = async (file: string, combinationId: string) => {
   ok("C3.8: fill fail: 'toString' or 'constructor' is not a code in an option map", codeForValue("toString", { map: { female: "F" }, unused: [], codes: ["F"] }, []) === null && codeForValue("constructor", { map: {}, unused: [], codes: [] }, []) === null);
   const marital = pdfOptions({}, "code_list:imm5707.marital_status_family (Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8; this list has no Conjugal option)");
   ok("C3.8: PDF codes: a form field with no resolved options takes its codes from its field map's code list (the filler's own source)", marital.length === 8 && marital.find((o) => o.label === "Married")?.code === "5" && marital.find((o) => o.label === "Unknown")?.code === "8" && pdfOptions({}, "as_is").length === 0, marital);
-  const snap = (forms: unknown[]) => ({ combination: {}, forms, field_maps: [], canonical_fields: [] }) as unknown as Snapshot;
   const onlineLine = channelProblems(snap([{ form_number: "IMM 5257", channel: "ONLINE" }]));
   ok("C1.6: P-107 a line filed Online is allowed: one warning that it needs the browser extension (later wave), never an error that blocks release",
     onlineLine.length === 1 && onlineLine[0].level === "warning" && /needs the browser extension \(later wave\)/.test(onlineLine[0].message), onlineLine);
-  ok("C1.6: P-107 fail case: a PDF line has no channel problem at all (no portal, no online version asked for)", channelProblems(snap([{ form_number: "IMM 5257" }, { form_number: "IMM 5707", channel: "SIGNED_PDF_UPLOAD" }])).length === 0);
+  ok("C1.6: P-107 fail case: a PDF line has no channel problem at all (no portal, no online version asked for)", channelProblems(snap([{ form_number: "IMM 5257" }, { form_number: "IMM 5707", channel: "PDF_UPLOAD", signature: "HAND_SCANNED" }])).length === 0);
 
   // ──────────────────────────────────────────── setup: sample rows, IMM 5257 PDF map from the saved real AI draft (US$0)
   await call("POST", "/demo/load");
@@ -103,11 +136,36 @@ const intake = async (file: string, combinationId: string) => {
   r = await call("PATCH", `/combinations/${vv}/forms/IMM 5257/channel`, { channel: "ONLINE" });
   const later = r.body.problems?.find((x: { item: string; message: string }) => x.item === "IMM 5257");
   ok("C1.6: P-107 Online stays selectable: the line is saved Online and says it needs the browser extension (later wave), a warning only", r.status === 200 && later?.level === "warning" && /later wave/.test(later.message) && !r.body.problems.some((x: { level: string }) => x.level === "error") && r.body.portal === undefined, r.body.problems);
-  ok("C1.6: filing method is derived: Online + PDF uploads; signatures follow the channel", r.body.filing_method === "Online + PDF uploads" && r.body.lines.find((l: { form: string }) => l.form === "IMM 5257").signature.includes("portal"), r.body.filing_method);
-  r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "SIGNED_PDF_UPLOAD" });
-  ok("C1.6: filing method: online plus a form signed by hand is 'Online + signed PDF uploads' (the fourth situation of P-62)", r.body.filing_method === "Online + signed PDF uploads" && r.body.lines.find((l: { form: string }) => l.form === "IMM 5707")?.signature.includes("by hand"), r.body.filing_method);
+  ok("C1.6: filing method is derived: Online + PDF uploads; an Online line has no signature by default", r.body.filing_method === "Online + PDF uploads" && r.body.lines.find((l: { form: string }) => l.form === "IMM 5257").signature_kind === "NONE", r.body.filing_method);
+  r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "PDF_UPLOAD", signature: "HAND_SCANNED" });
+  ok("C1.6 C-2 pass: a PDF upload signed by hand and scanned is saved with its signature (the old 'signed PDF upload')", r.status === 200 && r.body.filing_method === "Online + PDF uploads" && r.body.lines.find((l: { form: string }) => l.form === "IMM 5707")?.signature === "Signed by hand and scanned", r.body);
   r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "PDF_UPLOAD", from: "ONLINE" });
-  ok("C1.6: channel fail: a save from an out-of-date screen is refused (409), the line stays as it is", r.status === 409 && sql(`select channel from combination_form where combination_id='${vv}' and lineage_key='IMM 5707' order by version desc limit 1`) === "SIGNED_PDF_UPLOAD", r.body.message);
+  ok("C1.6: channel fail: a save from an out-of-date screen is refused (409), the line stays as it is", r.status === 409 && sql(`select channel || ':' || signature from combination_form where combination_id='${vv}' and lineage_key='IMM 5707' order by version desc limit 1`) === "PDF_UPLOAD:HAND_SCANNED", r.body.message);
+  r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "SIGNED_PDF_UPLOAD" });
+  ok("C1.6 C-1 fail: the old spelling is refused on the write route (400, in words), the line unchanged", r.status === 400 && /signed by hand and scanned/.test(JSON.stringify(r.body)) && sql(`select channel from combination_form where combination_id='${vv}' and lineage_key='IMM 5707' order by version desc limit 1`) === "PDF_UPLOAD", r.body);
+  r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "PDF_UPLOAD", signature: "PEN" });
+  ok("C1.6 C-2 fail: signed in pen on a PDF upload is refused in words, the line unchanged", r.status === 400 && /does not fit a line filed as PDF upload/.test(JSON.stringify(r.body)) && sql(`select signature from combination_form where combination_id='${vv}' and lineage_key='IMM 5707' order by version desc limit 1`) === "HAND_SCANNED", r.body);
+  r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "PAPER" });
+  ok("C1.6 C-2 pass: a line moved to Paper takes signed in pen (its default), the filing method says paper", r.status === 200 && r.body.lines.find((l: { form: string }) => l.form === "IMM 5707")?.signature_kind === "PEN" && /paper/.test(r.body.filing_method), r.body.filing_method);
+  r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "NOT_NEEDED" });
+  ok("C1.6 C-4 fail: Not needed with no record that the account asks it itself is refused in words", r.status === 400 && /marked Not needed/.test(JSON.stringify(r.body)), r.body);
+  // C-3 per account: a record for the IRCC secure account (Online only) beside the record for every account.
+  const acc5707 = sql(`select e.id from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='IMM 5707' and e.channel='PDF' order by e.edition_label desc limit 1`), ws5707 = sql(`select workspace_id from combination where id='${vv}'`);
+  sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, quote, set_by) values ('${ws5707}', '${acc5707}', 'IRCC_SECURE_ACCOUNT', '{ONLINE}', 'PERSON_SAMPLE', 'Test line for the secure account', 'test') on conflict do nothing`);
+  r = await call("PATCH", `/combinations/${vv}/account`, { account: "LMIA_SOMETHING" });
+  ok("C1.6 Q1 fail: an unknown IRCC account is refused", r.status === 400, r.body);
+  r = await call("PATCH", `/combinations/${vv}/account`, { account: "IRCC_SECURE_ACCOUNT" });
+  const paperNow = r.body.problems?.find((x: { item: string; level: string }) => x.item === "IMM 5707" && x.level === "error");
+  ok("C1.6 C-3 pass: once the account is the IRCC secure account, its record applies: the Paper line becomes an error in words (not changed silently)", r.status === 200 && r.body.account === "IRCC_SECURE_ACCOUNT" && /through the IRCC secure account only as Online/.test(paperNow?.message ?? ""), r.body.problems);
+  r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "PDF_UPLOAD", signature: "NONE" });
+  ok("C1.6 C-3 fail: a PDF upload the account does not accept is refused on save", r.status === 400 && /only as Online/.test(JSON.stringify(r.body)), r.body);
+  r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "ONLINE" });
+  ok("C1.6 C-3 pass: Online, which the account accepts, is saved", r.status === 200 && r.body.lines.find((l: { form: string }) => l.form === "IMM 5707")?.channel === "ONLINE", r.body);
+  const formsTab = (await call("GET", `/combinations/${vv}/workspace?tab=forms`)).body;
+  const l5707 = formsTab?.lines?.find((l: { code: string }) => l.code === "IMM 5707");
+  ok("C1.6 §5: the Forms tab offers each channel with its reason when refused, and the signatures that fit", !!l5707 && l5707.channelOptions.find((o: { channel: string }) => o.channel === "PDF_UPLOAD")?.ok === false && /only as Online/.test(l5707.channelOptions.find((o: { channel: string }) => o.channel === "PDF_UPLOAD")?.why ?? "") && l5707.signatures.map((x: { kind: string }) => x.kind).join() === "NONE,TYPED_NAME", l5707);
+  await call("PATCH", `/combinations/${vv}/account`, { account: null });
+  sql(`delete from form_edition_accept where set_by='test'`);
   await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "PDF_UPLOAD" });
   const review = (await call("GET", `/combinations/${vv}/review`)).body;
   ok("C3.8: the review's validator runs the channel rules: the Online line is a warning there too, never an error", review.draft.problems.some((x: { level: string; item: string; message: string }) => x.level === "warning" && x.item === "IMM 5257" && /later wave/.test(x.message)) && !review.draft.problems.some((x: { level: string; message: string }) => x.level === "error" && /Online|portal/.test(x.message)), review.draft.problems.length);

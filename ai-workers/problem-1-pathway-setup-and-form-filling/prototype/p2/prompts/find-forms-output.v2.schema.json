@@ -1,0 +1,145 @@
+{
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "forms",
+  "unresolved"
+ ],
+ "properties": {
+  "forms": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "code",
+     "title",
+     "applies",
+     "condition",
+     "who",
+     "quote",
+     "filed_note",
+     "channel"
+    ],
+    "properties": {
+     "code": {
+      "type": "string"
+     },
+     "title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "applies": {
+      "enum": [
+       "always",
+       "condition",
+       "alternative",
+       "separate_application",
+       "not_needed"
+      ]
+     },
+     "condition": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "who": {
+      "enum": [
+       "each_applicant",
+       "principal_applicant",
+       "spouse_or_partner",
+       "couple_once",
+       "each_dependent_child",
+       "each_person",
+       "case",
+       "representative"
+      ]
+     },
+     "quote": {
+      "type": "string"
+     },
+     "filed_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "channel": {
+      "anyOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "value",
+         "account",
+         "quote"
+        ],
+        "properties": {
+         "value": {
+          "enum": [
+           "ONLINE",
+           "PDF_UPLOAD",
+           "PAPER",
+           "NOT_NEEDED"
+          ]
+         },
+         "account": {
+          "enum": [
+           "IRCC_SECURE_ACCOUNT",
+           "PR_PORTAL",
+           "IRCC_PORTAL",
+           "APR_PORTAL",
+           "LMIA_ONLINE",
+           "PAPER",
+           "ANY"
+          ]
+         },
+         "quote": {
+          "type": "string"
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "unresolved": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "quote",
+     "reason"
+    ],
+    "properties": {
+     "quote": {
+      "type": "string"
+     },
+     "reason": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

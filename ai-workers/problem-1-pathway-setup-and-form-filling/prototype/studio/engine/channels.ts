@@ -3,71 +3,104 @@
 // validator rules for channels and option maps (P-62 §5.3, no AI) run on the snapshot, with everything else in
 // engine/validate.ts, at review and release. W1-02 (P-102, P-107 as amended by P-114): Online stays a choice per line, filled by the browser
 // extension in a later wave; portals, online versions and screen maps are parked with it.
-import { CHANNEL_WORDS, SIGNATURE_WORDS, type Channel } from "../contracts/forms.ts";
+import { ACCOUNT_WORDS, CHANNEL_WORDS, SIGNATURE_FITS, SIGNATURE_WORDS, signatureFits, signatureMisfitWords, type Channel, type Signature } from "../contracts/forms.ts";
 import { hasCodes, optionMapProblems, type OptionMap } from "./options.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { compareEditions } from "./programs.ts";
 import type { PrismaClient } from "@prisma/client";
 
-type Line = { form_number: string; channel?: Channel; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean };
+type Line = { form_number: string; channel?: string; signature?: string; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean };
 /** The parts of the snapshot (engine/snapshot.ts) these rules read. */
 type MapEntry = { data_path: string; caption?: string | null; outcome: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null; row?: number | null; list_purpose?: { kind: string; overflow: string } | null };
 type FieldMap = { form_number: string; form_edition: string; channel?: string; entries: MapEntry[] };
 type FieldDef = { id: string; answer_list?: { key: string; values: { key: string; label: string }[] } };
 const mapsOf = (s: Snapshot) => s.field_maps as FieldMap[];
-const chOf = (l: Line): Channel => l.channel ?? "PDF_UPLOAD";
-export const signatureOf = (c: Channel) => SIGNATURE_WORDS[c];
-/** Lead check L4: the ways a line may be filed, from what the Form library records IRCC accepts for the edition
- *  (PDF · ONLINE · PDF_OR_ONLINE); null when nothing is recorded (every way is offered, as Sample). */
-export function acceptedChannels(accepts: string | null | undefined): Channel[] | null {
-  if (accepts === "PDF") return ["PDF_UPLOAD", "SIGNED_PDF_UPLOAD"];
-  if (accepts === "ONLINE") return ["ONLINE"];
-  if (accepts === "PDF_OR_ONLINE") return ["PDF_UPLOAD", "ONLINE", "SIGNED_PDF_UPLOAD"];
-  return null;
+
+/** C-8 (W1-10 slice 1, P-143): a snapshot line's channel and signature. A release made before the slice says
+ *  "SIGNED_PDF_UPLOAD"; it reads as PDF upload, signed by hand and scanned. A missing channel is PDF upload; a missing
+ *  signature is the channel's default (Paper: pen; otherwise none). */
+export function lineOf(l: { channel?: string | null; signature?: string | null }): { channel: Channel; signature: Signature } {
+  if (l.channel === "SIGNED_PDF_UPLOAD") return { channel: "PDF_UPLOAD", signature: "HAND_SCANNED" };
+  const channel = (l.channel ?? "PDF_UPLOAD") as Channel;
+  return { channel, signature: (l.signature as Signature | undefined) ?? SIGNATURE_FITS[channel][0] };
 }
-/** What the Form library records IRCC accepts, per form, for its current PDF edition (only forms with a record). It is
- *  the library's, not the combination's, so it is read beside the snapshot and never changes its fingerprint. */
-export type Accepts = Map<string, string>;
+const chOf = (l: Line): Channel => lineOf(l).channel;
+/** C-8: what the fingerprint and the release comparison read for a line, so a combination released before the slice
+ *  does not show "changed since release": PDF upload signed by hand and scanned keeps the old spelling there. Only the
+ *  fingerprint's copy; the snapshot itself says channel and signature. */
+export function fingerprintLine<T extends { channel?: string; signature?: string }>(l: T): T {
+  const { channel, signature } = lineOf(l);
+  if (channel !== "PDF_UPLOAD" || signature !== "HAND_SCANNED") return l;
+  const { signature: _s, ...rest } = l; void _s;
+  return { ...rest, channel: "SIGNED_PDF_UPLOAD" } as T;
+}
+export const signatureOf = (s: Signature) => SIGNATURE_WORDS[s];
+
+/** What IRCC accepts for one form edition through one IRCC account (ANY: every account), with its basis and IRCC's line. */
+export type AcceptRecord = { account: string; channels: Channel[]; basis: string; quote: string | null; source_url?: string | null };
+/** What the Form library records IRCC accepts, per form (its current PDF edition), per account. It is the library's,
+ *  not the combination's, so it is read beside the snapshot and never changes its fingerprint. */
+export type Accepts = Map<string, AcceptRecord[]>;
+/** C-3: the record for the combination's account, else the one for every account; another account's never applies. */
+export function acceptedFor(records: AcceptRecord[] | undefined, account: string | null | undefined): AcceptRecord | null {
+  return (account ? records?.find((r) => r.account === account) : undefined) ?? records?.find((r) => r.account === "ANY") ?? null;
+}
+const OFFERED_WITHOUT_RECORD: Channel[] = ["ONLINE", "PDF_UPLOAD", "PAPER"];
+/** The channels a line may take (C-3, C-4): those the record says, Not needed only from the account's own record; no
+ *  record: Online, PDF upload and Paper, as Sample. */
+export function allowedChannels(records: AcceptRecord[] | undefined, account: string | null | undefined): { channels: Channel[]; record: AcceptRecord | null } {
+  const r = acceptedFor(records, account);
+  if (!r) return { channels: OFFERED_WITHOUT_RECORD, record: null };
+  return { channels: r.channels.filter((c) => c !== "NOT_NEEDED" || (r.account !== "ANY" && r.account === account)), record: r };
+}
 export async function acceptsOf(db: Pick<PrismaClient, "formEdition">, workspaceId: string): Promise<Accepts> {
-  const eds = await db.formEdition.findMany({ where: { workspaceId, channel: { not: "ONLINE" } }, select: { editionLabel: true, acceptedChannels: true, form: { select: { formKey: true } } } });
+  const eds = await db.formEdition.findMany({ where: { workspaceId, channel: { not: "ONLINE" } }, select: { editionLabel: true, accepts: true, form: { select: { formKey: true } } } });
   const newest = new Map<string, (typeof eds)[number]>();
   for (const e of eds) { const n = newest.get(e.form.formKey); if (!n || compareEditions(n, e) < 0) newest.set(e.form.formKey, e); }
-  return new Map([...newest].filter(([, e]) => acceptedChannels(e.acceptedChannels)).map(([k, e]) => [k, e.acceptedChannels!]));
+  return new Map([...newest].filter(([, e]) => e.accepts.length).map(([k, e]) => [k, e.accepts.map((a) => ({ account: a.account, channels: a.channels as Channel[], basis: a.basis, quote: a.quote, source_url: a.sourceUrl }))]));
 }
-const ACCEPTS_SAID: Record<string, string> = { PDF: "a PDF upload", ONLINE: "Online", PDF_OR_ONLINE: "a PDF upload or Online" };
-/** The words for a line filed in a way IRCC does not accept for its edition (on save and at release). */
-export const notAcceptedWords = (form: string, channel: Channel, accepts: string) => `${form} is filed as ${CHANNEL_WORDS[channel]}, but the Form library records that IRCC accepts it only as ${ACCEPTS_SAID[accepts] ?? accepts}. Choose a way IRCC accepts.`;
+const said = (cs: Channel[]) => cs.map((c) => CHANNEL_WORDS[c]).join(" or ");
+const accountWords = (a: string) => ACCOUNT_WORDS[a as "ANY"] ?? a;
+/** The words for a line filed in a way IRCC does not accept for its edition and account (on save and at release). */
+export const notAcceptedWords = (form: string, channel: Channel, r: AcceptRecord) =>
+  `${form} is filed as ${CHANNEL_WORDS[channel]}, but the Form library records that IRCC accepts it ${r.account === "ANY" ? "" : `through the ${accountWords(r.account)} `}only as ${said(r.channels.filter((c) => c !== "NOT_NEEDED")) || "Not needed"}${r.channels.includes("NOT_NEEDED") ? " (the account asks it itself)" : ""}. Choose a way IRCC accepts.`;
+/** C-4: Not needed without the account's own record saying so. */
+export const notNeededWords = (form: string, account: string | null | undefined) =>
+  `${form} is marked Not needed, but no record says ${account ? `the ${accountWords(account)}` : "this combination's IRCC account"} asks it itself. Record that in the Form library first (What IRCC accepts, for that account), or choose how it is filed.`;
 
-/** "Online only", "PDF only", "Online + signed PDF uploads", …; a channel that only conditional lines add is said with
- *  its condition ("; plus PDF upload when …"). */
+/** C-7: "Online only", "PDF only", "Paper only", "Online + PDF uploads", …; Not needed lines are left out; a channel
+ *  that only conditional lines add is said with its condition ("; plus PDF upload when …"). */
 export function filingMethod(lines: Line[]): string {
-  if (!lines.length) return "No forms yet";
-  const always = lines.filter((l) => (l.status ?? "always") === "always");
+  const filed = lines.filter((l) => chOf(l) !== "NOT_NEEDED");
+  if (!filed.length) return lines.length ? "Nothing to file: the IRCC account asks every form itself" : "No forms yet";
+  const always = filed.filter((l) => (l.status ?? "always") === "always");
   const say = (set: Set<Channel>) => {
     if (!set.size) return "";
-    const online = set.has("ONLINE"), pdf = set.has("PDF_UPLOAD"), signed = set.has("SIGNED_PDF_UPLOAD");
-    if (online && !pdf && !signed) return "Online only";
-    if (!online) return pdf && signed ? "PDF only (some signed by hand)" : signed ? "Signed PDF uploads only" : "PDF only";
-    return `Online + ${[pdf ? "PDF uploads" : "", signed ? "signed PDF uploads" : ""].filter(Boolean).join(" and ")}`;
+    const parts = [set.has("ONLINE") ? "Online" : "", set.has("PDF_UPLOAD") ? "PDF uploads" : "", set.has("PAPER") ? "paper forms" : ""].filter(Boolean);
+    if (parts.length === 1) return set.has("ONLINE") ? "Online only" : set.has("PDF_UPLOAD") ? "PDF only" : "Paper only";
+    return parts.join(" + ").replace(/^paper/, "Paper");
   };
   const base = new Set(always.map(chOf));
-  const extra = lines.filter((l) => !base.has(chOf(l)));
+  const extra = filed.filter((l) => !base.has(chOf(l)));
   const head = say(base) || "Only conditional forms";
   // "plus PDF upload when the applicant has a representative": the channel's own words, the condition as a clause.
   const clause = (c: string | null | undefined) => { const t = (c ?? "its condition holds").trim().replace(/[.;]+$/, ""); return t.charAt(0).toLowerCase() + t.slice(1); };
   const more = [...new Map(extra.map((l) => [chOf(l), l])).values()].map((l) => `plus ${LOWER[chOf(l)]} when ${clause(l.condition_plain)}`);
   return [head, ...more].join("; ");
 }
-const LOWER: Record<Channel, string> = { PDF_UPLOAD: "PDF upload", ONLINE: "online", SIGNED_PDF_UPLOAD: "signed PDF upload" };
+const LOWER: Record<Channel, string> = { PDF_UPLOAD: "PDF upload", ONLINE: "online", PAPER: "paper", NOT_NEEDED: "nothing" };
 
-/** The filing method in one of C1.6's words, for the Programs row and the page: "PDF only" (PDF and signed PDF
- *  uploads), "Online only" or "Mixed: online and PDF"; checklists are not filed. The line-by-line detail is filingMethod. */
+/** The filing method in one of C1.6's words, for the Programs row and the page: "PDF only", "Online only", "Paper only"
+ *  or "Mixed: …"; checklists and Not needed lines are not filed. The line-by-line detail is filingMethod. */
 export function filingKind(lines: (Line & { form_kind?: string | null })[]): string {
-  const filed = lines.filter((l) => (l.form_kind ?? "data_form") === "data_form");
+  const filed = lines.filter((l) => (l.form_kind ?? "data_form") === "data_form" && chOf(l) !== "NOT_NEEDED");
   if (!filed.length) return lines.length ? "Checklists only" : "No forms yet";
-  const online = filed.filter((l) => chOf(l) === "ONLINE").length;
-  return !online ? "PDF only" : online === filed.length ? "Online only" : "Mixed: online and PDF";
+  const n = (c: Channel) => filed.filter((l) => chOf(l) === c).length;
+  if (n("ONLINE") === filed.length) return "Online only";
+  if (n("PAPER") === filed.length) return "Paper only";
+  if (n("PDF_UPLOAD") === filed.length) return "PDF only";
+  return n("ONLINE") ? (n("PAPER") && !n("PDF_UPLOAD") ? "Mixed: online and paper" : "Mixed: online and PDF") : "Mixed: PDF and paper";
 }
 
 /** Channel and option-map problems of one combination's snapshot. */
@@ -80,8 +113,13 @@ export function channelProblems(s: Snapshot, accepts?: Accepts): Problem[] {
     // W1-02 (break M1): every form is read and filled from its PDF (P-102). A form the library holds only as an online
     // version (parked with the extension, on an older database) has nothing to read or fill: release is refused.
     if ((f.form_kind ?? "data_form") === "data_form" && f.online_only) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} has no PDF edition in the library: forms come in only as their official PDF. Add ${f.form_number}'s PDF from IRCC (Add form), or remove the form from this combination.` });
-    const said = accepts?.get(f.form_number), ok = (f.form_kind ?? "data_form") === "data_form" ? acceptedChannels(said) : null;
-    if (ok && !ok.includes(chOf(f))) out.push({ level: "error", where: "Forms", item: f.form_number, message: notAcceptedWords(f.form_number, chOf(f), said!) });
+    if ((f.form_kind ?? "data_form") === "data_form") {
+      const { channel, signature } = lineOf(f), account = s.combination.portal ?? null;
+      const { channels, record } = allowedChannels(accepts?.get(f.form_number), account);
+      if (channel === "NOT_NEEDED" && !channels.includes("NOT_NEEDED")) out.push({ level: "error", where: "Forms", item: f.form_number, message: notNeededWords(f.form_number, account) });
+      else if (record && !channels.includes(channel)) out.push({ level: "error", where: "Forms", item: f.form_number, message: notAcceptedWords(f.form_number, channel, record) });
+      if (!signatureFits(channel, signature)) out.push({ level: "error", where: "Forms", item: f.form_number, message: signatureMisfitWords(f.form_number, channel, signature) });
+    }
     if (chOf(f) === "ONLINE") out.push({ level: "warning", where: "Forms", item: f.form_number, message: `${f.form_number} is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.` });
   }
   const pdfMaps = mapsOf(s).filter((m) => m.channel !== "ONLINE"); // W1-02: an older release's online maps are parked
@@ -111,9 +149,9 @@ export function listRowsWords(form: string, n: number, example: string): string 
 /** The channels view of one combination: every line, its channel, signature, and the derived filing method. */
 export function channelsView(s: Snapshot) {
   const lines = (s.forms as Line[]).map((f) => {
-    const ch = chOf(f);
+    const { channel, signature } = lineOf(f);
     const versions = mapsOf(s).filter((m) => m.form_number === f.form_number && m.channel !== "ONLINE");
-    return { form: f.form_number, title: f.title, who: f.who, status: f.status, channel: ch, channel_words: CHANNEL_WORDS[ch], signature: signatureOf(ch), version: versions.at(-1)?.form_edition ?? null };
+    return { form: f.form_number, title: f.title, who: f.who, status: f.status, channel, channel_words: CHANNEL_WORDS[channel], signature_kind: signature, signature: signatureOf(signature), version: versions.at(-1)?.form_edition ?? null };
   });
-  return { filing_method: filingMethod(s.forms as Line[]), lines };
+  return { filing_method: filingMethod(s.forms as Line[]), account: s.combination.portal ?? null, lines };
 }

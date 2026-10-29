@@ -5,7 +5,7 @@
 // the next release (publishLifecycle, called by the one library publisher). Reorder is not here: it applies at once
 // with an audit line (Lead, 26 Oct), in api/src/structure.ts.
 import { HttpException, Inject, Injectable } from "@nestjs/common";
-import type { LibraryChange, Prisma, ProgramDef } from "@prisma/client";
+import type { FilingChannel, LibraryChange, Prisma, ProgramDef } from "@prisma/client";
 import { LEVEL_OF, LEVEL_WORD, PATHWAY_TYPE_LABEL, type LifecycleAction, type PathwayType, type RowAction, type Use, type UsesView } from "../../contracts/structure.ts";
 import { ACTORS, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { actionVerb, changeView } from "./library-changes.ts";
@@ -360,13 +360,17 @@ export class Lifecycle {
     return null;
   }
 
-  /** C11.18: the approved channels go on the form's current edition, "Set by a person · Sample" (the expert confirms later). */
+  /** C11.18 (P-143: per IRCC account): the approved channels go on the form's current edition for that account, "Set by a
+   *  person · Sample" (the expert confirms later); a finder proposal (P-140, C-5) keeps its basis, AI_SAMPLE. */
   private async applyAccepts(actor: Actor, c: LibraryChange) {
-    const m = c.matches as { channels?: string; quote?: string | null; reason?: string | null };
+    const m = c.matches as { account?: string; channels?: string[]; quote?: string | null; reason?: string | null; source?: string; form_page?: string | null };
     const def = await this.db.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: c.key }, include: { editions: true } });
     const current = def ? newestEdition(def.editions.filter((e) => e.channel !== "ONLINE")) ?? null : null;
     await this.db.$transaction(async (tx) => {
-      if (current) await tx.formEdition.update({ where: { id: current.id }, data: { acceptedChannels: m.channels ?? null, acceptedBasis: "PERSON_SAMPLE", acceptedQuote: m.quote ?? `Set by a person: ${m.reason ?? ""}`.slice(0, 400) } });
+      if (current && m.channels?.length) {
+        const account = m.account ?? "ANY", data = { channels: m.channels as FilingChannel[], basis: m.source === "finder" ? "AI_SAMPLE" : "PERSON_SAMPLE", quote: (m.quote ?? `Set by a person: ${m.reason ?? ""}`).slice(0, 400), sourceUrl: m.form_page ?? null, readOn: new Date(), setBy: actor.id, setAt: new Date() };
+        await tx.formEditionAccept.upsert({ where: { formEditionId_account: { formEditionId: current.id, account } }, create: { workspaceId: c.workspaceId, formEditionId: current.id, account, ...data }, update: data });
+      }
       await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? "Applied at approval (what IRCC accepts; Sample until the expert confirms)." } });
     });
     await this.audit.log(c.workspaceId, actor.id, "approved", "form", c.key, `${actor.name} approved what IRCC accepts for ${c.key}: ${c.label ?? ""}`);

@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
 import { MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, RUN_CAP_USD } from "../../../p2/policy.ts";
 import { costBesideLimit, isProviderLimit } from "../../engine/ai-run.ts";
-import { editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, replayPattern, type SavedRun } from "../../engine/rounds.ts";
+import { editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, promptOfRun, replayPattern, type SavedRun } from "../../engine/rounds.ts";
 import { PROTOTYPE, SOLUTION } from "./core.ts";
 import type { Sources } from "./sources.ts";
 
@@ -31,12 +31,15 @@ export type AiStep = {
   /** Optional per step: the run cap of one round (US$) and its time limit (ms). Without them a round's cap is sized from
    *  its measured input so one retry fits (QA-87; never below US$1, never above the run cap), and it gets 300 000 ms. */
   budget_usd?: number; timeout_ms?: number;
+  /** W1-10 slice 1 (plan §4): earlier prompt versions whose saved runs this step still replays, each with the words a
+   *  person sees ("saved before channels"); any other version is never replayed. */
+  replays?: { template: string; check: string; label: string }[];
   /** Saved runs made before job keys existed, by file name → combination key (reviewed list). */
   legacyKeys?: Record<string, string>;
   words: { noSaved: string; badSaved: string; nothingUsed: string };
 };
 /** One AI round's outcome: an answer (live or replayed) or a plain reason it has none. */
-export type RoundOut<T> = { ok: true; output: T; costUsd: number; from: "live" | "replay"; runFile: string } | { ok: false; reason: string; costUsd: number; blocked?: boolean; cancelled?: boolean; details?: string };
+export type RoundOut<T> = { ok: true; output: T; costUsd: number; from: "live" | "replay"; runFile: string; /** an earlier prompt's label when replayed from it */ earlier?: string } | { ok: false; reason: string; costUsd: number; blocked?: boolean; cancelled?: boolean; details?: string };
 /** One round's context. `contextKey` is what its saved answer belongs to: a combination's key, or a form edition
  *  (`edition:<code>:<edition>`, engine/rounds.ts editionContextKey). `trail` is the plain place name the job carries. */
 export type RoundContext = { trail: string; contextKey: string; inputs: { file: string; sha256: string }[]; mode: "live" | "replay" | "rules"; wanted: () => Promise<boolean>; batchId?: string };
@@ -96,12 +99,16 @@ export class StepRunner {
     if (ctx.mode === "replay") {
       // Round 2 m-a: an unreadable or wrong-shape answer is skipped and an older good one is used.
       const mine = replayPattern(step.jobBase, isCheck);
-      const r = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f)).sort(newestFirst) : []).map(readRun)
-        .find((x): x is SavedRun => !!x && isSameSavedRun(x, want) && (() => { try { return step.shapeOk(JSON.parse(String(x.raw_output))); } catch { return false; } })());
+      // The current prompt's answer first; else one of an earlier version the step still replays (plan §4), labelled.
+      const prompts = [{ sha256: want.templateSha256, label: "" }, ...(step.replays ?? []).map((v) => ({ sha256: sha(readFileSync(join(PROMPTS, isCheck ? v.check : v.template))), label: v.label }))];
+      const runs = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f)).sort(newestFirst) : []).map(readRun);
+      const usable = (x: SavedRun | null, p: { sha256: string }): x is SavedRun => !!x && isSameSavedRun(x, { ...want, templateSha256: p.sha256 }) && (() => { try { return step.shapeOk(JSON.parse(String(x.raw_output))); } catch { return false; } })();
+      let r: SavedRun | undefined, label = "";
+      for (const p of prompts) { r = runs.find((x): x is SavedRun => usable(x, p)); if (r) { label = promptOfRun(r, prompts) ?? ""; break; } }
       if (!r) return { ok: false, costUsd: 0, reason: step.words.noSaved };
       const saved = JSON.parse(String(r.raw_output)) as T;
       if (!step.shapeOk(saved)) return { ok: false, costUsd: 0, reason: step.words.badSaved };
-      return { ok: true, output: saved, costUsd: 0, from: "replay", runFile: `prototype/p2/runs/${r.file}` };
+      return { ok: true, output: saved, costUsd: 0, from: "replay", runFile: `prototype/p2/runs/${r.file}`, ...(label ? { earlier: label } : {}) };
     }
     // The launcher admits one known fact (p2/launch.ts knownOk): a combination's trail, or a printed form edition.
     const edition = editionOfContextKey(ctx.contextKey);

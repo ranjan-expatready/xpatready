@@ -96,6 +96,9 @@ export type WorkspaceFormLine = {
   line: string; code: string; title: string; document: boolean; edition: string | null; boxes: number;
   who: string; minAge: number | null; onlyIf: OnlyIf; condition: unknown;
   channel: string; channelWords: string; signature: string | null; accepted: string[]; acceptedBasis: string;
+  /** P-143 (W1-10 slice 1): the line's signature value, the signatures that fit its channel (C-2), and every channel
+   *  offered or refused with the reason (C-3, C-4). */
+  signatureKind: string; signatures: { kind: string; words: string }[]; channelOptions: { channel: string; words: string; ok: boolean; why: string | null }[];
   signedBy: string | null; signedByLabel: string; origin: string; quote: string | null; revision: string; status: string;
   /** How a person added the line when there is no IRCC quote ("Added from the library by a person"; Lead check L11). */
   added?: string | null;

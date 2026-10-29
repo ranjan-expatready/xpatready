@@ -1,5 +1,6 @@
 // Forms channels and the shared-field library (forms lane; P-61, P-65, P-107). No AI anywhere in this file.
-//   channels:   each line's channel (PDF upload, Online, Signed PDF upload); the filing method and signatures are derived.
+//   channels:   each line's channel (Online, PDF upload, Paper, Not needed) and signature (P-143, W1-10 slice 1), within
+//               what IRCC accepts for the combination's IRCC account; the filing method is derived.
 //               Online stays selectable and is filled by the browser extension in a later wave (P-102, P-107).
 //   library:    aliases, answer lists and option maps, list purposes, and reviewed merges (P-65).
 // W1-02 (P-102): portal capture, online versions and their screen maps, the portal choice and online drafting are parked
@@ -8,8 +9,8 @@ import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inje
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Prisma, type FormEdition } from "@prisma/client";
-import { CHANNEL_WORDS, type Channel, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewMerge, SetChannel } from "../../contracts/forms.ts";
-import { acceptedChannels, acceptsOf, channelProblems, channelsView, notAcceptedWords } from "../../engine/channels.ts";
+import { ACCOUNT_WORDS, CHANNEL_WORDS, SetAccount, SIGNATURE_FITS, SIGNATURE_WORDS, signatureFits, signatureMisfitWords, type Channel, type Signature, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewMerge, SetChannel } from "../../contracts/forms.ts";
+import { acceptsOf, allowedChannels, channelProblems, channelsView, notAcceptedWords, notNeededWords } from "../../engine/channels.ts";
 import { compareEditions } from "../../engine/programs.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
@@ -79,26 +80,50 @@ export class Forms {
     need(actor, "author");
     const b = parse(SetChannel, body);
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
-    await this.db.$transaction((tx) => this.channelOf(tx, c, lineKey, b.channel, b.from, actor), CHANNEL_TX).catch(raced);
+    await this.db.$transaction((tx) => this.channelOf(tx, c, lineKey, b, actor), CHANNEL_TX).catch(raced);
     return this.channels(combinationId);
   }
 
-  /** One line's channel, claimed on the channel the screen showed. A checklist is not filed, so it has no channel. */
-  private async channelOf(tx: Prisma.TransactionClient, c: { id: string; workspaceId: string; label: string }, lineKey: string, channel: Channel, from: Channel | undefined, actor: Actor) {
-    const rows = await tx.combinationForm.findMany({ where: { combinationId: c.id, lineageKey: lineKey }, include: { form: { select: { formKind: true, editions: true } } } });
+  /** One line's channel and signature (P-143), claimed on what the screen showed. A checklist is not filed, so it has
+   *  neither. C-2: the signature fits the channel; a channel change keeps a signature that still fits, else takes the
+   *  channel's default. C-3, C-4: only a way IRCC accepts for the form's current edition and the combination's account. */
+  private async channelOf(tx: Prisma.TransactionClient, c: { id: string; workspaceId: string; label: string; portalKey: string | null }, lineKey: string, b: { channel: Channel; signature?: Signature; from?: Channel; fromSignature?: Signature }, actor: Actor) {
+    const rows = await tx.combinationForm.findMany({ where: { combinationId: c.id, lineageKey: lineKey }, include: { form: { select: { formKind: true, editions: { include: { accepts: true } } } } } });
     if (!rows.length) fail(`${lineKey} is not a form of this combination.`, HttpStatus.NOT_FOUND);
     const newest = [...rows].sort((x, y) => y.version - x.version)[0];
     if (newest.status === "RETIRED") fail(`${lineKey} was removed from this combination.`, HttpStatus.NOT_FOUND);
     if (newest.form.formKind !== "data_form") fail(`${lineKey} is a checklist: it is not filed, so it has no channel.`);
-    if (from && newest.channel !== from) conflict(`${lineKey} was changed to ${CHANNEL_WORDS[newest.channel]} while you were choosing. Your choice was not saved; check it and choose again.`);
-    if (newest.channel === channel) return;
-    // Lead check L4: never a way IRCC does not accept for the form's current edition (the library's record, S4).
-    const accepts = newest.form.editions.filter((e) => e.channel !== "ONLINE").sort(compareEditions).at(-1)?.acceptedChannels;
-    const ok = acceptedChannels(accepts);
-    if (ok && !ok.includes(channel)) fail(notAcceptedWords(lineKey, channel, accepts!));
-    if (newest.status === "DRAFT") { const n = await tx.combinationForm.updateMany({ where: { id: newest.id, channel: newest.channel }, data: { channel, origin: "HUMAN", updatedBy: actor.id } }); if (!n.count) conflict(`${lineKey} was changed at the same moment: refresh to see it.`); }
-    else await revise(tx.combinationForm, rows.map(({ form, ...r }) => { void form; return r; }), { channel }, actor.id, strip);
-    await this.audit.log(c.workspaceId, actor.id, "changed", "form line", lineKey, `${actor.name} set how ${lineKey} is filed in "${c.label}": ${CHANNEL_WORDS[newest.channel]} → ${CHANNEL_WORDS[channel]}`, undefined, c.id);
+    if (b.from && newest.channel !== b.from) conflict(`${lineKey} was changed to ${CHANNEL_WORDS[newest.channel]} while you were choosing. Your choice was not saved; check it and choose again.`);
+    if (b.fromSignature && newest.signature !== b.fromSignature) conflict(`${lineKey}'s signature was changed to ${SIGNATURE_WORDS[newest.signature].toLowerCase()} while you were choosing. Your choice was not saved; check it and choose again.`);
+    const channel = b.channel;
+    const signature: Signature = b.signature ?? (signatureFits(channel, newest.signature) ? newest.signature : SIGNATURE_FITS[channel][0]);
+    if (newest.channel === channel && newest.signature === signature) return;
+    if (!signatureFits(channel, signature)) fail(signatureMisfitWords(lineKey, channel, signature));
+    if (newest.channel !== channel) {
+      const current = newest.form.editions.filter((e) => e.channel !== "ONLINE").sort(compareEditions).at(-1);
+      const records = current?.accepts.map((a) => ({ account: a.account, channels: a.channels as Channel[], basis: a.basis, quote: a.quote }));
+      const { channels, record } = allowedChannels(records, c.portalKey);
+      if (channel === "NOT_NEEDED" && !channels.includes("NOT_NEEDED")) fail(notNeededWords(lineKey, c.portalKey));
+      if (record && !channels.includes(channel)) fail(notAcceptedWords(lineKey, channel, record));
+    }
+    if (newest.status === "DRAFT") { const n = await tx.combinationForm.updateMany({ where: { id: newest.id, channel: newest.channel, signature: newest.signature }, data: { channel, signature, origin: "HUMAN", updatedBy: actor.id } }); if (!n.count) conflict(`${lineKey} was changed at the same moment: refresh to see it.`); }
+    else await revise(tx.combinationForm, rows.map(({ form, ...r }) => { void form; return r; }), { channel, signature }, actor.id, strip);
+    const was = `${CHANNEL_WORDS[newest.channel]}, ${SIGNATURE_WORDS[newest.signature].toLowerCase()}`, now = `${CHANNEL_WORDS[channel]}, ${SIGNATURE_WORDS[signature].toLowerCase()}`;
+    await this.audit.log(c.workspaceId, actor.id, "changed", "form line", lineKey, `${actor.name} set how ${lineKey} is filed in "${c.label}": ${was} → ${now}`, undefined, c.id);
+  }
+
+  /** Plan §8 Q1 (P-143): the IRCC account the combination files through; what IRCC accepts is then read for it (C-3).
+   *  Lines already saved are not changed: a line the account no longer accepts shows as a problem until it is chosen again. */
+  async setAccount(actor: Actor, combinationId: string, body: unknown) {
+    need(actor, "author");
+    const b = parse(SetAccount, body);
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    if (c.retiredAt) fail(`"${c.label}" is retired.`, HttpStatus.CONFLICT);
+    if (c.portalKey === b.account) return this.channels(combinationId);
+    await this.db.combination.update({ where: { id: combinationId }, data: { portalKey: b.account } });
+    const w = (a: string | null) => (a ? ACCOUNT_WORDS[a as "ANY"] ?? a : "not set");
+    await this.audit.log(c.workspaceId, actor.id, "changed", "combination", c.combinationKey, `${actor.name} set the IRCC account of "${c.label}": ${w(c.portalKey)} → ${w(b.account)}`, undefined, c.id);
+    return this.channels(combinationId);
   }
 
   async channels(combinationId: string) {
@@ -356,6 +381,7 @@ export class FormsController {
   @Patch("editions/:id/option-maps") setOptionMap(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setOptionMap(actorOf(a), id, b); }
   @Patch("editions/:id/list-purposes") setListPurpose(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setListPurpose(actorOf(a), id, b); }
   @Get("combinations/:id/channels") channels(@Param("id") id: string) { return this.f.channels(id); }
+  @Patch("combinations/:id/account") account(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setAccount(actorOf(a), id, b); }
   @Patch("combinations/:id/forms/:line/channel") channel(@Headers("x-actor") a: H, @Param("id") id: string, @Param("line") l: string, @Body() b: unknown) { return this.f.setChannel(actorOf(a), id, l, b); }
   @Post("library/fields/:key/aliases") alias(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.f.addAlias(actorOf(a), k, b); }
   @Post("library/fields/:key/answer-list") link(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.f.linkAnswerList(actorOf(a), k, b); }

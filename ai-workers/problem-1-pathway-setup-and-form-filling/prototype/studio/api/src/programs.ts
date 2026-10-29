@@ -451,7 +451,7 @@ export class Programs {
       forms: lines.sort((x, y) => x.lineageKey.localeCompare(y.lineageKey)).map((f) => {
         const e = newestEdition(f.form.editions.filter((x) => x._count.maps > 0 && x.channel !== "ONLINE"));
         return { code: f.form.formKey, title: f.form.displayName, document: f.form.formKind !== "data_form", who: f.who, when: f.attachMode === "COMBINATION_MANDATORY" ? "always" : f.conditionPlain ?? "only if", edition: e?.editionLabel ?? null, boxes: e?._count.maps ?? 0,
-          channel: f.channel, channelWords: CHANNEL_WORDS[f.channel], signature: view.lines.find((l) => l.form === f.lineageKey)?.signature ?? null };
+          channel: f.channel, channelWords: CHANNEL_WORDS[f.channel], signature: view.lines.find((l) => l.form === f.lineageKey)?.signature ?? null, signatureKind: f.signature };
       }),
       sources: c.attachments.map((x) => ({ id: x.id, kind: x.kind, name: x.edition ?? x.fileName, status: x.status, detail: x.statusDetail, at: x.createdAt })),
       held: await this.heldFor(c.workspaceId, combinationId, new Set((row?.leaf.forms ?? []).map((f) => f.code))),
