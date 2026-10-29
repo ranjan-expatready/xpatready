@@ -42,3 +42,34 @@ Built on main's tables, before forms PR #90 (the one door, item 5 and the rule s
 * **Sections from scratch.** Until slice 2 proposes sections from the forms' parts, a workspace started without the sample has no way to get a section. So a from-scratch combination cannot place a question, and BR-11 holds its release. The checks seed sections. The demo path (sample inputs) is not affected.
 * P-162's format part ("Format: not read yet") and the completeness function (item 7) are not in (2a).
 * A document type's name is not renamed here. Document types come only from checklist lines.
+
+## Slice 1a, 29 Oct: the `ProposalItem` table and the one door (P-149; C11.13, C11.14, C3.2, C3.6)
+**What it is.** One table, `proposal_item`, in the shape of contract v2 (`contracts/proposal-item.ts`), and one module, `api/src/proposals.ts`, that is the only way in:
+* `insertProposals(db, workspace, items)`: parses each item against the contract, refuses a run that is not one of the workspace's steps, checks identity at write, writes all or none.
+* `decide(…, ids, accept | edit | reject, reason)`: one batch id per call, at most 200 items. Accept or edit runs `LANDERS[kind]` in the same transaction and checks identity again. A reject needs a reason. An accepted item is never decided again in place (409: "an approved item changes only as a revision").
+* `undo(batchId)`: only the person who decided, only within 10 s, only while every ADD still waits. It removes the landed draft rows and the ADDs; the items become `undone` (the contract's word).
+* Landers today: field, section, answer list, document type. Each writes the draft row and a WAITING `LibraryChange` with `batch_id` and `proposal_item_id` (two new columns). The combination kinds and `person_role` have no lander yet (409, the item stays waiting): `pqr_pick` is 1c, the rest W1-10.
+
+**Identity, per kind (Lead, 29 Oct).** A field, section or person role by its name (`normalizeLabel`), an answer list by its set of codes (order ignored), a document type by its name and what it proves. The server computes the key and refuses a producer key that differs. Refused at write: two items of one batch with the same identity, and a new library item already in the library (409, "propose reusing it instead"). A waiting item of another run is not refused at write (a second draft of the same form would be blocked); it is caught at approval.
+
+**The migration** (`20261029200000_s6_proposal_item`):
+* It copies field, section and answer_list rows (library) and document_requirement and check rows (now requirement_line and cross_check, combination) onto `proposal_item`. The old comparison columns go into `work`, so the copy loses nothing.
+* It drops `rule` rows and any kind the contract does not know.
+* It logs both (Q-L4): a NOTICE, and one `audit_event` per workspace naming the counts and every dropped key. It stops if copied + dropped is not every row. Then it drops `normalization_item`.
+* Copied rows are pre-contract: their payload keeps its old keys beside `kind`. Only new writes go through the parse.
+* **Run on a copy of the :4400 data** (`pg_dump xr_studio_demo | psql xr_studio_screens_mig`, then `prisma migrate deploy`): clean. :4400 holds no proposal rows today, so nothing moved. The full mapping is proved by `check_s6_p149`'s replay: every older migration on a scratch database, nine rows of every old kind, then this one (7 copied, 2 rule rows dropped and listed).
+
+**Readers switched.** sources.ts (ingest writes through `insertProposals`; review, decide, accept-clean, re-compare and apply read the table; apply lands new fields through `landField`), checklist.ts, demo.ts, programs.ts, review-queue.ts, ai.ts and library-changes.ts (`sameName`). The field-map page (`job.tsx`) is unchanged: `reviewRow` gives it the old row shape until 1b replaces the page. The server's own columns beside the contract: `choice` (the review's ACCEPTED · CHANGED · NEW · RETURNED), `decided_key` and `work`.
+
+**The free-add scan** (`check_s6_p149`) refuses any `canonicalField / logicalSection / answerList / documentType .create|createMany|upsert` outside `proposals.ts`. Allowlist: the P-65 merge (forms.ts). Listed as owed by other lanes, never widened:
+* forms.ts `createAnswerList`: unreachable since (2a); forms deletes it.
+* studio.ts: a document type named while adding a requirement (configuration.tsx). It goes through the door with W1-10 / P-158 item 4.
+
+**Checks.** `check_s6_p149.ts` 37/37: the migration, the door, decide, undo, the review reading the new table, and the scan, with a pass and a fail per rule. Other checks that wrote `normalization_item` by SQL now write `proposal_item`:
+* screens: `check_screen02_fix.ts`, `check_screen02_slice2.ts`;
+* other lanes, a table rename only: `check_forms_f3a1c.ts` (forms) and `check_ai_launch_paths.ts` (forms).
+
+**Not in 1a, by plan:**
+* `seed_library.cjs` still writes by SQL. The door has no HTTP route until 1b's queue; the seeds move to it then.
+* The 1b page, bulk accept and grouped approval.
+* Release publish of an approved `answer_list` ADD: it is not yet in `unapprovedAdds`. 1b checks it with the queue.

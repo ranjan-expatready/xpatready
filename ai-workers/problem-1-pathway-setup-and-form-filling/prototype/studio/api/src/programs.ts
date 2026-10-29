@@ -74,7 +74,7 @@ export class Programs {
     const [a, j, p, h] = await Promise.all([
       this.db.auditEvent.aggregate({ where: { workspaceId }, _count: true, _max: { at: true } }),
       this.db.draftingJob.aggregate({ where: { workspaceId }, _count: true, _max: { startedAt: true, finishedAt: true } }),
-      this.db.normalizationItem.groupBy({ by: ["decision"], where: { workspaceId }, _count: true }),
+      this.db.proposalItem.groupBy({ by: ["status"], where: { workspaceId }, _count: true }),
       this.db.intakeItem.groupBy({ by: ["status"], where: { workspaceId }, _count: true }),
     ]);
     const key = JSON.stringify([workspaceId, a._count, a._max.at, j._count, j._max.startedAt, j._max.finishedAt, p, h]);
@@ -85,7 +85,7 @@ export class Programs {
       this.db.combination.findMany({ where: { workspaceId }, include: { attachments: { select: { id: true, kind: true, recognised: true, sha256: true, edition: true, createdAt: true, officialFile: true } } } }),
       this.db.configRelease.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { combinationId: true, snapshot: true, releasedAt: true, packVersion: { select: { version: true } } } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, status: true, batchId: true, kind: true, mode: true } }),
-      this.db.normalizationItem.groupBy({ by: ["jobId"], where: { workspaceId, decision: "PENDING" }, _count: true }),
+      this.db.proposalItem.groupBy({ by: ["runId"], where: { workspaceId, status: "waiting" }, _count: true }),
       this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } }),
       this.db.formEdition.findMany({ where: { workspaceId }, select: { sha256: true, maps: { select: { id: true }, take: 1 } } }),
       this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD", outcome: "new_edition_held" }, select: { code: true, editionLabel: true, combinationId: true } }),
@@ -99,7 +99,7 @@ export class Programs {
     const latest = new Map<string, (typeof releases)[number]>();
     for (const r of releases) if (!latest.has(r.combinationId)) latest.set(r.combinationId, r);
     const mapped = new Set(editions.filter((e) => e.maps.length).map((e) => e.sha256));
-    const pending = new Map(items.map((i) => [i.jobId, i._count]));
+    const pending = new Map(items.map((i) => [i.runId, i._count]));
     // The date each official file was downloaded (its leading ISO part: a hand fetch adds a note after it).
     const official = new Map((manifest() as { sha256: string; downloaded_utc?: string }[]).map((m) => [m.sha256, String(m.downloaded_utc ?? "").split(" ")[0]]));
     const byKey = new Map(nodes.map((n) => [n.programNodeKey, n]));
