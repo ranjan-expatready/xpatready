@@ -30,6 +30,7 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 | W1-09 | Shared library in setup order (combination → forms → fields, sections, document types, checks); manual add with the AI duplicate check; missing masters listed | screens | W1-03 | Concept |
 | W1-10 | AI drafts the rest of the masters from the PDFs and checklists: sections, document types, conditions, checks (proposals only) | forms | W1-06, W1-07 | Design agreed in part (challenge and plan, 29 Oct); slice 0 step runner built (619eaac4) + queue item contract proposal (e3fe8770); slice 1 (channel P-143) PLAN next
 | W1-15 | Questions and documents, document first (P-130–P-132): Questionnaires tab with one source per fact and the PQR tick (C4.10), Documents tab with "supplies n facts", Preview in three sets; the AI run's 7 steps join W1-10 (C4.11) | runtime (tabs, after S5 merges) · forms (AI steps, with W1-10) | S5, W1-10 | **Concept agreed 29 Oct; board v2 agreed 29 Oct (P-147)**; runtime slice 1 (data and rules) built 37f946af, suites finishing, then founder early look; slice 2 waits board v2 and grilling
+| W1-16 | End-to-end masters the publisher loop needs (P-150): edition attributes, a form line's country variant, shared code lists with value maps per edition and channel, field length and continuation rules, the signature value per line with the parent-for-a-minor and representative roles, one shared condition record | forms (edition attributes, country variant, length, signature value; W1-10 drafts them) · screens (code lists and shared condition in S6) | slice 0, S6 | Not started (decided 29 Oct) |
 | W1-11 | Reset empties everything; Load sample = structure + official PDFs of the 5 combinations (+1 Corporate Sample); AI proposals replay | runtime | W1-03, W1-06 | Not started |
 | W1-12 | Forms for the 5 combinations identified from IRCC guides (Sample until the expert confirms), downloaded, checked in Adobe | Lead research · evidence (Mac) | — | Research running |
 | W1-14 | End-to-end map v2: the complete scope (built and imagined) redrawn on today's decisions, as a new file beside the earlier map (founder: create our own version) | Lead | W1-03–W1-09 concepts agreed | **Drawn 29 Oct: `design/end-to-end-map-2026-10-29.html`** — extension parked (P-102), finder downloads canada.ca (P-103), four channels + signature (P-143), document-first (P-130), agent first (P-129); progress page refreshed the same day |
@@ -42,15 +43,7 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 
 **Founder asks of 26 Oct, one line each** (44 asks, where each lives, status, and the gaps still open for the founder): `screens/W1-baseline/founder-asks.md`. Progress page for the founder: `design/end-to-end-progress.html`. Keep all three in step.
 
-## Founder inputs checked (not followed blindly)
-* **Sheet of 5 combinations:** "Study Permit › Study Permit" repeats the program (category becomes the application type); "Express Entry Stream _ Province" typo; Ontario as a sub-category changes no IRCC form (P-109); inside/outside Canada and inland/outland are levels only where IRCC files them as different applications (expert confirms); the forms column was empty (W1-12).
-* **End-to-end map 26 Oct:** extension cards, "the product never fetches" and the capture steps are superseded by P-102/P-103.
-* **Progress page 26 Oct:** its focus line "ingestion and extension" is superseded by P-101.
-* Screens the founder named by their place in the app (Programs › New combination; Programs › Individual › Citizenship › Grant of citizenship; Corporate › Compliance › Inspection response; Shared library) are saved as the "before" in `screens/W1-baseline/` (18 screenshots, 26 Oct). Forms come from the canada.ca forms page the founder gave (W1-12).
-* Structure names on the sheet: the Lead decides from IRCC's own naming (founder: "research what is the truth"); research in screens/W1-form-library/forms-for-5-combinations.md (Part B, being written); the expert confirms later.
-
-## Earlier parallel work
-The 26 Oct audit of earlier work (extension, PDF intake, Screens 01–04, R1, m3, evidence, qa/scout) is in `history/WAVE-1-earlier-work-2026-10-26.md`.
+Founder inputs checked and earlier parallel work (26 Oct): `history/WAVE-1-notes-2026-10-26.md`.
 
 ## Rules for this wave
 **Remove, retire, reorder (P-116):** one shared mechanism on every master (where used first; remove only unused, retire/restore used; reorder where order matters; no move), built with W1-03 and reused by W1-06, W1-08, W1-09. **Lanes (P-111, amended by P-117):** one build lane at a time on the demo path, qa after every merge; m3 research only; scout, evidence, Devin and Goose paused; one Lead chat at a time, a fresh /lead each day. Permanent-residence combinations: PDFs where IRCC takes them, an answer sheet for portal-only forms (P-113).
