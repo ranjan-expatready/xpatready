@@ -63,6 +63,7 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   r = await call("POST", `/combinations/${wp}/checklist/move`, { lineage: before[1], role: "principal", direction: "up" });
   const after = lines(r.body, "principal").map((x: any) => x.lineage);
   ok("move pass: the second line moves up, at once: the first two swap and the rest keep their order", r.status === 200 && after[0] === before[1] && after[1] === before[0] && JSON.stringify(after.slice(2)) === JSON.stringify(before.slice(2)), after.slice(0, 3));
+  ok("move pass: one move changes only the two lines it swaps (two draft rows with a position), never the whole checklist", Number(sql(`select count(*) from document_requirement where combination_id='${wp}' and status='DRAFT' and position is not null`)) === 2, sql(`select count(*) from document_requirement where combination_id='${wp}' and status='DRAFT'`));
   ok("move: one History line names the document and whose checklist", Number(sql(`select count(*) from audit_event where combination_id='${wp}' and summary like '%moved % up in Principal applicant''s checklist%'`)) === 1);
   c = await cfg();
   ok("move: the new order is a draft change (goes out with the next release), the release keeps its order", c.draft.matches_release === false && (await call("GET", `/combinations/${wp}/config?mode=published`)).body.snapshot.document_requirements.every((x: any) => !("position" in x)), c.draft.matches_release);

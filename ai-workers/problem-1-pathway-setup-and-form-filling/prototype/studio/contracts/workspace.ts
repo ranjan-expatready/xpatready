@@ -206,7 +206,7 @@ export type ChecklistFactRow = { fact: string; label: string; about: "holder" | 
 export type ChecklistLineRow = {
   lineage: string; role: string; document: { key: string; name: string }; who: string; base: boolean; when: string;
   providedBy: string; alternatives: { key: string; name: string }[]; supplies: ChecklistFactRow[]; aboutOthers: number;
-  quote: string | null; status: string; origin: string; position: number | null; by: string | null;
+  quote: string | null; status: string; origin: string; position: number | null; rank: number; by: string | null;
 };
 export type ChecklistView = {
   roles: { role: string; label: string; lines: ChecklistLineRow[] }[];

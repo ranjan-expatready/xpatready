@@ -1,7 +1,7 @@
 {
-  "at": "2026-10-29T05:51:29.514Z",
+  "at": "2026-10-29T06:01:35.367Z",
   "port": 4438,
-  "pass": 25,
+  "pass": 26,
   "fail": 0,
   "log": [
     {
@@ -86,6 +86,11 @@
       ]
     },
     {
+      "name": "move pass: one move changes only the two lines it swaps (two draft rows with a position), never the whole checklist",
+      "ok": true,
+      "detail": "2"
+    },
+    {
       "name": "move: one History line names the document and whose checklist",
       "ok": true
     },
@@ -118,7 +123,7 @@
           "document": "Proof of fee payment (processing fee and other applicable fees receipt)",
           "who": "principal_applicant",
           "by": "user-A",
-          "at": "2026-10-29T05:51:28.956Z"
+          "at": "2026-10-29T06:01:34.886Z"
         }
       ]
     },

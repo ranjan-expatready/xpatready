@@ -173,6 +173,8 @@ export type ChecklistLine = {
   lineage: string; role: string; document: { key: string; name: string }; who: string; base: boolean; when: string;
   providedBy: string; alternatives: { key: string; name: string }[]; supplies: ChecklistFact[]; aboutOthers: number;
   quote: string | null; status: string; origin: string; position: number | null;
+  /** Its place on this checklist: the set position, else its place in the default order (always first, then by name). */
+  rank: number;
 };
 /** Each person role's checklist: the lines that name it (per person, as documentFacts reads them), what each supplies
  *  and about whom, and whether slice 1's rules take that answer out of the questionnaire (its source for that person is
@@ -200,12 +202,16 @@ export function checklist(s: Snapshot): { role: string; label: string; lines: Ch
         lineage: r.lineage, role, document: { key: t?.key ?? r.document_type_key, name: t?.name ?? r.document_type }, who: r.who,
         base: r.base_or_conditional === "base", when: r.base_or_conditional === "base" ? "Always" : (r.condition_plain ?? "Only if its condition holds"),
         providedBy: r.provided_by, alternatives: ((r.alternatives ?? []) as string[]).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })),
-        supplies, aboutOthers: supplies.filter((x) => x.about !== "holder").length, quote: r.source_quote ?? null, status: r.status, origin: r.origin, position: r.position ?? null,
+        supplies, aboutOthers: supplies.filter((x) => x.about !== "holder").length, quote: r.source_quote ?? null, status: r.status, origin: r.origin, position: r.position ?? null, rank: 0,
       };
       byRole.set(role, [...(byRole.get(role) ?? []), line]);
     }
   }
-  const order = (a: ChecklistLine, b: ChecklistLine) => (a.position ?? 1e9) - (b.position ?? 1e9) || Number(b.base) - Number(a.base) || a.document.name.localeCompare(b.document.name);
+  // A move sets the position of only the two lines it swaps (api/src/person-checklist.ts): every other line keeps its
+  // place in the default order, so one move is two draft changes, never the whole checklist.
+  const byDefault = (a: ChecklistLine, b: ChecklistLine) => Number(b.base) - Number(a.base) || a.document.name.localeCompare(b.document.name) || a.lineage.localeCompare(b.lineage);
+  for (const list of byRole.values()) [...list].sort(byDefault).forEach((l, i) => { l.rank = l.position ?? (i + 1) * 10; });
+  const order = (a: ChecklistLine, b: ChecklistLine) => a.rank - b.rank || byDefault(a, b);
   const roles = [...new Set(people.map((p) => p.role as string)), "case"];
   return roles.filter((r) => byRole.has(r)).map((role) => ({ role, label: who(s, role), lines: byRole.get(role)!.sort(order) }));
 }

@@ -63,11 +63,11 @@ export class PersonChecklists {
     if (i < 0) throw problem(404, "Not on this checklist", "That document is not on this person's checklist any more. Reload.");
     const j = b.direction === "up" ? i - 1 : i + 1;
     if (j < 0 || j >= list.length) throw problem(409, "Already there", b.direction === "up" ? "It is already first on this checklist." : "It is already last on this checklist.");
-    const order = [...list]; [order[i], order[j]] = [order[j], order[i]];
-    for (const [n, l] of order.entries()) {
-      const want = (n + 1) * 10;
-      if (l.position === want) continue;
-      const rows = await this.db.documentRequirement.findMany({ where: { combinationId: id, lineageKey: l.lineage } });
+    // Swap the two lines' places; every other line keeps its own (one move = two draft changes).
+    const [a, z] = [list[i], list[j]];
+    const ranks: [string, number][] = a.rank === z.rank ? [[a.lineage, z.rank + (b.direction === "up" ? -1 : 1)], [z.lineage, a.rank]] : [[a.lineage, z.rank], [z.lineage, a.rank]];
+    for (const [lineage, want] of ranks) {
+      const rows = await this.db.documentRequirement.findMany({ where: { combinationId: id, lineageKey: lineage } });
       await revise(this.db.documentRequirement, rows, { position: want }, actor.id, strip);
     }
     const label = list.find((l) => l.lineage === b.lineage)!.document.name;
