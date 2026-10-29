@@ -1,7 +1,7 @@
 {
-  "at": "2026-10-28T19:52:57.516Z",
+  "at": "2026-10-29T02:11:14.520Z",
   "port": 4434,
-  "pass": 39,
+  "pass": 47,
   "fail": 0,
   "log": [
     {
@@ -110,8 +110,18 @@
       "name": "C4.10 M5: a tick is one named line on Review, needing the immigration expert's sign-off",
       "ok": true,
       "detail": [
-        "Where an answer comes from: person.date_of_birth (principal): pre-qualification"
+        "Where an answer comes from: Date of birth (Principal applicant): pre-qualification"
       ]
+    },
+    {
+      "name": "Lead check W1 pass: the tick's Review line uses the fact's words and the role's label (\"…: pre-qualification\")",
+      "ok": true,
+      "detail": "Date of birth (Principal applicant): pre-qualification"
+    },
+    {
+      "name": "Lead check W1 fail: the tick's Review line shows no system key or role key",
+      "ok": true,
+      "detail": "Date of birth (Principal applicant): pre-qualification"
     },
     {
       "name": "C4.10 API read: the list says where each fact comes from, with counts (Sample)",
@@ -175,13 +185,37 @@
       "name": "C4.10 M5: the choice is one named change on Review (needs the immigration expert); the draft no longer equals the release",
       "ok": true,
       "detail": [
-        "Where an answer comes from: person.date_of_birth (principal): comes from Client"
+        "Where an answer comes from: Date of birth (Principal applicant): comes from the client"
+      ]
+    },
+    {
+      "name": "Lead check W1 pass: the Review line reads \"Date of birth (<role label>): comes from the client\"",
+      "ok": true,
+      "detail": [
+        "Date of birth (Principal applicant): comes from the client"
+      ]
+    },
+    {
+      "name": "Lead check W1 fail: no Review line shows a system key (person.date_of_birth) or a role key (principal)",
+      "ok": true,
+      "detail": [
+        "Date of birth (Principal applicant): comes from the client"
       ]
     },
     {
       "name": "C4.10 Undo fail: someone else cannot undo the author's draft choice",
       "ok": true,
-      "detail": "403 Approver (simulated) does not hold the author duty"
+      "detail": "403 Only the person who made this draft can undo it."
+    },
+    {
+      "name": "Lead check W2 pass: the refusal says \"Only the person who made this draft can undo it.\"",
+      "ok": true,
+      "detail": "Only the person who made this draft can undo it."
+    },
+    {
+      "name": "Lead check W2 fail: the refusal does not talk about duties or \"(simulated)\"",
+      "ok": true,
+      "detail": "Only the person who made this draft can undo it."
     },
     {
       "name": "C4.10 Undo pass: the author undoes it at once: back to the passport, and the draft equals the release again",
@@ -200,7 +234,12 @@
     {
       "name": "C4.10 m2 (P-97) fail: Agent on a declaration is refused at save (422)",
       "ok": true,
-      "detail": "\"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it (P-97)."
+      "detail": "\"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it."
+    },
+    {
+      "name": "Lead check W3 fail: the refusal at save carries no decision code (P-…)",
+      "ok": true,
+      "detail": "\"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it."
     },
     {
       "name": "C4.2 M4 fail: a pre-qualification tick on an agent fact is refused at save (422)",
@@ -228,7 +267,14 @@
       "name": "C4.10 fail: release is refused while a client-only fact says Agent (an error on the page, in words)",
       "ok": true,
       "detail": [
-        "Principal applicant: \"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it (P-97), never the agent. Set Comes from to Client."
+        "Principal applicant: \"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it, never the agent. Set Comes from to Client."
+      ]
+    },
+    {
+      "name": "Lead check W3 pass: the release check says it in words and carries no decision code; no source check on the page does",
+      "ok": true,
+      "detail": [
+        "Principal applicant: \"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it, never the agent. Set Comes from to Client."
       ]
     },
     {
