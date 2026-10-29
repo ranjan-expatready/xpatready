@@ -17,10 +17,7 @@
       "Bash(git -C * push * -d*)",
       "Bash(git -C * push * --delete*)",
       "Bash(git -C * push * :*)",
-      "Bash(gh pr close*)",
       "Bash(gh pr edit*)",
-      "Bash(gh pr comment*)",
-      "Bash(gh pr review*)",
       "Bash(gh issue create*)",
       "Bash(gh issue edit*)",
       "Bash(gh issue comment*)",
@@ -82,6 +79,27 @@
           {
             "type": "command",
             "if": "Bash(gh pr merge*)",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/merge-guard.sh",
+            "timeout": 15,
+            "onFailure": "block"
+          },
+          {
+            "type": "command",
+            "if": "Bash(gh pr close*)",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/merge-guard.sh",
+            "timeout": 15,
+            "onFailure": "block"
+          },
+          {
+            "type": "command",
+            "if": "Bash(gh pr comment*)",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/merge-guard.sh",
+            "timeout": 15,
+            "onFailure": "block"
+          },
+          {
+            "type": "command",
+            "if": "Bash(gh pr review*)",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/merge-guard.sh",
             "timeout": 15,
             "onFailure": "block"
