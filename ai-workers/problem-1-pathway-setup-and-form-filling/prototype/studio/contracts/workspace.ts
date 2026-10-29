@@ -137,14 +137,34 @@ export const FAMILIES = [
 ] as const;
 export type FamilyKey = (typeof FAMILIES)[number]["key"];
 
-export type PreviewPerson = { subjectId: string; role: string; label: string; questions: number; documents: number; forms: number };
+/** questions: the one count, the same as this person's chip on the Questionnaires tab (journey item 8); asked: of those,
+ *  what the client is asked once documents fill theirs. */
+export type PreviewPerson = { subjectId: string; role: string; label: string; questions: number; asked: number; documents: number; forms: number };
 export type PreviewDocument = { requirement: string; status: string; why: string; provided_by: string };
-export type PreviewForm = { form: string; title: string; applies: boolean | "cannot_tell"; why: string; channel: string; channelWords: string; noRule: boolean };
+/** C4.6: what a person gets, by channel; a form filed once for the application or once per couple is its own group. */
+export const OUTPUT_GROUPS = [
+  { key: "ONLINE", title: "Filled on the portal (Online)" },
+  { key: "PDF_UPLOAD", title: "Filled PDF to upload" },
+  { key: "SIGNED_PDF_UPLOAD", title: "PDF to print and sign" },
+  { key: "COUPLE", title: "Filed once for the couple" },
+  { key: "APPLICATION", title: "Filed once for the application" },
+] as const;
+export type OutputGroup = (typeof OUTPUT_GROUPS)[number]["key"];
+export type PreviewForm = { form: string; title: string; applies: boolean | "cannot_tell"; why: string; channel: string; channelWords: string; noRule: boolean; group: OutputGroup };
+/** C4.3 (board v2 frame 4): the three sets for one person. PQR: the ticked pre-qualification questions (no verdict shown,
+ *  P-77). SQR: the client's questionnaire (`questionnaire`), with what documents fill instead. Agent view: every question
+ *  for the person with where its answer comes from. `from` is in words: "Client", "Case officer", "Document · Passport". */
+export type PreviewSets = {
+  pqr: { fact: string; label: string; from: string }[];
+  sqr: { asked: number; fromDocuments: { document: string; facts: string[] }[] };
+  agent: { questions: number; sections: { section: string; title: string; about: string; questions: { fact: string; label: string; from: string; hidden: boolean }[] }[] };
+};
 /** An answer that changes what applies (yes/no facts only): the author tries it to see what changes. */
 export type PreviewTweak = { key: string; subjectId: string; fact: string; label: string; about: string; value: boolean | null };
 export type PreviewView = {
   label: string; families: { key: FamilyKey; label: string }[]; family: FamilyKey; person: string;
   people: PreviewPerson[]; questionnaire: QuestionnaireView; documents: PreviewDocument[]; forms: PreviewForm[]; tweaks: PreviewTweak[];
+  sets: PreviewSets;
 };
 
 /** A form removed from the combination since its last release: Undo puts the same line back while the draft is open (P-116).

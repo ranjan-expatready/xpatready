@@ -6,50 +6,45 @@
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: M2 queue item 3, who fills (C4.9, P-97); item 2 PQR passed the Lead check (c4001d6e + b6cff769), held on this branch
-current_slice: who fills built (library change on To review, applied at approval as a draft placement, released with the next release; placeField lock); library.tsx left to screens (Lead)
+current_item: M2 queue item 4, Preview by person and channel (C4.3, C4.6)
+current_slice: Preview built per the Lead's answers (Q1–Q3) + N-2 (acceptPqrPick takes the queue's transaction client); notes in build-notes-m2.md
 stage: CHECK
 owner: Lead
-next_action: Lead: check who fills (CI is the full check) and open the runtime Lead PR with PQR + who fills. Builder next: queue item (4) Preview by person and channel (C4.3, C4.6); C4.7 is wired into S6's queue once S6 slice 1 is on main.
-blocked_by: C4.7 queue wiring waits S6 slice 1 (screens) on main
+next_action: Lead: check Preview (C4.3, C4.6) and N-2 on this branch (claude/runtime-preview-9fd91e); CI is the full check. Then the builder takes (5) S7 Reset + Load sample with the six combinations.
+blocked_by: none; screens 1c registers acceptPqrPick as the pqr_pick lander once this branch is on main
 updated: 2026-10-29
 
-## Handover (to a fresh runtime session, 29 Oct late; this session stops here per the Lead, P-173)
-* **Exact state:** branch `runtime/2026-10-27-s5-workspace`, last code commit **3839ddf4** (main synced at d59bf029; the contract conflict there was resolved by keeping both `field_map_edition` (forms) and `who_can_be` (runtime) in `contracts/drafting-run.v0`). The worktree is clean; by-products are restored. Nothing is half-done.
-* **Done and with the Lead (Documents tab merge):** slice 3 (Documents tab, Lead check PASS at 740ef734). FIX pass 1 at ccc7b18d covered QA-84, QA-85, QA-88 runtime part, QA-91 as a plan, and the Lead minors; full run-suites gave 68/68 there. FIX pass 2 at 3839ddf4 covered:
-  * QA-92: the drawer saves a case fact under `case`.
-  * QA-93: confirm and Undo in place.
-  * QA-94: no system names.
-  * QA-95: the 5-character reason words, linked to the box.
-  * The `check_s5_slice3_browser` Undo-bar race: the test waits on the row; the app's order is in `forms.tsx`, the forms lane's file, and was left alone.
-* **Checks on 3839ddf4 (own named checks only; CI is the full check, per the Lead):**
-  * `check_qa92_95_browser.cjs` 23/23, three runs (4436).
-  * `check_s5_slice3_browser.cjs` 35/35, five runs in a row (the race).
-  * `check_w115_slice2_browser.cjs` 56/56 and `check_s5_slice2_browser.cjs` 61/61 (their System name assertions now check that no key is on screen).
-  * `check_w115_slice2.ts` 35/35.
-  * A local full run-suites on 3839ddf4 was started and stopped on the Lead's word.
-* **Open for the Lead/founder:**
-  * (1) **QA-93 finding:** choosing a section per combination does not decide what is asked. A question placed in a section in the shared library is asked whatever is chosen, so "Remove" only moved the section to the end. Remove is now offered only for a section that asks this person nothing; elsewhere the reason is written in its place. Should selection decide what is asked, or only order and titles?
-  * (2) QA-91 (Who can be › AI as a run card) is a plan only: build-notes "Fixes: Lead check of slice 3 and qa ai-paths".
-  * (3) `contracts/drafting-run.v0` lists `who_can_be` (expand only).
-* **Next (the Lead's ordered M2 queue, in "From the Lead" on origin/lead/2026-10-29-m3go):**
-  1. PQR (C4.2, C4.7, C4.8).
-  2. Who fills (C4.9).
-  3. Preview by person and channel (C4.3, C4.6).
-  4. S7 Reset + Load sample with the six combinations (C10.1, C11.7).
-  5. Validator (C3.8).
-* **Running checks (runtime ports 4430–4439 only):** the commands are the usage lines at the top of each test, e.g. `zsh studio/tools/isolated.sh runtime_qa9x 4436 start && node studio/tests/check_qa92_95_browser.cjs 4436 xr_studio_runtime_qa9x`.
-  * Build the web app first (`cd studio/web && npx vite build`); an isolated server serves that build.
-  * Use Node 24 from `.tools/node-v24.21.0/bin`. In a fresh copy, run `node_modules/.bin/prisma generate` once.
-  * Never reset :4400.
+## Handover (to a fresh runtime session, 29 Oct evening; this session stops at a safe point, context near its limit)
+* **Exact state:** branch `claude/runtime-m2q-b52c9a` (this worktree), pushed. The Lead folded it up to **ec552135** into Lead PR #94 (Documents tab, PQR, who fills, A5 test fix); it merges on green CI. Main is synced at deda0e6b (forms PR #90). Nothing is half-done; by-products are restored. Once PR #94 merges, cut the next branch from main.
+* **Done in this session (all passed the Lead check, in PR #94):**
+  * PQR (C4.2, C4.8): the "Pre-qualification n" chip on the Questionnaires tab; the country PQR view (`engine/sources.ts countryPqr`, `GET /api/combinations/:id/pqr/country`). Tests `check_pqr.ts` 37/37 and `check_pqr_browser.cjs` 20/20.
+  * C4.7, up to the queue: `pqrPicksByRules` (contract v2 `pqr_pick` items, origin rules) and `acceptPqrPick` (api/src/fact-sources.ts; not routed). Screens' S6 slice 1 says where it plugs into the one queue; then wire it.
+  * Who fills (C4.9, P-97): `api/src/who-fills.ts`, plus narrow additions in `library-changes.ts`, `lifecycle.ts` and `review-queue.ts` (screens/forms files, agreed by the Lead); the `placeField` 409 lock; the Review line in `engine/validate.ts`; the drawer section. Tests `check_who_fills.ts` 26/26 and `check_who_fills_browser.cjs` 19/19. Screens makes `library.tsx` "Collected from" read-only on this API. S6 slice 1 also names where `placement_fills` plugs in.
+  * PR #94 CI fix: `check_studio_browser.cjs` A5 clicks the Child chip (the Documents tab shows one person at a time). 49/49 on an isolated copy.
+* **Decided:** QA-93 / P-174 (founder): what a client is asked comes from the forms and rules; choosing sections sets only order, titles and which empty sections show. It is built that way; nothing more to build.
+* **Next (the Lead's M2 queue):**
+  * (4) Preview: built on `claude/runtime-preview-9fd91e` (fresh session, 29 Oct); see `screens/W1-questions-and-documents/build-notes-m2.md`.
+  * (5) S7 Reset + Load sample with the six combinations (C10.1, C11.7).
+  * (6) Validator (C3.8).
+  * C4.7: `acceptPqrPick(tx, actor, item)` is ready for the queue (N-2 done); screens 1c registers it as the lander.
+  * QA-91 where it fits.
+* **Running checks (runtime ports 4430–4439 only):** the usage line at the top of each test, e.g. `zsh studio/tools/isolated.sh runtime_pqr 4436 start && tsx studio/tests/check_pqr.ts 4436 xr_studio_runtime_pqr`.
+  * Build the web app first (`cd studio/web && ../node_modules/.bin/vite build`).
+  * Use Node 24 from `.tools/node-v24.21.0/bin`. In a fresh copy, run `npm install` then `node_modules/.bin/prisma generate`.
+  * Run tests that import the API with `tsx --tsconfig studio/api/tsconfig.json` (run-suites does this). Keep the usage line plain `tsx`: run-suites' pattern needs it.
+  * `check_studio_browser.cjs` takes `STUDIO_URL=http://localhost:<own port>`; never :4400.
+  * The isolated server does not reload code: stop and start it after an API change.
 * **Learned, not written elsewhere:**
-  * The guard hook refuses many commands (variable expansion, `$(…)`, words like "merge", some branch names): put commands in a scratchpad script and run `zsh <file>`.
-  * Test runs rewrite other lanes' screenshots, `product/qa/reports`, `prototype/p2` runs, jobs and `ledger/used-launch-tickets`, and `studio/evidence`. Commit only this lane's files by path, then `git checkout --` and `git clean` those folders.
-  * On the Questionnaires tab, `[data-section="x"]` also matches the rules and checks area: scope it with `[data-questions]`.
-  * The Undo toast lasts 10 s, so wait on what the action changes, not on the toast.
-  * Earlier slice notes are in screens/W1-questions-and-documents/build-notes.md and screens/W1-combination-workspace/build-notes.md.
+  * The guard hook refuses many inline commands (heredocs, loops, some words). Write a script to the scratchpad and run `zsh <file>`.
+  * In zsh an unquoted `$VAR` holding a command with arguments does not split: write the command out.
+  * Run each suite from another lane on its own fresh isolated copy: several of them (grounding, forms_qa53, s4 library browser) fail on a database that other suites have used.
+  * Test runs rewrite other lanes' screenshots, `prototype/p2` runs, jobs and ledgers, and `studio/evidence`. Commit only this lane's files by path, then `git checkout --` and `git clean` those folders (browser-run-N folders under evidence need `rm`).
+  * On the Questionnaires tab, scope `[data-section]` with `[data-questions]`; the Undo toast lasts 10 s, so wait on the change, not the toast.
 
 ## Log (last 10 lines)
+- 2026-10-29 · Builder (Mac): Lead message QA-99 (Critical): synced main a9fe60c0 (09c6c635); Who can be › AI now sends the finder's full trail (people-ai.ts whoCanBeTrail via finder trailOf), its own commit e0680dbd; check_qa99_who_can_be_trail 3/3, qa check_qa_ai_paths 22/22 (step E), check_s5_people_ai 15/15; CHECK, owner Lead. AI US$0.
+- 2026-10-29 · Builder (Mac, fresh session): applied Lead message (Preview answers Q1–Q3, N-2): took runtime-m2q (9e4f32ed); built Preview by person and by channel (C4.3, C4.6) and N-2 at 7d67e1ec; check_preview_sets 27/27, browser 24/24, check_pqr 38/38; neighbours green (engine 38/38, case_engine 50/50, s5 slice1 55/55, slice2 31/31, leadcheck 49/49, s5 browsers 52/52 and 61/61, pqr_browser 20/20, R1 98/98, 120/120, 63/63, studio_browser 49/49); graph exit 0; by-products restored; CHECK, owner Lead. AI US$0.
+- 2026-10-29 · Builder (Mac): Lead: who fills PASS; PQR, who fills and the A5 fix folded into PR #94 (up to ec552135). Fixed PR #94 CI: check_studio_browser A5 opens the Child checklist (test only, 49/49 on 4437); synced main deda0e6b; Preview plan (C4.3, C4.6) with 3 questions in plan.md; Handover rewritten for a fresh session (context near its limit); PLAN, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): PQR Lead check PASS; who fills (C4.9, P-97) built per the agreed plan: api/src/who-fills.ts (propose route, applyFills at approval, releaseFills at release), narrow additions in library-changes.ts, lifecycle.ts, review-queue.ts (screens/forms files), placeField 409 lock, Review line in validate.ts diff, drawer section; library.tsx untouched (screens). check_who_fills 26/26, check_who_fills_browser 19/19; neighbours green (screen02_slice2 52/52, grounding 31/31, forms_qa53 20/20, s4 library browser 69/69, runtime R1 120/120, 63/63, 99/99, w115 1–3, pqr 37/37, engine 38/38); CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): Lead answers applied: QA-93 decided (P-174, kept as built); C4.7 one door (P-149), no runtime pick store. Synced main 54f25ae4; built pqrPicksByRules (contract v2 pqr_pick items, origin rules) and acceptPqrPick (tick through the same draft row; AI_PROPOSAL for AI, CODE_MATCH for rules), unrouted until S6 slice 1; order in plan.md "PQR"; check_pqr 37/37, check_pqr_browser 20/20; CHECK, owner Lead; next (3) who fills. AI US$0.
 - 2026-10-29 · Builder (Mac, fresh session): applied Lead note (ninth chat, read from origin/lead/2026-10-29-m3go): PQR plan in plan.md "PQR"; C4.7 question sent to the Lead (where a pending AI pick lives); built C4.2 (Pre-qualification chip on the Questionnaires tab; country PQR view GET /api/combinations/:id/pqr/country, P-132) and proved C4.8; check_pqr 25/25, check_pqr_browser 20/20, slice1 47/47, slice2 35/35, engine 38/38 on 4436; CHECK, owner Lead. AI US$0.
@@ -57,6 +52,3 @@ updated: 2026-10-29
 - 2026-10-29 · Builder (Mac): FIX pass 2 built: QA-92 the drawer saves a case fact under 'case'; QA-93 confirm and Undo in place, Remove offered only where it changes something (found: placed questions stay asked whatever sections are chosen; question for the Lead); QA-94 no system names; QA-95 'Write at least 5 characters'; race test waits on the row. check_qa92_95_browser 23/23 locally; full suites next. AI US$0.
 - 2026-10-29 · Builder (Mac): FIX pass done: QA-84 (schema without numeric limits, counts checked in code), QA-85 (stub plus who_can_be in contracts/drafting-run.v0: the stub run was refused as an unknown kind on Node 24), plain failure words, QA-91 as a plan; release supersedes retired checks; drawer alternatives, 'From the sample setup'; full run-suites 68/68 on ccc7b18d; by-products restored; CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): applied Lead message (slice 3 check PASS; FIX pass): synced main d50d87f9; QA-84 schema limits checked in code, QA-85 stub, plain failure words (QA-88 runtime part), QA-91 written as a plan; release supersedes retired checks; drawer alternatives, 'From the sample setup'; check_who_can_be_qa 9/9, slice3 34/34, browser 35/35 (d824e53f); full suites running. AI US$0.
-- 2026-10-29 · Builder (Mac): full run-suites on dfd1a018: 64 pass, check_w1_programs_s2 failed one timing check under load (87/87 twice alone on 4436); graph exit 0; by-products restored; slice 3 EARLY-LOOK, owner Lead; Lead message received: QA-84/85/91 FIX next. AI US$0.
-- 2026-10-29 · Builder (Mac): fresh runtime session (Lead's move): open point 3 fixed in engine/snapshot.ts (a draft removal stays out of the published view until a release; fact sources and placements have none), open point 1 said on the Documents tab, (2) information only; check_w115_slice3 31/31, browser 32/32, check_engine 38/38 (dfd1a018, pushed); full suites running. AI US$0.
-- 2026-10-29 · Builder (Mac): slice 3 (Documents tab) built at b5c46535 (check_w115_slice3 26/26, browser 31/31) before the Lead's hold; full suites not run on it; handover written for a fresh session; slice 2 at ff4d9cce with the Lead. AI US$0.
