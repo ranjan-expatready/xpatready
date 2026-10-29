@@ -9,13 +9,13 @@ import { basename, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { normalize, type LibraryField } from "../../engine/normalize.ts";
-import { EXPERIMENT_CAP_USD, LABEL, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
+import { EXPERIMENT_CAP_USD, LABEL, MAX_ATTEMPTS, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
 import { canonical } from "../../../contracts/rules.ts";
 import { costUsd, SpendLedger } from "../../../p2/ledger.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { assembleMerged, flagNearDuplicates, partOutputTokens, planDraft, type DraftPlan, type Prior } from "../../engine/parts.ts";
 import { compareEditions } from "../../engine/programs.ts";
-import { checkedOutput, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs, type FieldMapAnswer } from "../../engine/ai-run.ts";
+import { checkedOutput, costBesideLimit, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs, type FieldMapAnswer } from "../../engine/ai-run.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
@@ -63,7 +63,7 @@ export function recordApproval(row: Approval, bytes: Buffer) {
   if (row.official) { writeFileSync(join(dir, `${row.sha256}.approval.json`), JSON.stringify({ contract: "official-download/v1", sha256: row.sha256, kind: row.kind, code: row.code, edition: row.edition, file_name: row.fileName, form_page: row.irccPage, source_url: row.official.sourceUrl, fetched_at: row.approvedAt.toISOString(), started_by: row.uploadedBy }, null, 1) + "\n"); return; }
   writeFileSync(join(dir, `${row.sha256}.approval.json`), JSON.stringify({ contract: "approved-source/v1", sha256: row.sha256, kind: row.kind, code: row.code, edition: row.edition, file_name: row.fileName, ircc_page: row.irccPage, uploaded_by: row.uploadedBy, approved_by: row.approvedBy, approved_at: row.approvedAt.toISOString() }, null, 1) + "\n");
 }
-const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary Resident Visa", "IMM 1295": "Application for Work Permit made Outside of Canada", "IMM 5707": "Family Information", "IMM 5409": "Statutory Declaration of Common-law Union", "IMM 5476": "Use of a Representative", "IMM 5475": "Authority to Release Personal Information to a Designated Individual", "IMM 5257 SCH1": "Schedule 1: Background/Declaration" };
+const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary Resident Visa", "IMM 1295": "Application for Work Permit made Outside of Canada", "IMM 5707": "Family Information", "IMM 5409": "Statutory Declaration of Common-law Union", "IMM 5476": "Use of a Representative", "IMM 5475": "Authority to Release Personal Information to a Designated Individual", "IMM 5257 SCH1": "Schedule 1: Application for Temporary Residence" }; // P-171 (a); source: canada.ca application forms index and the IMM 5257 SCH1 page, read 29 Oct 2026
 
 /** Break M6: one file per running launcher (its process group id), removed when it ends. */
 const LAUNCHES = () => join(VAR_ROOT, "launches");
@@ -228,7 +228,7 @@ export class Sources {
     const want = { job_id: jobId, kind: "field_map", combination: "studio", configuration_version: "studio-add-form", template: "field-map.v2.md", output_schema: "field-map-output.v2.schema.json",
       ...(printedEdition && EDITION.test(printedEdition) ? { known: { form_edition: printedEdition } } : {}),
       inputs: [{ file: a.inventoryFile, sha256: sha(readFileSync(inv)) }],
-      settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "high", timeout_ms: 900000, max_attempts: 2, budget_usd: 5, max_output_tokens: 64000 } }; // 64k: a full 242-box form needs 53-63k output (IMM 1295, 20 Oct); 32k truncated IMM 5257 (21 Oct 05:58Z)
+      settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "high", timeout_ms: 900000, max_attempts: MAX_ATTEMPTS, budget_usd: 5, max_output_tokens: 64000 } }; // 64k: a full 242-box form needs 53-63k output (IMM 1295, 20 Oct); 32k truncated IMM 5257 (21 Oct 05:58Z)
     const have = existsSync(jobFile) ? readFileSync(jobFile, "utf8") : null;
     if (have !== JSON.stringify(want, null, 1) + "\n") writeFileSync(jobFile, JSON.stringify(want, null, 1) + "\n");
     const draftInputs: DraftInputs = { inputSha: want.inputs[0].sha256, templateSha: sha(readFileSync(join(PROMPTS, want.template))), schemaSha: sha(readFileSync(join(PROMPTS, want.output_schema))), model: want.settings.model, effort: want.settings.effort, maxOutputTokens: want.settings.max_output_tokens, known: want.known ?? null };
@@ -505,8 +505,10 @@ export class Sources {
           try { const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "correct_unbilled_p2.py"), lj.run_file], { cwd: PROTOTYPE }); correction = JSON.parse(stdout.trim()); } catch (e) { correction = { error: (e as Error).message.slice(0, 200) }; }
         }
         const rid = /"request_id":"([^"]+)"/.exec(errs)?.[1];
-        await this.db.draftingJob.update({ where: { id }, data: { status: limit ? "BLOCKED" : "FAILED", runId: rec.drafting_run?.run_id, runFile, costUsd: limit ? 0 : rec.drafting_run?.usage?.cost_usd ?? null, finishedAt: new Date(), detail: { job_id: jobId, steps, provider_status: rec.drafting_run?.status, ledger_correction: correction },
-          message: limit ? `Blocked by the AI provider: the account's monthly usage limit refused the call before any processing (request ${rid ?? "id not returned"}). Nothing was drafted or billed; the ledger's worst-case reservation was settled at US$0 (AIW-D273). Raise the limit in the Anthropic Console, then start the live draft again.` : `${explainRun(rec).message} Run ${rec.drafting_run?.run_id}.` } });
+        // Outside review 29 Oct: only the refused attempt is free; an earlier attempt counted at its worst case stays counted.
+        const kept = limit ? costBesideLimit(rec) : 0;
+        await this.db.draftingJob.update({ where: { id }, data: { status: limit ? "BLOCKED" : "FAILED", runId: rec.drafting_run?.run_id, runFile, costUsd: limit ? kept : rec.drafting_run?.usage?.cost_usd ?? null, finishedAt: new Date(), detail: { job_id: jobId, steps, provider_status: rec.drafting_run?.status, ledger_correction: correction },
+          message: limit ? `Blocked by the AI provider: the account's monthly usage limit refused the call before any processing (request ${rid ?? "id not returned"}). ${kept > 0 ? `Nothing was drafted; the refused call was settled at US$0 (AIW-D273), and an earlier attempt stays counted at US$${kept.toFixed(2)}.` : "Nothing was drafted or billed; the ledger's worst-case reservation was settled at US$0 (AIW-D273)."} Raise the limit in the Anthropic Console, then start the live draft again.` : `${explainRun(rec).message} Run ${rec.drafting_run?.run_id}.` } });
         return;
       }
       await this.db.draftingJob.update({ where: { id }, data: { runId: rec.drafting_run?.run_id, runFile, costUsd: rec.drafting_run?.usage?.cost_usd ?? null, detail: { job_id: jobId, steps } } });

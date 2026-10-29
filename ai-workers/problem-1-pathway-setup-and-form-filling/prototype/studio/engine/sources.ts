@@ -6,6 +6,7 @@ import { subjectsFor, type Person } from "./render.ts";
 import { anyMapped, previewRender } from "./coverage.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
+import { ProposalItem } from "../contracts/proposal-item.ts";
 
 export const SOURCES = ["DOCUMENT", "CLIENT", "AGENT"] as const;
 export type Source = (typeof SOURCES)[number];
@@ -167,6 +168,49 @@ export function factSourceProblems(s: Snapshot): Problem[] {
 /** PQR ⊂ SQR ∪ the client's checklist documents (Lead Q1): the ticked facts, each with how it is asked and confirmed. */
 export function prequalification(s: Snapshot): { role: string; fact: string; label: string; source: Source; document: string | null }[] {
   return factSources(s).filter((f) => f.prequalification && f.source !== "AGENT" && f.placed).map((f) => ({ role: f.role, fact: f.fact, label: f.label, source: f.source, document: f.document?.name ?? null }));
+}
+
+/** C4.7 stand-in producer (Lead, 29 Oct: one door, P-149): until W1-10 step 7 drafts PQR picks with AI, the rules propose
+ *  one per fact a rule of the combination reads (directly, or through a derived field such as an age), for each person
+ *  role whose forms need it, that a prospect can answer (Client or Document, a question asks it) and that is not ticked.
+ *  Each is a contract v2 queue item (contracts/proposal-item.ts), origin "rules", never labelled AI; it enters S6's one
+ *  queue only once S6 slice 1 is on main. Pure: no database, no AI (US$0). */
+export function pqrPicksByRules(s: Snapshot, combinationId: string, runId: string, newId: () => string): ProposalItem[] {
+  const fieldsOf = (c: unknown) => c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : [];
+  const derived = new Map((s.derived_fields as { id: string; inputs?: string[]; reference?: string }[]).map((d) => [d.id, [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])]]));
+  const readBy = new Map<string, string>();
+  for (const r of s.rules as { id: string; when: unknown; when_plain?: string; then?: string }[]) {
+    const words = `${r.when_plain ?? r.then ?? r.id}`.trim().replace(/\.$/, "");
+    for (const f of fieldsOf(r.when)) for (const x of [f, ...(derived.get(f) ?? [])]) if (!readBy.has(x)) readBy.set(x, words);
+  }
+  return factSources(s).filter((f) => readBy.has(f.fact) && f.placed && f.source !== "AGENT" && !f.prequalification && f.forms.length).map((f): ProposalItem => ProposalItem.parse({
+    id: newId(), kind: "pqr_pick", runId, step: "pqr_picks_by_rules", scope: { formEdition: null, combinationId }, landsOn: "combination",
+    reuse: { match: "new", existingKey: null },
+    payload: { kind: "pqr_pick", factKey: f.fact, role: f.role, reason: `A rule of this combination reads it: ${readBy.get(f.fact)}.`.slice(0, 300) },
+    source: null, rounds: { draft: null, check: null }, rules: [{ rule: "pqr_subset_of_sqr", passed: true, why: null }],
+    agreement: "rules_only", confidence: "check", reason: "Proposed by the rules from what this combination's rules read; the immigration expert confirms at release.",
+    origin: "rules", addReason: null, identity: { key: `${f.role}|${f.fact}`, near: [], nearReason: null }, relatesTo: null, revision: null,
+    status: "waiting", decision: null, basis: "SAMPLE",
+  }));
+}
+
+/** P-132: the country PQR is a view, never a record: each combination's released PQR ticks (its newest release), one line
+ *  per fact and person role, with the combinations that ask it. A draft tick is not in it until its combination releases. */
+export type CountryPqrLine = { role: string; roleLabel: string; fact: string; label: string; combinations: { id: string; label: string; release: number }[] };
+export function countryPqr(released: { combinationId: string; version: number; snapshot: Snapshot }[]): { lines: CountryPqrLine[]; combinations: number } {
+  const lines = new Map<string, CountryPqrLine>();
+  let asking = 0;
+  for (const r of [...released].sort((a, b) => a.snapshot.combination.label.localeCompare(b.snapshot.combination.label))) {
+    const ticks = prequalification(r.snapshot);
+    if (ticks.length) asking++;
+    for (const t of ticks) {
+      const k = `${t.role}|${t.fact}`;
+      const line = lines.get(k) ?? { role: t.role, roleLabel: who(r.snapshot, t.role), fact: t.fact, label: factWords(r.snapshot, t.fact), combinations: [] };
+      line.combinations.push({ id: r.combinationId, label: r.snapshot.combination.label, release: r.version });
+      lines.set(k, line);
+    }
+  }
+  return { lines: [...lines.values()].sort((a, b) => b.combinations.length - a.combinations.length || a.roleLabel.localeCompare(b.roleLabel) || a.label.localeCompare(b.label)), combinations: asking };
 }
 
 // ------------------------------------------------------------------ W1-15 slice 3: each person's checklist (board v2 frame 3)

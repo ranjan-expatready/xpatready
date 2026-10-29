@@ -53,11 +53,11 @@ export function AiMarker({ n, tabIndex = 0 }: { n: number; tabIndex?: number }) 
 }
 
 export const fmtMonth = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { month: "short", year: "numeric", timeZone: "UTC" });
-/** When something happened (QA-17): the time alone today, the day and time on another day, the year when it is not this one. */
+/** When something happened (QA-17): "today at" and the time today, the day and time on another day, the year when it is not this one. */
 export function fmtWhen(iso: string | Date, now = new Date()) {
   const d = new Date(iso);
   const time = d.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" });
-  if (d.toDateString() === now.toDateString()) return `today ${time}`;
+  if (d.toDateString() === now.toDateString()) return `today at ${time}`;
   return `${d.toLocaleDateString("en-CA", { day: "numeric", month: "short", ...(d.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }) })}, ${time}`;
 }
 export const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });

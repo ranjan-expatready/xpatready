@@ -1,0 +1,237 @@
+{
+  "at": "2026-10-29T14:44:34.980Z",
+  "port": 4439,
+  "pass": 37,
+  "fail": 0,
+  "log": [
+    {
+      "name": "C4.2 P-132 pass: one country line per fact and person, with every released combination that asks it",
+      "ok": true,
+      "detail": [
+        "Date of birth: b+a",
+        "Types of care to be provided in a caregiver position (child care, disabled, elderly, other): a"
+      ]
+    },
+    {
+      "name": "C4.2 P-132: the line most combinations ask comes first; the count is the combinations that ask any",
+      "ok": true,
+      "detail": 2
+    },
+    {
+      "name": "C4.2 P-132 fail-guard: the country lines say the question and the person in words, never a system key",
+      "ok": true,
+      "detail": [
+        "Date of birth / Principal applicant",
+        "Types of care to be provided in a caregiver position (child care, disabled, elderly, other) / Principal applicant"
+      ]
+    },
+    {
+      "name": "C4.2 fail: a tick that release refuses (a case officer fact) is never in the country PQR",
+      "ok": true
+    },
+    {
+      "name": "C4.2 fail: a combination with no tick adds nothing",
+      "ok": true
+    },
+    {
+      "name": "C4.2 API read: the country PQR after Load sample: no question yet, one released combination (Sample)",
+      "ok": true,
+      "detail": {
+        "lines": 0,
+        "released": 1
+      }
+    },
+    {
+      "name": "C4.2 pass: the author ticks Date of birth for pre-qualification (a draft row of the one per-combination record)",
+      "ok": true,
+      "detail": true
+    },
+    {
+      "name": "C4.2 pass: the combination's PQR set lists exactly the ticked questions, with how each is asked",
+      "ok": true,
+      "detail": [
+        {
+          "role": "principal",
+          "fact": "person.date_of_birth",
+          "label": "Date of birth",
+          "source": "DOCUMENT",
+          "document": "Passport or travel document information page photocopy"
+        }
+      ]
+    },
+    {
+      "name": "C4.2 P-132 fail: a draft tick is not in the country PQR until its combination releases; it is named as a draft change",
+      "ok": true,
+      "detail": {
+        "draftAdds": [
+          {
+            "role": "principal",
+            "fact": "person.date_of_birth",
+            "label": "Date of birth"
+          }
+        ],
+        "draftRemoves": []
+      }
+    },
+    {
+      "name": "C4.2 P-132 fail: there is no country PQR record to read or write on its own (only the view per combination)",
+      "ok": true,
+      "detail": 404
+    },
+    {
+      "name": "C4.8 pass: the tick is one named line among the combination's changes, for the immigration expert's sign-off",
+      "ok": true,
+      "detail": "Date of birth (Principal applicant): pre-qualification"
+    },
+    {
+      "name": "C4.8 fail: no separate PQR approval route (approve is 404)",
+      "ok": true,
+      "detail": 404
+    },
+    {
+      "name": "C4.8 fail: no separate PQR approval route (release is 404)",
+      "ok": true,
+      "detail": 404
+    },
+    {
+      "name": "C4.8 fail: no separate PQR approval route (submit is 404)",
+      "ok": true,
+      "detail": 404
+    },
+    {
+      "name": "C4.8 pass: the combination is submitted with its PQR, sources, forms and documents together",
+      "ok": true,
+      "detail": 201
+    },
+    {
+      "name": "C4.8: the submitted summary carries the PQR line",
+      "ok": true,
+      "detail": [
+        "Where an answer comes from|principal|person.date_of_birth"
+      ]
+    },
+    {
+      "name": "C4.8 fail: approval waits for the immigration expert's sign-off of the PQR line",
+      "ok": true,
+      "detail": "409 Release refused: 1 change needs the content reviewer's SME sign-off."
+    },
+    {
+      "name": "C4.8 pass: one release (Release 2) publishes the PQR with everything else",
+      "ok": true,
+      "detail": 2
+    },
+    {
+      "name": "C4.8 pass: the released snapshot carries the tick",
+      "ok": true
+    },
+    {
+      "name": "C4.2 P-132 pass: once released, the country PQR asks it, naming the combination and its release",
+      "ok": true,
+      "detail": [
+        "Date of birth · Principal applicant · With an LMIA r2"
+      ]
+    },
+    {
+      "name": "C4.2 P-132: an untick in the draft keeps the released line and names it as leaving at the next release",
+      "ok": true,
+      "detail": {
+        "draftAdds": [],
+        "draftRemoves": [
+          {
+            "role": "principal",
+            "fact": "person.date_of_birth",
+            "label": "Date of birth"
+          }
+        ]
+      }
+    },
+    {
+      "name": "C4.8: the untick is itself a named change for the next release",
+      "ok": true,
+      "detail": [
+        "Where an answer comes from: Date of birth (Principal applicant): back to the rules' source, no pre-qualification"
+      ]
+    },
+    {
+      "name": "C4.2 P-132 fail: a retired combination's release is not in the country PQR (prospects are not asked for it)",
+      "ok": true,
+      "detail": {
+        "lines": 0,
+        "released": 0
+      }
+    },
+    {
+      "name": "C4.7 pass: the rules propose picks as contract v2 queue items, origin rules, each with a reason in words",
+      "ok": true,
+      "detail": [
+        "case|case.country_where_applying: A rule of this combination reads it: The applicant is applying from a country of which they are not a citizen.",
+        "child|person.date_of_birth: A rule of this combination reads it: The person is 18 or older at the application date, or is a minor travelling alone to Canada.",
+        "child|person.marital_status: A rule of this combination reads it: The principal applicant is in a common-law relationship and the partner will accompany them to Canada."
+      ]
+    },
+    {
+      "name": "C4.7 fail-guard: a rules pick is never labelled AI (no AI rounds, rules_only)",
+      "ok": true
+    },
+    {
+      "name": "C4.7 fail: no pick on a case officer fact, a fact no question asks, or a fact already ticked (PQR ⊂ SQR ∪ documents)",
+      "ok": true
+    },
+    {
+      "name": "C4.7 fail: once ticked, the same fact is not proposed again",
+      "ok": true
+    },
+    {
+      "name": "C4.7 roles fail: an approver cannot accept a pick (403)",
+      "ok": true,
+      "detail": 403
+    },
+    {
+      "name": "C4.7 fail: another kind of item is refused here (400)",
+      "ok": true,
+      "detail": 400
+    },
+    {
+      "name": "C4.7 fail: a pick already decided is refused (409)",
+      "ok": true,
+      "detail": 409
+    },
+    {
+      "name": "C4.7 pass: Accept writes the tick through the same draft row, with the pick's reason, origin CODE_MATCH (the rules, not AI)",
+      "ok": true,
+      "detail": "200 DRAFT|CODE_MATCH|true|A rule of this combination reads it: The applicant is applying from a country of which they are not a citizen."
+    },
+    {
+      "name": "C4.7 fail: accepting the same pick twice is refused in words (409 Asked already)",
+      "ok": true,
+      "detail": "\"Country or territory from which the application is being made\" is already asked in pre-qualification."
+    },
+    {
+      "name": "C4.7 pass: an AI pick is accepted the same way with origin AI_PROPOSAL",
+      "ok": true,
+      "detail": 200
+    },
+    {
+      "name": "C4.7 fail: a pick on a case officer fact is refused with the tick's own words (422)",
+      "ok": true,
+      "detail": "\"IRCC application file number of the case\" comes from the case officer: a prospect is asked only what they can answer."
+    },
+    {
+      "name": "C4.8 + C4.7: the accepted pick is a named change of the one release, for the immigration expert's sign-off",
+      "ok": true,
+      "detail": [
+        "Country or territory from which the application is being made (The application): pre-qualification"
+      ]
+    },
+    {
+      "name": "C4.2 fail: an unknown combination is 404 in words (never a 500)",
+      "ok": true,
+      "detail": 404
+    },
+    {
+      "name": "C4.2 roles fail: an unknown person cannot read it",
+      "ok": true,
+      "detail": 401
+    }
+  ]
+}

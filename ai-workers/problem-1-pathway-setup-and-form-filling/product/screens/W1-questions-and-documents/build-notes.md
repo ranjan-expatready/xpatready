@@ -119,3 +119,29 @@ Agreed plan: `plan.md`, challenge and Lead response: `challenge.md`. No screen i
 * **QA-95:** a reason that is written but shorter than 5 characters now says "Write at least 5 characters: why the case officer enters it." (`CASE_OFFICER_REASON_SHORT`, `engine/sources.ts`). An empty reason keeps the "write why" words. The box's `aria-describedby` points at its message.
 * **Undo-bar race (forms audit):** `check_s5_slice3_browser.cjs` now waits on the row leaving, the Undo bar and the Removed list, not on the toast. The app's order is in `forms.tsx`, which is the forms lane's file, so it was left alone.
 * **Tests:** `check_qa92_95_browser.cjs` (new): a pass and a fail per finding. `check_w115_slice2_browser.cjs` and `check_s5_slice2_browser.cjs` now assert that no system name is on screen and that the library link carries it.
+
+## PQR, part 1: C4.2 and C4.8 (29 Oct; M2 queue item 2; plan.md "PQR")
+* **Already built before this pass:** the per-combination tick (`fact_source.prequalification`, slice 1) with its save, bulk and release refusals, and its line on Review with `needs_sme` (P-76).
+* **C4.2, the PQR as a set:** a "Pre-qualification n" chip beside the source chips on the Questionnaires tab shows only that person's ticked questions. Above them, a panel says how a PQR answer is asked and confirmed (P-77, Lead Q1). There is no separate PQR tab: board v2 (P-147) puts the tick on the row and the PQR set in Preview (Preview is queue item 4), so the set is a filter of the same rows.
+* **C4.2, country PQR (P-132):** `engine/sources.ts countryPqr` builds one line per fact and person from the newest release of every combination in the country pack that is not retired. It is never stored. `GET /api/combinations/:id/pqr/country` adds this combination's draft adds and removes, named as changing at its next release. A retired combination is left out, because prospects are not asked for it.
+* **C4.8:** no new code. `check_pqr.ts` proves a tick is one named change, waits for the immigration expert's sign-off, goes out in the one release with everything else, and has no PQR-only route.
+* **C4.7, the producer and Accept (Lead, 29 Oct: one door, P-149; not put into any queue until S6 slice 1 is on main):**
+  * `pqrPicksByRules` (engine/sources.ts) proposes one contract v2 `pqr_pick` item per fact that a rule of the combination reads, directly or through a derived field such as an age. It skips facts the case officer enters, facts no question asks, and facts already ticked. Origin is "rules" with no AI rounds and no IRCC source.
+  * `acceptPqrPick` (api/src/fact-sources.ts) is what S6's queue will call. It writes the tick through the same draft row and refusals as a person's tick, and keeps the pick's reason.
+  * Small choice: an AI pick saves origin AI_PROPOSAL, as the Lead said. The rules' stand-in saves CODE_MATCH (deterministic, accepted by a person), so Review never shows a rules pick as AI.
+* **Tests:** `check_pqr.ts` (API and engine, 37/37 with C4.7; it calls the Accept path directly, so it needs the API tsconfig, which run-suites passes) and `check_pqr_browser.cjs` (20/20, axe and 1024 px; screenshots in `screenshots/pqr/`).
+
+## Who fills (M2 queue item 3; C4.9, P-97; plan.md "Who fills", agreed by the Lead 29 Oct)
+* **New, runtime file `api/src/who-fills.ts`:**
+  * `POST /api/library/fields/:key/fills` {to: CLIENT · CASE_OFFICER, reason ≥ 5} saves a `library_change` (kind `placement_fills`, action `SET_FILLS`, `matches` before, after and how many combinations use it) as WAITING. Nothing changes before approval.
+  * It refuses, in words: a client-only section, no change, one already open, a fact no question asks, a value other than client or case officer (Q2: a document is chosen per combination), a retired field, and anyone without the author duty. If two people propose at the same moment, the later one is refused (the form_accepts pattern).
+  * `applyFills` runs at approval. It checks again that who fills it has not changed meanwhile (if it has: 409, and the change waits again), then writes a draft placement version. `releaseFills` marks the change RELEASED in the pack once a release has published that draft.
+* **Narrow additions in other lanes' files (Q1, agreed):**
+  * `api/src/library-changes.ts` (screens/forms): the kind's noun and action word, `fills` in `changeView`, and `releaseFills` at the end of `publishLibraryChanges`.
+  * `api/src/lifecycle.ts` (screens/forms): one line in `afterApprove` calls `applyFills`.
+  * `api/src/review-queue.ts` (screens/forms): the To review line in words ("Who fills it, for every combination: Client → Case officer (used by n …). Reason: …").
+  * `api/src/studio.ts`: `placeField` refuses with 409 a change of who fills an existing placement ("use Change who fills"). A new placement may still set it.
+  * `api/src/main.ts`: registers the controller.
+* **Engine:** `engine/validate.ts diff` names the change once on Review ("Who fills a question: <fact in words>: filled by the case officer, was the client (shared library, every combination)", `needs_sme`). The generic placement line is dropped when who fills it is the only difference.
+* **Screen:** the Questionnaires drawer has a section "Who fills it, for every combination". It shows the library default in words, "Change who fills…" with a required reason, and then the change as Waiting, Returned or Approved, with who proposed it and why. A declaration shows its lock; an approver sees no button. `GET …/fact-sources` gives each row `fills` {library, change}. `web/src/pages/library.tsx` is not touched: screens makes its "Collected from" read-only on this API (Lead, Q3).
+* **Tests:** `check_who_fills.ts` (API, 26/26) and `check_who_fills_browser.cjs` (19/19, accessibility check and 1024 px; screenshots in `screenshots/who-fills/`).

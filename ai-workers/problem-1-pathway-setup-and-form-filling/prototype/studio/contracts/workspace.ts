@@ -192,11 +192,22 @@ export type FactSourceRow = {
   sourceReason: string | null;
   /** The newest saved choice: none (the rules), a draft (its author may undo it at once) or published. */
   change: { status: "DRAFT" | "PUBLISHED"; by: string; at: string; batchId: string | null } | null;
+  /** C4.9 (P-97): who fills the question for every combination (the library placement; null: not a client or case
+   *  officer question), and an open change of it (waiting on To review, returned, or approved for the next release). */
+  fills: { library: "CLIENT" | "CASE_OFFICER" | null; change: { id: string; to: "CLIENT" | "CASE_OFFICER"; status: "WAITING" | "RETURNED" | "APPROVED"; by: string; reason: string } | null };
 };
 export type FactSourcesView = {
   counts: { facts: number; document: number; client: number; agent: number; prequalification: number };
   facts: FactSourceRow[];
   problems: { level: "error" | "warning"; where: string; item: string; label?: string; role?: string; message: string }[];
+  basis: string;
+};
+/** P-132: the country PQR, a view of the newest releases (GET /api/combinations/:id/pqr/country). */
+export type CountryPqrView = {
+  lines: { role: string; roleLabel: string; fact: string; label: string; combinations: { id: string; label: string; release: number }[] }[];
+  /** Released combinations that ask at least one PQR question, and all released ones. */
+  combinations: number; released: number;
+  thisCombination: { draftAdds: { role: string; fact: string; label: string }[]; draftRemoves: { role: string; fact: string; label: string }[] };
   basis: string;
 };
 export type BulkSourceResult = { saved: number; batchId: string | null; what: string; refused: { role: string; fact: string; label: string; message: string }[] };

@@ -136,6 +136,9 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await click(p.getByRole("dialog").getByRole("button", { name: "Save to draft" }));
   { const t = await toastLike(/added to the draft/); step("A5: a person adds a conditional document requirement with a valid condition, saved as draft", /added to the draft/.test(t), t); }
   await p.reload(); await idle(); await click(p.getByRole("tab", { name: /^Documents/ }));
+  // W1-15 slice 3 (board v2 frame 3): the Documents tab shows one person's checklist at a time and opens on the principal
+  // applicant; this requirement is each dependent child's, so it is on the Child checklist.
+  await click(p.locator('[data-doc-role-chip="child"]'));
   main = await p.innerText("main");
   step("A5: the new requirement survives a reload, marked Draft and edited by a person", /Custody documents or parental letter of authorization/.test(main) && /Edited by a person/.test(main));
   await shot("A5-configuration-documents.png");
