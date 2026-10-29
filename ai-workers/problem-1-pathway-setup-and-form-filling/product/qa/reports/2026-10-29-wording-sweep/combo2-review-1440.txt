@@ -1,0 +1,188 @@
+URL /c/be4e72f9-5fb1-4070-9290-41dc79504c75/review as user-A
+TITLE Product Studio · Expat Ready (prototype)
+H1 ["Visitor visa"]
+HEADS ["Overview","Forms","Questionnaires","Documents","Preview","Review and release","","Kind","Item","Change","Origin","Needs","Signed"]
+CUT []
+ERRORS []
+---
+Immigration programs
+Temporary residence
+Visitors
+Visitor visa
+Visitor visa
+In setup
+
+Not released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample
+
+Next step
+
+Add 1 form from the library
+Sample: official visitor-visa forms and checklists attached; not set up yet.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+1
+
+Author submits
+
+Configuration author (only the author submits)
+
+22 draft changes; 0 problems to fix
+
+2
+
+SME duty signs content
+
+Content reviewer (Immigration SME duty)
+
+Rules, document requirements, checks and AI proposals need the SME duty
+
+3
+
+A second person releases
+
+Approver (never the author or submitter)
+
+Nothing released yet
+
+You are acting as Configuration author (simulated): Super Admin · content publisher
+
+Duties: author, review. The server enforces them: an author or submitter can never approve, and a draft changed after submission cannot be released.
+
+The draft passes validation
+
+Changes in the draft compared with nothing released (22)
+
+	Kind	Item	Change	Origin	Needs	Signed
+	Derived definition	case.applying_country_differs_from_citizenship
+
+True when the country or territory from which the person applies is not a country of their citizenship.
+
+	added	—	SME duty	
+	Derived definition	case.spouse_or_partner_count
+
+Number of person records in the case holding the role subject_spouse_or_partner (current spouse, common-law or conjugal partner) on the application date.
+
+	added	—	SME duty	
+	Derived definition	person.age_years
+
+The person's age in whole years on the application date.
+
+	added	—	SME duty	
+	Derived definition	person.education_row_duration_days
+
+Per education row: days from start to end, using the first day of each month.
+
+	added	—	SME duty	
+	Derived definition	person.employment_history_gap_months
+
+Sort the person's activity rows by start month; count calendar months up to the application date not covered by any row between the earliest row's start and the latest row's end (or the application date for an ongoing row). Zero when there is no gap.
+
+	added	—	SME duty	
+	Derived definition	person.employment_row_duration_days
+
+Per activity row: days from the row's start to its end, using the first day of each month since rows are month-precise; rows without an end date (ongoing) are skipped.
+
+	added	—	SME duty	
+	Derived definition	person.intended_employment_duration_days
+
+Days from the expected employment start date to the expected end date.
+
+	added	—	SME duty	
+	Derived definition	person.intended_employment_start_days_from_application
+
+Days from the application date to the expected employment start date; negative when the start date has passed.
+
+	added	—	SME duty	
+	Derived definition	person.national_id_days_until_expiry
+
+Days from the application date to the national identity document expiry date.
+
+	added	—	SME duty	
+	Derived definition	person.nomination_days_until_expiry
+
+Days from the application date to the nomination certificate expiry; negative when already expired.
+
+	added	—	SME duty	
+	Derived definition	person.passport_days_until_expiry
+
+Days from the application date to the printed passport expiry date; negative when expired.
+
+	added	—	SME duty	
+	Derived definition	person.passport_issue_days_after_birth
+
+Days from the date of birth to the passport issue date; negative when the passport is dated before birth.
+
+	added	—	SME duty	
+	Derived definition	person.passport_validity_days
+
+Days from the passport issue date to its expiry date.
+
+	added	—	SME duty	
+	Derived definition	person.passport_years_since_expiry
+
+Whole years elapsed from the printed passport expiry date to the application date; zero or negative if not yet expired.
+
+	added	—	SME duty	
+	Derived definition	person.residence_differs_from_citizenship
+
+True when the current country of residence on the application date is not a country of citizenship shown on the passport.
+
+	added	—	SME duty	
+	Derived definition	person.residence_status_days_until_expiry
+
+Days from the application date to the end date of the status in the current residence row only.
+
+	added	—	SME duty	
+	Derived definition	person.residence_status_row_duration_days
+
+Per residence row: days from the status start date to its end date.
+
+	added	—	SME duty	
+	Derived definition	person.travel_row_duration_days
+
+Per trip row: days from the trip start to its end, using the first day of each month.
+
+	added	—	SME duty	
+	Derived definition	person.us_pr_card_days_until_expiry
+
+Days from the application date to the US permanent resident card expiry date.
+
+	added	—	SME duty	
+	Derived definition	person.venezuelan_extended_passport_expiry
+
+Printed passport expiry date plus 5 years, as stated in Guide 5487, for entry in the IMM 1295 expiry date field.
+
+	added	—	SME duty	
+	Derived definition	relationship.cohabitation_years
+
+Whole years of continuous cohabitation from the cohabitation start date to the application date (calculated like an age in years).
+
+	added	—	SME duty	
+	Derived definition	relationship.start_vs_cohabitation_days
+
+Days between the IMM 1295 relationship start date and the IMM 5409 cohabitation start date; zero when they agree.
+
+	added	—	SME duty	
+Note (optional for submit and sign; required to return)
+Submit for review
+Approve and release
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+author, review
+Use the dark theme
+Studio
+1 waiting for you
+Path
+Pathway: show the list for Temporary residence
+Program: show the list for Visitors
+Category: show the list for Visitor visa
+Combination
+Review and release
+Table: , Kind, Item, Change, Origin, Needs, Signed
+Only the approver duty can release
