@@ -2,10 +2,11 @@
 // answer to each fact comes from, per person role, and the Pre-qualification tick. The rules work out every source
 // (engine/sources.ts); a person's choice over it, and each tick, is a FactSource row, versioned like a document
 // requirement: a draft until the combination's release publishes it; the author's own draft is undone at once. US$0.
-import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Put } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
+import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
 import { z } from "zod";
 import { buildSnapshot } from "../../engine/snapshot.ts";
-import { factSources, prequalification, SOURCES, type FactSourceView } from "../../engine/sources.ts";
+import { factSourceProblems, factSources, prequalification, SOURCES, type FactSourceView } from "../../engine/sources.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
 
@@ -21,7 +22,15 @@ export const SetFactSource = z.object({
   /** The version read (0 when the rules' default was shown): a stale one is a 409. */
   version: z.number({ error: "Reload: the version you read is missing." }).int().min(0),
 });
-const NOT_YOURS = "Only the person who made this draft can undo it.";
+/** Slice 2 (P-147 board v2): one change on the ticked rows. "RULES" goes back to the rules' default for each row. */
+export const BulkFactSource = z.object({
+  items: z.array(z.object({ role: z.string().min(1).max(80), fact: z.string().min(1).max(200), version: z.number().int().min(0) }), { error: "Tick the rows to change." }).min(1, "Tick the rows to change.").max(500, "At most 500 rows in one change."),
+  source: z.enum([...SOURCES, "RULES"], { message: "Choose where the answers come from: Client, Agent or the rules' default." }).optional(),
+  prequalification: z.boolean().optional(),
+}).refine((b) => b.source !== undefined || b.prequalification !== undefined, { message: "Choose what to change on the ticked rows.", path: ["source"] });
+const UndoBulk = z.object({ batchId: z.string().uuid({ message: "That bulk change is not known. Reload the page." }) });
+export const AGENT_NOT_OFFERED = "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document.";
+const NOT_YOURS ="Only the person who made this draft can undo it.";
 const UndoFactSource =z.object({ version: z.number({ error: "Reload: the version you read is missing." }).int().min(1) });
 
 @Injectable()
@@ -40,10 +49,12 @@ export class FactSources {
     const c = await this.combination(id, false);
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     const rows = await this.db.factSource.findMany({ where: { combinationId: id }, orderBy: { version: "desc" } });
-    const version = new Map<string, number>(); for (const r of rows) if (!version.has(r.lineageKey)) version.set(r.lineageKey, r.version);
-    const facts = factSources(snapshot).map((f) => ({ ...f, version: version.get(`${f.role}|${f.fact}`) ?? 0 }));
+    const newest = new Map<string, (typeof rows)[number]>(); for (const r of rows) if (!newest.has(r.lineageKey)) newest.set(r.lineageKey, r);
+    // Slice 2: the row's status is its newest saved choice: none (the rules), a draft (Changed here, its author may
+    // undo it at once) or published (released in an earlier release).
+    const facts = factSources(snapshot).map((f) => { const n = newest.get(`${f.role}|${f.fact}`); return { ...f, version: n?.version ?? 0, change: n ? { status: n.status === "DRAFT" ? "DRAFT" as const : "PUBLISHED" as const, by: n.updatedBy, at: n.updatedAt.toISOString(), batchId: n.batchId } : null }; });
     const counts = { facts: facts.length, document: facts.filter((f) => f.source === "DOCUMENT").length, client: facts.filter((f) => f.source === "CLIENT").length, agent: facts.filter((f) => f.source === "AGENT").length, prequalification: facts.filter((f) => f.prequalification).length };
-    return { counts, facts, prequalification: prequalification(snapshot), basis: "Sample until the immigration expert confirms" };
+    return { counts, facts, prequalification: prequalification(snapshot), problems: factSourceProblems(snapshot), basis: "Sample until the immigration expert confirms" };
   }
 
   /** A person's choice over the rules for one fact of one role (P-130), or the tick; checked now, and again at release. */
@@ -92,6 +103,79 @@ export class FactSources {
     await this.audit.log(c.workspaceId, actor.id, "undone", "fact source", `${role}|${fact}`, `${actor.name} undid their choice of where "${fact}" (${role}) comes from in "${c.label}"`, undefined, id);
     return (await this.list(id)).facts.find((x) => x.role === role && x.fact === fact) ?? null;
   }
+
+  async bulk(actor: Actor, id: string, body: unknown) {
+    need(actor, "author");
+    return bulkSet(this.db, this.audit, actor, await this.combination(id), body);
+  }
+
+  async bulkUndo(actor: Actor, id: string, body: unknown) {
+    if (!(actor.duties as readonly string[]).includes("author")) throw problem(403, "Not yours", NOT_YOURS);
+    return bulkUndo(this.db, this.audit, actor, await this.combination(id), body);
+  }
+}
+
+/** Slice 2 (P-147): one change on the ticked rows. Each row is re-checked against the same locks as a single save;
+ *  a refused row is listed in words and the rest are saved together under one batch id (one Undo). */
+export async function bulkSet(db: Db, audit: Audit, actor: Actor, c: { id: string; workspaceId: string; label: string }, body: unknown) {
+  const parsed = BulkFactSource.safeParse(body);
+  if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
+  const b = parsed.data;
+  const { snapshot } = await buildSnapshot(db, c.workspaceId, c.id, "draft");
+  const views = new Map(factSources(snapshot).map((f) => [`${f.role}|${f.fact}`, f]));
+  const keys = [...new Set(b.items.map((x) => `${x.role}|${x.fact}`))];
+  const rows = await db.factSource.findMany({ where: { combinationId: c.id, lineageKey: { in: keys } }, orderBy: { version: "desc" } });
+  const refused: { role: string; fact: string; label: string; message: string }[] = [];
+  type Row = (typeof rows)[number];
+  const save: { key: string; f: FactSourceView; newest: Row | undefined; published: Row | undefined; data: { source: string | null; documentTypeKey: string | null; prequalification: boolean; reason: string | null } }[] = [];
+  const seen = new Set<string>();
+  for (const it of b.items) {
+    const key = `${it.role}|${it.fact}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const f = views.get(key);
+    const mine = rows.filter((r) => r.lineageKey === key), newest = mine[0];
+    if (!f) { refused.push({ role: it.role, fact: it.fact, label: it.fact, message: `No form of "${c.label}" needs it for this person any more. Reload.` }); continue; }
+    if ((newest?.version ?? 0) !== it.version) { refused.push({ role: f.role, fact: f.fact, label: f.label, message: `"${f.label}": changed by someone else after you looked. Reload, then choose again.` }); continue; }
+    const source = b.source === undefined ? (newest?.source ?? null) : b.source === "RULES" ? f.ruleSource : b.source;
+    const documentTypeKey = b.source === undefined ? (newest?.documentTypeKey ?? null) : b.source === "RULES" ? (f.ruleDocument?.key ?? null) : null;
+    const tick = b.prequalification ?? newest?.prequalification ?? false;
+    const errors = refusals(f, source as FactSourceView["source"] | null, documentTypeKey, tick);
+    if (errors.length) { refused.push({ role: f.role, fact: f.fact, label: f.label, message: errors[0].message }); continue; }
+    const keep = source && !(source === f.ruleSource && (source !== "DOCUMENT" || documentTypeKey === f.ruleDocument?.key)) ? source : null;
+    const data = { source: keep, documentTypeKey: keep === "DOCUMENT" ? documentTypeKey : null, prequalification: tick, reason: newest?.reason ?? null };
+    // Already as chosen: not a change, so neither saved nor undone.
+    if ((newest?.source ?? null) === data.source && (newest?.documentTypeKey ?? null) === data.documentTypeKey && (newest?.prequalification ?? false) === data.prequalification) continue;
+    save.push({ key, f, newest, published: mine.find((r) => r.status === "PUBLISHED"), data });
+  }
+  const batchId = save.length ? randomUUID() : null;
+  if (save.length) await db.$transaction(async (tx) => {
+    for (const x of save) {
+      if (x.newest?.status === "DRAFT") await tx.factSource.delete({ where: { id: x.newest.id } });
+      await tx.factSource.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, lineageKey: x.key, role: x.f.role, canonicalFieldKey: x.f.fact, ...x.data, version: (x.newest?.version ?? 0) + 1, status: "DRAFT", supersedesId: x.published?.id ?? null, origin: "HUMAN", updatedBy: actor.id, batchId } });
+    }
+  });
+  const what = [b.source ? `where the answer comes from set to ${b.source === "RULES" ? "the rules' default" : b.source === "CLIENT" ? "the client" : b.source === "AGENT" ? "the agent" : "a document"}` : "", b.prequalification === undefined ? "" : `pre-qualification ${b.prequalification ? "on" : "off"}`].filter(Boolean).join(", ");
+  if (save.length) await audit.log(c.workspaceId, actor.id, "changed", "fact source", `bulk:${batchId}`, `${actor.name} changed ${save.length} question${save.length === 1 ? "" : "s"} in "${c.label}": ${what}`, { batchId, rows: save.map((x) => x.key) }, c.id);
+  return { saved: save.length, batchId, what, refused };
+}
+
+/** One Undo for one bulk change: the author's own draft rows of that batch go at once; a row released or changed since
+ *  stays, and is listed. */
+export async function bulkUndo(db: Db, audit: Audit, actor: Actor, c: { id: string; workspaceId: string; label: string }, body: unknown) {
+  const parsed = UndoBulk.safeParse(body);
+  if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
+  const rows = await db.factSource.findMany({ where: { combinationId: c.id, batchId: parsed.data.batchId } });
+  if (!rows.length) throw problem(409, "Nothing to undo", "That bulk change is not there any more: it was undone or released.");
+  if (rows.some((r) => r.updatedBy !== actor.id)) throw problem(403, "Not yours", NOT_YOURS);
+  const all = await db.factSource.findMany({ where: { combinationId: c.id, lineageKey: { in: rows.map((r) => r.lineageKey) } }, orderBy: { version: "desc" } });
+  const top = new Map<string, string>(); for (const r of all) if (!top.has(r.lineageKey)) top.set(r.lineageKey, r.id);
+  const go = rows.filter((r) => r.status === "DRAFT" && top.get(r.lineageKey) === r.id);
+  const kept = rows.filter((r) => !go.includes(r)).map((r) => ({ role: r.role, fact: r.canonicalFieldKey, message: r.status === "DRAFT" ? "Changed again since: kept." : "Released since: a release is never undone." }));
+  if (!go.length) throw problem(409, "Released since", "That bulk change was released or changed again meanwhile: a release is never undone. Change it in a new draft.", { kept });
+  await db.factSource.deleteMany({ where: { id: { in: go.map((r) => r.id) } } });
+  await audit.log(c.workspaceId, actor.id, "undone", "fact source", `bulk:${parsed.data.batchId}`, `${actor.name} undid their change to ${go.length} question${go.length === 1 ? "" : "s"} in "${c.label}"`, { rows: go.map((r) => r.lineageKey) }, c.id);
+  return { undone: go.length, kept };
 }
 
 /** The same rules release applies (engine/sources.ts factSourceProblems), said at save for this one fact. */
@@ -103,6 +187,8 @@ function refusals(f: FactSourceView, source: FactSourceView["source"] | null, do
     if (!documentTypeKey) out.push({ field: "documentTypeKey", message: "Choose which document supplies it." });
     else if (![f.ruleDocument, ...f.also].some((x) => x?.key === documentTypeKey)) out.push({ field: "documentTypeKey", message: `That document is not on this person's checklist, or it does not supply "${f.label}". Add it on the Documents tab first.` });
   }
+  // Board v2 frame 1 (P-147): the agent is offered only for the facts the rules give the agent.
+  if (source === "AGENT" && f.ruleSource !== "AGENT" && !f.clientOnly) out.push({ field: "source", message: AGENT_NOT_OFFERED });
   if (source === "CLIENT" && !f.placed) out.push({ field: "source", message: `No question asks "${f.label}", so the client cannot give it. Add the question first.` });
   if (tick && s === "AGENT") out.push({ field: "prequalification", message: `"${f.label}" comes from the agent: a prospect is asked only what they can answer.` });
   if (tick && !f.placed) out.push({ field: "prequalification", message: `No question asks "${f.label}", so a prospect cannot be asked it.` });
@@ -114,5 +200,7 @@ export class FactSourcesController {
   constructor(@Inject(FactSources) private readonly f: FactSources) {}
   @Get("combinations/:id/fact-sources") list(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.f.list(id); }
   @Put("combinations/:id/fact-sources/:role/:fact") set(@Headers("x-actor") a: H, @Param("id") id: string, @Param("role") role: string, @Param("fact") fact: string, @Body() b: unknown) { return this.f.set(actorOf(a), id, role, fact, b); }
+  @Post("combinations/:id/fact-sources/bulk") @HttpCode(200) bulk(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.bulk(actorOf(a), id, b); }
+  @Post("combinations/:id/fact-sources/bulk/undo") @HttpCode(200) bulkUndo(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.bulkUndo(actorOf(a), id, b); }
   @Delete("combinations/:id/fact-sources/:role/:fact") undo(@Headers("x-actor") a: H, @Param("id") id: string, @Param("role") role: string, @Param("fact") fact: string, @Body() b: unknown) { return this.f.undo(actorOf(a), id, role, fact, b); }
 }

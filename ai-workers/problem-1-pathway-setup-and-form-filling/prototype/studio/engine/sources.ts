@@ -124,7 +124,7 @@ export const factWords = (s: Snapshot, fact: string) => {
  *  question is a warning when the document is always needed and an error when it is conditional. */
 export function factSourceProblems(s: Snapshot): Problem[] {
   const out: Problem[] = [];
-  const say = (level: "error" | "warning", f: FactSourceView, message: string) => out.push({ level, where: "Questions", item: f.fact, label: f.label, message: `${who(s, f.role)}: "${f.label}" ${message}` });
+  const say = (level: "error" | "warning", f: FactSourceView, message: string) => out.push({ level, where: "Questions", item: f.fact, label: f.label, role: f.role, message: `${who(s, f.role)}: "${f.label}" ${message}` });
   for (const f of factSources(s)) {
     const person = f.proposedBy === "Person";
     if (!f.forms.length && (person || f.prequalification)) say("warning", f, "has a choice saved, but no form of this combination needs it any more. Clear it.");

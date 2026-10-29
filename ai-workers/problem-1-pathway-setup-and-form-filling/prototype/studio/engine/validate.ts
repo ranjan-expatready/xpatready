@@ -17,7 +17,7 @@ const nodeValid = ajv.getSchema(`${schema.$id}#/definitions/node`)!;
 export const isNode = (n: unknown) => nodeValid(n) as boolean;
 
 /** `label` is the item in words (a question's meaning) where `item` is a field code; screens show it, never the code. */
-export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string };
+export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string; /** The person role it is about (W1-15 slice 2: "Needs you" puts it on its row). */ role?: string };
 const ORDERED = new Set(["gt", "gte", "lt", "lte"]);
 const BIRTH = "person.date_of_birth";
 

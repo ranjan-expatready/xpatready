@@ -1462,9 +1462,12 @@ model FactSource {
   origin            Origin
   updatedBy         String           @map("updated_by")
   updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  /// One bulk change (slice 2): its rows share this id, so one Undo takes them back together
+  batchId           String?          @map("batch_id") @db.Uuid
 
   combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
 
   @@unique([combinationId, lineageKey, version])
+  @@index([combinationId, batchId])
   @@map("fact_source")
 }
