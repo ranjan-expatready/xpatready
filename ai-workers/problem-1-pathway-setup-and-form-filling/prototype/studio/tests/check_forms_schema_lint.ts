@@ -1,9 +1,10 @@
 // Demo bug, 29 Oct: every live guide pick failed because find-guide-output.v1.schema.json held "maxItems", which the AI
 // service's structured outputs refuse (400 invalid_request_error before any processing). Stub passes never send a schema to
 // the real service, so no suite saw it. This check lints every output schema under p2/prompts against the keywords
-// structured outputs refuse (the Claude API reference, "JSON Schema limitations"): numerical constraints, string length,
-// array size and other complex array constraints, object size, conditional and negated schemas, recursive references, and
-// additionalProperties other than false. A keyword is only flagged where it is a keyword, never where it is a property's
+// structured outputs refuse (official docs, build-with-claude/structured-outputs, "JSON Schema limitations", read 29 Oct):
+// numerical constraints, string length, array constraints beyond minItems 0 or 1, object size, conditional and negated schemas,
+// recursive or external references, allOf with $ref, objects or arrays inside enum, additionalProperties other than false, and
+// regex features the service refuses (back-references, look-ahead or look-behind, \b \B, large {n,m} ranges). A keyword is only flagged where it is a keyword, never where it is a property's
 // name. A pass and a fail case per rule; then every real schema. No server, no network, NO model call (US$0).
 //   C11.14 an AI step's request is one the AI service accepts
 //   cd prototype/studio && npx tsx tests/check_forms_schema_lint.ts
@@ -22,6 +23,16 @@ const FORMATS = new Set(["date-time", "time", "date", "duration", "email", "host
 /** Keys whose value is a map of names → schemas (the names are not keywords). */
 const NAME_MAPS = new Set(["properties", "$defs", "definitions"]);
 
+/** What the service refuses in a regex (docs: simple patterns work; these do not). */
+function patternProblems(re: string): string[] {
+  const out: string[] = [];
+  if (/\\[1-9]/.test(re)) out.push("uses a back-reference");
+  if (/\(\?<?[=!]/.test(re)) out.push("uses a look-ahead or look-behind");
+  if (/\\[bB]/.test(re)) out.push("uses a word boundary");
+  for (const m of re.matchAll(/\{(\d+)(?:,(\d*))?\}/g)) if (Number(m[1]) > 100 || Number(m[2] || 0) > 100) out.push(`uses a large range {${m[1]},${m[2] ?? ""}}`);
+  return out;
+}
+
 /** Every problem in one schema, with its JSON path. */
 export function lintSchema(schema: unknown): string[] {
   const out: string[] = [];
@@ -35,6 +46,10 @@ export function lintSchema(schema: unknown): string[] {
       if (k === "minItems" && !(v === 0 || v === 1)) out.push(`${path}: "minItems" ${String(v)} is refused (only 0 or 1)`);
       if (k === "additionalProperties" && v !== false) out.push(`${path}: "additionalProperties" must be false`);
       if (k === "format" && typeof v === "string" && !FORMATS.has(v)) out.push(`${path}: format "${v}" is not supported`);
+      if (k === "pattern" && typeof v === "string") for (const why of patternProblems(v)) out.push(`${path}: pattern ${why}`);
+      if (k === "$ref" && typeof v === "string" && !v.startsWith("#")) out.push(`${path}: an external $ref is refused`);
+      if (k === "allOf" && Array.isArray(v) && v.some((x) => x && typeof x === "object" && "$ref" in x)) out.push(`${path}: allOf with $ref is refused`);
+      if (k === "enum" && Array.isArray(v) && v.some((x) => x !== null && typeof x === "object")) out.push(`${path}: an enum holds only strings, numbers, booleans or null`);
       if (k === "enum" || k === "const" || k === "required") continue; // values, not schemas
       walk(v, `${path}.${k}`);
     }
@@ -64,6 +79,10 @@ ok("pass: a supported format and pattern are accepted (pattern completed live: f
 ok("fail: an unsupported format is refused", lintSchema({ type: "string", format: "regex" }).length === 1);
 ok("pass: $ref between definitions is accepted", lintSchema({ $defs: { a: { type: "object", additionalProperties: false, properties: { b: { $ref: "#/$defs/b" } } }, b: { type: "string" } }, $ref: "#/$defs/a" }).length === 0);
 ok("fail: a definition that refers to itself (recursion) is refused", lintSchema({ $defs: { node: { type: "object", additionalProperties: false, properties: { child: { $ref: "#/$defs/node" } } } } }).some((p) => /refers to itself/.test(p)));
+
+ok("pass: a simple pattern (the field-map fact key) is accepted", lintSchema({ type: "string", pattern: "^[a-z][a-z_]*\\.[a-z][a-z0-9_]*$" }).length === 0);
+ok("fail: a pattern with a back-reference, a look-ahead, a word boundary or a large range is refused", ["^(a)\\1$", "^(?=a)b$", "\\bword\\b", "^a{1,500}$"].every((re) => lintSchema({ type: "string", pattern: re }).length === 1));
+ok("fail: an external $ref, allOf with $ref, and an object inside enum are refused", lintSchema({ $ref: "https://example.org/s.json" }).length === 1 && lintSchema({ allOf: [{ $ref: "#/$defs/a" }], $defs: { a: { type: "string" } } }).length === 1 && lintSchema({ enum: [{ a: 1 }] }).length === 1);
 
 // --- every real output schema
 const files = readdirSync(PROMPTS).filter((f) => f.endsWith(".schema.json")).sort();

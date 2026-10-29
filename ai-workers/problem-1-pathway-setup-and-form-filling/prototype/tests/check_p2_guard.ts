@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { admitInput, admitRun, answerKeyFiles, assertNoLinksUnder, assertRoute, canaryStrings, isolatedNodeArgs, PolicyRefusal, screenMakerText } from "../p2/guard.ts";
 import { admittedPublicText, buildDigest, findForbidden } from "../p2/screen.ts";
 import { BudgetExceeded, SpendLedger } from "../p2/ledger.ts";
-import { OFFICIAL, PARTS_DIR, PROTOTYPE, ROUTE_ID, SCREEN_INVENTORIES, SOLUTION } from "../p2/policy.ts";
+import { MAX_REQUEST_BYTES, OFFICIAL, PARTS_DIR, PROTOTYPE, ROUTE_ID, SCREEN_INVENTORIES, SOLUTION } from "../p2/policy.ts";
 import { runDrafting, type Caller } from "../p2/runner.ts";
 
 const results: [string, boolean][] = [];
@@ -85,6 +85,12 @@ t("demo bug 29 Oct fail: a failure with unknown usage (no status) still settles 
 const busy: Caller = async () => { calls++; throw Object.assign(new Error("429 rate limited"), { status: 429 }); };
 const r429 = await runDrafting(run("run-429"), build, busy, new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 40));
 t("a rate-limited request (429) is retried within max_attempts", r429.attempts.length === 2);
+const lBig = new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 40);
+const cBig = calls;
+const rBig = await runDrafting(run("run-big"), () => ({ system: "s", user: "x".repeat(MAX_REQUEST_BYTES + 1) }), ok, lBig);
+t("Lead 29 Oct (G5) fail: a request above the step size cap is refused before any reservation or call, at US$0", rBig.status === "refused" && calls === cBig && lBig.committed() === 0 && rBig.attempts[0].outcome === "refused_input_too_large");
+const rFit = await runDrafting(run("run-fit"), () => ({ system: "s", user: "x".repeat(MAX_REQUEST_BYTES - 1000) }), ok, new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 40));
+t("Lead 29 Oct (G5) pass: a request just under the cap runs", rFit.status === "completed");
 const roomy = new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 40);
 const r3 = await runDrafting(run("run-3"), build, ok, roomy);
 t("a successful attempt settles at its reported usage", r3.status === "completed" && Math.abs(roomy.committed() - (1000 * 4 + 1000 * 20) / 1e6) < 1e-9);

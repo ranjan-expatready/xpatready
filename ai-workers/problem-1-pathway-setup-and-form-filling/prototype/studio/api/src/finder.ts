@@ -36,6 +36,7 @@ import { channelsFrom, recordedCopy, sampleFixtures } from "./filing.ts";
 import { WHO } from "./studio.ts";
 import { linkFinderGuides } from "./guide-sources.ts";
 import { LIVE_RUN, newestFirst, StepRunner, worstRoundUsd, type AiStep, type RoundOut, type SavedRun } from "./rounds.ts";
+import { MAX_ATTEMPTS } from "../../../p2/policy.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
@@ -172,7 +173,7 @@ export class Finder implements OnModuleInit {
     const about = b.mode === "live" ? aboutUsd(expected, await lastFinishedUsd(this.db, await this.ws.id(), FINDER_OPERATION, "LIVE"), true) : 0;
     const plan = { operation: FINDER_OPERATION, operation_label: "Find this combination's forms", combination: { id: c.id, label: c.label, trail: c.trail }, mode: b.mode, page_url: b.pageUrl ?? remembered?.package ?? null, only: b.only ?? null, steps,
       totals: { worst_usd: worst, expected_usd: expected, about_usd: about, ai_rounds: rounds.length }, ledger,
-      note: b.mode === "rules" ? "Rules only: every form number printed on the pages is listed for you to attach by hand; nothing is attached, because AI did not decide which apply." : b.mode === "replay" ? "Saved AI answers for these exact pages are replayed: US$0. A page with no saved answer stops with the reason." : `Live AI: two rounds per question, at most US$${worst.toFixed(2)} (usually much less). Downloads from canada.ca cost nothing.`,
+      note: b.mode === "rules" ? "Rules only: every form number printed on the pages is listed for you to attach by hand; nothing is attached, because AI did not decide which apply." : b.mode === "replay" ? "Saved AI answers for these exact pages are replayed: US$0. A page with no saved answer stops with the reason." : `Live AI: two rounds per question, at most US$${worst.toFixed(2)} (usually much less; at most ${MAX_ATTEMPTS} paid attempts per round). Downloads from canada.ca cost nothing.`,
       targets: [] as unknown[] };
     const plan_sha256 = sha(JSON.stringify({ c: c.id, mode: b.mode, page: plan.page_url, only: plan.only, steps: steps.map((s) => s.kind + s.uses_ai), worst }));
     return { ...plan, plan_sha256 };

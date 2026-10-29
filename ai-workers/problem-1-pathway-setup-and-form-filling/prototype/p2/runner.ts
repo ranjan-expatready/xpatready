@@ -15,7 +15,7 @@ import { join } from "node:path";
 import { admitRun, loadKey, PolicyRefusal, type AdmitOptions, type RouteSettings } from "./guard.ts";
 import { assertIsolated } from "./isolation.ts";
 import { BudgetExceeded, costUsd, inputTokenBound, type SpendLedger } from "./ledger.ts";
-import { BASE_URL, EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR } from "./policy.ts";
+import { BASE_URL, EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR, MAX_REQUEST_BYTES } from "./policy.ts";
 
 export type DraftRequest = { system: string; user: string; output_schema?: Record<string, unknown> };
 export type CallResult = { text: string; stop_reason?: string | null; usage: { input_tokens: number; output_tokens: number } };
@@ -24,7 +24,7 @@ export type Caller = ((req: DraftRequest, s: CallSettings) => Promise<CallResult
 export type Attempt = { n: number; outcome: string; error?: string; cost_usd?: number; worst_usd: number; stop_reason?: string | null; input_tokens?: number; output_tokens?: number; duration_ms?: number };
 
 export type RunOutcome = {
-  status: "completed" | "provider_error" | "budget_exceeded";
+  status: "completed" | "provider_error" | "budget_exceeded" | "refused";
   label: string;
   caller: string;
   admitted: { file: string; sha256: string; kind: string }[];
@@ -51,6 +51,12 @@ export async function runDrafting(
   const req = build(admitted);
   // R4-M1: a paid call goes ahead only when the caller's build step screened the finished request (draft.ts).
   if (call.kind === "paid" && !(opts.screened && opts.screened())) throw new PolicyRefusal("a paid call needs a request screened inside the drafting process (R4-M1)");
+  // Lead 29 Oct (G5): a request above the step size cap is refused before any reservation or call (US$0).
+  const requestBytes = Buffer.byteLength(JSON.stringify(req), "utf8");
+  if (requestBytes > MAX_REQUEST_BYTES) {
+    return { status: "refused", label: LABEL, caller: call.kind ?? "unmarked", admitted: admitted.map(({ file, sha256, kind }) => ({ file, sha256, kind })),
+      attempts: [{ n: 1, outcome: "refused_input_too_large", error: `request of ${requestBytes} bytes is above the cap of ${MAX_REQUEST_BYTES}`, cost_usd: 0, worst_usd: 0 }] };
+  }
   const worst = costUsd(run.settings.model, inputTokenBound(JSON.stringify(req)), run.settings.max_output_tokens);
   const out: RunOutcome = { status: "provider_error", label: LABEL, caller: call.kind ?? "unmarked", admitted: admitted.map(({ file, sha256, kind }) => ({ file, sha256, kind })), attempts: [] };
   return ledger.withLock(async () => {

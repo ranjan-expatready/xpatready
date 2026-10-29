@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
-import { RUN_CAP_USD } from "../../../p2/policy.ts";
+import { MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, RUN_CAP_USD } from "../../../p2/policy.ts";
 import { editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, replayPattern, type SavedRun } from "../../engine/rounds.ts";
 import { PROTOTYPE, SOLUTION } from "./core.ts";
 import type { Sources } from "./sources.ts";
@@ -36,6 +36,10 @@ export type RoundOut<T> = { ok: true; output: T; costUsd: number; from: "live" |
 /** One round's context. `contextKey` is what its saved answer belongs to: a combination's key, or a form edition
  *  (`edition:<code>:<edition>`, engine/rounds.ts editionContextKey). `trail` is the plain place name the job carries. */
 export type RoundContext = { trail: string; contextKey: string; inputs: { file: string; sha256: string }[]; mode: "live" | "replay" | "rules"; wanted: () => Promise<boolean>; batchId?: string };
+
+/** Lead 29 Oct (G4): may a form's run number `attempt` be retried? A live form has one budget of paid attempts across its
+ *  runs (p2/policy.ts), each run counted at the most it could use; a stub run costs nothing and is never counted. */
+export const paidRetryAllowed = (mode: string, attempt: number) => mode !== "LIVE" || (attempt + 1) * MAX_ATTEMPTS <= MAX_PAID_ATTEMPTS_PER_FORM;
 
 /** A round's worst case as the ledger reserves it: inputs bounded by characters, both attempts, never above the run cap. */
 export const worstRoundUsd = (step: AiStep, inputChars: number) => Math.min(RUN_CAP_USD, costUsd(MODEL, inputTokenBound("x".repeat(inputChars)), step.max_output_tokens) * 2);
@@ -78,7 +82,7 @@ export class StepRunner {
     // The launcher admits one known fact (p2/launch.ts knownOk): a combination's trail, or a printed form edition.
     const edition = editionOfContextKey(ctx.contextKey);
     const job = { job_id: jobId, kind: step.kind, combination: ctx.contextKey, configuration_version: step.configurationVersion, template, output_schema: step.schema, inputs: ctx.inputs,
-      settings: { provider_route: ROUTE, model: MODEL, effort: step.effort, timeout_ms: 300_000, max_attempts: 2, budget_usd: 1, max_output_tokens: step.max_output_tokens },
+      settings: { provider_route: ROUTE, model: MODEL, effort: step.effort, timeout_ms: 300_000, max_attempts: MAX_ATTEMPTS, budget_usd: 1, max_output_tokens: step.max_output_tokens },
       known: edition ? { form_edition: `${edition.code} (${edition.edition})` } : { combination_trail: ctx.trail } };
     mkdirSync(JOBS, { recursive: true });
     writeFileSync(join(JOBS, `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
@@ -113,6 +117,8 @@ export class StepRunner {
     // Demo 29 Oct: the AI service refused the request itself (our setup error, e.g. a schema keyword it does not accept):
     // nothing was processed or charged; its own words go to the server log only.
     const attempts = (rec.drafting_run?.attempts ?? []) as { outcome?: string; error?: string }[];
+    // Lead 29 Oct (G5): the request was above the step size cap, refused before any call.
+    if (attempts.some((a) => a.outcome === "refused_input_too_large")) return { ok: false, costUsd: 0, reason: "The pages are too large for one AI call, so nothing was sent and nothing was charged" };
     if (rec.drafting_run?.status !== "completed" && attempts.some((a) => a.outcome === "refused_by_provider")) {
       console.warn(`${step.kind} ${jobId}: the AI service refused the request:`, attempts.map((a) => a.error ?? "").join(" | ").slice(0, 600));
       return { ok: false, costUsd: 0, reason: "The AI service refused the request (our setup error); nothing was charged" };

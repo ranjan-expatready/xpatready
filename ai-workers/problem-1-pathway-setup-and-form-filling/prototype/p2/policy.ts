@@ -75,6 +75,14 @@ export const RUN_CAP_USD = 5;
 export const WAVE1_CAP_USD = 60;
 export const WAVE1_START = "2026-10-26T00:00:00.000Z";
 export const MAX_ATTEMPTS = 2;
+/** Lead 29 Oct (research G4): the paid AI attempts one form may use in all, its first run and any retry together
+ *  (MAX_ATTEMPTS per run, so one paid retry). Before, batch retries × runner attempts allowed 6. Stub runs cost nothing
+ *  and are not counted. */
+export const MAX_PAID_ATTEMPTS_PER_FORM = 4;
+/** Lead 29 Oct (research G5): the largest request one AI step may send, in bytes of the serialized request (the ledger's
+ *  input bound counts about one token per byte). The largest real request so far was about 152 K input tokens (checks,
+ *  20 Oct); a larger one is refused before any call, at US$0, and is split or read another way. */
+export const MAX_REQUEST_BYTES = 800_000;
 
 /** Label every screen and record of drafted output carries (AIW-D260, verbatim). */
 export const LABEL = "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route";

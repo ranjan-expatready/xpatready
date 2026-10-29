@@ -10,8 +10,8 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { editionContextKey, editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, replayPattern, savedRunKey, type SavedRun } from "../engine/rounds.ts";
-import { RUNS, StepRunner, worstRoundUsd, type AiStep } from "../api/src/rounds.ts";
-import { EXPERIMENT_CAP_USD, RUN_CAP_USD, WAVE1_CAP_USD } from "../../p2/policy.ts";
+import { paidRetryAllowed, RUNS, StepRunner, worstRoundUsd, type AiStep } from "../api/src/rounds.ts";
+import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, MAX_REQUEST_BYTES, RUN_CAP_USD, WAVE1_CAP_USD } from "../../p2/policy.ts";
 import { BudgetExceeded, SpendLedger } from "../../p2/ledger.ts";
 import { knownOk } from "../../p2/launch.ts";
 
@@ -105,6 +105,11 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   const brokenRec2 = record({ drafting_run: { status: "provider_error", usage: { cost_usd: 0.22 }, attempts: [{ n: 1, outcome: "error", error: "socket hang up" }] }, contract_valid: true });
   r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: brokenRec2 }) })));
   ok("demo bug fail: a failure whose cost is unknown keeps its recorded worst case and is not called a refusal", !r.ok && r.costUsd === 0.22 && !/refused the request/.test(r.reason), r);
+  // Lead 29 Oct (G5): a request above the size cap was refused before any call; the step says so plainly, US$0.
+  const bigRec = record({ drafting_run: { status: "refused", usage: { cost_usd: 0 }, attempts: [{ n: 1, outcome: "refused_input_too_large", error: `request of 900000 bytes is above the cap of ${MAX_REQUEST_BYTES}` }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: bigRec }) })));
+  ok("G5 pass: input above the size cap is refused in plain words at US$0 (\"The pages are too large for one AI call…\")", !r.ok && r.reason === "The pages are too large for one AI call, so nothing was sent and nothing was charged" && r.costUsd === 0, r);
+  ok("G5 fail: the person never reads the byte counts or the cap's name", !r.ok && !/bytes|cap of/.test(r.reason));
   // Stop finds the round running now for its run, and no other.
   let during: string | undefined;
   const watcher = new StepRunner({ launchOnce: async (jobId: string, mode: "stub" | "live") => { if (mode === "live") during = watcher.liveJob("batch-9"); return { code: 0, err: "", out: mode === "stub" ? "{}" : JSON.stringify({ run_file: okRec }) }; } });
@@ -128,6 +133,13 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   let cJob: { known?: Record<string, unknown> } = {};
   await new StepRunner({ launchOnce: async (jobId: string, mode: "stub" | "live") => { if (mode === "stub") cJob = JSON.parse(readFileSync(join(JOBS, `${jobId}.json`), "utf8")); return { code: 0, err: "", out: mode === "stub" ? "{}" : JSON.stringify({ run_file: okRec }) }; } }).round(step, false, { trail, contextKey: "k1", inputs, mode: "live", wanted: async () => true });
   ok("N1 fail: a combination's round never claims a form edition as its known fact", JSON.stringify(cJob.known) === JSON.stringify({ combination_trail: trail }), cJob.known);
+
+  // --- G4 (Lead, 29 Oct): one budget of paid attempts per form, stated in p2/policy.ts
+  ok("G4 pass: the policy states the paid attempts per form (4: two per run, so one paid retry); a live first run may be retried once", MAX_PAID_ATTEMPTS_PER_FORM === 4 && MAX_ATTEMPTS === 2 && paidRetryAllowed("LIVE", 1), { MAX_PAID_ATTEMPTS_PER_FORM, MAX_ATTEMPTS });
+  ok("G4 fail: a live form's second retry is refused (it would pass 4 paid attempts; before, 6 were possible)", !paidRetryAllowed("LIVE", 2) && !paidRetryAllowed("LIVE", 3));
+  ok("G4: a stub run costs nothing and is never held to the paid budget", paidRetryAllowed("STUB", 2) && paidRetryAllowed("REPLAY", 5));
+  ok("G4: the field-map plan states the budget before the run (ai.ts and the launch dialog's cost line)", /max_paid_attempts_per_form: MAX_PAID_ATTEMPTS_PER_FORM/.test(readFileSync(join(STUDIO, "api", "src", "ai.ts"), "utf8")) && /paid attempts per form, a retry included/.test(readFileSync(join(STUDIO, "web", "src", "components", "ai-launch.tsx"), "utf8")));
+  ok("G4: every AI step reads its attempts from the policy (no step hard-codes its own)", ["rounds.ts", "people-ai.ts", "sources.ts"].every((f) => /max_attempts: MAX_ATTEMPTS/.test(readFileSync(join(STUDIO, "api", "src", f), "utf8"))));
 
   // --- P-139 (founder, 29 Oct): the experiment cap is US$120; the Wave 1 cap stays US$60
   ok("P-139 pass: the experiment cap is US$120 and the Wave 1 cap US$60", EXPERIMENT_CAP_USD === 120 && WAVE1_CAP_USD === 60, { EXPERIMENT_CAP_USD, WAVE1_CAP_USD });
