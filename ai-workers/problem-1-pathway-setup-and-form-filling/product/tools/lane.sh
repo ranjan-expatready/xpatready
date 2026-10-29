@@ -10,7 +10,7 @@
 #   lane.sh state             rewrite the generated table in STATE.md (main copy only, on branch main)
 #   lane.sh leads             Lead commits on main in the last 30 minutes and on other claude/* branches not yet in main (one Lead at a time, P-87)
 #   lane.sh inbox             findings dropped for the Lead: files in product/inbox/ on main and unmerged devin/* branches (inbox/README.md)
-LANES="screens forms runtime m3 evidence qa scout"
+LANES="screens forms runtime m3 evidence qa"  # scout retired 29 Oct (P-146)
 P="ai-workers/problem-1-pathway-setup-and-form-filling"
 HERE="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not in the repository"; exit 2; }
 MAIN="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
