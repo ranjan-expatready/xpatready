@@ -1,0 +1,43 @@
+URL /c/be4e72f9-5fb1-4070-9290-41dc79504c75/preview as user-A
+TITLE Product Studio · Expat Ready (prototype)
+H1 ["Visitor visa"]
+HEADS ["Overview","Forms","Questionnaires","Documents","Preview","Review and release","Nothing to preview yet"]
+CUT []
+ERRORS []
+---
+Immigration programs
+Temporary residence
+Visitors
+Visitor visa
+Visitor visa
+In setup
+
+Not released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample
+
+Next step
+
+Add 1 form from the library
+Sample: official visitor-visa forms and checklists attached; not set up yet.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+Nothing to preview yet
+
+Nothing to preview yet: once this combination has forms, choose a Sample family to see each person's questions, documents and forms exactly as a case gets them.
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+author, review
+Use the dark theme
+Studio
+1 waiting for you
+Path
+Pathway: show the list for Temporary residence
+Program: show the list for Visitors
+Category: show the list for Visitor visa
+Combination
+Preview

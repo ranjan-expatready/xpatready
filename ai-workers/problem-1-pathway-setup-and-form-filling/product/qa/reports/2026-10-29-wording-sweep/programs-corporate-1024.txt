@@ -1,0 +1,175 @@
+URL /?pw=CORPORATE as user-A
+TITLE Product Studio · Expat Ready (prototype)
+H1 ["Immigration programs"]
+HEADS ["Temporary residence 7 combinations","High-wage position","Low-wage position","Global Talent Stream","In-home caregiver","Offer of employment","Offer of employment","Inspection response","Permanent residence 1 combination","Atlantic employer designation"]
+CUT []
+ERRORS []
+---
+Immigration programs
+Program structure
+Add combination
+
+Every combination your firm can open, and where its setup stands.
+
+Retail
+21
+Corporate and employers
+8
+Cards
+List
+⌘K
+All
+8
+Temporary residence
+7
+Permanent residence
+1
+Program: All
+Compliance (1)
+Designation and endorsement (1)
+Employer offers (LMIA-exempt) (2)
+LMIA (4)
+Status: All
+Needs you
+0
+
+8 combinations · 1 In setup · 7 Not started
+Names are Sample until the immigration expert confirms.
+
+How employer and worker cases connect Sample examples
+
+The employer's LMIA is set up here; the worker's work permit is set up under Retail. On the worker's case the agent picks "relies on employer case", and the employer's name, address and LMIA number fill in (later wave).
+
+A software company hires one developer: one employer case here, one worker case under Retail.
+One LMIA for three cooks: one employer case, three worker cases, each relying on it.
+A household hires a caregiver: the household is the employer.
+Temporary residence
+7 combinations
+Corporate and employers › Temporary residence › LMIA
+In setup
+High-wage position
+
+No sub-category
+
+Step 1 of 4 · Forms
+
+No forms yet
+
+Find forms
+Corporate and employers › Temporary residence › LMIA
+Not started
+Low-wage position
+
+No sub-category
+
+Not started
+
+No forms yet
+
+Start setup
+Corporate and employers › Temporary residence › LMIA
+Not started
+Global Talent Stream
+
+No sub-category
+
+Not started
+
+No forms yet
+
+Start setup
+Corporate and employers › Temporary residence › LMIA
+Not started
+In-home caregiver
+
+No sub-category
+
+Not started
+
+No forms yet
+
+Start setup
+Corporate and employers › Temporary residence › Employer offers (LMIA-exempt)
+Not started
+Offer of employment
+
+Intra-company transferee
+
+Not started
+
+No forms yet
+
+Start setup
+Corporate and employers › Temporary residence › Employer offers (LMIA-exempt)
+Not started
+Offer of employment
+
+Professional under a trade agreement
+
+Not started
+
+No forms yet
+
+Start setup
+Corporate and employers › Temporary residence › Compliance
+Not started
+Inspection response
+
+No sub-category
+
+Not started
+
+No forms yet
+
+Start setup
+Permanent residence
+1 combination
+Corporate and employers › Permanent residence › Designation and endorsement
+Not started
+Atlantic employer designation
+
+No sub-category
+
+Not started
+
+No forms yet
+
+Start setup
+
+8 combinations shown
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+author, review
+Use the dark theme
+Studio
+1 waiting for you
+About this page
+Pathway type
+Show as
+Search combinations, form numbers and documents
+Pathway
+Program
+How employer and worker cases connect
+Temporary residence combinations
+Corporate and employers › Temporary residence › LMIA › High-wage position › No sub-category, In setup
+Category
+Setup: Step 1 of 4: Forms
+Corporate and employers › Temporary residence › LMIA › Low-wage position › No sub-category, Not started
+Setup: not started
+Start setup: Low-wage position
+Corporate and employers › Temporary residence › LMIA › Global Talent Stream › No sub-category, Not started
+Start setup: Global Talent Stream
+Corporate and employers › Temporary residence › LMIA › In-home caregiver › No sub-category, Not started
+Start setup: In-home caregiver
+Corporate and employers › Temporary residence › Employer offers (LMIA-exempt) › Offer of employment › Intra-company transferee, Not started
+Sub-category
+Start setup: Intra-company transferee
+Corporate and employers › Temporary residence › Employer offers (LMIA-exempt) › Offer of employment › Professional under a trade agreement, Not started
+Start setup: Professional under a trade agreement
+Corporate and employers › Temporary residence › Compliance › Inspection response › No sub-category, Not started
+Start setup: Inspection response
+Permanent residence combinations
+Corporate and employers › Permanent residence › Designation and endorsement › Atlantic employer designation › No sub-category, Not started
+Start setup: Atlantic employer designation

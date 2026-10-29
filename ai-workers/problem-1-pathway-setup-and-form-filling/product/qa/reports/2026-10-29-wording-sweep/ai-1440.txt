@@ -1,0 +1,26 @@
+URL /ai as user-A
+TITLE Product Studio · Expat Ready (prototype)
+H1 ["AI work"]
+HEADS ["Scope","How","Steps and parts","Status","Spent / worst case","Started"]
+CUT []
+ERRORS []
+---
+AI work
+
+Every AI launch from the catalogue, a program, a combination or a source, with what each step did and cost. Decisions happen in To review: nothing reaches a draft until a person decides.
+
+Scope	How	Steps and parts	Status	Spent / worst case	Started
+imm5562e-copy.pdf
+
+library
+
+	Rules only (no AI)	4 steps · 3 done, 1 waiting for you	Waiting for you	US$0.00 / US$0.00	today 7:55 a.m. · Configuration author
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+author, review
+Use the dark theme
+Studio
+1 waiting for you
+Table: Scope, How, Steps and parts, Status, Spent / worst case, Started
