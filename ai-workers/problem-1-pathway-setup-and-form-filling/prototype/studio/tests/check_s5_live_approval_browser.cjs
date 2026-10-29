@@ -25,6 +25,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.12 L2 pass: and the AI now plan says the most it can cost before anything runs", live.status === 201 && live.body?.totals?.worst_usd > 0, JSON.stringify(live.body?.totals ?? live.body?.detail));
   await p.goto(`${BASE}/c/${sv}/questionnaires`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   const who = p.locator("[data-who-can-be]");
+  // Board v2 (P-147 §3): the card is folded to one line; "Show and edit" opens the built table.
+  await who.getByRole("button", { name: "Show and edit" }).click();
   await who.getByRole("button", { name: "Fill from the guide" }).click();
   const fill = p.getByRole("dialog"); await fill.locator("[data-people-cost]").waitFor({ timeout: 30000 }).catch(() => {});
   await p.waitForFunction(() => !document.querySelector('[data-fill-mode="live"] input')?.disabled, null, { timeout: 10000 }).catch(() => {});

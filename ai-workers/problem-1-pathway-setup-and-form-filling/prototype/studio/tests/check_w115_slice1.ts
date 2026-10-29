@@ -67,7 +67,7 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   const get = (fs: any[], role: string, fact: string) => fs.find((f) => f.role === role && f.fact === fact);
   ok("C4.10 precedence pass: the principal's date of birth comes from the passport (Document, by Rules)", get(fs0, "principal", "person.date_of_birth")?.source === "DOCUMENT" && /Passport/.test(get(fs0, "principal", "person.date_of_birth")?.document?.name ?? "") && get(fs0, "principal", "person.date_of_birth")?.proposedBy === "Rules");
   const rep = fs0.find((f) => f.fact.startsWith("representative."));
-  ok("C4.10 precedence pass: a representative's fact comes from the agent", rep?.source === "AGENT", rep && `${rep.role}|${rep.fact}`);
+  ok("C4.10 precedence pass: a representative's fact comes from the case officer", rep?.source === "AGENT", rep && `${rep.role}|${rep.fact}`);
   const decl = fs0.find((f) => f.clientOnly);
   ok("C4.10 m2 (P-97) pass: a declaration or background answer comes from the client", !!decl && decl.source === "CLIENT", decl && `${decl.role}|${decl.fact}`);
   const noDoc = fs0.find((f) => f.source === "CLIENT" && !f.clientOnly && !f.also.length);

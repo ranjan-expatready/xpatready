@@ -1,7 +1,7 @@
 // R1c renderer journey (runtime lane, plan §8 "questionnaire part of the journey") in a real browser, on the runtime
 // copy after setup_visitor_visa.ts: the officer opens a case and adds the family (1440 and 1024 px) → the client answers
 // on a phone (390 px): one part per screen, "answering for", field checks with an error summary, a repeating group,
-// leave and resume → the officer reviews in the agent view, edits with the message naming the forms, confirms a section,
+// leave and resume → the officer reviews in the case view, edits with the message naming the forms, confirms a section,
 // meets a conflict. axe-core (WCAG 2.2 A/AA) on every state; data checked underneath through the API. No paid AI.
 // Screenshots: product/screens/R1-thin-slice/screenshots/r1c/.
 //   zsh studio/tools/isolated.sh runtime_r1 4430 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4430 xr_studio_runtime_r1 && node studio/tests/runtime/check_runtime_r1c.cjs 4430
@@ -224,7 +224,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await c.goto(`${BASE}/cases/${caseId}`); await idle(c);
   step("roles fail: the client cannot open the officer's case page", await shows(c.getByText("This page is for the case officer")));
 
-  // ── 3. The officer reviews in the agent view (a household of four children, the release's limit: review M6)
+  // ── 3. The officer reviews in the case view (a household of four children, the release's limit: review M6)
   for (const n of [2, 3, 4]) await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: `Sample Child C${n} with a rather long name` }, "user-O");
   await o.reload(); await idle(o);
   await o.getByRole("tab", { name: /^Sample Spouse C/ }).click(); 
@@ -237,7 +237,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("agent source (review M4): a confirmed answer still says who first answered it", await shows(visitSec.getByText(/questionnaire · Client A · .* · confirmed by Case officer/).first()));
   step("readability (Lead, R1d): an answer read by the whole household says \"fills IMM 5257 for N people\", with each person on hover", await shows(visitSec.getByText(/fills IMM 5257 for 6 people/).first()) && /Sample Child C4/.test((await visitSec.getByText(/fills IMM 5257 for 6 people/).first().getAttribute("title")) ?? ""));
   step("agent copy: no label reads \"(optional) (optional)\"", !(await o.locator("main").textContent()).includes("(optional) (optional)"));
-  await state(o, "agent-view-confirmed", [1440, 1024]);
+  await state(o, "case-view-confirmed", [1440, 1024]);
   await visitSec.getByRole("button", { name: /^Edit When will the visit end/ }).click();
   const endEdit = o.getByRole("dialog").getByRole("group", { name: /visit end/ });
   await endEdit.getByLabel("Day").fill("1"); await endEdit.getByLabel("Month").fill("7");
@@ -245,11 +245,11 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("agent checks: a date the officer corrects to before the start shows \"1 to check\" and the message on the section and the row", await shows(visitSec.getByText("1 to check")) && await shows(visitSec.getByText("The visit ends before it starts. Check both dates.").nth(1)));
   await visitSec.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
   step("agent checks: Confirm section still confirms (warn, not block) and says the check is still open", await shows(o.getByText(/1 check still open: The visit ends before it starts/)));
-  await state(o, "agent-section-check", [1440]);
+  await state(o, "case-view-section-check", [1440]);
   await o.locator("section").filter({ has: o.getByRole("heading", { name: "Application details" }) }).getByRole("button", { name: /^Edit Are you applying/ }).click();
   step("QA-37 (P-63): the edit dialog says \"form fields\", never \"boxes\"", await shows(o.getByRole("dialog").getByText(/\(\d+ form fields?\)/).first()) && !/\bbox(es)?\b/.test(await o.getByRole("dialog").textContent()));
   await o.getByRole("dialog").getByLabel("Transit").check();
-  await state(o, "agent-edit-dialog", [1440]);
+  await state(o, "case-view-edit-dialog", [1440]);
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
   step("agent pass: an edit saves with a message naming every form it fills (P-45)", await shows(o.getByText(/Saved\. It fills IMM 5257 for \d+ people \(\d+ form fields\)/).last()));
   step("keyboard (review minor): closing the dialog returns the focus to its Edit button", await until(o, () => (document.activeElement?.getAttribute("aria-label") ?? "").startsWith("Edit Are you applying")));
@@ -260,7 +260,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await call("PUT", `/runtime/cases/${caseId}/answers/${qOf(v, "The application", "case.funds_available_cad").subjectId}/case.funds_available_cad`, { value: "6000", expectedId: qOf(v, "The application", "case.funds_available_cad").answer.id }, "user-P");
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
   step("agent fail: a stale edit is refused (409) in the dialog and says what happened; nothing is overwritten", await shows(o.getByRole("dialog").getByText(/Someone changed this answer after you opened it/)) && (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body.sections.flatMap((s) => s.questions).find((q) => q.fact === "case.funds_available_cad").answer.value === "6000");
-  await state(o, "agent-conflict", [1440]);
+  await state(o, "case-view-conflict", [1440]);
   step("agent conflict (review M3): the dialog now shows the newer answer", await eventually(async () => (await o.getByRole("dialog").getByLabel(/How much money/).inputValue()) === "6000"));
   await o.getByRole("dialog").getByLabel(/How much money/).fill("7000");
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
@@ -291,7 +291,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("review M3 pass: what blocks filing is listed on the page (question, whose, why), not only in a tooltip", await shows(imm.getByRole("listitem").filter({ hasText: /\(Sample Applicant C\): (not answered|not confirmed|needs a fix)$/ }).first()));
   step("review M1 fail-guard: IMM 5257's fill trial passed, so its copies are not marked \"Checked copy, not for filing\"", await gone(imm.getByText("Checked copy, not for filing")));
   // Lead, break M3: an empty required group blocks filing until "none apply" is answered and confirmed: the officer
-  // says it for the principal's education in the agent view, then confirms the section.
+  // says it for the principal's education in the case view, then confirms the section.
   const edu = o.locator("section").filter({ has: o.getByRole("heading", { name: "Education history" }) }).filter({ hasText: "for Sample Applicant C" });
   step("M3 agent: the blocking list names the empty group (\"Entries in … : add them, or say none apply\")", await shows(imm.getByText(/Entries in "Education history": add them, or say none apply \(Sample Applicant C\): not answered/)));
   await o.getByRole("tab", { name: /^Sample Applicant C/ }).click();
@@ -299,7 +299,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("M3 agent pass (P-72): the officer's \"none apply\" waits for Confirm section", await shows(edu.getByText("None apply", { exact: true })) && await shows(edu.getByText("To confirm")));
   await edu.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
   step("M3 agent pass: Confirm section confirms it", await shows(edu.getByText("Confirmed", { exact: true })));
-  await state(o, "agent-group-none-apply", [1440]);
+  await state(o, "case-view-group-none-apply", [1440]);
   // Confirm every required fact IMM 5257 reads for the principal (Sample values by type), as the officer would.
   const sample = (q) => q.options?.length ? q.options[0].key : q.shape.phone ? { country_code: "1", number: "5550100" } : q.value_type === "yes_no" ? false
     : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000"
