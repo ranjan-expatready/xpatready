@@ -15,16 +15,16 @@ import { join } from "node:path";
 import { admitRun, loadKey, PolicyRefusal, type AdmitOptions, type RouteSettings } from "./guard.ts";
 import { assertIsolated } from "./isolation.ts";
 import { BudgetExceeded, costUsd, inputTokenBound, type SpendLedger } from "./ledger.ts";
-import { BASE_URL, EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR } from "./policy.ts";
+import { BASE_URL, EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR, MAX_REQUEST_BYTES, MAX_RETRY_AFTER_S } from "./policy.ts";
 
 export type DraftRequest = { system: string; user: string; output_schema?: Record<string, unknown> };
 export type CallResult = { text: string; stop_reason?: string | null; usage: { input_tokens: number; output_tokens: number } };
 export type CallSettings = RouteSettings & { timeout_ms: number; effort?: string };
 export type Caller = ((req: DraftRequest, s: CallSettings) => Promise<CallResult>) & { kind?: "stub" | "paid" };
-export type Attempt = { n: number; outcome: string; error?: string; cost_usd?: number; worst_usd: number; stop_reason?: string | null; input_tokens?: number; output_tokens?: number; duration_ms?: number };
+export type Attempt = { n: number; outcome: string; error?: string; request_id?: string; cost_usd?: number; worst_usd: number; stop_reason?: string | null; input_tokens?: number; output_tokens?: number; duration_ms?: number };
 
 export type RunOutcome = {
-  status: "completed" | "provider_error" | "budget_exceeded";
+  status: "completed" | "provider_error" | "budget_exceeded" | "refused" | "timed_out";
   label: string;
   caller: string;
   admitted: { file: string; sha256: string; kind: string }[];
@@ -51,6 +51,12 @@ export async function runDrafting(
   const req = build(admitted);
   // R4-M1: a paid call goes ahead only when the caller's build step screened the finished request (draft.ts).
   if (call.kind === "paid" && !(opts.screened && opts.screened())) throw new PolicyRefusal("a paid call needs a request screened inside the drafting process (R4-M1)");
+  // Lead 29 Oct (G5): a request above the step size cap is refused before any reservation or call (US$0).
+  const requestBytes = Buffer.byteLength(JSON.stringify(req), "utf8");
+  if (requestBytes > MAX_REQUEST_BYTES) {
+    return { status: "refused", label: LABEL, caller: call.kind ?? "unmarked", admitted: admitted.map(({ file, sha256, kind }) => ({ file, sha256, kind })),
+      attempts: [{ n: 1, outcome: "refused_input_too_large", error: `request of ${requestBytes} bytes is above the cap of ${MAX_REQUEST_BYTES}`, cost_usd: 0, worst_usd: 0 }] };
+  }
   const worst = costUsd(run.settings.model, inputTokenBound(JSON.stringify(req)), run.settings.max_output_tokens);
   const out: RunOutcome = { status: "provider_error", label: LABEL, caller: call.kind ?? "unmarked", admitted: admitted.map(({ file, sha256, kind }) => ({ file, sha256, kind })), attempts: [] };
   return ledger.withLock(async () => {
@@ -70,17 +76,49 @@ export async function runDrafting(
         out.status = "completed"; out.text = r.text;
         return out;
       } catch (e) {
-        // Usage unknown: the reservation stays counted at its worst case.
-        ledger.settle(id, worst, "error_counted_at_worst_case");
-        out.attempts.push({ n, outcome: "error", error: (e as Error).message.slice(0, 300), worst_usd: worst, duration_ms: Date.now() - t0 });
-        // A request the API rejects as invalid (4xx other than 408, 409, 429) fails the same way on retry:
-        // no second attempt (found on the first live chain, 20 Oct 2026, discovery D17).
+        // QA-86: a call the service refused (4xx other than 408, 409, 429: invalid, too large, usage limit) or was too busy to
+        // take (429, 500, 502, 503, 529) processed nothing, so it settles at its true cost, US$0. Any other failure (a timeout,
+        // a dropped connection): usage unknown, so the reservation stays counted at its worst case.
         const status = (e as { status?: number }).status;
-        if (typeof status === "number" && status >= 400 && status < 500 && ![408, 409, 429].includes(status)) break;
+        const refused = typeof status === "number" && status >= 400 && status < 500 && ![408, 409, 429].includes(status);
+        const busy = typeof status === "number" && [429, 500, 502, 503, 529].includes(status);
+        const timedOut = status === 408 || (status === undefined && /time(d)?\s*-?\s*out/i.test(`${(e as Error).name} ${(e as Error).message}`));
+        const requestId = requestIdOf(e);
+        ledger.settle(id, refused || busy ? 0 : worst, refused ? "refused_by_provider_usd0" : busy ? "busy_usd0" : "error_counted_at_worst_case");
+        out.attempts.push({ n, outcome: refused ? "refused_by_provider" : busy ? "busy" : timedOut ? "timed_out" : "error", error: (e as Error).message.slice(0, 300),
+          ...(requestId ? { request_id: requestId } : {}), ...(refused || busy ? { cost_usd: 0 } : {}), worst_usd: worst, duration_ms: Date.now() - t0 });
+        if (timedOut) out.status = "timed_out";
+        // A refused request fails the same way on retry (D17): no second attempt.
+        if (refused) break;
+        // QA-87: a busy service is retried only after the wait it names, never at once; no wait named, or too long: stop.
+        if (busy) {
+          const wait = retryAfterSeconds(e);
+          if (wait === null || wait > MAX_RETRY_AFTER_S || n >= run.settings.max_attempts) break;
+          await new Promise((res) => setTimeout(res, wait * 1000));
+        }
       }
     }
     return out;
   });
+}
+
+/** QA-88: the service's request id, for the Details a person can open (never in the main sentence). */
+function requestIdOf(e: unknown): string | null {
+  const x = e as { request_id?: string; requestID?: string; message?: string; headers?: unknown };
+  const fromHeaders = headerOf(x.headers, "request-id");
+  return x.request_id ?? x.requestID ?? fromHeaders ?? /"request_id"\s*:\s*"([^"]+)"/.exec(String(x.message ?? ""))?.[1] ?? null;
+}
+/** QA-87: the seconds a busy service asks us to wait (retry-after), or null when it names none. */
+function retryAfterSeconds(e: unknown): number | null {
+  const v = headerOf((e as { headers?: unknown }).headers, "retry-after");
+  const n = v === null ? NaN : Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+function headerOf(headers: unknown, name: string): string | null {
+  if (!headers) return null;
+  if (typeof (headers as { get?: unknown }).get === "function") return (headers as { get: (k: string) => string | null }).get(name);
+  const v = (headers as Record<string, unknown>)[name];
+  return typeof v === "string" || typeof v === "number" ? String(v) : null;
 }
 
 /** The real call: Anthropic API only (AIW-D261), explicit base URL, SDK retries off, streamed, structured

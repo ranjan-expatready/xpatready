@@ -18,7 +18,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Prisma } from "@prisma/client";
 import { costUsd } from "../../../p2/ledger.ts";
-import { EXPERIMENT_CAP_USD, RUN_CAP_USD } from "../../../p2/policy.ts";
+import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, RUN_CAP_USD } from "../../../p2/policy.ts";
 import { ACTORS, Audit, Db, fail, need, PROTOTYPE, Workspace, type Actor } from "./core.ts";
 /** A person by name on every AI work view (Screen 02 board view 10): never an internal id. */
 const personName = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "A person";
@@ -29,6 +29,7 @@ type A4 = { total: number; reused: number; leftover: number };
 const a4Of = (detail: unknown): A4 | null => { const a = (detail as { a4?: A4 } | null)?.a4; return a ? { total: a.total, reused: a.reused, leftover: a.leftover } : null; };
 const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return null; const n = (s: string) => all.filter((p) => p.status === s).length; return `${all.length} part${all.length === 1 ? "" : "s"} · ${[n("done") && `${n("done")} done`, n("failed") && `${n("failed")} failed`, n("running") && `${n("running")} running`, n("queued") && `${n("queued")} queued`, n("not started") && `${n("not started")} not started`].filter(Boolean).join(", ")}`; };
 import { Sources } from "./sources.ts";
+import { paidRetryAllowed } from "./rounds.ts";
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const MAX_PARALLEL = 2, MAX_ATTEMPTS_PER_SOURCE = 3;
@@ -147,7 +148,7 @@ export class Ai implements OnModuleInit {
       expected_usd: targets.some((t) => t.action === "draft" && t.expected_usd === null) ? null : round(targets.reduce((a, t) => a + (t.expected_usd ?? 0), 0)), worst_usd: round(targets.reduce((a, t) => a + t.worst_usd, 0)) };
     const ledger = this.sources.ledger();
     const plan_sha256 = sha(JSON.stringify({ mode, scope: scope.kind, targets: targets.map((t) => [t.combinationId, t.attachmentId, t.action, t.run_file ?? null, t.fingerprint ?? null]) }));
-    return { operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each form field). Questions, sections, document requirements and rules are not AI-drafted here: people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
+    return { max_paid_attempts_per_form: MAX_PAID_ATTEMPTS_PER_FORM, operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each form field). Questions, sections, document requirements and rules are not AI-drafted here: people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
   }
 
   /** F3 D4: for each file (checksum), the draft of it being mapped in another source. A source's draft is its newest
@@ -389,6 +390,10 @@ export class Ai implements OnModuleInit {
     if (!redo.length) fail("Nothing to retry: every step finished or ran to its end. To draft a form anew, start its draft again.");
     const over = redo.filter((j) => j.attempt >= MAX_ATTEMPTS_PER_SOURCE);
     if (over.length) fail(`${over.length} step${over.length > 1 ? "s have" : " has"} reached ${MAX_ATTEMPTS_PER_SOURCE} attempts; it needs a person, not another retry.`);
+    // Lead 29 Oct (G4): a live form has one budget of paid attempts across its runs (p2/policy.ts), counted at the most
+    // each run could use; stub runs cost nothing and keep the run limit above.
+    const spent = redo.filter((j) => !paidRetryAllowed(j.mode, j.attempt));
+    if (spent.length) fail(`${spent.length} form${spent.length > 1 ? "s have" : " has"} used ${spent.length > 1 ? "their" : "its"} ${MAX_PAID_ATTEMPTS_PER_FORM} paid AI attempts (${MAX_ATTEMPTS} per run); ${spent.length > 1 ? "they need" : "it needs"} a person, not another paid retry.`);
     const worstEach = (batch!.plan as any).targets as any[];
     const worst = round(redo.reduce((a, j) => a + (j.mode === "LIVE" ? (worstEach.find((t) => t.attachmentId === j.attachmentId)?.worst_usd ?? RUN_CAP_USD) : 0), 0));
     const ledger = this.sources.ledger();

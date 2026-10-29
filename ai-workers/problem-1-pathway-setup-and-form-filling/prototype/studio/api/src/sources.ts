@@ -9,7 +9,7 @@ import { basename, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { normalize, type LibraryField } from "../../engine/normalize.ts";
-import { EXPERIMENT_CAP_USD, LABEL, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
+import { EXPERIMENT_CAP_USD, LABEL, MAX_ATTEMPTS, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
 import { canonical } from "../../../contracts/rules.ts";
 import { costUsd, SpendLedger } from "../../../p2/ledger.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
@@ -228,7 +228,7 @@ export class Sources {
     const want = { job_id: jobId, kind: "field_map", combination: "studio", configuration_version: "studio-add-form", template: "field-map.v2.md", output_schema: "field-map-output.v2.schema.json",
       ...(printedEdition && EDITION.test(printedEdition) ? { known: { form_edition: printedEdition } } : {}),
       inputs: [{ file: a.inventoryFile, sha256: sha(readFileSync(inv)) }],
-      settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "high", timeout_ms: 900000, max_attempts: 2, budget_usd: 5, max_output_tokens: 64000 } }; // 64k: a full 242-box form needs 53-63k output (IMM 1295, 20 Oct); 32k truncated IMM 5257 (21 Oct 05:58Z)
+      settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "high", timeout_ms: 900000, max_attempts: MAX_ATTEMPTS, budget_usd: 5, max_output_tokens: 64000 } }; // 64k: a full 242-box form needs 53-63k output (IMM 1295, 20 Oct); 32k truncated IMM 5257 (21 Oct 05:58Z)
     const have = existsSync(jobFile) ? readFileSync(jobFile, "utf8") : null;
     if (have !== JSON.stringify(want, null, 1) + "\n") writeFileSync(jobFile, JSON.stringify(want, null, 1) + "\n");
     const draftInputs: DraftInputs = { inputSha: want.inputs[0].sha256, templateSha: sha(readFileSync(join(PROMPTS, want.template))), schemaSha: sha(readFileSync(join(PROMPTS, want.output_schema))), model: want.settings.model, effort: want.settings.effort, maxOutputTokens: want.settings.max_output_tokens, known: want.known ?? null };

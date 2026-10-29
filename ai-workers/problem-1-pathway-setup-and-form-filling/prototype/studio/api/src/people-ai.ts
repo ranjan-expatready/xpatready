@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
-import { RUN_CAP_USD } from "../../../p2/policy.ts";
+import { MAX_ATTEMPTS, RUN_CAP_USD } from "../../../p2/policy.ts";
 import { slug } from "../../engine/import.ts";
 import { ProposePeopleBody, type PeoplePlan, type PeopleProposal, type ProposedPerson } from "../../contracts/workspace.ts";
 import { Audit, Db, need, PROTOTYPE, SOLUTION, type Actor } from "./core.ts";
@@ -114,6 +114,8 @@ export class PeopleFromGuide {
       const r = roles.get(p.role);
       if (!r) { out.dropped.push({ role: p.role, why: "Not a person role in the library that takes part in a case (Shared library › Person roles)." }); return null; }
       if (!inGuide(p.quote)) { out.dropped.push({ role: p.role, why: "Its sentence is not in the guide text, so it is not proposed." }); return null; }
+      // The 0–9 range is kept in code: the provider's structured outputs refuse minimum and maximum in the schema (P-153: code is the guard).
+      if (![p.min, p.max].every((n) => Number.isInteger(n) && n >= 0 && n <= 9)) { out.dropped.push({ role: p.role, why: "Its number of people is not a whole number from 0 to 9, so it is not proposed." }); return null; }
       const applies = r.mayBeApplicant ? p.applies : false;
       return { role: p.role, label: r.label, min: p.role === "principal" ? 1 : Math.min(p.min, p.max), max: p.role === "principal" ? 1 : p.max, applies, quote: p.quote.slice(0, 400), why: p.why ?? null, agreed };
     };
@@ -162,7 +164,7 @@ export class PeopleFromGuide {
     }
     const jobId = `${base}-${slug(combinationKey).slice(0, 30).replace(/_/g, "-")}-${sha(`${combinationKey}|${g.input.sha256}|${Date.now()}`).slice(0, 8)}`;
     const job = { job_id: jobId, kind: "who_can_be", combination: combinationKey, configuration_version: "s5-who-can-be", template, output_schema: AI.schema, inputs,
-      settings: { provider_route: ROUTE, model: MODEL, effort: AI.effort, timeout_ms: 300_000, max_attempts: 2, budget_usd: 1, max_output_tokens: AI.max_output_tokens }, known: { combination_trail: g.trail } };
+      settings: { provider_route: ROUTE, model: MODEL, effort: AI.effort, timeout_ms: 300_000, max_attempts: MAX_ATTEMPTS, budget_usd: 1, max_output_tokens: AI.max_output_tokens }, known: { combination_trail: g.trail } };
     mkdirSync(JOBS, { recursive: true });
     writeFileSync(join(JOBS, `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
     try {

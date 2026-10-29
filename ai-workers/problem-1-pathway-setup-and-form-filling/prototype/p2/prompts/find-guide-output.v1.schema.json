@@ -6,6 +6,6 @@
   "package_title": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
   "confidence": { "enum": ["high", "low"] },
   "reason": { "type": "string" },
-  "others": { "type": "array", "maxItems": 5, "items": { "type": "string" } }
+  "others": { "type": "array", "items": { "type": "string" } }
  }
 }
