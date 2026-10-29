@@ -32,7 +32,7 @@ Results: `check_s6_library_sources` 24/24, `check_s6_library_pages_browser` 33/3
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: PLAN — (2b) the one door with S6 slice 1, the one review queue: plan.md "Plan: (2b) …" (1a table and door, 1b queue page, 1c hook-ups); (2a) Lead check PASS (Lead PR #96)
+stage: PLAN — (2b) the one door with S6 slice 1, the one review queue: `screens/W1-shared-library/plan-slice1.md` (1a table and door, 1b queue page, 1c hook-ups); (2a) Lead check PASS (Lead PR #96)
 owner: Lead
 next_action: Lead: agree the plan and answer N-1 (forms: drop origin person/addReason, add a rule reference to ProposalSource), N-2 (runtime: acceptPqrPick takes a transaction client and is exported) and N-3 (sections from scratch); then Builder: BUILD 1a
 then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
@@ -40,7 +40,7 @@ blocked_by: forms runner package and contract v2 on main (Lead merge)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
-- 2026-10-29 · W1-shared-library (S6) · PLAN (2b) + slice 1 · applied Lead message ((2a) PASS in Lead PR #96); main deda0e6b synced. Plan in plan.md: 1a ProposalItem table + migration off NormalizationItem + proposals.ts one door with a lander per kind and the free-add scan; 1b queue page, To review row, grouped approval, Draft fields with AI; 1c pqr_pick lander (acceptPqrPick, PR #94) and "Add the fact this rule needs" (needs forms' rule reference). placement_fills stays a LibraryChange (allowlisted). N-1..N-3 to the Lead. No code. US$0.
+- 2026-10-29 · W1-shared-library (S6) · PLAN (2b) + slice 1 · applied Lead message ((2a) PASS in Lead PR #96); main deda0e6b synced. Plan in plan-slice1.md: 1a ProposalItem table + migration off NormalizationItem + proposals.ts one door with a lander per kind and the free-add scan; 1b queue page, To review row, grouped approval, Draft fields with AI; 1c pqr_pick lander (acceptPqrPick, PR #94) and "Add the fact this rule needs" (needs forms' rule reference). placement_fills stays a LibraryChange (allowlisted). N-1..N-3 to the Lead. No code. US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD (2a) → CHECK · full run-suites on 5b00ae99: 67 PASS 4 FAIL, all four from (2a): P-63 "box" on Fields (sources now say "form field"), QA-65 (the 410 routes name their person first, nobody 401), A1 (Studio typed-key check gone with createField: ≥1), QA-71 (the check reads the Category column; a name may end in "employer"); checklist file names in words; seed_library.d.cts. Rerun: ai_drafting 48/48, s6 sources 24/24, s6 pages 33/33, forms_qa53 20/20, screen01_browser 120/120, qa_1029 51/51; tsc api and web clean; any 419; graph G3 2 (older). US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD (2a) · 38cc245d: POST /library/fields, /sections, /answer-lists → 410; GET /library/:kind/:key/sources and row sources and where used; field and section rename (C3.15); origin line per page; check_s6_library_sources 24/24, pages browser 33/33; seed_library.cjs for checks that used the adds (forms, runtime files listed). US$0.
 - 2026-10-29 · Handover · applied Lead message (P-173 queue): item (2) sized (heavy, half waits on #90), Handover rewritten for a fresh session; context of this one spent. US$0.
