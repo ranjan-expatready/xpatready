@@ -84,7 +84,7 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
     }
     rows.push({ id: x.id, workspaceId, kind: x.kind, runId: x.runId, step: x.step, formEdition: x.scope.formEdition, combinationId: x.scope.combinationId, landsOn: x.landsOn,
       reuse: x.reuse, payload: x.payload as Prisma.InputJsonValue, source: (x.source ?? undefined) as Prisma.InputJsonValue | undefined, rounds: x.rounds as Prisma.InputJsonValue,
-      rules: x.rules, agreement: x.agreement, confidence: x.confidence, reason: x.reason, origin: x.origin, addReason: x.addReason, identity: x.identity, identityKey: key,
+      rules: x.rules, agreement: x.agreement, confidence: x.confidence, reason: x.reason, origin: x.origin, identity: x.identity, identityKey: key,
       relatesTo: x.relatesTo, revision: (x.revision ?? undefined) as Prisma.InputJsonValue | undefined, basis: x.basis,
       choice: choice ?? null, decidedKey: decidedKey ?? null, work: (work ?? undefined) as Prisma.InputJsonValue | undefined });
   }
@@ -134,7 +134,7 @@ export async function landField(tx: Tx, l: Landing, f: { key: string; meaning: s
 
 const taken = async (tx: Tx, ws: string) => new Set((await tx.canonicalField.findMany({ where: { workspaceId: ws }, select: { canonicalFieldKey: true } })).map((x) => x.canonicalFieldKey));
 const slugKey = (label: string, used: Set<string>) => keyFor("x", label, used).slice(2);
-const sourceRef = (r: Row, actor: Actor) => `${r.origin === "person" ? "added by hand" : `${r.origin === "rules" ? "rules" : "AI"} run ${r.runId}`}; accepted by ${actor.id} on the review queue (item ${r.id})`;
+const sourceRef = (r: Row, actor: Actor) => `${r.origin === "rules" ? "rules" : "AI"} run ${r.runId}; accepted by ${actor.id} on the review queue (item ${r.id})`;
 
 /** LANDERS[kind]: what accepting an item writes, inside decide's transaction. A kind with no lander yet is refused. */
 export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<string>>> = {
@@ -150,7 +150,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const used = new Set((await tx.logicalSection.findMany({ where: { workspaceId: l.ws }, select: { sectionKey: true } })).map((x) => `x.${x.sectionKey}`));
     const key = slugKey(s.label, used);
     const order = 100 + (await tx.logicalSection.count({ where: { workspaceId: l.ws } }));
-    await tx.logicalSection.create({ data: { workspaceId: l.ws, sectionKey: key, version: 1, status: "DRAFT", title: s.label, displayOrder: order, origin: r.origin === "person" ? "HUMAN" : "AI_PROPOSAL", updatedBy: l.actor.id } });
+    await tx.logicalSection.create({ data: { workspaceId: l.ws, sectionKey: key, version: 1, status: "DRAFT", title: s.label, displayOrder: order, origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
     await waitingAdd(tx, l, "section", key, s.label);
     return key;
   },
@@ -158,7 +158,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const a = p as Extract<ProposalPayload, { kind: "answer_list" }>;
     const used = new Set((await tx.answerList.findMany({ where: { workspaceId: l.ws }, select: { answerListKey: true } })).map((x) => `x.${x.answerListKey}`));
     const key = slugKey(a.label, used);
-    await tx.answerList.create({ data: { workspaceId: l.ws, answerListKey: key, version: 1, status: "DRAFT", label: a.label, origin: r.origin === "person" ? "HUMAN" : "AI_PROPOSAL", updatedBy: l.actor.id,
+    await tx.answerList.create({ data: { workspaceId: l.ws, answerListKey: key, version: 1, status: "DRAFT", label: a.label, origin: "AI_PROPOSAL", updatedBy: l.actor.id,
       values: { create: a.values.map((v, i) => ({ valueKey: v.code, label: v.label, sortOrder: i + 1 })) } } });
     await waitingAdd(tx, l, "answer_list", key, a.label);
     return key;
@@ -168,7 +168,7 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
     const used = new Set((await tx.documentType.findMany({ where: { workspaceId: l.ws }, select: { documentTypeKey: true } })).map((x) => `x.${x.documentTypeKey}`));
     const key = slugKey(d.name, used);
     await tx.documentType.create({ data: { workspaceId: l.ws, documentTypeKey: key, name: d.name, category: d.category || "client", suppliesFacts: d.suppliesFacts,
-      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT", origin: r.origin === "person" ? "HUMAN" : "AI_PROPOSAL", updatedBy: l.actor.id } });
+      readerProfile: { readerKind: d.readerKind, identityDocument: d.identityDocument, proves: d.proves }, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: l.actor.id } });
     await waitingAdd(tx, l, "document_type", key, d.name);
     return key;
   },
@@ -219,7 +219,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         }
         const land = LANDERS[r.kind as ProposalKind];
         if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
-        landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: r.addReason ?? reason ?? r.reason, proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+        landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason, proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
       }
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(),
         decisionReason: reason, batchId, decidedKey: landedAs, ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey) } : {}) } });

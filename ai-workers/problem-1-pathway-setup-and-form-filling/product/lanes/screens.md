@@ -55,14 +55,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: BUILD 1b (not started) — 1a passed the Lead check (in Lead PR #96); this session's context is spent, so a fresh session builds 1b from this Handover
-owner: Builder
-next_action: fresh screens session: /next screens, BUILD 1b (Handover steps 1–8), hand back 1b; then 1c
+stage: FIX 1a (Lead PR #96, contract v2.1) on `claude/screens-1a-fix`; 1b built on `claude/screens-1b-queue` (EARLY-LOOK)
+owner: Lead
+next_action: Lead: fold `claude/screens-1a-fix` into PR #96; then the 1b early look
 then: 1b (queue page, grouped approval, seeds through the door) → 1c (pqr_pick, rule-sourced field) → S6 slices 2 → 3 → 4 (plan.md §4)
 blocked_by: nothing for 1b; 1c waits for runtime PR #94 (acceptPqrPick, N-2) and forms' rule reference (N-1)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-shared-library (S6) · FIX 1a (Lead PR #96, CI 40913796984) · cause: contract v2.1 on main (PR #98) dropped addReason and added source.rule, so the saved-run replay's items failed the door's parse; sources.ts and proposals.ts follow v2.1, check_s6_p149's item carries rule: null. Six named suites rerun alone on private copies. US$0.
 - 2026-10-29 · W1-shared-library (S6) · applied Lead message: 1a Lead check PASS (folded into Lead PR #96); next 1b. Handover rewritten for a fresh session (1b steps, what 1a gives it, owed items); this session's context is spent. No code. US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD 1a → CHECK · full run-suites 74 PASS 0 FAIL on 3d006452 (the first run's browser failures were this new copy's missing web build); check_s6_p149 37/37; graph G3 2 (older); migration clean on a copy of :4400 (no proposal rows there; the seeded replay covers every kind). US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD 1a · merged origin/claude/screens-2a-22c0e2 and main c545f84e; 50224b01: proposal_item table + migration (copies, drops rule rows, logs both; clean on a copy of :4400), proposals.ts one door (insertProposals, decide with landers, undo 10 s), readers switched; check_s6_p149 37/37; full run-suites running. US$0.
@@ -72,4 +73,3 @@ updated: 2026-10-29
 - 2026-10-29 · W1-shared-library (S6) · BUILD (2a) · 38cc245d: POST /library/fields, /sections, /answer-lists → 410; GET /library/:kind/:key/sources and row sources and where used; field and section rename (C3.15); origin line per page; check_s6_library_sources 24/24, pages browser 33/33; seed_library.cjs for checks that used the adds (forms, runtime files listed). US$0.
 - 2026-10-29 · Handover · applied Lead message (P-173 queue): item (2) sized (heavy, half waits on #90), Handover rewritten for a fresh session; context of this one spent. US$0.
 - 2026-10-29 · PR #91 review + P-165 · FIX · applied Lead message: 89822be7 Restore keeps the Pathway type (t=CORPORATE), a retired row announces Retired (qa_1029 49/49); main a7f96890 synced, STAND-INS gained SI-11, 14–16: 1b810203 SI-11 chip on Releases, SI-14–16 listed for the runtime lane; check_stand_ins 9/9; browser and full suites blocked by load (demo load > 30 s). US$0.
-- 2026-10-29 · qa batch + P-165 · CHECK · run on 4c4b9dd5 found BR-13's Status menu changed by Retired (screen01_browser, programs_s2): 044a7092 offers Retired only while one is retired; full run-suites on 044a7092 69 PASS 0 FAIL 1 skipped (demo reset). US$0.

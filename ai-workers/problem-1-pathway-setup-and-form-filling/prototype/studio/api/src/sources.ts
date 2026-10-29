@@ -563,7 +563,7 @@ export class Sources {
     // S6 slice 1a: the comparison's proposals enter the one review queue through the door (contract v2); the comparison
     // itself (outcome, candidates, form fields, affected items) is the server's working column beside them.
     const libKeys = new Set(library.map((l) => l.key));
-    const quoteOf = (q?: string) => (q && /^[0-9a-f]{64}$/.test(a.sha256) ? { file: a.fileName.slice(0, 300), sha256: a.sha256, edition: a.edition?.slice(0, 60) ?? null, page: null, quote: q.slice(0, 1000), quoteFound: true } : null);
+    const quoteOf = (q?: string) => (q && /^[0-9a-f]{64}$/.test(a.sha256) ? { file: a.fileName.slice(0, 300), sha256: a.sha256, edition: a.edition?.slice(0, 60) ?? null, page: null, quote: q.slice(0, 1000), quoteFound: true, rule: null } : null);
     const proposals: (NewProposal & Work)[] = items.map((i) => {
       const near = i.candidates.filter((c) => c.score >= 0.55).map((c) => c.key).slice(0, 10);
       const reuses = !!i.recommendation.key && (i.recommendation.action === "reuse" || (i.recommendation.action === "decide" && libKeys.has(i.recommendation.key)));
@@ -571,7 +571,7 @@ export class Sources {
       const payload = { kind: "field" as const, label: i.proposedKey.slice(0, 120), aliases: [], meaning: i.proposedMeaning, valueType: i.proposedType, subject: null, formBox: null };
       return { kind: "field", runId: jobId, step: job.kind, scope: { formEdition: (out.form_edition ?? a.edition ?? null)?.slice(0, 60) ?? null, combinationId: job.combinationId }, landsOn: "library",
         reuse: reuses ? { match: "reuse", existingKey: i.recommendation.key } : { match: "new", existingKey: null }, payload, source: quoteOf(i.evidence.quotes[0]), rounds: { draft: null, check: null }, rules: [],
-        agreement: "one_round", confidence: ready ? "ready" : i.outcome === "NEW" ? "check" : "decide", reason: ready ? null : i.reason.slice(0, 500), origin: "ai", addReason: null,
+        agreement: "one_round", confidence: ready ? "ready" : i.outcome === "NEW" ? "check" : "decide", reason: ready ? null : i.reason.slice(0, 500), origin: "ai",
         identity: { key: identityKeyOf(payload, ""), near, nearReason: near.length ? i.reason.slice(0, 300) : null }, relatesTo: null, revision: null, basis: "SAMPLE",
         work: { proposedKey: i.proposedKey, outcome: i.outcome, matchedKey: i.matchedKey, candidates: i.candidates, persons: i.persons, boxes: i.boxes, evidence: { ...i.evidence, recommendation: i.recommendation },
           affected: Object.fromEntries([i.matchedKey, ...i.candidates.map((c) => c.key)].filter(Boolean).map((k) => [k, affected.get(k!) ?? null])), reason: i.reason } };
