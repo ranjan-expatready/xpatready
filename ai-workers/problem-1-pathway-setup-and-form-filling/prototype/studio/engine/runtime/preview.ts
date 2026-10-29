@@ -7,7 +7,8 @@ import type { Snapshot } from "../snapshot.ts";
 import { caseView, knownOf, type Answer, type Participant } from "./case.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { MINOR } from "../../contracts/runtime.ts";
-import { FAMILIES, type FamilyKey, type PreviewView } from "../../contracts/workspace.ts";
+import { FAMILIES, type FamilyKey, type OutputGroup, type PreviewSets, type PreviewView } from "../../contracts/workspace.ts";
+import { documentFacts, factSources, prequalification, SOURCE_WORDS } from "../sources.ts";
 
 type Line = { role: string; label?: string; min?: number; max?: number; applies?: boolean };
 const limits = (participants: Line[], role: string) => { const p = participants.find((x) => x.role === role); return { min: p?.min ?? 0, max: p?.max ?? 0, label: p?.label, applies: p?.applies !== false }; };
@@ -62,8 +63,24 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   const ids = new Set(people.map((p) => p.subjectId));
   const kept = Object.fromEntries(Object.entries(tweaks).filter(([k, v]) => ids.has(k.split("|")[0]) && typeof v === "boolean"));
   const sample = sampleBirthDates(s, people, today), answers = [...sample, ...tweakAnswers(kept, today)];
-  const questionnaire = caseView(s, people, answers, [], "sqr", today);
   const r = render(s, renderPeople, knownOf(s, people, answers, [], today).known, { today });
+  // Where each fact's answer comes from, per person role (W1-15 slice 1, P-130): the rules' default or a person's choice.
+  const sources = new Map(factSources(s).map((f) => [`${f.role}|${f.fact}`, f]));
+  const roleOf = (subjectId: string) => people.find((p) => p.subjectId === subjectId)?.role ?? subjectId;
+  const docFacts = documentFacts(s, renderPeople);
+  const partnerOf = (id: string) => { const me = roleOf(id), other = me === "principal" ? "spouse_or_partner" : me === "spouse_or_partner" ? "principal" : null; return other ? people.find((p) => p.role === other)?.subjectId ?? null : null; };
+  // Lead Q2: the client view skips a fact a document supplies when that document is needed from its holder for this family
+  // (the holder, or the partner for a partner's fact); otherwise the question is the fallback and is asked (P-130).
+  const fromDocument = (subjectId: string, fact: string): string | null => {
+    const f = sources.get(`${roleOf(subjectId)}|${fact}`);
+    if (f?.source !== "DOCUMENT" || !f.document) return null;
+    const key = f.document.key, name = f.document.name;
+    if (!(docFacts.get(subjectId)?.get(fact) ?? []).some((x) => x.key === key)) return null;
+    const holders = new Set([subjectId, partnerOf(subjectId)]);
+    return r.checklist.some((d) => holders.has(d.person) && d.status === "Needed" && (d.document_type_key === key || d.requirement === name)) ? name : null;
+  };
+  const questionnaire = caseView(s, people, answers, [], "sqr", today, [], { skipDocumentFacts: fromDocument });
+  const agentView = caseView(s, people, answers, [], "agent", today);
   // The answers that change what applies: yes/no questions from the family before any tweak (so a tweak never vanishes
   // once answered).
   const base = render(s, renderPeople, knownOf(s, people, sample, [], today).known, { today });
@@ -76,17 +93,51 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   const chosen = people.some((p) => p.subjectId === person && p.role !== "case") ? person : "principal";
   // The application's own questions, documents and forms are shown with the principal applicant, who answers them.
   const mine = (id: string) => (x: string) => x === id || (id === "principal" && x === "case");
+  // The one count (journey item 8): every question for the person in the agent view, hidden ones included, as the
+  // Questionnaires tab counts its chip; `asked` is what the client is asked of them.
+  const count = (v: typeof questionnaire, id: string, shown: boolean) => v.sections.filter((x) => mine(id)(x.subjectId)).reduce((n, x) => n + x.questions.filter((q) => !shown || !q.hidden).length, 0);
   const forPerson = (id: string) => ({
     documents: r.checklist.filter((d) => mine(id)(d.person) && d.status !== "Not needed"),
     forms: r.forms.filter((f) => mine(id)(f.person) && f.applies !== false),
-    questions: questionnaire.sections.filter((x) => mine(id)(x.subjectId)).reduce((n, x) => n + x.questions.filter((q) => !q.hidden).length, 0),
+    questions: count(agentView, id, false),
+    asked: count(questionnaire, id, true),
   });
+  // C4.6: a form filed for the application (its rule is about the case) or once per couple is its own group, shown once
+  // with the person who files it; every other form by its filing channel.
+  const formDef = new Map((s.forms as { form_number: string; who: string; condition?: { subjectKind?: string } | null }[]).map((f) => [f.form_number, f]));
+  const groupOf = (form: string, ch: Channel): OutputGroup => { const d = formDef.get(form); return d?.who === "case" || d?.condition?.subjectKind === "CASE" ? "APPLICATION" : d?.who === "couple_once" ? "COUPLE" : ch; };
+  const fromWords = (subjectId: string, fact: string, collected: string) => {
+    const f = sources.get(`${roleOf(subjectId)}|${fact}`);
+    if (!f) return collected === "client_questionnaire" || collected === "profile_record" ? SOURCE_WORDS.CLIENT : SOURCE_WORDS.AGENT;
+    return f.source === "DOCUMENT" ? `${SOURCE_WORDS.DOCUMENT} · ${f.document?.name ?? "a document"}` : SOURCE_WORDS[f.source];
+  };
+  // Lead Q1: the information line only ("Passport fills 7 answers"): every answer of the person a needed document fills,
+  // whether the client view would otherwise ask it or the case officer enters it from the document.
+  const filledByDocuments = (id: string) => {
+    const by = new Map<string, string[]>();
+    for (const x of agentView.sections.filter((x) => mine(id)(x.subjectId))) for (const q of x.questions) {
+      const doc = fromDocument(x.subjectId, q.fact);
+      if (doc && !(by.get(doc) ?? []).includes(q.label)) by.set(doc, [...(by.get(doc) ?? []), q.label]);
+    }
+    return [...by].map(([document, facts]) => ({ document, facts }));
+  };
+  const chosenRole = roleOf(chosen);
+  const sets: PreviewSets = {
+    pqr: prequalification(s).filter((t) => t.role === chosenRole || (chosenRole === "principal" && t.role === "case")).map((t) => ({ fact: t.fact, label: t.label, from: t.source === "DOCUMENT" ? `${SOURCE_WORDS.DOCUMENT} · ${t.document ?? "a document"}` : SOURCE_WORDS.CLIENT })),
+    sqr: { asked: count(questionnaire, chosen, true), fromDocuments: filledByDocuments(chosen) },
+    agent: {
+      questions: count(agentView, chosen, false),
+      sections: agentView.sections.filter((x) => mine(chosen)(x.subjectId)).map((x) => ({ section: x.section, title: x.title, about: x.about_label,
+        questions: x.questions.map((q) => ({ fact: q.fact, label: q.label, from: fromWords(x.subjectId, q.fact, q.collected_from), hidden: q.hidden })) })),
+    },
+  };
   return {
     label, families, family: fam, person: chosen,
-    people: people.filter((p) => p.role !== "case").map((p) => { const x = forPerson(p.subjectId); return { subjectId: p.subjectId, role: p.role, label: p.label, questions: x.questions, documents: x.documents.length, forms: x.forms.length }; }),
+    people: people.filter((p) => p.role !== "case").map((p) => { const x = forPerson(p.subjectId); return { subjectId: p.subjectId, role: p.role, label: p.label, questions: x.questions, asked: x.asked, documents: x.documents.length, forms: x.forms.length }; }),
     questionnaire,
     documents: forPerson(chosen).documents.map((d) => ({ requirement: d.requirement, status: d.status, why: d.why, provided_by: d.provided_by })),
-    forms: forPerson(chosen).forms.map((f) => { const ch = channelOf.get(f.form) ?? "PDF_UPLOAD"; return { form: f.form, title: f.title, applies: f.applies, why: f.why, channel: ch, channelWords: CHANNEL_WORDS[ch], noRule: !!(f as { no_rule?: boolean }).no_rule }; }),
+    forms: forPerson(chosen).forms.map((f) => { const ch = channelOf.get(f.form) ?? "PDF_UPLOAD"; return { form: f.form, title: f.title, applies: f.applies, why: f.why, channel: ch, channelWords: CHANNEL_WORDS[ch], noRule: !!(f as { no_rule?: boolean }).no_rule, group: groupOf(f.form, ch) }; }),
     tweaks: tweakList,
+    sets,
   };
 }

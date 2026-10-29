@@ -7,11 +7,11 @@
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: M2 queue item 4, Preview by person and channel (C4.3, C4.6)
-current_slice: plan written (plan.md "Preview by person and by channel"), three questions for the Lead; no code yet
-stage: PLAN
+current_slice: Preview built per the Lead's answers (Q1–Q3) + N-2 (acceptPqrPick takes the queue's transaction client); notes in build-notes-m2.md
+stage: CHECK
 owner: Lead
-next_action: Lead: answer the Preview plan's three questions. Builder (a fresh session; this one is near its context limit): build Preview per the answers.
-blocked_by: Lead answers on the Preview plan; C4.7 queue wiring waits S6 slice 1 (screens) on main
+next_action: Lead: check Preview (C4.3, C4.6) and N-2 on this branch (claude/runtime-preview-9fd91e); CI is the full check. Then the builder takes (5) S7 Reset + Load sample with the six combinations.
+blocked_by: none; screens 1c registers acceptPqrPick as the pqr_pick lander once this branch is on main
 updated: 2026-10-29
 
 ## Handover (to a fresh runtime session, 29 Oct evening; this session stops at a safe point, context near its limit)
@@ -23,10 +23,10 @@ updated: 2026-10-29
   * PR #94 CI fix: `check_studio_browser.cjs` A5 clicks the Child chip (the Documents tab shows one person at a time). 49/49 on an isolated copy.
 * **Decided:** QA-93 / P-174 (founder): what a client is asked comes from the forms and rules; choosing sections sets only order, titles and which empty sections show. It is built that way; nothing more to build.
 * **Next (the Lead's M2 queue):**
-  * (4) Preview: plan in plan.md; wait for the Lead's answers.
+  * (4) Preview: built on `claude/runtime-preview-9fd91e` (fresh session, 29 Oct); see `screens/W1-questions-and-documents/build-notes-m2.md`.
   * (5) S7 Reset + Load sample with the six combinations (C10.1, C11.7).
   * (6) Validator (C3.8).
-  * Wire C4.7 into the queue once S6 slice 1 is on main.
+  * C4.7: `acceptPqrPick(tx, actor, item)` is ready for the queue (N-2 done); screens 1c registers it as the lander.
   * QA-91 where it fits.
 * **Running checks (runtime ports 4430–4439 only):** the usage line at the top of each test, e.g. `zsh studio/tools/isolated.sh runtime_pqr 4436 start && tsx studio/tests/check_pqr.ts 4436 xr_studio_runtime_pqr`.
   * Build the web app first (`cd studio/web && ../node_modules/.bin/vite build`).

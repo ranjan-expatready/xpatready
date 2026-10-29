@@ -4,6 +4,7 @@
 // requirement: a draft until the combination's release publishes it; the author's own draft is undone at once. US$0.
 import { randomUUID } from "node:crypto";
 import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
 import { agentRefusal, CASE_OFFICER_NEEDS_REASON, countryPqr, factSourceProblems, factSources, prequalification, SOURCES, who, type FactSourceView } from "../../engine/sources.ts";
@@ -205,11 +206,14 @@ export async function bulkUndo(db: Db, audit: Audit, actor: Actor, c: { id: stri
   return { undone: go.length, kept };
 }
 
-/** C4.7 Accept (Lead, 29 Oct; P-149 one door): S6's queue calls this when a person accepts a waiting `pqr_pick` item. It
- *  writes the tick through the same draft row and refusals as a person's tick, keeping the pick's reason, so it goes out in
- *  the combination's one release. Origin: AI_PROPOSAL for an AI pick; CODE_MATCH for the rules' stand-in (never shown as AI).
- *  Not routed: the queue (S6 slice 1) is the one door; there is no second pick store or route here. */
-export async function acceptPqrPick(db: Db, audit: Audit, actor: Actor, raw: unknown) {
+/** C4.7 Accept (Lead, 29 Oct; P-149 one door; N-2 of S6 slice 1): the queue's lander for `pqr_pick`. S6's decide
+ *  transaction calls it with its own transaction client, so the tick and the item's status change together (the queue
+ *  writes the item's status and decision). It writes the tick through the same draft row and refusals as a person's tick,
+ *  keeping the pick's reason, so it goes out in the combination's one release. Origin: AI_PROPOSAL for an AI pick;
+ *  CODE_MATCH for the rules' stand-in (never shown as AI). No route or button of its own: the queue's Accept is the one. */
+export async function acceptPqrPick(tx: Prisma.TransactionClient, actor: Actor, raw: unknown) {
+  // Reads and the audit line go through the caller's transaction client too (buildSnapshot and Audit only use its tables).
+  const db = tx as unknown as Db, audit = new Audit(db);
   need(actor, "author");
   const parsed = ProposalItem.safeParse(raw);
   if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
@@ -230,11 +234,9 @@ export async function acceptPqrPick(db: Db, audit: Audit, actor: Actor, raw: unk
   if (f.prequalification) throw problem(409, "Asked already", `"${f.label}" is already asked in pre-qualification.`);
   const errors = refusals(f, (newest?.source ?? null) as FactSourceView["source"] | null, newest?.documentTypeKey ?? null, true, newest?.sourceReason ?? null);
   if (errors.length) throw problem(422, "Not possible", errors[0].message, { errors });
-  await db.$transaction(async (tx) => {
-    if (newest?.status === "DRAFT") await tx.factSource.delete({ where: { id: newest.id } });
-    await tx.factSource.create({ data: { workspaceId: c.workspaceId, combinationId: id, lineageKey, role, canonicalFieldKey: fact, source: newest?.source ?? null, documentTypeKey: newest?.documentTypeKey ?? null, prequalification: true, reason, sourceReason: newest?.sourceReason ?? null,
-      version: (newest?.version ?? 0) + 1, status: "DRAFT", supersedesId: rows.find((r) => r.status === "PUBLISHED")?.id ?? null, origin: item.origin === "ai" ? "AI_PROPOSAL" : "CODE_MATCH", updatedBy: actor.id } });
-  });
+  if (newest?.status === "DRAFT") await tx.factSource.delete({ where: { id: newest.id } });
+  await tx.factSource.create({ data: { workspaceId: c.workspaceId, combinationId: id, lineageKey, role, canonicalFieldKey: fact, source: newest?.source ?? null, documentTypeKey: newest?.documentTypeKey ?? null, prequalification: true, reason, sourceReason: newest?.sourceReason ?? null,
+    version: (newest?.version ?? 0) + 1, status: "DRAFT", supersedesId: rows.find((r) => r.status === "PUBLISHED")?.id ?? null, origin: item.origin === "ai" ? "AI_PROPOSAL" : "CODE_MATCH", updatedBy: actor.id } });
   await audit.log(c.workspaceId, actor.id, "accepted", "fact source", lineageKey, `${actor.name} accepted the ${item.origin === "ai" ? "AI's" : "rules'"} pick: ask "${f.label}" (${who(snapshot, role)}) in pre-qualification for "${c.label}". Why: ${reason}`, { itemId: item.id, runId: item.runId }, id);
   return factSources((await buildSnapshot(db, c.workspaceId, id, "draft")).snapshot).find((x) => x.role === role && x.fact === fact);
 }

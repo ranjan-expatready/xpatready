@@ -181,8 +181,11 @@ export type Mode = "sqr" | "agent";
  *  its confirmation and the form boxes it fills. A case asks only what someone on it needs (P-62): a fact that fills a
  *  box of a form that applies, or decides whether a form, document or question applies. Questions the release places in
  *  a selected section but nothing of this case reads are not asked (counted in the summary). SQR mode shows the
- *  client's fields only; agent mode shows every needed fact. */
-export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = []): QuestionnaireView {
+ *  client's fields only; agent mode shows every needed fact.
+ *  `skipDocumentFacts` (Preview only for now, Lead Q2 29 Oct; the case default with M3's documents-first intake, C6.5):
+ *  a fact a document on that person's checklist supplies is not asked (P-130); it names the document, or null to ask.
+ *  What it skips is listed per person and document in `from_documents`. */
+export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null } = {}): QuestionnaireView {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const caseSubject = people.find((p) => p.role === "case")!;
   const { known, confirm } = knownOf(s, people, answers, rows, today);
@@ -201,7 +204,16 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const needed = r.questions.filter((q) => !q.about.includes("/") && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
     .sort((a, b) => first.get(`${a.section}|${a.about}`)! - first.get(`${b.section}|${b.about}`)! || placed(a.fact) - placed(b.fact));
   const notAsked = r.questions.filter((q) => !q.about.includes("/")).length - needed.length;
-  const questions = needed.filter((q) => mode === "agent" || isClientField(s, q.fact)).map((q) => {
+  const fromDocuments = new Map<string, { subjectId: string; document: string; facts: string[] }>();
+  const skipped = (q: (typeof needed)[number]) => {
+    const doc = opts.skipDocumentFacts?.(subjectOf(q.about), q.fact);
+    if (!doc) return false;
+    const k = `${subjectOf(q.about)}|${doc}`, e = fromDocuments.get(k) ?? { subjectId: subjectOf(q.about), document: doc, facts: [] };
+    if (!e.facts.includes(q.label)) e.facts.push(q.label);
+    fromDocuments.set(k, e);
+    return true;
+  };
+  const questions = needed.filter((q) => (mode === "agent" || isClientField(s, q.fact)) && !skipped(q)).map((q) => {
     const subjectId = subjectOf(q.about), p = placementOf(s, q.fact);
     let required = q.required, hidden = q.status === "hidden by a condition";
     if (p?.condition && p.condition_effect === "REQUIRE") { const c = evalCondition(s, known, p.condition, q.about === "case" ? "case" : subjectId); required = c.applies === true; }
@@ -253,6 +265,6 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const subjectId = c.person === "case" ? caseSubject.subjectId : c.person, fact = c.applies_to && placementOf(s, c.applies_to) ? c.applies_to : null;
     return { id: c.id, severity: c.severity, message: c.message, subjectId, about_label: c.person === "case" ? caseSubject.label : c.person_label, fact, section: fact ? placementOf(s, fact)!.section_id : null, illustrative: c.illustrative };
   }).filter((c) => mode === "agent" || (c.section !== null && shown.has(`${c.subjectId}|${c.section}`)));
-  return { mode, sections, checks, forms: r.forms.map((f) => ({ form: f.form, person: f.person_label, applies: f.applies })), summary: { not_asked: notAsked, questions: questions.length, answered: sections.reduce((n, x) => n + x.answered, 0), confirmed: sections.reduce((n, x) => n + x.confirmed, 0), missing: sections.reduce((n, x) => n + x.missing.length, 0) } };
+  return { mode, sections, checks, forms: r.forms.map((f) => ({ form: f.form, person: f.person_label, applies: f.applies })), ...(opts.skipDocumentFacts ? { from_documents: [...fromDocuments.values()] } : {}), summary: { not_asked: notAsked, questions: questions.length, answered: sections.reduce((n, x) => n + x.answered, 0), confirmed: sections.reduce((n, x) => n + x.confirmed, 0), missing: sections.reduce((n, x) => n + x.missing.length, 0) } };
 }
 export type CaseView = ReturnType<typeof caseView>;

@@ -111,8 +111,17 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
   const core = await import("../api/src/core.ts"); const { acceptPqrPick } = await import("../api/src/fact-sources.ts");
   const db = new core.Db(); const audit = new core.Audit(db);
   const actor = (id: string) => [...core.ACTORS, ...core.RUNTIME_ACTORS].find((a) => a.id === id)!;
-  const tryAccept = async (who: string, item: unknown) => { try { return { status: 200, body: await acceptPqrPick(db, audit, actor(who) as any, item) }; } catch (e: any) { return { status: e.getStatus?.() ?? 500, body: e.getResponse?.() ?? String(e) }; } };
+  // N-2: the queue calls it inside its own decide transaction (S6 slice 1); the test does the same.
+  const tryAccept = async (who: string, item: unknown) => { try { return { status: 200, body: await db.$transaction((tx) => acceptPqrPick(tx, actor(who) as any, item)) }; } catch (e: any) { return { status: e.getStatus?.() ?? 500, body: e.getResponse?.() ?? String(e) }; } };
+  void audit;
   const pick = picks[0] as any;
+  {
+    const before = sql(`select count(*) from fact_source where combination_id='${wp}' and lineage_key='${pick.identity.key}'`);
+    const auditBefore = sql(`select count(*) from audit_event where combination_id='${wp}' and action='accepted'`);
+    let rolled = false;
+    try { await db.$transaction(async (tx) => { await acceptPqrPick(tx, actor("user-A") as any, pick); throw new Error("the queue's own write failed"); }); } catch (e: any) { rolled = /queue's own write failed/.test(String(e?.message)); }
+    ok("C4.7 N-2 fail: when the queue's decide transaction fails after the lander, neither the tick nor its audit line stays", rolled && sql(`select count(*) from fact_source where combination_id='${wp}' and lineage_key='${pick.identity.key}'`) === before && sql(`select count(*) from audit_event where combination_id='${wp}' and action='accepted'`) === auditBefore, { rolled, before });
+  }
   r = await tryAccept("user-B", pick);
   ok("C4.7 roles fail: an approver cannot accept a pick (403)", r.status === 403, r.status);
   r = await tryAccept("user-A", { ...pick, payload: { kind: "comes_from", factKey: pick.payload.factKey, role: pick.payload.role, from: "client", documentType: null }, kind: "comes_from" });
