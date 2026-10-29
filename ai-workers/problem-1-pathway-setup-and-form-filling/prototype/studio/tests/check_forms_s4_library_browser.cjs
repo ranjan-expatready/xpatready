@@ -70,6 +70,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     step("DV-bb-1 fail: a dismissed card does not come back after the page reloads", (await cards.count()) === 1, `${await cards.count()} card(s) after reload`);
     await cards.first().locator("[data-run-dismiss]").click(); await sleep(300);
     step("C11.11: the uploaded forms are in the list afterwards", (await forms()).includes("IMM 5604") && (await forms()).includes("IMM 1344"));
+    // DV-bb-5 (outside review): the form number is in the row's own typeface (same family as the title), not a mono type.
+    const fonts = await p.locator("tr[data-form]").first().evaluate((tr) => [...tr.querySelectorAll("td")].slice(0, 2).map((td) => getComputedStyle(td.querySelector("button, span") ?? td).fontFamily));
+    step("DV-bb-5 pass: the form number and the title use one font family", fonts.length === 2 && fonts[0] === fonts[1], fonts.join(" | "));
+    step("DV-bb-5 fail: no mono type on the form number", !/mono/i.test(fonts[0] ?? "") && (await p.locator("tr[data-form] td.mono").count()) === 0, fonts[0]);
     await p.setInputFiles('input[aria-label="Choose PDFs to upload"]', [PDF, PDF2]); await p.locator("section[data-run-status]").nth(1).waitFor();
     await shot("03-upload-two-files");
 

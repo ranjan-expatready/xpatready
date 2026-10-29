@@ -4,14 +4,16 @@
 // the rules and checks used here fold below (m4). People pick from the shared library's person roles; a new kind of
 // person is added there (S6), never here.
 import * as React from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Plus, Undo2, X } from "lucide-react";
+import { BookOpen, ChevronDown, Plus, Undo2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { FILLED_BY, type PeopleLine, type PeoplePlan, type PeopleProposal, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView } from "../../../../contracts/workspace";
+import { type BulkSourceResult, type FactSourceRow, type PeopleLine, type PeoplePlan, type PeopleProposal, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
 import { Tip } from "@/components/status";
+import { BulkBar, FactDrawer, RowMenu, RowStatus, ComesFrom, PreQual, SAY, SourceChips, SourceStrip, useFactSources, useRefreshSources, useUndoToast, type Filter } from "@/pages/workspace/sources";
+import { Lock } from "lucide-react";
 import { ConfigArea } from "@/pages/configuration";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +43,8 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   const qc = useQueryClient(); const toast = useToast();
   const { canAuthor } = useSessionView();
   const [editing, setEditing] = React.useState(false);
+  // Board v2 (P-147 §3): folded to one line by default; it is the first thing on the tab and changes rarely.
+  const [unfolded, setUnfolded] = React.useState(false);
   const [lines, setLines] = React.useState<Line[]>(() => toLines(v));
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [busy, setBusy] = React.useState(false);
@@ -79,6 +83,12 @@ function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   };
   const err = (i: number, f: string) => errors[`participants[${i}].${f}`];
   const shown = editing ? lines : toLines(v);
+  if (!unfolded && !editing && !filling) return (
+    <section aria-labelledby="who-can-be" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface-raised px-5 py-3 shadow-sm" data-who-can-be data-folded>
+      <p className="min-w-0 text-sm"><span id="who-can-be" className="font-semibold">Who can be in this application</span> <span className="text-text-muted">· {shown.map((l) => `${role(l.role)?.label ?? l.label} ${howMany(l)}`).join(" · ")}{shown.filter((l) => l.applies).length > 1 ? " · each applicant files their own application" : ""}</span></p>
+      <Button size="sm" variant="ghost" onClick={() => setUnfolded(true)} aria-expanded={false}><ChevronDown /> {canAuthor ? "Show and edit" : "Show"}</Button>
+    </section>
+  );
   return (
     <section aria-labelledby="who-can-be" className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm" data-who-can-be>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -197,21 +207,26 @@ function AddPerson({ offered, onAdd }: { offered: { key: string; label: string; 
   );
 }
 
-// ------------------------------------------------------------------ questions per person (slice 2, early-look fix 3)
+// ------------------------------------------------------------------ questions per person (W1-15 slice 2, P-147)
 
-const SOURCE_WORDS: Record<string, string> = { client_questionnaire: "The client answers it in the questionnaire", profile_record: "From the client's profile", verified_document: "The case officer takes it from a document", staff_working_view: "The case officer fills it", existing_record: "From an existing record" };
-const TYPE_WORDS: Record<string, string> = { text: "Text", date: "Date", yes_no: "Yes or no", number: "Number", code: "A choice from a list", country: "A country", address: "An address", phone: "A phone number", email: "An email address" };
-
-/** One person role's questions as a case asks them: wording first, who fills it, only if, the forms that need it;
- *  coverage on top (a gap blocks release). The field code shows only in a question's side panel (concept §7). */
+/** One person role's questions as a case asks them, each row five things: Question · Comes from · Pre-qualification ·
+ *  Only if · Status (board v2 frames 1–2). The strip and the chips on top; ⋯ menu and the side drawer per row; the bulk
+ *  bar while rows are ticked. Facts no question asks (from a document or the case officer) are listed after the sections. */
 function QuestionsByPerson({ id, q, available }: { id: string; q: QuestionnairesView | null; available: { key: string; title: string }[] }) {
   const [sp, setSp] = useSearchParams();
   const { canAuthor } = useSessionView();
   const [add, setAdd] = React.useState("");
-  const [shown, setShown] = React.useState<QuestionnaireQuestion | null>(null);
+  const [shown, setShown] = React.useState<{ fact: string; q: QuestionnaireQuestion | null; section: string | null } | null>(null);
+  const [filter, setFilter] = React.useState<Filter>("all");
+  const [picked, setPicked] = React.useState<Set<string>>(new Set());
+  const [refused, setRefused] = React.useState<BulkSourceResult["refused"]>([]);
+  const fs = useFactSources(id);
+  const refresh = useRefreshSources(id);
+  const undoToast = useUndoToast();
   // Only the first section is open at first (146 questions on the work permit); each folds and "Open all" opens them all.
   const [openIds, setOpenIds] = React.useState<Set<string> | null>(null);
-  const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["combination", id], ["config", id], ["preview"]] });
+  const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["combination", id], ["config", id], ["preview"], ["fact-sources", id]] });
+  React.useEffect(() => { setPicked(new Set()); setFilter("all"); }, [q?.role]);
   const addSection = canAuthor ? (
     <div className="flex flex-wrap items-center gap-2" data-add-section>
       <Select aria-label="Library section to add" className="h-8 w-72" value={add} onChange={(e) => setAdd(e.target.value)}><option value="">Add a library section…</option>{available.map((x) => <option key={x.key} value={x.key}>{x.title}</option>)}</Select>
@@ -226,11 +241,62 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
     </section>
   );
   const role = q.roles.find((r) => r.role === q.role);
+  // Facts about the case itself (the file number, the office) belong to no person: they show where their question sits,
+  // and with the principal applicant when no question asks them.
+  const placedFacts = new Set(q.sections.flatMap((s) => s.questions.map((x) => x.fact)));
+  const rows = (fs.data?.facts ?? []).filter((f) => f.role === q.role || (f.role === "case" && (q.role === "principal" || placedFacts.has(f.fact))));
+  const byFact = new Map<string, FactSourceRow>(); for (const f of rows) if (f.role === q.role || !byFact.has(f.fact)) byFact.set(f.fact, f);
+  const checks = new Map<string, string>(); for (const p of fs.data?.problems ?? []) if ((p.role === q.role || (p.role === "case" && byFact.get(p.item)?.role === "case")) && p.level === "error" && !checks.has(p.item)) checks.set(p.item, p.message);
+  const unasked = [...byFact.values()].filter((f) => !placedFacts.has(f.fact));
+  const keep = (fact: string) => { const f = byFact.get(fact); return filter === "all" || (filter === "needs" ? checks.has(fact) : f?.source === filter); };
   const opened = openIds ?? new Set(q.sections[0] ? [q.sections[0].id] : []);
   const allOpen = q.sections.every((s) => opened.has(s.id));
   const total = q.sections.reduce((n, s) => n + s.questions.length, 0);
+  const pickedRows = [...byFact.values()].filter((f) => picked.has(f.fact));
+  const mine = [...byFact.values()];
+  const count = (src: FactSourceRow["source"]) => mine.filter((f) => f.source === src).length;
+  const toggle = (facts: string[], on: boolean) => setPicked((now) => { const n = new Set(now); for (const x of facts) if (on) n.add(x); else n.delete(x); return n; });
+  const backToRules = async (f: FactSourceRow, label: string) => {
+    try {
+      await api(`/combinations/${id}/fact-sources/${encodeURIComponent(f.role)}/${encodeURIComponent(f.fact)}`, { method: "PUT", json: { source: f.ruleSource, documentTypeKey: f.ruleSource === "DOCUMENT" ? f.ruleDocument?.key ?? null : null, version: f.version } });
+      refresh();
+      undoToast.show(`"${label}" is back to the rules' default`, f.change?.status === "DRAFT" ? undefined : async () => { await api(`/combinations/${id}/fact-sources/${encodeURIComponent(f.role)}/${encodeURIComponent(f.fact)}`, { method: "DELETE", json: { version: f.version + 1 } }); refresh(); });
+    } catch (e) { setRefused([{ role: f.role, fact: f.fact, label, message: (e as Error).message }]); }
+  };
+  const menu = (fact: string, label: string, x: QuestionnaireQuestion | null, section: string | null) => {
+    const f = byFact.get(fact);
+    const open = () => setShown({ fact, q: x, section });
+    return <RowMenu name={label} items={[
+      { label: "Open details", onSelect: open },
+      { label: "Change where it comes from…", why: !canAuthor ? SAY.readOnly : !f ? "No form needs it, so it has no source to change." : f.clientOnly ? SAY.clientOnly : null, onSelect: open },
+      { label: "Back to the rules' default", why: !canAuthor ? SAY.readOnly : !f || f.proposedBy === "Rules" ? SAY.atDefault : null, onSelect: () => f && void backToRules(f, label) },
+      { label: "Change in the library…", href: `/library/fields/${encodeURIComponent(fact)}` },
+      { label: "Move up or down", why: section ? SAY.order(section) : "No question asks it, so it has no place in a section." },
+      { label: "Retire", why: SAY.retire },
+    ]} />;
+  };
+  const row = (fact: string, label: string, x: QuestionnaireQuestion | null, section: string | null) => {
+    const f = byFact.get(fact);
+    return (
+      <tr key={fact} data-question data-fact={fact} className={cn(picked.has(fact) ? "bg-primary/5" : "")}>
+        {canAuthor ? <td className="w-8"><input type="checkbox" aria-label={`Select ${label}`} disabled={!f} checked={picked.has(fact)} onChange={(e) => toggle([fact], e.target.checked)} data-row-tick /></td> : null}
+        <td className="max-w-md"><button type="button" className="text-left font-medium hover:text-text-link hover:underline" aria-label={`Details of: ${label}`} onClick={() => setShown({ fact, q: x, section })}>{label}</button>{x?.group ? <span className="text-xs text-text-muted"> · asked for each entry</span> : null}{x && !x.required ? <span className="text-xs text-text-muted"> (optional)</span> : null}</td>
+        <td><ComesFrom f={f} fallbackless={!!f && f.source === "DOCUMENT" && !f.placed} /></td>
+        <td><PreQual f={f} /></td>
+        <td className="max-w-56 text-xs">{x?.onlyIf ?? <span className="text-text-muted">{x ? "Always" : "—"}</span>}</td>
+        <td><RowStatus f={f} check={checks.get(fact)} /></td>
+        <td className="w-10">{menu(fact, label, x, section)}</td>
+      </tr>
+    );
+  };
+  const head = (facts: string[]) => {
+    const pickable = facts.filter((x) => byFact.has(x)); const all = pickable.length > 0 && pickable.every((x) => picked.has(x));
+    return [...(canAuthor ? [<input key="all" type="checkbox" aria-label="Select every row in this section" disabled={!pickable.length} checked={all} onChange={(e) => toggle(pickable, e.target.checked)} />] : []), "Question", "Comes from", "Pre-qualification", "Only if", "Status", <span key="a" className="sr-only">Actions</span>];
+  };
   return (
     <section aria-labelledby="questions-head" className="space-y-4" data-questions>
+      <SourceStrip v={fs.data} />
+      {fs.error ? <Notice tone="warn" title="Where each answer comes from could not load">{fs.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void fs.refetch()}>Retry</button></Notice> : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="questions-head" className="font-semibold">Questions for each person</h2>
         <span className="flex flex-wrap items-center gap-2"><Button size="sm" variant="ghost" onClick={() => setOpenIds(allOpen ? new Set() : new Set(q.sections.map((s) => s.id)))}>{allOpen ? "Close all sections" : "Open all sections"}</Button>{addSection}</span>
@@ -239,7 +305,13 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
         {q.roles.map((r) => <button key={r.role} type="button" aria-pressed={r.role === q.role} data-role-chip={r.role} onClick={() => { const n = new URLSearchParams(sp); n.set("role", r.role); setSp(n, { replace: true }); }}
           className={cn("min-h-9 rounded-full border px-3 py-1 text-sm", r.role === q.role ? "border-primary bg-primary/10 font-medium text-text-link" : "border-border bg-surface-raised text-text-muted hover:bg-text/5")}>{r.label} · {r.questions} question{r.questions === 1 ? "" : "s"}{r.gaps ? <span className="ml-1 rounded bg-danger/12 px-1 text-xs text-text-danger">{r.gaps} not asked</span> : null}</button>)}
       </div>
-      <p className="text-sm" data-coverage><span className="font-medium">{role?.label}:</span> the forms need {q.coverage.needed} answer{q.coverage.needed === 1 ? "" : "s"} about this person · {q.coverage.client} asked of the client · {q.coverage.officer} filled by the case officer{q.coverage.gaps.length ? <span className="text-text-danger"> · {q.coverage.gaps.length} asked of nobody</span> : null}</p>
+      <SourceChips rows={mine} needs={checks.size} value={filter} onChange={setFilter} />
+      {pickedRows.length && canAuthor ? <BulkBar id={id} picked={pickedRows} onClear={() => setPicked(new Set())} onDone={(r, undo) => { setRefused(r.refused); if (r.saved) { setPicked(new Set()); undoToast.show(`${r.what.charAt(0).toUpperCase()}${r.what.slice(1)} on ${r.saved} question${r.saved === 1 ? "" : "s"}`, undo); } }} /> : null}
+      {refused.length ? <Notice tone="warn" title={`${refused.length} row${refused.length === 1 ? "" : "s"} not changed`} action={<Button size="sm" variant="ghost" onClick={() => setRefused([])}>Dismiss</Button>}><ul className="mt-1 space-y-0.5" data-bulk-refused>{refused.map((x, i) => <li key={i}>{x.label && !x.message.includes(x.label) ? <><span className="font-medium">{x.label}</span>: </> : null}{x.message}</li>)}</ul></Notice> : null}
+      {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
+      {/* S2-1 (Lead, 29 Oct): the same sources and numbers as the chips and the strip (slice 1's rules), not the older
+          placement count (client or case officer). */}
+      <p className="text-sm" data-coverage><span className="font-medium">{role?.label}:</span> {fs.data ? <>the forms need {mine.length} answer{mine.length === 1 ? "" : "s"} for this person · {count("DOCUMENT")} from documents · {count("CLIENT")} asked of the client · {count("AGENT")} entered by the case officer</> : "working out where each answer comes from…"}{q.coverage.gaps.length ? <span className="text-text-danger"> · {q.coverage.gaps.length} asked of nobody</span> : null}</p>
       {q.coverage.gaps.length ? (
         <Notice tone="danger" title={`${q.coverage.gaps.length} answer${q.coverage.gaps.length === 1 ? " is" : "s are"} needed but asked of nobody: release waits for ${q.coverage.gaps.length === 1 ? "it" : "them"}`}>
           <ul className="mt-1 space-y-0.5" data-gaps>{q.coverage.gaps.slice(0, 8).map((g) => <li key={g.fact}>"{g.meaning}", needed by {g.forms.join(", ")}</li>)}</ul>
@@ -247,47 +319,42 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
         </Notice>
       ) : null}
       {q.sections.map((s) => {
-        const isOpen = opened.has(s.id);
+        const isOpen = opened.has(s.id) || filter !== "all";
+        const lines = s.questions.filter((x) => keep(x.fact));
+        const locked = s.questions.length > 0 && s.questions.every((x) => byFact.get(x.fact)?.clientOnly);
+        if (filter !== "all" && !lines.length) return null;
+        const fromDocs = s.questions.filter((x) => byFact.get(x.fact)?.source === "DOCUMENT").length;
         return (
           <div key={s.id} className="rounded-xl border border-border bg-surface-raised" data-section={s.id}>
             <div className="flex items-center justify-between gap-2 pr-2">
               <button className="flex-1 px-4 py-3 text-left" aria-expanded={isOpen} onClick={() => { const n = new Set(opened); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); setOpenIds(n); }}>
-                <span className="font-medium">{s.title}</span> <span className="text-xs text-text-muted">· {s.questions.length} question{s.questions.length === 1 ? "" : "s"} for {role?.label ?? "this person"}</span>
+                <span className="font-medium">{s.title}</span>{locked ? <span className="ml-2 inline-flex items-center gap-1 text-xs text-text-muted" data-client-only><Lock className="size-3.5" aria-hidden /> Always the client</span> : null} <span className="text-xs text-text-muted">· {s.questions.length} question{s.questions.length === 1 ? "" : "s"} for {role?.label ?? "this person"}{fromDocs ? ` · ${fromDocs} from documents` : ""}</span>
               </button>
               {canAuthor ? <Button size="sm" variant="ghost" onClick={() => sel.mutate({ key: s.id, on: false })} aria-label={`Remove from questionnaire: ${s.title}`}>Remove from questionnaire</Button> : null}
             </div>
-            {isOpen ? (s.questions.length ? (
+            {isOpen ? (lines.length ? (
               <div className="border-t border-border px-4 py-3">
-                <Table dense head={["Question", "Who fills it", "Only if", "Needed by", ""]}>
-                  {s.questions.map((x) => (
-                    <tr key={x.fact} data-question>
-                      <td className="max-w-md"><span className="font-medium">{x.wording}</span>{x.group ? <span className="text-xs text-text-muted"> · asked for each entry</span> : null}{x.required ? null : <span className="text-xs text-text-muted"> (optional)</span>}</td>
-                      <td><Pill tone={x.filledBy === "CLIENT" ? "info" : "neutral"}>{FILLED_BY[x.filledBy]}</Pill></td>
-                      <td className="max-w-56 text-xs">{x.onlyIf ?? <span className="text-text-muted">Always</span>}</td>
-                      <td className="text-xs">{x.neededBy.length ? x.neededBy.join(", ") : <span className="text-text-muted">No form (decides what applies)</span>}</td>
-                      <td><Button size="sm" variant="ghost" aria-label={`Details of: ${x.wording}`} onClick={() => setShown(x)}>Details</Button></td>
-                    </tr>
-                  ))}
+                <Table dense head={head(lines.map((x) => x.fact))} label={`${s.title}: questions`}>
+                  {lines.map((x) => row(x.fact, x.wording, x, s.title))}
                 </Table>
               </div>
             ) : <p className="border-t border-border px-4 py-3 text-sm text-text-muted">This section asks {role?.label ?? "this person"} nothing for this combination.</p>) : null}
           </div>
         );
       })}
-      <p className="text-xs text-text-muted">{total} question{total === 1 ? "" : "s"} for {role?.label}, from the largest Sample family the combination allows. {q.notAsked ? `${q.notAsked} placed question${q.notAsked === 1 ? " is" : "s are"} not asked: no form reads ${q.notAsked === 1 ? "it" : "them"} and ${q.notAsked === 1 ? "it decides" : "they decide"} nothing.` : ""}</p>
-      {shown ? (
-        <Panel open onOpenChange={(o) => !o && setShown(null)} title={shown.wording} description={shown.meaning} footer={<><span /><Button variant="ghost" onClick={() => setShown(null)}>Close</Button></>}>
-          <dl className="grid grid-cols-[10rem_1fr] gap-x-3 gap-y-2 text-sm" data-question-details>
-            {shown.help ? <><dt className="text-text-muted">Note</dt><dd className="text-xs">{shown.help}</dd></> : null}
-            <dt className="text-text-muted">Who fills it</dt><dd>{FILLED_BY[shown.filledBy]} · {SOURCE_WORDS[shown.collectedFrom ?? ""] ?? "Not placed"}<p className="text-xs text-text-muted">Set once in the shared library; a change needs a second person and reaches every combination that asks it.</p></dd>
-            <dt className="text-text-muted">Kind of answer</dt><dd>{TYPE_WORDS[shown.answerType] ?? shown.answerType}</dd>
-            <dt className="text-text-muted">Only if</dt><dd>{shown.onlyIf ?? "Always"}</dd>
-            <dt className="text-text-muted">Needed by</dt><dd>{shown.neededBy.join(", ") || "No form: it decides what applies"}</dd>
-            <dt className="text-text-muted">Used in</dt><dd>{shown.whereUsed} combination{shown.whereUsed === 1 ? "" : "s"}</dd>
-            <dt className="text-text-muted">System name</dt><dd><Link className="mono text-text-link underline" to={`/library/fields/${encodeURIComponent(shown.fact)}`}>{shown.fact}</Link></dd>
-          </dl>
-        </Panel>
+      {unasked.filter((f) => keep(f.fact)).length ? (
+        <div className="rounded-xl border border-border bg-surface-raised" data-section="unasked">
+          <p className="px-4 pt-3 font-medium">Answered without a question <span className="text-xs font-normal text-text-muted">· {unasked.length} fact{unasked.length === 1 ? "" : "s"} for {role?.label}: read from a document or entered by the case officer</span></p>
+          <div className="px-4 py-3">
+            <Table dense head={head(unasked.filter((f) => keep(f.fact)).map((f) => f.fact))} label="Answered without a question">
+              {unasked.filter((f) => keep(f.fact)).map((f) => row(f.fact, f.label, null, null))}
+            </Table>
+          </div>
+        </div>
       ) : null}
+      <p className="text-xs text-text-muted">{total} question{total === 1 ? "" : "s"} for {role?.label}, from the largest Sample family the combination allows. {q.notAsked ? `${q.notAsked} placed question${q.notAsked === 1 ? " is" : "s are"} not asked: no form reads ${q.notAsked === 1 ? "it" : "them"} and ${q.notAsked === 1 ? "it decides" : "they decide"} nothing.` : ""}</p>
+      {shown ? <FactDrawer key={`${q.role}|${shown.fact}|${byFact.get(shown.fact)?.version ?? 0}`} id={id} role={q.role} roleLabel={role?.label ?? q.role} section={shown.section} q={shown.q} f={byFact.get(shown.fact)} canAuthor={canAuthor} onClose={() => setShown(null)} onSaved={(t, u) => undoToast.show(t, u)} /> : null}
+      {undoToast.node}
     </section>
   );
 }
