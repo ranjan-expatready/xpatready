@@ -53,9 +53,9 @@ try {
   ok("C1.6 Q1: a parked portal key takes its account's name; an unknown account is refused by the database", sql(`select portal_key from combination where id='${C}'`) === "PR_PORTAL"
     && (() => { try { sql(`update combination set portal_key='rep_pr_portal' where id='${C}'`); return false; } catch { return true; } })());
   ok("C11.18 C-4 fail: Not needed for every account, or beside another channel, is refused by the database",
-    (() => { try { sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) values ('${W}', '${E[3]}', 'ANY', '{NOT_NEEDED}', 'X', 't')`); return false; } catch { return true; } })()
-    && (() => { try { sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) values ('${W}', '${E[3]}', 'PR_PORTAL', '{NOT_NEEDED,ONLINE}', 'X', 't')`); return false; } catch { return true; } })()
-    && sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) values ('${W}', '${E[3]}', 'PR_PORTAL', '{NOT_NEEDED}', 'X', 't') returning account`) === "PR_PORTAL");
+    (() => { try { sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) values ('${W}', '${E[3]}', 'ANY', '{NOT_NEEDED}', 'PERSON_SAMPLE', 't')`); return false; } catch { return true; } })()
+    && (() => { try { sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) values ('${W}', '${E[3]}', 'PR_PORTAL', '{NOT_NEEDED,ONLINE}', 'PERSON_SAMPLE', 't')`); return false; } catch { return true; } })()
+    && sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) values ('${W}', '${E[3]}', 'PR_PORTAL', '{NOT_NEEDED}', 'PERSON_SAMPLE', 't') returning account`) === "PR_PORTAL");
   ok("C1.6: the migration's own text says how to roll back", /Rollback/.test(readFileSync(join(MIG, NEW, "migration.sql"), "utf8")));
 } finally {
   execFileSync(join(BIN, "dropdb"), ["-h", "127.0.0.1", "-p", "54329", "-U", "xr_studio", "--if-exists", DB]);

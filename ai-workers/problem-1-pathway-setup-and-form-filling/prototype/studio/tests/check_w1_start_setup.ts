@@ -70,8 +70,8 @@ const card = async (key: string) => ((await call("GET", "/catalogue?pathway=INDI
   ok("M1 founder (wait for a click): with no saved answer Start setup creates the combination and starts no run", r.status === 201 && r.body.created === true && r.body.saved === false && r.body.run === null && sql(`select count(*) from ai_batch where scope_label like '${tvId}|%'`) === "0", r.body);
   const offer = (await call("GET", `/combinations/${tvId}/start-setup`)).body;
   const words = /\((.*)\)$/.exec(offer.offer?.label ?? "")?.[1] ?? "";
-  ok("M1: the landing offers one button 'Find forms with AI (about US$… · at most US$…)', the worst case in its tip", offer.run === null && offer.offer?.mode === "live" && /^Find forms with AI \(/.test(offer.offer.label) && COST.test(words) && /at most US\$\d+\.\d\d\. Nothing is spent until you click\./i.test(offer.offer.tip) && /^[0-9a-f]{64}$/.test(offer.offer.planSha256), offer.offer);
-  ok("fix 4: the button and its tip say the cost in the same words (about US$x · at most US$y)", offer.offer.tip.toLowerCase().includes(`${words.toLowerCase()}.`), { words, tip: offer.offer.tip });
+  ok("M1: the landing offers one button 'Find forms with AI (about US$… · at most US$…)', the worst case in its tip, with each AI step's reserve (QA-98)", offer.run === null && offer.offer?.mode === "live" && /^Find forms with AI \(/.test(offer.offer.label) && COST.test(words) && /at most US\$\d+\.\d\d \(.*: at most US\$\d+\.\d\d\)\. Nothing is spent until you click\./i.test(offer.offer.tip) && /^[0-9a-f]{64}$/.test(offer.offer.planSha256), offer.offer);
+  ok("fix 4: the button and its tip say the cost in the same words (about US$x · at most US$y)", offer.offer.tip.toLowerCase().includes(`${words.toLowerCase()} (`), { words, tip: offer.offer.tip });
   writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 1, err: RAW } }));
   r = await call("POST", `/combinations/${tvId}/forms/find`, { mode: "live", planSha256: offer.offer.planSha256, idempotencyKey: `check-s3-${Date.now()}` });
   const v2 = r.body?.id ? await ended(r.body.id) : null;
