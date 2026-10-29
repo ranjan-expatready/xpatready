@@ -70,7 +70,7 @@ const REASON = "Test: a different meaning from the library field that could fit.
   // ─────────────────────────────── M8, m1, m3-ish, m4, m7, m8: decisions are validated
   const a = clean[0], b = clean[1], c = clean[2];
   r = await call("POST", `/jobs/${jobId}/items/${a.id}`, { decision: "BOGUS" });
-  ok("C3.6 M8 fail: an unknown decision is refused (400), nothing stored", r.status === 400 && sql(`select decision from normalization_item where id='${a.id}'`) === "PENDING", r.body?.detail);
+  ok("C3.6 M8 fail: an unknown decision is refused (400), nothing stored", r.status === 400 && sql(`select status from proposal_item where id='${a.id}'`) === "waiting", r.body?.detail);
   r = await call("POST", `/jobs/${jobId}/items/${a.id}`, { decision: "NEW", label: "Brk value type", meaning: "A test meaning long enough.", valueType: "<script>alert(1)</script>" });
   ok("C3.6 M8 fail: an unknown kind of value is refused (400)", r.status === 400, r.body?.detail);
   r = await call("POST", `/jobs/${jobId}/items/${a.id}`, { decision: "NEW", label: "Brk long meaning", meaning: "x".repeat(200_000) });
@@ -255,9 +255,9 @@ const REASON = "Test: a different meaning from the library field that could fit.
   ok("C3.4 m9: ten stub drafts at once leave one open draft", new Set(drafts.map((d) => d.body?.id)).size === 1 && Number(sql(`select count(*) from drafting_job where attachment_id='${ck.id}' and kind='checklist_draft' and status='COMPLETED'`)) === 1, drafts.map((d) => d.status));
   const ckJob = sql(`select id from drafting_job where attachment_id='${ck.id}' and kind='checklist_draft' and status='COMPLETED' order by started_at desc limit 1`);
   // Scaffolding (test input, not an AI answer): one malformed proposal, the shape a live answer could return.
-  sql(`insert into normalization_item (id, workspace_id, job_id, proposed_key, proposed_meaning, proposed_type, outcome, candidates, persons, boxes, evidence, affected, reason, kind, payload, source_quote)
-       select gen_random_uuid(), workspace_id, id, 'requirement.brk', 'Test input (malformed)', 'document', 'NEW', '[]', '{}', '[]', '{}', '{}', 'test input', 'document_requirement', '{"who": 5}', 'Test input' from drafting_job where id='${ckJob}'`);
-  const bad = sql(`select id from normalization_item where job_id='${ckJob}' and proposed_key='requirement.brk'`);
+  sql(`insert into proposal_item (id, workspace_id, kind, run_id, step, lands_on, reuse, payload, source, rounds, agreement, confidence, origin, identity, identity_key, work)
+       select gen_random_uuid(), workspace_id, 'requirement_line', id, 'checklist_draft', 'combination', '{"match":"new","existingKey":null}', '{"who": 5}'::jsonb || '{"kind":"requirement_line"}', null, '{"draft":null,"check":null}', 'one_round', 'check', 'ai', '{"key":"requirement.brk","near":[],"nearReason":null}', 'requirement.brk', '{"proposedKey":"requirement.brk","outcome":"NEW","reason":"test input","legacyKind":"document_requirement","legacyPayload":{"who": 5},"sourceQuote":"Test input"}' from drafting_job where id='${ckJob}'`);
+  const bad = sql(`select id from proposal_item where run_id='${ckJob}' and identity_key='requirement.brk'`);
   r = await call("POST", `/jobs/${ckJob}/items/${bad}`, { decision: "NEW", label: "Brk checklist", meaning: "A test meaning long enough." });
   ok("C3.4 m8 fail: a checklist proposal cannot be made a shared field (400)", r.status === 400, r.body?.detail);
   await call("POST", `/jobs/${ckJob}/items/${bad}`, { decision: "ACCEPTED" });

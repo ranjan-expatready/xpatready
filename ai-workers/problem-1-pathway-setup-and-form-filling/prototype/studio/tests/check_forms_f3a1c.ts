@@ -46,10 +46,10 @@ const planOf = async (attachmentId: string, mode = "STUB", draftAgain = false) =
   sql(`update drafting_job set status='RUNNING' where id='${job}'`);
   ok("C3.1: BR-7 running: \"the AI draft is running\"", /the AI draft is running/.test((await planOf(aS)).why));
   sql(`update drafting_job set status='COMPLETED' where id='${job}'`);
-  sql(`insert into normalization_item (id, workspace_id, job_id, proposed_key, proposed_meaning, proposed_type, outcome, candidates, persons, boxes, evidence, affected, reason) select gen_random_uuid(), workspace_id, '${job}', 'person.sample_' || g, 'Sample proposal ' || g, 'string', 'new', '[]', '{}', '[]', '[]', '[]', 'F3a-1c check' from drafting_job, generate_series(1, 12) g where id='${job}'`);
+  sql(`insert into proposal_item (id, workspace_id, kind, run_id, step, lands_on, reuse, payload, source, rounds, agreement, confidence, origin, identity, identity_key, work) select gen_random_uuid(), workspace_id, 'field', '${job}', 'field_map', 'library', '{"match":"new","existingKey":null}', jsonb_build_object('kind', 'field', 'label', 'person.sample_' || g, 'aliases', '[]'::jsonb, 'meaning', 'Sample proposal ' || g, 'valueType', 'string', 'subject', null, 'formBox', null), null, '{"draft":null,"check":null}', 'one_round', 'check', 'ai', jsonb_build_object('key', 'person.sample_' || g, 'near', '[]'::jsonb, 'nearReason', null), 'person.sample_' || g, jsonb_build_object('proposedKey', 'person.sample_' || g, 'outcome', 'NEW', 'reason', 'F3a-1c check') from drafting_job, generate_series(1, 12) g where id='${job}'`);
   t = await planOf(aS, "STUB", true);
   ok("C3.1: BR-7 done with 12 proposals to decide: \"12 proposals left · a content publisher\" (draft again changes nothing)", t.action === "skip" && /Being mapped in Visitor visa: 12 proposals left · a content publisher\./.test(t.why), t.why);
-  sql(`update normalization_item set decision='REUSE' where job_id='${job}'`);
+  sql(`update proposal_item set status='accepted', choice='ACCEPTED' where run_id='${job}'`);
   ok("C3.1: BR-7 every proposal decided, not yet added: still skipped (\"the configuration author adds them to the draft\")", /every proposal is decided · the configuration author adds them to the draft/.test((await planOf(aS)).why));
   sql(`update drafting_job set status='APPLIED' where id='${job}'`);
   t = await planOf(aS);
@@ -62,7 +62,7 @@ const planOf = async (attachmentId: string, mode = "STUB", draftAgain = false) =
   // Break M4: a newer step that is no draft to review (a stub pass, a failed draft, a failed "add from the library")
   // never hides the draft still waiting; a newer real draft that was applied does.
   sql(`update drafting_job set status='COMPLETED', started_at = now() - interval '1 hour' where id='${job}'`);
-  sql(`update normalization_item set decision='PENDING' where job_id='${job}'`);
+  sql(`update proposal_item set status='waiting', choice=null where run_id='${job}'`);
   const newer = (kind: string, mode: string, status: string) => sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, started_by, message) select gen_random_uuid(), workspace_id, combination_id, id, '${kind}', '${mode}', '${status}', 'user-A', 'F3a-1c check (newer step)' from source_attachment where id='${aV}' returning id`).split("\n")[0];
   for (const [kind, mode, status, what] of [["field_map", "STUB", "COMPLETED", "a newer stub pass"], ["field_map", "REPLAY", "FAILED", "a newer failed draft"], ["reuse_map", "LOCAL", "FAILED", "a newer failed \"add from the library\""], ["field_map", "REPLAY", "BLOCKED", "a newer draft blocked by the usage limit"], ["field_map", "LIVE", "CANCELLED", "a newer cancelled draft"]] as const) {
     const id = newer(kind, mode, status);
@@ -83,7 +83,7 @@ const planOf = async (attachmentId: string, mode = "STUB", draftAgain = false) =
   sql(`update source_attachment set sha256 = '${sha}' where id='${aV}'`);
 
   // A stub pass is no draft to review (no AI, nothing to decide): two at the same moment both queue (break B3 of slice 2).
-  sql(`delete from normalization_item where job_id='${job}'`); sql(`delete from drafting_job where id='${job}'`);
+  sql(`delete from proposal_item where run_id='${job}'`); sql(`delete from drafting_job where id='${job}'`);
   const stubs = await Promise.all([call("POST", `/attachments/${aV}/draft`, { mode: "stub" }), call("POST", `/attachments/${aS}/draft`, { mode: "stub" })]);
   ok("C3.1: D4 two stub passes of one file at the same moment both queue (no AI, nothing to review, US$0)", stubs.every((x) => x.status < 300), stubs.map((x) => x.status));
   sql(`delete from drafting_job where attachment_id in ('${aV}','${aS}')`);
@@ -136,11 +136,11 @@ const planOf = async (attachmentId: string, mode = "STUB", draftAgain = false) =
   ok("C3.1: PR #36 review fail case: retrying a failed draft while another combination's draft of the same file is queued is refused (409, in words); nothing inserted",
     bR.status < 300 && rr.status === 409 && /^Being mapped in Super visa/.test(rr.body.message) && vJobs() === "1", [bR.status, rr.status, rr.body?.message, vJobs()]);
   sql(`update drafting_job set status='COMPLETED' where id='${sJob}'`);
-  sql(`insert into normalization_item (id, workspace_id, job_id, proposed_key, proposed_meaning, proposed_type, outcome, candidates, persons, boxes, evidence, affected, reason) select gen_random_uuid(), workspace_id, '${sJob}', 'person.retry_' || g, 'Sample proposal ' || g, 'string', 'new', '[]', '{}', '[]', '[]', '[]', 'F3a-1c check' from drafting_job, generate_series(1, 3) g where id='${sJob}'`);
+  sql(`insert into proposal_item (id, workspace_id, kind, run_id, step, lands_on, reuse, payload, source, rounds, agreement, confidence, origin, identity, identity_key, work) select gen_random_uuid(), workspace_id, 'field', '${sJob}', 'field_map', 'library', '{"match":"new","existingKey":null}', jsonb_build_object('kind', 'field', 'label', 'person.retry_' || g, 'aliases', '[]'::jsonb, 'meaning', 'Sample proposal ' || g, 'valueType', 'string', 'subject', null, 'formBox', null), null, '{"draft":null,"check":null}', 'one_round', 'check', 'ai', jsonb_build_object('key', 'person.retry_' || g, 'near', '[]'::jsonb, 'nearReason', null), 'person.retry_' || g, jsonb_build_object('proposedKey', 'person.retry_' || g, 'outcome', 'NEW', 'reason', 'F3a-1c check') from drafting_job, generate_series(1, 3) g where id='${sJob}'`);
   rr = await call("POST", `/ai/batches/${bR.body.id}/retry`, {});
   ok("C3.1: PR #36 review fail case: retrying after the other combination finished its draft (3 proposals pending) is refused too; nothing inserted",
     rr.status === 409 && /Being mapped in Super visa: 3 proposals left/.test(rr.body.message) && vJobs() === "1", [rr.status, rr.body?.message, vJobs()]);
-  sql(`delete from normalization_item where job_id='${sJob}'`); sql(`delete from drafting_job where id='${sJob}'`);
+  sql(`delete from proposal_item where run_id='${sJob}'`); sql(`delete from drafting_job where id='${sJob}'`);
   rr = await call("POST", `/ai/batches/${bR.body.id}/retry`, {});
   ok("C3.1: PR #36 review with nothing mapped elsewhere the retry is queued (attempt 2, saved answer, US$0)", rr.status < 300 && vJobs() === "2", [rr.status, rr.body?.message, vJobs()]);
   ok("C3.1: D4 no model call was made: no drafting step of IMM 5257 or IMM 5707 is live (US$0)", sql(`select count(*) from drafting_job where mode='LIVE' and attachment_id in ('${aV}','${aS}','${v5707}','${s5707}')`) === "0");

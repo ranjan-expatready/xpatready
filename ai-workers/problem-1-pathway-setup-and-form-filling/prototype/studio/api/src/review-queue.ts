@@ -42,7 +42,7 @@ export class ReviewQueueService {
       this.db.programDef.findMany({ where: { workspaceId }, select: { id: true, programNodeKey: true, parentNodeKey: true, nodeKind: true, label: true } }),
       this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, kind: true, mode: true, status: true, costUsd: true, startedBy: true, startedAt: true, finishedAt: true, detail: true } }),
-      this.db.normalizationItem.groupBy({ by: ["jobId"], where: { workspaceId, decision: "PENDING" }, _count: true }),
+      this.db.proposalItem.groupBy({ by: ["runId"], where: { workspaceId, status: "waiting" }, _count: true }),
       this.db.aiBatch.findMany({ where: { workspaceId, status: { in: ["QUEUED", "RUNNING"] } }, include: { jobs: { select: { status: true, costUsd: true } } } }),
       this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" } }),
       this.db.fieldMerge.findMany({ where: { workspaceId, status: "PROPOSED" } }),
@@ -62,7 +62,7 @@ export class ReviewQueueService {
     const out: QueueItem[] = [];
 
     // AI proposals: the newest drafting step per source, as the Programs row counts them (programs.ts catalogue).
-    const waitingCount = new Map(pending.map((p) => [p.jobId, p._count]));
+    const waitingCount = new Map(pending.map((p) => [p.runId, p._count]));
     const newest = new Map<string, (typeof jobs)[number]>();
     for (const j of jobs) if (j.attachmentId && !newest.has(j.attachmentId)) newest.set(j.attachmentId, j);
     for (const j of newest.values()) {

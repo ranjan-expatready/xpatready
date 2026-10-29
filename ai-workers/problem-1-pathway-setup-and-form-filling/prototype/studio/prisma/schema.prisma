@@ -424,6 +424,9 @@ model LibraryChange {
   combinationId  String?   @map("combination_id") @db.Uuid
   /// Who applied the draft that created it (break M2): never its approver either.
   appliedBy      String?   @map("applied_by")
+  /// S6 slice 1a: the proposal it came from and the batch it was accepted in (grouped approval and Undo, slice 1b).
+  proposalItemId String?   @map("proposal_item_id") @db.Uuid
+  batchId        String?   @map("batch_id") @db.Uuid
 
   @@index([workspaceId, status])
   @@map("library_change")
@@ -878,7 +881,7 @@ model DraftingJob {
 
   combination Combination?        @relation(fields: [combinationId], references: [id], onDelete: Cascade)
   batch       AiBatch?            @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  items       NormalizationItem[]
+  proposals   ProposalItem[]
 
   // A partial unique index (migration 20261021070000_ai_batches) allows one QUEUED or RUNNING step per source and
   // kind: a second launch for the same form is refused by the database, not only by a disabled button.
@@ -915,37 +918,57 @@ model AiBatch {
   @@map("ai_batch")
 }
 
-/// One proposed canonical field from an added form, compared with the library.
-/// outcome: REUSE | NEW | AMBIGUOUS | CONFLICT. decision: PENDING | ACCEPTED | CHANGED | RETURNED.
-model NormalizationItem {
-  id             String   @id @default(uuid()) @db.Uuid
-  workspaceId    String   @map("workspace_id") @db.Uuid
-  jobId          String   @map("job_id") @db.Uuid
-  formEditionId  String?  @map("form_edition_id") @db.Uuid
-  proposedKey    String   @map("proposed_key")
-  proposedMeaning String  @map("proposed_meaning")
-  proposedType   String   @map("proposed_type")
-  outcome        String
-  matchedKey     String?  @map("matched_key")
-  candidates     Json
-  persons        String[]
-  boxes          Json
-  evidence       Json
-  affected       Json
-  reason         String
-  decision       String   @default("PENDING")
-  decidedKey     String?  @map("decided_key")
-  decidedBy      String?  @map("decided_by")
-  decisionNote   String?  @map("decision_note")
+/// S6 slice 1a (P-149, one door): every AI, rules or person proposal, in the shape of contracts/proposal-item.ts (v2).
+/// Written only through api/src/proposals.ts (insertProposals; decide, or the field-map review in sources.ts calling the
+/// same writers). Replaces NormalizationItem (migration 20261029200000_s6_proposal_item, which logs what it copied and
+/// dropped). status: waiting · accepted · edited · rejected · undone (the contract's words).
+model ProposalItem {
+  id             String    @id @default(uuid()) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  kind           String
+  /// The run that made it (an AI or rules step is a DraftingJob); null for a person's Add.
+  runId          String?   @map("run_id") @db.Uuid
+  step           String
+  formEdition    String?   @map("form_edition")
+  combinationId  String?   @map("combination_id") @db.Uuid
+  landsOn        String    @map("lands_on")
+  reuse          Json
+  payload        Json
+  source         Json?
+  rounds         Json
+  rules          Json      @default("[]")
+  agreement      String
+  confidence     String
+  reason         String?
+  origin         String
+  addReason      String?   @map("add_reason")
+  identity       Json
+  /// identity.key as a column, for the exact-duplicate check at write and at approval.
+  identityKey    String    @map("identity_key")
+  relatesTo      String?   @map("relates_to") @db.Uuid
+  revision       Json?
+  status         String    @default("waiting")
+  decidedBy      String?   @map("decided_by")
   decidedAt      DateTime? @map("decided_at") @db.Timestamptz
-  /// field (the columns above) · section · document_requirement · rule · check · answer_list (payload holds the proposal).
-  kind           String   @default("field")
-  payload        Json?
-  sourceQuote    String?  @map("source_quote")
+  decisionReason String?   @map("decision_reason")
+  batchId        String?   @map("batch_id") @db.Uuid
+  basis          String    @default("SAMPLE")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  /// The server's working columns, never typed by a producer: the field-map review's choice (ACCEPTED · CHANGED · NEW ·
+  /// RETURNED), the key it chose, and the library comparison (proposed key, outcome, candidates, form fields, affected).
+  choice         String?
+  decidedKey     String?   @map("decided_key")
+  work           Json?
 
-  job DraftingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  run DraftingJob? @relation(fields: [runId], references: [id], onDelete: Cascade)
 
-  @@map("normalization_item")
+  @@index([workspaceId, status])
+  @@index([workspaceId, kind, identityKey])
+  @@index([combinationId])
+  @@index([formEdition])
+  @@index([runId])
+  @@index([batchId])
+  @@map("proposal_item")
 }
 
 /// A frozen, hashed configuration version that case work consumes. Draft edits never change it.
