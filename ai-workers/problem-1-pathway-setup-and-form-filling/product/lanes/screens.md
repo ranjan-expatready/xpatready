@@ -30,14 +30,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: CHECK — qa batch (QA-39, 48, 70–74, 79, 80) and the Stand-in chip at 044a7092 (run-suites 69 PASS 0 FAIL); PR #87 fixes at 9428a3fd
+stage: CHECK — PR #91 review fixes at 89822be7; main a7f96890 synced + SI-11 chip at 1b810203 (local suites blocked by machine load; CI on the push)
 owner: Lead
-next_action: Lead: merge 9428a3fd into PR #87 (count sent); check 7a60c011 + 4c4b9dd5 + 044a7092 (run-suites 69 PASS 0 FAIL on 044a7092); confirm the stand-in check's not-built-yet list (SI-1, 6, 9, 10); then message when the forms branch is on main → S6 slice 1 BUILD from main (one ProposalItem table); recording pass after per-step budget_usd lands (then drop the runnerBudgetUsd cast), shared ledger and founder amount
+next_action: Lead: check 89822be7 + 1b810203 on CI (local run impossible under load 16–22); confirm SI-14–16 chips go to the runtime lane and SI-1, 6, 9, 10 stay listed until built; then message when the forms branch is on main → S6 slice 1 BUILD from main (one ProposalItem table)
 then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
 blocked_by: forms runner package and contract v2 on main (Lead merge)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · PR #91 review + P-165 · FIX · applied Lead message: 89822be7 Restore keeps the Pathway type (t=CORPORATE), a retired row announces Retired (qa_1029 49/49); main a7f96890 synced, STAND-INS gained SI-11, 14–16: 1b810203 SI-11 chip on Releases, SI-14–16 listed for the runtime lane; check_stand_ins 9/9; browser and full suites blocked by load (demo load > 30 s). US$0.
 - 2026-10-29 · qa batch + P-165 · CHECK · run on 4c4b9dd5 found BR-13's Status menu changed by Retired (screen01_browser, programs_s2): 044a7092 offers Retired only while one is retired; full run-suites on 044a7092 69 PASS 0 FAIL 1 skipped (demo reset). US$0.
 - 2026-10-29 · qa batch + P-165 · FIX/BUILD · main d50d87f9 synced; 7a60c011 QA-39, 48, 70–74, 79, 80 in plain words (check_screens_qa_1029_browser 43/43 at 1440 and 1024; QA-81 screens part 4/4 on main); 4c4b9dd5 StandIn chip + check_stand_ins 9/9 (no page uses it yet). Run on 9428a3fd: 63 PASS 4 FAIL, solo rerun 2 of 4 pass; count sent to the Lead. US$0.
 - 2026-10-29 · W1-shared-library (S6) · FIX · applied Lead message (outside review on PR #87): 9428a3fd (a) recording pass sends only missing rounds (draftEdition "fill"), worst case reserved before sending; (b) an answer naming another edition is never used (replay skips, live refused in plain words); check_s6_field_drafts 26/26; pushed, Lead told; run-suites running. US$0.
@@ -47,4 +48,3 @@ updated: 2026-10-29
 - 2026-10-29 · W1-shared-library (S6) · BUILD slice R (US$0) · 21556f3a: field_map_edition step on the runner (edition key, box-count output limit, runner budget check), field-map-check.v1.md, stub, run-contract kind, tools/record-field-drafts.ts (Scaffolding; plan first, both caps, --max-usd), check_s6_field_drafts 19/19; schema v2 passes qa lint part A. P-158: manual-add inventory in plan-p149.md, 10-line delta sent; those parts on hold. No live call. US$0.
 - 2026-10-29 · QA-81 (P-154) · applied Lead message: configuration.tsx edit dropped (runtime slice 2, Lead PR #80, makes it "The firm"); check_p154_words expects "The firm" — 2 PASS, 2 FAIL (configuration.tsx) until #80 is synced; programs.tsx fix kept. US$0.
 - 2026-10-29 · QA-81 (P-154) · FIX (words only) · programs.tsx Corporate panel "the agent picks" → "the case officer picks"; configuration.tsx "Provided by" "The firm (agent)" → "The firm (case officer)" (stored code unchanged); tests/check_p154_words.ts 4/4 (and 0/4 on the old text). To name in the S6 hand-back. US$0.
-- 2026-10-29 · sync · main 170659bc merged (PR #77 decisions P-146–P-155; PR #78 runtime W1-15 slice 1); no conflicts. S6 BUILD still waits for forms slice 0 on main. US$0.
