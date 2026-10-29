@@ -4,8 +4,8 @@ Owner: the Lead. **One list of every immigration value the product uses that is 
 
 **Confidence** = how likely the rule is right as built, judged on the source: **95** official page opened and quoted by the Lead · **85** official page opened by research, not yet re-opened by the Lead · **70–90** founder's rule where IRCC is silent, scored on the logic and how safe the default is · **≤65** inference or conflicting signals. **Impact if wrong:** Low = data change only · Medium = a rule or screen changes · High = a filing could be rejected.
 
-## Score today: 81 / 100 (weighted by impact: High 3, Medium 2, Low 1)
-Sourced facts 90 (12 rows) · founder rules where IRCC is silent 73 (6 rows) · older Sample values from setup 69 (7 rows). With B6 corrected for Express Entry (A6): 83. The weakest rows (B3, B6, C3, C6) are cheap to change (data or one rule); none blocks building.
+## Score today: 83 / 100 (weighted by impact: High 3, Medium 2, Low 1)
+Sourced facts 90 (12 rows) · founder rules where IRCC is silent 82 (6 rows) · older Sample values from setup 69 (7 rows). (Was 81 before B6 was corrected from the Express Entry completeness check.) The weakest rows (B3, B6, C3, C6) are cheap to change (data or one rule); none blocks building.
 
 ## A. Sourced facts (sources: `screens/W1-baseline/immigration-facts-2026-10-29.md`)
 | # | Rule in the product | Basis | Conf. | Impact if wrong |
@@ -31,7 +31,7 @@ Sourced facts 90 (12 rows) · founder rules where IRCC is silent 73 (6 rows) · 
 | B3 | Provincial nominee, Express Entry: IMM 5669 and IMM 5406 are Online lines (answer sheet, no PDF) | Signals conflict: the EE page lists them nowhere as PDFs, and a guide says EE built them into its questionnaires; not confirmed on an official page | 55 | Medium (one combination, two lines; data change) |
 | B4 | Sponsorship and PR are two filings in one submission group, each with its own number box | IRCC calls them two applications; an empty second box costs nothing | 90 | Low |
 | B5 | Accompanying child of a student or worker: "will this child study 6 months or more?" decides a study permit filing; no age rule | Mirrors IRCC's 6-month rule exactly; avoids an invented age threshold | 85 | Medium |
-| B6 | Non-accompanying member 18+ gets a police certificate line, waivable with a reason | **Too weak for Express Entry (A6: required, rejected if missing)** — proposed: required, not waivable, for Express Entry; waivable stays for other PR programs until checked | 60 | High |
+| B6 | Non-accompanying member 18+: police certificate (and medical) **required, not waivable, for Express Entry** (a hard block, P-172); waivable with a reason for other PR programs until their pages are checked | A6 for Express Entry; other programs unchecked | 90 | High |
 
 ## C. Older Sample values from setup (decided before 29 Oct; to verify the same way)
 | # | Rule in the product | Basis | Conf. | Impact if wrong |
