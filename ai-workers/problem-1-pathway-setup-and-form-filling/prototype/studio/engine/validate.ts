@@ -17,7 +17,7 @@ const nodeValid = ajv.getSchema(`${schema.$id}#/definitions/node`)!;
 export const isNode = (n: unknown) => nodeValid(n) as boolean;
 
 /** `label` is the item in words (a question's meaning) where `item` is a field code; screens show it, never the code. */
-export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string };
+export type Problem = { level: "error" | "warning"; where: string; item: string; message: string; label?: string; /** The person role it is about (W1-15 slice 2: "Needs you" puts it on its row). */ role?: string };
 const ORDERED = new Set(["gt", "gte", "lt", "lte"]);
 const BIRTH = "person.date_of_birth";
 
@@ -187,7 +187,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   {
     // Lead check W1: the fact's own words and the role's label, never system keys.
     const docName = (key: string) => [...(next.document_types as any[]), ...((prev?.document_types ?? []) as any[])].find((t) => t.key === key)?.name ?? key;
-    const words = (x: any) => [x.source ? `comes from ${x.source === "DOCUMENT" ? `the ${docName(x.document_type)}` : x.source === "CLIENT" ? "the client" : "the agent"}` : "", x.prequalification ? "pre-qualification" : ""].filter(Boolean).join(", ") || "back to the rules' source";
+    const words = (x: any) => [x.source ? `comes from ${x.source === "DOCUMENT" ? `the ${docName(x.document_type)}` : x.source === "CLIENT" ? "the client" : `the case officer${x.source_reason ? ` (why: ${x.source_reason})` : ""}`}` : "", x.prequalification ? "pre-qualification" : ""].filter(Boolean).join(", ") || "back to the rules' source";
     const line = (s: Snapshot, x: any, rest: string) => `${factWords(s, x.fact)} (${who(s, x.role)}): ${rest}`;
     const a = new Map(((prev?.fact_sources ?? []) as any[]).map((x) => [`${x.role}|${x.fact}`, x])), b = new Map(((next.fact_sources ?? []) as any[]).map((x) => [`${x.role}|${x.fact}`, x]));
     for (const [key, x] of b) if (!a.has(key)) out.push({ kind: "Where an answer comes from", key, change: "added", origin: x.origin, needs_sme: true, label: line(next, x, words(x)) });

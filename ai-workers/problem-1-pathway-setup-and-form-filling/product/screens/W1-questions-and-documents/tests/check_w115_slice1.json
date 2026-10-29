@@ -1,6 +1,6 @@
 {
-  "at": "2026-10-29T02:11:14.520Z",
-  "port": 4434,
+  "at": "2026-10-29T04:48:23.128Z",
+  "port": 18434,
   "pass": 47,
   "fail": 0,
   "log": [
@@ -49,7 +49,7 @@
       "ok": true
     },
     {
-      "name": "C4.10 precedence pass: a representative's fact comes from the agent",
+      "name": "C4.10 precedence pass: a representative's fact comes from the case officer",
       "ok": true,
       "detail": "case|representative.licensing_province"
     },
@@ -171,9 +171,17 @@
         },
         "prequalification": false,
         "reason": "Sample: asked on the form as well",
+        "sourceReason": null,
         "clientOnly": false,
         "placed": true,
-        "version": 1
+        "agentOffered": false,
+        "version": 1,
+        "change": {
+          "status": "DRAFT",
+          "by": "user-A",
+          "at": "2026-10-29T04:48:21.850Z",
+          "batchId": null
+        }
       }
     },
     {
@@ -244,7 +252,7 @@
     {
       "name": "C4.2 M4 fail: a pre-qualification tick on an agent fact is refused at save (422)",
       "ok": true,
-      "detail": "\"Canadian province or territory of the law society the representative belongs to\" comes from the agent: a prospect is asked only what they can answer."
+      "detail": "\"Canadian province or territory of the law society the representative belongs to\" comes from the case officer: a prospect is asked only what they can answer."
     },
     {
       "name": "C4.2 M4 (Q1) pass: the passport's date of birth is ticked for pre-qualification; it stays a Document fact and is in the PQR",
@@ -267,14 +275,14 @@
       "name": "C4.10 fail: release is refused while a client-only fact says Agent (an error on the page, in words)",
       "ok": true,
       "detail": [
-        "Principal applicant: \"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it, never the agent. Set Comes from to Client."
+        "Principal applicant: \"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it, never the case officer. Set Comes from to Client."
       ]
     },
     {
       "name": "Lead check W3 pass: the release check says it in words and carries no decision code; no source check on the page does",
       "ok": true,
       "detail": [
-        "Principal applicant: \"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it, never the agent. Set Comes from to Client."
+        "Principal applicant: \"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is a declaration or background answer: only the client gives it, never the case officer. Set Comes from to Client."
       ]
     },
     {

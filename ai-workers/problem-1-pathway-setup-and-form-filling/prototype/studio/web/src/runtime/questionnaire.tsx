@@ -481,7 +481,7 @@ function ConfirmPill({ a }: { a: Answer }) {
   const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
-const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "agent view", confirm_section: "confirmed section" };
+const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "case view", confirm_section: "confirmed section" };
 const WHO: Record<string, string> = { "user-O": "Case officer", "user-P": "Client A", "user-Q": "Client B" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
