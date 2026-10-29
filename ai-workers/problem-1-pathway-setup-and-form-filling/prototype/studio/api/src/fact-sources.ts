@@ -9,7 +9,8 @@ import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
 import { agentRefusal, CASE_OFFICER_NEEDS_REASON, countryPqr, factSourceProblems, factSources, prequalification, SOURCES, who, type FactSourceView } from "../../engine/sources.ts";
 import { ProposalItem } from "../../contracts/proposal-item.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
+import { fillsOf, KIND as FILLS_KIND } from "./who-fills.ts";
 
 type H = string | undefined;
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -54,7 +55,11 @@ export class FactSources {
     const newest = new Map<string, (typeof rows)[number]>(); for (const r of rows) if (!newest.has(r.lineageKey)) newest.set(r.lineageKey, r);
     // Slice 2: the row's status is its newest saved choice: none (the rules), a draft (Changed here, its author may
     // undo it at once) or published (released in an earlier release).
-    const facts = factSources(snapshot).map((f) => { const n = newest.get(`${f.role}|${f.fact}`); return { ...f, version: n?.version ?? 0, change: n ? { status: n.status === "DRAFT" ? "DRAFT" as const : "PUBLISHED" as const, by: n.updatedBy, at: n.updatedAt.toISOString(), batchId: n.batchId } : null }; });
+    // C4.9: who fills each question in the library, and an open change of it (who-fills.ts).
+    const libFills = new Map((snapshot.placements as { fact: string; collected_from: string }[]).map((p) => [p.fact, fillsOf(p.collected_from)]));
+    const open = await this.db.libraryChange.findMany({ where: { workspaceId: c.workspaceId, kind: FILLS_KIND, status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, orderBy: { proposedAt: "desc" } });
+    const fillsChange = (fact: string) => { const x = open.find((o) => o.key === fact); return x ? { id: x.id, to: (x.matches as { after: "CLIENT" | "CASE_OFFICER" }).after, status: x.status as "WAITING" | "RETURNED" | "APPROVED", by: ACTORS.find((a) => a.id === x.proposedBy)?.name ?? "A person", reason: x.reason ?? "" } : null; };
+    const facts = factSources(snapshot).map((f) => { const n = newest.get(`${f.role}|${f.fact}`); return { ...f, fills: { library: libFills.get(f.fact) ?? null, change: fillsChange(f.fact) }, version: n?.version ?? 0, change: n ? { status: n.status === "DRAFT" ? "DRAFT" as const : "PUBLISHED" as const, by: n.updatedBy, at: n.updatedAt.toISOString(), batchId: n.batchId } : null }; });
     const counts = { facts: facts.length, document: facts.filter((f) => f.source === "DOCUMENT").length, client: facts.filter((f) => f.source === "CLIENT").length, agent: facts.filter((f) => f.source === "AGENT").length, prequalification: facts.filter((f) => f.prequalification).length };
     return { counts, facts, prequalification: prequalification(snapshot), problems: factSourceProblems(snapshot), basis: "Sample until the immigration expert confirms" };
   }

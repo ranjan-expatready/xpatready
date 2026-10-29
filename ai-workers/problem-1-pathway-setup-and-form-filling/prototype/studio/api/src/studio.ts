@@ -1,5 +1,6 @@
 // Product Studio application service: programs and combinations, the shared library (versioned edits), the
 // combination's own configuration, previews through the common renderer, validation, review and release.
+import { FILLS_LOCK } from "./who-fills.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
@@ -444,6 +445,9 @@ export class Studio {
     if (b.condition) { const errs = checkCondition(b.condition, types.fields, types.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); if (!b.conditionEffect) fail("Choose what the condition does (show, hide, require or optional)."); }
     const data = { sectionKey: b.sectionKey, collectedFrom: b.collectedFrom, repeats: b.repeats, tier: b.tier ?? "case", questionText: b.questionText?.trim() || null, helpText: b.helpText?.trim() || null, predicateJson: b.condition ?? null, conditionEffect: (b.conditionEffect as any) ?? null, conditionPlain: b.conditionPlain ?? null, ruleOnly: !!b.ruleOnly };
     const rows = await this.db.sectionQuestion.findMany({ where: { workspaceId, lineageKey: key } });
+    // C4.9 (P-97): who fills an existing placement changes only through a library change with a second person (who-fills.ts).
+    const now = [...rows].sort((a, b) => b.version - a.version).find((r) => r.status === "DRAFT" || r.status === "PUBLISHED");
+    if (now && now.collectedFrom !== b.collectedFrom) fail(FILLS_LOCK, HttpStatus.CONFLICT);
     let row;
     if (!rows.length) {
       const order = await this.db.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });

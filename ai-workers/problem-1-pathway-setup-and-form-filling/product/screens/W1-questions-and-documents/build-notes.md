@@ -130,3 +130,18 @@ Agreed plan: `plan.md`, challenge and Lead response: `challenge.md`. No screen i
   * `acceptPqrPick` (api/src/fact-sources.ts) is what S6's queue will call. It writes the tick through the same draft row and refusals as a person's tick, and keeps the pick's reason.
   * Small choice: an AI pick saves origin AI_PROPOSAL, as the Lead said. The rules' stand-in saves CODE_MATCH (deterministic, accepted by a person), so Review never shows a rules pick as AI.
 * **Tests:** `check_pqr.ts` (API and engine, 37/37 with C4.7; it calls the Accept path directly, so it needs the API tsconfig, which run-suites passes) and `check_pqr_browser.cjs` (20/20, axe and 1024 px; screenshots in `screenshots/pqr/`).
+
+## Who fills (M2 queue item 3; C4.9, P-97; plan.md "Who fills", agreed by the Lead 29 Oct)
+* **New, runtime file `api/src/who-fills.ts`:**
+  * `POST /api/library/fields/:key/fills` {to: CLIENT · CASE_OFFICER, reason ≥ 5} saves a `library_change` (kind `placement_fills`, action `SET_FILLS`, `matches` before, after and how many combinations use it) as WAITING. Nothing changes before approval.
+  * It refuses, in words: a client-only section, no change, one already open, a fact no question asks, a value other than client or case officer (Q2: a document is chosen per combination), a retired field, and anyone without the author duty. If two people propose at the same moment, the later one is refused (the form_accepts pattern).
+  * `applyFills` runs at approval. It checks again that who fills it has not changed meanwhile (if it has: 409, and the change waits again), then writes a draft placement version. `releaseFills` marks the change RELEASED in the pack once a release has published that draft.
+* **Narrow additions in other lanes' files (Q1, agreed):**
+  * `api/src/library-changes.ts` (screens/forms): the kind's noun and action word, `fills` in `changeView`, and `releaseFills` at the end of `publishLibraryChanges`.
+  * `api/src/lifecycle.ts` (screens/forms): one line in `afterApprove` calls `applyFills`.
+  * `api/src/review-queue.ts` (screens/forms): the To review line in words ("Who fills it, for every combination: Client → Case officer (used by n …). Reason: …").
+  * `api/src/studio.ts`: `placeField` refuses with 409 a change of who fills an existing placement ("use Change who fills"). A new placement may still set it.
+  * `api/src/main.ts`: registers the controller.
+* **Engine:** `engine/validate.ts diff` names the change once on Review ("Who fills a question: <fact in words>: filled by the case officer, was the client (shared library, every combination)", `needs_sme`). The generic placement line is dropped when who fills it is the only difference.
+* **Screen:** the Questionnaires drawer has a section "Who fills it, for every combination". It shows the library default in words, "Change who fills…" with a required reason, and then the change as Waiting, Returned or Approved, with who proposed it and why. A declaration shows its lock; an approver sees no button. `GET …/fact-sources` gives each row `fills` {library, change}. `web/src/pages/library.tsx` is not touched: screens makes its "Collected from" read-only on this API (Lead, Q3).
+* **Tests:** `check_who_fills.ts` (API, 26/26) and `check_who_fills_browser.cjs` (19/19, accessibility check and 1024 px; screenshots in `screenshots/who-fills/`).

@@ -192,6 +192,9 @@ export type FactSourceRow = {
   sourceReason: string | null;
   /** The newest saved choice: none (the rules), a draft (its author may undo it at once) or published. */
   change: { status: "DRAFT" | "PUBLISHED"; by: string; at: string; batchId: string | null } | null;
+  /** C4.9 (P-97): who fills the question for every combination (the library placement; null: not a client or case
+   *  officer question), and an open change of it (waiting on To review, returned, or approved for the next release). */
+  fills: { library: "CLIENT" | "CASE_OFFICER" | null; change: { id: string; to: "CLIENT" | "CASE_OFFICER"; status: "WAITING" | "RETURNED" | "APPROVED"; by: string; reason: string } | null };
 };
 export type FactSourcesView = {
   counts: { facts: number; document: number; client: number; agent: number; prequalification: number };
