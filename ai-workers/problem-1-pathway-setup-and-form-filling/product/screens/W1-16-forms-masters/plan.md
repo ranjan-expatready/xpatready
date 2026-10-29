@@ -45,3 +45,30 @@
 2. **Signature (N5).** *Recommend:* folded into slice 1's migration, so the line changes once. *Else:* a second migration in W1-16.
 3. **Country variants (N2).** *Recommend:* a variant group on the combination with one rule and a default, members as lines. *Else:* two lines, each with its own "Only if" (the expert must keep them exclusive by hand).
 4. **Recording the help pages (P-152 way a).** The guard lets AI read only recorded official pages. *Recommend:* the forms lane records the IRCC/ESDC help pages for the three online-only forms with the existing recorder (`official-sources/fetch_official_sources.py`, Mac, US$0) before slice g's way (a). *Else:* way (b) only in Wave 1.
+
+## 5. P-153: one shared rules file in every AI step (slice r, before e and g)
+**Decision:** code is the guard (every rule that must hold is enforced on the server, on every proposal, whoever made it). One shared rules file is put into every AI step's prompt by the step runner. Its hash joins the prompt's fingerprint, so a replay stays exact.
+
+**Today** (`p2/launch.ts`): the job names one template; the launcher screens it, fingerprints it (`template_sha256`), and passes the fingerprint to the drafting process (`draft.ts`), which checks it again. The saved-answer key compares `template_sha256` (`engine/rounds.ts isSameSavedRun`).
+
+**Plan (slice r):**
+* **The file:** `p2/prompts/shared-rules.v1.md`, plain words, one rule per line, each naming its server guard test. It covers: the identity rule per kind; one meaning, one field; "about whom" sets the subject, never the field; no typed technical names; quote the source line; values are Sample; P-149's meaning-change question and example cases; P-152's online-only intake.
+* **Injection:** `AiStep` names its rules file; the runner writes it on the job (`rules`). The launcher reads it, screens it like the template, and puts it at the head of the prompt. It records `rules_sha256` and the joined fingerprint `prompt_sha256 = sha(rules ‖ template)` in the run's launch evidence. `draft.ts` checks both hashes, as it does the template's.
+* **Replay:** the saved-answer key compares the joined fingerprint. A new rules version marks saved answers Out of date (`plan.md` R-1).
+  * The 27 Oct finder answers were made without the file. A step may name the earlier prompt versions it still replays, as in `plan-slice1-channels.md` §4, so Load sample keeps working until slice h re-records them live.
+* **Guard tests:** the rules file names each rule's server test. The Lead's checker reads those names.
+
+**Tests:**
+
+| | Test |
+|---|---|
+| Pass | A job with the rules file runs. The prompt the drafting process builds starts with the file's text. The run records `rules_sha256` and the joined fingerprint. A replay with the same file and template is found. |
+| Fail | The launcher refuses a job without the rules file, or with a rules file whose hash does not match the one the launcher passed ("a prompt without the rules file is refused"). |
+| Fail | A replay whose rules version differs is not used. |
+| Fail | A rule named in the file with no guard test fails the check. |
+
+The tests run on the fake launcher and the launcher's own pure checks (US$0).
+
+**Order:** slice r comes right after slice 0 is on main and before any new AI step (W1-16 e and g, W1-10 slices 1–5). The finder moves onto it first. `people-ai.ts` (runtime lane) follows when it moves to the runner.
+
+**Question for the Lead:** `p2/launch.ts` and `draft.ts` are the guarded AI route (AIW-D261). *Recommend:* the forms lane changes them in slice r, with the Lead's check of that diff. *Else:* the Lead changes the route and the forms lane only wires the runner.
