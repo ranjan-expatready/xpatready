@@ -52,8 +52,7 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
   ok("C11.7 B1 pass: reads on an empty workspace create no Pathway (the type is a fixed value, never a row)", sql("select count(*) from program_def") === "0");
   let s = await structure();
   ok("C11.3 B1: GET /structure on an empty workspace says it is empty, under the words of the type", s.empty === true && s.typeLabel === "Retail" && s.nodes.length === 0);
-  let r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "Visitors" }, category: { create: "Visitor visa" } });
-  ok("C11.3 B1 fail: the path builder with no Pathway says to add one on the Structure", r.status === 409 && /no pathway yet/i.test(r.body.detail), r.body.detail);
+  let r = await call("GET", "/structure?pathwayType=INDIVIDUAL");
 
   // ---------------------------------------------------------------- BR-1 Pathway type and several Pathways
   r = await node("INDIVIDUAL", "pathway", "Temporary residence");
@@ -113,6 +112,9 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
   r = await call("POST", "/structure/meaning-check", { pathwayType: "INDIVIDUAL", label: "Visiter visa" });
   ok("C11.3 BR-5 (P-95): the AI meaning check is off: 403 paid_runs_off, no AI job, nothing spent", r.status === 403 && r.body.code === "paid_runs_off" && sql("select count(*) from drafting_job") === "0", r.body.detail);
   ok("C11.3 BR-5: every name shows 'Not meaning-checked' while the switch is off", (await structure()).nodes.every((n: any) => n.meaningChecked === false));
+  const footer = ((await structure()).meaningCheck?.why ?? "") as string;
+  ok("DV-bb-6c pass: the Program structure footer says in plain words that the meaning check is off", /AI meaning check is off/.test(footer), footer);
+  ok("DV-bb-6c fail: the footer carries no decision number (PRODUCT §4: no ids on the main path)", !/\b[PD]-\d+/.test(footer), footer);
 
   // ---------------------------------------------------------------- BR-15 roles
   const asB = await Promise.all([node("INDIVIDUAL", "program", "Approver program", trR, {}, "user-B"), call("PATCH", `/structure/nodes/${visitors}`, { label: "X", version: 1 }, "user-B"),
@@ -146,12 +148,6 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
   await node("INDIVIDUAL", "category", "Federal skilled worker", econ);
   const c2 = await cat();
   ok("C11.10 B1 pass: Immigration programs has one section per Retail Pathway, each with its combinations", c2.sections.length === 2 && c2.sections.find((x: any) => x.pathwayKey === prR)?.combinations === 1 && c2.totals.programs === 2, c2.sections.map((x: any) => [x.label, x.combinations]));
-  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "Citizenship" }, category: { create: "Grant" } });
-  ok("C11.3 B1 fail: a new program with two Retail Pathways needs the Pathway named", r.status === 400 && r.body.errors?.[0]?.field === "pathwayKey", r.body.detail);
-  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { key: econ }, category: { create: "Canadian experience" } });
-  ok("C11.3 B1 pass: an existing program carries its own Pathway (the second Retail Pathway is reachable)", r.status === 201 && r.body.nodeKey?.startsWith(econ), r.body.nodeKey);
-  r = await call("POST", "/path-proposal", { pathway: "INDIVIDUAL", description: "federal skilled worker application" });
-  ok("C11.4 B1: the free path proposal finds a combination under the second Retail Pathway", r.body.proposal?.pathwayKey === prR && r.body.proposal?.category?.label === "Federal skilled worker", r.body.proposal);
 
   // ---------------------------------------------------------------- lifecycle on a draft name (never released)
   // These names count as another person's, so a delete waits for a second person (P-116 amended: an author's own

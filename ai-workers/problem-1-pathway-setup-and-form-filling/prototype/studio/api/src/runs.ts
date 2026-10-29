@@ -12,6 +12,7 @@ import { actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { Ai } from "./ai.ts";
 import { Finder, FINDER_OPERATION, FINDER_STEPS } from "./finder.ts";
 import { UPLOAD_OPERATION, UPLOAD_STEPS, UploadRuns } from "./upload-run.ts";
+import { aboutUsd } from "./finder-cost.ts";
 
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 const ACTIVE = ["QUEUED", "RUNNING"];
@@ -22,6 +23,14 @@ export function runStatus(b: Pick<AiBatch, "status" | "cancelRequested">): { cod
   const m: Record<string, [string, string]> = { QUEUED: ["queued", "Queued"], RUNNING: ["running", "Running"], CANCELLED: ["stopped", "Stopped"], FAILED: ["failed", "Failed"], COMPLETED: ["done", "Done"], PARTIAL: ["done_with_problems", "Done with problems"], NEEDS_PERSON: ["needs_person", "Waiting for you"] };
   const [code, word] = m[b.status] ?? ["running", b.status];
   return { code, word };
+}
+/** S3 early look (1): a run never shows raw technical text (an error code, a stack, a server path), whatever wrote it;
+ *  such a message is replaced by plain words and the detail stays in the server log. */
+const TECH = /\b(E(NOENT|ACCES|PERM|CONN[A-Z]+|ADDRINUSE|TIMEDOUT|PIPE|NOTDIR|ISDIR|EXIST)|errno|syscall|Node\.js v\d)|\/(Users|home|private|tmp|var)\/|[A-Za-z]:\\|\bat \S+:\d+:\d+|\.(m?[jt]s|json):\d+/;
+export function plainRunText(t: string | null): string | null {
+  if (!t || !TECH.test(t)) return t;
+  console.warn("run message kept from the page:", t.slice(0, 600));
+  return "Something went wrong on this computer; what the run spent is on this card. Try again, or attach the forms from the Form library by hand.";
 }
 type Step = { n: number; kind: string; label: string; uses: "rules" | "ai"; status: string; message: string | null; usd: number; started_at: Date | null; finished_at: Date | null; counts: { done: number; total: number; unit: string } | null };
 
@@ -37,7 +46,7 @@ export class Runs {
     return defs.map((d, i) => {
       const j = b.operation === FINDER_OPERATION || b.operation === UPLOAD_OPERATION ? b.jobs.find((x) => x.kind === d.kind) : b.jobs[i];
       const c = j?.detail && typeof j.detail === "object" ? (j.detail as { done?: number; total?: number }) : null;
-      return { n: i + 1, kind: d.kind, label: d.label, uses: d.ai && !(j?.status === "COMPLETED" && !(j.costUsd ?? 0) && /no ai call/i.test(j.message ?? "")) ? "ai" : "rules", status: j?.status ?? "WAITING", message: j?.message ?? null, usd: j?.costUsd ?? 0, started_at: j && j.status !== "WAITING" && j.status !== "QUEUED" ? j.startedAt : null, finished_at: j?.finishedAt ?? null, counts: c?.total ? { done: c.done ?? 0, total: c.total, unit: b.operation === FINDER_OPERATION ? "forms" : "parts" } : null };
+      return { n: i + 1, kind: d.kind, label: d.label, uses: d.ai && !(j?.status === "COMPLETED" && !(j.costUsd ?? 0) && /no ai call/i.test(j.message ?? "")) ? "ai" : "rules", status: j?.status ?? "WAITING", message: plainRunText(j?.message ?? null), usd: j?.costUsd ?? 0, started_at: j && j.status !== "WAITING" && j.status !== "QUEUED" ? j.startedAt : null, finished_at: j?.finishedAt ?? null, counts: c?.total ? { done: c.done ?? 0, total: c.total, unit: b.operation === FINDER_OPERATION ? "forms" : "parts" } : null };
     });
   }
 
@@ -59,20 +68,20 @@ export class Runs {
     const failedStep = steps.find((s) => ["FAILED", "BLOCKED", "NEEDS_PERSON"].includes(s.status));
     // Where the run's card is: the library for an upload; its own page otherwise (S5 points a finder run at its Forms tab).
     const href = b.operation === UPLOAD_OPERATION ? "/library/forms" : `/ai/${b.id}`;
-    return { id: b.id, operation: b.operation, label: LABEL[b.operation] ?? b.operation, scope: b.operation === FINDER_OPERATION ? b.scopeLabel.split("|")[1] ?? null : b.scopeLabel, status: st.code, status_word: st.word, message: b.message,
+    return { id: b.id, operation: b.operation, label: LABEL[b.operation] ?? b.operation, scope: b.operation === FINDER_OPERATION ? b.scopeLabel.split("|")[1] ?? null : b.scopeLabel, status: st.code, status_word: st.word, message: plainRunText(b.message),
       step: cur ? { n: cur.n, m: steps.length, label: cur.label } : null, steps, started_at: b.startedAt, finished_at: b.finishedAt, elapsed_ms: (b.finishedAt ?? new Date()).getTime() - b.startedAt.getTime(), usual_ms: usual.ms, last_activity_at: new Date(last),
-      usd: { spent: Math.round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0) * 100) / 100, worst: b.worstCaseUsd, usual: usual.usd }, can_stop: ACTIVE.includes(b.status) && !b.cancelRequested,
-      error: failedStep ? { what: b.message && b.message !== failedStep.message ? b.message : `${failedStep.label}: see the step above.`, next: this.nextOf(b, href) } : null, href };
+      usd: { spent: Math.round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0) * 100) / 100, worst: b.worstCaseUsd, usual: usual.usd, about: b.operation === FINDER_OPERATION ? aboutUsd(b.expectedUsd, usual.usd, b.mode === "LIVE") : usual.usd }, can_stop: ACTIVE.includes(b.status) && !b.cancelRequested,
+      error: failedStep ? { what: b.message && plainRunText(b.message) !== failedStep.message ? plainRunText(b.message)! : `${failedStep.label}: see the step above.`, next: this.nextOf(b, href) } : null, href };
   }
 
   /** The one next step a stopped or waiting run offers (never a link to the page already open). */
   private nextOf(b: AiBatch, href: string): { label: string; href: string } | null {
     const plan = (b.plan ?? {}) as { held_id?: string; held_unread?: boolean };
-    // QA-63: no page chooses the application page yet (S5 brings the finder to the Forms tab), so "Find again" on the card
-    // itself was a dead end: the next step that works today is adding the forms' PDFs on the combination's Sources page.
+    // QA-63 / S3 item 5 (replaces the interim link to the Sources page now that the Forms tab chooses the page): the finder's next step is on the combination's Forms tab, never this card: a run that could not
+    // pick the application page opens the Find dialog at the page choice; any other opens it to find again.
     if (b.operation === FINDER_OPERATION) {
-      const combinationId = (plan as { combination?: { id?: string } }).combination?.id ?? b.scopeLabel.split("|")[0];
-      return b.status === "NEEDS_PERSON" && combinationId ? { label: "Upload its forms on the Sources page", href: `/c/${combinationId}/sources` } : b.status === "NEEDS_PERSON" ? null : { label: "See the details", href };
+      const cid = (plan as { combination?: { id?: string } }).combination?.id ?? b.scopeLabel.split("|")[0], page = !!(b.plan as { result?: { guide_choice?: unknown } } | null)?.result?.guide_choice;
+      return page ? { label: "Choose the application page", href: `/c/${cid}/forms?find=page` } : { label: "Find again", href: `/c/${cid}/forms?find=again` };
     }
     // Round 4 review should: a file the rules could not read can never be approved: say so, and what to do instead.
     if (b.operation === UPLOAD_OPERATION) return plan.held_id ? (plan.held_unread ? { label: "Open it on To review", href: `/review/held/${plan.held_id}` } : { label: "Record the IRCC page it came from", href: `/review/held/${plan.held_id}` }) : null;

@@ -6,7 +6,7 @@
 import fc from "fast-check";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CreateCombinationBody, CreateNodeBody, CreatePathBody, labelProblem, normalizeLabel, problemFromZod, sharedStep } from "../contracts/programs.ts";
+import { CreateCombinationBody, CreateNodeBody, labelProblem, normalizeLabel, problemFromZod, sharedStep } from "../contracts/programs.ts";
 import { checkedOf, compareEditions, compareStatus, editionMonth, isLive, missingItems, needsWork, newestEdition, nextActionOf, rowCounts, setupActionOf, statusOf, STATUS_TEXT, type SetupState } from "../engine/programs.ts";
 import { validate } from "../engine/validate.ts";
 import { CatalogueQuery } from "../contracts/programs.ts";
@@ -91,9 +91,9 @@ m = missingItems(empty, people, [], visitor);
 const head = nextActionOf({ ...visitor, status: "IN_SETUP", changes: 0, missing: m });
 ok("item 1 pass: Visitor visa — header \"Add 1 form from the library\" = first missing line's step; sources and set-up forms counted apart",
   head?.label === "Add 1 form from the library" && m[0].step === head.label && m[0].text === "2 forms attached as sources, 0 set up." && m.every((x) => x.step === head.label), m.map((x) => x.text));
-ok("item 1 fail: the old contradiction (\"No forms yet … Add sources\" while forms are attached) is gone", !m.some((x) => /No forms yet|Add sources/.test(x.text)), m.map((x) => x.text));
+ok("item 1 fail: the old contradiction (\"No forms yet … Add sources\" while forms are attached) is gone", !m.some((x) => /No forms yet|Add sources|Find forms/.test(x.text)), m.map((x) => x.text));
 m = missingItems(empty, people, [], setupOf({}));
-ok("item 1: nothing attached → \"No forms yet\" and Add sources, the same as the header", m[0].text === "No forms yet." && sharedStep(m) === "Add sources" && nextActionOf({ ...setupOf({}), status: "IN_SETUP", changes: 0, missing: m })?.label === m[0].step, m.map((x) => x.text));
+ok("item 1 / S3 fix 2: nothing attached → \"No forms yet\" and Find forms (the finder offer), the same as the header", m[0].text === "No forms yet." && sharedStep(m) === "Find forms" && nextActionOf({ ...setupOf({}), status: "IN_SETUP", changes: 0, missing: m })?.label === m[0].step, m.map((x) => x.text));
 fc.assert(fc.property(fc.nat(4), fc.nat(3), fc.nat(3), fc.boolean(), fc.nat(5), fc.boolean(), (sources, lib, draftable, running, proposals, released) => {
   const st = setupOf({ forms: sources, sources, draftable, fromLibrary: Array.from({ length: lib }, (_, i) => `IMM ${i}`), running: running ? "b" : null, proposals: proposals ? [{ job: "j", n: proposals }] : [] });
   const miss = missingItems(empty, people, [], st);
@@ -112,7 +112,7 @@ m = missingItems(empty, people, [], visitor);
 ok("step once pass: every line shares the step → the lines carry only causes and the step is named once (sharedStep)", m.length > 1 && sharedStep(m) === "Add 1 form from the library" && m.every((x) => !/Next step/.test(x.text)), m.map((x) => x.text));
 m = missingItems(empty, people, []);
 ok("step once fail: lines with different steps each keep their own (nothing is merged away)", sharedStep(m) === null && m.length === 2 && m.every((x) => /Next step: /.test(x.text)) && new Set(m.map((x) => x.step)).size === 2, m.map((x) => x.text));
-ok("step once: a single line keeps its step in the sentence (nothing to repeat)", sharedStep([{ step: "Add sources" }]) === null && missingItems({ ...empty, sections: full.sections, placements: full.placements } as Snapshot, people, [], setupOf({})).every((x) => /Next step: Add sources\./.test(x.text)));
+ok("step once: a single line keeps its step in the sentence (nothing to repeat)", sharedStep([{ step: "Find forms" }]) === null && missingItems({ ...empty, sections: full.sections, placements: full.placements } as Snapshot, people, [], setupOf({})).every((x) => /Next step: Find forms\./.test(x.text)));
 
 // ---------------------------------------------------------------- round 3: invisible characters never make a twin
 ok("round 3 fail: a name with an invisible character is the same name (no look-alike twin)", normalizeLabel("Super\u2060 visa") === normalizeLabel("Super visa") && normalizeLabel("Super\u3164visa") === normalizeLabel("Supervisa") && CreateNodeBody.parse({ kind: "PROGRAM", parentKey: "individual", label: "Super\u200d visa" }).label === "Super visa");
@@ -130,8 +130,8 @@ ok("round 3 pass: visible letters of any script still count", normalizeLabel("�
 // ---------------------------------------------------------------- QA-6, QA-7 the name rules, one place for server and page
 ok("QA-6 fail: a name of symbols only is refused in plain words (it has nothing to compare or key)", !CreateNodeBody.safeParse({ kind: "PROGRAM", parentKey: "individual", label: "!!!" }).success && labelProblem("!!!") === "Use letters or digits in the name, not only punctuation.");
 ok("QA-6 pass: letters in any script, digits and punctuation around them are kept", ["Résidence temporaire", "Visa d'été — 日本語", "H-1B", "2027"].every((x) => labelProblem(x) === null && CreateNodeBody.safeParse({ kind: "PROGRAM", parentKey: "individual", label: x }).success));
-const longName = CreatePathBody.safeParse({ pathway: "INDIVIDUAL", program: { create: "A".repeat(60) + " " + "B".repeat(70) }, category: { create: "Long test" } });
-ok("QA-7: a name over 120 characters is refused on its level's field with the message the page shows", !longName.success && problemFromZod(longName.error).errors?.[0]?.field === "program.create" && problemFromZod(longName.error).errors?.[0]?.message === "Keep the name under 120 characters." && labelProblem("A".repeat(121)) === "Keep the name under 120 characters.");
+const longName = CreateNodeBody.safeParse({ kind: "PROGRAM", parentKey: "individual", label: "A".repeat(60) + " " + "B".repeat(70) });
+ok("QA-7: a name over 120 characters is refused on its level's field with the message the page shows", !longName.success && problemFromZod(longName.error).errors?.[0]?.field === "label" && problemFromZod(longName.error).errors?.[0]?.message === "Keep the name under 120 characters." && labelProblem("A".repeat(121)) === "Keep the name under 120 characters.");
 ok("QA-7 pass: exactly 120 characters is accepted", labelProblem("A".repeat(120)) === null);
 ok("break m2 pass: names that differ only in vowel signs (Hindi, Thai) are different names", normalizeLabel("किसान वीज़ा") !== normalizeLabel("कसान वज़ा") && normalizeLabel("วีซ่า") !== normalizeLabel("วซา"));
 ok("break m2 fail: a name of combining marks only is refused; direction controls are removed before storing", labelProblem("\u0301\u0301") !== null && CreateNodeBody.parse({ kind: "PROGRAM", parentKey: "individual", label: "BR \u202Easiv" }).label === "BR asiv");

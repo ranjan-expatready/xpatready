@@ -46,7 +46,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== find the forms with AI
   await go(vv, "forms");
-  step("C11.15 (Lead split 28 Oct): before any find the Forms tab says Start setup runs the finder and keeps the slot for its button, with no button of its own", /No form find yet/.test(await finder.innerText()) && /Start setup runs the form finder/.test(await finder.innerText()) && await finder.locator("[data-finder-start]").count() === 1 && await finder.getByRole("button").count() === 0);
+  // S3 item 5 (screens lane, 29 Oct): the slot holds Start setup's one offer, "Find forms with AI (about … · at most …)".
+  step("C11.15 (Lead split 28 Oct; S3 item 5): before any find the Forms tab's slot holds the one Find forms button, nothing spent yet", /No form find yet/.test(await finder.innerText()) && /Nothing was spent yet/.test(await finder.innerText()) && await finder.locator("[data-finder-start]").count() === 1 && await finder.getByRole("button").count() === 1 && await finder.locator("[data-finder-start] [data-find-forms]").count() === 1);
   step("C11.15 guides: the guide is among Visitor visa's sources", /Guide 5256/.test(await p.locator("[data-sources]").innerText().catch(() => "")));
   // The first find is Start setup's (screens lane): started here through the same API, saved AI answers (US$0).
   const plan0 = (await api(`/combinations/${vv}/forms/find/plan`, { method: "POST", data: { mode: "replay" } })).body;
@@ -84,7 +85,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const again = p.getByRole("dialog"); await again.locator("[data-find-plan]").waitFor({ timeout: 30000 }).catch(() => {});
   step("C11.15 plan: Find again shows the steps and says the cost before anything runs (saved AI answers: US$0)", /Cost: US\$0/.test(await again.locator("[data-find-cost]").innerText().catch(() => "")) && await again.locator("[data-find-plan] li").count() > 2);
   await again.getByLabel(/AI now/).check(); await p.waitForTimeout(800);
-  step("C11.15 plan: choosing AI now says the most it can cost, inside the cap", /At most US\$\d+\.\d\d/.test(await again.locator("[data-find-cost]").innerText().catch(() => "")), await again.locator("[data-find-cost]").innerText().catch(() => ""));
+  step("C11.15 plan: choosing AI now says the most it can cost, inside the cap", /at most US\$\d+\.\d\d/i.test(await again.locator("[data-find-cost]").innerText().catch(() => "")), await again.locator("[data-find-cost]").innerText().catch(() => ""));
   await again.getByLabel(/Use saved AI answers/).check(); await again.locator("[data-find-plan]").waitFor(); await p.waitForTimeout(800);
   await state("find-again-plan");
   const before = (await api(`/combinations/${vv}/forms/find/latest`)).body.run?.id;
