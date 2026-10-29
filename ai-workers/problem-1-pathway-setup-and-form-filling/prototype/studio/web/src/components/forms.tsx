@@ -4,6 +4,7 @@
 // file: already in the library, added (and attached here), a guide attached here, a new edition held for impact review
 // (never attached silently, P-32), held for a person, or refused.
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, FileUp, Plus, Search } from "lucide-react";
 import { api, ApiError, useApi, useToast } from "@/lib/api";
@@ -75,7 +76,7 @@ export function IntakeResults({ results }: { results: IntakeResult[] }) {
 
 /** Library forms to pick from. Only forms (not checklists) with an edition are offered; one already on the row is shown
  *  as added. */
-export function FormPicker({ combinationId, onAdded, have = [] }: { combinationId: string; onAdded?: (code: string) => void; have?: string[] }) {
+export function FormPicker({ combinationId, onAdded, have = [], uploadBelow = false }: { combinationId: string; onAdded?: (code: string) => void; have?: string[]; uploadBelow?: boolean }) {
   const qc = useQueryClient(); const toast = useToast();
   const lib = useApi<LibraryForm[]>(["library-forms"], "/library/forms");
   const [q, setQ] = React.useState(""), [busy, setBusy] = React.useState<string | null>(null), [err, setErr] = React.useState<string | null>(null);
@@ -92,7 +93,7 @@ export function FormPicker({ combinationId, onAdded, have = [] }: { combinationI
   return (
     <div className="space-y-2">
       <div className="relative"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input className="pl-8" placeholder="Search forms in the library" aria-label="Search forms in the library" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-      {lib.isLoading ? <Spinner label="Loading the library" /> : !list.length ? <p className="text-sm text-text-muted">{q ? "No form in the library matches. Upload the IRCC PDF below." : "The library has no forms yet. Upload an IRCC PDF below."}</p> : (
+      {lib.isLoading ? <Spinner label="Loading the library" /> : !list.length ? <p className="text-sm text-text-muted" data-picker-empty>{q ? "No form in the library matches." : "The library has no forms yet."} {uploadBelow ? "Upload the IRCC PDF below." : <>A new form enters the library first: <Link className="text-text-link underline" to="/library/forms">upload it in the Form library</Link>.</>}</p> : (
         <ul className="max-h-64 divide-y divide-border overflow-y-auto rounded-lg border border-border" aria-label="Library forms">
           {list.map((f) => {
             const cur = f.editions.find((e) => e.mapped) ?? f.editions[0];
@@ -117,7 +118,7 @@ export function AddFormPanel({ combinationId, label, have, onClose }: { combinat
   return (
     <Panel open onOpenChange={(o) => !o && onClose()} title="Add a form" description={`To ${label}. Pick one the library has, or upload IRCC PDFs: a new form enters the library and is attached here as a source; it joins the configuration through the next step.`} footer={<><Button variant="ghost" onClick={onClose}>Close</Button><span /></>}>
       <div className="space-y-5">
-        <section aria-label="From the library"><h3 className="mb-2 text-sm font-semibold">From the library</h3><FormPicker combinationId={combinationId} have={have} /></section>
+        <section aria-label="From the library"><h3 className="mb-2 text-sm font-semibold">From the library</h3><FormPicker combinationId={combinationId} have={have} uploadBelow /></section>
         <section aria-label="Upload"><h3 className="mb-2 text-sm font-semibold">Not in the library?</h3><FormIntake combinationId={combinationId} title="Drop IRCC PDFs here" /></section>
       </div>
     </Panel>

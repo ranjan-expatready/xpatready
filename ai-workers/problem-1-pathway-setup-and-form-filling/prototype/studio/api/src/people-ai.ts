@@ -95,7 +95,7 @@ export class PeopleFromGuide {
     const steps = b.data.mode === "rules" ? STEPS_RULES : STEPS_AI;
     const note = b.data.mode === "replay" ? "Uses the answers AI gave for this exact guide and prompt before (US$0); with none saved yet, it says so and nothing changes." : b.data.mode === "rules" ? "No AI: rules find the sentences that name each person. How many is a Sample default you check." : "Two AI rounds read the guide; only lines both agree on, with their sentence in the guide, are proposed.";
     const ledger = this.sources.ledger();
-    return { mode: b.data.mode, guide: { code: g.code, title: g.title, url: g.url }, steps, totals: { worst_usd: worst, remaining_usd: ledger.remaining_usd }, note, plan_sha256: sha(JSON.stringify({ combinationId, mode: b.data.mode, guide: g.input?.sha256 ?? sha(g.text), worst })) };
+    return { mode: b.data.mode, guide: { code: g.code, title: g.title, url: g.url }, steps, totals: { worst_usd: worst, remaining_usd: ledger.remaining_usd }, note, live: { approved: LIVE_APPROVED(), why: LIVE_APPROVED() ? null : LIVE_WAITING }, plan_sha256: sha(JSON.stringify({ combinationId, mode: b.data.mode, guide: g.input?.sha256 ?? sha(g.text), worst })) };
   }
 
   /** Runs the plan and returns a proposal for the editor (never saved here). */

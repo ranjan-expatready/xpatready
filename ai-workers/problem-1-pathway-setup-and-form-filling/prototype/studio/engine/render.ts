@@ -4,6 +4,7 @@
 // team's closed operator vocabulary through contracts/rules.ts (deterministic; no AI call per answer).
 import { CALCULATIONS, evaluate, type PredicateNode, type Truth } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
+import { documentFacts } from "./sources.ts";
 
 /** A person role key from the shared library's person roles (S5, M3); principal, spouse_or_partner, child,
  *  representative and sponsor keep their meaning in the rules below. */
@@ -120,9 +121,11 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     if (!rel) return p?.label ?? about;
     return `${p?.label ?? id}: ${rel.replace("_", " ")}`;
   };
-  // Which supported document type can supply a fact (DocumentType.suppliesFacts; a reader profile, Proposal).
-  const docFacts = opts.documentFacts ?? new Map<string, string[]>();
-  for (const t of s.document_types ?? []) for (const f of t.supplies_facts ?? []) docFacts.set(f, [...new Set([...(docFacts.get(f) ?? []), t.name])]);
+  // Which supported document type can supply a fact (DocumentType.suppliesFacts; a reader profile, Proposal): per person
+  // (W1-15 challenge M3), from the checklist lines that name that person; `opts.documentFacts` adds by fact for everyone.
+  const perPerson = documentFacts(s, people);
+  const extra = opts.documentFacts ?? new Map<string, string[]>();
+  const docsFor = (about: string, fact: string) => { const names = [...(perPerson.get(about)?.get(fact) ?? []).map((x) => x.name), ...(extra.get(fact) ?? [])]; return names.length ? [...new Set(names)] : undefined; };
 
   // ------------------------------------------------------------ forms for each person
   const forms = s.forms.filter((f) => f.form_kind !== "document" || true).flatMap((f) => {
@@ -155,7 +158,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
       const kv = known.get(k) ?? (e.row === 0 ? known.get(kkey(about, e.fact)) : undefined);
       if (kv) { boxes.push({ ...base, coverage: kv.status === "confirmed" ? "confirmed fact" : "answered on screen", detail: kv.source, value: kv.value }); continue; }
       if (!field.has(e.fact)) { boxes.push({ ...base, coverage: "unresolved", detail: "the form field reads a field that is not in the library" }); continue; }
-      const docs = docFacts.get(e.fact);
+      const docs = docsFor(about, e.fact);
       if (p?.collected_from === "verified_document" || (docs && !p)) { boxes.push({ ...base, coverage: docs ? "document reading" : "unresolved", detail: docs ? `a supported document can supply it: ${docs.join(", ")}` : "collected from a document, but no supported document type supplies it" }); continue; }
       if (!p) { boxes.push({ ...base, coverage: "unresolved", detail: "no question placement: nobody is asked for this value yet" }); continue; }
       const cov: Coverage = p.collected_from === "client_questionnaire" ? "client question" : p.collected_from === "profile_record" || p.collected_from === "existing_record" ? "client profile" : "staff working view";

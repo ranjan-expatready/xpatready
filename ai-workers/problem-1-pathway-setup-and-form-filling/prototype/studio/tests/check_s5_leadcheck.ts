@@ -194,6 +194,7 @@ const P = (extra: any[] = []) => [{ role: "principal", min: 1, max: 1, applies: 
   r = await call("PATCH", `/combinations/${wp}/people`, { participants: P([{ role: "sponsor", min: 0, max: 1, applies: false }]), version: pw.version });
   pw = await people(wp);
   ok("C11.12 L6 pass (before a release): a save offers Undo", r.status === 200 && pw.canUndo === true, { status: r.status, canUndo: pw.canUndo });
+  ok("C11.6 QA-69 pass (before a release): the Forms tab offers Undo of the last change on its forms", !!(await forms(wp)).lastChange, (await forms(wp)).lastChange);
   r = await call("POST", `/combinations/${wp}/submit`, {});
   const submitted = r.status === 201;
   const review = (await call("GET", `/combinations/${wp}/review`)).body;
@@ -206,6 +207,10 @@ const P = (extra: any[] = []) => [{ role: "principal", min: 1, max: 1, applies: 
   ok("C11.12 L6: after the release the tab offers no Undo", pw.canUndo === false, pw.canUndo);
   r = await call("POST", `/combinations/${wp}/people/undo`, { version: pw.version });
   ok("C11.12 L6 fail: Undo of a save that was released since is refused (409, a release is never undone)", r.status === 409 && /Released since/.test(words(r)) && (await people(wp)).lines.some((x: any) => x.role === "sponsor"), words(r));
+
+  ok("C11.6 QA-69: after the release the Forms tab offers no Undo", (await forms(wp)).lastChange === null, (await forms(wp)).lastChange);
+  r = await undoForms(wp);
+  ok("C11.6 QA-69 fail: Undo of a forms change made before the release is refused (409 Released since)", r.status === 409 && /Released since|released meanwhile/.test(`${r.body?.title} ${words(r)}`), `${r.status} ${words(r)}`);
 
   // ---------------------------------------------------------------- the record
   const out = join(import.meta.dirname, "..", "..", "..", "product", "screens", "W1-combination-workspace", "tests");
