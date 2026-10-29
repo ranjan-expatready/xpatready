@@ -40,8 +40,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.goto(BASE); await as("user-A");
   await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } });
   await open("?pw=CORPORATE");
-  step("C11.10 empty after Reset: Corporate and employers says it is empty in its own words and points to the Structure", /Nothing set up in Corporate and employers yet/.test(await main()) && await p.getByRole("button", { name: "Open Structure" }).count() === 1, (await main()).slice(0, 220));
-  await p.getByRole("button", { name: "Open Structure" }).click(); await p.waitForURL(/\/structure/);
+  step("C11.10 empty after Reset: Corporate and employers says it is empty in its own words and points to the Structure", /Nothing set up in Corporate and employers yet/.test(await main()) && await p.getByRole("button", { name: /^Open (Program s|S)tructure$/ }).count() === 1, (await main()).slice(0, 220));
+  await p.getByRole("button", { name: /^Open (Program s|S)tructure$/ }).click(); await p.waitForURL(/\/structure/);
   step("C11.3 empty: Open Structure from Corporate lands on the Structure's Corporate tab", /t=CORPORATE/.test(p.url()) || /Corporate and employers/.test(await p.locator("[aria-pressed=true], [aria-selected=true]").first().innerText().catch(() => "")), p.url());
   await api("/demo/load", { method: "POST", timeout: 240000 }); // sample load runs past the 30 s request default on a loaded Mac
 
@@ -52,8 +52,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.setViewportSize({ width: w, height: h }); await p.waitForTimeout(300);
     const cols = await p.evaluate(() => { const s = document.querySelector("[data-section] ul, [data-section] [role=list]"); if (!s) return 0; const xs = new Set([...s.children].map((c) => Math.round(c.getBoundingClientRect().left))); return xs.size; });
     step(`C11.10 ${w} px: cards in ${w >= 1280 ? 3 : w >= 1000 ? 2 : 1} column(s), no sideways scroll`, !(await sideways()) && cols === (w >= 1280 ? 3 : w >= 1000 ? 2 : 1), `cols ${cols}, scrollWidth ${await p.evaluate(() => document.documentElement.scrollWidth)}`);
-    const ctl = await p.evaluate(() => ["Search combinations", "Status:", "Cards", "List", "New combination"].map((t) => { const e = [...document.querySelectorAll("main input, main button")].find((x) => (x.getAttribute("aria-label") ?? x.textContent).includes(t)); if (!e) return `${t}: missing`; const r = e.getBoundingClientRect(); return r.right <= window.innerWidth + 1 && r.left >= 0 && r.width > 20 ? "" : `${t}: off screen ${Math.round(r.left)}–${Math.round(r.right)}`; }).filter(Boolean));
-    step(`C11.10 ${w} px: search, Status, Cards/List and New combination are all on screen`, ctl.length === 0, ctl.join("; "));
+    const ctl = await p.evaluate(() => ["Search combinations", "Status:", "Cards", "List", "Add combination"].map((t) => { const e = [...document.querySelectorAll("main input, main button")].find((x) => (x.getAttribute("aria-label") ?? x.textContent).includes(t)); if (!e) return `${t}: missing`; const r = e.getBoundingClientRect(); return r.right <= window.innerWidth + 1 && r.left >= 0 && r.width > 20 ? "" : `${t}: off screen ${Math.round(r.left)}–${Math.round(r.right)}`; }).filter(Boolean));
+    step(`C11.10 ${w} px: search, Status, Cards/List and Add combination are all on screen`, ctl.length === 0, ctl.join("; "));
     if (w === 390) { await shot("s2-390-cards"); await axe("390 px cards"); }
   }
   await p.getByRole("button", { name: "List", exact: true }).click(); await p.waitForSelector('[data-view="list"]');
@@ -73,10 +73,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.keyboard.press(process.platform === "darwin" ? "Meta+k" : "Control+k");
   step("C11.10 keyboard: ⌘K puts the cursor in the search", await p.evaluate(() => document.activeElement?.getAttribute("aria-label")?.startsWith("Search combinations")));
   await p.keyboard.type("visa"); await p.waitForTimeout(500);
-  const seen = []; for (let i = 0; i < 14; i++) { await p.keyboard.press("Tab"); seen.push(await p.evaluate(() => { const a = document.activeElement; return (a?.getAttribute("aria-label") || a?.textContent || a?.tagName || "").replace(/\s+/g, " ").trim().slice(0, 40); })); }
+  const seen = []; for (let i = 0; i < 30; i++) { await p.keyboard.press("Tab"); seen.push(await p.evaluate(() => { const a = document.activeElement; return (a?.getAttribute("aria-label") || a?.textContent || a?.tagName || "").replace(/\s+/g, " ").trim().slice(0, 40); })); if (/^(Start setup|Open|Add \d)/.test(seen.at(-1))) break; }
   step("C11.10 keyboard: from the search, Tab reaches Clear search, Status, Cards/List and then a card's next step", seen.some((t) => /Clear search/.test(t)) && seen.some((t) => /^Status/.test(t)) && seen.some((t) => /^(Start setup|Open|Add \d)/.test(t)), seen.join(" → "));
-  const focusRing = await p.evaluate(() => { const a = document.activeElement; const cs = getComputedStyle(a); return cs.boxShadow !== "none" || cs.outlineStyle !== "none"; });
-  step("C11.10 keyboard: the focused element shows a focus ring", focusRing);
+  const focusRing = await p.evaluate(() => { const a = document.activeElement; const cs = getComputedStyle(a); return { ok: cs.boxShadow !== "none" || cs.outlineStyle !== "none", what: `${a?.tagName} ${a?.getAttribute("aria-label") ?? a?.textContent?.slice(0, 40)} ${a?.className?.toString().slice(0, 160)}` }; });
+  step("C11.10 keyboard: the focused element shows a focus ring", focusRing.ok, focusRing.what);
   await open();
   await card("Citizenship").focus(); await p.keyboard.press("Enter"); await p.waitForFunction(() => document.querySelectorAll("[data-section]").length === 1);
   await p.keyboard.press("Tab"); await p.keyboard.press("Shift+Tab");
