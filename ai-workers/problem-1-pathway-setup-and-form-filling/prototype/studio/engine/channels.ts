@@ -60,7 +60,8 @@ export async function acceptsOf(db: Pick<PrismaClient, "formEdition">, workspace
   for (const e of eds) { const n = newest.get(e.form.formKey); if (!n || compareEditions(n, e) < 0) newest.set(e.form.formKey, e); }
   return new Map([...newest].filter(([, e]) => e.accepts.length).map(([k, e]) => [k, e.accepts.map((a) => ({ account: a.account, channels: a.channels as Channel[], basis: a.basis, quote: a.quote, source_url: a.sourceUrl }))]));
 }
-const said = (cs: Channel[]) => cs.map((c) => CHANNEL_WORDS[c]).join(" or ");
+const AS: Record<Channel, string> = { ONLINE: "Online", PDF_UPLOAD: "a PDF upload", PAPER: "on paper", NOT_NEEDED: "Not needed" };
+const said = (cs: Channel[]) => cs.map((c) => AS[c]).join(" or ");
 const accountWords = (a: string) => ACCOUNT_WORDS[a as "ANY"] ?? a;
 /** The words for a line filed in a way IRCC does not accept for its edition and account (on save and at release). */
 export const notAcceptedWords = (form: string, channel: Channel, r: AcceptRecord) =>

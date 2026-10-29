@@ -35,7 +35,7 @@ CREATE INDEX "form_edition_accept_workspace_id_idx" ON "form_edition_accept" ("w
 INSERT INTO "form_edition_accept" ("workspace_id", "form_edition_id", "account", "channels", "basis", "quote", "source_url", "set_by")
 SELECT "workspace_id", "id", 'ANY',
   CASE "accepted_channels" WHEN 'PDF' THEN ARRAY['PDF_UPLOAD']::"FilingChannel"[] WHEN 'ONLINE' THEN ARRAY['ONLINE']::"FilingChannel"[] ELSE ARRAY['PDF_UPLOAD', 'ONLINE']::"FilingChannel"[] END,
-  COALESCE("accepted_basis", 'AI_SAMPLE'), "accepted_quote", "form_page_url", 'migration'
+  CASE WHEN "accepted_basis" IN ('PERSON_SAMPLE', 'EXPERT', 'SAMPLE_FIXTURE') THEN "accepted_basis" ELSE 'AI_SAMPLE' END, "accepted_quote", "form_page_url", 'migration'
 FROM "form_edition" WHERE "accepted_channels" IN ('PDF', 'ONLINE', 'PDF_OR_ONLINE');
 ALTER TABLE "form_edition" DROP COLUMN "accepted_channels", DROP COLUMN "accepted_basis", DROP COLUMN "accepted_quote";
 
@@ -45,6 +45,7 @@ ALTER TABLE "combination" DROP CONSTRAINT "combination_portal_check";
 UPDATE "combination" SET "portal_key" = CASE "portal_key" WHEN 'ircc_portal' THEN 'IRCC_PORTAL' WHEN 'apr_portal' THEN 'APR_PORTAL' WHEN 'rep_pr_portal' THEN 'PR_PORTAL' WHEN 'lmia_online' THEN 'LMIA_ONLINE' ELSE "portal_key" END WHERE "portal_key" IS NOT NULL;
 ALTER TABLE "combination" ADD CONSTRAINT "combination_portal_check" CHECK ("portal_key" IS NULL OR "portal_key" IN ('IRCC_SECURE_ACCOUNT', 'PR_PORTAL', 'IRCC_PORTAL', 'APR_PORTAL', 'LMIA_ONLINE', 'PAPER'));
 ALTER TABLE "form_edition_accept" ADD CONSTRAINT "form_edition_accept_account_check" CHECK ("account" IN ('ANY', 'IRCC_SECURE_ACCOUNT', 'PR_PORTAL', 'IRCC_PORTAL', 'APR_PORTAL', 'LMIA_ONLINE', 'PAPER'));
+ALTER TABLE "form_edition_accept" ADD CONSTRAINT "form_edition_accept_basis_check" CHECK ("basis" IN ('AI_SAMPLE', 'PERSON_SAMPLE', 'SAMPLE_FIXTURE', 'FOUNDER_SAMPLE', 'EXPERT'));
 -- C-4: Not needed only for a named account, and alone.
 ALTER TABLE "form_edition_accept" ADD CONSTRAINT "form_edition_accept_not_needed_check" CHECK (NOT ('NOT_NEEDED' = ANY ("channels")) OR ("account" <> 'ANY' AND cardinality("channels") = 1));
 

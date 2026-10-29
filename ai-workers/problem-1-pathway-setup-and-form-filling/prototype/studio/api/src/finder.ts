@@ -524,7 +524,7 @@ export class Finder implements OnModuleInit {
       const def = await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId, formKey: key } }, update: { formPageUrl: url }, create: { workspaceId, formKey: key, displayName: title.replace(/^guide\s*\d+\s*[-–:]?\s*/i, "") || key, formKind: "guide", formPageUrl: url } });
       const have = await tx.formEdition.findFirst({ where: { workspaceId, govFormDefId: def.id, contentSha256: fp } });
       if (have) { await tx.formEdition.update({ where: { id: have.id }, data: { checkedAt: new Date() } }); return; }
-      await tx.formEdition.createMany({ data: [{ workspaceId, govFormDefId: def.id, editionLabel: label, sha256: fileSha, contentSha256: fp, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: url, sourceUrl: url, canadaUpdated: modified, checkedAt: new Date(), acceptedChannels: "READ_BY_AI", acceptedBasis: null }], skipDuplicates: true });
+      await tx.formEdition.createMany({ data: [{ workspaceId, govFormDefId: def.id, editionLabel: label, sha256: fileSha, contentSha256: fp, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: url, sourceUrl: url, canadaUpdated: modified, checkedAt: new Date() }], skipDuplicates: true }); // a guide is read by AI, never filed: no record of what IRCC accepts
       await tx.officialDownload.createMany({ data: [{ workspaceId, sha256: fileSha, kind: "guide", code: key, edition: label, title, formPageUrl: url, sourceUrl: url, fileName: basename(stored), storedPath: stored.replace(`${ROOT}/`, ""), bytes: bytes.length, basis: "download", batchId, startedBy: by }], skipDuplicates: true });
     });
   }

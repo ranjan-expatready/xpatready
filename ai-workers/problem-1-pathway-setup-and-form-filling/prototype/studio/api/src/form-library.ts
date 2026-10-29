@@ -265,7 +265,10 @@ export class FormLibrary {
       for (const r of d.before) {
         // Lead check L1: every saved line setting comes back (age, signer, rule, channel …), not a fixed few.
         const { updatedAt, predicateJson, id, ...row } = r; void updatedAt; void id;
-        const put = { ...row, predicateJson: predicateJson === null ? Prisma.DbNull : (predicateJson as Prisma.InputJsonValue) };
+        // C-8 (P-143): a step recorded before the slice spells the line's channel "SIGNED_PDF_UPLOAD"; it comes back as
+        // PDF upload, signed by hand and scanned.
+        const old = (row.channel as string) === "SIGNED_PDF_UPLOAD" ? { channel: "PDF_UPLOAD" as const, signature: "HAND_SCANNED" as const } : {};
+        const put = { ...row, ...old, predicateJson: predicateJson === null ? Prisma.DbNull : (predicateJson as Prisma.InputJsonValue) };
         await tx.combinationForm.upsert({ where: { id: r.id }, update: put, create: { id: r.id, ...put } });
       }
       await tx.formLineAction.update({ where: { id: a.id }, data: { undoneAt: new Date(), undoneBy: actor.id } });

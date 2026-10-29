@@ -66,7 +66,8 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   const canadaIdx = JSON.parse(readFileSync(join(OFFICIAL, "canada", "index.json"), "utf8")).items as { url: string; path: string }[];
   const pageWords = (url: string) => { const it = canadaIdx.find((x) => x.url === url); return it ? pageText(readFileSync(join(OFFICIAL, it.path), "utf8")).replace(/\s+/g, " ") : ""; };
   const fixed = Object.entries(fx.accepts as Record<string, { channels: string; quote: string }>).filter(([c]) => c !== "IMM 5257");
-  const wrong = fixed.filter(([c, f]) => lrow(c)?.accepts !== f.channels || lrow(c)?.accepts_basis !== "SAMPLE_FIXTURE" || lrow(c)?.accepts_quote !== f.quote).map(([c]) => [c, lrow(c)?.accepts, lrow(c)?.accepts_basis]);
+  const WORDS: Record<string, string> = { PDF: "PDF upload", ONLINE: "Online", PDF_OR_ONLINE: "PDF upload · Online" }; // P-143: the record in words, for every account
+  const wrong = fixed.filter(([c, f]) => lrow(c)?.accepts !== WORDS[f.channels] || lrow(c)?.accepts_basis !== "SAMPLE_FIXTURE" || lrow(c)?.accepts_quote !== f.quote).map(([c]) => [c, lrow(c)?.accepts, lrow(c)?.accepts_basis]);
   ok("C11.11 (change 4) pass: the forms whose pages say they are uploaded get it from the Sample fixtures (IMM 5475, 5476: PDF upload, Sample · canada.ca words, the line kept)", fixed.map(([c]) => c).join() === "IMM 5475,IMM 5476" && !wrong.length, wrong);
   const notOnPage = Object.entries(fx.accepts as Record<string, { quote: string }>).filter(([c, f]) => !pageWords(lrow(c)?.form_page_url ?? "").includes(f.quote.replace(/\s+/g, " "))).map(([c]) => c);
   ok("C11.11 (change 4): each fixture's line is IRCC's own sentence on that form's recorded canada.ca page (nothing invented)", !notOnPage.length, notOnPage);
@@ -82,7 +83,7 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("break minor: a number written loosely is understood in the path and in search (imm1295 is IMM 1295)", (await call("GET", "/library/forms/imm1295/uses")).body?.key === "IMM 1295" && (await call("GET", "/library/forms/list?q=imm1295")).body.rows?.[0]?.code === "IMM 1295");
   const refused = (q: string) => { try { sql(q); return false; } catch { return true; } };
   const ed = sql(`select id from form_edition limit 1`);
-  ok("Lead 27 Oct: the database refuses what the contracts refuse (IRCC accepts, who said it, where an edition came from)", refused(`update form_edition set accepted_channels='FAX' where id='${ed}'`) && refused(`update form_edition set accepted_basis='GUESS' where id='${ed}'`) && refused(`update form_edition set origin='EMAIL' where id='${ed}'`) && !refused(`update form_edition set accepted_channels=accepted_channels where id='${ed}'`));
+  ok("Lead 27 Oct: the database refuses what the contracts refuse (IRCC accepts, who said it, where an edition came from)", refused(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) select workspace_id, id, 'ANY', '{FAX}', 'AI_SAMPLE', 't' from form_edition where id='${ed}'`) && refused(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) select workspace_id, id, 'NOWHERE', '{ONLINE}', 'AI_SAMPLE', 't' from form_edition where id='${ed}'`) && refused(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) select workspace_id, id, 'ANY', '{ONLINE}', 'GUESS', 't' from form_edition where id='${ed}'`) && refused(`update form_edition set origin='EMAIL' where id='${ed}'`) && !refused(`update form_edition set origin=origin where id='${ed}'`));
   r = await call("GET", `/library/forms/${encodeURIComponent("Guide 5256")}/uses`);
   ok("break round 2 N7, review round 2 M2: a guide opens by its own key (Guide 5256), so it can be retired or deleted", r.status === 200 && r.body.key === "Guide 5256", r.body?.detail ?? r.body?.key);
   ok("review round 2 M3: the list's Used by counts checklists attached as sources, as the drawer does (IMM 5484)", (lrow("IMM 5484")?.used_by?.length ?? 0) > 0 && lrow("IMM 5484").used_by.every((u: any) => u.label.includes(" › ")), lrow("IMM 5484")?.used_by);
@@ -95,26 +96,26 @@ const jobsBefore = new Set(existsSync(join(P2, "jobs")) ? execFileSync("ls", [jo
   ok("break minor: Replace on a combination that does not exist is a 404 in words", (await call("POST", `/combinations/00000000-0000-4000-8000-000000000000/forms/${encodeURIComponent("IMM 1295")}/replace`, {})).status === 404);
 
   // --- C11.18: a person sets what IRCC accepts with the canada.ca line or a reason; a second person approves
-  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF" });
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: ["PDF_UPLOAD"] });
   ok("C11.18 fail: neither the canada.ca line nor a reason is refused (400, on the field)", r.status === 400 && /canada\.ca line|say why/i.test(r.body.detail), r.body.detail);
-  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF", reason: "Paper and portal both take it" }, "user-B");
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: ["PDF_UPLOAD"], reason: "Paper and portal both take it" }, "user-B");
   ok("C11.18 fail: a person without the author duty cannot propose it (403)", r.status === 403, r.status);
-  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5484")}/accepts`, { channels: "PDF", reason: "test" });
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5484")}/accepts`, { channels: ["PDF_UPLOAD"], reason: "test" });
   ok("C11.18 fail: a checklist is never filed, so it takes no channel (409, in words)", r.status === 409 && /never filed/.test(r.body.detail), r.body.detail);
-  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF_OR_ONLINE", quote: "You can apply online or on paper with this form." });
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: ["PDF_UPLOAD", "ONLINE"], quote: "You can apply online or on paper with this form." });
   ok("C11.18 pass: with the canada.ca line, it waits for a second person on To review", r.status < 300 && r.body.status === "WAITING" && sql(`select count(*) from library_change where kind='form_accepts' and key='IMM 1295' and status='WAITING'`) === "1", r.body);
   const acc = r.body.id;
   const detail = (await call("GET", `/library/changes/${acc}`)).body;
   ok("review: the second person reads the change in words: before → after, IRCC's line and the form's canada.ca page", detail?.accepts?.before === "Not set yet" && detail.accepts.after === "PDF upload · Online" && /apply online or on paper/.test(detail.accepts.quote ?? "") && /^https:\/\/www\.canada\.ca\//.test(detail.accepts.form_page ?? ""), detail?.accepts);
   ok("C11.18: the library shows the change waiting and keeps the old value until approved", (await call("GET", "/library/forms/list?q=1295")).body.rows[0]?.accepts_waiting === true && (await call("GET", "/library/forms/list?q=1295")).body.rows[0]?.accepts === null);
-  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: "PDF", reason: "another" });
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: ["PDF_UPLOAD"], reason: "another" });
   ok("C11.18 fail: a second change while one waits is refused (409)", r.status === 409 && /already waits/.test(r.body.detail), r.body.detail);
   const self = await call("POST", `/library/changes/${acc}/approve`, { note: "ok" }, "user-A");
   ok("C11.18 fail: the proposer cannot approve it (author ≠ approver), told in plain words", self.status >= 400 && /You proposed this change to what IRCC accepts, so a different person/.test(self.body?.detail ?? ""), self.body?.detail);
   r = await call("POST", `/library/changes/${acc}/approve`, { note: "Matches the form page" }, "user-B");
   lib = (await call("GET", "/library/forms/list")).body;
-  ok("C11.18 pass: a second person approves: the form shows PDF upload · Online, set by a person · Sample, with the line", r.status < 300 && lrow("IMM 1295")?.accepts === "PDF_OR_ONLINE" && lrow("IMM 1295")?.accepts_basis === "PERSON_SAMPLE" && /apply online or on paper/.test(lrow("IMM 1295")?.accepts_quote ?? "") && !lrow("IMM 1295")?.accepts_waiting, lrow("IMM 1295"));
-  const twice = await Promise.all(["PDF", "ONLINE"].map((c) => call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: c, reason: `Both at once ${c}` })));
+  ok("C11.18 pass: a second person approves: the form shows PDF upload · Online, set by a person · Sample, with the line", r.status < 300 && lrow("IMM 1295")?.accepts === "PDF upload · Online" && lrow("IMM 1295")?.accepts_basis === "PERSON_SAMPLE" && /apply online or on paper/.test(lrow("IMM 1295")?.accepts_quote ?? "") && !lrow("IMM 1295")?.accepts_waiting, lrow("IMM 1295"));
+  const twice = await Promise.all(["PDF_UPLOAD", "ONLINE"].map((c) => call("POST", `/library/forms/${encodeURIComponent("IMM 1295")}/accepts`, { channels: [c], reason: `Both at once ${c}` })));
   ok("break minor: two people proposing at the same moment leave one change waiting; the other is refused (409)", twice.filter((x) => x.status < 300).length === 1 && twice.filter((x) => x.status === 409).length === 1 && sql(`select count(*) from library_change where kind='form_accepts' and key='IMM 1295' and status='WAITING'`) === "1", twice.map((x) => x.status));
   sql(`delete from library_change where kind='form_accepts' and key='IMM 1295' and status='WAITING'`);
   const approvedLine = sql(`select string_agg(summary, ' | ' order by at) from audit_event where action='approved' and entity_key='IMM 1295'`); // two lines in one instant: read them all
