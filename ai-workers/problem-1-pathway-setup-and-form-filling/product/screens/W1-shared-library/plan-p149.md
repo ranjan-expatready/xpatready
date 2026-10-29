@@ -87,3 +87,27 @@ P-153 requires each P-149 rule that S6 builds to be enforced in the server, on e
 | P-149.5 expert-confirmed cases | Approval is refused while any example lacks `confirmedBy` from the `sme` duty. | `P-149.5 pass: confirmed cases → approvable` | `P-149.5 fail: an unconfirmed case → approval refused` | 3, 4 |
 | Q-A4 no bulk for a person's items | The bulk-accept service refuses a batch that holds an item with origin person. | `Q-A4 pass: a batch of Ready AI items is accepted` | `Q-A4 fail: a batch with one person's item → 400, nothing written` | 1 |
 | Q-A1 placement on Send | Placement runs only after a successful Add write; its failure never rolls the Add back. Live only under the caps. | `Q-A1 pass: Add → related placement items arrive with relatesTo the Add` | `Q-A1 fail: the placement step fails → the Add stays saved; over a cap → no live call, rules matcher only` | 1 |
+
+### Words (P-154, 29 Oct)
+"Agent" is retired as a role word.
+
+**The words S6 uses:**
+* Where a fact comes from: Document · Client · Case officer.
+* The page a case officer works in: "case view".
+* Representative: a licensed representative, on IMM 5476.
+* Staff: everyone at the firm.
+
+**Where they apply in S6:**
+* The Add dialog's "about whom" lists only person roles from "Who can be in this application" (P-119): Principal applicant, Spouse or partner, and so on, plus Representative where the form asks about them. It never offers "agent" or "staff" as a subject.
+* Queue and library copy say "case officer" for the person working the case.
+
+**Test** (in `tests/check_s6_p149.ts` and the S6 browser check):
+* `P-154 pass: the Add dialog's "about whom" and the queue's words use roles and Case officer`
+* `P-154 fail: no user-facing "agent" on S6 pages or API messages (source and page-text scan)`
+
+**User-facing "agent" in files this lane has touched, to change when next touched, each with a P-154 pass and fail label:**
+* `web/src/pages/programs.tsx:459` (Program structure help): "the agent picks" → "the case officer picks".
+
+**For other lanes** (not changed here; the Lead routes them):
+* `web/src/pages/configuration.tsx:89` "The firm (agent)" and the runtime's "agent view" (`questionnaire.tsx:484`) belong to the runtime lane.
+* The contract's `comes_from.from: "agent"` code (forms) may stay as a stored code, but its words read "Case officer".
