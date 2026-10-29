@@ -6,10 +6,10 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: DV-doc-1 retest on main db5e0208; report `qa/reports/2026-10-29-dv-doc-1.md`
-stage: WAITING
-owner: Lead
-next_action: (1) the coverage rerun on S4+S5 once screens and runtime finish their suites (first pass on 32961d69 incomplete: 7 copies did not start under load; report `2026-10-29-coverage-s4-s5.md`); (2) after-merge on S3 when it merges; (3) QA-69 and QA-48 when their fixes merge; (4) Lead answers: C1.8 copies per line, QA-69 rule. Read the Handover section first.
+current_item: after-merge S3 Start setup on main f7cb40d9 (PR #76, with DV-bb-1, 6b, 6c); report `qa/reports/2026-10-29-after-merge-s3.md`
+stage: TESTING
+owner: qa
+next_action: (1) finish S3 after-merge on isolated qa_s3 :4477 (merged suites replayed; rerun the order-dependent ones after a reset; new `check_qa_am_s3_1029.cjs`); (2) the coverage rerun on S4+S5 when the Mac is quiet; (3) QA-69 and QA-48 when their fixes merge; (4) Lead answers: C1.8 copies per line, QA-69 rule. Read the Handover section first.
 blocked_by: none
 updated: 2026-10-29
 
@@ -56,7 +56,6 @@ updated: 2026-10-29
   9. S4: the finder has no button until S5 slice 3: test it through `POST /combinations/:id/forms/find/plan` then `/find` (Rules or Replay only, never `live`); only Visitor visa (`vv.single`) has saved answers. No product route makes an unused, unapproved form, so Delete is walked on a seeded form (the builders' own way). The guard hook blocks `for` loops and heredocs: put them in a scratchpad script.
 
 ## Log (last 8 lines)
-- 2026-10-27 · applied Lead note 27 Oct 22:50. after-merge on main 027174d (screens S1/S2 FIX; CI 37/37 on the same code): the seven items walked headed then replayed; QA-44 (2/2), QA-45, QA-46, QA-49, QA-50 closed; review m1 and break m8 pass; new Minors QA-51 (To review trail without the type), QA-52 (approval message for a removal), QA-53 (16 other configuration reads open to nobody and case people), QA-54 (case person on a Studio page by URL: 'could not load … Retry'); checks: `check_qa_am_fix_1027.cjs` 9/14, `check_qa_am_s2_1027.cjs` 45/46, `check_qa_am_1027.cjs` 54/58 ×2; coverage api 97.09/82.10, engine 99.38/89.09 (floor kept), 35/36 under coverage (p2 guard, known). US$0.
 - 2026-10-27 · Lead 23:59: report on 027174d read; QA-51/52/54 → screens, QA-53 → forms (shared read guard after S4). Founder: hand over tonight. Handover section written; WAITING for S4, then the visual-system slice. US$0.
 - 2026-10-28 · Lead brief (after PR #66). after-merge on main dccd87e: copy bound to qa, main synced (conflicts took main's Delete words); CI 42/42 on the same tree; headed walk + `check_qa_am_r3_1028.cjs` 59/69 ×2; `check_qa_am_1027.cjs` moved to round 3 (51/55), `check_qa_am_fix_1027.cjs` 13/14; new QA-60 Major (QA-44 back in the Add pop-up, cut name saved), QA-55–59 Minor; QA-48 narrowed to Minor (Retire/Restore from the row works); QA-51, 52, 54 closed; journey 7/10 Program structure, 9/10 Immigration programs; suites 40/41 under coverage (p2 guard, known) + CI 42/42; coverage api 97.21/82.75, engine 99.38/89.08 (floor 97/82 · 99/89). US$0.
 - 2026-10-28 · Lead message (after PR #65). after-merge on main 06a8fc30 (S4): CI 47/47 on the same tree; headed walk + `check_qa_am_s4_1028.cjs` 55/61 ×2, `check_qa_s4_filing.ts` 6/9; r3 64/69 (QA-57 closed), fix 13/14; new QA-61–64 Minor (QA-64 Conflict: form retire waits for the release, P-116 amended says approval); Load sample sets 2 of 7 (brief said 5 of 7: question); journey 8/10; under coverage 41/46 (p2 guard; three M7 Stop steps clash with the preload; a lost server), api 96.88/81.69 and engine 99.44/88.96 on that incomplete run, not judged: clean coverage rerun owed. US$0.
@@ -64,3 +63,4 @@ updated: 2026-10-29
 - 2026-10-29 · Lead message (after PR #71). after-merge on main e2cb27a4 (S5; qa_s5/s5b/s5c :4472–4474): CI 57/57 on the same app code; QA-53 holds on every S5 route; QA-38 and QA-40 closed; new QA-69 UX Minor (Forms Undo offered after a release); `check_qa_am_s5_1029.cjs` 50/50; s4 check moved to the row action 58/62 (QA-62/63/64 only); explore_1025 retired (W1-02 fixtures gone); new G3 `POST /combinations/:id/attachments`; coverage not rerun. Report `qa/reports/2026-10-29-after-merge-s5.md`.
 - 2026-10-29 · Lead message (PR #75, main db5e0208): coverage paused; DV-doc-1: 13 bugs closed by replay, 4 open; C2.3, C5.3, C3.7, C11.17, C11.11 Works; C1.8, C11.15 Partial (no copies per line); `check_qa_dv_1029.cjs` 24/25.
 - 2026-10-29 · stop hook: BUGS-CLOSED over 12 KB; 37 rows closed up to 26 Oct moved to `history/qa-bugs-closed-to-2026-10-26.md`; suite screenshots removed.
+- 2026-10-29 · Lead message (PR #76, main f7cb40d9): after-merge S3 started on qa_s3 :4477; DV-doc-1 already done.
