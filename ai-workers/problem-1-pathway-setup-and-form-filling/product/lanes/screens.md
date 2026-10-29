@@ -38,6 +38,7 @@ blocked_by: forms slice 0 on main (Lead PR); forms contract v2 for slice 1
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · QA-81 (P-154) · applied Lead message: configuration.tsx edit dropped (runtime slice 2, Lead PR #80, makes it "The firm"); check_p154_words expects "The firm" — 2 PASS, 2 FAIL (configuration.tsx) until #80 is synced; programs.tsx fix kept. US$0.
 - 2026-10-29 · QA-81 (P-154) · FIX (words only) · programs.tsx Corporate panel "the agent picks" → "the case officer picks"; configuration.tsx "Provided by" "The firm (agent)" → "The firm (case officer)" (stored code unchanged); tests/check_p154_words.ts 4/4 (and 0/4 on the old text). To name in the S6 hand-back. US$0.
 - 2026-10-29 · sync · main 170659bc merged (PR #77 decisions P-146–P-155; PR #78 runtime W1-15 slice 1); no conflicts. S6 BUILD still waits for forms slice 0 on main. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN · applied Lead message (P-154): plan-p149.md "Words": Document · Client · Case officer, case view, Representative, staff; Add "about whom" = roles only; P-154 pass/fail labels; programs.tsx:459 "agent" to change when next touched; runtime/forms occurrences listed for the Lead. US$0.
@@ -47,4 +48,3 @@ updated: 2026-10-29
 - 2026-10-29 · sync · main f7cb40d9 merged (PR #76: S3 Start setup and DV-bb-1/6b/6c on main); no conflicts. S6 BUILD still waits for forms slice 0 on main. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN agreed · applied Lead message: Q-L1..L5 yes, N1/N2 accepted, founder Q1 with the Lead (slice R waits; slice 1 does not); written under "Lead response, agreed 29 Oct" in plan.md. Nothing to build until forms slice 0 is on main. US$0.
 - 2026-10-29 · W1-shared-library (S6) · EARLY-LOOK → PLAN · applied Lead message (contract approved): fresh re-check on 28d78cdc (R-109, fresh agent) and plan.md (R1–R5 answered on P-138, the approved contract and the step runner 619eaac4; N1 edition key, N2 old kinds; back-end table; slices with Capability/Scaffolding labels; ownership; founder Q1, Lead Q-L1..L5). No code. US$0. Owner Lead.
-- 2026-10-29 · DV-bb-1/6b/6c · FIX → CHECK · applied Lead message (S3 Lead check PASS): finished upload cards dismissible (stay gone after reload); reset counts added roles, keeps and names the 6 built-in ones; no "(P-95)" in the structure footer; pass and fail check each (structure 81/81, library 67/67, studio_browser 49/49 on a copy); web rebuilt; run-suites on afb86cde 58 PASS 0 FAIL; graph passes. US$0. Owner Lead.
