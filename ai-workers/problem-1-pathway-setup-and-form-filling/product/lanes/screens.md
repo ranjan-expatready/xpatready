@@ -13,7 +13,7 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 
 **Agreed by the Lead on 29 Oct: build `screens/W1-shared-library/plan-slice1.md` as 1a → 1b → 1c, each with its own hand-back.**
 
-**1a, the table and the door. Built at 50224b01; full suites running (build-notes.md "Slice 1a").** Steps:
+**1a, the table and the door. Built at 50224b01, handed back at CHECK: full suites 74 PASS 0 FAIL (build-notes.md "Slice 1a").** Steps:
 1. **Prisma model `ProposalItem`.** Mirror `contracts/proposal-item.ts`: JSON payload, source, rounds, rules, identity, revision and decision; index status, kind, combination, edition, run and batch.
 2. **The migration.** Copy the `NormalizationItem` rows onto `ProposalItem`, mapping its kinds (field, section, answer_list, check, document_requirement) to the contract kinds. Drop the `rule` rows. Log what it copies and drops (Q-L4). Then drop `NormalizationItem`.
    * Rows are written in `sources.ts:545-577` and decided in `sources.ts:617-695`.
