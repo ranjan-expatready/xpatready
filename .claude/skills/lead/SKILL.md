@@ -26,7 +26,7 @@ Run `bash P/tools/lane.sh whoami` (Mac: on `lead/<date>` from `origin/main`). `u
 * **EARLY-LOOK:** screenshots next to the board; list differences; founder says Go or changes (changes go to the board first).
 * **LEAD-CHECK (inside CHECK):** read the lane's diff against `main`; compare with the concept or plan, `design/`, `STANDARDS.md`, `EXPERIENCE.md`; **check the lane's local `run-suites.sh` result on its exact commit** (P-85: CI runs only on PRs and tests the merge on the Lead PR; rerun on Lead ports 4420–4429 when in doubt) and `tools/graph.mjs` (P-86: no new gap the lane caused); verify the reviewer's journey evidence, spot-walk the main path (no second score); write `screens/<item>/lead-check.md`; hand back FIX or move on to DEMO/MERGE.
 * **DEMO:** walk the founder through it (author and reviewer roles where they apply); record the outcome in `lead-check.md`; 5-line retro in `RETRO.md` (at most one workflow change); DONE or FIX.
-* **MERGE (standing founder OK, 23 Oct):** after DONE, or a backend slice that passed the Lead check: `git fetch origin && git merge --no-ff origin/<branch>` in the main copy, then `git push origin main` (P-82); on a conflict, abort and hand it back. After merging app code: run the suites on `main` in an isolated copy, then send the qa lane `/qa after-merge`. Report every merge to the founder. Restart :4400 only with the founder's OK.
+* **MERGE (standing founder OK, 23 Oct):** after DONE, or a backend slice that passed the Lead check: `git fetch origin && git merge --no-ff origin/<branch>` in the main copy, then `git push origin main` (P-82); on a conflict, abort and hand it back. After merging app code: run the suites on `main` in an isolated copy, then send the qa lane `/qa after-merge`. Restart :4400 (P-163); tell the founder what is new.
 * **Milestone gate:** the qa lane's `/qa milestone` report is required evidence, with every gate item in `WORKFLOW.md`.
 * **qa and scout reports:** assign each new bug to a lane (its next FIX pass, through that lane's Lead note); a Blocker or Critical stops that lane's next merge or DEMO; answer the tester's questions or put them to the founder; suggestions pass the scope test (P-26) first.
 * **CONCEPT:** skill screen-concept (`screen-designer` may draft it); write `concept.md` on `main`, then set the lane's Lead note to DESIGN or PLAN.
@@ -37,7 +37,7 @@ Run `bash P/tools/lane.sh whoami` (Mac: on `lead/<date>` from `origin/main`). `u
 1. Step 0b finds another Lead's recent commit → write nothing, one line, stop.
 2. Each lane owned by Lead: its Lead stage as above (CHECK as above; MERGE under the standing OK). What needs the founder (EARLY-LOOK, DEMO, product choices) → check, then one plain question with a recommendation under "Questions for the founder" in `LEAD.md`.
 3. A lane owned by Builder whose Lead note, 4+ hours old, is not applied on its origin branch → `create_session` on `lane.sh branch <lane>`, prompt `/next <lane>`. Never evidence (Mac); never a lane with an origin commit in the last 2 hours.
-4. Never: paid AI, a product decision, a :4400 restart, a force-push, a merge with red CI.
+4. Never: paid AI, a product decision, a force-push, red CI merges. Restart: a STATE line for the Mac Lead.
 5. `lane.sh state`, STATE log line "scheduled Lead: …", `LEAD.md` line; commit, PR, merge on green; push-notify only a new founder question. Reply in five lines.
 
 ## Fresh context (say it unprompted)

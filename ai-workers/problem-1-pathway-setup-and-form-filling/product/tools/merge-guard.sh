@@ -1,5 +1,6 @@
 #!/bin/bash
-# PreToolUse hook (P-87, founder 26 Oct): only the Lead's copy may run `gh pr merge`. The allow rule lives in the Lead
+# PreToolUse hook (P-87, founder 26 Oct): only the Lead's copy may run `gh pr merge`, and (founder 29 Oct, P-163)
+# `gh pr close`, `gh pr comment`, `gh pr review`. The allow rule lives in the Lead
 # copy's own .claude/settings.local.json; this guard refuses the command in every other copy (lanes, qa, scout, cloud
 # sessions not marked as the Lead), whatever their permission mode.
 input=$(cat)
@@ -9,4 +10,4 @@ cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)
 ROOT=$([ -n "$cwd" ] && git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)
 LANE=$([ -n "$ROOT" ] && cd "$ROOT" && bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/lane.sh whoami 2>/dev/null)
 [ "$LANE" = lead ] && exit 0
-jq -n --arg l "${LANE:-unknown}" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:("Only the Lead merges pull requests (P-87); this copy is the " + $l + " copy. Hand the branch to the Lead in your Paste to Lead block.")}}'
+jq -n --arg l "${LANE:-unknown}" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:("Only the Lead merges, closes, reviews or comments on pull requests (P-87, P-163); this copy is the " + $l + " copy. Hand the branch to the Lead in your Paste to Lead block.")}}'
