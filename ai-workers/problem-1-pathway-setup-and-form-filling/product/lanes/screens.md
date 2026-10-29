@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-29 (Lead, eighth chat): **The forms lane's contract v2 (P-149) and P-154 are approved**; it reaches `main` when the Lead merges the forms branch (after its runner package). Stage BUILD, owner Builder: finish the full local `run-suites.sh` on slice R's US$0 part (21556f3a, with the P-158 delta in `plan-p158.md` as agreed), then hand back stage CHECK for the Lead check of slice R (no live call; the paid recording pass waits the founder's spend OK). S6 slice 1 BUILD starts after the forms merge, on the approved contract (one new `ProposalItem` table; field proposals move onto it). US$0.
+2026-10-29 (Lead, eighth chat; P-173 parallel build, no scope cut): Stage BUILD, owner Builder. **Your M2 queue, in order (one slice = build, own named checks, hand back; CI is the full check):** (1) S6 slice 1, the one review queue on contract v2 (one `ProposalItem` table; C11.13, C11.14, C3.2) — starts when the Lead merges forms PR #90; (2) library lists with where used, origin, rename and the P-158 "from a source, no free add" door (C3.13, C3.14, C3.15, C3.6); (3) one setup checklist per combination driving cards and Overview (P-157, P-161; C11.16, C11.10); (4) linking combinations and copying a line across combinations (C1.3, C1.5). Your files: Program structure, Immigration programs, Shared library pages and drawers, review queue, Overview. Not yours: forms library and channels (forms), combination tabs, PQR, Load sample (runtime). A slice that turns out heavy: tell the Lead before building it. Context above ~70%: write the Handover, tell the Lead.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

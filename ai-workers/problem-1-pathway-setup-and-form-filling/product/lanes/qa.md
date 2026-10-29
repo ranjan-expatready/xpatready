@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-29 (Lead, eighth chat): your branch `claude/qa-ai-paths-c2866f` conflicts with `main` in `qa/CAPABILITIES.md` only. Merge `origin/main` into it, keep both sides (main's newer statuses plus your tested ones), push, and say so: the Lead merges it by Lead PR. Then wait: retest QA-83, QA-86–89 once the forms runner package merges, and QA-84/85/91 after runtime's fix; the live smoke (about US$0.80) runs only on the founder's OK. US$0.
+2026-10-29 (Lead, eighth chat; P-173): after every Lead merge, `/qa after-merge` on main (the Lead sends it); at the end of M2, the content publisher walk-through on the six combinations like a person (S8, W1-13) is the M2 gate. US$0 unless the founder approves a live smoke.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
