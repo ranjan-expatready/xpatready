@@ -34,10 +34,18 @@ const job = { job_id: jobId, kind: "who_can_be", combination: "wp.family", confi
 const before = new Set(existsSync(join(PROTO, "p2", "runs")) ? readdirSync(join(PROTO, "p2", "runs")) : []);
 writeFileSync(jobFile, JSON.stringify(job, null, 1) + "\n");
 let out = "", code = 0;
-try { out = execFileSync(process.execPath, [join(PROTO, "p2", "launch.ts"), "--job", jobId, "--stub"], { cwd: PROTO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 120_000 }); }
-catch (e: any) { code = e.status ?? 1; out = `${e.stdout ?? ""}${e.stderr ?? ""}`; }
-finally { rmSync(jobFile, { force: true }); }
-ok("C11.12 QA-85 pass: the stub pass of a who_can_be job runs through p2/launch.ts (exit 0, no ENOENT)", code === 0 && !/ENOENT/.test(out), out.trim().split("\n").slice(-1)[0]);
+// As the Studio's launchOnce does: another suite's launch may hold the experiment ledger, so a locked ledger waits.
+try {
+  for (let n = 0; n < 60; n++) {
+    code = 0;
+    try { out = execFileSync(process.execPath, [join(PROTO, "p2", "launch.ts"), "--job", jobId, "--stub"], { cwd: PROTO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 120_000 }); }
+    catch (e: any) { code = e.status ?? 1; out = `${e.stdout ?? ""}${e.stderr ?? ""}`; }
+    if (!code || !/ledger locked/i.test(out)) break;
+    execFileSync("sleep", ["2"]);
+  }
+} finally { rmSync(jobFile, { force: true }); }
+const lastLine = (() => { try { const j = JSON.parse(out.trim().split("\n").slice(-1)[0]); return { exit: j.exit, refused: j.refused, error: j.error, status: j.status }; } catch { return out.trim().slice(-300); } })();
+ok("C11.12 QA-85 pass: the stub pass of a who_can_be job runs through p2/launch.ts (exit 0, no ENOENT)", code === 0 && !/ENOENT/.test(out), code ? lastLine : "");
 for (const f of readdirSync(join(PROTO, "p2", "runs"))) if (!before.has(f) && f.includes(jobId)) rmSync(join(PROTO, "p2", "runs", f), { force: true });
 
 // ---- QA-88 (runtime part): failure words are plain
