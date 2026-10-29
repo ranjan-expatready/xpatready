@@ -7,10 +7,10 @@
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: W1-questions-and-documents (W1-15, P-130–P-132)
-current_slice: slice 2 FIX (S2-1, Agent lock as one rule) for merge; slice 3 (Documents tab) planned in plan.md
-stage: FIX
-owner: Builder
-next_action: Builder: full run-suites on b33b941b (slice 2 with S2-1 and the one-rule Agent lock) running; then hand slice 2 back for the merge; then BUILD slice 3 (Documents tab) per plan.md 'Slice 3' (adds document_requirement.position and .alternatives, expand only).
+current_slice: slice 2 (Questionnaires tab) with S2-1, P-154, P-155(3), for merge at ff4d9cce; next slice 3 (Documents tab) per plan.md
+stage: CHECK
+owner: Lead
+next_action: Lead: check and merge W1-15 slice 2 at ff4d9cce (synced main 170659bc; full run-suites 64/64 on that commit, check_studio_browser skipped). Builder meanwhile builds slice 3 (Documents tab) per plan.md 'Slice 3'.
 blocked_by: none
 updated: 2026-10-29
 
@@ -26,6 +26,7 @@ updated: 2026-10-29
 * **Slice 3 (built 28 Oct):** finder strip and dialog (`web/src/pages/workspace/finder.tsx`), Picked by AI · Sample, row ⋯ menu (Redo with AI, Replace edition, Remove from this combination), the one Undo bar on the forms lane's `POST …/forms/undo` plus the shared Undo toast, Removed in this draft with Add back, guides linked as sources (`api/src/guide-sources.ts`, hooks in `demo.ts` and one line in `finder.ts finish`). S5's own restore route is gone. Tests `check_s5_slice3.ts` (4436) and `check_s5_slice3_browser.cjs` (4437). Open for the Lead: Who can be filled by AI (needs a paid live run to record a replay); other tabs' removes; the older Add-from-library picker.
 
 ## Log (last 10 lines)
+- 2026-10-29 · Builder (Mac): slice 2 FIX with S2-1, P-154 (Agent retired: Case officer, case view), P-155(3) (case officer with a written reason; one rule agentRefusal; fact_source.source_reason); synced main 170659bc; full run-suites 64/64 on ff4d9cce; slice-1 DV test fix 37e66a2e on the sync branch; CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): founder OK on slice 2 with S2-1: per-person line uses slice 1's sources (chips' numbers); Agent lock kept, now one rule (engine/sources.ts agentRefusal); check_w115_slice2 29/29, browser 48/48, s5 slice2 61/61, slice1 47/47 (b33b941b); full suites running; slice 3 plan written. AI US$0.
 - 2026-10-29 · Builder (Mac): Lead asked for a slice-1 sync: 915aa186 (00444a35 + main f7cb40d9; main.ts keeps FactSources and StartSetup; slice1 47/47, S3 26/26 and 39/39) on runtime/2026-10-29-w115-slice1-sync; brought into slice 2 (dbfde76b); full run-suites 61 pass, check_dv_backbone_browser waited too little for Upload PDF under load (test now waits; 8/8); slice 2 EARLY-LOOK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): slice 2 (Questionnaires tab, board v2 P-147) built: API bulk and bulk/undo (batch_id), row status, release checks with role, Agent offered only for agent facts; UI strip, chips, Needs you, rows of five, ⋯ menu with reasons, drawer, bulk bar, Who can be folded; check_w115_slice2 26/26, browser 46/46; older S5 browser tests being updated for the fold. AI US$0.
@@ -35,4 +36,3 @@ updated: 2026-10-29
 - 2026-10-29 · Builder (Mac): applied Lead message (synced main db5e0208; outside review DV-bb-3: the picker links to the Form library; DV-bb-6a: the person role says Child, the Family sponsorship category keeps 'Dependent child'); check_dv_backbone_browser 8/8; full run-suites 59/59 on a506048d; by-products restored; EARLY-LOOK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): the five suites that failed in the full run pass alone (slice3 browser 35/35, p80 guard 41/41 with the project's Node, launch paths 39/39, s4 runs 90/90, orchestration 22/22); W1-15 slice 1 → EARLY-LOOK, owner Lead; by-products restored. AI US$0.
 - 2026-10-29 · Builder (Mac): full run-suites on df23c39d 53 pass / 5 fail (load: isolated copy did not start, launcher timeouts; slice3 browser Undo toast); rerunning the five alone; by-products restored. AI US$0.
-- 2026-10-29 · Builder (Mac): Lead (seventh chat) resume message applied; one shared preview render for coverage and sources (16d0fdf9; check_engine 38/38); synced main 32961d69 (df23c39d); full suites running on df23c39d. AI US$0.
