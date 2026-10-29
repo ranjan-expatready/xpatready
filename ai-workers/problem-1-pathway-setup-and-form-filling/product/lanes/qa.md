@@ -7,19 +7,14 @@
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: after-merge on main deda0e6b (PR #90 forms, #91 screens), branch `claude/qa-after-merge-deda0e6`, copy qa_am :4471
-stage: TEST
-owner: qa
-next_action: qa: suites on deda0e6b running (files they rewrite in other lanes's folders go back to HEAD after); then the report; live smoke steps 1-4 (this copy's ledger) only after the Lead sends the founder's answer on the US$3.24 worst case
+stage: WAITING
+owner: Lead
+next_action: (1) Lead: answer the report's two questions (the :4400 reset at 12:58; live smoke US$6.49 / US$4.30 / step 3 alone), route QA-96 to runtime and QA-73/74/80 leftovers to screens; merge this branch's qa files; (2) qa: the live smoke on the Lead's answer (copy qa_live :4478, `STUDIO_PEOPLE_AI_LIVE=approved` for step 3); retest QA-92–96 when runtime's PR #94 merges. Report `qa/reports/2026-10-29-after-merge-deda0e6.md`
 blocked_by: none
 updated: 2026-10-29
 
 ## Handover (29 Oct, ~16:00; for the next qa session: read this first)
-* **The ask waiting (Lead, 29 Oct): `/qa after-merge` on main deda0e6b.** It brings:
-  * PR #91 (screens): the qa wording batch QA-39, 48, 70–74, 79, 80; the Stand-in chip; Restore keeps the Pathway type.
-  * PR #90 (forms): the runner package QA-83, 85–89; a per-form paid budget across batches; usage-limit handling; the request id in Details; the IMM 5257 SCH1 title.
-  * PRs #93 and #95: records only (P-164–P-174).
-
-  :4400 was restarted on deda0e6b (data kept): read-only there; never reset it. US$0.
+* **Done 29 Oct evening (this session):** after-merge on deda0e6b, report `qa/reports/2026-10-29-after-merge-deda0e6.md`. Kept below for the next run: setup, retest map, lessons. Added: a worktree copy needs `ln -s /Users/ranjansingh/Desktop/Xpatready/.tools .tools` at its root before `isolated.sh` (else "start the demo database first"); run the wording sweep on a copy with the sample loaded (the S3 check leaves names, so a later Load sample is refused).
 * **How to run it, in order:**
   1. Start a fresh qa copy: a new worktree from `origin/main`, `echo qa > .claude/lane`.
   2. Install: `npm ci` in `prototype/studio` with **Node 24** (`.tools/node-v24.21.0/bin` first on PATH; Homebrew's Node 23 fails Prisma), then `npx prisma generate` and `cd web && npx vite build`.
@@ -78,6 +73,7 @@ updated: 2026-10-29
   9. S4: the finder has no button until S5 slice 3: test it through `POST /combinations/:id/forms/find/plan` then `/find` (Rules or Replay only, never `live`); only Visitor visa (`vv.single`) has saved answers. No product route makes an unused, unapproved form, so Delete is walked on a seeded form (the builders' own way). The guard hook blocks `for` loops and heredocs: put them in a scratchpad script.
 
 ## Log (last 8 lines)
+- 2026-10-29 · after-merge deda0e6b: ready; suites 68/71 in the run, the 3 red rerun alone: programs_s2 87/87, start_setup_browser 39/39 (fix 4 passes), w115_slice2 flaky 1 in 3 (QA-96 new, Minor, runtime); 14 bugs closed (QA-39, 48, 70–72, 79, 81, 83–89), QA-73/74/80 narrowed; C3.10 Works, C11.8 Partial; live smoke stopped before any call (product reserves US$5.58 for the finder alone, approved US$3.24); :4400 found empty (reset 12:58). US$0.
 - 2026-10-29 · Lead asked for start_setup_browser fix 4 on deda0e6b (PR #94 CI red): two runs died in the sample load at load 17-20; solo rerun after the suites (screenshots the suites rewrite in other folders go back to HEAD then).
 - 2026-10-29 · Lead: live smoke approved by the founder (about US$0.80), steps 1-4 on this copy's ledger; held until the founder answers on the worst case US$3.24.
 - 2026-10-29 · after-merge deda0e6b started (fresh qa session): ai paths 21/21, r3 69/69, s3 39/39; wording sweep rerun on a loaded sample; regression checks running.
@@ -85,7 +81,3 @@ updated: 2026-10-29
 - 2026-10-29 · Lead message (PR #76, main f7cb40d9): after-merge S3 started on qa_s3 :4477; DV-doc-1 already done.
 - 2026-10-29 · after-merge S3 (f7cb40d9): ready; all merged suites green (run as run-suites runs them); new `check_qa_am_s3_1029.cjs` 37/39; QA-70 new (Major, menu links show no focus ring, screens); C11.2 Works, C11.15 Partial; G5 back to 0.
 - 2026-10-29 · explore wording (f7cb40d9, qa_wd :4478): 38 screens × 2 widths read; QA-39 raised to Major and updated; QA-71–80 new (6 Major, 4 Minor; screens 7, runtime 3, forms 1); new `check_qa_wording_1029.cjs`.
-- 2026-10-29 · Lead note (P-154): QA-81 "agent" in 6 places (runtime 4, screens 2; no "Agent enters" on main); QA-82 questions show field definitions (164 of 164 placements have no question wording; forms W1-10 / screens S6); wording check now flags "agent".
-- 2026-10-29 · explore ai-paths (new qa copy, main 170659bc; old qa branch merged in): every AI step inventoried; schemas linted against the provider's rules; 13 error shapes replayed through the runner; demo copy's run records and all ledgers read; new QA-83, 84, 85, 90 Critical, QA-86–89 Major, QA-91 Minor; new `check_qa_ai_paths.ts` (offline) 10/21; live smoke plan for approval. US$0.
-- 2026-10-29 · explore coverage (main 52117004, qa_qn :4471, branch `claude/qa-coverage-1029`): every suite under c8, api 97.49/82.52, engine 99.45/89.65 (floor held; 56/65 under c8, 7 of 9 fails pass plainly, 2 load-timing; CI 40832699780 green on the same code); QA-47, QA-69 closed; QA-81 down to screens (Minor); Questionnaires tab walked: QA-92 Major, QA-93 Major, QA-94, QA-95 Minor (runtime); C4.10 Partial; new `check_qa_qn_1029.cjs` 31/40; s5 check moved to Show and edit (51/51). US$0.
-- 2026-10-29 · Lead message (main deda0e6b: PR #90, #91): after-merge not started here (context long); Handover written for a fresh qa session; stale 28 Oct handover items cut (lessons kept).
