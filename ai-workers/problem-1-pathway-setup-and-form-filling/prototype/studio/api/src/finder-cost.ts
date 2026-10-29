@@ -23,6 +23,14 @@ export function aboutUsd(expected: number | null, lastFinished: number | null, l
   return expected ?? lastFinished ?? (live ? usualLiveUsd() : null);
 }
 
+/** Lead 29 Oct (CI on #94/#96): a run's "about" and "at most" are the ones its plan stated when it started (stored on the
+ *  batch: its plan JSON and worstCaseUsd), read back, never computed again: saved run files or finished runs that appear
+ *  later never change what the card says. A batch from before plans carried "about" falls back to the old rule. */
+export function statedUsd(b: { plan: unknown; worstCaseUsd: number; expectedUsd: number | null; mode: string }, lastFinished: number | null): { about: number | null; worst: number } {
+  const totals = (b.plan as { totals?: { about_usd?: number | null } } | null)?.totals;
+  return { about: totals && "about_usd" in totals ? totals.about_usd ?? null : aboutUsd(b.expectedUsd, lastFinished, b.mode === "LIVE"), worst: b.worstCaseUsd };
+}
+
 /** What the newest finished live run of an operation spent (the run card's "last finished run of the same kind"). */
 export async function lastFinishedUsd(db: Db, workspaceId: string, operation: string, mode: string, notId?: string): Promise<number | null> {
   const prev = await db.aiBatch.findFirst({ where: { workspaceId, operation, mode, ...(notId ? { id: { not: notId } } : {}), status: { in: ["COMPLETED", "PARTIAL"] }, finishedAt: { not: null } }, orderBy: { finishedAt: "desc" }, include: { jobs: { select: { costUsd: true } } } });
