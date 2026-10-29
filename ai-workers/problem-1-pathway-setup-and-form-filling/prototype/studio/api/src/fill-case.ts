@@ -5,18 +5,23 @@
 // never changes it; a new copy is made only when the officer asks. Generation runs as a queued job (STANDARDS §3:
 // never inside the web request): one at a time, status kept, a restart resumes queued copies and fails running ones.
 // Audit lines name the form, the person's role and the case by its short id: never a value or a typed name (RT-17).
-import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Res, type OnModuleInit } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Res, UploadedFiles, UseInterceptors, type OnModuleInit } from "@nestjs/common";
+import { AnyFilesInterceptor } from "@nestjs/platform-express";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { Response } from "express";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
-import { changedFacts, changedGroups, formCoverage, groupFacts, inputHash, pdfForms, readiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, inputHash, pdfForms, readiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
+import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
+import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
-import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
+import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
 import { writeForm } from "./fill.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 
@@ -35,6 +40,15 @@ const idOf = (id: string, what: string) => (UUID.test(id) ? id : fail(`No such $
 const formOf = (form: string) => (/^[A-Z]{2,6} ?\d{3,5}[A-Z]?$/.test(form) ? form : fail("No such form.", HttpStatus.NOT_FOUND));
 /** At most this many copies of one case wait or run at once (break m6): one case cannot hold up every other. */
 const ACTIVE_PER_CASE = 5;
+const run = promisify(execFile);
+/** C-9: a validated copy is one PDF, at most this size. */
+const MAX_VALIDATED_BYTES = 20 * 1024 * 1024;
+type Snap = ReturnType<Runtime["snapshotOf"]>;
+/** P-143: a form's channel in the case's release (an older release's spelling read as today's, C-8). */
+const channelIn = (s: Snap, form: string): Channel => lineOf((s.forms as { form_number: string; channel?: string; signature?: string }[]).find((f) => f.form_number === form) ?? {}).channel;
+/** C-9 (P-144): a barcode form filed by PDF upload or on paper needs a current validated copy before it is filed. */
+const needsValidate = (s: Snap, form: string) => isBarcodeForm(form) && ["PDF_UPLOAD", "PAPER"].includes(channelIn(s, form));
+const OUT_OF_DATE = "Out of date: validate again";
 
 /** P-65 (a), review M1: a form's fill trial verdict, read from the evidence lane's own record
  *  (evidence-lane/E1/<form>/STATUS.md, its "## Verdict": "Passes …" or "The product's part passes …", never "… does not
@@ -73,9 +87,9 @@ export class CaseForms implements OnModuleInit {
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
     const { answers, rows, groups } = await this.runtime.state(c);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
-    const pdf = pdfForms(s);
+    const pdf = new Set([...pdfForms(s), ...copyOnlyForms(s)]); // P-145: an Online form with IRCC's PDF gets a copy not for filing
     const titles = new Map((s.forms as { form_number: string; title?: string }[]).map((f) => [f.form_number, f.title ?? f.form_number]));
-    const copies = await this.db.formInstance.findMany({ where: { caseId }, orderBy: { createdAt: "desc" }, include: { snapshot: true } });
+    const copies = await this.db.formInstance.findMany({ where: { caseId }, orderBy: { createdAt: "desc" }, include: { snapshot: true, validated: { orderBy: { readAt: "desc" }, take: 1 } } });
     const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
     const forms: CaseForm[] = [];
     for (const p of people.filter((x) => x.role !== "case")) {
@@ -84,7 +98,8 @@ export class CaseForms implements OnModuleInit {
         const applies = !!cov && cov.applies !== false;
         const mine = copies.filter((x) => x.formNumber === form && x.subjectId === p.subjectId);
         if (!applies && !mine.length) continue; // a form that stops applying keeps its copies in view (break M4)
-        forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialPassed(form),
+        const channel = channelIn(s, form);
+        forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialPassed(form), channel, for_filing: channel !== "ONLINE", needs_validate: needsValidate(s, form),
           draft: { written_now: cov?.facts.length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
           readiness: readiness(view, form, p.subjectId), copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId))) });
       }
@@ -94,12 +109,16 @@ export class CaseForms implements OnModuleInit {
     const online = (s.forms as { form_number: string; title?: string; channel?: string }[]).filter((f) => f.channel === "ONLINE").map((f) => ({
       form: f.form_number, title: f.title ?? f.form_number,
       people: [...new Set(view.forms.filter((x) => x.form === f.form_number && x.applies !== false).map((x) => x.person))],
+      pdf_copy: copyOnlyForms(s).has(f.form_number),
+      why_no_copy: copyOnlyForms(s).has(f.form_number) ? null : answerSheetOnly(f.form_number, s.combination.portal) ? "Express Entry: the answer sheet only, no PDF copy (P-171)." : "IRCC's PDF of this form is not in this case's release.",
     })).filter((f) => f.people.length);
     return { forms, online };
   }
 
   /** A copy with its state today; changed facts are named by their question (labels), never by their keys. */
-  private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown } }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = []): FormCopy {
+  private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown }; validated?: { readAt: Date; readBy: string; factsHash: string; readBack: unknown }[] }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = []): FormCopy {
+    // C-10: a validated copy is current while the form's facts are what they were when it was read back.
+    const v = x.validated?.[0], vrb = v?.readBack as { written?: number; read_back_equal?: number } | undefined, current = !!v && v.factsHash === inputHash(today);
     const stored = x.snapshot.factsJson as Stored, then = stored.facts;
     const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
     const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; result: string; why: string | null }[] } | null;
@@ -107,7 +126,8 @@ export class CaseForms implements OnModuleInit {
     return { id: x.id, status: x.status as FormCopy["status"], created_at: x.createdAt.toISOString(), created_by: x.createdBy, finished_at: x.finishedAt?.toISOString() ?? null, error: x.error,
       locked: x.lockedAt ? { kind: x.lockedKind as keyof typeof LOCK_KINDS, at: x.lockedAt.toISOString(), by: x.lockedBy! } : null,
       out_of_date: changed.length > 0, stale: !!x.lockedAt && changed.length > 0, changed, counts: result?.counts ?? null, intact: result?.intact ?? null, person_steps: result?.person_steps ?? [],
-      by_hand: byHand, file_ok: x.status === "GENERATED" && !!x.path && existsSync(join(ROOT, x.path)) };
+      by_hand: byHand, file_ok: x.status === "GENERATED" && !!x.path && existsSync(join(ROOT, x.path)),
+      validated: v ? { at: v.readAt.toISOString(), by: v.readBy, current, words: current ? "Validated copy read back" : OUT_OF_DATE, read_back: { written: vrb?.written ?? 0, equal: vrb?.read_back_equal ?? 0 } } : null };
   }
 
   /** RT-13: a new copy of one form for one person, from the confirmed facts as they are now (frozen with the copy).
@@ -120,9 +140,9 @@ export class CaseForms implements OnModuleInit {
     if (b.idempotencyKey) { const again = await this.db.formInstance.findFirst({ where: { caseId, idempotencyKey: b.idempotencyKey } }); if (again) return this.answerFor(again, form, subjectId); }
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
     const { answers, rows, groups } = await this.runtime.state(c);
-    if ((s.forms as { form_number: string; channel?: string }[]).some((f) => f.form_number === form && f.channel === "ONLINE"))
-      fail(`${form} is filed Online in this case's release: its answers go on the portal sheet, not in a PDF.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    if (!pdfForms(s).has(form)) fail(`${form} has no PDF to fill in this case's release.`, HttpStatus.NOT_FOUND);
+    if (channelIn(s, form) === "NOT_NEEDED") fail(`${form} is Not needed in this case's release: the IRCC account asks it itself, so nothing is filled.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    if (answerSheetOnly(form, s.combination.portal)) fail(`${form} is filed Online through the IRCC secure account: its answers go on the answer sheet only, with no PDF copy (P-171).`, HttpStatus.UNPROCESSABLE_ENTITY);
+    if (!pdfForms(s).has(form) && !copyOnlyForms(s).has(form)) fail(channelIn(s, form) === "ONLINE" ? `${form} is filed Online and IRCC's PDF of it is not in this case's release: its answers go on the answer sheet.` : `${form} has no PDF to fill in this case's release.`, channelIn(s, form) === "ONLINE" ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.NOT_FOUND);
     const cov = formCoverage(s, people, answers, rows, form, subjectId);
     if (!cov || cov.applies === false) fail(`${form} does not apply to that person on this case.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const stored: Stored = { facts: cov!.facts, boxes: cov!.boxes, groups: groupFacts(caseView(s, people, answers, rows, "agent", new Date(), groups), form, subjectId) };
@@ -170,7 +190,8 @@ export class CaseForms implements OnModuleInit {
       const snapshot = x.case.pins.find((p) => p.configReleaseId === x.configReleaseId)!.release.snapshot as Parameters<typeof writeForm>[0];
       const dir = join(VAR("demo"), "cases", x.caseId); mkdirSync(dir, { recursive: true });
       const base = `${x.formNumber.replace(/\s+/g, "")}-${short(x.subjectId)}-${id}`;
-      const r = await writeForm(snapshot, { boxes: stored.boxes }, x.formNumber, dir, base);
+      const notForFiling = channelIn(snapshot as Snap, x.formNumber) === "ONLINE"; // P-145
+      const r = await writeForm(snapshot, { boxes: stored.boxes }, x.formNumber, dir, base, { notForFiling });
       if (!r.report.intact) throw new Error("the filled file did not pass its checks (read back, signatures, unchanged parts); it is not handed over");
       const by = (k: string) => r.boxes.filter((b: { result: string }) => b.result === k).length;
       const counts = { written: by("written"), by_hand: by("by hand"), blank: by("blank"), not_written: by("not written"), by_a_person: by("by a person") };
@@ -187,7 +208,7 @@ export class CaseForms implements OnModuleInit {
   }
 
   private async copyFor(actor: Actor, id: string) {
-    const x = await this.db.formInstance.findUnique({ where: { id: idOf(id, "copy") }, include: { snapshot: true } });
+    const x = await this.db.formInstance.findUnique({ where: { id: idOf(id, "copy") }, include: { snapshot: true, validated: { orderBy: { readAt: "desc" }, take: 1 } } });
     if (!x) fail("No such copy.", HttpStatus.NOT_FOUND);
     const c: Reached = await this.officerCase(actor, x!.caseId); // the officer of the copy's workspace only; others are refused there
     return { x: x!, c };
@@ -210,6 +231,8 @@ export class CaseForms implements OnModuleInit {
     const b = parse(LockCopy, body);
     if (x.status !== "GENERATED") conflict("Only a generated copy can be locked.");
     if (x.lockedAt) conflict(`This copy is already locked (${LOCK_KINDS[x.lockedKind as keyof typeof LOCK_KINDS]}); a locked copy never changes.`);
+    // P-145: a copy of a form filed Online is never filed or uploaded.
+    if (channelIn(this.runtime.snapshotOf(c), x.formNumber) === "ONLINE") conflict(`${x.formNumber} is filed Online: this PDF is a ${NOT_FOR_FILING.toLowerCase()}. Type the answers into the IRCC account from the answer sheet.`);
     const { answers, rows, groups } = await this.runtime.state(c);
     const cov = formCoverage(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
     const lockView = caseView(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, "agent", new Date(), groups);
@@ -222,10 +245,46 @@ export class CaseForms implements OnModuleInit {
     // Only the file that was made is ever locked: it must still be there with the bytes recorded (PR #12 review 2), since
     // a locked copy can never be corrected afterwards.
     this.checkedFile(x, HttpStatus.CONFLICT);
+    const s = this.runtime.snapshotOf(c);
+    // C-9, C-10 (P-144, P-171 (1)): a barcode form on a PDF upload or Paper line is filed only with a current validated copy.
+    if (needsValidate(s, x.formNumber)) {
+      const v = x.validated[0];
+      if (!v) conflict(`${x.formNumber} is a barcode form filed as ${CHANNEL_WORDS[channelIn(s, x.formNumber)]}: Validate it in Adobe, save it and read the validated copy back here before it is filed (IRCC returns it unprocessed otherwise).`);
+      if (v!.factsHash !== inputHash(cov?.facts ?? [])) conflict(`${x.formNumber}'s validated copy is out of date: a fact on the form changed after it was validated. Make a new copy, validate it again and read it back.`);
+    }
     const n = await this.db.formInstance.updateMany({ where: { id, status: "GENERATED", lockedAt: null }, data: { lockedKind: b.kind, lockedAt: new Date(), lockedBy: actor.id } });
     if (n.count !== 1) conflict("Someone locked this copy at the same moment.");
     await this.audit.log(c.workspaceId, actor.id, "locked", "form copy", x.formNumber, `${actor.name} locked copy ${short(id)} of ${x.formNumber} on case ${short(x.caseId)}: ${LOCK_KINDS[b.kind]}`);
     return this.copy(actor, id);
+  }
+
+  /** C-9 (P-144, P-171 (1)): the person's validated copy of a generated, up-to-date copy, read back into the case with
+   *  the proven E5 reader (studio/tools/read_validated.py): every value the product wrote must read back equal. Kept
+   *  with its checksum and the fingerprint of the form's facts at that moment (C-10), insert-only. */
+  async validated(actor: Actor, id: string, files: { originalname?: string; buffer?: Buffer; size?: number }[] | undefined) {
+    const { x, c } = await this.copyFor(actor, id);
+    const f = (files ?? [])[0];
+    if (!f?.buffer?.length || (files ?? []).length !== 1) fail("Send the one validated PDF you saved from Adobe.", HttpStatus.BAD_REQUEST);
+    if (f!.buffer!.length > MAX_VALIDATED_BYTES) fail("The file is larger than 20 MB: send the validated PDF of this form.", HttpStatus.PAYLOAD_TOO_LARGE);
+    if (x.status !== "GENERATED" || !x.path) conflict("Only a generated copy can be validated and read back.");
+    if (channelIn(this.runtime.snapshotOf(c), x.formNumber) === "ONLINE") conflict(`${x.formNumber} is filed Online: its PDF is a ${NOT_FOR_FILING.toLowerCase()}, so there is nothing to validate.`);
+    const { answers, rows, groups } = await this.runtime.state(c);
+    const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
+    const cov = formCoverage(s, people, answers, rows, x.formNumber, x.subjectId);
+    const changed = [...changedFacts((x.snapshot.factsJson as Stored).facts, cov?.facts ?? []), ...changedGroups((x.snapshot.factsJson as Stored).groups, groupFacts(caseView(s, people, answers, rows, "agent", new Date(), groups), x.formNumber, x.subjectId))];
+    if (changed.length) conflict(`This copy is out of date (${changed.length} change${changed.length === 1 ? "" : "s"} since it was made): make a new copy, validate that one and read it back.`);
+    this.checkedFile(x, HttpStatus.CONFLICT);
+    const dir = join(VAR("demo"), "cases", x.caseId, "validated"); mkdirSync(dir, { recursive: true });
+    const sha = createHash("sha256").update(f!.buffer!).digest("hex"), path = join(dir, `${x.formNumber.replace(/\s+/g, "")}-${short(x.id)}-${sha.slice(0, 12)}.pdf`);
+    writeFileSync(path, f!.buffer!);
+    const request = join(ROOT, x.path!.replace(/\.pdf$/, ".request.json"));
+    let rb: { ok: boolean; why: string | null; written?: number; read_back_equal?: number; mismatches?: unknown[] };
+    try { const { stdout } = await run(PY, ["-I", join(PROTOTYPE, "studio", "tools", "read_validated.py"), path, join(ROOT, x.path!), request], { cwd: ROOT, timeout: 120_000, maxBuffer: 10 * 1024 * 1024 }); rb = JSON.parse(stdout.trim().split("\n").pop()!); }
+    catch { rb = { ok: false, why: "The file could not be read back." }; }
+    if (!rb.ok) fail(`Not read back: ${rb.why ?? "the file does not hold the values this copy wrote."} Nothing was recorded; validate this copy in Adobe, save it and send it again.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    const v = await this.db.validatedCopy.create({ data: { workspaceId: c.workspaceId, formInstanceId: x.id, path: path.replace(`${ROOT}/`, ""), sha256: sha, factsHash: inputHash(cov?.facts ?? []), readBack: rb as object, readBy: actor.id } });
+    await this.audit.log(c.workspaceId, actor.id, "validated", "form copy", x.formNumber, `${actor.name} read back a validated copy of ${x.formNumber} (copy ${short(x.id)}) on case ${short(x.caseId)}: ${rb.read_back_equal}/${rb.written} values equal`);
+    return { id: v.id, copy: await this.copy(actor, id) };
   }
 
   /** The copy's file as it was made: present (else `missing`, 404 to download, 409 to lock), inside the working files,
@@ -245,7 +304,9 @@ export class CaseForms implements OnModuleInit {
     const { x } = await this.copyFor(actor, id);
     if (x.status !== "GENERATED" || !x.path) fail("This copy has no file.", HttpStatus.NOT_FOUND);
     const bytes = this.checkedFile(x, HttpStatus.NOT_FOUND);
-    return { bytes, name: `${x.formNumber.replace(/\s+/g, "")}-copy-${short(x.id)}.pdf` };
+    // P-145: a copy of a form filed Online is named for what it is.
+    const online = channelIn(this.runtime.snapshotOf((await this.copyFor(actor, id)).c), x.formNumber) === "ONLINE";
+    return { bytes, name: `${x.formNumber.replace(/\s+/g, "")}-${online ? "copy-not-for-filing" : "copy"}-${short(x.id)}.pdf` };
   }
 }
 
@@ -256,6 +317,7 @@ export class CaseFormsController {
   @Get("cases/:id/forms") list(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.list(actorOf(a), id); }
   @Post("cases/:id/forms/:form/:subject/generate") @HttpCode(HttpStatus.ACCEPTED) generate(@Headers("x-actor") a: H, @Param("id") id: string, @Param("form") form: string, @Param("subject") s: string, @Body() b: unknown) { return this.f.generate(actorOf(a), id, form, s, b); }
   @Get("form-copies/:id") copy(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.copy(actorOf(a), id); }
+  @Post("form-copies/:id/validated") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_VALIDATED_BYTES, files: 1 } })) validated(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: { originalname?: string; buffer?: Buffer }[]) { return this.f.validated(actorOf(a), id, files); }
   @Post("form-copies/:id/lock") lock(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.lock(actorOf(a), id, b); }
   @Get("form-copies/:id/file") async file(@Headers("x-actor") a: H, @Param("id") id: string, @Res() res: Response) { const d = await this.f.file(actorOf(a), id); res.setHeader("content-type", "application/pdf"); res.setHeader("content-disposition", `attachment; filename="${d.name}"`); res.end(d.bytes); }
 }

@@ -15,7 +15,7 @@
 //  - downloads only from canada.ca (engine/canada.ts officialUrl), from the form's own page, checked like a manifest file
 //    and recorded as an official download (M2): no second person. Same printed edition, different file: the library's
 //    edition stays and the form is marked "Newer file on canada.ca" (M6); a newer edition is held for impact review.
-import { ACCOUNT_WORDS } from "../../contracts/forms.ts";
+import { ACCOUNT_WORDS, CHANNELS, IRCC_ACCOUNTS, type Channel } from "../../contracts/forms.ts";
 import { acceptsWords } from "../../contracts/form-library.ts";
 import { HttpException, HttpStatus, Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
@@ -732,6 +732,18 @@ export class Finder implements OnModuleInit {
         const channels = ({ PDF: ["PDF_UPLOAD"], ONLINE: ["ONLINE"], PDF_OR_ONLINE: ["PDF_UPLOAD", "ONLINE"] } as const)[fixed.channels];
         await this.db.formEditionAccept.create({ data: { workspaceId, formEditionId: current.id, account: "ANY", channels: [...channels], basis: "SAMPLE_FIXTURE", quote: fixed.quote.slice(0, 400), sourceUrl: page, readOn: new Date(), setBy: "system" } }); accepts++;
       }
+    }
+    // C-12 (P-171 (3)) and plan §8 Q1: the founder's records and the sample accounts, Sample, each with its basis.
+    const extra = (() => { try { return JSON.parse(readFileSync(fixtureFile ?? join(STUDIO, "samples", "form-library-sample.json"), "utf8")) as { founder_accepts?: { records?: { form: string; account: string; channels: string[] }[] }; accounts?: { combinations?: Record<string, { account: string; url: string }> } }; } catch { return {}; } })();
+    for (const r of extra.founder_accepts?.records ?? []) {
+      const d = defs.find((x) => normaliseCode(x.formKey) === normaliseCode(r.form)), current = d ? newestEdition(d.editions.filter((e) => e.channel !== "ONLINE")) : null;
+      if (!current || !(IRCC_ACCOUNTS as readonly string[]).includes(r.account) || !r.channels.every((c) => (CHANNELS as readonly string[]).includes(c))) { notUsed.push(`${r.form}: the founder's record (P-171) was not used: ${current ? "not a known account or channel" : "the form is not in the library"}`); continue; }
+      await this.db.formEditionAccept.upsert({ where: { formEditionId_account: { formEditionId: current.id, account: r.account } }, update: {}, create: { workspaceId, formEditionId: current.id, account: r.account, channels: r.channels as Channel[], basis: "FOUNDER_SAMPLE", quote: null, setBy: "system" } }); accepts++;
+    }
+    for (const [key, a] of Object.entries(extra.accounts?.combinations ?? {})) {
+      if (!(IRCC_ACCOUNTS as readonly string[]).includes(a.account)) { notUsed.push(`${key}: not a known IRCC account`); continue; }
+      // A released combination keeps its account as released: only rows without a release take it.
+      await this.db.combination.updateMany({ where: { workspaceId, combinationKey: key, portalKey: null, releases: { none: {} } }, data: { portalKey: a.account } });
     }
     return { pages, accepts, acceptsSaved, guides, noGuide, notUsed, note: null };
   }

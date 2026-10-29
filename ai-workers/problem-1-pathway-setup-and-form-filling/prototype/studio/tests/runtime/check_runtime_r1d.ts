@@ -23,7 +23,7 @@ const bytes = (path: string, actor: string) => new Promise<{ status: number; bod
   const req = request({ host: "127.0.0.1", port: PORT, path: `/api${path}`, headers: { "x-actor": actor }, agent: false }, (res) => { const c: Buffer[] = []; res.on("data", (x: Buffer) => c.push(x)); res.on("end", () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(c) })); });
   req.on("error", reject); req.end();
 });
-type Copy = { id: string; status: string; locked: { kind: string } | null; out_of_date: boolean; stale: boolean; changed: string[]; counts: { written: number; not_written: number } | null; intact: boolean | null; file_ok: boolean };
+type Copy = { id: string; status: string; locked: { kind: string } | null; validated?: { current: boolean; words: string } | null; out_of_date: boolean; stale: boolean; changed: string[]; counts: { written: number; not_written: number } | null; intact: boolean | null; file_ok: boolean };
 type Q = { subjectId: string; fact: string; value_type: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string }[]; answer: { confirmed: boolean } | null };
 type Form = { form: string; subject_id: string; applies: boolean; person: string; draft: { written_now: number; mapped: number; unconfirmed: number }; readiness: { ready: boolean; missing: { fact: string; reason: string }[] }; copies: Copy[] };
 
@@ -178,6 +178,24 @@ async function main() {
   ok("RT-16 fail: the client cannot lock a copy (403)", r.status === 403, r.status);
   r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "printed" }, OFFICER);
   ok("RT-16 fail: an unknown lock kind is a 400 in plain words", r.status === 400 && /validated copy uploaded back, or filed/.test(r.body?.detail ?? ""), r.body?.detail);
+  // ── W1-10 slice 1 C-9 (P-144, P-171 (1)): IMM 5257 is a barcode form on a PDF upload line: Validate is the last step.
+  r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "validated_copy_uploaded" }, OFFICER);
+  ok("C11.6 C-9 fail: a barcode form with no validated copy read back is not filed or uploaded (409, in words)", r.status === 409 && /Validate it in Adobe/.test(r.body?.detail ?? ""), r.body?.detail);
+  const sendValidated = async (copy: string, file: Buffer, name: string, actor = OFFICER) => {
+    const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(file)]), name);
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/runtime/form-copies/${copy}/validated`, { method: "POST", headers: { "x-actor": actor }, body: fd });
+    return { status: res.status, body: await res.json().catch(() => null) };
+  };
+  const copyFile = readFileSync(join(ROOT, row1.path));
+  r = await sendValidated(locked1, Buffer.from("not a pdf"), "notes.txt");
+  ok("C11.6 C-9 fail: a file that is not the validated PDF is refused and nothing is recorded", r.status === 422 && /not a PDF/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
+  r = await sendValidated(locked1, readFileSync(join(ROOT, "ai-workers", "problem-1-pathway-setup-and-form-filling", "official-sources", "ircc", "forms", "imm5257e.pdf")), "imm5257e.pdf");
+  ok("C11.6 C-9 fail: IRCC's blank form (none of the copy's values) does not read back, nothing recorded", r.status === 422 && /values the product wrote differ|could not be read/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
+  r = await sendValidated(locked1, copyFile, "imm5257-validated.pdf", CLIENT);
+  ok("C11.6 C-9 fail: the client cannot send a validated copy (officer only)", r.status === 403, r.status);
+  r = await sendValidated(locked1, copyFile, "imm5257-validated.pdf");
+  ok("C11.6 C-9 pass: the saved copy reads back with every value the product wrote; its checksum and the facts' fingerprint are kept", r.status === 201 && r.body?.copy?.validated?.current === true && r.body.copy.validated.read_back.equal === r.body.copy.validated.read_back.written && r.body.copy.validated.read_back.written > 0
+    && sql(`select sha256 from validated_copy where form_instance_id='${locked1}'`) === sha(copyFile), r.body);
   r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "validated_copy_uploaded" }, OFFICER);
   ok("RT-16 pass: the officer locks an up-to-date generated copy (\"validated copy uploaded back\")", r.status === 201 && r.body.locked?.kind === "validated_copy_uploaded", r.body);
   r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "filed" }, OFFICER);
@@ -196,6 +214,7 @@ async function main() {
   const locked = f.copies.find((x) => x.id === locked1)!;
   ok("RT-15/16 pass: after the passport number changes, the locked copy is stale and names the fact; its file and row are unchanged", locked.stale && locked.out_of_date && locked.changed.some((x) => /passport/i.test(x)) && sha(readFileSync(join(ROOT, row1.path))) === row1.sha && sql(`select sha256 from form_instance where id='${locked1}'`) === row1.sha, locked);
   ok("RT-15 pass: nothing was regenerated on its own (a new copy only on the officer's request)", sql(`select count(*) from form_instance where case_id='${caseId}'`) === before);
+  ok("C11.6 C-10 pass: after a fact on the form changed, its validated copy says \"Out of date: validate again\" and is kept as history", locked.validated?.current === false && locked.validated?.words === "Out of date: validate again" && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "1", locked.validated);
   ok("RT-15 fail-guard: the spouse's copy, whose facts did not change, is not out of date", !(await formOf("IMM 5257", spouse)).copies.find((x) => x.id === spouse2)!.out_of_date);
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-3` }, OFFICER);
   const second: string = r.body.id; await done(second);
@@ -254,6 +273,7 @@ async function main() {
   copyFileSync(keep, pl); appendFileSync(pl, "%changed");
   const lockChanged = await call("POST", `/runtime/form-copies/${lockMe}/lock`, { kind: "filed" }, OFFICER);
   copyFileSync(keep, pl); rmSync(keep);
+  await sendValidated(lockMe, readFileSync(pl), "validated.pdf"); // C-9: Validate is the last step before filing
   ok("PR #12 review 2 fail: a copy whose file is missing cannot be locked (409 in plain words)", lockMissing.status === 409 && /missing from the working files/.test(lockMissing.body?.detail ?? ""), lockMissing.body?.detail);
   ok("PR #12 review 2 fail: a copy whose file changed on disk cannot be locked (409 in plain words); it stays unlocked", lockChanged.status === 409 && /changed on disk/.test(lockChanged.body?.detail ?? "") && sql(`select locked_at is null from form_instance where id='${lockMe}'`) === "t", lockChanged.body?.detail);
   r = await call("POST", `/runtime/form-copies/${lockMe}/lock`, { kind: "filed" }, OFFICER);
@@ -288,6 +308,7 @@ async function main() {
   const readyWithEntry = (await formOf("IMM 5257", P)).readiness.ready;
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-pr13` }, OFFICER);
   const pr13: string = r.body.id; await done(pr13);
+  await sendValidated(pr13, readFileSync(join(ROOT, sql(`select path from form_instance where id='${pr13}'`))), "validated.pdf");
   const filed13 = await call("POST", `/runtime/form-copies/${pr13}/lock`, { kind: "filed" }, OFFICER);
   await call("POST", `/runtime/cases/${caseId}/groups/${P}/rows`, { group: prev }, OFFICER);
   f = await formOf("IMM 5257", P);
@@ -308,8 +329,12 @@ async function main() {
   const oP: string = oc.people.find((p: { role: string }) => p.role === "principal").subject_id;
   const ol = (await call("GET", `/runtime/cases/${oc.id}/forms`, undefined, OFFICER)).body.forms as Form[];
   r = await call("POST", `/runtime/cases/${oc.id}/forms/IMM%205257/${oP}/generate`, { idempotencyKey: `gen-${run}-online` }, OFFICER);
-  ok("PR #12 review 1 fail: a case whose release files IMM 5257 Online offers no IMM 5257 copy; asking for one is 422 in plain words, nothing queued",
-    !ol.some((x) => x.form === "IMM 5257") && r.status === 422 && /filed Online in this case's release: its answers go on the portal sheet/.test(r.body?.detail ?? "") && sql(`select count(*) from form_instance where case_id='${oc.id}'`) === "0", { forms: ol.map((x) => x.form), status: r.status, detail: r.body?.detail });
+  // P-145 (W1-10 slice 1) replaces PR #12 review 1's rule: a form filed Online with IRCC's PDF gets a "Copy, not for filing".
+  const onlineCopy: string = r.body?.id; if (onlineCopy) await done(onlineCopy);
+  const lockOnline = onlineCopy ? await call("POST", `/runtime/form-copies/${onlineCopy}/lock`, { kind: "filed" }, OFFICER) : { status: 0, body: null };
+  ok("C11.6 P-145 pass: a case whose release files IMM 5257 Online offers a PDF copy marked not for filing",
+    (ol as (Form & { for_filing?: boolean })[]).some((x) => x.form === "IMM 5257" && x.for_filing === false) && r.status === 202, { forms: ol.map((x) => x.form), status: r.status, detail: r.body?.detail });
+  ok("C11.6 P-145 fail: that copy is never filed or uploaded (409 in words)", lockOnline.status === 409 && /copy, not for filing/.test(lockOnline.body?.detail ?? ""), [lockOnline.body?.detail, sql(`select status || ' ' || coalesce(error, '') from form_instance where id='${onlineCopy}'`)]);
   ok("PR #12 review 1 pass-guard: the case's other PDF forms are still offered, and the real release is the latest again", ol.length > 0 && sql(`select id from config_release where combination_id='${vv}' order by version desc limit 1`) === rel.id, ol.map((x) => x.form));
   // P-65 (a), review M1: the fill trial verdict gates filing, per form.
   ok("review M1: a form whose fill trial passed is fileable; one with no trial record, or a verdict that the product's file does not pass, is not",

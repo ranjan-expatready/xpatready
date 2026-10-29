@@ -138,6 +138,9 @@ export type FormCopy = {
   by_hand: { label: string; why: string }[];
   /** The copy's file is on disk and unchanged; false: it cannot be handed over (break m1). */
   file_ok: boolean;
+  /** C-9, C-10 (P-144, P-171 (1)): the newest validated copy read back for this copy; current: the form's facts are
+   *  unchanged since; otherwise "Out of date: validate again" (kept as history, never deleted). */
+  validated: { at: string; by: string; current: boolean; words: string; read_back: { written: number; equal: number } } | null;
 };
 /** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
  *  and every copy made, newest first. */
@@ -148,10 +151,15 @@ export type CaseForm = {
   trial_passed: boolean;
   /** The form no longer applies to this person (for example marked not travelling); its copies stay listed (break M4). */
   applies: boolean;
+  /** P-143: the line's channel; P-145: a form filed Online gets a "Copy, not for filing" (never locked or filed). */
+  channel: string; for_filing: boolean;
+  /** C-9 (P-144): a barcode form filed by PDF upload or on paper needs a current validated copy before it is filed. */
+  needs_validate: boolean;
 };
 /** QA-40: a form this case's release files Online: no PDF copy is made here, but the officer still sees it and for
  *  whom (P-113: an answer sheet in the portal's order; the browser extension fills it in a later wave). */
-export type CaseOnlineForm = { form: string; title: string; people: string[] };
+/** P-145, P-171 (3): whether a PDF copy (not for filing) is offered beside the answer sheet, and why not when it is not. */
+export type CaseOnlineForm = { form: string; title: string; people: string[]; pdf_copy: boolean; why_no_copy: string | null };
 /** QA-40 (P-114, W1-02): how a case names a form filed Online, in the same words as the configuration's channel. */
 export const ONLINE_LATER_WAVE = "Online (later wave)";
 

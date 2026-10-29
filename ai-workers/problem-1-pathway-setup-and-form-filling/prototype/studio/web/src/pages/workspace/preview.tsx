@@ -70,7 +70,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
             <ul className="mt-2 space-y-2 text-sm">{p.forms.map((f) => (
               <li key={f.form} data-preview-form={f.form}>
                 <span className="mono font-medium">{f.form}</span> <span className="text-text-muted">{f.title}</span>
-                <span className="ml-1.5 inline-flex gap-1"><Pill tone={f.channel === "ONLINE" ? "ai" : f.channel === "SIGNED_PDF_UPLOAD" ? "warn" : "neutral"}>{f.channelWords}</Pill>{f.noRule ? <Pill tone="warn">Cannot tell yet: no rule</Pill> : f.applies === "cannot_tell" ? <Pill tone="warn">Cannot tell yet</Pill> : null}</span>
+                <span className="ml-1.5 inline-flex gap-1"><Pill tone={f.channel === "ONLINE" ? "ai" : f.channel === "PAPER" ? "warn" : "neutral"}>{f.channelWords}</Pill>{f.noRule ? <Pill tone="warn">Cannot tell yet: no rule</Pill> : f.applies === "cannot_tell" ? <Pill tone="warn">Cannot tell yet</Pill> : null}</span>
                 <br /><span className="text-xs text-text-muted">{f.why}</span>
               </li>
             ))}</ul>
