@@ -32,7 +32,7 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 current_screen: W1-shared-library (S6 Shared library)
 stage: FIX — slice R outside review (a)+(b) done at 9428a3fd (PR #87); qa bugs and the Stand-in chip next
 owner: Builder
-next_action: Builder: full run-suites on 9428a3fd (running), count to the Lead; then qa batch (QA-39, 48, 70–74, 79, 80) and StandIn chip + check_stand_ins from side branch screens-qa-wip, main synced, browser check, run-suites, Paste to Lead. After that, Lead: message when the forms branch (runner package, contract v2) is on main → S6 slice 1 BUILD from main (one ProposalItem table); recording pass after per-step budget_usd lands (then drop the runnerBudgetUsd cast), shared ledger and founder amount
+next_action: Builder: full run-suites on 9428a3fd (running since 13:48; its by-products are restored before any commit), count to the Lead; then qa batch (QA-39, 48, 70–74, 79, 80) and StandIn chip + check_stand_ins from side branch screens-qa-wip, main synced, browser check, run-suites, Paste to Lead. After that, Lead: message when the forms branch (runner package, contract v2) is on main → S6 slice 1 BUILD from main (one ProposalItem table); recording pass after per-step budget_usd lands (then drop the runnerBudgetUsd cast), shared ledger and founder amount
 then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
 blocked_by: forms runner package and contract v2 on main (Lead merge)
 updated: 2026-10-29
