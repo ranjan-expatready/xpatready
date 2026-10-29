@@ -30,14 +30,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: BUILD slice R (US$0 part built, 21556f3a; full suites running); P-158 delta sent, waiting for the Lead
-owner: Lead
-next_action: Lead: agree the P-158 delta (plan-p149.md "P-158"; person roles open); live recording waits for forms runner fixes (QA-83, 86–89, per-step budget) and the shared ledger (QA-90), then the founder amount (about US$13, worst US$30, Sample)
+stage: BUILD slice R (US$0 part built, 21556f3a; full suites running); P-158 delta agreed (plan-p158.md)
+owner: Builder
+next_action: Builder: when the suites finish, hand back slice R (with plan-p158.md); then build P-158 items 1, 6, 7 (+ item 8 tests) on main tables; item 5 and one door in slice 1 after forms contract v2
 then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
 blocked_by: forms slice 0 on main (Lead PR); forms contract v2 for slice 1
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-shared-library (S6) · PLAN · applied Lead message: P-158 delta agreed (items 1–10, notes a person roles from guides, b answer lists only from a source, c conditions cite a source + sme); written to plan-p158.md (moved out of plan-p149.md, line limit). US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD slice R (US$0) · 21556f3a: field_map_edition step on the runner (edition key, box-count output limit, runner budget check), field-map-check.v1.md, stub, run-contract kind, tools/record-field-drafts.ts (Scaffolding; plan first, both caps, --max-usd), check_s6_field_drafts 19/19; schema v2 passes qa lint part A. P-158: manual-add inventory in plan-p149.md, 10-line delta sent; those parts on hold. No live call. US$0.
 - 2026-10-29 · QA-81 (P-154) · applied Lead message: configuration.tsx edit dropped (runtime slice 2, Lead PR #80, makes it "The firm"); check_p154_words expects "The firm" — 2 PASS, 2 FAIL (configuration.tsx) until #80 is synced; programs.tsx fix kept. US$0.
 - 2026-10-29 · QA-81 (P-154) · FIX (words only) · programs.tsx Corporate panel "the agent picks" → "the case officer picks"; configuration.tsx "Provided by" "The firm (agent)" → "The firm (case officer)" (stored code unchanged); tests/check_p154_words.ts 4/4 (and 0/4 on the old text). To name in the S6 hand-back. US$0.
@@ -47,4 +48,3 @@ updated: 2026-10-29
 - 2026-10-29 · W1-shared-library (S6) · PLAN addendum agreed · applied Lead message: Q-A1 yes (Send is the click, placement AI in background after it), Q-A2 no (contract v2 by forms after slice 0, before slice 1), Q-A3 Lead decision (answer list = value codes, order ignored; section = name or synonym only), Q-A4 yes; order slice R then slice 1. Recorded in plan-p149.md. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN addendum · applied Lead message (P-149): plan-p149.md (moved out of plan.md, line limit) — what holds on main (versions, release freeze, file-only forms, sme duty), changes per slice (one door, identity rule at write and approval, versions guard, meaning question, example cases, placements, coverage gap), forms contract changes and W1-10 producers, Lead Q-A1..A4. No code. US$0.
 - 2026-10-29 · sync · main f7cb40d9 merged (PR #76: S3 Start setup and DV-bb-1/6b/6c on main); no conflicts. S6 BUILD still waits for forms slice 0 on main. US$0.
-- 2026-10-29 · W1-shared-library (S6) · PLAN agreed · applied Lead message: Q-L1..L5 yes, N1/N2 accepted, founder Q1 with the Lead (slice R waits; slice 1 does not); written under "Lead response, agreed 29 Oct" in plan.md. Nothing to build until forms slice 0 is on main. US$0.
