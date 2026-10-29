@@ -111,3 +111,21 @@ Every figure below comes from the product's own plans (US$0) on qa_live, Study p
 ## Suggestions
 * *Needed for the proof · Scaffolding:* CI for a Lead PR should run on the merge with the latest main. Two PRs merged within 15 minutes (#91, then #90) left main's combined code untested by CI.
 * *Needed for the proof · Capability:* each AI step's plan should show the same worst case the smoke plan uses. Here the run reserves 2 paid attempts per round across 4 rounds; the founder approves money in the plan's words.
+
+## 5. Live smoke on main a9fe60c0 (founder: steps 1–3, ceiling US$6.49; step 4 skipped)
+**Setup:**
+* Copy qa_live :4478, synced to a9fe60c0 (PR #98).
+* `STUDIO_PEOPLE_AI_LIVE=approved` on that copy only; the user allowed the paid calls in this session.
+* Before the run, QA-97 closed: the start-setup browser suite passed twice on one copy, 39/39 both times.
+* Reservations checked before each launch: US$5.58 + US$0.91 = US$6.49, which is within the ceiling.
+
+| Step | Reserved | Actual (ledger) | What it returned |
+|---|---|---|---|
+| 1 pick the page | inside the run's US$5.58 | US$0 | rules found a sure match ("Study permit application"); no AI call, so the page-pick AI round stays untested on a live call |
+| 2 list the forms: draft + checker | US$5.58 for the run; US$0.47 per attempt | **US$0.143 + US$0.136 = US$0.28** | both rounds listed 8 forms; 3 from the library, 2 downloaded from canada.ca, 5 attached (Picked by AI · Sample), 2 to decide; one attempt each; output 3,005 and 2,715 of 10,000 tokens |
+| 3 Who can be, AI now | US$0.91 | **US$0** | refused by the guarded route before any call → **QA-99** (Critical, runtime) |
+| 4 field map | — | — | skipped: no form outside the library to map |
+
+* **Total spent: US$0.28**, against US$6.49 reserved and about US$0.75 expected. 16:21–16:22 UTC; the run took 58 s.
+* Ledger: this copy's `p2/ledger/spend.jsonl`, kept out of the qa commit (QA-90). Run files: `p2/runs/studio-finder-forms*-70299c64-live-20261029t1621*`.
+* A step-3 rerun needs the QA-99 fix first; the page-pick round needs a combination with no sure rules match (for example Work permit).

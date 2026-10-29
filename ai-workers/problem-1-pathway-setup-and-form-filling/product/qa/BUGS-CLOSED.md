@@ -4,6 +4,7 @@ Older rows (closed up to 26 Oct): `history/qa-bugs-closed-to-2026-10-26.md`.
 
 | # | Type · Severity | Capability | Found | Closed on | How it was retested |
 |---|---|---|---|---|---|
+| QA-97 | Bug · Major | C11.15, C11.8 | deda0e6b (CI #94) | main a9fe60c0 (PR #98), 29 Oct | `check_w1_start_setup_browser.cjs` twice on one copy (the second sees the first's finished runs): 39/39 both; card "about US$0.31 · at most US$5.58 · US$0.00 so far" = button "about US$0.31 · at most US$5.58" (about and at most stored on the batch) |
 | QA-39 | UX · Major | C3.10 | 8360565 | main deda0e6b, 29 Oct | `check_qa_wording_1029.cjs` (38 pages × 2 widths): Fields lead with words ("Application date", the key small under it); no "Canonical fields", no `yes_no`; "461 form fields"; versions name the role; nothing cut at 1024 |
 | QA-48 | UX · Minor | C11.9, C11.10 | 76628a4 | main deda0e6b, 29 Oct | `check_qa_am_r3_1028.cjs` 69/69: Immigration programs says "1 retired, not shown (Status: Retired)" |
 | QA-70 | UX · Major | C11.10, C11.3 | f7cb40d9 | main deda0e6b, 29 Oct | `check_qa_am_s3_1029.cjs` 39/39: menu links show the focus ring |

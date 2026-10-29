@@ -9,7 +9,7 @@ Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes eve
 current_item: after-merge on main deda0e6b (PR #90 forms, #91 screens), branch `claude/qa-after-merge-deda0e6`, copy qa_am :4471
 stage: WAITING
 owner: Lead
-next_action: (1) live smoke option (a), founder: steps 1-3, hard ceiling US$6.49 (expected about US$0.75), step 4 skipped (no form outside the library) — run only after the Lead says forms' cost-wording fix (QA-97) is on main, the user allowed the paid calls in this qa session (29 Oct, "Allow, when Lead says"); own copy qa_live :4478 with STUDIO_PEOPLE_AI_LIVE=approved; stop before any reservation past US$6.49; report cost per step against its reservation; (2) Lead: route QA-96 (runtime), QA-97 and QA-98 (forms); answer the :4400 reset question; merge this branch's qa files
+next_action: (1) Lead: route QA-99 (Critical, runtime: Who can be AI now refused, trail is the label alone) and QA-96 (runtime), QA-98 (forms); answer the :4400 reset question; merge this branch's qa files; (2) qa: after the QA-99 fix, live step 3 again (US$0.91 reserved; founder's US$6.49 ceiling has US$6.21 left) and, if the founder wants it, the page-pick round on a combination with no sure rules match. Report `qa/reports/2026-10-29-after-merge-deda0e6.md` §5
 blocked_by: none
 updated: 2026-10-29
 
@@ -73,6 +73,7 @@ updated: 2026-10-29
   9. S4: the finder has no button until S5 slice 3: test it through `POST /combinations/:id/forms/find/plan` then `/find` (Rules or Replay only, never `live`); only Visitor visa (`vv.single`) has saved answers. No product route makes an unused, unapproved form, so Delete is walked on a seeded form (the builders' own way). The guard hook blocks `for` loops and heredocs: put them in a scratchpad script.
 
 ## Log (last 8 lines)
+- 2026-10-29 · live smoke on a9fe60c0 (founder, ceiling US$6.49; user allowed here): QA-97 closed; finder live US$0.28 of US$5.58 reserved (8 forms both rounds, 5 attached, page by rules); Who can be refused before any call → QA-99 Critical (runtime); step 4 skipped. Total US$0.28.
 - 2026-10-29 · Lead: founder approved option (a), steps 1-3 at most US$6.49, after the QA-97 fix merges; QA-98 logged (forms, Minor: reservations above the smoke plan).
 - 2026-10-29 · Lead: QA-97 logged (forms, Major, blocks merges: start_setup_browser fix 4 red in full runs only); live smoke "steps 1-4 within US$3.24": only step 3 fits; its paid call was refused by this session's permission check, so nothing was sent (US$0).
 - 2026-10-29 · after-merge deda0e6b: ready; suites 68/71 in the run, the 3 red rerun alone: programs_s2 87/87, start_setup_browser 39/39 (fix 4 passes), w115_slice2 flaky 1 in 3 (QA-96 new, Minor, runtime); 14 bugs closed (QA-39, 48, 70–72, 79, 81, 83–89), QA-73/74/80 narrowed; C3.10 Works, C11.8 Partial; live smoke stopped before any call (product reserves US$5.58 for the finder alone, approved US$3.24); :4400 found empty (reset 12:58). US$0.
@@ -80,4 +81,3 @@ updated: 2026-10-29
 - 2026-10-29 · Lead: live smoke approved by the founder (about US$0.80), steps 1-4 on this copy's ledger; held until the founder answers on the worst case US$3.24.
 - 2026-10-29 · after-merge deda0e6b started (fresh qa session): ai paths 21/21, r3 69/69, s3 39/39; wording sweep rerun on a loaded sample; regression checks running.
 - 2026-10-29 · stop hook: BUGS-CLOSED over 12 KB; 37 rows closed up to 26 Oct moved to `history/qa-bugs-closed-to-2026-10-26.md`; suite screenshots removed.
-- 2026-10-29 · Lead message (PR #76, main f7cb40d9): after-merge S3 started on qa_s3 :4477; DV-doc-1 already done.
