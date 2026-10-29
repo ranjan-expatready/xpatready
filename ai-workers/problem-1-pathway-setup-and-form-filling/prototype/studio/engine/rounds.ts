@@ -41,6 +41,10 @@ export function isSameSavedRun(r: SavedRun, want: { templateSha256: string; inpu
 export const roundBase = (jobBase: string, isCheck: boolean) => `${jobBase}${isCheck ? "-check" : ""}`;
 /** The saved run files of one round: the checker's carry "-check"; the draft's never do. */
 export const replayPattern = (jobBase: string, isCheck: boolean) => new RegExp(`^${roundBase(jobBase, isCheck)}-${isCheck ? "" : "(?!check-)"}.+-live-\\d{8}t\\d{9}z-[a-z0-9]+\\.json$`);
+/** Demo 29 Oct (P-153: code is the guard): the AI service refuses maxItems in a schema, so "at most 5 other pages from
+ *  each guide round" is kept here; anything that is not a title is dropped. */
+export const MAX_OTHER_PAGES = 5;
+export const otherPages = (others: unknown): string[] => (Array.isArray(others) ? others.filter((t): t is string => typeof t === "string") : []).slice(0, MAX_OTHER_PAGES);
 /** A round's job id: unique to the trail and to this run (S4 break M5, round 2 N3), so Stop ends only this run's call. */
 export function jobIdFor(jobBase: string, isCheck: boolean, trail: string, batchId?: string): string {
   return `${roundBase(jobBase, isCheck)}-${slug(trail).slice(0, 40).replace(/_/g, "-")}-${createHash("sha256").update(`${batchId ?? ""}|${trail}`).digest("hex").slice(0, 8)}`;

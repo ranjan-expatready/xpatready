@@ -10,7 +10,7 @@ import { Controller, Get, Headers, HttpException, Inject, Injectable, Param, Pos
 import type { AiBatch, DraftingJob } from "@prisma/client";
 import { actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { Ai } from "./ai.ts";
-import { Finder, FINDER_OPERATION, FINDER_STEPS } from "./finder.ts";
+import { detailsOf, Finder, FINDER_OPERATION, FINDER_STEPS } from "./finder.ts";
 import { UPLOAD_OPERATION, UPLOAD_STEPS, UploadRuns } from "./upload-run.ts";
 import { aboutUsd } from "./finder-cost.ts";
 
@@ -32,7 +32,7 @@ export function plainRunText(t: string | null): string | null {
   console.warn("run message kept from the page:", t.slice(0, 600));
   return "Something went wrong on this computer; what the run spent is on this card. Try again, or attach the forms from the Form library by hand.";
 }
-type Step = { n: number; kind: string; label: string; uses: "rules" | "ai"; status: string; message: string | null; usd: number; started_at: Date | null; finished_at: Date | null; counts: { done: number; total: number; unit: string } | null };
+type Step = { n: number; kind: string; label: string; uses: "rules" | "ai"; status: string; message: string | null; usd: number; started_at: Date | null; finished_at: Date | null; details: string | null; counts: { done: number; total: number; unit: string } | null };
 
 @Injectable()
 export class Runs {
@@ -46,7 +46,7 @@ export class Runs {
     return defs.map((d, i) => {
       const j = b.operation === FINDER_OPERATION || b.operation === UPLOAD_OPERATION ? b.jobs.find((x) => x.kind === d.kind) : b.jobs[i];
       const c = j?.detail && typeof j.detail === "object" ? (j.detail as { done?: number; total?: number }) : null;
-      return { n: i + 1, kind: d.kind, label: d.label, uses: d.ai && !(j?.status === "COMPLETED" && !(j.costUsd ?? 0) && /no ai call/i.test(j.message ?? "")) ? "ai" : "rules", status: j?.status ?? "WAITING", message: plainRunText(j?.message ?? null), usd: j?.costUsd ?? 0, started_at: j && j.status !== "WAITING" && j.status !== "QUEUED" ? j.startedAt : null, finished_at: j?.finishedAt ?? null, counts: c?.total ? { done: c.done ?? 0, total: c.total, unit: b.operation === FINDER_OPERATION ? "forms" : "parts" } : null };
+      return { n: i + 1, kind: d.kind, label: d.label, uses: d.ai && !(j?.status === "COMPLETED" && !(j.costUsd ?? 0) && /no ai call/i.test(j.message ?? "")) ? "ai" : "rules", status: j?.status ?? "WAITING", message: plainRunText(j?.message ?? null), usd: j?.costUsd ?? 0, started_at: j && j.status !== "WAITING" && j.status !== "QUEUED" ? j.startedAt : null, finished_at: j?.finishedAt ?? null, details: detailsOf(j?.detail), counts: c?.total ? { done: c.done ?? 0, total: c.total, unit: b.operation === FINDER_OPERATION ? "forms" : "parts" } : null };
     });
   }
 
