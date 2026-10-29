@@ -1,0 +1,18 @@
+URL /new as user-A
+TITLE Product Studio · Expat Ready (prototype)
+H1 []
+HEADS []
+CUT []
+ERRORS []
+---
+Page not found
+
+Back to Immigration programs
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+author, review
+Use the dark theme
+Studio
+1 waiting for you

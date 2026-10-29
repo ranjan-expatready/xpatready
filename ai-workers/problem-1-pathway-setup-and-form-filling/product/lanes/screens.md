@@ -30,14 +30,16 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: CHECK (S6 slice R, US$0 part) — Lead check
-owner: Lead
-next_action: Lead: check slice R (21556f3a; full run-suites 67 PASS 0 FAIL on d9c8be97, same code); live recording waits forms runner fixes + shared ledger + founder amount; S6 slice 1 BUILD after the forms merge (contract v2)
+stage: FIX — slice R outside review (a)+(b) done at 9428a3fd (PR #87); qa bugs and the Stand-in chip next
+owner: Builder
+next_action: Builder: full run-suites on 9428a3fd (running since 13:48; its by-products are restored before any commit), count to the Lead; then qa batch (QA-39, 48, 70–74, 79, 80) and StandIn chip + check_stand_ins from side branch screens-qa-wip, main synced, browser check, run-suites, Paste to Lead. After that, Lead: message when the forms branch (runner package, contract v2) is on main → S6 slice 1 BUILD from main (one ProposalItem table); recording pass after per-step budget_usd lands (then drop the runnerBudgetUsd cast), shared ledger and founder amount
 then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
 blocked_by: forms runner package and contract v2 on main (Lead merge)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-shared-library (S6) · FIX · applied Lead message (outside review on PR #87): 9428a3fd (a) recording pass sends only missing rounds (draftEdition "fill"), worst case reserved before sending; (b) an answer naming another edition is never used (replay skips, live refused in plain words); check_s6_field_drafts 26/26; pushed, Lead told; run-suites running. US$0.
+- 2026-10-29 · W1-shared-library (S6) · slice R Lead check PASS at 164ef658 (Lead PR #87). Idle until the forms merge. US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD slice R (US$0) → CHECK · full run-suites 67 PASS 0 FAIL (started 038add4f, ended d9c8be97: code = 21556f3a; Prisma client regenerated after the main sync, first run failed on a stale client); check_s6_field_drafts 19/19, check_p154_words 4/4; graph G3 2 (older). No live call. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN · applied Lead message: P-158 delta agreed (items 1–10, notes a person roles from guides, b answer lists only from a source, c conditions cite a source + sme); written to plan-p158.md (moved out of plan-p149.md, line limit). US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD slice R (US$0) · 21556f3a: field_map_edition step on the runner (edition key, box-count output limit, runner budget check), field-map-check.v1.md, stub, run-contract kind, tools/record-field-drafts.ts (Scaffolding; plan first, both caps, --max-usd), check_s6_field_drafts 19/19; schema v2 passes qa lint part A. P-158: manual-add inventory in plan-p149.md, 10-line delta sent; those parts on hold. No live call. US$0.
@@ -46,5 +48,3 @@ updated: 2026-10-29
 - 2026-10-29 · sync · main 170659bc merged (PR #77 decisions P-146–P-155; PR #78 runtime W1-15 slice 1); no conflicts. S6 BUILD still waits for forms slice 0 on main. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN · applied Lead message (P-154): plan-p149.md "Words": Document · Client · Case officer, case view, Representative, staff; Add "about whom" = roles only; P-154 pass/fail labels; programs.tsx:459 "agent" to change when next touched; runtime/forms occurrences listed for the Lead. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN · applied Lead message (P-153): plan-p149.md "Server guards and their tests": each P-149 rule S6 builds has its server guard (every origin) and a named pass and fail test in tests/check_s6_p149.ts. US$0.
-- 2026-10-29 · W1-shared-library (S6) · PLAN addendum agreed · applied Lead message: Q-A1 yes (Send is the click, placement AI in background after it), Q-A2 no (contract v2 by forms after slice 0, before slice 1), Q-A3 Lead decision (answer list = value codes, order ignored; section = name or synonym only), Q-A4 yes; order slice R then slice 1. Recorded in plan-p149.md. US$0.
-- 2026-10-29 · W1-shared-library (S6) · PLAN addendum · applied Lead message (P-149): plan-p149.md (moved out of plan.md, line limit) — what holds on main (versions, release freeze, file-only forms, sme duty), changes per slice (one door, identity rule at write and approval, versions guard, meaning question, example cases, placements, coverage gap), forms contract changes and W1-10 producers, Lead Q-A1..A4. No code. US$0.

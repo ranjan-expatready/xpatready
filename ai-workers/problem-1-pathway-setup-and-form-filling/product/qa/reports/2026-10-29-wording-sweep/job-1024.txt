@@ -1,0 +1,25 @@
+URL /c/6c55cf31-c38f-4b4c-a6e8-a60462efe86c/jobs/9f7731de-2abe-4da8-b7e2-891e76b090d5 as user-A
+TITLE Product Studio · Expat Ready (prototype)
+H1 ["Form: AI-proposed field map"]
+HEADS []
+CUT []
+ERRORS []
+---
+Sources and forms
+AI field-map draft
+Form: AI-proposed field map
+On this computer
+NEEDS_PERSON
+US$0.00
+1s
+
+AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route. The AI saw only the public list of the form's fields; it never saw the library, a family or an answer key. The comparison with the library below is deterministic.
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+author, review
+Use the dark theme
+Studio
+1 waiting for you
+No AI

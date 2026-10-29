@@ -39,14 +39,14 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const sideways = (p) => p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   const shot = (p, n) => p.screenshot({ path: path.join(SHOTS, `${n}.png`) });
   const text = async (p, sel = "main") => (await p.locator(sel).first().innerText()).replace(/\s+/g, " ");
-  const rowOf = (p, code) => p.locator("main tbody tr").filter({ has: p.getByText(code, { exact: true }) }).first();
-  const openLib = async (p, qs = "") => { await p.goto(`${BASE}/library/forms${qs}`); await p.locator("main tbody tr").first().waitFor({ timeout: 30000 }); await wait(300); };
+  const rowOf = (p, code) => p.locator("main tbody tr[data-form]").filter({ has: p.getByText(code, { exact: true }) }).first();
+  const openLib = async (p, qs = "") => { await p.goto(`${BASE}/library/forms${qs}`); await p.locator("main tbody tr[data-form]").first().waitFor({ timeout: 30000 }); await wait(300); };
 
   // ═════════════ 1. The library list after Load sample (C11.11, P-123)
   const a = await page("user-A");
   await openLib(a);
   const list = (await call("GET", "/library/forms/list")).body;
-  const rows = await a.locator("main tbody tr").count();
+  const rows = await a.locator("main tbody tr[data-form]").count();
   step("C11.11: one list of every form, guide and checklist (no groups); the rows equal the library", rows === list.rows.length && list.rows.length === list.counts.all, `${rows} rows, ${list.counts.all} in the library`);
   const chips = (await a.getByRole("button", { name: /^(All|Forms|Guides|Checklists)\s*\d+/ }).allInnerTexts()).map((t) => t.replace(/\s+/g, "").replace(/(\D)(\d)/, "$1 $2"));
   step("C11.11: Type chips count what they say (All, Forms, Guides, Checklists)", chips.join("|") === `All ${list.counts.all}|Forms ${list.counts.form}|Guides ${list.counts.guide}|Checklists ${list.counts.checklist}`, chips.join(" | "));
@@ -62,17 +62,17 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await shot(a, "s4-library-1440");
   // Filters
   await a.getByRole("button", { name: /^Guides\s*\d+/ }).click(); await wait(500);
-  step("C11.11: the Guides chip shows the 4 guides only", await a.locator("main tbody tr").count() === list.counts.guide);
+  step("C11.11: the Guides chip shows the 4 guides only", await a.locator("main tbody tr[data-form]").count() === list.counts.guide);
   await a.getByRole("button", { name: /^All\s*\d+/ }).click(); await wait(300);
   await a.getByPlaceholder("Search number or title").fill("5257"); await wait(700);
-  const found = (await a.locator("main tbody tr").allInnerTexts()).map((t) => t.split("\n")[0]);
+  const found = (await a.locator("main tbody tr[data-form]").allInnerTexts()).map((t) => t.split("\n")[0]);
   step("C11.11: search '5257' finds IMM 5257 and its schedule", found.length === 2 && found.every((t) => /IMM 5257/.test(t)), found);
   await a.getByPlaceholder("Search number or title").fill("zz-no-such-form"); await wait(700);
   step("C11.11: a search with no match says so with Clear filters", /No form matches/.test(await text(a)) && await a.getByRole("button", { name: "Clear filters" }).count() === 1);
   await a.getByRole("button", { name: "Clear filters" }).click(); await wait(400);
   const vvId = sql("select id from combination where combination_key='vv.single'");
   await a.getByRole("combobox", { name: "Used by" }).selectOption(vvId).catch(() => {}); await wait(700);
-  const used = (await a.locator("main tbody tr").allInnerTexts()).map((t) => t.split("\n")[0].trim());
+  const used = (await a.locator("main tbody tr[data-form]").allInnerTexts()).map((t) => t.split("\n")[0].trim());
   const usesVv = list.rows.filter((r) => (r.used_by ?? []).some((u) => (u.id ?? u.combination_id ?? u.combinationId) === vvId)).map((r) => r.code);
   step("C11.11: the Used by filter (Visitor visa) shows the forms that combination uses", used.length > 0 && (usesVv.length === 0 || usesVv.every((c) => used.includes(c))), `${used.join(", ")}`);
   await openLib(a);
@@ -131,17 +131,17 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // Retire a form used only as a source (IMM 5257 → Visitor visa and Super visa setups): Where used first, second person, Restore.
   const p = await page("user-A");
   await openLib(p);
-  await p.getByRole("button", { name: "Actions for IMM 5257", exact: true }).click();
-  const delItem = p.getByRole("menuitem", { name: /^Delete/ });
-  step("P-116: Delete is greyed for a used form (IMM 5257) and says when it is possible ('only when nothing uses it')", await delItem.getAttribute("aria-disabled") === "true" || await delItem.getAttribute("data-disabled") !== null);
-  await p.getByRole("menuitem", { name: /^Retire/ }).click();
-  const dlg = p.getByRole("dialog"); await dlg.waitFor();
+  // PR #69: one written action per row (the ⋯ menu is gone) and a side panel instead of a dialog.
+  const act = (code) => rowOf(p, code).locator("button", { hasText: /^(Retire|Delete|Restore|Withdraw)/ }).first();
+  step("C3.7 P-116: a used form (IMM 5257) offers Retire, never Delete", /^Retire/.test((await act("IMM 5257").innerText()).trim()), (await act("IMM 5257").innerText()).trim());
+  await act("IMM 5257").click();
+  const dlg = p.locator("aside[aria-label]"); await dlg.waitFor();
   await dlg.getByText(/Visitor visa|combination/).first().waitFor({ timeout: 8000 }).catch(() => {});
   const dl = (await dlg.innerText()).replace(/\s+/g, " ");
-  step("P-116: the retire dialog shows where the form is used before any action", /Visitors › Visitor visa|Visitor visa/.test(dl), dl.slice(0, 220));
+  step("C3.7 P-116: the retire dialog shows where the form is used before any action", /Visitors › Visitor visa|Visitor visa/.test(dl), dl.slice(0, 220));
   step("QA-64 P-116 amended: the retire dialog says when it takes effect as the decision says (a library retire takes effect at approval)", !/next release carries it/.test(dl), dl.match(/[^.]*release[^.]*\./)?.[0]);
   await axe(p, "Retire dialog at 1440 px");
-  await dlg.getByRole("textbox").fill("Replaced by a newer edition (qa walk)"); await dlg.getByRole("button", { name: "Ask to retire" }).click(); await wait(1500);
+  await dlg.locator("textarea").fill("Replaced by a newer edition (qa walk)"); await dlg.getByRole("button", { name: "Send for approval" }).click(); await wait(1500);
   const rc = sql("select id from library_change where kind='library_form' and action='RETIRE' and status='WAITING' limit 1");
   await openLib(p);
   step("P-116: the row says Retire waiting while it waits", !!rc && /Retire waiting/.test((await rowOf(p, "IMM 5257").innerText())), (await rowOf(p, "IMM 5257").innerText()).replace(/\s+/g, " ").slice(0, 160));
@@ -162,7 +162,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   step("P-116: a retired form is not offered: attaching it to a combination is refused", retiredLater === "t" && pick.status >= 400, `${pick.status} ${pick.body?.detail}`);
   await openLib(p);
   await p.getByRole("button", { name: /^Retired\s*\d+/ }).click().catch(() => {}); await wait(500);
-  step("C11.11: the Retired status chip lists the retired form", (await p.locator("main tbody tr").allInnerTexts()).some((t) => /IMM 5257/.test(t)));
+  step("C11.11: the Retired status chip lists the retired form", (await p.locator("main tbody tr[data-form]").allInnerTexts()).some((t) => /IMM 5257/.test(t)));
   const rr = await call("POST", `/library/forms/${enc("IMM 5257")}/restore`, { reason: "Still filed (qa walk)" });
   const rs = sql("select id from library_change where kind='library_form' and action='RESTORE' and status='WAITING' limit 1");
   if (rs) { await call("POST", `/library/changes/${rs}/approve`, {}, "user-B"); if (sql("select retired_at is null from gov_form_def where form_key='IMM 5257'") !== "t") await release("qa: restore the form"); }
@@ -171,11 +171,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // form with no edition is seeded as the builders' own check does (Scaffolding), then walked in the page.
   sql("insert into gov_form_def select (jsonb_populate_record(null::gov_form_def, to_jsonb(d) || jsonb_build_object('id', gen_random_uuid(), 'form_key', 'IMM 0101', 'display_name', 'Sample unused form (qa)', 'form_page_url', null, 'retired_at', null, 'retired_by', null))).* from gov_form_def d where form_key='IMM 5802'");
   await openLib(p);
-  await p.getByRole("button", { name: "Actions for IMM 0101", exact: true }).click();
-  await p.getByRole("menuitem", { name: /^Delete/ }).click();
-  const dd = p.getByRole("dialog"); await dd.waitFor(); await dd.getByText(/Nothing uses it/).waitFor({ timeout: 8000 }).catch(() => {});
-  step("P-116: Delete on an unused form says nothing uses it and asks why", /Nothing uses it/.test(await dd.innerText()) && await dd.getByRole("textbox").count() === 1);
-  await dd.getByRole("textbox").fill("Added by mistake (qa walk)"); await dd.getByRole("button", { name: "Ask to delete" }).click(); await wait(1500);
+  step("P-116: an unused form (IMM 0101) offers Delete", /^Delete/.test((await act("IMM 0101").innerText()).trim()), (await act("IMM 0101").innerText()).trim());
+  await act("IMM 0101").click();
+  const dd = p.locator("aside[aria-label]"); await dd.waitFor(); await dd.getByText(/Nothing uses it/i).waitFor({ timeout: 8000 }).catch(() => {});
+  step("P-116: Delete on an unused form says nothing uses it and asks why", /Nothing uses it/i.test(await dd.innerText()) && await dd.locator("textarea").count() === 1, (await dd.innerText()).replace(/\s+/g, " ").slice(0, 200));
+  await dd.locator("textarea").fill("Added by mistake (qa walk)"); await dd.getByRole("button", { name: "Send for approval" }).click(); await wait(1500);
   const dch = sql("select id from library_change where kind='library_form' and action='DELETE' and status='WAITING' limit 1");
   step("P-116: the delete waits for a second person; the form stays until then", !!dch && sql("select count(*) from gov_form_def where form_key='IMM 0101'") === "1");
   if (dch) { await b.goto(`${BASE}/review/change/${dch}`); await b.locator("main h1").waitFor(); await wait(600); }
@@ -241,9 +241,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await axe(p, "Run card (replay) at 1440 px");
   await shot(p, "s4-run-card-replay");
   await p.goto(`${BASE}/ai/${svRep.l.body.id}`); await p.locator("[data-run-status]").first().waitFor();
-  const next = p.locator("[data-run-status]").getByRole("link", { name: /Find again/ });
-  const href = await next.getAttribute("href").catch(() => null);
-  step("QA-63 P-110: a run waiting for a person gives a next step that leads somewhere ('Find again' does not reload the same card)", !!href && href !== `/ai/${svRep.l.body.id}`, `Find again → ${href}`);
+  // QA-63 fix (forms f2dfa1e9): the waiting card's next step leads to the Sources page; any link off this card counts.
+  const links = await p.locator("[data-run-status] a").evaluateAll((as) => as.map((a) => `${a.textContent.trim()} → ${a.getAttribute("href")}`));
+  const onward = links.filter((l) => !l.endsWith(` → /ai/${svRep.l.body.id}`) && /→ \//.test(l));
+  step("QA-63 P-110: a run waiting for a person gives a next step that leads somewhere (not the same card)", onward.length > 0, links);
   await p.goto(`${BASE}/ai`); await p.locator("main table").waitFor({ timeout: 30000 });
   const aiList = await text(p, "main table");
   step("QA-62 plain words: AI work names a finder run by its place, without the combination's database id or internal codes (NEEDS_PERSON, RULES)", !/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/.test(aiList) && !/NEEDS_PERSON|\bRULES\b/.test(aiList), aiList.match(/[0-9a-f]{8}-[0-9a-f-]{27}\|[^ ]+|NEEDS_PERSON|RULES/g)?.slice(0, 3));
@@ -251,7 +252,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // ═════════════ 5. 1024 px and the read-only person
   const s = await page("user-A", 1024); await openLib(s);
-  const lastCell = await s.locator("main tbody tr").first().locator("td").last().boundingBox();
+  const lastCell = await s.locator("main tbody tr[data-form]").first().locator("td").last().boundingBox();
   step("Review M5: at 1024 px Status and ⋯ stay on screen, no sideways scroll", !!lastCell && lastCell.x + lastCell.width <= 1024 && await sideways(s) <= 0, `${lastCell && Math.round(lastCell.x + lastCell.width)} px · ${await sideways(s)} px`);
   await axe(s, "Forms library at 1024 px");
   await shot(s, "s4-library-1024");

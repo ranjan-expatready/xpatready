@@ -213,9 +213,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await a.getByText(/needs the browser extension \(later wave\)/i).first().waitFor({ timeout: 10000 }).catch(() => {});
     step("C11.1 W1-02: a line filed Online says it needs the browser extension (later wave)", /needs the browser extension \(later wave\)/i.test(await text(a)), (await text(a)).match(/.{40}later wave.{40}/i)?.[0]);
     await a.goto(`${a.base}/c/${vv}/preview`); await a.waitForLoadState("networkidle");
-    await a.getByRole("button", { name: "Forms and coverage" }).click(); await a.waitForLoadState("networkidle");
-    const prev = await text(a);
-    step("C11.1 W1-02: Preview (draft) offers no Fill PDF on the Online line and says why", /needs the browser extension \(later wave\)/i.test(prev), prev.match(/.{60}IMM 5707.{80}/)?.[0] ?? prev.slice(0, 160));
+    // S5 (PR #71): the "Forms and coverage" button is gone; Preview lists each person's forms with how each is filed.
+    const pf = a.locator('[data-preview-form="IMM 5707"]').first();
+    await pf.waitFor({ timeout: 15000 }).catch(() => {});
+    const prev = await pf.innerText().catch(() => text(a));
+    step("C11.1 W1-02: Preview (draft) names the Online line as later wave and offers no Fill PDF on it", /later wave/i.test(prev) && !/Fill PDF/.test(prev), prev.slice(0, 160));
     const refuse = await call("POST", `/combinations/${vv}/fill`, { form: "IMM 5707", person: "principal", mode: "draft" });
     step("C11.1 W1-02: the Studio fill of an Online line is refused (409) with the later-wave words", refuse.status === 409 && /later wave/.test(refuse.body?.detail ?? ""), `${refuse.status} ${refuse.body?.detail}`);
     await shot(a, "w102-preview-online-line");

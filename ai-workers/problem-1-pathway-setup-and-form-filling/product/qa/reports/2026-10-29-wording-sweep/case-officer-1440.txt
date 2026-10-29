@@ -1,0 +1,184 @@
+URL /cases/d5e3f41b-0b34-445b-a81d-9ff3f4bdbea1 as user-O
+TITLE Product Studio · Expat Ready (prototype)
+H1 ["QA-WORDING-1\nOpen\nRelease 1"]
+HEADS ["People on this case","Forms","IMM 1295 for Client A","IMM 5257 SCH1 for Client A","IMM 5475 for Client A","IMM 5476 for Client A","IMM 5707 for Client A","representative 15 missing","The application 26 missing","Client A 78 missing","Personal details","Contact details","Representative and authorizations"]
+CUT []
+ERRORS []
+---
+Cases
+›
+QA-WORDING-1
+QA-WORDING-1
+Open
+Release 1
+
+153 questions for this household · 0 answered · 0 confirmed · 119 required not answered · 26 questions of the release not asked here (no form of this case reads them)
+
+Client's questionnaire
+
+Client A answers on their phone, for everyone travelling.
+
+Open it as Client A (simulated)
+People on this case
+Add spouse or partner
+Add child
+Client A
+Principal applicant
+Forms
+
+Filled from confirmed answers only. A new copy is made only when you ask; a locked copy never changes.
+
+IMM 1295 for Client A
+60 facts to answer or confirm before filing
+Generate a copy
+
+Confirmed answers for 0 of 163 form fields. A copy also lists the form fields to write by hand.
+
+What blocks filing (60)
+IMM 5257 SCH1 for Client A
+Checked copy, not for filing
+9 facts to answer or confirm before filing
+Generate a copy
+
+Confirmed answers for 0 of 40 form fields. A copy also lists the form fields to write by hand.
+
+What blocks filing (9)
+IMM 5475 for Client A
+Checked copy, not for filing
+20 facts to answer or confirm before filing
+Generate a copy
+
+Confirmed answers for 0 of 20 form fields. A copy also lists the form fields to write by hand.
+
+What blocks filing (20)
+IMM 5476 for Client A
+Checked copy, not for filing
+26 facts to answer or confirm before filing
+Generate a copy
+
+Confirmed answers for 0 of 36 form fields. A copy also lists the form fields to write by hand.
+
+What blocks filing (26)
+IMM 5707 for Client A
+7 facts to answer or confirm before filing
+Generate a copy
+
+Confirmed answers for 0 of 40 form fields. A copy also lists the form fields to write by hand.
+
+What blocks filing (7)
+representative
+15 missing
+The application
+26 missing
+Client A
+78 missing
+Personal details
+2
+Contact details
+3
+Representative and authorizations
+10
+
+Click Edit on any answer to change it. A change updates every form that uses it, with a message, and needs the section confirmed again.
+
+Personal details
+for representative
+0 answered · 0 confirmed
+2 missing
+Confirm section
+Family name (surname) as shown on passport or travel document
+Not answered · the officer enters this from a document or record
+Add
+Given name(s) as shown on passport or travel document
+Not answered · the officer enters this from a document or record
+Add
+Contact details
+for representative
+0 answered · 0 confirmed
+3 missing
+Confirm section
+Telephone number including country calling code and extension
+Not answered
+Add
+Fax number including country calling code and extension
+Not answered
+Add
+E-mail address
+Not answered
+Add
+Representative and authorizations
+for representative
+0 answered · 0 confirmed
+10 missing
+Confirm section
+Apartment or unit of the person's mailing address
+Not answered · the officer enters this from a document or record
+Add
+Street number of the person's mailing address
+Not answered · the officer enters this from a document or record
+Add
+Street name of the person's mailing address
+Not answered · the officer enters this from a document or record
+Add
+City or town of the person's mailing address
+Not answered · the officer enters this from a document or record
+Add
+Province, state or territory of the person's mailing address
+Not answered · the officer enters this from a document or record
+Add
+Country or territory of the person's mailing address
+Not answered · the officer enters this from a document or record
+
+No answer list yet (forms slice 2): the officer checks this answer before confirming the section.
+
+Add
+Postal or ZIP code of the person's mailing address
+Not answered · the officer enters this from a document or record
+Add
+Person's telephone number including country code
+Not answered · the officer enters this from a document or record
+Add
+International dialling country code of the person's primary telephone number
+Not answered · the officer enters this from a document or record
+Add
+The person's e-mail address
+Not answered · the officer enters this from a document or record
+Add
+--- labels ---
+Cases home
+Simulated people for the prototype: not part of the product
+Simulated person
+Path
+Frozen when the case opened (2026-10-29, 7:55:08 a.m.); a later release never changes this case
+The evidence lane's fill trial for this form has not passed (P-65)
+Whose answers
+15 required question(s) not answered
+26 required question(s) not answered
+78 required question(s) not answered
+Sections
+Personal details
+2 required question(s) not answered
+Contact details
+3 required question(s) not answered
+Representative and authorizations
+10 required question(s) not answered
+Answers given, and how many of them the officer has confirmed
+Required and not answered: Family name (surname) as shown on passport or travel document; Given name(s) as shown on passport or travel document
+Nothing answered yet in this section
+Add Family name (surname) as shown on passport or travel document for representative
+Add Given name(s) as shown on passport or travel document for representative
+Required and not answered: Telephone number including country calling code and extension; Fax number including country calling code and extension; E-mail address
+Add Telephone number including country calling code and extension for representative
+Add Fax number including country calling code and extension for representative
+Add E-mail address for representative
+Required and not answered: Apartment or unit of the person's mailing address; Street number of the person's mailing address; Street name of the person's mailing address; City or town of the person's mailing address; Province, state or territory of the person's mailing address; Country or territory of the person's mailing address; Postal or ZIP code of the person's mailing address; Person's telephone number including country code; International dialling country code of the person's primary telephone number; The person's e-mail address
+Add Apartment or unit of the person's mailing address for representative
+Add Street number of the person's mailing address for representative
+Add Street name of the person's mailing address for representative
+Add City or town of the person's mailing address for representative
+Add Province, state or territory of the person's mailing address for representative
+Add Country or territory of the person's mailing address for representative
+Add Postal or ZIP code of the person's mailing address for representative
+Add Person's telephone number including country code for representative
+Add International dialling country code of the person's primary telephone number for representative
+Add The person's e-mail address for representative

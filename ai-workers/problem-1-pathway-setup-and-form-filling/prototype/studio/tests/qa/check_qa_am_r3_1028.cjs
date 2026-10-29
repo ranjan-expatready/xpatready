@@ -106,7 +106,7 @@ const keyOf = (label, prefix = "individual.") => sql(`select program_node_key fr
   const dlg = a.getByRole("dialog"); await dlg.waitFor(); await wait(500);
   const pre = await dlg.locator("input[role=combobox]").evaluateAll((els) => els.map((e) => e.value));
   const focus = await a.evaluate(() => document.activeElement?.getAttribute("placeholder") ?? "");
-  step("P-128 (2): Add opens the pop-up prefilled from the tab, Pathway and Program filters, focus on the first empty level", pre[0] === "Temporary residence" && pre[1] === "Visitors" && /category/i.test(focus), `${pre.join(" | ")} · focus "${focus}"`);
+  step("C11.17 P-128 (2): Add opens the pop-up prefilled from the tab, Pathway and Program filters, focus on the first empty level", pre[0] === "Temporary residence" && pre[1] === "Visitors" && /category/i.test(focus), `${pre.join(" | ")} · focus "${focus}"`);
   const cat = dlg.getByRole("combobox").nth(2);
   await cat.fill("visitor-VISA"); await wait(900);
   const exists = await text(a, "[role=dialog]");
@@ -124,7 +124,7 @@ const keyOf = (label, prefix = "individual.") => sql(`select program_node_key fr
   await a.keyboard.type("Outside Canada"); await wait(900);
   step("C11.3 keyboard: Tab from a new category reaches 'None: the category is the combination', Space unticks it and moves into Sub-category", onNone && await dlg.getByRole("combobox").nth(3).inputValue() === "Outside Canada");
   const adding = await text(a, "[role=dialog]");
-  step("P-128 (2): 'You are adding' says the whole line and how many new names", /You are adding Retail › Temporary residence › Visitors › Business visit(New)? › Outside Canada/.test(adding) && /2 new names/.test(adding), adding.match(/You are adding.{0,140}/)?.[0]);
+  step("C11.17 P-128 (2): 'You are adding' says the whole line and how many new names", /You are adding Retail › Temporary residence › Visitors › Business visit(New)? › Outside Canada/.test(adding) && /2 new names/.test(adding), adding.match(/You are adding.{0,140}/)?.[0]);
   const before = Number(sql("select count(*) from program_def")), combosBefore = Number(sql("select count(*) from combination"));
   await dlg.getByRole("button", { name: /^Add/ }).last().click();
   await dlg.waitFor({ state: "hidden", timeout: 15000 }).catch(() => {});
