@@ -52,6 +52,10 @@ const accepted = refused.filter(([, v]) => parses(v)).map(([w]) => w);
 ok("A3 fail: the contract refuses an unknown kind, a fourth confidence word, extra fields, a line for no one, a one-fact or blocking cross check, a source with no fingerprint, a fifth reader kind and a payload of another kind", accepted.length === 0, accepted);
 ok("P-134 (rules, not schema): an identity document read as a letter parses, so the queue can show the refusal as Decide", parses(item({ ...payloads[3], readerKind: "letter_or_record" } as ProposalPayload)));
 
+// --- P-154 (founder, 29 Oct): a fact comes from a Document, the Client or the Case officer; "agent" is retired
+ok("P-154 pass: a fact may come from the case officer", parses(item({ ...payloads[9], from: "case_officer", documentType: null } as ProposalPayload)));
+ok("P-154 fail: the retired role word \"agent\" is refused", !parses(item({ ...payloads[9], from: "agent", documentType: null } as unknown as ProposalPayload)));
+
 // --- v2 (P-149)
 ok("P-149 (1) pass: one door: a person's Add (no run, step add, no AI rounds, with its reason) parses beside AI and rules items", parses(person()) && parses(item(payloads[0], { origin: "rules", agreement: "rules_only" })) && parses(item(payloads[0])));
 ok("P-149 (1) fail: no other origin; a person's Add without a reason, with a run or with AI rounds is refused; an AI item with no run or with an add reason is refused",

@@ -41,7 +41,8 @@ export const ProposalPayload = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("condition"), target: z.object({ kind: z.enum(["question", "section", "form_line"]), key: z.string().max(120) }), roles: Roles, condition: Condition }),
   z.object({ kind: z.literal("requirement_line"), documentType: z.string().max(120), roles: Roles, always: z.boolean(), condition: Condition.nullable(), alternativeGroup: z.string().max(60).nullable() }),
   z.object({ kind: z.literal("cross_check"), sentence: z.string().min(3).max(300), tree: z.unknown(), reads: z.array(z.string().max(120)).min(2).max(20), severity: z.literal("warn"), examples: Examples }),
-  z.object({ kind: z.literal("comes_from"), factKey: z.string().max(120), role: z.string().max(60), from: z.enum(["document", "client", "agent"]), documentType: z.string().max(120).nullable() }),
+  /** Where a fact comes from (P-130; P-154 words: Document · Client · Case officer; "agent" is retired). */
+  z.object({ kind: z.literal("comes_from"), factKey: z.string().max(120), role: z.string().max(60), from: z.enum(["document", "client", "case_officer"]), documentType: z.string().max(120).nullable() }),
   z.object({ kind: z.literal("pqr_pick"), factKey: z.string().max(120), role: z.string().max(60), reason: z.string().min(3).max(300) }),
 ]);
 export type ProposalPayload = z.infer<typeof ProposalPayload>;

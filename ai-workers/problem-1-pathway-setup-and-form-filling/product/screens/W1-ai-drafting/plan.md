@@ -11,7 +11,7 @@ It runs on one combination after its forms are attached (S4 finder). Every AI st
 | 2 | Facts per person role, from the forms' field maps | rules, US$0 | S6 slice 1 (field maps per edition) | input to steps 5–7 | Capability |
 | 3 | Documents each person gives, with their conditions, from the checklist and guide | AI + checker + rules | queue contract | requirement-line proposals; a new document type goes to S6 as a library add | Capability |
 | 4 | What each document supplies, and how it is read (P-133, P-134) | rules first (`suppliesFacts`); AI only for a new type; a rule refuses AI reading for identity documents | step 3 | document-type proposal with facts and reader kind | Capability |
-| 5 | Comes from per fact: document if one supplies it, agent for representative and office facts, else client; declarations always client (P-97) | rules, US$0 | W1-15 slice 1 (fact record) | proposal per fact | Capability |
+| 5 | Comes from per fact: document if one supplies it, case officer for representative and office facts, else client (P-154 words); declarations always client (P-97) | rules, US$0 | W1-15 slice 1 (fact record) | proposal per fact | Capability |
 | 6 | Who and when: conditions per person role on questions, sections and form lines, plus "if yes, give details" questions | AI + checker + rules (valid condition, shared field, `reachable`) | S6 slice 3 (shared conditions) | condition proposals, referencing a shared condition | Capability |
 | 7 | Pre-qualification picks: the facts the guide's eligibility section tests, with reason and quote (P-76) | AI + checker + rules (PQR ⊂ SQR) | step 5 | PQR tick proposals | Capability |
 | 8 | Cross-answer checks (tier 2, warn never block; a2) | AI + checker + rules | step 6 | check proposals | Capability |

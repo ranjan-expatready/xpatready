@@ -57,3 +57,6 @@ The filing channel (B37, P-140) is **not** a queue item. It lands as today's "Wh
 ## Earlier note (29 Oct, before v2)
 * `origin` is AI · Rules · **Person** (P-149 one door: a manual Add is the same kind of item, marked as made by a person). `check_forms_proposal_contract.ts` 6/6.
 * Proposed, not yet in the file: an `examples` field on the condition, form-check and cross-check payloads (P-149 (5): two or three AI-drafted cases per rule, re-run for every combination using it before approval). It needs agreeing with the screens lane before W1-10 slice 3; see `plan.md` §5. The research's `notSameAs[]` and `placements[]` are S6's to propose.
+
+## P-154 (founder, 29 Oct)
+* `comes_from.from` is Document · Client · **Case officer** (`case_officer`); "agent" is retired as a role word and is refused (`check_forms_proposal_contract.ts`, a pass and a fail).
