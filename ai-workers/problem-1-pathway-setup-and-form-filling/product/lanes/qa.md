@@ -6,10 +6,10 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: explore wording sweep on main f7cb40d9; report `qa/reports/2026-10-29-wording-sweep.md`
+current_item: explore ai-paths on main 170659bc; report `qa/reports/2026-10-29-ai-paths.md` (this branch `claude/qa-ai-paths-c2866f` also carries the wording sweep, QA-71–82, from `claude/qa-after-merge-69-9e9e6e`)
 stage: WAITING
 owner: Lead
-next_action: (1) the coverage rerun on S4+S5 when the Mac is quiet (report `2026-10-29-coverage-s4-s5.md`); (2) retest QA-39, QA-70–80, QA-69, QA-48 when their fixes merge (wording: rerun `check_qa_wording_1029.cjs`); (3) Lead answers: keys on screen, page titles, QA-70 focus ring, C1.8 copies, QA-69 rule. Read the Handover section first.
+next_action: (1) Lead: route QA-83–91 and ask the founder to approve the live smoke plan (report §3, about US$0.80, at most US$6.58) once QA-83/84/85 are fixed and QA-90 is decided; (2) retest with `check_qa_ai_paths.ts` (offline) as each fix merges; (3) earlier items: coverage rerun on S4+S5; retest QA-39, QA-48, QA-69–82 as fixes merge. Read the Handover section first.
 blocked_by: none
 updated: 2026-10-29
 
@@ -56,7 +56,6 @@ updated: 2026-10-29
   9. S4: the finder has no button until S5 slice 3: test it through `POST /combinations/:id/forms/find/plan` then `/find` (Rules or Replay only, never `live`); only Visitor visa (`vv.single`) has saved answers. No product route makes an unused, unapproved form, so Delete is walked on a seeded form (the builders' own way). The guard hook blocks `for` loops and heredocs: put them in a scratchpad script.
 
 ## Log (last 8 lines)
-- 2026-10-28 · Lead brief (after PR #69). after-merge on main 38722933 (qa_r69 :4471): CI 48/48 on the same app code; QA-53 closed (GETs incl. HEAD/case/slash variants 401/403; fix 14/14); Form library lifecycle walked headed (panel, reason, toast, Withdraw); resend pass/fail paths good; R69-1 → QA-66 and R69-2 → QA-67 reproduced, R69-3 not reproduced; new QA-65 (`/releases` + three POST reads open to nobody, chain to a file download), QA-68 (resend drops Name/Meaning); r3 68/69, filing 6/9, s4 check stale after #69; new `check_qa_am_r69_1028.cjs` 21/33; graph G3 1 (tested route, not parsed); coverage not rerun. US$0.
 - 2026-10-29 · Lead message (after PR #71). after-merge on main e2cb27a4 (S5; qa_s5/s5b/s5c :4472–4474): CI 57/57 on the same app code; QA-53 holds on every S5 route; QA-38 and QA-40 closed; new QA-69 UX Minor (Forms Undo offered after a release); `check_qa_am_s5_1029.cjs` 50/50; s4 check moved to the row action 58/62 (QA-62/63/64 only); explore_1025 retired (W1-02 fixtures gone); new G3 `POST /combinations/:id/attachments`; coverage not rerun. Report `qa/reports/2026-10-29-after-merge-s5.md`.
 - 2026-10-29 · Lead message (PR #75, main db5e0208): coverage paused; DV-doc-1: 13 bugs closed by replay, 4 open; C2.3, C5.3, C3.7, C11.17, C11.11 Works; C1.8, C11.15 Partial (no copies per line); `check_qa_dv_1029.cjs` 24/25.
 - 2026-10-29 · stop hook: BUGS-CLOSED over 12 KB; 37 rows closed up to 26 Oct moved to `history/qa-bugs-closed-to-2026-10-26.md`; suite screenshots removed.
@@ -64,3 +63,4 @@ updated: 2026-10-29
 - 2026-10-29 · after-merge S3 (f7cb40d9): ready; all merged suites green (run as run-suites runs them); new `check_qa_am_s3_1029.cjs` 37/39; QA-70 new (Major, menu links show no focus ring, screens); C11.2 Works, C11.15 Partial; G5 back to 0.
 - 2026-10-29 · explore wording (f7cb40d9, qa_wd :4478): 38 screens × 2 widths read; QA-39 raised to Major and updated; QA-71–80 new (6 Major, 4 Minor; screens 7, runtime 3, forms 1); new `check_qa_wording_1029.cjs`.
 - 2026-10-29 · Lead note (P-154): QA-81 "agent" in 6 places (runtime 4, screens 2; no "Agent enters" on main); QA-82 questions show field definitions (164 of 164 placements have no question wording; forms W1-10 / screens S6); wording check now flags "agent".
+- 2026-10-29 · explore ai-paths (new qa copy, main 170659bc; old qa branch merged in): every AI step inventoried; schemas linted against the provider's rules; 13 error shapes replayed through the runner; demo copy's run records and all ledgers read; new QA-83, 84, 85, 90 Critical, QA-86–89 Major, QA-91 Minor; new `check_qa_ai_paths.ts` (offline) 10/21; live smoke plan for approval. US$0.
