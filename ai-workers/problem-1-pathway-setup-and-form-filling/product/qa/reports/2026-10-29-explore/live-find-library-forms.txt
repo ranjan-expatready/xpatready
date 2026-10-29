@@ -1,0 +1,295 @@
+Shared library › Forms
+
+Forms
+
+Every IRCC form, guide and checklist, stored once. Combinations pick from here by themselves.
+
+Upload PDF
+Type
+All18
+Forms9
+Guides4
+Checklists5
+Used by
+Any combination
+Family sponsorship › Spouse or partner › Applicant outside Canada
+LMIA › High-wage position
+Study permits › Study permit
+Visitors › Super visa
+Visitors › Visitor visa
+Work permits › Employer-specific work permit › With an LMIA
+Status
+Needs your OK0
+Newer file on canada.ca0
+Retired0
+Number	Title	Type	Edition	IRCC accepts	Used by	Status	
+Actions
+
+Guide 5256	
+Applying for a visitor visa (temporary resident visa) - paper application
+	Guide	Read from canada.ca on 2026-10-29	Not filed	2 combinations	
+Ready
+	
+Edit
+Guide 5256
+Retire
+Guide 5256
+
+Guide 5269	
+Applying for a Study Permit outside Canada
+	Guide	Read from canada.ca on 2026-10-29	Not filed	
+Study permit · Study permits
+	
+Ready
+	
+Edit
+Guide 5269
+Retire
+Guide 5269
+
+Guide 5289	
+Sponsor your spouse, common-law partner, conjugal partner or dependent child – Complete Guide (IMM 5289)
+	Guide	Read from canada.ca on 2026-10-29	Not filed	
+Applicant outside Canada · Family sponsorship › Spouse or partner
+	
+Ready
+	
+Edit
+Guide 5289
+Retire
+Guide 5289
+
+Guide 5487	
+Applying for a Work Permit outside Canada
+	Guide	Read from canada.ca on 2026-10-29	Not filed	
+With an LMIA · Work permits › Employer-specific work permit
+	
+Ready
+	
+Edit
+Guide 5487
+Retire
+Guide 5487
+
+IMM 1294	
+Application for study permit made outside of Canada
+	Form	06-2026	Online
+AI · Sample
+	
+Study permit · Study permits
+	
+Ready
+	
+Edit
+IMM 1294
+Delete
+IMM 1294
+
+
+
+Its approved official file is kept, never deleted: retire it instead. See where used
+
+
+IMM 1295	
+Application for work permit made outside of Canada
+	Form	09-2023	
+Not set yet
+	
+With an LMIA · Work permits › Employer-specific work permit
+	
+Ready
+	
+Edit
+IMM 1295
+Retire
+IMM 1295
+
+
+
+Still used: Work permits › Employer-specific work permit › With an LMIA; Work permits › Employer-specific work permit › With an LMIA · release 1. See where used
+
+
+IMM 5257	
+Application for visitor visa (temporary resident visa)
+	Form	09-2023	
+Not set yet
+	2 combinations	
+Ready
+	
+Edit
+IMM 5257
+Retire
+IMM 5257
+
+IMM 5257 SCH1	
+Schedule 1 - Application for temporary residence
+	Form	09-2023	
+Not set yet
+	
+With an LMIA · Work permits › Employer-specific work permit
+	
+Ready
+	
+Edit
+IMM 5257 SCH1
+Retire
+IMM 5257 SCH1
+
+
+
+Still used: Work permits › Employer-specific work permit › With an LMIA; Work permits › Employer-specific work permit › With an LMIA · release 1. See where used
+
+
+IMM 5409	
+STATUTORY DECLARATION OF COMMON-LAW UNION
+	Form	01-2023	
+Not set yet
+	2 combinations	
+Ready
+	
+Edit
+IMM 5409
+Retire
+IMM 5409
+
+
+
+Still used: Work permits › Employer-specific work permit › With an LMIA; Study permits › Study permit; Work permits › Employer-specific work permit › With an LMIA · release 1. See where used
+
+
+IMM 5475	
+Authority to release personal information to a designated individual
+	Form	05-2021	PDF upload
+Sample · canada.ca words
+	3 combinations	
+Ready
+	
+Edit
+IMM 5475
+Retire
+IMM 5475
+
+
+
+Still used: Work permits › Employer-specific work permit › With an LMIA; Study permits › Study permit; Work permits › Employer-specific work permit › With an LMIA · release 1. See where used
+
+
+IMM 5476	
+Use of Representative
+	Form	11-2025	PDF upload
+Sample · canada.ca words
+	3 combinations	
+Ready
+	
+Edit
+IMM 5476
+Retire
+IMM 5476
+
+
+
+Still used: Work permits › Employer-specific work permit › With an LMIA; Study permits › Study permit; Work permits › Employer-specific work permit › With an LMIA · release 1. See where used
+
+
+IMM 5483	
+Document Checklist - For a Study Permit
+	Checklist	08-2025	Not filed	
+Study permit · Study permits
+	
+Ready
+	
+Edit
+IMM 5483
+Delete
+IMM 5483
+
+
+
+Its approved official file is kept, never deleted: retire it instead. See where used
+
+
+IMM 5484	
+Document Checklist - For a Temporary Resident Visa
+	Checklist	05-2026	Not filed	2 combinations	
+Ready
+	
+Edit
+IMM 5484
+Retire
+IMM 5484
+
+IMM 5488	
+DOCUMENT CHECKLIST FOR A WORK PERMIT (APPLIED OUTSIDE CANADA)
+	Checklist	10-2024	Not filed	
+With an LMIA · Work permits › Employer-specific work permit
+	
+Ready
+	
+Edit
+IMM 5488
+Retire
+IMM 5488
+
+
+
+Still used: Work permits › Employer-specific work permit › With an LMIA; Work permits › Employer-specific work permit › With an LMIA · release 1. See where used
+
+
+IMM 5707	
+Family Information
+	Form	01-2023	
+Not set yet
+	4 combinations	
+Ready
+	
+Edit
+IMM 5707
+Retire
+IMM 5707
+
+
+
+Still used: Work permits › Employer-specific work permit › With an LMIA; Work permits › Employer-specific work permit › With an LMIA · release 1. See where used
+
+
+IMM 5802	
+Offer of employment form (employer form)
+	Form	no usable edition yet	
+Not set yet
+	Not used	
+No file yet
+	
+Edit
+IMM 5802
+Retire
+IMM 5802
+
+IMM 5881	
+Temporary Resident Visa
+	Checklist	05-2026	Not filed	
+Visitor visa · Visitors
+	
+Ready
+	
+Edit
+IMM 5881
+Retire
+IMM 5881
+
+IMM 5905	
+Work Permit
+	Checklist	03-2026	Not filed	
+With an LMIA · Work permits › Employer-specific work permit
+	
+Ready
+	
+Edit
+IMM 5905
+Retire
+IMM 5905
+
+
+
+Still used: Work permits › Employer-specific work permit › With an LMIA; Work permits › Employer-specific work permit › With an LMIA · release 1. See where used
+
+Which forms a combination needs and what IRCC accepts are Sample until the immigration expert confirms.
