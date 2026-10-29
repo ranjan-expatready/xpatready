@@ -39,6 +39,21 @@ The filing channel (B37, P-140) is **not** a queue item. It lands as today's "Wh
 2. **Rules-only items: yes.** They may be Ready. They are never bulk-accepted when they land on the library; the second person still approves every library landing.
 3. **Channel values: settled by P-143** (Online · PDF upload · Paper · Not needed, with the signature as its own value). The filing channel stays a `form_accepts` change, not a queue item.
 
-## Change after approval, 29 Oct (Lead's ask, P-149)
+## Contract v2 (P-149; Lead, 29 Oct; from screens `plan-p149.md` §C): for the Lead's quick check
+**File:** `prototype/studio/contracts/proposal-item.ts`. **Proof:** `tests/check_forms_proposal_contract.ts` 18/18, a pass and a fail check for each piece. Still no code reads or writes it: S6 slice 1 and W1-10 slice 2 are its first users.
+
+| Piece | In the contract | Rule the schema enforces |
+|---|---|---|
+| One door (P-149 (1)) | `origin` AI · Rules · **Person**; `runId` nullable; `addReason` | A person's Add has no run, its step is `add`, it has no AI rounds and must say why it was added by hand. An AI or rules item names its run and has no add reason |
+| Identity (P-149 (2)) | `identity {key, near[], nearReason}` | A near match needs the reason it is not the same. An exact duplicate never becomes an item (refused at write and again at approval, S6) |
+| Identity per kind (Lead's calls) | answer list: `values [{code, label}]` (identity = the set of codes, order ignored); field and section: `aliases` (identity = name or synonym); document type: `proves` (identity = name + what it proves) | codes are lower-case keys; `proves` is required |
+| Where it applies (P-149) | `relatesTo` (item id) | an item id, never free text |
+| Versions and the meaning question (P-149 (3), (4)) | `revision {ofKey, fromVersion, meaningChange {answer, forced, usersLine}}` | a forced change is always yes; a yes says what happens to the item's users |
+| Example cases (P-149 (5)) | `examples [{facts, expected, confirmedBy}]` (at most five) on condition, form check and cross check | each case has its expected outcome; `confirmedBy` stays null until the expert (duty sme) confirms |
+| Kind check | the item's `kind` equals its payload's | refused otherwise |
+
+**Changes from v1 that a builder must know:** the answer list's `choices: string[]` became `values: {code, label}[]`, and field and section payloads gained `aliases`. A person's or rules-only item uses `agreement: "rules_only"`.
+
+## Earlier note (29 Oct, before v2)
 * `origin` is AI · Rules · **Person** (P-149 one door: a manual Add is the same kind of item, marked as made by a person). `check_forms_proposal_contract.ts` 6/6.
 * Proposed, not yet in the file: an `examples` field on the condition, form-check and cross-check payloads (P-149 (5): two or three AI-drafted cases per rule, re-run for every combination using it before approval). It needs agreeing with the screens lane before W1-10 slice 3; see `plan.md` §5. The research's `notSameAs[]` and `placements[]` are S6's to propose.

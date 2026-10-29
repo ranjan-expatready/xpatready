@@ -9,13 +9,14 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: W1-10 slice 0 for merge (runner + edition context key + P-139 cap + contract + DV-bb-5); slice 1 channels PLAN
 stage: CHECK
 owner: Lead
-next_action: Lead merges slice 0 (c1191e58, running its suites); then the slice 1 plan's §8 answers and the P-149 `examples` contract field (plan.md §5)
+next_action: Lead's quick check of contract v2 (P-149; queue-item-contract.md) and the merge of slice 0 (c1191e58); then the slice 1 plan's §8 answers
 blocked_by: none
 updated: 2026-10-29
 
 ## Handover (29 Oct, morning; resume from this section alone)
 * **Where it stands (29 Oct, morning):** stage CHECK, owner Lead. Branch `claude/forms-r69-fix-4af07a`, pushed, clean tree, synced with main `db5e0208`. **Slice 0 for merge at `c1191e58`:** full run-suites 58/58 (studio browser skipped: :4400), graph --check passes, `web/dist` rebuilt first.
   * **Lead's two asks (`c1191e58`):** (a) the runner's `RoundContext.contextKey` is a combination's key or a form edition, `edition:<code>:<edition>` (`engine/rounds.ts editionContextKey`, `editionOfContextKey`); an edition round's job names the printed edition as its known fact, which the launcher admits for IMM editions only (a guide edition is refused: for S6 to know); pass and fail tests. (b) `p2/policy.ts EXPERIMENT_CAP_USD = 120` (P-139), Wave 1 cap 60; pass and fail tests on a temp ledger. `check_forms_rounds.ts` 37/37.
+  * **Contract v2 (P-149, Lead 29 Oct, screens plan-p149 §C):** `origin` person, `runId` nullable, `addReason`, `identity`, `relatesTo`, `revision` (meaning change), `document_type.proves`, `examples[]` on condition, form check and cross check; Lead identity calls (answer list = its set of value codes, so `values {code,label}` replaces `choices`; field and section carry `aliases`). `check_forms_proposal_contract.ts` 18/18, a pass and a fail per piece; no consumers yet. Addendum §5 now names the checklist-line placements (steps 4–5) and `proves` (step 3).
   * **P-149 addendum** (`plan.md` §5): what lands in which slice (identity rule per kind in slices 2–5; example cases per condition and check in slices 3 and 5, needing an `examples` contract field for the Lead with the screens lane; the manual field Add's "where it applies" is S6's, on the runner). Contract `origin` now AI · Rules · Person (`check_forms_proposal_contract.ts` 6/6). After `c1191e58`; does not touch the slice 0 merge.
   * **Contract approved** (Lead, 29 Oct), recorded in `queue-item-contract.md` "Lead response, agreed 29 Oct"; stable from now, changes through the Lead with the screens lane.
   * **Slice 0 (`619eaac4`):** one step runner, `engine/rounds.ts` (pure) and `api/src/rounds.ts` (`StepRunner`); the finder runs its rounds only through it, no behaviour change; `check_forms_rounds.ts` 27/27.
@@ -35,6 +36,7 @@ updated: 2026-10-29
   * The Bash hook misfires on some compound commands: put them in a scratchpad script. No paid AI (US$0). Lane pushes run no CI (P-85).
 
 ## Log (last 10 lines)
+- 2026-10-29 · contract v2 (P-149) · CHECK (owner Lead) · applied Lead message: contract v2 from screens plan-p149 §C plus the Lead's identity calls, a pass and a fail per piece (18/18), no consumers; P-149 addendum gains the checklist-line placements and proves. Handed back on its own. US$0.
 - 2026-10-29 · P-149 · CHECK (owner Lead) · applied Lead message (P-149 authoring model): W1-10 plan §5 addendum (what lands in which slice); contract origin AI · Rules · Person with pass and fail tests (6/6); `examples` field proposed for slice 3. Slice 0 merge (c1191e58) untouched. US$0.
 - 2026-10-29 · W1-10 slice 0 for merge · CHECK (owner Lead) · Lead asks: runner contextKey takes a form edition (edition:<code>:<edition>, screens N1) and P-139 cap US$120, each with pass and fail tests (check_forms_rounds 37/37); contract approval recorded; full run-suites on c1191e58 58/58. US$0.
 - 2026-10-29 · W1-10 slice 0 + DV-bb-5 · BUILD → CHECK (owner Lead) · applied Lead note (29 Oct morning, main db5e0208): DV-bb-5 the form number in the row's typeface (12 px), library browser 67/67; slice 1 channels PLAN with the Lead's answers and reuse notes (4 questions left); full run-suites on a40adcbb 58/58. US$0.
@@ -44,4 +46,3 @@ updated: 2026-10-29
 - 2026-10-28 · #73 review · FIX → CHECK (owner Lead) · channelsFrom (QA-61): a negated sentence is read clause by clause (";", ",", " but ", " instead"); a negated clause or a bare condition says nothing, an affirmative clause counts ("Do not mail this form, upload it …" is PDF). Pass and fail tests: canada 68, finder 138, qa filing 9/9. US$0.
 - 2026-10-28 · R69 + QA-65..68 · FIX → CHECK (owner Lead) · applied Lead message (take QA-65..68): QA-65 case reads need a known person, POST configuration reads guarded (ConfigRead); QA-66/67 = R69-1/2 proved; QA-68 send again with what changed only (API 400 on a name or meaning). qa53 20, finder 138, library browser 65; full run-suites on 5600ac06 47/47. US$0.
 - 2026-10-28 · R69 · FIX · applied Lead note 28 Oct (sixth chat): synced main 38722933; R69-1 returned form change keeps its state and Withdraw, R69-2 person in the list key, R69-3 both-refused greyed (proved), takesEffect for Retire/Restore only; pass and fail tests: finder 137, library browser 61. Full run-suites stopped at 2.1 GB free (rule: 3 GB); old forms test databases dropped. US$0.
-- 2026-10-28 · safe stop · BUILD → CHECK (owner Lead) · QA-61..64 (cbfdab22) wait for the Lead check; the run-suites prefix (5c2c4e82) goes to a Lead PR; everything pushed, Handover current. US$0.
