@@ -72,3 +72,15 @@ Study permit › Forms: cost on the button before any call (about US$0.31 · at 
 
 ## 8. Reuse
 Filling: `api/src/fill.ts` runs `p5/fill.py`. The branch adds no PDF, barcode or inventory code, so nothing duplicates `E1/tools/barcode_compare.py` or `inventory.py`.
+
+## 9. Outside review of PR #90 (Lead message, 29 Oct): three points checked in the code, all real (commit `6617ccdd`)
+| Point | Found | Fix | Tests (the fail tests fail on the old files) |
+|---|---|---|---|
+| 1 🔴 `draftAgain` ignores the 4 paid attempts per form | Real: `paidRetryAllowed` read the step's attempt number in one batch only; each Draft again started at attempt 1, so a form had no limit. | `rounds.ts paidRunsOf` / `paidRunAllowed`: a form's live field-map runs that cost something (or are running), over every batch and every source holding the same file. `ai.ts` plan says not eligible ("counted across its runs"); retry reads the same count. | `check_forms_rounds.ts` 4 (helpers, both call sites); `check_ai_launch_paths.ts` 5 (2 runs start; a third refused, its plan US$0; the retry refused; the stub pass still runs). |
+| 2 🔴 limit refusal hides an earlier charge | Real, but not as written. With today's runner the joined error text began with the earlier timeout, so `isProviderLimit` missed the limit: "did not answer in time" for field maps, "our setup error" for finder rounds. In the finder rounds a limit on its own was never BLOCKED either (since QA-86 it is `refused_by_provider`, checked first). The cost was zeroed wherever the limit was found (`sources.ts`, the rounds' last branch). | Limit found per attempt. `costBesideLimit` keeps the other attempts' cost (refused one free, AIW-D273) in `explainRun`, `sources.ts` and the rounds; the rounds check the limit before "setup error". | `check_forms_ai_errors.ts` 4; `check_forms_rounds.ts` 2 (timeout then limit: BLOCKED, US$0.22 kept; a limit alone: BLOCKED at US$0). |
+| 3 🟡 guide round's request id lost | Real: the failed `find_guide` step kept only the candidates. No run view returned any step's Details either. | The guide step keeps `details`. `finder.ts` and `runs.ts` return `details` on each step. | `check_forms_s4_finder.ts` 2 ("Request req_qa89" on both views and not in the sentence; no Details when there was no call). |
+
+Still open (for the Lead):
+* The run card (`web/src/components/run-card.tsx`, screens' W1-07) does not show the step's `details` yet; the API now gives them.
+* A draft in parts may use 2 attempts per part, while the per-form count takes 2 per run.
+* `check_ai_launch_paths.ts` now clears the form's earlier field-map steps before each case, since its many fake paid runs share one form.

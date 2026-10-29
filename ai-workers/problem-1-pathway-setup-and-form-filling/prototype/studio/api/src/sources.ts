@@ -15,7 +15,7 @@ import { costUsd, SpendLedger } from "../../../p2/ledger.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { assembleMerged, flagNearDuplicates, partOutputTokens, planDraft, type DraftPlan, type Prior } from "../../engine/parts.ts";
 import { compareEditions } from "../../engine/programs.ts";
-import { checkedOutput, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs, type FieldMapAnswer } from "../../engine/ai-run.ts";
+import { checkedOutput, costBesideLimit, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs, type FieldMapAnswer } from "../../engine/ai-run.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
@@ -505,8 +505,10 @@ export class Sources {
           try { const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "correct_unbilled_p2.py"), lj.run_file], { cwd: PROTOTYPE }); correction = JSON.parse(stdout.trim()); } catch (e) { correction = { error: (e as Error).message.slice(0, 200) }; }
         }
         const rid = /"request_id":"([^"]+)"/.exec(errs)?.[1];
-        await this.db.draftingJob.update({ where: { id }, data: { status: limit ? "BLOCKED" : "FAILED", runId: rec.drafting_run?.run_id, runFile, costUsd: limit ? 0 : rec.drafting_run?.usage?.cost_usd ?? null, finishedAt: new Date(), detail: { job_id: jobId, steps, provider_status: rec.drafting_run?.status, ledger_correction: correction },
-          message: limit ? `Blocked by the AI provider: the account's monthly usage limit refused the call before any processing (request ${rid ?? "id not returned"}). Nothing was drafted or billed; the ledger's worst-case reservation was settled at US$0 (AIW-D273). Raise the limit in the Anthropic Console, then start the live draft again.` : `${explainRun(rec).message} Run ${rec.drafting_run?.run_id}.` } });
+        // Outside review 29 Oct: only the refused attempt is free; an earlier attempt counted at its worst case stays counted.
+        const kept = limit ? costBesideLimit(rec) : 0;
+        await this.db.draftingJob.update({ where: { id }, data: { status: limit ? "BLOCKED" : "FAILED", runId: rec.drafting_run?.run_id, runFile, costUsd: limit ? kept : rec.drafting_run?.usage?.cost_usd ?? null, finishedAt: new Date(), detail: { job_id: jobId, steps, provider_status: rec.drafting_run?.status, ledger_correction: correction },
+          message: limit ? `Blocked by the AI provider: the account's monthly usage limit refused the call before any processing (request ${rid ?? "id not returned"}). ${kept > 0 ? `Nothing was drafted; the refused call was settled at US$0 (AIW-D273), and an earlier attempt stays counted at US$${kept.toFixed(2)}.` : "Nothing was drafted or billed; the ledger's worst-case reservation was settled at US$0 (AIW-D273)."} Raise the limit in the Anthropic Console, then start the live draft again.` : `${explainRun(rec).message} Run ${rec.drafting_run?.run_id}.` } });
         return;
       }
       await this.db.draftingJob.update({ where: { id }, data: { runId: rec.drafting_run?.run_id, runFile, costUsd: rec.drafting_run?.usage?.cost_usd ?? null, detail: { job_id: jobId, steps } } });

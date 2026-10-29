@@ -9,7 +9,7 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: audit of the late work (fresh session) + runner package + contract v2 + plans, for one Lead PR; next QA-90 plan only
 stage: CHECK
 owner: Lead
-next_action: Lead merges the branch (fix e838097d; full run-suites 65 pass, 2 browser fails rerun: library 69/69 alone, s5 slice 3 flaky on both versions); audit `screens/W1-ai-drafting/handover-audit-2026-10-29.md` §6; then P-156 Q1–Q2, slice 1 §8, W1-16 Q1–Q4, QA-90 question
+next_action: Lead merges the branch into PR #90 (outside review fix 6617ccdd: per-form paid budget across batches, limit after a counted attempt, guide step Details; full run-suites on 6617ccdd running); earlier fix e838097d; audit §9 and `screens/W1-ai-drafting/handover-audit-2026-10-29.md` §6; then P-156 Q1–Q2, slice 1 §8, W1-16 Q1–Q4, QA-90 question
 blocked_by: none
 updated: 2026-10-29
 
@@ -36,13 +36,13 @@ updated: 2026-10-29
   * The Bash hook misfires on some compound commands: put them in a scratchpad script. No paid AI (US$0). Lane pushes run no CI (P-85).
 
 ## Log (last 10 lines)
+- 2026-10-29 · P-170 / P-171 · PLAN (owner Lead) · applied Lead message: (a) library already IMM 5257 SCH1 (09-2023), its title fixed (one line, after the suite run); (b) Validate last + out of date after a change → slice 1 plan §8a C-9/C-10 with P-144; (c) IMM 5409 oath already blank (F6, tested) → C-11 release check; (d) Express Entry IMM 5669/5406 Online → C-12; 2 new Lead questions (§8 Q5 P-145 vs P-171 d, Q6 build C-9/C-10 here)
+- 2026-10-29 · outside review of PR #90 · FIX → CHECK (owner Lead) · applied Lead message: 3 points checked in code, all real; fixed at 6617ccdd with pass and fail tests (fail tests fail on old files): 4 paid attempts per form across batches; usage limit found per attempt, earlier counted cost kept (finder rounds also BLOCKED for a limit alone); guide round's request id in step Details (API; run card UI is screens'). Audit §9
 - 2026-10-29 · audit of the late work (fresh session) · CHECK (owner Lead) · every late commit read; 2 bugs fixed with pass and fail tests (e838097d: cost hidden after a busy/refused retry; 5-page rule tested); full run-suites on e838097d 65 pass, 2 browser fails rerun (library 69/69 alone; s5 slice 3 flaky on both versions); decisions table, walk at 1440/1024, reuse clean. US$0.
 - 2026-10-29 · runner package · FIX → CHECK (owner Lead) · QA-83, QA-85–89 and per-step budget/timeout done; P-156 and QA-90 plans written; full run-suites on 8ff87e5e 67/67. Lane handed to a fresh session (Lead). US$0.
 - 2026-10-29 · AI safety follow-ups · CHECK (owner Lead) · lint per the official docs (pattern, $ref, enum), one paid-attempt budget per form (4) in policy and the cost shown, request size cap 800 KB refused at US$0; full run-suites on c17615ec 64/64. US$0.
 - 2026-10-29 · demo bug (guide pick) · FIX → CHECK (owner Lead) · maxItems dropped from the guide schema (5 kept in code), who-can-be min/max likewise, 4xx refusals settle at US$0, plain refusal words; schema lint check in run-suites; touched checks green. No live call (founder approval needed). US$0.
 - 2026-10-29 · slice 0 sync (2) · CHECK (owner Lead) · applied Lead message (main 170659bc): clean merge at 3c7255ef; named checks green (rounds 38, contract 20, finder 138, run browser 22, library browser 69, start setup 26 + browser 39) plus W1-15 slice 1 47; typecheck, graph. US$0.
-- 2026-10-29 · P-154 · DESIGN (owner Lead) · applied Lead message (P-154 words): contract comes_from case_officer (agent refused), pass and fail tests (20/20); plans reworded; rules file plan carries the words; no "agent" in forms' user-facing files. US$0.
 - 2026-10-29 · P-153 · DESIGN (owner Lead) · applied Lead message (P-153): shared rules file and its injection planned as W1-16 slice r (plan §5), with pass and fail tests and one Lead question. No code. US$0.
 - 2026-10-29 · W1-16 · DESIGN (owner Lead) · applied Lead message (P-150, P-152; order slice 0 sync → contract v2 → W1-16 plan, the first two already done): W1-16 forms plan with re-check, rules, slices a–h and 4 questions. No code. US$0.
 - 2026-10-29 · slice 0 sync · CHECK (owner Lead) · applied Lead message (slice 0 PASS; merge conflict with S3): merged main f7cb40d9 at 3ca624ef; finder rounds on the runner, S3's plain words moved into rounds.ts (fail tests added); rounds 38, finder 138, run browser 22, library browser 69, start setup 26 + browser 39, typecheck, graph. US$0.
-- 2026-10-29 · contract v2 (P-149) · CHECK (owner Lead) · applied Lead message: contract v2 from screens plan-p149 §C plus the Lead's identity calls, a pass and a fail per piece (18/18), no consumers; P-149 addendum gains the checklist-line placements and proves. Handed back on its own. US$0.

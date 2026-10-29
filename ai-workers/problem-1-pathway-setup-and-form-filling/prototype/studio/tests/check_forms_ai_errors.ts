@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { runDrafting } from "../../p2/runner.ts";
 import { SpendLedger } from "../../p2/ledger.ts";
 import { MAX_RETRY_AFTER_S } from "../../p2/policy.ts";
-import { explainRun } from "../engine/ai-run.ts";
+import { costBesideLimit, explainRun } from "../engine/ai-run.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
@@ -63,6 +63,14 @@ const raw = /\{"type":"error"|invalid_request_error|request_too_large|overloaded
   ok("audit fail: a dropped call then a busy retry says the cost (US$0.43), not \"nothing was drafted or charged\"", !/nothing was drafted or charged/.test(mixed("busy").message) && /US\$0\.43/.test(mixed("busy").message) && /busy/.test(mixed("busy").message), mixed("busy").message);
   ok("audit fail: a dropped call then a refused retry says the cost (US$0.43)", !/or charged/.test(mixed("refused_by_provider").message) && /US\$0\.43/.test(mixed("refused_by_provider").message), mixed("refused_by_provider").message);
   ok("audit pass: a busy call with nothing counted still says \"nothing was drafted or charged\"", /nothing was drafted or charged/.test(r529.message), r529.message);
+  // Outside review 29 Oct: a timeout (counted at its worst case) then the provider's usage limit: BLOCKED, and the cost stays.
+  const limitText = '400 {"type":"error","error":{"type":"invalid_request_error","message":"You have reached your specified API usage limits."},"request_id":"req_lim"}';
+  const afterTimeout = explainRun({ caller: "live", drafting_run: { status: "timed_out", attempts: [{ n: 1, outcome: "timed_out", error: "Request timed out.", worst_usd: 0.43 }, { n: 2, outcome: "refused_by_provider", error: limitText, cost_usd: 0, worst_usd: 0.43 }], usage: { cost_usd: 0.43 } } } as never);
+  ok("review fail: a timeout then a usage-limit refusal is BLOCKED by the limit (not \"did not answer in time\")", afterTimeout.status === "BLOCKED" && /usage limit/.test(afterTimeout.message), afterTimeout);
+  ok("review fail: and the timed-out attempt stays counted (US$0.43), never \"nothing was drafted or billed\"", /US\$0\.43/.test(afterTimeout.message) && !/or billed/.test(afterTimeout.message), afterTimeout.message);
+  const limitOnly = explainRun({ caller: "live", drafting_run: { status: "provider_error", attempts: [{ n: 1, outcome: "refused_by_provider", error: limitText, cost_usd: 0, worst_usd: 0.43 }], usage: { cost_usd: 0 } } } as never);
+  ok("review pass: a usage-limit refusal on its own is BLOCKED with nothing drafted or billed, its request id under Details", limitOnly.status === "BLOCKED" && /Nothing was drafted or billed/.test(limitOnly.message) && /req_lim/.test(limitOnly.details ?? ""), limitOnly);
+  ok("review: an older record whose refused attempt has no cost fields still counts only the other attempts", costBesideLimit({ drafting_run: { attempts: [{ n: 1, outcome: "error", error: "socket hang up", worst_usd: 0.3 }, { n: 2, outcome: "error", error: limitText }], usage: { cost_usd: 0.6 } } } as never) === 0.3);
   const shape = explainRun({ caller: "live", drafting_run: { status: "invalid_output", attempts: [{ n: 1, outcome: "ok" }], usage: { cost_usd: 0.1 } }, output_errors: "/forms/0: must have required property 'quote'" } as never);
   ok("QA-88: an answer in the wrong shape is said plainly; the validator's words go under Details", /not in the agreed shape\. Nothing was applied/.test(shape.message) && !/required property/.test(shape.message) && /required property/.test(shape.details ?? ""), shape);
   rmSync(scratch, { recursive: true, force: true });

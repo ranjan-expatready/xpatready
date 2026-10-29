@@ -464,6 +464,9 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
     const jobs89 = existsSync(join(VAR, "fake-launch.log")) ? readFileSync(join(VAR, "fake-launch.log"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l) as { job: string; mode: string }) : [];
     ok("QA-89 fail: after the first guide round was refused, no checker round was launched", jobs89.some((j) => j.job.startsWith("studio-finder-guide-") && !j.job.startsWith("studio-finder-guide-check") && j.mode === "live") && !jobs89.some((j) => j.job.startsWith("studio-finder-guide-check")), jobs89.map((j) => `${j.job.slice(0, 30)}:${j.mode}`));
     ok("QA-89 pass: the step says the service refused the request, US$0, and offers the page choice", /refused the request \(our setup error\)/.test(run89.steps?.[0]?.message ?? "") && /Choose the application page/.test(run89.steps?.[0]?.message ?? "") && (run89.usd?.spent ?? 1) === 0, run89.steps?.[0]?.message);
+    // Outside review 29 Oct: the failed guide round's request id reaches the guide step's Details (finder and shared run views).
+    const shared89 = (await call("GET", `/runs/${l89.body.id}`)).body;
+    ok("review fail: the failed first guide round's request id is under the guide step's Details, never in its sentence", run89.steps?.[0]?.details === "Request req_qa89" && shared89.steps?.[0]?.details === "Request req_qa89" && !/req_qa89/.test(run89.steps?.[0]?.message ?? ""), { finder: run89.steps?.[0]?.details, shared: shared89.steps?.[0]?.details });
   }
 
   // --- QA-62, QA-63 (qa after-merge on S4): a replay with nothing saved, on Super visa (no page chosen by rules)
@@ -472,7 +475,8 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   r = await call("POST", `/combinations/${sv}/forms/find`, { mode: "replay", planSha256: svPlan.plan_sha256, idempotencyKey: "qa62-super-visa-replay" });
   const svId = r.body.id, svRun = (await finish(svId)).body;
   const guideMsg = svRun.steps?.[0]?.message ?? "";
-  ok("QA-62 fail: a replay with nothing saved never says AI could not pick the page, and has one full stop", svRun.status === "NEEDS_PERSON" && !/AI could not/.test(guideMsg) && !/\.\./.test(guideMsg) && /Choose the application page/.test(guideMsg), guideMsg);
+  ok("review pass: a step with no AI call to name has no Details", svRun.steps?.[0]?.details === null, svRun.steps?.[0]?.details);
+  ok("QA-62 fail: a replay with nothing saved never says AI could not pick the page, and has one full stop",svRun.status === "NEEDS_PERSON" && !/AI could not/.test(guideMsg) && !/\.\./.test(guideMsg) && /Choose the application page/.test(guideMsg), guideMsg);
   const listed = ((await call("GET", "/ai/batches")).body as any[]).find((b) => b.id === svId); // eslint-disable-line @typescript-eslint/no-explicit-any
   ok("QA-62 pass: AI work names the finder run by its place (no database id, no pipe)", !!listed && !/\|/.test(listed.scopeLabel) && !/[0-9a-f]{8}-[0-9a-f]{4}-/.test(listed.scopeLabel) && /Super visa$/.test(listed.scopeLabel), listed?.scopeLabel);
   ok("QA-62: the run's own page names it the same way", !/\|/.test((await call("GET", `/ai/batches/${svId}`)).body.scopeLabel ?? "|"));
