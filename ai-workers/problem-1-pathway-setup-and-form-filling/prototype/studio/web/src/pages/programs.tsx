@@ -456,7 +456,7 @@ function CorporateCallout() {
   return (
     <aside aria-label="How employer and worker cases connect" className="rounded-xl border border-border bg-surface-raised p-4 text-sm" data-corporate-callout>
       <p className="font-semibold">How employer and worker cases connect <span className="ml-1 rounded border border-border px-1.5 text-xs font-normal text-text-muted">Sample examples</span></p>
-      <p className="mt-1 text-text-muted">The employer's LMIA is set up here; the worker's work permit is set up under Retail. On the worker's case the agent picks "relies on employer case", and the employer's name, address and LMIA number fill in (later wave).</p>
+      <p className="mt-1 text-text-muted">The employer's LMIA is set up here; the worker's work permit is set up under Retail. On the worker's case the case officer picks "relies on employer case", and the employer's name, address and LMIA number fill in (later wave).</p>
       <ul className="mt-2 list-disc space-y-0.5 pl-5 text-text-muted">
         <li>A software company hires one developer: one employer case here, one worker case under Retail.</li>
         <li>One LMIA for three cooks: one employer case, three worker cases, each relying on it.</li>
