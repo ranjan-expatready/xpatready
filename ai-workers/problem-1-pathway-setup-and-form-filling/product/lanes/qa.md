@@ -50,22 +50,7 @@ updated: 2026-10-29
   5. A copy's server can die mid-run (ECONNREFUSED): restart it with `isolated.sh … start`.
   6. Plain reruns of chosen suites: sed a copy of `run-suites.sh` so its loop reads `$RERUN` (`scratchpad/mkrerun.sh` pattern).
 
-## Older handover (28 Oct)
-* **Next, in order (Lead, 28 Oct, founder's credit nearly gone):**
-  1. **Done 29 Oct on 52117004** (`qa/reports/2026-10-29-coverage-s4-s5.md`; plain reruns used a scratch copy of `run-suites.sh` whose loop takes `$RERUN`). **Clean coverage rerun on S4 (main 06a8fc30).** The 28 Oct run was incomplete: load about 8.5, two S4 suites stopped early, api 96.88/81.69 and engine 99.44/88.96 (under the 97/82 · 99/89 floor, not judged). Rerun with nothing else running (scratchpad pattern: stop qa copies → `NODE_V8_COVERAGE` + `NODE_OPTIONS=--import tests/qa/coverage-preload.mjs` → `run-suites.sh` → `c8 report --include api/src/** | engine/**`). The three M7 "Stop during the paid call" steps always fail under the preload (it turns a stop signal into a clean exit), like `check_p2_guard`; rerun those plainly on qa ports (4475, 4477, 4478) with `STUDIO_FAKE_LAUNCHER=…/tests/fixtures/fake-launch.mjs`. Then put back the by-products.
-  2. **Done 28 Oct** (after-merge on PR #69, 38722933). New `check_qa_am_r69_1028.cjs` (:4471, `isolated.sh qa_r69 4471 start`): 21/33, fails = QA-65–68. `check_qa_am_s4_1028.cjs` is stale after #69 (⋯ menu → row action; reason rows count as `tr`): move it.
-  3. **`/qa after-merge` on S5 (runtime)** when it merges: QA-63 (Find again), the finder from the combination's Forms tab, Stop on a running run, QA-38, QA-40, QA-47. **Done 29 Oct** (QA-38, QA-40 closed; QA-47 and finder not run).
-  4. **Rewrite `check_qa_m2_journeys.cjs` once S3 merges (Lead, 28 Oct).** It is stale: it presses the "New combination" button that round 3 removed. Move it to "Add combination" (the pop-up on Immigration programs) and S3's Start setup; keep every journey's finding steps (QA-1, QA-6, QA-7, QA-10, QA-11).
-* **Open findings now:** QA-60 Major and QA-55, 56, 58, 59, 48 (screens); QA-47, QA-69 (runtime; QA-69 words forms); QA-61, QA-62, QA-64, QA-65–68 (forms; QA-68 page may be screens); QA-38, QA-40 closed e2cb27a4; QA-53 closed 38722933; QA-63 (runtime or forms); QA-39 (Screen 04). Two questions are with the Lead: Load sample sets 2 of 7 (brief said 5 of 7), and QA-64's retire timing.
-* **Where things are (28 Oct):** branch `claude/qa-after-merge-s1-21bfdf`, in sync with main 06a8fc30. This copy is the worktree `vigilant-nobel-cb0120` (bound qa 28 Oct). The Lead copies `qa/`, `lanes/qa.md` and `tests/qa/` onto its own PR, so pushing this branch is enough. Latest report: `qa/reports/2026-10-27-after-merge-fix.md`.
-* **Replayable checks (all reset and load their own data, US$0):**
-  * `check_qa_am_fix_1027.cjs`: :4472, `isolated.sh qa_fix 4472 start`.
-  * `check_qa_am_s2_1027.cjs`: :4472.
-  * `check_qa_am_1027.cjs`: :4471 empty, plus :4476 after `tests/runtime/setup_visitor_visa.ts 4476 xr_studio_qa_x1` (moved to round 3 on 28 Oct).
-  * `check_qa_am_r3_1028.cjs`: :4473, `isolated.sh qa_r3 4473 start` (round 3 + lifecycle + Immigration programs).
-  * `check_qa_am_s4_1028.cjs`: :4474, `isolated.sh qa_s4 4474 start` (S4 library + finder, Rules and Replay only); `check_qa_s4_filing.ts` needs no server.
-
-  Commands are in `tests/qa/README.md`. Results on 06a8fc30: s4 55/61 (twice), filing 6/9, r3 64/69, fix 13/14; 1027 51/55 on dccd87e; every fail is an open finding. `check_qa_am_s2_1027.cjs` still drives the round 2 page (cards): move it next.
+## Earlier lessons (28 Oct; check commands are in `tests/qa/README.md`)
 * **Learned, not written elsewhere:**
   1. A copy needs `prisma generate` and a `vite build` of `web/` before `isolated.sh … start`. Start always drops and recreates its database.
   2. The `gh pr merge` guard hook blocks compound Bash commands (pipes after `cat`, `for` loops, subshells, heredocs). Put them in a scratchpad script and run that alone.
@@ -93,7 +78,6 @@ updated: 2026-10-29
   9. S4: the finder has no button until S5 slice 3: test it through `POST /combinations/:id/forms/find/plan` then `/find` (Rules or Replay only, never `live`); only Visitor visa (`vv.single`) has saved answers. No product route makes an unused, unapproved form, so Delete is walked on a seeded form (the builders' own way). The guard hook blocks `for` loops and heredocs: put them in a scratchpad script.
 
 ## Log (last 8 lines)
-- 2026-10-29 · Lead message (PR #75, main db5e0208): coverage paused; DV-doc-1: 13 bugs closed by replay, 4 open; C2.3, C5.3, C3.7, C11.17, C11.11 Works; C1.8, C11.15 Partial (no copies per line); `check_qa_dv_1029.cjs` 24/25.
 - 2026-10-29 · stop hook: BUGS-CLOSED over 12 KB; 37 rows closed up to 26 Oct moved to `history/qa-bugs-closed-to-2026-10-26.md`; suite screenshots removed.
 - 2026-10-29 · Lead message (PR #76, main f7cb40d9): after-merge S3 started on qa_s3 :4477; DV-doc-1 already done.
 - 2026-10-29 · after-merge S3 (f7cb40d9): ready; all merged suites green (run as run-suites runs them); new `check_qa_am_s3_1029.cjs` 37/39; QA-70 new (Major, menu links show no focus ring, screens); C11.2 Works, C11.15 Partial; G5 back to 0.
@@ -101,3 +85,4 @@ updated: 2026-10-29
 - 2026-10-29 · Lead note (P-154): QA-81 "agent" in 6 places (runtime 4, screens 2; no "Agent enters" on main); QA-82 questions show field definitions (164 of 164 placements have no question wording; forms W1-10 / screens S6); wording check now flags "agent".
 - 2026-10-29 · explore ai-paths (new qa copy, main 170659bc; old qa branch merged in): every AI step inventoried; schemas linted against the provider's rules; 13 error shapes replayed through the runner; demo copy's run records and all ledgers read; new QA-83, 84, 85, 90 Critical, QA-86–89 Major, QA-91 Minor; new `check_qa_ai_paths.ts` (offline) 10/21; live smoke plan for approval. US$0.
 - 2026-10-29 · explore coverage (main 52117004, qa_qn :4471, branch `claude/qa-coverage-1029`): every suite under c8, api 97.49/82.52, engine 99.45/89.65 (floor held; 56/65 under c8, 7 of 9 fails pass plainly, 2 load-timing; CI 40832699780 green on the same code); QA-47, QA-69 closed; QA-81 down to screens (Minor); Questionnaires tab walked: QA-92 Major, QA-93 Major, QA-94, QA-95 Minor (runtime); C4.10 Partial; new `check_qa_qn_1029.cjs` 31/40; s5 check moved to Show and edit (51/51). US$0.
+- 2026-10-29 · Lead message (main deda0e6b: PR #90, #91): after-merge not started here (context long); Handover written for a fresh qa session; stale 28 Oct handover items cut (lessons kept).
