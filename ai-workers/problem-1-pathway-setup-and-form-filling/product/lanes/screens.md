@@ -7,7 +7,8 @@
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 ## Handover (screens lane, 29 Oct evening, kept current; a fresh session resumes from this file alone)
-**Branch `claude/screens-1b-queue` (from `claude/screens-1a-34cb66` e3483c7d; worktree `kind-mendel-ef9c9c`), pushed; main a9fe60c0 synced.** AI spent US$0.
+**(3) DESIGN done, 29 Oct evening: branch `claude/screens-checklist` (from main 0aeb22d7; worktree `screens-checklist-53f3c9`), pushed.** Fresh challenge F1–F5 in `screens/W1-setup-checklist/challenge.md` (new dated section) and `plan.md` (slices A engine and contract, no visible change · B card and Overview, after forms' official-pages record · C tabs, runtime's files unless handed over). No code. Waiting for the Lead and the founder's early look. In this copy `lane.sh setup`'s `npm ci` fails under node 23 (EBADENGINE): put `.tools/node-v24.21.0/bin` first on PATH before any build.
+**Earlier: branch `claude/screens-1b-queue` (from `claude/screens-1a-34cb66` e3483c7d; worktree `kind-mendel-ef9c9c`), pushed; main a9fe60c0 synced.** AI spent US$0.
 * Node: `.tools/node-v24.21.0`, since Prisma refuses Homebrew's node 23. A fresh worktree needs `npm ci` with that node on PATH, then `prisma generate`, then **`vite build` in `web/`** (without it, every browser suite times out).
 * (2a) and **1a passed the Lead check** and are folded into Lead PR #96 (merges on green CI). The Lead backs up :4400 before the restart that runs the migration.
 
@@ -38,14 +39,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-setup-checklist (queue item 3; S6 slice 1 done, 1c waiting on #94)
-stage: DESIGN (3) not started — fresh challenge + plan only, concept not agreed (Lead correction); this session stopped at ~70% context
-owner: Builder
-next_action: fresh screens session: /next screens, (3) fresh challenge in challenge.md + plan.md, no code; hand back for the founder's early look
+stage: DESIGN (3) done — fresh challenge F1–F5 + plan.md, no code
+owner: Lead
+next_action: Lead: concept v3 (F1 P-161 (3) duties, F4 P-174 + contract v2 kinds), F1's two questions, F3 who builds slice C, F2 ask forms for the pages record first; then the founder's early look; on OK, slice A
 then: (3) build after the Lead's OK → 1c when #94 is on main → 1b-2 → (4)
 blocked_by: nothing for the (3) plan; 1c waits for runtime PR #94 (acceptPqrPick)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-setup-checklist · DESIGN (3) → owner Lead · new branch claude/screens-checklist from main 0aeb22d7 with this file from 7a1f053b; fresh challenge of concept v2 (F1 duty table vs P-161 (3), pages are rules-only; F2 pages record not scheduled before this; F3 tabs are runtime's files, people card on two pages; F4 step 4 vs P-174 and contract v2 kinds; F5 C11.10 already "Works"); plan.md slices A/B/C. Official sources: nothing pending. No code. US$0.
 - 2026-10-29 · W1-setup-checklist · applied Lead correction: concept not agreed; (3) is a fresh challenge + plan only, no code, for the founder's early look. Handover updated. US$0.
 - 2026-10-29 · W1-shared-library → W1-setup-checklist · applied Lead message: 1b (bb94fce6) and the 1a fix folded into #96; next queue item (3), plan first. Handover rewritten for a fresh session (this one at ~70% context, founder's rule). No code. US$0.
 - 2026-10-29 · W1-shared-library (S6) · EARLY-LOOK 1b FIX · Lead early look: toasts covered the side panel's footer; toaster moves beside an open panel (above its footer when the panel is full width), every side panel; browser step at 1440, 1024 and 800 proves Accept and Reject stay clear and clickable; check_s6_queue_browser 26/26. 1a fix 0a5b09dd: six named suites green on its own branch. US$0.
@@ -55,4 +57,3 @@ updated: 2026-10-29
 - 2026-10-29 · W1-shared-library (S6) · BUILD 1a · merged origin/claude/screens-2a-22c0e2 and main c545f84e; 50224b01: proposal_item table + migration (copies, drops rule rows, logs both; clean on a copy of :4400), proposals.ts one door (insertProposals, decide with landers, undo 10 s), readers switched; check_s6_p149 37/37; full run-suites running. US$0.
 - 2026-10-29 · W1-shared-library (S6) · applied Lead message: plan-slice1.md agreed (1a → 1b → 1c, each its own hand-back); N-1, N-2 and N-3 accepted; the migration logs its copies and drops and runs on a copy of the :4400 data. Handover rewritten for a fresh session (this one's context is spent). No code. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN (2b) + slice 1 · applied Lead message ((2a) PASS in Lead PR #96); main deda0e6b synced. Plan in plan-slice1.md: 1a ProposalItem table + migration off NormalizationItem + proposals.ts one door with a lander per kind and the free-add scan; 1b queue page, To review row, grouped approval, Draft fields with AI; 1c pqr_pick lander (acceptPqrPick, PR #94) and "Add the fact this rule needs" (needs forms' rule reference). placement_fills stays a LibraryChange (allowlisted). N-1..N-3 to the Lead. No code. US$0.
-- 2026-10-29 · W1-shared-library (S6) · BUILD (2a) → CHECK · full run-suites on 5b00ae99: 67 PASS 4 FAIL, all four from (2a): P-63 "box" on Fields (sources now say "form field"), QA-65 (the 410 routes name their person first, nobody 401), A1 (Studio typed-key check gone with createField: ≥1), QA-71 (the check reads the Category column; a name may end in "employer"); checklist file names in words; seed_library.d.cts. Rerun: ai_drafting 48/48, s6 sources 24/24, s6 pages 33/33, forms_qa53 20/20, screen01_browser 120/120, qa_1029 51/51; tsc api and web clean; any 419; graph G3 2 (older). US$0.
