@@ -26,13 +26,12 @@ const payloads: ProposalPayload[] = [
 ];
 const item = (payload: ProposalPayload, over: Record<string, unknown> = {}) => ({
   id: id(1), kind: payload.kind, runId: id(2), step: "documents", scope: { formEdition: null, combinationId: id(3) }, landsOn: "combination", reuse: { match: "new", existingKey: null }, payload,
-  source: { file: "prototype/p1/inventory/imm5484e.text.inventory.json", sha256: "a".repeat(64), edition: "05-2026", page: 1, quote: "Marriage certificate, if applicable", quoteFound: true },
+  source: { file: "prototype/p1/inventory/imm5484e.text.inventory.json", sha256: "a".repeat(64), edition: "05-2026", page: 1, quote: "Marriage certificate, if applicable", quoteFound: true, rule: null },
   rounds: { draft: null, check: null }, rules: [{ rule: "quote found", passed: true, why: null }], agreement: "agreed", confidence: "ready", reason: null, origin: "ai",
-  addReason: null, identity: { key: `${payload.kind}:example`, near: [], nearReason: null }, relatesTo: null, revision: null,
+  identity: { key: `${payload.kind}:example`, near: [], nearReason: null }, relatesTo: null, revision: null,
   status: "waiting", decision: null, basis: "SAMPLE", ...over,
 });
 const parses = (v: unknown) => ProposalItem.safeParse(v).success;
-const person = (over: Record<string, unknown> = {}) => item(payloads[0], { origin: "person", runId: null, step: "add", source: null, agreement: "rules_only", addReason: "The form asks it; no AI draft has it yet.", ...over });
 
 // --- v1, kept
 ok("A3 pass: the contract names 11 kinds, and an example of each parses", PROPOSAL_KINDS.length === 11 && payloads.every((p) => parses(item(p))) && new Set(payloads.map((p) => p.kind)).size === 11, payloads.filter((p) => !parses(item(p))).map((p) => p.kind));
@@ -57,15 +56,18 @@ ok("P-154 pass: a fact may come from the case officer", parses(item({ ...payload
 ok("P-154 fail: the retired role word \"agent\" is refused", !parses(item({ ...payloads[9], from: "agent", documentType: null } as unknown as ProposalPayload)));
 
 // --- v2 (P-149)
-ok("P-149 (1) pass: one door: a person's Add (no run, step add, no AI rounds, with its reason) parses beside AI and rules items", parses(person()) && parses(item(payloads[0], { origin: "rules", agreement: "rules_only" })) && parses(item(payloads[0])));
-ok("P-149 (1) fail: no other origin; a person's Add without a reason, with a run or with AI rounds is refused; an AI item with no run or with an add reason is refused",
-  !parses(item(payloads[0], { origin: "import" })) && !parses(person({ addReason: null })) && !parses(person({ runId: id(9) })) && !parses(person({ step: "documents" }))
-  && !parses(person({ rounds: { draft: { reading: "x", payload: payloads[0], from: "live", runFile: "r.json", costUsd: 0.1 }, check: null } })) && !parses(item(payloads[0], { runId: null })) && !parses(item(payloads[0], { addReason: "because" })));
+ok("P-158 (1) pass: AI and rules items parse, each naming the run that made it", parses(item(payloads[0], { origin: "rules", agreement: "rules_only" })) && parses(item(payloads[0])));
+ok("P-158 (1) fail: nothing enters by hand: a person's Add (origin person, add reason, no run) is refused, and so is an item with no run",
+  !parses(item(payloads[0], { origin: "person", runId: null, step: "add", source: null, agreement: "rules_only" })) && !parses(item(payloads[0], { origin: "person" })) && !parses(item(payloads[0], { addReason: "The form asks it" })) && !parses(item(payloads[0], { runId: null })) && !parses(item(payloads[0], { origin: "import" })));
+const src = (rule: unknown) => item(payloads[0], { source: { file: "x", sha256: "a".repeat(64), edition: null, page: null, quote: "q", quoteFound: true, rule } });
+ok("P-158 (5) pass: a source names the rule that needs the fact (its key and sentence), or none", parses(src({ key: "rule.spouse_listed", sentence: "A spouse is listed when the applicant is married." })) && parses(src(null)));
+ok("P-158 (5) fail: a rule reference without its sentence, with an empty key or with other fields is refused; a source must say rule (null when none)",
+  !parses(src({ key: "rule.x" })) && !parses(src({ key: "", sentence: "A sentence here." })) && !parses(src({ key: "k", sentence: "A sentence here.", why: "x" })) && !parses(item(payloads[0], { source: { file: "x", sha256: "a".repeat(64), edition: null, page: null, quote: "q", quoteFound: true } })));
 ok("P-149 (2) pass: an item carries its identity key; a near match parses with the reason why it is not the same", parses(item(payloads[0], { identity: { key: "field:date of birth|principal_applicant|date", near: ["person.birth_date"], nearReason: "That one is the date of entry, not of birth." } })));
 ok("P-149 (2) fail: an item without an identity, or a near match without a reason, is refused", !parses({ ...item(payloads[0]), identity: undefined }) && !parses(item(payloads[0], { identity: { key: "k", near: ["person.birth_date"], nearReason: null } })));
 ok("Lead 29 Oct pass: an answer list's identity is its set of value codes; a field and a section carry their synonyms", parses(item(payloads[1])) && (payloads[1] as { values: { code: string }[] }).values.every((v) => /^[a-z]/.test(v.code)) && parses(item(payloads[0])) && parses(item(payloads[2])));
 ok("Lead 29 Oct fail: an answer list of labels only (no codes), or a code in capitals, is refused", !parses(item({ kind: "answer_list", label: "Marital status", choices: ["Single", "Married"] } as unknown as ProposalPayload)) && !parses(item({ kind: "answer_list", label: "x", values: [{ code: "Single", label: "Single" }] } as unknown as ProposalPayload)));
-ok("P-149 placement pass: an item relates to the person's Add it follows from", parses(item(payloads[9], { relatesTo: id(7) })));
+ok("P-149 placement pass: an item relates to the item it follows from", parses(item(payloads[9], { relatesTo: id(7) })));
 ok("P-149 placement fail: relatesTo is an item id, not free text", !parses(item(payloads[9], { relatesTo: "the date of birth field" })));
 const rev = (m: Record<string, unknown>) => ({ ofKey: "person.date_of_birth", fromVersion: 2, meaningChange: m });
 ok("P-149 (3)(4) pass: an edit names the item and version it changes; a meaning change says what happens to its users; a forced yes stays yes", parses(item(payloads[0], { revision: rev({ answer: false, forced: false, usersLine: null }) })) && parses(item(payloads[0], { revision: rev({ answer: true, forced: true, usersLine: "3 combinations and 12 open cases read it; they move to version 3 at their next release." }) })));

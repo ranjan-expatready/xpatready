@@ -32,7 +32,7 @@ const saveFor = (key) => SAVED.forEach((f, i) => {
 });
 const removeCopies = () => { for (const f of copies.splice(0)) fs.rmSync(path.join(RUNS, f), { force: true }); };
 let fail = 0, pass = 0;
-const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).replace(/\s+/g, " ").slice(0, 260)}` : ""}`); };
+const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${(typeof detail === "string" ? detail : JSON.stringify(detail)).replace(/\s+/g, " ").slice(0, 260)}` : ""}`); };
 
 (async () => {
   const b = await chromium.launch({ channel: "chrome", headless: true });
