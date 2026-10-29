@@ -80,6 +80,13 @@ Filling: `api/src/fill.ts` runs `p5/fill.py`. The branch adds no PDF, barcode or
 | 2 🔴 limit refusal hides an earlier charge | Real, but not as written. With today's runner the joined error text began with the earlier timeout, so `isProviderLimit` missed the limit: "did not answer in time" for field maps, "our setup error" for finder rounds. In the finder rounds a limit on its own was never BLOCKED either (since QA-86 it is `refused_by_provider`, checked first). The cost was zeroed wherever the limit was found (`sources.ts`, the rounds' last branch). | Limit found per attempt. `costBesideLimit` keeps the other attempts' cost (refused one free, AIW-D273) in `explainRun`, `sources.ts` and the rounds; the rounds check the limit before "setup error". | `check_forms_ai_errors.ts` 4; `check_forms_rounds.ts` 2 (timeout then limit: BLOCKED, US$0.22 kept; a limit alone: BLOCKED at US$0). |
 | 3 🟡 guide round's request id lost | Real: the failed `find_guide` step kept only the candidates. No run view returned any step's Details either. | The guide step keeps `details`. `finder.ts` and `runs.ts` return `details` on each step. | `check_forms_s4_finder.ts` 2 ("Request req_qa89" on both views and not in the sentence; no Details when there was no call). |
 
+**Checks on `6617ccdd`:**
+* Named checks: rounds 66 · ai_errors 24 · schema lint 24 · launch paths 44 · finder 142 · contract 20; tsc clean; graph passes (G3 2 known).
+* Full `run-suites.sh`: 60 pass, 7 fail, 1 skipped (:4400). The 7 fails came while another lane's full run used the Mac: "fetch failed", "did not start" and timing steps. Each passed alone on the same code: finder 142, slice2 41, s5 slice3 35, screen01 120, programs s2 87, s1s2 fix 30, w115 slice2 56.
+* `check_p2_guard.ts` passed inside the full run (prototype/tests).
+
+**P-171 (a), after it:** IMM 5257 SCH1's library title in `api/src/sources.ts` is now the official "Schedule 1: Application for Temporary Residence". It had been IMM 5669's "Background/Declaration" wording. The source is in a comment (forms index and the form page, read 29 Oct 2026). A pass and a fail check in `check_forms_rounds.ts` compare it with the saved official page (68/68).
+
 Still open (for the Lead):
 * The run card (`web/src/components/run-card.tsx`, screens' W1-07) does not show the step's `details` yet; the API now gives them.
 * A draft in parts may use 2 attempts per part, while the per-form count takes 2 per run.
