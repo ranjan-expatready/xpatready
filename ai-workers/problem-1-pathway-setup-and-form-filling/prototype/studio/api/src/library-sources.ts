@@ -1,5 +1,5 @@
 // S6 Shared library, queue item (2a) (screens lane; P-158 delta items 1 and 6, C3.13, C3.15): every library item comes
-// from a source, so the free adds answer 410; each item's sources ("From: IMM 1295 box …", "checklist IMM 5488 …") and
+// from a source, so the free adds answer 410; each item's sources ("From: IMM 1295 form field …", "checklist IMM 5488 …") and
 // where it is used, read from the rows that already hold them (form field maps, checklist requirement quotes, the
 // imported release); a direct, versioned rename of a field's name or a section's title with the exact-duplicate check.
 // The one door (every item a ProposalItem, a rule as a source) comes in S6 slice 1, on the forms lane's contract v2.
@@ -14,9 +14,9 @@ const problem = (status: number, title: string, detail: string) =>
 
 /** P-158 item 1: nothing is added to the library by hand; the 410 says where the item comes from instead. */
 const FROM: Record<string, string> = {
-  field: "A field comes from a form box (add the form under Forms and confirm what the AI read), a checklist line, or a rule that needs it.",
+  field: "A field comes from a form field (add the form under Forms and confirm what the AI read), a checklist line, or a rule that needs it.",
   section: "Sections are proposed from the forms' own parts and confirmed on To review.",
-  answer_list: "An answer list comes from a form box's own choices or an IRCC code list.",
+  answer_list: "An answer list comes from a form field's own choices or an IRCC code list.",
 };
 export const noFreeAdd = (kind: keyof typeof FROM): never => {
   throw new HttpException({ type: "https://expatready.local/problems/no-free-add", title: "Not added by hand", status: HttpStatus.GONE, detail: `Nothing is added to the shared library by hand. ${FROM[kind]}` }, HttpStatus.GONE);
@@ -29,7 +29,11 @@ export type SourceLine = { kind: "form_box" | "checklist" | "release" | "ai_run"
 export type SourcesView = { kind: Kind; key: string; name: string; sources: SourceLine[]; unsourced: boolean; used_in: string[] };
 
 /** "prototype/p1/inventory/imm5488e.text.inventory.json" → "IMM 5488"; any other file keeps its own name. */
-const checklistName = (file: string) => { const m = /imm[\s_-]?(\d{4})/i.exec(file); return m ? `IMM ${m[1]}` : file.split("/").pop() ?? file; };
+const checklistName = (file: string) => {
+  const m = /(imm|guide)[\s_-]?(\d{4})/i.exec(file);
+  if (m) return `${m[1].toLowerCase() === "imm" ? "IMM" : "Guide"} ${m[2]}`;
+  return (file.split("/").pop() ?? file).replace(/(\.text)?\.inventory\.json$|\.[a-z]+$/i, "").replace(/[-_]+/g, " ");
+};
 /** "the reviewed … release 2c66…; proposed by c1-fieldmap-…" → the release in words, the AI runs as its small print. */
 const releaseLine = (ref: string | null | undefined): SourceLine => {
   if (!ref) return { kind: "release", text: "From the imported release" };
@@ -50,17 +54,17 @@ export class LibrarySources {
       const fields = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
       const latest = new Map<string, (typeof fields)[number]>(); for (const f of fields) if (!latest.has(f.canonicalFieldKey)) latest.set(f.canonicalFieldKey, f);
       if (kind === "field") {
-        for (const b of boxes) add(b.canonicalFieldKey!, { kind: "form_box", text: `From: ${b.edition.editionLabel} box "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"`, quote: b.evidenceQuote });
+        for (const b of boxes) add(b.canonicalFieldKey!, { kind: "form_box", text: `From: ${b.edition.editionLabel} form field "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"`, quote: b.evidenceQuote });
         for (const f of latest.values()) if (f.sourceRef) add(f.canonicalFieldKey, f.origin === "AI_PROPOSAL" ? { kind: "ai_run", text: `From the ${f.sourceRef}` } : releaseLine(f.sourceRef));
       } else if (kind === "answer_list") {
-        for (const b of boxes) { const list = latest.get(b.canonicalFieldKey!)?.answerListKey; if (list) add(list, { kind: "form_box", text: `Choices of: ${b.edition.editionLabel} box "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"` }); }
+        for (const b of boxes) { const list = latest.get(b.canonicalFieldKey!)?.answerListKey; if (list) add(list, { kind: "form_box", text: `Choices of: ${b.edition.editionLabel} form field "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"` }); }
       } else {
         // A section's questions read form boxes: until sections are proposed from the forms' parts (S6 slice 2), those
         // forms are its evidence, beside the release it came with.
         const forms = new Map<string, Set<string>>();
         const editionOf = new Map<string, string[]>(); for (const b of boxes) { const a = editionOf.get(b.canonicalFieldKey!) ?? []; a.push(b.edition.editionLabel.replace(/ \(.*$/, "")); editionOf.set(b.canonicalFieldKey!, a); }
         for (const q of await this.db.sectionQuestion.findMany({ where: { workspaceId } })) for (const e of editionOf.get(q.canonicalFieldKey) ?? []) { const s = forms.get(q.sectionKey) ?? new Set(); s.add(e); forms.set(q.sectionKey, s); }
-        for (const [k, s] of forms) add(k, { kind: "forms", text: `Its questions read boxes on ${[...s].sort().join(", ")}` });
+        for (const [k, s] of forms) add(k, { kind: "forms", text: `Its questions read form fields on ${[...s].sort().join(", ")}` });
         const secs = await this.db.logicalSection.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
         const seen = new Set<string>();
         for (const s of secs) if (!seen.has(s.sectionKey) && seen.add(s.sectionKey) && s.origin === "IMPORTED_RELEASE") add(s.sectionKey, releaseLine(null));

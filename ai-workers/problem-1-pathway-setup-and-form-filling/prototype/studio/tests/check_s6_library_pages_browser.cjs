@@ -35,9 +35,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       await p.setViewportSize({ width: w, height: h });
       await go("/library/fields");
       const fl = await main();
-      step(`C3.6 P-158 (${w}): Fields offers no Add and says in one line where fields come from`, (await p.getByRole("button", { name: /Add a field/ }).count()) === 0 && (await p.locator("[data-origin]").count()) === 1 && /Where these come from: each field is read from a form box/.test(fl), fl.slice(0, 200));
+      step(`C3.6 P-158 (${w}): Fields offers no Add and says in one line where fields come from`, (await p.getByRole("button", { name: /Add a field/ }).count()) === 0 && (await p.locator("[data-origin]").count()) === 1 && /Where these come from: each field is read from a form field/.test(fl), fl.slice(0, 200));
       const rows = await p.locator("main table tbody tr").count(), noted = await p.locator("main table tbody tr [data-source]").count();
-      step(`P-162 (${w}): every Fields row shows its source ("From: IMM …" or "From a reviewed release")`, rows > 100 && noted === rows && /From: IMM 1295 \(09-2023\) box/.test(fl) && /From a reviewed release/.test(fl), `${noted} of ${rows}`);
+      step(`P-162 (${w}): every Fields row shows its source ("From: IMM …" or "From a reviewed release"); no page says "box" (P-63)`, rows > 100 && noted === rows && !/\bbox(es)?\b/i.test(fl) && /From: IMM 1295 \(09-2023\) form field/.test(fl) && /From a reviewed release/.test(fl), `${noted} of ${rows}`);
       step(`P-162 fail (${w}): a field with no source is flagged "No source recorded", never blank`, /No source recorded/.test(await p.locator("main table tbody tr", { hasText: "person.old_hand_made" }).innerText()));
       step(`C3.13 (${w}): where used: a field's forms, form fields and combinations`, /IMM 1295[^\n]* · \d+ form fields? · 1 combination/.test(fl));
       const f = await fits(); step(`QA-39 (${w}): the Fields table still fits without sideways scroll`, f.ok, JSON.stringify(f));
@@ -45,7 +45,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       await go("/library/sections");
       const sc = await main();
       step(`C3.6 P-158 (${w}): Sections offers no Add and says where sections come from`, (await p.getByLabel("New section title").count()) === 0 && (await p.getByRole("button", { name: "Add", exact: true }).count()) === 0 && /Where these come from: the forms' own parts/.test(sc));
-      step(`C3.13 (${w}): Sections shows each one's source and the combinations using it by name`, /Its questions read boxes on IMM 1295/.test(sc) && /With an LMIA/.test(sc) && (await p.locator("main table tbody tr [data-source]").count()) === (await p.locator("main table tbody tr").count()));
+      step(`C3.13 (${w}): Sections shows each one's source and the combinations using it by name`, /Its questions read form fields on IMM 1295/.test(sc) && /With an LMIA/.test(sc) && (await p.locator("main table tbody tr [data-source]").count()) === (await p.locator("main table tbody tr").count()));
       const sf = await fits(); step(`QA-39 (${w}): the Sections table fits without sideways scroll`, sf.ok, JSON.stringify(sf));
       await p.screenshot({ path: path.join(SHOTS, `sections-${w}.png`) });
       await go("/library/documents");
@@ -62,7 +62,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     // A field's page: where it comes from, where used, and the rename (C3.15)
     await go("/library/fields/person.family_name");
     let fd = await main();
-    step("P-158 item 6: a field's page lists where it comes from, box by box, and the combinations using it", /Where it comes from/.test(fd) && /From: IMM 1295 \(09-2023\) box "Family name/.test(fd) && /Used in combinations: With an LMIA/.test(fd), fd.slice(0, 200));
+    step("P-158 item 6: a field's page lists where it comes from, box by box, and the combinations using it", /Where it comes from/.test(fd) && /From: IMM 1295 \(09-2023\) form field "Family name/.test(fd) && /Used in combinations: With an LMIA/.test(fd), fd.slice(0, 200));
     await p.getByLabel("Name", { exact: true }).fill("Surname"); await p.getByRole("button", { name: "Rename" }).click(); await settle();
     fd = await main();
     step("C3.15: an author renames the field on its page: the heading shows the new name, a new draft version", /^Surname$/m.test(fd) && /v2 draft/.test(fd), fd.slice(0, 160));

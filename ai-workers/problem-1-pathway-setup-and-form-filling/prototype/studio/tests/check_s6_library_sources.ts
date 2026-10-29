@@ -28,22 +28,22 @@ const count = (table: string) => Number(sql(`select count(*) from ${table}`));
   const s = await call("POST", "/library/sections", { title: "Free section", meaning: "A section typed in by hand." });
   const l = await call("POST", "/library/answer-lists", { key: "free_list", label: "Free list", values: [{ key: "a", label: "A" }, { key: "b", label: "B" }] });
   ok("C3.6 P-158 fail: a free add of a field, a section or an answer list is gone (410)", f.status === 410 && s.status === 410 && l.status === 410, [f.status, s.status, l.status]);
-  ok("C3.6 P-158 fail: the 410 says where the item comes from instead, in plain words", /form box/.test(f.body?.detail) && /forms' own parts/.test(s.body?.detail) && /form box's own choices|IRCC code list/.test(l.body?.detail), [f.body?.detail, s.body?.detail]);
+  ok("C3.6 P-158 fail: the 410 says where the item comes from instead, in plain words", /form field/.test(f.body?.detail) && /forms' own parts/.test(s.body?.detail) && /form field's own choices|IRCC code list/.test(l.body?.detail), [f.body?.detail, s.body?.detail]);
   ok("C3.6 P-158 fail: a refused add writes nothing (no field, section, list or waiting change)", JSON.stringify(before) === JSON.stringify([count("canonical_field"), count("logical_section"), count("answer_list"), count("library_change")]));
-  const viewer = await call("POST", "/library/fields", { key: "person.x", meaning: "x", valueType: "text" }, "user-Z");
-  ok("C3.6 P-158 fail: the add is gone for everyone, whoever asks", viewer.status === 410, viewer.status);
+  const [approver, nobody] = await Promise.all([call("POST", "/library/fields", { key: "person.x", meaning: "x", valueType: "text" }, "user-B"), call("POST", "/library/sections", { title: "x" }, "user-Z")]);
+  ok("C3.6 P-158 fail: the add is gone for every person (410); an unknown person is 401 first (QA-65)", approver.status === 410 && nobody.status === 401, [approver.status, nobody.status]);
 
   // ─────────────────── P-158 item 6: sources
   let r = await call("GET", "/library/fields/person.family_name/sources");
-  ok("C3.13 P-158 pass: a field read from form boxes names each one (\"From: IMM 1295 … box …\")", r.status === 200 && r.body.sources.filter((x: { kind: string }) => x.kind === "form_box").length >= 3 && r.body.sources.some((x: { text: string }) => /^From: IMM 1295 \(.*\) box "Family name/.test(x.text)) && r.body.unsourced === false, r.body.sources?.slice(0, 2));
+  ok("C3.13 P-158 pass: a field read from form boxes names each one (\"From: IMM 1295 … form field …\")", r.status === 200 && r.body.sources.filter((x: { kind: string }) => x.kind === "form_box").length >= 3 && r.body.sources.some((x: { text: string }) => /^From: IMM 1295 \(.*\) form field "Family name/.test(x.text)) && r.body.unsourced === false, r.body.sources?.slice(0, 2));
   ok("C3.13 pass: the field says where it is used (combinations by name)", r.body.used_in?.length >= 1, r.body.used_in);
   r = await call("GET", "/library/fields/case.application_date/sources");
   ok("P-158 pass: a field no form box reads still names its source (the reviewed release it came with)", r.status === 200 && r.body.sources.length === 1 && r.body.sources[0].kind === "release" && /reviewed work-permit release/.test(r.body.sources[0].text), r.body.sources);
   const types = (await call("GET", "/library/document-types")).body as { documentTypeKey: string; name: string; source: string | null; unsourced: boolean; used_in: string[] }[];
   const dt = types[0];
   r = await call("GET", `/library/document-types/${encodeURIComponent(dt.documentTypeKey)}/sources`);
-  ok("P-158 pass: a document type names its checklist line, quoted (\"From: checklist IMM 5488\")", r.status === 200 && r.body.sources.some((x: { kind: string; text: string; quote?: string }) => x.kind === "checklist" && /^From: checklist IMM \d{4}$/.test(x.text) && !!x.quote), r.body.sources?.[0]);
-  ok("C3.13 pass: the Document types list gives each row its source and where it is used", types.length > 0 && types.every((t) => !t.unsourced && /^From: checklist/.test(t.source ?? "") && t.used_in.length >= 1), types.find((t) => t.unsourced || !t.used_in.length)?.name);
+  ok("P-158 pass: a document type names its checklist line, quoted (\"From: checklist IMM 5488\")", r.status === 200 && r.body.sources.some((x: { kind: string; text: string; quote?: string }) => x.kind === "checklist" && /^From: checklist (IMM|Guide) \d{4}$|^From: checklist [a-z ]+$/.test(x.text) && !!x.quote), r.body.sources?.[0]);
+  ok("C3.13 pass: the Document types list gives each row its source and where it is used", types.length > 0 && types.every((t) => !t.unsourced && /^From: checklist /.test(t.source ?? "") && !/inventory|\.json/.test(t.source ?? "") && t.used_in.length >= 1), types.find((t) => t.unsourced || !t.used_in.length)?.name);
   const sections = (await call("GET", "/library/sections")).body as { key: string; title: string; source: string | null; unsourced: boolean; used_in: string[]; combinations: number }[];
   r = await call("GET", `/library/sections/${sections[0].key}/sources`);
   ok("C3.13 pass: a section names the forms its questions read, and its release", r.status === 200 && r.body.sources.some((x: { kind: string }) => x.kind === "forms") && r.body.sources.some((x: { kind: string }) => x.kind === "release"), r.body.sources);

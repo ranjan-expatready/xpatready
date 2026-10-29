@@ -59,11 +59,11 @@ class StudioController {
   @Post("combinations/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.approve(actorOf(a), id); }
   @Get("library/fields") fields(@Query() q: any) { return this.s.fields(q); }
   @Get("library/fields/:key") field(@Param("key") k: string) { return this.s.field(k); }
-  @Post("library/fields") addField() { return noFreeAdd("field"); } // P-158: no free add (410)
+  @Post("library/fields") addField(@Headers("x-actor") a: H) { actorOf(a); return noFreeAdd("field"); } // P-158: no free add (410)
   @Patch("library/fields/:key") updField(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: any) { return this.s.updateField(actorOf(a), k, b); }
   @Post("library/fields/:key/placement") place(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: any) { return this.s.placeField(actorOf(a), k, b); }
   @Get("library/sections") sections() { return this.s.sections(); }
-  @Post("library/sections") addSection() { return noFreeAdd("section"); } // P-158: no free add (410)
+  @Post("library/sections") addSection(@Headers("x-actor") a: H) { actorOf(a); return noFreeAdd("section"); } // P-158: no free add (410)
   @Get("library/document-types") types() { return this.s.documentTypes(); }
   @ConfigRead() @Post("conditions/check") check(@Body() b: any) { return this.s.checkCondition(b); }
   @CaseRead() @Get("releases") releases(@Query("combination") c?: string) { return this.s.releases(c); }

@@ -7,7 +7,7 @@
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 ## Handover (screens lane, 29 Oct evening, kept current; a fresh session resumes from this file alone)
-**Branch `claude/screens-2a-22c0e2` (worktree `screens-2a-22c0e2`), pushed at 38cc245d; main d2399813 synced (PR #91 merged since, at 816815ff).** AI spent US$0. Node: `.tools/node-v24.21.0` (the Homebrew node 23 is refused by Prisma); a fresh worktree needs `lane.sh setup` with that node first, then `prisma generate`.
+**Branch `claude/screens-2a-22c0e2` (worktree `screens-2a-22c0e2`), pushed (see the last log line for the commit); main d2399813 synced (PR #91 merged since, at 816815ff).** AI spent US$0. Node: `.tools/node-v24.21.0` (the Homebrew node 23 is refused by Prisma); a fresh worktree needs `lane.sh setup` with that node first, then `prisma generate`.
 
 **Done this session: queue item (2a)** (detail in `screens/W1-shared-library/build-notes.md`):
 - the three free adds answer 410;
@@ -32,14 +32,15 @@ Results: `check_s6_library_sources` 24/24, `check_s6_library_pages_browser` 33/3
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: BUILD (2a) done at 38cc245d; full local run-suites running, then CHECK for the Lead
-owner: Builder
-next_action: Builder: read the run-suites result, restore its by-products, fix any failure, hand (2a) to the Lead; then sync main (forms PR #90 merged at deda0e6b: contract v2 `contracts/proposal-item.ts` is on main) and plan (2b), the P-158 door through ProposalItem, together with S6 slice 1, the one review queue (C11.13, C11.14, C3.2), including routing runtime's C4.7 pqr_pick producer and Accept (`acceptPqrPick`, `api/src/fact-sources.ts`)
+stage: CHECK — S6 (2a) at the commit named in the last log line; full local run-suites on 5b00ae99 67 PASS 4 FAIL, the 4 fixed and rerun green
+owner: Lead
+next_action: Lead: check (2a) on CI and merge; Builder then syncs main (forms #90 at deda0e6b) and plans (2b), the P-158 door through ProposalItem, with S6 slice 1, the one review queue (C11.13, C11.14, C3.2), including routing runtime's C4.7 pqr_pick producer and Accept (`acceptPqrPick`, `api/src/fact-sources.ts`); the P-97 "Change who fills" button waits for runtime's `POST /library/fields/:key/fills` on main
 then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
 blocked_by: forms runner package and contract v2 on main (Lead merge)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-shared-library (S6) · BUILD (2a) → CHECK · full run-suites on 5b00ae99: 67 PASS 4 FAIL, all four from (2a): P-63 "box" on Fields (sources now say "form field"), QA-65 (the 410 routes name their person first, nobody 401), A1 (Studio typed-key check gone with createField: ≥1), QA-71 (the check reads the Category column; a name may end in "employer"); checklist file names in words; seed_library.d.cts. Rerun: ai_drafting 48/48, s6 sources 24/24, s6 pages 33/33, forms_qa53 20/20, screen01_browser 120/120, qa_1029 51/51; tsc api and web clean; any 419; graph G3 2 (older). US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD (2a) · 38cc245d: POST /library/fields, /sections, /answer-lists → 410; GET /library/:kind/:key/sources and row sources and where used; field and section rename (C3.15); origin line per page; check_s6_library_sources 24/24, pages browser 33/33; seed_library.cjs for checks that used the adds (forms, runtime files listed). US$0.
 - 2026-10-29 · Handover · applied Lead message (P-173 queue): item (2) sized (heavy, half waits on #90), Handover rewritten for a fresh session; context of this one spent. US$0.
 - 2026-10-29 · PR #91 review + P-165 · FIX · applied Lead message: 89822be7 Restore keeps the Pathway type (t=CORPORATE), a retired row announces Retired (qa_1029 49/49); main a7f96890 synced, STAND-INS gained SI-11, 14–16: 1b810203 SI-11 chip on Releases, SI-14–16 listed for the runtime lane; check_stand_ins 9/9; browser and full suites blocked by load (demo load > 30 s). US$0.
@@ -49,4 +50,3 @@ updated: 2026-10-29
 - 2026-10-29 · W1-shared-library (S6) · slice R Lead check PASS at 164ef658 (Lead PR #87). Idle until the forms merge. US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD slice R (US$0) → CHECK · full run-suites 67 PASS 0 FAIL (started 038add4f, ended d9c8be97: code = 21556f3a; Prisma client regenerated after the main sync, first run failed on a stale client); check_s6_field_drafts 19/19, check_p154_words 4/4; graph G3 2 (older). No live call. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN · applied Lead message: P-158 delta agreed (items 1–10, notes a person roles from guides, b answer lists only from a source, c conditions cite a source + sme); written to plan-p158.md (moved out of plan-p149.md, line limit). US$0.
-- 2026-10-29 · W1-shared-library (S6) · BUILD slice R (US$0) · 21556f3a: field_map_edition step on the runner (edition key, box-count output limit, runner budget check), field-map-check.v1.md, stub, run-contract kind, tools/record-field-drafts.ts (Scaffolding; plan first, both caps, --max-usd), check_s6_field_drafts 19/19; schema v2 passes qa lint part A. P-158: manual-add inventory in plan-p149.md, 10-line delta sent; those parts on hold. No live call. US$0.
