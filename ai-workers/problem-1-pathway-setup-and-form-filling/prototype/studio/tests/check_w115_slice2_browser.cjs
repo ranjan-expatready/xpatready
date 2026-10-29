@@ -107,7 +107,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const oRow = p.locator('[data-question][data-fact="person.family_name"]').first();
   step("P-155(3) pass: the row says Case officer with \"Why: …\" under it", /Case officer/.test(await oRow.locator("[data-comes-from]").innerText()) && /Why: Sample: the officer copies it/.test(await oRow.locator("[data-source-reason]").innerText().catch(() => "")), await oRow.innerText());
   await state("row-case-officer-with-why");
-  await p.locator("[data-undo-toast] [data-undo]").click(); await settle();
+  // The toast lasts 10 s; after a screenshot (slow under load) use the page note's Undo, which stays until used (QA-58).
+  await p.locator("[data-note-undo]").click(); await settle();
   await oRow.getByRole("button", { name: /^Details of/ }).click();
   await drawer.locator("[data-fact-drawer]").waitFor();
   await drawer.locator('[data-source-option="CLIENT"] input').check();
@@ -150,7 +151,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const changed = (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change?.batchId);
   step("bulk: both rows carry one batch id", changed.length === 2 && changed[0].change.batchId === changed[1].change.batchId, changed.map((f) => f.fact).join(", "));
   await state("bulk-done-undo-toast");
-  await toast.locator("[data-undo]").click(); await settle();
+  // The toast lasts 10 s; after a screenshot (slow under load) use the page note's Undo, which stays until used (QA-58).
+  await p.locator("[data-note-undo]").click(); await settle();
   const after = (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change);
   step("Undo pass: one Undo takes both rows back", after.length === 0, after.map((f) => f.fact).join(", "));
 
