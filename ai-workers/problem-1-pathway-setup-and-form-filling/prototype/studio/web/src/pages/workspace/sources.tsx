@@ -156,7 +156,7 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
     if (!f) return null;
     const src = s.split(":")[0] as AnswerSource;
     if (f.clientOnly && src !== "CLIENT") return SAY.clientOnly;
-    if (src === "AGENT" && f.ruleSource !== "AGENT") return SAY.agentNotOffered;
+    if (src === "AGENT" && !f.agentOffered) return SAY.agentNotOffered;
     if (src === "CLIENT" && !f.placed) return SAY.clientNotPlaced;
     return null;
   };
@@ -192,7 +192,7 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
               {[...docs.map((d) => ({ value: `DOCUMENT:${d.key}`, label: `Document · ${d.name}`, hint: d.key === f.ruleDocument?.key ? `Default by the rules: it is on ${roleLabel}'s checklist and supplies it.` : "Also supplied by it." })),
                 ...(docs.length ? [] : [{ value: "DOCUMENT:", label: "Document", hint: `No document on ${roleLabel}'s checklist supplies it. Add one on Documents.` }]),
                 { value: "CLIENT", label: "Client", hint: f.placed ? "Asked in the client questionnaire." : "" },
-                { value: "AGENT", label: "Agent", hint: f.ruleSource === "AGENT" ? "The agent enters it." : "" }].map((o) => {
+                { value: "AGENT", label: "Agent", hint: f.agentOffered ? "The agent enters it." : "" }].map((o) => {
                 const off = o.value === "DOCUMENT:" ? "No document supplies it." : why(o.value);
                 return (
                   <label key={o.value} className={cn("flex gap-2 rounded-lg border p-2", choice === o.value ? "border-primary bg-primary/5" : "border-border", off ? "text-text-muted" : "")} data-source-option={o.value}>

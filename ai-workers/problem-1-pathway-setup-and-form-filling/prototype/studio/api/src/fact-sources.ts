@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
 import { z } from "zod";
 import { buildSnapshot } from "../../engine/snapshot.ts";
-import { factSourceProblems, factSources, prequalification, SOURCES, type FactSourceView } from "../../engine/sources.ts";
+import { agentRefusal, factSourceProblems, factSources, prequalification, SOURCES, type FactSourceView } from "../../engine/sources.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
 
@@ -29,7 +29,6 @@ export const BulkFactSource = z.object({
   prequalification: z.boolean().optional(),
 }).refine((b) => b.source !== undefined || b.prequalification !== undefined, { message: "Choose what to change on the ticked rows.", path: ["source"] });
 const UndoBulk = z.object({ batchId: z.string().uuid({ message: "That bulk change is not known. Reload the page." }) });
-export const AGENT_NOT_OFFERED = "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document.";
 const NOT_YOURS ="Only the person who made this draft can undo it.";
 const UndoFactSource =z.object({ version: z.number({ error: "Reload: the version you read is missing." }).int().min(1) });
 
@@ -187,8 +186,9 @@ function refusals(f: FactSourceView, source: FactSourceView["source"] | null, do
     if (!documentTypeKey) out.push({ field: "documentTypeKey", message: "Choose which document supplies it." });
     else if (![f.ruleDocument, ...f.also].some((x) => x?.key === documentTypeKey)) out.push({ field: "documentTypeKey", message: `That document is not on this person's checklist, or it does not supply "${f.label}". Add it on the Documents tab first.` });
   }
-  // Board v2 frame 1 (P-147): the agent is offered only for the facts the rules give the agent.
-  if (source === "AGENT" && f.ruleSource !== "AGENT" && !f.clientOnly) out.push({ field: "source", message: AGENT_NOT_OFFERED });
+  // Board v2 frame 1 (P-147): the one rule for the agent as a source (engine/sources.ts agentRefusal).
+  const agent = source === "AGENT" ? agentRefusal(f) : null;
+  if (agent) out.push({ field: "source", message: agent });
   if (source === "CLIENT" && !f.placed) out.push({ field: "source", message: `No question asks "${f.label}", so the client cannot give it. Add the question first.` });
   if (tick && s === "AGENT") out.push({ field: "prequalification", message: `"${f.label}" comes from the agent: a prospect is asked only what they can answer.` });
   if (tick && !f.placed) out.push({ field: "prequalification", message: `No question asks "${f.label}", so a prospect cannot be asked it.` });

@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-29T02:11:14.520Z",
+  "at": "2026-10-29T03:53:04.594Z",
   "port": 4434,
   "pass": 47,
   "fail": 0,
@@ -173,7 +173,14 @@
         "reason": "Sample: asked on the form as well",
         "clientOnly": false,
         "placed": true,
-        "version": 1
+        "agentOffered": false,
+        "version": 1,
+        "change": {
+          "status": "DRAFT",
+          "by": "user-A",
+          "at": "2026-10-29T03:53:03.555Z",
+          "batchId": null
+        }
       }
     },
     {

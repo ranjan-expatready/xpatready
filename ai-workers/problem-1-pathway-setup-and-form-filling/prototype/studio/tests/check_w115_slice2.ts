@@ -7,6 +7,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { AGENT_NOT_OFFERED, agentRefusal } from "../engine/sources.ts";
 
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_runtime_w115b";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -41,6 +42,11 @@ const CODES = /\bP-\d+\b/;
   const decl = L.facts.find((f: any) => f.clientOnly && f.role === "principal");
   const agentFact = L.facts.find((f: any) => f.ruleSource === "AGENT" && f.role !== "case" && !f.clientOnly);
   ok("fixture: three placed document facts, a declaration and an agent fact for the principal", docs.length === 3 && !!decl && !!agentFact, { docs: docs.length, decl: !!decl, agent: agentFact?.fact });
+
+  // ---------------------------------------------------------------- the agent: one rule (engine/sources.ts agentRefusal)
+  ok("agent rule pass: the agent's own fact may come from the agent (no refusal; the list says agentOffered)", agentRefusal(agentFact) === null && agentFact.agentOffered === true, agentFact.fact);
+  ok("agent rule fail: a fact read from a document may not (the one message), and the list says so", agentRefusal(docs[0]) === AGENT_NOT_OFFERED && docs[0].agentOffered === false, docs[0].fact);
+  ok("agent rule: a declaration is never offered the agent (its own refusal speaks for it)", decl.agentOffered === false && agentRefusal(decl) === null);
 
   // ---------------------------------------------------------------- bulk: roles, shape, locks
   const items = (fs: any[]) => fs.map((f) => ({ role: f.role, fact: f.fact, version: f.version }));

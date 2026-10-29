@@ -57,6 +57,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("P-147 §3: Show and edit opens the full table (built S5 card)", await p.locator("[data-who-can-be] table").count() === 1 && await p.locator('[data-who-can-be] [data-person="principal"]').count() === 1);
   const chips = await p.locator('[role="group"][aria-label="Where it comes from"]').innerText();
   step("EXPERIENCE §0 pass: source chips Document · Client · Agent and Needs you · 0", /Document \d+/.test(chips) && /Client \d+/.test(chips) && /Agent \d+/.test(chips) && /Needs you · 0/.test(chips), chips.replace(/\n/g, " "));
+  // S2-1 (Lead, 29 Oct): the person's line uses slice 1's sources, with the chips' numbers.
+  await p.waitForFunction(() => /from documents/.test(document.querySelector("[data-coverage]")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
+  const line = await p.locator("[data-coverage]").innerText();
+  const num = (re, t) => Number((t.match(re) ?? [])[1] ?? -1);
+  const [cd, cc, ca] = [num(/Document (\d+)/, chips), num(/Client (\d+)/, chips), num(/Agent (\d+)/, chips)];
+  const [ld, lc, la, ln] = [num(/(\d+) from documents/, line), num(/(\d+) asked of the client/, line), num(/(\d+) entered by the agent/, line), num(/need (\d+) answers/, line)];
+  step("S2-1 pass: the person's line says documents · client · agent with the chips' numbers, and they add up", ld === cd && lc === cc && la === ca && ln === cd + cc + ca, `${line} | chips ${cd}/${cc}/${ca}`);
+  step("S2-1 fail: the line no longer uses the older split (\"filled by the case officer\")", !/filled by the case officer/.test(line), line);
   await state("questionnaires-strip-and-rows");
 
   // ======================================================== rows of five things, ⋯ menu

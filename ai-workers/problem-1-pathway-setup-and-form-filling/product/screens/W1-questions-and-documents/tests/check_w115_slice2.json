@@ -1,7 +1,7 @@
 {
-  "at": "2026-10-29T02:57:33.456Z",
+  "at": "2026-10-29T03:51:48.596Z",
   "port": 4436,
-  "pass": 26,
+  "pass": 29,
   "fail": 0,
   "log": [
     {
@@ -22,6 +22,20 @@
         "decl": true,
         "agent": "organisation.address"
       }
+    },
+    {
+      "name": "agent rule pass: the agent's own fact may come from the agent (no refusal; the list says agentOffered)",
+      "ok": true,
+      "detail": "organisation.address"
+    },
+    {
+      "name": "agent rule fail: a passport fact may not (the one message), and the list says so",
+      "ok": true,
+      "detail": "organisation.name"
+    },
+    {
+      "name": "agent rule: a declaration is never offered the agent (its own refusal speaks for it)",
+      "ok": true
     },
     {
       "name": "bulk roles fail: a case officer cannot change the ticked rows (403)",
@@ -115,7 +129,7 @@
       "ok": true,
       "detail": {
         "saved": 3,
-        "batchId": "3db0bf5a-1dbd-49a6-a6bb-9dc45cdd52f9",
+        "batchId": "9562474b-4f97-4958-b09c-5a9a178debac",
         "what": "where the answer comes from set to the client",
         "refused": []
       }
@@ -127,20 +141,20 @@
         {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T02:57:32.016Z",
-          "batchId": "3db0bf5a-1dbd-49a6-a6bb-9dc45cdd52f9"
+          "at": "2026-10-29T03:51:47.711Z",
+          "batchId": "9562474b-4f97-4958-b09c-5a9a178debac"
         },
         {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T02:57:32.018Z",
-          "batchId": "3db0bf5a-1dbd-49a6-a6bb-9dc45cdd52f9"
+          "at": "2026-10-29T03:51:47.713Z",
+          "batchId": "9562474b-4f97-4958-b09c-5a9a178debac"
         },
         {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T02:57:32.020Z",
-          "batchId": "3db0bf5a-1dbd-49a6-a6bb-9dc45cdd52f9"
+          "at": "2026-10-29T03:51:47.713Z",
+          "batchId": "9562474b-4f97-4958-b09c-5a9a178debac"
         }
       ]
     },
@@ -191,7 +205,7 @@
         "d0": {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T02:57:32.523Z",
+          "at": "2026-10-29T03:51:47.959Z",
           "batchId": null
         }
       }
@@ -228,8 +242,8 @@
       "detail": {
         "status": "PUBLISHED",
         "by": "user-A",
-        "at": "2026-10-29T02:57:33.233Z",
-        "batchId": "e1078d1a-1c22-494f-9c9d-210d6fb395a2"
+        "at": "2026-10-29T03:51:48.464Z",
+        "batchId": "adb59287-7432-44ad-8799-1188fa31492b"
       }
     },
     {

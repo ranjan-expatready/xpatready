@@ -58,3 +58,8 @@ Agreed plan: `plan.md`, challenge and Lead response: `challenge.md`. No screen i
 **Not in slice 2:** Documents tab (slice 3; Copies, Translation, Validity window read-only Sample there), Preview in three sets (slice 4), AI proposals with Accept, Reject and Decide side by side (slice 5).
 
 **Tests:** `tests/check_w115_slice2.ts` 26/26 (API: bulk, locks, batch Undo, row status, Needs you role, release; a pass and a fail each); `tests/check_w115_slice2_browser.cjs` 46/46 (1440 and 1024, axe on 8 states; screenshots in `screenshots/slice2/`). The older S5 browser tests open "Show and edit" first. US$0.
+
+## Fixes after the founder's early look of slice 2 (29 Oct)
+* **S2-1:** the per-person line uses slice 1's sources, the same numbers as the chips and the strip: "Principal applicant: the forms need 120 answers for this person · 18 from documents · 86 asked of the client · 16 entered by the agent" (it said "82 asked of the client · 38 filled by the case officer", the older placement count). Pass and fail in `check_w115_slice2_browser.cjs`; `check_s5_slice2_browser.cjs` reads the new words.
+* **Agent lock, kept as built (the Lead, default):** now one rule, `agentRefusal()` in `engine/sources.ts`, with its message `AGENT_NOT_OFFERED`. The save, the bulk change and the screen read it (the view's `agentOffered`), so the founder's possible exception ("with a written reason, reviewed at release, never declarations") is one change there. Pass and fail in `check_w115_slice2.ts` (29/29).
+* Not this lane's (the Lead): the Question column shows the field's definition (library wording, W1-10/S6); the sample note "outside Canada" (S7).

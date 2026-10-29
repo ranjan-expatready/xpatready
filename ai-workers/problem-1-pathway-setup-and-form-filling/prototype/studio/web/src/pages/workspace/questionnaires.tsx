@@ -253,6 +253,8 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   const allOpen = q.sections.every((s) => opened.has(s.id));
   const total = q.sections.reduce((n, s) => n + s.questions.length, 0);
   const pickedRows = [...byFact.values()].filter((f) => picked.has(f.fact));
+  const mine = [...byFact.values()];
+  const count = (src: FactSourceRow["source"]) => mine.filter((f) => f.source === src).length;
   const toggle = (facts: string[], on: boolean) => setPicked((now) => { const n = new Set(now); for (const x of facts) if (on) n.add(x); else n.delete(x); return n; });
   const backToRules = async (f: FactSourceRow, label: string) => {
     try {
@@ -303,11 +305,13 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
         {q.roles.map((r) => <button key={r.role} type="button" aria-pressed={r.role === q.role} data-role-chip={r.role} onClick={() => { const n = new URLSearchParams(sp); n.set("role", r.role); setSp(n, { replace: true }); }}
           className={cn("min-h-9 rounded-full border px-3 py-1 text-sm", r.role === q.role ? "border-primary bg-primary/10 font-medium text-text-link" : "border-border bg-surface-raised text-text-muted hover:bg-text/5")}>{r.label} · {r.questions} question{r.questions === 1 ? "" : "s"}{r.gaps ? <span className="ml-1 rounded bg-danger/12 px-1 text-xs text-text-danger">{r.gaps} not asked</span> : null}</button>)}
       </div>
-      <SourceChips rows={[...byFact.values()]} needs={checks.size} value={filter} onChange={setFilter} />
+      <SourceChips rows={mine} needs={checks.size} value={filter} onChange={setFilter} />
       {pickedRows.length && canAuthor ? <BulkBar id={id} picked={pickedRows} onClear={() => setPicked(new Set())} onDone={(r, undo) => { setRefused(r.refused); if (r.saved) { setPicked(new Set()); undoToast.show(`${r.what.charAt(0).toUpperCase()}${r.what.slice(1)} on ${r.saved} question${r.saved === 1 ? "" : "s"}`, undo); } }} /> : null}
       {refused.length ? <Notice tone="warn" title={`${refused.length} row${refused.length === 1 ? "" : "s"} not changed`} action={<Button size="sm" variant="ghost" onClick={() => setRefused([])}>Dismiss</Button>}><ul className="mt-1 space-y-0.5" data-bulk-refused>{refused.map((x, i) => <li key={i}>{x.label && !x.message.includes(x.label) ? <><span className="font-medium">{x.label}</span>: </> : null}{x.message}</li>)}</ul></Notice> : null}
       {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
-      <p className="text-sm" data-coverage><span className="font-medium">{role?.label}:</span> the forms need {q.coverage.needed} answer{q.coverage.needed === 1 ? "" : "s"} about this person · {q.coverage.client} asked of the client · {q.coverage.officer} filled by the case officer{q.coverage.gaps.length ? <span className="text-text-danger"> · {q.coverage.gaps.length} asked of nobody</span> : null}</p>
+      {/* S2-1 (Lead, 29 Oct): the same sources and numbers as the chips and the strip (slice 1's rules), not the older
+          placement count (client or case officer). */}
+      <p className="text-sm" data-coverage><span className="font-medium">{role?.label}:</span> {fs.data ? <>the forms need {mine.length} answer{mine.length === 1 ? "" : "s"} for this person · {count("DOCUMENT")} from documents · {count("CLIENT")} asked of the client · {count("AGENT")} entered by the agent</> : "working out where each answer comes from…"}{q.coverage.gaps.length ? <span className="text-text-danger"> · {q.coverage.gaps.length} asked of nobody</span> : null}</p>
       {q.coverage.gaps.length ? (
         <Notice tone="danger" title={`${q.coverage.gaps.length} answer${q.coverage.gaps.length === 1 ? " is" : "s are"} needed but asked of nobody: release waits for ${q.coverage.gaps.length === 1 ? "it" : "them"}`}>
           <ul className="mt-1 space-y-0.5" data-gaps>{q.coverage.gaps.slice(0, 8).map((g) => <li key={g.fact}>"{g.meaning}", needed by {g.forms.join(", ")}</li>)}</ul>

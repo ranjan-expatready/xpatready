@@ -70,7 +70,19 @@ export type FactSourceView = {
   clientOnly: boolean;
   /** A question is placed for it (the client can be asked; the fallback for a document fact). */
   placed: boolean;
+  /** The agent may be chosen as its source (agentRefusal). */
+  agentOffered: boolean;
 };
+
+/** The one rule for the agent as a source (board v2 frame 1, P-147; the Lead, 29 Oct: keep it as built for now). The agent
+ *  is offered only for the facts the rules give the agent; a declaration is the client's (its own refusal). The founder is
+ *  weighing an exception "with a written reason, reviewed at release, never declarations": it joins here, as a reason
+ *  argument, so the save, the bulk change and the screen keep one answer. */
+export const AGENT_NOT_OFFERED = "Not offered: the agent enters only the representative's, the office's and the case's own facts. Choose the client or a document.";
+export function agentRefusal(f: Pick<FactSourceView, "ruleSource" | "clientOnly">): string | null {
+  if (f.clientOnly) return null;
+  return f.ruleSource === "AGENT" ? null : AGENT_NOT_OFFERED;
+}
 
 const roleOf = (people: Person[], about: string) => about === "case" ? "case" : people.find((p) => p.id === about.split("/")[0])?.role ?? about;
 const AGENT_FROM = new Set(["staff_working_view", "existing_record"]);
@@ -107,7 +119,8 @@ export function factSources(s: Snapshot): FactSourceView[] {
     const document = source === "DOCUMENT" ? (c?.source === "DOCUMENT" ? suppliers.find((x) => x.key === c.document_type) ?? { key: c.document_type!, name: c.document_type!, base: false } : ruleDocument) : null;
     return { role: n.role, fact: n.fact, label: (meaning.get(n.fact) ?? n.fact).trim().replace(/\.$/, ""), forms: [...n.forms].sort(),
       source, document, also: suppliers.filter((x) => x.key !== document?.key), proposedBy: c?.source ? "Person" : "Rules", ruleSource, ruleDocument,
-      prequalification: !!c?.prequalification, reason: c?.reason ?? null, clientOnly, placed: !!p && !p.rule_only };
+      prequalification: !!c?.prequalification, reason: c?.reason ?? null, clientOnly, placed: !!p && !p.rule_only,
+      agentOffered: !clientOnly && agentRefusal({ ruleSource, clientOnly }) === null };
   });
 }
 

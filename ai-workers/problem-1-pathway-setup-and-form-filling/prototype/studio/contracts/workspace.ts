@@ -186,6 +186,8 @@ export type FactSourceRow = {
   source: AnswerSource; document: FactSupplier | null; also: FactSupplier[];
   proposedBy: "Rules" | "Person"; ruleSource: AnswerSource; ruleDocument: FactSupplier | null;
   prequalification: boolean; reason: string | null; clientOnly: boolean; placed: boolean; version: number;
+  /** The agent may be chosen as its source (one rule: engine/sources.ts agentRefusal). */
+  agentOffered: boolean;
   /** The newest saved choice: none (the rules), a draft (its author may undo it at once) or published. */
   change: { status: "DRAFT" | "PUBLISHED"; by: string; at: string; batchId: string | null } | null;
 };
