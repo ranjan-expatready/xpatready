@@ -1,6 +1,7 @@
 // Product Studio API (NestJS 11, as the team's backend) and the built web app on one local port.
 //   node --tsconfig-raw is not used: run with tsx (see studio/start.sh), http://localhost:4400
 import { FactSources, FactSourcesController } from "./fact-sources.ts";
+import { PersonChecklists, PersonChecklistsController } from "./person-checklist.ts";
 import "reflect-metadata";
 import { oneAtATime } from "./form-uses.ts";
 import { Body, Catch, Controller, Delete, Get, Headers, HttpException, Inject, Module, Param, Patch, Post, Query, Res, UploadedFiles, UseInterceptors, type ArgumentsHost, type ExceptionFilter } from "@nestjs/common";
@@ -50,7 +51,7 @@ class StudioController {
   @Post("combinations/:id/rules") addRule(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, null, b); }
   @Patch("combinations/:id/rules/:key") updRule(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, k, b); }
   @Patch("combinations/:id/forms/:form") updForm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("form") f: string, @Body() b: any) { return oneAtATime(id, () => this.s.saveForm(actorOf(a), id, normaliseCode(f), b)); } // S4 round 2 N6: one change at a time
-  @Post("combinations/:id/sections/:key") selOn(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string) { return this.s.selectSection(actorOf(a), id, k, true); }
+  @Post("combinations/:id/sections/:key") selOn(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string, @Body() b: any) { return this.s.selectSection(actorOf(a), id, k, true, b); }
   @Delete("combinations/:id/sections/:key") selOff(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string) { return this.s.selectSection(actorOf(a), id, k, false); }
   @Get("combinations/:id/review") review(@Param("id") id: string) { return this.s.review(id); }
   @Post("combinations/:id/submit") submit(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.submit(actorOf(a), id, b?.note); }
@@ -168,7 +169,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController], providers: [FactSources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController], providers: [FactSources, PersonChecklists, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
 class AppModule {}
 
 async function main() {

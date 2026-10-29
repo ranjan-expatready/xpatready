@@ -1,0 +1,240 @@
+{
+  "at": "2026-10-29T08:25:01.021Z",
+  "port": 4438,
+  "pass": 34,
+  "fail": 0,
+  "log": [
+    {
+      "name": "C4.5 pass: a checklist per person (principal, spouse or partner, child), each with its lines",
+      "ok": true,
+      "detail": [
+        "principal:21",
+        "spouse_or_partner:9",
+        "child:1"
+      ]
+    },
+    {
+      "name": "C4.5 pass: the principal's passport supplies its facts about the holder, each taken out of the questionnaire (slice 1's source is this document)",
+      "ok": true,
+      "detail": [
+        "person.family_name:true",
+        "person.given_names:true",
+        "person.sex:true",
+        "person.date_of_birth:true",
+        "person.place_of_birth_city:true",
+        "person.citizenship:true",
+        "person.passport_number:true",
+        "person.passport_country_of_issue:true",
+        "person.passport_issue_date:true",
+        "person.passport_expiry_date:true"
+      ]
+    },
+    {
+      "name": "C4.5 fail-guard: a line that supplies nothing says so (filed as is), nothing taken out",
+      "ok": true,
+      "detail": "Proof of fee payment (processing fee and other applicable fees receipt)"
+    },
+    {
+      "name": "C4.5 pass: the child's checklist has the child's own lines only (per person, never combination-wide)",
+      "ok": true,
+      "detail": [
+        "each_dependent_child"
+      ]
+    },
+    {
+      "name": "words pass: each line carries When in words (Always, or the condition in plain words)",
+      "ok": true
+    },
+    {
+      "name": "C4.5 fail: with the family name set to the client, the passport no longer takes it out of the questionnaire",
+      "ok": true,
+      "detail": {
+        "fact": "person.family_name",
+        "label": "Family name (surname) as shown on passport or travel document",
+        "about": "holder",
+        "aboutRole": "principal",
+        "takenOut": false
+      }
+    },
+    {
+      "name": "fingerprint guard: before any move no line carries a position, and the draft equals the release",
+      "ok": true,
+      "detail": true
+    },
+    {
+      "name": "move roles fail: a case officer cannot change the order (403)",
+      "ok": true,
+      "detail": 403
+    },
+    {
+      "name": "move fail: the first line cannot move up (409, in words)",
+      "ok": true,
+      "detail": "It is already first on this checklist."
+    },
+    {
+      "name": "move fail: a line not on this checklist is 404 in words",
+      "ok": true,
+      "detail": "That document is not on this person's checklist any more. Reload."
+    },
+    {
+      "name": "move pass: the second line moves up, at once: the first two swap and the rest keep their order",
+      "ok": true,
+      "detail": [
+        "proof_of_fee_payment_processing_fee_and_other_applicable_fee:principal_applicant",
+        "passport_or_travel_document_information_page_photocopy:each_applicant",
+        "copy_of_imm_5802_offer_of_employment_and_proof_of_employer_c:principal_applicant"
+      ]
+    },
+    {
+      "name": "move pass: one move changes only the two lines it swaps (two draft rows with a position), never the whole checklist",
+      "ok": true,
+      "detail": "2"
+    },
+    {
+      "name": "move: one History line names the document and whose checklist",
+      "ok": true
+    },
+    {
+      "name": "move: the new order is a draft change (goes out with the next release), the release keeps its order",
+      "ok": true,
+      "detail": false
+    },
+    {
+      "name": "alternatives fail: a type not in the library is refused in words",
+      "ok": true,
+      "detail": "400 An alternative must be a document type in the library: no_such_document_type is not."
+    },
+    {
+      "name": "alternatives pass: a library type is saved as an alternative (the line's own type is never its own alternative)",
+      "ok": true,
+      "detail": [
+        {
+          "key": "birth_certificate_of_accompanying_dependent_child",
+          "name": "Birth certificate of accompanying dependent child"
+        }
+      ]
+    },
+    {
+      "name": "remove pass: the line leaves the principal's checklist and is listed as Removed in this draft",
+      "ok": true,
+      "detail": [
+        {
+          "lineage": "proof_of_fee_payment_processing_fee_and_other_applicable_fee:principal_applicant",
+          "document": "Proof of fee payment (processing fee and other applicable fees receipt)",
+          "who": "principal_applicant",
+          "by": "user-A",
+          "at": "2026-10-29T08:24:52.726Z"
+        }
+      ]
+    },
+    {
+      "name": "Undo fail: someone else cannot put it back (403, in words)",
+      "ok": true,
+      "detail": "403 Only the person who made this draft can undo it."
+    },
+    {
+      "name": "Undo pass: the author puts it back at once; nothing is listed as removed",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "Undo fail: there is no removal to undo twice (409 Nothing to undo)",
+      "ok": true,
+      "detail": "409 Nothing to undo"
+    },
+    {
+      "name": "C4.10 pass (open point 3): a document removed in the draft stays in the published view until a release",
+      "ok": true,
+      "detail": {
+        "draft": 0,
+        "published": 1,
+        "oldRule": 0
+      }
+    },
+    {
+      "name": "C4.10 fail-guard (open point 3): the old rule took the newest published-or-retired row and dropped it before any release",
+      "ok": true,
+      "detail": {
+        "draft": 0,
+        "published": 1,
+        "oldRule": 0
+      }
+    },
+    {
+      "name": "C4.10 pass (open point 3): a rule removed in the draft stays in the published view until a release",
+      "ok": true,
+      "detail": {
+        "draft": 0,
+        "published": 1,
+        "oldRule": 0
+      }
+    },
+    {
+      "name": "C4.10 pass (open point 3): a form removed in the draft stays in the published view until a release",
+      "ok": true,
+      "detail": {
+        "draft": 0,
+        "published": 1,
+        "oldRule": 0
+      }
+    },
+    {
+      "name": "C4.10 pass (open point 3): fact sources and placements have no draft retire that could leak (no RETIRED rows; a change is a draft)",
+      "ok": true,
+      "detail": 200
+    },
+    {
+      "name": "C4.10 pass (open point 3): a check removed in the draft stays in the published view until a release",
+      "ok": true,
+      "detail": {
+        "draft": 0,
+        "published": 1,
+        "oldRule": 0
+      }
+    },
+    {
+      "name": "release pass: the order, the alternative and the removal are released (Release 2)",
+      "ok": true,
+      "detail": 2
+    },
+    {
+      "name": "release: Release 2 carries the positions and the alternative, and not the removed line",
+      "ok": true,
+      "detail": 25
+    },
+    {
+      "name": "C4.10 pass (Lead check slice 3): the release carries the check's removal: the released check is superseded and Release 2 has no such check",
+      "ok": true,
+      "detail": "SUPERSEDED"
+    },
+    {
+      "name": "C4.10 fail-guard (Lead check slice 3): after the release the published view drops the check (held only until a release)",
+      "ok": true,
+      "detail": {
+        "draft": 0,
+        "published": 0,
+        "oldRule": 0
+      }
+    },
+    {
+      "name": "Undo fail: a released removal is not undone (409 Released since)",
+      "ok": true,
+      "detail": "409 That removal was released meanwhile: a release is never undone. Add the document again in a new draft."
+    },
+    {
+      "name": "after the release nothing shows as Removed in this draft",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "move fail: a retired combination's checklist is not changed (409, restore it first)",
+      "ok": true,
+      "detail": "\"With an LMIA\" is retired: its checklist is not changed. Restore it on Structure first; open cases keep their release."
+    },
+    {
+      "name": "fail: an unknown combination is 404 in words (never a 500)",
+      "ok": true,
+      "detail": 404
+    }
+  ]
+}

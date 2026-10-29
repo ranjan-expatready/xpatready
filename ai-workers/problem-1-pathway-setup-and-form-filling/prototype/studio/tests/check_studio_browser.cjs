@@ -123,7 +123,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   // a person adds a conditional document requirement (sample input instead of typing)
   // S5 (m5): the "Sample inputs" buttons are gone from the Documents tab; the person types the requirement.
   await go(`/c/${wp}/configuration?area=documents`); await p.waitForURL(/\/documents/);
-  await click(btn("Add a document requirement"));
+  await click(btn("Add a document"));
   { const dlg = p.getByRole("dialog");
     await dlg.getByLabel("New document type name").fill("Custody documents or parental letter of authorization");
     await dlg.getByLabel("Whose document").selectOption("each_dependent_child");

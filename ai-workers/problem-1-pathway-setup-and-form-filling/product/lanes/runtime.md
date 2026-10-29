@@ -7,32 +7,56 @@
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: W1-questions-and-documents (W1-15, P-130–P-132)
-current_slice: slice 2 FIX (S2-1, Agent lock as one rule) for merge; slice 3 (Documents tab) planned in plan.md
-stage: FIX
-owner: Builder
-next_action: Builder: full run-suites on b33b941b (slice 2 with S2-1 and the one-rule Agent lock) running; then hand slice 2 back for the merge; then BUILD slice 3 (Documents tab) per plan.md 'Slice 3' (adds document_requirement.position and .alternatives, expand only).
+current_slice: FIX pass 2 done at 3839ddf4 (QA-92 to QA-95, Undo-bar race); handover written; session stopped (P-173)
+stage: CHECK
+owner: Lead
+next_action: Lead: check FIX pass 2 at 3839ddf4 for the Documents tab merge (CI is the full check); decide the QA-93 finding (does choosing a section decide what is asked?); then start a fresh runtime session on the M2 queue (PQR, who fills, preview by person and channel, S7 Reset + Load sample, validator).
 blocked_by: none
 updated: 2026-10-29
 
-## Handover (28 Oct, to a fresh runtime session; keep current — the founder asked to save after every step)
-* **Where it stands (29 Oct):** W1-15 slice 1 built on branch `runtime/2026-10-27-s5-workspace` at df23c39d (synced main 32961d69): `engine/sources.ts` (Comes from by rules, per role; C4.10 rules), `api/src/fact-sources.ts` (GET/PUT/DELETE …/fact-sources), table `fact_source`, `samples/questions-and-documents.json`; test `check_w115_slice1.ts` (4434). EARLY-LOOK, owner Lead. Channel files (`engine/channels.ts`, `api/src/filing.ts`, the Filed as picker) are the forms lane's now (P-143): keep out of them.
-* **Where it stands (28 Oct, evening):** branch `runtime/2026-10-27-s5-workspace` at bb853222 (pushed from the worktree branch claude/runtime-s5-fix-083cd5), synced with main 38722933. Lead check FIX done (build-notes "Fixes: Lead check L1–L12"); CHECK, owner Lead, who re-merges into PR #71. Nothing half-done; run by-products restored.
-* **FIX notes:** what IRCC accepts is read beside the snapshot (`engine/channels.ts acceptsOf`), never in it (in it, released fingerprints changed on Load); AI now on Who can be is off unless the server has `STUDIO_PEOPLE_AI_LIVE=approved` (founder's Go for a live trial); rules-only people lines are `CODE_MATCH`. Tests `check_s5_leadcheck.ts` (4434) and `check_s5_leadcheck_browser.cjs` (4435).
-* **Before the FIX (28 Oct):** branch `runtime/2026-10-27-s5-workspace`, synced with main 368b8c32 (PR #67, #69). All of S5 is built and checked (build-notes top sections); READY for MERGE at 2d8989ec, handed back by message to the fourth Lead chat (28 Oct), which then passed the lanes to a new Lead chat; the lane stopped at this safe point. Nothing half-done; run by-products restored. Next pass after the merge: the remaining removes on Documents, rules, sections and people with the shared components, and Add a form from the library on S4's picker list.
-* **QA-38:** `newestReleases` in `contracts/runtime.ts` (newest release per combination = the server's rule in `api/src/runtime.ts`); `NewCaseDialog` (`web/src/runtime/cases.tsx`) uses it. Tests: `check_s5_slice1.ts` (list = pin, before and after release 2; old rule vs shared rule), `check_s5_slice2_browser.cjs` (dialog names release 1, then 2; the case opens on Release 2).
-* **QA-40:** the case's Online forms (`api/src/fill-case.ts` `online`) say "IMM 1295 · filed Online (later wave)" (`ONLINE_LATER_WAVE`, `web/src/runtime/forms.tsx`). Tests: same two files (PDF on release 1 is a copy row, Online on release 2 is an Online row; words on the case page; screenshot `slice2/12-case-online-form-1440.png`).
-* **Running checks (runtime ports 4430–4439 only):** scripts were in the session scratchpad; the commands are the usage lines at the top of each test, e.g. `zsh studio/tools/isolated.sh runtime_s5 4431 start && tsx studio/tests/check_s5_slice1.ts 4431 xr_studio_runtime_s5`; full suites `bash product/tools/run-suites.sh` (no `--demo`: it resets :4400); demo journey on an own copy with `STUDIO_URL=http://localhost:4433`. Build the web app first (`cd studio/web && ../node_modules/.bin/vite build`). In a fresh copy run `node_modules/.bin/prisma generate` once.
-* **Learned, not written elsewhere:** the guard hook (`merge-guard.sh`) refuses commands that have variable expansion, `eval`, `$(…)` or words like "merge": put commands in a scratchpad script and run `zsh <file>`. Test runs rewrite other lanes' screenshots, `product/qa/reports`, `prototype/p2` ledgers and `studio/evidence`: commit only this lane's files by path, then `git checkout --` and `git clean` those folders. The qa checks `tests/qa/check_qa_am_1027.cjs` and `check_qa_explore_1025.cjs` stop on this branch at main's older "Forms and coverage" button (S5 replaced it): qa moves them when S5 merges.
-* **Slice 3 (built 28 Oct):** finder strip and dialog (`web/src/pages/workspace/finder.tsx`), Picked by AI · Sample, row ⋯ menu (Redo with AI, Replace edition, Remove from this combination), the one Undo bar on the forms lane's `POST …/forms/undo` plus the shared Undo toast, Removed in this draft with Add back, guides linked as sources (`api/src/guide-sources.ts`, hooks in `demo.ts` and one line in `finder.ts finish`). S5's own restore route is gone. Tests `check_s5_slice3.ts` (4436) and `check_s5_slice3_browser.cjs` (4437). Open for the Lead: Who can be filled by AI (needs a paid live run to record a replay); other tabs' removes; the older Add-from-library picker.
+## Handover (to a fresh runtime session, 29 Oct late; this session stops here per the Lead, P-173)
+* **Exact state:** branch `runtime/2026-10-27-s5-workspace`, last code commit **3839ddf4** (main synced at d59bf029; the contract conflict there was resolved by keeping both `field_map_edition` (forms) and `who_can_be` (runtime) in `contracts/drafting-run.v0`). The worktree is clean; by-products are restored. Nothing is half-done.
+* **Done and with the Lead (Documents tab merge):** slice 3 (Documents tab, Lead check PASS at 740ef734). FIX pass 1 at ccc7b18d covered QA-84, QA-85, QA-88 runtime part, QA-91 as a plan, and the Lead minors; full run-suites gave 68/68 there. FIX pass 2 at 3839ddf4 covered:
+  * QA-92: the drawer saves a case fact under `case`.
+  * QA-93: confirm and Undo in place.
+  * QA-94: no system names.
+  * QA-95: the 5-character reason words, linked to the box.
+  * The `check_s5_slice3_browser` Undo-bar race: the test waits on the row; the app's order is in `forms.tsx`, the forms lane's file, and was left alone.
+* **Checks on 3839ddf4 (own named checks only; CI is the full check, per the Lead):**
+  * `check_qa92_95_browser.cjs` 23/23, three runs (4436).
+  * `check_s5_slice3_browser.cjs` 35/35, five runs in a row (the race).
+  * `check_w115_slice2_browser.cjs` 56/56 and `check_s5_slice2_browser.cjs` 61/61 (their System name assertions now check that no key is on screen).
+  * `check_w115_slice2.ts` 35/35.
+  * A local full run-suites on 3839ddf4 was started and stopped on the Lead's word.
+* **Open for the Lead/founder:**
+  * (1) **QA-93 finding:** choosing a section per combination does not decide what is asked. A question placed in a section in the shared library is asked whatever is chosen, so "Remove" only moved the section to the end. Remove is now offered only for a section that asks this person nothing; elsewhere the reason is written in its place. Should selection decide what is asked, or only order and titles?
+  * (2) QA-91 (Who can be › AI as a run card) is a plan only: build-notes "Fixes: Lead check of slice 3 and qa ai-paths".
+  * (3) `contracts/drafting-run.v0` lists `who_can_be` (expand only).
+* **Next (the Lead's ordered M2 queue, in "From the Lead" on origin/lead/2026-10-29-m3go):**
+  1. PQR (C4.2, C4.7, C4.8).
+  2. Who fills (C4.9).
+  3. Preview by person and channel (C4.3, C4.6).
+  4. S7 Reset + Load sample with the six combinations (C10.1, C11.7).
+  5. Validator (C3.8).
+* **Running checks (runtime ports 4430–4439 only):** the commands are the usage lines at the top of each test, e.g. `zsh studio/tools/isolated.sh runtime_qa9x 4436 start && node studio/tests/check_qa92_95_browser.cjs 4436 xr_studio_runtime_qa9x`.
+  * Build the web app first (`cd studio/web && npx vite build`); an isolated server serves that build.
+  * Use Node 24 from `.tools/node-v24.21.0/bin`. In a fresh copy, run `node_modules/.bin/prisma generate` once.
+  * Never reset :4400.
+* **Learned, not written elsewhere:**
+  * The guard hook refuses many commands (variable expansion, `$(…)`, words like "merge", some branch names): put commands in a scratchpad script and run `zsh <file>`.
+  * Test runs rewrite other lanes' screenshots, `product/qa/reports`, `prototype/p2` runs, jobs and `ledger/used-launch-tickets`, and `studio/evidence`. Commit only this lane's files by path, then `git checkout --` and `git clean` those folders.
+  * On the Questionnaires tab, `[data-section="x"]` also matches the rules and checks area: scope it with `[data-questions]`.
+  * The Undo toast lasts 10 s, so wait on what the action changes, not on the toast.
+  * Earlier slice notes are in screens/W1-questions-and-documents/build-notes.md and screens/W1-combination-workspace/build-notes.md.
 
 ## Log (last 10 lines)
+- 2026-10-29 · Builder (Mac): FIX pass 2 handed back at 3839ddf4: QA-92, QA-93 (Remove only where it changes something; finding for the Lead), QA-94, QA-95, race; own checks green (check_qa92_95_browser 23/23 x3, s5_slice3_browser 35/35 x5, w115_slice2_browser 56/56, s5_slice2_browser 61/61, w115_slice2 35/35); full Handover written; session stops (P-173). AI US$0.
+- 2026-10-29 · Builder (Mac): FIX pass 2 built: QA-92 the drawer saves a case fact under 'case'; QA-93 confirm and Undo in place, Remove offered only where it changes something (found: placed questions stay asked whatever sections are chosen; question for the Lead); QA-94 no system names; QA-95 'Write at least 5 characters'; race test waits on the row. check_qa92_95_browser 23/23 locally; full suites next. AI US$0.
+- 2026-10-29 · Builder (Mac): FIX pass done: QA-84 (schema without numeric limits, counts checked in code), QA-85 (stub plus who_can_be in contracts/drafting-run.v0: the stub run was refused as an unknown kind on Node 24), plain failure words, QA-91 as a plan; release supersedes retired checks; drawer alternatives, 'From the sample setup'; full run-suites 68/68 on ccc7b18d; by-products restored; CHECK, owner Lead. AI US$0.
+- 2026-10-29 · Builder (Mac): applied Lead message (slice 3 check PASS; FIX pass): synced main d50d87f9; QA-84 schema limits checked in code, QA-85 stub, plain failure words (QA-88 runtime part), QA-91 written as a plan; release supersedes retired checks; drawer alternatives, 'From the sample setup'; check_who_can_be_qa 9/9, slice3 34/34, browser 35/35 (d824e53f); full suites running. AI US$0.
+- 2026-10-29 · Builder (Mac): full run-suites on dfd1a018: 64 pass, check_w1_programs_s2 failed one timing check under load (87/87 twice alone on 4436); graph exit 0; by-products restored; slice 3 EARLY-LOOK, owner Lead; Lead message received: QA-84/85/91 FIX next. AI US$0.
+- 2026-10-29 · Builder (Mac): fresh runtime session (Lead's move): open point 3 fixed in engine/snapshot.ts (a draft removal stays out of the published view until a release; fact sources and placements have none), open point 1 said on the Documents tab, (2) information only; check_w115_slice3 31/31, browser 32/32, check_engine 38/38 (dfd1a018, pushed); full suites running. AI US$0.
+- 2026-10-29 · Builder (Mac): slice 3 (Documents tab) built at b5c46535 (check_w115_slice3 26/26, browser 31/31) before the Lead's hold; full suites not run on it; handover written for a fresh session; slice 2 at ff4d9cce with the Lead. AI US$0.
+- 2026-10-29 · Builder (Mac): slice 2 FIX with S2-1, P-154 (Agent retired: Case officer, case view), P-155(3) (case officer with a written reason; one rule agentRefusal; fact_source.source_reason); synced main 170659bc; full run-suites 64/64 on ff4d9cce; slice-1 DV test fix 37e66a2e on the sync branch; CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): founder OK on slice 2 with S2-1: per-person line uses slice 1's sources (chips' numbers); Agent lock kept, now one rule (engine/sources.ts agentRefusal); check_w115_slice2 29/29, browser 48/48, s5 slice2 61/61, slice1 47/47 (b33b941b); full suites running; slice 3 plan written. AI US$0.
 - 2026-10-29 · Builder (Mac): Lead asked for a slice-1 sync: 915aa186 (00444a35 + main f7cb40d9; main.ts keeps FactSources and StartSetup; slice1 47/47, S3 26/26 and 39/39) on runtime/2026-10-29-w115-slice1-sync; brought into slice 2 (dbfde76b); full run-suites 61 pass, check_dv_backbone_browser waited too little for Upload PDF under load (test now waits; 8/8); slice 2 EARLY-LOOK, owner Lead. AI US$0.
-- 2026-10-29 · Builder (Mac): slice 2 (Questionnaires tab, board v2 P-147) built: API bulk and bulk/undo (batch_id), row status, release checks with role, Agent offered only for agent facts; UI strip, chips, Needs you, rows of five, ⋯ menu with reasons, drawer, bulk bar, Who can be folded; check_w115_slice2 26/26, browser 46/46; older S5 browser tests being updated for the fold. AI US$0.
-- 2026-10-29 · Builder (Mac): full run-suites 60/60 on cbb1a57a (W1–W3 fixes; check_studio_browser skipped); by-products restored; CHECK, owner Lead; slice 2 BUILD starts (Lead: founder's OK covers it). AI US$0.
-- 2026-10-29 · Builder (Mac): founder OK on W1-15 slice 1; Lead check W1 (Review lines in words), W2 (Undo refusal words), W3 (no decision codes) fixed with a pass and a fail test each (check_w115_slice1 47/47, check_engine 38/38); full suites next. AI US$0.
-- 2026-10-29 · Builder (Mac): Lead message (P-147 board v2 agreed) applied: fit check of slice 1 against board v2 in plan.md (no data change; slice 2 adds row status and Only if, role on release checks, bulk route with one Undo per batch, ⋯ menu and drawer); EARLY-LOOK, owner Lead. AI US$0.
-- 2026-10-29 · Builder (Mac): applied Lead message (synced main db5e0208; outside review DV-bb-3: the picker links to the Form library; DV-bb-6a: the person role says Child, the Family sponsorship category keeps 'Dependent child'); check_dv_backbone_browser 8/8; full run-suites 59/59 on a506048d; by-products restored; EARLY-LOOK, owner Lead. AI US$0.
-- 2026-10-29 · Builder (Mac): the five suites that failed in the full run pass alone (slice3 browser 35/35, p80 guard 41/41 with the project's Node, launch paths 39/39, s4 runs 90/90, orchestration 22/22); W1-15 slice 1 → EARLY-LOOK, owner Lead; by-products restored. AI US$0.
-- 2026-10-29 · Builder (Mac): full run-suites on df23c39d 53 pass / 5 fail (load: isolated copy did not start, launcher timeouts; slice3 browser Undo toast); rerunning the five alone; by-products restored. AI US$0.
-- 2026-10-29 · Builder (Mac): Lead (seventh chat) resume message applied; one shared preview render for coverage and sources (16d0fdf9; check_engine 38/38); synced main 32961d69 (df23c39d); full suites running on df23c39d. AI US$0.

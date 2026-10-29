@@ -1,6 +1,6 @@
 // W1-15 Questions and documents, slice 1 (P-130; challenge.md M1–M6, m1, m2, Lead response 29 Oct): where the answer to
 // each fact a combination's forms need comes from, per person role, worked out by rules from the snapshot:
-// a document on that role's checklist that supplies it › the client › the agent. A person's choice over that default and
+// a document on that role's checklist that supplies it › the client › the case officer. A person's choice over that default and
 // the Pre-qualification tick are the snapshot's `fact_sources` (only when set). Pure: no database, no AI (US$0).
 import { subjectsFor, type Person } from "./render.ts";
 import { anyMapped, previewRender } from "./coverage.ts";
@@ -83,9 +83,12 @@ export type FactSourceView = {
  *  save, the bulk change, the release check and the screen all read this. */
 export const CASE_OFFICER_NEEDS_REASON = "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release.";
 const REASON_MIN = 5;
+/** QA-95: a reason was written but is too short to say anything; the words say what is missing, not that nothing was written. */
+export const CASE_OFFICER_REASON_SHORT = `Write at least ${REASON_MIN} characters: why the case officer enters it.`;
 export function agentRefusal(f: Pick<FactSourceView, "ruleSource" | "clientOnly">, reason?: string | null): string | null {
   if (f.clientOnly || f.ruleSource === "AGENT") return null;
-  return (reason ?? "").trim().length >= REASON_MIN ? null : CASE_OFFICER_NEEDS_REASON;
+  const n = (reason ?? "").trim().length;
+  return n >= REASON_MIN ? null : n ? CASE_OFFICER_REASON_SHORT : CASE_OFFICER_NEEDS_REASON;
 }
 
 const roleOf = (people: Person[], about: string) => about === "case" ? "case" : people.find((p) => p.id === about.split("/")[0])?.role ?? about;
@@ -164,4 +167,54 @@ export function factSourceProblems(s: Snapshot): Problem[] {
 /** PQR ⊂ SQR ∪ the client's checklist documents (Lead Q1): the ticked facts, each with how it is asked and confirmed. */
 export function prequalification(s: Snapshot): { role: string; fact: string; label: string; source: Source; document: string | null }[] {
   return factSources(s).filter((f) => f.prequalification && f.source !== "AGENT" && f.placed).map((f) => ({ role: f.role, fact: f.fact, label: f.label, source: f.source, document: f.document?.name ?? null }));
+}
+
+// ------------------------------------------------------------------ W1-15 slice 3: each person's checklist (board v2 frame 3)
+
+export type ChecklistFact = { fact: string; label: string; about: About; aboutRole: string | null; takenOut: boolean };
+export type ChecklistLine = {
+  lineage: string; role: string; document: { key: string; name: string }; who: string; base: boolean; when: string;
+  providedBy: string; alternatives: { key: string; name: string }[]; supplies: ChecklistFact[]; aboutOthers: number;
+  quote: string | null; status: string; origin: string; position: number | null;
+  /** Its place on this checklist: the set position, else its place in the default order (always first, then by name). */
+  rank: number;
+};
+/** Each person role's checklist: the lines that name it (per person, as documentFacts reads them), what each supplies
+ *  and about whom, and whether slice 1's rules take that answer out of the questionnaire (its source for that person is
+ *  this document). Order: the set position, then base before conditional, then the name. Pure: no database. */
+export function checklist(s: Snapshot): { role: string; label: string; lines: ChecklistLine[] }[] {
+  const { people } = previewRender(s);
+  const sources = new Map(factSources(s).map((f) => [`${f.role}|${f.fact}`, f]));
+  const meaning = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, (f.meaning ?? f.id).trim().replace(/\.$/, "")]));
+  const types = s.document_types as DocType[];
+  const byRole = new Map<string, ChecklistLine[]>();
+  for (const r of s.document_requirements as any[]) {
+    const t = types.find((x) => x.key === r.document_type_key || x.name === r.document_type);
+    const kind = r.condition?.subjectKind;
+    const holders = kind === "DOCUMENT" ? [] : kind === "CASE" ? subjectsFor(people, r.who) : subjectsFor(people, r.who, kind === "EACH_APPLICANT" || kind === "EACH_PERSON" ? undefined : kind);
+    const roles = [...new Set(holders.map((h) => roleOf(people, h)))];
+    for (const role of roles) {
+      const holder = holders.find((h) => roleOf(people, h) === role)!;
+      const other = (about: About) => about === "holder" ? role : about === "holder.spouse" ? (holder === "case" ? null : roleOf(people, spouseOf(people, holder) ?? "")) : null;
+      const supplies = (t ? suppliesOf(t) : []).map(({ fact, about }) => {
+        const aboutRole = other(about) || null;
+        const src = aboutRole ? sources.get(`${aboutRole}|${fact}`) : undefined;
+        return { fact, label: meaning.get(fact) ?? fact, about, aboutRole, takenOut: !!src && src.source === "DOCUMENT" && src.document?.key === t!.key };
+      });
+      const line: ChecklistLine = {
+        lineage: r.lineage, role, document: { key: t?.key ?? r.document_type_key, name: t?.name ?? r.document_type }, who: r.who,
+        base: r.base_or_conditional === "base", when: r.base_or_conditional === "base" ? "Always" : (r.condition_plain ?? "Only if its condition holds"),
+        providedBy: r.provided_by, alternatives: ((r.alternatives ?? []) as string[]).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })),
+        supplies, aboutOthers: supplies.filter((x) => x.about !== "holder").length, quote: r.source_quote ?? null, status: r.status, origin: r.origin, position: r.position ?? null, rank: 0,
+      };
+      byRole.set(role, [...(byRole.get(role) ?? []), line]);
+    }
+  }
+  // A move sets the position of only the two lines it swaps (api/src/person-checklist.ts): every other line keeps its
+  // place in the default order, so one move is two draft changes, never the whole checklist.
+  const byDefault = (a: ChecklistLine, b: ChecklistLine) => Number(b.base) - Number(a.base) || a.document.name.localeCompare(b.document.name) || a.lineage.localeCompare(b.lineage);
+  for (const list of byRole.values()) [...list].sort(byDefault).forEach((l, i) => { l.rank = l.position ?? (i + 1) * 10; });
+  const order = (a: ChecklistLine, b: ChecklistLine) => a.rank - b.rank || byDefault(a, b);
+  const roles = [...new Set(people.map((p) => p.role as string)), "case"];
+  return roles.filter((r) => byRole.has(r)).map((role) => ({ role, label: who(s, role), lines: byRole.get(role)!.sort(order) }));
 }
