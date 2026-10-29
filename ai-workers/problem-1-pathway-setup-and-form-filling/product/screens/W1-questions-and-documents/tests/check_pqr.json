@@ -1,7 +1,7 @@
 {
-  "at": "2026-10-29T14:15:18.569Z",
+  "at": "2026-10-29T14:22:28.723Z",
   "port": 4436,
-  "pass": 25,
+  "pass": 37,
   "fail": 0,
   "log": [
     {
@@ -159,6 +159,69 @@
         "lines": 0,
         "released": 0
       }
+    },
+    {
+      "name": "C4.7 pass: the rules propose picks as contract v2 queue items, origin rules, each with a reason in words",
+      "ok": true,
+      "detail": [
+        "case|case.country_where_applying: A rule of this combination reads it: The applicant is applying from a country of which they are not a citizen.",
+        "child|person.date_of_birth: A rule of this combination reads it: The person is 18 or older at the application date, or is a minor travelling alone to Canada.",
+        "child|person.marital_status: A rule of this combination reads it: The principal applicant is in a common-law relationship and the partner will accompany them to Canada."
+      ]
+    },
+    {
+      "name": "C4.7 fail-guard: a rules pick is never labelled AI (no AI rounds, rules_only)",
+      "ok": true
+    },
+    {
+      "name": "C4.7 fail: no pick on a case officer fact, a fact no question asks, or a fact already ticked (PQR ⊂ SQR ∪ documents)",
+      "ok": true
+    },
+    {
+      "name": "C4.7 fail: once ticked, the same fact is not proposed again",
+      "ok": true
+    },
+    {
+      "name": "C4.7 roles fail: an approver cannot accept a pick (403)",
+      "ok": true,
+      "detail": 403
+    },
+    {
+      "name": "C4.7 fail: another kind of item is refused here (400)",
+      "ok": true,
+      "detail": 400
+    },
+    {
+      "name": "C4.7 fail: a pick already decided is refused (409)",
+      "ok": true,
+      "detail": 409
+    },
+    {
+      "name": "C4.7 pass: Accept writes the tick through the same draft row, with the pick's reason, origin CODE_MATCH (the rules, not AI)",
+      "ok": true,
+      "detail": "200 DRAFT|CODE_MATCH|true|A rule of this combination reads it: The applicant is applying from a country of which they are not a citizen."
+    },
+    {
+      "name": "C4.7 fail: accepting the same pick twice is refused in words (409 Asked already)",
+      "ok": true,
+      "detail": "\"Country or territory from which the application is being made\" is already asked in pre-qualification."
+    },
+    {
+      "name": "C4.7 pass: an AI pick is accepted the same way with origin AI_PROPOSAL",
+      "ok": true,
+      "detail": 200
+    },
+    {
+      "name": "C4.7 fail: a pick on a case officer fact is refused with the tick's own words (422)",
+      "ok": true,
+      "detail": "\"IRCC application file number of the case\" comes from the case officer: a prospect is asked only what they can answer."
+    },
+    {
+      "name": "C4.8 + C4.7: the accepted pick is a named change of the one release, for the immigration expert's sign-off",
+      "ok": true,
+      "detail": [
+        "Country or territory from which the application is being made (The application): pre-qualification"
+      ]
     },
     {
       "name": "C4.2 fail: an unknown combination is 404 in words (never a 500)",

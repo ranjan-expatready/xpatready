@@ -6,7 +6,8 @@ import { randomUUID } from "node:crypto";
 import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
 import { z } from "zod";
 import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
-import { agentRefusal, CASE_OFFICER_NEEDS_REASON, countryPqr, factSourceProblems, factSources, prequalification, SOURCES, type FactSourceView } from "../../engine/sources.ts";
+import { agentRefusal, CASE_OFFICER_NEEDS_REASON, countryPqr, factSourceProblems, factSources, prequalification, SOURCES, who, type FactSourceView } from "../../engine/sources.ts";
+import { ProposalItem } from "../../contracts/proposal-item.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
 
@@ -197,6 +198,40 @@ export async function bulkUndo(db: Db, audit: Audit, actor: Actor, c: { id: stri
   await db.factSource.deleteMany({ where: { id: { in: go.map((r) => r.id) } } });
   await audit.log(c.workspaceId, actor.id, "undone", "fact source", `bulk:${parsed.data.batchId}`, `${actor.name} undid their change to ${go.length} question${go.length === 1 ? "" : "s"} in "${c.label}"`, { rows: go.map((r) => r.lineageKey) }, c.id);
   return { undone: go.length, kept };
+}
+
+/** C4.7 Accept (Lead, 29 Oct; P-149 one door): S6's queue calls this when a person accepts a waiting `pqr_pick` item. It
+ *  writes the tick through the same draft row and refusals as a person's tick, keeping the pick's reason, so it goes out in
+ *  the combination's one release. Origin: AI_PROPOSAL for an AI pick; CODE_MATCH for the rules' stand-in (never shown as AI).
+ *  Not routed: the queue (S6 slice 1) is the one door; there is no second pick store or route here. */
+export async function acceptPqrPick(db: Db, audit: Audit, actor: Actor, raw: unknown) {
+  need(actor, "author");
+  const parsed = ProposalItem.safeParse(raw);
+  if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
+  const item = parsed.data;
+  if (item.payload.kind !== "pqr_pick") throw problem(400, "Not a pick", "Only a pre-qualification pick is accepted here.");
+  if (item.status !== "waiting") throw problem(409, "Decided already", "This pick was already accepted or rejected.");
+  const id = item.scope.combinationId ?? "";
+  const c = /^[0-9a-f-]{36}$/i.test(id) ? await db.combination.findUnique({ where: { id } }) : null;
+  if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
+  if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its pre-qualification is not changed. Restore it on Structure first.`);
+  const { role, factKey: fact, reason } = item.payload;
+  const lineageKey = `${role}|${fact}`;
+  const rows = await db.factSource.findMany({ where: { combinationId: id, lineageKey }, orderBy: { version: "desc" } });
+  const newest = rows[0];
+  const { snapshot } = await buildSnapshot(db, c.workspaceId, id, "draft");
+  const f = factSources(snapshot).find((x) => x.role === role && x.fact === fact);
+  if (!f) throw problem(404, "Not needed", `No form of "${c.label}" needs this answer for this person any more, so it is not asked. Reject the pick.`);
+  if (f.prequalification) throw problem(409, "Asked already", `"${f.label}" is already asked in pre-qualification.`);
+  const errors = refusals(f, (newest?.source ?? null) as FactSourceView["source"] | null, newest?.documentTypeKey ?? null, true, newest?.sourceReason ?? null);
+  if (errors.length) throw problem(422, "Not possible", errors[0].message, { errors });
+  await db.$transaction(async (tx) => {
+    if (newest?.status === "DRAFT") await tx.factSource.delete({ where: { id: newest.id } });
+    await tx.factSource.create({ data: { workspaceId: c.workspaceId, combinationId: id, lineageKey, role, canonicalFieldKey: fact, source: newest?.source ?? null, documentTypeKey: newest?.documentTypeKey ?? null, prequalification: true, reason, sourceReason: newest?.sourceReason ?? null,
+      version: (newest?.version ?? 0) + 1, status: "DRAFT", supersedesId: rows.find((r) => r.status === "PUBLISHED")?.id ?? null, origin: item.origin === "ai" ? "AI_PROPOSAL" : "CODE_MATCH", updatedBy: actor.id } });
+  });
+  await audit.log(c.workspaceId, actor.id, "accepted", "fact source", lineageKey, `${actor.name} accepted the ${item.origin === "ai" ? "AI's" : "rules'"} pick: ask "${f.label}" (${who(snapshot, role)}) in pre-qualification for "${c.label}". Why: ${reason}`, { itemId: item.id, runId: item.runId }, id);
+  return factSources((await buildSnapshot(db, c.workspaceId, id, "draft")).snapshot).find((x) => x.role === role && x.fact === fact);
 }
 
 /** The same rules release applies (engine/sources.ts factSourceProblems), said at save for this one fact. */

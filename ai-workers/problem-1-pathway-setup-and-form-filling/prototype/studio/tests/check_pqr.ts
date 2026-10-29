@@ -2,12 +2,13 @@
 // (the per-combination tick, slice 1), the country PQR as a view of the newest releases (never a record), and the PQR
 // going out in the combination's one review and release. A passing and a failing case per rule: the engine on the
 // sample's own snapshots, and the API on an isolated copy with the sample loaded. Rules only: no AI call (US$0).
-// C4.7 (AI picks) waits for the Lead's answer on where a pending pick lives (plan.md "PQR", question).
+// C4.7 (Lead, 29 Oct): the rules' stand-in producer and the Accept path against contract v2; no queue until S6 slice 1.
 //   zsh studio/tools/isolated.sh runtime_pqr 4436 start && tsx studio/tests/check_pqr.ts 4436 xr_studio_runtime_pqr
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { countryPqr, factSources, prequalification } from "../engine/sources.ts";
+import { countryPqr, factSources, pqrPicksByRules, prequalification } from "../engine/sources.ts";
+import { ProposalItem } from "../contracts/proposal-item.ts";
 
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_runtime_pqr";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -95,6 +96,45 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
   K = await country();
   ok("C4.2 P-132 fail: a retired combination's release is not in the country PQR (prospects are not asked for it)", K.lines.length === 0 && K.released === 0, { lines: K.lines.length, released: K.released });
   sql(`update combination set retired_at=null where id='${wp}'`);
+  // ---------------------------------------------------------------- C4.7: rules producer and Accept (no queue yet, P-149)
+  const D = (await call("GET", `/combinations/${wp}/config?mode=draft`)).body.snapshot;
+  let seq = 0; const newId = () => `00000000-0000-4000-8000-${String(++seq).padStart(12, "0")}`;
+  const RUN = "11111111-1111-4111-8111-111111111111";
+  const picks = pqrPicksByRules(D, wp, RUN, newId);
+  const views = new Map(factSources(D).map((f) => [`${f.role}|${f.fact}`, f]));
+  ok("C4.7 pass: the rules propose picks as contract v2 queue items, origin rules, each with a reason in words", picks.length > 0 && picks.every((x) => ProposalItem.safeParse(x).success && x.origin === "rules" && x.payload.kind === "pqr_pick" && /A rule of this combination reads it/.test((x.payload as any).reason)), picks.slice(0, 3).map((x: any) => `${x.payload.role}|${x.payload.factKey}: ${x.payload.reason}`));
+  ok("C4.7 fail-guard: a rules pick is never labelled AI (no AI rounds, rules_only)", picks.every((x) => x.agreement === "rules_only" && !x.rounds.draft && !x.rounds.check && x.step === "pqr_picks_by_rules"));
+  ok("C4.7 fail: no pick on a case officer fact, a fact no question asks, or a fact already ticked (PQR ⊂ SQR ∪ documents)", picks.every((x: any) => { const f = views.get(`${x.payload.role}|${x.payload.factKey}`); return !!f && f.source !== "AGENT" && f.placed && !f.prequalification; }));
+  const ticked = clone(D); ticked.fact_sources = [{ role: (picks[0].payload as any).role, fact: (picks[0].payload as any).factKey, source: null, document_type: null, prequalification: true, reason: null, origin: "HUMAN" }];
+  ok("C4.7 fail: once ticked, the same fact is not proposed again", !pqrPicksByRules(ticked, wp, RUN, newId).some((x: any) => x.identity.key === picks[0].identity.key));
+  process.env.DATABASE_URL = `postgresql://xr_studio@127.0.0.1:54329/${DB}`;
+  const core = await import("../api/src/core.ts"); const { acceptPqrPick } = await import("../api/src/fact-sources.ts");
+  const db = new core.Db(); const audit = new core.Audit(db);
+  const actor = (id: string) => [...core.ACTORS, ...core.RUNTIME_ACTORS].find((a) => a.id === id)!;
+  const tryAccept = async (who: string, item: unknown) => { try { return { status: 200, body: await acceptPqrPick(db, audit, actor(who) as any, item) }; } catch (e: any) { return { status: e.getStatus?.() ?? 500, body: e.getResponse?.() ?? String(e) }; } };
+  const pick = picks[0] as any;
+  r = await tryAccept("user-B", pick);
+  ok("C4.7 roles fail: an approver cannot accept a pick (403)", r.status === 403, r.status);
+  r = await tryAccept("user-A", { ...pick, payload: { kind: "comes_from", factKey: pick.payload.factKey, role: pick.payload.role, from: "client", documentType: null }, kind: "comes_from" });
+  ok("C4.7 fail: another kind of item is refused here (400)", r.status === 400, r.status);
+  r = await tryAccept("user-A", { ...pick, status: "accepted" });
+  ok("C4.7 fail: a pick already decided is refused (409)", r.status === 409, r.status);
+  r = await tryAccept("user-A", pick);
+  const row = sql(`select status || '|' || origin || '|' || prequalification || '|' || coalesce(reason,'') from fact_source where combination_id='${wp}' and lineage_key='${pick.identity.key}' order by version desc limit 1`);
+  ok("C4.7 pass: Accept writes the tick through the same draft row, with the pick's reason, origin CODE_MATCH (the rules, not AI)", r.status === 200 && r.body?.prequalification === true && row.startsWith("DRAFT|CODE_MATCH|true|A rule of this combination reads it"), `${r.status} ${row}`);
+  r = await tryAccept("user-A", pick);
+  ok("C4.7 fail: accepting the same pick twice is refused in words (409 Asked already)", r.status === 409 && /already asked/.test(String(r.body?.detail)), r.body?.detail);
+  const second = picks.find((x: any) => x.identity.key !== pick.identity.key) as any;
+  if (second) {
+    r = await tryAccept("user-A", { ...second, origin: "ai", step: "w1_10_step_7", agreement: "agreed" });
+    ok("C4.7 pass: an AI pick is accepted the same way with origin AI_PROPOSAL", r.status === 200 && sql(`select origin from fact_source where combination_id='${wp}' and lineage_key='${second.identity.key}' order by version desc limit 1`) === "AI_PROPOSAL", r.status);
+  }
+  const officer = factSources(D).find((f) => f.source === "AGENT" && f.placed);
+  if (officer) { r = await tryAccept("user-A", { ...pick, id: newId(), payload: { ...pick.payload, factKey: officer.fact, role: officer.role }, identity: { key: `${officer.role}|${officer.fact}`, near: [], nearReason: null } }); ok("C4.7 fail: a pick on a case officer fact is refused with the tick's own words (422)", r.status === 422 && /prospect is asked only what they can answer/.test(String(r.body?.detail)), r.body?.detail); }
+  c = (await call("GET", `/combinations/${wp}`)).body;
+  ok("C4.8 + C4.7: the accepted pick is a named change of the one release, for the immigration expert's sign-off", (c.draft.changes as any[]).some((x) => x.key === pick.identity.key && x.needs_sme && /pre-qualification/.test(x.label)), (c.draft.changes as any[]).filter((x) => x.key === pick.identity.key).map((x) => x.label));
+  await db.$disconnect();
+
   r = await call("GET", `/combinations/not-a-combination/pqr/country`);
   ok("C4.2 fail: an unknown combination is 404 in words (never a 500)", r.status === 404 && /does not exist/.test(words(r)), r.status);
   r = await call("GET", `/combinations/${wp}/pqr/country`, undefined, "nobody");

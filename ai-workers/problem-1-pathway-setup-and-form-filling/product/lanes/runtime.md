@@ -7,11 +7,11 @@
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: M2 queue item 2, PQR (C4.2, C4.7, C4.8; P-76, P-130, P-132)
-current_slice: PQR part 1 built (C4.2 PQR chip and country PQR view; C4.8 proved); C4.7 waits the Lead's answer (plan.md "PQR")
+current_slice: PQR built up to the queue: C4.2 chip and country PQR view, C4.8 proved, C4.7 rules producer + Accept path (contract v2, no route, no store; Lead answer 29 Oct, plan.md "PQR")
 stage: CHECK
 owner: Lead
-next_action: Lead: check PQR part 1 (CI is the full check) and answer the C4.7 question: where a pending AI pick lives until S6's queue exists. Then the Builder builds C4.7, or moves on to item (3) who fills (C4.9).
-blocked_by: Lead answer on C4.7 (pending pick record)
+next_action: Lead: check PQR (CI is the full check). Builder, by the Lead's order: queue item (3) who fills (C4.9), then (4) Preview; C4.7 is wired into S6's queue once S6 slice 1 is on main.
+blocked_by: C4.7 queue wiring waits S6 slice 1 (screens) on main
 updated: 2026-10-29
 
 ## Handover (to a fresh runtime session, 29 Oct late; this session stops here per the Lead, P-173)
@@ -50,6 +50,7 @@ updated: 2026-10-29
   * Earlier slice notes are in screens/W1-questions-and-documents/build-notes.md and screens/W1-combination-workspace/build-notes.md.
 
 ## Log (last 10 lines)
+- 2026-10-29 · Builder (Mac): Lead answers applied: QA-93 decided (P-174, kept as built); C4.7 one door (P-149), no runtime pick store. Synced main 54f25ae4; built pqrPicksByRules (contract v2 pqr_pick items, origin rules) and acceptPqrPick (tick through the same draft row; AI_PROPOSAL for AI, CODE_MATCH for rules), unrouted until S6 slice 1; order in plan.md "PQR"; check_pqr 37/37, check_pqr_browser 20/20; CHECK, owner Lead; next (3) who fills. AI US$0.
 - 2026-10-29 · Builder (Mac, fresh session): applied Lead note (ninth chat, read from origin/lead/2026-10-29-m3go): PQR plan in plan.md "PQR"; C4.7 question sent to the Lead (where a pending AI pick lives); built C4.2 (Pre-qualification chip on the Questionnaires tab; country PQR view GET /api/combinations/:id/pqr/country, P-132) and proved C4.8; check_pqr 25/25, check_pqr_browser 20/20, slice1 47/47, slice2 35/35, engine 38/38 on 4436; CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): FIX pass 2 handed back at 3839ddf4: QA-92, QA-93 (Remove only where it changes something; finding for the Lead), QA-94, QA-95, race; own checks green (check_qa92_95_browser 23/23 x3, s5_slice3_browser 35/35 x5, w115_slice2_browser 56/56, s5_slice2_browser 61/61, w115_slice2 35/35); full Handover written; session stops (P-173). AI US$0.
 - 2026-10-29 · Builder (Mac): FIX pass 2 built: QA-92 the drawer saves a case fact under 'case'; QA-93 confirm and Undo in place, Remove offered only where it changes something (found: placed questions stay asked whatever sections are chosen; question for the Lead); QA-94 no system names; QA-95 'Write at least 5 characters'; race test waits on the row. check_qa92_95_browser 23/23 locally; full suites next. AI US$0.
@@ -59,4 +60,3 @@ updated: 2026-10-29
 - 2026-10-29 · Builder (Mac): fresh runtime session (Lead's move): open point 3 fixed in engine/snapshot.ts (a draft removal stays out of the published view until a release; fact sources and placements have none), open point 1 said on the Documents tab, (2) information only; check_w115_slice3 31/31, browser 32/32, check_engine 38/38 (dfd1a018, pushed); full suites running. AI US$0.
 - 2026-10-29 · Builder (Mac): slice 3 (Documents tab) built at b5c46535 (check_w115_slice3 26/26, browser 31/31) before the Lead's hold; full suites not run on it; handover written for a fresh session; slice 2 at ff4d9cce with the Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): slice 2 FIX with S2-1, P-154 (Agent retired: Case officer, case view), P-155(3) (case officer with a written reason; one rule agentRefusal; fact_source.source_reason); synced main 170659bc; full run-suites 64/64 on ff4d9cce; slice-1 DV test fix 37e66a2e on the sync branch; CHECK, owner Lead. AI US$0.
-- 2026-10-29 · Builder (Mac): founder OK on slice 2 with S2-1: per-person line uses slice 1's sources (chips' numbers); Agent lock kept, now one rule (engine/sources.ts agentRefusal); check_w115_slice2 29/29, browser 48/48, s5 slice2 61/61, slice1 47/47 (b33b941b); full suites running; slice 3 plan written. AI US$0.
