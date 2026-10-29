@@ -32,13 +32,13 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 current_screen: W1-shared-library (S6 Shared library)
 stage: PLAN addendum P-149 sent; waiting for Lead answers Q-A1..A4 and forms slice 0 on main
 owner: Lead
-next_action: Lead: answer plan.md "Addendum: P-149" §D (Q-A1 placement AI on Send, Q-A2 contract changes in slice 0, Q-A3 identity for lists and sections, Q-A4 no bulk for person items); message the lane when forms slice 0 is on main; then S6 slice 1 BUILD from main
+next_action: Lead: answer plan-p149.md §D (Q-A1 placement AI on Send, Q-A2 contract changes in slice 0, Q-A3 identity for lists and sections, Q-A4 no bulk for person items); message the lane when forms slice 0 is on main; then S6 slice 1 BUILD from main
 then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
 blocked_by: forms slice 0 on main (Lead PR)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
-- 2026-10-29 · W1-shared-library (S6) · PLAN addendum · applied Lead message (P-149): plan.md "Addendum: P-149" — what holds on main (versions, release freeze, file-only forms, sme duty), changes per slice (one door, identity rule at write and approval, versions guard, meaning question, example cases, placements, coverage gap), forms contract changes and W1-10 producers, Lead Q-A1..A4. No code. US$0.
+- 2026-10-29 · W1-shared-library (S6) · PLAN addendum · applied Lead message (P-149): plan-p149.md (moved out of plan.md, line limit) — what holds on main (versions, release freeze, file-only forms, sme duty), changes per slice (one door, identity rule at write and approval, versions guard, meaning question, example cases, placements, coverage gap), forms contract changes and W1-10 producers, Lead Q-A1..A4. No code. US$0.
 - 2026-10-29 · sync · main f7cb40d9 merged (PR #76: S3 Start setup and DV-bb-1/6b/6c on main); no conflicts. S6 BUILD still waits for forms slice 0 on main. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN agreed · applied Lead message: Q-L1..L5 yes, N1/N2 accepted, founder Q1 with the Lead (slice R waits; slice 1 does not); written under "Lead response, agreed 29 Oct" in plan.md. Nothing to build until forms slice 0 is on main. US$0.
 - 2026-10-29 · W1-shared-library (S6) · EARLY-LOOK → PLAN · applied Lead message (contract approved): fresh re-check on 28d78cdc (R-109, fresh agent) and plan.md (R1–R5 answered on P-138, the approved contract and the step runner 619eaac4; N1 edition key, N2 old kinds; back-end table; slices with Capability/Scaffolding labels; ownership; founder Q1, Lead Q-L1..L5). No code. US$0. Owner Lead.
