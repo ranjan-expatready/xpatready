@@ -7,7 +7,8 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { acceptedFor, allowedChannels, channelProblems, filingKind, filingMethod, fingerprintLine, lineOf, type AcceptRecord } from "../engine/channels.ts";
-import { diff } from "../engine/validate.ts";
+import { diff, validate } from "../engine/validate.ts";
+import { oathMappedProblems } from "../engine/form-steps.ts";
 import { SetChannel, signatureFits } from "../contracts/forms.ts";
 import { AcceptsBody } from "../contracts/form-library.ts";
 import { codeForValue, draftOptionMap, optionMapProblems, pdfOptions } from "../engine/options.ts";
@@ -78,6 +79,20 @@ const intake = async (file: string, combinationId: string) => {
     !ee("ONLINE").some((x) => x.level === "error") && ee("PDF_UPLOAD").some((x) => x.level === "error" && /through the IRCC secure account only as Online/.test(x.message)), ee("PDF_UPLOAD"));
   const nn = channelProblems({ ...snap([{ form_number: "IMM 5669", channel: "NOT_NEEDED" }]), combination: { portal: "APR_PORTAL" } } as unknown as Snapshot, new Map([["IMM 5669", recs]]));
   ok("C1.6 C-4 fail: a Not needed line without its account's record is an error at release", nn.some((x) => x.level === "error" && /marked Not needed/.test(x.message)), nn);
+  // C-11 (P-171 c): a release whose field map maps a box of IMM 5409's oath block says that box is completed by a person
+  // at the oath and never filled; a declarant's own box mapped is not flagged. The real inventory, read as validate reads it.
+  const S5 = "IMM_5409[0].Page1[0].Section5[0].", INV5409 = "prototype/p1/inventory/imm5409e.inventory.json";
+  const map5409 = (paths: string[]) => [{ form_number: "IMM 5409", form_edition: "IMM 5409 (test)", inventory_file: INV5409, entries: paths.map((p) => ({ data_path: p, caption: p.split(".").pop(), outcome: "mapped", fact: "person.family_name" })) }];
+  const inv5409 = (f: string) => JSON.parse(readFileSync(join(STUDIO, "..", "..", f), "utf8")).fields;
+  const oathHit = oathMappedProblems(map5409([`${S5}City[0]`, `${S5}NameDecl[0]`]), inv5409);
+  ok("C1.6 C-11 pass: at release a mapped oath box of IMM 5409 (where it is declared) is said to be completed by a person at the oath, never filled", oathHit.length === 1 && oathHit[0].item === `${S5}City[0]` && oathHit[0].level === "warning" && /By a person/.test(oathHit[0].message) && /never fills it/.test(oathHit[0].message), oathHit);
+  ok("C1.6 C-11 fail: a declarant's own box, an unmapped oath box, an Online map or a map with no form field list is not flagged",
+    oathMappedProblems(map5409([`${S5}NameDecl[0]`]), inv5409).length === 0
+    && oathMappedProblems([{ ...map5409([`${S5}City[0]`])[0], entries: [{ data_path: `${S5}City[0]`, outcome: "unresolved", fact: null }] }], inv5409).length === 0
+    && oathMappedProblems([{ ...map5409([`${S5}City[0]`])[0], channel: "ONLINE" }], inv5409).length === 0
+    && oathMappedProblems([{ ...map5409([`${S5}City[0]`])[0], inventory_file: null }], inv5409).length === 0);
+  const relOath = validate({ ...snap([]), sections: [], placements: [], document_requirements: [], document_types: [], rules: [], checks: [], derived_fields: [], field_maps: map5409([`${S5}Title[0]`]) } as unknown as Snapshot, [{ key: "person.family_name", valueType: "text" }], []).filter((x) => /belongs to the oath/.test(x.message));
+  ok("C1.6 C-11 pass: the release's own validation (validate) carries it, reading the form field list from the map", relOath.length === 1 && relOath[0].item === `${S5}Title[0]`, relOath);
   ok("C1.6 C-8 pass: an older release's SIGNED_PDF_UPLOAD reads as PDF upload, signed by hand and scanned", JSON.stringify(lineOf({ channel: "SIGNED_PDF_UPLOAD" })) === '{"channel":"PDF_UPLOAD","signature":"HAND_SCANNED"}' && lineOf({ channel: "PAPER" }).signature === "PEN");
   const old = { forms: [{ form_number: "IMM 5707", channel: "SIGNED_PDF_UPLOAD", title: "T" }] }, now = { forms: [{ form_number: "IMM 5707", signature: "HAND_SCANNED", title: "T" }] };
   ok("C1.6 C-8 pass: the same line in the new spelling is not a change since release (fingerprint and comparison)", (fingerprintLine(now.forms[0]) as { channel?: string }).channel === "SIGNED_PDF_UPLOAD" && !("signature" in fingerprintLine(now.forms[0])) && !diff(old as unknown as Snapshot, now as unknown as Snapshot).some((c) => c.kind === "Form"));
