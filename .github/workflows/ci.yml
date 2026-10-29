@@ -5,7 +5,7 @@
 # pull request to main, tested on its merge result. Per pull request, in one job (each job bills at least a minute):
 #   * always: the push guard on the pull request's commits, the rules-file checks, the decision-impact check, the
 #     graph check (P-86) and the official IRCC PDF checksums (P-31);
-#   * when the pull request changes code (anything but docs, images and PDFs): the explicit-any count and the full studio suites (run-suites.sh --demo, which includes the engine
+#   * when the pull request changes code (files under prototype/, except docs, images and PDFs): the explicit-any count and the full studio suites (run-suites.sh --demo, which includes the engine
 #     suite; no model call, US$0) on a machine set up by cloud-setup.sh.
 # A lane opens its pull request when its work is ready for the Lead's check, so a code change is tested about once;
 # a newer push to the pull request cancels the older run. Docs-only pull requests (most Lead PRs) take about a minute.
@@ -32,7 +32,9 @@ jobs:
         name: does this pull request change code?
         run: |
           # No early-exit grep in a pipe: under pipefail its SIGPIPE would read as "no code changed".
-          code=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" | grep -ivE '\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$' || true)
+          # Code = the app and its tools under prototype/ (or the build setup); the product records' own checkers, boards
+          # and this file run only the fast checks above (founder, 29 Oct: no full suites for records PRs).
+          code=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" | grep -E '^(ai-workers/problem-1-pathway-setup-and-form-filling/prototype/|\.nvmrc$)' | grep -ivE '\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$' || true)
           if [ -z "$code" ]; then
             echo "Docs and records only: suites not needed." >> "$GITHUB_STEP_SUMMARY"
             echo "changed=false" >> "$GITHUB_OUTPUT"; echo "suites=false" >> "$GITHUB_OUTPUT"; exit 0

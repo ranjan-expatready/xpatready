@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pathway Configurator — end-to-end: who does what · 29 Oct 2026</title>
+<style>
+  :root{
+    --ink:#1c1c1a; --sub:#5f5e5a; --line:#e1e0d9; --paper:#fcfcfb; --panel:#f6f6f4;
+    --human:#256abf; --human-bg:#ebf4fc;
+    --gate:#7b4fbf;  --gate-bg:#f2eeff;
+    --ai:#b34d00;    --ai-bg:#fdf0e2;
+    --sys:#4a6b2f;   --sys-bg:#eef5e6;
+    --ext:#0f7e5c;   --ext-bg:#e2f4ed;
+    --w:#639922; --b:#5598e7; --p:#ef9f27; --d:#8e6bd8; --x:#c3c2b7; --pk:#8a897f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);font:14px/1.45 -apple-system,"Segoe UI",Roboto,sans-serif;padding:28px}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:15px;margin:34px 0 10px;border-bottom:2px solid var(--ink);padding-bottom:6px}
+  .deck{color:var(--sub);margin:0 0 14px;max-width:1100px}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--sub);margin:10px 0 6px}
+  .legend b{color:var(--ink);font-weight:600}
+  .chip{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;vertical-align:1px}
+  .c-human{background:var(--human-bg);color:var(--human)}
+  .c-gate{background:var(--gate-bg);color:var(--gate)}
+  .c-ai{background:var(--ai-bg);color:var(--ai)}
+  .c-sys{background:var(--sys-bg);color:var(--sys)}
+  .c-ext{background:var(--ext-bg);color:var(--ext)}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
+  .d-w{background:var(--w)} .d-b{background:var(--b)} .d-p{background:var(--p)} .d-d{background:var(--d)} .d-x{background:var(--x)} .d-pk{background:var(--pk)}
+
+  /* ---------- swimlane board ---------- */
+  .boardwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--paper)}
+  table.board{border-collapse:separate;border-spacing:0;min-width:1680px;width:100%}
+  .board th,.board td{vertical-align:top;padding:8px;border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+  .board thead th{background:var(--ink);color:#fff;text-align:left;font-size:12px;padding:10px 8px}
+  .board thead th small{display:block;font-weight:400;color:#d8d7d1;margin-top:2px}
+  .board td.lane{width:150px;min-width:150px;font-weight:600;font-size:12.5px;background:var(--panel)}
+  .board td.lane small{display:block;font-weight:400;color:var(--sub);margin-top:3px}
+  .board td.cell{width:190px;min-width:190px;background:#fff}
+  .board td.cell.dim{background:var(--paper)}
+  tr.parked td{background:#fafaf8}
+  .card{border:1px solid var(--line);border-left-width:4px;border-radius:6px;padding:6px 8px;margin:0 0 6px;background:#fff;font-size:12px}
+  .card:last-child{margin-bottom:0}
+  .card .t{font-weight:600;display:block;margin-bottom:1px}
+  .card .num{display:inline-block;background:var(--ink);color:#fff;border-radius:8px;font-size:10px;padding:0 5px;margin-right:5px;font-weight:600}
+  .card small{color:var(--sub);display:block;margin-top:2px}
+  .card.human{border-left-color:var(--human)} .card.human .num{background:var(--human)}
+  .card.gate{border-left-color:var(--gate)} .card.gate .num{background:var(--gate)}
+  .card.ai{border-left-color:var(--ai)} .card.ai .num{background:var(--ai)}
+  .card.sys{border-left-color:var(--sys)} .card.sys .num{background:var(--sys)}
+  .card.ext{border-left-color:var(--ext)} .card.ext .num{background:var(--ext)}
+  .card.parked{border-style:dashed;border-left-color:var(--pk)} .card.parked .num{background:var(--pk)}
+  .st{float:right;font-size:10px;color:var(--sub);white-space:nowrap}
+
+  /* ---------- matrix ---------- */
+  table.mx{border-collapse:collapse;width:100%;font-size:12.5px}
+  .mx th{background:var(--ink);color:#fff;text-align:left;padding:7px 9px;font-size:12px}
+  .mx td{border:1px solid var(--line);padding:6px 9px;vertical-align:top}
+  .mx tr:nth-child(even) td{background:var(--paper)}
+  .mx td.art{font-weight:600;width:200px}
+  .never{background:#fdf3f0 !important}
+  .note{font-size:12px;color:var(--sub);margin-top:6px}
+  .callout{border:1px solid var(--line);border-left:4px solid var(--ai);background:var(--ai-bg);border-radius:6px;padding:10px 14px;margin-top:14px;max-width:1100px}
+  .callout b{color:var(--ai)}
+  .callout.sysb{border-left-color:var(--sys);background:var(--sys-bg)} .callout.sysb b{color:var(--sys)}
+</style></head>
+<body>
+
+<h1>Pathway Configurator — end-to-end: who does what</h1>
+<p class="deck">One picture of the whole loop, <b>without the browser extension</b> (P-101/P-102: parked, back last for online fill only). A combination's forms are found by AI and fetched from canada.ca or uploaded by a person; AI turns them into proposed master data; people curate and release; a case answers every fact once — <b>documents before questions</b> (P-130); the engine fills every channel the filing uses. Colour of the card = <b>who acts</b>; dot = <b>where it stands today</b> (qa-verified state at 29 Oct 2026, <code>qa/CAPABILITIES.md</code>; designed scope from <code>DECISIONS.md</code> and <code>WAVE-1.md</code>). Supersedes the 26 Oct map (its extension cards, "the product never fetches" and the capture steps are gone).</p>
+<div class="legend">
+  <span><b>Who acts:</b></span>
+  <span><span class="chip c-human">Person — author / officer / client</span></span>
+  <span><span class="chip c-gate">Second person · expert (approval gate)</span></span>
+  <span><span class="chip c-ai">AI (only ever proposes)</span></span>
+  <span><span class="chip c-sys">Engine / system (deterministic)</span></span>
+  <span><span class="chip c-ext">Browser extension (parked)</span></span>
+</div>
+<div class="legend">
+  <span><b>Status:</b></span>
+  <span><span class="dot d-w"></span>Works (qa-tested)</span>
+  <span><span class="dot d-b"></span>Built, merged, not yet qa-tested</span>
+  <span><span class="dot d-p"></span>Partial</span>
+  <span><span class="dot d-d"></span>Agreed / designed, not built</span>
+  <span><span class="dot d-x"></span>Not built</span>
+  <span><span class="dot d-pk"></span>Parked</span>
+</div>
+
+<div class="boardwrap"><table class="board">
+<thead><tr>
+  <th>Actor</th>
+  <th>1 · Structure<small>Decide what the firm sells</small></th>
+  <th>2 · Sources<small>Get IRCC's own files in</small></th>
+  <th>3 · AI drafts<small>Read → propose masters</small></th>
+  <th>4 · People curate<small>Accept → release</small></th>
+  <th>5 · Assemble<small>Documents &amp; questions per person</small></th>
+  <th>6 · Run a case<small>Facts asked once</small></th>
+  <th>7 · Produce outputs<small>Fill every channel</small></th>
+  <th>8 · File &amp; change<small>Submit; keep current</small></th>
+</tr></thead>
+<tbody>
+
+<tr>
+  <td class="lane">Content publisher<br><small>"Super Admin" — configures once per combination</small></td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-w"></span>works</span><span class="num">1</span><span class="t">Build the path</span>Pathway › Program › Category › Sub-category; the leaf is the <b>combination</b>. Retail / Corporate tabs, numbered outline (Tree + List), filter bar, one Add pop-up; duplicates refused (P-104, P-128).</div>
+    <div class="card human"><span class="st"><span class="dot d-b"></span>built 29 Oct</span><span class="num">2</span><span class="t">Start setup on the card</span>Every structure combination is a card on Immigration programs; Start setup opens its workspace, place read-only. Loads the finder's saved result at US$0, else offers "Find forms with AI (about US$0.20)" — runs only on a click (P-125, P-138).</div>
+  </td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-b"></span>built</span><span class="num">3</span><span class="t">Forms enter one door</span>The form library is the only door: the finder downloads from canada.ca, or Upload PDF takes many files; duplicates by number + edition + checksum refused; guides and checklists stored as "Read by AI" (P-123, S4).</div>
+    <div class="card human"><span class="st"><span class="dot d-w"></span>works</span><span class="num">4</span><span class="t">Upload official files</span>A person uploads; code · edition · published · checksum read <b>without AI</b>. Off-list → held with a plain reason before library, attachment or AI.</div>
+  </td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-p"></span>partial</span><span class="num">5</span><span class="t">Click to draft</span>Every AI run starts only on a person's click, with its price stated; a saved run replays at US$0 (P-138). Live steps, progress, plain errors, Stop — the shared run component is next (W1-07).</div>
+  </td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-p"></span>partial</span><span class="num">8</span><span class="t">Curate on "To review"</span>Accept · edit · reject each proposal beside its quoted source; bulk-accept <b>High only</b>, one Undo (P-121). "Describe what you need" fills gaps (S6 — not built).</div>
+    <div class="card human"><span class="st"><span class="dot d-w"></span>works</span><span class="num">10</span><span class="t">Submit for release</span>Author submits the draft change set; maker ≠ approver.</div>
+  </td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-d"></span>agreed</span><span class="num">11</span><span class="t">Questionnaires tab</span>Every form fact gets one <b>Comes from</b> (Document · type / Client / Agent; declarations always Client) and a PQR tick; a fact a document supplies is not asked (P-130, C4.10). Rows, ⋯ menu, four bulk actions, no bulk delete (P-147). Slice 1 data + rules on the runtime branch.</div>
+    <div class="card human"><span class="st"><span class="dot d-d"></span>agreed</span><span class="num">12</span><span class="t">Documents tab + Preview</span>Each document type shows "supplies n facts"; Preview in three sets — questionnaires, documents, outputs (W1-15 board v2).</div>
+    <div class="card human"><span class="st"><span class="dot d-b"></span>built · modes designed</span><span class="num">12b</span><span class="t">"Who can be in this application"</span>The person roles a case may include and how many, each with a <b>filing mode</b>: files own application · on the principal's filing, applying · declared only (P-119, P-135).</div>
+  </td>
+  <td class="cell dim"></td>
+  <td class="cell dim"></td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-p"></span>partial</span><span class="num">18</span><span class="t">Review a new edition</span>A new edition of a used form is held; field-by-field diff + AI impact list → accept → re-release (held works; the diff review is Screen 02 scope, on branch).</div>
+  </td>
+</tr>
+
+<tr>
+  <td class="lane">Second person ·<br>immigration expert<br><small>Nothing ships on one person's word</small></td>
+  <td class="cell dim"></td>
+  <td class="cell">
+    <div class="card gate"><span class="st"><span class="dot d-p"></span>partial</span><span class="num">5b</span><span class="t">Approve held sources</span>Off-list file held with a plain reason → a <b>different person</b> compares and approves; its checksum joins the approved list (a manifest row today; the screen is Screen 02 scope).</div>
+  </td>
+  <td class="cell dim"></td>
+  <td class="cell">
+    <div class="card gate"><span class="st"><span class="dot d-w"></span>works</span><span class="num">9</span><span class="t">Approve new masters</span>Every <b>new shared field</b>, merge of duplicates, library change and by-hand "What IRCC accepts" fix: a different person approves. Maker ≠ approver enforced.</div>
+    <div class="card gate"><span class="st"><span class="dot d-d"></span>designed</span><span class="num">9b</span><span class="t">Confirm each channel</span>The finder's two rounds propose each form's channel with IRCC's quoted line; a second person confirms the "What IRCC accepts" change, recorded per edition and account (P-140; forms slice 1).</div>
+    <div class="card gate"><span class="st"><span class="dot d-w"></span>works</span><span class="num">10b</span><span class="t">Release gate</span>Expert ticks → a <b>different person</b> releases. Library changes publish with the release; a case pins its release forever.</div>
+  </td>
+  <td class="cell dim"></td>
+  <td class="cell dim"></td>
+  <td class="cell dim"></td>
+  <td class="cell">
+    <div class="card gate"><span class="st">always</span><span class="num">—</span><span class="t">Immigration values</span>Programs, fees, thresholds, "who signs", which forms apply, channels and filing modes: only the expert. Everything else is labelled <b>Sample</b>.</div>
+  </td>
+</tr>
+
+<tr>
+  <td class="lane">AI<br><small>Proposes; never applies, never decides</small></td>
+  <td class="cell">
+    <div class="card ai"><span class="st"><span class="dot d-d"></span>designed</span><span class="num">—</span><span class="t">Propose a setup</span>"Rules then AI" drafts a new combination's setup as proposals (P-105, W1-05); nothing accepted automatically.</div>
+  </td>
+  <td class="cell">
+    <div class="card ai"><span class="st"><span class="dot d-p"></span>partial</span><span class="num">4b</span><span class="t">Form finder</span>Two rounds read the IRCC guide/checklist → propose the combination's forms and each form's channel, with the quoted line (P-123, P-140). AI chooses; the <b>system</b> downloads. Keyword rule only flags contradictions.</div>
+  </td>
+  <td class="cell">
+    <div class="card ai"><span class="st"><span class="dot d-p"></span>partial</span><span class="num">6</span><span class="t">Map form fields</span>Per form field: <b>reuse a shared field · new · ambiguous · conflict</b>, beside the source; "not a fact / filled by hand". Proven by API at US$0 replay; person walk pending.</div>
+    <div class="card ai"><span class="st"><span class="dot d-d"></span>agreed · slice 0 on branch</span><span class="num">7</span><span class="t">"Draft questions and documents" — one run, 7 steps</span>Facts · documents and when · facts per document · source per fact · conditional questions · PQR picks · independent checker + rules → into the one review queue (C4.11, W1-10). Live once on Visitor visa (about US$50 for the wave, P-131); saved after.</div>
+  </td>
+  <td class="cell">
+    <div class="card ai"><span class="st"><span class="dot d-x"></span>not built</span><span class="num">—</span><span class="t">Draft on request</span>"Describe what you need" → drafts the item + shows near-duplicates; system names generated, never typed (P-120, S6).</div>
+  </td>
+  <td class="cell dim"></td>
+  <td class="cell">
+    <div class="card ai"><span class="st"><span class="dot d-d"></span>designed</span><span class="num">—</span><span class="t">Propose facts from documents</span>One reader per kind: passport coded lines by rules + Textract for printed text; letters and foreign records by AI vision with page citations (P-133). "Fill this from my documents" per section (P-134). Every value stays a proposal — <b>never sets a form value</b>.</div>
+    <div class="card ai"><span class="st"><span class="dot d-x"></span>not built</span><span class="num">—</span><span class="t">Tier-3 review</span>Finds contradictions rules can't state (name spelled two ways across documents). Quotes both sources; officer accepts or dismisses; never blocks (C7.5; full AG-11 page, P-141).</div>
+  </td>
+  <td class="cell dim"></td>
+  <td class="cell">
+    <div class="card ai"><span class="st"><span class="dot d-p"></span>on branch</span><span class="num">18b</span><span class="t">New-edition impact</span>Compares editions field-by-field; lists every library item and combination touched before anything changes.</div>
+    <div class="card ai"><span class="st"><span class="dot d-x"></span>loop</span><span class="num">—</span><span class="t">Learning loop</span>A pattern AI review keeps finding is proposed as a deterministic check — more becomes rules over time.</div>
+  </td>
+</tr>
+
+<tr>
+  <td class="lane">System / engine<br><small>Deterministic — no AI in the path</small></td>
+  <td class="cell dim"></td>
+  <td class="cell">
+    <div class="card sys"><span class="st"><span class="dot d-w"></span>works</span><span class="num">3b</span><span class="t">Guard the list, fetch the files</span>Code · edition · published · checksum read without AI. The finder downloads <b>only from canada.ca</b> (recorded copies, fingerprint-matched); off-list held before library, attachment or AI. New edition of a used form → held for impact review.</div>
+  </td>
+  <td class="cell">
+    <div class="card sys"><span class="st"><span class="dot d-w"></span>works</span><span class="num">6b</span><span class="t">Write only accepted proposals</span>One script path writes approved items to the DRAFT library — deduplicated, auditable, reversible. No direct DB write outside it.</div>
+  </td>
+  <td class="cell">
+    <div class="card sys"><span class="st"><span class="dot d-p"></span>partial</span><span class="num">8b</span><span class="t">Validate before release</span>Every form field mapped or "not a fact"; channel inside what IRCC accepts; every form fact has <b>exactly one</b> Comes-from source (C4.10, on branch). Conditional questions reachable — not checked yet.</div>
+  </td>
+  <td class="cell">
+    <div class="card sys"><span class="st"><span class="dot d-d"></span>slice 1 on branch</span><span class="num">13</span><span class="t">Assemble per person, documents first</span>One renderer resolves a person's lines by role + "only if" → their documents, questions and forms. A fact a document supplies leaves the questionnaire (P-130). <b>PQR ⊂ SQR ⊂ agent view</b> (the full form).</div>
+  </td>
+  <td class="cell">
+    <div class="card sys"><span class="st"><span class="dot d-w"></span>works</span><span class="num">15</span><span class="t">Validate as they answer</span>Tier-1 field rules on entry, same rule in every channel; tier-2 consistency checks warn with reasons.</div>
+    <div class="card sys"><span class="st"><span class="dot d-w"></span>works</span><span class="num">15b</span><span class="t">Guard the facts</span>Only <b>confirmed</b> facts fill outputs; a save with no change keeps confirmations; minor's facts via the principal, adult child's only after they confirm (P-78).</div>
+    <div class="card sys"><span class="st"><span class="dot d-d"></span>designed</span><span class="num">15d</span><span class="t">Derive the filings</span>Per case: how many filings and whose, which forms and fees go on whose filing, how filings group into one submission, which wait for another (P-135).</div>
+  </td>
+  <td class="cell">
+    <div class="card sys"><span class="st"><span class="dot d-w"></span>works</span><span class="num">16</span><span class="t">Fill the PDF</span>Append-only writer → every form field via its field map, barcodes, read back equal (44/44); Adobe Validate is the only hard stop (IMM 5409 evidence check running).</div>
+    <div class="card sys"><span class="st"><span class="dot d-d"></span>designed</span><span class="num">17</span><span class="t">Resolve the filing</span>Prepare application per channel: Online lines → checked answer sheet in portal order (P-113); PDF upload → validated PDF + upload step; Paper → print, sign in pen, mail; "Not needed" the portal asks itself (P-143). Per-person document checklist; "Download PDF copy, not for filing" on Online lines (P-145). Portal fixed by the combination, read-only (P-137).</div>
+  </td>
+  <td class="cell">
+    <div class="card sys"><span class="st"><span class="dot d-p"></span>partial</span><span class="num">19</span><span class="t">Keep it current</span>A changed fact marks signed, uploaded or entered items stale — never rewrites them (P-136). "Ready to file" blocked only by: out-of-date item · missing signature · barcode form with no validated copy (P-136, P-144). Portal re-check — parked with the extension.</div>
+  </td>
+</tr>
+
+<tr>
+  <td class="lane">Case officer / agent<br><small>Works the released configuration — <b>built first (P-129)</b></small></td>
+  <td class="cell dim" colspan="5"></td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-w"></span>works · thin slice</span><span class="num">14</span><span class="t">Open a case</span>On the pinned release, with its people; sends the family link (R1; the full case is M3).</div>
+    <div class="card human"><span class="st"><span class="dot d-w"></span>works</span><span class="num">15c</span><span class="t">Confirm facts, section by section</span>Every fact once per person, source and status; only confirmed facts fill; staff check AI-read values against the document — names, dates, numbers always (P-142).</div>
+    <div class="card human"><span class="st"><span class="dot d-d"></span>designed</span><span class="num">—</span><span class="t">Eligibility page</span>Each gate met / not met / not answered, what is missing, "rules as at", disclaimer (C6.9; full AG-03 page, P-141).</div>
+  </td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-d"></span>designed</span><span class="num">17b</span><span class="t">Prepare the filing</span>Two-stage deliverables list — confirm facts, then each item by channel with a status; acknowledges AI findings with a reason; uploads signed scans (C7.7, C8.1; M3 design agreed).</div>
+  </td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-d"></span>designed</span><span class="num">20</span><span class="t">Record the filing</span>Portal · our reference · application number · UCI; per-screen "entered" ticks. Only three things block "Ready to file" (P-136, P-144).</div>
+  </td>
+</tr>
+
+<tr>
+  <td class="lane">Client / prospect<br><small>Answers; never configures — <b>after M3 (P-129)</b></small></td>
+  <td class="cell dim" colspan="4"></td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-x"></span>not built</span><span class="num">—</span><span class="t">Prospect: PQR</span>Answers the combination's pre-qualification subset (P-132); sees only the firm's next step, never a verdict. Answers pre-fill the SQR "please confirm" (P-76, P-77).</div>
+  </td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-w"></span>works · thin slice</span><span class="num">14b</span><span class="t">Client: answers once</span>Family link, one section at a time, save and resume; each fact asked once per person; principal answers for the minor; uploads documents — "Fill this from my documents" offered per section (P-134).</div>
+  </td>
+  <td class="cell">
+    <div class="card human"><span class="st"><span class="dot d-d"></span>designed</span><span class="num">—</span><span class="t">Sign</span>Per line: typed name · signed by hand and scanned · signed in pen · none (P-143); returns signed scans where the line says so.</div>
+  </td>
+  <td class="cell dim"></td>
+</tr>
+
+<tr class="parked">
+  <td class="lane">Browser extension<br><small><b>Parked 26 Oct (P-102).</b> Returns last (W6) for online fill only — capture does not return</small></td>
+  <td class="cell dim" colspan="6"></td>
+  <td class="cell">
+    <div class="card parked"><span class="st"><span class="dot d-pk"></span>parked</span><span class="num">W6</span><span class="t">Fill mode</span>Fills one live portal screen from confirmed facts via the screen map; a screen that doesn't match its capture fills nothing → "Re-capture needed". May later fetch the portal's own PDF (P-145).</div>
+  </td>
+  <td class="cell">
+    <div class="card parked"><span class="st"><span class="dot d-pk"></span>parked</span><span class="num">W6b</span><span class="t">Watch for change</span>Every fill checks portal structure → Form health view; a changed screen opens a held online edition with its diff.</div>
+  </td>
+</tr>
+</tbody></table></div>
+
+<p class="note">Numbers are the reading order of one combination's journey: ① build the path → ② Start setup → ③/④ sources in (finder downloads · upload) → ⑤ held items to a second person; click to draft → ⑥ AI maps fields (+ ⑦ "Draft questions and documents", 7 steps) → ⑧ author curates → ⑨ new masters and channels to a second person → ⑩ submit → expert → release → ⑪–⑬ assemble per person, documents first → ⑭ case opened, client answers once, documents read → ⑮ engine validates, officer confirms, filings derived → ⑯–⑰ engine fills PDFs and answer sheets → ⑱–⑳ filing prepared and recorded; new editions and staying current.</p>
+
+<h2>Who creates each configuration — the division of labour</h2>
+<table class="mx">
+<thead><tr><th>Configuration piece</th><th>AI's job</th><th>Person's job</th><th>Gate before it lives</th><th>Today</th></tr></thead>
+<tbody>
+<tr><td class="art">Program tree · combination<br><small>Pathway › Program › Category › Sub-category</small></td><td>Designed: "Rules then AI" drafts a setup; nothing accepted automatically</td><td>Builds and names the structure on Program structure only; Start setup opens the workspace</td><td>Normal release</td><td><span class="dot d-w"></span>works (S1+S2 merged; S3 built 29 Oct)</td></tr>
+<tr><td class="art">Forms and sources<br><small>forms, guides, checklists</small></td><td>Form finder proposes the combination's forms with IRCC's quoted line; <b>never downloads by itself</b></td><td>Confirms the list once; uploads PDFs by hand when needed; records the IRCC page</td><td>The system downloads only from canada.ca; second person approves anything off the approved list</td><td><span class="dot d-p"></span>finder + one-door library built; upload works</td></tr>
+<tr><td class="art">Filing channel + signature per form<br><small>Online · PDF upload · Paper · Not needed; signed typed · scanned · pen · none (P-143)</small></td><td>Proposes the channel with IRCC's quote (two rounds; keyword rule only flags contradictions)</td><td>Sets or corrects "What IRCC accepts" by hand with the canada.ca line or a reason</td><td>A second person confirms, per form edition and IRCC account; Sample until the expert</td><td><span class="dot d-w"></span>set-by-hand + approval works · <span class="dot d-d"></span>AI proposal in slice 1</td></tr>
+<tr><td class="art">Shared fields — the canonical / master data fields</td><td>Proposes reuse / new / ambiguous / conflict per form field; proposes aliases and merges; detects duplicates</td><td>Accepts, edits or rejects; resolves ambiguous by hand</td><td>A <b>new</b> shared field always needs a second person; merges too</td><td><span class="dot d-p"></span>mapping partial · <span class="dot d-w"></span>merge works</td></tr>
+<tr><td class="art">Field map <small>form field → shared field, per person, per channel</small></td><td>Drafts the whole map; online version reuses the PDF twin's map first, then aliases</td><td>Reviews beside the source; marks "not a fact / filled by hand"</td><td>Validator: every form field mapped or excused before release</td><td><span class="dot d-p"></span>partial</td></tr>
+<tr><td class="art">Sections · document types · conditions · checks · answer lists</td><td>"Draft questions and documents" drafts them in one 7-step run, each with the quoted source; independent checker round + rules</td><td>Accepts / corrects in the one review queue; bulk-accept High only, one Undo; describes missing ones</td><td>Second person on new items; rules re-check every bulk accept</td><td><span class="dot d-d"></span>agreed; step runner on the forms branch (W1-10 slice 0)</td></tr>
+<tr><td class="art">Comes from + PQR tick per fact<br><small>Document · type / Client / Agent; declarations always Client (P-130)</small></td><td>Drafts the source proposal per fact</td><td>Sets each fact's one source and the pre-qualification ticks on the Questionnaires tab</td><td>Release refuses a form field with no source or two (C4.10)</td><td><span class="dot d-d"></span>agreed (W1-15; slice 1 on branch)</td></tr>
+<tr><td class="art">PQR picks <small>which questions a prospect answers</small></td><td>Drafts picks with a reason each</td><td>Accepts or removes each pick — one PQR record per combination; the country PQR is a view of released combinations (P-132)</td><td>Goes out with the combination's one release — no separate approval</td><td><span class="dot d-d"></span>designed (W1-15; renderer after M3)</td></tr>
+<tr><td class="art">"Who can be in this application" + filing modes<br><small>roles a case may include; own filing · applying · declared only (P-119, P-135)</small></td><td>Fills the roles from the guide; rules check on Save</td><td>Edits the roles and filing modes per combination</td><td>Release; the runtime refuses a case role not listed or over the maximum</td><td><span class="dot d-b"></span>roles built (S5) · <span class="dot d-d"></span>filing modes designed (W1-15)</td></tr>
+<tr><td class="art">Document checklist per person <small>on a case</small></td><td>—</td><td>—</td><td>Derived by the engine from released lines + person's role/answers, documents first (P-130)</td><td><span class="dot d-d"></span>designed (W1-15 / M3)</td></tr>
+<tr><td class="art">Validations — tier 1 (field format)</td><td>Designed: drafts from the form's own limits and scripts</td><td>Accepts</td><td>Runs deterministically on every channel once accepted</td><td><span class="dot d-p"></span>engine runs field validation; AI drafting designed</td></tr>
+<tr><td class="art">Checks — tier 2 (consistency, document validity)</td><td>Designed: drafts as shared sentences from guides/checklists; also proposes new checks from tier-3 patterns</td><td>Accepts; can override a finding with a recorded reason</td><td>Release; always warns, never blocks</td><td><span class="dot d-x"></span>not built</td></tr>
+<tr><td class="art">AI review objectives — tier 3</td><td><b>Judges</b> at set stages only (reads documents, compares facts)</td><td>People <b>write the objectives</b> ("compare names across identity documents"); officer accepts/dismisses each finding with a reason</td><td>Full AG-11 checker page in M3 (P-141)</td><td><span class="dot d-x"></span>not built</td></tr>
+<tr class="never"><td class="art">Immigration values<br><small>programs, fees, thresholds, channels, "who signs", minimum ages, filing modes</small></td><td><b>Never</b> — AI never invents them; Sample-labelled until confirmed</td><td>The immigration expert supplies and confirms, per combination</td><td>Expert tick inside every release</td><td>expert dependency</td></tr>
+<tr class="never"><td class="art">Facts on a case · form values</td><td><b>Never sets a form value</b> (SA-1B-35); may only propose facts read from documents (P-133)</td><td>Client answers or uploads; staff confirm — names, dates, numbers always checked against the document (P-142); a mismatch shows the client "please check"</td><td>Confirmation state on every fact; only confirmed facts fill</td><td><span class="dot d-w"></span>guard works</td></tr>
+<tr class="never"><td class="art">Approvals · releases · signatures</td><td><b>Never</b></td><td>Submit → expert tick → a different person releases; people sign forms</td><td>Maker ≠ approver enforced in code</td><td><span class="dot d-w"></span>works</td></tr>
+</tbody></table>
+
+<div class="callout"><b>Where AI stands today:</b> two AI jobs are proven — the form finder (which forms, which channel, IRCC's quote) and form-field mapping — both replayed at US$0. The next and biggest one, "Draft questions and documents" (one 7-step run producing every remaining master as proposals), is agreed and its step runner is on the forms branch; it runs live once on Visitor visa (about US$50, P-131) and is saved after. Still by rule, AI never creates: sources (the system fetches; a person uploads), immigration values (the expert), approvals and releases (two people), case facts and form values (client + officer), and keys (generated by the system).</div>
+
+<div class="callout sysb"><b>The one rule that makes it safe:</b> AI output exists only as a <b>proposal</b> beside its source passage, runs only on a person's click with its price stated (P-138), and every proposal gets a draft round + an independent checker round + the rules check — bulk-accept for High only (P-121). The engine writes to the draft library only what a person accepted; new masters pass a second person; releases publish them. So the shared library — the canonical master data every combination reuses — stays deduplicated, auditable and reversible, and Load sample replays the same proposals through the same path at US$0.</div>
+
+</body></html>
