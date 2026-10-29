@@ -19,7 +19,7 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 * The field-map review page (`job.tsx`) still reads the old row shape through `reviewRow`.
 * `ProposalItem` has the server columns `choice`, `decided_key` and `work`. `LibraryChange` has `batch_id` and `proposal_item_id`.
 
-**1b, the queue page: BUILT, at EARLY-LOOK** (build-notes.md "Slice 1b": routes, door rules, pages, what was decided and why; steps 1–5 and 7b done, 6, 7a and 7c decided there). Original steps (plan-slice1.md, row 1b):
+**1b, the queue page: DONE** (Lead early look passed after the toast fix; 1a fix 0a5b09dd and 1b bb94fce6 folded into Lead PR #96, CI rerunning) (build-notes.md "Slice 1b": routes, door rules, pages, what was decided and why; steps 1–5 and 7b done, 6, 7a and 7c decided there). Original steps (plan-slice1.md, row 1b):
 1. **`GET /review/proposals`:** grouped by form edition or combination, in three bands: Ready · Check · Decide.
    * Add `POST /review/proposals/decide` and `POST /review/proposals/undo/:batch`, both calling `proposals.ts`.
 2. **The page and its side panel:** both readings, the quote and the rules. On the EXPERIENCE.md bar; tooltips on complex parts.
@@ -42,7 +42,13 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 * **N-3:** no stop-gap; sections come from the forms' parts in slice 2, and the checks seed until then.
 * **P-97:** after #94, the field page's "Collected from" becomes read-only for an existing placement, with "Change who fills" calling `POST /library/fields/:key/fills`. That is our page (library.tsx).
 
-**Queue after slice 1 (P-173):** (3) one setup checklist per combination (P-157, P-161); (4) linking combinations and copying a line (C1.3, C1.5).
+**Next for a fresh session: queue item (3), one setup checklist per combination driving the cards and Overview (P-157, P-161; C11.16, C11.10).** Lead, 29 Oct: start it while 1c waits for runtime PR #94 (`acceptPqrPick`) on main. **Plan first, no code:** a short plan in `screens/W1-setup-checklist/plan.md`, built from `concept-draft.md` and `challenge.md` there (design/ holds the board). Then hand back for the Lead's OK.
+* Start a new `claude/screens-*` branch from main once #96 has merged (1a, (2a), 1b are in it); until then from `claude/screens-1b-queue` (bb94fce6).
+* Not done from 1b, decided with the Lead in build-notes "Slice 1b": 1b-2 (Draft fields with AI on the form row; job.tsx folds in), `seed_library.cjs` stays SQL. 1c: pqr_pick lander and the rule-sourced field (N-1 is on main as contract v2.1; N-2 waits for #94).
+* Running the checks: `/private/...` scratch scripts are gone with this session. Put node 24 on PATH (`.tools/node-v24.21.0/bin`), run `tsx --tsconfig api/tsconfig.json` for `.ts` checks (without it the decorators fail), and rebuild `web/` before browser checks. The five suites the forms replay touches (`check_ai_orchestration`, `check_forms_channels`, `check_forms_demo`, `check_forms_pdf_hardening`, `check_forms_slice2`) are the ones a door change can break.
+* Ports: screens own 4440–4449 only (4460s are evidence's).
+
+**Queue after (3) (P-173):** (4) linking combinations and copying a line (C1.3, C1.5).
 
 **Not screens' (routed in the hand-backs):** runtime.ts "opened case <id>" (QA-74); engine/validate.ts messages with codes (QA-73); section meanings are release c1-v3 content (QA-71); QA-82 to forms W1-10 / S6 slice 1; qa's `check_qa_am_r69_1028.cjs:123` selects the person by the old label.
 
@@ -54,15 +60,16 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - The Prisma client in `node_modules` is shared with other copies: after switching branches run `./node_modules/.bin/prisma generate` if a column is reported missing.
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
-current_screen: W1-shared-library (S6 Shared library)
-stage: EARLY-LOOK 1b — queue page, side panel, bulk accept (Ready only, ≤ 200, one Undo), To review group and batch rows, grouped second-person approval built on `claude/screens-1b-queue`
-owner: Lead
-next_action: Lead: fold 1b (claude/screens-1b-queue) into #96 after the toast fix; then 1b-2 or 1c
-then: 1b-2 (Draft fields with AI on the form row → contract items with both readings; job.tsx folds in) → 1c (pqr_pick, rule-sourced field) → S6 slices 2 → 3 → 4 (plan.md §4)
-blocked_by: nothing for 1b; 1c waits for runtime PR #94 (acceptPqrPick, N-2) and forms' rule reference (N-1)
+current_screen: W1-setup-checklist (queue item 3; S6 slice 1 done, 1c waiting on #94)
+stage: PLAN (3) not started — this session stopped at ~70% context (founder's rule); a fresh session writes plan.md first
+owner: Builder
+next_action: fresh screens session: /next screens, PLAN queue item (3) in screens/W1-setup-checklist/plan.md (from concept-draft.md and challenge.md), hand back; no code
+then: (3) build after the Lead's OK → 1c when #94 is on main → 1b-2 → (4)
+blocked_by: nothing for the (3) plan; 1c waits for runtime PR #94 (acceptPqrPick)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-shared-library → W1-setup-checklist · applied Lead message: 1b (bb94fce6) and the 1a fix folded into #96; next queue item (3), plan first. Handover rewritten for a fresh session (this one at ~70% context, founder's rule). No code. US$0.
 - 2026-10-29 · W1-shared-library (S6) · EARLY-LOOK 1b FIX · Lead early look: toasts covered the side panel's footer; toaster moves beside an open panel (above its footer when the panel is full width), every side panel; browser step at 1440, 1024 and 800 proves Accept and Reject stay clear and clickable; check_s6_queue_browser 26/26. 1a fix 0a5b09dd: six named suites green on its own branch. US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD 1b → EARLY-LOOK · new session from e3483c7d, main a9fe60c0 synced (contract v2.1: three small fixes in 1a code); review-proposals.ts routes (queue grouped, decide, undo, grouped approval), door rules (bulk Ready only and never rules→library, reuse adds nothing, field-map items on their page, Undo back to waiting), To review group and batch rows, proposals.tsx (queue, side panel, batch page), answer list publishes; check_s6_p149 65/65, check_s6_queue_browser 23/23, check_screen02_slice1 passed, tsc clean, any 423, graph G4 0. US$0.
 - 2026-10-29 · W1-shared-library (S6) · applied Lead message: 1a Lead check PASS (folded into Lead PR #96); next 1b. Handover rewritten for a fresh session (1b steps, what 1a gives it, owed items); this session's context is spent. No code. US$0.
@@ -72,4 +79,3 @@ updated: 2026-10-29
 - 2026-10-29 · W1-shared-library (S6) · PLAN (2b) + slice 1 · applied Lead message ((2a) PASS in Lead PR #96); main deda0e6b synced. Plan in plan-slice1.md: 1a ProposalItem table + migration off NormalizationItem + proposals.ts one door with a lander per kind and the free-add scan; 1b queue page, To review row, grouped approval, Draft fields with AI; 1c pqr_pick lander (acceptPqrPick, PR #94) and "Add the fact this rule needs" (needs forms' rule reference). placement_fills stays a LibraryChange (allowlisted). N-1..N-3 to the Lead. No code. US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD (2a) → CHECK · full run-suites on 5b00ae99: 67 PASS 4 FAIL, all four from (2a): P-63 "box" on Fields (sources now say "form field"), QA-65 (the 410 routes name their person first, nobody 401), A1 (Studio typed-key check gone with createField: ≥1), QA-71 (the check reads the Category column; a name may end in "employer"); checklist file names in words; seed_library.d.cts. Rerun: ai_drafting 48/48, s6 sources 24/24, s6 pages 33/33, forms_qa53 20/20, screen01_browser 120/120, qa_1029 51/51; tsc api and web clean; any 419; graph G3 2 (older). US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD (2a) · 38cc245d: POST /library/fields, /sections, /answer-lists → 410; GET /library/:kind/:key/sources and row sources and where used; field and section rename (C3.15); origin line per page; check_s6_library_sources 24/24, pages browser 33/33; seed_library.cjs for checks that used the adds (forms, runtime files listed). US$0.
-- 2026-10-29 · Handover · applied Lead message (P-173 queue): item (2) sized (heavy, half waits on #90), Handover rewritten for a fresh session; context of this one spent. US$0.
