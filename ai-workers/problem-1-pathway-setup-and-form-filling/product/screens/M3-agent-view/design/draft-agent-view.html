@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>M3 case view — draft board</title>
+<style>
+/* Team tokens (code/ERv2-frontend@5ccd9fa src/styles/tokens.css) + visual-system level colours (W1-visual-system r3). No one-off values. */
+:root{--primary:#0862c5;--p50:#e6f4ff;--p100:#cce9ff;--link:#054e9c;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--faint:#8c8c8c;
+--border:#d9d9d9;--border-s:#bfbfbf;--line:#ececec;--danger:#dc2626;--danger-t:#991b1b;--danger-tint:#fbe5e5;--warn:#ff8500;--warn-t:#663200;--warn-tint:#fff1e0;
+--ok:#16a34a;--ok-t:#0f5c2e;--ok-tint:#e3f4e9;--ai:#7c3aed;--ai-tint:#f3edfd;--lv1:#37506e;--lv2:#0b6477;--lv3:#043a73;--bg:#e9ecef;--r:8px;--r2:12px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif;color:var(--text)}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+.board-title{width:1440px;margin:24px auto 8px;padding:0 4px;display:flex;justify-content:space-between;align-items:flex-end}
+.board-title h1{font-size:24px}.board-title p{margin:4px 0 0;color:var(--muted)}
+.toolbar{display:flex;gap:8px;align-items:center}
+.btn{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--r);border:1px solid var(--border-s);background:var(--raised);color:var(--text);font:500 14px Inter,system-ui,sans-serif;cursor:pointer}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.sm{height:30px;padding:0 10px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--link)}.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.ai{border-color:#c9b3f5;color:var(--ai)}
+.frame{width:1440px;margin:0 auto 28px;background:var(--surface);border:1px solid var(--border-s);border-radius:var(--r2);overflow:hidden;box-shadow:0 2px 10px #0001}
+.frame-cap{background:#2d2d2d;color:#fff;padding:8px 16px;font-size:12px;display:flex;justify-content:space-between}
+.top{height:56px;background:var(--raised);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600}.logo b{color:var(--primary);font-size:18px}.logo span{color:var(--muted);font-weight:500}
+.crumbs{color:var(--muted);font-size:12px}
+.proto{font-size:12px;border:1px dashed var(--warn);color:var(--warn-t);background:var(--warn-tint);padding:2px 8px;border-radius:999px}
+.demo{display:flex;gap:6px;align-items:center;border:1px dashed var(--warn);border-radius:var(--r);padding:4px 8px;background:var(--warn-tint)}
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:640px}
+nav.menu{background:var(--raised);border-right:1px solid var(--border);padding:14px 10px;font-size:14px}
+nav.menu h4{margin:14px 8px 4px;font-size:12px;color:var(--faint);font-weight:600}
+nav.menu a{display:flex;justify-content:space-between;padding:7px 10px;border-radius:var(--r);color:var(--text);text-decoration:none}
+nav.menu a.on{background:var(--p50);color:var(--link);font-weight:600}
+.count{font-size:12px;background:var(--p100);color:var(--link);border-radius:999px;padding:0 7px}
+main{padding:20px 24px;min-width:0}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+.ph h2{font-size:24px}.ph p{margin:2px 0 0;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--raised);font-size:12px;color:var(--muted)}
+.chip.on{border-color:var(--primary);background:var(--p50);color:var(--link);font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:18px;padding:1px 8px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.pill.ok{background:var(--ok-tint);color:var(--ok-t);border-color:#b7e2c5}.pill.warn{background:var(--warn-tint);color:var(--warn-t);border-color:#ffd3a3}
+.pill.danger{background:var(--danger-tint);color:var(--danger-t);border-color:#f3b9b9}.pill.ai{background:var(--ai-tint);color:var(--ai);border-color:#dccbfa}
+.pill.info{background:var(--p50);color:var(--link);border-color:var(--p100)}.pill.neutral{background:#eee;color:var(--muted)}
+.role{font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--border-s);background:#fff;white-space:nowrap}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.grid2{display:grid;grid-template-columns:1fr 520px;gap:16px;align-items:start}
+table{width:100%;border-collapse:collapse;background:var(--raised)}
+th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--raised)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.sel td{background:var(--p50)}
+tr.group td{background:#fafafa;font-size:12px;color:var(--muted);font-weight:600;padding:7px 10px}
+.quote{font-size:12px;color:var(--muted);border-left:3px solid var(--p100);padding-left:8px;margin-top:4px;font-style:italic}
+.src{font-size:12px;color:var(--faint)}
+.checks3{display:flex;flex-direction:column;gap:2px;font-size:12px;white-space:nowrap}
+.y{color:var(--ok-t)}.n{color:var(--danger-t)}.q{color:var(--warn-t)}
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.notice{border-radius:var(--r);padding:10px 12px;font-size:14px;border:1px solid}
+.notice.info{background:var(--p50);border-color:var(--p100)}.notice.warn{background:var(--warn-tint);border-color:#ffd3a3}.notice.danger{background:var(--danger-tint);border-color:#f3b9b9}.notice.ok{background:var(--ok-tint);border-color:#b7e2c5}
+.saved{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px;border-radius:var(--r);background:#f1f1f1;border:1px solid var(--border-s);color:var(--text)}
+.saved.stale{background:var(--warn-tint);border-color:#ffd3a3;color:var(--warn-t)}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px;border-radius:var(--r);background:var(--ai-tint);border:1px solid #dccbfa;color:var(--ai);font-weight:600}
+.panel{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);display:flex;flex-direction:column;box-shadow:-4px 0 14px #0000000d}
+.panel header{padding:14px 16px;border-bottom:1px solid var(--border)}.panel .body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.panel footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cmp>div{border:1px solid var(--border);border-radius:var(--r);padding:10px;font-size:12px}
+.cmp h5{margin:0 0 4px;font-size:12px;color:var(--muted)}
+mark{background:#fff3a6;padding:0 2px}
+.page{border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:12px;background:#fcfcfc;max-height:180px;overflow:hidden}
+.muted{color:var(--muted)}.small{font-size:12px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:12px 0 14px}
+.tabs a{padding:8px 14px;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent}.tabs a.on{color:var(--link);border-color:var(--primary);font-weight:600}
+.trail{font-size:12px;color:var(--muted)}.trail b{color:var(--text)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.steps{display:flex;gap:4px;margin:8px 0}.steps i{flex:1;height:6px;border-radius:999px;background:var(--border)}.steps i.d{background:var(--ok)}.steps i.r{background:var(--primary)}
+ol.st{margin:6px 0 0;padding:0;list-style:none;font-size:12px}ol.st li{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed var(--line)}
+.mx td,.mx th{text-align:center}.mx td:first-child,.mx th:first-child{text-align:left}
+.cell-y{color:var(--ok-t);font-weight:600}.cell-n{color:var(--faint)}.cell-q{color:var(--warn-t)}
+.state{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);padding:12px;font-size:12px;display:flex;flex-direction:column;gap:6px}
+.state h4{margin:0;font-size:14px}
+.sk{height:12px;border-radius:6px;background:linear-gradient(90deg,#eee,#f6f6f6,#eee)}
+.row{display:flex;gap:12px;align-items:center}.wrap{flex-wrap:wrap}.sp{justify-content:space-between}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+/* Labels (P-33 Capability/Scaffolding, P-26 Needed/Not built, decision marks) */
+.lab{display:none;font:600 10px/14px Inter,system-ui,sans-serif;letter-spacing:.2px;padding:1px 6px;border-radius:4px;margin:2px 4px 2px 0;vertical-align:middle;white-space:nowrap}
+body.labels .lab{display:inline-block}
+.lab.cap{background:#e6f4ff;color:#054e9c;border:1px solid #9ccfff}.lab.scf{background:#fff1e0;color:#663200;border:1px dashed #ff8500}
+.lab.nb{background:#eee;color:#595959;border:1px solid #bfbfbf}.lab.f{background:#e3f4e9;color:#0f5c2e;border:1px solid #b7e2c5}
+.lab.m{background:#fbe5e5;color:#991b1b;border:1px solid #f3b9b9}
+.legend{width:1440px;margin:0 auto 12px;font-size:12px;color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.sample{font-size:12px;color:var(--warn-t);background:var(--warn-tint);border-radius:4px;padding:0 6px}
+</style>
+</head>
+<body>
+<style>
+.from{font-size:12px;padding:1px 8px;border-radius:999px;white-space:nowrap}.from.doc{background:#e1f2f5;border:1px solid #9fd3dc;color:#0b6477}.from.cli{background:var(--p50);border:1px solid var(--p100);color:var(--lv3)}.from.agt{background:var(--warn-tint);border:1px solid #ffd3a3;color:#663200}.from.emp{background:#eef0f4;border:1px solid #c5ccd8;color:var(--lv1)}
+.ws{display:grid;grid-template-columns:340px 1fr;min-height:660px}
+.list{background:var(--raised);border-right:1px solid var(--border);padding:12px 0;font-size:13px}
+.list h5{margin:12px 14px 4px;font-size:12px;color:var(--faint);font-weight:600;display:flex;justify-content:space-between}
+.li{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px 14px;border-left:3px solid transparent;cursor:pointer}
+.li:hover{background:#fafafa}.li.on{background:var(--p50);border-left-color:var(--primary)}
+.li small{grid-column:1/3;color:var(--muted);font-size:12px}
+.strip{display:flex;gap:6px;margin:10px 0}.strip a{flex:1;border:1px solid var(--border);background:var(--raised);border-radius:var(--r);padding:6px 10px;font-size:12px;color:var(--muted);text-decoration:none}
+.strip a b{display:block;color:var(--text);font-size:13px}.strip a.on{border-color:var(--primary);background:var(--p50)}
+.fact{display:grid;grid-template-columns:190px 1fr 220px 110px 28px;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px}
+.fact.head{font-size:12px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)}
+.fact .v{font-weight:500}.more{color:var(--faint);text-align:center;cursor:pointer;border-radius:6px}.more:hover{background:#eee}
+.sec{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.sec>header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);gap:10px}
+.sec>footer{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#fafafa;border-top:1px solid var(--border);gap:8px}
+.drawer-wrap{display:grid;grid-template-columns:1fr 540px;min-height:520px}
+.dim{background:#00000014;padding:20px;color:var(--muted);font-size:12px}
+.crop{border:1px solid var(--border);border-radius:var(--r);background:#fff;padding:12px;font:12px/1.5 "SF Mono",Menlo,monospace}
+.crop .mrz{background:#f4f4f4;padding:6px;margin-top:8px;letter-spacing:1px}
+.prop{display:grid;grid-template-columns:150px 1fr auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.stepper{display:flex;flex-direction:column;gap:0;font-size:13px}
+.stepper div{display:grid;grid-template-columns:22px 1fr auto;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);align-items:center}
+.ic{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;border:1px solid var(--border-s);color:var(--muted)}
+.ic.d{background:var(--ok);border-color:var(--ok);color:#fff}.ic.r{border-color:var(--primary);color:var(--primary);font-weight:700}.ic.x{background:var(--warn-tint);border-color:var(--warn);color:var(--warn-t)}
+.menu-pop{position:absolute;right:10px;top:34px;width:300px;background:#fff;border:1px solid var(--border-s);border-radius:var(--r);box-shadow:0 6px 18px #0002;font-size:13px;z-index:2}
+.menu-pop div{padding:8px 12px;border-bottom:1px solid var(--line)}.menu-pop div.off{color:var(--faint)}
+.tip{background:#2d2d2d;color:#fff;font-size:12px;border-radius:6px;padding:6px 9px;max-width:320px;box-shadow:0 4px 12px #0003}
+.acc{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.toast{background:#2d2d2d;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:13px;display:flex;gap:14px;align-items:center}
+.toast a{color:#9ccfff}
+.fil{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:2px 10px;font-size:12px;background:#fff}.fil.on{border-color:var(--primary);background:var(--p50);color:var(--link);font-weight:600}
+.k{font-size:12px;color:var(--faint)}
+</style>
+
+<div class="board-title"><div><h1>M3 · Case view and filing: draft board, r5</h1><p>m3 lane, 29 Oct · r5 + P-143 to P-145 (four channels and a signature value per line, a third blocker, PDF copy on Online lines; frames 6, 7) · full Eligibility and Review pages from the team's AG-03 and AG-11 (P-141, frames 12, 13), P-142 document reading · r4 applies the founder's answers: P-135 filing mode per person role (the engine derives filings, groups, waits, fees), P-136 two more blockers, P-137 portal fixed · r3 answered the fresh challenge (challenge.md) · concept <code>screens/M3-agent-view/concept-draft.md</code> · builds on the agreed v2 board (P-122) and document first (P-130, P-133, P-134) · every name, value, form and channel is <span class="sample">Sample</span> until the immigration expert confirms · Unconfirmed: no counsel on signing and correction points</p></div>
+<div class="toolbar"><button class="btn" onclick="document.body.classList.toggle('labels')">Show labels</button><span class="proto">Scaffolding · board only</span></div></div>
+<div class="legend">Labels: <span class="lab cap" style="display:inline-block">Capability</span> what the product does in production · <span class="lab scf" style="display:inline-block">Scaffolding</span> Sample data, demo or board aids · <span class="lab nb" style="display:inline-block">Team AG-xx</span> the team builds it; we show only its inputs or findings · <span class="lab f" style="display:inline-block">F P-xx</span> follows a decision · <span class="lab m" style="display:inline-block">Expert Q4</span> waits on the immigration expert (Sample). Rule on every frame: <b>little on each row; detail in the side drawer, the ⋯ menu and tooltips.</b></div>
+
+<!-- 0 EVIDENCE -->
+<style>
+.dg{display:grid;grid-template-columns:repeat(6,1fr);gap:10px 14px;font-size:12px;align-items:stretch}
+.nd{background:#fff;border:1px solid var(--border-s);border-radius:var(--r);padding:8px 10px;position:relative}
+.nd b{display:block;font-size:13px}.nd.st1{border-color:var(--lv2);background:#f4fafb}.nd.st2{border-color:var(--lv3);background:var(--p50)}.nd.gate{border:2px solid var(--danger-t);background:var(--danger-tint)}.nd.post{border-style:dashed}
+.ar{text-align:center;color:var(--faint);font-size:14px;align-self:center}
+.back{border:1px dashed var(--warn);background:var(--warn-tint);color:var(--warn-t);border-radius:var(--r);padding:8px 10px;font-size:12px}
+.cmpt td,.cmpt th{font-size:12px}
+.uc{font-size:12px;columns:3;column-gap:24px}.uc li{margin-bottom:4px;break-inside:avoid}
+</style>
+<div class="frame"><div class="frame-cap"><span>0 · First: what depends on what, the use cases, and which earlier design we build from (evidence)</span><span>research: Agent view and filing UX (29 Oct) · IRCC research 26 Oct · document first (P-130)</span></div>
+<div style="padding:16px 24px">
+<h3 style="font-size:16px;margin-bottom:8px">0a · Dependency graph of one filing</h3>
+<div class="dg">
+ <div class="nd"><b>Combination</b>pinned release</div><div class="ar">→</div>
+ <div class="nd"><b>Portal</b>from the combination, read-only <span class="lab f">F P-137</span></div><div class="ar">→</div>
+ <div class="nd" style="grid-column:span 2"><b>Channel + signature per line</b>Online · PDF upload · Paper · Not needed, per edition × account; signature: typed · hand, scanned · pen · none <span class="lab f">F P-143</span></div>
+ <div class="nd"><b>Filing mode per role</b>files own · on the principal's, applying · declared only <span class="lab f">F P-135</span></div><div class="ar">→</div>
+ <div class="nd" style="border-color:var(--ai)"><b>Engine derives</b>filings (whose) · forms per person · fees on whose filing · submission groups · waits</div><div class="ar">→</div>
+ <div class="nd st1"><b>Documents → facts</b>per person; document › client › case officer; proposed → confirmed by section</div><div class="ar">→ fill</div>
+ <div class="nd st2" style="grid-column:1/3"><b>Items of three kinds</b> <b style="display:inline">form</b> (line × person × channel; signing is part of it) · <b style="display:inline">document</b> (upload to IRCC) · <b style="display:inline">IRCC step</b> (interview, biometrics)</div><div class="ar">→</div>
+ <div class="nd st2"><b>Signing steps</b>inside each form item, from the line's signer and the portal: client e-signs in the portal · pen · the representative's declaration</div><div class="ar">→</div>
+ <div class="nd gate"><b>Ready to file</b>blocks: our check, missing or conflicting facts (P-71); an out-of-date signed, uploaded or entered item; a missing required signature (P-136); a barcode form not validated and read back <span class="lab f">F P-144</span></div>
+ <div class="nd"><b>Record each submission group</b>one action; per filing: application number, fee receipt; UCI per person</div><div class="ar">→</div>
+ <div class="nd post" style="grid-column:span 4"><b>After filing</b> read-only · no second recording · "filed with an earlier value" + task. Milestones (acknowledgement, biometrics, requests, decision) are the team's AG-07: <i>not built here</i>. A waiting filing starts on a recorded trigger ("Start next stage", AG-7-45 rule 2).</div>
+ <div class="back" style="grid-column:1/7"><b>Back-edges (why a wizard fails):</b> a changed fact → every finished deliverable using it goes <b>Out of date</b>, never edited · a new upload → new proposals · a new person (newborn) → new documents, facts and deliverables · a change on the employer case → the worker's finished items go out of date · a recorded trigger (approval, AOR) → a waiting filing can start.</div>
+</div>
+<p class="small muted">The screen answers one question at the top: <b>what stands between this filing and Submit, and who owes it</b> (officer, client, employer, IRCC).</p>
+
+<h3 style="font-size:16px;margin:14px 0 8px">0b · Use cases the design must carry (frame that shows each)</h3>
+<ol class="uc">
+<li>Visitor visa, family of three: three filings on one screen, recorded together (1, 2, 7)</li>
+<li>Spousal sponsorship + child on the PR Portal: digital forms + PDF uploads + client e-signs (6, 7)</li>
+<li>Same on paper: pen per form and person, barcode page on top (7)</li>
+<li>Mixed in one application: online form, PDF upload, form signed in pen, client e-sign, document on request, IRCC video interview (6)</li>
+<li>Work permit with an employer case linked (10)</li>
+<li>Passport read by rules; officer confirms beside the page (3)</li>
+<li>Client typed a different birth date from the passport (4)</li>
+<li>Background "yes": the officer sees it, cannot confirm it; an extra letter appears (2)</li>
+<li>Required document missing at filing: warns, files with a note (5, 6)</li>
+<li>A form not needed on this route: "Not needed on the APR Portal", not hidden (6)</li>
+<li>A fact changes after the client signed: signed copy out of date, re-sign (8)</li>
+<li>A fact corrected after filing: "filed with an earlier value", task (8)</li>
+<li>Returned incomplete: reopen, fix, resubmit (<i>not built here</i>, team AG-07)</li>
+<li>Newborn added after submission (<i>not built here</i>)</li>
+<li>Two officers, one edits while the other has it open (11)</li>
+<li>Work permit + spouse's open work permit + child's study permit in one case (Q1, 2)</li><li>Express Entry: 1 filing, 4 people, one child declared only (7b)</li><li>Spousal sponsorship: sponsorship co-filed with the PR application, cannot be sent alone (7b)</li><li>Provincial nomination, then the eAPR: the eAPR waits (7b) <span class="lab m">Expert Q8</span></li><li>In-Canada spouse's open work permit after the PR receipt (7b)</li><li>Citizenship by a representative: paper only (7)</li><li>A visitor family split into two submissions loses the fee cap (7b)</li><li>Address and travel history typed fast: keyboard, paste rows (<i>not built in M3</i>)</li>
+</ol>
+
+<h3 style="font-size:16px;margin:14px 0 8px">0c · Earlier designs compared: starting points, not templates</h3>
+<div class="tbl-wrap"><table class="cmpt"><tr><th>Design</th><th>Keep</th><th>Drop or fix</th></tr>
+<tr><td><b>v1</b> (23 Oct) items list + detail</td><td>Workspace pattern; every state drawn; right panels, no modals</td><td>route and stages missing; groups by channel only</td></tr>
+<tr><td><b>v2</b> (27 Oct, agreed base, P-122)</td><td>deliverable = one row with its own steps; "PDF copy, not for filing"; one block-vs-warn sentence</td><td>counts do not add up (14 vs 22); stages are only headings; no route; no "cannot start yet"; nothing after filing</td></tr>
+<tr><td><b>v3</b> Split view (strongest)</td><td>each stage has its own progress, blocker and next action; "Needs attention" with reason and owner; "unblocks 3 items"</td><td>mixed units (facts vs sections); three navigation devices for one choice; Command view as a layout</td></tr>
+<tr><td><b>Team mock</b> (case-management)</td><td>blocker → "fix" link to the exact place; binder per applicant with states; waive with a reason</td><td>readiness is an average of four percentages (hides a blocker); form status has no channel or out-of-date; ten tabs for one job; submission per case and blocked</td></tr>
+<tr><td><b>This draft r1</b> (earlier today)</td><td>case view section, fill from documents, check, checklist, record, out of date, employer link</td><td>five-part strip + filters + list = too many devices on the left; no step kind for video or phone; no route; no after filing</td></tr>
+<tr style="background:var(--ok-tint)"><td><b>Chosen: r2</b></td><td colspan="2">v3 Split view with its units fixed (stage 1 counts <b>sections</b>, stage 2 counts <b>deliverables</b>); one switch "Get the information · Prepare the filing · Everything"; the attention queue grouped by who owes it is the default; rows use one small set of words (<i>Cannot start yet · To do · In progress · Ready · Out of date · Done</i>) and a "Needed before" tag (signing · filing · after filing); a person × deliverable view; the combination's portal read-only (P-122); a minimal after-filing state. <b>r3</b> (challenge): one filing per person who files their own application; items of three kinds; lean rows.</td></tr></table></div>
+</div></div>
+
+<!-- 1 OPEN A CASE -->
+<div class="frame"><div class="frame-cap"><span>1 · Cases › Open a case: a released combination, its people, its filings</span><span>dialog pattern, 3 steps at most (EXPERIENCE §3) · extends the built R1 dialog</span></div>
+<div class="drawer-wrap"><div style="padding:16px"><b style="font-size:14px">How the engine derives filings from the modes</b> <span class="lab f">F P-135</span> <span class="lab cap">Capability</span><div class="tbl-wrap" style="margin-top:8px"><table><tr><th>Combination</th><th>Roles → mode</th><th>Derived</th></tr><tr><td>Visitor visa</td><td class="small">principal, spouse, child → files own</td><td class="small"><b>3 filings</b>, 1 group, family fee cap</td></tr><tr><td>Express Entry</td><td class="small">principal → own; spouse, child → applying; child 2 not coming → declared only</td><td class="small"><b>1 filing · 4 people</b>; declared only: family information + medical, no fee</td></tr><tr><td>Spouse sponsorship</td><td class="small">sponsor → co-filed; spouse → principal; child → applying</td><td class="small"><b>2 filings</b> (sponsorship + PR), 1 group, no split <span class="lab m">Expert Q4</span></td></tr><tr><td>Study permit, family</td><td class="small">student → own; spouse → files own (open work permit); child → files own (visitor)</td><td class="small"><b>3 filings</b> on 3 combinations, 1 group</td></tr><tr><td>Provincial nominee</td><td class="small">nomination, then eAPR</td><td class="small"><b>2 filings in sequence</b>: the eAPR waits <span class="lab m">Expert Q8</span></td></tr><tr><td>Citizenship</td><td class="small">each person → files own</td><td class="small">a filing each; paper (a representative cannot submit online)</td></tr></table></div><p class="small muted">Modes are set in "Who can be in this application" (configuration, M3-0). Values <span class="sample">Sample</span> until the expert confirms. The LMIA or offer is a linked employer case, not a filing.</p></div>
+<div class="panel" style="margin:16px"><header><h3 style="font-size:18px">Open a case</h3><div class="steps"><i class="d"></i><i class="d"></i><i class="r"></i></div><span class="small muted">1 What · 2 Who · <b>3 Check and open</b></span> <span class="lab cap">Capability</span><span class="lab f">F P-67, P-119</span></header>
+<div class="body">
+ <div><div class="k">Filings in this case <span title="A filing is one application that IRCC numbers and decides. The engine derives them from each role's filing mode (P-135).">ⓘ</span> <span class="lab f">F P-135</span></div>
+  <div class="card" style="padding:10px;margin-top:4px"><b>Visitor visa · 3 filings</b> <span class="pill info">Release 2 · Live</span><div class="trail">Retail › Temporary residence › Visitors › Visitor visa</div><div class="small" style="margin-top:6px">People: <span class="role">Client A · Principal applicant</span> <span class="role">Client B · Spouse or partner</span> <span class="role">Client C · Child, 9</span></div><div class="small muted">Each is marked "Files own application" (P-119), so each gets their own filing: own forms, documents, application number and decision (team AG-7-45). People who do not file their own (e.g. a child on a PR application) go on the principal's filing.</div></div>
+  <span class="small muted">Filings are derived, never added by hand. A role marked "files own" picks its combination per person (e.g. a student's spouse: open work permit).</span></div>
+ <div><div class="k">Filed through <span title="The portal the combination is set up for. It is not chosen here (P-122); each form's channel is set on its row.">ⓘ</span></div><div class="small">APR Portal <span class="muted">(from the combination)</span></div></div>
+ <div><div class="k">Client login that answers</div><div class="small">Client A (sees the questionnaire after M3; P-129)</div></div>
+ <div><div class="k">Relies on an employer case <span title="Only for employer-specific work permits. The worker's case reads the employer's name, address and LMIA or offer number from that case, read-only.">ⓘ</span></div><div class="small muted">Not offered: the Visitor visa has no employer facts</div> <span class="lab f">F P-106</span></div>
+ <div class="notice info small"><b>Will be created as</b> case ER-0204 · 3 filings (Client A, B, C) in 1 submission group · each person pinned to Visitor visa release 2 (kept even when a new release goes out). Each person's document checklist is built from the release now.</div>
+ <div class="notice warn small">Retired combinations are not offered. "Who can be in this application" allows 1 spouse at most: "Add spouse" is off once one is added, with the reason.</div>
+</div><footer><button class="btn">Back</button><button class="btn primary">Open case</button></footer></div></div></div>
+
+<!-- 2 WORKSPACE + CASE VIEW SECTION -->
+<style>
+.stg{display:grid;grid-template-columns:1fr 1fr 220px;gap:10px;margin:10px 0 0}
+.stc{border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;background:#fff;font-size:12px;cursor:pointer}
+.stc.on{border:2px solid var(--primary);background:var(--p50)}
+.stc b{font-size:20px;color:var(--text)}.stc h4{margin:0 0 2px;font-size:13px}
+.own{font-size:11px;font-weight:600;color:var(--faint);padding:10px 14px 2px;text-transform:uppercase;letter-spacing:.3px}
+.nb2{font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:0 5px;white-space:nowrap}
+</style>
+<div class="frame"><div class="frame-cap"><span>2 · Case › Prepare application: stage 1 "Get the information"; a section open = the case view (the full form, by section)</span><span>v3 Split view, fixed (frame 0c) · P-122 two stages · absorbs today's Forms panel</span></div>
+<div class="top"><div class="logo"><b>ExpatReady</b><span>Cases › ER-0204 · Client A family › Prepare application</span></div><span class="small muted">Case officer (Sample)</span></div>
+<div style="padding:12px 20px;background:var(--raised);border-bottom:1px solid var(--border)">
+ <div class="ph" style="margin-bottom:2px"><div><h2>Client A family</h2><p class="trail">Retail › Temporary residence › Visitors › <b>Visitor visa</b> · release 2 · 3 people <span class="lab cap">Capability</span></p></div>
+ <div class="row"><span class="fil on" title="Three filings, one per person who files their own application (Q1). The list shows all three; filter by person.">Visitor visa · 3 filings ▾</span><span class="lab f">F P-135</span><span class="fil" title="From the combination (P-122). Each form's channel is set on its row.">Filed through APR Portal</span><span class="lab f">F P-137</span><span class="more" title="⋯ Add a filing · Person × deliverable view · History · Print checklist">⋯</span></div></div>
+ <div class="stg"><div class="stc on"><h4>1 · Get the information</h4><b>3</b> of 9 sections confirmed · <span style="color:var(--danger-t)">1 to check</span><div class="muted">Next: Personal details · Client A</div></div>
+ <div class="stc"><h4>2 · Prepare the filing</h4><b>1</b> of 9 items done · 3 cannot start yet<div class="muted">Next: IMM 5476 back from Client A</div></div>
+ <div class="stc"><h4>Everything</h4>9 sections · 11 documents · 9 items · <b style="font-size:13px">5 need you</b></div></div>
+ <div class="tabs" style="margin:10px 0 0"><a>Overview</a><a class="on">Prepare application</a><a>Eligibility</a><a>Review</a><a>History</a></div></div>
+<div class="ws"><div class="list">
+ <div style="padding:0 14px 4px" class="row small"><span class="chip on" style="height:26px">Needs you · 5</span><span class="chip" style="height:26px">All</span><span class="chip" style="height:26px">Everyone ▾</span></div>
+ <div class="own">You (case officer) · 3</div>
+ <div class="li on"><span>Personal details · Client A</span><span class="pill danger">To check</span><small>birth date differs from the passport · unblocks 2 forms</small></div>
+ <div class="li"><span>Travel history · Client B</span><span class="pill warn">To do</span><small>typed by the client · to confirm</small></div>
+ <div class="li"><span>Family and relationships · Client C</span><span class="pill warn">To do</span><small>answered by the principal (P-78)</small></div>
+ <div class="own">Client · 2</div>
+ <div class="li"><span>Marriage certificate · Client A</span><span class="pill neutral">Requested</span><small>supplies date of marriage · asked 27 Oct</small></div>
+ <div class="li"><span>Background and declarations · Client B</span><span class="pill neutral">In progress</span><small>on the family link (C6.2) · yours to see, not confirm (P-97)</small></div>
+ <div class="own">Done · 3</div>
+ <div class="li"><span>Family and relationships · Client A</span><span class="pill ok">Done</span><small>confirmed 28 Oct</small></div>
+ <div class="small muted" style="padding:6px 14px">+ 2 more done · switch to "All" for the 9 sections and 11 documents</div>
+</div>
+<main style="padding:16px 20px">
+ <div class="sec"><header><div><h3 style="font-size:17px">Personal details · Client A</h3><span class="small muted">Once for every form that uses them: IMM 5257 · IMM 5707 <span class="lab cap">Capability</span><span class="lab f">F P-130</span></span></div>
+ <div class="row"><button class="btn ai sm" title="Reads Client A's uploaded passport and proposes the values it supplies for this section. Nothing changes until you confirm. Typing always works.">Fill this from documents</button><span class="lab cap">Capability</span><span class="lab f">F P-134</span><span class="more" title="History of this section · Show only what needs you · Print">⋯</span></div></header>
+ <div class="fact head"><span>Fact</span><span>Value</span><span>Comes from</span><span>State</span><span></span></div>
+ <div class="fact"><span>Family name</span><span class="v">KUMAR</span><span><span class="from doc" title="Read from the passport's coded lines (rules, no AI) · page 1 · 27 Oct">Document · Passport</span></span><span><span class="pill ai">Proposed</span></span><span class="more">⋯</span></div>
+ <div class="fact"><span>Given names</span><span class="v">AARAV</span><span><span class="from doc">Document · Passport</span></span><span><span class="pill ai">Proposed</span></span><span class="more">⋯</span></div>
+ <div class="fact" style="background:var(--danger-tint)"><span>Date of birth</span><span class="v">21 Mar 1990 <span class="small muted">· typed 12 Mar 1990</span></span><span><span class="from doc">Document · Passport</span></span><span><span class="pill danger" title="The client typed a different value from the passport. Open it to choose with a reason; both stay on record.">To check</span></span><span class="more">⋯</span></div>
+ <div class="fact"><span>Sex</span><span class="v">M</span><span><span class="from doc">Document · Passport</span></span><span><span class="pill ai">Proposed</span></span><span class="more">⋯</span></div>
+ <div class="fact"><span>Passport number</span><span class="v">Z1234567</span><span><span class="from doc">Document · Passport</span></span><span><span class="pill ai">Proposed</span></span><span class="more">⋯</span></div>
+ <div class="fact"><span>Passport expiry date</span><span class="v">14 Feb 2033</span><span><span class="from doc">Document · Passport</span></span><span><span class="pill ai">Proposed</span></span><span class="more">⋯</span></div>
+ <div class="fact"><span>Current marital status</span><span class="v">Married</span><span><span class="from cli" title="Answered by Client A in the questionnaire, 26 Oct. A client's own answer counts as confirmed for the client's fields (P-72).">Client</span></span><span><span class="pill ok">Confirmed</span></span><span class="more">⋯</span></div>
+ <div class="fact"><span>Date of marriage</span><span class="v muted">—</span><span><span class="from doc">Document · Marriage certificate</span></span><span><span class="pill warn" title="The marriage certificate is requested, not received. Wait for it, or type the date (it then becomes your entry).">Missing</span></span><span class="more">⋯</span></div>
+ <div class="fact"><span>Email</span><span class="v">client.a@example.com</span><span><span class="from cli">Client</span></span><span><span class="pill ok">Confirmed</span></span><span class="more">⋯</span></div>
+ <div class="fact"><span>Previous UCI</span><span class="v">none</span><span><span class="from agt" title="Entered by the case officer, 28 Oct">Case officer</span></span><span><span class="pill ok">Confirmed</span></span><span class="more">⋯</span></div>
+ <footer><span class="small muted">Confirming fills IMM 5257 and IMM 5707 for Client A. <b>1 to check</b> first; the missing date stays missing and shows on the forms.</span><button class="btn primary" disabled title="Resolve 'Date of birth' first">Confirm section (6)</button></footer></div>
+ <div class="row" style="margin-top:12px;align-items:flex-start;gap:16px">
+  <div class="menu-pop" style="position:static;width:300px"><div class="small muted">⋯ on a fact</div><div>Edit (your entry, with a reason)</div><div>See the document page</div><div>History: every value, who, when, why</div><div>Not applicable to this person</div></div>
+  <div class="tip">Comes from <b>Document · Passport</b>: read from the passport's coded lines (rules, no AI, P-134). Proposed until you confirm. If the passport is replaced, the value keeps filling drafts and shows "evidence replaced" until the new one is read.</div>
+  <span class="lab cap">Capability</span>
+ </div>
+</main></div></div>
+
+<!-- 3 FILL FROM DOCUMENTS -->
+<div class="frame"><div class="frame-cap"><span>3 · "Fill this from documents": source and proposals, side drawer (never automatic on upload)</span><span>Source + proposals pattern · P-133 one reader per kind · P-134 D2, D4 · research D5 (identity fields one by one)</span></div>
+<div class="drawer-wrap"><div style="padding:16px"><div class="k" style="margin-bottom:6px">Client A · Passport · uploaded 27 Oct by the case officer · page 1 of 1</div>
+ <div class="crop"><b>REPUBLIC OF INDIA · PASSPORT</b> <span class="sample">Synthetic document</span><br>Surname <mark>KUMAR</mark><br>Given names <mark>AARAV</mark><br>Nationality INDIAN · Sex M<br>Date of birth <mark>21/03/1990</mark> · Place of birth PUNE<br>Date of expiry 14/02/2033<br><div class="mrz">P&lt;INDKUMAR&lt;&lt;AARAV&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>Z1234567&lt;4IND9003215M3302146&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;06</div></div>
+ <p class="small muted">Selecting a proposal highlights its place on the page. <span class="lab scf">Scaffolding · synthetic document (P-133)</span></p></div>
+<div class="panel" style="margin:12px"><header><div class="row sp"><h3 style="font-size:17px">Fill Personal details from documents</h3><span class="more">✕</span></div><div class="small muted">Read from <b>the passport's coded lines</b> in the PDF's text layer, rules only (the POC reader <code>p5/reader/mrz.ts</code>): check digits passed ✓. Only what the coded lines hold is proposed; place of birth is typed. No AI reads identity documents. <span class="lab cap">Capability</span><span class="lab f">F P-133, P-134</span></div></header>
+<div class="body"><div class="small"><b>Identity facts: look at each one</b> <span title="Names, date of birth, passport number and expiry, and anything from handwritten or foreign certificates, are always checked one by one against the page (P-142 D5). Only staff mark a value as checked against the document (D3).">ⓘ</span> <span class="lab f">F P-142 D5</span></div>
+ <div class="prop"><span>Family name</span><b>KUMAR</b><span><button class="btn sm">✓ Matches page</button></span></div>
+ <div class="prop"><span>Given names</span><b>AARAV</b><span><button class="btn sm">✓ Matches page</button></span></div>
+ <div class="prop"><span>Date of birth</span><span><b>21 Mar 1990</b> <span class="pill danger">differs from typed 12 Mar 1990</span></span><span><button class="btn sm">Check…</button></span></div>
+ <div class="prop"><span>Passport number</span><b>Z1234567</b><span><button class="btn sm">✓ Matches page</button></span></div>
+ <div class="prop"><span>Expiry date</span><b>14 Feb 2033</b><span><button class="btn sm">✓ Matches page</button></span></div>
+ <div class="small" style="margin-top:6px"><b>Other facts</b></div>
+ <div class="prop"><span>Sex</span><b>M</b><span class="small muted">edit ✎</span></div>
+ <div class="prop"><span>Country of citizenship</span><b>India</b><span class="small muted">edit ✎</span></div>
+ <div class="notice info small">Values go in as <b>Proposed</b>. They fill nothing until the section is confirmed (P-72). Correcting is one click and an edit in place, as quick as accepting.</div></div>
+<footer><button class="btn">Cancel</button><button class="btn primary">Use 6 values · 1 to check</button></footer></div></div>
+<div style="padding:0 16px 16px" class="g3">
+ <div class="state"><h4>Reading</h4>Reading the passport's coded lines… <div class="sk"></div><button class="btn sm">Stop</button><span class="small muted">Rules: no cost. Letters and foreign records: AI vision on synthetic documents, cost shown first (P-110, P-133).</span></div>
+ <div class="state"><h4>No document yet</h4>Client A's passport is not uploaded. <button class="btn sm">Upload passport</button> <button class="btn sm ghost">Request from client</button><span class="small muted">Typing the facts always works.</span></div>
+ <div class="state"><h4>Could not read</h4>No coded lines in the file's text, or a check digit failed. Nothing was proposed. Printed-zone reading needs Textract: not built in M3. <button class="btn sm">Upload a clearer copy</button> or type the facts.</div>
+</div></div>
+
+<!-- 4 MISMATCH -->
+<div class="frame"><div class="frame-cap"><span>4 · A typed value differs from the document: a check the officer resolves with a reason (never an overwrite, never "fraud")</span><span>research: AG-8-23 no silent overwrite · one open check per person and fact · D6 client sees "please check" after M3</span></div>
+<div class="drawer-wrap"><div class="dim">Case view, Personal details · Client A (dimmed)</div>
+<div class="panel" style="margin:12px"><header><div class="row sp"><h3 style="font-size:17px">Date of birth · Client A</h3><span class="pill danger">To check</span></div><div class="small muted">Blocks Confirm section and both forms that use it (P-71: a conflicting fact blocks). <span class="lab cap">Capability</span><span class="lab f">F P-71, P-130</span></div></header>
+<div class="body"><div class="cmp"><div><h5>Passport (document)</h5><b style="font-size:16px">21 Mar 1990</b><div class="small muted">coded lines, check digit ✓ · page 1</div></div><div><h5>Client A typed (questionnaire, 26 Oct)</h5><b style="font-size:16px">12 Mar 1990</b><div class="small muted">possible day/month swap</div></div></div>
+ <div><div class="k">Use</div><label class="small"><input type="radio" checked> The passport's value</label><br><label class="small"><input type="radio"> The client's value</label><br><label class="small"><input type="radio"> Another value: <input style="width:120px"></label></div>
+ <div><div class="k">Reason (required)</div><select style="width:100%;height:32px"><option>Client typed day and month the wrong way round</option><option>The document is wrong; the client will get it corrected</option><option>Other (write a note)</option></select></div>
+ <div class="notice info small">The other value stays on record with your reason. Names differing only by capitals, apostrophes or a shortened coded name do not raise a check (passport spelling rules).</div>
+ <div class="small muted">The client sees only "please check" on that answer (after M3, P-142 D6); you resolve it here with a reason.</div>
+ <div class="small muted">When it happens: a fact a document supplies is not asked of the client (P-130), so a clash appears only when a value was typed before the upload, or by the officer. This is our rule check (P-71); the team's AG-11 Checker's cross-checks stay advisory.</div>
+ <div class="small muted">Variant: <b>two documents disagree</b> (passport vs birth certificate): same panel, two document columns, neither chosen for you.</div></div>
+<footer><button class="btn">Cancel</button><button class="btn primary">Resolve</button></footer></div></div></div>
+
+<!-- 5 DOCUMENT CHECKLIST -->
+<div class="frame"><div class="frame-cap"><span>5 · Documents · per person: the checklist read from the release, growing and shrinking with the answers</span><span>C6.4 · checklist line per person × requirement · document owned by the person (reusable across cases)</span></div>
+<div style="padding:16px 24px"><div class="row sp" style="margin-bottom:8px"><div class="row"><span class="chip on">Client A</span><span class="chip">Client B</span><span class="chip">Client C</span><span class="chip">Needs you · 3</span></div><button class="btn sm">Request all outstanding</button></div>
+<div class="tbl-wrap"><table><tr><th>Document</th><th>State</th><th>Uploaded to IRCC</th><th></th></tr>
+<tr><td title="Always · supplies: 9 facts"><b>Passport</b> <span class="small muted">or travel document</span></td><td><span class="pill info">Being checked · 7 proposed</span></td><td>☐</td><td class="more">⋯</td></tr>
+<tr><td title="Asked because marital status is Married · supplies: 3 facts"><b>Marriage certificate</b></td><td><span class="pill warn">Requested 27 Oct</span></td><td>—</td><td class="more">⋯</td></tr>
+<tr><td title="Always · supplies: 2 facts"><b>Bank statements, 4 months</b></td><td><span class="pill ok">Approved</span></td><td>☐</td><td class="more">⋯</td></tr>
+<tr><td title="Always · supplies: none, filed as is"><b>Photo</b></td><td><span class="pill ok">Received</span></td><td>☐</td><td class="more">⋯</td></tr>
+<tr><td title="Asked because occupation is Employed · supplies: 4 facts"><b>Employment letter</b></td><td><span class="pill neutral">Not requested</span></td><td>—</td><td class="more">⋯</td></tr>
+<tr style="color:var(--faint)"><td title="Not applicable now: previous marriage changed to No (file kept)">Divorce certificate</td><td><span class="pill neutral">Not applicable</span></td><td>—</td><td class="more">⋯</td></tr>
+</table></div>
+<div class="g3" style="margin-top:12px"><div class="state"><h4>Why and what it supplies: on hover and in the drawer</h4>Rows stay lean: the reason ("Asked because marital status is Married") and the facts it supplies are in the tooltip and the drawer.</div>
+<div class="state"><h4>States of a line</h4>The team's words (AG-09 binder): Not requested → Requested → Received → Being checked (read, values proposed) → Approved · or Rejected (reason) · Not applicable (file kept). "Uploaded to IRCC" is a separate tick. <span class="lab cap">Capability</span></div>
+<div class="state"><h4>⋯ menu</h4>Upload · Request from client · Reuse from another case · Replace (new passport: old kept as history, "evidence replaced") · Reject with a reason · See facts it supplies</div>
+<div class="state"><h4>Missing documents warn, never block</h4>IRCC's own portal checklist can differ from ours (research AV-7). A missing document only blocks when a fact it supplies is missing on a form. <span class="lab f">F EXPERIENCE §2.9</span></div></div></div></div>
+
+<!-- 6 PREPARE THE FILING -->
+<style>
+.ch{font-size:11px;font-weight:600;border-radius:4px;padding:0 5px;border:1px solid var(--border-s);color:var(--muted);background:#fff;white-space:nowrap}
+.li.cant{color:var(--faint);cursor:default}.li.cant:hover{background:none}
+.mx2 td,.mx2 th{text-align:center;font-size:12px}.mx2 td:first-child,.mx2 th:first-child{text-align:left}
+</style>
+<div class="frame"><div class="frame-cap"><span>6 · Stage 2 "Prepare the filing": one row per item, three kinds (form · document · IRCC step), every channel in one list</span><span>C7.7 · C7.3 · C7.6 · P-122 · "needed before" tags (Encompass) · "Cannot start yet" (GOV.UK)</span></div>
+<div class="ws"><div class="list">
+ <div style="padding:0 14px 4px" class="row small"><span class="chip" style="height:26px">Needs you · 3</span><span class="chip on" style="height:26px">All · 9</span><span class="lab f">F P-143</span><span class="chip" style="height:26px">Everyone ▾</span></div>
+ <div class="own">Forms</div>
+ <div class="li"><span>APR Portal questions · Client A</span><span class="pill warn">In progress</span><small><span class="ch">Online</span> answer sheet · 5 of 8 screens entered · signature: none</small></div>
+ <div class="li"><span>APR Portal questions · Clients B, C</span><span class="pill warn">To do</span><small><span class="ch">Online</span> 2 answer sheets · ⋯ Download PDF copy</small></div>
+ <div class="li"><span>IMM 5257 · Clients A, B, C</span><span class="pill danger" title="A barcode form on PDF upload with no validated copy read back blocks Ready to file (P-144).">Blocks: not validated</span><small><span class="ch">PDF upload</span> barcodes · validate in Adobe, upload back · <span class="nb2">before filing</span></small></div>
+ <div class="li on"><span>IMM 5707 · Client A</span><span class="pill info">In progress</span><small><span class="ch">PDF upload</span> step 5 of 7 · signature: typed name</small></div>
+ <div class="li cant"><span>IMM 5707 · Client B</span><span class="pill neutral" title="Waits for: date of marriage (marriage certificate requested from Client A)">Cannot start yet</span><small><span class="ch">PDF upload</span> waits for date of marriage</small></div>
+ <div class="li"><span>IMM 5476 · Use of a representative</span><span class="pill info">In progress</span><small><span class="ch">PDF upload</span> signature: signed by hand, scanned · sent to Client A · <span class="nb2">before filing</span></small></div>
+ <div class="own">Documents and IRCC steps</div>
+ <div class="li"><span>Documents to upload · 6 of 11</span><span class="pill warn">In progress</span><small>opens stage 1 documents, filtered</small></div>
+ <div class="li cant"><span>Biometrics · Clients A, B</span><span class="pill neutral">Cannot start yet</span><small><span class="ch">IRCC step</span> after the instruction letter · <span class="nb2">after filing</span></small></div>
+ <div class="own">Send</div>
+ <div class="li cant"><span>Representative's declaration</span><span class="pill neutral">Cannot start yet</span><small>at Transmit, after every "before filing" row</small></div>
+ <div class="own">Not needed on the APR Portal</div>
+ <div class="li cant"><span>IMM 5645 · Family information</span><span class="pill neutral">Not needed</span><small><span class="ch">Not needed</span> IMM 5707 is used for this combination (Sample)</small></div>
+ <div class="own">Then</div>
+ <div class="li cant"><span>Record the 3 filings</span><span class="pill neutral">Cannot start yet</span><small>after Transmit</small></div></div>
+<main style="padding:16px 20px;position:relative">
+ <div class="row sp"><div><h3 style="font-size:17px">IMM 5707 · Family information · Client A</h3><div class="small muted"><span class="ch">PDF upload</span> · needed before filing · edition 01-2021 · fill trial passed (evidence E1) <span class="lab cap">Capability</span><span class="lab f">F P-122</span></div></div><span class="more" style="font-size:18px" title="Change channel · Add a PDF copy, not for filing · Download · Run AI review · Report a mapping problem · History">⋯</span></div>
+ <div class="g4" style="grid-template-columns:1fr 1fr;margin-top:12px"><div class="card"><div class="stepper">
+  <div><span class="ic d">✓</span>Filled from confirmed facts<span class="small muted">39 values</span></div>
+  <div><span class="ic d">✓</span>Our check<span class="small muted" title="Our own rules on the facts this form reads. It is not IRCC's Validate.">no errors ⓘ</span></div>
+  <div><span class="ic d">✓</span>Downloaded<span class="small muted">28 Oct</span></div>
+  <div><span class="ic d">✓</span>Validated in Adobe<span class="small muted">by you, outside the app</span></div>
+  <div><span class="ic r">5</span><b>Upload the validated copy</b><span><button class="btn sm primary">Upload</button></span></div>
+  <div><span class="ic">6</span>Read back and compared<span class="small muted">by position</span></div>
+  <div><span class="ic">7</span>Uploaded to IRCC<span class="small muted">a tick</span></div></div>
+  <p class="small muted">Never says "Validated" for our own check (P-46). A form whose fill trial has not passed shows "Answer sheet only": fill in Adobe, then upload for read-back (P-65).</p></div>
+ <div class="card"><b>Review findings for this form</b> <span class="pill neutral">advisory</span> <span class="small muted">· all findings: the Review page (frame 13)</span>
+  <div class="prop" style="grid-template-columns:1fr auto"><span class="small">"Address history has a 3-month gap (Jan–Mar 2024)"</span><button class="btn sm">Acknowledge…</button></div>
+  <div class="prop" style="grid-template-columns:1fr auto"><span class="small muted">"Sibling count differs from IMM 5257" · acknowledged: half-sibling</span><span class="pill ok">Done</span></div>
+  <p class="small muted">Findings never block (P-71). Acknowledging needs a reason; "Other" needs a note.</p>
+  </div></div>
+ <div class="g3" style="margin-top:12px">
+  <div class="state"><h4>⋯ Change channel (forms only)</h4>Four values: Online · PDF upload · Paper · Not needed, inside what IRCC accepts <b>for this edition on this account</b> (P-143). Online <span class="pill neutral">off</span> "IRCC accepts this form as a PDF only on the APR Portal." · Paper <span class="pill neutral">off</span> "Only on an accessibility exception, with a reason." Documents and IRCC steps have no channel.</div>
+  <div class="state"><h4>Signature: its own value per line (P-143)</h4>typed name · signed by hand and scanned · signed in pen · none. Derived from the edition and the channel, never typed by us. Plus the account's step: the client e-signs in the PR Portal, or the representative's declaration at Transmit (frame 7).</div>
+  <div class="state"><h4>The same words on every row</h4>Cannot start yet (says what it waits for) · To do · In progress · Ready · Out of date · Done · Not needed through this portal. Tags: needed before signing · before filing · after filing.</div></div>
+</main></div>
+<div style="padding:0 20px 12px"><h3 style="font-size:15px;margin:4px 0 6px">Steps per channel, in the item's drawer <span class="lab cap">Capability</span><span class="lab f">F P-143, P-144, P-145</span></h3>
+ <div class="tbl-wrap"><table><tr><th>Channel</th><th>Steps on the line</th><th>Blocks Ready to file when</th></tr>
+ <tr><td><span class="ch">Online</span></td><td class="small">answer sheet in portal screen order (answer, Copy, source) → "Entered" per screen (freezes its answers) · ⋯ <b>Download PDF copy</b>: IRCC's PDF filled from confirmed facts where one exists, else our format; marked "Copy, not for filing" (P-145)</td><td class="small">an entered screen is out of date (P-136)</td></tr>
+ <tr><td><span class="ch">PDF upload</span></td><td class="small">fill from confirmed facts → our check (never "Validated") → download → Validate in Adobe → person steps (e.g. typed names on IMM 1344) → upload the validated copy → read back → "Uploaded to IRCC". Signed by hand: read back → print → signed → scan received → uploaded. Never printed otherwise</td><td class="small">a barcode form with no validated copy read back (P-144); an uploaded copy out of date; a missing signature (P-136)</td></tr>
+ <tr><td><span class="ch">Paper</span></td><td class="small">fill → our check → Validate in Adobe → upload back, read back → print with the barcode page → signed in pen → barcode page on top → mailed (tracking number)</td><td class="small">no validated copy read back (P-144); a missing pen signature; a signed copy out of date</td></tr>
+ <tr><td><span class="ch">Not needed</span></td><td class="small">no steps; the line stays visible, greyed, with the reason ("the portal asks it itself")</td><td class="small">never</td></tr></table></div>
+ <p class="small muted">A filing that mixes Online and PDF upload lines is the normal portal case; "online plus uploaded PDFs" is the filing's method, worked out from its lines, not a fifth channel.</p></div>
+<div style="padding:0 20px 16px" class="grid2"><div><h3 style="font-size:15px;margin:4px 0 6px">⋯ › Person × deliverable view <span class="lab cap">Capability</span></h3>
+ <div class="tbl-wrap"><table class="mx2"><tr><th>Person</th><th>Information</th><th>Documents</th><th>Forms</th><th>Signing</th></tr>
+ <tr><td>Client A · principal</td><td><span class="pill danger">1 to check</span></td><td>4 of 6</td><td>1 of 3</td><td>IMM 5476 out for signing</td></tr>
+ <tr><td>Client B · spouse</td><td>2 of 3</td><td>3 of 4</td><td><span class="pill neutral">cannot start</span></td><td>waits for forms</td></tr>
+ <tr><td>Client C · child, 9</td><td>1 of 3</td><td>2 of 2</td><td>0 of 1</td><td>— (parent signs)</td></tr></table></div></div>
+ <div class="card"><b>Mixed channels in one application</b> <span class="sample">Sample: spousal sponsorship, PR Portal</span><ul class="small" style="margin:6px 0 0;padding-left:18px"><li>Form <span class="ch">Online</span> IMM 0008 digital form · client e-signs in the client portal (we tick "seen") · ⋯ Download PDF copy</li><li>Form <span class="ch">PDF upload</span> IMM 1344 sponsorship · signature: typed names</li><li>Form <span class="ch">PDF upload</span> IMM 5532 · signature: typed names</li><li>Form <span class="ch">PDF upload</span> IMM 5476 ×2 · signature: signed by hand, scanned</li><li>Document: police certificate, original posted if IRCC asks</li><li>IRCC step: interview by video or phone, if asked</li><li class="muted">The firm's own calls with the client are tasks (team AG-13), <i>not built here</i></li></ul><p class="small muted">One list, one set of row words; each kind's steps live in the drawer.</p></div></div></div>
+
+<!-- 7 SIGNATURES + FILING RECORD -->
+<div class="frame"><div class="frame-cap"><span>7 · Signatures per account, and the filing record (filing number and UCI per person)</span><span>C8.1 · C8.2 · research AV-3, AV-6 · the representative never signs for the client (Unconfirmed: no counsel)</span></div>
+<div style="padding:16px 24px"><div class="acc">
+ <div class="card"><b>APR Portal</b> <span class="small muted">visitor, study, work · signing steps sit inside each form item</span><div class="stepper" style="margin-top:6px"><div><span class="ic d">✓</span>IMM 5476: signed by hand and scanned, Client A and the representative<span></span></div><div><span class="ic d">✓</span>IMM 5707: typed name<span></span></div><div><span class="ic r">2</span>Representative's declaration at "Transmit"<span class="small muted">the representative's own</span></div></div><span class="lab cap">Capability</span></div>
+ <div class="card"><b>Representative PR Portal</b> <span class="small muted">PR other than Express Entry</span><div class="stepper" style="margin-top:6px"><div><span class="ic d">✓</span>IMM 1344, IMM 5532: typed names (sponsor, applicant)<span></span></div><div><span class="ic x">!</span>Client B e-signs the digital forms in the client portal<span><button class="btn sm">Seen in portal ✓</button></span></div><div><span class="ic">2</span>Representative ticks the declaration<span></span></div></div><p class="small muted">We only record that it happened. We never ask for or store the client's portal sign-in.</p><span class="lab cap">Capability</span></div>
+ <div class="card"><b>Paper</b> <span class="small muted">incl. citizenship: a representative cannot submit online, so it is paper</span><div class="stepper" style="margin-top:6px"><div><span class="ic d">✓</span>Printed with the barcode page on top<span></span></div><div><span class="ic r">2</span>Signed in pen: Client A; Client B for Client C (child's signer)<span></span></div><div><span class="ic">3</span>Barcode page on top, mailed<span></span></div></div><span class="lab f">F P-143, P-144</span></div></div>
+<p class="small muted" style="margin:8px 0 0">A missing required signature blocks "Ready to file" (P-136). The representative never signs for the client; the product stores no client sign-in.</p>
+<div class="drawer-wrap" style="min-height:0;margin-top:14px;grid-template-columns:1fr 560px"><div class="small muted" style="padding:8px"><b style="color:var(--text)">One filing per person who files their own application.</b> IRCC gives each its own application number and decision (SA-1B-74); the team keeps the number on the filing (AG-7-45). The three filings are recorded together in one action (team BR-31). <span class="lab f">F P-135</span><br><br><b style="color:var(--text)">After recording</b> the filing is read-only (ticks, sign states, copies, numbers). "Correct a number" keeps the history. A correction after filing never edits a filed copy: see frame 8.</div>
+<div class="panel"><header><h3 style="font-size:17px">Record the filings · Visitor visa · 3</h3><span class="lab cap">Capability</span><span class="lab f">F P-65, P-122</span></header><div class="body">
+ <div class="row"><div style="flex:1"><div class="k">Filed in</div>APR Portal <span class="small muted">(the filing's route)</span></div><div style="flex:1"><div class="k">Our filing reference <span title="Type this as the APR Portal's 'case ID'. IRCC does not use it; it is how you find the filing.">ⓘ</span></div><b>ER-0204-1 … -3</b></div></div>
+ <div><div class="k">Submitted on</div><input value="29 Oct 2026" style="height:30px"> <span class="small muted">not after today</span></div>
+ <table><tr><th>Filing</th><th>Application number</th><th>UCI</th></tr>
+ <tr><td>Client A</td><td><input value="V312345678" style="width:120px"></td><td><input value="1123-4567" style="width:100px"></td></tr>
+ <tr><td>Client B</td><td><input value="V312345679" style="width:120px"></td><td><input placeholder="as on IRCC's page" style="width:100px"></td></tr>
+ <tr><td>Client C</td><td><input placeholder="required" style="width:120px;border-color:var(--danger)"></td><td><input style="width:100px"></td></tr></table>
+ <div class="small" style="color:var(--danger-t)">Client C: enter the application number shown on IRCC's status page.</div>
+ <div><div class="k">Fee receipt</div><button class="btn sm">Upload "Transaction Approved" page</button></div>
+ <div class="notice warn small">1 item is out of date (IMM 5707 · Client B). Recording warns, never blocks.</div></div>
+<footer><button class="btn">Cancel</button><button class="btn primary">Record the 3 filings</button></footer></div></div></div></div>
+
+<!-- 7b GROUPS WAITS FEES -->
+<div class="frame"><div class="frame-cap"><span>7b · Submission groups, waits and fees: what the engine derives per case (P-135)</span><span>research ircc_filing_units.md · team AG-7-45, BR-31 · amounts and modes Sample</span></div>
+<div style="padding:16px 24px" class="g3">
+ <div class="card"><b>Visitor visa · 3 filings · 1 group</b> <span class="lab cap">Capability</span><div class="tbl-wrap" style="margin-top:8px"><table><tr><th>Filing</th><th>Fee line</th><th></th></tr>
+  <tr><td>Client A</td><td class="small">Family rate <span class="sample">Sample</span></td><td class="small">pays</td></tr>
+  <tr><td>Client B</td><td class="small">Family rate: fee exempt</td><td class="small">—</td></tr>
+  <tr><td>Client C</td><td class="small">Family rate: fee exempt</td><td class="small">—</td></tr></table></div>
+  <p class="small muted">⋯ <b>Send Client C separately</b>: "Loses the family fee cap. Give a reason." The cap applies only within one submission.</p></div>
+ <div class="card"><b>Spouse sponsorship · 2 filings · 1 group</b> <span class="lab cap">Capability</span>
+  <div class="stepper" style="margin-top:6px"><div><span class="ic">S</span>Sponsorship · Client A (sponsor)<span class="pill neutral">co-filed</span></div><div><span class="ic">P</span>PR application · Client B + Client C (applying)<span class="pill info">1 number</span></div></div>
+  <p class="small muted">"The sponsorship goes with Client B's PR application. It cannot be sent alone." Split is not offered. Bundled fee on Client B's filing. <span class="lab m">Expert Q4</span></p></div>
+ <div class="card"><b>Waits</b> <span class="lab cap">Capability</span>
+  <div class="li cant" style="padding:6px 0"><span>Open work permit · Client B (in Canada)</span><span class="pill neutral">Cannot start yet</span><small>waits for the AOR on Client B's PR filing</small></div>
+  <div class="li cant" style="padding:6px 0"><span>eAPR · Client D</span><span class="pill neutral">Cannot start yet</span><small>waits for the provincial nomination <span class="lab m">Expert Q8</span></small></div>
+  <p class="small muted">Record the AOR or the nomination as a document on the earlier filing → "Start next stage" is offered. Nothing starts by itself.</p></div>
+ <div class="card" style="grid-column:1/4"><b>Express Entry · 1 filing · 4 people</b> <span class="small muted">— the filings chip counts filings, not people</span> <span class="lab cap">Capability</span>
+  <div class="small" style="margin-top:6px"><span class="role">Client A · principal</span> <span class="role">Client B · spouse, applying</span> <span class="role">Client C · child, applying</span> <span class="role">Client E · child, declared only</span> — Client E: family information and medical only, no fee, still declared (leaving a member out has a lasting cost; Unconfirmed: no counsel). One application number for the filing; UCI per person.</div></div>
+</div></div>
+
+<!-- 8 OUT OF DATE -->
+<div class="frame"><div class="frame-cap"><span>8 · A fact changes: drafts follow; signed, uploaded, entered or filed items are marked out of date and never rewritten</span><span>C9.2 · P-65 · built: changedFacts / out_of_date / stale in fill-case.ts</span></div>
+<div style="padding:16px 24px" class="g3" ><div class="state" style="grid-column:1/4"><div class="toast">Date of marriage updated for Client A and Client B. Drafts use the new value; 2 finished items (IMM 5707 · A and B) are marked out of date and were not changed. <a>See them</a> <a>Undo</a></div></div>
+ <div class="state"><h4>Before filing <span class="pill warn">Out of date</span></h4>IMM 5707 · Client A · validated copy uploaded 27 Oct. Date of marriage changed on 29 Oct (12 Jun 2015 → 21 Jun 2015). The uploaded copy was kept as it was. <div class="row"><button class="btn sm">Prepare again</button><button class="btn sm ghost">Undo the change</button></div><span class="small muted">Blocks "Ready to file" until prepared again or undone.</span> <span class="lab f">F P-136</span></div>
+ <div class="state"><h4>Entered in the portal <span class="pill warn">Out of date</span></h4>APR Portal questions, screen "Marital status", ticked as entered 28 Oct. The answers it covered were frozen at the tick; one now differs. <button class="btn sm">Show what to re-enter</button></div>
+ <div class="state"><h4>After filing <span class="pill danger">Filed with an earlier value</span></h4>Filed 29 Oct with 12 Jun 2015. Nothing filed was changed. A task asks the case officer to decide: re-sign, or tell IRCC (P-142 D7; whether IRCC must be told: Unconfirmed: no counsel). <button class="btn sm">Open task</button></div></div></div>
+
+<!-- 9b AFTER FILING -->
+<div class="frame"><div class="frame-cap"><span>9 · After filing: kept minimal in M3 (P-129 gate); milestones are the team's AG-07</span><span>challenge M6</span></div>
+<div style="padding:16px 24px" class="g3">
+ <div class="state"><h4>Read-only filing</h4>Recorded 29 Oct by the case officer. Ticks, signing steps, copies and numbers no longer change. <a>Correct a number</a> keeps the history. <span class="lab cap">Capability</span></div>
+ <div class="state"><h4>No second recording</h4>"Record the filing" is refused for a filing already recorded, with "Correct a number" offered instead. <span class="lab cap">Capability</span></div>
+ <div class="state"><h4>Filed with an earlier value</h4>A later fact change marks the filed item, never edits it, and opens a task: re-sign or tell IRCC (Unconfirmed: no counsel). <span class="lab cap">Capability</span></div>
+ <div class="state" style="grid-column:1/4"><h4>Not built here</h4>Acknowledgement, biometrics letters, medicals, document requests, interviews, returned incomplete → resubmit, newborn added, decision: the team's AG-07 milestones and lifecycle (<code>CaseMilestone</code>, <code>Decision</code> per filing). <span class="lab nb">Team AG-07</span></div>
+</div></div>
+
+<!-- 9 EMPLOYER LINK -->
+<div class="frame"><div class="frame-cap"><span>10 · Employer case link on a worker's filing (P-106)</span><span>Retail › Temporary residence › Work permits › Employer-specific work permit › With an LMIA – inside Canada · employer case under Corporate (Sample)</span></div>
+<div style="padding:16px 24px" class="grid2"><div class="sec"><header><div><h3 style="font-size:17px">Employer · Client D</h3><span class="small muted">Read from the employer case. Change it there.</span></div><div class="row"><a class="small">Open employer case E-0042 ↗</a><span class="more" title="Change linked case · Remove link (asks a reason)">⋯</span></div></header>
+ <div class="fact head"><span>Fact</span><span>Value</span><span>Comes from</span><span>State</span><span></span></div>
+ <div class="fact"><span>Employer's name</span><span class="v">Sample Robotics Inc.</span><span><span class="from emp" title="Held once on employer case E-0042 (there: Document · LMIA letter, confirmed 20 Oct)">Employer case</span></span><span><span class="pill ok">Confirmed</span></span><span class="more">⋯</span></div>
+ <div class="fact"><span>Employer's address</span><span class="v">100 Sample St, Toronto ON</span><span><span class="from emp">Employer case</span></span><span><span class="pill ok">Confirmed</span></span><span class="more">⋯</span></div>
+ <div class="fact"><span>LMIA number</span><span class="v">1234567</span><span><span class="from emp">Employer case</span></span><span><span class="pill ok">Confirmed</span></span><span class="more">⋯</span></div>
+ <div class="fact"><span>LMIA letter</span><span class="v">document</span><span><span class="from emp">Employer case</span></span><span><span class="pill ok">Received</span></span><span class="more">⋯</span></div>
+ <footer><span class="small muted">Linked by the case officer, 27 Oct. A change on E-0042 marks this filing's finished items out of date; nothing is copied silently.</span></footer></div>
+ <div class="card"><b>How it works</b> <span class="lab cap">Capability</span><span class="lab f">F P-106</span><ul class="small"><li>Offered only when the combination's forms need employer facts; picks a case under Corporate.</li><li>The employer's facts show read-only, with "Employer case" as where they come from; the real source (document or case officer) is in the drawer.</li><li>Removing the link asks for a reason; the facts then show as Missing.</li><li>Open work permit: no employer facts, no link offered.</li></ul><span class="lab scf">Scaffolding · Sample employer and LMIA number</span></div></div></div>
+
+<!-- 10 STATES -->
+<div class="frame"><div class="frame-cap"><span>11 · States every screen draws (EXPERIENCE §4)</span><span>empty · loading · needs work · running · error · read-only · conflict</span></div>
+<div style="padding:16px 24px" class="g4">
+ <div class="state"><h4>Empty case</h4>Nothing collected yet. Start with the documents: each person's checklist is ready. <button class="btn sm primary">Upload Client A's passport</button></div>
+ <div class="state"><h4>Loading</h4><div class="sk"></div><div class="sk" style="width:70%"></div><div class="sk" style="width:85%"></div></div>
+ <div class="state"><h4>Could not load</h4>The case could not be loaded. Nothing was lost. <button class="btn sm">Retry</button></div>
+ <div class="state"><h4>Someone else saved</h4>Client A changed an answer while you were confirming. Nothing was confirmed. <button class="btn sm">Reload the section</button></div>
+ <div class="state"><h4>Read-only: filed</h4>Recorded 29 Oct by the case officer. <a>Correct a number</a></div>
+ <div class="state"><h4>Not on this release</h4>Release 3 is out; this case stays on release 2 (P-67).</div>
+ <div class="state"><h4>Client's own answers</h4>Background and declaration answers are the client's: you can see them, not confirm them (P-97).</div>
+ <div class="state"><h4>Long content</h4>A family of 6: person filter and "Needs you" keep the list short; names wrap, never cut.</div></div></div>
+
+<!-- 13 ELIGIBILITY -->
+<style>
+.elc{border:1px solid var(--border);border-radius:var(--r2);background:#fff;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:13px;cursor:pointer}
+.elc.on{border:2px solid var(--primary);background:var(--p50)}.elc small{grid-column:1/3;color:var(--muted);font-size:12px}
+.gate{display:grid;grid-template-columns:22px 1fr auto;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px;align-items:center}
+.sev{font-size:11px;font-weight:700;border-radius:4px;padding:0 6px}.sev.c{background:var(--danger-tint);color:var(--danger-t)}.sev.ma{background:var(--warn-tint);color:var(--warn-t)}.sev.mi{background:#eee;color:var(--muted)}.sev.i{background:var(--p50);color:var(--link)}
+</style>
+<div class="frame"><div class="frame-cap"><span>12 · Case › Eligibility: a full page from the team's AG-03 Qualifier (P-141), on our rules engine</span><span>C6.9 · P-76, P-77 · AG-3-10, -12, -13, -16, -25, -28, -32, -33, -34 · rules only, no AI</span></div>
+<div class="top"><div class="logo"><b>ExpatReady</b><span>Cases › ER-0204 · Client A family › Eligibility</span></div><span class="small muted">Case officer (Sample)</span></div>
+<div style="padding:10px 20px;background:var(--raised);border-bottom:1px solid var(--border)"><div class="tabs" style="margin:0"><a>Overview</a><a>Prepare application</a><a class="on">Eligibility</a><a>Review</a><a>History</a></div></div>
+<div class="notice warn small" style="margin:12px 20px 0"><b>Indicative eligibility, not a guarantee of approval.</b> Staff only; the client and prospect never see a verdict (P-77). <span class="sample">Sample rules</span> · wording with the immigration expert.</div>
+<div class="ws" style="grid-template-columns:400px 1fr"><div class="list" style="padding:12px 14px">
+ <div class="row sp small" style="margin-bottom:8px"><span><b>Client A</b> · assessed 29 Oct by the case officer</span><span class="more" title="⋯ Re-run with a reason · Earlier assessments (3) · Compare with the last run · Print for the file">⋯</span></div>
+ <div class="k" style="margin:0 0 6px">This case's combination</div>
+ <div class="elc on"><span><b>Visitor visa</b></span><span class="pill warn">Possibly eligible</span><small>needs: funds available, ties to home country</small></div>
+ <div class="k" style="margin:12px 0 6px">Other released programs, ranked <span title="Every released combination of this pathway type is checked on the same facts. Order: likely, then possibly (fewest missing), then not eligible. Indicative only.">ⓘ</span></div>
+ <div class="elc"><span>Super visa</span><span class="pill danger">Not eligible</span><small>not a parent or grandparent of a Canadian (1 gate)</small></div>
+ <div class="elc" style="margin-top:6px"><span>Study permit · outside Canada</span><span class="pill warn">Possibly eligible</span><small>needs 4 facts, incl. a letter of acceptance</small></div>
+ <div class="notice info small" style="margin-top:12px"><b>Missing facts</b> · funds available <span class="muted">(needed by 2 programs)</span> · ties to home country · letter of acceptance → <a>open in the case view</a></div>
+ <p class="small muted">Cut from AG-03 (heavy): score grids such as CRS, "below cut-off" bands, what-if recommendations (§8b).</p></div>
+<main style="padding:16px 20px"><div class="sec"><header><div><h3 style="font-size:17px">Visitor visa · Client A</h3><span class="small muted">Gates as data on the release (rules engine, P-77). <span class="lab cap">Capability</span></span></div><span class="pill warn">Possibly eligible: needs 2 facts</span></header>
+ <div style="padding:6px 14px">
+ <div class="gate"><span class="ic d">✓</span><span>Valid passport for the whole stay <span class="small muted">· passport expiry 14 Feb 2033 (Document · Passport)</span></span><span class="pill ok">Met</span></div>
+ <div class="gate"><span class="ic d">✓</span><span>No inadmissibility declared <span class="small muted">· background answers (Client)</span></span><span class="pill ok">Met</span></div>
+ <div class="gate"><span class="ic">?</span><span>Enough funds for the stay <span class="small muted">· funds available: not answered</span></span><span class="pill neutral">Not answered</span></div>
+ <div class="gate"><span class="ic">?</span><span>Ties to the home country <span class="small muted">· employment, property: not answered</span></span><span class="pill neutral">Not answered</span></div>
+ <div class="gate"><span class="ic d">✓</span><span>Purpose of visit is a visit <span class="small muted">· purpose: tourism (Client)</span></span><span class="pill ok">Met</span></div></div>
+ <footer><span class="small muted">Rules: Visitor visa release 2 · rules as at 19 Oct 2026 · run by the case officer 29 Oct 10:12 · facts frozen with the run</span><div class="row"><button class="btn sm" title="Record your own view beside the result, with a reason. The result stays.">Override…</button><button class="btn sm" title="Stamp: reviewed by you, with a note.">Mark reviewed</button></div></footer></div>
+ <div class="g3" style="margin-top:12px">
+  <div class="state"><h4>Override (drawer)</h4>Your outcome · reason (required) · kept beside the engine's result, never replacing it; not carried into a re-run (AG-3-33). <span class="lab cap">Capability</span></div>
+  <div class="state"><h4>Out of date</h4>"Facts changed since this run (funds available, 29 Oct)." <button class="btn sm">Run again</button> A run is never edited; each run is kept (AG-3-1, AG-3-28).</div>
+  <div class="state"><h4>Where it starts</h4>The prospect's PQR answers (after M3, P-129) carry in; on the case, the officer runs it. No AI: identical with AI off (AG-03).</div></div>
+</main></div></div>
+
+<!-- 14 REVIEW -->
+<div class="frame"><div class="frame-cap"><span>13 · Case › Review: findings before filing, from rules and the AI review (team AG-11 Checker + AG-07 deficiencies), a full page (P-141)</span><span>C7.5 · P-71, P-121, P-136 · AG-11-69, -70, -71; AG-7-25, -26, -28</span></div>
+<div class="top"><div class="logo"><b>ExpatReady</b><span>Cases › ER-0204 · Client A family › Review</span></div><span class="small muted">Case officer (Sample)</span></div>
+<div style="padding:10px 20px;background:var(--raised);border-bottom:1px solid var(--border)"><div class="row sp"><div class="tabs" style="margin:0"><a>Overview</a><a>Prepare application</a><a>Eligibility</a><a class="on">Review</a><a>History</a></div>
+ <div class="row"><span class="live" title="Two AI rounds per form (a draft and an independent checker that does not see it) plus the rules. Cost shown before it starts; Stop ends it; saved runs replay at US$0.">✦ Run AI review · 3 forms · about US$0.30 · at most US$0.90</span><span class="lab cap">Capability</span><span class="lab f">F P-110, P-121</span></div></div></div>
+<div class="ws" style="grid-template-columns:400px 1fr"><div class="list">
+ <div style="padding:0 14px 6px" class="row small"><span class="chip on" style="height:26px">Open · 4</span><span class="chip" style="height:26px">All · 7</span><span class="chip" style="height:26px">Everyone ▾</span></div>
+ <div class="own">Client B · visitor visa filing</div>
+ <div class="li on"><span>Family name differs: passport vs marriage certificate</span><span class="sev ma">MAJOR</span><small>Rules · "KUMARI" vs "KUMAR" · IMM 5707</small></div>
+ <div class="li"><span>Sibling count differs between forms</span><span class="sev mi">MINOR</span><small>AI · both rounds agree · IMM 5257 vs IMM 5707</small></div>
+ <div class="own">Client A</div>
+ <div class="li"><span>Address history has a 3-month gap</span><span class="sev ma">MAJOR</span><small>AI · Low: the rounds disagree</small></div>
+ <div class="li"><span>IMM 5476 not signed</span><span class="sev c">CRITICAL</span><small>Rules · blocks Ready to file (P-136)</small></div>
+ <div class="own">Done · 3</div>
+ <div class="li"><span>Travel dates overlap</span><span class="pill ok">Acknowledged</span><small>"Same trip, two entries" · case officer</small></div>
+ <div class="small muted" style="padding:6px 14px">+ 2 resolved by a fact change</div></div>
+<main style="padding:16px 20px"><div class="sec"><header><div><h3 style="font-size:17px">Family name differs: passport vs marriage certificate</h3><span class="small muted">Client B · rules cross-check (name, date of birth, numbers, dates across documents, facts and forms; AG-11-69) <span class="lab cap">Capability</span></span></div><span class="sev ma">MAJOR</span></header>
+ <div style="padding:12px 14px" class="cmp"><div><h5>Passport · page 1 (Document)</h5><b>KUMARI</b><div class="small muted">confirmed 28 Oct, fills IMM 5257, IMM 5707</div></div><div><h5>Marriage certificate · page 1 (Document)</h5><b>KUMAR</b><div class="small muted">read 29 Oct, proposed</div></div></div>
+ <div style="padding:0 14px 12px" class="small muted">Why: IRCC asks for names exactly as on the passport; a different name on a supporting document may need an explanation letter. <span class="sample">Sample guidance</span></div>
+ <footer><span class="small muted">Advisory: AI and rule findings warn, never block, except the P-71 and P-136 blockers (e.g. a missing signature).</span><div class="row"><button class="btn sm">Fix the fact</button><button class="btn sm" title="Keep it on record with a reason; 'Other' needs a note.">Acknowledge…</button><span class="more" title="⋯ Waive a CRITICAL (permission + reason) · Dismiss (does not return for the same source) · History">⋯</span></div></footer></div>
+ <div class="g3" style="margin-top:12px">
+  <div class="state"><h4>AI finding (drawer)</h4>What · why · the quoted field on each form · <b>both rounds' readings</b>: High when draft, checker and rules agree; <b>Low</b> with both reasons when they disagree (P-121). <span class="lab cap">Capability</span></div>
+  <div class="state"><h4>States</h4>Open → Acknowledged (reason) → Resolved · Open → Waived (CRITICAL only; permission + reason) · a rule finding resolves by itself when the fact is fixed; a waiver reopens when its fact changes (AG-7-26).</div>
+  <div class="state"><h4>Out of date and AI off</h4>A fact or form changed since the run: "Findings from 29 Oct may be out of date. Run again." With AI off, the rules cross-checks and manual findings still work (AG-11-71).</div></div>
+ <p class="small muted">Severity words from the team (CRITICAL · MAJOR · MINOR · INFO; AG-7-25); sources Rules · AI · Added by hand. Cut from AG-11 (heavy): the "Needs you" routing, plan gating, retention (§8b). <span class="lab scf">Scaffolding · Sample findings, replayed AI runs</span></p>
+</main></div></div>
+
+<!-- 11 BUILD ORDER -->
+<div class="frame"><div class="frame-cap"><span>14 · Build order in slices (after the M2 gate; each with an early look)</span><span>concept-draft.md §8 · labels per P-33</span></div>
+<div style="padding:16px 24px"><div class="tbl-wrap"><table><tr><th>Slice</th><th>What</th><th>Label</th></tr>
+<tr><td><b>M3-0</b> Filing modes</td><td class="small">mode per role on "Who can be in this application", linked combinations, co-filed companion, follows-with-trigger, fee lines, release check</td><td><span class="lab cap" style="display:inline-block">Capability</span> <span class="lab scf" style="display:inline-block">values Scaffolding</span></td></tr>
+<tr><td><b>M3-1</b> Filings and checklist</td><td class="small">derived filings, applicants, groups, waits; pins re-keyed with backfill (runtime lane); checklist lines; the tab with the filings chip</td><td><span class="lab cap" style="display:inline-block">Capability</span></td></tr>
+<tr><td><b>M3-2</b> Documents in</td><td class="small">person-owned upload; <code>p5/reader/mrz.ts</code> on synthetic PDFs; proposals; Fill drawer</td><td><span class="lab cap" style="display:inline-block">Capability</span> <span class="lab scf" style="display:inline-block">documents Scaffolding</span></td></tr>
+<tr><td><b>M3-3</b> Checks and confirm</td><td class="small">typed-vs-document check, "Matches page", Confirm refuses open checks</td><td><span class="lab cap" style="display:inline-block">Capability</span></td></tr>
+<tr><td><b>M3-4</b> Items</td><td class="small">three kinds, channel on forms, signing inside forms, Cannot start yet, tags, person view, PDF round trip, answer sheet</td><td><span class="lab cap" style="display:inline-block">Capability</span></td></tr>
+<tr><td><b>M3-5</b> Groups, fees, record</td><td class="small">split with reason, co-filed guard, fee lines, record per group, read-only, Correct a number</td><td><span class="lab cap" style="display:inline-block">Capability</span> <span class="lab scf" style="display:inline-block">amounts Scaffolding</span></td></tr>
+<tr><td><b>M3-6</b> Out of date and waits</td><td class="small">P-136 blockers; extend the built staleness; Start next stage on a recorded trigger; task after filing</td><td><span class="lab cap" style="display:inline-block">Capability</span></td></tr>
+<tr><td><b>M3-7</b> Employer link</td><td class="small">Corporate case link, read-only facts, out of date on change</td><td><span class="lab cap" style="display:inline-block">Capability</span></td></tr>
+<tr><td><b>M3-8</b> Eligibility page</td><td class="small">gates as data on the release (Sample, M2 configuration), assessment snapshot per run, three outcomes, ranking across released combinations, missing facts, override and review with a reason, re-run when out of date</td><td><span class="lab cap" style="display:inline-block">Capability</span> <span class="lab scf" style="display:inline-block">gates Scaffolding</span></td></tr><tr><td><b>M3-9</b> Review page</td><td class="small">findings with team severities and states; rules cross-checks (US$0); AI review in two rounds with cost first, Stop and replay (one live trial on Visitor visa); acknowledge, waive, dismiss; out of date; AI off</td><td><span class="lab cap" style="display:inline-block">Capability</span> <span class="lab scf" style="display:inline-block">replays Scaffolding</span></td></tr><tr><td><b>M3-10</b> AI reader for letters</td><td class="small">AI vision on synthetic letters and foreign records (P-133), cost first</td><td><span class="lab cap" style="display:inline-block">Capability</span></td></tr>
+</table></div><p class="small muted">M3-0 first; M3-1 to M3-3 before M3-4 to M3-6; M3-7 to M3-10 alongside (different files). M3-8 needs only facts (after M3-1); M3-9 needs filled forms (after M3-4).</p></div></div>
+
+</body>
+</html>
