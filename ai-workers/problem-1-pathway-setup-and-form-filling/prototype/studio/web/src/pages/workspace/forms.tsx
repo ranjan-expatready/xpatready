@@ -7,7 +7,7 @@
 // menu has Redo with AI, Replace edition and Remove from this combination; the page has one Undo (the forms lane's
 // POST …/forms/undo, P-116 amended) and the shared Undo toast after a removal; guides are sources (api/src/guide-sources.ts).
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Undo2 } from "lucide-react";
@@ -47,14 +47,25 @@ export function FormsTab({ id, lines, filing, filingDetail, problems, removed = 
   const [open, setOpen] = React.useState<WorkspaceFormLine | null>(null);
   const [adding, setAdding] = React.useState(false);
   const [finding, setFinding] = React.useState<string[] | null>(null);
+  const [choosingPage, setChoosingPage] = React.useState(false);
+  const [sp, setSp] = useSearchParams();
   const [removing, setRemoving] = React.useState<WorkspaceFormLine | null>(null);
   const d = useApi<CombinationView>(["combination", id], `/combinations/${id}`);
   const latest = useFinderLatest(id);
   const toast = useUndoToast();
   const qc = useQueryClient();
   const undoLast = async (changeId?: string) => { await api(`/combinations/${id}/forms/undo`, { method: "POST", json: changeId ? { changeId } : {} }); for (const k of [...formsKeys(id), ["combination", id, "finder"]]) void qc.invalidateQueries({ queryKey: k }); };
-  const redo = (codes?: string[]) => setFinding(codes ?? []);
-  const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} removed={removed.map((r) => r.code)} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} onClose={() => setFinding(null)} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
+  const redo = (codes?: string[]) => { setChoosingPage(false); setFinding(codes ?? []); };
+  const choosePage = () => { setChoosingPage(true); setFinding([]); };
+  // S3 item 5 (QA-63): a run card elsewhere (AI work) sends the person here: ?find=page opens the page choice, ?find=again
+  // the Find dialog; the address is cleaned so a reload does not open it again.
+  const asked = sp.get("find");
+  React.useEffect(() => {
+    if (!asked || !latest.data) return;
+    if (asked === "page" && latest.data.page_choice) choosePage(); else redo();
+    setSp((x) => { const n = new URLSearchParams(x); n.delete("find"); return n; }, { replace: true });
+  }, [asked, latest.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} onChoosePage={choosePage} removed={removed.map((r) => r.code)} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} page={choosingPage ? latest.data?.page_choice ?? { candidates: [], why: "" } : null} onClose={() => { setFinding(null); setChoosingPage(false); }} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
   const onRemoved = (code: string) => toast.show(`${code} removed from this combination; it stays in the Form library`, () => undoLast());
   const noRule = lines.filter((l) => l.onlyIf.kind === "words_only");
   const add = canAuthor ? <Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus /> Add a form from the library</Button> : null;

@@ -4,7 +4,7 @@
 //     on-screen answer → actual PDF fill/read-back/download → human adds a conditional document requirement (draft) →
 //     draft preview changes → submit, refused early approval, SME sign-off, release v2 → release preview shows it →
 //     guarded AI path for IMM 5257 (stub pass; a live call only with STUDIO_LIVE=1).
-//   Pass B, from scratch after Reset: program, category and combination through the New combination path builder → manual upload (official and a non-official
+//   Pass B, from scratch after Reset: program and category through the Add pop-up, Start setup on the new card → manual upload (official and a non-official
 //     file) and a sample attachment → read forms → AI field map of IMM 1295 (replay of the saved real run) into an
 //     empty library → IMM 5476 (replay) compared with that library: reuse, new, ambiguous, address parts → decisions,
 //     a returned item → apply → coverage → section and placement added by a person → coverage changes → release.
@@ -45,7 +45,8 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     await click(p.getByRole("dialog").getByRole("button", { name: "Reset demo" }));
     await p.getByRole("dialog").getByText(/rows and \d+ working files removed/).waitFor({ timeout: 60000 });
     const txt = await p.getByRole("dialog").innerText();
-    step(`${label}: reset removes the workspace rows and files, preserved evidence byte-identical`, /byte-identical/.test(txt) && /0 rows remain/.test(txt), txt.split("\n").slice(1, 3).join(" "));
+    step(`${label} (DV-bb-6b pass): reset removes the workspace rows and files, keeps only the 6 built-in person roles, preserved evidence byte-identical`, /byte-identical/.test(txt) && /keeps only its 6 built-in person roles/.test(txt), txt.split("\n").slice(1, 3).join(" "));
+    step(`DV-bb-6b fail (${label}): the reset never says "0 rows remain" while the 6 built-in person roles stay`, !/\b0 rows remain/.test(txt), txt.split("\n").slice(1, 3).join(" "));
     await shot(`${label}-reset.png`);
     await click(p.getByRole("dialog").getByRole("button", { name: "Close" }).last());
     const cat = await api("/catalogue?pathway=INDIVIDUAL");
@@ -206,24 +207,23 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   for (let i = 0; i < 40 && !pathways.length; i++) { pathways = (await api("/structure?pathwayType=INDIVIDUAL")).nodes.filter((n) => n.level === "pathway").map((n) => n.label); if (!pathways.length) await p.waitForTimeout(250); }
   step("B0b: the first Retail Pathway is added on Program structure through the Add pop-up (P-112 name, P-127)", pathways.join() === "Temporary residence", pathways.join());
   await go("/");
-  // Layout v2 (P-35): no separate "Add program or category"; the New combination path builder (/new) picks or creates
-  // each level (the server checks level, parent and duplicates) and creates the combination in one request.
-  // P-128 (5): Programs' button is Add combination (the pop-up in place); the path builder page stays until S3 (P-125 (5)).
-  await go("/new"); await p.waitForURL(/\/new/);
-  const level = async (label, name) => {
-    const box = p.getByRole("combobox", { name: label, exact: true });
-    await box.click(); await box.fill(name);
-    await click(p.getByRole("listbox", { name: label }).getByRole("option", { name: `Create "${name}"` }));
-  };
-  await level("Program", "Work permits (built from scratch)");
-  await level("Category", "Employer-specific work permit");
-  const willBe = await p.getByText(/^Will be created as/).innerText();
-  await click(btn("Create and add sources"));
+  // S3 (P-125): every name is added on Program structure, here through its Add pop-up opened in place from Immigration
+  // programs (P-128 (5)); Start setup on the new card creates the combination and opens it on its Forms tab (S5).
+  await click(p.locator("[data-add-combination]")); await p.locator("[data-add-dialog]").waitFor();
+  const name = async (lv, text) => { const f = p.locator(`[data-field="${lv}"] input[role="combobox"]`); await f.fill(text); await p.keyboard.press("Tab"); await p.waitForTimeout(600); };
+  if (!(await p.locator('[data-field="pathway"] input[role="combobox"]').inputValue())) await name("pathway", "Temporary residence");
+  await name("program", "Work permits (built from scratch)");
+  await name("category", "Employer-specific work permit");
+  const willBe = (await p.locator("[data-you-are-adding]").innerText()).replace(/New/g, "").replace(/\s+/g, " ");
+  await click(p.locator("[data-add-submit]")); await p.locator("[data-add-dialog]").waitFor({ state: "detached" });
+  let leafKey = null;
+  for (let i = 0; i < 40 && !leafKey; i++) { leafKey = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).rows.find((r) => r.label === "Employer-specific work permit")?.nodeKey ?? null; if (!leafKey) await p.waitForTimeout(250); }
+  await click(p.locator(`[data-node="${leafKey}"] [data-start-setup]`).first());
   await p.waitForURL(/\/c\/[0-9a-f-]+\/(sources|forms)/, { timeout: 15000 }).catch(() => {}); const scratch = p.url().includes("/c/") ? p.url().split("/c/")[1].split("/")[0] : null;
   if (scratch) await p.getByRole("heading", { level: 1, name: "Employer-specific work permit" }).waitFor({ timeout: 15000 }).catch(() => {}); // the page header arrives with the combination
   const crumbs = scratch ? await p.getByRole("navigation", { name: "Path" }).getByRole("link").allTextContents().catch(() => []) : [];
   const made = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).rows.find((r) => r.combinationId === scratch);
-  step("B1: the path builder creates the program and category and the combination for that full path in one go", !!scratch && /Retail › Temporary residence › Work permits \(built from scratch\) › Employer-specific work permit/.test(willBe) && made?.path.join(" › ") === "Work permits (built from scratch) › Employer-specific work permit" && crumbs.join(" › ").includes("Work permits (built from scratch)"), `${willBe} → ${crumbs.join(" › ")}`);
+  step("B1 (S3): the Add pop-up adds the program and category; Start setup creates the combination for that full path and opens it", !!scratch && /Retail › Temporary residence › Work permits \(built from scratch\) › Employer-specific work permit/.test(willBe) && made?.path.join(" › ") === "Work permits (built from scratch) › Employer-specific work permit" && crumbs.join(" › ").includes("Work permits (built from scratch)"), `${willBe} → ${crumbs.join(" › ")}`);
   // S5 (P-118 Q2, m5): forms enter only through the Form library; the combination picks them from there. The library's
   // upload is S4's (P-123): one run card per file (rules check, then library or held for a person).
   await go("/library/forms");
