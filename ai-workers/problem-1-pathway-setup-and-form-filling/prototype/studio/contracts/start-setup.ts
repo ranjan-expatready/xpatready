@@ -19,11 +19,15 @@ const usd = (n: number) => `US$${n.toFixed(2)}`;
 /** S3 early look (4): the one cost wording, the same on the button, its tip and the run card (run-card.tsx costLine):
  *  "about US$x · at most US$y"; with no usual cost yet only the ceiling, never an invented figure. */
 export const costWords = (about: number | null, worst: number) => `${about !== null ? `about ${usd(about)} · ` : ""}at most ${usd(worst)}`;
+/** QA-98: what each AI step of a live plan reserves (its rounds' worst case, both attempts), the same words on the
+ *  button's tip and in the Find dialog; their sum is the plan's "at most". Steps with no AI round are left out. */
+export type StepReserve = { label: string; worst_usd: number | null };
+export const reserveWords = (steps: StepReserve[]) => steps.filter((s) => s.worst_usd !== null).map((s) => `${s.label}: at most ${usd(s.worst_usd as number)}`).join(" · ");
 export const START = {
   label: "Start setup",
   tip: (name: string) => `Creates the setup of "${name}" and opens it. Its forms and checklists come from canada.ca: a saved AI answer is loaded free; otherwise you choose to run AI, with its cost shown first. Once released and Live, new cases for ${name} use this setup. Where it sits is set on Program structure, not here.`,
   findLive: (about: number | null, worst: number) => `Find forms with AI (${costWords(about, worst)})`,
-  findLiveTip: (about: number | null, worst: number) => `AI reads the canada.ca application page and guide and lists the forms and checklists they ask for; a second AI round checks it. ${costWords(about, worst).replace(/^./, (c) => c.toUpperCase())}. Nothing is spent until you click.`,
+  findLiveTip: (about: number | null, worst: number, steps: StepReserve[] = []) => `AI reads the canada.ca application page and guide and lists the forms and checklists they ask for; a second AI round checks it. ${costWords(about, worst).replace(/^./, (c) => c.toUpperCase())}${steps.some((s) => s.worst_usd !== null) ? ` (${reserveWords(steps)})` : ""}. Nothing is spent until you click.`,
   rulesOnly: "Find form numbers by rules (free)",
   rulesTip: "Rules list every form number printed on the canada.ca pages, for you to attach by hand. Nothing is attached, because AI did not decide which apply.",
   overCap: (worst: number, left: number) => `AI can't run now: its worst case (${usd(worst)}) is above what is left of the AI spending cap (${usd(left)}). Rules only is free.`,

@@ -172,10 +172,19 @@ export class Finder implements OnModuleInit {
     if (b.pageUrl) { const u = officialUrl(b.pageUrl); if (!u.ok) throw problem(400, "Only canada.ca pages", `${u.why} Paste the address of the official application or guide page on canada.ca.`, { errors: [{ field: "pageUrl", message: u.why }] }); }
     const remembered = b.pageUrl ? null : await this.rememberedPages(combinationId);
     const ledger = this.sources.ledger();
-    const steps = STEPS.map((s, i) => ({ n: i + 1, kind: s.kind, label: s.label, uses_ai: s.ai && b.mode !== "rules" }));
     // Cost: each AI round's worst case as the ledger reserves it (inputs bounded by bytes, both attempts); replay and rules US$0.
-    const rounds = b.mode === "live" ? [...(remembered || b.pageUrl ? [] : ["find_guide", "find_guide"] as const), "find_forms", "find_forms"] as AiKind[] : [];
-    const worst = round2(rounds.reduce((a, k) => a + worstRoundUsd(AI_SETTINGS[k], k === "find_guide" ? 120_000 : 160_000), 0));
+    // QA-98: each AI step states the reserve it carries (the page pick's two rounds, then one forms round each), so the
+    // button's tip and the Find dialog say the same per-step figures and their sum is the one "at most".
+    const pagePicked = !!(remembered || b.pageUrl);
+    const roundUsd = (k: AiKind) => worstRoundUsd(AI_SETTINGS[k], k === "find_guide" ? 120_000 : 160_000);
+    const stepRounds: Partial<Record<StepKind, AiKind[]>> = b.mode === "live" ? { finder_guide: pagePicked ? [] : ["find_guide", "find_guide"], finder_propose: ["find_forms"], finder_check: ["find_forms"] } : {};
+    const steps = STEPS.map((s, i) => {
+      const r = stepRounds[s.kind] ?? [];
+      return { n: i + 1, kind: s.kind, label: s.kind === "finder_guide" && pagePicked ? "Use the application page already chosen (no AI round)" : s.label, uses_ai: s.ai && b.mode !== "rules" && !(s.kind === "finder_guide" && pagePicked), worst_usd: r.length ? Math.ceil(Math.round(r.reduce((a, k) => a + roundUsd(k), 0) * 1e6) / 1e4) / 100 : null };
+    });
+    const rounds = Object.values(stepRounds).flat() as AiKind[];
+    // Each step's reserve in cents rounded up (never below what the ledger reserves); the sum is the plan's "at most".
+    const worst = round2(steps.reduce((a, s) => a + (s.worst_usd ?? 0), 0));
     const expected = b.mode === "live" ? this.expectedUsd(c.trail) : 0;
     // S3 early look (4): the one "about" (finder-cost.ts), the same on the Find button, this plan and the run card.
     const about = b.mode === "live" ? aboutUsd(expected, await lastFinishedUsd(this.db, await this.ws.id(), FINDER_OPERATION, "LIVE"), true) : 0;
