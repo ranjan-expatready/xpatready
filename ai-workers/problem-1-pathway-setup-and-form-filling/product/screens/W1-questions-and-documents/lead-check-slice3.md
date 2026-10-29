@@ -15,3 +15,6 @@
 
 ## Next
 Founder early look (screenshots `screenshots/slice3/01–05` at 1440 and 1024), then the Lead PR. Not before: the two minors may ride with the FIX pass.
+
+## Founder early look
+**Go (29 Oct)**, with the two minors above; the runtime lane fixes them with QA-84, QA-85, QA-91, then the Lead merges the branch by Lead PR.
