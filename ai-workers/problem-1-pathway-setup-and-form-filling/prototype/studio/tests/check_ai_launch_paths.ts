@@ -125,9 +125,10 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
     ["refused", { status: "refused" }, {}, /The AI declined to draft this form\. Nothing was applied\. Cost US\$0\.42/],
     ["timed_out", { status: "timed_out" }, {}, /did not answer in time/],
     ["budget_exceeded", { status: "budget_exceeded" }, {}, /over its spending cap/],
-    ["provider_error (not a limit)", { status: "provider_error", attempts: [{ outcome: "error", error: "529 overloaded" }] }, {}, /provider returned an error: 529 overloaded/],
+    // QA-88 (29 Oct): plain words; the service's own words go under Details, never in the sentence.
+    ["provider_error (not a limit)", { status: "provider_error", attempts: [{ outcome: "error", error: "529 overloaded" }] }, {}, /^(?!.*529)The AI service did not complete the call\. Nothing was drafted or applied/],
     ["invalid_output cut at the limit", { status: "invalid_output", settings: { max_output_tokens: 4000 }, usage: { output_tokens: 4000, cost_usd: 0.3 } }, { output_errors: "stop_reason max_tokens" }, /cut off at the output limit \(4000 of 4000/],
-    ["invalid_output in another shape", { status: "invalid_output" }, { output_errors: { entries: "missing" } }, /not in the agreed shape \(\{"entries":"missing"\}\)/],
+    ["invalid_output in another shape", { status: "invalid_output" }, { output_errors: { entries: "missing" } }, /^(?!.*entries)The AI answered, but not in the agreed shape\. Nothing was applied/],
     ["completed, entries break our rules", { status: "completed" }, { raw_output: JSON.stringify({ canonical_fields: [], entries: [{ data_path: "a", outcome: "mapped", fact: "Person.Name" }] }), contract_errors: [{ instancePath: "/entries/0/fact", message: "bad" }] }, /AI answered 1 form field\. 1 entry broke our entry rules \(form field 1: field name "Person\.Name" breaks the naming rule\)/],
     ["completed, the run record failed our check", { status: "completed" }, { raw_output: "not json" }, /AI answered\. The answer failed our check of the run record/],
     ["an unknown status", { status: "weird" }, {}, /ended without a usable draft \(status weird\)/],
