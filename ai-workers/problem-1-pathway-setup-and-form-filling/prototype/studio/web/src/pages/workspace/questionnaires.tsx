@@ -225,8 +225,19 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   const undoToast = useUndoToast();
   // Only the first section is open at first (146 questions on the work permit); each folds and "Open all" opens them all.
   const [openIds, setOpenIds] = React.useState<Set<string> | null>(null);
+  const [removing, setRemoving] = React.useState<{ key: string; title: string } | null>(null);
+  const qc = useQueryClient();
   const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["combination", id], ["config", id], ["preview"], ["fact-sources", id]] });
   React.useEffect(() => { setPicked(new Set()); setFilter("all"); }, [q?.role]);
+  // QA-93 (P-116): removing a section asks first, says what goes for whom, then offers one Undo that puts it back in its place.
+  const reload = () => { for (const k of [["combination", id], ["config", id], ["preview"], ["fact-sources", id]]) void qc.invalidateQueries({ queryKey: k }); };
+  const remove = async (x: { key: string; title: string }) => {
+    let r: { sectionOrder: number | null };
+    try { r = await api<{ sectionOrder: number | null }>(`/combinations/${id}/sections/${x.key}`, { method: "DELETE" }); }
+    catch (e) { setRemoving(null); setRefused([{ role: "", fact: "", label: "", message: `"${x.title}" was not removed: ${(e as Error).message}` }]); return; }
+    setRemoving(null); reload();
+    undoToast.show(`"${x.title}" removed from the questionnaire`, async () => { await api(`/combinations/${id}/sections/${x.key}`, { method: "POST", json: { sectionOrder: r.sectionOrder } }); reload(); });
+  };
   const addSection = canAuthor ? (
     <div className="flex flex-wrap items-center gap-2" data-add-section>
       <Select aria-label="Library section to add" className="h-8 w-72" value={add} onChange={(e) => setAdd(e.target.value)}><option value="">Add a library section…</option>{available.map((x) => <option key={x.key} value={x.key}>{x.title}</option>)}</Select>
@@ -330,7 +341,12 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
               <button className="flex-1 px-4 py-3 text-left" aria-expanded={isOpen} onClick={() => { const n = new Set(opened); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); setOpenIds(n); }}>
                 <span className="font-medium">{s.title}</span>{locked ? <span className="ml-2 inline-flex items-center gap-1 text-xs text-text-muted" data-client-only><Lock className="size-3.5" aria-hidden /> Always the client</span> : null} <span className="text-xs text-text-muted">· {s.questions.length} question{s.questions.length === 1 ? "" : "s"} for {role?.label ?? "this person"}{fromDocs ? ` · ${fromDocs} from documents` : ""}</span>
               </button>
-              {canAuthor ? <Button size="sm" variant="ghost" onClick={() => sel.mutate({ key: s.id, on: false })} aria-label={`Remove from questionnaire: ${s.title}`}>Remove from questionnaire</Button> : null}
+              {/* QA-93: a question the shared library places in a section is asked whether or not the section is chosen, so
+                  removing it here would only move it to the end. Offered only where it changes something: a section that
+                  asks this person nothing. */}
+              {canAuthor ? (s.questions.length
+                ? <span className="max-w-64 text-right text-xs text-text-muted" data-remove-why>Remove from questionnaire: not here. Its {s.questions.length} question{s.questions.length === 1 ? " is" : "s are"} placed in it in the shared library and stay{s.questions.length === 1 ? "s" : ""} asked; change the placement there.</span>
+                : <Button size="sm" variant="ghost" onClick={() => setRemoving({ key: s.id, title: s.title })} aria-label={`Remove from questionnaire: ${s.title}`}>Remove from questionnaire</Button>) : null}
             </div>
             {isOpen ? (lines.length ? (
               <div className="border-t border-border px-4 py-3">
@@ -353,7 +369,12 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
         </div>
       ) : null}
       <p className="text-xs text-text-muted">{total} question{total === 1 ? "" : "s"} for {role?.label}, from the largest Sample family the combination allows. {q.notAsked ? `${q.notAsked} placed question${q.notAsked === 1 ? " is" : "s are"} not asked: no form reads ${q.notAsked === 1 ? "it" : "them"} and ${q.notAsked === 1 ? "it decides" : "they decide"} nothing.` : ""}</p>
-      {shown ? <FactDrawer key={`${q.role}|${shown.fact}|${byFact.get(shown.fact)?.version ?? 0}`} id={id} role={q.role} roleLabel={role?.label ?? q.role} section={shown.section} q={shown.q} f={byFact.get(shown.fact)} canAuthor={canAuthor} onClose={() => setShown(null)} onSaved={(t, u) => undoToast.show(t, u)} /> : null}
+      {/* QA-92: a fact about the case is saved under its own role ("case"), not the person whose tab shows it. */}
+      {shown ? <FactDrawer key={`${q.role}|${shown.fact}|${byFact.get(shown.fact)?.version ?? 0}`} id={id} role={byFact.get(shown.fact)?.role ?? q.role} roleLabel={byFact.get(shown.fact)?.role === "case" ? "The case (asked once)" : role?.label ?? q.role} section={shown.section} q={shown.q} f={byFact.get(shown.fact)} canAuthor={canAuthor} onClose={() => setShown(null)} onSaved={(t, u) => undoToast.show(t, u)} /> : null}
+      {removing ? <Dialog open onOpenChange={(o) => !o && setRemoving(null)} title={`Remove "${removing.title}" from the questionnaire?`} description="The sections are chosen once for the whole combination."
+        footer={<><Button variant="ghost" onClick={() => setRemoving(null)}>Keep the section</Button><Button variant="destructive" data-confirm-remove onClick={() => void remove(removing)}>Remove section</Button></>}>
+        <p className="text-sm text-text-muted" data-remove-what>It asks {role?.label ?? "this person"} nothing in this combination, so it leaves this list. A question it asks someone else stays asked: the shared library places it there. You can undo straight after, or add the section back from the library.</p>
+      </Dialog> : null}
       {undoToast.node}
     </section>
   );

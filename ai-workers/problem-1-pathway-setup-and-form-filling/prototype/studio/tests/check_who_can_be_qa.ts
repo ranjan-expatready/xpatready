@@ -16,9 +16,9 @@ const schemaText = readFileSync(join(PROTO, "p2", "prompts", "who-can-be-output.
 const NUMERIC = /"(minimum|maximum|exclusiveMinimum|exclusiveMaximum|multipleOf)"/;
 ok("C11.12 QA-84 pass: who-can-be-output.v1.schema.json has no numeric limit the provider refuses", !NUMERIC.test(schemaText), (schemaText.match(NUMERIC) ?? [""])[0]);
 const line = (role: string, min: number, max: number) => ({ role, min, max, applies: true, quote: "q", why: null });
-const good = checkCounts({ people: [line("principal", 1, 1), line("child", 0, COUNT_LIMIT), line("spouse_or_partner", 0, 0)], unresolved: [] });
+const good = checkCounts({ people: [line("principal", 1, 1), line("child", 0, COUNT_LIMIT), line("spouse_or_partner", 0, 0)] });
 ok("C11.12 QA-84 pass: counts 0 to 9 with the least no more than the most are kept", good.kept.length === 3 && !good.dropped.length, good);
-const bad = checkCounts({ people: [line("child", 0, 10), line("sponsor", -1, 1), line("spouse_or_partner", 2, 1), line("parent", 0.5, 2)], unresolved: [] });
+const bad = checkCounts({ people: [line("child", 0, 10), line("sponsor", -1, 1), line("spouse_or_partner", 2, 1), line("parent", 0.5, 2)] });
 ok("C11.12 QA-84 fail: 10, a negative, a least above the most and a fraction are dropped, never clamped", !bad.kept.length && bad.dropped.length === 4, bad.dropped.map((d) => d.role));
 ok("C11.12 QA-84 fail: each dropped line says why in words (0 to 9)", bad.dropped.every((d) => /whole number from 0 to 9/.test(d.why)), bad.dropped[0]?.why);
 

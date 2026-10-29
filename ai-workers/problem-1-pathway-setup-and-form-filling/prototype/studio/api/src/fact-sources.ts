@@ -68,10 +68,11 @@ export class FactSources {
     const lineageKey = `${role}|${fact}`;
     const rows = await this.db.factSource.findMany({ where: { combinationId: id, lineageKey }, orderBy: { version: "desc" } });
     const newest = rows[0];
-    if ((newest?.version ?? 0) !== b.version) throw problem(409, "Changed since", `Someone changed where "${fact}" comes from after you looked. Reload, then choose again.`, { version: newest?.version ?? 0 });
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     const f = factSources(snapshot).find((x) => x.role === role && x.fact === fact);
-    if (!f) throw problem(404, "Not needed", `No form of "${c.label}" needs "${fact}" for this person, so there is nothing to choose.`);
+    // QA-94: messages name the question in words; the system name stays behind the library link.
+    if ((newest?.version ?? 0) !== b.version) throw problem(409, "Changed since", `Someone changed where ${f ? `"${f.label}"` : "this answer"} comes from after you looked. Reload, then choose again.`, { version: newest?.version ?? 0 });
+    if (!f) throw problem(404, "Not needed", `No form of "${c.label}" needs this answer for this person, so there is nothing to choose.`);
     const source = b.source === undefined ? (newest?.source ?? null) : b.source;
     const documentTypeKey = source === "DOCUMENT" ? (b.documentTypeKey ?? (b.source === undefined ? newest?.documentTypeKey : null) ?? null) : null;
     const tick = b.prequalification ?? newest?.prequalification ?? false;
@@ -138,7 +139,7 @@ export async function bulkSet(db: Db, audit: Audit, actor: Actor, c: { id: strin
     seen.add(key);
     const f = views.get(key);
     const mine = rows.filter((r) => r.lineageKey === key), newest = mine[0];
-    if (!f) { refused.push({ role: it.role, fact: it.fact, label: it.fact, message: `No form of "${c.label}" needs it for this person any more. Reload.` }); continue; }
+    if (!f) { refused.push({ role: it.role, fact: it.fact, label: "", message: `One ticked answer is no longer needed by any form of "${c.label}" for this person. Reload.` }); continue; }
     if ((newest?.version ?? 0) !== it.version) { refused.push({ role: f.role, fact: f.fact, label: f.label, message: `"${f.label}": changed by someone else after you looked. Reload, then choose again.` }); continue; }
     const source = b.source === undefined ? (newest?.source ?? null) : b.source === "RULES" ? f.ruleSource : b.source;
     const documentTypeKey = b.source === undefined ? (newest?.documentTypeKey ?? null) : b.source === "RULES" ? (f.ruleDocument?.key ?? null) : null;

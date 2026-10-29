@@ -83,9 +83,12 @@ export type FactSourceView = {
  *  save, the bulk change, the release check and the screen all read this. */
 export const CASE_OFFICER_NEEDS_REASON = "The case officer enters only the representative's, the office's and the case's own details. To have the case officer enter this answer, write why; a second person reviews it at release.";
 const REASON_MIN = 5;
+/** QA-95: a reason was written but is too short to say anything; the words say what is missing, not that nothing was written. */
+export const CASE_OFFICER_REASON_SHORT = `Write at least ${REASON_MIN} characters: why the case officer enters it.`;
 export function agentRefusal(f: Pick<FactSourceView, "ruleSource" | "clientOnly">, reason?: string | null): string | null {
   if (f.clientOnly || f.ruleSource === "AGENT") return null;
-  return (reason ?? "").trim().length >= REASON_MIN ? null : CASE_OFFICER_NEEDS_REASON;
+  const n = (reason ?? "").trim().length;
+  return n >= REASON_MIN ? null : n ? CASE_OFFICER_REASON_SHORT : CASE_OFFICER_NEEDS_REASON;
 }
 
 const roleOf = (people: Person[], about: string) => about === "case" ? "case" : people.find((p) => p.id === about.split("/")[0])?.role ?? about;

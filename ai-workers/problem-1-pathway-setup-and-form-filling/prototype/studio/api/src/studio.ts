@@ -475,13 +475,21 @@ export class Studio {
     return s;
   }
 
-  async selectSection(actor: Actor, combinationId: string, sectionKey: string, on: boolean) {
+  /** QA-93 (P-116): removing answers with the place the section had, so Undo adds it back in the same place. */
+  async selectSection(actor: Actor, combinationId: string, sectionKey: string, on: boolean, b?: { sectionOrder?: unknown }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
-    if (on) { const n = await this.db.sqrSectionSelection.count({ where: { combinationId } }); await this.db.sqrSectionSelection.upsert({ where: { combinationId_sectionKey: { combinationId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, combinationId, sectionKey, sectionOrder: n } }); }
-    else await this.db.sqrSectionSelection.deleteMany({ where: { combinationId, sectionKey } });
+    let sectionOrder: number | null = null;
+    if (on) {
+      const back = Number.isInteger(b?.sectionOrder) && (b!.sectionOrder as number) >= 0 ? b!.sectionOrder as number : null;
+      const n = back ?? await this.db.sqrSectionSelection.count({ where: { combinationId } });
+      await this.db.sqrSectionSelection.upsert({ where: { combinationId_sectionKey: { combinationId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, combinationId, sectionKey, sectionOrder: n } });
+    } else {
+      sectionOrder = (await this.db.sqrSectionSelection.findFirst({ where: { combinationId, sectionKey } }))?.sectionOrder ?? null;
+      await this.db.sqrSectionSelection.deleteMany({ where: { combinationId, sectionKey } });
+    }
     await this.audit.log(c.workspaceId, actor.id, "updated", "section selection", sectionKey, `${actor.name} ${on ? "added" : "removed"} section ${sectionKey} ${on ? "to" : "from"} "${c.label}"`, undefined, c.id);
-    return { ok: true };
+    return { ok: true, sectionOrder };
   }
 
   async documentTypes() {

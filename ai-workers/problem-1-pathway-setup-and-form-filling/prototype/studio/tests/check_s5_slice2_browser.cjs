@@ -105,7 +105,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("coverage: the person's line says how many answers the forms need and who gives them (none asked of nobody on the sample)", /the forms need \d+ answers for this person · \d+ from documents · \d+ asked of the client · \d+ entered by the case officer/.test(await p.locator("[data-coverage]").innerText()) && !/asked of nobody/.test(await p.locator("[data-coverage]").innerText()));
   await p.locator("[data-question]").first().getByRole("button", { name: /^Details of/ }).click();
   const det = p.getByRole("dialog");
-  step("fix 3: the field code shows only in the question's side panel, as its System name", /System name/.test(await det.innerText()) && CODE.test(await det.locator("[data-question-details]").innerText()));
+  step("fix 3 (QA-94): the field code stays behind the side panel's library link, never as text", /Open this answer in the shared library/.test(await det.innerText()) && !CODE.test(await det.locator("[data-question-details]").innerText()) && CODE.test(decodeURIComponent(await det.locator("[data-library-link]").getAttribute("href") ?? "")));
   await state("question-details");
   await det.getByRole("button", { name: "Close" }).first().click();
   await p.locator('[data-role-chip="spouse_or_partner"]').click(); await settle();

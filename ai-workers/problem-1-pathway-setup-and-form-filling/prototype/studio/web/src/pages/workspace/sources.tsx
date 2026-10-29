@@ -209,10 +209,10 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
             </fieldset>
             {needsWhy ? (
               <label className="block text-xs font-medium" data-officer-why>Why the case officer enters it <span className="font-normal text-text-muted">(required; shown on the row and to the second person at release)</span>
-                <Textarea className="mt-1 min-h-14" value={officerWhy} disabled={!editable} onChange={(e) => setOfficerWhy(e.target.value)} aria-invalid={error?.field === "sourceReason" ? true : undefined} />
+                <Textarea className="mt-1 min-h-14" value={officerWhy} disabled={!editable} onChange={(e) => setOfficerWhy(e.target.value)} aria-invalid={error?.field === "sourceReason" ? true : undefined} aria-describedby={error?.field === "sourceReason" ? "officer-why-error" : undefined} data-officer-why-box />
               </label>
             ) : null}
-            {error?.field === "source" || error?.field === "documentTypeKey" || error?.field === "sourceReason" ? <p role="alert" className="text-text-danger" data-drawer-error>{error.message}</p> : null}
+            {error?.field === "source" || error?.field === "documentTypeKey" || error?.field === "sourceReason" ? <p role="alert" id={error.field === "sourceReason" ? "officer-why-error" : undefined} className="text-text-danger" data-drawer-error>{error.message}</p> : null}
             <p className="text-xs" data-fallback>{f.placed ? <span className="text-text-ok">✓ Fallback question reachable{section ? ` in ${section}` : ""}: the client is asked if the document is missing or cannot be read.</span> : <span className="text-text-warn">No fallback question: if the document is missing or cannot be read, nobody is asked.</span>}</p>
             {f.also.length ? <p className="text-xs text-text-muted" data-also>Also supplied by: {f.also.map((x) => x.name).join(", ")} (information only).</p> : null}
             <p className="rounded-lg bg-surface p-2 text-xs text-text-muted">Changing it here is an override for this combination only, reviewed in this combination's release. The library default stays.</p>
@@ -237,7 +237,8 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
           <dt className="text-text-muted">Used by</dt><dd>{(f?.forms ?? q?.neededBy ?? []).join(", ") || "No form: it decides what applies"}</dd>
           {q ? <><dt className="text-text-muted">Used in</dt><dd>{q.whereUsed} combination{q.whereUsed === 1 ? "" : "s"}</dd></> : null}
           <dt className="text-text-muted">Status and history</dt><dd data-drawer-status>{status}</dd>
-          <dt className="text-text-muted">System name</dt><dd><Link className="mono text-text-link underline" to={`/library/fields/${encodeURIComponent(q?.fact ?? f?.fact ?? "")}`}>{q?.fact ?? f?.fact}</Link><p className="text-xs text-text-muted">{SAY.library}</p></dd>
+          {/* QA-94: the system name stays behind the library link, never on screen. */}
+          <dt className="text-text-muted">In the library</dt><dd><Link className="text-text-link underline" to={`/library/fields/${encodeURIComponent(q?.fact ?? f?.fact ?? "")}`} data-library-link>Open this answer in the shared library</Link><p className="text-xs text-text-muted">{SAY.library}</p></dd>
         </dl>
       </div>
     </Panel>
