@@ -30,14 +30,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: FIX — slice R outside review (a)+(b) done at 9428a3fd (PR #87); qa bugs and the Stand-in chip next
-owner: Builder
-next_action: Builder: full run-suites on 9428a3fd (running since 13:48; its by-products are restored before any commit), count to the Lead; then qa batch (QA-39, 48, 70–74, 79, 80) and StandIn chip + check_stand_ins from side branch screens-qa-wip, main synced, browser check, run-suites, Paste to Lead. After that, Lead: message when the forms branch (runner package, contract v2) is on main → S6 slice 1 BUILD from main (one ProposalItem table); recording pass after per-step budget_usd lands (then drop the runnerBudgetUsd cast), shared ledger and founder amount
+stage: CHECK — qa batch (QA-39, 48, 70–74, 79, 80) at 7a60c011 and the Stand-in chip at 4c4b9dd5; PR #87 fixes at 9428a3fd
+owner: Lead
+next_action: Lead: merge 9428a3fd into PR #87 (count sent: 65 PASS, 2 FAIL under load, unrelated); check 7a60c011 + 4c4b9dd5 (full run-suites on 4c4b9dd5 running, count in the hand-back); confirm the stand-in check's not-built-yet list (SI-1, 6, 9, 10); then message when the forms branch is on main → S6 slice 1 BUILD from main (one ProposalItem table); recording pass after per-step budget_usd lands (then drop the runnerBudgetUsd cast), shared ledger and founder amount
 then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
 blocked_by: forms runner package and contract v2 on main (Lead merge)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · qa batch + P-165 · FIX/BUILD · main d50d87f9 synced; 7a60c011 QA-39, 48, 70–74, 79, 80 in plain words (check_screens_qa_1029_browser 43/43 at 1440 and 1024; QA-81 screens part 4/4 on main); 4c4b9dd5 StandIn chip + check_stand_ins 9/9 (no page uses it yet). Run on 9428a3fd: 63 PASS 4 FAIL, solo rerun 2 of 4 pass; count sent to the Lead. US$0.
 - 2026-10-29 · W1-shared-library (S6) · FIX · applied Lead message (outside review on PR #87): 9428a3fd (a) recording pass sends only missing rounds (draftEdition "fill"), worst case reserved before sending; (b) an answer naming another edition is never used (replay skips, live refused in plain words); check_s6_field_drafts 26/26; pushed, Lead told; run-suites running. US$0.
 - 2026-10-29 · W1-shared-library (S6) · slice R Lead check PASS at 164ef658 (Lead PR #87). Idle until the forms merge. US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD slice R (US$0) → CHECK · full run-suites 67 PASS 0 FAIL (started 038add4f, ended d9c8be97: code = 21556f3a; Prisma client regenerated after the main sync, first run failed on a stale client); check_s6_field_drafts 19/19, check_p154_words 4/4; graph G3 2 (older). No live call. US$0.
@@ -47,4 +48,3 @@ updated: 2026-10-29
 - 2026-10-29 · QA-81 (P-154) · FIX (words only) · programs.tsx Corporate panel "the agent picks" → "the case officer picks"; configuration.tsx "Provided by" "The firm (agent)" → "The firm (case officer)" (stored code unchanged); tests/check_p154_words.ts 4/4 (and 0/4 on the old text). To name in the S6 hand-back. US$0.
 - 2026-10-29 · sync · main 170659bc merged (PR #77 decisions P-146–P-155; PR #78 runtime W1-15 slice 1); no conflicts. S6 BUILD still waits for forms slice 0 on main. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN · applied Lead message (P-154): plan-p149.md "Words": Document · Client · Case officer, case view, Representative, staff; Add "about whom" = roles only; P-154 pass/fail labels; programs.tsx:459 "agent" to change when next touched; runtime/forms occurrences listed for the Lead. US$0.
-- 2026-10-29 · W1-shared-library (S6) · PLAN · applied Lead message (P-153): plan-p149.md "Server guards and their tests": each P-149 rule S6 builds has its server guard (every origin) and a named pass and fail test in tests/check_s6_p149.ts. US$0.
