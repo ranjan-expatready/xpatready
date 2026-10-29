@@ -173,7 +173,7 @@ export function prequalification(s: Snapshot): { role: string; fact: string; lab
 /** C4.7 stand-in producer (Lead, 29 Oct: one door, P-149): until W1-10 step 7 drafts PQR picks with AI, the rules propose
  *  one per fact a rule of the combination reads (directly, or through a derived field such as an age), for each person
  *  role whose forms need it, that a prospect can answer (Client or Document, a question asks it) and that is not ticked.
- *  Each is a contract v2 queue item (contracts/proposal-item.ts), origin "rules", never labelled AI; it enters S6's one
+ *  Each is a contract v2.1 queue item (contracts/proposal-item.ts), origin "rules", never labelled AI; it enters S6's one
  *  queue only once S6 slice 1 is on main. Pure: no database, no AI (US$0). */
 export function pqrPicksByRules(s: Snapshot, combinationId: string, runId: string, newId: () => string): ProposalItem[] {
   const fieldsOf = (c: unknown) => c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : [];
@@ -189,7 +189,7 @@ export function pqrPicksByRules(s: Snapshot, combinationId: string, runId: strin
     payload: { kind: "pqr_pick", factKey: f.fact, role: f.role, reason: `A rule of this combination reads it: ${readBy.get(f.fact)}.`.slice(0, 300) },
     source: null, rounds: { draft: null, check: null }, rules: [{ rule: "pqr_subset_of_sqr", passed: true, why: null }],
     agreement: "rules_only", confidence: "check", reason: "Proposed by the rules from what this combination's rules read; the immigration expert confirms at release.",
-    origin: "rules", addReason: null, identity: { key: `${f.role}|${f.fact}`, near: [], nearReason: null }, relatesTo: null, revision: null,
+    origin: "rules", identity: { key: `${f.role}|${f.fact}`, near: [], nearReason: null }, relatesTo: null, revision: null,
     status: "waiting", decision: null, basis: "SAMPLE",
   }));
 }
