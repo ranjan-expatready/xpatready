@@ -67,7 +67,8 @@ export const ProposalItem = z.object({
   confidence: Confidence,
   /** Why it is Check or Decide, in plain words (both readings kept); null when Ready. */
   reason: z.string().max(500).nullable(),
-  origin: z.enum(["ai", "rules"]),
+  /** Who made it (P-149: one door): AI, the rules, or a person through the one Add (the marked exception). */
+  origin: z.enum(["ai", "rules", "person"]),
   /** waiting → accepted / edited / rejected (with a reason) → undone within the batch's Undo; the second person is S6's. */
   status: z.enum(["waiting", "accepted", "edited", "rejected", "undone"]),
   decision: z.object({ by: z.string().max(60), at: z.string().datetime(), reason: z.string().max(300).nullable(), batchId: z.string().uuid().nullable() }).nullable(),

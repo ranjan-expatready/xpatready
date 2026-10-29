@@ -42,6 +42,8 @@ const refused: [string, unknown][] = [
 ];
 const accepted = refused.filter(([, v]) => ProposalItem.safeParse(v).success).map(([w]) => w);
 ok("A3 fail: the contract refuses an unknown kind, a fourth confidence word, extra fields, a line for no one, a one-fact or blocking cross check, a source with no fingerprint and a fifth reader kind", accepted.length === 0, accepted);
+ok("P-149 pass: one door: an item made by a person through the one Add parses, as do AI and rules items", ["ai", "rules", "person"].every((o) => ProposalItem.safeParse(item(payloads[0], { origin: o })).success));
+ok("P-149 fail: an item names who made it; no other origin is accepted", !ProposalItem.safeParse(item(payloads[0], { origin: "import" })).success && !ProposalItem.safeParse({ ...item(payloads[0]), origin: undefined }).success);
 ok("P-134 (rules, not schema): an identity document read as a letter parses, so the queue can show the refusal as Decide", ProposalItem.safeParse(item({ ...payloads[3], readerKind: "letter_or_record" } as ProposalPayload)).success);
 
 console.log(`\n${pass} passed, ${fail} failed`);
