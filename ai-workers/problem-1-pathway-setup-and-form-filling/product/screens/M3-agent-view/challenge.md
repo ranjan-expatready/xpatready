@@ -1,4 +1,4 @@
-# Challenge — M3 agent view and filing, concept draft r2 (fresh agent, 29 Oct)
+# Challenge — M3 case view and filing, concept draft r2 (fresh reviewer, 29 Oct)
 
 Read: `concept-draft.md` (r2), `design/draft-agent-view.html` (13 frames, as HTML); `../M3-prepare-application/` (challenge M1–M7, AV-1–AV-7); the Lead copy's DECISIONS (P-129–P-134), report and `rules_provenance_model.md`; research `agent_filing_ux.md` (branch lead/2026-10-28-r7); team AG-07 (AG-7-45 at :1930, BR-31 at :1944), AG-03, AG-11 (snapshot 19 Oct); built runtime (`prisma/schema.prisma`, `api/src/runtime.ts`, `fill-case.ts`, `web/src/runtime/*`); `qa/CAPABILITIES.md` C6–C9; EXPERIENCE; STANDARDS. Team code (`ERv2-frontend@24cae6b`) claims are **Unverified** (capture only, not run). Freshness script not run; the team snapshot is 10 days old, so AG-07/AG-11 points are Unverified against later team edits.
 
