@@ -5,7 +5,7 @@
 // upload equal to canada.ca's file (no second person) and one that is not (held) → a republished same-edition file.
 // canada.ca is the recorded copies (official-sources/ircc/canada), plus a test-made folder for two changed files. US$0:
 // the AI is tests/fixtures/fake-launch.mjs (honoured only in an isolated copy); nothing calls a model or canada.ca.
-//   zsh studio/tools/isolated.sh forms_s4 4455 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs STUDIO_CANADA_FIXTURES=canada-alt && tsx studio/tests/check_forms_s4_finder.ts 4455 xr_studio_forms_s4
+//   zsh studio/tools/isolated.sh forms_s4 4455 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs STUDIO_CANADA_FIXTURES=canada-alt && tsx studio/tests/check_forms_s4_finder.ts 4455 xr_studio_forms_s4
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";

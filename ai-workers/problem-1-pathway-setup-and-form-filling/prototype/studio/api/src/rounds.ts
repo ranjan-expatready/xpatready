@@ -137,6 +137,7 @@ export class StepRunner {
     if (live.cancelled) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped before the AI call was sent: nothing was charged." };
     if (live.stopped) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped while the AI call ran: the call was ended. It stays counted at its reserved worst case (the provider may still bill it); nothing of it is used." };
     const lj = last(live.out);
+    if (lj?.live_off) return { ok: false, costUsd: 0, reason: lj.refused };
     if (!lj?.run_file) {
       const why = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).trim() || `the launcher stopped (exit ${live.code})`;
       const limit = /usage limit/i.test(why + live.err);

@@ -21,6 +21,7 @@ import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
 import { keyFor, sameName } from "./library-changes.ts";
 import { cleanLabel, labelProblem } from "../../contracts/programs.ts";
+import { START } from "../../contracts/start-setup.ts";
 import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
 const ACTOR_BY_ID = (id: string) => ACTORS.find((a) => a.id === id) ?? ACTORS[0];
 /** The library revision a comparison was made against: every definition key, version and status. A different revision
@@ -46,6 +47,12 @@ export function launcherFor(requested: string | undefined, varRoot: string): str
   try { return realpathSync(resolve(ROOT, requested)) === realpathSync(FAKE_LAUNCHER) ? FAKE_LAUNCHER : guarded; } catch { return guarded; }
 }
 const LAUNCHER = launcherFor(process.env.STUDIO_FAKE_LAUNCHER, VAR_ROOT);
+/** Lead Critical 29 Oct (qa spent US$0.27 by one click on a test copy): every live AI call of this server (finder rounds,
+ *  guide pick, field-map drafting, Who can be, anything through the launcher) needs the explicit switch
+ *  STUDIO_AI_LIVE=approved at server start. isolated.sh and run-suites.sh never set it; a check that tests a live path
+ *  names it in its own usage line, and :4400 sets it only when the founder chooses. Without it the launch is refused
+ *  before any process starts: US$0. Read at each call, so a test copy's environment is what counts. */
+export const aiLive = () => process.env.STUDIO_AI_LIVE === "approved";
 const PROMPTS = join(PROTOTYPE, "p2", "prompts");
 const EDITION = /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
 /** P-80: where the drafting guard can check an approval made in the product (p2/policy.ts approvedSourcesDirOk): this
@@ -426,6 +433,7 @@ export class Sources {
    *  launch at a time in this server, and a launch the experiment ledger refused because another runner (another copy)
    *  holds it is started again after a pause: refused before any call, so nothing was spent (break B3). */
   async launchOnce(jobId: string, mode: "stub" | "live", wanted?: () => Promise<boolean>): Promise<{ code: number; out: string; err: string; cancelled?: boolean; stopped?: boolean }> {
+    if (mode === "live" && !aiLive()) return { code: 3, out: JSON.stringify({ refused: START.liveOff, live_off: true }) + "\n", err: "" };
     const turn = this.launching.then(async () => {
       for (let n = 0; ; n++) {
         // A cancel is honoured up to the moment a paid call starts (QA-31 break M1): a live launch can wait its turn behind

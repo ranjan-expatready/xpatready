@@ -71,6 +71,9 @@ export function channelProposal(draft: ChannelReading | undefined, check: Channe
   const readings = { draft: draft ?? null, check: check ?? null, keyword };
   const first = d ?? c;
   if (!first) return { outcome: "listed", why: draft || check ? "The sentence AI quoted for how it is filed is not on the page, so nothing was proposed." : "Neither round found a sentence on the page saying how it is filed.", readings };
+  // Review M1 / break M4 (29 Oct): Not needed is said for one IRCC account (C-4; the database refuses it for every
+  // account), so a reading without one is listed for a person, never proposed as a change no one could approve.
+  if (first.value === "NOT_NEEDED" && first.account === "ANY") return { outcome: "listed", why: "AI read it as Not needed but named no IRCC account; Not needed is said for one account, so nothing was proposed.", readings };
   const agree = !!d && !!c && d.value === c.value && d.account === c.account;
   const read = channelsRead(first.quote);
   const contradicts = first.value !== "NOT_NEEDED" && !!read && !read.includes(first.value);

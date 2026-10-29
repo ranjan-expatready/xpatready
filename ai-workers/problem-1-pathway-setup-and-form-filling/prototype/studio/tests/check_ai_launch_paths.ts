@@ -5,7 +5,7 @@
 // The server honours STUDIO_FAKE_LAUNCHER only in an isolated copy's own working folder. QA-30: a draft request with no
 // mode is a plain 400. QA-32 (qa Minors pass): a retry after a mid-run cancel. W1-02 (P-102): QA-27 and QA-31 (the
 // screen-map draft's refusals and cancel) are parked with the browser extension. Every rule has a passing and a failing case.
-//   zsh studio/tools/isolated.sh forms_fl 4453 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_ai_launch_paths.ts 4453 xr_studio_forms_fl  [--evidence writes evidence/forms-slice2b]
+//   zsh studio/tools/isolated.sh forms_fl 4453 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_ai_launch_paths.ts 4453 xr_studio_forms_fl  [--evidence writes evidence/forms-slice2b]
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -38,7 +38,7 @@ const FIX = join(STUDIO, "tests", "fixtures");
  *  wait can run out while the server is still starting, so a failed restart waits for /api/session up to 2 minutes more
  *  before the check reports it (a FAIL line, never a crash). */
 const restart = async (root: string, name: string, launcher: string) => {
-  try { execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), name, String(PORT), "restart", `STUDIO_FAKE_LAUNCHER=${launcher}`], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); return true; }
+  try { execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), name, String(PORT), "restart", "STUDIO_AI_LIVE=approved", `STUDIO_FAKE_LAUNCHER=${launcher}`], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); return true; }
   catch { return until(async () => (await fetch(`http://localhost:${PORT}/api/session`).catch(() => null))?.status === 200, 120_000); }
 };
 /** What the guarded launcher's stub passes write in the repository (the PR 10 part runs it on purpose, US$0): run, job

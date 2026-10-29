@@ -7,7 +7,7 @@
 // shared run card shows it (M1, M4). The New combination page is gone (M2). Sample inputs; canada.ca is the recorded
 // copies and the AI is tests/fixtures/fake-launch.mjs (isolated copy only): US$0. Screenshots into
 // product/screens/W1-start-setup/screenshots/, axe (WCAG 2.2 AA) on each.
-//   zsh studio/tools/isolated.sh screens_s3b 4437 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && node studio/tests/check_w1_start_setup_browser.cjs 4437 xr_studio_screens_s3b
+//   zsh studio/tools/isolated.sh screens_s3b 4437 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && node studio/tests/check_w1_start_setup_browser.cjs 4437 xr_studio_screens_s3b
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;

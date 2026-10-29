@@ -23,7 +23,7 @@ export type FinderForm = { code: string; title: string; quote: string | null; co
 export type PageChoice = { candidates: { title: string; url: string }[]; why: string };
 export type FinderLatest = { run: { id: string; status: string; mode: string; finished_at: string | null } | null; forms: FinderForm[]; sample_note?: string; page_choice?: PageChoice | null };
 type Mode = "replay" | "rules" | "live";
-type Plan = { steps: { n: number; label: string; uses_ai: boolean; worst_usd?: number | null }[]; totals: { worst_usd: number | null; expected_usd: number | null; about_usd?: number | null; ai_rounds: number }; note?: string | null; plan_sha256: string };
+type Plan = { live?: { on: boolean; why: string | null }; steps: { n: number; label: string; uses_ai: boolean; worst_usd?: number | null }[]; totals: { worst_usd: number | null; expected_usd: number | null; about_usd?: number | null; ai_rounds: number }; note?: string | null; plan_sha256: string };
 
 const ACTIVE = new Set(["QUEUED", "RUNNING"]);
 const ON_LINE = new Set<FinderState>(["ATTACHED", "DOWNLOADED_ATTACHED", "NEWER_FILE_SAME_EDITION"]);
@@ -50,6 +50,9 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
   const plan = useQuery<Plan, ApiError>({ queryKey: ["finder-plan", id, mode, only?.join(",") ?? "", pageUrl ?? ""], queryFn: () => api<Plan>(`/combinations/${id}/forms/find/plan`, { method: "POST", json: { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) } }), retry: false, enabled: !page || !!pageUrl });
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
   const qc = useQueryClient();
+  // Lead Critical 29 Oct: with AI now switched off on this copy the live choice is greyed with the reason (any plan says it).
+  const liveOff = plan.data?.live && !plan.data.live.on ? plan.data.live.why : null;
+  React.useEffect(() => { if (liveOff && mode === "live") setMode(page ? "rules" : "replay"); }, [liveOff, mode, page]);
   const start = async () => {
     if (!plan.data) return;
     setBusy(true); setError(null);
@@ -79,7 +82,7 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
         <fieldset className="space-y-2">
           <legend className="text-xs font-medium">How AI answers</legend>
           {MODES.map(([m, label, hint]) => (
-            <label key={m} className="flex gap-2 text-sm"><input type="radio" name="find-mode" checked={mode === m} onChange={() => setMode(m)} className="mt-1" /><span><span className="font-medium">{label}</span><br /><span className="text-xs text-text-muted">{hint}</span></span></label>
+            <label key={m} className={`flex gap-2 text-sm${m === "live" && liveOff ? " text-text-muted" : ""}`} data-mode={m}><input type="radio" name="find-mode" checked={mode === m} disabled={m === "live" && !!liveOff} onChange={() => setMode(m)} className="mt-1" /><span><span className="font-medium">{label}</span><br /><span className="text-xs text-text-muted">{m === "live" && liveOff ? liveOff : hint}</span></span></label>
           ))}
         </fieldset>
         {plan.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p> : plan.error ? <Notice tone="danger" title="This find cannot start">{plan.error.message}</Notice> : plan.data ? (

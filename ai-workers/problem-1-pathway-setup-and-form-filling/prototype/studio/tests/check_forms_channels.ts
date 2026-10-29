@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { acceptedFor, allowedChannels, channelProblems, filingKind, filingMethod, fingerprintLine, lineOf, type AcceptRecord } from "../engine/channels.ts";
 import { diff, validate } from "../engine/validate.ts";
 import { oathMappedProblems } from "../engine/form-steps.ts";
+import { channelProposal } from "../api/src/filing.ts";
 import { SetChannel, signatureFits } from "../contracts/forms.ts";
 import { AcceptsBody } from "../contracts/form-library.ts";
 import { codeForValue, draftOptionMap, optionMapProblems, pdfOptions } from "../engine/options.ts";
@@ -79,6 +80,10 @@ const intake = async (file: string, combinationId: string) => {
     !ee("ONLINE").some((x) => x.level === "error") && ee("PDF_UPLOAD").some((x) => x.level === "error" && /through the IRCC secure account only as Online/.test(x.message)), ee("PDF_UPLOAD"));
   const nn = channelProblems({ ...snap([{ form_number: "IMM 5669", channel: "NOT_NEEDED" }]), combination: { portal: "APR_PORTAL" } } as unknown as Snapshot, new Map([["IMM 5669", recs]]));
   ok("C1.6 C-4 fail: a Not needed line without its account's record is an error at release", nn.some((x) => x.level === "error" && /marked Not needed/.test(x.message)), nn);
+  const nnRead = (account: string) => ({ value: "NOT_NEEDED", account, quote: "The account asks these questions itself." }) as Parameters<typeof channelProposal>[0];
+  const nnAny = channelProposal(nnRead("ANY"), nnRead("ANY"), null, () => true), nnPr = channelProposal(nnRead("PR_PORTAL"), nnRead("PR_PORTAL"), null, () => true);
+  ok("C1.6 C-5 fail (review M1): the finder never proposes Not needed for every account (no one could approve it); it is listed with the reason", nnAny.outcome === "listed" && /named no IRCC account/.test(nnAny.why ?? ""), nnAny);
+  ok("C1.6 C-5 pass: Not needed for one account, both rounds agreeing, is proposed (Ready)", nnPr.outcome === "ready" && nnPr.account === "PR_PORTAL", nnPr);
   // C-11 (P-171 c): a release whose field map maps a box of IMM 5409's oath block says that box is completed by a person
   // at the oath and never filled; a declarant's own box mapped is not flagged. The real inventory, read as validate reads it.
   const S5 = "IMM_5409[0].Page1[0].Section5[0].", INV5409 = "prototype/p1/inventory/imm5409e.inventory.json";

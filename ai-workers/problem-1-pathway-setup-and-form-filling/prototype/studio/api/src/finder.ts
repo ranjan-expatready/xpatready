@@ -17,6 +17,7 @@
 //    edition stays and the form is marked "Newer file on canada.ca" (M6); a newer edition is held for impact review.
 import { ACCOUNT_WORDS, CHANNELS, IRCC_ACCOUNTS, type Channel } from "../../contracts/forms.ts";
 import { acceptsWords } from "../../contracts/form-library.ts";
+import { START } from "../../contracts/start-setup.ts";
 import { HttpException, HttpStatus, Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -33,7 +34,7 @@ import { FinderBody, FinderLaunchBody, normaliseCode, type FinderMode } from "..
 import { canadaSource, CanadaError, type CanadaSource } from "./canada.ts";
 import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 import { aboutUsd, lastFinishedUsd } from "./finder-cost.ts";
-import { Sources } from "./sources.ts";
+import { aiLive, Sources } from "./sources.ts";
 import { channelProposal, channelsFrom, channelsRead, recordedCopy, sampleFixtures, type ChannelProposal, type ChannelReading } from "./filing.ts";
 import { WHO } from "./studio.ts";
 import { linkFinderGuides } from "./guide-sources.ts";
@@ -189,7 +190,7 @@ export class Finder implements OnModuleInit {
     // S3 early look (4): the one "about" (finder-cost.ts), the same on the Find button, this plan and the run card.
     const about = b.mode === "live" ? aboutUsd(expected, await lastFinishedUsd(this.db, await this.ws.id(), FINDER_OPERATION, "LIVE"), true) : 0;
     const plan = { operation: FINDER_OPERATION, operation_label: "Find this combination's forms", combination: { id: c.id, label: c.label, trail: c.trail }, mode: b.mode, page_url: b.pageUrl ?? remembered?.package ?? null, only: b.only ?? null, steps,
-      totals: { worst_usd: worst, expected_usd: expected, about_usd: about, ai_rounds: rounds.length }, ledger,
+      totals: { worst_usd: worst, expected_usd: expected, about_usd: about, ai_rounds: rounds.length }, ledger, live: { on: aiLive(), why: aiLive() ? null : START.liveOff },
       note: b.mode === "rules" ? "Rules only: every form number printed on the pages is listed for you to attach by hand; nothing is attached, because AI did not decide which apply." : b.mode === "replay" ? "Saved AI answers for these exact pages are replayed: US$0. A page with no saved answer stops with the reason." : `Live AI: two rounds per question, at most US$${worst.toFixed(2)} (usually much less; at most ${MAX_ATTEMPTS} paid attempts per round). Downloads from canada.ca cost nothing.`,
       targets: [] as unknown[] };
     // Lead 29 Oct (CI on #94/#96): the plan's "about" is part of what the person saw, so a click on a button whose cost words
@@ -223,6 +224,7 @@ export class Finder implements OnModuleInit {
     const again = await this.db.aiBatch.findUnique({ where: { workspaceId_idempotencyKey: { workspaceId, idempotencyKey: b.idempotencyKey } } });
     if (again && !again.scopeLabel.startsWith(`${combinationId}|`)) throw problem(409, "Key already used", "This launch key belongs to another run. Look at the plan again to start a new one.");
     if (again) return this.view(again.id);
+    if (b.mode === "live" && !aiLive()) throw problem(409, "AI now is switched off", START.liveOff);
     const plan = await this.plan(combinationId, { mode: b.mode, pageUrl: b.pageUrl, only: b.only });
     if (plan.plan_sha256 !== b.planSha256) throw problem(409, "Look at the plan again", "Something changed since you looked at the plan (the pages, the mode or the cost). Look at it again before starting.");
     if (b.mode === "live" && plan.totals.worst_usd > plan.ledger.remaining_usd + 1e-9) throw problem(409, "Over the spending cap", `The worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the AI spending cap (US$${plan.ledger.remaining_usd.toFixed(2)}). Nothing was started; use saved AI answers or rules only.`);

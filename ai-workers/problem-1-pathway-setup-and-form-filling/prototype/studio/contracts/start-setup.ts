@@ -28,6 +28,8 @@ export const START = {
   tip: (name: string) => `Creates the setup of "${name}" and opens it. Its forms and checklists come from canada.ca: a saved AI answer is loaded free; otherwise you choose to run AI, with its cost shown first. Once released and Live, new cases for ${name} use this setup. Where it sits is set on Program structure, not here.`,
   findLive: (about: number | null, worst: number) => `Find forms with AI (${costWords(about, worst)})`,
   findLiveTip: (about: number | null, worst: number, steps: StepReserve[] = []) => `AI reads the canada.ca application page and guide and lists the forms and checklists they ask for; a second AI round checks it. ${costWords(about, worst).replace(/^./, (c) => c.toUpperCase())}${steps.some((s) => s.worst_usd !== null) ? ` (${reserveWords(steps)})` : ""}. Nothing is spent until you click.`,
+  /** Lead Critical 29 Oct: live AI is off unless the server was started with STUDIO_AI_LIVE=approved (the founder's choice). */
+  liveOff: "AI now is switched off on this copy (no paid AI call can start here). Use saved AI answers or rules only, both free.",
   rulesOnly: "Find form numbers by rules (free)",
   rulesTip: "Rules list every form number printed on the canada.ca pages, for you to attach by hand. Nothing is attached, because AI did not decide which apply.",
   overCap: (worst: number, left: number) => `AI can't run now: its worst case (${usd(worst)}) is above what is left of the AI spending cap (${usd(left)}). Rules only is free.`,

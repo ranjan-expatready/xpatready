@@ -5,7 +5,7 @@
 // process group within seconds → Upload PDF: an official form read by rules ("no AI call was made") and added; a file
 // that is not a PDF refused; a PDF the rules cannot read held for a person with no AI call → the Wave 1 cap refuses a
 // reservation above US$60 (on a scratch ledger). US$0: nothing calls a model or canada.ca (recorded copies).
-//   zsh studio/tools/isolated.sh forms_s4r 4456 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_forms_s4_runs.ts 4456 xr_studio_forms_s4r
+//   zsh studio/tools/isolated.sh forms_s4r 4456 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_forms_s4_runs.ts 4456 xr_studio_forms_s4r
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { normaliseCode } from "../contracts/form-library.ts";

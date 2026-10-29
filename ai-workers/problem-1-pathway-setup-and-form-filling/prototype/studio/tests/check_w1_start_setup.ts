@@ -5,7 +5,7 @@
 // refuses a retired name, a name under a retired one and a name under a waiting change, with the same words on the
 // Program structure row, the Immigration programs card and the API (409). The New combination page's two endpoints are
 // gone (M2). canada.ca is the recorded copies and the AI is tests/fixtures/fake-launch.mjs (isolated copy only): US$0.
-//   zsh studio/tools/isolated.sh screens_s3 4436 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_w1_start_setup.ts 4436 xr_studio_screens_s3
+//   zsh studio/tools/isolated.sh screens_s3 4436 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_w1_start_setup.ts 4436 xr_studio_screens_s3
 import { execFileSync } from "node:child_process";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
