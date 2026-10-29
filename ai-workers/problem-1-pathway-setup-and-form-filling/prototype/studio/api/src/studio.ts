@@ -8,7 +8,7 @@ import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
 import { checkCondition, diff, validate } from "../../engine/validate.ts";
-import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
 import { acceptsOf } from "../../engine/channels.ts";
@@ -155,7 +155,7 @@ export class Studio {
     const key = b.key ?? node!.programNodeKey;
     const c = await this.db.combination.create({ data: { workspaceId, programDefId: node!.id, combinationKey: key, label, description: b.description ?? null, participants, sourceBasis: b.sourceBasis ?? node!.sourceBasis, basisNote: b.basisNote ?? null, createdBy: actor.id } })
       .catch((e) => { if ((e as any)?.code === "P2002") fail("This full combination was given its configuration a moment ago by someone else. Open it instead.", HttpStatus.CONFLICT); throw e; });
-    await this.audit.log(workspaceId, actor.id, "created", "configuration row", key, `${actor.name} created the configuration row for ${node!.label}`, { participants }, c.id);
+    await this.audit.log(workspaceId, actor.id, "created", "configuration row", key, `${actor.name} started setting up ${node!.label}`, { participants }, c.id);
     return c;
   }
 
@@ -827,11 +827,15 @@ export class Studio {
   async releases(combinationId?: string) {
     const workspaceId = await this.ws.id();
     const rows = await this.db.configRelease.findMany({ where: { workspaceId, ...(combinationId ? { combinationId } : {}) }, orderBy: { releasedAt: "desc" }, include: { combination: true } });
-    return rows.map((r) => ({ id: r.id, combination: r.combination.label, combination_id: r.combinationId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, summary: r.summary, basis: r.basis }));
+    return rows.map((r) => ({ id: r.id, combination: r.combination.label, combination_id: r.combinationId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, names: { author: peopleNames(r.authorId), submitter: peopleNames(r.submitterId), approver: peopleNames(r.approverId) }, summary: r.summary, basis: r.basis }));
   }
 
   async activity(limit = 200) {
     const workspaceId = await this.ws.id();
-    return this.db.auditEvent.findMany({ where: { workspaceId }, orderBy: { at: "desc" }, take: limit });
+    return (await this.db.auditEvent.findMany({ where: { workspaceId }, orderBy: { at: "desc" }, take: limit })).map((e) => ({ ...e, who: peopleNames(e.actor) }));
   }
 }
+
+/** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */
+const PEOPLE: readonly { id: string; name: string }[] = [...ACTORS, ...RUNTIME_ACTORS];
+export const peopleNames = (ids: string | null) => (ids ?? "").split(",").filter(Boolean).map((id) => PEOPLE.find((p) => p.id === id.trim())?.name ?? id).join(", ");

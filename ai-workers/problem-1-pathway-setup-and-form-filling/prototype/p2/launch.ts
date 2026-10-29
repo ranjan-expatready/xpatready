@@ -133,7 +133,7 @@ export function launch(jobId: string, mode: "stub" | "live", opts: { approvedDir
   const record: Record<string, unknown> = {
     run_id: runId, idempotency_key: idempotencyKey({ inputs, settings: runSettings } as never), contract_version: "drafting-run/v0", kind: job.kind,
     ...(typeof o.text === "string" ? { output_sha256: sha(Buffer.from(o.text, "utf8")) } : {}),
-    inputs, settings: runSettings, status, attempts: o.attempts.map((a: any) => ({ n: a.n, outcome: a.outcome, ...(a.error ? { error: a.error } : {}), ...(a.input_tokens !== undefined ? { input_tokens: a.input_tokens, output_tokens: a.output_tokens } : {}), ...(a.duration_ms !== undefined ? { duration_ms: a.duration_ms } : {}) })),
+    inputs, settings: runSettings, status, attempts: o.attempts.map((a: any) => ({ n: a.n, outcome: a.outcome, ...(a.error ? { error: a.error } : {}), ...(a.request_id ? { request_id: a.request_id } : {}), ...(a.input_tokens !== undefined ? { input_tokens: a.input_tokens, output_tokens: a.output_tokens } : {}), ...(a.duration_ms !== undefined ? { duration_ms: a.duration_ms } : {}) })),
     usage, started_at: startedAt, ended_at: endedAt, ...(entries ? { entries } : {}),
   };
   const contract = ajv.getSchema("https://expatready.local/contracts/drafting-run.v0.json")!;

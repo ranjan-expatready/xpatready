@@ -73,7 +73,10 @@ const finished = async (jobId: string) => { let j: Res = { status: 0, body: null
 type Step = { exit?: number; out?: Record<string, unknown>; err?: string; record?: unknown };
 /** One live draft of the source through the fake launcher, answering as the scenario says. */
 let source = "";
-const draft = async (scenario: { stub?: Step; live?: Step; locked_first?: boolean }, src = source) => {
+const draft = async (scenario: { stub?: Step; live?: Step; locked_first?: boolean }, src = source, fresh = true) => {
+  // Each case is a form with no earlier paid runs: the 4 paid attempts per form (G4) count across batches, so the many
+  // fake paid runs of these checks would otherwise use up the form's budget. The budget's own check passes fresh = false.
+  if (fresh) sql(`delete from drafting_job where attachment_id = '${src}' and kind = 'field_map'`);
   writeFileSync(join(VARDIR, "fake-launch.json"), JSON.stringify({ stub: { exit: 0, out: { ok: true } }, ...scenario }));
   rmSync(join(VARDIR, "fake-launch.count"), { force: true }); writeFileSync(join(VARDIR, "fake-launch.log"), "");
   const r = await call("POST", `/attachments/${src}/draft`, { mode: "live" });
@@ -125,9 +128,10 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
     ["refused", { status: "refused" }, {}, /The AI declined to draft this form\. Nothing was applied\. Cost US\$0\.42/],
     ["timed_out", { status: "timed_out" }, {}, /did not answer in time/],
     ["budget_exceeded", { status: "budget_exceeded" }, {}, /over its spending cap/],
-    ["provider_error (not a limit)", { status: "provider_error", attempts: [{ outcome: "error", error: "529 overloaded" }] }, {}, /provider returned an error: 529 overloaded/],
+    // QA-88 (29 Oct): plain words; the service's own words go under Details, never in the sentence.
+    ["provider_error (not a limit)", { status: "provider_error", attempts: [{ outcome: "error", error: "529 overloaded" }] }, {}, /^(?!.*529)The AI service did not complete the call\. Nothing was drafted or applied/],
     ["invalid_output cut at the limit", { status: "invalid_output", settings: { max_output_tokens: 4000 }, usage: { output_tokens: 4000, cost_usd: 0.3 } }, { output_errors: "stop_reason max_tokens" }, /cut off at the output limit \(4000 of 4000/],
-    ["invalid_output in another shape", { status: "invalid_output" }, { output_errors: { entries: "missing" } }, /not in the agreed shape \(\{"entries":"missing"\}\)/],
+    ["invalid_output in another shape", { status: "invalid_output" }, { output_errors: { entries: "missing" } }, /^(?!.*entries)The AI answered, but not in the agreed shape\. Nothing was applied/],
     ["completed, entries break our rules", { status: "completed" }, { raw_output: JSON.stringify({ canonical_fields: [], entries: [{ data_path: "a", outcome: "mapped", fact: "Person.Name" }] }), contract_errors: [{ instancePath: "/entries/0/fact", message: "bad" }] }, /AI answered 1 form field\. 1 entry broke our entry rules \(form field 1: field name "Person\.Name" breaks the naming rule\)/],
     ["completed, the run record failed our check", { status: "completed" }, { raw_output: "not json" }, /AI answered\. The answer failed our check of the run record/],
     ["an unknown status", { status: "weird" }, {}, /ended without a usable draft \(status weird\)/],
@@ -155,6 +159,20 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   ok("parts: a provider limit found in the run records also gives BLOCKED", j.status === "BLOCKED", { status: j.status, message: j.message?.slice(0, 160) });
   j = await draft({ live: { exit: 0, out: { run_file: join(VARDIR, "no-such-run.json") } } }, parts);
   ok("parts fail: an unreadable run file ends the step FAILED with the reason (never left RUNNING)", j.status === "FAILED" && /ENOENT|no such file/i.test(j.message), j.message);
+  // ──────────────────────────────────────────── outside review 29 Oct (G4): 4 paid attempts per form, across batches
+  // A Draft again starts a new batch, where the retry rule (attempts inside one batch) never looked: the budget is per form.
+  const paid = { live: { exit: 0, record: record({ status: "timed_out" }) } } as const; // each run counted at US$0.42
+  const run1 = await draft(paid), run2 = await draft(paid, source, false);
+  ok("G4 per form pass: one form's first two paid runs start, each in its own batch (2 runs × 2 attempts = 4)", run1.status === "FAILED" && run2.status === "FAILED" && run1.costUsd > 0 && run2.costUsd > 0 && run1.batchId !== run2.batchId, { s: [run1.status, run2.status], cost: [run1.costUsd, run2.costUsd] });
+  const run3 = await draft(paid, source, false);
+  ok("G4 per form fail: a third paid run from a new batch (Draft again) is refused before any call, the budget named", run3.status === "NOT STARTED" && /used its 4 paid AI attempts/.test(run3.message) && !run3.calls.length, run3);
+  const plan3 = await call("POST", "/ai/plan", { scope: { kind: "source", ids: [source] }, mode: "LIVE", draftAgain: true });
+  ok("G4 per form fail: the plan shows the form as not eligible for a paid run, worst case US$0", plan3.body.targets?.[0]?.action === "not_eligible" && plan3.body.totals?.worst_usd === 0 && /counted across its runs/.test(plan3.body.targets[0].why), plan3.body.targets?.[0]);
+  r = await call("POST", `/ai/batches/${run2.batchId}/retry`, {});
+  ok("G4 per form fail: a retry of the second batch's first run is refused too (it alone was within the old per-batch rule)", r.status === 400 && /used its 4 paid AI attempts/.test(r.body?.message), { status: r.status, message: r.body?.message });
+  scenario({ stub: { exit: 0, out: { ok: true } } });
+  r = await call("POST", `/attachments/${source}/draft`, { mode: "stub" });
+  ok("G4 per form pass: the stub pass (no AI, US$0) still runs for that form", r.status === 201 && (await finished(r.body.id)).costUsd === 0, r.status);
   // ──────────────────────────────────────────── QA-32: retry after a mid-run cancel of a draft in parts
   // (review and break of the qa Minors pass, M1: a cancel during a part's stub pass must stop that part's paid call too)
   scenario({ stub: { exit: 0, out: { ok: true }, sleep_ms: 2500 }, live: { exit: 1, out: { refused: "budget: the experiment cap is reached" } } });
@@ -180,6 +198,7 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   ok("QA-32 fail: a step that ran to its end is not retried (and not offered), and the refusal says how to draft again", okJob.status === "COMPLETED" && okView.body.jobs?.[0]?.retryable === false && r.status === 400 && /Nothing to retry: every step finished or ran to its end\. To draft a form anew, start its draft again/.test(r.body.message), { job: okJob.status, status: r.status, message: r.body?.message });
 
   // ──────────────────────────────────────────── M1 on a whole-form draft (IMM 5409): cancelled before, or during, its paid call
+  sql(`delete from drafting_job where attachment_id = '${source}' and kind = 'field_map'`); // a form with no paid runs yet (G4 above used them)
   scenario({ stub: { exit: 0, out: { ok: true }, sleep_ms: 2500 }, live: { exit: 1, out: { refused: "should never be called" } } });
   r = await call("POST", `/attachments/${source}/draft`, { mode: "live" });
   let wf = r.body.id as string;
