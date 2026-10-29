@@ -15,6 +15,7 @@ import { join } from "node:path";
 import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
 import { RUN_CAP_USD } from "../../../p2/policy.ts";
 import { slug } from "../../engine/import.ts";
+import { AI_FAILED, checkCounts } from "../../engine/people.ts";
 import { ProposePeopleBody, type PeoplePlan, type PeopleProposal, type ProposedPerson } from "../../contracts/workspace.ts";
 import { Audit, Db, need, PROTOTYPE, SOLUTION, type Actor } from "./core.ts";
 import { inventoryFor } from "./finder.ts";
@@ -126,6 +127,10 @@ export class PeopleFromGuide {
       out.run_files = [draft.runFile, check?.runFile].filter((x): x is string => !!x);
       if (!draft.ok || !check?.ok) { out.note = (!draft.ok ? draft.reason : check?.reason) ?? "The AI step did not finish."; out.from = null; return out; }
       out.from = draft.from === "live" || check.from === "live" ? "live" : "replay";
+      const d = checkCounts(draft.output!), k = checkCounts(check.output!);
+      out.dropped.push(...d.dropped, ...k.dropped.filter((x) => !d.dropped.some((y) => y.role === x.role)));
+      const outside = new Set([...d.dropped, ...k.dropped].map((x) => x.role));
+      draft.output!.people = d.kept.filter((p) => !outside.has(p.role)); check.output!.people = k.kept.filter((p) => !outside.has(p.role));
       const two = new Map(check.output!.people.map((p) => [p.role, p]));
       for (const p of draft.output!.people) {
         const q = two.get(p.role);
@@ -167,16 +172,19 @@ export class PeopleFromGuide {
     writeFileSync(join(JOBS, `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
     try {
       const last = (o: string) => { for (const l of o.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
+      // QA-88: the launcher's and the provider's own text go to the server log, never to the person.
       const stub = await this.sources.launchOnce(jobId, "stub");
-      if (stub.code !== 0) return { ok: false, costUsd: 0, reason: `The guarded AI route refused the job before any call: ${String(last(stub.out)?.refused ?? stub.err).trim().slice(-300)}` };
+      if (stub.code !== 0) { console.warn(`[who-can-be] stub pass refused ${jobId}: ${String(last(stub.out)?.refused ?? stub.err).trim().slice(-300)}`); return { ok: false, costUsd: 0, reason: AI_FAILED.refused }; }
       const live = await this.sources.launchOnce(jobId, "live");
       const lj = last(live.out);
-      if (!lj?.run_file) return { ok: false, costUsd: 0, reason: `The AI step did not run: ${String(lj?.refused ?? lj?.error ?? live.err).trim().slice(-300)}` };
+      if (!lj?.run_file) { console.warn(`[who-can-be] live call did not run ${jobId}: ${String(lj?.refused ?? lj?.error ?? live.err).trim().slice(-300)}`); return { ok: false, costUsd: 0, reason: AI_FAILED.notRun }; }
       const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
       const cost = Number(rec.drafting_run?.usage?.cost_usd ?? 0);
-      if (rec.drafting_run?.status !== "completed" || rec.contract_valid !== true) return { ok: false, costUsd: cost, reason: "The AI answer could not be used. Nothing was proposed." };
+      const spent = ` Cost US$${cost.toFixed(2)}.`;
+      if (rec.drafting_run?.status !== "completed") return { ok: false, costUsd: cost, reason: AI_FAILED.notRun + spent };
+      if (rec.contract_valid !== true) return { ok: false, costUsd: cost, reason: AI_FAILED.unusable + spent };
       const o = JSON.parse(String(rec.raw_output)) as Answer;
-      return Array.isArray(o?.people) ? { ok: true, output: o, costUsd: cost, from: "live", runFile: String(lj.run_file).replace(`${SOLUTION}/`, "") } : { ok: false, costUsd: cost, reason: "The AI answer did not have the expected shape." };
+      return Array.isArray(o?.people) ? { ok: true, output: o, costUsd: cost, from: "live", runFile: String(lj.run_file).replace(`${SOLUTION}/`, "") } : { ok: false, costUsd: cost, reason: AI_FAILED.unusable + spent };
     } finally { rmSync(join(JOBS, `${jobId}.json`), { force: true }); }
   }
 }

@@ -96,6 +96,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("drawer pass: who and when, alternatives, the facts it supplies with About whom and Taken out", /Who and when/.test(dtext) && /Alternatives · any one counts/.test(dtext) && /About whom/.test(dtext) && await drawer.locator('[data-taken-out="yes"]').count() >= 9, dtext.slice(0, 160));
   step("drawer pass (P-147 Q3): Copies, Translation and Validity window are read-only, Sample, not set", /Copies[\s\S]*Not set · Sample[\s\S]*Translation[\s\S]*Not set · Sample[\s\S]*Validity window[\s\S]*Not set · Sample/.test(dtext) && await drawer.locator("[data-doc-not-built] input, [data-doc-not-built] select, [data-doc-not-built] textarea").count() === 0);
   step("drawer fail-guard: no system key in the drawer", !KEYS.test(dtext), (dtext.match(KEYS) ?? [""])[0]);
+  const alts = await drawer.locator("[data-drawer-alternatives]").innerText();
+  const own = (await drawer.locator("h2, [role=heading]").first().innerText().catch(() => "")).trim();
+  step("drawer pass (Lead check slice 3): with no alternative set, Alternatives says \"None yet: set one in Edit.\"", alts.trim() === "None yet: set one in Edit.", alts);
+  step("drawer fail-guard (Lead check slice 3): the line's own document is never listed as its alternative", !!own && !alts.includes(own) && !/No alternative/.test(dtext), `${own} | ${alts}`);
+  step("words fail-guard (Lead check slice 3): \"Imported release\" is never shown (a sample line says \"From the sample setup\")", !/Imported release/.test(await p.locator("body").innerText()) && !/Imported release/.test(dtext), "");
   await state("documents-drawer-passport");
   await p.keyboard.press("Escape"); await settle();
 

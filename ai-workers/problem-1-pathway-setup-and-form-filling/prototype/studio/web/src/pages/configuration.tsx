@@ -24,7 +24,7 @@ export function OriginPill({ origin, status }: { origin?: string; status?: strin
   return (
     <span className="inline-flex gap-1">
       {status === "DRAFT" ? <Pill tone="warn">Draft</Pill> : status === "RETIRED" ? <Pill tone="danger">Removed in draft</Pill> : null}
-      {origin === "AI_PROPOSAL" ? <Pill tone="ai">AI-proposed</Pill> : origin === "HUMAN" ? <Pill tone="info">Edited by a person</Pill> : origin === "IMPORTED_RELEASE" ? <Pill title="From the reviewed release c1-v3">Imported release</Pill> : null}
+      {origin === "AI_PROPOSAL" ? <Pill tone="ai">AI-proposed</Pill> : origin === "HUMAN" ? <Pill tone="info">Edited by a person</Pill> : origin === "IMPORTED_RELEASE" ? <Pill title="Loaded with the sample setup, from an earlier reviewed release">From the sample setup</Pill> : null}
     </span>
   );
 }

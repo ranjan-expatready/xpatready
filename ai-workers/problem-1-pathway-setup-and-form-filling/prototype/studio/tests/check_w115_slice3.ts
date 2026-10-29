@@ -118,6 +118,13 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   r = await call("PUT", `/combinations/${wp}/fact-sources/principal/${encodeURIComponent("person.family_name")}`, { source: "CLIENT", version: Number(sql(`select coalesce(max(version),0) from fact_source where combination_id='${wp}' and lineage_key='principal|person.family_name'`)) });
   ok("C4.10 pass (open point 3): fact sources and placements have no draft retire that could leak (no RETIRED rows; a change is a draft)", r.status === 200 && sql(`select count(*) from fact_source where combination_id='${wp}' and status='RETIRED'`) === "0" && sql(`select count(*) from section_question where status='RETIRED'`) === "0" && sql(`select status from fact_source where combination_id='${wp}' and lineage_key='principal|person.family_name' order by version desc limit 1`) === "DRAFT", r.status);
   await call("DELETE", `/combinations/${wp}/fact-sources/principal/${encodeURIComponent("person.family_name")}`, { version: Number(sql(`select max(version) from fact_source where combination_id='${wp}' and lineage_key='principal|person.family_name'`)) });
+  // A check's removal (no screen removes one yet: written as the other lines' removals are) rides with this release.
+  const chk = sql(`select id||'|'||check_key from check_def where combination_id='${wp}' and status='PUBLISHED' order by check_key limit 1`).split("|");
+  const cols = sql(`select column_name from information_schema.columns where table_name='check_def' order by ordinal_position`).split("\n");
+  const pick = (c: string) => ({ id: "gen_random_uuid()", version: "version + 1", status: "'RETIRED'", supersedes_id: "id" } as Record<string, string>)[c] ?? `"${c}"`;
+  if (chk[0]) sql(`insert into check_def (${cols.map((c) => `"${c}"`).join(", ")}) select ${cols.map(pick).join(", ")} from check_def where id='${chk[0]}'`);
+  vw = views(rowsOf("check_def", "check_key", chk[1] ?? ""));
+  ok("C4.10 pass (open point 3): a check removed in the draft stays in the published view until a release", !!chk[0] && vw.draft === 0 && vw.published === 1 && vw.oldRule === 0, vw);
 
   await call("POST", `/combinations/${wp}/submit`, {});
   const review = (await call("GET", `/combinations/${wp}/review`)).body;
@@ -127,6 +134,8 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   ok("release pass: the order, the alternative and the removal are released (Release 2)", r.status === 201 && r.body?.version === 2, words(r) || r.body?.version);
   const rel = (await call("GET", `/combinations/${wp}/config?mode=published`)).body.snapshot;
   ok("release: Release 2 carries the positions and the alternative, and not the removed line", rel.document_requirements.some((x: any) => "position" in x) && rel.document_requirements.some((x: any) => x.document_type_key === PASSPORT && (x.alternatives ?? []).includes(anyOther)) && !rel.document_requirements.some((x: any) => x.lineage === target.lineage), rel.document_requirements.length);
+  ok("C4.10 pass (Lead check slice 3): the release carries the check's removal: the released check is superseded and Release 2 has no such check", sql(`select status from check_def where id='${chk[0]}'`) === "SUPERSEDED" && !rel.checks.some((x: any) => x.id === chk[1]), sql(`select status from check_def where id='${chk[0]}'`));
+  ok("C4.10 fail-guard (Lead check slice 3): after the release the published view drops the check (held only until a release)", views(rowsOf("check_def", "check_key", chk[1])).published === 0, views(rowsOf("check_def", "check_key", chk[1])));
   r = await call("POST", `/combinations/${wp}/checklist/undo-remove`, { lineage: target.lineage });
   ok("Undo fail: a released removal is not undone (409 Released since)", r.status === 409 && /Released since/.test(r.body?.title ?? ""), `${r.status} ${words(r)}`);
   V = await list();

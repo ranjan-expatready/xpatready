@@ -803,7 +803,8 @@ export class Studio {
       lists: await publish(tx.answerList, { workspaceId: ws, answerListKey: { in: snapshot.canonical_fields.flatMap((f) => (f.answer_list ? [f.answer_list.key] : [])) } }),
     };
     // A retired row released: the lineage it ends stays retired; its predecessor is superseded.
-    for (const delegate of [tx.documentRequirement, tx.predicate, tx.combinationForm] as any[]) for (const x of await delegate.findMany({ where: { combinationId: id, status: "RETIRED", supersedesId: { not: null } } })) await delegate.update({ where: { id: x.supersedesId }, data: { status: "SUPERSEDED" } });
+    // Checks too (Lead check slice 3): effective's held retires cover them, so a released retire must supersede here.
+    for (const delegate of [tx.documentRequirement, tx.predicate, tx.combinationForm, tx.check] as any[]) for (const x of await delegate.findMany({ where: { combinationId: id, status: "RETIRED", supersedesId: { not: null } } })) await delegate.update({ where: { id: x.supersedesId }, data: { status: "SUPERSEDED" } });
     // What is now published must be exactly the frozen, reviewed snapshot (break M1): an edit saved while the release ran
     // would otherwise be published unreviewed and missing from the release. Any difference rolls the whole release back.
     const published = await buildSnapshot(tx, ws, id, "published");

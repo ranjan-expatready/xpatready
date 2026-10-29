@@ -155,8 +155,10 @@ function DocumentDrawer({ line, roles, roleLabel, canAuthor, onClose, onEdit, on
           <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-1"><dt className="text-text-muted">Who</dt><dd>{whoLabel(line.who)}</dd><dt className="text-text-muted">When</dt><dd>{line.base ? "Always" : `Only if: ${line.when}`}</dd><dt className="text-text-muted">Provided by</dt><dd>{line.providedBy === "client" ? "The client" : line.providedBy === "agent" ? "The firm" : line.providedBy.replace(/_/g, " ")}</dd></dl>
         </section>
         <section aria-labelledby="dd-alt" className="space-y-1"><h3 id="dd-alt" className="font-semibold">Alternatives · any one counts</h3>
-          <p data-drawer-alternatives>{[line.document.name, ...line.alternatives.map((a) => a.name)].join(" · or ")}</p>
-          {line.alternatives.length ? <p className="text-xs text-text-muted">The facts read are this line's document's; when an alternative is given, the client is asked what it does not supply.</p> : <p className="text-xs text-text-muted">No alternative: set one in Edit.</p>}
+          {line.alternatives.length ? <>
+            <p data-drawer-alternatives>{line.alternatives.map((a) => a.name).join(" · or ")}</p>
+            <p className="text-xs text-text-muted">The facts read are this line's document's; when an alternative is given, the client is asked what it does not supply.</p>
+          </> : <p className="text-text-muted" data-drawer-alternatives>None yet: set one in Edit.</p>}
         </section>
         <section aria-labelledby="dd-facts" className="space-y-1"><h3 id="dd-facts" className="font-semibold">Facts it supplies · {line.supplies.length} · from the library document type</h3>
           {line.supplies.length ? (
