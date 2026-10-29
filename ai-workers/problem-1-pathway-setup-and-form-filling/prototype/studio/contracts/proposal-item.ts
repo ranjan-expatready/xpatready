@@ -1,3 +1,5 @@
+// v2.1 (P-158, Lead 29 Oct, for screens' S6 slice 1 N-1): nothing enters the library by hand, so a person's Add is gone
+// (no "person" origin, no add reason); a source may name the rule that needs the fact (rule key and its sentence).
 // v2 (P-149, Lead 29 Oct; screens plan-p149.md §C): a person's Add is the same item (one door), with its reason, its identity,
 // what it relates to and, for an edit, the meaning-change answer. v1 approved by the Lead 29 Oct (W1-10 challenge A3, Q-L2).
 // The one review-queue item contract every AI, rules or person producer writes
@@ -48,7 +50,9 @@ export const ProposalPayload = z.discriminatedUnion("kind", [
 export type ProposalPayload = z.infer<typeof ProposalPayload>;
 
 /** IRCC's line the proposal rests on (P-121): the rules find the quote in that file, or the item is dropped and listed. */
-export const ProposalSource = z.object({ file: z.string().max(300), sha256: z.string().regex(/^[0-9a-f]{64}$/), edition: z.string().max(60).nullable(), page: z.number().int().positive().nullable(), quote: z.string().min(1).max(1000), quoteFound: z.boolean() });
+/** P-158 (5): when a rule needs the fact, the rule it rests on (its key and its sentence), beside the file and quote. */
+export const RuleReference = z.object({ key: z.string().min(1).max(120), sentence: z.string().min(3).max(300) }).strict();
+export const ProposalSource = z.object({ file: z.string().max(300), sha256: z.string().regex(/^[0-9a-f]{64}$/), edition: z.string().max(60).nullable(), page: z.number().int().positive().nullable(), quote: z.string().min(1).max(1000), quoteFound: z.boolean(), rule: RuleReference.nullable() });
 
 /** One round's reading of the item (api/src/rounds.ts): a draft or the blind checker; rules-only producers have no rounds. */
 export const RoundReading = z.object({ reading: z.string().max(300), payload: ProposalPayload, from: z.enum(["live", "replay"]), runFile: z.string().max(300), costUsd: z.number().min(0) });
@@ -72,9 +76,8 @@ export const Confidence = z.enum(["ready", "check", "decide"]);
 export const ProposalItem = z.object({
   id: z.string().uuid(),
   kind: z.enum(PROPOSAL_KINDS),
-  /** The run and its step that produced it (AI work names it; the acceptance rate is per step, P-130 §6.3). A person's Add
-   *  has no run (null) and its step is "add". */
-  runId: z.string().uuid().nullable(), step: z.string().max(60),
+  /** The run and its step that produced it (AI or rules work names it; the acceptance rate is per step, P-130 §6.3). */
+  runId: z.string().uuid(), step: z.string().max(60),
   /** Where it was drafted: a form edition (S6, one draft per edition) or a combination (W1-10). */
   scope: z.object({ formEdition: z.string().max(60).nullable(), combinationId: z.string().uuid().nullable() }),
   landsOn: LandsOn,
@@ -88,12 +91,10 @@ export const ProposalItem = z.object({
   confidence: Confidence,
   /** Why it is Check or Decide, in plain words (both readings kept); null when Ready. */
   reason: z.string().max(500).nullable(),
-  /** Who made it (P-149: one door): AI, the rules, or a person through the one Add (the marked exception). */
-  origin: z.enum(["ai", "rules", "person"]),
-  /** Why a person added it by hand (required for a person's Add; shown at release, P-149). */
-  addReason: z.string().min(3).max(300).nullable(),
+  /** Who made it: AI or the rules (P-158 (1): nothing enters the library by hand). */
+  origin: z.enum(["ai", "rules"]),
   identity: Identity,
-  /** The item this one follows from, e.g. a placement proposed after a person's field Add (P-149 "where it applies"). */
+  /** The item this one follows from, e.g. a placement proposed after its field (P-149 "where it applies"). */
   relatesTo: z.string().uuid().nullable(),
   /** Set when the item changes an approved one (P-149 (3), (4)); null for a new item. */
   revision: Revision.nullable(),
@@ -105,14 +106,6 @@ export const ProposalItem = z.object({
 }).strict().superRefine((x, ctx) => {
   const say = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
   if (x.kind !== x.payload.kind) say("payload", "The payload is of another kind than the item.");
-  if (x.origin === "person") {
-    if (!x.addReason) say("addReason", "Say why you add it by hand: it is shown at release.");
-    if (x.runId !== null || x.step !== "add") say("runId", "A person's Add has no run; its step is add.");
-    if (x.rounds.draft || x.rounds.check) say("rounds", "A person's Add has no AI rounds.");
-  } else {
-    if (x.addReason) say("addReason", "Only a person's Add carries a reason for adding by hand.");
-    if (x.runId === null) say("runId", "An AI or rules item names the run that made it.");
-  }
   if (x.identity.near.length && !x.identity.nearReason) say("identity", "It is close to an existing item: say why it is not the same.");
   const m = x.revision?.meaningChange;
   if (m?.forced && !m.answer) say("revision", "A changed answer type or set of values changes the meaning: the answer is yes.");
