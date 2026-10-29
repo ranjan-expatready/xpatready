@@ -85,3 +85,26 @@ Fit check against today's data: a checklist line is a `document_requirement` (ty
 1. C4.2 and C4.8 now: done (`check_pqr.ts`, `check_pqr_browser.cjs`).
 2. The C4.7 producer and Accept path against contract v2, not put into any queue yet: done. `engine/sources.ts pqrPicksByRules` makes `pqr_pick` items with origin "rules" and no `ProposalSource`, never labelled AI, until W1-10 step 7 runs. `api/src/fact-sources.ts acceptPqrPick` writes the tick through the same draft row and refusals; it has no route of its own. **Wiring into S6's queue waits until S6 slice 1 is on main.**
 3. While C4.7 waits: queue item (3) who fills (C4.9), then (4) Preview; then back to C4.7 to wire it into the queue.
+
+## Who fills (M2 queue item 3; C4.9; P-97, P-23): short plan for the Lead, 29 Oct (no code yet)
+**What C4.9 means now.** Lead Q2 (slice 1) already split C4.9 into two parts:
+* **Built (slices 1–2):** the per-combination override (Comes from, reviewed at that combination's release) and the client-only lock on background and declaration sections.
+* **Not built: the library default.** P-97 says that changing who fills a question for every combination is a library change: a second person approves it on To review, and it goes out with the next release.
+
+**Finding: the library page breaks P-97 today.** On the library field page (`web/src/pages/library.tsx`), "Collected from" saves straight to a draft placement version (`POST /library/fields/:key/placement`, `api/src/studio.ts placeField`). No second person approves it, and it is published with the next release like any draft.
+
+**The plan (US$0; reuses the existing library-change pattern, no new table):**
+| Element | Record | API | Rule | Test (pass / fail) |
+|---|---|---|---|---|
+| Propose: "Change who fills, for every combination", from the Questionnaires drawer, with a reason and "used by n combinations" | `library_change` kind `placement_fills`, action `SET_FILLS`, `matches` {before, after} | `POST /api/library/fields/:key/fills` {to: client · case_officer, reason} | Only Client ↔ Case officer. Refused: a client-only section (P-97), no change, one already waiting, a fact with no placement, a retired field; author duty | Proposal saved as WAITING, the placement unchanged / each refusal in words |
+| Approve on To review by a second person | the same row | the existing `decideChange` (proposer and draft applier refused) | Approval writes a DRAFT placement version with the new `collectedFrom` (origin HUMAN); nothing changes before approval | Approved → draft version / the proposer approving → 403 |
+| Out with the next release | `publishLibraryChanges` (existing: APPROVED → published, RELEASED in the pack) | release (existing) | Each affected combination's Review names it once, in words, with `needs_sme`; a per-combination override (C4.10) stays in place and still wins | Released snapshot's placement carries it; the Comes from rules follow it / an override keeps its own source |
+| Lock the direct edit | — | `placeField` | Changing `collectedFrom` on an existing placement is refused with "Who fills is changed with a second person: use Change who fills". A new placement may still set it. | Direct change → 409 / new placement → 200 |
+| Shown | — | `GET …/fact-sources` adds `fillsChange` {to, by, status} | The row and drawer say "Waiting for a second person: Case officer for every combination" | Browser: propose, see Waiting, approve as the second person, then see the draft |
+
+**Questions for the Lead:**
+1. **Files.** To review (`api/src/review-queue.ts`, `contracts/review-queue.ts`), approval and publish (`api/src/library-changes.ts`, `api/src/lifecycle.ts`) and the library page (`library.tsx`) are the screens and forms lanes' files. *Recommend:* runtime makes the narrow additions: one kind in the To review list and words, the apply step at approval, the propose route, and the lock in `placeField`. The Lead tells the screens lane, so S6 slice 1 does not collide. The other way is that screens adds the kind and runtime builds only the drawer, the route and the lock.
+2. **Values.** Only Client ↔ Case officer (P-97's words)? The other values (verified document, profile record, existing record) stay as they are and are not offered. *Recommend yes:* "from a document" is per combination now (Comes from, P-130).
+3. **The library field page.** Make its "Collected from" read-only for an existing placement, with the same "Change who fills" door? *Recommend yes;* otherwise P-97 has a side door.
+
+**Size:** medium: one route, one apply step, one lock, a drawer section, two checks (API and browser). It does not wait on S6.
