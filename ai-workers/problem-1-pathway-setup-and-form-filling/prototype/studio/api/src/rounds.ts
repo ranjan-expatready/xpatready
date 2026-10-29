@@ -110,6 +110,13 @@ export class StepRunner {
     }
     const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
     const cost = Number(rec.drafting_run?.usage?.cost_usd ?? 0);
+    // Demo 29 Oct: the AI service refused the request itself (our setup error, e.g. a schema keyword it does not accept):
+    // nothing was processed or charged; its own words go to the server log only.
+    const attempts = (rec.drafting_run?.attempts ?? []) as { outcome?: string; error?: string }[];
+    if (rec.drafting_run?.status !== "completed" && attempts.some((a) => a.outcome === "refused_by_provider")) {
+      console.warn(`${step.kind} ${jobId}: the AI service refused the request:`, attempts.map((a) => a.error ?? "").join(" | ").slice(0, 600));
+      return { ok: false, costUsd: 0, reason: "The AI service refused the request (our setup error); nothing was charged" };
+    }
     if (rec.drafting_run?.status !== "completed" || rec.contract_valid !== true || typeof rec.raw_output !== "string") {
       const limit = /usage limit/i.test(JSON.stringify(rec.drafting_run?.attempts ?? []));
       return { ok: false, blocked: limit, costUsd: limit ? 0 : cost, reason: limit ? "The AI provider's usage limit refused the call before any processing: nothing was charged." : `The AI answer could not be used (${rec.drafting_run?.status ?? "no status"}${rec.output_errors ? ": it did not match the expected shape" : ""}). ${nothing}` };

@@ -96,6 +96,15 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   const brokenRec = record({ drafting_run: { status: "failed", usage: { cost_usd: 0.3 } }, contract_valid: false, output_errors: ["x"] });
   r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: brokenRec }) })));
   ok("C11.14 fail: a failed or contract-breaking live run is not used", !r.ok && /could not be used \(failed: it did not match the expected shape\)/.test(r.reason) && r.costUsd === 0.3, r);
+  // Demo bug, 29 Oct: the AI service refused the guide pick (400 invalid_request_error: maxItems in the schema). The run record
+  // (as p2/launch.ts writes it after the runner) holds the attempt refused before processing, at US$0.
+  const refusedRec = record({ drafting_run: { status: "provider_error", usage: { cost_usd: 0 }, attempts: [{ n: 1, outcome: "refused_by_provider", error: "400 invalid_request_error: output_config.format.schema: For 'array' type, property 'maxItems' is not supported" }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: refusedRec }) })));
+  ok("demo bug pass: a request the AI service refused says so plainly with US$0 (\"The AI service refused the request (our setup error); nothing was charged\")", !r.ok && r.reason === "The AI service refused the request (our setup error); nothing was charged" && r.costUsd === 0 && !r.blocked, r);
+  ok("demo bug fail: the person never reads the service's own words (provider_error, invalid_request_error, maxItems)", !r.ok && !/provider_error|invalid_request|maxItems|400/.test(r.reason), r);
+  const brokenRec2 = record({ drafting_run: { status: "provider_error", usage: { cost_usd: 0.22 }, attempts: [{ n: 1, outcome: "error", error: "socket hang up" }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: brokenRec2 }) })));
+  ok("demo bug fail: a failure whose cost is unknown keeps its recorded worst case and is not called a refusal", !r.ok && r.costUsd === 0.22 && !/refused the request/.test(r.reason), r);
   // Stop finds the round running now for its run, and no other.
   let during: string | undefined;
   const watcher = new StepRunner({ launchOnce: async (jobId: string, mode: "stub" | "live") => { if (mode === "live") during = watcher.liveJob("batch-9"); return { code: 0, err: "", out: mode === "stub" ? "{}" : JSON.stringify({ run_file: okRec }) }; } });

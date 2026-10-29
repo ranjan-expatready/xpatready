@@ -70,13 +70,14 @@ export async function runDrafting(
         out.status = "completed"; out.text = r.text;
         return out;
       } catch (e) {
-        // Usage unknown: the reservation stays counted at its worst case.
-        ledger.settle(id, worst, "error_counted_at_worst_case");
-        out.attempts.push({ n, outcome: "error", error: (e as Error).message.slice(0, 300), worst_usd: worst, duration_ms: Date.now() - t0 });
-        // A request the API rejects as invalid (4xx other than 408, 409, 429) fails the same way on retry:
-        // no second attempt (found on the first live chain, 20 Oct 2026, discovery D17).
+        // A request the API rejects as invalid (4xx other than 408, 409, 429) is refused before any processing, so it costs
+        // nothing (demo 29 Oct: a 400 recorded at US$0.22 each), and it fails the same way on retry: no second attempt (D17).
+        // Any other failure: usage unknown, so the reservation stays counted at its worst case.
         const status = (e as { status?: number }).status;
-        if (typeof status === "number" && status >= 400 && status < 500 && ![408, 409, 429].includes(status)) break;
+        const refused = typeof status === "number" && status >= 400 && status < 500 && ![408, 409, 429].includes(status);
+        ledger.settle(id, refused ? 0 : worst, refused ? "refused_by_provider_usd0" : "error_counted_at_worst_case");
+        out.attempts.push({ n, outcome: refused ? "refused_by_provider" : "error", error: (e as Error).message.slice(0, 300), ...(refused ? { cost_usd: 0 } : {}), worst_usd: worst, duration_ms: Date.now() - t0 });
+        if (refused) break;
       }
     }
     return out;
