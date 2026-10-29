@@ -1,7 +1,7 @@
 // Product Studio application service: programs and combinations, the shared library (versioned edits), the
 // combination's own configuration, previews through the common renderer, validation, review and release.
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
-import type { ReviewSubmission } from "@prisma/client";
+import { Prisma, type ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
@@ -504,7 +504,7 @@ export class Studio {
   }
 
   // ------------------------------------------------------------------ the combination's own configuration
-  async saveRequirement(actor: Actor, combinationId: string, lineage: string | null, b: { documentTypeKey?: string; newTypeName?: string; attachMode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; appliesToRoles: string; providedBy?: string; sourceQuote?: string; sourceFile?: string; note?: string; retire?: boolean; baseRevision?: string }) {
+  async saveRequirement(actor: Actor, combinationId: string, lineage: string | null, b: { documentTypeKey?: string; newTypeName?: string; attachMode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; appliesToRoles: string; providedBy?: string; sourceQuote?: string; sourceFile?: string; note?: string; alternatives?: string[]; retire?: boolean; baseRevision?: string }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const workspaceId = c.workspaceId;
@@ -526,7 +526,11 @@ export class Studio {
     if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
     if (b.attachMode === "ANSWER_CONDITIONAL" && !b.condition) fail("A conditional requirement needs its condition.");
     if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
-    const data = { documentTypeKey: typeKey!, attachMode: b.attachMode, predicateJson: b.attachMode === "ANSWER_CONDITIONAL" ? b.condition : null, conditionPlain: b.attachMode === "ANSWER_CONDITIONAL" ? (b.conditionPlain ?? null) : null, appliesToRoles: b.appliesToRoles, providedBy: b.providedBy ?? "client", sourceQuote: b.sourceQuote ?? null, sourceFile: b.sourceFile ?? null, note: b.note ?? null, origin: "HUMAN" as const };
+    // W1-15 slice 3: alternatives are other library document types; any one of them counts instead of this line's.
+    const alternatives = [...new Set((Array.isArray(b.alternatives) ? b.alternatives : []).filter((k) => typeof k === "string" && k && k !== typeKey))];
+    if (alternatives.length) { const known = await this.db.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: alternatives } }, select: { documentTypeKey: true } });
+      const missing = alternatives.filter((k) => !known.some((t) => t.documentTypeKey === k)); if (missing.length) fail(`An alternative must be a document type in the library: ${missing.join(", ")} is not.`); }
+    const data = { alternatives: alternatives.length ? alternatives : Prisma.DbNull, documentTypeKey: typeKey!, attachMode: b.attachMode, predicateJson: b.attachMode === "ANSWER_CONDITIONAL" ? b.condition : null, conditionPlain: b.attachMode === "ANSWER_CONDITIONAL" ? (b.conditionPlain ?? null) : null, appliesToRoles: b.appliesToRoles, providedBy: b.providedBy ?? "client", sourceQuote: b.sourceQuote ?? null, sourceFile: b.sourceFile ?? null, note: b.note ?? null, origin: "HUMAN" as const };
     let row;
     if (!lineage) {
       let key = `${typeKey}:${b.appliesToRoles}`;

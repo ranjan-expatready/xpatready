@@ -11,7 +11,7 @@ import { irccWords } from "../../../contracts/workspace";
 export const WHO: [string, string][] = [["each_applicant", "Each applicant"], ["principal_applicant", "Principal applicant"], ["spouse_or_partner", "Spouse or partner"], ["couple_once", "Once per couple"], ["each_dependent_child", "Each child"], ["each_person", "Each person"], ["case", "The application (once)"], ["representative", "The representative"], ["sponsor", "The sponsor"]];
 export const whoLabel = (w: string) => WHO.find(([v]) => v === w)?.[1] ?? w;
 /** Revision tokens of the draft rows the editors open (sent back so a concurrent change is refused, not overwritten). */
-const RevCtx = React.createContext<Record<string, string>>({});
+export const RevCtx = React.createContext<Record<string, string>>({});
 
 export function useLibraryFields() {
   const q = useApi<any[]>(["fields"], "/library/fields");
@@ -71,13 +71,14 @@ function Documents({ id, s, fields }: { id: string; s: any; fields: any }) {
   );
 }
 
-function RequirementDialog({ id, r, fields, onClose }: { id: string; r: any; fields: any; onClose: () => void }) {
+/** Add or edit one checklist line (also the Documents tab's "+ Add a document" and its drawer's Edit, W1-15 slice 3). */
+export function RequirementDialog({ id, r, fields, onClose, onSaved }: { id: string; r: any; fields: any; onClose: () => void; onSaved?: () => void }) {
   const revs = React.useContext(RevCtx);
   const types = useApi<any[]>(["doc-types"], "/library/document-types");
   const isNew = !r.lineage;
-  const [f, setF] = React.useState<any>({ documentTypeKey: r.document_type_key ?? "", newTypeName: "", appliesToRoles: r.who ?? "each_applicant", attachMode: r.base_or_conditional === "conditional" ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY", condition: r.condition ?? null, conditionPlain: r.condition_plain ?? "", providedBy: r.provided_by ?? "client", sourceQuote: r.source_quote ?? "", sourceFile: r.source_file ?? "", note: r.note ?? "" });
+  const [f, setF] = React.useState<any>({ alternatives: r.alternatives ?? [], documentTypeKey: r.document_type_key ?? "", newTypeName: "", appliesToRoles: r.who ?? "each_applicant", attachMode: r.base_or_conditional === "conditional" ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY", condition: r.condition ?? null, conditionPlain: r.condition_plain ?? "", providedBy: r.provided_by ?? "client", sourceQuote: r.source_quote ?? "", sourceFile: r.source_file ?? "", note: r.note ?? "" });
   const set = (p: any) => setF((x: any) => ({ ...x, ...p }));
-  const save = useAction((b: any) => api(isNew ? `/combinations/${id}/requirements` : `/combinations/${id}/requirements/${encodeURIComponent(r.lineage)}`, { method: isNew ? "POST" : "PATCH", json: isNew ? b : { ...b, baseRevision: revs[`requirement:${r.lineage}`] } }), { success: isNew ? "Document requirement added to the draft" : "Document requirement saved to the draft", invalidate: [["config", id], ["combination", id], ["preview"], ["doc-types"]], onDone: onClose });
+  const save = useAction((b: any) => api(isNew ? `/combinations/${id}/requirements` : `/combinations/${id}/requirements/${encodeURIComponent(r.lineage)}`, { method: isNew ? "POST" : "PATCH", json: isNew ? b : { ...b, baseRevision: revs[`requirement:${r.lineage}`] } }), { success: isNew ? "Document requirement added to the draft" : "Document requirement saved to the draft", invalidate: [["config", id], ["combination", id], ["preview"], ["doc-types"], ["checklist", id], ["fact-sources", id]], onDone: () => { onSaved?.(); onClose(); } });
   return (
     <Dialog guard wide open onOpenChange={(o) => !o && onClose()} title={isNew ? "Add a document requirement" : `Edit: ${r.document_type}`} description="Base requirements apply to everyone they name; conditional ones only when their condition is true for that person."
       footer={<>{!isNew ? <Button variant="destructive" className="mr-auto" onClick={() => save.mutate({ retire: true })}><Trash2 /> Remove</Button> : null}<Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => save.mutate(f)} busy={save.isPending}>Save to draft</Button></>}>
@@ -90,6 +91,12 @@ function RequirementDialog({ id, r, fields, onClose }: { id: string; r: any; fie
         </div>
         <Field label="Requirement"><Select value={f.attachMode} onChange={(e) => set({ attachMode: e.target.value })}><option value="COMBINATION_MANDATORY">Base: always needed for the people it names</option><option value="ANSWER_CONDITIONAL">Conditional: only when a condition is true</option></Select></Field>
         {f.attachMode === "ANSWER_CONDITIONAL" ? <><ConditionBuilder value={f.condition} onChange={(c) => set({ condition: c })} fields={fields.list} /><Field label="Why it is needed, in plain words"><Input value={f.conditionPlain} onChange={(e) => set({ conditionPlain: e.target.value })} /></Field></> : null}
+        <Field label="Alternatives (any one counts)" hint="Other library document types the client may give instead. The facts read are this line's document's.">
+          <span className="flex flex-wrap items-center gap-1.5" data-alternatives>
+            {(f.alternatives as string[]).map((k) => <Pill key={k}>{(types.data ?? []).find((t) => t.documentTypeKey === k)?.name ?? k}<button type="button" aria-label={`Remove alternative ${(types.data ?? []).find((t) => t.documentTypeKey === k)?.name ?? k}`} className="ml-1" onClick={() => set({ alternatives: (f.alternatives as string[]).filter((x) => x !== k) })}>×</button></Pill>)}
+            <Select aria-label="Add an alternative" className="h-8 w-64" value="" onChange={(e) => { if (e.target.value) set({ alternatives: [...f.alternatives, e.target.value] }); }}><option value="">Add an alternative…</option>{(types.data ?? []).filter((t) => t.documentTypeKey !== f.documentTypeKey && !(f.alternatives as string[]).includes(t.documentTypeKey)).map((t) => <option key={t.documentTypeKey} value={t.documentTypeKey}>{t.name}</option>)}</Select>
+          </span>
+        </Field>
         <Field label="Source quote" hint="Exact words from the attached official source; leave empty if none (it then shows as unsourced)."><Textarea value={f.sourceQuote} onChange={(e) => set({ sourceQuote: e.target.value })} /></Field>
       </div>
     </Dialog>

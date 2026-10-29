@@ -200,3 +200,18 @@ export type FactSourcesView = {
   basis: string;
 };
 export type BulkSourceResult = { saved: number; batchId: string | null; what: string; refused: { role: string; fact: string; label: string; message: string }[] };
+
+// ------------------------------------------------------------------ W1-15 slice 3: each person's checklist (board v2 frame 3)
+export type ChecklistFactRow = { fact: string; label: string; about: "holder" | "holder.spouse" | "holder.parent"; aboutRole: string | null; takenOut: boolean };
+export type ChecklistLineRow = {
+  lineage: string; role: string; document: { key: string; name: string }; who: string; base: boolean; when: string;
+  providedBy: string; alternatives: { key: string; name: string }[]; supplies: ChecklistFactRow[]; aboutOthers: number;
+  quote: string | null; status: string; origin: string; position: number | null; by: string | null;
+};
+export type ChecklistView = {
+  roles: { role: string; label: string; lines: ChecklistLineRow[] }[];
+  /** Lines removed in this draft: put back with Undo by the person who removed them, or they go with the next release. */
+  removed: { lineage: string; document: string; who: string; by: string; at: string }[];
+  problems: { level: "error" | "warning"; where: string; item: string; label?: string; role?: string; message: string }[];
+  basis: string;
+};
