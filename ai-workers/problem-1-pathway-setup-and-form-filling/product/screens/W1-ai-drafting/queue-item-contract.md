@@ -38,3 +38,7 @@ The filing channel (B37, P-140) is **not** a queue item. It lands as today's "Wh
 1. **Storage: yes.** One new table for `ProposalItem` in S6 slice 1. The field proposals move onto it; there is no second table beside `NormalizationItem`.
 2. **Rules-only items: yes.** They may be Ready. They are never bulk-accepted when they land on the library; the second person still approves every library landing.
 3. **Channel values: settled by P-143** (Online · PDF upload · Paper · Not needed, with the signature as its own value). The filing channel stays a `form_accepts` change, not a queue item.
+
+## Change after approval, 29 Oct (Lead's ask, P-149)
+* `origin` is AI · Rules · **Person** (P-149 one door: a manual Add is the same kind of item, marked as made by a person). `check_forms_proposal_contract.ts` 6/6.
+* Proposed, not yet in the file: an `examples` field on the condition, form-check and cross-check payloads (P-149 (5): two or three AI-drafted cases per rule, re-run for every combination using it before approval). It needs agreeing with the screens lane before W1-10 slice 3; see `plan.md` §5. The research's `notSameAs[]` and `placements[]` are S6's to propose.
