@@ -13,8 +13,22 @@ next_action: (1) Lead: route QA-99 (Critical, runtime: Who can be AI now refused
 blocked_by: none
 updated: 2026-10-29
 
-## Handover (29 Oct, ~16:00; for the next qa session: read this first)
-* **Done 29 Oct evening (this session):** after-merge on deda0e6b, report `qa/reports/2026-10-29-after-merge-deda0e6.md`. Kept below for the next run: setup, retest map, lessons. Added: a worktree copy needs `ln -s /Users/ranjansingh/Desktop/Xpatready/.tools .tools` at its root before `isolated.sh` (else "start the demo database first"); run the wording sweep on a copy with the sample loaded (the S3 check leaves names, so a later Load sample is refused).
+## Handover (29 Oct, ~22:00; for the next qa session: read this first)
+* **Done 29 Oct evening:** after-merge on deda0e6b plus the live smoke on a9fe60c0. Report: `qa/reports/2026-10-29-after-merge-deda0e6.md` (§5 is the live smoke). Branch `claude/qa-after-merge-deda0e6` (worktree sharp-golick-4e9110), pushed; the Lead opens the qa PR.
+* **Waiting:**
+  * Live step 3 (Who can be, US$0.91 reserved) reruns when runtime's QA-99 fix merges. The Lead sends it. Founder ceiling: US$6.21 left of US$6.49. The user allowed paid calls in this session, but a new session must ask the user again.
+  * Live run recipe:
+    * Copy `zsh studio/tools/isolated.sh qa_live 4478 start STUDIO_PEOPLE_AI_LIVE=approved`, then Load sample.
+    * Plans are free: `POST /api/combinations/<id>/people/propose/plan {mode:"live"}`, then `/people/propose {mode, planSha256}` (synchronous).
+    * The finder: `/forms/find/plan`, then `/forms/find {mode, planSha256, idempotencyKey}`, then poll `/api/runs/<id>` (status is lower case).
+    * Costs: diff of `p2/ledger/spend.jsonl`. Put the ledger and run files back to HEAD before committing.
+  * Retest QA-92–96 when runtime's PR #94 merges (`check_qa_qn_1029.cjs`, `check_w115_slice2_browser.cjs` three times).
+* **Lessons:**
+  * A new worktree needs `ln -s /Users/ranjansingh/Desktop/Xpatready/.tools .tools` at its root before `isolated.sh` (else "start the demo database first").
+  * Run the wording sweep on a freshly loaded copy (the S3 check leaves names, so a later Load sample is refused with 409).
+  * CI of a Lead PR can run without the PR merged just before it: check the merge base in the CI log ("Merge X into Y") and run the suites yourself when they differ.
+  * Above load 10 the sample load times out (30 s) and kills whole suites: rerun the red ones alone.
+  * The person menu shows names only now ("Approver", "Configuration author").
 * **How to run it, in order:**
   1. Start a fresh qa copy: a new worktree from `origin/main`, `echo qa > .claude/lane`.
   2. Install: `npm ci` in `prototype/studio` with **Node 24** (`.tools/node-v24.21.0/bin` first on PATH; Homebrew's Node 23 fails Prisma), then `npx prisma generate` and `cd web && npx vite build`.
