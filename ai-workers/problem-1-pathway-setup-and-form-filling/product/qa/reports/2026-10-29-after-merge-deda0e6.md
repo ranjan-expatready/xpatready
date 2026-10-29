@@ -81,6 +81,9 @@ Every figure below comes from the product's own plans (US$0) on qa_live, Study p
 * Worst case for steps 1–3: US$6.49 (US$4.30 with the page given), against the approved US$3.24.
 * By the rule (stop before any step that would pass the plan), nothing was launched. The ledger in this copy has no live line.
 * The options went to the Lead (question 2).
+* **Follow-up (Lead, same evening):** the founder chose option (a), steps 1–3 with a hard ceiling of US$6.49, run after forms' QA-97 fix merges. Step 4 is skipped: no form outside the library to map.
+* QA-98 (forms, Minor) records the gap between the reservations and the plan.
+* The paid call needs the user's OK in this qa session: its permission check refused step 3 as a real-world transaction.
 
 ## Graph and decisions
 * `graph.mjs --write`: G1–G6 unchanged (G3: the same 2 attachment routes, API-only).
