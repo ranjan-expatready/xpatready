@@ -173,6 +173,12 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   ok("G4 pass: the policy states the paid attempts per form (4: two per run, so one paid retry); a live first run may be retried once", MAX_PAID_ATTEMPTS_PER_FORM === 4 && MAX_ATTEMPTS === 2 && paidRetryAllowed("LIVE", 1), { MAX_PAID_ATTEMPTS_PER_FORM, MAX_ATTEMPTS });
   ok("G4 fail: a live form's second retry is refused (it would pass 4 paid attempts; before, 6 were possible)", !paidRetryAllowed("LIVE", 2) && !paidRetryAllowed("LIVE", 3));
   ok("G4: a stub run costs nothing and is never held to the paid budget", paidRetryAllowed("STUB", 2) && paidRetryAllowed("REPLAY", 5));
+  // P-171 (a), P-170: the schedule's library title is the official one, from the saved canada.ca page (read 29 Oct 2026).
+  const sch1Page = readFileSync(join(STUDIO, "..", "..", "official-sources", "ircc", "canada", "pages", "imm5257-sch1.html"), "utf8");
+  const official = /<h1[^>]*>([^<]+)<span[^>]*>\(IMM 5257 SCH1\)/.exec(sch1Page)?.[1].trim();
+  const ours = /"IMM 5257 SCH1": "([^"]+)"/.exec(readFileSync(join(STUDIO, "api", "src", "sources.ts"), "utf8"))?.[1];
+  ok("P-171 (a) pass: IMM 5257 SCH1's library title is the official page's", !!official && ours === official, { ours, official });
+  ok("P-171 (a) fail: never IMM 5669's \"Background/Declaration\" wording", !/Background\/Declaration/.test(ours ?? "x"), ours);
   // Outside review 29 Oct: the budget holds per form across batches (Draft again), counted from the form's own runs.
   const run = (over: Partial<{ kind: string; mode: string; status: string; costUsd: number | null }> = {}) => ({ kind: "field_map", mode: "LIVE", status: "FAILED", costUsd: 0.4, ...over });
   ok("G4 per form pass: a form with one paid run may start one more (2 runs × 2 attempts = 4)", paidRunAllowed(paidRunsOf([run()])) && paidRunAllowed(paidRunsOf([])));
