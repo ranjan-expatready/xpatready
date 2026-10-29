@@ -29,10 +29,14 @@ export function fieldMapShapeOk(o: unknown): o is FieldMapOutput {
     && x.entries.every((e) => e && typeof e.data_path === "string" && e.data_path.length > 0 && OUTCOMES.has(e.outcome) && typeof e.person === "string");
 }
 
+/** The answer reads exactly this edition: both prompts give the printed edition as a fact to copy (known_fact). */
+export const sameEdition = (o: FieldMapOutput, e: Pick<EditionSource, "printed">) => o.form_edition.trim() === e.printed;
+
 export const FIELD_DRAFT_WORDS = {
   noSaved: "No saved AI draft of this form edition yet: Draft fields with AI runs it (about US$x · at most US$y), or a person maps the boxes.",
   badSaved: "The saved AI draft of this form edition could not be read, so it was not used.",
   nothingUsed: "Nothing of it was used: a person maps the boxes, or Draft fields with AI runs again.",
+  otherEdition: (got: string, want: string) => `The AI answer was for another form edition (${got}), not ${want}. Nothing of it was used: a person maps the boxes, or Draft fields with AI runs again.`,
 };
 
 /** The step. Whole-form readings: a 250-box form answers with up to about 64 000 output tokens (IMM 1295, 20 Oct); each
@@ -43,8 +47,9 @@ export const FIELD_MAP_EDITION: AiStep = {
   effort: "high", max_output_tokens: 64_000, shapeOk: fieldMapShapeOk, words: FIELD_DRAFT_WORDS,
 };
 
-/** The step for one edition: its output limit from its box count, as a part's (engine/parts.ts, about 300 a box). */
-export const stepFor = (e: Pick<EditionSource, "fields">): AiStep => ({ ...FIELD_MAP_EDITION, max_output_tokens: partOutputTokens(e.fields) });
+/** The step for one edition: its output limit from its box count, as a part's (engine/parts.ts, about 300 a box), and an
+ *  answer is used only when it names this edition (replay skips another edition's answer; a live one is refused). */
+export const stepFor = (e: Pick<EditionSource, "fields" | "printed">): AiStep => ({ ...FIELD_MAP_EDITION, max_output_tokens: partOutputTokens(e.fields), shapeOk: (o) => fieldMapShapeOk(o) && sameEdition(o, e) });
 
 /** What one live attempt may spend under the runner's job budget. rounds.ts fixes `budget_usd` at 1 for every step; the
  *  forms lane was asked (29 Oct) for a per-step value. Until a step carries its own, a reading above it is refused before
@@ -77,7 +82,7 @@ export const editionKey = (e: Pick<EditionSource, "code" | "edition">) => editio
 
 /** One round's money before it runs: one attempt at the step's output limit, the ledger's worst (both attempts, at most
  *  the run cap), and whether one attempt fits the runner's job budget. */
-export function roundCost(e: Pick<EditionSource, "inventoryBytes" | "fields">) {
+export function roundCost(e: Pick<EditionSource, "inventoryBytes" | "fields" | "printed">) {
   const step = stepFor(e);
   const template = readFileSync(join(PROTOTYPE, "p2", "prompts", step.template), "utf8");
   const attempt = costUsd(MODEL, inputTokenBound("x".repeat(e.inventoryBytes + template.length)), step.max_output_tokens);
@@ -88,12 +93,28 @@ export type EditionRounds = { key: string; draft: RoundOut<FieldMapOutput>; chec
 
 /** Both readings of one edition: the draft round, then the blind checker round on the same inventory. In replay mode both
  *  come from saved answers of exactly this edition, prompt and file, or say there are none (US$0). A live round is sent
- *  only when the caller passes mode "live" (P-138: a click, or the logged recording pass). */
-export async function draftEdition(runner: StepRunner, e: EditionSource, mode: "live" | "replay", wanted: () => Promise<boolean>, batchId?: string): Promise<EditionRounds> {
-  const ctx = { trail: e.printed, contextKey: editionKey(e), inputs: [{ file: e.inventory, sha256: e.inventorySha256 }], mode, wanted, batchId };
+ *  only in mode "live" (P-138: a click) or "fill" (the logged recording pass: a round with a saved reading replays it at
+ *  US$0 and only a missing round is sent, so the pass spends exactly what it budgeted). */
+export async function draftEdition(runner: StepRunner, e: EditionSource, mode: "live" | "replay" | "fill", wanted: () => Promise<boolean>, batchId?: string): Promise<EditionRounds> {
+  const ctx = { trail: e.printed, contextKey: editionKey(e), inputs: [{ file: e.inventory, sha256: e.inventorySha256 }], wanted, batchId };
   const step = stepFor(e);
-  const draft = await runner.round<FieldMapOutput>(step, false, ctx);
+  const round = async (isCheck: boolean): Promise<RoundOut<FieldMapOutput>> => {
+    if (mode !== "live") {
+      const saved = await runner.round<FieldMapOutput>(step, isCheck, { ...ctx, mode: "replay" });
+      if (saved.ok || mode === "replay") return saved;
+    }
+    // A live answer of the right shape that names another edition is refused in plain words (it is never used).
+    let other: string | null = null;
+    const shapeOk = (o: unknown) => {
+      if (step.shapeOk(o)) return true;
+      if (fieldMapShapeOk(o)) other = o.form_edition;
+      return false;
+    };
+    const got = await runner.round<FieldMapOutput>({ ...step, shapeOk }, isCheck, { ...ctx, mode: "live" });
+    return other !== null && !got.ok ? { ...got, reason: FIELD_DRAFT_WORDS.otherEdition(other, e.printed) } : got;
+  };
+  const draft = await round(false);
   if (draft.ok === false && (draft.blocked || draft.cancelled)) return { key: ctx.contextKey, draft, check: { ok: false, costUsd: 0, reason: "Not started: the draft round did not finish." }, costUsd: draft.costUsd };
-  const check = await runner.round<FieldMapOutput>(step, true, ctx);
+  const check = await round(true);
   return { key: ctx.contextKey, draft, check, costUsd: draft.costUsd + check.costUsd };
 }

@@ -14,6 +14,7 @@ import { draftEdition, editionKey, FIELD_MAP_EDITION, fieldMapShapeOk, roundCost
 import { RUNS, StepRunner } from "../api/src/rounds.ts";
 import { jobIdFor } from "../engine/rounds.ts";
 import { RUN_CAP_USD } from "../../p2/policy.ts";
+import { plan as recordPlan, recordPass } from "../tools/record-field-drafts.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
@@ -71,7 +72,12 @@ const answer = (edition: string) => ({ form_edition: edition, canonical_fields: 
     save(false, editionKey(i5475), i5475, { form_edition: "IMM 5475 (12-2022)", entries: "none" }, 5);
     got = await draftEdition(runner, i5475, "replay", async () => false);
     ok("C11.14 pass (round 2 m-a): a newer saved reading in the wrong shape is skipped and the older good one is used", got.draft.ok && (got.draft as { runFile: string }).runFile.includes(tsName(3)), got.draft.ok && got.draft.runFile);
+    save(false, editionKey(i5475), i5475, answer("IMM 5476 (11-2025)"), 6); // this edition's key, but it names another edition
+    got = await draftEdition(runner, i5475, "replay", async () => false);
+    ok("C11.8 fail (outside review b): a newer saved reading that names another edition is never replayed for this one; the older reading of this edition is used", got.draft.ok && (got.draft as { runFile: string }).runFile.includes(tsName(3)) && got.draft.output.form_edition === i5475.printed, got.draft.ok && got.draft.runFile);
   } finally { for (const f of written) rmSync(join(RUNS, f), { force: true }); }
+  ok("C11.14 pass (outside review b): an answer is used for an edition only when it names that edition", stepFor(i5475).shapeOk(answer("IMM 5475 (12-2022)")));
+  ok("C11.14 fail (outside review b): an answer of the right shape that names another edition is not used for this one", !stepFor(i5475).shapeOk(answer("IMM 5475 (06-2019)")) && !stepFor(i5475).shapeOk(answer("IMM 5476 (11-2025)")));
 
   // --- live rounds on a fake launcher: the job a round sends (no process, no network, no spend)
   const dir = mkdtempSync(join(tmpdir(), "s6-field-drafts-"));
@@ -93,6 +99,40 @@ const answer = (edition: string) => ({ form_edition: edition, canonical_fields: 
   jobs.length = 0; calls.length = 0;
   got = await draftEdition(new StepRunner(fake), i5475, "live", async () => false);
   ok("P-138 fail: a live round not wanted (no click, or cancelled) sends no AI call, and the checker round is not started", !got.draft.ok && got.draft.cancelled === true && !got.check.ok && !calls.some((c) => c.startsWith("live:") && c.includes("-check-")) && got.costUsd === 0, { calls, draft: got.draft });
+
+  // --- a live answer that names another edition (outside review b)
+  const otherRec = join(dir, "other.json");
+  writeFileSync(otherRec, JSON.stringify({ drafting_run: { status: "completed", usage: { cost_usd: 0.31 } }, contract_valid: true, raw_output: JSON.stringify(answer("IMM 5476 (11-2025)")) }));
+  const other = { launchOnce: async (jobId: string, mode: "stub" | "live") => mode === "stub" ? { code: 0, out: "{}", err: "" } : { code: 0, out: JSON.stringify({ run_file: otherRec }), err: "" } };
+  got = await draftEdition(new StepRunner(other), i5475, "live", async () => true);
+  const why = (x: typeof got.draft) => (x as { reason?: string }).reason ?? "";
+  ok("C11.14 fail (outside review b): a live answer naming another edition is refused with a plain reason, and its cost stays counted", !got.draft.ok && !got.check.ok && /another form edition \(IMM 5476 \(11-2025\)\), not IMM 5475 \(12-2022\)/.test(why(got.draft)) && Math.abs(got.costUsd - 0.62) < 1e-9, why(got.draft));
+
+  // --- the recording pass sends only the missing rounds, inside the agreed amount (outside review a)
+  const saved: string[] = [];
+  const saveDraft = () => {
+    const file = `${jobIdFor(FIELD_MAP_EDITION.jobBase, false, i5475.printed, "s6check-fill")}-live-${tsName(7)}-s6chk.json`;
+    writeFileSync(join(RUNS, file), JSON.stringify({ caller: "live", contract_valid: true, raw_output: JSON.stringify(answer(i5475.printed)),
+      drafting_run: { status: "completed", usage: { cost_usd: 0.3 }, inputs: { combination: editionKey(i5475), official_files: [{ file: i5475.inventory, sha256: i5475.inventorySha256 }] } },
+      launch_evidence: { template_sha256: sha(readFileSync(join(PROTOTYPE, "p2", "prompts", FIELD_MAP_EDITION.template))), known: { form_edition: i5475.printed } } }));
+    saved.push(file);
+  };
+  const silent = () => {};
+  try {
+    saveDraft();
+    calls.length = 0;
+    got = await draftEdition(new StepRunner(fake), i5475, "fill", async () => true);
+    const liveCalls = () => calls.filter((c) => c.startsWith("live:"));
+    ok("P-138 pass (outside review a): with the draft reading saved, the pass replays it at US$0 and sends only the checker round", got.draft.ok && got.draft.from === "replay" && got.check.ok && got.check.from === "live" && liveCalls().length === 1 && liveCalls()[0].includes("-check-") && Math.abs(got.costUsd - 0.31) < 1e-9, { calls, cost: got.costUsd });
+    const [row] = await recordPlan(new StepRunner(never), [i5475]);
+    calls.length = 0;
+    let pass1 = await recordPass(new StepRunner(fake), [row], row.worstUsd, () => 100, silent);
+    ok("P-138 pass (outside review a): an edition with one saved reading is budgeted one round, and exactly that round is sent within --max-usd", row.need === 1 && liveCalls().length === 1 && pass1.reserved <= row.worstUsd && pass1.spent <= pass1.reserved, { need: row.need, calls, pass1 });
+    calls.length = 0;
+    pass1 = await recordPass(new StepRunner(fake), [row], row.worstUsd - 0.01, () => 100, silent);
+    const left = await recordPass(new StepRunner(fake), [row], 100, () => row.worstUsd - 0.01, silent);
+    ok("P-138 fail (outside review a): when the missing round's worst case is above --max-usd or above what is left of the caps, nothing is sent", liveCalls().length === 0 && pass1.reserved === 0 && left.reserved === 0, { calls });
+  } finally { for (const f of saved) rmSync(join(RUNS, f), { force: true }); }
   rmSync(dir, { recursive: true, force: true });
 
   // --- the guarded launcher admits the new step's job (stub caller: no model, US$0)
