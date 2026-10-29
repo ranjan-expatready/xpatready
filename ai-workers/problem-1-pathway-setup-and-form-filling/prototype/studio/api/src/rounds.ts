@@ -136,14 +136,17 @@ export class StepRunner {
     if (attempts.some((a) => a.outcome === "refused_input_too_large")) return { ok: false, costUsd: 0, reason: "The pages are too large for one AI call, so nothing was sent and nothing was charged" };
     const details = attempts.map((a) => (a as { request_id?: string }).request_id).filter(Boolean).pop();
     const withDetails = details ? { details: `Request ${details}` } : {};
+    // Audit 29 Oct: a refused or busy attempt costs US$0, but an earlier attempt of the same run (a timeout, a dropped
+    // connection) stays counted at its worst case; then the run's recorded cost is shown, never "nothing was charged".
+    const charged = cost > 0 ? `; an earlier attempt stays counted at US$${cost.toFixed(2)}` : "";
     if (rec.drafting_run?.status !== "completed" && attempts.some((a) => a.outcome === "refused_by_provider")) {
       console.warn(`${step.kind} ${jobId}: the AI service refused the request:`, attempts.map((a) => a.error ?? "").join(" | ").slice(0, 600));
-      return { ok: false, costUsd: 0, reason: "The AI service refused the request (our setup error); nothing was charged", ...withDetails };
+      return { ok: false, costUsd: cost, reason: `The AI service refused the request (our setup error)${charged || "; nothing was charged"}`, ...withDetails };
     }
     // QA-87, QA-88: busy, or no answer in time, said plainly; the service's own words to the server log only.
     if (rec.drafting_run?.status !== "completed" && attempts.some((a) => a.outcome === "busy")) {
       console.warn(`${step.kind} ${jobId}: the AI service was busy:`, attempts.map((a) => a.error ?? "").join(" | ").slice(0, 600));
-      return { ok: false, costUsd: 0, reason: "The AI service was busy, so nothing was charged. Try again in a few minutes", ...withDetails };
+      return { ok: false, costUsd: cost, reason: charged ? `The AI service was busy${charged}. Try again in a few minutes` : "The AI service was busy, so nothing was charged. Try again in a few minutes", ...withDetails };
     }
     if (rec.drafting_run?.status === "timed_out") {
       return { ok: false, costUsd: cost, reason: "The AI service did not answer in time; nothing was used", ...withDetails };

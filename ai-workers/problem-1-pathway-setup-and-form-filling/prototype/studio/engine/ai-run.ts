@@ -72,10 +72,14 @@ export function explainRun(env: RunEnvelope): { status: "FAILED" | "BLOCKED"; me
     case "timed_out": return say("FAILED", `The AI did not answer in time. Nothing was applied. Cost ${cost}.`);
     case "budget_exceeded": return say("FAILED", "The run would have gone over its spending cap, so it stopped. Nothing was applied.");
     case "provider_error": {
+      // Audit 29 Oct: a refused or busy attempt costs US$0, but an earlier attempt that failed otherwise stays counted at its
+      // worst case; then the cost is said, never "nothing was charged".
+      const free = Number(run.usage?.cost_usd ?? 0) <= 0;
+      const charged = free ? "nothing was drafted or charged" : `nothing was drafted; an earlier attempt stays counted (Cost ${cost})`;
       if (has("refused_by_provider")) return say("FAILED", /request_too_large|prompt is too long|\b413\b/i.test(attempts.map((a) => a.error).join(" "))
-        ? "The request was too large for the AI service, so nothing was drafted or charged."
-        : "The AI service refused the request (our setup error), so nothing was drafted or charged.");
-      if (has("busy")) return say("FAILED", "The AI service was busy, so nothing was drafted or charged. Try again in a few minutes.");
+        ? `The request was too large for the AI service, so ${charged}.`
+        : `The AI service refused the request (our setup error), so ${charged}.`);
+      if (has("busy")) return say("FAILED", `The AI service was busy, so ${charged}. Try again in a few minutes.`);
       if (has("timed_out")) return say("FAILED", `The AI did not answer in time. Nothing was applied. Cost ${cost}.`);
       return say("FAILED", `The AI service did not complete the call. Nothing was drafted or applied. Cost ${cost}.`);
     }

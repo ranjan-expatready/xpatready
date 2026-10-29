@@ -58,6 +58,11 @@ const raw = /\{"type":"error"|invalid_request_error|request_too_large|overloaded
   ok("QA-88: a timeout says so plainly", /did not answer in time/.test(rTime.message) && !raw.test(rTime.message), rTime.message);
   const rDrop = await replay("connection dropped", Object.assign(new Error("socket hang up"), { name: "APIConnectionError" }));
   ok("QA-88: any other failure never shows the service's words in the main sentence (Details keeps them)", /did not complete the call/.test(rDrop.message) && !/socket hang up/.test(rDrop.message) && /socket hang up/.test(rDrop.details), rDrop);
+  // Audit 29 Oct: an earlier attempt counted at its worst case is never hidden behind "nothing was charged".
+  const mixed = (second: string) => explainRun({ caller: "live", drafting_run: { status: "provider_error", attempts: [{ n: 1, outcome: "error", error: "socket hang up" }, { n: 2, outcome: second, error: "529 overloaded" }], usage: { cost_usd: 0.43 } } } as never);
+  ok("audit fail: a dropped call then a busy retry says the cost (US$0.43), not \"nothing was drafted or charged\"", !/nothing was drafted or charged/.test(mixed("busy").message) && /US\$0\.43/.test(mixed("busy").message) && /busy/.test(mixed("busy").message), mixed("busy").message);
+  ok("audit fail: a dropped call then a refused retry says the cost (US$0.43)", !/or charged/.test(mixed("refused_by_provider").message) && /US\$0\.43/.test(mixed("refused_by_provider").message), mixed("refused_by_provider").message);
+  ok("audit pass: a busy call with nothing counted still says \"nothing was drafted or charged\"", /nothing was drafted or charged/.test(r529.message), r529.message);
   const shape = explainRun({ caller: "live", drafting_run: { status: "invalid_output", attempts: [{ n: 1, outcome: "ok" }], usage: { cost_usd: 0.1 } }, output_errors: "/forms/0: must have required property 'quote'" } as never);
   ok("QA-88: an answer in the wrong shape is said plainly; the validator's words go under Details", /not in the agreed shape\. Nothing was applied/.test(shape.message) && !/required property/.test(shape.message) && /required property/.test(shape.details ?? ""), shape);
   rmSync(scratch, { recursive: true, force: true });

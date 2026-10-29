@@ -9,7 +9,7 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { editionContextKey, editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, replayPattern, savedRunKey, type SavedRun } from "../engine/rounds.ts";
+import { editionContextKey, editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, MAX_OTHER_PAGES, newestFirst, otherPages, replayPattern, savedRunKey, type SavedRun } from "../engine/rounds.ts";
 import { paidRetryAllowed, RUNS, sizedBudgetUsd, StepRunner, worstRoundUsd, type AiStep } from "../api/src/rounds.ts";
 import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, MAX_REQUEST_BYTES, RUN_CAP_USD, WAVE1_CAP_USD } from "../../p2/policy.ts";
 import { BudgetExceeded, SpendLedger } from "../../p2/ledger.ts";
@@ -115,6 +115,17 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: busyRec }) })));
   ok("QA-87 pass: a busy service is said plainly, US$0, request id under Details", !r.ok && r.reason === "The AI service was busy, so nothing was charged. Try again in a few minutes" && r.costUsd === 0 && r.details === "Request req_busy_1", r);
   ok("QA-88 fail: the person never reads overloaded_error, 529 or JSON", !r.ok && !/overloaded|529|\{/.test(r.reason));
+  // Audit 29 Oct: a first attempt that timed out stays counted at its worst case; a busy or refused retry must not hide it.
+  const mixedBusy = record({ drafting_run: { status: "timed_out", usage: { cost_usd: 0.22 }, attempts: [{ n: 1, outcome: "timed_out", error: "Request timed out." }, { n: 2, outcome: "busy", error: "529 overloaded_error" }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: mixedBusy }) })));
+  ok("audit fail: a timeout then a busy retry keeps the counted US$0.22 and never says \"nothing was charged\"", !r.ok && r.costUsd === 0.22 && !/nothing was charged/.test(r.reason) && /US\$0\.22/.test(r.reason), r);
+  const mixedRefused = record({ drafting_run: { status: "provider_error", usage: { cost_usd: 0.22 }, attempts: [{ n: 1, outcome: "error", error: "socket hang up" }, { n: 2, outcome: "refused_by_provider", error: "400 invalid_request_error" }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: mixedRefused }) })));
+  ok("audit fail: a dropped call then a refused retry keeps the counted US$0.22 and never says \"nothing was charged\"", !r.ok && r.costUsd === 0.22 && !/nothing was charged/.test(r.reason) && /refused the request/.test(r.reason), r);
+  ok("audit pass: a refusal with nothing counted still says \"nothing was charged\" at US$0 (refusedRec above)", (await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: refusedRec }) })))).costUsd === 0);
+  // Demo 29 Oct (P-153): "at most 5 other pages from each guide round" lives in code, since the schema may not say maxItems.
+  ok("demo bug pass: up to 5 other pages are kept as given", JSON.stringify(otherPages(["a", "b", "c"])) === JSON.stringify(["a", "b", "c"]));
+  ok("demo bug fail: an answer with 8 other pages keeps only the first 5; non-titles and a missing list give nothing", otherPages(["1", "2", "3", "4", "5", "6", "7", "8"]).length === MAX_OTHER_PAGES && MAX_OTHER_PAGES === 5 && otherPages([1, null, "x"]).join() === "x" && otherPages(undefined).length === 0);
   // QA-87 and the Lead's ask (29 Oct): a round's budget and time limit per step; without them the budget is sized so one retry fits.
   ok("QA-87 pass: a small input keeps the US$1 default", sizedBudgetUsd({ max_output_tokens: 3000 }, 37_000) === 1);
   ok("QA-87 fail (before: a fixed US$1): a 100 KB finder input with a 10,000 output limit gets a budget both attempts fit", sizedBudgetUsd({ max_output_tokens: 10_000 }, 100_000) >= 2 * worstRoundUsd({ max_output_tokens: 10_000 } as AiStep, 100_000) / 2 && sizedBudgetUsd({ max_output_tokens: 10_000 }, 100_000) > 1, sizedBudgetUsd({ max_output_tokens: 10_000 }, 100_000));

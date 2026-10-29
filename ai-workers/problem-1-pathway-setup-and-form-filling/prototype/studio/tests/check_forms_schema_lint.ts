@@ -120,7 +120,8 @@ ok("QA-85 fail: a kind with no stub answer is found (the check would name it)", 
 const files = readdirSync(PROMPTS).filter((f) => f.endsWith(".schema.json")).sort();
 const problems = files.flatMap((f) => lintSchema(JSON.parse(readFileSync(join(PROMPTS, f), "utf8"))).map((p) => `${f} ${p}`));
 ok(`C11.14: every output schema in p2/prompts (${files.length}) uses only keywords the AI service accepts`, files.length >= 9 && problems.length === 0, problems);
-ok("demo bug pass: the guide schema has no maxItems now (at most 5 is kept in code: finder.ts)", !/maxItems/.test(readFileSync(join(PROMPTS, "find-guide-output.v1.schema.json"), "utf8")) && /\.slice\(0, 5\)/.test(readFileSync(join(import.meta.dirname, "..", "api", "src", "finder.ts"), "utf8")));
+// At most 5 is kept in code: engine/rounds.ts otherPages (its pass and fail: check_forms_rounds.ts), used by finder.ts.
+ok("demo bug pass: the guide schema has no maxItems now (at most 5 is kept in code: finder.ts)", !/maxItems/.test(readFileSync(join(PROMPTS, "find-guide-output.v1.schema.json"), "utf8")) && /otherPages\(d\.output\.others\)/.test(readFileSync(join(import.meta.dirname, "..", "api", "src", "finder.ts"), "utf8")));
 ok("pass: the who-can-be schema has no minimum or maximum now (0 to 9 is kept in code: people-ai.ts)", !/minimum|maximum/.test(readFileSync(join(PROMPTS, "who-can-be-output.v1.schema.json"), "utf8")) && /n >= 0 && n <= 9/.test(readFileSync(join(import.meta.dirname, "..", "api", "src", "people-ai.ts"), "utf8")));
 
 console.log(`\n${pass} passed, ${fail} failed`);
