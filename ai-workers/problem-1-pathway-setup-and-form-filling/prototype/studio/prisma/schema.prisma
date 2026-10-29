@@ -175,6 +175,7 @@ model Combination {
   captures     PortalCapture[]
   sections     SqrSectionSelection[]
   requirements DocumentRequirement[]
+  factSources  FactSource[] // W1-15 slice 1
   rules        Predicate[]
   checks       Check[]
   releases     ConfigRelease[]
@@ -674,6 +675,8 @@ model LogicalSection {
   title        String
   meaning      String?
   displayOrder Int              @default(0) @map("display_order")
+  /// W1-15 (P-97, P-130): declarations and background: the client answers; never from a document or the agent.
+  clientOnly   Boolean          @default(false) @map("client_only")
   origin       Origin
   updatedBy    String           @map("updated_by")
   updatedAt    DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
@@ -738,6 +741,9 @@ model DocumentType {
   category        String
   /// Facts a supported document of this type can supply (closes P5 finding D36 in the prototype model).
   suppliesFacts   String[]         @default([]) @map("supplies_facts")
+  /// W1-15 (Lead on M6): whom a supplied fact is about when it is not the holder: { fact: "holder.spouse" | "holder.parent" }.
+  /// A fact not listed is about the holder (the person the checklist line names).
+  suppliesAbout   Json?            @map("supplies_about")
   readerProfile   Json?            @map("reader_profile")
   version         Int
   status          DefinitionStatus
@@ -1432,4 +1438,33 @@ model RecaptureTask {
 
   @@index([formEditionId, status])
   @@map("recapture_task")
+}
+
+/// W1-15 slice 1 (P-130, challenge M1): what a person set for one fact of one person role on a combination, over the
+/// rules' default (engine/sources.ts): where the answer comes from, and the Pre-qualification tick. Nothing is stored
+/// for a fact left as the rules say. Versioned like document requirements (draft, published at release).
+model FactSource {
+  id                String           @id @default(uuid()) @db.Uuid
+  workspaceId       String           @map("workspace_id") @db.Uuid
+  combinationId     String           @map("combination_id") @db.Uuid
+  /// `${role}|${fact}`
+  lineageKey        String           @map("lineage_key")
+  role              String
+  canonicalFieldKey String           @map("canonical_field_key")
+  /// DOCUMENT · CLIENT · AGENT; null keeps the rules' source (only the tick is set)
+  source            String?
+  documentTypeKey   String?          @map("document_type_key")
+  prequalification  Boolean          @default(false)
+  reason            String?
+  version           Int
+  status            DefinitionStatus
+  supersedesId      String?          @map("supersedes_id") @db.Uuid
+  origin            Origin
+  updatedBy         String           @map("updated_by")
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, lineageKey, version])
+  @@map("fact_source")
 }

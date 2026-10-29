@@ -1,0 +1,11 @@
+{
+  "about": "W1-15 slice 1 (P-130, challenge M6 and m2, Lead response 29 Oct). Sample library data, applied when the sample library is imported (Load sample), until the immigration expert confirms. clientOnlySections: the sections whose questions only the client answers (P-97: declarations and background); never from a document or the agent. documentSupplies: facts a document type supplies beyond its reader profile, and whom a fact is about when it is not the holder (holder.spouse, holder.parent); a fact not listed under 'about' is about the holder, the person the checklist line names.",
+  "basis": "Sample",
+  "clientOnlySections": ["background_declarations", "background_medical", "security_history"],
+  "documentSupplies": {
+    "marriage_certificate_or_licence_photocopy": {
+      "facts": ["person.family_name", "person.given_names", "relationship.start_date"],
+      "about": {}
+    }
+  }
+}

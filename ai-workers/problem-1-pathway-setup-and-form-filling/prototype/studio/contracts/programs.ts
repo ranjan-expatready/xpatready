@@ -72,7 +72,7 @@ export const Participant = z.object({
 export const DEFAULT_PARTICIPANTS = [
   { role: "principal", label: "Principal applicant", min: 1, max: 1, preview: 1, applies: true },
   { role: "spouse_or_partner", label: "Spouse or partner", min: 0, max: 1, preview: 0, applies: true },
-  { role: "child", label: "Dependent child", min: 0, max: 6, preview: 0, applies: true },
+  { role: "child", label: "Child", min: 0, max: 6, preview: 0, applies: true },
   { role: "representative", label: "Representative", min: 0, max: 1, preview: 0, applies: false },
 ] as const;
 

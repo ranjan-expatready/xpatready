@@ -224,6 +224,8 @@ export class FormLibrary {
     const b = parse(UndoBody, body);
     const a = await this.db.formLineAction.findFirst({ where: { combinationId, undoneAt: null }, orderBy: { at: "desc" } });
     if (!a) throw problem(409, "Nothing to undo", "There is no change on this combination's forms to undo.");
+    // QA-69: a release made after the change is never undone (as people Undo, Lead check L6).
+    if (await this.db.configRelease.findFirst({ where: { combinationId, releasedAt: { gt: a.at } }, select: { id: true } })) throw problem(409, "Released since", "That change was released meanwhile: a release is never undone. Change it in a new draft.");
     if (b.changeId && b.changeId !== a.id) throw problem(409, "Changed since", `The last change on these forms is now ${nameOf(a.by)}'s (${a.action}), not the one you saw. Reload, then undo.`, { changeId: a.id });
     const d = a.detail as unknown as { codes: string[]; before: LineRow[]; after: { id: string; status: string; version: number; sig?: string }[] };
     // Round 3 major: Undo never brings back a form that is retired, or whose retire or delete is open (P-116).

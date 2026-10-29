@@ -84,6 +84,18 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step(`C11.10 L11 fail: it never shows our own words as IRCC's (no quoted "added from the library")`, !/"[^"]*added from the library/.test(text));
   const boxes = Number((/(\d+) form fields matched/.exec(text) ?? [])[1] ?? 0);
   step(`C11.10 L11: a line the library already matched (${boxes} form fields) has no "Draft with AI" step, it says In the library`, boxes === 0 || (await row.getByRole("button", { name: "Draft with AI" }).count() === 0 && await row.locator("[data-line-matched]").count() === 1), `${boxes} matched`);
+  // Devin Review (PR #71): "In the library" is about the shown file's own edition. A newer edition of the same form,
+  // attached and read but not mapped yet, is the file the row shows: it keeps its AI step although the line has matches.
+  sql(`insert into source_attachment (id, workspace_id, combination_id, kind, file_name, stored_path, sha256, bytes, recognised, edition, status, status_detail, uploaded_via, uploaded_by) values (gen_random_uuid(), '${ws}', '${vv}', 'Form', '${lib.toLowerCase().replace(/ /g, "")}-next.pdf', 'none', '${"e".repeat(64)}', 1000, true, '${lib} (12-2099)', 'READ', 'Read: ready for AI drafting', 'test', 'user-A')`);
+  await go(vv, "forms");
+  const row2 = p.locator(`[data-line="${lib}"]`); await row2.waitFor();
+  step(`C11.10 L11 fail: with a newer, unmapped edition of ${lib} attached, the row is not "In the library" and keeps Draft with AI`, await row2.locator("[data-line-matched]").count() === 0 && await row2.getByRole("button", { name: "Draft with AI" }).count() === 1, (await row2.innerText()).split("\n").slice(-3).join(" | "));
+  sql(`delete from source_attachment where combination_id='${vv}' and sha256='${"e".repeat(64)}'`);
+  await go(vv, "forms");
+  step(`C11.10 L11 pass: with that file gone, the mapped edition shows "In the library" again`, await p.locator(`[data-line="${lib}"] [data-line-matched]`).count() === 1);
+  // L2 (Devin Review, PR #71): the greyed words are the server's answer, not the page's own.
+  const why = (await api(`/combinations/${sv}/people/propose/plan`, { method: "POST", data: { mode: "rules" } })).body?.live;
+  step("C11.12 L2: the plan says AI now is not approved and why (the page reads this, the API refuses a live run)", why?.approved === false && /founder's Go for a live trial/.test(why.why ?? ""), JSON.stringify(why));
   const found = p.locator('[data-line="IMM 5257"]');
   step("C11.10 L11 fail-guard: a line the finder picked keeps IRCC's words (quoted)", /"[^"]{20,}/.test(await found.innerText().catch(() => "")));
   await state("forms-added-from-library");

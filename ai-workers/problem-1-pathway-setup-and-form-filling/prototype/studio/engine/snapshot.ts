@@ -47,6 +47,9 @@ export type Snapshot = {
   mode: Mode;
   canonical_fields: any[]; sections: any[]; placements: any[]; forms: any[]; field_maps: any[];
   document_requirements: any[]; document_types: any[]; rules: any[]; derived_fields: any[]; checks: any[];
+  /** W1-15 slice 1: a person's choices over the rules' source per fact and person role, and the Pre-qualification
+   *  ticks; present only when the combination has any (engine/sources.ts), so other configurations keep their fingerprint. */
+  fact_sources?: { role: string; fact: string; source: "DOCUMENT" | "CLIENT" | "AGENT" | null; document_type: string | null; prequalification: boolean; reason: string | null; origin: string }[];
   row_versions: Record<string, string>;
 };
 
@@ -60,7 +63,7 @@ export async function buildSnapshot(db: PrismaClient, workspaceId: string, combi
 export async function buildSnapshots(db: PrismaClient, workspaceId: string, combinationIds: string[], mode: Mode): Promise<Map<string, { snapshot: Snapshot; sha256: string }>> {
   const ws = { workspaceId };
   const inComp = { combinationId: { in: combinationIds } };
-  const [comps, nodes, fields, sections, questions, allSel, allForms, allReq, doctypes, allRules, derived, allChecks, answerLists] = await Promise.all([
+  const [comps, nodes, fields, sections, questions, allSel, allForms, allReq, doctypes, allRules, derived, allChecks, answerLists, allSources] = await Promise.all([
     db.combination.findMany({ where: { id: { in: combinationIds } }, include: { program: true } }), db.programDef.findMany({ where: ws }),
     db.canonicalField.findMany({ where: ws }), db.logicalSection.findMany({ where: ws }), db.sectionQuestion.findMany({ where: ws }),
     db.sqrSectionSelection.findMany({ where: inComp, orderBy: { sectionOrder: "asc" } }),
@@ -68,6 +71,7 @@ export async function buildSnapshots(db: PrismaClient, workspaceId: string, comb
     db.documentRequirement.findMany({ where: inComp }), db.documentType.findMany({ where: ws }),
     db.predicate.findMany({ where: inComp }), db.derivedField.findMany({ where: ws }), db.check.findMany({ where: inComp }),
     db.answerList.findMany({ where: ws, include: { values: { orderBy: { sortOrder: "asc" } } } }),
+    db.factSource.findMany({ where: inComp }),
   ]);
   if (comps.length !== new Set(combinationIds).size) throw new Error("Combination not found");
   const allEditionIds = [...new Set(allForms.flatMap((f) => f.form.editions.map((e) => e.id)))];
@@ -81,13 +85,13 @@ export async function buildSnapshots(db: PrismaClient, workspaceId: string, comb
   const lists = new Map(effective(answerLists, (l) => l.answerListKey, mode).map((l) => [l.answerListKey, l.values.map((v) => ({ key: v.valueKey, label: v.label }))]));
   const shared = { lists, entriesOf, effFields: effective(fields, (f) => f.canonicalFieldKey, mode), effSections: effective(sections, (x) => x.sectionKey, mode), effQuestions: effective(questions, (q) => q.lineageKey, mode), effTypes: effective(doctypes, (t) => t.documentTypeKey, mode) };
   const group = <T extends { combinationId: string }>(rows: T[]) => { const m = new Map<string, T[]>(); for (const r of rows) m.set(r.combinationId, [...(m.get(r.combinationId) ?? []), r]); return m; };
-  const gSel = group(allSel), gForms = group(allForms), gReq = group(allReq), gRules = group(allRules), gChecks = group(allChecks);
+  const gSel = group(allSel), gForms = group(allForms), gReq = group(allReq), gRules = group(allRules), gChecks = group(allChecks), gSources = group(allSources);
   const by = <T extends { combinationId: string }>(g: Map<string, T[]>, id: string) => g.get(id) ?? [];
   const out = new Map<string, { snapshot: Snapshot; sha256: string }>();
   for (const comp of comps) {
     // The row's full path, pathway first (SA-1B-55): Pathway › Program › Category › Sub-category.
     const chain: any[] = []; for (let n: any = comp.program; n; n = n.parentNodeKey ? nodes.find((x) => x.programNodeKey === n.parentNodeKey) : null) chain.unshift(n);
-    out.set(comp.id, assemble(comp, chain, mode, { fields, sections, questions, doctypes, derived, selections: by(gSel, comp.id), cforms: by(gForms, comp.id), requirements: by(gReq, comp.id), rules: by(gRules, comp.id), checks: by(gChecks, comp.id), allMaps, shared }));
+    out.set(comp.id, assemble(comp, chain, mode, { fields, sections, questions, doctypes, derived, selections: by(gSel, comp.id), cforms: by(gForms, comp.id), requirements: by(gReq, comp.id), rules: by(gRules, comp.id), checks: by(gChecks, comp.id), sources: by(gSources, comp.id), allMaps, shared }));
   }
   return out;
 }
@@ -103,8 +107,9 @@ function formEditions(f: { channel?: string | null; form: { editions: FormEditio
   return { ...(f.channel === "ONLINE" ? { online_versions: online.filter((e) => e.portalKey === portalKey).length } : {}), ...(online.length && !pdf.length ? { online_only: true } : {}) };
 }
 
-function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; sections: any[]; questions: any[]; doctypes: any[]; derived: any[]; selections: any[]; cforms: any[]; requirements: any[]; rules: any[]; checks: any[]; allMaps: any[]; shared: { lists: Map<string, { key: string; label: string }[]>; effFields: any[]; effSections: any[]; effQuestions: any[]; effTypes: any[]; entriesOf: (editionId: string) => any[] } }): { snapshot: Snapshot; sha256: string } {
+function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; sections: any[]; questions: any[]; doctypes: any[]; derived: any[]; selections: any[]; cforms: any[]; requirements: any[]; rules: any[]; checks: any[]; sources?: any[]; allMaps: any[]; shared: { lists: Map<string, { key: string; label: string }[]>; effFields: any[]; effSections: any[]; effQuestions: any[]; effTypes: any[]; entriesOf: (editionId: string) => any[] } }): { snapshot: Snapshot; sha256: string } {
   const { derived, selections, cforms, requirements, rules, checks, allMaps, shared } = rows;
+  const effSources = effective(rows.sources ?? [], (r: any) => r.lineageKey, mode).filter((r: any) => r.status !== "RETIRED" && (r.source || r.prequalification));
   const rv: Record<string, string> = {};
   const note = (kind: string, key: string, r: { version: number; status: string }) => { rv[`${kind}:${key}`] = `v${r.version} ${r.status}`; };
 
@@ -137,6 +142,8 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   if (forms.some((f) => f.minAge)) used.add("person.date_of_birth");
   for (const d of derived) if ([...used].includes(d.derivedKey)) for (const i of [...d.inputs, d.reference]) used.add(i);
   const placements = effQuestions.filter((q) => selected.has(q.sectionKey) || used.has(q.canonicalFieldKey));
+  // W1-15 (P-97): a placement in a section only the client answers says so (only then, so the fingerprint keeps).
+  const clientOnly = new Set(effSections.filter((x: any) => x.clientOnly).map((x: any) => x.sectionKey));
   for (const p of placements) used.add(p.canonicalFieldKey);
 
   const snapshot: Snapshot = {
@@ -146,16 +153,17 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
     mode,
     canonical_fields: effFields.filter((f) => used.has(f.canonicalFieldKey)).sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey)).map((f) => { note("field", f.canonicalFieldKey, f); return { id: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, data_type: f.dataType, scope: f.scope, item_version: f.version, status: f.status, origin: f.origin, ...(f.answerListKey && shared.lists.has(f.answerListKey) ? { answer_list: { key: f.answerListKey, values: shared.lists.get(f.answerListKey) } } : {}) }; }),
     sections: selections.map((s) => effSections.find((x) => x.sectionKey === s.sectionKey)).filter(Boolean).map((s) => { note("section", s!.sectionKey, s!); return { id: s!.sectionKey, title: s!.title, meaning: s!.meaning, item_version: s!.version, status: s!.status }; }),
-    placements: placements.sort((a, b) => a.sectionKey.localeCompare(b.sectionKey) || a.displayOrder - b.displayOrder).map((q) => { note("placement", q.lineageKey, q); return { lineage: q.lineageKey, fact: q.canonicalFieldKey, section_id: q.sectionKey, order: q.displayOrder, question_text: q.questionText, help_text: q.helpText, repeats: q.repeats, tier: q.tier, collected_from: q.collectedFrom, client_visible: q.clientVisible, condition: q.predicateJson, condition_effect: q.conditionEffect, condition_plain: q.conditionPlain, rule_only: q.ruleOnly, item_version: q.version, status: q.status }; }),
+    placements: placements.sort((a, b) => a.sectionKey.localeCompare(b.sectionKey) || a.displayOrder - b.displayOrder).map((q) => { note("placement", q.lineageKey, q); return { lineage: q.lineageKey, fact: q.canonicalFieldKey, section_id: q.sectionKey, order: q.displayOrder, question_text: q.questionText, help_text: q.helpText, repeats: q.repeats, tier: q.tier, collected_from: q.collectedFrom, client_visible: q.clientVisible, condition: q.predicateJson, condition_effect: q.conditionEffect, condition_plain: q.conditionPlain, rule_only: q.ruleOnly, ...(clientOnly.has(q.sectionKey) ? { client_only: true } : {}), item_version: q.version, status: q.status }; }),
     forms: forms.sort((a, b) => a.lineageKey.localeCompare(b.lineageKey)).map((f) => { note("form", f.lineageKey, f); return { form_number: f.form.formKey, title: f.form.displayName, form_kind: f.form.formKind, who: f.who, status: f.attachMode === "COMBINATION_MANDATORY" ? "always" : "conditional", condition: f.predicateJson, condition_plain: f.conditionPlain, source_quote: f.sourceQuote, item_version: f.version, origin: f.origin, ...(f.channel && f.channel !== "PDF_UPLOAD" ? { channel: f.channel } : {}), ...formEditions(f, comp.portalKey),
       // S5: only when set, so a line that keeps the defaults keeps its fingerprint (no draft change appears).
       ...(f.minAge ? { min_age: f.minAge } : {}), ...(f.signedBy ? { signed_by: f.signedBy } : {}) }; }),
     field_maps: fieldMaps,
     document_requirements: effReq.sort((a, b) => a.lineageKey.localeCompare(b.lineageKey)).map((r) => { note("requirement", r.lineageKey, r); return { lineage: r.lineageKey, document_type: effTypes.find((t) => t.documentTypeKey === r.documentTypeKey)?.name ?? r.documentTypeKey, document_type_key: r.documentTypeKey, who: r.appliesToRoles, provided_by: r.providedBy, base_or_conditional: r.attachMode === "COMBINATION_MANDATORY" ? "base" : "conditional", condition: r.predicateJson, condition_plain: r.conditionPlain, source_quote: r.sourceQuote, source_file: r.sourceFile, note: r.note, item_version: r.version, status: r.status, origin: r.origin }; }),
-    document_types: effTypes.filter((t) => effReq.some((r) => r.documentTypeKey === t.documentTypeKey)).sort((a, b) => a.documentTypeKey.localeCompare(b.documentTypeKey)).map((t) => ({ key: t.documentTypeKey, name: t.name, category: t.category, supplies_facts: t.suppliesFacts, reader_profile: t.readerProfile })),
+    document_types: effTypes.filter((t) => effReq.some((r) => r.documentTypeKey === t.documentTypeKey)).sort((a, b) => a.documentTypeKey.localeCompare(b.documentTypeKey)).map((t) => ({ key: t.documentTypeKey, name: t.name, category: t.category, supplies_facts: t.suppliesFacts, ...(t.suppliesAbout && Object.keys(t.suppliesAbout).length ? { supplies_about: t.suppliesAbout } : {}), reader_profile: t.readerProfile })),
     rules: effRules.sort((a, b) => a.predicateKey.localeCompare(b.predicateKey)).map((r) => { note("rule", r.predicateKey, r); return { id: r.predicateKey, when: r.predicateJson, when_plain: r.whenPlain, then: r.thenPlain, for_whom: r.forWhom, source_quote: r.sourceQuote, item_version: r.version, status: r.status, origin: r.origin }; }),
     derived_fields: [...derived].sort((a, b) => a.derivedKey.localeCompare(b.derivedKey)).map((d) => ({ id: d.derivedKey, calculation: d.calculation, inputs: d.inputs, reference: d.reference, plain: d.plain, executable: d.executable })),
     checks: effChecks.sort((a, b) => a.checkKey.localeCompare(b.checkKey)).map((c) => ({ id: c.checkKey, group: c.checkGroup, applies_to: c.appliesTo, condition: c.predicateJson, severity: c.severity, message: c.message, source_quote: c.sourceQuote, illustrative: c.illustrative, item_version: c.version })),
+    ...(effSources.length ? { fact_sources: effSources.sort((a: any, b: any) => a.lineageKey.localeCompare(b.lineageKey)).map((r: any) => { note("fact source", r.lineageKey, r); return { role: r.role, fact: r.canonicalFieldKey, source: r.source ?? null, document_type: r.documentTypeKey ?? null, prequalification: r.prequalification, reason: r.reason ?? null, origin: r.origin }; }) } : {}),
     row_versions: rv,
   };
   const { row_versions: _rv, mode: _m, ...hashed } = snapshot;

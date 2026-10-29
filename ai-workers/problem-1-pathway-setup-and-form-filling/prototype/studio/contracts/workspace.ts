@@ -153,7 +153,10 @@ export type RemovedForm = { code: string; title: string; at: string };
 /** Slice 3: "Who can be in this application" filled from the combination's guide (api/src/people-ai.ts). The plan says
  *  the steps and the most it can cost first; the proposal is never saved by itself (the person accepts it and saves). */
 export const ProposePeopleBody = z.object({ mode: z.enum(["rules", "replay", "live"], { error: "Choose how to fill it." }), planSha256: z.string().regex(/^[0-9a-f]{64}$/).optional() });
-export type PeoplePlan = { mode: "rules" | "replay" | "live"; guide: { code: string; title: string; url: string }; steps: { n: number; label: string; uses_ai: boolean }[]; totals: { worst_usd: number; remaining_usd: number }; note: string; plan_sha256: string };
+export type PeoplePlan = { mode: "rules" | "replay" | "live"; guide: { code: string; title: string; url: string }; steps: { n: number; label: string; uses_ai: boolean }[]; totals: { worst_usd: number; remaining_usd: number }; note: string; plan_sha256: string;
+  /** Whether AI now may run (the founder approved a live trial) and, when not, why: the page greys the choice from this;
+   *  the API refuses a live run either way (Lead check L2, Devin Review on PR #71). */
+  live: { approved: boolean; why: string | null } };
 export type ProposedPerson = { role: string; label: string; min: number; max: number; applies: boolean; quote: string; why: string | null; agreed: boolean };
 export type PeopleProposal = {
   mode: PeoplePlan["mode"]; guide: PeoplePlan["guide"]; people: ProposedPerson[];
