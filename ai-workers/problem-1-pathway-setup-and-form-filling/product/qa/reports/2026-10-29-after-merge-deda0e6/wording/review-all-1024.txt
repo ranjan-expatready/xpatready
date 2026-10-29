@@ -1,0 +1,42 @@
+URL /review?filter=all as user-A
+TITLE To review · Product Studio
+H1 ["To review"]
+HEADS ["Item","What and why","Status","AI cost","Next step"]
+CUT []
+ERRORS []
+---
+To review
+
+Everything that waits for a person: AI proposals, combinations to review and release, new editions, held files and merges. Nothing reaches a release until a person decides.
+
+Needs you · 1
+Waiting for others · 0
+Running · 0
+All · 1
+Kind
+All
+Held file (1)
+Item	What and why	Status	AI cost	Next step
+Held file
+
+IMM 5562 (07-2024)
+
+Configuration author · today at 8:34 p.m.
+
+	Not on the approved source list: not read into the library, attached or sent to AI. The person who uploaded it records the IRCC page it came from first.	Needs you	—	Record the IRCC page
+
+Oldest first within each group. Each row shows only the step you can take; the studio checks it again when you take it.
+
+1 item shown
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+Search the items to review
+Show items
+Kind of item
+Items to review

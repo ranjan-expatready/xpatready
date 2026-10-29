@@ -1,0 +1,73 @@
+URL /c/77c8c9ec-2f0a-4d87-9c06-12c7855a5fef/questionnaires as user-A
+TITLE Immigration programs · Product Studio
+H1 ["Visitor visa"]
+HEADS ["Overview","Forms","Questionnaires","Documents","Preview","Review and release","No questions yet","","","","","","","",""]
+CUT []
+ERRORS []
+---
+Immigration programs
+Temporary residence
+Visitors
+Visitor visa
+Visitor visa
+In setup
+
+Not released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample
+
+Next step
+
+Add 1 form from the library
+Sample: official visitor-visa forms and checklists attached; not set up yet.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+
+Who can be in this application · Principal applicant exactly 1 · Spouse or partner 0 to 1 · Child 0 to 4 · each applicant files their own application
+
+Show and edit
+No questions yet
+
+The questions each person needs come from the facts their forms read. Add forms on the Forms tab, or a library section here.
+
+Add a library section…
+Application details
+Personal details
+Languages
+Travel and identity documents
+Contact details
+Residence and immigration status
+Spouse or partner relationship
+Family members
+Intended work in Canada
+Education history
+Employment and activity history
+Medical background
+Background declarations
+Service, membership and government position history
+Travel history
+Representative and authorizations
+Processing requirements
+Submitted documents
+Add section
+Rules used here (0)
+Checks on these answers (0)
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+Path
+Pathway: show the list for Temporary residence
+Program: show the list for Visitors
+Category: show the list for Visitor visa
+Combination
+Questionnaires
+Library section to add
+Table: Rule, Evaluated for, Condition, 
+Table: Check, Group, Severity, When it fires
