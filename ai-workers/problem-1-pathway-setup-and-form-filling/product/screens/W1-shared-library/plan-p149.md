@@ -111,3 +111,40 @@ P-153 requires each P-149 rule that S6 builds to be enforced in the server, on e
 **For other lanes** (not changed here; the Lead routes them):
 * `web/src/pages/configuration.tsx:89` "The firm (agent)" and the runtime's "agent view" (`questionnaire.tsx:484`) belong to the runtime lane.
 * The contract's `comes_from.from: "agent"` code (forms) may stay as a stored code, but its words read "Case officer".
+
+### P-158 (29 Oct): no free manual add. Inventory and proposed delta (waiting for the Lead)
+P-158 amends P-149's manual add: every library item comes from a source. People confirm, rename, explain and merge; they never create an item from nothing.
+
+**Manual add found today:**
+* **plan.md §3:**
+  * "One Add" (`POST /library/add {kind, words}`);
+  * "Answer lists through the second person" by Add;
+  * "Person role Add (m1)";
+  * shared condition "Add from a sentence".
+* **This file:**
+  * B, "AI-first lists": "Not in the list? Add one".
+  * B, rule (1): origin person, its reason and "Added by a person" at release.
+  * B, "Manual field Add: where it applies": placements, Q-A1.
+  * B, coverage gap: share of manual adds.
+  * Q-A4.
+  * C: contract `origin: person`, `addReason`, `relatesTo`.
+  * Guard rows: P-149.1 reason, Q-A1, Q-A4.
+* **Code on main:**
+  * Fields page "Add field" (`library.tsx:42`, typed key, `POST /library/fields`, `studio.ts createField`);
+  * Sections page "Add section" (`library.tsx:119`, `POST /library/sections`);
+  * `POST /library/answer-lists` (`forms.ts:364`).
+
+**Not manual add:**
+* document types, made only by applying a checklist (`studio.ts:521`);
+* "Add a library section to this questionnaire" (`configuration.tsx:139`), which uses an existing section.
+
+**Delta proposed:** sent to the Lead, 29 Oct. Building these parts waits for the Lead's agreement. Slice R's US$0 work stays as it is.
+
+**Folded in (Lead, 29 Oct):**
+* **P-162, in S6:** each row and drawer on the Fields page shows the field's type, its format and its source (P-158 traceability, delta item 6).
+  * Format is read from the field's form box mappings when a producer has filled it, else "Format: not read yet".
+  * The format extraction (PDF box and form instructions, AI with quotes) and the fixed checks in code come later, from the forms and runtime lanes. S6 shows them, and adds no format field of its own until that contract exists.
+  * Tests:
+    * `P-162 pass: a field row shows type, format and source`
+    * `P-162 fail: a field with no source is flagged, never shown blank`
+* **P-161:** the setup checklist ("Before forms" block on the Forms tab; the people card moves there) is built after S6, once forms' official-pages record is on main (concept `screens/W1-setup-checklist/concept-draft.md`). S6's completeness function (delta item 7) is what it reads.
