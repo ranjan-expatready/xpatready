@@ -111,7 +111,8 @@ type MenuItem = { label: string; why?: string | null; onSelect?: () => void; hre
 export function RowMenu({ name, items }: { name: string; items: MenuItem[] }) {
   const item = "flex cursor-pointer flex-col gap-0.5 rounded-md px-2 py-1.5 outline-none data-[highlighted]:bg-text/5 data-[disabled]:cursor-default";
   return (
-    <DropdownMenu.Root>
+    // Not modal: a modal menu hides the rest of the page from screen readers while focusable items stay in it.
+    <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild><Button size="sm" variant="ghost" aria-label={`Actions for ${name}`} data-row-menu><MoreHorizontal /></Button></DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="end" sideOffset={4} className="z-50 w-[300px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg" data-row-menu-items>
@@ -249,7 +250,7 @@ export function BulkBar({ id, picked, onClear, onDone }: { id: string; picked: F
   };
   return (
     // Floats at the bottom of the window: appearing never moves the rows under the pointer.
-    <div role="region" aria-label="Change the ticked rows" className="fixed bottom-4 left-1/2 z-40 flex w-[min(960px,calc(100vw-2rem))] -translate-x-1/2 flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-surface-raised p-2 shadow-lg" data-bulk-bar>
+    <div role="region" aria-label="Change the ticked rows" className="fixed bottom-4 right-4 z-40 flex w-[calc(100vw-2rem)] max-w-[960px] flex-wrap md:w-[calc(100vw-14rem-3rem)] items-center gap-2 rounded-xl border border-primary/40 bg-surface-raised p-2 shadow-lg" data-bulk-bar>
       <span className="px-1 text-sm font-medium" data-bulk-count>{picked.length} selected</span>
       <Select aria-label="Set where it comes from" className="h-8 w-60" value="" disabled={busy} onChange={(e) => { const v = e.target.value as AnswerSource | "RULES"; if (v) void run({ source: v }); }} data-bulk-source>
         <option value="">Set where it comes from…</option><option value="CLIENT">Client</option><option value="AGENT">Agent</option><option value="RULES">Back to the rules' default</option>
