@@ -8,6 +8,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { effective } from "../engine/snapshot.ts";
 
 const PORT = Number(process.argv[2] ?? 4438), DB = process.argv[3] ?? "xr_studio_runtime_w115d";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -93,6 +94,31 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
 
   // ---------------------------------------------------------------- a released removal is never undone
   await call("PATCH", `/combinations/${wp}/requirements/${encodeURIComponent(target.lineage)}`, { retire: true });
+
+  // ---------------------------------------------------------------- open point 3: the published view changes only on release
+  // A removal saved as a draft over a released row is a RETIRED row whose predecessor is still PUBLISHED. The published
+  // view (engine/snapshot.ts effective, the rule buildSnapshot "published" uses) keeps the released row until a release.
+  const rowsOf = (table: string, keyCol: string, key: string) => sql(`select id, version, status, coalesce(supersedes_id::text,'') from ${table} where combination_id='${wp}' and ${keyCol}='${key.replace(/'/g, "''")}'`).split("\n").filter(Boolean).map((x) => { const [id, version, status, sup] = x.split("|"); return { id, version: Number(version), status, supersedesId: sup || null, key }; });
+  const views = (rows: any[]) => ({ draft: effective(rows, (x) => x.key, "draft", true).length, published: effective(rows, (x) => x.key, "published", true).length, oldRule: effective(rows, (x) => x.key, "published").length });
+  let vw = views(rowsOf("document_requirement", "lineage_key", target.lineage));
+  ok("C4.10 pass (open point 3): a document removed in the draft stays in the published view until a release", vw.draft === 0 && vw.published === 1, vw);
+  ok("C4.10 fail-guard (open point 3): the old rule took the newest published-or-retired row and dropped it before any release", vw.oldRule === 0, vw);
+  const rule = sql(`select predicate_key from predicate where combination_id='${wp}' and status='PUBLISHED' order by predicate_key limit 1`);
+  r = await call("PATCH", `/combinations/${wp}/rules/${encodeURIComponent(rule)}`, { retire: true });
+  vw = views(rowsOf("predicate", "predicate_key", rule));
+  ok("C4.10 pass (open point 3): a rule removed in the draft stays in the published view until a release", r.status < 300 && vw.draft === 0 && vw.published === 1 && vw.oldRule === 0, vw);
+  const form = sql(`select lineage_key from combination_form where combination_id='${wp}' and status='PUBLISHED' order by lineage_key limit 1`);
+  r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(form)}`, { retire: true });
+  vw = views(rowsOf("combination_form", "lineage_key", form));
+  ok("C4.10 pass (open point 3): a form removed in the draft stays in the published view until a release", r.status < 300 && vw.draft === 0 && vw.published === 1 && vw.oldRule === 0, vw);
+  // Test-only restore: this release carries the document's removal, not the rule's or the form's.
+  sql(`delete from predicate where combination_id='${wp}' and predicate_key='${rule}' and status='RETIRED'; delete from combination_form where combination_id='${wp}' and lineage_key='${form}' and status='RETIRED'`);
+  // Fact sources and placements write no draft retire: a fact source's change (even back to the rules) is a DRAFT row
+  // over the released one, and a placement is retired only by a library change released in its own pack.
+  r = await call("PUT", `/combinations/${wp}/fact-sources/principal/${encodeURIComponent("person.family_name")}`, { source: "CLIENT", version: Number(sql(`select coalesce(max(version),0) from fact_source where combination_id='${wp}' and lineage_key='principal|person.family_name'`)) });
+  ok("C4.10 pass (open point 3): fact sources and placements have no draft retire that could leak (no RETIRED rows; a change is a draft)", r.status === 200 && sql(`select count(*) from fact_source where combination_id='${wp}' and status='RETIRED'`) === "0" && sql(`select count(*) from section_question where status='RETIRED'`) === "0" && sql(`select status from fact_source where combination_id='${wp}' and lineage_key='principal|person.family_name' order by version desc limit 1`) === "DRAFT", r.status);
+  await call("DELETE", `/combinations/${wp}/fact-sources/principal/${encodeURIComponent("person.family_name")}`, { version: Number(sql(`select max(version) from fact_source where combination_id='${wp}' and lineage_key='principal|person.family_name'`)) });
+
   await call("POST", `/combinations/${wp}/submit`, {});
   const review = (await call("GET", `/combinations/${wp}/review`)).body;
   const sme = ((review.submission?.changeSummary ?? []) as any[]).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);

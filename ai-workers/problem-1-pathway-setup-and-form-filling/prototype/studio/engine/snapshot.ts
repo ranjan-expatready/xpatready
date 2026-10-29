@@ -8,17 +8,21 @@ import { canonical, sha256 } from "../../contracts/rules.ts";
 import { compareEditions } from "./programs.ts";
 
 export type Mode = "draft" | "published";
-type Versioned = { status: string; version: number };
+type Versioned = { status: string; version: number; id?: string; supersedesId?: string | null };
 
-/** Newest effective row per lineage key. RETIRED as the newest row removes the lineage. */
-export function effective<T extends Versioned>(rows: T[], keyOf: (r: T) => string, mode: Mode): T[] {
+/** Newest effective row per lineage key. RETIRED as the newest row removes the lineage. With `heldRetires` (a
+ *  combination's own lines: documents, rules, forms, checks), a removal saved over a released row waits for its release:
+ *  in the published view the released row stands until a release supersedes it (W1-15 slice 3, open point 3). */
+export function effective<T extends Versioned>(rows: T[], keyOf: (r: T) => string, mode: Mode, heldRetires = false): T[] {
   const by = new Map<string, T[]>();
   for (const r of rows) { const k = keyOf(r); by.set(k, [...(by.get(k) ?? []), r]); }
   const out: T[] = [];
   for (const list of by.values()) {
     const sorted = [...list].sort((a, b) => b.version - a.version);
     const pick = mode === "draft" ? sorted.find((r) => r.status === "DRAFT") ?? sorted.find((r) => r.status === "PUBLISHED" || r.status === "RETIRED") : sorted.find((r) => r.status === "PUBLISHED" || r.status === "RETIRED");
-    if (pick && pick.status !== "RETIRED") out.push(pick);
+    const held = heldRetires && mode === "published" && pick?.status === "RETIRED" && pick.supersedesId ? sorted.find((r) => r.id === pick.supersedesId && r.status === "PUBLISHED") : undefined;
+    if (held) out.push(held);
+    else if (pick && pick.status !== "RETIRED") out.push(pick);
   }
   return out;
 }
@@ -113,7 +117,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   const rv: Record<string, string> = {};
   const note = (kind: string, key: string, r: { version: number; status: string }) => { rv[`${kind}:${key}`] = `v${r.version} ${r.status}`; };
 
-  const forms = effective(cforms, (r) => r.lineageKey, mode);
+  const forms = effective(cforms, (r) => r.lineageKey, mode, true);
   // F1: PDF editions first, as before; an online version only on a line filed Online, from the combination's portal.
   // New keys appear only when set, so a configuration without channels keeps its fingerprint.
   const fieldMaps = [...forms].sort((a, b) => a.lineageKey.localeCompare(b.lineageKey)).flatMap((f) => [
@@ -130,9 +134,9 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   // The library is shared; a combination's snapshot carries the fields, sections and placements its forms and
   // selected sections use, plus every field its conditions read.
   const { effFields, effSections, effQuestions, effTypes } = shared;
-  const effReq = effective(requirements, (r) => r.lineageKey, mode);
-  const effRules = effective(rules, (r) => r.predicateKey, mode);
-  const effChecks = effective(checks, (c) => c.checkKey, mode);
+  const effReq = effective(requirements, (r) => r.lineageKey, mode, true);
+  const effRules = effective(rules, (r) => r.predicateKey, mode, true);
+  const effChecks = effective(checks, (c) => c.checkKey, mode, true);
   const selected = new Set(selections.map((s) => s.sectionKey));
   const used = new Set<string>();
   for (const m of fieldMaps) for (const e of m.entries) if (e.fact) used.add(e.fact);

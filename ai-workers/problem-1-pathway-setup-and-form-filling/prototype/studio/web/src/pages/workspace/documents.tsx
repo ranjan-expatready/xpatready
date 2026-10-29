@@ -111,6 +111,7 @@ export function DocumentsTab({ id }: { id: string }) {
         {error ? <Notice tone="warn" title="Not changed" action={<Button size="sm" variant="ghost" onClick={() => setError(null)}>Dismiss</Button>}><span data-documents-error>{error}</span></Notice> : null}
         {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
         <p className="text-sm text-text-muted">A document that supplies facts takes those questions out of the client questionnaire. Missing or unreadable at the case, the questionnaire asks them ("We could not read it from your passport").</p>
+        <p className="text-xs text-text-muted" data-doc-order-note>Order: Move up or Move down in a line's ⋯ menu. A line given by several people (Each applicant) keeps one place: its order applies to everyone on this list.</p>
         {lines.length ? (
           <Table dense head={["Document", "Who", "When", "Supplies", "Status", <span key="a" className="sr-only">Actions</span>]} label={`${role.label}'s checklist`}>
             {lines.map((l) => (

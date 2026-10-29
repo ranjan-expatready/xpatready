@@ -1,7 +1,7 @@
 {
-  "at": "2026-10-29T06:01:35.367Z",
+  "at": "2026-10-29T06:14:03.654Z",
   "port": 4438,
-  "pass": 26,
+  "pass": 31,
   "fail": 0,
   "log": [
     {
@@ -123,7 +123,7 @@
           "document": "Proof of fee payment (processing fee and other applicable fees receipt)",
           "who": "principal_applicant",
           "by": "user-A",
-          "at": "2026-10-29T06:01:34.886Z"
+          "at": "2026-10-29T06:14:02.273Z"
         }
       ]
     },
@@ -141,6 +141,47 @@
       "name": "Undo fail: there is no removal to undo twice (409 Nothing to undo)",
       "ok": true,
       "detail": "409 Nothing to undo"
+    },
+    {
+      "name": "C4.10 pass (open point 3): a document removed in the draft stays in the published view until a release",
+      "ok": true,
+      "detail": {
+        "draft": 0,
+        "published": 1,
+        "oldRule": 0
+      }
+    },
+    {
+      "name": "C4.10 fail-guard (open point 3): the old rule took the newest published-or-retired row and dropped it before any release",
+      "ok": true,
+      "detail": {
+        "draft": 0,
+        "published": 1,
+        "oldRule": 0
+      }
+    },
+    {
+      "name": "C4.10 pass (open point 3): a rule removed in the draft stays in the published view until a release",
+      "ok": true,
+      "detail": {
+        "draft": 0,
+        "published": 1,
+        "oldRule": 0
+      }
+    },
+    {
+      "name": "C4.10 pass (open point 3): a form removed in the draft stays in the published view until a release",
+      "ok": true,
+      "detail": {
+        "draft": 0,
+        "published": 1,
+        "oldRule": 0
+      }
+    },
+    {
+      "name": "C4.10 pass (open point 3): fact sources and placements have no draft retire that could leak (no RETIRED rows; a change is a draft)",
+      "ok": true,
+      "detail": 200
     },
     {
       "name": "release pass: the order, the alternative and the removal are released (Release 2)",

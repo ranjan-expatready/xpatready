@@ -69,6 +69,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("find fail: nothing matches says so in words", await p.locator("[data-documents-none]").innerText().then((t) => /No document matches/.test(t)).catch(() => false));
   await p.getByLabel("Find a document").fill(""); await settle();
 
+  const orderNote = await p.locator("[data-doc-order-note]").innerText().catch(() => "");
+  step("words pass (open point 1): the tab says a shared line keeps one place: its order applies to everyone on this list", /order applies to everyone on this list/.test(orderNote) && /Each applicant/.test(orderNote), orderNote);
+
   // ======================================================== the ⋯ menu: greyed with reasons
   const first = p.locator("[data-doc-line]").first();
   await first.getByRole("button", { name: /^Actions for/ }).click();
