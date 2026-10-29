@@ -4,6 +4,7 @@ import { Notice, Pill, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { fmtWhen } from "@/components/status";
+import { StandIn } from "@/components/stand-in";
 
 /** QA-74: what an activity line is about, in the words the pages use. */
 const ITEM_WORD: Record<string, string> = { "configuration row": "combination", row: "combination" };
@@ -12,7 +13,8 @@ export function ReleasesPage() {
   const r = useApi<any[]>(["releases"], "/releases");
   return (
     <div className="mx-auto max-w-6xl space-y-4">
-      <div><h1 className="text-xl font-semibold">Releases</h1><p className="mt-1 text-sm text-text-muted">Frozen configuration versions. Case work only ever uses a released version.</p></div>
+      {/* P-165 SI-11: our release side stands in for the team's content pack container (SA-1). */}
+      <div><h1 className="flex items-center gap-2 text-xl font-semibold">Releases <StandIn id="SI-11" today="our own draft, review, approve and release, and the release each case keeps using." later="the team's content pack container (SA-1) adds how firms adopt a release and roll one back." /></h1><p className="mt-1 text-sm text-text-muted">Frozen configuration versions. Case work only ever uses a released version.</p></div>
       {/* QA-74: people by name, one date format; the fingerprint is in the version's tip, not a column. */}
       {r.isLoading ? <Spinner label="Loading" /> : !r.data?.length ? <EmptyState title="Nothing released yet" /> : <Table head={["Combination", "Version", "Author / submitter / approver", "Released", "Basis"]}>{r.data.map((x) => <tr key={x.id}><td><Link className="text-text-link hover:underline" to={`/c/${x.combination_id}/review`}>{x.combination}</Link></td><td title={`Fingerprint (SHA-256): ${x.sha256}`}>v{x.version} {x.status === "SUPERSEDED" ? <Pill>superseded</Pill> : <Pill tone="ok">current</Pill>}</td><td className="text-xs">{x.names.author} / {x.names.submitter} / {x.names.approver}</td><td className="whitespace-nowrap text-xs">{fmtWhen(x.released_at)}</td><td className="max-w-md text-xs text-text-muted">{x.basis}</td></tr>)}</Table>}
     </div>
