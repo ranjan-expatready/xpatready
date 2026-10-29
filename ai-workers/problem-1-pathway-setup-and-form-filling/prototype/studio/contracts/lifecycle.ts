@@ -25,6 +25,10 @@ export const WHY = {
   waitingUnder: (name: string) => `Can't delete: a change to ${q(name)} under it is waiting for a second person.`,
   retiredUnder: (name: string) => `Can't delete: ${q(name)} under it is retired.`,
   hasCases: "Can't delete: cases were opened on it. Retire it instead.",
+  // S3 (M3): Start setup on a name nobody may pick, or under a change that waits.
+  startRetired: "Can't start setup: it is retired. Restore it first.",
+  startRetiredAbove: (name: string) => `Can't start setup: ${q(name)} above it is retired.`,
+  startWaiting: (name: string | null) => `Can't start setup: a change to ${name ? q(name) : "it"} waits for a second person. Withdraw it, or wait for the decision.`,
   alreadyRetired: "It is already retired.",
   neverReleased: "It was never released: delete it instead.",
   /** What blocks a Retire, with the way out for each (QA-55): released names still in use are retired first; names

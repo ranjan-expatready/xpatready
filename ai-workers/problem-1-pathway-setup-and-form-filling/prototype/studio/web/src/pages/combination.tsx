@@ -18,6 +18,10 @@ import { OverviewTab } from "@/pages/workspace/overview";
 import { FormsTab } from "@/pages/workspace/forms";
 import { QuestionnairesTab } from "@/pages/workspace/questionnaires";
 import { PreviewTab, usePreviewParams } from "@/pages/workspace/preview";
+import { LEVEL_TEXT } from "@/components/levels";
+
+/** Where it sits, read-only here (P-125 (3)), in the level colours of the shared Trail (S3 m6). */
+const PLACE_TEXT: Record<string, string> = { Pathway: LEVEL_TEXT.pathway, Program: LEVEL_TEXT.program, Category: LEVEL_TEXT.category, "Sub-category": LEVEL_TEXT.subCategory };
 
 /** "Principal applicant, Spouse or partner (optional), Child (0–6)": who can be in the application, in one line. */
 const peopleWords = (ps: { label: string; min: number; max: number }[]) => (ps ?? []).filter((p) => p.max > 0).map((p) => `${p.label}${p.max > 1 ? ` (${p.min}–${p.max})` : p.min === 0 ? " (optional)" : ""}`).join(", ");
@@ -60,7 +64,7 @@ export function CombinationPage() {
     <div className="mx-auto max-w-7xl space-y-5">
       <nav aria-label="Path" className="flex flex-wrap items-center gap-1 text-sm text-text-muted">
         <Link to={backTo} className="font-medium text-text-link hover:underline">Immigration programs</Link>
-        {(d.path ?? []).map((n) => <React.Fragment key={n.key}><ChevronRight className="size-3.5" aria-hidden /><Link to={levelLink(n)} title={`${n.level}: show the list for ${n.label}`} className="hover:text-text hover:underline">{n.label}</Link></React.Fragment>)}
+        {(d.path ?? []).map((n) => <React.Fragment key={n.key}><ChevronRight className="size-3.5" aria-hidden /><Link to={levelLink(n)} title={`${n.level}: show the list for ${n.label}`} className={cn("hover:underline", PLACE_TEXT[n.level])} data-place={n.level}>{n.label}</Link></React.Fragment>)}
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">

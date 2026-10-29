@@ -367,12 +367,13 @@ function pdf(title: string, text: string) {
   ok("performance: a filtered catalogue answers in under 200 ms with the sample data", ms < 200, `${ms} ms`);
 
   // ---------------------------------------------------------------- QA-6, QA-7 names; QA-11 the existing combination
-  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "!!!" }, category: { create: "???" } });
-  ok("QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created", r.status === 400 && r.body.errors?.some((e: any) => e.field === "program.create" && /letters or digits/.test(e.message)) && sql("select count(*) from program_def where label in ('!!!','???')") === "0", r.body.errors);
-  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "A".repeat(60) + " " + "B".repeat(70) }, category: { create: "Long test" } });
-  ok("QA-7 fail: a 131-character name is refused with \"Keep the name under 120 characters.\" on the Program field", r.status === 400 && r.body.errors?.[0]?.field === "program.create" && r.body.errors[0].message === "Keep the name under 120 characters." && sql("select count(*) from program_def where length(label) > 120") === "0", r.body.errors);
-  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", pathwayKey: "retail.temporary_residence", program: { create: "R\u00e9sidence temporaire" }, category: { create: "Visa d'\u00e9t\u00e9 \u2014 \u65e5\u672c\u8a9e" } });
-  ok("QA-6 pass: names in any script with punctuation around letters are created as typed", r.status === 201 && r.body.created === true, r.body?.nodeKey ?? r.body?.detail);
+  // S3 (P-125): names are added on Program structure only; the name rules are checked through its endpoint.
+  r = await call("POST", "/structure/nodes", { pathwayType: "INDIVIDUAL", level: "program", parentKey: "retail.temporary_residence", label: "!!!" });
+  ok("QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created", r.status === 400 && r.body.errors?.some((e: any) => e.field === "label" && /letters or digits/.test(e.message)) && sql("select count(*) from program_def where label in ('!!!','???')") === "0", r.body.errors);
+  r = await call("POST", "/structure/nodes", { pathwayType: "INDIVIDUAL", level: "program", parentKey: "retail.temporary_residence", label: "A".repeat(60) + " " + "B".repeat(70) });
+  ok("QA-7 fail: a 131-character name is refused with \"Keep the name under 120 characters.\" on the name field", r.status === 400 && r.body.errors?.[0]?.field === "label" && r.body.errors[0].message === "Keep the name under 120 characters." && sql("select count(*) from program_def where length(label) > 120") === "0", r.body.errors);
+  r = await call("POST", "/structure/path", { pathwayType: "INDIVIDUAL", pathway: { key: "retail.temporary_residence" }, program: { label: "R\u00e9sidence temporaire" }, category: { label: "Visa d'\u00e9t\u00e9 \u2014 \u65e5\u672c\u8a9e" }, subCategory: null });
+  ok("QA-6 pass: names in any script with punctuation around letters are created as typed", r.status === 201 && r.body.created?.length === 2, r.body?.leaf?.key ?? r.body?.detail);
   const opts = (await call("GET", "/path-options?pathway=INDIVIDUAL")).body;
   const wpOpt = opts.programs.find((x: any) => x.key === "individual.work_permits")?.categories.find((x: any) => x.key === "individual.work_permits.employer_specific")?.subCategories.find((x: any) => x.key === "individual.work_permits.employer_specific.with_lmia");
   ok("QA-11 pass: the path builder knows the existing combination's id, so \"Open the existing combination\" opens its page", wpOpt?.hasSetup && wpOpt.combinationId === wp.combinationId, wpOpt);
@@ -397,8 +398,8 @@ function pdf(title: string, text: string) {
   r = await call("POST", "/demo/reset", { confirm: "RESET" });
   ok("QA-12 setup: reset the demo copy", r.status === 201, r.body?.message);
   // W1-03 (27 Oct): after a reset the Structure is empty in both tabs; a person adds the Pathway first.
-  await call("POST", "/structure/nodes", { pathwayType: "INDIVIDUAL", level: "pathway", label: "Individual" });
-  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "Hand-made" }, category: { create: "One row" } });
+  const handPw = (await call("POST", "/structure/nodes", { pathwayType: "INDIVIDUAL", level: "pathway", label: "Individual" })).body.key;
+  r = await call("POST", "/structure/path", { pathwayType: "INDIVIDUAL", pathway: { key: handPw }, program: { label: "Hand-made" }, category: { label: "One row" }, subCategory: null });
   ds = (await call("GET", "/demo/status")).body;
   const ses = (await call("GET", "/session")).body;
   ok("QA-12 fail: a combination made by hand is not \"sample inputs loaded\"; the menu says programs exist (reset first)", r.status === 201 && ds.loaded === false && ds.programsExist === true && ses.sampleLoaded === false && ses.counts.programs > 0, { loaded: ds.loaded, programsExist: ds.programsExist, sampleLoaded: ses.sampleLoaded });
