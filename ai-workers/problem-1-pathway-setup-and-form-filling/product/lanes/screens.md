@@ -34,7 +34,7 @@ Results: `check_s6_library_sources` 24/24, `check_s6_library_pages_browser` 33/3
 current_screen: W1-shared-library (S6 Shared library)
 stage: BUILD (2a) done at 38cc245d; full local run-suites running, then CHECK for the Lead
 owner: Builder
-next_action: Builder: read the run-suites result, fix any failure, hand (2a) to the Lead; then (2b) and S6 slice 1 after forms PR #90
+next_action: Builder: read the run-suites result, restore its by-products, fix any failure, hand (2a) to the Lead; then sync main (forms PR #90 merged at deda0e6b: contract v2 `contracts/proposal-item.ts` is on main) and plan (2b), the P-158 door through ProposalItem, together with S6 slice 1, the one review queue (C11.13, C11.14, C3.2), including routing runtime's C4.7 pqr_pick producer and Accept (`acceptPqrPick`, `api/src/fact-sources.ts`)
 then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
 blocked_by: forms runner package and contract v2 on main (Lead merge)
 updated: 2026-10-29
