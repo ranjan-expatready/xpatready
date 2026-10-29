@@ -12,7 +12,7 @@ import { actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { Ai } from "./ai.ts";
 import { detailsOf, Finder, FINDER_OPERATION, FINDER_STEPS } from "./finder.ts";
 import { UPLOAD_OPERATION, UPLOAD_STEPS, UploadRuns } from "./upload-run.ts";
-import { aboutUsd } from "./finder-cost.ts";
+import { statedUsd } from "./finder-cost.ts";
 
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 const ACTIVE = ["QUEUED", "RUNNING"];
@@ -70,7 +70,7 @@ export class Runs {
     const href = b.operation === UPLOAD_OPERATION ? "/library/forms" : `/ai/${b.id}`;
     return { id: b.id, operation: b.operation, label: LABEL[b.operation] ?? b.operation, scope: b.operation === FINDER_OPERATION ? b.scopeLabel.split("|")[1] ?? null : b.scopeLabel, status: st.code, status_word: st.word, message: plainRunText(b.message),
       step: cur ? { n: cur.n, m: steps.length, label: cur.label } : null, steps, started_at: b.startedAt, finished_at: b.finishedAt, elapsed_ms: (b.finishedAt ?? new Date()).getTime() - b.startedAt.getTime(), usual_ms: usual.ms, last_activity_at: new Date(last),
-      usd: { spent: Math.round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0) * 100) / 100, worst: b.worstCaseUsd, usual: usual.usd, about: b.operation === FINDER_OPERATION ? aboutUsd(b.expectedUsd, usual.usd, b.mode === "LIVE") : usual.usd }, can_stop: ACTIVE.includes(b.status) && !b.cancelRequested,
+      usd: { spent: Math.round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0) * 100) / 100, worst: b.worstCaseUsd, usual: usual.usd, about: b.operation === FINDER_OPERATION ? statedUsd(b, usual.usd).about : usual.usd }, can_stop: ACTIVE.includes(b.status) && !b.cancelRequested,
       error: failedStep ? { what: b.message && plainRunText(b.message) !== failedStep.message ? plainRunText(b.message)! : `${failedStep.label}: see the step above.`, next: this.nextOf(b, href) } : null, href };
   }
 
