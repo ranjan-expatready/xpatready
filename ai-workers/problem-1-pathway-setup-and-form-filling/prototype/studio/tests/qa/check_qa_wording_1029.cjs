@@ -20,6 +20,7 @@ const FLAGS = [
   ["one-plural", /\b1 (?!of\b)[a-z]+(?:s)\b(?! ago)/],
   ["placeholder", /later screen|coming soon|not yet built|TODO|lorem|placeholder|\bTBD\b/i],
   ["§4 Not word", /\b(?:canonical|composition|combo|predicate|participants|snapshot|segment|stream|N\/A|logical section|box map|AI output|Archive|Deactivate|Trash)\b/i],
+  ["retired role word (P-154)", /\bagents?\b/i],
   ["system", /\b(?:undefined|null|NaN|\[object|sha256|uuid|json|endpoint|payload|enum)\b/i],
 ];
 const hits = [];

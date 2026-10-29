@@ -23,7 +23,7 @@ It was judged against PRODUCT §4 (words on screen) and the Lead's list: jargon 
   * Releases and Activity;
   * the AI field-map job page;
   * the case officer page.
-* That gives 10 rows in BUGS.md: QA-39 raised to Major and updated, and QA-71 to QA-80 new. 6 are Major and 4 Minor; none is Blocker or Critical. Each row has the exact text, the fix in plain words and the lane.
+* That gives 12 rows in BUGS.md: QA-39 raised to Major and updated, QA-71 to QA-80 new, and QA-81 (the word "agent", P-154) and QA-82 (questions that read as definitions) added on the Lead's note. 9 are Major and 4 Minor; none is Blocker or Critical. Each row has the exact text, the fix in plain words and the lane.
 * No text was cut off by its box and no page threw an error at either width. Two pages had layout problems: the AI work detail page's card starts out of line with every other page, and the Fields table's last column is cut off at 1024 px.
 
 ## Findings by screen
@@ -39,7 +39,34 @@ It was judged against PRODUCT §4 (words on screen) and the Lead's list: jargon 
 | Combination header, Overview, Questionnaires | QA-77 | Minor | runtime | "Applicant, Spouse or partner (travelling)" against "Principal applicant, Spouse or partner" on the same combination |
 | Combination › Forms, Documents | QA-78 | Minor | runtime | "Online (later wave)"; "No form find yet … Nothing was spent yet" on a Live combination; file names; capitals in IRCC titles; "provided by other", "Base" |
 | Combination › Overview | QA-79 | Minor | screens | "Release 1 on today 7:53 a.m."; "39 · 64" unlabelled; tiles with words and no number; "Forms" linked twice |
+| Case page, Activity, Corporate panel, Documents | QA-81 | Major | runtime, screens | "agent view", "(entered in the agent view)", "The firm (agent)" (P-154) |
+| Questionnaires, Preview, client questionnaire | QA-82 | Major | forms, screens | Questions read as field definitions |
 | Shell; AI work detail; Held file | QA-80 | Minor | screens | One browser-tab title for every page; "Acting as … Super A…" cut at 1024; one role with three names; a page with no heading, out of line; held badge "Waiting for a second person" while the uploader must act |
+
+## Added on the Lead's note (P-154, founder 29 Oct)
+**QA-81 (Major): "agent" is still on screen.** It is retired as a role word. There are six places on main f7cb40d9; "Agent enters" appears in none of them, nor anywhere else on main.
+
+| Where a person sees it | Exact text | Should read | Source | Lane |
+|---|---|---|---|---|
+| Case page (officer), the line under an answer | "agent view · Case officer · …" | "case view · …" | `web/src/runtime/questionnaire.tsx:484` | runtime |
+| Case page, why an answer is not confirmed | "Waits for the officer's "Confirm section" (entered in the agent view)" | "(entered by the case officer)" | `engine/runtime/case.ts:47` | runtime |
+| A client opening the officer's view | 403 "The agent view is for the case officer." | "The case view is for the case officer." | `api/src/runtime.ts:182` | runtime |
+| Activity | "… answered … on case … (agent view)" | "(case view)" | `api/src/runtime.ts:222` | runtime |
+| Immigration programs, Corporate panel | "On the worker's case the agent picks "relies on employer case" …" | "the case officer picks" | `web/src/pages/programs.tsx:459` | screens |
+| Combination › Documents, "Provided by" | "The firm (agent)" | "The firm (case officer)" | `web/src/pages/configuration.tsx:89` | screens |
+
+The internal mode name `agent` (`?mode=agent`, `Mode = "sqr" | "agent"`) is never shown, so I raised no row for it.
+
+**QA-82 (Major): the Questions column shows field definitions, not client questions.** This affects:
+* the Questionnaires tab's "Question" column;
+* Preview ("What Principal applicant is asked");
+* the client's questionnaire.
+
+They read like "Official language (English or French) in which the person wants to receive service" and "Whether the person the form is about is the principal applicant, rather than the principal applicant's spouse …".
+
+The cause is data, not layout. All 164 question placements in the sample have no question wording, so `engine/runtime/questionnaires.ts:53` falls back to the field label, which is written as a definition.
+
+The fix is a plain question per placement ("Which official language do you want IRCC to use with you?"), with the definition only under Details. Owner: forms (W1-10) for the wording, screens (S6) for showing it.
 
 **Read and found clean:**
 * Program structure (both types), apart from one word: "release or discard them first". "Discard" is not a §4 word; Delete is. I'm noting it here rather than as a row.
