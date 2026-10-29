@@ -6,10 +6,10 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: after-merge S3 Start setup on main f7cb40d9 (PR #76, with DV-bb-1, 6b, 6c); report `qa/reports/2026-10-29-after-merge-s3.md`
-stage: TESTING
-owner: qa
-next_action: (1) finish S3 after-merge on isolated qa_s3 :4477 (merged suites replayed; rerun the order-dependent ones after a reset; new `check_qa_am_s3_1029.cjs`); (2) the coverage rerun on S4+S5 when the Mac is quiet; (3) QA-69 and QA-48 when their fixes merge; (4) Lead answers: C1.8 copies per line, QA-69 rule. Read the Handover section first.
+current_item: after-merge S3 Start setup on main f7cb40d9; report `qa/reports/2026-10-29-after-merge-s3.md`
+stage: WAITING
+owner: Lead
+next_action: (1) the coverage rerun on S4+S5 when the Mac is quiet (report `2026-10-29-coverage-s4-s5.md`); (2) QA-70, QA-69 and QA-48 when their fixes merge; (3) Lead answers: QA-70 focus ring, C1.8 copies per line, QA-69 rule. Read the Handover section first.
 blocked_by: none
 updated: 2026-10-29
 
@@ -56,7 +56,6 @@ updated: 2026-10-29
   9. S4: the finder has no button until S5 slice 3: test it through `POST /combinations/:id/forms/find/plan` then `/find` (Rules or Replay only, never `live`); only Visitor visa (`vv.single`) has saved answers. No product route makes an unused, unapproved form, so Delete is walked on a seeded form (the builders' own way). The guard hook blocks `for` loops and heredocs: put them in a scratchpad script.
 
 ## Log (last 8 lines)
-- 2026-10-27 · Lead 23:59: report on 027174d read; QA-51/52/54 → screens, QA-53 → forms (shared read guard after S4). Founder: hand over tonight. Handover section written; WAITING for S4, then the visual-system slice. US$0.
 - 2026-10-28 · Lead brief (after PR #66). after-merge on main dccd87e: copy bound to qa, main synced (conflicts took main's Delete words); CI 42/42 on the same tree; headed walk + `check_qa_am_r3_1028.cjs` 59/69 ×2; `check_qa_am_1027.cjs` moved to round 3 (51/55), `check_qa_am_fix_1027.cjs` 13/14; new QA-60 Major (QA-44 back in the Add pop-up, cut name saved), QA-55–59 Minor; QA-48 narrowed to Minor (Retire/Restore from the row works); QA-51, 52, 54 closed; journey 7/10 Program structure, 9/10 Immigration programs; suites 40/41 under coverage (p2 guard, known) + CI 42/42; coverage api 97.21/82.75, engine 99.38/89.08 (floor 97/82 · 99/89). US$0.
 - 2026-10-28 · Lead message (after PR #65). after-merge on main 06a8fc30 (S4): CI 47/47 on the same tree; headed walk + `check_qa_am_s4_1028.cjs` 55/61 ×2, `check_qa_s4_filing.ts` 6/9; r3 64/69 (QA-57 closed), fix 13/14; new QA-61–64 Minor (QA-64 Conflict: form retire waits for the release, P-116 amended says approval); Load sample sets 2 of 7 (brief said 5 of 7: question); journey 8/10; under coverage 41/46 (p2 guard; three M7 Stop steps clash with the preload; a lost server), api 96.88/81.69 and engine 99.44/88.96 on that incomplete run, not judged: clean coverage rerun owed. US$0.
 - 2026-10-28 · Lead brief (after PR #69). after-merge on main 38722933 (qa_r69 :4471): CI 48/48 on the same app code; QA-53 closed (GETs incl. HEAD/case/slash variants 401/403; fix 14/14); Form library lifecycle walked headed (panel, reason, toast, Withdraw); resend pass/fail paths good; R69-1 → QA-66 and R69-2 → QA-67 reproduced, R69-3 not reproduced; new QA-65 (`/releases` + three POST reads open to nobody, chain to a file download), QA-68 (resend drops Name/Meaning); r3 68/69, filing 6/9, s4 check stale after #69; new `check_qa_am_r69_1028.cjs` 21/33; graph G3 1 (tested route, not parsed); coverage not rerun. US$0.
@@ -64,3 +63,4 @@ updated: 2026-10-29
 - 2026-10-29 · Lead message (PR #75, main db5e0208): coverage paused; DV-doc-1: 13 bugs closed by replay, 4 open; C2.3, C5.3, C3.7, C11.17, C11.11 Works; C1.8, C11.15 Partial (no copies per line); `check_qa_dv_1029.cjs` 24/25.
 - 2026-10-29 · stop hook: BUGS-CLOSED over 12 KB; 37 rows closed up to 26 Oct moved to `history/qa-bugs-closed-to-2026-10-26.md`; suite screenshots removed.
 - 2026-10-29 · Lead message (PR #76, main f7cb40d9): after-merge S3 started on qa_s3 :4477; DV-doc-1 already done.
+- 2026-10-29 · after-merge S3 (f7cb40d9): ready; all merged suites green (run as run-suites runs them); new `check_qa_am_s3_1029.cjs` 37/39; QA-70 new (Major, menu links show no focus ring, screens); C11.2 Works, C11.15 Partial; G5 back to 0.

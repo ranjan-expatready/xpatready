@@ -133,12 +133,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await openLib(p);
   // PR #69: one written action per row (the ⋯ menu is gone) and a side panel instead of a dialog.
   const act = (code) => rowOf(p, code).locator("button", { hasText: /^(Retire|Delete|Restore|Withdraw)/ }).first();
-  step("P-116: a used form (IMM 5257) offers Retire, never Delete", /^Retire/.test((await act("IMM 5257").innerText()).trim()), (await act("IMM 5257").innerText()).trim());
+  step("C3.7 P-116: a used form (IMM 5257) offers Retire, never Delete", /^Retire/.test((await act("IMM 5257").innerText()).trim()), (await act("IMM 5257").innerText()).trim());
   await act("IMM 5257").click();
   const dlg = p.locator("aside[aria-label]"); await dlg.waitFor();
   await dlg.getByText(/Visitor visa|combination/).first().waitFor({ timeout: 8000 }).catch(() => {});
   const dl = (await dlg.innerText()).replace(/\s+/g, " ");
-  step("P-116: the retire dialog shows where the form is used before any action", /Visitors › Visitor visa|Visitor visa/.test(dl), dl.slice(0, 220));
+  step("C3.7 P-116: the retire dialog shows where the form is used before any action", /Visitors › Visitor visa|Visitor visa/.test(dl), dl.slice(0, 220));
   step("QA-64 P-116 amended: the retire dialog says when it takes effect as the decision says (a library retire takes effect at approval)", !/next release carries it/.test(dl), dl.match(/[^.]*release[^.]*\./)?.[0]);
   await axe(p, "Retire dialog at 1440 px");
   await dlg.locator("textarea").fill("Replaced by a newer edition (qa walk)"); await dlg.getByRole("button", { name: "Send for approval" }).click(); await wait(1500);

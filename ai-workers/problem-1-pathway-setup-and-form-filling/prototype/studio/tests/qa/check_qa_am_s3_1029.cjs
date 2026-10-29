@@ -102,6 +102,10 @@ const TECH = /\b(P|D)-\d+\b|nodeKey|undefined|null\b|\[object/;
     await p.screenshot({ path: path.join(SHOTS, `landing-${w}.png`), fullPage: true });
     await p.goBack(); await p.waitForLoadState("networkidle");
     step(`C11.15 (${w}): Back returns to Immigration programs; the card now says Set up / opens the setup, not Start setup`, !/\/c\//.test(p.url()) && !(await p.locator(`[data-start-setup][aria-label="Start setup: ${NAME[w]}"]`).count()), p.url().replace(BASE, ""));
+    // QA-70: a sidebar link reached by Tab shows where the focus is (WCAG 2.4.7); the app sets :focus-visible { outline: none }
+    await p.locator("nav a", { hasText: "Program structure" }).first().focus(); await p.keyboard.press("Shift+Tab"); await p.keyboard.press("Tab");
+    const ring = await p.evaluate(() => { const a = document.activeElement; const cs = getComputedStyle(a); return { ok: cs.boxShadow !== "none" || cs.outlineStyle !== "none", what: `${a?.tagName} ${a?.textContent?.trim().slice(0, 30)}` }; });
+    step(`QA-70 (${w}): a sidebar link focused by the keyboard shows a focus ring`, ring.ok, ring.what);
     // DV-bb-6c: the Program structure footer
     await p.goto(`${BASE}/structure`); await p.waitForLoadState("networkidle");
     const foot = await p.locator("main").innerText();
