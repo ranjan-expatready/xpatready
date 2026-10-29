@@ -7,10 +7,10 @@
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: W1-questions-and-documents (W1-15, P-130–P-132)
-current_slice: slice 2 (Questionnaires tab) for merge at ff4d9cce; slice 3 (Documents tab) BUILT at b5c46535, on hold (Lead, 29 Oct): not handed back, full suites not run on it
-stage: CHECK
-owner: Lead
-next_action: Lead: check and merge slice 2 at ff4d9cce (full run-suites 64/64 there). Then a fresh runtime session (founder's rule): sync main, run the full suites on the slice 3 commit, and hand slice 3 back as EARLY-LOOK (see Handover 'Slice 3').
+current_slice: slice 2 (Questionnaires tab) with the Lead as PR #80 at ff4d9cce; slice 3 (Documents tab) with open points (1)-(3) settled at dfd1a018
+stage: BUILD
+owner: Builder
+next_action: Builder (fresh session): full run-suites running on dfd1a018 (open point 3 fixed: published view changes only on release); then EARLY-LOOK to the Lead.
 blocked_by: none
 updated: 2026-10-29
 
@@ -25,6 +25,7 @@ updated: 2026-10-29
 * **Learned, not written elsewhere:** the guard hook (`merge-guard.sh`) refuses commands that have variable expansion, `eval`, `$(…)` or words like "merge": put commands in a scratchpad script and run `zsh <file>`. Test runs rewrite other lanes' screenshots, `product/qa/reports`, `prototype/p2` ledgers and `studio/evidence`: commit only this lane's files by path, then `git checkout --` and `git clean` those folders. The qa checks `tests/qa/check_qa_am_1027.cjs` and `check_qa_explore_1025.cjs` stop on this branch at main's older "Forms and coverage" button (S5 replaced it): qa moves them when S5 merges.
 
 ## Log (last 10 lines)
+- 2026-10-29 · Builder (Mac): fresh runtime session (Lead's move): open point 3 fixed in engine/snapshot.ts (a draft removal stays out of the published view until a release; fact sources and placements have none), open point 1 said on the Documents tab, (2) information only; check_w115_slice3 31/31, browser 32/32, check_engine 38/38 (dfd1a018, pushed); full suites running. AI US$0.
 - 2026-10-29 · Builder (Mac): slice 3 (Documents tab) built at b5c46535 (check_w115_slice3 26/26, browser 31/31) before the Lead's hold; full suites not run on it; handover written for a fresh session; slice 2 at ff4d9cce with the Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): slice 2 FIX with S2-1, P-154 (Agent retired: Case officer, case view), P-155(3) (case officer with a written reason; one rule agentRefusal; fact_source.source_reason); synced main 170659bc; full run-suites 64/64 on ff4d9cce; slice-1 DV test fix 37e66a2e on the sync branch; CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): founder OK on slice 2 with S2-1: per-person line uses slice 1's sources (chips' numbers); Agent lock kept, now one rule (engine/sources.ts agentRefusal); check_w115_slice2 29/29, browser 48/48, s5 slice2 61/61, slice1 47/47 (b33b941b); full suites running; slice 3 plan written. AI US$0.
@@ -34,4 +35,3 @@ updated: 2026-10-29
 - 2026-10-29 · Builder (Mac): founder OK on W1-15 slice 1; Lead check W1 (Review lines in words), W2 (Undo refusal words), W3 (no decision codes) fixed with a pass and a fail test each (check_w115_slice1 47/47, check_engine 38/38); full suites next. AI US$0.
 - 2026-10-29 · Builder (Mac): Lead message (P-147 board v2 agreed) applied: fit check of slice 1 against board v2 in plan.md (no data change; slice 2 adds row status and Only if, role on release checks, bulk route with one Undo per batch, ⋯ menu and drawer); EARLY-LOOK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): applied Lead message (synced main db5e0208; outside review DV-bb-3: the picker links to the Form library; DV-bb-6a: the person role says Child, the Family sponsorship category keeps 'Dependent child'); check_dv_backbone_browser 8/8; full run-suites 59/59 on a506048d; by-products restored; EARLY-LOOK, owner Lead. AI US$0.
-- 2026-10-29 · Builder (Mac): the five suites that failed in the full run pass alone (slice3 browser 35/35, p80 guard 41/41 with the project's Node, launch paths 39/39, s4 runs 90/90, orchestration 22/22); W1-15 slice 1 → EARLY-LOOK, owner Lead; by-products restored. AI US$0.
