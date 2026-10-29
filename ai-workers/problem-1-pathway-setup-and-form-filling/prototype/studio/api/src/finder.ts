@@ -111,6 +111,8 @@ type GuideValue = { url: string; title: string | null; candidates?: Candidate[] 
 type FinderPlan = Awaited<ReturnType<Finder["plan"]>> & { result?: FinderResult };
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 const countsOf = (d: unknown) => (d && typeof d === "object" ? (d as { done?: number; total?: number }) : null);
+/** Outside review 29 Oct: a step's Details (the service's request id) for whoever opens them; never in the sentence. */
+export const detailsOf = (d: unknown): string | null => (d && typeof d === "object" && typeof (d as { details?: unknown }).details === "string" ? (d as { details: string }).details : null);
 
 /** Where a combination sits, by names (the AI's only known fact besides the pages). */
 async function trailOf(db: Db, combinationId: string): Promise<{ id: string; workspaceId: string; label: string; trail: string[] }> {
@@ -287,7 +289,9 @@ export class Finder implements OnModuleInit {
       // QA-89: the checker round is sent only when the first round answered; a failed first round ends the pick here.
       const k: RoundOut<GuideOut> = d.ok ? await this.aiRound<GuideOut>("find_guide", true, trail, combinationKey, [inv], mode, wanted, batchId) : { ok: false, costUsd: 0, reason: d.reason };
       const cost = round2(d.costUsd + k.costUsd);
-      if (!d.ok || !k.ok) return { status: (!d.ok && d.blocked) || (!k.ok && k.blocked) ? "BLOCKED" : "NEEDS_PERSON", message: `${mode === "live" ? "AI could not pick the page: " : ""}${(!d.ok ? d.reason : !k.ok ? k.reason : "").replace(/\.+\s*$/, "")}. Choose the application page.`, costUsd: cost, detail: { candidates: sure.candidates }, value: { url: "", title: null, candidates: sure.candidates } };
+      // Outside review 29 Oct: the failed round's request id goes to this step's Details, as the later steps' do.
+      const details = !d.ok ? d.details : !k.ok ? k.details : undefined;
+      if (!d.ok || !k.ok) return { status: (!d.ok && d.blocked) || (!k.ok && k.blocked) ? "BLOCKED" : "NEEDS_PERSON", message: `${mode === "live" ? "AI could not pick the page: " : ""}${(!d.ok ? d.reason : !k.ok ? k.reason : "").replace(/\.+\s*$/, "")}. Choose the application page.`, costUsd: cost, detail: { candidates: sure.candidates, ...(details ? { details } : {}) }, value: { url: "", title: null, candidates: sure.candidates } };
       const byTitle = (t: string | null) => (t ? idx.packages.find((p) => sameText(p.title) === sameText(t)) : undefined);
       const a = byTitle(d.output.package_title), c = byTitle(k.output.package_title);
       // At most 5 other pages from each round, kept in code (engine/rounds.ts otherPages): the provider refuses maxItems.
@@ -608,7 +612,7 @@ export class Finder implements OnModuleInit {
     if (!b || b.operation !== FINDER_OPERATION) throw problem(404, "Not found", "This form-finder run no longer exists (the demo workspace may have been reset).");
     const plan = b.plan as unknown as FinderPlan;
     const spent = round2(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0));
-    const steps = STEPS.map((s, i) => { const j = b.jobs.find((x) => x.kind === s.kind); return { n: i + 1, kind: s.kind, label: s.label, status: j?.status ?? "WAITING", message: j?.message ?? null, usd: j?.costUsd ?? 0, started_at: j?.status === "WAITING" ? null : j?.startedAt ?? null, finished_at: j?.finishedAt ?? null, counts: countsOf(j?.detail)?.total ? { done: countsOf(j!.detail)!.done ?? 0, total: countsOf(j!.detail)!.total!, unit: "forms" } : null }; });
+    const steps = STEPS.map((s, i) => { const j = b.jobs.find((x) => x.kind === s.kind); return { n: i + 1, kind: s.kind, label: s.label, status: j?.status ?? "WAITING", message: j?.message ?? null, usd: j?.costUsd ?? 0, started_at: j?.status === "WAITING" ? null : j?.startedAt ?? null, finished_at: j?.finishedAt ?? null, details: detailsOf(j?.detail), counts: countsOf(j?.detail)?.total ? { done: countsOf(j!.detail)!.done ?? 0, total: countsOf(j!.detail)!.total!, unit: "forms" } : null }; });
     const current = steps.find((s) => s.status === "RUNNING") ?? null;
     return { id: b.id, label: plan.operation_label, combination: plan.combination, mode: plan.mode, status: b.status, message: b.message, step: current ? { n: current.n, m: steps.length, label: current.label } : null, steps,
       started_at: b.startedAt, finished_at: b.finishedAt, elapsed_ms: (b.finishedAt ?? new Date()).getTime() - b.startedAt.getTime(), usd: { spent, worst: b.worstCaseUsd }, result: plan.result ?? null, sample_note: "Which forms apply is Sample until the immigration expert confirms." };

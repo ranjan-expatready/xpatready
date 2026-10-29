@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
 import { MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, RUN_CAP_USD } from "../../../p2/policy.ts";
+import { costBesideLimit, isProviderLimit } from "../../engine/ai-run.ts";
 import { editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, replayPattern, type SavedRun } from "../../engine/rounds.ts";
 import { PROTOTYPE, SOLUTION } from "./core.ts";
 import type { Sources } from "./sources.ts";
@@ -43,6 +44,14 @@ export type RoundContext = { trail: string; contextKey: string; inputs: { file: 
 /** Lead 29 Oct (G4): may a form's run number `attempt` be retried? A live form has one budget of paid attempts across its
  *  runs (p2/policy.ts), each run counted at the most it could use; a stub run costs nothing and is never counted. */
 export const paidRetryAllowed = (mode: string, attempt: number) => mode !== "LIVE" || (attempt + 1) * MAX_ATTEMPTS <= MAX_PAID_ATTEMPTS_PER_FORM;
+
+/** Outside review 29 Oct: the budget holds per form across batches, not only for retries inside one. The live field-map
+ *  runs of one form (its file) that may have used paid attempts: a run with a cost (its own or reserved at its worst case),
+ *  or one still running. A run that sent nothing (a stub refusal, nothing to draft, all at US$0) is not counted. */
+export const paidRunsOf = (jobs: { kind: string; mode: string; status: string; costUsd: number | null }[]) =>
+  jobs.filter((j) => j.kind === "field_map" && j.mode === "LIVE" && ((j.costUsd ?? 0) > 0 || (j.costUsd === null && j.status === "RUNNING"))).length;
+/** May a form that already used `paidRuns` live runs start one more? */
+export const paidRunAllowed = (paidRuns: number) => (paidRuns + 1) * MAX_ATTEMPTS <= MAX_PAID_ATTEMPTS_PER_FORM;
 
 /** QA-87: a round's run cap when the step names none: both attempts of its worst case fit (inputs and prompt measured in
  *  bytes, as the ledger bounds them), at least US$1, at most the run cap. */
@@ -139,6 +148,12 @@ export class StepRunner {
     // Audit 29 Oct: a refused or busy attempt costs US$0, but an earlier attempt of the same run (a timeout, a dropped
     // connection) stays counted at its worst case; then the run's recorded cost is shown, never "nothing was charged".
     const charged = cost > 0 ? `; an earlier attempt stays counted at US$${cost.toFixed(2)}` : "";
+    // Outside review 29 Oct: the usage limit is a 400 too, so it is found before "our setup error"; only the refused
+    // attempt is free, an earlier one counted at its worst case stays counted.
+    if (rec.drafting_run?.status !== "completed" && isProviderLimit(rec)) {
+      const kept = costBesideLimit(rec);
+      return { ok: false, blocked: true, costUsd: kept, reason: `The AI provider's usage limit refused the call before any processing${kept > 0 ? `; an earlier attempt stays counted at US$${kept.toFixed(2)}` : ": nothing was charged"}. Use saved AI answers or rules only, or try later`, ...withDetails };
+    }
     if (rec.drafting_run?.status !== "completed" && attempts.some((a) => a.outcome === "refused_by_provider")) {
       console.warn(`${step.kind} ${jobId}: the AI service refused the request:`, attempts.map((a) => a.error ?? "").join(" | ").slice(0, 600));
       return { ok: false, costUsd: cost, reason: `The AI service refused the request (our setup error)${charged || "; nothing was charged"}`, ...withDetails };
@@ -153,7 +168,8 @@ export class StepRunner {
     }
     if (rec.drafting_run?.status !== "completed" || rec.contract_valid !== true || typeof rec.raw_output !== "string") {
       const limit = /usage limit/i.test(JSON.stringify(rec.drafting_run?.attempts ?? []));
-      return { ok: false, blocked: limit, costUsd: limit ? 0 : cost, reason: limit ? "The AI provider's usage limit refused the call before any processing: nothing was charged." : `The AI answer could not be used (${rec.drafting_run?.status ?? "no status"}${rec.output_errors ? ": it did not match the expected shape" : ""}). ${nothing}` };
+      const kept = limit ? costBesideLimit(rec) : cost;
+      return { ok: false, blocked: limit, costUsd: kept, reason: limit ? `The AI provider's usage limit refused the call before any processing${kept > 0 ? `; an earlier attempt stays counted at US$${kept.toFixed(2)}.` : ": nothing was charged."}` : `The AI answer could not be used (${rec.drafting_run?.status ?? "no status"}${rec.output_errors ? ": it did not match the expected shape" : ""}). ${nothing}` };
     }
     let output: T; try { output = JSON.parse(rec.raw_output); } catch { return { ok: false, costUsd: cost, reason: `The AI answer was not readable. ${nothing}` }; }
     if (!step.shapeOk(output)) return { ok: false, costUsd: cost, reason: `The AI answer did not have the expected shape. ${nothing}` };

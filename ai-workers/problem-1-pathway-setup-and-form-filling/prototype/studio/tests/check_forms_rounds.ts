@@ -10,7 +10,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { editionContextKey, editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, MAX_OTHER_PAGES, newestFirst, otherPages, replayPattern, savedRunKey, type SavedRun } from "../engine/rounds.ts";
-import { paidRetryAllowed, RUNS, sizedBudgetUsd, StepRunner, worstRoundUsd, type AiStep } from "../api/src/rounds.ts";
+import { paidRetryAllowed, paidRunAllowed, paidRunsOf, RUNS, sizedBudgetUsd, StepRunner, worstRoundUsd, type AiStep } from "../api/src/rounds.ts";
 import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, MAX_REQUEST_BYTES, RUN_CAP_USD, WAVE1_CAP_USD } from "../../p2/policy.ts";
 import { BudgetExceeded, SpendLedger } from "../../p2/ledger.ts";
 import { knownOk } from "../../p2/launch.ts";
@@ -123,6 +123,14 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: mixedRefused }) })));
   ok("audit fail: a dropped call then a refused retry keeps the counted US$0.22 and never says \"nothing was charged\"", !r.ok && r.costUsd === 0.22 && !/nothing was charged/.test(r.reason) && /refused the request/.test(r.reason), r);
   ok("audit pass: a refusal with nothing counted still says \"nothing was charged\" at US$0 (refusedRec above)", (await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: refusedRec }) })))).costUsd === 0);
+  // Outside review 29 Oct: the usage limit (a 400) is found before "our setup error", and an earlier counted attempt stays.
+  const limitText = '400 {"type":"error","error":{"type":"invalid_request_error","message":"You have reached your specified API usage limits."}}';
+  const limitAfter = record({ drafting_run: { status: "timed_out", usage: { cost_usd: 0.22 }, attempts: [{ n: 1, outcome: "timed_out", error: "Request timed out.", worst_usd: 0.22 }, { n: 2, outcome: "refused_by_provider", error: limitText, request_id: "req_lim2", cost_usd: 0, worst_usd: 0.22 }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: limitAfter }) })));
+  ok("review fail: a timeout then the usage limit is BLOCKED by the limit (never \"our setup error\") and keeps the counted US$0.22", !r.ok && r.blocked === true && r.costUsd === 0.22 && /usage limit/.test(r.reason) && !/setup error|nothing was charged/.test(r.reason) && r.details === "Request req_lim2", r);
+  const limitAlone = record({ drafting_run: { status: "provider_error", usage: { cost_usd: 0 }, attempts: [{ n: 1, outcome: "refused_by_provider", error: limitText, cost_usd: 0, worst_usd: 0.22 }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: limitAlone }) })));
+  ok("review pass: the usage limit on its own is BLOCKED at US$0, \"nothing was charged\"", !r.ok && r.blocked === true && r.costUsd === 0 && /usage limit.*nothing was charged/.test(r.reason), r);
   // Demo 29 Oct (P-153): "at most 5 other pages from each guide round" lives in code, since the schema may not say maxItems.
   ok("demo bug pass: up to 5 other pages are kept as given", JSON.stringify(otherPages(["a", "b", "c"])) === JSON.stringify(["a", "b", "c"]));
   ok("demo bug fail: an answer with 8 other pages keeps only the first 5; non-titles and a missing list give nothing", otherPages(["1", "2", "3", "4", "5", "6", "7", "8"]).length === MAX_OTHER_PAGES && MAX_OTHER_PAGES === 5 && otherPages([1, null, "x"]).join() === "x" && otherPages(undefined).length === 0);
@@ -165,6 +173,12 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   ok("G4 pass: the policy states the paid attempts per form (4: two per run, so one paid retry); a live first run may be retried once", MAX_PAID_ATTEMPTS_PER_FORM === 4 && MAX_ATTEMPTS === 2 && paidRetryAllowed("LIVE", 1), { MAX_PAID_ATTEMPTS_PER_FORM, MAX_ATTEMPTS });
   ok("G4 fail: a live form's second retry is refused (it would pass 4 paid attempts; before, 6 were possible)", !paidRetryAllowed("LIVE", 2) && !paidRetryAllowed("LIVE", 3));
   ok("G4: a stub run costs nothing and is never held to the paid budget", paidRetryAllowed("STUB", 2) && paidRetryAllowed("REPLAY", 5));
+  // Outside review 29 Oct: the budget holds per form across batches (Draft again), counted from the form's own runs.
+  const run = (over: Partial<{ kind: string; mode: string; status: string; costUsd: number | null }> = {}) => ({ kind: "field_map", mode: "LIVE", status: "FAILED", costUsd: 0.4, ...over });
+  ok("G4 per form pass: a form with one paid run may start one more (2 runs × 2 attempts = 4)", paidRunAllowed(paidRunsOf([run()])) && paidRunAllowed(paidRunsOf([])));
+  ok("G4 per form fail: a form with two paid runs, in any batches, may not start a third", !paidRunAllowed(paidRunsOf([run(), run({ status: "COMPLETED" })])), paidRunsOf([run(), run({ status: "COMPLETED" })]));
+  ok("G4 per form: runs that sent nothing (US$0), stub and reuse steps are not counted; a running call is", paidRunsOf([run({ costUsd: 0 }), run({ mode: "STUB" }), run({ kind: "reuse_map" }), run({ costUsd: null, status: "QUEUED" })]) === 0 && paidRunsOf([run({ costUsd: null, status: "RUNNING" })]) === 1);
+  ok("G4 per form: the new batch's plan and the retry both read the form's runs (ai.ts)", (readFileSync(join(STUDIO, "api", "src", "ai.ts"), "utf8").match(/paidRunAllowed\(paidRunsOfFile\(/g) ?? []).length === 2);
   ok("G4: the field-map plan states the budget before the run (ai.ts and the launch dialog's cost line)", /max_paid_attempts_per_form: MAX_PAID_ATTEMPTS_PER_FORM/.test(readFileSync(join(STUDIO, "api", "src", "ai.ts"), "utf8")) && /paid attempts per form, a retry included/.test(readFileSync(join(STUDIO, "web", "src", "components", "ai-launch.tsx"), "utf8")));
   ok("G4: every AI step reads its attempts from the policy (no step hard-codes its own)", ["rounds.ts", "people-ai.ts", "sources.ts"].every((f) => /max_attempts: MAX_ATTEMPTS/.test(readFileSync(join(STUDIO, "api", "src", f), "utf8"))));
 

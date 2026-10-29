@@ -30,9 +30,20 @@ export type RunEnvelope = {
   };
 };
 
+/** The provider's account usage limit refused an attempt (HTTP 400 "usage limits"). Outside review 29 Oct: read per
+ *  attempt, so a limit after an earlier attempt that timed out is still found (the joined text began with the timeout). */
+const limitRefusal = (a: { error?: string }) => /^400\b/.test(String(a.error ?? "").trim()) && /usage limits?/i.test(String(a.error ?? ""));
 export function isProviderLimit(env: RunEnvelope): boolean {
-  const errs = (env.drafting_run?.attempts ?? []).map((a) => String(a.error ?? "")).join(" ");
-  return /usage limits?/i.test(errs) && /^400/.test(errs.trim());
+  return (env.drafting_run?.attempts ?? []).some(limitRefusal);
+}
+/** What a run blocked by the usage limit still counts: its other attempts at their recorded cost, or their worst case
+ *  when the cost is unknown (p2/launch.ts adds them the same way); the refused attempt itself is free (AIW-D273). */
+export function costBesideLimit(env: RunEnvelope): number {
+  const attempts = (env.drafting_run?.attempts ?? []) as { error?: string; cost_usd?: number; worst_usd?: number }[];
+  // A record whose attempts carry no costs (an older or hand-made record): its run total, which p2/runner.ts gives a
+  // refused attempt at US$0.
+  if (!attempts.some((a) => a.cost_usd !== undefined || a.worst_usd !== undefined)) return attempts.some((a) => !limitRefusal(a)) ? Number(env.drafting_run?.usage?.cost_usd ?? 0) : 0;
+  return Math.round(attempts.filter((a) => !limitRefusal(a)).reduce((s, a) => s + Number(a.cost_usd ?? a.worst_usd ?? 0), 0) * 1e6) / 1e6;
 }
 
 /** Boxes the AI answered, when its output can be read at all. */
@@ -65,7 +76,10 @@ export function explainRun(env: RunEnvelope): { status: "FAILED" | "BLOCKED"; me
   const rid = attempts.map((a) => a.request_id ?? /"request_id"\s*:\s*"([^"]+)"/.exec(a.error ?? "")?.[1]).filter(Boolean).pop();
   const details = [rid ? `Request ${rid}` : "", attempts.map((a) => a.error).filter(Boolean).pop() ?? ""].filter(Boolean).join(" · ").slice(0, 400) || undefined;
   const say = (status: "FAILED" | "BLOCKED", message: string) => ({ status, message, ...(details ? { details } : {}) });
-  if (isProviderLimit(env)) return say("BLOCKED", "Blocked by the AI provider: the account's usage limit refused the call before any processing. Nothing was drafted or billed.");
+  // Outside review 29 Oct: the refused attempt is free, but an earlier one counted at its worst case stays counted.
+  if (isProviderLimit(env)) return say("BLOCKED", costBesideLimit(env) > 0
+    ? `Blocked by the AI provider: the account's usage limit refused the call before any processing. Nothing was drafted; an earlier attempt stays counted (Cost ${usd(costBesideLimit(env))}).`
+    : "Blocked by the AI provider: the account's usage limit refused the call before any processing. Nothing was drafted or billed.");
   if (has("refused_input_too_large")) return say("FAILED", "The form is too large for one AI call, so nothing was sent or charged.");
   switch (run.status) {
     case "refused": return say("FAILED", `The AI declined to draft this form. Nothing was applied. Cost ${cost}.`);
