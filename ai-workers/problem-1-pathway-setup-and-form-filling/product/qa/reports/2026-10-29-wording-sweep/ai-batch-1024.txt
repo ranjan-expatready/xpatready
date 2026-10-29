@@ -1,0 +1,46 @@
+URL /ai/ea42bc93-86b0-4782-9bf5-a5b15ecb9b57 as user-A
+TITLE Product Studio · Expat Ready (prototype)
+H1 []
+HEADS []
+CUT []
+ERRORS []
+---
+All AI work
+
+Reading an uploaded PDF · imm5562e-copy.pdf
+
+Waiting for you · 2 s · US$0 · rules only, no AI
+
+Done:
+Rules check the file: a real PDF, not damaged, its fingerprintrules · US$0
+
+A PDF of 160 KB that opens; its fingerprint is recorded. US$0.
+
+Done:
+Read what this file is: rules first, AI only when the rules cannotrules · US$0
+
+Rules read it: IMM 5562 (07-2024) · SUPPLEMENTARY INFORMATION YOUR TRAVELS. No AI call was made.
+
+Done:
+Compare with canada.ca and find the guides that name itrules · US$0
+
+canada.ca shows IMM 5562 last updated 2024-07; this file is not the one its page links. Named by Guide 5289.
+
+Waiting for you:
+Add it to the libraryrules · US$0
+
+Held for source verification: IMM 5562 (07-2024) is not on the approved source list. It was not added to the library, attached, or sent to AI.
+
+Waiting for you
+
+Held: record the IRCC page it came from on To review; then a second person compares and approves it.
+Record the IRCC page it came from
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+author, review
+Use the dark theme
+Studio
+1 waiting for you
+Reading an uploaded PDF: imm5562e-copy.pdf

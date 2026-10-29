@@ -1,0 +1,3537 @@
+[
+ {
+  "page": "structure-corporate",
+  "w": 1440,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Global Talent Stream"
+ },
+ {
+  "page": "structure-corporate",
+  "w": 1440,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Global Talent Stream"
+ },
+ {
+  "page": "structure-corporate",
+  "w": 1440,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Global Talent Stream"
+ },
+ {
+  "page": "structure-corporate",
+  "w": 1440,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "1.1.3 Category Global Talent Stream"
+ },
+ {
+  "page": "programs",
+  "w": 1440,
+  "kind": "one-plural",
+  "match": "1 needs",
+  "line": "2 forms found · 1 ready to add from the library · 1 needs a draft"
+ },
+ {
+  "page": "programs",
+  "w": 1440,
+  "kind": "one-plural",
+  "match": "1 needs",
+  "line": "2 forms found · 1 ready to add from the library · 1 needs a draft"
+ },
+ {
+  "page": "programs-corporate",
+  "w": 1440,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Global Talent Stream"
+ },
+ {
+  "page": "programs-corporate",
+  "w": 1440,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Corporate and employers › Temporary residence › LMIA › Global Talent Stream › No sub-category, Not started"
+ },
+ {
+  "page": "programs-corporate",
+  "w": 1440,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Start setup: Global Talent Stream"
+ },
+ {
+  "page": "programs-list",
+  "w": 1440,
+  "kind": "one-plural",
+  "match": "1 needs",
+  "line": "2 forms found · 1 ready to add from the library · 1 needs a draft"
+ },
+ {
+  "page": "programs-list",
+  "w": 1440,
+  "kind": "one-plural",
+  "match": "1 needs",
+  "line": "2 forms found · 1 ready to add from the library · 1 needs a draft"
+ },
+ {
+  "page": "review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Configuration author · today 7:55 a.m."
+ },
+ {
+  "page": "review-all",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Configuration author · today 7:55 a.m."
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.application_date",
+  "line": "case.application_date\tDate the application is (or will be) submitted; reference date for calculated values\tdate\tnone · 0 form fields\tapplication details · staff"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.application_number",
+  "line": "case.application_number\tIRCC application file number of the case\ttext\tIMM 5476 · 1 form fields\tapplication details · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.application_type",
+  "line": "case.application_type\tKind of immigration application the case concerns (e.g. permanent residence, study permit extension)\ttext\tIMM 5476, IMM 5475 · 2 form fiel"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.applying_for_pgwp",
+  "line": "case.applying_for_pgwp\tWhether the application is for a post-graduation work permit\tyes_no\tnone · 0 form fields\tintended work · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.authorizes_release_to_designated_individual",
+  "line": "case.authorizes_release_to_designated_individual\tWhether the applicant authorizes IRCC/CBSA to release case information to a designated individual\tyes_no\tnone ·"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.country_where_applying",
+  "line": "case.country_where_applying\tCountry or territory from which the application is being made\tcountry\tIMM 1295 · 2 form fields\tresidence history · client questionna"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.employer_exempt_from_compliance_regime",
+  "line": "case.employer_exempt_from_compliance_regime\tWhether the employer is exempt from the Employer Compliance Regime\tyes_no\tnone · 0 form fields\tintended work · staff"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.employer_obtained_lmia",
+  "line": "case.employer_obtained_lmia\tWhether the employer obtained an LMIA from ESDC for the job\tyes_no\tnone · 0 form fields\tintended work · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.job_requires_licence_or_certification",
+  "line": "case.job_requires_licence_or_certification\tWhether the offered job requires a licence or certification (regulated job)\tyes_no\tnone · 0 form fields\tintended work"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.offer_from_nominating_province_employer",
+  "line": "case.offer_from_nominating_province_employer\tWhether the job offer is from an employer in the nominating province or territory\tyes_no\tnone · 0 form fields\tinten"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.offer_lmia_exempt",
+  "line": "case.offer_lmia_exempt\tWhether the job offer is exempt from the LMIA requirement\tyes_no\tnone · 0 form fields\tintended work · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "yes_no",
+  "line": "case.offer_submitted_via_imm5802\tWhether IRCC authorized the employer to submit the offer of employment on form IMM 5802\tyes_no\tnone · 0 form fields\tintended wo"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.release_authorization_action",
+  "line": "case.release_authorization_action\tWhether the person is granting or withdrawing authority for the immigration authorities to release information from their case"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.representative_form_action",
+  "line": "case.representative_form_action\tWhat this use-of-representative filing does: appoint, update contact details, cancel, cancel and replace, or withdraw\tcode\tIMM 5"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.service_language",
+  "line": "case.service_language\tOfficial language (English or French) in which the person wants to receive service\tcode\tIMM 1295 · 1 form fields\tapplication details · cli"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.subject_is_principal_applicant",
+  "line": "case.subject_is_principal_applicant\tWhether the person the form is about is the principal applicant, rather than the principal applicant's spouse, common-law pa"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.submission_office_location",
+  "line": "case.submission_office_location\tLocation (city/country) of the office where the application was submitted\ttext\tIMM 5475 · 1 form fields\tapplication details · st"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.submission_office_name",
+  "line": "case.submission_office_name\tName of the office where the application was submitted\ttext\tIMM 5475 · 1 form fields\tapplication details · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.uses_representative",
+  "line": "case.uses_representative\tWhether the applicant uses the services of an authorized representative\tyes_no\tnone · 0 form fields\trepresentative · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "document.in_english_or_french",
+  "line": "document.in_english_or_french\tWhether a submitted document is in English or French\tyes_no\tnone · 0 form fields\tsubmitted documents · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "document.translator_is_canadian_certified",
+  "line": "document.translator_is_canadian_certified\tWhether the translator of a document is a Canadian certified translator\tyes_no\tnone · 0 form fields\tsubmitted document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "organisation.address",
+  "line": "organisation.address\tComplete address of an organisation\taddress\tIMM 1295 · 1 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "organisation.name",
+  "line": "organisation.name\tLegal or operating name of an organisation (here the prospective employer)\ttext\tIMM 5476, IMM 1295, IMM 5475 · 4 form fields\tintended work · s"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.biometrics_required",
+  "line": "person.biometrics_required\tWhether the person must give biometric fingerprints and photo for this application\tyes_no\tnone · 0 form fields\tprocessing requirement"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.caregiver_care_types",
+  "line": "person.caregiver_care_types\tTypes of care to be provided in a caregiver position (child care, disabled, elderly, other)\tcode\tIMM 1295 · 4 form fields\tintended w"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.caregiver_persons_requiring_care",
+  "line": "person.caregiver_persons_requiring_care\tNumber of persons requiring care in a caregiver position\tnumber\tIMM 1295 · 1 form fields\tintended work · verified docume"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.citizenship",
+  "line": "person.citizenship\tCountry of citizenship\tcountry\tIMM 1295 · 1 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.country_of_birth",
+  "line": "person.country_of_birth\tThe country or territory where the person was born\tcountry\tIMM 1295, IMM 5707 · 6 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.criminal_history",
+  "line": "person.criminal_history\tWhether the person ever committed, was arrested for, charged with or convicted of a criminal offence\tyes_no\tIMM 1295 · 1 form fields\tbac"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.criminal_history_details",
+  "line": "person.criminal_history_details\tDetails of criminal history\ttext\tIMM 1295 · 1 form fields\tbackground declarations · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.current_residence_country",
+  "line": "person.current_residence_country\tCountry where the person currently lives\tcountry\tIMM 5409 · 1 form fields\tresidence history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.date_of_birth",
+  "line": "person.date_of_birth\tDate of birth\tdate\tIMM 1295, IMM 5476, IMM 5257 SCH1, IMM 5707, IMM 5475 · 13 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.disorder_requiring_services",
+  "line": "person.disorder_requiring_services\tWhether the person has a physical or mental disorder requiring social or health services other than medication\tyes_no\tIMM 129"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.education_field_and_level",
+  "line": "person.education_field_and_level\tField and level of study of a period of education\ttext\tIMM 1295 · 1 form fields\teducation history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.education_from_date",
+  "line": "person.education_from_date\tStart date of a period of post-secondary education\tdate\tIMM 1295 · 2 form fields\teducation history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.education_institution",
+  "line": "person.education_institution\tName of the school or facility attended\ttext\tIMM 1295 · 2 form fields\teducation history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.education_location",
+  "line": "person.education_location\tLocation (city, province/state, country) of the school or facility\taddress\tIMM 1295 · 3 form fields\teducation history · client questio"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.education_to_date",
+  "line": "person.education_to_date\tEnd date of a period of post-secondary education\tdate\tIMM 1295 · 2 form fields\teducation history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.email",
+  "line": "person.email\tThe person's e-mail address\ttext\tIMM 5475 · 1 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.email_address",
+  "line": "person.email_address\tE-mail address\ttext\tIMM 5476, IMM 1295 · 2 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.employment_activity",
+  "line": "person.employment_activity\tActivity or occupation during a period\ttext\tIMM 1295 · 3 form fields\temployment history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.employment_employer_name",
+  "line": "person.employment_employer_name\tCompany, employer or facility name for a period of activity\ttext\tIMM 1295 · 3 form fields\temployment history · client questionna"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.employment_from_date",
+  "line": "person.employment_from_date\tStart date of a period of activity or occupation\tdate\tIMM 1295 · 6 form fields\temployment history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.employment_location",
+  "line": "person.employment_location\tLocation (city, province/state, country) of a period of activity\taddress\tIMM 1295 · 9 form fields\temployment history · client questio"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.employment_to_date",
+  "line": "person.employment_to_date\tEnd date of a period of activity or occupation\tdate\tIMM 1295 · 6 form fields\temployment history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.exceptional_situation_no_valid_passport",
+  "line": "person.exceptional_situation_no_valid_passport\tWhether the person has an exceptional situation preventing them from getting a valid passport or travel document\t"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.family_name",
+  "line": "person.family_name\tFamily name (surname) as shown on passport or travel document\ttext\tIMM 5257 SCH1, IMM 5707, IMM 5475, IMM 1295, IMM 5476 · 13 form fields\tper"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.fax_number",
+  "line": "person.fax_number\tFax number including country calling code and extension\ttext\tIMM 5476, IMM 1295 · 10 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.fee_exempt",
+  "line": "person.fee_exempt\tWhether the person is exempt from the work permit processing fee\tyes_no\tnone · 0 form fields\tprocessing requirements · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.flight_school_graduate",
+  "line": "person.flight_school_graduate\tWhether the PGWP applicant is a flight school graduate\tyes_no\tnone · 0 form fields\teducation history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.full_name",
+  "line": "person.full_name\tThe person's full name exactly as shown on their passport or travel document\ttext\tIMM 5409 · 4 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.given_names",
+  "line": "person.given_names\tGiven name(s) as shown on passport or travel document\ttext\tIMM 1295, IMM 5257 SCH1, IMM 5475, IMM 5476, IMM 5707 · 13 form fields\tpersonal de"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.government_position_activities",
+  "line": "person.government_position_activities\tActivities and/or positions held in one government position\ttext\tIMM 5257 SCH1 · 1 form fields\tsecurity history · client q"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.government_position_country",
+  "line": "person.government_position_country\tCountry or territory of one government position held by the person\tcountry\tIMM 5257 SCH1 · 1 form fields\tsecurity history · c"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.government_position_department",
+  "line": "person.government_position_department\tDepartment or branch of one government position\ttext\tIMM 5257 SCH1 · 1 form fields\tsecurity history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.government_position_end_date",
+  "line": "person.government_position_end_date\tEnd date of one government position held by the person\tdate\tIMM 5257 SCH1 · 2 form fields\tsecurity history · client question"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.government_position_jurisdiction_level",
+  "line": "person.government_position_jurisdiction_level\tLevel of jurisdiction of one government position (for example national, regional, municipal)\ttext\tIMM 5257 SCH1 · "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.government_position_start_date",
+  "line": "person.government_position_start_date\tStart date of one government position held by the person\tdate\tIMM 5257 SCH1 · 2 form fields\tsecurity history · client ques"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.has_children",
+  "line": "person.has_children\tWhether the person has any children (natural, adopted or step), derived from the child records held for the person\tyes_no\tIMM 5707 · 1 form "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.has_held_government_position",
+  "line": "person.has_held_government_position\tWhether the person has ever held any government position (for example civil servant, judge, police officer, mayor, member of"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.immigration_history_details",
+  "line": "person.immigration_history_details\tDetails explaining yes answers to immigration-history background questions\ttext\tIMM 1295 · 1 form fields\tbackground declarati"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.intended_employment_end_date",
+  "line": "person.intended_employment_end_date\tExpected end date of the intended employment\tdate\tIMM 1295 · 1 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.intended_employment_start_date",
+  "line": "person.intended_employment_start_date\tExpected start date of the intended employment\tdate\tIMM 1295 · 1 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.intended_job_duties",
+  "line": "person.intended_job_duties\tBrief description of duties of the intended employment\ttext\tIMM 1295 · 1 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.intended_job_title",
+  "line": "person.intended_job_title\tJob title of the intended employment\ttext\tIMM 1295 · 1 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.intended_occupation_requires_medical",
+  "line": "person.intended_occupation_requires_medical\tWhether the intended work is in health services, child care, or primary or secondary education\tyes_no\tnone · 0 form "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.intended_work_location",
+  "line": "person.intended_work_location\tIntended location of employment in Canada\taddress\tIMM 1295 · 2 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.intended_work_province",
+  "line": "person.intended_work_province\tCanadian province or territory of the intended employment\tcode\tnone · 0 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.is_employer_specific_work_permit",
+  "line": "person.is_employer_specific_work_permit\tWhether the application is for an employer-specific (not open) work permit\tyes_no\tnone · 0 form fields\tintended work · s"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.is_provincial_nominee",
+  "line": "person.is_provincial_nominee\tWhether the person holds a provincial or territorial nomination\tyes_no\tnone · 0 form fields\tintended work · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.language_test_taken",
+  "line": "person.language_test_taken\tWhether the person has taken a designated English or French proficiency test\tyes_no\tIMM 1295 · 1 form fields\tlanguages · client quest"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.life_insurance_names_partner_as_beneficiary",
+  "line": "person.life_insurance_names_partner_as_beneficiary\tWhether the person holds life insurance on themselves that names their partner as beneficiary\tyes_no\tIMM 5409"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.lmia_or_offer_number",
+  "line": "person.lmia_or_offer_number\tLabour Market Impact Assessment number or LMIA-exempt offer of employment number\ttext\tIMM 1295 · 1 form fields\tintended work · verif"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.mailing_address",
+  "line": "person.mailing_address\tCurrent mailing address\taddress\tIMM 1295 · 9 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.mailing_address_city",
+  "line": "person.mailing_address_city\tCity or town of the person's mailing address\ttext\tIMM 5476, IMM 5475 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.mailing_address_country",
+  "line": "person.mailing_address_country\tCountry or territory of the person's mailing address\tcountry\tIMM 5475, IMM 5476 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.mailing_address_postal_code",
+  "line": "person.mailing_address_postal_code\tPostal or ZIP code of the person's mailing address\ttext\tIMM 5475, IMM 5476 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.mailing_address_province_state",
+  "line": "person.mailing_address_province_state\tProvince, state or territory of the person's mailing address\ttext\tIMM 5475, IMM 5476 · 2 form fields\trepresentative · prof"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.mailing_address_street_name",
+  "line": "person.mailing_address_street_name\tStreet name of the person's mailing address\ttext\tIMM 5476, IMM 5475 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.mailing_address_street_number",
+  "line": "person.mailing_address_street_number\tStreet number of the person's mailing address\ttext\tIMM 5475, IMM 5476 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.mailing_address_unit",
+  "line": "person.mailing_address_unit\tApartment or unit of the person's mailing address\ttext\tIMM 5476, IMM 5475 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.marital_status",
+  "line": "person.marital_status\tCurrent marital status\tcode\tIMM 5707, IMM 1295 · 6 form fields\tpersonal details · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.medical_details",
+  "line": "person.medical_details\tDetails explaining yes answers to medical background questions\ttext\tIMM 1295 · 1 form fields\tbackground medical · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.military_service",
+  "line": "person.military_service\tWhether the person served in any military, militia, civil defence, security organization or police force\tyes_no\tIMM 5257 SCH1, IMM 1295 "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.military_service_country",
+  "line": "person.military_service_country\tCountry or territory of one period of service\tcountry\tIMM 5257 SCH1 · 1 form fields\tsecurity history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.military_service_details",
+  "line": "person.military_service_details\tDates and countries of military or security service\ttext\tIMM 1295 · 1 form fields\tbackground declarations · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.military_service_end_date",
+  "line": "person.military_service_end_date\tEnd date of one period of military, militia, civil defence, security or police service\tdate\tIMM 5257 SCH1 · 2 form fields\tsecur"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.military_service_location",
+  "line": "person.military_service_location\tLocation or place where the person was stationed during one period of service\ttext\tIMM 5257 SCH1 · 1 form fields\tsecurity histo"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.military_service_province",
+  "line": "person.military_service_province\tProvince or region of the place where the person was stationed during one period of service\ttext\tIMM 5257 SCH1 · 1 form fields\t"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.military_service_start_date",
+  "line": "person.military_service_start_date\tStart date of one period of military, militia, civil defence, security or police service\tdate\tIMM 5257 SCH1 · 2 form fields\ts"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.national_id_country_of_issue",
+  "line": "person.national_id_country_of_issue\tCountry or territory that issued the national identity document\tcountry\tIMM 1295 · 1 form fields\ttravel document · verified "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.national_id_expiry_date",
+  "line": "person.national_id_expiry_date\tExpiry date of the national identity document\tdate\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.national_id_issue_date",
+  "line": "person.national_id_issue_date\tIssue date of the national identity document\tdate\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.national_id_number",
+  "line": "person.national_id_number\tNumber of the national identity document\ttext\tIMM 1295 · 2 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.native_language",
+  "line": "person.native_language\tNative language or mother tongue\tcode\tIMM 1295 · 1 form fields\tlanguages · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.nomination_expiry_date",
+  "line": "person.nomination_expiry_date\tExpiry date of the provincial or territorial nomination certificate\tdate\tnone · 0 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.occupation",
+  "line": "person.occupation\tThe person's present occupation\ttext\tIMM 5707 · 5 form fields\temployment history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.official_language_ability",
+  "line": "person.official_language_ability\tAbility to communicate in English, French, both or neither\tcode\tIMM 1295 · 1 form fields\tlanguages · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.organization_activities_positions",
+  "line": "person.organization_activities_positions\tActivities carried out and/or positions held by the person within one organization\ttext\tIMM 5257 SCH1 · 1 form fields\ts"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.organization_country",
+  "line": "person.organization_country\tCountry or territory of one organization the person is or was associated with\tcountry\tIMM 5257 SCH1 · 1 form fields\tsecurity history"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.organization_membership_end_date",
+  "line": "person.organization_membership_end_date\tEnd date of the person's membership in or association with one organization\tdate\tIMM 5257 SCH1 · 2 form fields\tsecurity "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.organization_membership_start_date",
+  "line": "person.organization_membership_start_date\tStart date of the person's membership in or association with one organization\tdate\tIMM 5257 SCH1 · 2 form fields\tsecur"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.organization_name",
+  "line": "person.organization_name\tName of an organization the person is or was a member of or associated with\ttext\tIMM 5257 SCH1 · 1 form fields\tsecurity history · clien"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.organization_province",
+  "line": "person.organization_province\tProvince or region of one organization the person is or was associated with\ttext\tIMM 5257 SCH1 · 1 form fields\tsecurity history · c"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.other_family_name",
+  "line": "person.other_family_name\tFamily name of any other name ever used (nickname, maiden name, alias)\ttext\tIMM 1295 · 2 form fields\tpersonal details · client question"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.other_given_names",
+  "line": "person.other_given_names\tGiven name(s) of any other name ever used\ttext\tIMM 1295 · 1 form fields\tpersonal details · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.passport_country_of_issue",
+  "line": "person.passport_country_of_issue\tCountry or territory that issued the passport\tcountry\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.passport_expiry_date",
+  "line": "person.passport_expiry_date\tExpiry date of the passport\tdate\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.passport_issue_date",
+  "line": "person.passport_issue_date\tIssue date of the passport\tdate\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.passport_number",
+  "line": "person.passport_number\tNumber of the passport or travel document used\ttext\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.passport_requires_reentry_permit",
+  "line": "person.passport_requires_reentry_permit\tWhether the government that issued the passport requires a re-entry permit\tyes_no\tnone · 0 form fields\ttravel document ·"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.phone_country_code",
+  "line": "person.phone_country_code\tInternational dialling country code of the person's primary telephone number\tnumber\tIMM 5475 · 1 form fields\trepresentative · profile "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.phone_number",
+  "line": "person.phone_number\tTelephone number including country calling code and extension\ttext\tIMM 5475, IMM 1295 · 17 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.phone_type",
+  "line": "person.phone_type\tType of telephone line (residence, cellular, business)\tcode\tIMM 1295 · 2 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.place_of_birth_city",
+  "line": "person.place_of_birth_city\tCity or town of birth\ttext\tIMM 1295 · 1 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.plans_to_study_in_canada",
+  "line": "person.plans_to_study_in_canada\tWhether the family member plans to attend school in Canada\tyes_no\tnone · 0 form fields\tfamily members · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.plans_to_work_in_canada",
+  "line": "person.plans_to_work_in_canada\tWhether the family member plans to work in Canada\tyes_no\tnone · 0 form fields\tfamily members · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.preferred_official_language",
+  "line": "person.preferred_official_language\tOfficial language in which the person is most at ease\tcode\tIMM 1295 · 1 form fields\tlanguages · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.previous_marriage_or_common_law",
+  "line": "person.previous_marriage_or_common_law\tWhether the person was ever previously married or in a common-law relationship\tyes_no\tIMM 1295 · 1 form fields\trelationsh"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.refused_visa_or_entry",
+  "line": "person.refused_visa_or_entry\tWhether the person was ever refused a visa or permit, denied entry or ordered to leave any country\tyes_no\tIMM 1295 · 1 form fields\t"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.representative_acts_for_person",
+  "line": "person.representative_acts_for_person\tWhether the representative also conducts business on behalf of this person\tyes_no\tnone · 0 form fields\trepresentative · st"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.requires_trv",
+  "line": "person.requires_trv\tWhether the person requires a temporary resident visa to enter Canada\tyes_no\tnone · 0 form fields\tprocessing requirements · staff working vi"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.residence_city",
+  "line": "person.residence_city\tCity, town or village where the person currently lives\ttext\tIMM 5409 · 1 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.residence_country",
+  "line": "person.residence_country\tCountry or territory of a period of residence or presence\tcountry\tIMM 1295 · 3 form fields\tresidence history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.residence_immigration_status",
+  "line": "person.residence_immigration_status\tImmigration status held in a country during a period of residence or presence\tcode\tIMM 1295 · 3 form fields\tresidence histor"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.residence_province_state",
+  "line": "person.residence_province_state\tProvince, state or territory where the person currently lives\ttext\tIMM 5409 · 1 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.residence_status_from_date",
+  "line": "person.residence_status_from_date\tStart date of the immigration status held in a country\tdate\tIMM 1295 · 4 form fields\tresidence history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.residence_status_other_details",
+  "line": "person.residence_status_other_details\tFree-text description of an immigration status not covered by the standard list\ttext\tIMM 1295 · 4 form fields\tresidence hi"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.residence_status_to_date",
+  "line": "person.residence_status_to_date\tEnd date of the immigration status held in a country\tdate\tIMM 1295 · 4 form fields\tresidence history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.residential_address",
+  "line": "person.residential_address\tCurrent residential (home) address\taddress\tIMM 5707, IMM 1295 · 13 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.sex",
+  "line": "person.sex\tSex or gender marker of the person\tcode\tIMM 1295 · 1 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.status_violation_canada",
+  "line": "person.status_violation_canada\tWhether the person ever remained beyond status, studied or worked without authorization in Canada\tyes_no\tIMM 1295 · 1 form fields"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.tb_history_or_contact",
+  "line": "person.tb_history_or_contact\tWhether, within the past two years, the person or a family member had lung tuberculosis or close contact with a person with tubercu"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.telephone_number",
+  "line": "person.telephone_number\tPerson's telephone number including country code\ttext\tIMM 5476 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.travel_country",
+  "line": "person.travel_country\tCountry or territory the person travelled to on one trip\tcountry\tIMM 5257 SCH1 · 2 form fields\ttravel history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.travel_end_date",
+  "line": "person.travel_end_date\tEnd date of one trip the person made\tdate\tIMM 5257 SCH1 · 2 form fields\ttravel history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.travel_location",
+  "line": "person.travel_location\tLocation (city or place) the person travelled to on one trip\ttext\tIMM 5257 SCH1 · 1 form fields\ttravel history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.travel_purpose",
+  "line": "person.travel_purpose\tPurpose of one trip the person made\ttext\tIMM 5257 SCH1 · 1 form fields\ttravel history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.travel_start_date",
+  "line": "person.travel_start_date\tStart date of one trip the person made\tdate\tIMM 5257 SCH1 · 2 form fields\ttravel history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.travelling_alone_to_canada",
+  "line": "person.travelling_alone_to_canada\tWhether a minor is travelling to Canada alone\tyes_no\tnone · 0 form fields\tfamily members · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.uci",
+  "line": "person.uci\tUnique client identifier assigned by the immigration authority\ttext\tIMM 1295, IMM 5257 SCH1, IMM 5476 · 3 form fields\tpersonal details · existing rec"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.upfront_medical_completed",
+  "line": "person.upfront_medical_completed\tWhether the person completed an upfront medical exam with a panel physician\tyes_no\tnone · 0 form fields\tprocessing requirements"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.us_lawful_permanent_resident",
+  "line": "person.us_lawful_permanent_resident\tWhether the person is a lawful permanent resident of the United States\tyes_no\tIMM 1295 · 1 form fields\ttravel document · cli"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.us_pr_card_expiry_date",
+  "line": "person.us_pr_card_expiry_date\tExpiry date of the US permanent resident card\tdate\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.uscis_number",
+  "line": "person.uscis_number\tU.S. Citizenship and Immigration Services number on the US permanent resident card\ttext\tIMM 1295 · 1 form fields\ttravel document · verified "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.violent_organisation_association",
+  "line": "person.violent_organisation_association\tWhether the person is or was a member of or associated with a group that engaged in or advocated violence for political "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.witnessed_ill_treatment",
+  "line": "person.witnessed_ill_treatment\tAnswer to the background question on witnessing or participating in ill treatment of prisoners or civilians, looting or desecrati"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.work_permit_type",
+  "line": "person.work_permit_type\tType of work permit applied for\tcode\tIMM 1295 · 1 form fields\tintended work · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "relationship.accompanies_subject_to_canada",
+  "line": "relationship.accompanies_subject_to_canada\tWhether this family member will accompany the subject to Canada\tyes_no\tIMM 5707 · 4 form fields\tfamily members · clie"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "relationship.child_relationship_type",
+  "line": "relationship.child_relationship_type\tThe kind of child relationship this person has to the subject (son, daughter, step-child, adopted child)\tcode\tIMM 5707 · 1 "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "relationship.cohabitation_start_date",
+  "line": "relationship.cohabitation_start_date\tDate the two partners began living together continuously in a conjugal relationship\tdate\tIMM 5409 · 2 form fields\trelations"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "relationship.common_law_declared_for_canadian_income_tax",
+  "line": "relationship.common_law_declared_for_canadian_income_tax\tWhether the partners have declared their common-law union under the Canadian Income Tax Act\tyes_no\tIMM "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "relationship.joint_financial_accounts",
+  "line": "relationship.joint_financial_accounts\tWhether the partners hold joint bank, trust, credit union or charge card accounts\tyes_no\tIMM 5409 · 1 form fields\trelation"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "relationship.joint_property_other_than_residence",
+  "line": "relationship.joint_property_other_than_residence\tWhether the partners jointly own property other than their residence\tyes_no\tIMM 5409 · 1 form fields\trelationsh"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "relationship.joint_residence_lease_mortgage_or_purchase",
+  "line": "relationship.joint_residence_lease_mortgage_or_purchase\tWhether the partners jointly signed a residential lease, mortgage or purchase agreement for a residence "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "relationship.other_documentary_evidence",
+  "line": "relationship.other_documentary_evidence\tDescription of other documentary evidence of the common-law relationship\ttext\tIMM 5409 · 1 form fields\trelationship · cl"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "relationship.start_date",
+  "line": "relationship.start_date\tDate of marriage or date the common-law relationship began\tdate\tIMM 1295 · 1 form fields\trelationship · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "representative.is_compensated",
+  "line": "representative.is_compensated\tWhether the representative is paid or otherwise compensated for representing the person\tyes_no\tnone · 0 form fields\trepresentative"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "representative.licensing_province",
+  "line": "representative.licensing_province\tCanadian province or territory of the law society the representative belongs to\ttext\tIMM 5476 · 2 form fields\trepresentative ·"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "representative.membership_id",
+  "line": "representative.membership_id\tRepresentative's membership number with their regulatory body\ttext\tIMM 5476 · 4 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "representative.representative_category",
+  "line": "representative.representative_category\tKind of representative: friend or family member, CICC member, law society member or student-at-law, Chambre des notaires "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "representative.representative_category_other",
+  "line": "representative.representative_category_other\tFree-text description of the representative's kind when it is 'other'\ttext\tIMM 5476 · 1 form fields\trepresentative "
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "representative.supervising_lawyer_membership_id",
+  "line": "representative.supervising_lawyer_membership_id\tLaw society membership number of the supervising lawyer\ttext\tIMM 5476 · 1 form fields\trepresentative · profile r"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "representative.supervising_lawyer_name",
+  "line": "representative.supervising_lawyer_name\tName of the lawyer supervising a student-at-law representative\ttext\tIMM 5476 · 1 form fields\trepresentative · profile rec"
+ },
+ {
+  "page": "library-fields",
+  "w": 1440,
+  "kind": "§4 Not word",
+  "match": "Canonical",
+  "line": "Canonical fields"
+ },
+ {
+  "page": "library-documents",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.family_name",
+  "line": "Birth certificate of accompanying dependent child\tclient\tperson.family_name, person.given_names, person.sex, person.date_of_birth, person.place_of_birth_city, p"
+ },
+ {
+  "page": "library-documents",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.full_name",
+  "line": "Copy of LMIA and copy of employment contract from prospective employer\temployer\tperson.full_name, organisation.name, person.intended_job_title, person.intended_"
+ },
+ {
+  "page": "library-documents",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.full_name",
+  "line": "Employment contract (LMIA-exempt job)\temployer\tperson.full_name, organisation.name, person.intended_job_title, person.intended_job_duties, person.intended_emplo"
+ },
+ {
+  "page": "library-documents",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.full_name",
+  "line": "Job offer letter\temployer\tperson.full_name, organisation.name, person.intended_job_title, person.intended_job_duties, person.intended_employment_start_date, per"
+ },
+ {
+  "page": "library-documents",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.family_name",
+  "line": "Passport or travel document information page photocopy\tclient\tperson.family_name, person.given_names, person.sex, person.date_of_birth, person.place_of_birth_ci"
+ },
+ {
+  "page": "library-documents",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "e.g",
+  "line": "Proof of past work experience (e.g. pay stubs)\tclient\tnone recorded"
+ },
+ {
+  "page": "library-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Guide\tRead from canada.ca on 2026-10-29\tNot filed\t2 combinations"
+ },
+ {
+  "page": "library-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Guide\tRead from canada.ca on 2026-10-29\tNot filed"
+ },
+ {
+  "page": "library-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Guide\tRead from canada.ca on 2026-10-29\tNot filed"
+ },
+ {
+  "page": "library-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Guide\tRead from canada.ca on 2026-10-29\tNot filed"
+ },
+ {
+  "page": "library-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Sample · canada.ca words"
+ },
+ {
+  "page": "library-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Sample · canada.ca words"
+ },
+ {
+  "page": "library-checks",
+  "w": 1440,
+  "kind": "internal name",
+  "match": "Screen 04",
+  "line": "This list is built with the shared-library screen (Screen 04). Combination rules and checks imported from the reviewed release are visible in each combination's"
+ },
+ {
+  "page": "library-checks",
+  "w": 1440,
+  "kind": "placeholder",
+  "match": "later screen",
+  "line": "Checks are set up on a later screen"
+ },
+ {
+  "page": "ai",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "copy.pdf",
+  "line": "imm5562e-copy.pdf"
+ },
+ {
+  "page": "ai",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Rules only (no AI)\t4 steps · 3 done, 1 waiting for you\tWaiting for you\tUS$0.00 / US$0.00\ttoday 7:55 a.m. · Configuration author"
+ },
+ {
+  "page": "activity",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "documents.html",
+  "line": "10/29/2026, 7:53:23 AM\tuser-A\tConfiguration author attached work-permit-outside-forms-documents.html to \"With an LMIA\" (sample button): Work permit outside: for"
+ },
+ {
+  "page": "activity",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "india.html",
+  "line": "10/29/2026, 7:53:18 AM\tuser-A\tConfiguration author attached visa-package-india.html to \"Visitor visa\" (sample button): Visitor visa application package, India\ts"
+ },
+ {
+  "page": "activity",
+  "w": 1440,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "10/29/2026, 7:53:24 AM\tuser-A\tConfiguration author created category \"Global Talent Stream\" under LMIA\tcategory"
+ },
+ {
+  "page": "library-field",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.application_date",
+  "line": "case.application_date"
+ },
+ {
+  "page": "library-field",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.application_date",
+  "line": "case.application_date"
+ },
+ {
+  "page": "library-field",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "yes_no",
+  "line": "yes_no"
+ },
+ {
+  "page": "combo-overview",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Released versions: Release 1 on today 7:53 a.m., approved by Approver · Review and release"
+ },
+ {
+  "page": "combo-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Its forms and checklists come from canada.ca into the Form library and attach here. Nothing was spent yet. Which forms apply is Sample until the immigration exp"
+ },
+ {
+  "page": "combo-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "documents.html",
+  "line": "Web page · work-permit-outside-forms-documents.html"
+ },
+ {
+  "page": "combo2-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Its forms and checklists come from canada.ca into the Form library and attach here. Nothing was spent yet. Which forms apply is Sample until the immigration exp"
+ },
+ {
+  "page": "combo2-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo2-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo2-forms",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "india.html",
+  "line": "Web page · visa-package-india.html"
+ },
+ {
+  "page": "combo-questionnaires",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "e.g",
+  "line": "Kind of immigration application the case concerns (e.g. permanent residence, study permit extension)\tCase officer\tAlways\tIMM 5475, IMM 5476\tDetails"
+ },
+ {
+  "page": "combo-questionnaires",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "e.g",
+  "line": "Details of: Kind of immigration application the case concerns (e.g. permanent residence, study permit extension)"
+ },
+ {
+  "page": "combo-documents",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "e.g",
+  "line": "Proof of past work experience (e.g. pay stubs)"
+ },
+ {
+  "page": "combo-preview",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "e.g",
+  "line": "Proof of past work experience (e.g. pay stubs)Cannot tell yet"
+ },
+ {
+  "page": "combo-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "subject_spouse_or_partner",
+  "line": "Derived fields · Number of person records in the case holding the role subject_spouse_or_partner (current spouse, common-law or conjugal partner) on the applica"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.applying_country_differs_from_citizenship",
+  "line": "Derived definition\tcase.applying_country_differs_from_citizenship"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "case.spouse_or_partner_count",
+  "line": "Derived definition\tcase.spouse_or_partner_count"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "subject_spouse_or_partner",
+  "line": "Number of person records in the case holding the role subject_spouse_or_partner (current spouse, common-law or conjugal partner) on the application date."
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.age_years",
+  "line": "Derived definition\tperson.age_years"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.education_row_duration_days",
+  "line": "Derived definition\tperson.education_row_duration_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.employment_history_gap_months",
+  "line": "Derived definition\tperson.employment_history_gap_months"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.employment_row_duration_days",
+  "line": "Derived definition\tperson.employment_row_duration_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.intended_employment_duration_days",
+  "line": "Derived definition\tperson.intended_employment_duration_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.intended_employment_start_days_from_application",
+  "line": "Derived definition\tperson.intended_employment_start_days_from_application"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.national_id_days_until_expiry",
+  "line": "Derived definition\tperson.national_id_days_until_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.nomination_days_until_expiry",
+  "line": "Derived definition\tperson.nomination_days_until_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.passport_days_until_expiry",
+  "line": "Derived definition\tperson.passport_days_until_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.passport_issue_days_after_birth",
+  "line": "Derived definition\tperson.passport_issue_days_after_birth"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.passport_validity_days",
+  "line": "Derived definition\tperson.passport_validity_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.passport_years_since_expiry",
+  "line": "Derived definition\tperson.passport_years_since_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.residence_differs_from_citizenship",
+  "line": "Derived definition\tperson.residence_differs_from_citizenship"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.residence_status_days_until_expiry",
+  "line": "Derived definition\tperson.residence_status_days_until_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.residence_status_row_duration_days",
+  "line": "Derived definition\tperson.residence_status_row_duration_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.travel_row_duration_days",
+  "line": "Derived definition\tperson.travel_row_duration_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.us_pr_card_days_until_expiry",
+  "line": "Derived definition\tperson.us_pr_card_days_until_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "person.venezuelan_extended_passport_expiry",
+  "line": "Derived definition\tperson.venezuelan_extended_passport_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "relationship.cohabitation_years",
+  "line": "Derived definition\trelationship.cohabitation_years"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "relationship.start_vs_cohabitation_days",
+  "line": "Derived definition\trelationship.start_vs_cohabitation_days"
+ },
+ {
+  "page": "review-held",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "copy.pdf",
+  "line": "imm5562e-copy.pdf · uploaded today 7:55 a.m."
+ },
+ {
+  "page": "review-held",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Paste the canada.ca page"
+ },
+ {
+  "page": "ai-batch",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "copy.pdf",
+  "line": "Reading an uploaded PDF · imm5562e-copy.pdf"
+ },
+ {
+  "page": "ai-batch",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Compare with canada.ca and find the guides that name itrules · US$0"
+ },
+ {
+  "page": "ai-batch",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "canada.ca shows IMM 5562 last updated 2024-07; this file is not the one its page links. Named by Guide 5289."
+ },
+ {
+  "page": "ai-batch",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "copy.pdf",
+  "line": "Reading an uploaded PDF: imm5562e-copy.pdf"
+ },
+ {
+  "page": "case-officer",
+  "w": 1440,
+  "kind": "decision number",
+  "match": "(P-65)",
+  "line": "The evidence lane's fill trial for this form has not passed (P-65)"
+ },
+ {
+  "page": "case-officer",
+  "w": 1440,
+  "kind": "decision number",
+  "match": "(P-65)",
+  "line": "The evidence lane's fill trial for this form has not passed (P-65)"
+ },
+ {
+  "page": "case-officer",
+  "w": 1440,
+  "kind": "decision number",
+  "match": "(P-65)",
+  "line": "The evidence lane's fill trial for this form has not passed (P-65)"
+ },
+ {
+  "page": "case-officer",
+  "w": 1440,
+  "kind": "internal name",
+  "match": "slice",
+  "line": "No answer list yet (forms slice 2): the officer checks this answer before confirming the section."
+ },
+ {
+  "page": "case-officer",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Frozen when the case opened (2026-10-29, 7:55:08 a.m.); a later release never changes this case"
+ },
+ {
+  "page": "structure-corporate",
+  "w": 1024,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Global Talent Stream"
+ },
+ {
+  "page": "structure-corporate",
+  "w": 1024,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Global Talent Stream"
+ },
+ {
+  "page": "structure-corporate",
+  "w": 1024,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Global Talent Stream"
+ },
+ {
+  "page": "structure-corporate",
+  "w": 1024,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "1.1.3 Category Global Talent Stream"
+ },
+ {
+  "page": "programs",
+  "w": 1024,
+  "kind": "one-plural",
+  "match": "1 needs",
+  "line": "2 forms found · 1 ready to add from the library · 1 needs a draft"
+ },
+ {
+  "page": "programs",
+  "w": 1024,
+  "kind": "one-plural",
+  "match": "1 needs",
+  "line": "2 forms found · 1 ready to add from the library · 1 needs a draft"
+ },
+ {
+  "page": "programs-corporate",
+  "w": 1024,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Global Talent Stream"
+ },
+ {
+  "page": "programs-corporate",
+  "w": 1024,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Corporate and employers › Temporary residence › LMIA › Global Talent Stream › No sub-category, Not started"
+ },
+ {
+  "page": "programs-corporate",
+  "w": 1024,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "Start setup: Global Talent Stream"
+ },
+ {
+  "page": "programs-list",
+  "w": 1024,
+  "kind": "one-plural",
+  "match": "1 needs",
+  "line": "2 forms found · 1 ready to add from the library · 1 needs a draft"
+ },
+ {
+  "page": "programs-list",
+  "w": 1024,
+  "kind": "one-plural",
+  "match": "1 needs",
+  "line": "2 forms found · 1 ready to add from the library · 1 needs a draft"
+ },
+ {
+  "page": "review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Configuration author · today 7:55 a.m."
+ },
+ {
+  "page": "review-all",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Configuration author · today 7:55 a.m."
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.application_date",
+  "line": "case.application_date\tDate the application is (or will be) submitted; reference date for calculated values\tdate\tnone · 0 form fields\tapplication details · staff"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.application_number",
+  "line": "case.application_number\tIRCC application file number of the case\ttext\tIMM 5476 · 1 form fields\tapplication details · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.application_type",
+  "line": "case.application_type\tKind of immigration application the case concerns (e.g. permanent residence, study permit extension)\ttext\tIMM 5476, IMM 5475 · 2 form fiel"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.applying_for_pgwp",
+  "line": "case.applying_for_pgwp\tWhether the application is for a post-graduation work permit\tyes_no\tnone · 0 form fields\tintended work · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.authorizes_release_to_designated_individual",
+  "line": "case.authorizes_release_to_designated_individual\tWhether the applicant authorizes IRCC/CBSA to release case information to a designated individual\tyes_no\tnone ·"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.country_where_applying",
+  "line": "case.country_where_applying\tCountry or territory from which the application is being made\tcountry\tIMM 1295 · 2 form fields\tresidence history · client questionna"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.employer_exempt_from_compliance_regime",
+  "line": "case.employer_exempt_from_compliance_regime\tWhether the employer is exempt from the Employer Compliance Regime\tyes_no\tnone · 0 form fields\tintended work · staff"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.employer_obtained_lmia",
+  "line": "case.employer_obtained_lmia\tWhether the employer obtained an LMIA from ESDC for the job\tyes_no\tnone · 0 form fields\tintended work · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.job_requires_licence_or_certification",
+  "line": "case.job_requires_licence_or_certification\tWhether the offered job requires a licence or certification (regulated job)\tyes_no\tnone · 0 form fields\tintended work"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.offer_from_nominating_province_employer",
+  "line": "case.offer_from_nominating_province_employer\tWhether the job offer is from an employer in the nominating province or territory\tyes_no\tnone · 0 form fields\tinten"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.offer_lmia_exempt",
+  "line": "case.offer_lmia_exempt\tWhether the job offer is exempt from the LMIA requirement\tyes_no\tnone · 0 form fields\tintended work · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "yes_no",
+  "line": "case.offer_submitted_via_imm5802\tWhether IRCC authorized the employer to submit the offer of employment on form IMM 5802\tyes_no\tnone · 0 form fields\tintended wo"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.release_authorization_action",
+  "line": "case.release_authorization_action\tWhether the person is granting or withdrawing authority for the immigration authorities to release information from their case"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.representative_form_action",
+  "line": "case.representative_form_action\tWhat this use-of-representative filing does: appoint, update contact details, cancel, cancel and replace, or withdraw\tcode\tIMM 5"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.service_language",
+  "line": "case.service_language\tOfficial language (English or French) in which the person wants to receive service\tcode\tIMM 1295 · 1 form fields\tapplication details · cli"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.subject_is_principal_applicant",
+  "line": "case.subject_is_principal_applicant\tWhether the person the form is about is the principal applicant, rather than the principal applicant's spouse, common-law pa"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.submission_office_location",
+  "line": "case.submission_office_location\tLocation (city/country) of the office where the application was submitted\ttext\tIMM 5475 · 1 form fields\tapplication details · st"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.submission_office_name",
+  "line": "case.submission_office_name\tName of the office where the application was submitted\ttext\tIMM 5475 · 1 form fields\tapplication details · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.uses_representative",
+  "line": "case.uses_representative\tWhether the applicant uses the services of an authorized representative\tyes_no\tnone · 0 form fields\trepresentative · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "document.in_english_or_french",
+  "line": "document.in_english_or_french\tWhether a submitted document is in English or French\tyes_no\tnone · 0 form fields\tsubmitted documents · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "document.translator_is_canadian_certified",
+  "line": "document.translator_is_canadian_certified\tWhether the translator of a document is a Canadian certified translator\tyes_no\tnone · 0 form fields\tsubmitted document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "organisation.address",
+  "line": "organisation.address\tComplete address of an organisation\taddress\tIMM 1295 · 1 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "organisation.name",
+  "line": "organisation.name\tLegal or operating name of an organisation (here the prospective employer)\ttext\tIMM 5476, IMM 1295, IMM 5475 · 4 form fields\tintended work · s"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.biometrics_required",
+  "line": "person.biometrics_required\tWhether the person must give biometric fingerprints and photo for this application\tyes_no\tnone · 0 form fields\tprocessing requirement"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.caregiver_care_types",
+  "line": "person.caregiver_care_types\tTypes of care to be provided in a caregiver position (child care, disabled, elderly, other)\tcode\tIMM 1295 · 4 form fields\tintended w"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.caregiver_persons_requiring_care",
+  "line": "person.caregiver_persons_requiring_care\tNumber of persons requiring care in a caregiver position\tnumber\tIMM 1295 · 1 form fields\tintended work · verified docume"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.citizenship",
+  "line": "person.citizenship\tCountry of citizenship\tcountry\tIMM 1295 · 1 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.country_of_birth",
+  "line": "person.country_of_birth\tThe country or territory where the person was born\tcountry\tIMM 1295, IMM 5707 · 6 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.criminal_history",
+  "line": "person.criminal_history\tWhether the person ever committed, was arrested for, charged with or convicted of a criminal offence\tyes_no\tIMM 1295 · 1 form fields\tbac"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.criminal_history_details",
+  "line": "person.criminal_history_details\tDetails of criminal history\ttext\tIMM 1295 · 1 form fields\tbackground declarations · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.current_residence_country",
+  "line": "person.current_residence_country\tCountry where the person currently lives\tcountry\tIMM 5409 · 1 form fields\tresidence history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.date_of_birth",
+  "line": "person.date_of_birth\tDate of birth\tdate\tIMM 1295, IMM 5476, IMM 5257 SCH1, IMM 5707, IMM 5475 · 13 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.disorder_requiring_services",
+  "line": "person.disorder_requiring_services\tWhether the person has a physical or mental disorder requiring social or health services other than medication\tyes_no\tIMM 129"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.education_field_and_level",
+  "line": "person.education_field_and_level\tField and level of study of a period of education\ttext\tIMM 1295 · 1 form fields\teducation history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.education_from_date",
+  "line": "person.education_from_date\tStart date of a period of post-secondary education\tdate\tIMM 1295 · 2 form fields\teducation history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.education_institution",
+  "line": "person.education_institution\tName of the school or facility attended\ttext\tIMM 1295 · 2 form fields\teducation history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.education_location",
+  "line": "person.education_location\tLocation (city, province/state, country) of the school or facility\taddress\tIMM 1295 · 3 form fields\teducation history · client questio"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.education_to_date",
+  "line": "person.education_to_date\tEnd date of a period of post-secondary education\tdate\tIMM 1295 · 2 form fields\teducation history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.email",
+  "line": "person.email\tThe person's e-mail address\ttext\tIMM 5475 · 1 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.email_address",
+  "line": "person.email_address\tE-mail address\ttext\tIMM 5476, IMM 1295 · 2 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.employment_activity",
+  "line": "person.employment_activity\tActivity or occupation during a period\ttext\tIMM 1295 · 3 form fields\temployment history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.employment_employer_name",
+  "line": "person.employment_employer_name\tCompany, employer or facility name for a period of activity\ttext\tIMM 1295 · 3 form fields\temployment history · client questionna"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.employment_from_date",
+  "line": "person.employment_from_date\tStart date of a period of activity or occupation\tdate\tIMM 1295 · 6 form fields\temployment history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.employment_location",
+  "line": "person.employment_location\tLocation (city, province/state, country) of a period of activity\taddress\tIMM 1295 · 9 form fields\temployment history · client questio"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.employment_to_date",
+  "line": "person.employment_to_date\tEnd date of a period of activity or occupation\tdate\tIMM 1295 · 6 form fields\temployment history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.exceptional_situation_no_valid_passport",
+  "line": "person.exceptional_situation_no_valid_passport\tWhether the person has an exceptional situation preventing them from getting a valid passport or travel document\t"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.family_name",
+  "line": "person.family_name\tFamily name (surname) as shown on passport or travel document\ttext\tIMM 5257 SCH1, IMM 5707, IMM 5475, IMM 1295, IMM 5476 · 13 form fields\tper"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.fax_number",
+  "line": "person.fax_number\tFax number including country calling code and extension\ttext\tIMM 5476, IMM 1295 · 10 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.fee_exempt",
+  "line": "person.fee_exempt\tWhether the person is exempt from the work permit processing fee\tyes_no\tnone · 0 form fields\tprocessing requirements · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.flight_school_graduate",
+  "line": "person.flight_school_graduate\tWhether the PGWP applicant is a flight school graduate\tyes_no\tnone · 0 form fields\teducation history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.full_name",
+  "line": "person.full_name\tThe person's full name exactly as shown on their passport or travel document\ttext\tIMM 5409 · 4 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.given_names",
+  "line": "person.given_names\tGiven name(s) as shown on passport or travel document\ttext\tIMM 1295, IMM 5257 SCH1, IMM 5475, IMM 5476, IMM 5707 · 13 form fields\tpersonal de"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.government_position_activities",
+  "line": "person.government_position_activities\tActivities and/or positions held in one government position\ttext\tIMM 5257 SCH1 · 1 form fields\tsecurity history · client q"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.government_position_country",
+  "line": "person.government_position_country\tCountry or territory of one government position held by the person\tcountry\tIMM 5257 SCH1 · 1 form fields\tsecurity history · c"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.government_position_department",
+  "line": "person.government_position_department\tDepartment or branch of one government position\ttext\tIMM 5257 SCH1 · 1 form fields\tsecurity history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.government_position_end_date",
+  "line": "person.government_position_end_date\tEnd date of one government position held by the person\tdate\tIMM 5257 SCH1 · 2 form fields\tsecurity history · client question"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.government_position_jurisdiction_level",
+  "line": "person.government_position_jurisdiction_level\tLevel of jurisdiction of one government position (for example national, regional, municipal)\ttext\tIMM 5257 SCH1 · "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.government_position_start_date",
+  "line": "person.government_position_start_date\tStart date of one government position held by the person\tdate\tIMM 5257 SCH1 · 2 form fields\tsecurity history · client ques"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.has_children",
+  "line": "person.has_children\tWhether the person has any children (natural, adopted or step), derived from the child records held for the person\tyes_no\tIMM 5707 · 1 form "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.has_held_government_position",
+  "line": "person.has_held_government_position\tWhether the person has ever held any government position (for example civil servant, judge, police officer, mayor, member of"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.immigration_history_details",
+  "line": "person.immigration_history_details\tDetails explaining yes answers to immigration-history background questions\ttext\tIMM 1295 · 1 form fields\tbackground declarati"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.intended_employment_end_date",
+  "line": "person.intended_employment_end_date\tExpected end date of the intended employment\tdate\tIMM 1295 · 1 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.intended_employment_start_date",
+  "line": "person.intended_employment_start_date\tExpected start date of the intended employment\tdate\tIMM 1295 · 1 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.intended_job_duties",
+  "line": "person.intended_job_duties\tBrief description of duties of the intended employment\ttext\tIMM 1295 · 1 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.intended_job_title",
+  "line": "person.intended_job_title\tJob title of the intended employment\ttext\tIMM 1295 · 1 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.intended_occupation_requires_medical",
+  "line": "person.intended_occupation_requires_medical\tWhether the intended work is in health services, child care, or primary or secondary education\tyes_no\tnone · 0 form "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.intended_work_location",
+  "line": "person.intended_work_location\tIntended location of employment in Canada\taddress\tIMM 1295 · 2 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.intended_work_province",
+  "line": "person.intended_work_province\tCanadian province or territory of the intended employment\tcode\tnone · 0 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.is_employer_specific_work_permit",
+  "line": "person.is_employer_specific_work_permit\tWhether the application is for an employer-specific (not open) work permit\tyes_no\tnone · 0 form fields\tintended work · s"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.is_provincial_nominee",
+  "line": "person.is_provincial_nominee\tWhether the person holds a provincial or territorial nomination\tyes_no\tnone · 0 form fields\tintended work · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.language_test_taken",
+  "line": "person.language_test_taken\tWhether the person has taken a designated English or French proficiency test\tyes_no\tIMM 1295 · 1 form fields\tlanguages · client quest"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.life_insurance_names_partner_as_beneficiary",
+  "line": "person.life_insurance_names_partner_as_beneficiary\tWhether the person holds life insurance on themselves that names their partner as beneficiary\tyes_no\tIMM 5409"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.lmia_or_offer_number",
+  "line": "person.lmia_or_offer_number\tLabour Market Impact Assessment number or LMIA-exempt offer of employment number\ttext\tIMM 1295 · 1 form fields\tintended work · verif"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.mailing_address",
+  "line": "person.mailing_address\tCurrent mailing address\taddress\tIMM 1295 · 9 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.mailing_address_city",
+  "line": "person.mailing_address_city\tCity or town of the person's mailing address\ttext\tIMM 5476, IMM 5475 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.mailing_address_country",
+  "line": "person.mailing_address_country\tCountry or territory of the person's mailing address\tcountry\tIMM 5475, IMM 5476 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.mailing_address_postal_code",
+  "line": "person.mailing_address_postal_code\tPostal or ZIP code of the person's mailing address\ttext\tIMM 5475, IMM 5476 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.mailing_address_province_state",
+  "line": "person.mailing_address_province_state\tProvince, state or territory of the person's mailing address\ttext\tIMM 5475, IMM 5476 · 2 form fields\trepresentative · prof"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.mailing_address_street_name",
+  "line": "person.mailing_address_street_name\tStreet name of the person's mailing address\ttext\tIMM 5476, IMM 5475 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.mailing_address_street_number",
+  "line": "person.mailing_address_street_number\tStreet number of the person's mailing address\ttext\tIMM 5475, IMM 5476 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.mailing_address_unit",
+  "line": "person.mailing_address_unit\tApartment or unit of the person's mailing address\ttext\tIMM 5476, IMM 5475 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.marital_status",
+  "line": "person.marital_status\tCurrent marital status\tcode\tIMM 5707, IMM 1295 · 6 form fields\tpersonal details · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.medical_details",
+  "line": "person.medical_details\tDetails explaining yes answers to medical background questions\ttext\tIMM 1295 · 1 form fields\tbackground medical · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.military_service",
+  "line": "person.military_service\tWhether the person served in any military, militia, civil defence, security organization or police force\tyes_no\tIMM 5257 SCH1, IMM 1295 "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.military_service_country",
+  "line": "person.military_service_country\tCountry or territory of one period of service\tcountry\tIMM 5257 SCH1 · 1 form fields\tsecurity history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.military_service_details",
+  "line": "person.military_service_details\tDates and countries of military or security service\ttext\tIMM 1295 · 1 form fields\tbackground declarations · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.military_service_end_date",
+  "line": "person.military_service_end_date\tEnd date of one period of military, militia, civil defence, security or police service\tdate\tIMM 5257 SCH1 · 2 form fields\tsecur"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.military_service_location",
+  "line": "person.military_service_location\tLocation or place where the person was stationed during one period of service\ttext\tIMM 5257 SCH1 · 1 form fields\tsecurity histo"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.military_service_province",
+  "line": "person.military_service_province\tProvince or region of the place where the person was stationed during one period of service\ttext\tIMM 5257 SCH1 · 1 form fields\t"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.military_service_start_date",
+  "line": "person.military_service_start_date\tStart date of one period of military, militia, civil defence, security or police service\tdate\tIMM 5257 SCH1 · 2 form fields\ts"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.national_id_country_of_issue",
+  "line": "person.national_id_country_of_issue\tCountry or territory that issued the national identity document\tcountry\tIMM 1295 · 1 form fields\ttravel document · verified "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.national_id_expiry_date",
+  "line": "person.national_id_expiry_date\tExpiry date of the national identity document\tdate\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.national_id_issue_date",
+  "line": "person.national_id_issue_date\tIssue date of the national identity document\tdate\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.national_id_number",
+  "line": "person.national_id_number\tNumber of the national identity document\ttext\tIMM 1295 · 2 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.native_language",
+  "line": "person.native_language\tNative language or mother tongue\tcode\tIMM 1295 · 1 form fields\tlanguages · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.nomination_expiry_date",
+  "line": "person.nomination_expiry_date\tExpiry date of the provincial or territorial nomination certificate\tdate\tnone · 0 form fields\tintended work · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.occupation",
+  "line": "person.occupation\tThe person's present occupation\ttext\tIMM 5707 · 5 form fields\temployment history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.official_language_ability",
+  "line": "person.official_language_ability\tAbility to communicate in English, French, both or neither\tcode\tIMM 1295 · 1 form fields\tlanguages · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.organization_activities_positions",
+  "line": "person.organization_activities_positions\tActivities carried out and/or positions held by the person within one organization\ttext\tIMM 5257 SCH1 · 1 form fields\ts"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.organization_country",
+  "line": "person.organization_country\tCountry or territory of one organization the person is or was associated with\tcountry\tIMM 5257 SCH1 · 1 form fields\tsecurity history"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.organization_membership_end_date",
+  "line": "person.organization_membership_end_date\tEnd date of the person's membership in or association with one organization\tdate\tIMM 5257 SCH1 · 2 form fields\tsecurity "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.organization_membership_start_date",
+  "line": "person.organization_membership_start_date\tStart date of the person's membership in or association with one organization\tdate\tIMM 5257 SCH1 · 2 form fields\tsecur"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.organization_name",
+  "line": "person.organization_name\tName of an organization the person is or was a member of or associated with\ttext\tIMM 5257 SCH1 · 1 form fields\tsecurity history · clien"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.organization_province",
+  "line": "person.organization_province\tProvince or region of one organization the person is or was associated with\ttext\tIMM 5257 SCH1 · 1 form fields\tsecurity history · c"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.other_family_name",
+  "line": "person.other_family_name\tFamily name of any other name ever used (nickname, maiden name, alias)\ttext\tIMM 1295 · 2 form fields\tpersonal details · client question"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.other_given_names",
+  "line": "person.other_given_names\tGiven name(s) of any other name ever used\ttext\tIMM 1295 · 1 form fields\tpersonal details · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.passport_country_of_issue",
+  "line": "person.passport_country_of_issue\tCountry or territory that issued the passport\tcountry\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.passport_expiry_date",
+  "line": "person.passport_expiry_date\tExpiry date of the passport\tdate\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.passport_issue_date",
+  "line": "person.passport_issue_date\tIssue date of the passport\tdate\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.passport_number",
+  "line": "person.passport_number\tNumber of the passport or travel document used\ttext\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.passport_requires_reentry_permit",
+  "line": "person.passport_requires_reentry_permit\tWhether the government that issued the passport requires a re-entry permit\tyes_no\tnone · 0 form fields\ttravel document ·"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.phone_country_code",
+  "line": "person.phone_country_code\tInternational dialling country code of the person's primary telephone number\tnumber\tIMM 5475 · 1 form fields\trepresentative · profile "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.phone_number",
+  "line": "person.phone_number\tTelephone number including country calling code and extension\ttext\tIMM 5475, IMM 1295 · 17 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.phone_type",
+  "line": "person.phone_type\tType of telephone line (residence, cellular, business)\tcode\tIMM 1295 · 2 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.place_of_birth_city",
+  "line": "person.place_of_birth_city\tCity or town of birth\ttext\tIMM 1295 · 1 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.plans_to_study_in_canada",
+  "line": "person.plans_to_study_in_canada\tWhether the family member plans to attend school in Canada\tyes_no\tnone · 0 form fields\tfamily members · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.plans_to_work_in_canada",
+  "line": "person.plans_to_work_in_canada\tWhether the family member plans to work in Canada\tyes_no\tnone · 0 form fields\tfamily members · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.preferred_official_language",
+  "line": "person.preferred_official_language\tOfficial language in which the person is most at ease\tcode\tIMM 1295 · 1 form fields\tlanguages · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.previous_marriage_or_common_law",
+  "line": "person.previous_marriage_or_common_law\tWhether the person was ever previously married or in a common-law relationship\tyes_no\tIMM 1295 · 1 form fields\trelationsh"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.refused_visa_or_entry",
+  "line": "person.refused_visa_or_entry\tWhether the person was ever refused a visa or permit, denied entry or ordered to leave any country\tyes_no\tIMM 1295 · 1 form fields\t"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.representative_acts_for_person",
+  "line": "person.representative_acts_for_person\tWhether the representative also conducts business on behalf of this person\tyes_no\tnone · 0 form fields\trepresentative · st"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.requires_trv",
+  "line": "person.requires_trv\tWhether the person requires a temporary resident visa to enter Canada\tyes_no\tnone · 0 form fields\tprocessing requirements · staff working vi"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.residence_city",
+  "line": "person.residence_city\tCity, town or village where the person currently lives\ttext\tIMM 5409 · 1 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.residence_country",
+  "line": "person.residence_country\tCountry or territory of a period of residence or presence\tcountry\tIMM 1295 · 3 form fields\tresidence history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.residence_immigration_status",
+  "line": "person.residence_immigration_status\tImmigration status held in a country during a period of residence or presence\tcode\tIMM 1295 · 3 form fields\tresidence histor"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.residence_province_state",
+  "line": "person.residence_province_state\tProvince, state or territory where the person currently lives\ttext\tIMM 5409 · 1 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.residence_status_from_date",
+  "line": "person.residence_status_from_date\tStart date of the immigration status held in a country\tdate\tIMM 1295 · 4 form fields\tresidence history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.residence_status_other_details",
+  "line": "person.residence_status_other_details\tFree-text description of an immigration status not covered by the standard list\ttext\tIMM 1295 · 4 form fields\tresidence hi"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.residence_status_to_date",
+  "line": "person.residence_status_to_date\tEnd date of the immigration status held in a country\tdate\tIMM 1295 · 4 form fields\tresidence history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.residential_address",
+  "line": "person.residential_address\tCurrent residential (home) address\taddress\tIMM 5707, IMM 1295 · 13 form fields\tcontact · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.sex",
+  "line": "person.sex\tSex or gender marker of the person\tcode\tIMM 1295 · 1 form fields\tpersonal details · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.status_violation_canada",
+  "line": "person.status_violation_canada\tWhether the person ever remained beyond status, studied or worked without authorization in Canada\tyes_no\tIMM 1295 · 1 form fields"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.tb_history_or_contact",
+  "line": "person.tb_history_or_contact\tWhether, within the past two years, the person or a family member had lung tuberculosis or close contact with a person with tubercu"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.telephone_number",
+  "line": "person.telephone_number\tPerson's telephone number including country code\ttext\tIMM 5476 · 2 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.travel_country",
+  "line": "person.travel_country\tCountry or territory the person travelled to on one trip\tcountry\tIMM 5257 SCH1 · 2 form fields\ttravel history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.travel_end_date",
+  "line": "person.travel_end_date\tEnd date of one trip the person made\tdate\tIMM 5257 SCH1 · 2 form fields\ttravel history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.travel_location",
+  "line": "person.travel_location\tLocation (city or place) the person travelled to on one trip\ttext\tIMM 5257 SCH1 · 1 form fields\ttravel history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.travel_purpose",
+  "line": "person.travel_purpose\tPurpose of one trip the person made\ttext\tIMM 5257 SCH1 · 1 form fields\ttravel history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.travel_start_date",
+  "line": "person.travel_start_date\tStart date of one trip the person made\tdate\tIMM 5257 SCH1 · 2 form fields\ttravel history · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.travelling_alone_to_canada",
+  "line": "person.travelling_alone_to_canada\tWhether a minor is travelling to Canada alone\tyes_no\tnone · 0 form fields\tfamily members · client questionnaire"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.uci",
+  "line": "person.uci\tUnique client identifier assigned by the immigration authority\ttext\tIMM 1295, IMM 5257 SCH1, IMM 5476 · 3 form fields\tpersonal details · existing rec"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.upfront_medical_completed",
+  "line": "person.upfront_medical_completed\tWhether the person completed an upfront medical exam with a panel physician\tyes_no\tnone · 0 form fields\tprocessing requirements"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.us_lawful_permanent_resident",
+  "line": "person.us_lawful_permanent_resident\tWhether the person is a lawful permanent resident of the United States\tyes_no\tIMM 1295 · 1 form fields\ttravel document · cli"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.us_pr_card_expiry_date",
+  "line": "person.us_pr_card_expiry_date\tExpiry date of the US permanent resident card\tdate\tIMM 1295 · 1 form fields\ttravel document · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.uscis_number",
+  "line": "person.uscis_number\tU.S. Citizenship and Immigration Services number on the US permanent resident card\ttext\tIMM 1295 · 1 form fields\ttravel document · verified "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.violent_organisation_association",
+  "line": "person.violent_organisation_association\tWhether the person is or was a member of or associated with a group that engaged in or advocated violence for political "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.witnessed_ill_treatment",
+  "line": "person.witnessed_ill_treatment\tAnswer to the background question on witnessing or participating in ill treatment of prisoners or civilians, looting or desecrati"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.work_permit_type",
+  "line": "person.work_permit_type\tType of work permit applied for\tcode\tIMM 1295 · 1 form fields\tintended work · staff working view"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "relationship.accompanies_subject_to_canada",
+  "line": "relationship.accompanies_subject_to_canada\tWhether this family member will accompany the subject to Canada\tyes_no\tIMM 5707 · 4 form fields\tfamily members · clie"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "relationship.child_relationship_type",
+  "line": "relationship.child_relationship_type\tThe kind of child relationship this person has to the subject (son, daughter, step-child, adopted child)\tcode\tIMM 5707 · 1 "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "relationship.cohabitation_start_date",
+  "line": "relationship.cohabitation_start_date\tDate the two partners began living together continuously in a conjugal relationship\tdate\tIMM 5409 · 2 form fields\trelations"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "relationship.common_law_declared_for_canadian_income_tax",
+  "line": "relationship.common_law_declared_for_canadian_income_tax\tWhether the partners have declared their common-law union under the Canadian Income Tax Act\tyes_no\tIMM "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "relationship.joint_financial_accounts",
+  "line": "relationship.joint_financial_accounts\tWhether the partners hold joint bank, trust, credit union or charge card accounts\tyes_no\tIMM 5409 · 1 form fields\trelation"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "relationship.joint_property_other_than_residence",
+  "line": "relationship.joint_property_other_than_residence\tWhether the partners jointly own property other than their residence\tyes_no\tIMM 5409 · 1 form fields\trelationsh"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "relationship.joint_residence_lease_mortgage_or_purchase",
+  "line": "relationship.joint_residence_lease_mortgage_or_purchase\tWhether the partners jointly signed a residential lease, mortgage or purchase agreement for a residence "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "relationship.other_documentary_evidence",
+  "line": "relationship.other_documentary_evidence\tDescription of other documentary evidence of the common-law relationship\ttext\tIMM 5409 · 1 form fields\trelationship · cl"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "relationship.start_date",
+  "line": "relationship.start_date\tDate of marriage or date the common-law relationship began\tdate\tIMM 1295 · 1 form fields\trelationship · verified document"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "representative.is_compensated",
+  "line": "representative.is_compensated\tWhether the representative is paid or otherwise compensated for representing the person\tyes_no\tnone · 0 form fields\trepresentative"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "representative.licensing_province",
+  "line": "representative.licensing_province\tCanadian province or territory of the law society the representative belongs to\ttext\tIMM 5476 · 2 form fields\trepresentative ·"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "representative.membership_id",
+  "line": "representative.membership_id\tRepresentative's membership number with their regulatory body\ttext\tIMM 5476 · 4 form fields\trepresentative · profile record"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "representative.representative_category",
+  "line": "representative.representative_category\tKind of representative: friend or family member, CICC member, law society member or student-at-law, Chambre des notaires "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "representative.representative_category_other",
+  "line": "representative.representative_category_other\tFree-text description of the representative's kind when it is 'other'\ttext\tIMM 5476 · 1 form fields\trepresentative "
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "representative.supervising_lawyer_membership_id",
+  "line": "representative.supervising_lawyer_membership_id\tLaw society membership number of the supervising lawyer\ttext\tIMM 5476 · 1 form fields\trepresentative · profile r"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "representative.supervising_lawyer_name",
+  "line": "representative.supervising_lawyer_name\tName of the lawyer supervising a student-at-law representative\ttext\tIMM 5476 · 1 form fields\trepresentative · profile rec"
+ },
+ {
+  "page": "library-fields",
+  "w": 1024,
+  "kind": "§4 Not word",
+  "match": "Canonical",
+  "line": "Canonical fields"
+ },
+ {
+  "page": "library-documents",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.family_name",
+  "line": "Birth certificate of accompanying dependent child\tclient\tperson.family_name, person.given_names, person.sex, person.date_of_birth, person.place_of_birth_city, p"
+ },
+ {
+  "page": "library-documents",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.full_name",
+  "line": "Copy of LMIA and copy of employment contract from prospective employer\temployer\tperson.full_name, organisation.name, person.intended_job_title, person.intended_"
+ },
+ {
+  "page": "library-documents",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.full_name",
+  "line": "Employment contract (LMIA-exempt job)\temployer\tperson.full_name, organisation.name, person.intended_job_title, person.intended_job_duties, person.intended_emplo"
+ },
+ {
+  "page": "library-documents",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.full_name",
+  "line": "Job offer letter\temployer\tperson.full_name, organisation.name, person.intended_job_title, person.intended_job_duties, person.intended_employment_start_date, per"
+ },
+ {
+  "page": "library-documents",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.family_name",
+  "line": "Passport or travel document information page photocopy\tclient\tperson.family_name, person.given_names, person.sex, person.date_of_birth, person.place_of_birth_ci"
+ },
+ {
+  "page": "library-documents",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "e.g",
+  "line": "Proof of past work experience (e.g. pay stubs)\tclient\tnone recorded"
+ },
+ {
+  "page": "library-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Guide · Read from canada.ca on 2026-10-29"
+ },
+ {
+  "page": "library-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Guide · Read from canada.ca on 2026-10-29"
+ },
+ {
+  "page": "library-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Guide · Read from canada.ca on 2026-10-29"
+ },
+ {
+  "page": "library-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Guide · Read from canada.ca on 2026-10-29"
+ },
+ {
+  "page": "library-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Sample · canada.ca words"
+ },
+ {
+  "page": "library-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Sample · canada.ca words"
+ },
+ {
+  "page": "library-checks",
+  "w": 1024,
+  "kind": "internal name",
+  "match": "Screen 04",
+  "line": "This list is built with the shared-library screen (Screen 04). Combination rules and checks imported from the reviewed release are visible in each combination's"
+ },
+ {
+  "page": "library-checks",
+  "w": 1024,
+  "kind": "placeholder",
+  "match": "later screen",
+  "line": "Checks are set up on a later screen"
+ },
+ {
+  "page": "ai",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "copy.pdf",
+  "line": "imm5562e-copy.pdf"
+ },
+ {
+  "page": "ai",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Rules only (no AI)\t4 steps · 3 done, 1 waiting for you\tWaiting for you\tUS$0.00 / US$0.00\ttoday 7:55 a.m. · Configuration author"
+ },
+ {
+  "page": "activity",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "documents.html",
+  "line": "10/29/2026, 7:53:23 AM\tuser-A\tConfiguration author attached work-permit-outside-forms-documents.html to \"With an LMIA\" (sample button): Work permit outside: for"
+ },
+ {
+  "page": "activity",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "india.html",
+  "line": "10/29/2026, 7:53:18 AM\tuser-A\tConfiguration author attached visa-package-india.html to \"Visitor visa\" (sample button): Visitor visa application package, India\ts"
+ },
+ {
+  "page": "activity",
+  "w": 1024,
+  "kind": "§4 Not word",
+  "match": "Stream",
+  "line": "10/29/2026, 7:53:24 AM\tuser-A\tConfiguration author created category \"Global Talent Stream\" under LMIA\tcategory"
+ },
+ {
+  "page": "library-field",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.application_date",
+  "line": "case.application_date"
+ },
+ {
+  "page": "library-field",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.application_date",
+  "line": "case.application_date"
+ },
+ {
+  "page": "library-field",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "yes_no",
+  "line": "yes_no"
+ },
+ {
+  "page": "combo-overview",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Released versions: Release 1 on today 7:53 a.m., approved by Approver · Review and release"
+ },
+ {
+  "page": "combo-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Its forms and checklists come from canada.ca into the Form library and attach here. Nothing was spent yet. Which forms apply is Sample until the immigration exp"
+ },
+ {
+  "page": "combo-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "documents.html",
+  "line": "Web page · work-permit-outside-forms-documents.html"
+ },
+ {
+  "page": "combo2-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Its forms and checklists come from canada.ca into the Form library and attach here. Nothing was spent yet. Which forms apply is Sample until the immigration exp"
+ },
+ {
+  "page": "combo2-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo2-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Read today 7:53 a.m."
+ },
+ {
+  "page": "combo2-forms",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "india.html",
+  "line": "Web page · visa-package-india.html"
+ },
+ {
+  "page": "combo-questionnaires",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "e.g",
+  "line": "Kind of immigration application the case concerns (e.g. permanent residence, study permit extension)\tCase officer\tAlways\tIMM 5475, IMM 5476\tDetails"
+ },
+ {
+  "page": "combo-questionnaires",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "e.g",
+  "line": "Details of: Kind of immigration application the case concerns (e.g. permanent residence, study permit extension)"
+ },
+ {
+  "page": "combo-documents",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "e.g",
+  "line": "Proof of past work experience (e.g. pay stubs)"
+ },
+ {
+  "page": "combo-preview",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "e.g",
+  "line": "Proof of past work experience (e.g. pay stubs)Cannot tell yet"
+ },
+ {
+  "page": "combo-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "subject_spouse_or_partner",
+  "line": "Derived fields · Number of person records in the case holding the role subject_spouse_or_partner (current spouse, common-law or conjugal partner) on the applica"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.applying_country_differs_from_citizenship",
+  "line": "Derived definition\tcase.applying_country_differs_from_citizenship"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "case.spouse_or_partner_count",
+  "line": "Derived definition\tcase.spouse_or_partner_count"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "subject_spouse_or_partner",
+  "line": "Number of person records in the case holding the role subject_spouse_or_partner (current spouse, common-law or conjugal partner) on the application date."
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.age_years",
+  "line": "Derived definition\tperson.age_years"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.education_row_duration_days",
+  "line": "Derived definition\tperson.education_row_duration_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.employment_history_gap_months",
+  "line": "Derived definition\tperson.employment_history_gap_months"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.employment_row_duration_days",
+  "line": "Derived definition\tperson.employment_row_duration_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.intended_employment_duration_days",
+  "line": "Derived definition\tperson.intended_employment_duration_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.intended_employment_start_days_from_application",
+  "line": "Derived definition\tperson.intended_employment_start_days_from_application"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.national_id_days_until_expiry",
+  "line": "Derived definition\tperson.national_id_days_until_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.nomination_days_until_expiry",
+  "line": "Derived definition\tperson.nomination_days_until_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.passport_days_until_expiry",
+  "line": "Derived definition\tperson.passport_days_until_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.passport_issue_days_after_birth",
+  "line": "Derived definition\tperson.passport_issue_days_after_birth"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.passport_validity_days",
+  "line": "Derived definition\tperson.passport_validity_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.passport_years_since_expiry",
+  "line": "Derived definition\tperson.passport_years_since_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.residence_differs_from_citizenship",
+  "line": "Derived definition\tperson.residence_differs_from_citizenship"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.residence_status_days_until_expiry",
+  "line": "Derived definition\tperson.residence_status_days_until_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.residence_status_row_duration_days",
+  "line": "Derived definition\tperson.residence_status_row_duration_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.travel_row_duration_days",
+  "line": "Derived definition\tperson.travel_row_duration_days"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.us_pr_card_days_until_expiry",
+  "line": "Derived definition\tperson.us_pr_card_days_until_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "person.venezuelan_extended_passport_expiry",
+  "line": "Derived definition\tperson.venezuelan_extended_passport_expiry"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "relationship.cohabitation_years",
+  "line": "Derived definition\trelationship.cohabitation_years"
+ },
+ {
+  "page": "combo2-review",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "relationship.start_vs_cohabitation_days",
+  "line": "Derived definition\trelationship.start_vs_cohabitation_days"
+ },
+ {
+  "page": "review-held",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "copy.pdf",
+  "line": "imm5562e-copy.pdf · uploaded today 7:55 a.m."
+ },
+ {
+  "page": "review-held",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Paste the canada.ca page"
+ },
+ {
+  "page": "ai-batch",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "copy.pdf",
+  "line": "Reading an uploaded PDF · imm5562e-copy.pdf"
+ },
+ {
+  "page": "ai-batch",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "Compare with canada.ca and find the guides that name itrules · US$0"
+ },
+ {
+  "page": "ai-batch",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "canada.ca",
+  "line": "canada.ca shows IMM 5562 last updated 2024-07; this file is not the one its page links. Named by Guide 5289."
+ },
+ {
+  "page": "ai-batch",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "copy.pdf",
+  "line": "Reading an uploaded PDF: imm5562e-copy.pdf"
+ },
+ {
+  "page": "case-officer",
+  "w": 1024,
+  "kind": "decision number",
+  "match": "(P-65)",
+  "line": "The evidence lane's fill trial for this form has not passed (P-65)"
+ },
+ {
+  "page": "case-officer",
+  "w": 1024,
+  "kind": "decision number",
+  "match": "(P-65)",
+  "line": "The evidence lane's fill trial for this form has not passed (P-65)"
+ },
+ {
+  "page": "case-officer",
+  "w": 1024,
+  "kind": "decision number",
+  "match": "(P-65)",
+  "line": "The evidence lane's fill trial for this form has not passed (P-65)"
+ },
+ {
+  "page": "case-officer",
+  "w": 1024,
+  "kind": "internal name",
+  "match": "slice",
+  "line": "No answer list yet (forms slice 2): the officer checks this answer before confirming the section."
+ },
+ {
+  "page": "case-officer",
+  "w": 1024,
+  "kind": "raw key",
+  "match": "a.m",
+  "line": "Frozen when the case opened (2026-10-29, 7:55:08 a.m.); a later release never changes this case"
+ },
+ {
+  "page": "demo",
+  "w": 1440,
+  "kind": "raw key",
+  "match": "qa_wd",
+  "line": "Working files: 36 (29639 KB) in ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/isolated-qa_wd/workspaces/demo. Generated scripts: none"
+ }
+]

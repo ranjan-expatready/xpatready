@@ -1,0 +1,14 @@
+URL /cases/d5e3f41b-0b34-445b-a81d-9ff3f4bdbea1 as user-P
+TITLE Product Studio · Expat Ready (prototype)
+H1 []
+HEADS []
+CUT []
+ERRORS []
+---
+This page is for the case officer
+
+As a client, open your questionnaire.
+--- labels ---
+Cases home
+Simulated people for the prototype: not part of the product
+Simulated person

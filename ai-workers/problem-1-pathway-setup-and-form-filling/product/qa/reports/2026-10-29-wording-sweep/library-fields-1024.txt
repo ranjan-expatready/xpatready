@@ -1,0 +1,686 @@
+URL /library/fields as user-A
+TITLE Product Studio · Expat Ready (prototype)
+H1 ["Canonical fields"]
+HEADS ["Field","Meaning","Type","Forms","Asked in","Status"]
+CUT []
+ERRORS []
+---
+Canonical fields
+
+One definition per meaning, shared by every form and program. Values about people and cases are never stored here.
+
+Add a field
+All fields
+Used by more than one form
+With a draft change
+AI-proposed
+Not asked anywhere
+164 of 164
+Field	Meaning	Type	Forms	Asked in	Status
+case.application_date	Date the application is (or will be) submitted; reference date for calculated values	date	none · 0 form fields	application details · staff working view	
+v1
+Imported release
+
+case.application_number	IRCC application file number of the case	text	IMM 5476 · 1 form fields	application details · staff working view	
+v1
+Imported release
+
+case.application_type	Kind of immigration application the case concerns (e.g. permanent residence, study permit extension)	text	IMM 5476, IMM 5475 · 2 form fields	application details · staff working view	
+v1
+Imported release
+
+case.applying_for_pgwp	Whether the application is for a post-graduation work permit	yes_no	none · 0 form fields	intended work · staff working view	
+v1
+Imported release
+
+case.authorizes_release_to_designated_individual	Whether the applicant authorizes IRCC/CBSA to release case information to a designated individual	yes_no	none · 0 form fields	representative · client questionnaire	
+v1
+Imported release
+
+case.country_where_applying	Country or territory from which the application is being made	country	IMM 1295 · 2 form fields	residence history · client questionnaire	
+v1
+Imported release
+
+case.employer_exempt_from_compliance_regime	Whether the employer is exempt from the Employer Compliance Regime	yes_no	none · 0 form fields	intended work · staff working view	
+v1
+Imported release
+
+case.employer_obtained_lmia	Whether the employer obtained an LMIA from ESDC for the job	yes_no	none · 0 form fields	intended work · staff working view	
+v1
+Imported release
+
+case.job_requires_licence_or_certification	Whether the offered job requires a licence or certification (regulated job)	yes_no	none · 0 form fields	intended work · staff working view	
+v1
+Imported release
+
+case.offer_from_nominating_province_employer	Whether the job offer is from an employer in the nominating province or territory	yes_no	none · 0 form fields	intended work · staff working view	
+v1
+Imported release
+
+case.offer_lmia_exempt	Whether the job offer is exempt from the LMIA requirement	yes_no	none · 0 form fields	intended work · staff working view	
+v1
+Imported release
+
+case.offer_submitted_via_imm5802	Whether IRCC authorized the employer to submit the offer of employment on form IMM 5802	yes_no	none · 0 form fields	intended work · staff working view	
+v1
+Imported release
+
+case.release_authorization_action	Whether the person is granting or withdrawing authority for the immigration authorities to release information from their case file to a designated individual	code	IMM 5475 · 1 form fields	representative · staff working view	
+v1
+Imported release
+
+case.representative_form_action	What this use-of-representative filing does: appoint, update contact details, cancel, cancel and replace, or withdraw	code	IMM 5476 · 1 form fields	representative · staff working view	
+v1
+Imported release
+
+case.service_language	Official language (English or French) in which the person wants to receive service	code	IMM 1295 · 1 form fields	application details · client questionnaire	
+v1
+Imported release
+
+case.subject_is_principal_applicant	Whether the person the form is about is the principal applicant, rather than the principal applicant's spouse, common-law partner or dependent child	yes_no	IMM 5257 SCH1 · 1 form fields	application details · staff working view	
+v1
+Imported release
+
+case.submission_office_location	Location (city/country) of the office where the application was submitted	text	IMM 5475 · 1 form fields	application details · staff working view	
+v1
+Imported release
+
+case.submission_office_name	Name of the office where the application was submitted	text	IMM 5475 · 1 form fields	application details · staff working view	
+v1
+Imported release
+
+case.uses_representative	Whether the applicant uses the services of an authorized representative	yes_no	none · 0 form fields	representative · staff working view	
+v1
+Imported release
+
+document.in_english_or_french	Whether a submitted document is in English or French	yes_no	none · 0 form fields	submitted documents · staff working view	
+v1
+Imported release
+
+document.translator_is_canadian_certified	Whether the translator of a document is a Canadian certified translator	yes_no	none · 0 form fields	submitted documents · staff working view	
+v1
+Imported release
+
+organisation.address	Complete address of an organisation	address	IMM 1295 · 1 form fields	intended work · verified document	
+v1
+Imported release
+
+organisation.name	Legal or operating name of an organisation (here the prospective employer)	text	IMM 5476, IMM 1295, IMM 5475 · 4 form fields	intended work · staff working view	
+v1
+Imported release
+
+person.biometrics_required	Whether the person must give biometric fingerprints and photo for this application	yes_no	none · 0 form fields	processing requirements · staff working view	
+v1
+Imported release
+
+person.caregiver_care_types	Types of care to be provided in a caregiver position (child care, disabled, elderly, other)	code	IMM 1295 · 4 form fields	intended work · verified document	
+v1
+Imported release
+
+person.caregiver_persons_requiring_care	Number of persons requiring care in a caregiver position	number	IMM 1295 · 1 form fields	intended work · verified document	
+v1
+Imported release
+
+person.citizenship	Country of citizenship	country	IMM 1295 · 1 form fields	personal details · verified document	
+v1
+Imported release
+
+person.country_of_birth	The country or territory where the person was born	country	IMM 1295, IMM 5707 · 6 form fields	personal details · verified document	
+v1
+Imported release
+
+person.criminal_history	Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence	yes_no	IMM 1295 · 1 form fields	background declarations · client questionnaire	
+v1
+Imported release
+
+person.criminal_history_details	Details of criminal history	text	IMM 1295 · 1 form fields	background declarations · client questionnaire	
+v1
+Imported release
+
+person.current_residence_country	Country where the person currently lives	country	IMM 5409 · 1 form fields	residence history · client questionnaire	
+v1
+Imported release
+
+person.date_of_birth	Date of birth	date	IMM 1295, IMM 5476, IMM 5257 SCH1, IMM 5707, IMM 5475 · 13 form fields	personal details · verified document	
+v1
+Imported release
+
+person.disorder_requiring_services	Whether the person has a physical or mental disorder requiring social or health services other than medication	yes_no	IMM 1295 · 1 form fields	background medical · client questionnaire	
+v1
+Imported release
+
+person.education_field_and_level	Field and level of study of a period of education	text	IMM 1295 · 1 form fields	education history · client questionnaire	
+v1
+Imported release
+
+person.education_from_date	Start date of a period of post-secondary education	date	IMM 1295 · 2 form fields	education history · client questionnaire	
+v1
+Imported release
+
+person.education_institution	Name of the school or facility attended	text	IMM 1295 · 2 form fields	education history · client questionnaire	
+v1
+Imported release
+
+person.education_location	Location (city, province/state, country) of the school or facility	address	IMM 1295 · 3 form fields	education history · client questionnaire	
+v1
+Imported release
+
+person.education_to_date	End date of a period of post-secondary education	date	IMM 1295 · 2 form fields	education history · client questionnaire	
+v1
+Imported release
+
+person.email	The person's e-mail address	text	IMM 5475 · 1 form fields	representative · profile record	
+v1
+Imported release
+
+person.email_address	E-mail address	text	IMM 5476, IMM 1295 · 2 form fields	contact · client questionnaire	
+v1
+Imported release
+
+person.employment_activity	Activity or occupation during a period	text	IMM 1295 · 3 form fields	employment history · client questionnaire	
+v1
+Imported release
+
+person.employment_employer_name	Company, employer or facility name for a period of activity	text	IMM 1295 · 3 form fields	employment history · client questionnaire	
+v1
+Imported release
+
+person.employment_from_date	Start date of a period of activity or occupation	date	IMM 1295 · 6 form fields	employment history · client questionnaire	
+v1
+Imported release
+
+person.employment_location	Location (city, province/state, country) of a period of activity	address	IMM 1295 · 9 form fields	employment history · client questionnaire	
+v1
+Imported release
+
+person.employment_to_date	End date of a period of activity or occupation	date	IMM 1295 · 6 form fields	employment history · client questionnaire	
+v1
+Imported release
+
+person.exceptional_situation_no_valid_passport	Whether the person has an exceptional situation preventing them from getting a valid passport or travel document	yes_no	none · 0 form fields	travel document · client questionnaire	
+v1
+Imported release
+
+person.family_name	Family name (surname) as shown on passport or travel document	text	IMM 5257 SCH1, IMM 5707, IMM 5475, IMM 1295, IMM 5476 · 13 form fields	personal details · verified document	
+v1
+Imported release
+
+person.fax_number	Fax number including country calling code and extension	text	IMM 5476, IMM 1295 · 10 form fields	contact · client questionnaire	
+v1
+Imported release
+
+person.fee_exempt	Whether the person is exempt from the work permit processing fee	yes_no	none · 0 form fields	processing requirements · staff working view	
+v1
+Imported release
+
+person.flight_school_graduate	Whether the PGWP applicant is a flight school graduate	yes_no	none · 0 form fields	education history · client questionnaire	
+v1
+Imported release
+
+person.full_name	The person's full name exactly as shown on their passport or travel document	text	IMM 5409 · 4 form fields	personal details · verified document	
+v1
+Imported release
+
+person.given_names	Given name(s) as shown on passport or travel document	text	IMM 1295, IMM 5257 SCH1, IMM 5475, IMM 5476, IMM 5707 · 13 form fields	personal details · verified document	
+v1
+Imported release
+
+person.government_position_activities	Activities and/or positions held in one government position	text	IMM 5257 SCH1 · 1 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.government_position_country	Country or territory of one government position held by the person	country	IMM 5257 SCH1 · 1 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.government_position_department	Department or branch of one government position	text	IMM 5257 SCH1 · 1 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.government_position_end_date	End date of one government position held by the person	date	IMM 5257 SCH1 · 2 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.government_position_jurisdiction_level	Level of jurisdiction of one government position (for example national, regional, municipal)	text	IMM 5257 SCH1 · 1 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.government_position_start_date	Start date of one government position held by the person	date	IMM 5257 SCH1 · 2 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.has_children	Whether the person has any children (natural, adopted or step), derived from the child records held for the person	yes_no	IMM 5707 · 1 form fields	family members · client questionnaire	
+v1
+Imported release
+
+person.has_held_government_position	Whether the person has ever held any government position (for example civil servant, judge, police officer, mayor, member of parliament, hospital administrator)	yes_no	IMM 5257 SCH1 · 1 form fields	background declarations · client questionnaire	
+v1
+Imported release
+
+person.immigration_history_details	Details explaining yes answers to immigration-history background questions	text	IMM 1295 · 1 form fields	background declarations · client questionnaire	
+v1
+Imported release
+
+person.intended_employment_end_date	Expected end date of the intended employment	date	IMM 1295 · 1 form fields	intended work · verified document	
+v1
+Imported release
+
+person.intended_employment_start_date	Expected start date of the intended employment	date	IMM 1295 · 1 form fields	intended work · verified document	
+v1
+Imported release
+
+person.intended_job_duties	Brief description of duties of the intended employment	text	IMM 1295 · 1 form fields	intended work · verified document	
+v1
+Imported release
+
+person.intended_job_title	Job title of the intended employment	text	IMM 1295 · 1 form fields	intended work · verified document	
+v1
+Imported release
+
+person.intended_occupation_requires_medical	Whether the intended work is in health services, child care, or primary or secondary education	yes_no	none · 0 form fields	intended work · staff working view	
+v1
+Imported release
+
+person.intended_work_location	Intended location of employment in Canada	address	IMM 1295 · 2 form fields	intended work · verified document	
+v1
+Imported release
+
+person.intended_work_province	Canadian province or territory of the intended employment	code	none · 0 form fields	intended work · verified document	
+v1
+Imported release
+
+person.is_employer_specific_work_permit	Whether the application is for an employer-specific (not open) work permit	yes_no	none · 0 form fields	intended work · staff working view	
+v1
+Imported release
+
+person.is_provincial_nominee	Whether the person holds a provincial or territorial nomination	yes_no	none · 0 form fields	intended work · client questionnaire	
+v1
+Imported release
+
+person.language_test_taken	Whether the person has taken a designated English or French proficiency test	yes_no	IMM 1295 · 1 form fields	languages · client questionnaire	
+v1
+Imported release
+
+person.life_insurance_names_partner_as_beneficiary	Whether the person holds life insurance on themselves that names their partner as beneficiary	yes_no	IMM 5409 · 2 form fields	relationship · client questionnaire	
+v1
+Imported release
+
+person.lmia_or_offer_number	Labour Market Impact Assessment number or LMIA-exempt offer of employment number	text	IMM 1295 · 1 form fields	intended work · verified document	
+v1
+Imported release
+
+person.mailing_address	Current mailing address	address	IMM 1295 · 9 form fields	contact · client questionnaire	
+v1
+Imported release
+
+person.mailing_address_city	City or town of the person's mailing address	text	IMM 5476, IMM 5475 · 2 form fields	representative · profile record	
+v1
+Imported release
+
+person.mailing_address_country	Country or territory of the person's mailing address	country	IMM 5475, IMM 5476 · 2 form fields	representative · profile record	
+v1
+Imported release
+
+person.mailing_address_postal_code	Postal or ZIP code of the person's mailing address	text	IMM 5475, IMM 5476 · 2 form fields	representative · profile record	
+v1
+Imported release
+
+person.mailing_address_province_state	Province, state or territory of the person's mailing address	text	IMM 5475, IMM 5476 · 2 form fields	representative · profile record	
+v1
+Imported release
+
+person.mailing_address_street_name	Street name of the person's mailing address	text	IMM 5476, IMM 5475 · 2 form fields	representative · profile record	
+v1
+Imported release
+
+person.mailing_address_street_number	Street number of the person's mailing address	text	IMM 5475, IMM 5476 · 2 form fields	representative · profile record	
+v1
+Imported release
+
+person.mailing_address_unit	Apartment or unit of the person's mailing address	text	IMM 5476, IMM 5475 · 2 form fields	representative · profile record	
+v1
+Imported release
+
+person.marital_status	Current marital status	code	IMM 5707, IMM 1295 · 6 form fields	personal details · client questionnaire	
+v1
+Imported release
+
+person.medical_details	Details explaining yes answers to medical background questions	text	IMM 1295 · 1 form fields	background medical · client questionnaire	
+v1
+Imported release
+
+person.military_service	Whether the person served in any military, militia, civil defence, security organization or police force	yes_no	IMM 5257 SCH1, IMM 1295 · 2 form fields	background declarations · client questionnaire	
+v1
+Imported release
+
+person.military_service_country	Country or territory of one period of service	country	IMM 5257 SCH1 · 1 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.military_service_details	Dates and countries of military or security service	text	IMM 1295 · 1 form fields	background declarations · client questionnaire	
+v1
+Imported release
+
+person.military_service_end_date	End date of one period of military, militia, civil defence, security or police service	date	IMM 5257 SCH1 · 2 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.military_service_location	Location or place where the person was stationed during one period of service	text	IMM 5257 SCH1 · 1 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.military_service_province	Province or region of the place where the person was stationed during one period of service	text	IMM 5257 SCH1 · 1 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.military_service_start_date	Start date of one period of military, militia, civil defence, security or police service	date	IMM 5257 SCH1 · 2 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.national_id_country_of_issue	Country or territory that issued the national identity document	country	IMM 1295 · 1 form fields	travel document · verified document	
+v1
+Imported release
+
+person.national_id_expiry_date	Expiry date of the national identity document	date	IMM 1295 · 1 form fields	travel document · verified document	
+v1
+Imported release
+
+person.national_id_issue_date	Issue date of the national identity document	date	IMM 1295 · 1 form fields	travel document · verified document	
+v1
+Imported release
+
+person.national_id_number	Number of the national identity document	text	IMM 1295 · 2 form fields	travel document · verified document	
+v1
+Imported release
+
+person.native_language	Native language or mother tongue	code	IMM 1295 · 1 form fields	languages · client questionnaire	
+v1
+Imported release
+
+person.nomination_expiry_date	Expiry date of the provincial or territorial nomination certificate	date	none · 0 form fields	intended work · verified document	
+v1
+Imported release
+
+person.occupation	The person's present occupation	text	IMM 5707 · 5 form fields	employment history · client questionnaire	
+v1
+Imported release
+
+person.official_language_ability	Ability to communicate in English, French, both or neither	code	IMM 1295 · 1 form fields	languages · client questionnaire	
+v1
+Imported release
+
+person.organization_activities_positions	Activities carried out and/or positions held by the person within one organization	text	IMM 5257 SCH1 · 1 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.organization_country	Country or territory of one organization the person is or was associated with	country	IMM 5257 SCH1 · 1 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.organization_membership_end_date	End date of the person's membership in or association with one organization	date	IMM 5257 SCH1 · 2 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.organization_membership_start_date	Start date of the person's membership in or association with one organization	date	IMM 5257 SCH1 · 2 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.organization_name	Name of an organization the person is or was a member of or associated with	text	IMM 5257 SCH1 · 1 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.organization_province	Province or region of one organization the person is or was associated with	text	IMM 5257 SCH1 · 1 form fields	security history · client questionnaire	
+v1
+Imported release
+
+person.other_family_name	Family name of any other name ever used (nickname, maiden name, alias)	text	IMM 1295 · 2 form fields	personal details · client questionnaire	
+v1
+Imported release
+
+person.other_given_names	Given name(s) of any other name ever used	text	IMM 1295 · 1 form fields	personal details · client questionnaire	
+v1
+Imported release
+
+person.passport_country_of_issue	Country or territory that issued the passport	country	IMM 1295 · 1 form fields	travel document · verified document	
+v1
+Imported release
+
+person.passport_expiry_date	Expiry date of the passport	date	IMM 1295 · 1 form fields	travel document · verified document	
+v1
+Imported release
+
+person.passport_issue_date	Issue date of the passport	date	IMM 1295 · 1 form fields	travel document · verified document	
+v1
+Imported release
+
+person.passport_number	Number of the passport or travel document used	text	IMM 1295 · 1 form fields	travel document · verified document	
+v1
+Imported release
+
+person.passport_requires_reentry_permit	Whether the government that issued the passport requires a re-entry permit	yes_no	none · 0 form fields	travel document · staff working view	
+v1
+Imported release
+
+person.phone_country_code	International dialling country code of the person's primary telephone number	number	IMM 5475 · 1 form fields	representative · profile record	
+v1
+Imported release
+
+person.phone_number	Telephone number including country calling code and extension	text	IMM 5475, IMM 1295 · 17 form fields	contact · client questionnaire	
+v1
+Imported release
+
+person.phone_type	Type of telephone line (residence, cellular, business)	code	IMM 1295 · 2 form fields	contact · client questionnaire	
+v1
+Imported release
+
+person.place_of_birth_city	City or town of birth	text	IMM 1295 · 1 form fields	personal details · verified document	
+v1
+Imported release
+
+person.plans_to_study_in_canada	Whether the family member plans to attend school in Canada	yes_no	none · 0 form fields	family members · client questionnaire	
+v1
+Imported release
+
+person.plans_to_work_in_canada	Whether the family member plans to work in Canada	yes_no	none · 0 form fields	family members · client questionnaire	
+v1
+Imported release
+
+person.preferred_official_language	Official language in which the person is most at ease	code	IMM 1295 · 1 form fields	languages · client questionnaire	
+v1
+Imported release
+
+person.previous_marriage_or_common_law	Whether the person was ever previously married or in a common-law relationship	yes_no	IMM 1295 · 1 form fields	relationship · client questionnaire	
+v1
+Imported release
+
+person.refused_visa_or_entry	Whether the person was ever refused a visa or permit, denied entry or ordered to leave any country	yes_no	IMM 1295 · 1 form fields	background declarations · client questionnaire	
+v1
+Imported release
+
+person.representative_acts_for_person	Whether the representative also conducts business on behalf of this person	yes_no	none · 0 form fields	representative · staff working view	
+v1
+Imported release
+
+person.requires_trv	Whether the person requires a temporary resident visa to enter Canada	yes_no	none · 0 form fields	processing requirements · staff working view	
+v1
+Imported release
+
+person.residence_city	City, town or village where the person currently lives	text	IMM 5409 · 1 form fields	contact · client questionnaire	
+v1
+Imported release
+
+person.residence_country	Country or territory of a period of residence or presence	country	IMM 1295 · 3 form fields	residence history · client questionnaire	
+v1
+Imported release
+
+person.residence_immigration_status	Immigration status held in a country during a period of residence or presence	code	IMM 1295 · 3 form fields	residence history · client questionnaire	
+v1
+Imported release
+
+person.residence_province_state	Province, state or territory where the person currently lives	text	IMM 5409 · 1 form fields	contact · client questionnaire	
+v1
+Imported release
+
+person.residence_status_from_date	Start date of the immigration status held in a country	date	IMM 1295 · 4 form fields	residence history · client questionnaire	
+v1
+Imported release
+
+person.residence_status_other_details	Free-text description of an immigration status not covered by the standard list	text	IMM 1295 · 4 form fields	residence history · client questionnaire	
+v1
+Imported release
+
+person.residence_status_to_date	End date of the immigration status held in a country	date	IMM 1295 · 4 form fields	residence history · client questionnaire	
+v1
+Imported release
+
+person.residential_address	Current residential (home) address	address	IMM 5707, IMM 1295 · 13 form fields	contact · client questionnaire	
+v1
+Imported release
+
+person.sex	Sex or gender marker of the person	code	IMM 1295 · 1 form fields	personal details · verified document	
+v1
+Imported release
+
+person.status_violation_canada	Whether the person ever remained beyond status, studied or worked without authorization in Canada	yes_no	IMM 1295 · 1 form fields	background declarations · client questionnaire	
+v1
+Imported release
+
+person.tb_history_or_contact	Whether, within the past two years, the person or a family member had lung tuberculosis or close contact with a person with tuberculosis	yes_no	IMM 1295 · 1 form fields	background medical · client questionnaire	
+v1
+Imported release
+
+person.telephone_number	Person's telephone number including country code	text	IMM 5476 · 2 form fields	representative · profile record	
+v1
+Imported release
+
+person.travel_country	Country or territory the person travelled to on one trip	country	IMM 5257 SCH1 · 2 form fields	travel history · client questionnaire	
+v1
+Imported release
+
+person.travel_end_date	End date of one trip the person made	date	IMM 5257 SCH1 · 2 form fields	travel history · client questionnaire	
+v1
+Imported release
+
+person.travel_location	Location (city or place) the person travelled to on one trip	text	IMM 5257 SCH1 · 1 form fields	travel history · client questionnaire	
+v1
+Imported release
+
+person.travel_purpose	Purpose of one trip the person made	text	IMM 5257 SCH1 · 1 form fields	travel history · client questionnaire	
+v1
+Imported release
+
+person.travel_start_date	Start date of one trip the person made	date	IMM 5257 SCH1 · 2 form fields	travel history · client questionnaire	
+v1
+Imported release
+
+person.travelling_alone_to_canada	Whether a minor is travelling to Canada alone	yes_no	none · 0 form fields	family members · client questionnaire	
+v1
+Imported release
+
+person.uci	Unique client identifier assigned by the immigration authority	text	IMM 1295, IMM 5257 SCH1, IMM 5476 · 3 form fields	personal details · existing record	
+v1
+Imported release
+
+person.upfront_medical_completed	Whether the person completed an upfront medical exam with a panel physician	yes_no	none · 0 form fields	processing requirements · client questionnaire	
+v1
+Imported release
+
+person.us_lawful_permanent_resident	Whether the person is a lawful permanent resident of the United States	yes_no	IMM 1295 · 1 form fields	travel document · client questionnaire	
+v1
+Imported release
+
+person.us_pr_card_expiry_date	Expiry date of the US permanent resident card	date	IMM 1295 · 1 form fields	travel document · verified document	
+v1
+Imported release
+
+person.uscis_number	U.S. Citizenship and Immigration Services number on the US permanent resident card	text	IMM 1295 · 1 form fields	travel document · verified document	
+v1
+Imported release
+
+person.violent_organisation_association	Whether the person is or was a member of or associated with a group that engaged in or advocated violence for political or religious objectives	yes_no	IMM 1295 · 1 form fields	background declarations · client questionnaire	
+v1
+Imported release
+
+person.witnessed_ill_treatment	Answer to the background question on witnessing or participating in ill treatment of prisoners or civilians, looting or desecration of religious buildings (wording to confirm against the official IMM 1295)	yes_no	none · 0 form fields	background declarations · client questionnaire	
+v1
+Imported release
+
+person.work_permit_type	Type of work permit applied for	code	IMM 1295 · 1 form fields	intended work · staff working view	
+v1
+Imported release
+
+relationship.accompanies_subject_to_canada	Whether this family member will accompany the subject to Canada	yes_no	IMM 5707 · 4 form fields	family members · client questionnaire	
+v1
+Imported release
+
+relationship.child_relationship_type	The kind of child relationship this person has to the subject (son, daughter, step-child, adopted child)	code	IMM 5707 · 1 form fields	family members · client questionnaire	
+v1
+Imported release
+
+relationship.cohabitation_start_date	Date the two partners began living together continuously in a conjugal relationship	date	IMM 5409 · 2 form fields	relationship · client questionnaire	
+v1
+Imported release
+
+relationship.common_law_declared_for_canadian_income_tax	Whether the partners have declared their common-law union under the Canadian Income Tax Act	yes_no	IMM 5409 · 1 form fields	relationship · client questionnaire	
+v1
+Imported release
+
+relationship.joint_financial_accounts	Whether the partners hold joint bank, trust, credit union or charge card accounts	yes_no	IMM 5409 · 1 form fields	relationship · client questionnaire	
+v1
+Imported release
+
+relationship.joint_property_other_than_residence	Whether the partners jointly own property other than their residence	yes_no	IMM 5409 · 1 form fields	relationship · client questionnaire	
+v1
+Imported release
+
+relationship.joint_residence_lease_mortgage_or_purchase	Whether the partners jointly signed a residential lease, mortgage or purchase agreement for a residence they both live in	yes_no	IMM 5409 · 1 form fields	relationship · client questionnaire	
+v1
+Imported release
+
+relationship.other_documentary_evidence	Description of other documentary evidence of the common-law relationship	text	IMM 5409 · 1 form fields	relationship · client questionnaire	
+v1
+Imported release
+
+relationship.start_date	Date of marriage or date the common-law relationship began	date	IMM 1295 · 1 form fields	relationship · verified document	
+v1
+Imported release
+
+representative.is_compensated	Whether the representative is paid or otherwise compensated for representing the person	yes_no	none · 0 form fields	representative · staff working view	
+v1
+Imported release
+
+representative.licensing_province	Canadian province or territory of the law society the representative belongs to	text	IMM 5476 · 2 form fields	representative · profile record	
+v1
+Imported release
+
+representative.membership_id	Representative's membership number with their regulatory body	text	IMM 5476 · 4 form fields	representative · profile record	
+v1
+Imported release
+
+representative.representative_category	Kind of representative: friend or family member, CICC member, law society member or student-at-law, Chambre des notaires member, or other	code	IMM 5476 · 2 form fields	representative · profile record	
+v1
+Imported release
+
+representative.representative_category_other	Free-text description of the representative's kind when it is 'other'	text	IMM 5476 · 1 form fields	representative · profile record	
+v1
+Imported release
+
+representative.supervising_lawyer_membership_id	Law society membership number of the supervising lawyer	text	IMM 5476 · 1 form fields	representative · profile record	
+v1
+Imported release
+
+representative.supervising_lawyer_name	Name of the lawyer supervising a student-at-law representative	text	IMM 5476 · 1 form fields	representative · profile record	
+v1
+Imported release
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+author, review
+Use the dark theme
+Studio
+1 waiting for you
+Search fields
+Filter
+Table: Field, Meaning, Type, Forms, Asked in, Status
+From the reviewed release c1-v3
