@@ -136,9 +136,9 @@ const enc = encodeURIComponent;
   const newest = Number(sql(`select max(version) from config_release where combination_id='${wp}'`));
   step("setup: IMM 5707 filed Online is released (release 3 or later)", ch.status < 300 && newest >= 3, `${ch.status} ${words(ch)} · ${rel} · newest ${newest}`);
   // QA-69 retest (29 Oct, 52117004): after the release the Forms tab offers no Undo and the API refuses it as released.
-  const lc = (await forms(wp))?.lastChange ?? null;
+  const lc69 = (await forms(wp))?.lastChange ?? null;
   const uf = await call("POST", `/combinations/${wp}/forms/undo`, {});
-  step("QA-69: after a release the Forms tab offers no Undo and Undo is 409 'Released since'", lc === null && uf.status === 409 && /Released since|released meanwhile/.test(`${uf.body?.title} ${words(uf)}`), `${JSON.stringify(lc)} ${uf.status} ${uf.body?.title} ${words(uf)}`);
+  step("QA-69: after a release the Forms tab offers no Undo and Undo is 409 'Released since'", lc69 === null && uf.status === 409 && /Released since|released meanwhile/.test(`${uf.body?.title} ${words(uf)}`), `${JSON.stringify(lc69)} ${uf.status} ${uf.body?.title} ${words(uf)}`);
   const oc = await call("POST", "/runtime/cases", { combinationId: wp, reference: `QA-S5-${Date.now().toString(36).slice(-4)}`, clientActor: "user-P", principal: { displayName: "Sample Applicant S" }, idempotencyKey: crypto.randomUUID() }, "user-O");
   const cf = oc.body?.id ? await call("GET", `/runtime/cases/${oc.body.id}/forms`, undefined, "user-O") : { status: 0, body: null };
   const cfText = JSON.stringify(cf.body ?? "");

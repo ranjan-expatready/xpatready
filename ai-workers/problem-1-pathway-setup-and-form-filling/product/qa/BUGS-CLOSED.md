@@ -32,3 +32,5 @@ Older rows (closed up to 26 Oct): `history/qa-bugs-closed-to-2026-10-26.md`.
 | QA-66 | Bug · Minor | C11.9 | 38722933 | main db5e0208 (PR #73, 56f04113), 29 Oct | `check_qa_am_r69_1028.cjs` 33/33: a returned change keeps Withdraw on the row and names the right action |
 | QA-67 | Bug · Minor | C11.9 | 38722933 | main db5e0208 (PR #73, 56f04113), 29 Oct | `check_qa_am_r69_1028.cjs` 33/33: row actions follow a person switch without a reload |
 | QA-68 | Bug · Minor | C11.9 | 38722933 | main db5e0208 (PR #73, 56f04113), 29 Oct | `check_qa_am_r69_1028.cjs` 33/33: Send again asks only what changed; a Name sent with it is refused in words (400), never dropped |
+| QA-47 | Bug · Minor | C7.1 | 76628a4 | main 52117004, 29 Oct | API `POST /combinations/:id/fill` with `{}` → 400 "Choose the form to fill. Choose the person the form is for." with field errors `form` and `person` |
+| QA-69 | UX · Minor | C11.6 | e2cb27a4 | main 52117004 (runtime 96f97e62), 29 Oct | `check_qa_am_s5_1029.cjs` 51/51, new QA-69 step: after a release the Forms tab has no last change and `POST …/forms/undo` is 409 "Released since" |
