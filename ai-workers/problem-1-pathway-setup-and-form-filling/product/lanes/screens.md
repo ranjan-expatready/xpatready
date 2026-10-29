@@ -11,33 +11,10 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 * Node: `.tools/node-v24.21.0`, since Prisma refuses Homebrew's node 23. A fresh worktree needs `npm ci` with that node on PATH, then `prisma generate`, then **`vite build` in `web/`** (without it, every browser suite times out).
 * (2a) and **1a passed the Lead check** and are folded into Lead PR #96 (merges on green CI). The Lead backs up :4400 before the restart that runs the migration.
 
-**Agreed by the Lead on 29 Oct: `screens/W1-shared-library/plan-slice1.md` as 1a → 1b → 1c, each with its own hand-back.**
-
-**1a, the table and the door: DONE** (code 50224b01; build-notes.md "Slice 1a"). What 1b builds on:
-* `api/src/proposals.ts` holds `insertProposals(db, ws, items)`, `decide(db, audit, actor, ws, ids, {action, reason, payload})` (≤ 200 items, one batch id), `undo(…, batchId)` (10 s, decider only), `LANDERS` (field, section, answer_list, document_type), `identityKeyOf`, `sameInLibrary`, `recordChoice` and `reviewRow`.
-* **None of these has an HTTP route yet.** `check_s6_p149.ts` calls them directly.
-* The field-map review page (`job.tsx`) still reads the old row shape through `reviewRow`.
-* `ProposalItem` has the server columns `choice`, `decided_key` and `work`. `LibraryChange` has `batch_id` and `proposal_item_id`.
-
-**1b, the queue page: DONE** (Lead early look passed after the toast fix; 1a fix 0a5b09dd and 1b bb94fce6 folded into Lead PR #96, CI rerunning) (build-notes.md "Slice 1b": routes, door rules, pages, what was decided and why; steps 1–5 and 7b done, 6, 7a and 7c decided there). Original steps (plan-slice1.md, row 1b):
-1. **`GET /review/proposals`:** grouped by form edition or combination, in three bands: Ready · Check · Decide.
-   * Add `POST /review/proposals/decide` and `POST /review/proposals/undo/:batch`, both calling `proposals.ts`.
-2. **The page and its side panel:** both readings, the quote and the rules. On the EXPERIENCE.md bar; tooltips on complex parts.
-3. **Bulk accept:** only for Ready items, never a rules item that lands on the library, at most 200 per batch, with one Undo (10 s).
-4. **To review:** `ai_proposals` becomes one `proposals` row per group, linking to the queue (review-queue.ts:65-80).
-5. **Grouped second-person approval:**
-   * `GET /review/changes?group=batch` and `POST /review/changes/batch/:id`.
-   * Each row goes through `decideChange`'s guards. The same person cannot approve their own batch.
-6. **"Draft fields with AI" on the form row:** through the runner's `field_map_edition` step (slice R), replay or stub only. Its items enter through `insertProposals`.
-7. **Owed from 1a:**
-   * Move `tests/seed_library.cjs` onto the door's route.
-   * Check that an approved `answer_list` ADD publishes: `unapprovedAdds` does not list answer_list yet.
-   * Decide whether the field-map review page (`job.tsx`) folds into the queue.
-8. **Tests:** `check_s6_p149.ts` grows the route cases; add `check_s6_queue_browser.cjs` with a pass and a fail per rule.
-   * Run your own checks. Run the full local suites only when no other lane is running them (load is high); CI is the full check.
+**S6 slice 1 (plan-slice1.md): 1a and 1b DONE**, folded into Lead PR #96 (1a fix 0a5b09dd, 1b bb94fce6). What was built, decided and owed: build-notes.md "Slice 1a" and "Slice 1b". 1c (pqr_pick lander, rule-sourced field) waits for runtime #94.
 
 **Agreed answers:**
-* **N-1:** forms drops `origin: person` and `addReason` and adds `rule: {key, sentence} | null` to `ProposalSource` after its slice 1. 1c item 5 waits for it.
+* **N-1:** done on main (contract v2.1: no `person` origin or `addReason`; `source.rule`).
 * **N-2:** runtime exports `acceptPqrPick(tx, actor, item)` and drops the pick's own Accept (PR #94). 1c registers it as the `pqr_pick` lander.
 * **N-3:** no stop-gap; sections come from the forms' parts in slice 2, and the checks seed until then.
 * **P-97:** after #94, the field page's "Collected from" becomes read-only for an existing placement, with "Change who fills" calling `POST /library/fields/:key/fills`. That is our page (library.tsx).
