@@ -67,3 +67,23 @@ S6 renders and enforces all of these; it does not draft them.
   * slice R on slice 0, once slice 0 is on main (the Lead messages);
   * slice 1 after the forms contract v2 merges.
 * US$0 until then.
+
+### Server guards and their tests (P-153, 29 Oct)
+P-153 requires each P-149 rule that S6 builds to be enforced in the server, on every proposal (AI, rules or person). A prompt or a screen alone never counts.
+* All of these go in one check file, `tests/check_s6_p149.ts`: API journeys against an isolated copy, US$0.
+* Each label starts with its rule id, so the decision checker finds it by name.
+* Every guard sits in `api/src/proposals.ts` (the writer, accept and approval services). Its pure part sits in `engine/library-rules.ts`.
+
+| Rule | Server guard (every origin) | Pass test (label) | Fail test (label) | Slice |
+|---|---|---|---|---|
+| P-149.1 one door | Only the proposals writer creates library items; there is no direct `LibraryChange` or library-row write outside the accept and approval services. | `P-149.1 pass: a person's Add lands as a ProposalItem origin person, then a LibraryChange only after accept` | `P-149.1 fail: a direct LibraryChange or library-row write outside proposals.ts is found by the source scan` | 1 |
+| P-149.1 reason | A person's item without `addReason` is refused at write. | `P-149.1 pass: a person's Add with a reason waits and shows the reason at release` | `P-149.1 fail: a person's Add without a reason → 400, nothing written` | 1 |
+| P-149.2 identity at write | `identityOf` runs on every write; an exact duplicate is refused, and a near one needs `nearReason`. | `P-149.2 pass: a near duplicate with a reason waits, the reason kept` | `P-149.2 fail: an exact duplicate from AI, rules or a person → 409; a near one without a reason → 400` | 1 (fields), 2 (lists, sections), 4 (document types) |
+| P-149.2 identity at approval | `identityOf` runs again inside the approval transaction. | `P-149.2 pass: approval succeeds when no twin exists` | `P-149.2 fail: the twin was approved after this item was written → its approval is refused, saying which twin` | same |
+| P-149.2 answer list / section (Q-A3) | For an answer list, the set of value codes (order ignored); for a section, the name or synonym. | `P-149.2 pass: a list with the same codes in another order is offered as the existing list` | `P-149.2 fail: the same section name on a second form → refused as a duplicate` | 2 |
+| P-149.3 versions | Accepting an edit inserts a new version (`supersedesId`); approved rows are never updated in meaning, type or values. The draft reads the latest approved version, and a release keeps its own. | `P-149.3 pass: an edit gives v2; an open draft shows v2; a released combination still shows v1` | `P-149.3 fail: an in-place update of an approved row's meaning, type or values → refused (and the source scan finds no such update)` | 1, then each kind |
+| P-149.4 meaning question | The server computes "forced" from the change (`valueType`, `answerListKey`, choices); the client's no is overridden. Yes needs the second person + the `sme` sign-off + a line on users. | `P-149.4 pass: a wording-only edit answered no needs the second person only` | `P-149.4 fail: a type change answered no is recorded as yes and its approval is refused without the sme sign-off; yes without the users line → 400` | 1, 2, 3 |
+| P-149.5 example cases | `runExamples` over every combination using the rule, inside approval; approval is refused on any failure. | `P-149.5 pass: all cases pass in both combinations using the shared condition → approvable` | `P-149.5 fail: one case fails in one combination → approval refused, naming the combination and the case` | 3 (conditions), 4 (checks) |
+| P-149.5 expert-confirmed cases | Approval is refused while any example lacks `confirmedBy` from the `sme` duty. | `P-149.5 pass: confirmed cases → approvable` | `P-149.5 fail: an unconfirmed case → approval refused` | 3, 4 |
+| Q-A4 no bulk for a person's items | The bulk-accept service refuses a batch that holds an item with origin person. | `Q-A4 pass: a batch of Ready AI items is accepted` | `Q-A4 fail: a batch with one person's item → 400, nothing written` | 1 |
+| Q-A1 placement on Send | Placement runs only after a successful Add write; its failure never rolls the Add back. Live only under the caps. | `Q-A1 pass: Add → related placement items arrive with relatesTo the Add` | `Q-A1 fail: the placement step fails → the Add stays saved; over a cap → no live call, rules matcher only` | 1 |
