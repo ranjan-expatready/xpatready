@@ -4,7 +4,7 @@
 # A mention in a lane note is not enough. Workflow and scope decisions are listed in EXEMPT. Exit 1 if any is missing. Run by the Lead before ending a chat (skill lead) and by
 # the qa lane (skill qa). Usage: decision-impact.sh [first P-number, default 61]
 PH="$(cd "$(dirname "$0")/.." && pwd)"; first=${1:-61}; bad=0
-EXEMPT=" P-64 P-68 P-69 P-70 P-74 P-75 P-81 P-82 P-83 P-84 P-85 P-86 P-87 P-88 P-89 P-91 P-92 P-94 P-101 P-111 P-117 P-124 P-126 P-146 P-153 P-163 P-166 P-167 P-169 "   # workflow, tooling and scope decisions (no screen of their own)
+EXEMPT=" P-64 P-68 P-69 P-70 P-74 P-75 P-81 P-82 P-83 P-84 P-85 P-86 P-87 P-88 P-89 P-91 P-92 P-94 P-101 P-111 P-117 P-124 P-126 P-146 P-153 P-163 P-166 P-167 P-169 P-170 P-173 "   # workflow, tooling and scope decisions (no screen of their own)
 ids=$(grep -o '^| P-[0-9]*' "$PH/DECISIONS.md" | tr -d '| ' | sort -t- -k2 -n -u)
 for id in $ids; do
   n=${id#P-}; [ "$n" -ge "$first" ] || continue

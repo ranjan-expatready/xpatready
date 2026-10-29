@@ -30,9 +30,20 @@ export type RunEnvelope = {
   };
 };
 
+/** The provider's account usage limit refused an attempt (HTTP 400 "usage limits"). Outside review 29 Oct: read per
+ *  attempt, so a limit after an earlier attempt that timed out is still found (the joined text began with the timeout). */
+const limitRefusal = (a: { error?: string }) => /^400\b/.test(String(a.error ?? "").trim()) && /usage limits?/i.test(String(a.error ?? ""));
 export function isProviderLimit(env: RunEnvelope): boolean {
-  const errs = (env.drafting_run?.attempts ?? []).map((a) => String(a.error ?? "")).join(" ");
-  return /usage limits?/i.test(errs) && /^400/.test(errs.trim());
+  return (env.drafting_run?.attempts ?? []).some(limitRefusal);
+}
+/** What a run blocked by the usage limit still counts: its other attempts at their recorded cost, or their worst case
+ *  when the cost is unknown (p2/launch.ts adds them the same way); the refused attempt itself is free (AIW-D273). */
+export function costBesideLimit(env: RunEnvelope): number {
+  const attempts = (env.drafting_run?.attempts ?? []) as { error?: string; cost_usd?: number; worst_usd?: number }[];
+  // A record whose attempts carry no costs (an older or hand-made record): its run total, which p2/runner.ts gives a
+  // refused attempt at US$0.
+  if (!attempts.some((a) => a.cost_usd !== undefined || a.worst_usd !== undefined)) return attempts.some((a) => !limitRefusal(a)) ? Number(env.drafting_run?.usage?.cost_usd ?? 0) : 0;
+  return Math.round(attempts.filter((a) => !limitRefusal(a)).reduce((s, a) => s + Number(a.cost_usd ?? a.worst_usd ?? 0), 0) * 1e6) / 1e6;
 }
 
 /** Boxes the AI answered, when its output can be read at all. */
@@ -55,24 +66,43 @@ function boxProblems(env: RunEnvelope, raw: Partial<FieldMapAnswer> | null): str
 }
 
 /** One plain sentence or three about a run that did not give a usable draft. Never blank. */
-export function explainRun(env: RunEnvelope): { status: "FAILED" | "BLOCKED"; message: string } {
+export function explainRun(env: RunEnvelope): { status: "FAILED" | "BLOCKED"; message: string; details?: string } {
   const run = env.drafting_run ?? {};
   const cost = usd(run.usage?.cost_usd);
   const n = answered(env);
-  if (isProviderLimit(env)) return { status: "BLOCKED", message: "Blocked by the AI provider: the account's usage limit refused the call before any processing. Nothing was drafted or billed." };
+  // QA-88: plain words per outcome, never the service's JSON or codes; its request id and own words go under Details.
+  const attempts = (run.attempts ?? []) as { outcome?: string; error?: string; request_id?: string }[];
+  const has = (o: string) => attempts.some((a) => a.outcome === o);
+  const rid = attempts.map((a) => a.request_id ?? /"request_id"\s*:\s*"([^"]+)"/.exec(a.error ?? "")?.[1]).filter(Boolean).pop();
+  const details = [rid ? `Request ${rid}` : "", attempts.map((a) => a.error).filter(Boolean).pop() ?? ""].filter(Boolean).join(" · ").slice(0, 400) || undefined;
+  const say = (status: "FAILED" | "BLOCKED", message: string) => ({ status, message, ...(details ? { details } : {}) });
+  // Outside review 29 Oct: the refused attempt is free, but an earlier one counted at its worst case stays counted.
+  if (isProviderLimit(env)) return say("BLOCKED", costBesideLimit(env) > 0
+    ? `Blocked by the AI provider: the account's usage limit refused the call before any processing. Nothing was drafted; an earlier attempt stays counted (Cost ${usd(costBesideLimit(env))}).`
+    : "Blocked by the AI provider: the account's usage limit refused the call before any processing. Nothing was drafted or billed.");
+  if (has("refused_input_too_large")) return say("FAILED", "The form is too large for one AI call, so nothing was sent or charged.");
   switch (run.status) {
-    case "refused": return { status: "FAILED", message: `The AI declined to draft this form. Nothing was applied. Cost ${cost}.` };
-    case "timed_out": return { status: "FAILED", message: `The AI did not answer in time. Nothing was applied. Cost ${cost}.` };
-    case "budget_exceeded": return { status: "FAILED", message: "The run would have gone over its spending cap, so it stopped. Nothing was applied." };
+    case "refused": return say("FAILED", `The AI declined to draft this form. Nothing was applied. Cost ${cost}.`);
+    case "timed_out": return say("FAILED", `The AI did not answer in time. Nothing was applied. Cost ${cost}.`);
+    case "budget_exceeded": return say("FAILED", "The run would have gone over its spending cap, so it stopped. Nothing was applied.");
     case "provider_error": {
-      const err = (run.attempts ?? []).map((a) => a.error).filter(Boolean).pop() ?? "no detail returned";
-      return { status: "FAILED", message: `The AI provider returned an error: ${String(err).slice(0, 200)}. Nothing was drafted or applied. Cost ${cost}.` };
+      // Audit 29 Oct: a refused or busy attempt costs US$0, but an earlier attempt that failed otherwise stays counted at its
+      // worst case; then the cost is said, never "nothing was charged".
+      const free = Number(run.usage?.cost_usd ?? 0) <= 0;
+      const charged = free ? "nothing was drafted or charged" : `nothing was drafted; an earlier attempt stays counted (Cost ${cost})`;
+      if (has("refused_by_provider")) return say("FAILED", /request_too_large|prompt is too long|\b413\b/i.test(attempts.map((a) => a.error).join(" "))
+        ? `The request was too large for the AI service, so ${charged}.`
+        : `The AI service refused the request (our setup error), so ${charged}.`);
+      if (has("busy")) return say("FAILED", `The AI service was busy, so ${charged}. Try again in a few minutes.`);
+      if (has("timed_out")) return say("FAILED", `The AI did not answer in time. Nothing was applied. Cost ${cost}.`);
+      return say("FAILED", `The AI service did not complete the call. Nothing was drafted or applied. Cost ${cost}.`);
     }
     case "invalid_output": {
       const cut = String(env.output_errors ?? "").includes("max_tokens");
-      return { status: "FAILED", message: cut
-        ? `The AI's answer was cut off at the output limit (${run.usage?.output_tokens ?? "?"} of ${run.settings?.max_output_tokens ?? "?"} output tokens). Nothing was applied. Cost ${cost}.`
-        : `The AI answered, but not in the agreed shape (${String(typeof env.output_errors === "string" ? env.output_errors : JSON.stringify(env.output_errors)).slice(0, 160)}). Nothing was applied. Cost ${cost}.` };
+      const why = String(typeof env.output_errors === "string" ? env.output_errors : JSON.stringify(env.output_errors)).slice(0, 300);
+      return cut
+        ? say("FAILED", `The AI's answer was cut off at the output limit (${run.usage?.output_tokens ?? "?"} of ${run.settings?.max_output_tokens ?? "?"} output tokens). Nothing was applied. Cost ${cost}.`)
+        : { status: "FAILED", message: `The AI answered, but not in the agreed shape. Nothing was applied. Cost ${cost}.`, details: [details, why].filter(Boolean).join(" · ").slice(0, 400) };
     }
   }
   if (/^completed/.test(run.status ?? "") && env.contract_valid === false) {
