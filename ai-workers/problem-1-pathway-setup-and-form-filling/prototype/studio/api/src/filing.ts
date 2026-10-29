@@ -40,10 +40,13 @@ function readLine(note: string | null | undefined) {
     if (!c || NEGATED.test(c)) continue;
     if (/\bupload(?:s|ed|ing)?\b/i.test(c)) pdf = true;
     if (FILE_ONLINE.test(c.replace(/\bonline applications?\b/gi, " "))) online = true;
-    if (FILE_PAPER.test(c)) paper = true;
+    // C-6: paper is read only from a sentence that is not a condition as a whole ("If you cannot apply online, you may apply on paper" is an accommodation, not the rule).
+    if (FILE_PAPER.test(c) && !CONDITION_FIRST.test(sentence)) paper = true;
   }
   return { pdf, online, paper };
 }
+/** A sentence that opens with a condition. */
+const CONDITION_FIRST = /^\s*(?:even if|even when|if|when|unless|whether|except|in case)\b/i;
 /** C-6: an affirmative instruction to file on paper. */
 const FILE_PAPER = /\b(?:apply|applies|applying|submit\w*|file)\s+(?:\w+\s+){0,3}?on paper\b|\bpaper applications? (?:must|should)\b|\bprint(?:ed)?,? sign(?:ed)?,? and (?:mail|send)\b|\bmail (?:it|this form|the form|your (?:application|form|completed application))\b|\bsend (?:it|this form|the form|your (?:application|form|completed application)) by mail\b/i;
 

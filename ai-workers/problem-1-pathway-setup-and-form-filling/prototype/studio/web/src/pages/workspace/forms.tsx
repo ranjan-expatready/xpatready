@@ -11,7 +11,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Undo2 } from "lucide-react";
-import { CHANNEL_WORDS, type Channel } from "../../../../contracts/forms";
+import { CHANNEL_WORDS, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel, type Signature } from "../../../../contracts/forms";
 import { changeWords, SIGNED_BY, type LastFormChange, type RemovedForm, type WorkspaceFormLine } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
 import { useUndoToast } from "@/components/lifecycle";
@@ -24,7 +24,7 @@ import { useLibraryFields, WHO, whoLabel } from "@/pages/configuration";
 import { attachmentFor, pendingForms, ReadingCell, ReadingSteps, SourcesLine, StepNotices } from "@/pages/sources";
 import { FormPicker } from "@/components/forms";
 import { useApi } from "@/lib/api";
-import { ChannelCell } from "@/components/channels";
+import { ChannelCell, SignatureCell } from "@/components/channels";
 import type { CombinationSummary, CombinationView } from "../../../../contracts/programs";
 /** The fields of a summary line that ChannelCell reads. */
 type ChannelLine = CombinationSummary["forms"][number];
@@ -37,12 +37,13 @@ const TIPS = {
   onlyIf: "When the form is needed. A rule is checked on every case; words alone cannot be checked, so a case cannot tell until a rule is built.",
   filed: "How new cases file this form unless the case officer changes it. Only ways IRCC accepts are offered (Form library; Sample until the immigration expert confirms).",
   signed: "Who signs the form. Sample until the immigration expert confirms.",
+  signature: "How the form is signed: typed name, signed by hand and scanned, signed in pen (paper), or no signature. Only what fits the way it is filed is offered (P-143; Sample until the immigration expert confirms).",
   library: "The edition this combination uses, how many of its form fields are matched to shared fields, and the step the form waits for (read it, draft with AI, review AI's proposals).",
 };
 
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
-export function FormsTab({ id, lines, filing, filingDetail, problems, removed = [], fromLibrary = [], lastChange = null }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[]; removed?: RemovedForm[]; fromLibrary?: string[]; lastChange?: LastFormChange | null }) {
+export function FormsTab({ id, lines, filing, filingDetail, account = null, problems, removed = [], fromLibrary = [], lastChange = null }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed?: RemovedForm[]; fromLibrary?: string[]; lastChange?: LastFormChange | null }) {
   const { canAuthor, known } = useSessionView();
   const [open, setOpen] = React.useState<WorkspaceFormLine | null>(null);
   const [adding, setAdding] = React.useState(false);
@@ -96,20 +97,21 @@ export function FormsTab({ id, lines, filing, filingDetail, problems, removed = 
     <div className="space-y-4">
       {undo}{finder}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm" data-filing><span className="text-text-muted">Filing: </span>{lines.length ? <><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null}</> : <b className="font-semibold">not known until a form is set up</b>} <span className="text-text-muted">· {count} · Sample until the immigration expert confirms</span></p>
+        <p className="text-sm" data-filing>{/* P-137, P-143: the IRCC account, read-only here */}<span className="mr-3" data-account><span className="text-text-muted">IRCC account: </span>{account ? `Filed through the ${account}` : <span className="text-text-muted">Not set (every way IRCC may accept is offered, Sample)</span>}</span><span className="text-text-muted">Filing: </span>{lines.length ? <><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null}</> : <b className="font-semibold">not known until a form is set up</b>} <span className="text-text-muted">· {count} · Sample until the immigration expert confirms</span></p>
         <span className="flex items-center gap-3">{add}<Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></span>
       </div>
       {pending.length ? <p className="text-sm" data-pending-summary><span className="font-medium">Not set up yet: </span>{[ready ? `${plural(ready, "form")} can be added from the library now (${ready === 1 ? "its" : "their"} form fields are already matched, no AI needed)` : "", toDraft ? `${plural(toDraft, "form")} ${toDraft === 1 ? "needs" : "need"} reading and drafting with AI` : ""].filter(Boolean).join("; ")}. Each row has its step.</p> : null}
       <StepNotices d={combo} />
       {noRule.length ? <Notice tone="warn" title={`${noRule.length} condition${noRule.length === 1 ? " is" : "s are"} in words only`}>A case cannot tell whom {noRule.map((l) => l.code).join(", ")} {noRule.length === 1 ? "applies" : "apply"} to until the words are turned into a rule. Release waits for it. Open the form to build the rule.</Notice> : null}
-      <Table head={["Form", "Why it is here (IRCC's words)", <Head key="w" tip={TIPS.who}>Who fills it</Head>, <Head key="o" tip={TIPS.onlyIf}>Only if</Head>, <Head key="f" tip={TIPS.filed}>Filed as by default</Head>, <Head key="s" tip={TIPS.signed}>Signed by</Head>, <Head key="l" tip={TIPS.library}>Read and matched</Head>, ""]}>
+      <Table head={["Form", "Why it is here (IRCC's words)", <Head key="w" tip={TIPS.who}>Who fills it</Head>, <Head key="o" tip={TIPS.onlyIf}>Only if</Head>, <Head key="f" tip={TIPS.filed}>Filed as by default</Head>, <Head key="g" tip={TIPS.signature}>Signature</Head>, <Head key="s" tip={TIPS.signed}>Signed by</Head>, <Head key="l" tip={TIPS.library}>Read and matched</Head>, ""]}>
         {lines.map((l) => (
           <tr key={l.line} data-line={l.code}>
             <td><span className="mono font-medium">{l.code}</span><br /><span className="text-xs text-text-muted">{l.title}</span>{l.origin === "AI_FOUND" || l.origin === "AI_PROPOSAL" ? <><br /><Pill tone="ai">Picked by AI · Sample</Pill></> : null}</td>
             <td className="max-w-56 text-xs text-text-muted">{l.quote ? `"${l.quote.slice(0, 120)}${l.quote.length > 120 ? "…" : ""}"` : l.added ?? "Added by a person"}</td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">Checklist · not filed</span> : <>{whoLabel(l.who)}{l.minAge ? <span className="text-text-muted"> · {l.minAge}+</span> : null}</>}</td>
             <td className="max-w-56 text-xs"><OnlyIfCell l={l} /></td>
-            <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
+            <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} options={l.channelOptions} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
+            <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <SignatureCell id={id} code={l.code} channel={l.channel as Channel} signature={l.signatureKind as Signature} signatures={l.signatures} canAuthor={canAuthor} />}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
             <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}</td>
             <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code])} onRemove={() => setRemoving(l)} /></> : null}</td>
@@ -239,6 +241,9 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
   const [cond, setCond] = React.useState<any>(l.condition);
   const [words, setWords] = React.useState(l.onlyIf.kind === "always" ? "" : l.onlyIf.words);
   const [channel, setChannel] = React.useState<Channel>(l.channel as Channel);
+  const [signature, setSignature] = React.useState<Signature>(l.signatureKind as Signature);
+  // C-2: a channel change keeps a signature that still fits, else takes the channel's first (its default).
+  const pickChannel = (c: Channel) => { setChannel(c); if (!SIGNATURE_FITS[c].includes(signature)) setSignature(SIGNATURE_FITS[c][0]); };
   const [signedBy, setSignedBy] = React.useState(l.signedBy ?? "");
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [busy, setBusy] = React.useState(false);
@@ -252,7 +257,7 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
         attachMode: mode === "always" ? "COMBINATION_MANDATORY" : "ANSWER_CONDITIONAL",
         ...(mode === "only_if" ? (cond ? { condition: cond, conditionPlain: words } : { conditionPlain: words }) : {}),
       } });
-      if (channel !== l.channel) await api(`/combinations/${id}/forms/${encodeURIComponent(l.code)}/channel`, { method: "PATCH", json: { channel, from: l.channel } });
+      if (channel !== l.channel || signature !== l.signatureKind) await api(`/combinations/${id}/forms/${encodeURIComponent(l.code)}/channel`, { method: "PATCH", json: { channel, signature, from: l.channel, fromSignature: l.signatureKind } });
       toast.push({ tone: "ok", text: `${l.code} saved to the draft` }); refresh(); onClose();
     } catch (e) {
       const err = e as ApiError;
@@ -297,7 +302,8 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
           </> : null}
         </fieldset>
         {!l.document ? <div className="grid grid-cols-2 gap-3">
-          <Field label="Filed as by default" hint={channel === "ONLINE" ? ONLINE_WORDS : l.acceptedBasis}><Select value={channel} onChange={(e) => setChannel(e.target.value as Channel)}>{(["PDF_UPLOAD", "SIGNED_PDF_UPLOAD", "ONLINE"] as Channel[]).map((c) => <option key={c} value={c} disabled={!l.accepted.includes(c)}>{CHANNEL_WORDS[c]}{l.accepted.includes(c) ? "" : " (IRCC does not accept it)"}</option>)}</Select></Field>
+          <Field label="Filed as by default" hint={channel === "ONLINE" ? ONLINE_WORDS : l.channelOptions.find((o) => o.channel === channel && !o.ok)?.why ?? l.acceptedBasis}><Select value={channel} onChange={(e) => pickChannel(e.target.value as Channel)}>{CHANNELS.map((c) => { const o = l.channelOptions.find((x) => x.channel === c); return <option key={c} value={c} disabled={!!o && !o.ok && c !== l.channel} title={o?.why ?? undefined}>{CHANNEL_WORDS[c]}{o && !o.ok ? " (IRCC does not accept it)" : ""}</option>; })}</Select></Field>
+          <Field label="Signature" hint="Only signatures that fit the way it is filed. Sample until the immigration expert confirms."><Select value={signature} onChange={(e) => setSignature(e.target.value as Signature)}>{SIGNATURE_FITS[channel].map((x) => <option key={x} value={x}>{SIGNATURE_WORDS[x]}</option>)}</Select></Field>
           <Field label="Signed by" hint="Sample until the immigration expert confirms." error={errors.signedBy}><Select value={signedBy} onChange={(e) => setSignedBy(e.target.value)}><option value="">Not set</option>{SIGNED_BY.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}</Select></Field>
         </div> : null}
         {!l.document ? <section aria-labelledby="drawer-reading" className="space-y-2 border-t border-border pt-4"><h3 id="drawer-reading" className="text-xs font-medium">Reading and matching</h3><ReadingSteps d={d} a={attachmentFor(d, l.code)} /></section> : null}
