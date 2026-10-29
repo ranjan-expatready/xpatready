@@ -9,7 +9,7 @@ Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes eve
 current_item: explore on main a9fe60c0 (run card cost words, Forms library and finder words, Program structure and Immigration programs at 1024/1440), branch `claude/qa-explore-1029`, copy qa_ex :4473
 stage: WAITING
 owner: Lead
-next_action: (1) Lead: QA-100 (Critical: the finder's live path is open on every copy; my check spent US$0.27 unapproved) needs a finder live switch; route QA-101–107, 109–111 to forms, QA-108 to the sample loader's lane; merge this branch's qa files. (2) qa: `/qa after-merge` when the Lead says #94, #96, #99 or forms slice 1 merged (QA-92–96 retest). Report `qa/reports/2026-10-29-explore.md`
+next_action: (1) Lead: QA-100 (Critical: the finder's live path is open on every copy; my check spent US$0.27 unapproved) needs a finder live switch; route QA-101–107, 109–111 to forms, QA-108 to runtime (S7); Lead routed all on 29 Oct (P-175 for QA-100); merge this branch's qa files. (2) qa: `/qa after-merge` when the Lead says #94, #96, #99 or forms slice 1 merged (QA-92–96 retest). Report `qa/reports/2026-10-29-explore.md`
 blocked_by: none
 updated: 2026-10-29
 
