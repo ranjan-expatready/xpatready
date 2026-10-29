@@ -35,7 +35,7 @@ Every online line in A and B is filed through the **APR Portal** (P-98: the one 
 1. **Reset to blank:** sources only (the official files committed under `official-sources/`). Replays rows 1–10 from nothing.
 2. **Configured (the M2 gate, C10.1):** A and B released (A release 1 all PDF; A release 2 mixed), with the library they built, and the thin family case on release 1 with IMM 5257 filled (rows 1–12, 17).
 3. **Finished story (the M3 gate, C10.2):** the family case on both releases, online fill, the filing with portal sheet, filled PDFs and signed copies, documents listed (rows 13–16, 18).
-AI in every checkpoint is the saved answers (US$0, labelled "replay"); a live run happens only with the founder's go (Goose task on the Mac).
+AI in every checkpoint is the saved answers (US$0, labelled "replay"); a live run happens only with the founder's go (a session on the Mac).
 
 ## Rules for every lane
 * A feature is not DONE until its row above shows in the demo story (seeded or replayable), with a check in the demo suite.
