@@ -9,7 +9,7 @@ Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes eve
 current_item: explore coverage on main 52117004 (branch `claude/qa-coverage-1029`): coverage rerun on S4+S5, retest of open bugs, Questionnaires tab walk (W1-15 slice 2); report `qa/reports/2026-10-29-coverage-s4-s5.md`
 stage: WAITING
 owner: Lead
-next_action: (1) Lead: route QA-92–95 to runtime (QA-92 is a one-line fix: the drawer uses `f.role`), QA-81 to screens; answer the report's two questions (case questions' count, raise the coverage floor); merge this branch's qa files; (2) qa: retest with `check_qa_qn_1029.cjs` when runtime's fix merges; QA-83, 86–89 after the forms merge, QA-84/85/91 after runtime's fix; the live smoke only on the founder's OK.
+next_action: (1) Lead: route QA-92–95 to runtime (QA-92 is a one-line fix: the drawer uses `f.role`), QA-81 to screens; answer the report's two questions (case questions' count, raise the coverage floor); merge this branch's qa files; (2) qa: retest with `check_qa_qn_1029.cjs` when runtime's fix merges; QA-83, 86–89 after the forms merge, QA-84/85/91 after runtime's fix; the live smoke only on the founder's OK. Note: this copy still holds untracked screenshots written by the suites and the wording check (never committed; removing them was refused by the permission check); the next qa session deletes them before its run.
 blocked_by: none
 updated: 2026-10-29
 
