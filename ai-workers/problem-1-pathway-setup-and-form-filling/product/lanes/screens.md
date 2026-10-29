@@ -13,7 +13,7 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 
 **Agreed by the Lead on 29 Oct: build `screens/W1-shared-library/plan-slice1.md` as 1a → 1b → 1c, each with its own hand-back.**
 
-**1a, the table and the door. Next, not started.** Steps:
+**1a, the table and the door. Built at 50224b01; full suites running (build-notes.md "Slice 1a").** Steps:
 1. **Prisma model `ProposalItem`.** Mirror `contracts/proposal-item.ts`: JSON payload, source, rounds, rules, identity, revision and decision; index status, kind, combination, edition, run and batch.
 2. **The migration.** Copy the `NormalizationItem` rows onto `ProposalItem`, mapping its kinds (field, section, answer_list, check, document_requirement) to the contract kinds. Drop the `rule` rows. Log what it copies and drops (Q-L4). Then drop `NormalizationItem`.
    * Rows are written in `sources.ts:545-577` and decided in `sources.ts:617-695`.
@@ -46,14 +46,15 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 Shared library)
-stage: BUILD 1a (not started) — plan-slice1.md agreed by the Lead 29 Oct; this session's context is spent, so a fresh session builds 1a from this Handover
+stage: BUILD 1a — built at 50224b01 (check_s6_p149 37/37; migration clean on a copy of the :4400 data); full run-suites running
 owner: Builder
-next_action: fresh screens session: /next screens, BUILD 1a (Handover steps 1–6), hand back 1a; then 1b, then 1c
-then: S6 slices 1 → 1-S → 2 → 3 → 4 (plan.md §4)
-blocked_by: nothing for 1a and 1b; 1c waits for runtime PR #94 (acceptPqrPick, N-2) and forms' rule reference (N-1)
+next_action: screens: finish the full run-suites on 1a, fix any failure, hand back 1a (CHECK, owner Lead)
+then: 1b (queue page, grouped approval, seeds through the door) → 1c (pqr_pick, rule-sourced field) → S6 slices 2 → 3 → 4 (plan.md §4)
+blocked_by: nothing for 1b; 1c waits for runtime PR #94 (acceptPqrPick, N-2) and forms' rule reference (N-1)
 updated: 2026-10-29
 
 ## Log (last 10 lines)
+- 2026-10-29 · W1-shared-library (S6) · BUILD 1a · merged origin/claude/screens-2a-22c0e2 and main c545f84e; 50224b01: proposal_item table + migration (copies, drops rule rows, logs both; clean on a copy of :4400), proposals.ts one door (insertProposals, decide with landers, undo 10 s), readers switched; check_s6_p149 37/37; full run-suites running. US$0.
 - 2026-10-29 · W1-shared-library (S6) · applied Lead message: plan-slice1.md agreed (1a → 1b → 1c, each its own hand-back); N-1, N-2 and N-3 accepted; the migration logs its copies and drops and runs on a copy of the :4400 data. Handover rewritten for a fresh session (this one's context is spent). No code. US$0.
 - 2026-10-29 · W1-shared-library (S6) · PLAN (2b) + slice 1 · applied Lead message ((2a) PASS in Lead PR #96); main deda0e6b synced. Plan in plan-slice1.md: 1a ProposalItem table + migration off NormalizationItem + proposals.ts one door with a lander per kind and the free-add scan; 1b queue page, To review row, grouped approval, Draft fields with AI; 1c pqr_pick lander (acceptPqrPick, PR #94) and "Add the fact this rule needs" (needs forms' rule reference). placement_fills stays a LibraryChange (allowlisted). N-1..N-3 to the Lead. No code. US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD (2a) → CHECK · full run-suites on 5b00ae99: 67 PASS 4 FAIL, all four from (2a): P-63 "box" on Fields (sources now say "form field"), QA-65 (the 410 routes name their person first, nobody 401), A1 (Studio typed-key check gone with createField: ≥1), QA-71 (the check reads the Category column; a name may end in "employer"); checklist file names in words; seed_library.d.cts. Rerun: ai_drafting 48/48, s6 sources 24/24, s6 pages 33/33, forms_qa53 20/20, screen01_browser 120/120, qa_1029 51/51; tsc api and web clean; any 419; graph G3 2 (older). US$0.
@@ -63,4 +64,3 @@ updated: 2026-10-29
 - 2026-10-29 · qa batch + P-165 · CHECK · run on 4c4b9dd5 found BR-13's Status menu changed by Retired (screen01_browser, programs_s2): 044a7092 offers Retired only while one is retired; full run-suites on 044a7092 69 PASS 0 FAIL 1 skipped (demo reset). US$0.
 - 2026-10-29 · qa batch + P-165 · FIX/BUILD · main d50d87f9 synced; 7a60c011 QA-39, 48, 70–74, 79, 80 in plain words (check_screens_qa_1029_browser 43/43 at 1440 and 1024; QA-81 screens part 4/4 on main); 4c4b9dd5 StandIn chip + check_stand_ins 9/9 (no page uses it yet). Run on 9428a3fd: 63 PASS 4 FAIL, solo rerun 2 of 4 pass; count sent to the Lead. US$0.
 - 2026-10-29 · W1-shared-library (S6) · FIX · applied Lead message (outside review on PR #87): 9428a3fd (a) recording pass sends only missing rounds (draftEdition "fill"), worst case reserved before sending; (b) an answer naming another edition is never used (replay skips, live refused in plain words); check_s6_field_drafts 26/26; pushed, Lead told; run-suites running. US$0.
-- 2026-10-29 · W1-shared-library (S6) · slice R Lead check PASS at 164ef658 (Lead PR #87). Idle until the forms merge. US$0.
