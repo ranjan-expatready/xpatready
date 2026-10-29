@@ -112,7 +112,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
     // QA-48: a retired combination is found under Status: Retired, and the counts line says it is hidden
     await go("/");
-    step("QA-48 fail case: with nothing retired the counts line says nothing about retired ones", !/retired, not shown/.test(await main()));
+    await p.getByRole("button", { name: /^Status:/ }).click();
+    const noRetired = await p.getByRole("menuitemradio", { name: /Retired/ }).count(); await p.keyboard.press("Escape");
+    step("QA-48 fail case: with nothing retired the counts line says nothing about retired ones and the Status menu keeps BR-13's six", !/retired, not shown/.test(await main()) && noRetired === 0, noRetired);
     // Retired as a release does it (P-116): the row and its activity line (the catalogue's cache follows the activity).
     sql(`update combination set retired_at = now() where id = '${visitor}'; insert into audit_event (id, workspace_id, actor, action, entity, entity_key, summary) select gen_random_uuid(), workspace_id, 'user-B', 'retired', 'combination', id::text, 'Approver retired Visitor visa (check)' from combination where id = '${visitor}'`);
     await go("/");

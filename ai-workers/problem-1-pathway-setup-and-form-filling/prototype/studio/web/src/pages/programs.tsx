@@ -45,7 +45,8 @@ const STATUSES = [
   ["in_setup", "In setup", "Setup has begun and is not released yet."],
   ["not_ready", "Not ready", "Something blocks release; the card says what."],
   ["live", "Live", "Firms can open cases on it."],
-  // QA-48: retired combinations are left out of every other view (P-116); here they can be found again.
+  // QA-48: retired combinations are left out of every other view (P-116); here they can be found again. Offered only
+  // while one is retired, so the menu stays BR-13's six otherwise.
   ["retired", "Retired", "Retired at a release: hidden from the other views. Restore one from its row on Program structure."],
 ] as const;
 type StatusKey = (typeof STATUSES)[number][0];
@@ -353,7 +354,7 @@ function StatusFilter({ value, counts, onChange }: { value: StatusKey; counts?: 
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="start" sideOffset={4} className="z-50 min-w-[280px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
           <DropdownMenu.RadioGroup value={value} onValueChange={(v) => onChange(v as StatusKey)}>
-            {STATUSES.map(([k, w, tip]) => (
+            {STATUSES.filter(([k]) => k !== "retired" || counts?.retired || value === "retired").map(([k, w, tip]) => (
               <DropdownMenu.RadioItem key={k} value={k} className="flex cursor-pointer flex-col gap-0.5 rounded-md px-2 py-1.5 outline-none data-[highlighted]:bg-text/5 data-[state=checked]:text-text-link">
                 <span className="flex items-center justify-between gap-4"><span className={cn(value === k && "font-semibold")}>{w}{k === "all" ? " · default" : ""}</span><span className="tabular-nums text-text-muted">{counts ? counts[k === "all" ? "all" : k] : "…"}</span></span>
                 <span className="text-xs text-text-muted">{tip}</span>
