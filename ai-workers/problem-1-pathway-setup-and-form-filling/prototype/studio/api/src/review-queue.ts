@@ -9,6 +9,8 @@ import { buildSnapshots, effective, type Snapshot } from "../../engine/snapshot.
 import { ACTORS, actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
 import { itemsOf, KIND_NOUN, actionWord, unapprovedAdds, unapprovedWhy, acceptsView } from "./library-changes.ts";
+import { ON_ITS_PAGE } from "./proposals.ts";
+import { groupOf } from "./review-proposals.ts";
 
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
@@ -38,11 +40,12 @@ export class ReviewQueueService {
 
   private async items(actor: Actor): Promise<QueueItem[]> {
     const workspaceId = await this.ws.id();
-    const [nodes, combos, jobs, pending, batches, subs, merges, held, changes] = await Promise.all([
+    const [nodes, combos, jobs, pending, queued, batches, subs, merges, held, changes] = await Promise.all([
       this.db.programDef.findMany({ where: { workspaceId }, select: { id: true, programNodeKey: true, parentNodeKey: true, nodeKind: true, label: true } }),
       this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, kind: true, mode: true, status: true, costUsd: true, startedBy: true, startedAt: true, finishedAt: true, detail: true } }),
       this.db.proposalItem.groupBy({ by: ["runId"], where: { workspaceId, status: "waiting" }, _count: true }),
+      this.db.proposalItem.findMany({ where: { workspaceId, status: "waiting", step: { notIn: [...ON_ITS_PAGE] } }, orderBy: { createdAt: "asc" }, select: { formEdition: true, combinationId: true, runId: true, confidence: true, createdAt: true } }),
       this.db.aiBatch.findMany({ where: { workspaceId, status: { in: ["QUEUED", "RUNNING"] } }, include: { jobs: { select: { status: true, costUsd: true } } } }),
       this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" } }),
       this.db.fieldMerge.findMany({ where: { workspaceId, status: "PROPOSED" } }),
@@ -75,6 +78,20 @@ export class ReviewQueueService {
       const base = { id: `job:${j.id}`, kind: "ai_proposals" as const, title: c?.path ?? "A combination", by: nameOf(j.startedBy), at: (j.finishedAt ?? j.startedAt).toISOString(), cost_usd: j.costUsd ?? 0 };
       if (n) out.push({ ...base, what: `${what} ${plural(n, "proposal")} still to decide.`, ...(holds(actor, "review") ? { state: "needs" as const, waiting_on: null, next: { label: `Review ${plural(n, "AI proposal")}`, href, note: null } } : { state: "waiting" as const, waiting_on: "A content publisher decides each proposal.", next: null }) });
       else out.push({ ...base, what: `${what} Every proposal is decided.`, ...(holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: "Add the decisions to the draft", href, note: null } } : { state: "waiting" as const, waiting_on: "The configuration author adds the decisions to the draft.", next: null }) });
+    }
+
+    // S6 slice 1b: the review queue, one row per form edition or combination (the field-map step's items keep their
+    // row above until its page folds into the queue).
+    const qGroups = new Map<string, { title: string; at: Date; n: Record<string, number> }>();
+    for (const r of queued) {
+      const id = groupOf(r), g = qGroups.get(id) ?? { title: r.formEdition ?? (r.combinationId ? combo.get(r.combinationId)?.path : null) ?? "Proposals with no form or combination", at: r.createdAt, n: { ready: 0, check: 0, decide: 0 } };
+      g.n[r.confidence] = (g.n[r.confidence] ?? 0) + 1; qGroups.set(id, g);
+    }
+    for (const [id, g] of qGroups) {
+      const total = g.n.ready + g.n.check + g.n.decide, href = `/review/proposals?group=${encodeURIComponent(id)}`;
+      const what = `${plural(total, "proposal")} waiting: ${g.n.ready} ready to accept, ${g.n.check} to check, ${g.n.decide} to decide.`;
+      out.push({ id: `proposals:${id}`, kind: "proposals", title: g.title, by: null, at: g.at.toISOString(), cost_usd: null, what,
+        ...(holds(actor, "review") ? { state: "needs" as const, waiting_on: null, next: { label: `Review ${plural(total, "proposal")}`, href, note: null } } : { state: "waiting" as const, waiting_on: "A content publisher decides each proposal.", next: null }) });
     }
 
     // Combinations waiting for review or release (P-79): the newest submission per combination, through the same gate
@@ -156,7 +173,18 @@ export class ReviewQueueService {
 
     // Library changes (P-53, Screen 04 B1): a new shared field and later adds, retires and restores, approved by a
     // second person; a returned one goes back to the person who proposed it.
+    // S6 slice 1b: what one queue decision landed (two items or more) is approved together, on its batch page.
+    const perBatch = new Map<string, typeof changes>();
+    for (const c of changes) if (c.batchId && c.status === "WAITING") perBatch.set(c.batchId, [...(perBatch.get(c.batchId) ?? []), c]);
+    for (const [batchId, list] of perBatch) {
+      if (list.length < 2) { perBatch.delete(batchId); continue; }
+      const mine = list.some((c) => c.proposedBy === actor.id || c.appliedBy === actor.id);
+      out.push({ id: `change-batch:${batchId}`, kind: "library_change", title: `${plural(list.length, "new library item")} from one review decision`, by: nameOf(list[0].proposedBy), at: list[0].proposedAt.toISOString(), cost_usd: null,
+        what: `${list.slice(0, 3).map((c) => `"${c.label ?? c.key}"`).join(", ")}${list.length > 3 ? ` and ${list.length - 3} more` : ""}: approve or return them together.`,
+        ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: `Approve or return ${plural(list.length, "item")}`, href: `/review/batch/${batchId}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You accepted them; a different person approves or returns them." : "A content publisher approves or returns them.", next: null }) });
+    }
     for (const c of changes) {
+      if (c.batchId && perBatch.has(c.batchId) && c.status === "WAITING") continue;
       const mine = c.proposedBy === actor.id, word = KIND_NOUN[c.kind] ?? c.kind.replace("_", " ");
       const acc = c.kind === "form_accepts" ? acceptsView(c) : null; // C11.18: plain words, before → after
       const what = acc ? `What IRCC accepts for ${acc.form}: ${acc.before} → ${acc.after}. ${acc.quote ? `canada.ca: "${acc.quote}"` : `Reason: ${acc.reason}`}` : `${c.action === "ADD" ? `New ${word}` : `${actionWord(c.action, c.kind)} the ${word}`}${c.reason ? `. Reason: ${c.reason}` : ""}${c.aiVerdict ? ` · Advisory check: ${c.aiVerdict}` : ""}`;

@@ -94,6 +94,9 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
 /** The team's right-anchored panel (Dialog variant="panel" / Sheet, P-48): any pane that collects a value. Pinned
  *  header (title, optional badge), scrolling body, pinned footer (Close left, primary right). */
 export function Panel({ open, onOpenChange, title, description, badge, children, footer }: { open: boolean; onOpenChange: (o: boolean) => void; title: string; description?: React.ReactNode; badge?: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode }) {
+  // S6 1b (Lead early look): while a side panel is open, toasts move clear of it (styles/index.css), so they never cover
+  // its footer's Accept or Reject.
+  React.useEffect(() => { if (!open) return; document.body.dataset.panelOpen = "true"; return () => { delete document.body.dataset.panelOpen; }; }, [open]);
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>

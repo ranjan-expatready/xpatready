@@ -18,3 +18,7 @@ html, main { scroll-padding-top: 4.5rem; }
 body { background: var(--color-surface); color: var(--color-text); font-family: var(--font-sans); font-size: 14px; -webkit-font-smoothing: antialiased; }
 :focus-visible { outline: none; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+/* S6 1b (Lead early look): toasts never cover an open side panel. Beside it where the screen is wide enough (panel up to
+   560 px + 384 px of toasts); above its footer where the panel takes the whole width. */
+body[data-panel-open] [data-toaster] { right: calc(min(560px, 100vw) + 1rem); }
+@media (max-width: 991px) { body[data-panel-open] [data-toaster] { right: 1rem; bottom: 5rem; } }
