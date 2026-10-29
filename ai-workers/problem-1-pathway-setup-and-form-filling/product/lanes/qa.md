@@ -10,10 +10,47 @@ current_item: explore coverage on main 52117004 (branch `claude/qa-coverage-1029
 stage: WAITING
 owner: Lead
 next_action: (1) Lead: route QA-92–95 to runtime (QA-92 is a one-line fix: the drawer uses `f.role`), QA-81 to screens; answer the report's two questions (case questions' count, raise the coverage floor); merge this branch's qa files; (2) qa: retest with `check_qa_qn_1029.cjs` when runtime's fix merges; QA-83, 86–89 after the forms merge, QA-84/85/91 after runtime's fix; the live smoke only on the founder's OK. Note: this copy still holds untracked screenshots written by the suites and the wording check (never committed; removing them was refused by the permission check); the next qa session deletes them before its run.
-blocked_by: none
+blocked_by: this session's context is long: the Lead moves qa to a fresh session for `/qa after-merge` on deda0e6b (Handover below)
 updated: 2026-10-29
 
-## Handover (28 Oct; for the next qa session)
+## Handover (29 Oct, ~16:00; for the next qa session: read this first)
+* **The ask waiting (Lead, 29 Oct): `/qa after-merge` on main deda0e6b.** It brings:
+  * PR #91 (screens): the qa wording batch QA-39, 48, 70–74, 79, 80; the Stand-in chip; Restore keeps the Pathway type.
+  * PR #90 (forms): the runner package QA-83, 85–89; a per-form paid budget across batches; usage-limit handling; the request id in Details; the IMM 5257 SCH1 title.
+  * PRs #93 and #95: records only (P-164–P-174).
+
+  :4400 was restarted on deda0e6b (data kept): read-only there; never reset it. US$0.
+* **How to run it, in order:**
+  1. Start a fresh qa copy: a new worktree from `origin/main`, `echo qa > .claude/lane`.
+  2. Install: `npm ci` in `prototype/studio` with **Node 24** (`.tools/node-v24.21.0/bin` first on PATH; Homebrew's Node 23 fails Prisma), then `npx prisma generate` and `cd web && npx vite build`.
+  3. Start a copy: `zsh tools/isolated.sh qa_am 4471 start`.
+  4. Run the scratchpad script pattern (the guard hook blocks heredocs, `for` loops, pipes after `cat`, `&&` with git and some `sed` lines, so put them in a script file written with Write and run `zsh <file>`).
+* **Retest map** (check → bugs; each check resets and loads its own data):
+
+  | Check | Bugs it covers |
+  |---|---|
+  | `check_qa_wording_1029.cjs` | QA-39, 71–74, 79, 80; then grep its saved texts as in the coverage report §2. It rewrites the tracked `2026-10-29-wording-sweep/` files: put them back unless you mean to update them |
+  | `check_qa_am_r3_1028.cjs` | QA-48 (68/69 on 52117004) |
+  | `check_qa_am_s3_1029.cjs` | QA-70 (37/39) |
+  | `check_qa_ai_paths.ts` (offline, from `prototype/`) | QA-83, 85–89 (10/21 on 170659bc) |
+  | `check_qa_qn_1029.cjs` | QA-92–95 (31/40; only if runtime's fix merged) |
+  | `check_qa_am_s4_1028.cjs`, `check_qa_am_s5_1029.cjs`, `check_qa_am_r69_1028.cjs`, `check_qa_dv_1029.cjs` | regression (62/62, 51/51, 33/33, 24/25) |
+
+  Not in deda0e6b: QA-84, 91 (runtime), QA-90 (Lead tooling), QA-92–95 (runtime).
+* **State of this copy (confident-jemison-6e225d, branch `claude/qa-coverage-1029`, last pushed b0b42c46):**
+  * Everything qa is committed.
+  * Untracked suite screenshots are left over (`git clean` was refused by the permission check): delete them, or start fresh.
+  * qa_qn :4471 is stopped.
+  * The Lead still has to merge this branch's qa files (report `qa/reports/2026-10-29-coverage-s4-s5.md`, BUGS QA-92–95, CAPABILITIES C4.10 Partial).
+* **Learned this run:**
+  1. `@axe-core/playwright` needs `browser.newContext()`, not `browser.newPage()`.
+  2. The drawer is outside `<main>`: read it with `[role=dialog]`.
+  3. The ⋯ menu items are not `role=menuitem`: use `find` refs.
+  4. Under load above 10, `check_w1_programs_s2` (200 ms Status change) and `check_s5_slice3_browser` go red; CI passes them.
+  5. A copy's server can die mid-run (ECONNREFUSED): restart it with `isolated.sh … start`.
+  6. Plain reruns of chosen suites: sed a copy of `run-suites.sh` so its loop reads `$RERUN` (`scratchpad/mkrerun.sh` pattern).
+
+## Older handover (28 Oct)
 * **Next, in order (Lead, 28 Oct, founder's credit nearly gone):**
   1. **Done 29 Oct on 52117004** (`qa/reports/2026-10-29-coverage-s4-s5.md`; plain reruns used a scratch copy of `run-suites.sh` whose loop takes `$RERUN`). **Clean coverage rerun on S4 (main 06a8fc30).** The 28 Oct run was incomplete: load about 8.5, two S4 suites stopped early, api 96.88/81.69 and engine 99.44/88.96 (under the 97/82 · 99/89 floor, not judged). Rerun with nothing else running (scratchpad pattern: stop qa copies → `NODE_V8_COVERAGE` + `NODE_OPTIONS=--import tests/qa/coverage-preload.mjs` → `run-suites.sh` → `c8 report --include api/src/** | engine/**`). The three M7 "Stop during the paid call" steps always fail under the preload (it turns a stop signal into a clean exit), like `check_p2_guard`; rerun those plainly on qa ports (4475, 4477, 4478) with `STUDIO_FAKE_LAUNCHER=…/tests/fixtures/fake-launch.mjs`. Then put back the by-products.
   2. **Done 28 Oct** (after-merge on PR #69, 38722933). New `check_qa_am_r69_1028.cjs` (:4471, `isolated.sh qa_r69 4471 start`): 21/33, fails = QA-65–68. `check_qa_am_s4_1028.cjs` is stale after #69 (⋯ menu → row action; reason rows count as `tr`): move it.
