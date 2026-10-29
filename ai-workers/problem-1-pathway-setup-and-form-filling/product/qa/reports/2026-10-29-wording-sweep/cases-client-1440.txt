@@ -1,0 +1,14 @@
+URL /cases as user-P
+TITLE Product Studio · Expat Ready (prototype)
+H1 []
+HEADS []
+CUT []
+ERRORS []
+---
+Cases are for the case officer
+
+Clients open their questionnaire from the link their officer sends. Switch to the case officer to see the cases.
+--- labels ---
+Cases home
+Simulated people for the prototype: not part of the product
+Simulated person
