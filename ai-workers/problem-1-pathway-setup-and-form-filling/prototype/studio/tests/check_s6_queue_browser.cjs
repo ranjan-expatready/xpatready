@@ -26,6 +26,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const settle = async () => { await p.waitForLoadState("networkidle"); await p.waitForTimeout(400); };
   const band = (b) => p.locator(`[data-band="${b}"]`);
   const axe = async (name) => { const v = (await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze()).violations; step(`axe: ${name} has no WCAG A/AA violation`, !v.length, v.map((x) => `${x.id}: ${x.nodes[0]?.target?.join(" ")}`).join(" | ")); };
+  // Lead early look: a toast never covers the side panel's footer. Each footer button is outside every toast and is the
+  // element a click at its centre reaches.
+  const footerClear = () => p.evaluate(() => {
+    const toasts = [...document.querySelectorAll("[data-toaster] > div")].map((x) => x.getBoundingClientRect());
+    const dialog = document.querySelector('[role="dialog"]');
+    const buttons = [...dialog.querySelectorAll("button")].filter((x) => /^(Accept|Reject)/.test(x.textContent.trim()));
+    const overlap = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    const detail = buttons.map((x) => { const r = x.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return `${x.textContent.trim()}@${Math.round(r.left)},${Math.round(r.top)} hit=${hit?.tagName}.${(hit?.textContent ?? "").trim().slice(0, 20)} overlap=${toasts.some((o) => overlap(o, r))}`; });
+    return { detail, toastAt: toasts.map((o) => `${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.right)},${Math.round(o.bottom)}`), toasts: toasts.length, buttons: buttons.length, ok: buttons.length >= 2 && buttons.every((x) => { const r = x.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !toasts.some((o) => overlap(o, r)) && !!hit && dialog.contains(hit) && (x.disabled || hit === x || x.contains(hit)); }) };
+  });
   const noSideScroll = () => p.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
   try {
     await p.goto(BASE); await as("user-C");
@@ -67,6 +77,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const txt = await panel.innerText();
     step("C11.13: the side panel shows both readings, IRCC's words with file and page, and the rules", /Name given at birth/.test(txt) && /Name as printed on the birth certificate/.test(txt) && /imm1111e\.pdf · edition 02-2026 · page 2 · found in the file/.test(txt) && /Passed/.test(txt) && /the readings differ/i.test(txt), txt.slice(0, 400));
     step("C11.14 fail: Reject stays off without a reason", await panel.getByRole("button", { name: "Reject" }).isDisabled());
+    const clear1440 = await footerClear();
+    step("C11.14 (1440): with a toast showing, the panel's Accept and Reject stay visible and clickable", clear1440.toasts >= 1 && clear1440.ok, JSON.stringify(clear1440));
     await p.screenshot({ path: path.join(SHOTS, "panel-decide-1440.png") });
     await axe("the side panel");
     await panel.getByRole("button", { name: "Accept the checker's reading" }).click(); await settle();
@@ -96,6 +108,21 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await as("user-C"); await p.setViewportSize({ width: 1024, height: 768 });
     await p.goto(`${BASE}/review/proposals?group=${encodeURIComponent(`edition:${ED}`)}`); await settle();
     step("layout (1024): the queue has no sideways page scroll", await noSideScroll());
+    // A toast while the panel stays open: the item is decided elsewhere meanwhile, so Accept is refused in a toast.
+    await band("ready").getByRole("button", { name: "Open Eye colour" }).click();
+    await p.getByRole("dialog").waitFor();
+    await api("/review/proposals/decide", { method: "POST", actor: "user-C", data: { ids: [ids.rules], action: "reject", reason: "Decided elsewhere (test)" } });
+    await p.getByRole("dialog").getByRole("button", { name: /^Accept/ }).click();
+    await p.locator("[data-toaster] > div").first().waitFor();
+    const clear1024 = await footerClear();
+    step("C11.14 fail (1024): a refused Accept shows its toast and the panel's Accept and Reject stay visible and clickable", clear1024.toasts >= 1 && clear1024.ok, JSON.stringify(clear1024));
+    await p.screenshot({ path: path.join(SHOTS, "panel-toast-1024.png") });
+    await p.setViewportSize({ width: 800, height: 900 });
+    await p.waitForTimeout(200);
+    const clear800 = await footerClear();
+    step("C11.14 (800, panel full width): the toast sits above the panel's footer; Accept and Reject stay clickable", clear800.toasts >= 1 && clear800.ok, JSON.stringify(clear800));
+    await p.screenshot({ path: path.join(SHOTS, "panel-toast-800.png") });
+    await p.keyboard.press("Escape");
     await p.screenshot({ path: path.join(SHOTS, "queue-1024.png"), fullPage: true });
     step("no page errors", !errs.length, errs.join(" | "));
   } catch (e) { step("the run finished", false, e.stack ?? e); }
