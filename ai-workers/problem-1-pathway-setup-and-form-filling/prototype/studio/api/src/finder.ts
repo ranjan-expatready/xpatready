@@ -283,7 +283,8 @@ export class Finder implements OnModuleInit {
       await set("AI picks the application package (round 1 of 2)");
       const d = await this.aiRound<GuideOut>("find_guide", false, trail, combinationKey, [inv], mode, wanted, batchId);
       await set("A second AI round checks the pick without seeing the first (round 2 of 2)", { costUsd: d.costUsd });
-      const k = await this.aiRound<GuideOut>("find_guide", true, trail, combinationKey, [inv], mode, wanted, batchId);
+      // QA-89: the checker round is sent only when the first round answered; a failed first round ends the pick here.
+      const k: RoundOut<GuideOut> = d.ok ? await this.aiRound<GuideOut>("find_guide", true, trail, combinationKey, [inv], mode, wanted, batchId) : { ok: false, costUsd: 0, reason: d.reason };
       const cost = round2(d.costUsd + k.costUsd);
       if (!d.ok || !k.ok) return { status: (!d.ok && d.blocked) || (!k.ok && k.blocked) ? "BLOCKED" : "NEEDS_PERSON", message: `${mode === "live" ? "AI could not pick the page: " : ""}${(!d.ok ? d.reason : !k.ok ? k.reason : "").replace(/\.+\s*$/, "")}. Choose the application page.`, costUsd: cost, detail: { candidates: sure.candidates }, value: { url: "", title: null, candidates: sure.candidates } };
       const byTitle = (t: string | null) => (t ? idx.packages.find((p) => sameText(p.title) === sameText(t)) : undefined);
@@ -346,13 +347,13 @@ export class Finder implements OnModuleInit {
         await set(mode === "live" ? "AI reads the pages (guarded live call; stub pass first)" : "Replaying the saved AI answer for these exact pages (US$0)");
         const o = await this.aiRound<FormsOut>("find_forms", false, trail, combinationKey, inputs, mode, wanted, batchId);
         return o.ok ? { status: "COMPLETED", message: `AI listed ${o.output.forms.length} form${o.output.forms.length === 1 ? "" : "s"} (${o.from === "replay" ? "saved answer, US$0" : `US$${o.costUsd.toFixed(2)}`}).`, costUsd: o.costUsd, detail: { run_file: o.runFile, from: o.from }, value: o }
-          : { status: o.blocked ? "BLOCKED" : o.cancelled ? "CANCELLED" : "FAILED", message: o.reason, costUsd: o.costUsd, value: o };
+          : { status: o.blocked ? "BLOCKED" : o.cancelled ? "CANCELLED" : "FAILED", message: o.reason, costUsd: o.costUsd, ...(o.details ? { detail: { details: o.details } } : {}), value: o };
       });
       const r2 = r1?.status === "COMPLETED" ? await this.step<RoundOut<FormsOut> | null>(batchId, "finder_check", async (set) => {
         await set(mode === "live" ? "The checker reads the same pages without seeing the first answer" : "Replaying the saved checker answer (US$0)");
         const o = await this.aiRound<FormsOut>("find_forms", true, trail, combinationKey, inputs, mode, wanted, batchId);
         return o.ok ? { status: "COMPLETED", message: `The checker listed ${o.output.forms.length} form${o.output.forms.length === 1 ? "" : "s"} (${o.from === "replay" ? "saved answer, US$0" : `US$${o.costUsd.toFixed(2)}`}).`, costUsd: o.costUsd, detail: { run_file: o.runFile, from: o.from }, value: o }
-          : { status: o.blocked ? "BLOCKED" : o.cancelled ? "CANCELLED" : "FAILED", message: o.reason, costUsd: o.costUsd, value: o };
+          : { status: o.blocked ? "BLOCKED" : o.cancelled ? "CANCELLED" : "FAILED", message: o.reason, costUsd: o.costUsd, ...(o.details ? { detail: { details: o.details } } : {}), value: o };
       }) : null;
       if (!r1 || r1.status !== "COMPLETED" || !r2 || r2.status !== "COMPLETED") {
         result.rules_only = printed;

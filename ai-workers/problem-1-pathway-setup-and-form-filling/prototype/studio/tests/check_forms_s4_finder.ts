@@ -451,6 +451,21 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   for (const x of listedRows) { const u = (await call("GET", `/library/forms/${encodeURIComponent(x.code)}/uses`)).body; if (u?.can?.delete && u?.can?.retire) { bothRefused.push(x.code); if (!x.action.why) notGreyed.push(x.code); } }
   ok("R69-3 (API): every library row whose Delete and Retire are both refused shows its action greyed with a reason", bothRefused.length >= 1 && notGreyed.length === 0, { bothRefused, notGreyed });
 
+  // --- QA-89 (qa explore ai-paths): a refused first guide round sends no checker round (the demo paid for two 400s)
+  {
+    const svq = sql(`select id from combination where label = 'Super visa' limit 1`);
+    rmSync(join(VAR, "fake-launch.log"), { force: true });
+    writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs: {
+      "studio-finder-guide": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: { drafting_run: { status: "provider_error", usage: { cost_usd: 0 }, attempts: [{ n: 1, outcome: "refused_by_provider", request_id: "req_qa89", error: "400 invalid_request_error" }] }, contract_valid: true } } },
+    } }));
+    const p89 = (await call("POST", `/combinations/${svq}/forms/find/plan`, { mode: "live" })).body;
+    const l89 = await call("POST", `/combinations/${svq}/forms/find`, { mode: "live", planSha256: p89.plan_sha256, idempotencyKey: "qa89-guide-refused" });
+    const run89 = (await finish(l89.body.id)).body;
+    const jobs89 = existsSync(join(VAR, "fake-launch.log")) ? readFileSync(join(VAR, "fake-launch.log"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l) as { job: string; mode: string }) : [];
+    ok("QA-89 fail: after the first guide round was refused, no checker round was launched", jobs89.some((j) => j.job.startsWith("studio-finder-guide-") && !j.job.startsWith("studio-finder-guide-check") && j.mode === "live") && !jobs89.some((j) => j.job.startsWith("studio-finder-guide-check")), jobs89.map((j) => `${j.job.slice(0, 30)}:${j.mode}`));
+    ok("QA-89 pass: the step says the service refused the request, US$0, and offers the page choice", /refused the request \(our setup error\)/.test(run89.steps?.[0]?.message ?? "") && /Choose the application page/.test(run89.steps?.[0]?.message ?? "") && (run89.usd?.spent ?? 1) === 0, run89.steps?.[0]?.message);
+  }
+
   // --- QA-62, QA-63 (qa after-merge on S4): a replay with nothing saved, on Super visa (no page chosen by rules)
   const sv = sql(`select id from combination where label = 'Super visa' limit 1`);
   const svPlan = (await call("POST", `/combinations/${sv}/forms/find/plan`, { mode: "replay" })).body;

@@ -15,16 +15,16 @@ import { join } from "node:path";
 import { admitRun, loadKey, PolicyRefusal, type AdmitOptions, type RouteSettings } from "./guard.ts";
 import { assertIsolated } from "./isolation.ts";
 import { BudgetExceeded, costUsd, inputTokenBound, type SpendLedger } from "./ledger.ts";
-import { BASE_URL, EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR, MAX_REQUEST_BYTES } from "./policy.ts";
+import { BASE_URL, EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR, MAX_REQUEST_BYTES, MAX_RETRY_AFTER_S } from "./policy.ts";
 
 export type DraftRequest = { system: string; user: string; output_schema?: Record<string, unknown> };
 export type CallResult = { text: string; stop_reason?: string | null; usage: { input_tokens: number; output_tokens: number } };
 export type CallSettings = RouteSettings & { timeout_ms: number; effort?: string };
 export type Caller = ((req: DraftRequest, s: CallSettings) => Promise<CallResult>) & { kind?: "stub" | "paid" };
-export type Attempt = { n: number; outcome: string; error?: string; cost_usd?: number; worst_usd: number; stop_reason?: string | null; input_tokens?: number; output_tokens?: number; duration_ms?: number };
+export type Attempt = { n: number; outcome: string; error?: string; request_id?: string; cost_usd?: number; worst_usd: number; stop_reason?: string | null; input_tokens?: number; output_tokens?: number; duration_ms?: number };
 
 export type RunOutcome = {
-  status: "completed" | "provider_error" | "budget_exceeded" | "refused";
+  status: "completed" | "provider_error" | "budget_exceeded" | "refused" | "timed_out";
   label: string;
   caller: string;
   admitted: { file: string; sha256: string; kind: string }[];
@@ -76,18 +76,49 @@ export async function runDrafting(
         out.status = "completed"; out.text = r.text;
         return out;
       } catch (e) {
-        // A request the API rejects as invalid (4xx other than 408, 409, 429) is refused before any processing, so it costs
-        // nothing (demo 29 Oct: a 400 recorded at US$0.22 each), and it fails the same way on retry: no second attempt (D17).
-        // Any other failure: usage unknown, so the reservation stays counted at its worst case.
+        // QA-86: a call the service refused (4xx other than 408, 409, 429: invalid, too large, usage limit) or was too busy to
+        // take (429, 500, 502, 503, 529) processed nothing, so it settles at its true cost, US$0. Any other failure (a timeout,
+        // a dropped connection): usage unknown, so the reservation stays counted at its worst case.
         const status = (e as { status?: number }).status;
         const refused = typeof status === "number" && status >= 400 && status < 500 && ![408, 409, 429].includes(status);
-        ledger.settle(id, refused ? 0 : worst, refused ? "refused_by_provider_usd0" : "error_counted_at_worst_case");
-        out.attempts.push({ n, outcome: refused ? "refused_by_provider" : "error", error: (e as Error).message.slice(0, 300), ...(refused ? { cost_usd: 0 } : {}), worst_usd: worst, duration_ms: Date.now() - t0 });
+        const busy = typeof status === "number" && [429, 500, 502, 503, 529].includes(status);
+        const timedOut = status === 408 || (status === undefined && /time(d)?\s*-?\s*out/i.test(`${(e as Error).name} ${(e as Error).message}`));
+        const requestId = requestIdOf(e);
+        ledger.settle(id, refused || busy ? 0 : worst, refused ? "refused_by_provider_usd0" : busy ? "busy_usd0" : "error_counted_at_worst_case");
+        out.attempts.push({ n, outcome: refused ? "refused_by_provider" : busy ? "busy" : timedOut ? "timed_out" : "error", error: (e as Error).message.slice(0, 300),
+          ...(requestId ? { request_id: requestId } : {}), ...(refused || busy ? { cost_usd: 0 } : {}), worst_usd: worst, duration_ms: Date.now() - t0 });
+        if (timedOut) out.status = "timed_out";
+        // A refused request fails the same way on retry (D17): no second attempt.
         if (refused) break;
+        // QA-87: a busy service is retried only after the wait it names, never at once; no wait named, or too long: stop.
+        if (busy) {
+          const wait = retryAfterSeconds(e);
+          if (wait === null || wait > MAX_RETRY_AFTER_S || n >= run.settings.max_attempts) break;
+          await new Promise((res) => setTimeout(res, wait * 1000));
+        }
       }
     }
     return out;
   });
+}
+
+/** QA-88: the service's request id, for the Details a person can open (never in the main sentence). */
+function requestIdOf(e: unknown): string | null {
+  const x = e as { request_id?: string; requestID?: string; message?: string; headers?: unknown };
+  const fromHeaders = headerOf(x.headers, "request-id");
+  return x.request_id ?? x.requestID ?? fromHeaders ?? /"request_id"\s*:\s*"([^"]+)"/.exec(String(x.message ?? ""))?.[1] ?? null;
+}
+/** QA-87: the seconds a busy service asks us to wait (retry-after), or null when it names none. */
+function retryAfterSeconds(e: unknown): number | null {
+  const v = headerOf((e as { headers?: unknown }).headers, "retry-after");
+  const n = v === null ? NaN : Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+function headerOf(headers: unknown, name: string): string | null {
+  if (!headers) return null;
+  if (typeof (headers as { get?: unknown }).get === "function") return (headers as { get: (k: string) => string | null }).get(name);
+  const v = (headers as Record<string, unknown>)[name];
+  return typeof v === "string" || typeof v === "number" ? String(v) : null;
 }
 
 /** The real call: Anthropic API only (AIW-D261), explicit base URL, SDK retries off, streamed, structured

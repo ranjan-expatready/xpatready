@@ -83,6 +83,9 @@ export const MAX_PAID_ATTEMPTS_PER_FORM = 4;
  *  input bound counts about one token per byte). The largest real request so far was about 152 K input tokens (checks,
  *  20 Oct); a larger one is refused before any call, at US$0, and is split or read another way. */
 export const MAX_REQUEST_BYTES = 800_000;
+/** QA-87: a busy service (429, 529, 503) is retried only after the wait it names (retry-after), and only when that wait is
+ *  at most this many seconds; with no wait named, the call stops and the person tries again later. */
+export const MAX_RETRY_AFTER_S = 30;
 
 /** Label every screen and record of drafted output carries (AIW-D260, verbatim). */
 export const LABEL = "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route";

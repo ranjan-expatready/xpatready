@@ -40,6 +40,7 @@ export function lintSchema(schema: unknown): string[] {
     if (Array.isArray(node)) { node.forEach((x, i) => walk(x, `${path}[${i}]`)); return; }
     if (!node || typeof node !== "object") return;
     const o = node as Record<string, unknown>;
+    if (o.properties && typeof o.properties === "object" && o.additionalProperties !== false && !("additionalProperties" in o)) out.push(`${path}: an object needs "additionalProperties": false`);
     for (const [k, v] of Object.entries(o)) {
       if (NAME_MAPS.has(k) && v && typeof v === "object") { for (const [name, sub] of Object.entries(v)) walk(sub, `${path}.${k}.${name}`); continue; }
       if (REFUSED.includes(k)) out.push(`${path}: "${k}" is refused by structured outputs`);
@@ -55,6 +56,25 @@ export function lintSchema(schema: unknown): string[] {
     }
   };
   walk(schema, "$");
+  // The service's size limits (qa explore ai-paths, from the docs): at most 24 optional and 16 union-type properties in all.
+  let optional = 0, unions = 0;
+  const count = (node: unknown) => {
+    if (Array.isArray(node)) { node.forEach(count); return; }
+    if (!node || typeof node !== "object") return;
+    const o = node as Record<string, unknown>;
+    if (o.properties && typeof o.properties === "object") {
+      const req = new Set((o.required as string[] | undefined) ?? []);
+      for (const [name, sub] of Object.entries(o.properties as Record<string, unknown>)) {
+        if (!req.has(name)) optional++;
+        const x = sub as Record<string, unknown> | null;
+        if (x && (x.anyOf || Array.isArray(x.type))) unions++;
+      }
+    }
+    for (const v of Object.values(o)) count(v);
+  };
+  count(schema);
+  if (optional > 24) out.push(`${optional} optional properties (the service allows 24)`);
+  if (unions > 16) out.push(`${unions} properties with union types (the service allows 16)`);
   // Recursive references: a definition that reaches itself through $ref is refused.
   const s = schema as { $defs?: Record<string, unknown>; definitions?: Record<string, unknown> };
   const defs = { ...(s?.definitions ?? {}), ...(s?.$defs ?? {}) };
@@ -83,6 +103,18 @@ ok("fail: a definition that refers to itself (recursion) is refused", lintSchema
 ok("pass: a simple pattern (the field-map fact key) is accepted", lintSchema({ type: "string", pattern: "^[a-z][a-z_]*\\.[a-z][a-z0-9_]*$" }).length === 0);
 ok("fail: a pattern with a back-reference, a look-ahead, a word boundary or a large range is refused", ["^(a)\\1$", "^(?=a)b$", "\\bword\\b", "^a{1,500}$"].every((re) => lintSchema({ type: "string", pattern: re }).length === 1));
 ok("fail: an external $ref, allOf with $ref, and an object inside enum are refused", lintSchema({ $ref: "https://example.org/s.json" }).length === 1 && lintSchema({ allOf: [{ $ref: "#/$defs/a" }], $defs: { a: { type: "string" } } }).length === 1 && lintSchema({ enum: [{ a: 1 }] }).length === 1);
+
+ok("fail (qa part A): an object without additionalProperties false is refused", lintSchema({ type: "object", properties: { a: { type: "string" } } }).length === 1);
+ok("fail (qa part A): more than 24 optional properties are refused", lintSchema({ type: "object", additionalProperties: false, properties: Object.fromEntries(Array.from({ length: 25 }, (_, i) => [`p${i}`, { type: "string" }])) }).some((p) => /25 optional/.test(p)));
+ok("pass: 24 optional properties are accepted", lintSchema({ type: "object", additionalProperties: false, properties: Object.fromEntries(Array.from({ length: 24 }, (_, i) => [`p${i}`, { type: "string" }])) }).length === 0);
+ok("fail (qa part A): more than 16 union-type properties are refused", lintSchema({ type: "object", additionalProperties: false, required: Array.from({ length: 17 }, (_, i) => `p${i}`), properties: Object.fromEntries(Array.from({ length: 17 }, (_, i) => [`p${i}`, { type: ["string", "null"] }])) }).some((p) => /17 properties with union/.test(p)));
+
+// --- QA-85 (qa part B): each job kind the Studio launches has the stub answer its stub pass reads (p2/stubs/<kind>.json)
+const STUBS = join(PROMPTS, "..", "stubs");
+const kinds = ["find_guide", "find_forms", "who_can_be", "field_map"];
+const missing = kinds.filter((k) => { try { JSON.parse(readFileSync(join(STUBS, `${k}.json`), "utf8")); return false; } catch { return true; } });
+ok("QA-85 pass: every launched kind's stub answer exists and is JSON (who_can_be included: before, its stub pass ended in a missing file)", missing.length === 0, missing);
+ok("QA-85 fail: a kind with no stub answer is found (the check would name it)", !kinds.concat("no_such_kind").every((k) => { try { readFileSync(join(STUBS, `${k}.json`)); return true; } catch { return false; } }));
 
 // --- every real output schema
 const files = readdirSync(PROMPTS).filter((f) => f.endsWith(".schema.json")).sort();

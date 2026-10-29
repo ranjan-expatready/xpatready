@@ -10,7 +10,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { editionContextKey, editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, replayPattern, savedRunKey, type SavedRun } from "../engine/rounds.ts";
-import { paidRetryAllowed, RUNS, StepRunner, worstRoundUsd, type AiStep } from "../api/src/rounds.ts";
+import { paidRetryAllowed, RUNS, sizedBudgetUsd, StepRunner, worstRoundUsd, type AiStep } from "../api/src/rounds.ts";
 import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, MAX_REQUEST_BYTES, RUN_CAP_USD, WAVE1_CAP_USD } from "../../p2/policy.ts";
 import { BudgetExceeded, SpendLedger } from "../../p2/ledger.ts";
 import { knownOk } from "../../p2/launch.ts";
@@ -110,6 +110,22 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: bigRec }) })));
   ok("G5 pass: input above the size cap is refused in plain words at US$0 (\"The pages are too large for one AI call…\")", !r.ok && r.reason === "The pages are too large for one AI call, so nothing was sent and nothing was charged" && r.costUsd === 0, r);
   ok("G5 fail: the person never reads the byte counts or the cap's name", !r.ok && !/bytes|cap of/.test(r.reason));
+  // QA-87, QA-88: a busy service said plainly, US$0; the request id under Details.
+  const busyRec = record({ drafting_run: { status: "provider_error", usage: { cost_usd: 0 }, attempts: [{ n: 1, outcome: "busy", request_id: "req_busy_1", error: "529 {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\"}}" }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: busyRec }) })));
+  ok("QA-87 pass: a busy service is said plainly, US$0, request id under Details", !r.ok && r.reason === "The AI service was busy, so nothing was charged. Try again in a few minutes" && r.costUsd === 0 && r.details === "Request req_busy_1", r);
+  ok("QA-88 fail: the person never reads overloaded_error, 529 or JSON", !r.ok && !/overloaded|529|\{/.test(r.reason));
+  // QA-87 and the Lead's ask (29 Oct): a round's budget and time limit per step; without them the budget is sized so one retry fits.
+  ok("QA-87 pass: a small input keeps the US$1 default", sizedBudgetUsd({ max_output_tokens: 3000 }, 37_000) === 1);
+  ok("QA-87 fail (before: a fixed US$1): a 100 KB finder input with a 10,000 output limit gets a budget both attempts fit", sizedBudgetUsd({ max_output_tokens: 10_000 }, 100_000) >= 2 * worstRoundUsd({ max_output_tokens: 10_000 } as AiStep, 100_000) / 2 && sizedBudgetUsd({ max_output_tokens: 10_000 }, 100_000) > 1, sizedBudgetUsd({ max_output_tokens: 10_000 }, 100_000));
+  ok("QA-87: the sized budget never passes the run cap", sizedBudgetUsd({ max_output_tokens: 64_000 }, 700_000) <= RUN_CAP_USD);
+  let budgetJob: { settings?: { budget_usd?: number; timeout_ms?: number } } = {};
+  const bRunner = new StepRunner({ launchOnce: async (jobId: string, mode: "stub" | "live") => { if (mode === "stub") budgetJob = JSON.parse(readFileSync(join(JOBS, `${jobId}.json`), "utf8")); return { code: 0, err: "", out: mode === "stub" ? "{}" : JSON.stringify({ run_file: okRec }) }; } });
+  await bRunner.round({ ...step, budget_usd: 5, timeout_ms: 900_000 }, false, { trail, contextKey: "k1", inputs, mode: "live", wanted: async () => true });
+  ok("Lead 29 Oct pass: a step's own budget_usd and timeout_ms go on its job (whole-form drafts: US$5, 900 000 ms)", budgetJob.settings?.budget_usd === 5 && budgetJob.settings?.timeout_ms === 900_000, budgetJob.settings);
+  await bRunner.round(step, false, { trail, contextKey: "k1", inputs, mode: "live", wanted: async () => true });
+  ok("Lead 29 Oct fail: a step that names neither gets 300 000 ms and a budget sized from its input (never below US$1)", budgetJob.settings?.timeout_ms === 300_000 && (budgetJob.settings?.budget_usd ?? 0) >= 1, budgetJob.settings);
+
   // Stop finds the round running now for its run, and no other.
   let during: string | undefined;
   const watcher = new StepRunner({ launchOnce: async (jobId: string, mode: "stub" | "live") => { if (mode === "live") during = watcher.liveJob("batch-9"); return { code: 0, err: "", out: mode === "stub" ? "{}" : JSON.stringify({ run_file: okRec }) }; } });

@@ -83,8 +83,12 @@ t("a request the API rejects as invalid (400) is not retried (D17)", r400.status
 t("demo bug 29 Oct pass: a request refused before processing (400) settles at US$0, marked refused_by_provider", l400.committed() === 0 && r400.attempts[0].outcome === "refused_by_provider" && r400.attempts[0].cost_usd === 0);
 t("demo bug 29 Oct fail: a failure with unknown usage (no status) still settles at its worst case", r1.attempts[0].outcome === "error" && r1.attempts[0].cost_usd === undefined);
 const busy: Caller = async () => { calls++; throw Object.assign(new Error("429 rate limited"), { status: 429 }); };
-const r429 = await runDrafting(run("run-429"), build, busy, new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 40));
-t("a rate-limited request (429) is retried within max_attempts", r429.attempts.length === 2);
+const l429 = new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 40);
+const r429 = await runDrafting(run("run-429"), build, busy, l429);
+t("QA-87 fail: a rate-limited request (429) that names no wait is not retried at once, and costs US$0 (QA-86)", r429.attempts.length === 1 && r429.attempts[0].outcome === "busy" && l429.committed() === 0);
+const busyWait: Caller = async () => { calls++; throw Object.assign(new Error("429 rate limited"), { status: 429, headers: { "retry-after": "0" } }); };
+const r429w = await runDrafting(run("run-429w"), build, busyWait, new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 40));
+t("QA-87 pass: a rate-limited request that names a short wait is retried after it, within max_attempts", r429w.attempts.length === 2);
 const lBig = new SpendLedger(mkdtempSync(join(tmpdir(), "p2-ledger-")), 40);
 const cBig = calls;
 const rBig = await runDrafting(run("run-big"), () => ({ system: "s", user: "x".repeat(MAX_REQUEST_BYTES + 1) }), ok, lBig);
