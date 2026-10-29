@@ -1,0 +1,20 @@
+URL /cases as user-O
+TITLE Product Studio · Expat Ready (prototype)
+H1 ["Cases"]
+HEADS ["Reference","Combination","Status","Opened"]
+CUT []
+ERRORS []
+---
+Cases
+
+Each case works from one released configuration, frozen when the case opens.
+
+Open a case
+Reference	Combination	Status	Opened
+QA-WORDING-1	With an LMIA	Open	Oct 29, 2026
+1 case shown
+--- labels ---
+Cases home
+Simulated people for the prototype: not part of the product
+Simulated person
+Table: Reference, Combination, Status, Opened

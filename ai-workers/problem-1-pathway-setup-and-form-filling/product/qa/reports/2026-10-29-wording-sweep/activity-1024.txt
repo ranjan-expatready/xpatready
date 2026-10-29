@@ -1,0 +1,127 @@
+URL /activity as user-A
+TITLE Product Studio · Expat Ready (prototype)
+H1 ["Activity"]
+HEADS ["When","Who","What","Item"]
+CUT []
+ERRORS []
+---
+Activity
+
+Every create, change, AI step, decision, release, fill and reset in this demo workspace, newest first.
+
+When	Who	What	Item
+10/29/2026, 7:58:46 AM	user-A	Configuration author proposed to retire "Guide 5487 · Applying for a Work Permit outside Canada": Sample: not needed (qa wording sweep)	form
+10/29/2026, 7:55:08 AM	user-O	Case officer opened case d5e3f41b on "With an LMIA" released version 1 (0c8fcb19c2d4)	case
+10/29/2026, 7:55:07 AM	user-A	Configuration author uploaded an unverified form source; held before library, attachment or AI use	form
+10/29/2026, 7:53:24 AM	user-A	Configuration author loaded the sample inputs in 7.4 s: 11 programs, 51 program nodes, 6 combinations set up, official files through the upload path, the reviewed work-permit release imported as Release 1, 1 sample profile	sample inputs
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Inspection response" under Compliance	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created program "Compliance" under Temporary residence	program
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Atlantic employer designation" under Designation and endorsement	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created program "Designation and endorsement" under Permanent residence	program
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "Professional under a trade agreement" under Offer of employment	sub-category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "Intra-company transferee" under Offer of employment	sub-category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Offer of employment" under Employer offers (LMIA-exempt)	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created program "Employer offers (LMIA-exempt)" under Temporary residence	program
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "In-home caregiver" under LMIA	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Global Talent Stream" under LMIA	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Low-wage position" under LMIA	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created the configuration row for High-wage position	configuration row
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "High-wage position" under LMIA	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created program "LMIA" under Temporary residence	program
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Travel document" under Permanent resident documents	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "PR card renewal" under Permanent resident documents	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created program "Permanent resident documents" under Permanent residence	program
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Grant of citizenship" under Citizenship	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created program "Citizenship" under Citizenship	program
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Provincial nomination" under Economic immigration	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "Permanent residence application" under Express Entry	sub-category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "Profile" under Express Entry	sub-category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Express Entry" under Economic immigration	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created program "Economic immigration" under Permanent residence	program
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Dependent child" under Family sponsorship	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "Applicant in Canada" under Spouse or partner	sub-category
+10/29/2026, 7:53:24 AM	user-A	Configuration author attached imm5475e.pdf to "Applicant outside Canada" (sample button): IMM 5475 (12-2022)	source
+10/29/2026, 7:53:24 AM	user-A	Configuration author attached imm5476e.pdf to "Applicant outside Canada" (sample button): IMM 5476 (11-2025)	source
+10/29/2026, 7:53:24 AM	user-A	Configuration author created the configuration row for Applicant outside Canada	configuration row
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "Applicant outside Canada" under Spouse or partner	sub-category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Spouse or partner" under Family sponsorship	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created program "Family sponsorship" under Permanent residence	program
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Study permit extension" under Study permits	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author attached imm5475e.pdf to "Study permit" (sample button): IMM 5475 (12-2022)	source
+10/29/2026, 7:53:24 AM	user-A	Configuration author attached imm5476e.pdf to "Study permit" (sample button): IMM 5476 (11-2025)	source
+10/29/2026, 7:53:24 AM	user-A	Configuration author attached imm5707e.pdf to "Study permit" (sample button): IMM 5707 (01-2023)	source
+10/29/2026, 7:53:24 AM	user-A	Configuration author created the configuration row for Study permit	configuration row
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Study permit" under Study permits	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created program "Study permits" under Temporary residence	program
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "Young professionals" under International Experience Canada	sub-category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "Working holiday" under International Experience Canada	sub-category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "International Experience Canada" under Work permits	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "Post-graduation" under Open work permit	sub-category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "Spouse of a student" under Open work permit	sub-category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "Spouse of a skilled worker" under Open work permit	sub-category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created category "Open work permit" under Work permits	category
+10/29/2026, 7:53:24 AM	user-A	Configuration author created sub-category "LMIA-exempt (employer offer)" under Employer-specific work permit	sub-category
+10/29/2026, 7:53:23 AM	user-A	Configuration author attached work-permit-outside-forms-documents.html to "With an LMIA" (sample button): Work permit outside: forms and documents page	source
+10/29/2026, 7:53:22 AM	user-A	Configuration author attached guide-5487.html to "With an LMIA" (sample button): Guide 5487 page	source
+10/29/2026, 7:53:22 AM	user-A	Configuration author attached IMM5905E.pdf to "With an LMIA" (sample button): IMM 5905 E (03-2026), New Delhi work permit visa office instructions (edition read from the file)	source
+10/29/2026, 7:53:22 AM	user-A	Configuration author added IMM 5905 (03-2026) (document checklist) to the library; code, title, edition and kind read from the file	form
+10/29/2026, 7:53:22 AM	user-A	Configuration author attached imm5488e.pdf to "With an LMIA" (sample button): IMM 5488 (10-2024)	source
+10/29/2026, 7:53:22 AM	user-A	Configuration author added IMM 5488 (10-2024) (document checklist) to the library; code, title, edition and kind read from the file	form
+10/29/2026, 7:53:22 AM	user-A	Configuration author read IMM 5257 SCH1 (09-2023): 57 form fields (existing inventory confirmed identical)	form
+10/29/2026, 7:53:22 AM	user-A	Configuration author attached imm5257_1e.pdf to "With an LMIA" (sample button): IMM 5257 SCH1 (09-2023)	source
+10/29/2026, 7:53:22 AM	user-A	Configuration author added IMM 5257 SCH1 (09-2023) (form) to the library; code, title, edition and kind read from the file	form
+10/29/2026, 7:53:22 AM	user-A	Configuration author read IMM 5475 (12-2022): 27 form fields (existing inventory confirmed identical)	form
+10/29/2026, 7:53:21 AM	user-A	Configuration author attached imm5475e.pdf to "With an LMIA" (sample button): IMM 5475 (12-2022)	source
+10/29/2026, 7:53:21 AM	user-A	Configuration author added IMM 5475 (05-2021) (form) to the library; code, title, edition and kind read from the file	form
+10/29/2026, 7:53:21 AM	user-A	Configuration author read IMM 5476 (11-2025): 53 form fields (existing inventory confirmed identical)	form
+10/29/2026, 7:53:20 AM	user-A	Configuration author attached imm5476e.pdf to "With an LMIA" (sample button): IMM 5476 (11-2025)	source
+10/29/2026, 7:53:20 AM	user-A	Configuration author added IMM 5476 (11-2025) (form) to the library; code, title, edition and kind read from the file	form
+10/29/2026, 7:53:20 AM	user-A	Configuration author read IMM 5409 (01-2023): 32 form fields (existing inventory confirmed identical)	form
+10/29/2026, 7:53:19 AM	user-A	Configuration author attached imm5409e.pdf to "With an LMIA" (sample button): IMM 5409 (01-2023)	source
+10/29/2026, 7:53:19 AM	user-A	Configuration author added IMM 5409 (01-2023) (form) to the library; code, title, edition and kind read from the file	form
+10/29/2026, 7:53:19 AM	user-A	Configuration author read IMM 5707 (01-2023): 50 form fields (existing inventory confirmed identical)	form
+10/29/2026, 7:53:19 AM	user-A	Configuration author attached imm5707e.pdf to "With an LMIA" (sample button): IMM 5707 (01-2023)	source
+10/29/2026, 7:53:19 AM	user-A	Configuration author read IMM 1295 (09-2023): 242 form fields (existing inventory confirmed identical)	form
+10/29/2026, 7:53:19 AM	user-A	Configuration author attached imm1295e.pdf to "With an LMIA" (sample button): IMM 1295 (09-2023)	source
+10/29/2026, 7:53:19 AM	user-A	Configuration author added IMM 1295 (09-2023) (form) to the library; code, title, edition and kind read from the file	form
+10/29/2026, 7:53:19 AM	user-A	Configuration author created the configuration row for With an LMIA	configuration row
+10/29/2026, 7:53:19 AM	user-A	Configuration author created sub-category "With an LMIA" under Employer-specific work permit	sub-category
+10/29/2026, 7:53:19 AM	user-A	Configuration author created category "Employer-specific work permit" under Work permits	category
+10/29/2026, 7:53:19 AM	user-A	Configuration author created program "Work permits" under Temporary residence	program
+10/29/2026, 7:53:19 AM	user-A	Configuration author created category "Extend stay in Canada" under Visitors	category
+10/29/2026, 7:53:19 AM	user-A	Configuration author attached imm5484e.pdf to "Super visa" (sample button): IMM 5484 (05-2026)	source
+10/29/2026, 7:53:19 AM	user-A	Configuration author read IMM 5707 (01-2023): 50 form fields (existing inventory confirmed identical)	form
+10/29/2026, 7:53:19 AM	user-A	Configuration author attached imm5707e.pdf to "Super visa" (sample button): IMM 5707 (01-2023)	source
+10/29/2026, 7:53:19 AM	user-A	Configuration author read IMM 5257 (09-2023): 242 form fields (existing inventory confirmed identical)	form
+10/29/2026, 7:53:18 AM	user-A	Configuration author attached imm5257e.pdf to "Super visa" (sample button): IMM 5257 (09-2023)	source
+10/29/2026, 7:53:18 AM	user-A	Configuration author created the configuration row for Super visa	configuration row
+10/29/2026, 7:53:18 AM	user-A	Configuration author created category "Super visa" under Visitors	category
+10/29/2026, 7:53:18 AM	user-A	Configuration author attached IMM5881E.pdf to "Visitor visa" (sample button): IMM 5881 E (05-2026), New Delhi visa additional document checklist (edition read from the file)	source
+10/29/2026, 7:53:18 AM	user-A	Configuration author added IMM 5881 (05-2026) (document checklist) to the library; code, title, edition and kind read from the file	form
+10/29/2026, 7:53:18 AM	user-A	Configuration author attached visa-package-india.html to "Visitor visa" (sample button): Visitor visa application package, India	source
+10/29/2026, 7:53:18 AM	user-A	Configuration author attached guide-5256.html to "Visitor visa" (sample button): Guide 5256 page	source
+10/29/2026, 7:53:18 AM	user-A	Configuration author attached imm5484e.pdf to "Visitor visa" (sample button): IMM 5484 (05-2026)	source
+10/29/2026, 7:53:18 AM	user-A	Configuration author added IMM 5484 (05-2026) (document checklist) to the library; code, title, edition and kind read from the file	form
+10/29/2026, 7:53:18 AM	user-A	Configuration author read IMM 5707 (01-2023): 50 form fields (existing inventory confirmed identical)	form
+10/29/2026, 7:53:17 AM	user-A	Configuration author attached imm5707e.pdf to "Visitor visa" (sample button): IMM 5707 (01-2023)	source
+10/29/2026, 7:53:17 AM	user-A	Configuration author added IMM 5707 (01-2023) (form) to the library; code, title, edition and kind read from the file	form
+10/29/2026, 7:53:17 AM	user-A	Configuration author read IMM 5257 (09-2023): 242 form fields (existing inventory confirmed identical)	form
+10/29/2026, 7:53:17 AM	user-A	Configuration author attached imm5257e.pdf to "Visitor visa" (sample button): IMM 5257 (09-2023)	source
+10/29/2026, 7:53:17 AM	user-A	Configuration author added IMM 5257 (09-2023) (form) to the library; code, title, edition and kind read from the file	form
+10/29/2026, 7:53:17 AM	user-A	Configuration author created the configuration row for Visitor visa	configuration row
+10/29/2026, 7:53:17 AM	user-A	Configuration author created category "Visitor visa" under Visitors	category
+10/29/2026, 7:53:17 AM	user-A	Configuration author created program "Visitors" under Temporary residence	program
+10/29/2026, 7:53:17 AM	user-A	Configuration author created pathway "Permanent residence"	pathway
+10/29/2026, 7:53:17 AM	user-A	Configuration author created pathway "Temporary residence"	pathway
+10/29/2026, 7:53:17 AM	user-A	Configuration author created pathway "Citizenship"	pathway
+10/29/2026, 7:53:17 AM	user-A	Configuration author created pathway "Permanent residence"	pathway
+10/29/2026, 7:53:17 AM	user-A	Configuration author created pathway "Temporary residence"	pathway
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+author, review
+Use the dark theme
+Studio
+1 waiting for you
+Table: When, Who, What, Item

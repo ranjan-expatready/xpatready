@@ -1,0 +1,39 @@
+URL /review/held/7e696cd0-b5a5-4714-a5b3-fa8a9cc16ec7 as user-A
+TITLE Product Studio · Expat Ready (prototype)
+H1 ["IMM 5562 (07-2024)"]
+HEADS ["IRCC page it came from"]
+CUT []
+ERRORS []
+---
+To review › Held file
+IMM 5562 (07-2024)
+Waiting for a second person
+
+imm5562e-copy.pdf · uploaded today 7:55 a.m.
+
+Read from the file
+IMM 5562 · SUPPLEMENTARY INFORMATION YOUR TRAVELS
+Edition
+IMM 5562 (07-2024)
+The file
+Open the held PDF · checksum a709245595d6…
+
+Not on the approved source list
+
+It was not read into the library, attached or sent to AI. A second person compares it with the IRCC page it came from; approved, its checksum joins the approved list and the file goes through the intake again.
+IRCC page it came from
+Paste the canada.ca page
+Record the page
+
+You uploaded this file
+
+A different person compares it with the IRCC page and approves or rejects it.
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+author, review
+Use the dark theme
+Studio
+1 waiting for you
+Path

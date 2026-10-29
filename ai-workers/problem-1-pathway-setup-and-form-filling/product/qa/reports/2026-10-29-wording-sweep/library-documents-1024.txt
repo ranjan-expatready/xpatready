@@ -1,0 +1,99 @@
+URL /library/documents as user-A
+TITLE Product Studio · Expat Ready (prototype)
+H1 ["Document types"]
+HEADS ["Document type","Category","Facts it can supply","Status"]
+CUT []
+ERRORS []
+---
+Document types
+
+Reusable document definitions. Facts a supported type can supply come from the reader profiles (a proposal until the reader proves them on a case).
+
+Document type	Category	Facts it can supply	Status
+Birth certificate of accompanying dependent child	client	person.family_name, person.given_names, person.sex, person.date_of_birth, person.place_of_birth_city, person.country_of_birth, mother.full_name, father.full_name	
+Imported release
+
+Certified translation of documents not in English or French	other	none recorded	
+Imported release
+
+Copy of IMM 5802 offer of employment and proof of employer compliance fee payment	employer	none recorded	
+Imported release
+
+Copy of LMIA and copy of employment contract from prospective employer	employer	person.full_name, organisation.name, person.intended_job_title, person.intended_job_duties, person.intended_employment_start_date, person.intended_employment_end_date, person.intended_work_location, person.intended_work_province, person.lmia_or_offer_number	
+Imported release
+
+Education and work experience evidence (New Delhi specification: certificates, diplomas or degrees with mark sheets; appointment and relieving letters; salary slips and Form 16; bank statements; reference letters with duration, duties and contact details)	client	none recorded	
+Imported release
+
+Employment contract (LMIA-exempt job)	employer	person.full_name, organisation.name, person.intended_job_title, person.intended_job_duties, person.intended_employment_start_date, person.intended_employment_end_date, person.intended_work_location, person.intended_work_province, person.lmia_or_offer_number	
+Imported release
+
+Evidence of exemption from the work permit processing fee	client	none recorded	
+Imported release
+
+Job offer letter	employer	person.full_name, organisation.name, person.intended_job_title, person.intended_job_duties, person.intended_employment_start_date, person.intended_employment_end_date, person.intended_work_location, person.intended_work_province, person.lmia_or_offer_number	
+Imported release
+
+Letter from current employer	client	none recorded	
+Imported release
+
+Letter of explanation - exceptional situation, no valid travel document (Venezuelan passport)	client	none recorded	
+Imported release
+
+Letter of explanation - Venezuelan passport extended 5 years	client	none recorded	
+Imported release
+
+Marriage certificate or licence (photocopy)	client	none recorded	
+Imported release
+
+Passport or travel document information page photocopy	client	person.family_name, person.given_names, person.sex, person.date_of_birth, person.place_of_birth_city, person.citizenship, person.passport_number, person.passport_country_of_issue, person.passport_issue_date, person.passport_expiry_date	
+Imported release
+
+Proof of common-law relationship (evidence listed on IMM 5409)	client	none recorded	
+Imported release
+
+Proof of completed upfront medical exam	other	none recorded	
+Imported release
+
+Proof of completion of program of study (final transcript, or institution letter / formal notice of graduation)	client	none recorded	
+Imported release
+
+Proof of fee payment (processing fee and other applicable fees receipt)	client	none recorded	
+Imported release
+
+Proof of legal immigration status in country of residence	client	none recorded	
+Imported release
+
+Proof of meeting the requirements of the offered job	client	none recorded	
+Imported release
+
+Proof of past work experience (e.g. pay stubs)	client	none recorded	
+Imported release
+
+Provincial/territorial confirmation of nomination and R204(c) letter	government	none recorded	
+Imported release
+
+Québec Acceptance Certificate (CAQ) evidence	employer	none recorded	
+Imported release
+
+Reference letter from past employers	client	none recorded	
+Imported release
+
+Résumé	client	none recorded	
+Imported release
+
+Translator's affidavit	other	none recorded	
+Imported release
+
+Visa application photographs	client	none recorded	
+Imported release
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+author, review
+Use the dark theme
+Studio
+1 waiting for you
+Table: Document type, Category, Facts it can supply, Status
+From the reviewed release c1-v3

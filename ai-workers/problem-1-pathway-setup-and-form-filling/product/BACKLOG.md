@@ -61,3 +61,5 @@ Answered: scope (P-70), ready to file (P-71), verification (P-72), wrong mapping
 | B44 | **Field privacy, significance, re-confirmation and review-each classes** | gap analysis `screens/W1-shared-library/research-end-to-end-masters.md`; P-150 | W4 · W5 | — | M |
 | B45 | **Source freshness:** source, date checked and next review on every item; periodic re-fetch of guides and checklists with a diff and AI impact (SA-1B-39, 40; B22) | gap analysis `screens/W1-shared-library/research-end-to-end-masters.md`; P-150 | W3 | — | M |
 | B46 | **Explanation-letter lines and the request-for-documents → document type map** | gap analysis `screens/W1-shared-library/research-end-to-end-masters.md`; P-150 | W4 | — | M |
+| B48 | **Workspace snapshots (P-160):** take, compare, restore as a draft change; automatic before release and reset | P-160 | W2 | runtime | M |
+| B47 | **One co-pilot "Ask" panel (P-159):** explain and find; act only by a To review proposal | P-159 | W2 | Lead | M |

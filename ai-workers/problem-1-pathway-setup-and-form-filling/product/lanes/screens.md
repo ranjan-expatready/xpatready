@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-29 (Lead, seventh chat): **S3 Lead check PASS** (`screens/W1-start-setup/lead-check.md`), merged by Lead PR. Stage FIX, owner Builder: the outside review items DV-bb-1 (upload result cards on the Form library stack forever: dismissible or one line), DV-bb-6b (Reset dialog "0 rows remain" while the 6 built-in roles stay), DV-bb-6c ("(P-95)" in the Program structure footer); a pass and a fail test each; local run-suites on the exact commit (rebuild `web/dist` first), hand back by message. Then S6 Shared library BUILD once the Lead approves the forms lane's queue item contract (proposal e3fe8770). US$0.
+2026-10-29 (Lead, eighth chat): **The forms lane's contract v2 (P-149) and P-154 are approved**; it reaches `main` when the Lead merges the forms branch (after its runner package). Stage BUILD, owner Builder: finish the full local `run-suites.sh` on slice R's US$0 part (21556f3a, with the P-158 delta in `plan-p158.md` as agreed), then hand back stage CHECK for the Lead check of slice R (no live call; the paid recording pass waits the founder's spend OK). S6 slice 1 BUILD starts after the forms merge, on the approved contract (one new `ProposalItem` table; field proposals move onto it). US$0.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
