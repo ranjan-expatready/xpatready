@@ -18,7 +18,7 @@ import { slug } from "../../engine/import.ts";
 import { AI_FAILED, checkCounts } from "../../engine/people.ts";
 import { ProposePeopleBody, type PeoplePlan, type PeopleProposal, type ProposedPerson } from "../../contracts/workspace.ts";
 import { Audit, Db, need, PROTOTYPE, SOLUTION, type Actor } from "./core.ts";
-import { inventoryFor } from "./finder.ts";
+import { inventoryFor, trailOf } from "./finder.ts";
 import { GUIDE_SOURCE_KIND } from "./guide-sources.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
@@ -66,6 +66,13 @@ export function rulesReading(text: string): Answer {
   return { people, unresolved: [] };
 }
 
+/** QA-99: the job's one known fact. The launcher admits only a full trail of names joined by " › " (p2/launch.ts
+ *  knownOk), the same one the finder sends (Pathway › Program › Category …); the combination's label alone is refused
+ *  before any call, so AI now could never run. */
+export async function whoCanBeTrail(db: Db, combinationId: string): Promise<string> {
+  return (await trailOf(db, combinationId)).trail.join(" › ");
+}
+
 @Injectable()
 export class PeopleFromGuide {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Sources) private readonly sources: Sources, @Inject(Studio) private readonly studio: Studio, @Inject(Audit) private readonly audit: Audit) {}
@@ -82,7 +89,7 @@ export class PeopleFromGuide {
     // The official text inventory (inventoryFor: "prototype/p1/inventory/…", under the solution folder) is what AI may read.
     if (input) { try { text = String(JSON.parse(readFileSync(join(SOLUTION, input.file), "utf8")).text ?? ""); } catch { text = ""; } }
     if (!text) throw problem(409, "Guide not readable", `${ed.form.formKey}'s text is not on this computer yet, so it cannot be read here. Find the forms again to read it.`);
-    return { code: ed.form.formKey, title: ed.form.displayName, url: ed.form.formPageUrl, text, input, trail: c.label };
+    return { code: ed.form.formKey, title: ed.form.displayName, url: ed.form.formPageUrl, text, input, trail: await whoCanBeTrail(this.db, combinationId) };
   }
 
   /** The plan: the steps and the most it can cost, said before anything runs (STANDARDS: cost first). */
