@@ -17,6 +17,7 @@ updated: 2026-10-29
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-29 · Lead (Mac, seventh chat): runtime W1-15 slice 1 early look (Lead walk on own copy 4422 at eca7fe2c): founder OK with 3 word fixes (codes on Review lines, undo refusal wording, no P-numbers on screen) → runtime FIX then slice 2. Founder asked about scope: **P-148** Load sample = only the agreed 6 (Super visa → Provincial nominee Express Entry, 23 placeholder rows go, in S7); no record of a 70–80% basis → expert question (11). PR #77 CI fixed (P-146 exempt in decision-impact)
 - 2026-10-29 · Lead (Mac, seventh chat): board v2 early look with the founder: **P-147** (⋯ menu with written reasons; four bulk actions, no bulk delete; copies, translation, validity read-only); runtime builds the tabs to it
 - 2026-10-29 · Lead (Mac, seventh chat): **PR #76 merged** (f7cb40d9: S3 Start setup + DV-bb-1/6b/6c); screens told S6 BUILD waits for forms slice 0; qa asked for after-merge on S3. Founder confirmed **P-146**: Devin is the outside reviewer, report only; Goose and the scout lane retired (DV-doc-7: LANES, PLAN, LEAD, DEMO, ENVIRONMENT, lane.sh; GOOSE-TASKS to history)
 - 2026-10-29 · Lead (Mac, seventh chat): PR #75 merged (db5e0208); S3 Lead check PASS (58/58 on fd5ac8ae, Lead walk on 4421) → Lead PR; runtime W1-15 slice 1 handed back (df23c39d) for the founder's early look with board v2.
