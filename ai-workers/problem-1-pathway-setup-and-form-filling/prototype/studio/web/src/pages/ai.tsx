@@ -49,7 +49,14 @@ export function AiBatchPage() {
   if (b.isError) return <ErrorState title="This AI work could not be opened" description={(b.error as Error).message} action={<Link className="text-text-link underline" to="/ai">All AI work</Link>} />;
   const d = b.data;
   // S4 slice 2: the form finder and Upload PDF are shown with the shared run card (their steps are not field-map steps).
-  if (d.operation === "find_forms" || d.operation === "upload_form") return <div className="mx-auto max-w-4xl space-y-4"><Link className="text-sm text-text-link underline" to="/ai">All AI work</Link><RunCard runId={d.id} /></div>;
+  // QA-80: the same breadcrumb, heading and left edge as every other page.
+  if (d.operation === "find_forms" || d.operation === "upload_form") return (
+    <div className="mx-auto max-w-6xl space-y-5">
+      <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/ai" className="hover:underline">AI work</Link><ChevronRight className="size-3" /><span>{d.scopeLabel}</span></nav>
+      <h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {d.operation_label}</h1>
+      <RunCard runId={d.id} />
+    </div>
+  );
   const running = active(d.status) || d.jobs.some((j: any) => active(j.status));
   const latest = new Map<string, any>(); for (const j of d.jobs) { const k = `${j.attachmentId}|${j.kind}`; const cur = latest.get(k); if (!cur || j.attempt > cur.attempt) latest.set(k, j); }
   // The server says which steps its retry runs again (cancelled part-way included, screen-map work never).

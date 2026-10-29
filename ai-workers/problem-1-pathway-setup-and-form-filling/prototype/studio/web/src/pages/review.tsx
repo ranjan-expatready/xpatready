@@ -8,7 +8,10 @@ import { irccWords } from "../../../contracts/workspace";
 import { problemWords } from "../../../contracts/programs";
 
 /** The simulated person's name for an id the server stores (QA-10: never "user-A" on screen). */
-const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
+export const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
+/** QA-73: the engine's part names in the words the pages use (the stored codes stay as they are). */
+const KIND_WORD: Record<string, string> = { "Derived definition": "Calculated answer", "Derived fields": "Calculated answers" };
+const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ?? "A calculation"}: this calculation is not checked by a test yet; it is shown, never used to decide.` : problemWords(p);
 
 export function ReviewTab({ d }: { d: any }) {
   const id = d.combination.id;
@@ -46,7 +49,7 @@ export function ReviewTab({ d }: { d: any }) {
       ) : null}
       <div className="grid gap-3 md:grid-cols-3">
         <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author (only the author submits)" text={sub ? `Submitted by ${nameOf(session.data.actors, sub.submittedBy)}, ${fmtWhen(sub.submittedAt)}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${v.draft.changes.length} draft change${v.draft.changes.length === 1 ? "" : "s"}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
-        <StepCard n={2} title="SME duty signs content" done={!!sub && !unsignedSme.length} who="Content reviewer (Immigration SME duty)" text={sub ? `${needSme.length - unsignedSme.length} of ${needSme.length} rule, document, check or AI-proposed changes signed` : "Rules, document requirements, checks and AI proposals need the SME duty"} />
+        <StepCard n={2} title="The immigration expert signs the content" done={!!sub && !unsignedSme.length} who="Content reviewer (the immigration expert's sign-off)" text={sub ? `${needSme.length - unsignedSme.length} of ${needSme.length} rule, document, check or AI-proposed changes signed` : "Rules, document requirements, checks and AI proposals need the immigration expert's sign-off"} />
         <StepCard n={3} title="A second person releases" done={false} who="Approver (never the author or submitter)" text={v.releases[0] ? `Last release: Release ${v.releases[0].release} by ${v.releases[0].approver}` : "Nothing released yet"} />
       </div>
       <Notice tone="info" title={`You are acting as ${me.name} (simulated): ${me.role}`}>Duties: {me.duties.join(", ")}. The server enforces them: an author or submitter can never approve, and a draft changed after submission cannot be released.</Notice>
@@ -54,7 +57,7 @@ export function ReviewTab({ d }: { d: any }) {
         <div className="rounded-xl border border-border bg-surface-raised p-4">
           <p className="font-medium">Validation of the draft</p>
           <p className="mt-1 text-xs text-text-muted">{errors.length} error{errors.length === 1 ? "" : "s"} (block submission) · {warnings.length} warning{warnings.length === 1 ? "" : "s"} (shown and recorded)</p>
-          <ul className="mt-2 space-y-1 text-sm">{[...errors, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem><b>{p.where}</b> · {problemWords(p)}</span></li>)}</ul>
+          <ul className="mt-2 space-y-1 text-sm">{[...errors, ...warnings].slice(0, allProblems ? undefined : 8).map((p: any, i: number) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level}</Pill><span data-problem><b>{KIND_WORD[p.where] ?? p.where}</b> · {problemLine(p)}</span></li>)}</ul>
           {errors.length + warnings.length > 8 ? <Button size="sm" variant="ghost" className="mt-1" onClick={() => setAllProblems(!allProblems)}>{allProblems ? "Show fewer" : `Show all ${errors.length + warnings.length}`}</Button> : null}
         </div>
       ) : <Notice tone="ok" title="The draft passes validation" />}
@@ -67,16 +70,16 @@ export function ReviewTab({ d }: { d: any }) {
           <Table className="rounded-none border-0" dense head={["", "Kind", "Item", "Change", "Origin", "Needs", "Signed"]}>
             {changes.slice(0, allChanges ? undefined : 25).map((c) => { const s = signed.get(ref(c)); return (
               <tr key={ref(c)}>
-                <td>{sub && !s ? <input type="checkbox" aria-label={`Select ${c.key}`} checked={picked.has(ref(c))} disabled={c.needs_sme && !can("sme")} onChange={(e) => setPicked((p) => { const n = new Set(p); e.target.checked ? n.add(ref(c)) : n.delete(ref(c)); return n; })} /> : null}</td>
-                <td className="text-xs">{c.kind}</td><td className="max-w-md"><span className="mono text-xs">{c.key}</span><p className="text-xs text-text-muted">{c.label}</p></td>
+                <td>{sub && !s ? <input type="checkbox" aria-label={`Select ${c.label || c.key}`} checked={picked.has(ref(c))} disabled={c.needs_sme && !can("sme")} onChange={(e) => setPicked((p) => { const n = new Set(p); e.target.checked ? n.add(ref(c)) : n.delete(ref(c)); return n; })} /> : null}</td>
+                <td className="text-xs">{KIND_WORD[c.kind] ?? c.kind}</td><td className="max-w-md text-xs" title={c.key}>{c.label || c.key}</td>
                 <td><Pill tone={c.change === "added" ? "info" : c.change === "removed" ? "danger" : "warn"}>{c.change}</Pill></td>
                 <td>{c.origin === "AI_PROPOSAL" ? <Pill tone="ai">AI-proposed</Pill> : c.origin === "HUMAN" ? <Pill tone="info">person</Pill> : <Pill>{c.origin ?? "—"}</Pill>}</td>
-                <td className="text-xs">{c.needs_sme ? "SME duty" : "review"}</td>
+                <td className="text-xs">{c.needs_sme ? "Immigration expert" : "Review"}</td>
                 <td className="text-xs">{s ? <Pill tone={s.action === "signed" ? "ok" : "warn"}>{s.action} by {nameOf(session.data.actors, s.actorId)}</Pill> : sub ? "—" : ""}</td>
               </tr>); })}
           </Table>
         )}
-        {changes.length > 25 ? <div className="border-t border-border px-4 py-2"><Button size="sm" variant="ghost" onClick={() => setAllChanges(!allChanges)}>{allChanges ? "Show fewer" : `Show all ${changes.length} changes`}</Button><span className="ml-2 text-xs text-text-muted">{Object.entries(changes.reduce((a: any, c: any) => { a[c.kind] = (a[c.kind] ?? 0) + 1; return a; }, {})).map(([k, n]) => `${n} ${k.toLowerCase()}`).join(" · ")}</span></div> : null}
+        {changes.length > 25 ? <div className="border-t border-border px-4 py-2"><Button size="sm" variant="ghost" onClick={() => setAllChanges(!allChanges)}>{allChanges ? "Show fewer" : `Show all ${changes.length} changes`}</Button><span className="ml-2 text-xs text-text-muted">{Object.entries(changes.reduce((a: any, c: any) => { a[c.kind] = (a[c.kind] ?? 0) + 1; return a; }, {})).map(([k, n]) => `${n} ${(KIND_WORD[k] ?? k).toLowerCase()}`).join(" · ")}</span></div> : null}
       </div>
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface-raised p-4">
         <label className="min-w-80 flex-1 text-xs">Note (optional for submit and sign; required to return)<Textarea className="mt-1 min-h-14" value={note} onChange={(e) => setNote(e.target.value)} /></label>

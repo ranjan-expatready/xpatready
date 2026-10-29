@@ -35,11 +35,11 @@ export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: Combina
         </section>
       ) : null}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Forms" value={k.forms} sub={<>{k.map_boxes} form fields matched to shared fields · <Link className="text-text-link underline" to={`/c/${id}/forms`}>Forms</Link></>} />
+        <Stat label="Forms" value={k.forms} sub={<>{k.map_boxes} form field{k.map_boxes === 1 ? "" : "s"} matched to shared fields · <Link className="text-text-link underline" to={`/c/${id}/forms`}>see them</Link></>} />
         <Stat label="Questions" value={row?.counts?.questions ?? 0} sub={`questions across all people (each person role counted) · ${k.sections} sections`} />
         <Stat label="Documents" value={k.document_requirements} sub="asked always or only if" />
         {/* Only this combination's own problems (Lead check item 3), each listed on Review and release. */}
-        <Stat label="Rules and checks" value={`${k.rules} · ${k.checks}`} tone={errors ? "danger" : undefined}
+        <Stat label="Rules and checks" value={`${k.rules} rule${k.rules === 1 ? "" : "s"} · ${k.checks} check${k.checks === 1 ? "" : "s"}`} tone={errors ? "danger" : undefined}
           sub={errors || warnings ? <Link className="text-text-link underline" to={`/c/${id}/review`}>{errors ? `${errors} problem${errors === 1 ? "" : "s"} to fix` : `${warnings} warning${warnings === 1 ? "" : "s"}`}: see them</Link> : "no problems"} />
       </div>
       <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm" aria-labelledby="ov-people" data-overview-people>
@@ -47,7 +47,7 @@ export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: Combina
         <ul className="mt-2 flex flex-wrap gap-2 text-sm">{people.filter((p) => p.max > 0).map((p) => <li key={p.role} className="rounded-full border border-border px-3 py-1">{p.label} · {p.min === p.max ? p.min : `${p.min} to ${p.max}`}{p.applies !== false ? " · applicant" : ""}</li>)}</ul>
         <p className="mt-2 text-xs text-text-muted">Each person marked as applicant gets their own forms, questions and documents. Numbers Sample until the immigration expert confirms.</p>
       </section>
-      <p className="text-sm text-text-muted" data-releases>{last ? <>Released versions: <b className="font-semibold text-text">Release {last.release}</b> on {fmtWhen(last.released_at)}, approved by {last.approver}{d.releases.length > 1 ? ` · ${d.releases.length - 1} earlier` : ""} · <Link className="text-text-link underline" to={`/c/${id}/review`}>Review and release</Link></> : "Nothing released yet. Case work only ever uses a released version; drafts are previews."}</p>
+      <p className="text-sm text-text-muted" data-releases>{last ? <>Released versions: <b className="font-semibold text-text">Release {last.release}</b>, {fmtWhen(last.released_at)}, approved by {last.approver}{d.releases.length > 1 ? ` · ${d.releases.length - 1} earlier` : ""} · <Link className="text-text-link underline" to={`/c/${id}/review`}>Review and release</Link></> : "Nothing released yet. Case work only ever uses a released version; drafts are previews."}</p>
     </div>
   );
 }
