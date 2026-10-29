@@ -18,7 +18,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Prisma } from "@prisma/client";
 import { costUsd } from "../../../p2/ledger.ts";
-import { EXPERIMENT_CAP_USD, RUN_CAP_USD } from "../../../p2/policy.ts";
+import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, RUN_CAP_USD } from "../../../p2/policy.ts";
 import { ACTORS, Audit, Db, fail, need, PROTOTYPE, Workspace, type Actor } from "./core.ts";
 /** A person by name on every AI work view (Screen 02 board view 10): never an internal id. */
 const personName = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "A person";
@@ -29,6 +29,7 @@ type A4 = { total: number; reused: number; leftover: number };
 const a4Of = (detail: unknown): A4 | null => { const a = (detail as { a4?: A4 } | null)?.a4; return a ? { total: a.total, reused: a.reused, leftover: a.leftover } : null; };
 const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return null; const n = (s: string) => all.filter((p) => p.status === s).length; return `${all.length} part${all.length === 1 ? "" : "s"} · ${[n("done") && `${n("done")} done`, n("failed") && `${n("failed")} failed`, n("running") && `${n("running")} running`, n("queued") && `${n("queued")} queued`, n("not started") && `${n("not started")} not started`].filter(Boolean).join(", ")}`; };
 import { Sources } from "./sources.ts";
+import { paidRetryAllowed, paidRunAllowed, paidRunsOf } from "./rounds.ts";
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const MAX_PARALLEL = 2, MAX_ATTEMPTS_PER_SOURCE = 3;
@@ -74,7 +75,9 @@ export class Ai implements OnModuleInit {
     const comps = await this.db.combination.findMany({ where: { id: { in: combinationIds } }, include: { program: true, attachments: { orderBy: { createdAt: "asc" } }, forms: { select: { lineageKey: true, status: true, version: true } } } });
     // Only an edition with its boxes mapped can be reused: an upload registers its edition before any map exists.
     const editions = await this.db.formEdition.findMany({ where: { workspaceId, maps: { some: {} } }, select: { sha256: true, editionLabel: true } });
-    const jobs = await this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, attachmentId: true, status: true, kind: true, fingerprint: true, runId: true, mode: true } });
+    const jobs = await this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, attachmentId: true, status: true, kind: true, fingerprint: true, runId: true, mode: true, costUsd: true } });
+    // Outside review 29 Oct: a form's paid runs across every batch and combination that holds the same file.
+    const paidRunsOfFile = await this.paidRunsByFile(workspaceId, jobs);
     // P-80: files a second person approved in the product are drafted like official ones (the guard checks the approval).
     const inProduct = new Set((await this.db.approvedSource.findMany({ where: { workspaceId, kind: "form" }, select: { sha256: true } })).map((x) => x.sha256));
     // S4 (M3): an official download from canada.ca is admitted like the official library, live included.
@@ -139,6 +142,7 @@ export class Ai implements OnModuleInit {
         const fp = split ? sha(JSON.stringify({ fingerprint, parts: split.parts.map((p) => p.file) })) : fingerprint;
         const how = split ? `in ${split.parts.length} part${split.parts.length === 1 ? "" : "s"} (${split.plan.leftover} of ${split.plan.total} form fields${split.plan.reused.length ? `; ${split.plan.reused.length} reused from ${split.reusedFrom.join(", ")} without AI` : ""})` : "";
         if (split && !split.parts.length) { targets.push({ ...base, action: "draft", read_first, fingerprint: fp, expected_usd: 0, worst_usd: 0, a4, why: `Every one of its ${split.plan.total} form fields is reused from ${split.reusedFrom.join(", ")} (same data path and caption): no AI call, US$0; a person reviews the result.` }); continue; }
+        if (mode === "LIVE" && !paidRunAllowed(paidRunsOfFile(a.sha256))) { targets.push({ ...base, action: "not_eligible", read_first, why: `This form has used its ${MAX_PAID_ATTEMPTS_PER_FORM} paid AI attempts (${MAX_ATTEMPTS} per run, counted across its runs): it needs a person, not another paid run. A saved AI answer, if there is one, can still be used at no cost.` }); continue; }
         targets.push({ ...base, action: "draft", read_first, fingerprint: fp, expected_usd: est.expected, worst_usd: est.worst, ...(a4 ? { a4 } : {}), why: `${approvedHere ? "Approved in the product by a second person, so it can be drafted. " : ""}${mode === "LIVE" ? `${read_first ? "Read the form on this computer, then a" : "A"} guarded live call${how ? ` ${how}` : ""} (stub pass first; up to ${2} attempts${split ? " per part" : ""}).` : `${read_first ? "Read the form, then the" : "The"} guarded stub pass${how ? ` ${how}` : ""}: no network, no cost, no AI content.`}` });
       }
     }
@@ -147,7 +151,17 @@ export class Ai implements OnModuleInit {
       expected_usd: targets.some((t) => t.action === "draft" && t.expected_usd === null) ? null : round(targets.reduce((a, t) => a + (t.expected_usd ?? 0), 0)), worst_usd: round(targets.reduce((a, t) => a + t.worst_usd, 0)) };
     const ledger = this.sources.ledger();
     const plan_sha256 = sha(JSON.stringify({ mode, scope: scope.kind, targets: targets.map((t) => [t.combinationId, t.attachmentId, t.action, t.run_file ?? null, t.fingerprint ?? null]) }));
-    return { operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each form field). Questions, sections, document requirements and rules are not AI-drafted here: people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
+    return { max_paid_attempts_per_form: MAX_PAID_ATTEMPTS_PER_FORM, operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each form field). Questions, sections, document requirements and rules are not AI-drafted here: people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
+  }
+
+  /** Outside review 29 Oct (G4 per form): the paid live runs of each file (checksum), over every source that holds it, so
+   *  a new batch (Draft again) and a retry count the same runs. A step whose source is gone counts under its own id. */
+  private async paidRunsByFile(workspaceId: string, jobs: { attachmentId: string | null; kind: string; mode: string; status: string; costUsd: number | null }[]) {
+    const ids = [...new Set(jobs.map((j) => j.attachmentId).filter((x): x is string => !!x))];
+    const shaOf = new Map((await this.db.sourceAttachment.findMany({ where: { workspaceId, id: { in: ids } }, select: { id: true, sha256: true } })).map((x) => [x.id, x.sha256]));
+    const byFile = new Map<string, typeof jobs>();
+    for (const j of jobs) { const k = (j.attachmentId && shaOf.get(j.attachmentId)) || j.attachmentId || ""; byFile.set(k, [...(byFile.get(k) ?? []), j]); }
+    return (sha256: string) => paidRunsOf(byFile.get(sha256) ?? []);
   }
 
   /** F3 D4: for each file (checksum), the draft of it being mapped in another source. A source's draft is its newest
@@ -389,6 +403,14 @@ export class Ai implements OnModuleInit {
     if (!redo.length) fail("Nothing to retry: every step finished or ran to its end. To draft a form anew, start its draft again.");
     const over = redo.filter((j) => j.attempt >= MAX_ATTEMPTS_PER_SOURCE);
     if (over.length) fail(`${over.length} step${over.length > 1 ? "s have" : " has"} reached ${MAX_ATTEMPTS_PER_SOURCE} attempts; it needs a person, not another retry.`);
+    // Lead 29 Oct (G4): a live form has one budget of paid attempts across its runs (p2/policy.ts), counted at the most
+    // each run could use; stub runs cost nothing and keep the run limit above.
+    // Outside review 29 Oct: and the form's paid runs in every other batch (a Draft again) count against the same budget.
+    const liveJobs = await this.db.draftingJob.findMany({ where: { workspaceId: batch!.workspaceId, kind: "field_map", mode: "LIVE" }, select: { attachmentId: true, kind: true, mode: true, status: true, costUsd: true } });
+    const paidRunsOfFile = await this.paidRunsByFile(batch!.workspaceId, liveJobs);
+    const shaOf = new Map((await this.db.sourceAttachment.findMany({ where: { id: { in: redo.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, sha256: true } })).map((x) => [x.id, x.sha256]));
+    const spent = redo.filter((j) => !paidRetryAllowed(j.mode, j.attempt) || (j.mode === "LIVE" && j.kind === "field_map" && !paidRunAllowed(paidRunsOfFile(shaOf.get(j.attachmentId!) ?? j.attachmentId ?? ""))));
+    if (spent.length) fail(`${spent.length} form${spent.length > 1 ? "s have" : " has"} used ${spent.length > 1 ? "their" : "its"} ${MAX_PAID_ATTEMPTS_PER_FORM} paid AI attempts (${MAX_ATTEMPTS} per run); ${spent.length > 1 ? "they need" : "it needs"} a person, not another paid retry.`);
     const worstEach = (batch!.plan as any).targets as any[];
     const worst = round(redo.reduce((a, j) => a + (j.mode === "LIVE" ? (worstEach.find((t) => t.attachmentId === j.attachmentId)?.worst_usd ?? RUN_CAP_USD) : 0), 0));
     const ledger = this.sources.ledger();

@@ -223,7 +223,8 @@ export function HeldFilePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <Crumbs here="Held file" />
-      <Head title={h.edition ?? h.code ?? h.file} chip={mine ? "Waiting for a second person" : "Needs you"} tone={mine ? "neutral" : "warn"} sub={<>{h.file} · uploaded {fmtWhen(h.at)}</>} />
+      {/* QA-80: the uploader who still has to record the IRCC page is the one who acts next. */}
+      <Head title={h.edition ?? h.code ?? h.file} chip={mine && !h.irccPage && !h.cannotApprove ? "Needs you: record the IRCC page" : mine ? "Waiting for a second person" : "Needs you"} tone={mine && (h.irccPage || h.cannotApprove) ? "neutral" : "warn"} sub={<>{h.file} · uploaded {fmtWhen(h.at)}</>} />
       <dl className="grid grid-cols-[9rem_1fr] gap-x-4 gap-y-1 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-held-read>
         <dt className="text-text-muted">Read from the file</dt><dd>{h.code ? `${h.code}${h.title ? ` · ${h.title}` : ""}` : "No form code could be read"}</dd>
         <dt className="text-text-muted">Edition</dt><dd>{h.edition ?? "Not read"}</dd>

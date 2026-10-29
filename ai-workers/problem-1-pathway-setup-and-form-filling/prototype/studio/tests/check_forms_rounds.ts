@@ -9,9 +9,9 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { editionContextKey, editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, newestFirst, replayPattern, savedRunKey, type SavedRun } from "../engine/rounds.ts";
-import { RUNS, StepRunner, worstRoundUsd, type AiStep } from "../api/src/rounds.ts";
-import { EXPERIMENT_CAP_USD, RUN_CAP_USD, WAVE1_CAP_USD } from "../../p2/policy.ts";
+import { editionContextKey, editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, MAX_OTHER_PAGES, newestFirst, otherPages, replayPattern, savedRunKey, type SavedRun } from "../engine/rounds.ts";
+import { paidRetryAllowed, paidRunAllowed, paidRunsOf, RUNS, sizedBudgetUsd, StepRunner, worstRoundUsd, type AiStep } from "../api/src/rounds.ts";
+import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, MAX_REQUEST_BYTES, RUN_CAP_USD, WAVE1_CAP_USD } from "../../p2/policy.ts";
 import { BudgetExceeded, SpendLedger } from "../../p2/ledger.ts";
 import { knownOk } from "../../p2/launch.ts";
 
@@ -96,6 +96,55 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   const brokenRec = record({ drafting_run: { status: "failed", usage: { cost_usd: 0.3 } }, contract_valid: false, output_errors: ["x"] });
   r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: brokenRec }) })));
   ok("C11.14 fail: a failed or contract-breaking live run is not used", !r.ok && /could not be used \(failed: it did not match the expected shape\)/.test(r.reason) && r.costUsd === 0.3, r);
+  // Demo bug, 29 Oct: the AI service refused the guide pick (400 invalid_request_error: maxItems in the schema). The run record
+  // (as p2/launch.ts writes it after the runner) holds the attempt refused before processing, at US$0.
+  const refusedRec = record({ drafting_run: { status: "provider_error", usage: { cost_usd: 0 }, attempts: [{ n: 1, outcome: "refused_by_provider", error: "400 invalid_request_error: output_config.format.schema: For 'array' type, property 'maxItems' is not supported" }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: refusedRec }) })));
+  ok("demo bug pass: a request the AI service refused says so plainly with US$0 (\"The AI service refused the request (our setup error); nothing was charged\")", !r.ok && r.reason === "The AI service refused the request (our setup error); nothing was charged" && r.costUsd === 0 && !r.blocked, r);
+  ok("demo bug fail: the person never reads the service's own words (provider_error, invalid_request_error, maxItems)", !r.ok && !/provider_error|invalid_request|maxItems|400/.test(r.reason), r);
+  const brokenRec2 = record({ drafting_run: { status: "provider_error", usage: { cost_usd: 0.22 }, attempts: [{ n: 1, outcome: "error", error: "socket hang up" }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: brokenRec2 }) })));
+  ok("demo bug fail: a failure whose cost is unknown keeps its recorded worst case and is not called a refusal", !r.ok && r.costUsd === 0.22 && !/refused the request/.test(r.reason), r);
+  // Lead 29 Oct (G5): a request above the size cap was refused before any call; the step says so plainly, US$0.
+  const bigRec = record({ drafting_run: { status: "refused", usage: { cost_usd: 0 }, attempts: [{ n: 1, outcome: "refused_input_too_large", error: `request of 900000 bytes is above the cap of ${MAX_REQUEST_BYTES}` }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: bigRec }) })));
+  ok("G5 pass: input above the size cap is refused in plain words at US$0 (\"The pages are too large for one AI call…\")", !r.ok && r.reason === "The pages are too large for one AI call, so nothing was sent and nothing was charged" && r.costUsd === 0, r);
+  ok("G5 fail: the person never reads the byte counts or the cap's name", !r.ok && !/bytes|cap of/.test(r.reason));
+  // QA-87, QA-88: a busy service said plainly, US$0; the request id under Details.
+  const busyRec = record({ drafting_run: { status: "provider_error", usage: { cost_usd: 0 }, attempts: [{ n: 1, outcome: "busy", request_id: "req_busy_1", error: "529 {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\"}}" }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: busyRec }) })));
+  ok("QA-87 pass: a busy service is said plainly, US$0, request id under Details", !r.ok && r.reason === "The AI service was busy, so nothing was charged. Try again in a few minutes" && r.costUsd === 0 && r.details === "Request req_busy_1", r);
+  ok("QA-88 fail: the person never reads overloaded_error, 529 or JSON", !r.ok && !/overloaded|529|\{/.test(r.reason));
+  // Audit 29 Oct: a first attempt that timed out stays counted at its worst case; a busy or refused retry must not hide it.
+  const mixedBusy = record({ drafting_run: { status: "timed_out", usage: { cost_usd: 0.22 }, attempts: [{ n: 1, outcome: "timed_out", error: "Request timed out." }, { n: 2, outcome: "busy", error: "529 overloaded_error" }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: mixedBusy }) })));
+  ok("audit fail: a timeout then a busy retry keeps the counted US$0.22 and never says \"nothing was charged\"", !r.ok && r.costUsd === 0.22 && !/nothing was charged/.test(r.reason) && /US\$0\.22/.test(r.reason), r);
+  const mixedRefused = record({ drafting_run: { status: "provider_error", usage: { cost_usd: 0.22 }, attempts: [{ n: 1, outcome: "error", error: "socket hang up" }, { n: 2, outcome: "refused_by_provider", error: "400 invalid_request_error" }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: mixedRefused }) })));
+  ok("audit fail: a dropped call then a refused retry keeps the counted US$0.22 and never says \"nothing was charged\"", !r.ok && r.costUsd === 0.22 && !/nothing was charged/.test(r.reason) && /refused the request/.test(r.reason), r);
+  ok("audit pass: a refusal with nothing counted still says \"nothing was charged\" at US$0 (refusedRec above)", (await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: refusedRec }) })))).costUsd === 0);
+  // Outside review 29 Oct: the usage limit (a 400) is found before "our setup error", and an earlier counted attempt stays.
+  const limitText = '400 {"type":"error","error":{"type":"invalid_request_error","message":"You have reached your specified API usage limits."}}';
+  const limitAfter = record({ drafting_run: { status: "timed_out", usage: { cost_usd: 0.22 }, attempts: [{ n: 1, outcome: "timed_out", error: "Request timed out.", worst_usd: 0.22 }, { n: 2, outcome: "refused_by_provider", error: limitText, request_id: "req_lim2", cost_usd: 0, worst_usd: 0.22 }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: limitAfter }) })));
+  ok("review fail: a timeout then the usage limit is BLOCKED by the limit (never \"our setup error\") and keeps the counted US$0.22", !r.ok && r.blocked === true && r.costUsd === 0.22 && /usage limit/.test(r.reason) && !/setup error|nothing was charged/.test(r.reason) && r.details === "Request req_lim2", r);
+  const limitAlone = record({ drafting_run: { status: "provider_error", usage: { cost_usd: 0 }, attempts: [{ n: 1, outcome: "refused_by_provider", error: limitText, cost_usd: 0, worst_usd: 0.22 }] }, contract_valid: true });
+  r = await live(fake((c) => (c.mode === "stub" ? { code: 0, out: "{}" } : { code: 0, out: JSON.stringify({ run_file: limitAlone }) })));
+  ok("review pass: the usage limit on its own is BLOCKED at US$0, \"nothing was charged\"", !r.ok && r.blocked === true && r.costUsd === 0 && /usage limit.*nothing was charged/.test(r.reason), r);
+  // Demo 29 Oct (P-153): "at most 5 other pages from each guide round" lives in code, since the schema may not say maxItems.
+  ok("demo bug pass: up to 5 other pages are kept as given", JSON.stringify(otherPages(["a", "b", "c"])) === JSON.stringify(["a", "b", "c"]));
+  ok("demo bug fail: an answer with 8 other pages keeps only the first 5; non-titles and a missing list give nothing", otherPages(["1", "2", "3", "4", "5", "6", "7", "8"]).length === MAX_OTHER_PAGES && MAX_OTHER_PAGES === 5 && otherPages([1, null, "x"]).join() === "x" && otherPages(undefined).length === 0);
+  // QA-87 and the Lead's ask (29 Oct): a round's budget and time limit per step; without them the budget is sized so one retry fits.
+  ok("QA-87 pass: a small input keeps the US$1 default", sizedBudgetUsd({ max_output_tokens: 3000 }, 37_000) === 1);
+  ok("QA-87 fail (before: a fixed US$1): a 100 KB finder input with a 10,000 output limit gets a budget both attempts fit", sizedBudgetUsd({ max_output_tokens: 10_000 }, 100_000) >= 2 * worstRoundUsd({ max_output_tokens: 10_000 } as AiStep, 100_000) / 2 && sizedBudgetUsd({ max_output_tokens: 10_000 }, 100_000) > 1, sizedBudgetUsd({ max_output_tokens: 10_000 }, 100_000));
+  ok("QA-87: the sized budget never passes the run cap", sizedBudgetUsd({ max_output_tokens: 64_000 }, 700_000) <= RUN_CAP_USD);
+  let budgetJob: { settings?: { budget_usd?: number; timeout_ms?: number } } = {};
+  const bRunner = new StepRunner({ launchOnce: async (jobId: string, mode: "stub" | "live") => { if (mode === "stub") budgetJob = JSON.parse(readFileSync(join(JOBS, `${jobId}.json`), "utf8")); return { code: 0, err: "", out: mode === "stub" ? "{}" : JSON.stringify({ run_file: okRec }) }; } });
+  await bRunner.round({ ...step, budget_usd: 5, timeout_ms: 900_000 }, false, { trail, contextKey: "k1", inputs, mode: "live", wanted: async () => true });
+  ok("Lead 29 Oct pass: a step's own budget_usd and timeout_ms go on its job (whole-form drafts: US$5, 900 000 ms)", budgetJob.settings?.budget_usd === 5 && budgetJob.settings?.timeout_ms === 900_000, budgetJob.settings);
+  await bRunner.round(step, false, { trail, contextKey: "k1", inputs, mode: "live", wanted: async () => true });
+  ok("Lead 29 Oct fail: a step that names neither gets 300 000 ms and a budget sized from its input (never below US$1)", budgetJob.settings?.timeout_ms === 300_000 && (budgetJob.settings?.budget_usd ?? 0) >= 1, budgetJob.settings);
+
   // Stop finds the round running now for its run, and no other.
   let during: string | undefined;
   const watcher = new StepRunner({ launchOnce: async (jobId: string, mode: "stub" | "live") => { if (mode === "live") during = watcher.liveJob("batch-9"); return { code: 0, err: "", out: mode === "stub" ? "{}" : JSON.stringify({ run_file: okRec }) }; } });
@@ -119,6 +168,25 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   let cJob: { known?: Record<string, unknown> } = {};
   await new StepRunner({ launchOnce: async (jobId: string, mode: "stub" | "live") => { if (mode === "stub") cJob = JSON.parse(readFileSync(join(JOBS, `${jobId}.json`), "utf8")); return { code: 0, err: "", out: mode === "stub" ? "{}" : JSON.stringify({ run_file: okRec }) }; } }).round(step, false, { trail, contextKey: "k1", inputs, mode: "live", wanted: async () => true });
   ok("N1 fail: a combination's round never claims a form edition as its known fact", JSON.stringify(cJob.known) === JSON.stringify({ combination_trail: trail }), cJob.known);
+
+  // --- G4 (Lead, 29 Oct): one budget of paid attempts per form, stated in p2/policy.ts
+  ok("G4 pass: the policy states the paid attempts per form (4: two per run, so one paid retry); a live first run may be retried once", MAX_PAID_ATTEMPTS_PER_FORM === 4 && MAX_ATTEMPTS === 2 && paidRetryAllowed("LIVE", 1), { MAX_PAID_ATTEMPTS_PER_FORM, MAX_ATTEMPTS });
+  ok("G4 fail: a live form's second retry is refused (it would pass 4 paid attempts; before, 6 were possible)", !paidRetryAllowed("LIVE", 2) && !paidRetryAllowed("LIVE", 3));
+  ok("G4: a stub run costs nothing and is never held to the paid budget", paidRetryAllowed("STUB", 2) && paidRetryAllowed("REPLAY", 5));
+  // P-171 (a), P-170: the schedule's library title is the official one, from the saved canada.ca page (read 29 Oct 2026).
+  const sch1Page = readFileSync(join(STUDIO, "..", "..", "official-sources", "ircc", "canada", "pages", "imm5257-sch1.html"), "utf8");
+  const official = /<h1[^>]*>([^<]+)<span[^>]*>\(IMM 5257 SCH1\)/.exec(sch1Page)?.[1].trim();
+  const ours = /"IMM 5257 SCH1": "([^"]+)"/.exec(readFileSync(join(STUDIO, "api", "src", "sources.ts"), "utf8"))?.[1];
+  ok("P-171 (a) pass: IMM 5257 SCH1's library title is the official page's", !!official && ours === official, { ours, official });
+  ok("P-171 (a) fail: never IMM 5669's \"Background/Declaration\" wording", !/Background\/Declaration/.test(ours ?? "x"), ours);
+  // Outside review 29 Oct: the budget holds per form across batches (Draft again), counted from the form's own runs.
+  const run = (over: Partial<{ kind: string; mode: string; status: string; costUsd: number | null }> = {}) => ({ kind: "field_map", mode: "LIVE", status: "FAILED", costUsd: 0.4, ...over });
+  ok("G4 per form pass: a form with one paid run may start one more (2 runs × 2 attempts = 4)", paidRunAllowed(paidRunsOf([run()])) && paidRunAllowed(paidRunsOf([])));
+  ok("G4 per form fail: a form with two paid runs, in any batches, may not start a third", !paidRunAllowed(paidRunsOf([run(), run({ status: "COMPLETED" })])), paidRunsOf([run(), run({ status: "COMPLETED" })]));
+  ok("G4 per form: runs that sent nothing (US$0), stub and reuse steps are not counted; a running call is", paidRunsOf([run({ costUsd: 0 }), run({ mode: "STUB" }), run({ kind: "reuse_map" }), run({ costUsd: null, status: "QUEUED" })]) === 0 && paidRunsOf([run({ costUsd: null, status: "RUNNING" })]) === 1);
+  ok("G4 per form: the new batch's plan and the retry both read the form's runs (ai.ts)", (readFileSync(join(STUDIO, "api", "src", "ai.ts"), "utf8").match(/paidRunAllowed\(paidRunsOfFile\(/g) ?? []).length === 2);
+  ok("G4: the field-map plan states the budget before the run (ai.ts and the launch dialog's cost line)", /max_paid_attempts_per_form: MAX_PAID_ATTEMPTS_PER_FORM/.test(readFileSync(join(STUDIO, "api", "src", "ai.ts"), "utf8")) && /paid attempts per form, a retry included/.test(readFileSync(join(STUDIO, "web", "src", "components", "ai-launch.tsx"), "utf8")));
+  ok("G4: every AI step reads its attempts from the policy (no step hard-codes its own)", ["rounds.ts", "people-ai.ts", "sources.ts"].every((f) => /max_attempts: MAX_ATTEMPTS/.test(readFileSync(join(STUDIO, "api", "src", f), "utf8"))));
 
   // --- P-139 (founder, 29 Oct): the experiment cap is US$120; the Wave 1 cap stays US$60
   ok("P-139 pass: the experiment cap is US$120 and the Wave 1 cap US$60", EXPERIMENT_CAP_USD === 120 && WAVE1_CAP_USD === 60, { EXPERIMENT_CAP_USD, WAVE1_CAP_USD });
