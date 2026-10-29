@@ -6,10 +6,10 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: explore ai-paths on main 170659bc; report `qa/reports/2026-10-29-ai-paths.md` (this branch `claude/qa-ai-paths-c2866f` also carries the wording sweep, QA-71–82, from `claude/qa-after-merge-69-9e9e6e`)
-stage: WAITING
-owner: Lead
-next_action: (1) Lead: route QA-83–91 and ask the founder to approve the live smoke plan (report §3, about US$0.80, at most US$6.58) once QA-83/84/85 are fixed and QA-90 is decided; (2) retest with `check_qa_ai_paths.ts` (offline) as each fix merges; (3) earlier items: coverage rerun on S4+S5; retest QA-39, QA-48, QA-69–82 as fixes merge. Read the Handover section first.
+current_item: explore coverage on main 52117004 (branch `claude/qa-coverage-1029`): coverage rerun on S4+S5, retest of open bugs, Questionnaires tab walk (W1-15 slice 2); report `qa/reports/2026-10-29-coverage-s4-s5.md`
+stage: TEST
+owner: qa
+next_action: (1) finish the coverage run (c8, background) and the retest checks on qa_qn :4471; (2) write the report, BUGS (QA-92–95 new) and CAPABILITIES; (3) put back the suites' by-products, commit qa files only, push, Paste to Lead. Earlier: QA-83–91 wait for the forms merge and runtime's fix (not retested here).
 blocked_by: none
 updated: 2026-10-29
 
@@ -56,6 +56,7 @@ updated: 2026-10-29
   9. S4: the finder has no button until S5 slice 3: test it through `POST /combinations/:id/forms/find/plan` then `/find` (Rules or Replay only, never `live`); only Visitor visa (`vv.single`) has saved answers. No product route makes an unused, unapproved form, so Delete is walked on a seeded form (the builders' own way). The guard hook blocks `for` loops and heredocs: put them in a scratchpad script.
 
 ## Log (last 8 lines)
+- 2026-10-29 · explore coverage started (main 52117004, qa_qn :4471): coverage run under c8 in the background (load 12–27 from other lanes); Questionnaires tab walked at 1440 and 1024: QA-92 Major (drawer saves a case fact under the person: 404), QA-93 (section Remove, no question or Undo), QA-94 (system names), QA-95 (short reason); new `check_qa_qn_1029.cjs` 31/40.
 - 2026-10-29 · Lead message (after PR #71). after-merge on main e2cb27a4 (S5; qa_s5/s5b/s5c :4472–4474): CI 57/57 on the same app code; QA-53 holds on every S5 route; QA-38 and QA-40 closed; new QA-69 UX Minor (Forms Undo offered after a release); `check_qa_am_s5_1029.cjs` 50/50; s4 check moved to the row action 58/62 (QA-62/63/64 only); explore_1025 retired (W1-02 fixtures gone); new G3 `POST /combinations/:id/attachments`; coverage not rerun. Report `qa/reports/2026-10-29-after-merge-s5.md`.
 - 2026-10-29 · Lead message (PR #75, main db5e0208): coverage paused; DV-doc-1: 13 bugs closed by replay, 4 open; C2.3, C5.3, C3.7, C11.17, C11.11 Works; C1.8, C11.15 Partial (no copies per line); `check_qa_dv_1029.cjs` 24/25.
 - 2026-10-29 · stop hook: BUGS-CLOSED over 12 KB; 37 rows closed up to 26 Oct moved to `history/qa-bugs-closed-to-2026-10-26.md`; suite screenshots removed.
