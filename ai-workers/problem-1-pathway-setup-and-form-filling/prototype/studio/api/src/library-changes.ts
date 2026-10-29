@@ -13,7 +13,7 @@ import { fillsView, releaseFills } from "./who-fills.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
-export const KIND_NOUN: Record<string, string> = { library_form: "library form", form_accepts: "what IRCC accepts", placement_fills: "who fills a question", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
+export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", placement_fills: "who fills a question", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
 // The lifecycle words come from the one word set (contracts/lifecycle.ts, P-116 amended 28 Oct): Delete, Retire, Restore.
 // "Remove" is kept for a form line taken off a combination (it stays in the library, P-123).
 const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for", SET_FILLS: "Change who fills" };
@@ -42,7 +42,7 @@ export function keyFor(group: string, label: string, taken: Set<string>): string
 /** Same name in the same group, ignoring case, spaces and punctuation: an exact duplicate, refused without AI (BR-7).
  *  It looks at the library, at new fields still waiting or approved, and at names already decided in any open AI draft
  *  (break M1: two proposals of one draft could take the same name). */
-export async function sameName(db: Pick<Db, "canonicalField" | "libraryChange" | "normalizationItem">, workspaceId: string, group: string, label: string, exceptItem?: string): Promise<{ label: string } | null> {
+export async function sameName(db: Pick<Db, "canonicalField" | "libraryChange" | "proposalItem">, workspaceId: string, group: string, label: string, exceptItem?: string): Promise<{ label: string } | null> {
   const want = normalizeLabel(label);
   const rows = await db.canonicalField.findMany({ where: { workspaceId, groupKey: group, status: { in: ["DRAFT", "PUBLISHED"] }, mergedIntoKey: null }, select: { canonicalFieldKey: true, label: true, aliases: true } });
   const lib = rows.find((r) => [r.label ?? "", ...r.aliases].some((x) => normalizeLabel(x) === want));
@@ -50,7 +50,7 @@ export async function sameName(db: Pick<Db, "canonicalField" | "libraryChange" |
   const open = await db.libraryChange.findMany({ where: { workspaceId, kind: "field", status: { in: ["WAITING", "APPROVED"] }, key: { startsWith: `${group}.` } }, select: { label: true } });
   const ch = open.find((c) => c.label && normalizeLabel(c.label) === want);
   if (ch) return { label: ch.label! };
-  const decided = await db.normalizationItem.findMany({ where: { workspaceId, decision: "NEW", decidedKey: { startsWith: `${group}.` }, job: { status: "COMPLETED" }, ...(exceptItem ? { id: { not: exceptItem } } : {}) }, select: { payload: true } });
+  const decided = await db.proposalItem.findMany({ where: { workspaceId, choice: "NEW", decidedKey: { startsWith: `${group}.` }, run: { status: "COMPLETED" }, ...(exceptItem ? { id: { not: exceptItem } } : {}) }, select: { payload: true } });
   const it = decided.find((d) => { const l = (d.payload as { label?: string } | null)?.label; return !!l && normalizeLabel(l) === want; });
   return it ? { label: (it.payload as { label: string }).label } : null;
 }
@@ -209,10 +209,13 @@ async function versionsOf(tx: Prisma.TransactionClient, kind: string, workspaceI
   if (kind === "field") return tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key }, select: pick });
   if (kind === "section") return tx.logicalSection.findMany({ where: { workspaceId, sectionKey: key }, select: pick });
   if (kind === "document_type") return tx.documentType.findMany({ where: { workspaceId, documentTypeKey: key }, select: pick });
+  // S6 1b (owed from 1a): an answer list has no supersedes link; a new version replaces the older published one.
+  if (kind === "answer_list") return (await tx.answerList.findMany({ where: { workspaceId, answerListKey: key }, select: { id: true, status: true, version: true } })).map((r) => ({ ...r, supersedesId: null }));
   return null;
 }
 async function setStatus(tx: Prisma.TransactionClient, kind: string, id: string, status: Status) {
   if (kind === "field") await tx.canonicalField.update({ where: { id }, data: { status } });
   else if (kind === "section") await tx.logicalSection.update({ where: { id }, data: { status } });
   else if (kind === "document_type") await tx.documentType.update({ where: { id }, data: { status } });
+  else if (kind === "answer_list") await tx.answerList.update({ where: { id }, data: { status } });
 }

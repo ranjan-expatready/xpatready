@@ -20,6 +20,7 @@ import { Intake, MAX_BYTES, MAX_FILES } from "./intake.ts";
 import { Programs } from "./programs.ts";
 import { ReviewQueueController, ReviewQueueService } from "./review-queue.ts";
 import { Screen02, Screen02Controller } from "./screen02.ts";
+import { ReviewProposals, ReviewProposalsController } from "./review-proposals.ts";
 import { Impact } from "./impact.ts";
 import { Checklists, ChecklistsController } from "./checklist.ts";
 import { Runtime, RuntimeController } from "./runtime.ts";
@@ -36,6 +37,7 @@ import { FormLibrary, FormLibraryController } from "./form-library.ts";
 import { Runs, RunsController } from "./runs.ts";
 import { UploadRuns } from "./upload-run.ts";
 import { StartSetup, StartSetupController } from "./start-setup.ts";
+import { LibrarySources, LibrarySourcesController, noFreeAdd } from "./library-sources.ts";
 
 type H = string | undefined;
 
@@ -60,11 +62,11 @@ class StudioController {
   @Post("combinations/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.approve(actorOf(a), id); }
   @Get("library/fields") fields(@Query() q: any) { return this.s.fields(q); }
   @Get("library/fields/:key") field(@Param("key") k: string) { return this.s.field(k); }
-  @Post("library/fields") addField(@Headers("x-actor") a: H, @Body() b: any) { return this.s.createField(actorOf(a), b); }
+  @Post("library/fields") addField(@Headers("x-actor") a: H) { actorOf(a); return noFreeAdd("field"); } // P-158: no free add (410)
   @Patch("library/fields/:key") updField(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: any) { return this.s.updateField(actorOf(a), k, b); }
   @Post("library/fields/:key/placement") place(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: any) { return this.s.placeField(actorOf(a), k, b); }
   @Get("library/sections") sections() { return this.s.sections(); }
-  @Post("library/sections") addSection(@Headers("x-actor") a: H, @Body() b: any) { return this.s.createSection(actorOf(a), b); }
+  @Post("library/sections") addSection(@Headers("x-actor") a: H) { actorOf(a); return noFreeAdd("section"); } // P-158: no free add (410)
   @Get("library/document-types") types() { return this.s.documentTypes(); }
   @ConfigRead() @Post("conditions/check") check(@Body() b: any) { return this.s.checkCondition(b); }
   @CaseRead() @Get("releases") releases(@Query("combination") c?: string) { return this.s.releases(c); }
@@ -170,7 +172,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController], providers: [FactSources, PersonChecklists, WhoFills, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ReviewProposalsController, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, LibrarySourcesController, PersonChecklistsController, WhoFillsController], providers: [FactSources, LibrarySources, PersonChecklists, WhoFills, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
 class AppModule {}
 
 async function main() {

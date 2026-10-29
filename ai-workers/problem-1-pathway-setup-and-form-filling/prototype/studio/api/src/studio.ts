@@ -5,7 +5,7 @@ import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
-import { buildSnapshot, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
+import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
 import { checkCondition, diff, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
@@ -15,9 +15,15 @@ import { acceptsOf } from "../../engine/channels.ts";
 import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../contracts/programs.ts";
 import { FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
-import { newKeyProblem } from "../../../contracts/fact-key.ts";
+import { LibrarySources, type SourceLine } from "./library-sources.ts";
 
 const VALUE_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
+/** S6 (2a), P-158 item 6: a list row's first source and how many more; an item with none is flagged, never blank. */
+const SHORT: Partial<Record<SourceLine["kind"], string>> = { release: "From a reviewed release", ai_run: "From an AI run a person decided" };
+const sourceSummary = (lines: SourceLine[] | undefined) => {
+  const best = lines?.find((l) => !SHORT[l.kind]) ?? lines?.[0]; // a form box or checklist line before a release note
+  return { source: best ? SHORT[best.kind] ?? best.text : null, more_sources: Math.max(0, (lines?.length ?? 0) - 1), unsourced: !lines?.length };
+};
 const COLLECTED = ["client_questionnaire", "verified_document", "staff_working_view", "profile_record", "existing_record"];
 export const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative", "sponsor"];
 
@@ -48,7 +54,7 @@ function retiredPeople(c: { label: string; retiredAt: Date | null }) {
 
 @Injectable()
 export class Studio {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(LibrarySources) private readonly lib: LibrarySources) {}
 
   // ------------------------------------------------------------------ session and programs
   async session(actor: Actor) {
@@ -368,11 +374,12 @@ export class Studio {
     const latest = new Map<string, (typeof rows)[number]>();
     for (const r of rows) if (!latest.has(r.canonicalFieldKey)) latest.set(r.canonicalFieldKey, r);
     const needle = (q.q ?? "").toLowerCase();
+    const [src, used] = await Promise.all([this.lib.all("field", workspaceId), this.lib.usedIn("field", workspaceId)]);
     return [...latest.values()].filter((f) => !needle || f.canonicalFieldKey.includes(needle) || f.meaning.toLowerCase().includes(needle)).map((f) => {
       const u = usage.filter((x) => x.canonicalFieldKey === f.canonicalFieldKey);
       const forms = [...new Set(u.map((x) => editions.get(x.formEditionId)))].filter(Boolean);
       const p = placements.get(f.canonicalFieldKey);
-      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null };
+      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [] };
     });
   }
 
@@ -400,21 +407,6 @@ export class Studio {
       ],
       supplied_by_documents: types.filter((t) => t.suppliesFacts.includes(key)).map((t) => t.name),
     };
-  }
-
-  async createField(actor: Actor, b: { key: string; meaning: string; valueType: string }) {
-    need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
-    const workspaceId = await this.ws.id();
-    const keyProblem = newKeyProblem(b.key);
-    if (keyProblem) fail(`A field key is area.name in lower case, for example person.previous_visa_refusal_country (areas: person, relationship, case, organisation, representative): ${keyProblem}.`);
-    if (!b.meaning?.trim() || b.meaning.trim().length < 8) fail("Describe the meaning in a short sentence (it is what reviewers and the AI compare).");
-    if (!VALUE_TYPES.includes(b.valueType)) fail(`Value type must be one of ${VALUE_TYPES.join(", ")}.`);
-    if (await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: b.key } })) fail(`${b.key} already exists: edit it instead, so every form keeps one definition.`, HttpStatus.CONFLICT);
-    const f = await this.db.canonicalField.create({ data: { workspaceId, canonicalFieldKey: b.key, version: 1, status: "DRAFT", meaning: b.meaning.trim(), valueType: b.valueType, dataType: VALUE_TYPE_TO_DATA_TYPE[b.valueType], scope: b.key.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(b.key), origin: "HUMAN", updatedBy: actor.id } });
-    // Break M3: a field added in the library waits for a second person too, like one from an AI draft (B1).
-    await this.db.libraryChange.create({ data: { workspaceId, kind: "field", key: b.key, label: f.label, action: "ADD", reason: "Added in the library by hand.", status: "WAITING", proposedBy: actor.id } });
-    await this.audit.log(workspaceId, actor.id, "created", "field", b.key, `${actor.name} added field ${b.key} (draft); a second person approves it on To review`);
-    return f;
   }
 
   async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean }) {
@@ -463,20 +455,8 @@ export class Studio {
     const seen = new Set<string>();
     const qs = await this.db.sectionQuestion.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
     const sel = await this.db.sqrSectionSelection.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
-    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
-  }
-
-  async createSection(actor: Actor, b: { title: string; meaning?: string }) {
-    need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
-    const workspaceId = await this.ws.id();
-    if (!b.title?.trim()) fail("Give the section a title.");
-    const key = slug(b.title);
-    if (await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: key } })) fail("A section with this title already exists; reuse it.", HttpStatus.CONFLICT);
-    const s = await this.db.logicalSection.create({ data: { workspaceId, sectionKey: key, version: 1, status: "DRAFT", title: b.title.trim(), meaning: b.meaning ?? null, displayOrder: 100 + (await this.db.logicalSection.count({ where: { workspaceId } })), origin: "HUMAN", updatedBy: actor.id } });
-    // A new section waits for a second person on To review before any release carries it (Lead re-check 25 Oct).
-    await this.db.libraryChange.create({ data: { workspaceId, kind: "section", key, label: s.title, action: "ADD", reason: "Added by hand.", status: "WAITING", proposedBy: actor.id } });
-    await this.audit.log(workspaceId, actor.id, "created", "section", key, `${actor.name} added section "${s.title}" (draft)`);
-    return s;
+    const [src, used] = await Promise.all([this.lib.all("section", workspaceId), this.lib.usedIn("section", workspaceId)]);
+    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
   }
 
   /** QA-93 (P-116): removing answers with the place the section had, so Undo adds it back in the same place. */
@@ -500,7 +480,8 @@ export class Studio {
     const workspaceId = await this.ws.id();
     const rows = await this.db.documentType.findMany({ where: { workspaceId }, orderBy: [{ name: "asc" }, { version: "desc" }] });
     const seen = new Set<string>();
-    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey));
+    const [src, used] = await Promise.all([this.lib.all("document_type", workspaceId), this.lib.usedIn("document_type", workspaceId)]);
+    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey)).map((r) => ({ ...r, ...sourceSummary(src.get(r.documentTypeKey)), used_in: used.get(r.documentTypeKey) ?? [] }));
   }
 
   async libraryTypes(workspaceId: string) {

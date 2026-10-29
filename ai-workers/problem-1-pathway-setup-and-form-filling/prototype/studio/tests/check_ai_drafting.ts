@@ -33,7 +33,7 @@ ok("A1 the released-configuration box map carries the one pattern", releasedFact
 ok("A1 the AI output schema carries it for every proposed field and every entry", out2.properties.canonical_fields.items.properties.id.pattern === FACT_KEY_PATTERN && out2.properties.entries.items.properties.fact.anyOf[0].pattern === FACT_KEY_PATTERN);
 ok("A1 the prompt states the pattern and the five areas", prompt2.includes(FACT_KEY_PATTERN.replace(/\\\\/g, "\\")) && ["person", "relationship", "case", "organisation", "representative"].every((a) => prompt2.includes(`\`${a}\``)));
 const studioCode = ["api/src/sources.ts", "api/src/studio.ts"].map((f) => read(join(PROTOTYPE, "studio", f))).join("\n");
-ok("A1 the studio checks typed keys with the same rule (no second copy of the pattern)", !/\[a-z0-9_\]\{1,60\}/.test(studioCode) && (studioCode.match(/newKeyProblem\(/g) ?? []).length >= 2);
+ok("A1 the studio checks typed keys with the same rule (no second copy of the pattern)", !/\[a-z0-9_\]\{1,60\}/.test(studioCode) && (studioCode.match(/newKeyProblem\(/g) ?? []).length >= 1); // P-158 (S6 2a): the Library page's typed key is gone; the AI draft's check stays
 ok("A1 the studio drafts with the v2 prompt and schema", /template: "field-map\.v2\.md", output_schema: "field-map-output\.v2\.schema\.json"/.test(studioCode));
 ok("A1 rule pass: a digit in the name (the IMM 1344 case) and an older area", !factKeyProblem("person.became_pr_as_sponsored_partner_within_5_years") && !factKeyProblem("document.in_english_or_french"));
 ok("A1 rule fail: capitals, a hyphen, a leading digit, no dot, too long", ["Person.name", "person.family-name", "person.5_years", "person", `person.${"x".repeat(80)}`].every((k) => !!factKeyProblem(k)));

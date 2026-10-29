@@ -18,6 +18,7 @@ import { AiBatchPage, AiWorkPage } from "@/pages/ai";
 import { ToReviewPage } from "@/pages/to-review";
 import { StructurePage } from "@/pages/structure";
 import { EditionImpactPage, HeldFilePage, LibraryChangePage, MergeReviewPage, FormFieldsPage } from "@/pages/review-items";
+import { ChangeBatchPage, ProposalsPage } from "@/pages/proposals";
 import { RuntimeApp } from "@/runtime/cases";
 
 export default function App() {
@@ -96,6 +97,8 @@ function Shell() {
             <Route path="/review" element={<ToReviewPage />} />
             <Route path="/structure" element={<StructurePage />} />
             <Route path="/review/change/:id" element={<LibraryChangePage />} />
+            <Route path="/review/proposals" element={<ProposalsPage />} />
+            <Route path="/review/batch/:id" element={<ChangeBatchPage />} />
             <Route path="/review/merge/:id" element={<MergeReviewPage />} />
             <Route path="/review/held/:id" element={<HeldFilePage />} />
             <Route path="/review/edition/:id" element={<EditionImpactPage />} />
@@ -231,7 +234,7 @@ function Preserved({ list }: { list: any[] }) {
 function Toaster() {
   const t = useToast();
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-96 flex-col gap-2" aria-live="polite">
+    <div data-toaster className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-2" aria-live="polite">
       {t.list.map((x) => (
         <div key={x.id} className={cn("pointer-events-auto flex items-start gap-3 rounded-lg border border-border border-l-4 bg-surface-raised px-4 py-3 text-sm shadow-lg", x.tone === "ok" ? "border-l-ok" : x.tone === "danger" ? "border-l-danger" : "border-l-primary")}>
           <p className="flex-1">{x.text}</p><button className="text-text-muted" aria-label="Dismiss" onClick={() => t.drop(x.id)}><X className="size-4" /></button>
