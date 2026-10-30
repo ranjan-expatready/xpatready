@@ -119,7 +119,9 @@ case "$1" in
       [ -n "$mo" ] && [ "$mo" != "$ow" ] && ow="$ow (main says: $mo)"
       up=$(git -C "$wt" log -1 --format='%cd' --date=format:'%d %b %H:%M' 2>/dev/null)
       dirty=$(git -C "$wt" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-      echo "$ln | stage: ${st:-?} | owner: ${ow:-?} | last commit: ${up:-none} | uncommitted: $dirty | behind main: $(git -C "$wt" rev-list --count HEAD..origin/main 2>/dev/null || git -C "$wt" rev-list --count HEAD..main 2>/dev/null) | $wt"
+      # Commits not on GitHub: never remove a copy unless this is 0 (no upstream = "no upstream", treat as unpushed).
+      unp=$(git -C "$wt" rev-list --count '@{upstream}..HEAD' 2>/dev/null || echo "no upstream")
+      echo "$ln | stage: ${st:-?} | owner: ${ow:-?} | last commit: ${up:-none} | uncommitted: $dirty | unpushed: $unp | behind main: $(git -C "$wt" rev-list --count HEAD..origin/main 2>/dev/null || git -C "$wt" rev-list --count HEAD..main 2>/dev/null) | $wt"
     done
     # Lanes pushed from the cloud or another machine (P-82): their newest branch on origin.
     for ln in $LANES; do lb=$(lane_branch "$ln"); [ -n "$lb" ] || continue
@@ -134,6 +136,10 @@ case "$1" in
   leads)
     git -C "$HERE" fetch -q origin 2>/dev/null; me=$(git -C "$HERE" branch --show-current)
     git -C "$HERE" log origin/main --since=30.minutes --format='main %h %cr %s' | grep ' lead:'
+    # Lead branches too, this copy's own included: at the start of a chat any recent Lead commit there is another chat's.
+    for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/lead/); do
+      git -C "$HERE" log "origin/main..$b" --since=30.minutes --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
+    done
     for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/); do
       [ "$b" = "origin/$me" ] || git -C "$HERE" log "origin/main..$b" --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
     done; true ;;
