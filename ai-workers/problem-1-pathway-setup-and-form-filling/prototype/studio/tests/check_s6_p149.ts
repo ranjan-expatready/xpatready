@@ -249,6 +249,50 @@ const item = (payload: any, over: any = {}) => ({ kind: payload.kind, runId: RUN
   const listKey = d1.items.find((x) => x.id === listId)!.landedAs;
   ok("C3.2 answer list pass (owed from 1a): an approved new answer list is published by the release", r.status === 201 && sql(`select status from answer_list where answer_list_key = '${listKey}'`) === "PUBLISHED" && sql(`select status from library_change where id = '${listChange}'`) === "RELEASED", [r.status, listKey]);
 
+  // ─────────────────── Lead review of PR #96: undo after an edit, batch all or nothing, reuse of a missing item, proofs
+  const { revise, strip } = await import("../api/src/core.ts");
+  const [ue] = await P.insertProposals(db, ws, [field("Edited after accept")]);
+  const due = await P.decide(db, audit, A, ws, [ue], { action: "accept" });
+  const ueKey = due.items[0].landedAs!;
+  await revise(db.canonicalField, await db.canonicalField.findMany({ where: { workspaceId: ws, canonicalFieldKey: ueKey } }), { meaning: "Meaning corrected by the author after the accept." }, A.id, strip);
+  e = await refused(() => P.undo(db, audit, A, ws, due.batchId));
+  ok("C11.14 undo fail (#96 1): Undo after the accepted draft was edited is refused (409, plain words); the edit and its ADD stay", e.status === 409 && /changed after it was accepted/.test(e.message)
+    && sql(`select meaning from canonical_field where canonical_field_key = '${ueKey}'`) === "Meaning corrected by the author after the accept." && sql(`select count(*) from library_change where batch_id = '${due.batchId}' and status = 'WAITING'`) === "1" && sql(`select status from proposal_item where id = '${ue}'`) === "accepted", e);
+  const [un1] = await P.insertProposals(db, ws, [field("Untouched after accept")]);
+  const dun = await P.decide(db, audit, A, ws, [un1], { action: "accept" });
+  const un2 = await P.undo(db, audit, A, ws, dun.batchId);
+  ok("C11.14 undo pass (#96 1): an untouched accepted draft is still undone, and its stamp leaves the item's work", un2.undone === 1 && sql(`select status || '|' || coalesce(work ? 'landedStamp', false)::text from proposal_item where id = '${un1}'`) === "waiting|false");
+
+  const [ba1, ba2] = await P.insertProposals(db, ws, [inEd(field("All or nothing one")), inEd(field("All or nothing two"))]);
+  r = await call("POST", "/review/proposals/decide", { ids: [ba1, ba2], action: "accept" }, "user-C");
+  const aon = r.body.batchId;
+  const [c1, c2] = sql(`select id from library_change where batch_id = '${aon}' order by key`).split("\n");
+  sql(`update library_change set proposed_at = proposed_at + interval '1 second' where id = '${c2}'`);
+  sql(`create or replace function p96_refuse() returns trigger language plpgsql as $$ begin raise exception 'refused for the test'; end $$; drop trigger if exists p96_refuse on library_change; create trigger p96_refuse before update on library_change for each row when (old.id = '${c2}') execute function p96_refuse()`);
+  r = await call("POST", `/review/changes/batch/${aon}`, { decision: "approve", note: "Both read right" }, "user-B");
+  sql("drop trigger if exists p96_refuse on library_change; drop function if exists p96_refuse()");
+  ok("C11.14 grouped approval fail (#96 2): one item refused rolls the whole batch back; nothing approved, the answer names the item", r.status === 409 && /Nothing was approved/.test(JSON.stringify(r.body)) && sql(`select string_agg(status, ',') from library_change where id in ('${c1}', '${c2}')`) === "WAITING,WAITING", [r.status, r.body]);
+  r = await call("POST", `/review/changes/batch/${aon}`, { decision: "approve", note: "Both read right" }, "user-B");
+  ok("C11.14 grouped approval pass (#96 2): with nothing refused, the same batch is approved whole", r.status === 201 && r.body.decided?.length === 2 && sql(`select string_agg(status, ',') from library_change where batch_id = '${aon}'`) === "APPROVED,APPROVED", r.body);
+
+  const [ghost] = await P.insertProposals(db, ws, [field(libLabel, { scope: { formEdition: null, combinationId: combo }, reuse: { match: "reuse", existingKey: "person.no_such_field_p96" } })]);
+  r = await call("POST", "/review/proposals/decide", { ids: [ghost], action: "accept" }, "user-B");
+  ok("C3.2 reuse fail (#96 3): a reuse naming an item not in the library is refused (409) and stays waiting", r.status === 409 && /not in the library/.test(r.body.message) && sql(`select status from proposal_item where id = '${ghost}'`) === "waiting", r.body);
+  const retiredKey = sql(`select canonical_field_key from canonical_field where workspace_id = '${ws}' and status = 'PUBLISHED' and merged_into_key is null limit 1`);
+  const [gone] = await P.insertProposals(db, ws, [field("Reuse a retired one", { scope: { formEdition: null, combinationId: combo }, reuse: { match: "reuse", existingKey: retiredKey } })]);
+  sql(`update canonical_field set status = 'RETIRED' where workspace_id = '${ws}' and canonical_field_key = '${retiredKey}'`);
+  r = await call("POST", "/review/proposals/decide", { ids: [gone], action: "accept" }, "user-B");
+  sql(`update canonical_field set status = 'PUBLISHED' where workspace_id = '${ws}' and canonical_field_key = '${retiredKey}'`);
+  ok("C3.2 reuse fail (#96 3): a reuse of an item retired since it was proposed is refused (409)", r.status === 409 && /not in the library/.test(r.body.message), [retiredKey, r.body]);
+
+  const doc = (name: string, proves: string) => { const p = { kind: "document_type", name, proves, category: "client", suppliesFacts: [], readerKind: "letter_or_record", identityDocument: false }; return item(p, { identity: { key: P.identityKeyOf(p as any, ""), near: [], nearReason: null } }); };
+  const [d0] = await P.insertProposals(db, ws, [doc("Proof letter p96", "that the holder lives at the address")]);
+  await P.decide(db, audit, A, ws, [d0], { action: "accept" });
+  e = await refused(() => P.insertProposals(db, ws, [doc("PROOF letter p96", "That the holder lives at the address")]));
+  ok("C3.2 identity fail (#96 4): the same document name proving the same thing is the same item (409)", e.status === 409 && /already in the library/.test(e.message), e);
+  const [d1b] = await P.insertProposals(db, ws, [doc("Proof letter p96", "that the holder is employed")]);
+  ok("C3.2 identity pass (#96 4): the same name proving something else is another item and is written", !!d1b);
+
   // ─────────────────── the free-add scan (P-149 one door)
   const ALLOW: { file: string; near: RegExp; why: string }[] = [
     { file: "forms.ts", near: /supersedesId: gone\.id, mergedIntoKey: to/, why: "the P-65 merge writes the merged field's retired version" },
