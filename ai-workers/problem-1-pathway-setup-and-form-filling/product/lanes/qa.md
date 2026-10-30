@@ -6,10 +6,10 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: after-merge on main 5f6c8deb (PR #94), branch `claude/qa-after-merge-5f6c8de` (explore branch merged in), copies qa_qn :4479, qa_ex :4478
+current_item: after-merge on main once forms PR #103 (slice 1 channels) merges; branch `claude/qa-l10-e3c849` (contains `claude/qa-after-merge-5f6c8de`); journey check `tests/qa/check_qa_am_ch_1030.cjs` written from the PR, ports 4472–4479 free
 stage: WAITING
 owner: Lead
-next_action: (1) Lead: port clash — forms copy `forms-s1-fix` on :4471 (qa range); my `isolated.sh start` there stopped it, restart it; give hand runs fixed port ranges. Route QA-112–117 (runtime; QA-113 table width screens; QA-115 a sample question). (2) qa: `/qa after-merge` when #96, forms slice 1 or the P-175 switch merge; live Who can be retest (QA-99) when the founder approves. Report `qa/reports/2026-10-30-after-merge.md`
+next_action: Lead: send "/qa after-merge" here when #103 is on main (checked 30 Oct: main bcd482d3, #103 OPEN). qa then: run-suites on the merge, `check_qa_am_ch_1030.cjs` at 400/1024/1440 twice, headed walk (paper filing, IRCC account picker, accepts per account and its impact, case Validate before filing), retest QA-92–96 and QA-112–117 where touched. Report `qa/reports/2026-10-30-after-merge-103.md`
 blocked_by: none
 updated: 2026-10-30
 
