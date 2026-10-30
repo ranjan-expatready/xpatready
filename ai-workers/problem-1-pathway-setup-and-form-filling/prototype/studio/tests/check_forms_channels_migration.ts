@@ -1,13 +1,14 @@
 // W1-10 slice 1 (plan-slice1-channels.md §2, §7; C-1, C-3, C-8): the channels migration on a copy holding every old value.
 // A scratch database gets every migration before 20261030090000_w110_channels, then rows in the old spelling (a Signed
 // PDF upload line in a draft and in a released version, the three old accepts values, pending and applied changes, a
-// parked portal key), then the migration; each row is read back. No server, no browser, no model call (US$0).
+// parked portal key), then the migration; each row is read back. Then the later migrations, with the database guards of
+// 20261030140000_w110_channel_guards (break m3, m4) each refused and allowed. No server, no browser, no model call (US$0).
 //   tsx studio/tests/check_forms_channels_migration.ts
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const STUDIO = join(import.meta.dirname, ".."), MIG = join(STUDIO, "prisma", "migrations"), NEW = "20261030090000_w110_channels";
+const STUDIO = join(import.meta.dirname, ".."), MIG = join(STUDIO, "prisma", "migrations"), NEW = "20261030090000_w110_channels", GUARDS = "20261030140000_w110_channel_guards";
 const BIN = "/opt/homebrew/opt/postgresql@18/bin", DB = "xr_studio_fx_migration", URL = `postgresql://xr_studio@127.0.0.1:54329/${DB}`;
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 220)}` : ""}`); };
@@ -57,6 +58,33 @@ try {
     && (() => { try { sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) values ('${W}', '${E[3]}', 'PR_PORTAL', '{NOT_NEEDED,ONLINE}', 'PERSON_SAMPLE', 't')`); return false; } catch { return true; } })()
     && sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) values ('${W}', '${E[3]}', 'PR_PORTAL', '{NOT_NEEDED}', 'PERSON_SAMPLE', 't') returning account`) === "PR_PORTAL");
   ok("C1.6: the migration's own text says how to roll back", /Rollback/.test(readFileSync(join(MIG, NEW, "migration.sql"), "utf8")));
+  // ──────────── later migrations, then the database guards (break m3, m4; review S7)
+  for (const d of all.filter((x) => x > NEW)) file(join(MIG, d, "migration.sql"));
+  const refused = (q: string) => { try { sql(q); return false; } catch { return true; } };
+  const accept = (account: string, channels: string) => `insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, set_by) values ('${W}', '${E[2]}', '${account}', '${channels}', 'PERSON_SAMPLE', 't') returning account`;
+  ok("C11.18 m4 fail: the database refuses a record of what IRCC accepts with no way, or the same way twice",
+    refused(accept("IRCC_PORTAL", "{}")) && refused(accept("IRCC_PORTAL", "{PAPER,PAPER}")) && refused(accept("IRCC_PORTAL", "{ONLINE,PDF_UPLOAD,ONLINE}")));
+  ok("C11.18 m4 pass: the database keeps a record with each way once", sql(accept("IRCC_PORTAL", "{ONLINE,PDF_UPLOAD}")) === "IRCC_PORTAL");
+  ok("C11.18 M6 fail: the database refuses anything but Paper for no account (paper filing)", refused(accept("PAPER", "{ONLINE}")) && refused(accept("PAPER", "{PAPER,PDF_UPLOAD}")));
+  ok("C11.18 M6 pass: the database keeps Paper for no account (paper filing)", sql(accept("PAPER", "{PAPER}")) === "PAPER");
+  ok("C1.6 C-2 m4 fail: the database refuses a line whose signature does not fit its channel",
+    refused(`update combination_form set channel='PAPER', signature='NONE' where lineage_key='IMM 5645'`) && refused(`update combination_form set channel='ONLINE', signature='HAND_SCANNED' where lineage_key='IMM 5645'`)
+    && refused(`update combination_form set signature='PEN' where lineage_key='IMM 5645'`) && refused(`update combination_form set channel='NOT_NEEDED', signature='TYPED_NAME' where lineage_key='IMM 5645'`));
+  ok("C1.6 C-2 m4 pass: the database keeps every pair that fits, and the migrated lines all fit",
+    sql(`update combination_form set channel='PAPER', signature='PEN' where lineage_key='IMM 5645' returning signature`) === "PEN"
+    && sql(`update combination_form set channel='ONLINE', signature='TYPED_NAME' where lineage_key='IMM 5645' returning signature`) === "TYPED_NAME"
+    && sql(`update combination_form set channel='NOT_NEEDED', signature='NONE' where lineage_key='IMM 5645' returning signature`) === "NONE");
+  const K = "00000000-0000-4000-8000-0000000000c1", I = "00000000-0000-4000-8000-0000000000f1";
+  sql(`set session_replication_role = replica;
+    insert into runtime_case (id, workspace_id, combination_id, reference, client_actor_id, created_by) values ('${K}', '${W}', '${C}', 'T-1', 'client', 'test');
+    insert into form_instance (id, workspace_id, case_id, subject_id, form_number, config_release_id, snapshot_id, status, created_by) values ('${I}', '${W}', '${K}', '${W}', 'IMM 5257', '${W}', '${W}', 'GENERATED', 'test');
+    insert into validated_copy (workspace_id, form_instance_id, path, sha256, facts_hash, read_back, read_by) values ('${W}', '${I}', 'v.pdf', repeat('a', 64), repeat('b', 64), '{}', 'user-O');`);
+  ok("C11.6 C-10 m3 fail: the database refuses to change a validated copy read back, or to delete it while its case exists",
+    refused(`update validated_copy set sha256=repeat('c', 64) where form_instance_id='${I}'`) && refused(`delete from validated_copy where form_instance_id='${I}'`)
+    && sql(`select sha256 from validated_copy where form_instance_id='${I}'`) === "a".repeat(64));
+  sql(`delete from runtime_case where id='${K}'`);
+  ok("C11.6 C-10 m3 pass: deleting the case (the demo reset) takes its copy and the validated copy with it", sql(`select count(*) from validated_copy where form_instance_id='${I}'`) === "0" && sql(`select count(*) from form_instance where id='${I}'`) === "0");
+  ok("C1.6: the guards' migration says how to roll back", /Rollback/.test(readFileSync(join(MIG, GUARDS, "migration.sql"), "utf8")));
 } finally {
   execFileSync(join(BIN, "dropdb"), ["-h", "127.0.0.1", "-p", "54329", "-U", "xr_studio", "--if-exists", DB]);
 }

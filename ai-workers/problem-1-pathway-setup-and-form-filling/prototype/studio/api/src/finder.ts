@@ -15,7 +15,7 @@
 //  - downloads only from canada.ca (engine/canada.ts officialUrl), from the form's own page, checked like a manifest file
 //    and recorded as an official download (M2): no second person. Same printed edition, different file: the library's
 //    edition stays and the form is marked "Newer file on canada.ca" (M6); a newer edition is held for impact review.
-import { ACCOUNT_WORDS, CHANNELS, IRCC_ACCOUNTS, type Channel } from "../../contracts/forms.ts";
+import { CHANNELS, throughAccount, IRCC_ACCOUNTS, type Channel } from "../../contracts/forms.ts";
 import { acceptsWords } from "../../contracts/form-library.ts";
 import { START } from "../../contracts/start-setup.ts";
 import { HttpException, HttpStatus, Inject, Injectable, type OnModuleInit } from "@nestjs/common";
@@ -471,9 +471,13 @@ export class Finder implements OnModuleInit {
     const same = current.accepts.find((a) => a.account === p.account);
     if (same && [...same.channels].sort().join() === [...p.channels].sort().join()) return { code, outcome: "kept", why: "The library already records this." };
     if (await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })) return { code, outcome: "kept", why: "A change to what IRCC accepts already waits for a second person." };
-    const label = `${code} · IRCC accepts${p.account === "ANY" ? "" : ` through the ${ACCOUNT_WORDS[p.account as "ANY"] ?? p.account}`}: ${acceptsWords(p.channels)}${p.outcome === "check" ? " · Check" : ""}`;
+    const label = `${code} · IRCC accepts${p.account === "ANY" ? "" : ` ${throughAccount(p.account)}`}: ${acceptsWords(p.channels)}${p.outcome === "check" ? " · Check" : ""}`;
     const c = await this.db.libraryChange.create({ data: { workspaceId, kind: "form_accepts", key: code, label, action: "SET_ACCEPTS", reason: `canada.ca: "${p.quote.slice(0, 380)}"`, status: "WAITING", proposedBy: by,
       matches: { source: "finder", account: p.account, channels: p.channels, quote: p.quote.slice(0, 400), reason: null, edition: current.editionLabel, before: same?.channels ?? null, form_page: def.formPageUrl ?? current.formPageUrl ?? null, readings: p.readings, check: p.why } as Prisma.InputJsonValue } });
+    // Review S5: two finds proposing for the same form at once both pass the check above; the earlier change stays, the
+    // later one is removed and its find says "kept" (as proposeAccepts does for two people).
+    const first = await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: "WAITING" }, orderBy: [{ proposedAt: "asc" }, { id: "asc" }] });
+    if (first && first.id !== c.id) { await this.db.libraryChange.delete({ where: { id: c.id } }); return { code, outcome: "kept", why: "A change to what IRCC accepts already waits for a second person." }; }
     await this.audit.log(workspaceId, by, "proposed", "form", code, `The form finder proposed that IRCC accepts ${code} as ${acceptsWords(p.channels)} (${p.outcome === "check" ? `Check: ${p.why}` : "both rounds agree"}); waits for a second person`);
     return { code, outcome: p.outcome, why: p.why, change_id: c.id };
   }

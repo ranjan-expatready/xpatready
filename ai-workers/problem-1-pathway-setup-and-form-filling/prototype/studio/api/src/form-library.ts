@@ -13,7 +13,7 @@ import { manifest } from "../../engine/import.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
 import { INDEX_URL } from "./finder.ts";
-import { ACCOUNT_WORDS } from "../../contracts/forms.ts";
+import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
 import { AcceptsBody, acceptsWords, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
 import { ACTORS, actorOf, Audit, ConfigRead, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
@@ -126,12 +126,12 @@ export class FormLibrary {
     const before = current.accepts.find((a) => a.account === b.account) ?? null;
     if (before && [...before.channels].sort().join() === [...b.channels].sort().join() && (before.quote ?? "") === (b.quote ?? "")) throw problem(409, "Nothing changes", "That is already what the library says IRCC accepts for this form and account.");
     if (await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })) throw problem(409, "Already waiting", `A change to what IRCC accepts for ${code} already waits for a second person on To review.`);
-    const label = `${code} · IRCC accepts${b.account === "ANY" ? "" : ` through the ${ACCOUNT_WORDS[b.account]}`}: ${acceptsWords(b.channels)}`;
+    const label = `${code} · IRCC accepts${b.account === "ANY" ? "" : ` ${throughAccount(b.account)}`}: ${acceptsWords(b.channels)}`;
     const c = await this.db.libraryChange.create({ data: { workspaceId, kind: "form_accepts", key: code, label, action: "SET_ACCEPTS", reason: b.quote ? `canada.ca: "${b.quote}"` : b.reason!, matches: { account: b.account, channels: b.channels, quote: b.quote ?? null, reason: b.reason ?? null, edition: current.editionLabel, before: before?.channels ?? null, form_page: def.formPageUrl ?? current.formPageUrl ?? null } as Prisma.InputJsonValue, status: "WAITING", proposedBy: actor.id } });
     // Break minor: two people proposing at once both pass the check above; the earlier one stays, the later is refused.
     const first = await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: "WAITING" }, orderBy: [{ proposedAt: "asc" }, { id: "asc" }] });
     if (first && first.id !== c.id) { await this.db.libraryChange.delete({ where: { id: c.id } }); throw problem(409, "Already waiting", `A change to what IRCC accepts for ${code} already waits for a second person on To review.`); }
-    await this.audit.log(workspaceId, actor.id, "proposed", "form", code, `${actor.name} proposed that IRCC accepts ${code}${b.account === "ANY" ? "" : ` through the ${ACCOUNT_WORDS[b.account]}`} as ${acceptsWords(b.channels)} (${b.quote ? "canada.ca line given" : `reason: ${b.reason}`}); waits for a second person`);
+    await this.audit.log(workspaceId, actor.id, "proposed", "form", code, `${actor.name} proposed that IRCC accepts ${code}${b.account === "ANY" ? "" : ` ${throughAccount(b.account)}`} as ${acceptsWords(b.channels)} (${b.quote ? "canada.ca line given" : `reason: ${b.reason}`}); waits for a second person`);
     return { id: c.id, status: c.status, label };
   }
 

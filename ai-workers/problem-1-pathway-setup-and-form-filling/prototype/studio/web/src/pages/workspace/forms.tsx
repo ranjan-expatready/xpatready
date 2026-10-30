@@ -11,7 +11,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Undo2 } from "lucide-react";
-import { CHANNEL_WORDS, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel, type Signature } from "../../../../contracts/forms";
+import { CHANNEL_WORDS, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, throughAccount, type Channel, type Signature } from "../../../../contracts/forms";
 import { changeWords, SIGNED_BY, type LastFormChange, type RemovedForm, type WorkspaceFormLine } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
 import { useUndoToast } from "@/components/lifecycle";
@@ -97,7 +97,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
     <div className="space-y-4">
       {undo}{finder}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm" data-filing>{/* P-143, review M2: the IRCC account, chosen here by an author */}<span className="mr-3" data-account><span className="text-text-muted">IRCC account: </span>{canAuthor ? <AccountPicker id={id} saved={accountKey} /> : account ? `Filed through the ${account}` : <span className="text-text-muted">Not set (every way IRCC may accept is offered, Sample)</span>}</span><span className="text-text-muted">Filing: </span>{lines.length ? <><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null}</> : <b className="font-semibold">not known until a form is set up</b>} <span className="text-text-muted">· {count} · Sample until the immigration expert confirms</span></p>
+        <p className="text-sm" data-filing>{/* P-143, review M2: the IRCC account, chosen here by an author */}<span className="mr-3" data-account><span className="text-text-muted">IRCC account: </span>{canAuthor ? <AccountPicker id={id} saved={accountKey} /> : account ? `Filed ${accountKey ? throughAccount(accountKey) : `through the ${account}`}` : <span className="text-text-muted">Not set (every way IRCC may accept is offered, Sample)</span>}</span><span className="text-text-muted">Filing: </span>{lines.length ? <><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null}</> : <b className="font-semibold">not known until a form is set up</b>} <span className="text-text-muted">· {count} · Sample until the immigration expert confirms</span></p>
         <span className="flex items-center gap-3">{add}<Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></span>
       </div>
       {pending.length ? <p className="text-sm" data-pending-summary><span className="font-medium">Not set up yet: </span>{[ready ? `${plural(ready, "form")} can be added from the library now (${ready === 1 ? "its" : "their"} form fields are already matched, no AI needed)` : "", toDraft ? `${plural(toDraft, "form")} ${toDraft === 1 ? "needs" : "need"} reading and drafting with AI` : ""].filter(Boolean).join("; ")}. Each row has its step.</p> : null}

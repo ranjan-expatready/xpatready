@@ -9,7 +9,7 @@ import { questionnairesView } from "../../engine/runtime/questionnaires.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
 import { wordsOnly } from "../../engine/render.ts";
 import { acceptsOf, allowedChannels, channelProblems, filingKind, filingMethod, lineOf, notAcceptedWords, notNeededWords, signatureOf } from "../../engine/channels.ts";
-import { ACCOUNT_WORDS, CHANNEL_WORDS, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel } from "../../contracts/forms.ts";
+import { ACCOUNT_WORDS, CHANNEL_WORDS, throughAccount, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel } from "../../contracts/forms.ts";
 import { answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { actorOf, Db, fail, readerOf } from "./core.ts";
 import { Studio } from "./studio.ts";
@@ -62,7 +62,7 @@ export class WorkspaceViews {
         channelOptions: CHANNELS.map((c) => ({ channel: c, words: CHANNEL_WORDS[c], ok: accepted.includes(c), why: accepted.includes(c) ? null : c === "NOT_NEEDED" ? notNeededWords(f.form_number, account) : notAcceptedWords(f.form_number, c, record!) })),
         // Lead check L4: what IRCC accepts comes from the Form library (S4) for the current edition; only when nothing is
         // recorded is every way offered, as Sample.
-        accepted, acceptedBasis: record ? `From the Form library: what IRCC accepts for this edition${record.account === "ANY" ? "" : ` through the ${ACCOUNT_WORDS[record.account as "ANY"] ?? record.account}`}` : "Sample: the Form library does not record what IRCC accepts for this form yet",
+        accepted, acceptedBasis: record ? `From the Form library: what IRCC accepts for this edition${record.account === "ANY" ? "" : ` ${throughAccount(record.account)}`}` : "Sample: the Form library does not record what IRCC accepts for this form yet",
         signedBy: f.signed_by ?? null, signedByLabel: signedByLabel(f.signed_by), origin: f.origin ?? "HUMAN", quote: irccWords(f.source_quote), added: ourWords(f.source_quote),
         revision: revisions[`form:${f.form_number}`] ?? "", status: status.get(f.form_number) ?? "DRAFT", version: version.get(f.form_number) ?? 1,
       };

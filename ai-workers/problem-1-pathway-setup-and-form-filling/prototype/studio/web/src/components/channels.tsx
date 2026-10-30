@@ -4,7 +4,7 @@
 // portal choice, "Add an online form" and what drafting reads online are parked with the extension.
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ACCOUNT_WORDS, CHANNEL_MEANS, CHANNEL_WORDS, CHANNELS, IRCC_ACCOUNTS, ONLINE_LATER, SIGNATURE_WORDS, type Channel, type Signature } from "../../../contracts/forms";
+import { ACCOUNT_WORDS, CHANNEL_MEANS, CHANNEL_WORDS, CHANNELS, IRCC_ACCOUNTS, ONLINE_LATER, SIGNATURE_WORDS, throughAccount, type Channel, type Signature } from "../../../contracts/forms";
 import type { CombinationSummary } from "../../../contracts/programs";
 import { api, useToast } from "@/lib/api";
 import { Select } from "@/components/ui/controls";
@@ -84,7 +84,7 @@ export function AccountPicker({ id, saved }: { id: string; saved: string | null 
     try {
       const r = await api<{ problems?: { level: string; item: string }[] }>(`/combinations/${id}/account`, { method: "PATCH", json: { account: to || null, from: from || null } });
       const bad = (r.problems ?? []).filter((p) => p.level === "error").map((p) => p.item);
-      toast.push({ tone: bad.length ? "info" : "ok", text: `${to ? `Filed through the ${ACCOUNT_WORDS[to as "ANY"]}` : "IRCC account not set"}${bad.length ? `. Choose again how these are filed: ${[...new Set(bad)].join(", ")}` : ""}` });
+      toast.push({ tone: bad.length ? "info" : "ok", text: `${to ? `Filed ${throughAccount(to)}` : "IRCC account not set"}${bad.length ? `. Choose again how these are filed: ${[...new Set(bad)].join(", ")}` : ""}` });
       refresh(qc, id); return true;
     } catch (e) { refresh(qc, id); toast.push({ tone: "danger", text: (e as Error).message }); return false; }
   });

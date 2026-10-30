@@ -28,7 +28,7 @@ export const SIGNATURE_FITS: Record<Channel, readonly Signature[]> = {
 export const signatureFits = (c: Channel, s: Signature) => SIGNATURE_FITS[c].includes(s);
 /** The words when a signature does not fit its channel (on save and at release). */
 export const signatureMisfitWords = (form: string, c: Channel, s: Signature) =>
-  `${form}: "${SIGNATURE_WORDS[s]}" does not fit a line filed as ${CHANNEL_WORDS[c]}. A ${CHANNEL_WORDS[c]} line is ${SIGNATURE_FITS[c].map((x) => SIGNATURE_WORDS[x].toLowerCase()).join(" or ")}.`;
+  `${form}: "${SIGNATURE_WORDS[s]}" does not fit a line filed as ${CHANNEL_WORDS[c]}. ${c === "ONLINE" ? "An" : "A"} ${CHANNEL_WORDS[c]} line is ${SIGNATURE_FITS[c].map((x) => SIGNATURE_WORDS[x].toLowerCase()).join(" or ")}.`;
 /** P-143, plan §8 Q1: the IRCC accounts a filing goes through (Sample until the immigration expert confirms). Names as
  *  canada.ca uses them, read 29 Oct (immigration-facts-2026-10-29.md rows 5c–5f): the IRCC secure account (work
  *  permits inside Canada, Express Entry), the PR Portal (spouse or partner sponsorship), LMIA Online (ESDC's employer
@@ -40,6 +40,9 @@ export const ACCOUNT_WORDS: Record<IrccAccount | "ANY", string> = {
   IRCC_SECURE_ACCOUNT: "IRCC secure account", PR_PORTAL: "PR Portal", IRCC_PORTAL: "IRCC Portal", APR_PORTAL: "APR Portal", LMIA_ONLINE: "LMIA Online (ESDC)",
   PAPER: "No account (paper filing)", ANY: "Any account",
 };
+/** Break m6: the account inside a sentence. "No account (paper filing)" is not an account to go "through". */
+export const throughAccount = (a: string) => (a === "PAPER" ? "on paper, with no IRCC account" : `through the ${ACCOUNT_WORDS[a as "ANY"] ?? a}`);
+export const accountSubject = (a: string) => (a === "PAPER" ? "paper filing (no IRCC account)" : `the ${ACCOUNT_WORDS[a as "ANY"] ?? a}`);
 /** P-144 (C-9): barcode forms: filed by PDF upload or on paper, each needs a current validated copy read back into the case
  *  before it is ready to file (IRCC returns it unprocessed otherwise). From P-144's examples and the evidence lane's barcode
  *  evidence (E1 imm5257, imm0008; P1 IMM 1295); IMM 5707 and IMM 5409 make no barcode (Help Centre 1523, read 29 Oct). */
@@ -62,7 +65,8 @@ export const SetChannel = z.object({
   channel: z.enum(CHANNELS, { error: channelError }),
   signature: z.enum(SIGNATURES, { error: "Choose typed name, signed by hand and scanned, signed in pen, or no signature." }).optional(),
   from: z.enum(CHANNELS, { error: channelError }).optional(),
-  fromSignature: z.enum(SIGNATURES).optional(),
+  // Break m6: the signature the person saw, refused in words like the others.
+  fromSignature: z.enum(SIGNATURES, { error: "Say which signature you changed it from: typed name, signed by hand and scanned, signed in pen, or no signature." }).optional(),
 });
 /** Plan §8 Q1: the IRCC account a combination files through (null: not set, every channel offered as Sample). */
 const accountError = { error: `Choose one of: ${IRCC_ACCOUNTS.map((a) => ACCOUNT_WORDS[a]).join(", ")}.` };

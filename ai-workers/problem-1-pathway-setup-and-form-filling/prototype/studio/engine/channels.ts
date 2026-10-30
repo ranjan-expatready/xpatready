@@ -3,7 +3,7 @@
 // validator rules for channels and option maps (P-62 §5.3, no AI) run on the snapshot, with everything else in
 // engine/validate.ts, at review and release. W1-02 (P-102, P-107 as amended by P-114): Online stays a choice per line, filled by the browser
 // extension in a later wave; portals, online versions and screen maps are parked with it.
-import { ACCOUNT_WORDS, CHANNEL_WORDS, SIGNATURE_FITS, SIGNATURE_WORDS, signatureFits, signatureMisfitWords, type Channel, type Signature } from "../contracts/forms.ts";
+import { CHANNEL_WORDS, accountSubject, throughAccount, SIGNATURE_FITS, SIGNATURE_WORDS, signatureFits, signatureMisfitWords, type Channel, type Signature } from "../contracts/forms.ts";
 import { hasCodes, optionMapProblems, type OptionMap } from "./options.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
@@ -66,14 +66,13 @@ export async function acceptsOf(db: Pick<PrismaClient, "formEdition">, workspace
 }
 const AS: Record<Channel, string> = { ONLINE: "Online", PDF_UPLOAD: "a PDF upload", PAPER: "on paper", NOT_NEEDED: "Not needed" };
 const said = (cs: Channel[]) => cs.map((c) => AS[c]).join(" or ");
-const accountWords = (a: string) => ACCOUNT_WORDS[a as "ANY"] ?? a;
 /** The words for a line filed in a way IRCC does not accept for its edition and account (on save and at release). */
 export const notAcceptedWords = (form: string, channel: Channel, r: AcceptRecord) => r.basis === PAPER_RULE
   ? `${form} is filed as ${CHANNEL_WORDS[channel]}, but this combination has no IRCC account (paper filing): every form is filed on paper. Choose Paper, or set the IRCC account it files through.`
-  : `${form} is filed as ${CHANNEL_WORDS[channel]}, but the Form library records that IRCC accepts it ${r.account === "ANY" ? "" : `through the ${accountWords(r.account)} `}only as ${said(r.channels.filter((c) => c !== "NOT_NEEDED")) || "Not needed"}${r.channels.includes("NOT_NEEDED") ? " (the account asks it itself)" : ""}. Choose a way IRCC accepts.`;
+  : `${form} is filed as ${CHANNEL_WORDS[channel]}, but the Form library records that IRCC accepts it ${r.account === "ANY" ? "" : `${throughAccount(r.account)} `}only as ${said(r.channels.filter((c) => c !== "NOT_NEEDED")) || "Not needed"}${r.channels.includes("NOT_NEEDED") ? " (the account asks it itself)" : ""}. Choose a way IRCC accepts.`;
 /** C-4: Not needed without the account's own record saying so. */
 export const notNeededWords = (form: string, account: string | null | undefined) =>
-  `${form} is marked Not needed, but no record says ${account ? `the ${accountWords(account)}` : "this combination's IRCC account"} asks it itself. Record that in the Form library first (What IRCC accepts, for that account), or choose how it is filed.`;
+  `${form} is marked Not needed, but no record says ${account ? accountSubject(account) : "this combination's IRCC account"} asks it itself. Record that in the Form library first (What IRCC accepts, for that account), or choose how it is filed.`;
 
 /** C-7: "Online only", "PDF only", "Paper only", "Online + PDF uploads", …; Not needed lines are left out; a channel
  *  that only conditional lines add is said with its condition ("; plus PDF upload when …"). */

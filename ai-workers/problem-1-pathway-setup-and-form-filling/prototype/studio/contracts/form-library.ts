@@ -58,8 +58,8 @@ export const AcceptsBody = z.object({
   account: z.enum(ACCEPTS_ACCOUNTS, { error: "Choose the IRCC account this is for, or any account." }).default("ANY"),
   channels: z.array(z.enum(CHANNELS, { error: "Choose from Online, PDF upload, Paper and Not needed." }), { error: "Choose what IRCC accepts: Online, PDF upload, Paper, or Not needed." })
     .min(1, "Choose at least one way IRCC accepts.").max(4).refine((x) => new Set(x).size === x.length, "Each way once."),
-  quote: z.string().trim().min(8, "Paste the canada.ca line (at least 8 characters), or give a reason instead.").max(400).optional(),
-  reason: z.string().trim().min(3, "Say why (3 to 300 characters).").max(300).optional(),
+  quote: z.string().trim().min(8, "Paste the canada.ca line (at least 8 characters), or give a reason instead.").max(400, "Paste only IRCC's sentence (at most 400 characters), not the whole page.").optional(),
+  reason: z.string().trim().min(3, "Say why (3 to 300 characters).").max(300, "Say why (3 to 300 characters).").optional(),
 }).refine((b) => !!b.quote || !!b.reason, { message: "Paste the canada.ca line this comes from, or say why.", path: ["quote"] })
   .refine((b) => b.account !== "ANY" || !b.channels.includes("NOT_NEEDED"), { message: "Not needed is said for one IRCC account (the account that asks it itself), never for every account.", path: ["channels"] })
   // Break M6: no account means paper filing, so the only way IRCC can accept a form "through" it is on paper.
