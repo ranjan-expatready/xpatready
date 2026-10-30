@@ -40,11 +40,11 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - The Prisma client in `node_modules` is shared with other copies: after switching branches run `./node_modules/.bin/prisma generate` if a column is reported missing.
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
-current_screen: W1-setup-checklist (3); #96 FIX handed back (49c175d0)
-stage: FIX — Lead's PR #96 outside-review bugs (1)–(5), branch claude/screens-96-fix from origin/lead/2026-10-29-s2a + main 5f6c8deb (#94); done at 49c175d0, every named check green
-owner: Lead
-next_action: Lead folds claude/screens-96-fix (49c175d0) into #96; fresh screens session: (3) board v4 per founder-feedback-2026-10-30.md, then slice A after the founder's Go. (3), for the Lead: concept v3 (F1 P-161 (3) duties, F4 P-174 + contract v2 kinds), F1's two questions, F3 who builds slice C, F2 ask forms for the pages record first; then the founder's early look; on OK, slice A
-then: (3) build after the Lead's OK → 1c (#94 is now on main) → 1b-2 → (4)
+current_screen: W1-setup-checklist (3); PR #96 review fix 2 (findings a–c + QA-113)
+stage: FIX — PR #96's three open review findings in library-sources.ts and QA-113, branch claude/screens-96-fix2-6d5fe3 (from claude/screens-96-fix 1322f30f + main bcd482d3); in progress
+owner: Builder
+next_action: finish the suite reruns, commit, push, tell the Lead
+then: board v4 → founder's Go → slice A → 1c → 1b-2 → (4) linking combinations and copying a line (C1.3, C1.5)
 blocked_by: nothing
 updated: 2026-10-30
 

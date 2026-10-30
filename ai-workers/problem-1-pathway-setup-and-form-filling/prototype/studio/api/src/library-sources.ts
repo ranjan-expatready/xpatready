@@ -40,6 +40,15 @@ const releaseLine = (ref: string | null | undefined): SourceLine => {
   const [what, runs] = ref.split("; proposed by ");
   return { kind: "release", text: `From ${what}`, quote: runs ? `proposed by AI runs ${runs}` : null };
 };
+/** PR #96 finding (a): only each row's newest version counts (a replaced form mapping or checklist line is no longer a
+ *  source or a use), and only while that version is a draft or published (a retired newest one hides the older ones). */
+const LIVE = ["PUBLISHED", "DRAFT", "RETIRED"] as const;
+const current = <T extends { version: number; status: string }>(rows: T[], idOf: (r: T) => string): T[] => {
+  const top = new Map<string, T>(); for (const r of rows) { const k = idOf(r), t = top.get(k); if (!t || r.version > t.version) top.set(k, r); }
+  return [...top.values()].filter((r) => r.status === "PUBLISHED" || r.status === "DRAFT");
+};
+/** The shared fields a condition reads (the engine's own reading, engine/validate.ts). */
+const fieldsOf = (c: unknown) => (c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : []);
 
 @Injectable()
 export class LibrarySources {
@@ -48,9 +57,10 @@ export class LibrarySources {
   /** Every source of every item of one kind (one read per table, so a list page gets them in one call). */
   async all(kind: Kind, workspaceId: string): Promise<Map<string, SourceLine[]>> {
     const out = new Map<string, SourceLine[]>();
-    const add = (key: string, l: SourceLine) => { const a = out.get(key) ?? []; if (!a.some((x) => x.text === l.text)) a.push(l); out.set(key, a); };
+    // PR #96 finding (c): two lines with the same words but different quotes (two lines of one checklist) both stay.
+    const add = (key: string, l: SourceLine) => { const a = out.get(key) ?? []; if (!a.some((x) => x.text === l.text && (x.quote ?? null) === (l.quote ?? null))) a.push(l); out.set(key, a); };
     if (kind === "field" || kind === "answer_list" || kind === "section") {
-      const boxes = await this.db.formFieldMap.findMany({ where: { workspaceId, outcome: "mapped", status: { in: ["PUBLISHED", "DRAFT"] }, canonicalFieldKey: { not: null } }, include: { edition: true }, orderBy: [{ formEditionId: "asc" }, { dataPath: "asc" }] });
+      const boxes = await this.mappedBoxes(workspaceId);
       const fields = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
       const latest = new Map<string, (typeof fields)[number]>(); for (const f of fields) if (!latest.has(f.canonicalFieldKey)) latest.set(f.canonicalFieldKey, f);
       if (kind === "field") {
@@ -70,10 +80,17 @@ export class LibrarySources {
         for (const s of secs) if (!seen.has(s.sectionKey) && seen.add(s.sectionKey) && s.origin === "IMPORTED_RELEASE") add(s.sectionKey, releaseLine(null));
       }
     } else {
-      for (const r of await this.db.documentRequirement.findMany({ where: { workspaceId, status: { in: ["PUBLISHED", "DRAFT"] } }, orderBy: { lineageKey: "asc" } }))
+      for (const r of current(await this.db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, orderBy: { lineageKey: "asc" } }), (r) => `${r.combinationId}|${r.lineageKey}`))
         if (r.sourceFile || r.sourceQuote) add(r.documentTypeKey, { kind: "checklist", text: `From: checklist ${r.sourceFile ? checklistName(r.sourceFile) : "(file not recorded)"}`, quote: r.sourceQuote, file: r.sourceFile });
     }
     return out;
+  }
+
+  /** The current mapped form fields (PR #96 finding (a): the newest version per edition and data path, so a mapping
+   *  replaced by a newer one, or by one that maps nothing, no longer counts). */
+  private async mappedBoxes(workspaceId: string) {
+    const rows = await this.db.formFieldMap.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, include: { edition: true }, orderBy: [{ formEditionId: "asc" }, { dataPath: "asc" }] });
+    return current(rows, (b) => `${b.formEditionId}|${b.dataPath}`).filter((b) => b.outcome === "mapped" && b.canonicalFieldKey);
   }
 
   /** Combinations each item is used in, by label (C3.13 where used). */
@@ -82,15 +99,33 @@ export class LibrarySources {
     const out = new Map<string, Set<string>>();
     const add = (key: string, combinationId: string) => { const l = label.get(combinationId); if (!l) return; const s = out.get(key) ?? new Set(); s.add(l); out.set(key, s); };
     if (kind === "section") for (const s of await this.db.sqrSectionSelection.findMany({ where: { workspaceId } })) add(s.sectionKey, s.combinationId);
-    else if (kind === "document_type") for (const r of await this.db.documentRequirement.findMany({ where: { workspaceId, status: { in: ["PUBLISHED", "DRAFT"] } } })) add(r.documentTypeKey, r.combinationId);
+    else if (kind === "document_type") for (const r of current(await this.db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }), (r) => `${r.combinationId}|${r.lineageKey}`)) add(r.documentTypeKey, r.combinationId);
     else {
-      // A field is used where a combination's form reads it; an answer list where one of its fields is.
-      const boxes = await this.db.formFieldMap.findMany({ where: { workspaceId, outcome: "mapped", status: { in: ["PUBLISHED", "DRAFT"] }, canonicalFieldKey: { not: null } }, select: { canonicalFieldKey: true, edition: { select: { govFormDefId: true } } } });
-      const lines = await this.db.combinationForm.findMany({ where: { workspaceId }, select: { govFormDefId: true, combinationId: true } });
-      const combosOf = new Map<string, string[]>(); for (const l of lines) combosOf.set(l.govFormDefId, [...(combosOf.get(l.govFormDefId) ?? []), l.combinationId]);
+      // A field is used where a combination's form reads it, and (PR #96 finding (b)) where its rules, document lines,
+      // form conditions and checks read it, or its questionnaire asks it (a question in a section the combination
+      // selects, or that question's condition). An answer list is used where one of its fields is.
+      const uses: [string, string][] = [];
+      const [boxes, lines, rules, docs, checks, questions, picks] = await Promise.all([
+        this.mappedBoxes(workspaceId),
+        this.db.combinationForm.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+        this.db.predicate.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+        this.db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+        this.db.check.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+        this.db.sectionQuestion.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }),
+        this.db.sqrSectionSelection.findMany({ where: { workspaceId } }),
+      ]);
+      const formLines = current(lines, (l) => `${l.combinationId}|${l.lineageKey}`);
+      const combosOf = new Map<string, string[]>(); for (const l of formLines) combosOf.set(l.govFormDefId, [...(combosOf.get(l.govFormDefId) ?? []), l.combinationId]);
+      for (const b of boxes) for (const c of combosOf.get(b.edition.govFormDefId) ?? []) uses.push([b.canonicalFieldKey!, c]);
+      for (const l of formLines) for (const f of fieldsOf(l.predicateJson)) uses.push([f, l.combinationId]);
+      for (const r of current(rules, (r) => `${r.combinationId}|${r.predicateKey}`)) for (const f of fieldsOf(r.predicateJson)) uses.push([f, r.combinationId]);
+      for (const d of current(docs, (d) => `${d.combinationId}|${d.lineageKey}`)) for (const f of fieldsOf(d.predicateJson)) uses.push([f, d.combinationId]);
+      for (const k of current(checks, (k) => `${k.combinationId}|${k.checkKey}`)) for (const f of fieldsOf(k.predicateJson)) uses.push([f, k.combinationId]);
+      const combosOfSection = new Map<string, string[]>(); for (const p of picks) combosOfSection.set(p.sectionKey, [...(combosOfSection.get(p.sectionKey) ?? []), p.combinationId]);
+      for (const q of current(questions, (q) => q.lineageKey)) for (const f of [q.canonicalFieldKey, ...fieldsOf(q.predicateJson)]) for (const c of combosOfSection.get(q.sectionKey) ?? []) uses.push([f, c]);
       const listOf = new Map<string, string | null>();
       if (kind === "answer_list") for (const f of await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })) listOf.set(f.canonicalFieldKey, f.answerListKey);
-      for (const b of boxes) { const key = kind === "field" ? b.canonicalFieldKey! : listOf.get(b.canonicalFieldKey!); if (key) for (const c of combosOf.get(b.edition.govFormDefId) ?? []) add(key, c); }
+      for (const [f, c] of uses) { const key = kind === "field" ? f : listOf.get(f); if (key) add(key, c); }
     }
     return new Map([...out].map(([k, s]) => [k, [...s].sort()]));
   }
