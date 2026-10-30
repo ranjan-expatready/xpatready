@@ -9,7 +9,7 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: M2 queue (1) W1-10 slice 1 channels (P-140, P-143–P-145, P-171; C1.6, C11.6, C11.15) on branch `claude/forms-s1-fix` (from `claude/forms-slice1-finish` 62cf99b2, synced main 5f6c8deb)
 stage: CHECK
 owner: Lead
-next_action: Lead opens the Lead PR for `claude/forms-s1-fix` (CI is the full check) and decides whether a fresh reviewer and breaker run first; answers the "Left for the Lead" points in `screens/W1-ai-drafting/plan-slice1-channels.md` §10
+next_action: Lead opens the Lead PR for `claude/forms-s1-fix` (CI is the full check) and decides whether a fresh reviewer and breaker run first; answers the "Left for the Lead" points in `screens/W1-ai-drafting/plan-slice1-channels.md` §10; then a fresh forms session starts M2 queue item (2): P-156 library first + each combination's IRCC checklist page, checklists read into document lines (C2.6, C2.12; plan `screens/W1-ai-drafting/plan-p156.md`)
 blocked_by: none
 updated: 2026-10-30
 
