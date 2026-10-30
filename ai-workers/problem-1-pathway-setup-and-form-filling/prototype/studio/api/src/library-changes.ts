@@ -9,18 +9,19 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { ACTORS, type Actor, type Db } from "./core.ts";
 import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycle.ts";
 import { ACTION_LABEL } from "../../contracts/lifecycle.ts";
+import { fillsView, releaseFills } from "./who-fills.ts";
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
-export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
+export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", placement_fills: "who fills a question", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
 // The lifecycle words come from the one word set (contracts/lifecycle.ts, P-116 amended 28 Oct): Delete, Retire, Restore.
 // "Remove" is kept for a form line taken off a combination (it stays in the library, P-123).
-const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for" };
+const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: ACTION_LABEL.DELETE, RETIRE: ACTION_LABEL.RETIRE, RESTORE: ACTION_LABEL.RESTORE, EDIT_RULE: "Change the rule of", SET_ACCEPTS: "Set what IRCC accepts for", SET_FILLS: "Change who fills" };
 export const actionWord = (action: string, _kind?: string) => ACTION_WORD[action] ?? action;
 /** The same word inside a sentence ("approved delete …", "set what IRCC accepts for …"): only its first letter lowered. */
 export const actionVerb = (action: string, kind?: string) => { const w = actionWord(action, kind); return w[0].toLowerCase() + w.slice(1); };
 /** What the change is about, as a noun ("this library form", "this change to what IRCC accepts"). */
-const changeNoun = (kind: string) => (kind === "form_accepts" ? "change to what IRCC accepts" : KIND_NOUN[kind] ?? "change");
+const changeNoun = (kind: string) => (kind === "form_accepts" ? "change to what IRCC accepts" : kind === "placement_fills" ? "change of who fills a question" : KIND_NOUN[kind] ?? "change");
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${status}`, title, status, detail }, status);
 
@@ -58,7 +59,7 @@ export function changeView(c: LibraryChange) {
   return { id: c.id, kind: c.kind, kind_word: KIND_NOUN[c.kind] ?? c.kind, key: c.key, label: c.label ?? c.key, action: c.action, action_word: actionWord(c.action, c.kind), reason: c.reason,
     ai_verdict: c.aiVerdict, matches: c.matches, status: c.status, proposed_by: nameOf(c.proposedBy), proposed_by_id: c.proposedBy, proposed_at: c.proposedAt,
     decided_by: nameOf(c.decidedBy), decided_at: c.decidedAt, decision_note: c.decisionNote, released_in: c.releasedIn, combination_id: c.combinationId,
-    ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}) };
+    ...(c.kind === "form_accepts" ? { accepts: acceptsView(c) } : {}), ...(c.kind === "placement_fills" ? { fills: fillsView(c) } : {}) }; // C4.9 (runtime lane)
 }
 
 /** C11.18: what the second person compares: before → after, IRCC's line or the reason, and the form's canada.ca page. */
@@ -70,7 +71,7 @@ export function acceptsView(c: Pick<LibraryChange, "key" | "matches">) {
 
 /** A second person decides (P-53 item 4, BR-9): never the person who proposed it. Claimed on its status, so two
  *  decisions at the same moment cannot both succeed. */
-export async function decideChange(db: Db, actor: Actor, id: string, decision: "approve" | "return", note?: string) {
+export async function decideChange(db: Pick<Db, "libraryChange"> | Prisma.TransactionClient, actor: Actor, id: string, decision: "approve" | "return", note?: string) {
   if (!(actor.duties as readonly string[]).includes("review")) throw problem(403, "Not allowed", `${actor.name} (simulated) does not hold the review duty.`);
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
@@ -195,6 +196,8 @@ export async function publishLibraryChanges(tx: Prisma.TransactionClient, worksp
     await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", releasedIn: pack } });
     out.push({ kind: c.kind, key: c.key, label: c.label ?? c.key, action: c.action });
   }
+  // C4.9 (runtime lane, P-97): an approved change of who fills is released once its placement draft is published.
+  out.push(...(await releaseFills(tx, workspaceId, pack)));
   return out;
 }
 type Status = "DRAFT" | "PUBLISHED" | "SUPERSEDED" | "RETIRED";

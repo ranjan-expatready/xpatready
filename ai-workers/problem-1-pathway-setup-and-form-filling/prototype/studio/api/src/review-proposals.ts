@@ -2,13 +2,13 @@
 // lists what waits, grouped by form edition or combination, in Ready · Check · Decide, with what the side panel shows;
 // decide and undo call the one door (proposals.ts), which checks every rule again. The second person approves or
 // returns what one decision landed on the library together, each row through decideChange's guards (BR-9).
-import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
 import type { ProposalItem as Row } from "@prisma/client";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { AGREEMENT_WORDS, BANDS, BatchDecisionBody, DecideBody, PROPOSAL_KIND_WORDS, ProposalsQuery, type Band, type ChangeBatch, type ProposalGroup, type ProposalsView, type QueueProposal, type Reading } from "../../contracts/review-proposals.ts";
 import { ACTORS, actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
-import { changeView } from "./library-changes.ts";
+import { changeView, decideChange } from "./library-changes.ts";
 import { BATCH_MAX, bulkWhy, decide, ON_ITS_PAGE, undo, UNDO_SECONDS } from "./proposals.ts";
 import { Screen02 } from "./screen02.ts";
 
@@ -113,8 +113,10 @@ export class ReviewProposals {
     return { id, by: nameOf(list[0].proposedBy), by_id: list[0].proposedBy, at: list[0].proposedAt.toISOString(), count: waiting.length, items: list.map(changeView) as unknown as ChangeBatch["items"], can_decide: !why, why_not: why };
   }
 
-  /** Approve or return every waiting item of one decision. Checked as a whole first (the same person never approves
-   *  their own batch; a return needs its reason), then each row goes through decideChange's guards. */
+  /** Approve or return every waiting item of one decision, all or nothing in one transaction (Lead review of PR #96
+   *  (2)): checked as a whole first (the same person never approves their own batch; a return needs its reason), then
+   *  each row goes through decideChange's guards; one refusal rolls every row back and says which item and why. A
+   *  batch holds only the ADDs a lander wrote, so the lifecycle steps of a single approval never apply here. */
   async decideBatch(actor: Actor, id: string, body: unknown) {
     const b = parse(BatchDecisionBody, body);
     need(actor, "review");
@@ -122,13 +124,25 @@ export class ReviewProposals {
     if (!view.can_decide) fail(view.why_not!, /different person|review duty/.test(view.why_not!) ? HttpStatus.FORBIDDEN : HttpStatus.CONFLICT);
     const note = b.note?.trim() || undefined;
     if (b.decision === "return" && (!note || note.length < 3)) fail("Say why they go back (3 characters or more), so the person who accepted them can correct them.");
-    const out: { id: string; status: string }[] = [], refused: { id: string; label: string; why: string }[] = [];
-    for (const c of view.items.filter((x) => x.status === "WAITING")) {
-      try { const r = await this.s02.decideLibraryChange(actor, c.id, b.decision, note); out.push({ id: c.id, status: r.status }); }
-      catch (e) { refused.push({ id: c.id, label: c.label, why: String((e as { message?: string }).message ?? e) }); }
-    }
-    await this.audit.log(await this.ws.id(), actor.id, b.decision === "approve" ? "approved" : "returned", "library batch", id, `${actor.name} ${b.decision === "approve" ? "approved" : "returned"} ${out.length} of ${out.length + refused.length} library items from one decision${note ? `: ${note}` : ""}`);
-    return { decided: out, refused };
+    const workspaceId = await this.ws.id(), word = b.decision === "approve" ? "approved" : "returned";
+    const out = await this.db.$transaction(async (tx) => {
+      const rows = await tx.libraryChange.findMany({ where: { workspaceId, batchId: id, status: "WAITING" }, orderBy: { proposedAt: "asc" } });
+      const odd = rows.find((c) => c.action !== "ADD");
+      if (odd) fail(`"${odd.label ?? odd.key}" is not a new library item; it is decided on its own. Nothing was ${word}.`, HttpStatus.CONFLICT);
+      const done: { id: string; status: string; label: string | null; key: string; kind: string; combinationId: string | null }[] = [];
+      for (const c of rows) {
+        try { const r = await decideChange(tx, actor, c.id, b.decision, note); done.push({ id: c.id, status: r.status, label: c.label, key: c.key, kind: c.kind, combinationId: c.combinationId }); }
+        catch (e) {
+          const status = e instanceof HttpException ? e.getStatus() : HttpStatus.CONFLICT;
+          const why = String((e as { getResponse?: () => { detail?: string } }).getResponse?.()?.detail ?? (e as { message?: string }).message ?? e);
+          fail(`Nothing was ${word}: "${c.label ?? c.key}" could not be (${why}). Every item of this decision still waits.`, status);
+        }
+      }
+      return done;
+    });
+    for (const c of out) await this.audit.log(workspaceId, actor.id, word, `library ${c.kind}`, c.key, `${actor.name} ${word} "${c.label ?? c.key}" (add)${note ? `: ${note}` : ""}`, undefined, c.combinationId ?? undefined);
+    await this.audit.log(workspaceId, actor.id, word, "library batch", id, `${actor.name} ${word} ${out.length} library item${out.length === 1 ? "" : "s"} from one decision${note ? `: ${note}` : ""}`);
+    return { decided: out.map(({ id: x, status }) => ({ id: x, status })), refused: [] as { id: string; label: string; why: string }[] };
   }
 }
 

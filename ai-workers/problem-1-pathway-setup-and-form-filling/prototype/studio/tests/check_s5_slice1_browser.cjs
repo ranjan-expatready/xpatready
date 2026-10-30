@@ -156,9 +156,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== Documents without the scaffolding (m5)
   await go("documents");
+  await p.locator("[data-documents]").waitFor({ timeout: 15000 }).catch(() => {});
   const docText = await panel().innerText();
-  step("m5: Documents has no 'Attach official checklist' and no sample-input buttons", !/Attach official checklist|Sample inputs/.test(docText) && /Add a document requirement/.test(docText));
-  await p.getByRole("button", { name: "Add a document requirement" }).click();
+  step("m5: Documents has no 'Attach official checklist' and no sample-input buttons", !/Attach official checklist|Sample inputs/.test(docText) && /Add a document/.test(docText));
+  await p.getByRole("button", { name: "Add a document" }).click();
   step("m5: the add dialog has no 'Sample inputs (instead of typing)' row", !/Sample inputs/.test(await p.getByRole("dialog").innerText()));
   await p.keyboard.press("Escape");
   await state("documents");

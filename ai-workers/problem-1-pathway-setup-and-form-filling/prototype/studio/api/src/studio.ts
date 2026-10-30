@@ -1,7 +1,8 @@
 // Product Studio application service: programs and combinations, the shared library (versioned edits), the
 // combination's own configuration, previews through the common renderer, validation, review and release.
+import { FILLS_LOCK } from "./who-fills.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
-import type { ReviewSubmission } from "@prisma/client";
+import { Prisma, type ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
@@ -436,6 +437,9 @@ export class Studio {
     if (b.condition) { const errs = checkCondition(b.condition, types.fields, types.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); if (!b.conditionEffect) fail("Choose what the condition does (show, hide, require or optional)."); }
     const data = { sectionKey: b.sectionKey, collectedFrom: b.collectedFrom, repeats: b.repeats, tier: b.tier ?? "case", questionText: b.questionText?.trim() || null, helpText: b.helpText?.trim() || null, predicateJson: b.condition ?? null, conditionEffect: (b.conditionEffect as any) ?? null, conditionPlain: b.conditionPlain ?? null, ruleOnly: !!b.ruleOnly };
     const rows = await this.db.sectionQuestion.findMany({ where: { workspaceId, lineageKey: key } });
+    // C4.9 (P-97): who fills an existing placement changes only through a library change with a second person (who-fills.ts).
+    const now = [...rows].sort((a, b) => b.version - a.version).find((r) => r.status === "DRAFT" || r.status === "PUBLISHED");
+    if (now && now.collectedFrom !== b.collectedFrom) fail(FILLS_LOCK, HttpStatus.CONFLICT);
     let row;
     if (!rows.length) {
       const order = await this.db.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });
@@ -455,13 +459,21 @@ export class Studio {
     return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
   }
 
-  async selectSection(actor: Actor, combinationId: string, sectionKey: string, on: boolean) {
+  /** QA-93 (P-116): removing answers with the place the section had, so Undo adds it back in the same place. */
+  async selectSection(actor: Actor, combinationId: string, sectionKey: string, on: boolean, b?: { sectionOrder?: unknown }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
-    if (on) { const n = await this.db.sqrSectionSelection.count({ where: { combinationId } }); await this.db.sqrSectionSelection.upsert({ where: { combinationId_sectionKey: { combinationId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, combinationId, sectionKey, sectionOrder: n } }); }
-    else await this.db.sqrSectionSelection.deleteMany({ where: { combinationId, sectionKey } });
+    let sectionOrder: number | null = null;
+    if (on) {
+      const back = Number.isInteger(b?.sectionOrder) && (b!.sectionOrder as number) >= 0 ? b!.sectionOrder as number : null;
+      const n = back ?? await this.db.sqrSectionSelection.count({ where: { combinationId } });
+      await this.db.sqrSectionSelection.upsert({ where: { combinationId_sectionKey: { combinationId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, combinationId, sectionKey, sectionOrder: n } });
+    } else {
+      sectionOrder = (await this.db.sqrSectionSelection.findFirst({ where: { combinationId, sectionKey } }))?.sectionOrder ?? null;
+      await this.db.sqrSectionSelection.deleteMany({ where: { combinationId, sectionKey } });
+    }
     await this.audit.log(c.workspaceId, actor.id, "updated", "section selection", sectionKey, `${actor.name} ${on ? "added" : "removed"} section ${sectionKey} ${on ? "to" : "from"} "${c.label}"`, undefined, c.id);
-    return { ok: true };
+    return { ok: true, sectionOrder };
   }
 
   async documentTypes() {
@@ -485,7 +497,7 @@ export class Studio {
   }
 
   // ------------------------------------------------------------------ the combination's own configuration
-  async saveRequirement(actor: Actor, combinationId: string, lineage: string | null, b: { documentTypeKey?: string; newTypeName?: string; attachMode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; appliesToRoles: string; providedBy?: string; sourceQuote?: string; sourceFile?: string; note?: string; retire?: boolean; baseRevision?: string }) {
+  async saveRequirement(actor: Actor, combinationId: string, lineage: string | null, b: { documentTypeKey?: string; newTypeName?: string; attachMode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; appliesToRoles: string; providedBy?: string; sourceQuote?: string; sourceFile?: string; note?: string; alternatives?: string[]; retire?: boolean; baseRevision?: string }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const workspaceId = c.workspaceId;
@@ -507,7 +519,11 @@ export class Studio {
     if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
     if (b.attachMode === "ANSWER_CONDITIONAL" && !b.condition) fail("A conditional requirement needs its condition.");
     if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
-    const data = { documentTypeKey: typeKey!, attachMode: b.attachMode, predicateJson: b.attachMode === "ANSWER_CONDITIONAL" ? b.condition : null, conditionPlain: b.attachMode === "ANSWER_CONDITIONAL" ? (b.conditionPlain ?? null) : null, appliesToRoles: b.appliesToRoles, providedBy: b.providedBy ?? "client", sourceQuote: b.sourceQuote ?? null, sourceFile: b.sourceFile ?? null, note: b.note ?? null, origin: "HUMAN" as const };
+    // W1-15 slice 3: alternatives are other library document types; any one of them counts instead of this line's.
+    const alternatives = [...new Set((Array.isArray(b.alternatives) ? b.alternatives : []).filter((k) => typeof k === "string" && k && k !== typeKey))];
+    if (alternatives.length) { const known = await this.db.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: alternatives } }, select: { documentTypeKey: true } });
+      const missing = alternatives.filter((k) => !known.some((t) => t.documentTypeKey === k)); if (missing.length) fail(`An alternative must be a document type in the library: ${missing.join(", ")} is not.`); }
+    const data = { alternatives: alternatives.length ? alternatives : Prisma.DbNull, documentTypeKey: typeKey!, attachMode: b.attachMode, predicateJson: b.attachMode === "ANSWER_CONDITIONAL" ? b.condition : null, conditionPlain: b.attachMode === "ANSWER_CONDITIONAL" ? (b.conditionPlain ?? null) : null, appliesToRoles: b.appliesToRoles, providedBy: b.providedBy ?? "client", sourceQuote: b.sourceQuote ?? null, sourceFile: b.sourceFile ?? null, note: b.note ?? null, origin: "HUMAN" as const };
     let row;
     if (!lineage) {
       let key = `${typeKey}:${b.appliesToRoles}`;
@@ -780,7 +796,8 @@ export class Studio {
       lists: await publish(tx.answerList, { workspaceId: ws, answerListKey: { in: snapshot.canonical_fields.flatMap((f) => (f.answer_list ? [f.answer_list.key] : [])) } }),
     };
     // A retired row released: the lineage it ends stays retired; its predecessor is superseded.
-    for (const delegate of [tx.documentRequirement, tx.predicate, tx.combinationForm] as any[]) for (const x of await delegate.findMany({ where: { combinationId: id, status: "RETIRED", supersedesId: { not: null } } })) await delegate.update({ where: { id: x.supersedesId }, data: { status: "SUPERSEDED" } });
+    // Checks too (Lead check slice 3): effective's held retires cover them, so a released retire must supersede here.
+    for (const delegate of [tx.documentRequirement, tx.predicate, tx.combinationForm, tx.check] as any[]) for (const x of await delegate.findMany({ where: { combinationId: id, status: "RETIRED", supersedesId: { not: null } } })) await delegate.update({ where: { id: x.supersedesId }, data: { status: "SUPERSEDED" } });
     // What is now published must be exactly the frozen, reviewed snapshot (break M1): an edit saved while the release ran
     // would otherwise be published unreviewed and missing from the release. Any difference rolls the whole release back.
     const published = await buildSnapshot(tx, ws, id, "published");

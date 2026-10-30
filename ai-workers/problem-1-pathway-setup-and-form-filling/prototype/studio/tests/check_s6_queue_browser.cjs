@@ -124,6 +124,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.screenshot({ path: path.join(SHOTS, "panel-toast-800.png") });
     await p.keyboard.press("Escape");
     await p.screenshot({ path: path.join(SHOTS, "queue-1024.png"), fullPage: true });
+    // Lead review of PR #96 (5): deciding a group's last item keeps its Undo, though the group then answers 404.
+    sql(`update proposal_item set status = 'waiting', decided_by = null, decided_at = null, decision_reason = null, batch_id = null where id = '${ids.rules}'`);
+    await p.goto(`${BASE}/review/proposals?group=${encodeURIComponent(`edition:${ED}`)}`); await settle();
+    await band("ready").getByRole("button", { name: "Open Eye colour" }).click();
+    await p.getByRole("dialog").getByLabel(/Reason/).fill("Not asked on this form (test)");
+    await p.getByRole("dialog").getByRole("button", { name: "Reject" }).click(); await settle();
+    const lastUndo = p.getByRole("button", { name: /^Undo \(\d+ s\)/ });
+    step("C11.14 (#96 5): the group's last item decided, the page says nothing waits and still offers its Undo", /Nothing waits in this group any more/.test(await p.locator("main").innerText()) && await lastUndo.isVisible());
+    await lastUndo.click(); await settle();
+    step("C11.14 (#96 5): that Undo puts the item back to wait", sql(`select status from proposal_item where id = '${ids.rules}'`) === "waiting");
     step("no page errors", !errs.length, errs.join(" | "));
   } catch (e) { step("the run finished", false, e.stack ?? e); }
   await b.close();

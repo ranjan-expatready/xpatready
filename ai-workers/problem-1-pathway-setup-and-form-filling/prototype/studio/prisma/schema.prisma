@@ -771,6 +771,10 @@ model DocumentRequirement {
   appliesToRoles  String           @map("applies_to_roles")
   providedBy      String           @map("provided_by")
   isRequired      Boolean          @default(true) @map("is_required")
+  /// W1-15 slice 3: the line's place in each person's checklist (null keeps the default order)
+  position        Int?
+  /// W1-15 slice 3: library document type keys that count instead of this one ("any one counts")
+  alternatives    Json?
   sourceQuote     String?          @map("source_quote")
   sourceFile      String?          @map("source_file")
   note            String?
