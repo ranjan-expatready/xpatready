@@ -42,9 +42,11 @@ export function ProposalsPage() {
   const decideMany = useAction((ids: string[]) => api<DecideResult>("/review/proposals/decide", { method: "POST", json: { ids, action: "accept" } }),
     { invalidate: inv, success: (r) => `Accepted ${plural(r.items.length, "proposal")}. New library items wait for a second person on To review.`, onDone: (r) => { setPicked(new Set()); setUndoable({ batchId: r.batchId, n: r.items.length, until: Date.now() + (view.data?.undo_seconds ?? 10) * 1000 }); } });
 
+  // Lead review of PR #96 (5): the group's last item decided makes the group answer 404; its Undo stays offered here.
   if (view.isError && asked) return (
     <div className="mx-auto flex max-w-[1240px] flex-col gap-4">
       <Crumbs here="Proposals" />
+      {undoable ? <UndoBar {...undoable} onGone={() => setUndoable(null)} /> : null}
       <Notice tone="info" title="Nothing waits in this group any more" action={<Link className="whitespace-nowrap text-text-link underline" to="/review/proposals">See every group</Link>}>{view.error.message}</Notice>
     </div>
   );

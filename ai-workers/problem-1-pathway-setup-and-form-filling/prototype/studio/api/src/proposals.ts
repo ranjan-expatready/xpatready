@@ -53,10 +53,25 @@ export async function sameInLibrary(db: Client, workspaceId: string, p: Proposal
     return rows.find((r) => [...new Set(r.values.map((v) => v.valueKey))].sort().join(",") === want)?.answerListKey ?? null;
   }
   if (p.kind === "document_type") {
-    const rows = await db.documentType.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { documentTypeKey: true, name: true } });
-    return rows.find((r) => normalizeLabel(r.name) === normalizeLabel(p.name))?.documentTypeKey ?? null;
+    // The same identity as identityKeyOf: a name and what it proves (two proofs under one name are two items).
+    const rows = await db.documentType.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { documentTypeKey: true, name: true, readerProfile: true } });
+    return rows.find((r) => `${normalizeLabel(r.name)}|${normalizeLabel(String((r.readerProfile as { proves?: unknown } | null)?.proves ?? ""))}` === want)?.documentTypeKey ?? null;
   }
   return null;
+}
+
+/** Whether a library item a reuse names is still there to use: present, not retired, not merged away. */
+async function usableInLibrary(db: Client, workspaceId: string, kind: string, key: string | null): Promise<boolean> {
+  if (!key) return false;
+  const live = { in: ["DRAFT", "PUBLISHED"] as ("DRAFT" | "PUBLISHED")[] };
+  switch (kind) {
+    case "field": return !!(await db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key, status: live, mergedIntoKey: null }, select: { id: true } }));
+    case "section": return !!(await db.logicalSection.findFirst({ where: { workspaceId, sectionKey: key, status: live }, select: { id: true } }));
+    case "answer_list": return !!(await db.answerList.findFirst({ where: { workspaceId, answerListKey: key, status: live }, select: { id: true } }));
+    case "document_type": return !!(await db.documentType.findFirst({ where: { workspaceId, documentTypeKey: key, status: live }, select: { id: true } }));
+    case "person_role": return !!(await db.personRole.findFirst({ where: { workspaceId, roleKey: key, retiredAt: null }, select: { id: true } }));
+    default: return false;
+  }
 }
 
 const plainIssues = (e: { issues: { path: PropertyKey[]; message: string }[] }) => e.issues.slice(0, 3).map((i) => `${i.path.join(".") || "item"}: ${i.message}`).join("; ");
@@ -181,6 +196,15 @@ const LANDED: Record<string, (tx: Tx, ws: string, key: string) => Promise<unknow
   answer_list: (tx, ws, key) => tx.answerList.deleteMany({ where: { workspaceId: ws, answerListKey: key, version: 1, status: "DRAFT" } }),
   document_type: (tx, ws, key) => tx.documentType.deleteMany({ where: { workspaceId: ws, documentTypeKey: key, version: 1, status: "DRAFT" } }),
 };
+/** A landed item's rows as they stand (every version, its last change; an answer list's values too). Stored at the
+ *  decision and compared at Undo, so an edit made after the accept is never erased by it (Lead review of PR #96 (1)). */
+const STAMP: Record<string, (tx: Tx, ws: string, key: string) => Promise<unknown>> = {
+  field: (tx, ws, key) => tx.canonicalField.findMany({ where: { workspaceId: ws, canonicalFieldKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true } }),
+  section: (tx, ws, key) => tx.logicalSection.findMany({ where: { workspaceId: ws, sectionKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true } }),
+  answer_list: (tx, ws, key) => tx.answerList.findMany({ where: { workspaceId: ws, answerListKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true, values: { orderBy: { valueKey: "asc" }, select: { valueKey: true, label: true, sortOrder: true } } } }),
+  document_type: (tx, ws, key) => tx.documentType.findMany({ where: { workspaceId: ws, documentTypeKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true } }),
+};
+const stampOf = async (tx: Tx, ws: string, kind: string, key: string) => (STAMP[kind] ? JSON.stringify(await STAMP[kind](tx, ws, key)) : null);
 
 export const UNDO_SECONDS = 10;
 export const BATCH_MAX = 200;
@@ -230,25 +254,31 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         if (p.data!.kind !== r.kind) fail("An edit keeps the proposal's kind.");
         payload = p.data!;
       }
-      let landedAs: string | null = null;
+      let landedAs: string | null = null, reused = false;
       if (d.action !== "reject") {
         if (r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
           const twin = await sameInLibrary(tx, workspaceId, payload);
           if (twin) fail(`"${identityKeyOf(payload, r.identityKey)}" is already in the library as ${twin} (added since it was proposed): reject this one, or reuse that item.`, HttpStatus.CONFLICT);
         }
         const reuse = r.reuse as { match: string; existingKey: string | null };
-        // P-120: a reuse adds nothing to the library; it records the existing item it uses.
-        if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") landedAs = reuse.existingKey;
-        else {
+        // P-120: a reuse adds nothing to the library; it records the existing item it uses, if that is still there.
+        if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
+          if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${identityKeyOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
+          landedAs = reuse.existingKey; reused = true;
+        } else {
           const land = LANDERS[r.kind as ProposalKind];
           if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
           landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason, proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
         }
       }
+      // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
+      const landedStamp = landedAs && !reused ?await stampOf(tx, workspaceId, r.kind, landedAs) : null;
+      const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}) };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(),
         decisionReason: reason, batchId, decidedKey: landedAs,
+        ...(d.action === "edit" || landedStamp ? { work: work as Prisma.InputJsonValue } : {}),
         // An edit keeps the item's own reading beside it, so Undo puts the item back as it was proposed (1b).
-        ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey), work: { ...((r.work ?? {}) as object), beforeEdit: r.payload } as Prisma.InputJsonValue } : {}) } });
+        ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey) } : {}) } });
       out.push({ id: r.id, landedAs });
     }
     return out;
@@ -271,12 +301,19 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     if (Date.now() - at > UNDO_SECONDS * 1000) fail(`Undo is offered for ${UNDO_SECONDS} seconds; after that, retire or delete the item in the library.`, HttpStatus.CONFLICT);
     const adds = await tx.libraryChange.findMany({ where: { workspaceId, batchId } });
     if (adds.some((c) => c.status !== "WAITING")) fail("A second person has already decided one of these items: it cannot be undone here.", HttpStatus.CONFLICT);
+    // PR #96 review (1): an item edited after the accept is not erased by Undo; the library keeps the person's edit.
+    for (const r of rows) {
+      const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };
+      if (landedStamp && r.decidedKey && (await stampOf(tx, workspaceId, r.kind, r.decidedKey)) !== landedStamp)
+        fail(`"${identityKeyOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
+    }
     for (const c of adds) await LANDED[c.kind]?.(tx, workspaceId, c.key);
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
     for (const r of rows) {
-      const { beforeEdit, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload };
+      const { beforeEdit, landedStamp, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: "waiting", decidedBy: null, decidedAt: null, decisionReason: null, batchId: null, decidedKey: null,
-        ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey), work: work as Prisma.InputJsonValue } : {}) } });
+        ...(beforeEdit || landedStamp ? { work: work as Prisma.InputJsonValue } : {}),
+        ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey) } : {}) } });
     }
     return rows.length;
   });

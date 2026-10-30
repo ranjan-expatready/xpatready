@@ -71,7 +71,7 @@ export function acceptsView(c: Pick<LibraryChange, "key" | "matches">) {
 
 /** A second person decides (P-53 item 4, BR-9): never the person who proposed it. Claimed on its status, so two
  *  decisions at the same moment cannot both succeed. */
-export async function decideChange(db: Db, actor: Actor, id: string, decision: "approve" | "return", note?: string) {
+export async function decideChange(db: Pick<Db, "libraryChange"> | Prisma.TransactionClient, actor: Actor, id: string, decision: "approve" | "return", note?: string) {
   if (!(actor.duties as readonly string[]).includes("review")) throw problem(403, "Not allowed", `${actor.name} (simulated) does not hold the review duty.`);
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
