@@ -5,7 +5,10 @@
 // Structure (a card shows only that Pathway's combinations, "All pathways" every Pathway's section); Cards / List,
 // remembered per person; every card the full five-part trail, a calculated status, the four setup steps and "Filed:";
 // "Status: All ▾" instead of a filter-tab row; search and Add combination placed (P-128: Pathway chips replace the cards); Corporate callout; read-only and
-// empty states. S1 fixes: "Start setup" for a Not started combination under "Used by" (New combination with the trail
+// empty states. Moved to the card v4 (P-180, concept W1-setup-checklist §6–§7): status chips All · Not started ·
+// In progress · Live, Needs you is the viewer's, a card is name · full trail · "n of 5 steps" or "✓ Live" · one button,
+// sections count "n of m live"; what the card no longer shows (Filed:, form counts, Step n of 4) is not checked here.
+// S1 fixes: "Start setup" for a Not started combination under "Used by" (New combination with the trail
 // filled), and the panel's footer (Remove / Retire, Save) fully visible at 1440×900 and 1024×768. The sample inputs and
 // the P-112 Sample names are added through the API the pages call. Screenshots at 1440 and 1024 px into
 // product/screens/W1-structure-programs/screenshots/s2/, axe (WCAG 2.2 AA) on each state. No model call (US$0).
@@ -93,7 +96,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.10: the description line says what the page is", /Every combination your firm can open, and where its setup stands\./.test(await p.locator("main").innerText()));
   const types = p.getByRole("group", { name: "Pathway type" });
   step("C11.10 P-104: the type tabs say Retail and Corporate and employers, each with its count", /^Retail\s*\d+$/.test((await types.getByRole("button").nth(0).textContent()).trim()) && /^Corporate and employers\s*\d+$/.test((await types.getByRole("button").nth(1).textContent()).trim()));
-  step("C11.10: no filter-tab row; the status is one 'Status: All' menu next to the search", await p.getByRole("group", { name: "Show combinations" }).count() === 0 && await p.getByRole("button", { name: /^Status: All/ }).count() === 1 && await p.getByRole("textbox", { name: /Search combinations/ }).count() === 1);
+  // Card v4 (P-180 Q2): the status is a row of chips All · Not started · In progress · Live next to the search.
+  const chips = await p.locator("[data-status-chip]").evaluateAll((b) => b.map((x) => x.getAttribute("data-status-chip")));
+  step("C11.10 P-180: no filter-tab row; the status is the chips All · Not started · In progress · Live next to the search", await p.getByRole("group", { name: "Show combinations" }).count() === 0 && chips.join("|") === "all|not_started|in_progress|live" && await p.locator('[data-status-chip="all"]').getAttribute("aria-pressed") === "true" && await p.getByRole("textbox", { name: /Search combinations/ }).count() === 1, chips.join("|"));
   const titleRow = await p.evaluate(() => { const h = document.querySelector("h1").getBoundingClientRect(); const bs = [...document.querySelectorAll("main button")].filter((x) => /^(Program structure|Add combination)$/.test(x.textContent.trim())); return bs.map((x) => ({ t: x.textContent.trim(), top: Math.abs(x.getBoundingClientRect().top - h.top) < 24, x: Math.round(x.getBoundingClientRect().left) })); });
   step("C11.10 P-128 (5): Program structure and Add combination sit in the title row, Add combination last", titleRow.length === 2 && titleRow.every((x) => x.top) && titleRow[1].t === "Add combination" && titleRow[0].t === "Program structure" && titleRow[1].x > titleRow[0].x, JSON.stringify(titleRow));
 
@@ -112,19 +117,31 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const waiting = (key) => cat.rows.filter((r) => r.pathwayKey === key && r.needsYou).length;
   const WAIT = ["review_proposals", "see_missing", "see_new_edition", "release"];
   const trS0 = cat.sections.find((x) => x.pathwayKey === tr);
-  step("S2 fix 6 (review M1): the two waiting combinations count, in their Pathway's section and card", svRow.needsYou && ssRow.needsYou && trS0.needs >= 2 && trS0.needs === waiting(tr), `${trS0.label} ${trS0.needs}`);
+  // Card v4 (P-180 Q1): Needs you is the viewer's. Super visa's AI proposals wait on the author (user-A); Spouse of a
+  // student's release passes its own checks (chip Live), so nothing of it waits on user-A.
+  step("S2 fix 6 (review M1) P-180: the combination waiting on this person counts, in its Pathway's section and chip", svRow.needsYou && trS0.needs >= 1 && trS0.needs === waiting(tr), `${trS0.label} ${trS0.needs}; Spouse of a student ${ssRow.needsYou}`);
   step("S2 fix 6: need you counts only combinations waiting on a person: never a Not started one, never a Live one with nothing waiting", cat.rows.every((r) => r.combinationId || !r.needsYou) && cat.rows.filter((r) => r.status === "READY" && !r.aiProposals && !r.held.length && !WAIT.includes(r.nextAction?.kind)).every((r) => !r.needsYou) && cat.sections.every((x) => x.needs === waiting(x.pathwayKey)), cat.sections.map((x) => `${x.label} ${x.needs}/${x.combinations}`).join(", "));
   const trS = cat.sections.find((x) => x.pathwayKey === tr);
   const trCard = await card("Temporary residence").evaluate((b) => ({ n: b.querySelector("[data-count]")?.textContent, need: b.querySelector("[data-need]")?.textContent ?? "" }));
   step("S2 fix 6: a Pathway chip's counts are the catalogue's (combinations, need you)", trCard.n === String(trS.combinations) && (trS.needs ? trCard.need.startsWith(String(trS.needs)) : !trCard.need), JSON.stringify(trCard));
+  // The Structure's Pathway cards still count the old rule (waiting on a person: proposals, missing, new edition,
+  // release); Programs (P-180) counts the viewer's own items, which include the expert's step 2 "Confirm who can apply".
+  // The two differ by design until the Lead decides whether the Structure follows (lane note, 30 Oct): printed, not asserted.
   const stPw = (await api("/structure?pathwayType=INDIVIDUAL")).body.nodes.filter((x) => x.level === "pathway");
-  step("S2 fix 6: the Structure's Pathway cards use the same rule (same need-you counts per Pathway)", cat.sections.every((x) => stPw.find((y) => y.key === x.pathwayKey)?.needs === x.needs), stPw.map((x) => `${x.label} ${x.needs}`).join(", "));
+  const per = [];
+  for (const who of ["user-A", "user-B", "user-C"]) per.push(`${who} ${(await api("/catalogue?pathway=INDIVIDUAL&filter=all", { actor: who })).body.sections.map((x) => x.needs).join(",")}`);
+  step("S2 fix 6: the Structure's Pathway cards carry a need count for every Pathway the catalogue shows", cat.sections.every((x) => Number.isInteger(stPw.find((y) => y.key === x.pathwayKey)?.needs)), stPw.map((x) => `${x.label} ${x.needs}`).join(", "));
+  console.log(`NOTE  Structure need counts ${stPw.map((x) => x.needs).join(",")} vs Programs Needs you per person: ${per.join(" · ")}`);
   const secs = await p.locator("[data-section]").evaluateAll((s) => s.map((x) => x.querySelector("h2").textContent));
-  step("C11.10 S2: 'All pathways' (the default) shows one section per Pathway, with its count", await all.getAttribute("aria-pressed") === "true" && secs.length === 3 && cat.sections.every((x, i) => secs[i].startsWith(x.label) && secs[i].includes(`${x.combinations} combination`)), secs.join(" | "));
-  const chip = p.locator(`[data-section="${tr}"] [data-need-you]`);
-  const chipText = (await chip.textContent().catch(() => "")) ?? "";
-  await chip.hover().catch(() => undefined); await p.getByRole("tooltip").filter({ hasText: /waiting for a person/ }).first().waitFor({ timeout: 5000 }).catch(() => undefined);
-  step("S2 fix 6 (review M1): the section shows its need-you count, and the chip explains itself", chipText.startsWith(`${trS0.needs} need`) && (await p.getByRole("tooltip").allTextContents()).some((t) => /Combinations waiting for a person: something to review, something missing or something blocking release\./.test(t)), chipText);
+  step("C11.10 S2 P-180: 'All pathways' (the default) shows one section per Pathway, with its 'n of m live' count", await all.getAttribute("aria-pressed") === "true" && secs.length === 3 && cat.sections.every((x, i) => secs[i].startsWith(x.label) && secs[i].includes(`${x.live} of ${x.combinations} live`)), secs.join(" | "));
+  // Card v4 §7: with the Needs you toggle on, each Pathway header says how many need you; the toggle explains itself.
+  const toggle = p.locator("[data-needs-you]");
+  await toggle.hover(); await p.getByRole("tooltip").filter({ hasText: /waits for you/ }).first().waitFor({ timeout: 5000 }).catch(() => undefined);
+  const toggleTips = await p.getByRole("tooltip").allTextContents();
+  await toggle.click(); await p.waitForFunction(() => new URLSearchParams(location.search).get("n") === "1"); await ready(); await p.waitForTimeout(300);
+  const chipText = (await p.locator(`[data-section="${tr}"] [data-need-you]`).textContent().catch(() => "")) ?? "";
+  step("S2 fix 6 (review M1) P-180: with Needs you on, the section shows its need-you count, and the toggle explains itself", chipText.startsWith(`${trS0.needs} need`) && toggleTips.some((t) => /Combinations where something waits for you: a review or a confirmation on your duty\./.test(t)), `${chipText} / ${toggleTips.join(" | ")}`);
+  await toggle.click(); await p.waitForFunction(() => !new URLSearchParams(location.search).get("n")); await ready(); await p.waitForTimeout(300);
   step("C11.10 BR-13: every combination is shown by default (Status: All)", await p.locator("article[data-node]").count() === cat.rows.length, `${await p.locator("article[data-node]").count()} of ${cat.rows.length}`);
   await p.mouse.move(0, 0);
   await state("cards-all-pathways");
@@ -136,28 +153,29 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await all.focus(); await card("Permanent residence").focus();
   await p.getByRole("tooltip").filter({ hasText: /Shows only Permanent residence/ }).first().waitFor({ timeout: 5000 }).catch(() => undefined);
   const tips = await p.getByRole("tooltip").allTextContents();
-  step("C11.10 S2: the card's tooltip says what a click does and what 'need you' means", tips.some((t) => /Shows only Permanent residence's combinations\..*waiting for a person/.test(t)), tips.join(" | "));
+  step("C11.10 S2: the card's tooltip says what a click does and what 'need you' means", tips.some((t) => /Shows only Permanent residence's combinations\..*"need you" counts those waiting for you/.test(t)), tips.join(" | "));
   await state("pathway-card-open");
   await all.click();
   await p.waitForFunction(() => document.querySelectorAll("[data-section]").length === 3);
   step("C11.10 S2: All pathways brings every section back", !/[?&]p=/.test(p.url()));
 
-  // ======================================================== a card: trail, status, setup steps, filed, next step
-  const live = cat.rows.find((r) => r.status === "READY");
+  // ======================================================== a card (concept v4 §7): name, full trail, progress, one button
+  const trailOf = (r) => r.trail.filter((x) => x && x !== "No sub-category");
+  const nameOf = (r) => (r.trail[4] && r.trail[4] !== "No sub-category" ? r.trail[4] : r.trail[3] ?? r.label);
+  const live = cat.rows.find((r) => r.setup?.chip.status === "LIVE");
   const liveCard = p.locator(`article[data-node="${live.nodeKey}"]`);
   const liveText = await liveCard.innerText();
-  step("C11.10 BR-7: a card carries the full five-part trail: Type › Pathway › Program muted, the category bold, the sub-category below", (await liveCard.locator("[data-trail]").textContent()) === live.trail.slice(0, 3).join(" › ") && (await liveCard.locator("h3").textContent()) === live.trail[3] && liveText.includes(live.trail[4]), liveText.replace(/\s+/g, " ").slice(0, 160));
-  const subs = await p.locator("article[data-node] h3 + p").allTextContents();
-  step("C11.10 BR-7: 'No sub-category' is never blank", subs.every((t) => t.trim().length > 0) && subs.includes("No sub-category"));
-  step("C11.10 A3: the Live card shows Step 4 of 4 · Live and Filed: PDF", /Step 4 of 4 · Live/.test(liveText) && /Filed: PDF/.test(liveText) && await liveCard.locator('[data-status="READY"]').count() === 1);
+  step("C11.10 BR-7 P-180: a card's heading is its name and the full trail is one grey line (full trail on hover)", (await liveCard.locator("[data-trail]").textContent()) === trailOf(live).join(" › ") && (await liveCard.locator("[data-trail]").getAttribute("title")) === trailOf(live).join(" › ") && (await liveCard.locator("h3").textContent()) === nameOf(live), liveText.replace(/\s+/g, " ").slice(0, 160));
+  const heads = await p.locator("article[data-node] h3").allTextContents(), trails = await p.locator("article[data-node] [data-trail]").allTextContents();
+  step("C11.10 BR-7: no card heading is blank and no trail says 'No sub-category'", heads.length === cat.rows.length && heads.every((t) => t.trim().length > 0) && trails.every((t) => !/No sub-category/.test(t)));
+  step("C11.10 A3 P-180: the Live card shows ✓ Live with an all-green edge bar and Open", /✓ Live/.test(liveText) && await liveCard.getAttribute("data-state") === "LIVE" && await liveCard.locator('[data-edge-bar="live"]').count() === 1 && await liveCard.locator('[data-card-button="open"]').count() === 1, liveText.replace(/\s+/g, " "));
   const nsCard = p.locator(`article[data-node="${ns.nodeKey}"]`);
   const nsText = await nsCard.innerText();
-  step("S2 fix 7: a Not started card shows 'Not started' under an empty bar, not 'Step 1 of 4'", /Not started/.test(nsText) && !/Step 1 of 4/.test(nsText) && await nsCard.locator('[data-setup="0"]').count() === 1 && (await nsCard.locator("[data-setup]").getAttribute("aria-label")) === "Setup: not started", nsText.replace(/\s+/g, " "));
-  step("S2 fix 2: a Not started card's one next step reads Start setup (no 'Add sources' anywhere on a Not started card)", (await nsCard.locator("[data-next-step]").textContent()).trim() === "Start setup" && !(await p.locator("article[data-node]").allInnerTexts()).some((t) => /Not started/.test(t) && /Add sources|Find forms/.test(t)));
+  step("S2 fix 7 P-180: a Not started card shows '0 of 5 steps' over an empty edge bar, never 'Step 1 of 4'", /0 of 5 steps/.test(nsText) && !/Step 1 of 4/.test(nsText) && await nsCard.getAttribute("data-state") === "NOT_STARTED" && await nsCard.locator('[data-edge-bar="0"]').count() === 1, nsText.replace(/\s+/g, " "));
+  step("S2 fix 2: a Not started card's one button reads Start setup (no 'Add sources' anywhere on a Not started card)", (await nsCard.locator('[data-next-step="start"]').textContent()).trim() === "Start setup" && !(await p.locator('article[data-state="NOT_STARTED"]').allInnerTexts()).some((t) => /Add sources|Find forms/.test(t)));
   const vvCard = p.locator(`article[data-node="${vv}"]`);
-  const vvText = await vvCard.innerText(), vvStep = vvRow.nextAction;
-  const k = vvStep?.kind === "add_from_library" ? (vvStep.forms ?? []).length : 0;
-  step("S2 fix 4: an In setup card's form count agrees with its button in plain words", !/attached, not added yet/.test(vvText) && (!k || (vvText.includes(`${k} ready to add from the library`) && vvText.includes(`Add ${k} form`))), vvText.replace(/\s+/g, " "));
+  const vvText = await vvCard.innerText();
+  step("S2 fix 4 P-180: an In progress card says 'n of 5 steps' as the checklist counts them, with Resume setup (no form count on the card)", vvText.includes(vvRow.setup.bar.text) && /^[1-5] of 5 steps$/.test(vvRow.setup.bar.text) && await vvCard.locator('[data-card-button="resume"]').count() === 1 && !/attached, not added yet|ready to add from the library/.test(vvText), vvText.replace(/\s+/g, " "));
   // fix 3: a Not started name never starts anything by itself
   const before = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.counts;
   const combos0 = sql("select count(*) from combination");
@@ -179,17 +197,19 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.waitForFunction((k) => document.activeElement?.closest("article")?.getAttribute("data-node") === k, vv, { timeout: 5000 }).catch(() => undefined);
   step("C11.10 P-50: Back returns with that card highlighted and focused", await p.evaluate((k) => document.activeElement?.closest("article")?.getAttribute("data-node") === k, vv) && /sel=/.test(p.url()));
 
-  // ======================================================== Status: All ▾
+  // ======================================================== the status chips (P-180 Q2)
   await open();
-  await p.getByRole("button", { name: /^Status: All/ }).click();
-  const opts = await p.getByRole("menuitemradio").allTextContents();
-  step("C11.10 BR-13: Status offers All (default) · Needs work · Not started · In setup · Not ready · Live, each with its count and meaning", opts.length === 6 && /^All · default/.test(opts[0]) && /^Needs work/.test(opts[1]) && /^Not started/.test(opts[2]) && /^Live/.test(opts[5]) && /Firms can open cases on it/.test(opts[5]), opts.join(" | ").slice(0, 200));
-  await p.getByRole("menuitemradio", { name: /^Not started/ }).click(); await p.waitForFunction(() => location.search.includes("f=not_started")); await ready(); await p.waitForTimeout(300);
+  const chipOf = async (k) => ({ t: (await p.locator(`[data-status-chip="${k}"]`).innerText()).replace(/\s+/g, " ").trim() });
+  const counts0 = cat.counts, chipTexts = [];
+  for (const [k, w] of [["all", "All"], ["not_started", "Not started"], ["in_progress", "In progress"], ["live", "Live"]]) chipTexts.push([(await chipOf(k)).t, `${w} ${counts0[k]}`]);
+  await p.locator('[data-status-chip="live"]').hover(); await p.getByRole("tooltip").filter({ hasText: /Firms can open cases on it/ }).first().waitFor({ timeout: 5000 }).catch(() => undefined);
+  step("C11.10 BR-13 P-180: the chips All (default) · Not started · In progress · Live each carry the catalogue's count, and say what they mean", chipTexts.every(([a, b]) => a === b) && (await p.getByRole("tooltip").allTextContents()).some((t) => /Firms can open cases on it/.test(t)), JSON.stringify(chipTexts));
+  await p.locator('[data-status-chip="not_started"]').click(); await p.waitForFunction(() => location.search.includes("f=not_started")); await ready(); await p.waitForTimeout(300);
   const nsApi = (await api("/catalogue?pathway=INDIVIDUAL&filter=not_started")).body;
   const shownNs = await p.locator("article[data-node]").evaluateAll((a) => a.map((x) => x.getAttribute("data-node")).sort());
   step("C11.10 BR-13: Not started shows exactly the combinations with no setup yet", nsApi.rows.length > 0 && nsApi.rows.every((r) => !r.combinationId) && JSON.stringify(shownNs) === JSON.stringify(nsApi.rows.map((r) => r.nodeKey).sort()) && /showing \d+ Not started/.test(await p.locator("[data-stats]").textContent()), `${shownNs.length} shown, API ${nsApi.rows.length}`);
-  const inSetup = (await api("/catalogue?pathway=INDIVIDUAL&filter=in_setup")).body.rows;
-  step("C11.10 BR-13: In setup no longer counts Not started ones", inSetup.every((r) => !!r.combinationId) && inSetup.some((r) => r.nodeKey === vv));
+  const inSetup = (await api("/catalogue?pathway=INDIVIDUAL&filter=in_progress")).body.rows;
+  step("C11.10 BR-13 P-180: In progress never counts Not started ones", inSetup.every((r) => !!r.combinationId) && inSetup.some((r) => r.nodeKey === vv));
   await state("status-not-started");
 
   // ======================================================== Cards / List, remembered per person
@@ -198,8 +218,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator('[role="grid"][aria-label="Combinations"]').waitFor();
   const groupRows = await p.locator("[data-group]").count();
   const listRow = p.locator(`[role="row"][data-node="${live.nodeKey}"]`);
-  step("C11.10: List shows the same combinations as rows, grouped by Pathway (group rows collapse)", groupRows === cat.sections.length && await p.locator('[role="row"][data-node]').count() === cat.rows.length);
-  step("C11.10 BR-7: a row carries the full five-part trail in one line, status, setup and next step", (await listRow.locator("[data-trail]").textContent()).startsWith(live.trail.join(" › ")) && await listRow.locator("[data-setup]").count() === 1 && await listRow.locator("[data-step-cell]").count() === 1, await listRow.locator("[data-trail]").textContent());
+  const programBands = new Set(cat.rows.map((r) => `${r.pathwayKey}|${r.trail[2]}`)).size;
+  step("C11.10 P-180: List shows the same combinations as rows, grouped by Pathway then Program (group rows collapse)", groupRows === cat.sections.length + programBands && await p.locator('[role="row"][data-node]').count() === cat.rows.length, `${groupRows} group rows; ${cat.sections.length} Pathways + ${programBands} Programs`);
+  step("C11.10 BR-7 P-180: a row carries the name, the trail above it, the progress and the one button", (await listRow.locator("[data-name]").textContent()) === nameOf(live) && trailOf(live).join(" › ").startsWith(await listRow.locator("[data-trail]").textContent()) && (await listRow.locator("[data-progress]").textContent()) === "Live" && await listRow.locator("[data-step-cell] [data-card-button]").count() === 1, await listRow.innerText());
   await state("list-view");
   await p.reload(); await ready();
   step("C11.10: the List choice is remembered for this person after a reload", await p.locator('[role="grid"][aria-label="Combinations"]').count() === 1 && !/[?&]v=/.test(p.url()));
@@ -212,7 +233,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator('[data-view="cards"]').waitFor();
   const shut0 = await p.locator('[data-section] h2 button[aria-expanded="false"]').count(), cards0 = await p.locator("article[data-node]").count();
   await p.locator('[data-section] h2 button[aria-expanded="true"]').first().click();
-  step("C11.10: a section header collapses its cards, keeping its count (and the list's collapse carries over)", shut0 === 1 && await p.locator('[data-section] h2 button[aria-expanded="false"]').count() === 2 && await p.locator("article[data-node]").count() < cards0 && /\d+ combinations?/.test(await p.locator('[data-section] h2 button[aria-expanded="false"]').first().textContent()));
+  const shut1 = await p.locator('[data-section] h2 button[aria-expanded="false"]').count(), cards1 = await p.locator("article[data-node]").count();
+  step("C11.10 P-180: a section header collapses its cards, keeping its 'n of m live' count (and the list's collapse carries over)", shut0 === 1 && shut1 === 2 && cards1 < cards0 && /\d+ of \d+ live/.test(await p.locator('[data-section] h2 button[aria-expanded="false"]').first().textContent()), `${shut0}→${shut1} shut, ${cards0}→${cards1} cards`);
+  // Folds last per person (concept v4 §7): open everything again for the steps below.
+  await p.evaluate(() => { try { for (const k of Object.keys(localStorage)) if (k.startsWith("xr-programs-fold:")) localStorage.removeItem(k); } catch { /* ignore */ } });
 
   // ======================================================== search, other tab, Corporate
   await open();
@@ -234,7 +258,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== read-only approver
   await as("user-B"); await open();
   const ro = await p.locator(`article[data-node="${ns.nodeKey}"]`).innerText();
-  step("BR-15 read-only: Add combination is disabled; a Not started card has no step to take; a started card says Open", await p.getByRole("button", { name: "Add combination" }).isDisabled() && !/Start setup|Add sources|Find forms/.test(ro) && await p.locator(`article[data-node="${vv}"]`).locator('[data-next-step="open"]').count() === 1, ro.replace(/\s+/g, " "));
+  step("BR-15 read-only: Add combination is disabled; a Not started card has no step to take; a started card says Open", await p.getByRole("button", { name: "Add combination" }).isDisabled() && !/Start setup|Add sources|Find forms/.test(ro) && await p.locator(`article[data-node="${vv}"]`).locator('[data-card-button="open"]').count() === 1, ro.replace(/\s+/g, " "));
   step("BR-15 read-only: no '+ Add pathway' on this page (P-128 (4)); adding is Add combination, off for the approver", await p.getByRole("button", { name: /Add pathway/ }).count() === 0 && await p.getByRole("button", { name: "Add combination" }).isDisabled());
   await state("read-only");
   await as("user-A");
@@ -309,10 +333,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   for (let i = 0; i < 30; i++) await add("INDIVIDUAL", "category", `Scale sample ${String(i + 1).padStart(2, "0")}`, "individual.visitors");
   const t0 = Date.now(); await open(); const ms = Date.now() - t0;
   const fifty = await p.locator("article[data-node]").count();
-  await p.getByRole("button", { name: /^Status: All/ }).click(); await p.getByRole("menuitemradio").first().waitFor();
   const filterMs = await p.evaluate(async () => {
-    const item = [...document.querySelectorAll('[role="menuitemradio"]')].find((x) => x.textContent.startsWith("Not started"));
-    const done = () => new URL(location.href).searchParams.get("f") === "not_started" && !document.querySelector('[data-stats][aria-busy="true"]') && [...document.querySelectorAll("article[data-node]")].every((a) => /Not started/.test(a.textContent));
+    const item = document.querySelector('[data-status-chip="not_started"]');
+    const done = () => new URL(location.href).searchParams.get("f") === "not_started" && !document.querySelector('[data-stats][aria-busy="true"]') && [...document.querySelectorAll("article[data-node]")].every((a) => a.getAttribute("data-state") === "NOT_STARTED");
     const t = performance.now(); item.click();
     await new Promise((res) => { const o = new MutationObserver(() => { if (done()) { o.disconnect(); res(); } }); o.observe(document.body, { subtree: true, childList: true, attributes: true }); });
     return Math.round(performance.now() - t);

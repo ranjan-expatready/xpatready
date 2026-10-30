@@ -559,7 +559,9 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, needsOn
     </div>
   );
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-surface-raised" role="grid" aria-label="Combinations" aria-readonly="true" data-view="list">
+    // overflow-clip, not overflow-hidden: hidden makes the grid the sticky bands' scroll box, so a Pathway band stuck
+    // 56 px down inside it and covered the first Program band (axe target-size).
+    <div className="overflow-clip rounded-lg border border-border bg-surface-raised" role="grid" aria-label="Combinations" aria-readonly="true" data-view="list">
       <div role="row" className={cn(GRID, "border-b border-border bg-surface px-4 py-2 text-xs font-semibold text-text-muted")}>
         <span role="columnheader">Combination</span>
         <span role="columnheader" className="sr-only sm:not-sr-only">Trail</span>
