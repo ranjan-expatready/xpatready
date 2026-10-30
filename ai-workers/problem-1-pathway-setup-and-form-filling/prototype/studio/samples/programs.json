@@ -185,7 +185,7 @@
          "work-permit-outside-forms-documents.html"
         ],
         "import": "release",
-        "note": "Sample: starts from the reviewed work-permit setup for applications from outside Canada (forms IMM 1295, IMM 5257 SCH1, IMM 5409, IMM 5475, IMM 5476, IMM 5707; checklists IMM 5488, IMM 5905). Documents specific to an LMIA are not configured yet."
+        "note": "Sample: starts from the reviewed work-permit setup for applications from outside Canada (forms IMM 1295, IMM 5257 SCH1, IMM 5409, IMM 5475, IMM 5476, IMM 5707; checklists IMM 5488 and the New Delhi visa office's IMM 5905). That setup is for every employer-specific job, so its document lines cover jobs with an LMIA (Copy of LMIA, Job offer letter) and LMIA-exempt jobs, each with its own condition; the LMIA-exempt lines never apply here and are not trimmed yet."
        }
       },
       {

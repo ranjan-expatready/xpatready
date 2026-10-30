@@ -74,6 +74,11 @@ const sampleOk = (f: Parameters<typeof trailsOf>[0]) => { const t = trailsOf(f);
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const s = await call("POST", "/demo/load");
   ok("Step 6: the suites' fixture (no sample named) still loads the older sample with its reviewed work-permit release", s.status < 300 && n(`select count(*) from config_release`) === 1 && n(`select count(*) from combination where label='Super visa'`) === 1, s.status);
+  // QA-115: the With an LMIA sample's words agree with its document lines (Copy of LMIA, Job offer letter, LMIA-exempt lines).
+  const lmia = sql(`select description from combination where combination_key='wp.family'`);
+  const lines = sql(`select string_agg(distinct coalesce(t.name, '') || ' / ' || coalesce(d.condition_plain, ''), ' | ') from document_requirement d join combination c on c.id=d.combination_id left join document_type t on t.document_type_key=d.document_type_key and t.workspace_id=d.workspace_id where c.combination_key='wp.family'`);
+  ok("C4.5 QA-115 pass: With an LMIA's note names the LMIA lines its checklist carries and says the LMIA-exempt lines never apply", /Copy of LMIA/.test(lmia) && /LMIA-exempt lines never apply/.test(lmia) && /LMIA/.test(lines) && /LMIA-exempt/.test(lines), { lmia, lines: lines.slice(0, 200) });
+  ok("C4.5 QA-115 fail: the note no longer says LMIA documents are not configured", !/not configured yet/.test(lmia), lmia);
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
