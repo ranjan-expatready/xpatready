@@ -50,3 +50,16 @@ The Lead's OK covers slice A and then the card (concept v4 §6–§7). Base bran
 2. F1's two questions (rules-only pages; "unusual"), to the founder if the Lead does not settle them.
 3. F3: who builds slice C.
 4. F5: the C11.10 and C11.16 rows.
+
+## Card v4 CHECK and Fixes (30 Oct, branch `claude/screens-card-aba78e`)
+CHECK on the card v4: `review.md` (journey 8/10, D1 D4 D9 D15 D16 D19 at 3, four Majors) and `break-report.md` (no Blocker, three Majors). Fixed at 8a8856b7, each with a pass and a fail test:
+* **Reviewer M1 = breaker M1, step 4 done with nothing in it.** `engine/setup-checklist.ts`: no document lines is never done, with or without forms (concept §4a); a combination just started now reads "0 of 5 steps" (`check_setup_checklist` two new steps; `check_w1_programs_s2` In progress text now 0–5).
+* **Reviewer M2, the expert's Needs you points to no action.** `confirm_people` left out of `REVIEWS` (Needs you) until a screen offers the confirmation (`participantsConfirmedAs`, P-176 Q1 open); it stays open on step 2 and in the Next line. Two new engine steps.
+* **Reviewer M4, two need-you counts.** `Programs.leafStates(actor)` gives each person's Needs you (forViewer); Program structure passes the person, so its Pathway counts equal the Programs sections for every person (concept §8). `check_w1_programs_s2`: the earlier NOTE is now two steps (equal per person; differs between people).
+* **Breaker M2, folded Pathway plus its chip showed nothing.** The Pathway chip counts as a filter (`programs.tsx` `filtering`), so it opens its sections; back on All the person's fold returns. Two new steps in `check_w1_programs_s2`.
+* Earlier in CHECK: after a person switch the page kept the last person's answer on screen while loading (the approver briefly saw Start setup); placeholder data now only for the same person (df88ff10).
+
+**Not fixed here, for the Lead (each needs a decision or another lane):**
+* **Reviewer M3, Resume setup lands where its item is not.** The people step's tab is Forms (`STEP_TAB`, P-161 (2): people sit in "Before forms" on Forms), but that part is not on Forms yet and nothing reads `?focus=` (slice C). Changing the tab would contradict P-161; the fix is slice C (the "Before forms" part and focus), or the Lead points the people step elsewhere until then.
+* **Breaker M3, speed at scale.** 393 combinations: first catalogue after a restart 14–67 s under load 11–18, 2.37 MB for 272 cards (every row carries the old fields next to `setup`); warm 30–110 ms holds. Needs a slimmer catalogue row (drop the old fields the card no longer reads) and a cold-start measure on a quiet machine: a slice of its own.
+* Minors (reviewer m1–m5, breaker m1–m9) listed in the two reports; not done in this pass. Breaker m2 (`counts.needs` and `?f=needs` still the old rule) is the same family as M4 and is the next one to take.
