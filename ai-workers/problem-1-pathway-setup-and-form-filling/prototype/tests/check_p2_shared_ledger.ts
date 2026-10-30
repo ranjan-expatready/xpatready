@@ -20,7 +20,7 @@ const child = join(scratch, "reserve-one.ts");
 writeFileSync(child, `import { SpendLedger } from ${JSON.stringify(join(PROTOTYPE, "p2", "ledger.ts"))};
 const [dir, run, worst, at] = process.argv.slice(2);
 while (Date.now() < Number(at)) { /* start together */ }
-try { new SpendLedger(dir, 1).reserve(run, 1, Number(worst), 5, "stub"); console.log("reserved"); } catch (e) { console.log("refused: " + (e as Error).message); }
+try { new SpendLedger(dir, 1).reserve(run, 1, Number(worst), 5, "paid"); /* paid: a stub reserves US$0 and passes no cap (break B1, QA-90 §9) */ console.log("reserved"); } catch (e) { console.log("refused: " + (e as Error).message); }
 `);
 const TSX = join(PROTOTYPE, "node_modules", ".bin", "tsx");
 const one = (dir: string, run: string, worst: number, at: number) => new Promise<string>((res) => {

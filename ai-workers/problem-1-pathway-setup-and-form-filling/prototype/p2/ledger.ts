@@ -65,17 +65,23 @@ export class SpendLedger {
 
   /** S4 (m4): US$ counted against the Wave 1 cap: attempts reserved since the wave started, as committed() counts them. */
   committedSince(sinceIso: string): number {
-    const es = this.entries();
-    const settled = new Map(es.filter((e) => e.type === "settle").map((e) => [e.id, (e as { actual_usd: number }).actual_usd]));
-    return es.filter((e): e is Extract<Entry, { type: "reserve" }> => e.type === "reserve" && e.at >= sinceIso).reduce((sum, r) => sum + (settled.get(r.id) ?? r.worst_usd), 0);
+    return this.counted((r) => r.at >= sinceIso);
   }
 
   /** US$ counted against the caps: settled attempts at their actual cost, unsettled ones at worst case. */
   committed(runId?: string): number {
+    return this.counted((r) => runId === undefined || r.run_id === runId);
+  }
+
+  /** P-179 break M1: every amount the caps add up is a number of US$ at or above 0. One line that is not (no amount, text,
+   *  below 0) would make the sum NaN or lower it and so switch the caps off; it stops every reservation instead, in words. */
+  private counted(keep: (r: Extract<Entry, { type: "reserve" }>) => boolean): number {
     const es = this.entries();
+    const bad = (v: unknown) => typeof v !== "number" || !Number.isFinite(v) || v < 0;
+    const wrong = es.find((e) => (e.type === "reserve" && bad(e.worst_usd)) || (e.type === "settle" && bad((e as { actual_usd: unknown }).actual_usd)));
+    if (wrong) throw new BudgetExceeded(`the shared ledger ${this.file} has a ${wrong.type} line (${(wrong as { id?: string }).id ?? "no id"}) whose amount is not a number of US$ at or above 0; no AI start is counted until it is fixed`);
     const settled = new Map(es.filter((e) => e.type === "settle").map((e) => [e.id, (e as { actual_usd: number }).actual_usd]));
-    return es.filter((e): e is Extract<Entry, { type: "reserve" }> => e.type === "reserve" && (runId === undefined || e.run_id === runId))
-      .reduce((sum, r) => sum + (settled.get(r.id) ?? r.worst_usd), 0);
+    return es.filter((e): e is Extract<Entry, { type: "reserve" }> => e.type === "reserve" && keep(e)).reduce((sum, r) => sum + (settled.get(r.id) ?? r.worst_usd), 0);
   }
 
   /** P-179: the most a click may take total spend to: the cap + 10% (US$132 for the US$120 experiment cap). */
@@ -123,6 +129,9 @@ export class SpendLedger {
   reserve(runId: string, attempt: number, worstUsd: number, runCapUsd: number, caller?: string, opts: { overrideId?: string; runKey?: string } = {}): string {
     // S4 break minor: a worst case that is not a number, or below zero, would let any call through the caps.
     if (!Number.isFinite(worstUsd) || worstUsd < 0) throw new BudgetExceeded(`worst case must be a number of US$ at or above 0 (got ${worstUsd})`);
+    // P-179 break B1, QA-90 §9: the stub caller never spends (its usage is 0 tokens), so it reserves US$0 and counts
+    // nothing toward any cap; before, it reserved the paid call's worst case and a Continue never got past it.
+    if (caller === "stub") worstUsd = 0;
     // QA-90: every copy shares one ledger, so two processes may reserve at the same moment; the read of what is committed
     // and the append are one step under a short lock, so the caps count both.
     return this.atomically(() => this.reserveNow(runId, attempt, worstUsd, runCapUsd, caller, opts));
@@ -131,9 +140,11 @@ export class SpendLedger {
   private reserveNow(runId: string, attempt: number, worstUsd: number, runCapUsd: number, caller: string | undefined, opts: { overrideId?: string; runKey?: string }): string {
     const total = this.committed(), run = this.committed(runId), wave = this.committedSince(WAVE1_START);
     const passed: [OverrideLimit, string][] = [];
-    if (total + worstUsd > this.capUsd) passed.push(["experiment", `experiment cap US$${this.capUsd}: committed ${total.toFixed(4)} + worst case ${worstUsd.toFixed(4)}`]);
-    if (run + worstUsd > runCapUsd) passed.push(["run", `run cap US$${runCapUsd}: committed ${run.toFixed(4)} + worst case ${worstUsd.toFixed(4)}`]);
-    if (wave + worstUsd > WAVE1_CAP_USD) passed.push(["wave", `Wave 1 cap US$${WAVE1_CAP_USD}: committed ${wave.toFixed(4)} since ${WAVE1_START.slice(0, 10)} + worst case ${worstUsd.toFixed(4)}`]);
+    // A US$0 reservation passes no limit, even with spend already past one (as costCheck says: a free start fits).
+    const adds = worstUsd > 0;
+    if (adds && total + worstUsd > this.capUsd) passed.push(["experiment", `experiment cap US$${this.capUsd}: committed ${total.toFixed(4)} + worst case ${worstUsd.toFixed(4)}`]);
+    if (adds && run + worstUsd > runCapUsd) passed.push(["run", `run cap US$${runCapUsd}: committed ${run.toFixed(4)} + worst case ${worstUsd.toFixed(4)}`]);
+    if (adds && wave + worstUsd > WAVE1_CAP_USD) passed.push(["wave", `Wave 1 cap US$${WAVE1_CAP_USD}: committed ${wave.toFixed(4)} since ${WAVE1_START.slice(0, 10)} + worst case ${worstUsd.toFixed(4)}`]);
     if (passed.length) {
       if (!opts.overrideId) throw new BudgetExceeded(passed[0][1]);
       const why = this.overrideRefusal(opts.overrideId, opts.runKey, passed.map(([l]) => l), worstUsd, total);
@@ -174,6 +185,7 @@ export class SpendLedger {
   }
 
   settle(id: string, actualUsd: number, outcome: string) {
+    if (!Number.isFinite(actualUsd) || actualUsd < 0) throw new BudgetExceeded(`a settled cost must be a number of US$ at or above 0 (got ${actualUsd})`); // break M1
     this.append({ type: "settle", id, actual_usd: actualUsd, outcome, at: new Date().toISOString() });
   }
 

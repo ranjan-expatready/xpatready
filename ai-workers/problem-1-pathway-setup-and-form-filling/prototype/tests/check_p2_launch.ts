@@ -66,7 +66,8 @@ t("... could not read the answer key or family values, write outside the ledger,
 t("the stub caller was invoked exactly once", ev.stub_calls === 1);
 t(`the one experiment ledger at the fixed policy cap (US$${EXPERIMENT_CAP_USD}, AIW-D282) was used`, ev.ledger?.file === LEDGER && ev.ledger?.cap_usd === EXPERIMENT_CAP_USD);
 const lines = ledgerLines();
-t("the attempt reserved its worst case before the call and settled at zero (stub)", lines.length === 2 && lines[0].type === "reserve" && lines[0].caller === "stub" && lines[0].worst_usd > 0 && lines[1].type === "settle" && lines[1].actual_usd === 0);
+// P-179 break B1, QA-90 §9: the stub never spends, so it reserves US$0 (before, the paid worst case, which blocked a Continue).
+t("the attempt reserved before the call, at US$0 (a stub never spends), and settled at zero (stub)", lines.length === 2 && lines[0].type === "reserve" && lines[0].caller === "stub" && lines[0].worst_usd === 0 && lines[1].type === "settle" && lines[1].actual_usd === 0);
 t("the record carries the screened template hash and the AIW-D260 label", ev.screened === true && ev.template_sha256?.length === 64 && /prototype-only exception/.test(env4.label ?? ""));
 t("a stub pass bound to this exact path code is recorded", JSON.parse(readFileSync(join(P2, "runs", "stub-pass", "c1-fieldmap-imm5707.json"), "utf8")).path_code_sha256 === ev.path_code_sha256);
 

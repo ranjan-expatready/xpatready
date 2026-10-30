@@ -49,6 +49,8 @@ export function useOverride(overrideId: string, plan: { run_key: string; cost_ch
   const l = new SpendLedger(LEDGER_DIR);
   if (typeof overrideId !== "string" || !overrideId) fail("No such Continue was recorded. Look at the cost again.", HttpStatus.CONFLICT);
   // Compared with the plan before it is used, so a refusal here leaves the person's Continue unused.
+  // Break M2: spend that arrived since the Continue may take this start past the ceiling: no start then.
+  if (!plan.cost_check.ok && !plan.cost_check.can_continue) fail(plan.cost_check.words, HttpStatus.CONFLICT);
   const seen = l.override(overrideId);
   if (seen && seen.run_key === plan.run_key) {
     const missing = plan.cost_check.over.map((x) => x.limit).filter((x) => !seen.limits.includes(x));

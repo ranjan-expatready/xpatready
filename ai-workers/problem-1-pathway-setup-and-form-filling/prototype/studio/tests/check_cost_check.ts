@@ -88,6 +88,27 @@ const free = at(130, 0, 70);
 ok("C11.8 P-179 pass: a start that spends nothing fits even with spend past the cap and the wave (no dialog)", free.ok && !free.over.length && /^Fits/.test(free.words), free);
 ok("C11.8 P-179 fail: one cent of worst case with spend past the cap is over again (and past US$132: no Continue)", !at(130, 0.01).ok && !at(132, 0.01).can_continue);
 
+// ── Break B1 (CHECK 30 Oct): every live step runs a stub pass first. The stub never spends, so it reserves US$0 and passes
+// no cap, with spend past the experiment cap or a run past its own; a paid reservation is still refused there.
+const b1 = fresh(119.5);
+const stub = (() => { try { return b1.l.reserve("run-s", 1, 1.38, 5, "stub"); } catch (e) { return e as Error; } })();
+ok("C11.8 break B1 pass: past the experiment cap, a stub pass (US$0) is reserved, at US$0", typeof stub === "string" && b1.lines().find((x) => x.id === stub)?.worst_usd === 0, stub);
+ok("C11.8 break B1 pass: a stub pass bigger than the run cap is reserved too (it spends nothing)", typeof (() => { try { return b1.l.reserve("run-big", 1, 6, 5, "stub"); } catch (e) { return e; } })() === "string");
+ok("C11.8 break B1 pass: with spend past the cap a US$0 paid reservation (nothing to spend) passes no limit", typeof (() => { try { return fresh(121).l.reserve("run-z", 1, 0, 5, "paid"); } catch (e) { return e; } })() === "string");
+ok("C11.8 break B1 fail: the paid attempt after it is still refused without a Continue", throws(() => b1.l.reserve("run-s", 2, 1.38, 5, "paid"), BudgetExceeded, /^experiment cap US\$120/));
+ok("C11.8 break B1 fail: the stub's US$0 counts nothing: committed stays US$119.50", Math.abs(b1.l.committed() - 119.5) < 1e-9, b1.l.committed());
+
+// ── Break M1: a ledger line whose amount is not a number of US$ at or above 0 stops every reservation in words, never
+// switching the caps off (NaN) or lowering spend (below 0); settle refuses such an amount.
+for (const [what, line] of [["no amount", { type: "reserve", id: "x#1", run_id: "x", attempt: 1, at: "2026-10-29T00:00:00.000Z" }], ["a text amount", { type: "reserve", id: "x#1", run_id: "x", attempt: 1, worst_usd: "4", at: "2026-10-29T00:00:00.000Z" }], ["a negative amount", { type: "reserve", id: "x#1", run_id: "x", attempt: 1, worst_usd: -50, at: "2026-10-29T00:00:00.000Z" }], ["a negative settle", { type: "settle", id: "old#1", actual_usd: -100, outcome: "ok", at: "2026-10-29T00:00:00.000Z" }]] as const) {
+  const m = fresh(119); appendFileSync(join(m.dir, "spend.jsonl"), JSON.stringify(line) + "\n");
+  ok(`C11.8 break M1 fail: a ledger line with ${what} refuses a US$4 reservation at US$119 in words (not admitted, no TypeError)`, throws(() => m.l.reserve("run-m", 1, 4, 5, "paid"), BudgetExceeded, /amount is not a number of US\$ at or above 0/));
+}
+const m1 = fresh(100); const mr = m1.l.reserve("run-m", 1, 1, 5, "paid");
+ok("C11.8 break M1 fail: settle refuses a negative or non-number cost", throws(() => m1.l.settle(mr, -100, "ok"), BudgetExceeded, /at or above 0/) && throws(() => m1.l.settle(mr, NaN, "ok"), BudgetExceeded, /at or above 0/));
+m1.l.settle(mr, 0.5, "ok");
+ok("C11.8 break M1 pass: a clean ledger adds up as before (US$100 + a US$0.50 settle)", Math.abs(m1.l.committed() - 100.5) < 1e-9, m1.l.committed());
+
 // The shared contract and the engine say the same: the dialog's words are built from the same check.
 
 ok("C11.8 P-179 pass: the dialog shows spend so far against the cap, the worst case and what Continue allows", COST_WORDS.spent(exp) === "Spend so far US$116.00 of US$120.00" && COST_WORDS.worst(exp) === "At most US$5.00" && /allows this one run, up to US\$5\.00\. Total spend stays within US\$132\.00/.test(COST_WORDS.continueNote(exp)));
