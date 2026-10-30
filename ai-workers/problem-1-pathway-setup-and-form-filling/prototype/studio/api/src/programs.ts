@@ -11,11 +11,11 @@ import { AddLineBody, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateN
 import { manifest } from "../../engine/import.ts";
 import { acceptsOf, channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
-import { checkedOf, comparePaths, compareStatus, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
+import { checkedOf, comparePaths, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
 import { filedOf, progressFollows, setupProgress } from "../../engine/structure.ts";
 import { forViewer, setupChecklistOf, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
-import type { CardSetup, SetupChecklist, StepKey, ViewerChecklist } from "../../contracts/setup-checklist.ts";
+import type { CardSetup, ChipStatus, SetupChecklist, StepKey, ViewerChecklist } from "../../contracts/setup-checklist.ts";
 import type { ProposalKind } from "../../contracts/proposal-item.ts";
 import { PATHWAY_TYPE_LABEL, type PathwayType } from "../../contracts/structure.ts";
 import { diff, validate } from "../../engine/validate.ts";
@@ -56,6 +56,8 @@ export async function officialPagesOf(ids: string[]): Promise<Map<string, Offici
 export function cardSetup(c: SetupChecklist, actor: Actor): CardSetup {
   return { chip: c.chip, bar: c.bar, next: c.next, current: c.current, viewer: forViewer(c, actor), steps: c.steps.map(({ open: _open, ...s }) => s) };
 }
+/** The List's Progress sort (card v4): most urgent first. */
+const CHIP_RANK: Record<ChipStatus, number> = { NOT_READY: 0, IN_PROGRESS: 1, NOT_STARTED: 2, LIVE: 3, RETIRED: 4 };
 /** A name with no combination yet: Not started (or retired before it was set up). */
 const notStartedInput = (retired: boolean): SetupInput => ({ combinationId: null, retired, release: null, pages: { state: "no_record" }, people: { roles: 0, applicants: 0, saved: false, tier: "expert" },
   forms: { lines: 0, fromLibrary: 0, draftable: 0, unmapped: 0, sources: 0 }, proposals: {}, problems: [], documents: { lines: 0, rolesWithout: 0 }, questions: 0, held: 0, running: null, changes: 0, review: { stage: "submit", submittedBy: null, authors: [] } });
@@ -278,6 +280,7 @@ export class Programs {
     const needsYou = actor ? new Map(everyInPathway.map((r) => [r.leaf.nodeKey, !r.leaf.retired && !!forViewer(r.setup, actor).needsYou])) : null;
     const needsMe = (r: Row) => needsYou ? !!needsYou.get(r.leaf.nodeKey) : r.leaf.needsYou;
     const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? r.leaf.needs : filter === "live" ? live(r) : filter === "in_progress" ? inProgress(r) : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : filter === "not_started" ? notStarted(r) : filter === "in_setup" ? r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId : r.leaf.status === filter.toUpperCase());
+    const chipAt = new Map(searched.map((x) => [x.r.leaf.nodeKey, chipOf(x.r)]));
     const shown = new Map(searched.filter((x) => pass(x.r)).map((x) => [x.r.leaf.nodeKey, { ...x.r.leaf, needsYou: needsMe(x.r), matches: x.m, ...(actor ? { setup: cardSetup(x.r.setup, actor) } : {}) }]));
     const on = (list: Row[]) => list.filter((r) => !r.leaf.retired);
     const count = (list: Row[]) => ({ needs: list.filter((r) => r.leaf.needs).length, live: on(list).filter(live).length, all: on(list).length, ready: on(list).filter((r) => r.leaf.status === "READY").length, not_ready: on(list).filter((r) => r.leaf.status === "NOT_READY").length, in_setup: on(list).filter((r) => r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId).length, in_progress: on(list).filter(inProgress).length, not_started: on(list).filter(notStarted).length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
@@ -314,7 +317,10 @@ export class Programs {
       pathway: q.pathway, filter, requestedFilter: q.filter, fellBack, q: q.q, program: q.program, under: q.under, sort: q.sort, pathwayKey: pwKey,
       underPath: q.under ? underPath(nodes, q.under) : null,
       /** Layout v2: one flat list in Program › Category › Sub-category order (route steps in step order), or by status. */
-      rows: [...shown.values()].sort((x, y) => (q.sort === "path" ? 0 : (q.sort === "status" ? 1 : -1) * compareStatus(x, y)) || structureOrder(x, y)), programs,
+      // Card v4 (P-180): the Progress sort follows the chip the column shows (most urgent first: Not ready, In progress,
+      // Not started, Live, Retired). The old status had no rank for a Not started row (NaN), so the sort fell back to
+      // path order and ascending and descending were the same.
+      rows: [...shown.values()].sort((x, y) => (q.sort === "path" ? 0 : (q.sort === "status" ? 1 : -1) * ((CHIP_RANK[chipAt.get(x.nodeKey)!] ?? 0) - (CHIP_RANK[chipAt.get(y.nodeKey)!] ?? 0))) || structureOrder(x, y)), programs,
       pathways: [["INDIVIDUAL", "Retail"], ["CORPORATE", "Corporate and employers"]].map(([v, l]) => ({ value: v, label: l, combinations: rows.filter((r) => r.pathway === v && !r.leaf.retired).length })),
       counts: { ...count(searched.map((x) => x.r)), retired: everyInPathway.filter((r) => r.leaf.retired).length }, totals, tree, sections,
       otherPathwayMatches: words ? rows.filter((r) => r.pathway === other && !r.leaf.retired && hit(r).length).length : 0,

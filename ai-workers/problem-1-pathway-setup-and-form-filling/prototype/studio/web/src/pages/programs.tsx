@@ -566,7 +566,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, needsOn
         <span role="columnheader">Combination</span>
         <span role="columnheader" className="sr-only sm:not-sr-only">Trail</span>
         <span role="columnheader" aria-sort={sort === "status" ? "ascending" : sort === "-status" ? "descending" : "none"} className="sr-only sm:not-sr-only">
-          <Tip tip={sort === "path" ? "Sort by progress: Not ready first, then In setup, then Live" : sort === "status" ? "Sort by progress, Live first" : "Back to Program structure order"}>
+          <Tip tip={sort === "path" ? "Sort by progress: In progress first, then Not started, then Live" : sort === "status" ? "Sort by progress, Live first" : "Back to Program structure order"}>
             <button type="button" onClick={onSort} className="inline-flex items-center gap-1 rounded outline-none hover:text-text focus-visible:ring-[3px] focus-visible:ring-ring/50">Progress <SortIcon className="size-3.5" aria-hidden /></button>
           </Tip>
         </span>

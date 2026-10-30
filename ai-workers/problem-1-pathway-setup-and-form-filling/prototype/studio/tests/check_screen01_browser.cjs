@@ -136,13 +136,17 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await state("programs-live");
 
   await p.locator('[data-status-chip="all"]').click(); await idle();
-  const rank = { NOT_STARTED: 1, IN_PROGRESS: 1, NOT_READY: 0, LIVE: 2 };
+  const rank = { NOT_READY: 0, IN_PROGRESS: 1, NOT_STARTED: 2, LIVE: 3 }; // the API's chip order (card v4)
   await grid().getByRole("button", { name: /^Progress/ }).click(); await idle();
   const sortState = await grid().getByRole("columnheader", { name: /Progress/ }).getAttribute("aria-sort");
-  const firstState = await grid().locator('[role="row"][data-node]').first().getAttribute("data-state");
-  step("P-49: the Progress column is sortable (not Live first, then Live) and says so to screen readers", sortState === "ascending" && rank[firstState] < 2 && p.url().includes("sort=status"), `${sortState} ${firstState}`);
+  // Card v4 (P-180): rows sort inside each Program band, so the order is checked band by band.
+  const bands = () => grid().locator('[role="row"][data-group], [role="row"][data-node]').evaluateAll((rs) => { const out = []; for (const r of rs) { if (r.hasAttribute("data-group")) out.push([]); else out[out.length - 1]?.push(r.getAttribute("data-state")); } return out.filter((b) => b.length); });
+  const asc = await bands();
+  const sortedBy = (bs, f) => bs.every((b) => b.every((s, i) => i === 0 || f(rank[b[i - 1]], rank[s])));
+  step("P-49: the Progress column is sortable (not Live first, then Live, in every Program band) and says so to screen readers", sortState === "ascending" && sortedBy(asc, (a, b) => a <= b) && asc.some((b) => new Set(b).size > 1) && p.url().includes("sort=status"), `${sortState} ${JSON.stringify(asc)}`);
   await grid().getByRole("button", { name: /^Progress/ }).click(); await idle();
-  step("P-49: sorting again puts Live first (descending)", (await grid().locator('[role="row"][data-node]').first().getAttribute("data-state")) === "LIVE" && (await grid().getByRole("columnheader", { name: /Progress/ }).getAttribute("aria-sort")) === "descending");
+  const desc = await bands();
+  step("P-49: sorting again puts Live first in every Program band (descending)", sortedBy(desc, (a, b) => a >= b) && (await grid().getByRole("columnheader", { name: /Progress/ }).getAttribute("aria-sort")) === "descending", JSON.stringify(desc));
   await state("programs-all-sorted-by-status");
   await grid().getByRole("button", { name: /^Progress/ }).click(); await idle();
 
@@ -166,7 +170,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
 
   const types = p.getByRole("group", { name: "Pathway type" });
   await types.getByRole("button", { name: /^Corporate and employers/ }).click(); await row("High-wage position").waitFor(); await idle();
-  step("item 5: Corporate shows the demo names (LMIA › High-wage position, Low-wage position, Global Talent Stream, In-home caregiver)", await row("High-wage position").count() === 1 && await row("Low-wage position").count() === 1 && await row("Global Talent Stream").count() === 1 && await row("In-home caregiver").count() === 1 && (await row("High-wage position").textContent()).includes("› LMIA › High-wage position"));
+  step("item 5: Corporate shows the demo names (LMIA › High-wage position, Low-wage position, Global Talent Stream, In-home caregiver)", await row("High-wage position").count() === 1 && await row("Low-wage position").count() === 1 && await row("Global Talent Stream").count() === 1 && await row("In-home caregiver").count() === 1 && (await row("High-wage position").locator("[data-trail]").textContent()).endsWith("› LMIA") && (await row("High-wage position").locator("[data-name]").textContent()) === "High-wage position", await row("High-wage position").innerText());
   await state("programs-corporate");
   await types.getByRole("button", { name: /^Retail/ }).click(); await idle();
 
@@ -210,7 +214,8 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await p.getByRole("region", { name: /Missing before firms can use it/ }).locator("li").first().waitFor();
   const vvHeadStep = (await p.locator("main [data-next-step]").first().textContent()).trim();
   const vvMiss = await p.getByRole("region", { name: /Missing before firms can use it/ }).locator("li").allTextContents();
-  step("item 1: Visitor visa — row step = header step = the missing list's one shared step (said once); sources and set-up forms counted apart", vvRowStep === "Resume setup" && vvHeadStep === "Add 1 form from the library" && vvMiss[0]?.trim() === "2 forms attached as sources, 0 set up." && (await p.locator("[data-shared-step]").textContent()) === `Next step for all of these: ${vvRowStep}.` && !vvMiss.some((x) => /Next step/.test(x)) && !vvMiss.some((x) => /No forms yet|Add sources/.test(x)), `${vvRowStep} | ${vvHeadStep} | ${vvMiss.join(" | ")}`);
+  const sharedStep = (await p.locator("[data-shared-step]").textContent().catch(() => "")) ?? "";
+  step("item 1 P-180: Visitor visa — the row says Resume setup; header step = the missing list's one shared step (said once); sources and set-up forms counted apart", vvRowStep === "Resume setup" && vvHeadStep === "Add 1 form from the library" && vvMiss[0]?.trim() === "2 forms attached as sources, 0 set up." && sharedStep === `Next step for all of these: ${vvHeadStep}.` && !vvMiss.some((x) => /Next step/.test(x)) && !vvMiss.some((x) => /No forms yet|Add sources/.test(x)), `${vvRowStep} | ${vvHeadStep} | ${sharedStep} |${vvMiss.join(" | ")}`);
   // Lead check items 3 and 5: no warnings on a combination with no setup; the Questions tile says what it counts.
   const vvTiles = await p.locator("main").textContent();
   step("item 3: a combination with no setup shows no warnings (\"no problems\")", !/\d+ warnings?/.test(vvTiles) && /no problems/.test(vvTiles));
@@ -297,9 +302,10 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("item 3: the warnings on a Live row are this combination's own and link to Review and release", warnCount === ownWarnings && (warnCount === 0 || (await warnLink.getAttribute("href")).endsWith("/review")), `${warnCount} shown, ${ownWarnings} own`);
   await state("combination-page-live-unverified-source-held");
 
-  // See N missing → the combination page with the missing list.
-  await p.goto(`${BASE}/?f=all`); await idle();
-  await row("Spouse of a student").getByRole("button", { name: /^See \d+ missing$/ }).click(); await p.waitForURL(/show=missing/); await idle();
+  // The combination page with the missing list (card v4, P-180: the card's one button no longer says "See N missing"; the
+  // list lives on the combination's page, reached at its address).
+  const ssId = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.label === "Spouse of a student").combinationId;
+  await p.goto(`${BASE}/c/${ssId}?show=missing`); await idle();
   await p.getByRole("region", { name: /Missing before firms can use it|Why firms cannot use it/ }).locator("li").first().waitFor(); // the list arrives with the page summary
   const miss = await p.getByRole("region", { name: /Missing before firms can use it|Why firms cannot use it/ }).locator("li").allTextContents();
   step("See N missing opens the combination page with each missing item", miss.length >= 1, miss.join(" | "));
@@ -316,9 +322,10 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await state("combination-page-not-started");
   await p.goto(`${BASE}/?f=all`); await idle();
   await as("user-B");
-  const muted = await row("Extend stay in Canada").locator("[data-step-cell] button").count();
+  // Card v4 (P-180): anyone without the author duty gets Open, never Start setup; opening a not-started row says who starts it.
+  const muted = await row("Extend stay in Canada").locator("[data-step-cell]").innerText();
   await row("Extend stay in Canada").click(); await idle();
-  step("non-author: author-only next steps are shown, not offered; a not-started row says who starts it", muted === 0 && /A configuration author starts it/.test(await p.locator('[aria-live="polite"]').textContent()) && !p.url().includes("/c/"));
+  step("non-author P-180: a not-started row offers Open, never Start setup, and says who starts it", muted.trim() === "Open" && await row("Extend stay in Canada").locator("[data-start-setup]").count() === 0 && /A configuration author starts it/.test(await p.locator('[aria-live="polite"]').textContent()) && !p.url().includes("/c/"), muted);
   await state("programs-non-author", { viewport: true });
   await p.goto(`${BASE}/?f=all`); await idle();
   await row("Visitor visa").click(); await p.waitForURL(/\/c\//); await idle();
@@ -368,7 +375,8 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await p.setViewportSize({ width: 1440, height: 900 });
   // ======================================================== P-74: forms decisions visible (C1.6; P-107 Online stays a choice, W1-02)
   await p.goto(`${BASE}/?f=all`); await idle();
-  step("C1.6 BR-14 (S2): the row says how the combination is filed, in the card's words (Filed: PDF)", /Filed: PDF(?! only)/.test(await row("With an LMIA").textContent()), await row("With an LMIA").textContent());
+  // Card v4 (P-180): the row carries five things only, so "Filed:" moved off it; the Forms tab says how it is filed (next).
+  step("C1.6 P-180: the row no longer says how the combination is filed (the Forms tab does)", !/Filed:/.test(await row("With an LMIA").textContent()), await row("With an LMIA").textContent());
   await p.goto(`${BASE}/c/${wpId}/forms`); await idle();
   const forms = p.getByRole("tabpanel"); // S5: the channels moved from the Overview to the Forms tab
   step("C1.6: the combination page shows the filing method and each line's channel", /Filing: PDF only/.test(await forms.textContent()) && await forms.getByRole("combobox", { name: /^How IMM \d+.* is filed$/ }).count() >= 6);

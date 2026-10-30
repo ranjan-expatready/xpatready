@@ -141,17 +141,19 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await card.locator("[data-card-act] button").click(); await p.waitForURL(/\/c\//, { timeout: 10000 }).catch(() => {});
     step("QA-48 (card v4): Open on the retired card opens its combination page", p.url().includes(`/c/${visitor}`), p.url().replace(BASE, ""));
     sql(`update combination set retired_at = null where id = '${visitor}'`);
-    const corpRow = ((await api("/catalogue?pathway=CORPORATE&filter=all")).body?.rows ?? []).find((r) => r.combinationId);
-    const corp = [corpRow?.combinationId, corpRow?.label];
-    step("setup: the sample has a Corporate combination to retire", !!corpRow, corpRow?.label);
-    sql(`update combination set retired_at = now() where id = '${corp[0]}'; insert into audit_event (id, workspace_id, actor, action, entity, entity_key, summary) select gen_random_uuid(), workspace_id, 'user-B', 'retired', 'combination', id::text, 'Approver retired a Corporate combination (check)' from combination where id = '${corp[0]}'`);
+    // Card v4: a retired combination that was set up offers Open (above); a retired name never set up has nothing to
+    // open, so its card links to Program structure on its own tab, where it is restored (P-116).
+    const corpRow = ((await api("/catalogue?pathway=CORPORATE&filter=all")).body?.rows ?? []).find((r) => !r.combinationId);
+    const corp = [corpRow?.nodeKey, corpRow?.label];
+    step("setup: the sample has a Corporate name not set up yet, to retire", !!corpRow, corpRow?.label);
+    sql(`update program_def set retired_at = now(), retired_by = 'user-B' where program_node_key = '${corp[0]}'; insert into audit_event (id, workspace_id, actor, action, entity, entity_key, summary) select gen_random_uuid(), workspace_id, 'user-B', 'retired', 'program', program_node_key, 'Approver retired a Corporate name (check)' from program_def where program_node_key = '${corp[0]}'`);
     await go("/?pw=CORPORATE&f=retired");
     const corpCard = p.locator(`article[data-label="${corp[1]}"]`);
-    const href = await corpCard.getByRole("link", { name: "Restore on Program structure" }).getAttribute("href");
-    step("QA-48: a retired Corporate combination's Restore opens Program structure on Corporate and employers", href === "/structure?r=1&t=CORPORATE", `${corp[1]}: ${href}`);
-    await corpCard.getByRole("link", { name: "Restore on Program structure" }).click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(400);
-    step("QA-48: there it is listed (Show retired on), so it can be restored", (await main()).includes(corp[1]), p.url().replace(BASE, ""));
-    sql(`update combination set retired_at = null where id = '${corp[0]}'`);
+    const href = await corpCard.getByRole("link", { name: "Restore on Program structure" }).getAttribute("href", { timeout: 10000 }).catch(() => null);
+    step("QA-48 (card v4): a retired Corporate name never set up links Restore to Program structure on Corporate and employers", href === "/structure?r=1&t=CORPORATE", `${corp[1]}: ${href} / ${(await corpCard.innerText().catch(() => "no card")).replace(/\n/g, " / ")}`);
+    if (href) { await corpCard.getByRole("link", { name: "Restore on Program structure" }).click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(400); }
+    step("QA-48: there it is listed (Show retired on), so it can be restored", !!href && (await main()).includes(corp[1]), p.url().replace(BASE, ""));
+    sql(`update program_def set retired_at = null, retired_by = null where program_node_key = '${corp[0]}'`);
 
     step("no page error", !errs.length, errs.join(" | "));
     const all = [ov, rel, act, ck, sc, dt, rv].join("\n");
