@@ -168,7 +168,16 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   for (const [k, id, label] of KINDS) {
     const a = new Map(((prev?.[k] as any[]) ?? []).map((x) => [id(x), x])), b = new Map(((next[k] as any[]) ?? []).map((x) => [id(x), x]));
     for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.question_text ?? x.fact ?? key });
-      else if (bare(a.get(key)) !== bare(x)) out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key });
+      else if (bare(a.get(key)) !== bare(x)) {
+        // C4.9 (P-97): who fills a question for every combination is named once, in words, for the immigration expert.
+        const was = a.get(key);
+        if (k === "placements" && was.collected_from !== x.collected_from) {
+          const fills = (v: string) => (v === "staff_working_view" ? "the case officer" : v === "client_questionnaire" ? "the client" : v.replace(/_/g, " "));
+          out.push({ kind: "Who fills a question", key, change: "changed", origin: x.origin, needs_sme: true, label: `${factWords(next, x.fact)}: filled by ${fills(x.collected_from)}, was ${fills(was.collected_from)} (shared library, every combination)` });
+          if (bare({ ...was, collected_from: null }) === bare({ ...x, collected_from: null })) continue;
+        }
+        out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key });
+      }
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? key });
   }
   const boxes = (s: Snapshot | null) => new Map<string, any>((s?.field_maps ?? []).flatMap((m: any) => m.entries.map((e: any) => [`${m.form_edition}|${e.data_path}`, e] as [string, any])));

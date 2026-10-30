@@ -42,3 +42,25 @@ export function linesNamingRemoved(before: { role: string; max: number }[], afte
   const removed = before.filter((p) => p.max > 0 && !kept.has(p.role)).map((p) => p.role);
   return lines.filter((l) => (NAMES[l.who] ?? []).some((r) => removed.includes(r))).map((l) => ({ ...l, roles: (NAMES[l.who] ?? []).filter((r) => removed.includes(r)) }));
 }
+
+type GuideLine = { role: string; min: number; max: number; applies: boolean; quote: string; why: string | null };
+/** QA-84 (Who can be › AI now): the provider's structured outputs refuse numeric limits in a schema, so how many
+ *  (0 to 9, the least no more than the most) is checked here after the answer is read. A line outside them is dropped
+ *  with its reason, never clamped. */
+export const COUNT_LIMIT = 9;
+export function checkCounts<T extends GuideLine>(a: { people: T[] }): { kept: T[]; dropped: { role: string; why: string }[] } {
+  const ok = (n: unknown) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= COUNT_LIMIT;
+  const kept: T[] = [], dropped: { role: string; why: string }[] = [];
+  for (const p of a.people ?? []) {
+    if (ok(p.min) && ok(p.max) && p.min <= p.max) kept.push(p);
+    else dropped.push({ role: p.role, why: `AI gave how many as ${p.min} to ${p.max}: it must be a whole number from 0 to ${COUNT_LIMIT}, the least no more than the most. Not proposed.` });
+  }
+  return { kept, dropped };
+}
+/** QA-88 (runtime part): what a person reads when Who can be's AI step cannot run: plain words, never the provider's
+ *  or the launcher's own text (that goes to the server log). */
+export const AI_FAILED = {
+  refused: "The guarded AI route refused this job before any call, so nothing was spent. Use rules only, or ask the Lead to check the AI settings.",
+  notRun: "The AI service did not answer this time, so nothing was proposed. Try again later, or use rules only.",
+  unusable: "The AI answered, but not in the agreed shape, so nothing was proposed.",
+} as const;

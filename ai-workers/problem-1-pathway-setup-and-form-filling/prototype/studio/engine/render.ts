@@ -182,7 +182,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     return people0.map((person) => {
       const c = evalCondition(s, known, d.condition, kind === "CASE" ? "case" : person);
       if (c.applies === "cannot_tell") addDecider(c.missing, person, `whether "${d.document_type}" is needed`);
-      return { lineage: d.lineage, requirement: d.document_type, person, person_label: label(person), base_or_conditional: d.base_or_conditional, provided_by: d.provided_by, applies: c.applies, missing: c.missing,
+      return { lineage: d.lineage, requirement: d.document_type, document_type_key: (d as { document_type_key?: string }).document_type_key ?? null, person, person_label: label(person), base_or_conditional: d.base_or_conditional, provided_by: d.provided_by, applies: c.applies, missing: c.missing,
         status: c.applies === false ? "Not needed" : c.applies === "cannot_tell" ? "Cannot tell yet" : "Needed", why: d.condition_plain ?? (d.base_or_conditional === "base" ? "required for every person it names" : d.note ?? ""), source_quote: d.source_quote, origin: d.origin, item_status: d.status };
     });
   });

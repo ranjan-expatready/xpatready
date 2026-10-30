@@ -1,10 +1,12 @@
 // S5 Preview (walkthrough v2 S5: "one sample family, person chips, three columns"): pick a Sample family and a person,
 // and see what the client is asked (the runtime's own renderer, read-only), the documents and the forms, each saying why.
+// M2 item 4 (C4.3, C4.6): per person, the three sets (pre-qualification; what the client is asked once documents fill
+// theirs; the case officer's view, each answer with its source) and the forms grouped by how each is filed.
 // The answers that change what applies can be tried. Family, person and tried answers live in the address, so a view can
 // be shared and Back works. One request per view: GET /combinations/:id/workspace?tab=preview&family=&person=&tweaks=.
 import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import type { PreviewView } from "../../../../contracts/workspace";
+import { OUTPUT_GROUPS, type PreviewView } from "../../../../contracts/workspace";
 import { PreviewQuestions } from "@/runtime/questionnaire";
 import { Notice, Pill } from "@/components/ui/controls";
 import { cn } from "@/lib/utils";
@@ -13,6 +15,14 @@ export function usePreviewParams() {
   const [sp] = useSearchParams();
   return { family: sp.get("family") ?? "", person: sp.get("person") ?? "", tweaks: sp.get("tweaks") ?? "", release: sp.get("release") === "1" ? "1" : "" };
 }
+
+/** C4.3 (board v2 frame 4): the three sets for one person, side by side from 1280 px, one at a time with a switch below. */
+const SETS = [
+  { key: "pqr", title: (p: PreviewView) => `Pre-qualification (${p.sets.pqr.length})` },
+  { key: "sqr", title: (p: PreviewView) => `What the client is asked (${p.sets.sqr.asked})` },
+  { key: "agent", title: (p: PreviewView) => `Case officer's view (${p.sets.agent.questions})` },
+] as const;
+type SetKey = (typeof SETS)[number]["key"];
 
 const chip = (on: boolean) => cn("min-h-9 rounded-full border px-3 py-1 text-sm", on ? "border-primary bg-primary/10 font-medium text-text-link" : "border-border bg-surface-raised text-text-muted hover:bg-text/5");
 
@@ -25,6 +35,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
   const who = p.people.find((x) => x.subjectId === p.person) ?? p.people[0];
   const mine = p.tweaks.filter((t) => t.subjectId === who.subjectId || (who.subjectId === "principal" && t.subjectId === "case"));
   const release = sp.get("release") === "1";
+  const shown: SetKey = SETS.some((x) => x.key === sp.get("set")) ? (sp.get("set") as SetKey) : "sqr";
   return (
     <div className="space-y-4" aria-busy={fetching || undefined} data-preview>
       <div className="flex flex-wrap items-center gap-2">
@@ -53,11 +64,52 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
           </div>
         </details>
       ) : null}
-      <div className="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)_minmax(0,1fr)]">
-        <section aria-labelledby="pv-q" className="space-y-2">
-          <h2 id="pv-q" className="font-semibold">What {who.label} is asked</h2>
+      <div role="radiogroup" aria-label="Which set" className="flex flex-wrap gap-1 xl:hidden" data-set-switch>
+        {SETS.map((x) => <button key={x.key} type="button" role="radio" aria-checked={shown === x.key} className={chip(shown === x.key)} onClick={() => set("set", x.key === "sqr" ? null : x.key)} data-set-button={x.key}>{x.title(p)}</button>)}
+      </div>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)_minmax(0,1fr)]" data-sets>
+        <section aria-labelledby="pv-pqr" className={cn("rounded-xl border border-border bg-surface-raised p-4", shown !== "pqr" && "hidden xl:block")} data-set="pqr">
+          <h2 id="pv-pqr" className="font-semibold">{SETS[0].title(p)}</h2>
+          <p className="mt-1 text-xs text-text-muted">What a prospect is asked first, before an application starts. They confirm these answers later in the full questionnaire; no result is shown to them.</p>
+          {!p.sets.pqr.length ? <p className="mt-2 text-sm text-text-muted" data-pqr-empty>No pre-qualification question is ticked for {who.label}. Tick them on the Questionnaires tab.</p> : (
+            <ul className="mt-2 space-y-1.5 text-sm">{p.sets.pqr.map((q) => <li key={q.fact} className="flex flex-wrap items-center gap-1.5" data-pqr-fact={q.fact}><span>{q.label}</span><Pill tone={q.from === "Client" ? "neutral" : "info"}>{q.from}</Pill></li>)}</ul>
+          )}
+        </section>
+        <section aria-labelledby="pv-q" className={cn("space-y-2", shown !== "sqr" && "hidden xl:block")} data-set="sqr">
+          <h2 id="pv-q" className="font-semibold">What {who.label} is asked ({p.sets.sqr.asked})</h2>
+          {p.sets.sqr.fromDocuments.length ? (
+            <div className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm" data-from-documents>
+              <p className="font-medium">From {who.label}'s documents</p>
+              <ul className="mt-1 space-y-1">{p.sets.sqr.fromDocuments.map((d) => (
+                <li key={d.document} data-from-document={d.document}>
+                  <details><summary className="cursor-pointer">{d.document} fills {d.facts.length} answer{d.facts.length === 1 ? "" : "s"}</summary><p className="mt-1 text-xs text-text-muted">{d.facts.join(" · ")}</p></details>
+                </li>
+              ))}</ul>
+              <p className="mt-1 text-xs text-text-muted">Not asked while the document is on the checklist; if it is missing or cannot be read, the question is asked instead.</p>
+            </div>
+          ) : null}
           <div className="rounded-[1.75rem] border-8 border-text/80 bg-surface p-3"><PreviewQuestions view={p.questionnaire} person={who.subjectId} /></div>
         </section>
+        <section aria-labelledby="pv-agent" className={cn("rounded-xl border border-border bg-surface-raised p-4", shown !== "agent" && "hidden xl:block")} data-set="agent">
+          <h2 id="pv-agent" className="font-semibold">{SETS[2].title(p)}</h2>
+          <p className="mt-1 text-xs text-text-muted">Every question for {who.label}, with where its answer comes from. The same count as the Questionnaires tab.</p>
+          <div className="mt-2 max-h-[36rem] space-y-3 overflow-y-auto pr-1" tabIndex={0} role="region" aria-label={`Every question for ${who.label}`}>
+            {p.sets.agent.sections.map((x) => (
+              <div key={`${x.about}|${x.section}`} data-agent-section={x.section}>
+                <h3 className="text-sm font-medium">{x.title}{x.about === "The application" ? <span className="font-normal text-text-muted"> (the application)</span> : null}</h3>
+                <ul className="mt-1 space-y-1 text-sm">{x.questions.map((q) => (
+                  <li key={q.fact} className="flex flex-wrap items-center gap-1.5" data-agent-fact={q.fact}>
+                    <span className={q.hidden ? "text-text-muted" : undefined}>{q.label}</span>
+                    <Pill tone={q.from.startsWith("Document") ? "info" : q.from === "Case officer" ? "warn" : "neutral"}>{q.from}</Pill>
+                    {q.hidden ? <span className="text-xs text-text-muted">hidden by a rule for this family</span> : null}
+                  </li>
+                ))}</ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         <section aria-labelledby="pv-d" className="rounded-xl border border-border bg-surface-raised p-4">
           <h2 id="pv-d" className="font-semibold">Documents ({p.documents.length})</h2>
           {!p.documents.length ? <p className="mt-2 text-sm text-text-muted">No document is needed from this person for this family.</p> : (
@@ -66,15 +118,19 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
         </section>
         <section aria-labelledby="pv-f" className="rounded-xl border border-border bg-surface-raised p-4">
           <h2 id="pv-f" className="font-semibold">Forms ({p.forms.length})</h2>
-          {!p.forms.length ? <p className="mt-2 text-sm text-text-muted">No form applies to this person for this family.</p> : (
-            <ul className="mt-2 space-y-2 text-sm">{p.forms.map((f) => (
-              <li key={f.form} data-preview-form={f.form}>
-                <span className="mono font-medium">{f.form}</span> <span className="text-text-muted">{f.title}</span>
-                <span className="ml-1.5 inline-flex gap-1"><Pill tone={f.channel === "ONLINE" ? "ai" : f.channel === "PAPER" ? "warn" : "neutral"}>{f.channelWords}</Pill>{f.noRule ? <Pill tone="warn">Cannot tell yet: no rule</Pill> : f.applies === "cannot_tell" ? <Pill tone="warn">Cannot tell yet</Pill> : null}</span>
-                <br /><span className="text-xs text-text-muted">{f.why}</span>
-              </li>
-            ))}</ul>
-          )}
+          <p className="mt-1 text-xs text-text-muted">What {who.label} gets, by how each form is filed.</p>
+          {!p.forms.length ? <p className="mt-2 text-sm text-text-muted">No form applies to this person for this family.</p> : OUTPUT_GROUPS.filter((g) => p.forms.some((f) => f.group === g.key)).map((g) => (
+            <div key={g.key} className="mt-3" data-output-group={g.key}>
+              <h3 className="text-sm font-medium">{g.title}</h3>
+              <ul className="mt-1 space-y-2 text-sm">{p.forms.filter((f) => f.group === g.key).map((f) => (
+                <li key={f.form} data-preview-form={f.form}>
+                  <span className="mono font-medium">{f.form}</span> <span className="text-text-muted">{f.title}</span>
+                  <span className="ml-1.5 inline-flex gap-1">{g.key === "APPLICATION" || g.key === "COUPLE" ? <Pill tone={f.channel === "ONLINE" ? "ai" : f.channel === "PAPER" ? "warn" : "neutral"}>{f.channelWords}</Pill> : null}{f.noRule ? <Pill tone="warn">Cannot tell yet: no rule</Pill> : f.applies === "cannot_tell" ? <Pill tone="warn">Cannot tell yet</Pill> : null}</span>
+                  <br /><span className="text-xs text-text-muted">{f.why}</span>
+                </li>
+              ))}</ul>
+            </div>
+          ))}
         </section>
       </div>
       {p.questionnaire.summary.not_asked ? <Notice tone="info">{p.questionnaire.summary.not_asked} question{p.questionnaire.summary.not_asked === 1 ? " is" : "s are"} placed in a selected section but not asked of this family: no form reads them and they decide nothing.</Notice> : null}

@@ -41,7 +41,7 @@ export function useFactSources(id: string) {
 }
 export function useRefreshSources(id: string) {
   const qc = useQueryClient();
-  return () => { for (const k of [["fact-sources", id], ["combination", id], ["combination-summary", id], ["config", id], ["draft"], ["preview"]]) void qc.invalidateQueries({ queryKey: k }); };
+  return () => { for (const k of [["fact-sources", id], ["pqr-country", id], ["combination", id], ["combination-summary", id], ["config", id], ["draft"], ["preview"]]) void qc.invalidateQueries({ queryKey: k }); };
 }
 
 /** The strip (C4.10, P-130): the full form = from documents + client answers + case officer enters, with pre-qualification
@@ -69,7 +69,7 @@ export function SourceStrip({ v }: { v: FactSourcesView | undefined }) {
   );
 }
 
-export type Filter = "all" | AnswerSource | "needs";
+export type Filter = "all" | AnswerSource | "needs" | "pqr";
 /** Source chips and "Needs you" for one person role (EXPERIENCE §0). */
 export function SourceChips({ rows, needs, value, onChange }: { rows: FactSourceRow[]; needs: number; value: Filter; onChange: (f: Filter) => void }) {
   const n = (s: AnswerSource) => rows.filter((r) => r.source === s).length;
@@ -79,7 +79,7 @@ export function SourceChips({ rows, needs, value, onChange }: { rows: FactSource
   );
   return (
     <div role="group" aria-label="Where it comes from" className="flex flex-wrap gap-1.5">
-      {chip("all", "All sources")}{chip("DOCUMENT", `Document ${n("DOCUMENT")}`)}{chip("CLIENT", `Client ${n("CLIENT")}`)}{chip("AGENT", `Case officer ${n("AGENT")}`)}{chip("needs", `Needs you · ${needs}`)}
+      {chip("all", "All sources")}{chip("DOCUMENT", `Document ${n("DOCUMENT")}`)}{chip("CLIENT", `Client ${n("CLIENT")}`)}{chip("AGENT", `Case officer ${n("AGENT")}`)}{chip("pqr", `Pre-qualification ${rows.filter((r) => r.prequalification).length}`)}{chip("needs", `Needs you · ${needs}`)}
     </div>
   );
 }
@@ -209,10 +209,10 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
             </fieldset>
             {needsWhy ? (
               <label className="block text-xs font-medium" data-officer-why>Why the case officer enters it <span className="font-normal text-text-muted">(required; shown on the row and to the second person at release)</span>
-                <Textarea className="mt-1 min-h-14" value={officerWhy} disabled={!editable} onChange={(e) => setOfficerWhy(e.target.value)} aria-invalid={error?.field === "sourceReason" ? true : undefined} />
+                <Textarea className="mt-1 min-h-14" value={officerWhy} disabled={!editable} onChange={(e) => setOfficerWhy(e.target.value)} aria-invalid={error?.field === "sourceReason" ? true : undefined} aria-describedby={error?.field === "sourceReason" ? "officer-why-error" : undefined} data-officer-why-box />
               </label>
             ) : null}
-            {error?.field === "source" || error?.field === "documentTypeKey" || error?.field === "sourceReason" ? <p role="alert" className="text-text-danger" data-drawer-error>{error.message}</p> : null}
+            {error?.field === "source" || error?.field === "documentTypeKey" || error?.field === "sourceReason" ? <p role="alert" id={error.field === "sourceReason" ? "officer-why-error" : undefined} className="text-text-danger" data-drawer-error>{error.message}</p> : null}
             <p className="text-xs" data-fallback>{f.placed ? <span className="text-text-ok">✓ Fallback question reachable{section ? ` in ${section}` : ""}: the client is asked if the document is missing or cannot be read.</span> : <span className="text-text-warn">No fallback question: if the document is missing or cannot be read, nobody is asked.</span>}</p>
             {f.also.length ? <p className="text-xs text-text-muted" data-also>Also supplied by: {f.also.map((x) => x.name).join(", ")} (information only).</p> : null}
             <p className="rounded-lg bg-surface p-2 text-xs text-text-muted">Changing it here is an override for this combination only, reviewed in this combination's release. The library default stays.</p>
@@ -230,6 +230,7 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
             <p className="text-xs text-text-muted">The prospect's answer is their own. The client questionnaire shows it as "please confirm"; a document read later is compared with it, and a difference is a check, not an overwrite.</p>
           </section>
         ) : null}
+        {f ? <WhoFills f={f} canAuthor={canAuthor} refresh={refresh} /> : null}
         <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-2" data-question-details>
           <dt className="text-text-muted">When it is asked</dt><dd>{q?.onlyIf ?? "Always"}{q ? (q.required ? " · required" : " · optional") : ""}</dd>
           {q ? <><dt className="text-text-muted">Kind of answer</dt><dd>{TYPE_WORDS[q.answerType] ?? q.answerType} · from the library</dd></> : null}
@@ -237,10 +238,54 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
           <dt className="text-text-muted">Used by</dt><dd>{(f?.forms ?? q?.neededBy ?? []).join(", ") || "No form: it decides what applies"}</dd>
           {q ? <><dt className="text-text-muted">Used in</dt><dd>{q.whereUsed} combination{q.whereUsed === 1 ? "" : "s"}</dd></> : null}
           <dt className="text-text-muted">Status and history</dt><dd data-drawer-status>{status}</dd>
-          <dt className="text-text-muted">System name</dt><dd><Link className="mono text-text-link underline" to={`/library/fields/${encodeURIComponent(q?.fact ?? f?.fact ?? "")}`}>{q?.fact ?? f?.fact}</Link><p className="text-xs text-text-muted">{SAY.library}</p></dd>
+          {/* QA-94: the system name stays behind the library link, never on screen. */}
+          <dt className="text-text-muted">In the library</dt><dd><Link className="text-text-link underline" to={`/library/fields/${encodeURIComponent(q?.fact ?? f?.fact ?? "")}`} data-library-link>Open this answer in the shared library</Link><p className="text-xs text-text-muted">{SAY.library}</p></dd>
         </dl>
       </div>
     </Panel>
+  );
+}
+
+const FILLS_WORD = { CLIENT: "the client", CASE_OFFICER: "the case officer" } as const;
+/** C4.9 (P-97): who fills the question for every combination, the shared library's default. Changed only as a library
+ *  change: proposed here with a reason, approved on To review by a second person, out with the next release. */
+function WhoFills({ f, canAuthor, refresh }: { f: FactSourceRow; canAuthor: boolean; refresh: () => void }) {
+  const [open, setOpen] = React.useState(false);
+  const [why, setWhy] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const lib = f.fills.library, ch = f.fills.change;
+  const to = lib === "CLIENT" ? "CASE_OFFICER" : "CLIENT";
+  const send = async () => {
+    setBusy(true); setError(null);
+    try { await api(`/library/fields/${encodeURIComponent(f.fact)}/fills`, { method: "POST", json: { to, reason: why.trim() } }); setOpen(false); setWhy(""); refresh(); }
+    catch (e) { setError((e as ApiError).message); }
+    finally { setBusy(false); }
+  };
+  return (
+    <section aria-labelledby="d-fills" className="space-y-2" data-who-fills>
+      <h3 id="d-fills" className="font-semibold">Who fills it, for every combination</h3>
+      {f.clientOnly ? <p className="flex items-center gap-1 text-xs text-text-muted" data-fills-locked><Lock className="size-3.5" aria-hidden /> {SAY.clientOnly} Who fills it does not change.</p>
+        : !lib ? <p className="text-xs text-text-muted" data-fills-none>In the shared library it is not a question the client or the case officer fills; choose where it comes from for this combination above.</p>
+        : <p data-fills-library>In the shared library: filled by {FILLS_WORD[lib]}.</p>}
+      {ch ? (
+        <p className="rounded-lg bg-surface p-2 text-xs" data-fills-change={ch.status}>
+          {ch.status === "WAITING" ? <>Waiting for a second person on <Link className="text-text-link underline" to="/review">To review</Link>: {FILLS_WORD[ch.to]} fills it for every combination.</>
+            : ch.status === "RETURNED" ? <>Returned on <Link className="text-text-link underline" to="/review">To review</Link>: correct or withdraw it there.</>
+            : <>Approved: {FILLS_WORD[ch.to]} fills it for every combination from the next release.</>}
+          {" "}Proposed by {ch.by}. Why: {ch.reason}
+        </p>
+      ) : lib && !f.clientOnly && canAuthor ? (open ? (
+        <div className="space-y-2 rounded-lg border border-border p-2" data-fills-form>
+          <p className="text-xs">Change to <span className="font-medium">{FILLS_WORD[to]}</span> for every combination that asks it. A second person approves it on To review; it goes out with the next release. This combination's own choice above stays.</p>
+          <label className="block text-xs font-medium">Why <span className="font-normal text-text-muted">(required; shown to the second person)</span>
+            <Textarea className="mt-1 min-h-14" value={why} onChange={(e) => setWhy(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "fills-error" : undefined} data-fills-why />
+          </label>
+          {error ? <p role="alert" id="fills-error" className="text-xs text-text-danger" data-fills-error>{error}</p> : null}
+          <span className="flex gap-2"><Button size="sm" onClick={() => void send()} busy={busy} data-fills-send>Send to To review</Button><Button size="sm" variant="ghost" onClick={() => { setOpen(false); setError(null); }}>Cancel</Button></span>
+        </div>
+      ) : <Button size="sm" variant="secondary" onClick={() => setOpen(true)} data-fills-open>Change who fills…</Button>) : null}
+    </section>
   );
 }
 

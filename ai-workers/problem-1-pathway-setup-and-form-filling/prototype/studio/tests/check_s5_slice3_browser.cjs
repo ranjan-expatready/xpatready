@@ -70,11 +70,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await row.getByRole("button", { name: "Actions for IMM 5257" }).click();
   await p.getByRole("menuitem", { name: "Remove from this combination" }).click();
   await p.getByRole("dialog").getByRole("button", { name: "Remove IMM 5257" }).click();
-  await p.locator("[data-undo-toast]").waitFor({ timeout: 15000 }).catch(() => {}); await settle();
+  // Race fix (forms audit, 29 Oct): the toast shows when the removal is saved, a moment before the list reloads; wait on
+  // the row, the Undo bar and the Removed list themselves, not on the toast.
+  await p.locator("[data-undo-toast]").waitFor({ timeout: 15000 }).catch(() => {});
+  await row.waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
+  await p.locator("[data-undo-bar]", { hasText: "Removed IMM 5257" }).waitFor({ timeout: 15000 }).catch(() => {});
+  await p.locator("[data-removed]", { hasText: "IMM 5257" }).waitFor({ timeout: 15000 }).catch(() => {}); await settle();
   step("P-116 pass: the line goes; the shared Undo toast and the one Undo bar name the removal; it is under Removed in this draft", await row.count() === 0 && /IMM 5257 removed from this combination/.test(await p.locator("[data-undo-toast]").innerText().catch(() => "")) && /Last change: Removed IMM 5257/.test(await p.locator("[data-undo-bar]").innerText().catch(() => "")) && /IMM 5257/.test(await p.locator("[data-removed]").innerText().catch(() => "")));
   await state("forms-removed-toast-and-undo");
   await p.locator("[data-undo-toast]").getByRole("button", { name: "Undo" }).click().catch(() => p.locator("[data-undo-bar]").getByRole("button", { name: "Undo" }).click());
-  await row.waitFor({ timeout: 15000 }).catch(() => {}); await settle();
+  await row.waitFor({ timeout: 15000 }).catch(() => {}); await p.locator("[data-removed]").waitFor({ state: "detached", timeout: 15000 }).catch(() => {}); await settle();
   step("P-116 pass: Undo puts the same line back, still picked by AI", await row.count() === 1 && /Picked by AI · Sample/.test(await row.innerText()) && await p.locator("[data-removed]").count() === 0);
 
   // ======================================================== Find again never re-attaches what a person removed
