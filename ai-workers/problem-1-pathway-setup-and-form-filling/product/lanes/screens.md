@@ -13,8 +13,10 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 * Start a fresh `claude/screens-*` branch from main once #96 is merged (else from `claude/screens-96-fix`), and bring in `screens/W1-setup-checklist/challenge.md` and `plan.md` from `claude/screens-checklist` if main does not have them yet.
 * Runs: node 24 first on PATH (`.tools/node-v24.21.0/bin`; `lane.sh setup`'s npm ci fails under node 23), `npm ci`, `prisma generate`, `vite build` in web/; private copies on 4441–4448 (`screens_96*` names worked); restore p2/, evidence/ and slice1b screenshots after runs.
 
-**(3) DESIGN, 29 Oct:** fresh challenge F1–F5 and `plan.md` (slices A engine, B card and Overview, C tabs) on `claude/screens-checklist` (4a40d176).
-* Node 24 (`.tools/node-v24.21.0/bin`) first on PATH; `tsx --tsconfig api/tsconfig.json` for `.ts` checks; rebuild `web/` before browser checks. The five suites a door change can break: `check_ai_orchestration`, `check_forms_channels`, `check_forms_demo`, `check_forms_pdf_hardening`, `check_forms_slice2`.
+**(3) DESIGN, 29 Oct:** `claude/screens-checklist` (from main 0aeb22d7, worktree `screens-checklist-53f3c9`) at 4a40d176: fresh challenge F1–F5 (new dated section in `challenge.md`) and `plan.md`: slice A engine and contract (no visible change) · B card and Overview, after forms' official-pages record · C tabs, runtime's files unless handed over. Earlier S6 work: `claude/screens-1b-queue` (from `claude/screens-1a-34cb66` e3483c7d, worktree `kind-mendel-ef9c9c`), 1b at bb94fce6.
+* Node 24 (`.tools/node-v24.21.0/bin`) first on PATH: Prisma refuses Homebrew's node 23. A fresh worktree: `npm ci`, `prisma generate`, then `vite build` in `web/` (without it every browser suite times out). `tsx --tsconfig api/tsconfig.json` for `.ts` checks (without it the decorators fail). Scratch scripts in `/private/...` go with their session. The five suites a door change can break: `check_ai_orchestration`, `check_forms_channels`, `check_forms_demo`, `check_forms_pdf_hardening`, `check_forms_slice2`.
+
+* The Lead backs up :4400 before the restart that runs #96's migration.
 
 **S6 slice 1 (plan-slice1.md): 1a and 1b DONE**, folded into Lead PR #96 (1a fix 0a5b09dd, 1b bb94fce6). What was built, decided and owed: build-notes.md "Slice 1a" and "Slice 1b". 1c (pqr_pick lander, rule-sourced field) waits for runtime #94.
 
