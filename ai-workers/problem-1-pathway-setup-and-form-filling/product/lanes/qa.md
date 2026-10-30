@@ -9,7 +9,7 @@ Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes eve
 current_item: after-merge on main once forms PR #103 (slice 1 channels) merges; branch `claude/qa-l10-e3c849` (contains `claude/qa-after-merge-5f6c8de`); journey check `tests/qa/check_qa_am_ch_1030.cjs` written from the PR, ports 4472–4479 free
 stage: WAITING
 owner: Lead
-next_action: Lead: send "/qa after-merge" here when #103 is on main (checked 30 Oct: main bcd482d3, #103 OPEN). qa then: run-suites on the merge, `check_qa_am_ch_1030.cjs` at 400/1024/1440 twice, headed walk (paper filing, IRCC account picker, accepts per account and its impact, case Validate before filing), retest QA-92–96 and QA-112–117 where touched. Report `qa/reports/2026-10-30-after-merge-103.md`
+next_action: Lead: send "/qa after-merge" here when #103 is on main (checked 30 Oct: main bcd482d3, #103 OPEN). qa then: run-suites on the merge, `check_qa_am_ch_1030.cjs` at 400/1024/1440 twice, headed walk (paper filing, IRCC account picker, accepts per account and its impact, case Validate before filing), retest QA-92–96 and QA-112–117 where touched. Report `qa/reports/2026-10-30-after-merge-103.md` Lead moved 30 Oct to session local_847d9394 (report there, not local_d263ed84); no runs until it sends /qa after-merge (Mac overloaded, 3 GB disk free). Queued then (Devin D4): C11.10 back to Partial until card v4 merges; name C7.1, C3.10, C6.2, C1.1 in the suites that prove them; C4.1/C4.3 record a commit or say Not tested.
 blocked_by: none
 updated: 2026-10-30
 
