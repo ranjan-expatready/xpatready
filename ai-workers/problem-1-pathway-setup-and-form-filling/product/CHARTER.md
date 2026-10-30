@@ -26,7 +26,7 @@ The Lead never asks the founder to choose technology, write instructions, type c
 | Builders | lanes screens, forms, runtime (cloud after cutover) | build slices to the agreed design, tests first, pre-review |
 | **Platform** (new) | lane, cloud | CI and test machinery, flake list, cloud setup, shared contracts and migration order, guard checks |
 | Reviewer and breaker | fresh agents started by the Lead | independent score (8+/10, no criterion at 0) and break attempts |
-| qa | lane, cloud | tests main like a person after every merge; explores; owns bug list |
+| qa | lane, cloud | **capability owner** (P-187): status, 1–5 experience score and top improvement per capability; tests main like a person after every merge; explores; owns bug list |
 | Evidence | lane, Mac only | official forms, Adobe checks, the team's material |
 | Outside reviewer | Devin | report-only checks (P-182) |
 | Intended user | person the founder names | unaided walks for D17/D20; never self-awarded |
@@ -49,7 +49,8 @@ The Lead never asks the founder to choose technology, write instructions, type c
 * Never in parallel: two writers on a file, two Leads, merges, paid live AI runs.
 * GitHub is the single source of truth: commit and push every step; nothing exists until pushed.
 
-## Measures (weekly scorecard; daily brief shows the queue)
+## Measures (weekly scorecard and capability review; daily brief shows the queue)
+Weekly capability review with the founder (P-187): what works, what does not, the three best improvements, and "is this still the product you want?".
 Rework by cause, first review score, idea to merged, wait for checks, unclean check runs, bugs escaping to main, records share, waiting on the founder, handovers, allowance per merged slice and AI spend. A workflow change that does not move its number in two weeks is undone.
 
 ## Roles we deliberately do not add (30 Oct)
