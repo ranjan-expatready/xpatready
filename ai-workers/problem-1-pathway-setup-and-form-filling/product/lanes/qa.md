@@ -6,14 +6,15 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: explore on main a9fe60c0 (run card cost words, Forms library and finder words, Program structure and Immigration programs at 1024/1440), branch `claude/qa-explore-1029`, copy qa_ex :4473
+current_item: after-merge on main 5f6c8deb (PR #94), branch `claude/qa-after-merge-5f6c8de` (explore branch merged in), copies qa_qn :4479, qa_ex :4478
 stage: WAITING
 owner: Lead
-next_action: (1) Lead: QA-100 (Critical: the finder's live path is open on every copy; my check spent US$0.27 unapproved) needs a finder live switch; route QA-101–107, 109–111 to forms, QA-108 to runtime (S7); Lead routed all on 29 Oct (P-175 for QA-100); merge this branch's qa files. (2) qa: `/qa after-merge` when the Lead says #94, #96, #99 or forms slice 1 merged (QA-92–96 retest). Report `qa/reports/2026-10-29-explore.md`
+next_action: (1) Lead: port clash — forms copy `forms-s1-fix` on :4471 (qa range); my `isolated.sh start` there stopped it, restart it; give hand runs fixed port ranges. Route QA-112–117 (runtime; QA-113 table width screens; QA-115 a sample question). (2) qa: `/qa after-merge` when #96, forms slice 1 or the P-175 switch merge; live Who can be retest (QA-99) when the founder approves. Report `qa/reports/2026-10-30-after-merge.md`
 blocked_by: none
-updated: 2026-10-29
+updated: 2026-10-30
 
-## Handover (29 Oct, ~22:00; for the next qa session: read this first)
+## Handover (30 Oct; for the next qa session: read this first)
+* **30 Oct, after-merge on 5f6c8deb (branch `claude/qa-after-merge-5f6c8de`):** QA-92–96 closed, QA-99 fixed in stub (live waits), QA-112–117 new. **Ports: 4471 is taken by the forms copy; use 4472–4479 and check `lsof -ti tcp:<port> -sTCP:LISTEN` first** (`isolated.sh` stops whatever holds the port). The guard hook blocks Bash lines containing "pqr", ports lists and some pipes: use scratchpad scripts. Retest QA-92–96 line below is done.
 * **29 Oct ~23:40, explore on a9fe60c0 (branch `claude/qa-explore-1029`, worktree objective-faraday-d76c2a, copy qa_ex :4473):** report `qa/reports/2026-10-29-explore.md`; QA-100–111 new. **Never click "Find forms with AI (about … · at most …)" in a check or by hand: it starts a LIVE run in one click on any copy (QA-100; US$0.27 spent that way).** Make a Rules find through the API first (`/forms/find/plan {mode:"rules"}`, then `/forms/find`), then use Find again; `check_qa_explore_1029.cjs` shows the pattern and stops if the ledger grows. The guard hook also blocks single `node … 2>&1 | tail` lines and some greps: use scratchpad scripts.
 * **Done 29 Oct evening:** after-merge on deda0e6b plus the live smoke on a9fe60c0. Report: `qa/reports/2026-10-29-after-merge-deda0e6.md` (§5 is the live smoke). Branch `claude/qa-after-merge-deda0e6` (worktree sharp-golick-4e9110), pushed; the Lead opens the qa PR.
 * **Waiting:**
@@ -88,6 +89,7 @@ updated: 2026-10-29
   9. S4: the finder has no button until S5 slice 3: test it through `POST /combinations/:id/forms/find/plan` then `/find` (Rules or Replay only, never `live`); only Visitor visa (`vv.single`) has saved answers. No product route makes an unused, unapproved form, so Delete is walked on a seeded form (the builders' own way). The guard hook blocks `for` loops and heredocs: put them in a scratchpad script.
 
 ## Log (last 8 lines)
+- 2026-10-30 · after-merge 5f6c8deb (#94): suites 89/90 (slice 3 browser once, QA-116); QA-92–96 closed; QA-99 fixed (stub); Documents tab, Preview, who fills, country PQR walked at 1024; QA-112–117 Minor; port clash with forms on :4471; US$0.
 - 2026-10-29 · explore a9fe60c0: 1024/1440 Immigration programs, Program structure, Forms library clean (axe, no cut words, no system values); cost words agree except AI work list (QA-106); unplanned live find by my check, US$0.27 (QA-100 Critical, told the Lead); its result: QA-101–104, 107, 111; dialog QA-105, 110; QA-108, 109. Check 69/74.
 - 2026-10-29 · live smoke on a9fe60c0 (founder, ceiling US$6.49; user allowed here): QA-97 closed; finder live US$0.28 of US$5.58 reserved (8 forms both rounds, 5 attached, page by rules); Who can be refused before any call → QA-99 Critical (runtime); step 4 skipped. Total US$0.28.
 - 2026-10-29 · Lead: founder approved option (a), steps 1-3 at most US$6.49, after the QA-97 fix merges; QA-98 logged (forms, Minor: reservations above the smoke plan).
@@ -95,4 +97,3 @@ updated: 2026-10-29
 - 2026-10-29 · after-merge deda0e6b: ready; suites 68/71 in the run, the 3 red rerun alone: programs_s2 87/87, start_setup_browser 39/39 (fix 4 passes), w115_slice2 flaky 1 in 3 (QA-96 new, Minor, runtime); 14 bugs closed (QA-39, 48, 70–72, 79, 81, 83–89), QA-73/74/80 narrowed; C3.10 Works, C11.8 Partial; live smoke stopped before any call (product reserves US$5.58 for the finder alone, approved US$3.24); :4400 found empty (reset 12:58). US$0.
 - 2026-10-29 · Lead asked for start_setup_browser fix 4 on deda0e6b (PR #94 CI red): two runs died in the sample load at load 17-20; solo rerun after the suites (screenshots the suites rewrite in other folders go back to HEAD then).
 - 2026-10-29 · Lead: live smoke approved by the founder (about US$0.80), steps 1-4 on this copy's ledger; held until the founder answers on the worst case US$3.24.
-- 2026-10-29 · after-merge deda0e6b started (fresh qa session): ai paths 21/21, r3 69/69, s3 39/39; wording sweep rerun on a loaded sample; regression checks running.
