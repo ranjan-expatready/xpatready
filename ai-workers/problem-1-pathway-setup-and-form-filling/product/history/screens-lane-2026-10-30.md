@@ -40,3 +40,9 @@
 - The Prisma client in `node_modules` is shared with other copies: after switching branches run `./node_modules/.bin/prisma generate` if a column is reported missing.
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
+
+## Moved from lanes/screens.md Handover (30 Oct, card v4 session), word for word
+* Runs: node 24 first on PATH (`lane.sh setup`'s npm ci fails under node 23); private copies on 4441–4449 (`screens_96*`, `s96c_*` names worked); restore p2/ (and `git clean` its used-launch-tickets), evidence/, slice1b and who-fills screenshots after runs. Never point TMPDIR at a long path: tsx's pipe fails (EINVAL).
+
+## Moved from lanes/screens.md Handover (30 Oct, card v4 session), word for word
+* **Notes for the Lead:** (1) the old row status and the checklist chip differ for one sample: Spouse of a student is status NOT_READY (old rule) but chip LIVE (its release passes its own checks), so the chips count 2 Live where the old counts said 1 Ready + 1 Not ready; concept §6 defines Not ready by the release's own checks, so the card follows the chip. (2) `/catalogue` cold after 130 added names took 3012 ms server time (rows() rebuild); warm page renders 150 cards in 570 ms, List 1415 ms. (3) Resume setup links `/c/:id/forms?focus=…` and `/review?c&step` land on the tab / queue without the focus or filter until runtime's slice C and the queue's `c`/`step` exist.
