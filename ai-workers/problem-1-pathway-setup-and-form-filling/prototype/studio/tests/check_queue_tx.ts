@@ -4,13 +4,13 @@
 // library query per item, and Prisma's 5 s default ran out. The step is slowed on purpose (STUDIO_SLOW_TX, isolated
 // test server only) to prove both sides: 6.5 s inside the transaction now completes; past the 60 s room the step fails
 // alone, writes nothing, and its five siblings keep their proposals. US$0: replays only, no live AI call.
-//   tsx studio/tests/check_queue_tx.ts 4434 xr_studio_runtime_qtx   (starts and stops its own isolated copy)
+//   tsx studio/tests/check_queue_tx.ts [port=4434] [name=runtime_qtx]   (starts its own isolated copy)
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 const STUDIO = join(import.meta.dirname, "..");
 
-const PORT = Number(process.argv[2] ?? 4434), DB = process.argv[3] ?? "xr_studio_runtime_qtx", NAME = DB.replace(/^xr_studio_/, "");
+const PORT = Number(process.argv[2] ?? 4434), NAME = (process.argv[3] ?? "runtime_qtx").replace(/^xr_studio_/, ""), DB = `xr_studio_${NAME}`;
 let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();

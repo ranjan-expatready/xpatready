@@ -173,7 +173,13 @@ function ThemeToggle() {
 }
 
 /** What POST /demo/load {"sample":"six"} answers (api/src/demo.ts loadSix). */
-type SixLoad = { seconds: number; combinations: { id: string; label: string; files: number }[]; drafts: { replayed: number; proposals_waiting: number; waiting_for_draft_with_ai: string[]; status: string }; missing: { combination: string; code: string; why: string }[]; log: string[] };
+type SixLoad = { timings?: Record<string, number>; seconds: number; combinations: { id: string; label: string; files: number }[]; drafts: { replayed: number; proposals_waiting: number; waiting_for_draft_with_ai: string[]; status: string }; missing: { combination: string; code: string; why: string }[]; log: string[] };
+
+/** C10.1: what POST /demo/load {"sample":"configured"} answers: the six load, then one row per DEMO.md mechanism. */
+type CheckpointRow = { row: string; title: string; status: "done" | "partial" | "waiting" | "not built yet" | "out"; shows: string; why: string | null };
+type ConfiguredLoad = SixLoad & { checkpoint: CheckpointRow[]; released: string[] };
+const ROW_TONE: Record<CheckpointRow["status"], string> = { done: "ok", partial: "warn", waiting: "warn", "not built yet": "neutral", out: "neutral" };
+const ROW_WORD: Record<CheckpointRow["status"], string> = { done: "Done", partial: "Partly", waiting: "Waiting", "not built yet": "Not built yet", out: "Parked" };
 
 function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExist: boolean }) {
   const [resetOpen, setResetOpen] = React.useState(false);
@@ -182,15 +188,20 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
   const [loaded6, setLoaded6] = React.useState<SixLoad | null>(null);
   // S7 (P-148): the menu loads the six agreed combinations; the older sample is the suites' fixture only, never offered here.
   const load = useAction(() => api<SixLoad>("/demo/load", { method: "POST", json: { sample: "six" } }), { success: (r) => `Sample starting point loaded in ${r.seconds.toFixed(1)} s`, invalidate: [[]], onDone: (r) => { setLoadOpen(false); setLoaded6(r); navTo("/"); } });
+  // C10.1: the configured checkpoint (the M2 gate): the six, then each DEMO.md row through the screens' services.
+  const [confOpen, setConfOpen] = React.useState(false);
+  const [configured, setConfigured] = React.useState<ConfiguredLoad | null>(null);
+  const loadConf = useAction(() => api<ConfiguredLoad>("/demo/load", { method: "POST", json: { sample: "configured" } }), { success: (r) => `Configured checkpoint loaded in ${r.seconds.toFixed(1)} s`, invalidate: [[]], onDone: (r) => { setConfOpen(false); setConfigured(r); navTo("/"); } });
   // Demo-only controls in one menu (P-35): scaffolding, never part of the product.
   const item = "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 outline-none data-[highlighted]:bg-text/5 data-[disabled]:cursor-default data-[disabled]:opacity-50";
   return (
     <div className="flex items-center gap-1.5">
       <DropdownMenu.Root>
-        <DropdownMenu.Trigger asChild><Button size="sm" variant="secondary" busy={load.isPending}>Demo <ChevronDown /></Button></DropdownMenu.Trigger>
+        <DropdownMenu.Trigger asChild><Button size="sm" variant="secondary" busy={load.isPending || loadConf.isPending}>Demo <ChevronDown /></Button></DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[260px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
             <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setLoadOpen(true)}><Upload className="size-4" />{loaded ? "Sample loaded (reset to load again)" : programsExist ? "Load sample (the Structure has names: reset first)" : "Load sample…"}</DropdownMenu.Item>
+            <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setConfOpen(true)}><Upload className="size-4" />{loaded || programsExist ? "Load the configured checkpoint (reset first)" : "Load the configured checkpoint…"}</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => setResetOpen(true)}><RotateCcw className="size-4" />Reset demo…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => navTo("/cases")}><FileText className="size-4" />Open the case area (runtime preview)</DropdownMenu.Item>
           </DropdownMenu.Content>
@@ -206,6 +217,33 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
           <li>Saved AI answers for the forms' fields replayed into the review queue, waiting for people to accept; a form without one waits for Draft with AI</li>
         </ul>
         <p className="mt-3 text-sm text-text-muted">A file that is still missing shows as "Not found · Upload PDF" on that combination, never hidden. Nothing is released: a second person approves every library item.</p>
+      </Dialog>
+      <Dialog open={confOpen} onOpenChange={(o) => { if (!loadConf.isPending) setConfOpen(o); }} title="Load the configured checkpoint?" description="The sample starting point, then each demo row done through the same screens' rules by the people who hold each duty. US$0: no live AI call."
+        footer={<><Button variant="ghost" disabled={loadConf.isPending} onClick={() => setConfOpen(false)}>Cancel</Button><Button busy={loadConf.isPending} onClick={() => loadConf.mutate(undefined)}><Upload /> Load the configured checkpoint</Button></>}>
+        <ul className="list-disc space-y-1 pl-5 text-sm" data-conf-brings>
+          <li>Everything Load sample brings (the six combinations <Pill tone="warn">Sample</Pill>)</li>
+          <li>The saved AI answers reviewed by the Configuration author and applied; a second person approves the new library items</li>
+          <li>Each combination submitted, signed by the Content reviewer and released by the Approver, when its rules allow it</li>
+        </ul>
+        <p className="mt-3 text-sm text-text-muted">A step a rule refuses is left undone and says why; nothing is approved or released past the rules. This takes a few minutes.</p>
+      </Dialog>
+      <Dialog open={!!configured} onOpenChange={() => setConfigured(null)} wide title="Configured checkpoint loaded" description="Each demo row, as far as today's saved AI answers and merged features allow. No live AI call was made (US$0)." footer={<Button onClick={() => setConfigured(null)}>Continue</Button>}>
+        {configured ? (
+          <div className="space-y-3 text-sm" data-conf-result>
+            <table className="w-full table-fixed border-collapse text-left">
+              <thead><tr className="border-b border-border text-text-muted"><th className="w-10 py-1 pr-2 font-medium">Row</th><th className="py-1 pr-2 font-medium">What it shows</th><th className="w-28 py-1 font-medium">Status</th></tr></thead>
+              <tbody>{configured.checkpoint.map((r) => (
+                <tr key={r.row} className="border-b border-border align-top" data-conf-row={r.row} data-status={r.status}>
+                  <td className="py-1.5 pr-2 tabular-nums text-text-muted">{r.row}</td>
+                  <td className="break-words py-1.5 pr-3"><div className="font-medium">{r.title}</div><div className="text-text-muted">{r.shows}</div>{r.why ? <div className="mt-0.5 text-text-muted" data-conf-why>{r.why}</div> : null}</td>
+                  <td className="py-1.5"><Pill tone={ROW_TONE[r.status]}>{ROW_WORD[r.status]}</Pill></td>
+                </tr>))}</tbody>
+            </table>
+            <details><summary className="cursor-pointer text-text-muted">What the loader did, step by step</summary>
+              <ul className="mt-2 space-y-1">{configured.log.map((l, i) => <li key={i} className={l.startsWith("  ") ? "pl-4 text-text-muted" : "font-medium"}>{l.trim()}</li>)}</ul>
+            </details>
+          </div>
+        ) : null}
       </Dialog>
       <Dialog open={!!loaded6} onOpenChange={() => setLoaded6(null)} wide title="Sample starting point loaded" description="The same services as the screens. Nothing was approved, released or filled; no live AI call was made (US$0)." footer={<Button onClick={() => setLoaded6(null)}>Continue</Button>}>
         {loaded6 ? (

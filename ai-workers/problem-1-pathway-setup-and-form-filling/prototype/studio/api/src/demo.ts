@@ -18,10 +18,15 @@ import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
 import { SAMPLE_CREATOR } from "./lifecycle.ts";
 import { linkSampleGuides } from "./guide-sources.ts";
-import { Sources } from "./sources.ts";
+import { libraryRevision, Sources } from "./sources.ts";
+import { Screen02 } from "./screen02.ts";
 import { Studio } from "./studio.ts";
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
+/** C10.1: one DEMO.md row of the configured checkpoint, as the Demo menu shows it. */
+export type CheckpointRow = { row: string; title: string; status: "done" | "partial" | "waiting" | "not built yet" | "out"; shows: string; why: string | null };
+/** How many proposals a field-map step reported (its detail counts). */
+const counted = (detail: unknown) => (detail as { counts?: { proposed_fields?: number } } | null)?.counts?.proposed_fields ?? 0;
 const RELEASE = join(PROTOTYPE, "p3", "releases", "c1-v3");
 
 /** The sample programs (Screen 01): an import file, not constants in code (STANDARDS §3.1). Seven Individual and four
@@ -39,7 +44,7 @@ type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" |
 
 @Injectable()
 export class Demo {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Programs) private readonly programs: Programs, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Screen02) private readonly library: Screen02) {}
 
   async status() {
     const workspaceId = await this.ws.id();
@@ -53,8 +58,8 @@ export class Demo {
    *  older sample kept as test data only so the other lanes' suites keep running until each moves to the six (plan step 6). */
   async load(actor: Actor, body?: { sample?: string } | null) {
     need(actor, "author");
-    const six = body?.sample === "six";
-    if (body?.sample !== undefined && !six) fail('Say which sample to load: "six".');
+    const configured = body?.sample === "configured", six = body?.sample === "six" || configured;
+    if (body?.sample !== undefined && !six) fail('Say which sample to load: "six" or "configured".');
     const workspaceId = await this.ws.id();
     // One load at a time (break round 3): claimed before anything awaits, so a second click while loading is told so,
     // never a half-load and a 500.
@@ -64,7 +69,7 @@ export class Demo {
     const log: string[] = [];
     try {
       if (await this.db.programDef.count({ where: { workspaceId } })) fail("The Structure already has names in this workspace. Reset the demo first to load the sample inputs.", HttpStatus.CONFLICT);
-      return six ? await this.loadSix(actor, workspaceId, t0, log) : await this.loadSteps(actor, workspaceId, t0, log);
+      return configured ? await this.loadConfigured(actor, workspaceId, t0, log) : six ? await this.loadSix(actor, workspaceId, t0, log) : await this.loadSteps(actor, workspaceId, t0, log);
     }
     catch (e) {
       if (e instanceof HttpException && e.getStatus() === HttpStatus.CONFLICT && !log.length) throw e;
@@ -148,6 +153,9 @@ export class Demo {
    *  library row written directly: the library fills only when people accept and a second person approves. */
   private async loadSix(actor: Actor, workspaceId: string, t0: number, log: string[]) {
     const sample = JSON.parse(readFileSync(SAMPLES_SIX, "utf8")) as SampleFile;
+    // C10.1: where the load's time goes, step by step (seconds per kind of step, summed), returned with the result.
+    const timings: Record<string, number> = {};
+    const timed = async <T>(step: string, f: () => Promise<T>): Promise<T> => { const t = Date.now(); try { return await f(); } finally { timings[step] = Math.round(((timings[step] ?? 0) + (Date.now() - t) / 1000) * 10) / 10; } };
     let nodes = 0;
     const made: { id: string; label: string; page: string | null; missing: { code: string; why: string }[]; files: number; absent: string[] }[] = [];
     for (const p of sample.pathways) {
@@ -161,9 +169,9 @@ export class Demo {
       const absent = c.sources.filter((f) => !official.has(f));
       const refused: { code: string; why: string }[] = [];
       for (const f of c.sources.filter((x) => official.has(x))) {
-        const r = await this.intake.sample(actor, comp.id, f);
+        const r = await timed("form intake (read code, edition, checksum)", () => this.intake.sample(actor, comp.id, f));
         if (!r.attachmentId) refused.push({ code: f, why: r.message }); // the intake's own words: shown, never hidden
-        else if (r.attachmentStatus === "RECOGNISED") await this.sources.read(actor, r.attachmentId);
+        else if (r.attachmentStatus === "RECOGNISED") await timed("form read (form fields)", () => this.sources.read(actor, r.attachmentId!));
       }
       const missing = [...(c.missing ?? []).map((m) => ({ code: m.code, why: m.why })), ...refused];
       made.push({ id: comp.id, label: path, page: c.page ?? null, missing, files: c.sources.length - absent.length - refused.length, absent });
@@ -191,7 +199,7 @@ export class Demo {
     const prof = await this.db.sampleProfile.create({ data: { workspaceId, profileKey: "client-a-family", label: "Client A family (existing sample record, made-up)", basis: "expected/p5-case-c1.json: made-up family prepared by the Lead; confirmed facts for previews and the PDF proof; never an AI result, never sent to a model", people: fam.people } });
     await this.db.sampleFact.createMany({ data: fam.facts.map((f) => ({ workspaceId, profileId: prof.id, personId: f.personId, canonicalFieldKey: f.key, row: f.row, value: f.value as any, status: "confirmed", source: f.source })) });
     log.push(`sample profile "${prof.label}": ${fam.facts.length} confirmed facts for ${fam.people.length} people`);
-    const filled = await this.finder.fillSample(workspaceId);
+    const filled = await timed("library forms and guides", () => this.finder.fillSample(workspaceId));
     const guides = await linkSampleGuides(this.db, workspaceId);
     log.push(`library forms: ${filled.pages} canada.ca pages recorded, what IRCC accepts set for ${filled.accepts}; IRCC guides linked as sources: ${guides}`);
     // The form finder, replayed (saved AI answers, US$0) from each combination's recorded application page.
@@ -200,25 +208,125 @@ export class Demo {
       if (!c.page) { finder.push({ combination: c.label, status: "NO_PAGE", message: "No canada.ca application page: an employer files it online (Sample)." }); continue; }
       const plan = await this.finder.plan(c.id, { mode: "replay", pageUrl: c.page });
       const run = await this.finder.launch(actor, c.id, { mode: "replay", pageUrl: c.page, planSha256: plan.plan_sha256, idempotencyKey: `sample-six-finder-${c.id}` });
-      const done = await this.settled(run.id);
+      const done = await timed("form finder replay", () => this.settled(run.id));
       finder.push({ combination: c.label, status: done.status, message: done.message ?? "" });
       log.push(`  form finder (saved AI answers, US$0) on ${c.label}: ${done.status.toLowerCase()}${done.message ? `: ${done.message.slice(0, 200)}` : ""}`);
     }
     // Library drafts (P-108, P-138): each read form with a saved AI field-map answer on exactly that file is replayed
     // through the one door; a form without one waits for "Draft with AI" (a paid click, never here).
-    const plan = await this.ai.plan({ kind: "catalogue", ids: made.map((m) => m.id) }, "REPLAY");
+    const plan = await timed("field-map plan", () => this.ai.plan({ kind: "catalogue", ids: made.map((m) => m.id) }, "REPLAY"));
     const replay = plan.targets.filter((t) => t.action === "reuse_saved_output");
     const waiting = plan.targets.filter((t) => t.action !== "reuse_saved_output" && t.action !== "skip").map((t) => t.source);
     let drafts: { status: string; message: string } = { status: "NONE", message: "No saved AI answer matched these forms." };
     if (replay.length) {
       const b = await this.ai.launch(actor, { scope: { kind: "catalogue", ids: made.map((m) => m.id) }, mode: "REPLAY", idempotencyKey: `sample-six-drafts-${workspaceId}`, planSha256: plan.plan_sha256 });
-      drafts = await this.settled(b.id!);
+      drafts = await timed("field-map replay (review queue)", () => this.settled(b.id!));
     }
     const proposals = await this.db.proposalItem.count({ where: { workspaceId, status: "waiting" } });
     log.push(`library drafts: ${replay.length} saved AI field-map answers replayed through the review queue (US$0): ${proposals} proposals waiting for review; ${[...new Set(waiting)].length} forms wait for "Draft with AI"${waiting.length ? ` (${[...new Set(waiting)].join(", ")})` : ""}`);
     const missing = made.flatMap((c) => [...c.absent.map((f) => ({ combination: c.label, code: f, why: "No saved copy." })), ...c.missing.map((m) => ({ combination: c.label, code: m.code, why: m.why }))]);
     await this.audit.log(workspaceId, actor.id, "loaded", "sample inputs", null, `${actor.name} loaded the sample starting point in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${made.length} combinations (5 Retail, 1 Corporate Sample), ${nodes} names in the Structure, official files through the form intake, the form finder replayed (US$0), ${proposals} AI proposals waiting for review; nothing released`, { log });
-    return { ok: true, sample: "six", seconds: (Date.now() - t0) / 1000, combinations: made.map((m) => ({ id: m.id, label: m.label, files: m.files })), finder, drafts: { replayed: replay.length, proposals_waiting: proposals, waiting_for_draft_with_ai: [...new Set(waiting)], status: drafts.status }, missing, cost_usd: 0, log };
+    return { ok: true, sample: "six", seconds: (Date.now() - t0) / 1000, combinations: made.map((m) => ({ id: m.id, label: m.label, files: m.files })), finder, drafts: { replayed: replay.length, proposals_waiting: proposals, waiting_for_draft_with_ai: [...new Set(waiting)], status: drafts.status }, missing, cost_usd: 0, timings, log };
+  }
+
+  /** C10.1 the configured checkpoint (the M2 gate, DEMO.md "Checkpoints" 2): Load sample six, then each DEMO.md row
+   *  through the same services as the screens, as the people who hold each duty: the author (user-A) decides the
+   *  replayed field-map proposals and applies them, a second person (user-B) approves the new library items, the author
+   *  submits, the SME (user-C) signs and user-B releases. Nothing is faked: a step a rule refuses stays undone and its row
+   *  says the rule's own words; a row whose function another lane has not merged says "not built yet". New saved AI
+   *  answers drop in with no code change (the six load replays whatever saved answer matches). US$0, no live AI call. */
+  private async loadConfigured(actor: Actor, workspaceId: string, t0: number, log: string[]) {
+    const six = await this.loadSix(actor, workspaceId, t0, log);
+    const person = (id: string) => ACTORS.find((a) => a.id === id)!;
+    const author = person("user-A"), sme = person("user-C"), approver = person("user-B");
+    const timings: Record<string, number> = { ...six.timings };
+    const timed = async <T>(step: string, f: () => Promise<T>): Promise<T> => { const t = Date.now(); try { return await f(); } finally { timings[step] = Math.round(((timings[step] ?? 0) + (Date.now() - t) / 1000) * 10) / 10; } };
+    const said = (e: unknown) => { const r = e instanceof HttpException ? (e.getResponse() as { detail?: string; message?: string | string[] }) : null; return String((r && typeof r === "object" ? r.detail ?? [r.message].flat().join("; ") : null) ?? (e as Error).message).slice(0, 400); };
+    const rows: CheckpointRow[] = [];
+    const row = (r: CheckpointRow) => { rows.push(r); log.push(`  row ${r.row} ${r.title}: ${r.status}${r.why ? ` (${r.why.slice(0, 200)})` : ""}`); };
+    log.push("configured checkpoint (C10.1): each DEMO.md row through the screens' services");
+
+    // Row 1: every official file through the intake (the six load). A file the intake held stays held with its reason:
+    // only a file whose code and edition were read can become a source (intake, Break M4), so none is approved here.
+    const held = await this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, select: { fileName: true } });
+    const files = six.combinations.reduce((t, c) => t + c.files, 0);
+    row({ row: "1", title: "Ingest PDF forms; a held file approved by a second person", status: "partial", shows: `${files} official files read on the six combinations (code, edition, checksum; no AI)`,
+      why: held.length ? `${held.length} file${held.length === 1 ? " is" : "s are"} held because the form's edition could not be read from the file (${held.map((h) => h.fileName).join(", ")}). Such a file cannot become a source, so there is nothing for a second person to approve; approval works on Library › To review for an off-list file whose edition can be read.` : "The intake held no file, so there is no held file to approve." });
+    row({ row: "2", title: "Online forms captured with the browser extension", status: "out", shows: "Parked (P-102, W6)", why: null });
+
+    // Rows 3–4: the replayed field-map drafts, decided by the author on each draft's own page, then applied to the draft.
+    const jobs = await this.db.draftingJob.findMany({ where: { workspaceId, kind: "field_map", status: "COMPLETED" }, orderBy: { startedAt: "asc" } });
+    const fileOf = new Map((await this.db.sourceAttachment.findMany({ where: { workspaceId }, select: { id: true, fileName: true } })).map((x) => [x.id, x.fileName]));
+    let accepted = 0, edited = 0, returned = 0, applied = 0;
+    const refused: string[] = [];
+    // One edit and one return stay visible (DEMO.md row 4), on the form with the most proposals.
+    const showcase = [...jobs].sort((a, b) => counted(b.detail) - counted(a.detail))[0]?.id;
+    for (const j of jobs) {
+      const form = fileOf.get(j.attachmentId ?? "") ?? "a form";
+      try {
+        await timed("field-map review and apply", async () => {
+          // A draft compared with an older library is compared again first (D280), as its page asks a person to.
+          const at = (j.detail as { library_revision?: { sha256?: string } } | null)?.library_revision?.sha256;
+          if (at && at !== (await libraryRevision(this.db, workspaceId)).sha256) await this.sources.recompare(author, j.id);
+          const items = await this.db.proposalItem.findMany({ where: { runId: j.id, status: "waiting" }, orderBy: { identityKey: "asc" } });
+          for (const [n, it] of items.entries()) {
+            const meaning = (it.payload as { meaning?: string }).meaning ?? "";
+            if (j.id === showcase && n === 0) { await this.sources.decide(author, j.id, it.id, { decision: "RETURNED", note: "Returned by the sample loader to show a return: decide it again on this form's page." }); returned++; }
+            else if (j.id === showcase && n === 1 && meaning.length >= 8) { await this.sources.decide(author, j.id, it.id, { decision: "ACCEPTED", meaning: `${meaning.replace(/\.?\s*$/, "")} (as asked on ${form}).`.slice(0, 500), note: "Edited by the sample loader: the meaning names the form it was read from." }); edited++; }
+            else { await this.sources.decide(author, j.id, it.id, { decision: "ACCEPTED", note: "Accepted by the sample loader as the saved AI answer proposed it; check it on this form's page." }); accepted++; }
+          }
+          await this.sources.apply(author, j.id, {});
+          applied++;
+        });
+      } catch (e) { refused.push(`${form}: ${said(e)}`); }
+    }
+    const waitingForAi = six.drafts.waiting_for_draft_with_ai;
+    row({ row: "3", title: "AI maps form fields to shared fields (saved answers, US$0)", status: !jobs.length ? "waiting" : waitingForAi.length ? "partial" : "done", shows: `${jobs.length} saved AI answers replayed (US$0)`,
+      why: waitingForAi.length ? `${waitingForAi.length} forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: ${waitingForAi.join(", ")}.` : null });
+    row({ row: "4", title: "A person reviews: accept with a reason, edit, reject", status: !jobs.length ? "waiting" : refused.length ? "partial" : "done", shows: `${accepted} accepted, ${edited} edited, ${returned} returned with a reason; ${applied} of ${jobs.length} drafts applied to their combinations`,
+      why: refused.length ? `Refused by a rule: ${refused.join(" · ")}` : null });
+
+    // Row 5: every new library item waits for a second person (BR-7); the approver approves them on To review.
+    const adds = await this.db.libraryChange.findMany({ where: { workspaceId, status: "WAITING" }, select: { id: true, label: true, key: true } });
+    const notApproved: string[] = [];
+    await timed("library approvals (second person)", async () => {
+      for (const c of adds) { try { await this.library.decideLibraryChange(approver, c.id, "approve", "Approved by the sample loader as the second person (C10.1 checkpoint)."); } catch (e) { notApproved.push(`${c.label ?? c.key}: ${said(e)}`); } }
+    });
+    row({ row: "5", title: "New shared fields approved by a second person", status: !adds.length ? "waiting" : notApproved.length ? "partial" : "done", shows: `${adds.length - notApproved.length} of ${adds.length} new library items approved by the ${approver.name}, not by the author`,
+      why: notApproved.length ? notApproved.slice(0, 3).join(" · ") : adds.length ? null : "No new library item: no draft was applied." });
+    row({ row: "6", title: "Reset returns to a blank workspace", status: "done", shows: "Demo › Reset demo", why: null });
+    row({ row: "7", title: "AI drafts sections and document requirements from the checklist", status: "not built yet", shows: "Not built yet: the forms and screens lanes add this step (C2.6, C3.4); the checkpoint calls it once it is on main.", why: null });
+    row({ row: "8", title: "Questionnaires per person, PQR picks, preview by person", status: applied ? "done" : "waiting", shows: "On each combination: the Questionnaires and Preview tabs, worked out from the forms applied above", why: applied ? null : "No form was applied." });
+
+    // Rows 9–12: release 1 on each combination whose draft passes the validator, through submit, SME sign-off and a
+    // different person's approval. A combination the validator refuses stays a draft, with the validator's words.
+    const released: string[] = [], blocked: string[] = [];
+    for (const c of six.combinations) {
+      // An empty combination is never released as "configured": the rules would allow it today (finding for the Lead),
+      // but a release with no form says nothing about the configuration.
+      if (!(await this.db.combinationForm.count({ where: { combinationId: c.id } }))) { blocked.push(`${c.label}: not submitted, no form is on it yet (the form finder has no saved answer for its canada.ca page, or none was confirmed).`); continue; }
+      try {
+        await timed("review and release", async () => {
+          const sub = await this.studio.submit(author, c.id, "Submitted by the sample loader (C10.1 checkpoint).");
+          const items = (sub.changeSummary as { kind: string; key: string }[]).map((x) => `${x.kind}|${x.key}`);
+          if (items.length) await this.studio.signoff(sme, c.id, { items, action: "signed", note: "Signed by the sample loader as the SME (C10.1 checkpoint)." });
+          await this.studio.approve(approver, c.id);
+        });
+        released.push(c.label);
+      } catch (e) { blocked.push(`${c.label}: ${said(e)}`); }
+    }
+    row({ row: "10", title: "Review and release: submit, expert ticks, a different person releases", status: !released.length ? "waiting" : blocked.length ? "partial" : "done", shows: released.length ? `Release 1 of ${released.join(", ")}` : "No combination can be released yet",
+      why: blocked.length ? blocked.join(" · ") : null });
+    const visitor = released.some((l) => /Visitor visa/.test(l));
+    row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, IMM 5707 PDF upload, IMM 5476 Signed PDF upload)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
+      why: visitor ? "Set on the Visitor visa's Forms tab for release 2." : "Waits for the Visitor visa's release 1: its channels change for release 2." });
+    row({ row: "11", title: "A family case on release 1", status: "waiting", shows: "The case area is built (Demo › Open the case area)", why: visitor ? "Open a case on the Visitor visa's release 1." : "Waits for the Visitor visa's release 1 (a case runs on a release)." });
+    row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: "waiting", shows: "The fill is built (C7.1)", why: "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run (Lead, 30 Oct)." });
+    row({ row: "17", title: "New edition: IMM 5476 2021 → 11-2025 comparison and impact", status: "not built yet", shows: "Not built yet: the screens lane adds the comparison (C9.1); the checkpoint calls it once it is on main.", why: null });
+    rows.sort((a, b) => Number(a.row) - Number(b.row));
+    const count = (s: CheckpointRow["status"]) => rows.filter((r) => r.status === s).length;
+    await this.audit.log(workspaceId, actor.id, "loaded", "configured checkpoint", null, `${actor.name} loaded the configured checkpoint in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${count("done")} rows done, ${count("partial")} partly, ${count("waiting")} waiting, ${count("not built yet")} not built yet`);
+    return { ...six, sample: "configured", seconds: (Date.now() - t0) / 1000, checkpoint: rows, released, timings, log };
   }
 
   /** Waits for a background run (form finder or AI batch) to end; a run still going after 3 minutes is reported as such. */
