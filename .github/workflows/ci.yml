@@ -18,7 +18,7 @@ jobs:
     # minutes are billed; the same checks and the full suites run, the :4400 demo is never touched (the browser suite
     # runs on its own isolated copy). The Mac must be on for a pull request to be checked.
     runs-on: [self-hosted, macOS, xr-mac]
-    timeout-minutes: 60
+    timeout-minutes: 90   # P-183: a busy Mac never stops a check halfway (60 cancelled #104 on 30 Oct)
     permissions: { contents: read }
     concurrency: { group: "ci-${{ github.event.pull_request.number }}", cancel-in-progress: true }
     env:
@@ -69,7 +69,9 @@ jobs:
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
       - name: studio suites (run-suites.sh, browser suite on its own copy; no model call, US$0)
         if: steps.code.outputs.suites == 'true'
-        env: { COPY_PREFIX: ci, SUITES_BROWSER_ISOLATED: "1" }
+        # P-183: CI first (lanes' full runs wait while this runs); suites one at a time (parallel is built but off until a
+        # serial-vs-parallel comparison on one commit gives identical results: the first trial, 30 Oct, did not).
+        env: { COPY_PREFIX: ci, SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
         run: |
           bash "$P/tools/run-suites.sh" | tee suites.md
           exit ${PIPESTATUS[0]}

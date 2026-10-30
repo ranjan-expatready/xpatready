@@ -47,34 +47,49 @@ if [ -n "$PREFIX" ]; then
   fi
   [ "$NAMES" = 1 ] || trap 'rm -rf "$LOCK"' EXIT
 fi
+# CI first (P-183): the Mac CI job marks itself (SUITES_CI_FIRST=1); any other full run waits until it is done, so a
+# pull request check never shares the Mac with a lane's full run. --names never waits.
+CILOCK="${SUITES_LOCKS:-$ROOT/.tools/run-suites-locks}/ci-active"; mkdir -p "${CILOCK%/*}"
+if [ "$NAMES" = 1 ]; then :
+elif [ "${SUITES_CI_FIRST:-}" = 1 ]; then echo "$$" > "$CILOCK"; trap 'rm -f "$CILOCK"; [ -n "${LOCK:-}" ] && rm -rf "$LOCK"' EXIT
+else
+  said=""; while [ -s "$CILOCK" ] && kill -0 "$(cat "$CILOCK" 2>/dev/null)" 2>/dev/null; do
+    [ -n "$said" ] || { echo "A pull request check (CI) is running the suites on this Mac: waiting for it first (P-183)."; said=1; }; sleep 15; done
+fi
 iname() { if [ -n "$PREFIX" ]; then printf '%s_%s' "$PREFIX" "$1"; else printf '%s' "$1"; fi; }
 iport() { if [ "$SLOT" -gt 0 ]; then echo $(( $1 + 10000 + 1000 * (SLOT - 1) )); else echo "$1"; fi; }
 if [ "$NAMES" = 1 ]; then echo "prefix: ${PREFIX:-none} · slot: $SLOT · forms_s4 → $(iname forms_s4) on $(iport 4455) · runtime_r1 → $(iname runtime_r1) on $(iport 4430)"; exit 0; fi
 pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 || zsh "$S/start.sh" >/dev/null 2>&1 || { echo "the demo database is not running and start.sh failed"; exit 2; }
 
-rows=(); fail=0
+# Parallel (P-183, founder 30 Oct): SUITES_JOBS suites on their own isolated copies at once (browser suites at most
+# SUITES_BROWSER_JOBS of them); the suites without an isolated copy (they read the demo database) stay one at a time, in
+# order. Every suite still runs, with the same checks; only when it runs changes. Default 1 and 1: exactly the serial run.
+JOBS="${SUITES_JOBS:-1}"; BJOBS="${SUITES_BROWSER_JOBS:-1}"
+ROWDIR="$OUT/rows.$$"; rm -rf "$ROWDIR"; mkdir -p "$ROWDIR"; JOBKEY=0000
+addrow() { printf '%s\n' "$1" >> "$ROWDIR/$JOBKEY.row"; }
 run() {  # $1 file, $2 label, rest: command
   local f="$1" label="$2"; shift 2; local log="$OUT/${f%.*}.log" t0=$SECONDS
-  if "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st=PASS; else st=FAIL; fail=1; fi
+  if "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st=PASS; else st=FAIL; fi
   local last; last=$(grep -E "passed|/[0-9]+ passed|[0-9]+ passed" "$log" | tail -1 | cut -c1-90)
   [ -n "$last" ] || last="$(grep -c '^PASS' "$log") checks passed"
   # A failing check's own line first: "Error" also appears inside PASS lines that quote an expected error.
   [ "$st" = FAIL ] && last="$( (grep -m1 -E '^(FAIL|STOP)' "$log" || grep -m1 -E 'Error' "$log") | cut -c1-90)"
-  rows+=("| $f | $st | $((SECONDS - t0)) s | ${last:-see $log} |")
+  addrow "| $f | $st | $((SECONDS - t0)) s | ${last:-see $log} |"
 }
-for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
-  f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac
+suite_one() {  # $1 path: one suite, as its usage line says
+  local path="$1"
+  f=$(basename "$path"); case " $SKIP " in *" $f "*) return;; esac
   usage=$(grep -m1 -E "studio/tests/$f" "$path")
   if [ "$f" = check_studio_browser.cjs ]; then
     if [ "$DEMO" = 0 ] && [ "${SUITES_BROWSER_ISOLATED:-}" = 1 ]; then
       # The Mac CI runner (self-hosted, founder 30 Oct): the same suite on its own isolated copy, never the :4400 demo.
       bn=$(iname studio_browser); bp=$(iport 4429)
-      zsh "$S/tools/isolated.sh" "$bn" "$bp" start >/dev/null 2>&1 || { rows+=("| $f | FAIL | | isolated copy $bn did not start |"); fail=1; continue; }
+      zsh "$S/tools/isolated.sh" "$bn" "$bp" start >/dev/null 2>&1 || { addrow "| $f | FAIL | | isolated copy $bn did not start |"; return; }
       run "$f" isolated env STUDIO_URL="http://localhost:$bp" STUDIO_DB="xr_studio_$bn" node "$path"
-      zsh "$S/tools/isolated.sh" "$bn" "$bp" stop >/dev/null 2>&1; continue
+      zsh "$S/tools/isolated.sh" "$bn" "$bp" stop >/dev/null 2>&1; return
     fi
-    [ "$DEMO" = 1 ] || { rows+=("| $f | skipped | | resets the :4400 demo: --demo (CI, cloud) |"); continue; }
-    zsh "$S/start.sh" >/dev/null 2>&1; run "$f" demo node "$path"; continue
+    [ "$DEMO" = 1 ] || { addrow "| $f | skipped | | resets the :4400 demo: --demo (CI, cloud) |"; return; }
+    zsh "$S/start.sh" >/dev/null 2>&1; run "$f" demo node "$path"; return
   fi
   # A usage line may pass server settings after "start" (isolated.sh start KEY=VALUE ..., e.g. a test-only pause).
   if [[ "$usage" =~ isolated\.sh\ ([a-z0-9_]+)\ ([0-9]+)\ start((\ [A-Z_][A-Z0-9_]*=[^ ]+)*)\ \&\&\ (tsx|node)\ studio/tests/$f(.*) ]]; then
@@ -84,7 +99,7 @@ for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
     keep=""; [ -n "$PREFIX" ] && keep='s/\[(xr_studio_[a-z0-9_]+)\]/\1/g; '
     args=$(printf '%s' "${BASH_REMATCH[6]}" | sed -E "${keep}"'s/\[[^]]*\]//g; s/ {2,}.*//')
     [ -n "$PREFIX" ] && args=$(printf ' %s ' "$args" | sed -E "s/ ${uport} / ${port} /g; s/xr_studio_${uname}( |\$)/xr_studio_${name}\1/g")
-    zsh "$S/tools/isolated.sh" "$name" "$port" start "${env[@]}" >/dev/null 2>&1 || { rows+=("| $f | FAIL | | isolated copy $name did not start |"); fail=1; continue; }
+    zsh "$S/tools/isolated.sh" "$name" "$port" start "${env[@]}" >/dev/null 2>&1 || { addrow "| $f | FAIL | | isolated copy $name did not start |"; return; }
     if [ "$tool" = node ]; then run "$f" "$name" node "$path" $args; else run "$f" "$name" $TSX "$path" $args; fi
     zsh "$S/tools/isolated.sh" "$name" "$port" stop >/dev/null 2>&1
   else
@@ -93,7 +108,31 @@ for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
     own=""; if [ -n "$PREFIX" ] && [[ "$usage" =~ \[port=([0-9]+)\]\ \[name=([a-z0-9_]+)\] ]]; then own="$(iport "${BASH_REMATCH[1]}") $(iname "${BASH_REMATCH[2]}")"; fi
     case "$f" in *.cjs) run "$f" plain node "$path";; *) run "$f" plain env DATABASE_URL="$DB/xr_studio_demo" $TSX "$path" $own;; esac
   fi
-done
+}
+# Scheduling: one serial worker for the suites without their own copy; up to JOBS (browser: BJOBS) others at once.
+pids=(); bpids=()
+reap() { local a=() p; for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && a+=("$p"); done; pids=("${a[@]}")
+  a=(); for p in "${bpids[@]}"; do kill -0 "$p" 2>/dev/null && a+=("$p"); done; bpids=("${a[@]}"); }
+isplain() { [ "$(basename "$1")" = check_studio_browser.cjs ] || ! grep -m1 -E "studio/tests/$(basename "$1")" "$1" | grep -q 'isolated\.sh [a-z0-9_]* [0-9]* start'; }
+all=("$S"/tests/check_*.ts "$S"/tests/check_*.cjs)
+if [ "$JOBS" -le 1 ]; then
+  n=0; for path in "${all[@]}"; do n=$((n + 1)); JOBKEY=$(printf '%04d' "$n") suite_one "$path"; done
+else
+  # The serial worker: every suite without its own copy, one at a time, in order, beside the parallel ones.
+  ( n=0; for path in "${all[@]}"; do n=$((n + 1)); isplain "$path" && JOBKEY=$(printf '%04d' "$n") suite_one "$path"; done ) & ppid=$!
+  n=0
+  for path in "${all[@]}"; do
+    n=$((n + 1)); key=$(printf '%04d' "$n"); isplain "$path" && continue
+    case "$(basename "$path")" in
+      *_browser.cjs) while reap; [ "${#bpids[@]}" -ge "$BJOBS" ] || [ $(( ${#pids[@]} + ${#bpids[@]} )) -ge "$JOBS" ]; do sleep 1; done
+        (JOBKEY=$key; suite_one "$path") & bpids+=("$!");;
+      *) while reap; [ $(( ${#pids[@]} + ${#bpids[@]} )) -ge "$JOBS" ]; do sleep 1; done
+        (JOBKEY=$key; suite_one "$path") & pids+=("$!");;
+    esac
+  done
+fi
+wait
+JOBKEY=9000
 # Suites outside tests/check_*: the runtime lane's (R1, two steps on one copy) and the drafting guard's (prototype/tests,
 # plain: they make their own temporary copies). Both lanes' Lead checks found CI skipping them (24 Oct).
 RT="$S/tests/runtime"; RN=$(iname runtime_r1); RP=$(iport 4430)
@@ -105,12 +144,13 @@ if [ -f "$RT/check_runtime_r1a.ts" ]; then
     # R1d next on the same copy (it fills forms from the cases R1c made); R1a last: its --reset empties the workspace.
     [ -f "$RT/check_runtime_r1d.ts" ] && run check_runtime_r1d.ts "$RN" $TSX "$RT/check_runtime_r1d.ts" "$RP" "xr_studio_$RN"
     run check_runtime_r1a.ts "$RN" $TSX "$RT/check_runtime_r1a.ts" "$RP" "xr_studio_$RN" --reset
-  else rows+=("| check_runtime_r1a.ts | FAIL | | isolated copy runtime_r1 or setup_visitor_visa.ts failed (see setup_visitor_visa.log) |"); fail=1; fi
+  else addrow "| check_runtime_r1a.ts | FAIL | | isolated copy runtime_r1 or setup_visitor_visa.ts failed (see setup_visitor_visa.log) |"; fi
   zsh "$S/tools/isolated.sh" "$RN" "$RP" stop >/dev/null 2>&1
 fi
 for t in check_p2_guard check_p2_launch; do
   [ -f "$P/prototype/tests/$t.ts" ] && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
 done
-echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; printf '%s\n' "${rows[@]}"
+echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; cat "$ROWDIR"/*.row
+fail=0; grep -q '^| [^|]* | FAIL |' "$ROWDIR"/*.row && fail=1
 echo "commit $(git rev-parse --short HEAD) · logs in ${OUT#$ROOT/}${PREFIX:+ · copies named ${PREFIX}_*, ports +$(( 10000 + 1000 * (SLOT - 1) ))}"
 exit $fail
