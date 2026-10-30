@@ -134,7 +134,9 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
     // 5 Review and release: draft changes since the latest release (or none yet), and its checks pass.
     if (problemsBy.release) open.release.push(problemsItem(problemsBy.release, "release", false));
     if (s.changes > 0 || !s.release) {
-      if (s.review.stage === "submit") open.release.push(item("submit", 1, "Submit for review", "review:submit"));
+      // PR #108 minor (b): Submit is offered once Forms and Questions and documents have nothing open (the submit endpoint
+      // refuses while their problems stand). Official pages and people are not gated: no screen confirms them yet (P-176 Q1).
+      if (s.review.stage === "submit") { if (!open.forms.length && !open.questions_documents.length) open.release.push(item("submit", 1, "Submit for review", "review:submit")); }
       else if (s.review.stage === "sign") open.release.push(item("sign", 1, "Review and sign", "review:sign", { notBy: s.review.submittedBy ? [s.review.submittedBy] : [] }));
       else open.release.push(item("release", 1, "Release", "review:release", { notBy: [...new Set([...(s.review.submittedBy ? [s.review.submittedBy] : []), ...s.review.authors])] }));
     }
@@ -164,7 +166,7 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
   const chipStatus: ChipStatus = s.retired ? "RETIRED" : !s.combinationId ? "NOT_STARTED" : notReady ? "NOT_READY" : s.release ? "LIVE" : "IN_PROGRESS";
   const first = nextStep ? open[nextStep][0] : null;
   const id = s.combinationId ?? "";
-  const hrefOf = (st: StepKey, i: OpenItem) => i.focus.startsWith("review:") && i.kind === "review_proposals" ? `/review?c=${id}&step=${STEP_KEYS.indexOf(st) + 1}`
+  const hrefOf = (st: StepKey, i: OpenItem) => i.focus.startsWith("review:") && i.kind === "review_proposals" ? `/review/proposals?c=${id}&step=${STEP_KEYS.indexOf(st) + 1}`
     : i.kind === "view_ai" ? `/c/${id}/jobs` : `/c/${id}/${steps[STEP_KEYS.indexOf(st)].tab}?focus=${encodeURIComponent(i.focus)}`;
   return {
     combinationId: s.combinationId,
