@@ -41,6 +41,8 @@ Every tool added for this work is listed here: version, official source, checksu
 * **Outcome (24 Oct):** served its purpose; the migration to ordinary clones retired it (P-82).
 
 ## Backups
+* `.tools/ledger-backup-2026-10-29` — the old AI spending ledgers, kept to seed the one shared ledger of QA-90 (restored 30 Oct from the size-trim audit).
+* Lane test databases `xr_studio_<lane>_*` (about 3.7 GB on 29 Oct) are scratch: drop them when lanes are idle (restored 30 Oct from the size-trim audit).
 * `.tools/solution-1-prototype/backups/xr_studio_demo-before-forms-restart-20261023-1908.dump` — the :4400 database before the forms update and the stray-row removal (pg_dump custom format; restore with `pg_restore`).
 * `.tools/solution-1-prototype/backups/xr_studio_demo-before-w1-structure-refresh-20261027-0742.dump` — the :4400 database before the 27 Oct refresh onto `lead/2026-10-27` (W1-02 plus screens slices 1+2, migration `20261027090000_w1_structure`); founder OK; restore with `pg_restore`.
 * `~/Xpatready-backup-2026-10-24.bundle` (all refs, verified), `~/Xpatready-db-*-2026-10-24.dump` (every `xr_studio_*` database), `~/Xpatready-backup-2026-10-24.tar.gz` (working tree) — the P-82 migration backups; checksums in `~/Xpatready-backup-2026-10-24.sha256`.
