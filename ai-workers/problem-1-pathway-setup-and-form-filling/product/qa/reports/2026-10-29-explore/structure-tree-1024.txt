@@ -1,0 +1,362 @@
+Program structure
+Add
+
+Where every combination sits: Pathway › Program › Category › Sub-category. The order here is the order on Immigration programs.
+
+Retail
+21
+Corporate and employers
+8
+Tree
+List
+Find a name
+Expand all
+Collapse all
+Pathway
+All
+21
+Temporary residence
+12
+Permanent residence
+8
+Citizenship
+1
+Program: All
+Visitors
+Work permits
+Study permits
+Family sponsorship
+Economic immigration
+Permanent resident documents
+Citizenship
+Status: All
+In setup
+Not ready
+Live
+Not started
+Waiting for approval
+Show retired (0)
+
+3 pathways · 7 programs · 15 categories · 11 sub-categories · 21 combinations
+
+Pathway
+Program
+Category
+Sub-category
+· Numbers show the order on this page, not IRCC codes.
+
+Name
+Status
+Cases may be opened from
+Actions
+1
+Temporary residence
+12 combinations
+Edit
+Temporary residence
+Retire
+Temporary residence
+
+Can't retire yet: "Work permits", "Employer-specific work permit" and 1 more under it are still in use: retire those first; "Visitor visa", "Super visa" and 1 more under it have setup drafts: release or discard them first; "Extend stay in Canada", "LMIA-exempt (employer offer)" and 3 more under it were never released: delete those first. Open cases and earlier releases keep everything either way. See where used
+
+1.1
+Visitors
+3 combinations
+Edit
+Visitors
+Delete
+Visitors
+
+Can't delete: "Visitor visa" under it has a setup draft. See where used
+
+1.1.1
+Visitor visa
+In setup
+Outside Canada
+Edit
+Visitor visa
+Delete
+Visitor visa
+
+Can't delete: its setup draft uses it. See where used
+
+1.1.2
+Super visa
+In setup
+Outside Canada
+Edit
+Super visa
+Delete
+Super visa
+
+Can't delete: its setup draft uses it. See where used
+
+1.1.3
+Extend stay in Canada
+Not started
+Inside Canada
+Edit
+Extend stay in Canada
+Delete
+Extend stay in Canada
+1.2
+Work permits
+7 combinations
+Edit
+Work permits
+Retire
+Work permits
+
+Can't retire yet: "Employer-specific work permit" and "With an LMIA" under it are still in use: retire those first; "LMIA-exempt (employer offer)", "Open work permit" and 1 more under it were never released: delete those first. Open cases and earlier releases keep everything either way. See where used
+
+1.2.1
+Employer-specific work permit
+2 sub-categories
+Edit
+Employer-specific work permit
+Retire
+Employer-specific work permit
+
+Can't retire yet: "With an LMIA" under it is still in use: retire it first; "LMIA-exempt (employer offer)" under it was never released: delete it first. Open cases and earlier releases keep everything either way. See where used
+
+1.2.1.1
+With an LMIA
+Live · Release 1
+Outside Canada
+Edit
+With an LMIA
+Retire
+With an LMIA
+1.2.1.2
+LMIA-exempt (employer offer)
+Not started
+Outside Canada
+Edit
+LMIA-exempt (employer offer)
+Delete
+LMIA-exempt (employer offer)
+1.2.2
+Open work permit
+3 sub-categories
+Edit
+Open work permit
+Delete
+Open work permit
+1.2.2.1
+Spouse of a skilled worker
+Not started
+Inside or outside Canada
+Edit
+Spouse of a skilled worker
+Delete
+Spouse of a skilled worker
+1.2.2.2
+Spouse of a student
+Not started
+Inside or outside Canada
+Edit
+Spouse of a student
+Delete
+Spouse of a student
+1.2.2.3
+Post-graduation
+Not started
+Inside Canada
+Edit
+Post-graduation
+Delete
+Post-graduation
+1.2.3
+International Experience Canada
+2 sub-categories
+Edit
+International Experience Canada
+Delete
+International Experience Canada
+1.2.3.1
+Working holiday
+Not started
+Outside Canada
+Edit
+Working holiday
+Delete
+Working holiday
+1.2.3.2
+Young professionals
+Not started
+Outside Canada
+Edit
+Young professionals
+Delete
+Young professionals
+1.3
+Study permits
+2 combinations
+Edit
+Study permits
+Delete
+Study permits
+
+Can't delete: "Study permit" under it has a setup draft. See where used
+
+1.3.1
+Study permit
+In setup
+Outside Canada
+Edit
+Study permit
+Delete
+Study permit
+
+Can't delete: its setup draft uses it. See where used
+
+1.3.2
+Study permit extension
+Not started
+Inside Canada
+Edit
+Study permit extension
+Delete
+Study permit extension
+2
+Permanent residence
+8 combinations
+Edit
+Permanent residence
+Delete
+Permanent residence
+
+Can't delete: "Applicant outside Canada" under it has a setup draft. See where used
+
+2.1
+Family sponsorship
+3 combinations
+Edit
+Family sponsorship
+Delete
+Family sponsorship
+
+Can't delete: "Applicant outside Canada" under it has a setup draft. See where used
+
+2.1.1
+Spouse or partner
+2 sub-categories
+Edit
+Spouse or partner
+Delete
+Spouse or partner
+
+Can't delete: "Applicant outside Canada" under it has a setup draft. See where used
+
+2.1.1.1
+Applicant outside Canada
+In setup
+Outside Canada
+Edit
+Applicant outside Canada
+Delete
+Applicant outside Canada
+
+Can't delete: its setup draft uses it. See where used
+
+2.1.1.2
+Applicant in Canada
+Not started
+Inside Canada
+Edit
+Applicant in Canada
+Delete
+Applicant in Canada
+2.1.2
+Dependent child
+Not started
+Inside or outside Canada
+Edit
+Dependent child
+Delete
+Dependent child
+2.2
+Economic immigration
+3 combinations
+Edit
+Economic immigration
+Delete
+Economic immigration
+2.2.1
+Express Entry
+2 sub-categories
+Edit
+Express Entry
+Delete
+Express Entry
+2.2.1.1
+Profile
+Not started
+Inside or outside Canada
+Edit
+Profile
+Delete
+Profile
+2.2.1.2
+Permanent residence application
+Not started
+Inside or outside Canada
+Edit
+Permanent residence application
+Delete
+Permanent residence application
+2.2.2
+Provincial nomination
+Not started
+Inside or outside Canada
+Edit
+Provincial nomination
+Delete
+Provincial nomination
+2.3
+Permanent resident documents
+2 combinations
+Edit
+Permanent resident documents
+Delete
+Permanent resident documents
+2.3.1
+PR card renewal
+Not started
+Inside Canada
+Edit
+PR card renewal
+Delete
+PR card renewal
+2.3.2
+Travel document
+Not started
+Outside Canada
+Edit
+Travel document
+Delete
+Travel document
+3
+Citizenship
+1 combination
+Edit
+Citizenship
+Delete
+Citizenship
+3.1
+Citizenship
+1 combination
+Edit
+Citizenship
+Delete
+Citizenship
+3.1.1
+Grant of citizenship
+Not started
+Inside Canada
+Edit
+Grant of citizenship
+Delete
+Grant of citizenship
+
+Names and locations are Sample until the immigration expert confirms. The AI meaning check is off: only the spelling check runs, and names are shown as Not meaning-checked.

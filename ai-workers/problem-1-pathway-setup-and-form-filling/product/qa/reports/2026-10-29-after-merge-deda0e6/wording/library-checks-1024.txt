@@ -1,0 +1,24 @@
+URL /library/checks as user-A
+TITLE Checks · Product Studio
+H1 ["Checks"]
+HEADS ["Checks are listed on each combination's Questionnaires tab"]
+CUT []
+ERRORS []
+---
+Checks
+
+Field validation, consistency checks, document validity and AI review objectives.
+
+Checks are listed on each combination's Questionnaires tab
+
+Each combination's rules and checks, with the questions they read, are on its Questionnaires tab. A shared list of checks across combinations is not built yet.
+
+Open Immigration programs
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you

@@ -1,0 +1,51 @@
+Immigration programs
+Temporary residence
+Study permits
+Study permit
+Study permit
+In setup
+
+Not released yet · cases opened outside Canada · people: Student, Representative (optional) · Sample
+
+Next step
+
+Add 3 forms from the library
+Sample: general forms only; no study-permit rules or documents are configured.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+
+No form find yet
+
+Its forms and checklists come from canada.ca into the Form library and attach here. Nothing was spent yet. Which forms apply is Sample until the immigration expert confirms.
+
+Find forms with AI (about US$0.31 · at most US$5.58)
+
+Filing: not known until a form is set up · 3 forms attached, 0 set up · Sample until the immigration expert confirms
+
+Add a form from the library
+Open the Form library
+
+Not set up yet: 3 forms can be added from the library now (their form fields are already matched, no AI needed). Each row has its step.
+
+Form	Why it is here (IRCC's words)	Who fills it	Only if	Filed as by default	Signed by	Read and matched	
+IMM 5707
+IMM 5707 (01-2023) · imm5707e.pdf	Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.	
+In the library
+Add from library
+	
+IMM 5476
+IMM 5476 (11-2025) · imm5476e.pdf	Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.	
+In the library
+Add from library
+	
+IMM 5475
+IMM 5475 (12-2022) · imm5475e.pdf	Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.	
+In the library
+Add from library
+	
+
+Sources (read for documents and citations, never filed): Guide 5269 (read 2026-10-29)

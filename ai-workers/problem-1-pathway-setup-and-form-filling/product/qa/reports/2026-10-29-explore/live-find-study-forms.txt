@@ -1,0 +1,131 @@
+Immigration programs
+Temporary residence
+Study permits
+Study permit
+Study permit
+In setup
+
+Not released yet · 112 draft changes · cases opened outside Canada · people: Student, Representative (optional) · Sample
+
+Next step
+
+Add 1 form from the library
+Sample: from the sample inputs; its setup has changed since they were loaded.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release5
+Last change: AI attached IMM 1294, IMM 5483, IMM 5409, IMM 5476, IMM 5475 · today at 11:15 p.m.
+Undo
+
+AI found 5 forms for this combination, 2 to decide
+
+Last find today at 11:15 p.m.. Which forms apply is Sample until the immigration expert confirms.
+
+Find again
+
+IMM 5707 Family Information AI's two rounds disagree · you decide
+
+IRCC's words: "Family Information (IMM 5707)"
+
+Only one AI round named it (the other's answer failed the rules).
+
+Add to this combination
+
+IMM 5646 Custodianship Declaration – Custodian for Minors Studying in Canada AI's two rounds disagree · you decide
+
+IRCC's words: "Declaration (IMM 5646) (opens in a new tab) . Pages 1"
+
+Only one AI round named it (the other's answer failed the rules).
+
+Add to this combination
+
+Filing: PDF only · 6 forms attached, 5 set up · Sample until the immigration expert confirms
+
+Add a form from the library
+Open the Form library
+
+Not set up yet: 1 form can be added from the library now (its form fields are already matched, no AI needed). Each row has its step.
+
+4 conditions are in words only
+
+A case cannot tell whom IMM 1294, IMM 5409, IMM 5475, IMM 5476 apply to until the words are turned into a rule. Release waits for it. Open the form to build the rule.
+Form	Why it is here (IRCC's words)	Who fills it	Only if	Filed as by default	Signed by	Read and matched	
+IMM 1294
+Application for study permit made outside of Canada
+Picked by AI · Sample	"Made Outside of Canada (IMM 1294) (opens in a new tab)"	Each applicant	No rule yet
+When applying from outside Canada. The pages do not print a form number for applying from inside Canada.	
+PDF upload
+Online (later wave)
+Signed PDF upload
+No signature in the file
+	Not set	
+No edition read yet · 0 form fields matched
+Not attached	
+Change
+
+IMM 5409
+STATUTORY DECLARATION OF COMMON-LAW UNION
+Picked by AI · Sample	"Common-law Union (IMM 5409) (opens in a new tab), if"	Once per couple	No rule yet
+If applicable (the guide says only "if applicable"; it relates to a common-law union)	
+PDF upload
+Online (later wave)
+Signed PDF upload
+No signature in the file
+	Not set	
+IMM 5409 (01-2023) · 16 form fields matched
+In the library
+	
+Change
+
+IMM 5475
+Authority to release personal information to a designated individual
+Picked by AI · Sample	"information to a designated individual (IMM 5475) (opens in a new tab), if"	Each applicant	No rule yet
+If applicable (the page does not say when)	
+PDF upload
+Online (later wave)
+Signed PDF upload
+No signature in the file
+	Not set	
+IMM 5475 (05-2021) · 20 form fields matched
+In the library
+	
+Change
+
+IMM 5476
+Use of Representative
+Picked by AI · Sample	"Use of a Representative (IMM 5476)"	Each applicant	No rule yet
+Only if you are appointing a representative, updating a representative's contact information, or cancelling a representative's appointment. Dependent children aged 18 or older file their own copy if the representative also acts for them.	
+PDF upload
+Online (later wave)
+Signed PDF upload
+No signature in the file
+	Not set	
+IMM 5476 (11-2025) · 36 form fields matched
+In the library
+	
+Change
+
+IMM 5483
+Document Checklist - For a Study Permit
+Picked by AI · Sample	"Make sure you complete the Document Checklist (IMM 5483) and include it with your application forms and supporting docum…"	Each applicant	Always	
+PDF upload
+Online (later wave)
+Signed PDF upload
+No signature in the file
+	Not set	
+No edition read yet · 0 form fields matched
+Not attached	
+Change
+
+IMM 5707
+IMM 5707 (01-2023) · imm5707e.pdf	Attached from the Form library: not set up as a line yet. It is read, then its form fields are matched to shared fields; it joins the lines when the matches are applied.	
+In the library
+Add from library
+	
+Blocks release
+IMM 1294 is filed as PDF upload, but the Form library records that IRCC accepts it only as Online. Choose a way IRCC accepts.
+
+Sources (read for documents and citations, never filed): Guide 5269 (read 2026-10-29)

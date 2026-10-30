@@ -4,6 +4,21 @@ Older rows (closed up to 26 Oct): `history/qa-bugs-closed-to-2026-10-26.md`.
 
 | # | Type · Severity | Capability | Found | Closed on | How it was retested |
 |---|---|---|---|---|---|
+| QA-97 | Bug · Major | C11.15, C11.8 | deda0e6b (CI #94) | main a9fe60c0 (PR #98), 29 Oct | `check_w1_start_setup_browser.cjs` twice on one copy (the second sees the first's finished runs): 39/39 both; card "about US$0.31 · at most US$5.58 · US$0.00 so far" = button "about US$0.31 · at most US$5.58" (about and at most stored on the batch) |
+| QA-39 | UX · Major | C3.10 | 8360565 | main deda0e6b, 29 Oct | `check_qa_wording_1029.cjs` (38 pages × 2 widths): Fields lead with words ("Application date", the key small under it); no "Canonical fields", no `yes_no`; "461 form fields"; versions name the role; nothing cut at 1024 |
+| QA-48 | UX · Minor | C11.9, C11.10 | 76628a4 | main deda0e6b, 29 Oct | `check_qa_am_r3_1028.cjs` 69/69: Immigration programs says "1 retired, not shown (Status: Retired)" |
+| QA-70 | UX · Major | C11.10, C11.3 | f7cb40d9 | main deda0e6b, 29 Oct | `check_qa_am_s3_1029.cjs` 39/39: menu links show the focus ring |
+| QA-71 | UX · Major | C3.10, C3.3 | f7cb40d9 | main deda0e6b, 29 Oct | wording sweep: Document types and Sections show no system names (0 keys) |
+| QA-72 | UX · Major | C3.10 | f7cb40d9 | main deda0e6b, 29 Oct | wording sweep and :4400: Checks says "Checks are listed on each combination's Questionnaires tab"; no screen number, no "later screen" |
+| QA-79 | UX · Minor | C11.6 | f7cb40d9 | main deda0e6b, 29 Oct | wording sweep: "39 rules · 64 checks"; "Release 1, today at 8:34 p.m." |
+| QA-81 | UX · Minor | C11.10 | f7cb40d9 | main deda0e6b, 29 Oct | "agent" on none of the 38 pages; not in `programs.tsx` |
+| QA-83 | Bug · Critical | C11.15 | 170659bc | main deda0e6b, 29 Oct | `check_qa_ai_paths.ts` 21/21 (offline): find-guide schema accepted by the provider's structured-output rules |
+| QA-84 | Bug · Critical | C11.12 | 170659bc | main deda0e6b, 29 Oct | `check_qa_ai_paths.ts` 21/21: who-can-be schema accepted |
+| QA-85 | Bug · Critical | C11.12 | 170659bc | main deda0e6b, 29 Oct | `check_qa_ai_paths.ts` 21/21: the who_can_be stub answer exists, so the stub pass runs |
+| QA-86 | Bug · Major | C11.8 | 170659bc | main deda0e6b, 29 Oct | `check_qa_ai_paths.ts`: 400 and 413 refusals are US$0 in the scratch ledger |
+| QA-87 | Bug · Major | C11.8, C11.15 | 170659bc | main deda0e6b, 29 Oct | `check_qa_ai_paths.ts`: a 529 on a 100 KB finder request is not reported as over the cap; a 429 is not retried at once |
+| QA-88 | UX · Major | C11.8 | 170659bc | main deda0e6b, 29 Oct | `check_qa_ai_paths.ts`: plain words, never the provider's JSON; request id in Details |
+| QA-89 | Bug · Major | C11.15 | 170659bc | main deda0e6b, 29 Oct | code read (`finder.ts` 290, 357): the checker round runs only after the first round succeeded |
 | QA-41 | UX · Minor | C6.1, C6.3 | 8360565 | 76628a4, 27 Oct | `check_qa_am_1027.cjs`: the Open a case dialog opens with focus on "Case reference" (an input), not Close |
 | QA-42 | UX · Minor | C1.4 | 8360565 | 76628a4, 27 Oct | `check_qa_am_1027.cjs`: Visitor visa (Live, forms released) no longer shows the "not set up yet" seed note |
 | QA-43 | Bug · Minor | C2.7 | 8360565 | 76628a4 (W1-02 removed the route, P-102), 27 Oct | `check_qa_am_1027.cjs`: `GET /combinations/:id/online-forms` is gone (404), with the other capture, pairing and portal routes |
