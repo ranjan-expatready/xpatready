@@ -21,8 +21,8 @@ updated: 2026-10-30
   4. Unmerged qa branches for the Lead: `claude/qa-after-merge-5f6c8de` (5d74a1e6 and this Handover; it contains `claude/qa-explore-1029` and `claude/qa-after-merge-deda0e6`).
   5. Not yet covered: c8 coverage rerun, release refused for a fact with no source or two (C4.10), read-only walk of :4400 on 5f6c8deb.
 * **30 Oct, after-merge on 5f6c8deb (branch `claude/qa-after-merge-5f6c8de`):** QA-92–96 closed, QA-99 fixed in stub (live waits), QA-112–117 new. **Ports: 4471 is taken by the forms copy; use 4472–4479 and check `lsof -ti tcp:<port> -sTCP:LISTEN` first** (`isolated.sh` stops whatever holds the port). The guard hook blocks Bash lines containing "pqr", ports lists and some pipes: use scratchpad scripts. Retest QA-92–96 line below is done.
-* **29 Oct ~23:40, explore on a9fe60c0 (branch `claude/qa-explore-1029`, worktree objective-faraday-d76c2a, copy qa_ex :4473):** report `qa/reports/2026-10-29-explore.md`; QA-100–111 new. **Never click "Find forms with AI (about … · at most …)" in a check or by hand: it starts a LIVE run in one click on any copy (QA-100; US$0.27 spent that way).** Make a Rules find through the API first (`/forms/find/plan {mode:"rules"}`, then `/forms/find`), then use Find again; `check_qa_explore_1029.cjs` shows the pattern and stops if the ledger grows. The guard hook also blocks single `node … 2>&1 | tail` lines and some greps: use scratchpad scripts.
-* **Done 29 Oct evening:** after-merge on deda0e6b plus the live smoke on a9fe60c0. Report: `qa/reports/2026-10-29-after-merge-deda0e6.md` (§5 is the live smoke). Branch `claude/qa-after-merge-deda0e6` (worktree sharp-golick-4e9110), pushed; the Lead opens the qa PR.
+* **29 Oct, explore on a9fe60c0:** `qa/reports/2026-10-29-explore.md`, QA-100–111. **Never click "Find forms with AI (about … · at most …)" by hand or in a check: one click starts a LIVE run on any copy (QA-100, US$0.27).** Make a Rules find through the API (`/forms/find/plan {mode:"rules"}`, then `/forms/find`), then use Find again; `check_qa_explore_1029.cjs` shows the pattern and stops if the ledger grows.
+* **29 Oct evening:** after-merge deda0e6b + live smoke a9fe60c0: `qa/reports/2026-10-29-after-merge-deda0e6.md` (§5).
 * **Waiting:**
   * Live step 3 (Who can be, US$0.91 reserved) reruns when runtime's QA-99 fix merges. The Lead sends it. Founder ceiling: US$5.94 left of US$6.49 (30 Oct). The user allowed paid calls in this session, but a new session must ask the user again.
   * Live run recipe:
@@ -30,13 +30,11 @@ updated: 2026-10-30
     * Plans are free: `POST /api/combinations/<id>/people/propose/plan {mode:"live"}`, then `/people/propose {mode, planSha256}` (synchronous).
     * The finder: `/forms/find/plan`, then `/forms/find {mode, planSha256, idempotencyKey}`, then poll `/api/runs/<id>` (status is lower case).
     * Costs: diff of `p2/ledger/spend.jsonl`. Put the ledger and run files back to HEAD before committing.
-  * Done 30 Oct: QA-92–96 retested and closed on 5f6c8deb.
 * **Lessons:**
   * A new worktree needs `ln -s /Users/ranjansingh/Desktop/Xpatready/.tools .tools` at its root before `isolated.sh` (else "start the demo database first").
   * Run the wording sweep on a freshly loaded copy (the S3 check leaves names, so a later Load sample is refused with 409).
   * CI of a Lead PR can run without the PR merged just before it: check the merge base in the CI log ("Merge X into Y") and run the suites yourself when they differ.
   * Above load 10 the sample load times out (30 s) and kills whole suites: rerun the red ones alone.
-  * The person menu shows names only now ("Approver", "Configuration author").
 * **How to run it, in order:**
   1. Start a fresh qa copy: a new worktree from `origin/main`, `echo qa > .claude/lane`.
   2. Install: `npm ci` in `prototype/studio` with **Node 24** (`.tools/node-v24.21.0/bin` first on PATH; Homebrew's Node 23 fails Prisma), then `npx prisma generate` and `cd web && npx vite build`.
@@ -54,12 +52,6 @@ updated: 2026-10-30
   | `check_qa_explore_1029.cjs` (never clicks a priced button; stops if the ledger grows) | QA-105, 106, 108, 110 (70/74 on 5f6c8deb) |
   | `check_qa_am_s4_1028.cjs`, `check_qa_am_s5_1029.cjs`, `check_qa_am_r69_1028.cjs`, `check_qa_dv_1029.cjs` | regression (62/62, 51/51, 33/33, 24/25) |
 
-  Not in deda0e6b: QA-84, 91 (runtime), QA-90 (Lead tooling), QA-92–95 (runtime).
-* **State of this copy (confident-jemison-6e225d, branch `claude/qa-coverage-1029`, last pushed b0b42c46):**
-  * Everything qa is committed.
-  * Untracked suite screenshots are left over (`git clean` was refused by the permission check): delete them, or start fresh.
-  * qa_qn :4471 is stopped.
-  * The Lead still has to merge this branch's qa files (report `qa/reports/2026-10-29-coverage-s4-s5.md`, BUGS QA-92–95, CAPABILITIES C4.10 Partial).
 * **Learned this run:**
   1. `@axe-core/playwright` needs `browser.newContext()`, not `browser.newPage()`.
   2. The drawer is outside `<main>`: read it with `[role=dialog]`.
