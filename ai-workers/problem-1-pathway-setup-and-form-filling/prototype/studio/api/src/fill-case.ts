@@ -11,7 +11,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { Response } from "express";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
@@ -274,13 +274,19 @@ export class CaseForms implements OnModuleInit {
     const changed = [...changedFacts((x.snapshot.factsJson as Stored).facts, cov?.facts ?? []), ...changedGroups((x.snapshot.factsJson as Stored).groups, groupFacts(caseView(s, people, answers, rows, "agent", new Date(), groups), x.formNumber, x.subjectId))];
     if (changed.length) conflict(`This copy is out of date (${changed.length} change${changed.length === 1 ? "" : "s"} since it was made): make a new copy, validate that one and read it back.`);
     this.checkedFile(x, HttpStatus.CONFLICT);
+    const sha = createHash("sha256").update(f!.buffer!).digest("hex");
+    // Break M1: Adobe's Validate adds the barcode, so a validated copy never has the bytes the product wrote. The copy
+    // sent back unchanged was never validated: refused, and nothing is kept.
+    if (sha === x.sha256) fail(`This is the copy the product made, unchanged: it was not validated. Open it in Adobe, press Validate, save it and send the saved file. Nothing was recorded.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const dir = join(VAR("demo"), "cases", x.caseId, "validated"); mkdirSync(dir, { recursive: true });
-    const sha = createHash("sha256").update(f!.buffer!).digest("hex"), path = join(dir, `${x.formNumber.replace(/\s+/g, "")}-${short(x.id)}-${sha.slice(0, 12)}.pdf`);
+    const path = join(dir, `${x.formNumber.replace(/\s+/g, "")}-${short(x.id)}-${sha.slice(0, 12)}.pdf`);
     writeFileSync(path, f!.buffer!);
     const request = join(ROOT, x.path!.replace(/\.pdf$/, ".request.json"));
     let rb: { ok: boolean; why: string | null; written?: number; read_back_equal?: number; mismatches?: unknown[] };
     try { const { stdout } = await run(PY, ["-I", join(PROTOTYPE, "studio", "tools", "read_validated.py"), path, join(ROOT, x.path!), request], { cwd: ROOT, timeout: 120_000, maxBuffer: 10 * 1024 * 1024 }); rb = JSON.parse(stdout.trim().split("\n").pop()!); }
     catch { rb = { ok: false, why: "The file could not be read back." }; }
+    // Refused uploads are not left in the working files (break minor).
+    if (!rb.ok) rmSync(path, { force: true });
     if (!rb.ok) fail(`Not read back: ${rb.why ?? "the file does not hold the values this copy wrote."} Nothing was recorded; validate this copy in Adobe, save it and send it again.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const v = await this.db.validatedCopy.create({ data: { workspaceId: c.workspaceId, formInstanceId: x.id, path: path.replace(`${ROOT}/`, ""), sha256: sha, factsHash: inputHash(cov?.facts ?? []), readBack: rb as object, readBy: actor.id } });
     await this.audit.log(c.workspaceId, actor.id, "validated", "form copy", x.formNumber, `${actor.name} read back a validated copy of ${x.formNumber} (copy ${short(x.id)}) on case ${short(x.caseId)}: ${rb.read_back_equal}/${rb.written} values equal`);

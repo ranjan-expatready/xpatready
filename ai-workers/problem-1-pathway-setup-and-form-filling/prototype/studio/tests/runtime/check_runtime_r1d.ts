@@ -188,17 +188,22 @@ async function main() {
     return { status: res.status, body: await res.json().catch(() => null) };
   };
   const copyFile = readFileSync(join(ROOT, row1.path));
+  // Break M1: Adobe's Validate adds the barcode and saves, so the validated file never has the copy's bytes. Simulated
+  // here as an incremental save appended after the copy (the values stay as written); the unchanged copy is refused.
+  const validatedFile = Buffer.concat([copyFile, Buffer.from("\n% Saved after Validate (simulated in this check)\n")]);
   r = await call("POST", `/runtime/form-copies/${locked1}/validated`, {}, OFFICER);
   ok("C11.6 C-9 fail: sending no file is refused in words (400), nothing recorded", r.status === 400 && /validated PDF/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
   r = await sendValidated(locked1, Buffer.from("not a pdf"), "notes.txt");
   ok("C11.6 C-9 fail: a file that is not the validated PDF is refused and nothing is recorded", r.status === 422 && /not a PDF/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
   r = await sendValidated(locked1, readFileSync(join(ROOT, "ai-workers", "problem-1-pathway-setup-and-form-filling", "official-sources", "ircc", "forms", "imm5257e.pdf")), "imm5257e.pdf");
   ok("C11.6 C-9 fail: IRCC's blank form (none of the copy's values) does not read back, nothing recorded", r.status === 422 && /values the product wrote differ|could not be read/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
-  r = await sendValidated(locked1, copyFile, "imm5257-validated.pdf", CLIENT);
-  ok("C11.6 C-9 fail: the client cannot send a validated copy (officer only)", r.status === 403, r.status);
   r = await sendValidated(locked1, copyFile, "imm5257-validated.pdf");
-  ok("C11.6 C-9 pass: the saved copy reads back with every value the product wrote; its checksum and the facts' fingerprint are kept", r.status === 201 && r.body?.copy?.validated?.current === true && r.body.copy.validated.read_back.equal === r.body.copy.validated.read_back.written && r.body.copy.validated.read_back.written > 0
-    && sql(`select sha256 from validated_copy where form_instance_id='${locked1}'`) === sha(copyFile), r.body);
+  ok("C11.6 C-9 fail (break M1): the product's own copy sent back unchanged is not validated: refused in words (422) and nothing recorded", r.status === 422 && /unchanged: it was not validated/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
+  r = await sendValidated(locked1, validatedFile, "imm5257-validated.pdf", CLIENT);
+  ok("C11.6 C-9 fail: the client cannot send a validated copy (officer only)", r.status === 403, r.status);
+  r = await sendValidated(locked1, validatedFile, "imm5257-validated.pdf");
+  ok("C11.6 C-9 pass: the validated and saved copy reads back with every value the product wrote; its checksum and the facts' fingerprint are kept", r.status === 201 && r.body?.copy?.validated?.current === true && r.body.copy.validated.read_back.equal === r.body.copy.validated.read_back.written && r.body.copy.validated.read_back.written > 0
+    && sql(`select sha256 from validated_copy where form_instance_id='${locked1}'`) === sha(validatedFile), r.body);
   r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "validated_copy_uploaded" }, OFFICER);
   ok("RT-16 pass: the officer locks an up-to-date generated copy (\"validated copy uploaded back\")", r.status === 201 && r.body.locked?.kind === "validated_copy_uploaded", r.body);
   r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "filed" }, OFFICER);

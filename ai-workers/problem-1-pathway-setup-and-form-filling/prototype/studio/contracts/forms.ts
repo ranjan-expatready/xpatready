@@ -65,7 +65,12 @@ export const SetChannel = z.object({
   fromSignature: z.enum(SIGNATURES).optional(),
 });
 /** Plan §8 Q1: the IRCC account a combination files through (null: not set, every channel offered as Sample). */
-export const SetAccount = z.object({ account: z.enum(IRCC_ACCOUNTS, { error: `Choose one of: ${IRCC_ACCOUNTS.map((a) => ACCOUNT_WORDS[a]).join(", ")}.` }).nullable() });
+const accountError = { error: `Choose one of: ${IRCC_ACCOUNTS.map((a) => ACCOUNT_WORDS[a]).join(", ")}.` };
+/** Review M2 / break M3: `from` is the account the person saw (null: not set), so two saves at once cannot both win. */
+export const SetAccount = z.object({
+  account: z.enum(IRCC_ACCOUNTS, accountError).nullable(),
+  from: z.enum(IRCC_ACCOUNTS, { error: (iss) => (iss.input === undefined ? "Say which IRCC account you changed it from (null when it was not set)." : accountError.error) }).nullable(),
+});
 export const NewAlias = z.object({ alias: z.string().trim().min(2).max(200) });
 export const NewAnswerList = z.object({
   key: z.string().trim().regex(/^[a-z][a-z0-9_]{1,60}$/, "A list key in lower case, for example sex or marital_status."),

@@ -196,7 +196,7 @@ export const changeWords = (c: LastFormChange) => `${({ attach: "Added", remove:
 /** GET /combinations/:id/workspace?tab= — one request per tab view. Overview, Documents and Review read the combination
  *  page's existing reads. */
 export type WorkspaceView =
-  | { tab: "forms"; asked: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; /** P-143: the IRCC account it files through, in words (null: not set) */ account?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }
+  | { tab: "forms"; asked: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; /** P-143: the IRCC account it files through, in words (null: not set) */ account?: string | null; /** Review M2: its key, for the picker */ accountKey?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }
   | { tab: "questionnaires"; asked: string; people: PeopleView; questionnaire: QuestionnairesView | null; available: { key: string; title: string }[] }
   | { tab: "preview"; asked: string; preview: PreviewView | null; empty: string | null }
   | { tab: Exclude<TabKey, "forms" | "questionnaires" | "preview">; asked: string };

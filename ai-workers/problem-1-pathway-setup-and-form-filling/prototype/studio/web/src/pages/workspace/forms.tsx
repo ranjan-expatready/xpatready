@@ -24,7 +24,7 @@ import { useLibraryFields, WHO, whoLabel } from "@/pages/configuration";
 import { attachmentFor, pendingForms, ReadingCell, ReadingSteps, SourcesLine, StepNotices } from "@/pages/sources";
 import { FormPicker } from "@/components/forms";
 import { useApi } from "@/lib/api";
-import { ChannelCell, SignatureCell } from "@/components/channels";
+import { AccountPicker, ChannelCell, SignatureCell } from "@/components/channels";
 import type { CombinationSummary, CombinationView } from "../../../../contracts/programs";
 /** The fields of a summary line that ChannelCell reads. */
 type ChannelLine = CombinationSummary["forms"][number];
@@ -43,7 +43,7 @@ const TIPS = {
 
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
-export function FormsTab({ id, lines, filing, filingDetail, account = null, problems, removed = [], fromLibrary = [], lastChange = null }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed?: RemovedForm[]; fromLibrary?: string[]; lastChange?: LastFormChange | null }) {
+export function FormsTab({ id, lines, filing, filingDetail, account = null, accountKey = null, problems, removed = [], fromLibrary = [], lastChange = null }: { id: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account?: string | null; accountKey?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed?: RemovedForm[]; fromLibrary?: string[]; lastChange?: LastFormChange | null }) {
   const { canAuthor, known } = useSessionView();
   const [open, setOpen] = React.useState<WorkspaceFormLine | null>(null);
   const [adding, setAdding] = React.useState(false);
@@ -97,7 +97,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, prob
     <div className="space-y-4">
       {undo}{finder}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm" data-filing>{/* P-137, P-143: the IRCC account, read-only here */}<span className="mr-3" data-account><span className="text-text-muted">IRCC account: </span>{account ? `Filed through the ${account}` : <span className="text-text-muted">Not set (every way IRCC may accept is offered, Sample)</span>}</span><span className="text-text-muted">Filing: </span>{lines.length ? <><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null}</> : <b className="font-semibold">not known until a form is set up</b>} <span className="text-text-muted">· {count} · Sample until the immigration expert confirms</span></p>
+        <p className="text-sm" data-filing>{/* P-143, review M2: the IRCC account, chosen here by an author */}<span className="mr-3" data-account><span className="text-text-muted">IRCC account: </span>{canAuthor ? <AccountPicker id={id} saved={accountKey} /> : account ? `Filed through the ${account}` : <span className="text-text-muted">Not set (every way IRCC may accept is offered, Sample)</span>}</span><span className="text-text-muted">Filing: </span>{lines.length ? <><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null}</> : <b className="font-semibold">not known until a form is set up</b>} <span className="text-text-muted">· {count} · Sample until the immigration expert confirms</span></p>
         <span className="flex items-center gap-3">{add}<Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></span>
       </div>
       {pending.length ? <p className="text-sm" data-pending-summary><span className="font-medium">Not set up yet: </span>{[ready ? `${plural(ready, "form")} can be added from the library now (${ready === 1 ? "its" : "their"} form fields are already matched, no AI needed)` : "", toDraft ? `${plural(toDraft, "form")} ${toDraft === 1 ? "needs" : "need"} reading and drafting with AI` : ""].filter(Boolean).join("; ")}. Each row has its step.</p> : null}

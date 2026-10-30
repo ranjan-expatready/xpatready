@@ -40,7 +40,7 @@ export class WorkspaceViews {
   }
 
   /** The Forms tab: each line of the draft with its settings, what IRCC accepts and its revision token. */
-  private async forms(id: string, workspaceId: string): Promise<{ lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }> {
+  private async forms(id: string, workspaceId: string): Promise<{ lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account: string | null; accountKey: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }> {
     const { snapshot } = await buildSnapshot(this.db, workspaceId, id, "draft");
     const accepts = await acceptsOf(this.db, workspaceId);
     const revisions = await this.studio.revisions(id);
@@ -88,7 +88,7 @@ export class WorkspaceViews {
     const last = await this.db.formLineAction.findFirst({ where: { combinationId: id, undoneAt: null, ...(since ? { at: { gt: since } } : {}) }, orderBy: { at: "desc" } });
     const lastChange: LastFormChange | null = last ? { id: last.id, action: last.action as LastFormChange["action"], codes: ((last.detail as { codes?: string[] })?.codes ?? []), by: last.by, at: last.at.toISOString() } : null;
     const portal = snapshot.combination.portal ?? null;
-    return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), account: portal ? ACCOUNT_WORDS[portal as "ANY"] ?? portal : null, problems, removed, fromLibrary: files.filter((f) => matched.has(f.sha256)).map((f) => f.id), lastChange };
+    return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), account: portal ? ACCOUNT_WORDS[portal as "ANY"] ?? portal : null, accountKey: portal, problems, removed, fromLibrary: files.filter((f) => matched.has(f.sha256)).map((f) => f.id), lastChange };
   }
 
   /** Questionnaires (slice 2): one person role's questions as a case asks them, with coverage; the library sections the

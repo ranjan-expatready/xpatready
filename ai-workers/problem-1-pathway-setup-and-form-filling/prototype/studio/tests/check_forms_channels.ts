@@ -172,9 +172,19 @@ const intake = async (file: string, combinationId: string) => {
   // C-3 per account: a record for the IRCC secure account (Online only) beside the record for every account.
   const acc5707 = sql(`select e.id from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='IMM 5707' and e.channel='PDF' order by e.edition_label desc limit 1`), ws5707 = sql(`select workspace_id from combination where id='${vv}'`);
   sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, quote, set_by) values ('${ws5707}', '${acc5707}', 'IRCC_SECURE_ACCOUNT', '{ONLINE}', 'PERSON_SAMPLE', 'Test line for the secure account', 'test') on conflict do nothing`);
-  r = await call("PATCH", `/combinations/${vv}/account`, { account: "LMIA_SOMETHING" });
+  r = await call("PATCH", `/combinations/${vv}/account`, { account: "LMIA_SOMETHING", from: null });
   ok("C1.6 Q1 fail: an unknown IRCC account is refused", r.status === 400, r.body);
   r = await call("PATCH", `/combinations/${vv}/account`, { account: "IRCC_SECURE_ACCOUNT" });
+  ok("C1.6 Q1 fail (break M3): an account save that does not say which account it changed is refused", r.status === 400 && /changed it from/.test(JSON.stringify(r.body)), r.body);
+  // Break M3: two saves at once from the same account: one wins, the other is refused (409), and the history is right.
+  const race = await Promise.all([call("PATCH", `/combinations/${vv}/account`, { account: "PR_PORTAL", from: null }), call("PATCH", `/combinations/${vv}/account`, { account: "IRCC_PORTAL", from: null })]);
+  const won = race.filter((x) => x.status === 200), lost = race.filter((x) => x.status === 409);
+  const hist = sql(`select count(*) from audit_event where combination_id='${vv}' and summary like '%IRCC account%not set →%'`);
+  ok("C1.6 Q1 fail (break M3): of two account saves at once one wins and one is refused; one history line says 'not set →'", won.length === 1 && lost.length === 1 && hist === "1", { statuses: race.map((x) => x.status), hist });
+  const wonAccount = won[0]?.body?.account ?? null;
+  r = await call("PATCH", `/combinations/${vv}/account`, { account: null, from: wonAccount });
+  ok("C1.6 Q1 pass: the account is set back to not set from the one saved", r.status === 200 && r.body.account === null, r.body);
+  r = await call("PATCH", `/combinations/${vv}/account`, { account: "IRCC_SECURE_ACCOUNT", from: null });
   const paperNow = r.body.problems?.find((x: { item: string; level: string }) => x.item === "IMM 5707" && x.level === "error");
   ok("C1.6 C-3 pass: once the account is the IRCC secure account, its record applies: the Paper line becomes an error in words (not changed silently)", r.status === 200 && r.body.account === "IRCC_SECURE_ACCOUNT" && /through the IRCC secure account only as Online/.test(paperNow?.message ?? ""), r.body.problems);
   r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "PDF_UPLOAD", signature: "NONE" });
@@ -184,7 +194,7 @@ const intake = async (file: string, combinationId: string) => {
   const formsTab = (await call("GET", `/combinations/${vv}/workspace?tab=forms`)).body;
   const l5707 = formsTab?.lines?.find((l: { code: string }) => l.code === "IMM 5707");
   ok("C1.6 §5: the Forms tab offers each channel with its reason when refused, and the signatures that fit", !!l5707 && l5707.channelOptions.find((o: { channel: string }) => o.channel === "PDF_UPLOAD")?.ok === false && /only as Online/.test(l5707.channelOptions.find((o: { channel: string }) => o.channel === "PDF_UPLOAD")?.why ?? "") && l5707.signatures.map((x: { kind: string }) => x.kind).join() === "NONE,TYPED_NAME", l5707);
-  await call("PATCH", `/combinations/${vv}/account`, { account: null });
+  await call("PATCH", `/combinations/${vv}/account`, { account: null, from: "IRCC_SECURE_ACCOUNT" });
   sql(`delete from form_edition_accept where set_by='test'`);
   await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "PDF_UPLOAD" });
   const review = (await call("GET", `/combinations/${vv}/review`)).body;

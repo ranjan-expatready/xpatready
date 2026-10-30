@@ -41,14 +41,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const accept = (code, channels) => sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, quote, set_by) values ('${ws}', '${ed(code)}', 'IRCC_SECURE_ACCOUNT', '{${channels}}', 'PERSON_SAMPLE', 'Test line for the IRCC secure account', 'test') on conflict do nothing`);
     accept("IMM 5707", "ONLINE"); accept("IMM 5475", "NOT_NEEDED");
     await api(`/combinations/${vv}/forms/IMM 5707/channel`, { method: "PATCH", data: { channel: "ONLINE" } });
-    const acc = await api(`/combinations/${vv}/account`, { method: "PATCH", data: { account: "IRCC_SECURE_ACCOUNT" } });
-    step("set-up: the combination is filed through the IRCC secure account", acc.status === 200 && acc.body?.account === "IRCC_SECURE_ACCOUNT", acc.status);
-
     await p.goto(`${BASE}/c/${vv}/forms`);
     const row = (code) => p.locator(`tr[data-line="${code}"]`);
     await row("IMM 5707").waitFor({ timeout: 30000 });
     const main = p.locator("main");
-    step("C1.6 §5: the account shows read-only on the Forms tab ('Filed through the IRCC secure account')", /Filed through the IRCC secure account/.test(await main.locator("[data-account]").innerText()) && await main.getByRole("combobox", { name: /account/i }).count() === 0);
+    // Review M2: the author sets the combination's IRCC account on the Forms tab (no raw API).
+    const accountBox = main.getByRole("combobox", { name: "IRCC account this combination files through" });
+    const portalOf = () => sql(`select coalesce(portal_key,'') from combination where id='${vv}'`);
+    const waitPortal = async (want) => { for (let i = 0; i < 40 && portalOf() !== want; i++) await p.waitForTimeout(250); return portalOf(); };
+    step("C1.6 Q1 pass: the Forms tab offers the IRCC account as a choice, 'Not set' first", await accountBox.count() === 1 && (await accountBox.inputValue()) === "" && (await accountBox.locator("option").count()) === 7);
+    await accountBox.selectOption("IRCC_SECURE_ACCOUNT");
+    step("C1.6 Q1 pass: picking the IRCC secure account on the screen saves it", (await waitPortal("IRCC_SECURE_ACCOUNT")) === "IRCC_SECURE_ACCOUNT", portalOf());
+    await p.reload(); await row("IMM 5707").waitFor({ timeout: 30000 });
     const head = await main.locator("thead").innerText();
     step("C1.6 P-143: a Signature column beside 'Filed as by default'", /Filed as by default/.test(head) && /Signature/.test(head), head.replace(/\s+/g, " "));
     const filed = row("IMM 5707").getByRole("combobox", { name: "How IMM 5707 is filed" });
@@ -83,7 +87,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await state("a Not needed line");
 
     // Fail: another account's record never applies. Moved to the PR Portal, Not needed has no record there: an error in words.
-    const moved = await api(`/combinations/${vv}/account`, { method: "PATCH", data: { account: "PR_PORTAL" } });
+    // Break M3 fail: a save from an account the person no longer sees is refused (409) and leaves the account as it is.
+    const stale = await api(`/combinations/${vv}/account`, { method: "PATCH", data: { account: "PR_PORTAL", from: null } });
+    step("C1.6 Q1 fail: a stale account save (from 'not set') is refused in words and nothing changes", stale.status === 409 && /was changed to IRCC secure account while you were choosing/.test(JSON.stringify(stale.body)) && portalOf() === "IRCC_SECURE_ACCOUNT", stale.body?.detail ?? stale.status);
+    await accountBox.selectOption("PR_PORTAL");
+    const moved = { status: (await waitPortal("PR_PORTAL")) === "PR_PORTAL" ? 200 : 0 };
     await p.reload(); await row("IMM 5475").waitFor({ timeout: 30000 });
     const nnNote = (await row("IMM 5475").locator("[role=note]").allInnerTexts()).join(" ");
     step("C1.6 C-4 fail: on an account with no record that it asks the form itself, the Not needed line says why it cannot stay (never changed silently)", moved.status === 200 && /Not needed/.test(nnNote) && chOf("IMM 5475") === "NOT_NEEDED", nnNote || moved.status);

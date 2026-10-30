@@ -4,7 +4,7 @@
 // portal choice, "Add an online form" and what drafting reads online are parked with the extension.
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CHANNEL_MEANS, CHANNEL_WORDS, CHANNELS, ONLINE_LATER, SIGNATURE_WORDS, type Channel, type Signature } from "../../../contracts/forms";
+import { ACCOUNT_WORDS, CHANNEL_MEANS, CHANNEL_WORDS, CHANNELS, IRCC_ACCOUNTS, ONLINE_LATER, SIGNATURE_WORDS, type Channel, type Signature } from "../../../contracts/forms";
 import type { CombinationSummary } from "../../../contracts/programs";
 import { api, useToast } from "@/lib/api";
 import { Select } from "@/components/ui/controls";
@@ -72,6 +72,27 @@ export function ChannelCell({ id, line, canAuthor, options }: { id: string; line
       {line.channel === "ONLINE" ? <span className="text-xs text-text-muted" data-online-later>{ONLINE_LATER}</span> : line.channel === "NOT_NEEDED" ? <span className="text-xs text-text-muted" data-not-needed>{CHANNEL_MEANS.NOT_NEEDED}</span> : null}
       {options?.find((o) => o.channel === line.channel && !o.ok)?.why ? <span className="text-xs text-danger" role="note">{options.find((o) => o.channel === line.channel)!.why}</span> : null}
     </div>
+  );
+}
+
+/** Review M2 (P-143, plan §8 Q1): the IRCC account the combination files through, chosen on the Forms tab. Saved with
+ *  the account the person saw (break M3). Lines already saved are kept: one the new account does not accept shows as a
+ *  problem until it is chosen again; a released combination changes only in its next release. */
+export function AccountPicker({ id, saved }: { id: string; saved: string | null }) {
+  const qc = useQueryClient(); const toast = useToast();
+  const pick = usePick<string>(saved ?? "", async (to, from) => {
+    try {
+      const r = await api<{ problems?: { level: string; item: string }[] }>(`/combinations/${id}/account`, { method: "PATCH", json: { account: to || null, from: from || null } });
+      const bad = (r.problems ?? []).filter((p) => p.level === "error").map((p) => p.item);
+      toast.push({ tone: bad.length ? "info" : "ok", text: `${to ? `Filed through the ${ACCOUNT_WORDS[to as "ANY"]}` : "IRCC account not set"}${bad.length ? `. Choose again how these are filed: ${[...new Set(bad)].join(", ")}` : ""}` });
+      refresh(qc, id); return true;
+    } catch (e) { refresh(qc, id); toast.push({ tone: "danger", text: (e as Error).message }); return false; }
+  });
+  return (
+    <Select aria-label="IRCC account this combination files through" title="The IRCC account this combination files through. What IRCC accepts is read for it (Form library). Changing it keeps each line as saved; a line it does not accept shows as a problem. Sample until the immigration expert confirms." className="h-8 w-auto" {...pick}>
+      <option value="">Not set (every way IRCC may accept is offered, Sample)</option>
+      {IRCC_ACCOUNTS.map((a) => <option key={a} value={a}>{ACCOUNT_WORDS[a]}</option>)}
+    </Select>
   );
 }
 

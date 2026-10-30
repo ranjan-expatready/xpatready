@@ -119,10 +119,13 @@ export class Forms {
     const b = parse(SetAccount, body);
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     if (c.retiredAt) fail(`"${c.label}" is retired.`, HttpStatus.CONFLICT);
-    if (c.portalKey === b.account) return this.channels(combinationId);
-    await this.db.combination.update({ where: { id: combinationId }, data: { portalKey: b.account } });
     const w = (a: string | null) => (a ? ACCOUNT_WORDS[a as "ANY"] ?? a : "not set");
-    await this.audit.log(c.workspaceId, actor.id, "changed", "combination", c.combinationKey, `${actor.name} set the IRCC account of "${c.label}": ${w(c.portalKey)} → ${w(b.account)}`, undefined, c.id);
+    // Break M3: saved only over the account the person saw, so of two saves at once one is refused and the history is right.
+    if (c.portalKey !== b.from) conflict(`The IRCC account of "${c.label}" was changed to ${w(c.portalKey)} while you were choosing. Your choice was not saved; check it and choose again.`);
+    if (c.portalKey === b.account) return this.channels(combinationId);
+    const n = await this.db.combination.updateMany({ where: { id: combinationId, portalKey: b.from, retiredAt: null }, data: { portalKey: b.account } });
+    if (!n.count) conflict(`The IRCC account of "${c.label}" was changed at the same moment: refresh to see it.`);
+    await this.audit.log(c.workspaceId, actor.id, "changed", "combination", c.combinationKey, `${actor.name} set the IRCC account of "${c.label}": ${w(b.from)} → ${w(b.account)}`, undefined, c.id);
     return this.channels(combinationId);
   }
 
