@@ -18,10 +18,19 @@ whoami_() {
   # lead on branch main or lead/* (P-82, P-87: the Mac's main copy, or a cloud clone checked out on main); a lane branch prefix (screens/, forms/, evidence/,
   # runtime/, qa/, or the existing claude/<lane>-* branches and <lane>-* worktree names) maps to that lane;
   # anything else is unbound, never lead.
-  local br; br=$(git -C "$HERE" branch --show-current 2>/dev/null)
-  [ "$br" = main ] && { echo lead; return; }
-  case "$br" in lead/*) echo lead; return;; esac
-  [ -f "$HERE/.claude/lane" ] && { cat "$HERE/.claude/lane"; return; }
+  # P-188: the tech lead is the Mac's main copy only. A cloud machine (CLAUDE_CODE_REMOTE, or not macOS) is never lead,
+  # whatever its branch or .claude/lane says; it falls through to its lane, or unbound.
+  local br cloud=""; br=$(git -C "$HERE" branch --show-current 2>/dev/null)
+  { [ "${CLAUDE_CODE_REMOTE:-}" = true ] || [ "$(uname)" != Darwin ]; } && cloud=1
+  if [ -z "$cloud" ]; then
+    [ "$br" = main ] && { echo lead; return; }
+    case "$br" in lead/*) echo lead; return;; esac
+  fi
+  if [ -f "$HERE/.claude/lane" ]; then
+    local ln; ln=$(cat "$HERE/.claude/lane")
+    [ -n "$cloud" ] && [ "$ln" = lead ] && { echo unbound; return; }
+    echo "$ln"; return
+  fi
   case "$br" in
     screens/*|claude/screens-*) echo screens;;
     forms/*|claude/forms-*) echo forms;;

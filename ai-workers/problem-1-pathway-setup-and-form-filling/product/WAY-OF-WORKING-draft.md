@@ -1,6 +1,6 @@
-# How we work — DRAFT for the founder's review (30 Oct)
+# How we work — approved by the founder 30 Oct (P-188); in force after the switch-over
 
-Nothing here is in force until the founder says yes. On yes it replaces `WORKFLOW.md`, `LANES.md`, `CHARTER.md` and the stage rules in the skills; those move intact to `archive/2026-10-30-before-simplify/` (git keeps every word).
+At the switch-over it replaces `WORKFLOW.md`, `LANES.md`, `CHARTER.md` and the stage rules in the skills; those move intact to `archive/2026-10-30-before-simplify/` (git keeps every word).
 
 **Why:** in 10 days the rules and records grew as large as the app (≈77k lines each). The Lead made 40% of all commits, and builders wait on one overloaded Mac, one merge gate and 50-minute test runs. A proof of concept needs a small team with clear owners, small changes and fast checks: how a good product team at a large tech company works.
 
@@ -22,7 +22,7 @@ Nothing here is in force until the founder says yes. On yes it replaces `WORKFLO
 2. **New screen only:** a design board, the founder's OK, then build. Fixes and backend work skip this.
 3. **Build** on a branch from `main`, **under one day of work**; a bigger item is split first.
 4. **Pull request:** checks green on a cloud machine (affected tests + quick set; the full set on the merge result), and the reviewer agent approves.
-5. **Tech lead merges.** QA tests `main` after each merge; the founder sees a short demo per finished feature.
+5. **Tech lead merges.** QA tests `main` after each merge; the demo app is updated to `main` and the founder looks on demand.
 
 ## The rules (all of them)
 1. `main` always works. A red `main` is fixed before anything else.
@@ -43,7 +43,7 @@ Nothing here is in force until the founder says yes. On yes it replaces `WORKFLO
 ## Where things live
 `PRODUCT.md` (what we build) · `BACKLOG.md` (work, in order) · `STATE.md` (one page) · `DECISIONS.md` · `ASSUMPTIONS.md` · `STANDARDS.md` (engineering and design bar) · `qa/BUGS.md`, `qa/CAPABILITIES.md` · `screens/<item>/` (board, plan, review) · `ENVIRONMENT.md` (installed tools). Everything else goes to the archive.
 
-## Weekly numbers (Monday, one table to the founder)
+## Numbers (on demand, kept current by the Lead)
 Capabilities working per milestone · changes merged and their median time from start to merge · bugs found after merge · AI spend · one workflow change, if any.
 
 ## Switch-over (1–2 days)
@@ -52,7 +52,7 @@ Capabilities working per milestone · changes merged and their median time from 
 3. Archive the old rules, slim the skills to this page, start three cloud builders and QA from `main`.
 4. One small item goes through end to end as the dry run; then this page is in force.
 
-## Questions for the founder (one at a time)
-1. **Checks machine:** cloud sessions as the merge check (US$0, ≈45 min full set; trial passed 83/83) or GitHub's machines (≈US$10–50 a month once free minutes run out)? Recommendation: cloud sessions now; revisit if waits exceed 30 minutes.
-2. **Demos:** one per finished feature, or one weekly session? Recommendation: weekly, plus early looks for new screens.
-3. **Daily brief:** keep a five-line daily note, or only the weekly numbers? Recommendation: five lines daily.
+## Founder's answers (30 Oct)
+1. **Checks machine:** cloud sessions run the merge check (US$0, ≈45 min full set); revisit if waits pass 30 minutes.
+2. **Demos:** on demand. The demo app (:4400) is updated to `main` after every merge, with a short "what's new" line; the founder looks whenever they choose. Early looks for new screens stay.
+3. **Briefs:** on demand, when the founder asks. The Lead writes unasked only when a decision, a risk or a spend needs the founder.
