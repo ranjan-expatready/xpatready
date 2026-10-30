@@ -28,14 +28,15 @@ Agreed answers N-1, N-2, N-3, P-97, the 1b items not done and the items routed t
 **Learned, not written elsewhere** (heredoc and loop refusals by the Bash hook, catalogue cache and audit rows, shared ports and databases, run by-products, `prisma generate` after a branch switch, second-person names): `history/screens-lane-2026-10-30.md`.
 
 current_screen: W1-setup-checklist (3): the card v4 on Immigration programs (P-180)
-stage: FIX — CHECK done (review 8/10 with four Majors, break report three Majors); four fixed at 8a8856b7 with tests; reviewer M3 and breaker M3 for the Lead (plan.md "Card v4 CHECK and Fixes"); affected suites rerunning one at a time
-owner: Builder (fresh screens session, 30 Oct)
-next_action: read the seq5 reruns (ten suites), restore run screenshots, then CHECK again or hand to the Lead with M3 (Resume lands on Forms, P-161) and scale speed as decisions
+stage: FIX — four Majors fixed (8a8856b7); reruns stopped at 2.7 GB free disk (rule: under 3 GB stop); reviewer M3 and breaker M3 wait on the Lead
+owner: Lead (reports now go to the new Lead chat local_847d9394)
+next_action: Lead: decide M3 (Resume target until slice C) and the scale slice; free disk; then this lane reruns the rest alone (s1s2_fix, qa_1029, screen01_browser, s6_queue, screen01_api) and goes to CHECK again
 then: 1c → 1b-2 → (4) linking combinations and copying a line (C1.3, C1.5)
 blocked_by: nothing
 updated: 2026-10-30
 
 ## Log (last 6 lines; older in `history/screens-lane-2026-10-30.md`)
+- 2026-10-30 · W1-setup-checklist · FIX, paused · reruns alone after 8a8856b7: setup_checklist 50/50, card 42/42, structure_browser 135/135, r3 26/26, programs_s2 89/90 (the one fail: Status change 262 ms against 200 ms, load ~15), s1s2_fix 26/30 (setup: Super visa's replay proposals had not landed, as on 07e06edc; three dependent steps plus QA-46 "Loading the change"), qa_1029 crashed in setup (API 30 s timeout). Stopped at 2.7 GB free disk; copies stopped, databases dropped, by-products restored. Lead changed: local_847d9394. US$0.
 - 2026-10-30 · W1-setup-checklist · CHECK → FIX · screen-reviewer journey 8/10, D1 D4 D9 D15 D16 D19 at 3, Majors M1–M4; screen-breaker no Blocker, Majors M1–M3. Fixed (8a8856b7): step 4 never done without document lines; Confirm who can apply out of Needs you until a screen offers it; Structure need counts per person (one count path); a Pathway chip opens a folded section. Left for the Lead: Resume lands on Forms where the people part is not built (P-161, slice C); catalogue speed at 393 combinations (14–67 s cold under load, 2.37 MB). US$0.
 - 2026-10-30 · W1-setup-checklist · CHECK · bug found by screen01 alone: after a person switch the page kept the last person's catalogue on screen while loading, so the approver briefly saw the author's Start setup; placeholder data now kept only for the same person (df88ff10); s6_queue C11.14 (two Ready accepted, one Undo) failed alone once, not card code: rerunning. US$0.
 - 2026-10-30 · W1-setup-checklist · CHECK started · full run-suites on 33c77518 (code 47579450): 5 FAIL of the rest PASS: check_w1_programs_r3 (old Status menu and Just added inside the card: moved to chips, data-label, "0 of 5 steps"), forms_s4_library (1176 ms first view; Retired filter), s5_slice3 (C11.15 click timeout), s6_queue (demo/load 30 s timeout), screen01_browser (first view 2397 ms; 116/116 alone before): rerunning each alone; run by-products restored (stub ledger US$0 actual). US$0.
