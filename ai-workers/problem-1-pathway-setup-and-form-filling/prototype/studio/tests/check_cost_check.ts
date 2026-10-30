@@ -5,6 +5,7 @@ import { appendFileSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { costCheck } from "../engine/cost-check.ts";
+import { COST_WORDS } from "../contracts/cost-check.ts";
 import { BudgetExceeded, OverrideRefused, SpendLedger } from "../../p2/ledger.ts";
 import { EXPERIMENT_CAP_USD, OVERRIDE_CEILING_USD, WAVE1_START } from "../../p2/policy.ts";
 
@@ -81,6 +82,16 @@ ok("C11.8 P-179 fail: an override naming no limit, an unknown one or a negative 
 appendFileSync(join(p.dir, "spend.jsonl"), JSON.stringify({ type: "override", id: "override-old", run_key: "p", limits: ["experiment"], worst_usd: 1, by: "user-A", at: "2026-10-30T00:00:00.000Z", expires_at: "2026-10-30T00:10:00.000Z" }) + "\n");
 ok("C11.8 P-179 fail: an override not used within its 10 minutes has expired", throws(() => p.l.useOverride("override-old", "p"), OverrideRefused, /expired/));
 ok("C11.8 P-179 pass: override and use lines count nothing toward any cap", p.l.committed() === 0);
+// check_cost_override found it (30 Oct): with spend already past the cap after a Continue, a free start (rules only, saved
+// answers, a stub pass) was flagged over the cap, so every free start would have needed a Continue.
+const free = at(130, 0, 70);
+ok("C11.8 P-179 pass: a start that spends nothing fits even with spend past the cap and the wave (no dialog)", free.ok && !free.over.length && /^Fits/.test(free.words), free);
+ok("C11.8 P-179 fail: one cent of worst case with spend past the cap is over again (and past US$132: no Continue)", !at(130, 0.01).ok && !at(132, 0.01).can_continue);
+
+// The shared contract and the engine say the same: the dialog's words are built from the same check.
+
+ok("C11.8 P-179 pass: the dialog shows spend so far against the cap, the worst case and what Continue allows", COST_WORDS.spent(exp) === "Spend so far US$116.00 of US$120.00" && COST_WORDS.worst(exp) === "At most US$5.00" && /allows this one run, up to US\$5\.00\. Total spend stays within US\$132\.00/.test(COST_WORDS.continueNote(exp)));
+ok("C11.8 P-179 fail: an unknown expected cost is said as such, never as US$0", COST_WORDS.expected(exp) === "Expected not known yet");
 
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

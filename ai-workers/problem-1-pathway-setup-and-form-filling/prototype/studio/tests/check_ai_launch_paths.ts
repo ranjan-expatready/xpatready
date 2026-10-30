@@ -170,7 +170,9 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   const run3 = await draft(paid, source, false);
   ok("G4 per form fail: a third paid run from a new batch (Draft again) is refused before any call, the budget named", run3.status === "NOT STARTED" && /used its 4 paid AI attempts/.test(run3.message) && !run3.calls.length, run3);
   const plan3 = await call("POST", "/ai/plan", { scope: { kind: "source", ids: [source] }, mode: "LIVE", draftAgain: true });
-  ok("G4 per form fail: the plan shows the form as not eligible for a paid run, worst case US$0", plan3.body.targets?.[0]?.action === "not_eligible" && plan3.body.totals?.worst_usd === 0 && /counted across its runs/.test(plan3.body.targets[0].why), plan3.body.targets?.[0]);
+  // P-179 Q2 (Lead, 30 Oct): the form is shown over its "attempts" limit; only a person's Continue starts one more run
+  // (check_cost_override.ts tests the Continue).
+  ok("G4 per form fail (P-179 Q2): the plan shows the form over its paid attempts, a Continue needed, its worst case stated", plan3.body.targets?.[0]?.action === "draft" && plan3.body.targets[0].over_attempts === true && plan3.body.cost_check?.over?.some((o: { limit: string }) => o.limit === "attempts") && /counted across its runs/.test(plan3.body.targets[0].why), plan3.body.targets?.[0]);
   r = await call("POST", `/ai/batches/${run2.batchId}/retry`, {});
   ok("G4 per form fail: a retry of the second batch's first run is refused too (it alone was within the old per-batch rule)", r.status === 400 && /used its 4 paid AI attempts/.test(r.body?.message), { status: r.status, message: r.body?.message });
   scenario({ stub: { exit: 0, out: { ok: true } } });

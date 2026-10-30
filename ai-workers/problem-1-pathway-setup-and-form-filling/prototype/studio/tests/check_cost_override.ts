@@ -1,0 +1,144 @@
+// P-179 (C11.8): the API side of a cost warning a person may continue past. Every forms plan carries `cost_check` and
+// `run_key`; POST /ai/overrides records a person's Continue (author only, the plan made again must match, never past
+// US$132); a launch over a limit starts only with an unused Continue for that run (once, within 10 minutes); attempts per
+// form (Q2) allow exactly one more run per click. The check starts its own isolated copy with no live AI switch and the
+// queue held, on a scratch ledger of its own that it seeds (test spend and test overrides never reach the ledger every
+// copy shares, QA-90): no AI call, no launcher, US$0. Every rule has a passing and a failing case.
+//   tsx --tsconfig studio/api/tsconfig.json studio/tests/check_cost_override.ts [port=4454] [name=forms_co]
+import { execFileSync } from "node:child_process";
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { launchArgs, overrideOf } from "../api/src/sources.ts";
+
+const PORT = Number(process.argv[2] ?? 4454), NAME = process.argv[3] ?? "forms_co", DB = `xr_studio_${NAME}`;
+const SCRATCH = mkdtempSync(join(tmpdir(), "p2-ledger-p179-"));
+const LEDGER = join(SCRATCH, "spend.jsonl");
+const ISOLATED = join(import.meta.dirname, "..", "tools", "isolated.sh");
+execFileSync("zsh", [ISOLATED, NAME, String(PORT), "start", `P2_LEDGER_DIR=${SCRATCH}`, "STUDIO_HOLD_QUEUE=1"], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, STUDIO_AI_LIVE: "" } });
+const stop = () => { try { execFileSync("zsh", [ISOLATED, NAME, String(PORT), "stop"], { stdio: "ignore" }); } catch { /* already stopped */ } rmSync(SCRATCH, { recursive: true, force: true }); };
+const lines = () => (existsSync(LEDGER) ? readFileSync(LEDGER, "utf8") : "").split("\n").filter(Boolean).map((l) => JSON.parse(l) as Record<string, any>); // eslint-disable-line @typescript-eslint/no-explicit-any -- ledger lines are read loosely
+let seq = 0;
+/** Seeds committed spend before Wave 1 started (so only the experiment cap moves), settled at that amount. */
+const seed = (usd: number) => { const id = `seed-p179-${++seq}`; appendFileSync(LEDGER, JSON.stringify({ type: "reserve", id, run_id: id, attempt: 1, worst_usd: usd, caller: "check_cost_override seed", at: "2026-10-20T00:00:00.000Z" }) + "\n"); };
+
+let pass = 0, fail = 0;
+const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
+type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
+const call = async (method: string, path: string, body?: unknown, actor: string | null = "user-A"): Promise<Res> => {
+  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { ...(actor ? { "x-actor": actor } : {}), "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
+  return { status: r.status, body: j };
+};
+const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
+
+(async () => {
+  // ──────────────────────────────────────────── unit: what the launcher is given
+  const ov = { id: "override-1-ab", run_key: "a".repeat(40) };
+  ok("C11.8 P-179 pass: a live launch carries --override-id and --run-key", launchArgs("L", "job", "live", [], ov).join(" ") === `L --job job --live --override-id override-1-ab --run-key ${"a".repeat(40)}`);
+  ok("C11.8 P-179 fail: the free stub pass never carries an override, and a launch with none carries nothing", !launchArgs("L", "job", "stub", [], ov).includes("--override-id") && !launchArgs("L", "job", "live", []).includes("--override-id"));
+  ok("C11.8 P-179 pass: a run's plan names its override; a plan with none or a broken one names nothing", overrideOf({ override: { ...ov, limits: ["run"] } })?.id === ov.id && overrideOf({}) === undefined && overrideOf({ override: { id: "x" } }) === undefined && overrideOf(null) === undefined);
+
+  // ──────────────────────────────────────────── setup: IMM 5409 on the Visitor visa, one whole-form live draft (as check_ai_launch_paths)
+  await call("POST", "/demo/load");
+  const vv = sql("select id from combination where combination_key='vv.single'");
+  await call("POST", `/combinations/${vv}/attachments/sample`, { officialFile: "imm5409e.pdf" });
+  const src = sql(`select id from source_attachment where file_name='imm5409e.pdf' and combination_id='${vv}'`);
+  sql("update form_edition set sha256 = repeat('1', 64) where edition_label = 'IMM 5409 (01-2023)'");
+  sql("update form_field_map set status = 'DRAFT' where form_edition_id = (select id from form_edition where edition_label = 'IMM 5409 (01-2023)')");
+  sql(`update source_attachment set status = 'RECOGNISED' where id = '${src}'`);
+  const scope = { kind: "source", ids: [src] };
+  const planNow = async () => (await call("POST", "/ai/plan", { scope, mode: "LIVE", draftAgain: true })).body;
+  const start = { kind: "draft_field_maps", scope, mode: "LIVE", draftAgain: true };
+  const cont = (p: any, extra: object = {}, actor: string | null = "user-A") => call("POST", "/ai/overrides", { run_key: p.run_key, worst_usd: p.cost_check.worst_usd, limits: p.cost_check.over.map((o: any) => o.limit), start, ...extra }, actor); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const draft = (overrideId?: string) => call("POST", `/attachments/${src}/draft`, { mode: "live", idempotencyKey: `p179-${Date.now()}-${Math.random()}`, ...(overrideId ? { overrideId } : {}) });
+  const cancelOpen = async () => { for (const b of (await call("GET", "/ai/batches")).body) if (["QUEUED", "RUNNING"].includes(b.status)) await call("POST", `/ai/batches/${b.id}/cancel`); };
+
+  // ──────────────────────────────────────────── a start that fits
+  let p = await planNow();
+  const worst = p.cost_check?.worst_usd;
+  ok("C11.8 P-179 pass: the field-map plan carries the cost check (worst case = the plan's) and a run key", p.targets?.[0]?.action === "draft" && worst > 0 && worst === p.totals.worst_usd && /^[0-9a-f]{40}$/.test(p.run_key) && p.cost_check.ok && p.cost_check.cap_usd === 120 && p.cost_check.ceiling_usd === 132, { cc: p.cost_check, key: p.run_key });
+  let r = await call("POST", "/ai/overrides", { run_key: p.run_key, worst_usd: worst, limits: ["experiment"], start });
+  ok("C11.8 P-179 fail: a Continue for a start that fits is refused (409), nothing recorded", r.status === 409 && /nothing to continue past/.test(msg(r)) && !lines().some((l) => l.type === "override"), { status: r.status, m: msg(r) });
+
+  // ──────────────────────────────────────────── Q2: a form that used its paid attempts
+  for (let i = 0; i < 2; i++) sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, cost_usd, started_by, message) select gen_random_uuid(), workspace_id, combination_id, id, 'field_map', 'LIVE', 'FAILED', 0.42, 'user-A', 'earlier paid run (check seed)' from source_attachment where id = '${src}'`);
+  p = await planNow();
+  ok("C11.8 P-179 pass (Q2): a form with no paid attempt left is a draft over 'attempts', Continue offered, its worst case shown", p.targets?.[0]?.action === "draft" && p.targets[0].over_attempts === true && p.cost_check.over.map((o: any) => o.limit).join() === "attempts" && p.cost_check.can_continue && p.cost_check.worst_usd === worst && /Continue allows exactly one more run/.test(p.cost_check.words), p.cost_check); // eslint-disable-line @typescript-eslint/no-explicit-any
+  r = await draft();
+  ok("C11.8 P-179 fail (Q2): without a Continue that start is refused before anything is queued (hard limits stay the default)", r.status === 400 && /used its 4 paid AI attempts/.test(msg(r)) && /needs a person's Continue/.test(msg(r)) && sql(`select count(*) from drafting_job where attachment_id='${src}' and status='QUEUED'`) === "0", { status: r.status, m: msg(r) });
+  for (const [who, why] of [["user-C", "content reviewer (SME)"], ["user-B", "approver"], ["user-O", "case officer"], ["user-P", "client"]]) {
+    r = await cont(p, {}, who);
+    ok(`C11.8 P-179 fail: the ${why} cannot Continue past a cost limit (403)`, r.status === 403, { status: r.status, m: msg(r) });
+  }
+  r = await cont(p, {}, null);
+  ok("C11.8 P-179 fail: nobody (no person named) cannot Continue (401), and none of these wrote a line", r.status === 401 && !lines().some((l) => l.type === "override"), r.status);
+  r = await cont(p, { worst_usd: worst + 1 });
+  ok("C11.8 P-179 fail: a Continue for another worst case than the plan's now is refused (409 stale), nothing recorded", r.status === 409 && /worst case is now/.test(msg(r)) && !lines().some((l) => l.type === "override"), msg(r));
+  r = await cont(p, { limits: ["experiment"] });
+  ok("C11.8 P-179 fail: a Continue naming other limits than the plan passes is refused (409)", r.status === 409 && /limits this start passes changed/.test(msg(r)), msg(r));
+  r = await cont(p, { run_key: "b".repeat(40) });
+  ok("C11.8 P-179 fail: a Continue for another run key (a changed plan) is refused (409)", r.status === 409 && /work changed/.test(msg(r)), msg(r));
+  r = await cont(p);
+  const o1 = r.body?.override_id as string;
+  const line = lines().find((l) => l.type === "override" && l.id === o1);
+  ok("C11.8 P-179 pass: the author's Continue is recorded in the shared ledger (who, which run, which limit, worst case, 10 minutes) and answered", r.status === 201 && line?.by === "user-A" && line.run_key === p.run_key && line.limits.join() === "attempts" && line.worst_usd === worst && Date.parse(r.body.expires_at) - Date.parse(line.at) === 600_000, { status: r.status, body: r.body, line });
+  ok("C11.8 P-179 pass: the Continue is in the audit trail (ai_override, the person and the limit)", sql(`select count(*) from audit_event where action='ai_override' and entity_key='${o1}' and summary like '%past attempts%'`) === "1");
+  r = await draft(o1);
+  const job1 = r.body?.id as string;
+  const batch1 = job1 ? sql(`select batch_id from drafting_job where id='${job1}'`) : "";
+  const planOv = batch1 ? JSON.parse(sql(`select plan::text from ai_batch where id='${batch1}'`)).override : null;
+  ok("C11.8 P-179 pass (Q2): with the Continue exactly one more run is queued, the Continue used once and kept on its run for the launcher", r.status === 201 && planOv?.id === o1 && planOv.run_key === p.run_key && lines().filter((l) => l.type === "override_use" && l.id === o1).length === 1, { status: r.status, m: msg(r), planOv });
+  ok("C11.8 P-179 pass: the start's audit line names the Continue", sql(`select count(*) from audit_event where entity_key='${batch1}' and summary like '%continued past attempts%'`) === "1");
+  await cancelOpen();
+  p = await planNow();
+  r = await draft(o1);
+  ok("C11.8 P-179 fail (Q2): one click is one run: the same Continue again is refused (409 used), nothing queued", p.targets?.[0]?.over_attempts === true && r.status === 409 && /already used/.test(msg(r)), { status: r.status, m: msg(r) });
+  r = await call("POST", "/ai/overrides", { run_key: p.run_key, worst_usd: p.cost_check.worst_usd, limits: ["attempts"], start });
+  const o2 = r.body?.override_id as string;
+  // An override that has run out of time: its expiry moved back in the scratch ledger (as 10 minutes passing).
+  const raw = readFileSync(LEDGER, "utf8").replace(new RegExp(`("id":"${o2}"[^\\n]*"expires_at":")[^"]+`), "$12026-10-01T00:00:00.000Z");
+  writeFileSync(LEDGER, raw);
+  r = await draft(o2);
+  ok("C11.8 P-179 fail: an expired Continue is refused (409), nothing queued", r.status === 409 && /expired/.test(msg(r)), { status: r.status, m: msg(r) });
+  r = await draft("override-0-nosuch");
+  ok("C11.8 P-179 fail: an unknown Continue is refused (409)", r.status === 409 && /No such Continue/.test(msg(r)), msg(r));
+  sql(`delete from drafting_job where attachment_id='${src}' and message='earlier paid run (check seed)'`);
+
+  // ──────────────────────────────────────────── the experiment cap (US$120) and the ceiling (US$132)
+  await cancelOpen();
+  const committed = lines().filter((l) => l.type === "reserve").reduce((a, l) => a + l.worst_usd, 0);
+  seed(120 - committed - worst / 2);
+  p = await planNow();
+  ok("C11.8 P-179 pass: past the experiment cap the plan says so with spend so far against the cap, Continue offered", !p.cost_check.ok && p.cost_check.over.map((o: any) => o.limit).join() === "experiment" && p.cost_check.can_continue && /Spend so far US\$\d+\.\d\d of US\$120\.00/.test(p.cost_check.words), p.cost_check); // eslint-disable-line @typescript-eslint/no-explicit-any
+  r = await draft();
+  ok("C11.8 P-179 fail: without a Continue the start over the cap is refused as before (nothing queued)", r.status === 400 && /experiment cap/.test(msg(r)), { status: r.status, m: msg(r) });
+  r = await cont(p);
+  const o3 = r.body?.override_id as string;
+  r = await draft(o3);
+  ok("C11.8 P-179 pass: with the author's Continue the start over the cap is queued, for this run's worst case only", r.status === 201 && lines().find((l) => l.type === "override" && l.id === o3)?.worst_usd === worst, { status: r.status, m: msg(r) });
+  await cancelOpen();
+  seed(12.01); // committed is now 132.01 - worst/2: this run could take total spend past the ceiling
+  p = await planNow();
+  const before = lines().filter((l) => l.type === "override").length;
+  ok("C11.8 P-179 pass: past US$132 the check offers no Continue and says the founder must raise the cap", !p.cost_check.can_continue && /founder must raise the cap/.test(p.cost_check.words) && /Spend so far/.test(p.cost_check.words), p.cost_check);
+  r = await cont(p);
+  ok("C11.8 P-179 fail: a Continue past US$132 is refused (409) and no line is written", r.status === 409 && /founder must raise the cap/.test(msg(r)) && lines().filter((l) => l.type === "override").length === before, { status: r.status, m: msg(r) });
+
+  // ──────────────────────────────────────────── the form finder's start carries the same check
+  const fp = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "live" })).body;
+  ok("C11.8 P-179 pass: the finder's live plan carries the cost check (its worst case) and a run key", fp.cost_check?.worst_usd === fp.totals?.worst_usd && /^[0-9a-f]{40}$/.test(fp.run_key) && !fp.cost_check.ok && !fp.cost_check.can_continue, fp.cost_check);
+  const rp = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "rules" })).body;
+  ok("C11.8 P-179 pass: rules only costs US$0 and fits even past the ceiling", rp.cost_check?.ok === true && rp.cost_check.worst_usd === 0, rp.cost_check);
+  r = await call("POST", "/ai/overrides", { run_key: fp.run_key, worst_usd: fp.cost_check.worst_usd, limits: fp.cost_check.over.map((o: any) => o.limit), start: { kind: "find_forms", combinationId: vv, mode: "live" } }); // eslint-disable-line @typescript-eslint/no-explicit-any
+  ok("C11.8 P-179 fail: a finder Continue past US$132 is refused too (409), nothing recorded", r.status === 409 && /founder must raise the cap/.test(msg(r)), { status: r.status, m: msg(r) });
+  r = await call("POST", `/combinations/${vv}/forms/find`, { mode: "live", planSha256: fp.plan_sha256, idempotencyKey: `p179-find-${Date.now()}`, overrideId: o3 });
+  ok("C11.8 P-179 fail: with no live AI switch the finder refuses before any Continue is used (US$0)", r.status === 409 && lines().filter((l) => l.type === "override_use" && l.id === o3).length === 1, { status: r.status, m: msg(r) });
+  r = await call("POST", "/ai/overrides", { run_key: fp.run_key, worst_usd: fp.cost_check.worst_usd, limits: ["run"], start: { kind: "find_page" } });
+  ok("C11.8 P-179 fail: a Continue for an unknown kind of start is a plain 400", r.status === 400 && /Say which start/.test(msg(r)), { status: r.status, m: msg(r) });
+
+  ok("US$0: no AI call was made (no reserve line other than this check's seeds)", lines().filter((l) => l.type === "reserve" && !String(l.id).startsWith("seed-p179")).every((l) => l.caller === "stub" || l.worst_usd === 0), lines().filter((l) => l.type === "reserve").length);
+  console.log(`\n${pass} passed, ${fail} failed`);
+  stop(); process.exit(fail ? 1 : 0);
+})().catch((e) => { console.log(`FAIL  the check stopped: ${(e as Error).stack}`); stop(); process.exit(1); });

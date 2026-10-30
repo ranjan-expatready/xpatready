@@ -32,8 +32,10 @@ export function costCheck(i: CostCheckInput): CostCheck {
   if (run > runCap) over.push({ limit: "run", limit_usd: runCap, after_usd: run, words: `One AI run could cost up to ${usd(run)}, above the ${usd(runCap)} each run may use.` });
   const forms = i.attempts?.spentForms ?? [];
   if (forms.length) over.push({ limit: "attempts", limit_usd: null, after_usd: null, words: `${forms.join(", ")} ${forms.length === 1 ? "has" : "have"} used ${forms.length === 1 ? "its" : "their"} ${MAX_PAID_ATTEMPTS_PER_FORM} paid AI attempts (${MAX_ATTEMPTS} per run). Continue allows exactly one more run of ${forms.length === 1 ? "it" : "each"}.` });
-  if (i.spent + i.worst > cap) over.push({ limit: "experiment", limit_usd: cap, after_usd: i.spent + i.worst, words: `Spend so far ${usd(i.spent)} of ${usd(cap)}. This run could reach ${usd(i.spent + i.worst)}, past the AI spending cap.` });
-  if (i.wave.spent + i.worst > waveCap) over.push({ limit: "wave", limit_usd: waveCap, after_usd: i.wave.spent + i.worst, words: `${waveName} has spent ${usd(i.wave.spent)} of its ${usd(waveCap)}. This run could take it to ${usd(i.wave.spent + i.worst)}.` });
+  // A start that can spend nothing (rules only, saved answers, a stub pass) passes no money limit, even with spend already
+  // past a cap after a Continue: it never reserves a paid call (found by check_cost_override, 30 Oct).
+  if (i.worst > 0 && i.spent + i.worst > cap) over.push({ limit: "experiment", limit_usd: cap, after_usd: i.spent + i.worst, words: `Spend so far ${usd(i.spent)} of ${usd(cap)}. This run could reach ${usd(i.spent + i.worst)}, past the AI spending cap.` });
+  if (i.worst > 0 && i.wave.spent + i.worst > waveCap) over.push({ limit: "wave", limit_usd: waveCap, after_usd: i.wave.spent + i.worst, words: `${waveName} has spent ${usd(i.wave.spent)} of its ${usd(waveCap)}. This run could take it to ${usd(i.wave.spent + i.worst)}.` });
   const pastCeiling = i.spent + i.worst > ceiling;
   const can_continue = over.length > 0 && !pastCeiling;
   const words = !over.length ? `Fits: spend so far ${usd(i.spent)} of ${usd(cap)}; this run could cost up to ${usd(i.worst)}.`
