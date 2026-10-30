@@ -118,6 +118,8 @@ export type ViewSection = { subjectId: string; about_label: string; section: str
 export type ViewCheck = { id: string; severity: string; message: string; subjectId: string; about_label: string; fact: string | null; section: string | null; illustrative: boolean };
 export type QuestionnaireView = {
   mode: "sqr" | "agent"; sections: ViewSection[]; checks: ViewCheck[]; forms: { form: string; person: string; applies: boolean | string }[];
+  /** Only when the view skips facts a document supplies (Preview, P-130): per person and document, the facts it fills. */
+  from_documents?: { subjectId: string; document: string; facts: string[] }[];
   summary: { not_asked: number; questions: number; answered: number; confirmed: number; missing: number };
 };
 

@@ -92,7 +92,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const agentOpt = drawer.locator('[data-source-option="AGENT"]');
   step("P-155(3) pass: Case officer may be chosen for a passport fact, saying it needs a written reason", !(await agentOpt.locator("input").isDisabled()) && /Case officer/.test(await agentOpt.innerText()) && /only with a written reason/.test(await agentOpt.innerText()), await agentOpt.innerText());
   step("M2 pass: the drawer says the fallback question is reachable and the override is for this combination only", /Fallback question reachable/.test(await drawer.locator("[data-fallback]").innerText()) && /override for this combination only/.test(await drawer.innerText()));
-  step("drawer: the system name shows only here, with where it is changed", /System name/.test(await drawer.locator("[data-question-details]").innerText()) && /person\.family_name/.test(await drawer.locator("[data-question-details]").innerText()));
+  step("drawer (QA-94): no system name on screen; the library link carries it", !/System name|person\.family_name/.test(await drawer.locator("[data-question-details]").innerText()) && /person\.family_name/.test(await drawer.locator("[data-library-link]").getAttribute("href") ?? ""));
   await state("drawer-passport-fact");
   // P-155(3): Case officer asks why; Save without it is refused in words; with it the row shows the reason.
   await agentOpt.locator("input").check();

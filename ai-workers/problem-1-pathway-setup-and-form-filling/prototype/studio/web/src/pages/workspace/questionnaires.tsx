@@ -8,7 +8,7 @@ import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookOpen, ChevronDown, Plus, Undo2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { type BulkSourceResult, type FactSourceRow, type PeopleLine, type PeoplePlan, type PeopleProposal, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView } from "../../../../contracts/workspace";
+import { type BulkSourceResult, type CountryPqrView, type FactSourceRow, type PeopleLine, type PeoplePlan, type PeopleProposal, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
 import { Tip } from "@/components/status";
@@ -207,6 +207,37 @@ function AddPerson({ offered, onAdd }: { offered: { key: string; label: string; 
   );
 }
 
+// ------------------------------------------------------------------ PQR (M2 queue item 2; C4.2, C4.8; P-76, P-132)
+
+/** The "Pre-qualification" chip's header: this person's PQR in this combination (the one per-combination record, P-132),
+ *  how it is asked and confirmed, and the country PQR, a view of the released combinations, never a separate record. */
+function PqrSet({ id, roleLabel, n }: { id: string; roleLabel: string; n: number }) {
+  const country = useQuery<CountryPqrView, ApiError>({ queryKey: ["pqr-country", id], queryFn: () => api<CountryPqrView>(`/combinations/${id}/pqr/country`) });
+  const [open, setOpen] = React.useState(false);
+  const c = country.data;
+  const pending = c ? c.thisCombination.draftAdds.length + c.thisCombination.draftRemoves.length : 0;
+  return (
+    <section aria-label="Pre-qualification questions" className="space-y-2 rounded-xl border border-border bg-surface-raised p-4" data-pqr-set>
+      <p className="text-sm"><span className="font-medium">{roleLabel}: {n} pre-qualification question{n === 1 ? "" : "s"} in this combination.</span> <span className="text-text-muted">A prospect answers them before a case starts; the client questionnaire later shows each answer as "please confirm", and a document read that differs is a check, not an overwrite. A tick goes out with this combination's next release, checked with everything else in it.</span></p>
+      {country.error ? <Notice tone="warn" title="The country pre-qualification could not load">{country.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void country.refetch()}>Retry</button></Notice> : null}
+      {c ? (
+        <div className="text-sm" data-pqr-country>
+          <p><span className="font-medium">Country pre-qualification:</span> {c.lines.length} question{c.lines.length === 1 ? "" : "s"} from {c.combinations} of {c.released} released combination{c.released === 1 ? "" : "s"}. It is put together from each combination's newest release, so nothing is set there.{pending ? <span className="text-text-muted" data-pqr-pending> This combination's draft changes {pending} line{pending === 1 ? "" : "s"} at its next release.</span> : null}{" "}
+            {c.lines.length ? <button type="button" className="font-medium text-text-link underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Hide the list" : "Show the list"}</button> : null}</p>
+          {open ? (
+            <div className="mt-2">
+              <Table dense head={["Question", "Person", "Asked by"]} label="Country pre-qualification questions">
+                {c.lines.map((l) => <tr key={`${l.role}|${l.fact}`} data-pqr-line={`${l.role}|${l.fact}`}><td className="font-medium">{l.label}</td><td>{l.roleLabel}</td><td className="text-xs">{l.combinations.map((x) => `${x.label} (release ${x.release})`).join(" · ")}</td></tr>)}
+              </Table>
+              <p className="mt-1 text-xs text-text-muted">{c.basis}.</p>
+            </div>
+          ) : null}
+        </div>
+      ) : <div className="h-6 animate-pulse rounded bg-surface" aria-hidden />}
+    </section>
+  );
+}
+
 // ------------------------------------------------------------------ questions per person (W1-15 slice 2, P-147)
 
 /** One person role's questions as a case asks them, each row five things: Question · Comes from · Pre-qualification ·
@@ -225,8 +256,19 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   const undoToast = useUndoToast();
   // Only the first section is open at first (146 questions on the work permit); each folds and "Open all" opens them all.
   const [openIds, setOpenIds] = React.useState<Set<string> | null>(null);
+  const [removing, setRemoving] = React.useState<{ key: string; title: string } | null>(null);
+  const qc = useQueryClient();
   const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["combination", id], ["config", id], ["preview"], ["fact-sources", id]] });
   React.useEffect(() => { setPicked(new Set()); setFilter("all"); }, [q?.role]);
+  // QA-93 (P-116): removing a section asks first, says what goes for whom, then offers one Undo that puts it back in its place.
+  const reload = () => { for (const k of [["combination", id], ["config", id], ["preview"], ["fact-sources", id]]) void qc.invalidateQueries({ queryKey: k }); };
+  const remove = async (x: { key: string; title: string }) => {
+    let r: { sectionOrder: number | null };
+    try { r = await api<{ sectionOrder: number | null }>(`/combinations/${id}/sections/${x.key}`, { method: "DELETE" }); }
+    catch (e) { setRemoving(null); setRefused([{ role: "", fact: "", label: "", message: `"${x.title}" was not removed: ${(e as Error).message}` }]); return; }
+    setRemoving(null); reload();
+    undoToast.show(`"${x.title}" removed from the questionnaire`, async () => { await api(`/combinations/${id}/sections/${x.key}`, { method: "POST", json: { sectionOrder: r.sectionOrder } }); reload(); });
+  };
   const addSection = canAuthor ? (
     <div className="flex flex-wrap items-center gap-2" data-add-section>
       <Select aria-label="Library section to add" className="h-8 w-72" value={add} onChange={(e) => setAdd(e.target.value)}><option value="">Add a library section…</option>{available.map((x) => <option key={x.key} value={x.key}>{x.title}</option>)}</Select>
@@ -248,7 +290,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   const byFact = new Map<string, FactSourceRow>(); for (const f of rows) if (f.role === q.role || !byFact.has(f.fact)) byFact.set(f.fact, f);
   const checks = new Map<string, string>(); for (const p of fs.data?.problems ?? []) if ((p.role === q.role || (p.role === "case" && byFact.get(p.item)?.role === "case")) && p.level === "error" && !checks.has(p.item)) checks.set(p.item, p.message);
   const unasked = [...byFact.values()].filter((f) => !placedFacts.has(f.fact));
-  const keep = (fact: string) => { const f = byFact.get(fact); return filter === "all" || (filter === "needs" ? checks.has(fact) : f?.source === filter); };
+  const keep = (fact: string) => { const f = byFact.get(fact); return filter === "all" || (filter === "needs" ? checks.has(fact) : filter === "pqr" ? !!f?.prequalification : f?.source === filter); };
   const opened = openIds ?? new Set(q.sections[0] ? [q.sections[0].id] : []);
   const allOpen = q.sections.every((s) => opened.has(s.id));
   const total = q.sections.reduce((n, s) => n + s.questions.length, 0);
@@ -306,6 +348,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
           className={cn("min-h-9 rounded-full border px-3 py-1 text-sm", r.role === q.role ? "border-primary bg-primary/10 font-medium text-text-link" : "border-border bg-surface-raised text-text-muted hover:bg-text/5")}>{r.label} · {r.questions} question{r.questions === 1 ? "" : "s"}{r.gaps ? <span className="ml-1 rounded bg-danger/12 px-1 text-xs text-text-danger">{r.gaps} not asked</span> : null}</button>)}
       </div>
       <SourceChips rows={mine} needs={checks.size} value={filter} onChange={setFilter} />
+      {filter === "pqr" ? <PqrSet id={id} roleLabel={role?.label ?? q.role} n={mine.filter((f) => f.prequalification).length} /> : null}
       {pickedRows.length && canAuthor ? <BulkBar id={id} picked={pickedRows} onClear={() => setPicked(new Set())} onDone={(r, undo) => { setRefused(r.refused); if (r.saved) { setPicked(new Set()); undoToast.show(`${r.what.charAt(0).toUpperCase()}${r.what.slice(1)} on ${r.saved} question${r.saved === 1 ? "" : "s"}`, undo); } }} /> : null}
       {refused.length ? <Notice tone="warn" title={`${refused.length} row${refused.length === 1 ? "" : "s"} not changed`} action={<Button size="sm" variant="ghost" onClick={() => setRefused([])}>Dismiss</Button>}><ul className="mt-1 space-y-0.5" data-bulk-refused>{refused.map((x, i) => <li key={i}>{x.label && !x.message.includes(x.label) ? <><span className="font-medium">{x.label}</span>: </> : null}{x.message}</li>)}</ul></Notice> : null}
       {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
@@ -330,7 +373,12 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
               <button className="flex-1 px-4 py-3 text-left" aria-expanded={isOpen} onClick={() => { const n = new Set(opened); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); setOpenIds(n); }}>
                 <span className="font-medium">{s.title}</span>{locked ? <span className="ml-2 inline-flex items-center gap-1 text-xs text-text-muted" data-client-only><Lock className="size-3.5" aria-hidden /> Always the client</span> : null} <span className="text-xs text-text-muted">· {s.questions.length} question{s.questions.length === 1 ? "" : "s"} for {role?.label ?? "this person"}{fromDocs ? ` · ${fromDocs} from documents` : ""}</span>
               </button>
-              {canAuthor ? <Button size="sm" variant="ghost" onClick={() => sel.mutate({ key: s.id, on: false })} aria-label={`Remove from questionnaire: ${s.title}`}>Remove from questionnaire</Button> : null}
+              {/* QA-93: a question the shared library places in a section is asked whether or not the section is chosen, so
+                  removing it here would only move it to the end. Offered only where it changes something: a section that
+                  asks this person nothing. */}
+              {canAuthor ? (s.questions.length
+                ? <span className="max-w-64 text-right text-xs text-text-muted" data-remove-why>Remove from questionnaire: not here. Its {s.questions.length} question{s.questions.length === 1 ? " is" : "s are"} placed in it in the shared library and stay{s.questions.length === 1 ? "s" : ""} asked; change the placement there.</span>
+                : <Button size="sm" variant="ghost" onClick={() => setRemoving({ key: s.id, title: s.title })} aria-label={`Remove from questionnaire: ${s.title}`}>Remove from questionnaire</Button>) : null}
             </div>
             {isOpen ? (lines.length ? (
               <div className="border-t border-border px-4 py-3">
@@ -353,7 +401,12 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
         </div>
       ) : null}
       <p className="text-xs text-text-muted">{total} question{total === 1 ? "" : "s"} for {role?.label}, from the largest Sample family the combination allows. {q.notAsked ? `${q.notAsked} placed question${q.notAsked === 1 ? " is" : "s are"} not asked: no form reads ${q.notAsked === 1 ? "it" : "them"} and ${q.notAsked === 1 ? "it decides" : "they decide"} nothing.` : ""}</p>
-      {shown ? <FactDrawer key={`${q.role}|${shown.fact}|${byFact.get(shown.fact)?.version ?? 0}`} id={id} role={q.role} roleLabel={role?.label ?? q.role} section={shown.section} q={shown.q} f={byFact.get(shown.fact)} canAuthor={canAuthor} onClose={() => setShown(null)} onSaved={(t, u) => undoToast.show(t, u)} /> : null}
+      {/* QA-92: a fact about the case is saved under its own role ("case"), not the person whose tab shows it. */}
+      {shown ? <FactDrawer key={`${q.role}|${shown.fact}|${byFact.get(shown.fact)?.version ?? 0}`} id={id} role={byFact.get(shown.fact)?.role ?? q.role} roleLabel={byFact.get(shown.fact)?.role === "case" ? "The case (asked once)" : role?.label ?? q.role} section={shown.section} q={shown.q} f={byFact.get(shown.fact)} canAuthor={canAuthor} onClose={() => setShown(null)} onSaved={(t, u) => undoToast.show(t, u)} /> : null}
+      {removing ? <Dialog open onOpenChange={(o) => !o && setRemoving(null)} title={`Remove "${removing.title}" from the questionnaire?`} description="The sections are chosen once for the whole combination."
+        footer={<><Button variant="ghost" onClick={() => setRemoving(null)}>Keep the section</Button><Button variant="destructive" data-confirm-remove onClick={() => void remove(removing)}>Remove section</Button></>}>
+        <p className="text-sm text-text-muted" data-remove-what>It asks {role?.label ?? "this person"} nothing in this combination, so it leaves this list. A question it asks someone else stays asked: the shared library places it there. You can undo straight after, or add the section back from the library.</p>
+      </Dialog> : null}
       {undoToast.node}
     </section>
   );
