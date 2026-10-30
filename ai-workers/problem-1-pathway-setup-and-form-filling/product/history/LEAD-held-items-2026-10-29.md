@@ -7,3 +7,7 @@
 | Scheduled Lead (P-84) | Founder | Paused; founder kept it off on 25 Oct (P-94). Session `session_018nCkziktpjgMdwbibEaDST`, scheduled task `trig_01R7hLebLNQc6s3qsexHNDXK` |
 | Static analysis gaps (R-70), shared-library audit | Screen 02–04 concepts | `history/SHARED-LIBRARY-AUDIT-2026-10-23.md` unreviewed |
 | Capability page (P-29) | End of prototype | Lead writes it from the code |
+
+## Moved from LEAD.md open items, 30 Oct (still open, low priority)
+| **Records cleanup from the outside review (Devin, 29 Oct, `history/devin/2026-10-29-devin-static-docs.md`)** | Lead | DV-doc-2 done (WAVE-1 rows); DV-doc-3 (PRODUCT, SCREENS, DEMO, PLAN gates, `domain/`, skill immigration-structure describe the old product), DV-doc-4 (P-28, P-37, P-104, P-24, P-79, P-84, P-117/P-126 conflicts: name what amends them), DV-doc-5 (27 superseded IDs cited from live files, P-107 and P-114 first), DV-doc-6 (one AI budget figure each), DV-doc-7 done 29 Oct (P-146: scout lane retired, LANES, PLAN, LEAD, DEMO, ENVIRONMENT, GOOSE-TASKS to history), DV-doc-8 (checker gaps: graph checks for superseded citations and stale statuses) as one Lead records PR after PR #75 |
+| **Independent workflow audit (25 Oct)** | Lead, founder | Open: founder home path in tracked files (push guard misses it); fresh re-score after every FIX before merge; team-readiness fixes as one Lead tooling PR. Details in git history of this file |

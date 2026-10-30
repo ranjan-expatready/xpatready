@@ -1,0 +1,235 @@
+URL /structure?t=CORPORATE as user-A
+TITLE Program structure · Product Studio
+H1 ["Program structure"]
+HEADS []
+CUT []
+ERRORS []
+---
+Program structure
+Add
+
+Where every combination sits: Pathway › Program › Category › Sub-category. The order here is the order on Immigration programs.
+
+Retail
+21
+Corporate and employers
+8
+Tree
+List
+Find a name
+Expand all
+Collapse all
+Pathway
+All
+8
+Temporary residence
+7
+Permanent residence
+1
+Program: All
+LMIA
+Employer offers (LMIA-exempt)
+Compliance
+Designation and endorsement
+Status: All
+In setup
+Not ready
+Live
+Not started
+Waiting for approval
+Show retired (0)
+
+2 pathways · 4 programs · 7 categories · 2 sub-categories · 8 combinations
+
+Pathway
+Program
+Category
+Sub-category
+· Numbers show the order on this page, not IRCC codes.
+
+Name
+Status
+Cases may be opened from
+Used by
+Actions
+1
+Temporary residence
+7 combinations
+Edit
+Temporary residence
+Delete
+Temporary residence
+
+Can't delete: "High-wage position" under it has a setup draft. See where used
+
+1.1
+LMIA
+4 combinations
+Edit
+LMIA
+Delete
+LMIA
+
+Can't delete: "High-wage position" under it has a setup draft. See where used
+
+1.1.1
+High-wage position
+In setup
+Inside Canada
+Used by:
+Setup draft
+Edit
+High-wage position
+Delete
+High-wage position
+
+Can't delete: its setup draft uses it. See where used
+
+1.1.2
+Low-wage position
+Not started
+Inside Canada
+Used by:
+Nothing yet
+Edit
+Low-wage position
+Delete
+Low-wage position
+1.1.3
+Global Talent Stream
+Not started
+Inside Canada
+Used by:
+Nothing yet
+Edit
+Global Talent Stream
+Delete
+Global Talent Stream
+1.1.4
+In-home caregiver
+Not started
+Inside Canada
+Used by:
+Nothing yet
+Edit
+In-home caregiver
+Delete
+In-home caregiver
+1.2
+Employer offers (LMIA-exempt)
+2 combinations
+Edit
+Employer offers (LMIA-exempt)
+Delete
+Employer offers (LMIA-exempt)
+1.2.1
+Offer of employment
+2 sub-categories
+Edit
+Offer of employment
+Delete
+Offer of employment
+1.2.1.1
+Intra-company transferee
+Not started
+Inside Canada
+Used by:
+Nothing yet
+Edit
+Intra-company transferee
+Delete
+Intra-company transferee
+1.2.1.2
+Professional under a trade agreement
+Not started
+Inside Canada
+Used by:
+Nothing yet
+Edit
+Professional under a trade agreement
+Delete
+Professional under a trade agreement
+1.3
+Compliance
+1 combination
+Edit
+Compliance
+Delete
+Compliance
+1.3.1
+Inspection response
+Not started
+Inside Canada
+Used by:
+Nothing yet
+Edit
+Inspection response
+Delete
+Inspection response
+2
+Permanent residence
+1 combination
+Edit
+Permanent residence
+Delete
+Permanent residence
+2.1
+Designation and endorsement
+1 combination
+Edit
+Designation and endorsement
+Delete
+Designation and endorsement
+2.1.1
+Atlantic employer designation
+Not started
+Inside Canada
+Used by:
+Nothing yet
+Edit
+Atlantic employer designation
+Delete
+Atlantic employer designation
+
+Names and locations are Sample until the immigration expert confirms. The AI meaning check is off: only the spelling check runs, and names are shown as Not meaning-checked.
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+About the Program structure
+Pathway type
+View
+Pathway
+Program
+Status
+Corporate and employers program structure
+Temporary residence pathway
+1 Pathway Temporary residence
+Collapse Temporary residence
+1.1 Program LMIA
+Collapse LMIA
+1.1.1 Category High-wage position
+Category
+1.1.2 Category Low-wage position
+1.1.3 Category Global Talent Stream
+1.1.4 Category In-home caregiver
+1.2 Program Employer offers (LMIA-exempt)
+Collapse Employer offers (LMIA-exempt)
+1.2.1 Category Offer of employment
+Collapse Offer of employment
+1.2.1.1 Sub-category Intra-company transferee
+Sub-category
+1.2.1.2 Sub-category Professional under a trade agreement
+1.3 Program Compliance
+Collapse Compliance
+1.3.1 Category Inspection response
+Permanent residence pathway
+2 Pathway Permanent residence
+Collapse Permanent residence
+2.1 Program Designation and endorsement
+Collapse Designation and endorsement
+2.1.1 Category Atlantic employer designation
