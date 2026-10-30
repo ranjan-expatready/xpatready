@@ -1,0 +1,78 @@
+URL /c/e09ac0ca-1399-421e-a611-8e8817317c64/overview as user-A
+TITLE Immigration programs · Product Studio
+H1 ["With an LMIA"]
+HEADS ["Overview","Forms","Questionnaires","Documents","Preview","Review and release","Who can be in this application"]
+CUT []
+ERRORS []
+---
+Immigration programs
+Temporary residence
+Work permits
+Employer-specific work permit
+With an LMIA
+With an LMIA
+Live
+
+In Release 1 · draft matches the release · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)
+
+Next step
+
+Nothing to do: firms can open cases on it
+
+Sample: from the sample inputs; its setup has changed since they were loaded.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+
+Forms
+
+8
+
+461 form fields matched to shared fields · see them
+
+Questions
+
+295
+
+questions across all people (each person role counted) · 18 sections
+
+Documents
+
+26
+
+asked always or only if
+
+Rules and checks
+
+39 rules · 64 checks
+
+15 warnings: see them
+
+Who can be in this application
+Change in Questionnaires
+Principal applicant · 1 · applicant
+Spouse or partner · 0 to 1 · applicant
+Child · 0 to 4
+Representative · 0 to 1
+
+Each person marked as applicant gets their own forms, questions and documents. Numbers Sample until the immigration expert confirms.
+
+Released versions: Release 1, today at 8:34 p.m., approved by Approver · Review and release
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+Path
+Pathway: show the list for Temporary residence
+Program: show the list for Work permits
+Category: show the list for Employer-specific work permit
+Sub-category: show the list for With an LMIA
+Combination
+Overview

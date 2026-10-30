@@ -1,0 +1,112 @@
+Immigration programs
+Program structure
+Add combination
+
+Every combination your firm can open, and where its setup stands.
+
+Retail
+21
+Corporate and employers
+8
+Cards
+List
+⌘K
+All
+21
+Temporary residence
+12
+Permanent residence
+8
+Citizenship
+1
+Program: All
+Citizenship (1)
+Economic immigration (3)
+Family sponsorship (3)
+Permanent resident documents (2)
+Study permits (2)
+Visitors (3)
+Work permits (7)
+Status: All
+Needs you
+0
+
+21 combinations · 1 Live · 4 In setup · 16 Not started
+Names are Sample until the immigration expert confirms.
+
+Combination
+Status
+Setup
+Next step
+Temporary residence
+· 12
+Retail › Temporary residence › Visitors › Visitor visa › No sub-category
+In setup
+Add 1 form from the library
+Retail › Temporary residence › Visitors › Super visa › No sub-category
+In setup
+Add 1 form from the library
+Retail › Temporary residence › Visitors › Extend stay in Canada › No sub-category
+Not started
+Start setup
+Retail › Temporary residence › Work permits › Employer-specific work permit › With an LMIA
+Filed: PDF
+Live
+Open
+Retail › Temporary residence › Work permits › Employer-specific work permit › LMIA-exempt (employer offer)
+Not started
+Start setup
+Retail › Temporary residence › Work permits › Open work permit › Spouse of a skilled worker
+Not started
+Start setup
+Retail › Temporary residence › Work permits › Open work permit › Spouse of a student
+Not started
+Start setup
+Retail › Temporary residence › Work permits › Open work permit › Post-graduation
+Not started
+Start setup
+Retail › Temporary residence › Work permits › International Experience Canada › Working holiday
+Not started
+Start setup
+Retail › Temporary residence › Work permits › International Experience Canada › Young professionals
+Not started
+Start setup
+Retail › Temporary residence › Study permits › Study permit › No sub-category
+In setup
+Add 3 forms from the library
+Retail › Temporary residence › Study permits › Study permit extension › No sub-category
+Not started
+Start setup
+Permanent residence
+· 8
+Retail › Permanent residence › Family sponsorship › Spouse or partner › Applicant outside Canada
+In setup
+Add 2 forms from the library
+Retail › Permanent residence › Family sponsorship › Spouse or partner › Applicant in Canada
+Not started
+Start setup
+Retail › Permanent residence › Family sponsorship › Dependent child › No sub-category
+Not started
+Start setup
+Retail › Permanent residence › Economic immigration › Express Entry › Profile
+Not started
+Start setup
+Retail › Permanent residence › Economic immigration › Express Entry › Permanent residence application
+Not started
+Start setup
+Retail › Permanent residence › Economic immigration › Provincial nomination › No sub-category
+Not started
+Start setup
+Retail › Permanent residence › Permanent resident documents › PR card renewal › No sub-category
+Not started
+Start setup
+Retail › Permanent residence › Permanent resident documents › Travel document › No sub-category
+Not started
+Start setup
+Citizenship
+· 1
+Retail › Citizenship › Citizenship › Grant of citizenship › No sub-category
+Not started
+Start setup
+
+21 combinations shown
