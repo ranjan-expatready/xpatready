@@ -120,7 +120,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await row.waitFor();
   step("C4.10 M1 pass: the row now says Client, Ask, Changed here", /Client/.test(await row.locator("[data-comes-from]").innerText()) && /Ask/.test(await row.innerText()) && await row.locator('[data-row-status="draft"]').count() === 1, await row.innerText());
   step("undo toast: one Undo for the save", await p.locator("[data-undo-toast] [data-undo]").count() === 1);
-  await p.locator("[data-undo-toast] [data-undo]").click(); await settle();
+  await p.locator("[data-undo-toast] [data-undo]").click();
+  // Lead, 30 Oct (main CI flake, the QA-116 family): under load the refetch lands after settle's fixed pause; wait on
+  // the change itself (the row back on the rules), not a timer. A row that never goes back still fails below.
+  await row.locator('[data-row-status="rules"]').waitFor({ timeout: 30000 }).catch(() => {}); await settle();
   step("Undo pass: the row goes back to the passport and the rules", /Document/.test(await row.locator("[data-comes-from]").innerText()) && await row.locator('[data-row-status="rules"]').count() === 1, await row.innerText());
 
   // ======================================================== a declaration: always the client
