@@ -29,7 +29,7 @@ const RELEASE = join(PROTOTYPE, "p3", "releases", "c1-v3");
  *  Rows with a "setup" block get their combination and official files through the normal upload path; one of them
  *  starts from the reviewed work-permit release. Everything else shows as Not started. */
 export const SAMPLES = join(STUDIO, "samples", "programs.json");
-type SampleSetup = { key: string; participants: any[]; sources: string[]; import?: "release"; note: string };
+type SampleSetup = { key: string; participants: any[]; sources: string[]; import?: "release"; note: string; drop_documents?: { document_type: string; why: string }[] };
 type SampleNode = { key: string; label: string; locations: string[]; link?: string; setup?: SampleSetup; subcategories?: SampleNode[] };
 /** S7 (P-148): the six agreed combinations the Demo menu loads (samples/wave1.json). */
 export const SAMPLES_SIX = join(STUDIO, "samples", "wave1.json");
@@ -95,7 +95,14 @@ export class Demo {
       for (const f of c.sources) { const r = await this.intake.sample(actor, comp.id, f); if (r.attachmentStatus === "RECOGNISED") await this.sources.read(actor, r.attachmentId!); }
       log.push(`  ${path}: ${c.sources.length} official files through the form intake`);
       if (c.import !== "release") return;
-      const counts = await importConfiguration(this.db, workspaceId, comp.id, config, { by: actor.id, releaseLabel: "the reviewed work-permit release", releaseSha: rel.configuration_sha256 });
+      // QA-115 (Lead, 30 Oct): a sub-category lists only the document lines that can apply to it; the sample names each
+      // line it leaves out of the release, with why. A name that matches no line stops the load (never a silent miss).
+      const drop = c.drop_documents ?? [];
+      const missed = drop.filter((x) => !config.document_requirements.some((d: any) => d.document_type === x.document_type));
+      if (missed.length) throw new Error(`Sample ${c.key}: no release line named ${missed.map((x) => `"${x.document_type}"`).join(", ")}`);
+      const cfg = drop.length ? { ...config, document_requirements: config.document_requirements.filter((d: any) => !drop.some((x) => x.document_type === d.document_type)) } : config;
+      const counts = await importConfiguration(this.db, workspaceId, comp.id, cfg, { by: actor.id, releaseLabel: "the reviewed work-permit release", releaseSha: rel.configuration_sha256 });
+      if (drop.length) log.push(`  ${path}: left out ${drop.length} document lines that cannot apply here (${drop.map((x) => x.why).join("; ")})`);
       const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, comp.id, "published");
       const authors = [rel.author.user_id];
       const pack = await this.db.packVersion.create({ data: { workspaceId, version: 1, authorIds: authors, approverId: rel.approver.user_id, summary: { rows: 1, via: "imported reviewed release", imported_from: "p3/releases/c1-v3" } } });

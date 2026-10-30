@@ -185,7 +185,13 @@
          "work-permit-outside-forms-documents.html"
         ],
         "import": "release",
-        "note": "Sample: starts from the reviewed work-permit setup for applications from outside Canada (forms IMM 1295, IMM 5257 SCH1, IMM 5409, IMM 5475, IMM 5476, IMM 5707; checklists IMM 5488 and the New Delhi visa office's IMM 5905). That setup is for every employer-specific job, so its document lines cover jobs with an LMIA (Copy of LMIA, Job offer letter) and LMIA-exempt jobs, each with its own condition; the LMIA-exempt lines never apply here and are not trimmed yet."
+        "drop_documents": [
+         { "document_type": "Copy of IMM 5802 offer of employment and proof of employer compliance fee payment", "why": "LMIA-exempt: an offer made through the Employer Portal" },
+         { "document_type": "Provincial/territorial confirmation of nomination and R204(c) letter", "why": "LMIA-exempt: a provincial nominee's exempt offer" },
+         { "document_type": "Employment contract (LMIA-exempt job)", "why": "LMIA-exempt job" },
+         { "document_type": "Proof of completion of program of study (final transcript, or institution letter / formal notice of graduation)", "why": "post-graduation work permit, an open work permit, not this sub-category" }
+        ],
+        "note": "Sample: starts from the reviewed work-permit setup for applications from outside Canada (forms IMM 1295, IMM 5257 SCH1, IMM 5409, IMM 5475, IMM 5476, IMM 5707; checklists IMM 5488 and the New Delhi visa office's IMM 5905), with the document lines for a job with an LMIA (Copy of LMIA, Job offer letter). Lines for LMIA-exempt jobs and the post-graduation work permit are left out. Each line keeps its sentence from the IRCC checklist or page it comes from."
        }
       },
       {

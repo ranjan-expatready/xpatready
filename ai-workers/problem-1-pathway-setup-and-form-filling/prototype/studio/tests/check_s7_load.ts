@@ -6,6 +6,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+const SOLUTION = join(import.meta.dirname, "..", "..", "..");
 
 const PORT = Number(process.argv[2] ?? 4435), DB = process.argv[3] ?? "xr_studio_runtime_s7";
 let pass = 0, fail = 0;
@@ -76,9 +77,16 @@ const sampleOk = (f: Parameters<typeof trailsOf>[0]) => { const t = trailsOf(f);
   ok("Step 6: the suites' fixture (no sample named) still loads the older sample with its reviewed work-permit release", s.status < 300 && n(`select count(*) from config_release`) === 1 && n(`select count(*) from combination where label='Super visa'`) === 1, s.status);
   // QA-115: the With an LMIA sample's words agree with its document lines (Copy of LMIA, Job offer letter, LMIA-exempt lines).
   const lmia = sql(`select description from combination where combination_key='wp.family'`);
-  const lines = sql(`select string_agg(distinct coalesce(t.name, '') || ' / ' || coalesce(d.condition_plain, ''), ' | ') from document_requirement d join combination c on c.id=d.combination_id left join document_type t on t.document_type_key=d.document_type_key and t.workspace_id=d.workspace_id where c.combination_key='wp.family'`);
-  ok("C4.5 QA-115 pass: With an LMIA's note names the LMIA lines its checklist carries and says the LMIA-exempt lines never apply", /Copy of LMIA/.test(lmia) && /LMIA-exempt lines never apply/.test(lmia) && /LMIA/.test(lines) && /LMIA-exempt/.test(lines), { lmia, lines: lines.slice(0, 200) });
-  ok("C4.5 QA-115 fail: the note no longer says LMIA documents are not configured", !/not configured yet/.test(lmia), lmia);
+  // Lead 30 Oct: trimmed. A With an LMIA sub-category lists no LMIA-exempt line; each kept line keeps its IRCC sentence (P-170).
+  const rows = sql(`select coalesce(t.name, d.document_type_key) || '§' || coalesce(d.condition_plain, '') || '§' || coalesce(d.source_file, '') || '§' || regexp_replace(coalesce(d.source_quote, ''), '\\s+', ' ', 'g') from document_requirement d join combination c on c.id=d.combination_id left join document_type t on t.document_type_key=d.document_type_key and t.workspace_id=d.workspace_id where c.combination_key='wp.family'`).split("\n").filter(Boolean).map((x) => { const [name, cond, file, quote] = x.split("§"); return { name, cond, file, quote }; });
+  const exempt = rows.filter((r) => /LMIA-exempt|exempt from an LMIA|IMM 5802|R204\(c\)|post-graduation|program of study/i.test(`${r.name} ${r.cond}`));
+  ok("C4.5 QA-115 pass: With an LMIA lists the LMIA lines (Copy of LMIA, Job offer letter) and no LMIA-exempt or post-graduation line", rows.some((r) => /Copy of LMIA/.test(r.name)) && rows.some((r) => /Job offer letter/.test(r.name)) && exempt.length === 0, exempt.map((r) => r.name));
+  const norm = (s: string) => s.toLowerCase().replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
+  const unbacked = rows.filter((r) => {
+    try { const inv = JSON.parse(readFileSync(join(SOLUTION, r.file), "utf8")); return !/^https:\/\/(www|ircc)\.canada\.ca\//.test(inv.summary?.url ?? "") || !r.quote || !norm(String(inv.text)).includes(norm(r.quote).slice(0, 80)); } catch { return true; }
+  });
+  ok("C4.5 QA-115 / P-170: every kept line is backed by the IRCC page it comes from (an IRCC address on canada.ca, its sentence found in that page's text)", rows.length > 0 && unbacked.length === 0, unbacked.map((r) => `${r.name} ← ${r.file}`));
+  ok("C4.5 QA-115: the note says what the sample shows, and that LMIA-exempt lines are left out", /Copy of LMIA/.test(lmia) && /LMIA-exempt jobs and the post-graduation work permit are left out/.test(lmia) && !/not configured yet/.test(lmia), lmia);
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
