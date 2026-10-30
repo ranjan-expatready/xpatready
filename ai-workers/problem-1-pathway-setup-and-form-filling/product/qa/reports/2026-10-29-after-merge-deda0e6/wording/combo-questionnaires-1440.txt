@@ -1,0 +1,200 @@
+URL /c/e09ac0ca-1399-421e-a611-8e8817317c64/questionnaires as user-A
+TITLE Immigration programs · Product Studio
+H1 ["With an LMIA"]
+HEADS ["Overview","Forms","Questionnaires","Documents","Preview","Review and release","Questions for each person","","Question","Comes from","Pre-qualification","Only if","Status","Actions","","","","","","","",""]
+CUT []
+ERRORS []
+---
+Immigration programs
+Temporary residence
+Work permits
+Employer-specific work permit
+With an LMIA
+With an LMIA
+Live
+
+In Release 1 · draft matches the release · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)
+
+Next step
+
+Nothing to do: firms can open cases on it
+
+Sample: from the sample inputs; its setup has changed since they were loaded.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+
+Who can be in this application · Principal applicant exactly 1 · Spouse or partner 0 to 1 · Child 0 to 4 · Representative 0 to 1 · each applicant files their own application
+
+Show and edit
+245
+Full form facts
+=
+32
+From documents
++
+178
+Client answers
++
+35
+Case officer enters
+0
+Pre-qualification
+✓ Every fact has one source
+
+Sample until the immigration expert confirms.
+
+Questions for each person
+Open all sections
+Add a library section…
+Add section
+Principal applicant · 146 questions
+Spouse or partner · 111 questions
+Child · 12 questions
+Representative · 15 questions
+All sources
+Document 18
+Client 86
+Case officer 16
+Needs you · 0
+
+Principal applicant: the forms need 120 answers for this person · 18 from documents · 86 asked of the client · 16 entered by the case officer
+
+Application details · 7 questions for Principal applicant
+Remove from questionnaire
+	Question	Comes from	Pre-qualification	Only if	Status	
+Actions
+
+	Official language (English or French) in which the person wants to receive service	
+Client
+	—	Always	Rules	
+
+	Whether the person the form is about is the principal applicant, rather than the principal applicant's spouse, common-law partner or dependent child	
+Case officer
+	Not offered	Always	Rules	
+
+	Kind of immigration application the case concerns (e.g. permanent residence, study permit extension)	
+Case officer
+	Not offered	Always	Rules	
+
+	IRCC application file number of the case	
+Case officer
+	Not offered	Always	Rules	
+
+	Name of the office where the application was submitted	
+Case officer
+	Not offered	Always	Rules	
+
+	Location (city/country) of the office where the application was submitted	
+Case officer
+	Not offered	Always	Rules	
+
+	Date the application is (or will be) submitted; reference date for calculated values	Client · decides what applies	—	Always	Rules	
+Personal details · 12 questions for Principal applicant · 7 from documents
+Remove from questionnaire
+Languages · 4 questions for Principal applicant
+Remove from questionnaire
+Travel and identity documents · 13 questions for Principal applicant · 4 from documents
+Remove from questionnaire
+Contact details · 6 questions for Principal applicant
+Remove from questionnaire
+Residence and immigration status · 6 questions for Principal applicant
+Remove from questionnaire
+Spouse or partner relationship · 9 questions for Principal applicant
+Remove from questionnaire
+Family members · 4 questions for Principal applicant
+Remove from questionnaire
+Intended work in Canada · 23 questions for Principal applicant · 7 from documents
+Remove from questionnaire
+Education history · 6 questions for Principal applicant
+Remove from questionnaire
+Employment and activity history · 6 questions for Principal applicant
+Remove from questionnaire
+Medical background
+Always the client · 3 questions for Principal applicant
+Remove from questionnaire
+Background declarations · 10 questions for Principal applicant
+Remove from questionnaire
+Service, membership and government position history
+Always the client · 17 questions for Principal applicant
+Remove from questionnaire
+Travel history · 5 questions for Principal applicant
+Remove from questionnaire
+Representative and authorizations · 10 questions for Principal applicant
+Remove from questionnaire
+Processing requirements · 4 questions for Principal applicant
+Remove from questionnaire
+Submitted documents · 1 question for Principal applicant
+Remove from questionnaire
+
+146 questions for Principal applicant, from the largest Sample family the combination allows. 38 placed questions are not asked: no form reads them and they decide nothing.
+
+Rules used here (39)
+Checks on these answers (64)
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+Path
+Pathway: show the list for Temporary residence
+Program: show the list for Work permits
+Category: show the list for Employer-specific work permit
+Sub-category: show the list for With an LMIA
+Combination
+Questionnaires
+Where every answer comes from
+Library section to add
+Person
+Where it comes from
+Remove from questionnaire: Application details
+Application details: questions
+Select every row in this section
+Select Official language (English or French) in which the person wants to receive service
+Details of: Official language (English or French) in which the person wants to receive service
+As the rules work it out; nothing changed here.
+Actions for Official language (English or French) in which the person wants to receive service
+Select Whether the person the form is about is the principal applicant, rather than the principal applicant's spouse, common-law partner or dependent child
+Details of: Whether the person the form is about is the principal applicant, rather than the principal applicant's spouse, common-law partner or dependent child
+Actions for Whether the person the form is about is the principal applicant, rather than the principal applicant's spouse, common-law partner or dependent child
+Select Kind of immigration application the case concerns (e.g. permanent residence, study permit extension)
+Details of: Kind of immigration application the case concerns (e.g. permanent residence, study permit extension)
+Actions for Kind of immigration application the case concerns (e.g. permanent residence, study permit extension)
+Select IRCC application file number of the case
+Details of: IRCC application file number of the case
+Actions for IRCC application file number of the case
+Select Name of the office where the application was submitted
+Details of: Name of the office where the application was submitted
+Actions for Name of the office where the application was submitted
+Select Location (city/country) of the office where the application was submitted
+Details of: Location (city/country) of the office where the application was submitted
+Actions for Location (city/country) of the office where the application was submitted
+Select Date the application is (or will be) submitted; reference date for calculated values
+Details of: Date the application is (or will be) submitted; reference date for calculated values
+Actions for Date the application is (or will be) submitted; reference date for calculated values
+Remove from questionnaire: Personal details
+Remove from questionnaire: Languages
+Remove from questionnaire: Travel and identity documents
+Remove from questionnaire: Contact details
+Remove from questionnaire: Residence and immigration status
+Remove from questionnaire: Spouse or partner relationship
+Remove from questionnaire: Family members
+Remove from questionnaire: Intended work in Canada
+Remove from questionnaire: Education history
+Remove from questionnaire: Employment and activity history
+Remove from questionnaire: Medical background
+Remove from questionnaire: Background declarations
+Remove from questionnaire: Service, membership and government position history
+Remove from questionnaire: Travel history
+Remove from questionnaire: Representative and authorizations
+Remove from questionnaire: Processing requirements
+Remove from questionnaire: Submitted documents
+Table: Rule, Evaluated for, Condition, 
+From the reviewed release c1-v3
+Table: Check, Group, Severity, When it fires
