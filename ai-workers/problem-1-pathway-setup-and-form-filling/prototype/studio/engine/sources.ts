@@ -234,9 +234,11 @@ export type ChecklistLine = {
  *  representative" = both; "no signature" = nobody (a signed upload with no signer is a release error, validate.ts). */
 export const SIGNED_SCAN = "signed_scan";
 const WHO_OF_ROLE: Record<string, string> = { principal: "principal_applicant", spouse_or_partner: "spouse_or_partner", child: "each_dependent_child", representative: "representative", sponsor: "sponsor" };
-export function signedScanLines(s: Snapshot): ChecklistLine[] {
-  const { people } = previewRender(s);
+export function signedScanLines(s: Snapshot, rendered?: ReturnType<typeof previewRender>["people"]): ChecklistLine[] {
   const out: ChecklistLine[] = [];
+  // Most combinations file nothing as Signed PDF upload: skip the render, and reuse the checklist's when it has one.
+  if (!(s.forms as { channel?: string }[]).some((f) => f.channel === "SIGNED_PDF_UPLOAD")) return out;
+  const people = rendered ?? previewRender(s).people;
   for (const f of s.forms as { form_number: string; title?: string; form_kind?: string; who: string; status?: string; condition?: any; condition_plain?: string | null; channel?: string; signed_by?: string }[]) {
     if (f.channel !== "SIGNED_PDF_UPLOAD" || (f.form_kind ?? "data_form") === "document") continue;
     const by = f.signed_by ?? "person";
@@ -297,7 +299,7 @@ export function checklist(s: Snapshot): { role: string; label: string; lines: Ch
   const byDefault = (a: ChecklistLine, b: ChecklistLine) => Number(b.base) - Number(a.base) || a.document.name.localeCompare(b.document.name) || a.lineage.localeCompare(b.lineage);
   for (const list of byRole.values()) [...list].sort(byDefault).forEach((l, i) => { l.rank = l.position ?? (i + 1) * 10; });
   // C3.11: the signed scans follow the requirement lines, in form order (they cannot be moved: they follow the form line).
-  for (const l of signedScanLines(s)) { const list = byRole.get(l.role) ?? []; l.rank = 100_000 + list.length; byRole.set(l.role, [...list, l]); }
+  for (const l of signedScanLines(s, people)) { const list = byRole.get(l.role) ?? []; l.rank = 100_000 + list.length; byRole.set(l.role, [...list, l]); }
   const order = (a: ChecklistLine, b: ChecklistLine) => a.rank - b.rank || byDefault(a, b);
   const roles = [...new Set(people.map((p) => p.role as string)), "case"];
   return roles.filter((r) => byRole.has(r)).map((role) => ({ role, label: who(s, role), lines: byRole.get(role)!.sort(order) }));
