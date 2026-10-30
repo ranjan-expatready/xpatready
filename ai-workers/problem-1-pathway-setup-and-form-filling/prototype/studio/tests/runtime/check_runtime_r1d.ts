@@ -187,10 +187,11 @@ async function main() {
     const res = await fetch(`http://127.0.0.1:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd });
     return { status: res.status, body: await res.json().catch(() => null) };
   };
+  const asValidated = (b: Buffer) => Buffer.concat([b, Buffer.from("\n% Saved after Validate (simulated in this check)\n")]);
   const copyFile = readFileSync(join(ROOT, row1.path));
   // Break M1: Adobe's Validate adds the barcode and saves, so the validated file never has the copy's bytes. Simulated
   // here as an incremental save appended after the copy (the values stay as written); the unchanged copy is refused.
-  const validatedFile = Buffer.concat([copyFile, Buffer.from("\n% Saved after Validate (simulated in this check)\n")]);
+  const validatedFile = asValidated(copyFile);
   r = await call("POST", `/runtime/form-copies/${locked1}/validated`, {}, OFFICER);
   ok("C11.6 C-9 fail: sending no file is refused in words (400), nothing recorded", r.status === 400 && /validated PDF/.test(r.body?.detail ?? "") && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "0", r.body?.detail);
   r = await sendValidated(locked1, Buffer.from("not a pdf"), "notes.txt");
@@ -281,7 +282,7 @@ async function main() {
   copyFileSync(keep, pl); appendFileSync(pl, "%changed");
   const lockChanged = await call("POST", `/runtime/form-copies/${lockMe}/lock`, { kind: "filed" }, OFFICER);
   copyFileSync(keep, pl); rmSync(keep);
-  await sendValidated(lockMe, readFileSync(pl), "validated.pdf"); // C-9: Validate is the last step before filing
+  await sendValidated(lockMe, asValidated(readFileSync(pl)), "validated.pdf"); // C-9: Validate is the last step before filing
   ok("PR #12 review 2 fail: a copy whose file is missing cannot be locked (409 in plain words)", lockMissing.status === 409 && /missing from the working files/.test(lockMissing.body?.detail ?? ""), lockMissing.body?.detail);
   ok("PR #12 review 2 fail: a copy whose file changed on disk cannot be locked (409 in plain words); it stays unlocked", lockChanged.status === 409 && /changed on disk/.test(lockChanged.body?.detail ?? "") && sql(`select locked_at is null from form_instance where id='${lockMe}'`) === "t", lockChanged.body?.detail);
   r = await call("POST", `/runtime/form-copies/${lockMe}/lock`, { kind: "filed" }, OFFICER);
@@ -316,7 +317,7 @@ async function main() {
   const readyWithEntry = (await formOf("IMM 5257", P)).readiness.ready;
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-pr13` }, OFFICER);
   const pr13: string = r.body.id; await done(pr13);
-  await sendValidated(pr13, readFileSync(join(ROOT, sql(`select path from form_instance where id='${pr13}'`))), "validated.pdf");
+  await sendValidated(pr13, asValidated(readFileSync(join(ROOT, sql(`select path from form_instance where id='${pr13}'`)))), "validated.pdf");
   const filed13 = await call("POST", `/runtime/form-copies/${pr13}/lock`, { kind: "filed" }, OFFICER);
   await call("POST", `/runtime/cases/${caseId}/groups/${P}/rows`, { group: prev }, OFFICER);
   f = await formOf("IMM 5257", P);

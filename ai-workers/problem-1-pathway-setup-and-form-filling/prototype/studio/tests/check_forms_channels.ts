@@ -209,6 +209,40 @@ const intake = async (file: string, combinationId: string) => {
   r = await call("POST", `/attachments/${svAtt}/reuse`, {});
   ok("C1.6: default channel: a form added from the library starts as PDF upload", sql(`select channel from combination_form where combination_id='${sv}' and lineage_key='IMM 5257' order by version desc limit 1`) === "PDF_UPLOAD", r.body);
 
+  // ──────────────────────────────────────────── slice 1 FIX: paper filing, Mixed words, accepts impact, edition at approval
+  ok("C1.6 C-7 (review S1): Online + PDF upload + Paper names all three; Online + PDF stays as it was", filingKind([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", channel: "PDF_UPLOAD" }, { form_number: "C", channel: "PAPER" }]) === "Mixed: online, PDF and paper" && filingKind([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", channel: "PDF_UPLOAD" }]) === "Mixed: online and PDF");
+  const paperOnly = allowedChannels([{ account: "ANY", channels: ["ONLINE", "PDF_UPLOAD", "PAPER"], basis: "PERSON_SAMPLE", quote: null }], "PAPER");
+  ok("C1.6 C-3 (break M6): with no account (paper filing) only Paper is allowed, whatever every account accepts; another account keeps its record", paperOnly.channels.join() === "PAPER" && allowedChannels([{ account: "ANY", channels: ["ONLINE", "PAPER"], basis: "PERSON_SAMPLE", quote: null }], "PR_PORTAL").channels.join() === "ONLINE,PAPER", paperOnly);
+  const [was5707, wasSig5707] = sql(`select channel || '|' || signature from combination_form where combination_id='${vv}' and lineage_key='IMM 5707' order by version desc limit 1`).split("|");
+  r = await call("PATCH", `/combinations/${vv}/account`, { account: "PAPER", from: null });
+  const paperErr = r.body.problems?.find((x: { item: string; level: string }) => x.item === "IMM 5707" && x.level === "error");
+  ok("C1.6 C-3 (break M6): once filed with no account, a PDF upload line is an error in words (not changed silently)", r.status === 200 && /no IRCC account \(paper filing\): every form is filed on paper/.test(paperErr?.message ?? ""), r.body.problems);
+  r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "ONLINE" });
+  ok("C1.6 C-3 fail (break M6): an Online line on a paper-filing combination is refused in words", r.status === 400 && /every form is filed on paper/.test(JSON.stringify(r.body)), r.body);
+  r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "PAPER" });
+  ok("C1.6 C-3 pass (break M6): Paper is saved on a paper-filing combination", r.status === 200 && r.body.lines.find((l: { form: string }) => l.form === "IMM 5707")?.channel === "PAPER", r.body);
+  await call("PATCH", `/combinations/${vv}/account`, { account: null, from: "PAPER" });
+  r = await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: was5707, signature: wasSig5707 });
+  ok("set-up: IMM 5707 is put back as it was", r.status === 200, r.body);
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5476")}/accepts`, { account: "PAPER", channels: ["ONLINE"], reason: "break M6 test" });
+  ok("C11.18 fail (break M6): a record for no account (paper filing) that is not Paper is refused in words", r.status === 400 && /files only on paper/.test(JSON.stringify(r.body)), r.body);
+  // Break M5: approving what IRCC accepts names every combination in use it would break, before the click.
+  const vvLabel = sql(`select label from combination where id='${vv}'`);
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5707")}/accepts`, { account: "ANY", channels: ["ONLINE"], reason: "break M5 test" });
+  const m5 = r.body?.id;
+  let seen = (await call("GET", `/library/changes/${m5}`, undefined, "user-B")).body;
+  ok("C11.18 (break M5): the approver sees which combinations the change breaks, each with why, before approving", r.status < 300 && seen?.accepts_impact?.some((i: { label: string; channel: string; words: string }) => i.label === vvLabel && i.channel === "PDF_UPLOAD" && /only as Online/.test(i.words)), seen?.accepts_impact ?? r.body);
+  sql(`delete from library_change where id='${m5}'`);
+  r = await call("POST", `/library/forms/${encodeURIComponent("IMM 5707")}/accepts`, { account: "ANY", channels: ["PDF_UPLOAD", "ONLINE"], reason: "break M5 test, keeps PDF upload" });
+  const m5b = r.body?.id;
+  seen = (await call("GET", `/library/changes/${m5b}`, undefined, "user-B")).body;
+  ok("C11.18 (break M5) fail-guard: a change that keeps every line allowed lists nothing", r.status < 300 && Array.isArray(seen?.accepts_impact) && !seen.accepts_impact.some((i: { label: string }) => i.label === vvLabel), seen?.accepts_impact);
+  // Break m5: a newer edition arriving after the proposal is refused at approval; nothing is written.
+  sql(`update library_change set matches = jsonb_set(matches, '{edition}', '"IMM 5707 (01-1999)"') where id='${m5b}'`);
+  r = await call("POST", `/library/changes/${m5b}/approve`, { note: "ok" }, "user-B");
+  ok("C11.18 fail (break m5): approval for an edition that is no longer current is refused in words and the change still waits", r.status === 409 && /proposed for IMM 5707 \(01-1999\)/.test(r.body?.detail ?? "") && sql(`select status from library_change where id='${m5b}'`) === "WAITING", r.body?.detail);
+  sql(`delete from library_change where id='${m5b}'`);
+
   // ──────────────────────────────────────────── one answer list end to end (PDF)
   r = await call("POST", "/library/answer-lists", { key: "sex", label: "Sex", values: [{ key: "female", label: "Female" }] });
   ok("C3.8: answer list fail: fewer than two values is refused", r.status === 400);
