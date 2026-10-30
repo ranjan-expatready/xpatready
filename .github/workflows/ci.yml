@@ -69,8 +69,8 @@ jobs:
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
       - name: studio suites (run-suites.sh, browser suite on its own copy; no model call, US$0)
         if: steps.code.outputs.suites == 'true'
-        # P-183: CI first (lanes' full runs wait while this runs); suites one at a time (parallel is built but off until a
-        # serial-vs-parallel comparison on one commit gives identical results: the first trial, 30 Oct, did not).
+        # P-183: CI first (lanes' full runs wait while this runs); suites one at a time (a parallel trial, 30 Oct, failed
+        # 12 suites, so parallel running was removed).
         env: { COPY_PREFIX: ci, SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
         run: |
           bash "$P/tools/run-suites.sh" | tee suites.md

@@ -6,9 +6,10 @@
 import { Body, Controller, Headers, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
+import { reviewRow } from "./proposals.ts";
 
 export const CHECKLIST_KINDS = ["document_requirement", "section", "rule", "check"] as const;
-/** What a checklist proposal carries in NormalizationItem.payload (kind document_requirement). */
+/** What a checklist proposal carries in its payload (ProposalItem kind requirement_line; its review row says document_requirement). */
 export type RequirementProposal = { document_type: string; who: string; base_or_conditional: "base" | "conditional"; condition_plain?: string | null; provided_by?: string };
 
 @Injectable()
@@ -40,7 +41,8 @@ export class Checklists {
    *  follows review). Document requirements only in this slice; other kinds are listed as not applied. */
   async apply(actor: Actor, jobId: string) {
     need(actor, "author");
-    const job = await this.db.draftingJob.findUnique({ where: { id: jobId }, include: { items: true } }).catch(() => null);
+    const found = await this.db.draftingJob.findUnique({ where: { id: jobId }, include: { proposals: true } }).catch(() => null);
+    const job = found && { ...found, items: found.proposals.map(reviewRow) };
     if (!job || job.kind !== "checklist_draft") fail("This is not a checklist draft.", HttpStatus.NOT_FOUND);
     if (job!.status !== "COMPLETED") fail(job!.status === "APPLIED" ? "Already applied." : "The draft is not ready.", HttpStatus.CONFLICT);
     const pending = job!.items.filter((i) => i.decision === "PENDING");
@@ -49,7 +51,7 @@ export class Checklists {
     const types = await this.db.documentType.findMany({ where: { workspaceId: job!.workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { documentTypeKey: true, name: true } });
     // Every accepted proposal is checked before anything is written (break M7: a malformed one failed half-way after the
     // draft was already marked applied).
-    const plan: { item: NonNullable<typeof job>["items"][number]; typeKey: string; p: RequirementProposal }[] = []; const skipped: string[] = []; const bad: string[] = [];
+    const plan: { item: ReturnType<typeof reviewRow>; typeKey: string; p: RequirementProposal }[] = []; const skipped: string[] = []; const bad: string[] = [];
     for (const i of job!.items.filter((x) => x.decision === "ACCEPTED")) {
       if (i.kind !== "document_requirement") { skipped.push(`${i.proposedKey} (${i.kind.replace("_", " ")}: applied by hand in this slice)`); continue; }
       const p = (i.payload ?? {}) as Partial<RequirementProposal>;

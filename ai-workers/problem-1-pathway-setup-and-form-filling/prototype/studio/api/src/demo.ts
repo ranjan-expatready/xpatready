@@ -133,7 +133,7 @@ export class Demo {
       "Forms and editions": (await t.govFormDef.count({ where: ws })) + (await t.formEdition.count({ where: ws })), "Field map entries (form fields)": await t.formFieldMap.count({ where: ws }),
       "Forms in combinations": await t.combinationForm.count({ where: ws }), "Document types and requirements": (await t.documentType.count({ where: ws })) + (await t.documentRequirement.count({ where: ws })),
       "Rules (conditions)": await t.predicate.count({ where: ws }), Checks: await t.check.count({ where: ws }), "Derived fields": await t.derivedField.count({ where: ws }),
-      "AI and reading steps": await t.draftingJob.count({ where: ws }), "AI proposals and decisions": await t.normalizationItem.count({ where: ws }),
+      "AI and reading steps": await t.draftingJob.count({ where: ws }), "AI proposals and decisions": await t.proposalItem.count({ where: ws }),
       "Reviews, sign-offs and releases": (await t.reviewSubmission.count({ where: ws })) + (await t.reviewSignoff.count({ where: ws })) + (await t.configRelease.count({ where: ws })),
       "Sample profiles and facts": (await t.sampleProfile.count({ where: ws })) + (await t.sampleFact.count({ where: ws })), "Generated PDFs and reports": await t.generatedArtifact.count({ where: ws }), "Activity entries": await t.auditEvent.count({ where: ws }),
       // Runtime lane (R1): cases, the people on them and their answers (all versions)
@@ -178,7 +178,7 @@ export class Demo {
     await this.db.$transaction(async (tx) => {
       // Children first; every table is scoped to the demo workspace id.
       await tx.case.deleteMany({ where: ws }); await tx.party.deleteMany({ where: ws }); // runtime lane (R1): cases (with their pins and participants), then people with their answers and rows
-      await tx.normalizationItem.deleteMany({ where: ws }); await tx.draftingJob.deleteMany({ where: ws }); await tx.aiBatch.deleteMany({ where: ws });
+      await tx.proposalItem.deleteMany({ where: ws }); await tx.draftingJob.deleteMany({ where: ws }); await tx.aiBatch.deleteMany({ where: ws });
       await tx.reviewSignoff.deleteMany({ where: ws }); await tx.reviewSubmission.deleteMany({ where: ws }); await tx.configRelease.deleteMany({ where: ws }); await tx.packVersion.deleteMany({ where: ws });
       await tx.formFieldMap.deleteMany({ where: ws }); await tx.combinationForm.deleteMany({ where: ws }); await tx.formEdition.deleteMany({ where: ws }); await tx.govFormDef.deleteMany({ where: ws });
       await tx.sqrSectionSelection.deleteMany({ where: ws }); await tx.documentRequirement.deleteMany({ where: ws }); await tx.predicate.deleteMany({ where: ws }); await tx.check.deleteMany({ where: ws });

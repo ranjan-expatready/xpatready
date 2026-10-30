@@ -18,10 +18,19 @@ whoami_() {
   # lead on branch main or lead/* (P-82, P-87: the Mac's main copy, or a cloud clone checked out on main); a lane branch prefix (screens/, forms/, evidence/,
   # runtime/, qa/, or the existing claude/<lane>-* branches and <lane>-* worktree names) maps to that lane;
   # anything else is unbound, never lead.
-  local br; br=$(git -C "$HERE" branch --show-current 2>/dev/null)
-  [ "$br" = main ] && { echo lead; return; }
-  case "$br" in lead/*) echo lead; return;; esac
-  [ -f "$HERE/.claude/lane" ] && { cat "$HERE/.claude/lane"; return; }
+  # P-188: the tech lead is the Mac's main copy only. A cloud machine (CLAUDE_CODE_REMOTE, or not macOS) is never lead,
+  # whatever its branch or .claude/lane says; it falls through to its lane, or unbound.
+  local br cloud=""; br=$(git -C "$HERE" branch --show-current 2>/dev/null)
+  { [ "${CLAUDE_CODE_REMOTE:-}" = true ] || [ "$(uname)" != Darwin ]; } && cloud=1
+  if [ -z "$cloud" ]; then
+    [ "$br" = main ] && { echo lead; return; }
+    case "$br" in lead/*) echo lead; return;; esac
+  fi
+  if [ -f "$HERE/.claude/lane" ]; then
+    local ln; ln=$(cat "$HERE/.claude/lane")
+    [ -n "$cloud" ] && [ "$ln" = lead ] && { echo unbound; return; }
+    echo "$ln"; return
+  fi
   case "$br" in
     screens/*|claude/screens-*) echo screens;;
     forms/*|claude/forms-*) echo forms;;
@@ -119,7 +128,9 @@ case "$1" in
       [ -n "$mo" ] && [ "$mo" != "$ow" ] && ow="$ow (main says: $mo)"
       up=$(git -C "$wt" log -1 --format='%cd' --date=format:'%d %b %H:%M' 2>/dev/null)
       dirty=$(git -C "$wt" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-      echo "$ln | stage: ${st:-?} | owner: ${ow:-?} | last commit: ${up:-none} | uncommitted: $dirty | behind main: $(git -C "$wt" rev-list --count HEAD..origin/main 2>/dev/null || git -C "$wt" rev-list --count HEAD..main 2>/dev/null) | $wt"
+      # Commits not on GitHub: never remove a copy unless this is 0 (no upstream = "no upstream", treat as unpushed).
+      unp=$(git -C "$wt" rev-list --count '@{upstream}..HEAD' 2>/dev/null || echo "no upstream")
+      echo "$ln | stage: ${st:-?} | owner: ${ow:-?} | last commit: ${up:-none} | uncommitted: $dirty | unpushed: $unp | behind main: $(git -C "$wt" rev-list --count HEAD..origin/main 2>/dev/null || git -C "$wt" rev-list --count HEAD..main 2>/dev/null) | $wt"
     done
     # Lanes pushed from the cloud or another machine (P-82): their newest branch on origin.
     for ln in $LANES; do lb=$(lane_branch "$ln"); [ -n "$lb" ] || continue
@@ -134,6 +145,11 @@ case "$1" in
   leads)
     git -C "$HERE" fetch -q origin 2>/dev/null; me=$(git -C "$HERE" branch --show-current)
     git -C "$HERE" log origin/main --since=30.minutes --format='main %h %cr %s' | grep ' lead:'
+    # Lead branches too, this copy's own included: at the start of a chat any unmerged Lead commit of the last day is
+    # another chat's (24 h, not 30 min: a paused Lead still counts; older unmerged ones are parked branches).
+    for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/lead/); do
+      git -C "$HERE" log "origin/main..$b" --since=24.hours --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
+    done
     for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/); do
       [ "$b" = "origin/$me" ] || git -C "$HERE" log "origin/main..$b" --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
     done; true ;;

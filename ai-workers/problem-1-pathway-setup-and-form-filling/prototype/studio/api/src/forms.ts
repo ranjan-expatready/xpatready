@@ -19,6 +19,7 @@ import { Sources } from "./sources.ts";
 import { Intake } from "./intake.ts";
 import { Checklists } from "./checklist.ts";
 import { seedFormsStory } from "./forms-demo.ts";
+import { noFreeAdd } from "./library-sources.ts";
 import { actorOf, ACTORS, Audit, Db, fail, need, revise, SOLUTION, strip, Workspace, type Actor } from "./core.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import type { z } from "zod";
@@ -391,7 +392,7 @@ export class FormsController {
   @Post("library/fields/:key/answer-list") link(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.f.linkAnswerList(actorOf(a), k, b); }
   @Delete("library/fields/:key/answer-list") unlink(@Headers("x-actor") a: H, @Param("key") k: string) { return this.f.unlinkAnswerList(actorOf(a), k); }
   @Get("library/answer-lists") lists() { return this.f.answerLists(); }
-  @Post("library/answer-lists") addList(@Headers("x-actor") a: H, @Body() b: unknown) { return this.f.createAnswerList(actorOf(a), b); }
+  @Post("library/answer-lists") addList(@Headers("x-actor") a: H) { actorOf(a); return noFreeAdd("answer_list"); } // P-158 note b: only from a source (410)
   @Get("library/merges") merges() { return this.f.merges(); }
   @Post("library/merges") propose(@Headers("x-actor") a: H, @Body() b: unknown) { return this.f.proposeMerge(actorOf(a), b); }
   @Post("library/merges/:id/approve") approveMerge(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.approveMerge(actorOf(a), id, b); }

@@ -197,11 +197,11 @@ function pdf(title: string, text: string) {
   const ckJob = r.body.id;
   // Scaffolding (test input, not an AI answer): one proposal of kind document_requirement, as a live draft would add it.
   const typeName = sql(`select name from document_type where status='PUBLISHED' order by document_type_key limit 1`);
-  sql(`insert into normalization_item (id, workspace_id, job_id, proposed_key, proposed_meaning, proposed_type, outcome, candidates, persons, boxes, evidence, affected, reason, kind, payload, source_quote)
-       select gen_random_uuid(), workspace_id, id, 'requirement.test', 'Test input', 'document', 'NEW', '[]', '{}', '[]', '{}', '{}', 'test input', 'document_requirement', '{"document_type": "${typeName.replace(/'/g, "''")}", "who": "each_applicant", "base_or_conditional": "base"}', 'Test input: a quote from the checklist' from drafting_job where id='${ckJob}'`);
+  sql(`insert into proposal_item (id, workspace_id, kind, run_id, step, lands_on, reuse, payload, source, rounds, agreement, confidence, origin, identity, identity_key, work)
+       select gen_random_uuid(), workspace_id, 'requirement_line', id, 'checklist_draft', 'combination', '{"match":"new","existingKey":null}', '{"document_type": "${typeName.replace(/'/g, "''").replace(/"/g, '\\"')}", "who": "each_applicant", "base_or_conditional": "base"}'::jsonb || '{"kind":"requirement_line"}', null, '{"draft":null,"check":null}', 'one_round', 'check', 'ai', '{"key":"requirement.test","near":[],"nearReason":null}', 'requirement.test', '{"proposedKey":"requirement.test","outcome":"NEW","reason":"test input","legacyKind":"document_requirement","legacyPayload":{"document_type": "${typeName.replace(/'/g, "''").replace(/"/g, '\\"')}", "who": "each_applicant", "base_or_conditional": "base"},"sourceQuote":"Test input: a quote from the checklist"}' from drafting_job where id='${ckJob}'`);
   r = await call("POST", `/jobs/${ckJob}/apply-checklist`);
   ok("C3.4 fail: a checklist draft with an undecided proposal is not applied", r.status === 400, r.body?.detail);
-  const itemId = sql(`select id from normalization_item where job_id='${ckJob}'`);
+  const itemId = sql(`select id from proposal_item where run_id='${ckJob}'`);
   await call("POST", `/jobs/${ckJob}/items/${itemId}`, { decision: "ACCEPTED" });
   r = await call("POST", `/jobs/${ckJob}/apply-checklist`);
   ok("C3.4 K2: an accepted proposal is written through the requirement writer as a draft row with its source quote", r.status === 201 && r.body.added === 1 && Number(sql(`select count(*) from document_requirement where combination_id='${sv}' and status='DRAFT' and source_quote='Test input: a quote from the checklist'`)) === 1, r.body);

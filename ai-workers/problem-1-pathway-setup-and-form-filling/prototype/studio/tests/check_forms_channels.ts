@@ -15,6 +15,7 @@ import { AcceptsBody } from "../contracts/form-library.ts";
 import { codeForValue, draftOptionMap, optionMapProblems, pdfOptions } from "../engine/options.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { normLabel } from "../engine/twin.ts";
+import { seedAnswerList, seedField } from "./seed_library.cjs";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_f1";
 const STUDIO = join(import.meta.dirname, "..");
@@ -255,12 +256,11 @@ const intake = async (file: string, combinationId: string) => {
   sql(`delete from library_change where id='${m5b}'`);
 
   // ──────────────────────────────────────────── one answer list end to end (PDF)
-  r = await call("POST", "/library/answer-lists", { key: "sex", label: "Sex", values: [{ key: "female", label: "Female" }] });
-  ok("C3.8: answer list fail: fewer than two values is refused", r.status === 400);
+  // P-158 note b (screens lane, S6 2a): an answer list comes only from a source (a form box's own choices or an IRCC
+  // code list); the free add is gone. The list is written here as that source would give it (tests/seed_library.cjs).
   r = await call("POST", "/library/answer-lists", { key: "sex", label: "Sex (Sample)", values: sexList });
-  const dup = await call("POST", "/library/answer-lists", { key: "sex", label: "Sex", values: sexList });
-  const twinLabels = await call("POST", "/library/answer-lists", { key: "sex_twins", label: "Sex", values: [{ key: "female", label: "Female" }, { key: "female_2", label: "female" }] });
-  ok("C3.8: answer list: created once (Sample); a second list with the same key, or two values with one label, is refused", r.status === 201 && dup.status === 409 && twinLabels.status === 400);
+  ok("C3.8 P-158 fail: an answer list is not typed in by hand (410), and nothing is written", r.status === 410 && sql("select count(*) from answer_list where answer_list_key='sex'") === "0", r.status);
+  seedAnswerList(sql, { key: "sex", label: "Sex (Sample)", values: sexList });
   r = await call("POST", "/library/fields/person.sex/answer-list", { list: "sex" });
   ok("C3.8: answer list: person.sex takes its values from it", r.status === 201);
   const pdfEd = sql("select id from form_edition where edition_label like 'IMM 5257 (%' limit 1");
@@ -280,7 +280,7 @@ const intake = async (file: string, combinationId: string) => {
   // An answer list on a field whose PDF form fields keep their codes in the code list (review 1: release blocked for good).
   r = await call("POST", "/library/fields/person.family_name/answer-list", { list: "sex" });
   ok("C3.8: answer list fail: a free-text field is not turned into a choice field", r.status === 400 && /free text/.test(r.body.message), r.body.message);
-  await call("POST", "/library/answer-lists", { key: "marital_status", label: "Marital status (Sample)", values: [["married", "Married"], ["single", "Single"], ["common_law", "Common-law"], ["divorced", "Divorced"], ["separated", "Legally separated"], ["widowed", "Widowed"], ["annulled", "Annulled marriage"], ["unknown", "Unknown"]].map(([key, label]) => ({ key, label })) });
+  seedAnswerList(sql, { key: "marital_status", label: "Marital status (Sample)", values: [["married", "Married"], ["single", "Single"], ["common_law", "Common-law"], ["divorced", "Divorced"], ["separated", "Legally separated"], ["widowed", "Widowed"], ["annulled", "Annulled marriage"], ["unknown", "Unknown"]].map(([key, label]) => ({ key, label })) });
   r = await call("POST", "/library/fields/person.marital_status/answer-list", { list: "marital_status" });
   const ed5707 = sql("select id from form_edition where edition_label like 'IMM 5707 (%' limit 1");
   const om5707 = (await call("POST", `/editions/${ed5707}/option-maps/draft`)).body.option_maps.filter((o: { fact: string }) => o.fact === "person.marital_status");
@@ -304,8 +304,8 @@ const intake = async (file: string, combinationId: string) => {
   ok("C3.8: answer list: a list linked by mistake can be taken off; no option-map problem is left for that field", r.status === 200 && r.body.answer_list === null && unl.length === 0, unl);
 
   // ──────────────────────────────────────────── reviewed merges (P-65)
-  r = await call("POST", "/library/fields", { key: "person.town_of_birth", meaning: "The town or city where the person was born", valueType: "text" });
-  ok("C3.5: setup: a second field with the same meaning is added by a person (the duplicate a merge removes)", r.status === 201, r.body?.message);
+  seedField(sql, { key: "person.town_of_birth", meaning: "The town or city where the person was born", source: "a second form's box (test setup)" });
+  ok("C3.5: setup: a second field with the same meaning comes from another source (the duplicate a merge removes)", sql("select count(*) from canonical_field where canonical_field_key='person.town_of_birth'") === "1");
   await call("POST", "/library/fields/person.town_of_birth/aliases", { alias: "Town of birth" });
   // A PDF form field reads the duplicate and is published (as a released line would be).
   const [cityRow, cityPath] = sql(`select id || '|' || data_path from form_field_map where form_edition_id='${pdfEd}' and canonical_field_key='person.place_of_birth_city' order by version desc limit 1`).split("|");
@@ -328,7 +328,7 @@ const intake = async (file: string, combinationId: string) => {
   const r8 = await call("POST", "/library/fields/person.town_of_birth/aliases", { alias: "Birth town" });
   ok("C3.5: merge fail: a merged-away field is not edited back to a draft and takes no new label (it only redirects)", r.status === 409 && r8.status === 409, [r.body.message, r8.body.message]);
   // Chains, cycles and forks (break M5): one pending merge per field, and every merge checked again when approved.
-  for (const k of ["x", "y", "z"]) await call("POST", "/library/fields", { key: `case.test_merge_${k}`, meaning: `A test field ${k} for the merge checks`, valueType: "text" });
+  for (const k of ["x", "y", "z"]) seedField(sql, { key: `case.test_merge_${k}`, meaning: `A test field ${k} for the merge checks` });
   const xy = (await call("POST", "/library/merges", { keep: "case.test_merge_y", merge: "case.test_merge_x", reason: "Test: x means the same as y." })).body;
   r = await call("POST", "/library/merges", { keep: "case.test_merge_z", merge: "case.test_merge_y", reason: "Test: y means the same as z." });
   const r9 = await call("POST", "/library/merges", { keep: "case.test_merge_z", merge: "case.test_merge_x", reason: "Test: x means the same as z." });

@@ -14,7 +14,7 @@ import { fmtWhen, Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
 
 const VIEWS = [["needs", "Needs you"], ["waiting", "Waiting for others"], ["running", "Running"], ["all", "All"]] as const;
-const KIND_TONE: Record<QueueKind, string> = { ai_proposals: "ai", release: "info", library_change: "info", form_fields: "warn", new_edition: "warn", held_file: "warn", merge: "neutral", running: "ai" };
+const KIND_TONE: Record<QueueKind, string> = { proposals: "ai", ai_proposals: "ai", release: "info", library_change: "info", form_fields: "warn", new_edition: "warn", held_file: "warn", merge: "neutral", running: "ai" };
 const STATE: Record<QueueItem["state"], [string, string]> = { needs: ["warn", "Needs you"], waiting: ["neutral", "Waiting for others"], running: ["ai", "Running"] };
 
 export function ToReviewPage() {

@@ -179,7 +179,7 @@ export class Ai implements OnModuleInit {
    *  blocked by the usage limit, a failed "add from the library") never hides a draft waiting for review (break M4,
    *  Lead check Major). It is being mapped while queued, running, or done with proposals to decide or not yet added to
    *  its draft. An applied one is in the library and is added from there. One set of queries for a whole plan. */
-  private async mappingIndex(workspaceId: string, sha256s: string[], db: Pick<Db, "sourceAttachment" | "draftingJob" | "normalizationItem"> = this.db) {
+  private async mappingIndex(workspaceId: string, sha256s: string[], db: Pick<Db, "sourceAttachment" | "draftingJob" | "proposalItem"> = this.db) {
     const shas = [...new Set(sha256s)];
     const atts = shas.length ? await db.sourceAttachment.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { id: true, sha256: true, combination: { select: { label: true } } } }) : [];
     const jobs = atts.length ? await db.draftingJob.findMany({ where: { workspaceId, attachmentId: { in: atts.map((a) => a.id) }, kind: "field_map", mode: { not: "STUB" }, status: { in: ["QUEUED", "RUNNING", "COMPLETED", "APPLIED"] } }, orderBy: { startedAt: "desc" }, select: { id: true, attachmentId: true, combinationId: true, status: true } }) : [];
@@ -187,7 +187,7 @@ export class Ai implements OnModuleInit {
     for (const j of jobs) if (j.attachmentId && !newest.has(j.attachmentId)) newest.set(j.attachmentId, j);
     const waiting = [...newest.values()].filter((j) => ["QUEUED", "RUNNING", "COMPLETED"].includes(j.status));
     const done = waiting.filter((j) => j.status === "COMPLETED").map((j) => j.id);
-    const left = new Map(done.length ? (await db.normalizationItem.groupBy({ by: ["jobId"], where: { jobId: { in: done }, decision: "PENDING" }, _count: true })).map((g) => [g.jobId, g._count] as const) : []);
+    const left = new Map(done.length ? (await db.proposalItem.groupBy({ by: ["runId"], where: { runId: { in: done }, status: "waiting" }, _count: true })).map((g) => [g.runId!, g._count] as const) : []);
     const of = new Map(atts.map((a) => [a.id, a]));
     return (sha256: string, attachmentId: string) => {
       const j = waiting.find((x) => x.attachmentId !== attachmentId && of.get(x.attachmentId!)?.sha256 === sha256);

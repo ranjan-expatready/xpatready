@@ -136,3 +136,6 @@
 
 ## Addendum: P-149 (29 Oct)
 Founder decision P-149 (AI-first library, one door, identity rule, versions, meaning question, example cases) changes §3–§5: see `plan-p149.md` (what holds on main, changes per slice, forms contract changes and W1-10 producers, Lead Q-A1..A4).
+
+## Addendum: (2b) and slice 1 plan (29 Oct)
+The one door through `ProposalItem` with the one review queue: see `plan-slice1.md` (parts 1a–1c, runtime's two hook-ups, tests, N-1..N-3).

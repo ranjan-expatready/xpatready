@@ -293,14 +293,17 @@ function pdf(title: string, text: string) {
   ok("source-trust: unapproved newer-looking edition is held before it can affect a Live row", r.one.outcome === "held" && wp.status === "READY" && wp.live && !wp.held.some((h: any) => h.edition === "IMM 5476 (01-2027)"), { needs: wp.needs, live: wp.live, next: wp.nextAction, held: wp.held });
   for (const pw of ["INDIVIDUAL", "CORPORATE"]) {
     const a = await cat(`pathway=${pw}&filter=all`), l = await cat(`pathway=${pw}&filter=live`);
-    ok(`F1 pass (${pw}): the Live count equals the rows showing Live, and the Live filter lists exactly them`, a.counts.live === a.rows.filter((x: any) => x.status === "READY").length && (a.counts.live === 0 || l.rows.map((x: any) => x.nodeKey).sort().join() === a.rows.filter((x: any) => x.status === "READY").map((x: any) => x.nodeKey).sort().join()), { live: a.counts.live, shown: a.rows.filter((x: any) => x.status === "READY").length });
+    // Card v4 (P-180): "Live" is the card's chip (a release that passes its own checks), as the cards show it.
+    const liveRows = a.rows.filter((x: any) => x.setup?.chip.status === "LIVE");
+    ok(`F1 pass (${pw}) P-180: the Live count equals the rows whose chip shows Live, and the Live filter lists exactly them`, a.counts.live === liveRows.length && (a.counts.live === 0 || l.rows.map((x: any) => x.nodeKey).sort().join() === liveRows.map((x: any) => x.nodeKey).sort().join()), { live: a.counts.live, shown: a.rows.filter((x: any) => x.status === "READY").length });
   }
   // Stand-in for the impact review (Screen 02): close the held editions.
   sql(`update intake_item set status='DONE' where status='HELD'`);
   wp = await leaf("individual.work_permits.employer_specific.with_lmia");
   ok("P-49 pass: released, startable and nothing open is Live (shown as \"Live\") and not in Needs work", wp.live && !wp.needs && /^Live · Release 1/.test(wp.statusText) && (await cat("pathway=INDIVIDUAL&filter=live")).rows.some((x: any) => x.nodeKey === wp.nodeKey), wp.statusText);
   const needs = await cat("pathway=INDIVIDUAL&filter=needs"), all = await cat("pathway=INDIVIDUAL&filter=all");
-  ok("P-49 / F1: Needs work is every row with a next step or not yet Live; every row is in Needs work or Live", needs.filter === "needs" && all.rows.every((x: any) => x.needs || x.live) && all.rows.filter((x: any) => x.needs).length === needs.counts.needs && needs.rows.every((x: any) => x.needs && (x.status !== "READY" || x.nextAction)), needs.counts);
+  // P-49's "Needs work" stays on each row; with a person, the needs filter and count are that person's Needs you (P-180, break-report m2).
+  ok("P-49 / F1: every row is in Needs work or Live; the needs filter and count are the person's Needs you", all.rows.every((x: any) => x.needs || x.live) && all.rows.filter((x: any) => x.needsYou).length === needs.counts.needs && (needs.fellBack ? needs.counts.needs === 0 : needs.filter === "needs" && needs.rows.every((x: any) => x.needsYou)), needs.counts);
 
   // ---------------------------------------------------------------- FIX: the page and the row agree (review #1); plain errors (review #4); keys (break M3); scope (m5)
   const vvLeaf = await leaf("individual.visitors.visitor_visa");
@@ -327,9 +330,11 @@ function pdf(title: string, text: string) {
   const junk = await cat("pathway=INDIVIDUAL&filter=all&under=junk.key&program=nope"), cross = await cat("pathway=INDIVIDUAL&filter=all&under=corporate.lmia");
   ok("m5: a program or path not in this pathway is ignored and the answer says so (no empty contradiction)", junk.under === "" && junk.program === "" && junk.rows.length === junk.counts.all && cross.under === "" && cross.underPath === null, { under: junk.under, program: junk.program, rows: junk.rows.length });
   ok("m4: a search over 120 characters is answered, not refused", (await call("GET", `/catalogue?pathway=INDIVIDUAL&q=${"a".repeat(130)}`)).status === 200);
-  const byStatus = (await cat("pathway=INDIVIDUAL&filter=all&sort=status")).rows.map((x: any) => x.status), desc = (await cat("pathway=INDIVIDUAL&filter=all&sort=-status")).rows.map((x: any) => x.status);
-  const rank = { NOT_READY: 0, IN_SETUP: 1, READY: 2 } as Record<string, number>;
-  ok("P-49: the Status column sorts Not ready, In setup, Live (and back)", byStatus.every((x: string, i: number) => !i || rank[byStatus[i - 1]] <= rank[x]) && desc[0] === "READY" && byStatus[0] === "NOT_READY", { first: byStatus[0], last: byStatus.at(-1) });
+  // Card v4 (P-180): the Progress sort follows the card's chip: Not ready, In progress, Not started, Live (and back).
+  const chipsOf = (r: any) => r.rows.map((x: any) => x.setup?.chip.status);
+  const byStatus = chipsOf(await cat("pathway=INDIVIDUAL&filter=all&sort=status")), desc = chipsOf(await cat("pathway=INDIVIDUAL&filter=all&sort=-status"));
+  const rank = { NOT_READY: 0, IN_PROGRESS: 1, NOT_STARTED: 2, LIVE: 3 } as Record<string, number>;
+  ok("P-49 P-180: the Progress column sorts by the chip, In progress before Not started before Live (and back)", byStatus.every((x: string, i: number) => x in rank && (!i || rank[byStatus[i - 1]] <= rank[x])) && desc.every((x: string, i: number) => !i || rank[desc[i - 1]] >= rank[x]) && desc[0] === "LIVE" && new Set(byStatus).size >= 3, { first: byStatus[0], last: byStatus.at(-1), kinds: [...new Set(byStatus)] });
   ok("P-49 fail: an unknown sort is refused on its field", (await call("GET", "/catalogue?sort=name")).body.errors?.[0]?.field === "sort");
   const under = await cat("pathway=INDIVIDUAL&filter=all&under=individual.work_permits.open");
   ok("P-50: the path on a combination filters the list to any level (category here), with its labels", under.rows.length === 3 && under.rows.every((x: any) => x.pathKeys.includes("individual.work_permits.open")) && under.underPath.join(" › ") === "Work permits › Open work permit", under.underPath);

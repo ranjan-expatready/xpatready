@@ -5,6 +5,7 @@
 // (keep steps queued to show restart, cancel and reset behaviour deterministically).
 //   tsx studio/tests/check_ai_orchestration.ts [port=4403] [name=aiorch]   (starts its own isolated copy)
 import { execFileSync } from "node:child_process";
+import { seedField } from "./seed_library.cjs";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -106,7 +107,7 @@ const done = (b: any) => b && !["QUEUED", "RUNNING"].includes(b.status) && !b.jo
   if (changed) await call("POST", `/jobs/${jobId}/items/${changed.id}`, { decision: "CHANGED", key: "person.employment_activity" });
   job = (await call("GET", `/jobs/${jobId}`)).body;
   for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." });
-  r = await call("POST", "/library/fields", { key: "person.synthetic_extra_field", meaning: "A definition added by someone else while the draft waited", valueType: "text" });
+  seedField(sql, { key: "person.synthetic_extra_field", meaning: "A definition added by someone else while the draft waited", actor: "user-C" }); // P-158: written as another draft would (no free add)
   r = await call("POST", `/jobs/${jobId}/apply`, {});
   ok("stale result refused: the library changed after the comparison, so applying is refused", r.status === 409 && /Stale/.test(r.body.message), r.body.message);
   r = await call("POST", `/jobs/${jobId}/recompare`);

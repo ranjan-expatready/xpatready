@@ -10,6 +10,7 @@
 //     a returned item → apply → coverage → section and placement added by a person → coverage changes → release.
 //   Then Reset → Load sample inputs again: the same counts, no duplicates (reset → seed → run → reset → rerun).
 // Screenshots, a step log and API snapshots go to studio/evidence/browser-run-<n>/.  node studio/tests/check_studio_browser.cjs
+// (an isolated copy: STUDIO_URL=http://localhost:<port> STUDIO_DB=xr_studio_<name>; the section step writes to that database)
 const path = require("node:path"); const fs = require("node:fs");
 const { chromium } = require("/Users/ranjansingh/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
 const URL = process.env.STUDIO_URL ?? "http://localhost:4400"; // an isolated copy: STUDIO_URL=http://localhost:<port>
@@ -322,7 +323,11 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("B5: draft preview: IMM 5476 boxes read reused definitions; new fields have no value source yet (unresolved, no placement)", !!addrBox && (c5476.counts.unresolved ?? 0) > 0, JSON.stringify(c5476.counts));
   await go(`/c/${scratch}/preview?view=studio`); await click(btn("Forms and coverage")); await shot("B5-coverage-before-placement.png");
 
-  await go("/library/sections"); await p.getByLabel("New section title").fill("Contact details"); await click(p.getByRole("button", { name: "Add", exact: true }));
+  // P-158 (S6 2a): sections come from the forms' parts, never a free add. The page offers no Add; until slice 2 proposes
+  // sections from the forms, the journey's new section is written as that proposal would be (tests/seed_library.cjs).
+  await go("/library/sections");
+  step("B6 P-158: the Sections page says where sections come from and offers no Add", /Where these come from/.test(await p.locator("main").innerText()) && (await p.getByRole("button", { name: "Add", exact: true }).count()) === 0 && (await p.getByLabel("New section title").count()) === 0);
+  require("./seed_library.cjs").seedSection((q) => require("node:child_process").execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${process.env.STUDIO_DB ?? "xr_studio_demo"}`, "-Atc", q], { encoding: "utf8" }).trim(), { title: "Contact details" });
   await go("/library/fields/person.email"); await p.getByLabel("Section").selectOption({ label: "Contact details" }); await p.getByLabel("Collected from").selectOption("client_questionnaire");
   await click(btn("Save placement as draft"));
   { const t = await toastLike(/Placement saved/); step("B6: a person places person.email in a new section (draft)", /Placement saved/.test(t), t); }
