@@ -19,6 +19,7 @@ NAMES=0; [ "${1:-}" = "--names" ] && NAMES=1   # print the names and ports this 
 SKIP="check_catalogue_scale.cjs"
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
+export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 / P-179: test runs never write the real ledger (forms plan-p179 §5)
 DB="postgresql://xr_studio@127.0.0.1:54329"
 # Per-copy names (Lead, 28 Oct): copies on one Mac share the database server and localhost ports, and two copies running
 # the suites at once broke each other's isolated copies. Each copy now gives its isolated copies, their databases and
