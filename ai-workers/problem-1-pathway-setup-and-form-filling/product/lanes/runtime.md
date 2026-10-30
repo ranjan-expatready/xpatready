@@ -7,31 +7,18 @@
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: M2 queue item 5, S7 Reset + Load sample (C10.1, C11.7; P-148, P-108, P-109, P-112)
-current_slice: S7 steps 1–6 built (branch claude/runtime-s7-6d5965); next M2 item (6) the validator (C3.8)
+current_slice: S7 steps 1–6, the Lead items and the validator (C3.8) built (branch claude/runtime-s7-6d5965); next QA-91
 stage: CHECK
 owner: Lead
-next_action: Lead: check S7 (plan.md "Built"), decide the findings there; then a fresh runtime session builds item (6), the validator (C3.8)
+next_action: Lead: check S7 (plan.md "Built"), f71a8a9e and c24cd684 (validator C3.8), decide the findings; then a fresh runtime session takes QA-91
 blocked_by: none
 updated: 2026-10-29
 
-## Handover (to a fresh runtime session, 29 Oct late night; S7 built, this session stops near its context limit)
-* **S7 state (start here):** branch `claude/runtime-s7-6d5965`, pushed; S7 steps 1–6 built (plan.md "Built"). It holds `origin/claude/runtime-preview-9fd91e` (eaa1a525), main, and Lead branch `lead/2026-10-29-s2a` (the one door, needed by step 4; three union conflicts resolved). Load sample: `POST /demo/load {"sample":"six"}` (Demo menu); no body = the suites' fixture (older sample). Checks: `check_s7_load.ts` 16/16 (4435), `check_s7_dialogs_browser.cjs` 12/12 (4437), `check_s7_reset.ts` 4/4; `check_studio_browser.cjs` now loads the fixture by API (A0–B3 pass; B4's draft replay timed out once under load, passed the run before). Next: item (6) validator (C3.8), then QA-91 where it fits.
+## Handover (to a fresh runtime session, 30 Oct; S7, the Lead's two items and the validator built; this session stops near its context limit)
+* **Now (30 Oct):** f71a8a9e (preview.ts:80 person match, QA-108 words) and c24cd684 (validator C3.8 in plain words) on this branch with S7; all CHECK, owner Lead. Next: QA-91 where it fits; the M3 queue is in the Lead's note. PR #94 (Documents tab, PQR, who fills, preview, QA-99) is merged into main (5f6c8deb). QA-93 / P-174: what is asked comes from the forms and rules; keep it so.
+* **S7 state (start here):** branch `claude/runtime-s7-6d5965`, pushed; S7 steps 1–6 built (plan.md "Built"). It holds `origin/claude/runtime-preview-9fd91e` (eaa1a525), main, and Lead branch `lead/2026-10-29-s2a` (the one door, needed by step 4; three union conflicts resolved). Load sample: `POST /demo/load {"sample":"six"}` (Demo menu); no body = the suites' fixture (older sample). Checks: `check_s7_load.ts` 16/16 (4435), `check_s7_dialogs_browser.cjs` 12/12 (4437), `check_s7_reset.ts` 4/4; `check_studio_browser.cjs` now loads the fixture by API (A0–B3 pass; B4's draft replay timed out once under load, passed the run before). 
 * **Careful:** `check_studio_browser.cjs` writes to `STUDIO_DB` (default `xr_studio_demo`): always pass `STUDIO_URL` and `STUDIO_DB` of an isolated copy. This session once ran it without `STUDIO_DB` and wrote one test section to the demo database; those three rows (section, waiting change, activity line) were deleted by id.
 * **Worktree setup:** a fresh worktree has no `.tools`: `ln -s /Users/ranjansingh/Desktop/Xpatready/.tools .tools` at the worktree root (git-ignored), then `npm install`, `prisma generate`, `vite build`.
-* **Earlier in this branch (Lead PR #94):** Preview (C4.3, C4.6) and N-2 at 6f105da4, QA-99 at e0680dbd, the check_pqr v2.1 fix at 0e0030b3.
-* **Before that:** branch `claude/runtime-m2q-b52c9a`, folded by the Lead up to **ec552135** into Lead PR #94 (Documents tab, PQR, who fills, A5 test fix).
-* **Done in this session (all passed the Lead check, in PR #94):**
-  * PQR (C4.2, C4.8): the "Pre-qualification n" chip on the Questionnaires tab; the country PQR view (`engine/sources.ts countryPqr`, `GET /api/combinations/:id/pqr/country`). Tests `check_pqr.ts` 37/37 and `check_pqr_browser.cjs` 20/20.
-  * C4.7, up to the queue: `pqrPicksByRules` (contract v2 `pqr_pick` items, origin rules) and `acceptPqrPick` (api/src/fact-sources.ts; not routed). Screens' S6 slice 1 says where it plugs into the one queue; then wire it.
-  * Who fills (C4.9, P-97): `api/src/who-fills.ts`, plus narrow additions in `library-changes.ts`, `lifecycle.ts` and `review-queue.ts` (screens/forms files, agreed by the Lead); the `placeField` 409 lock; the Review line in `engine/validate.ts`; the drawer section. Tests `check_who_fills.ts` 26/26 and `check_who_fills_browser.cjs` 19/19. Screens makes `library.tsx` "Collected from" read-only on this API. S6 slice 1 also names where `placement_fills` plugs in.
-  * PR #94 CI fix: `check_studio_browser.cjs` A5 clicks the Child chip (the Documents tab shows one person at a time). 49/49 on an isolated copy.
-* **Decided:** QA-93 / P-174 (founder): what a client is asked comes from the forms and rules; choosing sections sets only order, titles and which empty sections show. It is built that way; nothing more to build.
-* **Next (the Lead's M2 queue):**
-  * (4) Preview: built on `claude/runtime-preview-9fd91e` (fresh session, 29 Oct); see `screens/W1-questions-and-documents/build-notes-m2.md`.
-  * (5) S7 Reset + Load sample with the six combinations (C10.1, C11.7).
-  * (6) Validator (C3.8).
-  * C4.7: `acceptPqrPick(tx, actor, item)` is ready for the queue (N-2 done); screens 1c registers it as the lander.
-  * QA-91 where it fits.
 * **Running checks (runtime ports 4430–4439 only):** the usage line at the top of each test, e.g. `zsh studio/tools/isolated.sh runtime_pqr 4436 start && tsx studio/tests/check_pqr.ts 4436 xr_studio_runtime_pqr`.
   * Build the web app first (`cd studio/web && ../node_modules/.bin/vite build`).
   * Use Node 24 from `.tools/node-v24.21.0/bin`. In a fresh copy, run `npm install` then `node_modules/.bin/prisma generate`.
@@ -56,5 +43,3 @@ updated: 2026-10-29
 - 2026-10-29 · Builder (Mac): Lead: who fills PASS; PQR, who fills and the A5 fix folded into PR #94 (up to ec552135). Fixed PR #94 CI: check_studio_browser A5 opens the Child checklist (test only, 49/49 on 4437); synced main deda0e6b; Preview plan (C4.3, C4.6) with 3 questions in plan.md; Handover rewritten for a fresh session (context near its limit); PLAN, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): PQR Lead check PASS; who fills (C4.9, P-97) built per the agreed plan: api/src/who-fills.ts (propose route, applyFills at approval, releaseFills at release), narrow additions in library-changes.ts, lifecycle.ts, review-queue.ts (screens/forms files), placeField 409 lock, Review line in validate.ts diff, drawer section; library.tsx untouched (screens). check_who_fills 26/26, check_who_fills_browser 19/19; neighbours green (screen02_slice2 52/52, grounding 31/31, forms_qa53 20/20, s4 library browser 69/69, runtime R1 120/120, 63/63, 99/99, w115 1–3, pqr 37/37, engine 38/38); CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): Lead answers applied: QA-93 decided (P-174, kept as built); C4.7 one door (P-149), no runtime pick store. Synced main 54f25ae4; built pqrPicksByRules (contract v2 pqr_pick items, origin rules) and acceptPqrPick (tick through the same draft row; AI_PROPOSAL for AI, CODE_MATCH for rules), unrouted until S6 slice 1; order in plan.md "PQR"; check_pqr 37/37, check_pqr_browser 20/20; CHECK, owner Lead; next (3) who fills. AI US$0.
-- 2026-10-29 · Builder (Mac, fresh session): applied Lead note (ninth chat, read from origin/lead/2026-10-29-m3go): PQR plan in plan.md "PQR"; C4.7 question sent to the Lead (where a pending AI pick lives); built C4.2 (Pre-qualification chip on the Questionnaires tab; country PQR view GET /api/combinations/:id/pqr/country, P-132) and proved C4.8; check_pqr 25/25, check_pqr_browser 20/20, slice1 47/47, slice2 35/35, engine 38/38 on 4436; CHECK, owner Lead. AI US$0.
-- 2026-10-29 · Builder (Mac): FIX pass 2 handed back at 3839ddf4: QA-92, QA-93 (Remove only where it changes something; finding for the Lead), QA-94, QA-95, race; own checks green (check_qa92_95_browser 23/23 x3, s5_slice3_browser 35/35 x5, w115_slice2_browser 56/56, s5_slice2_browser 61/61, w115_slice2 35/35); full Handover written; session stops (P-173). AI US$0.
