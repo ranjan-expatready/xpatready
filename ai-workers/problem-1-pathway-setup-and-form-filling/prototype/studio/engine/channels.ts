@@ -10,7 +10,7 @@ import type { Snapshot } from "./snapshot.ts";
 import { compareEditions } from "./programs.ts";
 import type { PrismaClient } from "@prisma/client";
 
-type Line = { form_number: string; channel?: Channel; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean };
+type Line = { form_number: string; channel?: Channel; signed_by?: string; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean };
 /** The parts of the snapshot (engine/snapshot.ts) these rules read. */
 type MapEntry = { data_path: string; caption?: string | null; outcome: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null; row?: number | null; list_purpose?: { kind: string; overflow: string } | null };
 type FieldMap = { form_number: string; form_edition: string; channel?: string; entries: MapEntry[] };
@@ -82,6 +82,8 @@ export function channelProblems(s: Snapshot, accepts?: Accepts): Problem[] {
     if ((f.form_kind ?? "data_form") === "data_form" && f.online_only) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} has no PDF edition in the library: forms come in only as their official PDF. Add ${f.form_number}'s PDF from IRCC (Add form), or remove the form from this combination.` });
     const said = accepts?.get(f.form_number), ok = (f.form_kind ?? "data_form") === "data_form" ? acceptedChannels(said) : null;
     if (ok && !ok.includes(chOf(f))) out.push({ level: "error", where: "Forms", item: f.form_number, message: notAcceptedWords(f.form_number, chOf(f), said!) });
+    // C3.11: a signed upload needs someone who signs it, or its signed scan is asked of nobody.
+    if (chOf(f) === "SIGNED_PDF_UPLOAD" && (f.form_kind ?? "data_form") === "data_form" && f.signed_by === "none") out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} is filed as Signed PDF upload but "Signed by" says No signature, so nobody is asked for its signed scan. Choose who signs it, or file it as a PDF upload.` });
     if (chOf(f) === "ONLINE") out.push({ level: "warning", where: "Forms", item: f.form_number, message: `${f.form_number} is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.` });
   }
   const pdfMaps = mapsOf(s).filter((m) => m.channel !== "ONLINE"); // W1-02: an older release's online maps are parked

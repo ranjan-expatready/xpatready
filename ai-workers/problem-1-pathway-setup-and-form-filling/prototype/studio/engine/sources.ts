@@ -222,7 +222,45 @@ export type ChecklistLine = {
   quote: string | null; status: string; origin: string; position: number | null;
   /** Its place on this checklist: the set position, else its place in the default order (always first, then by name). */
   rank: number;
+  /** C3.11: a line worked out from a form line (never stored), with why it is there; changed only on that form line. */
+  automatic?: { form: string; reason: string };
 };
+
+/** C3.11 (P-62 §3, P-143): a form line filed as Signed PDF upload asks each person who signs it for the signed, scanned
+ *  copy. Worked out from the line's channel and "Signed by" (engine/channels.ts rule: never stored), so changing the
+ *  channel takes it away at once and a release carries it with the line. Who signs (contracts/workspace.ts SIGNED_BY,
+ *  Sample): not set or "the person" = each person the form is about; "a parent, for a minor" = the principal for a
+ *  child's form, the person otherwise; "the principal, for the family" = the principal; "the person and the
+ *  representative" = both; "no signature" = nobody (a signed upload with no signer is a release error, validate.ts). */
+export const SIGNED_SCAN = "signed_scan";
+const WHO_OF_ROLE: Record<string, string> = { principal: "principal_applicant", spouse_or_partner: "spouse_or_partner", child: "each_dependent_child", representative: "representative", sponsor: "sponsor" };
+export function signedScanLines(s: Snapshot): ChecklistLine[] {
+  const { people } = previewRender(s);
+  const out: ChecklistLine[] = [];
+  for (const f of s.forms as { form_number: string; title?: string; form_kind?: string; who: string; status?: string; condition?: any; condition_plain?: string | null; channel?: string; signed_by?: string }[]) {
+    if (f.channel !== "SIGNED_PDF_UPLOAD" || (f.form_kind ?? "data_form") === "document") continue;
+    const by = f.signed_by ?? "person";
+    if (by === "none") continue;
+    const about = [...new Set(subjectsFor(people, f.who, f.condition?.subjectKind).map((h) => roleOf(people, h)))].filter((r) => r !== "case");
+    const signers = new Set<string>();
+    for (const r of about.length ? about : f.who === "case" ? ["principal"] : []) {
+      if (by === "principal_for_family" || (by === "parent_for_minor" && r === "child")) signers.add("principal"); else signers.add(r);
+      if (by === "person_and_representative") signers.add("representative");
+    }
+    const has = new Set(people.map((p) => p.role as string));
+    const base = (f.status ?? "always") === "always";
+    for (const role of [...signers].filter((r) => has.has(r))) {
+      const forOthers = by === "principal_for_family" || (by === "parent_for_minor" && role === "principal" && about.includes("child") && !about.includes("principal"));
+      const reason = `${f.form_number} is filed as Signed PDF upload: it is printed, signed by hand${forOthers ? " (for the family members it is about)" : ""}, scanned and uploaded.`;
+      out.push({
+        lineage: `${SIGNED_SCAN}:${f.form_number}:${role}`, role, document: { key: `${SIGNED_SCAN}.${f.form_number}`, name: `${f.form_number} signed by hand and scanned` }, who: WHO_OF_ROLE[role] ?? role,
+        base, when: base ? "Always" : (f.condition_plain ?? "Only if its form applies"), providedBy: "client", alternatives: [], supplies: [], aboutOthers: 0,
+        quote: null, status: "AUTOMATIC", origin: "FORM_LINE", position: null, rank: 0, automatic: { form: f.form_number, reason },
+      });
+    }
+  }
+  return out;
+}
 /** Each person role's checklist: the lines that name it (per person, as documentFacts reads them), what each supplies
  *  and about whom, and whether slice 1's rules take that answer out of the questionnaire (its source for that person is
  *  this document). Order: the set position, then base before conditional, then the name. Pure: no database. */
@@ -258,6 +296,8 @@ export function checklist(s: Snapshot): { role: string; label: string; lines: Ch
   // place in the default order, so one move is two draft changes, never the whole checklist.
   const byDefault = (a: ChecklistLine, b: ChecklistLine) => Number(b.base) - Number(a.base) || a.document.name.localeCompare(b.document.name) || a.lineage.localeCompare(b.lineage);
   for (const list of byRole.values()) [...list].sort(byDefault).forEach((l, i) => { l.rank = l.position ?? (i + 1) * 10; });
+  // C3.11: the signed scans follow the requirement lines, in form order (they cannot be moved: they follow the form line).
+  for (const l of signedScanLines(s)) { const list = byRole.get(l.role) ?? []; l.rank = 100_000 + list.length; byRole.set(l.role, [...list, l]); }
   const order = (a: ChecklistLine, b: ChecklistLine) => a.rank - b.rank || byDefault(a, b);
   const roles = [...new Set(people.map((p) => p.role as string)), "case"];
   return roles.filter((r) => byRole.has(r)).map((role) => ({ role, label: who(s, role), lines: byRole.get(role)!.sort(order) }));
