@@ -1,6 +1,8 @@
 // S6 Shared library, queue item (2a) (screens lane; P-158 delta items 1, 6 and 8; C3.6, C3.13, C3.15): no free add (the
 // three POSTs answer 410 and write nothing), every library item's sources and where it is used, and a direct, versioned
-// rename with the exact-duplicate check. A passing and a failing case per rule, through the API on an isolated copy with
+// rename with the exact-duplicate check; PR #96 findings (a) only the newest form mapping is a source, (b) where used
+// reads rules, conditions and questions too, (c) checklist lines that differ in quote both stay, and QA-113's heading.
+// A passing and a failing case per rule, through the API on an isolated copy with
 // the sample inputs loaded (the demo is never touched). No browser, NO model call (US$0).
 //   zsh studio/tools/isolated.sh screens_lib 4446 start && tsx studio/tests/check_s6_library_sources.ts 4446 xr_studio_screens_lib
 import { execFileSync } from "node:child_process";
@@ -62,6 +64,56 @@ const count = (table: string) => Number(sql(`select count(*) from ${table}`));
   r = await call("GET", "/library/forms/person.family_name/sources");
   const r2 = await call("GET", "/library/fields/person.not_there/sources");
   ok("P-158 fail: an unknown list or an unknown item is 404, in words", r.status === 404 && /fields, sections, document-types or answer-lists/.test(r.body.detail) && r2.status === 404 && /not in the shared library/.test(r2.body.detail), [r.body.detail, r2.body.detail]);
+
+  // ─────────────────── PR #96 findings (a)–(c) and QA-113
+  const texts = async (key: string) => ((await call("GET", `/library/fields/${key}/sources`)).body.sources as { text: string }[]).map((x) => x.text).join(" | ");
+  const usedIn = async (key: string) => (await call("GET", `/library/fields/${key}/sources`)).body.used_in as string[];
+  const touch = (key: string) => sql(`insert into audit_event (id, workspace_id, actor, action, entity, entity_key, summary) select gen_random_uuid(), id, 'user-A', 'edited', 'field', '${key}', 'test setup' from workspace where key='demo'`);
+  // (a) A published form mapping replaced by a newer draft that maps another field: only the newest version counts.
+  const box = sql("select id from form_field_map where canonical_field_key='person.family_name' and outcome='mapped' and status='PUBLISHED' order by data_path limit 1");
+  const copy = (from: string, caption: string, key: string, status: string, outcome = "mapped") => sql(`insert into form_field_map (id, workspace_id, form_edition_id, data_path, caption, heading, outcome, person, row, canonical_field_key, evidence_quote, version, status, supersedes_id, origin, updated_by) select gen_random_uuid(), workspace_id, form_edition_id, data_path, '${caption}', heading, '${outcome}', person, row, '${key}', evidence_quote, version + 1, '${status}', id, origin, 'user-A' from form_field_map where id='${from}' returning id`).split("\n")[0];
+  const v2 = copy(box, "S6 old caption", "person.family_name", "PUBLISHED");
+  sql(`update form_field_map set status='SUPERSEDED' where id='${box}'`); touch("person.family_name");
+  ok("PR #96 (a) pass: a published form mapping is a source of its field", /"S6 old caption"/.test(await texts("person.family_name")));
+  const v3 = copy(v2, "S6 new caption", "person.given_names", "DRAFT"); touch("person.family_name");
+  const [oldT, newT] = [await texts("person.family_name"), await texts("person.given_names")];
+  ok("PR #96 (a) fail: once a newer draft maps that form field to another field, the old mapping is no longer listed", !/"S6 old caption"/.test(oldT), oldT);
+  ok("PR #96 (a) pass: the newer draft's field lists it instead", /"S6 new caption"/.test(newT), newT);
+  copy(v3, "S6 unmapped caption", "person.given_names", "DRAFT", "unresolved"); touch("person.given_names");
+  const both = (await texts("person.family_name")) + (await texts("person.given_names"));
+  ok("PR #96 (a) fail: a newest version that maps nothing hides every older mapping of that form field", !/S6 (old|new|unmapped) caption/.test(both), both);
+  // (b) A field used only in a rule, or only by a question, is used in that combination.
+  const combo = sql("select c.id || '|' || c.label from combination c join sqr_section_selection s on s.combination_id = c.id order by c.label limit 1").split("|");
+  const sectionOf = sql(`select section_key from sqr_section_selection where combination_id='${combo[0]}' order by section_order limit 1`);
+  const ruleOnly = seedField(sql, { key: "person.s6_rule_only", meaning: "A test field only a rule reads.", source: "rule R-S6 (test)" });
+  const askedOnly = seedField(sql, { key: "person.s6_question_only", meaning: "A test field only a question asks.", source: "rule R-S6 (test)" });
+  ok("PR #96 (b) fail: a field no form, rule or question uses is used nowhere", (await usedIn(ruleOnly)).length === 0 && (await usedIn(askedOnly)).length === 0);
+  sql(`insert into predicate (id, workspace_id, combination_id, predicate_key, predicate_json, then_plain, for_whom, version, status, origin, updated_by) values (gen_random_uuid(), (select workspace_id from combination where id='${combo[0]}'), '${combo[0]}', 'r_s6_test', '{"field":"${ruleOnly}","op":"eq","value":"yes"}', 'Test rule', 'principal', 1, 'PUBLISHED', 'HUMAN', 'user-A')`);
+  sql(`insert into section_question (id, workspace_id, lineage_key, section_key, canonical_field_key, display_order, repeats, tier, collected_from, version, status, origin, updated_by) values (gen_random_uuid(), (select workspace_id from combination where id='${combo[0]}'), '${askedOnly}', '${sectionOf}', '${askedOnly}', 999, 'once_per_case', 'case', 'client_questionnaire', 1, 'DRAFT', 'HUMAN', 'user-A')`);
+  touch(ruleOnly);
+  ok("PR #96 (b) pass: a field only a rule reads is used in that rule's combination", (await usedIn(ruleOnly)).includes(combo[1]), await usedIn(ruleOnly));
+  ok("PR #96 (b) pass: a field only a question asks is used where its section is selected", (await usedIn(askedOnly)).includes(combo[1]), await usedIn(askedOnly));
+  sql(`insert into predicate (id, workspace_id, combination_id, predicate_key, predicate_json, then_plain, for_whom, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, combination_id, predicate_key, '{"field":"person.uci"}', then_plain, for_whom, 2, 'DRAFT', origin, 'user-A' from predicate where predicate_key='r_s6_test'`);
+  touch(ruleOnly);
+  ok("PR #96 (b) fail: once the rule's newest version reads another field, the old one is no longer used there", (await usedIn(ruleOnly)).length === 0, await usedIn(ruleOnly));
+  // (c) Two lines of the same checklist file for one document type, with different quotes, both stay.
+  const req = sql("select id || '|' || document_type_key from document_requirement where source_file is not null and source_quote is not null and status in ('PUBLISHED','DRAFT') order by lineage_key limit 1").split("|");
+  const addLine = (quote: string, lineage: string) => sql(`insert into document_requirement (id, workspace_id, combination_id, lineage_key, document_type_key, attach_mode, predicate_json, condition_plain, applies_to_roles, provided_by, is_required, source_quote, source_file, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, combination_id, '${lineage}', document_type_key, attach_mode, predicate_json, condition_plain, applies_to_roles, provided_by, is_required, '${quote}', source_file, 1, 'DRAFT', origin, 'user-A' from document_requirement where id='${req[0]}'`);
+  addLine("S6 second checklist line quote", "s6_second_line");
+  addLine("S6 second checklist line quote", "s6_same_line");
+  touch(req[1]);
+  const quotes = ((await call("GET", `/library/document-types/${encodeURIComponent(req[1])}/sources`)).body.sources as { quote?: string | null }[]).map((x) => x.quote);
+  ok("PR #96 (c) pass: a second line of the same checklist with its own quote is listed with that quote", quotes.includes("S6 second checklist line quote") && quotes.length >= 2, quotes);
+  ok("PR #96 (c) fail: a line with the same words and the same quote is listed once", quotes.filter((x) => x === "S6 second checklist line quote").length === 1, quotes);
+  // QA-113: the To review heading of a who-fills change says "who fills" once.
+  const wp = sql("select id from combination where combination_key='wp.family'");
+  const fact = ((await call("GET", `/combinations/${wp}/fact-sources`)).body.facts as { role: string; fact: string; fills: { library: string }; clientOnly: boolean; ruleSource: string; placed: boolean }[])
+    .find((x) => x.role === "principal" && x.fills.library === "CLIENT" && !x.clientOnly && x.ruleSource === "CLIENT" && x.placed);
+  const fills = fact ? await call("POST", `/library/fields/${encodeURIComponent(fact.fact)}/fills`, { to: "CASE_OFFICER", reason: "Sample: QA-113 heading test" }) : { status: 0, body: null };
+  const change = fills.body?.id ? (await call("GET", `/library/changes/${fills.body.id}`)).body : null;
+  const heading = change ? `${change.action_word} ${change.kind_word}: ${change.label}` : "";
+  ok("QA-113 pass: the change's heading reads \"Change who fills a question: …\"", /^Change who fills a question: /.test(heading), heading || fills.body);
+  ok("QA-113 fail: the heading never doubles the words (\"who fills who fills\")", !!heading && !/who fills who fills/i.test(heading), heading);
 
   // ─────────────────── C3.15: rename, direct and versioned, with the exact-duplicate check
   const v0 = Number(sql("select max(version) from canonical_field where canonical_field_key='person.family_name'"));
