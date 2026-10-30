@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-29 (Lead, eighth chat; P-173): after every Lead merge, `/qa after-merge` on main (the Lead sends it); at the end of M2, the content publisher walk-through on the six combinations like a person (S8, W1-13) is the M2 gate. US$0 unless the founder approves a live smoke.
+2026-10-30 (Lead, tenth chat): fresh session. **Now:** `/qa after-merge` on main once the Lead merges forms PR #103 (slice 1 channels: the four channels, IRCC account picker, validated copy, accepts impact, paper-only account); retest QA-92–96 and QA-112–117 where touched. Then after-merge again after #96 (screens) and the runtime S7 PR. **Ports:** qa 4470–4479 only; the 30 Oct clash was the forms copy on 4471 (forms told: 4450–4459). Live AI: US$0 unless the founder approves in this session (Who can be retest QA-99 is waiting on that). At the end of M2, the content publisher walk on the six combinations (S8, W1-13) is the M2 gate.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
