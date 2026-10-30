@@ -20,8 +20,7 @@ The Lead never asks the founder to choose technology, write instructions, type c
 | Role | Who | Owns |
 |---|---|---|
 | Founder | person | direction, product choices, spend, final say |
-| **Lead** (product owner proxy, business analyst, architect, delivery and release manager) | Claude, Mac, one at a time | concepts and plans, requirement trace, checks, merges, records, workflow, founder contact |
-| Analyst | agent the Lead launches (Mac: reads `sources/`) | traces every requirement to the team's source, a decision and an acceptance check; lists gaps and conflicts before design |
+| **Lead** (product owner proxy, architect, delivery and release manager) | Claude, Mac, one at a time | concepts and plans (each traces its requirements to the team's source, a decision and an acceptance check; the challenger checks the trace), checks, merges, records, workflow, founder contact |
 | Designer | agent `screen-designer` | draft concepts and boards in the team's brand |
 | Challenger | fresh agent | attacks each concept or plan before the founder sees it |
 | Builders | lanes screens, forms, runtime (cloud after cutover) | build slices to the agreed design, tests first, pre-review |
@@ -35,7 +34,7 @@ The Lead never asks the founder to choose technology, write instructions, type c
 ## Top-class, owned and checked
 | Pillar | Owner | How it is checked |
 |---|---|---|
-| Product fit | Lead + analyst | requirement trace; founder direction checks; demos |
+| Product fit | Lead + challenger | requirement trace in every concept; founder direction checks; demos |
 | Design and UX | Lead + designer | board before build; journey test; intended-user walk; WCAG 2.2 AA |
 | Engineering | builders + platform | `STANDARDS.md`; reviewer D1–D20; graph check |
 | Quality | reviewer, breaker, qa | machine test result on the exact commit; qa after merge; escapes tracked |
@@ -52,6 +51,9 @@ The Lead never asks the founder to choose technology, write instructions, type c
 
 ## Measures (weekly scorecard; daily brief shows the queue)
 Rework by cause, first review score, idea to merged, wait for checks, unclean check runs, bugs escaping to main, records share, waiting on the founder, handovers, allowance per merged slice and AI spend. A workflow change that does not move its number in two weeks is undone.
+
+## Roles we deliberately do not add (30 Oct)
+No separate business analyst, product engineer or architect: the Lead does the analysis and architecture in the concept step, and builders are full-stack product engineers. A new role is added only when the weekly scorecard shows a cause it would remove (for example, if `missed-requirement` becomes the top rework cause, a requirement-trace agent is added).
 
 ## Changing this charter
 The Lead proposes, the founder agrees, a decision row records it. The Lead reviews the charter against the scorecard every week.
