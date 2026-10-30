@@ -28,14 +28,15 @@ Agreed answers N-1, N-2, N-3, P-97, the 1b items not done and the items routed t
 **Learned, not written elsewhere** (heredoc and loop refusals by the Bash hook, catalogue cache and audit rows, shared ports and databases, run by-products, `prisma generate` after a branch switch, second-person names): `history/screens-lane-2026-10-30.md`.
 
 current_screen: W1-setup-checklist (3): the card v4 on Immigration programs (P-180)
-stage: BUILD — card built; 4 of 8 lane suites moved, check_w1_programs_s2 not yet; card suite 41/42 then fixed
-owner: Builder (fresh screens session; this one at ~70% context)
-next_action: fresh /next screens on claude/screens-card-aba78e: move check_w1_programs_s2, rerun the moved suites one at a time, run-suites on the exact commit, screenshots beside the board, then CHECK
+stage: BUILD — card built; every lane suite moved (check_w1_programs_s2 87/87 at 12a44e8b); one-at-a-time rerun of the moved suites running
+owner: Builder (fresh screens session, 30 Oct)
+next_action: finish the one-at-a-time rerun, run-suites on the exact commit, screenshots beside the board (card suite writes them), then CHECK
 then: 1c → 1b-2 → (4) linking combinations and copying a line (C1.3, C1.5)
 blocked_by: nothing
 updated: 2026-10-30
 
 ## Log (last 6 lines; older in `history/screens-lane-2026-10-30.md`)
+- 2026-10-30 · W1-setup-checklist · BUILD (fresh session) · check_w1_programs_s2 moved to the card v4 (chips, viewer's Needs you, name · trail · "n of 5 steps", one button, Program bands in List) 87/87; List grid overflow-hidden → overflow-clip (the sticky Pathway band stuck 56 px down inside the grid and covered the first Program band: axe target-size, and it never stuck to the page); graph G3 2 (older); tsc clean; official sources nothing pending. Note for the Lead: Structure's Pathway need counts keep the old rule (2,0,0) while Programs counts the viewer's (author 1,0,0; expert 5,1,0 from step 2 "Confirm who can apply"): printed by the suite, not asserted. 12a44e8b. US$0.
 - 2026-10-30 · W1-setup-checklist · BUILD the card v4 (P-180), not CHECK yet · merged slice A (e973d314); programs.tsx card/chips/sections/List per concept v4 §6–§7; /catalogue in_progress filter, viewer Needs you, programs[].live; catalogue key per person (bug); check_setup_card_browser 41/42 (axe target-size, fixed); four suites moved, check_w1_programs_s2 left; tsc clean; official sources nothing pending. Handover at ~70% context. US$0.
 - 2026-10-30 · W1-setup-checklist · BUILD slice A done (434c6686), the card next · new session claude/screens-slice-a-62933a from 4908ebdd: contracts/setup-checklist.ts, engine/setup-checklist.ts (five steps, Not ready first, where and kind tables, one counts, forViewer, mayAct), catalogue cards and summary carry setup with the x-actor overlay; no visible change; check_setup_checklist 46/46 (150 combinations cold 549 ms, warm 30 ms); tsc clean; graph G3 2 (older); official sources nothing pending; run-suites on 434c6686: 85 PASS, 2 FAIL, both runtime's and present on base 4908ebdd too (check_w115_slice3_browser remove/Undo 2 fails on both; check_w115_slice2_browser timing flake, base 4/6 and branch 2/6 passes, same steps); four briefed points not done, reasons in plan.md "Slice A built". Card in a fresh session (~70% context). US$0.
 - 2026-10-30 · W1-setup-checklist · DESIGN → BUILD · applied Lead message (founder's Go on board v4, P-180; fold the notes into the concept; build slice A then the card): concept v4 folded (2c5be7c7); plan.md brought in with a slice A build brief (five old engine/programs.ts functions and their users, no pages record yet, order, checks); slice A not started: this session is at ~70% context, a fresh session builds it. No code. US$0.
