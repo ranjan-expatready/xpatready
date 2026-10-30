@@ -271,20 +271,22 @@ export class Programs {
     const pwKey = nodes.some((n) => n.nodeKind === "PATHWAY" && n.clientType === q.pathway && !n.retiredAt && n.programNodeKey === q.pathwayKey) ? q.pathwayKey : "";
     const inProgram = inPathway.filter((r) => (!pwKey || r.leaf.pathwayKey === pwKey) && (!q.program || r.leaf.programKey === q.program) && (!q.under || r.leaf.pathKeys.includes(q.under)));
     const searched = inProgram.map((r) => ({ r, m: hit(r) })).filter((x) => !words || x.m.length);
+    // With a person, "needs" (the filter and its count) is that person's Needs you, the card's rule (break-report m2).
+    const needsYou = actor ? new Map(everyInPathway.map((r) => [r.leaf.nodeKey, !r.leaf.retired && !!forViewer(r.setup, actor).needsYou])) : null;
+    const needsMe = (r: Row) => needsYou ? !!needsYou.get(r.leaf.nodeKey) : r.leaf.needsYou;
+    const needsOf = (r: Row) => actor ? needsMe(r) : r.leaf.needs;
     // "Needs work" with nothing to do falls back to All, and says so (P-35, P-49).
-    const fellBack = q.filter === "needs" && !searched.some((x) => x.r.leaf.needs);
+    const fellBack = q.filter === "needs" && !searched.some((x) => needsOf(x.r));
     const filter = fellBack ? "all" : q.filter;
     // P-180: the status chips read the setup checklist's chip (Not ready folds into In progress); "Needs you" is the
     // viewer's own (an item on their duty and tier waits), so every count of it on the page is this person's.
     const chipOf = (r: Row) => r.setup.chip.status;
     const live = (r: Row) => chipOf(r) === "LIVE", inProgress = (r: Row) => chipOf(r) === "IN_PROGRESS" || chipOf(r) === "NOT_READY", notStarted = (r: Row) => chipOf(r) === "NOT_STARTED";
-    const needsYou = actor ? new Map(everyInPathway.map((r) => [r.leaf.nodeKey, !r.leaf.retired && !!forViewer(r.setup, actor).needsYou])) : null;
-    const needsMe = (r: Row) => needsYou ? !!needsYou.get(r.leaf.nodeKey) : r.leaf.needsYou;
-    const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? r.leaf.needs : filter === "live" ? live(r) : filter === "in_progress" ? inProgress(r) : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : filter === "not_started" ? notStarted(r) : filter === "in_setup" ? r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId : r.leaf.status === filter.toUpperCase());
+    const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? needsOf(r) : filter === "live" ? live(r) : filter === "in_progress" ? inProgress(r) : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : filter === "not_started" ? notStarted(r) : filter === "in_setup" ? r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId : r.leaf.status === filter.toUpperCase());
     const chipAt = new Map(searched.map((x) => [x.r.leaf.nodeKey, chipOf(x.r)]));
     const shown = new Map(searched.filter((x) => pass(x.r)).map((x) => [x.r.leaf.nodeKey, { ...x.r.leaf, needsYou: needsMe(x.r), matches: x.m, ...(actor ? { setup: cardSetup(x.r.setup, actor) } : {}) }]));
     const on = (list: Row[]) => list.filter((r) => !r.leaf.retired);
-    const count = (list: Row[]) => ({ needs: list.filter((r) => r.leaf.needs).length, live: on(list).filter(live).length, all: on(list).length, ready: on(list).filter((r) => r.leaf.status === "READY").length, not_ready: on(list).filter((r) => r.leaf.status === "NOT_READY").length, in_setup: on(list).filter((r) => r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId).length, in_progress: on(list).filter(inProgress).length, not_started: on(list).filter(notStarted).length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
+    const count = (list: Row[]) => ({ needs: list.filter(needsOf).length, live: on(list).filter(live).length, all: on(list).length, ready: on(list).filter((r) => r.leaf.status === "READY").length, not_ready: on(list).filter((r) => r.leaf.status === "NOT_READY").length, in_setup: on(list).filter((r) => r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId).length, in_progress: on(list).filter(inProgress).length, not_started: on(list).filter(notStarted).length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
     // W1-03 B1: every Pathway of the type, in Structure order (several per type).
     const pws = nodes.filter((n) => n.nodeKind === "PATHWAY" && n.clientType === q.pathway);
     const kids = (k: string) => nodes.filter((n) => n.parentNodeKey === k);

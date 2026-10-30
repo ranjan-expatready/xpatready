@@ -7,8 +7,9 @@ import { z } from "zod";
 export const STEP_KEYS = ["pages", "people", "forms", "questions_documents", "release"] as const;
 export type StepKey = (typeof STEP_KEYS)[number];
 export const STEP_LABEL: Record<StepKey, string> = { pages: "Official pages", people: "Who can be in this application", forms: "Forms", questions_documents: "Questions and documents", release: "Review and release" };
-/** The tab each step opens (P-161 (2): Official pages and people sit in "Before forms" on Forms). */
-export const STEP_TAB: Record<StepKey, "forms" | "documents" | "questionnaires" | "review"> = { pages: "forms", people: "forms", forms: "forms", questions_documents: "documents", release: "review" };
+/** The tab each step opens (P-161 (2): Official pages and people sit in "Before forms" on Forms). Temporary deviation
+ *  (Lead, 30 Oct, review M3): people opens Questionnaires, where people are changed today; revert when slice C lands. */
+export const STEP_TAB: Record<StepKey, "forms" | "documents" | "questionnaires" | "review"> = { pages: "forms", people: "questionnaires", forms: "forms", questions_documents: "documents", release: "review" };
 
 /** ✓ Done · ● Next · ○ To do · ◐ AI at work · ⧗ Waiting for someone else (the viewer overlay turns "next" into
  *  "waiting" when the first open item is not this person's). */

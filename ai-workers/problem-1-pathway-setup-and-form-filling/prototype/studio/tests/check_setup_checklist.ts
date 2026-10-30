@@ -45,6 +45,10 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
   // CHECK 30 Oct (review M2): no screen offers "Confirm who can apply" yet (P-176 Q1), so it is open but never Needs you.
   const unconfirmed = setupChecklistOf(live({ people: { roles: 3, applicants: 2, saved: false, confirmed: null, tier: "expert" } }));
   step("C11.10: an unconfirmed people list stays open on step 2 and in the Next line", unconfirmed.steps[1].open.some((i) => i.kind === "confirm_people"), unconfirmed.steps[1].open.map((i) => i.kind));
+  // Lead 30 Oct (review M3): until slice C's "Before forms", the people step opens Questionnaires, where people are changed.
+  const peopleNext = setupChecklistOf(draft({ people: { roles: 3, applicants: 2, saved: false, confirmed: null, tier: "author" } }));
+  step("C11.10: the people step opens Questionnaires (temporary, until slice C)", unconfirmed.steps[1].tab === "questionnaires" && (peopleNext.next?.step !== "people" || peopleNext.next.href.includes("/questionnaires?")), { tab: unconfirmed.steps[1].tab, href: peopleNext.next?.href });
+  step("C11.10 (fail case): Resume on the people step never lands on Forms", !(peopleNext.next?.step === "people" && peopleNext.next.href.includes("/forms?")), peopleNext.next?.href);
   step("C11.10 (fail case): it is not Needs you for the expert while no screen offers the confirmation", !forViewer(unconfirmed, SME).needsYou, forViewer(unconfirmed, SME).needsYou);
 }
 {
@@ -143,7 +147,7 @@ const api = async (path: string, actor: string | null = "user-A", method = "GET"
   const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { ...(actor ? { "x-actor": actor } : {}), "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   return { status: r.status, body: await r.json().catch(() => null) as any };
 };
-type Leaf = { combinationId: string | null; nodeKey: string; label: string; nextAction: { kind: string } | null; counts: { documents: number; questions: number } | null; forms: { drafted: boolean; document: boolean }[]; live: boolean; retired: boolean; setup?: any };
+type Leaf = { combinationId: string | null; nodeKey: string; label: string; nextAction: { kind: string } | null; counts: { documents: number; questions: number } | null; forms: { drafted: boolean; document: boolean }[]; live: boolean; retired: boolean; needsYou?: boolean; setup?: any };
 await api("/demo/reset", "user-A", "POST", { confirm: "RESET" });
 const loaded = await api("/demo/load", "user-A", "POST");
 step("setup: sample inputs loaded on the isolated copy", loaded.status < 300, loaded.status);
@@ -158,6 +162,14 @@ step("C11.10: GET /catalogue gives every card its setup (chip, bar, steps withou
 step("C11.16: Not started cards say \"0 of 5 steps\" and Start setup for the author", rows.filter((r) => !r.combinationId).every((r) => r.setup.bar.text === "0 of 5 steps" && r.setup.viewer.button === "Start setup"));
 const smeRows = await leaves("user-C");
 step("C11.10: the immigration expert sees Open on every card (P-180 Q1)", smeRows.every((r) => r.setup.viewer.button === "Open"), [...new Set(smeRows.map((r) => r.setup.viewer.button))]);
+// Break-report m2: the API's "needs" count and filter are the person's own Needs you, the card's rule.
+const needsFor = async (actor: string) => {
+  const all = (await api("/catalogue?pathway=INDIVIDUAL&filter=all", actor)).body, only = (await api("/catalogue?pathway=INDIVIDUAL&filter=needs", actor)).body;
+  return { count: all.counts.needs as number, mine: (all.rows as Leaf[]).filter((r) => r.needsYou).length, shown: only.fellBack ? 0 : only.rows.length, onlyMine: only.fellBack || (only.rows as Leaf[]).every((r) => r.needsYou) };
+};
+const needA = await needsFor("user-A"), needC = await needsFor("user-C");
+step("C11.10: counts.needs and ?filter=needs are the person's Needs you (author and expert)", [needA, needC].every((n) => n.count === n.mine && n.shown === n.mine && n.onlyMine), { author: needA, expert: needC });
+step("C11.10 (fail case): the count is not the same old number for every person", needA.count !== needC.count || needA.mine === needC.mine, { author: needA.count, expert: needC.count });
 const noActor = await fetch(`http://localhost:${PORT}/api/catalogue?pathway=INDIVIDUAL`);
 step("C11.10 (fail case): the catalogue without a person is refused (401, deny by default)", noActor.status === 401, noActor.status);
 // Parity with today's next step (plan.md slice A (3)): the setup actions the old engine names are the new step-3 items.

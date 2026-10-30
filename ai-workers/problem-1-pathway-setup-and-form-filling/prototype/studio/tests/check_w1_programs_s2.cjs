@@ -245,6 +245,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.10 concept v4 §7: a folded Pathway's chip opens its section (a filter opens every section with a match)", await p.locator(`[data-section="${foldedKey}"] article[data-node]`).count() > 0 && await p.locator(`[data-section="${foldedKey}"] h2 button[aria-expanded="false"]`).count() === 0, foldedKey);
   await p.locator(`[data-pathway-chip="all"]`).click();
   await p.waitForFunction(() => !new URLSearchParams(location.search).get("p"));
+  await p.locator(`[data-section="${foldedKey}"] h2 button[aria-expanded="false"]`).waitFor({ timeout: 8000 }).catch(() => undefined);
   step("C11.10 (fail case): back on All, the person's fold is kept", await p.locator(`[data-section="${foldedKey}"] h2 button[aria-expanded="false"]`).count() === 1);
   // Folds last per person (concept v4 §7): open everything again for the steps below.
   await p.evaluate(() => { try { for (const k of Object.keys(localStorage)) if (k.startsWith("xr-programs-fold:")) localStorage.removeItem(k); } catch { /* ignore */ } });

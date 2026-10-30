@@ -302,7 +302,8 @@ function pdf(title: string, text: string) {
   wp = await leaf("individual.work_permits.employer_specific.with_lmia");
   ok("P-49 pass: released, startable and nothing open is Live (shown as \"Live\") and not in Needs work", wp.live && !wp.needs && /^Live · Release 1/.test(wp.statusText) && (await cat("pathway=INDIVIDUAL&filter=live")).rows.some((x: any) => x.nodeKey === wp.nodeKey), wp.statusText);
   const needs = await cat("pathway=INDIVIDUAL&filter=needs"), all = await cat("pathway=INDIVIDUAL&filter=all");
-  ok("P-49 / F1: Needs work is every row with a next step or not yet Live; every row is in Needs work or Live", needs.filter === "needs" && all.rows.every((x: any) => x.needs || x.live) && all.rows.filter((x: any) => x.needs).length === needs.counts.needs && needs.rows.every((x: any) => x.needs && (x.status !== "READY" || x.nextAction)), needs.counts);
+  // P-49's "Needs work" stays on each row; with a person, the needs filter and count are that person's Needs you (P-180, break-report m2).
+  ok("P-49 / F1: every row is in Needs work or Live; the needs filter and count are the person's Needs you", all.rows.every((x: any) => x.needs || x.live) && all.rows.filter((x: any) => x.needsYou).length === needs.counts.needs && (needs.fellBack ? needs.counts.needs === 0 : needs.filter === "needs" && needs.rows.every((x: any) => x.needsYou)), needs.counts);
 
   // ---------------------------------------------------------------- FIX: the page and the row agree (review #1); plain errors (review #4); keys (break M3); scope (m5)
   const vvLeaf = await leaf("individual.visitors.visitor_visa");
