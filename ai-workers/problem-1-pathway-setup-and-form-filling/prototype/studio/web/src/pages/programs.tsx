@@ -136,7 +136,9 @@ export function ProgramsPage() {
     const k = (e: KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); search.current?.focus(); search.current?.select(); } };
     window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
   }, []);
-  const cat = useApi<CatalogueResponse>(["catalogue", pathway, filter, q, program, under, sort, pathwayKey], `/catalogue?pathway=${pathway}&filter=${filter}&q=${encodeURIComponent(q)}&program=${encodeURIComponent(program)}&under=${encodeURIComponent(under)}&sort=${sort}&pathwayKey=${encodeURIComponent(pathwayKey)}`,
+  // The person is part of the key: the button, Needs you and its counts are this person's (P-180 overlay).
+  const actorId = useActorId();
+  const cat = useApi<CatalogueResponse>(["catalogue", pathway, filter, q, program, under, sort, pathwayKey, actorId], `/catalogue?pathway=${pathway}&filter=${filter}&q=${encodeURIComponent(q)}&program=${encodeURIComponent(program)}&under=${encodeURIComponent(under)}&sort=${sort}&pathwayKey=${encodeURIComponent(pathwayKey)}`,
     { placeholderData: keepPreviousData, refetchInterval: (x) => ((x.state.data?.rows ?? []).some((r) => r.aiRunning) ? 3000 : false) });
 
   // Always from the current URL, never a render's copy: the search box's delayed update must not undo a newer change.
@@ -282,13 +284,13 @@ export function ProgramsPage() {
                 ))}
               </div>
             ) : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             {cat.data?.programs.length ? (
-              <select aria-label="Program" value={program} onChange={(e) => set({ prog: e.target.value || null, under: null }, true)} className="h-9 max-w-[15rem] rounded-lg border border-border bg-surface px-2 text-sm" data-program-filter>
+              <select aria-label="Program" value={program} onChange={(e) => set({ prog: e.target.value || null, under: null }, true)} className="h-8 max-w-[12rem] rounded-full border border-border-strong bg-surface-raised px-2.5 text-sm" data-program-filter>
                 <option value="">Program: All</option>{cat.data.programs.map((x) => <option key={x.key} value={x.key}>{x.label} ({x.combinations})</option>)}
               </select>
             ) : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
             <StatusChips value={filter} counts={counts} onChange={(k) => set({ f: k === "all" ? null : k }, true)} />
             <Tip tip={NEED_YOU}>
               <button type="button" aria-pressed={needsOnly} onClick={() => set({ n: needsOnly ? null : "1" }, true)} data-needs-you
