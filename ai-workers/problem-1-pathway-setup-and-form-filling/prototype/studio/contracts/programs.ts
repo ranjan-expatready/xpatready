@@ -7,8 +7,9 @@ import type { CardSetup, SetupChecklist, ViewerChecklist } from "./setup-checkli
 export const PATHWAYS = ["INDIVIDUAL", "CORPORATE"] as const;
 export const STATUSES = ["IN_SETUP", "NOT_READY", "READY"] as const;
 export type Status = (typeof STATUSES)[number];
-/** Filters (P-49): "Needs work" (needs, the default), Live and All on screen; the status filters stay for API callers. */
-export const FILTERS = ["needs", "live", "all", "ready", "not_ready", "in_setup", "not_started", "ai_proposals", "retired"] as const;
+/** Filters: the page's chips All · Not started · In progress · Live (· Retired) read the setup checklist's chip (P-180);
+ *  the older status filters stay for API callers. */
+export const FILTERS = ["needs", "live", "all", "ready", "not_ready", "in_setup", "in_progress", "not_started", "ai_proposals", "retired"] as const;
 export const SORTS = ["path", "status", "-status"] as const;
 export type Filter = (typeof FILTERS)[number];
 
@@ -171,7 +172,7 @@ export type NextAction = { kind: "start" | "add_forms" | "add_from_library" | "d
 // ------------------------------------------------------------------ responses the Screen 01 pages read
 /** One person role on a combination (stored as JSON on the combination; see Participant above for the request shape). */
 export type ParticipantLine = { role: string; label: string; min: number; max: number; preview?: number; applies?: boolean };
-export type CatalogueCounts = Record<"needs" | "live" | "all" | "ready" | "not_ready" | "in_setup" | "not_started" | "ai_proposals" | "retired", number>;
+export type CatalogueCounts = Record<"needs" | "live" | "all" | "ready" | "not_ready" | "in_setup" | "in_progress" | "not_started" | "ai_proposals" | "retired", number>;
 /** W1-04 (design D): one section per Pathway of the tab, in Structure order, with its combinations' tree and counts. */
 export type CatalogueSection = { pathwayKey: string; label: string; combinations: number; needs: number; live: number; tree: CatalogueGroup[] };
 /** GET /catalogue. */
@@ -182,7 +183,8 @@ export type CatalogueResponse = {
   pathwayKey: string;
   underPath: string[] | null;
   rows: CatalogueLeaf[];
-  programs: { key: string; label: string; combinations: number }[];
+  /** live: how many of its combinations are Live (the Program header's "n of m live", P-180). */
+  programs: { key: string; label: string; combinations: number; live: number }[];
   pathways: { value: string; label: string; combinations: number }[];
   counts: CatalogueCounts;
   totals: { programs: number; categories: number; combinations: number };

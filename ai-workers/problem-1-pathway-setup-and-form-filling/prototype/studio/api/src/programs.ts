@@ -271,9 +271,16 @@ export class Programs {
     // "Needs work" with nothing to do falls back to All, and says so (P-35, P-49).
     const fellBack = q.filter === "needs" && !searched.some((x) => x.r.leaf.needs);
     const filter = fellBack ? "all" : q.filter;
-    const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? r.leaf.needs : filter === "live" ? r.leaf.live : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : filter === "not_started" ? !r.leaf.combinationId : filter === "in_setup" ? r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId : r.leaf.status === filter.toUpperCase());
-    const shown = new Map(searched.filter((x) => pass(x.r)).map((x) => [x.r.leaf.nodeKey, { ...x.r.leaf, matches: x.m, ...(actor ? { setup: cardSetup(x.r.setup, actor) } : {}) }]));
-    const count = (list: Row[]) => ({ needs: list.filter((r) => r.leaf.needs).length, live: list.filter((r) => r.leaf.live).length, all: list.filter((r) => !r.leaf.retired).length, ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "READY").length, not_ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "NOT_READY").length, in_setup: list.filter((r) => !r.leaf.retired && r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId).length, not_started: list.filter((r) => !r.leaf.retired && !r.leaf.combinationId).length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
+    // P-180: the status chips read the setup checklist's chip (Not ready folds into In progress); "Needs you" is the
+    // viewer's own (an item on their duty and tier waits), so every count of it on the page is this person's.
+    const chipOf = (r: Row) => r.setup.chip.status;
+    const live = (r: Row) => chipOf(r) === "LIVE", inProgress = (r: Row) => chipOf(r) === "IN_PROGRESS" || chipOf(r) === "NOT_READY", notStarted = (r: Row) => chipOf(r) === "NOT_STARTED";
+    const needsYou = actor ? new Map(everyInPathway.map((r) => [r.leaf.nodeKey, !r.leaf.retired && !!forViewer(r.setup, actor).needsYou])) : null;
+    const needsMe = (r: Row) => needsYou ? !!needsYou.get(r.leaf.nodeKey) : r.leaf.needsYou;
+    const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? r.leaf.needs : filter === "live" ? live(r) : filter === "in_progress" ? inProgress(r) : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : filter === "not_started" ? notStarted(r) : filter === "in_setup" ? r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId : r.leaf.status === filter.toUpperCase());
+    const shown = new Map(searched.filter((x) => pass(x.r)).map((x) => [x.r.leaf.nodeKey, { ...x.r.leaf, needsYou: needsMe(x.r), matches: x.m, ...(actor ? { setup: cardSetup(x.r.setup, actor) } : {}) }]));
+    const on = (list: Row[]) => list.filter((r) => !r.leaf.retired);
+    const count = (list: Row[]) => ({ needs: list.filter((r) => r.leaf.needs).length, live: on(list).filter(live).length, all: on(list).length, ready: on(list).filter((r) => r.leaf.status === "READY").length, not_ready: on(list).filter((r) => r.leaf.status === "NOT_READY").length, in_setup: on(list).filter((r) => r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId).length, in_progress: on(list).filter(inProgress).length, not_started: on(list).filter(notStarted).length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
     // W1-03 B1: every Pathway of the type, in Structure order (several per type).
     const pws = nodes.filter((n) => n.nodeKind === "PATHWAY" && n.clientType === q.pathway);
     const kids = (k: string) => nodes.filter((n) => n.parentNodeKey === k);
@@ -295,13 +302,13 @@ export class Programs {
     const sections = pws.map((p) => {
       const t = kids(p.programNodeKey).map(build).filter(Boolean) as CatalogueGroup[];
       const mine = inPathway.filter((r) => r.leaf.pathwayKey === p.programNodeKey);
-      return { pathwayKey: p.programNodeKey, label: p.label, combinations: mine.length, needs: mine.filter((r) => r.leaf.needsYou).length, live: mine.filter((r) => r.leaf.live).length, tree: t };
+      return { pathwayKey: p.programNodeKey, label: p.label, combinations: mine.length, needs: mine.filter(needsMe).length, live: mine.filter(live).length, tree: t };
     });
     const tree = sections.flatMap((s) => s.tree);
     const other = q.pathway === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL";
     const progs = pws.flatMap((p) => kids(p.programNodeKey));
     const totals = { programs: progs.length, categories: progs.flatMap((p) => kids(p.programNodeKey)).length, combinations: inPathway.length };
-    const programs = progs.map((p) => ({ key: p.programNodeKey as string, label: p.label as string, combinations: inPathway.filter((r) => r.leaf.programKey === p.programNodeKey).length }))
+    const programs = progs.map((p) => ({ key: p.programNodeKey as string, label: p.label as string, combinations: inPathway.filter((r) => r.leaf.programKey === p.programNodeKey).length, live: inPathway.filter((r) => r.leaf.programKey === p.programNodeKey && live(r)).length }))
       .sort((a, b) => a.label.localeCompare(b.label, "en-CA", { sensitivity: "base" }));
     return {
       pathway: q.pathway, filter, requestedFilter: q.filter, fellBack, q: q.q, program: q.program, under: q.under, sort: q.sort, pathwayKey: pwKey,
