@@ -1,0 +1,96 @@
+URL /library/fields/case.application_date as user-A
+TITLE Fields · Product Studio
+H1 ["Application date"]
+HEADS ["Definition","Where it is asked","Form fields that read it, and whose value each form field needs","Conditions that read it","Kind","Item","Combination","Condition"]
+CUT []
+ERRORS []
+---
+Fields
+Application date
+Application date
+
+case.application_date
+
+Date the application is (or will be) submitted; reference date for calculated values
+
+v1
+Imported release
+once per case
+Definition
+Meaning
+
+What reviewers and the comparison rely on; one meaning per field.
+
+Value type
+Text
+Date
+Yes or no
+List of choices
+Country
+Number
+Address
+Phone number
+Email address
+Save as draft
+
+Versions: v1 published (Configuration author)
+
+Where it is asked
+Section
+Choose a section
+Application details
+Personal details
+Languages
+Travel and identity documents
+Contact details
+Residence and immigration status
+Spouse or partner relationship
+Family members
+Intended work in Canada
+Education history
+Employment and activity history
+Medical background
+Background declarations
+Service, membership and government position history
+Travel history
+Representative and authorizations
+Processing requirements
+Submitted documents
+Collected from
+Client questionnaire
+A verified document
+The case officer (case view)
+Client profile
+Existing record
+Repeats
+Once per case
+For each person the forms need
+For each row (history, children)
+Question text
+
+Optional; the meaning is used when empty.
+
+Condition on the question
+None: asked whenever a form needs it
+Show only when…
+Hide when…
+Optional when…
+Save placement as draft
+Form fields that read it, and whose value each form field needs
+
+No form field reads this field.
+
+Conditions that read it
+Kind	Item	Combination	Condition
+Rule	Add document: proof of language proficiency (language test results).	With an LMIA	PGWP application submitted on or after 1 November 2024, unless the applicant is a flight school graduate (the exception is from Guide 5487: 'The only exception to language requirement is flight school graduates.').
+Check	OR_PGWP_LANGUAGE_PROOF	With an LMIA	Fires for a post-graduation work permit applied for on or after 1 November 2024 where the applicant says no language test was taken and is not a flight school graduate. Ask the client for language test results, or confirm with the specialist whether the flight school exception applies.
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+From the reviewed release c1-v3
+Table: Kind, Item, Combination, Condition

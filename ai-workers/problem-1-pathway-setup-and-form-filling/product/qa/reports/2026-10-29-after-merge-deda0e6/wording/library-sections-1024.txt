@@ -1,0 +1,42 @@
+URL /library/sections as user-A
+TITLE Sections · Product Studio
+H1 ["Sections"]
+HEADS ["Section","Meaning","Questions","Used by combinations","Status"]
+CUT []
+ERRORS []
+---
+Sections
+
+Reusable groups of questions. Each combination selects the sections its questionnaire uses.
+
+New section title
+Meaning
+Add
+Section	Meaning	Questions	Used by combinations	Status
+Application details	Case-level facts about the application itself: type, dates, office, numbers and service language.	7	1	
+Personal details	Identity facts about each person: names, sex, birth, citizenship, marital status and client identifiers.	12	1	
+Languages	Each person's native language and ability in English and French.	4	1	
+Travel and identity documents	Passport, national identity document and US permanent resident card details for each person.	13	1	
+Contact details	Each client-side person's addresses, telephone, fax and e-mail.	8	1	
+Residence and immigration status	Periods of residence with the immigration status held, and the country the application is made from.	7	1	
+Spouse or partner relationship	Facts about the subject's current and previous marriage or common-law relationship, including common-law evidence.	9	1	
+Family members	How each family member relates to the subject, whether they accompany, and their plans in Canada.	6	1	
+Intended work in Canada	The work permit sought, the prospective employer, the job offer and its LMIA or nomination basis.	23	1	
+Education history	Periods of post-secondary education, one row per period.	6	1	
+Employment and activity history	Periods of occupation or activity, one row per period.	6	1	
+Medical background	Background answers about tuberculosis and disorders requiring health or social services.	3	1	
+Background declarations	Yes/no background answers and their details on immigration history, criminality, military service, organisations, ill treatment and government positions.	10	1	
+Service, membership and government position history	Rows describing each period of military or security service, organisation membership and government position.	17	1	
+Travel history	Rows describing each trip the person took to other countries.	5	1	
+Representative and authorizations	The firm's representative, the use-of-representative filing, and any authority to release information.	22	1	
+Processing requirements	Per-person processing facts such as fees, biometrics, visa need and medical exam completion.	4	1	
+Submitted documents	Facts about each submitted document, such as its language and translation.	2	1	
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+Table: Section, Meaning, Questions, Used by combinations, Status

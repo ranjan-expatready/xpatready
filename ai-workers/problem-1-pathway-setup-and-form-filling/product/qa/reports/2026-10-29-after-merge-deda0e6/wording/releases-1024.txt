@@ -1,0 +1,24 @@
+URL /releases as user-A
+TITLE Releases · Product Studio
+H1 ["Releases\nStand-in"]
+HEADS ["Combination","Version","Author / submitter / approver","Released","Basis"]
+CUT []
+ERRORS []
+---
+Releases
+Stand-in
+
+Frozen configuration versions. Case work only ever uses a released version.
+
+Combination	Version	Author / submitter / approver	Released	Basis
+With an LMIA	v1 current	Configuration author / Configuration author / Approver	today at 8:34 p.m.	Imported reviewed release: AI-drafted under the guarded path, reviewed and approved by a second person. Prototype only; not specialist-confirmed.
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+Table: Combination, Version, Author / submitter / approver, Released, Basis
+Fingerprint (SHA-256): b228b666d2cff37844faaa3100343a36186de03a6037158018265ffc92c116e5
