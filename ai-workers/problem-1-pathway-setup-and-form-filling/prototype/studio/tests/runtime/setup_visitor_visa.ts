@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { normLabel } from "../../engine/twin.ts";
 import { client, recorder } from "./api.ts";
+import { seedAnswerList, seedSection } from "../seed_library.cjs";
 
 const PORT = Number(process.argv[2] ?? 4430), DB = process.argv[3] ?? "xr_studio_runtime_r1";
 const { call, sql, until } = client(PORT, DB);
@@ -172,8 +173,8 @@ async function main() {
     const src = inv.fields.find((f) => listName(f) === n && f.options_resolved?.length);
     const taken = new Set<string>(), seen = new Set<string>();
     const values = (src?.options_resolved ?? []).map(([label]) => plainLabel(label)).filter((label) => label && !seen.has(normLabel(label)) && seen.add(normLabel(label))).map((label) => ({ key: slugValue(label, taken), label }));
-    const x = await call("POST", "/library/answer-lists", { key: l.key, label: l.label, values }, AUTHOR);
-    if (x.status >= 300) ok(`4.5 answer list ${l.key}`, false, x.body);
+    // P-158 note b: the list comes from the form's own choices (here, IMM 5257's list); the free add is gone (410).
+    seedAnswerList(sql, { key: l.key, label: l.label, values, actor: AUTHOR });
   }
   const listOf = new Map(sql("select distinct on (canonical_field_key) canonical_field_key || '|' || coalesce(answer_list_key,'') from canonical_field order by canonical_field_key, version desc").split("\n").map((l) => l.split("|") as [string, string]));
   for (const field of NO_LIST_YET) if (listOf.get(field)) await call("DELETE", `/library/fields/${field}/answer-list`, undefined, AUTHOR);
@@ -196,7 +197,7 @@ async function main() {
   }
 
   // 4.5b sections and questions for every fact nobody is asked for; conditions as data
-  for (const s of NEW_SECTIONS) await call("POST", "/library/sections", s, AUTHOR);
+  for (const s of NEW_SECTIONS) seedSection(sql, { ...s, actor: AUTHOR }); // P-158: sections come from the forms' parts, not a free add
   const valueKey = (field: string, label: string) => lists.get(LIST_NAMES[fieldList.get(field) ?? ""]?.key ?? "")?.find((v) => v.label.toLowerCase() === label)?.key;
   let placed = 0;
   for (const p of PLACES) {

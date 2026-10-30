@@ -1,4 +1,4 @@
-# W1 setup checklist: one derived checklist per combination drives every card and the Overview (P-157, P-161, P-176) — concept draft v3
+# W1 setup checklist: one derived checklist per combination drives every card and the Overview (P-157, P-161, P-176) — concept draft v4 (card per board v4, R-144, P-180)
 
 Stage: **Concept draft v3 (designer agent, 30 Oct)** after the fresh challenge F1–F5 (`challenge.md`, branch `claude/screens-checklist`) and the Lead's response: F1 → P-176, F2 and F4 accepted, F3 decided by the Lead, F5 accepted (the Lead edits the capability rows). v2's Q1–Q3 are answered by P-161 (1)(2) and P-176. Board: `design/draft-setup-checklist.html` (v3). Slices: `plan.md`. Markers: **[F P-xx]** = followed that decision · **[GAP]** = no decision covers it · **[CONFLICT]** = two sources disagree. Every element is tagged Capability / Scaffolding (P-33) and Needed / Not built (P-26) in §10. Names, counts, roles and editions are **Sample**.
 
@@ -43,7 +43,7 @@ Duties from `api/src/core.ts` ACTORS: Configuration author (author, review) · C
 Filled iff the viewer holds the duty and the second-person rule allows it. The server answers 403 on the same table (exported by `engine/setup-checklist.ts`, imported by the API, the forms lane's confirm endpoint and the screen; no copy). Within a review queue item the existing per-item duties apply. **[GAP]** a people list with nothing sure behind it (typed or changed by hand, or saved before this rule) → Q1. **[GAP]** "the cases of TAXONOMY §4" are 20 case descriptions, not a list of roles and counts the rules can read → Q2.
 
 ## 6. States, and where each problem and proposal belongs
-The **chip comes from the release** (In setup · Not ready · Live); the **steps come from the draft**. Not started: no segment filled, outline **Start setup**. In setup: as §4. **Not ready** (its own release fails a check): the release's problems become open items on their steps, **first, before any draft item**, filled for the author, Next line "Firms cannot open cases until this is fixed". **Live:** chip "Live · Release n"; the bar shows the draft, "Changes since Release n"; all ✓ → outline **Open**. Live with back-filled pages: step 1 open, filled per §5 tier, chip stays Live. **Retired:** no bar, no Next line, outline **Open**. **Just added:** the Not started card with the note "Just added" (P-128). Loading: skeleton bar. Error: "The setup steps could not be worked out." + Retry.
+The **card shows the draft's steps and nothing from the release except "Live"** [F R-144, P-180]. Not started: "0 of 5 steps", empty edge bar, **Start setup**. In progress (1–4 steps done, or all five done but not released): "n of 5 steps", n parts of the edge bar, **Resume setup**, which lands on the first open item. **Not ready** (its own release fails a check): the release's problems become open items on their steps, **first, before any draft item**; step 5 reopens, so the card reads "n of 5 steps", **Needs you** for the author ("Firms cannot open cases until n problems are fixed"), **Resume setup**. **Live**, with or without unreleased changes: "✓ Live", full green edge bar, **Open**; the release number and "Changes since Release n" show in the combination page's header. Live with back-filled pages: still "Live"; step 1's item shows on the page, and Needs you appears for whoever confirms it (§5 tier). **Retired:** "Retired at Release n", no bar, **Open**. **Just added:** the Not started card, scrolled into view and outlined for 2 s, with no extra text. Loading: a skeleton card. Error: "Setup steps could not be worked out." with Retry; Open still works.
 | Validator `where` (the eight values in `engine/`) | Step | Lands on |
 |---|---|---|
 | Forms | 3 | Forms · the line |
@@ -61,19 +61,33 @@ The **chip comes from the release** (In setup · Not ready · Live); the **steps
 Tests: every `where` literal in `engine/` (the eight) and every kind (the eleven) has a row; a new value without a row fails.
 
 ## 7. The card, the Overview, the button map
-**Card** [F P-115 design D, P-128]: trail, title, chip, five-segment bar (shape + text) with "n of 5 done · Next: <step>", facts line, "Next: …" line with count and why, one button bottom-left in the same place and size, filled only per §5. A click opens `/c/:id/<tab>?focus=<item>` or the filtered queue: scrolled to centre, focus moved, outlined 2 s (still with reduced motion); never a pop-up [F P-50]; an item fixed meanwhile lands with "This was done since you opened it. Next: …". **Overview** [F P-118 Q5, P-161 (2)]: reports only; the strip replaces "Missing before firms can use it" and the header "Next step" box; each row: mark, step, one-line summary with counts and who confirmed on which tier ("confirmed by the configuration author · sure"), its open item as a link; no people card. **Tabs** [F P-130]: Overview · Forms · Documents · Questionnaires · Preview · Review and release; each badge = its step's open count. **Copy:** bar tooltip "Five steps, worked out from what is set up now. ✓ done · ● next · ◐ AI at work · ⧗ waiting for someone else." Step 1 tooltip "IRCC's apply page and document checklist for this combination. The forms, the people and the documents are read from them." Sure/not-sure tooltip "The configuration author confirms what the rules or both AI readings agree on; anything else waits for the immigration expert."
-| Today's card button | Now |
-|---|---|
-| Start setup (filled on 14 cards) | Start setup, outline (nobody is waiting) |
-| Find forms | Find forms (step 3), filled for the author |
-| Add n forms from the library | "Add n forms found" opens Forms on the finder result; "Review n form picks" after P-156 (3) |
-| Draft setup | "Map n forms" (only if an edition is unmapped) · "Draft questions and documents" (step 4) |
-| View AI progress | View AI progress, outline (precedence §4) |
-| Review n AI proposals | Review n proposals, opens the queue filtered to this combination and step |
-| See n missing | gone: each line is an open item of its step |
-| See new edition(s) | Review new edition (step 3), chip stays Live |
-| Review and release | Submit for review · Review and sign · Release, by duty (§5) |
-| Open (author and approver) | Open, outline |
+**Card** [F R-144, P-180, P-115, P-128]: five things only: (1) the combination's name as the heading; (2) the full trail, one small grey line that ends in "…" when long, with the full trail on hover and for screen readers; (3) one progress line, "n of 5 steps" or "✓ Live", with a 2 px five-part edge bar along the bottom that only repeats it (aria-hidden, never the only signal); (4) **Needs you**, a small mark top right, only when an item on the viewer's duty and tier waits (§5), and its hover says what and how many; (5) one button, the same place and size on every card, in the one primary colour: **Start setup** · **Resume setup** · **Open**. For a person without the author duty the button is **Open** in every state (Q1). The rest of the card also opens the combination. Gone from the card: chip, "n of 5 done · Next: …", facts line, "Next: …" line, release numbers, AI problems and progress, rule codes, system phrases. They live on the combination's Overview. **Overview** [F P-118 Q5, P-161 (2)]: reports only; the strip replaces "Missing before firms can use it" and the header "Next step" box; each row: mark, step, one-line summary with counts and who confirmed on which tier ("confirmed by the configuration author · sure"), its open item as a link; no people card. **Tabs** [F P-130]: Overview · Forms · Documents · Questionnaires · Preview · Review and release; each badge = its step's open count. **Copy:** bar tooltip "Five steps, worked out from what is set up now. ✓ done · ● next · ◐ AI at work · ⧗ waiting for someone else." Step 1 tooltip "IRCC's apply page and document checklist for this combination. The forms, the people and the documents are read from them." Sure/not-sure tooltip "The configuration author confirms what the rules or both AI readings agree on; anything else waits for the immigration expert."
+| Today's card button | Now (on the card) | Where the act lives |
+|---|---|---|
+| Start setup | Start setup | Overview, step 1 |
+| Find forms · Add n forms from the library · Draft setup · Map n forms | Resume setup | step 3's item on Forms (`?focus=`) |
+| View AI progress | Resume setup | the step's ◐ row on the Overview |
+| Review n AI proposals | Resume setup (author) · Needs you on the card | the queue filtered to this combination and step |
+| See n missing | Resume setup | the open item of its step |
+| See new edition(s) | Open (Live) · Needs you | step 3, Review new edition |
+| Review and release · Submit · Sign · Release | Resume setup (author) · Open with Needs you (expert, approver) | step 5, by duty (§5) |
+| Open | Open | Overview |
+
+**Page around the cards** [F R-144, P-180, P-128, P-115]:
+* Filter bar stays (P-128): Find · status chips **All · Not started · In progress · Live** (· Retired while any) · **Needs you** toggle · Cards / List (P-115). "Needs work" and "Not ready" fold into In progress and Needs you (Q2).
+* Sections: Pathway, then Program, each header with one quiet count "n of m live", folding open or closed, with the fold state remembered per person. A filter or search opens every section holding a match and hides the rest.
+* List: one line per combination: name, trail, five-part mini bar with "n of 5" or "Live", Needs you, the button. With Needs you on, each Pathway line says how many need you.
+* Columns: 4 at 1440 px, 3 at 1024 px, 2 at 800 px, 1 on a phone.
+* Speed: the 150-combination timing test stays (§8).
+
+**One button colour** [F P-180 Q3]: `--color-primary` (#0862C5, white text 5.89:1; hover #054E9C 8.15:1) for every primary button; green keeps meaning Live and done. Options weighed (board v4 §5):
+| Option | Text on fill | Fill against white | Note |
+|---|---|---|---|
+| **A · brand blue #0862C5 (recommended)** | white 5.89:1 (hover #054E9C 8.15:1) | 5.89:1 | the team's token today (tokens.css primary-600); nothing new; green stays "Live / done" |
+| B · green #15803D | white 5.02:1 | 5.02:1 | passes, but reads as a status beside ✓ Live; a new token outside the brand kit |
+| C · light green #DCFCE7 | #0F5C2E 7.38:1 | 1.10:1, needs the #16A34A border (3.30:1) | the weakest call to action; the same meaning clash |
+
+**Slice B tests (card):** the card shows exactly the five things (no chip, Next line or rule code: a text scan fails on "P-\d+", "Release \d" or "Next:"); the button word per state and per duty; Needs you only when the viewer's item waits; one primary colour (every `.primary` button computes the same background); fold state remembered; List row content; 1440, 1024, 800 and 375 px; 150 combinations within the concept's timing budget.
 **[GAP]** the orange "Draft · n changes" banner on Programs (review §1.5): no decision; left as is for the Lead.
 
 ## 8. Contract, counts and scale
@@ -107,3 +121,6 @@ Capability · Needed: the step engine and cache, the two tables, the duty and ti
 - [ ] Data and API needs known and available (§8 known; the official-pages record is the forms lane's item 2, not built; the queue filters and `participantsConfirmedAs` are new)
 - [ ] Every decision it relies on agreed (P-161, P-176 agreed; Q1–Q3; the P-125 (3) amendment recorded)
 - [ ] No open questions (Q1–Q3; the banner GAP and the lane-file notes of §3 for the Lead)
+
+## Board v4 (30 Oct, P-180)
+The founder gave the Go on board v4 (`design/draft-board-v4.html`) with the recommendations: Q1 people without the author duty see **Open**, with Needs you when they must act; Q2 status chips **All · Not started · In progress · Live** plus the Needs you toggle; Q3 **brand blue** `--color-primary` for every primary button. §6 first paragraph and the §7 card, button map, page and colour text above come from `board-v4-notes.md`. Board v3 (`design/draft-setup-checklist.html`) stays the reference for the steps, duties, Overview and tables.

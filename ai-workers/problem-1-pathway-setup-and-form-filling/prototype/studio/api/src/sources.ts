@@ -20,6 +20,7 @@ import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
 import { keyFor, sameName } from "./library-changes.ts";
+import { identityKeyOf, insertProposals, landField, recordChoice, reviewRow, type NewProposal, type Work } from "./proposals.ts";
 import { cleanLabel, labelProblem } from "../../contracts/programs.ts";
 import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
 const ACTOR_BY_ID = (id: string) => ACTORS.find((a) => a.id === id) ?? ACTORS[0];
@@ -542,7 +543,7 @@ export class Sources {
   /** Reads a run record (live or replayed) and compares its proposals with the library. */
   async ingest(jobId: string, attachmentId: string, opts: { recompare?: Actor } = {}) {
     const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId } });
-    const previous = opts.recompare ? await this.db.normalizationItem.findMany({ where: { jobId } }) : [];
+    const previous = opts.recompare ? (await this.db.proposalItem.findMany({ where: { runId: jobId } })).map(reviewRow) : [];
     const revision = await libraryRevision(this.db, job.workspaceId);
     const a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: attachmentId } });
     const rec = JSON.parse(readFileSync(join(SOLUTION, job.runFile!), "utf8"));
@@ -559,22 +560,42 @@ export class Sources {
     flagNearDuplicates(items, rec.merged?.near_duplicates ?? []);
     const affected = await this.dependents(a.workspaceId, [...new Set(items.flatMap((i) => [i.matchedKey, ...i.candidates.map((c) => c.key)]).filter(Boolean) as string[])]);
     if (opts.recompare && job.status !== "COMPLETED") fail("Only a draft waiting for review can be compared again.", HttpStatus.CONFLICT);
-    await this.db.normalizationItem.deleteMany({ where: { jobId } });
-    await this.db.normalizationItem.createMany({ data: items.map((i) => ({ workspaceId: a.workspaceId, jobId, proposedKey: i.proposedKey, proposedMeaning: i.proposedMeaning, proposedType: i.proposedType, outcome: i.outcome, matchedKey: i.matchedKey,
-      candidates: i.candidates as any, persons: i.persons, boxes: i.boxes as any, evidence: { ...i.evidence, recommendation: i.recommendation } as any, affected: Object.fromEntries([i.matchedKey, ...i.candidates.map((c) => c.key)].filter(Boolean).map((k) => [k, affected.get(k!) ?? null])) as any, reason: i.reason })) });
+    // S6 slice 1a: the comparison's proposals enter the one review queue through the door (contract v2); the comparison
+    // itself (outcome, candidates, form fields, affected items) is the server's working column beside them.
+    const libKeys = new Set(library.map((l) => l.key));
+    const quoteOf = (q?: string) => (q && /^[0-9a-f]{64}$/.test(a.sha256) ? { file: a.fileName.slice(0, 300), sha256: a.sha256, edition: a.edition?.slice(0, 60) ?? null, page: null, quote: q.slice(0, 1000), quoteFound: true, rule: null } : null);
+    const proposals: (NewProposal & Work)[] = items.map((i) => {
+      const near = i.candidates.filter((c) => c.score >= 0.55).map((c) => c.key).slice(0, 10);
+      const reuses = !!i.recommendation.key && (i.recommendation.action === "reuse" || (i.recommendation.action === "decide" && libKeys.has(i.recommendation.key)));
+      const ready = i.outcome === "REUSE" || (i.outcome === "NEW" && !near.length);
+      const payload = { kind: "field" as const, label: i.proposedKey.slice(0, 120), aliases: [], meaning: i.proposedMeaning, valueType: i.proposedType, subject: null, formBox: null };
+      return { kind: "field", runId: jobId, step: job.kind, scope: { formEdition: (out.form_edition ?? a.edition ?? null)?.slice(0, 60) ?? null, combinationId: job.combinationId }, landsOn: "library",
+        reuse: reuses ? { match: "reuse", existingKey: i.recommendation.key } : { match: "new", existingKey: null }, payload, source: quoteOf(i.evidence.quotes[0]), rounds: { draft: null, check: null }, rules: [],
+        agreement: "one_round", confidence: ready ? "ready" : i.outcome === "NEW" ? "check" : "decide", reason: ready ? null : i.reason.slice(0, 500), origin: "ai",
+        identity: { key: identityKeyOf(payload, ""), near, nearReason: near.length ? i.reason.slice(0, 300) : null }, relatesTo: null, revision: null, basis: "SAMPLE",
+        work: { proposedKey: i.proposedKey, outcome: i.outcome, matchedKey: i.matchedKey, candidates: i.candidates, persons: i.persons, boxes: i.boxes, evidence: { ...i.evidence, recommendation: i.recommendation },
+          affected: Object.fromEntries([i.matchedKey, ...i.candidates.map((c) => c.key)].filter(Boolean).map((k) => [k, affected.get(k!) ?? null])), reason: i.reason } };
+    });
+    await this.db.$transaction(async (tx) => { await tx.proposalItem.deleteMany({ where: { runId: jobId } }); await insertProposals(tx, a.workspaceId, proposals); });
     // Re-compare (D280 stale result): a person's decision is kept when the comparison for that proposal is unchanged and
     // its decided key means what it meant (an existing field is still there; a new key has not been created meanwhile).
     let kept = 0, reopened = 0;
     if (previous.length) {
-      const libKeys = new Set(library.map((l) => l.key));
-      for (const it of await this.db.normalizationItem.findMany({ where: { jobId } })) {
+      for (const raw of await this.db.proposalItem.findMany({ where: { runId: jobId } })) {
+        const it = reviewRow(raw);
         const old = previous.find((o) => o.proposedKey === it.proposedKey);
         if (!old || old.decision === "PENDING") continue;
         const topKeys = (x: any) => (x.candidates as any[]).slice(0, 3).map((c) => c.key).join(",");
         const wasExisting = !!old.decidedKey && (old.decidedKey === old.matchedKey || (old.candidates as any[]).some((c) => c.key === old.decidedKey) || old.outcome === "REUSE");
         const same = old.outcome === it.outcome && old.matchedKey === it.matchedKey && topKeys(old) === topKeys(it) && (old.decision === "RETURNED" || !old.decidedKey || libKeys.has(old.decidedKey) === wasExisting);
-        if (same) { kept++; await this.db.normalizationItem.update({ where: { id: it.id }, data: { decision: old.decision, decidedKey: old.decidedKey, decidedBy: old.decidedBy, decisionNote: old.decisionNote, decidedAt: old.decidedAt, proposedMeaning: old.proposedMeaning, proposedType: old.proposedType } }); }
-        else { reopened++; await this.db.normalizationItem.update({ where: { id: it.id }, data: { decisionNote: `Decide again: the library changed since ${old.decidedBy}'s decision (${old.decision.toLowerCase()}${old.decidedKey ? ` → ${old.decidedKey}` : ""}).` } }); }
+        if (same) {
+          kept++;
+          const p = raw.payload as Record<string, unknown>, oldPayload = old.payload as { label?: string; advisory?: unknown } | null;
+          await recordChoice(this.db, it.id, { choice: old.decision, decidedKey: old.decidedKey, by: old.decidedBy, reason: old.decisionNote, payload: { ...p, meaning: old.proposedMeaning, valueType: old.proposedType, ...(old.decision === "NEW" && oldPayload?.label ? { label: oldPayload.label } : {}) } as any,
+            ...(old.decision === "NEW" ? { work: { ...(raw.work as object), advisory: oldPayload?.advisory ?? null } } : {}) });
+          await this.db.proposalItem.update({ where: { id: it.id }, data: { decidedAt: old.decidedAt } });
+        }
+        else { reopened++; await this.db.proposalItem.update({ where: { id: it.id }, data: { decisionReason: `Decide again: the library changed since ${old.decidedBy}'s decision (${old.decision.toLowerCase()}${old.decidedKey ? ` → ${old.decidedKey}` : ""}).` } }); }
       }
     }
     const n = (o: string) => items.filter((i) => i.outcome === o).length;
@@ -608,10 +629,10 @@ export class Sources {
   }
 
   async job(id: string) {
-    const j = await this.db.draftingJob.findUniqueOrThrow({ where: { id }, include: { items: { orderBy: { proposedKey: "asc" } } } });
+    const { proposals, ...j } = await this.db.draftingJob.findUniqueOrThrow({ where: { id }, include: { proposals: true } });
     const rank: Record<string, number> = { CONFLICT: 0, AMBIGUOUS: 1, NEW: 2, REUSE: 3 };
     const a = j.attachmentId ? await this.db.sourceAttachment.findUnique({ where: { id: j.attachmentId } }) : null;
-    return { ...j, attachment: a, items: j.items.sort((x, y) => rank[x.outcome] - rank[y.outcome] || x.proposedKey.localeCompare(y.proposedKey)), elapsed_s: Math.round(((j.finishedAt ?? new Date()).getTime() - j.startedAt.getTime()) / 1000) };
+    return { ...j, attachment: a, items: proposals.map(reviewRow).sort((x, y) => rank[x.outcome] - rank[y.outcome] || x.proposedKey.localeCompare(y.proposedKey)), elapsed_s: Math.round(((j.finishedAt ?? new Date()).getTime() - j.startedAt.getTime()) / 1000) };
   }
 
   async decide(actor: Actor, jobId: string, itemId: string, body: unknown) {
@@ -630,7 +651,9 @@ export class Sources {
   private async decideChecked(actor: Actor, jobId: string, itemId: string, b: { decision: "ACCEPTED" | "CHANGED" | "RETURNED" | "PENDING" | "NEW"; key?: string; note?: string; meaning?: string; valueType?: string; label?: string; reason?: string }) {
     const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId } });
     if (job.status === "APPLIED") fail("This draft is already applied to the configuration; change the definitions in the library instead.", HttpStatus.CONFLICT);
-    const it = await this.db.normalizationItem.findUniqueOrThrow({ where: { id: itemId } });
+    const raw = await this.db.proposalItem.findUnique({ where: { id: itemId } });
+    if (!raw) fail("This proposal does not exist.", HttpStatus.NOT_FOUND);
+    const it = reviewRow(raw!);
     if (it.jobId !== jobId) fail("This proposal belongs to another draft.", HttpStatus.NOT_FOUND);
     if (it.kind !== "field" && (b.decision === "NEW" || b.decision === "CHANGED")) fail("A checklist proposal is accepted or returned; it is not a shared field.");
     let decidedKey: string | null = null;
@@ -653,8 +676,8 @@ export class Sources {
     }
     if (b.decision === "RETURNED" && !b.note?.trim()) fail("Say why it goes back, so its form fields show the reason.");
     if (b.decision === "NEW") return this.decideNew(actor, job, it, b);
-    const u = await this.db.normalizationItem.update({ where: { id: itemId }, data: { decision: b.decision, decidedKey: b.decision === "RETURNED" || b.decision === "PENDING" ? null : decidedKey, decidedBy: b.decision === "PENDING" ? null : actor.id, decisionNote: b.note ?? (b.meaning ? `meaning: ${b.meaning}` : null), decidedAt: b.decision === "PENDING" ? null : new Date(),
-      ...(b.meaning ? { proposedMeaning: b.meaning } : {}), ...(b.valueType ? { proposedType: b.valueType } : {}) } });
+    const edits = b.meaning || b.valueType ? { ...(raw!.payload as any), ...(b.meaning ? { meaning: b.meaning } : {}), ...(b.valueType ? { valueType: b.valueType } : {}) } : undefined;
+    const u = reviewRow(await recordChoice(this.db, itemId, { choice: b.decision, decidedKey: b.decision === "RETURNED" || b.decision === "PENDING" ? null : decidedKey, by: b.decision === "PENDING" ? null : actor.id, reason: b.note ?? (b.meaning ? `meaning: ${b.meaning}` : null), payload: edits }));
     await this.audit.log(job.workspaceId, actor.id, "decided", "AI proposal", it.proposedKey, `${actor.name} ${b.decision.toLowerCase()} ${it.proposedKey}${decidedKey && decidedKey !== it.proposedKey ? ` → ${decidedKey}` : ""}${b.note ? `: ${b.note}` : ""}`);
     return u;
   }
@@ -676,11 +699,12 @@ export class Sources {
       const twin = await sameName(tx, job.workspaceId, group, label, it.id);
       if (twin) fail(`"${label}" is already a shared field in this group, or already chosen in an open draft (${twin.label}). Use that field instead.`, HttpStatus.CONFLICT);
       const taken = new Set([...(await tx.canonicalField.findMany({ where: { workspaceId: job.workspaceId }, select: { canonicalFieldKey: true } })).map((x) => x.canonicalFieldKey),
-        ...(await tx.normalizationItem.findMany({ where: { workspaceId: job.workspaceId, decision: "NEW", decidedKey: { not: null }, id: { not: it.id }, job: { status: { in: ["COMPLETED", "APPLIED"] } } }, select: { decidedKey: true } })).map((x) => x.decidedKey!),
-        ...(await tx.normalizationItem.findMany({ where: { jobId: job.id, decidedKey: { not: null }, id: { not: it.id } }, select: { decidedKey: true } })).map((x) => x.decidedKey!)]);
+        ...(await tx.proposalItem.findMany({ where: { workspaceId: job.workspaceId, choice: "NEW", decidedKey: { not: null }, id: { not: it.id }, run: { status: { in: ["COMPLETED", "APPLIED"] } } }, select: { decidedKey: true } })).map((x) => x.decidedKey!),
+        ...(await tx.proposalItem.findMany({ where: { runId: job.id, decidedKey: { not: null }, id: { not: it.id } }, select: { decidedKey: true } })).map((x) => x.decidedKey!)]);
       const key = keyFor(group, label, taken);
-      return tx.normalizationItem.update({ where: { id: it.id }, data: { decision: "NEW", decidedKey: key, decidedBy: actor.id, decidedAt: new Date(), proposedMeaning: meaning, ...(b.valueType ? { proposedType: b.valueType } : {}),
-        decisionNote: reason || null, payload: { label, reason: reason || null, advisory: best ? { key: best.key, score: best.score } : null } } });
+      const raw = await tx.proposalItem.findUniqueOrThrow({ where: { id: it.id } });
+      return reviewRow(await recordChoice(tx, it.id, { choice: "NEW", decidedKey: key, by: actor.id, reason: reason || null,
+        payload: { ...(raw.payload as any), label, meaning, ...(b.valueType ? { valueType: b.valueType } : {}) }, work: { ...(raw.work as object), advisory: best ? { key: best.key, score: best.score } : null } }));
     });
     const key = u.decidedKey!;
     await this.audit.log(job.workspaceId, actor.id, "decided", "AI proposal", it.proposedKey, `${actor.name} made "${label}" a new shared field (${key})${reason ? `: ${reason}` : ""}`);
@@ -691,8 +715,8 @@ export class Sources {
    *  field. Ambiguous and conflicting items always need their own decision. */
   async acceptClean(actor: Actor, jobId: string, outcome: "REUSE" | "NEW" = "REUSE") {
     need(actor, "review");
-    const items = (await this.db.normalizationItem.findMany({ where: { jobId, outcome, decision: "PENDING" } })).filter((i) => outcome === "REUSE" || !(i.candidates as any[]).some((c) => c.score >= 0.55));
-    for (const i of items) await this.db.normalizationItem.update({ where: { id: i.id }, data: { decision: "ACCEPTED", decidedKey: outcome === "REUSE" ? i.matchedKey : i.proposedKey, decidedBy: actor.id, decidedAt: new Date(), decisionNote: outcome === "REUSE" ? "accepted with the other exact reuse matches" : "accepted with the other new definitions that have no similar library field" } });
+    const items = (await this.db.proposalItem.findMany({ where: { runId: jobId, status: "waiting" } })).map(reviewRow).filter((i) => i.outcome === outcome && (outcome === "REUSE" || !(i.candidates as any[]).some((c) => c.score >= 0.55)));
+    for (const i of items) await recordChoice(this.db, i.id, { choice: "ACCEPTED", decidedKey: outcome === "REUSE" ? i.matchedKey : i.proposedKey, by: actor.id, reason: outcome === "REUSE" ? "accepted with the other exact reuse matches" : "accepted with the other new definitions that have no similar library field" });
     const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId } });
     await this.audit.log(job.workspaceId, actor.id, "decided", "AI proposal", null, `${actor.name} accepted ${items.length} ${outcome === "REUSE" ? "exact reuse matches" : "new definitions"} together`);
     return { accepted: items.length, outcome };
@@ -702,7 +726,8 @@ export class Sources {
    *  definitions, and the form in the combination. Everything lands as DRAFT; release follows review. */
   async apply(actor: Actor, jobId: string, b: { who?: string; title?: string }) {
     need(actor, "author");
-    const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId }, include: { items: true } });
+    const { proposals, ...rest } = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId }, include: { proposals: true } });
+    const job = { ...rest, items: proposals.map(reviewRow) };
     if (job.kind !== "field_map") fail("This is not a field-map draft: a checklist draft is applied with its own step.");
     if (job.status !== "COMPLETED") fail(job.status === "APPLIED" ? "Already applied." : "The draft is not ready.", HttpStatus.CONFLICT);
     // Break M1 across drafts: a new field this draft names must not have been created meanwhile by another draft.
@@ -737,12 +762,12 @@ export class Sources {
       for (const i of job.items.filter((x) => x.decision !== "RETURNED" && x.decidedKey)) {
         if (await tx.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: i.decidedKey! } })) continue;
         const p = (i.payload ?? {}) as { label?: string; reason?: string | null; advisory?: { key: string; score: number } | null };
-        const made = await tx.canonicalField.create({ data: { workspaceId: ws, canonicalFieldKey: i.decidedKey!, version: 1, status: "DRAFT", meaning: i.proposedMeaning, valueType: i.proposedType, dataType: VALUE_TYPE_TO_DATA_TYPE[i.proposedType] ?? "STRING", scope: i.decidedKey!.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(i.decidedKey!), origin: "AI_PROPOSAL", sourceRef: `${job.mode === "REPLAY" ? "replayed " : ""}AI run ${job.runId}; decided by ${i.decidedBy}`, updatedBy: actor.id, ...(p.label ? { label: p.label, groupKey: i.decidedKey!.split(".")[0], labelChecked: true } : {}) } });
-        // Every new shared field waits for a second person on To review before any release carries it (BR-7, P-53).
+        // Every new shared field waits for a second person on To review before any release carries it (BR-7, P-53): the
+        // one lander writes the draft row and its ADD (S6 slice 1a).
         const top = ((i.candidates as { key: string; score: number }[]) ?? []).slice(0, 3);
-        await tx.libraryChange.create({ data: { workspaceId: ws, kind: "field", key: i.decidedKey!, label: p.label ?? made.label ?? null, action: "ADD", reason: p.reason ?? i.decisionNote ?? null,
-          aiVerdict: i.outcome === "NEW" && !top.some((c) => c.score >= 0.55) ? "No library field means the same." : top[0] ? `Could be ${top[0].key} (match ${Math.round(top[0].score * 100)}%).` : null,
-          matches: top, meaningChecked: i.decision === "NEW", status: "WAITING", proposedBy: i.decidedBy ?? actor.id, appliedBy: actor.id, sourceJobId: job.id, combinationId: job.combinationId } });
+        await landField(tx, { ws, actor, batchId: null, itemId: i.id, reason: p.reason ?? i.decisionNote ?? null, matches: top, meaningChecked: i.decision === "NEW", proposedBy: i.decidedBy ?? actor.id, sourceJobId: job.id, combinationId: job.combinationId,
+          aiVerdict: i.outcome === "NEW" && !top.some((c) => c.score >= 0.55) ? "No library field means the same." : top[0] ? `Could be ${top[0].key} (match ${Math.round(top[0].score * 100)}%).` : null },
+          { key: i.decidedKey!, meaning: i.proposedMeaning, valueType: i.proposedType, label: p.label ?? null, sourceRef: `${job.mode === "REPLAY" ? "replayed " : ""}AI run ${job.runId}; decided by ${i.decidedBy}` });
         created++;
       }
       await tx.formFieldMap.createMany({ data: out.entries.map((e: any) => {
