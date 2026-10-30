@@ -28,14 +28,15 @@ Agreed answers N-1, N-2, N-3, P-97, the 1b items not done and the items routed t
 **Learned, not written elsewhere** (heredoc and loop refusals by the Bash hook, catalogue cache and audit rows, shared ports and databases, run by-products, `prisma generate` after a branch switch, second-person names): `history/screens-lane-2026-10-30.md`.
 
 current_screen: W1-setup-checklist (3): the card v4 on Immigration programs (P-180)
-stage: BUILD — card built; every lane suite moved and passing alone at 47579450; full run-suites on 47579450 running
+stage: CHECK — full run-suites on 33c77518 read: 5 fails; check_w1_programs_r3 still on the old Status menu (moved now); 4 look like load timing, rerunning alone; screen-reviewer + screen-breaker running
 owner: Builder (fresh screens session, 30 Oct)
-next_action: read run-suites on 47579450 (rerun a timing fail alone), then CHECK (screen-reviewer + screen-breaker)
+next_action: read the alone reruns (r3, s6_queue, forms_s4_library, s5_slice3, screen01_browser) and the review + break report; FIX or hand to the Lead
 then: 1c → 1b-2 → (4) linking combinations and copying a line (C1.3, C1.5)
 blocked_by: nothing
 updated: 2026-10-30
 
 ## Log (last 6 lines; older in `history/screens-lane-2026-10-30.md`)
+- 2026-10-30 · W1-setup-checklist · CHECK started · full run-suites on 33c77518 (code 47579450): 5 FAIL of the rest PASS: check_w1_programs_r3 (old Status menu and Just added inside the card: moved to chips, data-label, "0 of 5 steps"), forms_s4_library (1176 ms first view; Retired filter), s5_slice3 (C11.15 click timeout), s6_queue (demo/load 30 s timeout), screen01_browser (first view 2397 ms; 116/116 alone before): rerunning each alone; run by-products restored (stub ledger US$0 actual). US$0.
 - 2026-10-30 · W1-setup-checklist · BUILD (fresh session) · one at a time on 47579450: card 42/42, visual_system 24/24, s1s2_fix 30/30, qa_1029 51/51 (Corporate restore moved: a retired name never set up links to Program structure; a set-up one offers Open), screen01_browser 116/116 (it had stopped half way on old selectors), screen01_api 135/135, start_setup 39/39 (cost line was a timing fail, passed alone), screen02_slice2 62/62, programs_s2 87/87. Bug found and fixed: the List's Progress sort did nothing (Not started rows had no rank in the old status table, NaN); it now follows the chip: Not ready, In progress, Not started, Live. Card screenshots in screenshots/card/. US$0.
 - 2026-10-30 · W1-setup-checklist · BUILD (fresh session) · check_w1_programs_s2 moved to the card v4 (chips, viewer's Needs you, name · trail · "n of 5 steps", one button, Program bands in List) 87/87; List grid overflow-hidden → overflow-clip (the sticky Pathway band stuck 56 px down inside the grid and covered the first Program band: axe target-size, and it never stuck to the page); graph G3 2 (older); tsc clean; official sources nothing pending. Note for the Lead: Structure's Pathway need counts keep the old rule (2,0,0) while Programs counts the viewer's (author 1,0,0; expert 5,1,0 from step 2 "Confirm who can apply"): printed by the suite, not asserted. 12a44e8b. US$0.
 - 2026-10-30 · W1-setup-checklist · BUILD the card v4 (P-180), not CHECK yet · merged slice A (e973d314); programs.tsx card/chips/sections/List per concept v4 §6–§7; /catalogue in_progress filter, viewer Needs you, programs[].live; catalogue key per person (bug); check_setup_card_browser 41/42 (axe target-size, fixed); four suites moved, check_w1_programs_s2 left; tsc clean; official sources nothing pending. Handover at ~70% context. US$0.

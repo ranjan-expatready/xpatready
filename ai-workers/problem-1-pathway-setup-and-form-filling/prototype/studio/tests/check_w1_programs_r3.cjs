@@ -5,6 +5,8 @@
 // prefilled from the tab and filters; the new card shows in place, Just added and Not started, and a filter that would
 // hide it is cleared; a reader cannot add. Sample inputs plus one saved AI replay (US$0, so "need you" is not zero).
 // Screenshots into product/screens/W1-visual-system/screenshots/programs/, axe (WCAG 2.2 AA) on each.
+// Card v4 (P-180): Status is a row of chips (data-status-chip), the new card says "0 of 5 steps" (data-state NOT_STARTED)
+// and Just added is a 2 s outline on the card itself, so the new card is found by its name.
 //   zsh studio/tools/isolated.sh screens_pr3 4434 start && node studio/tests/check_w1_programs_r3.cjs 4434 xr_studio_screens_pr3
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
@@ -60,7 +62,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== the filter bar (P-128 (4), board P2)
   await open();
-  step("C11.10 P-128 (4): no Pathway cards and no '+ Add pathway'; one filter bar with chips, Program, Status and Needs you", await p.locator("[data-pathway-cards]").count() === 0 && await p.getByRole("button", { name: /Add pathway/ }).count() === 0 && await p.locator("[data-filter-bar] [data-pathway-chips]").count() === 1 && await p.locator("[data-program-filter]").count() === 1 && await p.getByRole("button", { name: /^Status:/ }).count() === 1 && await p.locator("[data-needs-you]").count() === 1);
+  step("C11.10 P-128 (4): no Pathway cards and no '+ Add pathway'; one filter bar with Pathway chips, Program, Status chips and Needs you", await p.locator("[data-pathway-cards]").count() === 0 && await p.getByRole("button", { name: /Add pathway/ }).count() === 0 && await p.locator("[data-filter-bar] [data-pathway-chips]").count() === 1 && await p.locator("[data-program-filter]").count() === 1 && await p.locator("[data-status-chips] [data-status-chip]").count() >= 4 && await p.locator("[data-needs-you]").count() === 1);
   const chipCounts = await p.locator("[data-pathway-chip]").evaluateAll((a) => a.map((x) => `${x.getAttribute("data-pathway-chip")}:${x.querySelector("[data-count]")?.textContent}:${parseInt(x.querySelector("[data-need]")?.textContent ?? "0", 10)}`));
   const want = ["all:" + cat.rows.filter((r) => !r.retired).length + ":" + needsYou, ...cat.sections.map((s) => `${s.pathwayKey}:${s.combinations}:${s.needs}`)];
   step("C11.10 R3-6: the chips' counts and need-you counts are the catalogue's", JSON.stringify(chipCounts) === JSON.stringify(want), `${chipCounts.join(" ")} vs ${want.join(" ")}`);
@@ -101,20 +103,20 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await field("category").fill("Temporary resident permit (test)"); await p.waitForTimeout(500);
   await state("add-combination-pop-up", { dialog: true });
   await p.locator("[data-add-submit]").click(); await dialog().waitFor({ state: "detached" });
-  const added = p.locator("article[data-node]").filter({ has: p.locator("[data-just-added]") });
+  const added = p.locator('article[data-node][data-label="Temporary resident permit (test)"]');
   await added.first().waitFor({ timeout: 10000 }).catch(() => undefined);
-  step("C11.3 P-128 (5) / AD-7: the new card shows in place, Just added and Not started; no setup started", await added.count() === 1 && /Temporary resident permit \(test\)/.test(await added.innerText()) && /Not started/.test(await added.innerText()) && sql("select count(*) from combination c join program_def d on d.id = c.program_def_id where d.label = 'Temporary resident permit (test)'") === "0");
+  step("C11.3 P-128 (5) / AD-7 / P-180: the new card shows in place, Not started (\"0 of 5 steps\"); no setup started", await added.count() === 1 && (await added.getAttribute("data-state")) === "NOT_STARTED" && /0 of 5 steps/.test(await added.innerText()) && sql("select count(*) from combination c join program_def d on d.id = c.program_def_id where d.label = 'Temporary resident permit (test)'") === "0");
   step("C11.3 S1-finish: what was added is said on the page, never in a toast", /Added Retail › Temporary residence › Work permits › Temporary resident permit \(test\): listed here as Not started; no setup started\./.test(await p.locator("[data-page-note]").innerText()) && await p.locator("div.fixed.bottom-4.right-4 > div").count() === 0, await p.locator("[data-page-note]").innerText().catch(() => ""));
   await state("after-add");
-  await p.locator("[data-status-filter], button:has-text('Status:')").first().click().catch(() => undefined);
-  await p.getByRole("menuitemradio", { name: /^Live/ }).click();
+  await p.locator('[data-status-chip="live"]').click();
   await p.waitForFunction(() => new URLSearchParams(location.search).get("f") === "live");
   await p.locator("[data-add-combination]").click(); await dialog().waitFor();
   await field("category").fill("Hidden by the filter (test)"); await p.waitForTimeout(500);
   await p.locator("[data-add-submit]").click(); await dialog().waitFor({ state: "detached" });
   await p.waitForFunction(() => !new URLSearchParams(location.search).get("f"), null, { timeout: 8000 }).catch(() => undefined);
-  await p.locator("article[data-node]").filter({ has: p.locator("[data-just-added]") }).first().waitFor({ timeout: 8000 }).catch(() => undefined);
-  step("C11.3 board P2 'After Add': a Status filter that would hide the new card is cleared, so it shows in place", !new URLSearchParams(new URL(p.url()).search).get("f") && /Hidden by the filter \(test\)/.test(await p.locator("article[data-node]").filter({ has: p.locator("[data-just-added]") }).innerText().catch(() => "")), p.url());
+  const hidden = p.locator('article[data-node][data-label="Hidden by the filter (test)"]');
+  await hidden.first().waitFor({ timeout: 8000 }).catch(() => undefined);
+  step("C11.3 board P2 'After Add': a Status filter that would hide the new card is cleared, so it shows in place", !new URLSearchParams(new URL(p.url()).search).get("f") && await hidden.count() === 1, p.url());
   await chip(tr.label).click(); await p.locator("[data-needs-you]").click();
   await p.locator("[data-clear-all]").click();
   await p.waitForFunction(() => !/[?&](p|prog|f|n|q)=/.test(location.search));
