@@ -140,7 +140,7 @@ case "$1" in
   inbox)  # findings dropped for the Lead (inbox/README.md): files on main, then unmerged devin/* branches.
     # Acknowledged = merged: the Lead merges each checker branch into its own PR, so a handled branch drops out here.
     git -C "$HERE" fetch -q origin || { echo "Cannot refresh the inbox from GitHub: retry before treating it as empty." >&2; exit 3; }
-    git -C "$HERE" ls-tree --name-only origin/main "$P/product/inbox/" | grep -v '/README.md$' | sed 's|^|main |'
+    git -C "$HERE" ls-tree --name-only origin/main "$P/product/inbox/" | grep -v -e '/README.md$' -e '/DEVIN-PROMPTS.md$' | sed 's|^|main |'
     for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/devin/); do
       git -C "$HERE" merge-base --is-ancestor "$b" origin/main 2>/dev/null && continue
       echo "$b $(git -C "$HERE" log -1 --format='%h %cr' "$b") · $(git -C "$HERE" diff --name-only "origin/main...$b" | tr '\n' ' ')"
