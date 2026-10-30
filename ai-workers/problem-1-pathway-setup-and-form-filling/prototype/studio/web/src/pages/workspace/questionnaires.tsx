@@ -16,6 +16,7 @@ import { BulkBar, FactDrawer, RowMenu, RowStatus, ComesFrom, PreQual, SAY, Sourc
 import { Lock } from "lucide-react";
 import { ConfigArea } from "@/pages/configuration";
 import { cn } from "@/lib/utils";
+import { RunCard } from "@/components/run-card";
 
 const TIPS = {
   card: "Sets which people a case may include and how many; each person marked as applicant gets their own forms, questions and documents.",
@@ -160,18 +161,33 @@ function FillFromGuide({ id, onClose, onUse }: { id: string; onClose: () => void
   const live = rules.data?.live ?? { approved: false, why: null };
   const [result, setResult] = React.useState<PeopleProposal | null>(null);
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
+  // QA-91 (C11.12, P-110): AI now answers with a run; its card shows each step and Stop, then the proposal is read.
+  const [runId, setRunId] = React.useState<string | null>(null);
   const run = async () => {
     if (!plan.data) return;
     setBusy(true); setError(null);
-    try { setResult(await api<PeopleProposal>(`/combinations/${id}/people/propose`, { method: "POST", json: { mode, planSha256: plan.data.plan_sha256 } })); }
-    catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try {
+      const r = await api<PeopleProposal | { runId: string }>(`/combinations/${id}/people/propose`, { method: "POST", json: { mode, planSha256: plan.data.plan_sha256 } });
+      if ("runId" in r) setRunId(r.runId); else setResult(r);
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
-  const footer = result
+  const ended = React.useCallback(async (v: { status: string; message: string | null }) => {
+    if (v.status !== "done" && v.status !== "done_with_problems") { setError(v.message ?? "The run ended before AI proposed anything. Fill it again, or use rules only."); return; }
+    try { setResult(await api<PeopleProposal>(`/combinations/${id}/people/runs/${runId}`)); setRunId(null); } catch (e) { setError((e as Error).message); }
+  }, [id, runId]);
+  const footer = runId && !result
+    ? <><Button variant="ghost" onClick={() => { setRunId(null); setError(null); }}>Back</Button></>
+    : result
     ? <><Button variant="ghost" onClick={() => setResult(null)}>Back</Button><Button onClick={() => onUse(result)} disabled={!result.people.length}>Use these lines</Button></>
     : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void run()} busy={busy} disabled={!plan.data}><BookOpen /> Fill</Button></>;
   return (
     <Dialog open wide onOpenChange={(o) => { if (!o) onClose(); }} title="Fill who can be in this application from the guide" description={plan.data ? `From ${plan.data.guide.code}: ${plan.data.guide.title}. Nothing is saved until you use the lines and save. Sample until the immigration expert confirms.` : "From the IRCC guide linked to this combination."} footer={footer}>
-      {result ? (
+      {runId && !result ? (
+        <div className="space-y-3" data-people-run>
+          <RunCard runId={runId} onEnded={(v) => void ended(v)} />
+          {error ? <p role="alert" className="text-sm text-text-danger">{error}</p> : null}
+        </div>
+      ) : result ? (
         <div className="space-y-3 text-sm" data-people-proposal>
           <p>{result.note}</p>
           {result.people.length ? <Table dense head={["Person", "How many", "Applicant", "IRCC's words"]}>{result.people.map((x) => <tr key={x.role} data-proposed={x.role}><td>{x.label}</td><td>{howMany(x)}</td><td>{x.applies ? "Yes" : "No"}</td><td className="max-w-md text-xs text-text-muted">"{x.quote}"{x.why ? <p className="mt-0.5">{x.why}</p> : null}</td></tr>)}</Table> : null}

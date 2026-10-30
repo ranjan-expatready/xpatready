@@ -135,6 +135,7 @@ export class WorkspaceController {
   constructor(@Inject(WorkspaceViews) private readonly w: WorkspaceViews, @Inject(Studio) private readonly s: Studio, @Inject(PeopleFromGuide) private readonly g: PeopleFromGuide) {}
   // Slice 3: "Who can be" filled from the guide: the plan (cost first), then the proposal (never saved by itself).
   @Post("combinations/:id/people/propose/plan") peoplePlan(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { readerOf(a); return this.g.plan(id, b); }
+  @Get("combinations/:id/people/runs/:runId") peopleRun(@Headers("x-actor") a: H, @Param("id") id: string, @Param("runId") r: string) { readerOf(a); return this.g.result(id, r); } // QA-91
   @Post("combinations/:id/people/propose") propose(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.g.propose(actorOf(a), id, b); }
   // Break m8: reads need a configuration person in x-actor (readerOf), like the catalogue.
   @Get("combinations/:id/workspace") view(@Headers("x-actor") a: H, @Param("id") id: string, @Query() q: Q) { readerOf(a); return this.w.view(id, q); }
