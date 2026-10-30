@@ -93,8 +93,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.15 plan: Find again shows the steps and says the cost before anything runs (saved AI answers: US$0)", /Cost: US\$0/.test(await again.locator("[data-find-cost]").innerText().catch(() => "")) && await again.locator("[data-find-plan] li").count() > 2);
   // Lead Critical 29 Oct: a copy without the live switch (every suite run; never switched on here) greys AI now with
   // the reason; only a copy the founder switched on offers it, and then its plan says the most it can cost.
-  if (await again.getByRole("radio", { name: /^AI now/ }).isDisabled()) {
-    step("C11.15 Lead Critical: with AI now switched off on this copy, Find again greys AI now and says why in words", /AI now is switched off on this copy/.test(await again.locator('[data-mode="live"]').innerText()), await again.locator('[data-mode="live"]').innerText());
+  // The branch follows the server's switch (the plan's live.on), never what the page shows, so a page that offered AI now
+  // on a copy without the switch fails here (review m2).
+  const liveOn = (await api(`/combinations/${vv}/forms/find/plan`, { method: "POST", data: { mode: "live" } })).body?.live?.on === true;
+  if (!liveOn) {
+    step("C11.15 Lead Critical: with AI now switched off on this copy, Find again greys AI now and says why in words", await again.getByRole("radio", { name: /^AI now/ }).isDisabled() && /AI now is switched off on this copy/.test(await again.locator('[data-mode="live"]').innerText()), await again.locator('[data-mode="live"]').innerText());
   } else {
     await again.getByRole("radio", { name: /^AI now/ }).check(); await p.waitForTimeout(800);
     step("C11.15 plan: choosing AI now says the most it can cost, inside the cap", /at most US\$\d+\.\d\d/i.test(await again.locator("[data-find-cost]").innerText().catch(() => "")), await again.locator("[data-find-cost]").innerText().catch(() => ""));

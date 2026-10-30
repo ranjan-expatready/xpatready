@@ -119,8 +119,15 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   r = await draft(o3);
   ok("C11.8 P-179 pass: with the author's Continue the start over the cap is queued, for this run's worst case only", r.status === 201 && lines().find((l) => l.type === "override" && l.id === o3)?.worst_usd === worst, { status: r.status, m: msg(r) });
   await cancelOpen();
+  // Break M2 (CHECK 30 Oct): a Continue recorded within US$132, then spend arrives (another copy) so the same run, same run
+  // key, would now pass the ceiling: the start is refused in the founder's words and nothing is queued.
+  const pM2 = await planNow(); r = await cont(pM2);
+  const oM2 = r.body?.override_id as string;
+  ok("C11.8 break M2 setup: a Continue is recorded while the start is within US$132", r.status === 201 && !!oM2, { status: r.status, m: msg(r) });
   seed(12.01); // committed is now 132.01 - worst/2: this run could take total spend past the ceiling
   p = await planNow();
+  r = await draft(oM2);
+  ok("C11.8 break M2 fail: that Continue no longer starts the run once it is past US$132 (409, the founder must raise the cap), nothing queued", p.run_key === pM2.run_key && !p.cost_check.can_continue && r.status === 409 && /founder must raise the cap/.test(msg(r)), { same_key: p.run_key === pM2.run_key, status: r.status, m: msg(r) });
   const before = lines().filter((l) => l.type === "override").length;
   ok("C11.8 P-179 pass: past US$132 the check offers no Continue and says the founder must raise the cap", !p.cost_check.can_continue && /founder must raise the cap/.test(p.cost_check.words) && /Spend so far/.test(p.cost_check.words), p.cost_check);
   r = await cont(p);
