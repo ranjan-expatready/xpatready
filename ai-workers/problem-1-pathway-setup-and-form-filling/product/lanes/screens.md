@@ -28,14 +28,15 @@ Agreed answers N-1, N-2, N-3, P-97, the 1b items not done and the items routed t
 **Learned, not written elsewhere** (heredoc and loop refusals by the Bash hook, catalogue cache and audit rows, shared ports and databases, run by-products, `prisma generate` after a branch switch, second-person names): `history/screens-lane-2026-10-30.md`.
 
 current_screen: W1-setup-checklist (3): the card v4 on Immigration programs (P-180)
-stage: BUILD done — slice C1 "Before forms" on `claude/screens-c1-before-forms`; affected suites alone green; the Lead opens the PR (C2 next, then C3)
-owner: Lead (local_847d9394)
-next_action: Lead: PR from `claude/screens-c1-before-forms`, full CI, show the founder the four board differences (plan.md "Slice C1"); then this lane builds C2 (StepBadge, focus landing on Documents and Questionnaires)
+stage: BUILD — slice C1 with the Lead's change 4 (plain people words); waiting for forms PR #109 on main, then merge main, resolve, rerun, report (no PR before)
+owner: Lead (messages when #109 is on main; reports to local_847d9394)
+next_action: when #109 is on main: merge main into `claude/screens-c1-before-forms`, resolve contracts/workspace.ts and pages/combination.tsx, rerun before_forms, s5_slice1, w115_slice2 alone, push, Paste to Lead; then C2
 then: 1c → 1b-2 → (4) linking combinations and copying a line (C1.3, C1.5)
 blocked_by: nothing
 updated: 2026-10-30
 
 ## Log (last 5 lines; older in `history/screens-lane-2026-10-30.md`)
+- 2026-10-30 · W1-setup-checklist · applied Lead note 2026-10-30 (C1 decisions 1–3 accepted; 4 plain people words; no PR until forms #109 is on main) · the folded people line reads "Principal applicant (always) · …"; alone: before_forms 22/22, s5_slice1 52/52, w115_slice2 55/55. US$0.
 - 2026-10-30 · W1-setup-checklist · applied Lead note 2026-10-30 (C1 go; order C1, C2, C3; Official pages Confirm waits for forms F2) · BUILD C1: Before forms block on Forms (Official pages read only, the people card moved from Questionnaires), useFocusItem landing, STEP_TAB.people back to Forms; new check_w1_before_forms_browser; five people-card walks open Forms. Alone: before_forms 20/20, setup_checklist 54/54, s5_slice1 52/52, s5_leadcheck 21/21, s5_slice3 35/35, w115_slice2 55/55 (two steps failed under load ~10 and passed alone at ~7), start_setup_browser 39/39 (fake launcher), card 42/42; s5_live_approval not run (needs a live switch). Fixed on the way: the outline was hidden by the page's :focus-visible reset (now a ring). US$0.
 - 2026-10-30 · W1-setup-checklist · FIX → CHECK · alone, after the Lead decisions: setup_checklist 54/54, s1s2_fix 30/30, qa_1029 51/51, screen01_browser 116/116, s6_queue 28/28, screen01_api 135/135, card 42/42, programs_s2 90/90 (two checks moved: P-49/F1 to the person's Needs you; the fold-kept step waits for the redraw). 7 GB free, load 3–6. US$0.
 - 2026-10-30 · W1-setup-checklist · FIX · applied Lead note 2026-10-30 (new Lead): reviewer M3 as a temporary deviation from P-161 (2) — the people step opens Questionnaires until slice C (`STEP_TAB.people`, revert noted in plan.md); breaker m2 fixed — with a person, `counts.needs`, `?filter=needs` and its fall-back are that person's Needs you; a pass and a fail test each; breaker M3 to the backlog; tsc and graph --check clean. US$0.

@@ -59,6 +59,9 @@ const MARK = { done: "✓", next: "●", todo: "○", ai: "◐", waiting: "⧗" 
   step("C11.10 pass: the Official pages line says the step's words (read only until the forms lane's record)", (await pagesLine.innerText()).includes(s.steps[0].summary) && await pagesLine.getByRole("button").count() === 0, await pagesLine.innerText());
   const who = peopleLine.locator("[data-who-can-be]");
   step("P-147 §3 pass: the people card is folded to one line with Show and edit (moved, not rebuilt)", await who.getAttribute("data-folded") !== null && await who.getByRole("button", { name: "Show and edit" }).count() === 1);
+  const words = await who.locator("[data-people-words]").innerText();
+  step("P-161 (2) pass: the folded line says who in the board's plain words, e.g. \"Principal applicant (always)\"", /Principal applicant \(always\)/.test(words) && words.split(" · ").every((w) => /\((always|optional)\)$/.test(w.replace(/^· /, ""))), words);
+  step("P-161 (2) fail case: no exact counts on the folded line (\"exactly\", \"0 to 1\": they stay in Show and edit)", !/exactly|\d to \d/.test(words), words);
   await shot("forms-before-forms");
   await who.getByRole("button", { name: "Show and edit" }).click(); await settle();
   step("P-147 §3: Show and edit opens the full table there", await p.locator("[data-who-can-be] table").count() === 1 && await p.locator('[data-who-can-be] [data-person="principal"]').count() === 1);

@@ -38,6 +38,9 @@ export function QuestionnairesTab({ id, people, questionnaire, available }: { id
 
 type Line = PeopleLine & { label: string };
 const toLines = (v: PeopleView): Line[] => v.lines.map((l) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.applies, preview: l.preview, quote: l.quote ?? null, origin: l.origin }));
+/** The folded line's plain words (board P-161 (2), Lead C1 decision 4): "Principal applicant (always) · Dependent child,
+ *  0–5 (optional)"; exact counts and who files their own application stay in Show and edit. */
+const plainWords = (label: string, l: { min: number; max: number }) => `${label}${l.max > 1 ? `, ${l.min}–${l.max}` : ""} (${l.min > 0 ? "always" : "optional"})`;
 const howMany = (l: { min: number; max: number }) => (l.min === l.max ? (l.min === 1 ? "exactly 1" : `exactly ${l.min}`) : `${l.min} to ${l.max}`);
 
 export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
@@ -86,7 +89,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   const shown = editing ? lines : toLines(v);
   if (!unfolded && !editing && !filling) return (
     <section aria-labelledby="who-can-be" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface-raised px-5 py-3 shadow-sm" data-who-can-be data-folded>
-      <p className="min-w-0 text-sm"><span id="who-can-be" className="font-semibold">Who can be in this application</span> <span className="text-text-muted">· {shown.map((l) => `${role(l.role)?.label ?? l.label} ${howMany(l)}`).join(" · ")}{shown.filter((l) => l.applies).length > 1 ? " · each applicant files their own application" : ""}</span></p>
+      <p className="min-w-0 text-sm"><span id="who-can-be" className="font-semibold">Who can be in this application</span> <span className="text-text-muted" data-people-words>· {shown.map((l) => plainWords(role(l.role)?.label ?? l.label, l)).join(" · ")}</span></p>
       <Button size="sm" variant="ghost" onClick={() => setUnfolded(true)} aria-expanded={false}><ChevronDown /> {canAuthor ? "Show and edit" : "Show"}</Button>
     </section>
   );
