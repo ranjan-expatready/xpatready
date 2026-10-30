@@ -35,3 +35,12 @@ Given on a screenshot of Immigration programs on main, after board v3 of the set
 * **Finding one:** the existing filter bar (Find, status chips Not started · In progress · Live, Needs you) and the Cards / List switch (P-115) stay above the sections. List view becomes one line per combination: name, trail, "4 of 5", button.
 * **The one signal kept on the card:** a small "Needs you" mark, only when something waits for the person looking (a review or a confirmation). Without it, a reviewer must open 150 cards to find their work. Everything else stays on the combination's page.
 * **Speed:** the concept's 150-combination timing test stays (P-157: counts are derived and cached per combination).
+
+## The card, final must-haves only (Lead's recommendation, 30 Oct; for the founder's Go on board v4)
+Five things, nothing else:
+1. **Name** (header).
+2. **Trail**, one small grey line.
+3. **Progress**, one quiet line, "4 of 5 steps". It becomes "Live" once released, so no separate status badge, and a 2 px bar along the card's bottom edge fills step by step. No ring, no percentage.
+4. **"Needs you"**, a small mark that appears only when something waits for this person.
+5. **One button**: Start setup · Resume setup · Open. One colour app-wide.
+A live combination with unreleased changes still reads "Live". The draft shows on its own page, not on the card.
