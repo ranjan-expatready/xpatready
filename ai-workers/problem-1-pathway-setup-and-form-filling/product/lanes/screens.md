@@ -28,15 +28,15 @@ Agreed answers N-1, N-2, N-3, P-97, the 1b items not done and the items routed t
 **Learned, not written elsewhere** (heredoc and loop refusals by the Bash hook, catalogue cache and audit rows, shared ports and databases, run by-products, `prisma generate` after a branch switch, second-person names): `history/screens-lane-2026-10-30.md`.
 
 current_screen: W1-setup-checklist (3): the card v4 on Immigration programs (P-180)
-stage: FIX — PR #108 review minors (a)–(c) on `claude/screens-minors-108` (from main c1618069); affected suites alone; then the Lead opens the PR
-owner: Builder (reports go to the new Lead chat local_847d9394)
-next_action: finish the affected suites one at a time, push, Paste to Lead; then slice C ("Before forms", P-161 (2)) and revert STEP_TAB.people to Forms, on a fresh branch
+stage: FIX done — PR #108 review minors (a)–(c) on `claude/screens-minors-108`; affected suites alone green; the Lead opens the PR
+owner: Lead (local_847d9394)
+next_action: Lead: PR from `claude/screens-minors-108`, full CI; then this lane takes slice C ("Before forms", P-161 (2)) and reverts STEP_TAB.people to Forms, on a fresh branch from main
 then: 1c → 1b-2 → (4) linking combinations and copying a line (C1.3, C1.5)
 blocked_by: nothing
 updated: 2026-10-30
 
 ## Log (last 5 lines; older in `history/screens-lane-2026-10-30.md`)
-- 2026-10-30 · W1-setup-checklist · applied Lead note 2026-10-30 (card v4 merged as PR #108, main c1618069) · FIX of the three review minors on `claude/screens-minors-108`: where used per current form edition; Submit for review only when Forms and Questions and documents are done; Review link opens the combination's proposals group (the API reads `c` and `step`). A pass and a fail test each; tsc and graph --check clean. US$0.
+- 2026-10-30 · W1-setup-checklist · applied Lead note 2026-10-30 (card v4 merged as PR #108, main c1618069) · FIX of the three review minors on `claude/screens-minors-108`: where used per current form edition; Submit for review only when Forms and Questions and documents are done; Review link opens the combination's proposals group (the API reads `c` and `step`). A pass and a fail test each; tsc and graph --check clean. Alone at 03aec724: setup_checklist 58/58, s6_library_sources 39/39, s6_p149 73/73, forms_rounds 68/68, s6_queue 28/28, studio_browser 50/50, card 42/42 (load 7–13, 5 GB free). US$0.
 - 2026-10-30 · W1-setup-checklist · FIX → CHECK · alone, after the Lead decisions: setup_checklist 54/54, s1s2_fix 30/30, qa_1029 51/51, screen01_browser 116/116, s6_queue 28/28, screen01_api 135/135, card 42/42, programs_s2 90/90 (two checks moved: P-49/F1 to the person's Needs you; the fold-kept step waits for the redraw). 7 GB free, load 3–6. US$0.
 - 2026-10-30 · W1-setup-checklist · FIX · applied Lead note 2026-10-30 (new Lead): reviewer M3 as a temporary deviation from P-161 (2) — the people step opens Questionnaires until slice C (`STEP_TAB.people`, revert noted in plan.md); breaker m2 fixed — with a person, `counts.needs`, `?filter=needs` and its fall-back are that person's Needs you; a pass and a fail test each; breaker M3 to the backlog; tsc and graph --check clean. US$0.
 - 2026-10-30 · W1-setup-checklist · FIX, paused · reruns alone after 8a8856b7: setup_checklist 50/50, card 42/42, structure_browser 135/135, r3 26/26, programs_s2 89/90 (the one fail: Status change 262 ms against 200 ms, load ~15), s1s2_fix 26/30 (setup: Super visa's replay proposals had not landed, as on 07e06edc; three dependent steps plus QA-46 "Loading the change"), qa_1029 crashed in setup (API 30 s timeout). Stopped at 2.7 GB free disk; copies stopped, databases dropped, by-products restored. Lead changed: local_847d9394. US$0.
