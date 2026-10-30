@@ -4,13 +4,8 @@
 // spend so far plus that worst case stays within the ceiling (US$132, the experiment cap + 10%); past it, no Continue.
 import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, OVERRIDE_CEILING_USD, RUN_CAP_USD, WAVE1_CAP_USD } from "../../p2/policy.ts";
 
-export type CostLimit = "run" | "attempts" | "experiment" | "wave";
-export type CostOver = { limit: CostLimit; limit_usd: number | null; after_usd: number | null; words: string };
-export type CostCheck = {
-  ok: boolean; over: CostOver[]; can_continue: boolean; words: string;
-  expected_usd: number | null; worst_usd: number; spent_usd: number; cap_usd: number; ceiling_usd: number;
-  wave: { name: string; spent_usd: number; cap_usd: number };
-};
+import type { CostCheck, CostOver } from "../contracts/cost-check.ts";
+export type { CostCheck, CostLimit, CostOver } from "../contracts/cost-check.ts";
 export type CostCheckInput = {
   /** US$ committed in the shared ledger (settled at cost, unsettled at worst case). */
   spent: number;

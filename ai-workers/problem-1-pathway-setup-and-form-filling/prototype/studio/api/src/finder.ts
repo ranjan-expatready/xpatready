@@ -34,13 +34,14 @@ import { FinderBody, FinderLaunchBody, normaliseCode, type FinderMode } from "..
 import { canadaSource, CanadaError, type CanadaSource } from "./canada.ts";
 import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 import { aboutUsd, lastFinishedUsd } from "./finder-cost.ts";
-import { aiLive, Sources } from "./sources.ts";
+import { aiLive, overrideOf, Sources, type LaunchOverride } from "./sources.ts";
+import { costCheckNow, runKeyOf, useOverride } from "./cost-gate.ts";
 import { channelProposal, channelsFrom, channelsRead, recordedCopy, sampleFixtures, type ChannelProposal, type ChannelReading } from "./filing.ts";
 import { WHO } from "./studio.ts";
 import { linkFinderGuides } from "./guide-sources.ts";
 import { LIVE_RUN, newestFirst, StepRunner, worstRoundUsd, type AiStep, type RoundOut, type SavedRun } from "./rounds.ts";
 import { otherPages } from "../../engine/rounds.ts";
-import { MAX_ATTEMPTS } from "../../../p2/policy.ts";
+import { MAX_ATTEMPTS, OVERRIDE_TTL_MS } from "../../../p2/policy.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
@@ -162,6 +163,9 @@ export class Finder implements OnModuleInit {
     }
   }
 
+  /** P-179: the Continue each running finder run was started with, by run id. */
+  private overrides = new Map<string, LaunchOverride>();
+
   /** Test seam: an isolated test copy swaps the canada.ca source (never the demo). */
   useCanada(c: CanadaSource) { this.canada = c; }
 
@@ -196,7 +200,9 @@ export class Finder implements OnModuleInit {
     // Lead 29 Oct (CI on #94/#96): the plan's "about" is part of what the person saw, so a click on a button whose cost words
     // changed meanwhile is refused ("Look at the plan again"), never started with other words.
     const plan_sha256 = sha(JSON.stringify({ c: c.id, mode: b.mode, page: plan.page_url, only: plan.only, steps: steps.map((s) => s.kind + s.uses_ai), worst, about }));
-    return { ...plan, plan_sha256 };
+    // P-179: the one cost check (each round is held to the run cap on its own) and the run key a Continue names.
+    const cost_check = costCheckNow({ worst, expected, run: Math.max(0, ...steps.map((s) => s.worst_usd ?? 0)) });
+    return { ...plan, plan_sha256, cost_check, run_key: runKeyOf(FINDER_OPERATION, plan_sha256, cost_check) };
   }
 
   private expectedUsd(trail: string[]): number | null {
@@ -227,14 +233,17 @@ export class Finder implements OnModuleInit {
     if (b.mode === "live" && !aiLive()) throw problem(409, "AI now is switched off", START.liveOff);
     const plan = await this.plan(combinationId, { mode: b.mode, pageUrl: b.pageUrl, only: b.only });
     if (plan.plan_sha256 !== b.planSha256) throw problem(409, "Look at the plan again", "Something changed since you looked at the plan (the pages, the mode or the cost). Look at it again before starting.");
-    if (b.mode === "live" && plan.totals.worst_usd > plan.ledger.remaining_usd + 1e-9) throw problem(409, "Over the spending cap", `The worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the AI spending cap (US$${plan.ledger.remaining_usd.toFixed(2)}). Nothing was started; use saved AI answers or rules only.`);
+    // P-179: over a limit, a start needs a person's Continue (used here, once); without one it is refused as before.
+    const override = !plan.cost_check.ok && b.overrideId ? useOverride(b.overrideId, plan) : null;
+    if (!override && b.mode === "live" && plan.totals.worst_usd > plan.ledger.remaining_usd + 1e-9) throw problem(409, "Over the spending cap", `The worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the AI spending cap (US$${plan.ledger.remaining_usd.toFixed(2)}). Nothing was started; use saved AI answers or rules only.`);
+    if (!override && !plan.cost_check.ok) throw problem(409, "Over a cost limit", plan.cost_check.words);
     let batchId: string;
     try {
       batchId = await this.db.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`finder:${combinationId}`}))`;
         const active = await tx.aiBatch.findFirst({ where: { workspaceId, operation: FINDER_OPERATION, scopeLabel: { startsWith: `${combinationId}|` }, status: { in: ["QUEUED", "RUNNING"] } } });
         if (active) throw problem(409, "Already finding", "The form finder is already running for this combination: watch it, or stop it first.", { runId: active.id });
-        const batch = await tx.aiBatch.create({ data: { workspaceId, idempotencyKey: b.idempotencyKey, operation: FINDER_OPERATION, scopeKind: "combination", scopeLabel: `${combinationId}|${plan.combination.trail.join(" › ")}`, mode: b.mode.toUpperCase(), status: "QUEUED", planSha256: plan.plan_sha256, plan: json(plan), spendLimitUsd: Math.max(plan.totals.worst_usd, 0.01), worstCaseUsd: plan.totals.worst_usd, expectedUsd: plan.totals.expected_usd, startedBy: actor.id, message: "Finding forms" } });
+        const batch = await tx.aiBatch.create({ data: { workspaceId, idempotencyKey: b.idempotencyKey, operation: FINDER_OPERATION, scopeKind: "combination", scopeLabel: `${combinationId}|${plan.combination.trail.join(" › ")}`, mode: b.mode.toUpperCase(), status: "QUEUED", planSha256: plan.plan_sha256, plan: json(override ? { ...plan, override } : plan), spendLimitUsd: Math.max(plan.totals.worst_usd, 0.01), worstCaseUsd: plan.totals.worst_usd, expectedUsd: plan.totals.expected_usd, startedBy: actor.id, message: "Finding forms" } });
         await tx.draftingJob.createMany({ data: STEPS.map((s, i) => ({ workspaceId, combinationId, batchId: batch.id, kind: s.kind, mode: s.ai ? b.mode.toUpperCase() : "LOCAL", status: "WAITING", message: "Waits for the step before it", startedBy: actor.id, startedAt: new Date(Date.now() + i) })) });
         return batch.id;
       });
@@ -281,6 +290,9 @@ export class Finder implements OnModuleInit {
   async execute(batchId: string) {
     const b = await this.db.aiBatch.update({ where: { id: batchId }, data: { status: "RUNNING" } });
     const plan = b.plan as unknown as FinderPlan;
+    // P-179: the Continue this run was started with goes to each of its live rounds (the ledger checks it again).
+    const ov = overrideOf(b.plan);
+    if (ov) { this.overrides.set(batchId, ov); setTimeout(() => this.overrides.delete(batchId), OVERRIDE_TTL_MS + 60 * 60_000).unref(); }
     const mode: FinderMode = plan.mode;
     const combinationId: string = plan.combination.id;
     const trail = (plan.combination.trail as string[]).join(" › ");
@@ -499,7 +511,7 @@ export class Finder implements OnModuleInit {
   /** One AI round on the shared step runner: replay the newest saved real run of exactly this job (same pages, same
    *  prompt, same combination), or a guarded live call. */
   async aiRound<T>(kind: AiKind, isCheck: boolean, trail: string, combinationKey: string, inputs: { file: string; sha256: string }[], mode: FinderMode, wanted: () => Promise<boolean>, batchId?: string): Promise<RoundOut<T>> {
-    return this.rounds.round<T>(AI_SETTINGS[kind], isCheck, { trail, contextKey: combinationKey, inputs, mode, wanted, batchId });
+    return this.rounds.round<T>(AI_SETTINGS[kind], isCheck, { trail, contextKey: combinationKey, inputs, mode, wanted, batchId, override: batchId ? this.overrides.get(batchId) : undefined });
   }
 
   /** Q-L1: a hand upload is an official download when its checksum equals the PDF behind the canada.ca form page's link

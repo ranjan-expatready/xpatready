@@ -42,7 +42,9 @@ export type AiStep = {
 export type RoundOut<T> = { ok: true; output: T; costUsd: number; from: "live" | "replay"; runFile: string; /** an earlier prompt's label when replayed from it */ earlier?: string } | { ok: false; reason: string; costUsd: number; blocked?: boolean; cancelled?: boolean; details?: string };
 /** One round's context. `contextKey` is what its saved answer belongs to: a combination's key, or a form edition
  *  (`edition:<code>:<edition>`, engine/rounds.ts editionContextKey). `trail` is the plain place name the job carries. */
-export type RoundContext = { trail: string; contextKey: string; inputs: { file: string; sha256: string }[]; mode: "live" | "replay" | "rules"; wanted: () => Promise<boolean>; batchId?: string };
+export type RoundContext = { trail: string; contextKey: string; inputs: { file: string; sha256: string }[]; mode: "live" | "replay" | "rules"; wanted: () => Promise<boolean>; batchId?: string;
+  /** P-179: the person's Continue this run was started with; passed to each live call (the ledger checks it). */
+  override?: { id: string; run_key: string } };
 
 /** Lead 29 Oct (G4): may a form's run number `attempt` be retried? A live form has one budget of paid attempts across its
  *  runs (p2/policy.ts), each run counted at the most it could use; a stub run costs nothing and is never counted. */
@@ -118,14 +120,14 @@ export class StepRunner {
     mkdirSync(JOBS, { recursive: true });
     writeFileSync(join(JOBS, `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
     if (ctx.batchId) this.liveJobs.set(ctx.batchId, jobId);
-    try { return await this.launch<T>(step, jobId, ctx.wanted); } finally {
+    try { return await this.launch<T>(step, jobId, ctx.wanted, ctx.override); } finally {
       // Review major 7: the job file is only the launcher's input; the run record keeps it. Nothing is left in the source tree.
       if (ctx.batchId) this.liveJobs.delete(ctx.batchId);
       rmSync(join(JOBS, `${jobId}.json`), { force: true });
     }
   }
 
-  private async launch<T>(step: AiStep, jobId: string, wanted: () => Promise<boolean>): Promise<RoundOut<T>> {
+  private async launch<T>(step: AiStep, jobId: string, wanted: () => Promise<boolean>, override?: { id: string; run_key: string }): Promise<RoundOut<T>> {
     const nothing = step.words.nothingUsed;
     const last = (out: string) => { for (const l of out.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
     const stub = await this.launcher.launchOnce(jobId, "stub");
@@ -133,7 +135,7 @@ export class StepRunner {
     if (stub.stopped) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped during the free stub pass: nothing was sent." };
     // S3 early look (1): the launcher's own words (a stack, an error code, a server path) go to the server log only.
     if (stub.code !== 0) { console.warn(`${step.kind} ${jobId}: stub refused:`, String(sj?.refused ?? stub.err).trim().slice(-600) || `exit ${stub.code}`); return { ok: false, costUsd: 0, reason: "The AI step could not start on this computer, so nothing was sent and nothing was charged" }; }
-    const live = await this.launcher.launchOnce(jobId, "live", wanted);
+    const live = await this.launcher.launchOnce(jobId, "live", wanted, override);
     if (live.cancelled) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped before the AI call was sent: nothing was charged." };
     if (live.stopped) return { ok: false, cancelled: true, costUsd: 0, reason: "Stopped while the AI call ran: the call was ended. It stays counted at its reserved worst case (the provider may still bill it); nothing of it is used." };
     const lj = last(live.out);

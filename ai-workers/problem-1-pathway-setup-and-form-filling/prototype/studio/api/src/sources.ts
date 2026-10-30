@@ -53,6 +53,13 @@ const LAUNCHER = launcherFor(process.env.STUDIO_FAKE_LAUNCHER, VAR_ROOT);
  *  names it in its own usage line, and :4400 sets it only when the founder chooses. Without it the launch is refused
  *  before any process starts: US$0. Read at each call, so a test copy's environment is what counts. */
 export const aiLive = () => process.env.STUDIO_AI_LIVE === "approved";
+/** P-179: the Continue a run was started with (kept on its plan): the launcher passes it to the ledger, which admits a
+ *  reservation past a limit only with it (p2/launch.ts --override-id --run-key). */
+export type LaunchOverride = { id: string; run_key: string };
+export const overrideOf = (plan: unknown): LaunchOverride | undefined => { const o = (plan as { override?: LaunchOverride } | null)?.override; return o?.id && o.run_key ? { id: o.id, run_key: o.run_key } : undefined; };
+/** The guarded launcher's arguments; an override goes only to a live call. */
+export const launchArgs = (launcher: string, jobId: string, mode: "stub" | "live", approved: string[], ov?: LaunchOverride) =>
+  [launcher, "--job", jobId, `--${mode}`, ...approved, ...(mode === "live" && ov ? ["--override-id", ov.id, "--run-key", ov.run_key] : [])];
 const PROMPTS = join(PROTOTYPE, "p2", "prompts");
 const EDITION = /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
 /** P-80: where the drafting guard can check an approval made in the product (p2/policy.ts approvedSourcesDirOk): this
@@ -322,7 +329,9 @@ export class Sources {
   /** Runs one queued field-map step (api/src/ai.ts claims it first): read the form on this computer if needed, then
    *  replay a saved run, or the guarded stub pass and, for live, the paid call. */
   async runDraftStep(id: string) {
-    const j = await this.db.draftingJob.findUniqueOrThrow({ where: { id } });
+    const j = await this.db.draftingJob.findUniqueOrThrow({ where: { id }, include: { batch: { select: { plan: true } } } });
+    // P-179: a person's Continue covers the run it started (each step's first attempt), never a later retry.
+    const ov = j.mode === "LIVE" && j.attempt === 1 ? overrideOf(j.batch?.plan) : undefined;
     let a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: j.attachmentId! } });
     if (a.status === "RECOGNISED" || a.status === "READ_FAILED") {
       await this.db.draftingJob.update({ where: { id }, data: { message: "Reading the form's fields on this computer (no AI)" } });
@@ -333,16 +342,16 @@ export class Sources {
     if (j.mode === "REPLAY") return this.useSaved(id, a.id);
     const printed = await this.printedEdition(a);
     const split = await this.draftSplit(a, printed, true);
-    if (split) return this.runParts(id, a, split, j.mode === "LIVE" ? "live" : "stub");
+    if (split) return this.runParts(id, a, split, j.mode === "LIVE" ? "live" : "stub", ov);
     const { jobId } = this.ensureJobFile({ officialFile: this.draftName(a), inventoryFile: a.inventoryFile }, printed);
     await this.db.draftingJob.update({ where: { id }, data: { message: j.mode === "LIVE" ? "Stub pass of the guarded launch path, then the AI call" : "Stub pass of the guarded launch path (no network, no cost)", detail: { job_id: jobId, steps: [] } } });
-    await this.launch(id, a.id, jobId, j.mode === "LIVE" ? "live" : "stub");
+    await this.launch(id, a.id, jobId, j.mode === "LIVE" ? "live" : "stub", ov);
   }
 
   /** A4: the parts of one form's draft, one at a time (each: the guarded stub pass, then for live the paid call), with
    *  progress per part; then one merged answer (reused entries + the parts' answers, near-duplicate names flagged) that
    *  is compared with the library like any draft. A part that fails fails the step: nothing is applied. */
-  async runParts(id: string, a: { id: string; workspaceId: string }, split: NonNullable<Awaited<ReturnType<Sources["draftSplit"]>>>, mode: "stub" | "live") {
+  async runParts(id: string, a: { id: string; workspaceId: string }, split: NonNullable<Awaited<ReturnType<Sources["draftSplit"]>>>, mode: "stub" | "live", ov?: LaunchOverride) {
     const { plan, parts } = split;
     const state = parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, job_id: p.jobId, status: "queued" as string, run_file: null as string | null, cost_usd: 0, error: null as string | null, saved: false, limit: false }));
     const reusedWords = plan.reused.length ? `${plan.reused.length} of ${plan.total} form fields reused from ${split.reusedFrom.join(", ")} without AI; ` : "";
@@ -368,7 +377,7 @@ export class Sources {
       const p = parts.find((x) => x.index === s.index)!;
       if (p.saved_run) { s.status = "done"; s.saved = true; s.run_file = `prototype/p2/runs/${p.saved_run}`; return; } // its saved answer, US$0
       if (p.repeats_failed_run) { s.status = "failed"; s.error = `a new paid call would repeat run ${p.repeats_failed_run}, which asked exactly this and whose answer failed our own check; a person maps this part, or the rule is reviewed`; return; }
-      const live = await this.launchOnce(s.job_id, "live", wanted), lj = lastJson(live.out);
+      const live = await this.launchOnce(s.job_id, "live", wanted, ov), lj = lastJson(live.out);
       if (live.cancelled) { s.status = "not started"; s.error = "cancelled before its AI call (after its stub pass); nothing was sent"; return; }
       if (!lj?.run_file) { s.status = "failed"; s.error = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 300) || "the launcher stopped without a reason"; s.limit = /usage limit/i.test(s.error); return; }
       const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
@@ -432,14 +441,14 @@ export class Sources {
   /** One run of the guarded launcher (p2/launch.ts) for a job file: the only way the Studio starts a drafting call. One
    *  launch at a time in this server, and a launch the experiment ledger refused because another runner (another copy)
    *  holds it is started again after a pause: refused before any call, so nothing was spent (break B3). */
-  async launchOnce(jobId: string, mode: "stub" | "live", wanted?: () => Promise<boolean>): Promise<{ code: number; out: string; err: string; cancelled?: boolean; stopped?: boolean }> {
+  async launchOnce(jobId: string, mode: "stub" | "live", wanted?: () => Promise<boolean>, ov?: LaunchOverride): Promise<{ code: number; out: string; err: string; cancelled?: boolean; stopped?: boolean }> {
     if (mode === "live" && !aiLive()) return { code: 3, out: JSON.stringify({ refused: START.liveOff, live_off: true }) + "\n", err: "" };
     const turn = this.launching.then(async () => {
       for (let n = 0; ; n++) {
         // A cancel is honoured up to the moment a paid call starts (QA-31 break M1): a live launch can wait its turn behind
         // other launches, or for the ledger, for minutes; the step is asked again right before each attempt.
         if (mode === "live" && wanted && !(await wanted())) return { code: 0, out: "", err: "", cancelled: true };
-        const r = await this.launchProcess(jobId, mode);
+        const r = await this.launchProcess(jobId, mode, mode === "live" ? ov : undefined);
         if (n >= 60 || !/ledger locked/i.test(r.out + r.err)) return r;
         await new Promise((res) => setTimeout(res, 2_000));
       }
@@ -448,12 +457,12 @@ export class Sources {
     return turn;
   }
 
-  private launchProcess(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string; stopped?: boolean }> {
+  private launchProcess(jobId: string, mode: "stub" | "live", ov?: LaunchOverride): Promise<{ code: number; out: string; err: string; stopped?: boolean }> {
     return new Promise((res) => {
       // P-80: a form approved in the product is admitted only from this copy's approved folder, named to the launcher.
       const approved = /^studio-fieldmap-approved-[0-9a-f]{12}/.test(jobId) ? ["--approved-dir", APPROVED_DIR()] : [];
       // S4 (M7, P-110): the launcher runs in its own process group, so Stop ends it and the drafting process it started.
-      const p = spawn(NODE, [LAUNCHER, "--job", jobId, `--${mode}`, ...approved], { cwd: ROOT, detached: true, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
+      const p = spawn(NODE, launchArgs(LAUNCHER, jobId, mode, approved, ov), { cwd: ROOT, detached: true, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
       this.children.set(jobId, p);
       const pidFile = join(LAUNCHES(), `${jobId}.pid`);
       try { mkdirSync(LAUNCHES(), { recursive: true }); writeFileSync(pidFile, String(p.pid ?? "")); } catch { /* the in-memory Stop still works */ }
@@ -479,7 +488,7 @@ export class Sources {
     return hit.map(([id]) => id);
   }
 
-  async launch(id: string, attachmentId: string, jobId: string, mode: "live" | "stub") {
+  async launch(id: string, attachmentId: string, jobId: string, mode: "live" | "stub", ov?: LaunchOverride) {
     const steps: any[] = [];
     const lastJson = (s: string) => { for (const l of s.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
     try {
@@ -491,7 +500,7 @@ export class Sources {
       if (mode === "stub") { await this.db.draftingJob.update({ where: { id }, data: { status: "COMPLETED", message: "Stub pass completed: the guarded path works. A stub has no AI content, so there is nothing to compare.", detail: { job_id: jobId, steps }, finishedAt: new Date(), costUsd: 0 } }); return; }
       const took = this.savedRuns(jobId).find((r) => r.duration_ms)?.duration_ms;
       await this.db.draftingJob.update({ where: { id }, data: { message: `Calling the AI (guarded path; Claude Opus 5.5; up to US$5). ${took ? `The last real run of this form took about ${Math.max(1, Math.round(took / 60_000))} minutes.` : "A large form can take several minutes."} The whole form is drafted in one call, so there is no part-by-part progress yet.`, detail: { job_id: jobId, steps } } });
-      const live = await this.launchOnce(jobId, "live", () => this.stillWanted(id));
+      const live = await this.launchOnce(jobId, "live", () => this.stillWanted(id), ov);
       if (live.cancelled) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", costUsd: 0, finishedAt: new Date(), message: "Cancelled before it started its AI call (after the stub pass): nothing was sent. US$0.", detail: { job_id: jobId, steps } } }); return; }
       if (live.stopped) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", finishedAt: new Date(), message: "Stopped while the AI call ran: the call was ended (M7). It stays counted at its reserved worst case; nothing of it is applied.", detail: { job_id: jobId, steps } } }); return; }
       const lj = lastJson(live.out);

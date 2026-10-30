@@ -28,6 +28,8 @@ export const FinderBody = z.object({
 export const FinderLaunchBody = FinderBody.extend({
   planSha256: z.string().regex(/^[0-9a-f]{64}$/, "Look at the plan first: its fingerprint is missing."),
   idempotencyKey: z.string().trim().min(8).max(120),
+  /** P-179: a person's Continue past a cost limit (POST /ai/overrides), used once by this launch. */
+  overrideId: z.string().trim().min(1).max(80).optional(),
 });
 
 /** POST /combinations/:id/forms: attach a library form by hand. */

@@ -97,6 +97,11 @@ export class SpendLedger {
     });
   }
 
+  /** P-179: a recorded override, read only (the API compares it with the plan before using it), or null. */
+  override(id: string): Extract<Entry, { type: "override" }> | null {
+    return this.entries().find((e): e is Extract<Entry, { type: "override" }> => e.type === "override" && e.id === id) ?? null;
+  }
+
   /** P-179: an override starts its own run once, within its time. Records the use; refuses an unknown, another run's, a used
    *  or an expired one. */
   useOverride(id: string, runKey: string): Extract<Entry, { type: "override" }> {
