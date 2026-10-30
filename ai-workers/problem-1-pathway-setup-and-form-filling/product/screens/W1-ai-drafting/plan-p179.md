@@ -37,3 +37,11 @@ After the `TSX=` line (21), one line, so test entries and test overrides never r
 export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 (10), P-179: a scratch ledger per run
 ```
 `isolated.sh` keeps a `P2_LEDGER_DIR` that is already set (QA-90 point 4), so every copy the suites start writes there. The run's summary names the folder.
+
+## 6. Build notes (30 Oct, forms lane)
+* **Where the shared ledger is found:** in `p2/policy.ts` itself, not in the start scripts (§2 point 4 said scripts): `P2_LEDGER_DIR` when set, else the main copy's `.tools/p2-ledger` when the main copy has `.tools`, else `prototype/p2/ledger`. Every process (the demo, lane copies, tools, checks) then resolves the same folder whichever script started it; `restart-api.sh` alone would otherwise have missed it. The isolated children cannot look (no read of `.git`), so `launch.ts` and the P5 reader always pass the folder.
+* **`reserve` is atomic across processes** (a short `spend.reserve.lock`, 10 s wait, stale after 30 s). The old read-then-append let two copies together pass the cap (the new fail test fails on the old code). The one-runner `withLock` is unchanged; `launchOnce` already waits for it.
+* **Seed:** an identical line is kept once; a first try that de-duplicated by entry type and id dropped the Lead's 21 Oct corrections (a second `settle` with the same id) and overstated spend by US$7.24; the check now guards that.
+* **The override lives in the ledger, checked twice:** the API (next) checks the plan and uses the override once; `reserve` checks it again inside the drafting process (used, same run key, names each limit passed, within the accepted worst case, within US$132 at reserve time), so spend that arrives after the click still stops at the ceiling.
+* **Not yet built:** the API (`cost_check` on plan replies, `POST /ai/overrides`, launch with an override, attempts Q2), `CostWarning` and its wiring, the hand-over note. See the lane Handover.
+
