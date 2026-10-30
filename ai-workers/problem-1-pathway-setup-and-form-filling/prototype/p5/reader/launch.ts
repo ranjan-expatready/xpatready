@@ -14,7 +14,7 @@ import { loadKey } from "../../p2/guard.ts";
 import { buildDigest } from "../../p2/screen.ts";
 import { admitDoc, PolicyRefusal, readerCanary, readerNodeArgs, screenText } from "./guard.ts";
 import { hasReaderStubPass, readerStubPassFile } from "./pathcode.ts";
-import { DOC_TYPES, LABEL, READ_ENTRY, READER_DIGEST_FILE, READER_JOBS, READER_PROMPTS, READER_RUNS, READER_SCREENING_DIR } from "./policy.ts";
+import { DOC_TYPES, LABEL, LEDGER_DIR, READ_ENTRY, READER_DIGEST_FILE, READER_JOBS, READER_PROMPTS, READER_RUNS, READER_SCREENING_DIR } from "./policy.ts";
 import type { ReaderJob } from "./request.ts";
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
@@ -37,6 +37,7 @@ export function launchReader(jobId: string, mode: "stub" | "live"): { exit: numb
   writeFileSync(READER_DIGEST_FILE, dBytes);
   const env: Record<string, string> = {};
   for (const k of ["PATH", "HOME", "TMPDIR", "LANG"]) if (process.env[k]) env[k] = process.env[k]!;
+  env.P2_LEDGER_DIR = LEDGER_DIR; // QA-90: the reading process reserves in this same shared ledger (it cannot look for it)
   const started = new Date().toISOString();
   const child = spawnSync(process.execPath, [...readerNodeArgs(), READ_ENTRY, "--job", jobId, "--run-id", runId, "--caller", mode, "--template-sha", sha(template), "--schema-sha", sha(schema)],
     { encoding: "utf8", env, timeout: job.settings.timeout_ms * job.settings.max_attempts * job.trials.length + 60_000, maxBuffer: 64 * 1024 * 1024 });

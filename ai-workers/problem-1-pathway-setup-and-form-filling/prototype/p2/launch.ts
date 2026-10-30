@@ -93,6 +93,7 @@ export function launch(jobId: string, mode: "stub" | "live", opts: { approvedDir
   const startedAt = new Date().toISOString();
   const env: Record<string, string> = {};
   for (const k of ["PATH", "HOME", "TMPDIR", "LANG"]) if (process.env[k]) env[k] = process.env[k]!; // no ANTHROPIC_* passes through
+  env.P2_LEDGER_DIR = LEDGER_DIR; // QA-90: the drafting process reserves in this same ledger (it cannot look for the shared one)
   const timeout = Number(job.settings.timeout_ms ?? 600_000) * Number(job.settings.max_attempts ?? 1) + 60_000;
   const child = spawnSync(process.execPath, [...isolatedNodeArgs(LEDGER_DIR, approvedDir), DRAFT_ENTRY, "--job", jobId, "--run-id", runId, "--caller", mode,
     "--template-sha", sha(template), "--schema-sha", sha(schema), ...(approvedDir ? ["--approved-dir", approvedDir] : [])], { encoding: "utf8", env, timeout, maxBuffer: 64 * 1024 * 1024 }); // (3)

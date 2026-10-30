@@ -9,7 +9,7 @@ import { basename, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { normalize, type LibraryField } from "../../engine/normalize.ts";
-import { EXPERIMENT_CAP_USD, LABEL, MAX_ATTEMPTS, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
+import { EXPERIMENT_CAP_USD, LABEL, LEDGER_DIR, MAX_ATTEMPTS, PARTS_DIR, RUN_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../../p2/policy.ts";
 import { canonical } from "../../../contracts/rules.ts";
 import { costUsd, SpendLedger } from "../../../p2/ledger.ts";
 import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
@@ -216,10 +216,10 @@ export class Sources {
 
   ledger() {
     const res = new Map<string, number>();
-    for (const l of readFileSync(join(PROTOTYPE, "p2", "ledger", "spend.jsonl"), "utf8").split("\n").filter(Boolean)) { const r = JSON.parse(l); if (r.type === "reserve") res.set(r.id, r.worst_usd); else if (r.type === "settle") res.set(r.id, r.actual_usd); }
+    for (const l of (existsSync(join(LEDGER_DIR, "spend.jsonl")) ? readFileSync(join(LEDGER_DIR, "spend.jsonl"), "utf8") : "").split("\n").filter(Boolean)) { const r = JSON.parse(l); if (r.type === "reserve") res.set(r.id, r.worst_usd); else if (r.type === "settle") res.set(r.id, r.actual_usd); }
     const committed = [...res.values()].reduce((a, b) => a + b, 0);
     // S4 (m4, P-110): Wave 1's own cap (US$60) inside the experiment cap; plans show it and refuse above it.
-    const wave = new SpendLedger(join(PROTOTYPE, "p2", "ledger")).committedSince(WAVE1_START);
+    const wave = new SpendLedger(LEDGER_DIR).committedSince(WAVE1_START);
     const remaining = Math.min(EXPERIMENT_CAP_USD - committed, WAVE1_CAP_USD - wave);
     return { committed_usd: Math.round(committed * 100) / 100, cap_usd: EXPERIMENT_CAP_USD, remaining_usd: Math.round(remaining * 100) / 100, per_run_cap_usd: RUN_CAP_USD,
       wave: { name: "Wave 1", cap_usd: WAVE1_CAP_USD, spent_usd: Math.round(wave * 100) / 100, remaining_usd: Math.round((WAVE1_CAP_USD - wave) * 100) / 100, since: WAVE1_START.slice(0, 10) } };

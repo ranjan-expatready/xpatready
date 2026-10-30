@@ -267,6 +267,20 @@ t("clean control: draft.ts started directly on clean text with a current ticket 
 writeFileSync(FAM, famOriginal);
 t("restoring the family values closes the gate again until a new stub pass (sources must match exactly)", gateNow("c1-fieldmap-imm5707").ok === false);
 
+// 10. QA-90 (8): with P2_LEDGER_DIR set, the launcher and the drafting process use that one shared folder, never the copy's own.
+const shared = join(root, "shared-ledger"), copyBefore = ledgerLines().length;
+const launchShared = (dir: string) => {
+  const r = spawnSync(process.execPath, [join(P2, "launch.ts"), "--job", "c1-fieldmap-imm5707", "--stub"], { encoding: "utf8", env: { ...env, P2_LEDGER_DIR: dir } });
+  try { return { code: r.status, ...JSON.parse(r.stdout.trim().split("\n").pop() ?? "{}") }; } catch { return { code: r.status, refused: r.stderr.slice(0, 300) }; }
+};
+const sh = launchShared(shared);
+const shEv = sh.run_file ? JSON.parse(readFileSync(sh.run_file, "utf8")).launch_evidence ?? {} : {};
+const shLines = existsSync(join(shared, "spend.jsonl")) ? readFileSync(join(shared, "spend.jsonl"), "utf8").split("\n").filter(Boolean) : [];
+t("C11.8 QA-90 pass: with P2_LEDGER_DIR set, the drafting process reserves and settles in the shared ledger (2 lines there, its used ticket too)",
+  sh.code === 0 && shEv.ledger?.file === join(shared, "spend.jsonl") && shLines.length === 2 && existsSync(join(shared, "used-launch-tickets")) && readdirSync(join(shared, "used-launch-tickets")).length === 1);
+t("C11.8 QA-90 fail: ... and writes nothing to the copy's own ledger", ledgerLines().length === copyBefore);
+t("C11.8 QA-90 fail: a relative P2_LEDGER_DIR is refused before any process starts", launchShared("shared-ledger").code !== 0 && ledgerLines().length === copyBefore && shLines.length === 2);
+
 for (const [n, p] of results) console.log(`${p ? "PASS" : "FAIL"}  ${n}`);
 const failed = results.filter(([, p]) => !p).length;
 if (failed) console.log(JSON.stringify({ wide: wide.stdout + wide.stderr.slice(0, 300), badSha: badSha.stdout, good: good.stdout.slice(0, 300) + good.stderr.slice(0, 300), other: other.stdout + other.stderr.slice(0, 300) }));

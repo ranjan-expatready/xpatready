@@ -11,6 +11,7 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSyn
 import { join } from "node:path";
 import { importConfiguration, sampleFamilyFacts } from "../../engine/import.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
+import { LEDGER_DIR } from "../../../p2/policy.ts";
 import { Ai } from "./ai.ts";
 import { ACTORS, Audit, Db, fail, need, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
 import { Programs } from "./programs.ts";
@@ -156,7 +157,7 @@ export class Demo {
     const fp = (label: string, paths: string[]) => { const h = createHash("sha256"); let n = 0; for (const p of paths.sort()) { if (!existsSync(p)) continue; h.update(p.replace(ROOT, "")); h.update(readFileSync(p)); n++; } return { label, files: n, sha256: h.digest("hex") }; };
     const under = (d: string, f: (x: string) => boolean = () => true) => (existsSync(d) ? this.walk(d).filter(f) : []);
     return [
-      fp("Spend ledger and launch tickets (append-only)", under(join(PROTOTYPE, "p2", "ledger"))),
+      fp("Spend ledger and launch tickets (append-only)", under(LEDGER_DIR)),
       fp("AI run records (P2 drafting and P5 reader)", [...under(join(PROTOTYPE, "p2", "runs")), ...under(join(PROTOTYPE, "p5", "reader", "runs"))]),
       fp("AI job definitions and form inventories (inputs of the saved runs)", [...under(join(PROTOTYPE, "p2", "jobs")), ...under(join(PROTOTYPE, "p1", "inventory"))]),
       fp("Official source originals and manifest", under(join(SOLUTION, "official-sources"))),

@@ -1,7 +1,7 @@
 // Aggregate spend ledger for the P2 experiment. Every attempt (first try or retry) reserves its worst-case
 // cost BEFORE the call; the reservation counts at worst case until settled with the provider's reported
 // usage. A crash or an error without usage leaves the worst case counted. Append-only JSON lines.
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, unlinkSync, writeSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { EXPERIMENT_CAP_USD, PRICE_PER_MTOK, WAVE1_CAP_USD, WAVE1_START } from "./policy.ts";
 
@@ -25,11 +25,13 @@ export class SpendLedger {
   readonly file: string;
   readonly capUsd: number;
   private lockFile: string;
+  private reserveLockFile: string;
   constructor(dir: string, capUsd: number = EXPERIMENT_CAP_USD) {
     this.capUsd = capUsd;
     mkdirSync(dir, { recursive: true });
     this.file = join(dir, "spend.jsonl");
     this.lockFile = join(dir, "spend.lock");
+    this.reserveLockFile = join(dir, "spend.reserve.lock");
   }
 
   private entries(): Entry[] {
@@ -67,6 +69,12 @@ export class SpendLedger {
   reserve(runId: string, attempt: number, worstUsd: number, runCapUsd: number, caller?: string): string {
     // S4 break minor: a worst case that is not a number, or below zero, would let any call through the caps.
     if (!Number.isFinite(worstUsd) || worstUsd < 0) throw new BudgetExceeded(`worst case must be a number of US$ at or above 0 (got ${worstUsd})`);
+    // QA-90: every copy shares one ledger, so two processes may reserve at the same moment; the read of what is committed
+    // and the append are one step under a short lock, so the caps count both.
+    return this.atomically(() => this.reserveNow(runId, attempt, worstUsd, runCapUsd, caller));
+  }
+
+  private reserveNow(runId: string, attempt: number, worstUsd: number, runCapUsd: number, caller?: string): string {
     const total = this.committed(), run = this.committed(runId);
     if (total + worstUsd > this.capUsd) throw new BudgetExceeded(`experiment cap US$${this.capUsd}: committed ${total.toFixed(4)} + worst case ${worstUsd.toFixed(4)}`);
     if (run + worstUsd > runCapUsd) throw new BudgetExceeded(`run cap US$${runCapUsd}: committed ${run.toFixed(4)} + worst case ${worstUsd.toFixed(4)}`);
@@ -75,6 +83,20 @@ export class SpendLedger {
     const id = `${runId}#${attempt}#${Date.now()}`;
     this.append({ type: "reserve", id, run_id: runId, attempt, worst_usd: worstUsd, ...(caller ? { caller } : {}), at: new Date().toISOString() });
     return id;
+  }
+
+  /** QA-90: a short exclusive section (milliseconds) around a read-then-append. Waits up to 10 s for another process; a
+   *  lock older than 30 s is left over from a crash and is removed. */
+  private atomically<T>(fn: () => T): T {
+    const until = Date.now() + 10_000;
+    for (;;) {
+      try { closeSync(openSync(this.reserveLockFile, "wx")); break; } catch {
+        try { if (Date.now() - statSync(this.reserveLockFile).mtimeMs > 30_000) { unlinkSync(this.reserveLockFile); continue; } } catch { continue; }
+        if (Date.now() > until) throw new BudgetExceeded(`ledger busy: another process held ${this.reserveLockFile} for 10 s`);
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5);
+      }
+    }
+    try { return fn(); } finally { try { unlinkSync(this.reserveLockFile); } catch { /* already gone */ } }
   }
 
   settle(id: string, actualUsd: number, outcome: string) {

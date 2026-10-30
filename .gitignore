@@ -28,6 +28,9 @@ ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/graph.json
 *.log
 ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p1/runs/
 ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/runs/*-stub-*.json
+# QA-90: the spend ledger is one shared folder per machine (P2_LEDGER_DIR); a copy's own folder is no longer tracked
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/used-launch-tickets/
 ai-workers/problem-1-pathway-setup-and-form-filling/inputs/meeting-*/
 .claude/lane
 .claude/worktrees/
