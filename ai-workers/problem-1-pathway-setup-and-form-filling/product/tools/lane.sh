@@ -136,9 +136,10 @@ case "$1" in
   leads)
     git -C "$HERE" fetch -q origin 2>/dev/null; me=$(git -C "$HERE" branch --show-current)
     git -C "$HERE" log origin/main --since=30.minutes --format='main %h %cr %s' | grep ' lead:'
-    # Lead branches too, this copy's own included: at the start of a chat any recent Lead commit there is another chat's.
+    # Lead branches too, this copy's own included: at the start of a chat any unmerged Lead commit of the last day is
+    # another chat's (24 h, not 30 min: a paused Lead still counts; older unmerged ones are parked branches).
     for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/lead/); do
-      git -C "$HERE" log "origin/main..$b" --since=30.minutes --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
+      git -C "$HERE" log "origin/main..$b" --since=24.hours --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
     done
     for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/); do
       [ "$b" = "origin/$me" ] || git -C "$HERE" log "origin/main..$b" --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
