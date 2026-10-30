@@ -34,12 +34,13 @@ export function costCheck(i: CostCheckInput): CostCheck {
   if (forms.length) over.push({ limit: "attempts", limit_usd: null, after_usd: null, words: `${forms.join(", ")} ${forms.length === 1 ? "has" : "have"} used ${forms.length === 1 ? "its" : "their"} ${MAX_PAID_ATTEMPTS_PER_FORM} paid AI attempts (${MAX_ATTEMPTS} per run). Continue allows exactly one more run of ${forms.length === 1 ? "it" : "each"}.` });
   // A start that can spend nothing (rules only, saved answers, a stub pass) passes no money limit, even with spend already
   // past a cap after a Continue: it never reserves a paid call (found by check_cost_override, 30 Oct).
-  if (i.worst > 0 && i.spent + i.worst > cap) over.push({ limit: "experiment", limit_usd: cap, after_usd: i.spent + i.worst, words: `Spend so far ${usd(i.spent)} of ${usd(cap)}. This run could reach ${usd(i.spent + i.worst)}, past the AI spending cap.` });
+  // Review m5: the limit's words say where this run could take spend; spend so far is said once, beside the cap.
+  if (i.worst > 0 && i.spent + i.worst > cap) over.push({ limit: "experiment", limit_usd: cap, after_usd: i.spent + i.worst, words: `This run could reach ${usd(i.spent + i.worst)}, past the ${usd(cap)} AI spending cap.` });
   if (i.worst > 0 && i.wave.spent + i.worst > waveCap) over.push({ limit: "wave", limit_usd: waveCap, after_usd: i.wave.spent + i.worst, words: `${waveName} has spent ${usd(i.wave.spent)} of its ${usd(waveCap)}. This run could take it to ${usd(i.wave.spent + i.worst)}.` });
   const pastCeiling = i.spent + i.worst > ceiling;
   const can_continue = over.length > 0 && !pastCeiling;
-  const words = !over.length ? `Fits: spend so far ${usd(i.spent)} of ${usd(cap)}; this run could cost up to ${usd(i.worst)}.`
-    : pastCeiling ? `Spend so far ${usd(i.spent)} of ${usd(cap)}. This run could reach ${usd(i.spent + i.worst)}, past the ${usd(ceiling)} the founder allows on a click. The founder must raise the cap.`
+  const words = !over.length ? `Fits: spent so far ${usd(i.spent)} of ${usd(cap)}; this run could cost up to ${usd(i.worst)}.`
+    : pastCeiling ? `This run could reach ${usd(i.spent + i.worst)}, past the ${usd(ceiling)} the founder allows on a click. The founder must raise the cap.`
     : `Over ${over.length === 1 ? "a limit" : `${over.length} limits`}: ${over.map((o) => o.words).join(" ")} Continue records your name and this run's worst case (${usd(i.worst)}); Cancel starts nothing.`;
   return { ok: !over.length, over, can_continue, words, expected_usd: expected, worst_usd: i.worst, spent_usd: i.spent, cap_usd: cap, ceiling_usd: ceiling, wave: { name: waveName, spent_usd: i.wave.spent, cap_usd: waveCap } };
 }

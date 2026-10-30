@@ -111,13 +111,60 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   const committed = lines().filter((l) => l.type === "reserve").reduce((a, l) => a + l.worst_usd, 0);
   seed(120 - committed - worst / 2);
   p = await planNow();
-  ok("C11.8 P-179 pass: past the experiment cap the plan says so with spend so far against the cap, Continue offered", !p.cost_check.ok && p.cost_check.over.map((o: any) => o.limit).join() === "experiment" && p.cost_check.can_continue && /Spend so far US\$\d+\.\d\d of US\$120\.00/.test(p.cost_check.words), p.cost_check); // eslint-disable-line @typescript-eslint/no-explicit-any
+  ok("C11.8 P-179 pass: past the experiment cap the plan says so, where this run could take spend against the cap, Continue offered", !p.cost_check.ok && p.cost_check.over.map((o: any) => o.limit).join() === "experiment" && p.cost_check.can_continue && /could reach US\$\d+\.\d\d, past the US\$120\.00 AI spending cap/.test(p.cost_check.words), p.cost_check); // eslint-disable-line @typescript-eslint/no-explicit-any
   r = await draft();
   ok("C11.8 P-179 fail: without a Continue the start over the cap is refused as before (nothing queued)", r.status === 400 && /experiment cap/.test(msg(r)), { status: r.status, m: msg(r) });
   r = await cont(p);
   const o3 = r.body?.override_id as string;
   r = await draft(o3);
   ok("C11.8 P-179 pass: with the author's Continue the start over the cap is queued, for this run's worst case only", r.status === 201 && lines().find((l) => l.type === "override" && l.id === o3)?.worst_usd === worst, { status: r.status, m: msg(r) });
+  // Review m6: the Continue's audit line says what was over and why, not the dialog's instructions.
+  const auditO3 = sql(`select summary from audit_event where action='ai_override' and entity_key='${o3}'`);
+  ok("C11.8 review m6: the ai_override audit line names the limit and why (the cap's words), not 'Continue records…; Cancel starts nothing'", /AI spending cap/.test(auditO3) && !/Cancel starts nothing|Continue records your name/.test(auditO3), auditO3);
+  await cancelOpen();
+
+  // ──────────────────────────────────────────── review m1, break m1/m2/m5/m7: a Continue is used only by the run it starts
+  const used = (id: string) => lines().filter((l) => l.type === "override_use" && l.id === id).length;
+  const expire = (id: string) => writeFileSync(LEDGER, readFileSync(LEDGER, "utf8").replace(new RegExp(`("id":"${id}"[^\\n]*"expires_at":")[^"]+`), "$12026-10-01T00:00:00.000Z"));
+  const draftKey = (key: string, overrideId?: string) => call("POST", `/attachments/${src}/draft`, { mode: "live", idempotencyKey: key, ...(overrideId ? { overrideId } : {}) });
+  let pm = await planNow();
+  const oa = (await cont(pm)).body?.override_id as string, ob = (await cont(pm)).body?.override_id as string;
+  const [ra, rb] = await Promise.all([draftKey(`p179-m1a-${Date.now()}`, oa), draftKey(`p179-m1b-${Date.now()}`, ob)]);
+  const won = ra.status === 201 ? oa : ob, lost = ra.status === 201 ? ob : oa;
+  ok("C11.8 review m1 fail: two starts of one form at once, each with its own Continue: one is queued, the other refused (409)", [ra.status, rb.status].sort().join() === "201,409", { a: ra.status, b: rb.status, m: msg(ra) + msg(rb) });
+  ok("C11.8 review m1 pass: only the started run's Continue is used; the refused one stays unused (before: both were used)", used(won) === 1 && used(lost) === 0, { won: used(won), lost: used(lost) });
+  await cancelOpen();
+  pm = await planNow();
+  r = await draft(lost);
+  ok("C11.8 review m1 pass: that unused Continue then starts its run", r.status === 201 && used(lost) === 1, { status: r.status, m: msg(r) });
+  await cancelOpen();
+  pm = await planNow();
+  const oc = (await cont(pm)).body?.override_id as string, sameKey = `p179-m2-${Date.now()}`;
+  const [rc1, rc2] = await Promise.all([draftKey(sameKey, oc), draftKey(sameKey, oc)]);
+  ok("C11.8 break m2 pass: a double click (the same launch key and Continue at once) answers the same run twice, the Continue used once", rc1.status === 201 && rc2.status === 201 && rc1.body?.id === rc2.body?.id && used(oc) === 1, { s: [rc1.status, rc2.status], ids: [rc1.body?.id, rc2.body?.id], m: msg(rc2) });
+  r = await draftKey(sameKey, oc);
+  ok("C11.8 break m2 pass: a later retry with that key gets the same run (before: 409 'already queued or running')", r.status === 201 && r.body?.id === rc1.body?.id, { status: r.status, m: msg(r) });
+  r = await draftKey(`p179-m2-other-${Date.now()}`, oc);
+  ok("C11.8 break m2 fail: the same Continue with another launch key is refused (409 already used)", r.status === 409 && /already (used|queued or running)/.test(msg(r)), { status: r.status, m: msg(r) });
+  await cancelOpen();
+  pm = await planNow();
+  // Break m7: a Continue recorded by another person (written into the scratch ledger: one author persona exists).
+  const oz = `override-${Date.now()}-zz`;
+  appendFileSync(LEDGER, JSON.stringify({ type: "override", id: oz, run_key: pm.run_key, limits: pm.cost_check.over.map((o: any) => o.limit), worst_usd: pm.cost_check.worst_usd, by: "user-Z", at: new Date().toISOString(), expires_at: new Date(Date.now() + 600_000).toISOString() }) + "\n"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  r = await draft(oz);
+  ok("C11.8 break m7 fail: another person's Continue does not start this person's run (409), and stays unused", r.status === 409 && /another person/.test(msg(r)) && used(oz) === 0, { status: r.status, m: msg(r) });
+  expire(oz);
+  r = await cont(pm, { surprise: "x".repeat(1000) });
+  ok("C11.8 break m5 fail: a Continue with a field the server does not know is refused in words (400), nothing recorded", r.status === 400 && /field the server does not know/.test(msg(r)), { status: r.status, m: msg(r) });
+  r = await cont(pm, { start: { ...start, extra: true } });
+  ok("C11.8 break m5 fail: ... also inside its start", r.status === 400 && /field the server does not know/.test(msg(r)), { status: r.status, m: msg(r) });
+  r = await cont(pm, { reason: "Founder's demo on 31 Oct" });
+  const or = r.body?.override_id as string;
+  ok("C11.8 break m5 pass: the optional reason is taken and kept on the ledger line and in the audit", r.status === 201 && lines().find((l) => l.id === or)?.reason === "Founder's demo on 31 Oct" && /Reason: Founder's demo on 31 Oct/.test(sql(`select summary from audit_event where entity_key='${or}'`)), { status: r.status, m: msg(r) });
+  expire(or);
+  const big = await fetch(`http://localhost:${PORT}/api/ai/overrides`, { method: "POST", headers: { "x-actor": "user-A", "content-type": "application/json" }, body: JSON.stringify({ run_key: pm.run_key, pad: "x".repeat(6 * 1024 * 1024) }) });
+  const bigBody = await big.json().catch(() => ({})) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  ok("C11.8 break m6 fail: a 6 MB body is refused as too large (413) in words, not a server error", big.status === 413 && /5 MB/.test(String(bigBody.detail)), { status: big.status, b: bigBody });
   await cancelOpen();
   // Break M2 (CHECK 30 Oct): a Continue recorded within US$132, then spend arrives (another copy) so the same run, same run
   // key, would now pass the ceiling: the start is refused in the founder's words and nothing is queued.
@@ -129,7 +176,7 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   r = await draft(oM2);
   ok("C11.8 break M2 fail: that Continue no longer starts the run once it is past US$132 (409, the founder must raise the cap), nothing queued", p.run_key === pM2.run_key && !p.cost_check.can_continue && r.status === 409 && /founder must raise the cap/.test(msg(r)), { same_key: p.run_key === pM2.run_key, status: r.status, m: msg(r) });
   const before = lines().filter((l) => l.type === "override").length;
-  ok("C11.8 P-179 pass: past US$132 the check offers no Continue and says the founder must raise the cap", !p.cost_check.can_continue && /founder must raise the cap/.test(p.cost_check.words) && /Spend so far/.test(p.cost_check.words), p.cost_check);
+  ok("C11.8 P-179 pass: past US$132 the check offers no Continue and says the founder must raise the cap", !p.cost_check.can_continue && /founder must raise the cap/.test(p.cost_check.words) && /could reach US\$\d+\.\d\d, past the US\$132\.00/.test(p.cost_check.words), p.cost_check);
   r = await cont(p);
   ok("C11.8 P-179 fail: a Continue past US$132 is refused (409) and no line is written", r.status === 409 && /founder must raise the cap/.test(msg(r)) && lines().filter((l) => l.type === "override").length === before, { status: r.status, m: msg(r) });
 
@@ -144,6 +191,19 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   ok("C11.8 P-179 fail: with no live AI switch the finder refuses before any Continue is used (US$0)", r.status === 409 && lines().filter((l) => l.type === "override_use" && l.id === o3).length === 1, { status: r.status, m: msg(r) });
   r = await call("POST", "/ai/overrides", { run_key: fp.run_key, worst_usd: fp.cost_check.worst_usd, limits: ["run"], start: { kind: "find_page" } });
   ok("C11.8 P-179 fail: a Continue for an unknown kind of start is a plain 400", r.status === 400 && /Say which start/.test(msg(r)), { status: r.status, m: msg(r) });
+
+  // ──────────────────────────────────────────── break m4, review m4: one spend total; break m6: a bad ledger line in words
+  const ledgerText = readFileSync(LEDGER, "utf8");
+  appendFileSync(LEDGER, JSON.stringify({ type: "settle", id: "orphan-no-reserve", actual_usd: 3, outcome: "check_cost_override orphan", at: new Date().toISOString() }) + "\n");
+  p = await planNow();
+  ok("C11.8 break m4 + review m4 pass: a settle with no reservation is counted by neither total; the page and the dialog show the same cents",
+    p.ledger?.committed_usd?.toFixed(2) === p.cost_check?.spent_usd?.toFixed(2) && Math.abs(p.ledger.committed_usd - lines().filter((l) => l.type === "reserve").reduce((a, l) => a + (lines().find((s) => s.type === "settle" && s.id === l.id)?.actual_usd ?? l.worst_usd), 0)) < 0.006, { page: p.ledger?.committed_usd, dialog: p.cost_check?.spent_usd });
+  appendFileSync(LEDGER, "this is not a ledger line\n");
+  r = await call("POST", "/ai/plan", { scope, mode: "LIVE", draftAgain: true });
+  ok("C11.8 break m6 fail: a line that is not a ledger entry stops AI starts in words (503), not 'Something went wrong'", r.status === 503 && /not a ledger entry/.test(msg(r)) && /nothing was started/.test(msg(r)), { status: r.status, m: msg(r) });
+  writeFileSync(LEDGER, ledgerText);
+  r = await call("POST", "/ai/plan", { scope, mode: "LIVE", draftAgain: true });
+  ok("C11.8 break m6 pass: with the line fixed the plan answers again", r.status === 201 || r.status === 200, { status: r.status, m: msg(r) });
 
   ok("US$0: no AI call was made (no reserve line other than this check's seeds)", lines().filter((l) => l.type === "reserve" && !String(l.id).startsWith("seed-p179")).every((l) => l.caller === "stub" || l.worst_usd === 0), lines().filter((l) => l.type === "reserve").length);
   console.log(`\n${pass} passed, ${fail} failed`);

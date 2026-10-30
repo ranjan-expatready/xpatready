@@ -29,7 +29,7 @@ type A4 = { total: number; reused: number; leftover: number };
 const a4Of = (detail: unknown): A4 | null => { const a = (detail as { a4?: A4 } | null)?.a4; return a ? { total: a.total, reused: a.reused, leftover: a.leftover } : null; };
 const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return null; const n = (s: string) => all.filter((p) => p.status === s).length; return `${all.length} part${all.length === 1 ? "" : "s"} · ${[n("done") && `${n("done")} done`, n("failed") && `${n("failed")} failed`, n("running") && `${n("running")} running`, n("queued") && `${n("queued")} queued`, n("not started") && `${n("not started")} not started`].filter(Boolean).join(", ")}`; };
 import { Sources } from "./sources.ts";
-import { costCheckNow, overrideAllowed, recordOverride, runKeyOf, useOverride } from "./cost-gate.ts";
+import { checkOverride, costCheckNow, overrideAllowed, recordOverride, runKeyOf, spendOverride } from "./cost-gate.ts";
 import { OverrideStart, type OverrideRef } from "../../contracts/cost-check.ts";
 import { paidRetryAllowed, paidRunAllowed, paidRunsOf } from "./rounds.ts";
 
@@ -264,9 +264,10 @@ export class Ai implements OnModuleInit {
     if (!run.length) fail("Nothing to do: every target is skipped or not eligible.");
     const limit = b.spendLimitUsd ?? plan.totals.worst_usd;
     if (plan.totals.worst_usd > limit + 1e-9) fail(`The worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above this launch's limit (US$${limit.toFixed(2)}). Narrow the selection or raise the limit.`);
-    // P-179: over a limit, a start needs a person's Continue (used here, once); without one it is refused as before.
+    // P-179: over a limit, a start needs a person's Continue (checked here, used once inside the transaction below); without
+    // one it is refused as before.
     let override: OverrideRef | null = null;
-    if (!plan.cost_check.ok && b.overrideId) override = useOverride(b.overrideId, plan);
+    if (!plan.cost_check.ok && b.overrideId) override = checkOverride(actor, b.overrideId, plan);
     if (!override) {
       const spent = plan.targets.filter((t) => t.over_attempts);
       if (spent.length) fail(`${spent.length} form${spent.length > 1 ? "s have" : " has"} used ${spent.length > 1 ? "their" : "its"} ${MAX_PAID_ATTEMPTS_PER_FORM} paid AI attempts (${MAX_ATTEMPTS} per run, counted across its runs): another paid run needs a person's Continue. Nothing was started.`);
@@ -284,6 +285,8 @@ export class Ai implements OnModuleInit {
           message: `Queued: ${ACTION_TEXT[t.action]}${t.read_first ? " (read the form first)" : ""}` } });
         ids.push(j.id);
       }
+      // Review m1: the Continue is used last, once every refusal above has passed; a refusal of the use rolls this back.
+      if (override) spendOverride(actor, override);
       return { batch, ids };
     }).catch(async (e) => {
       if ((e as any)?.code !== "P2002") throw e;
@@ -310,6 +313,11 @@ export class Ai implements OnModuleInit {
     if (ed?.form.retiredAt) fail(`${ed.form.formKey} is retired in the library: AI does not draft it. Restore it there first.`, HttpStatus.CONFLICT);
     if (ed && (await closingChange(this.db, att!.workspaceId, ed.form.formKey))) fail(`A request to retire or delete ${ed.form.formKey} is open on To review: AI does not draft it until that is decided.`, HttpStatus.CONFLICT);
     const scope: Scope = { kind: "source", ids: [attachmentId] };
+    // Break m2: the same launch key sent again returns its run, before the re-plan (which would see that run as running).
+    if (idempotencyKey) {
+      const again = await this.db.aiBatch.findUnique({ where: { workspaceId_idempotencyKey: { workspaceId: att?.workspaceId ?? (await this.ws.id()), idempotencyKey } } });
+      if (again) return (await this.batch(again.id)).jobs[0];
+    }
     const p = await this.plan(scope, m, { draftAgain: true });
     const t = p.targets[0];
     if (!t || t.action === "skip" || t.action === "not_eligible") fail(t?.why ?? "Nothing to draft for this source.", t?.why?.includes("already queued or running") || t?.elsewhere ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST);
@@ -329,7 +337,9 @@ export class Ai implements OnModuleInit {
     const o = overrideAllowed(actor, body, plan);
     const r = recordOverride(actor, o);
     const workspaceId = await this.ws.id();
-    await this.audit.log(workspaceId, actor.id, "ai_override", "AI work", r.id, `${actor.name} chose Continue past ${o.limits.join(", ")} for "${plan.operation_label}": this one run, worst case US$${o.worst_usd.toFixed(2)}; ${plan.cost_check.words}`, { run_key: o.run_key, limits: o.limits, worst_usd: o.worst_usd, expires_at: r.expires_at });
+    // Review m6: the audit says what was over and why, not the dialog's instructions ("Continue records…; Cancel…").
+    const why = (plan.cost_check.over as { words: string }[]).map((x) => x.words).join(" ");
+    await this.audit.log(workspaceId, actor.id, "ai_override", "AI work", r.id, `${actor.name} chose Continue past ${o.limits.join(", ")} for "${plan.operation_label}": this one run, worst case US$${o.worst_usd.toFixed(2)}. ${why}${o.reason ? ` Reason: ${o.reason}` : ""}`, { run_key: o.run_key, limits: o.limits, worst_usd: o.worst_usd, expires_at: r.expires_at, ...(o.reason ? { reason: o.reason } : {}) });
     return { override_id: r.id, expires_at: r.expires_at };
   }
 

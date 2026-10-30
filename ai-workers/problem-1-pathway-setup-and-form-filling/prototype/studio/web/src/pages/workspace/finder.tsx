@@ -51,7 +51,7 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
   const key = React.useMemo(() => crypto.randomUUID(), []);
   const plan = useQuery<Plan, ApiError>({ queryKey: ["finder-plan", id, mode, only?.join(",") ?? "", pageUrl ?? ""], queryFn: () => api<Plan>(`/combinations/${id}/forms/find/plan`, { method: "POST", json: { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) } }), retry: false, enabled: !page || !!pageUrl });
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
-  const qc = useQueryClient();
+  const qc = useQueryClient(), toast = useToast();
   // Lead Critical 29 Oct: with AI now switched off on this copy the live choice is greyed with the reason (any plan says it).
   const liveOff = plan.data?.live && !plan.data.live.on ? plan.data.live.why : null;
   React.useEffect(() => { if (liveOff && mode === "live") setMode(page ? "rules" : "replay"); }, [liveOff, mode, page]);
@@ -63,7 +63,8 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
       const body = { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) };
       const v = (await cost.gate(plan.data as unknown as Parameters<typeof cost.gate>[0], { kind: "find_forms", combinationId: id, ...body },
         (overrideId) => api<{ id: string }>(`/combinations/${id}/forms/find`, { method: "POST", json: { ...body, planSha256: plan.data!.plan_sha256, idempotencyKey: `s5-${key}-${mode}-${pageUrl ?? ""}`, ...(overrideId ? { overrideId } : {}) } }))) as { id: string } | undefined;
-      if (!v) { setError(COST_WORDS.cancelled); return; }
+      // Review m7: Cancel is the person's choice, not an error: the same info toast as Draft setup.
+      if (!v) { toast.push({ tone: "info", text: COST_WORDS.cancelled }); return; }
       for (const k of formsKeys(id)) void qc.invalidateQueries({ queryKey: k });
       void qc.invalidateQueries({ queryKey: ["combination", id, "finder"] });
       onStarted(v.id); onClose();

@@ -19,6 +19,7 @@ import { checkedOutput, costBesideLimit, explainRun, failedOurCheck, isProviderL
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
+import { ledgerRead } from "./cost-gate.ts";
 import { keyFor, sameName } from "./library-changes.ts";
 import { cleanLabel, labelProblem } from "../../contracts/programs.ts";
 import { START } from "../../contracts/start-setup.ts";
@@ -222,14 +223,16 @@ export class Sources {
   }
 
   ledger() {
-    const res = new Map<string, number>();
-    for (const l of (existsSync(join(LEDGER_DIR, "spend.jsonl")) ? readFileSync(join(LEDGER_DIR, "spend.jsonl"), "utf8") : "").split("\n").filter(Boolean)) { const r = JSON.parse(l); if (r.type === "reserve") res.set(r.id, r.worst_usd); else if (r.type === "settle") res.set(r.id, r.actual_usd); }
-    const committed = [...res.values()].reduce((a, b) => a + b, 0);
+    // P-179 break m4: the same sums reserve and the cost check use (SpendLedger), so a settle with no reservation is not
+    // counted here either; before, this page and the cost check could give two totals. Review m4: cents as toFixed(2)
+    // gives them (the cost check's words), never Math.round, so the page and the dialog show the same figure.
+    const l = new SpendLedger(LEDGER_DIR);
+    const { committed, wave } = ledgerRead(() => ({ committed: l.committed(), wave: l.committedSince(WAVE1_START) }));
     // S4 (m4, P-110): Wave 1's own cap (US$60) inside the experiment cap; plans show it and refuse above it.
-    const wave = new SpendLedger(LEDGER_DIR).committedSince(WAVE1_START);
     const remaining = Math.min(EXPERIMENT_CAP_USD - committed, WAVE1_CAP_USD - wave);
-    return { committed_usd: Math.round(committed * 100) / 100, cap_usd: EXPERIMENT_CAP_USD, remaining_usd: Math.round(remaining * 100) / 100, per_run_cap_usd: RUN_CAP_USD,
-      wave: { name: "Wave 1", cap_usd: WAVE1_CAP_USD, spent_usd: Math.round(wave * 100) / 100, remaining_usd: Math.round((WAVE1_CAP_USD - wave) * 100) / 100, since: WAVE1_START.slice(0, 10) } };
+    const cents = (n: number) => Number(n.toFixed(2));
+    return { committed_usd: cents(committed), cap_usd: EXPERIMENT_CAP_USD, remaining_usd: cents(remaining), per_run_cap_usd: RUN_CAP_USD,
+      wave: { name: "Wave 1", cap_usd: WAVE1_CAP_USD, spent_usd: cents(wave), remaining_usd: cents(WAVE1_CAP_USD - wave), since: WAVE1_START.slice(0, 10) } };
   }
 
   /** The guarded job file for one form's field-map draft (P2 launch reads it). Returns the job id and input hash. */

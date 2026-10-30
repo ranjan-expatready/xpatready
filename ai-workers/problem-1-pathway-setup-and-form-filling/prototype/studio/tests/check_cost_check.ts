@@ -1,9 +1,11 @@
 // P-179 (C11.8): the cost check before any AI start, and a person's override in the one shared ledger (QA-90). Pure and
 // ledger-level, on scratch ledgers: no server, no network, US$0. Every rule has a passing and a failing case.
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/check_cost_check.ts
-import { appendFileSync, mkdtempSync, readFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { appendFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { seedShared } from "../../p2/tools/seed-shared-ledger.ts";
 import { costCheck } from "../engine/cost-check.ts";
 import { COST_WORDS } from "../contracts/cost-check.ts";
 import { BudgetExceeded, OverrideRefused, SpendLedger } from "../../p2/ledger.ts";
@@ -17,7 +19,7 @@ const throws = (f: () => unknown, cls: new (...a: any[]) => Error, re: RegExp) =
 const at = (spent: number, worst: number, wave = 0, extra: object = {}) => costCheck({ spent, wave: { spent: wave }, worst, ...extra });
 ok("C11.8 P-179 pass: the ceiling is the US$120 experiment cap + 10% = US$132", EXPERIMENT_CAP_USD === 120 && OVERRIDE_CEILING_USD === 132);
 const fits = at(100, 5, 10, { expected: 1.2 });
-ok("C11.8 P-179 pass: under every limit the check fits, shows spend so far against the cap, and offers no Continue", fits.ok && !fits.over.length && !fits.can_continue && fits.spent_usd === 100 && fits.cap_usd === 120 && fits.expected_usd === 1.2 && /spend so far US\$100\.00 of US\$120\.00/.test(fits.words));
+ok("C11.8 P-179 pass: under every limit the check fits, shows spend so far against the cap, and offers no Continue", fits.ok && !fits.over.length && !fits.can_continue && fits.spent_usd === 100 && fits.cap_usd === 120 && fits.expected_usd === 1.2 && /spent so far US\$100\.00 of US\$120\.00/.test(fits.words));
 ok("C11.8 P-179 pass: exactly at the experiment cap fits (reserve refuses only past it)", at(115, 5).ok);
 const exp = at(116, 5);
 ok("C11.8 P-179 fail: past the experiment cap: over 'experiment' at US$121, Continue offered (within US$132)", !exp.ok && exp.over.map((o) => o.limit).join() === "experiment" && exp.over[0].after_usd === 121 && exp.can_continue && /Continue records your name/.test(exp.words));
@@ -109,9 +111,47 @@ ok("C11.8 break M1 fail: settle refuses a negative or non-number cost", throws((
 m1.l.settle(mr, 0.5, "ok");
 ok("C11.8 break M1 pass: a clean ledger adds up as before (US$100 + a US$0.50 settle)", Math.abs(m1.l.committed() - 100.5) < 1e-9, m1.l.committed());
 
+// ── Break m3: Continues recorded and not started yet hold their worst case against US$132, so two cannot pass it together.
+const h = fresh(125);
+const h1 = (() => { try { return h.l.recordOverride({ run_key: "h1", limits: ["experiment"], worst_usd: 6, by: "user-A" }).id; } catch (e) { return e as Error; } })();
+ok("C11.8 break m3 pass: at US$125 one US$6 Continue is recorded (US$131)", typeof h1 === "string", h1);
+ok("C11.8 break m3 fail: a second US$6 Continue for another run is refused while the first is held (before: both recorded)", throws(() => h.l.recordOverride({ run_key: "h2", limits: ["experiment"], worst_usd: 6, by: "user-A" }), OverrideRefused, /held by other Continues not started yet.*founder must raise the cap/) && h.lines().filter((x) => x.type === "override").length === 1);
+ok("C11.8 break m3 pass: what Continues hold is US$6 while unused, US$0 once used (its run's reservations count instead)", h.l.heldByOverridesUsd() === 6 && (h.l.useOverride(h1 as string, "h1"), h.l.heldByOverridesUsd() === 0));
+ok("C11.8 break m3 pass: an expired Continue holds nothing", fresh(0).l.heldByOverridesUsd([{ type: "override", id: "o", run_key: "k", limits: ["run"], worst_usd: 5, by: "user-A", at: "2026-10-01T00:00:00.000Z", expires_at: "2026-10-01T00:10:00.000Z" }] as never) === 0);
+
+// ── Break m7: a Continue is used only by the person who recorded it.
+const pr = fresh(118); const po = pr.l.recordOverride({ run_key: "pr", limits: ["experiment"], worst_usd: 3, by: "user-A" });
+ok("C11.8 break m7 fail: another person cannot use it, and it stays unused", throws(() => pr.l.useOverride(po.id, "pr", "user-Z"), OverrideRefused, /another person/) && !pr.lines().some((x) => x.type === "override_use"));
+ok("C11.8 break m7 pass: the person who recorded it can", (() => { try { return pr.l.useOverride(po.id, "pr", "user-A").id === po.id; } catch { return false; } })());
+
+// ── Break m6: a line that is not JSON stops reservations in words (before: a bare SyntaxError, a 500 with no words).
+const bj = fresh(10); appendFileSync(join(bj.dir, "spend.jsonl"), "{not json\n");
+ok("C11.8 break m6 fail: a line that is not a ledger entry refuses a reservation in words, naming the line", throws(() => bj.l.reserve("run-j", 1, 1, 5, "paid"), BudgetExceeded, /has a line \(2\) that is not a ledger entry/));
+
+// ── Review m9: the ledger lock. A holder removes only its own lock; a crashed (old) lock is broken; a fresh one is not.
+const lk = fresh(0), lockFile = join(lk.dir, "spend.reserve.lock");
+lk.l.withReserveLock(() => writeFileSync(lockFile, "another-holder"));
+ok("C11.8 review m9 pass: a holder leaving the lock removes only its own (a lock now holding another token stays; before: deleted)", existsSync(lockFile) && readFileSync(lockFile, "utf8") === "another-holder");
+writeFileSync(lockFile, "crashed-holder"); const old = new Date(Date.now() - 60_000); utimesSync(lockFile, old, old);
+const t0 = Date.now(); const rk = lk.l.reserve("run-k", 1, 1, 5, "paid");
+ok("C11.8 review m9 pass: a lock older than 30 s (a crash) is broken: the reservation goes through at once and leaves no lock or moved-aside file", typeof rk === "string" && Date.now() - t0 < 2_000 && !existsSync(lockFile) && !readdirSync(lk.dir).some((f) => f.includes(".stale-")));
+writeFileSync(lockFile, "live-holder");
+const t1 = Date.now();
+ok("C11.8 review m9 fail: a fresh lock is never broken: the reservation waits, then refuses 'ledger busy' (10 s), and the lock stays", throws(() => lk.l.reserve("run-k", 2, 1, 5, "paid"), BudgetExceeded, /ledger busy/) && Date.now() - t1 >= 9_500 && readFileSync(lockFile, "utf8") === "live-holder");
+rmSync(lockFile);
+
+// ── Review m8: the seed tool rewrites the shared file under the ledger's lock, so it waits for a copy that holds it.
+const sd = fresh(5);
+const holder = spawn(process.execPath, ["-e", `const fs=require("node:fs");fs.writeFileSync(${JSON.stringify(join(sd.dir, "spend.reserve.lock"))},"child");fs.appendFileSync(${JSON.stringify(join(sd.dir, "spend.jsonl"))},JSON.stringify({type:"reserve",id:"child#1",run_id:"child",attempt:1,worst_usd:2,at:"2026-10-29T00:00:00.000Z"})+"\\n");setTimeout(()=>fs.unlinkSync(${JSON.stringify(join(sd.dir, "spend.reserve.lock"))}),1500);`], { stdio: "ignore" });
+while (!existsSync(join(sd.dir, "spend.reserve.lock"))) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5);
+const t2 = Date.now();
+const seeded = seedShared(sd.dir, [JSON.stringify({ type: "reserve", id: "copy#1", run_id: "copy", attempt: 1, worst_usd: 1, at: "2026-10-21T00:00:00.000Z" })]);
+ok("C11.8 review m8 pass: the seed waited for the copy holding the lock (≥ 1 s) and kept that copy's reservation and its own (US$8)", Date.now() - t2 >= 1_000 && seeded.all.length === 3 && Math.abs(sd.l.committed() - 8) < 1e-9, { ms: Date.now() - t2, n: seeded.all.length, c: sd.l.committed() });
+holder.kill();
+
 // The shared contract and the engine say the same: the dialog's words are built from the same check.
 
-ok("C11.8 P-179 pass: the dialog shows spend so far against the cap, the worst case and what Continue allows", COST_WORDS.spent(exp) === "Spend so far US$116.00 of US$120.00" && COST_WORDS.worst(exp) === "At most US$5.00" && /allows this one run, up to US\$5\.00\. Total spend stays within US\$132\.00/.test(COST_WORDS.continueNote(exp)));
+ok("C11.8 P-179 pass: the dialog shows spend so far against the cap, the worst case and what Continue allows", COST_WORDS.spent(exp) === "Spent so far US$116.00 of US$120.00" && COST_WORDS.worst(exp) === "At most US$5.00" && /allows this one run, up to US\$5\.00\. Total spend stays within US\$132\.00/.test(COST_WORDS.continueNote(exp)));
 ok("C11.8 P-179 fail: an unknown expected cost is said as such, never as US$0", COST_WORDS.expected(exp) === "Expected not known yet");
 
 console.log(`\n${pass}/${pass + fail} passed`);

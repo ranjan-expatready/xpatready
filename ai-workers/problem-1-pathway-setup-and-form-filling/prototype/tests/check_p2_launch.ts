@@ -294,6 +294,20 @@ t("C11.8 P-179 pass: the launcher passes --override-id and --run-key to the draf
 t("C11.8 P-179 fail: an override id that is not a plain word, or one without its run key, is refused before any process starts",
   /plain words/.test(launchArgs(["--override-id", "x --live", "--run-key", "k"]).refused ?? "") && /go together/.test(launchArgs(["--override-id", "override-1"]).refused ?? "") && ledgerLines().length === l11 + 2);
 
+// 12. P-179 review B1, end to end: the stub pass every live step runs first goes through the real launcher and drafting
+// process with the shared ledger already past the experiment cap and the Wave 1 cap (as after a Continue); before, the
+// stub reserved the paid worst case there and was refused, so a Continue never reached its paid call.
+const b1Dir = join(root, "b1-ledger");
+mkdirSync(b1Dir, { recursive: true });
+writeFileSync(join(b1Dir, "spend.jsonl"), JSON.stringify({ type: "reserve", id: "b1-seed#1", run_id: "b1-seed", attempt: 1, worst_usd: EXPERIMENT_CAP_USD + 1, caller: "check_p2_launch seed", at: new Date().toISOString() }) + "\n");
+const b1 = launchShared(b1Dir);
+const b1Lines = readFileSync(join(b1Dir, "spend.jsonl"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+const b1Stub = b1Lines.find((l) => l.type === "reserve" && l.caller === "stub");
+t("C11.8 review B1 pass: past the experiment and Wave 1 caps, launch.ts --stub runs through the drafting process: reserved at US$0, settled at US$0",
+  b1.code === 0 && b1Stub?.worst_usd === 0 && b1Lines.some((l) => l.type === "settle" && l.id === b1Stub.id && l.actual_usd === 0));
+t("C11.8 review B1 fail: on that ledger a paid attempt without a Continue is still refused (the caps are really passed)",
+  (() => { try { new SpendLedger(b1Dir).reserve("b1-live", 1, 0.32, 5, "paid"); return false; } catch (e) { return /experiment cap US\$120/.test((e as Error).message); } })());
+
 for (const [n, p] of results) console.log(`${p ? "PASS" : "FAIL"}  ${n}`);
 const failed = results.filter(([, p]) => !p).length;
 if (failed) console.log(JSON.stringify({ wide: wide.stdout + wide.stderr.slice(0, 300), badSha: badSha.stdout, good: good.stdout.slice(0, 300) + good.stderr.slice(0, 300), other: other.stdout + other.stderr.slice(0, 300) }));

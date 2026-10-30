@@ -35,7 +35,7 @@ import { canadaSource, CanadaError, type CanadaSource } from "./canada.ts";
 import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 import { aboutUsd, lastFinishedUsd } from "./finder-cost.ts";
 import { aiLive, overrideOf, Sources, type LaunchOverride } from "./sources.ts";
-import { costCheckNow, runKeyOf, useOverride } from "./cost-gate.ts";
+import { checkOverride, costCheckNow, runKeyOf, spendOverride } from "./cost-gate.ts";
 import { channelProposal, channelsFrom, channelsRead, recordedCopy, sampleFixtures, type ChannelProposal, type ChannelReading } from "./filing.ts";
 import { WHO } from "./studio.ts";
 import { linkFinderGuides } from "./guide-sources.ts";
@@ -233,8 +233,9 @@ export class Finder implements OnModuleInit {
     if (b.mode === "live" && !aiLive()) throw problem(409, "AI now is switched off", START.liveOff);
     const plan = await this.plan(combinationId, { mode: b.mode, pageUrl: b.pageUrl, only: b.only });
     if (plan.plan_sha256 !== b.planSha256) throw problem(409, "Look at the plan again", "Something changed since you looked at the plan (the pages, the mode or the cost). Look at it again before starting.");
-    // P-179: over a limit, a start needs a person's Continue (used here, once); without one it is refused as before.
-    const override = !plan.cost_check.ok && b.overrideId ? useOverride(b.overrideId, plan) : null;
+    // P-179: over a limit, a start needs a person's Continue (checked here, used once inside the transaction below); without
+    // one it is refused as before.
+    const override = !plan.cost_check.ok && b.overrideId ? checkOverride(actor, b.overrideId, plan) : null;
     if (!override && b.mode === "live" && plan.totals.worst_usd > plan.ledger.remaining_usd + 1e-9) throw problem(409, "Over the spending cap", `The worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the AI spending cap (US$${plan.ledger.remaining_usd.toFixed(2)}). Nothing was started; use saved AI answers or rules only.`);
     if (!override && !plan.cost_check.ok) throw problem(409, "Over a cost limit", plan.cost_check.words);
     let batchId: string;
@@ -245,13 +246,15 @@ export class Finder implements OnModuleInit {
         if (active) throw problem(409, "Already finding", "The form finder is already running for this combination: watch it, or stop it first.", { runId: active.id });
         const batch = await tx.aiBatch.create({ data: { workspaceId, idempotencyKey: b.idempotencyKey, operation: FINDER_OPERATION, scopeKind: "combination", scopeLabel: `${combinationId}|${plan.combination.trail.join(" › ")}`, mode: b.mode.toUpperCase(), status: "QUEUED", planSha256: plan.plan_sha256, plan: json(override ? { ...plan, override } : plan), spendLimitUsd: Math.max(plan.totals.worst_usd, 0.01), worstCaseUsd: plan.totals.worst_usd, expectedUsd: plan.totals.expected_usd, startedBy: actor.id, message: "Finding forms" } });
         await tx.draftingJob.createMany({ data: STEPS.map((s, i) => ({ workspaceId, combinationId, batchId: batch.id, kind: s.kind, mode: s.ai ? b.mode.toUpperCase() : "LOCAL", status: "WAITING", message: "Waits for the step before it", startedBy: actor.id, startedAt: new Date(Date.now() + i) })) });
+        // Review m1: the Continue is used last, after "Already finding" and the key; a refusal of the use rolls this back.
+        if (override) spendOverride(actor, override);
         return batch.id;
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") { const b2 = await this.db.aiBatch.findUnique({ where: { workspaceId_idempotencyKey: { workspaceId, idempotencyKey: b.idempotencyKey } } }); if (b2) return this.view(b2.id); }
       throw e;
     }
-    await this.audit.log(workspaceId, actor.id, "started", "form finder", combinationId, `${actor.name} started the form finder for "${plan.combination.label}" (${b.mode === "live" ? `live AI, at most US$${plan.totals.worst_usd.toFixed(2)}` : b.mode === "replay" ? "saved AI answers, US$0" : "rules only, US$0"})`, undefined, combinationId);
+    await this.audit.log(workspaceId, actor.id, "started", "form finder", combinationId, `${actor.name} started the form finder for "${plan.combination.label}" (${b.mode === "live" ? `live AI, at most US$${plan.totals.worst_usd.toFixed(2)}` : b.mode === "replay" ? "saved AI answers, US$0" : "rules only, US$0"})${override ? `; continued past ${override.limits.join(", ")} (override ${override.id})` : ""}`, override ? { override_id: override.id, run_key: override.run_key } : undefined, combinationId);
     void this.execute(batchId).catch(async (e) => {
       await this.db.aiBatch.updateMany({ where: { id: batchId, status: { in: ["QUEUED", "RUNNING"] } }, data: { status: "FAILED", finishedAt: new Date(), message: `The form finder stopped: ${(e as Error).message.slice(0, 300)}` } });
     });

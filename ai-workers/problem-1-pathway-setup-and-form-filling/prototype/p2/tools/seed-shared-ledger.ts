@@ -19,6 +19,19 @@ export function unionOfLedgers(texts: string[]): string[] {
   return [...seen.entries()].sort(([, a], [, b]) => (a.at ?? "~").localeCompare(b.at ?? "~")).map(([k]) => k);
 }
 
+/** Writes the union of the shared ledger and `texts` into `dir`'s spend.jsonl, reading and replacing it under the ledger's
+ *  lock (review m8). Answers the lines written and how many the shared ledger had before. */
+export function seedShared(dir: string, texts: string[]): { all: string[]; before: number } {
+  return new SpendLedger(dir).withReserveLock(() => {
+    const file = join(dir, "spend.jsonl"), now = existsSync(file) ? readFileSync(file, "utf8") : "";
+    const all = unionOfLedgers([now, ...texts]);
+    const tmp = join(dir, `spend.jsonl.seed-${process.pid}`);
+    writeFileSync(tmp, all.join("\n") + (all.length ? "\n" : ""));
+    renameSync(tmp, file);
+    return { all, before: now.split("\n").filter(Boolean).length };
+  });
+}
+
 if (import.meta.main) {
   if (!process.env.P2_LEDGER_DIR) { console.error("refused: set P2_LEDGER_DIR to the shared ledger folder (the main copy's .tools/p2-ledger)"); process.exit(2); }
   const MAIN = dirname(execFileSync("git", ["-C", PROTOTYPE, "rev-parse", "--path-format=absolute", "--git-common-dir"], { encoding: "utf8" }).trim());
@@ -29,8 +42,7 @@ if (import.meta.main) {
   const read = (dir: string): string => existsSync(join(dir, "spend.jsonl")) ? readFileSync(join(dir, "spend.jsonl"), "utf8") : "";
   const usd = (dir: string) => existsSync(join(dir, "spend.jsonl")) ? new SpendLedger(dir).committed() : 0;
 
-  const texts = [read(LEDGER_DIR)];
-  const before = read(LEDGER_DIR).split("\n").filter(Boolean).length;
+  const texts: string[] = [];
   for (const dir of copies) {
     console.log(`before: US$${usd(dir).toFixed(4)} committed in ${relative(MAIN, dir) || dir}`);
     texts.push(read(dir));
@@ -40,10 +52,9 @@ if (import.meta.main) {
       for (const f of readdirSync(join(dir, sub))) if (!existsSync(join(LEDGER_DIR, sub, f))) copyFileSync(join(dir, sub, f), join(LEDGER_DIR, sub, f));
     }
   }
-  const all = unionOfLedgers(texts);
   mkdirSync(LEDGER_DIR, { recursive: true });
-  const tmp = join(LEDGER_DIR, `spend.jsonl.seed-${process.pid}`);
-  writeFileSync(tmp, all.join("\n") + (all.length ? "\n" : ""));
-  renameSync(tmp, join(LEDGER_DIR, "spend.jsonl"));
+  // Review m8: the shared file is read and replaced under the ledger's own lock, so a reservation another copy appends
+  // meanwhile waits for the rewrite instead of being lost by it.
+  const { all, before } = seedShared(LEDGER_DIR, texts);
   console.log(`after: US$${usd(LEDGER_DIR).toFixed(4)} committed in the shared ledger ${LEDGER_DIR} (${all.length} lines, ${all.length - before} added)`);
 }

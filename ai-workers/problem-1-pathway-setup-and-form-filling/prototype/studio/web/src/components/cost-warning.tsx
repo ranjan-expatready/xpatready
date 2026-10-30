@@ -13,7 +13,7 @@ type Plan = { cost_check: CostCheck; run_key: string };
 
 export function CostWarning({ check, busy, error, onContinue, onCancel }: { check: CostCheck; busy?: boolean; error?: string | null; onContinue: () => void; onCancel: () => void }) {
   return (
-    <Dialog open onOpenChange={(o) => !o && !busy && onCancel()} title={check.can_continue ? COST_WORDS.title : COST_WORDS.titleCeiling} description={COST_WORDS.spent(check)}
+    <Dialog open onOpenChange={(o) => !o && !busy && onCancel()} title={check.can_continue ? COST_WORDS.title : COST_WORDS.titleCeiling} description={COST_WORDS.description}
       footer={<>
         <Button variant="ghost" onClick={onCancel} disabled={busy} data-cost-cancel>{COST_WORDS.cancel}</Button>
         {check.can_continue ? <Button onClick={onContinue} busy={busy} data-cost-continue aria-describedby="cost-continue-note">{COST_WORDS.continue}</Button> : null}
@@ -44,13 +44,22 @@ export function CostWarning({ check, busy, error, onContinue, onCancel }: { chec
 export function useCostGate() {
   const [pending, setPending] = React.useState<{ plan: Plan; start: OverrideStartBody; launch: (overrideId?: string) => Promise<unknown>; done: (v: unknown) => void } | null>(null);
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
+  const opener = React.useRef<HTMLElement | null>(null);
   const gate = React.useCallback((plan: Plan, start: OverrideStartBody, launch: (overrideId?: string) => Promise<unknown>) => {
     if (!plan.cost_check || plan.cost_check.ok) return launch();
     setError(null);
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     // Resolves with the launch's answer after Continue, or undefined after Cancel (nothing started).
     return new Promise<unknown>((done) => setPending({ plan, start, launch, done }));
   }, []);
-  const cancel = () => { pending?.done(undefined); setPending(null); };
+  // Review m3: the Start button that opened the warning is disabled while it waits, so focus fell to the page on Cancel or
+  // Escape. Once the caller has enabled it again (a few frames), focus goes back to it, so the keyboard path goes on.
+  const refocus = (el: HTMLElement | null, tries = 30) => {
+    if (!el || !el.isConnected || tries <= 0) return;
+    if ((el as HTMLButtonElement).disabled || el.getAttribute("aria-disabled") === "true") { requestAnimationFrame(() => refocus(el, tries - 1)); return; }
+    el.focus();
+  };
+  const cancel = () => { pending?.done(undefined); setPending(null); const el = opener.current; requestAnimationFrame(() => refocus(el)); };
   const proceed = async () => {
     if (!pending) return;
     setBusy(true); setError(null);

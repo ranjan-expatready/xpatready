@@ -61,7 +61,7 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
             </label>
           ))}
         </fieldset>
-        {p ? <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-cost-line>{mode === "LIVE" ? <>Expected {p.totals.expected_usd === null ? "unknown" : `US$${p.totals.expected_usd.toFixed(2)}`} · worst case US${p.totals.worst_usd.toFixed(2)} (each form capped at US${p.per_run_cap_usd}; at most {p.max_paid_attempts_per_form} paid attempts per form, a retry included) · Spent so far US${(p.ledger.cap_usd - p.ledger.remaining_usd).toFixed(2)} of US${p.ledger.cap_usd}.</> : mode === "REPLAY" ? "Replay of saved real runs: no model call, US$0." : "Stub pass: no network, no cost, no AI content."}</p> : null}
+        {p ? <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-cost-line>{mode === "LIVE" ? <>Expected {p.totals.expected_usd === null ? "unknown" : `US$${p.totals.expected_usd.toFixed(2)}`} · worst case US${p.totals.worst_usd.toFixed(2)} (each form capped at US${p.per_run_cap_usd}; at most {p.max_paid_attempts_per_form} paid attempts per form, a retry included) · Spent so far US${p.ledger.committed_usd.toFixed(2)} of US${p.ledger.cap_usd.toFixed(2)}.</> : mode === "REPLAY" ? "Replay of saved real runs: no model call, US$0." : "Stub pass: no network, no cost, no AI content."}</p> : null}
         {p ? <p className="text-xs text-text-muted">{p.capability_note}</p> : null}
         {plan.isLoading ? <Spinner label="Working out what would run" /> : plan.isError ? <Notice tone="danger" title="The plan could not be made">{(plan.error as Error).message}</Notice> : p ? (
           <>

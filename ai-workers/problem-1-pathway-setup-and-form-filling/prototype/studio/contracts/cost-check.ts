@@ -17,16 +17,20 @@ export type CostCheck = {
 
 /** POST /ai/overrides: Continue past `limits` for the start the person looked at (`start` lets the server make that plan
  *  again; its run key, worst case and limits must be the same now). Author only. Answers `{ override_id, expires_at }`. */
+// Break m5: strict, so a field the server does not know is refused in words instead of dropped without a word.
+const unknownField = { error: (i: { code?: string }) => (i.code === "unrecognized_keys" ? "This Continue carries a field the server does not know. Look at the cost again." : undefined) };
 export const OverrideStart = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("draft_field_maps"), scope: z.object({ kind: z.enum(["catalogue", "program", "combination", "source"]), ids: z.array(z.string()).max(400) }), mode: z.enum(["LIVE", "REPLAY", "STUB"]), draftAgain: z.boolean().optional() }),
-  z.object({ kind: z.literal("find_forms"), combinationId: z.string().min(1), mode: z.enum(["live", "replay", "rules"]), pageUrl: z.string().optional(), only: z.array(z.string()).max(30).optional() }),
+  z.strictObject({ kind: z.literal("draft_field_maps"), scope: z.strictObject({ kind: z.enum(["catalogue", "program", "combination", "source"]), ids: z.array(z.string()).max(400) }, unknownField), mode: z.enum(["LIVE", "REPLAY", "STUB"]), draftAgain: z.boolean().optional() }, unknownField),
+  z.strictObject({ kind: z.literal("find_forms"), combinationId: z.string().min(1), mode: z.enum(["live", "replay", "rules"]), pageUrl: z.string().optional(), only: z.array(z.string()).max(30).optional() }, unknownField),
 ], { message: "Say which start this Continue is for." });
-export const OverrideBody = z.object({
+export const OverrideBody = z.strictObject({
   run_key: z.string().regex(/^[0-9a-f]{40}$/, "Look at the cost first: the run key is missing."),
   worst_usd: z.number({ message: "Say the worst case you saw, in US$." }).finite().min(0),
   limits: z.array(z.enum(COST_LIMITS)).min(1, "Say which limit to continue past.").max(4),
   start: OverrideStart,
-});
+  /** Optional words the person adds (kept on the ledger line and in the audit). */
+  reason: z.string().max(500, "Keep the reason under 500 characters.").optional(),
+}, unknownField);
 export type OverrideStartBody = z.infer<typeof OverrideStart>;
 export type OverrideReply = { override_id: string; expires_at: string };
 /** What a started run carries to its launches (kept on the run's plan). */
@@ -40,7 +44,9 @@ export const COST_WORDS = {
   titleCeiling: "This start is past what a click may allow",
   expected: (c: CostCheck) => `Expected ${usd(c.expected_usd)}`,
   worst: (c: CostCheck) => `At most ${usd(c.worst_usd)}`,
-  spent: (c: CostCheck) => `Spend so far ${usd(c.spent_usd)} of ${usd(c.cap_usd)}`,
+  // Review m4: one label and one rounding with Draft setup and Sources ("Spent so far", cents by toFixed(2)).
+  spent: (c: CostCheck) => `Spent so far ${usd(c.spent_usd)} of ${usd(c.cap_usd)}`,
+  description: "Nothing is spent until you choose.",
   wave: (c: CostCheck) => `${c.wave.name}: ${usd(c.wave.spent_usd)} of ${usd(c.wave.cap_usd)}`,
   continueNote: (c: CostCheck) => `Continue records your name and allows this one run, up to ${usd(c.worst_usd)}. Total spend stays within ${usd(c.ceiling_usd)}.`,
   ceilingNote: "The founder must raise the cap before this can start.",
