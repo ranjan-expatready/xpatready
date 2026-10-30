@@ -28,3 +28,10 @@ Given on a screenshot of Immigration programs on main, after board v3 of the set
 * Redraw the card on board v4 (`design/draft-setup-checklist.html`) and the concept's card section. Keep the setup checklist's five steps and counts underneath (P-157): they now show only on the combination's page and in the card's progress.
 * Show the board to the founder for a Go before screens builds slice A.
 * The button colour is one design-system token used by every primary button. Check it against `STANDARDS.md` and `EXPERIENCE.md`, and against the team's brand components.
+
+## At 20, 50, 150 combinations (founder's question, 30 Oct; the Lead's recommendation for board v4)
+* **Progress:** show "4 of 5" with a thin five-part bar. With five steps a percentage says the same thing less clearly (80% means 4 of 5), so no percentage.
+* **Grouping:** sections by Pathway, then Program, each header with one quiet count ("Family sponsorship · 3 of 8 live") and folding open or closed. This is how 150 cards stay findable.
+* **Finding one:** the existing filter bar (Find, status chips Not started · In progress · Live, Needs you) and the Cards / List switch (P-115) stay above the sections. List view becomes one line per combination: name, trail, "4 of 5", button.
+* **The one signal kept on the card:** a small "Needs you" mark, only when something waits for the person looking (a review or a confirmation). Without it, a reviewer must open 150 cards to find their work. Everything else stays on the combination's page.
+* **Speed:** the concept's 150-combination timing test stays (P-157: counts are derived and cached per combination).
