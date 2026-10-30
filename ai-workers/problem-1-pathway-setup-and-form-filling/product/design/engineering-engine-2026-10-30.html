@@ -198,8 +198,8 @@ a{color:var(--teal)}
 <thead><tr><th>Item</th><th>Cost</th><th>Note</th></tr></thead>
 <tbody>
 <tr><td>Cloud builders, qa, platform</td><td>US$0 extra</td><td>Your Claude plan allowance, as today</td></tr>
-<tr><td>GitHub test machines</td><td>about US$10–30 a month</td><td>~12 min × US$0.006 per run; about 2 runs per code pull request; first 2,000 minutes a month free. Cap at US$50. <b>Correction:</b> my earlier US$250–300 estimate assumed splitting every run four ways and today's waste; the measured run is 12 minutes</td></tr>
-<tr><td>GitHub rules on main</td><td>possibly US$4 a month</td><td>Protection rules on a private repository need a paid GitHub plan; I'll check yours</td></tr>
+<tr><td>Merge check (decided P-186)</td><td>US$0</td><td>The Mac runs the official check once the builders have left it, and GitHub's free monthly minutes take the lighter test groups in parallel. No paid test machines. <b>Correction:</b> my earlier US$250–300 estimate for paid machines was too high; the measured run is 12 minutes, about US$0.07</td></tr>
+<tr><td>GitHub rules on main</td><td>US$0 for now</td><td>Protection rules on a private repository need a paid GitHub plan; until then the Mac's merge guard enforces "checks green before merge"</td></tr>
 <tr><td>Deep review of big or AI-spend changes</td><td>optional</td><td>3 free runs, then about US$5–25 each; only with your approval</td></tr>
 </tbody></table></div>
 
@@ -218,11 +218,37 @@ It also cut a planned "verifier" session that would have spent your allowance on
 </tbody></table></div>
 <div class="col" style="margin-top:14px"><p>Why I'm confident: every change is aimed at a measured time sink, every quality check either stays or becomes stronger, and the guardrails are enforced by machines rather than by sessions remembering rules. Two points are still to be proven: whether the full tests run in a cloud machine (the cloud trial running now) and which GitHub plan you are on. I'll report both before anything is switched.</p></div>
 
-<h2>Your three decisions</h2>
+<h2>Setups we could have chosen</h2>
+<div class="tbl"><table>
+<thead><tr><th>Setup</th><th>Speed</th><th>Independent check</th><th>Cost</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>Everything on the Mac (today)</td><td><span class="chip c-red">slow</span> 36–61 min checks, builders crowd 8 GB</td><td>yes (machine)</td><td>US$0</td><td>The bottleneck we measured</td></tr>
+<tr><td><b>Builders in the cloud, Mac checks only, GitHub free minutes for light groups</b> (chosen)</td><td><span class="chip c-green">fast</span> forecast 10–20 min, two machines at once</td><td>yes (machine)</td><td>US$0</td><td>Best fit: free, independent, parallel. Needs the Mac awake</td></tr>
+<tr><td>Builders in the cloud, all checks on GitHub's paid machines</td><td><span class="chip c-green">fastest</span> ~12 min, many at once</td><td>yes (machine)</td><td>~US$10–30/month</td><td>Kept as the upgrade if the Mac proves too slow</td></tr>
+<tr><td>Cloud sessions run the official check</td><td><span class="chip c-amber">medium</span></td><td><span class="chip c-amber">weak</span> an AI's report</td><td>allowance</td><td>Rejected: a session can misreport or be cut off; also burns allowance waiting</td></tr>
+<tr><td>Claude Projects coordinates the lanes</td><td>fast</td><td>—</td><td>allowance</td><td>Rejected: its threads ignore our skills, hooks and guardrails</td></tr>
+<tr><td>Make the repository public for free machines</td><td>fast</td><td>yes</td><td>US$0</td><td>Rejected: exposes the product and the team's material, irreversibly</td></tr>
+</tbody></table></div>
+<div class="col" style="margin-top:14px"><p><b>Why tests can run in the cloud but not count there:</b> a cloud session can run every test. The difference is who reports the result. On the Mac runner or a GitHub machine, a plain machine runs the tests and posts the result on the exact version; no AI can change it. In a cloud session, the AI runs them and tells us what happened, so its result is a claim. Builders still run the full tests in the cloud before handing over, to catch problems early; only the official merge check needs the machine.</p>
+<p><b>Why the Mac is slow:</b> its 8 GB of memory is shared by five builders, their own test runs, the Lead and the check. With the builders moved to the cloud, the same Mac has the memory to itself.</p>
+<p><b>The split, and its limit:</b> the tests divide into groups. The Mac runs the browser-heavy groups and GitHub's free minutes run the lighter ones at the same time, about 5 minutes of GitHub time per pull request, which fits roughly 100 code pull requests a month in the free 2,000 minutes. October's free minutes were already used up (about 4,700 minutes since 24 Oct); they renew at your next billing date. When they run out, the switch sends every group to the Mac, so a check is slower but never blocked. I could not read your exact balance: that needs a one-time permission you'd grant (I'll show you the command).</p></div>
+
+<h2>Cutover: when, and how you'll know</h2>
+<div class="col"><p>I'll tell you "ready for cutover" when all five are true:</p>
+<ol class="steps">
+<li>The cloud trial passed, or its fixes landed and a rerun passed.</li>
+<li>The new check is built and green: split groups on the Mac and GitHub, guard checks, merge only from the Mac.</li>
+<li>The current queue is merged or parked at pushed checkpoints (#96, the forms line with #103, the screens card, the runtime line).</li>
+<li>The charter and the updated skills (acceptance checks first, pre-review, reviewer started by the Lead, platform lane) are merged.</li>
+<li>One dry run: a cloud builder takes a small slice through the whole new path.</li>
+</ol>
+<p>Then: every lane stops at a pushed checkpoint, the rules switch, all lanes restart in the cloud. About an hour. Forecast: 1–2 working days from now.</p></div>
+
+<h2>Decided</h2>
 <div class="col">
-<div class="ask"><b>1. Tests on GitHub's machines, capped at US$50 a month.</b> Recommended: it is the only independent test result that cannot be faked, and it removes the Mac queue. Expected cost US$10–30.</div>
-<div class="ask"><b>2. The new way of working</b>: one-day slices, acceptance checks first, pre-review, reviewer started by the Lead, platform lane, lighter records. Recommended: it targets the 120–160 hours of rework.</div>
-<div class="ask"><b>3. Builders move to the cloud</b> at their next handover, once the cloud trial passes; the Lead stays on the Mac and you reach it from your phone. Recommended.</div>
+<div class="ask"><b>P-185:</b> keep going, then one cutover.</div>
+<div class="ask"><b>P-186:</b> the merge check stays free: the Mac checks only, GitHub's free minutes help.</div>
+<div class="ask"><b>Team charter</b> (<code>CHARTER.md</code>): you set direction; the Lead owns everything else and keeps you aligned. It covers analysis, design, engineering, quality, security and workflow, with an analyst agent that traces every requirement before design.</div>
 </div>
 
 <h2>Rollout</h2>
