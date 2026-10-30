@@ -39,9 +39,9 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
 
 current_screen: W1-shared-library (S6 1a/1b FIX for Lead PR #96); W1-setup-checklist (3) DESIGN handed back
-stage: FIX — Lead's PR #96 outside-review bugs (1)–(5), branch claude/screens-96-fix from origin/lead/2026-10-29-s2a + main 5f6c8deb (#94); checks running
-owner: Builder (FIX), then Lead
-next_action: finish the #96 FIX checks, push, hand the commit to the Lead to fold into #96. (3), for the Lead: concept v3 (F1 P-161 (3) duties, F4 P-174 + contract v2 kinds), F1's two questions, F3 who builds slice C, F2 ask forms for the pages record first; then the founder's early look; on OK, slice A
+stage: FIX — Lead's PR #96 outside-review bugs (1)–(5), branch claude/screens-96-fix from origin/lead/2026-10-29-s2a + main 5f6c8deb (#94); done at 49c175d0, every named check green
+owner: Lead
+next_action: Lead: fold claude/screens-96-fix (49c175d0) into #96. (3), for the Lead: concept v3 (F1 P-161 (3) duties, F4 P-174 + contract v2 kinds), F1's two questions, F3 who builds slice C, F2 ask forms for the pages record first; then the founder's early look; on OK, slice A
 then: (3) build after the Lead's OK → 1c (#94 is now on main) → 1b-2 → (4)
 blocked_by: nothing
 updated: 2026-10-30
