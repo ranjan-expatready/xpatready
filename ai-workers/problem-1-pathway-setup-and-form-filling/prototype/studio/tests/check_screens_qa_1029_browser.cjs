@@ -117,28 +117,29 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("QA-73: Review and release: no \"SME duty\", no \"Derived\", no \"no tested helper\"", !/SME duty|Derived definition|Derived fields|no tested helper/.test(rv), (rv.match(/SME duty|Derived[^\n]{0,40}|no tested helper/) ?? [])[0]);
     await axe("Review and release"); await p.screenshot({ path: path.join(SHOTS, "review-1440.png"), fullPage: true });
 
-    // QA-48: a retired combination is found under Status: Retired, and the counts line says it is hidden
+    // QA-48: a retired combination is found under the Retired chip (card v4, P-180), and the counts line says it is hidden
     await go("/");
-    await p.getByRole("button", { name: /^Status:/ }).click();
-    const noRetired = await p.getByRole("menuitemradio", { name: /Retired/ }).count(); await p.keyboard.press("Escape");
-    step("QA-48 fail case: with nothing retired the counts line says nothing about retired ones and the Status menu keeps BR-13's six", !/retired, not shown/.test(await main()) && noRetired === 0, noRetired);
+    const noRetired = await p.locator('[data-status-chip="retired"]').count();
+    step("QA-48 fail case: with nothing retired the counts line says nothing about retired ones and there is no Retired chip", !/retired, not shown/.test(await main()) && noRetired === 0, noRetired);
     // Retired as a release does it (P-116): the row and its activity line (the catalogue's cache follows the activity).
     sql(`update combination set retired_at = now() where id = '${visitor}'; insert into audit_event (id, workspace_id, actor, action, entity, entity_key, summary) select gen_random_uuid(), workspace_id, 'user-B', 'retired', 'combination', id::text, 'Approver retired Visitor visa (check)' from combination where id = '${visitor}'`);
     await go("/");
     const pg = await main();
-    step("QA-48: the counts line says one is retired and not shown, and how to see it", /1 retired, not shown \(Status: Retired\)/.test(pg), (pg.match(/\d+ combinations?[^\n]*/) ?? [])[0]);
-    await p.getByRole("button", { name: /^Status:/ }).click(); await p.getByRole("menuitemradio", { name: /Retired/ }).click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(300);
+    step("QA-48: the counts line says one is retired and not shown, and how to see it", /1 retired, not shown \(Retired\)/.test(pg), (pg.match(/\d+ combinations?[^\n]*/) ?? [])[0]);
+    await p.locator('[data-status-chip="retired"]').click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(300);
     const rt = await main();
-    step("QA-48: Status: Retired lists the retired combination", /Visitor visa/.test(rt) && /f=retired/.test(p.url()), p.url().replace(BASE, ""));
+    step("QA-48: the Retired chip lists the retired combination", /Visitor visa/.test(rt) && /f=retired/.test(p.url()), p.url().replace(BASE, ""));
     const card = p.locator('article[data-label="Visitor visa"]');
-    step("QA-48: the retired card says Retired and offers Restore on Program structure, never a setup step", /^1 retired combination/m.test(rt) && await card.locator('[data-status="RETIRED"]').count() === 1 && await card.getByRole("link", { name: "Restore on Program structure" }).count() === 1 && !/In setup|Add \d+ form/.test(await card.innerText()), (await card.innerText()).replace(/\n/g, " / "));
+    // Card v4 (concept v4 §6): "Retired at Release n", no bar, Open; restoring stays on Program structure (P-116).
+    step("QA-48 (card v4): the retired card says Retired at Release n with no bar and offers Open, never a setup step", /^1 retired combination/m.test(rt) && /Retired at Release \d+/.test(await card.innerText()) && await card.locator("[data-edge-bar]").count() === 0 && (await card.locator("[data-card-act]").innerText()).trim() === "Open" && !/In setup|Start setup|Resume setup|of 5 steps/.test(await card.innerText()), (await card.innerText()).replace(/\n/g, " / "));
     await p.screenshot({ path: path.join(SHOTS, "retired-1440.png") });
     // PR #91 outside review (2): the row announces what its chip shows.
     const label = await card.getAttribute("aria-label");
-    step("QA-48: the retired card's accessible name says Retired, as its chip does", /, Retired$/.test(label ?? ""), label);
-    step("QA-48 fail case: it never announces Live, In setup or Not started", !/(Live|Not ready|In setup|Not started)$/.test(label ?? ""), label);
-    // PR #91 outside review (1): Restore opens Program structure on the combination's own Pathway type.
-    step("QA-48: a retired Retail combination's Restore opens Program structure on Retail (no t=CORPORATE)", (await card.getByRole("link", { name: "Restore on Program structure" }).getAttribute("href")) === "/structure?r=1");
+    step("QA-48: the retired card's accessible name says Retired, as its progress line does", /, Retired at Release \d+$/.test(label ?? ""), label);
+    step("QA-48 fail case: it never announces Live, In setup or Not started", !/(Live|Not ready|In setup|Not started|of 5 steps)$/.test(label ?? ""), label);
+    // PR #91 outside review (1), card v4: Open on a retired card opens its combination page (restore is on Program structure).
+    await card.locator("[data-card-act] button").click(); await p.waitForURL(/\/c\//, { timeout: 10000 }).catch(() => {});
+    step("QA-48 (card v4): Open on the retired card opens its combination page", p.url().includes(`/c/${visitor}`), p.url().replace(BASE, ""));
     sql(`update combination set retired_at = null where id = '${visitor}'`);
     const corpRow = ((await api("/catalogue?pathway=CORPORATE&filter=all")).body?.rows ?? []).find((r) => r.combinationId);
     const corp = [corpRow?.combinationId, corpRow?.label];

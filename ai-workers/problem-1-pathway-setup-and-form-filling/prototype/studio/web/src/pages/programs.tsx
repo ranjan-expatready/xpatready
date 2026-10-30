@@ -427,7 +427,7 @@ function SectionHeader({ s, accent, shown, filtering, needsOnly, closed, onToggl
 function ProgramHeader({ p, closed, onToggle }: { p: ProgramGroup; closed: boolean; onToggle: () => void }) {
   return (
     <h3 className="mb-2 mt-3 pl-1 text-sm" data-program-band>
-      <button type="button" aria-expanded={!closed} onClick={onToggle} className="inline-flex items-center gap-2 rounded-md py-0.5 pr-2 text-left outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
+      <button type="button" aria-expanded={!closed} onClick={onToggle} className="inline-flex min-h-6 items-center gap-2 rounded-md py-0.5 pr-2 text-left outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
         {closed ? <ChevronRight className="size-4 text-text-muted" aria-hidden /> : <ChevronDown className="size-4 text-text-muted" aria-hidden />}
         <span className="font-semibold text-lv2">{p.label}</span>
         <span className="text-xs font-normal text-text-muted" data-live-count>{liveCount(p.live, p.combinations)}</span>
@@ -552,7 +552,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, needsOn
   const band = (key: string, shut: boolean, body: React.ReactNode, cls: string, style?: React.CSSProperties) => (
     <div role="row" data-group={key} className={cls} style={style}>
       <span role="rowheader" className="flex items-center">
-        <button type="button" aria-expanded={!shut} onClick={() => onToggle(key)} className="inline-flex items-center gap-2 rounded-md px-2 py-0.5 text-sm outline-none hover:text-text-link focus-visible:ring-[3px] focus-visible:ring-ring/50">
+        <button type="button" aria-expanded={!shut} onClick={() => onToggle(key)} className="inline-flex min-h-6 items-center gap-2 rounded-md px-2 py-0.5 text-sm outline-none hover:text-text-link focus-visible:ring-[3px] focus-visible:ring-ring/50">
           {shut ? <ChevronRight className="size-4 text-text-muted" aria-hidden /> : <ChevronDown className="size-4 text-text-muted" aria-hidden />}{body}
         </button>
       </span>
