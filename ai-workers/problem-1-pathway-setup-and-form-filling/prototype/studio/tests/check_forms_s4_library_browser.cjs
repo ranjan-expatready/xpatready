@@ -10,6 +10,7 @@
 const path = require("node:path"); const fs = require("node:fs"); const os = require("node:os"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
+const { speed } = require("./speed_budget.cjs"); // P-184: speed budgets judged only when the Mac is not busy
 const PORT = Number(process.argv[2] ?? 4458), DB = process.argv[3] ?? "xr_studio_forms_s4l";
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
@@ -36,7 +37,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.goto(`${BASE}/`); await as("user-A");
     let t0 = Date.now(); await open(); const cold = Date.now() - t0; // the server's and browser's first page: reported, not judged
     t0 = Date.now(); await open();
-    step("performance: Forms first view under 1 s (empty library)", Date.now() - t0 < 1000, `${Date.now() - t0} ms (cold first page ${cold} ms)`);
+    { const s = speed("performance: Forms first view under 1 s (empty library)", Date.now() - t0 < 1000, `${Date.now() - t0} ms (cold first page ${cold} ms)`); step(s.label, s.ok, s.detail); }
     step("C11.11: an empty library teaches the first action (the finder brings forms in; or Upload PDF)", /No forms yet/.test(await p.locator("main").textContent()) && /form finder/.test(await p.locator("main").textContent()));
     await axe("empty library"); await shot("01-empty");
 
@@ -46,7 +47,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const run = (await api(`/combinations/${vv}/forms/find`, { method: "POST", json: { mode: "rules", planSha256: plan.plan_sha256, idempotencyKey: `s4l-${Date.now()}` } })).body;
     for (let i = 0; i < 60 && ["queued", "running"].includes((await api(`/runs/${run.id}`)).body?.status); i++) await sleep(500);
     t0 = Date.now(); await open();
-    step("performance: Forms first view under 1 s with the sample", Date.now() - t0 < 1000, `${Date.now() - t0} ms`);
+    { const s = speed("performance: Forms first view under 1 s with the sample", Date.now() - t0 < 1000, `${Date.now() - t0} ms`); step(s.label, s.ok, s.detail); }
     const head = await p.locator("thead").innerText();
     step("C11.11: one list with the board's columns (Number, Title, Type, Edition, IRCC accepts, Used by, Status)", ["Number", "Title", "Type", "Edition", "IRCC accepts", "Used by", "Status"].every((h) => head.includes(h)), head);
     step("C11.11: forms, guides and checklists in one list (no groups); the guide the finder read is in it", (await forms()).includes("IMM 5257") && (await forms()).includes("Guide 5256") && (await forms()).includes("IMM 5484"), (await forms()).join(","));

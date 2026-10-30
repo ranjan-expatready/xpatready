@@ -8,6 +8,7 @@
 const path = require("node:path"); const fs = require("node:fs");
 const { chromium } = require("/Users/ranjansingh/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
+const { speed } = require("./speed_budget.cjs"); // P-184: speed budgets judged only when the Mac is not busy
 const PORT = Number(process.argv[2] ?? 4404), BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const OFFICIAL = path.join(ROOT, "official-sources", "ircc");
@@ -98,7 +99,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   let t0 = Date.now(); await p.goto(BASE); await grid().waitFor(); timings.cold_first_view_ms = Date.now() - t0;
   await p.goto(`${BASE}/library/forms`); await idle();
   t0 = Date.now(); await p.goto(BASE); await grid().waitFor(); timings.first_view_ms = Date.now() - t0;
-  step("performance: first view under 1 s with the sample data (app files cached)", timings.first_view_ms < 1000, `${timings.first_view_ms} ms (cold browser ${timings.cold_first_view_ms} ms)`);
+  { const s = speed("performance: first view under 1 s with the sample data (app files cached)", timings.first_view_ms < 1000, `${timings.first_view_ms} ms (cold browser ${timings.cold_first_view_ms} ms)`); step(s.label, s.ok, s.detail); }
   await idle();
   // BR-13 (W1-04, amends P-49): every combination by default; the views are one "Status: All ▾" menu, no tab row.
   step("BR-13: All is the default view; the status is one menu, no filter-tab row", await p.getByRole("button", { name: /^Status: All/ }).count() === 1 && await p.getByRole("group", { name: "Show combinations" }).count() === 0);
@@ -141,7 +142,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
     await new Promise((res) => { const o = new MutationObserver(() => { if (done()) { o.disconnect(); res(); } }); o.observe(document.body, { subtree: true, childList: true, attributes: true }); });
     return Math.round(performance.now() - t);
   });
-  step("performance: changing the view answers under 200 ms", timings.filter_ms < 200, `${timings.filter_ms} ms`);
+  { const s = speed("performance: changing the view answers under 200 ms", timings.filter_ms < 200, `${timings.filter_ms} ms`); step(s.label, s.ok, s.detail); }
   await idle();
   const liveRows = await grid().locator('[role="row"][data-node]').count();
   step("F1: Live shows every row whose status is Live", liveRows === 1 && (await row("With an LMIA").textContent()).includes("Live"), liveRows);

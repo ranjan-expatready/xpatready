@@ -8,6 +8,7 @@
 const path = require("node:path"); const fs = require("node:fs");
 const { chromium } = require("../../node_modules/playwright");
 const AxeBuilder = require("../../node_modules/@axe-core/playwright").default;
+const { speed } = require("../speed_budget.cjs"); // P-184: speed budgets judged only when the Mac is not busy
 
 const PORT = process.argv[2] ?? "4430", BASE = `http://localhost:${PORT}`;
 const SHOTS = path.join(__dirname, "../../../../product/screens/R1-thin-slice/screenshots/r1c");
@@ -358,7 +359,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   const none = async () => {};
   const agent = await best(caseView(o), none), tab = await best(personTab(o), backToApplication(o)), part = await best(clientPart(c), none);
   const [agentMs, tabMs, partMs] = [agent.ms, tab.ms, part.ms];
-  if (!process.env.R1C_SLOW) step(`budget: first view of the case page (best of 3 after a warm-up: ${agentMs} ms) and of a client part (${partMs} ms) under 1 s; a person's tab (${tabMs} ms) under 200 ms`, agentMs < 1000 && partMs < 1000 && tabMs < 200, { agent: agent.all, part: part.all, tab: tab.all });
+  if (!process.env.R1C_SLOW) { const s = speed(`budget: first view of the case page (best of 3 after a warm-up: ${agentMs} ms) and of a client part (${partMs} ms) under 1 s; a person's tab (${tabMs} ms) under 200 ms`, agentMs < 1000 && partMs < 1000 && tabMs < 200, { agent: agent.all, part: part.all, tab: tab.all }); step(s.label, s.ok, s.detail); }
   // The measure still catches a slow app: the same views with every API answer held 1.1 s are over the budget.
   if (!process.env.R1C_SLOW) {
     const s = await open("user-P", 390, 844);

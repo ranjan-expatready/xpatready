@@ -13,6 +13,7 @@
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
+const { speed } = require("./speed_budget.cjs"); // P-184: speed budgets judged only when the Mac is not busy
 const PORT = Number(process.argv[2] ?? 4447), DB = process.argv[3] ?? "xr_studio_screens_s2";
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
@@ -317,10 +318,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await new Promise((res) => { const o = new MutationObserver(() => { if (done()) { o.disconnect(); res(); } }); o.observe(document.body, { subtree: true, childList: true, attributes: true }); });
     return Math.round(performance.now() - t);
   });
-  step("C11.10 scale (STANDARDS §9): with 50+ combinations a Status change answers within 200 ms in the page", filterMs < 200, `${filterMs} ms`);
+  { const s = speed("C11.10 scale (STANDARDS §9): with 50+ combinations a Status change answers within 200 ms in the page", filterMs < 200, `${filterMs} ms`); step(s.label, s.ok, s.detail); }
   await open();
   const t1 = Date.now(); await p.getByRole("textbox", { name: /Search combinations/ }).fill("Scale sample 2"); await p.waitForFunction(() => document.querySelectorAll("article[data-node]").length === 10 && [...document.querySelectorAll("article[data-node]")].every((a) => /Scale sample 2/.test(a.textContent))); const ms2 = Date.now() - t1;
-  step("C11.10 scale: 50+ combinations show as cards and a search narrows them (120 ms typing pause included)", fifty >= 50 && ms2 < 1000, `${fifty} cards, first view ${ms} ms, search ${ms2} ms`);
+  { const s = speed("C11.10 scale: 50+ combinations show as cards and a search narrows them (120 ms typing pause included)", ms2 < 1000, `${fifty} cards, first view ${ms} ms, search ${ms2} ms`); step(s.label, s.ok && fifty >= 50, s.detail); } // the card count is judged always (P-184 covers only the time)
   step("sanity: database still holds every Structure name", Number(sql("select count(*) from program_def")) > 50);
 
   step("no script error on any page", errs.length === 0, errs.join(" | "));
