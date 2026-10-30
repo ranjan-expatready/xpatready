@@ -13,10 +13,8 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 * Start a fresh `claude/screens-*` branch from main once #96 is merged (else from `claude/screens-96-fix`), and bring in `screens/W1-setup-checklist/challenge.md` and `plan.md` from `claude/screens-checklist` if main does not have them yet.
 * Runs: node 24 first on PATH (`.tools/node-v24.21.0/bin`; `lane.sh setup`'s npm ci fails under node 23), `npm ci`, `prisma generate`, `vite build` in web/; private copies on 4441–4448 (`screens_96*` names worked); restore p2/, evidence/ and slice1b screenshots after runs.
 
-**(3) DESIGN done, 29 Oct evening: branch `claude/screens-checklist` (from main 0aeb22d7; worktree `screens-checklist-53f3c9`), pushed.** Fresh challenge F1–F5 in `screens/W1-setup-checklist/challenge.md` (new dated section) and `plan.md` (slices A engine and contract, no visible change · B card and Overview, after forms' official-pages record · C tabs, runtime's files unless handed over). No code. Waiting for the Lead and the founder's early look. In this copy `lane.sh setup`'s `npm ci` fails under node 23 (EBADENGINE): put `.tools/node-v24.21.0/bin` first on PATH before any build.
-**Earlier: branch `claude/screens-1b-queue` (from `claude/screens-1a-34cb66` e3483c7d; worktree `kind-mendel-ef9c9c`), pushed; main a9fe60c0 synced.** AI spent US$0.
-* Node: `.tools/node-v24.21.0`, since Prisma refuses Homebrew's node 23. A fresh worktree needs `npm ci` with that node on PATH, then `prisma generate`, then **`vite build` in `web/`** (without it, every browser suite times out).
-* (2a) and **1a passed the Lead check** and are folded into Lead PR #96 (merges on green CI). The Lead backs up :4400 before the restart that runs the migration.
+**(3) DESIGN, 29 Oct:** fresh challenge F1–F5 and `plan.md` (slices A engine, B card and Overview, C tabs) on `claude/screens-checklist` (4a40d176).
+* Node 24 (`.tools/node-v24.21.0/bin`) first on PATH; `tsx --tsconfig api/tsconfig.json` for `.ts` checks; rebuild `web/` before browser checks. The five suites a door change can break: `check_ai_orchestration`, `check_forms_channels`, `check_forms_demo`, `check_forms_pdf_hardening`, `check_forms_slice2`.
 
 **S6 slice 1 (plan-slice1.md): 1a and 1b DONE**, folded into Lead PR #96 (1a fix 0a5b09dd, 1b bb94fce6). What was built, decided and owed: build-notes.md "Slice 1a" and "Slice 1b". 1c (pqr_pick lander, rule-sourced field) waits for runtime #94.
 
@@ -26,10 +24,7 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 * **N-3:** no stop-gap; sections come from the forms' parts in slice 2, and the checks seed until then.
 * **P-97:** after #94, the field page's "Collected from" becomes read-only for an existing placement, with "Change who fills" calling `POST /library/fields/:key/fills`. That is our page (library.tsx).
 
-**Next for a fresh session: queue item (3), one setup checklist per combination driving the cards and Overview (P-157, P-161; C11.16, C11.10).** Lead, 29 Oct: start it while 1c waits for runtime PR #94 (`acceptPqrPick`) on main. **Lead correction (29 Oct): the concept is NOT agreed yet.** Write only (a) a fresh challenge (skill screen-challenge) of `concept-draft.md`, as a new dated section in `screens/W1-setup-checklist/challenge.md` (an earlier challenge is there; read it, do not repeat it), and (b) a short plan in `plan.md` from the concept, the challenge and design/. No code. Hand both back; the Lead takes them to the founder's early look.
-* Start a new `claude/screens-*` branch from main once #96 has merged (1a, (2a), 1b are in it); until then from `claude/screens-1b-queue` (bb94fce6).
 * Not done from 1b, decided with the Lead in build-notes "Slice 1b": 1b-2 (Draft fields with AI on the form row; job.tsx folds in), `seed_library.cjs` stays SQL. 1c: pqr_pick lander and the rule-sourced field (N-1 is on main as contract v2.1; N-2 waits for #94).
-* Running the checks: `/private/...` scratch scripts are gone with this session. Put node 24 on PATH (`.tools/node-v24.21.0/bin`), run `tsx --tsconfig api/tsconfig.json` for `.ts` checks (without it the decorators fail), and rebuild `web/` before browser checks. The five suites the forms replay touches (`check_ai_orchestration`, `check_forms_channels`, `check_forms_demo`, `check_forms_pdf_hardening`, `check_forms_slice2`) are the ones a door change can break.
 * Ports: screens own 4440–4449 only (4460s are evidence's).
 
 **Queue after (3) (P-173):** (4) linking combinations and copying a line (C1.3, C1.5).
@@ -39,7 +34,6 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 **Learned, not written elsewhere:**
 - Bash here refuses heredocs, `$(…)`, loops and some long `&&` chains (merge-guard hook): write a script to the scratchpad and run it. The catalogue caches rows keyed on activity counts: a check that changes the database by SQL also inserts an `audit_event` row.
 - Other lanes run this lane's checks under the same copy names and ports (`run-suites.sh` uses the usage lines), and all copies share one PostgreSQL server: two runs at once break each other. For reruns, use private names and ports (for example `<name>_mine` on 4460+), then drop those databases.
-- Long or multi-line Bash commands (heredocs, `$(…)` in some forms, loops) are refused by the merge guard hook (`gh pr merge*` matcher); put edits in a script file in the scratchpad and run it with a short command.
 - Run by-products land in the tree (other lanes' screenshots, `prototype/p2/*`, `prototype/studio/evidence/*`): restore them before each commit and stage only lane files.
 - The Prisma client in `node_modules` is shared with other copies: after switching branches run `./node_modules/.bin/prisma generate` if a column is reported missing.
 - An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
