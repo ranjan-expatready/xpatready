@@ -91,6 +91,15 @@ ok("C C11.15 an overloaded provider on a 100 KB finder request is not reported a
 const r429 = await replay("429-rate-limit", providerError(429, "rate_limit_error", "rate limit"), 33_000, 3000);
 ok("C C11.8 a rate-limited call is not retried at once and counted twice", r429.calls === 1 && r429.counted === 0, `${r429.calls} calls back to back, counted US$${r429.counted.toFixed(4)}`);
 
+// ---- E. the launcher admits each job kind's known facts (p2/launch.ts knownOk): QA-99 (live smoke 29 Oct, a9fe60c0)
+// Who can be builds `known: { combination_trail: g.trail }` with g.trail = the combination's label alone ("Study permit"),
+// which knownOk refuses (a trail is two names or more joined by " › "), so AI now is refused before any call.
+const { knownOk } = await import("../../../p2/launch.ts");
+const peopleSrc = readFileSync(join(PROTO, "studio", "api", "src", "people-ai.ts"), "utf8");
+const labelOnly = /trail:\s*c\.label\b/.test(peopleSrc);
+ok("E C11.12 Who can be's job carries a trail the launcher admits (not the combination's label alone)", !labelOnly && knownOk({ combination_trail: "Temporary residence › Study permits › Study permit" }),
+  labelOnly ? `people-ai.ts sets trail: c.label; knownOk({ combination_trail: "Study permit" }) is ${knownOk({ combination_trail: "Study permit" })}` : "");
+
 // ---- D. output headroom of saved live runs (thinking shares max_tokens): warning only
 const RUNS = join(PROTO, "p2", "runs");
 const tight = existsSync(RUNS) ? readdirSync(RUNS).filter((f) => /^studio-.*-live-.*\.json$/.test(f) && !f.includes("reconverted")).map((f) => { try { const r = JSON.parse(readFileSync(join(RUNS, f), "utf8")); const a = r.drafting_run.attempts.at(-1); return { f, used: (a?.output_tokens ?? 0) / r.drafting_run.settings.max_output_tokens }; } catch { return null; } }).filter((x): x is { f: string; used: number } => !!x && x.used >= 0.9) : [];

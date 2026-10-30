@@ -1,0 +1,200 @@
+URL /c/e09ac0ca-1399-421e-a611-8e8817317c64/preview as user-A
+TITLE Immigration programs · Product Studio
+H1 ["With an LMIA"]
+HEADS ["Overview","Forms","Questionnaires","Documents","Preview","Review and release","What Principal applicant is asked","Application details","Official language (English or French) in which the person wants to receive service","Documents (21)","Forms (7)"]
+CUT []
+ERRORS []
+---
+Immigration programs
+Temporary residence
+Work permits
+Employer-specific work permit
+With an LMIA
+With an LMIA
+Live
+
+In Release 1 · draft matches the release · cases opened outside Canada · people: Principal applicant, Spouse or partner (optional), Child (0–4), Representative (optional)
+
+Next step
+
+Nothing to do: firms can open cases on it
+
+Sample: from the sample inputs; its setup has changed since they were loaded.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+Sample family
+Single, no children
+Couple, no children
+Couple, one child
+Couple, two children
+Draft
+Released
+Draft (not released) · Sample people, never saved · Every form field and a Sample filled PDF
+Principal applicant · 84 questions · 21 documents · 7 forms
+Spouse or partner · 76 questions · 9 documents · 4 forms
+Child 1 · 7 questions · 1 document · 0 forms
+Child 2 · 3 questions · 1 document · 0 forms
+Representative · 13 questions · 0 documents · 0 forms
+Try answers that change what applies for Principal applicant (31)
+What Principal applicant is asked
+1. Application details · 1
+2. Personal details · 3
+3. Languages · 4
+4. Travel and identity documents · 2
+5. Contact details · 6
+6. Residence and immigration status (the application) · 1
+7. Residence and immigration status (Principal applicant) · 5
+8. Spouse or partner relationship (the application) · 6
+9. Spouse or partner relationship (Principal applicant) · 2
+10. Family members · 4
+11. Intended work in Canada · 1
+12. Education history · 6
+13. Employment and activity history · 6
+14. Medical background · 3
+15. Background declarations · 10
+16. Service, membership and government position history · 17
+17. Travel history · 5
+18. Representative and authorizations · 1
+19. Processing requirements · 1
+Application details
+
+Section 1 of 19 · once for the application · 1 question
+
+Official language (English or French) in which the person wants to receive service
+English
+French
+Previous section
+Next section
+
+Only questions the client fills. Typing here tries the fields; nothing is saved.
+
+Documents (21)
+Copy of IMM 5802 offer of employment and proof of employer compliance fee paymentCannot tell yet
+because Only when IRCC authorized the employer to submit the offer of employment using the IMM 5802 form.
+Copy of LMIA and copy of employment contract from prospective employerCannot tell yet
+because Only when the employer obtained an LMIA from ESDC for the job.
+Education and work experience evidence (New Delhi specification: certificates, diplomas or degrees with mark sheets; appointment and relieving letters; salary slips and Form 16; bank statements; reference letters with duration, duties and contact details)Cannot tell yet
+because When there is a job offered (employer-specific work permit).
+Employment contract (LMIA-exempt job)Cannot tell yet
+because When the job is LMIA-exempt.
+Evidence of exemption from the work permit processing feeCannot tell yet
+because Only for an applicant who is exempt from paying the work permit processing fee.
+Job offer letterCannot tell yet
+because Only when the job requires an LMIA.
+Letter from current employerCannot tell yet
+because Only for an employer-specific work permit.
+Letter of explanation - exceptional situation, no valid travel document (Venezuelan passport)Cannot tell yet
+because Venezuelan passport issued before 7 June 2019, expired for 5 years or more, where the applicant has an exceptional situation and cannot get a new passport or other acceptable travel document.
+Letter of explanation - Venezuelan passport extended 5 yearsCannot tell yet
+because Venezuelan passport issued before 7 June 2019, whose printed expiry date has passed, and that has been expired for less than 5 years at the application date.
+Passport or travel document information page photocopy
+because required for every person it names
+Proof of completed upfront medical examCannot tell yet
+because Only for an applicant who had an upfront medical exam with a panel physician.
+Proof of completion of program of study (final transcript, or institution letter / formal notice of graduation)Cannot tell yet
+because Only when applying for a post-graduation work permit.
+Proof of fee payment (processing fee and other applicable fees receipt)
+because required for every person it names
+Proof of legal immigration status in country of residenceCannot tell yet
+because Only when the applicant's country or territory of residence differs from the citizenship on their passport.
+Proof of meeting the requirements of the offered jobCannot tell yet
+because When the application is for an employer-specific work permit (there is a job being offered).
+Proof of past work experience (e.g. pay stubs)Cannot tell yet
+because Only for an employer-specific work permit.
+Provincial/territorial confirmation of nomination and R204(c) letterCannot tell yet
+because When the applicant is a provincial nominee with an LMIA-exempt offer of employment from an employer in the nominating province or territory.
+Québec Acceptance Certificate (CAQ) evidenceCannot tell yet
+because When the intended work is in Québec and the job has an LMIA.
+RésuméCannot tell yet
+because Only for an employer-specific work permit.
+Reference letter from past employersCannot tell yet
+because Only for an employer-specific work permit.
+Visa application photographsCannot tell yet
+because Paper photos only when the applicant is not required to give biometric fingerprints and photo.
+Forms (7)
+IMM 1295 Application for work permit made outside of Canada
+PDF upload
+
+always required for this combination
+IMM 5257 SCH1 Schedule 1 - Application for temporary residence
+PDF upload
+Cannot tell yet
+
+Needed for an applicant who answered yes to any background information question on the application form.
+IMM 5475 Authority to release personal information to a designated individual
+PDF upload
+Cannot tell yet
+
+Needed only when the applicant authorizes IRCC and CBSA to release case information to someone other than themselves.
+IMM 5476 Use of Representative
+PDF upload
+Cannot tell yet
+
+Needed when the applicant uses an authorized representative, or is appointing, updating or cancelling a representative.
+IMM 5488 DOCUMENT CHECKLIST FOR A WORK PERMIT (APPLIED OUTSIDE CANADA)
+PDF upload
+
+always required for this combination
+IMM 5707 Family Information
+PDF upload
+Cannot tell yet
+
+Needed for each applicant aged 18 or older at the application date, and for a minor who is travelling alone to Canada.
+IMM 5905 Work Permit
+PDF upload
+
+always required for this combination
+38 questions are placed in a selected section but not asked of this family: no form reads them and they decide nothing.
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+Path
+Pathway: show the list for Temporary residence
+Program: show the list for Work permits
+Category: show the list for Employer-specific work permit
+Sub-category: show the list for With an LMIA
+Combination
+Preview
+Which version
+Person
+Whether, within the past two years, the person or a family member had lung tuberculosis or close contact with a person with tuberculosis for Principal applicant
+Whether the person has a physical or mental disorder requiring social or health services other than medication for Principal applicant
+Whether the person ever remained beyond status, studied or worked without authorization in Canada for Principal applicant
+Whether the person was ever refused a visa or permit, denied entry or ordered to leave any country for Principal applicant
+Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence for Principal applicant
+Whether the person served in any military, militia, civil defence, security organization or police force for Principal applicant
+Whether the person is or was a member of or associated with a group that engaged in or advocated violence for political or religious objectives for Principal applicant
+Answer to the background question on witnessing or participating in ill treatment of prisoners or civilians, looting or desecration of religious buildings (wording to confirm against the official IMM 1295) for Principal applicant
+Whether the applicant authorizes IRCC/CBSA to release case information to a designated individual for The application
+Whether the applicant uses the services of an authorized representative for The application
+Whether a minor is travelling to Canada alone for Principal applicant
+Whether IRCC authorized the employer to submit the offer of employment on form IMM 5802 for The application
+Whether the employer obtained an LMIA from ESDC for the job for The application
+Whether the application is for an employer-specific (not open) work permit for Principal applicant
+Whether the job offer is exempt from the LMIA requirement for The application
+Whether the person is exempt from the work permit processing fee for Principal applicant
+Whether the person has an exceptional situation preventing them from getting a valid passport or travel document for Principal applicant
+Whether the person completed an upfront medical exam with a panel physician for Principal applicant
+Whether the application is for a post-graduation work permit for The application
+Whether the person holds a provincial or territorial nomination for Principal applicant
+Whether the job offer is from an employer in the nominating province or territory for The application
+Whether the person must give biometric fingerprints and photo for this application for Principal applicant
+Whether this family member will accompany the subject to Canada for Principal applicant
+Whether the family member plans to work in Canada for Principal applicant
+Whether the person requires a temporary resident visa to enter Canada for Principal applicant
+Whether the employer is exempt from the Employer Compliance Regime for The application
+Whether the PGWP applicant is a flight school graduate for Principal applicant
+Whether the offered job requires a licence or certification (regulated job) for The application
+Whether a submitted document is in English or French for Principal applicant
+Whether the intended work is in health services, child care, or primary or secondary education for Principal applicant
+Whether the government that issued the passport requires a re-entry permit for Principal applicant
+Sections
