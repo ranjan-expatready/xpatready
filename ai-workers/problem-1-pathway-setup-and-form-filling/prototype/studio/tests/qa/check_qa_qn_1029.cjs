@@ -124,11 +124,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       // Section Remove asks first or offers Undo (P-116)
       // A fresh page, so an earlier save's Undo toast cannot count as this one's.
       await p.reload(); await p.getByText("Full form facts").waitFor({ timeout: 30000 });
-      await p.getByRole("button", { name: "Remove from questionnaire: Submitted documents" }).click(); await sleep(2500);
+      // Since 5f6c8deb (QA-93 fix) Remove shows only where it changes something; other sections say why in words.
+      const rmBtn = p.getByRole("button", { name: /^Remove from questionnaire: / }).first();
+      const notHere = await p.locator("[data-remove-why]").count();
+      step("QA-93: sections where Remove changes nothing say why in words instead", notHere > 0, notHere);
+      const rmCount = await p.getByRole("button", { name: /^Remove from questionnaire: / }).count();
+      const sec = rmCount ? (await rmBtn.getAttribute("aria-label") ?? "").replace("Remove from questionnaire: ", "") : "(no section offers Remove here)";
+      if (rmCount) { await rmBtn.click(); await sleep(2500); }
       const asked = await p.getByRole("dialog").count() + await p.getByRole("alertdialog").count();
       const undo = await p.getByRole("button", { name: "Undo" }).count();
       const said = (await p.locator("[role=status]").allInnerTexts()).join(" | ");
-      step("QA-93 fail: Remove from questionnaire on a section asks first or offers Undo (P-116)", asked > 0 || undo > 0, { asked, undo, said, gone: !/Submitted documents ·/.test(await main()) });
+      step("QA-93 fail: Remove from questionnaire on a section asks first or offers Undo (P-116)", !rmCount || asked > 0 || undo > 0, { sec, asked, undo, said });
       if (asked) await p.keyboard.press("Escape");
       if (!/Submitted documents ·/.test(await main())) { await p.getByLabel("Library section to add").selectOption({ label: "Submitted documents" }); await p.getByRole("button", { name: "Add section" }).click(); await sleep(2000); }
       step("Add a library section brings the removed section back", /Submitted documents ·/.test(await main()));
