@@ -1,0 +1,14 @@
+URL /cases/48d2e92e-8fbd-4a16-bacb-237075efaba2 as user-P
+TITLE Product Studio
+H1 []
+HEADS []
+CUT []
+ERRORS []
+---
+This page is for the case officer
+
+As a client, open your questionnaire.
+--- labels ---
+Cases home
+Simulated people for the prototype: not part of the product
+Simulated person

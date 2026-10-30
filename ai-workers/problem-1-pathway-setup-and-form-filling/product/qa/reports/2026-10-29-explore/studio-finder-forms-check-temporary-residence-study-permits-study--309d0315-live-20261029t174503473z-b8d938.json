@@ -1,0 +1,128 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-finder-forms-check-temporary-residence-study-permits-study--309d0315-live-20261029t174503473z-b8d938",
+  "idempotency_key": "ee6be8932ca9b4c10d2ac47c88342f2dabe31ebae2965ca54cc13b364b399093",
+  "contract_version": "drafting-run/v0",
+  "kind": "find_forms",
+  "output_sha256": "41d6c0c01ebc7a2172a04839f2f58e912217c9a1d828c6cdb7981368d216406e",
+  "inputs": {
+   "combination": "sp.student",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/study-canada-study-permit-apply.text.inventory.json",
+     "sha256": "2d60f3cc050b01b1ae6d08646ccf49334c592a83e7098cc9dfb09f63c11445b5"
+    },
+    {
+     "file": "prototype/p1/inventory/guide-5269.text.inventory.json",
+     "sha256": "fa691c5049e97e4a4d04c07c3f85bf17921f6d64df29aadb5335f8796d649234"
+    }
+   ],
+   "configuration_version": "s4-form-finder"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "medium",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 10000,
+   "prompt_version": "find-forms-check.v1.md",
+   "prompt_sha256": "f852e107973a08d0c40563751174a1bc95ba2488213aa02568edcae977891a90"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 20518,
+    "output_tokens": 2586,
+    "duration_ms": 24104
+   }
+  ],
+  "usage": {
+   "input_tokens": 20518,
+   "output_tokens": 2586,
+   "cost_usd": 0.133792,
+   "duration_ms": 24104
+  },
+  "started_at": "2026-10-29T17:45:03.481Z",
+  "ended_at": "2026-10-29T17:45:28.695Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "fbd39cdf607eb840a32a58eb393c6ba5feb50975ad41a2cdc8edb9be9feb9845",
+  "template_sha256": "f3b1245a3dfbdc23bd60d1deda01cbcf5cfb8bbf6465153fe702555f133901c2",
+  "schema_file": "find-forms-output.v1.schema.json",
+  "schema_sha256": "2f4958634c499340fe685bc976788450e75c8bfe6e22cd246d12e78e624c88b6",
+  "known": {
+   "combination_trail": "Temporary residence › Study permits › Study permit"
+  },
+  "screened": true,
+  "output_sha256": "41d6c0c01ebc7a2172a04839f2f58e912217c9a1d828c6cdb7981368d216406e",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/objective-faraday-d76c2a/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "020b66ed193db2c02632f70ec1a1e57df51a282405201816c02b6c500c2bc139",
+  "request_bytes": 64122,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/objective-faraday-d76c2a/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 38.030491999999995
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/study-canada-study-permit-apply.text.inventory.json",
+    "sha256": "2d60f3cc050b01b1ae6d08646ccf49334c592a83e7098cc9dfb09f63c11445b5",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p1/inventory/guide-5269.text.inventory.json",
+    "sha256": "fa691c5049e97e4a4d04c07c3f85bf17921f6d64df29aadb5335f8796d649234",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "ffe9d7d1cc527ccec6fa3702165234bb98878501fcc14f350bf9693416c3f8f7",
+   "digest_made_at": "2026-10-29T17:45:03.477Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "82d5288b7d24c7f221317b6cdb84fb78",
+   "ticket_expires_at": "2026-10-29T17:47:03.477Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"forms\":[{\"code\":\"IMM 5269\",\"title\":\"Applying for a Study Permit outside Canada\",\"applies\":\"condition\",\"condition\":\"Instruction guide for applying for a study permit from outside Canada; the application page also covers applying from inside Canada and at a port of entry\",\"who\":\"case\",\"quote\":\"Guide 5269 - Applying for a Study Permit outside Canada\",\"filed_note\":null},{\"code\":\"IMM 1294\",\"title\":\"Application For Study Permit Made Outside of Canada\",\"applies\":\"condition\",\"condition\":\"When applying for a study permit from outside Canada (the guide lists it as a form that must be filled out and submitted)\",\"who\":\"each_applicant\",\"quote\":\"Made Outside of Canada (IMM 1294) (opens in a new tab)\",\"filed_note\":\"If you’re applying for a study permit you must apply online from outside of Canada.\"},{\"code\":\"IMM 5707\",\"title\":\"Family Information\",\"applies\":\"always\",\"condition\":null,\"who\":\"each_applicant\",\"quote\":\"The following are the forms that must be filled out and submitted:\",\"filed_note\":null},{\"code\":\"IMM 5483\",\"title\":\"Document Checklist\",\"applies\":\"always\",\"condition\":null,\"who\":\"case\",\"quote\":\"Make sure you complete the Document Checklist (IMM 5483) and include it with your application forms and supporting documents.\",\"filed_note\":null},{\"code\":\"IMM 5409\",\"title\":\"Statutory Declaration of Common-law Union\",\"applies\":\"condition\",\"condition\":\"If applicable, when there is a common-law partner\",\"who\":\"couple_once\",\"quote\":\"Common-law Union (IMM 5409) (opens in a new tab), if\",\"filed_note\":null},{\"code\":\"IMM 5646\",\"title\":\"Custodianship Declaration – Custodian for Minors Studying in Canada\",\"applies\":\"condition\",\"condition\":\"Children 17 or younger coming to study without an accompanying parent or legal guardian; minors between 17 and the age of majority may need a custodian at an officer's discretion\",\"who\":\"case\",\"quote\":\"a letter of permission from one or both parents and, if applicable, a notarized custodianship declaration.\",\"filed_note\":null},{\"code\":\"IMM 5476\",\"title\":\"Use of a Representative\",\"applies\":\"condition\",\"condition\":\"Only if appointing a representative, updating a representative's contact information, or cancelling a representative's appointment; dependent children 18 or older fill out their own copy if a representative acts for them\",\"who\":\"each_applicant\",\"quote\":\"Fill out this form only if you:\",\"filed_note\":null},{\"code\":\"IMM 5475\",\"title\":\"Authority to release personal information to a designated individual\",\"applies\":\"condition\",\"condition\":\"If applicable, when authorizing release of personal information to a designated individual\",\"who\":\"each_applicant\",\"quote\":\"information to a designated individual (IMM 5475) (opens in a new tab), if\",\"filed_note\":null}],\"unresolved\":[{\"quote\":\"Even if you apply online, you should read the instruction guide before you complete your application. The guide will explain how to complete each field on the form.\",\"reason\":\"The combination covers study permits generally, including applications from inside Canada, but the only guide and application form numbers printed (Guide 5269, IMM 1294) are for applications made outside Canada; no inside-Canada form number appears in the pages, so the IMM 1294 and guide scope is recorded as conditional.\"},{\"quote\":\"Declaration (IMM 5646) (opens in a new tab) . Pages 1\",\"reason\":\"Custodianship declaration is completed by parents/legal guardians and the custodian rather than the applicant; none of the 'who' values fits exactly, recorded as case.\"}]}"
+}

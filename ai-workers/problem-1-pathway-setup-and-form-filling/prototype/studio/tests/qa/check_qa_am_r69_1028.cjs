@@ -114,13 +114,13 @@ const row = async (code, a = "user-A") => (await call("GET", `/api/library/forms
   ok("C11.9 pass: sent, the toast offers Undo and the row offers Withdraw", await settle("Guide 5289", /^Withdraw/));
   await page.screenshot({ path: path.join(SHOTS, "01-retire-sent-withdraw.png") });
   // R69-2 / QA-67: switch to the approver without a reload; the row must follow the person.
-  await page.getByRole("combobox").first().selectOption({ label: "Approver · Content publisher · second person" });
+  await page.getByRole("combobox").first().selectOption({ label: "Approver" }); // 29 Oct (deda0e6b, QA-80): the menu shows the name only
   await page.waitForTimeout(2500);
   const asApprover = await actionOf("Guide 5289");
   ok("C11.9 QA-67 fail (R69-2): after switching to the approver, the row no longer offers the author's Withdraw", !asApprover.text.startsWith("Withdraw"), asApprover);
   await page.reload(); await rowEl("Guide 5289").waitFor();
   const fresh = await actionOf("Guide 5289");
-  await page.getByRole("combobox").first().selectOption({ label: "Configuration author · Super Admin · content publisher" });
+  await page.getByRole("combobox").first().selectOption({ label: "Configuration author" });
   await page.waitForTimeout(2500);
   const back = await actionOf("Guide 5289");
   await page.screenshot({ path: path.join(SHOTS, "02-r69-2-author-sees-approver-row.png") });
