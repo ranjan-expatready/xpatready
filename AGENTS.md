@@ -7,5 +7,6 @@
 5. **No personal names** in project files; use roles (the founder, the immigration expert, Client A).
 6. **New technology** only through the gate in `product/STANDARDS.md` §1.
 7. Current workflow, roles and quality bar: `ai-workers/problem-1-pathway-setup-and-form-filling/product/WORKFLOW.md`.
+8. **A size limit never costs a fact (founder, 30 Oct).** Older material moves word for word to `history/` with a link; only exact duplicates are deleted; every trim diffs old against new, and its commit says what moved where. A file that cannot fit without losing a fact goes to the Lead (or the founder): change the limit or split the file, never cut.
 
 Earlier rules (maker/checker, manifests, Codex coordination) are history: `archive/2026-10-21-before-workflow-switch/root-AGENTS.md`.

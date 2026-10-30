@@ -1,0 +1,21 @@
+# Devin prompts — the founder pastes one into Devin when the Lead says so (P-182)
+
+Devin is the outside checker, report only (P-146): it never edits app code, lane files or rules, never pushes `main`, writes no fixes. The Lead picks its report up from `inbox/` at the start of every `/lead` chat, or when the founder says "check Devin". Each prompt below is complete: paste it as it is. Work given to Devin is checking that tools and patterns do well (running suites, scanners, screen walks, list comparisons); product judgement stays with the Lead and the founder.
+
+**Every prompt starts with this block (paste it first):**
+> This repository (xpatready on GitHub), newest `main`. Read `AGENTS.md` and `ai-workers/problem-1-pathway-setup-and-form-filling/product/inbox/README.md` and follow its drop format exactly. Report only: change no file except your one inbox file; push one branch `devin/<yyyy-mm-dd>-<topic>` from `main` with that file; open no pull request. Never set any `STUDIO_*_LIVE` variable or any AI API key: every check is US$0 with the saved answers. Set up with `bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/cloud-setup.sh`. Every finding cites evidence (file and line, failing command and its output, or a screenshot path in your branch) and a suggested lane (screens, forms, runtime, qa). Plain business words; no personal names. Check `qa/BUGS.md` first: a known bug gets your evidence, not a new id.
+
+## D1 · Look and usability walk (after each merge to `main` that changes screens)
+Start the app (`zsh ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/start.sh`, then Demo › Reset and Load sample). Walk every page the newest merges changed (list them from `git log -5 --stat main`), as a content publisher who has never seen it, at 1024 and 1440 px wide. For each page compare with its board under `product/screens/*/design/` and its concept: words a basic user understands, one clear next step, nothing cut off or overlapping, the same button colour and sizes everywhere (P-180: brand blue `--color-primary`), keyboard reachable, focus visible. Run axe on each page. Report each difference with a screenshot of the page and of the board.
+
+## D2 · Security and technology review (weekly)
+Read the API under `prototype/studio/api/src` and the contracts. Check: every route that changes data checks who is acting and their duty (the `x-actor` and duty rules); every body is validated before use; no secret, key or token in the repository or logs; file uploads limited in type and size; errors never leak stack traces to the page; SQL only through Prisma. Run `npm audit --omit=dev` and list outdated packages with known advisories. Rate each finding by real risk for a private demo app now and for production later, separately.
+
+## D3 · Hard testing on Linux (on demand; fills the Mac-only CI gap, P-181)
+Run `bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/run-suites.sh --demo` on your clean Linux copy and report the summary table. Then run each browser suite (`tests/check_*_browser.cjs`) five times in a row and list every suite that fails at least once (flaky), with its failing step. Then run `check_catalogue_scale.cjs` by its usage line and report its timings. Then try the API with bad input on ten routes that save data (missing fields, wrong types, 10 000-character strings, another person's id, a second person approving their own change) and report any 500 error or any change that should have been refused.
+
+## D4 · Capability gap check (before each milestone gate)
+For every row of `product/qa/CAPABILITIES.md` with status Works or Partial: find the page, the API route and the test that prove it (`product/tools/graph.mjs` helps). For every decision in `product/DECISIONS.md` from P-149 on: find the capability row that cites it. Report rows with no test, decisions with no capability, and capabilities marked Works whose test does not check what the row says.
+
+## When the Lead asks for which
+D1 after a screens merge · D2 every Monday · D3 after a big merge and before each milestone gate · D4 before each milestone gate. The Lead says "send Devin D<n>" in its reply; the founder pastes the common block plus that prompt.
