@@ -14,17 +14,23 @@ blocked_by: none
 updated: 2026-10-30
 
 ## Handover (30 Oct; for the next qa session: read this first)
+* **Left to do (30 Oct, the Lead role moved to a fresh Lead chat):**
+  1. `/qa after-merge` on each next merge to main: #96 (screens: library sources and rename, ProposalItem table, review queue page), forms slice 1, the P-175 live switch (QA-100), #99 if not yet tested. Last tested main: **5f6c8deb**.
+  2. When QA-100 (P-175) merges: check that a copy without the server switch refuses every live start (finder and Who can be) before any call, and that the ledger does not grow; then rerun `check_qa_explore_1029.cjs` (QA-105, 106, 108, 110 still fail on 5f6c8deb).
+  3. Live Who can be retest (QA-99) only when the founder approves it in that session: US$0.55 spent of US$6.49, **US$5.94 left**.
+  4. Unmerged qa branches for the Lead: `claude/qa-after-merge-5f6c8de` (5d74a1e6 and this Handover; it contains `claude/qa-explore-1029` and `claude/qa-after-merge-deda0e6`).
+  5. Not yet covered: c8 coverage rerun, release refused for a fact with no source or two (C4.10), read-only walk of :4400 on 5f6c8deb.
 * **30 Oct, after-merge on 5f6c8deb (branch `claude/qa-after-merge-5f6c8de`):** QA-92–96 closed, QA-99 fixed in stub (live waits), QA-112–117 new. **Ports: 4471 is taken by the forms copy; use 4472–4479 and check `lsof -ti tcp:<port> -sTCP:LISTEN` first** (`isolated.sh` stops whatever holds the port). The guard hook blocks Bash lines containing "pqr", ports lists and some pipes: use scratchpad scripts. Retest QA-92–96 line below is done.
 * **29 Oct ~23:40, explore on a9fe60c0 (branch `claude/qa-explore-1029`, worktree objective-faraday-d76c2a, copy qa_ex :4473):** report `qa/reports/2026-10-29-explore.md`; QA-100–111 new. **Never click "Find forms with AI (about … · at most …)" in a check or by hand: it starts a LIVE run in one click on any copy (QA-100; US$0.27 spent that way).** Make a Rules find through the API first (`/forms/find/plan {mode:"rules"}`, then `/forms/find`), then use Find again; `check_qa_explore_1029.cjs` shows the pattern and stops if the ledger grows. The guard hook also blocks single `node … 2>&1 | tail` lines and some greps: use scratchpad scripts.
 * **Done 29 Oct evening:** after-merge on deda0e6b plus the live smoke on a9fe60c0. Report: `qa/reports/2026-10-29-after-merge-deda0e6.md` (§5 is the live smoke). Branch `claude/qa-after-merge-deda0e6` (worktree sharp-golick-4e9110), pushed; the Lead opens the qa PR.
 * **Waiting:**
-  * Live step 3 (Who can be, US$0.91 reserved) reruns when runtime's QA-99 fix merges. The Lead sends it. Founder ceiling: US$6.21 left of US$6.49. The user allowed paid calls in this session, but a new session must ask the user again.
+  * Live step 3 (Who can be, US$0.91 reserved) reruns when runtime's QA-99 fix merges. The Lead sends it. Founder ceiling: US$5.94 left of US$6.49 (30 Oct). The user allowed paid calls in this session, but a new session must ask the user again.
   * Live run recipe:
     * Copy `zsh studio/tools/isolated.sh qa_live 4478 start STUDIO_PEOPLE_AI_LIVE=approved`, then Load sample.
     * Plans are free: `POST /api/combinations/<id>/people/propose/plan {mode:"live"}`, then `/people/propose {mode, planSha256}` (synchronous).
     * The finder: `/forms/find/plan`, then `/forms/find {mode, planSha256, idempotencyKey}`, then poll `/api/runs/<id>` (status is lower case).
     * Costs: diff of `p2/ledger/spend.jsonl`. Put the ledger and run files back to HEAD before committing.
-  * Retest QA-92–96 when runtime's PR #94 merges (`check_qa_qn_1029.cjs`, `check_w115_slice2_browser.cjs` three times).
+  * Done 30 Oct: QA-92–96 retested and closed on 5f6c8deb.
 * **Lessons:**
   * A new worktree needs `ln -s /Users/ranjansingh/Desktop/Xpatready/.tools .tools` at its root before `isolated.sh` (else "start the demo database first").
   * Run the wording sweep on a freshly loaded copy (the S3 check leaves names, so a later Load sample is refused with 409).
@@ -34,7 +40,7 @@ updated: 2026-10-30
 * **How to run it, in order:**
   1. Start a fresh qa copy: a new worktree from `origin/main`, `echo qa > .claude/lane`.
   2. Install: `npm ci` in `prototype/studio` with **Node 24** (`.tools/node-v24.21.0/bin` first on PATH; Homebrew's Node 23 fails Prisma), then `npx prisma generate` and `cd web && npx vite build`.
-  3. Start a copy: `zsh tools/isolated.sh qa_am 4471 start`.
+  3. Start a copy on a free port 4472–4479 (check `lsof -ti tcp:<port> -sTCP:LISTEN` first; 4471 is the forms copy's): `zsh tools/isolated.sh qa_am 4472 start`. Full suites: `bash product/tools/run-suites.sh` (qa prefix, ports +16000, about 35 min), then restore by-products.
   4. Run the scratchpad script pattern (the guard hook blocks heredocs, `for` loops, pipes after `cat`, `&&` with git and some `sed` lines, so put them in a script file written with Write and run `zsh <file>`).
 * **Retest map** (check → bugs; each check resets and loads its own data):
 
@@ -44,7 +50,8 @@ updated: 2026-10-30
   | `check_qa_am_r3_1028.cjs` | QA-48 (68/69 on 52117004) |
   | `check_qa_am_s3_1029.cjs` | QA-70 (37/39) |
   | `check_qa_ai_paths.ts` (offline, from `prototype/`) | QA-83, 85–89 (10/21 on 170659bc) |
-  | `check_qa_qn_1029.cjs` | QA-92–95 (31/40; only if runtime's fix merged) |
+  | `check_qa_qn_1029.cjs` | QA-117 note; regression for QA-92–95 (39/41 on 5f6c8deb) |
+  | `check_qa_explore_1029.cjs` (never clicks a priced button; stops if the ledger grows) | QA-105, 106, 108, 110 (70/74 on 5f6c8deb) |
   | `check_qa_am_s4_1028.cjs`, `check_qa_am_s5_1029.cjs`, `check_qa_am_r69_1028.cjs`, `check_qa_dv_1029.cjs` | regression (62/62, 51/51, 33/33, 24/25) |
 
   Not in deda0e6b: QA-84, 91 (runtime), QA-90 (Lead tooling), QA-92–95 (runtime).
