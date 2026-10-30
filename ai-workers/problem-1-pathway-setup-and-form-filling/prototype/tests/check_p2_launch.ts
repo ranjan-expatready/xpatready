@@ -281,6 +281,18 @@ t("C11.8 QA-90 pass: with P2_LEDGER_DIR set, the drafting process reserves and s
 t("C11.8 QA-90 fail: ... and writes nothing to the copy's own ledger", ledgerLines().length === copyBefore);
 t("C11.8 QA-90 fail: a relative P2_LEDGER_DIR is refused before any process starts", launchShared("shared-ledger").code !== 0 && ledgerLines().length === copyBefore && shLines.length === 2);
 
+// 11. P-179: an override id and run key reach the drafting process's reservation; anything but plain words is refused.
+const launchArgs = (extra: string[]) => {
+  const r = spawnSync(process.execPath, [join(P2, "launch.ts"), "--job", "c1-fieldmap-imm5707", "--stub", ...extra], { encoding: "utf8", env });
+  try { return { code: r.status, ...JSON.parse(r.stdout.trim().split("\n").pop() ?? "{}") }; } catch { return { code: r.status, refused: r.stderr.slice(0, 300) }; }
+};
+const l11 = ledgerLines().length;
+const ov = launchArgs(["--override-id", "override-1-abc", "--run-key", "field_map:LIVE:source:x"]);
+t("C11.8 P-179 pass: the launcher passes --override-id and --run-key to the drafting process, whose reservation names the override",
+  ov.code === 0 && ledgerLines().length === l11 + 2 && ledgerLines()[l11]?.override_id === "override-1-abc");
+t("C11.8 P-179 fail: an override id that is not a plain word, or one without its run key, is refused before any process starts",
+  /plain words/.test(launchArgs(["--override-id", "x --live", "--run-key", "k"]).refused ?? "") && /go together/.test(launchArgs(["--override-id", "override-1"]).refused ?? "") && ledgerLines().length === l11 + 2);
+
 for (const [n, p] of results) console.log(`${p ? "PASS" : "FAIL"}  ${n}`);
 const failed = results.filter(([, p]) => !p).length;
 if (failed) console.log(JSON.stringify({ wide: wide.stdout + wide.stderr.slice(0, 300), badSha: badSha.stdout, good: good.stdout.slice(0, 300) + good.stderr.slice(0, 300), other: other.stdout + other.stderr.slice(0, 300) }));

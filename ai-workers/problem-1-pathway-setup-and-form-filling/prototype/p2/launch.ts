@@ -51,10 +51,15 @@ export function issueTicket(canary: ReturnType<typeof canaryStrings>, job: Job, 
   return { digest, digestSha: sha(bytes) };
 }
 
-export function launch(jobId: string, mode: "stub" | "live", opts: { approvedDir?: string } = {}): LaunchResult {
+/** P-179: an override id and run key are plain words (letters, digits, - _ : , .), so they pass to the drafting process as
+ *  arguments and nothing else. */
+const OVERRIDE_WORD = /^[A-Za-z0-9_:,.-]{1,300}$/;
+export function launch(jobId: string, mode: "stub" | "live", opts: { approvedDir?: string; override?: { id: string; runKey: string } } = {}): LaunchResult {
   if (!NAME.test(jobId)) throw new PolicyRefusal("job id must be a plain name");
   const approvedDir = opts.approvedDir;
   if (approvedDir !== undefined && !approvedSourcesDirOk(approvedDir)) throw new PolicyRefusal(`--approved-dir must be a Studio copy's approved-sources folder: ${approvedDir}`);
+  const override = opts.override;
+  if (override && !(OVERRIDE_WORD.test(override.id) && OVERRIDE_WORD.test(override.runKey))) throw new PolicyRefusal("--override-id and --run-key must be plain words (letters, digits, - _ : , .)");
   const job = JSON.parse(readFileSync(join(JOBS_DIR, `${jobId}.json`), "utf8")) as Job;
   if (job.job_id !== jobId) throw new PolicyRefusal("job file names a different job id");
   if (!NAME.test(job.template) || !NAME.test(job.output_schema)) throw new PolicyRefusal("template and schema must be plain file names in p2/prompts");
@@ -96,7 +101,7 @@ export function launch(jobId: string, mode: "stub" | "live", opts: { approvedDir
   env.P2_LEDGER_DIR = LEDGER_DIR; // QA-90: the drafting process reserves in this same ledger (it cannot look for the shared one)
   const timeout = Number(job.settings.timeout_ms ?? 600_000) * Number(job.settings.max_attempts ?? 1) + 60_000;
   const child = spawnSync(process.execPath, [...isolatedNodeArgs(LEDGER_DIR, approvedDir), DRAFT_ENTRY, "--job", jobId, "--run-id", runId, "--caller", mode,
-    "--template-sha", sha(template), "--schema-sha", sha(schema), ...(approvedDir ? ["--approved-dir", approvedDir] : [])], { encoding: "utf8", env, timeout, maxBuffer: 64 * 1024 * 1024 }); // (3)
+    "--template-sha", sha(template), "--schema-sha", sha(schema), ...(approvedDir ? ["--approved-dir", approvedDir] : []), ...(override ? ["--override-id", override.id, "--run-key", override.runKey] : [])], { encoding: "utf8", env, timeout, maxBuffer: 64 * 1024 * 1024 }); // (3)
   rmSync(ticketFile(runId), { force: true }); // used or not, this run's ticket is done (its use is recorded in the ledger folder)
   const endedAt = new Date().toISOString();
   let out: Record<string, any>;
@@ -161,9 +166,11 @@ if (import.meta.main) {
   const i = process.argv.indexOf("--job");
   const mode = process.argv.includes("--live") ? "live" : process.argv.includes("--stub") ? "stub" : null;
   const a = process.argv.indexOf("--approved-dir");
+  const o = process.argv.indexOf("--override-id"), k = process.argv.indexOf("--run-key");
   try {
-    if (i < 0 || !mode) throw new PolicyRefusal("usage: launch.ts --job <job id> (--stub | --live) [--approved-dir <folder>]");
-    const r = launch(process.argv[i + 1], mode, a > 0 ? { approvedDir: process.argv[a + 1] ?? "" } : {});
+    if (i < 0 || !mode) throw new PolicyRefusal("usage: launch.ts --job <job id> (--stub | --live) [--approved-dir <folder>] [--override-id <id> --run-key <key>]");
+    if ((o > 0) !== (k > 0)) throw new PolicyRefusal("--override-id and --run-key go together (P-179)");
+    const r = launch(process.argv[i + 1], mode, { ...(a > 0 ? { approvedDir: process.argv[a + 1] ?? "" } : {}), ...(o > 0 ? { override: { id: process.argv[o + 1] ?? "", runKey: process.argv[k + 1] ?? "" } } : {}) });
     console.log(JSON.stringify({ exit: r.exit, run_file: r.run_file, refused: r.refused, status: (r.record as any)?.status }));
     process.exit(r.exit);
   } catch (e) {

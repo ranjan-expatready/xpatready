@@ -91,6 +91,12 @@ export const PRICE_PER_MTOK: Record<string, { input: number; output: number }> =
  *  29 Oct): raised to US$120 for the W1-10 live trial; the Wave 1 cap stays US$60. */
 export const EXPERIMENT_CAP_USD = 120;
 export const RUN_CAP_USD = 5;
+/** P-179 (founder, 30 Oct; Lead answers Q1-Q3): a cost limit warns before anything is spent, and a person may click
+ *  Continue past it for that one run's worst case. Clicks may take total spend past the experiment cap by at most 10%;
+ *  past this ceiling there is no Continue, only "the founder must raise the cap". */
+export const OVERRIDE_CEILING_USD = Math.round(EXPERIMENT_CAP_USD * 1.1 * 100) / 100;
+/** An override is used to start its run within this time of the click, once (P-179). */
+export const OVERRIDE_TTL_MS = 10 * 60_000;
 /** P-110 (founder, 26 Oct; raised from US$40 to US$60 on 27 Oct, Lead PR #52): what Wave 1's live AI tests may spend,
  *  counted from the wave's start inside the experiment cap. The ledger refuses a reservation above it. */
 export const WAVE1_CAP_USD = 60;
