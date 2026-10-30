@@ -472,12 +472,12 @@ export class Finder implements OnModuleInit {
     if (same && [...same.channels].sort().join() === [...p.channels].sort().join()) return { code, outcome: "kept", why: "The library already records this." };
     if (await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })) return { code, outcome: "kept", why: "A change to what IRCC accepts already waits for a second person." };
     const label = `${code} · IRCC accepts${p.account === "ANY" ? "" : ` ${throughAccount(p.account)}`}: ${acceptsWords(p.channels)}${p.outcome === "check" ? " · Check" : ""}`;
+    // Review S5: two finds proposing for the same form at once both pass the check above; the database keeps one open
+    // change per form (library_change_one_open), so the later find says "kept" instead of failing on its refusal.
     const c = await this.db.libraryChange.create({ data: { workspaceId, kind: "form_accepts", key: code, label, action: "SET_ACCEPTS", reason: `canada.ca: "${p.quote.slice(0, 380)}"`, status: "WAITING", proposedBy: by,
-      matches: { source: "finder", account: p.account, channels: p.channels, quote: p.quote.slice(0, 400), reason: null, edition: current.editionLabel, before: same?.channels ?? null, form_page: def.formPageUrl ?? current.formPageUrl ?? null, readings: p.readings, check: p.why } as Prisma.InputJsonValue } });
-    // Review S5: two finds proposing for the same form at once both pass the check above; the earlier change stays, the
-    // later one is removed and its find says "kept" (as proposeAccepts does for two people).
-    const first = await this.db.libraryChange.findFirst({ where: { workspaceId, kind: "form_accepts", key: code, status: "WAITING" }, orderBy: [{ proposedAt: "asc" }, { id: "asc" }] });
-    if (first && first.id !== c.id) { await this.db.libraryChange.delete({ where: { id: c.id } }); return { code, outcome: "kept", why: "A change to what IRCC accepts already waits for a second person." }; }
+      matches: { source: "finder", account: p.account, channels: p.channels, quote: p.quote.slice(0, 400), reason: null, edition: current.editionLabel, before: same?.channels ?? null, form_page: def.formPageUrl ?? current.formPageUrl ?? null, readings: p.readings, check: p.why } as Prisma.InputJsonValue } })
+      .catch((e) => { if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return null; throw e; });
+    if (!c) return { code, outcome: "kept", why: "A change to what IRCC accepts already waits for a second person." };
     await this.audit.log(workspaceId, by, "proposed", "form", code, `The form finder proposed that IRCC accepts ${code} as ${acceptsWords(p.channels)} (${p.outcome === "check" ? `Check: ${p.why}` : "both rounds agree"}); waits for a second person`);
     return { code, outcome: p.outcome, why: p.why, change_id: c.id };
   }

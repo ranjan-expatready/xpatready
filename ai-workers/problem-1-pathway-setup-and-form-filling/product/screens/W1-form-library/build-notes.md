@@ -135,6 +135,7 @@ Files: New: `prisma/migrations/20261027150000_s4_form_library`, `contracts/form-
 Data: `Origin` + `AI_FOUND`; `GovFormDef` + `formPageUrl`, `retiredAt`, `retiredBy` (formKind adds `guide`, `checklist`); `FormEdition` + `origin`, `formPageUrl`, `sourceUrl`, `canadaUpdated`, `checkedAt`, `acceptedChannels`, `acceptedBasis`, `acceptedQuote`, `newerFileSha256`; new `OfficialDownload` (unique per checksum, https canada.ca check constraint), `FormLineAction` (Undo); `CombinationForm.finderBatchId`; `DraftingJob.combinationId` nullable (M7). Team names kept (`GovFormDef`, `FormEdition`, `CombinationForm`).
 
 ## Choices (small, technical)
+* DV-bb-5 (`history/devin/2026-10-29-devin-backbone.md`, form number in another style): the form number stays at 12 px, because 14 px overflowed the 1024 px table by 9 px (kept from the lane file).
 * Finder steps are `DraftingJob` rows with status `WAITING` until started, so the field-map worker (`ai.ts`) never picks them up; a server restart ends an open run "Find again".
 * Only High (both rounds agree, rules pass) is attached automatically; Low waits for a person — P-121's "a disagreement is Low; a person decides", applied to P-123's automatic attach.
 * A conditional form is attached as "only if" with AI's plain condition from the page; the real condition is W1-10's (m1). No "alternative of" relation (Not built).

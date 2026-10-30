@@ -6,11 +6,11 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { acceptedFor, allowedChannels, channelProblems, filingKind, filingMethod, fingerprintLine, lineOf, type AcceptRecord } from "../engine/channels.ts";
+import { acceptedFor, allowedChannels, channelProblems, filingKind, filingMethod, fingerprintLine, lineOf, notNeededWords, type AcceptRecord } from "../engine/channels.ts";
 import { diff, validate } from "../engine/validate.ts";
 import { oathMappedProblems } from "../engine/form-steps.ts";
 import { channelProposal } from "../api/src/filing.ts";
-import { SetChannel, signatureFits } from "../contracts/forms.ts";
+import { SetChannel, signatureFits, signatureMisfitWords, throughAccount } from "../contracts/forms.ts";
 import { AcceptsBody } from "../contracts/form-library.ts";
 import { codeForValue, draftOptionMap, optionMapProblems, pdfOptions } from "../engine/options.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
@@ -67,6 +67,17 @@ const intake = async (file: string, combinationId: string) => {
     !signatureFits("PDF_UPLOAD", "PEN") && !signatureFits("ONLINE", "HAND_SCANNED") && !signatureFits("PAPER", "NONE") && !signatureFits("NOT_NEEDED", "TYPED_NAME") && !signatureFits("ONLINE", "PEN"));
   const misfit = channelProblems(snap([{ form_number: "IMM 5257", channel: "PAPER", signature: "NONE" }]));
   ok("C1.6 C-2 fail: at release a Paper line with no signature is an error in words", misfit.some((x) => x.level === "error" && /does not fit a line filed as Paper/.test(x.message)), misfit);
+  // Break m6: every refusal in words, and the account read as a sentence.
+  const m6sig = SetChannel.safeParse({ channel: "PAPER", signature: "PEN", fromSignature: "X" }), m6sigOk = SetChannel.safeParse({ channel: "PAPER", signature: "PEN", fromSignature: "NONE" });
+  ok("C1.6 m6 fail: a signature it was changed from that is not one of the four is refused in words", !m6sig.success && /^Say which signature you changed it from/.test(m6sig.error.issues[0].message), m6sig.success ? null : m6sig.error.issues[0].message);
+  ok("C1.6 m6 pass: a known signature it was changed from is accepted", m6sigOk.success);
+  const m6q = AcceptsBody.safeParse({ account: "ANY", channels: ["PAPER"], quote: "x".repeat(401) }), m6qOk = AcceptsBody.safeParse({ account: "ANY", channels: ["PAPER"], quote: "x".repeat(400) });
+  ok("C11.18 m6 fail: a canada.ca line of 401 characters is refused in words", !m6q.success && /at most 400 characters/.test(m6q.error.issues[0].message), m6q.success ? null : m6q.error.issues[0].message);
+  ok("C11.18 m6 pass: a canada.ca line of 400 characters is accepted", m6qOk.success);
+  ok("C1.6 m6 pass: the words read as sentences: \"An Online line\", \"on paper, with no IRCC account\", \"paper filing (no IRCC account) asks it\"",
+    /\. An Online line is/.test(signatureMisfitWords("IMM 5257", "ONLINE", "PEN")) && /\. A Paper line is/.test(signatureMisfitWords("IMM 5257", "PAPER", "NONE"))
+    && throughAccount("PAPER") === "on paper, with no IRCC account" && throughAccount("PR_PORTAL") === "through the PR Portal" && /no record says paper filing \(no IRCC account\) asks it itself/.test(notNeededWords("IMM 5257", "PAPER")));
+  ok("C1.6 m6 fail: no sentence says \"A Online\" or \"through the No account\"", !/A Online|through the No account|the No account/.test([signatureMisfitWords("A", "ONLINE", "PEN"), throughAccount("PAPER"), notNeededWords("A", "PAPER")].join(" ")));
   ok("C1.6 C-1 fail: the old spelling SIGNED_PDF_UPLOAD is refused with its new name", (() => { const r = SetChannel.safeParse({ channel: "SIGNED_PDF_UPLOAD" }); return !r.success && /PDF upload, signed by hand and scanned/.test(r.error.issues[0].message); })());
   ok("C1.6 C-1 pass: each of the four channels and four signatures is a value", ["ONLINE", "PDF_UPLOAD", "PAPER", "NOT_NEEDED"].every((c) => SetChannel.safeParse({ channel: c }).success) && ["TYPED_NAME", "HAND_SCANNED", "PEN", "NONE"].every((x) => SetChannel.safeParse({ channel: "PDF_UPLOAD", signature: x }).success));
   const recs: AcceptRecord[] = [{ account: "ANY", channels: ["PDF_UPLOAD", "ONLINE"], basis: "AI_SAMPLE", quote: "q" }, { account: "IRCC_SECURE_ACCOUNT", channels: ["ONLINE"], basis: "FOUNDER_SAMPLE", quote: null }, { account: "PR_PORTAL", channels: ["NOT_NEEDED"], basis: "PERSON_SAMPLE", quote: "q" }];
@@ -338,6 +349,42 @@ const intake = async (file: string, combinationId: string) => {
 
   const out = join(STUDIO, "evidence", "forms-channels"); mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "channels-visitor-visa.json"), JSON.stringify((await call("GET", `/combinations/${vv}/channels`)).body, null, 1));
+
+  // ──────────────────────────────────────────── services on this copy's database (never the demo's)
+  if (/xr_studio_demo/.test(DB)) throw new Error("This check never runs on the demo database.");
+  process.env.DATABASE_URL = `postgresql://xr_studio@127.0.0.1:54329/${DB}`;
+  const { Db } = await import("../api/src/core.ts"), { Finder } = await import("../api/src/finder.ts"), { addFormLine } = await import("../api/src/form-lines.ts");
+  const db = new Db(), wsId = sql(`select workspace_id from combination where id='${vv}'`);
+  // Review S5: two finds proposing what IRCC accepts for the same form at the same moment: one change waits, the other is "kept".
+  const raceForm = sql(`select d.form_key from gov_form_def d join form_edition e on e.gov_form_def_id=d.id where d.workspace_id='${wsId}' and d.form_kind='data_form' and e.channel<>'ONLINE' and d.retired_at is null
+    and not exists (select 1 from library_change c where c.kind='form_accepts' and c.key=d.form_key and c.status in ('WAITING','RETURNED','APPROVED')) order by d.form_key limit 1`);
+  // Both finds pass the "already waiting" check before either writes: each insert waits until the other has arrived.
+  let arrived = 0, release = () => {}; const gate = new Promise<void>((r) => { release = r; });
+  const atOnce = new Proxy(db, { get(t, k) {
+    if (k === "libraryChange") return new Proxy(t.libraryChange, { get(lc, m) {
+      if (m === "create") return async (a: Parameters<typeof lc.create>[0]) => { if (++arrived >= 2) release(); await Promise.race([gate, new Promise((r) => setTimeout(r, 5000))]); return lc.create(a); };
+      const v = (lc as unknown as Record<string | symbol, unknown>)[m]; return typeof v === "function" ? v.bind(lc) : v; } });
+    const v = (t as unknown as Record<string | symbol, unknown>)[k]; return typeof v === "function" ? v.bind(t) : v; } });
+  const finder = new Finder(atOnce, null as never, { log: async () => undefined } as never, null as never) as unknown as { proposeChannel: (w: string, c: string, p: unknown, by: string) => Promise<{ outcome: string; change_id?: string }> };
+  const proposal = { outcome: "ready", channels: ["PAPER"], account: "ANY", quote: "Print the form, sign it and mail it.", why: null, readings: { draft: null, check: null, keyword: null } };
+  const settled = await Promise.allSettled([1, 2].map(() => finder.proposeChannel(wsId, raceForm, proposal, "system")));
+  const both = settled.map((x) => (x.status === "fulfilled" ? x.value : { outcome: `refused: ${String((x.reason as Error)?.message ?? x.reason).slice(0, 80)}` as string, change_id: undefined }));
+  const waiting = sql(`select count(*) from library_change where kind='form_accepts' and key='${raceForm}' and status='WAITING'`);
+  ok("C11.18 C-5 fail (review S5): two finds proposing for one form at the same moment: one waiting change, and neither find fails on the database refusal", waiting === "1" && both.filter((x) => x.change_id).length === 1 && !both.some((x) => x.outcome.startsWith("refused")), { raceForm, waiting, both: both.map((x) => x.outcome) });
+  ok("C11.18 C-5 pass (review S5): the other find says the change already waits (kept)", both.filter((x) => x.outcome === "kept").length === 1 && both.some((x) => x.outcome === "ready"), both);
+  sql(`delete from library_change where kind='form_accepts' and key='${raceForm}' and matches->>'source'='finder'`);
+  // A Paper line removed in a release comes back with its signature (C-2: the database refuses Paper with none).
+  const back = sql(`select d.id || '|' || d.form_key from gov_form_def d join form_edition e on e.gov_form_def_id=d.id where d.workspace_id='${wsId}' and d.form_kind='data_form' and d.retired_at is null
+    and not exists (select 1 from combination_form f where f.combination_id='${vv}' and f.lineage_key=d.form_key) order by d.form_key limit 1`).split("|");
+  const v1 = "00000000-0000-4000-8000-00000000b001";
+  sql(`insert into combination_form (id, workspace_id, combination_id, gov_form_def_id, lineage_key, who, attach_mode, status, origin, updated_by, channel, signature, version) values ('${v1}', '${wsId}', '${vv}', '${back[0]}', '${back[1]}', 'each_applicant', 'COMBINATION_MANDATORY', 'SUPERSEDED', 'HUMAN', 'test', 'PAPER', 'PEN', 1);
+    insert into combination_form (id, workspace_id, combination_id, gov_form_def_id, lineage_key, who, attach_mode, status, origin, updated_by, channel, signature, version, supersedes_id) values (gen_random_uuid(), '${wsId}', '${vv}', '${back[0]}', '${back[1]}', 'each_applicant', 'COMBINATION_MANDATORY', 'RETIRED', 'HUMAN', 'test', 'PAPER', 'PEN', 2, '${v1}');`);
+  const added = await addFormLine(db, { workspaceId: wsId, combinationId: vv, govFormDefId: back[0], formKey: back[1], origin: "HUMAN", by: "user-A", sourceQuote: "Test" }).catch((e: Error) => e.message);
+  const v3 = sql(`select channel || ':' || signature from combination_form where combination_id='${vv}' and lineage_key='${back[1]}' and version=3`);
+  ok("C1.6 C-2 pass: a Paper line removed in a release and added back is Paper, signed in pen, as it was", added === "added" && v3 === "PAPER:PEN", { added, v3 });
+  ok("C1.6 C-2 fail: the database refuses the Paper line with no signature the old restore wrote", (() => { try { sql(`update combination_form set signature='NONE' where combination_id='${vv}' and lineage_key='${back[1]}' and version=3`); return false; } catch { return true; } })());
+  sql(`delete from combination_form where combination_id='${vv}' and lineage_key='${back[1]}'`);
+  await db.$disconnect();
 
   // ──────────────────────────────────────────── reset removes the new records with the workspace
   r = await call("POST", "/demo/reset", { confirm: "RESET" });
