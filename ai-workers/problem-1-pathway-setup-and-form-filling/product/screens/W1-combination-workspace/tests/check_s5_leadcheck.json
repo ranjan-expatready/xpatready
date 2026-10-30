@@ -1,16 +1,16 @@
 {
-  "at": "2026-10-28T17:58:47.350Z",
-  "port": 4434,
-  "pass": 46,
+  "at": "2026-10-29T15:20:39.917Z",
+  "port": 4473,
+  "pass": 49,
   "fail": 0,
   "log": [
     {
-      "name": "L9 pass: after a reset only the new workspace's six person roles remain",
+      "name": "C11.12 L9 pass: after a reset only the new workspace's six person roles remain",
       "ok": true,
       "detail": "6/1"
     },
     {
-      "name": "L9 fail: a person role of a workspace that no longer exists (left by a reset before the fix) is removed by the next reset",
+      "name": "C11.12 L9 fail: a person role of a workspace that no longer exists (left by a reset before the fix) is removed by the next reset",
       "ok": true
     },
     {
@@ -27,7 +27,7 @@
       }
     },
     {
-      "name": "L1 pass: Undo puts back age 18, the person as signer and Always (the edit before it), not just the status",
+      "name": "C11.6 L1 pass: Undo puts back age 18, the person as signer and Always (the edit before it), not just the status",
       "ok": true,
       "detail": {
         "now": "18|person|COMBINATION_MANDATORY|-|DRAFT|v2",
@@ -36,7 +36,7 @@
       }
     },
     {
-      "name": "L1 pass: a second Undo goes back to the released line (no age, no signer)",
+      "name": "C11.6 L1 pass: a second Undo goes back to the released line (no age, no signer)",
       "ok": true,
       "detail": {
         "now": "-|-|COMBINATION_MANDATORY|-|PUBLISHED|v1",
@@ -49,64 +49,64 @@
       "detail": ""
     },
     {
-      "name": "L1 fail: Undo of the age edit is refused once the line was changed since (its filing is now part of what is compared)",
+      "name": "C11.6 L1 fail: Undo of the age edit is refused once the line was changed since (its filing is now part of what is compared)",
       "ok": true,
       "detail": "One of these forms was changed after that step (by you or someone else), so it cannot be undone exactly. Change it by hand."
     },
     {
-      "name": "L4 (rule): PDF accepts PDF and signed PDF uploads, Online only Online, both all three; nothing recorded is null (Sample)",
+      "name": "C1.6 L4 (rule, P-143): a record of PDF upload offers PDF upload; Online offers Online; nothing recorded offers Online, PDF upload and Paper (Sample)",
       "ok": true
     },
     {
-      "name": "L4 fail-guard: with nothing recorded for IMM 1295, every way is offered and said to be Sample",
+      "name": "C1.6 L4 fail-guard: with nothing recorded for IMM 1295, every way is offered and said to be Sample",
       "ok": true,
       "detail": {
         "accepted": [
-          "PDF_UPLOAD",
           "ONLINE",
-          "SIGNED_PDF_UPLOAD"
+          "PDF_UPLOAD",
+          "PAPER"
         ],
         "basis": "Sample: the Form library does not record what IRCC accepts for this form yet"
       }
     },
     {
-      "name": "L4 pass: once the Form library records PDF for the edition, Filed as offers only PDF upload and signed PDF upload, from the library",
+      "name": "C1.6 L4 pass: once the Form library records PDF for the edition, Filed as offers only PDF upload (any signature that fits it), from the library",
       "ok": true,
       "detail": {
         "accepted": [
-          "PDF_UPLOAD",
-          "SIGNED_PDF_UPLOAD"
+          "PDF_UPLOAD"
         ],
         "basis": "From the Form library: what IRCC accepts for this edition"
       }
     },
     {
-      "name": "L4 fail: choosing Online is refused on save in words (IRCC accepts it only as a PDF upload)",
+      "name": "C1.6 L4 fail: choosing Online is refused on save in words (IRCC accepts it only as a PDF upload)",
       "ok": true,
       "detail": "IMM 1295 is filed as Online, but the Form library records that IRCC accepts it only as a PDF upload. Choose a way IRCC accepts."
     },
     {
-      "name": "L4 pass: a signed PDF upload, which IRCC accepts, is saved",
+      "name": "C1.6 L4 pass: a PDF upload signed by hand and scanned, which IRCC accepts, is saved",
       "ok": true,
       "detail": ""
     },
     {
-      "name": "L4 fail: a line already filed Online (saved before the library recorded PDF) blocks release with the same words",
+      "name": "C1.6 L4 fail: a line already filed Online (saved before the library recorded PDF) blocks release with the same words",
       "ok": true,
       "detail": [
         "IMM 1295 is filed as Online, but the Form library records that IRCC accepts it only as a PDF upload. Choose a way IRCC accepts.",
+        "IMM 1295: \"Signed by hand and scanned\" does not fit a line filed as Online. A Online line is no signature or typed name.",
         "IMM 1295 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.",
         "IMM 1295: 37 rows of its lists (for example \"Question 8 B Row 1 Country or Territory. If you replied…\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library.",
         "Not decided yet (from an earlier release): 16 form fields (for example *). Decide them when this edition is drafted again."
       ]
     },
     {
-      "name": "L4 fail: submitting for review is refused while it is so",
+      "name": "C1.6 L4 fail: submitting for review is refused while it is so",
       "ok": true,
-      "detail": "Fix 1 problem before submitting: IMM 1295: IMM 1295 is filed as Online, but the Form library records that IRCC accepts it only as a PDF uplo"
+      "detail": "Fix 2 problems before submitting: IMM 1295: IMM 1295 is filed as Online, but the Form library records that IRCC accepts it only as a PDF upl"
     },
     {
-      "name": "L4 pass: filed as a PDF upload again, the error is gone",
+      "name": "C1.6 L4 pass: filed as a PDF upload again, the error is gone",
       "ok": true
     },
     {
@@ -123,14 +123,14 @@
       ]
     },
     {
-      "name": "L5 pass: a minimum age on Visitor visa (no section selected) brings the date of birth question along, so no error",
+      "name": "C11.6 L5 pass: a minimum age on Visitor visa (no section selected) brings the date of birth question along, so no error",
       "ok": true,
       "detail": [
         "No field map yet: the form cannot be filled."
       ]
     },
     {
-      "name": "L5 pass: Preview decides IMM 5257 for the Sample principal from their date of birth (from age 18)",
+      "name": "C11.6 L5 pass: Preview decides IMM 5257 for the Sample principal from their date of birth (from age 18)",
       "ok": true,
       "detail": {
         "form": "IMM 5257",
@@ -143,34 +143,34 @@
       }
     },
     {
-      "name": "L5 pass (engine): on a new case, with the date of birth not yet known, it is asked as the question that decides the form",
+      "name": "C11.6 L5 pass (engine): on a new case, with the date of birth not yet known, it is asked as the question that decides the form",
       "ok": true,
       "detail": "decides"
     },
     {
-      "name": "L5 fail: with nobody asked for a date of birth (no placement, no document), release is refused naming the fix",
+      "name": "C11.6 L5 fail: with nobody asked for a date of birth (no placement, no document), release is refused naming the fix",
       "ok": true,
       "detail": [
         "IMM X applies from age 18, so each person's date of birth decides it, but nobody is asked for a date of birth in this combination. Add the date of birth question to this combination's questionnaire, or clear the minimum age."
       ]
     },
     {
-      "name": "L5 pass (engine): the same form with a date of birth question has no such error",
+      "name": "C11.6 L5 pass (engine): the same form with a date of birth question has no such error",
       "ok": true,
       "detail": []
     },
     {
-      "name": "L5 pass: With an LMIA asks the date of birth (Personal details), so its age-gated IMM 1295 has no such error",
+      "name": "C11.6 L5 pass: With an LMIA asks the date of birth (Personal details), so its age-gated IMM 1295 has no such error",
       "ok": true,
       "detail": []
     },
     {
-      "name": "L5 pass: and a case decides it from that answer (the child, 8, does not get IMM 1295; the principal does)",
+      "name": "C11.6 L5 pass: and a case decides it from that answer (the child, 8, does not get IMM 1295; the principal does)",
       "ok": true,
       "detail": []
     },
     {
-      "name": "L5 (engine): with no date of birth known, the form is 'cannot tell' and the date of birth is what decides it",
+      "name": "C11.6 L5 (engine): with no date of birth known, the form is 'cannot tell' and the date of birth is what decides it",
       "ok": true,
       "detail": {
         "form": "IMM X",
@@ -188,15 +188,15 @@
       }
     },
     {
-      "name": "L5 pass: clearing the minimum age clears the error",
+      "name": "C11.6 L5 pass: clearing the minimum age clears the error",
       "ok": true
     },
     {
-      "name": "L11 (rule): the product's own words are never IRCC's; a real quote stays one",
+      "name": "C11.10 L11 (rule): the product's own words are never IRCC's; a real quote stays one",
       "ok": true
     },
     {
-      "name": "L11 pass: IMM 1295 added from the library shows no IRCC quote and says how it was added",
+      "name": "C11.10 L11 pass: IMM 1295 added from the library shows no IRCC quote and says how it was added",
       "ok": true,
       "detail": {
         "status": 201,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "name": "L11 fail-guard: a line the finder picked keeps IRCC's words and says nothing about being added",
+      "name": "C11.10 L11 fail-guard: a line the finder picked keeps IRCC's words and says nothing about being added",
       "ok": true,
       "detail": {
         "quote": "If you are in a common-law union, you must also request and ",
@@ -214,17 +214,17 @@
       }
     },
     {
-      "name": "L2 fail: the plan for AI now is refused (409) with the reason: it waits for the founder's Go for a live trial",
+      "name": "C11.12 L2 fail: the plan for AI now is refused (409) with the reason: it waits for the founder's Go for a live trial",
       "ok": true,
       "detail": "AI now waits for the founder's Go for a live trial (P-110). Use rules only, or saved AI answers, meanwhile."
     },
     {
-      "name": "L2 fail: running AI now is refused before any AI call (US$0)",
+      "name": "C11.12 L2 fail: running AI now is refused before any AI call (US$0)",
       "ok": true,
       "detail": "AI now waits for the founder's Go for a live trial (P-110). Use rules only, or saved AI answers, meanwhile."
     },
     {
-      "name": "L2 pass: rules only still plans, at US$0",
+      "name": "C11.12 L2 pass: rules only still plans, at US$0",
       "ok": true,
       "detail": {
         "worst_usd": 0,
@@ -242,7 +242,7 @@
       ]
     },
     {
-      "name": "L3 pass: a line from rules only is saved and read back as found by rules (CODE_MATCH), never as AI",
+      "name": "C11.12 L3 pass: a line from rules only is saved and read back as found by rules (CODE_MATCH), never as AI",
       "ok": true,
       "detail": {
         "status": 200,
@@ -254,16 +254,16 @@
       }
     },
     {
-      "name": "L3 fail: an origin that is not one of the product's (HUMAN, AI_PROPOSAL, CODE_MATCH, SAMPLE) is refused",
+      "name": "C11.12 L3 fail: an origin that is not one of the product's (HUMAN, AI_PROPOSAL, CODE_MATCH, SAMPLE) is refused",
       "ok": true,
       "detail": 400
     },
     {
-      "name": "L7 (engine): a typed label is kept; with none, the library's label is used",
+      "name": "C11.12 L7 (engine): a typed label is kept; with none, the library's label is used",
       "ok": true
     },
     {
-      "name": "L7 pass: 'Common-law partner' typed for the spouse line is saved as typed",
+      "name": "C11.12 L7 pass: 'Common-law partner' typed for the spouse line is saved as typed",
       "ok": true,
       "detail": {
         "status": 200,
@@ -272,35 +272,48 @@
       }
     },
     {
-      "name": "L7 fail-guard: a line sent with no label takes the library's label",
+      "name": "C11.12 L7 fail-guard: a line sent with no label takes the library's label",
       "ok": true,
       "detail": "Spouse or partner"
     },
     {
-      "name": "L10 fail: who can be in a retired combination is not saved (409, says restore it first)",
+      "name": "C11.12 L10 fail: who can be in a retired combination is not saved (409, says restore it first)",
       "ok": true,
       "detail": "\"Visitor visa\" is retired: who can be in it is not changed. Restore it on Structure first; open cases keep their release."
     },
     {
-      "name": "L10 fail: nor undone",
+      "name": "C11.12 L10 fail: nor undone",
       "ok": true,
       "detail": "\"Visitor visa\" is retired: who can be in it is not changed. Restore it on Structure first; open cases keep their release."
     },
     {
-      "name": "L10: the tab offers no Undo on a retired combination",
+      "name": "C11.12 L10: the tab offers no Undo on a retired combination",
       "ok": true
     },
     {
-      "name": "L10 pass: once restored, the same save goes through",
+      "name": "C11.12 L10 pass: once restored, the same save goes through",
       "ok": true,
       "detail": ""
     },
     {
-      "name": "L6 pass (before a release): a save offers Undo",
+      "name": "C11.12 L6 pass (before a release): a save offers Undo",
       "ok": true,
       "detail": {
         "status": 200,
         "canUndo": true
+      }
+    },
+    {
+      "name": "C11.6 QA-69 pass (before a release): the Forms tab offers Undo of the last change on its forms",
+      "ok": true,
+      "detail": {
+        "id": "d3661bdd-6df4-469c-a696-1574f3b06adb",
+        "action": "edit",
+        "codes": [
+          "IMM 1295"
+        ],
+        "by": "user-A",
+        "at": "2026-10-29T15:20:37.943Z"
       }
     },
     {
@@ -309,14 +322,24 @@
       "detail": 2
     },
     {
-      "name": "L6: after the release the tab offers no Undo",
+      "name": "C11.12 L6: after the release the tab offers no Undo",
       "ok": true,
       "detail": false
     },
     {
-      "name": "L6 fail: Undo of a save that was released since is refused (409, a release is never undone)",
+      "name": "C11.12 L6 fail: Undo of a save that was released since is refused (409, a release is never undone)",
       "ok": true,
       "detail": "Released since: that change was released meanwhile, and a release is never undone. Change who can be in a new draft."
+    },
+    {
+      "name": "C11.6 QA-69: after the release the Forms tab offers no Undo",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "C11.6 QA-69 fail: Undo of a forms change made before the release is refused (409 Released since)",
+      "ok": true,
+      "detail": "409 That change was released meanwhile: a release is never undone. Change it in a new draft."
     }
   ]
 }

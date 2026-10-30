@@ -72,7 +72,8 @@ try {
   };
   const caller = mode === "stub" ? stubCaller(job.kind) : sdkCaller();
   const ledger = new SpendLedger(LEDGER_DIR); // the experiment ledger at EXPERIMENT_CAP_USD; never injected
-  const outcome = await runDrafting(run, build, caller, ledger, { allowStubDrafts: mode === "stub", screened: () => requestScreened, approvedDir });
+  const overrideId = arg("override-id"), runKey = arg("run-key"); // P-179: a person's recorded Continue, checked again by the ledger
+  const outcome = await runDrafting(run, build, caller, ledger, { allowStubDrafts: mode === "stub", screened: () => requestScreened, approvedDir, ...(overrideId && runKey ? { override: { id: overrideId, runKey } } : {}) });
   console.log(JSON.stringify({
     ok: true, isolation, job_id: jobId, prompt_sha256: promptSha,
     screening: { digest_sha256: digestSha, digest_made_at: digest.made_at, digest_sources: digest.sources, ticket_nonce: ticket.nonce, ticket_expires_at: ticket.expires_at, items_screened: jobScreenItems(job, template, schemaBytes).length, request_screened: requestScreened, stub_gate_checked: mode === "live" },

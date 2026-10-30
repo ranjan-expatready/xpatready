@@ -52,6 +52,7 @@ Each slice ends with scripted API journeys, a pass and a fail test per rule, che
 * **Founder Q2, answered (P-140):** the finder's two rounds propose the channel with IRCC's quote. The channel values are not decided yet (research asked).
 * **P-138:** drafting a form's masters runs only on a click; a saved draft replays at US$0.
 * **Lead Q-L1 to Q-L3, yes:** the runner by the forms lane first (slice 0); the queue item contract proposal in `contracts/` before slice 2; the order above.
+* **Slice 0 note (runner, kept from the lane file):** an edition round's job names the printed edition as its known fact, and the launcher admits IMM editions only; a guide edition is refused (`prototype/p2/launch.ts:35`, `knownOk`; screens noted it in `plan-slice1.md`).
 
 ## 5. P-149 addendum: the shared library authoring model (founder, 29 Oct; Lead message)
 P-149 (on `lead/2026-10-29-devin`, research `screens/W1-shared-library/research-authoring-model.md`) amends P-120: AI drafts first, a person edits and accepts, a second person approves, and a manual Add is the marked exception. What it changes in W1-10, and where each part lands:

@@ -1,12 +1,12 @@
 {
- "at": "2026-10-26T14:38:29.375Z",
+ "at": "2026-10-30T05:06:26.435Z",
  "pass": 16,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 5.935
+   "detail": 9.545
   },
   {
    "name": "C1.6 pass: every line shows its channel (PDF upload today) and the combination its filing method",
@@ -25,8 +25,8 @@
    "name": "C1.6 pass: the author sets one line's channel; the line, its signature and the filing method follow",
    "ok": true,
    "detail": [
-    "PDF only",
-    "PDF only (some signed by hand)"
+    "Mixed: PDF and paper",
+    "PDF uploads + paper forms"
    ]
   },
   {
@@ -34,12 +34,12 @@
    "ok": true
   },
   {
-   "name": "C1.6 fail: a channel that is not one of the three is refused on its field",
+   "name": "C1.6 fail: a channel that is not one of the four is refused on its field",
    "ok": true,
    "detail": [
     {
      "field": "channel",
-     "message": "Choose PDF upload, Online or Signed PDF upload."
+     "message": "Choose Online, PDF upload, Paper or Not needed."
     }
    ]
   },
@@ -48,9 +48,9 @@
    "ok": true
   },
   {
-   "name": "round 2 M2 fail: a save from a screen that still showed PDF upload (now Signed) is refused, not a silent overwrite",
+   "name": "round 2 M2 fail: a save from a screen that still showed PDF upload (now Paper) is refused, not a silent overwrite",
    "ok": true,
-   "detail": "IMM 1295 was changed to Signed PDF upload while you were choosing. Your choice was not saved; check it and choose again."
+   "detail": "IMM 1295 was changed to Paper while you were choosing. Your choice was not saved; check it and choose again."
   },
   {
    "name": "review 2 should 4 fail: a checklist is not filed, so it has no channel",
