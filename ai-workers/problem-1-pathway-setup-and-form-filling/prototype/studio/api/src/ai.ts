@@ -157,8 +157,9 @@ export class Ai implements OnModuleInit {
       expected_usd: targets.some((t) => t.action === "draft" && t.expected_usd === null) ? null : round(targets.reduce((a, t) => a + (t.expected_usd ?? 0), 0)), worst_usd: round(targets.reduce((a, t) => a + t.worst_usd, 0)) };
     const ledger = this.sources.ledger();
     const plan_sha256 = sha(JSON.stringify({ mode, scope: scope.kind, targets: targets.map((t) => [t.combinationId, t.attachmentId, t.action, t.run_file ?? null, t.fingerprint ?? null, t.over_attempts ?? false]) }));
-    // P-179: the one cost check (the shared ledger's numbers) and the run key a Continue names.
-    const cost_check = costCheckNow({ worst: totals.worst_usd, expected: totals.expected_usd, run: Math.max(0, ...targets.map((t) => t.worst_usd)), spentForms: targets.filter((t) => t.over_attempts).map((t) => t.source) });
+    // P-179: the one cost check (the shared ledger's numbers) and the run key a Continue names. A form drafted in parts is
+    // one run per part, each held to the run cap on its own (found by check_cost_warning_browser: "run" was flagged).
+    const cost_check = costCheckNow({ worst: totals.worst_usd, expected: totals.expected_usd, run: Math.max(0, ...targets.flatMap((t) => t.a4?.parts.length ? t.a4.parts.map((x) => x.worst_usd) : [t.worst_usd])), spentForms: targets.filter((t) => t.over_attempts).map((t) => t.source) });
     const run_key = runKeyOf("draft_field_maps", plan_sha256, cost_check);
     return { cost_check, run_key, max_paid_attempts_per_form: MAX_PAID_ATTEMPTS_PER_FORM, operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each form field). Questions, sections, document requirements and rules are not AI-drafted here: people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
   }

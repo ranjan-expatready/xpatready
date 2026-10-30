@@ -10,6 +10,8 @@ import { api, ApiError, useToast } from "@/lib/api";
 import { Button, Field, Input, Notice, Panel, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { useCostGate } from "@/components/cost-warning";
+import { COST_WORDS } from "../../../contracts/cost-check";
 
 export type AiScope = { kind: "catalogue" | "program" | "combination" | "source"; ids: string[]; label?: string };
 const MODES = [
@@ -30,10 +32,13 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
   const plan = useQuery<any>({ queryKey: ["ai-plan", scope.kind, scope.ids.join(","), mode, again], queryFn: () => api("/ai/plan", { method: "POST", json: { scope: { kind: scope.kind, ids: scope.ids }, mode, draftAgain: again } }), staleTime: 0 });
   const p = plan.data;
   React.useEffect(() => { if (p) setLimit(p.totals.worst_usd.toFixed(2)); }, [p?.plan_sha256]);
+  const cost = useCostGate(); // P-179: over a limit, the cost warning first (Continue or Cancel)
   const start = async () => {
     setBusy(true); setErr(null);
     try {
-      const b = await api("/ai/batches", { method: "POST", json: { scope: { kind: scope.kind, ids: scope.ids }, mode, draftAgain: again, idempotencyKey: key, planSha256: p.plan_sha256, spendLimitUsd: Number(limit) } });
+      const sc = { kind: scope.kind, ids: scope.ids };
+      const b: any = await cost.gate(p, { kind: "draft_field_maps", scope: sc, mode, draftAgain: again }, (overrideId) => api("/ai/batches", { method: "POST", json: { scope: sc, mode, draftAgain: again, idempotencyKey: key, planSha256: p.plan_sha256, spendLimitUsd: Number(limit), ...(overrideId ? { overrideId } : {}) } }));
+      if (!b) { toast.push({ tone: "info", text: COST_WORDS.cancelled }); return; }
       toast.push({ tone: "ok", text: `AI work started: ${b.jobs.length} step${b.jobs.length === 1 ? "" : "s"}` });
       onClose(); nav(`/ai/${b.id}`);
     } catch (e) {
@@ -89,6 +94,7 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
         ) : null}
         {scope.kind === "combination" && scope.ids.length === 1 ? <Checklists combinationId={scope.ids[0]} onOpen={(jobId) => { onClose(); nav(`/c/${scope.ids[0]}/jobs/${jobId}`); }} /> : null}
         {err ? <Notice tone="danger" title="Not started">{err}</Notice> : null}
+        {cost.dialog}
         <p className="text-xs text-text-muted">AI output is a proposal: a person decides each item on To review, applies it to the draft, and release stays a separate approval. A sent AI call cannot be recalled by Cancel.</p>
       </div>
     </Panel>

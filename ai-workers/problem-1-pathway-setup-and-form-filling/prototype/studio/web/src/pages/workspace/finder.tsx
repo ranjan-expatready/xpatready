@@ -16,6 +16,8 @@ import { fmtWhen } from "@/components/status";
 import { irccWords } from "../../../../contracts/workspace";
 import { costWords, START } from "../../../../contracts/start-setup";
 import { FindFormsStart } from "@/components/start-setup";
+import { useCostGate } from "@/components/cost-warning";
+import { COST_WORDS } from "../../../../contracts/cost-check";
 
 export type FinderState = "ATTACHED" | "DOWNLOADED_ATTACHED" | "NEWER_FILE_SAME_EDITION" | "NOT_FOUND" | "UPLOAD_WAITING_SECOND_PERSON" | "REMOVED_BY_PERSON" | "TO_DECIDE" | "NOT_FOR_THIS_APPLICATION";
 export type FinderForm = { code: string; title: string; quote: string | null; conditionPlain: string | null; who: string | null; state: FinderState; why?: string | null; lineId?: string | null; lineVersion?: number | null; runId: string };
@@ -53,11 +55,15 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
   // Lead Critical 29 Oct: with AI now switched off on this copy the live choice is greyed with the reason (any plan says it).
   const liveOff = plan.data?.live && !plan.data.live.on ? plan.data.live.why : null;
   React.useEffect(() => { if (liveOff && mode === "live") setMode(page ? "rules" : "replay"); }, [liveOff, mode, page]);
+  const cost = useCostGate(); // P-179: over a limit, the cost warning first (Continue or Cancel)
   const start = async () => {
     if (!plan.data) return;
     setBusy(true); setError(null);
     try {
-      const v = await api<{ id: string }>(`/combinations/${id}/forms/find`, { method: "POST", json: { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}), planSha256: plan.data.plan_sha256, idempotencyKey: `s5-${key}-${mode}-${pageUrl ?? ""}` } });
+      const body = { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) };
+      const v = (await cost.gate(plan.data as unknown as Parameters<typeof cost.gate>[0], { kind: "find_forms", combinationId: id, ...body },
+        (overrideId) => api<{ id: string }>(`/combinations/${id}/forms/find`, { method: "POST", json: { ...body, planSha256: plan.data!.plan_sha256, idempotencyKey: `s5-${key}-${mode}-${pageUrl ?? ""}`, ...(overrideId ? { overrideId } : {}) } }))) as { id: string } | undefined;
+      if (!v) { setError(COST_WORDS.cancelled); return; }
       for (const k of formsKeys(id)) void qc.invalidateQueries({ queryKey: k });
       void qc.invalidateQueries({ queryKey: ["combination", id, "finder"] });
       onStarted(v.id); onClose();
@@ -93,6 +99,7 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
           </div>
         ) : null}
         {error ? <p role="alert" className="text-sm text-text-danger">{error}</p> : null}
+        {cost.dialog}
       </div>
     </Dialog>
   );
