@@ -115,7 +115,7 @@ const countsOf = (d: unknown) => (d && typeof d === "object" ? (d as { done?: nu
 export const detailsOf = (d: unknown): string | null => (d && typeof d === "object" && typeof (d as { details?: unknown }).details === "string" ? (d as { details: string }).details : null);
 
 /** Where a combination sits, by names (the AI's only known fact besides the pages). */
-async function trailOf(db: Db, combinationId: string): Promise<{ id: string; workspaceId: string; label: string; trail: string[] }> {
+export async function trailOf(db: Db, combinationId: string): Promise<{ id: string; workspaceId: string; label: string; trail: string[] }> {
   const c = await db.combination.findUnique({ where: { id: combinationId }, include: { program: true } });
   if (!c) throw problem(404, "Not found", "That combination does not exist.");
   const nodes = await db.programDef.findMany({ where: { workspaceId: c.workspaceId }, select: { programNodeKey: true, parentNodeKey: true, label: true } });

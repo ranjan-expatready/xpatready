@@ -11,12 +11,12 @@ import { Button, Notice, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
 import { cn } from "@/lib/utils";
-import { ConfigArea } from "@/pages/configuration";
 import { PreviewTab as StudioPreview } from "@/pages/preview";
 import { ReviewTab } from "@/pages/review";
 import { OverviewTab } from "@/pages/workspace/overview";
 import { FormsTab } from "@/pages/workspace/forms";
 import { QuestionnairesTab } from "@/pages/workspace/questionnaires";
+import { DocumentsTab } from "@/pages/workspace/documents";
 import { PreviewTab, usePreviewParams } from "@/pages/workspace/preview";
 import { LEVEL_TEXT } from "@/components/levels";
 
@@ -79,7 +79,7 @@ export function CombinationPage() {
       </div>
       <div role="tabpanel" aria-label={TABS.find((t) => t.key === tab)!.label}>
         {tab === "overview" ? <OverviewTab d={d} sum={sum.data} show={sp.get("show")} />
-          : tab === "documents" ? <ConfigArea id={c.id} areas={["documents"]} />
+          : tab === "documents" ? <DocumentsTab id={c.id} />
           : tab === "review" ? <ReviewTab d={d} />
           : tab === "preview" && sp.get("view") === "studio" ? <div className="space-y-3"><Link className="text-sm text-text-link underline" to={`/c/${id}/preview`}>Back to the preview by person</Link><StudioPreview d={d} /></div>
           : <WorkspaceTab id={c.id} tab={tab} hasRelease={!!last} />}

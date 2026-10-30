@@ -1,0 +1,157 @@
+{
+  "at": "2026-10-29T14:38:23.378Z",
+  "port": 4438,
+  "pass": 26,
+  "fail": 0,
+  "log": [
+    {
+      "name": "C4.9 read: each row says who fills it in the shared library, with no change open",
+      "ok": true,
+      "detail": {
+        "library": "CLIENT",
+        "change": null
+      }
+    },
+    {
+      "name": "C4.9 roles fail: a case officer cannot propose it (403)",
+      "ok": true,
+      "detail": 403
+    },
+    {
+      "name": "C4.9 roles fail: an approver cannot propose it (403)",
+      "ok": true,
+      "detail": 403
+    },
+    {
+      "name": "C4.9 Q2 fail: only the client or the case officer is offered (400, in words)",
+      "ok": true,
+      "detail": "{\"type\":\"https://expatready.local/problems/validation\",\"title\":\"Some details need fixing\",\"status\":400,\"detail\":\"Choose who fills it: the client or the case off"
+    },
+    {
+      "name": "C4.9 fail: a reason under 5 characters is refused in words (400)",
+      "ok": true,
+      "detail": 400
+    },
+    {
+      "name": "C4.9 fail: proposing who already fills it is refused (409 Nothing changes)",
+      "ok": true,
+      "detail": "\"Field and level of study of a period of education\" is already filled by the client in the library."
+    },
+    {
+      "name": "C4.9 P-97 fail: a background or declaration question never changes (409, always the client), said with no code",
+      "ok": true,
+      "detail": "\"Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence\" is in Background declarations: only the client answers it, so who fills it does not change."
+    },
+    {
+      "name": "C4.9 fail: an unknown question is 404 in words",
+      "ok": true,
+      "detail": 404
+    },
+    {
+      "name": "C4.9 pass: the author proposes the case officer for every combination; it waits for a second person",
+      "ok": true,
+      "detail": {
+        "id": "2d2ff15d-0022-4411-9ab4-99aa49028e2d",
+        "status": "WAITING",
+        "label": "Field and level of study of a period of education · filled by the case officer, for every combination",
+        "before": "CLIENT",
+        "after": "CASE_OFFICER",
+        "uses": 1
+      }
+    },
+    {
+      "name": "C4.9 pass: nothing changes before approval: the placement is as it was",
+      "ok": true,
+      "detail": "PUBLISHED|client_questionnaire|v1 → PUBLISHED|client_questionnaire|v1"
+    },
+    {
+      "name": "C4.9 fail: a second proposal while one waits is refused (409 Already waiting)",
+      "ok": true,
+      "detail": "A change of who fills \"Field and level of study of a period of education\" already waits on To review or for the next release."
+    },
+    {
+      "name": "C4.9: the row shows the waiting change, who proposed it and why",
+      "ok": true,
+      "detail": {
+        "id": "2d2ff15d-0022-4411-9ab4-99aa49028e2d",
+        "to": "CASE_OFFICER",
+        "status": "WAITING",
+        "by": "Configuration author",
+        "reason": "Sample: the office holds this for every case"
+      }
+    },
+    {
+      "name": "C4.9 To review: the change is listed in words (Client → Case officer, used by, reason) with the second person's step",
+      "ok": true,
+      "detail": "Who fills it, for every combination: Client → Case officer (used by 1 combination; goes out with the next release). Reason: Sample: the office holds this for every case"
+    },
+    {
+      "name": "C4.9 fail: the person who proposed it cannot approve it (403)",
+      "ok": true,
+      "detail": 403
+    },
+    {
+      "name": "C4.9 pass: a second person approves it; it is applied as a draft placement version for the case officer",
+      "ok": true,
+      "detail": "201 DRAFT|staff_working_view|v2"
+    },
+    {
+      "name": "C4.9: the rules follow the library: Comes from is now the case officer, the change says approved for the next release",
+      "ok": true,
+      "detail": {
+        "rule": "AGENT",
+        "change": "APPROVED"
+      }
+    },
+    {
+      "name": "C4.8/C4.9: Review names it once, in words, for the immigration expert (no generic placement line)",
+      "ok": true,
+      "detail": [
+        "Who fills a question: Field and level of study of a period of education: filled by the case officer, was the client (shared library, every combination)"
+      ]
+    },
+    {
+      "name": "C4.9 Q3 fail: changing who fills an existing placement directly is refused (409, use Change who fills)",
+      "ok": true,
+      "detail": "Who fills a question is changed with a second person: use Change who fills. It goes to To review, then out with the next release."
+    },
+    {
+      "name": "C4.9 Q3 pass: saving a placement that keeps who fills it is still allowed",
+      "ok": true,
+      "detail": "201 "
+    },
+    {
+      "name": "C4.9 pass: the next release publishes it (Release 2)",
+      "ok": true,
+      "detail": 2
+    },
+    {
+      "name": "C4.9 pass: the placement is published for the case officer, and the change is released in that pack",
+      "ok": true,
+      "detail": "PUBLISHED|staff_working_view|v2 · RELEASED|2"
+    },
+    {
+      "name": "C4.9: the released snapshot carries the new default",
+      "ok": true
+    },
+    {
+      "name": "C4.9: once released, the row has no open change",
+      "ok": true
+    },
+    {
+      "name": "C4.9 + C4.10 pass: this combination may still choose the client for it (an override, reviewed at its release)",
+      "ok": true,
+      "detail": "CLIENT"
+    },
+    {
+      "name": "C4.9 fail: a returned change changes nothing and shows as returned",
+      "ok": true,
+      "detail": "201 PUBLISHED|client_questionnaire|v1"
+    },
+    {
+      "name": "C4.9 fail: approval checks again: who fills it changed meanwhile, so nothing is applied and it waits again (409)",
+      "ok": true,
+      "detail": "409 Who fills this question changed after it was proposed, so nothing was changed. Return it; the author proposes it again."
+    }
+  ]
+}
