@@ -4,11 +4,14 @@
 // requirement: a draft until the combination's release publishes it; the author's own draft is undone at once. US$0.
 import { randomUUID } from "node:crypto";
 import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { buildSnapshot } from "../../engine/snapshot.ts";
-import { agentRefusal, CASE_OFFICER_NEEDS_REASON, factSourceProblems, factSources, prequalification, SOURCES, type FactSourceView } from "../../engine/sources.ts";
+import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
+import { agentRefusal, CASE_OFFICER_NEEDS_REASON, countryPqr, factSourceProblems, factSources, prequalification, SOURCES, who, type FactSourceView } from "../../engine/sources.ts";
+import { ProposalItem } from "../../contracts/proposal-item.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
+import { fillsOf, KIND as FILLS_KIND } from "./who-fills.ts";
 
 type H = string | undefined;
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -53,7 +56,11 @@ export class FactSources {
     const newest = new Map<string, (typeof rows)[number]>(); for (const r of rows) if (!newest.has(r.lineageKey)) newest.set(r.lineageKey, r);
     // Slice 2: the row's status is its newest saved choice: none (the rules), a draft (Changed here, its author may
     // undo it at once) or published (released in an earlier release).
-    const facts = factSources(snapshot).map((f) => { const n = newest.get(`${f.role}|${f.fact}`); return { ...f, version: n?.version ?? 0, change: n ? { status: n.status === "DRAFT" ? "DRAFT" as const : "PUBLISHED" as const, by: n.updatedBy, at: n.updatedAt.toISOString(), batchId: n.batchId } : null }; });
+    // C4.9: who fills each question in the library, and an open change of it (who-fills.ts).
+    const libFills = new Map((snapshot.placements as { fact: string; collected_from: string }[]).map((p) => [p.fact, fillsOf(p.collected_from)]));
+    const open = await this.db.libraryChange.findMany({ where: { workspaceId: c.workspaceId, kind: FILLS_KIND, status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, orderBy: { proposedAt: "desc" } });
+    const fillsChange = (fact: string) => { const x = open.find((o) => o.key === fact); return x ? { id: x.id, to: (x.matches as { after: "CLIENT" | "CASE_OFFICER" }).after, status: x.status as "WAITING" | "RETURNED" | "APPROVED", by: ACTORS.find((a) => a.id === x.proposedBy)?.name ?? "A person", reason: x.reason ?? "" } : null; };
+    const facts = factSources(snapshot).map((f) => { const n = newest.get(`${f.role}|${f.fact}`); return { ...f, fills: { library: libFills.get(f.fact) ?? null, change: fillsChange(f.fact) }, version: n?.version ?? 0, change: n ? { status: n.status === "DRAFT" ? "DRAFT" as const : "PUBLISHED" as const, by: n.updatedBy, at: n.updatedAt.toISOString(), batchId: n.batchId } : null }; });
     const counts = { facts: facts.length, document: facts.filter((f) => f.source === "DOCUMENT").length, client: facts.filter((f) => f.source === "CLIENT").length, agent: facts.filter((f) => f.source === "AGENT").length, prequalification: facts.filter((f) => f.prequalification).length };
     return { counts, facts, prequalification: prequalification(snapshot), problems: factSourceProblems(snapshot), basis: "Sample until the immigration expert confirms" };
   }
@@ -68,10 +75,11 @@ export class FactSources {
     const lineageKey = `${role}|${fact}`;
     const rows = await this.db.factSource.findMany({ where: { combinationId: id, lineageKey }, orderBy: { version: "desc" } });
     const newest = rows[0];
-    if ((newest?.version ?? 0) !== b.version) throw problem(409, "Changed since", `Someone changed where "${fact}" comes from after you looked. Reload, then choose again.`, { version: newest?.version ?? 0 });
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     const f = factSources(snapshot).find((x) => x.role === role && x.fact === fact);
-    if (!f) throw problem(404, "Not needed", `No form of "${c.label}" needs "${fact}" for this person, so there is nothing to choose.`);
+    // QA-94: messages name the question in words; the system name stays behind the library link.
+    if ((newest?.version ?? 0) !== b.version) throw problem(409, "Changed since", `Someone changed where ${f ? `"${f.label}"` : "this answer"} comes from after you looked. Reload, then choose again.`, { version: newest?.version ?? 0 });
+    if (!f) throw problem(404, "Not needed", `No form of "${c.label}" needs this answer for this person, so there is nothing to choose.`);
     const source = b.source === undefined ? (newest?.source ?? null) : b.source;
     const documentTypeKey = source === "DOCUMENT" ? (b.documentTypeKey ?? (b.source === undefined ? newest?.documentTypeKey : null) ?? null) : null;
     const tick = b.prequalification ?? newest?.prequalification ?? false;
@@ -107,6 +115,20 @@ export class FactSources {
     return (await this.list(id)).facts.find((x) => x.role === role && x.fact === fact) ?? null;
   }
 
+  /** P-132: the country PQR, assembled from the newest release of every combination in this combination's country pack
+   *  that is not retired; this combination's draft ticks are counted apart, as "goes in at its next release". */
+  async country(id: string) {
+    const c = await this.combination(id, false);
+    const rows = await this.db.configRelease.findMany({ where: { workspaceId: c.workspaceId, combination: { retiredAt: null } }, select: { combinationId: true, version: true, snapshot: true }, orderBy: { version: "desc" } });
+    const newest = new Map<string, (typeof rows)[number]>(); for (const r of rows) if (!newest.has(r.combinationId)) newest.set(r.combinationId, r);
+    const view = countryPqr([...newest.values()].map((r) => ({ combinationId: r.combinationId, version: r.version, snapshot: r.snapshot as unknown as Snapshot })));
+    const { snapshot } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
+    const asked = new Set(view.lines.filter((l) => l.combinations.some((x) => x.id === id)).map((l) => `${l.role}|${l.fact}`));
+    const draft = prequalification(snapshot).filter((t) => !asked.has(`${t.role}|${t.fact}`)).map((t) => ({ role: t.role, fact: t.fact, label: t.label }));
+    const gone = view.lines.filter((l) => l.combinations.some((x) => x.id === id) && !prequalification(snapshot).some((t) => t.role === l.role && t.fact === l.fact)).map((l) => ({ role: l.role, fact: l.fact, label: l.label }));
+    return { ...view, released: newest.size, thisCombination: { draftAdds: draft, draftRemoves: gone }, basis: "Sample until the immigration expert confirms" };
+  }
+
   async bulk(actor: Actor, id: string, body: unknown) {
     need(actor, "author");
     return bulkSet(this.db, this.audit, actor, await this.combination(id), body);
@@ -138,7 +160,7 @@ export async function bulkSet(db: Db, audit: Audit, actor: Actor, c: { id: strin
     seen.add(key);
     const f = views.get(key);
     const mine = rows.filter((r) => r.lineageKey === key), newest = mine[0];
-    if (!f) { refused.push({ role: it.role, fact: it.fact, label: it.fact, message: `No form of "${c.label}" needs it for this person any more. Reload.` }); continue; }
+    if (!f) { refused.push({ role: it.role, fact: it.fact, label: "", message: `One ticked answer is no longer needed by any form of "${c.label}" for this person. Reload.` }); continue; }
     if ((newest?.version ?? 0) !== it.version) { refused.push({ role: f.role, fact: f.fact, label: f.label, message: `"${f.label}": changed by someone else after you looked. Reload, then choose again.` }); continue; }
     const source = b.source === undefined ? (newest?.source ?? null) : b.source === "RULES" ? f.ruleSource : b.source;
     const documentTypeKey = b.source === undefined ? (newest?.documentTypeKey ?? null) : b.source === "RULES" ? (f.ruleDocument?.key ?? null) : null;
@@ -184,6 +206,41 @@ export async function bulkUndo(db: Db, audit: Audit, actor: Actor, c: { id: stri
   return { undone: go.length, kept };
 }
 
+/** C4.7 Accept (Lead, 29 Oct; P-149 one door; N-2 of S6 slice 1): the queue's lander for `pqr_pick`. S6's decide
+ *  transaction calls it with its own transaction client, so the tick and the item's status change together (the queue
+ *  writes the item's status and decision). It writes the tick through the same draft row and refusals as a person's tick,
+ *  keeping the pick's reason, so it goes out in the combination's one release. Origin: AI_PROPOSAL for an AI pick;
+ *  CODE_MATCH for the rules' stand-in (never shown as AI). No route or button of its own: the queue's Accept is the one. */
+export async function acceptPqrPick(tx: Prisma.TransactionClient, actor: Actor, raw: unknown) {
+  // Reads and the audit line go through the caller's transaction client too (buildSnapshot and Audit only use its tables).
+  const db = tx as unknown as Db, audit = new Audit(db);
+  need(actor, "author");
+  const parsed = ProposalItem.safeParse(raw);
+  if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
+  const item = parsed.data;
+  if (item.payload.kind !== "pqr_pick") throw problem(400, "Not a pick", "Only a pre-qualification pick is accepted here.");
+  if (item.status !== "waiting") throw problem(409, "Decided already", "This pick was already accepted or rejected.");
+  const id = item.scope.combinationId ?? "";
+  const c = /^[0-9a-f-]{36}$/i.test(id) ? await db.combination.findUnique({ where: { id } }) : null;
+  if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
+  if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its pre-qualification is not changed. Restore it on Structure first.`);
+  const { role, factKey: fact, reason } = item.payload;
+  const lineageKey = `${role}|${fact}`;
+  const rows = await db.factSource.findMany({ where: { combinationId: id, lineageKey }, orderBy: { version: "desc" } });
+  const newest = rows[0];
+  const { snapshot } = await buildSnapshot(db, c.workspaceId, id, "draft");
+  const f = factSources(snapshot).find((x) => x.role === role && x.fact === fact);
+  if (!f) throw problem(404, "Not needed", `No form of "${c.label}" needs this answer for this person any more, so it is not asked. Reject the pick.`);
+  if (f.prequalification) throw problem(409, "Asked already", `"${f.label}" is already asked in pre-qualification.`);
+  const errors = refusals(f, (newest?.source ?? null) as FactSourceView["source"] | null, newest?.documentTypeKey ?? null, true, newest?.sourceReason ?? null);
+  if (errors.length) throw problem(422, "Not possible", errors[0].message, { errors });
+  if (newest?.status === "DRAFT") await tx.factSource.delete({ where: { id: newest.id } });
+  await tx.factSource.create({ data: { workspaceId: c.workspaceId, combinationId: id, lineageKey, role, canonicalFieldKey: fact, source: newest?.source ?? null, documentTypeKey: newest?.documentTypeKey ?? null, prequalification: true, reason, sourceReason: newest?.sourceReason ?? null,
+    version: (newest?.version ?? 0) + 1, status: "DRAFT", supersedesId: rows.find((r) => r.status === "PUBLISHED")?.id ?? null, origin: item.origin === "ai" ? "AI_PROPOSAL" : "CODE_MATCH", updatedBy: actor.id } });
+  await audit.log(c.workspaceId, actor.id, "accepted", "fact source", lineageKey, `${actor.name} accepted the ${item.origin === "ai" ? "AI's" : "rules'"} pick: ask "${f.label}" (${who(snapshot, role)}) in pre-qualification for "${c.label}". Why: ${reason}`, { itemId: item.id, runId: item.runId }, id);
+  return factSources((await buildSnapshot(db, c.workspaceId, id, "draft")).snapshot).find((x) => x.role === role && x.fact === fact);
+}
+
 /** The same rules release applies (engine/sources.ts factSourceProblems), said at save for this one fact. */
 function refusals(f: FactSourceView, source: FactSourceView["source"] | null, documentTypeKey: string | null, tick: boolean, sourceReason: string | null = null): { field: string; message: string }[] {
   const out: { field: string; message: string }[] = [];
@@ -206,6 +263,7 @@ function refusals(f: FactSourceView, source: FactSourceView["source"] | null, do
 export class FactSourcesController {
   constructor(@Inject(FactSources) private readonly f: FactSources) {}
   @Get("combinations/:id/fact-sources") list(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.f.list(id); }
+  @Get("combinations/:id/pqr/country") country(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.f.country(id); }
   @Put("combinations/:id/fact-sources/:role/:fact") set(@Headers("x-actor") a: H, @Param("id") id: string, @Param("role") role: string, @Param("fact") fact: string, @Body() b: unknown) { return this.f.set(actorOf(a), id, role, fact, b); }
   @Post("combinations/:id/fact-sources/bulk") @HttpCode(200) bulk(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.bulk(actorOf(a), id, b); }
   @Post("combinations/:id/fact-sources/bulk/undo") @HttpCode(200) bulkUndo(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.bulkUndo(actorOf(a), id, b); }

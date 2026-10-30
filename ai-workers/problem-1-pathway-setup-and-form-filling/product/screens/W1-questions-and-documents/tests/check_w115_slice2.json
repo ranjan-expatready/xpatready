@@ -1,6 +1,6 @@
 {
-  "at": "2026-10-29T04:48:35.160Z",
-  "port": 18436,
+  "at": "2026-10-29T14:44:15.207Z",
+  "port": 4439,
   "pass": 35,
   "fail": 0,
   "log": [
@@ -164,11 +164,15 @@
         "clientOnly": false,
         "placed": true,
         "agentOffered": false,
+        "fills": {
+          "library": "CASE_OFFICER",
+          "change": null
+        },
         "version": 1,
         "change": {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T04:48:33.700Z",
+          "at": "2026-10-29T14:44:13.632Z",
           "batchId": null
         }
       }
@@ -209,7 +213,7 @@
       "ok": true,
       "detail": {
         "saved": 3,
-        "batchId": "b4919de1-9359-4dcd-986d-c1b9bf534dac",
+        "batchId": "458d7c75-a51b-49fa-93f3-87daded5ef49",
         "what": "where the answer comes from set to the client",
         "refused": []
       }
@@ -221,20 +225,20 @@
         {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T04:48:34.175Z",
-          "batchId": "b4919de1-9359-4dcd-986d-c1b9bf534dac"
+          "at": "2026-10-29T14:44:14.102Z",
+          "batchId": "458d7c75-a51b-49fa-93f3-87daded5ef49"
         },
         {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T04:48:34.176Z",
-          "batchId": "b4919de1-9359-4dcd-986d-c1b9bf534dac"
+          "at": "2026-10-29T14:44:14.103Z",
+          "batchId": "458d7c75-a51b-49fa-93f3-87daded5ef49"
         },
         {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T04:48:34.177Z",
-          "batchId": "b4919de1-9359-4dcd-986d-c1b9bf534dac"
+          "at": "2026-10-29T14:44:14.104Z",
+          "batchId": "458d7c75-a51b-49fa-93f3-87daded5ef49"
         }
       ]
     },
@@ -285,7 +289,7 @@
         "d0": {
           "status": "DRAFT",
           "by": "user-A",
-          "at": "2026-10-29T04:48:34.479Z",
+          "at": "2026-10-29T14:44:14.425Z",
           "batchId": null
         }
       }
@@ -322,8 +326,8 @@
       "detail": {
         "status": "PUBLISHED",
         "by": "user-A",
-        "at": "2026-10-29T04:48:35.015Z",
-        "batchId": "9aee79e2-816e-45ee-8c69-9ea1048c6258"
+        "at": "2026-10-29T14:44:15.027Z",
+        "batchId": "86e69c01-133f-4bf2-9e58-a91cef9c0d57"
       }
     },
     {
