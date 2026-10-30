@@ -35,7 +35,7 @@ $changed
 git status --porcelain -- "$SF" 2>/dev/null | grep -q . && reasons="$reasons- Uncommitted work at the end of a stage in this copy ($LANE): commit it (git add -A && git commit; message '<lane>: <stage> — <summary>' with the attribution line).
 "
 # (3) Rules files.
-docs=$(bash "$PH/tools/check-docs.sh" 2>&1) || reasons="$reasons- Rules files need attention (condense or fix links; keep each under its limit):
+docs=$(bash "$PH/tools/check-docs.sh" 2>&1) || reasons="$reasons- Rules files need attention (fix links; over a size limit, move older material word for word to history/ with a link, delete only exact duplicates, diff old against new; a file that cannot fit without losing a fact goes to the Lead: AGENTS.md rule 8):
 $docs
 "
 # (4) STANDARDS §7 "no any": the explicit-any count in live code may only fall (Lead check 23 Oct, item 2).

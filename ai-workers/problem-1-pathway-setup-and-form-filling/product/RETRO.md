@@ -28,3 +28,8 @@ Owner: the Lead, at DEMO. At most one workflow change per retro, recorded in `DE
 * **Root cause:** the Lead merged a shared contract change before the lanes that use it had synced and rerun their checks on it.
 * **Change:** a change to a shared contract (`contracts/`) merges together with, or after, each dependent lane's fix; the Lead names the dependent lanes in the contract PR.
 * **Also:** disk fell to 5.2 GB unnoticed (R-142: `tools/disk.sh` at every Lead check).
+
+## 30 Oct, tenth Lead chat: an unapproved live AI run, US$0.17 (runtime, QA-91 check)
+* **What happened:** runtime's new QA-91 check pointed at the fake launcher by a wrong path, on a copy started with the live switch (`STUDIO_PEOPLE_AI_LIVE=approved`), so the real launcher made two paid calls (04:08Z, US$0.089 + US$0.082). Second time after QA-100 (US$0.27).
+* **Root cause:** a check copy was started with a live switch without a founder-approved paid run in that session; nothing refused a check that ran without the fake launcher.
+* **Change:** a check copy never starts with a live switch unless the founder approved a paid run in that session; a check that needs the stand-in refuses to start without it (runtime's guard, with tests). P-179's override (forms) becomes the one way past a limit.

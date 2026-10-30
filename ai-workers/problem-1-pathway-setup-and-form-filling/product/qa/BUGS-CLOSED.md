@@ -4,6 +4,11 @@ Older rows (closed up to 26 Oct): `history/qa-bugs-closed-to-2026-10-26.md`.
 
 | # | Type · Severity | Capability | Found | Closed on | How it was retested |
 |---|---|---|---|---|---|
+| QA-92 | Bug · Major | C4.10 | 52117004 | main 5f6c8deb (PR #94), 30 Oct | `check_qa_qn_1029.cjs` 39/41 on :4479: Save in the drawer on a case fact (Official language, pre-qualification on) stores the row under 'case'; runtime `check_qa92_95_browser` 23/23 |
+| QA-93 | UX · Major | C4.10, C11.9 | 52117004 | main 5f6c8deb (PR #94), 30 Oct | `check_qa_qn_1029.cjs`: no sample section offers Remove where it changes nothing (18 say why in words); runtime `check_qa92_95_browser` 23/23: Remove asks first (section, for whom, can be undone), Keep removes nothing, the toast names it, Undo puts it back in place |
+| QA-94 | UX · Minor | C4.10 | 52117004 | main 5f6c8deb (PR #94), 30 Oct | `check_qa_qn_1029.cjs`: no system name in the drawer, the 404 or the 409 ("Given name(s) of any other name ever used") |
+| QA-95 | UX · Minor | C4.10 | 52117004 | main 5f6c8deb (PR #94), 30 Oct | `check_qa_qn_1029.cjs`: a 3-character reason → "Write at least 5 characters: why the case officer enters it."; the box is linked to its error (aria-describedby) |
+| QA-96 | Bug · Minor | C4.10 | deda0e6b | main 5f6c8deb (PR #94), 30 Oct | `check_w115_slice2_browser.cjs` 56/56 in the full run and 3 of 3 alone (was 1 in 3) |
 | QA-97 | Bug · Major | C11.15, C11.8 | deda0e6b (CI #94) | main a9fe60c0 (PR #98), 29 Oct | `check_w1_start_setup_browser.cjs` twice on one copy (the second sees the first's finished runs): 39/39 both; card "about US$0.31 · at most US$5.58 · US$0.00 so far" = button "about US$0.31 · at most US$5.58" (about and at most stored on the batch) |
 | QA-39 | UX · Major | C3.10 | 8360565 | main deda0e6b, 29 Oct | `check_qa_wording_1029.cjs` (38 pages × 2 widths): Fields lead with words ("Application date", the key small under it); no "Canonical fields", no `yes_no`; "461 form fields"; versions name the role; nothing cut at 1024 |
 | QA-48 | UX · Minor | C11.9, C11.10 | 76628a4 | main deda0e6b, 29 Oct | `check_qa_am_r3_1028.cjs` 69/69: Immigration programs says "1 retired, not shown (Status: Retired)" |
