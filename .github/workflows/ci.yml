@@ -5,8 +5,8 @@
 # pull request to main, tested on its merge result. Per pull request, in one job (each job bills at least a minute):
 #   * always: the push guard on the pull request's commits, the rules-file checks, the decision-impact check, the
 #     graph check (P-86) and the official IRCC PDF checksums (P-31);
-#   * when the pull request changes code (files under prototype/, except docs, images and PDFs): the explicit-any count and the full studio suites (run-suites.sh --demo, which includes the engine
-#     suite; no model call, US$0) on a machine set up by cloud-setup.sh.
+#   * when the pull request changes code (files under prototype/, except docs, images and PDFs): the explicit-any count and the full studio suites (run-suites.sh, which includes the engine
+#     suite; no model call, US$0) on the founder's Mac (self-hosted runner, 30 Oct; it was GitHub's machine set up by cloud-setup.sh).
 # A lane opens its pull request when its work is ready for the Lead's check, so a code change is tested about once;
 # a newer push to the pull request cancels the older run. Docs-only pull requests (most Lead PRs) take about a minute.
 name: ci
@@ -14,7 +14,10 @@ on:
   pull_request:
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    # Founder, 30 Oct: on the founder's Mac (self-hosted runner "xr-mac", ~/actions-runner-xpatready): no GitHub-hosted
+    # minutes are billed; the same checks and the full suites run, the :4400 demo is never touched (the browser suite
+    # runs on its own isolated copy). The Mac must be on for a pull request to be checked.
+    runs-on: [self-hosted, macOS, xr-mac]
     timeout-minutes: 60
     permissions: { contents: read }
     concurrency: { group: "ci-${{ github.event.pull_request.number }}", cancel-in-progress: true }
@@ -40,11 +43,10 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"; echo "suites=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
           echo "changed=true" >> "$GITHUB_OUTPUT"; echo "suites=true" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: the Mac's tools (node 24, venv, official PDFs, database) linked like a lane copy (lane.sh setup)
+        run: |
+          [ -e .tools ] || ln -s "$HOME/Desktop/Xpatready/.tools" .tools
+          echo "$PWD/.tools/node-v24.21.0/bin" >> "$GITHUB_PATH"; echo /opt/homebrew/opt/postgresql@18/bin >> "$GITHUB_PATH"; echo /opt/homebrew/bin >> "$GITHUB_PATH"
       - name: packages (npm ci; the graph and any-count checks read TypeScript from them)
         run: cd "$S" && npm ci --no-fund --no-audit
       - name: rules files, decision impact, graph (P-86)
@@ -52,19 +54,20 @@ jobs:
           bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
       - name: official IRCC PDFs (manifest checksums, P-31)
         run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
-      - name: set up like a cloud session (cloud-setup.sh)
+      - name: web app build (the browser suites need it)
         if: steps.code.outputs.changed == 'true'
-        run: bash "$P/tools/cloud-setup.sh"
+        run: cd "$S" && ./node_modules/.bin/prisma generate && cd web && ../node_modules/.bin/vite build
       - name: explicit-any count
         if: steps.code.outputs.changed == 'true'
         run: node "$S/tools/count-any.mjs"
       - name: Playwright's own Chromium
         if: steps.code.outputs.suites == 'true'
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
-      - name: studio suites (run-suites.sh --demo; no model call, US$0)
+      - name: studio suites (run-suites.sh, browser suite on its own copy; no model call, US$0)
         if: steps.code.outputs.suites == 'true'
+        env: { COPY_PREFIX: ci, SUITES_BROWSER_ISOLATED: "1" }
         run: |
-          bash "$P/tools/run-suites.sh" --demo | tee suites.md
+          bash "$P/tools/run-suites.sh" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
         if: always() && steps.code.outputs.suites == 'true'

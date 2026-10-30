@@ -66,6 +66,13 @@ for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
   f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac
   usage=$(grep -m1 -E "studio/tests/$f" "$path")
   if [ "$f" = check_studio_browser.cjs ]; then
+    if [ "$DEMO" = 0 ] && [ "${SUITES_BROWSER_ISOLATED:-}" = 1 ]; then
+      # The Mac CI runner (self-hosted, founder 30 Oct): the same suite on its own isolated copy, never the :4400 demo.
+      bn=$(iname studio_browser); bp=$(iport 4429)
+      zsh "$S/tools/isolated.sh" "$bn" "$bp" start >/dev/null 2>&1 || { rows+=("| $f | FAIL | | isolated copy $bn did not start |"); fail=1; continue; }
+      run "$f" isolated env STUDIO_URL="http://localhost:$bp" STUDIO_DB="xr_studio_$bn" node "$path"
+      zsh "$S/tools/isolated.sh" "$bn" "$bp" stop >/dev/null 2>&1; continue
+    fi
     [ "$DEMO" = 1 ] || { rows+=("| $f | skipped | | resets the :4400 demo: --demo (CI, cloud) |"); continue; }
     zsh "$S/start.sh" >/dev/null 2>&1; run "$f" demo node "$path"; continue
   fi

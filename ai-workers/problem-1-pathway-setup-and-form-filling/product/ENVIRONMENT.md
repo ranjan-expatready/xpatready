@@ -40,6 +40,11 @@ Every tool added for this work is listed here: version, official source, checksu
 * **Data and licence:** MIT; runs locally; reads only this repository.
 * **Outcome (24 Oct):** served its purpose; the migration to ordinary clones retired it (P-82).
 
+## Technology gate record: GitHub Actions self-hosted runner (STANDARDS §1) — installed 30 Oct (founder OK, P-181)
+* What: GitHub's official runner v2.338.2 for macOS arm64, from github.com/actions/runner (release of 26 Oct 2026), `actions-runner-osx-arm64-2.338.2.tar.gz`, SHA-256 `25a065af409ffa317ab4d5a3b614dd15fc9c40f2172bc1b35a1b1258e919a388` (matched the release's published value). Location `~/actions-runner-xpatready` (outside the repository), runner name and label `xr-mac`.
+* Why: pull request checks ran on GitHub's machines and were blocked when the Actions spending limit was hit; on the Mac no minutes are billed and the same checks and full suites run (`.github/workflows/ci.yml`; the browser suite on its own isolated copy, never the :4400 demo).
+* Registration and the background service are done by the founder in a terminal (the Lead's session may not register runners). The Mac must be on for a pull request to be checked.
+
 ## Backups
 * `.tools/ledger-backup-2026-10-29` — the old AI spending ledgers, kept to seed the one shared ledger of QA-90 (restored 30 Oct from the size-trim audit).
 * Lane test databases `xr_studio_<lane>_*` (about 3.7 GB on 29 Oct) are scratch: drop them when lanes are idle (restored 30 Oct from the size-trim audit).
