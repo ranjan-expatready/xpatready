@@ -397,8 +397,9 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("C1.6 P-102: no portal choice and no \"Add an online form\" on the combination page", await forms.getByRole("combobox", { name: "Portal" }).count() === 0 && await forms.getByRole("button", { name: "Add an online form" }).count() === 0);
   await as("user-B");
   // The tab redraws for the new person a moment after the switch (the session is read again): wait for it, under load too.
-  await p.waitForFunction(() => !document.querySelector('[role="tabpanel"] select, [role="tabpanel"] [role="combobox"]'), null, { timeout: 8000 }).catch(() => {});
-  step("C1.6: someone without the author duty sees the channels but cannot change them", await forms.getByRole("combobox").count() === 0 && /PDF upload/.test(await forms.textContent()) && await forms.getByRole("button", { name: "Add form" }).count() === 0, JSON.stringify({ boxes: await forms.getByRole("combobox").evaluateAll((xs) => xs.map((x) => x.getAttribute("aria-label"))), pdf: /PDF upload/.test(await forms.textContent()), add: await forms.getByRole("button", { name: "Add form" }).count() }));
+  // No select is also true while the tab is blank mid-redraw: wait for its forms table to be back (a "Filed as" cell).
+  await p.waitForFunction(() => { const t = document.querySelector('[role="tabpanel"]'); return !!t && !t.querySelector('select, [role="combobox"]') && t.querySelector("table") && /PDF upload/.test(t.textContent ?? ""); }, null, { timeout: 8000 }).catch(() => {});
+  step("C1.6: someone without the author duty sees the channels but cannot change them", await forms.getByRole("combobox").count() === 0 && /PDF upload/.test(await forms.textContent()) && await forms.getByRole("button", { name: "Add form" }).count() === 0, JSON.stringify({ boxes: await forms.getByRole("combobox").evaluateAll((xs) => xs.map((x) => x.getAttribute("aria-label"))), pdf: /PDF upload/.test(await forms.textContent()), add: await forms.getByRole("button", { name: "Add form" }).count(), text: (await forms.textContent()).replace(/\s+/g, " ").slice(0, 400) }));
   await as("user-A");
   await p.goto(`${BASE}/c/${wpId}/sources`); await idle();
   step("C1.6 P-102: the sources tab no longer offers what drafting reads online", await p.locator("[data-drafting-sources]").count() === 0);
