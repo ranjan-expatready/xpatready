@@ -9,7 +9,7 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: (2) P-179 cost warning + override, built with QA-90 one shared ledger (C11.8; plan `screens/W1-ai-drafting/plan-p179.md`, Lead-agreed 30 Oct incl. §4 Q1–Q3); then (3) P-156. Branch `claude/forms-p179b-0857b9` (QA-90 cd0b06f6, P-179 core 0bc93e16, API 2nd commit after 6ef03dc9, checks, dialog; holds `claude/forms-s1-guards-42e331` and main bcd482d3)
 stage: FIX
 owner: Builder
-next_action: Handover items (1)-(2) done in c950b098 (plan-p179.md §7); full run-suites on c950b098 running, then CHECK again (fresh reviewer and breaker)
+next_action: Handover items (1)-(2) done in c950b098 (plan-p179.md §7); full run-suites on c950b098 running (it waited behind Mac CI, P-183; the screenshots it writes are restored or kept after it ends), then CHECK again (fresh reviewer and breaker); report to the Lead chat local_847d9394
 blocked_by: none
 updated: 2026-10-30
 
