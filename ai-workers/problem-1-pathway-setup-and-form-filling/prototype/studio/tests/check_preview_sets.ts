@@ -78,6 +78,21 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
   const S2 = clone(S1); S2.document_requirements = S2.document_requirements.filter((r: any) => !(r.document_type_key === passport.key || r.document_type === passport.name));
   const v2 = previewFamily(S2, "", "principal", {});
   ok("C4.3 Q2 fail (P-130 fallback): with the passport line removed from the checklist, the same question is asked again", asked(v2, clientQ.fact) && !v2.sets.sqr.fromDocuments.some((d: any) => d.document === passport.name), v2.sets.sqr.fromDocuments.map((d: any) => d.document));
+  // Finding on preview.ts:80 (Minor): only the partner's passport is needed (the principal's line cannot be told yet), so
+  // the principal's question is asked: a needed document skips only the facts it supplies about that person.
+  const isPassport = (r: any) => r.document_type_key === passport.key || r.document_type === passport.name;
+  const pReq = S1.document_requirements.find(isPassport);
+  const open = S1.document_requirements.find((r: any) => r.base_or_conditional === "conditional" && r.condition && !["DOCUMENT", "CASE"].includes(r.condition.subjectKind));
+  const { subjectKind: _k, ...openCond } = open?.condition ?? {};
+  const S6 = clone(S1); S6.document_requirements = [...S6.document_requirements.filter((r: any) => !isPassport(r)),
+    { ...clone(pReq), who: "principal_applicant", base_or_conditional: "conditional", condition: { ...openCond, subjectKind: "PRINCIPAL" } },
+    { ...clone(pReq), who: "spouse_or_partner", base_or_conditional: "base", condition: null }];
+  const passportLine = (S0: any, who: string) => previewFamily(S0, "", who, {}).documents.find((d: any) => d.requirement === passport.name)?.status ?? "none";
+  const v6 = previewFamily(S6, "", "principal", {});
+  ok("C4.3 Q2 fail (finding preview.ts:80): with only the partner's passport needed, the principal's question their own passport supplies is asked", passportLine(S6, "spouse") === "Needed" && passportLine(S6, "principal") !== "Needed" && asked(v6, clientQ.fact) && !v6.sets.sqr.fromDocuments.some((d: any) => d.facts.includes(clientQ.label)), { principal: passportLine(S6, "principal"), spouse: passportLine(S6, "spouse"), asked: asked(v6, clientQ.fact) });
+  const S7 = clone(S6); const pt = S7.document_types.find((d: any) => d.key === passport.key); pt.supplies_about = { ...(pt.supplies_about ?? {}), [clientQ.fact]: "holder.spouse" };
+  const v7 = previewFamily(S7, "", "principal", {});
+  ok("C4.3 Q2 pass (finding preview.ts:80): a fact the partner's needed document supplies about its holder's spouse is skipped for the principal", !asked(v7, clientQ.fact) && v7.sets.sqr.fromDocuments.some((d: any) => d.document === passport.name && d.facts.includes(clientQ.label)), v7.sets.sqr.fromDocuments);
   const people = familyPeople(S1.combination.participants, base.family);
   const plain = caseView(S1, people, [], [], "sqr");
   const plainAsks = plain.sections.filter((x: any) => x.subjectId === "principal").some((x: any) => x.questions.some((q: any) => q.fact === clientQ.fact));
