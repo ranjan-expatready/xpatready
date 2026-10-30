@@ -13,3 +13,30 @@
 - 2026-10-29 · W1-shared-library (S6) · EARLY-LOOK 1b FIX · Lead early look: toasts covered the side panel's footer; toaster moves beside an open panel (above its footer when the panel is full width), every side panel; browser step at 1440, 1024 and 800 proves Accept and Reject stay clear and clickable; check_s6_queue_browser 26/26. 1a fix 0a5b09dd: six named suites green on its own branch. US$0.
 - 2026-10-29 · W1-shared-library (S6) · BUILD 1b → EARLY-LOOK · new session from e3483c7d, main a9fe60c0 synced (contract v2.1: three small fixes in 1a code); review-proposals.ts routes (queue grouped, decide, undo, grouped approval), door rules (bulk Ready only and never rules→library, reuse adds nothing, field-map items on their page, Undo back to waiting), To review group and batch rows, proposals.tsx (queue, side panel, batch page), answer list publishes; check_s6_p149 65/65, check_s6_queue_browser 23/23, check_screen02_slice1 passed, tsc clean, any 423, graph G4 0. US$0.
 - 2026-10-30 · W1-shared-library (S6) · FIX for Lead PR #96 · applied Lead message: (1) Undo refuses (409) once the accepted draft changed (stamp of the landed rows); (2) grouped approval all or nothing in one transaction; (3) a reuse of a missing, retired or merged item refused (409) at decide; (4) document type identity by name and proves in sameInLibrary; (5) Undo kept on the empty-group page. Main 5f6c8deb merged (3 conflicts, both sides kept). Pass and fail tests in check_s6_p149 and check_s6_queue_browser. US$0.
+
+## Moved from lanes/screens.md Handover (30 Oct, card v4 session), word for word
+**Agreed answers:**
+* **N-1:** done on main (contract v2.1: no `person` origin or `addReason`; `source.rule`).
+* **N-2:** runtime exports `acceptPqrPick(tx, actor, item)` and drops the pick's own Accept (PR #94). 1c registers it as the `pqr_pick` lander.
+* **N-3:** no stop-gap; sections come from the forms' parts in slice 2, and the checks seed until then.
+* **P-97:** after #94, the field page's "Collected from" becomes read-only for an existing placement, with "Change who fills" calling `POST /library/fields/:key/fills`. That is our page (library.tsx).
+
+* Not done from 1b, decided with the Lead in build-notes "Slice 1b": 1b-2 (Draft fields with AI on the form row; job.tsx folds in), `seed_library.cjs` stays SQL. 1c: pqr_pick lander and the rule-sourced field (N-1 is on main as contract v2.1; N-2 waits for #94).
+* Ports: screens own 4440–4449 only (4460s are evidence's).
+
+**Not screens' (routed in the hand-backs):** runtime.ts "opened case <id>" (QA-74); engine/validate.ts messages with codes (QA-73); section meanings are release c1-v3 content (QA-71); QA-82 to forms W1-10 / S6 slice 1; qa's `check_qa_am_r69_1028.cjs:123` selects the person by the old label.
+
+
+## Moved from lanes/screens.md Handover (30 Oct, card v4 session), word for word
+* **Board v4: Go (P-180), 30 Oct.** Board `design/draft-board-v4.html` on `claude/screens-board-v4`; the founder chose Q1 Open for non-authors, Q2 chips All · Not started · In progress · Live + Needs you, Q3 brand blue. Concept v4 folded at 2c5be7c7 (Lead's OK to edit `concept-draft.md`); `plan.md` is on this branch, with "Slice A build brief" (what exists, order, checks). **Next: slice A, then the card**, on `claude/screens-board-v4` (or main once #96 merges); CI is blocked on billing, so the local run-suites on the exact commit is the evidence.
+* **Slice A DONE, 30 Oct:** `claude/screens-slice-a-62933a` (from `claude/screens-board-v4` 4908ebdd) at 434c6686: `contracts/setup-checklist.ts`, `engine/setup-checklist.ts` (`setupChecklistOf`, `forViewer`, `mayAct`, the two tables), `GET /catalogue` cards and `GET /combinations/:id/summary` carry `setup` with the viewer's overlay (`x-actor`); no page reads it yet (no visible change). `tests/check_setup_checklist.ts` 46/46 (usage: `isolated.sh screens_sa 4441 start && tsx … 4441`); tsc clean; graph G3 2 (older). Four points not done as briefed, with reasons, in `plan.md` "Slice A built" (old five functions stay until slice B replaces the Overview's missing list and Next step; cache per workspace, timing 549 ms cold / 30 ms warm at 150; Release `notBy` holds the submitter only; no `participantsConfirmedAs` yet). Full run-suites on 434c6686: 85 PASS, 2 FAIL (runtime's W1-15 browser suites; also on base, see the log).
+
+## Moved from lanes/screens.md Handover (30 Oct, card v4 session), word for word
+* The Lead backs up :4400 before the restart that runs #96's migration.
+**Learned, not written elsewhere:**
+- Bash here refuses heredocs, `$(…)`, loops and some long `&&` chains (merge-guard hook): write a script to the scratchpad and run it. The catalogue caches rows keyed on activity counts: a check that changes the database by SQL also inserts an `audit_event` row.
+- Other lanes run this lane's checks under the same copy names and ports (`run-suites.sh` uses the usage lines), and all copies share one PostgreSQL server: two runs at once break each other. For reruns, use private names and ports (for example `<name>_mine` on 4460+), then drop those databases.
+- Run by-products land in the tree (other lanes' screenshots, `prototype/p2/*`, `prototype/studio/evidence/*`): restore them before each commit and stage only lane files.
+- The Prisma client in `node_modules` is shared with other copies: after switching branches run `./node_modules/.bin/prisma generate` if a column is reported missing.
+- An author's own names delete at once (P-116 amended): a check that needs the second-person path marks its names as another person's (`update program_def set created_by='user-C'`).
+
