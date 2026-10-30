@@ -49,7 +49,8 @@ jobs:
           # Each line added is put in front of the last one: node 24 last, so it wins over Homebrew's node 23.
           echo /opt/homebrew/bin >> "$GITHUB_PATH"; echo /opt/homebrew/opt/postgresql@18/bin >> "$GITHUB_PATH"; echo "$PWD/.tools/node-v24.21.0/bin" >> "$GITHUB_PATH"
       - name: node 24
-        run: node --version | grep -q '^v24\.' || { echo "node 24 not first on PATH: $(command -v node) $(node --version)"; exit 1; }
+        run: |
+          node --version | grep -q '^v24\.' || { echo "node 24 not first on PATH - $(command -v node) $(node --version)"; exit 1; }
       - name: packages (npm ci; the graph and any-count checks read TypeScript from them)
         run: cd "$S" && npm ci --no-fund --no-audit
       - name: rules files, decision impact, graph (P-86)
