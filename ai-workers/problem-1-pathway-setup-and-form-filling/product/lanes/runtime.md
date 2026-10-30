@@ -6,12 +6,12 @@
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: QA-91, Who can be › AI as a run card (C11.12, P-110; Lead 30 Oct: build now, the founder approved a live Who can be retest)
-current_slice: QA-91 built and checked with the fake launcher only (API 16/16, browser 10/10); QA-115 trimmed; incident record kept in p2/runs/incident-2026-10-30/
-stage: CHECK
+current_item: (1) C3.11 signed-scan lines (built); (2) C10.1 configured checkpoint (planned: screens/W1-reset-and-sample/c10.1-plan.md)
+current_slice: C3.11 built, API 22/22, browser 21/21; C10.1 plan with three questions sent to the Lead (paid drafting of 8 forms, rows 11–12, rows 7/17 owned by other lanes)
+stage: CHECK (C3.11) · PLAN (C10.1)
 owner: Lead
-next_action: Lead: check QA-91 (people-ai.ts run, runs.ts, the dialog) and QA-115; open the Lead PR once #96 merges; merge main here if asked
-blocked_by: none
+next_action: Lead: check C3.11 (b6ed0012) and answer the C10.1 plan's Q1–Q3; then the builder builds C10.1 on this branch
+blocked_by: C10.1 waits for Q1 (founder: US$44.85 worst case, or the US$0 scope)
 updated: 2026-10-30
 
 ## Handover (to a fresh runtime session, 30 Oct)
@@ -33,6 +33,7 @@ updated: 2026-10-30
   * On the Questionnaires tab, scope `[data-section]` with `[data-questions]`; the Undo toast lasts 10 s, so wait on the change, not the toast.
 
 ## Log (last 10 lines)
+- 2026-10-30 · Builder (Mac, fresh session, branch claude/runtime-m2gate-7a844f): applied Lead note 30 Oct (task from the Lead chat: C3.11, then C10.1). Merged claude/runtime-s7-qa-c7d705. C10.1 plan (44d7c3ff): a six load measured at 280 s, 8 forms without a saved field-map answer (paid drafting worst US$44.85), rows 7 and 17 owned by forms/screens and not built; Q1–Q3 to the Lead. C3.11 built (b6ed0012): a Signed PDF upload line adds "<form> signed by hand and scanned" for each person who signs it (Signed by rules, Sample), worked out from the line and never stored, with why on the Documents tab, after own documents, not movable or removable alone, gone when the channel changes; release error for Signed PDF upload + No signature. check_c3_11_signed_scan 22/22, check_c3_11_browser 21/21. Paper is not a channel in the schema (P-143's four channels: forms lane), so only Signed PDF upload is covered. AI US$0 (one ai/plan call, no launch).
 - 2026-10-30 · Builder (Mac): Lead rules applied: incident record committed (d2208d5c), moved out of replay (19daa240); no live switch on check copies (AI now opens only with the fake launcher; check_s5_live_approval_browser moved to it). QA-91 finished: a stopped run keeps no proposal; check_qa91 16/16 and browser 10/10 with the spend guard (pass and fail), US$0, no paid ledger line. Full run-suites on cdfd9f0d: all pass but three; two were the incident files being replayed (fixed 19daa240, 15/15 and 35/35 alone), one a scale timing miss under load (check_w1_programs_s2, 87/87 alone). CHECK, owner Lead. AI US$0 this step.
 - 2026-10-30 · Builder (Mac): QA-91 built (people-ai.ts background run with four steps, Stop, result route; runs.ts label, steps, stop; RunCard in the Who can be dialog); tsc clean. **Incident: one unapproved live run, US$0.17** (04:08Z, two rounds, ledger settled 0.089008 + 0.082144): my new check named the fake launcher by a path from the wrong folder, so the isolated copy (AI now approved on it) used the real guarded launcher. Stopped every run; the check now refuses to start unless the server runs the fake launcher (proved: wrong path → STOP, right path → passes, US$0). Ledger and run files left as they are (the true record). Live check not rerun: waits for the Lead. BUILD, owner Lead.
 - 2026-10-30 · Builder (Mac): Lead answers applied (QA-91 build now; QA-115 trim). Took s2a again (#96 fix 2; screens.md = s2a's, which also undoes the risk of b3549206). QA-115 trimmed: four lines left out with why (IMM 5802 offer, R204(c) nominee letter, LMIA-exempt contract, post-graduation proof); every kept line backed by its IRCC sentence (check_s7_load 19/19, dd2c7e24). Context past 70%: Handover written; QA-91 to a fresh session (BUILD, owner Builder). AI US$0.
@@ -42,4 +43,3 @@ updated: 2026-10-30
 - 2026-10-29 · Builder (Mac, fresh session): took runtime-preview (eaa1a525), main and Lead s2a (one door); built S7 steps 2–6: samples/wave1.json (six, P-112), Demo.loadSix (Structure services, intake, finder replay, field-map REPLAY batch through insertProposals; no release, no live call), the two dialogs, suites' fixture kept; check_s7_load 16/16, s7_dialogs_browser 12/12, s7_reset 4/4; findings in plan.md; CHECK, owner Lead. AI US$0.
 - 2026-10-29 · Builder (Mac): applied Lead message (S7 next, heavy: plan first): plan in screens/W1-reset-and-sample/plan.md (6 steps, 2 product questions); step 1 built: Reset empties official_download and form_line_action too; check_s7_reset 4/4 (every table with a workspace id); Handover written, session stops (context near limit); BUILD, owner Builder (fresh session). AI US$0.
 - 2026-10-29 · Builder (Mac): Lead message (PR #94 CI, check_pqr ZodError): pqrPicksByRules still wrote contract v2's `addReason`, which v2.1 (P-158, main a9fe60c0) drops from the strict item; removed it (engine/sources.ts); the check already held the v2.1 shape; check_pqr 38/38 on 4436; CHECK, owner Lead. AI US$0.
-- 2026-10-29 · Builder (Mac): Lead message QA-99 (Critical): synced main a9fe60c0 (09c6c635); Who can be › AI now sends the finder's full trail (people-ai.ts whoCanBeTrail via finder trailOf), its own commit e0680dbd; check_qa99_who_can_be_trail 3/3, qa check_qa_ai_paths 22/22 (step E), check_s5_people_ai 15/15; CHECK, owner Lead. AI US$0.
