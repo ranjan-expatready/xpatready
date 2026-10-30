@@ -59,6 +59,7 @@ updated: 2026-10-30
   4. Under load above 10, `check_w1_programs_s2` (200 ms Status change) and `check_s5_slice3_browser` go red; CI passes them.
   5. A copy's server can die mid-run (ECONNREFUSED): restart it with `isolated.sh … start`.
   6. Plain reruns of chosen suites: sed a copy of `run-suites.sh` so its loop reads `$RERUN` (`scratchpad/mkrerun.sh` pattern).
+  7. The person menu now shows role names only ("Approver", "Configuration author"); `check_qa_am_r69_1028.cjs:123` still selects the person by the old label (restored after trim a8bb05a1, AGENTS.md rule 8).
 
 ## Earlier lessons (28 Oct; check commands are in `tests/qa/README.md`)
 * **Learned, not written elsewhere:**
