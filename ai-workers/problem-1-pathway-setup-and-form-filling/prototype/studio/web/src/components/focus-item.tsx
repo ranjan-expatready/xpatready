@@ -4,8 +4,9 @@
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
 
-/** The 2 s outline, for any element that carries data-focus. */
-export const FOCUS_RING = "rounded-xl outline-none data-[focused]:outline data-[focused]:outline-2 data-[focused]:outline-offset-2 data-[focused]:outline-primary";
+/** The 2 s outline, for any element that carries data-focus: a ring (box shadow), since the page's `:focus-visible`
+ *  reset removes outlines from a focused element. */
+export const FOCUS_RING = "rounded-xl outline-none data-[focused]:ring-2 data-[focused]:ring-primary data-[focused]:ring-offset-2 data-[focused]:ring-offset-surface";
 export const DONE_SINCE = "This was done since you opened it.";
 
 /** `done`: the focus keys whose step is done by now; undefined while the checklist loads (nothing lands before it). */

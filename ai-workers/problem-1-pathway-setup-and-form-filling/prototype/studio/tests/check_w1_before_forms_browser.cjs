@@ -47,10 +47,11 @@ const MARK = { done: "✓", next: "●", todo: "○", ai: "◐", waiting: "⧗" 
   // ======================================================== the block on Forms
   await go(`/c/${sv.combinationId}/forms`);
   const bf = p.locator("[data-before-forms]");
-  await bf.waitFor({ timeout: 15000 }).catch(() => {});
+  await bf.locator("[data-mark]").first().waitFor({ timeout: 15000 }).catch(() => {}); await p.waitForTimeout(500);
   const s = await setupOf(sv.combinationId);
-  const panelFirst = await p.evaluate(() => { const panel = document.querySelector('[role="tabpanel"]'); const block = document.querySelector("[data-before-forms]"); const all = panel ? [...panel.querySelectorAll("section, table, h2")] : []; return !!block && all[0] === block; });
-  step("P-161 (2) pass: Before forms is the first thing on the Forms tab, above the forms", await bf.count() === 1 && panelFirst && /Before forms/.test(await bf.innerText()));
+  // Every other visible part of the tab starts below the block.
+  const panelFirst = await p.evaluate(() => { const panel = document.querySelector('[role="tabpanel"]'); const block = document.querySelector("[data-before-forms]"); if (!panel || !block) return { ok: false, above: ["no block"] }; const end = block.getBoundingClientRect().bottom; const above = [...panel.querySelectorAll("section, table, h2, h3, button")].filter((e) => !block.contains(e) && e.getClientRects().length && e.getBoundingClientRect().top < end).map((e) => `${e.tagName} ${(e.textContent ?? "").slice(0, 30)}`); return { ok: !above.length, above }; });
+  step("P-161 (2) pass: Before forms is the first thing on the Forms tab, above the forms", await bf.count() === 1 && panelFirst.ok && /Before forms/i.test(await bf.innerText()), panelFirst.above);
   const pagesLine = bf.locator('[data-step="pages"]'), peopleLine = bf.locator('[data-step="people"]');
   step("C11.10 pass: its two lines are step 1 Official pages and step 2 Who can be in this application", await pagesLine.count() === 1 && await peopleLine.count() === 1 && /Official pages/.test(await pagesLine.innerText()) && await peopleLine.locator("[data-who-can-be]").count() === 1);
   const marks = [await pagesLine.locator("[data-mark]").getAttribute("data-mark"), await peopleLine.locator("[data-mark]").getAttribute("data-mark")];
@@ -68,8 +69,8 @@ const MARK = { done: "✓", next: "●", todo: "○", ai: "◐", waiting: "⧗" 
   // ======================================================== ?focus= lands on its line
   await go(`/c/${sv.combinationId}/forms?focus=people%3Acard`);
   await p.locator('[data-step="people"][data-focused]').waitFor({ timeout: 8000 }).catch(() => {});
-  const landed = await p.evaluate(() => { const el = document.querySelector('[data-step="people"]'); return { outlined: el?.hasAttribute("data-focused"), focused: !!el && (el === document.activeElement || el.contains(document.activeElement)), focusInUrl: new URLSearchParams(location.search).has("focus"), outline: el ? getComputedStyle(el).outlineStyle : null }; });
-  step("C11.10 pass: ?focus=people:card lands on the people line: focused and outlined, the address cleared", landed.outlined && landed.focused && !landed.focusInUrl && landed.outline !== "none", landed);
+  const landed = await p.evaluate(() => { const el = document.querySelector('[data-step="people"]'); return { outlined: el?.hasAttribute("data-focused"), focused: !!el && (el === document.activeElement || el.contains(document.activeElement)), focusInUrl: new URLSearchParams(location.search).has("focus"), ring: el ? getComputedStyle(el).boxShadow : null }; });
+  step("C11.10 pass: ?focus=people:card lands on the people line: focused and outlined, the address cleared", landed.outlined && landed.focused && !landed.focusInUrl && !!landed.ring && landed.ring !== "none", landed);
   await shot("focus-people-landed");
   await p.waitForTimeout(2300);
   step("C11.10: the outline goes after 2 s", !(await p.locator('[data-step="people"]').evaluate((el) => el.hasAttribute("data-focused"))));
