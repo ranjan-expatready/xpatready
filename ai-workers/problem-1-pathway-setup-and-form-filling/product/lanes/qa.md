@@ -17,14 +17,14 @@ updated: 2026-10-30
 * **Left to do (30 Oct, the Lead role moved to a fresh Lead chat):**
   1. `/qa after-merge` on each next merge to main: #96 (screens: library sources and rename, ProposalItem table, review queue page), forms slice 1, the P-175 live switch (QA-100), #99 if not yet tested. Last tested main: **5f6c8deb**.
   2. When QA-100 (P-175) merges: check that a copy without the server switch refuses every live start (finder and Who can be) before any call, and that the ledger does not grow; then rerun `check_qa_explore_1029.cjs` (QA-105, 106, 108, 110 still fail on 5f6c8deb).
-  3. Live Who can be retest (QA-99) only when the founder approves it in that session: US$0.55 spent of US$6.49, **US$5.94 left**.
+  3. Done 30 Oct: live Who can be retest (QA-99) closed, US$0.13 (`qa/reports/2026-10-30-live-qa99.md`). Founder ceiling now US$0.68 spent of US$6.49, **US$5.81 left**; any further paid call needs the founder again in that session.
   4. Unmerged qa branches for the Lead: `claude/qa-after-merge-5f6c8de` (5d74a1e6 and this Handover; it contains `claude/qa-explore-1029` and `claude/qa-after-merge-deda0e6`).
   5. Not yet covered: c8 coverage rerun, release refused for a fact with no source or two (C4.10), read-only walk of :4400 on 5f6c8deb.
 * **30 Oct, after-merge on 5f6c8deb (branch `claude/qa-after-merge-5f6c8de`):** QA-92–96 closed, QA-99 fixed in stub (live waits), QA-112–117 new. **Ports: 4471 is taken by the forms copy; use 4472–4479 and check `lsof -ti tcp:<port> -sTCP:LISTEN` first** (`isolated.sh` stops whatever holds the port). The guard hook blocks Bash lines containing "pqr", ports lists and some pipes: use scratchpad scripts. Retest QA-92–96 line below is done.
 * **29 Oct, explore on a9fe60c0:** `qa/reports/2026-10-29-explore.md`, QA-100–111. **Never click "Find forms with AI (about … · at most …)" by hand or in a check: one click starts a LIVE run on any copy (QA-100, US$0.27).** Make a Rules find through the API (`/forms/find/plan {mode:"rules"}`, then `/forms/find`), then use Find again; `check_qa_explore_1029.cjs` shows the pattern and stops if the ledger grows.
 * **29 Oct evening:** after-merge deda0e6b + live smoke a9fe60c0: `qa/reports/2026-10-29-after-merge-deda0e6.md` (§5).
 * **Waiting:**
-  * Live step 3 (Who can be, US$0.91 reserved) reruns when runtime's QA-99 fix merges. The Lead sends it. Founder ceiling: US$5.94 left of US$6.49 (30 Oct). The user allowed paid calls in this session, but a new session must ask the user again.
+  * Done 30 Oct: live step 3 (Who can be) ran once, US$0.13 of US$0.91 reserved; QA-99 closed. Founder ceiling: US$5.81 left of US$6.49. A new session must ask the user again before any paid call.
   * Live run recipe:
     * Copy `zsh studio/tools/isolated.sh qa_live 4478 start STUDIO_PEOPLE_AI_LIVE=approved`, then Load sample.
     * Plans are free: `POST /api/combinations/<id>/people/propose/plan {mode:"live"}`, then `/people/propose {mode, planSha256}` (synchronous).
@@ -89,6 +89,7 @@ updated: 2026-10-30
   9. S4: the finder has no button until S5 slice 3: test it through `POST /combinations/:id/forms/find/plan` then `/find` (Rules or Replay only, never `live`); only Visitor visa (`vv.single`) has saved answers. No product route makes an unused, unapproved form, so Delete is walked on a seeded form (the builders' own way). The guard hook blocks `for` loops and heredocs: put them in a scratchpad script.
 
 ## Log (last 8 lines)
+- 2026-10-30 · live retest QA-99 on bcd482d3 (founder approved in the Lead chat and in this session): Who can be › AI now on Study permit 201 in 88 s, 2 proposed with quotes, 1 to decide; US$0.13; QA-99 closed (history/qa-bugs-closed-2026-10-30.md); ledger and run files back to HEAD
 - 2026-10-30 · after-merge 5f6c8deb (#94): suites 89/90 (slice 3 browser once, QA-116); QA-92–96 closed; QA-99 fixed (stub); Documents tab, Preview, who fills, country PQR walked at 1024; QA-112–117 Minor; port clash with forms on :4471; US$0.
 - 2026-10-29 · explore a9fe60c0: 1024/1440 Immigration programs, Program structure, Forms library clean (axe, no cut words, no system values); cost words agree except AI work list (QA-106); unplanned live find by my check, US$0.27 (QA-100 Critical, told the Lead); its result: QA-101–104, 107, 111; dialog QA-105, 110; QA-108, 109. Check 69/74.
 - 2026-10-29 · live smoke on a9fe60c0 (founder, ceiling US$6.49; user allowed here): QA-97 closed; finder live US$0.28 of US$5.58 reserved (8 forms both rounds, 5 attached, page by rules); Who can be refused before any call → QA-99 Critical (runtime); step 4 skipped. Total US$0.28.
