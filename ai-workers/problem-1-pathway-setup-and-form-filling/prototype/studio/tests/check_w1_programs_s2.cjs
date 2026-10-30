@@ -124,14 +124,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const trS = cat.sections.find((x) => x.pathwayKey === tr);
   const trCard = await card("Temporary residence").evaluate((b) => ({ n: b.querySelector("[data-count]")?.textContent, need: b.querySelector("[data-need]")?.textContent ?? "" }));
   step("S2 fix 6: a Pathway chip's counts are the catalogue's (combinations, need you)", trCard.n === String(trS.combinations) && (trS.needs ? trCard.need.startsWith(String(trS.needs)) : !trCard.need), JSON.stringify(trCard));
-  // The Structure's Pathway cards still count the old rule (waiting on a person: proposals, missing, new edition,
-  // release); Programs (P-180) counts the viewer's own items, which include the expert's step 2 "Confirm who can apply".
-  // The two differ by design until the Lead decides whether the Structure follows (lane note, 30 Oct): printed, not asserted.
-  const stPw = (await api("/structure?pathwayType=INDIVIDUAL")).body.nodes.filter((x) => x.level === "pathway");
-  const per = [];
-  for (const who of ["user-A", "user-B", "user-C"]) per.push(`${who} ${(await api("/catalogue?pathway=INDIVIDUAL&filter=all", { actor: who })).body.sections.map((x) => x.needs).join(",")}`);
-  step("S2 fix 6: the Structure's Pathway cards carry a need count for every Pathway the catalogue shows", cat.sections.every((x) => Number.isInteger(stPw.find((y) => y.key === x.pathwayKey)?.needs)), stPw.map((x) => `${x.label} ${x.needs}`).join(", "));
-  console.log(`NOTE  Structure need counts ${stPw.map((x) => x.needs).join(",")} vs Programs Needs you per person: ${per.join(" · ")}`);
+  // CHECK 30 Oct (review M4): one count path (concept §8). The Structure's Pathway need counts are each person's own
+  // Needs you, the same as the Programs sections, for the author, the approver and the expert.
+  const pairs = [];
+  for (const who of ["user-A", "user-B", "user-C"]) {
+    const st = (await api("/structure?pathwayType=INDIVIDUAL", { actor: who })).body.nodes.filter((x) => x.level === "pathway");
+    const pr = (await api("/catalogue?pathway=INDIVIDUAL&filter=all", { actor: who })).body.sections;
+    pairs.push({ who, same: pr.every((x) => st.find((y) => y.key === x.pathwayKey)?.needs === x.needs), st: st.map((x) => x.needs).join(","), pr: pr.map((x) => x.needs).join(",") });
+  }
+  step("C11.10 concept §8: the Structure's Pathway need counts equal the Programs sections' for each person", pairs.every((x) => x.same), pairs.map((x) => `${x.who} ${x.st} vs ${x.pr}`).join(" · "));
+  step("C11.10 (fail case): the counts are per person, not one number for everyone", new Set(pairs.map((x) => x.pr)).size > 1, pairs.map((x) => `${x.who} ${x.pr}`).join(" · "));
   const secs = await p.locator("[data-section]").evaluateAll((s) => s.map((x) => x.querySelector("h2").textContent));
   step("C11.10 S2 P-180: 'All pathways' (the default) shows one section per Pathway, with its 'n of m live' count", await all.getAttribute("aria-pressed") === "true" && secs.length === 3 && cat.sections.every((x, i) => secs[i].startsWith(x.label) && secs[i].includes(`${x.live} of ${x.combinations} live`)), secs.join(" | "));
   // Card v4 §7: with the Needs you toggle on, each Pathway header says how many need you; the toggle explains itself.
@@ -175,7 +177,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("S2 fix 2: a Not started card's one button reads Start setup (no 'Add sources' anywhere on a Not started card)", (await nsCard.locator('[data-next-step="start"]').textContent()).trim() === "Start setup" && !(await p.locator('article[data-state="NOT_STARTED"]').allInnerTexts()).some((t) => /Add sources|Find forms/.test(t)));
   const vvCard = p.locator(`article[data-node="${vv}"]`);
   const vvText = await vvCard.innerText();
-  step("S2 fix 4 P-180: an In progress card says 'n of 5 steps' as the checklist counts them, with Resume setup (no form count on the card)", vvText.includes(vvRow.setup.bar.text) && /^[1-5] of 5 steps$/.test(vvRow.setup.bar.text) && await vvCard.locator('[data-card-button="resume"]').count() === 1 && !/attached, not added yet|ready to add from the library/.test(vvText), vvText.replace(/\s+/g, " "));
+  step("S2 fix 4 P-180: an In progress card says 'n of 5 steps' as the checklist counts them, with Resume setup (no form count on the card)", vvText.includes(vvRow.setup.bar.text) && /^[0-5] of 5 steps$/.test(vvRow.setup.bar.text) && await vvCard.locator('[data-card-button="resume"]').count() === 1 && !/attached, not added yet|ready to add from the library/.test(vvText), vvText.replace(/\s+/g, " "));
   // fix 3: a Not started name never starts anything by itself
   const before = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.counts;
   const combos0 = sql("select count(*) from combination");
@@ -235,6 +237,15 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator('[data-section] h2 button[aria-expanded="true"]').first().click();
   const shut1 = await p.locator('[data-section] h2 button[aria-expanded="false"]').count(), cards1 = await p.locator("article[data-node]").count();
   step("C11.10 P-180: a section header collapses its cards, keeping its 'n of m live' count (and the list's collapse carries over)", shut0 === 1 && shut1 === 2 && cards1 < cards0 && /\d+ of \d+ live/.test(await p.locator('[data-section] h2 button[aria-expanded="false"]').first().textContent()), `${shut0}→${shut1} shut, ${cards0}→${cards1} cards`);
+  // CHECK 30 Oct (break M2): a folded Pathway's own chip is a filter, so it opens that Pathway's cards.
+  const foldedKey = await p.locator('[data-section]:has(h2 button[aria-expanded="false"])').first().getAttribute("data-section");
+  await p.locator(`[data-pathway-chip="${foldedKey}"]`).click();
+  await p.waitForFunction((k) => new URLSearchParams(location.search).get("p") === k, foldedKey);
+  await p.locator(`[data-section="${foldedKey}"] article[data-node]`).first().waitFor({ timeout: 8000 }).catch(() => undefined);
+  step("C11.10 concept v4 §7: a folded Pathway's chip opens its section (a filter opens every section with a match)", await p.locator(`[data-section="${foldedKey}"] article[data-node]`).count() > 0 && await p.locator(`[data-section="${foldedKey}"] h2 button[aria-expanded="false"]`).count() === 0, foldedKey);
+  await p.locator(`[data-pathway-chip="all"]`).click();
+  await p.waitForFunction(() => !new URLSearchParams(location.search).get("p"));
+  step("C11.10 (fail case): back on All, the person's fold is kept", await p.locator(`[data-section="${foldedKey}"] h2 button[aria-expanded="false"]`).count() === 1);
   // Folds last per person (concept v4 §7): open everything again for the steps below.
   await p.evaluate(() => { try { for (const k of Object.keys(localStorage)) if (k.startsWith("xr-programs-fold:")) localStorage.removeItem(k); } catch { /* ignore */ } });
 

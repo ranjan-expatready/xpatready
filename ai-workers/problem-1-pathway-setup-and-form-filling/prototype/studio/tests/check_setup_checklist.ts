@@ -37,6 +37,17 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
   step("C11.16 (fail case): a combination that exists never offers Start setup", forViewer(started, AUTHOR).button === "Resume setup", forViewer(started, AUTHOR).button);
 }
 {
+  // CHECK 30 Oct (review M1, break M1): right after Start setup nothing is done, so no step may count as done.
+  const fresh = setupChecklistOf(draft({ pages: { state: "no_record" }, people: { roles: 0, applicants: 0, saved: false, confirmed: null, tier: "expert" }, forms: { lines: 0, fromLibrary: 0, draftable: 0, unmapped: 0, sources: 0 }, documents: { lines: 0, rolesWithout: 0 }, questions: 0 }));
+  step("C11.16 / concept §4a: just started (no forms, no documents) → \"0 of 5 steps\", step 4 open", fresh.bar.text === "0 of 5 steps" && fresh.steps[3].state !== "done", { bar: fresh.bar.text, step4: fresh.steps[3].state });
+  const docsNoForms = setupChecklistOf(draft({ forms: { lines: 0, fromLibrary: 0, draftable: 0, unmapped: 0, sources: 0 }, documents: { lines: 0, rolesWithout: 0 } }));
+  step("C11.16 (fail case): no document lines is never done, with or without forms", docsNoForms.steps[3].state !== "done" && docsNoForms.steps[3].open.some((i) => i.text === "Draft questions and documents"), docsNoForms.steps[3].open.map((i) => i.text));
+  // CHECK 30 Oct (review M2): no screen offers "Confirm who can apply" yet (P-176 Q1), so it is open but never Needs you.
+  const unconfirmed = setupChecklistOf(live({ people: { roles: 3, applicants: 2, saved: false, confirmed: null, tier: "expert" } }));
+  step("C11.10: an unconfirmed people list stays open on step 2 and in the Next line", unconfirmed.steps[1].open.some((i) => i.kind === "confirm_people"), unconfirmed.steps[1].open.map((i) => i.kind));
+  step("C11.10 (fail case): it is not Needs you for the expert while no screen offers the confirmation", !forViewer(unconfirmed, SME).needsYou, forViewer(unconfirmed, SME).needsYou);
+}
+{
   const found = setupChecklistOf(draft({ forms: { lines: 0, fromLibrary: 3, draftable: 0, unmapped: 0, sources: 3 } }));
   const forms = found.steps[2];
   step("C1.4: 3 library forms found for its sources → \"Add 3 forms found\", never \"Find forms\"", forms.open[0]?.text === "Add 3 forms found" && !forms.open.some((i) => i.kind === "find_forms"), forms.open.map((i) => i.text));

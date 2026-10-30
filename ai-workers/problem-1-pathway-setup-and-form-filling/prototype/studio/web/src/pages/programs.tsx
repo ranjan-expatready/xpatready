@@ -157,7 +157,8 @@ export function ProgramsPage() {
   // From the answer, not the address: while a new Pathway's answer is on its way, the page keeps showing the last one whole.
   const answered = cat.data?.pathwayKey ?? "";
   const shownSections = answered && sections.some((s) => s.pathwayKey === answered) ? sections.filter((s) => s.pathwayKey === answered) : sections;
-  const filtering = filter !== "all" || !!q || !!program || !!under || needsOnly;
+  // A Pathway chip is a filter too: it opens its sections even when the person folded them (break-report M2).
+  const filtering = filter !== "all" || !!q || !!program || !!under || needsOnly || !!pathwayKey;
   const programMeta = new Map((cat.data?.programs ?? []).map((p) => [p.key, p]));
   const groups: Group[] = shownSections.map((s) => {
     const mine = rows.filter((r) => r.pathwayKey === s.pathwayKey);
@@ -166,7 +167,7 @@ export function ProgramsPage() {
     return { s, i: sections.findIndex((x) => x.pathwayKey === s.pathwayKey), rows: mine,
       programs: [...byProgram].map(([key, list]) => { const m = programMeta.get(key); return { key, label: m?.label ?? list[0].trail[2], combinations: m?.combinations ?? list.length, live: m?.live ?? list.filter((r) => chipOf(r) === "LIVE").length, rows: list }; }) };
   }).filter((g) => g.rows.length || !filtering);
-  const [closed, toggle] = useFolds(filtering ? `${pathway}|${filter}|${q}|${program}|${under}|${needsOnly}` : null);
+  const [closed, toggle] = useFolds(filtering ? `${pathway}|${pathwayKey}|${filter}|${q}|${program}|${under}|${needsOnly}` : null);
 
   // Back from a combination: the opened one is highlighted and the page is where it was (saved scroll, else the item).
   const restored = React.useRef(false);

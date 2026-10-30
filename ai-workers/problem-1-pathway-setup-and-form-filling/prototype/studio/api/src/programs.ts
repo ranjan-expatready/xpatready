@@ -231,9 +231,10 @@ export class Programs {
   }
 
   /** Each last-level name's combination state, for the Structure outline (counts, Live, has setup, retired). */
-  async leafStates() {
+  /** With a person, "needs" is that person's Needs you (forViewer), the same count path as the Programs page (concept §8). */
+  async leafStates(actor?: Actor) {
     const { rows } = await this.rows();
-    return new Map(rows.map((r) => [r.leaf.nodeKey, { combinationId: r.leaf.combinationId, live: r.leaf.live, needs: r.leaf.needsYou, retired: r.leaf.retired, status: r.leaf.status, statusText: r.leaf.statusText }]));
+    return new Map(rows.map((r) => [r.leaf.nodeKey, { combinationId: r.leaf.combinationId, live: r.leaf.live, needs: actor ? !r.leaf.retired && !!forViewer(r.setup, actor).needsYou : r.leaf.needsYou, retired: r.leaf.retired, status: r.leaf.status, statusText: r.leaf.statusText }]));
   }
 
   /** GET /catalogue: one request for the whole tree of one pathway, filtered and searched on the server. */

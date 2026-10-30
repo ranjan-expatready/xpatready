@@ -44,7 +44,9 @@ export function mayAct(item: Pick<OpenItem, "kind" | "tier" | "notBy">, actor: {
 /** Items that wait for a person's review or confirmation: they make "Needs you" (founder 30 Oct: "a review or a
  *  confirmation"); building items (find, add, map, draft, a draft's own problems) do not; a release's problems do
  *  (Not ready: firms cannot open cases). */
-const REVIEWS: ItemKind[] = ["confirm_pages", "choose_pages", "review_people", "confirm_people", "review_proposals", "review_edition", "sign", "release", "fix_problems"];
+// confirm_people stays out of Needs you until a screen offers the confirmation (participantsConfirmedAs, P-176 Q1 open):
+// a mark nobody can clear is noise. It still counts as open on the step and in the Next line.
+const REVIEWS: ItemKind[] = ["confirm_pages", "choose_pages", "review_people", "review_proposals", "review_edition", "sign", "release", "fix_problems"];
 
 /** The official-pages record (forms lane, queue item 2). Until it lands every combination reads "no_record". */
 export type OfficialPages = { state: "no_record" } | { state: "proposed"; matches: number } | { state: "confirmed"; by: string | null; as: Tier };
@@ -120,7 +122,8 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
     if (s.held) open.forms.push(item("review_edition", s.held, s.held === 1 ? "Review new edition" : `Review ${s.held} new editions`, "forms:held"));
     // 4 Questions and documents: 4a documents first, then 4b questions (P-130, P-174).
     const qd = open.questions_documents;
-    if (s.forms.lines && !s.documents.lines && !partProposals.documents) qd.push(item("draft", 1, "Draft questions and documents", "documents:lines"));
+    // No document lines is never done, with or without forms yet (concept §4a: a document line for every applicant role).
+    if (!s.documents.lines && !partProposals.documents) qd.push(item("draft", 1, "Draft questions and documents", "documents:lines"));
     else if (s.documents.rolesWithout) qd.push(item("draft", s.documents.rolesWithout, `Add documents for ${plural(s.documents.rolesWithout, "person role")}`, "documents:lines"));
     if (partProposals.documents) qd.push(item("review_proposals", partProposals.documents, `Review ${plural(partProposals.documents, "proposal")}`, "review:documents"));
     if (partProblems.documents) qd.push(item("fix_problems", partProblems.documents, `Fix ${plural(partProblems.documents, "problem")}`, "documents:problems"));
