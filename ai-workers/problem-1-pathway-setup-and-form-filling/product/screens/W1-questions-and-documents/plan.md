@@ -67,3 +67,70 @@ Fit check against today's data: a checklist line is a `document_requirement` (ty
 * Undo of an own-draft removal: a small route that takes back the author's own Removed-in-draft line (403 "Only the person who made this draft can undo it."; 409 "Released since").
 * Not in slice 3: library document type edits (S6), AI proposals (slice 5), Preview (slice 4), the P-143 channel files.
 * Tests: `check_w115_slice3.ts` (API: checklist per person, supplies and about whom, taken out, order, alternatives, remove and its Undo, locks; a pass and a fail each) and `check_w115_slice3_browser.cjs` (1440 and 1024, axe).
+
+## PQR (M2 queue item 2; C4.2, C4.7, C4.8; P-76, P-130, P-132): runtime lane, 29 Oct, fresh session
+**Already there (slices 1–2):** the per-combination PQR tick is a `fact_source` row (one PQR record per combination, P-132). Save, bulk change and release refuse a tick on a Case officer fact or on a fact no question asks (PQR ⊂ SQR ∪ checklist documents, Lead Q1). Each tick is a Review line with `needs_sme` and goes out in the combination's one release (P-76). The row shows "Ask"; the strip counts the ticks.
+
+**What this pass adds (US$0, no AI call):**
+| Element | Record | API | Rule | Test (pass / fail) |
+|---|---|---|---|---|
+| C4.2 the combination's PQR as a set: a "Pre-qualification n" chip on the Questionnaires tab shows only that person's ticked questions | `fact_source` (no change) | `GET …/fact-sources` (exists) | PQR ⊂ SQR ∪ documents (exists) | the chip lists exactly the ticked rows / an unticked row is not listed |
+| C4.2 country PQR (P-132): assembled from released combinations, never stored | `config_release.snapshot.fact_sources` | `GET /api/pqr/country` | newest release per combination; a draft tick is not in it until released | a released tick appears with the combinations that ask it / a draft-only tick does not |
+| C4.8 one review and release | none | release (exists) | a tick or untick is a Review line in words with `needs_sme`; there is no PQR-only approval route | Review names the tick; the released snapshot carries it / an untick after release shows as removed |
+| C4.7 AI picks with a reason, accept or remove each | **question below** | intake for W1-10 step 7 | identity = fact + role (W1-10 plan (2)); the same refusals as a tick | — |
+
+**Question for the Lead (C4.7, before it is built):** the producer is W1-10 step 7 (forms lane, `W1-ai-drafting/plan.md` slice 4), and the queue-item contract has every producer write into S6's queue (screens lane), which no branch has built. Board v2 shows the pick on the Questionnaires row ("AI proposal · not yet accepted", Accept / Reject, reason and quote in the drawer). Where does a pending pick live until S6's queue exists? *Recommend:* runtime adds a small per-combination pick record (fact + role, reason, quote, producer, Pending / Accepted / Removed) with an intake route taking the agreed `ProposalPayload` `pqr_pick` + `ProposalSource`. Accept writes the tick through the same save (origin AI_PROPOSAL, reason kept), so it joins the one release; Remove keeps who and when; a pending pick changes nothing. S6's queue later lists these rows instead of copying them. Until W1-10 step 7 runs, a rules producer proposes picks (the facts a rule of the combination reads, "Proposed by Rules"), never labelled AI.
+
+**Lead's answer (29 Oct): no runtime pick store.** P-149 is one door: every proposal lives in S6's one `ProposalItem` table (S6 slice 1, right after PR #90). A second store would mean a migration and two review lists. **Order:**
+1. C4.2 and C4.8 now: done (`check_pqr.ts`, `check_pqr_browser.cjs`).
+2. The C4.7 producer and Accept path against contract v2, not put into any queue yet: done. `engine/sources.ts pqrPicksByRules` makes `pqr_pick` items with origin "rules" and no `ProposalSource`, never labelled AI, until W1-10 step 7 runs. `api/src/fact-sources.ts acceptPqrPick` writes the tick through the same draft row and refusals; it has no route of its own. **Wiring into S6's queue waits until S6 slice 1 is on main.**
+3. While C4.7 waits: queue item (3) who fills (C4.9), then (4) Preview; then back to C4.7 to wire it into the queue.
+
+## Who fills (M2 queue item 3; C4.9; P-97, P-23): short plan for the Lead, 29 Oct (no code yet)
+**What C4.9 means now.** Lead Q2 (slice 1) already split C4.9 into two parts:
+* **Built (slices 1–2):** the per-combination override (Comes from, reviewed at that combination's release) and the client-only lock on background and declaration sections.
+* **Not built: the library default.** P-97 says that changing who fills a question for every combination is a library change: a second person approves it on To review, and it goes out with the next release.
+
+**Finding: the library page breaks P-97 today.** On the library field page (`web/src/pages/library.tsx`), "Collected from" saves straight to a draft placement version (`POST /library/fields/:key/placement`, `api/src/studio.ts placeField`). No second person approves it, and it is published with the next release like any draft.
+
+**The plan (US$0; reuses the existing library-change pattern, no new table):**
+| Element | Record | API | Rule | Test (pass / fail) |
+|---|---|---|---|---|
+| Propose: "Change who fills, for every combination", from the Questionnaires drawer, with a reason and "used by n combinations" | `library_change` kind `placement_fills`, action `SET_FILLS`, `matches` {before, after} | `POST /api/library/fields/:key/fills` {to: client · case_officer, reason} | Only Client ↔ Case officer. Refused: a client-only section (P-97), no change, one already waiting, a fact with no placement, a retired field; author duty | Proposal saved as WAITING, the placement unchanged / each refusal in words |
+| Approve on To review by a second person | the same row | the existing `decideChange` (proposer and draft applier refused) | Approval writes a DRAFT placement version with the new `collectedFrom` (origin HUMAN); nothing changes before approval | Approved → draft version / the proposer approving → 403 |
+| Out with the next release | `publishLibraryChanges` (existing: APPROVED → published, RELEASED in the pack) | release (existing) | Each affected combination's Review names it once, in words, with `needs_sme`; a per-combination override (C4.10) stays in place and still wins | Released snapshot's placement carries it; the Comes from rules follow it / an override keeps its own source |
+| Lock the direct edit | — | `placeField` | Changing `collectedFrom` on an existing placement is refused with "Who fills is changed with a second person: use Change who fills". A new placement may still set it. | Direct change → 409 / new placement → 200 |
+| Shown | — | `GET …/fact-sources` adds `fillsChange` {to, by, status} | The row and drawer say "Waiting for a second person: Case officer for every combination" | Browser: propose, see Waiting, approve as the second person, then see the draft |
+
+**Questions for the Lead:**
+1. **Files.** To review (`api/src/review-queue.ts`, `contracts/review-queue.ts`), approval and publish (`api/src/library-changes.ts`, `api/src/lifecycle.ts`) and the library page (`library.tsx`) are the screens and forms lanes' files. *Recommend:* runtime makes the narrow additions: one kind in the To review list and words, the apply step at approval, the propose route, and the lock in `placeField`. The Lead tells the screens lane, so S6 slice 1 does not collide. The other way is that screens adds the kind and runtime builds only the drawer, the route and the lock.
+2. **Values.** Only Client ↔ Case officer (P-97's words)? The other values (verified document, profile record, existing record) stay as they are and are not offered. *Recommend yes:* "from a document" is per combination now (Comes from, P-130).
+3. **The library field page.** Make its "Collected from" read-only for an existing placement, with the same "Change who fills" door? *Recommend yes;* otherwise P-97 has a side door.
+
+**Size:** medium: one route, one apply step, one lock, a drawer section, two checks (API and browser). It does not wait on S6.
+
+## Preview by person and by channel (M2 queue item 4; C4.3, C4.6; board v2 frame 4; P-47, P-62 §7): short plan for the Lead, 29 Oct (no code yet)
+**What is there (S5 Preview, `web/src/pages/workspace/preview.tsx`, `api/src/workspace.ts preview` → `previewFamily`):** a Sample family, person chips, tried answers in the address, and three columns: "What <person> is asked" (the runtime renderer), Documents, and Forms with a channel pill.
+
+**Gaps against board v2 frame 4 and the journey review (item 8):**
+* There are no three sets. Only the client's questionnaire is shown; there is no PQR and no Agent view.
+* The client's set still asks facts that a document on that person's checklist supplies (board: "the client view skips document facts").
+* Forms are not grouped by what the person gets on each channel (C4.6: portal screens, filled PDFs, PDFs to sign).
+* The question count differs from the Questionnaires tab: a third number.
+* The journey review saw a child get all 7 forms, IMM 5409 (common-law) included. To check before building: a real fault in who a form applies to, or a form filed once per couple shown under every person.
+
+**The plan (US$0, read-only, no new table; one engine function, one view change):**
+| Element | From | API | Rule | Test (pass / fail) |
+|---|---|---|---|---|
+| A switch with three sets (side by side at 1440 px, one at a time below 1280 px), per person | — | `GET …/workspace?tab=preview` gains `sets` | — | three sets at 1440 px; one with the switch at 1024 px |
+| **PQR:** the person's ticked questions (the per-combination record), "please confirm" later, no verdict shown to the prospect (P-77) | `prequalification(snapshot)` (built) | `sets.pqr` | PQR ⊂ SQR ∪ documents | ticked → listed / unticked or Case officer → not listed |
+| **SQR (client):** the shared renderer as today, but a fact whose source for this person is a document is not asked. Above the sections: "From your documents: Passport fills 7 answers" (information only) | `factSources` + the renderer | `sets.sqr` | P-130: a document fact is asked only as the fallback when the document is missing or unreadable | a passport fact is not asked when the passport is on the checklist / it is asked when the passport line is removed |
+| **Agent view:** the full form for the person, each fact with its source (Document · type / Client / Case officer); the count equals the Questionnaires tab's | `factSources` | `sets.agent` | one count (journey item 8) | the count equals that person's chip on Questionnaires / no system key on screen |
+| **C4.6 outputs per channel:** the person's forms grouped as "Filled on the portal (Online)", "Filled PDF to upload", "PDF to print and sign", plus "Filed once for the application" (by the principal applicant) | the filing channels (forms lane, read only) | `outputs` per person | signature line from the channel (as built) | each form in exactly one group / a form filed for the application is not repeated for every person |
+
+**Questions for the Lead:**
+1. **"Fill this from my documents"** (frame 4's upload, proposals and "please check") is C4.5/C6.5 client behaviour, which P-129 moves after M3. *Recommend:* Preview shows only the information line ("Passport fills 7 answers") now, with no upload interaction; the interactive part comes with W5.
+2. **Renderer gap:** skipping document facts in the client view is a renderer change (`engine/render.ts`, `web/src/runtime/questionnaire.tsx`), and real cases use the same renderer. *Recommend:* add a "skip facts a document supplies" option that only Preview sets for now. A case pinned to an older release keeps asking them (challenge note). It becomes the case default with M3's documents-first intake (C6.5).
+3. **The IMM 5409 finding:** if a form filed once per couple shows under every person, I fix it in Preview's grouping (C4.6), not in who a form applies to. If who it applies to is wrong, that is a rules fault; I report it before changing it.
+
+**Size:** heavy-medium: one engine function (`previewSets`), the preview view, one renderer option, and two checks (API and browser at 1440 and 1024 px with the accessibility check). It does not touch the forms lane's channel files.

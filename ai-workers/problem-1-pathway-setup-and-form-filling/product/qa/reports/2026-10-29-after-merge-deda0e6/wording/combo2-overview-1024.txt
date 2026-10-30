@@ -1,0 +1,81 @@
+URL /c/77c8c9ec-2f0a-4d87-9c06-12c7855a5fef/overview as user-A
+TITLE Immigration programs · Product Studio
+H1 ["Visitor visa"]
+HEADS ["Overview","Forms","Questionnaires","Documents","Preview","Review and release","Missing before firms can use it (2)","Who can be in this application"]
+CUT []
+ERRORS []
+---
+Immigration programs
+Temporary residence
+Visitors
+Visitor visa
+Visitor visa
+In setup
+
+Not released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample
+
+Next step
+
+Add 1 form from the library
+Sample: official visitor-visa forms and checklists attached; not set up yet.
+Overview
+Forms
+Questionnaires
+Documents
+Preview
+Review and release
+Missing before firms can use it (2)
+2 forms attached as sources, 0 set up.
+No questions yet for Applicant, Spouse or partner (travelling), Child (travelling).
+
+Next step for all of these: Add 1 form from the library.
+
+Forms
+
+0
+
+0 form fields matched to shared fields · see them
+
+Questions
+
+0
+
+questions across all people (each person role counted) · 0 sections
+
+Documents
+
+0
+
+asked always or only if
+
+Rules and checks
+
+0 rules · 0 checks
+
+no problems
+
+Who can be in this application
+Change in Questionnaires
+Applicant · 1 · applicant
+Spouse or partner (travelling) · 0 to 1 · applicant
+Child (travelling) · 0 to 4 · applicant
+
+Each person marked as applicant gets their own forms, questions and documents. Numbers Sample until the immigration expert confirms.
+
+Nothing released yet. Case work only ever uses a released version; drafts are previews.
+--- labels ---
+Product Studio home
+Working prototype on a local demo database: no sign-in, simulated people, not production
+Simulated person
+Super Admin · content publisher. Duties: author, review
+Use the dark theme
+Studio
+1 waiting for you
+Path
+Pathway: show the list for Temporary residence
+Program: show the list for Visitors
+Category: show the list for Visitor visa
+Combination
+Overview
+Fixed on the Forms tab
+Fixed on the Questionnaires tab

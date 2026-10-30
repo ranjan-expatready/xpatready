@@ -1,0 +1,16 @@
+diff --git a/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl b/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl
+index 6795d2f9..81b4b59e 100644
+--- a/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl
++++ b/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl
+@@ -601,3 +601,11 @@
+ {"type":"settle","id":"studio-finder-forms-check-individual-visitors-visitor-visa-live-20261027t072500006z-a569fb#1#1793085901036","actual_usd":0.153532,"outcome":"ok","at":"2026-10-27T07:25:27.850Z"}
+ {"type":"reserve","id":"studio-finder-forms-individual-visitors-visitor-visa-stub-20261027t072550341z-a4ea69#1#1793085951907","run_id":"studio-finder-forms-individual-visitors-visitor-visa-stub-20261027t072550341z-a4ea69","attempt":1,"worst_usd":0.497548,"caller":"stub","at":"2026-10-27T07:25:51.907Z"}
+ {"type":"settle","id":"studio-finder-forms-individual-visitors-visitor-visa-stub-20261027t072550341z-a4ea69#1#1793085951907","actual_usd":0,"outcome":"ok","at":"2026-10-27T07:25:51.908Z"}
++{"type":"reserve","id":"studio-finder-forms-temporary-residence-study-permits-study--309d0315-stub-20261029t174435410z-ab55fa#1#1793295876420","run_id":"studio-finder-forms-temporary-residence-study-permits-study--309d0315-stub-20261029t174435410z-ab55fa","attempt":1,"worst_usd":0.46664,"caller":"stub","at":"2026-10-29T17:44:36.420Z"}
++{"type":"settle","id":"studio-finder-forms-temporary-residence-study-permits-study--309d0315-stub-20261029t174435410z-ab55fa#1#1793295876420","actual_usd":0,"outcome":"ok","at":"2026-10-29T17:44:36.423Z"}
++{"type":"reserve","id":"studio-finder-forms-temporary-residence-study-permits-study--309d0315-live-20261029t174437020z-7526f6#1#1793295877937","run_id":"studio-finder-forms-temporary-residence-study-permits-study--309d0315-live-20261029t174437020z-7526f6","attempt":1,"worst_usd":0.46664,"caller":"paid","at":"2026-10-29T17:44:37.937Z"}
++{"type":"settle","id":"studio-finder-forms-temporary-residence-study-permits-study--309d0315-live-20261029t174437020z-7526f6#1#1793295877937","actual_usd":0.132468,"outcome":"ok","at":"2026-10-29T17:45:00.847Z"}
++{"type":"reserve","id":"studio-finder-forms-check-temporary-residence-study-permits-study--309d0315-stub-20261029t174501749z-89a163#1#1793295902745","run_id":"studio-finder-forms-check-temporary-residence-study-permits-study--309d0315-stub-20261029t174501749z-89a163","attempt":1,"worst_usd":0.464488,"caller":"stub","at":"2026-10-29T17:45:02.745Z"}
++{"type":"settle","id":"studio-finder-forms-check-temporary-residence-study-permits-study--309d0315-stub-20261029t174501749z-89a163#1#1793295902745","actual_usd":0,"outcome":"ok","at":"2026-10-29T17:45:02.747Z"}
++{"type":"reserve","id":"studio-finder-forms-check-temporary-residence-study-permits-study--309d0315-live-20261029t174503473z-b8d938#1#1793295904539","run_id":"studio-finder-forms-check-temporary-residence-study-permits-study--309d0315-live-20261029t174503473z-b8d938","attempt":1,"worst_usd":0.464488,"caller":"paid","at":"2026-10-29T17:45:04.539Z"}
++{"type":"settle","id":"studio-finder-forms-check-temporary-residence-study-permits-study--309d0315-live-20261029t174503473z-b8d938#1#1793295904539","actual_usd":0.133792,"outcome":"ok","at":"2026-10-29T17:45:28.642Z"}
