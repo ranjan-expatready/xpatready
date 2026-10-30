@@ -47,6 +47,8 @@ export function launcherFor(requested: string | undefined, varRoot: string): str
   try { return realpathSync(resolve(ROOT, requested)) === realpathSync(FAKE_LAUNCHER) ? FAKE_LAUNCHER : guarded; } catch { return guarded; }
 }
 const LAUNCHER = launcherFor(process.env.STUDIO_FAKE_LAUNCHER, VAR_ROOT);
+/** True only on an isolated test copy whose launches go to the fake launcher: nothing it launches can reach a model. */
+export const usesFakeLauncher = () => LAUNCHER === FAKE_LAUNCHER;
 const PROMPTS = join(PROTOTYPE, "p2", "prompts");
 const EDITION = /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
 /** P-80: where the drafting guard can check an approval made in the product (p2/policy.ts approvedSourcesDirOk): this

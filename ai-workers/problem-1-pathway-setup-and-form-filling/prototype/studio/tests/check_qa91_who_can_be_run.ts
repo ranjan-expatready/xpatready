@@ -1,9 +1,9 @@
 // QA-91 (C11.12, P-110; Lead 30 Oct: build now): Who can be › AI now runs in the background as a run, like the form
 // finder and Upload PDF: it answers at once with a run id, the shared run card reads its four steps (rules, AI, AI check,
 // rules), Stop ends it so no later round starts, and the proposal is read when it is done (never saved). Rules only and
-// saved AI answers still answer at once. AI now is approved only on this isolated copy, and the guarded launcher is the
-// test fixture (tests/fixtures/fake-launch.mjs): no network, no model call (US$0).
-//   zsh studio/tools/isolated.sh runtime_qa91 4433 start STUDIO_PEOPLE_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_qa91_who_can_be_run.ts 4433 xr_studio_runtime_qa91
+// saved AI answers still answer at once. AI now opens on this isolated copy only because its launcher is the test fixture
+// (tests/fixtures/fake-launch.mjs; no live switch, Lead 30 Oct): no network, no model call (US$0).
+//   zsh studio/tools/isolated.sh runtime_qa91 4433 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_qa91_who_can_be_run.ts 4433 xr_studio_runtime_qa91
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -31,6 +31,8 @@ const launches = () => (existsSync(join(VAR, "fake-launch.log")) ? readFileSync(
   const env = pid ? execFileSync("ps", ["-E", "-ww", "-p", pid, "-o", "command="], { encoding: "utf8" }) : "";
   const fake = env.match(/STUDIO_FAKE_LAUNCHER=(\S+)/)?.[1], varRoot = env.match(/STUDIO_VAR=(\S+)/)?.[1] ?? "";
   if (!fake || launcherFor(fake, varRoot) !== FAKE_LAUNCHER) { console.error(`STOP  the server on :${PORT} does not run the fake launcher (${fake ?? "not set"}): this check would make paid AI calls. Start it as the usage line says.`); process.exit(2); }
+  ok("spend guard pass: this server runs the fake launcher (resolved as the server does), so nothing here reaches a model", launcherFor(fake, varRoot) === FAKE_LAUNCHER, fake);
+  ok("spend guard fail: the incident's path (relative to the wrong folder) does not count as the fake launcher, so the guard stops", launcherFor("studio/tests/fixtures/fake-launch.mjs", varRoot) !== FAKE_LAUNCHER);
   await call("POST", "/demo/reset", { confirm: "RESET" });
   if ((await call("POST", "/demo/load", {})).status >= 300) { console.error("STOP  the sample did not load"); process.exit(2); }
   const vv = sql(`select id from combination where combination_key='vv.single'`);
