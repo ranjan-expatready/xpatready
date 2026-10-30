@@ -306,6 +306,8 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
           <Field label="Signature" hint="Only signatures that fit the way it is filed. Sample until the immigration expert confirms."><Select value={signature} onChange={(e) => setSignature(e.target.value as Signature)}>{SIGNATURE_FITS[channel].map((x) => <option key={x} value={x}>{SIGNATURE_WORDS[x]}</option>)}</Select></Field>
           <Field label="Signed by" hint="Sample until the immigration expert confirms." error={errors.signedBy}><Select value={signedBy} onChange={(e) => setSignedBy(e.target.value)}><option value="">Not set</option>{SIGNED_BY.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}</Select></Field>
         </div> : null}
+        {/* Break m9: each way IRCC does not accept says why in visible text, not only in a disabled option's tooltip. */}
+        {!l.document && l.channelOptions.some((o) => !o.ok) ? <ul className="space-y-0.5 text-xs text-text-muted" data-refused-ways>{l.channelOptions.filter((o) => !o.ok).map((o) => <li key={o.channel}><b className="font-medium">{o.words}</b> is not offered: {o.why}</li>)}</ul> : null}
         {!l.document ? <section aria-labelledby="drawer-reading" className="space-y-2 border-t border-border pt-4"><h3 id="drawer-reading" className="text-xs font-medium">Reading and matching</h3><ReadingSteps d={d} a={attachmentFor(d, l.code)} /></section> : null}
       </div>
     </Panel>

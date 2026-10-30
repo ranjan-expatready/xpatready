@@ -123,7 +123,9 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
         {!f.for_filing ? <Pill tone="info" title="Filed Online: IRCC's PDF filled from the same confirmed facts, for reading and checking only (P-145)">Copy, not for filing</Pill>
           : !f.trial_passed ? <Pill tone="warn" title="The evidence lane's fill trial for this form has not passed (P-65)">Checked copy, not for filing</Pill> : null}
         {f.for_filing && f.needs_validate && latest?.status === "GENERATED" ? <ValidatedState caseId={caseId} c={latest} form={f.form} /> : null}
-        {f.readiness.ready ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks (the form's own Validate still runs in Adobe)"><Check className="size-3" aria-hidden />Ready to file</Pill>
+        {/* Break M2 (C-9): a barcode form with no current validated copy is never "Ready to file", in words. */}
+        {f.readiness.ready && f.for_filing && f.needs_validate && !latest?.validated?.current ? <Pill tone="warn" title="Every fact is confirmed; IRCC returns a barcode form unprocessed unless it was validated in Adobe (P-144)" data-needs-validated>Validate before filing</Pill>
+          : f.readiness.ready ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks (the form's own Validate still runs in Adobe)"><Check className="size-3" aria-hidden />Ready to file</Pill>
           : <Pill tone="warn">{missing.length} fact{missing.length === 1 ? "" : "s"} to answer or confirm before filing</Pill>}
         <span className="flex-1" />
         <Button size="sm" variant={!latest || latest.out_of_date || latest.status === "FAILED" ? "default" : "secondary"} disabled={!f.applies} busy={working || (latest ? busy(latest) : false)} onClick={() => void generate()}>

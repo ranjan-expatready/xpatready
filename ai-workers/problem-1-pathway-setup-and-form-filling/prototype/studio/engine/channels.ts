@@ -47,10 +47,14 @@ export function acceptedFor(records: AcceptRecord[] | undefined, account: string
   return (account ? records?.find((r) => r.account === account) : undefined) ?? records?.find((r) => r.account === "ANY") ?? null;
 }
 const OFFERED_WITHOUT_RECORD: Channel[] = ["ONLINE", "PDF_UPLOAD", "PAPER"];
+/** The basis of the paper-filing rule's record (no IRCC account: paper only), never stored. */
+const PAPER_RULE = "PAPER_FILING";
 /** The channels a line may take (C-3, C-4): those the record says, Not needed only from the account's own record; no
  *  record: Online, PDF upload and Paper, as Sample. */
 export function allowedChannels(records: AcceptRecord[] | undefined, account: string | null | undefined): { channels: Channel[]; record: AcceptRecord | null } {
   const r = acceptedFor(records, account);
+  // Break M6: with no account (paper filing) every line is filed on paper; nothing goes Online, as a PDF upload or Not needed.
+  if (account === "PAPER") return { channels: (r ? r.channels : OFFERED_WITHOUT_RECORD).filter((c) => c === "PAPER"), record: { account: "PAPER", channels: ["PAPER"], basis: PAPER_RULE, quote: null } };
   if (!r) return { channels: OFFERED_WITHOUT_RECORD, record: null };
   return { channels: r.channels.filter((c) => c !== "NOT_NEEDED" || (r.account !== "ANY" && r.account === account)), record: r };
 }
@@ -64,8 +68,9 @@ const AS: Record<Channel, string> = { ONLINE: "Online", PDF_UPLOAD: "a PDF uploa
 const said = (cs: Channel[]) => cs.map((c) => AS[c]).join(" or ");
 const accountWords = (a: string) => ACCOUNT_WORDS[a as "ANY"] ?? a;
 /** The words for a line filed in a way IRCC does not accept for its edition and account (on save and at release). */
-export const notAcceptedWords = (form: string, channel: Channel, r: AcceptRecord) =>
-  `${form} is filed as ${CHANNEL_WORDS[channel]}, but the Form library records that IRCC accepts it ${r.account === "ANY" ? "" : `through the ${accountWords(r.account)} `}only as ${said(r.channels.filter((c) => c !== "NOT_NEEDED")) || "Not needed"}${r.channels.includes("NOT_NEEDED") ? " (the account asks it itself)" : ""}. Choose a way IRCC accepts.`;
+export const notAcceptedWords = (form: string, channel: Channel, r: AcceptRecord) => r.basis === PAPER_RULE
+  ? `${form} is filed as ${CHANNEL_WORDS[channel]}, but this combination has no IRCC account (paper filing): every form is filed on paper. Choose Paper, or set the IRCC account it files through.`
+  : `${form} is filed as ${CHANNEL_WORDS[channel]}, but the Form library records that IRCC accepts it ${r.account === "ANY" ? "" : `through the ${accountWords(r.account)} `}only as ${said(r.channels.filter((c) => c !== "NOT_NEEDED")) || "Not needed"}${r.channels.includes("NOT_NEEDED") ? " (the account asks it itself)" : ""}. Choose a way IRCC accepts.`;
 /** C-4: Not needed without the account's own record saying so. */
 export const notNeededWords = (form: string, account: string | null | undefined) =>
   `${form} is marked Not needed, but no record says ${account ? `the ${accountWords(account)}` : "this combination's IRCC account"} asks it itself. Record that in the Form library first (What IRCC accepts, for that account), or choose how it is filed.`;
@@ -101,7 +106,8 @@ export function filingKind(lines: (Line & { form_kind?: string | null })[]): str
   if (n("ONLINE") === filed.length) return "Online only";
   if (n("PAPER") === filed.length) return "Paper only";
   if (n("PDF_UPLOAD") === filed.length) return "PDF only";
-  return n("ONLINE") ? (n("PAPER") && !n("PDF_UPLOAD") ? "Mixed: online and paper" : "Mixed: online and PDF") : "Mixed: PDF and paper";
+  // Review S1: every channel present is named, Paper included.
+  return n("ONLINE") ? (n("PAPER") && n("PDF_UPLOAD") ? "Mixed: online, PDF and paper" : n("PAPER") ? "Mixed: online and paper" : "Mixed: online and PDF") : "Mixed: PDF and paper";
 }
 
 /** Channel and option-map problems of one combination's snapshot. */

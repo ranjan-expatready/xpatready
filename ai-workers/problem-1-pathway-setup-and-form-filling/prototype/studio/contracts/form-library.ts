@@ -62,6 +62,8 @@ export const AcceptsBody = z.object({
   reason: z.string().trim().min(3, "Say why (3 to 300 characters).").max(300).optional(),
 }).refine((b) => !!b.quote || !!b.reason, { message: "Paste the canada.ca line this comes from, or say why.", path: ["quote"] })
   .refine((b) => b.account !== "ANY" || !b.channels.includes("NOT_NEEDED"), { message: "Not needed is said for one IRCC account (the account that asks it itself), never for every account.", path: ["channels"] })
+  // Break M6: no account means paper filing, so the only way IRCC can accept a form "through" it is on paper.
+  .refine((b) => b.account !== "PAPER" || (b.channels.length === 1 && b.channels[0] === "PAPER"), { message: "No account (paper filing) files only on paper: choose Paper, or choose the IRCC account that accepts it another way.", path: ["channels"] })
   .refine((b) => !b.channels.includes("NOT_NEEDED") || b.channels.length === 1, { message: "Not needed stands alone: the account asks the form itself, so it is not also filed another way.", path: ["channels"] });
 
 /** POST /library/forms/:code/retire|restore and DELETE /library/forms/:code: the P-116 lifecycle, a second person approves. */

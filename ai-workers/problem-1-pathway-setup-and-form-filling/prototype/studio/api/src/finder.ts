@@ -181,7 +181,7 @@ export class Finder implements OnModuleInit {
     const stepRounds: Partial<Record<StepKind, AiKind[]>> = b.mode === "live" ? { finder_guide: pagePicked ? [] : ["find_guide", "find_guide"], finder_propose: ["find_forms"], finder_check: ["find_forms"] } : {};
     const steps = STEPS.map((s, i) => {
       const r = stepRounds[s.kind] ?? [];
-      return { n: i + 1, kind: s.kind, label: s.kind === "finder_guide" && pagePicked ? "Use the application page already chosen (no AI round)" : s.label, uses_ai: s.ai && b.mode !== "rules" && !(s.kind === "finder_guide" && pagePicked), worst_usd: r.length ? Math.ceil(Math.round(r.reduce((a, k) => a + roundUsd(k), 0) * 1e6) / 1e4) / 100 : null };
+      return { n: i + 1, kind: s.kind, label: s.kind === "finder_guide" && pagePicked ? "Use the application page already chosen (no AI round)" : s.label, uses_ai: s.ai && b.mode !== "rules" && !(s.kind === "finder_guide" && pagePicked), chosen: s.kind === "finder_guide" && pagePicked, worst_usd: r.length ? Math.ceil(Math.round(r.reduce((a, k) => a + roundUsd(k), 0) * 1e6) / 1e4) / 100 : null };
     });
     const rounds = Object.values(stepRounds).flat() as AiKind[];
     // Each step's reserve in cents rounded up (never below what the ledger reserves); the sum is the plan's "at most".

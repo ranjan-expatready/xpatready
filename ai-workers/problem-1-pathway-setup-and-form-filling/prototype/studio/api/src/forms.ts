@@ -89,7 +89,8 @@ export class Forms {
    *  channel's default. C-3, C-4: only a way IRCC accepts for the form's current edition and the combination's account. */
   private async channelOf(tx: Prisma.TransactionClient, c: { id: string; workspaceId: string; label: string; portalKey: string | null }, lineKey: string, b: { channel: Channel; signature?: Signature; from?: Channel; fromSignature?: Signature }, actor: Actor) {
     const rows = await tx.combinationForm.findMany({ where: { combinationId: c.id, lineageKey: lineKey }, include: { form: { select: { formKind: true, editions: { include: { accepts: true } } } } } });
-    if (!rows.length) fail(`${lineKey} is not a form of this combination.`, HttpStatus.NOT_FOUND);
+    // Break m7: an unknown key is not echoed back at any length.
+    if (!rows.length) fail(`${lineKey.length > 40 ? `${lineKey.slice(0, 40)}…` : lineKey} is not a form of this combination.`, HttpStatus.NOT_FOUND);
     const newest = [...rows].sort((x, y) => y.version - x.version)[0];
     if (newest.status === "RETIRED") fail(`${lineKey} was removed from this combination.`, HttpStatus.NOT_FOUND);
     if (newest.form.formKind !== "data_form") fail(`${lineKey} is a checklist: it is not filed, so it has no channel.`);

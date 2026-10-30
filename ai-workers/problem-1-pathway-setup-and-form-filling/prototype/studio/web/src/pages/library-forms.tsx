@@ -39,7 +39,7 @@ const BASIS: Record<string, { tag: string; tip: string }> = {
 };
 /** A guide's date is canada.ca's own "Date modified" when the page prints one; otherwise when the studio read it. */
 const editionText = (r: Row) => (r.type === "guide" ? (r.canada_updated ? `Updated on canada.ca ${r.canada_updated}` : r.checked_at ? `Read from canada.ca on ${new Date(r.checked_at).toISOString().slice(0, 10)}` : "Date not known") : r.edition ? r.edition.replace(`${r.code} `, "").replace(/[()]/g, "") : null);
-const ACCEPTS_TIP = "What IRCC accepts for this form: a PDF upload, an online form in the portal, or either. Guides and checklists are not filed: AI reads them. AI reads it from IRCC's page, the sample loads it with IRCC's own line from the page, or a person sets it with a second person's OK; Sample until the immigration expert confirms. Online filling needs the browser extension (later wave).";
+const ACCEPTS_TIP = "What IRCC accepts for this form, for each IRCC account or for every account: Online, PDF upload, Paper, or Not needed (the account asks it itself; said for one account only). Guides and checklists are not filed: AI reads them. AI reads it from IRCC's page, the sample loads it with IRCC's own line from the page, or a person sets it with a second person's OK; Sample until the immigration expert confirms. Online filling needs the browser extension (later wave).";
 const STATUS: Record<Row["status"], { word: string; tone: string; tip: string }> = {
   ready: { word: "Ready", tone: "ok", tip: "Its current edition is in the library and may be used by any combination." },
   needs_ok: { word: "Needs your OK", tone: "warn", tip: "A file of this form waits for a second person on To review (a hand upload, or a newer edition to review)." },

@@ -16,6 +16,9 @@ import { RECHECK, WHY } from "../../contracts/lifecycle.ts";
 const entityOf = (kind: string) => (kind === "structure_node" ? "structure" : kind === "library_form" ? "form" : "combination");
 import { formUses, hasApprovedFile } from "./form-uses.ts";
 import { newestEdition } from "../../engine/programs.ts";
+import { acceptsOf, allowedChannels, lineOf, notAcceptedWords, notNeededWords, type AcceptRecord } from "../../engine/channels.ts";
+import { buildSnapshot } from "../../engine/snapshot.ts";
+import type { Channel } from "../../contracts/forms.ts";
 
 // S4 (m2): "library_form" is a Shared library › Forms entry, keyed by its form number (api/src/form-library.ts formUses).
 export const LIFECYCLE_KINDS = ["structure_node", "combination", "library_form"] as const;
@@ -317,6 +320,14 @@ export class Lifecycle {
 
   /** Checked again when a second person approves: something may have started using it since it was proposed. */
   async checkApprove(c: LibraryChange) {
+    // Break m5: what IRCC accepts is approved for the edition it was proposed for; a newer edition since is refused.
+    if (c.kind === "form_accepts") {
+      const proposed = (c.matches as { edition?: string } | null)?.edition;
+      const def = await this.db.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: c.key }, include: { editions: true } });
+      const current = def ? newestEdition(def.editions.filter((e) => e.channel !== "ONLINE")) : null;
+      if (proposed && current && current.editionLabel !== proposed) throw problem(409, "A new edition arrived", `This was proposed for ${proposed}; the library's current edition is now ${current.editionLabel}. Return it with that reason, and propose what IRCC accepts for the new edition.`);
+      return;
+    }
     if (!isLifecycleKind(c.kind)) return;
     const u = await this.usesOf(c.kind, c.key).catch(() => null);
     if (!u) throw problem(409, "No longer there", RECHECK.gone);
@@ -359,6 +370,27 @@ export class Lifecycle {
   private async recheckCombination(c: LibraryChange, u: UsesView) {
     if (c.action === "DELETE") return u.released ? "It was released meanwhile." : u.uses.some((x) => x.kind === "case") ? "It has cases now." : null;
     return null;
+  }
+
+  /** Break M5: what approving a change to what IRCC accepts would break, named before the click: every combination still
+   *  in use whose line for the form is filed in a way the new record no longer allows (its release then shows the error
+   *  until the line is chosen again). Read for the combination's own IRCC account, as on the Forms tab (C-3). */
+  async acceptsImpact(c: LibraryChange): Promise<{ combination: string; label: string; channel: Channel; words: string }[]> {
+    const m = c.matches as { account?: string; channels?: string[] };
+    if (c.kind !== "form_accepts" || c.status !== "WAITING" || !m.channels?.length) return [];
+    const account = m.account ?? "ANY";
+    const next: AcceptRecord[] = [...((await acceptsOf(this.db, c.workspaceId)).get(c.key) ?? []).filter((r) => r.account !== account), { account, channels: m.channels as Channel[], basis: "PERSON_SAMPLE", quote: null }];
+    const combos = await this.db.combination.findMany({ where: { workspaceId: c.workspaceId, retiredAt: null, forms: { some: { form: { formKey: c.key } } } }, select: { id: true, label: true, portalKey: true }, orderBy: { label: "asc" } });
+    const out: { combination: string; label: string; channel: Channel; words: string }[] = [];
+    for (const k of combos) {
+      const { snapshot } = await buildSnapshot(this.db, c.workspaceId, k.id, "draft");
+      const line = (snapshot.forms as { form_number: string; form_kind?: string | null; channel?: string | null; signature?: string | null }[]).find((f) => f.form_number === c.key);
+      if (!line || (line.form_kind ?? "data_form") !== "data_form") continue;
+      const { channel } = lineOf(line), after = allowedChannels(next, k.portalKey);
+      if (after.channels.includes(channel)) continue;
+      out.push({ combination: k.id, label: k.label, channel, words: after.record && channel !== "NOT_NEEDED" ? notAcceptedWords(c.key, channel, after.record) : notNeededWords(c.key, k.portalKey) });
+    }
+    return out;
   }
 
   /** C11.18 (P-143: per IRCC account): the approved channels go on the form's current edition for that account, "Set by a
