@@ -83,7 +83,7 @@ const P = (extra: any[] = []) => [{ role: "principal", min: 1, max: 1, applies: 
   ok("C1.6 L4 fail: choosing Online is refused on save in words (IRCC accepts it only as a PDF upload)", r.status === 400 && /accepts it only as a PDF upload/.test(words(r)) && (await lineOf(wp, F)).channel === "PDF_UPLOAD", words(r));
   r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(F)}/channel`, { channel: "PDF_UPLOAD", signature: "HAND_SCANNED", from: line.channel });
   ok("C1.6 L4 pass: a PDF upload signed by hand and scanned, which IRCC accepts, is saved", r.status === 200 && (await lineOf(wp, F)).signatureKind === "HAND_SCANNED", words(r));
-  sql(`update combination_form set channel='ONLINE' where combination_id='${wp}' and lineage_key='${F}' and status='DRAFT'`);
+  sql(`update combination_form set channel='ONLINE', signature='NONE' where combination_id='${wp}' and lineage_key='${F}' and status='DRAFT'`);
   let probs = await problems(wp);
   ok("C1.6 L4 fail: a line already filed Online (saved before the library recorded PDF) blocks release with the same words", probs.some((p) => p.level === "error" && p.item === F && /accepts it only as a PDF upload/.test(p.message)), probs.filter((p) => p.item === F).map((p) => p.message));
   r = await call("POST", `/combinations/${wp}/submit`, {});

@@ -161,7 +161,10 @@ const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, ma
   r = await call("POST", `/runtime/cases/${K}/people`, { role: "parent", displayName: "Parent P", applies: false }, "user-O");
   ok("C11.12 fail: a role the release does not list (Parent) is refused", r.status === 422 && /does not list/.test(r.body.detail), r.body.detail);
   r = await call("GET", `/runtime/cases/${K}/forms`, undefined, "user-O");
-  ok("C7.6 QA-40 pass: a form filed Online is listed on the case with its people, and not as a PDF copy row", r.status === 200 && (r.body.online ?? []).some((f: any) => f.form === "IMM 1295" && f.people.length) && !r.body.forms.some((f: any) => f.form === "IMM 1295"), r.body.online);
+  // P-145 (forms slice 1, plan-slice1-channels.md §10): an Online form whose IRCC PDF is in the release keeps a PDF row,
+  // but only as a "Copy, not for filing" (for_filing false); it is never offered as a copy to file.
+  const rows1295 = r.body.forms.filter((f: any) => f.form === "IMM 1295");
+  ok("C7.6 QA-40 pass: a form filed Online is listed on the case with its people, and any PDF row of it is a copy not for filing (P-145)", r.status === 200 && (r.body.online ?? []).some((f: any) => f.form === "IMM 1295" && f.people.length && f.pdf_copy === true) && rows1295.every((f: any) => f.channel === "ONLINE" && f.for_filing === false), { online: r.body.online, rows: rows1295.map((f: any) => ({ channel: f.channel, for_filing: f.for_filing })) });
   // QA-38: the list the officer picks from and the release the server pins agree, whatever order the list comes in.
   ok("C6.1 QA-38 pass: after release 2 the New case list names release 2 and the new case is pinned to release 2; the earlier case keeps release 1", (await listed()) === 2 && pinOf(K) === 2 && pinOf(k1) === 1, { listed: await listed(), pinned: pinOf(K), earlier: pinOf(k1) });
   const rows = [{ combination_id: "x", version: 2 }, { combination_id: "x", version: 1 }, { combination_id: "y", version: 1 }];

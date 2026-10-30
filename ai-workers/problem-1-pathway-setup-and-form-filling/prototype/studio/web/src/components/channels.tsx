@@ -89,7 +89,7 @@ export function AccountPicker({ id, saved }: { id: string; saved: string | null 
     } catch (e) { refresh(qc, id); toast.push({ tone: "danger", text: (e as Error).message }); return false; }
   });
   return (
-    <Select aria-label="IRCC account this combination files through" title="The IRCC account this combination files through. What IRCC accepts is read for it (Form library). Changing it keeps each line as saved; a line it does not accept shows as a problem. Sample until the immigration expert confirms." className="h-8 w-auto" {...pick}>
+    <Select aria-label="IRCC account this combination files through" title="The IRCC account this combination files through. What IRCC accepts is read for it (Form library). Changing it keeps each line as saved; a line it does not accept shows as a problem. Sample until the immigration expert confirms." className="h-8 w-auto max-w-full" {...pick}>{/* QA-20: never wider than its line at 390 px (its longest option is ~410 px) */}
       <option value="">Not set (every way IRCC may accept is offered, Sample)</option>
       {IRCC_ACCOUNTS.map((a) => <option key={a} value={a}>{ACCOUNT_WORDS[a]}</option>)}
     </Select>
