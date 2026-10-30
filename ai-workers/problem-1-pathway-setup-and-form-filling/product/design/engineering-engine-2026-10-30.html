@@ -1,0 +1,236 @@
+<title>Expat Ready Engineering Engine</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500&display=swap">
+<style>
+/* Layout: one reading column, wide figures break out to 1040px; status encoded as chips */
+:root{
+  --bg:#f6f7f5; --panel:#ffffff; --ink:#18201f; --muted:#5b6664; --line:#d9dfdc;
+  --teal:#0f6b5f; --teal-soft:#e2f1ed; --amber:#a45c06; --amber-soft:#fbefdc;
+  --red:#a33232; --red-soft:#f8e4e2; --green:#2f6b1f; --green-soft:#e7f2df;
+  --display:"Newsreader",Georgia,serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121716; --panel:#1a211f; --ink:#e6ecea; --muted:#9aa7a4; --line:#2d3836;
+  --teal:#5cc4b2; --teal-soft:#17332e; --amber:#e3a24f; --amber-soft:#36280f;
+  --red:#ec8b85; --red-soft:#3a1d1c; --green:#93cf74; --green-soft:#1f3218; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121716; --panel:#1a211f; --ink:#e6ecea; --muted:#9aa7a4; --line:#2d3836;
+  --teal:#5cc4b2; --teal-soft:#17332e; --amber:#e3a24f; --amber-soft:#36280f;
+  --red:#ec8b85; --red-soft:#3a1d1c; --green:#93cf74; --green-soft:#1f3218; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:16px/1.65 var(--body)}
+.wrap{max-width:1040px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.col{max-width:720px}
+h1{font:500 clamp(2rem,4.5vw,3rem)/1.1 var(--display);margin:0 0 12px;text-wrap:balance}
+h2{font:500 1.6rem/1.2 var(--display);margin:56px 0 12px;text-wrap:balance}
+h3{font:600 1rem/1.3 var(--body);margin:0 0 6px}
+p{margin:0 0 14px}
+.lede{font-size:1.1rem;color:var(--muted)}
+.eyebrow{font:500 .75rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:10px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;min-width:0}
+.num{font:500 1.9rem/1 var(--mono);font-variant-numeric:tabular-nums;margin:4px 0 6px}
+.small{font-size:.88rem;color:var(--muted)}
+.chip{display:inline-block;font:500 .72rem/1 var(--mono);padding:4px 7px;border-radius:5px;letter-spacing:.03em;white-space:nowrap}
+.c-red{background:var(--red-soft);color:var(--red)} .c-amber{background:var(--amber-soft);color:var(--amber)}
+.c-green{background:var(--green-soft);color:var(--green)} .c-teal{background:var(--teal-soft);color:var(--teal)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.92rem;min-width:620px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 .75rem/1.2 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+.fig{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.fig svg{display:block;min-width:760px;width:100%;height:auto}
+svg text{font-family:var(--body);fill:var(--ink)} svg .m{fill:var(--muted);font-size:12px} svg .mono{font-family:var(--mono)}
+.bar{height:12px;border-radius:3px;background:var(--amber)}
+.barrow{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.barrow:last-child{border-bottom:0}
+.ask{border-left:3px solid var(--teal);padding:4px 0 4px 14px;margin:0 0 18px;border-radius:0}
+ol.steps{padding-left:1.2rem;margin:0} ol.steps li{margin:0 0 10px}
+code{font:.88em var(--mono);background:var(--teal-soft);color:var(--teal);padding:1px 5px;border-radius:4px}
+a{color:var(--teal)}
+@media (max-width:560px){.barrow{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+<div class="col">
+<div class="eyebrow">Lead · 30 Oct 2026 · for the founder's decision</div>
+<h1>The engineering engine, redesigned</h1>
+<p class="lede">How the AI team builds, checks and merges today, where the time really goes, and the setup I recommend: faster, with every independent check kept and machine-enforced guardrails between parallel teams.</p>
+</div>
+
+<h2>Your question: does the cloud use extra tokens?</h2>
+<div class="col">
+<p>No. A cloud session does the same work with the same tokens as a session on your Mac, and the cloud machine itself is free (Anthropic's page: "there's no separate charge for the cloud VM"). Your plan allowance is the fuel tank: running five builders at once burns it five times as fast, wherever they run. Using the allowance up is fine when it buys finished work. What wastes it is rework, reruns and handovers, and the numbers below show that is where most of it goes today. Cutting rework is the cheapest speed you can buy.</p>
+</div>
+
+<h2>Where we are: measured, 21–30 Oct</h2>
+<div class="grid">
+  <div class="card"><div class="small">Pull requests merged</div><div class="num">100</div><div class="small">in 7 days, 0 today until 11:00</div></div>
+  <div class="card"><div class="small">Fix commits vs build commits</div><div class="num">172 : 177</div><div class="small">first review scores 5.5–7.5 of 10</div></div>
+  <div class="card"><div class="small">One check, GitHub vs Mac</div><div class="num">12 vs 36–61</div><div class="small">minutes; Mac queues up to 48 min</div></div>
+  <div class="card"><div class="small">Commits on main that touch the app</div><div class="num">23%</div><div class="small">61% are records or documents only</div></div>
+</div>
+<p class="small" style="margin-top:12px">Sources: git history, 779 GitHub check runs, the retro and the state log; read by an independent reviewer on 30 Oct. Hour figures below are estimates.</p>
+
+<h3 style="margin-top:28px">Where the hours go</h3>
+<div class="card">
+  <div class="barrow"><div><b>Review → fix loops.</b> Work fails its first review and goes round again.</div><div><div class="bar" style="width:100%"></div><span class="small">120–160 h</span></div></div>
+  <div class="barrow"><div><b>Waiting on checks.</b> One overloaded 8 GB Mac, one check at a time, reruns.</div><div><div class="bar" style="width:24%"></div><span class="small">30–35 h in 3 days</span></div></div>
+  <div class="barrow"><div><b>Lead bookkeeping.</b> 36% of all commits are the Lead's records.</div><div><div class="bar" style="width:23%"></div><span class="small">25–40 h</span></div></div>
+  <div class="barrow"><div><b>Outages.</b> Billing block (71 checks never ran), disk full three times, a power cut.</div><div><div class="bar" style="width:13%"></div><span class="small">15–20 h</span></div></div>
+  <div class="barrow"><div><b>Session churn.</b> Ten Lead chats in five days, 91 handover commits, overlapping branches.</div><div><div class="bar" style="width:15%"></div><span class="small">15–25 h</span></div></div>
+</div>
+<div class="col" style="margin-top:14px"><p>The machines are the second problem, not the first. Most time is lost because work reaches review before it is good enough, and then everything waits in one queue on one laptop.</p></div>
+
+<h2>How it will run</h2>
+<div class="fig">
+<svg viewBox="0 0 1000 430" role="img" aria-labelledby="t1 d1"><title id="t1">The new setup</title><desc id="d1">The founder talks to the Lead on the Mac. The Lead starts builder sessions in the cloud. Each builder opens a pull request; GitHub runs the full tests on its own machines; a fresh reviewer scores it; the Lead checks and merges; qa tests main.</desc>
+<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L8 5L1 9" fill="none" stroke="var(--muted)" stroke-width="1.6"/></marker></defs>
+<rect x="20" y="30" width="150" height="70" rx="8" fill="var(--teal-soft)" stroke="var(--teal)"/>
+<text x="95" y="60" text-anchor="middle" font-weight="600">Founder</text><text x="95" y="80" text-anchor="middle" class="m">phone or Mac</text>
+<line x1="170" y1="65" x2="225" y2="65" stroke="var(--muted)" marker-end="url(#ar)"/>
+<rect x="230" y="20" width="200" height="90" rx="8" fill="var(--panel)" stroke="var(--teal)" stroke-width="2"/>
+<text x="330" y="50" text-anchor="middle" font-weight="600">Lead (Mac)</text><text x="330" y="70" text-anchor="middle" class="m">plans, starts, steers, merges</text><text x="330" y="88" text-anchor="middle" class="m">only machine that can merge</text>
+<rect x="20" y="150" width="410" height="250" rx="10" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
+<text x="36" y="172" class="m mono">CLAUDE CLOUD · 16 GB EACH · NO MACHINE CHARGE</text>
+<rect x="40" y="185" width="115" height="60" rx="7" fill="var(--panel)" stroke="var(--line)"/><text x="97" y="212" text-anchor="middle" font-weight="600">screens</text><text x="97" y="230" text-anchor="middle" class="m">builder</text>
+<rect x="168" y="185" width="115" height="60" rx="7" fill="var(--panel)" stroke="var(--line)"/><text x="225" y="212" text-anchor="middle" font-weight="600">forms</text><text x="225" y="230" text-anchor="middle" class="m">builder</text>
+<rect x="296" y="185" width="115" height="60" rx="7" fill="var(--panel)" stroke="var(--line)"/><text x="353" y="212" text-anchor="middle" font-weight="600">runtime</text><text x="353" y="230" text-anchor="middle" class="m">builder</text>
+<rect x="40" y="260" width="180" height="60" rx="7" fill="var(--panel)" stroke="var(--teal)"/><text x="130" y="287" text-anchor="middle" font-weight="600">platform (new)</text><text x="130" y="305" text-anchor="middle" class="m">tests, CI, shared contracts</text>
+<rect x="232" y="260" width="179" height="60" rx="7" fill="var(--panel)" stroke="var(--line)"/><text x="321" y="287" text-anchor="middle" font-weight="600">qa</text><text x="321" y="305" text-anchor="middle" class="m">tests main after merges</text>
+<text x="225" y="352" text-anchor="middle" class="m">each builds a 1-day slice, tests it on its own machine,</text>
+<text x="225" y="370" text-anchor="middle" class="m">runs a pre-review, then opens a pull request</text>
+<line x1="330" y1="110" x2="330" y2="148" stroke="var(--muted)" marker-end="url(#ar)"/>
+<line x1="430" y1="215" x2="495" y2="215" stroke="var(--muted)" marker-end="url(#ar)"/>
+<rect x="500" y="150" width="480" height="250" rx="10" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
+<text x="516" y="172" class="m mono">GATES ON EVERY PULL REQUEST · NOBODY GRADES OWN WORK</text>
+<rect x="520" y="185" width="210" height="58" rx="7" fill="var(--panel)" stroke="var(--line)"/><text x="625" y="210" text-anchor="middle" font-weight="600">GitHub full tests</text><text x="625" y="228" text-anchor="middle" class="m">GitHub's machines, ~12 min</text>
+<rect x="750" y="185" width="210" height="58" rx="7" fill="var(--panel)" stroke="var(--line)"/><text x="855" y="210" text-anchor="middle" font-weight="600">Fresh reviewer + breaker</text><text x="855" y="228" text-anchor="middle" class="m">started by the Lead, 8/10+</text>
+<rect x="520" y="258" width="210" height="58" rx="7" fill="var(--panel)" stroke="var(--line)"/><text x="625" y="283" text-anchor="middle" font-weight="600">Guard checks</text><text x="625" y="301" text-anchor="middle" class="m">overlap, migrations, up to date</text>
+<rect x="750" y="258" width="210" height="58" rx="7" fill="var(--panel)" stroke="var(--teal)" stroke-width="2"/><text x="855" y="283" text-anchor="middle" font-weight="600">Lead check → merge</text><text x="855" y="301" text-anchor="middle" class="m">one at a time, on latest main</text>
+<rect x="520" y="331" width="440" height="52" rx="7" fill="var(--green-soft)" stroke="var(--green)"/><text x="740" y="353" text-anchor="middle" font-weight="600">main: qa after merge · nightly full run · red main reverted in 30 min</text><text x="740" y="371" text-anchor="middle" class="m">Mac keeps only evidence work, the team's material and canada.ca downloads</text>
+</svg>
+</div>
+
+<h2>The path of one change</h2>
+<div class="tbl"><table>
+<thead><tr><th>Step</th><th>Who</th><th>What changes from today</th><th>Independent?</th></tr></thead>
+<tbody>
+<tr><td>1. Design or plan</td><td>Lead, designer agent, challenger; you agree product choices</td><td><b>New:</b> the concept's tests become runnable acceptance checks before any building starts</td><td><span class="chip c-green">challenger</span></td></tr>
+<tr><td>2. Build</td><td>Builder, cloud</td><td>Slices of about one day, each its own pull request straight to main (no extra Lead branch)</td><td>—</td></tr>
+<tr><td>3. Pre-review</td><td>Builder runs the acceptance checks and a breaker lens</td><td><b>New:</b> catches most problems before the official review (today's first scores 5.5–7.5)</td><td><span class="chip c-amber">self-check only</span></td></tr>
+<tr><td>4. Full tests</td><td>GitHub's own machines</td><td>Replaces the overloaded Mac; a machine result no session can write</td><td><span class="chip c-green">machine</span></td></tr>
+<tr><td>5. Review and break</td><td>Fresh reviewer and breaker, <b>started by the Lead</b> on a fixed version</td><td>Today the builder starts its own reviewer; attempts are now counted</td><td><span class="chip c-green">fresh context</span></td></tr>
+<tr><td>6. Guard checks</td><td>GitHub, 1–2 min</td><td>Push guard, records rules, file overlap with other lanes, migration order, branch up to date with main</td><td><span class="chip c-green">machine</span></td></tr>
+<tr><td>7. Lead check and merge</td><td>Lead</td><td>Reads the diff against the plan and the evidence; no reruns. Merges one at a time; a PR behind main is retested first</td><td><span class="chip c-green">Lead</span></td></tr>
+<tr><td>8. After merge</td><td>qa lane; nightly full run</td><td><b>New:</b> a red main is reverted within 30 minutes and merges freeze until it is green</td><td><span class="chip c-green">qa</span></td></tr>
+</tbody></table></div>
+<p class="small" style="margin-top:10px">Full test runs per change: one on the builder's machine plus one on GitHub (plus a retest if main moved), instead of up to five on the Mac.</p>
+
+<h2>Parallel work without stepping on each other</h2>
+<div class="grid">
+<div class="card"><h3><span class="chip c-green">runs in parallel</span></h3>
+<ul class="small" style="padding-left:1.1rem;margin:8px 0 0">
+<li>Builders on separate files (each lane owns a list of paths)</li>
+<li>Designing the next item while the current one is built</li>
+<li>Reviews, breakers and qa explores</li>
+<li>GitHub test runs for different pull requests</li></ul></div>
+<div class="card"><h3><span class="chip c-red">never in parallel</span></h3>
+<ul class="small" style="padding-left:1.1rem;margin:8px 0 0">
+<li>Two writers on the same files</li>
+<li>Merges (one at a time, each on the latest main)</li>
+<li>Two Leads</li>
+<li>Any paid live AI run (your approval, one at a time)</li></ul></div>
+<div class="card"><h3><span class="chip c-teal">machine-enforced</span></h3>
+<ul class="small" style="padding-left:1.1rem;margin:8px 0 0">
+<li>Merging only from the Mac, never from a cloud session</li>
+<li>File overlap and migration order checked on every pull request</li>
+<li>No AI key in any cloud machine; a check fails if a live switch is on</li>
+<li>Changes to shared contracts name the pull requests that depend on them and merge together</li></ul></div>
+</div>
+
+<h2>New roles and skills</h2>
+<div class="tbl"><table>
+<thead><tr><th>Addition</th><th>Why (evidence)</th></tr></thead>
+<tbody>
+<tr><td><b>Platform lane</b>: tests, CI, cloud setup, flake list, shared contracts</td><td>Today flakes and CI moves land on whichever lane is nearby; 12 workflow rewrites in a week</td></tr>
+<tr><td><b>Acceptance checks first</b> (in the concept and plan skills)</td><td>Review → fix loops are the biggest time sink: 120–160 hours</td></tr>
+<tr><td><b>Pre-review</b> step in <code>/next</code></td><td>First official reviews score 5.5–7.5; the target is 8+ on the first try</td></tr>
+<tr><td><b>Reviewer started by the Lead</b>, attempts counted</td><td>Today the builder chooses when and how it is graded</td></tr>
+<tr><td><b>Flake list</b> with an owner and an expiry; one automatic retry, reported</td><td>Speed tests failed falsely under load (P-184)</td></tr>
+<tr><td><b>New-lane checklist</b></td><td>Adding a lane today needs edits in four tools that are easy to miss</td></tr>
+<tr><td><b>Morning report</b> (scheduled cloud task) and a live status page</td><td>You should see the queue, red checks, what waits on you, and spend, without asking</td></tr>
+<tr><td><b>Reusable kit</b> for your other products (template repository, later a plugin)</td><td>Your goal: prove it here, reuse it everywhere</td></tr>
+</tbody></table></div>
+
+<h2>Measure, learn, adjust: every week</h2>
+<div class="col"><p>The numbers above become a standing weekly scorecard. Each Monday the morning report shows them against last week; the Lead explains what moved and why, and proposes at most one change to how we work. If a change does not move its number in two weeks, we undo it.</p></div>
+<div class="tbl"><table>
+<thead><tr><th>Measure</th><th>Today</th><th>Target</th><th>What it tells us</th></tr></thead>
+<tbody>
+<tr><td><b>Rework</b>: fix commits per build commit, by cause and by lane</td><td>~1 : 1</td><td>under 0.4 : 1</td><td>Whether work reaches review ready</td></tr>
+<tr><td><b>First review score</b></td><td>5.5–7.5</td><td>8+ first time in 3 of 4</td><td>Whether acceptance checks and pre-review work</td></tr>
+<tr><td><b>Idea to merged</b> (median, per slice)</td><td>not measured end to end</td><td>under 1 working day</td><td>Overall speed</td></tr>
+<tr><td><b>Waiting for checks</b> (pull request open to merge)</td><td>p90 3 h; Mac runs 36–61 min</td><td>p90 under 1 h</td><td>Whether the machines keep up</td></tr>
+<tr><td><b>Check runs that were not clean</b></td><td>45%</td><td>under 15%</td><td>Flakes, billing, cancelled runs</td></tr>
+<tr><td><b>Bugs qa finds after merge</b> (escapes), by severity</td><td>tracked in qa, not trended</td><td>no Blocker or Critical escapes</td><td>Whether speed is costing quality</td></tr>
+<tr><td><b>Records share of commits</b></td><td>Lead 36% of all commits</td><td>under 15%</td><td>Bookkeeping overhead</td></tr>
+<tr><td><b>Waiting on the founder</b> (ask to answer)</td><td>not measured</td><td>same day</td><td>Whether decisions hold up lanes</td></tr>
+<tr><td><b>Handovers and fresh sessions</b></td><td>91 handover commits; 10 Lead chats in 5 days</td><td>1 Lead chat a day</td><td>Context churn</td></tr>
+<tr><td><b>Plan allowance per merged slice</b> and paid AI spend</td><td>not measured</td><td>trend down; AI spend only as approved</td><td>Whether the fuel goes into finished work</td></tr>
+</tbody></table></div>
+
+<h3 style="margin-top:28px">Rework: why it happens and how we'll find out</h3>
+<div class="col">
+<p>From the records so far, rework comes from four places: the design changes after building starts (Screen 01 was first seen cluttered only after it was coded); review finds gaps the builder could have caught (first scores 5.5–7.5); a shared change in one lane breaks another (PR #98 broke #94 and #96); and timing tests fail on an overloaded Mac. We do not yet know the split, so from now on every fix commit carries one cause tag: <code>design-change</code>, <code>missed-requirement</code>, <code>bug</code>, <code>review-standard</code>, <code>cross-lane</code>, <code>flaky-test</code> or <code>environment</code>. The first weekly report then names the biggest cause and which lane or step produces it. Some rework is healthy: a reviewer raising the bar is the system working. Rework that a check before building could have caught is waste.</p>
+</div>
+
+<h3 style="margin-top:28px">Bookkeeping: what it is and what changes</h3>
+<div class="col">
+<p>Bookkeeping is the Lead and lanes writing about the work instead of doing it: the state table, the log, lane notes, the progress page, decision rows copied into several files, and trimming files that hit their size limits by moving lines word for word into history. Some of it is essential, because it is how a fresh session and you know where we are. The waste is in copying the same fact into many places and the size-limit trims. The fix: one small file per decision and per log line, the state table generated by a script, notes as pull-request comments, and one records update a day. The facts stay; the copying goes.</p>
+</div>
+
+<h2>Records: lighter, nothing lost</h2>
+<div class="col"><p>One small file per decision and per log line instead of long files that hit size limits and need word-for-word moves (30 such trims this week). The state table is generated by a script. One records pull request a day, which only runs the fast checks. Lead notes go to lanes as a pull-request comment plus a direct message, so a lane never waits for a merge to read its instructions.</p></div>
+
+<h2>What it costs</h2>
+<div class="tbl"><table>
+<thead><tr><th>Item</th><th>Cost</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Cloud builders, qa, platform</td><td>US$0 extra</td><td>Your Claude plan allowance, as today</td></tr>
+<tr><td>GitHub test machines</td><td>about US$10–30 a month</td><td>~12 min × US$0.006 per run; about 2 runs per code pull request; first 2,000 minutes a month free. Cap at US$50. <b>Correction:</b> my earlier US$250–300 estimate assumed splitting every run four ways and today's waste; the measured run is 12 minutes</td></tr>
+<tr><td>GitHub rules on main</td><td>possibly US$4 a month</td><td>Protection rules on a private repository need a paid GitHub plan; I'll check yours</td></tr>
+<tr><td>Deep review of big or AI-spend changes</td><td>optional</td><td>3 free runs, then about US$5–25 each; only with your approval</td></tr>
+</tbody></table></div>
+
+<h2>How I double-checked it</h2>
+<div class="tbl"><table>
+<thead><tr><th>Round</th><th>What happened</th></tr></thead>
+<tbody>
+<tr><td>1 · Facts</td><td>Three independent reviewers read every rule, skill, hook and tool, and measured 779 check runs and 1,127 commits. Anthropic's official Claude Code documentation was read for every capability used here.</td></tr>
+<tr><td>2 · Design</td><td>I drafted the setup from those facts.</td></tr>
+<tr><td>3 · Attack</td><td>A separate critic, with the repository and the draft, tried to break it. Verdict: adopt with fixes. Three serious holes it found are fixed above:
+<ul class="small" style="padding-left:1.1rem;margin:6px 0 0">
+<li>Self-written test reports could be faked → only GitHub's machine result counts</li>
+<li>Tests could go stale when main moves → retest on the latest main before every merge; red main reverted in 30 minutes</li>
+<li>A cloud session could claim to be the Lead → merging works only on the Mac</li></ul>
+It also cut a planned "verifier" session that would have spent your allowance on waiting.</td></tr>
+</tbody></table></div>
+<div class="col" style="margin-top:14px"><p>Why I'm confident: every change is aimed at a measured time sink, every quality check either stays or becomes stronger, and the guardrails are enforced by machines rather than by sessions remembering rules. Two points are still to be proven: whether the full tests run in a cloud machine (the cloud trial running now) and which GitHub plan you are on. I'll report both before anything is switched.</p></div>
+
+<h2>Your three decisions</h2>
+<div class="col">
+<div class="ask"><b>1. Tests on GitHub's machines, capped at US$50 a month.</b> Recommended: it is the only independent test result that cannot be faked, and it removes the Mac queue. Expected cost US$10–30.</div>
+<div class="ask"><b>2. The new way of working</b>: one-day slices, acceptance checks first, pre-review, reviewer started by the Lead, platform lane, lighter records. Recommended: it targets the 120–160 hours of rework.</div>
+<div class="ask"><b>3. Builders move to the cloud</b> at their next handover, once the cloud trial passes; the Lead stays on the Mac and you reach it from your phone. Recommended.</div>
+</div>
+
+<h2>Rollout</h2>
+<div class="col"><ol class="steps">
+<li>Today: the lanes keep building and the current queue keeps merging on the Mac as is; nothing stops for this redesign. Read the cloud trial result.</li>
+<li>Platform lane: GitHub-machine tests and guard checks, merge only from the Mac, cloud setup fixes, flake list.</li>
+<li>Builders move to the cloud one by one at their next handover, not all at once: each lane finishes and pushes its current step, then its next session starts in the cloud with the new rules. No lane loses work; acceptance checks and pre-review start with each lane's next item.</li>
+<li>Records simplified with the tools that check them.</li>
+<li>After a week of real numbers: package it as a reusable kit for your other products.</li>
+</ol></div>
+</div>
