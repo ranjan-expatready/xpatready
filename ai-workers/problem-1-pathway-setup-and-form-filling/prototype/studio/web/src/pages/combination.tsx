@@ -15,6 +15,7 @@ import { PreviewTab as StudioPreview } from "@/pages/preview";
 import { ReviewTab } from "@/pages/review";
 import { OverviewTab } from "@/pages/workspace/overview";
 import { FormsTab } from "@/pages/workspace/forms";
+import { BeforeForms } from "@/components/before-forms";
 import { QuestionnairesTab } from "@/pages/workspace/questionnaires";
 import { DocumentsTab } from "@/pages/workspace/documents";
 import { PreviewTab, usePreviewParams } from "@/pages/workspace/preview";
@@ -99,7 +100,7 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
   if (w.isLoading) return <Spinner label={`Loading ${tab}`} />;
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;
-  if (v.tab === "forms") return <FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} />;
+  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} /></div>;
   if (v.tab === "questionnaires") return <QuestionnairesTab id={id} people={v.people} questionnaire={v.questionnaire} available={v.available} />;
   if (v.tab === "preview") return <PreviewTab id={id} p={v.preview} empty={v.empty} fetching={w.isFetching} hasRelease={hasRelease} />;
   return null;

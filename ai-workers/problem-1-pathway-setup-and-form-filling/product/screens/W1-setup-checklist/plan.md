@@ -70,3 +70,17 @@ CHECK on the card v4: `review.md` (journey 8/10, D1 D4 D9 D15 D16 D19 at 3, four
 * **Breaker M3, not in this card:** backlog slice of its own (trim the row fields; a 400-combination cold and warm timing on a quiet machine). The sample has 21 combinations.
 * programs_s2's 262 ms against 200 ms at load ~15 is "not judged: machine busy" (P-184).
 * Two checks moved with it: `check_screen01_api` P-49/F1 keeps P-49's rule on each row (every row is Needs work or Live; the row's `needs` field is unchanged), and its needs filter and count are now the person's Needs you (P-180). `check_w1_programs_s2`'s fold-kept step now waits for the redraw (it read the page before it redrew).
+
+## Slice C1 — Before forms (30 Oct, branch `claude/screens-c1-before-forms`; Lead: C1, then C2, then C3)
+Slice C is split (Lead, 30 Oct): **C1** Before forms on Forms · **C2** tab badges (StepBadge) and the `?focus=` landing on Documents and Questionnaires · **C3** the Overview strip, with the people card leaving the Overview · Official pages Confirm/Choose after the forms lane's record (F2).
+C1 built:
+* `web/src/components/before-forms.tsx`: a "Before forms" block at the top of the Forms tab. Step 1 **Official pages** is a read-only line with the step's mark and words. Step 2 is the people card (`WhoCanBe`, moved from Questionnaires, still folded to one line). Marks and words come from the setup checklist (`GET …/summary` `setup`). The workspace view for `tab=forms` now carries `people`.
+* `web/src/components/focus-item.tsx` `useFocusItem`: a `?focus=` link scrolls to its line (no animation under reduced motion), focuses it, outlines it for 2 s and clears the address. "This was done since you opened it." shows only when that line's step is done.
+* `STEP_TAB.people` is back to Forms (the 30 Oct interim is reverted). Questionnaires keeps one line naming the people, with "Change on Forms". The Overview's link reads "Change on Forms" (C3 removes that card).
+* Tests: new `check_w1_before_forms_browser` (the block, marks, focus landing, Resume, the links, read only, axe). The people-card walks in `check_s5_slice1`, `check_s5_leadcheck`, `check_s5_slice3` and `check_s5_live_approval` now open Forms. `check_w115_slice2` checks the moved line. Two engine steps in `check_setup_checklist` flipped back.
+
+**Where C1 differs from the board (`design/draft-setup-checklist.html` §5), for the founder:**
+1. *Official pages line words.* The board reads "✓ Official pages: apply page · study permit checklist · confirmed by the configuration author (sure: the rules found one match) · Change". C1 shows the step's own words, "No official pages record yet" for every combination today, and no Change: the record, its page names and Confirm come with the forms lane's F2.
+2. *The people line.* The board shows one plain line, "✓ Who can be in this application Sample: Principal applicant (always) · Spouse or partner (optional) · …". C1 shows the existing folded people card (its one line with "Show and edit") inside the block, so editing works where it sits.
+3. *Mark.* The board's ✓ assumes both steps are confirmed. In the sample, step 1 is ○ (no record) and step 2 follows the people card's state.
+

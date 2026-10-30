@@ -45,10 +45,10 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
   // CHECK 30 Oct (review M2): no screen offers "Confirm who can apply" yet (P-176 Q1), so it is open but never Needs you.
   const unconfirmed = setupChecklistOf(live({ people: { roles: 3, applicants: 2, saved: false, confirmed: null, tier: "expert" } }));
   step("C11.10: an unconfirmed people list stays open on step 2 and in the Next line", unconfirmed.steps[1].open.some((i) => i.kind === "confirm_people"), unconfirmed.steps[1].open.map((i) => i.kind));
-  // Lead 30 Oct (review M3): until slice C's "Before forms", the people step opens Questionnaires, where people are changed.
+  // Slice C1 (P-161 (2)): the people step opens Forms, where Before forms holds the people card (the 30 Oct interim reverted).
   const peopleNext = setupChecklistOf(draft({ people: { roles: 3, applicants: 2, saved: false, confirmed: null, tier: "author" } }));
-  step("C11.10: the people step opens Questionnaires (temporary, until slice C)", unconfirmed.steps[1].tab === "questionnaires" && (peopleNext.next?.step !== "people" || peopleNext.next.href.includes("/questionnaires?")), { tab: unconfirmed.steps[1].tab, href: peopleNext.next?.href });
-  step("C11.10 (fail case): Resume on the people step never lands on Forms", !(peopleNext.next?.step === "people" && peopleNext.next.href.includes("/forms?")), peopleNext.next?.href);
+  step("C11.10: the people step opens Forms (Before forms, P-161 (2))", unconfirmed.steps[1].tab === "forms" && (peopleNext.next?.step !== "people" || peopleNext.next.href.includes("/forms?focus=people%3Acard")), { tab: unconfirmed.steps[1].tab, href: peopleNext.next?.href });
+  step("C11.10 (fail case): Resume on the people step never lands on Questionnaires", !(peopleNext.next?.step === "people" && peopleNext.next.href.includes("/questionnaires")), peopleNext.next?.href);
   step("C11.10 (fail case): it is not Needs you for the expert while no screen offers the confirmation", !forViewer(unconfirmed, SME).needsYou, forViewer(unconfirmed, SME).needsYou);
 }
 {
