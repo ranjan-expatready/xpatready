@@ -25,7 +25,15 @@ US$0 throughout: every check uses the fake launcher or the stub; no live call.
 3. `contracts/cost-check.ts` + `CostWarning`; wired on the forms lane's starts; browser check.
 4. Hand-over note to screens and runtime: the component, the one call, a sample check.
 
-## 4. Questions for the Lead (before building)
-* **Q1, the Wave 1 cap (US$60).** P-179 names the run cap, the attempts per form and the founder's ceiling. Does an override also pass the Wave 1 cap? *Recommend:* yes, as a named limit in the same dialog, but only up to the US$132 total. The wave cap then works as an early warning, not a second wall.
-* **Q2, attempts per form (4).** A click passing it allows one more run (2 attempts) of that form, never an open count? *Recommend:* yes, one run per click, recorded like the money.
-* **Q3, QA-90 point 10.** run-suites points `P2_LEDGER_DIR` at a scratch folder per run, so test entries and test overrides never reach the real ledger? *Recommend:* yes (run-suites is the Lead's file).
+## 4. Lead answers (30 Oct; all three as recommended)
+* **Q1, the Wave 1 cap (US$60):** an override also passes it, shown as a named limit in the same dialog, never beyond the US$132 total.
+* **Q2, attempts per form (4):** one click past the attempts limit allows exactly one more run of that form (2 attempts), recorded like the money.
+* **Q3, QA-90 point 10:** yes, run-suites gives each run its own scratch `P2_LEDGER_DIR` (proposal below; the Lead applies it, it is the Lead's file).
+* **Evidence while GitHub Actions is blocked on billing:** a local run-suites result on the exact commit.
+
+## 5. Proposal for `product/tools/run-suites.sh` (Lead's file)
+After the `TSX=` line (21), one line, so test entries and test overrides never reach the real shared ledger:
+```
+export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 (10), P-179: a scratch ledger per run
+```
+`isolated.sh` keeps a `P2_LEDGER_DIR` that is already set (QA-90 point 4), so every copy the suites start writes there. The run's summary names the folder.
