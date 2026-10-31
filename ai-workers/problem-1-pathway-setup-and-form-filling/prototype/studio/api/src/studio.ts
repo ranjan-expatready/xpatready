@@ -13,7 +13,7 @@ import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedW
 import { recordAction, snapshotLines } from "./form-uses.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../contracts/programs.ts";
-import { FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
+import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 
@@ -569,6 +569,11 @@ export class Studio {
     // S5: minimum age and who signs (contracts/workspace.ts); field errors as Problem Details.
     const line = FormLineEdit.safeParse({ minAge: b.minAge, signedBy: b.signedBy, copies: b.copies });
     if (!line.success) throw new HttpException(problemFromZod(line.error), HttpStatus.BAD_REQUEST);
+    // C1.8 (review m2): a checklist (document) line is never filed, so it has no copies; the screen does not offer it.
+    if (line.data.copies !== undefined && (await this.db.govFormDef.findUniqueOrThrow({ where: { id: rows[0].govFormDefId }, select: { formKind: true } })).formKind === "document") {
+      const doc = DocumentLineEdit.safeParse({ copies: line.data.copies });
+      if (!doc.success) throw new HttpException(problemFromZod(doc.error), HttpStatus.BAD_REQUEST);
+    }
     for (const k of ["minAge", "signedBy", "copies"] as const) if (line.data[k] !== undefined) changes[k] = line.data[k];
     // M1: "Only if" in words with no rule yet is allowed (a person turns it into a rule later); release refuses it
     // until it has one (engine/validate.ts), and Preview says "Cannot tell yet: no rule".

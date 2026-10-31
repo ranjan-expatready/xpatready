@@ -94,6 +94,9 @@ export const FormLineEdit = z.object({
   copies: z.number({ error: COPIES_WORDS }).int(COPIES_WORDS).min(1, COPIES_WORDS).max(9, COPIES_WORDS).optional(),
 });
 
+/** C1.8 (review m2): a checklist (document) line is never filed, so it keeps one copy; the screen does not offer it. */
+export const DocumentLineEdit = z.object({ copies: z.literal(1, { error: "A checklist is not filed, so it has no copies." }).optional() });
+
 /** How a line's "Only if" stands (M1): none (always), a rule, or words with no rule yet (Preview: cannot tell). */
 export type OnlyIf = { kind: "always" } | { kind: "rule"; words: string } | { kind: "words_only"; words: string };
 

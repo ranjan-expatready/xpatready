@@ -5,7 +5,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { copiesWords, FormLineEdit } from "../contracts/workspace.ts";
+import { copiesWords, DocumentLineEdit, FormLineEdit } from "../contracts/workspace.ts";
 import { lineSig } from "../api/src/form-uses.ts";
 
 const PORT = Number(process.argv[2] ?? 4441), DB = process.argv[3] ?? "xr_studio_screens_c18";
@@ -65,6 +65,11 @@ const field = (r: { body: any }, f: string) => (r.body?.errors ?? []).find((e: a
   const guard = (() => { try { sql(`update combination_form set copies = 12 where combination_id='${C}' and lineage_key='${F}'`); return false; } catch { return true; } })();
   ok("C1.8 fail (database): 12 copies are refused by the database check too", guard);
 
+  const D = f0.lines.find((l: any) => l.document)?.code as string;
+  r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent(D)}`, { copies: 2, baseRevision: line(D)?.revision });
+  ok("C1.8 fail (review m2): a checklist line is never filed, so 2 copies on it are refused on the field", !!D && r.status === 400 && field(r, "copies") === "A checklist is not filed, so it has no copies.", { line: D, status: r.status, msg: field(r, "copies") });
+  ok("C1.8 pass: the checklist line keeps 1 copy", (await forms()).lines.find((l: any) => l.code === D).copies === 1);
+  ok("C1.8 pass (contract): 1 copy on a checklist line is accepted (it is the default), more is refused", DocumentLineEdit.safeParse({ copies: 1 }).success && !DocumentLineEdit.safeParse({ copies: 2 }).success);
   r = await call("POST", `/combinations/${C}/forms/undo`, {});
   f0 = await forms();
   ok("C1.8 pass: Undo last change puts the line back to 1 copy", r.status < 300 && line(F).copies === 1, { status: r.status, copies: line(F)?.copies });

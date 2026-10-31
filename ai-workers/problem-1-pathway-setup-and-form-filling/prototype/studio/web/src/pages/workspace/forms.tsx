@@ -287,7 +287,7 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
       <div className="space-y-5">
         {l.quote ? <p className="rounded-lg bg-surface px-3 py-2 text-xs text-text-muted">IRCC's words: "{l.quote}"</p> : null}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Who fills it" hint="One copy for each person it names." error={errors.who}><Select value={who} onChange={(e) => setWho(e.target.value)}>{WHO.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</Select></Field>
+          <Field label="Who fills it" hint="Each person it names fills their own." error={errors.who}><Select value={who} onChange={(e) => setWho(e.target.value)}>{WHO.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</Select></Field>
           <Field label="From age (optional)" hint="Leave empty for any age. Sample." error={errors.minAge}><Input inputMode="numeric" value={minAge} onChange={(e) => setMinAge(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="Any age" /></Field>
           {!l.document ? <Field label="Copies" hint="Copies of this form for each person it names, 1 to 9. Sample." error={errors.copies}><Input inputMode="numeric" value={copies} onChange={(e) => { setCopies(e.target.value.replace(/[^0-9]/g, "").slice(0, 1)); setErrors(({ copies: _c, ...rest }) => rest); }} placeholder="1" /></Field> : null}
         </div>
