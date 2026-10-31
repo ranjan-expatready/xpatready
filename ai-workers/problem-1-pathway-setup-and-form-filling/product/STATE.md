@@ -12,16 +12,23 @@ updated: 2026-10-31 · milestone: **M2 — Super Admin configuration**, with the
 * R1 thin runtime slice: 6 of 8 work (75%)
 * M3 case, agent and client: 0 of 15 work · 3 partial (design agreed; build at the M2 gate)
 
-## In flight (31 Oct)
+## In flight (31 Oct, 08:00 UTC)
+**Blocker: CI is refused for every PR** since about 06:15 UTC: GitHub says "recent account payments have failed or your spending limit needs to be increased". About 2,500 minutes of PR checks ran on GitHub's machines in the morning after P-190, so the US$10 monthly budget is gone. Nothing merges until the founder fixes billing or chooses where PR checks run (BACKLOG N0).
+
 | PR | Area | What | Where it stands |
 |---|---|---|---|
-| #113 | runtime | queue transaction fix, C10.1 checkpoint, C3.11, P-184 speed helper, S7 Reset + Load sample | conflicts with main again; the Mac runtime session (local_3b02c2d2) syncs. The tech lead still has to decide the four "Found while building" points in its c10.1 plan before approving |
-| #116 | runtime (cloud) | DV-bb-9, DV-bb-8, DV-d1-3, and P-193 (only the proposer corrects) | stacked on #113 |
-| #111, #120 | screens (cloud) | review Minors · release page title | the screens builder refreshes both after #129 and handles their reviews |
-| #128 | forms (cloud) | the cost warning re-plans on Start | approved; merges on green |
+| #113 | runtime (Mac, local_3b02c2d2) | queue transaction fix, C10.1 checkpoint, C3.11, P-184 speed helper, S7 Reset + Load sample | the tech lead decided its four "Found while building" points (two new rows X1a, X9a; the other two need no change); the builder is syncing main and getting a fresh Approve |
+| #116 | runtime (cloud) | DV-bb-9, DV-bb-8, DV-d1-3, P-193 | approved on aef35efa; labels after #113 merges |
+| #131 | forms (cloud) | a Continue covers retries of the run it started (P-194) | approved; waits for CI |
+| #133, #139 | screens (cloud) | grey disabled button; N5 C1 "Before forms" | approved; wait for CI |
+| #138 | forms (cloud) | X5 slice a: the form library from IRCC's forms list | the tech lead answered its two questions (whole index; remember deletions in slice c); reviewer checking |
+| #141 | tech lead | lead skill habits; P-194 rescued; the old qa session's unmerged work rescued | this PR |
+
+## Takeover (31 Oct)
+A new Lead chat took over (the founder confirmed the previous one is closed). Checked every Mac copy for unsaved work: nothing uncommitted. Rescued into #141: P-194 (its PR #132 merged before the commit), and the qa session's five commits on `claude/qa-l10-e3c849` that never had a PR (QA-99 live retest and closure, the slice 1 channels journey check). Cloud builders cannot be messaged; their PRs are their reports.
 
 ## Founder decisions waiting
-* None (31 Oct: P-194 answered #131's question).
+* N0: billing, or where PR checks run (recommendation in the chat).
 
 ## Close-out still to do
 * After #111 and #113 merge: archive the four old Mac builder sessions (forms-fix8 local_c49f56b8, screens-card3 local_ba1559ab, runtime local_3b02c2d2, qa local_b27bf6a4) and remove their copies (about 12 GB). Then remove the frozen `lanes/` folder, and start a cloud qa session for `/qa after-merge` on main.
@@ -39,6 +46,7 @@ updated: 2026-10-31 · milestone: **M2 — Super Admin configuration**, with the
 * **The Mac:** stays on (the founder keeps it on). It holds about 22 GB free; restart it every week or two to clear macOS temp files.
 
 ## Log (newest first; earlier lines are in git history)
+- 2026-10-31 · tech lead (new chat): took over; rescued P-194 and the qa session's unmerged QA-99 retest; found CI refused by GitHub billing; decided #113's four points and #138's two questions.
 - 2026-10-31 · tech lead: the switch-over is done.
   - Merged today: #112, #114, #115, #117–#119, #121–#127, #129, #130. PR checks moved to GitHub's machines, affected tests only (#124); full set nightly on the Mac (#123); auto-merge fixed (#125, #126).
   - Founder decisions: P-189 to P-193.
