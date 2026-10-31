@@ -554,7 +554,7 @@ export class Studio {
     return row;
   }
 
-  async saveForm(actor: Actor, combinationId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean; baseRevision?: string; minAge?: number | null; signedBy?: string | null }) {
+  async saveForm(actor: Actor, combinationId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean; baseRevision?: string; minAge?: number | null; signedBy?: string | null; copies?: number }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const rows = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: formKey } });
@@ -567,9 +567,9 @@ export class Studio {
     if (b.retire) changes.status = "RETIRED";
     if (b.who) { if (!WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
     // S5: minimum age and who signs (contracts/workspace.ts); field errors as Problem Details.
-    const line = FormLineEdit.safeParse({ minAge: b.minAge, signedBy: b.signedBy });
+    const line = FormLineEdit.safeParse({ minAge: b.minAge, signedBy: b.signedBy, copies: b.copies });
     if (!line.success) throw new HttpException(problemFromZod(line.error), HttpStatus.BAD_REQUEST);
-    for (const k of ["minAge", "signedBy"] as const) if (line.data[k] !== undefined) changes[k] = line.data[k];
+    for (const k of ["minAge", "signedBy", "copies"] as const) if (line.data[k] !== undefined) changes[k] = line.data[k];
     // M1: "Only if" in words with no rule yet is allowed (a person turns it into a rule later); release refuses it
     // until it has one (engine/validate.ts), and Preview says "Cannot tell yet: no rule".
     if (b.conditionPlain !== undefined && b.condition === undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") changes.conditionPlain = b.conditionPlain.trim() || null;
