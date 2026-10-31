@@ -76,3 +76,20 @@ Fresh copy `screens_rev4` on :4449, web rebuilt from the worktree, sample loaded
 Journey score after the fix: **9.5/10**. Plain words and visual quality are now 1, and accessibility and sizes stays 1. Next step stays at ½ because of the release-page wording above.
 
 **Verdict: Approve** for commit f6258cb4.
+
+## Re-check of 44475848 (reviewer, 31 Oct)
+
+The only code change since f6258cb4 is in `web/src/pages/workspace/overview.tsx`: the Rules and checks tile now counts problems where `where !== "Release"`. Only `emptyProblem()` (`studio.ts:63`) uses `where: "Release"`, so no other problem drops out of the tile.
+
+**Correction to my f6258cb4 section:** the red "1 problem to fix" on that tile was caused by this PR. It was not there before the PR, as I wrote.
+
+What I checked: fresh `screens_rev4` copy on :4449, web rebuilt from the worktree, sample loaded.
+* **Overview, Super visa:** the tile now says "no problems". The missing list keeps "2 forms attached as sources, 0 set up." with one shared next step.
+* **Review and release tab:** still lists "Release · Nothing to release yet: …" once, and Submit stays disabled.
+* **Browser, 400, 1024 and 1440 px:** axe found 0 violations, nothing scrolls sideways, and there were no console errors.
+* **`check_screen01_browser` on a fresh copy: 116/116.** That run rewrites tracked screenshots and `evidence/screen01/browser-checks.json`. I restored them with git checkout.
+* **Still open (Should, not blocking):** the release page's held reason for an empty combination that has sections or rules (see the f6258cb4 section).
+
+Journey score: 9.5/10, unchanged.
+
+**Verdict: Approve** for commit 44475848.
