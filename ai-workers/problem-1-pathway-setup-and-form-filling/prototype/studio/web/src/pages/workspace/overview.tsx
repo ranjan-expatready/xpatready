@@ -43,7 +43,7 @@ export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: Combina
           sub={errors || warnings ? <Link className="text-text-link underline" to={`/c/${id}/review`}>{errors ? `${errors} problem${errors === 1 ? "" : "s"} to fix` : `${warnings} warning${warnings === 1 ? "" : "s"}`}: see them</Link> : "no problems"} />
       </div>
       <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm" aria-labelledby="ov-people" data-overview-people>
-        <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="ov-people" className="font-semibold">Who can be in this application</h2><Link className="text-sm text-text-link underline" to={`/c/${id}/questionnaires`}>Change in Questionnaires</Link></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="ov-people" className="font-semibold">Who can be in this application</h2><Link className="text-sm text-text-link underline" to={`/c/${id}/forms?focus=people%3Acard`}>Change on Forms</Link></div>
         <ul className="mt-2 flex flex-wrap gap-2 text-sm">{people.filter((p) => p.max > 0).map((p) => <li key={p.role} className="rounded-full border border-border px-3 py-1">{p.label} · {p.min === p.max ? p.min : `${p.min} to ${p.max}`}{p.applies !== false ? " · applicant" : ""}</li>)}</ul>
         <p className="mt-2 text-xs text-text-muted">Each person marked as applicant gets their own forms, questions and documents. Numbers Sample until the immigration expert confirms.</p>
       </section>

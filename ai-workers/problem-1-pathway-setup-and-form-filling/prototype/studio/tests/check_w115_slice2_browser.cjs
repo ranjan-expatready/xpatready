@@ -53,10 +53,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const L = (await api(`/combinations/${wp}/fact-sources`)).body;
   step("C4.10 strip pass: full form = from documents + client answers + case officer enters, with the server's counts", strip.includes(String(L.counts.facts)) && strip.includes(String(L.counts.document)) && L.counts.facts === L.counts.document + L.counts.client + L.counts.agent && /✓ Every fact has one source/.test(strip), strip.replace(/\n/g, " "));
   step("C4.10 strip fail-guard: it shows no system key", !/\b[a-z_]+\.[a-z_]+\b/.test(strip));
-  const who = p.locator("[data-who-can-be]");
-  step("P-147 §3 pass: Who can be in this application is folded to one line with Show and edit", await who.getAttribute("data-folded") !== null && await who.getByRole("button", { name: "Show and edit" }).count() === 1 && await who.locator("table").count() === 0);
-  await who.getByRole("button", { name: "Show and edit" }).click(); await settle();
-  step("P-147 §3: Show and edit opens the full table (built S5 card)", await p.locator("[data-who-can-be] table").count() === 1 && await p.locator('[data-who-can-be] [data-person="principal"]').count() === 1);
+  // Slice C1 (P-161 (2)): the people card moved to Before forms on Forms (its fold is checked in check_w1_before_forms_browser).
+  step("P-161 (2) pass: Questionnaires no longer holds the people card; one line names the people and links to Forms", await p.locator("[data-who-can-be]").count() === 0 && await p.locator("[data-who-can-be-moved]").getByRole("link", { name: "Change on Forms" }).count() === 1);
   const chips = await p.locator('[role="group"][aria-label="Where it comes from"]').innerText();
   step("EXPERIENCE §0 pass: source chips Document · Client · Case officer and Needs you · 0", /Document \d+/.test(chips) && /Client \d+/.test(chips) && /Case officer \d+/.test(chips) && /Needs you · 0/.test(chips), chips.replace(/\n/g, " "));
   step("P-154 fail-guard: the strip, the chips and the person line never say agent", !/\bagents?\b/i.test(`${strip} ${chips} ${await p.locator("[data-coverage]").innerText()}`) && /Case officer enters/.test(strip));
