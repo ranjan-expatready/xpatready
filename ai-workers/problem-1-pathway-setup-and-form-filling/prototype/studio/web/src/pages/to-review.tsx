@@ -86,8 +86,10 @@ export function ToReviewPage() {
 
 function Rows({ items }: { items: QueueItem[] }) {
   return (
+    // QA-113: at 1024 px the box is about 735 px wide; a 760 px floor scrolled sideways and cut "Item". The columns wrap
+    // down to 640 px, and only a narrower window scrolls.
     <div className="overflow-x-auto rounded-lg border border-border bg-surface-raised">
-      <table className="w-full min-w-[760px] text-sm" aria-label="Items to review">
+      <table className="w-full min-w-[640px] text-sm" aria-label="Items to review">
         <thead><tr className="border-b border-border bg-surface text-left text-text-muted">
           <th scope="col" className="px-4 py-2.5 font-semibold">Item</th><th scope="col" className="px-4 py-2.5 font-semibold">What and why</th>
           <th scope="col" className="px-4 py-2.5 font-semibold">Status</th><th scope="col" className="px-4 py-2.5 font-semibold">AI cost</th><th scope="col" className="px-4 py-2.5 font-semibold">Next step</th>
