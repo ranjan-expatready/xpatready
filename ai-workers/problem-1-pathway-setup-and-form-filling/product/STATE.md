@@ -2,10 +2,12 @@
 
 updated: 2026-10-31 · milestone: **M2 — Super Admin configuration**, with the thin runtime slice R1 · way of working: `WAY-OF-WORKING.md` · work list: `BACKLOG.md` · why each choice was made: `design/why-we-chose-2026-10-31.md`
 
-## Resume here (a fresh `/lead` chat)
-1. Open PRs: `gh pr list`. A PR merges by itself on green CI plus the label `review: approved` (the `automerge` workflow checks every approved open PR on each run). The demo updates itself after merges.
-2. Builders run as cloud sessions (forms, runtime, screens). They cannot message the Lead: their PRs are their reports, and their questions sit under "Questions" in each PR. Collect them; decide the technical ones; bring the founder only product, money and preference questions, one at a time, with a recommendation.
-3. Then `BACKLOG.md` row **X0**: regroup the backlog into features (P-191), and walk the founder through `design/why-we-chose-2026-10-31.md`.
+## Resume here (a fresh `/lead` chat; handover written 31 Oct 12:40 UTC)
+1. **Set the hourly check first** (lead skill): Mac queue, red checks, open PRs and their Questions, the demo at :4400 (restart it with `start.sh` in `.claude/worktrees/demo-main` if it does not answer 200).
+2. **Open PRs:** the lead PRs #148 (CI back on the Mac, P-196), #149 (features F1–F8, handover rule, stacked on #148), #150 (the demo survives its update job) and #151 (Devin D5 explorer, P-197) are labelled and merge on green. #148 and #151 both touch `DECISIONS.md` and `decision-impact.sh`, so the second needs main merged in and the label again. The builders' PRs (#113, #116, #131, #133, #138, #139, #142–#147) belong to the sessions below.
+3. **Sessions started by the previous Lead chat (31 Oct):** cloud builders "Forms builder: F2", "Screens builder: F1", "Runtime builder: #116, then F7 and F6" (they cannot message the Lead; their questions go in their PRs), and the Mac session local_3b02c2d2 that owns #113 (archive it and remove its copy `reverent-mahavira-cef858` once #113 merges).
+4. **Then:** start a cloud qa session for `/qa after-merge` once #113 is on main; read Devin's D5 report when the founder says "check Devin"; walk the founder through `design/why-we-chose-2026-10-31.md`.
+5. **Watch:** one Mac runner, about 15 checks queued at 12:30 UTC; propose a second runner only with numbers. The hand-started full run was cancelled (founder); the nightly runs at 21:00 UTC.
 
 ## Progress (counted from `qa/CAPABILITIES.md` by `tools/progress.sh`; moves only after qa tests)
 * M2 Super Admin setup: 21 of 57 work (36%) · 16 partial · 1 not tested · 19 not built
