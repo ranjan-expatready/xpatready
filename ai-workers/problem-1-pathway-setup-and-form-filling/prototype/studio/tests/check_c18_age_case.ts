@@ -42,10 +42,12 @@ const BIRTH = "person.date_of_birth";
   const applies = (answers: Answer[]) => caseView(s, people, answers, [], "sqr", today).forms.find((x) => x.form === F)?.applies;
   const unknown = caseView(s, people, [], [], "sqr", today);
   ok("C1.8 pass: with the date of birth unknown, IMM 1295 is 'cannot tell' on the case (never filed, never dropped)", unknown.forms.find((x) => x.form === F)?.applies === "cannot_tell", unknown.forms.find((x) => x.form === F));
-  // The sample reads the date of birth from the passport (collected from a verified document): the client is not asked
-  // while the passport is on the checklist (P-130 rule, as Preview says); the staff working view asks it.
+  // The sample's date of birth placement is collected from a verified document (the passport), so the client
+  // questionnaire leaves it out (case.ts isClientField); the staff working view asks it. Review Major 1: the date of birth
+  // is also needed by other forms, so the step checks the question says it decides IMM 1295 (the age line), not only
+  // that it is there.
   const asked = caseView(s, people, [], [], "agent", today).sections.flatMap((x: any) => x.questions).filter((q: any) => q.subjectId === "principal" && q.fact === BIRTH);
-  ok("C1.8 pass: and the case's working view asks the principal's date of birth (not answered yet)", asked.length === 1 && (asked[0].value === undefined || asked[0].value === null || asked[0].value === ""), asked.map((q: any) => ({ label: q.label, value: q.value })));
+  ok("C1.8 pass: and the case's working view asks the principal's date of birth because it decides IMM 1295", asked.length === 1 && (asked[0].value === undefined || asked[0].value === null || asked[0].value === "") && /IMM 1295/.test(asked[0].why ?? ""), asked.map((q: any) => ({ label: q.label, why: q.why })));
   ok("C1.8 pass: a principal of 30 gets IMM 1295", applies(born("1996-05-01")) === true);
   ok("C1.8 fail: a principal of 10 does not", applies(born("2016-05-01")) === false);
   ok("C1.8 pass (edge): 18 today, on the birthday, gets it", applies(born("2008-10-31")) === true);
