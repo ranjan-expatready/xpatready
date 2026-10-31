@@ -27,7 +27,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The wa
 1. Run the suites your change touches, each alone on an isolated copy (each test's usage line). Shared code (contracts, schema, engine): `bash P/tools/run-suites.sh`.
    A test you touch: any wait you rely on fails loudly when it times out (no `.catch(() => undefined)` after a wait); fix the ones you meet, nothing more.
 2. Launch **screen-reviewer** on the exact commit; also **screen-breaker** for a new screen, money, permissions or a migration. Fix every Blocker and Major with a fail test; fix the Minors or list them in the PR.
-3. `git push -u origin HEAD`; `gh pr create --base main` with: what and why (the backlog row or decision), the acceptance checks and their results, before and after screenshots for any visible change, one line **"On the demo:"** naming the page at :4400 and what to try (the tech lead passes it to the founder after the merge), the cost (US$0).
+3. `git push -u origin HEAD`; `gh pr create --base main` with: what and why (the backlog row or decision), the acceptance checks and their results, before and after screenshots for any visible change, one line **"On the demo:"** naming the page at :4400 and what to try (the tech lead passes it to the founder after the merge), the cost (US$0), and your context share ("context: N%", from `get_usage`; at 50% say so: the team hands over together, P-198).
 4. When the reviewer approves the code as it is now: `gh pr edit <n> --add-label "review: approved"`. The PR merges by itself on green CI and the demo updates. **Any later push needs a new review and the label again.** CI red → read the log, fix, push.
 
 ## 5. Reply
