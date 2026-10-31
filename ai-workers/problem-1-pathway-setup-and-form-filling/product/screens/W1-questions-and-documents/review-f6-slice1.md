@@ -3,7 +3,7 @@
 Reviewer: independent reviewer agent (did not build it), 31 Oct. **Commit reviewed: `63e9eff61b0dc71cd8d9a9b353d7445ed54064a5`** (branch `claude/runtime-f6-pqr-picks`, one commit on #113's head `7e4ea58c`; #113 itself not reviewed here). Diff: `origin/claude/reverent-mahavira-cef858..63e9eff6`.
 Basis: BACKLOG F6, concept-draft.md (P-130–P-132; step 6 "PQR picks … with a reason … each (P-76)"), concept-draft-v2-notes.md (P-147), W1-shared-library/plan-slice1.md item 1c, CAPABILITIES C4.7 ("a reason per pick; a person accepts or removes each"), STANDARDS, EXPERIENCE, QUALITY. Live AI picks (W1-10 step 7) are out of scope and not counted.
 
-**Verdict: Block** (screen-review scale: Ship after fixes). Two Majors below; everything else holds.
+r1 verdict on 63e9eff6: Block (two Majors). **Current verdict, r2 on `80b0fdee4afa0798fbfda2a3fd773c54edc4d631`: Approve** (see r2 at the end).
 
 ## Suites rerun on the exact commit (isolated copies, ports 4430–4438, names `rv6_*`, US$0)
 | Suite | Result |
@@ -50,3 +50,38 @@ Should (may follow, record it): m3 to m7.
 
 ## Could not check
 A real screen reader. An intended user's unaided walk (D17, D20 stay with the founder). Real browser zoom: 200 % was emulated as a 512 px viewport at scale 2.
+
+## r2 — re-review of `80b0fdee4afa0798fbfda2a3fd773c54edc4d631` (31 Oct)
+Diff `63e9eff6..80b0fdee`: changes in fact-sources.ts, proposals.ts, proposals.tsx, questionnaires.tsx and the two suites. Rerun on `rv6_*` copies (ports 4430–4434, 4437):
+
+| Suite | Result |
+|---|---|
+| check_f6_pqr_picks.ts | 24/24 |
+| check_f6_pqr_picks_browser.cjs | 27/27 |
+| check_pqr.ts / check_pqr_browser.cjs | 38/38 / 20/20 |
+| check_s6_queue_browser.cjs / check_s6_p149.ts / check_queue_tx.ts | 28/28 / 73/73 / 8/8 |
+
+I reran my own probes (outside the repo) on the new head.
+
+| Item | r2 | Evidence |
+|---|---|---|
+| M1 the pick's reason | **Fixed** | Accept with no typed reason now stores "A rule of this combination reads it: The applicant is applying from …", the pick's own reason, in the API probe and through the UI. A typed reason still wins (proposals.ts lander, `typed`). New test "review M1". |
+| M2 a rejected pick returns | **Fixed** | After a reject, the next run reads "Nothing new: the 30 picks … already waiting on To review. 1 the rules would propose was decided by a person before, so it is not proposed again." and nothing is waiting for that fact. New test "review M2". |
+| m1 Undo restores the earlier draft | **Fixed** | Hand change, then accept, then Undo gives `1\|DRAFT\|CLIENT\|false\|author note\|HUMAN\|user-A` before and after, identical. With an earlier bulk change, the batch id comes back too, and that bulk change's own Undo then succeeds (`undone: 1`). An edited pick restores its edited fact's earlier row. |
+| m2 two proposes at once | **Fixed** | Two simultaneous POSTs returned 32 and 0, with 0 duplicate identities. The `pg_advisory_xact_lock` is taken per combination, and earlier picks are read inside the lock. New test "review m2". |
+| m3 wrong role offered Accept | **Fixed** | For the Approver and the Content reviewer, Accept is disabled with "Only a configuration author accepts a pre-qualification pick." The server's 403 is unchanged. |
+| m5 focus after Propose | **Fixed** | Focus moves to the notice, and the next Tab reaches "Open on To review". |
+| m4 words and 1024 px layout | Open, Minor | "pqr subset of sqr", "(The application)", the repeated "Why a person looks" sentence, and Open off-screen at 1024 on To review. The builder lists these for the PR: the first three come from #113's engine/sources.ts, the last from the queue page's existing layout. Accepted as follow-ups; none blocks. |
+
+New observations (Minor, none blocks):
+- (a) A non-author (Approver, Content reviewer) can still Reject a pick. Since the M2 fix, that rejection keeps the pick from being proposed again. That fits P-76 ("a person … removes each"), but the founder may want removal kept to authors; noted, not a finding.
+- (b) The result words "1 the rules would propose was decided by a person before" read awkwardly. Suggest "1 more was decided by a person before and is not proposed again."
+- (c) The commit carries this review and the journey report as the builder copied them; this r2 section is the only change, and it is not committed.
+
+Journey score r2: **8.5/10, pass** (no zero).
+- Correct data goes from ½ to 1.
+- Error recovery goes from ½ to 1.
+- Accessibility rises with the focus fix but stays ½ because Open is off-screen at 1024.
+- Plain words and visual quality stay ½.
+
+**Verdict r2: Approve** on `80b0fdee4afa0798fbfda2a3fd773c54edc4d631`. No open Blocker or Major. The open Minors (m4 and a–b above) go on the PR's follow-up list.

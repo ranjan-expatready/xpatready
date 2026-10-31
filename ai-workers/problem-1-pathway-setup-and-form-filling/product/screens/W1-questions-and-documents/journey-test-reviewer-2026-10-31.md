@@ -58,3 +58,14 @@ Fixes that would raise the score, most valuable first:
 
 ## Could not test
 A real screen reader. Real browser zoom (emulated). An intended user's unaided walk (D17 and D20 stay with the founder). Live AI picks (out of scope; founder Go needed).
+
+## r2 on `80b0fdee` (31 Oct)
+I walked the journeys again on the new head.
+- Journey 1: the tick keeps the pick's reason.
+- Journey 2: the rejected pick is not proposed again, and the result says so.
+- Journey 3: Undo restores the earlier draft row exactly, including its bulk batch.
+- Journey 4: two tabs at once now give 32 and 0 picks.
+- Journey 5: Accept is disabled for the Approver and the Content reviewer, with a reason in words.
+- Focus moves to the result notice after Propose.
+
+Score: correct data goes from ½ to 1, and error recovery from ½ to 1. **Score 8.5/10, pass.** Open Minors: the words and the 1024 px table on To review (see the review's r2).
