@@ -315,17 +315,17 @@ export class CaseForms implements OnModuleInit {
   async file(actor: Actor, id: string, original = false) {
     const { x, c } = await this.copyFor(actor, id);
     if (x.status !== "GENERATED" || !x.path) fail("This copy has no file.", HttpStatus.NOT_FOUND);
-    const form = x.formNumber.replace(/\s+/g, "");
+    const form = x.formNumber.replace(/\s+/g, ""), s = this.runtime.snapshotOf(c);
     const v = x.validated[0];
-    if (!original && v && isBarcodeForm(x.formNumber)) {
+    if (!original && v && needsValidate(s, x.formNumber)) { // the same rule as `lock` (a barcode form on PDF upload or paper)
       const { answers, rows } = await this.runtime.state(c);
-      const cov = formCoverage(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
+      const cov = formCoverage(s, this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
       // C-10: current while the form's facts are what they were when it was read back (as `copyOf` shows it).
       if (v.factsHash === inputHash(cov?.facts ?? [])) return { bytes: this.checkedFile(v, HttpStatus.NOT_FOUND, VALIDATED_FILE), name: `${form}-validated-${short(x.id)}.pdf` };
     }
     const bytes = this.checkedFile(x, HttpStatus.NOT_FOUND);
     // P-145: a copy of a form filed Online is named for what it is.
-    const online = channelIn(this.runtime.snapshotOf(c), x.formNumber) === "ONLINE";
+    const online = channelIn(s, x.formNumber) === "ONLINE";
     return { bytes, name: `${form}-${online ? "copy-not-for-filing" : "copy"}-${short(x.id)}.pdf` };
   }
 }
