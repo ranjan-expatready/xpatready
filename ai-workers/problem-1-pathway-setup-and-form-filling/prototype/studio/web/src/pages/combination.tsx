@@ -30,10 +30,21 @@ const peopleWords = (ps: { label: string; min: number; max: number }[]) => (ps ?
  *  level a link back to the list filtered to it, the status, the facts in one muted line and the one next step; one row
  *  of tabs in setup order (walkthrough v2 S5). Old addresses (Sources and forms, Configuration) open the tab that now
  *  holds their part. */
-/** A field-map job finished while its form is not yet marked DRAFTED (the server's second write is still to come). */
+/** A field-map job finished while its form is not yet marked DRAFTED (the server's second write is still to come). Only
+ *  the form's newest field-map job counts, and only for 30 s after this tab first saw that state: a stub pass (or an
+ *  older job) also ends COMPLETED with the form still READ, for good, and must not keep the tab asking (#147 Devin). */
+const SETTLE_MS = 30_000;
+const settlingSince = new Map<string, number>(); // job id → when this tab first saw it finished with its form READ
 const settling = (d: unknown) => {
-  const v = d as { jobs?: { kind: string; status: string; attachmentId?: string | null }[]; attachments?: { id: string; status: string }[] } | undefined;
-  return !!v?.jobs?.some((j) => j.kind === "field_map" && j.status === "COMPLETED" && v.attachments?.some((a) => a.id === j.attachmentId && a.status === "READ"));
+  const v = d as { jobs?: { id: string; kind: string; status: string; attachmentId?: string | null }[]; attachments?: { id: string; status: string }[] } | undefined;
+  const now = Date.now();
+  return !!v?.attachments?.some((a) => {
+    if (a.status !== "READ") return false;
+    const newest = v.jobs?.find((j) => j.kind === "field_map" && j.attachmentId === a.id); // newest first
+    if (newest?.status !== "COMPLETED") return false;
+    const since = settlingSince.get(newest.id) ?? now; settlingSince.set(newest.id, since);
+    return now - since < SETTLE_MS;
+  });
 };
 
 export function CombinationPage() {

@@ -32,7 +32,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       const r = await route.fetch(); const j = await r.json();
       const job = (j.jobs ?? []).find((x) => x.attachmentId === att.id && x.kind === "field_map");
       const a = (j.attachments ?? []).find((x) => x.id === att.id);
-      if (!rewritten && job?.status === "COMPLETED" && a) { a.status = "READ"; rewritten++; }
+      if (!rewritten && job?.status === "COMPLETED" && a) { a.status = "READ"; rewritten++; if (process.env.DEBUG_REFRESH) console.log("DEBUG", JSON.stringify((j.jobs ?? []).filter((x) => x.attachmentId === att.id).map((x) => [x.id.slice(0, 8), x.kind, x.status, x.startedAt]))); }
       await route.fulfill({ response: r, json: j });
     });
 
@@ -47,6 +47,21 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const link = p.getByRole("row", { name: /IMM 5257/ }).getByRole("link", { name: "Review AI proposals" });
     const shown = await link.first().waitFor({ timeout: 20000 }).then(() => true, () => false);
     step("#143 review fail case: after the in-between answer the tab keeps asking, and \"Review AI proposals\" appears without a reload", shown);
+
+    // #147 Devin (fail case): a finished job whose form stays READ for good (a stub pass does that) must not keep the tab
+    // asking: every answer now says READ; the tab may ask for up to 30 s, then stops.
+    await p.unrouteAll({ behavior: "ignoreErrors" });
+    const asked = [];
+    await p.route(new RegExp(`/api/combinations/${sv.combinationId}$`), async (route) => {
+      asked.push(Date.now());
+      const r = await route.fetch(); const j = await r.json();
+      const a = (j.attachments ?? []).find((x) => x.id === att.id); if (a) a.status = "READ";
+      await route.fulfill({ response: r, json: j });
+    });
+    await p.reload(); await p.waitForLoadState("networkidle");
+    const t0 = Date.now(); await p.waitForTimeout(42000);
+    const late = asked.filter((t) => t > t0 + 34000).length;
+    step("#147 Devin fail case: with the form READ for good, the tab asks a while (the settling window), then stops", asked.length > 2 && late === 0, JSON.stringify({ asked: asked.length, after34s: late }));
     step("no page error", !errs.length, errs.join(" | "));
   } catch (e) { step(`unexpected ${e.message.split("\n")[0]}`, false); }
   await b.close();
