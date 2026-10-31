@@ -6,7 +6,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseFormsIndex } from "../engine/canada.ts";
+import { parseFormsIndex, realDate } from "../engine/canada.ts";
 import { isLaterDate, planIndexFill } from "../engine/library-index.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_x5";
@@ -39,6 +39,18 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   ok("C2.6 X5 break m2 fail: an index date that went back, or one in another shape, marks nothing newer; a later one does", !isLaterDate("2023-09", "2099-01-01") && !isLaterDate("May 2024", "2024-01") && isLaterDate("2024-06", "2024-05-31") && !isLaterDate("2024-05", "2024-05-15"));
   ok("C2.6 X5 P156-2 pass: a later read with another date, for a form that has a file, marks it newer", planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [{ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: true, formPageUrl: "x" }]).newer.join() === "IMM 1295");
   ok("C2.6 X5 P156-2 fail: no mark for the same date, a form with no file, or a first read (no earlier date)", !planIndexFill([row("IMM 1295")], [{ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: true, formPageUrl: "x" }]).newer.length && !planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [{ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: false, formPageUrl: "x" }]).newer.length && !planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [{ formKey: "IMM 1295", indexDateModified: null, hasFile: true, formPageUrl: "x" }]).newer.length);
+  // Fill hardening (break m13, m15; Devin on #145).
+  const lf = (extra: object = {}) => ({ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: true, formPageUrl: "x", ...extra });
+  const back = planIndexFill([row("IMM 1295", { dateModified: "2023-02-01" })], [lf({ indexDateModified: "2024-02-01", editionDated: "2023-01" })]);
+  ok("C2.6 X5 Devin (#145) fail: an index date that went back clears an earlier 'newer' mark (before: the mark from the undone change stayed)", back.clear.join() === "IMM 1295" && !back.newer.length, back);
+  ok("C2.6 X5 Devin (#145) pass: the same or a later date never clears a mark", !planIndexFill([row("IMM 1295")], [lf()]).clear.length && !planIndexFill([row("IMM 1295", { dateModified: "2025-01-01" })], [lf()]).clear.length);
+  ok("C2.6 X5 break m13 fail: a form whose only printed file waits for a second person is still marked when the index's date moves on (before: the date moved silently and the form read Ready once approved)", planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [lf({ hasFile: false, hasHeldFile: true })]).newer.join() === "IMM 1295");
+  const twice = planIndexFill([row("IMM 5373 B", { dateModified: "2023-01-01" }), row("IMM 5373 B", { dateModified: "2025-03-01" })], [lf({ formKey: "IMM 5373 B", indexDateModified: "2024-01-01" })]);
+  ok("C2.6 X5 break m15 fail: a number listed twice keeps its latest date (before: the first row's, so a later edition went unseen)", twice.listed[0]?.dateModified === "2025-03-01" && twice.newer.join() === "IMM 5373 B", twice);
+  const link = (code: string, title: string, date = "2024-01-01") => `<tr><td>${code}</td><td><a href="https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/${code.replace(/\W+/g, "").toLowerCase()}.html">${title}</a></td><td>${date}</td></tr>`;
+  const bad = parseFormsIndex(`<table><tbody>${link("IMM 1111", "")}${link("IMM 2222", "x".repeat(301))}${link("IMM 3333", "Good", "2024-02-30")}${link("IMM 4444", "Good too", "2024-02-29")}</tbody></table>`);
+  ok("C2.6 X5 break m15 / Devin (#145) fail: a row with no title or an over-long one is counted unreadable, never stored; an impossible date is kept as no date", bad.rows.map((r) => r.code).join() === "IMM 3333,IMM 4444" && bad.unreadable.join() === "IMM 1111,IMM 2222" && bad.rows[0].dateModified === null && bad.rows[1].dateModified === "2024-02-29", bad);
+  ok("C2.6 X5 break m15 pass: real dates read as real (month ends, leap years); others not", realDate("2024-02-29") && realDate("2024-12") && !realDate("2023-02-29") && !realDate("2024-13") && !realDate("2024-04-31") && !realDate("May 2024"));
 
   // ── the API on the sample, with the recorded copy of IRCC's list
   await call("POST", "/demo/reset", { confirm: "RESET" });
@@ -119,6 +131,8 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   const b0 = Number(sql("select count(*) from gov_form_def"));
   const [f1, f2] = await Promise.all([call("POST", "/library/forms/fill-from-index"), call("POST", "/library/forms/fill-from-index")]);
   ok("C2.6 X5 break m1 fail: two fills at once report together exactly the rows created (before: each claimed all of them)", f1.status === 201 && f2.status === 201 && f1.body.created + f2.body.created === Number(sql("select count(*) from gov_form_def")) - b0, { a: f1.body?.created, b: f2.body?.created, made: Number(sql("select count(*) from gov_form_def")) - b0 });
+  const onIndex = Number(sql("select count(*) from gov_form_def where listed_on_index_at is not null"));
+  ok("C2.6 X5 break m14 / Devin (#145) fail: each of two fills at once says every listed form is there, new or already (before: the losing fill counted its plan: '0 new, 9 already')", f1.body.created + f1.body.listed === onIndex && f2.body.created + f2.body.listed === onIndex, { a: [f1.body?.created, f1.body?.listed], b: [f2.body?.created, f2.body?.listed], onIndex });
   r = await call("POST", "/library/forms/fill-from-index", undefined, null);
   ok("C2.6 X5 fail: nobody (no person named) cannot fill (401)", r.status === 401, r.status);
   console.log(`\n${pass} passed, ${fail} failed`);

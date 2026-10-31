@@ -60,6 +60,14 @@ export type Package = { title: string; url: string };
  *  is the page's date, not the edition) and the "Select an application package" links. A row whose number cannot be read
  *  or whose link is not an official address is left out. Guides are not rows of this table; they are linked from the
  *  package pages (pageLinks, guideLinks). */
+/** A date canada.ca writes (YYYY-MM or YYYY-MM-DD) that is a real calendar date: month 01-12, the day within the month. */
+export function realDate(d: string): boolean {
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(d);
+  if (!m) return false;
+  const y = Number(m[1]), mo = Number(m[2]), day = m[3] ? Number(m[3]) : 1;
+  return mo >= 1 && mo <= 12 && day >= 1 && day <= new Date(Date.UTC(y, mo, 0)).getUTCDate();
+}
+
 export function parseFormsIndex(html: string): { rows: IndexRow[]; packages: Package[]; noPage: string[]; unreadable: string[] } {
   const rows: IndexRow[] = [], noPage: string[] = [], unreadable: string[] = [];
   const body = /<tbody\b[^>]*>([\s\S]*?)<\/tbody>/i.exec(html)?.[1] ?? "";
@@ -73,8 +81,11 @@ export function parseFormsIndex(html: string): { rows: IndexRow[]; packages: Pac
     if (!a) { noPage.push(code); continue; }
     const u = officialUrl(a.href);
     if (!u.ok) { noPage.push(code); continue; }
-    const title = a.text, date = tds[2] ? strip(tds[2]) : "";
-    rows.push({ code, title, pageUrl: u.url, dateModified: /^\d{4}-\d{2}(-\d{2})?$/.test(date) ? date : null, kind: /^document checklist/i.test(title) ? "checklist" : "form" });
+    const title = a.text.trim(), date = tds[2] ? strip(tds[2]) : "";
+    // X5 break m15 / Devin on #145: a row with no title, or one too long to be a title (over 300 characters), is counted as
+    // unreadable, never stored; a date that is not a real calendar date (2024-02-30) is kept as no date.
+    if (!title || title.length > 300) { unreadable.push(code); continue; }
+    rows.push({ code, title, pageUrl: u.url, dateModified: realDate(date) ? date : null, kind: /^document checklist/i.test(title) ? "checklist" : "form" });
   }
   const packages: Package[] = [], seen = new Set<string>();
   const ff = /<form\b[^>]*id\s*=\s*["']applications-ff["'][^>]*>([\s\S]*?)<\/form>/i.exec(html)?.[1] ?? "";

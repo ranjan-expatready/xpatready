@@ -328,6 +328,9 @@ function SetAccepts({ row }: { row: Row }) {
   const toggle = (c: string) => setChannels((xs) => (c === "NOT_NEEDED" ? (xs.includes(c) ? [] : [c]) : xs.includes(c) ? xs.filter((x) => x !== c) : [...xs.filter((x) => x !== "NOT_NEEDED"), c]));
   const [quote, setQuote] = React.useState(""), [reason, setReason] = React.useState("");
   const go = useAsk(() => api(`/library/forms/${encodeURIComponent(row.code)}/accepts`, { method: "POST", json: { account, channels, ...(quote.trim() ? { quote: quote.trim() } : {}), ...(reason.trim() ? { reason: reason.trim() } : {}) } }), "Sent: it waits for a second person on To review", [["library-forms-list"], ["form-uses", row.code]], () => setOpen(false));
+  // Devin on #145: a form with no usable edition yet cannot take "what IRCC accepts" (the server answers "No edition yet"):
+  // the drawer says what comes first instead of offering a step that fails.
+  if (!row.edition) return <p className="text-text-muted" data-accepts-needs-file>Upload or find its PDF first: what IRCC accepts is set on a form's current edition.</p>;
   if (!open) return <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>{row.accepts ? "Correct what IRCC accepts" : "Set what IRCC accepts"}</Button>;
   return (
     <div className="space-y-2 rounded-lg border border-border p-3">
