@@ -1,7 +1,7 @@
 // N7 (runtime lane; Devin 30 Oct, product/inbox/2026-10-30-devin-d1-walk.md): three findings, each with a passing and
 // a failing case. DV-bb-9: only the person who proposed a change withdraws it, a new shared field included, and only
 // they send a returned remove, retire or restore again (P-116 amended, P-15 second-person split; review Major 1 and
-// break B1, B2, B4 on 10939d21); the Structure row, the change page and To review offer it to them only. DV-bb-8: files reach a combination through the one intake (P-51, P-103); the second door
+// break B1, B2, B4 on 10939d21), and only they correct a returned field (P-193, B50); the Structure row, the change page and To review offer it to them only. DV-bb-8: files reach a combination through the one intake (P-51, P-103); the second door
 // POST /combinations/:id/attachments is gone. DV-d1-3 (QA-94 class): the review page of With an LMIA shows the role of a
 // calculated answer in plain words, never its system key. Break B5: the sample route without a body is a 400. In a real browser for DV-d1-3; screenshots at 1440 and 1024 in
 // screens/N7-devin-fixes/screenshots/, axe (WCAG 2.2 AA). No model call (US$0).
@@ -105,6 +105,20 @@ const PDF = path.join(ROOT, "official-sources", "ircc", "forms", "imm5476e.pdf")
     sql(`update library_change set proposed_by='user-A' where id='${fid}'`);
     r = await api(`/library/changes/${fid}/withdraw`, { method: "POST", data: { note: "My own, not needed." } });
     step("DV-bb-9 pass (new field): the proposer withdraws their own new field", r.status === 201 && r.body?.status === "WITHDRAWN", r.body?.status ?? r.body);
+
+    // P-193 (B50, breaker B3): a returned new field is corrected by its proposer only, else another author could rename
+    // it and approve their own words.
+    const rid = sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by, decided_by, decision_note) values (gen_random_uuid(), '${ws}', 'field', 'person.n7_check_field_two', 'N7 check field two', 'ADD', 'Check only', 'RETURNED', 'user-C', 'user-B', 'Check: returned') returning id`).split("\n")[0];
+    r = await api(`/library/changes/${rid}/resubmit`, { method: "POST", data: { label: "Renamed by another author", reason: "I corrected it for them." } });
+    step("B50 / P-193 fail: an author cannot correct another person's returned new field (403 in words); its name and status stay",
+      r.status === 403 && /Only the person who proposed a change can correct it and send it again\. Content reviewer proposed this one/.test(r.body?.detail ?? "") && sql(`select status || '|' || label from library_change where id='${rid}'`) === "RETURNED|N7 check field two", r.body?.detail ?? r.body);
+    await p.goto(`${BASE}/review/change/${rid}`); await p.locator("[data-withdraw-not-mine]").waitFor({ timeout: 30000 }); await settle();
+    step("B50 fail (page): another person's returned field offers no correction form and no Withdraw; the page says who can", await p.locator("[data-correct]").count() === 0 && /Only Content reviewer can correct it or withdraw it\./.test(await p.locator("[data-withdraw-not-mine]").innerText()));
+    const qf = (await api("/review-queue?filter=all")).body.items.find((x) => x.id === `change:${rid}`);
+    step("B50: To review shows another person's returned field as waiting for its proposer, no step for this author", qf?.state === "waiting" && /The person who proposed it corrects it or withdraws it/.test(qf?.waiting_on ?? ""), qf && { state: qf.state, waiting_on: qf.waiting_on });
+    sql(`update library_change set proposed_by='user-A' where id='${rid}'`);
+    r = await api(`/library/changes/${rid}/resubmit`, { method: "POST", data: { label: "N7 check field two corrected", reason: "Corrected the name myself." } });
+    step("B50 / P-193 pass: the proposer corrects their own returned field and sends it again", r.status === 201 && r.body?.status === "WAITING" && sql(`select label from library_change where id='${rid}'`) === "N7 check field two corrected", r.body?.status ?? r.body);
 
     // Break B5: the sample route with no body says so in words.
     r = await p.request.fetch(`${BASE}/api/combinations/${vv}/attachments/sample`, { method: "POST", headers: { "x-actor": "user-A" } }).then(async (x) => ({ status: x.status(), body: await x.json().catch(() => null) }));

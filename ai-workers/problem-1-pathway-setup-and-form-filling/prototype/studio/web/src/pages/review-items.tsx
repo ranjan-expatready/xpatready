@@ -94,8 +94,8 @@ export function LibraryChangePage() {
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
       </div>
       <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span> (generated from the group and the name)</p></details>
-      {x.status === "RETURNED" && LIFECYCLE_KINDS.includes(x.kind) && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can send it again or withdraw it.</p>
-        : x.status === "RETURNED" && (mine || me.has("author")) ? (LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} mine={mine} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
+      {x.status === "RETURNED" && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can {LIFECYCLE_KINDS.includes(x.kind) ? "send it again" : "correct it"} or withdraw it.</p>
+        : x.status === "RETURNED" ? (LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
         : <>
           {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
@@ -151,7 +151,7 @@ function SendAgain({ change }: { change: LibraryChangeDetail }) {
 }
 
 /** B1 (break B1): a returned new field is corrected and sent again, or withdrawn; it never freezes its combination. */
-function Correct({ change, mine }: { change: LibraryChangeDetail; mine: boolean }) {
+function Correct({ change }: { change: LibraryChangeDetail }) {
   const nav = useNavigate();
   const [label, setLabel] = React.useState(change.field?.label ?? change.label), [meaning, setMeaning] = React.useState(change.field?.meaning ?? ""), [reason, setReason] = React.useState("");
   const send = useAction(() => api<LibraryChangeView>(`/library/changes/${change.id}/resubmit`, { method: "POST", json: { label, meaning, reason } }), { success: (r) => `"${r.label}" sent to a second person again`, invalidate: [...inv, ["library-change", change.id]], onDone: () => nav("/review") });
@@ -162,7 +162,7 @@ function Correct({ change, mine }: { change: LibraryChangeDetail; mine: boolean 
       <label className="block text-sm">Meaning<Textarea className="mt-1" value={meaning} maxLength={500} onChange={(e) => setMeaning(e.target.value)} /></label>
       <label className="block text-sm">What you corrected<Textarea className="mt-1" value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} placeholder="So the second person can check it" /></label>
       <div className="flex justify-end"><Button busy={send.isPending} disabled={reason.trim().length < 8} onClick={() => send.mutate(undefined)}>Send again</Button></div>
-      {mine ? <Withdraw id={change.id} /> : null}
+      <Withdraw id={change.id} />
     </section>
   );
 }
