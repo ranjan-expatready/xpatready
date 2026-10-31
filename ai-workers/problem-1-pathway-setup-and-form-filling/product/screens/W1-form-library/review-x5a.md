@@ -166,3 +166,86 @@ Report: `journey-test-reviewer-2026-10-31-x5a-57f7d79d.md`. Accessibility and sc
 * Timings are from headless Chrome in this sandbox, with no CPU throttle.
 
 **Verdict: Approve** (no open Blocker or Major at 57f7d79d; the three Minor items above are Should).
+
+---
+
+# Independent CHECK of the follow-up: commit 310acb9c (PR #142, stacked on #138 at e849e9e6), 31 Oct 2026
+
+Reviewer: I did not build this. I reviewed only `git diff e849e9e6 310acb9c` on `claude/forms-x5a-minors-06zafk`. It answers break M6 and m11–m12 of the 57f7d79d round, and review m1–m3 of 57f7d79d.
+
+**How I tested.** I built the web with `npx vite build`; `tsc --noEmit` is clean for web and api. I used isolated copies `rvx5f` :4452, `rvx5g` :4453 and `rvx5h` :4454, each with its own `/tmp/rv8` ledger. A mutation copy `rvx5m` :4455 ran from `/tmp/rv8/mut`, never from the repo.
+* **Suites.** `check_forms_x5_library.ts` **32/32**. `check_forms_s4_library_browser.cjs` **85/85**, twice on fresh copies. I put its screenshots back with `git restore` (slice3 only).
+* **Graph.** G1–G6 0/0/2/0/0/0, unchanged. The two G3 routes are attachment routes that predate this PR.
+* **My scripts.** A Playwright journey, timings and a double-Enter probe (`/tmp/rv8/scripts/`), each run twice. A differential check-canada and Replace run, old line against new.
+* **Spend.** US$0, no `*_LIVE`. All copies are stopped.
+* **Not run.** `check_forms_s4_finder.ts` (Replace C11.15) needs `STUDIO_AI_LIVE=approved`, so I tested Replace by hand instead (below).
+
+Verdict: Approve
+
+**Why.** No Blocker or Major is open.
+* **M6 is closed.** The list, the fill and the check now read one current edition (`form-library.ts:63-70`, `:92`, `:180`, `:226`). With the old line put back, the new step **fails**, 31/32: `outcome:"current"`, "IMM 1295 (09-2023) (held copy) is still the current edition".
+* **Focus after Show more and the reset are fixed.** The count is now announced.
+* **What remains.** Three Minor items, each Should.
+
+## What the coordinator asked
+* **Setting state during render with the memoised table: safe.** `if (limitKey !== viewKey) { setLimitKey; setLimit }` (`library-forms.tsx:79-81`) runs before `pageRows` and `tableEl` are computed. React throws that render away and re-runs the component with `limit=50` before anything commits, so the memoised table never sees the old limit. The guard ends the loop on the second pass.
+  * **Deferred search.** It works under `useDeferredValue`. The key uses `dq`, so the reset lands in the same render as the new rows. An abandoned deferred render drops its update, and the next render sees the key differ again.
+  * **Data refreshes.** A refetch after Delete or Undo does not change the key, so the page keeps its rows, as wanted.
+  * **Measured.** I pressed "No file yet" with all 237 rows shown. A MutationObserver saw **at most 50 rows** mounted on any frame (10 of 10). The list settled in **54–89 ms**, against 100–189 ms before. No React warning, no page error.
+* **Focus with a screen-reader mindset: correct, with two gaps.**
+  * **Where focus lands.** Each press puts focus on the first added row's number button: rows 51, 101, 151 and **201 on the last press**, in 2 of 2 runs. The name is "IMM 0017, button", inside the table, so the row and column are read.
+  * **The count.** "Showing 100 of 237 forms" is `role=status`, so a count change is spoken politely after the focus move. The button reads "Show 50 more forms".
+  * **The drawer.** From row 51, Escape returns focus to IMM 0017.
+  * **The gaps.** Issues 1 and 2.
+* **Does `currentEdition` change Replace? Yes, only where it should.** `replace` → `checkCanada` → `compareWithCanada` is the only caller (`form-library.ts:197`, `:292`).
+  * **Every product path approves its editions.** Each path that creates a printed edition records its checksum as approved: the manifest, `approved_source`, or `official_download`, including the fingerprint match (`intake.ts:297-353`, `finder.ts:533/643`, `impact.ts:74`). So on real data nothing changes.
+  * **Differential run.** I ran the same state (sample, rules finder, fill) in the PR copy and the old-line copy. check-canada on all 15 forms gave **identical** answers (8 current, 2 check, 1 no PDF, 4 not recorded). Replace on all 8 combination lines also gave **identical** answers.
+  * **With a held copy.** I gave IMM 5409 a held copy carrying canada.ca's date and PDF. **Replace** on its line now answers `check`, the mark stays and the row says `newer_file`. The old code answered `current`, cleared the mark and the row read `ready`. Replace inherits the fix.
+
+## Issues, ranked
+1. **Minor (Should): a second Enter on Show more opens a drawer (D11).** Focus moves to the row's number button (`library-forms.tsx:85-88`), so the next Enter opens it.
+   * **Repro.** Enter, then Enter again 30, 60, 150 or 400 ms later. Each time: 100 rows and the IMM 0017 drawer open, 4 of 4. This matches break m16.
+   * **Why it matters.** A keyboard user pressing Enter for "50 more again" gets a dialog they did not ask for. It is recoverable with Escape, and no [M] line is broken.
+   * **Fix.** Focus something that does not act on Enter: the new row (`tabIndex={-1}`) or its title cell.
+2. **Minor (Should): the count is spoken only while the pager exists (WCAG 4.1.3 is met by the role; D11).**
+   * The `role=status` lives inside `[data-show-more]` (`:187`).
+   * **The last press.** The region unmounts, so nothing confirms that all 237 are shown.
+   * **Back above 50 rows.** After a filter with 50 rows or fewer (Guides), going back to All inserts the region with its text already in it, which many screen readers do not speak. This matches break m17.
+   * **Fix.** Keep one status region always mounted, for example "Showing all 237 forms".
+3. **Minor (Should): the render-time reset has no check that fails without it (D16).**
+   * I put the old `useEffect(() => setLimit(PAGE), …)` back into the mutation copy. The browser suite still passed, **85/85**: the "starts again at 50" step waits 300 ms, so it cannot see the extra render.
+   * The paging steps do guard the rest: the e849e9e6 page stops the suite at the new button name, 77 passed and 1 failed.
+   * **Fix.** Count the most rows mounted during a chip press made with every row shown, as in my MutationObserver probe (it must stay at 50 or fewer).
+
+**Not findings.**
+* **Show more timing (expand, §9).** Measured from click to focus on the new row plus one paint frame: 90–227 ms, median about 145 ms. 3 of 40 timings are over 200 ms, and only by the frame I add. The last review treated this margin the same way.
+* **Words and readers outside this diff.**
+  * **Break m18.** The check's words point to Find again, which cannot help when canada.ca's file is the held edition. No product path makes that state.
+  * **Break m19.** Other readers still use the any-edition rule: `proposeAccepts` `form-library.ts:143`, `finder.ts:484/731/773`, `lifecycle.ts:327/401`. They predate this PR. The commit claims one rule for the list, the fill and the check, and that claim holds.
+* **Carried from 57f7d79d.** The table has no accessible name. The m8 words still have no check. The upload reader ignores a letter suffix.
+
+## D1–D20 (changes from 57f7d79d in bold)
+| D | Score | Evidence |
+|---|---|---|
+| D1–D5 | 5 / 5 / 5 / n/a / 5 | Unchanged by this diff; X5 suite 32/32 |
+| D6 | 5 | **One current edition for list, fill and check; mutation 31/32; Replace differential identical on real data** |
+| D7–D10 | 5 | US$0; library path; chips and pager; same "newer" words |
+| D11 | 4 | **Count announced on change; last press silent; second Enter opens a drawer (issues 1, 2)** |
+| D12 | 5 | Team look at 1440, 1024 and 400 px |
+| D13 | 5 | **Focus on the first added row, including the last press; axe 0 at 1440, 1024, 720×450 and 400; no sideways scroll** |
+| D14 | 5 | "Show 50 more forms", team Button |
+| D15 | 5 | **Chip from all shown 54–89 ms (was 100–189); Show more median 145 ms** |
+| D16 | 4 | 32 + 85 green; M6 and paging steps fail without the fix; **reset step does not (issue 3)** |
+| D17, D20 | simulated only | No intended user walked it |
+| D18, D19 | 5 | Listed by IRCC with the page; rows past 50 reach the drawer |
+
+## Journey score: 9.5 / 10 (pass; no criterion at 0)
+Report: `journey-test-reviewer-2026-10-31-x5a-310acb9c.md`. Feedback and state ½ (issues 1, 2); every other criterion 1.
+
+## What I could not check
+* **CI.** The ci job on 310acb9c (124484351489) did not start: GitHub refused it for billing or the spending limit. No test ran in CI. This needs the founder.
+* **The finder suite** (needs `STUDIO_AI_LIVE=approved`; Replace was covered by hand).
+* A real screen reader; canada.ca live (recorded copies only); an unaided walk by the configuration author (D17, D20).
+* Timings come from headless Chrome in this sandbox, with no CPU throttle.
+
+**Verdict: Approve** (no open Blocker or Major at 310acb9c; the three Minor items above are Should and do not block).

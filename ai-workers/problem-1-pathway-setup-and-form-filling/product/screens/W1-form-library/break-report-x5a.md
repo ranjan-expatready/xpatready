@@ -115,3 +115,64 @@ Result: combinations keep filing the 06-2022 file and nothing says canada.ca has
   - Devanagari, CJK and Arabic titles are stored and found by search ("临时").
 - **Layout:** at 1024 px and at 720×450 (200 %) there is no page scroll and "Show N more" stays visible.
 - **Scale (not judged, §9 is sample-only):** 2,042 rows filled in 0.72 s; the list call takes 0.16–0.26 s and returns 1.4 MB.
+
+---
+
+# Round at 310acb9c (the check reads the current edition; Show more moves focus and speaks; the limit resets in render)
+
+Only `git diff e849e9e6 310acb9c` was attacked. Isolated copy `brk7` on :4456 (`isolated.sh`, `P2_LEDGER_DIR=/tmp/brk7l`, web built with `npx vite build`), sample loaded, then filled (237 rows). No `*_LIVE`, US$0. The PR's `check_forms_x5_library.ts` passes 32/32 on this copy. Held editions were made by inserting `form_edition` rows; "approved" means an `approved_source` row. The copy is stopped, its database dropped and its working folder removed. No screenshot or other repo file was changed apart from this section.
+
+## Blocker
+None.
+
+## Major
+None. M6 is fixed (see What held).
+
+## Minor
+- **m16. A second Enter on "Show more" opens a row's drawer.** Focus moves to row 51's number button after `setTimeout(0)` (`library-forms.tsx:85-88`), so the next Enter lands on that button.
+  Repro (keyboard only, 1440 px):
+  1. Tab to "Show 50 more forms".
+  2. Press Enter, then Enter again about 60 ms later.
+
+  Result: 100 rows, and the drawer is open on IMM 0017 (row 51). Holding Enter down does the same: the list goes to 237 rows, then the drawer opens on IMM 0017. Someone pressing Enter repeatedly to load more rows gets a modal they did not ask for. A mouse double-click held: 100 rows, no drawer.
+- **m17. The `role=status` count is only there while a pager is shown.** It lives inside `[data-show-more]` (`library-forms.tsx:187`), so:
+  - **The last press says nothing.** After it, the region unmounts and "Showing 237 of 237" is never announced. Focus does land on row 201 (IMM 5709), as m11 asked.
+  - **A filter with 50 rows or fewer says no count.** For example, Guides (4) leaves no status region on the page (checked with `querySelectorAll('[role=status]')`).
+  - **Going back to more than 50 rows may not be announced.** Moving from such a filter back to All mounts the region with its text already in it, which many screen readers do not announce.
+
+  Also, the words read "Showing 50 of 72 forms · Show 22 more forms" under the Checklists chip. Not tested with a real screen reader.
+- **m18. The check's words lead nowhere when canada.ca's file is the held edition.** This happens only if a held printed edition can exist; the earlier round found no product path that makes one.
+  Repro:
+  1. IMM 5409 has an approved edition relabelled 06-2022, and a held edition 01-2023 carrying canada.ca's date and PDF address. The mark is set.
+  2. In the row's ⋯ menu, choose "Replace with a new edition…".
+
+  The toast says "canada.ca shows IMM 5409 last updated 2023-01. Run "Find again"… a newer edition goes to edition review". The row still reads "Newer edition on canada.ca", which is correct. However, Find again finds that sha already in the library (`finder.ts:616`, `same` returns "library"), so the advice changes nothing. Nothing says that the newer edition is waiting for a second person.
+- **m19. The other "current edition" readers still use the any-edition rule.** The commit's comment says the list, the fill and the check now use one rule. These readers still use `newestEdition(editions.filter(channel !== "ONLINE"))`, which includes held editions:
+  - `proposeAccepts` (`form-library.ts:143`): in the m18 state, the change is recorded against the held 01-2023, while the list shows 06-2022's accepts;
+  - the finder's page backfill (`finder.ts:731`): it writes canada.ca's date and PDF address onto the held edition, which is how the M6 state could arise for a form with no recorded page;
+  - `finder.ts:484` and `:773`;
+  - `lifecycle.ts:327` and `:401`.
+
+  Found by reading the code; I did not run these paths. `currentEdition` is private to `FormLibrary`, so these readers cannot reuse it.
+
+## What held
+- **check-canada / Replace now read the current edition.** All runs were on IMM 5409 or IMM 5707 with the mark set:
+  - **Held newer edition (05-2024) and an approved 01-2023 that matches canada.ca:** `current`, the mark is cleared, and the row reads Ready 01-2023. That is right, since canada.ca still shows 01-2023.
+  - **Held edition carrying canada.ca's date and file, approved edition older (M6):** `check`, the mark stays, and the row reads `newer_file` 06-2022. This held by API, by `POST /combinations/:id/forms/IMM%205409/replace {"version":1}`, and through the row's ⋯ "Replace with a new edition…" in the browser (the list kept 150 rows and focus stayed on the row).
+  - **The held edition approved afterwards:** the next check answers `current`, the mark is cleared, and the row reads Ready 01-2023.
+  - **Five checks fired while the approval landed:** 1 `check` and 4 `current`, with the mark cleared only after the approval.
+  - **ONLINE-only (IMM 5707 made ONLINE):** `check`, and the mark stays. The same holds with a held printed edition added beside it.
+  - **No edition (IMM 0008):** `check`, and the mark stays. It is not shown, because the row is `no_file`.
+- **Roles and versions:**
+  - check-canada and Replace answer 403 for user-B, user-C and user-O, and 401 for "nobody" and "USER-A".
+  - Replace with version 7 gives 409 "Changed since", and version 0 gives 400.
+- **Paging, focus:**
+  - Show more puts focus on row 51 (IMM 0017), shown in view with a visible focus ring under keyboard use (`:focus-visible` is true) at 1440, at 1024, and at 720×450 (200 %), with no horizontal scroll.
+  - Three clicks in one task show 200 rows with focus on row 51; no error.
+  - A filter chip pressed straight after Show more goes back to 50 rows with focus on the chip.
+  - Show more under Checklists (72) shows 72 rows with focus on the first added row.
+- **Paging, drawer:** with the drawer open (it is modal), a chip cannot be clicked. A scripted Show more behind it adds rows but focus stays in the dialog. Escape returns focus to IMM 0017.
+- **Paging, search:**
+  - "imm" goes to 50 of 196; Show more gives 100; "imm 5" goes back to 50 of 106; clearing gives 50 of 237, with focus kept in the box.
+  - A keystroke after Show more does not undo it.
+- **Limit reset in render (m12 fixed).** Pressing a chip with all 237 rows shown takes 88–101 ms (Forms) and 69–100 ms (Checklists), against 100–189 ms before. Measured in the page, the search "imm" with 237 shown takes 78–83 ms, and clearing a search with 196 shown takes 105–138 ms. No React warnings or page errors.

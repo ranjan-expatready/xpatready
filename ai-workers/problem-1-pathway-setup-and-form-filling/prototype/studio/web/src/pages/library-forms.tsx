@@ -81,10 +81,11 @@ export function FormsPage() {
   if (limitKey !== viewKey) { setLimitKey(viewKey); setLimit(PAGE); }
   const pageRows = React.useMemo(() => rows.slice(0, limit), [rows, limit]);
   // X5 review (57f7d79d) m1, WCAG 2.4.3: Show more moves focus to the first row it added (before: it stayed below the new
-  // rows, or fell to the page when the button left).
+  // rows, or fell to the page when the button left). Review (310acb9c) 1 / break m16: to the row itself, not its number
+  // button, so a second Enter does not open that row's drawer.
   const showMore = () => {
     const first = rows[pageRows.length]?.code; setLimit((n) => n + PAGE);
-    if (first) setTimeout(() => document.querySelector<HTMLElement>(`tr[data-form="${CSS.escape(first)}"] button`)?.focus(), 0);
+    if (first) setTimeout(() => document.querySelector<HTMLElement>(`tr[data-form="${CSS.escape(first)}"]`)?.focus(), 0);
   };
   const [opened, setOpened] = React.useState<Row | null>(null);
   // P-116 amended (28 Oct): the row's one written action is confirmed in the right panel (ImpactPanel), then the Undo toast.
@@ -125,7 +126,7 @@ export function FormsPage() {
   const tableEl = React.useMemo(() => (
             <Table label="Table: Number, Title, Type, Edition, IRCC accepts, Used by, Status" headClass={[undefined, undefined, "hidden xl:table-cell", "hidden xl:table-cell"]} head={["Number", "Title", "Type", "Edition", <Tip key="ia" tip={ACCEPTS_TIP}><span tabIndex={0} className="underline decoration-dotted rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">IRCC accepts</span></Tip>, "Used by", "Status", <span key="a" className="sr-only">Actions</span>]}>
               {pageRows.map((r) => (<React.Fragment key={r.code}>
-                <tr data-form={r.code} className={r.status === "retired" ? "text-text-muted" : undefined}>
+                <tr data-form={r.code} tabIndex={-1} className={`outline-none focus-visible:outline-2 focus-visible:outline-ring ${r.status === "retired" ? "text-text-muted" : ""}`}>
                   <td className="whitespace-nowrap text-xs tabular-nums"><button type="button" className="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setOpen(r)}>{r.code}</button></td>
                   <td className="min-w-32 max-w-56 break-words xl:max-w-80"><span className="line-clamp-2" title={r.title}>{r.title}</span>
                     <span className="mt-0.5 block text-xs text-text-muted xl:hidden">{TYPE_WORD[r.type]} · {editionText(r) ?? "no usable edition yet"}</span></td>
@@ -184,7 +185,10 @@ export function FormsPage() {
           : !rows.length ? (filtered
             ? <EmptyState title="No form matches" description="Nothing in the library matches these filters. Clear a filter or search for another number or title." action={<Button variant="secondary" onClick={() => { setType(""); setUsedBy(""); setStatus(""); setQ(""); }}>Clear filters</Button>} />
             : <EmptyState title="No forms yet" description="Forms come in by themselves when a combination's setup starts: the form finder reads its IRCC page and downloads each form from canada.ca. You can also upload IRCC PDFs. Every form is stored once and used by any combination." />)
-          : <>{tableEl}{rows.length > pageRows.length ? <p className="flex flex-wrap items-center gap-3 text-sm" data-show-more><span className="text-text-muted" role="status">Showing {pageRows.length} of {rows.length} forms</span><Button size="sm" variant="secondary" onClick={showMore}>Show {Math.min(PAGE, rows.length - pageRows.length)} more forms</Button></p> : null}</>}
+          : <>{tableEl}{rows.length > pageRows.length ? <p className="flex flex-wrap items-center gap-3 text-sm" data-show-more><span className="text-text-muted" aria-hidden>Showing {pageRows.length} of {rows.length} forms</span><Button size="sm" variant="secondary" onClick={showMore}>Show {Math.min(PAGE, rows.length - pageRows.length)} more forms</Button></p> : null}</>}
+        {/* Review (310acb9c) 2 / break m17, WCAG 4.1.3: one status region, always on the page, says how many forms are shown
+            (before: it lived in the pager, so the last Show more and a short filter were never spoken). */}
+        <p className="sr-only" role="status" data-list-count data-shown={pageRows.length}>{lib.data ? (rows.length ? `Showing ${pageRows.length} of ${rows.length} forms` : filtered ? "No form matches" : "") : ""}</p>
         <p className="text-xs text-text-muted">{lib.data?.sample_note}</p>
         {open ? <FormDrawer row={open} onClose={() => setOpen(null)} canAuthor={canAuthor} /> : null}
         {confirm ? <div className="xl:fixed xl:right-6 xl:top-20 xl:z-40 xl:w-[440px]"><ImpactPanel key={`impact-${confirm.code}`} kind={confirm.action.kind} name={`${confirm.code} · ${confirm.title}`}

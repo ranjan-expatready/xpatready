@@ -282,12 +282,26 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await pager.getByRole("button", { name: /^Show \d+ more forms$/ }).click(); await sleep(300);
     const focusAfter = await p.evaluate(() => { const tr = document.activeElement?.closest("tr[data-form]"); return tr ? [...document.querySelectorAll("tr[data-form]")].indexOf(tr) : -1; });
     step("X5 review m1 fail: Show more moves focus to the first row it added (row 51; before: the button below the new rows)", focusAfter === 50, `focused row index ${focusAfter}`);
-    step("X5 review m2 fail: the count beside Show more is a status, and the button says forms", (await pager.locator('[role="status"]').count()) === 1 && /Showing 100 of \d+ forms/.test((await pager.textContent()) ?? ""), await pager.textContent());
+    const countSays = async () => (await p.locator('[data-list-count][role="status"]').textContent()) ?? "";
+    step("X5 review m2 fail: the count is a status, and the button says forms", /^Showing 100 of \d+ forms$/.test(await countSays()) && /Show \d+ more forms/.test((await pager.textContent()) ?? ""), await countSays());
+    // Review (310acb9c) 1 / break m16: a second Enter after Show more opens no drawer (focus is on the row, not its button).
+    await pager.getByRole("button").focus(); await p.keyboard.press("Enter"); await sleep(60); await p.keyboard.press("Enter"); await sleep(300);
+    step("X5 review (310acb9c) 1 fail: a second Enter after Show more opens no drawer (before: row 51's drawer opened)", (await p.getByRole("dialog").count()) === 0 && (await p.locator("tr[data-form]").count()) === 150, `dialogs ${await p.getByRole("dialog").count()}, rows ${await p.locator("tr[data-form]").count()}`);
+    if (await p.getByRole("dialog").count()) { await p.keyboard.press("Escape"); await sleep(200); }
     while (await pager.count()) { await pager.getByRole("button").click(); await sleep(200); }
     const lastFocus = await p.evaluate(() => !!document.activeElement?.closest("tr[data-form]"));
     const lastCode = await p.locator("tr[data-form]").last().getAttribute("data-form");
+    step("X5 review (310acb9c) 2 fail: after the last Show more the count is still said (before: the status left with the button)", (await countSays()) === `Showing ${total} of ${total} forms`, await countSays());
     step("X5 break m11 fail: after the last Show more, focus is on a row it added (before: the page body)", lastFocus && (await p.locator("tr[data-form]").count()) === total, `rows ${await p.locator("tr[data-form]").count()} of ${total}`);
-    await p.getByRole("button", { name: /^Guides\s*\d+$/ }).click(); await sleep(200); await p.getByRole("button", { name: /^All\s*\d+$/ }).click(); await sleep(300);
+    // Review (310acb9c) 3: the count starts again at 50 in the same render as the filter change: pressing a chip with every row
+    // shown never renders more than 50 rows (before, an effect drew every match first; read render by render from the
+    // count's data-shown, since both renders land in one task).
+    const shownSeq = await p.evaluate(async () => { const el = document.querySelector("[data-list-count]"); const seen = []; const obs = new MutationObserver((recs) => { for (const r of recs) seen.push(Number(r.oldValue)); }); obs.observe(el, { attributes: true, attributeFilter: ["data-shown"], attributeOldValue: true }); const b = [...document.querySelectorAll("button")].find((x) => /^No file yet\s*\d+$/.test(x.textContent.trim())); b.click(); await new Promise((r) => setTimeout(r, 600)); obs.disconnect(); seen.push(Number(el.getAttribute("data-shown"))); b.click(); await new Promise((r) => setTimeout(r, 400)); return seen; });
+    const mostMounted = Math.max(0, ...shownSeq.slice(1));
+    step("X5 review (310acb9c) 3 fail: a chip pressed with every row shown shows at most 50 rows on every render (before: every match, then cut to 50)", shownSeq.length >= 2 && mostMounted > 0 && mostMounted <= 50, `rows shown, render by render: ${shownSeq.join(" > ")}`);
+    await p.getByRole("button", { name: /^Guides\s*\d+$/ }).click(); await sleep(300);
+    step("X5 review (310acb9c) 2 fail: a short filter (no pager) still says its count", /^Showing (\d+) of \1 forms$/.test(await countSays()), await countSays());
+    await p.getByRole("button", { name: /^All\s*\d+$/ }).click(); await sleep(300);
     step("X5 review m3 fail: a filter change starts the list again at 50 (Showing 50 of N)", (await p.locator("tr[data-form]").count()) === 50 && /Showing 50 of/.test((await pager.textContent()) ?? ""), await pager.textContent().catch(() => "none"));
     // A search finds a form past the first 50 (the last row of the whole list).
     await searchBox.fill(lastCode ?? "none"); await sleep(400);
