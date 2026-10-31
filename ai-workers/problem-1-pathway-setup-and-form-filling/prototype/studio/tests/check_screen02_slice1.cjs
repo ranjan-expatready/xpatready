@@ -48,6 +48,9 @@ function pdf(title, text) {
     await p.setViewportSize({ width: 1024, height: 768 });
     await p.screenshot({ path: path.join(SHOTS, `${base}-1024.png`), fullPage: true });
     step(`1024 px: ${name} has no sideways scroll`, !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)));
+    // QA-113: the To review table fits its own box too (it was 760 px in about 735, scrolled sideways, "Item" cut to "em").
+    const box = await p.evaluate(() => { const t = document.querySelector('table[aria-label="Items to review"]'); return t ? { table: t.scrollWidth, box: t.parentElement.clientWidth } : null; });
+    if (box) step(`C5.3 QA-113: 1024 px: ${name}: the To review table fits its box, no sideways scroll inside it`, box.table <= box.box + 1, `${box.table} in ${box.box}`);
     await p.setViewportSize({ width: 1440, height: 900 });
   };
 

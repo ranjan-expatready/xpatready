@@ -1,14 +1,16 @@
 // P-179 (C11.8): the cost check before any AI start, and a person's override in the one shared ledger (QA-90). Pure and
 // ledger-level, on scratch ledgers: no server, no network, US$0. Every rule has a passing and a failing case.
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/check_cost_check.ts
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { seedShared } from "../../p2/tools/seed-shared-ledger.ts";
 import { costCheck } from "../engine/cost-check.ts";
 import { COST_WORDS } from "../contracts/cost-check.ts";
-import { BudgetExceeded, OverrideRefused, SpendLedger } from "../../p2/ledger.ts";
+import { BudgetExceeded, LedgerBusy, OverrideRefused, SpendLedger } from "../../p2/ledger.ts";
+import { runDrafting } from "../../p2/runner.ts";
+import { createHash } from "node:crypto";
 import { EXPERIMENT_CAP_USD, OVERRIDE_CEILING_USD, WAVE1_START } from "../../p2/policy.ts";
 
 let pass = 0, fail = 0;
@@ -115,9 +117,51 @@ ok("C11.8 break M1 pass: a clean ledger adds up as before (US$100 + a US$0.50 se
 const h = fresh(125);
 const h1 = (() => { try { return h.l.recordOverride({ run_key: "h1", limits: ["experiment"], worst_usd: 6, by: "user-A" }).id; } catch (e) { return e as Error; } })();
 ok("C11.8 break m3 pass: at US$125 one US$6 Continue is recorded (US$131)", typeof h1 === "string", h1);
-ok("C11.8 break m3 fail: a second US$6 Continue for another run is refused while the first is held (before: both recorded)", throws(() => h.l.recordOverride({ run_key: "h2", limits: ["experiment"], worst_usd: 6, by: "user-A" }), OverrideRefused, /held by other Continues not started yet.*founder must raise the cap/) && h.lines().filter((x) => x.type === "override").length === 1);
-ok("C11.8 break m3 pass: what Continues hold is US$6 while unused, US$0 once used (its run's reservations count instead)", h.l.heldByOverridesUsd() === 6 && (h.l.useOverride(h1 as string, "h1"), h.l.heldByOverridesUsd() === 0));
+// N6 (review N2): the words say wait (the hold ends by itself within 10 minutes), not that the founder must raise the cap.
+ok("C11.8 break m3 fail: a second US$6 Continue for another run is refused while the first is held (before: both recorded)", throws(() => h.l.recordOverride({ run_key: "h2", limits: ["experiment"], worst_usd: 6, by: "user-A" }), OverrideRefused, /^Other Continues chosen in the last 10 minutes still hold US\$6\.00 until their runs start; with them, this run could take spend to US\$137\.00, past the US\$132\.00 a click may allow\. Wait a few minutes, then look at the cost again$/) && h.lines().filter((x) => x.type === "override").length === 1);
+// N6 (break n2): a used Continue holds its worst case until its run reserves it (before: US$0 once used, so a second
+// Continue was recorded and its run refused at reserve).
+ok("C11.8 break n2 pass: what a Continue holds is US$6 while unused, still US$6 once used and its run not reserved yet, US$0 once reserved", h.l.heldByOverridesUsd() === 6 && (h.l.useOverride(h1 as string, "h1"), h.l.heldByOverridesUsd() === 6) && (h.l.reserve("run-h1", 1, 6, 6, "paid", { overrideId: h1 as string, runKey: "h1" }), h.l.heldByOverridesUsd() === 0), h.l.heldByOverridesUsd());
+const n2 = fresh(125); const n2a = n2.l.recordOverride({ run_key: "x1", limits: ["experiment"], worst_usd: 6, by: "user-A" }); n2.l.useOverride(n2a.id, "x1");
+ok("C11.8 break n2 fail: a second Continue while the first one's run waits in the queue (used, not reserved) is refused, nothing written", throws(() => n2.l.recordOverride({ run_key: "x2", limits: ["experiment"], worst_usd: 6, by: "user-B" }), OverrideRefused, /still hold US\$6\.00/) && n2.lines().filter((x) => x.type === "override").length === 1);
+n2.l.reserve("run-x1", 1, 2, 6, "paid", { overrideId: n2a.id, runKey: "x1" });
+ok("C11.8 break n2 pass: part reserved: it holds only the rest of its worst case (US$4)", Math.abs(n2.l.heldByOverridesUsd() - 4) < 1e-9, n2.l.heldByOverridesUsd());
+ok("C11.8 break n2 pass: once its run has ended (the API names it), it holds nothing, and a Continue for another run is recorded", n2.l.heldByOverridesUsd(undefined, undefined, undefined, new Set([n2a.id])) === 0 && typeof n2.l.recordOverride({ run_key: "x3", limits: ["experiment"], worst_usd: 4, by: "user-B" }, { ended: new Set([n2a.id]) }).id === "string");
 ok("C11.8 break m3 pass: an expired Continue holds nothing", fresh(0).l.heldByOverridesUsd([{ type: "override", id: "o", run_key: "k", limits: ["run"], worst_usd: 5, by: "user-A", at: "2026-10-01T00:00:00.000Z", expires_at: "2026-10-01T00:10:00.000Z" }] as never) === 0);
+
+// ── N6 review N2: a person's own unused Continue for the same run (left by a launch refused after the click) no longer
+// blocks their retry: it is the one the retry uses. The costCheck and the ledger agree on what other Continues hold.
+const rn = fresh(120.012);
+const rn1 = rn.l.recordOverride({ run_key: "rn", limits: ["experiment"], worst_usd: 9.99, by: "user-A" });
+const rn2 = (() => { try { return rn.l.recordOverride({ run_key: "rn", limits: ["experiment"], worst_usd: 9.99, by: "user-A" }); } catch (e) { return e as Error; } })();
+ok("C11.8 N6 review N2 pass: the same person's Continue for the same run, unused, is used again (same id, no second line; before: 409 'held … the founder must raise the cap')", !(rn2 instanceof Error) && rn2.id === rn1.id && rn2.again === true && rn.lines().filter((x) => x.type === "override").length === 1, rn2);
+ok("C11.8 N6 review N2 pass: and it still starts one run only", (rn.l.useOverride(rn1.id, "rn", "user-A"), throws(() => rn.l.useOverride(rn1.id, "rn", "user-A"), OverrideRefused, /already used/)));
+const ro = fresh(120.012); ro.l.recordOverride({ run_key: "ro", limits: ["experiment"], worst_usd: 9.99, by: "user-A" });
+const roB = (() => { try { return ro.l.recordOverride({ run_key: "ro", limits: ["experiment"], worst_usd: 9.99, by: "user-D" }); } catch (e) { return e as Error; } })();
+ok("C11.8 N6 review N2 pass: another person's Continue for the same run is their own line, and the first does not hold against it (one run key starts one run)", !(roB instanceof Error) && !roB.again && ro.lines().filter((x) => x.type === "override").length === 2, roB);
+ok("C11.8 N6 review N2 fail: a Continue for another run is still held back by it (US$9.99 held), in wait words", throws(() => ro.l.recordOverride({ run_key: "ro-other", limits: ["experiment"], worst_usd: 9.99, by: "user-A" }), OverrideRefused, /still hold US\$9\.99.*Wait a few minutes/));
+ok("C11.8 N6 review N2 pass: what is held leaves out the run key looked at, and counts one run key once", Math.abs(ro.l.heldByOverridesUsd(undefined, undefined, "ro")) < 1e-9 && Math.abs(ro.l.heldByOverridesUsd(undefined, undefined, "ro-other") - 9.99) < 1e-9);
+const heldCc = at(120.012, 9.99, 0, { held: 9.99 });
+ok("C11.8 N6 review N2 fail: costCheck counts what other Continues hold as the ledger does: no Continue, words say wait (not the founder)", !heldCc.ok && !heldCc.can_continue && heldCc.held_usd === 9.99 && /still hold US\$9\.99.*Wait a few minutes, then look at the cost again\./.test(heldCc.words) && !/founder/.test(heldCc.words), heldCc);
+ok("C11.8 N6 review N2 pass: with nothing held, the same start offers Continue (the ledger records it)", at(120.012, 9.99, 0, { held: 0 }).can_continue && typeof fresh(120.012).l.recordOverride({ run_key: "z", limits: ["experiment"], worst_usd: 9.99, by: "user-A" }).id === "string");
+ok("C11.8 N6 review N2 pass: past US$132 on its own, the words still send it to the founder (held or not)", /founder must raise the cap/.test(at(127.01, 5, 0, { held: 3 }).words));
+
+// ── N6 (break n4, review n3): override lines and the reservation's time are checked like amounts: a malformed line stops
+// every Continue and reservation in words (before: NaN held, a lower hold, a TypeError 500, or a Continue that never expired).
+const badOverride = (extra: object) => ({ type: "override", id: "override-bad", run_key: "k", limits: ["experiment"], worst_usd: 5, by: "user-A", at: "2026-10-30T00:00:00.000Z", expires_at: "2099-01-01T00:00:00.000Z", ...extra });
+for (const [what, line, re] of [
+  ["no worst case", badOverride({ worst_usd: undefined }), /override line \(override-bad\) whose amount is not a number of US\$ at or above 0/],
+  ["a worst case below 0", badOverride({ worst_usd: -100 }), /amount is not a number/],
+  ["a text worst case", badOverride({ worst_usd: "6" }), /amount is not a number/],
+  ["no expiry", badOverride({ expires_at: undefined }), /time or expiry is missing/],
+  ["limits as text", badOverride({ limits: "experiment,wave" }), /limits are not a list of known limits/],
+  ["no person", badOverride({ by: undefined }), /id, run or person is missing/],
+  ["a reservation with no time", { type: "reserve", id: "r#1", run_id: "r", attempt: 1, worst_usd: 1 }, /reserve line \(r#1\) whose time is missing/],
+] as const) {
+  const m = fresh(119); appendFileSync(join(m.dir, "spend.jsonl"), JSON.stringify(line) + "\n");
+  ok(`C11.8 N6 break n4 fail: a ledger line with ${what} refuses a Continue and a reservation in words (BudgetExceeded, nothing written)`, throws(() => m.l.recordOverride({ run_key: "n", limits: ["experiment"], worst_usd: 6, by: "user-A" }), BudgetExceeded, re) && throws(() => m.l.reserve("run-n", 1, 0.5, 5, "paid"), BudgetExceeded, re) && m.lines().length === 2);
+}
+ok("C11.8 N6 break n4 pass: well-formed override and use lines pass the check (a clean ledger adds up as before)", (() => { const g = fresh(100); const x = g.l.recordOverride({ run_key: "g", limits: ["experiment", "wave"], worst_usd: 1, by: "user-A" }); g.l.useOverride(x.id, "g"); return Math.abs(g.l.committed() - 100) < 1e-9; })());
 
 // ── Break m7: a Continue is used only by the person who recorded it.
 const pr = fresh(118); const po = pr.l.recordOverride({ run_key: "pr", limits: ["experiment"], worst_usd: 3, by: "user-A" });
@@ -139,6 +183,79 @@ writeFileSync(lockFile, "live-holder");
 const t1 = Date.now();
 ok("C11.8 review m9 fail: a fresh lock is never broken: the reservation waits, then refuses 'ledger busy' (10 s), and the lock stays", throws(() => lk.l.reserve("run-k", 2, 1, 5, "paid"), BudgetExceeded, /ledger busy/) && Date.now() - t1 >= 9_500 && readFileSync(lockFile, "utf8") === "live-holder");
 rmSync(lockFile);
+
+// ── N6 break N1: the one-runner lock (spend.lock) names its holder; a lock whose process has exited (SIGTERM from Stop, a
+// crash) is broken, so it no longer stops every copy's AI steps until a person deletes it. A live holder still refuses.
+const runLock = fresh(0), runLockFile = join(runLock.dir, "spend.lock");
+const LEDGER_TS = join(import.meta.dirname, "..", "..", "p2", "ledger.ts");
+const holderSrc = `import { SpendLedger } from ${JSON.stringify(LEDGER_TS)}; await new SpendLedger(${JSON.stringify(runLock.dir)}).withLock(async () => { console.log("held"); await new Promise((r) => setTimeout(r, 60_000)); });`;
+const runHolder = spawn(process.execPath, ["--experimental-strip-types", "--no-warnings", "--input-type=module", "-e", holderSrc], { stdio: ["ignore", "pipe", "ignore"] });
+await new Promise<void>((res) => runHolder.stdout!.on("data", (d) => { if (String(d).includes("held")) res(); }));
+ok("C11.8 N6 break N1 pass: the lock names its holder (this computer and its process id)", new RegExp(`:${runHolder.pid}:[0-9a-f]+$`).test(readFileSync(runLockFile, "utf8")), readFileSync(runLockFile, "utf8"));
+const liveRefused = await runLock.l.withLock(async () => "entered").then(() => false, (e) => e instanceof BudgetExceeded && /locked by another runner/.test(e.message));
+ok("C11.8 N6 break N1 fail: while the holder runs, a second runner is refused and the holder's lock stays", liveRefused && existsSync(runLockFile));
+runHolder.kill("SIGTERM"); await new Promise((r) => runHolder.once("exit", r));
+ok("C11.8 N6 break N1 pass: SIGTERM skips the holder's finally: its lock is left behind (the break, reproduced)", existsSync(runLockFile));
+const afterCrash = await runLock.l.withLock(async () => "entered").catch((e) => e as Error);
+ok("C11.8 N6 break N1 pass: the next runner breaks the lock of the exited process at once, runs, and leaves no lock or moved-aside file (before: 'ledger locked by another runner' until a person deleted it)", afterCrash === "entered" && !existsSync(runLockFile) && !readdirSync(runLock.dir).some((f) => /\.stale-|\.new-/.test(f)), afterCrash);
+writeFileSync(runLockFile, "");
+ok("C11.8 N6 break N1 fail: an empty lock (older form, holder unknown) is not broken while under an hour old", await runLock.l.withLock(async () => "entered").then(() => false, (e) => /locked by another runner/.test((e as Error).message)) && existsSync(runLockFile));
+const hourOld = new Date(Date.now() - 3_700_000); utimesSync(runLockFile, hourOld, hourOld);
+ok("C11.8 N6 break N1 pass: an empty lock over an hour old is broken", (await runLock.l.withLock(async () => "entered").catch((e) => e)) === "entered" && !existsSync(runLockFile));
+writeFileSync(runLockFile, `another-computer:1:abcdef`);
+ok("C11.8 N6 break N1 fail: a lock naming another computer is never judged by its process id here", await runLock.l.withLock(async () => "entered").then(() => false, (e) => /locked by another runner/.test((e as Error).message)));
+rmSync(runLockFile);
+
+// ── N6 break n1: the short reserve lock of an exited process is broken at once (before: every call froze until it was 30 s
+// old), and the API's ledger waits 2 s, not 10 s, then says busy (LedgerBusy), not "fix the ledger line".
+const rl = fresh(0), rlFile = join(rl.dir, "spend.reserve.lock");
+const dead = spawnSync(process.execPath, ["-e", "process.stdout.write(String(process.pid))"], { encoding: "utf8" }).stdout;
+writeFileSync(rlFile, `${(await import("node:os")).hostname()}:${dead}:abc123`);
+const t3 = Date.now(); const rlr = rl.l.reserve("run-rl", 1, 1, 5, "paid");
+ok("C11.8 N6 break n1 pass: a fresh reserve lock whose process has exited is broken at once (< 1 s; before: 10 s wait, then refused)", typeof rlr === "string" && Date.now() - t3 < 1_000 && !existsSync(rlFile), Date.now() - t3);
+writeFileSync(rlFile, `${(await import("node:os")).hostname()}:${process.ppid}:abc123`);
+const apiL = new SpendLedger(rl.dir, undefined, { waitMs: 2_000 }); const t4 = Date.now();
+ok("C11.8 N6 break n1 fail: a live holder's lock is kept; the API's ledger gives up after 2 s with LedgerBusy (busy words)", throws(() => apiL.recordOverride({ run_key: "b", limits: ["experiment"], worst_usd: 1, by: "user-A" }), LedgerBusy, /ledger busy: .* for 2 s/) && Date.now() - t4 >= 1_900 && Date.now() - t4 < 4_000 && existsSync(rlFile), Date.now() - t4);
+rmSync(rlFile);
+
+// ── N6 break n5: settle appends under the short lock, so a seed's read-and-replace cannot drop it.
+const st = fresh(0); const stId = st.l.reserve("run-st", 1, 2, 5, "paid");
+const stHolder = spawn(process.execPath, ["-e", `const fs=require("node:fs");fs.writeFileSync(${JSON.stringify(join(st.dir, "spend.reserve.lock"))},"seed");setTimeout(()=>fs.unlinkSync(${JSON.stringify(join(st.dir, "spend.reserve.lock"))}),1200);`], { stdio: "ignore" });
+while (!existsSync(join(st.dir, "spend.reserve.lock"))) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5);
+const t5 = Date.now(); st.l.settle(stId, 0.5, "ok");
+ok("C11.8 N6 break n5 pass: settle waited for the lock holder (≥ 1 s; before: appended at once, inside a seed's rewrite) and was kept", Date.now() - t5 >= 1_000 && Math.abs(st.l.committed() - 0.5) < 1e-9, { ms: Date.now() - t5, c: st.l.committed() });
+stHolder.kill();
+// PR #121 review (Devin): a settle never appends outside the short lock (a seed's rewrite could drop it): busy → LedgerBusy.
+const sb = fresh(0); const sbId = sb.l.reserve("run-sb", 1, 2, 5, "paid"); const liveTok = `${(await import("node:os")).hostname()}:${process.ppid}:abc123`;
+writeFileSync(join(sb.dir, "spend.reserve.lock"), liveTok);
+const sbL = new SpendLedger(sb.dir, undefined, { waitMs: 300 });
+ok("C11.8 N6 PR review fail: with the lock held past the wait, settle writes nothing outside the lock (LedgerBusy; before 2b4332ff's fallback appended unlocked)", throws(() => sbL.settle(sbId, 0.25, "ok"), LedgerBusy, /ledger busy/) && !sb.lines().some((x) => x.type === "settle"));
+rmSync(join(sb.dir, "spend.reserve.lock"));
+// Break 3 m3, kept: the runner never pays twice because a settle was busy. A US$0 stub call whose answer arrives while
+// another process holds the lock: one call, the answer kept, the reservation left at its worst case, the reason noted.
+const rr = fresh(0); const rrL = new SpendLedger(rr.dir, undefined, { waitMs: 300 });
+const INV = "prototype/p1/inventory/application-forms-guides.text.inventory.json";
+const invSha = createHash("sha256").update(readFileSync(join(import.meta.dirname, "..", "..", "..", INV))).digest("hex");
+let rrCalls = 0;
+const rrCaller = Object.assign(async () => { rrCalls++; writeFileSync(join(rr.dir, "spend.reserve.lock"), liveTok); return { text: "{\"answer\":1}", stop_reason: "end_turn", usage: { input_tokens: 10, output_tokens: 10 } }; }, { kind: "stub" as const });
+const rro = await runDrafting({ run_id: "run-rr", inputs: { official_files: [{ file: INV, sha256: invSha }] }, settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "low", timeout_ms: 300000, max_attempts: 2, budget_usd: 5, max_output_tokens: 1000 } } as never, () => ({ system: "s", user: "u" }) as never, rrCaller as never, rrL, { allowStubDrafts: true } as never);
+rmSync(join(rr.dir, "spend.reserve.lock"), { force: true });
+ok("C11.8 N6 break 3 m3 pass: a busy settle keeps the answer: one call, completed, the reservation kept (no settle line), the reason noted", rrCalls === 1 && rro.status === "completed" && rro.text === "{\"answer\":1}" && !rr.lines().some((x) => x.type === "settle") && /counted at its worst case: ledger busy/.test(String((rro.attempts[0] as { settle_error?: string }).settle_error)), { rrCalls, s: rro.status, a: rro.attempts });
+// PR #121 review (Devin): breakers of a stale lock take turns (a breaker's own short lock); a fresh lock is never moved.
+const bt = fresh(0), btLock = join(bt.dir, "spend.reserve.lock"), btTurn = `${btLock}.break`;
+writeFileSync(btLock, "crashed-holder"); const btOld = new Date(Date.now() - 60_000); utimesSync(btLock, btOld, btOld);
+writeFileSync(btTurn, "");
+const btHolder = spawn(process.execPath, ["-e", `setTimeout(()=>require("node:fs").unlinkSync(${JSON.stringify(btTurn)}),1000)`], { stdio: "ignore" });
+const t6 = Date.now(); const btr = bt.l.reserve("run-bt", 1, 1, 5, "paid");
+ok("C11.8 N6 PR review pass: while another breaker has its turn, a waiter does not touch the stale lock; it breaks it once the turn ends (≥ 1 s)", typeof btr === "string" && Date.now() - t6 >= 900 && !existsSync(btTurn) && !readdirSync(bt.dir).some((f) => /\.stale-|\.break$/.test(f)), Date.now() - t6);
+btHolder.kill();
+writeFileSync(btLock, "crashed-holder"); utimesSync(btLock, btOld, btOld); writeFileSync(btTurn, ""); utimesSync(btTurn, btOld, btOld);
+const t7 = Date.now(); const btr2 = bt.l.reserve("run-bt", 2, 1, 5, "paid");
+ok("C11.8 N6 PR review pass: a breaker's turn left by a crash (older than 5 s) is cleared, and the stale lock broken at once", typeof btr2 === "string" && Date.now() - t7 < 1_000 && !existsSync(btTurn), Date.now() - t7);
+// Break 3 m7: the person's own unused Continue is used again only while it still fits the ceiling.
+const rc = fresh(120); const rc1 = rc.l.recordOverride({ run_key: "rc", limits: ["experiment"], worst_usd: 6, by: "user-A" });
+rc.l.reserve("other", 1, 0, 5, "paid"); appendFileSync(join(rc.dir, "spend.jsonl"), JSON.stringify({ type: "reserve", id: "late#1", run_id: "late", attempt: 1, worst_usd: 7, at: "2026-10-20T00:00:00.000Z" }) + "\n");
+ok("C11.8 N6 break 3 m7 fail: spend arrived since (US$127 + US$6 past US$132): the own Continue is not handed back, the ceiling refuses", throws(() => rc.l.recordOverride({ run_key: "rc", limits: ["experiment"], worst_usd: 6, by: "user-A" }), OverrideRefused, /founder must raise the cap/) && !!rc1.id);
 
 // ── Review m8: the seed tool rewrites the shared file under the ledger's lock, so it waits for a copy that holds it.
 const sd = fresh(5);

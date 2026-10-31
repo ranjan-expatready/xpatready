@@ -29,7 +29,7 @@ type A4 = { total: number; reused: number; leftover: number };
 const a4Of = (detail: unknown): A4 | null => { const a = (detail as { a4?: A4 } | null)?.a4; return a ? { total: a.total, reused: a.reused, leftover: a.leftover } : null; };
 const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return null; const n = (s: string) => all.filter((p) => p.status === s).length; return `${all.length} part${all.length === 1 ? "" : "s"} · ${[n("done") && `${n("done")} done`, n("failed") && `${n("failed")} failed`, n("running") && `${n("running")} running`, n("queued") && `${n("queued")} queued`, n("not started") && `${n("not started")} not started`].filter(Boolean).join(", ")}`; };
 import { Sources } from "./sources.ts";
-import { checkOverride, costCheckNow, overrideAllowed, recordOverride, runKeyOf, spendOverride } from "./cost-gate.ts";
+import { checkOverride, costPlanNow, endedOverrides, overrideAllowed, recordOverride, spendOverride } from "./cost-gate.ts";
 import { OverrideStart, type OverrideRef } from "../../contracts/cost-check.ts";
 import { paidRetryAllowed, paidRunAllowed, paidRunsOf } from "./rounds.ts";
 
@@ -159,8 +159,7 @@ export class Ai implements OnModuleInit {
     const plan_sha256 = sha(JSON.stringify({ mode, scope: scope.kind, targets: targets.map((t) => [t.combinationId, t.attachmentId, t.action, t.run_file ?? null, t.fingerprint ?? null, t.over_attempts ?? false]) }));
     // P-179: the one cost check (the shared ledger's numbers) and the run key a Continue names. A form drafted in parts is
     // one run per part, each held to the run cap on its own (found by check_cost_warning_browser: "run" was flagged).
-    const cost_check = costCheckNow({ worst: totals.worst_usd, expected: totals.expected_usd, run: Math.max(0, ...targets.flatMap((t) => t.a4?.parts.length ? t.a4.parts.map((x) => x.worst_usd) : [t.worst_usd])), spentForms: targets.filter((t) => t.over_attempts).map((t) => t.source) });
-    const run_key = runKeyOf("draft_field_maps", plan_sha256, cost_check);
+    const { cost_check, run_key } = costPlanNow("draft_field_maps", plan_sha256, { worst: totals.worst_usd, expected: totals.expected_usd, run: Math.max(0, ...targets.flatMap((t) => t.a4?.parts.length ? t.a4.parts.map((x) => x.worst_usd) : [t.worst_usd])), spentForms: targets.filter((t) => t.over_attempts).map((t) => t.source) }, await endedOverrides(this.db));
     return { cost_check, run_key, max_paid_attempts_per_form: MAX_PAID_ATTEMPTS_PER_FORM, operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each form field). Questions, sections, document requirements and rules are not AI-drafted here: people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
   }
 
@@ -271,7 +270,9 @@ export class Ai implements OnModuleInit {
     if (!override) {
       const spent = plan.targets.filter((t) => t.over_attempts);
       if (spent.length) fail(`${spent.length} form${spent.length > 1 ? "s have" : " has"} used ${spent.length > 1 ? "their" : "its"} ${MAX_PAID_ATTEMPTS_PER_FORM} paid AI attempts (${MAX_ATTEMPTS} per run, counted across its runs): another paid run needs a person's Continue. Nothing was started.`);
-      if (plan.totals.worst_usd > plan.ledger.remaining_usd + 1e-9) fail(`The worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the experiment cap (US$${plan.ledger.remaining_usd.toFixed(2)} of US$${EXPERIMENT_CAP_USD}).`);
+      // N6 (found by check_cost_override): a start that can spend nothing (a stub pass, saved answers) is never refused by
+      // the cap, even with spend already past it (remaining below 0), as costCheck and reserve say.
+      if (plan.totals.worst_usd > 0 && plan.totals.worst_usd > plan.ledger.remaining_usd + 1e-9) fail(`The worst case (US$${plan.totals.worst_usd.toFixed(2)}) is above what is left of the experiment cap (US$${plan.ledger.remaining_usd.toFixed(2)} of US$${EXPERIMENT_CAP_USD}).`);
       if (!plan.cost_check.ok) fail(plan.cost_check.words);
     }
     const created = await this.db.$transaction(async (tx) => {
@@ -316,6 +317,9 @@ export class Ai implements OnModuleInit {
     // Break m2: the same launch key sent again returns its run, before the re-plan (which would see that run as running).
     if (idempotencyKey) {
       const again = await this.db.aiBatch.findUnique({ where: { workspaceId_idempotencyKey: { workspaceId: att?.workspaceId ?? (await this.ws.id()), idempotencyKey } } });
+      // PR #121 review (Devin, security): a key belongs to one form's run; another form's key is refused, never answered
+      // with that run (as the finder does for its own keys).
+      if (again && (again.scopeKind !== "source" || !((again.plan as { scope?: { ids?: string[] } } | null)?.scope?.ids ?? []).includes(attachmentId))) fail("This launch key belongs to another run. Look at the plan again to start a new one.", HttpStatus.CONFLICT);
       if (again) return (await this.batch(again.id)).jobs[0];
     }
     const p = await this.plan(scope, m, { draftAgain: true });
@@ -335,11 +339,11 @@ export class Ai implements OnModuleInit {
     const start = s.data!;
     const plan = start.kind === "find_forms" ? await findPlan(start) : await this.plan(start.scope, start.mode, { draftAgain: start.draftAgain });
     const o = overrideAllowed(actor, body, plan);
-    const r = recordOverride(actor, o);
+    const r = recordOverride(actor, o, await endedOverrides(this.db));
     const workspaceId = await this.ws.id();
     // Review m6: the audit says what was over and why, not the dialog's instructions ("Continue records…; Cancel…").
     const why = (plan.cost_check.over as { words: string }[]).map((x) => x.words).join(" ");
-    await this.audit.log(workspaceId, actor.id, "ai_override", "AI work", r.id, `${actor.name} chose Continue past ${o.limits.join(", ")} for "${plan.operation_label}": this one run, worst case US$${o.worst_usd.toFixed(2)}. ${why}${o.reason ? ` Reason: ${o.reason}` : ""}`, { run_key: o.run_key, limits: o.limits, worst_usd: o.worst_usd, expires_at: r.expires_at, ...(o.reason ? { reason: o.reason } : {}) });
+    await this.audit.log(workspaceId, actor.id, "ai_override", "AI work", r.id, `${actor.name} chose Continue past ${o.limits.join(", ")} for "${plan.operation_label}"${r.again ? " again (their Continue from a moment ago, not used yet, is the one this click uses)" : ""}: this one run, worst case US$${o.worst_usd.toFixed(2)}. ${why}${o.reason ? ` Reason: ${o.reason}` : ""}`, { run_key: o.run_key, limits: o.limits, worst_usd: o.worst_usd, expires_at: r.expires_at, ...(r.again ? { again: true } : {}), ...(o.reason ? { reason: o.reason } : {}) });
     return { override_id: r.id, expires_at: r.expires_at };
   }
 
