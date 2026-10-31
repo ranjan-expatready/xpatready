@@ -67,10 +67,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await sleep(500);
     step("C11.8 P-179 fail: Cancel starts nothing and records nothing (no run, no override, US$0)", (await api("/ai/batches")).body.length === 0 && !lines().some((l) => l.type === "override") && (await p.getByText("Cancelled: nothing was started and nothing was spent.").count()) === 1);
     // Review m3 (EXPERIENCE 12): after Cancel, and after Escape, focus is back on Start, so the keyboard path goes on.
-    const startFocused = async () => { for (let i = 0; i < 20; i++) { if (await p.evaluate(() => /^Start \d+ step/.test(document.activeElement?.textContent?.trim() ?? ""))) return true; await sleep(100); } return false; };
+    const startFocused = async () => { for (let i = 0; i < 50; i++) { if (await p.evaluate(() => /^Start \d+ step/.test(document.activeElement?.textContent?.trim() ?? ""))) return true; await sleep(100); } return false; };
     step("C11.8 review m3: after Cancel, focus is on Start again (before: on the page)", await startFocused(), await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)));
     await p.keyboard.press("Enter");
     await warning.waitFor();
+    // The warning is painted before its dialog layer is set up (a React effect): an Escape in between goes to the Draft
+    // setup panel below and closes it (CI run 41082971828). A person sees focus move into the warning first: wait for that.
+    const box = await p.getByRole("dialog").filter({ has: warning }).elementHandle();
+    await p.waitForFunction((el) => el.contains(document.activeElement), box, { timeout: 10_000 }).catch(() => {});
     await p.keyboard.press("Escape");
     await warning.waitFor({ state: "detached" });
     step("C11.8 review m3: Enter on Start opens the warning again; after Escape, focus is on Start again and nothing started", await startFocused() && (await api("/ai/batches")).body.length === 0, await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 120)));
