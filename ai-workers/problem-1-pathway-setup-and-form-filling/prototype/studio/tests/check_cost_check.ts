@@ -241,6 +241,20 @@ const rrCaller = Object.assign(async () => { rrCalls++; writeFileSync(join(rr.di
 const rro = await runDrafting({ run_id: "run-rr", inputs: { official_files: [{ file: INV, sha256: invSha }] }, settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "low", timeout_ms: 300000, max_attempts: 2, budget_usd: 5, max_output_tokens: 1000 } } as never, () => ({ system: "s", user: "u" }) as never, rrCaller as never, rrL, { allowStubDrafts: true } as never);
 rmSync(join(rr.dir, "spend.reserve.lock"), { force: true });
 ok("C11.8 N6 break 3 m3 pass: a busy settle keeps the answer: one call, completed, the reservation kept (no settle line), the reason noted", rrCalls === 1 && rro.status === "completed" && rro.text === "{\"answer\":1}" && !rr.lines().some((x) => x.type === "settle") && /counted at its worst case: ledger busy/.test(String((rro.attempts[0] as { settle_error?: string }).settle_error)), { rrCalls, s: rro.status, a: rro.attempts });
+// #121 review 6, Minor 2: on the failure path too, a US$0 settle that cannot be written is said on the attempt (cost_usd
+// stays the call's true US$0; the ledger keeps the worst case, the safe side) and the model is not called again.
+const rf = fresh(0); const rfL = new SpendLedger(rf.dir, undefined, { waitMs: 300 });
+let rfCalls = 0;
+const rfCaller = Object.assign(async () => { rfCalls++; writeFileSync(join(rf.dir, "spend.reserve.lock"), liveTok); throw Object.assign(new Error('400 {"type":"error","error":{"type":"invalid_request_error","message":"bad"}}'), { status: 400 }); }, { kind: "stub" as const });
+const rfo = await runDrafting({ run_id: "run-rf", inputs: { official_files: [{ file: INV, sha256: invSha }] }, settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "low", timeout_ms: 300000, max_attempts: 2, budget_usd: 5, max_output_tokens: 1000 } } as never, () => ({ system: "s", user: "u" }) as never, rfCaller as never, rfL, { allowStubDrafts: true } as never);
+rmSync(join(rf.dir, "spend.reserve.lock"), { force: true });
+const rfa = rfo.attempts[0] as { cost_usd?: number; settle_error?: string; outcome?: string };
+ok("C11.8 #121 review 6 m2 pass: a refused call whose US$0 settle is busy notes it on the attempt (cost_usd 0, settle_error), one call, no settle line", rfCalls === 1 && rfa.outcome === "refused_by_provider" && rfa.cost_usd === 0 && /counted at its worst case: ledger busy/.test(String(rfa.settle_error)) && !rf.lines().some((x) => x.type === "settle"), { rfCalls, a: rfo.attempts });
+// #121 review 6, Minor 3: the reader process (p5/reader/read.ts, an earlier experiment's sandboxed script no suite drives)
+// settles only through settleOrKeep on both paths, each noting a settle it could not write. A direct ledger.settle there
+// would bring back the second paid call (break 3 m3); this guard fails if one comes back.
+const readerSrc = readFileSync(join(import.meta.dirname, "..", "..", "p5", "reader", "read.ts"), "utf8");
+ok("C11.8 #121 review 6 m3 fail: the reader never calls ledger.settle directly; both its paths use settleOrKeep and note a busy settle", !/ledger\.settle\(/.test(readerSrc) && (readerSrc.match(/ledger\.settleOrKeep\(/g) ?? []).length === 2 && (readerSrc.match(/notSettled \? \{ settle_error/g) ?? []).length === 2);
 // PR #121 review (Devin): breakers of a stale lock take turns (a breaker's own short lock); a fresh lock is never moved.
 const bt = fresh(0), btLock = join(bt.dir, "spend.reserve.lock"), btTurn = `${btLock}.break`;
 writeFileSync(btLock, "crashed-holder"); const btOld = new Date(Date.now() - 60_000); utimesSync(btLock, btOld, btOld);
@@ -252,6 +266,7 @@ btHolder.kill();
 writeFileSync(btLock, "crashed-holder"); utimesSync(btLock, btOld, btOld); writeFileSync(btTurn, ""); utimesSync(btTurn, btOld, btOld);
 const t7 = Date.now(); const btr2 = bt.l.reserve("run-bt", 2, 1, 5, "paid");
 ok("C11.8 N6 PR review pass: a breaker's turn left by a crash (older than 5 s) is cleared, and the stale lock broken at once", typeof btr2 === "string" && Date.now() - t7 < 1_000 && !existsSync(btTurn), Date.now() - t7);
+ok("C11.8 #121 review 6 m4 pass: a crashed turn is cleared by moving it aside, and nothing moved aside is left behind", !readdirSync(bt.dir).some((f) => /\.break\.stale-|\.stale-/.test(f)), readdirSync(bt.dir));
 // Break 3 m7: the person's own unused Continue is used again only while it still fits the ceiling.
 const rc = fresh(120); const rc1 = rc.l.recordOverride({ run_key: "rc", limits: ["experiment"], worst_usd: 6, by: "user-A" });
 rc.l.reserve("other", 1, 0, 5, "paid"); appendFileSync(join(rc.dir, "spend.jsonl"), JSON.stringify({ type: "reserve", id: "late#1", run_id: "late", attempt: 1, worst_usd: 7, at: "2026-10-20T00:00:00.000Z" }) + "\n");
