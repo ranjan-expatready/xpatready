@@ -201,7 +201,7 @@ export function FormsPage() {
         {lib.isLoading ? <div className="space-y-2" role="status" aria-busy="true" aria-label="Loading forms">{/* DV-d1-2 (N8): a label needs a role (axe aria-prohibited-attr) */}{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
           : lib.isError ? <Notice tone="danger" title="The forms could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void lib.refetch()}>Try again</Button>}>{(lib.error as Error).message}</Notice>
           : !rows.length ? (filtered
-            ? <EmptyState title="No form matches" description="Nothing in the library matches these filters. Clear a filter or search for another number or title." action={<Button variant="secondary" onClick={() => { setType(""); setUsedBy(""); setStatus(""); setQ(""); }}>Clear filters</Button>} />
+            ? <EmptyState title="No form matches" description="Nothing in the library matches these filters. Clear a filter or search for another number or title." action={<Button variant="secondary" onClick={() => { typedRef.current = false; setType(""); setUsedBy(""); setStatus(""); setQ(""); }}>Clear filters</Button>} />
             : <EmptyState title="No forms yet" description="Forms come in by themselves when a combination's setup starts: the form finder reads its IRCC page and downloads each form from canada.ca. You can also upload IRCC PDFs. Every form is stored once and used by any combination." />)
           : <>{tableEl}{rows.length > pageRows.length ? <p className="flex flex-wrap items-center gap-3 text-sm" data-show-more><span className="text-text-muted" aria-hidden>Showing {pageRows.length} of {rows.length} forms</span><Button size="sm" variant="secondary" onClick={showMore}>Show {Math.min(PAGE, rows.length - pageRows.length)} more forms</Button></p> : null}</>}
         {/* Review (310acb9c) 2 / break m17, WCAG 4.1.3: one status region, always on the page, says how many forms are shown
@@ -348,9 +348,10 @@ function SetAccepts({ row }: { row: Row }) {
   const go = useAsk(() => api(`/library/forms/${encodeURIComponent(row.code)}/accepts`, { method: "POST", json: { account, channels, ...(quote.trim() ? { quote: quote.trim() } : {}), ...(reason.trim() ? { reason: reason.trim() } : {}) } }), "Sent: it waits for a second person on To review", [["library-forms-list"], ["form-uses", row.code]], () => setOpen(false));
   // Devin on #145: a form with no usable edition yet cannot take "what IRCC accepts" (the server answers "No edition yet"):
   // the drawer says what comes first instead of offering a step that fails.
-  // Break / review (dc93b60f) m21: a form whose PDF waits for a second person says so (before: "Upload … first" beside "1
+  // Break / review (dc93b60f) m21, (e466adb1) m28: a form whose PDF is held says so, without promising an approval (a French
+  // file, for one, can never be approved) (before: "Upload … first" beside "1
   // held file waiting for a person").
-  if (!row.edition) return <p className="text-text-muted" data-accepts-needs-file>{row.status === "needs_ok" ? "Its PDF waits for a second person on To review: what IRCC accepts is set once that edition is approved." : "Upload or find its PDF first: what IRCC accepts is set on a form's current edition."}</p>;
+  if (!row.edition) return <p className="text-text-muted" data-accepts-needs-file>{row.status === "needs_ok" ? "Its PDF is held on To review: what IRCC accepts is set once an edition of it is approved." : "Upload or find its PDF first: what IRCC accepts is set on a form's current edition."}</p>;
   if (!open) return <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>{row.accepts ? "Correct what IRCC accepts" : "Set what IRCC accepts"}</Button>;
   return (
     <div className="space-y-2 rounded-lg border border-border p-3">

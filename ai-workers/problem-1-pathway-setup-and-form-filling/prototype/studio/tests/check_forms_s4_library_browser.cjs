@@ -322,6 +322,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await searchBox.fill(""); await sleep(1000);
     // Review (337cdfd5) 2 / break m22: Clear filters (which also empties the search) says the new count at once.
     await searchBox.fill("zzzq"); await p.getByText("No form matches").first().waitFor(); await sleep(900);
+    // Review (e466adb1) 2: an edit and its undo in one task (the search ends where it was) must not leave typing pending.
+    await p.evaluate(() => { const box = document.querySelector('input[aria-label="Search number or title"]'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set; set.call(box, "zzzqa"); box.dispatchEvent(new Event("input", { bubbles: true })); set.call(box, "zzzq"); box.dispatchEvent(new Event("input", { bubbles: true })); }); await sleep(900);
     await p.getByRole("button", { name: "Clear filters" }).click(); await sleep(250);
     step("X5 review (337cdfd5) 2 fail: Clear filters says the new count at once (before: 'No form matches' for 700 ms more)", /^Showing 50 of \d+ forms$/.test((await p.locator("[data-list-count]").textContent()) ?? ""), await p.locator("[data-list-count]").textContent());
     // Review (337cdfd5) 1 / break m21: a count still waiting on typing is said when a drawer opens, before it hides the page.

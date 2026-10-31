@@ -61,10 +61,12 @@ export type Package = { title: string; url: string };
  *  or whose link is not an official address is left out. Guides are not rows of this table; they are linked from the
  *  package pages (pageLinks, guideLinks). */
 /** Review (dc93b60f) / break m22: a title the library can show: not blank once invisible characters (zero-width spaces, soft
- *  hyphens, byte-order marks) are taken out, and at most 300 characters (counted as characters, not UTF-16 units). */
+ *  hyphens, byte-order marks, blank letters) are taken out, and at most 300 visible characters (not UTF-16 units). */
 export function indexTitleOk(title: string): boolean {
-  const seen = title.replace(/[\u00AD\u200B-\u200F\u2060\uFEFF]/g, "").trim();
-  return seen.length > 0 && [...title].length <= 300;
+  // Break (e466adb1) m22: every invisible character counts as none: format and control characters, private use, separators,
+  // and the blank letters (Hangul fillers, the braille blank, the combining grapheme joiner).
+  const shown = title.replace(/[\p{Cf}\p{Cc}\p{Co}\u034F\u115F\u1160\u2800\u3164\uFFA0]/gu, "");
+  return shown.replace(/\p{Z}/gu, "").length > 0 && [...shown].length <= 300;
 }
 
 /** A date canada.ca writes (YYYY-MM or YYYY-MM-DD) that is a real calendar date: month 01-12, the day within the month. */

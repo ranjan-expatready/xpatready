@@ -7,7 +7,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { indexTitleOk, parseFormsIndex, realDate } from "../engine/canada.ts";
-import { isLaterDate, planIndexFill } from "../engine/library-index.ts";
+import { editionMonth, isLaterDate, libraryRows, newerOnIndex, planIndexFill } from "../engine/library-index.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_x5";
 let pass = 0, fail = 0;
@@ -35,28 +35,32 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   ok("C2.6 X5 break m7 fail: a number that cannot be read is counted as unreadable (shown to the person), never silently dropped", odd.rows.length === 0 && odd.unreadable.join() === "IMM 5257E,PPTC 153", odd);
   const dup = planIndexFill([row("IMM 4444", { kind: "checklist", title: "Document checklist", pageUrl: "https://www.canada.ca/checklist.html", dateModified: "2020-01-01" }), row("IMM 4444", { title: "Application form", pageUrl: "https://www.canada.ca/form.html", dateModified: "2024-06-01" })], []).create[0];
   ok("C2.6 X5 break m6 + Devin fail: a number listed twice, a checklist row first, is the form row whole: its kind, title, page and date (before: the checklist's page)", dup?.kind === "data_form" && dup.title === "Application form" && dup.pageUrl === "https://www.canada.ca/form.html" && dup.dateModified === "2024-06-01", dup);
-  ok("C2.6 X5 review m2 fail: no 'newer' mark when the library's edition is already dated at or after the index's date (the fill's words agree with the list)", !planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [{ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: true, formPageUrl: "x", editionDated: "2025-03" }]).newer.length && planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [{ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: true, formPageUrl: "x", editionDated: "2024-12" }]).newer.join() === "IMM 1295");
+  ok("C2.6 X5 review m2 fail: no 'newer' mark when the library's edition is already dated at or after the index's date (the fill's words agree with the list)", !planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [{ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: true, formPageUrl: "x", editionMonth: "2025-03" }]).newer.length && planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [{ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: true, formPageUrl: "x", editionMonth: "2024-12" }]).newer.join() === "IMM 1295");
   ok("C2.6 X5 break m2 fail: an index date that went back, or one in another shape, marks nothing newer; a later one does", !isLaterDate("2023-09", "2099-01-01") && !isLaterDate("May 2024", "2024-01") && isLaterDate("2024-06", "2024-05-31") && !isLaterDate("2024-05", "2024-05-15"));
   ok("C2.6 X5 P156-2 pass: a later read with another date, for a form that has a file, marks it newer", planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [{ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: true, formPageUrl: "x" }]).newer.join() === "IMM 1295");
   ok("C2.6 X5 P156-2 fail: no mark for the same date, a form with no file, or a first read (no earlier date)", !planIndexFill([row("IMM 1295")], [{ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: true, formPageUrl: "x" }]).newer.length && !planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [{ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: false, formPageUrl: "x" }]).newer.length && !planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [{ formKey: "IMM 1295", indexDateModified: null, hasFile: true, formPageUrl: "x" }]).newer.length);
   // Fill hardening (break m13, m15; Devin on #145).
   const lf = (extra: object = {}) => ({ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: true, formPageUrl: "x", ...extra });
-  // Break / review (dc93b60f) M8: a date that went back clears the mark only once the library's edition is dated at or after
-  // it (the list's rule); a step back still later than the file keeps it.
-  const stillLater = planIndexFill([row("IMM 1295", { dateModified: "2025-03-01" })], [lf({ indexDateModified: "2025-06-01", editionDated: "2023-09" })]);
-  ok("C2.6 X5 review (dc93b60f) M8 fail: an index date that goes back but is still later than the file keeps the mark (before: cleared; the row read Ready on 09-2023)", !stillLater.clear.length && !stillLater.newer.length, stillLater);
-  const answeredNow = planIndexFill([row("IMM 1295", { dateModified: "2023-02-01" })], [lf({ indexDateModified: "2024-02-01", editionDated: "2023-03" })]);
-  ok("C2.6 X5 review (dc93b60f) M8 pass: once the file is dated at or after the index's date, the mark is cleared (written down, not only hidden)", answeredNow.clear.join() === "IMM 1295", answeredNow);
-  ok("C2.6 X5 Devin (#145) pass: the same or a later date never clears a mark the file does not answer", !planIndexFill([row("IMM 1295")], [lf()]).clear.length && !planIndexFill([row("IMM 1295", { dateModified: "2025-01-01" })], [lf()]).clear.length);
-  const heldOnly = planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [lf({ hasFile: false, hasHeldFile: true })]);
-  ok("C2.6 X5 break m13 fail: a form whose only printed file waits for a second person is marked for when it is approved, and not said as 'newer' (the list says it has no file yet)", heldOnly.pending.join() === "IMM 1295" && !heldOnly.newer.length, heldOnly);
-  ok("C2.6 X5 review (dc93b60f) q2 fail: a held file already dated at or after the index's date is not marked (one rule with the list)", !planIndexFill([row("IMM 1295", { dateModified: "2025-02-01" })], [lf({ hasFile: false, hasHeldFile: true, heldDated: "2025-11" })]).pending.length);
+  // Review / break (e466adb1) M10, M11, Devin: "newer" is judged by the dates: the index's month after the current edition's
+  // month (canada.ca's when known, else the month printed in its label). Nothing stored, so nothing left wrong by events.
+  ok("C2.6 X5 review (e466adb1) M10 pass: an edition's month is canada.ca's when known, else the month in its label; a label with none has none", editionMonth({ canadaUpdated: "2024-10", editionLabel: "IMM 5488 (01-2019)" }) === "2024-10" && editionMonth({ canadaUpdated: null, editionLabel: "IMM 1295 (09-2023)" }) === "2023-09" && editionMonth({ editionLabel: "Guide 5289 (read 2026-10-31)" }) === null && editionMonth({ editionLabel: "IMM 1295 (13-2023)" }) === null);
+  ok("C2.6 X5 review (e466adb1) M10 fail: a hand-uploaded file (no canada.ca month) is newer only while the index is later than its own month: back to its month it is not (before: newer for good)", newerOnIndex("2025-06", "2023-09") && !newerOnIndex("2023-09", "2023-09") && !newerOnIndex("2020-01", "2023-09") && !newerOnIndex(null, "2023-09") && !newerOnIndex("2025-06", null));
+  ok("C2.6 X5 review (dc93b60f) M8 fail: an index date that goes back but is still later than the file stays newer (before: cleared; the row read Ready on 09-2023)", newerOnIndex("2025-03-01", "2023-09"));
+  const named = planIndexFill([row("IMM 1295", { dateModified: "2025-06-01" })], [lf({ indexDateModified: "2023-09-01", editionMonth: "2023-09" })]);
+  const again = planIndexFill([row("IMM 1295", { dateModified: "2025-08-01" })], [lf({ indexDateModified: "2025-06-01", editionMonth: "2023-09" })]);
+  ok("C2.6 X5 P156-2 pass: the fill names a form the read made newer than its file, once (a later read of a form already newer does not name it again); nothing is stored for a dated file", named.newer.join() === "IMM 1295" && !named.mark.length && !again.newer.length && !again.mark.length, { named, again });
+  ok("C2.6 X5 P156-2 fail: a form with no approved file is never named newer (a held or rejected upload leaves nothing behind: after an approval the list judges the approved file's month)", !planIndexFill([row("IMM 1295", { dateModified: "2025-06-01" })], [lf({ hasFile: false, indexDateModified: "2023-09-01" })]).newer.length);
+  const undUp = planIndexFill([row("GUIDE 5289", { dateModified: "2025-06-01" })], [lf({ formKey: "GUIDE 5289", indexDateModified: "2024-01-01" })]);
+  const undBack = planIndexFill([row("GUIDE 5289", { dateModified: "2023-06-01" })], [lf({ formKey: "GUIDE 5289", indexDateModified: "2024-01-01" })]);
+  ok("C2.6 X5 P156-2 pass: an undated file keeps the stored mark: set by a later date, cleared by a step back", undUp.newer.join() === "GUIDE 5289" && undUp.mark.join() === "GUIDE 5289" && undBack.clear.join() === "GUIDE 5289" && !undBack.newer.length, { undUp, undBack });
   const twice = planIndexFill([row("IMM 5373 B", { dateModified: "2023-01-01", title: "Old title", pageUrl: "https://www.canada.ca/old.html" }), row("IMM 5373 B", { dateModified: "2025-03-01", title: "New title", pageUrl: "https://www.canada.ca/new.html" })], [lf({ formKey: "IMM 5373 B", indexDateModified: "2024-01-01", formPageUrl: null })]);
   ok("C2.6 X5 break m15 / m26 fail: a number listed twice keeps its latest row whole: its date, title and page together (before: the first row's title and page with the latest date)", twice.listed[0]?.dateModified === "2025-03-01" && twice.listed[0]?.pageUrl === "https://www.canada.ca/new.html" && twice.newer.join() === "IMM 5373 B", twice);
   const link = (code: string, title: string, date = "2024-01-01") => `<tr><td>${code}</td><td><a href="https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/${code.replace(/\W+/g, "").toLowerCase()}.html">${title}</a></td><td>${date}</td></tr>`;
   const dates = parseFormsIndex(`<table><tbody>${link("IMM 3333", "Good", "2024-02-30")}${link("IMM 4444", "Good too", "2024-02-29")}${link("IMM 5555", "", "2024-01-01")}</tbody></table>`);
   ok("C2.6 X5 break m15 fail: an impossible date is kept as no date; the parser keeps every numbered row (the finder and the check still find it by number)", dates.rows.map((r) => r.code).join() === "IMM 3333,IMM 4444,IMM 5555" && dates.rows[0].dateModified === null && dates.rows[1].dateModified === "2024-02-29", dates);
-  ok("C2.6 X5 break m15 / m22 fail: a title the library cannot show (blank, only invisible characters, over 300 characters) is refused; 300 characters, emoji counted as one, is kept", !indexTitleOk("") && !indexTitleOk("\u200B\u00AD ") && !indexTitleOk("x".repeat(301)) && indexTitleOk("x".repeat(300)) && indexTitleOk("😀".repeat(151)) && indexTitleOk("Application for a visitor visa"));
+  ok("C2.6 X5 break m15 / m22 fail: a title the library cannot show (blank, only invisible characters, over 300 characters) is refused; 300 characters, emoji counted as one, is kept", !indexTitleOk("") && !indexTitleOk("\u200B\u00AD ") && !indexTitleOk("\u3164") && !indexTitleOk("\u2800\u2800") && !indexTitleOk("\u202E\u2066\u2069") && !indexTitleOk("\u115F\uFFA0\u034F") && !indexTitleOk("x".repeat(301)) && indexTitleOk("x".repeat(300)) && indexTitleOk("😀".repeat(151)) && indexTitleOk("Application for a visitor visa"));
+  const lr = libraryRows([row("IMM 1111", { title: "" }), row("IMM 2222", { title: "x".repeat(301) }), row("IMM 3333", { title: "\u200B" }), row("IMM 3333", { title: "Good" }), row("IMM 4444")], ["IMM 9X"]);
+  ok("C2.6 X5 break m15 / m23, review (e466adb1) 3 fail: the fill leaves out rows with no title it can show and counts each such number once as unreadable; a number that also has a good row is kept, not counted", lr.rows.map((r) => r.code).join() === "IMM 3333,IMM 4444" && lr.unreadable.join() === "IMM 9X,IMM 1111,IMM 2222", lr);
   ok("C2.6 X5 break m15 / m25 pass: real dates read as real (month ends, leap years, years IRCC could write); others not", realDate("2024-02-29") && realDate("2024-12") && !realDate("2023-02-29") && !realDate("2024-13") && !realDate("2024-04-31") && !realDate("May 2024") && !realDate("0000-01") && !realDate("9999-12"));
 
   // ── the API on the sample, with the recorded copy of IRCC's list
@@ -101,10 +105,12 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   ok("C2.6 X5 P156-2 pass: a later read with a changed date marks the form with a file 'newer on canada.ca'; its file stays", r.body.newer?.includes(withFile) && kept2?.status === "newer_file" && kept2.newer_on_index === true && sql(`select count(*) from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where d.form_key = '${withFile}'`) === fileBefore, { newer: r.body.newer, kept2 });
   ok("C2.6 X5 review m2 pass: every form the fill calls newer shows 'newer' in the list (one rule for both)", (r.body.newer as string[]).every((code) => list2.rows.find((x: any) => x.code === code)?.status === "newer_file"), r.body.newer); // eslint-disable-line @typescript-eslint/no-explicit-any
   ok("C2.6 X5 P156-2 fail: a form with no file is never marked newer (it stays 'no file yet')", !r.body.newer?.includes(noFileKey) && nf2?.status === "no_file", nf2?.status);
-  // X5 break M2 / Devin: only a check that finds the library's edition current answers the mark; a failed check keeps it.
+  // X5 break M2 / Devin, review (e466adb1): a check never changes a dated file's "newer" (the dates decide); one that fails or
+  // finds another date leaves the row as it was.
+  const before2 = (await call("GET", "/library/forms/list")).body.rows.find((x: any) => x.code === withFile)?.status; // eslint-disable-line @typescript-eslint/no-explicit-any
   const chk = await call("POST", `/library/forms/${encodeURIComponent(withFile)}/check-canada`);
-  const markAfter = sql(`select coalesce(newer_on_index_at::text, '') from gov_form_def where form_key = '${withFile}'`);
-  ok("C2.6 X5 break M2 fail: a check answers the mark only when it found the edition current; a failed check (409) or another date keeps it (before: cleared first, whatever the check found)", chk.status === 201 && chk.body?.outcome === "current" ? markAfter === "" : markAfter !== "", { status: chk.status, outcome: chk.body?.outcome, m: msg(chk), markAfter });
+  const after2 = (await call("GET", "/library/forms/list")).body.rows.find((x: any) => x.code === withFile)?.status; // eslint-disable-line @typescript-eslint/no-explicit-any
+  ok("C2.6 X5 break M2 fail: a check that did not find the library's edition current leaves the row as it was (before: cleared the mark, whatever the check found)", chk.status === 201 && chk.body?.outcome === "current" ? true : before2 === "newer_file" && after2 === "newer_file", { status: chk.status, outcome: chk.body?.outcome, before2, after2 });
   // X5 break M3 / Devin: the mark is answered once the library holds an edition canada.ca dates at or after the index's date.
   sql(`update gov_form_def set newer_on_index_at = now(), index_date_modified = '2025-02-01' where form_key = '${withFile}'`);
   const before3 = (await call("GET", "/library/forms/list")).body.rows.find((x: any) => x.code === withFile)?.status; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -130,20 +136,25 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   sql(`update gov_form_def set newer_on_index_at = null where form_key = '${withFile}'`);
   sql(`delete from form_edition where sha256 = 'f' || repeat('0', 63)`);
   // Review (dc93b60f): the three API wirings, each with a check that fails without it.
-  // (1) M8: a mark the file answers is cleared in the database, not only hidden by the list.
+  // (1) M8 / M10: a file dated at or after the index's date is not newer, whatever an earlier read said.
   sql(`update form_edition set canada_updated = '2099-01' where gov_form_def_id = (select id from gov_form_def where form_key = '${withFile}')`);
   sql(`update gov_form_def set newer_on_index_at = now() where form_key = '${withFile}'`);
   await call("POST", "/library/forms/fill-from-index");
-  ok("C2.6 X5 review (dc93b60f) M8 fail: a mark the library's edition answers is cleared by the fill in the database (before: kept, only hidden)", sql(`select coalesce(newer_on_index_at::text, '') from gov_form_def where form_key = '${withFile}'`) === "");
-  // (2) M9: a real held upload (a HELD intake item, no edition) counts as a held file: the fill marks it for when it is
-  // approved, and does not call it newer.
+  ok("C2.6 X5 review (dc93b60f) M8 / (e466adb1) M10 fail: a file dated at or after the index's date reads Ready, even with a mark an earlier read left (before: a stored mark decided)", (await call("GET", "/library/forms/list")).body.rows.find((x: any) => x.code === withFile)?.status === "ready"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  sql(`update gov_form_def set newer_on_index_at = null where form_key = '${withFile}'`);
+  // (2) M9 / M11: a held upload, a fill that moves the index's date on, then the approval: the approved file reads newer, with
+  // nothing stored by the fill (so a fill running during the approval cannot lose it). The approval is played by copying an
+  // approved edition's file onto the form under an older label.
   const ws = sql(`select workspace_id from gov_form_def where form_key = '${noFileKey}'`);
   sql(`insert into intake_item (id, workspace_id, file_name, stored_path, sha256, bytes, kind, code, outcome, status, created_by) values (gen_random_uuid(), '${ws}', 'held.pdf', '/tmp/held.pdf', 'e' || repeat('0', 63), 1, 'form', '${noFileKey}', 'held', 'HELD', 'user-A')`);
   sql(`update gov_form_def set newer_on_index_at = null, index_date_modified = '2000-01-01' where form_key = '${noFileKey}'`);
   const rUp = await call("POST", "/library/forms/fill-from-index");
-  ok("C2.6 X5 review (dc93b60f) M9 fail: a form whose PDF is a held upload is marked when the index's date moves on, so it says newer once approved (before: the date moved silently)", sql(`select coalesce(newer_on_index_at::text, '') from gov_form_def where form_key = '${noFileKey}'`) !== "" && !rUp.body.newer?.includes(noFileKey), { newer: rUp.body.newer });
+  const indexNow = sql(`select index_date_modified from gov_form_def where form_key = '${noFileKey}'`);
   sql(`delete from intake_item where sha256 = 'e' || repeat('0', 63)`);
-  sql(`update gov_form_def set newer_on_index_at = null where form_key = '${noFileKey}'`);
+  sql(`insert into form_edition select * from jsonb_populate_record(null::form_edition, (select to_jsonb(e) || jsonb_build_object('id', gen_random_uuid(), 'gov_form_def_id', (select id from gov_form_def where form_key = '${noFileKey}'), 'canada_updated', null, 'edition_label', '${noFileKey} (01-2001)') from form_edition e where e.gov_form_def_id = (select id from gov_form_def where form_key = '${withFile}') and e.channel <> 'ONLINE' limit 1))`);
+  const approvedRow = (await call("GET", "/library/forms/list")).body.rows.find((x: any) => x.code === noFileKey); // eslint-disable-line @typescript-eslint/no-explicit-any
+  ok("C2.6 X5 review (dc93b60f) M9 / (e466adb1) M11 fail: a held upload approved after the index moved on reads newer (its label's month before the index's), and the fill did not call it newer while it had no file", /^\d{4}/.test(indexNow) && approvedRow?.status === "newer_file" && !rUp.body.newer?.includes(noFileKey), { indexNow, status: approvedRow?.status, newer: rUp.body.newer });
+  sql(`delete from form_edition where edition_label = '${noFileKey} (01-2001)'`);
   // (3) m24: four fills at once, one form newly newer: only the fill that set the mark names it.
   sql(`update form_edition set canada_updated = '2000-01' where gov_form_def_id = (select id from gov_form_def where form_key = '${withFile}')`);
   sql(`update gov_form_def set newer_on_index_at = null, index_date_modified = '2000-01-01' where form_key = '${withFile}'`);

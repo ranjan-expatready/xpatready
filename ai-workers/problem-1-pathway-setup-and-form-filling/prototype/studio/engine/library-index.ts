@@ -3,30 +3,39 @@
 // becomes a library form (a new one is "Listed by IRCC · no file yet"); a form already there is matched by its number,
 // never duplicated, and keeps its file. A later read whose date modified differs, for a form that has a file, marks it
 // "Newer edition on canada.ca": a person checks it; the file is never replaced here.
-import type { IndexRow } from "./canada.ts";
+import { indexTitleOk, type IndexRow } from "./canada.ts";
 
-export type LibraryForm = { formKey: string; indexDateModified: string | null; hasFile: boolean; formPageUrl: string | null; /** canada.ca's month for the library's newest edition (YYYY-MM), if known */ editionDated?: string | null;
-  /** X5 break m13, M9: a printed file waits for a second person (a held upload, or an unapproved edition) and no approved one
-   *  exists yet: a later date still marks the form, so the mark is there once the file is approved (before: the date moved
-   *  on silently and the form read Ready on an old file). */
-  hasHeldFile?: boolean;
-  /** canada.ca's month for the newest held edition, if known: a held file dated at or after the index answers it already. */
-  heldDated?: string | null };
+export type LibraryForm = { formKey: string; indexDateModified: string | null; hasFile: boolean; formPageUrl: string | null;
+  /** The month the library's current (approved, printed) edition is from (editionMonth), if known. */
+  editionMonth?: string | null };
 export type IndexFill = {
   /** New library forms, listed with no file yet. */
   create: { formKey: string; title: string; kind: "data_form" | "checklist"; pageUrl: string; dateModified: string | null }[];
-  /** Forms already in the library: now marked as listed by IRCC; their page filled in only where the library had none. */
-  listed: { formKey: string; pageUrl: string | null; dateModified: string | null }[];
-  /** Forms with a file whose index date changed since the last read: "Newer edition on canada.ca". */
+  /** Forms already in the library: now marked as listed by IRCC; their page filled in only where the library had none.
+   *  `before` is the index date the library had (a fill names a form newer only if it is the one that moved it). */
+  listed: { formKey: string; pageUrl: string | null; dateModified: string | null; before: string | null }[];
+  /** Forms with a file this read makes newer than their file (they were not before it): said in the fill's words. */
   newer: string[];
-  /** Forms with no approved file yet (only a held one) marked the same way: not said as "newer" (the list says "Needs your
-   *  OK" or "No file yet" for them), the mark waits for the approval (review dc93b60f q2). */
-  pending: string[];
-  /** Break / review (dc93b60f) M8: forms whose current edition is dated at or after the index's date: an earlier mark is
-   *  answered and cleared, the list's own rule written down (before: any step back cleared it, even one still later than
-   *  the file). */
+  /** Forms whose file has no month (an undated edition): the stored mark is set (a later date) or cleared (a step back). */
+  mark: string[];
   clear: string[];
 };
+
+/** Review / break (e466adb1) M10, M11, Devin: the month a library edition is from: canada.ca's "last updated" month when
+ *  known, else the edition's own month printed in its label ("IMM 1295 (09-2023)"). Intake and the finder both write that
+ *  label, so a hand upload or an approved held file is dated too. */
+export function editionMonth(e: { canadaUpdated?: string | null; editionLabel: string }): string | null {
+  if (e.canadaUpdated && /^\d{4}-\d{2}/.test(e.canadaUpdated)) return e.canadaUpdated.slice(0, 7);
+  const m = /\((\d{2})-(\d{4})\)\s*$/.exec(e.editionLabel);
+  return m && Number(m[1]) >= 1 && Number(m[1]) <= 12 ? `${m[2]}-${m[1]}` : null;
+}
+
+/** P156-2, one rule for the list, the fill and the check: "Newer edition on canada.ca" when IRCC's index lists a later month
+ *  for the form than the month of the library's current edition. Nothing is stored for it, so an approval, a rejected
+ *  upload or a fill running meanwhile cannot leave it wrong (before: a stored mark, set and cleared by events). */
+export function newerOnIndex(indexDate: string | null | undefined, fileMonth: string | null | undefined): boolean {
+  return !!(indexDate && fileMonth && /^\d{4}-\d{2}/.test(indexDate) && indexDate.slice(0, 7) > fileMonth);
+}
 
 /** X5 break m2: a date is newer only when it is later (canada.ca writes YYYY-MM or YYYY-MM-DD; compared month first). A
  *  date that went back, or one in another shape, marks nothing. */
@@ -34,6 +43,13 @@ export function isLaterDate(next: string, before: string): boolean {
   const ok = /^\d{4}-\d{2}(-\d{2})?$/;
   if (!ok.test(next) || !ok.test(before)) return false;
   return `${next}-00`.slice(0, 10) > `${before}-00`.slice(0, 10);
+}
+
+/** Break m15 / m23, review (dc93b60f, e466adb1): the index rows the library fill takes: those with a title it can show
+ *  (indexTitleOk). A number left with no good row is counted as unreadable, once; one that also has a good row is not. */
+export function libraryRows(rows: IndexRow[], unreadable: string[] = []): { rows: IndexRow[]; unreadable: string[] } {
+  const good = rows.filter((r) => indexTitleOk(r.title)), kept = new Set(good.map((r) => r.code));
+  return { rows: good, unreadable: [...unreadable, ...new Set(rows.filter((r) => !kept.has(r.code)).map((r) => r.code))] };
 }
 
 export function planIndexFill(rows: IndexRow[], library: LibraryForm[]): IndexFill {
@@ -48,19 +64,21 @@ export function planIndexFill(rows: IndexRow[], library: LibraryForm[]): IndexFi
     const b = best.get(r.code);
     if (!b || (r.kind === "form" && b.kind !== "form") || (r.kind === b.kind && later(r, b))) best.set(r.code, r);
   }
-  const out: IndexFill = { create: [], listed: [], newer: [], pending: [], clear: [] };
+  const out: IndexFill = { create: [], listed: [], newer: [], mark: [], clear: [] };
   for (const r of best.values()) {
     const f = have.get(r.code);
     if (!f) { out.create.push({ formKey: r.code, title: r.title, kind: r.kind === "checklist" ? "checklist" : "data_form", pageUrl: r.pageUrl, dateModified: r.dateModified }); continue; }
-    out.listed.push({ formKey: r.code, pageUrl: f.formPageUrl ? null : r.pageUrl, dateModified: r.dateModified });
-    // X5 review (86f9447c) m2: the same rule the list applies: not newer when the library's edition is already dated at or
-    // after the index's date (the fill's words then agree with the list's count).
-    const month = r.dateModified?.slice(0, 7);
-    const answered = !!(f.editionDated && month && f.editionDated >= month);
-    const changed = !!(f.indexDateModified && r.dateModified && isLaterDate(r.dateModified, f.indexDateModified));
-    if (f.hasFile && changed && !answered) out.newer.push(r.code);
-    else if (!f.hasFile && f.hasHeldFile && changed && !(f.heldDated && month && f.heldDated >= month)) out.pending.push(r.code);
-    else if (answered) out.clear.push(r.code);
+    out.listed.push({ formKey: r.code, pageUrl: f.formPageUrl ? null : r.pageUrl, dateModified: r.dateModified, before: f.indexDateModified });
+    if (!f.hasFile || !r.dateModified) continue;
+    if (f.editionMonth) {
+      // A dated file: the list judges it by the dates; the fill only names a form this read made newer.
+      if (newerOnIndex(r.dateModified, f.editionMonth) && !newerOnIndex(f.indexDateModified, f.editionMonth)) out.newer.push(r.code);
+      continue;
+    }
+    // An undated file (rare: no canada.ca month, no month in its label): the stored mark, set by a later date (P156-2) and
+    // cleared by a step back.
+    if (f.indexDateModified && isLaterDate(r.dateModified, f.indexDateModified)) { out.newer.push(r.code); out.mark.push(r.code); }
+    else if (f.indexDateModified && isLaterDate(f.indexDateModified, r.dateModified)) out.clear.push(r.code);
   }
   return out;
 }

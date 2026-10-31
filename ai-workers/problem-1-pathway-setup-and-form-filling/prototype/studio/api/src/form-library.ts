@@ -11,9 +11,9 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { manifest } from "../../engine/import.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
-import { indexTitleOk, officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
+import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
 import { INDEX_URL } from "./finder.ts";
-import { planIndexFill } from "../../engine/library-index.ts";
+import { editionMonth, libraryRows, newerOnIndex, planIndexFill } from "../../engine/library-index.ts";
 import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
 import { AcceptsBody, acceptsWords, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
@@ -100,9 +100,11 @@ export class FormLibrary {
       const pendingChange = lifecyclePending.find((x) => x.key === f.formKey), lifecycle = pendingChange?.action ?? null;
       const needsOk = held.some((h) => h.code === f.formKey);
       // Lead 28 Oct (carried should): "Needs your OK" only when something waits for a person; a form with no file is "No file yet".
-      // X5 (P156-2): a later read of IRCC's index that changed the date of a form with a file marks it newer, too.
-      // X5 break M3 / Devin: the index's mark is answered once the library holds an edition canada.ca dates at or after it.
-      const indexNewer = !!(current && f.newerOnIndexAt && !(current.canadaUpdated && f.indexDateModified && current.canadaUpdated >= f.indexDateModified.slice(0, 7)));
+      // X5 (P156-2): "Newer edition on canada.ca" when IRCC's index lists a later month than the current edition's.
+      // Review / break (e466adb1) M10, M11: judged by the dates (newerOnIndex: the index's month after the month of the current
+      // edition); the stored mark only for an undated edition.
+      const month = current ? editionMonth(current) : null;
+      const indexNewer = !!current && (month ? newerOnIndex(f.indexDateModified, month) : !!f.newerOnIndexAt);
       const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 || indexNewer ? "newer_file" : current ? "ready" : "no_file";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
         // P-143 (C-3): one record per IRCC account (ANY first); the column says them in words, one line per account.
@@ -172,24 +174,14 @@ export class FormLibrary {
     if (!parsed.rows.length) throw problem(409, "IRCC's forms list could not be read", "The forms list page has no form rows (its layout may have changed). Nothing was added to the library.");
     // X5 break M1: each number in the library's own spelling (contracts' normaliseCode, as every route and the finder use:
     // "IMM 5373 B", not "IMM 5373B"), so a listed form is found, deleted and attached like any other.
-    const all = parsed.rows.map((r) => ({ ...r, code: normaliseCode(r.code) }));
-    // Break m15 / review (dc93b60f): a row with no title the library can show, or one over 300 characters, is left out and
-    // counted as unreadable; a number with another, good row is kept by that row and not counted twice (break m23).
-    const rows = all.filter((r) => indexTitleOk(r.title));
-    const unreadable = [...parsed.unreadable, ...new Set(all.filter((r) => !indexTitleOk(r.title) && !rows.some((g) => g.code === r.code)).map((r) => r.code))];
+    // Break m15 / review (dc93b60f, e466adb1): rows the library can show (libraryRows: a title, not over 300 characters); a
+    // number with no good row is counted as unreadable, once.
+    const { rows, unreadable } = libraryRows(parsed.rows.map((r) => ({ ...r, code: normaliseCode(r.code) })), parsed.unreadable);
     // X5 break m9: a file means an edition a combination may file from (an online-only screen map is no file).
     // Review (5a5f0d16) m2 / Devin: the fill judges a form by the same current edition the list shows (an approved printed
     // edition, the newest; newestEdition), never by a held or older edition's date: one "newer" rule in both.
-    // Break / review (dc93b60f) M9: a hand upload waiting for a second person is a HELD intake item (no edition yet), so it
-    // counts as a held file too, as an unapproved edition does.
-    const [defs, approved, heldUploads] = await Promise.all([this.db.govFormDef.findMany({ where: { workspaceId }, include: { editions: true } }), this.approvedShas(workspaceId), this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD", kind: { in: ["form", "checklist"] } }, select: { code: true } })]);
-    const heldCodes = new Set(heldUploads.map((h) => (h.code ? normaliseCode(h.code) : "")).filter(Boolean));
-    const plan = planIndexFill(rows, defs.map((d) => {
-      const current = this.currentEdition(d.editions, approved.all);
-      const heldEditions = d.editions.filter((e) => e.channel !== "ONLINE" && !!e.sha256 && !approved.all.has(e.sha256));
-      const heldDated = heldEditions.map((e) => e.canadaUpdated).filter((x): x is string => !!x).sort().pop() ?? null;
-      return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, hasHeldFile: !current && (heldEditions.length > 0 || heldCodes.has(d.formKey)), heldDated, formPageUrl: d.formPageUrl, editionDated: current?.canadaUpdated ?? null };
-    }));
+    const [defs, approved] = await Promise.all([this.db.govFormDef.findMany({ where: { workspaceId }, include: { editions: true } }), this.approvedShas(workspaceId)]);
+    const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionMonth: current ? editionMonth(current) : null }; }));
     const now = new Date();
     // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
     // Break m14 / Devin on #145: the words count what this fill did, not what it planned: a form another fill created meanwhile
@@ -199,12 +191,13 @@ export class FormLibrary {
       let kept = 0; const marked: string[] = [];
       // X5 break m4: a form deleted meanwhile (an approved delete) is skipped, never a failed fill.
       for (const l of plan.listed) {
-        const isNewer = plan.newer.includes(l.formKey), isPending = plan.pending.includes(l.formKey), isClear = plan.clear.includes(l.formKey);
-        const n = (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}), ...(isClear ? { newerOnIndexAt: null } : {}) } })).count;
+        const isNewer = plan.newer.includes(l.formKey), isMark = plan.mark.includes(l.formKey), isClear = plan.clear.includes(l.formKey);
+        // Break / review (dc93b60f) m24: "newer" names a form only in the fill that moved its date (another fill that moved it a
+        // moment earlier leaves this one's guarded write empty).
+        const moved = isNewer && l.dateModified ? (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey, indexDateModified: l.before }, data: { indexDateModified: l.dateModified } })).count : 0;
+        const n = (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}), ...(isMark ? { newerOnIndexAt: now } : isClear ? { newerOnIndexAt: null } : {}) } })).count;
         kept += n;
-        // Break / review (dc93b60f) m24: "newer" names a form only when this fill set its mark (not one another fill marked a
-        // moment earlier): the mark is written only where none was.
-        if (n && (isNewer || isPending) && (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey, newerOnIndexAt: null }, data: { newerOnIndexAt: now } })).count && isNewer) marked.push(l.formKey);
+        if (n && moved) marked.push(l.formKey);
       }
       return { created: made, already: kept + (plan.create.length - made), newer: marked };
     });

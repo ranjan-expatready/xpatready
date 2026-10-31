@@ -83,3 +83,112 @@ Full record in `journey-test-reviewer-2026-10-31-x5a-dc93b60f.md`.
 * Live canada.ca (only the recorded copy).
 * How many pre-gate unapproved editions exist in the founder's demo database. That number decides whether `hasHeldFile` ever fires there.
 * Retrofit mapping: not applicable to this hardening diff.
+
+---
+
+# Re-check of commit e466adb1 (the fixes for dc93b60f), 31 Oct 2026
+
+Reviewer: I did not build this. I reviewed `git diff 5ae993a0 e466adb1` (code: `*.ts`, `*.tsx`, `*.cjs`) and read the PR's whole change since 0fc3f8a7 for context. The bar is the same as above: P-156 (1), P156-2, STANDARDS, EXPERIENCE and QUALITY.
+
+**How I tested.**
+* **Copies.** Copies `x5rva` :4452, `x5rvb` :4453 and `x5rvc` :4454 for the code under review. Copy `x5rvm` :4455 for mutations, built from `git archive e466adb1` into `/tmp/x5rv-e46-mut`. The web was built first with `npx vite build`. All copies are stopped and their databases dropped.
+* **Suites.**
+  * `check_forms_x5_library` 45/45.
+  * `check_forms_s4_canada` 80/80.
+  * `check_forms_s4_library_browser` 95/95. The slice3 screenshots it changed are restored.
+* **Graph.** G1–G6 = 0/0/2/0/0/0 (run in the `/tmp` copy). The two G3 routes are attachment routes that predate this PR.
+* **Spend.** US$0, no `*_LIVE` set, and the ledgers are empty.
+* **Scripts and screenshots.** Scripts are in `/tmp/x5rv-e46-scripts/` and screenshots in `/tmp/x5rv-e46-shots/`.
+* **Not mine.** `break-report-x5a.md` changed during my session because a concurrent break round is writing there. I left it alone.
+
+**The last review's issues, re-run on this commit.** All are fixed except where noted.
+* **1 (M8): fixed.** IMM 5488 with a file dated 2019-01, a 2026-01 mark and an index now at 2024-10 keeps the mark and reads `newer_file`. With the file at 2025-01 the mark is cleared in the database and the row reads `ready`.
+* **2 (M9): fixed.** A real held upload (intake, HELD) marks the form when the date moves on, and the fill does not name it "newer" (IMM 1344, IMM 5710).
+* **3: fixed.** IMM 5476 whose only edition is held and dated 2025-11, with the index read at 2025-01: no mark and no "newer".
+* **4: fixed.** Each of the 3 wirings fails its check when removed: 44/45 each time.
+* **5 (m24): fixed.** Six fills at once, 3 rounds: exactly one fill names the form each round, every reply is 201, and there is one mark.
+* **6 (m21): fixed.** A held-only IMM 1344 drawer says "Its PDF waits for a second person on To review…". axe finds 0 violations.
+* **7: fixed.** The parser keeps every numbered row, and only the fill judges titles.
+
+**Verdict: Approve.** There is no open Blocker or Major. The three Should items below can follow in a later item.
+
+## Your three questions
+1. **The pending mark after approval: it agrees with the list's rule, but it outlives a rejection.**
+   * Upload IMM 1344 (held), then fill with the date moved on. The fill sets a mark and says "newer []". The row reads Needs your OK.
+   * After the second person approves it, the row reads `newer_file`, with `newer_on_index` true and edition "IMM 1344 (09-2024)".
+   * That is the list's own rule (`form-library.ts:105`): a hand upload has no canada.ca date.
+   * Two consequences, both of which err towards "check it":
+     * (a) A held file that is itself canada.ca's newest edition still reads "Newer" once approved. "Check canada.ca" cannot answer it: it returns `check`, because `compareWithCanada` needs a dated edition. Only "Find again" dates the edition. This is the same as for any undated upload with a file, so it is not new here.
+     * (b) A rejected held upload leaves the mark behind. See issue 1.
+2. **Is the mark write race-safe? Yes.**
+   * The first `updateMany` (always written: `listedOnIndexAt`) locks the row for the rest of the transaction.
+   * A second fill blocks on that lock. Under read committed it then re-checks `newerOnIndexAt: null` against the committed mark and gets count 0.
+   * Every fill walks `plan.listed` in the same order, so no deadlock.
+   * Measured: 3 rounds × 6 fills, all 201, one fill names it, one mark (`/tmp/x5rv-e46-scripts/pending.ts`). Removing the `where` makes the suite fail (44/45).
+   * By design, a form already marked whose date moves again is not named a second time. The row still shows the mark.
+3. **Does `typedRef` leave a stale state? Yes, in one narrow case** (issue 2).
+   * The flag is cleared only when the effect runs. An input that ends where `dq` already was leaves it `true`, for example an edit and its undo inside one deferred render. The next Clear filters then waits 700 ms again.
+   * Reproduced 5 of 5 times by dispatching two input events in one task. Separate key presses (Playwright `press`) did not reproduce it.
+   * The `setOpen` closure is not stale. `tableEl` is memoised on `[pageRows, canAuthor]`, and every input of `countText` also changes `pageRows`, except the error state, when no table is drawn.
+   * `data-shown` is 0 on error.
+   * `setSpoken` and `setOpened` commit in one render, and `Panel` hides the page in its own effect. Whether a real screen reader speaks the count is unverified.
+
+## Issues, ranked (none Blocker or Major)
+1. **Should: a pending mark survives a rejected held upload, and a later upload then reads "Newer edition on canada.ca" with no fill in between (D2, D11).**
+   * Repro on :4454 with IMM 5710:
+     1. Upload, then fill with the date moved: the form is marked.
+     2. Reject the upload: the row reads `no_file`, and the mark stays in `gov_form_def`.
+     3. Upload a new copy and approve it: the row reads `newer_file` for "IMM 5710 (09-2023)", which is canada.ca's listed 2023-09.
+   * The fill's clear never fires without a current edition, and Check cannot answer an undated edition.
+   * Fix: in the reject path (`intake.ts:146`), clear `newerOnIndexAt` when the form has no approved printed edition and no other HELD item. Or clear it in `planIndexFill` for `!hasFile && !hasHeldFile` (`library-index.ts:62`), plus a suite step: upload, fill, reject, upload, approve.
+2. **Should: `typedRef` can stay `true`, so Clear filters waits 700 ms again (WCAG 4.1.3, the m22 fix).**
+   * `library-forms.tsx:138` resets the flag only when the effect runs.
+   * Fix: set `typedRef.current = false` in Clear filters' onClick (`:204`). Or record the typed value and treat input as typing only when `dq` equals it.
+3. **Should: the fill's title filter and its "not counted twice" rule have no test that fails when they are removed** (STANDARDS [M]).
+   * `const rows = all;` passes 45/45.
+   * Dropping `!rows.some(...)` (`form-library.ts:178-179`) also passes 45/45.
+   * Only `indexTitleOk` is unit-tested. No recorded row is affected today.
+   * Fix: move the filter and count into a small engine function with one step each, or add an API step on a doctored index.
+
+**Every other rule is caught when removed:**
+* the clear write, held uploads and `where null` (44/45 each);
+* pending named as newer (44);
+* the old clear rule (43);
+* `heldDated` (44);
+* held counted as newer (43);
+* best row (44);
+* the year bound (44);
+* `typedRef`, the speak-at-open and `data-shown` (browser 94/95 each).
+
+## D1–D20
+| D | Score | Evidence |
+|---|---|---|
+| D1 | 5 | P156-1/2 met; M8, M9 and m24 behave as the list's rule |
+| D2 | 4 | No duplicates or wrong Ready; a stale mark after a reject (issue 1) |
+| D3 | 5 | One parser; the fill alone judges titles; one plan |
+| D4 | 5 | No schema change |
+| D5 | 5 | 6-way races ×3: one mark, one name, all 201 |
+| D6 | 5 | A clear happens only where the list already answers the mark, so nothing visible changes silently |
+| D7 | 5 | No AI; US$0 |
+| D8 | 5 | Shared library › Forms unchanged |
+| D9 | 5 | A held-only drawer says who acts next |
+| D10 | 5 | Plain words, per PRODUCT §4 |
+| D11 | 4 | Counts are right; "Newer" is shown after a reject (issue 1) |
+| D12 | 5 | Team look; 1440, 1024, 400 and 720@200 % |
+| D13 | 4 | axe 0; keyboard path 16 Tabs; focus returns; the `typedRef` edge (issue 2) |
+| D14 | 5 | Team components |
+| D15 | 5 | Fill 211 ms in the browser; list in budget |
+| D16 | 4 | 45 + 80 + 95 green; two fill rules uncaught (issue 3) |
+| D17 | simulated only | No intended user walked it |
+| D18 | 5 | canada.ca pages linked; the fill's words agree with the list |
+| D19 | 5 | Fill → row → drawer → To review hand-off is named |
+| D20 | simulated only | The founder's walkthrough |
+
+## Journey score: 9 / 10 (pass, no criterion at 0)
+The full record is in `journey-test-reviewer-2026-10-31-x5a-e466adb1.md`.
+
+## What I could not check
+* A real screen reader, so I could not hear the count spoken at drawer open (same commit as the dialog).
+* An unaided walk by an intended user (D17 and D20 stay with the founder).
+* Live canada.ca (only the recorded copy).
+* Retrofit mapping: not applicable.
