@@ -35,12 +35,19 @@ jobs:
           "$P/tools/push-guard.sh" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
       - id: code
         name: does this pull request change code?
+        env: { HEAD_REF: "${{ github.event.pull_request.head.ref }}" }
         run: |
           # No early-exit grep in a pipe: under pipefail its SIGPIPE would read as "no code changed".
           # Code = the app and its tools under prototype/, the build setup, and the suites' own tools and this file (they
           # change how the suites run); the product records, their checkers and boards run only the fast checks above
           # (founder, 29 Oct: no full suites for records PRs).
           code=$(git -c core.quotePath=false diff --no-renames --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" | grep -E '^(ai-workers/problem-1-pathway-setup-and-form-filling/prototype/|ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/(run-suites\.sh|select-suites\.mjs|cloud-setup\.sh)$|\.github/workflows/ci\.yml$|\.nvmrc$)' | grep -ivE '\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$' || true)
+          # P-201: a builder's own PR gets the fast checks only; the suites run once per merge-queue batch (Mergify's
+          # batch PRs come from branches mergify/merge-queue/...), on the result that will land on main.
+          if [ -n "$code" ] && [[ "$HEAD_REF" != mergify/* ]]; then
+            echo "Code changed: the suites run when this PR's merge-queue batch is checked (P-201)." >> "$GITHUB_STEP_SUMMARY"
+            echo "changed=true" >> "$GITHUB_OUTPUT"; echo "suites=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
           if [ -z "$code" ]; then
             echo "Docs and records only: suites not needed." >> "$GITHUB_STEP_SUMMARY"
             echo "changed=false" >> "$GITHUB_OUTPUT"; echo "suites=false" >> "$GITHUB_OUTPUT"; exit 0
