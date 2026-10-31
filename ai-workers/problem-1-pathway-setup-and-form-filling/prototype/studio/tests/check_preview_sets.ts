@@ -100,9 +100,9 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
   ok("C4.6 + Q3 fail: no child gets a form filed for the application or the couple (who a form applies to is right on the sample)", kids.every(([, v]) => !v.forms.some((f: any) => f.group === "APPLICATION" || f.group === "COUPLE")), kids.map(([id, v]) => `${id}: ${v.forms.map((f: any) => f.form).join(",") || "none"}`));
   const perForm = allForms.filter((f) => f.group !== "APPLICATION" && f.group !== "COUPLE");
   ok("C4.6 pass: every other form is grouped by its filing channel", perForm.length > 0 && perForm.every((f) => f.group === f.channel), perForm.map((f) => `${f.form}:${f.channel}`));
-  const S4 = clone(S); const f1 = S4.forms.find((f: any) => f.form_number === "IMM 1295"); f1.channel = "ONLINE"; const f2 = S4.forms.find((f: any) => f.form_number === "IMM 5707"); f2.channel = "SIGNED_PDF_UPLOAD";
+  const S4 = clone(S); const f1 = S4.forms.find((f: any) => f.form_number === "IMM 1295"); f1.channel = "ONLINE"; const f2 = S4.forms.find((f: any) => f.form_number === "IMM 5707"); f2.channel = "PAPER";
   const v4 = previewFamily(S4, "", "principal", {});
-  ok("C4.6 pass: a form filed online is under \"Filled on the portal\"; a signed PDF under \"PDF to print and sign\"", v4.forms.find((f) => f.form === "IMM 1295")?.group === "ONLINE" && v4.forms.find((f) => f.form === "IMM 5707")?.group === "SIGNED_PDF_UPLOAD", v4.forms.map((f) => `${f.form}:${f.group}`));
+  ok("C4.6 pass: a form filed online is under \"Filled on the portal\"; a paper form under \"PDF to print, sign and mail\"", v4.forms.find((f) => f.form === "IMM 1295")?.group === "ONLINE" && v4.forms.find((f) => f.form === "IMM 5707")?.group === "PAPER", v4.forms.map((f) => `${f.form}:${f.group}`));
   const S5 = clone(S4); S5.forms.find((f: any) => f.form_number === "IMM 5476").channel = "ONLINE";
   ok("C4.6 fail: a form filed for the application stays in that group whatever its channel (never repeated by channel)", previewFamily(S5, "", "principal", {}).forms.filter((f) => f.form === "IMM 5476").map((f) => f.group).join() === "APPLICATION");
 

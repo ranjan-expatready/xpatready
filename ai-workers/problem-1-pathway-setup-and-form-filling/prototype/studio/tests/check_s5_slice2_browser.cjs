@@ -182,7 +182,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C6.1 QA-38 pass: the case opens pinned to release 2, as the list said", await o.getByText("Release 2", { exact: true }).count() > 0 && await o.getByText("Release 1", { exact: true }).count() === 0);
   await o.locator('[data-online-form="IMM 1295"]').waitFor({ timeout: 15000 }).catch(() => {});
   const onl = await o.locator('[data-online-form="IMM 1295"]').innerText().catch(() => "");
-  step("C7.6 QA-40 pass: the case still names IMM 1295 and says in words it is filed Online in a later wave (no PDF copy)", /IMM 1295 · filed Online \(later wave\)/.test(onl.replace(/\s+/g, " ")) && /filed online, in a later wave/.test(onl), onl.replace(/\s+/g, " ").slice(0, 200));
+  // P-145 (forms slice 1): the Online row says how it is filed and that its PDF is only a copy, not for filing.
+  step("C7.6 QA-40 pass: the case still names IMM 1295 and says in words it is filed Online in a later wave, its PDF a copy not for filing (P-145)", /IMM 1295 · filed Online \(later wave\)/.test(onl.replace(/\s+/g, " ")) && /It is filed online: the case officer types it into the IRCC account/.test(onl.replace(/\s+/g, " ")) && /PDF copy, not for filing/.test(onl), onl.replace(/\s+/g, " ").slice(0, 200));
   step("C7.6 QA-40 fail-guard: a form filed as a PDF (IMM 5257 SCH1) is not in the Online rows", await o.locator('[data-online-form="IMM 5257 SCH1"]').count() === 0);
   await o.locator('[data-online-form="IMM 1295"]').scrollIntoViewIfNeeded();
   n++; await o.screenshot({ path: path.join(SHOTS, `${String(n).padStart(2, "0")}-case-online-form-1440.png`) });

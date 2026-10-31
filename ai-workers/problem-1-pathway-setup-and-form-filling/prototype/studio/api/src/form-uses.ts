@@ -100,8 +100,9 @@ export type LineRow = Prisma.CombinationFormGetPayload<object>;
 export async function snapshotLines(db: Pick<Db, "combinationForm">, combinationId: string, codes: string[]) {
   return (await db.combinationForm.findMany({ where: { combinationId, lineageKey: { in: codes } } })) as LineRow[];
 }
-/** What a line says (break M4): an edit that keeps its status and version still changes this, an exact Undo does not. */
-export const lineSig = (r: Pick<LineRow, "who" | "attachMode" | "conditionPlain" | "origin" | "predicateJson" | "minAge" | "signedBy" | "channel" | "sourceQuote" | "govFormDefId">) => JSON.stringify([r.who, r.attachMode, r.conditionPlain, r.origin, r.predicateJson, r.minAge, r.signedBy, r.channel, r.sourceQuote, r.govFormDefId]);
+/** What a line says (break M4): an edit that keeps its status and version still changes this, an exact Undo does not.
+ *  P-143: the signature counts too, only when set, so a step recorded before it keeps its signature. */
+export const lineSig = (r: Pick<LineRow, "who" | "attachMode" | "conditionPlain" | "origin" | "predicateJson" | "minAge" | "signedBy" | "channel" | "sourceQuote" | "govFormDefId"> & { signature?: string | null }) => JSON.stringify([r.who, r.attachMode, r.conditionPlain, r.origin, r.predicateJson, r.minAge, r.signedBy, r.channel, r.sourceQuote, r.govFormDefId, ...(r.signature && r.signature !== "NONE" ? [r.signature] : [])]);
 /** Records one change with the rows it started from; the rows after it are read again when it is undone. */
 export async function recordAction(db: Pick<Db, "formLineAction" | "combinationForm">, a: { workspaceId: string; combinationId: string; action: "attach" | "remove" | "finder_attach" | "edit"; codes: string[]; before: LineRow[]; by: string; batchId?: string }) {
   const after = await snapshotLines(db, a.combinationId, a.codes);

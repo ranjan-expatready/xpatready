@@ -13,6 +13,8 @@ export type LibraryChangeDetail = LibraryChangeView & { field: { key: string; la
   goes_with: string[]; with_combination: boolean;
   /** ReviewCard (P-116 amended): the approval re-check, run now and shown before the click; null when it does not apply. */
   recheck: { ok: boolean; text: string; kept: string[] } | null;
+  /** Break M5: a change to what IRCC accepts, the combinations in use it leaves with a line filed in a refused way. */
+  accepts_impact?: { combination: string; label: string; channel: string; words: string }[];
   /** S4 C11.18: a change to what IRCC accepts for a form, in words (before → after, IRCC's line or the reason, its page). */
   accepts?: { form: string; edition: string | null; before: string; after: string; quote: string | null; reason: string | null; form_page: string | null } };
 

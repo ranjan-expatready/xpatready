@@ -5,7 +5,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { acceptedChannels } from "../engine/channels.ts";
+import { allowedChannels } from "../engine/channels.ts";
 import { ourWords, irccWords } from "../contracts/workspace.ts";
 import { checkPeople } from "../engine/people.ts";
 
@@ -61,29 +61,29 @@ const P = (extra: any[] = []) => [{ role: "principal", min: 1, max: 1, applies: 
   line = await lineOf(wp, F);
   await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(F)}`, { minAge: 18, baseRevision: line.revision });
   line = await lineOf(wp, F);
-  r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(F)}/channel`, { channel: "SIGNED_PDF_UPLOAD", from: line.channel });
+  r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(F)}/channel`, { channel: "PDF_UPLOAD", signature: "HAND_SCANNED", from: line.channel });
   ok("setup: the line's filing changed after the age edit, on the channel picker (not an Undo step)", r.status === 200, words(r));
   r = await undoForms(wp);
   ok("C11.6 L1 fail: Undo of the age edit is refused once the line was changed since (its filing is now part of what is compared)", r.status === 409 && /changed after that step/.test(words(r)), words(r));
   line = await lineOf(wp, F);
-  await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(F)}/channel`, { channel: "PDF_UPLOAD", from: line.channel });
+  await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(F)}/channel`, { channel: "PDF_UPLOAD", signature: "NONE", from: line.channel });
   line = await lineOf(wp, F);
   await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(F)}`, { minAge: null, baseRevision: line.revision });
 
   // ---------------------------------------------------------------- L4 Filed as from what IRCC accepts
-  ok("C1.6 L4 (rule): PDF accepts PDF and signed PDF uploads, Online only Online, both all three; nothing recorded is null (Sample)", JSON.stringify(acceptedChannels("PDF")) === '["PDF_UPLOAD","SIGNED_PDF_UPLOAD"]' && JSON.stringify(acceptedChannels("ONLINE")) === '["ONLINE"]' && acceptedChannels("PDF_OR_ONLINE")!.length === 3 && acceptedChannels(null) === null && acceptedChannels("READ_BY_AI") === null);
+  ok("C1.6 L4 (rule, P-143): a record of PDF upload offers PDF upload; Online offers Online; nothing recorded offers Online, PDF upload and Paper (Sample)", allowedChannels([{ account: "ANY", channels: ["PDF_UPLOAD"], basis: "X", quote: null }], null).channels.join() === "PDF_UPLOAD" && allowedChannels([{ account: "ANY", channels: ["ONLINE"], basis: "X", quote: null }], null).channels.join() === "ONLINE" && allowedChannels(undefined, null).record === null && allowedChannels(undefined, null).channels.length === 3);
   // The library's record on every PDF edition of the form (the newest one is what counts).
   const eds = `select e.id from form_edition e join gov_form_def d on d.id=e.gov_form_def_id where d.form_key='${F}' and e.workspace_id='${served}' and e.channel <> 'ONLINE'`;
   line = await lineOf(wp, F);
   ok("C1.6 L4 fail-guard: with nothing recorded for IMM 1295, every way is offered and said to be Sample", line.accepted.length === 3 && /^Sample/.test(line.acceptedBasis), { accepted: line.accepted, basis: line.acceptedBasis });
-  sql(`update form_edition set accepted_channels='PDF', accepted_basis='PERSON_SAMPLE' where id in (${eds})`);
+  sql(`insert into form_edition_accept (workspace_id, form_edition_id, account, channels, basis, quote, set_by) select workspace_id, id, 'ANY', '{PDF_UPLOAD}', 'PERSON_SAMPLE', 'Test: upload the form', 'test' from form_edition where id in (${eds}) on conflict do nothing`);
   line = await lineOf(wp, F);
-  ok("C1.6 L4 pass: once the Form library records PDF for the edition, Filed as offers only PDF upload and signed PDF upload, from the library", JSON.stringify(line.accepted) === '["PDF_UPLOAD","SIGNED_PDF_UPLOAD"]' && /Form library/.test(line.acceptedBasis), { accepted: line.accepted, basis: line.acceptedBasis });
+  ok("C1.6 L4 pass: once the Form library records PDF for the edition, Filed as offers only PDF upload (any signature that fits it), from the library", JSON.stringify(line.accepted) === '["PDF_UPLOAD"]' && /Form library/.test(line.acceptedBasis), { accepted: line.accepted, basis: line.acceptedBasis });
   r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(F)}/channel`, { channel: "ONLINE", from: line.channel });
   ok("C1.6 L4 fail: choosing Online is refused on save in words (IRCC accepts it only as a PDF upload)", r.status === 400 && /accepts it only as a PDF upload/.test(words(r)) && (await lineOf(wp, F)).channel === "PDF_UPLOAD", words(r));
-  r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(F)}/channel`, { channel: "SIGNED_PDF_UPLOAD", from: line.channel });
-  ok("C1.6 L4 pass: a signed PDF upload, which IRCC accepts, is saved", r.status === 200 && (await lineOf(wp, F)).channel === "SIGNED_PDF_UPLOAD", words(r));
-  sql(`update combination_form set channel='ONLINE' where combination_id='${wp}' and lineage_key='${F}' and status='DRAFT'`);
+  r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent(F)}/channel`, { channel: "PDF_UPLOAD", signature: "HAND_SCANNED", from: line.channel });
+  ok("C1.6 L4 pass: a PDF upload signed by hand and scanned, which IRCC accepts, is saved", r.status === 200 && (await lineOf(wp, F)).signatureKind === "HAND_SCANNED", words(r));
+  sql(`update combination_form set channel='ONLINE', signature='NONE' where combination_id='${wp}' and lineage_key='${F}' and status='DRAFT'`);
   let probs = await problems(wp);
   ok("C1.6 L4 fail: a line already filed Online (saved before the library recorded PDF) blocks release with the same words", probs.some((p) => p.level === "error" && p.item === F && /accepts it only as a PDF upload/.test(p.message)), probs.filter((p) => p.item === F).map((p) => p.message));
   r = await call("POST", `/combinations/${wp}/submit`, {});
@@ -91,7 +91,7 @@ const P = (extra: any[] = []) => [{ role: "principal", min: 1, max: 1, applies: 
   sql(`update combination_form set channel='PDF_UPLOAD' where combination_id='${wp}' and lineage_key='${F}' and status='DRAFT'`);
   probs = await problems(wp);
   ok("C1.6 L4 pass: filed as a PDF upload again, the error is gone", !probs.some((p) => p.item === F && /accepts it only/.test(p.message)));
-  sql(`update form_edition set accepted_channels=null, accepted_basis=null where id in (${eds})`);
+  sql(`delete from form_edition_accept where form_edition_id in (${eds}) and set_by='test'`);
 
   // ---------------------------------------------------------------- forms from the finder on Visitor visa (for L5, L11)
   const plan = (await call("POST", `/combinations/${vv}/forms/find/plan`, { mode: "replay" })).body;

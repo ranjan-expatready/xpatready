@@ -9,7 +9,7 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { editionContextKey, editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, MAX_OTHER_PAGES, newestFirst, otherPages, replayPattern, savedRunKey, type SavedRun } from "../engine/rounds.ts";
+import { editionContextKey, editionOfContextKey, isSameSavedRun, jobIdFor, LIVE_RUN, MAX_OTHER_PAGES, newestFirst, otherPages, promptOfRun, replayPattern, savedRunKey, type SavedRun } from "../engine/rounds.ts";
 import { paidRetryAllowed, paidRunAllowed, paidRunsOf, RUNS, sizedBudgetUsd, StepRunner, worstRoundUsd, type AiStep } from "../api/src/rounds.ts";
 import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, MAX_REQUEST_BYTES, RUN_CAP_USD, WAVE1_CAP_USD } from "../../p2/policy.ts";
 import { BudgetExceeded, SpendLedger } from "../../p2/ledger.ts";
@@ -43,6 +43,10 @@ const JOBS = join(STUDIO, "..", "p2", "jobs");
   ];
   const wrong = variants.filter(([, r]) => isSameSavedRun(r, want)).map(([w]) => w);
   ok("C11.8 fail: a saved run is never replayed for another prompt, other files or order, another combination, a stub pass, a broken contract, an unfinished run or no answer", wrong.length === 0, wrong);
+  // W1-10 slice 1 (plan §4): a step names the earlier prompt versions it still replays; any other version is refused.
+  const prompts = [{ sha256: "t2", label: "" }, { sha256: "t1", label: "Saved before channels" }];
+  ok("C11.8 §4 pass: an answer of an earlier prompt the step names is replayed, with its label", promptOfRun(good, prompts) === "Saved before channels" && promptOfRun({ ...good, launch_evidence: { template_sha256: "t2" } }, prompts) === "");
+  ok("C11.8 §4 fail: an answer of any other prompt version is never replayed", promptOfRun({ ...good, launch_evidence: { template_sha256: "t0" } }, prompts) === null && promptOfRun({ ...good, launch_evidence: {} }, prompts) === null);
   const j1 = jobIdFor("studio-finder-forms", false, "Individual › Visitors › Visitor visa", "batch-1"), j2 = jobIdFor("studio-finder-forms", false, "Individual › Visitors › Visitor visa", "batch-2");
   ok("break M5 pass: a round's job id names the step, the place and a fingerprint, and is stable for one run", /^studio-finder-forms-individual-visitors-visitor-visa-[0-9a-f]{8}$/.test(j1) && j1 === jobIdFor("studio-finder-forms", false, "Individual › Visitors › Visitor visa", "batch-1"), j1);
   ok("break M5 / round 2 N3 fail: two runs, or a checker round, never share a job id (Stop ends only its own call)", j1 !== j2 && jobIdFor("studio-finder-forms", true, "Individual › Visitors › Visitor visa", "batch-1").startsWith("studio-finder-forms-check-"));
