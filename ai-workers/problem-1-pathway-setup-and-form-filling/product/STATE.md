@@ -21,7 +21,7 @@ updated: 2026-10-31 · milestone: **M2 — Super Admin configuration**, with the
 | #128 | forms (cloud) | the cost warning re-plans on Start | approved; merges on green |
 
 ## Founder decisions waiting
-* One forms cloud session ("Does Continue cover a run's retries?") stopped to wait for a human answer. The forms builder was told to put that question in its PR; ask the founder when it appears.
+* None (31 Oct: P-194 answered #131's question).
 
 ## Close-out still to do
 * After #111 and #113 merge: archive the four old Mac builder sessions (forms-fix8 local_c49f56b8, screens-card3 local_ba1559ab, runtime local_3b02c2d2, qa local_b27bf6a4) and remove their copies (about 12 GB). Then remove the frozen `lanes/` folder, and start a cloud qa session for `/qa after-merge` on main.
