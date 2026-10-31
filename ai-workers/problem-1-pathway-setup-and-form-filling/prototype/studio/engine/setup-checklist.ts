@@ -45,8 +45,10 @@ export function mayAct(item: Pick<OpenItem, "kind" | "tier" | "notBy">, actor: {
  *  confirmation"); building items (find, add, map, draft, a draft's own problems) do not; a release's problems do
  *  (Not ready: firms cannot open cases). */
 // confirm_people stays out of Needs you until a screen offers the confirmation (participantsConfirmedAs, P-176 Q1 open):
-// a mark nobody can clear is noise. It still counts as open on the step and in the Next line.
-const REVIEWS: ItemKind[] = ["confirm_pages", "choose_pages", "review_people", "review_proposals", "review_edition", "sign", "release", "fix_problems"];
+// a mark nobody can clear is noise. It still counts as open on the step and in the Next line. N8 (F2 review M1, break M3):
+// the same for confirm_pages and choose_pages: the record and its endpoint exist, the "Before forms" block that offers
+// them comes with slice C; until then they are not "Needs you".
+const REVIEWS: ItemKind[] = ["review_people", "review_proposals", "review_edition", "sign", "release", "fix_problems"];
 
 /** The official-pages record (forms lane, queue item 2). Until it lands every combination reads "no_record". */
 export type OfficialPages = { state: "no_record" } | { state: "proposed"; matches: number } | { state: "confirmed"; by: string | null; as: Tier };

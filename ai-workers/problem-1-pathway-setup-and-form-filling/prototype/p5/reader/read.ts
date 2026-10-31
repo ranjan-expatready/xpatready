@@ -83,14 +83,19 @@ try {
           r.attempts.push({ n, outcome: "refused_before_call", error: e.message }); break;
         }
         const t0 = Date.now();
-        try {
-          const res = await call(req, s);
+        // PR #121 review (as p2/runner.ts): the call and its settle are separate steps; a settle that cannot be written
+        // keeps the answer, leaves the reservation at its worst case and never calls the model again.
+        let res: any, failure: unknown; // eslint-disable-line @typescript-eslint/no-explicit-any -- the reader's caller answer, as below
+        try { res = await call(req, s); } catch (e) { failure = e; }
+        if (res) {
           const c = costUsd(s.model, res.usage.input_tokens, res.usage.output_tokens);
-          ledger.settle(id, c, res.stop_reason === "end_turn" ? "ok" : `ok_stop_${res.stop_reason}`);
-          r.attempts.push({ n, outcome: "ok", stop_reason: res.stop_reason, cost_usd: c, input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens, duration_ms: Date.now() - t0 });
+          const notSettled = ledger.settleOrKeep(id, c, res.stop_reason === "end_turn" ? "ok" : `ok_stop_${res.stop_reason}`);
+          r.attempts.push({ n, outcome: "ok", stop_reason: res.stop_reason, cost_usd: c, input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens, duration_ms: Date.now() - t0, ...(notSettled ? { settle_error: `counted at its worst case: ${notSettled}` } : {}) });
           r.text = res.text; break;
-        } catch (e) {
-          ledger.settle(id, worst, "error_counted_at_worst_case");
+        }
+        {
+          const e = failure;
+          ledger.settleOrKeep(id, worst, "error_counted_at_worst_case");
           r.attempts.push({ n, outcome: "error", error: (e as Error).message.slice(0, 300), duration_ms: Date.now() - t0 });
           const st = (e as { status?: number }).status;
           // An account-level refusal (key, permission, the account's own usage limit) fails every later call the same

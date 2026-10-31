@@ -1,83 +1,82 @@
-# Break report 2: P-179 cost warning + Continue on the QA-90 shared ledger, after the FIX (backend path, 30 Oct)
+# Break report 3: N6 "P-179 follow-ups" (money safety), at commit c71fe137 (31 Oct)
 
-Copy `claude/gallant-hertz-60664a` @ `3b1e4c39` (code = `c950b098`). Disk was 5 GB free, so an isolated copy `fx7_brk2` ran on :4459 with `P2_LEDGER_DIR=<scratchpad>/ledger`, `STUDIO_HOLD_QUEUE=1` and no `*_LIVE` switch. It was stopped at the end, and the working tree is clean. The ledger attacks used new scratch folders and `SpendLedger` directly. No launcher ran, no priced button was clicked, and nothing was spent (US$0). The real shared ledger `.tools/p2-ledger` was only read, through a scratch copy: 753 lines (370 reserve, 383 settle), 0 orphan settles and no settle above its worst case. It passes the new amount checks: committed US$38.89, Wave 1 US$3.13. `prototype/p2/ledger/spend.jsonl` does not exist in this copy. Scripts: `<scratchpad>/attack_ledger.ts`, `attack_api.ts`, `attack_lock.ts`, `race.sh`, `sigterm.sh`. Earlier report: `break-report-p179-1.md`.
-
-## Earlier breaks, tried again
-| Earlier | Result now |
-|---|---|
-| **B1** stub refused past a cap | **Fixed.** `reserve(…,1.38,5,"stub")` at US$119.50 and a US$6 stub with a US$5 run cap are both RESERVED at US$0. The `unmarked` caller is still refused, and a `NaN` stub is refused. The end-to-end run in `check_p2_launch` §12 was read, not run again, because it writes run records into the copy. |
-| **M1** malformed amounts | **Fixed for reserve/settle.** No `worst_usd`, -50, `"4"` and `settle -100` each stop reserve, the Continue and the wave sum with `BudgetExceeded` in words. `settle(Infinity)` is refused. See n4 for override lines. |
-| **M2** Continue past US$132 | **Fixed.** A Continue is recorded, then US$12.01 of spend is added (same run key, `can_continue:false`). The launch answers 409 "past the US$132.00 … The founder must raise the cap": 0 used, 0 queued. |
-| **m1** refusal spends the Continue | **Fixed.** Two Continues, two launches at once: 409 "Being mapped…" and 201. Exactly 1 `override_use`. |
-| **m2** double click, one key | **Fixed.** 201/201 with the same job and 1 use. A later retry with the same key gets 201 and the same job. |
-| **m3** unspent Continues not held | **Fixed while unused.** A second Continue at US$125 is refused ("6.0000 held by other Continues not started yet"). The gap left once the Continue is used is n2. |
-| **m4** two totals | **Fixed.** With an orphan settle, `cost_check.spent` is 118.62, the same as `ledger.committed` (118.62). |
-| **m5** loose body | **Fixed.** An unknown field at the top level or in `start` gets 400 in words. A 501-character `reason` gets 400. A `reason` object gets 400. |
-| **m6** 6 MB / garbage line | **Fixed.** 6 MB gets 413 in words. A non-JSON ledger line gets 503 "AI starts are stopped…" for the LIVE and STUB plans. |
-| **m7** another person's Continue | **Fixed at the ledger** (`useOverride(id,key,"user-Z")` is refused "recorded by another person"). The API passes `actor.id` (`cost-gate.ts:66,78`). Not testable over HTTP: only one author persona exists. |
+Adversarial CHECK of `git diff 066b476c c71fe137`, branch `claude/friendly-lamport-06zafk`. Earlier report: this file at the commit before. US$0 throughout: no `*_LIVE` switch, no priced button, queue held, scratch ledgers only (`/tmp/brk3/...`, never `.tools/p2-ledger`).
+* **What ran.** While I worked, other sessions changed the shared working tree (`p2/ledger.ts` was edited, then put back; `review.md`, the reviewer's journey test, `screenshots/p179/*`). So I extracted c71fe137 with `git archive` into `/tmp/brk3/src` and ran everything against that copy.
+* **The copy.** The isolated copy was `n6_brk3` on :4459, started with `P2_LEDGER_DIR=/tmp/brk3/ledger STUDIO_HOLD_QUEUE=1` and its web build made from the same commit. At the end it was stopped and its database dropped.
+* **Scripts** (scratch, not committed): `a1.ts`/`a2.ts` ledger, `lockw.ts`+`race.sh` spend.lock, `resw.ts` reserve lock, `settle.ts`, `h1.ts` HTTP, `b1.cjs` browser (Playwright, headless Chrome).
 
 ## Blocker
-None found.
+None found. Money stays at or below US$132, and at or below each cap unless a Continue was recorded (see What held).
 
 ## Major
-**N1. A drafting process stopped or crashed during a call leaves the one-runner lock `spend.lock` in the shared folder. Every copy's AI steps then fail until a person deletes it.**
-* Cause: `withLock` (`p2/ledger.ts:225-230`) removes the lock only in `finally`, and that does not run on SIGTERM or a crash. Stop sends SIGTERM to the launcher's process group (`studio/api/src/sources.ts:488`). Nothing breaks a stale `spend.lock`; `spend.reserve.lock` got that treatment in review m9, this lock did not.
-* Reproduction (`sigterm.sh`, scratch ledger):
-  1. A process holds `withLock` and has reserved, as `runDrafting` does during a call (`p2/runner.ts:63`).
-  2. `kill -TERM` it: `spend.lock` stays.
-  3. The next `withLock` is refused "ledger locked by another runner".
-* Effect: in the Studio, `launchOnce` retries 60 × 2 s (`sources.ts:455`), then the step fails. This includes the free stub pass, so every Continue run, finder round and field-map draft in every copy fails.
-* Why it is new: before QA-90 this blocked one copy; now the folder is shared.
-* Expected: a stale `spend.lock` is detected (pid or age, like `breakStaleLock`), or released on SIGTERM.
+None found.
 
 ## Minor
-* **n1. The API process stops answering everyone while it waits on `spend.reserve.lock`.**
-  * Cause: `atomically` waits with `Atomics.wait` on the main thread (`p2/ledger.ts:199`). The API calls it from `recordOverride` and `spendOverride`.
-  * Measured (`attack_lock.ts`):
-    * Another process holds a fresh lock for 8 s: a `GET /session` sent meanwhile took **7,799 ms**. The launch then answered 201 with 1 use.
-    * The same lock held 12 s: `GET /session` took **10,551 ms**. The launch got 503; the Continue stayed unused and the transaction rolled back (good).
-    * A lock whose holder crashed 1 s ago: `POST /ai/overrides` gets 503 after 10,096 ms, and `GET /session` meanwhile took 9,879 ms. Each further call freezes again until the lock is 30 s old.
-  * A keep-alive client got `ECONNRESET` after a freeze.
-  * The 503 words for "ledger busy" say "Ask the Lead to fix the ledger line" (`cost-gate.ts:84`), which is wrong for a busy lock.
-  * Expected: an async wait, or a short try in the API; words that say "busy, try again".
-* **n2. A Continue that has been used, but whose run has not reserved yet, holds nothing against US$132.**
-  * Cause: `heldByOverridesUsd` drops used Continues (`ledger.ts:96-99`), and `committed()` counts only reservations. The run waits in the queue and the stub pass first.
-  * Reproduction (`attack_ledger.ts`, committed US$125):
-    1. Continue X (US$6) is recorded, and a second Continue is refused (correct).
-    2. X is used: held is now 0.
-    3. Continue Y (US$6) is **recorded**.
-    4. X reserves 6. Y's run, already started, is refused at `reserve` ("committed 131 + 6 … past the US$132 ceiling").
-  * This is the m3 case, moved to the window between use and the first reserve. Money stays at or below US$132.
-  * Expected: hold a used Continue's worst case until its run has reserved or ended.
-* **n3. A NUL character in `reason` records the Continue but answers 404.**
-  * Reproduction: `POST /ai/overrides` with `reason:"a\u0000b"`. The `override` line is written (`ledger.ts:113`), then the audit insert fails (`ai.ts:342`, Postgres "invalid byte sequence").
-  * The answer is **404 "Not found (it may have been removed by a reset)"** (`main.ts:168`): no id is returned and no `ai_override` audit row is written. The line holds US$2.76 against US$132 for 10 minutes.
-  * Zod lets `\u0000` through (`contracts/cost-check.ts:32`).
-  * Expected: refuse control characters in `reason`, or write the audit before or with the ledger line.
-* **n4. Override lines are not checked like amounts.**
-  * `counted()` checks only `reserve` and `settle` (`ledger.ts:84-86`). Seed merges lines without checking them (`seed-shared-ledger.ts:18`). With US$119 committed:
-    * An override line with `worst_usd:-100` lowers what is held, so a new US$6 Continue is RECORDED.
-    * `worst_usd:"6"` makes `recordOverride` throw `TypeError: held.toFixed is not a function`. That is not `BudgetExceeded`, so the answer is 500, not 503 in words.
-    * An override with **no `expires_at`**, recorded on 1 Jan, is still used and reserved today: `Date.parse(undefined)` is NaN, so it never expires (`ledger.ts:133`, `cost-gate.ts:67`).
-    * `limits:"experiment,wave"` (a string) passes `.includes` in `overrideRefusal`.
-  * These lines arrive only by hand edit or seed. Expected: the same fail-closed check for override lines.
-* **n5. Seed can drop a `settle` (found by reading).**
-  * `settle` appends without the reserve lock (`ledger.ts:219-222`). Seed reads, writes a temporary file, then renames (`seed-shared-ledger.ts:27-33`).
-  * A settle appended in between goes to the replaced file and is lost. Its reservation then counts at worst case: spend is overstated, which is the safe side. Not run.
+* **m1. On the Forms tab, a plan that went out of date while the dialog was open brings back review N1: a red toast, no warning, no Continue.**
+  * Cause: `sources.tsx:127` makes the plan once, when Live is chosen. It is fetched again only after a 409 (`:143`), but the over-cap refusal is a 400.
+  * Steps (`b1.cjs`, screenshot `/tmp/brk3/b3-stale.png`):
+    1. Spend US$0. Forms › IMM 5257 › Draft with AI › Live: the plan fits.
+    2. Another start (another copy, or Draft setup's queue) takes spend to US$119.
+    3. Click "Start live AI draft". Expected: the cost warning with Continue. Actual: a red toast, "The worst case (US$7.23) is above what is left of the experiment cap (US$1.00 of US$120)."
+    4. Click again: the same toast again. Nothing started (US$0).
+  * The only way out is to close the dialog and open it again; the toast does not say so.
+  * Expected: fetch the plan again when Start is clicked, or after any refusal from the launch.
+* **m2. The same dialog gives two different "left" figures.**
+  * The dialog says "Spent so far US$0.00 of the US$120.00 experiment cap; US$60.00 left." The US$60.00 is what is left of Wave 1 (`api/src/sources.ts:232`, `min(experiment, wave)`), not of the experiment cap. The toast meanwhile says "US$1.00 of US$120".
+  * The sentence was edited by this commit (review n4); same screenshot.
+* **m3. With the n5 fix, a busy lock at settle can throw away a paid answer and pay for the call again.**
+  * Cause: `settle` now waits for the short lock (`ledger.ts:290`). The drafting process waits 10 s, then throws `LedgerBusy`.
+  * In `runner.ts`, `settle` (`:74`) sits inside the `try` around the paid call, so that throw lands in the call's `catch`. There it counts as an error: not refused, not busy, no time-out. The answer `r.text` is dropped, the reservation is settled at its worst case (`:87`), and the loop goes on to attempt n+1, a second paid call for an answer it already had.
+  * Shown at ledger level (`settle.ts`): an alive process holds `spend.reserve.lock`, and `settle` throws `LedgerBusy` after 10,006 ms with the worst case kept. The runner path was read, not run (it needs a paid caller).
+  * Trigger is rare: a live holder for 10–30 s. The extra call stays within the caps.
+  * Expected: settle after the `try`, or retry settle on `LedgerBusy` without treating it as a call failure.
+* **m4. A used Continue still holds only until it expires (10 min). Break n2 is narrowed, not closed.**
+  * Steps (`a2.ts`), committed US$120:
+    1. Continue KQ (US$6) is recorded and used 11 min ago; its run has not reserved yet. `heldByOverridesUsd` gives 0 (`ledger.ts:133-143`).
+    2. A new Continue K9 (US$12) is **recorded**.
+    3. KQ's run reserves 6, which is allowed (the expiry is not checked at reserve).
+    4. K9's run is refused at `reserve`: "126 + 12 … past the US$132 ceiling".
+  * When it happens: Draft setup over many forms runs its steps one after another, so later steps reserve more than 10 minutes after the click.
+  * Money stays at or below US$132. Expected: hold until the run has reserved its worst case or ended (`ended` already tells the API when a run has ended).
+* **m5. A lone surrogate in `reason` still records a Continue with no audit (n3 fix incomplete).**
+  * Steps: `POST /ai/overrides` with `reason:"a\uD800b"`. The answer is **500** "Something went wrong". The `override` line is written (`"reason":"a\ud800b"`), and there is 0 `ai_override` audit row: Postgres JSON refuses a lone `\ud800`.
+  * The regex at `contracts/cost-check.ts:37` refuses C0 controls only.
+  * The person's next click reuses that line (the review N2 reuse) and writes an audit row that says "again (their Continue from a moment ago…)". No earlier row exists, and the ledger keeps the first reason, not the one in the audit (`ledger.ts:156-157`, `ai.ts:343`).
+  * U+2028, U+0085, U+FFFF, RTL text and emoji: 201, stored.
+  * Expected: refuse unpaired surrogates (or `.isWellFormed()`), or write the audit before or with the ledger line.
+* **m6. A `spend.lock` whose holder looks alive, or that comes from "another" host, is never broken; nothing ages it out.** This is break N1 again in narrower cases.
+  * Steps (`lockw.ts`, locks back-dated 3 hours): `vm:1:…` (a live process id), `other-mac.local:999999:…` and `vm.local:999999:…` (this computer under another name). Each next `withLock` answers "ledger locked by another runner" (`ledger.ts:45-49`, `:300`).
+  * When it happens: macOS's `os.hostname()` changes with the network (`Mac.local`, `Mac.lan`, `Mac`), and process ids are reused over days. A crash followed by either leaves a lock that every copy's AI steps wait on.
+  * The words name a file, not what a person should do.
+  * Expected: an age limit for named locks too, longer than the longest run, or words telling the person what to do.
+* **m7. `recordOverride` returns a person's own Continue without checking the ceiling again** (`ledger.ts:157`, before `:158`).
+  * Steps (`a1.ts` A): a Continue is recorded at US$120, then spend reaches US$127. The same person and key get `again:true` for a US$6 worst case: 133 > 132.
+  * The API refuses earlier (`overrideAllowed` checks `can_continue`), and `reserve` checks the ceiling, so no money moves. But the ledger's own promise, "refused when it would take spend past the ceiling", is not kept on this path.
+* **m8 (read, not reproduced). Three waiters can still both enter `withLock`.**
+  * `breakStaleLock` renames whatever is at the lock name. Two of three waiters, B and C, read the dead lock. A breaks it and takes a fresh one. B then moves A's fresh lock aside and puts it back. In that moment C can `takeLock`. B's put-back then fails, and B deletes A's lock (`ledger.ts` breakStaleLock).
+  * 8×6 and 16×12 rounds with a dead holder showed 0 overlaps, so the window is very short.
 
 ## What held
-* **Roles:** `POST /ai/overrides` answers 403 for user-B, user-C, user-O, user-P and user-Q, and 401 for `system`, an unknown person and no header. 0 lines are written.
-* **Hostile `overrideId` on launch:** an array, `{"$ne":1}`, 100 KB of text, `../../etc/passwd`, `123` and `true` all answer 409 "No such Continue". The launcher only takes plain words (`launch.ts:62`).
-* **Odd bodies:**
-  * Duplicate JSON keys: the last wins, the same as the plan, and it is recorded.
-  * A `__proto__` key is accepted (201) and does nothing.
-  * Duplicate limits get 409.
-  * 4.9 MB of `scope.ids` gets 404 Not found, with no line written.
-  * Non-English, right-to-left (RTL) and emoji text and a newline in `reason` answer 201 and are stored escaped.
-* **Concurrency near the ceiling:**
-  * 6 Continues at once over HTTP when only one fits: one 201 and five 409, 1 line.
-  * 16 processes × 4 rounds recording Continues at US$120, and × 3 rounds with a planted 60 s stale lock: exactly 2 recorded each round (US$126, then US$132).
-  * 16 processes × 6 rounds reserving US$20 with a stale lock: exactly 2 each round (US$120 cap). No `.stale-*` file is left behind.
-* **Stale reserve lock:** broken by the API in 632 ms and the launch goes on.
-* **Ledger amounts:** reservations totalling 1e308 make committed `Infinity`, which refuses everything. A settle of 1e300 refuses paid starts while US$0 stubs still pass.
-* **Migrations:** P-179 adds none. The override lives in the ledger line, `ai_batch.plan.override` and the audit. The branch's migration diff is slice 1's.
+* **Money:**
+  * 16 processes × 5 rounds reserve US$20 behind a dead-holder `spend.reserve.lock`: exactly 3 each round (Wave cap US$60), no LedgerBusy, no `.stale-*` left.
+  * Past US$132: a live start without a Continue gets 400; with an older Continue, 409 "past the US$132.00…".
+  * A stub start at US$133 gets 201 at US$0 (the `ai.ts` launch fix holds).
+* **Locks:**
+  * SIGTERM to a `withLock` holder: the next runner breaks the lock and enters at once.
+  * 8 and 16 waiters on a dead `spend.lock`: one at a time, 0 overlap.
+  * A reserve lock whose holder died: broken at once (POST /ai/overrides 201 in 35 ms).
+  * A live holder for 6 s: 503 "The shared spend ledger is busy… Try again in a moment" after 2,029 ms. A `GET /session` sent meanwhile took 1,936 ms, the 2 s wait by design.
+* **Continue reuse:**
+  * The same person and key get the same id (1 line).
+  * Two launches at once with that id: 201 and 409 "Being mapped…", exactly 1 `override_use`, 1 queued.
+  * After Stop, the cancelled run's Continue holds US$0 (`ended`).
+* **Fail closed:** unknown line types, an orphan `override_use`, a settle with no id and a non-text `override_id` do not lower committed or held. Malformed override lines stop starts in words (as the commit says).
+* **Escape guard (Forms tab, browser):**
+  * Cancel, then Escape: the form's dialog closes, so the guard is gone.
+  * Escape while Continue is busy: swallowed, and the warning stays. After the 503, Escape cancels the warning only, and a second Escape closes the dialog.
+  * After a Continue that started a run, Escape closes a later dialog: no leak.
+* **Double Start (double click) on the Forms tab:** one warning, then Continue: 1 override, 1 use, 1 run.
+* **Sizes:** at 1024 px and at 720 px (about 200 % zoom), the warning has no sideways scroll and Continue is visible. 0 page errors.
+
+## Not checked
+A real launcher or live run; a second author persona over HTTP (only `user-A` exists); a screen reader.
