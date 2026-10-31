@@ -80,6 +80,8 @@ const PDF = path.join(ROOT, "official-sources", "ircc", "forms", "imm5476e.pdf")
     r = await api(`/library/changes/${ch.id}/resubmit`, { method: "POST", data: { reason: "I send it for them." } });
     step("N7 break B1 fail: an author cannot send again another person's returned remove (403 in words); it stays returned, its reason unchanged",
       r.status === 403 && /Only the person who proposed a change can send it again\. Content reviewer proposed this one/.test(r.body?.detail ?? "") && sql(`select status || '|' || reason from library_change where id='${ch.id}'`) === "RETURNED|Not needed: a check name.", r.body?.detail ?? r.body);
+    row = await rowOf();
+    step("N7 break N1 / review Minor 4: another person's returned change greys the row saying it went back to them, never 'waiting for a second person'", row?.action?.why === "A change to it was returned to Content reviewer: only they send it again or withdraw it." && row?.pending?.proposer === "Content reviewer", row?.action);
     const q = (await api("/review-queue?filter=all")).body.items.find((x) => x.id === `change:${ch.id}`);
     step("N7 review Minor 2: To review does not ask another author to correct or withdraw someone else's returned remove", q?.state === "waiting" && /The person who proposed it sends it again or withdraws it/.test(q?.waiting_on ?? ""), q && { state: q.state, waiting_on: q.waiting_on, next: q.next });
     // The page says so before anyone clicks: a returned change offers Send again and Withdraw to its proposer only.

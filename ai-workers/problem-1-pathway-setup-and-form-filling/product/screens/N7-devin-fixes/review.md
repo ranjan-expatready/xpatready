@@ -62,3 +62,53 @@ Note, not a finding: `review.tsx` imports `roleKeysInWords` from another page (`
 - Timings against the STANDARDS §9 budgets.
 
 **Verdict: Block (Changes needed) on commit `10939d21`.** Fix issue 1 (Major): the proposer-only withdraw must also cover new shared fields on server and page, with a test. Alternatively, record a Lead decision in `challenge.md` that fields are deliberately "any author" and correct the 403 wording. Issue 2 (Minor) should be fixed in the same pass.
+
+---
+
+## Re-review at `cddef56a` (31 Oct)
+Diffs read: `10939d21..cddef56a`, and the whole N7 diff `origin/claude/reverent-mahavira-cef858..cddef56a`.
+
+How I checked:
+- Own copy `rev_n7c` on :4437; the web build already in `web/dist` was from cddef56a. No :4400, no `*_LIVE`, US$0.
+- `check_runtime_n7.cjs`: **27/27** (a copy writing screenshots to /tmp).
+- `tsc --noEmit`: passes for api and web.
+- Browser walk on Program structure, the change page and To review.
+
+**Issue 1 (Major): closed.**
+- The proposer check is now in `withdrawChange` (`library-changes.ts:156-157`). It sits after the 404 and before the kind, status and note checks, so it covers every kind.
+- New field: a fail case (403, still WAITING) and a pass case (WITHDRAWN) are both in the check.
+- Page: Withdraw shows only when the change is `mine`, on a WAITING new field (`review-items.tsx:107`) and in `Correct` (`:160`).
+
+**Issue 2 (Minor): closed.**
+- `review-queue.ts:195` no longer gives "Needs you" to a non-proposer author on a returned remove, retire or restore. I saw this in the browser under "Waiting for others": "The person who proposed it sends it again or withdraws it. — No step for you".
+- A new field still reads "Correct it" for another author, consistent with `resubmitChange` (any author corrects).
+
+**Issue 3 (Minor, info):** left for qa, as agreed.
+
+**Breaker fixes, verified:**
+- B1: `Lifecycle.resubmit` is proposer-only. A non-proposer gets 403 and the change stays returned with its reason unchanged; the proposer's send-again returns it to WAITING. The check runs before the status and reason checks, which is correct. I also sent again by keyboard as the proposer.
+- B4: on Program structure, another person's waiting change greys the row ("A change to it is waiting for a second person."); my own shows Withdraw. "Send again" on a returned row appears only for the proposer (0 instances when not mine, 1 when mine).
+- The contract change in `contracts/structure.ts` (`pending.mine`) is additive. `rowAction` has a single caller, `structure.ts:60`.
+- B5: `attachments/sample` with no body, with or without a JSON content-type, returns 400 "That sample is not in the official library." It no longer returns 500.
+
+**New Minor 4 (Should): wrong words on a returned row that is not mine.**
+- What is wrong: `lifecycle.ts:116` gives every pending change that is not mine `WHY.waiting`, "A change to it is waiting for a second person.". A RETURNED change is waiting for its proposer, not a second person, and the row's own red line above it says "Returned by Approver…".
+- Seen in the API at :4437: `pending.status: "RETURNED", mine: false` gave `why: "A change to it is waiting for a second person."`.
+- Fix: when `status === "RETURNED"`, use the wording from `review-queue.ts:195`, "The person who proposed it sends it again or withdraws it.". The status needs passing into `rowAction`.
+
+**Open product question, not blocking this commit: break B3.**
+- `resubmitChange` (`library-changes.ts:134`) lets any author correct a returned new field. The second-person check compares the approver only with `proposedBy`. So a second author can rewrite someone's returned field and then approve their own words.
+- This behaviour is older than N7 and documented as deliberate (B1 comment; the queue wording). The builder has raised it in the PR for the Lead. It is latent today because the demo has one author.
+- I record it so the Lead decides it explicitly: either make it proposer-only, or record the corrector as the person the second-person check must differ from.
+
+**Journey score at cddef56a: 9/10, pass.** Next step obvious and correct data are back to 1. Speed stays ½ because I did not time it against §9.
+
+D-scores that changed:
+
+| D | Score | Evidence |
+|---|---|---|
+| D2 | 4 | Withdraw and send-again are proposer-only on the server for every kind; B3 is left to the Lead |
+| D9 | 4 | Queue and page agree; Minor 4 wording |
+| D16 | 5 | Each fix has a fail and a pass case (27 checks) |
+
+**Verdict: Approve on commit `cddef56a`.** There is no open Blocker or Major. Minor 4 (Should) and Minor 3 (qa) can go in a later PR. B3 is the Lead's decision.

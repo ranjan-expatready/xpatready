@@ -49,3 +49,14 @@ Commit `10939d21` (branch `claude/runtime-devin-fixes`, diff against `origin/cla
 
 ## Not tested
 A real screen reader. An intended user's unaided walk (D17 and D20 stay with the founder). A second real author: the demo has only one, so "not mine" was set up through SQL, as in the builder's check. Mutation testing of the fix: I did not revert the fix to watch the checks fail. I relied on the builder's statement that 7 failed before the fix, and the assertions match the changed lines.
+
+## Re-walk at `cddef56a` (copy `rev_n7c` on :4437)
+- `check_runtime_n7.cjs`: 27/27.
+- J2 (another person's change, as the author):
+  - The change page shows "Only Content reviewer can send it again or withdraw it." with no buttons.
+  - On Program structure, Send again is gone from the returned row (0 when not mine, 1 when mine).
+  - To review files the change under "Waiting for others" with "The person who proposed it sends it again or withdraws it. — No step for you".
+- J1, sending again by keyboard as the proposer: the change returns to WAITING and the page goes back to To review.
+- The new-field withdraw from a non-proposer is refused (403) and the change stays waiting.
+- New Minor: a returned row that is not mine is greyed with "waiting for a second person" (`lifecycle.ts:116`). It should say the proposer acts.
+- **Score at cddef56a: 9/10, pass.** Next step obvious is 1 and correct data is 1; speed stays ½ because it was not timed.

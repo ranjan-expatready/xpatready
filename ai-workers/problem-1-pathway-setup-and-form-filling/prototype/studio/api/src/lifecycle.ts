@@ -110,10 +110,10 @@ export const ownDraft = (f: NodeFacts, actorId: string | undefined) => !!actorId
 export const SAMPLE_CREATOR = "sample-inputs";
 /** The row's one action (P-128 R3-2): Withdraw while a change waits, Restore when retired, Retire once released, else
  *  Delete; with why it cannot, for a Delete the names that go with it, and whether it is deleted at once. */
-export function rowAction(f: NodeFacts, pending: { action: LifecycleAction; mine: boolean } | null, actorId?: string): RowAction {
+export function rowAction(f: NodeFacts, pending: { action: LifecycleAction; mine: boolean; status: string; proposer: string } | null, actorId?: string): RowAction {
   const can = nodeCan(f);
   // N7 break B4: the proposer's own waiting change can be withdrawn; anyone else's greys the row (as the Form library).
-  if (pending) return pending.mine ? { kind: "WITHDRAW", why: null, below: [], withCombination: false, immediate: false } : { kind: pending.action, why: WHY.waiting, below: [], withCombination: false, immediate: false };
+  if (pending) return pending.mine ? { kind: "WITHDRAW", why: null, below: [], withCombination: false, immediate: false } : { kind: pending.action, why: pending.status === "RETURNED" ? WHY.returnedToOther(pending.proposer) : WHY.waiting, below: [], withCombination: false, immediate: false };
   if (f.node.retiredAt) return { kind: "RESTORE", why: can.restore, below: [], withCombination: !!can.withCombination, immediate: false };
   if (f.combos.some((c) => c.released)) return { kind: "RETIRE", why: can.retire, below: [], withCombination: !!can.withCombination, immediate: false };
   return { kind: "DELETE", why: can.delete, below: can.delete ? [] : f.below.map((n) => n.programNodeKey), withCombination: false, immediate: ownDraft(f, actorId) };

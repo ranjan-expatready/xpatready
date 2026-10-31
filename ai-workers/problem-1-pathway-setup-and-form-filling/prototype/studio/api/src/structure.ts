@@ -47,7 +47,7 @@ export class Structure {
     const workspaceId = await this.ws.id();
     const g = await this.graph(workspaceId);
     const leaves = await this.programs.leafStates(ACTORS.find((a) => a.id === actorId));
-    const pending = new Map((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "structure_node", status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })).map((c) => [c.key, { id: c.id, action: c.action as LifecycleAction, status: c.status as "WAITING" | "RETURNED" | "APPROVED", mine: c.proposedBy === actorId, by: c.status === "RETURNED" ? ACTORS.find((a) => a.id === c.decidedBy)?.name ?? null : null, note: c.status === "RETURNED" ? c.decisionNote : null }]));
+    const pending = new Map((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "structure_node", status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })).map((c) => [c.key, { id: c.id, action: c.action as LifecycleAction, status: c.status as "WAITING" | "RETURNED" | "APPROVED", mine: c.proposedBy === actorId, proposer: ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "another person", by: c.status === "RETURNED" ? ACTORS.find((a) => a.id === c.decidedBy)?.name ?? null : null, note: c.status === "RETURNED" ? c.decisionNote : null }]));
     // "Used by" on each line (P-127 (1)): the releases that hold a combination and the cases open on it.
     const combos = await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, retiredAt: true, _count: { select: { releases: true, cases: { where: { status: "OPEN" } } } } } });
     const used = new Map(combos.map((c) => [c.id, c._count]));
