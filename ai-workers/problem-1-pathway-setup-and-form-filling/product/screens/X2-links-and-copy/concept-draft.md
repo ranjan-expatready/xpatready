@@ -1,6 +1,17 @@
 # X2 Links between combinations and copying a line (C1.3, C1.5): concept draft
 
-Screens builder, 31 Oct 2026, for the founder's early look through the tech lead. **Status: draft, nothing built.** It adapts what Screen 03's agreed concept already says (`screens/03-combination-workspace/concept.md`: BR-12, BR-13, the Links card, the endpoints; Q1 answered) to today's app (the six tabs, card v4, the shared lifecycle with Undo). Board: `design/draft-x2-board.html`. Everything shown is Sample.
+Screens builder, 31 Oct 2026, for the founder's early look through the tech lead. **Status: draft v2 after the challenge (`challenge.md`), nothing built.**
+
+> **Challenge outcome (read first).**
+> * **B1 (Blocker, confirmed):** P-106 (founder, 26 Oct, amends P-13) says "'Linked to' leaves configuration; the link lives on the case", and the app follows it (C11.5; `engine/coverage.ts:4`). Screen 03 (25 Oct) and this draft's X2a came before it. C1.3, `PRODUCT.md` line 47 and backlog F1 were never updated.
+>   * **So X2a below is parked, not built,** until the founder answers Q1.
+>   * Recommendation: C1.3 becomes the case-level "relies on employer case" link in M3, and X2 ships X2b only.
+> * **M1 and M2 are accepted:**
+>   * Follows would be a suggestion only, carrying no picked facts; answers carry forward through the person's shared answers (TAXONOMY §3).
+>   * A carried fact never counts as asked.
+> * **M3 (integrity of links between combinations)** only applies if Q1 keeps links in configuration. The challenge lists it in full: retire, rename, a carried fact dropped later, a person per fact, the shared pack release, publishing.
+> * **X2b is revised below** with M4 (the full set of outcomes) and M5 (one batch id across targets in one transaction, an idempotency key, and the batch Undo pattern from `fact-sources.ts`).
+> * The board's Minors are listed in `challenge.md`. The board is redrawn once Q1 is answered. It adapts what Screen 03's agreed concept already says (`screens/03-combination-workspace/concept.md`: BR-12, BR-13, the Links card, the endpoints; Q1 answered) to today's app (the six tabs, card v4, the shared lifecycle with Undo). Board: `design/draft-x2-board.html`. Everything shown is Sample.
 
 **Slices:** **X2a Links** (C1.3), then **X2b Copy a line / add or remove one line across many** (C1.5). Each is about a day and merges on its own.
 
@@ -74,16 +85,32 @@ Screens builder, 31 Oct 2026, for the founder's early look through the tech lead
   * the rules L1–L5 and C1–C2.
 * **Scaffolding:** the sample's two links: worker With an LMIA supported by the LMIA, and post-graduation work permit follows the study permit. They are loaded with the sample and are Sample until the immigration expert confirms them.
 
+## 3b. X2b rules after the challenge (M4, M5)
+* **BR-C1:** before anything changes, each target is listed with one outcome:
+  * **will change**;
+  * **already has it**;
+  * **has it with a different "only if"** (the target's own line is kept);
+  * **cannot: the way it is filed is not accepted** for the target's account;
+  * **cannot: the line's person is not in this application**;
+  * **cannot: its "only if" uses a fact this combination does not ask**;
+  * **cannot: the form is retired, or its retire is open**, in the library;
+  * **waits: this combination is submitted for review.** Adding to it would withdraw that submission, so it is left out unless the publisher ticks it on purpose.
+  * Removing a line across many has its own outcomes: **will be removed**, **does not have it**, **removed already in the draft**.
+* **BR-C2:** one batch id across all targets, written in one transaction with an idempotency key, so a retried request adds nothing twice. **Undo of the batch** reverses every target together while none of them has changed since. Otherwise it is refused and names which target changed (the pattern in `fact-sources.ts`). Retired combinations are never targets.
+* **Endpoints:**
+  * `POST /lines/bulk/preview {line, op: add|remove, combinationIds[]}`, which returns the outcome per target;
+  * `POST /lines/bulk {…, idempotencyKey}`;
+  * `POST /lines/bulk/:batchId/undo`;
+  * `POST /combinations/:id/lines/copy {fromId, lineIds[]}`, which copies a line from another combination (m8).
+
 ## 7. Questions for the founder (at most three, recommendation first)
-1. **Does a "Follows" link carry facts too, or is it only a suggestion of the next application?**
-   * *Recommend:* it carries facts too, with the same picker. The person's details carry forward from the study permit to the post-graduation work permit (TAXONOMY §3).
-   * *Alternative:* a suggestion only, with nothing carried.
-2. **Can a link point to a combination that has no release yet?**
-   * *Recommend:* yes, saved as a draft. This combination's release waits, with a plain problem naming the other one (BR-L5), so setup is never blocked by order.
-   * *Alternative:* refuse the link until the other combination is released.
+1. **After P-106, do links between combinations still belong in configuration?**
+   * *Recommend: no.* C1.3 becomes the case-level "relies on employer case …" link built with the case officer step (M3), which is what P-106 says. X2 ships X2b only, and C1.3, `PRODUCT.md` line 47 and backlog F1 are updated to match.
+   * *Alternative:* keep configuration links (X2a), with the integrity rules in challenge M3. That reverses P-106.
+2. **If "Follows" stays anywhere, is it only a suggestion of the next application, or does it carry chosen facts?**
+   * *Recommend: a suggestion only.* Answers carry forward through the person's shared answers (TAXONOMY §3).
 3. **Copy across many (X2b), first slice: which lines?**
-   * *Recommend:* form lines and document lines only. Rules and questions follow later.
-   * *Alternative:* everything at once (larger and slower to review).
+   * *Recommend:* form lines and document lines only, with the outcomes in BR-C1. Rules and questions follow later.
 
 ## Definition of Ready (to be ticked after the challenge and the founder's look)
 - [ ] Board clicked through by the founder · [ ] challenge done (Blockers and Majors fixed or answered) · [ ] Q1–Q3 answered · [ ] row X2a at the top of the screens area in BACKLOG
