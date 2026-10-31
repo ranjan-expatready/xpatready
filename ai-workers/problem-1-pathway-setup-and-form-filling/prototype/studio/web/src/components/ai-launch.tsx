@@ -37,7 +37,11 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
     setBusy(true); setErr(null);
     try {
       const sc = { kind: scope.kind, ids: scope.ids };
-      const b: any = await cost.gate(p, { kind: "draft_field_maps", scope: sc, mode, draftAgain: again }, (overrideId) => api("/ai/batches", { method: "POST", json: { scope: sc, mode, draftAgain: again, idempotencyKey: key, planSha256: p.plan_sha256, spendLimitUsd: Number(limit), ...(overrideId ? { overrideId } : {}) } }));
+      // N6 follow-up: a live start makes its plan again first (spend may have come from another copy since this panel made
+      // it), so the warning shows today's figures. The launch still sends the fingerprint of the plan shown here: if the
+      // work itself changed, the server refuses and the panel shows the new plan.
+      const planAgain = async () => { const r = await plan.refetch(); if (r.error) throw r.error; return r.data; };
+      const b: any = await cost.gate(mode === "LIVE" ? planAgain : p, { kind: "draft_field_maps", scope: sc, mode, draftAgain: again }, (overrideId) => api("/ai/batches", { method: "POST", json: { scope: sc, mode, draftAgain: again, idempotencyKey: key, planSha256: p.plan_sha256, spendLimitUsd: Number(limit), ...(overrideId ? { overrideId } : {}) } }));
       if (!b) { toast.push({ tone: "info", text: COST_WORDS.cancelled }); return; }
       toast.push({ tone: "ok", text: `AI work started: ${b.jobs.length} step${b.jobs.length === 1 ? "" : "s"}` });
       onClose(); nav(`/ai/${b.id}`);
