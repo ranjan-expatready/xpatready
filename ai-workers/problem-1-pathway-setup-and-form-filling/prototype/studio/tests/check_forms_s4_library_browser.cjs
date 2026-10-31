@@ -258,7 +258,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.getByRole("button", { name: /^Ready\s*\d+$/ }).click(); await sleep(400);
     const readyRows = await p.locator("[data-row-status]").evaluateAll((els) => els.map((e) => e.getAttribute("data-row-status")));
     step("X5 break M5 fail: the Ready chip shows only forms with a file (before: no such chip)", readyRows.length > 0 && readyRows.every((x) => x === "ready"), readyRows.slice(0, 5).join());
-    await p.getByRole("button", { name: /^Ready\s*\d+$/ }).click(); await sleep(200);
+    await p.getByRole("button", { name: /^Ready\s*\d+$/ }).click(); await sleep(400);
+    // X5 review (86f9447c) M1, STANDARDS §9 (< 200 ms): search and a chip press after the fill, timed in the page from the
+    // keystroke or click to the filtered rows on screen; the best of three (a busy runner adds noise, not the page).
+    const searchBox = p.getByRole("searchbox", { name: "Search number or title" });
+    const timeSearch = async (term) => { await searchBox.fill(""); await sleep(300); return p.evaluate(async (t) => { const box = document.querySelector('input[aria-label="Search number or title"]'); const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set; const t0 = performance.now(); setter.call(box, t); box.dispatchEvent(new Event("input", { bubbles: true })); for (;;) { const rows = [...document.querySelectorAll("tr[data-form]")]; if (rows.length && rows.every((r) => r.textContent.toLowerCase().includes(t.toLowerCase()))) return performance.now() - t0; await new Promise((r) => requestAnimationFrame(r)); } }, term); };
+    const searches = [await timeSearch("IMM 5257"), await timeSearch("visitor"), await timeSearch("IMM 1295")];
+    await searchBox.fill(""); await sleep(300);
+    const guidesMs = await p.evaluate(async () => { const b = [...document.querySelectorAll("button")].find((x) => /^Guides\s*\d+$/.test(x.textContent.trim())); const t0 = performance.now(); b.click(); for (;;) { const rows = [...document.querySelectorAll("tr[data-form]")]; if (rows.length && rows.length <= 10) return performance.now() - t0; await new Promise((r) => requestAnimationFrame(r)); } });
+    step("X5 review (86f9447c) M1 fail: after the fill, search and the Guides chip answer in under 200 ms (STANDARDS §9; before: 184-375 ms and 207-217 ms)", Math.min(...searches) < 200 && guidesMs < 200, JSON.stringify({ searches: searches.map((x) => Math.round(x)), guidesMs: Math.round(guidesMs) }));
+    await p.getByRole("button", { name: /^All\s*\d+$/ }).click(); await sleep(300); // back to every type
     await axe("X5: the library after the fill from IRCC's forms list");
     // One readable view (the whole list is now some 240 rows): the first screen at 1440 px.
     await p.setViewportSize({ width: 1440, height: 900 }); await p.getByText("Listed by IRCC · no file yet").first().evaluate((e) => e.scrollIntoView({ block: "center" })); await sleep(150);

@@ -5,7 +5,7 @@
 // "Newer edition on canada.ca": a person checks it; the file is never replaced here.
 import type { IndexRow } from "./canada.ts";
 
-export type LibraryForm = { formKey: string; indexDateModified: string | null; hasFile: boolean; formPageUrl: string | null };
+export type LibraryForm = { formKey: string; indexDateModified: string | null; hasFile: boolean; formPageUrl: string | null; /** canada.ca's month for the library's newest edition (YYYY-MM), if known */ editionDated?: string | null };
 export type IndexFill = {
   /** New library forms, listed with no file yet. */
   create: { formKey: string; title: string; kind: "data_form" | "checklist"; pageUrl: string; dateModified: string | null }[];
@@ -25,18 +25,22 @@ export function isLaterDate(next: string, before: string): boolean {
 
 export function planIndexFill(rows: IndexRow[], library: LibraryForm[]): IndexFill {
   const have = new Map(library.map((f) => [f.formKey, f]));
-  // X5 break m6: a number the index lists twice (a form and its checklist link) is one form; if any of its rows is a form,
-  // it is a form (a checklist row listed first no longer makes a real form a checklist).
-  const isForm = new Set(rows.filter((r) => r.kind === "form").map((r) => r.code));
+  // X5 break m6, Devin on #138: a number the index lists twice (a form and its checklist link) is one form; if any of its
+  // rows is a form, that row is the one kept, whole (its title, page and date as well as its kind), never the checklist's.
+  const formRow = new Map<string, IndexRow>();
+  for (const r of rows) if (r.kind === "form" && !formRow.has(r.code)) formRow.set(r.code, r);
   const out: IndexFill = { create: [], listed: [], newer: [] }, seen = new Set<string>();
   for (const r0 of rows) {
     if (seen.has(r0.code)) continue;
     seen.add(r0.code);
-    const r = isForm.has(r0.code) ? { ...r0, kind: "form" as const } : r0;
+    const r = formRow.get(r0.code) ?? r0;
     const f = have.get(r.code);
     if (!f) { out.create.push({ formKey: r.code, title: r.title, kind: r.kind === "checklist" ? "checklist" : "data_form", pageUrl: r.pageUrl, dateModified: r.dateModified }); continue; }
     out.listed.push({ formKey: r.code, pageUrl: f.formPageUrl ? null : r.pageUrl, dateModified: r.dateModified });
-    if (f.hasFile && f.indexDateModified && r.dateModified && isLaterDate(r.dateModified, f.indexDateModified)) out.newer.push(r.code);
+    // X5 review (86f9447c) m2: the same rule the list applies: not newer when the library's edition is already dated at or
+    // after the index's date (the fill's words then agree with the list's count).
+    const answered = !!(f.editionDated && r.dateModified && f.editionDated >= r.dateModified.slice(0, 7));
+    if (f.hasFile && f.indexDateModified && r.dateModified && isLaterDate(r.dateModified, f.indexDateModified) && !answered) out.newer.push(r.code);
   }
   return out;
 }
