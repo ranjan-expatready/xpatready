@@ -9,6 +9,8 @@ import { seedShared } from "../../p2/tools/seed-shared-ledger.ts";
 import { costCheck } from "../engine/cost-check.ts";
 import { COST_WORDS } from "../contracts/cost-check.ts";
 import { BudgetExceeded, LedgerBusy, OverrideRefused, SpendLedger } from "../../p2/ledger.ts";
+import { runDrafting } from "../../p2/runner.ts";
+import { createHash } from "node:crypto";
 import { EXPERIMENT_CAP_USD, OVERRIDE_CEILING_USD, WAVE1_START } from "../../p2/policy.ts";
 
 let pass = 0, fail = 0;
@@ -223,11 +225,33 @@ while (!existsSync(join(st.dir, "spend.reserve.lock"))) Atomics.wait(new Int32Ar
 const t5 = Date.now(); st.l.settle(stId, 0.5, "ok");
 ok("C11.8 N6 break n5 pass: settle waited for the lock holder (≥ 1 s; before: appended at once, inside a seed's rewrite) and was kept", Date.now() - t5 >= 1_000 && Math.abs(st.l.committed() - 0.5) < 1e-9, { ms: Date.now() - t5, c: st.l.committed() });
 stHolder.kill();
-// Break 3 m3: a settle never fails for a busy lock (the runner would take the throw for a failed call and pay again).
-const sb = fresh(0); const sbId = sb.l.reserve("run-sb", 1, 2, 5, "paid"); writeFileSync(join(sb.dir, "spend.reserve.lock"), `${(await import("node:os")).hostname()}:${process.ppid}:abc123`);
+// PR #121 review (Devin): a settle never appends outside the short lock (a seed's rewrite could drop it): busy → LedgerBusy.
+const sb = fresh(0); const sbId = sb.l.reserve("run-sb", 1, 2, 5, "paid"); const liveTok = `${(await import("node:os")).hostname()}:${process.ppid}:abc123`;
+writeFileSync(join(sb.dir, "spend.reserve.lock"), liveTok);
 const sbL = new SpendLedger(sb.dir, undefined, { waitMs: 300 });
-ok("C11.8 N6 break 3 m3 pass: with the lock held past the wait, settle still records the cost (no LedgerBusy into the runner's catch)", (() => { try { sbL.settle(sbId, 0.25, "ok"); return true; } catch { return false; } })() && sb.lines().some((x) => x.type === "settle" && x.id === sbId && x.actual_usd === 0.25));
+ok("C11.8 N6 PR review fail: with the lock held past the wait, settle writes nothing outside the lock (LedgerBusy; before 2b4332ff's fallback appended unlocked)", throws(() => sbL.settle(sbId, 0.25, "ok"), LedgerBusy, /ledger busy/) && !sb.lines().some((x) => x.type === "settle"));
 rmSync(join(sb.dir, "spend.reserve.lock"));
+// Break 3 m3, kept: the runner never pays twice because a settle was busy. A US$0 stub call whose answer arrives while
+// another process holds the lock: one call, the answer kept, the reservation left at its worst case, the reason noted.
+const rr = fresh(0); const rrL = new SpendLedger(rr.dir, undefined, { waitMs: 300 });
+const INV = "prototype/p1/inventory/application-forms-guides.text.inventory.json";
+const invSha = createHash("sha256").update(readFileSync(join(import.meta.dirname, "..", "..", "..", INV))).digest("hex");
+let rrCalls = 0;
+const rrCaller = Object.assign(async () => { rrCalls++; writeFileSync(join(rr.dir, "spend.reserve.lock"), liveTok); return { text: "{\"answer\":1}", stop_reason: "end_turn", usage: { input_tokens: 10, output_tokens: 10 } }; }, { kind: "stub" as const });
+const rro = await runDrafting({ run_id: "run-rr", inputs: { official_files: [{ file: INV, sha256: invSha }] }, settings: { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "low", timeout_ms: 300000, max_attempts: 2, budget_usd: 5, max_output_tokens: 1000 } } as never, () => ({ system: "s", user: "u" }) as never, rrCaller as never, rrL, { allowStubDrafts: true } as never);
+rmSync(join(rr.dir, "spend.reserve.lock"), { force: true });
+ok("C11.8 N6 break 3 m3 pass: a busy settle keeps the answer: one call, completed, the reservation kept (no settle line), the reason noted", rrCalls === 1 && rro.status === "completed" && rro.text === "{\"answer\":1}" && !rr.lines().some((x) => x.type === "settle") && /counted at its worst case: ledger busy/.test(String((rro.attempts[0] as { settle_error?: string }).settle_error)), { rrCalls, s: rro.status, a: rro.attempts });
+// PR #121 review (Devin): breakers of a stale lock take turns (a breaker's own short lock); a fresh lock is never moved.
+const bt = fresh(0), btLock = join(bt.dir, "spend.reserve.lock"), btTurn = `${btLock}.break`;
+writeFileSync(btLock, "crashed-holder"); const btOld = new Date(Date.now() - 60_000); utimesSync(btLock, btOld, btOld);
+writeFileSync(btTurn, "");
+const btHolder = spawn(process.execPath, ["-e", `setTimeout(()=>require("node:fs").unlinkSync(${JSON.stringify(btTurn)}),1000)`], { stdio: "ignore" });
+const t6 = Date.now(); const btr = bt.l.reserve("run-bt", 1, 1, 5, "paid");
+ok("C11.8 N6 PR review pass: while another breaker has its turn, a waiter does not touch the stale lock; it breaks it once the turn ends (≥ 1 s)", typeof btr === "string" && Date.now() - t6 >= 900 && !existsSync(btTurn) && !readdirSync(bt.dir).some((f) => /\.stale-|\.break$/.test(f)), Date.now() - t6);
+btHolder.kill();
+writeFileSync(btLock, "crashed-holder"); utimesSync(btLock, btOld, btOld); writeFileSync(btTurn, ""); utimesSync(btTurn, btOld, btOld);
+const t7 = Date.now(); const btr2 = bt.l.reserve("run-bt", 2, 1, 5, "paid");
+ok("C11.8 N6 PR review pass: a breaker's turn left by a crash (older than 5 s) is cleared, and the stale lock broken at once", typeof btr2 === "string" && Date.now() - t7 < 1_000 && !existsSync(btTurn), Date.now() - t7);
 // Break 3 m7: the person's own unused Continue is used again only while it still fits the ceiling.
 const rc = fresh(120); const rc1 = rc.l.recordOverride({ run_key: "rc", limits: ["experiment"], worst_usd: 6, by: "user-A" });
 rc.l.reserve("other", 1, 0, 5, "paid"); appendFileSync(join(rc.dir, "spend.jsonl"), JSON.stringify({ type: "reserve", id: "late#1", run_id: "late", attempt: 1, worst_usd: 7, at: "2026-10-20T00:00:00.000Z" }) + "\n");

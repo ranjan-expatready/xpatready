@@ -317,6 +317,9 @@ export class Ai implements OnModuleInit {
     // Break m2: the same launch key sent again returns its run, before the re-plan (which would see that run as running).
     if (idempotencyKey) {
       const again = await this.db.aiBatch.findUnique({ where: { workspaceId_idempotencyKey: { workspaceId: att?.workspaceId ?? (await this.ws.id()), idempotencyKey } } });
+      // PR #121 review (Devin, security): a key belongs to one form's run; another form's key is refused, never answered
+      // with that run (as the finder does for its own keys).
+      if (again && (again.scopeKind !== "source" || !((again.plan as { scope?: { ids?: string[] } } | null)?.scope?.ids ?? []).includes(attachmentId))) fail("This launch key belongs to another run. Look at the plan again to start a new one.", HttpStatus.CONFLICT);
       if (again) return (await this.batch(again.id)).jobs[0];
     }
     const p = await this.plan(scope, m, { draftAgain: true });

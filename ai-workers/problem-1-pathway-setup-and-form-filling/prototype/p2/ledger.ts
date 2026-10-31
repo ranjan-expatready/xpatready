@@ -273,25 +273,47 @@ export class SpendLedger {
    *  faster one had just taken, and both entered. Now the old lock is moved aside (a rename: only one waiter can move it)
    *  and looked at once moved: a lock that is not stale after all (a waiter's fresh one) is put back. True: try again. */
   private breakStaleLock(file: string, stale: (text: string, ageMs: number) => boolean): boolean {
-    const look = (f: string) => { try { return { text: readFileSync(f, "utf8"), age: Date.now() - statSync(f).mtimeMs }; } catch { return null; } };
-    const now = look(file);
-    if (!now) return true; // gone meanwhile
-    if (!stale(now.text, now.age)) return false;
-    const aside = `${file}.stale-${process.pid}-${randomBytes(4).toString("hex")}`;
-    try { renameSync(file, aside); } catch { return true; } // another waiter moved it first
-    const moved = look(aside);
-    try { if (moved && !stale(moved.text, moved.age)) linkSync(aside, file); } catch { /* a newer lock is there: it stays */ }
-    try { unlinkSync(aside); } catch { /* gone */ }
-    return true;
+    const look = (f: string) => { try { const st = statSync(f); return { text: readFileSync(f, "utf8"), age: Date.now() - st.mtimeMs, ino: st.ino }; } catch { return null; } };
+    const first = look(file);
+    if (!first) return true; // gone meanwhile
+    if (!stale(first.text, first.age)) return false;
+    // PR #121 review (Devin): two breakers interleaving could move aside a fresh lock one of them had just taken, leaving
+    // the name free for a third. Breakers now take turns under a short breaker's lock of their own, and the one whose
+    // turn it is looks at the lock again: a fresh lock taken meanwhile is never touched. A breaker's lock left by a crash
+    // (a turn takes microseconds) is cleared after 5 s.
+    const turn = `${file}.break`;
+    try { closeSync(openSync(turn, "wx")); } catch {
+      try { if (Date.now() - statSync(turn).mtimeMs > 5_000) unlinkSync(turn); } catch { /* gone */ }
+      return false; // another breaker's turn: wait, then look again
+    }
+    try {
+      const now = look(file);
+      if (!now) return true;
+      if (now.ino !== first.ino || !stale(now.text, now.age)) return now.ino !== first.ino;
+      const aside = `${file}.stale-${process.pid}-${randomBytes(4).toString("hex")}`;
+      try { renameSync(file, aside); } catch { return true; }
+      const moved = look(aside);
+      // Only the stale holder itself releasing in this very instant could have swapped the file: put a fresh one back.
+      try { if (moved && (moved.ino !== now.ino || !stale(moved.text, moved.age))) linkSync(aside, file); } catch { /* a newer lock is there: it stays */ }
+      try { unlinkSync(aside); } catch { /* gone */ }
+      return true;
+    } finally { try { unlinkSync(turn); } catch { /* gone */ } }
   }
 
   settle(id: string, actualUsd: number, outcome: string) {
     if (!Number.isFinite(actualUsd) || actualUsd < 0) throw new BudgetExceeded(`a settled cost must be a number of US$ at or above 0 (got ${actualUsd})`); // break M1
-    // Break n5: under the short lock, so the seed tool's read-and-replace never drops a settle appended meanwhile. Break 3
-    // m3: a settle never fails for a busy lock (the runner would take that for a failed call and pay again): past the wait
-    // it is appended without the lock (one append is one write; only a seed running at that very moment could miss it).
-    const line = { type: "settle" as const, id, actual_usd: actualUsd, outcome, at: new Date().toISOString() };
-    try { this.atomically(() => this.append(line)); } catch (e) { if (!(e instanceof LedgerBusy)) throw e; this.append(line); }
+    // Break n5: under the short lock, so the seed tool's read-and-replace never drops a settle appended meanwhile, and
+    // never outside it (PR #121 review, Devin: an unlocked append could be replaced by a seed's snapshot). Break 3 m3 is
+    // answered in the callers instead: a settle refused as busy leaves the reservation at its worst case (the safe side)
+    // and never makes the runner or the reader call the model again (settleOrKeep).
+    this.atomically(() => this.append({ type: "settle", id, actual_usd: actualUsd, outcome, at: new Date().toISOString() }));
+  }
+
+  /** Break 3 m3 / PR #121 review: a settle that cannot be written now (the ledger is busy or unreadable) is not a failed
+   *  call: the reservation stays counted at its worst case, which over-counts and never under-counts. Answers why the
+   *  settle was not written, or null. */
+  settleOrKeep(id: string, actualUsd: number, outcome: string): string | null {
+    try { this.settle(id, actualUsd, outcome); return null; } catch (e) { if (e instanceof BudgetExceeded) return e.message; throw e; }
   }
 
   /** One runner at a time: a second process is refused while another holds the lock. Break N1 (N6): the lock names its
@@ -300,10 +322,16 @@ export class SpendLedger {
    *  empty lock (written before the holder was named) is broken once an hour old. */
   async withLock<T>(fn: () => Promise<T>): Promise<T> {
     const token = lockToken();
-    if (!this.takeLock(this.lockFile, token)) {
-      const broke = this.breakStaleLock(this.lockFile, (text, ageMs) => holderGone(text) || (text === "" && ageMs > 3_600_000));
-      if (!broke || !this.takeLock(this.lockFile, token)) throw new BudgetExceeded(`ledger locked by another runner (${this.lockFile})`);
+    let taken = this.takeLock(this.lockFile, token);
+    // A few short tries: another breaker's turn lasts microseconds.
+    for (let i = 0; !taken && i < 20; i++) {
+      if (!this.breakStaleLock(this.lockFile, (text, ageMs) => holderGone(text) || (text === "" && ageMs > 3_600_000))) {
+        if (!existsSync(`${this.lockFile}.break`)) break; // a live holder: refused
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5); continue;
+      }
+      taken = this.takeLock(this.lockFile, token);
     }
+    if (!taken) throw new BudgetExceeded(`ledger locked by another runner (${this.lockFile})`);
     try { return await fn(); } finally { this.dropLock(this.lockFile, token); }
   }
 }
