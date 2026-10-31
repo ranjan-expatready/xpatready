@@ -24,6 +24,12 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The wa
 * **Product choices go to the founder,** one at a time with a recommendation (skill **grilling**). Immigration facts come from canada.ca with page, quote and date; only real doubts go to the founder.
 * **Money:** live AI is off on every copy; a paid run needs the founder's Go with the cost stated first.
 
+## Habits (lessons of 31 Oct)
+* Judge a check by its exit code, never by the tail of its output.
+* Before pushing to a PR's branch, check that the PR is still open: a PR may have merged itself, and a later commit then never reaches `main`.
+* Base advice on all the history there is (every run, PR or session), never on one sample.
+* Before deleting a cache or tool, search the repository for paths into it.
+
 ## Talking to the founder
 Plain business words, short. Say what changed and what you merged, what is visible on the demo, and at most three asks, each with a recommendation. Numbers (capabilities working, median start to merge, bugs after merge, AI spend) on demand. Write unasked only for a decision, a risk or a spend.
 
