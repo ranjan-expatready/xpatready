@@ -8,7 +8,6 @@ on:
   workflow_run: { workflows: [ci], types: [completed] }
   pull_request_target: { types: [labeled] }
 permissions: { contents: write, pull-requests: write, actions: write }
-concurrency: { group: automerge, cancel-in-progress: false }
 jobs:
   merge:
     runs-on: ubuntu-latest
@@ -17,14 +16,14 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       REPO: ${{ github.repository }}
-      PR_FROM_LABEL: ${{ github.event.pull_request.number }}
-      SHA_FROM_RUN: ${{ github.event.workflow_run.head_sha }}
     steps:
       - name: merge when green and approved
         run: |
           set -euo pipefail
-          if [ -n "$PR_FROM_LABEL" ]; then prs="$PR_FROM_LABEL"
-          else prs=$(gh api "repos/$REPO/commits/$SHA_FROM_RUN/pulls" --jq '.[] | select(.state=="open" and .base.ref=="main") | .number'); fi
+          # Every run looks at every approved open PR, not only the one that triggered it: GitHub drops waiting runs when
+          # several PRs finish at once (31 Oct: #118 and #119 were green and approved but never merged), so no PR may
+          # depend on its own trigger. Merges are guarded per PR by --match-head-commit, so two runs at once are safe.
+          prs=$(gh pr list --repo "$REPO" --base main --state open --label "review: approved" --json number --jq '.[].number')
           for n in $prs; do
             pr=$(gh api "repos/$REPO/pulls/$n")
             head=$(jq -r .head.sha <<<"$pr"); state=$(jq -r .state <<<"$pr")
