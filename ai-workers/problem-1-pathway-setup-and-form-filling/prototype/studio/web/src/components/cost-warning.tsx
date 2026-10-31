@@ -53,6 +53,7 @@ export function useCostGate() {
   const escGuard = React.useRef<((e: KeyboardEvent) => void) | null>(null);
   const disarm = () => { if (escGuard.current) window.removeEventListener("keydown", escGuard.current, true); escGuard.current = null; };
   const cancelRef = React.useRef<() => void>(() => undefined);
+  const clickRef = React.useRef({ cancelled: false });
   // N6 follow-up: `plan` may be a function that makes the plan again. Spend can arrive from another copy while the panel is
   // open, so a plan made when it opened (or after a refusal) can be stale: after a Cancel the next Start would show old
   // figures and even a Continue past the ceiling. The Escape guard is armed first, in the click, then the plan is made
@@ -62,7 +63,7 @@ export function useCostGate() {
     setError(null);
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     disarm();
-    const click = { cancelled: false };
+    const click = { cancelled: false }; clickRef.current = click;
     escGuard.current = (e: KeyboardEvent) => { if (e.key !== "Escape") return; e.preventDefault(); e.stopImmediatePropagation(); if (!busyRef.current) { click.cancelled = true; cancelRef.current(); } };
     window.addEventListener("keydown", escGuard.current, true);
     let fresh: Plan;
@@ -72,12 +73,14 @@ export function useCostGate() {
     // Resolves with the launch's answer after Continue, or undefined after Cancel (nothing started).
     return new Promise<unknown>((done) => setPending({ plan: fresh, start, launch, done }));
   }, []);
-  React.useEffect(() => disarm, []);
+  // Review Minor 4: the panel closed while its plan is being made: the start is cancelled, nothing launches.
+  React.useEffect(() => () => { clickRef.current.cancelled = true; disarm(); }, []);
   // Review m3: the Start button that opened the warning is disabled while it waits, so focus fell to the page on Cancel or
   // Escape. Once the caller has enabled it again (a few frames), focus goes back to it, so the keyboard path goes on.
-  const refocus = (el: HTMLElement | null, tries = 30) => {
-    if (!el || !el.isConnected || tries <= 0) return;
-    if ((el as HTMLButtonElement).disabled || el.getAttribute("aria-disabled") === "true") { requestAnimationFrame(() => refocus(el, tries - 1)); return; }
+  // Review Minor 1: up to 5 s, not a frame count: an Escape while a slow plan is being made waits for Start to be enabled.
+  const refocus = (el: HTMLElement | null, until = performance.now() + 5000) => {
+    if (!el || !el.isConnected || performance.now() > until) return;
+    if ((el as HTMLButtonElement).disabled || el.getAttribute("aria-disabled") === "true") { requestAnimationFrame(() => refocus(el, until)); return; }
     el.focus();
   };
   const cancel = () => { disarm(); pending?.done(undefined); setPending(null); const el = opener.current; requestAnimationFrame(() => refocus(el)); };
