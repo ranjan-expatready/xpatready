@@ -223,6 +223,15 @@ while (!existsSync(join(st.dir, "spend.reserve.lock"))) Atomics.wait(new Int32Ar
 const t5 = Date.now(); st.l.settle(stId, 0.5, "ok");
 ok("C11.8 N6 break n5 pass: settle waited for the lock holder (≥ 1 s; before: appended at once, inside a seed's rewrite) and was kept", Date.now() - t5 >= 1_000 && Math.abs(st.l.committed() - 0.5) < 1e-9, { ms: Date.now() - t5, c: st.l.committed() });
 stHolder.kill();
+// Break 3 m3: a settle never fails for a busy lock (the runner would take the throw for a failed call and pay again).
+const sb = fresh(0); const sbId = sb.l.reserve("run-sb", 1, 2, 5, "paid"); writeFileSync(join(sb.dir, "spend.reserve.lock"), `${(await import("node:os")).hostname()}:${process.ppid}:abc123`);
+const sbL = new SpendLedger(sb.dir, undefined, { waitMs: 300 });
+ok("C11.8 N6 break 3 m3 pass: with the lock held past the wait, settle still records the cost (no LedgerBusy into the runner's catch)", (() => { try { sbL.settle(sbId, 0.25, "ok"); return true; } catch { return false; } })() && sb.lines().some((x) => x.type === "settle" && x.id === sbId && x.actual_usd === 0.25));
+rmSync(join(sb.dir, "spend.reserve.lock"));
+// Break 3 m7: the person's own unused Continue is used again only while it still fits the ceiling.
+const rc = fresh(120); const rc1 = rc.l.recordOverride({ run_key: "rc", limits: ["experiment"], worst_usd: 6, by: "user-A" });
+rc.l.reserve("other", 1, 0, 5, "paid"); appendFileSync(join(rc.dir, "spend.jsonl"), JSON.stringify({ type: "reserve", id: "late#1", run_id: "late", attempt: 1, worst_usd: 7, at: "2026-10-20T00:00:00.000Z" }) + "\n");
+ok("C11.8 N6 break 3 m7 fail: spend arrived since (US$127 + US$6 past US$132): the own Continue is not handed back, the ceiling refuses", throws(() => rc.l.recordOverride({ run_key: "rc", limits: ["experiment"], worst_usd: 6, by: "user-A" }), OverrideRefused, /founder must raise the cap/) && !!rc1.id);
 
 // ── Review m8: the seed tool rewrites the shared file under the ledger's lock, so it waits for a copy that holds it.
 const sd = fresh(5);

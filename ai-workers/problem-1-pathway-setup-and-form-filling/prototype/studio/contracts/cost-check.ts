@@ -34,7 +34,9 @@ export const OverrideBody = z.strictObject({
   /** Optional words the person adds (kept on the ledger line and in the audit). */
   // Break n3 (N6): a control character (NUL and the like) cannot be stored with the audit, so it is refused before anything
   // is written; a line break or a tab is kept.
-  reason: z.string().max(500, "Keep the reason under 500 characters.").regex(/^[^\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]*$/, "The reason has a character that cannot be stored (a control character). Type it again; nothing was recorded.").optional(),
+  reason: z.string().max(500, "Keep the reason under 500 characters.").regex(/^[^\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]*$/, "The reason has a character that cannot be stored (a control character). Type it again; nothing was recorded.")
+    // Break 3 m5: a lone surrogate (half of an emoji) cannot be stored either.
+    .refine((s) => !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(s), "The reason has a character that cannot be stored (half of a character). Type it again; nothing was recorded.").optional(),
 }, unknownField);
 export type OverrideStartBody = z.infer<typeof OverrideStart>;
 export type OverrideReply = { override_id: string; expires_at: string };

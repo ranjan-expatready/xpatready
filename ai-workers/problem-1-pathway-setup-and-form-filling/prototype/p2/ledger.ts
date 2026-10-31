@@ -154,7 +154,8 @@ export class SpendLedger {
       // leaves it so), is the one this click means: it is used again, not recorded twice.
       const used = new Set(es.filter((e) => e.type === "override_use").map((e) => e.id)), same = (a: string[]) => [...a].sort().join();
       const mine = es.find((e): e is Extract<Entry, { type: "override" }> => e.type === "override" && e.run_key === o.run_key && e.by === o.by && !used.has(e.id) && Date.parse(e.expires_at) >= now && e.worst_usd >= o.worst_usd - 1e-9 && same(e.limits) === same(o.limits));
-      if (mine) return { id: mine.id, expires_at: mine.expires_at, again: true };
+      // Break 3 m7: it is used again only while it still fits the ceiling (spend may have arrived since).
+      if (mine && this.committed() + o.worst_usd <= this.ceilingUsd) return { id: mine.id, expires_at: mine.expires_at, again: true };
       const total = this.committed(), held = this.heldByOverridesUsd(es, now, o.run_key, opts.ended), usd = (n: number) => `US$${n.toFixed(2)}`;
       if (total + o.worst_usd > this.ceilingUsd) throw new OverrideRefused("ceiling", `ceiling US$${this.ceilingUsd}: committed ${total.toFixed(4)} + worst case ${o.worst_usd.toFixed(4)}; the founder must raise the cap`);
       // Break m3: other Continues not started yet hold their worst case too, so two of them cannot together pass the ceiling.
@@ -286,8 +287,11 @@ export class SpendLedger {
 
   settle(id: string, actualUsd: number, outcome: string) {
     if (!Number.isFinite(actualUsd) || actualUsd < 0) throw new BudgetExceeded(`a settled cost must be a number of US$ at or above 0 (got ${actualUsd})`); // break M1
-    // Break n5: under the short lock, so the seed tool's read-and-replace never drops a settle appended meanwhile.
-    this.atomically(() => this.append({ type: "settle", id, actual_usd: actualUsd, outcome, at: new Date().toISOString() }));
+    // Break n5: under the short lock, so the seed tool's read-and-replace never drops a settle appended meanwhile. Break 3
+    // m3: a settle never fails for a busy lock (the runner would take that for a failed call and pay again): past the wait
+    // it is appended without the lock (one append is one write; only a seed running at that very moment could miss it).
+    const line = { type: "settle" as const, id, actual_usd: actualUsd, outcome, at: new Date().toISOString() };
+    try { this.atomically(() => this.append(line)); } catch (e) { if (!(e instanceof LedgerBusy)) throw e; this.append(line); }
   }
 
   /** One runner at a time: a second process is refused while another holds the lock. Break N1 (N6): the lock names its

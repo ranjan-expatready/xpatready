@@ -92,8 +92,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await api(`/ai/batches/${batchId}/cancel`, { method: "POST" });
 
     // N6 (review N1): the Forms tab's own Draft with AI start (one form) shows the same warning, with Continue. One form's
-    // worst case is part of the combination's, so spend moves up to just under the cap again first.
-    seed(worst / 2);
+    // worst case is part of the combination's: the dialog opens while it fits; spend then moves up (another copy) so the
+    // plan the dialog holds goes out of date (break 3 m1).
     await p.goto(`${BASE}/c/${vv}/forms`);
     const row = p.locator('[data-pending^="IMM 5409"]');
     await row.getByRole("button", { name: "Read form" }).click();
@@ -103,8 +103,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const startLive = dd.getByRole("button", { name: "Start live AI draft" });
     await p.waitForFunction(() => [...document.querySelectorAll("button")].some((x) => /Start live AI draft/.test(x.textContent ?? "") && !x.disabled), null, { timeout: 30_000 });
     const runsBefore = (await api("/ai/batches")).body.length;
+    seed(worst / 2);
+    await startLive.click();
+    await p.getByText(/is above what is left of the experiment cap/).first().waitFor({ timeout: 30_000 });
+    step("C11.8 N6 break 3 m1 setup: the out-of-date plan's Start is refused by the server (nothing started)", (await api("/ai/batches")).body.length === runsBefore);
     await startLive.click();
     await warning.waitFor({ timeout: 30_000 });
+    step("C11.8 N6 break 3 m1 fail: the next Start shows the cost warning with Continue (before: the same red toast again)", (await p.locator("[data-cost-continue]").count()) === 1);
     const sp = (await api("/ai/plan", { method: "POST", json: { scope: { kind: "source", ids: [src] }, mode: "LIVE", draftAgain: true } })).body;
     const ft = await p.getByRole("dialog").filter({ has: warning }).textContent();
     step("C11.8 N6 review N1 pass: on the Forms tab, Draft with AI › Live over the cap shows the cost warning with Continue before anything starts (before: a red toast only)", /^This start is over a cost limit/.test(ft) && sp.cost_check.can_continue && new RegExp(`US\\$${sp.cost_check.worst_usd.toFixed(2)}`).test(ft) && /AI spending cap\./.test(ft) && (await p.locator("[data-cost-continue]").count()) === 1 && (await api("/ai/batches")).body.length === runsBefore, ft);
@@ -115,7 +120,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await startLive.focus(); await p.keyboard.press("Enter"); await p.keyboard.press("Escape"); await sleep(600);
     step("C11.8 N6 fail: Escape before the warning is ready there cancels the warning, not the form's dialog", (await warning.count()) === 0 && (await dd.count()) === 1 && (await api("/ai/batches")).body.length === runsBefore);
     // Review n4: the dialog says spend in cents, as Draft setup and the warning do.
-    step("C11.8 N6 review n4: the form's dialog says spend so far in cents (US$x.xx, never US$119.5)", /Spent so far US\$\d+\.\d\d of the US\$120\.00 experiment cap; US\$-?\d+\.\d\d left\./.test(await dd.textContent()), await dd.textContent());
+    step("C11.8 N6 review n4 + break 3 m2: the form's dialog says spend in cents, names the wave, and what is left before a cap (never 'US$60 left of the experiment cap') (US$x.xx, never US$119.5)", /Spent so far US\$\d+\.\d\d of the US\$120\.00 experiment cap · Wave 1: US\$\d+\.\d\d of US\$60\.00; US\$\d+\.\d\d left before a cap\./.test(await dd.textContent()), await dd.textContent());
     await startLive.click();
     await warning.waitFor();
     await p.locator("[data-cost-continue]").click();

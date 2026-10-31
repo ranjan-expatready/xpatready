@@ -170,6 +170,8 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   const beforeNul = lines().length;
   r = await cont(pm, { reason: "a\u0000b" });
   ok("C11.8 N6 break n3 fail: a NUL in the reason is refused in words (400), no ledger line, no audit (before: line written, then 404)", r.status === 400 && /control character/.test(msg(r)) && lines().length === beforeNul, { status: r.status, m: msg(r) });
+  r = await cont(pm, { reason: "half \uD83D of an emoji" });
+  ok("C11.8 N6 break 3 m5 fail: a lone surrogate in the reason is refused in words (400), nothing written (before: line written, then 500)", r.status === 400 && /cannot be stored/.test(msg(r)) && lines().length === beforeNul, { status: r.status, m: msg(r) });
   r = await cont(pm, { reason: "Line one\nline two\tand a tab" });
   ok("C11.8 N6 break n3 pass: a line break and a tab in the reason are kept", r.status === 201 && lines().find((l) => l.id === r.body?.override_id)?.reason === "Line one\nline two\tand a tab", { status: r.status, m: msg(r) });
   expire(r.body?.override_id);

@@ -43,7 +43,8 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
       onClose(); nav(`/ai/${b.id}`);
     } catch (e) {
       setErr((e as Error).message);
-      if (e instanceof ApiError && e.status === 409) void plan.refetch();
+      // Break 3 m1: any refusal (a cost refusal is a 400) makes the plan again, so the next Start shows today's warning.
+      if (e instanceof ApiError) void plan.refetch();
     } finally { setBusy(false); }
   };
   const runnable = p ? p.totals.steps : 0;
