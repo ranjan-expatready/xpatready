@@ -4,8 +4,11 @@
 // by the load; no live AI call is made. The older sample stays as the suites' fixture (POST /demo/load with no sample).
 //   zsh studio/tools/isolated.sh runtime_s7 4435 start && tsx studio/tests/check_s7_load.ts 4435 xr_studio_runtime_s7
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { LEDGER_DIR } from "../../p2/policy.ts";
+// QA-90: the one shared spend ledger (p2/policy.ts LEDGER_DIR); not there yet = nothing spent.
+const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsSync(f) ? readFileSync(f, "utf8").length : 0; };
 const SOLUTION = join(import.meta.dirname, "..", "..", "..");
 
 const PORT = Number(process.argv[2] ?? 4435), DB = process.argv[3] ?? "xr_studio_runtime_s7";
@@ -44,7 +47,7 @@ const sampleOk = (f: Parameters<typeof trailsOf>[0]) => { const t = trailsOf(f);
   const wrong = await call("POST", "/demo/load", { sample: "everything" });
   ok("C11.7 fail: an unknown sample name is refused with words, nothing loaded", wrong.status === 400 && n(`select count(*) from combination`) === 0, wrong.body?.message);
 
-  const ledgerBefore = readFileSync(join(import.meta.dirname, "..", "..", "p2", "ledger", "spend.jsonl"), "utf8").length;
+  const ledgerBefore = ledger();
   const l = await call("POST", "/demo/load", { sample: "six" });
   if (l.status >= 300) { console.error("STOP  the six did not load", l.body); process.exit(2); }
   const ws = sql(`select id from workspace limit 1`);
@@ -67,7 +70,7 @@ const sampleOk = (f: Parameters<typeof trailsOf>[0]) => { const t = trailsOf(f);
   const vv = l.body.finder.find((f: any) => /Visitor visa/.test(f.combination));
   ok("C11.7: the form finder is replayed on the Visitor visa (saved AI answers, US$0) and picks its forms", ["COMPLETED", "PARTIAL"].includes(vv?.status) && n(`select count(*) from ai_batch where workspace_id='${ws}' and operation='find_forms' and mode='REPLAY'`) === 5, l.body.finder);
   ok("C11.7: a combination without a saved finder answer stops with the reason, for a person (no live call)", l.body.finder.filter((f: any) => !/Visitor visa/.test(f.combination)).every((f: any) => f.status !== "COMPLETED" || f.message), l.body.finder.map((f: any) => f.status));
-  ok("C11.7 (Lead R-143): Load sample makes no live AI call: no live run, US$0, the spend ledger unchanged", n(`select count(*) from ai_batch where workspace_id='${ws}' and mode='LIVE'`) === 0 && n(`select count(*) from drafting_job where workspace_id='${ws}' and mode='LIVE'`) === 0 && Number(sql(`select coalesce(sum(cost_usd),0) from drafting_job where workspace_id='${ws}'`)) === 0 && l.body.cost_usd === 0 && readFileSync(join(import.meta.dirname, "..", "..", "p2", "ledger", "spend.jsonl"), "utf8").length === ledgerBefore);
+  ok("C11.7 (Lead R-143): Load sample makes no live AI call: no live run, US$0, the spend ledger unchanged", n(`select count(*) from ai_batch where workspace_id='${ws}' and mode='LIVE'`) === 0 && n(`select count(*) from drafting_job where workspace_id='${ws}' and mode='LIVE'`) === 0 && Number(sql(`select coalesce(sum(cost_usd),0) from drafting_job where workspace_id='${ws}'`)) === 0 && l.body.cost_usd === 0 && ledger() === ledgerBefore);
   const again = await call("POST", "/demo/load", { sample: "six" });
   ok("C11.7 fail: loading twice is refused (Reset first), nothing doubled", again.status === 409 && n(`select count(*) from combination where workspace_id='${ws}'`) === 6, again.body?.message);
 

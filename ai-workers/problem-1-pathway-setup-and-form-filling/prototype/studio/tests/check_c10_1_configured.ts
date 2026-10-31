@@ -5,8 +5,9 @@
 // in plain words, IMM 5257 waits for the paid run, no live AI call, Reset returns to blank. US$0.
 //   zsh studio/tools/isolated.sh runtime_c101 4431 start && tsx studio/tests/check_c10_1_configured.ts 4431 xr_studio_runtime_c101
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { LEDGER_DIR } from "../../p2/policy.ts";
 
 const PORT = Number(process.argv[2] ?? 4431), DB = process.argv[3] ?? "xr_studio_runtime_c101";
 let pass = 0, fail = 0;
@@ -17,7 +18,8 @@ const call = async (method: string, path: string, body?: unknown) => {
   const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": "user-A", "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   return { status: r.status, body: await r.json().catch(() => null) };
 };
-const ledger = () => readFileSync(join(import.meta.dirname, "..", "..", "p2", "ledger", "spend.jsonl"), "utf8").length;
+// QA-90: the one shared spend ledger (p2/policy.ts LEDGER_DIR); not there yet = nothing spent.
+const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsSync(f) ? readFileSync(f, "utf8").length : 0; };
 type Row = { row: string; title: string; status: string; shows: string; why: string | null };
 
 (async () => {

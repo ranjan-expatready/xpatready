@@ -104,7 +104,7 @@ class SourcesController {
 class DemoController {
   constructor(@Inject(Demo) private readonly d: Demo) {}
   @Get("status") status() { return this.d.status(); }
-  @Post("load") load(@Headers("x-actor") a: H, @Body() b: any) { return this.d.load(actorOf(a), b); }
+  @Post("load") load(@Headers("x-actor") a: H, @Body() b: { sample?: string } | null) { return this.d.load(actorOf(a), b); }
   @Post("reset") reset(@Headers("x-actor") a: H, @Body() b: any) { return this.d.reset(actorOf(a), b?.confirm); }
 }
 

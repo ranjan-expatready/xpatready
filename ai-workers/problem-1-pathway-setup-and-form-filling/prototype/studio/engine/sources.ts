@@ -238,7 +238,7 @@ const WHO_OF_ROLE: Record<string, string> = { principal: "principal_applicant", 
 export function signedScanLines(s: Snapshot): ChecklistLine[] {
   const { people } = previewRender(s);
   const out: ChecklistLine[] = [];
-  for (const f of s.forms as { form_number: string; title?: string; form_kind?: string; who: string; status?: string; condition?: any; condition_plain?: string | null; channel?: string; signature?: string; signed_by?: string }[]) {
+  for (const f of s.forms as { form_number: string; title?: string; form_kind?: string; who: string; status?: string; condition?: { subjectKind?: string } | null; condition_plain?: string | null; channel?: string; signature?: string; signed_by?: string }[]) {
     const line = lineOf(f);
     if (line.channel !== "PDF_UPLOAD" || line.signature !== "HAND_SCANNED" || (f.form_kind ?? "data_form") === "document") continue;
     const by = f.signed_by ?? "person";
