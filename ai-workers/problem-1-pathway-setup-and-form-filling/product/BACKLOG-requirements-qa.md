@@ -17,3 +17,4 @@ Answered: scope (P-70), ready to file (P-71), verification (P-72), wrong mapping
 | B49 | Stand-in chips | P-165 | M2 | screens | S |
 | B48 | **Workspace snapshots (P-160):** take, compare, restore as a draft change; automatic before release and reset | P-160 | W2 | runtime | M |
 | B47 | **One co-pilot "Ask" panel (P-159):** explain and find; act only by a To review proposal | P-159 | W2 | Lead | M |
+| B50 | **Only the proposer corrects a field returned for changes** (P-193): another author gets a plain refusal, the same as remove, retire and restore; a pass and a fail test (runtime, with #116) | P-193; breaker B3 on #116 | M2 | runtime | S |

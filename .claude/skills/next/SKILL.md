@@ -20,14 +20,15 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The wa
 * Screens: skill **screen-build**. Backend: the record, API, rule and contract, with a **passing and a failing test per business rule**; check labels name the capability ids they prove (`C1.6: …`); `node P/tools/graph.mjs --check` passes.
 * Reuse first: the filling and barcode tools, `prototype/evidence-lane/E1`, p1–p5, `research_notes/` (never rebuild them).
 * Your own files only; a change to the database schema or `contracts/` shared with another area → say so first in the PR's opening line.
-* Own ports and databases (yours in `WAY-OF-WORKING.md`), never :4400; **never set `*_LIVE=approved`**, never click a priced button; state any AI cost before a paid run (the founder approves it).
+* Own ports and databases (yours in `WAY-OF-WORKING.md`), never :4400; **never set `*_LIVE=approved` by hand** (only through `run-suites.sh` or a test's usage line, which pair it with the fake launcher, P-192), never click a priced button; state any AI cost before a paid run (the founder approves it).
 * Immigration values from official sources (page, quote, date) or labelled Sample; no personal names.
 
 ## 4. Check, review, PR
 1. Run the suites your change touches, each alone on an isolated copy (each test's usage line). Shared code (contracts, schema, engine): `bash P/tools/run-suites.sh`.
+   A test you touch: any wait you rely on fails loudly when it times out (no `.catch(() => undefined)` after a wait); fix the ones you meet, nothing more.
 2. Launch **screen-reviewer** on the exact commit; also **screen-breaker** for a new screen, money, permissions or a migration. Fix every Blocker and Major with a fail test; fix the Minors or list them in the PR.
 3. `git push -u origin HEAD`; `gh pr create --base main` with: what and why (the backlog row or decision), the acceptance checks and their results, before and after screenshots for any visible change, the cost (US$0).
 4. When the reviewer approves the code as it is now: `gh pr edit <n> --add-label "review: approved"`. The PR merges by itself on green CI and the demo updates. **Any later push needs a new review and the label again.** CI red → read the log, fix, push.
 
 ## 5. Reply
-One short report when the PR is open or merged: PR link, what changed in plain words, the checks, and anything needed from the tech lead or founder. No lane file and no "Paste to Lead" block: the PR is the record. Disagree with evidence in the PR or in `screens/<item>/challenge.md`; never deviate silently.
+One short report when the PR is open or merged: PR link, what changed in plain words, the checks, and anything needed from the tech lead or founder. No lane file and no "Paste to Lead" block: the PR is the record. **Never wait for a human inside the session:** every question goes in the PR under "Questions", with your recommendation, and you carry on with the next item; the tech lead collects them. Disagree with evidence in the PR or in `screens/<item>/challenge.md`; never deviate silently.

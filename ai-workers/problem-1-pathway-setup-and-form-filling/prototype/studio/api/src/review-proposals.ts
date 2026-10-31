@@ -11,6 +11,8 @@ import { ACTORS, actorOf, Audit, Db, fail, need, Workspace, type Actor } from ".
 import { changeView, decideChange } from "./library-changes.ts";
 import { BATCH_MAX, bulkWhy, decide, ON_ITS_PAGE, undo, UNDO_SECONDS } from "./proposals.ts";
 import { Screen02 } from "./screen02.ts";
+import { STEP_KEYS } from "../../contracts/setup-checklist.ts";
+import { KIND_STEP } from "../../engine/setup-checklist.ts";
 
 type H = string | undefined;
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
@@ -57,7 +59,7 @@ export class ReviewProposals {
       }
       g.counts[r.confidence as Band]++; g.total++;
     }
-    const chosen = q.group ? groups.get(q.group) : undefined;
+    const chosen = q.group ? groups.get(q.group) : q.c ? await this.groupFor(workspaceId, rows, groups, q.c, q.step) : undefined;
     if (q.group && !chosen) fail("Nothing waits in this group any more: it may have been decided, or the demo was reset.", HttpStatus.NOT_FOUND);
     let group: ProposalsView["group"] = null;
     if (chosen) {
@@ -66,6 +68,16 @@ export class ReviewProposals {
       group = { ...chosen, bands };
     }
     return { groups: [...groups.values()], group, batch_max: BATCH_MAX, undo_seconds: UNDO_SECONDS };
+  }
+
+  /** PR #108 minor (c): the oldest group with this combination's proposals (its own, or its forms' editions), one for
+   *  the asked step first; none → no group chosen (the page opens the oldest, as without a link). */
+  private async groupFor(workspaceId: string, rows: Row[], groups: Map<string, ProposalGroup>, c: string, step?: number) {
+    const codes = new Set((await this.db.combinationForm.findMany({ where: { workspaceId, combinationId: c, status: { not: "RETIRED" } }, select: { form: { select: { formKey: true } } } })).map((l) => l.form.formKey));
+    const mine = rows.filter((r) => r.combinationId === c || (!r.combinationId && r.formEdition && (codes.has(r.formEdition) || codes.has(r.formEdition.split(" (")[0]))));
+    const want = step ? STEP_KEYS[step - 1] : null;
+    const r = (want && mine.find((x) => KIND_STEP[x.kind as keyof typeof KIND_STEP]?.step === want)) || mine[0];
+    return r ? groups.get(groupOf(r)) : undefined;
   }
 
   private view(r: Row): QueueProposal {

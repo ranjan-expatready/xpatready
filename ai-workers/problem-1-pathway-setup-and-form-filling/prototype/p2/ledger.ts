@@ -283,7 +283,16 @@ export class SpendLedger {
     // (a turn takes microseconds) is cleared after 5 s.
     const turn = `${file}.break`;
     try { closeSync(openSync(turn, "wx")); } catch {
-      try { if (Date.now() - statSync(turn).mtimeMs > 5_000) unlinkSync(turn); } catch { /* gone */ }
+      // #121 review 6, Minor 4: a turn left by a crash is moved aside and looked at once moved (as the lock is), so a
+      // fresh turn another breaker took meanwhile is put back, never deleted.
+      try {
+        if (Date.now() - statSync(turn).mtimeMs > 5_000) {
+          const asideTurn = `${turn}.stale-${process.pid}-${randomBytes(4).toString("hex")}`;
+          renameSync(turn, asideTurn);
+          try { if (Date.now() - statSync(asideTurn).mtimeMs <= 5_000) linkSync(asideTurn, turn); } catch { /* a newer turn is there: it stays */ }
+          try { unlinkSync(asideTurn); } catch { /* gone */ }
+        }
+      } catch { /* gone or moved by another waiter */ }
       return false; // another breaker's turn: wait, then look again
     }
     try {

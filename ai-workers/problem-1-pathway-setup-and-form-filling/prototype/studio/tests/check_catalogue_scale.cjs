@@ -9,7 +9,7 @@
 // row's next step, P-50). The old "?show=problems" filter is replaced by the Needs work and Not ready counts (T5).
 //   node studio/tests/check_catalogue_scale.cjs 4401 [page port: a QA-4 page proxy in front of the server, optional]
 const path = require("node:path"); const fs = require("node:fs");
-const { chromium } = require("/Users/ranjansingh/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+const { chromium } = require("playwright");
 const PORT = Number(process.argv[2] ?? 4401), API = `http://localhost:${PORT}`, BASE = `http://localhost:${Number(process.argv[3] ?? PORT)}`;
 const OUT = path.join(__dirname, "..", "evidence", "scale-100"); fs.mkdirSync(OUT, { recursive: true });
 const FIRST_VIEW_BUDGET_MS = 2000; // a normal visit (app files cached) to the All view of 300+ combinations
