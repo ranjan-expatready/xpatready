@@ -111,6 +111,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("row-case-officer-with-why");
   // The toast lasts 10 s; after a screenshot (slow under load) use the page note's Undo, which stays until used (QA-58).
   await p.locator("[data-note-undo]").click(); await settle();
+  // The drawer is keyed on the row's version: wait for the undo to reach the row, or its refresh remounts the drawer
+  // after it opens and drops the choices below (PR #155 review).
+  await oRow.locator('[data-row-status="rules"]').waitFor({ timeout: 10000 }).catch(() => {});
   await oRow.getByRole("button", { name: /^Details of/ }).click();
   await drawer.locator("[data-fact-drawer]").waitFor();
   await drawer.locator('[data-source-option="CLIENT"] input').check();
@@ -123,6 +126,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // Wait for the saved state on the row before reading it (and the undone state below): a loaded runner read them too early.
   await row.locator('[data-row-status="draft"]').waitFor({ timeout: 10000 }).catch(() => {});
   step("C4.10 M1 pass: the row now says Client, Ask, Changed here", /Client/.test(await row.locator("[data-comes-from]").innerText()) && /Ask/.test(await row.innerText()) && await row.locator('[data-row-status="draft"]').count() === 1, await row.innerText());
+  await p.locator("[data-undo-toast] [data-undo]").waitFor({ timeout: 5000 }).catch(() => {});
   step("undo toast: one Undo for the save", await p.locator("[data-undo-toast] [data-undo]").count() === 1);
   await p.locator("[data-undo-toast] [data-undo]").click(); await settle();
   await row.locator('[data-row-status="rules"]').waitFor({ timeout: 10000 }).catch(() => {});
