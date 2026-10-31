@@ -244,7 +244,7 @@ export class Demo {
    *  Visitor visa (held for source verification), records the IRCC page it came from, and the approver, a second person,
    *  compares and approves it on the intake's own route (P-80). The library holds IMM 5476 (11-2025), not 11-2021, so the
    *  copy is not a duplicate (review-3 Major 1). Once approved it goes through the intake again: an edition older than the
-   *  library's is kept aside, never used, which the row says. */
+   *  library's is set aside by the Approver, never used, which the row says. */
   private async heldFileApproved(author: Actor, approver: Actor, workspaceId: string): Promise<{ ok: true; shows: string } | { ok: false; why: string }> {
     const vv = await this.db.combination.findFirst({ where: { workspaceId, combinationKey: "vv.single" }, select: { id: true } });
     if (!vv) return { ok: false, why: "The Visitor visa combination is not in the sample, so the off-list copy has nowhere to be uploaded." };
@@ -254,7 +254,14 @@ export class Demo {
     if (!item) return { ok: false, why: `The off-list copy of IMM 5476 (11-2021) was not held for a source check: ${up.message}` };
     await this.intake.recordPage(author, item.id, { irccPage: OFF_LIST_COPY.page });
     const done = await this.intake.decideHeld(approver, item.id, "approve", { note: "Sample: compared with the IRCC page", irccPage: OFF_LIST_COPY.page });
-    const after = done.result?.outcome === "older_edition_held" ? " Then the intake kept it aside as an edition older than the library's IMM 5476 (11-2025): not used." : done.result ? ` Then the intake: ${done.result.message}` : "";
+    // Review m2 (f7): the re-intake holds it as an older edition; the Approver sets it aside with that reason, so nothing is
+    // left waiting on To review (a second person may set aside an older edition: Intake.heldFile anyHold).
+    let after = done.result ? ` Then the intake: ${done.result.message}` : "";
+    if (done.result?.outcome === "older_edition_held") {
+      const older = await this.db.intakeItem.findFirst({ where: { workspaceId, sha256: item.sha256, status: "HELD", outcome: "older_edition_held" }, select: { id: true } });
+      if (older) await this.intake.decideHeld(approver, older.id, "reject", { note: "Sample: older than the library's IMM 5476 (11-2025), so it is not used." });
+      after = ` Then the intake found it older than the library's IMM 5476 (11-2025), and ${approver.name} set it aside: not used.`;
+    }
     return { ok: true, shows: `an off-list copy of ${item.editionLabel ?? "IMM 5476 (11-2021)"} (${OFF_LIST_COPY.name}) held for a source check, its IRCC page recorded by ${author.name}, approved by ${approver.name}.${after}` };
   }
 
