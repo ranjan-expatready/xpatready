@@ -95,8 +95,8 @@ try {
         }
         {
           const e = failure;
-          ledger.settleOrKeep(id, worst, "error_counted_at_worst_case");
-          r.attempts.push({ n, outcome: "error", error: (e as Error).message.slice(0, 300), duration_ms: Date.now() - t0 });
+          const notSettled = ledger.settleOrKeep(id, worst, "error_counted_at_worst_case");
+          r.attempts.push({ n, outcome: "error", error: (e as Error).message.slice(0, 300), duration_ms: Date.now() - t0, ...(notSettled ? { settle_error: `counted at its worst case: ${notSettled}` } : {}) });
           const st = (e as { status?: number }).status;
           // An account-level refusal (key, permission, the account's own usage limit) fails every later call the same
           // way: stop the run (found on the first live run, 21 Oct: ten identical "usage limits" refusals).
