@@ -1,0 +1,283 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Programs cards v4</title>
+<style>
+/* Team brand tokens from prototype/studio/web/src/styles/tokens.css (light sheet) and levels.css, as on board v3. */
+:root{--color-primary:#0862c5;--color-primary-hover:#054e9c;--primary-50:#e6f4ff;--primary-100:#cce9ff;--color-surface:#f7f7f7;--color-surface-raised:#fff;--color-text:#2d2d2d;--color-text-muted:#737373;--color-text-link:#054e9c;--color-border:#d9d9d9;--color-border-strong:#bfbfbf;--orange-50:#fff3e0;--orange-200:#ffc773;--color-text-warn:#663200;--color-ok:#16a34a;--color-text-ok:#0f5c2e;--ok-50:#eefaf2;--ok-100:#dcfce7;--color-text-danger:#991b1b;--neutral-100:#eeeeee;--radius:8px;--lv1:#37506e;--lv2:#0b6477;--lv3:#043a73;--font:'Inter Variable',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);font-size:14px;color:var(--color-text);background:#e9ecef;line-height:1.45}
+h1,h2,h3,h4{font-family:'Proxima Nova',var(--font);margin:0}
+.board{max-width:1440px;margin:0 auto;padding:24px}
+.board>header h1{font-size:24px}.board>header p{color:var(--color-text-muted);margin:6px 0 0;max-width:1100px}
+.section{margin:36px 0 8px}.section>h2{font-size:18px}.section>p{margin:4px 0;color:var(--color-text-muted);max-width:1100px}
+.ann{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;align-items:center}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;padding:1px 6px;border-radius:999px;border:1px solid;white-space:nowrap;font-weight:500}
+.tag.dec{color:var(--color-text-ok);border-color:#a7dcb9;background:var(--ok-50)}
+.tag.cap{color:var(--color-text-link);border-color:var(--primary-100);background:var(--primary-50)}
+.tag.chg{color:var(--color-text-warn);border-color:var(--orange-200);background:var(--orange-50)}
+.tag.nb{color:var(--color-text-muted);border:1px dashed var(--color-border-strong);background:#fff}
+.ref{background:#fff;border:1px solid var(--color-border);border-radius:12px;padding:14px 16px;overflow-x:auto}
+.ref table{border-collapse:collapse;width:100%;font-size:13px}.ref th,.ref td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--color-border);vertical-align:top}.ref th{font-size:12px;color:var(--color-text-muted);font-weight:600}
+.ref tr:last-child td{border-bottom:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.note{font-size:12px;color:var(--color-text-muted)}
+/* app shell */
+.frame{background:var(--color-surface);border:1px solid var(--color-border-strong);border-radius:12px;overflow:hidden;box-shadow:0 2px 8px #0000001a;margin-top:10px}
+.frame-title{font-size:12px;color:var(--color-text-muted);padding:6px 12px;background:#fff;border-bottom:1px solid var(--color-border)}
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--color-border)}
+.logo{font-weight:800;color:var(--color-primary);font-size:18px;display:flex;align-items:center;gap:6px}.logo i{display:inline-block;width:22px;height:22px;border-radius:5px;background:var(--color-primary)}
+.prod{border-left:1px solid var(--color-border);padding-left:12px;font-size:12px;color:var(--color-text-muted)}.prod b{display:block;color:var(--color-text);font-size:14px}
+.demo{font-size:12px;background:var(--orange-50);color:var(--color-text-warn);border-radius:6px;padding:2px 8px;margin-left:auto}
+.shell{display:grid;grid-template-columns:200px 1fr}
+.side{background:#fff;border-right:1px solid var(--color-border);padding:14px 10px}
+.side .grp{font-size:12px;color:var(--color-text-muted);margin:14px 8px 4px}.side .grp:first-child{margin-top:0}
+.side a{display:block;padding:6px 8px;border-radius:6px;color:var(--color-text);text-decoration:none}.side a.on{background:var(--primary-50);color:var(--color-text-link);font-weight:600}
+.main{padding:20px 24px;min-width:0}
+.ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ph h1{font-size:24px}.ph .sp{flex:1}
+.sub{color:var(--color-text-muted);margin:2px 0 0}
+/* the one button (one token: --color-primary) */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--radius);border:1px solid var(--color-border-strong);background:#fff;color:var(--color-text);font:inherit;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:#fff}.btn.primary:hover{background:var(--color-primary-hover)}
+.btn:focus-visible{outline:3px solid #0862c566;outline-offset:2px}
+.btn.sm{height:32px;padding:0 12px;font-size:13px}
+/* filter bar */
+.fbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 6px}
+.find{display:flex;align-items:center;gap:6px;height:36px;border:1px solid var(--color-border-strong);border-radius:8px;background:#fff;padding:0 10px;min-width:240px;color:var(--color-text-muted)}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.fchip{height:32px;display:inline-flex;align-items:center;gap:6px;padding:0 10px;border-radius:999px;border:1px solid var(--color-border-strong);background:#fff;font-size:13px}
+.fchip.on{background:var(--primary-50);border-color:var(--color-primary);color:var(--color-text-link);font-weight:600}
+.fchip .n{font-size:12px;color:var(--color-text-muted);font-variant-numeric:tabular-nums}
+.seg2{display:inline-flex;border:1px solid var(--color-border-strong);border-radius:8px;overflow:hidden;margin-left:auto}.seg2 span{padding:6px 10px;font-size:13px;background:#fff}.seg2 .on{background:var(--primary-50);color:var(--color-text-link);font-weight:600}
+.summary{font-size:13px;color:var(--color-text-muted);margin:4px 0 0}.summary b{color:var(--color-text)}
+/* sections */
+.band{display:flex;align-items:center;gap:10px;margin:18px 0 10px;padding:6px 10px;border-left:4px solid #6aa9e9;background:#fff;border-radius:6px;cursor:pointer}
+.band h2{font-size:16px;color:var(--lv1)}.band .cnt{font-size:13px;color:var(--color-text-muted)}
+.chev{width:18px;color:var(--color-text-muted);font-size:12px}
+.prog{display:flex;align-items:center;gap:8px;margin:14px 0 8px 4px;cursor:pointer}.prog h3{font-size:14px;color:var(--lv2)}.prog .cnt{font-size:12px;color:var(--color-text-muted)}
+.folded{opacity:1}
+/* the card: five things */
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.card{position:relative;background:#fff;border:1px solid var(--color-border);border-radius:12px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:4px;min-height:148px;overflow:hidden}
+.card:hover{border-color:var(--color-border-strong);box-shadow:0 1px 4px #0000000f}
+.card h4{font-size:16px;color:var(--lv3);line-height:1.3}.card:has(.needs) h4{padding-right:96px}
+.card .trail{font-size:12px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .progress{font-size:13px;color:var(--color-text);margin-top:6px}
+.card .progress.live{color:var(--color-text-ok);font-weight:600}.card .progress.live:before{content:"✓ "}
+.card .progress.ret{color:var(--color-text-muted)}
+.card .act{margin-top:auto;padding-top:10px}
+.needs{position:absolute;top:12px;right:12px;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--color-text-warn);background:var(--orange-50);border:1px solid var(--orange-200);border-radius:999px;padding:1px 8px}
+.needs:before{content:"";width:6px;height:6px;border-radius:50%;background:#ff8500}
+/* 2 px edge bar: five parts, decorative (the progress line carries the meaning) */
+.edge{position:absolute;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;height:2px}
+.edge i{background:var(--neutral-100)}.edge i.d{background:var(--color-primary)}.edge.live i{background:var(--color-ok)}.edge.none{display:none}
+.state{display:inline-block;font-size:11px;font-weight:600;background:#2d2d2d;color:#fff;border-radius:999px;padding:1px 8px;margin-bottom:6px}
+.skel{height:12px;border-radius:4px;background:linear-gradient(90deg,#eee,#f6f6f6,#eee);margin:4px 0}
+/* list view */
+.list{background:#fff;border:1px solid var(--color-border);border-radius:12px;overflow:hidden}
+.lrow{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,2fr) 150px 96px 140px;gap:12px;align-items:center;min-height:44px;padding:0 16px;border-bottom:1px solid var(--color-border)}
+.lrow:last-child{border-bottom:0}.lrow.h{min-height:34px;font-size:12px;color:var(--color-text-muted);font-weight:600;background:#fafafa}
+.lrow .nm{font-weight:600;color:var(--lv3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lrow .tr{font-size:12px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini{display:inline-grid;grid-template-columns:repeat(5,10px);gap:2px;margin-right:8px;vertical-align:middle}.mini i{height:4px;border-radius:2px;background:var(--neutral-100)}.mini i.d{background:var(--color-primary)}.mini.live i{background:var(--color-ok)}
+.lrow .needs{position:static}
+.lband{padding:8px 16px;background:#f3f6f9;font-size:13px;font-weight:600;color:var(--lv1);border-bottom:1px solid var(--color-border)}.lband span{font-weight:400;color:var(--color-text-muted)}
+/* anatomy */
+.anat{display:grid;grid-template-columns:360px 1fr;gap:24px;align-items:start}
+.anat .card{min-height:170px}
+.pin{display:inline-flex;width:20px;height:20px;border-radius:50%;background:#2d2d2d;color:#fff;font-size:11px;font-weight:700;align-items:center;justify-content:center;flex:none}
+.anat ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}.anat li{display:flex;gap:10px}.anat li>div>b:first-child{display:block}
+.sw{display:flex;gap:16px;flex-wrap:wrap}
+.swc{background:#fff;border:1px solid var(--color-border);border-radius:12px;padding:14px;flex:1 1 260px}
+.swc.rec{border:2px solid var(--color-primary)}
+.swc h4{font-size:14px;margin-bottom:8px}.swc .btns{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+.btn.green{background:#15803d;border-color:#15803d;color:#fff}
+.btn.lgreen{background:var(--ok-100);border-color:var(--color-ok);color:var(--color-text-ok)}
+.phone{width:375px;max-width:100%}
+.phone .cards{grid-template-columns:minmax(0,1fr)}
+.qs li{margin:0 0 10px}
+@media (max-width:1100px){.cards{grid-template-columns:repeat(3,minmax(0,1fr))}.anat{grid-template-columns:1fr}}
+@media (max-width:860px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.shell{grid-template-columns:1fr}.side{display:none}.grid2{grid-template-columns:1fr}.lrow{grid-template-columns:minmax(0,1fr) 120px 120px}.lrow .tr,.lrow .nd{display:none}}
+.cards>*{min-width:0}
+@media (max-width:560px){.board{padding:16px}.cards{grid-template-columns:minmax(0,1fr)}.topbar{flex-wrap:wrap}.demo{margin-left:0}.main{padding:16px}.find{min-width:0;flex:1 1 100%}.seg2{margin-left:0}}
+</style></head><body><div class="board">
+
+<header>
+<h1>Board v4 · Immigration programs cards, simple (R-144)</h1>
+<p>Screens lane, 30 Oct, for the Lead's early look and then the founder's Go before slice A. It redraws only the card and the page around it, from the founder's feedback (R-144) and the Lead's must-haves. The five setup steps, their rules and the combination's own page stay as on board v3 (<code>draft-setup-checklist.html</code> sections 1 and 4–7). This shows the intent, not exact pixels (P-44). Names and counts are Sample.</p>
+<div class="ann"><span class="tag dec">R-144 founder feedback</span><span class="tag dec">P-157 counts derived</span><span class="tag dec">P-161 five steps</span><span class="tag dec">P-115 Cards / List</span><span class="tag dec">P-128 filter bar, Needs you</span><span class="tag chg">Changes concept v3 §6–§7</span><span class="tag nb">Not built</span></div>
+</header>
+
+<div class="section"><h2>1 · The card: five things, nothing else</h2>
+<p>Everything else that was on the card (the status line, "Next: …", release numbers, AI problems, rule codes, system phrases) now lives only on the combination's own page, in the Overview's five steps (board v3 section 5).</p>
+<div class="anat" style="margin-top:12px">
+ <div class="card" aria-label="Spouse or common-law partner, 3 of 5 steps, needs you">
+  <span class="needs" title="Something here waits for you: 2 proposals to review">Needs you</span>
+  <h4>Spouse or common-law partner</h4>
+  <div class="trail" title="Retail › Permanent residence › Family sponsorship › Spouse or common-law partner">Retail › Permanent residence › Family sponsorship › Spouse or common-law partner</div>
+  <div class="progress">3 of 5 steps</div>
+  <div class="act"><a class="btn primary sm" href="#">Resume setup</a></div>
+  <div class="edge" aria-hidden="true"><i class="d"></i><i class="d"></i><i class="d"></i><i></i><i></i></div>
+ </div>
+ <ol>
+  <li><span class="pin">1</span><div><b>Name</b> The combination's own name is the heading (16 px, the level colour). Long names wrap to two lines and are never cut.</div></li>
+  <li><span class="pin">2</span><div><b>Trail</b> One small grey line with the full path, as the founder wrote it: Pathway type › Pathway › Program › Category › Sub-category. A long trail ends in "…", and the full trail shows on hover and to screen readers.</div></li>
+  <li><span class="pin">3</span><div><b>Progress</b> One quiet line: "0 of 5 steps" up to "4 of 5 steps", then "✓ Live" once released, so there is no separate status badge. A 2 px bar on the card's bottom edge fills one part per step (green when Live). The bar only repeats the line, so it is hidden from screen readers and nothing depends on its colour. No percentage and no ring.</div></li>
+  <li><span class="pin">4</span><div><b>Needs you</b> A small mark, top right, only when something waits for the person looking: a proposal to review, a confirmation on their tier, a sign-off, or a release check to fix. Its hover says what and how many ("2 proposals to review"). Shape and text, never colour alone.</div></li>
+  <li><span class="pin">5</span><div><b>One button</b>, always in the same place and size, in the one primary colour: <b>Start setup</b> (0 of 5) · <b>Resume setup</b> (1–4 of 5, or not ready) · <b>Open</b> (Live, or retired). The rest of the card also opens the combination, so the button is never the only target.</div></li>
+ </ol>
+</div>
+<div class="ref" style="margin-top:14px"><table>
+<tr><th>Gone from the card (R-144 point 3)</th><th>Where it is now</th></tr>
+<tr><td>Status chip ("Not started", "In setup", "Not ready", "Live · Release 2")</td><td>The progress line says "n of 5 steps" or "Live". The release number and "Changes since Release n" appear in the combination page's header.</td></tr>
+<tr><td>"n of 5 done · Next: Forms" and the "Next: …" line with its why</td><td>The Overview's five steps on the combination page: the current step is marked, and its open item is a link. <b>Resume setup</b> lands straight on that item (v3's <code>?focus=</code>, outlined for 2 s).</td></tr>
+<tr><td>Facts line (forms, people, documents counts)</td><td>Each step's summary row on the Overview.</td></tr>
+<tr><td>"View AI problems", "View AI progress"</td><td>The step that holds them, on the Overview; AI at work shows there as ◐.</td></tr>
+<tr><td>Rule codes (P-76) and system phrases ("release a problem first before draft")</td><td>Nowhere on screen. Rule codes stay in tooltips for the team's own pages only; problems are written in plain words on their step.</td></tr>
+<tr><td>Duty buttons ("Find forms", "Map n forms", "Review n proposals", "Submit for review", "Review and sign", "Release")</td><td>Each step's own item on the combination page, still filled per duty and tier (v3 §5). On the card, <b>Needs you</b> replaces them.</td></tr>
+</table></div>
+</div>
+
+<div class="section"><h2>2 · Immigration programs, 1440 px, as the configuration author</h2>
+<p>The filter bar stays above the sections (P-128). Sections are grouped by Pathway, then by Program, and each header carries one quiet count that folds open or closed. The cards show every state the author meets.</p>
+<div class="frame"><div class="frame-title">Immigration programs · Retail · 1440 px · acting as configuration author (scaffolding)</div>
+<div class="topbar"><span class="logo"><i></i>ExpatReady</span><span class="prod"><b>Pathway Configurator</b>Studio</span><span class="demo">Demo workspace · acting as Configuration author</span></div>
+<div class="shell"><nav class="side"><div class="grp">Set up</div><a href="#">Program structure</a><a class="on" href="#">Immigration programs</a><div class="grp">Library</div><a href="#">Forms</a><a href="#">Shared library</a><div class="grp">Review</div><a href="#">To review</a><a href="#">Releases</a></nav>
+<main class="main">
+ <div class="ph"><h1>Immigration programs</h1><span class="sp"></span><a class="btn" href="#">Program structure</a><a class="btn primary" href="#">+ Add</a></div>
+ <p class="sub">Each card is one application a firm can open. Retail · Corporate and employers.</p>
+ <div class="fbar">
+  <span class="find">⌕ Find a combination</span>
+  <span class="chips" role="group" aria-label="Status"><span class="fchip on">All <span class="n">24</span></span><span class="fchip">Not started <span class="n">6</span></span><span class="fchip">In progress <span class="n">9</span></span><span class="fchip">Live <span class="n">9</span></span></span>
+  <span class="fchip">● Needs you <span class="n">4</span></span>
+  <span class="seg2" role="group" aria-label="View"><span class="on">▦ Cards</span><span>☰ List</span></span>
+ </div>
+ <p class="summary"><b>24 combinations</b> · 9 live · 9 in progress · 6 not started</p>
+
+ <div class="band" role="button" aria-expanded="true"><span class="chev">▾</span><h2>Permanent residence</h2><span class="cnt">3 of 9 live</span></div>
+ <div class="prog" role="button" aria-expanded="true"><span class="chev">▾</span><h3>Family sponsorship</h3><span class="cnt">1 of 4 live</span></div>
+ <div class="cards">
+  <div class="card"><span class="needs" title="2 proposals to review">Needs you</span><h4>Spouse or common-law partner</h4><div class="trail">Retail › Permanent residence › Family sponsorship › Spouse or common-law partner</div><div class="progress">3 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Resume setup</a></div><div class="edge" aria-hidden="true"><i class="d"></i><i class="d"></i><i class="d"></i><i></i><i></i></div></div>
+  <div class="card"><h4>Dependent child</h4><div class="trail">Retail › Permanent residence › Family sponsorship › Dependent child</div><div class="progress">0 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Start setup</a></div><div class="edge" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="card"><h4>Parents and grandparents</h4><div class="trail">Retail › Permanent residence › Family sponsorship › Parents and grandparents</div><div class="progress live">Live</div><div class="act"><a class="btn primary sm" href="#">Open</a></div><div class="edge live" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="card"><h4>Other relative</h4><div class="trail">Retail › Permanent residence › Family sponsorship › Other relative</div><div class="progress">1 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Resume setup</a></div><div class="edge" aria-hidden="true"><i class="d"></i><i></i><i></i><i></i><i></i></div></div>
+ </div>
+ <div class="prog" role="button" aria-expanded="true"><span class="chev">▾</span><h3>Economic</h3><span class="cnt">2 of 5 live</span></div>
+ <div class="cards">
+  <div class="card"><h4>Skilled trades</h4><div class="trail">Retail › Permanent residence › Economic › Express Entry › Skilled trades</div><div class="progress live">Live</div><div class="act"><a class="btn primary sm" href="#">Open</a></div><div class="edge live" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="card"><span class="needs" title="Firms cannot open cases until 1 problem is fixed">Needs you</span><h4>Canadian experience</h4><div class="trail">Retail › Permanent residence › Economic › Express Entry › Canadian experience</div><div class="progress">4 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Resume setup</a></div><div class="edge" aria-hidden="true"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i></i></div></div>
+  <div class="card"><h4>Federal skilled worker</h4><div class="trail">Retail › Permanent residence › Economic › Express Entry › Federal skilled worker</div><div class="progress live">Live</div><div class="act"><a class="btn primary sm" href="#">Open</a></div><div class="edge live" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="card"><h4>Provincial nominee</h4><div class="trail">Retail › Permanent residence › Economic › Provincial nominee</div><div class="progress">2 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Resume setup</a></div><div class="edge" aria-hidden="true"><i class="d"></i><i class="d"></i><i></i><i></i><i></i></div></div>
+ </div>
+ <div class="band" role="button" aria-expanded="false"><span class="chev">▸</span><h2>Temporary residence</h2><span class="cnt">4 of 7 live</span></div>
+ <div class="band" role="button" aria-expanded="true"><span class="chev">▾</span><h2>Work permit</h2><span class="cnt">2 of 8 live</span></div>
+ <div class="prog" role="button" aria-expanded="true"><span class="chev">▾</span><h3>Employer-specific</h3><span class="cnt">1 of 3 live</span></div>
+ <div class="cards">
+  <div class="card"><h4>With an LMIA</h4><div class="trail">Retail › Work permit › Employer-specific › Inside Canada › With an LMIA</div><div class="progress">4 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Resume setup</a></div><div class="edge" aria-hidden="true"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i></i></div></div>
+  <div class="card"><h4>LMIA-exempt</h4><div class="trail">Retail › Work permit › Employer-specific › Inside Canada › LMIA-exempt</div><div class="progress live">Live</div><div class="act"><a class="btn primary sm" href="#">Open</a></div><div class="edge live" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="card"><span class="needs" title="1 form edition to confirm">Needs you</span><h4>Intra-company transferee</h4><div class="trail">Retail › Work permit › Employer-specific › Outside Canada › Intra-company transferee</div><div class="progress">2 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Resume setup</a></div><div class="edge" aria-hidden="true"><i class="d"></i><i class="d"></i><i></i><i></i><i></i></div></div>
+ </div>
+ <div class="prog" role="button" aria-expanded="false"><span class="chev">▸</span><h3>Open work permit</h3><span class="cnt">1 of 5 live</span></div>
+</main></div></div></div>
+<p class="note">Fold state is remembered per person, like Cards or List. While a filter or a search is on, every section holding a match opens, and a section with no match is hidden, as today. A section header's count reads "n of m live", the same words as the card.</p>
+</div>
+
+<div class="section"><h2>3 · Every state, and what the card says</h2>
+<p>The progress line and the button follow from the five steps (P-157, worked out from data, nothing stored). The button's words follow the state, and Needs you follows the person looking.</p>
+<div class="cards" style="margin-top:16px">
+ <div><span class="state">Not started</span><div class="card"><h4>Dependent child</h4><div class="trail">Retail › Permanent residence › Family sponsorship › Dependent child</div><div class="progress">0 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Start setup</a></div><div class="edge" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div></div>
+ <div><span class="state">In progress · AI at work or waiting for someone else</span><div class="card"><h4>Visitor visa</h4><div class="trail">Retail › Temporary residence › Visitor › Visitor visa</div><div class="progress">2 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Resume setup</a></div><div class="edge" aria-hidden="true"><i class="d"></i><i class="d"></i><i></i><i></i><i></i></div></div></div>
+ <div><span class="state">Not ready (its release fails a check)</span><div class="card"><span class="needs" title="Firms cannot open cases until 1 problem is fixed">Needs you</span><h4>Canadian experience</h4><div class="trail">Retail › Permanent residence › Economic › Express Entry › Canadian experience</div><div class="progress">4 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Resume setup</a></div><div class="edge" aria-hidden="true"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i></i></div></div></div>
+ <div><span class="state">Live, with unreleased changes</span><div class="card"><h4>Super visa</h4><div class="trail">Retail › Temporary residence › Visitor › Super visa</div><div class="progress live">Live</div><div class="act"><a class="btn primary sm" href="#">Open</a></div><div class="edge live" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div></div>
+ <div><span class="state">Retired (Status: Retired only)</span><div class="card"><h4>Start-up visa (old)</h4><div class="trail">Retail › Permanent residence › Economic › Start-up visa (old)</div><div class="progress ret">Retired at Release 3</div><div class="act"><a class="btn primary sm" href="#">Open</a></div><div class="edge none" aria-hidden="true"></div></div></div>
+ <div><span class="state">Just added</span><div class="card" style="outline:3px solid #0862c566;outline-offset:2px"><h4>Adopted child</h4><div class="trail">Retail › Permanent residence › Family sponsorship › Adopted child</div><div class="progress">0 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Start setup</a></div><div class="edge" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div><p class="note">Scrolled into view and outlined for 2 s; no "Just added" text.</p></div>
+ <div><span class="state">Loading</span><div class="card"><div class="skel" style="width:70%;height:16px"></div><div class="skel" style="width:90%"></div><div class="skel" style="width:30%"></div><div class="act"><span class="btn sm" style="width:110px;opacity:.4"></span></div></div></div>
+ <div><span class="state">Steps could not be worked out</span><div class="card"><h4>Study permit</h4><div class="trail">Retail › Temporary residence › Study permit</div><div class="progress" style="color:var(--color-text-danger)">Setup steps could not be worked out. <a href="#" style="color:var(--color-text-link)">Retry</a></div><div class="act"><a class="btn primary sm" href="#">Open</a></div><div class="edge none" aria-hidden="true"></div></div></div>
+</div>
+<div class="ref" style="margin-top:16px"><table>
+<tr><th>State (from data)</th><th>Progress line</th><th>Edge bar</th><th>Button, configuration author</th><th>Button, everyone else (Q1)</th><th>Needs you shows when</th></tr>
+<tr><td>Not started: nothing set up yet</td><td>0 of 5 steps</td><td>empty</td><td>Start setup</td><td>Open</td><td>never (nothing waits yet)</td></tr>
+<tr><td>In progress: 1–4 steps done, or all 5 done but not released</td><td>n of 5 steps</td><td>n parts, blue</td><td>Resume setup (lands on the first open item)</td><td>Open (lands on the Overview)</td><td>an item on this person's duty and tier waits (v3 §5 table): a proposal, a confirmation, a sign-off, a release</td></tr>
+<tr><td>Not ready: its release fails a check</td><td>n of 5 steps (step 5 reopens)</td><td>n parts</td><td>Resume setup</td><td>Open</td><td>the author: always ("Firms cannot open cases until n problems are fixed")</td></tr>
+<tr><td>Live, with or without unreleased changes</td><td>✓ Live</td><td>full, green</td><td>Open</td><td>Open</td><td>a change of it waits for this person (a review, a sign-off, a new edition)</td></tr>
+<tr><td>Retired</td><td>Retired at Release n</td><td>none</td><td>Open</td><td>Open</td><td>never</td></tr>
+</table></div>
+</div>
+
+<div class="section"><h2>4 · At 20, 50 and 150 combinations</h2>
+<p>Cards stay findable through the sections and the filter bar. With 150, the List view shows one line per combination (P-115): name, trail, "n of 5", Needs you, button. Speed: the concept's 150-combination timing test stays, because counts are derived and cached per combination (P-157). One request per view, as today.</p>
+<div class="grid2" style="margin-top:12px">
+<div class="frame"><div class="frame-title">List view · 150 combinations · Needs you on · 1440 px</div><div class="main">
+ <div class="fbar" style="margin-top:0"><span class="find">⌕ Find a combination</span><span class="chips"><span class="fchip on">All <span class="n">150</span></span><span class="fchip">Not started <span class="n">41</span></span><span class="fchip">In progress <span class="n">62</span></span><span class="fchip">Live <span class="n">47</span></span></span><span class="fchip on">● Needs you <span class="n">7</span></span><span class="seg2"><span>▦ Cards</span><span class="on">☰ List</span></span></div>
+ <p class="summary" style="margin-bottom:10px"><b>7 of 150 combinations need you</b> · Clear Needs you</p>
+ <div class="list">
+  <div class="lrow h"><span>Combination</span><span class="tr">Trail</span><span>Progress</span><span class="nd"></span><span></span></div>
+  <div class="lband">Permanent residence <span>· 2 need you</span></div>
+  <div class="lrow"><span class="nm">Spouse or common-law partner</span><span class="tr">Retail › Permanent residence › Family sponsorship</span><span><span class="mini"><i class="d"></i><i class="d"></i><i class="d"></i><i></i><i></i></span>3 of 5</span><span class="nd"><span class="needs">Needs you</span></span><span><a class="btn primary sm" href="#">Resume setup</a></span></div>
+  <div class="lrow"><span class="nm">Canadian experience</span><span class="tr">Retail › Permanent residence › Economic › Express Entry</span><span><span class="mini"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i></i></span>4 of 5</span><span class="nd"><span class="needs">Needs you</span></span><span><a class="btn primary sm" href="#">Resume setup</a></span></div>
+  <div class="lband">Work permit <span>· 3 need you</span></div>
+  <div class="lrow"><span class="nm">Intra-company transferee</span><span class="tr">Retail › Work permit › Employer-specific › Outside Canada</span><span><span class="mini"><i class="d"></i><i class="d"></i><i></i><i></i><i></i></span>2 of 5</span><span class="nd"><span class="needs">Needs you</span></span><span><a class="btn primary sm" href="#">Resume setup</a></span></div>
+  <div class="lrow"><span class="nm">Post-graduation</span><span class="tr">Retail › Work permit › Open work permit</span><span><span class="mini live"><i></i><i></i><i></i><i></i><i></i></span>Live</span><span class="nd"><span class="needs">Needs you</span></span><span><a class="btn primary sm" href="#">Open</a></span></div>
+  <div class="lrow"><span class="nm">Spousal open work permit</span><span class="tr">Retail › Work permit › Open work permit</span><span><span class="mini"><i class="d"></i><i></i><i></i><i></i><i></i></span>1 of 5</span><span class="nd"><span class="needs">Needs you</span></span><span><a class="btn primary sm" href="#">Resume setup</a></span></div>
+  <div class="lband">Temporary residence <span>· 2 need you</span></div>
+  <div class="lrow"><span class="nm">Super visa</span><span class="tr">Retail › Temporary residence › Visitor</span><span><span class="mini live"><i></i><i></i><i></i><i></i><i></i></span>Live</span><span class="nd"><span class="needs">Needs you</span></span><span><a class="btn primary sm" href="#">Open</a></span></div>
+  <div class="lrow"><span class="nm">Visitor visa</span><span class="tr">Retail › Temporary residence › Visitor</span><span><span class="mini"><i class="d"></i><i class="d"></i><i></i><i></i><i></i></span>2 of 5</span><span class="nd"><span class="needs">Needs you</span></span><span><a class="btn primary sm" href="#">Resume setup</a></span></div>
+ </div>
+</div></div>
+<div class="frame"><div class="frame-title">Cards · 150 combinations · sections folded · 1440 px</div><div class="main">
+ <p class="summary"><b>150 combinations</b> · 47 live · 62 in progress · 41 not started</p>
+ <div class="band" aria-expanded="false"><span class="chev">▸</span><h2>Permanent residence</h2><span class="cnt">14 of 46 live</span></div>
+ <div class="band" aria-expanded="false"><span class="chev">▸</span><h2>Temporary residence</h2><span class="cnt">12 of 31 live</span></div>
+ <div class="band" aria-expanded="true"><span class="chev">▾</span><h2>Work permit</h2><span class="cnt">15 of 52 live</span></div>
+ <div class="prog" aria-expanded="false"><span class="chev">▸</span><h3>Employer-specific</h3><span class="cnt">6 of 21 live</span></div>
+ <div class="prog" aria-expanded="false"><span class="chev">▸</span><h3>Open work permit</h3><span class="cnt">9 of 31 live</span></div>
+ <div class="band" aria-expanded="false"><span class="chev">▸</span><h2>Citizenship</h2><span class="cnt">6 of 21 live</span></div>
+ <p class="note" style="margin-top:12px">A folded header keeps one count. To find their own work, a reviewer turns on <b>Needs you</b>: matching sections open and the rest hide. The header does not add a second count; in List with Needs you on, each Pathway line says how many need you.</p>
+</div></div>
+</div>
+</div>
+
+<div class="section"><h2>5 · One button colour, app-wide (R-144 point 6)</h2>
+<p>One design-system token, <code>--color-primary</code>, drives every primary button: card buttons, + Add, Approve, Release. Every check below was worked out on white and on the page grey (#f7f7f7). EXPERIENCE §12 asks for 4.5:1 for text, and a button's edge needs 3:1 against what is around it.</p>
+<div class="sw" style="margin-top:12px">
+ <div class="swc rec"><h4>A · Brand blue (recommended)</h4><div class="btns"><a class="btn primary sm" href="#">Start setup</a><a class="btn primary sm" href="#">Resume setup</a><a class="btn primary sm" href="#">Open</a></div>
+  <p class="note">#0862C5 with white text, 5.9:1 (hover #054E9C, 8.2:1); fill against white 5.9:1. It is the team's own token today (tokens.css, primary-600), so every existing primary button already matches and nothing new enters the design system. Green stays free to mean "Live" and "done", so a button never looks like a status.</p></div>
+ <div class="swc"><h4>B · Green, as the founder suggested</h4><div class="btns"><a class="btn green sm" href="#">Start setup</a><a class="btn green sm" href="#">Resume setup</a><a class="btn green sm" href="#">Open</a></div>
+  <p class="note">#15803D with white text, 5.0:1, which passes. But green already means Live and done (✓ Live, the green bar, the ok tokens), so a green Open on a Live card reads as a status, not an action. It would also be a new token outside the brand kit.</p></div>
+ <div class="swc"><h4>C · Light green</h4><div class="btns"><a class="btn lgreen sm" href="#">Start setup</a><a class="btn lgreen sm" href="#">Resume setup</a><a class="btn lgreen sm" href="#">Open</a></div>
+  <p class="note">#DCFCE7 fill with #0F5C2E text, 7.4:1, which passes. The fill against white is only 1.1:1, so it needs the #16A34A border (3.3:1) to be seen as a button. It is the weakest call to action of the three, and it has the same meaning clash as B.</p></div>
+</div>
+</div>
+
+<div class="section"><h2>6 · Smaller screens</h2>
+<p>Columns: 4 at 1440 px, 3 at 1024 px, 2 at 800 px, 1 on a phone. The card keeps its five things at every width. The trail ends in "…" sooner, and the button keeps its place and size. On a phone the filter chips wrap under Find, and List hides the trail column.</p>
+<div class="frame phone"><div class="frame-title">375 px</div><div class="main">
+ <div class="ph"><h1 style="font-size:20px">Immigration programs</h1></div>
+ <div class="fbar"><span class="find">⌕ Find</span><span class="chips"><span class="fchip on">All</span><span class="fchip">Not started</span><span class="fchip">In progress</span><span class="fchip">Live</span></span><span class="fchip">● Needs you</span></div>
+ <div class="band"><span class="chev">▾</span><h2>Permanent residence</h2><span class="cnt">3 of 9 live</span></div>
+ <div class="cards">
+  <div class="card"><span class="needs">Needs you</span><h4>Spouse or common-law partner</h4><div class="trail">Retail › Permanent residence › Family sponsorship › Spouse or common-law partner</div><div class="progress">3 of 5 steps</div><div class="act"><a class="btn primary sm" href="#">Resume setup</a></div><div class="edge" aria-hidden="true"><i class="d"></i><i class="d"></i><i class="d"></i><i></i><i></i></div></div>
+  <div class="card"><h4>Parents and grandparents</h4><div class="trail">Retail › Permanent residence › Family sponsorship › Parents and grandparents</div><div class="progress live">Live</div><div class="act"><a class="btn primary sm" href="#">Open</a></div><div class="edge live" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div>
+ </div>
+</div></div>
+</div>
+
+<div class="section"><h2>7 · What this changes, and the questions for the founder</h2>
+<div class="grid2" style="margin-top:10px">
+<div class="ref"><table>
+<tr><th>Concept v3 (§6–§7)</th><th>Board v4</th></tr>
+<tr><td>Chip from the release: In setup · Not ready · Live · Release n</td><td>No chip. The progress line reads "n of 5 steps" or "Live"; the release number moves to the combination page.</td></tr>
+<tr><td>Five-segment bar, 8 px, with "n of 5 done · Next: &lt;step&gt;"</td><td>A 2 px edge bar that only repeats the line; the "Next" step shows only on the page.</td></tr>
+<tr><td>Facts line and "Next: …" line with count and why</td><td>Gone from the card; the Overview's step rows carry them.</td></tr>
+<tr><td>The button names the next act (Find forms, Map n forms, Review n proposals, Submit, Sign, Release), filled per duty</td><td>Three words: Start setup · Resume setup · Open, always in the one primary colour. The duty acts stay on the page; on the card, <b>Needs you</b> tells a person their act is waiting.</td></tr>
+<tr><td>Status filter: All · Needs work · Not started · In setup · Not ready · Live (· Retired)</td><td>Chips: All · Not started · In progress · Live (· Retired while any), plus the <b>Needs you</b> toggle. "Needs work" and "Not ready" fold into In progress and Needs you (Q2).</td></tr>
+<tr><td>Pathway band with a need-you count</td><td>Pathway, then Program, each with one "n of m live" count, folding, remembered per person.</td></tr>
+<tr><td>"Just added" note on a new card</td><td>No text: the card is scrolled into view and outlined for 2 s.</td></tr>
+</table>
+<p class="note">Unchanged: the five steps and their rules, the duty and tier table (v3 §5), Overview, tabs, <code>?focus=</code> landings, the contract and the cache (v3 §8), and slices A, B and C. Slice A (engine and contract) needs no change for this board. Slice B draws this card instead of v3's.</p></div>
+<div class="ref"><ol class="qs" style="margin:0;padding-left:18px">
+<li><b>Q1 · The button for a person who does not set up</b> (the immigration expert or the approver). <i>Recommendation:</i> they see <b>Open</b> on every card, and Needs you tells them when they must act. <i>Why:</i> "Resume setup" offers them an act the server refuses (403). The founder's one word per state still holds for the author. <i>Other choice:</i> the same three words for everyone, with a refusal in words when they click.</li>
+<li><b>Q2 · Fewer status words in the filter.</b> <i>Recommendation:</i> All · Not started · In progress · Live, plus the Needs you toggle. <i>Why:</i> they match the card's own words, and "Not ready" is always also Needs you for the author. <i>Other choice:</i> keep Not ready as a fifth chip.</li>
+<li><b>Q3 · The button colour.</b> <i>Recommendation:</i> A, the brand blue the app already uses (5.9:1). <i>Why:</i> green means Live and done on this page. <i>Other choice:</i> C, light green with a green border (7.4:1 text), if the founder prefers it after seeing both.</li>
+</ol></div>
+</div>
+</div>
+
+</div></body></html>

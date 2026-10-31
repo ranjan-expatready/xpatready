@@ -124,13 +124,13 @@ class AiController {
 @Controller("api")
 class ProgramsController {
   constructor(@Inject(Programs) private readonly p: Programs, @Inject(Sources) private readonly sources: Sources, @Inject(Intake) private readonly intake: Intake) {}
-  @Get("catalogue") catalogue(@Headers("x-actor") a: H, @Query() q: any) { readerOf(a); return this.p.catalogue(q); }
+  @Get("catalogue") catalogue(@Headers("x-actor") a: H, @Query() q: any) { return this.p.catalogue(q, readerOf(a)); }
   @Get("draft") draft(@Headers("x-actor") a: H, @Query("summary") summary?: string) { return this.p.draft(actorOf(a), summary === "1"); }
   @Post("pack/release") release(@Headers("x-actor") a: H, @Body() b: any) { return this.p.release(actorOf(a), b); }
   @Post("program-nodes") node(@Headers("x-actor") a: H, @Body() b: any) { return this.p.createNode(actorOf(a), b); }
   @Post("combinations") create(@Headers("x-actor") a: H, @Body() b: any, @Res({ passthrough: true }) res: any) { return this.p.createCombination(actorOf(a), b).then((r) => { res.status(r.created ? 201 : 200); return r; }); }
   @Get("path-options") pathOptions(@Headers("x-actor") a: H, @Query("pathway") pw: string) { readerOf(a); return this.p.pathOptions(pw); }
-  @Get("combinations/:id/summary") summary(@Param("id") id: string) { return this.p.summary(id); }
+  @Get("combinations/:id/summary") summary(@Headers("x-actor") a: H, @Param("id") id: string) { return this.p.summary(id, readerOf(a)); }
   @Post("combinations/:id/lines") line(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.p.addLine(actorOf(a), id, b); }
   @Get("library/forms") forms() { return this.sources.libraryForms(); }
   /** The one form intake (P-51): one or many files; with combinationId they are attached to it (door 1), without it

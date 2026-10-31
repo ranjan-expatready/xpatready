@@ -46,7 +46,7 @@ export class Structure {
     const q = parse(StructureQuery, query);
     const workspaceId = await this.ws.id();
     const g = await this.graph(workspaceId);
-    const leaves = await this.programs.leafStates();
+    const leaves = await this.programs.leafStates(ACTORS.find((a) => a.id === actorId));
     const pending = new Map((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "structure_node", status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })).map((c) => [c.key, { id: c.id, action: c.action as LifecycleAction, status: c.status as "WAITING" | "RETURNED" | "APPROVED", by: c.status === "RETURNED" ? ACTORS.find((a) => a.id === c.decidedBy)?.name ?? null : null, note: c.status === "RETURNED" ? c.decisionNote : null }]));
     // "Used by" on each line (P-127 (1)): the releases that hold a combination and the cases open on it.
     const combos = await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, retiredAt: true, _count: { select: { releases: true, cases: { where: { status: "OPEN" } } } } } });
@@ -62,7 +62,7 @@ export class Structure {
     const walk = (n: ProgramDef): { combinations: number; live: number; needs: number } => {
       const kids = g.kids(n.programNodeKey);
       const own = leaves.get(n.programNodeKey);
-      // needs: combinations below it waiting on a person (S2 fix 6, engine waitsForPerson), for the Pathway cards.
+      // needs: combinations below it that need this person (forViewer, P-180), as on Programs; no person: the old rule.
       let combinations = own && !own.retired ? 1 : 0, live = own?.live ? 1 : 0, needs = own?.needs ? 1 : 0;
       const view: StructureNode = { key: n.programNodeKey, level: LEVEL_OF[n.nodeKind], parentKey: n.parentNodeKey, label: n.label, pathwayType: q.pathwayType, allowedLocations: n.allowedLocations,
         order: n.displayOrder, combinations: 0, live: 0, needs: 0, hasSetup: !!own?.combinationId, meaningChecked: false, version: n.version, retired: !!n.retiredAt, pending: pending.get(n.programNodeKey) ?? null, action: actionOf(n),

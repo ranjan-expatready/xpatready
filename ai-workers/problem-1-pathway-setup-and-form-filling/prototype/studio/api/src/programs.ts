@@ -11,14 +11,17 @@ import { AddLineBody, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateN
 import { manifest } from "../../engine/import.ts";
 import { acceptsOf, channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
-import { checkedOf, comparePaths, compareStatus, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
+import { checkedOf, comparePaths, isLive, missingItems, needsWork, newestEdition, waitsForPerson, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
 import { filedOf, progressFollows, setupProgress } from "../../engine/structure.ts";
+import { forViewer, setupChecklistOf, type OfficialPages, type SetupInput } from "../../engine/setup-checklist.ts";
+import type { CardSetup, ChipStatus, SetupChecklist, StepKey, ViewerChecklist } from "../../contracts/setup-checklist.ts";
+import type { ProposalKind } from "../../contracts/proposal-item.ts";
 import { PATHWAY_TYPE_LABEL, type PathwayType } from "../../contracts/structure.ts";
 import { diff, validate } from "../../engine/validate.ts";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { Audit, Db, need, ROOT, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, need, ROOT, Workspace, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
 import { changeView, itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { openNodeKeys, startWhy } from "./lifecycle.ts";
@@ -40,7 +43,26 @@ type SnapForm = { form_number: string; form_kind?: string | null; channel?: Chan
 type Row = {
   leaf: CatalogueLeaf; pathway: string; changes: number; errors: number; firstError: string | null; hasContent: boolean;
   searchText: string; docNames: string[];
+  /** W1 setup checklist (slice A): the same for every viewer; forViewer adds the duty overlay after the cache. */
+  setup: SetupChecklist;
 };
+
+/** The official-pages record of each combination (P-156 (2)), the forms lane's queue item 2. It has not landed: every
+ *  combination answers "no record yet", so step 1 stays open with no item (plan.md slice A). One reader, one place. */
+export async function officialPagesOf(ids: string[]): Promise<Map<string, OfficialPages>> {
+  return new Map(ids.map((id) => [id, { state: "no_record" as const }]));
+}
+/** The card's part of the checklist with this viewer's overlay (GET /catalogue: steps without their open items). */
+export function cardSetup(c: SetupChecklist, actor: Actor): CardSetup {
+  return { chip: c.chip, bar: c.bar, next: c.next, current: c.current, viewer: forViewer(c, actor), steps: c.steps.map(({ open: _open, ...s }) => s) };
+}
+/** The List's Progress sort (card v4): most urgent first. */
+const CHIP_RANK: Record<ChipStatus, number> = { NOT_READY: 0, IN_PROGRESS: 1, NOT_STARTED: 2, LIVE: 3, RETIRED: 4 };
+/** A name with no combination yet: Not started (or retired before it was set up). */
+const notStartedInput = (retired: boolean): SetupInput => ({ combinationId: null, retired, release: null, pages: { state: "no_record" }, people: { roles: 0, applicants: 0, saved: false, tier: "expert" },
+  forms: { lines: 0, fromLibrary: 0, draftable: 0, unmapped: 0, sources: 0 }, proposals: {}, problems: [], documents: { lines: 0, rolesWithout: 0 }, questions: 0, held: 0, running: null, changes: 0, review: { stage: "submit", submittedBy: null, authors: [] } });
+/** Where a release stands (the gate's words, studio.ts gateOf): submit, then the expert signs, then a second person releases. */
+const reviewStage = (g: { ok: boolean; why?: string } | undefined): "submit" | "sign" | "release" => g?.ok ? "release" : /sign-off/.test(g?.why ?? "") ? "sign" : "submit";
 
 /** The labels from the program down to a node, for "Showing: Visitors › Super visa" on the list. */
 function underPath(nodes: ProgramDef[], key: string) {
@@ -80,7 +102,7 @@ export class Programs {
     const key = JSON.stringify([workspaceId, a._count, a._max.at, j._count, j._max.startedAt, j._max.finishedAt, p, h]);
     if (this.cache?.key === key) return this.cache;
     const t0 = performance.now();
-    const [nodes, combos, releases, jobs, items, lib, editions, heldItems] = await Promise.all([
+    const [nodes, combos, releases, jobs, items, lib, editions, heldItems, byKind, subs] = await Promise.all([
       this.db.programDef.findMany({ where: { workspaceId }, orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }] }),
       this.db.combination.findMany({ where: { workspaceId }, include: { attachments: { select: { id: true, kind: true, recognised: true, sha256: true, edition: true, createdAt: true, officialFile: true } } } }),
       this.db.configRelease.findMany({ where: { workspaceId }, orderBy: { version: "desc" }, select: { combinationId: true, snapshot: true, releasedAt: true, packVersion: { select: { version: true } } } }),
@@ -89,7 +111,13 @@ export class Programs {
       this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } }),
       this.db.formEdition.findMany({ where: { workspaceId }, select: { sha256: true, maps: { select: { id: true }, take: 1 } } }),
       this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD", outcome: "new_edition_held" }, select: { code: true, editionLabel: true, combinationId: true } }),
+      // Setup checklist (concept §8): waiting proposals, one groupBy combination × form edition × kind.
+      this.db.proposalItem.groupBy({ by: ["combinationId", "formEdition", "kind"], where: { workspaceId, status: "waiting" }, _count: true }),
+      this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" }, select: { combinationId: true, submittedBy: true } }),
     ]);
+    const submittedBy = new Map<string, string>();
+    for (const x of subs) if (!submittedBy.has(x.combinationId)) submittedBy.set(x.combinationId, x.submittedBy);
+    const pages = await officialPagesOf(combos.map((c) => c.id));
     // "New today": made by a person in the last day, after the sample load (the loader's own nodes are not new).
     const loadedAt = (await this.db.auditEvent.findFirst({ where: { workspaceId, action: "loaded" }, orderBy: { at: "desc" }, select: { at: true } }))?.at.getTime() ?? 0;
     const snaps = combos.length ? await buildSnapshots(this.db, workspaceId, combos.map((c) => c.id), "draft") : new Map();
@@ -126,7 +154,8 @@ export class Programs {
         held.length && next !== "see_new_edition" ? `New edition waiting: ${held.map((x) => x.edition).join(", ")}` : null, newToday ? "New today" : null].filter(Boolean).join(" · ");
       if (!c) {
         rows.push({ pathway, changes: 0, errors: 0, firstError: null, hasContent: false, searchText: path.join(" "), docNames: [],
-          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") } });
+          leaf: { ...base, combinationId: null, startWhy: startWhy(chain, openNodes), forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Start setup", text: "Not started: no setup yet. Next step: Start setup." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, needsYou: false, live: false, held: [], note: noteOf(0, "start") },
+          setup: setupChecklistOf(notStartedInput(retired), `${n.programNodeKey}|${key}`) });
         continue;
       }
       const { snapshot } = snaps.get(c.id)! as { snapshot: Snapshot };
@@ -165,7 +194,33 @@ export class Programs {
         .filter((x, i, all) => all.findIndex((y) => y.edition === x.edition) === i);
       const nextAction = nextActionOf({ ...setup, status, changes, missing, held: held.length });
       const progress = progressFollows(setupProgress({ forms: snapForms.length, allDrafted: forms.every((f) => f.drafted), reviewed: changes === 0 ? !!rel : !!gates.get(c.id)?.ok, aiProposals, live: isLive({ status }), changes }), nextAction, missing);
+      // W1 setup checklist (slice A): the same data, read once into one input (concept §8).
+      const proposalsOf: Partial<Record<ProposalKind, number>> = {};
+      for (const g of byKind) if (g.combinationId === c.id || (!g.combinationId && g.formEdition && (codes.has(g.formEdition) || codes.has(g.formEdition.split(" (")[0])))) proposalsOf[g.kind as ProposalKind] = (proposalsOf[g.kind as ProposalKind] ?? 0) + g._count;
+      const roles = participants.filter((p) => p.max > 0);
+      const applicantRoles = roles.filter((p) => p.role !== "representative" && p.applies !== false);
+      const docLines = snapshot.document_requirements as { who?: unknown }[];
+      const covers = (d: { who?: unknown }, role: string) => !Array.isArray(d.who) || !d.who.length || d.who.includes(role);
+      const unmapped = snapForms.filter((f) => (f.form_kind ?? "data_form") === "data_form" && !(snapshot.field_maps as { form_number: string; channel?: string; entries: unknown[] }[]).some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length)).length;
+      const by = c.participantsBy;
+      const input: SetupInput = {
+        combinationId: c.id, retired,
+        release: rel ? { number: rel.packVersion?.version ?? 1, problems: relSnap ? relProblems : [] } : null,
+        pages: pages.get(c.id) ?? { state: "no_record" },
+        // participantsConfirmedAs is not stored yet (P-176, Q1 open): a saved list counts as confirmed, at the tier of the
+        // person who saved it (the expert's duty: expert; anyone else: author).
+        people: { roles: roles.length, applicants: applicantRoles.length, saved: !!by, confirmed: by ? { by, as: (ACTORS.find((a) => a.id === by)?.duties as readonly string[] | undefined)?.includes("sme") ? "expert" : "author" } : null, tier: "expert", reason: "Not confirmed yet" },
+        forms: { lines: snapForms.length, fromLibrary: fromLibrary.length, draftable, unmapped, sources: setup.sources },
+        proposals: proposalsOf, problems: draftProblems,
+        documents: { lines: docLines.length, rolesWithout: docLines.length ? applicantRoles.filter((r) => !docLines.some((d) => covers(d, r.role))).length : 0 },
+        questions: hasContent ? rowCounts(snapshot, participants).questions : 0,
+        held: held.length,
+        running: running ? { batchId: running, step: "forms" as StepKey } : null,
+        changes,
+        review: { stage: reviewStage(gates.get(c.id)), submittedBy: submittedBy.get(c.id) ?? null, authors: [] },
+      };
       rows.push({ pathway, changes, errors: errors.length, firstError: errors[0] ? `${errors[0].item}: ${errors[0].message}` : null, hasContent, docNames,
+        setup: setupChecklistOf(input, `${c.id}|${key}`),
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
         leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
           missing, aiProposals, aiRunning: running, release: rel ? { pack: rel.packVersion?.version ?? 1, at: rel.releasedAt.toISOString() } : null, checked,
@@ -176,13 +231,14 @@ export class Programs {
   }
 
   /** Each last-level name's combination state, for the Structure outline (counts, Live, has setup, retired). */
-  async leafStates() {
+  /** With a person, "needs" is that person's Needs you (forViewer), the same count path as the Programs page (concept §8). */
+  async leafStates(actor?: Actor) {
     const { rows } = await this.rows();
-    return new Map(rows.map((r) => [r.leaf.nodeKey, { combinationId: r.leaf.combinationId, live: r.leaf.live, needs: r.leaf.needsYou, retired: r.leaf.retired, status: r.leaf.status, statusText: r.leaf.statusText }]));
+    return new Map(rows.map((r) => [r.leaf.nodeKey, { combinationId: r.leaf.combinationId, live: r.leaf.live, needs: actor ? !r.leaf.retired && !!forViewer(r.setup, actor).needsYou : r.leaf.needsYou, retired: r.leaf.retired, status: r.leaf.status, statusText: r.leaf.statusText }]));
   }
 
   /** GET /catalogue: one request for the whole tree of one pathway, filtered and searched on the server. */
-  async catalogue(query: unknown): Promise<CatalogueResponse> {
+  async catalogue(query: unknown, actor?: Actor): Promise<CatalogueResponse> {
     const t0 = performance.now();
     const q = parse(CatalogueQuery, query);
     const { rows, nodes, at } = await this.rows();
@@ -215,12 +271,22 @@ export class Programs {
     const pwKey = nodes.some((n) => n.nodeKind === "PATHWAY" && n.clientType === q.pathway && !n.retiredAt && n.programNodeKey === q.pathwayKey) ? q.pathwayKey : "";
     const inProgram = inPathway.filter((r) => (!pwKey || r.leaf.pathwayKey === pwKey) && (!q.program || r.leaf.programKey === q.program) && (!q.under || r.leaf.pathKeys.includes(q.under)));
     const searched = inProgram.map((r) => ({ r, m: hit(r) })).filter((x) => !words || x.m.length);
+    // With a person, "needs" (the filter and its count) is that person's Needs you, the card's rule (break-report m2).
+    const needsYou = actor ? new Map(everyInPathway.map((r) => [r.leaf.nodeKey, !r.leaf.retired && !!forViewer(r.setup, actor).needsYou])) : null;
+    const needsMe = (r: Row) => needsYou ? !!needsYou.get(r.leaf.nodeKey) : r.leaf.needsYou;
+    const needsOf = (r: Row) => actor ? needsMe(r) : r.leaf.needs;
     // "Needs work" with nothing to do falls back to All, and says so (P-35, P-49).
-    const fellBack = q.filter === "needs" && !searched.some((x) => x.r.leaf.needs);
+    const fellBack = q.filter === "needs" && !searched.some((x) => needsOf(x.r));
     const filter = fellBack ? "all" : q.filter;
-    const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? r.leaf.needs : filter === "live" ? r.leaf.live : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : filter === "not_started" ? !r.leaf.combinationId : filter === "in_setup" ? r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId : r.leaf.status === filter.toUpperCase());
-    const shown = new Map(searched.filter((x) => pass(x.r)).map((x) => [x.r.leaf.nodeKey, { ...x.r.leaf, matches: x.m }]));
-    const count = (list: Row[]) => ({ needs: list.filter((r) => r.leaf.needs).length, live: list.filter((r) => r.leaf.live).length, all: list.filter((r) => !r.leaf.retired).length, ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "READY").length, not_ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "NOT_READY").length, in_setup: list.filter((r) => !r.leaf.retired && r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId).length, not_started: list.filter((r) => !r.leaf.retired && !r.leaf.combinationId).length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
+    // P-180: the status chips read the setup checklist's chip (Not ready folds into In progress); "Needs you" is the
+    // viewer's own (an item on their duty and tier waits), so every count of it on the page is this person's.
+    const chipOf = (r: Row) => r.setup.chip.status;
+    const live = (r: Row) => chipOf(r) === "LIVE", inProgress = (r: Row) => chipOf(r) === "IN_PROGRESS" || chipOf(r) === "NOT_READY", notStarted = (r: Row) => chipOf(r) === "NOT_STARTED";
+    const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? needsOf(r) : filter === "live" ? live(r) : filter === "in_progress" ? inProgress(r) : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : filter === "not_started" ? notStarted(r) : filter === "in_setup" ? r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId : r.leaf.status === filter.toUpperCase());
+    const chipAt = new Map(searched.map((x) => [x.r.leaf.nodeKey, chipOf(x.r)]));
+    const shown = new Map(searched.filter((x) => pass(x.r)).map((x) => [x.r.leaf.nodeKey, { ...x.r.leaf, needsYou: needsMe(x.r), matches: x.m, ...(actor ? { setup: cardSetup(x.r.setup, actor) } : {}) }]));
+    const on = (list: Row[]) => list.filter((r) => !r.leaf.retired);
+    const count = (list: Row[]) => ({ needs: list.filter(needsOf).length, live: on(list).filter(live).length, all: on(list).length, ready: on(list).filter((r) => r.leaf.status === "READY").length, not_ready: on(list).filter((r) => r.leaf.status === "NOT_READY").length, in_setup: on(list).filter((r) => r.leaf.status === "IN_SETUP" && !!r.leaf.combinationId).length, in_progress: on(list).filter(inProgress).length, not_started: on(list).filter(notStarted).length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
     // W1-03 B1: every Pathway of the type, in Structure order (several per type).
     const pws = nodes.filter((n) => n.nodeKind === "PATHWAY" && n.clientType === q.pathway);
     const kids = (k: string) => nodes.filter((n) => n.parentNodeKey === k);
@@ -242,19 +308,22 @@ export class Programs {
     const sections = pws.map((p) => {
       const t = kids(p.programNodeKey).map(build).filter(Boolean) as CatalogueGroup[];
       const mine = inPathway.filter((r) => r.leaf.pathwayKey === p.programNodeKey);
-      return { pathwayKey: p.programNodeKey, label: p.label, combinations: mine.length, needs: mine.filter((r) => r.leaf.needsYou).length, live: mine.filter((r) => r.leaf.live).length, tree: t };
+      return { pathwayKey: p.programNodeKey, label: p.label, combinations: mine.length, needs: mine.filter(needsMe).length, live: mine.filter(live).length, tree: t };
     });
     const tree = sections.flatMap((s) => s.tree);
     const other = q.pathway === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL";
     const progs = pws.flatMap((p) => kids(p.programNodeKey));
     const totals = { programs: progs.length, categories: progs.flatMap((p) => kids(p.programNodeKey)).length, combinations: inPathway.length };
-    const programs = progs.map((p) => ({ key: p.programNodeKey as string, label: p.label as string, combinations: inPathway.filter((r) => r.leaf.programKey === p.programNodeKey).length }))
+    const programs = progs.map((p) => ({ key: p.programNodeKey as string, label: p.label as string, combinations: inPathway.filter((r) => r.leaf.programKey === p.programNodeKey).length, live: inPathway.filter((r) => r.leaf.programKey === p.programNodeKey && live(r)).length }))
       .sort((a, b) => a.label.localeCompare(b.label, "en-CA", { sensitivity: "base" }));
     return {
       pathway: q.pathway, filter, requestedFilter: q.filter, fellBack, q: q.q, program: q.program, under: q.under, sort: q.sort, pathwayKey: pwKey,
       underPath: q.under ? underPath(nodes, q.under) : null,
       /** Layout v2: one flat list in Program › Category › Sub-category order (route steps in step order), or by status. */
-      rows: [...shown.values()].sort((x, y) => (q.sort === "path" ? 0 : (q.sort === "status" ? 1 : -1) * compareStatus(x, y)) || structureOrder(x, y)), programs,
+      // Card v4 (P-180): the Progress sort follows the chip the column shows (most urgent first: Not ready, In progress,
+      // Not started, Live, Retired). The old status had no rank for a Not started row (NaN), so the sort fell back to
+      // path order and ascending and descending were the same.
+      rows: [...shown.values()].sort((x, y) => (q.sort === "path" ? 0 : (q.sort === "status" ? 1 : -1) * ((CHIP_RANK[chipAt.get(x.nodeKey)!] ?? 0) - (CHIP_RANK[chipAt.get(y.nodeKey)!] ?? 0))) || structureOrder(x, y)), programs,
       pathways: [["INDIVIDUAL", "Retail"], ["CORPORATE", "Corporate and employers"]].map(([v, l]) => ({ value: v, label: l, combinations: rows.filter((r) => r.pathway === v && !r.leaf.retired).length })),
       counts: { ...count(searched.map((x) => x.r)), retired: everyInPathway.filter((r) => r.leaf.retired).length }, totals, tree, sections,
       otherPathwayMatches: words ? rows.filter((r) => r.pathway === other && !r.leaf.retired && hit(r).length).length : 0,
@@ -429,7 +498,7 @@ export class Programs {
 
   /** GET /combinations/:id/summary: the combination page's header and Overview (P-50): its catalogue row (path with
    *  keys, status, missing list, next step) plus forms, sources and new editions held for impact review. */
-  async summary(combinationId: string): Promise<CombinationSummary> {
+  async summary(combinationId: string, actor?: Actor | null): Promise<CombinationSummary> {
     const c = await this.db.combination.findUnique({ where: { id: combinationId }, include: { program: true, attachments: { orderBy: { createdAt: "asc" } } } });
     if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
     const { rows } = await this.rows();
@@ -445,6 +514,8 @@ export class Programs {
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, combinationId, "draft");
     const view = channelsView(snapshot);
     return {
+      // W1 setup checklist (slice A): the full checklist, with this viewer's overlay when the request names one.
+      setup: row ? ({ ...row.setup, ...(actor ? { viewer: forViewer(row.setup, actor) } : {}) } as SetupChecklist | ViewerChecklist) : null,
       row: row?.leaf ?? null, changes: row?.changes ?? 0, allowedLocations: c.program.allowedLocations, participants: c.participants,
       filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: view.filing_method,
       channelProblems: channelProblems(snapshot, await acceptsOf(this.db, c.workspaceId)).filter((p) => p.where === "Forms"),

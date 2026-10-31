@@ -65,7 +65,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("review m1: every combination with setup has its bar at its next step's stage (none ahead of the button)", cat.rows.filter((x) => x.combinationId && x.nextAction && ["start", "add_forms", "add_from_library", "see_new_edition"].includes(x.nextAction.kind)).every((x) => x.progress.step === 1));
   await p.goto(`${BASE}/`); await ready();
   const svCard = await p.locator(`article[data-node="${sv.nodeKey}"]`).innerText();
-  step("review m1: on the card, the bar's words and the button agree (Step 2 of 4 · Draft beside Review … AI proposals)", /Step 2 of 4 · Draft/.test(svCard) && /Review \d+ AI proposals?/.test(svCard), svCard.replace(/\s+/g, " ").slice(0, 200));
+  // Card v4 (P-180): the card shows the checklist's "n of 5 steps" and one button; the proposals to review are its Needs you.
+  step("review m1 (card v4): on the card, the progress line is the checklist's, beside Resume setup and Needs you for the proposals", svCard.includes(svRow.setup.bar.text) && /Resume setup/.test(svCard) && /Needs you/.test(svCard) && !/Step \d of 4/.test(svCard), svCard.replace(/\s+/g, " ").slice(0, 200));
 
   // ======================================================== QA-49: the Structure's order everywhere
   const structOrder = async () => (await api("/structure?pathwayType=INDIVIDUAL")).body.nodes;
