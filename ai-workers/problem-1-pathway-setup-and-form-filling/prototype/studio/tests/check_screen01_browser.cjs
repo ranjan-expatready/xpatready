@@ -6,7 +6,7 @@
 // and highlights the row, "+ Add form" through the one intake with an approved older edition held, not-started row, non-author.
 //   zsh studio/tools/isolated.sh s01ui 4404 start && node studio/tests/check_screen01_browser.cjs 4404 [xr_studio_s01ui]
 const path = require("node:path"); const fs = require("node:fs");
-const { chromium } = require("/Users/ranjansingh/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+const { chromium } = require("playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const PORT = Number(process.argv[2] ?? 4404), BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
