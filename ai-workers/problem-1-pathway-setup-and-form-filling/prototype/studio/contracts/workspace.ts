@@ -82,11 +82,20 @@ export const SIGNED_BY = [
 ] as const;
 export const signedByLabel = (k: string | null | undefined) => SIGNED_BY.find((x) => x.key === k)?.label ?? "Not set";
 
+export const COPIES_WORDS = "Copies is a whole number from 1 to 9.";
+/** C1.8: the copies a line asks for, in words ("" for the default single copy, so most rows stay quiet). */
+export const copiesWords = (n: number | null | undefined) => (n && n > 1 ? `${n} copies each` : "");
+
 /** PATCH /combinations/:id/forms/:form: the line fields S5 adds (who, only if, filed as stay on their existing routes). */
 export const FormLineEdit = z.object({
   minAge: z.number({ error: "Minimum age is a whole number from 1 to 99, or empty." }).int("Minimum age is a whole number from 1 to 99, or empty.").min(1, "Minimum age is a whole number from 1 to 99, or empty.").max(99, "Minimum age is a whole number from 1 to 99, or empty.").nullable().optional(),
   signedBy: z.enum(SIGNED_BY.map((x) => x.key) as [string, ...string[]], { error: "Choose who signs it from the list." }).nullable().optional(),
+  /** C1.8: copies of this form for each person it names (1 to 9; 1 is the default, so it is never empty). */
+  copies: z.number({ error: COPIES_WORDS }).refine((n) => Number.isInteger(n) && n >= 1 && n <= 9, COPIES_WORDS).optional(), // one rule, one message (break m4)
 });
+
+/** C1.8 (review m2): a checklist (document) line is never filed, so it keeps one copy; the screen does not offer it. */
+export const DocumentLineEdit = z.object({ copies: z.literal(1, { error: "A checklist is not filed, so it has no copies." }).optional() });
 
 /** How a line's "Only if" stands (M1): none (always), a rule, or words with no rule yet (Preview: cannot tell). */
 export type OnlyIf = { kind: "always" } | { kind: "rule"; words: string } | { kind: "words_only"; words: string };
@@ -94,7 +103,7 @@ export type OnlyIf = { kind: "always" } | { kind: "rule"; words: string } | { ki
 /** One form line as the Forms tab shows it. `revision` is the line's optimistic-concurrency token. */
 export type WorkspaceFormLine = {
   line: string; code: string; title: string; document: boolean; edition: string | null; boxes: number;
-  who: string; minAge: number | null; onlyIf: OnlyIf; condition: unknown;
+  who: string; minAge: number | null; copies: number; onlyIf: OnlyIf; condition: unknown;
   channel: string; channelWords: string; signature: string | null; accepted: string[]; acceptedBasis: string;
   /** P-143 (W1-10 slice 1): the line's signature value, the signatures that fit its channel (C-2), and every channel
    *  offered or refused with the reason (C-3, C-4). */
