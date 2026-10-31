@@ -25,7 +25,7 @@ type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; 
   accepts_accounts?: { account: string; account_words: string; channels: string[]; words: string; basis: string; quote: string | null; source_url: string | null }[];
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
   used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; listed_by_ircc?: boolean; newer_on_index?: boolean; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
-type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string };
+type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string; remembered_deletions?: { code: string; deleted_by: string; deleted_at: string }[] };
 export type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
 
 const TYPE_WORD: Record<Row["type"], string> = { form: "Form", guide: "Guide", checklist: "Checklist" };
@@ -51,7 +51,7 @@ const STATUS: Record<Row["status"], { word: string; tone: string; tip: string }>
 /** X5 (P-156 (1)): the words of a row filled from IRCC's forms list, beside the usual ones. */
 const STATUS_INDEX: Record<"listed" | "newer", { word: string; tip: string }> = {
   listed: { word: "Listed by IRCC · no file yet", tip: "IRCC's forms list names this form; its PDF is not in the library yet. It is downloaded from canada.ca when a combination picks it, or you can upload it." },
-  newer: { word: "Newer edition on canada.ca", tip: "IRCC's forms list shows a newer date for this form than when the library was last filled. Combinations keep using the library's file: check it against canada.ca (⋯ › Replace with a new edition)." },
+  newer: { word: "Newer edition on canada.ca", tip: "IRCC's forms list shows a later date for this form than the library's file, since it was last checked. Combinations keep using the library's file: check it against canada.ca (⋯ › Replace with a new edition)." },
 };
 const ORIGIN: Record<string, string> = { DOWNLOADED: "Downloaded from canada.ca by the form finder", UPLOADED: "Uploaded by a person", SAMPLE: "Official copy loaded with the sample" };
 
@@ -112,7 +112,9 @@ export function FormsPage() {
   // Review major 8: focus goes back to what opened the drawer (the number), never to the top of the page.
   const back = React.useRef<HTMLElement | null>(null);
   const setOpen = (r: Row | null) => {
-    if (r) { back.current = document.activeElement as HTMLElement | null; setOpened(r); return; }
+    // Review (337cdfd5) 1 / break m21: a count still waiting on typing is said now, before the drawer hides the page from
+    // screen readers (before: it landed behind the drawer and was never heard).
+    if (r) { back.current = document.activeElement as HTMLElement | null; setSpoken(countText); setOpened(r); return; }
     const code = opened?.code; setOpened(null);
     setTimeout(() => (back.current?.isConnected ? back.current : document.querySelector<HTMLElement>(`tr[data-form="${CSS.escape(code ?? "")}"] button`))?.focus(), 0);
   };
@@ -129,9 +131,11 @@ export function FormsPage() {
   // more is spoken at once. Break (0fc3f8a7) m20: no count while the list could not be loaded (before: the old list's).
   const countText = lib.data && !lib.isError ? (rows.length ? `Showing ${pageRows.length} of ${rows.length} forms` : filtered ? "No form matches" : "") : "";
   const [spoken, setSpoken] = React.useState(countText);
-  const spokenQ = React.useRef(dq);
+  const spokenQ = React.useRef(dq), typedRef = React.useRef(false);
   React.useEffect(() => {
-    const typing = spokenQ.current !== dq; spokenQ.current = dq;
+    // Review (337cdfd5) 2 / break m22: only the search box's own typing waits; Clear filters (which also empties the search)
+    // is said at once.
+    const typing = typedRef.current && spokenQ.current !== dq; spokenQ.current = dq; typedRef.current = false;
     if (!typing) { setSpoken(countText); return; }
     const t = setTimeout(() => setSpoken(countText), 700);
     return () => clearTimeout(t);
@@ -192,17 +196,18 @@ export function FormsPage() {
             {chip(status === "no_file", "No file yet", c.no_file ?? 0, () => setStatus(status === "no_file" ? "" : "no_file"), STATUS.no_file.tip)}
             {chip(status === "retired", "Retired", c.retired, () => setStatus(status === "retired" ? "" : "retired"), STATUS.retired.tip)}
           </div>
-          <label className="relative ml-auto"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input type="search" aria-label="Search number or title" placeholder="Search number or title" value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} className="w-64 pl-8" /></label>
+          <label className="relative ml-auto"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input type="search" aria-label="Search number or title" placeholder="Search number or title" value={q} maxLength={80} onChange={(e) => { typedRef.current = true; setQ(e.target.value); }} className="w-64 pl-8" /></label>
         </div>
         {lib.isLoading ? <div className="space-y-2" role="status" aria-busy="true" aria-label="Loading forms">{/* DV-d1-2 (N8): a label needs a role (axe aria-prohibited-attr) */}{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
           : lib.isError ? <Notice tone="danger" title="The forms could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void lib.refetch()}>Try again</Button>}>{(lib.error as Error).message}</Notice>
           : !rows.length ? (filtered
-            ? <EmptyState title="No form matches" description="Nothing in the library matches these filters. Clear a filter or search for another number or title." action={<Button variant="secondary" onClick={() => { setType(""); setUsedBy(""); setStatus(""); setQ(""); }}>Clear filters</Button>} />
+            ? <EmptyState title="No form matches" description="Nothing in the library matches these filters. Clear a filter or search for another number or title." action={<Button variant="secondary" onClick={() => { typedRef.current = false; setType(""); setUsedBy(""); setStatus(""); setQ(""); }}>Clear filters</Button>} />
             : <EmptyState title="No forms yet" description="Forms come in by themselves when a combination's setup starts: the form finder reads its IRCC page and downloads each form from canada.ca. You can also upload IRCC PDFs. Every form is stored once and used by any combination." />)
           : <>{tableEl}{rows.length > pageRows.length ? <p className="flex flex-wrap items-center gap-3 text-sm" data-show-more><span className="text-text-muted" aria-hidden>Showing {pageRows.length} of {rows.length} forms</span><Button size="sm" variant="secondary" onClick={showMore}>Show {Math.min(PAGE, rows.length - pageRows.length)} more forms</Button></p> : null}</>}
         {/* Review (310acb9c) 2 / break m17, WCAG 4.1.3: one status region, always on the page, says how many forms are shown
             (before: it lived in the pager, so the last Show more and a short filter were never spoken). */}
-        <p className="sr-only" role="status" data-list-count data-shown={pageRows.length}>{spoken}</p>
+        <p className="sr-only" role="status" data-list-count data-shown={lib.isError ? 0 : pageRows.length}>{spoken}</p>
+        {lib.data?.remembered_deletions?.length ? <RememberedDeletions items={lib.data.remembered_deletions} canAuthor={canAuthor} /> : null}
         <p className="text-xs text-text-muted">{lib.data?.sample_note}</p>
         {open ? <FormDrawer row={open} onClose={() => setOpen(null)} canAuthor={canAuthor} /> : null}
         {confirm ? <div className="xl:fixed xl:right-6 xl:top-20 xl:z-40 xl:w-[440px]"><ImpactPanel key={`impact-${confirm.code}`} kind={confirm.action.kind} name={`${confirm.code} · ${confirm.title}`}
@@ -240,13 +245,39 @@ function useAsk<R>(fn: () => Promise<R>, success: string, keys: unknown[][], onD
   return useMutation<R, Error, void>({ mutationFn: fn, onSuccess: () => { for (const k of keys) void queryClient.invalidateQueries({ queryKey: k }); toast.push({ tone: "ok", text: success }); onDone(); } });
 }
 
+/** X5 slice c: the forms a second person approved deleting; fills leave them out until a person lists one again. */
+function RememberedDeletions({ items, canAuthor }: { items: { code: string; deleted_by: string; deleted_at: string }[]; canAuthor: boolean }) {
+  const [code, setCode] = React.useState<string | null>(null);
+  const heading = React.useRef<HTMLHeadingElement | null>(null);
+  // Review (00007dd0) 2, WCAG 2.4.3: after List again, focus goes to the next List again button, else to this heading (or,
+  // when the section is gone, the Fill button), never to the page.
+  const refocus = (after: string, tries = 40) => {
+    const left = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-remembered-deletions] [data-list-again]")).filter((b) => b.dataset.listAgain !== after);
+    const target = left[0] ?? heading.current ?? document.querySelector<HTMLElement>("[data-fill-index]");
+    if (left.length || !document.querySelector(`[data-list-again="${CSS.escape(after)}"]`) || tries <= 0) { target?.focus(); return; }
+    requestAnimationFrame(() => refocus(after, tries - 1));
+  };
+  const again = useAction((c: string) => api<{ message: string; code: string }>(`/library/forms/${encodeURIComponent(c)}/list-again`, { method: "POST" }), { success: (r) => r.message, invalidate: [["library-forms-list"]], onDone: (r) => { setCode(null); requestAnimationFrame(() => refocus(r.code)); } });
+  return (
+    <section aria-labelledby="deleted-forms" className="space-y-1 text-sm" data-remembered-deletions>
+      <h2 id="deleted-forms" ref={heading} tabIndex={-1} className="font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">Deleted from the library ({items.length})</h2>
+      <p className="text-text-muted">Fills from IRCC's forms list leave these out until someone lists one again.</p>
+      <ul className="flex flex-wrap gap-2">{items.map((d) => (
+        <li key={d.code} className="flex items-center gap-2 rounded border border-border px-2 py-1" data-deleted={d.code}>
+          <span>{d.code}</span><span className="text-text-muted">deleted {d.deleted_at.slice(0, 10)}, approved by {d.deleted_by}</span>
+          {canAuthor ? <Button size="sm" variant="secondary" busy={again.isPending && code === d.code} onClick={() => { setCode(d.code); again.mutate(d.code); }} aria-label={`List again: ${d.code}`} data-list-again={d.code}>List again</Button> : null}
+        </li>))}</ul>
+    </section>
+  );
+}
+
 /** X5 (P-156 (1)): fills the library from IRCC's forms list once (US$0: no AI, no download); safe to press again. */
 function FillFromIndexButton() {
   const ref = React.useRef<HTMLButtonElement | null>(null), inFlight = React.useRef(false); // review (86f9447c) m4: a double click sends one fill
   // X5 review m5 (WCAG 2.4.3): the busy button is disabled while it fills; focus goes back to it once it is enabled again.
   const refocus = (tries = 30) => { const el = ref.current; if (!el || tries <= 0) return; if (el.disabled) { requestAnimationFrame(() => refocus(tries - 1)); return; } el.focus(); };
   const fill = useAction(() => api<{ message: string }>("/library/forms/fill-from-index", { method: "POST" }), { success: (r) => r.message, invalidate: [["library-forms-list"]], onDone: () => requestAnimationFrame(() => refocus()) });
-  return <Tip tip="Reads IRCC's forms and guides list into the library: every form number, listed with no file yet. No AI, no download, US$0. Forms already here keep their file."><span><Button ref={ref} variant="secondary" busy={fill.isPending} onClick={() => { if (inFlight.current) return; inFlight.current = true; fill.mutate(undefined, { onSettled: () => { inFlight.current = false; } }); }} data-fill-index><ListChecks /> Fill from IRCC's forms list</Button></span></Tip>;
+  return <Tip tip="Reads IRCC's forms and guides list into the library: every form number not in the library yet, listed with no file (forms deleted from the library are left out). No AI, no download, US$0. Forms already here keep their file."><span><Button ref={ref} variant="secondary" busy={fill.isPending} onClick={() => { if (inFlight.current) return; inFlight.current = true; fill.mutate(undefined, { onSettled: () => { inFlight.current = false; } }); }} data-fill-index><ListChecks /> Fill from IRCC's forms list</Button></span></Tip>;
 }
 
 /** One way in for a file: Upload PDF, many files at once; each file runs on its own card (rules first, AI only when they cannot). */
@@ -342,6 +373,12 @@ function SetAccepts({ row }: { row: Row }) {
   const toggle = (c: string) => setChannels((xs) => (c === "NOT_NEEDED" ? (xs.includes(c) ? [] : [c]) : xs.includes(c) ? xs.filter((x) => x !== c) : [...xs.filter((x) => x !== "NOT_NEEDED"), c]));
   const [quote, setQuote] = React.useState(""), [reason, setReason] = React.useState("");
   const go = useAsk(() => api(`/library/forms/${encodeURIComponent(row.code)}/accepts`, { method: "POST", json: { account, channels, ...(quote.trim() ? { quote: quote.trim() } : {}), ...(reason.trim() ? { reason: reason.trim() } : {}) } }), "Sent: it waits for a second person on To review", [["library-forms-list"], ["form-uses", row.code]], () => setOpen(false));
+  // the outside check on #145: a form with no usable edition yet cannot take "what IRCC accepts" (the server answers "No edition yet"):
+  // the drawer says what comes first instead of offering a step that fails.
+  // Break / review (dc93b60f) m21, (e466adb1) m28: a form whose PDF is held says so, without promising an approval (a French
+  // file, for one, can never be approved) (before: "Upload … first" beside "1
+  // held file waiting for a person").
+  if (!row.edition) return <p className="text-text-muted" data-accepts-needs-file>{row.status === "needs_ok" ? "Its PDF is held on To review: what IRCC accepts is set once an edition of it is approved." : "Upload or find its PDF first: what IRCC accepts is set on a form's current edition."}</p>;
   if (!open) return <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>{row.accepts ? "Correct what IRCC accepts" : "Set what IRCC accepts"}</Button>;
   return (
     <div className="space-y-2 rounded-lg border border-border p-3">

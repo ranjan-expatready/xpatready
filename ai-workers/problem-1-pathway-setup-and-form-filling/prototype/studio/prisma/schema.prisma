@@ -270,11 +270,10 @@ model GovFormDef {
   /// Which source drafting reads for this form (P-62 §1, C2.10): PDF_FIRST (the PDF version first, then the online
   /// screens for what differs; the default) or ONLINE_ONLY (the online screens alone: the PDF version is not reused).
   draftFrom   String  @default("PDF_FIRST") @map("draft_from")
-  /// X5 (P-156 (1)): when IRCC's forms index last listed this number (the library fill, US$0), the index's date modified
-  /// for it then, and when a later read found that date changed for a form that has a file ("Newer edition on canada.ca").
+  /// X5 (P-156 (1)): when IRCC's forms index last listed this number (the library fill, US$0), and the index's date
+  /// modified for it then.
   listedOnIndexAt   DateTime? @map("listed_on_index_at") @db.Timestamptz
   indexDateModified String?   @map("index_date_modified")
-  newerOnIndexAt    DateTime? @map("newer_on_index_at") @db.Timestamptz
 
   editions FormEdition[]
   usedBy   CombinationForm[]
@@ -335,6 +334,9 @@ model FormEdition {
   sourceUrl      String?   @map("source_url")
   canadaUpdated  String?   @map("canada_updated")
   checkedAt      DateTime? @map("checked_at") @db.Timestamptz
+  /// X5 (PR #146): IRCC's index date last seen as current for this file: set by a "Check against canada.ca" that found it
+  /// current (an undated file: by the fill's reads). engine/library-index.ts newerOnIndex.
+  indexDateSeenCurrent String? @map("index_date_seen_current")
   /// S4 (M6): canada.ca now serves a different file for this same printed edition; a person decides to Replace.
   newerFileSha256 String?  @map("newer_file_sha256")
 
@@ -427,6 +429,21 @@ model OfficialPagesRecord {
 
   @@index([workspaceId])
   @@map("combination_official_pages")
+}
+
+/// X5 slice c (P-156 (1); the tech lead on #138): a form a second person approved deleting from the library is remembered,
+/// so a later fill from IRCC's forms list does not list it again. A person adding the form back (an upload, a canada.ca
+/// download by Find again, a sample load) forgets it. Keyed by form number; no foreign key (the form's row is gone).
+model LibraryFormDeletion {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  formKey     String   @map("form_key")
+  deletedBy   String   @map("deleted_by")
+  changeId    String?  @map("change_id") @db.Uuid
+  deletedAt   DateTime @default(now()) @map("deleted_at") @db.Timestamptz
+
+  @@unique([workspaceId, formKey])
+  @@map("library_form_deletion")
 }
 
 model ApprovedSource {
