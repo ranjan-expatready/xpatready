@@ -72,7 +72,8 @@ jobs:
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
       - name: studio suites this change can affect (run-suites.sh --changed, browser suite on its own copy; US$0)
         if: steps.code.outputs.suites == 'true'
-        env: { COPY_PREFIX: ci, SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
+        # Two test slots on the Mac (P-199): each runner gets its own copy names and ports, so two checks never meet.
+        env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
         # One at a time (a parallel trial, 30 Oct, failed 12 suites). Copies named ci_*, like the nightly run; the one
         # runner runs one job at a time, so they never meet. The chosen suites and why print first, into the summary.
         run: |
