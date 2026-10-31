@@ -1,8 +1,8 @@
 {
-  "at": "2026-10-31T08:39:11.299Z",
-  "port": 4430,
+  "at": "2026-10-31T12:21:11.790Z",
+  "port": 4432,
   "pass": 30,
-  "fail": 0,
+  "fail": 2,
   "log": [
     {
       "name": "C3.11 fail-guard: with every line filed as PDF upload, no signed-scan line is on any checklist",
@@ -213,6 +213,31 @@
       "name": "C3.11 engine pass: a conditional form's signed scan is conditional with the form's own words",
       "ok": true,
       "detail": "Only if the applicant has a representative"
+    },
+    {
+      "name": "X9b m6 pass: the Documents tab and the case agree on who signs and why, in all 180 \"Signed by\" × who × condition-kind cases",
+      "ok": false,
+      "detail": [
+        "not set × each_applicant × PRINCIPAL: tab [\"principal\"] vs case [\"child\",\"principal\",\"spouse_or_partner\"]",
+        "not set × each_applicant × CASE: tab [] vs case [\"child\",\"principal\",\"spouse_or_partner\"]",
+        "not set × each_applicant × DEPENDENT: tab [\"child\"] vs case [\"child\",\"principal\",\"spouse_or_partner\"]",
+        "not set × principal_applicant × CASE: tab [] vs case [\"principal\"]"
+      ]
+    },
+    {
+      "name": "X9b m6 fail-guard: a form on each applicant whose condition is on the principal (or the case) still asks each applicant it is about on the Documents tab, not the principal alone or nobody",
+      "ok": false,
+      "detail": {
+        "PRINCIPAL": [
+          "principal"
+        ],
+        "CASE": [],
+        "every": [
+          "child",
+          "principal",
+          "spouse_or_partner"
+        ]
+      }
     }
   ]
 }
