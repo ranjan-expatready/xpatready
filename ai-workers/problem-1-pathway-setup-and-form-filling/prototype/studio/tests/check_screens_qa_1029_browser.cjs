@@ -168,6 +168,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("QA-48: there it is listed (Show retired on), so it can be restored", !!href && (await main()).includes(corp[1]), p.url().replace(BASE, ""));
     sql(`update program_def set retired_at = null, retired_by = null where program_node_key = '${corp[0]}'`);
 
+    // #133 review Major: a Start setup greyed with aria-disabled (a change to it waits for a second person) is grey too.
+    const del = await api("/structure/nodes/individual.visitors.extend_stay", { method: "DELETE", data: { reason: "Check: a greyed Start setup." } });
+    await go("/");
+    const startBtn = p.getByRole("button", { name: "Start setup: Extend stay in Canada" }).first();
+    const sLook = await startBtn.evaluate((e) => { const c = getComputedStyle(e); return { aria: e.getAttribute("aria-disabled"), bg: c.backgroundColor, opacity: c.opacity }; }).catch((e) => ({ error: e.message.split("\n")[0] }));
+    step("Button: a greyed Start setup (a change waits for a second person) is grey at full opacity, not a faded brand blue", del.status < 300 && sLook.aria === "true" && sLook.opacity === "1" && !/rgb\(8, 98, 197\)/.test(sLook.bg ?? "rgb(8, 98, 197)"), JSON.stringify({ del: del.status, ...sLook }));
+
     step("no page error", !errs.length, errs.join(" | "));
     const all = [ov, rel, act, ck, sc, dt, rv].join("\n");
     step("no user id, raw type, fingerprint or screen number on these pages", !SYSTEM.test(all), (all.match(SYSTEM) ?? [])[0]);
