@@ -58,3 +58,6 @@ Three GitHub Actions runners, version 2.338.2 (osx-arm64; the official package a
 * `xr-mac-2` (`~/actions-runner-xpatready-2`, label `xr-mac`): a second slot for the same jobs, copies named `ci2_*` (other ports), so two checks never meet.
 * `xr-mac-light` (`~/actions-runner-xpatready-3`, label `xr-mac-light`): auto-merge and the demo update only, so they never wait behind a test run.
 Each runner's `.env` and `.path` are copies of the first one's. Stop or start one with `./svc.sh stop|start` in its folder. Registration needed a one-hour code from GitHub › Settings › Actions › Runners, pasted by the founder.
+
+## Merge queue (P-201, 31 Oct 2026)
+Mergify (GitHub app, free plan) on this repository only, configured by `.mergify.yml` at the repository root: approved PRs (label `review: approved`) are batched up to 4, checked once on a batch PR from `mergify/merge-queue/...`, and merged together. `automerge.yml` runs only by hand as a fallback. To pause the queue, remove the app from the repository (GitHub › Settings › GitHub Apps).
