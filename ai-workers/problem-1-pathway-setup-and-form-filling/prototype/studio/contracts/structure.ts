@@ -101,7 +101,9 @@ export type StructureNode = {
   needs: number;
   meaningChecked: boolean; version: number; retired: boolean;
   /** An open change to it (QA-59): waiting, returned (with who and why) or approved and not yet released. */
-  pending: { id: string; action: LifecycleAction; status: "WAITING" | "RETURNED" | "APPROVED"; by: string | null; note: string | null } | null;
+  pending: { id: string; action: LifecycleAction; status: "WAITING" | "RETURNED" | "APPROVED"; by: string | null; note: string | null;
+    /** The person asking proposed it: only they withdraw it or send it again (DV-bb-9, N7 break B1). */
+    mine: boolean } | null;
   /** A last-level name is a combination (BR-2): its state, Not started when it has no setup yet (id null). */
   combination: { id: string | null; status: "IN_SETUP" | "NOT_READY" | "READY"; statusText: string; retired: boolean;
     /** Not started: why Start setup cannot run here (S3 M3), null when it can. */

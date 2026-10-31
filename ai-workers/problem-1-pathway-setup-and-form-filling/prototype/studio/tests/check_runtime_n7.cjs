@@ -1,8 +1,9 @@
 // N7 (runtime lane; Devin 30 Oct, product/inbox/2026-10-30-devin-d1-walk.md): three findings, each with a passing and
-// a failing case. DV-bb-9: only the person who proposed a remove, retire or restore withdraws it (P-116 amended, P-15
-// second-person split). DV-bb-8: files reach a combination through the one intake (P-51, P-103); the second door
+// a failing case. DV-bb-9: only the person who proposed a change withdraws it, a new shared field included, and only
+// they send a returned remove, retire or restore again (P-116 amended, P-15 second-person split; review Major 1 and
+// break B1, B2, B4 on 10939d21); the Structure row, the change page and To review offer it to them only. DV-bb-8: files reach a combination through the one intake (P-51, P-103); the second door
 // POST /combinations/:id/attachments is gone. DV-d1-3 (QA-94 class): the review page of With an LMIA shows the role of a
-// calculated answer in plain words, never its system key. In a real browser for DV-d1-3; screenshots at 1440 and 1024 in
+// calculated answer in plain words, never its system key. Break B5: the sample route without a body is a 400. In a real browser for DV-d1-3; screenshots at 1440 and 1024 in
 // screens/N7-devin-fixes/screenshots/, axe (WCAG 2.2 AA). No model call (US$0).
 //   zsh studio/tools/isolated.sh runtime_n7 4431 start && node studio/tests/check_runtime_n7.cjs 4431 xr_studio_runtime_n7
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
@@ -52,30 +53,60 @@ const PDF = path.join(ROOT, "official-sources", "ircc", "forms", "imm5476e.pdf")
     r = await api(`/combinations/${vv}/attachments`);
     step("DV-bb-8: reading a combination's attached files is unchanged (GET stays)", r.status === 200 && Array.isArray(r.body), r.status);
 
-    // ------------------------------------------------------------ DV-bb-9: withdraw is the proposer's only
+    // ------------------------------------------------------------ DV-bb-9: withdraw (and send again) are the proposer's only
     r = await api("/structure/nodes", { method: "POST", data: { pathwayType: "CORPORATE", level: "pathway", label: "N7 check pathway", parentKey: null } });
     const key = r.body?.key;
     sql(`update program_def set created_by='user-C' where program_node_key='${key}'`); // someone else's draft: its delete waits for a second person
     r = await api(`/structure/nodes/${key}`, { method: "DELETE", data: { reason: "Not needed: a check name." } });
     const ch = r.body;
     step("setup: a remove of a draft name waits for a second person (an open change)", r.status === 200 && ch?.status === "WAITING", ch?.status ?? ch);
+    const rowOf = async () => (await api("/structure?pathwayType=CORPORATE")).body.nodes.find((n) => n.key === key);
+    let row = await rowOf();
+    step("N7 break B4 pass: the proposer's own waiting change: the Structure row offers Withdraw", row?.action?.kind === "WITHDRAW" && row?.pending?.mine === true, row?.action);
     sql(`update library_change set proposed_by='user-C' where id='${ch.id}'`); // as if another person had proposed it
+    row = await rowOf();
+    step("N7 break B4 fail: another person's waiting change: the row offers no Withdraw, greyed with the reason", row?.action?.kind === "DELETE" && /waiting for a second person/.test(row?.action?.why ?? "") && row?.pending?.mine === false, row?.action);
     r = await api(`/library/changes/${ch.id}/withdraw`, { method: "POST", data: { note: "Not mine, but I try." } });
     step("C11.9 DV-bb-9 fail: an author cannot withdraw another person's proposal (403, in words that name who proposed it); it stays waiting",
       r.status === 403 && /Only the person who proposed a change can withdraw it\. Content reviewer proposed this one/.test(r.body?.detail ?? r.body?.message ?? "") && sql(`select status from library_change where id='${ch.id}'`) === "WAITING" && sql(`select count(*) from audit_event where action='withdrawn' and entity_key='${key}'`) === "0", r.body?.detail ?? r.body);
+    r = await api(`/library/changes/${ch.id}/withdraw`, { method: "POST", data: {} });
+    step("DV-bb-9 fail: with no note either, the refusal is about whose change it is (403), not the note", r.status === 403, r.status);
     sql(`update library_change set proposed_by='someone-gone' where id='${ch.id}'`);
     r = await api(`/library/changes/${ch.id}/withdraw`, { method: "POST", data: { note: "Not mine either." } });
     step("DV-bb-9 fail: a proposer no longer in the list is named 'Another person', never by id", r.status === 403 && /Another person proposed this one/.test(r.body?.detail ?? "") && !/someone-gone/.test(JSON.stringify(r.body)), r.body?.detail);
-    // The page says so before anyone clicks: a returned change shows "Withdraw it instead…" to its proposer only.
-    sql(`update library_change set proposed_by='user-C', status='RETURNED', decision_note='Check: returned' where id='${ch.id}'`);
-    await p.goto(`${BASE}/review/change/${ch.id}`); await p.locator("[data-send-again]").waitFor({ timeout: 30000 }); await settle();
-    step("DV-bb-9 fail (page): another person's returned change offers no Withdraw; the page says who can", await p.getByRole("button", { name: /Withdraw it instead/ }).count() === 0 && /Only Content reviewer can withdraw it\./.test(await p.locator("[data-withdraw-not-mine]").innerText()));
+
+    // Break B1: a returned remove is sent again by its proposer only (else another author could send it, then approve it alone).
+    sql(`update library_change set proposed_by='user-C', status='RETURNED', decided_by='user-B', decision_note='Check: returned' where id='${ch.id}'`);
+    r = await api(`/library/changes/${ch.id}/resubmit`, { method: "POST", data: { reason: "I send it for them." } });
+    step("N7 break B1 fail: an author cannot send again another person's returned remove (403 in words); it stays returned, its reason unchanged",
+      r.status === 403 && /Only the person who proposed a change can send it again\. Content reviewer proposed this one/.test(r.body?.detail ?? "") && sql(`select status || '|' || reason from library_change where id='${ch.id}'`) === "RETURNED|Not needed: a check name.", r.body?.detail ?? r.body);
+    const q = (await api("/review-queue?filter=all")).body.items.find((x) => x.id === `change:${ch.id}`);
+    step("N7 review Minor 2: To review does not ask another author to correct or withdraw someone else's returned remove", q?.state === "waiting" && /The person who proposed it sends it again or withdraws it/.test(q?.waiting_on ?? ""), q && { state: q.state, waiting_on: q.waiting_on, next: q.next });
+    // The page says so before anyone clicks: a returned change offers Send again and Withdraw to its proposer only.
+    await p.goto(`${BASE}/review/change/${ch.id}`); await p.locator("[data-withdraw-not-mine]").waitFor({ timeout: 30000 }); await settle();
+    step("DV-bb-9 fail (page): another person's returned change offers no Send again and no Withdraw; the page says who can",
+      await p.getByRole("button", { name: /Withdraw it instead|Send again/ }).count() === 0 && /Only Content reviewer can send it again or withdraw it\./.test(await p.locator("[data-withdraw-not-mine]").innerText()));
     await state("returned-not-mine");
     sql(`update library_change set proposed_by='user-A' where id='${ch.id}'`);
-    await p.reload(); await p.locator("[data-send-again]").waitFor({ timeout: 30000 }); await settle();
-    step("DV-bb-9 pass (page): the proposer's own returned change offers Withdraw it instead…", await p.getByRole("button", { name: /Withdraw it instead/ }).count() === 1 && await p.locator("[data-withdraw-not-mine]").count() === 0);
+    await p.goto(`${BASE}/review/change/${ch.id}`); await p.locator("[data-send-again]").waitFor({ timeout: 30000 }); await settle();
+    step("DV-bb-9 pass (page): the proposer's own returned change offers Send again and Withdraw it instead…", await p.getByRole("button", { name: /Withdraw it instead/ }).count() === 1 && await p.locator("[data-withdraw-not-mine]").count() === 0);
+    r = await api(`/library/changes/${ch.id}/resubmit`, { method: "POST", data: { reason: "Still not needed." } });
+    step("N7 break B1 pass: the proposer sends their own returned remove again", r.status === 201 && r.body?.status === "WAITING", r.body?.status ?? r.body);
     r = await api(`/library/changes/${ch.id}/withdraw`, { method: "POST", data: { note: "My own, not needed." } });
     step("C11.9 DV-bb-9 pass: the proposer withdraws their own open change", r.status === 201 && r.body?.status === "WITHDRAWN" && sql(`select count(*) from audit_event where action='withdrawn' and entity_key='${key}'`) === "1", r.body?.status ?? r.body);
+
+    // Review Major 1 / break B2: the same rule for a new shared field on the same route.
+    const ws = sql("select id from workspace limit 1");
+    const fid = sql(`insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by) values (gen_random_uuid(), '${ws}', 'field', 'person.n7_check_field', 'N7 check field', 'ADD', 'Check only', 'WAITING', 'user-C') returning id`).split("\n")[0];
+    r = await api(`/library/changes/${fid}/withdraw`, { method: "POST", data: { note: "Not mine, but I try." } });
+    step("DV-bb-9 fail (new field): an author cannot withdraw another person's new field (403); it stays waiting", r.status === 403 && /Content reviewer proposed this one/.test(r.body?.detail ?? "") && sql(`select status from library_change where id='${fid}'`) === "WAITING", r.body?.detail ?? r.body);
+    sql(`update library_change set proposed_by='user-A' where id='${fid}'`);
+    r = await api(`/library/changes/${fid}/withdraw`, { method: "POST", data: { note: "My own, not needed." } });
+    step("DV-bb-9 pass (new field): the proposer withdraws their own new field", r.status === 201 && r.body?.status === "WITHDRAWN", r.body?.status ?? r.body);
+
+    // Break B5: the sample route with no body says so in words.
+    r = await p.request.fetch(`${BASE}/api/combinations/${vv}/attachments/sample`, { method: "POST", headers: { "x-actor": "user-A" } }).then(async (x) => ({ status: x.status(), body: await x.json().catch(() => null) }));
+    step("N7 break B5 fail: a sample request with no body is a 400 in words, never a 500", r.status === 400 && /not in the official library/.test(r.body?.message ?? r.body?.detail ?? ""), r);
 
     // ------------------------------------------------------------ DV-d1-3: plain role words on the review page
     await p.goto(`${BASE}/c/${lmia}/review`); await settle();

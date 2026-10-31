@@ -153,6 +153,8 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
   if (!(actor.duties as readonly string[]).includes("author")) throw problem(403, "Not allowed", `${actor.name} (simulated) does not hold the author duty.`);
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
+  // DV-bb-9: only the person who proposed a change withdraws it, whatever its kind (as only they undo their own delete).
+  if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can withdraw it. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to withdraw it.`);
   if (isLifecycleKind(c.kind)) return withdrawLifecycle(db, actor, c, note); // W1-03: remove, retire or restore (P-116)
   if (c.kind !== "field" || c.action !== "ADD" || !["WAITING", "RETURNED"].includes(c.status)) throw problem(409, "Cannot withdraw", "Only a new shared field that is waiting or returned is withdrawn.");
   const why = (note ?? "").trim();

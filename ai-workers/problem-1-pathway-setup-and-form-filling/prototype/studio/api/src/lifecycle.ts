@@ -110,9 +110,10 @@ export const ownDraft = (f: NodeFacts, actorId: string | undefined) => !!actorId
 export const SAMPLE_CREATOR = "sample-inputs";
 /** The row's one action (P-128 R3-2): Withdraw while a change waits, Restore when retired, Retire once released, else
  *  Delete; with why it cannot, for a Delete the names that go with it, and whether it is deleted at once. */
-export function rowAction(f: NodeFacts, pending: boolean, actorId?: string): RowAction {
+export function rowAction(f: NodeFacts, pending: { action: LifecycleAction; mine: boolean } | null, actorId?: string): RowAction {
   const can = nodeCan(f);
-  if (pending) return { kind: "WITHDRAW", why: null, below: [], withCombination: false, immediate: false };
+  // N7 break B4: the proposer's own waiting change can be withdrawn; anyone else's greys the row (as the Form library).
+  if (pending) return pending.mine ? { kind: "WITHDRAW", why: null, below: [], withCombination: false, immediate: false } : { kind: pending.action, why: WHY.waiting, below: [], withCombination: false, immediate: false };
   if (f.node.retiredAt) return { kind: "RESTORE", why: can.restore, below: [], withCombination: !!can.withCombination, immediate: false };
   if (f.combos.some((c) => c.released)) return { kind: "RETIRE", why: can.retire, below: [], withCombination: !!can.withCombination, immediate: false };
   return { kind: "DELETE", why: can.delete, below: can.delete ? [] : f.below.map((n) => n.programNodeKey), withCombination: false, immediate: ownDraft(f, actorId) };
@@ -241,6 +242,9 @@ export class Lifecycle {
    *  same rule as a new proposal (nodeCan, read without this change); a branch delete lists its branch as it is now. */
   async resubmit(actor: Actor, c: LibraryChange, reason: string) {
     need(actor, "author");
+    // N7 break B1: only the proposer sends a returned remove, retire or restore again, as only they withdraw it; another
+    // author sending it again could then approve it alone (the second-person check knows only the proposer).
+    if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can send it again. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to correct or withdraw it.`);
     if (c.status !== "RETURNED") throw problem(409, "Not returned", `Only a returned change is sent again; this one is ${c.status.toLowerCase()}.`);
     const why = reason.trim();
     if (why.length < 3 || why.length > 300) throw problem(400, "Say what changed", "Say what changed, for the second person (3 to 300 characters).");
@@ -433,8 +437,6 @@ export class Lifecycle {
  *  released). Reached through POST /library/changes/:id/withdraw (library-changes.ts withdrawChange). */
 export async function withdrawLifecycle(db: Db, actor: Actor, c: LibraryChange, note?: string) {
   need(actor, "author");
-  // DV-bb-9: only the person who proposed a change withdraws it, as only they undo their own delete (Undo above).
-  if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can withdraw it. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to withdraw it.`);
   const why = (note ?? "").trim();
   if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
   const done = await db.libraryChange.updateMany({ where: { id: c.id, status: { in: OPEN } }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });

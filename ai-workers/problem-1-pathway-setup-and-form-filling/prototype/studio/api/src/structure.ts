@@ -47,7 +47,7 @@ export class Structure {
     const workspaceId = await this.ws.id();
     const g = await this.graph(workspaceId);
     const leaves = await this.programs.leafStates(ACTORS.find((a) => a.id === actorId));
-    const pending = new Map((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "structure_node", status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })).map((c) => [c.key, { id: c.id, action: c.action as LifecycleAction, status: c.status as "WAITING" | "RETURNED" | "APPROVED", by: c.status === "RETURNED" ? ACTORS.find((a) => a.id === c.decidedBy)?.name ?? null : null, note: c.status === "RETURNED" ? c.decisionNote : null }]));
+    const pending = new Map((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "structure_node", status: { in: ["WAITING", "RETURNED", "APPROVED"] } } })).map((c) => [c.key, { id: c.id, action: c.action as LifecycleAction, status: c.status as "WAITING" | "RETURNED" | "APPROVED", mine: c.proposedBy === actorId, by: c.status === "RETURNED" ? ACTORS.find((a) => a.id === c.decidedBy)?.name ?? null : null, note: c.status === "RETURNED" ? c.decisionNote : null }]));
     // "Used by" on each line (P-127 (1)): the releases that hold a combination and the cases open on it.
     const combos = await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, retiredAt: true, _count: { select: { releases: true, cases: { where: { status: "OPEN" } } } } } });
     const used = new Map(combos.map((c) => [c.id, c._count]));
@@ -57,7 +57,7 @@ export class Structure {
     const under = (k: string): ProgramDef[] => g.kids(k).flatMap((c) => [c, ...under(c.programNodeKey)]);
     const chainOf = (n: ProgramDef) => { const out: ProgramDef[] = []; for (let x: ProgramDef | undefined = n; x; x = x.parentNodeKey ? g.byKey.get(x.parentNodeKey) : undefined) out.unshift(x); return out; };
     const openNodes = new Set(pending.keys());
-    const actionOf = (n: ProgramDef) => { const below = under(n.programNodeKey); return rowAction({ node: n, below, parent: n.parentNodeKey ? g.byKey.get(n.parentNodeKey) ?? null : null, combos: [n, ...below].flatMap((x) => comboOf.get(x.id) ?? []), open }, pending.has(n.programNodeKey), actorId); };
+    const actionOf = (n: ProgramDef) => { const below = under(n.programNodeKey); return rowAction({ node: n, below, parent: n.parentNodeKey ? g.byKey.get(n.parentNodeKey) ?? null : null, combos: [n, ...below].flatMap((x) => comboOf.get(x.id) ?? []), open }, pending.get(n.programNodeKey) ?? null, actorId); };
     const out: StructureNode[] = [];
     const walk = (n: ProgramDef): { combinations: number; live: number; needs: number } => {
       const kids = g.kids(n.programNodeKey);
