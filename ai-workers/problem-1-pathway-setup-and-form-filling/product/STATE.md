@@ -30,6 +30,14 @@ A new Lead chat took over (the founder confirmed the previous one is closed). Ch
 ## Founder decisions waiting
 * None (31 Oct: P-195 answered N0).
 
+## Plan from here (31 Oct, agreed with the founder in outline)
+1. **Today: drain the Mac queue.** About ten checks wait on the one Mac runner (#131, #133, #139, #113, #148, four forms X5 slices, #116), plus the full run started by hand (P-196). One at a time, 1–35 min each: about 4–5 hours. The single runner is now the bottleneck: watch it, and propose a second runner only with evidence.
+2. **After #113 merges:** archive the runtime Mac session (local_3b02c2d2) and its copy; start a cloud qa session from this Lead chat for `/qa after-merge` (BACKLOG N4).
+3. **Tech lead, X0:** regroup the backlog into features in journey order (P-191), with a size per feature; walk the founder through it and `design/why-we-chose-2026-10-31.md`.
+4. **Then fresh sessions from this Lead chat** (they show under it): one cloud builder per feature (three at once, no two on the same files), qa after each day's merges, evidence on the Mac when a feature needs the official PDFs. The old cloud builders are archived once their open PRs merge.
+
+Archived 31 Oct: five old Lead chats and five old Mac lanes; their copies removed except `strange-leakey-909146` (2.8 GB, stub-run files only; needs a forced removal, refused by the permission check). Two old forms lanes (local_5770574b, local_ab5f7df4) refused archiving ("live work", likely a Remote Control client): archive from the sidebar.
+
 ## Close-out still to do
 * After #111 and #113 merge: archive the four old Mac builder sessions (forms-fix8 local_c49f56b8, screens-card3 local_ba1559ab, runtime local_3b02c2d2, qa local_b27bf6a4) and remove their copies (about 12 GB). Then remove the frozen `lanes/` folder, and start a cloud qa session for `/qa after-merge` on main.
 * The first nightly full run on the Mac is tonight at 21:00 UTC (workflow `nightly`). A red nightly run is fixed first.
