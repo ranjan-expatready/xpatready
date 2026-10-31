@@ -19,7 +19,7 @@ DEMO=0; NAMES=0; CHANGED=""
 while [ $# -gt 0 ]; do case "$1" in
   --demo) DEMO=1;;
   --names) NAMES=1;;   # print the names and ports this copy would use, run nothing
-  --changed) CHANGED="${2:-}"; shift;;
+  --changed) [ -n "${2:-}" ] || { echo "--changed wants <base>..<head>; no suite was run"; exit 2; }; CHANGED="$2"; shift;;
   --changed=*) CHANGED="${1#--changed=}";;
   *) echo "run-suites.sh: unknown option $1 (--demo, --names, --changed <base>..<head>); no suite was run"; exit 2;;
 esac; shift; done
@@ -72,11 +72,12 @@ PICK=""
 if [ -n "$CHANGED" ]; then
   [[ "$CHANGED" == *..* ]] || { echo "--changed wants <base>..<head>; no suite was run"; exit 2; }
   base="${CHANGED%%..*}"; head="${CHANGED##*..}"
-  files=$(git diff --name-only "$base...$head") || { echo "git diff $base...$head failed; no suite was run"; exit 2; }
+  files=$(git -c core.quotePath=false diff --no-renames --name-only "$base...$head") || { echo "git diff $base...$head failed; no suite was run"; exit 2; }
   sel=$(printf '%s\n' "$files" | node "$P/product/tools/select-suites.mjs") || { echo "select-suites.mjs failed; no suite was run"; exit 2; }
   printf '%s\n' "$sel" > "$OUT/selection.tsv"
-  if [ "${sel%%$'\t'*}" = ALL ]; then
-    echo "**Every suite runs** for $base..$head ($(printf '%s\n' "$files" | grep -c .) files changed): ${sel#ALL$'\t'}"; echo
+  TAB=$(printf '\t')
+  if [ "${sel%%"$TAB"*}" = ALL ]; then
+    echo "**Every suite runs** for $base..$head ($(printf '%s\n' "$files" | grep -c .) files changed): ${sel#ALL"$TAB"}"; echo
   else
     PICK=" $(printf '%s\n' "$sel" | cut -f1 | tr '\n' ' ')"
     echo "**$(printf '%s\n' "$sel" | grep -c .) suites chosen** for $base..$head ($(printf '%s\n' "$files" | grep -c .) files changed); the full set runs nightly on main."
@@ -147,6 +148,8 @@ fi
 for t in check_p2_guard check_p2_launch; do
   [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
 done
+# A choice that ran nothing is a fault, never a pass.
+[ -n "$PICK" ] && [ "${#rows[@]}" -eq 0 ] && { rows=("| (none) | FAIL | | suites were chosen but none ran |"); fail=1; }
 echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; printf '%s\n' "${rows[@]}"
 echo "commit $(git rev-parse --short HEAD)${PICK:+ · only the chosen suites ran (--changed $CHANGED)} · logs in ${OUT#$ROOT/}${PREFIX:+ · copies named ${PREFIX}_*, ports +$(( 10000 + 1000 * (SLOT - 1) ))}"
 exit $fail

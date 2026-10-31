@@ -11,7 +11,11 @@
 //     looked up in the browser suites; no match, or a file the shell itself uses, runs every browser suite;
 //   * an API module (api/src/<x>.ts): the endpoint paths of the module and of every module that imports it (in main.ts,
 //     only the controllers that use it), looked up in the suites, plus the suites that import it; no match runs everything;
-//   * always a fixed smoke set of fast suites along the main journey (structure, programs, start setup, engine, cases).
+//     a web file that calls one of those endpoints adds its own browser suites (the web rule above);
+//   * any changed file: the suites whose text names it (file name with extension: suites that read a source as text);
+//   * a file under api/src or web/src: the suites that read every file of that folder (a readdirSync over it);
+//   * always a fixed smoke set of fast suites along the main journey (structure, programs, start setup, the
+//     combination workspace in a browser, engine, cases).
 // Docs and images (.md, .txt, .png, .jpg, .gif, .webp, .svg, .pdf) and records outside prototype/ choose nothing.
 // Reads files only: no server, no database, no model call (US$0).
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -21,7 +25,7 @@ import { execSync } from "node:child_process";
 const ROOT = execSync("git rev-parse --show-toplevel", { encoding: "utf8" }).trim();
 const P = "ai-workers/problem-1-pathway-setup-and-form-filling", PR = `${P}/prototype`, S = `${PR}/studio`;
 const SKIP = new Set(["check_catalogue_scale.cjs"]);   // as in run-suites.sh: not a regression suite
-const SMOKE = ["check_engine.ts", "check_case_engine.ts", "check_w1_structure.ts", "check_screen01_api.ts", "check_w1_start_setup.ts"];
+const SMOKE = ["check_engine.ts", "check_case_engine.ts", "check_w1_structure.ts", "check_screen01_api.ts", "check_w1_start_setup.ts", "check_dv_backbone_browser.cjs"];
 const RUNTIME_GROUP = ["check_runtime_r1c.cjs", "check_runtime_r1d.ts", "check_runtime_r1a.ts"];
 const DOCS = /\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$/i;
 
@@ -40,6 +44,9 @@ for (const f of [...ls(`${S}/tests`, /^check_.*\.(ts|cjs)$/), ...ls(`${S}/tests/
 }
 const text = new Map([...suites].map(([n, f]) => [n, read(f)]));
 const browser = [...suites.keys()].filter((n) => /playwright|chromium/.test(text.get(n)));
+// Suites that read every file of a source folder (the deny-by-default route check, the stand-in and words scans).
+const scanners = (re) => [...suites.keys()].filter((n) => /readdirSync|globSync/.test(text.get(n)) && re.test(text.get(n)));
+const apiScanners = scanners(/["'`]api["'`]|api\/src/), webScanners = scanners(/["'`]web["'`]|web\/src/);
 
 // Relative imports and requires of a file, resolved to repository paths ("@/x" is web/src/x).
 function importsOf(f) {
@@ -98,6 +105,8 @@ function webPick(f) {
   if (shell.length) return { browser: `${rel}: used by the shell around every page (${shell.slice(0, 3).join(", ")})` };
   const routes = appRoutes.filter((r) => names.has(r.el)).map((r) => r.path);
   const pats = routes.map((r) => [r, pathPattern(r)]).filter(([, p]) => p);
+  // A route too general to look up ("/", the Immigration programs home) cannot be matched to suites: every browser suite.
+  const general = routes.find((r) => !pathPattern(r));
   const own = exportedNames(f);
   const out = new Map();
   for (const n of browser) {
@@ -107,6 +116,7 @@ function webPick(f) {
     const c = own.find((x) => new RegExp(`\\b${x}\\b`).test(t));
     if (r) out.set(n, `${rel} serves ${r[0]}`); else if (c) out.set(n, `${rel}: names ${c}`);
   }
+  if (general) return { browser: `${rel} serves ${general}, too general to look up`, picks: out };
   if (!out.size) return { browser: `${rel}: ${routes.length ? `no browser suite opens ${routes.join(", ")}` : "no route found"}` };
   return { picks: out };
 }
@@ -159,8 +169,17 @@ function apiPick(f) {
     if (e) out.set(n, `${rel}: calls /${e[0]}`);
   }
   for (const n of suitesImporting([...reach].filter((x) => x !== MAIN))) if (!out.has(n)) out.set(n, `${rel}: imported by the suite`);
-  if (!out.size) return { all: `${rel}: no suite calls its ${eps.size} endpoint(s) or imports it` };
-  return { picks: out };
+  // The pages that call these endpoints: their browser suites too (a double-click guard is tested through the page).
+  let browserWhy;
+  for (const w of webFiles) {
+    const e = pats.find(([, p]) => new RegExp(`/${p}`).test(read(w)));
+    if (!e) continue;
+    const wp = webPick(w), wrel = w.slice(`${S}/`.length);
+    if (wp.browser && !browserWhy) browserWhy = `${rel}: /${e[0]} is called by ${wrel} (${wp.browser})`;
+    for (const [n] of wp.picks ?? []) if (!out.has(n)) out.set(n, `${rel}: /${e[0]} is called by ${wrel}`);
+  }
+  if (!out.size && !browserWhy) return { all: `${rel}: no suite calls its ${eps.size} endpoint(s) or imports it` };
+  return { picks: out, browser: browserWhy };
 }
 
 // ---- one changed file
@@ -197,6 +216,12 @@ for (const f of changed) {
   if (p.all) alls.push(p.all);
   if (p.browser) browserWhy.push(p.browser);
   for (const [n, r] of p.picks ?? []) add(n, r);
+  if (DOCS.test(f)) continue;
+  // A suite that reads a source file as text names it; one that reads a whole folder reads every file in it.
+  const name = basename(f), named = new RegExp(`(?<![A-Za-z0-9_.-])${esc(name)}(?![A-Za-z0-9_-])`);
+  for (const [n, t] of text) if (suites.get(n) !== f && named.test(t)) add(n, `names ${name}`);
+  if (f.startsWith(`${S}/api/src/`)) for (const n of apiScanners) add(n, "reads every file in api/src");
+  if (f.startsWith(`${S}/web/src/`)) for (const n of webScanners) add(n, "reads every file in web/src");
 }
 if (alls.length) { console.log(`ALL\t${alls[0]}${alls.length > 1 ? ` (+${alls.length - 1} more)` : ""}`); process.exit(0); }
 if (browserWhy.length) for (const n of browser) add(n, `every browser suite: ${browserWhy[0]}${browserWhy.length > 1 ? ` (+${browserWhy.length - 1} more)` : ""}`);
