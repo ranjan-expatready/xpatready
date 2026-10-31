@@ -4,15 +4,35 @@
 import { HttpStatus } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { costCheck, type CostCheck } from "../../engine/cost-check.ts";
-import { BudgetExceeded, OverrideRefused, SpendLedger, type OverrideLimit } from "../../../p2/ledger.ts";
+import { BudgetExceeded, LedgerBusy, OverrideRefused, SpendLedger, type OverrideLimit } from "../../../p2/ledger.ts";
 import { LEDGER_DIR, WAVE1_START } from "../../../p2/policy.ts";
 import { OverrideBody, type OverrideRef } from "../../contracts/cost-check.ts";
 import { fail, need, type Actor } from "./core.ts";
 
-/** The cost check for a start, against what the shared ledger holds now (the same numbers reserve uses). */
-export function costCheckNow(i: { worst: number; expected?: number | null; run?: number; spentForms?: string[] }): CostCheck {
+/** Break n1 (N6): the API waits at most 2 s for another process's short ledger lock. The wait holds the API's one thread,
+ *  so every request waited with it (10 s before); past it, the start is refused as busy, in words. */
+export const apiLedger = () => new SpendLedger(LEDGER_DIR, undefined, { waitMs: 2_000 });
+
+/** The cost check for a start and its run key, against what the shared ledger holds now (the same numbers reserve and
+ *  recordOverride use). N6 (review N2): what other starts' Continues still hold counts against the ceiling, as the ledger
+ *  counts it when Continue is recorded, so the dialog never offers a Continue the ledger would refuse; this start's own
+ *  run key holds nothing against itself. The run key does not depend on what is held (only on the plan, worst case and
+ *  limits), so it is made first. */
+export function costPlanNow(operation: string, planSha256: string, i: { worst: number; expected?: number | null; run?: number; spentForms?: string[] }, ended: ReadonlySet<string> = new Set()): { cost_check: CostCheck; run_key: string } {
   const l = new SpendLedger(LEDGER_DIR);
-  return ledgerRead(() => costCheck({ spent: l.committed(), wave: { spent: l.committedSince(WAVE1_START) }, worst: i.worst, expected: i.expected ?? null, run: i.run, attempts: i.spentForms?.length ? { spentForms: i.spentForms } : undefined }));
+  return ledgerRead(() => {
+    const input = { spent: l.committed(), wave: { spent: l.committedSince(WAVE1_START) }, worst: i.worst, expected: i.expected ?? null, run: i.run, attempts: i.spentForms?.length ? { spentForms: i.spentForms } : undefined };
+    const base = costCheck(input), run_key = runKeyOf(operation, planSha256, base);
+    if (base.ok) return { cost_check: base, run_key };
+    return { cost_check: costCheck({ ...input, held: l.heldByOverridesUsd(undefined, undefined, run_key, ended) }), run_key };
+  });
+}
+
+/** N6 (break n2): the Continues whose run has ended in this copy (finished, failed or stopped): they hold nothing more
+ *  against the ceiling. Another copy's run is not seen here: its Continue holds until it reserves or expires (the safe side). */
+export async function endedOverrides(db: { $queryRawUnsafe: <T>(q: string) => Promise<T> }): Promise<Set<string>> {
+  const rows = await db.$queryRawUnsafe<{ id: string | null }[]>(`select plan->'override'->>'id' as id from ai_batch where status in ('COMPLETED', 'PARTIAL', 'FAILED', 'CANCELLED') and plan ? 'override'`);
+  return new Set(rows.map((r) => r.id).filter((x): x is string => !!x));
 }
 
 /** One run key per start: what it does (the plan's fingerprint) and what it could cost. A changed plan has another key,
@@ -38,9 +58,9 @@ export function overrideAllowed(actor: Actor, body: unknown, plan: { run_key: st
 }
 
 /** Records the override in the shared ledger (the ledger re-checks the ceiling under its lock). */
-export function recordOverride(actor: Actor, o: { run_key: string; worst_usd: number; limits: OverrideLimit[]; reason?: string }) {
-  try { return new SpendLedger(LEDGER_DIR).recordOverride({ ...o, by: actor.id }); }
-  catch (e) { if (e instanceof OverrideRefused) fail(e.why === "ceiling" ? `${e.message}. Nothing was recorded.` : e.message, HttpStatus.CONFLICT); return ledgerFail(e); }
+export function recordOverride(actor: Actor, o: { run_key: string; worst_usd: number; limits: OverrideLimit[]; reason?: string }, ended: ReadonlySet<string> = new Set()) {
+  try { return apiLedger().recordOverride({ ...o, by: actor.id }, { ended }); }
+  catch (e) { if (e instanceof OverrideRefused) fail(e.why === "ceiling" || e.why === "held" ? `${e.message}. Nothing was recorded.` : e.message, HttpStatus.CONFLICT); return ledgerFail(e); }
 }
 
 const REFUSED: Record<string, string> = {
@@ -75,12 +95,14 @@ export function checkOverride(actor: Actor, overrideId: unknown, plan: { run_key
  *  the launch's database transaction: a refusal rolls the launch back, and a launch refused before it (a draft already
  *  under review, "Already finding", the same key twice) leaves the Continue unused. */
 export function spendOverride(actor: Actor, ref: OverrideRef): void {
-  try { new SpendLedger(LEDGER_DIR).useOverride(ref.id, ref.run_key, actor.id); }
+  try { apiLedger().useOverride(ref.id, ref.run_key, actor.id); }
   catch (e) { if (e instanceof OverrideRefused) fail(refusedWords(e), HttpStatus.CONFLICT); ledgerFail(e); }
 }
 
 /** Break m6: a ledger that cannot be read (a line that is not JSON or not an amount) stops every AI start, in words. */
 export function ledgerFail(e: unknown): never {
+  // Break n1 (N6): a busy ledger is not a broken one: wait a moment and try again (before: "Ask the Lead to fix the ledger line").
+  if (e instanceof LedgerBusy) fail("The shared spend ledger is busy with another start. Try again in a moment; nothing was started.", HttpStatus.SERVICE_UNAVAILABLE);
   if (e instanceof BudgetExceeded) fail(`AI starts are stopped: ${e.message}. Ask the Lead to fix the ledger line; nothing was started.`, HttpStatus.SERVICE_UNAVAILABLE);
   throw e;
 }

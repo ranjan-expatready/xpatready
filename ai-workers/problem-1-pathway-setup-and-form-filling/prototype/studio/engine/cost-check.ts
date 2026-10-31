@@ -15,6 +15,9 @@ export type CostCheckInput = {
   worst: number; expected?: number | null;
   /** The largest single run's worst case in this start (each run is held to the run cap); defaults to `worst`. */
   run?: number;
+  /** US$ that other people's or other starts' Continues still hold against the ceiling (SpendLedger.heldByOverridesUsd,
+   *  this start's own run key left out), so the dialog offers Continue only when the ledger would record it (N6, review N2). */
+  held?: number;
   /** Paid attempts per form: the forms in this start that have no paid run left (G4), by name. */
   attempts?: { spentForms: string[] };
   caps?: { experiment?: number; wave?: number; run?: number; ceiling?: number };
@@ -24,7 +27,7 @@ const usd = (n: number) => `US$${n.toFixed(2)}`;
 
 export function costCheck(i: CostCheckInput): CostCheck {
   const cap = i.caps?.experiment ?? EXPERIMENT_CAP_USD, waveCap = i.caps?.wave ?? WAVE1_CAP_USD, runCap = i.caps?.run ?? RUN_CAP_USD, ceiling = i.caps?.ceiling ?? OVERRIDE_CEILING_USD;
-  if (![i.spent, i.wave.spent, i.worst, i.run ?? 0].every((n) => Number.isFinite(n) && n >= 0)) throw new Error("cost check: every amount must be a number of US$ at or above 0");
+  if (![i.spent, i.wave.spent, i.worst, i.run ?? 0, i.held ?? 0].every((n) => Number.isFinite(n) && n >= 0)) throw new Error("cost check: every amount must be a number of US$ at or above 0");
   const expected = i.expected ?? null, run = i.run ?? i.worst, waveName = i.wave.name ?? "Wave 1";
   if (expected !== null && expected > i.worst + 1e-9) throw new Error("cost check: the expected cost cannot be above the worst case");
   const over: CostOver[] = [];
@@ -37,10 +40,15 @@ export function costCheck(i: CostCheckInput): CostCheck {
   // Review m5: the limit's words say where this run could take spend; spend so far is said once, beside the cap.
   if (i.worst > 0 && i.spent + i.worst > cap) over.push({ limit: "experiment", limit_usd: cap, after_usd: i.spent + i.worst, words: `This run could reach ${usd(i.spent + i.worst)}, past the ${usd(cap)} AI spending cap.` });
   if (i.worst > 0 && i.wave.spent + i.worst > waveCap) over.push({ limit: "wave", limit_usd: waveCap, after_usd: i.wave.spent + i.worst, words: `${waveName} has spent ${usd(i.wave.spent)} of its ${usd(waveCap)}. This run could take it to ${usd(i.wave.spent + i.worst)}.` });
+  const held = i.held ?? 0;
   const pastCeiling = i.spent + i.worst > ceiling;
-  const can_continue = over.length > 0 && !pastCeiling;
+  // The same comparison as SpendLedger.recordOverride: Continues chosen in the last 10 minutes hold their worst case until
+  // their runs start, so a Continue here is refused while they do. That ends by itself: the words say wait, not the founder.
+  const heldBack = !pastCeiling && i.spent + held + i.worst > ceiling;
+  const can_continue = over.length > 0 && !pastCeiling && !heldBack;
   const words = !over.length ? `Fits: spent so far ${usd(i.spent)} of ${usd(cap)}; this run could cost up to ${usd(i.worst)}.`
     : pastCeiling ? `This run could reach ${usd(i.spent + i.worst)}, past the ${usd(ceiling)} the founder allows on a click. The founder must raise the cap.`
+    : heldBack ? `Other Continues chosen in the last 10 minutes still hold ${usd(held)} until their runs start; with them, this run could reach ${usd(i.spent + held + i.worst)}, past the ${usd(ceiling)} a click may allow. Wait a few minutes, then look at the cost again.`
     : `Over ${over.length === 1 ? "a limit" : `${over.length} limits`}: ${over.map((o) => o.words).join(" ")} Continue records your name and this run's worst case (${usd(i.worst)}); Cancel starts nothing.`;
-  return { ok: !over.length, over, can_continue, words, expected_usd: expected, worst_usd: i.worst, spent_usd: i.spent, cap_usd: cap, ceiling_usd: ceiling, wave: { name: waveName, spent_usd: i.wave.spent, cap_usd: waveCap } };
+  return { ok: !over.length, over, can_continue, words, expected_usd: expected, worst_usd: i.worst, spent_usd: i.spent, held_usd: held, cap_usd: cap, ceiling_usd: ceiling, wave: { name: waveName, spent_usd: i.wave.spent, cap_usd: waveCap } };
 }

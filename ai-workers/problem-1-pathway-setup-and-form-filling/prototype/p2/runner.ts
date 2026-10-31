@@ -68,14 +68,20 @@ export async function runDrafting(
         return out;
       }
       const t0 = Date.now();
-      try {
-        const r = await call(req, run.settings);
+      // Break 3 m3 / PR #121 review: the call and its settle are separate steps. A settle that cannot be written (the
+      // ledger busy) keeps the answer and leaves the reservation at its worst case; it never counts as a failed call, so
+      // the model is never asked again for an answer already paid for.
+      let r: Awaited<ReturnType<Caller>> | undefined, failure: unknown;
+      try { r = await call(req, run.settings); } catch (e) { failure = e; }
+      if (r) {
         const c = costUsd(run.settings.model, r.usage.input_tokens, r.usage.output_tokens);
-        ledger.settle(id, c, r.stop_reason === "end_turn" || r.stop_reason === undefined ? "ok" : `ok_stop_${r.stop_reason}`);
-        out.attempts.push({ n, outcome: "ok", cost_usd: c, worst_usd: worst, stop_reason: r.stop_reason, input_tokens: r.usage.input_tokens, output_tokens: r.usage.output_tokens, duration_ms: Date.now() - t0 });
+        const notSettled = ledger.settleOrKeep(id, c, r.stop_reason === "end_turn" || r.stop_reason === undefined ? "ok" : `ok_stop_${r.stop_reason}`);
+        out.attempts.push({ n, outcome: "ok", cost_usd: c, worst_usd: worst, stop_reason: r.stop_reason, input_tokens: r.usage.input_tokens, output_tokens: r.usage.output_tokens, duration_ms: Date.now() - t0, ...(notSettled ? { settle_error: `counted at its worst case: ${notSettled}` } : {}) });
         out.status = "completed"; out.text = r.text;
         return out;
-      } catch (e) {
+      }
+      {
+        const e = failure;
         // QA-86: a call the service refused (4xx other than 408, 409, 429: invalid, too large, usage limit) or was too busy to
         // take (429, 500, 502, 503, 529) processed nothing, so it settles at its true cost, US$0. Any other failure (a timeout,
         // a dropped connection): usage unknown, so the reservation stays counted at its worst case.
@@ -84,7 +90,7 @@ export async function runDrafting(
         const busy = typeof status === "number" && [429, 500, 502, 503, 529].includes(status);
         const timedOut = status === 408 || (status === undefined && /time(d)?\s*-?\s*out/i.test(`${(e as Error).name} ${(e as Error).message}`));
         const requestId = requestIdOf(e);
-        ledger.settle(id, refused || busy ? 0 : worst, refused ? "refused_by_provider_usd0" : busy ? "busy_usd0" : "error_counted_at_worst_case");
+        ledger.settleOrKeep(id, refused || busy ? 0 : worst, refused ? "refused_by_provider_usd0" : busy ? "busy_usd0" : "error_counted_at_worst_case");
         out.attempts.push({ n, outcome: refused ? "refused_by_provider" : busy ? "busy" : timedOut ? "timed_out" : "error", error: (e as Error).message.slice(0, 300),
           ...(requestId ? { request_id: requestId } : {}), ...(refused || busy ? { cost_usd: 0 } : {}), worst_usd: worst, duration_ms: Date.now() - t0 });
         if (timedOut) out.status = "timed_out";
