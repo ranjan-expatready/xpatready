@@ -235,7 +235,10 @@ function PqrSet({ id, roleLabel, n }: { id: string; roleLabel: string; n: number
   const { canAuthor } = useSessionView();
   // C4.7 (F6 slice 1): the rules propose picks onto To review (no AI, US$0); a person accepts or rejects each there.
   const [picked, setPicked] = React.useState<{ proposed: number; waitingAlready: number; words: string } | null>(null);
+  const said = React.useRef<HTMLDivElement>(null);
   const propose = useAction(() => api<{ runId: string; proposed: number; waitingAlready: number; words: string }>(`/combinations/${id}/pqr/picks`, { method: "POST" }), { onDone: (r) => setPicked(r), invalidate: [["proposals"]] });
+  // Review m5 (f6): the answer takes the focus, so a keyboard or screen reader user hears it and reaches its link next.
+  React.useEffect(() => { if (picked) said.current?.focus(); }, [picked]);
   return (
     <section aria-label="Pre-qualification questions" className="space-y-2 rounded-xl border border-border bg-surface-raised p-4" data-pqr-set>
       {canAuthor ? (
@@ -245,9 +248,9 @@ function PqrSet({ id, roleLabel, n }: { id: string; roleLabel: string; n: number
         </div>
       ) : null}
       {picked ? (
-        <Notice tone={picked.proposed ? "ok" : "info"} title={picked.proposed ? `${picked.proposed} pick${picked.proposed === 1 ? "" : "s"} proposed` : "No new pick"} action={picked.proposed || picked.waitingAlready ? <Link className="whitespace-nowrap text-text-link underline" to={`/review/proposals?group=${encodeURIComponent(`combination:${id}`)}`}>Open on To review</Link> : undefined}>
+        <div ref={said} tabIndex={-1} className="outline-none" data-pqr-propose-said><Notice tone={picked.proposed ? "ok" : "info"} title={picked.proposed ? `${picked.proposed} pick${picked.proposed === 1 ? "" : "s"} proposed` : "No new pick"} action={picked.proposed || picked.waitingAlready ? <Link className="whitespace-nowrap text-text-link underline" to={`/review/proposals?group=${encodeURIComponent(`combination:${id}`)}`}>Open on To review</Link> : undefined}>
           <span data-pqr-propose-result>{picked.words}</span>
-        </Notice>
+        </Notice></div>
       ) : null}
       <p className="text-sm"><span className="font-medium">{roleLabel}: {n} pre-qualification question{n === 1 ? "" : "s"} in this combination.</span> <span className="text-text-muted">A prospect answers them before a case starts; the client questionnaire later shows each answer as "please confirm", and a document read that differs is a check, not an overwrite. A tick goes out with this combination's next release, checked with everything else in it.</span></p>
       {country.error ? <Notice tone="warn" title="The country pre-qualification could not load">{country.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void country.refetch()}>Retry</button></Notice> : null}

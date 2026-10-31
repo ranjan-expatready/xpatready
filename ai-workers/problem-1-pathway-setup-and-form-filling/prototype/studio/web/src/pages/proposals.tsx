@@ -7,7 +7,7 @@ import * as React from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Check, ChevronRight, Undo2 } from "lucide-react";
 import { BAND_TIPS, BAND_WORDS, BANDS, type Band, type ChangeBatch, type DecideResult, type ProposalsView, type QueueProposal } from "../../../contracts/review-proposals";
-import { api, useAction, useActorId, useApi } from "@/lib/api";
+import { api, useAction, useActorId, useApi, useSessionView } from "@/lib/api";
 import { Button, Notice, Panel, Pill, Table, Textarea } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -156,6 +156,9 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
     { invalidate: inv, success: (r) => (p.kind === "pqr_pick" ? (r.items[0]?.landedAs ? "Accepted: it is now asked in pre-qualification in this combination's draft, released with it." : "Rejected: it is not asked in pre-qualification.") : r.items[0]?.landedAs ? `Decided. It landed as ${r.items[0].landedAs}.` : "Decided."), onDone: (r) => onDone(r, 1) });
   const checkPayload = p.readings.check?.payload ?? null;
   const differ = p.agreement === "differ" && !!checkPayload;
+  // Review m3 (f6): a pre-qualification pick ticks the combination's draft, which only a configuration author changes.
+  const { canAuthor } = useSessionView();
+  const authorOnly = p.kind === "pqr_pick" && !canAuthor;
   return (
     <Panel open onOpenChange={(o) => !o && onClose()} title={p.title} description={`${p.kind_word} · ${p.lands_on === "library" ? "shared library" : "this combination"}${p.basis === "SAMPLE" ? " · Sample until the immigration expert confirms" : ""}`}
       badge={<Pill tone={BAND_TONE[p.band]}>{BAND_WORDS[p.band]}</Pill>}
@@ -163,7 +166,8 @@ function SidePanel({ p, onClose, onDone }: { p: QueueProposal; onClose: () => vo
         <Button variant="secondary" busy={run.isPending} disabled={reason.trim().length < 3} onClick={() => run.mutate({ action: "reject" })}>Reject</Button>
         <span className="flex flex-wrap gap-2">
           {differ ? <Button variant="secondary" busy={run.isPending} onClick={() => run.mutate({ action: "edit", payload: checkPayload })}>Accept the checker's reading</Button> : null}
-          <Button busy={run.isPending} onClick={() => run.mutate({ action: "accept" })}>{differ ? "Accept the first reading" : "Accept"}</Button>
+          {authorOnly ? <span className="self-center text-xs text-text-muted" data-author-only>Only a configuration author accepts a pre-qualification pick.</span> : null}
+          <Button busy={run.isPending} disabled={authorOnly} onClick={() => run.mutate({ action: "accept" })}>{differ ? "Accept the first reading" : "Accept"}</Button>
         </span>
       </>}>
       <div className="flex flex-col gap-4 text-sm">

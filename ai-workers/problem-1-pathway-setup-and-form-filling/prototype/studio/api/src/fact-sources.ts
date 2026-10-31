@@ -145,7 +145,7 @@ export class FactSources {
   /** C4.7 (F6 slice 1; P-76, P-149 one door): the rules propose pre-qualification picks for a combination's draft and put
    *  them on To review, one item per person role and fact, each with its reason (engine/sources.ts pqrPicksByRules, the
    *  stand-in until W1-10 step 7 drafts them with AI on the founder's Go). A run is recorded (US$0, no AI). A pick already
-   *  waiting on the queue is not proposed twice; a ticked fact is never proposed. Accepting one ticks the fact in the draft
+   *  waiting on the queue, or decided by a person before, is not proposed again; a ticked fact is never proposed. Accepting one ticks the fact in the draft
    *  (acceptPqrPick), so it goes into the combination's one review and release with the rest (C4.8): no other approval. */
   async proposePicks(actor: Actor, combinationId: string) {
     need(actor, "author");
@@ -153,25 +153,36 @@ export class FactSources {
     if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
     if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its pre-qualification is not changed. Restore it on Structure first.`);
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, combinationId, "draft");
-    const waiting = new Set((await this.db.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId, kind: "pqr_pick", status: "waiting" }, select: { identityKey: true } })).map((x) => x.identityKey));
     const views = new Map(factSources(snapshot).map((f) => [`${f.role}|${f.fact}`, f]));
     const out = await this.db.$transaction(async (tx) => {
+      // Review m2 (f6): one propose per combination at a time, and the earlier picks read inside it, so two clicks at
+      // once never put the same pick on the queue twice.
+      await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`pqr_picks:${combinationId}`}))`;
+      // Review M2 (f6): a pick a person already decided (rejected, or accepted and later unticked by hand) is not proposed
+      // again; one still waiting is not repeated. Undo puts an item back to waiting, so it counts as waiting.
+      const earlier = await tx.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId, kind: "pqr_pick" }, select: { identityKey: true, status: true } });
+      const waiting = new Set(earlier.filter((x) => x.status === "waiting").map((x) => x.identityKey));
+      const decided = new Set(earlier.filter((x) => x.status !== "waiting").map((x) => x.identityKey));
       const job = await tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId, kind: PQR_PICKS_KIND, mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(), message: "Pre-qualification picks proposed by the rules (no AI, US$0)" } });
       const all = pqrPicksByRules(snapshot, combinationId, job.id, randomUUID);
-      const fresh = all.filter((i) => !waiting.has(i.identity.key));
+      const fresh = all.filter((i) => !waiting.has(i.identity.key) && !decided.has(i.identity.key));
+      const decidedAlready = all.filter((i) => !waiting.has(i.identity.key) && decided.has(i.identity.key)).length;
+      const waitingAlready = all.filter((i) => waiting.has(i.identity.key)).length;
       const items = fresh.map(({ id: _id, status: _status, decision: _decision, ...item }) => {
         const f = views.get(item.identity.key)!;
         return { ...item, work: { title: `Ask "${f.label}" (${who(snapshot, f.role)}) in pre-qualification` } };
       });
       await insertProposals(tx, c.workspaceId, items);
       const message = items.length ? `${items.length} pre-qualification pick${items.length === 1 ? "" : "s"} proposed by the rules (no AI, US$0)` : "No new pick: the rules found nothing else to propose";
-      await tx.draftingJob.update({ where: { id: job.id }, data: { message, detail: { proposed: items.length, waiting_already: all.length - fresh.length } } });
-      return { runId: job.id, proposed: items.length, waitingAlready: all.length - fresh.length };
+      await tx.draftingJob.update({ where: { id: job.id }, data: { message, detail: { proposed: items.length, waiting_already: waitingAlready, decided_already: decidedAlready } } });
+      return { runId: job.id, proposed: items.length, waitingAlready, decidedAlready };
     }, QUEUE_TX);
     await this.audit.log(c.workspaceId, actor.id, "proposed", "pre-qualification picks", c.combinationKey, `${actor.name} asked the rules for pre-qualification picks on "${c.label}": ${out.proposed} proposed${out.waitingAlready ? `, ${out.waitingAlready} already waiting on To review` : ""} (no AI, US$0)`, { runId: out.runId }, combinationId);
+    const decidedWords = out.decidedAlready ? ` ${out.decidedAlready} the rules would propose ${out.decidedAlready === 1 ? "was" : "were"} decided by a person before, so ${out.decidedAlready === 1 ? "it is" : "they are"} not proposed again.` : "";
     const words = out.proposed
-      ? `${out.proposed} pick${out.proposed === 1 ? " is" : "s are"} waiting on To review, each with its reason. Accept the ones a prospect should be asked.${out.waitingAlready ? ` ${out.waitingAlready} more ${out.waitingAlready === 1 ? "was" : "were"} already waiting.` : ""}`
-      : out.waitingAlready ? `Nothing new: the ${out.waitingAlready} pick${out.waitingAlready === 1 ? " the rules propose is" : "s the rules propose are"} already waiting on To review.`
+      ? `${out.proposed} pick${out.proposed === 1 ? " is" : "s are"} waiting on To review, each with its reason. Accept the ones a prospect should be asked.${out.waitingAlready ? ` ${out.waitingAlready} more ${out.waitingAlready === 1 ? "was" : "were"} already waiting.` : ""}${decidedWords}`
+      : out.waitingAlready ? `Nothing new: the ${out.waitingAlready} pick${out.waitingAlready === 1 ? " the rules propose is" : "s the rules propose are"} already waiting on To review.${decidedWords}`
+      : out.decidedAlready ? `Nothing new:${decidedWords}`
       : "Nothing to propose: no rule of this combination reads an answer a prospect can give that is not already asked in pre-qualification.";
     return { ...out, words };
   }
@@ -289,17 +300,27 @@ export async function pickStamp(tx: Prisma.TransactionClient, key: string) {
   const { combinationId, lineageKey } = pickParts(key);
   return tx.factSource.findMany({ where: { combinationId, lineageKey }, orderBy: { version: "asc" }, select: { version: true, status: true, prequalification: true, source: true, updatedAt: true } });
 }
-/** Undo of an accepted pick (proposals.ts undo, within its 10 s): the tick is taken off the draft again. The draft row the
- *  pick wrote goes when nothing else differs from the released row (or there is none to keep); otherwise only its tick. */
-export async function unlandPick(tx: Prisma.TransactionClient, key: string) {
+type PriorDraft = { role: string; canonicalFieldKey: string; source: string | null; documentTypeKey: string | null; prequalification: boolean; reason: string | null; sourceReason: string | null; version: number; supersedesId: string | null; origin: string; updatedBy: string; batchId: string | null } | null;
+/** The draft row an accepted pick replaces (acceptPqrPick deletes it and writes its own), kept on the queue item so Undo
+ *  puts it back exactly: its source, document, reasons, origin, author and bulk batch (review m1, f6). */
+export async function priorPickDraft(tx: Prisma.TransactionClient, combinationId: string, role: string, fact: string): Promise<PriorDraft> {
+  const top = await tx.factSource.findFirst({ where: { combinationId, lineageKey: `${role}|${fact}` }, orderBy: { version: "desc" } });
+  if (!top || top.status !== "DRAFT") return null;
+  return { role: top.role, canonicalFieldKey: top.canonicalFieldKey, source: top.source, documentTypeKey: top.documentTypeKey, prequalification: top.prequalification, reason: top.reason, sourceReason: top.sourceReason, version: top.version, supersedesId: top.supersedesId, origin: top.origin, updatedBy: top.updatedBy, batchId: (top as { batchId?: string | null }).batchId ?? null };
+}
+/** Undo of an accepted pick (proposals.ts undo, within its 10 s): the draft row the pick wrote goes, and the draft row it
+ *  replaced (if any) comes back as it was; with none, the fact is back to its released row (or to the rules). */
+export async function unlandPick(tx: Prisma.TransactionClient, key: string, landed: Record<string, unknown> = {}) {
   const { combinationId, lineageKey } = pickParts(key);
   const rows = await tx.factSource.findMany({ where: { combinationId, lineageKey }, orderBy: { version: "desc" } });
-  const draft = rows[0]?.status === "DRAFT" && rows[0].prequalification ? rows[0] : null;
-  if (!draft) return;
-  const released = rows.find((r) => r.status === "PUBLISHED");
-  const same = released ? released.source === draft.source && released.documentTypeKey === draft.documentTypeKey && (released.sourceReason ?? null) === (draft.sourceReason ?? null) && !released.prequalification : draft.source === null && !draft.sourceReason;
-  if (same) await tx.factSource.delete({ where: { id: draft.id } });
-  else await tx.factSource.update({ where: { id: draft.id }, data: { prequalification: false, reason: null } });
+  const mine = rows[0]?.status === "DRAFT" && rows[0].prequalification ? rows[0] : null;
+  if (!mine) return;
+  await tx.factSource.delete({ where: { id: mine.id } });
+  const prior = (landed.priorDraft ?? null) as PriorDraft;
+  if (prior) {
+    const { batchId, ...row } = prior;
+    await tx.factSource.create({ data: { ...row, workspaceId: mine.workspaceId, combinationId, lineageKey, status: "DRAFT", source: row.source as never, origin: row.origin as never, ...(batchId ? { batchId } : {}) } });
+  }
 }
 
 /** The same rules release applies (engine/sources.ts factSourceProblems), said at save for this one fact. */

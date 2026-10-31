@@ -39,9 +39,12 @@ const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsS
   ok("C4.7 fail: only an author asks for picks (the Approver is refused, 403, nothing proposed)", r.status === 403 && n(`select count(*) from proposal_item where kind='pqr_pick'`) === 0, r.status);
   r = await call("POST", `/combinations/00000000-0000-4000-8000-000000000000/pqr/picks`);
   ok("C4.7 fail: an unknown combination is refused in words (404)", r.status === 404 && /does not exist/.test(words(r)), words(r));
-  r = await call("POST", `/combinations/${wp}/pqr/picks`);
-  const first = r.body;
-  ok("C4.7 pass: the rules propose picks for the work permit's draft and say where they wait, in words", r.status === 200 && first.proposed > 0 && first.waitingAlready === 0 && /waiting on To review/.test(first.words), first);
+  // Review m2 (f6): two clicks at once never put the same pick on the queue twice.
+  const [r1, r2] = await Promise.all([call("POST", `/combinations/${wp}/pqr/picks`), call("POST", `/combinations/${wp}/pqr/picks`)]);
+  const [first, twin] = r1.body.proposed >= r2.body.proposed ? [r1.body, r2.body] : [r2.body, r1.body];
+  ok("C4.7 pass: the rules propose picks for the work permit's draft and say where they wait, in words", r1.status === 200 && r2.status === 200 && first.proposed > 0 && first.waitingAlready === 0 && /waiting on To review/.test(first.words), first);
+  ok("C4.7 review m2 fail: two proposes at the same moment put each pick on the queue once (the second finds them waiting)", twin.proposed === 0 && twin.waitingAlready === first.proposed && n(`select count(*) from proposal_item where combination_id='${wp}' and kind='pqr_pick'`) === first.proposed && n(`select count(*) from (select identity_key from proposal_item where combination_id='${wp}' and kind='pqr_pick' group by identity_key having count(*) > 1) d`) === 0, { first: first.proposed, twin });
+  r = r1;
   const job = sql(`select kind || '|' || mode || '|' || status || '|' || coalesce(cost_usd, -1) from drafting_job where id='${first.runId}'`);
   ok("C4.7 pass: the proposal is a recorded run with no AI and no cost (LOCAL, US$0), and nothing was spent", job === "pqr_picks|LOCAL|COMPLETED|0" && ledger() === spent, job);
   let Q = await queue();
@@ -69,6 +72,12 @@ const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsS
   // ---------------------------------------------------------------- rule 3: Undo takes the tick back (10 s), the pick waits again
   r = await call("POST", `/review/proposals/undo/${batch}`);
   ok("C4.7 pass: Undo within 10 s takes the tick off the draft and the pick waits on To review again", r.status < 300 && !ticked(ka) && n(`select count(*) from proposal_item where id='${a.id}' and status='waiting'`) === 1, r.status >= 300 ? words(r) : r.body);
+  // Review M1 (f6): Accept with the reason box left empty keeps the pick's own reason, never the run's general sentence.
+  const own = String(sql(`select payload->>'reason' from proposal_item where id='${a.id}'`));
+  r = await call("POST", "/review/proposals/decide", { ids: [a.id], action: "accept" });
+  const kept = sql(`select coalesce(reason,'') from fact_source where combination_id='${wp}' and lineage_key='${ka}' order by version desc limit 1`);
+  ok("C4.7 review M1 pass: accepted with no reason typed, the tick keeps the pick's own reason (\"A rule of this combination reads it: …\")", r.status < 300 && kept === own && /^A rule of this combination reads it: /.test(kept) && !/Proposed by the rules/.test(kept), { kept, own });
+  await call("POST", `/review/proposals/undo/${r.body?.batchId}`);
   r = await call("POST", "/review/proposals/decide", { ids: [a.id], action: "accept", reason: "Accepted again after the undo." });
   const batch2 = r.body?.batchId;
   const v = Number(sql(`select max(version) from fact_source where combination_id='${wp}' and lineage_key='${ka}'`));
@@ -80,11 +89,25 @@ const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsS
   // ---------------------------------------------------------------- rule 4: reject leaves it unticked; a fact ticked meanwhile is refused
   r = await call("POST", "/review/proposals/decide", { ids: [b.id], action: "reject", reason: "Not something a prospect knows yet." });
   ok("C4.7 pass: rejecting a pick leaves the fact unticked and the pick decided (rejected, with the reason)", r.status < 300 && !ticked(kb) && sql(`select status || '|' || coalesce(decision_reason,'') from proposal_item where id='${b.id}'`) === "rejected|Not something a prospect knows yet.", r.status >= 300 ? words(r) : r.body);
+  r = await call("POST", `/combinations/${wp}/pqr/picks`);
+  ok("C4.7 review M2 fail: a pick a person rejected is not proposed again by the next run, which says so", r.status === 200 && r.body.proposed === 0 && r.body.decidedAlready >= 1 && /decided by a person before/.test(r.body.words) && n(`select count(*) from proposal_item where combination_id='${wp}' and kind='pqr_pick' and identity_key='${kb}'`) === 1, r.body);
   const vc = Number(sql(`select coalesce(max(version), 0) from fact_source where combination_id='${wp}' and lineage_key='${kc}'`));
   const [rc, ...fc] = kc.split("|");
   const byHand = await call("PUT", `/combinations/${wp}/fact-sources/${encodeURIComponent(rc)}/${encodeURIComponent(fc.join("|"))}`, { prequalification: true, reason: "Ticked by hand first.", version: vc });
   r = await call("POST", "/review/proposals/decide", { ids: [c2.id], action: "accept", reason: "Late accept." });
   ok("C4.7 fail: a pick whose fact was ticked by hand meanwhile is refused in words (409), the hand tick and its reason kept", byHand.status === 200 && r.status === 409 && /already asked in pre-qualification/.test(words(r)) && sql(`select reason from fact_source where combination_id='${wp}' and lineage_key='${kc}' order by version desc limit 1`) === "Ticked by hand first." && n(`select count(*) from proposal_item where id='${c2.id}' and status='waiting'`) === 1, { hand: byHand.status >= 300 ? words(byHand) : byHand.status, accept: words(r) });
+
+  // ---------------------------------------------------------------- review m1 (f6): Undo puts back the author's own draft row exactly
+  const d = (await queue()).find((x: any) => ![a.id, b.id, c2.id].includes(x.id))!;
+  const kd = keyOf(d), [rd, ...fd] = kd.split("|");
+  const vd = Number(sql(`select coalesce(max(version), 0) from fact_source where combination_id='${wp}' and lineage_key='${kd}'`));
+  const own2 = await call("PUT", `/combinations/${wp}/fact-sources/${encodeURIComponent(rd)}/${encodeURIComponent(fd.join("|"))}`, { prequalification: false, reason: "Author note kept by Undo.", version: vd });
+  const rowOf = () => sql(`select version || '|' || status || '|' || coalesce(source::text,'-') || '|' || coalesce(reason,'-') || '|' || origin || '|' || updated_by || '|' || prequalification from fact_source where combination_id='${wp}' and lineage_key='${kd}' order by version desc limit 1`);
+  const beforeAccept = rowOf();
+  r = await call("POST", "/review/proposals/decide", { ids: [d.id], action: "accept" });
+  const acceptedRow = rowOf();
+  const u = await call("POST", `/review/proposals/undo/${r.body?.batchId}`);
+  ok("C4.7 review m1 pass: Undo after an accept puts the author's earlier draft row back exactly (source, reason, origin, author)", own2.status === 200 && r.status < 300 && u.status < 300 && /\|true$/.test(acceptedRow) && rowOf() === beforeAccept, { after: rowOf(), beforeAccept, accepted: acceptedRow.slice(-20), statuses: [own2.status, r.status, u.status] });
 
   // ---------------------------------------------------------------- rule 5: C4.8 the accepted pick goes out with the combination's one release
   const draft = (await call("GET", `/combinations/${wp}`)).body?.draft;
