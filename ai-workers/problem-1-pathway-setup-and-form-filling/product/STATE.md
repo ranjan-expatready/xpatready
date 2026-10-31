@@ -2,6 +2,11 @@
 
 updated: 2026-10-31 · milestone: **M2 — Super Admin configuration**, with the thin runtime slice R1 · way of working: `WAY-OF-WORKING.md` · work list: `BACKLOG.md` · why each choice was made: `design/why-we-chose-2026-10-31.md`
 
+## Goals (P-202; the Lead updates them at every handover)
+* **Today (31 Oct):** the merge queue clears the backlog of approved PRs overnight; the demo shows F1 copies per form line and the F2 library fill.
+* **This week (to 7 Nov):** F7 (demo reset and sample) done; F1, F2 and F6 well under way; workflow frozen except fixes (founder's time on the product).
+* **M2 gate:** about three weeks from 31 Oct on the feature sizes (`BACKLOG.md` › Features); firmed after the first features' real times.
+
 ## Resume here (a fresh `/lead` chat)
 1. Open PRs: `gh pr list`. A PR merges by itself on green CI plus the label `review: approved` (the `automerge` workflow checks every approved open PR on each run). The demo updates itself after merges.
 2. Builders run as cloud sessions (forms, runtime, screens). They cannot message the Lead: their PRs are their reports, and their questions sit under "Questions" in each PR. Collect them; decide the technical ones; bring the founder only product, money and preference questions, one at a time, with a recommendation.

@@ -24,14 +24,15 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The wa
 * **Money:** live AI is off on every copy; a paid run needs the founder's Go with the cost stated first.
 
 ## Standing rules (P-202, founder 31 Oct)
-1. **20-minute check from the first minute** (CronCreate): merge-queue batches, red checks, merges, builders' activity and questions, the demo at :4400; three to five plain lines to the founder each time.
-2. **Never wait on merges.** Builders work through their feature list and start the next item as soon as one is approved; the moment one is idle, give it its next items.
-3. **Always look for parallel work.** Every check asks what else can run now; an area with work and no session gets one. That includes qa in the cloud: after-merge tests, exploratory journeys and edge cases on built features, capability-gap and design reviews of screens not built yet. Start one only when there is something new to test, and keep the kinds of runs that found real bugs.
-4. **Builders' questions reach the founder.** Every check reads each PR's "Questions". Answer the technical ones; bring product questions to the founder one at a time with a recommendation, relay the answer to the builder by message, and get it working again.
-5. **No drift.** Check each PR's "what and why" against the founder's decisions and the agreed boards; a new screen part needs the founder's early look before it is built.
-6. **Every founder ask goes through the five steps** in `WAY-OF-WORKING.md` (reread its principles each chat): restate, find the facts, challenge, recommend, act once agreed. Ask factual questions; never guess the founder's intent.
-7. **Mergify does all merging;** merge by hand only with the founder's OK.
-8. **When the situation changes, reread the options dropped earlier.**
+1. **20-minute check from the first minute** (CronCreate): merge-queue batches, red checks, merges, builders' activity and questions, the demo at :4400; three to five plain lines to the founder each time. Each check also asks: did anything I started stop, fail or go quiet (a builder, qa, a workflow, a rule)? Restart or replace it, and say so.
+2. **Judge progress against three goals** kept at the top of `STATE.md`: today (what merges and shows on the demo), this week (which features finish), the M2 gate date.
+3. **Never wait on merges.** Builders work through their feature list and start the next item as soon as one is approved; the moment one is idle, give it its next items.
+4. **Always look for parallel work.** Every check asks what else can run now; an area with work and no session gets one. That includes qa in the cloud: after-merge tests, exploratory journeys and edge cases on built features, capability-gap and design reviews of screens not built yet. Start one only when there is something new to test, and keep the kinds of runs that found real bugs.
+5. **Builders' questions reach the founder.** Every check reads each PR's "Questions". Answer the technical ones; bring product questions to the founder one at a time with a recommendation, relay the answer to the builder by message, and get it working again.
+6. **No drift.** Check each PR's "what and why" against the founder's decisions and the agreed boards; a new screen part needs the founder's early look before it is built.
+7. **Every founder ask goes through the five steps** in `WAY-OF-WORKING.md` (reread its principles each chat): restate, find the facts, challenge, recommend, act once agreed. Ask factual questions; never guess the founder's intent.
+8. **Mergify does all merging;** merge by hand only with the founder's OK.
+9. **When the situation changes, reread the options dropped earlier.**
 
 ## Habits (lessons of 31 Oct)
 * Judge a check by its exit code, never by the tail of its output.

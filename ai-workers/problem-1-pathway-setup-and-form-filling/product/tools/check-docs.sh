@@ -1,5 +1,5 @@
 #!/bin/bash
-# Keeps agent instructions small and links working (P-188, P-189): skills and agents under 100 lines and 7 KB, root
+# Keeps agent instructions small and links working (P-188, P-189): skills and agents under 100 lines and 10 KB (P-203: over it, merge duplicates only, never cut a unique rule; overflow moves to WAY-OF-WORKING.md with a pointer), root
 # CLAUDE.md/AGENTS.md under 60 lines (long instruction files lower agents' success: design/research-agent-teams-2026-10-31.md);
 # records have no size limit (git history is the archive); backticked product paths must exist next to the citing file,
 # in the product or problem folder, or at the root. Prints problems; exit 1 if any. Used by the Stop hook and the tech lead.
@@ -9,7 +9,7 @@ check() { local max=$1 kb=$2; shift 2; for f in "$@"; do [ -f "$f" ] || continue
   [ "$n" -gt "$max" ] && echo "TOO LONG ($n lines > $max): ${f#$ROOT/}"
   [ "$kb" -gt 0 ] && [ "$b" -gt $((kb * 1024)) ] && echo "TOO BIG ($((b / 1024)) KB > $kb KB): ${f#$ROOT/}"; done; }
 {
-  check 100 7 "$ROOT"/.claude/skills/*/SKILL.md "$ROOT"/.claude/agents/*.md
+  check 100 10 "$ROOT"/.claude/skills/*/SKILL.md "$ROOT"/.claude/agents/*.md
   check 60 0 "$ROOT/CLAUDE.md" "$ROOT/AGENTS.md"
   for f in "$PH"/*.md "$PH"/domain/*.md "$ROOT"/.claude/skills/*/SKILL.md "$ROOT"/.claude/agents/*.md; do
     grep -o '`[A-Za-z0-9_./-]*\.md`' "$f" | tr -d '`' | sort -u | while read -r ref; do
