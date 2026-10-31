@@ -1,5 +1,5 @@
 # Nightly full set (test-speed plan, founder 31 Oct): each pull request checks only the suites its files can affect, on
-# GitHub's machine (ci.yml, run-suites.sh --changed); every suite runs here every night on main, on the founder's Mac
+# the same Mac since P-195 (ci.yml, run-suites.sh --changed); every suite runs here every night on main, on the founder's Mac
 # (self-hosted runner "xr-mac", ~/actions-runner-xpatready: no GitHub-hosted minutes are billed, US$0). The Mac must be
 # on at 21:00 UTC; "Run workflow" (workflow_dispatch) starts it by hand. The :4400 demo is never touched (the browser
 # suite runs on its own isolated copy). No model call: every suite replays saved runs.

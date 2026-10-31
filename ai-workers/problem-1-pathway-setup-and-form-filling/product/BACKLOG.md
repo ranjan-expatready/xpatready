@@ -7,6 +7,7 @@ One queue for everything: **Now** (in order, being done), **Next** (in order, st
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
+| N0 | tech lead | **Blocker: GitHub refused every CI job (31 Oct, from about 06:15 UTC)** because the US$10 Actions budget was spent in one morning. P-195: PR checks and auto-merge move back to the Mac runner | the P-195 PR runs green on `xr-mac`; the waiting approved PRs re-run and merge by themselves | Actions annotations, 31 Oct |
 | N1 | forms | **Merge PR #112:** slice 1 channels (P-143), live AI off by default on every copy (P-175, QA-100), one shared spend ledger (QA-90), cost warning and recorded Continue (P-179, C11.8) | merged; :4400 on the new main; QA-90 and QA-100 retested by qa | PR #112; forms Handover at faf7fca9 |
 | N2 | screens | **Merge PR #111:** PR #108 review Minors | merged | PR #111 |
 | N3 | runtime | **Merge PR #113:** queue transaction fix, C10.1 configured checkpoint, C3.11 signed-scan lines, P-184 speed helper, S7 Reset + Load sample (six combinations, P-148) | synced with main; tech lead decides the four "Found while building" points in the runtime branch's c10.1 plan (screens/W1-reset-and-sample); merged | PR #113; runtime Handover 30 Oct |
@@ -16,11 +17,13 @@ One queue for everything: **Now** (in order, being done), **Next** (in order, st
 | N7 | runtime | **Devin findings:** DV-bb-9 withdraw checks proposer = actor (`lifecycle.ts:434`), DV-bb-8 remove `POST /combinations/:id/attachments`, DV-d1-3 | fail test before the fix | LEAD.md Devin row |
 | N8 | forms | **Devin findings** DV-d1-1, DV-d1-2; **F2** official-pages confirm endpoint | — | LEAD.md Devin row |
 | N9 | screens | **Devin finding** DV-d1-4 | — | LEAD.md Devin row |
-| N10 | founder | **Paid runs waiting on N1** (each needs a Go with the cost first): R-146 field-map run for 8 demo forms (IMM 1294, 5646, 5710, 0008, 5406, 5562, 5532, 5604; up to US$45); R-145 Who can be live retest QA-99 (≈US$0.91); R-140 qa live smoke of the AI paths; R-98/R-101 drafts of IMM 0008, 5669, 5406 (up to US$12; fold into R-146 where the same forms) | actual cost reported | REQUESTS R-98, R-101, R-140, R-145, R-146 |
+| N10 | founder | **Paid runs waiting on N1** (each needs a Go with the cost first): R-146 field-map run for 8 demo forms (IMM 1294, 5646, 5710, 0008, 5406, 5562, 5532, 5604; up to US$45); R-145 done 30 Oct (qa live retest, US$0.13; QA-99 closed, report `qa/reports/2026-10-30-live-qa99.md`); R-140 qa live smoke of the AI paths; R-98/R-101 drafts of IMM 0008, 5669, 5406 (up to US$12; fold into R-146 where the same forms) | actual cost reported | REQUESTS R-98, R-101, R-140, R-145, R-146 |
 
 ## Next (M2, P-173: no scope cut; in order per area)
 | # | Area | Item | Source |
 |---|---|---|---|
+| X1a | screens | **Bug: a combination with 0 forms and 0 documents can be submitted, signed off and approved** (the release rule in `studio.ts`; found by the runtime builder in #113 on three combinations) | c10.1-plan.md "Found while building" |
+| X9a | runtime | Sample: add one off-list file with a readable edition (IMM 5476, 2021 edition) so held-file approval can be shown; the validator's K1 message names a raw form-field path (`IMM_5707[0].page1[0]…`) instead of the field's label | c10.1-plan.md "Found while building" |
 | X1 | screens | C2: StepBadge and `?focus=` landing on Documents and Questionnaires; then C3 Overview strip | W1-setup-checklist plan |
 | X2 | screens | Linking combinations and copying a line (C1.3, C1.5) | screens queue (4) |
 | X3 | screens | S6 Shared library: one review queue, one Add in plain words (W1-09; P-120, P-121, P-149; recheck 2026-10-28 has 5 Majors to fold in; P-138 drafting on a click); code lists and shared condition (W1-16 part); QA-82 (question column shows the definition) | WAVE-1 S6, W1-09, W1-16 |
@@ -29,7 +32,7 @@ One queue for everything: **Now** (in order, being done), **Next** (in order, st
 | X6 | forms | W1-07 AI run experience: steps shown live, progress bar, plain errors, Stop (R-116; cap US$60 for wave 1) | WAVE-1 W1-07 |
 | X7 | forms | W1-10 AI drafts the remaining masters from the PDFs and checklists (sections, document types, conditions, checks; proposals only); m8 oath boxes; W1-16 forms part (edition attributes, country variant, length and continuation, signature value, online-only intake with a unique code, P-150, P-152) | WAVE-1 W1-10, W1-16 |
 | X8 | forms | Open forms bugs QA-75, QA-98, QA-101–107, QA-109–111; R-126 (a hand upload the rules cannot read waits for a person) | qa/BUGS.md; REQUESTS R-126 |
-| X9 | runtime | Open runtime bugs QA-76–78, QA-91, QA-99 (Critical: live retest in N10), QA-108, QA-112, QA-114–117 | qa/BUGS.md |
+| X9 | runtime | Open runtime bugs QA-76–78, QA-91, QA-108, QA-112, QA-114–117 | qa/BUGS.md |
 | X10 | evidence (Mac) | W1-12: Adobe checks of the official PDFs for the 5 combinations (+1 Corporate Sample); E1b IMM 5409 check, F5 (static forms' page fields empty outside Adobe) and F6 (oath details in Validate) to forms, then IMM 5476 | WAVE-1 W1-12; evidence lane |
 | X11 | qa | M2 gate: content publisher walk on the six combinations, like a person (S8, W1-13); intended user for D17/D20 arranged by the founder (R-93) | WAVE-1 S8 |
 | X0 | tech lead | **Regroup this backlog into features (P-191)** after #111–#113 merge: Super Admin setup, then case officer, then client; each feature done when a person can do it on the demo; then walk the founder through `design/why-we-chose-2026-10-31.md` | P-191 |

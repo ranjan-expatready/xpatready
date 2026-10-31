@@ -1,0 +1,9 @@
+603a604,611
+> {"type":"reserve","id":"studio-who-can-be-sp-student-5f0e15fe-stub-20261030t070752947z-f3c29f#1#1793344081675","run_id":"studio-who-can-be-sp-student-5f0e15fe-stub-20261030t070752947z-f3c29f","attempt":1,"worst_usd":0.244696,"caller":"stub","at":"2026-10-30T07:08:01.675Z"}
+> {"type":"settle","id":"studio-who-can-be-sp-student-5f0e15fe-stub-20261030t070752947z-f3c29f#1#1793344081675","actual_usd":0,"outcome":"ok","at":"2026-10-30T07:08:01.677Z"}
+> {"type":"reserve","id":"studio-who-can-be-sp-student-5f0e15fe-live-20261030t070807811z-34e7bc#1#1793344095808","run_id":"studio-who-can-be-sp-student-5f0e15fe-live-20261030t070807811z-34e7bc","attempt":1,"worst_usd":0.244696,"caller":"paid","at":"2026-10-30T07:08:15.808Z"}
+> {"type":"settle","id":"studio-who-can-be-sp-student-5f0e15fe-live-20261030t070807811z-34e7bc#1#1793344095808","actual_usd":0.065368,"outcome":"ok","at":"2026-10-30T07:08:25.922Z"}
+> {"type":"reserve","id":"studio-who-can-be-check-sp-student-a8ecdbb0-stub-20261030t070833401z-f7284d#1#1793344121348","run_id":"studio-who-can-be-check-sp-student-a8ecdbb0-stub-20261030t070833401z-f7284d","attempt":1,"worst_usd":0.241276,"caller":"stub","at":"2026-10-30T07:08:41.348Z"}
+> {"type":"settle","id":"studio-who-can-be-check-sp-student-a8ecdbb0-stub-20261030t070833401z-f7284d#1#1793344121348","actual_usd":0,"outcome":"ok","at":"2026-10-30T07:08:41.349Z"}
+> {"type":"reserve","id":"studio-who-can-be-check-sp-student-a8ecdbb0-live-20261030t070845786z-238583#1#1793344130738","run_id":"studio-who-can-be-check-sp-student-a8ecdbb0-live-20261030t070845786z-238583","attempt":1,"worst_usd":0.241276,"caller":"paid","at":"2026-10-30T07:08:50.738Z"}
+> {"type":"settle","id":"studio-who-can-be-check-sp-student-a8ecdbb0-live-20261030t070845786z-238583#1#1793344130738","actual_usd":0.066184,"outcome":"ok","at":"2026-10-30T07:08:59.417Z"}
