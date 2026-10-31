@@ -117,6 +117,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const rv = await main();
     step("QA-73: Review and release: no \"SME duty\", no \"Derived\", no \"no tested helper\"", !/SME duty|Derived definition|Derived fields|no tested helper/.test(rv), (rv.match(/SME duty|Derived[^\n]{0,40}|no tested helper/) ?? [])[0]);
     await axe("Review and release"); await p.screenshot({ path: path.join(SHOTS, "review-1440.png"), fullPage: true });
+    // QA-73 and QA-74 retest (X4): on the released combination, each list warning names its form once, and the versions
+    // table has no fingerprint column (it is in the version's tip) and dates in the one format.
+    await go(`/c/${released}/review`);
+    if (await p.getByRole("button", { name: /^Show all \d+$/ }).count()) await p.getByRole("button", { name: /^Show all \d+$/ }).click();
+    const rr = await main(), lists = rr.split("\n").filter((l) => /rows? of its lists/.test(l));
+    step("QA-73: a list warning names its form once (\"IMM 1295: 37 rows\", never \"IMM 1295: IMM 1295:\")", lists.length > 0 && lists.every((l) => !/(IMM [\w ]+?): \1:/.test(l)), lists.find((l) => /(IMM [\w ]+?): \1:/.test(l)) ?? `${lists.length} list warnings`);
+    const versions = await p.locator("main table").last().innerText();
+    step("QA-74: Released versions: no Fingerprint column and no hash; the fingerprint is in the version's tip", /^Version\s/.test(versions) && !/Fingerprint/.test(versions) && !/[0-9a-f]{16}/.test(versions) && /^Fingerprint \(SHA-256\): [0-9a-f]{64}$/.test(await p.locator("main table").last().locator("tbody td").first().getAttribute("title") ?? ""), versions.slice(0, 160));
+    step("QA-74: Released versions: dates in the one format (no \"10/29/2026, 8:34:03 PM\")", !/\d+\/\d+\/\d{4}/.test(versions), versions.slice(0, 160));
+    await axe("Review and release (released)"); await p.screenshot({ path: path.join(SHOTS, "review-released-1440.png"), fullPage: true });
 
     // QA-48: a retired combination is found under the Retired chip (card v4, P-180), and the counts line says it is hidden
     await go("/");
