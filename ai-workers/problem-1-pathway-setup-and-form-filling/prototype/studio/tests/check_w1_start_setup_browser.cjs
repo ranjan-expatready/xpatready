@@ -7,7 +7,7 @@
 // shared run card shows it (M1, M4). The New combination page is gone (M2). Sample inputs; canada.ca is the recorded
 // copies and the AI is tests/fixtures/fake-launch.mjs (isolated copy only): US$0. Screenshots into
 // product/screens/W1-start-setup/screenshots/, axe (WCAG 2.2 AA) on each.
-//   zsh studio/tools/isolated.sh screens_s3b 4437 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && node studio/tests/check_w1_start_setup_browser.cjs 4437 xr_studio_screens_s3b
+//   zsh studio/tools/isolated.sh screens_s3b 4437 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && node studio/tests/check_w1_start_setup_browser.cjs 4437 xr_studio_screens_s3b
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
@@ -97,18 +97,29 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const offerTip = await tipOf(offerBtn);
   const words = /\((.*)\)$/.exec(label)?.[1] ?? "";
   step("M1 founder (wait for a click): with no saved answer the slot offers 'Find forms with AI (about US$… · at most US$…)', and nothing has run", /^Find forms with AI \(/.test(label) && new RegExp(`^${COST.source}$`).test(words) && (await offerBtn.getAttribute("data-find-forms")) === "live" && sql(`select count(*) from ai_batch where scope_label like '${cid}|%'`) === "0", label);
-  step("M1 / S3 fix 4: its tip states the cost in the button's words, before anything is spent", offerTip.toLowerCase().includes(`${words.toLowerCase()}. nothing is spent until you click.`), { words, offerTip });
-  fs.writeFileSync(path.join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 1, err: RAW } }));
+  step("M1 / S3 fix 4: its tip states the cost in the button's words, before anything is spent", offerTip.toLowerCase().includes(`${words.toLowerCase()} (`) && /\. Nothing is spent until you click\.$/.test(offerTip), { words, offerTip });
+  // QA-98: one run, one stated cost: the tip names what each AI step reserves, and those add up to the button's "at most".
+  const usdOf = (t) => Number(/at most US\$(\d+\.\d\d)/.exec(t)?.[1] ?? NaN);
+  const tipSteps = [...offerTip.matchAll(/([^(·]+?): at most US\$(\d+\.\d\d)/g)].map((m) => ({ label: m[1].trim(), usd: Number(m[2]) }));
+  const cents = (a) => Math.round(a.reduce((s, x) => s + x, 0) * 100);
+  const buttonWorst = usdOf(words);
+  step("C11.15: QA-98: the button's tip lists each AI step's reserve (the page pick and both forms rounds), and they add up to its 'at most'", tipSteps.length === 3 && cents(tipSteps.map((s) => s.usd)) === Math.round(buttonWorst * 100), { tipSteps, buttonWorst });
+  fs.writeFileSync(path.join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 1, err: RAW, sleep_ms: 5000 } })); // the run stays active long enough for its card to be read
   await p.evaluate(() => document.activeElement?.blur?.());
   await state("just-started");
 
   // ======================================================== the click: the run on the Forms tab's card, then the page choice
   await offerBtn.click();
-  await panel.locator("[data-run-line]").first().waitFor({ timeout: 15000 }).catch(() => undefined);
+  // The card shows only while the run is active, and a stand-in that fails at once could end before the card's first
+  // fetch on GitHub's 2-core machine (cardCost "" in #111, #120): the stand-in above now takes 5 s, and the cost line is
+  // waited for (up to 30 s, with text) and read from that same element; a timeout is a named failure, never swallowed.
+  const costEl = panel.locator("[data-run-cost]").filter({ hasText: /\S/ }).first();
+  const costWait = await costEl.waitFor({ state: "visible", timeout: 30000 }).then(() => "", (e) => e.message.split("\n")[0]);
+  step("S3 fix 4: the run card shows its cost line within 30 s of the click", !costWait, costWait || "shown");
   const batches = sql(`select count(*) from ai_batch where scope_label like '${cid}|%' and mode = 'LIVE'`);
   const runId = sql(`select id from ai_batch where scope_label like '${cid}|%' order by started_at desc limit 1`);
   step("M1 / M4: the click starts the live run (the fake launcher here, US$0) and the Forms tab's run card shows it", batches === "1" && !!runId, batches);
-  const cardCost = (await panel.locator("[data-run-cost]").first().innerText().catch(() => "")).trim();
+  const cardCost = costWait ? "" : (await costEl.innerText({ timeout: 5000 }).catch(() => "")).trim();
   step("S3 fix 4: the run card's cost says the button's words (about US$x · at most US$y), then what it spent", cardCost.startsWith(`${words} · US$`), { cardCost, words });
   await panel.locator('[data-find-forms="page"]').waitFor({ timeout: 30000 }).catch(() => undefined);
   const panelText = await panel.innerText();
@@ -125,6 +136,17 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const planCost = (await dlg.locator("[data-find-cost]").innerText().catch(() => "")).trim();
   step("item 5: 'Choose the page and find again' opens the page choice; a canada.ca page is taken and the plan reads only it (no AI round to pick the page)", await dlg.locator("[data-page-choice]").count() === 1 && !/AI picks the application package/.test(await dlg.innerText()) && !!planCost, planCost);
   step("S3 fix 4: the Find dialog says the cost in the same words", planCost.toLowerCase().startsWith(words.toLowerCase().replace(/ · at most.*/, "")), { planCost, words });
+  // QA-98: the dialog states its own plan the same way: each AI step's reserve beside it, the sum its "at most". With the
+  // page chosen, the page-pick step has no AI round and no reserve, so this run states less than the button's run did,
+  // by exactly the page pick's reserve: two plans, each stating one cost, never one run with two.
+  const dlgSteps = await dlg.locator("[data-step-reserve]").allInnerTexts();
+  const dialogWorst = usdOf(planCost);
+  const pagePick = tipSteps[0]?.usd ?? NaN;
+  step("C11.15: QA-98: the dialog lists each AI step's reserve; they add up to its 'at most'; the forms rounds reserve what the tip said", dlgSteps.length === 2 && cents(dlgSteps.map(usdOf)) === Math.round(dialogWorst * 100) && JSON.stringify(dlgSteps.map(usdOf)) === JSON.stringify(tipSteps.slice(1).map((s) => s.usd)), { dlgSteps, dialogWorst, tipSteps });
+  step("C11.15: QA-98 fail: with the page chosen the page pick reserves nothing and is not an AI step; the dialog's 'at most' is the button's less the page pick", /Use the application page already chosen \(no AI round\)/.test(await dlg.innerText()) && Math.round((buttonWorst - pagePick) * 100) === Math.round(dialogWorst * 100) && dialogWorst < buttonWorst, { buttonWorst, pagePick, dialogWorst });
+  const noPage = (await api(`/combinations/${cid}/forms/find/plan`, { method: "POST", data: { mode: "live" } })).body ?? {};
+  const crossed = await api(`/combinations/${cid}/forms/find`, { method: "POST", data: { mode: "live", pageUrl: PAGE, planSha256: noPage.plan_sha256 ?? "x", idempotencyKey: `qa98-${process.pid}` } });
+  step("C11.15: QA-98 fail: a run is never started on another plan than the one whose cost was stated (the no-page plan's fingerprint with a chosen page is refused)", !!noPage.plan_sha256 && crossed.status === 409 && sql(`select count(*) from ai_batch where scope_label like '${cid}|%' and mode = 'LIVE'`) === "1", { status: crossed.status, title: crossed.body?.title });
   await state("page-choice");
   await dlg.locator("[data-page-other]").fill("https://example.com/forms.html"); await p.waitForTimeout(1200);
   step("item 5 fail: a page outside canada.ca is refused in plain words; Start stays off", /canada\.ca/.test(await dlg.innerText()) && await p.getByRole("button", { name: "Start" }).isDisabled(), (await dlg.innerText()).slice(-200));

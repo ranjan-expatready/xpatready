@@ -5,15 +5,19 @@
 // The server honours STUDIO_FAKE_LAUNCHER only in an isolated copy's own working folder. QA-30: a draft request with no
 // mode is a plain 400. QA-32 (qa Minors pass): a retry after a mid-run cancel. W1-02 (P-102): QA-27 and QA-31 (the
 // screen-map draft's refusals and cancel) are parked with the browser extension. Every rule has a passing and a failing case.
-//   zsh studio/tools/isolated.sh forms_fl 4453 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_ai_launch_paths.ts 4453 xr_studio_forms_fl  [--evidence writes evidence/forms-slice2b]
+//   zsh studio/tools/isolated.sh forms_fl 4453 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_ai_launch_paths.ts 4453 xr_studio_forms_fl  [--evidence writes evidence/forms-slice2b]
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { LEDGER_DIR } from "../../p2/policy.ts";
 
 const PORT = Number(process.argv[2] ?? 4453), DB = process.argv[3] ?? "xr_studio_forms_fl";
 const STUDIO = join(import.meta.dirname, "..");
 const VARDIR = join(STUDIO, "var", `isolated-${DB.replace(/^xr_studio_/, "")}`);
-const LEDGER = join(STUDIO, "..", "p2", "ledger", "spend.jsonl");
+const LEDGER = join(LEDGER_DIR, "spend.jsonl"); // QA-90: the ledger every copy shares (run-suites: its scratch one)
+const ledgerText = () => (existsSync(LEDGER) ? readFileSync(LEDGER, "utf8") : "");
+/** Lines added since `was` that are not a stub pass at US$0 (QA-90 (9): test servers write those to the shared ledger; they count nothing). */
+const paidLinesSince = (was: string) => { const now = ledgerText(); return (now.startsWith(was) ? now.slice(was.length) : now).split("\n").filter(Boolean).filter((l) => { const x = JSON.parse(l); return !(x.caller === "stub" || (x.type === "settle" && x.actual_usd === 0)); }).length; };
 const log: { name: string; ok: boolean; detail?: unknown }[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 240)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
@@ -38,27 +42,26 @@ const FIX = join(STUDIO, "tests", "fixtures");
  *  wait can run out while the server is still starting, so a failed restart waits for /api/session up to 2 minutes more
  *  before the check reports it (a FAIL line, never a crash). */
 const restart = async (root: string, name: string, launcher: string) => {
-  try { execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), name, String(PORT), "restart", `STUDIO_FAKE_LAUNCHER=${launcher}`], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); return true; }
+  try { execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), name, String(PORT), "restart", "STUDIO_AI_LIVE=approved", `STUDIO_FAKE_LAUNCHER=${launcher}`], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); return true; }
   catch { return until(async () => (await fetch(`http://localhost:${PORT}/api/session`).catch(() => null))?.status === 200, 120_000); }
 };
 /** What the guarded launcher's stub passes write in the repository (the PR 10 part runs it on purpose, US$0): run, job
  *  and ticket files, the source's inventory, two ledger lines per pass (reserve and settle at US$0) and a new canary
  *  digest. Recorded at the start and put back at the end, so a regression run leaves the repository as it was (Lead
- *  note, 25 Oct): only files this run added are removed, and the ledger loses only the lines this run appended, and
- *  only while it still starts with what it held before (another copy's line is never touched). */
+ *  note, 25 Oct): only files this run added are removed. QA-90: the spend ledger is shared and never rewritten; this run's
+ *  stub lines stay in it at US$0. */
 const P2 = join(STUDIO, "..", "p2"), P1 = join(STUDIO, "..", "p1");
-const DIRS = [join(P2, "runs"), join(P2, "jobs"), join(P2, "ledger", "used-launch-tickets"), join(P1, "inventory")];
+const DIRS = [join(P2, "runs"), join(P2, "jobs"), join(LEDGER_DIR, "used-launch-tickets"), join(P1, "inventory")];
 const CANARY = join(P2, "screening", "canary-digest.json");
 const filesIn = (d: string): string[] => (existsSync(d) ? readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? filesIn(join(d, e.name)) : [join(d, e.name)])) : []);
-const before = { files: new Set(DIRS.flatMap(filesIn)), ledger: readFileSync(LEDGER, "utf8"), canary: existsSync(CANARY) ? readFileSync(CANARY, "utf8") : null };
+const before = { files: new Set(DIRS.flatMap(filesIn)), ledger: ledgerText(), canary: existsSync(CANARY) ? readFileSync(CANARY, "utf8") : null };
 function putBack() {
   const added = DIRS.flatMap(filesIn).filter((f) => !before.files.has(f));
   for (const f of added) rmSync(f, { force: true });
-  const now = readFileSync(LEDGER, "utf8");
-  const extra = now.startsWith(before.ledger) ? now.slice(before.ledger.length).split("\n").filter(Boolean) : null;
-  // Only stub lines settled at US$0 are this run's; anything else is left for a person to look at.
-  if (extra && extra.every((l) => { const x = JSON.parse(l); return x.caller === "stub" || (x.type === "settle" && x.actual_usd === 0); })) writeFileSync(LEDGER, before.ledger);
-  else if (extra?.length) console.log(`note: the spend ledger gained ${extra.length} line(s) that are not this run's stub passes; left as they are`);
+  // QA-90: the ledger is shared by every copy, so it is never rewritten here (another copy's line could be lost); this run's
+  // stub passes stay in it at US$0 and count nothing.
+  const extra = paidLinesSince(before.ledger);
+  if (extra) console.log(`note: the spend ledger gained ${extra} line(s) that are not stub passes at US$0; left as they are`);
   if (before.canary !== null) writeFileSync(CANARY, before.canary);
   return added.length;
 }
@@ -99,7 +102,7 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   sql(`update source_attachment set status = 'RECOGNISED' where id = '${source}'`);
   const plan = await call("POST", "/ai/plan", { scope: { kind: "source", ids: [source] }, mode: "LIVE", draftAgain: true });
   ok("setup: IMM 5409 on the Visitor visa plans one whole-form live call (no parts, nothing reused)", add.status === 201 && plan.body.targets?.[0]?.action === "draft" && !plan.body.targets[0].a4, plan.body.targets?.[0]?.why);
-  const ledgerBefore = statSync(LEDGER).size;
+  const ledgerBefore = ledgerText();
 
   // ──────────────────────────────────────────── QA-30: a draft request with no mode
   let r = await call("POST", `/attachments/${source}/draft`, {});
@@ -167,7 +170,9 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   const run3 = await draft(paid, source, false);
   ok("G4 per form fail: a third paid run from a new batch (Draft again) is refused before any call, the budget named", run3.status === "NOT STARTED" && /used its 4 paid AI attempts/.test(run3.message) && !run3.calls.length, run3);
   const plan3 = await call("POST", "/ai/plan", { scope: { kind: "source", ids: [source] }, mode: "LIVE", draftAgain: true });
-  ok("G4 per form fail: the plan shows the form as not eligible for a paid run, worst case US$0", plan3.body.targets?.[0]?.action === "not_eligible" && plan3.body.totals?.worst_usd === 0 && /counted across its runs/.test(plan3.body.targets[0].why), plan3.body.targets?.[0]);
+  // P-179 Q2 (Lead, 30 Oct): the form is shown over its "attempts" limit; only a person's Continue starts one more run
+  // (check_cost_override.ts tests the Continue).
+  ok("G4 per form fail (P-179 Q2): the plan shows the form over its paid attempts, a Continue needed, its worst case stated", plan3.body.targets?.[0]?.action === "draft" && plan3.body.targets[0].over_attempts === true && plan3.body.cost_check?.over?.some((o: { limit: string }) => o.limit === "attempts") && /counted across its runs/.test(plan3.body.targets[0].why), plan3.body.targets?.[0]);
   r = await call("POST", `/ai/batches/${run2.batchId}/retry`, {});
   ok("G4 per form fail: a retry of the second batch's first run is refused too (it alone was within the old per-batch rule)", r.status === 400 && /used its 4 paid AI attempts/.test(r.body?.message), { status: r.status, message: r.body?.message });
   scenario({ stub: { exit: 0, out: { ok: true } } });
@@ -215,7 +220,7 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   // S4 M7 (P-110) replaces "a sent call cannot be recalled": Stop now ends the running call itself.
   ok("C11.8 M7 whole form (break m1): a cancel during the paid call ends the call; it stays counted at its reserved worst case and its answer is never compared or applied", wj.status === "CANCELLED" && /Stopped while the AI call ran: the call was ended \(M7\)\. It stays counted at its reserved worst case; nothing of it is applied\./.test(wj.message) && sql(`select count(*) from proposal_item where run_id='${wf}'`) === "0", { status: wj.status, message: wj.message });
 
-  ok("none of these paths wrote to the shared spend ledger (no reservation, no correction line)", statSync(LEDGER).size === ledgerBefore);
+  ok("none of these paths wrote to the shared spend ledger (no reservation, no correction line)", paidLinesSince(ledgerBefore) === 0);
   ok("nothing was applied: IMM 5409 has no map rows from these drafts", sql(`select count(*) from drafting_job where attachment_id='${source}' and status='APPLIED'`) === "0");
 
   // ──────────────────────────────────────────── PR 10 review: STUDIO_FAKE_LAUNCHER runs only the test fixture
@@ -244,7 +249,7 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   const out = EVIDENCE ? join(STUDIO, "evidence", "forms-slice2b") : VARDIR; mkdirSync(out, { recursive: true });
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const removed = putBack();
-  ok("the run leaves the repository as it was: the stub passes' run, job and ticket files removed, the ledger and the canary digest as before", readFileSync(LEDGER, "utf8") === before.ledger && DIRS.flatMap(filesIn).every((f) => before.files.has(f)), { removed });
+  ok("the run leaves the repository as it was: the stub passes' run, job and ticket files removed, no ledger line beyond stub passes at US$0, the canary digest as before", paidLinesSince(before.ledger) === 0 && DIRS.flatMap(filesIn).every((f) => before.files.has(f)), { removed });
   console.log(`\n${pass}/${pass + fail} passed`);
   writeFileSync(join(out, "check_ai_launch_paths.json"), JSON.stringify({ at: new Date().toISOString(), port: PORT, database: DB, paid_calls: 0, pass, fail, log }, null, 1));
   process.exit(fail ? 1 : 0);

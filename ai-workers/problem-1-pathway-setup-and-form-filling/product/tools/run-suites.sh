@@ -3,6 +3,8 @@
 # lane's exact commit, and a lane before it hands back all run this one script, so they run the same checks.
 #   bash product/tools/run-suites.sh            every suite; the demo-reset browser suite only where :4400 is disposable
 #   bash product/tools/run-suites.sh --demo     also check_studio_browser.cjs (it RESETS the :4400 demo: CI and cloud only)
+#   bash product/tools/run-suites.sh --changed <base>..<head>   only the suites the change can affect, plus a smoke set
+#        (select-suites.mjs; pull requests, founder 31 Oct); everything when a shared file changed. Combines with --demo.
 # Each tests/check_*.ts|cjs names its run in a usage line: "isolated.sh <name> <port> start && tsx|node studio/tests/<file>
 # <args>" (an isolated copy: own database, own files, the demo is never touched) or "tsx studio/tests/<file>" (no server).
 # Never calls a model (every suite replays saved runs; US$0). Exit 1 when any suite fails; a summary table either way.
@@ -13,8 +15,14 @@ export PATH="$ROOT/.tools/node-v24.21.0/bin:/opt/homebrew/opt/postgresql@18/bin:
 # GNU timeout: `timeout` on Linux (CI), `gtimeout` from Homebrew coreutils on the Mac. Missing → stop loudly, never run unguarded.
 TIMEOUT="$(command -v timeout || command -v gtimeout || true)"
 [ -n "$TIMEOUT" ] || { echo "GNU timeout is missing (Mac: brew install coreutils, which provides gtimeout); no suite was run"; exit 2; }
-DEMO=0; [ "${1:-}" = "--demo" ] && DEMO=1
-NAMES=0; [ "${1:-}" = "--names" ] && NAMES=1   # print the names and ports this copy would use, run nothing
+DEMO=0; NAMES=0; CHANGED=""
+while [ $# -gt 0 ]; do case "$1" in
+  --demo) DEMO=1;;
+  --names) NAMES=1;;   # print the names and ports this copy would use, run nothing
+  --changed) [ -n "${2:-}" ] || { echo "--changed wants <base>..<head>; no suite was run"; exit 2; }; CHANGED="$2"; shift;;
+  --changed=*) CHANGED="${1#--changed=}";;
+  *) echo "run-suites.sh: unknown option $1 (--demo, --names, --changed <base>..<head>); no suite was run"; exit 2;;
+esac; shift; done
 # Not regression suites: the 100-program exercise needs its own fixture copy (run by hand, see its usage line).
 SKIP="check_catalogue_scale.cjs"
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
@@ -59,6 +67,24 @@ fi
 iname() { if [ -n "$PREFIX" ]; then printf '%s_%s' "$PREFIX" "$1"; else printf '%s' "$1"; fi; }
 iport() { if [ "$SLOT" -gt 0 ]; then echo $(( $1 + 10000 + 1000 * (SLOT - 1) )); else echo "$1"; fi; }
 if [ "$NAMES" = 1 ]; then echo "prefix: ${PREFIX:-none} · slot: $SLOT · forms_s4 → $(iname forms_s4) on $(iport 4455) · runtime_r1 → $(iname runtime_r1) on $(iport 4430)"; exit 0; fi
+# --changed: the suites to run (PICK, " a b c "); empty PICK = every suite. The choice and its reasons print first.
+PICK=""
+if [ -n "$CHANGED" ]; then
+  [[ "$CHANGED" == *..* ]] || { echo "--changed wants <base>..<head>; no suite was run"; exit 2; }
+  base="${CHANGED%%..*}"; head="${CHANGED##*..}"
+  files=$(git -c core.quotePath=false diff --no-renames --name-only "$base...$head") || { echo "git diff $base...$head failed; no suite was run"; exit 2; }
+  sel=$(printf '%s\n' "$files" | node "$P/product/tools/select-suites.mjs") || { echo "select-suites.mjs failed; no suite was run"; exit 2; }
+  printf '%s\n' "$sel" > "$OUT/selection.tsv"
+  TAB=$(printf '\t')
+  if [ "${sel%%"$TAB"*}" = ALL ]; then
+    echo "**Every suite runs** for $base..$head ($(printf '%s\n' "$files" | grep -c .) files changed): ${sel#ALL"$TAB"}"; echo
+  else
+    PICK=" $(printf '%s\n' "$sel" | cut -f1 | tr '\n' ' ')"
+    echo "**$(printf '%s\n' "$sel" | grep -c .) suites chosen** for $base..$head ($(printf '%s\n' "$files" | grep -c .) files changed); the full set runs nightly on main."
+    echo; echo "| Chosen suite | Why |"; echo "|---|---|"; printf '%s\n' "$sel" | awk -F'\t' '{ gsub(/\|/, "\\|", $2); print "| " $1 " | " $2 " |" }'; echo
+  fi
+fi
+picked() { [ -z "$PICK" ] && return 0; case "$PICK" in *" $1 "*) return 0;; esac; return 1; }
 pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 || zsh "$S/start.sh" >/dev/null 2>&1 || { echo "the demo database is not running and start.sh failed"; exit 2; }
 
 rows=(); fail=0
@@ -73,6 +99,7 @@ run() {  # $1 file, $2 label, rest: command
 }
 for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
   f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac
+  picked "$f" || continue
   usage=$(grep -m1 -E "studio/tests/$f" "$path")
   if [ "$f" = check_studio_browser.cjs ]; then
     if [ "$DEMO" = 0 ] && [ "${SUITES_BROWSER_ISOLATED:-}" = 1 ]; then
@@ -106,8 +133,9 @@ done
 # Suites outside tests/check_*: the runtime lane's (R1, two steps on one copy) and the drafting guard's (prototype/tests,
 # plain: they make their own temporary copies). Both lanes' Lead checks found CI skipping them (24 Oct).
 RT="$S/tests/runtime"; RN=$(iname runtime_r1); RP=$(iport 4430)
-if [ -f "$RT/check_case_engine.ts" ]; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
-if [ -f "$RT/check_runtime_r1a.ts" ]; then
+if [ -f "$RT/check_case_engine.ts" ] && picked check_case_engine.ts; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
+# The three R1 suites share one copy and run in order: chosen together (select-suites.mjs) or not at all.
+if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; }; then
   if zsh "$S/tools/isolated.sh" "$RN" "$RP" start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" "$RP" "xr_studio_$RN" > "$OUT/setup_visitor_visa.log" 2>&1; then
     # R1c's browser journey first: it publishes a release 2 that R1a expects (runtime lane, 24 Oct).
     [ -f "$RT/check_runtime_r1c.cjs" ] && run check_runtime_r1c.cjs "$RN" node "$RT/check_runtime_r1c.cjs" "$RP"
@@ -118,8 +146,10 @@ if [ -f "$RT/check_runtime_r1a.ts" ]; then
   zsh "$S/tools/isolated.sh" "$RN" "$RP" stop >/dev/null 2>&1
 fi
 for t in check_p2_guard check_p2_launch; do
-  [ -f "$P/prototype/tests/$t.ts" ] && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
+  [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
 done
+# A choice that ran nothing is a fault, never a pass.
+[ -n "$PICK" ] && [ "${#rows[@]}" -eq 0 ] && { rows=("| (none) | FAIL | | suites were chosen but none ran |"); fail=1; }
 echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; printf '%s\n' "${rows[@]}"
-echo "commit $(git rev-parse --short HEAD) · logs in ${OUT#$ROOT/}${PREFIX:+ · copies named ${PREFIX}_*, ports +$(( 10000 + 1000 * (SLOT - 1) ))}"
+echo "commit $(git rev-parse --short HEAD)${PICK:+ · only the chosen suites ran (--changed $CHANGED)} · logs in ${OUT#$ROOT/}${PREFIX:+ · copies named ${PREFIX}_*, ports +$(( 10000 + 1000 * (SLOT - 1) ))}"
 exit $fail

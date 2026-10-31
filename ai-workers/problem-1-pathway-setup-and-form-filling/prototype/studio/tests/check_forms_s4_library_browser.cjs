@@ -212,7 +212,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.getByRole("button", { name: "IMM 1295", exact: true }).click();
     const sp = p.getByRole("dialog"); await sp.waitFor();
     await sp.getByRole("button", { name: /Set what IRCC accepts|Correct what IRCC accepts/ }).click();
-    await sp.getByLabel("IRCC accepts", { exact: true }).selectOption("PDF_OR_ONLINE");
+    await sp.getByRole("checkbox", { name: "PDF upload", exact: true }).check(); await sp.getByRole("checkbox", { name: "Online", exact: true }).check(); // P-143: ways IRCC accepts, for any account
     await sp.getByRole("button", { name: "Send for a second person" }).click(); await sleep(500);
     step("C11.18 fail: sending with neither the canada.ca line nor a reason says what is missing, nothing is sent", /canada\.ca line|say why/i.test(await sp.innerText()) && sql(`select count(*) from library_change where kind='form_accepts'`) === "0");
     await axe("set what IRCC accepts"); await shot("13-set-accepts");
@@ -228,6 +228,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await open();
     step("C11.18 pass: after the second person approves, the row shows PDF upload · Online, set by a person · Sample", /PDF upload · Online\s*Set by a person · Sample/.test(await rows().filter({ hasText: "IMM 1295" }).first().innerText()), await rows().filter({ hasText: "IMM 1295" }).first().innerText());
     await shot("15-accepts-approved");
+    // N8 DV-d1-1 (Devin D1 walk): "2 combinations" in Used by read as struck through (a dotted line through the words). It
+    // is a plain link-style button now: no dotted decoration, and it opens the form's drawer (where it is used).
+    const count = p.locator("[data-used-by-count]").first();
+    const deco = await count.evaluate((e) => { const cs = getComputedStyle(e); return { tag: e.tagName, style: cs.textDecorationStyle, line: cs.textDecorationLine, text: e.textContent }; });
+    step("N8 DV-d1-1 fail: the Used-by count is a button with no dotted line (before: a dotted underline that read as struck through)", deco.tag === "BUTTON" && deco.style !== "dotted" && !/line-through/.test(deco.line) && /^\d+ combinations$/.test(deco.text ?? ""), JSON.stringify(deco));
+    await count.click();
+    step("N8 DV-d1-1 pass: the count opens the form's drawer, which says where it is used", await p.getByRole("dialog").filter({ hasText: /Where used|where it is used/i }).count() === 1);
+    await p.keyboard.press("Escape");
+    // N8 DV-d1-2 (Devin D1 walk): the loading list was a div with a label and no role (axe aria-prohibited-attr, seen at
+    // 1440 px while the list loaded). The list is held back for a moment so axe sees the loading state.
+    await p.route("**/api/library/forms/list**", async (route) => { await new Promise((r) => setTimeout(r, 2_000)); await route.continue(); });
+    await p.goto(`${BASE}/library/forms`);
+    await p.locator('[aria-label="Loading forms"]').waitFor({ timeout: 10_000 });
+    step("N8 DV-d1-2: the loading list says so as a status (role status, busy)", (await p.locator('[aria-label="Loading forms"]').getAttribute("role")) === "status" && (await p.locator('[aria-label="Loading forms"]').getAttribute("aria-busy")) === "true");
+    await axe("N8 DV-d1-2 fail: Forms while the list loads, 1440 px (before: aria-prohibited-attr on the loading list)");
+    await p.unroute("**/api/library/forms/list**");
     step("no page errors", errs.length === 0, errs.join(" | "));
   } catch (e) { fail++; console.log(`FAIL  unexpected ${e.stack}`); } finally { await b.close(); }
   console.log(`\n${pass} passed, ${fail} failed`);

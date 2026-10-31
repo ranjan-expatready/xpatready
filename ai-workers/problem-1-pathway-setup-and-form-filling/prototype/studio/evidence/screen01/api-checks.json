@@ -1,12 +1,12 @@
 {
- "at": "2026-10-26T19:05:21.371Z",
+ "at": "2026-10-30T05:06:06.041Z",
  "pass": 135,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 3.775
+   "detail": 8.142
   },
   {
    "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
@@ -22,7 +22,7 @@
    "detail": [
     {
      "value": "INDIVIDUAL",
-     "label": "Individual",
+     "label": "Retail",
      "combinations": 21
     },
     {
@@ -280,7 +280,7 @@
    "name": "QA-1 pass: submitted and signed, the combination will be released",
    "ok": true,
    "detail": {
-    "combinationId": "51cc831d-0a79-424a-a07a-0e029d21b025",
+    "combinationId": "8ea1a72e-5b63-41a7-9709-14ec769c845e",
     "label": "Spouse of a student",
     "path": [
      "Work permits",
@@ -365,7 +365,7 @@
    "name": "BR-8 fail: released but not startable is Not ready, with each missing item",
    "ok": true,
    "detail": [
-    "No questions yet for Principal applicant, Spouse or partner, Dependent child. Next step: Add questions (Configuration › Questions and sections)."
+    "No questions yet for Principal applicant, Spouse or partner, Child. Next step: Add questions (Configuration › Questions and sections)."
    ]
   },
   {
@@ -386,7 +386,8 @@
     "all": 23,
     "ready": 1,
     "not_ready": 1,
-    "in_setup": 21,
+    "in_setup": 5,
+    "not_started": 16,
     "ai_proposals": 0,
     "retired": 0
    }
@@ -516,7 +517,7 @@
   {
    "name": "P-51 pass: a guide uploaded on a combination is attached to it as a source",
    "ok": true,
-   "detail": "A guide (Guide 5487 - Applying for a Work Permit outside Canada): kept as a source of this combination; guides are not library forms. Attached to Study permit for minors."
+   "detail": "A guide (Guide 5553 - Applying for a work permit inside Canada – extend, change conditions, initial and open work permits - online application): kept as a source of this combination; guides are not library forms. Attached to Study permit for minors."
   },
   {
    "name": "P-51: many files in one request give one result per file, in order",
@@ -700,7 +701,8 @@
     "all": 23,
     "ready": 1,
     "not_ready": 1,
-    "in_setup": 21,
+    "in_setup": 5,
+    "not_started": 16,
     "ai_proposals": 0,
     "retired": 0
    }
@@ -776,26 +778,26 @@
    "detail": [
     [
      201,
-     "individual.item"
+     "retail.temporary_residence.item"
     ],
     [
      201,
-     "individual.item-2"
+     "retail.temporary_residence.item-2"
     ],
     [
      201,
-     "individual.a_very_long_program_name_that_goes_on_and_on_beyond_sixty_ch"
+     "retail.temporary_residence.a_very_long_program_name_that_goes_on_and_on_beyond_sixty_ch"
     ],
     [
      201,
-     "individual.a_very_long_program_name_that_goes_on_and_on_beyond_sixty_ch-2"
+     "retail.temporary_residence.a_very_long_program_name_that_goes_on_and_on_beyond_sixty_ch-2"
     ]
    ]
   },
   {
    "name": "M3 fail: the same name again (ignoring spaces) is still refused (BR-6)",
    "ok": true,
-   "detail": "\"日本語プログラム\" already exists under Individual. Choose it instead, or give the new one a different name."
+   "detail": "\"日本語プログラム\" already exists under Temporary residence. Choose it instead, or give the new one a different name."
   },
   {
    "name": "QA-14 pass: the same category sent four times at once is created once; the others are told it exists",
@@ -877,10 +879,10 @@
    "name": "item 5: Super visa is one combination, Visitors › Super visa (no Parent / Grandparent sub-categories)",
    "ok": true,
    "detail": [
-    "Visitors › Extend stay in Canada",
-    "Visitors › Race at once",
+    "Visitors › Visitor visa",
     "Visitors › Super visa",
-    "Visitors › Visitor visa"
+    "Visitors › Extend stay in Canada",
+    "Visitors › Race at once"
    ]
   },
   {
@@ -968,28 +970,24 @@
   {
    "name": "performance: a filtered catalogue answers in under 200 ms with the sample data",
    "ok": true,
-   "detail": "4 ms"
+   "detail": "10 ms"
   },
   {
    "name": "QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created",
    "ok": true,
    "detail": [
     {
-     "field": "program.create",
-     "message": "Use letters or digits in the name, not only punctuation."
-    },
-    {
-     "field": "category.create",
+     "field": "label",
      "message": "Use letters or digits in the name, not only punctuation."
     }
    ]
   },
   {
-   "name": "QA-7 fail: a 131-character name is refused with \"Keep the name under 120 characters.\" on the Program field",
+   "name": "QA-7 fail: a 131-character name is refused with \"Keep the name under 120 characters.\" on the name field",
    "ok": true,
    "detail": [
     {
-     "field": "program.create",
+     "field": "label",
      "message": "Keep the name under 120 characters."
     }
    ]
@@ -997,7 +995,7 @@
   {
    "name": "QA-6 pass: names in any script with punctuation around letters are created as typed",
    "ok": true,
-   "detail": "individual.r_sidence_temporaire.visa_d_t"
+   "detail": "retail.temporary_residence.r_sidence_temporaire.visa_d_t"
   },
   {
    "name": "QA-11 pass: the path builder knows the existing combination's id, so \"Open the existing combination\" opens its page",
@@ -1007,13 +1005,13 @@
     "label": "With an LMIA",
     "combinations": 1,
     "hasSetup": true,
-    "combinationId": "9cb782ec-0031-416b-b738-5ed05caf791b"
+    "combinationId": "095bd7e8-64c8-488b-a1d1-8fccb1380b3a"
    }
   },
   {
    "name": "QA-11 fail: a level without setup has no combination to open",
    "ok": true,
-   "detail": "individual.citizenship.grant"
+   "detail": "retail.temporary_residence.r_sidence_temporaire.visa_d_t"
   },
   {
    "name": "QA-5 pass: a time the app writes is stored as the real moment, whatever the database's own zone",
@@ -1023,7 +1021,7 @@
   {
    "name": "QA-5: the app still shows it at the real time",
    "ok": true,
-   "detail": "2026-10-26T19:05:17.173Z"
+   "detail": "2026-10-30T05:05:55.851Z"
   },
   {
    "name": "QA-5 condition: the database's own zone is not UTC on this machine, so the check above is a real test of the fix",
@@ -1041,7 +1039,7 @@
    "detail": [
     [
      201,
-     3.569
+     8.121
     ],
     [
      409,

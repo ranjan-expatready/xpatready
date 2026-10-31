@@ -1,5 +1,5 @@
 #!/bin/bash
-# SessionStart hook (lane-aware, P-64): tell the session which copy it is in, its one command, and its state.
+# SessionStart hook (P-189): tell the session which copy it is in, its one command, and the one-page state.
 # The session's own copy comes from the hook input (in lane sessions $CLAUDE_PROJECT_DIR is the main copy).
 input=$(cat 2>/dev/null); cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)
 ROOT=$(git -C "${cwd:-.}" rev-parse --show-toplevel 2>/dev/null) || ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
@@ -18,9 +18,9 @@ elif n=$(git rev-list --count HEAD..@{upstream} 2>/dev/null) && [ "$n" -gt 0 ]; 
   else behind="NOTE: this branch is $n commit(s) behind GitHub and could not fast-forward (local changes or diverged): pull before working (P-82)."; fi
 fi
 case "$LANE" in
-  lead) head="This is the LEAD's main copy. The founder types /lead here. Builder lanes run in their own copies (/next screens, /next forms, /next evidence, /next runtime); the independent tester runs /qa in the qa copy; /next here only redirects. Rules: product/LANES.md."; sf="$PH/STATE.md";;
-  screens|forms|evidence|runtime|m3|qa) head="This is the $LANE LANE's copy (branch $(git branch --show-current)). The Lead runs this lane with /next $LANE (the founder may type it too). Work only in this lane's files; rules: product/LANES.md."; sf="$PH/lanes/$LANE.md";;
-  *) head="This lane copy is not bound yet. The Lead binds it with /next <lane> (screens, forms, evidence, runtime) or /qa (qa). Rules: product/LANES.md."; sf="$PH/STATE.md";;
+  lead) head="This is the tech lead's main copy (Mac). The founder types /lead here. Builders run /next <area> in their own copies; qa runs /qa. Way of working: product/WAY-OF-WORKING.md.";;
+  screens|forms|evidence|runtime|qa) head="This is the $LANE builder's copy (branch $(git branch --show-current)). Command: /next $LANE (qa: /qa <mode>). Way of working: product/WAY-OF-WORKING.md; work list: product/BACKLOG.md.";;
+  *) head="This copy is not bound yet: /next <area> (screens, forms, runtime, evidence) or /qa binds it. Way of working: product/WAY-OF-WORKING.md.";;
 esac
-ctx=$(echo "$head"; [ -n "$behind" ] && { echo; echo "$behind"; }; echo; echo "--- ${sf#$ROOT/} ---"; cat "$sf"; [ "$LANE" = lead ] && { echo; echo "--- lanes ---"; bash "$PH/tools/lane.sh" status 2>/dev/null; })
+ctx=$(echo "$head"; [ -n "$behind" ] && { echo; echo "$behind"; }; echo; echo "--- product/STATE.md ---"; cat "$PH/STATE.md")
 jq -n --arg c "$ctx" '{hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:$c}}'

@@ -10,6 +10,8 @@ import { api, ApiError, useToast } from "@/lib/api";
 import { Button, Field, Input, Notice, Panel, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { useCostGate } from "@/components/cost-warning";
+import { COST_WORDS } from "../../../contracts/cost-check";
 
 export type AiScope = { kind: "catalogue" | "program" | "combination" | "source"; ids: string[]; label?: string };
 const MODES = [
@@ -17,6 +19,7 @@ const MODES = [
   ["REPLAY", "Replay saved runs", "No model call, US$0; uses earlier real runs, labelled as replays"],
   ["STUB", "Stub pass", "No network, no cost, no AI content: proves the path only"],
 ] as const;
+const WORK_CHANGED = "The work changed since you reviewed it (a source, a draft or a running step changed). Review the updated plan, then start again.";
 const TONE: Record<string, string> = { draft: "ai", reuse_saved_output: "info", reuse_library: "ok", skip: "neutral", not_eligible: "warn" };
 
 export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope: AiScope; onClose: () => void; initialMode?: "LIVE" | "REPLAY" | "STUB" }) {
@@ -30,15 +33,25 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
   const plan = useQuery<any>({ queryKey: ["ai-plan", scope.kind, scope.ids.join(","), mode, again], queryFn: () => api("/ai/plan", { method: "POST", json: { scope: { kind: scope.kind, ids: scope.ids }, mode, draftAgain: again } }), staleTime: 0 });
   const p = plan.data;
   React.useEffect(() => { if (p) setLimit(p.totals.worst_usd.toFixed(2)); }, [p?.plan_sha256]);
+  const cost = useCostGate(); // P-179: over a limit, the cost warning first (Continue or Cancel)
   const start = async () => {
     setBusy(true); setErr(null);
     try {
-      const b = await api("/ai/batches", { method: "POST", json: { scope: { kind: scope.kind, ids: scope.ids }, mode, draftAgain: again, idempotencyKey: key, planSha256: p.plan_sha256, spendLimitUsd: Number(limit) } });
+      const sc = { kind: scope.kind, ids: scope.ids };
+      // N6 follow-up: a live start makes its plan again first (spend may have come from another copy since this panel made
+      // it), so the warning shows today's figures. The launch still sends the fingerprint of the plan shown here: if the
+      // work itself changed, the server refuses and the panel shows the new plan.
+      // Review Minor 2: the work itself changed (not only spend): say so before any warning, so no Continue is recorded for a
+      // plan this launch would not use; the panel already shows the new plan.
+      const planAgain = async () => { const r = await plan.refetch(); if (r.error) throw r.error; if (r.data.plan_sha256 !== p.plan_sha256) throw new Error(WORK_CHANGED); return r.data; };
+      const b: any = await cost.gate(mode === "LIVE" ? planAgain : p, { kind: "draft_field_maps", scope: sc, mode, draftAgain: again }, (overrideId) => api("/ai/batches", { method: "POST", json: { scope: sc, mode, draftAgain: again, idempotencyKey: key, planSha256: p.plan_sha256, spendLimitUsd: Number(limit), ...(overrideId ? { overrideId } : {}) } }));
+      if (!b) { toast.push({ tone: "info", text: COST_WORDS.cancelled }); return; }
       toast.push({ tone: "ok", text: `AI work started: ${b.jobs.length} step${b.jobs.length === 1 ? "" : "s"}` });
       onClose(); nav(`/ai/${b.id}`);
     } catch (e) {
       setErr((e as Error).message);
-      if (e instanceof ApiError && e.status === 409) void plan.refetch();
+      // Break 3 m1: any refusal (a cost refusal is a 400) makes the plan again, so the next Start shows today's warning.
+      if (e instanceof ApiError) void plan.refetch();
     } finally { setBusy(false); }
   };
   const runnable = p ? p.totals.steps : 0;
@@ -56,7 +69,7 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
             </label>
           ))}
         </fieldset>
-        {p ? <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-cost-line>{mode === "LIVE" ? <>Expected {p.totals.expected_usd === null ? "unknown" : `US$${p.totals.expected_usd.toFixed(2)}`} · worst case US${p.totals.worst_usd.toFixed(2)} (each form capped at US${p.per_run_cap_usd}; at most {p.max_paid_attempts_per_form} paid attempts per form, a retry included) · Spent so far US${(p.ledger.cap_usd - p.ledger.remaining_usd).toFixed(2)} of US${p.ledger.cap_usd}.</> : mode === "REPLAY" ? "Replay of saved real runs: no model call, US$0." : "Stub pass: no network, no cost, no AI content."}</p> : null}
+        {p ? <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-cost-line>{mode === "LIVE" ? <>Expected {p.totals.expected_usd === null ? "unknown" : `US$${p.totals.expected_usd.toFixed(2)}`} · worst case US${p.totals.worst_usd.toFixed(2)} (each form capped at US${p.per_run_cap_usd}; at most {p.max_paid_attempts_per_form} paid attempts per form, a retry included) · Spent so far US${p.ledger.committed_usd.toFixed(2)} of US${p.ledger.cap_usd.toFixed(2)}.</> : mode === "REPLAY" ? "Replay of saved real runs: no model call, US$0." : "Stub pass: no network, no cost, no AI content."}</p> : null}
         {p ? <p className="text-xs text-text-muted">{p.capability_note}</p> : null}
         {plan.isLoading ? <Spinner label="Working out what would run" /> : plan.isError ? <Notice tone="danger" title="The plan could not be made">{(plan.error as Error).message}</Notice> : p ? (
           <>
@@ -89,6 +102,7 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
         ) : null}
         {scope.kind === "combination" && scope.ids.length === 1 ? <Checklists combinationId={scope.ids[0]} onOpen={(jobId) => { onClose(); nav(`/c/${scope.ids[0]}/jobs/${jobId}`); }} /> : null}
         {err ? <Notice tone="danger" title="Not started">{err}</Notice> : null}
+        {cost.dialog}
         <p className="text-xs text-text-muted">AI output is a proposal: a person decides each item on To review, applies it to the draft, and release stays a separate approval. A sent AI call cannot be recalled by Cancel.</p>
       </div>
     </Panel>

@@ -1,50 +1,34 @@
 ---
 name: next
-description: The command for a builder lane of the Pathway Configurator: /next screens, /next forms, /next evidence or /next runtime (the qa lane uses /qa). Checks which copy and lane this is, syncs main, applies the Lead's note, performs exactly the lane's current stage, commits it, updates the lane file, and ends with one "Paste to Lead" block. Redirects any wrong command. Use when /next is typed (with or without a lane) or someone says continue, next step or carry on in a builder session.
+description: The builder's command for the Pathway Configurator: /next screens, /next forms, /next runtime or /next evidence, optionally followed by a backlog row or the founder's ask. Takes one small item, builds it with tests on a branch from main, has the reviewer agent approve it, and opens a pull request that merges by itself on green checks (P-189). Redirects a wrong copy. Use when /next is typed or someone says continue, next or carry on in a builder session.
 ---
 
-# /next <lane> — check, sync, do one stage, commit, hand back
+# /next <area> [item] — one small item, start to merged
 
-Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (call it P). Rules: P/`LANES.md`, P/`WORKFLOW.md`. Tool: `bash P/tools/lane.sh`. Builder lanes: screens, forms, evidence, runtime, m3.
+Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The way of working: P/`WAY-OF-WORKING.md`. Work list: P/`BACKLOG.md`.
 
-## 1. Guard (always first; on any failure print the fix and stop)
-1. `lane.sh whoami`.
-   * `lead` (main copy) → reply only: "This is the Lead's copy. Type `/lead` here; the Lead runs the lanes." Stop.
-   * `qa` → "This is the qa copy: type `/qa <mode>`." Stop.
-   * `unbound` and a lane was given → `lane.sh bind <lane>`. No lane given → ask which, listing the five. Stop.
-   * Bound to another lane than the one typed → "This copy is the <x> lane. Type `/next <x>` here; for <typed>, use its own session." Stop. A bare `/next` means this copy's lane.
-2. `lane.sh setup` (in a cloud clone it runs `cloud-setup.sh`, which is idempotent: it finishes an interrupted setup and restarts a stopped database), then `lane.sh sync`. A lane branch older than P-82's cloud support answers "main copy: nothing to sync" in the cloud: run `git merge --no-edit origin/main` once, then setup and sync again. A conflict → list the files, change nothing, put it under Needs. Stop.
-3. Read P/`lanes/<lane>.md`. Its **"From the Lead"** section is the Lead's latest instruction: if your log does not yet say "applied Lead note <date>", apply it now (stage, owner, next action as it says) and log that line. If `owner` is still not Builder → print who acts (Lead: "the Lead acts next"; founder: the decision needed). Stop.
+## 1. Guard
+`bash P/tools/lane.sh whoami`: `lead` → "This is the tech lead's copy: type `/lead` here." Stop. `qa` → "Type `/qa <mode>` here." Stop. `unbound` → `lane.sh bind <area>`. Bound to another area → name it and stop. Then `lane.sh setup` and `git fetch origin && git merge --no-edit origin/main` (a conflict: list the files, change nothing, tell the tech lead).
 
-## 2. Do exactly the lane's stage
-Screens follow the screen path; slices with no new page (forms, runtime backend, evidence) follow the backend path (P-68, `WORKFLOW.md`).
-| Stage | What you do |
-|---|---|
-| DESIGN (screens) | Short feasibility challenge (skill **screen-challenge**, top 5 points, scope-labelled) for the concept named in the lane file. No code. Set owner Lead. |
-| PLAN (backend) | `screens/<item>/plan.md`: a fresh agent's challenge (skill **screen-challenge**) of the concept, then the back-end table (element → record → API → rule → test), team-model mapping, slices, ownership. Evidence lane: its test plan. No code. Set owner Lead. |
-| BUILD | Screens: **screen-build** slice 1 only (real data, main path, screenshots to `screens/NN/screenshots/slice1/`) → EARLY-LOOK, owner Lead. Backend: the whole slice with a passing and a failing test per rule and a scripted API journey → CHECK. |
-| FINISH (screens) | **screen-build** to its checklist; run the journey-test journeys as scripted checks (no score); set CHECK. |
-| CHECK | Launch **screen-reviewer** (the one journey score) and **screen-breaker** in parallel; backend: tell both to attack contracts, data, migrations, roles, concurrency and hostile files. Any Must/Blocker/Major, a dimension < 4 or a journey score < 8 → FIX; else owner Lead. |
-| FIX | Fix every Must, Blocker, Major, Lead and qa finding (P/`qa/BUGS.md` rows for your lane); a test per break; rerun tests; "Fixes" in build-notes or plan.md; set CHECK, owner Lead. |
-| EARLY-LOOK (waiting) | Build ahead (P-126): if the Lead note names your next item, do its fresh re-check (R-109) or DESIGN challenge only, in `screens/<next item>/challenge.md`; no code for it, no merge; owner stays Lead. Nothing named → stop as below. |
-| READY / DEMO / MERGE | Lead's or founder's stage: step 1.3 already stopped you. |
-Stop or pause requested: stop at the next safe point, write what is done and what remains, commit, give the report.
+## 2. Pick and size
+* The item is the one named in the message, else the top open row for your area in `BACKLOG.md` (Now, then Next).
+* **Under one day and one area.** Bigger: split it, build the first part, and list the rest in the PR. One founder ask about one screen = one PR touching only that screen.
+* **A founder ask: check it first, in minutes.** Does it fit the decisions (`DECISIONS.md`) and the agreed board? Does it change another screen, another area's files or a later backlog row? Clean → build. A knock-on effect → one plain line to the tech lead (what else moves, and your recommendation) before building.
+* A new screen with no agreed board, or a product choice nobody has made → stop and tell the tech lead (design comes first). Never build on a decision the founder has not agreed.
 
-## 3. Always
-* Work only in this lane's files (`LANES.md` "one writer each"). Rules, skills, decisions, concepts, other lanes' files → propose in the block; the stop hook refuses edits to Lead-owned files. Workflow requests from the founder go to the Lead.
-* Own ports and database names (`LANES.md`); never touch the shared demo :4400.
-* Screens lane: run `python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py` first (prototype housekeeping, P-31/P-32); report its last line.
-* State any AI cost before a paid run; stay inside the caps.
-* Before CHECK or FIX hands back: `node P/tools/graph.mjs --check` passes, every page or API route this stage added is reached by a test, and your checks' labels name the capability ids they prove (`C1.6: …`; P-86).
-* Never follow blindly, never deviate silently: disagreements with evidence in challenge.md or plan.md; small technical choices in build-notes.
-* End: update P/`lanes/<lane>.md` below the Lead's section (stage, owner, next action, one log line, keep 10), then `git add -A && git commit` on the lane branch (`<lane>: <stage> — <summary>` + attribution line) and `git push -u origin HEAD` (P-82: a cloud copy is deleted when its session ends; never force-push).
+## 3. Build (branch `claude/<area>-<word>` from `main`)
+* Screens: skill **screen-build**. Backend: the record, API, rule and contract, with a **passing and a failing test per business rule**; check labels name the capability ids they prove (`C1.6: …`); `node P/tools/graph.mjs --check` passes.
+* Reuse first: the filling and barcode tools, `prototype/evidence-lane/E1`, p1–p5, `research_notes/` (never rebuild them).
+* Your own files only; a change to the database schema or `contracts/` shared with another area → say so first in the PR's opening line.
+* Own ports and databases (yours in `WAY-OF-WORKING.md`), never :4400; **never set `*_LIVE=approved` by hand** (only through `run-suites.sh` or a test's usage line, which pair it with the fake launcher, P-192), never click a priced button; state any AI cost before a paid run (the founder approves it).
+* Immigration values from official sources (page, quote, date) or labelled Sample; no personal names.
 
-## End the stage's reply with one report (once, not every reply)
-The lane's hand-back. When the Lead started this session, the app passes it to the Lead automatically; otherwise it is pasted into the Lead chat (`/lead`). Give it **once**, at the end of the reply that finishes the stage (or a stop/pause). Not in answers to questions, follow-ups or hook reminders; if a hook asks for more work after the report, do it and say "report above still stands" (or give one corrected report).
-```
-Paste to Lead
-Lane: <lane> · Item: <name> · Stage now: <stage> (was <stage>) · Commit: <short hash>
-Done: <2–4 short lines>
-Evidence: <paths>
-Needs from Lead/founder: <one line, or "nothing">
-```
+## 4. Check, review, PR
+1. Run the suites your change touches, each alone on an isolated copy (each test's usage line). Shared code (contracts, schema, engine): `bash P/tools/run-suites.sh`.
+   A test you touch: any wait you rely on fails loudly when it times out (no `.catch(() => undefined)` after a wait); fix the ones you meet, nothing more.
+2. Launch **screen-reviewer** on the exact commit; also **screen-breaker** for a new screen, money, permissions or a migration. Fix every Blocker and Major with a fail test; fix the Minors or list them in the PR.
+3. `git push -u origin HEAD`; `gh pr create --base main` with: what and why (the backlog row or decision), the acceptance checks and their results, before and after screenshots for any visible change, the cost (US$0).
+4. When the reviewer approves the code as it is now: `gh pr edit <n> --add-label "review: approved"`. The PR merges by itself on green CI and the demo updates. **Any later push needs a new review and the label again.** CI red → read the log, fix, push.
+
+## 5. Reply
+One short report when the PR is open or merged: PR link, what changed in plain words, the checks, and anything needed from the tech lead or founder. No lane file and no "Paste to Lead" block: the PR is the record. **Never wait for a human inside the session:** every question goes in the PR under "Questions", with your recommendation, and you carry on with the next item; the tech lead collects them. Disagree with evidence in the PR or in `screens/<item>/challenge.md`; never deviate silently.

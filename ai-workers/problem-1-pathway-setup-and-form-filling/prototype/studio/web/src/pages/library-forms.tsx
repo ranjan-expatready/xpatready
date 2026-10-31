@@ -3,6 +3,7 @@
 // the shared run card, rules first). Every row: Replace with a new edition, Re-read with AI, See where it is used,
 // Retire (kept for released versions), Delete (only when nothing uses it); a person approves retire and delete (P-116).
 // Which forms a combination needs and what IRCC accepts are Sample until the immigration expert confirms. Checks below.
+import { ACCOUNT_WORDS, CHANNEL_WORDS, CHANNELS, IRCC_ACCOUNTS } from "../../../contracts/forms";
 import * as React from "react";
 import { Link } from "react-router-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -19,6 +20,8 @@ import { ACTION_LABEL, RETURNED_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../.
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; edition: string | null; canada_updated: string | null; accepts: string | null; accepts_basis: string | null; accepts_quote: string | null; accepts_waiting: boolean;
+  /** P-143 (C-3): one record per IRCC account (ANY: every account), each with its basis and IRCC's line. */
+  accepts_accounts?: { account: string; account_words: string; channels: string[]; words: string; basis: string; quote: string | null; source_url: string | null }[];
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
   used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
 type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string };
@@ -32,10 +35,11 @@ const BASIS: Record<string, { tag: string; tip: string }> = {
   PERSON_SAMPLE: { tag: "Set by a person · Sample", tip: "A person set this and a second person approved it. Sample until the immigration expert confirms." },
   SAMPLE_FIXTURE: { tag: "Sample · canada.ca words", tip: "Loaded with the sample from IRCC's own sentence on this form's canada.ca page (no AI call). Sample until the immigration expert confirms." },
   EXPERT: { tag: "Confirmed by the expert", tip: "The immigration expert confirmed this." },
+  FOUNDER_SAMPLE: { tag: "Founder P-171 · Sample", tip: "The founder's answer where IRCC's pages say nothing (P-171). No IRCC line to quote. Sample until the immigration expert confirms." },
 };
 /** A guide's date is canada.ca's own "Date modified" when the page prints one; otherwise when the studio read it. */
 const editionText = (r: Row) => (r.type === "guide" ? (r.canada_updated ? `Updated on canada.ca ${r.canada_updated}` : r.checked_at ? `Read from canada.ca on ${new Date(r.checked_at).toISOString().slice(0, 10)}` : "Date not known") : r.edition ? r.edition.replace(`${r.code} `, "").replace(/[()]/g, "") : null);
-const ACCEPTS_TIP = "What IRCC accepts for this form: a PDF upload, an online form in the portal, or either. Guides and checklists are not filed: AI reads them. AI reads it from IRCC's page, the sample loads it with IRCC's own line from the page, or a person sets it with a second person's OK; Sample until the immigration expert confirms. Online filling needs the browser extension (later wave).";
+const ACCEPTS_TIP = "What IRCC accepts for this form, for each IRCC account or for every account: Online, PDF upload, Paper, or Not needed (the account asks it itself; said for one account only). Guides and checklists are not filed: AI reads them. AI reads it from IRCC's page, the sample loads it with IRCC's own line from the page, or a person sets it with a second person's OK; Sample until the immigration expert confirms. Online filling needs the browser extension (later wave).";
 const STATUS: Record<Row["status"], { word: string; tone: string; tip: string }> = {
   ready: { word: "Ready", tone: "ok", tip: "Its current edition is in the library and may be used by any combination." },
   needs_ok: { word: "Needs your OK", tone: "warn", tip: "A file of this form waits for a second person on To review (a hand upload, or a newer edition to review)." },
@@ -111,7 +115,7 @@ export function FormsPage() {
           </div>
           <label className="relative ml-auto"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input type="search" aria-label="Search number or title" placeholder="Search number or title" value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} className="w-64 pl-8" /></label>
         </div>
-        {lib.isLoading ? <div className="space-y-2" aria-label="Loading forms">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+        {lib.isLoading ? <div className="space-y-2" role="status" aria-busy="true" aria-label="Loading forms">{/* DV-d1-2 (N8): a label needs a role (axe aria-prohibited-attr) */}{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
           : lib.isError ? <Notice tone="danger" title="The forms could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void lib.refetch()}>Try again</Button>}>{(lib.error as Error).message}</Notice>
           : !lib.data?.rows.length ? (filtered
             ? <EmptyState title="No form matches" description="Nothing in the library matches these filters. Clear a filter or search for another number or title." action={<Button variant="secondary" onClick={() => { setType(""); setUsedBy(""); setStatus(""); setQ(""); }}>Clear filters</Button>} />
@@ -126,7 +130,7 @@ export function FormsPage() {
                   <td className="hidden xl:table-cell">{TYPE_WORD[r.type]}</td>
                   <td className="hidden xl:table-cell">{editionText(r) ?? <span className="text-text-muted">no usable edition yet</span>}</td>
                   <td className="max-w-36 xl:max-w-none"><AcceptsCell r={r} /></td>
-                  <td className="max-w-48 xl:max-w-72">{r.used_by.length === 0 ? <span className="text-text-muted">Not used</span> : r.used_by.length === 1 ? <TrailText label={r.used_by[0].label} /> : <Tip tip={r.used_by.map((u) => u.label).join(", ")}><span tabIndex={0} className="underline decoration-dotted rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">{r.used_by.length} combinations</span></Tip>}</td>
+                  <td className="max-w-48 xl:max-w-72">{r.used_by.length === 0 ? <span className="text-text-muted">Not used</span> : r.used_by.length === 1 ? <TrailText label={r.used_by[0].label} /> : <Tip tip={r.used_by.map((u) => u.label).join(", ")}>{/* DV-d1-1 (N8): a count a person trusts at a glance: a plain link-style button (opens where it is used), never a dotted line that reads as struck through */}<button type="button" data-used-by-count className="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setOpen(r)}>{r.used_by.length} combinations</button></Tip>}</td>
                   <td><span className="inline-flex flex-wrap gap-1"><Tip tip={STATUS[r.status].tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone={STATUS[r.status].tone}>{STATUS[r.status].word}</Pill></span></Tip>{r.lifecycle_waiting && r.lifecycle_returned ? <Tip tip={TIP.returned}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="danger">{RETURNED_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : r.lifecycle_waiting ? <Tip tip={r.lifecycle_approved ? `Approved: the form is ${r.lifecycle_waiting === "RESTORE" ? "restored" : "retired"} with the next release (Release, on the combination's Review page).` : `A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="warn">{r.lifecycle_approved ? `${ACTION_LABEL[r.lifecycle_waiting]} approved` : WAITING_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : null}</span></td>
                   <td className="text-right">
                     <div className="flex items-center justify-end gap-0.5">
@@ -246,7 +250,10 @@ function FormDrawer({ row, onClose, canAuthor }: { row: Row; onClose: () => void
       </section>
       <section className="mt-4 space-y-2 text-sm" aria-labelledby="fd-acc"><h3 id="fd-acc" className="font-semibold">What IRCC accepts</h3>
         <AcceptsCell r={row} />
-        {row.accepts_quote ? <p className="text-text-muted">{row.accepts_basis === "PERSON_SAMPLE" ? "" : "IRCC's words: "}“{row.accepts_quote}”</p> : null}
+        {/* P-143 (C-3): one line per IRCC account with a record, "any account" otherwise; each with who said it and IRCC's words. */}
+        {(row.accepts_accounts ?? []).length ? <ul className="space-y-1" data-accepts-accounts>{row.accepts_accounts!.map((a) => (
+          <li key={a.account}><span className="font-medium">{a.account_words}:</span> {a.words} <span className="text-xs text-text-muted">· {BASIS[a.basis]?.tag ?? a.basis}</span>{a.quote ? <span className="block text-text-muted">{a.basis === "PERSON_SAMPLE" ? "" : "IRCC's words: "}“{a.quote}”</span> : null}</li>))}</ul>
+          : row.accepts_quote ? <p className="text-text-muted">{row.accepts_basis === "PERSON_SAMPLE" ? "" : "IRCC's words: "}“{row.accepts_quote}”</p> : null}
         {row.type === "form" && canAuthor && !row.accepts_waiting && row.status !== "retired" ? <SetAccepts row={row} /> : null}
       </section>
       <section className="mt-4 space-y-1" aria-labelledby="fd-use"><h3 id="fd-use" className="text-sm font-semibold">Where it is used</h3>
@@ -264,13 +271,18 @@ function FormDrawer({ row, onClose, canAuthor }: { row: Row; onClose: () => void
 /** C11.18: set or correct what IRCC accepts, with the canada.ca line it comes from or a reason; a second person approves. */
 function SetAccepts({ row }: { row: Row }) {
   const [open, setOpen] = React.useState(false);
-  const [channels, setChannels] = React.useState(row.accepts && row.accepts !== "READ_BY_AI" ? row.accepts : "PDF");
+  const [account, setAccount] = React.useState<string>("ANY");
+  const has = (a: string) => row.accepts_accounts?.find((x) => x.account === a)?.channels ?? [];
+  const [channels, setChannels] = React.useState<string[]>(has("ANY").length ? has("ANY") : ["PDF_UPLOAD"]);
+  const toggle = (c: string) => setChannels((xs) => (c === "NOT_NEEDED" ? (xs.includes(c) ? [] : [c]) : xs.includes(c) ? xs.filter((x) => x !== c) : [...xs.filter((x) => x !== "NOT_NEEDED"), c]));
   const [quote, setQuote] = React.useState(""), [reason, setReason] = React.useState("");
-  const go = useAsk(() => api(`/library/forms/${encodeURIComponent(row.code)}/accepts`, { method: "POST", json: { channels, ...(quote.trim() ? { quote: quote.trim() } : {}), ...(reason.trim() ? { reason: reason.trim() } : {}) } }), "Sent: it waits for a second person on To review", [["library-forms-list"], ["form-uses", row.code]], () => setOpen(false));
+  const go = useAsk(() => api(`/library/forms/${encodeURIComponent(row.code)}/accepts`, { method: "POST", json: { account, channels, ...(quote.trim() ? { quote: quote.trim() } : {}), ...(reason.trim() ? { reason: reason.trim() } : {}) } }), "Sent: it waits for a second person on To review", [["library-forms-list"], ["form-uses", row.code]], () => setOpen(false));
   if (!open) return <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>{row.accepts ? "Correct what IRCC accepts" : "Set what IRCC accepts"}</Button>;
   return (
     <div className="space-y-2 rounded-lg border border-border p-3">
-      <Field label="IRCC accepts"><Select aria-label="IRCC accepts" value={channels} onChange={(e) => setChannels(e.target.value)}><option value="PDF">PDF upload</option><option value="ONLINE">Online</option><option value="PDF_OR_ONLINE">PDF upload · Online</option></Select></Field>
+      <Field label="For which IRCC account" hint="Any account, or the one account this applies to (P-143)."><Select aria-label="For which IRCC account" value={account} onChange={(e) => { setAccount(e.target.value); setChannels(has(e.target.value).length ? has(e.target.value) : ["PDF_UPLOAD"]); }}>{[...IRCC_ACCOUNTS, "ANY"].map((a) => <option key={a} value={a}>{ACCOUNT_WORDS[a as "ANY"]}</option>)}</Select></Field>
+      <fieldset className="space-y-1"><legend className="text-xs font-medium">IRCC accepts</legend>{CHANNELS.map((c) => { const off = c === "NOT_NEEDED" && account === "ANY";
+        return <label key={c} className={`flex items-center gap-2 text-sm ${off ? "text-text-muted" : ""}`}><input type="checkbox" checked={channels.includes(c)} disabled={off} onChange={() => toggle(c)} />{CHANNEL_WORDS[c]}{off ? " (only for one account: the account that asks it itself)" : ""}</label>; })}</fieldset>
       <Field label="The canada.ca line it comes from" hint="Paste IRCC's own words, e.g. from the form's page or the guide."><Textarea aria-label="The canada.ca line it comes from" rows={2} value={quote} onChange={(e) => setQuote(e.target.value)} /></Field>
       <Field label="Or: why (when there is no line to quote)"><Textarea aria-label="Or: why" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
       {go.error ? <p className="text-sm text-danger" role="alert">{(go.error as Error).message}</p> : null}

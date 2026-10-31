@@ -120,7 +120,7 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
     // Headless Chrome on the Mac opens a closed select's popup on ArrowDown instead of changing it, so each arrow press is
     // a key event on the select followed by the change it makes (what a person's arrow press does in a real browser).
     const arrow = async (v) => { await chan.dispatchEvent("keydown", { key: "ArrowDown" }); await chan.selectOption(v); await p.waitForTimeout(80); };
-    await chan.focus(); await arrow("ONLINE"); await arrow("SIGNED_PDF_UPLOAD");
+    await chan.focus(); await arrow("ONLINE"); await arrow("PAPER");
     const cDuring = patches.filter((u) => /\/channel$/.test(u)).length - n0, cFocus = await p.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? "");
     await p.keyboard.press("Tab"); await p.waitForTimeout(900);
     step("C1.6 break K1: arrow presses on Filed as save nothing until focus leaves, then once; focus stayed on it", cDuring === 0 && /is filed$/.test(cFocus) && patches.filter((u) => /\/channel$/.test(u)).length - n0 === 1, `while pressing ${cDuring}, focus "${cFocus}", after Tab ${patches.filter((u) => /\/channel$/.test(u)).length - n0}`);

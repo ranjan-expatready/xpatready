@@ -1,29 +1,45 @@
-# State — overview of all lanes (generated from `lanes/*.md` by `lane.sh state`; the Lead adds the log)
+# State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_milestone: M2 — Super Admin configuration (Screens 01–04 + forms channels F1), with the thin runtime slice R1 (P-67) and independent qa (P-68) alongside
-lanes: `LANES.md` · the founder types `/lead` only; the Lead runs `/next screens|forms|evidence|runtime` and `/qa <mode>` sessions
-journey and gaps: `history/AUDIT-2026-10-23.md` · capabilities and bugs: `qa/CAPABILITIES.md`, `qa/BUGS.md`
-updated: 2026-10-29
+updated: 2026-10-31 · milestone: **M2 — Super Admin configuration**, with the thin runtime slice R1 · way of working: `WAY-OF-WORKING.md` · work list: `BACKLOG.md` · why each choice was made: `design/why-we-chose-2026-10-31.md`
 
-<!-- lanes:start -->
-| Lane | Item | Stage | Who acts | Next |
-|---|---|---|---|---|
-| screens | W1-setup-checklist (3): the card v4 on Immigration programs (P-180) | FIX — CHECK done (review 8/10 with four Majors, break report three Majors); four fixed at 8a8856b7 with tests; reviewer M3 and breaker M3 for the Lead (plan.md "Card v4 CHECK and Fixes"); affected suites rerunning one at a time | Builder (fresh screens session, 30 Oct) | Blocked: nothing |
-| forms | (2) P-179 cost warning + override, built with QA-90 one shared ledger (C11.8; plan plan-p179 (forms branch), Lead-agreed 30 Oct incl. §4 Q1–Q3); then (3) P-156. Branch `claude/forms-p179b-0857b9` (QA-90 cd0b06f6, P-179 core 0bc93e16, API 2nd commit after 6ef03dc9, checks, dialog; holds `claude/forms-s1-guards-42e331` and main bcd482d3) | FIX | Builder | Handover items (1)-(2) done in c950b098 (plan-p179.md §7); full run-suites on c950b098 running, then CHECK … |
-| runtime | (1) C3.11 signed-scan lines (built, at CHECK); (2) C10.1 configured checkpoint, US$0 scope (built) (cross-lane queue transaction fix (13278e7e, check_queue_tx 8/8); C10.1 configured checkpoint built (31a87498: API 20/20, browser 12/12); step timings measured) | CHECK (C3.11 and C10.1) | Lead | Blocked: rows 9–12 wait for Visitor visa release 1: IMM 5257's paid field-map run and a p |
-| m3 | M3 case view (renamed from "agent view", P-154; case officer and representative side end to end; folder name kept until the Lead asks) | DONE (design) | Lead | build at the M2 gate (M3-0 to runtime); design r5c final on claude/m3-design-baf010 (representative review … |
-| evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
-| qa | after-merge on main once forms PR #103 (slice 1 channels) merges; branch `claude/qa-l10-e3c849` (contains `claude/qa-after-merge-5f6c8de`); journey check `tests/qa/check_qa_am_ch_1030.cjs` written from the PR, ports 4472–4479 free | WAITING | Lead | Lead note waiting for sync · Lead: send "/qa after-merge" here when #103 is on main (checked 30 Oct: main bcd482d3, #103 OPEN). qa then:… |
-<!-- lanes:end -->
+## Resume here (a fresh `/lead` chat)
+1. Open PRs: `gh pr list`. A PR merges by itself on green CI plus the label `review: approved` (the `automerge` workflow checks every approved open PR on each run). The demo updates itself after merges.
+2. Builders run as cloud sessions (forms, runtime, screens). They cannot message the Lead: their PRs are their reports, and their questions sit under "Questions" in each PR. Collect them; decide the technical ones; bring the founder only product, money and preference questions, one at a time, with a recommendation.
+3. Then `BACKLOG.md` row **X0**: regroup the backlog into features (P-191), and walk the founder through `design/why-we-chose-2026-10-31.md`.
 
-## Log (last 10 lines; older in history/)
-- 2026-10-30 · Lead (Mac, twelfth chat): founder chose this chat as Lead after two Leads overlapped (guard gap fixed: `lane.sh leads` now sees Lead branches); #106 merged (8248dec7; graph G2 fixed); Devin's #106 review fixed (unpushed-commit check, decision-impact reads moved rows); honest setup review given to the founder (≈5/10: checking strong, delivery slow, overhead ≈ app work, 3 open Critical spend bugs); hotfix session `hotfix-p175` ports the P-175 live-off guard alone onto main; #96 failed job rerun; Devin D4 + D1 routed (LEAD.md); disk 2.4 → 6.7 GB free (founder OK: forms-fix7, devin-d1, devin-d4 copies removed, all pushed); screens, forms, runtime told to report to this chat; cloud trial passed (83/83, 42 min, US$0; its ledger-leak and merge-guard notes go to the platform track); cutover not ready (2 of 5).
-- 2026-10-30 · Lead (Mac, eleventh chat): P-187 (qa owns the capability list: experience score, improvement idea, weekly capability review); graph.mjs reads decisions/P-96-P-97.md after the rows moved; all on PR #106; next: a fresh `/lead`.
-- 2026-10-30 · Lead (Mac, eleventh chat, last): founder P-185 (keep going, then one cutover) and P-186 (merge check free: Mac checks only, GitHub free minutes for light groups); CHARTER.md (founder sets direction; Lead owns the rest; analyst agent; platform lane); design page v3 (setups compared, cutover checklist); handover in LEAD.md; next: a fresh `/lead` builds the platform track while the queue merges.
-- 2026-10-30 · Lead (Mac, eleventh chat): engineering redesign drafted for the founder (design/engineering-engine-2026-10-30.html, artifact QJAfGcjEvPBweuNNU7fCSn): 3 rounds (rules, machinery, measured delivery 21–30 Oct; Claude Code docs; independent critic: adopt with fixes); three founder decisions open (GitHub-machine tests capped US$50/month, new way of working, builders to cloud at handover); lanes keep working, nothing stopped; #105 merged (c222e4dc); #103 red (6 suites, fixed on the forms line 89994a4c); cloud trial running.
-- 2026-10-30 · Lead (Mac, eleventh chat): founder P-184 (speed checks not judged when the Mac is busy; runtime builds the shared helper); fresh forms FIX session forms-fix8 after the reviewer's 6/10 on P-179 + QA-90. Earlier: #96 CI 1 fail only (check_forms_s4_library_browser: Forms first view 1593 ms > 1 s under runner load); Lead rerun on its exact commit 36d6fb6f, Lead ports: 529 ms and 548 ms, 69/69 twice → load, not #96; CI rerun asked (attempt 2), merges on green; no open review threads. Earlier: disk 3 → 8 GB (founder OK): four pushed, finished copies removed (wt-forms, wt-s2a, screens-card-aba78e, runtime-m2gate-7a844f), their sessions archived; screens session restarted as screens-card3 (the first never started: disk). Earlier: merge queue unchanged — #96 CI running on xr-mac, #103 and #105 queued behind it (nothing mergeable yet); fresh screens session screens-card2 takes card v4 to CHECK; forms-fix7 at CHECK (reviewer + breaker on P-179 + QA-90, run-suites 88/88 on a264532b); runtime C10.1 + queue transaction fix at CHECK (9ac5aaa5), C3.11 render fix (3cd38160).
-- 2026-10-30 · Lead (Mac, tenth chat, last): #104 merged (02ce7adf: Mac runner, Devin prompts, CI first + 90 min, P-181–P-183, R-145/R-146); first Mac CI 81/83 (2 timing failures on main → runtime); #96 and #103 synced and checked on the Mac in turn; forms-fix7, screens-card and runtime (timeout fix, C10.1) building; Devin D3 sent; handover in LEAD.md; next: a fresh `/lead`.
-- 2026-10-30 · Lead (Mac, tenth chat): P-181 PR checks move to a self-hosted runner on the Mac (`xr-mac`, v2.338.2, checksum matched; registered by the founder, service start pending); ci.yml and run-suites on PR #104 (browser suite on its own isolated copy, 49/49 locally); by-products of that local run (evidence PNGs, US$0 stub ledger lines) left uncommitted in the main copy, never pushed.
-- 2026-10-30 · Lead (Mac, tenth chat): founder decisions P-178, P-179, P-180 (board v4 Go); runtime QA-91 built + QA-115 trimmed, one unapproved live run US$0.17 (RETRO); forms P-179/QA-90 steps 1–2a on claude/forms-p179-7cc21f; screens concept v4 + slice A brief on claude/screens-board-v4; GitHub Actions blocked on billing (no merges until the founder raises the limit).
-- 2026-10-30 · Lead (Mac, tenth chat): ninth chat's four lane copies checked clean and pushed, sessions archived; #96 synced with main (3 open review findings → screens first); forms slice 1 = Lead PR #103; runtime S7 conflicts with #96's fixes → runtime syncs after #96; qa after-merge files (QA-112–117) merged here; fresh sessions screens, forms, runtime, qa started on their handovers.
-- 2026-10-30 · Lead (Mac, ninth chat): #94 merged (5f6c8deb; :4400 restarted after a database backup in .tools/backups); #96 review fixes folded (49c175d0), CI rerunning; runtime S7 Load sample + validator built (claude/runtime-s7-6d5965, Lead PR after #96); forms slice 1 at FIX (6 Majors, live switch P-175 built) waits for a fresh session; setup checklist concept v3 drafted (P-176) for the founder's early look; qa PR #101; records #100.
+## Progress (counted from `qa/CAPABILITIES.md` by `tools/progress.sh`; moves only after qa tests)
+* M2 Super Admin setup: 21 of 57 work (36%) · 16 partial · 1 not tested · 19 not built
+* R1 thin runtime slice: 6 of 8 work (75%)
+* M3 case, agent and client: 0 of 15 work · 3 partial (design agreed; build at the M2 gate)
+
+## In flight (31 Oct)
+| PR | Area | What | Where it stands |
+|---|---|---|---|
+| #113 | runtime | queue transaction fix, C10.1 checkpoint, C3.11, P-184 speed helper, S7 Reset + Load sample | conflicts with main again; the Mac runtime session (local_3b02c2d2) syncs. The tech lead still has to decide the four "Found while building" points in its c10.1 plan before approving |
+| #116 | runtime (cloud) | DV-bb-9, DV-bb-8, DV-d1-3, and P-193 (only the proposer corrects) | stacked on #113 |
+| #111, #120 | screens (cloud) | review Minors · release page title | the screens builder refreshes both after #129 and handles their reviews |
+| #128 | forms (cloud) | the cost warning re-plans on Start | approved; merges on green |
+
+## Founder decisions waiting
+* One forms cloud session ("Does Continue cover a run's retries?") stopped to wait for a human answer. The forms builder was told to put that question in its PR; ask the founder when it appears.
+
+## Close-out still to do
+* After #111 and #113 merge: archive the four old Mac builder sessions (forms-fix8 local_c49f56b8, screens-card3 local_ba1559ab, runtime local_3b02c2d2, qa local_b27bf6a4) and remove their copies (about 12 GB). Then remove the frozen `lanes/` folder, and start a cloud qa session for `/qa after-merge` on main.
+* The first nightly full run on the Mac is tonight at 21:00 UTC (workflow `nightly`). A red nightly run is fixed first.
+
+## Watch
+* **Auto-merge:** the first day had three faults, all fixed: the Mac queue, a lost trigger, and an approval going stale after a refresh. Watch that approved PRs merge without help.
+* **Demo update:** it fails if the demo has rewritten tracked files (stub runs); then move it by hand (`git -C .claude/worktrees/demo-main checkout -- . && … checkout --detach origin/main`, then `start.sh`). An automatic reset step was refused by the permission system.
+* **Week-one numbers, on demand:**
+  * median time from start to merge (target under a day);
+  * the tech lead's share of commits (target under 15%);
+  * bugs found after merge (must not rise);
+  * red checks that pass on a re-run;
+  * AI spend (US$0 unless approved).
+* **The Mac:** stays on (the founder keeps it on). It holds about 22 GB free; restart it every week or two to clear macOS temp files.
+
+## Log (newest first; earlier lines are in git history)
+- 2026-10-31 · tech lead: the switch-over is done.
+  - Merged today: #112, #114, #115, #117–#119, #121–#127, #129, #130. PR checks moved to GitHub's machines, affected tests only (#124); full set nightly on the Mac (#123); auto-merge fixed (#125, #126).
+  - Founder decisions: P-189 to P-193.
+  - Disk: 6.6 → 22 GB free. Removed idle test databases, stale temp files, updater caches, Chrome's leftover copies and the Codex cache. Three browser tests that loaded Playwright from that cache now load the project's own copy.

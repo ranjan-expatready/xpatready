@@ -23,6 +23,7 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { ACTORS, Audit, Db, need, ROOT, Workspace, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
+import { officialPagesOf as readOfficialPages } from "./official-pages.ts";
 import { changeView, itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { openNodeKeys, startWhy } from "./lifecycle.ts";
 import { Sources } from "./sources.ts";
@@ -47,11 +48,8 @@ type Row = {
   setup: SetupChecklist;
 };
 
-/** The official-pages record of each combination (P-156 (2)), the forms lane's queue item 2. It has not landed: every
- *  combination answers "no record yet", so step 1 stays open with no item (plan.md slice A). One reader, one place. */
-export async function officialPagesOf(ids: string[]): Promise<Map<string, OfficialPages>> {
-  return new Map(ids.map((id) => [id, { state: "no_record" as const }]));
-}
+/** The official-pages record of each combination (P-156 (2)): the forms lane's reader (F2, api/src/official-pages.ts). */
+export const officialPagesOf = (db: Db, ids: string[]): Promise<Map<string, OfficialPages>> => readOfficialPages(db, ids);
 /** The card's part of the checklist with this viewer's overlay (GET /catalogue: steps without their open items). */
 export function cardSetup(c: SetupChecklist, actor: Actor): CardSetup {
   return { chip: c.chip, bar: c.bar, next: c.next, current: c.current, viewer: forViewer(c, actor), steps: c.steps.map(({ open: _open, ...s }) => s) };
@@ -117,7 +115,7 @@ export class Programs {
     ]);
     const submittedBy = new Map<string, string>();
     for (const x of subs) if (!submittedBy.has(x.combinationId)) submittedBy.set(x.combinationId, x.submittedBy);
-    const pages = await officialPagesOf(combos.map((c) => c.id));
+    const pages = await officialPagesOf(this.db, combos.map((c) => c.id));
     // "New today": made by a person in the last day, after the sample load (the loader's own nodes are not new).
     const loadedAt = (await this.db.auditEvent.findFirst({ where: { workspaceId, action: "loaded" }, orderBy: { at: "desc" }, select: { at: true } }))?.at.getTime() ?? 0;
     const snaps = combos.length ? await buildSnapshots(this.db, workspaceId, combos.map((c) => c.id), "draft") : new Map();
@@ -522,7 +520,7 @@ export class Programs {
       forms: lines.sort((x, y) => x.lineageKey.localeCompare(y.lineageKey)).map((f) => {
         const e = newestEdition(f.form.editions.filter((x) => x._count.maps > 0 && x.channel !== "ONLINE"));
         return { code: f.form.formKey, title: f.form.displayName, document: f.form.formKind !== "data_form", who: f.who, when: f.attachMode === "COMBINATION_MANDATORY" ? "always" : f.conditionPlain ?? "only if", edition: e?.editionLabel ?? null, boxes: e?._count.maps ?? 0,
-          channel: f.channel, channelWords: CHANNEL_WORDS[f.channel], signature: view.lines.find((l) => l.form === f.lineageKey)?.signature ?? null };
+          channel: f.channel, channelWords: CHANNEL_WORDS[f.channel], signature: view.lines.find((l) => l.form === f.lineageKey)?.signature ?? null, signatureKind: f.signature };
       }),
       sources: c.attachments.map((x) => ({ id: x.id, kind: x.kind, name: x.edition ?? x.fileName, status: x.status, detail: x.statusDetail, at: x.createdAt })),
       held: await this.heldFor(c.workspaceId, combinationId, new Set((row?.leaf.forms ?? []).map((f) => f.code))),
