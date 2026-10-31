@@ -173,3 +173,65 @@ Other D scores: unchanged from the round above.
 
 **Could not check:** a real screen reader; canada.ca live; Find again's add-back in a browser.
 **Journey test:** `journey-test-reviewer-2026-10-31-x5c-00007dd0.md`, **8.5/10**, pass. The verdict is still Block, on issue A.
+
+# Round at 7fdc81f8
+
+Reviewer: a third one. I did not build this slice or review its earlier rounds. I reviewed `git diff 00007dd0 7fdc81f8` and the whole slice `7570c9f4..7fdc81f8`.
+
+**Verdict: Approve.** The Major (A) is closed. B, C and D are fixed in the code. Two Shoulds and two Minors remain, listed below. None of them blocks.
+
+**How I tested.**
+* Copies ran on :4450–4453 only. The served web build contains the fix (`List again: ${e.code}`, `data-list-again`).
+* Mutants ran from `git archive 7fdc81f8` in `/tmp/rv7cm`, so the worktree was not edited. Each web mutant got its own vite build.
+* US$0. `STUDIO_AI_LIVE` was set only for `check_forms_s4_finder.ts`, with the fake launcher, as its usage line says.
+* Afterwards: the copies are stopped, 13 `xr_studio_rv7c*` databases dropped, the `slice3/` screenshots restored (`git checkout --`), and the tree is clean.
+
+| Suite | Result |
+|---|---|
+| `check_forms_x5_library.ts`, run twice | 78/78 both times |
+| `check_forms_s4_library_browser.cjs`, run twice | 99/99 both times |
+| `check_forms_x5_finder_baseline.ts` | 8/8 |
+| `check_forms_s4_finder.ts` | 144/144 |
+| `check_forms_demo.ts` | 23/23 |
+| `check_s6_library_sources.ts` | 39/39 |
+| `tsc --noEmit`, api and web | clean |
+| Graph (on a clean archive copy) | G1–G6 = 0/0/2/0/0/0. The two G3 are the older attachment routes |
+
+## Previous issues, with the fix removed
+| # | Live on 7fdc81f8 | Mutant |
+|---|---|---|
+| A (Major, axe 2.5.3) | **Closed.** Names are `List again: IMM 0008 SCH4`; axe is clean for the author and the approver | Old aria-label: browser suite fails `axe … label-content-name-mismatch: 2` |
+| B (focus) | **Closed for the normal path.** After the first item, focus goes to the next List again; after the last, to Fill. Residue: S1 below | No refocus: `waitForFunction` times out (fails) |
+| C (under-reporting) | **Closed.** With 2 rows removed to stand in for new forms, the toast reads "…The fill also listed 2 other new forms from IRCC's forms list." Both rows come back | No `more`: `C3.12 … (00007dd0) 3` fails (77/78) |
+| D (not atomic) | **Closed in the code.** The fill was made to fail (restart with an empty recorded folder). Result: 409 in words, the memory is kept (1 row), 0 `restored` lines, and the section still shows both | No restore: **survives 78/78**. On that mutant the memory is lost after the same failure (S2) |
+
+The two "first view under 1 s" failures on the mutants (1149 ms and 1292 ms) came from load: four copies ran at once. The unmutated runs passed both times.
+
+## Open issues (ranked)
+S1. **Should (WCAG 2.4.3, residue of B).**
+   * Problem: after the *last* List again, focus falls to `<body>` when the list reload takes longer than about 0.7 s. The page budget allows a first view of up to 1 s.
+   * Repro: delay `GET /api/library/forms/list` by 300, 600 and 800 ms. Focus lands on Fill, Fill and `BODY`.
+   * Cause: `refocus` polls 40 animation frames (`web/src/pages/library-forms.tsx:254-258`). It then focuses the heading, which unmounts a moment later. `useAction` does not wait for the invalidation (`lib/api.ts:50`).
+   * Fix: refocus once the list query has settled (await `invalidateQueries`, or an effect on `items.length`), not on a frame count.
+S2. **Should (STANDARDS §7 [M], "a rule's test fails when the rule is removed").** The restore when the fill fails (`api/src/form-library.ts:231-234`) has no test, because mutant D survives. Fix: one check that restarts the copy with an empty `STUDIO_CANADA_FIXTURES` and presses List again. It should expect 409, the memory row still there, and no `restored` line.
+S3. **Should, carried (round 00007dd0 item 3).** The sample load's forget (`engine/import.ts:83`), `sources.ts:777` and `finder.ts:558` are still untested. This round did not touch them.
+m1. **Minor.**
+   * Problem: after a failed List again, focus goes to `<body>`. The shared Button disables itself while busy (`components/ui/controls.tsx:32`), and `onError` does not refocus. The error toast is clear, and the button can be pressed again. Screenshot: `/tmp/rv7c/shots/06-fill-failed-1440.png`.
+   * Fix: refocus the pressed button on error.
+m2. **Minor.** `others = created − 1` assumes this fill created the restored form (`form-library.ts:238`). If another fill runs at the same moment and creates it, the message counts one too few. No data is wrong.
+m3. **Minor, carried (item 5).** The delete confirm does not say that later fills leave the form out.
+
+## D1–D20 (changes from round 00007dd0)
+| D | Score | Evidence |
+|---|---|---|
+| D10 | 5 | The toast names the other forms the fill listed |
+| D11 | 5 | Toast, audit (`restored` plus a fill line), and focus moves on; S1 applies only on a slow reload |
+| D13 | 4 | axe is clean. No sideways scroll at 400, 1024 and 1440 px, nor at 512 px (200 %). Focus is lost on a slow reload or an error (S1, m1) |
+| D16 | 4 | New checks fail when their rule is removed (A, B, C). The restore (D) and the sample-load forget are untested |
+| D17, D20 | simulated only | No intended user walked it |
+The other D scores are unchanged.
+
+**Could not check:** a real screen reader; canada.ca live; an intended user's unaided walk.
+**Journey test:** `journey-test-reviewer-2026-10-31-x5c-7fdc81f8.md`, **9.5/10**, pass.
+
+**Verdict: Approve** (no open Blocker or Major). These items do not block, and fixing them is optional: S1, S2, S3, then m1–m3.
