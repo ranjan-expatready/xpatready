@@ -30,7 +30,6 @@
       "Bash(gh release delete*)",
       "Bash(gh secret*)",
       "Bash(gh variable set*)",
-      "Bash(gh workflow run*)",
       "Bash(gh api -X POST*)",
       "Bash(gh api -X PUT*)",
       "Bash(gh api -X PATCH*)",
