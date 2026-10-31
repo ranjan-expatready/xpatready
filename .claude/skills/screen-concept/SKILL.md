@@ -17,7 +17,7 @@ Read: `ai-workers/problem-1-pathway-setup-and-form-filling/product/PRODUCT.md`, 
 4. **Layout** — one pattern from `EXPERIENCE.md` §3; scoped menu; team tokens; every state; realistic Sample data; real IRCC codes only when certain. Draw it on the design canvas and save each board's source to `screens/NN/design/` (the builder cannot see the canvas).
 5. **Copy** — tooltips, empty states, errors.
 6. **Contract and tests** — endpoints and shapes; one pass + one fail per BR; scale and keyboard checks.
-6b. **Capability or scaffolding** (P-33, `WORKFLOW.md`) — list each element under one of the two; demo steps use the capability's own path.
+6b. **Capability or scaffolding** (P-33) — list each element under one of the two; demo steps use the capability's own path.
 7. **Questions** — at most three, recommendation first.
 8. Write `screens/NN-slug/concept.md` (under 100 lines) with sections for each step above.
 9. **Before showing the founder:** run a fresh agent with skill screen-challenge on the concept; fix every Blocker/Major or record why not.

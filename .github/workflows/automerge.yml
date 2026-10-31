@@ -1,0 +1,45 @@
+# Auto-merge (P-189, founder 31 Oct): a pull request merges by itself when (1) the ci job passed on its current head
+# commit and (2) it carries the label "review: approved", added after its last commit (the reviewer agent approves the
+# code as it is now; a newer push needs a new approval). Nobody presses merge. Runs for a few
+# seconds on the Mac's runner (GitHub's machines are blocked by the account's billing limit, 31 Oct; the Mac costs
+# nothing; the job waits its turn behind a running check); it reads and merges only, never pushes code.
+name: automerge
+on:
+  workflow_run: { workflows: [ci], types: [completed] }
+  pull_request_target: { types: [labeled] }
+permissions: { contents: write, pull-requests: write, actions: write }
+concurrency: { group: automerge, cancel-in-progress: false }
+jobs:
+  merge:
+    runs-on: [self-hosted, macOS, xr-mac]
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request_target' || github.event.workflow_run.conclusion == 'success'
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      PR_FROM_LABEL: ${{ github.event.pull_request.number }}
+      SHA_FROM_RUN: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: merge when green and approved
+        run: |
+          set -euo pipefail
+          export PATH=/opt/homebrew/bin:$PATH
+          if [ -n "$PR_FROM_LABEL" ]; then prs="$PR_FROM_LABEL"
+          else prs=$(gh api "repos/$REPO/commits/$SHA_FROM_RUN/pulls" --jq '.[] | select(.state=="open" and .base.ref=="main") | .number'); fi
+          for n in $prs; do
+            pr=$(gh api "repos/$REPO/pulls/$n")
+            head=$(jq -r .head.sha <<<"$pr"); state=$(jq -r .state <<<"$pr")
+            [ "$state" = open ] || { echo "#$n not open"; continue; }
+            jq -e '.labels | map(.name) | index("review: approved")' <<<"$pr" >/dev/null || { echo "#$n: no review approval yet"; continue; }
+            # The approval must be newer than the last commit.
+            committed=$(gh api "repos/$REPO/commits/$head" --jq .commit.committer.date)
+            labelled=$(gh api "repos/$REPO/issues/$n/events" --paginate --jq '[.[] | select(.event=="labeled" and .label.name=="review: approved") | .created_at] | last // ""')
+            [[ -n "$labelled" && "$labelled" > "$committed" ]] || { echo "#$n: approval is older than the last commit ($labelled < $committed)"; continue; }
+            # ci must have passed on this exact head commit.
+            ok=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$head" --jq '[.workflow_runs[] | select(.conclusion=="success")] | length')
+            [ "$ok" -gt 0 ] || { echo "#$n: ci has not passed on $head"; continue; }
+            echo "#$n: green on $head and approved at $labelled: merging"
+            gh pr merge "$n" --repo "$REPO" --merge --match-head-commit "$head" && echo "merged #$n" >> "$GITHUB_STEP_SUMMARY"
+            # A merge made with this job's token starts no push workflows (GitHub rule), so start the demo update directly.
+            gh workflow run demo-update.yml --repo "$REPO" --ref main || echo "demo update not started"
+          done

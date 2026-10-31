@@ -1,6 +1,6 @@
 {
-  "at": "2026-10-29T14:38:23.378Z",
-  "port": 4438,
+  "at": "2026-10-30T05:09:27.884Z",
+  "port": 16438,
   "pass": 26,
   "fail": 0,
   "log": [
@@ -51,7 +51,7 @@
       "name": "C4.9 pass: the author proposes the case officer for every combination; it waits for a second person",
       "ok": true,
       "detail": {
-        "id": "2d2ff15d-0022-4411-9ab4-99aa49028e2d",
+        "id": "80393067-3d72-4e6d-b126-7e52d80bfec7",
         "status": "WAITING",
         "label": "Field and level of study of a period of education · filled by the case officer, for every combination",
         "before": "CLIENT",
@@ -73,7 +73,7 @@
       "name": "C4.9: the row shows the waiting change, who proposed it and why",
       "ok": true,
       "detail": {
-        "id": "2d2ff15d-0022-4411-9ab4-99aa49028e2d",
+        "id": "80393067-3d72-4e6d-b126-7e52d80bfec7",
         "to": "CASE_OFFICER",
         "status": "WAITING",
         "by": "Configuration author",

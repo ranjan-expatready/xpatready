@@ -3,7 +3,7 @@
 // person → a live form-finder run (stand-in launcher, its AI call hangs) shows in the top-bar chip on any page → the
 // chip opens the run's card → Stop ends it → Stopped. Screenshots at 1440 and 1024 px into
 // product/screens/W1-form-library/screenshots/slice2/, axe (WCAG 2.2 AA) on each state. US$0 (no model call).
-//   zsh studio/tools/isolated.sh forms_s4b 4457 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && node studio/tests/check_forms_s4_run_browser.cjs 4457 xr_studio_forms_s4b
+//   zsh studio/tools/isolated.sh forms_s4b 4457 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && node studio/tests/check_forms_s4_run_browser.cjs 4457 xr_studio_forms_s4b
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;

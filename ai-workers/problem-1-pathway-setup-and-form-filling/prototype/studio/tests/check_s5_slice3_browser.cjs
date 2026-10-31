@@ -46,6 +46,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== find the forms with AI
   await go(vv, "forms");
+  // The offer is a plan the server computes (start-setup); the slot is empty, with no spinner, until it arrives.
+  await finder.locator("[data-finder-start]").waitFor({ timeout: 30000 }).catch(() => {});
   // S3 item 5 (screens lane, 29 Oct): the slot holds Start setup's one offer, "Find forms with AI (about … · at most …)".
   step("C11.15 (Lead split 28 Oct; S3 item 5): before any find the Forms tab's slot holds the one Find forms button, nothing spent yet", /No form find yet/.test(await finder.innerText()) && /Nothing was spent yet/.test(await finder.innerText()) && await finder.locator("[data-finder-start]").count() === 1 && await finder.getByRole("button").count() === 1 && await finder.locator("[data-finder-start] [data-find-forms]").count() === 1);
   step("C11.15 guides: the guide is among Visitor visa's sources", /Guide 5256/.test(await p.locator("[data-sources]").innerText().catch(() => "")));
@@ -89,9 +91,18 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await finder.getByRole("button", { name: "Find again" }).click();
   const again = p.getByRole("dialog"); await again.locator("[data-find-plan]").waitFor({ timeout: 30000 }).catch(() => {});
   step("C11.15 plan: Find again shows the steps and says the cost before anything runs (saved AI answers: US$0)", /Cost: US\$0/.test(await again.locator("[data-find-cost]").innerText().catch(() => "")) && await again.locator("[data-find-plan] li").count() > 2);
-  await again.getByLabel(/AI now/).check(); await p.waitForTimeout(800);
-  step("C11.15 plan: choosing AI now says the most it can cost, inside the cap", /at most US\$\d+\.\d\d/i.test(await again.locator("[data-find-cost]").innerText().catch(() => "")), await again.locator("[data-find-cost]").innerText().catch(() => ""));
-  await again.getByLabel(/Use saved AI answers/).check(); await again.locator("[data-find-plan]").waitFor(); await p.waitForTimeout(800);
+  // Lead Critical 29 Oct: a copy without the live switch (every suite run; never switched on here) greys AI now with
+  // the reason; only a copy the founder switched on offers it, and then its plan says the most it can cost.
+  // The branch follows the server's switch (the plan's live.on), never what the page shows, so a page that offered AI now
+  // on a copy without the switch fails here (review m2).
+  const liveOn = (await api(`/combinations/${vv}/forms/find/plan`, { method: "POST", data: { mode: "live" } })).body?.live?.on === true;
+  if (!liveOn) {
+    step("C11.15 Lead Critical: with AI now switched off on this copy, Find again greys AI now and says why in words", await again.getByRole("radio", { name: /^AI now/ }).isDisabled() && /AI now is switched off on this copy/.test(await again.locator('[data-mode="live"]').innerText()), await again.locator('[data-mode="live"]').innerText());
+  } else {
+    await again.getByRole("radio", { name: /^AI now/ }).check(); await p.waitForTimeout(800);
+    step("C11.15 plan: choosing AI now says the most it can cost, inside the cap", /at most US\$\d+\.\d\d/i.test(await again.locator("[data-find-cost]").innerText().catch(() => "")), await again.locator("[data-find-cost]").innerText().catch(() => ""));
+  }
+  await again.getByRole("radio", { name: /^Use saved AI answers/ }).check(); await again.locator("[data-find-plan]").waitFor(); await p.waitForTimeout(800);
   await state("find-again-plan");
   const before = (await api(`/combinations/${vv}/forms/find/latest`)).body.run?.id;
   await again.getByRole("button", { name: "Start" }).click();
@@ -120,12 +131,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const fill = p.getByRole("dialog"); await fill.locator("[data-people-cost]").waitFor({ timeout: 30000 }).catch(() => {});
   step("C11.12 plan: Fill from the guide names the guide and says the cost first (rules only: US$0)", /Guide 5256/.test(await fill.innerText()) && /Cost: US\$0/.test(await fill.locator("[data-people-cost]").innerText().catch(() => "")));
   // Lead check L2: AI now is greyed (not in the slice 3 Go) until the founder approves a live trial.
-  step("C11.12 L2: AI now is greyed and says it waits for the founder's Go for a live trial", await fill.getByLabel(/AI now/).isDisabled() && /not approved yet/.test(await fill.locator('[data-fill-mode="live"]').innerText()) && /founder's Go for a live trial/.test(await fill.locator('[data-fill-mode="live"]').innerText()));
-  await fill.getByLabel(/Use saved AI answers/).check(); await p.waitForTimeout(800);
+  step("C11.12 L2: AI now is greyed and says it waits for the founder's Go for a live trial", await fill.getByRole("radio", { name: /^AI now/ }).isDisabled() && /not approved yet/.test(await fill.locator('[data-fill-mode="live"]').innerText()) && /founder's Go for a live trial/.test(await fill.locator('[data-fill-mode="live"]').innerText()));
+  await fill.getByRole("radio", { name: /^Use saved AI answers/ }).check(); await p.waitForTimeout(800);
   await fill.getByRole("button", { name: "Fill" }).click(); await fill.locator("[data-people-proposal]").waitFor({ timeout: 30000 }).catch(() => {});
   step("C11.12 fail: with no saved AI answer yet it says so and proposes nothing", /No saved AI answer/.test(await fill.innerText()) && await fill.getByRole("button", { name: "Use these lines" }).isDisabled());
   await fill.getByRole("button", { name: "Back" }).click();
-  await fill.getByLabel(/Rules only/).check(); await p.waitForTimeout(800);
+  await fill.getByRole("radio", { name: /^Rules only/ }).check(); await p.waitForTimeout(800);
   await fill.getByRole("button", { name: "Fill" }).click(); await fill.locator("[data-people-proposal]").waitFor({ timeout: 30000 }).catch(() => {});
   step("C11.12 pass: rules propose the principal and the family the guide names, each with IRCC's words", await fill.locator('[data-proposed="principal"]').count() === 1 && await fill.locator('[data-proposed="spouse_or_partner"]').count() === 1 && /"[^"]{20,}"/.test(await fill.locator("[data-people-proposal]").innerText()));
   await state("who-can-be-from-guide");

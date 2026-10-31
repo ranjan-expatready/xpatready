@@ -5,19 +5,19 @@ description: Independent tester for the Pathway Configurator - tests the merged 
 
 # /qa — independent testing, like a person and underneath
 
-Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Lane rules: P/`LANES.md`. Bars: P/`QUALITY.md`, P/`EXPERIENCE.md`, P/`STANDARDS.md`. Scoring per screen: skill **journey-test**. You never built what you test; you never fix app code.
+Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The way of working: P/`WAY-OF-WORKING.md`. Bars: P/`EXPERIENCE.md`, P/`STANDARDS.md`. Scoring per screen: skill **journey-test**. You never built what you test; you never fix app code.
 
 ## 0. Guard (first)
 `bash P/tools/lane.sh whoami`:
-* `lead` (main copy) → you are the Lead routing a founder request: continue the qa session (`SendMessage`) or start one, prompt `/qa <mode>` (Mac: `start_session`, own worktree, `source_branch` main; cloud: `create_session`, `source_revision` and `outcome_branch` = the qa lane's branch); tell the founder it is running. Stop.
+* `lead` (main copy) → you are the Lead routing a founder request: continue the qa session (`SendMessage`) or start one, prompt `/qa <mode>` (Mac: `start_session`, own worktree from main; or a cloud session from main); tell the founder it is running. Stop.
 * `unbound` → `lane.sh bind qa`. Another lane → "This is the <x> lane; /qa runs in the qa copy." Stop.
-* `qa` → `lane.sh setup`, `lane.sh sync` (you test what is on `main`), read P/`lanes/qa.md` and its "From the Lead" note.
+* `qa` → `lane.sh setup`, then `git fetch origin && git merge --no-edit origin/main` (you test what is on `main`); read the message that started you and the open `qa/BUGS.md` rows.
 
 ## 1. Modes
 | Mode | Trigger | Scope |
 |---|---|---|
 | `after-merge` | Lead, after every merge of app code into `main` | Smoke of every Works capability + full test of the capabilities the merge touched (`git diff --stat <last tested commit>..main`) |
-| `milestone` | Lead, before a milestone gate (WORKFLOW.md) | Every capability in P/`qa/CAPABILITIES.md` for the milestone, every role, coverage report, all suites rerun |
+| `milestone` | Lead, before a milestone gate | Every capability in P/`qa/CAPABILITIES.md` for the milestone, every role, coverage report, all suites rerun |
 | `capability <name>` | Lead or founder | One capability or screen, in depth |
 | `explore <area>` | Founder, Lead, or when time allows | Charter-based exploration (60 min): what a real author, RCIC, officer or client would try |
 | `with-me` | Founder opens this session | Explore together: ask the founder one question at a time (AskUserQuestion, recommendation first), test what they point at, report as you go |
@@ -42,13 +42,5 @@ Screenshot each decision point and every defect (`P/qa/reports/<date>-<mode>/`).
 * D17 and D20 need an intended user: you may simulate, never award them.
 
 ## 5. Hand back
-Update P/`lanes/qa.md` (stage WAITING, owner Lead, next action, one log line), commit on your branch (`qa: <mode> — <summary>` + attribution line) and push it (P-82), end with one block:
-```
-Paste to Lead
-Lane: qa · Run: <mode> on main <short hash> · Commit: <short hash>
-Verdict: <ready / not ready, one line>
-Bugs: <n Blocker · n Critical · n Major · n Minor> (new: QA-…)
-Coverage: api <l>% lines / <b>% branches · engine <l>% / <b>% (floor <x>%)
-Questions: <one line each, or none>
-```
-Blocker or Critical → the Lead stops the affected lane's next merge or DEMO until fixed and retested.
+Commit your report and `qa/BUGS.md` rows on a branch `claude/qa-<word>` from main (`qa: <mode> — <summary>` + attribution line), push, open a PR (`gh pr create --base main`) and label it `review: approved` (records only; it merges by itself on green CI). Reply once, briefly: the run (mode, main commit), verdict (ready or not, one line), bugs (n Blocker · n Critical · n Major · n Minor, new QA-…), coverage, questions.
+A Blocker or Critical goes to the top of the backlog: the tech lead holds merges in that area until it is fixed and retested.
