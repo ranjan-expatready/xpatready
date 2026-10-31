@@ -1,8 +1,8 @@
 # Auto-merge (P-189, founder 31 Oct): a pull request merges by itself when (1) the ci job passed on its current head
 # commit and (2) it carries the label "review: approved", added after its last commit (the reviewer agent approves the
 # code as it is now; a newer push with code needs a new approval, a merge of main does not). Nobody presses merge. Runs for a few
-# seconds on GitHub's machine (back from the Mac on 31 Oct once billing was cleared: on the Mac it waited behind the
-# test queue); it reads and merges only, never pushes code.
+# seconds on the founder's Mac (P-195, 31 Oct: GitHub's machines are off budget; it may wait behind a running check);
+# it reads and merges only, never pushes code.
 name: automerge
 on:
   workflow_run: { workflows: [ci], types: [completed] }
@@ -10,7 +10,7 @@ on:
 permissions: { contents: write, pull-requests: write, actions: write }
 jobs:
   merge:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, xr-mac-light]   # P-199: its own slot, never behind a test run
     timeout-minutes: 5
     if: github.event_name == 'pull_request_target' || github.event.workflow_run.conclusion == 'success'
     env:

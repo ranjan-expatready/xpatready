@@ -4,10 +4,11 @@
 // Retire (kept for released versions), Delete (only when nothing uses it); a person approves retire and delete (P-116).
 // Which forms a combination needs and what IRCC accepts are Sample until the immigration expert confirms. Checks below.
 import { ACCOUNT_WORDS, CHANNEL_WORDS, CHANNELS, IRCC_ACCOUNTS } from "../../../contracts/forms";
+import { normaliseCode } from "../../../contracts/form-library";
 import * as React from "react";
 import { Link } from "react-router-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { FileUp, MoreHorizontal, Search } from "lucide-react";
+import { FileUp, ListChecks, MoreHorizontal, Search } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { api, queryClient, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { RunCard } from "@/components/run-card";
@@ -23,7 +24,7 @@ type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; 
   /** P-143 (C-3): one record per IRCC account (ANY: every account), each with its basis and IRCC's line. */
   accepts_accounts?: { account: string; account_words: string; channels: string[]; words: string; basis: string; quote: string | null; source_url: string | null }[];
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
-  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
+  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; listed_by_ircc?: boolean; newer_on_index?: boolean; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
 type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string };
 export type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
 
@@ -47,6 +48,11 @@ const STATUS: Record<Row["status"], { word: string; tone: string; tip: string }>
   no_file: { word: "No file yet", tone: "neutral", tip: "No edition of this form is in the library yet: upload its PDF, or let the form finder download it from canada.ca." },
   retired: { word: "Retired", tone: "neutral", tip: "Hidden from pickers and AI; released versions and open cases keep it. Restore it to use it again." },
 };
+/** X5 (P-156 (1)): the words of a row filled from IRCC's forms list, beside the usual ones. */
+const STATUS_INDEX: Record<"listed" | "newer", { word: string; tip: string }> = {
+  listed: { word: "Listed by IRCC · no file yet", tip: "IRCC's forms list names this form; its PDF is not in the library yet. It is downloaded from canada.ca when a combination picks it, or you can upload it." },
+  newer: { word: "Newer edition on canada.ca", tip: "IRCC's forms list shows a newer date for this form than when the library was last filled. Combinations keep using the library's file: check it against canada.ca (⋯ › Replace with a new edition)." },
+};
 const ORIGIN: Record<string, string> = { DOWNLOADED: "Downloaded from canada.ca by the form finder", UPLOADED: "Uploaded by a person", SAMPLE: "Official copy loaded with the sample" };
 
 export function FormsPage() {
@@ -54,8 +60,36 @@ export function FormsPage() {
   const session = useApi<{ actor?: { duties?: string[] } }>(["session", actorId], "/session");
   const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
   const [type, setType] = React.useState(""), [usedBy, setUsedBy] = React.useState(""), [status, setStatus] = React.useState(""), [q, setQ] = React.useState("");
-  const qs = new URLSearchParams(Object.entries({ type, usedBy, status, q: q.trim() }).filter(([, v]) => v)).toString();
-  const lib = useApi<List>(["library-forms-list", actorId, qs], `/library/forms/list${qs ? `?${qs}` : ""}`, { placeholderData: (p) => p });
+  // X5 review (86f9447c) M1, STANDARDS §9: the whole list is read once and filtered here, by the server's own rules
+  // (form-library.ts list()), so a search keystroke or a chip press makes no request; the search term is deferred and the
+  // table memoised, so typing stays under 200 ms with IRCC's ~240 listed forms in it.
+  const lib = useApi<List>(["library-forms-list", actorId], "/library/forms/list", { placeholderData: (p) => p });
+  const dq = React.useDeferredValue(q);
+  const rows = React.useMemo(() => {
+    const term = dq.trim().toLowerCase(), termCode = term ? normaliseCode(dq.trim()).toLowerCase() : "";
+    return (lib.data?.rows ?? []).filter((r) => (!type || r.type === type) && (!usedBy || r.used_by.some((u) => u.id === usedBy)) && (!status || r.status === status)
+      && (!term || r.code.toLowerCase().includes(term) || r.code.toLowerCase().includes(termCode) || r.title.toLowerCase().includes(term)));
+  }, [lib.data, type, usedBy, status, dq]);
+  // X5 review (5a5f0d16) M1, STANDARDS §9: at most PAGE rows are mounted at once (Show more adds the next PAGE), so widening
+  // a filter back to the whole list stays under 200 ms; the count of every match is said beside the button.
+  const PAGE = 50;
+  // X5 break (57f7d79d) m12: the count starts again at PAGE in the same render as the filter change (an effect drew every
+  // match first, then redrew at PAGE).
+  const [limit, setLimit] = React.useState(PAGE);
+  const viewKey = JSON.stringify([type, usedBy, status, dq]);
+  const [limitKey, setLimitKey] = React.useState(viewKey);
+  if (limitKey !== viewKey) { setLimitKey(viewKey); setLimit(PAGE); }
+  const pageRows = React.useMemo(() => rows.slice(0, limit), [rows, limit]);
+  // Review / break (0fc3f8a7) M7, WCAG 2.4.7: the focused row draws an outline inside its edges. The base sheet's unlayered
+  // ":focus-visible { outline: none }" beats every layered utility (the app's focus is a ring), so the row's outline is
+  // marked important; a ring (box-shadow) does not draw on a table row.
+  // X5 review (57f7d79d) m1, WCAG 2.4.3: Show more moves focus to the first row it added (before: it stayed below the new
+  // rows, or fell to the page when the button left). Review (310acb9c) 1 / break m16: to the row itself, not its number
+  // button, so a second Enter does not open that row's drawer.
+  const showMore = () => {
+    const first = rows[pageRows.length]?.code; setLimit((n) => n + PAGE);
+    if (first) setTimeout(() => document.querySelector<HTMLElement>(`tr[data-form="${CSS.escape(first)}"]`)?.focus(), 0);
+  };
   const [opened, setOpened] = React.useState<Row | null>(null);
   // P-116 amended (28 Oct): the row's one written action is confirmed in the right panel (ImpactPanel), then the Undo toast.
   const [confirm, setConfirm] = React.useState<Row | null>(null);
@@ -89,41 +123,24 @@ export function FormsPage() {
   const chip = (active: boolean, label: string, n: number | undefined, on: () => void, tip: string) => (
     <Tip tip={tip}><button type="button" aria-pressed={active} onClick={on} className={`rounded-full border px-3 py-1 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${active ? "border-primary bg-primary/10 text-text-link" : "border-border text-text"}`}>{label}{n !== undefined ? <span className="ml-1 tabular-nums text-text-muted">{n}</span> : null}</button></Tip>
   );
-  const filtered = !!(type || usedBy || status || q.trim());
-  return (
-    <TipProvider>
-      <div className="mx-auto max-w-7xl space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><p className="text-sm text-text-muted">Shared library › Forms</p><h1 className="text-2xl font-bold tracking-tight">Forms</h1><p className="mt-1 text-sm text-text-muted">Every IRCC form, guide and checklist, stored once. Combinations pick from here by themselves.</p></div>
-          {canAuthor ? <UploadButton onRuns={(ids) => setRuns((r) => [...ids, ...r].slice(0, 20))} /> : null}
-        </div>
-        {runs.length ? <div className="space-y-3">{runs.map((id) => <RunCard key={id} runId={id} onEnded={() => void queryClient.invalidateQueries({ queryKey: ["library-forms-list"] })} onDismiss={() => setRuns((r) => r.filter((x) => x !== id))} />)}</div> : null}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3" role="group" aria-label="Filters">
-          <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">Type</span>
-            {chip(!type, "All", c.all, () => setType(""), "Every form, guide and checklist in the library.")}
-            {chip(type === "form", "Forms", c.form, () => setType("form"), "Forms a case files (PDF or online).")}
-            {chip(type === "guide", "Guides", c.guide, () => setType("guide"), "IRCC guides: read by AI to find a combination's forms; never filled.")}
-            {chip(type === "checklist", "Checklists", c.checklist, () => setType("checklist"), "IRCC document checklists: read by AI for the documents list; never filled.")}
-          </div>
-          <label className="flex items-center gap-2 text-sm"><span className="font-medium">Used by</span>
-            <Select aria-label="Used by" value={usedBy} onChange={(e) => setUsedBy(e.target.value)} className="w-56"><option value="">Any combination</option>{(lib.data?.combinations ?? []).map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</Select>
-          </label>
-          <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">Status</span>
-            {chip(status === "needs_ok", "Needs your OK", c.needs_ok, () => setStatus(status === "needs_ok" ? "" : "needs_ok"), STATUS.needs_ok.tip)}
-            {chip(status === "newer_file", "Newer file on canada.ca", c.newer_file, () => setStatus(status === "newer_file" ? "" : "newer_file"), STATUS.newer_file.tip)}
-            {chip(status === "retired", "Retired", c.retired, () => setStatus(status === "retired" ? "" : "retired"), STATUS.retired.tip)}
-          </div>
-          <label className="relative ml-auto"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input type="search" aria-label="Search number or title" placeholder="Search number or title" value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} className="w-64 pl-8" /></label>
-        </div>
-        {lib.isLoading ? <div className="space-y-2" role="status" aria-busy="true" aria-label="Loading forms">{/* DV-d1-2 (N8): a label needs a role (axe aria-prohibited-attr) */}{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-          : lib.isError ? <Notice tone="danger" title="The forms could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void lib.refetch()}>Try again</Button>}>{(lib.error as Error).message}</Notice>
-          : !lib.data?.rows.length ? (filtered
-            ? <EmptyState title="No form matches" description="Nothing in the library matches these filters. Clear a filter or search for another number or title." action={<Button variant="secondary" onClick={() => { setType(""); setUsedBy(""); setStatus(""); setQ(""); }}>Clear filters</Button>} />
-            : <EmptyState title="No forms yet" description="Forms come in by themselves when a combination's setup starts: the form finder reads its IRCC page and downloads each form from canada.ca. You can also upload IRCC PDFs. Every form is stored once and used by any combination." />)
-          : (
+  // Review (5a5f0d16) m4: read with the deferred term, so clearing a search never flashes "No forms yet".
+  const filtered = !!(type || usedBy || status || dq.trim());
+  // Review (0fc3f8a7) 2: the count is spoken once typing pauses (before: an update per keystroke or two); a chip or Show
+  // more is spoken at once. Break (0fc3f8a7) m20: no count while the list could not be loaded (before: the old list's).
+  const countText = lib.data && !lib.isError ? (rows.length ? `Showing ${pageRows.length} of ${rows.length} forms` : filtered ? "No form matches" : "") : "";
+  const [spoken, setSpoken] = React.useState(countText);
+  const spokenQ = React.useRef(dq);
+  React.useEffect(() => {
+    const typing = spokenQ.current !== dq; spokenQ.current = dq;
+    if (!typing) { setSpoken(countText); return; }
+    const t = setTimeout(() => setSpoken(countText), 700);
+    return () => clearTimeout(t);
+  }, [countText, dq]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the row callbacks only call state setters; the rows and the person are what change it
+  const tableEl = React.useMemo(() => (
             <Table label="Table: Number, Title, Type, Edition, IRCC accepts, Used by, Status" headClass={[undefined, undefined, "hidden xl:table-cell", "hidden xl:table-cell"]} head={["Number", "Title", "Type", "Edition", <Tip key="ia" tip={ACCEPTS_TIP}><span tabIndex={0} className="underline decoration-dotted rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">IRCC accepts</span></Tip>, "Used by", "Status", <span key="a" className="sr-only">Actions</span>]}>
-              {lib.data.rows.map((r) => (<React.Fragment key={r.code}>
-                <tr data-form={r.code} className={r.status === "retired" ? "text-text-muted" : undefined}>
+              {pageRows.map((r) => (<React.Fragment key={r.code}>
+                <tr data-form={r.code} tabIndex={-1} className={`focus-visible:outline-2! focus-visible:outline-solid! focus-visible:-outline-offset-2! focus-visible:outline-ring! ${r.status === "retired" ? "text-text-muted" : ""}`}>
                   <td className="whitespace-nowrap text-xs tabular-nums"><button type="button" className="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setOpen(r)}>{r.code}</button></td>
                   <td className="min-w-32 max-w-56 break-words xl:max-w-80"><span className="line-clamp-2" title={r.title}>{r.title}</span>
                     <span className="mt-0.5 block text-xs text-text-muted xl:hidden">{TYPE_WORD[r.type]} · {editionText(r) ?? "no usable edition yet"}</span></td>
@@ -131,7 +148,7 @@ export function FormsPage() {
                   <td className="hidden xl:table-cell">{editionText(r) ?? <span className="text-text-muted">no usable edition yet</span>}</td>
                   <td className="max-w-36 xl:max-w-none"><AcceptsCell r={r} /></td>
                   <td className="max-w-48 xl:max-w-72">{r.used_by.length === 0 ? <span className="text-text-muted">Not used</span> : r.used_by.length === 1 ? <TrailText label={r.used_by[0].label} /> : <Tip tip={r.used_by.map((u) => u.label).join(", ")}>{/* DV-d1-1 (N8): a count a person trusts at a glance: a plain link-style button (opens where it is used), never a dotted line that reads as struck through */}<button type="button" data-used-by-count className="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setOpen(r)}>{r.used_by.length} combinations</button></Tip>}</td>
-                  <td><span className="inline-flex flex-wrap gap-1"><Tip tip={STATUS[r.status].tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone={STATUS[r.status].tone}>{STATUS[r.status].word}</Pill></span></Tip>{r.lifecycle_waiting && r.lifecycle_returned ? <Tip tip={TIP.returned}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="danger">{RETURNED_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : r.lifecycle_waiting ? <Tip tip={r.lifecycle_approved ? `Approved: the form is ${r.lifecycle_waiting === "RESTORE" ? "restored" : "retired"} with the next release (Release, on the combination's Review page).` : `A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="warn">{r.lifecycle_approved ? `${ACTION_LABEL[r.lifecycle_waiting]} approved` : WAITING_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : null}</span></td>
+                  <td><span className="inline-flex flex-wrap gap-1">{(() => { const ix = r.status === "no_file" && r.listed_by_ircc ? STATUS_INDEX.listed : r.status === "newer_file" && r.newer_on_index ? STATUS_INDEX.newer : null; return <Tip tip={ix?.tip ?? STATUS[r.status].tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-row-status={r.status}><Pill tone={STATUS[r.status].tone}>{ix?.word ?? STATUS[r.status].word}</Pill></span></Tip>; })()}{r.lifecycle_waiting && r.lifecycle_returned ? <Tip tip={TIP.returned}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="danger">{RETURNED_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : r.lifecycle_waiting ? <Tip tip={r.lifecycle_approved ? `Approved: the form is ${r.lifecycle_waiting === "RESTORE" ? "restored" : "retired"} with the next release (Release, on the combination's Review page).` : `A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="warn">{r.lifecycle_approved ? `${ACTION_LABEL[r.lifecycle_waiting]} approved` : WAITING_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : null}</span></td>
                   <td className="text-right">
                     <div className="flex items-center justify-end gap-0.5">
                       <RowAction kind={r.action.kind} why={canAuthor ? r.action.why : WHY.author} canEdit={canAuthor} name={r.code} reasonId={`why-${r.code.replace(/\W+/g, "-")}`}
@@ -146,7 +163,46 @@ export function FormsPage() {
               </React.Fragment>
               ))}
             </Table>
-          )}
+  ), [pageRows, canAuthor]);
+  return (
+    <TipProvider>
+      <div className="mx-auto max-w-7xl space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><p className="text-sm text-text-muted">Shared library › Forms</p><h1 className="text-2xl font-bold tracking-tight">Forms</h1><p className="mt-1 text-sm text-text-muted">Every IRCC form, guide and checklist, stored once. Combinations pick from here by themselves.</p></div>
+          {/* X5 review m6: the two ways forms come in, side by side. */}
+          {canAuthor ? <span className="flex flex-wrap items-center gap-2"><FillFromIndexButton /><UploadButton onRuns={(ids) => setRuns((r) => [...ids, ...r].slice(0, 20))} /></span> : null}
+        </div>
+        {runs.length ? <div className="space-y-3">{runs.map((id) => <RunCard key={id} runId={id} onEnded={() => void queryClient.invalidateQueries({ queryKey: ["library-forms-list"] })} onDismiss={() => setRuns((r) => r.filter((x) => x !== id))} />)}</div> : null}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3" role="group" aria-label="Filters">
+          <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">Type</span>
+            {chip(!type, "All", c.all, () => setType(""), "Every form, guide and checklist in the library.")}
+            {chip(type === "form", "Forms", c.form, () => setType("form"), "Forms a case files (PDF or online).")}
+            {chip(type === "guide", "Guides", c.guide, () => setType("guide"), "IRCC guides: read by AI to find a combination's forms; never filled.")}
+            {chip(type === "checklist", "Checklists", c.checklist, () => setType("checklist"), "IRCC document checklists: read by AI for the documents list; never filled.")}
+          </div>
+          <label className="flex items-center gap-2 text-sm"><span className="font-medium">Used by</span>
+            <Select aria-label="Used by" value={usedBy} onChange={(e) => setUsedBy(e.target.value)} className="w-56"><option value="">Any combination</option>{(lib.data?.combinations ?? []).map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</Select>
+          </label>
+          <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">Status</span>
+            {chip(status === "needs_ok", "Needs your OK", c.needs_ok, () => setStatus(status === "needs_ok" ? "" : "needs_ok"), STATUS.needs_ok.tip)}
+            {/* X5 (review 4, break m10): one word for both kinds of "newer" (a newer file, or a newer date on IRCC's list). */}
+            {chip(status === "newer_file", "Newer on canada.ca", c.newer_file, () => setStatus(status === "newer_file" ? "" : "newer_file"), "canada.ca shows something newer than the library's file: another file of the same edition, or a newer date on IRCC's forms list. Combinations keep the library's file until a person checks it.")}
+            {/* X5 break M5: after the fill most rows have no file yet; these two chips find the rest, or only those. */}
+            {chip(status === "ready", "Ready", c.ready ?? 0, () => setStatus(status === "ready" ? "" : "ready"), STATUS.ready.tip)}
+            {chip(status === "no_file", "No file yet", c.no_file ?? 0, () => setStatus(status === "no_file" ? "" : "no_file"), STATUS.no_file.tip)}
+            {chip(status === "retired", "Retired", c.retired, () => setStatus(status === "retired" ? "" : "retired"), STATUS.retired.tip)}
+          </div>
+          <label className="relative ml-auto"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input type="search" aria-label="Search number or title" placeholder="Search number or title" value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} className="w-64 pl-8" /></label>
+        </div>
+        {lib.isLoading ? <div className="space-y-2" role="status" aria-busy="true" aria-label="Loading forms">{/* DV-d1-2 (N8): a label needs a role (axe aria-prohibited-attr) */}{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+          : lib.isError ? <Notice tone="danger" title="The forms could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void lib.refetch()}>Try again</Button>}>{(lib.error as Error).message}</Notice>
+          : !rows.length ? (filtered
+            ? <EmptyState title="No form matches" description="Nothing in the library matches these filters. Clear a filter or search for another number or title." action={<Button variant="secondary" onClick={() => { setType(""); setUsedBy(""); setStatus(""); setQ(""); }}>Clear filters</Button>} />
+            : <EmptyState title="No forms yet" description="Forms come in by themselves when a combination's setup starts: the form finder reads its IRCC page and downloads each form from canada.ca. You can also upload IRCC PDFs. Every form is stored once and used by any combination." />)
+          : <>{tableEl}{rows.length > pageRows.length ? <p className="flex flex-wrap items-center gap-3 text-sm" data-show-more><span className="text-text-muted" aria-hidden>Showing {pageRows.length} of {rows.length} forms</span><Button size="sm" variant="secondary" onClick={showMore}>Show {Math.min(PAGE, rows.length - pageRows.length)} more forms</Button></p> : null}</>}
+        {/* Review (310acb9c) 2 / break m17, WCAG 4.1.3: one status region, always on the page, says how many forms are shown
+            (before: it lived in the pager, so the last Show more and a short filter were never spoken). */}
+        <p className="sr-only" role="status" data-list-count data-shown={pageRows.length}>{spoken}</p>
         <p className="text-xs text-text-muted">{lib.data?.sample_note}</p>
         {open ? <FormDrawer row={open} onClose={() => setOpen(null)} canAuthor={canAuthor} /> : null}
         {confirm ? <div className="xl:fixed xl:right-6 xl:top-20 xl:z-40 xl:w-[440px]"><ImpactPanel key={`impact-${confirm.code}`} kind={confirm.action.kind} name={`${confirm.code} · ${confirm.title}`}
@@ -184,7 +240,16 @@ function useAsk<R>(fn: () => Promise<R>, success: string, keys: unknown[][], onD
   return useMutation<R, Error, void>({ mutationFn: fn, onSuccess: () => { for (const k of keys) void queryClient.invalidateQueries({ queryKey: k }); toast.push({ tone: "ok", text: success }); onDone(); } });
 }
 
-/** One way in: Upload PDF, many files at once; each file runs on its own card (rules first, AI only when they cannot). */
+/** X5 (P-156 (1)): fills the library from IRCC's forms list once (US$0: no AI, no download); safe to press again. */
+function FillFromIndexButton() {
+  const ref = React.useRef<HTMLButtonElement | null>(null), inFlight = React.useRef(false); // review (86f9447c) m4: a double click sends one fill
+  // X5 review m5 (WCAG 2.4.3): the busy button is disabled while it fills; focus goes back to it once it is enabled again.
+  const refocus = (tries = 30) => { const el = ref.current; if (!el || tries <= 0) return; if (el.disabled) { requestAnimationFrame(() => refocus(tries - 1)); return; } el.focus(); };
+  const fill = useAction(() => api<{ message: string }>("/library/forms/fill-from-index", { method: "POST" }), { success: (r) => r.message, invalidate: [["library-forms-list"]], onDone: () => requestAnimationFrame(() => refocus()) });
+  return <Tip tip="Reads IRCC's forms and guides list into the library: every form number, listed with no file yet. No AI, no download, US$0. Forms already here keep their file."><span><Button ref={ref} variant="secondary" busy={fill.isPending} onClick={() => { if (inFlight.current) return; inFlight.current = true; fill.mutate(undefined, { onSettled: () => { inFlight.current = false; } }); }} data-fill-index><ListChecks /> Fill from IRCC's forms list</Button></span></Tip>;
+}
+
+/** One way in for a file: Upload PDF, many files at once; each file runs on its own card (rules first, AI only when they cannot). */
 function UploadButton({ onRuns }: { onRuns: (ids: string[]) => void }) {
   const input = React.useRef<HTMLInputElement>(null);
   const [error, setError] = React.useState<string | null>(null);

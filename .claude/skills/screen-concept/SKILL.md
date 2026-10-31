@@ -21,4 +21,4 @@ Read: `ai-workers/problem-1-pathway-setup-and-form-filling/product/PRODUCT.md`, 
 7. **Questions** — at most three, recommendation first.
 8. Write `screens/NN-slug/concept.md` (under 100 lines) with sections for each step above.
 9. **Before showing the founder:** run a fresh agent with skill screen-challenge on the concept; fix every Blocker/Major or record why not.
-10. On agreement: record answers in concept.md and decisions in `DECISIONS.md`; set the lane file's "From the Lead" note to READY → BUILD (owner Builder).
+10. On agreement: record answers in concept.md and decisions in `DECISIONS.md`; put the screen's row at the top of its area in `BACKLOG.md` and start that area's builder with `/next <area> <row>`.

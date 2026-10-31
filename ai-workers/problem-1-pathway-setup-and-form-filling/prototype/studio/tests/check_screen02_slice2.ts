@@ -122,6 +122,7 @@ function pdf(title: string, text: string) {
   // ─────────────────────────────── C3.8 K1: undecided form fields block submit
   r = await call("POST", `/combinations/${sv}/submit`, {});
   ok("C3.8 K1 fail: a draft with undecided form fields of the applied edition cannot be submitted", r.status === 400 && /no decision in this draft/.test(r.body?.detail), r.body?.detail);
+  ok("C3.8 K1 (#118 review): the refusal gives the form's own words as its example, never a PDF field path", !/\[\d+\]\./.test(r.body?.detail ?? "") && !/for example \./.test(r.body?.detail ?? ""), r.body?.detail);
   const ff = (await call("GET", `/jobs/${jobId}/form-fields`)).body;
   const fe = (await call("GET", `/editions/${ff.edition.id}/form-fields`)).body;
   ok("C3.8 K1: the edition's form fields read the same list (no decision, mapped, not a fact) by edition", fe.fields.length === ff.fields.length && fe.fields.some((x: any) => x.outcome_word === "No decision"), fe.fields.length);

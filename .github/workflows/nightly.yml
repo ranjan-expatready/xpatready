@@ -1,5 +1,5 @@
 # Nightly full set (test-speed plan, founder 31 Oct): each pull request checks only the suites its files can affect, on
-# GitHub's machine (ci.yml, run-suites.sh --changed); every suite runs here every night on main, on the founder's Mac
+# the same Mac since P-195 (ci.yml, run-suites.sh --changed); every suite runs here every night on main, on the founder's Mac
 # (self-hosted runner "xr-mac", ~/actions-runner-xpatready: no GitHub-hosted minutes are billed, US$0). The Mac must be
 # on at 21:00 UTC; "Run workflow" (workflow_dispatch) starts it by hand. The :4400 demo is never touched (the browser
 # suite runs on its own isolated copy). No model call: every suite replays saved runs.
@@ -36,7 +36,7 @@ jobs:
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
       - name: every studio suite (run-suites.sh, browser suite on its own copy; no model call, US$0)
         # The same Mac setup as the pull request check had (P-183): copies named ci_*, CI first (lanes' full runs wait).
-        env: { COPY_PREFIX: ci, SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
+        env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
         run: |
           bash "$P/tools/run-suites.sh" | tee suites.md
           exit ${PIPESTATUS[0]}

@@ -7,9 +7,9 @@
 #     graph check (P-86) and the official IRCC PDF checksums (P-31);
 #   * when the pull request changes code (files under prototype/, except docs, images and PDFs, or the suites' own tools
 #     and this file): the explicit-any count and the studio suites its files can affect (run-suites.sh --changed, plus a
-#     smoke set; everything when a shared file changed; no model call, US$0) on GitHub's 2-core machine set up by
-#     cloud-setup.sh (test-speed plan, founder 31 Oct: about US$0.006 a minute, US$5-10 a month accepted). The full set
-#     runs every night on main on the founder's Mac (nightly.yml, free).
+#     smoke set; everything when a shared file changed; no model call, US$0) on the founder's Mac (self-hosted runner
+#     xr-mac, free; P-195, 31 Oct: GitHub's machines used the US$10 monthly budget in one morning). The full set runs
+#     every night on main on the same Mac (nightly.yml).
 # A lane opens its pull request when its work is ready for the Lead's check, so a code change is tested about once;
 # a newer push to the pull request cancels the older run. Docs-only pull requests (most Lead PRs) take about a minute.
 name: ci
@@ -17,10 +17,10 @@ on:
   pull_request:
 jobs:
   ci:
-    # Founder, 31 Oct: back on GitHub's machine (the Mac averaged 44 minutes plus a 15-minute wait, as it also runs the
-    # builders and the demo); the machine is fresh, so the browser suite runs on its :4400 demo (--demo).
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # P-195 (founder, 31 Oct): back on the Mac. Builders now run in the cloud, so the Mac runs only checks, the demo and
+    # the Lead. The browser suite runs on its own isolated copy, never the :4400 demo (no --demo).
+    runs-on: [self-hosted, macOS, xr-mac]
+    timeout-minutes: 90   # P-183: a busy Mac never stops a check halfway
     permissions: { contents: read }
     concurrency: { group: "ci-${{ github.event.pull_request.number }}", cancel-in-progress: true }
     env:
@@ -46,11 +46,14 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"; echo "suites=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
           echo "changed=true" >> "$GITHUB_OUTPUT"; echo "suites=true" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: the Mac's tools (node 24, venv, official PDFs, database) linked like a lane copy (lane.sh setup)
+        run: |
+          [ -e .tools ] || ln -s "$HOME/Desktop/Xpatready/.tools" .tools
+          # Each line added is put in front of the last one: node 24 last, so it wins over Homebrew's node 23.
+          echo /opt/homebrew/bin >> "$GITHUB_PATH"; echo /opt/homebrew/opt/postgresql@18/bin >> "$GITHUB_PATH"; echo "$PWD/.tools/node-v24.21.0/bin" >> "$GITHUB_PATH"
+      - name: node 24
+        run: |
+          node --version | grep -q '^v24\.' || { echo "node 24 not first on PATH - $(command -v node) $(node --version)"; exit 1; }
       - name: packages (npm ci; the graph and any-count checks read TypeScript from them)
         run: cd "$S" && npm ci --no-fund --no-audit
       - name: rules files, decision impact, graph (P-86)
@@ -58,21 +61,23 @@ jobs:
           bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && node "$P/tools/graph.mjs" --check
       - name: official IRCC PDFs (manifest checksums, P-31)
         run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
-      - name: set up like a cloud session (cloud-setup.sh; it also builds the web app the browser suites need)
+      - name: web app build (the browser suites need it)
         if: steps.code.outputs.changed == 'true'
-        run: bash "$P/tools/cloud-setup.sh"
+        run: cd "$S" && ./node_modules/.bin/prisma generate && cd web && ../node_modules/.bin/vite build
       - name: explicit-any count
         if: steps.code.outputs.changed == 'true'
         run: node "$S/tools/count-any.mjs"
       - name: Playwright's own Chromium
         if: steps.code.outputs.suites == 'true'
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
-      - name: studio suites this change can affect (run-suites.sh --demo --changed; no model call, US$0)
+      - name: studio suites this change can affect (run-suites.sh --changed, browser suite on its own copy; US$0)
         if: steps.code.outputs.suites == 'true'
-        # One at a time (a parallel trial, 30 Oct, failed 12 suites). No COPY_PREFIX: CI has no prefix, so the usage
-        # lines' own names and ports apply (run-suites.sh). The chosen suites and why print first, into the summary.
+        # Two test slots on the Mac (P-199): each runner gets its own copy names and ports, so two checks never meet.
+        env: { COPY_PREFIX: "${{ runner.name == 'xr-mac-2' && 'ci2' || 'ci' }}", SUITES_BROWSER_ISOLATED: "1", SUITES_CI_FIRST: "1" }
+        # One at a time (a parallel trial, 30 Oct, failed 12 suites). Copies named ci_*, like the nightly run; the one
+        # runner runs one job at a time, so they never meet. The chosen suites and why print first, into the summary.
         run: |
-          bash "$P/tools/run-suites.sh" --demo --changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" | tee suites.md
+          bash "$P/tools/run-suites.sh" --changed "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
         if: always() && steps.code.outputs.suites == 'true'
