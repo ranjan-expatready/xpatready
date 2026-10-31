@@ -248,6 +248,8 @@ export class FormLibrary {
     // canada.ca's index date as it stands becomes that file's own date last seen current (never lowered: break m36), so a
     // page edited without a new edition stops reading "newer"; other bytes are not, whatever the dates say. The file is not
     // re-dated from the page (review 6bc5eb72 M: a page month would hide a later edition; fileMonth reads the printed month).
+    // The outside check (0796fc0c): with no approved file there is nothing to compare: say so before downloading anything.
+    if (!current?.sha256) return { outcome: "check" as const, message: `${code} has no approved file in the library to compare. Find again on a combination that uses it, or upload its PDF.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
     let pdf: Awaited<ReturnType<CanadaSource["get"]>>;
     try { pdf = await this.canada.get(pdfUrl, "pdf"); } catch (e) {
       // Break (6bc5eb72) m41: the page was read, its PDF was not; said as such, and nothing is recorded as checked (m39).
@@ -257,13 +259,16 @@ export class FormLibrary {
     await this.db.formEdition.updateMany({ where: { govFormDefId: def.id }, data: { checkedAt: new Date(), formPageUrl: pageUrl } });
     if (current?.sha256 && pdf.sha256 === current.sha256) {
       // The outside check (6bc5eb72): canada.ca serving the library's own bytes again also ends a finder's "new file" marker.
-      await this.db.formEdition.updateMany({ where: { id: current.id }, data: { sourceUrl: pdfUrl, newerFileSha256: null } });
-      const baseline = def.indexDateModified;
-      if (baseline) await this.db.formEdition.updateMany({ where: { id: current.id, OR: [{ indexDateSeenCurrent: null }, { indexDateSeenCurrent: { lt: baseline } }] }, data: { indexDateSeenCurrent: baseline } });
+      // Break (0796fc0c) m48: the finder's marker is cleared only if it is still the one this check read.
+      await this.db.formEdition.updateMany({ where: { id: current.id }, data: { sourceUrl: pdfUrl } });
+      if (current.newerFileSha256) await this.db.formEdition.updateMany({ where: { id: current.id, newerFileSha256: current.newerFileSha256 }, data: { newerFileSha256: null } });
+      if (def.indexDateModified) await this.db.formEdition.updateMany({ where: { id: current.id, OR: [{ indexDateSeenCurrent: null }, { indexDateSeenCurrent: { lt: def.indexDateModified } }] }, data: { indexDateSeenCurrent: def.indexDateModified } });
+      // Break m45 / review (0796fc0c) 4: the audit names the baseline the file keeps, not only the date this check offered.
+      const baseline = (await this.db.formEdition.findUnique({ where: { id: current.id }, select: { indexDateSeenCurrent: true } }))?.indexDateSeenCurrent ?? null;
       return { outcome: "current" as const, message: `${current.editionLabel} is canada.ca's current file: the same PDF${page.lastUpdated ? ` (page last updated ${page.lastUpdated})` : ""}.`, last_updated: page.lastUpdated, edition: current.editionLabel, sha256: pdf.sha256, baseline };
     }
     // Break (6bc5eb72) M15 / review Should 4: what the check found, in words.
-    return { outcome: "check" as const, message: current ? `canada.ca now serves a different PDF for ${code} than the library's file (${current.editionLabel})${page.lastUpdated ? `; its page was last updated ${page.lastUpdated}` : ""}. Find again on a combination that uses ${code} downloads it for review (a new edition goes to edition review; the same edition from a new file is marked for you to replace).` : `${code} has no approved file in the library to compare. Find again on a combination that uses it, or upload its PDF.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
+    return { outcome: "check" as const, message: current ? `canada.ca now serves a different PDF for ${code} than the library's file (${current.editionLabel})${page.lastUpdated ? `; its page was last updated ${page.lastUpdated}` : ""}. Find again on a combination that uses ${code} downloads it for review (a new edition goes to edition review; the same edition from a new file is marked for you to replace), or upload canada.ca's PDF.` : `${code} has no approved file in the library to compare. Find again on a combination that uses it, or upload its PDF.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
   }
 
   // ------------------------------------------------------------------ hand actions on a combination's forms

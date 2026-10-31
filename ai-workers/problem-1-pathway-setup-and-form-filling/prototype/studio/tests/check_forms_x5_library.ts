@@ -202,6 +202,12 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   sql(`update form_edition set index_date_seen_current = '2099-01-01', newer_file_sha256 = 'c' || repeat('0', 63) where sha256 = '${realSha}'`);
   const lowChk = await call("POST", `/library/forms/${encodeURIComponent(withFile)}/check-canada`);
   ok("C2.6 X5 break m36 / outside check (6bc5eb72) fail: a current check keeps a later baseline and clears the finder's new-file marker (the row reads Ready, not 'newer file')", lowChk.body?.outcome === "current" && sql(`select index_date_seen_current from form_edition where sha256 = '${realSha}'`) === "2099-01-01" && sql(`select coalesce(newer_file_sha256, '') from form_edition where sha256 = '${realSha}'`) === "" && (await call("GET", "/library/forms/list")).body.rows.find((x: any) => x.code === withFile)?.status === "ready", { outcome: lowChk.body?.outcome }); // eslint-disable-line @typescript-eslint/no-explicit-any
+  ok("C2.6 X5 break (0796fc0c) m45 fail: the check's audit line names the baseline the file keeps (2099-01-01), not the date it offered", sql(`select detail->>'baseline' from audit_event where action = 'checked' order by at desc limit 1`) === "2099-01-01");
+  // The outside check (0796fc0c): a form with no approved file is answered before anything is downloaded.
+  sql(`update form_edition set sha256 = 'b' || repeat('0', 63) where sha256 = '${realSha}'`);
+  const noApproved = await call("POST", `/library/forms/${encodeURIComponent(withFile)}/check-canada`);
+  ok("C2.6 X5 outside check (0796fc0c) fail: a form with no approved file gets 'no approved file … upload its PDF' (before: it downloaded first, and a missing PDF gave 409)", noApproved.status === 201 && noApproved.body?.outcome === "check" && /no approved file/.test(noApproved.body?.message ?? ""), { status: noApproved.status, m: noApproved.body?.message ?? msg(noApproved) });
+  sql(`update form_edition set sha256 = '${realSha}' where sha256 = 'b' || repeat('0', 63)`);
   sql(`update form_edition set index_date_seen_current = '2026-02-01' where sha256 = '${realSha}'`);
   const guideKey = sql(`select form_key from gov_form_def where form_kind = 'guide' limit 1`);
   const gChk = guideKey ? await call("POST", `/library/forms/${encodeURIComponent(guideKey)}/check-canada`) : { status: 0, body: null };
