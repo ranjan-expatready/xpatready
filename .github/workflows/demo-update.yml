@@ -9,7 +9,7 @@ permissions: { contents: read }
 concurrency: { group: demo-update, cancel-in-progress: true }
 jobs:
   demo:
-    runs-on: [self-hosted, macOS, xr-mac]
+    runs-on: [self-hosted, macOS, xr-mac-light]   # P-199: its own slot, never behind a test run
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
