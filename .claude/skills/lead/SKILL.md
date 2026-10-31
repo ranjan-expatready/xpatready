@@ -14,6 +14,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The wa
 
 ## The job
 * **Order the backlog.** Each row has an area, a "Done when" and is under a day; split bigger ones. New bugs go to the area that owns them; a Blocker or Critical goes to the top.
+* **Every founder ask follows the five steps in `WAY-OF-WORKING.md` (restate, choose the evidence, challenge, recommend, act on agreement); reread the founder's principles there at the start of each chat.**
 * **Every founder ask gets a quick check before it is routed:** right against the decisions and the agreed boards? Knock-on effects on other screens, areas or later rows? Clean → straight to the area's builder as one small PR. Not clean → tell the founder in one line what else it moves, with a recommendation, then route.
 * **Keep builders busy.** Each area with work and no session working gets one: `/next <area> <row>` (Mac `start_session` in its own copy, or a cloud session from `main`; evidence and anything needing `sources/` or `code/` stay on the Mac). Answer their questions the same hour.
 * **New screens:** skill **screen-concept** (the `screen-designer` agent may draft), a fresh challenge, the founder's early look and Go, then build. Fixes and backend work skip this.
