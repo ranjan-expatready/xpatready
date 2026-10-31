@@ -5,7 +5,7 @@
 // never changes it; a new copy is made only when the officer asks. Generation runs as a queued job (STANDARDS §3:
 // never inside the web request): one at a time, status kept, a restart resumes queued copies and fails running ones.
 // Audit lines name the form, the person's role and the case by its short id: never a value or a typed name (RT-17).
-import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Res, UploadedFiles, UseInterceptors, type OnModuleInit } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Query, Res, UploadedFiles, UseInterceptors, type OnModuleInit } from "@nestjs/common";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -49,6 +49,9 @@ const channelIn = (s: Snap, form: string): Channel => lineOf((s.forms as { form_
 /** C-9 (P-144): a barcode form filed by PDF upload or on paper needs a current validated copy before it is filed. */
 const needsValidate = (s: Snap, form: string) => isBarcodeForm(form) && ["PDF_UPLOAD", "PAPER"].includes(channelIn(s, form));
 const OUT_OF_DATE = "Out of date: validate again";
+/** What a file check names in its refusal: the generated copy, or the validated copy read back (C-9). */
+const COPY_FILE = { name: "This copy's file", made: "made", again: "generate a new copy" };
+const VALIDATED_FILE = { name: "This copy's validated file", made: "read back", again: "validate the copy again and read it back" };
 
 /** P-65 (a), review M1: a form's fill trial verdict, read from the evidence lane's own record
  *  (evidence-lane/E1/<form>/STATUS.md, its "## Verdict": "Passes …" or "The product's part passes …", never "… does not
@@ -295,24 +298,35 @@ export class CaseForms implements OnModuleInit {
 
   /** The copy's file as it was made: present (else `missing`, 404 to download, 409 to lock), inside the working files,
    *  and with the hash recorded. One read: the bytes checked are the bytes used. */
-  private checkedFile(x: { path: string | null; sha256: string | null }, missing: HttpStatus) {
+  private checkedFile(x: { path: string | null; sha256: string | null }, missing: HttpStatus, what = COPY_FILE) {
     const path = join(ROOT, x.path ?? "");
-    if (!x.path || !existsSync(path)) fail("This copy's file is missing from the working files; generate a new copy.", missing);
-    if (!realpathSync(path).startsWith(realpathSync(VAR_ROOT) + "/")) fail("This copy's file is not in the working files; it is not handed over.", HttpStatus.CONFLICT);
+    if (!x.path || !existsSync(path)) fail(`${what.name} is missing from the working files; ${what.again}.`, missing);
+    if (!realpathSync(path).startsWith(realpathSync(VAR_ROOT) + "/")) fail(`${what.name} is not in the working files; it is not handed over.`, HttpStatus.CONFLICT);
     const bytes = readFileSync(path);
-    if (createHash("sha256").update(bytes).digest("hex") !== x.sha256) fail("This copy's file changed on disk since it was made; generate a new copy.", HttpStatus.CONFLICT);
+    if (createHash("sha256").update(bytes).digest("hex") !== x.sha256) fail(`${what.name} changed on disk since it was ${what.made}; ${what.again}.`, HttpStatus.CONFLICT);
     return bytes;
   }
 
   /** The copy's bytes, checked against the hash recorded when it was made, and those same bytes are what is sent (break
-   *  M1: one read). The file must lie in the working files (break m5) and still exist (break m1). */
-  async file(actor: Actor, id: string) {
-    const { x } = await this.copyFor(actor, id);
+   *  M1: one read). The file must lie in the working files (break m5) and still exist (break m1).
+   *  C-9 (P-144, Devin on PR #121): a barcode form with a current validated copy downloads that validated file (the one
+   *  with Adobe's barcode, the one that is filed), checked the same way against its own recorded checksum; a failed
+   *  check is refused, never answered with the unbarcoded copy. `original` asks for the copy as the product made it. */
+  async file(actor: Actor, id: string, original = false) {
+    const { x, c } = await this.copyFor(actor, id);
     if (x.status !== "GENERATED" || !x.path) fail("This copy has no file.", HttpStatus.NOT_FOUND);
+    const form = x.formNumber.replace(/\s+/g, "");
+    const v = x.validated[0];
+    if (!original && v && isBarcodeForm(x.formNumber)) {
+      const { answers, rows } = await this.runtime.state(c);
+      const cov = formCoverage(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
+      // C-10: current while the form's facts are what they were when it was read back (as `copyOf` shows it).
+      if (v.factsHash === inputHash(cov?.facts ?? [])) return { bytes: this.checkedFile(v, HttpStatus.NOT_FOUND, VALIDATED_FILE), name: `${form}-validated-${short(x.id)}.pdf` };
+    }
     const bytes = this.checkedFile(x, HttpStatus.NOT_FOUND);
     // P-145: a copy of a form filed Online is named for what it is.
-    const online = channelIn(this.runtime.snapshotOf((await this.copyFor(actor, id)).c), x.formNumber) === "ONLINE";
-    return { bytes, name: `${x.formNumber.replace(/\s+/g, "")}-${online ? "copy-not-for-filing" : "copy"}-${short(x.id)}.pdf` };
+    const online = channelIn(this.runtime.snapshotOf(c), x.formNumber) === "ONLINE";
+    return { bytes, name: `${form}-${online ? "copy-not-for-filing" : "copy"}-${short(x.id)}.pdf` };
   }
 }
 
@@ -325,6 +339,6 @@ export class CaseFormsController {
   @Get("form-copies/:id") copy(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.copy(actorOf(a), id); }
   @Post("form-copies/:id/validated") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_VALIDATED_BYTES, files: 1 } })) validated(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: { originalname?: string; buffer?: Buffer }[]) { return this.f.validated(actorOf(a), id, files); }
   @Post("form-copies/:id/lock") lock(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.lock(actorOf(a), id, b); }
-  @Get("form-copies/:id/file") async file(@Headers("x-actor") a: H, @Param("id") id: string, @Res() res: Response) { const d = await this.f.file(actorOf(a), id); res.setHeader("content-type", "application/pdf"); res.setHeader("content-disposition", `attachment; filename="${d.name}"`); res.end(d.bytes); }
+  @Get("form-copies/:id/file") async file(@Headers("x-actor") a: H, @Param("id") id: string, @Query("original") o: string | undefined, @Res() res: Response) { const d = await this.f.file(actorOf(a), id, o === "1"); res.setHeader("content-type", "application/pdf"); res.setHeader("content-disposition", `attachment; filename="${d.name}"`); res.end(d.bytes); }
 }
 
