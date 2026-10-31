@@ -11,7 +11,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Scorin
 From the item's `concept.md`, decisions and `PRODUCT.md` §1, write each journey as: persona (author, reviewer/RCIC, case officer, client) · goal in their words · steps · expected result. Cover: main path, an alternate, empty, error (bad input, failed AI, held file), wrong role, recovery (reload, back, double click), and the step across the screen boundary (where this hands to the next screen). At most 10; the main path first.
 
 ## 2. Walk them like a person (visible browser)
-Start an isolated copy on your lane's port (`LANES.md` in the product home). Use the built-in browser pane (or Playwright headed). Use only what a person sees: click, type, read. No API shortcuts, no reading code first. For each step note what you expected, what happened, wrong turns, unclear words, waits over 1 s. Screenshot each decision point.
+Start an isolated copy on your own port (`WAY-OF-WORKING.md` in the product home). Use the built-in browser pane (or Playwright headed). Use only what a person sees: click, type, read. No API shortcuts, no reading code first. For each step note what you expected, what happened, wrong turns, unclear words, waits over 1 s. Screenshot each decision point.
 
 ## 3. Replay as automated checks
 Turn the main and error journeys into a Playwright script (`prototype/studio/tests/`, or the lane's evidence folder): axe WCAG 2.2 A/AA on each state; widths 400, 1024, 1440 px with no sideways scroll; keyboard-only main path; console and page errors; timings against `STANDARDS.md` §9 budgets. Run it twice to catch flakiness.
