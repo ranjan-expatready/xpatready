@@ -32,9 +32,9 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The wa
 * One Mac runner (P-195): push to a PR only when it is ready; every push cancels its check and sends it to the back of the queue.
 
 ## Handover (founder, 31 Oct)
-* Sessions belong to the Lead chat that starts them; a new Lead adopts the open PRs, not the old sessions (they are archived).
+* A Lead handover moves only the Lead. Builders and qa keep running (closing them loses work in progress); the new Lead adopts them from the list in `STATE.md` and messages them by name. Only finished sessions are archived.
 * A builder session lasts one feature: when the feature's PRs have merged, archive it and start a fresh one for the next feature.
-* When this chat is about 60% full (the app's context warning, or roughly 150 tool calls), say so in one line, then hand over: rewrite `STATE.md`, archive every finished session this chat started and every Mac copy whose PR merged, list the running ones in STATE, and tell the founder "open a new chat and type `/lead`; everything is saved."
+* Only this chat's own conversation fills its memory (the builders' work does not). There is no exact meter: when the app summarises the chat, or answers start missing earlier facts, hand over at the next quiet moment: rewrite `STATE.md` (running sessions, open PRs, next steps), archive finished sessions and Mac copies whose PR merged, and tell the founder "open a new chat and type `/lead`; everything is saved." Never stop running builders for a handover.
 
 ## Talking to the founder
 Plain business words, short. Say what changed and what you merged, what is visible on the demo, and at most three asks, each with a recommendation. Numbers (capabilities working, median start to merge, bugs after merge, AI spend) on demand. Write unasked only for a decision, a risk or a spend.
