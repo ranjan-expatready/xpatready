@@ -334,8 +334,10 @@ export class Sources {
    *  replay a saved run, or the guarded stub pass and, for live, the paid call. */
   async runDraftStep(id: string) {
     const j = await this.db.draftingJob.findUniqueOrThrow({ where: { id }, include: { batch: { select: { plan: true } } } });
-    // P-179: a person's Continue covers the run it started (each step's first attempt), never a later retry.
-    const ov = j.mode === "LIVE" && j.attempt === 1 ? overrideOf(j.batch?.plan) : undefined;
+    // P-179: a person's Continue covers the run it started, including a retry of that same run (forms follow-up, 31 Oct;
+    // question in the PR): every attempt of every step of the batch carries it, and the ledger still holds the run's
+    // reservations to the worst case the person accepted and total spend to the ceiling (SpendLedger.overrideRefusal).
+    const ov = j.mode === "LIVE" ? overrideOf(j.batch?.plan) : undefined;
     let a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: j.attachmentId! } });
     if (a.status === "RECOGNISED" || a.status === "READ_FAILED") {
       await this.db.draftingJob.update({ where: { id }, data: { message: "Reading the form's fields on this computer (no AI)" } });

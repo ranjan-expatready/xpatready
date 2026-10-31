@@ -92,6 +92,21 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   ok("C11.8 P-179 pass (Q2): with the Continue exactly one more run is queued, the Continue used once and kept on its run for the launcher", r.status === 201 && planOv?.id === o1 && planOv.run_key === p.run_key && lines().filter((l) => l.type === "override_use" && l.id === o1).length === 1, { status: r.status, m: msg(r), planOv });
   ok("C11.8 P-179 pass: the start's audit line names the Continue", sql(`select count(*) from audit_event where entity_key='${batch1}' and summary like '%continued past attempts%'`) === "1");
   await cancelOpen();
+  // P-179 follow-up (31 Oct; question in the PR): a run started with a Continue past "attempts" may be retried: the
+  // Continue covers that run, retries included, within the worst case the person accepted (the ledger holds it there).
+  r = await call("POST", `/ai/batches/${batch1}/retry`, {});
+  const retried = sql(`select max(attempt) from drafting_job where batch_id='${batch1}' and status='QUEUED'`);
+  ok("C11.8 P-179 follow-up pass: the Continue run, stopped before it was sent, is retried (before: 400 'used its 4 paid AI attempts … needs a person'), and the retry keeps the run's Continue", r.status === 201 && retried === "2" && JSON.parse(sql(`select plan::text from ai_batch where id='${batch1}'`)).override?.id === o1, { status: r.status, m: msg(r), retried });
+  await cancelOpen();
+  const snapLedger = readFileSync(LEDGER, "utf8"); seed(140);
+  r = await call("POST", `/ai/batches/${batch1}/retry`, {});
+  ok("C11.8 P-179 follow-up fail: past the US$132 ceiling that retry is refused in the founder's words (409), nothing queued", r.status === 409 && /founder must raise the cap/.test(msg(r)) && sql(`select count(*) from drafting_job where batch_id='${batch1}' and status='QUEUED'`) === "0", { status: r.status, m: msg(r) });
+  writeFileSync(LEDGER, snapLedger);
+  const keptOverride = JSON.stringify(JSON.parse(sql(`select plan::text from ai_batch where id='${batch1}'`)).override);
+  sql(`update ai_batch set plan = plan - 'override' where id='${batch1}'`);
+  r = await call("POST", `/ai/batches/${batch1}/retry`, {});
+  ok("C11.8 P-179 follow-up fail: a run with no Continue for a form past its paid attempts is still not retried (400, needs a person)", r.status === 400 && /needs a person, not another paid retry/.test(msg(r)), { status: r.status, m: msg(r) });
+  sql(`update ai_batch set plan = jsonb_set(plan, '{override}', '${keptOverride}'::jsonb) where id='${batch1}'`); // the run's Continue back, as it was
   p = await planNow();
   r = await draft(o1);
   ok("C11.8 P-179 fail (Q2): one click is one run: the same Continue again is refused (409 used), nothing queued", p.targets?.[0]?.over_attempts === true && r.status === 409 && /already used/.test(msg(r)), { status: r.status, m: msg(r) });
