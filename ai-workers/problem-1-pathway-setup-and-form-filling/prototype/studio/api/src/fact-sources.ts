@@ -7,7 +7,8 @@ import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpSt
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
-import { agentRefusal, CASE_OFFICER_NEEDS_REASON, countryPqr, factSourceProblems, factSources, prequalification, SOURCES, who, type FactSourceView } from "../../engine/sources.ts";
+import { agentRefusal, CASE_OFFICER_NEEDS_REASON, countryPqr, factSourceProblems, factSources, pqrPicksByRules, prequalification, SOURCES, who, type FactSourceView } from "../../engine/sources.ts";
+import { insertProposals, QUEUE_TX } from "./proposals.ts";
 import { ProposalItem } from "../../contracts/proposal-item.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { ACTORS, actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
@@ -141,6 +142,39 @@ export class FactSources {
     if (!(actor.duties as readonly string[]).includes("author")) throw problem(403, "Not yours", NOT_YOURS);
     return bulkUndo(this.db, this.audit, actor, await this.combination(id), body);
   }
+  /** C4.7 (F6 slice 1; P-76, P-149 one door): the rules propose pre-qualification picks for a combination's draft and put
+   *  them on To review, one item per person role and fact, each with its reason (engine/sources.ts pqrPicksByRules, the
+   *  stand-in until W1-10 step 7 drafts them with AI on the founder's Go). A run is recorded (US$0, no AI). A pick already
+   *  waiting on the queue is not proposed twice; a ticked fact is never proposed. Accepting one ticks the fact in the draft
+   *  (acceptPqrPick), so it goes into the combination's one review and release with the rest (C4.8): no other approval. */
+  async proposePicks(actor: Actor, combinationId: string) {
+    need(actor, "author");
+    const c = /^[0-9a-f-]{36}$/i.test(combinationId) ? await this.db.combination.findUnique({ where: { id: combinationId } }) : null;
+    if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
+    if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its pre-qualification is not changed. Restore it on Structure first.`);
+    const { snapshot } = await buildSnapshot(this.db, c.workspaceId, combinationId, "draft");
+    const waiting = new Set((await this.db.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId, kind: "pqr_pick", status: "waiting" }, select: { identityKey: true } })).map((x) => x.identityKey));
+    const views = new Map(factSources(snapshot).map((f) => [`${f.role}|${f.fact}`, f]));
+    const out = await this.db.$transaction(async (tx) => {
+      const job = await tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId, kind: PQR_PICKS_KIND, mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(), message: "Pre-qualification picks proposed by the rules (no AI, US$0)" } });
+      const all = pqrPicksByRules(snapshot, combinationId, job.id, randomUUID);
+      const fresh = all.filter((i) => !waiting.has(i.identity.key));
+      const items = fresh.map(({ id: _id, status: _status, decision: _decision, ...item }) => {
+        const f = views.get(item.identity.key)!;
+        return { ...item, work: { title: `Ask "${f.label}" (${who(snapshot, f.role)}) in pre-qualification` } };
+      });
+      await insertProposals(tx, c.workspaceId, items);
+      const message = items.length ? `${items.length} pre-qualification pick${items.length === 1 ? "" : "s"} proposed by the rules (no AI, US$0)` : "No new pick: the rules found nothing else to propose";
+      await tx.draftingJob.update({ where: { id: job.id }, data: { message, detail: { proposed: items.length, waiting_already: all.length - fresh.length } } });
+      return { runId: job.id, proposed: items.length, waitingAlready: all.length - fresh.length };
+    }, QUEUE_TX);
+    await this.audit.log(c.workspaceId, actor.id, "proposed", "pre-qualification picks", c.combinationKey, `${actor.name} asked the rules for pre-qualification picks on "${c.label}": ${out.proposed} proposed${out.waitingAlready ? `, ${out.waitingAlready} already waiting on To review` : ""} (no AI, US$0)`, { runId: out.runId }, combinationId);
+    const words = out.proposed
+      ? `${out.proposed} pick${out.proposed === 1 ? " is" : "s are"} waiting on To review, each with its reason. Accept the ones a prospect should be asked.${out.waitingAlready ? ` ${out.waitingAlready} more ${out.waitingAlready === 1 ? "was" : "were"} already waiting.` : ""}`
+      : out.waitingAlready ? `Nothing new: the ${out.waitingAlready} pick${out.waitingAlready === 1 ? " the rules propose is" : "s the rules propose are"} already waiting on To review.`
+      : "Nothing to propose: no rule of this combination reads an answer a prospect can give that is not already asked in pre-qualification.";
+    return { ...out, words };
+  }
 }
 
 /** Slice 2 (P-147): one change on the ticked rows. Each row is re-checked against the same locks as a single save;
@@ -207,6 +241,7 @@ export async function bulkUndo(db: Db, audit: Audit, actor: Actor, c: { id: stri
   await db.factSource.deleteMany({ where: { id: { in: go.map((r) => r.id) } } });
   await audit.log(c.workspaceId, actor.id, "undone", "fact source", `bulk:${parsed.data.batchId}`, `${actor.name} undid their change to ${go.length} question${go.length === 1 ? "" : "s"} in "${c.label}"`, { rows: go.map((r) => r.lineageKey) }, c.id);
   return { undone: go.length, kept };
+
 }
 
 /** C4.7 Accept (Lead, 29 Oct; P-149 one door; N-2 of S6 slice 1): the queue's lander for `pqr_pick`. S6's decide
@@ -244,6 +279,29 @@ export async function acceptPqrPick(tx: Prisma.TransactionClient, actor: Actor, 
   return factSources((await buildSnapshot(db, c.workspaceId, id, "draft")).snapshot).find((x) => x.role === role && x.fact === fact);
 }
 
+/** The kind of run that proposes pre-qualification picks by rules (DraftingJob.kind). */
+export const PQR_PICKS_KIND = "pqr_picks";
+/** What a pick's acceptance wrote, as the queue stores it (decidedKey): the combination, role and fact. */
+export const pickKey = (combinationId: string, role: string, fact: string) => `${combinationId}|${role}|${fact}`;
+const pickParts = (key: string) => { const [combinationId, role, ...rest] = key.split("|"); return { combinationId, lineageKey: `${role}|${rest.join("|")}` }; };
+/** The queue's stamp for a landed pick (proposals.ts STAMP): its rows as they stand, so Undo refuses once a person changed them. */
+export async function pickStamp(tx: Prisma.TransactionClient, key: string) {
+  const { combinationId, lineageKey } = pickParts(key);
+  return tx.factSource.findMany({ where: { combinationId, lineageKey }, orderBy: { version: "asc" }, select: { version: true, status: true, prequalification: true, source: true, updatedAt: true } });
+}
+/** Undo of an accepted pick (proposals.ts undo, within its 10 s): the tick is taken off the draft again. The draft row the
+ *  pick wrote goes when nothing else differs from the released row (or there is none to keep); otherwise only its tick. */
+export async function unlandPick(tx: Prisma.TransactionClient, key: string) {
+  const { combinationId, lineageKey } = pickParts(key);
+  const rows = await tx.factSource.findMany({ where: { combinationId, lineageKey }, orderBy: { version: "desc" } });
+  const draft = rows[0]?.status === "DRAFT" && rows[0].prequalification ? rows[0] : null;
+  if (!draft) return;
+  const released = rows.find((r) => r.status === "PUBLISHED");
+  const same = released ? released.source === draft.source && released.documentTypeKey === draft.documentTypeKey && (released.sourceReason ?? null) === (draft.sourceReason ?? null) && !released.prequalification : draft.source === null && !draft.sourceReason;
+  if (same) await tx.factSource.delete({ where: { id: draft.id } });
+  else await tx.factSource.update({ where: { id: draft.id }, data: { prequalification: false, reason: null } });
+}
+
 /** The same rules release applies (engine/sources.ts factSourceProblems), said at save for this one fact. */
 function refusals(f: FactSourceView, source: FactSourceView["source"] | null, documentTypeKey: string | null, tick: boolean, sourceReason: string | null = null): { field: string; message: string }[] {
   const out: { field: string; message: string }[] = [];
@@ -266,6 +324,7 @@ function refusals(f: FactSourceView, source: FactSourceView["source"] | null, do
 export class FactSourcesController {
   constructor(@Inject(FactSources) private readonly f: FactSources) {}
   @Get("combinations/:id/fact-sources") list(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.f.list(id); }
+  @Post("combinations/:id/pqr/picks") @HttpCode(200) propose(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.proposePicks(actorOf(a), id); }
   @Get("combinations/:id/pqr/country") country(@Headers("x-actor") a: H, @Param("id") id: string) { readerOf(a); return this.f.country(id); }
   @Put("combinations/:id/fact-sources/:role/:fact") set(@Headers("x-actor") a: H, @Param("id") id: string, @Param("role") role: string, @Param("fact") fact: string, @Body() b: unknown) { return this.f.set(actorOf(a), id, role, fact, b); }
   @Post("combinations/:id/fact-sources/bulk") @HttpCode(200) bulk(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.bulk(actorOf(a), id, b); }

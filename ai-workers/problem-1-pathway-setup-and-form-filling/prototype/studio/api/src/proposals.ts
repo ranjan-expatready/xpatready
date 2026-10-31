@@ -12,6 +12,7 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { fail, need, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
+import { acceptPqrPick, pickKey, pickStamp, unlandPick } from "./fact-sources.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -153,6 +154,15 @@ const sourceRef = (r: Row, actor: Actor) => `${r.origin === "rules" ? "rules" : 
 
 /** LANDERS[kind]: what accepting an item writes, inside decide's transaction. A kind with no lander yet is refused. */
 export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<string>>> = {
+  // C4.7 (F6 slice 1, plan-slice1 item 1c): a pre-qualification pick ticks its fact in the combination's draft
+  // (fact-sources.ts acceptPqrPick: the same refusals as the tick by hand); no library item, no second person (P-76).
+  async pqr_pick(tx, r, p, l) {
+    if (p.kind !== "pqr_pick") fail("Wrong payload.");
+    const pick = p as Extract<ProposalPayload, { kind: "pqr_pick" }>;
+    await acceptPqrPick(tx, l.actor, { id: r.id, kind: r.kind, runId: r.runId, step: r.step, scope: { formEdition: r.formEdition, combinationId: r.combinationId }, landsOn: r.landsOn, reuse: r.reuse, payload: { ...pick, reason: (l.reason ?? pick.reason).slice(0, 300) },
+      source: r.source ?? null, rounds: r.rounds, rules: r.rules, agreement: r.agreement, confidence: r.confidence, reason: r.reason, origin: r.origin, identity: r.identity, relatesTo: r.relatesTo, revision: r.revision ?? null, status: "waiting", decision: null, basis: r.basis });
+    return pickKey(r.combinationId ?? "", pick.role, pick.factKey);
+  },
   async field(tx, r, p, l) {
     if (p.kind !== "field") fail("Wrong payload.");
     const f = p as Extract<ProposalPayload, { kind: "field" }>;
@@ -204,7 +214,10 @@ const STAMP: Record<string, (tx: Tx, ws: string, key: string) => Promise<unknown
   answer_list: (tx, ws, key) => tx.answerList.findMany({ where: { workspaceId: ws, answerListKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true, values: { orderBy: { valueKey: "asc" }, select: { valueKey: true, label: true, sortOrder: true } } } }),
   document_type: (tx, ws, key) => tx.documentType.findMany({ where: { workspaceId: ws, documentTypeKey: key }, orderBy: { version: "asc" }, select: { version: true, status: true, updatedAt: true } }),
 };
+STAMP.pqr_pick = (tx, _ws, key) => pickStamp(tx, key);
 const stampOf = async (tx: Tx, ws: string, kind: string, key: string) => (STAMP[kind] ? JSON.stringify(await STAMP[kind](tx, ws, key)) : null);
+/** What Undo takes back for an item that lands on a combination, not the library (C4.7: a pick's tick). */
+const UNLAND: Partial<Record<string, (tx: Tx, key: string) => Promise<unknown>>> = { pqr_pick: unlandPick };
 
 export const UNDO_SECONDS = 10;
 export const BATCH_MAX = 200;
@@ -310,9 +323,12 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     for (const r of rows) {
       const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };
       if (landedStamp && r.decidedKey && (await stampOf(tx, workspaceId, r.kind, r.decidedKey)) !== landedStamp)
-        fail(`"${identityKeyOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
+        fail(r.kind === "pqr_pick"
+          ? `The pre-qualification tick this pick set was changed after it was accepted, so Undo would erase that change. Nothing was undone: change it on the combination's Questionnaires tab instead.`
+          : `"${identityKeyOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
     }
     for (const c of adds) await LANDED[c.kind]?.(tx, workspaceId, c.key);
+    for (const r of rows) if (r.decidedKey && r.landsOn === "combination") await UNLAND[r.kind]?.(tx, r.decidedKey);
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
     for (const r of rows) {
       const { beforeEdit, landedStamp, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string };
