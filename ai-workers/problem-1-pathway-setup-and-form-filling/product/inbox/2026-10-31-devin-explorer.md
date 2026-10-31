@@ -56,16 +56,62 @@ Set-up step fails on the Mac itself. Steps: on macOS run `bash product/tools/clo
 
 ## Part 2 · Checking the claims in `qa/CAPABILITIES.md`
 
-_(in progress)_
+Every row marked **Works** was tried on `de82e7fd` against the running app at :4410 or its API. Verified = I reproduced it myself.
+
+**Verified works**
+
+- C1.1 Programs page lists every combination (cards + list). C1.2 duplicates refused case-insensitively in plain words; >120 chars refused at submit. C1.4 combination page shows path, status, one next step.
+- C2.1 `imm5257e.pdf` upload: form number, edition and checksum read rules-only; "Already in the library: IMM 5257 (09-2023). Nothing duplicated." C2.2 unknown PDF held before library/AI with a plain reason. C2.3 held file lands in approver's Needs you; uploader self-approve 403 "a different person checks its source" — **and self-reject is also 403** (see E-15).
+- C4.3 `GET /api/combinations/…/preview` returns per-person sets for Visitor visa. C4.5 `…/checklist` responds (empty here — the sample attaches 0 documents to this combination; reinforces E-11).
+- C5.1/C5.2 walked end to end: author submit → reviewer Sign (22/22) → approver Approve and release; "Return to author" refused without a note; released as version 1.
+- C5.3 To review filters Needs you/Waiting for others/Running/All; held file under approver's Needs you, never uploader's.
+- C6.1 case EXP-001 opened on the newest release. C6.2 Client A answered all 3 parts, save/resume, None apply. C6.3 agent view shows source/status per answer, edit dialog works. C6.6 officer confirmed all sections (7/7).
+- C7.1 generated copy wrote 5 confirmed fields, read-back checked. C7.6 (Partial row) gate verified at API: `POST …/lock {"kind":"filed"}` on a fresh case (EXP-002, 0 answers) → **409 "7 facts to answer or confirm before filing: do that, then generate a new copy."** Generate itself is allowed; the lock is the gate — consistent with the claim.
+- C11.1 no extension/capture/online-fill UI anywhere walked; PDF path works end to end. C11.2 library is the one door (upload + duplicate + held paths all verified). C11.10 cards/list/chips clean.
+
+**Not re-verified (rely on listed evidence):** C1.7 (parked), C3.5, C3.7, C4.9, C4.10's release-refusal facet, C6.10 (no minor in the walked family), C11.8 (live cost — not run, US$0 constraint correctly kept me from it). "Find missing forms" (C11.2) likewise not run — no saved answers, and I would not spend.
+
+**E-15 · Gap · Minor · lane: forms**
+An uploader cannot withdraw their own held upload. Steps: upload a non-form PDF (held); as the uploader try reject → 403 "a different person checks its source". Expected: a "Withdraw" for the uploader (they may see their mistake first). Actual: only a different person can clear it; the item sits in everyone's queue meanwhile. Evidence: API calls above on `de82e7fd`.
+
+**Tension to note (not a new bug):** C3.10's claim is the form-field vocabulary ("never 'box'") and that was swept — but raw keys still reach three other surfaces (review-table Item/Origin E-12, generated copy E-9, case/questionnaire headings E-10). The wording standard evidently does not yet cover section keys, placement items or engine-step names.
 
 ## Part 3 · Looking for surprises before they happen
 
-_(pending)_
+Newest ~30 merges on `main` read (20 real PR merges, 31 Oct #111–#141 plus their sync merges).
+
+**E-16 · Ambiguity · Minor · lane: tech lead (process)**
+The same-day churn pattern is real: `web/src/pages/review.tsx` changed by two different wording PRs on the same day (#118 then #136), `to-review.tsx` likewise (#119, #137), and `sources.tsx` + `cost-warning.tsx` + `ai-launch.tsx` by #121 then #128 (39 + 63 changed lines the same day). The shared browser suite `tests/check_screens_qa_1029_browser.cjs` was appended to by at least four PRs (#111, #118, #120, #136). Everything merged green today, but one shared append-only suite plus parallel wording PRs on the same page is how merge races and order-coupled tests start. Suggested: split the big browser suite per area, or route same-page wording fixes through one PR. Evidence: `git diff --stat <merge>^1 <merge>` per merge above.
+
+**E-17 · UX · Minor · lane: screens**
+One release now carries two numbers. After #136 the page reads "Last released: version 1, in Release 2" and the table shows "v1 · Release 2". A publisher cannot tell whether they shipped version 1 or release 2; the words also disagree with Open a case, which offers "release 1". Evidence: walk on `de82e7fd`; diff of #136 on `web/src/pages/review.tsx`.
+
+**Checked in Part 3, no finding**
+
+- Pages over 1 s: none found. API timings on the isolated copy: programs/cases/review-queue/draft-summary ≤ 30 ms, library list 141 ms, preview 41 ms. The 2.3 s first load was the dev server compiling, not the product.
+- Tests that do not check what their name says: none found. #129 ("fix start-setup race") is honestly a test-timing fix — it names itself a test change and makes the wait fail loudly (matches the new rule in `next` SKILL §4.1, #132).
 
 ## Part 4 · Reviewing how we work
 
-_(pending)_
+Read: `AGENTS.md`, `CLAUDE.md`, `WAY-OF-WORKING.md`, `lead` and `next` skills, newest `DECISIONS.md` rows, `STATE.md`. Five proposals, each with evidence and cost.
+
+1. **One banned-patterns check for user-visible strings.** The wording sweep (C3.10) fixed "box"/"Canonical fields", but raw keys still reach users on three other surfaces (E-9, E-10, E-12, plus QA-73/113/114 open). A single suite asserting "no `snake_case` tokens, no `derive_*` step names, no enum SHOUT_CASE in rendered text" on the walked pages would catch the whole class. Cost: one shared helper + a denylist; small.
+2. **"The sample validates clean" as a check.** Every demo, screenshot and outside walk inherits the sample's 12 self-warnings (E-11) and a releasable combination with 0 documents (E-7). A check asserting 0 errors **and 0 warnings** on a fresh Load-sample draft would keep the starting point honest. Cost: fix the sample's question placements once, plus one check; small.
+3. **Keep CI on the Mac runner with hard budget guards.** `STATE.md` records GitHub-hosted minutes spending the US$10 monthly budget by 06:15 UTC in one morning (~2,500 minutes; P-195 moved checks back to `xr-mac`). Proposed: keep the Mac runner primary, and add `timeout-minutes` on every PR workflow so a wedged job cannot drain a budget again. Evidence: STATE "In flight" + P-195. Cost: minutes to add the timeouts; mostly already decided.
+4. **Kill the stale-count bug class at the root.** E-13 (post-release "44 draft changes"), QA-111 (finder counts), QA-116 (Undo timing), QA-67 (row actions stale after person switch) are one bug: invalidated-query gaps. One shared `invalidateAll` on (a) person switch and (b) any mutating action's success would remove the class instead of patching each page. Cost: small–medium in `web/src` query helpers.
+5. **Track "bugs found by outside walks" as a first-class number.** `STATE.md`'s watch list already counts "bugs found after merge (must not rise)"; this walk found ~12 reportable items on a green `main` in about two hours — the suites are green while surfaces still leak keys and jargon. An hour of outside walking per milestone gate is cheap evidence the suites cannot produce. Cost: one hour per gate.
 
 ## Top 10 for the tech lead
 
-_(pending)_
+1. **E-3** — `cloud-setup.sh` dies on any fresh Mac at the locale grep; one-line fix, blocks onboarding and any Mac CI step.
+2. **E-10** — the client questionnaire shows `family_members` / `personal_details` / `employment_history` as part titles. Client-facing.
+3. **E-9** — engine jargon (`derive_inverse`, "not in the executable set") inside the generated copy an officer sends out.
+4. **E-11** — Load sample ships a draft with 12 warnings against itself; every demo inherits them.
+5. **E-7** — a released combination with 0 documents and questions in unused sections opens cases silently.
+6. **E-13** — header still says "44 draft changes · In setup" right after release (stale-query class, see P4-4).
+7. **E-14** — "Sign 44" signs 44 when the step says 0 of 22 need signing.
+8. **E-12** — review table shows `IMPORTED_RELEASE` and placement keys (extends QA-73).
+9. **E-15** — an uploader cannot withdraw their own held upload; only a different person may reject it.
+10. **E-16** — same-day same-file PRs and one shared append-only browser suite: the collision pattern to break before it produces a real merge race.
+
+(Also logged: E-4 silent 403s when a case person lands on studio pages; E-8 signature stutter and "1 form fields"; E-17 "version 1 · Release 2" dual numbering; E-5/E-6 minor card/dialog cosmetics. QA-73/80/82/111/113-class confirmed on `de82e7fd` with fresh evidence above.)
