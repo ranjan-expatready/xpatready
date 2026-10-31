@@ -2,6 +2,7 @@
 // AI field-map draft (p2/launch.ts: stub pass, then the live call under the existing route, input allowlist, ledger
 // and caps), a labelled replay of a saved real run, comparison with the shared library and the person's decisions.
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
+import { runWorstUsd } from "../../engine/cost-check.ts";
 import { execFile, execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -319,11 +320,12 @@ export class Sources {
       const draftInputs: DraftInputs = { inputSha, templateSha: sha(readFileSync(join(PROMPTS, job.template))), schemaSha: sha(readFileSync(join(PROMPTS, job.output_schema))), model: settings.model, effort: settings.effort, maxOutputTokens: settings.max_output_tokens, known: job.known ?? null };
       const saved = existsSync(RUNS) ? this.savedRuns(jobId, inputSha).find((r) => r.valid && sameDraftInputs(r.envelope, draftInputs)) : undefined;
       const repeats = saved ? null : this.repeatsFailedRun(jobId, draftInputs);
-      const worst = saved || repeats ? 0 : Math.min(RUN_CAP_USD, costUsd(settings.model, bytes.length + 8_000, settings.max_output_tokens) * settings.max_attempts);
+      const worst = saved || repeats ? 0 : runWorstUsd(costUsd(settings.model, bytes.length + 8_000, settings.max_output_tokens), settings.max_attempts);
       return { index: p.index, count: p.count, sections: p.sections, fields: p.fields.length, paths: p.fields.map((f) => f.data_path!), jobId, file, inputSha, saved_run: saved?.file ?? null, repeats_failed_run: repeats?.run_id ?? null, worst_usd: Math.round(worst * 100) / 100 };
     });
     return { plan: { total: plan.total, reused: plan.reused, leftover: plan.leftover } as Omit<DraftPlan, "parts">, parts, wholeJobId: whole.jobId, inventoryFile: invRel, inventorySha: invSha,
-      reusedFrom: [...new Set(plan.reused.map((r) => r.reused_from))], worst_usd: Math.round(parts.reduce((x, p) => x + p.worst_usd, 0) * 100) / 100 };
+      // #131 review M1: rounded up to the cent, never down (the runner reserves each part's exact worst case).
+      reusedFrom: [...new Set(plan.reused.map((r) => r.reused_from))], worst_usd: Math.ceil(parts.reduce((x, p) => x + p.worst_usd, 0) * 100 - 1e-6) / 100 };
   }
 
   /** The edition printed on the file, as the intake read it into the library (P-51); else the approved list's label. */
@@ -335,8 +337,10 @@ export class Sources {
    *  replay a saved run, or the guarded stub pass and, for live, the paid call. */
   async runDraftStep(id: string) {
     const j = await this.db.draftingJob.findUniqueOrThrow({ where: { id }, include: { batch: { select: { plan: true } } } });
-    // P-179: a person's Continue covers the run it started (each step's first attempt), never a later retry.
-    const ov = j.mode === "LIVE" && j.attempt === 1 ? overrideOf(j.batch?.plan) : undefined;
+    // P-179: a person's Continue covers the run it started, including a retry of that same run (forms follow-up, 31 Oct;
+    // question in the PR): every attempt of every step of the batch carries it, and the ledger still holds the run's
+    // reservations to the worst case the person accepted and total spend to the ceiling (SpendLedger.overrideRefusal).
+    const ov = j.mode === "LIVE" ? overrideOf(j.batch?.plan) : undefined;
     let a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: j.attachmentId! } });
     if (a.status === "RECOGNISED" || a.status === "READ_FAILED") {
       await this.db.draftingJob.update({ where: { id }, data: { message: "Reading the form's fields on this computer (no AI)" } });
