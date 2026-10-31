@@ -73,6 +73,7 @@ export class OfficialPagesService {
     if (!mayAct({ kind: item.kind, tier: item.tier }, { id: actor.id, duties: actor.duties as readonly string[] })) {
       // N8 break m5: plain words, one reason, no decision codes.
       const why = held && held.confirmedAs === "expert" && recordHolds(sources, held) ? "The immigration expert chose this combination's official page, so only the immigration expert changes it."
+        : item.tier === "author" ? "The configuration author or the immigration expert confirms the official page."
         : item.matches === 1 ? "The rules found one apply page here and this is another page: choosing a different page is the immigration expert's call."
         : item.matches > 1 ? `The rules found ${item.matches} apply pages here: the immigration expert chooses one.`
         : item.tier === "expert" ? "The rules found no apply page here: the immigration expert chooses the page." : "The configuration author or the immigration expert confirms the official page.";

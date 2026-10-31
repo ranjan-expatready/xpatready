@@ -54,7 +54,7 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   ok("C11.10 F2 N8 review M1 fail: step 1's Confirm/Choose is not 'Needs you' for the author or the expert until a screen offers it", !!vw(sum) && !!vw(sumC) && !/checklist page/.test(vw(sum)?.needsYou?.text ?? "") && !/checklist page/.test(vw(sumC)?.needsYou?.text ?? ""), { a: vw(sum)?.needsYou, c: vw(sumC)?.needsYou });
   for (const [who, name] of [["user-B", "approver"], ["user-O", "case officer"], ["user-P", "client"]]) {
     r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: match.id }, who);
-    ok(`C11.10 F2 fail: the ${name} cannot confirm the official page (403), nothing stored`, r.status === 403 && sql(`select count(*) from combination_official_pages where combination_id='${wp}'`) === "0", { status: r.status, m: msg(r) });
+    ok(`C11.10 F2 fail: the ${name} cannot confirm the official page (403, the right reason), nothing stored`, r.status === 403 && (who === "user-B" ? /configuration author or the immigration expert confirms/.test(msg(r)) : true) && sql(`select count(*) from combination_official_pages where combination_id='${wp}'`) === "0", { status: r.status, m: msg(r) });
   }
   r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: other.id }, "user-A");
   ok("C11.10 F2 fail (P-176): the author cannot pass over the rules' one match for another page: that is the expert's choice (403, plain words, no decision code)", r.status === 403 && /choosing a different page is the immigration expert's call/.test(msg(r)) && !/P-\d/.test(msg(r)), { status: r.status, m: msg(r) });
