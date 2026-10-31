@@ -13,14 +13,14 @@ import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { SpendLedger } from "../../p2/ledger.ts";
-import { EXPERIMENT_CAP_USD, WAVE1_CAP_USD, WAVE1_START } from "../../p2/policy.ts";
+import { EXPERIMENT_CAP_USD, LEDGER_DIR, WAVE1_CAP_USD, WAVE1_START } from "../../p2/policy.ts";
 import { draftEdition, editionKey, roundCost, sampleEditions, type EditionSource } from "../api/src/field-drafts.ts";
 import { NODE, PROTOTYPE, ROOT, STUDIO } from "../api/src/core.ts";
 import { StepRunner } from "../api/src/rounds.ts";
 
 /** What is left of both caps now (p2/ledger.ts, the same numbers the launcher refuses by). */
 export function leftUsd() {
-  const l = new SpendLedger(join(PROTOTYPE, "p2", "ledger"));
+  const l = new SpendLedger(LEDGER_DIR);
   return Math.min(EXPERIMENT_CAP_USD - l.committed(), WAVE1_CAP_USD - l.committedSince(WAVE1_START));
 }
 

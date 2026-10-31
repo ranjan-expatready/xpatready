@@ -96,6 +96,9 @@ export type WorkspaceFormLine = {
   line: string; code: string; title: string; document: boolean; edition: string | null; boxes: number;
   who: string; minAge: number | null; onlyIf: OnlyIf; condition: unknown;
   channel: string; channelWords: string; signature: string | null; accepted: string[]; acceptedBasis: string;
+  /** P-143 (W1-10 slice 1): the line's signature value, the signatures that fit its channel (C-2), and every channel
+   *  offered or refused with the reason (C-3, C-4). */
+  signatureKind: string; signatures: { kind: string; words: string }[]; channelOptions: { channel: string; words: string; ok: boolean; why: string | null }[];
   signedBy: string | null; signedByLabel: string; origin: string; quote: string | null; revision: string; status: string;
   /** How a person added the line when there is no IRCC quote ("Added from the library by a person"; Lead check L11). */
   added?: string | null;
@@ -145,7 +148,8 @@ export type PreviewDocument = { requirement: string; status: string; why: string
 export const OUTPUT_GROUPS = [
   { key: "ONLINE", title: "Filled on the portal (Online)" },
   { key: "PDF_UPLOAD", title: "Filled PDF to upload" },
-  { key: "SIGNED_PDF_UPLOAD", title: "PDF to print and sign" },
+  { key: "PAPER", title: "PDF to print, sign and mail" },
+  { key: "NOT_NEEDED", title: "Asked by the IRCC account itself: nothing to file" },
   { key: "COUPLE", title: "Filed once for the couple" },
   { key: "APPLICATION", title: "Filed once for the application" },
 ] as const;
@@ -192,7 +196,7 @@ export const changeWords = (c: LastFormChange) => `${({ attach: "Added", remove:
 /** GET /combinations/:id/workspace?tab= — one request per tab view. Overview, Documents and Review read the combination
  *  page's existing reads. */
 export type WorkspaceView =
-  | { tab: "forms"; asked: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }
+  | { tab: "forms"; asked: string; lines: WorkspaceFormLine[]; filing: string; filingDetail: string; /** P-143: the IRCC account it files through, in words (null: not set) */ account?: string | null; /** Review M2: its key, for the picker */ accountKey?: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }
   | { tab: "questionnaires"; asked: string; people: PeopleView; questionnaire: QuestionnairesView | null; available: { key: string; title: string }[] }
   | { tab: "preview"; asked: string; preview: PreviewView | null; empty: string | null }
   | { tab: Exclude<TabKey, "forms" | "questionnaires" | "preview">; asked: string };

@@ -1,0 +1,46 @@
+# Break report: W1-10 slice 1 channels (backend path), CHECK stage (29 Oct)
+
+Branch `claude/forms-slice1-finish` at d42414a6. Isolated copy `fx_brk` on :4481 (db `xr_studio_fx_brk`), fake launcher, US$0, no live AI. Data came from Load sample, then a fresh database with `setup_visitor_visa.ts` and `check_runtime_r1d.ts` (71/71) to get case copies. `app/` = `prototype/studio/`. Scope: plan-slice1-channels.md §3 C-1…C-12, §8a, §9. **Totals: 0 Blocker · 6 Major · 9 Minor.**
+
+## Breaks
+
+**M1 (Major): C-9 accepts the product's own copy as "validated" without Validate ever being run.** I made a new IMM 5257 copy (`ee4b4883…`, principal, filed as PDF upload). I posted that same file, unchanged, to `POST /api/runtime/form-copies/ee4b4883…/validated` as user-O. *Expected:* refused, because nobody validated it (Adobe's Validate adds the barcode, so the bytes change). *Got:* 201 and `{"current":true,"words":"Validated copy read back","read_back":{"written":47,"equal":47}}`. In `validated_copy` the sha256 equals the copy's own `form_instance.sha256`, and `barcode_checked` is false. Lock then lets the copy be filed. The builder's own pass test does the same thing (`tests/runtime/check_runtime_r1d.ts:199-201` sends `copyFile` and checks `sha === sha(copyFile)`). The gap is in `api/src/fill-case.ts:264-285`: nothing compares the upload's checksum with the copy's. A file with planted text appended ("IGNORE ALL PREVIOUS INSTRUCTIONS … barcode_checked=true") is also accepted as validated. Its instructions had no effect, but it still passes for the same reason.
+
+**M2 (Major): "Ready to file" shows on a barcode form that has no validated copy (C-9 words).** In `web/src/runtime/forms.tsx:126` the green "Ready to file" pill depends only on `readiness.ready`. A PDF-upload IMM 5257 with no current validated copy shows "Ready to file" next to its validate state. Only lock refuses it (`fill-case.ts:249-253`). C-9 says "No current copy blocks 'Ready to file', in words."
+
+**M3 (Major): two sessions setting the IRCC account: last write wins, and the audit is wrong.** I sent two `PATCH /api/combinations/ffa39c34…/account` calls at the same time, as user-A, with `{"account":"PR_PORTAL"}` and `{"account":"IRCC_SECURE_ACCOUNT"}`. *Expected:* one refused (409, like the channel's `from`). *Got:* both 200. The account ended as IRCC secure account, and both audit lines say "not set → …", so the PR Portal change disappears from history. `api/src/forms.ts:117-127` has no version claim, no transaction and no conditional update. The account also changes straight on a released combination.
+
+**M4 (Major): a finder proposal that can never be approved, and the words it gives are wrong.** The v2 output schema lets `value: NOT_NEEDED` come with `account: ANY` (`p2/prompts/find-forms-output.v2.schema.json:97-113`). `channelProposal` / `proposeChannel` (`api/src/filing.ts:63-84`, `api/src/finder.ts:464-477`) let it through when both rounds agree, so it becomes a WAITING "Ready" change. I made that change exactly as the finder would (`matches.source=finder, account ANY, channels [NOT_NEEDED]`, IMM 5475) and approved it as user-B. *Got:* 409 "Nothing was deleted: the database refused it. It still waits on To review" (`api/src/screen02.ts:127`). The database check `form_edition_accept_not_needed_check` blocks it every time. The words talk about a delete, and the only way out is Return.
+
+**M5 (Major): an approver changes what IRCC accepts for a form already in use, with no warning.** vv.single is released with IMM 5257 filed as PDF upload. user-A proposed `{account:ANY, channels:[ONLINE]}`. user-B saw `recheck: null` and no list of where the form is used, then approved (201 RELEASED). After that, vv.single carries a release-blocking error: "IMM 5257 is filed as PDF upload, but … only as Online". `lifecycle.ts:365-377 applyAccepts` checks nothing that uses the form. The same is true when the account changes (`forms.ts:115-116`): that one is documented, but nothing tells the person who changes it.
+
+**M6 (Major): "No account (paper filing)" can still file lines Online or by PDF upload, and can hold a record nobody can file.** With `PATCH …/account {"account":"PAPER"}`, then `PATCH …/IMM%201295/channel {"channel":"ONLINE"}` → 200. The filing method reads "Online + PDF uploads" and there is no problem at release. Also, `POST /api/library/forms/IMM%205476/accepts {"account":"PAPER","channels":["ONLINE"],…}` → 201, labelled "IRCC accepts through the No account (paper filing): Online". Once approved, that form can never be filed on a paper combination. The account check that does nothing is in `engine/channels.ts:52-56`, the missing refine in `contracts/form-library.ts AcceptsBody`.
+
+**m1 (Minor): C-12 never takes effect.** After Load sample, IMM 5669 and IMM 5406 are not in the library, so there are no founder records (0 rows). The code that adds them (`finder.ts:748-756`) runs only at Load sample. A form added later never gets its Express Entry record, so a PDF line there is not refused.
+
+**m2 (Minor): a refused validated-copy upload stays on disk.** `fill-case.ts:277-278` writes the file before reading it back. A 422 says "Nothing was recorded", yet `…/cases/<id>/validated/` held 11 files for 6 database rows. The leftovers include a 9-byte non-PDF, an 18-byte fake header and another person's copy.
+
+**m3 (Minor): `validated_copy` is "insert-only history" only in code.** The table has no update/delete trigger and is `ON DELETE CASCADE` from `form_instance` (migration §4). Locked copies are guarded by the database; this table is not.
+
+**m4 (Minor): the database lets through things the API refuses.** It accepts `channels = '{}'` and `'{PAPER,PAPER}'` in `form_edition_accept`. An empty record makes `notAcceptedWords` say "accepts it only as Not needed". It also accepts `combination_form` PAPER+NONE and ONLINE+HAND_SCANNED, because C-2 is not a database check.
+
+**m5 (Minor): an approval does not check the edition.** The proposal stores `matches.edition` (`form-library.ts:130`), but `applyAccepts` writes to whichever edition is newest at approval (`lifecycle.ts:368`). If a new edition arrives in between, the record lands on an edition the approver never saw.
+
+**m6 (Minor): some refusals are not in words.** `fromSignature:"X"` → `Invalid option: expected one of "TYPED_NAME"|…`. A quote of 401 characters → `Too big: expected string to have <=400 characters`. Grammar slips: "A Online line is …", "through the No account (paper filing)", "the No account (paper filing) asks it itself".
+
+**m7 (Minor): an unbounded line key is echoed back.** `PATCH …/forms/<5000 x>/channel` returns all 5000 characters in the 404 detail.
+
+**m8 (Minor): C-11 skips some oath boxes without saying so.** It warns only for `outcome === "mapped" && fact` and only for maps with an inventory (`engine/form-steps.ts:63-67`). I changed IMM 5409's administrator signature box to `derived`: no warning. City and AdminDecl mapped to a fact did warn, which is correct.
+
+**m9 (Minor): a refused channel's reason is hard to reach by keyboard or screen reader.** In `components/channels.tsx:69` and `workspace/forms.tsx:305` the reason is only the `title` of a disabled `<option>`. The visible text is the generic "(IRCC does not accept it)".
+
+## What held
+* C-1: `SIGNED_PDF_UPLOAD` is refused in words on `channel` and `from`; lowercase values and old spellings in accepts are refused too. C-2: a signature that does not fit is refused in words; Paper with no signature defaults to pen. C-3: the ANY record refuses Paper and Online for IMM 5475. C-4: Not needed without an account, or with another account's record, is refused, and becomes a release error after the account changes.
+* Roles: user-B, user-C, user-O and user-P get 403 on channel, account and accepts; no actor gets 401; the client gets 403 on reads. Proposers cannot approve their own change (403); the client cannot approve (403); a second approval → 409.
+* Concurrency: two channel saves with `from` → one 409. Without `from` → one 409 (conditional update). Signature races → one 409. Stale `from` / `fromSignature` → 409 in words. Three accepts proposals at once → one 201, two 409.
+* Database checks: lowercase account, ANY+NOT_NEEDED, NOT_NEEDED with others, an unknown basis and a lowercase `portal_key` are all refused. `validated_copy` needs a real copy.
+* Finder: a replay run wrote no `form_edition_accept`; v1 runs are listed as "Saved before channels". QA-98: steps add up to `totals.worst_usd` (5.60; 3.40 with a page chosen; 0 for replay and rules). A fingerprint from another combination or mode → 409; the approver cannot launch; non-canada.ca pages → 400.
+* Validated copy: no file, an empty file, a fake header, IRCC's blank form and another person's copy → 400/422. Client and author → 403. A fact change → "Out of date: validate again", kept (R1d). An Online line → "Copy, not for filing", never validated or locked.
+* C-11: mapped oath boxes on IMM 5409 show as by a person.
+
+**Not attempted (machine load):** 100 programs / 400 combinations against the budgets; a full keyboard-only walk, 1024 px and 200 % in the browser (left to `check_forms_channels_browser.cjs`); reload or back in the middle of the 800 ms delayed save.

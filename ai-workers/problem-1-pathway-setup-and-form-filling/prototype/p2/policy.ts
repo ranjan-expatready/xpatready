@@ -1,6 +1,7 @@
 // P2 drafting policy, fixed in code (AIW-D260 content limits, AIW-D261 route). The runner reads only
 // these constants; a run record cannot widen them. Changing a value here needs the founder's decision.
-import { join, relative, resolve, sep } from "node:path";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
 export const PROTOTYPE = join(import.meta.dirname, "..");
 export const ROOT = join(PROTOTYPE, "..", "..", "..");
@@ -11,7 +12,27 @@ export const KEY_FILE = join(ROOT, ".tools", "solution-1-prototype", "secrets", 
 /** Spend ledger for the whole experiment: kept in the project (evidence, backed up), append-only. The
  *  trusted entry path (launch.ts -> draft.ts) always uses this directory and EXPERIMENT_CAP_USD; a paid
  *  caller refuses any other ledger (runner.ts). */
-export const LEDGER_DIR = join(PROTOTYPE, "p2", "ledger");
+export const LEDGER_DIR = ledgerDirFrom(process.env.P2_LEDGER_DIR);
+/** QA-90: one ledger for every copy. P2_LEDGER_DIR, when set, names it (run-suites: a scratch folder per run; launch.ts
+ *  always passes it to the drafting process, whose environment is otherwise cut). Unset, the main copy's .tools/p2-ledger
+ *  when the main copy has a .tools folder (the Mac: the demo and every lane copy find the same one through git), else
+ *  the project's own p2/ledger as before (CI, cloud). Only an absolute path is taken, so a copy can never resolve it
+ *  against its own folder by mistake. */
+export function ledgerDirFrom(v: string | undefined, root: string = ROOT): string {
+  if (v === undefined || v === "") return sharedLedgerDir(root) ?? join(PROTOTYPE, "p2", "ledger");
+  if (resolve(v) !== v) throw new Error(`P2_LEDGER_DIR must be an absolute path without . or .. parts (got ${v})`);
+  return v;
+}
+/** The main copy's .tools/p2-ledger, or null. A copy's .git is a folder in the main copy and a file
+ *  "gitdir: <main>/.git/worktrees/<name>" in a lane copy. */
+export function sharedLedgerDir(root: string): string | null {
+  try {
+    const g = join(root, ".git");
+    const gitdir = statSync(g).isDirectory() ? null : /^gitdir:\s*(.+)$/m.exec(readFileSync(g, "utf8"))?.[1].trim();
+    const main = gitdir === null ? root : gitdir ? dirname(dirname(dirname(gitdir))) : null;
+    return main && existsSync(join(main, ".tools")) ? join(main, ".tools", "p2-ledger") : null;
+  } catch { return null; }
+}
 /** Maker-written prompt templates. The launcher screens every file it uses from here before a run. */
 export const PROMPTS_DIR = join(PROTOTYPE, "p2", "prompts");
 /** Job files: which official inputs, which template, which settings. Read by the launcher and the child. */
@@ -70,6 +91,12 @@ export const PRICE_PER_MTOK: Record<string, { input: number; output: number }> =
  *  29 Oct): raised to US$120 for the W1-10 live trial; the Wave 1 cap stays US$60. */
 export const EXPERIMENT_CAP_USD = 120;
 export const RUN_CAP_USD = 5;
+/** P-179 (founder, 30 Oct; Lead answers Q1-Q3): a cost limit warns before anything is spent, and a person may click
+ *  Continue past it for that one run's worst case. Clicks may take total spend past the experiment cap by at most 10%;
+ *  past this ceiling there is no Continue, only "the founder must raise the cap". */
+export const OVERRIDE_CEILING_USD = Math.round(EXPERIMENT_CAP_USD * 1.1 * 100) / 100;
+/** An override is used to start its run within this time of the click, once (P-179). */
+export const OVERRIDE_TTL_MS = 10 * 60_000;
 /** P-110 (founder, 26 Oct; raised from US$40 to US$60 on 27 Oct, Lead PR #52): what Wave 1's live AI tests may spend,
  *  counted from the wave's start inside the experiment cap. The ledger refuses a reservation above it. */
 export const WAVE1_CAP_USD = 60;

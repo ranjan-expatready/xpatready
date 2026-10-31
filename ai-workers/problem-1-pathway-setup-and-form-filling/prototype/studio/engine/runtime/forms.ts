@@ -1,6 +1,7 @@
 // Form copies from a case (runtime lane, R1d, plan §8 RT-13…RT-15): which confirmed facts one form reads for one
 // person, a hash of them, what changed since a copy was made, and whether the form can be filed (P-71). Pure: the API
 // writes the copy (api/src/fill-case.ts) through the shared filler. Only confirmed facts are ever written (P-72).
+import { answerSheetOnly } from "../../contracts/forms.ts";
 import { createHash } from "node:crypto";
 import { render, type BoxRow, type Person, type Role } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
@@ -23,8 +24,16 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
 /** The forms a case fills as PDFs: the release files them as a PDF (its filing line is not Online) and has their
  *  official file and form field map. A form filed Online goes on its portal sheet, never in a PDF (PR #12 review 1). */
 export function pdfForms(s: Snapshot): Set<string> {
-  const online = new Set((s.forms as { form_number: string; channel?: string }[]).filter((f) => f.channel === "ONLINE").map((f) => f.form_number));
+  // C-4 (W1-10 slice 1): a Not needed line is never filled either.
+  const online = new Set((s.forms as { form_number: string; channel?: string }[]).filter((f) => f.channel === "ONLINE" || f.channel === "NOT_NEEDED").map((f) => f.form_number));
   return new Set((s.field_maps as { form_number: string; channel?: string; official_file?: string }[]).filter((m) => m.channel !== "ONLINE" && m.official_file && !online.has(m.form_number)).map((m) => m.form_number));
+}
+
+/** P-145: the forms filed Online that have IRCC's PDF in the release (an official file and its form field map): a PDF copy
+ *  is made from the same confirmed facts, "Copy, not for filing". Express Entry's IMM 5669 and IMM 5406 are not (P-171 (3)). */
+export function copyOnlyForms(s: Snapshot): Set<string> {
+  const online = new Set((s.forms as { form_number: string; channel?: string }[]).filter((f) => f.channel === "ONLINE" && !answerSheetOnly(f.form_number, s.combination.portal)).map((f) => f.form_number));
+  return new Set((s.field_maps as { form_number: string; channel?: string; official_file?: string }[]).filter((m) => m.channel !== "ONLINE" && m.official_file && online.has(m.form_number)).map((m) => m.form_number));
 }
 
 /** The confirmed facts among a form's boxes, in form-field order. */

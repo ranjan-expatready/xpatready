@@ -101,7 +101,7 @@ export class Screen02 {
     const names = listed.filter((k) => k !== c!.key && !k.startsWith("combination:"));
     const goesWith = names.length ? (await this.db.programDef.findMany({ where: { workspaceId: c!.workspaceId, programNodeKey: { in: names } }, select: { programNodeKey: true, label: true } })).sort((a, b) => names.indexOf(a.programNodeKey) - names.indexOf(b.programNodeKey)).map((n) => n.label) : [];
     return { ...changeView(c!), field: field ? { key: field.canonicalFieldKey, label: field.label, meaning: field.meaning, value_type: field.valueType, group: field.groupKey, status: field.status } : null,
-      goes_with: goesWith, with_combination: listed.some((k) => k.startsWith("combination:")), recheck: await this.lifecycle.recheck(c!) };
+      goes_with: goesWith, with_combination: listed.some((k) => k.startsWith("combination:")), recheck: await this.lifecycle.recheck(c!), accepts_impact: await this.lifecycle.acceptsImpact(c!) };
   }
   undoDelete(actor: Actor, id: string) { return this.lifecycle.undoOwnDelete(actor, id); }
   /** Send again: a returned structure or combination change goes through the one guard (QA-59); a field as before. */
@@ -124,7 +124,7 @@ export class Screen02 {
     if (decision === "approve") await this.lifecycle.afterApprove(actor, c).catch(async (e) => {
       await this.db.libraryChange.updateMany({ where: { id, status: "APPROVED" }, data: { status: "WAITING", decidedBy: null, decidedAt: null, decisionNote: null } });
       if (e instanceof HttpException) throw e;
-      fail("Nothing was deleted: the database refused it. It still waits on To review; try again, or return it.", HttpStatus.CONFLICT);
+      fail(`Nothing was ${c.kind === "form_accepts" ? "applied" : "deleted"}: the database refused it. It still waits on To review; try again, or return it.`, HttpStatus.CONFLICT);
     });
     // S4 round 2 N8: an approved delete that could not be applied comes back RETURNED: say that, not "approved".
     const now = decision === "approve" ? (await this.db.libraryChange.findUnique({ where: { id } }))! : c;

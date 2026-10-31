@@ -6,6 +6,7 @@ import { subjectsFor, type Person } from "./render.ts";
 import { anyMapped, previewRender } from "./coverage.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
+import { lineOf } from "./channels.ts";
 import { ProposalItem } from "../contracts/proposal-item.ts";
 
 export const SOURCES = ["DOCUMENT", "CLIENT", "AGENT"] as const;
@@ -226,7 +227,7 @@ export type ChecklistLine = {
   automatic?: { form: string; reason: string };
 };
 
-/** C3.11 (P-62 §3, P-143): a form line filed as Signed PDF upload asks each person who signs it for the signed, scanned
+/** C3.11 (P-62 §3, P-143): a form line filed as PDF upload, signed by hand and scanned, asks each person who signs it for the signed, scanned
  *  copy. Worked out from the line's channel and "Signed by" (engine/channels.ts rule: never stored), so changing the
  *  channel takes it away at once and a release carries it with the line. Who signs (contracts/workspace.ts SIGNED_BY,
  *  Sample): not set or "the person" = each person the form is about; "a parent, for a minor" = the principal for a
@@ -237,8 +238,9 @@ const WHO_OF_ROLE: Record<string, string> = { principal: "principal_applicant", 
 export function signedScanLines(s: Snapshot): ChecklistLine[] {
   const { people } = previewRender(s);
   const out: ChecklistLine[] = [];
-  for (const f of s.forms as { form_number: string; title?: string; form_kind?: string; who: string; status?: string; condition?: any; condition_plain?: string | null; channel?: string; signed_by?: string }[]) {
-    if (f.channel !== "SIGNED_PDF_UPLOAD" || (f.form_kind ?? "data_form") === "document") continue;
+  for (const f of s.forms as { form_number: string; title?: string; form_kind?: string; who: string; status?: string; condition?: any; condition_plain?: string | null; channel?: string; signature?: string; signed_by?: string }[]) {
+    const line = lineOf(f);
+    if (line.channel !== "PDF_UPLOAD" || line.signature !== "HAND_SCANNED" || (f.form_kind ?? "data_form") === "document") continue;
     const by = f.signed_by ?? "person";
     if (by === "none") continue;
     const about = [...new Set(subjectsFor(people, f.who, f.condition?.subjectKind).map((h) => roleOf(people, h)))].filter((r) => r !== "case");
@@ -251,7 +253,7 @@ export function signedScanLines(s: Snapshot): ChecklistLine[] {
     const base = (f.status ?? "always") === "always";
     for (const role of [...signers].filter((r) => has.has(r))) {
       const forOthers = by === "principal_for_family" || (by === "parent_for_minor" && role === "principal" && about.includes("child") && !about.includes("principal"));
-      const reason = `${f.form_number} is filed as Signed PDF upload: it is printed, signed by hand${forOthers ? " (for the family members it is about)" : ""}, scanned and uploaded.`;
+      const reason = `${f.form_number} is filed as PDF upload, signed by hand and scanned: it is printed, signed by hand${forOthers ? " (for the family members it is about)" : ""}, scanned and uploaded.`;
       out.push({
         lineage: `${SIGNED_SCAN}:${f.form_number}:${role}`, role, document: { key: `${SIGNED_SCAN}.${f.form_number}`, name: `${f.form_number} signed by hand and scanned` }, who: WHO_OF_ROLE[role] ?? role,
         base, when: base ? "Always" : (f.condition_plain ?? "Only if its form applies"), providedBy: "client", alternatives: [], supplies: [], aboutOthers: 0,

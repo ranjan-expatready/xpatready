@@ -1,10 +1,10 @@
 {
- "at": "2026-10-26T14:35:19.373Z",
- "port": 4450,
- "database": "xr_studio_forms_f1",
+ "at": "2026-10-30T04:58:03.425Z",
+ "port": 16450,
+ "database": "xr_studio_forms_forms_f1",
  "paid_calls": 0,
  "fixtures": "Sample (tests/fixtures/intake/README.md)",
- "pass": 53,
+ "pass": 106,
  "fail": 0,
  "log": [
   {
@@ -16,7 +16,199 @@
    "ok": true
   },
   {
-   "name": "C1.6: filing method: PDF only · Online only · mixed · online with signed PDFs, worked out from the lines",
+   "name": "C1.6: filing method: PDF only · Online only · mixed, worked out from the lines (a hand-signed PDF upload is a PDF upload)",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-7: filing method: Paper only · Online + paper forms · Not needed lines left out · nothing to file",
+   "ok": true,
+   "detail": [
+    "Online + paper forms"
+   ]
+  },
+  {
+   "name": "C1.6 C-7: filing kind: Paper only; Not needed is not filed; Online + PDF is mixed",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-2 pass: the signatures that fit: Paper in pen, PDF upload signed by hand and scanned, Online typed or none, Not needed none",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-2 fail: pen only on Paper, hand-scanned only on a PDF upload, Paper never unsigned, Not needed never signed",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-2 fail: at release a Paper line with no signature is an error in words",
+   "ok": true,
+   "detail": [
+    {
+     "level": "error",
+     "where": "Forms",
+     "item": "IMM 5257",
+     "message": "IMM 5257: \"No signature\" does not fit a line filed as Paper. A Paper line is signed in pen."
+    }
+   ]
+  },
+  {
+   "name": "C1.6 m6 fail: a signature it was changed from that is not one of the four is refused in words",
+   "ok": true,
+   "detail": "Say which signature you changed it from: typed name, signed by hand and scanned, signed in pen, or no signature."
+  },
+  {
+   "name": "C1.6 m6 pass: a known signature it was changed from is accepted",
+   "ok": true
+  },
+  {
+   "name": "C11.18 m6 fail: a canada.ca line of 401 characters is refused in words",
+   "ok": true,
+   "detail": "Paste only IRCC's sentence (at most 400 characters), not the whole page."
+  },
+  {
+   "name": "C11.18 m6 pass: a canada.ca line of 400 characters is accepted",
+   "ok": true
+  },
+  {
+   "name": "C1.6 m6 pass: the words read as sentences: \"An Online line\", \"on paper, with no IRCC account\", \"paper filing (no IRCC account) asks it\"",
+   "ok": true
+  },
+  {
+   "name": "C1.6 m6 fail: no sentence says \"A Online\" or \"through the No account\"",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-1 fail: the old spelling SIGNED_PDF_UPLOAD is refused with its new name",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-1 pass: each of the four channels and four signatures is a value",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-3 pass: the combination's account's own record wins; without one, the record for every account",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-3 fail: another account's record never applies, and no record offers Online, PDF upload and Paper (Sample), never Not needed",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-4 pass and fail: Not needed only from the account's own record",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-12 pass and fail: IMM 5669 through the IRCC secure account is Online only; a PDF upload line is refused at release in words",
+   "ok": true,
+   "detail": [
+    {
+     "level": "error",
+     "where": "Forms",
+     "item": "IMM 5669",
+     "message": "IMM 5669 is filed as PDF upload, but the Form library records that IRCC accepts it through the IRCC secure account only as Online. Choose a way IRCC accepts."
+    }
+   ]
+  },
+  {
+   "name": "C1.6 C-4 fail: a Not needed line without its account's record is an error at release",
+   "ok": true,
+   "detail": [
+    {
+     "level": "error",
+     "where": "Forms",
+     "item": "IMM 5669",
+     "message": "IMM 5669 is marked Not needed, but no record says the APR Portal asks it itself. Record that in the Form library first (What IRCC accepts, for that account), or choose how it is filed."
+    }
+   ]
+  },
+  {
+   "name": "C1.6 C-5 fail (review M1): the finder never proposes Not needed for every account (no one could approve it); it is listed with the reason",
+   "ok": true,
+   "detail": {
+    "outcome": "listed",
+    "why": "AI read it as Not needed but named no IRCC account; Not needed is said for one account, so nothing was proposed.",
+    "readings": {
+     "draft": {
+      "value": "NOT_NEEDED",
+      "account": "ANY",
+      "quote": "The account asks these questions itself."
+     },
+     "check": {
+      "value": "NOT_NEEDED",
+      "account": "ANY",
+      "quote": "The account asks these questions itself."
+     },
+     "keyword": null
+    }
+   }
+  },
+  {
+   "name": "C1.6 C-5 pass: Not needed for one account, both rounds agreeing, is proposed (Ready)",
+   "ok": true,
+   "detail": {
+    "outcome": "ready",
+    "channels": [
+     "NOT_NEEDED"
+    ],
+    "account": "PR_PORTAL",
+    "quote": "The account asks these questions itself.",
+    "why": null,
+    "readings": {
+     "draft": {
+      "value": "NOT_NEEDED",
+      "account": "PR_PORTAL",
+      "quote": "The account asks these questions itself."
+     },
+     "check": {
+      "value": "NOT_NEEDED",
+      "account": "PR_PORTAL",
+      "quote": "The account asks these questions itself."
+     },
+     "keyword": null
+    }
+   }
+  },
+  {
+   "name": "C1.6 C-11 pass: at release a mapped oath box of IMM 5409 (where it is declared) is said to be completed by a person at the oath, never filled",
+   "ok": true,
+   "detail": [
+    {
+     "level": "warning",
+     "where": "Field map IMM 5409 (test)",
+     "item": "IMM_5409[0].Page1[0].Section5[0].City[0]",
+     "message": "IMM 5409: the form field \"City[0]\" is mapped to person.family_name, but it belongs to the oath. By a person: it is completed when the declaration is made, by the person who administers it; the product never fills it."
+    }
+   ]
+  },
+  {
+   "name": "C1.6 C-11 fail: a declarant's own box, an unmapped oath box, an Online map or a map with no form field list is not flagged",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-11 pass: the release's own validation (validate) carries it, reading the form field list from the map",
+   "ok": true,
+   "detail": [
+    {
+     "level": "warning",
+     "where": "Field map IMM 5409 (test)",
+     "item": "IMM_5409[0].Page1[0].Section5[0].Title[0]",
+     "message": "IMM 5409: the form field \"Title[0]\" is mapped to person.family_name, but it belongs to the oath. By a person: it is completed when the declaration is made, by the person who administers it; the product never fills it."
+    }
+   ]
+  },
+  {
+   "name": "C1.6 C-8 pass: an older release's SIGNED_PDF_UPLOAD reads as PDF upload, signed by hand and scanned",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-8 pass: the same line in the new spelling is not a change since release (fingerprint and comparison)",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-8 fail: a real change (hand-scanned to typed name) is still a change",
+   "ok": true
+  },
+  {
+   "name": "C11.18 C-3 fail: Not needed for every account is refused (it is said for one account)",
    "ok": true
   },
   {
@@ -120,8 +312,8 @@
    "name": "C1.6: a configuration without channels keeps its fingerprint (draft equals its release)",
    "ok": true,
    "detail": {
-    "wpRelease": "52b4c9159c9c4969dee69944a438b541ea93e70c8c61abe02ddf05fb928ae290",
-    "wpDraft": "52b4c9159c9c4969dee69944a438b541ea93e70c8c61abe02ddf05fb928ae290"
+    "wpRelease": "b228b666d2cff37844faaa3100343a36186de03a6037158018265ffc92c116e5",
+    "wpDraft": "b228b666d2cff37844faaa3100343a36186de03a6037158018265ffc92c116e5"
    }
   },
   {
@@ -133,6 +325,9 @@
    "name": "C2.1: intake pass: every IRCC public page in the official library still reads as a guide or checklist (none as a portal screen)",
    "ok": true,
    "detail": [
+    "guide",
+    "guide",
+    "guide",
     "guide",
     "guide",
     "guide",
@@ -186,35 +381,392 @@
      "level": "warning",
      "where": "Field map IMM 5257 (09-2023)",
      "item": "IMM 5257",
-     "message": "52 list rows have no purpose yet (for example Question 8 B Row 1 Country or Territory. If you replied Yes to question 8 A, please give your previous country or territory of residence.): choose what the list holds and what happens to rows the form has no room for."
+     "message": "IMM 5257: 52 rows of its lists (for example \"Question 8 B Row 1 Country or Territory. If you replied…\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
     },
     {
      "level": "warning",
      "where": "Field map IMM 5707 (01-2023)",
      "item": "IMM 5707",
-     "message": "9 list rows have no purpose yet (for example ): choose what the list holds and what happens to rows the form has no room for."
+     "message": "IMM 5707: 9 rows of its lists (for example \"Date of birth\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
     }
    ]
   },
   {
-   "name": "C1.6: filing method is derived: Online + PDF uploads; signatures follow the channel",
+   "name": "C1.6: filing method is derived: Online + PDF uploads; an Online line has no signature by default",
    "ok": true,
    "detail": "Online + PDF uploads"
   },
   {
-   "name": "C1.6: filing method: online plus a form signed by hand is 'Online + signed PDF uploads' (the fourth situation of P-62)",
+   "name": "C1.6 C-2 pass: a PDF upload signed by hand and scanned is saved with its signature (the old 'signed PDF upload')",
    "ok": true,
-   "detail": "Online + signed PDF uploads"
+   "detail": {
+    "filing_method": "Online + PDF uploads",
+    "account": null,
+    "lines": [
+     {
+      "form": "IMM 5257",
+      "title": "Application for visitor visa (temporary resident visa)",
+      "who": "each_applicant",
+      "status": "always",
+      "channel": "ONLINE",
+      "channel_words": "Online",
+      "signature_kind": "NONE",
+      "signature": "No signature",
+      "version": "IMM 5257 (09-2023)"
+     },
+     {
+      "form": "IMM 5707",
+      "title": "Family Information",
+      "who": "each_applicant",
+      "status": "always",
+      "channel": "PDF_UPLOAD",
+      "channel_words": "PDF upload",
+      "signature_kind": "HAND_SCANNED",
+      "signature": "Signed by hand and scanned",
+      "version": "IMM 5707 (01-2023)"
+     }
+    ],
+    "problems": [
+     {
+      "level": "warning",
+      "where": "Forms",
+      "item": "IMM 5257",
+      "message": "IMM 5257 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF."
+     },
+     {
+      "level": "warning",
+      "where": "Field map IMM 5257 (09-2023)",
+      "item": "IMM 5257",
+      "message": "IMM 5257: 52 rows of its lists (for example \"Question 8 B Row 1 Country or Territory. If you replied…\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+     },
+     {
+      "level": "warning",
+      "where": "Field map IMM 5707 (01-2023)",
+      "item": "IMM 5707",
+      "message": "IMM 5707: 9 rows of its lists (for example \"Date of birth\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+     }
+    ]
+   }
   },
   {
    "name": "C1.6: channel fail: a save from an out-of-date screen is refused (409), the line stays as it is",
    "ok": true,
-   "detail": "IMM 5707 was changed to Signed PDF upload while you were choosing. Your choice was not saved; check it and choose again."
+   "detail": "IMM 5707 was changed to PDF upload while you were choosing. Your choice was not saved; check it and choose again."
+  },
+  {
+   "name": "C1.6 C-1 fail: the old spelling is refused on the write route (400, in words), the line unchanged",
+   "ok": true,
+   "detail": {
+    "type": "https://expatready.local/problems/validation",
+    "title": "Some details need fixing",
+    "status": 400,
+    "detail": "Signed PDF upload is now PDF upload, signed by hand and scanned: choose PDF upload and that signature.",
+    "message": "Signed PDF upload is now PDF upload, signed by hand and scanned: choose PDF upload and that signature.",
+    "errors": [
+     {
+      "field": "channel",
+      "message": "Signed PDF upload is now PDF upload, signed by hand and scanned: choose PDF upload and that signature."
+     }
+    ]
+   }
+  },
+  {
+   "name": "C1.6 C-2 fail: signed in pen on a PDF upload is refused in words, the line unchanged",
+   "ok": true,
+   "detail": {
+    "type": "https://expatready.local/problems/400",
+    "title": "Request refused",
+    "status": 400,
+    "detail": "IMM 5707: \"Signed in pen\" does not fit a line filed as PDF upload. A PDF upload line is no signature or signed by hand and scanned or typed name.",
+    "message": "IMM 5707: \"Signed in pen\" does not fit a line filed as PDF upload. A PDF upload line is no signature or signed by hand and scanned or typed name."
+   }
+  },
+  {
+   "name": "C1.6 C-2 pass: a line moved to Paper takes signed in pen (its default), the filing method says paper",
+   "ok": true,
+   "detail": "Online + paper forms"
+  },
+  {
+   "name": "C1.6 C-4 fail: Not needed with no record that the account asks it itself is refused in words",
+   "ok": true,
+   "detail": {
+    "type": "https://expatready.local/problems/400",
+    "title": "Request refused",
+    "status": 400,
+    "detail": "IMM 5707 is marked Not needed, but no record says this combination's IRCC account asks it itself. Record that in the Form library first (What IRCC accepts, for that account), or choose how it is filed.",
+    "message": "IMM 5707 is marked Not needed, but no record says this combination's IRCC account asks it itself. Record that in the Form library first (What IRCC accepts, for that account), or choose how it is filed."
+   }
+  },
+  {
+   "name": "C1.6 Q1 fail: an unknown IRCC account is refused",
+   "ok": true,
+   "detail": {
+    "type": "https://expatready.local/problems/validation",
+    "title": "Some details need fixing",
+    "status": 400,
+    "detail": "Choose one of: IRCC secure account, PR Portal, IRCC Portal, APR Portal, LMIA Online (ESDC), No account (paper filing).",
+    "message": "Choose one of: IRCC secure account, PR Portal, IRCC Portal, APR Portal, LMIA Online (ESDC), No account (paper filing).",
+    "errors": [
+     {
+      "field": "account",
+      "message": "Choose one of: IRCC secure account, PR Portal, IRCC Portal, APR Portal, LMIA Online (ESDC), No account (paper filing)."
+     }
+    ]
+   }
+  },
+  {
+   "name": "C1.6 Q1 fail (break M3): an account save that does not say which account it changed is refused",
+   "ok": true,
+   "detail": {
+    "type": "https://expatready.local/problems/validation",
+    "title": "Some details need fixing",
+    "status": 400,
+    "detail": "Say which IRCC account you changed it from (null when it was not set).",
+    "message": "Say which IRCC account you changed it from (null when it was not set).",
+    "errors": [
+     {
+      "field": "from",
+      "message": "Say which IRCC account you changed it from (null when it was not set)."
+     }
+    ]
+   }
+  },
+  {
+   "name": "C1.6 Q1 fail (break M3): of two account saves at once one wins and one is refused; one history line says 'not set →'",
+   "ok": true,
+   "detail": {
+    "statuses": [
+     200,
+     409
+    ],
+    "hist": "1"
+   }
+  },
+  {
+   "name": "C1.6 Q1 pass: the account is set back to not set from the one saved",
+   "ok": true,
+   "detail": {
+    "filing_method": "Online + paper forms",
+    "account": null,
+    "lines": [
+     {
+      "form": "IMM 5257",
+      "title": "Application for visitor visa (temporary resident visa)",
+      "who": "each_applicant",
+      "status": "always",
+      "channel": "ONLINE",
+      "channel_words": "Online",
+      "signature_kind": "NONE",
+      "signature": "No signature",
+      "version": "IMM 5257 (09-2023)"
+     },
+     {
+      "form": "IMM 5707",
+      "title": "Family Information",
+      "who": "each_applicant",
+      "status": "always",
+      "channel": "PAPER",
+      "channel_words": "Paper",
+      "signature_kind": "PEN",
+      "signature": "Signed in pen",
+      "version": "IMM 5707 (01-2023)"
+     }
+    ],
+    "problems": [
+     {
+      "level": "warning",
+      "where": "Forms",
+      "item": "IMM 5257",
+      "message": "IMM 5257 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF."
+     },
+     {
+      "level": "warning",
+      "where": "Field map IMM 5257 (09-2023)",
+      "item": "IMM 5257",
+      "message": "IMM 5257: 52 rows of its lists (for example \"Question 8 B Row 1 Country or Territory. If you replied…\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+     },
+     {
+      "level": "warning",
+      "where": "Field map IMM 5707 (01-2023)",
+      "item": "IMM 5707",
+      "message": "IMM 5707: 9 rows of its lists (for example \"Date of birth\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+     }
+    ]
+   }
+  },
+  {
+   "name": "C1.6 C-3 pass: once the account is the IRCC secure account, its record applies: the Paper line becomes an error in words (not changed silently)",
+   "ok": true,
+   "detail": [
+    {
+     "level": "warning",
+     "where": "Forms",
+     "item": "IMM 5257",
+     "message": "IMM 5257 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF."
+    },
+    {
+     "level": "error",
+     "where": "Forms",
+     "item": "IMM 5707",
+     "message": "IMM 5707 is filed as Paper, but the Form library records that IRCC accepts it through the IRCC secure account only as Online. Choose a way IRCC accepts."
+    },
+    {
+     "level": "warning",
+     "where": "Field map IMM 5257 (09-2023)",
+     "item": "IMM 5257",
+     "message": "IMM 5257: 52 rows of its lists (for example \"Question 8 B Row 1 Country or Territory. If you replied…\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+    },
+    {
+     "level": "warning",
+     "where": "Field map IMM 5707 (01-2023)",
+     "item": "IMM 5707",
+     "message": "IMM 5707: 9 rows of its lists (for example \"Date of birth\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+    }
+   ]
+  },
+  {
+   "name": "C1.6 C-3 fail: a PDF upload the account does not accept is refused on save",
+   "ok": true,
+   "detail": {
+    "type": "https://expatready.local/problems/400",
+    "title": "Request refused",
+    "status": 400,
+    "detail": "IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it through the IRCC secure account only as Online. Choose a way IRCC accepts.",
+    "message": "IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it through the IRCC secure account only as Online. Choose a way IRCC accepts."
+   }
+  },
+  {
+   "name": "C1.6 C-3 pass: Online, which the account accepts, is saved",
+   "ok": true,
+   "detail": {
+    "filing_method": "Online only",
+    "account": "IRCC_SECURE_ACCOUNT",
+    "lines": [
+     {
+      "form": "IMM 5257",
+      "title": "Application for visitor visa (temporary resident visa)",
+      "who": "each_applicant",
+      "status": "always",
+      "channel": "ONLINE",
+      "channel_words": "Online",
+      "signature_kind": "NONE",
+      "signature": "No signature",
+      "version": "IMM 5257 (09-2023)"
+     },
+     {
+      "form": "IMM 5707",
+      "title": "Family Information",
+      "who": "each_applicant",
+      "status": "always",
+      "channel": "ONLINE",
+      "channel_words": "Online",
+      "signature_kind": "NONE",
+      "signature": "No signature",
+      "version": "IMM 5707 (01-2023)"
+     }
+    ],
+    "problems": [
+     {
+      "level": "warning",
+      "where": "Forms",
+      "item": "IMM 5257",
+      "message": "IMM 5257 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF."
+     },
+     {
+      "level": "warning",
+      "where": "Forms",
+      "item": "IMM 5707",
+      "message": "IMM 5707 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF."
+     },
+     {
+      "level": "warning",
+      "where": "Field map IMM 5257 (09-2023)",
+      "item": "IMM 5257",
+      "message": "IMM 5257: 52 rows of its lists (for example \"Question 8 B Row 1 Country or Territory. If you replied…\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+     },
+     {
+      "level": "warning",
+      "where": "Field map IMM 5707 (01-2023)",
+      "item": "IMM 5707",
+      "message": "IMM 5707: 9 rows of its lists (for example \"Date of birth\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+     }
+    ]
+   }
+  },
+  {
+   "name": "C1.6 §5: the Forms tab offers each channel with its reason when refused, and the signatures that fit",
+   "ok": true,
+   "detail": {
+    "line": "IMM 5707",
+    "code": "IMM 5707",
+    "title": "Family Information",
+    "document": false,
+    "edition": "IMM 5707 (01-2023)",
+    "boxes": 40,
+    "who": "each_applicant",
+    "minAge": null,
+    "onlyIf": {
+     "kind": "always"
+    },
+    "condition": null,
+    "channel": "ONLINE",
+    "channelWords": "Online",
+    "signature": "No signature",
+    "signatureKind": "NONE",
+    "signatures": [
+     {
+      "kind": "NONE",
+      "words": "No signature"
+     },
+     {
+      "kind": "TYPED_NAME",
+      "words": "Typed name"
+     }
+    ],
+    "channelOptions": [
+     {
+      "channel": "ONLINE",
+      "words": "Online",
+      "ok": true,
+      "why": null
+     },
+     {
+      "channel": "PDF_UPLOAD",
+      "words": "PDF upload",
+      "ok": false,
+      "why": "IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it through the IRCC secure account only as Online. Choose a way IRCC accepts."
+     },
+     {
+      "channel": "PAPER",
+      "words": "Paper",
+      "ok": false,
+      "why": "IMM 5707 is filed as Paper, but the Form library records that IRCC accepts it through the IRCC secure account only as Online. Choose a way IRCC accepts."
+     },
+     {
+      "channel": "NOT_NEEDED",
+      "words": "Not needed",
+      "ok": false,
+      "why": "IMM 5707 is marked Not needed, but no record says the IRCC secure account asks it itself. Record that in the Form library first (What IRCC accepts, for that account), or choose how it is filed."
+     }
+    ],
+    "accepted": [
+     "ONLINE"
+    ],
+    "acceptedBasis": "From the Form library: what IRCC accepts for this edition through the IRCC secure account",
+    "signedBy": null,
+    "signedByLabel": "Not set",
+    "origin": "HUMAN",
+    "quote": null,
+    "added": "Added from the library by a person",
+    "revision": "2026-10-30T04:57:55.152Z",
+    "status": "DRAFT",
+    "version": 1
+   }
   },
   {
    "name": "C3.8: the review's validator runs the channel rules: the Online line is a warning there too, never an error",
    "ok": true,
-   "detail": 93
+   "detail": 149
   },
   {
    "name": "C1.6: the combination summary carries no portal and no online forms; IMM 5257 shows its PDF edition while filed Online",
@@ -229,7 +781,8 @@
     "boxes": 242,
     "channel": "ONLINE",
     "channelWords": "Online",
-    "signature": "The client signs the declaration in the portal"
+    "signature": "No signature",
+    "signatureKind": "NONE"
    }
   },
   {
@@ -246,6 +799,211 @@
     "ok": true,
     "form": "IMM 5257"
    }
+  },
+  {
+   "name": "C1.6 C-7 (review S1): Online + PDF upload + Paper names all three; Online + PDF stays as it was",
+   "ok": true
+  },
+  {
+   "name": "C1.6 C-3 (break M6): with no account (paper filing) only Paper is allowed, whatever every account accepts; another account keeps its record",
+   "ok": true,
+   "detail": {
+    "channels": [
+     "PAPER"
+    ],
+    "record": {
+     "account": "PAPER",
+     "channels": [
+      "PAPER"
+     ],
+     "basis": "PAPER_FILING",
+     "quote": null
+    }
+   }
+  },
+  {
+   "name": "C1.6 C-3 (break M6): once filed with no account, a PDF upload line is an error in words (not changed silently)",
+   "ok": true,
+   "detail": [
+    {
+     "level": "error",
+     "where": "Forms",
+     "item": "IMM 5257",
+     "message": "IMM 5257 is filed as PDF upload, but this combination has no IRCC account (paper filing): every form is filed on paper. Choose Paper, or set the IRCC account it files through."
+    },
+    {
+     "level": "error",
+     "where": "Forms",
+     "item": "IMM 5707",
+     "message": "IMM 5707 is filed as PDF upload, but this combination has no IRCC account (paper filing): every form is filed on paper. Choose Paper, or set the IRCC account it files through."
+    },
+    {
+     "level": "warning",
+     "where": "Field map IMM 5257 (09-2023)",
+     "item": "IMM 5257",
+     "message": "IMM 5257: 52 rows of its lists (for example \"Question 8 B Row 1 Country or Territory. If you replied…\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+    },
+    {
+     "level": "warning",
+     "where": "Field map IMM 5707 (01-2023)",
+     "item": "IMM 5707",
+     "message": "IMM 5707: 9 rows of its lists (for example \"Date of birth\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+    }
+   ]
+  },
+  {
+   "name": "C1.6 C-3 fail (break M6): an Online line on a paper-filing combination is refused in words",
+   "ok": true,
+   "detail": {
+    "type": "https://expatready.local/problems/400",
+    "title": "Request refused",
+    "status": 400,
+    "detail": "IMM 5707 is filed as Online, but this combination has no IRCC account (paper filing): every form is filed on paper. Choose Paper, or set the IRCC account it files through.",
+    "message": "IMM 5707 is filed as Online, but this combination has no IRCC account (paper filing): every form is filed on paper. Choose Paper, or set the IRCC account it files through."
+   }
+  },
+  {
+   "name": "C1.6 C-3 pass (break M6): Paper is saved on a paper-filing combination",
+   "ok": true,
+   "detail": {
+    "filing_method": "PDF uploads + paper forms",
+    "account": "PAPER",
+    "lines": [
+     {
+      "form": "IMM 5257",
+      "title": "Application for visitor visa (temporary resident visa)",
+      "who": "each_applicant",
+      "status": "always",
+      "channel": "PDF_UPLOAD",
+      "channel_words": "PDF upload",
+      "signature_kind": "NONE",
+      "signature": "No signature",
+      "version": "IMM 5257 (09-2023)"
+     },
+     {
+      "form": "IMM 5707",
+      "title": "Family Information",
+      "who": "each_applicant",
+      "status": "always",
+      "channel": "PAPER",
+      "channel_words": "Paper",
+      "signature_kind": "PEN",
+      "signature": "Signed in pen",
+      "version": "IMM 5707 (01-2023)"
+     }
+    ],
+    "problems": [
+     {
+      "level": "error",
+      "where": "Forms",
+      "item": "IMM 5257",
+      "message": "IMM 5257 is filed as PDF upload, but this combination has no IRCC account (paper filing): every form is filed on paper. Choose Paper, or set the IRCC account it files through."
+     },
+     {
+      "level": "warning",
+      "where": "Field map IMM 5257 (09-2023)",
+      "item": "IMM 5257",
+      "message": "IMM 5257: 52 rows of its lists (for example \"Question 8 B Row 1 Country or Territory. If you replied…\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+     },
+     {
+      "level": "warning",
+      "where": "Field map IMM 5707 (01-2023)",
+      "item": "IMM 5707",
+      "message": "IMM 5707: 9 rows of its lists (for example \"Date of birth\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+     }
+    ]
+   }
+  },
+  {
+   "name": "set-up: IMM 5707 is put back as it was",
+   "ok": true,
+   "detail": {
+    "filing_method": "PDF only",
+    "account": null,
+    "lines": [
+     {
+      "form": "IMM 5257",
+      "title": "Application for visitor visa (temporary resident visa)",
+      "who": "each_applicant",
+      "status": "always",
+      "channel": "PDF_UPLOAD",
+      "channel_words": "PDF upload",
+      "signature_kind": "NONE",
+      "signature": "No signature",
+      "version": "IMM 5257 (09-2023)"
+     },
+     {
+      "form": "IMM 5707",
+      "title": "Family Information",
+      "who": "each_applicant",
+      "status": "always",
+      "channel": "PDF_UPLOAD",
+      "channel_words": "PDF upload",
+      "signature_kind": "NONE",
+      "signature": "No signature",
+      "version": "IMM 5707 (01-2023)"
+     }
+    ],
+    "problems": [
+     {
+      "level": "warning",
+      "where": "Field map IMM 5257 (09-2023)",
+      "item": "IMM 5257",
+      "message": "IMM 5257: 52 rows of its lists (for example \"Question 8 B Row 1 Country or Territory. If you replied…\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+     },
+     {
+      "level": "warning",
+      "where": "Field map IMM 5707 (01-2023)",
+      "item": "IMM 5707",
+      "message": "IMM 5707: 9 rows of its lists (for example \"Date of birth\") do not say yet what the list holds or where entries go when the form runs out of rows. It does not stop a release; it is set in the form's field map in the Form library."
+     }
+    ]
+   }
+  },
+  {
+   "name": "C11.18 fail (break M6): a record for no account (paper filing) that is not Paper is refused in words",
+   "ok": true,
+   "detail": {
+    "type": "https://expatready.local/problems/check-the-request",
+    "title": "Check the request",
+    "status": 400,
+    "detail": "No account (paper filing) files only on paper: choose Paper, or choose the IRCC account that accepts it another way.",
+    "message": "No account (paper filing) files only on paper: choose Paper, or choose the IRCC account that accepts it another way.",
+    "errors": [
+     {
+      "field": "channels",
+      "message": "No account (paper filing) files only on paper: choose Paper, or choose the IRCC account that accepts it another way."
+     }
+    ]
+   }
+  },
+  {
+   "name": "C11.18 (break M5): the approver sees which combinations the change breaks, each with why, before approving",
+   "ok": true,
+   "detail": [
+    {
+     "combination": "ba470b9f-80c1-4bcb-9808-214ff66c3b6c",
+     "label": "Visitor visa",
+     "channel": "PDF_UPLOAD",
+     "words": "IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it only as Online. Choose a way IRCC accepts."
+    },
+    {
+     "combination": "6f104e9c-d18c-49f9-b56a-db3b63d15125",
+     "label": "With an LMIA",
+     "channel": "PDF_UPLOAD",
+     "words": "IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it only as Online. Choose a way IRCC accepts."
+    }
+   ]
+  },
+  {
+   "name": "C11.18 (break M5) fail-guard: a change that keeps every line allowed lists nothing",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "C11.18 fail (break m5): approval for an edition that is no longer current is refused in words and the change still waits",
+   "ok": true,
+   "detail": "This was proposed for IMM 5707 (01-1999); the library's current edition is now IMM 5707 (01-2023). Return it with that reason, and propose what IRCC accepts for the new edition."
   },
   {
    "name": "C3.8: answer list fail: fewer than two values is refused",
@@ -493,8 +1251,8 @@
    "name": "C3.5: merge fail: the same merge proposed twice at the same moment is stored once",
    "ok": true,
    "detail": [
-    409,
-    201
+    201,
+    409
    ]
   },
   {
@@ -515,6 +1273,47 @@
     201,
     201
    ]
+  },
+  {
+   "name": "C11.18 C-5 fail (review S5): two finds proposing for one form at the same moment: one waiting change, and neither find fails on the database refusal",
+   "ok": true,
+   "detail": {
+    "raceForm": "IMM 1295",
+    "waiting": "1",
+    "both": [
+     "ready",
+     "kept"
+    ]
+   }
+  },
+  {
+   "name": "C11.18 C-5 pass (review S5): the other find says the change already waits (kept)",
+   "ok": true,
+   "detail": [
+    {
+     "code": "IMM 1295",
+     "outcome": "ready",
+     "why": null,
+     "change_id": "a6522b65-65a6-471c-9b9f-4803c5d70603"
+    },
+    {
+     "code": "IMM 1295",
+     "outcome": "kept",
+     "why": "A change to what IRCC accepts already waits for a second person."
+    }
+   ]
+  },
+  {
+   "name": "C1.6 C-2 pass: a Paper line removed in a release and added back is Paper, signed in pen, as it was",
+   "ok": true,
+   "detail": {
+    "added": "added",
+    "v3": "PAPER:PEN"
+   }
+  },
+  {
+   "name": "C1.6 C-2 fail: the database refuses the Paper line with no signature the old restore wrote",
+   "ok": true
   },
   {
    "name": "C3.5: reset removes answer lists and merges with the workspace",
