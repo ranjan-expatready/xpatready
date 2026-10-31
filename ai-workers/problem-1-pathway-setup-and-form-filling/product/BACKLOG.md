@@ -36,6 +36,8 @@ A feature is done when a person can do it on the demo (:4400) and qa has tested 
 
 **Order and parallel plan (three cloud builders, one qa):** forms F2 → F3 → F4; screens F1 → F8 → F5; runtime F7 → F6 → R1; qa after each day's merges, then the gate. The forms line is the longest (about 9–15 builder-days), so the M2 gate is about three weeks out on today's estimate; the one Mac check queue can stretch that, and the first features' real times firm it up.
 
+**M3 features (after the M2 gate; design agreed), in the order a case moves:** M3-A firm, users and case team; Retail and Corporate apart (C6.11, C11.5) · M3-B filings and fees from the case; channel per form within what IRCC accepts (C6.12, C11.6) · M3-C documents: checklist per person, AI reads uploads into facts to confirm (C6.4, C6.5) · M3-D staff eligibility page (C6.9) · M3-E prepare and check: deliverables list, ready-to-file rules, independent AI review, portal sheet (C7.7, C7.6, C7.5, C7.3) · M3-F submit and keep it safe: signed scans, filing records, stale marks, the finished demo story (C8.1, C8.2, C9.2, C10.2).
+
 ## Next (M2, P-173: no scope cut; in order per area)
 | # | Area | Item | Source |
 |---|---|---|---|

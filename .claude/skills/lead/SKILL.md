@@ -29,6 +29,12 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The wa
 * Before pushing to a PR's branch, check that the PR is still open: a PR may have merged itself, and a later commit then never reaches `main`.
 * Base advice on all the history there is (every run, PR or session), never on one sample.
 * Before deleting a cache or tool, search the repository for paths into it.
+* One Mac runner (P-195): push to a PR only when it is ready; every push cancels its check and sends it to the back of the queue.
+
+## Handover (founder, 31 Oct)
+* Sessions belong to the Lead chat that starts them; a new Lead adopts the open PRs, not the old sessions (they are archived).
+* A builder session lasts one feature: when the feature's PRs have merged, archive it and start a fresh one for the next feature.
+* When this chat is about 60% full (the app's context warning, or roughly 150 tool calls), say so in one line, then hand over: rewrite `STATE.md`, archive every finished session this chat started and every Mac copy whose PR merged, list the running ones in STATE, and tell the founder "open a new chat and type `/lead`; everything is saved."
 
 ## Talking to the founder
 Plain business words, short. Say what changed and what you merged, what is visible on the demo, and at most three asks, each with a recommendation. Numbers (capabilities working, median start to merge, bugs after merge, AI spend) on demand. Write unasked only for a decision, a risk or a spend.
