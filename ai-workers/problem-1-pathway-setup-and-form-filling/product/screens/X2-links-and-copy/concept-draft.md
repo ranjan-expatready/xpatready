@@ -1,6 +1,8 @@
 # X2 Links between combinations and copying a line (C1.3, C1.5): concept draft
 
-Screens builder, 31 Oct 2026, for the founder's early look through the tech lead. **Status: draft v2 after the challenge (`challenge.md`), nothing built.**
+Screens builder, 31 Oct 2026, for the founder's early look through the tech lead. **Status: v3, founder's answers recorded (31 Oct, PR #167); X2b agreed for build after F8. X2a dropped (P-106).**
+
+**Founder's answers (31 Oct, through the tech lead, PR #167):** (1) links between combinations stay out of configuration (P-106); C1.3 becomes the case-level link in M3; X2 ships X2b only. (2) "Follows", wherever it stays, is only a suggestion of the next application. (3) The first copy-across-many slice is **form and document lines only** ("Forms and documents first").
 
 > **Challenge outcome (read first).**
 > * **B1 (Blocker, confirmed):** P-106 (founder, 26 Oct, amends P-13) says "'Linked to' leaves configuration; the link lives on the case", and the app follows it (C11.5; `engine/coverage.ts:4`). Screen 03 (25 Oct) and this draft's X2a came before it. C1.3, `PRODUCT.md` line 47 and backlog F1 were never updated.
@@ -11,7 +13,7 @@ Screens builder, 31 Oct 2026, for the founder's early look through the tech lead
 >   * A carried fact never counts as asked.
 > * **M3 (integrity of links between combinations)** only applies if Q1 keeps links in configuration. The challenge lists it in full: retire, rename, a carried fact dropped later, a person per fact, the shared pack release, publishing.
 > * **X2b is revised below** with M4 (the full set of outcomes) and M5 (one batch id across targets in one transaction, an idempotency key, and the batch Undo pattern from `fact-sources.ts`).
-> * The board's Minors are listed in `challenge.md`. The board is redrawn once Q1 is answered. It adapts what Screen 03's agreed concept already says (`screens/03-combination-workspace/concept.md`: BR-12, BR-13, the Links card, the endpoints; Q1 answered) to today's app (the six tabs, card v4, the shared lifecycle with Undo). Board: `design/draft-x2-board.html`. Everything shown is Sample.
+> * The board's Minors are listed in `challenge.md`. The board is redrawn once Q1 is answered. It adapts what Screen 03's agreed concept already says (`screens/03-combination-workspace/concept.md`: BR-12, BR-13, the Links card, the endpoints; Q1 answered) to today's app (the six tabs, card v4, the shared lifecycle with Undo). Board: `design/draft-x2b-board.html` (X2b, v3); `design/draft-x2-board.html` is the earlier v1 (X2a + X2b), kept as the record. Everything shown is Sample.
 
 **Slices:** **X2a Links** (C1.3), then **X2b Copy a line / add or remove one line across many** (C1.5). Each is about a day and merges on its own.
 
@@ -113,4 +115,4 @@ Screens builder, 31 Oct 2026, for the founder's early look through the tech lead
    * *Recommend:* form lines and document lines only, with the outcomes in BR-C1. Rules and questions follow later.
 
 ## Definition of Ready (to be ticked after the challenge and the founder's look)
-- [ ] Board clicked through by the founder · [ ] challenge done (Blockers and Majors fixed or answered) · [ ] Q1–Q3 answered · [ ] row X2a at the top of the screens area in BACKLOG
+- [ ] X2b board clicked through by the founder · [x] challenge done (B1 answered by Q1; M1, M2 accepted; M3 dropped with X2a; M4, M5 in BR-C1, BR-C2) · [x] Q1–Q3 answered (PR #167) · [x] BACKLOG X2 row says X2b (built after F8)
