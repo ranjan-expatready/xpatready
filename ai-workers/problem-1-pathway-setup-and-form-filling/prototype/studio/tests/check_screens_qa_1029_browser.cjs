@@ -116,6 +116,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const rv = await main();
     step("QA-73: Review and release: no \"SME duty\", no \"Derived\", no \"no tested helper\"", !/SME duty|Derived definition|Derived fields|no tested helper/.test(rv), (rv.match(/SME duty|Derived[^\n]{0,40}|no tested helper/) ?? [])[0]);
     await axe("Review and release"); await p.screenshot({ path: path.join(SHOTS, "review-1440.png"), fullPage: true });
+    // Tech lead 31 Oct (#117 Q1): a disabled primary button is plainly grey on every page, not a half-faded blue.
+    const off = await p.getByRole("button", { name: /Approve and release/ }).evaluate((e) => { const c = getComputedStyle(e); return { off: e.disabled, bg: c.backgroundColor, opacity: c.opacity }; });
+    step("Button: a disabled primary (Approve and release, for the author) is grey at full opacity, not a faded brand blue", off.off && off.opacity === "1" && !/rgb\(8, 98, 197\)/.test(off.bg), JSON.stringify(off));
     // QA-73 and QA-74 retest (X4): on the released combination, each list warning names its form once, and the versions
     // table has no fingerprint column (it is in the version's tip) and dates in the one format.
     await go(`/c/${released}/review`);
