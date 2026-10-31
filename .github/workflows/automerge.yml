@@ -1,8 +1,8 @@
 # Auto-merge (P-189, founder 31 Oct): a pull request merges by itself when (1) the ci job passed on its current head
 # commit and (2) it carries the label "review: approved", added after its last commit (the reviewer agent approves the
-# code as it is now; a newer push needs a new approval). Nobody presses merge. Runs for a few
-# seconds on the Mac's runner (GitHub's machines are blocked by the account's billing limit, 31 Oct; the Mac costs
-# nothing; the job waits its turn behind a running check); it reads and merges only, never pushes code.
+# code as it is now; a newer push with code needs a new approval, a merge of main does not). Nobody presses merge. Runs for a few
+# seconds on GitHub's machine (back from the Mac on 31 Oct once billing was cleared: on the Mac it waited behind the
+# test queue); it reads and merges only, never pushes code.
 name: automerge
 on:
   workflow_run: { workflows: [ci], types: [completed] }
@@ -11,7 +11,7 @@ permissions: { contents: write, pull-requests: write, actions: write }
 concurrency: { group: automerge, cancel-in-progress: false }
 jobs:
   merge:
-    runs-on: [self-hosted, macOS, xr-mac]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     if: github.event_name == 'pull_request_target' || github.event.workflow_run.conclusion == 'success'
     env:
@@ -23,7 +23,6 @@ jobs:
       - name: merge when green and approved
         run: |
           set -euo pipefail
-          export PATH=/opt/homebrew/bin:$PATH
           if [ -n "$PR_FROM_LABEL" ]; then prs="$PR_FROM_LABEL"
           else prs=$(gh api "repos/$REPO/commits/$SHA_FROM_RUN/pulls" --jq '.[] | select(.state=="open" and .base.ref=="main") | .number'); fi
           for n in $prs; do
@@ -31,8 +30,10 @@ jobs:
             head=$(jq -r .head.sha <<<"$pr"); state=$(jq -r .state <<<"$pr")
             [ "$state" = open ] || { echo "#$n not open"; continue; }
             jq -e '.labels | map(.name) | index("review: approved")' <<<"$pr" >/dev/null || { echo "#$n: no review approval yet"; continue; }
-            # The approval must be newer than the last commit.
-            committed=$(gh api "repos/$REPO/commits/$head" --jq .commit.committer.date)
+            # The approval must be newer than the last commit with code in it: a merge of main into the branch (a refresh,
+            # `gh pr update-branch`) adds no code of the builder's, so it does not need a new review (31 Oct).
+            committed=$(gh api "repos/$REPO/pulls/$n/commits" --paginate --jq '[.[] | select((.parents | length) == 1) | .commit.committer.date] | last // ""')
+            [ -n "$committed" ] || committed=$(gh api "repos/$REPO/commits/$head" --jq .commit.committer.date)
             labelled=$(gh api "repos/$REPO/issues/$n/events" --paginate --jq '[.[] | select(.event=="labeled" and .label.name=="review: approved") | .created_at] | last // ""')
             [[ -n "$labelled" && "$labelled" > "$committed" ]] || { echo "#$n: approval is older than the last commit ($labelled < $committed)"; continue; }
             # ci must have passed on this exact head commit.
