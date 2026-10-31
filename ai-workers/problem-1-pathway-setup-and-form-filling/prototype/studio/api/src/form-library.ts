@@ -165,8 +165,10 @@ export class FormLibrary {
     // "IMM 5373 B", not "IMM 5373B"), so a listed form is found, deleted and attached like any other.
     const rows = parsed.rows.map((r) => ({ ...r, code: normaliseCode(r.code) }));
     // X5 break m9: a file means an edition a combination may file from (an online-only screen map is no file).
-    const defs = await this.db.govFormDef.findMany({ where: { workspaceId }, select: { formKey: true, indexDateModified: true, formPageUrl: true, editions: { where: { channel: { not: "ONLINE" } }, select: { canadaUpdated: true } } } });
-    const plan = planIndexFill(rows, defs.map((d) => ({ formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: d.editions.length > 0, formPageUrl: d.formPageUrl, editionDated: d.editions.map((e) => e.canadaUpdated).filter((x): x is string => !!x).sort().at(-1) ?? null })));
+    // Review (5a5f0d16) m2 / Devin: the fill judges a form by the same current edition the list shows (an approved printed
+    // edition, the newest; newestEdition), never by a held or older edition's date: one "newer" rule in both.
+    const [defs, approved] = await Promise.all([this.db.govFormDef.findMany({ where: { workspaceId }, include: { editions: true } }), this.approvedShas(workspaceId)]);
+    const plan = planIndexFill(rows, defs.map((d) => { const current = newestEdition(d.editions.filter((e) => e.channel !== "ONLINE" && e.sha256 && approved.all.has(e.sha256))); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionDated: current?.canadaUpdated ?? null }; }));
     const now = new Date();
     // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
     const created = await this.db.$transaction(async (tx) => {

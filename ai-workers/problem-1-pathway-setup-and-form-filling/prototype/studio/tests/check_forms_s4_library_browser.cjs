@@ -247,10 +247,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // X5 slice a (P-156 (1)): the author fills the library from IRCC's forms list (US$0); new rows read "Listed by IRCC · no
     // file yet". A person without the author duty has no such button.
     await as("user-A"); await open();
-    await p.locator("[data-fill-index]").click();
+    // X5 review (86f9447c) m4: a double click sends one fill (the button guards a fill in flight).
+    let fillPosts = 0; const countFill = (r) => { if (r.method() === "POST" && r.url().includes("/library/forms/fill-from-index")) fillPosts++; };
+    p.on("request", countFill);
+    await p.locator("[data-fill-index]").dblclick();
     await p.getByText(/Filled from IRCC's forms list: \d+ new forms listed/).first().waitFor({ timeout: 30_000 });
+    await sleep(500); p.off("request", countFill);
+    step("X5 review m4 fail: a double click on Fill sends one fill (before: two)", fillPosts === 1, `requests ${fillPosts}`);
     await p.getByText("Listed by IRCC · no file yet").first().waitFor({ timeout: 30_000 });
-    step("X5 C2.6 pass: Fill from IRCC's forms list adds the listed forms, each 'Listed by IRCC · no file yet'", (await p.getByText("Listed by IRCC · no file yet").count()) > 50);
+    step("X5 C2.6 pass: Fill from IRCC's forms list adds the listed forms, each 'Listed by IRCC · no file yet' (the first 50 shown, then Show more)", (await p.getByText("Listed by IRCC · no file yet").count()) >= 40 && /Showing 50 of \d+/.test((await p.locator("[data-show-more]").textContent()) ?? ""), await p.locator("[data-show-more]").textContent().catch(() => "none"));
     // X5 review m5 (WCAG 2.4.3): after the fill, focus is back on the button (before: on the page).
     let fillFocused = false; for (let i = 0; i < 50 && !fillFocused; i++) { fillFocused = await p.evaluate(() => document.activeElement?.hasAttribute("data-fill-index") ?? false); if (!fillFocused) await sleep(100); }
     step("X5 review m5 fail: after Fill, keyboard focus is on the Fill button again", fillFocused, await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 100)));
@@ -266,7 +271,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const searches = [await timeSearch("IMM 5257"), await timeSearch("visitor"), await timeSearch("IMM 1295")];
     await searchBox.fill(""); await sleep(300);
     const guidesMs = await p.evaluate(async () => { const b = [...document.querySelectorAll("button")].find((x) => /^Guides\s*\d+$/.test(x.textContent.trim())); const t0 = performance.now(); b.click(); for (;;) { const rows = [...document.querySelectorAll("tr[data-form]")]; if (rows.length && rows.length <= 10) return performance.now() - t0; await new Promise((r) => requestAnimationFrame(r)); } });
-    step("X5 review (86f9447c) M1 fail: after the fill, search and the Guides chip answer in under 200 ms (STANDARDS §9; before: 184-375 ms and 207-217 ms)", Math.min(...searches) < 200 && guidesMs < 200, JSON.stringify({ searches: searches.map((x) => Math.round(x)), guidesMs: Math.round(guidesMs) }));
+    // Review (5a5f0d16) M1: widening back to the whole list (All after Guides) is timed too (before: 316-325 ms).
+    const allMs = await p.evaluate(async () => { const b = [...document.querySelectorAll("button")].find((x) => /^All\s*\d+$/.test(x.textContent.trim())); const t0 = performance.now(); b.click(); for (;;) { if (document.querySelectorAll("tr[data-form]").length >= 40) return performance.now() - t0; await new Promise((r) => requestAnimationFrame(r)); } });
+    step("X5 review (86f9447c, 5a5f0d16) M1 fail: after the fill, search, the Guides chip and widening back to All answer in under 200 ms (STANDARDS §9; before: 184-375, 207-217 and 316-325 ms)", Math.min(...searches) < 200 && guidesMs < 200 && allMs < 200, JSON.stringify({ searches: searches.map((x) => Math.round(x)), guidesMs: Math.round(guidesMs), allMs: Math.round(allMs) }));
     await p.getByRole("button", { name: /^All\s*\d+$/ }).click(); await sleep(300); // back to every type
     await axe("X5: the library after the fill from IRCC's forms list");
     // One readable view (the whole list is now some 240 rows): the first screen at 1440 px.

@@ -70,6 +70,12 @@ export function FormsPage() {
     return (lib.data?.rows ?? []).filter((r) => (!type || r.type === type) && (!usedBy || r.used_by.some((u) => u.id === usedBy)) && (!status || r.status === status)
       && (!term || r.code.toLowerCase().includes(term) || r.code.toLowerCase().includes(termCode) || r.title.toLowerCase().includes(term)));
   }, [lib.data, type, usedBy, status, dq]);
+  // X5 review (5a5f0d16) M1, STANDARDS §9: at most PAGE rows are mounted at once (Show more adds the next PAGE), so widening
+  // a filter back to the whole list stays under 200 ms; the count of every match is said beside the button.
+  const PAGE = 50;
+  const [limit, setLimit] = React.useState(PAGE);
+  React.useEffect(() => setLimit(PAGE), [type, usedBy, status, dq]);
+  const pageRows = React.useMemo(() => rows.slice(0, limit), [rows, limit]);
   const [opened, setOpened] = React.useState<Row | null>(null);
   // P-116 amended (28 Oct): the row's one written action is confirmed in the right panel (ImpactPanel), then the Undo toast.
   const [confirm, setConfirm] = React.useState<Row | null>(null);
@@ -103,11 +109,12 @@ export function FormsPage() {
   const chip = (active: boolean, label: string, n: number | undefined, on: () => void, tip: string) => (
     <Tip tip={tip}><button type="button" aria-pressed={active} onClick={on} className={`rounded-full border px-3 py-1 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${active ? "border-primary bg-primary/10 text-text-link" : "border-border text-text"}`}>{label}{n !== undefined ? <span className="ml-1 tabular-nums text-text-muted">{n}</span> : null}</button></Tip>
   );
-  const filtered = !!(type || usedBy || status || q.trim());
+  // Review (5a5f0d16) m4: read with the deferred term, so clearing a search never flashes "No forms yet".
+  const filtered = !!(type || usedBy || status || dq.trim());
   // eslint-disable-next-line react-hooks/exhaustive-deps -- the row callbacks only call state setters; the rows and the person are what change it
   const tableEl = React.useMemo(() => (
             <Table label="Table: Number, Title, Type, Edition, IRCC accepts, Used by, Status" headClass={[undefined, undefined, "hidden xl:table-cell", "hidden xl:table-cell"]} head={["Number", "Title", "Type", "Edition", <Tip key="ia" tip={ACCEPTS_TIP}><span tabIndex={0} className="underline decoration-dotted rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">IRCC accepts</span></Tip>, "Used by", "Status", <span key="a" className="sr-only">Actions</span>]}>
-              {rows.map((r) => (<React.Fragment key={r.code}>
+              {pageRows.map((r) => (<React.Fragment key={r.code}>
                 <tr data-form={r.code} className={r.status === "retired" ? "text-text-muted" : undefined}>
                   <td className="whitespace-nowrap text-xs tabular-nums"><button type="button" className="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setOpen(r)}>{r.code}</button></td>
                   <td className="min-w-32 max-w-56 break-words xl:max-w-80"><span className="line-clamp-2" title={r.title}>{r.title}</span>
@@ -131,7 +138,7 @@ export function FormsPage() {
               </React.Fragment>
               ))}
             </Table>
-  ), [rows, canAuthor]);
+  ), [pageRows, canAuthor]);
   return (
     <TipProvider>
       <div className="mx-auto max-w-7xl space-y-5">
@@ -167,7 +174,7 @@ export function FormsPage() {
           : !rows.length ? (filtered
             ? <EmptyState title="No form matches" description="Nothing in the library matches these filters. Clear a filter or search for another number or title." action={<Button variant="secondary" onClick={() => { setType(""); setUsedBy(""); setStatus(""); setQ(""); }}>Clear filters</Button>} />
             : <EmptyState title="No forms yet" description="Forms come in by themselves when a combination's setup starts: the form finder reads its IRCC page and downloads each form from canada.ca. You can also upload IRCC PDFs. Every form is stored once and used by any combination." />)
-          : tableEl}
+          : <>{tableEl}{rows.length > pageRows.length ? <p className="flex flex-wrap items-center gap-3 text-sm" data-show-more><span className="text-text-muted">Showing {pageRows.length} of {rows.length}</span><Button size="sm" variant="secondary" onClick={() => setLimit((n) => n + PAGE)}>Show {Math.min(PAGE, rows.length - pageRows.length)} more</Button></p> : null}</>}
         <p className="text-xs text-text-muted">{lib.data?.sample_note}</p>
         {open ? <FormDrawer row={open} onClose={() => setOpen(null)} canAuthor={canAuthor} /> : null}
         {confirm ? <div className="xl:fixed xl:right-6 xl:top-20 xl:z-40 xl:w-[440px]"><ImpactPanel key={`impact-${confirm.code}`} kind={confirm.action.kind} name={`${confirm.code} · ${confirm.title}`}
