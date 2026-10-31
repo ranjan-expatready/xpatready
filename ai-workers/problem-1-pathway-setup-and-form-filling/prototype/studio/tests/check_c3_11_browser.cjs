@@ -1,5 +1,5 @@
 // C3.11 (runtime lane; P-62 §3, P-143): the signed-scan lines on the Documents tab, walked in a real browser. A form line
-// filed as Signed PDF upload shows "<form> signed by hand and scanned" on each signer's checklist, with why and an
+// filed as PDF upload, signed by hand and scanned, shows "<form> signed by hand and scanned" on each signer's checklist, with why and an
 // "Added by the form line" status; its ⋯ menu greys Move and Remove with the reason and offers the Forms tab; the drawer
 // says why; filed as PDF upload again, the line is gone. A pass and a fail per rule; screenshots at 1440 and 1024 in
 // screens/W1-questions-and-documents/screenshots/c3-11/, axe (WCAG 2.2 AA) on each state. US$0.
@@ -40,16 +40,18 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("setup: the sample inputs load", (await api("/demo/load", { method: "POST" })).status === 201);
   const wp = sql("select id from combination where combination_key='wp.family'");
   const F = "IMM 1295";
-  const setChannel = (channel, from) => api(`/combinations/${wp}/forms/${encodeURIComponent(F)}/channel`, { method: "PATCH", data: { channel, from } });
+  // C1.6 (forms, main): "signed by hand and scanned" is a signature on a PDF upload line, no longer a channel of its own.
+  const lineBody = (c) => (c === "SIGNED" ? { channel: "PDF_UPLOAD", signature: "HAND_SCANNED" } : { channel: c, signature: "NONE" });
+  const setChannel = (to, from) => api(`/combinations/${wp}/forms/${encodeURIComponent(F)}/channel`, { method: "PATCH", data: { ...lineBody(to), from: lineBody(from).channel, fromSignature: lineBody(from).signature } });
   const go = async () => { await p.goto(`${BASE}/c/${wp}/documents?role=principal`); await p.locator("[data-documents]").waitFor({ timeout: 120000 }); await settle(); };
   const scanRow = () => p.locator(`[data-doc-line="signed_scan:${F}:principal"]`);
 
   await go();
   step("C3.11 fail-guard: filed as PDF upload, no signed-scan row on the principal's checklist", (await scanRow().count()) === 0);
-  step("C3.11 setup: IMM 1295 set to Signed PDF upload", (await setChannel("SIGNED_PDF_UPLOAD", "PDF_UPLOAD")).status === 200);
+  step("C3.11 setup: IMM 1295 set to PDF upload, signed by hand and scanned", (await setChannel("SIGNED", "PDF_UPLOAD")).status === 200);
   await go();
   step("C3.11 pass: the principal's checklist shows \"IMM 1295 signed by hand and scanned\"", (await scanRow().count()) === 1 && /IMM 1295 signed by hand and scanned/.test(await scanRow().innerText()));
-  step("C3.11 pass: the row says why (filed as Signed PDF upload: printed, signed by hand, scanned and uploaded)", /filed as Signed PDF upload/.test(await scanRow().locator("[data-doc-reason]").innerText()));
+  step("C3.11 pass: the row says why (filed as PDF upload, signed by hand and scanned: printed, signed by hand, scanned and uploaded)", /filed as PDF upload, signed by hand and scanned/.test(await scanRow().locator("[data-doc-reason]").innerText()));
   step("C3.11 pass: its status reads \"Added by the form line\"", /Added by the form line/.test(await scanRow().locator('[data-doc-status="automatic"]').innerText()));
   const rows = await p.locator("[data-documents] tbody tr").evaluateAll((t) => t.map((r) => r.getAttribute("data-doc-line")));
   step("C3.11 pass: it comes after the person's own documents", rows.at(-1) === `signed_scan:${F}:principal`, rows.slice(-2).join(" | "));
@@ -72,13 +74,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await scanRow().getByRole("button", { name: `Details of: ${F} signed by hand and scanned` }).click();
   const drawer = p.locator("[data-doc-drawer-automatic]");
   await drawer.waitFor();
-  step("C3.11 pass: the drawer says why and that it goes away when filed another way", /filed as Signed PDF upload/.test(await drawer.innerText()) && /goes away at once/.test(await drawer.innerText()));
+  step("C3.11 pass: the drawer says why and that it goes away when filed another way", /filed as PDF upload, signed by hand and scanned/.test(await drawer.innerText()) && /goes away at once/.test(await drawer.innerText()));
   step("C3.11 fail-guard: the drawer offers no Edit or Remove for it", (await p.locator("[data-drawer-edit], [data-drawer-remove]").count()) === 0);
   await state("signed-scan-drawer");
   await p.keyboard.press("Escape");
 
   // channel back → gone
-  step("C3.11 setup: IMM 1295 filed as PDF upload again", (await setChannel("PDF_UPLOAD", "SIGNED_PDF_UPLOAD")).status === 200);
+  step("C3.11 setup: IMM 1295 filed as PDF upload again", (await setChannel("PDF_UPLOAD", "SIGNED")).status === 200);
   await go();
   step("C3.11 pass: filed as PDF upload, the signed-scan row is gone", (await scanRow().count()) === 0);
   step("no page error", errs.length === 0, errs.join(" | "));

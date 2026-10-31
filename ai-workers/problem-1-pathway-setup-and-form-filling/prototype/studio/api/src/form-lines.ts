@@ -41,7 +41,7 @@ export async function addFormLine(db: Pick<Db, "combinationForm" | "govFormDef" 
   else {
     // After a released removal the line comes back with the content it had when removed; a new line gets the defaults.
     const row: Prisma.CombinationFormCreateManyInput = newest
-      ? { workspaceId: newest.workspaceId, combinationId: newest.combinationId, lineageKey: newest.lineageKey, govFormDefId: newest.govFormDefId, who: newest.who, attachMode: newest.attachMode, predicateJson: newest.predicateJson ?? Prisma.DbNull, conditionPlain: newest.conditionPlain, sourceQuote: newest.sourceQuote, channel: newest.channel, origin: l.origin, updatedBy: l.by, status: "DRAFT", version: newest.version + 1, supersedesId: newest.id }
+      ? { workspaceId: newest.workspaceId, combinationId: newest.combinationId, lineageKey: newest.lineageKey, govFormDefId: newest.govFormDefId, who: newest.who, attachMode: newest.attachMode, predicateJson: newest.predicateJson ?? Prisma.DbNull, conditionPlain: newest.conditionPlain, sourceQuote: newest.sourceQuote, channel: newest.channel, signature: newest.signature, origin: l.origin, updatedBy: l.by, status: "DRAFT", version: newest.version + 1, supersedesId: newest.id }
       : { workspaceId: l.workspaceId, combinationId: l.combinationId, lineageKey: l.formKey, govFormDefId: l.govFormDefId, who: l.who ?? "each_applicant", attachMode: l.attachMode ?? "COMBINATION_MANDATORY", conditionPlain: l.conditionPlain ?? null, sourceQuote: l.sourceQuote.slice(0, 500), channel: "PDF_UPLOAD", origin: l.origin, finderBatchId: l.finderBatchId ?? null, updatedBy: l.by, status: "DRAFT", version: 1 };
     n = (await db.combinationForm.createMany({ data: [row], skipDuplicates: true })).count;
   }

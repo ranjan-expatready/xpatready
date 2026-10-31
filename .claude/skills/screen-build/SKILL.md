@@ -14,6 +14,6 @@ description: Builder's skill for implementing one agreed Pathway Configurator sc
 
 **Order:** data (mirroring team names; migration keeps records) → rules and engine (pure) → contract (zod, Problem Details, server authorisation, version and idempotency checks) → UI (pattern, every state, tooltips, keyboard) → AI assist / governance where the concept says → Sample data as import files.
 
-**Mid-build discovery** that the agreed design cannot work: stop that part, write it under "Build discoveries" in challenge.md with evidence and a fix, put it in the stage's Paste to Lead (Needs line), continue with unaffected parts.
+**Mid-build discovery** that the agreed design cannot work: stop that part, write it under "Build discoveries" in challenge.md with evidence and a fix, say it in the PR and to the tech lead, continue with unaffected parts.
 
 **Done when (checklist):** every BR has a passing and a failing test · existing suites still pass · axe-core clean · performance budgets measured · screenshots of every state at 1440 and 1024 in `screens/NN/screenshots/` · you walked every scenario yourself · `build-notes.md` (under 100 lines) lists files changed, team-name mapping, mock vs real, checks run per standards section, honest self-score D1–D20, known gaps, AI cost. Then set CHECK. Commit and push on your lane branch; the push guard gates the content (P-82).

@@ -1,0 +1,26 @@
+{
+ "job_id": "studio-who-can-be-qa85-mvuiinbo",
+ "path_code_sha256": "3fa45a6cffedaee995c3151cf77e686523ce542ea00954b298b3219c8e96d18a",
+ "screening_sources": [
+  {
+   "file": "prototype/expected/slice-1-field-map.json",
+   "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+  },
+  {
+   "file": "prototype/expected/slice-1-field-map.v2.json",
+   "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+  },
+  {
+   "file": "prototype/p1/e5-family-values.json",
+   "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+  },
+  {
+   "file": "prototype/p1/adobe-complete-1295-values.json",
+   "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+  }
+ ],
+ "digest_sha256": "941c17c9a2445cc375dc85aa9c6d0545c6efe6f587309d48cdc2f960c96ddc63",
+ "run_id": "studio-who-can-be-qa85-mvuiinbo-stub-20261030t050911159z-9b552d",
+ "at": "2026-10-30T05:09:11.633Z",
+ "stub_calls": 1
+}

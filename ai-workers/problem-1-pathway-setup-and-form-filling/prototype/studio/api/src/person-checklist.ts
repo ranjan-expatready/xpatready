@@ -62,7 +62,7 @@ export class PersonChecklists {
     const i = list.findIndex((l) => l.lineage === b.lineage);
     if (i < 0) throw problem(404, "Not on this checklist", "That document is not on this person's checklist any more. Reload.");
     // C3.11: a signed scan follows its form line; it is changed there, never moved or removed on its own.
-    if (list[i].automatic) throw problem(409, "Follows its form line", `${list[i].document.name} is added because ${list[i].automatic!.form} is filed as Signed PDF upload; it stays after the other documents. Change the form line on the Forms tab to change it.`);
+    if (list[i].automatic) throw problem(409, "Follows its form line", `${list[i].document.name} is added because ${list[i].automatic!.form} is filed as PDF upload, signed by hand and scanned; it stays after the other documents. Change the form line on the Forms tab to change it.`);
     const j = b.direction === "up" ? i - 1 : i + 1;
     if (j < 0 || j >= list.length) throw problem(409, "Already there", b.direction === "up" ? "It is already first on this checklist." : "It is already last on this checklist.");
     if (list[j]?.automatic) throw problem(409, "Already there", "It is already last before the signed scans, which follow their form lines.");

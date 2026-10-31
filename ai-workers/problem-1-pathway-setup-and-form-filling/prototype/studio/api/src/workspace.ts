@@ -8,8 +8,8 @@ import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snaps
 import { questionnairesView } from "../../engine/runtime/questionnaires.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
 import { wordsOnly } from "../../engine/render.ts";
-import { acceptedChannels, acceptsOf, channelProblems, filingKind, filingMethod, signatureOf } from "../../engine/channels.ts";
-import { CHANNEL_WORDS, CHANNELS, type Channel } from "../../contracts/forms.ts";
+import { acceptsOf, allowedChannels, channelProblems, filingKind, filingMethod, lineOf, notAcceptedWords, notNeededWords, signatureOf } from "../../engine/channels.ts";
+import { ACCOUNT_WORDS, CHANNEL_WORDS, throughAccount, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel } from "../../contracts/forms.ts";
 import { answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { actorOf, Db, fail, readerOf } from "./core.ts";
 import { Studio } from "./studio.ts";
@@ -40,7 +40,7 @@ export class WorkspaceViews {
   }
 
   /** The Forms tab: each line of the draft with its settings, what IRCC accepts and its revision token. */
-  private async forms(id: string, workspaceId: string): Promise<{ lines: WorkspaceFormLine[]; filing: string; filingDetail: string; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }> {
+  private async forms(id: string, workspaceId: string): Promise<{ lines: WorkspaceFormLine[]; filing: string; filingDetail: string; account: string | null; accountKey: string | null; problems: { level: "error" | "warning"; item: string; message: string }[]; removed: RemovedForm[]; fromLibrary: string[]; lastChange: LastFormChange | null }> {
     const { snapshot } = await buildSnapshot(this.db, workspaceId, id, "draft");
     const accepts = await acceptsOf(this.db, workspaceId);
     const revisions = await this.studio.revisions(id);
@@ -50,15 +50,19 @@ export class WorkspaceViews {
     for (const r of rows) if (!status.has(r.lineageKey)) { status.set(r.lineageKey, r.status); version.set(r.lineageKey, r.version); }
     const lines = (snapshot.forms as SnapForm[]).map((f): WorkspaceFormLine => {
       const map = maps.filter((m) => m.form_number === f.form_number).at(-1);
-      const channel = f.channel ?? "PDF_UPLOAD";
+      const { channel, signature } = lineOf(f), account = snapshot.combination.portal ?? null;
+      const { channels: accepted, record } = allowedChannels(accepts.get(f.form_number), account);
       const onlyIf: OnlyIf = f.status !== "conditional" ? { kind: "always" } : wordsOnly(f) ? { kind: "words_only", words: f.condition_plain ?? "" } : { kind: "rule", words: f.condition_plain ?? "" };
       return {
         line: f.form_number, code: f.form_number, title: f.title, document: (f.form_kind ?? "data_form") === "document", edition: map?.form_edition ?? null,
         boxes: map ? map.entries.filter((e) => e.outcome === "mapped").length : 0, who: f.who, minAge: f.min_age ?? null, onlyIf, condition: f.condition ?? null,
-        channel, channelWords: CHANNEL_WORDS[channel], signature: (f.form_kind ?? "data_form") === "document" ? null : signatureOf(channel),
+        channel, channelWords: CHANNEL_WORDS[channel], signature: (f.form_kind ?? "data_form") === "document" ? null : signatureOf(signature), signatureKind: signature,
+        // P-143 (C-2): the signatures that fit the line's channel; C-3, C-4: each channel, offered or refused with its reason.
+        signatures: SIGNATURE_FITS[channel].map((k) => ({ kind: k, words: SIGNATURE_WORDS[k] })),
+        channelOptions: CHANNELS.map((c) => ({ channel: c, words: CHANNEL_WORDS[c], ok: accepted.includes(c), why: accepted.includes(c) ? null : c === "NOT_NEEDED" ? notNeededWords(f.form_number, account) : notAcceptedWords(f.form_number, c, record!) })),
         // Lead check L4: what IRCC accepts comes from the Form library (S4) for the current edition; only when nothing is
         // recorded is every way offered, as Sample.
-        accepted: acceptedChannels(accepts.get(f.form_number)) ?? [...CHANNELS], acceptedBasis: acceptedChannels(accepts.get(f.form_number)) ? "From the Form library: what IRCC accepts for this edition" : "Sample: the Form library does not record what IRCC accepts for this form yet",
+        accepted, acceptedBasis: record ? `From the Form library: what IRCC accepts for this edition${record.account === "ANY" ? "" : ` ${throughAccount(record.account)}`}` : "Sample: the Form library does not record what IRCC accepts for this form yet",
         signedBy: f.signed_by ?? null, signedByLabel: signedByLabel(f.signed_by), origin: f.origin ?? "HUMAN", quote: irccWords(f.source_quote), added: ourWords(f.source_quote),
         revision: revisions[`form:${f.form_number}`] ?? "", status: status.get(f.form_number) ?? "DRAFT", version: version.get(f.form_number) ?? 1,
       };
@@ -83,7 +87,8 @@ export class WorkspaceViews {
     // QA-69: nothing to undo once a release came after it (the Undo bar is not offered; the API refuses it too).
     const last = await this.db.formLineAction.findFirst({ where: { combinationId: id, undoneAt: null, ...(since ? { at: { gt: since } } : {}) }, orderBy: { at: "desc" } });
     const lastChange: LastFormChange | null = last ? { id: last.id, action: last.action as LastFormChange["action"], codes: ((last.detail as { codes?: string[] })?.codes ?? []), by: last.by, at: last.at.toISOString() } : null;
-    return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), problems, removed, fromLibrary: files.filter((f) => matched.has(f.sha256)).map((f) => f.id), lastChange };
+    const portal = snapshot.combination.portal ?? null;
+    return { lines, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: filingMethod(snapshot.forms as SnapForm[]), account: portal ? ACCOUNT_WORDS[portal as "ANY"] ?? portal : null, accountKey: portal, problems, removed, fromLibrary: files.filter((f) => matched.has(f.sha256)).map((f) => f.id), lastChange };
   }
 
   /** Questionnaires (slice 2): one person role's questions as a case asks them, with coverage; the library sections the

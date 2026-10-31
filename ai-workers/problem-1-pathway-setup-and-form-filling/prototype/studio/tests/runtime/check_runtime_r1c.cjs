@@ -321,9 +321,19 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     }
   }
   await o.reload(); await idle(o);
-  step("P-71 pass: with every required fact confirmed, IMM 5257 is ready to file and the earlier copy is out of date", await shows(imm.getByText("Ready to file")) && await shows(imm.getByText("Out of date")));
+  // Break M2 (C-9): IMM 5257 is a barcode form filed as a PDF upload: with every fact confirmed it says "Validate before
+  // filing", never "Ready to file", until a validated copy of the current copy is read back.
+  step("P-71 pass / C-9 fail-guard (break M2): with every required fact confirmed, IMM 5257 says \"Validate before filing\" (not \"Ready to file\") and the earlier copy is out of date", await shows(imm.getByText("Validate before filing")) && await gone(imm.getByText("Ready to file")) && await shows(imm.getByText("Out of date")));
   await imm.getByRole("button", { name: "Generate a new copy" }).click();
   await shows(imm.getByText("Generated", { exact: true }));
+  // The officer validates the new copy in Adobe and reads it back (simulated: the copy plus an appended save; values unchanged).
+  const fl5257 = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, "user-O")).body.forms.find((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C");
+  const newCopy = fl5257.copies[0].id;
+  const bytes = Buffer.from(await (await fetch(`${BASE}/api/runtime/form-copies/${newCopy}/file`, { headers: { "x-actor": "user-O" } })).arrayBuffer());
+  const fd = new FormData(); fd.append("file", new Blob([Buffer.concat([bytes, Buffer.from("\n% Saved after Validate (simulated in this check)\n")])]), "imm5257-validated.pdf");
+  const vr = await fetch(`${BASE}/api/runtime/form-copies/${newCopy}/validated`, { method: "POST", headers: { "x-actor": "user-O" }, body: fd });
+  await o.reload(); await idle(o);
+  step("C-9 pass (break M2): once the validated copy is read back, IMM 5257 is \"Ready to file\"", vr.status === 201 && await shows(imm.getByText("Ready to file")) && await gone(imm.getByText("Validate before filing")), vr.status);
   const focused = (l) => l.evaluate((el) => el === document.activeElement).catch(() => false);
   const lockBtn = imm.getByRole("group", { name: "Lock this copy" }).getByRole("button", { name: "Lock", exact: true });
   await imm.getByRole("button", { name: "Filed" }).click();

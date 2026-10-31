@@ -11,6 +11,7 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSyn
 import { join } from "node:path";
 import { importConfiguration, sampleFamilyFacts } from "../../engine/import.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
+import { LEDGER_DIR } from "../../../p2/policy.ts";
 import { Ai } from "./ai.ts";
 import { ACTORS, Audit, Db, fail, need, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
 import { Programs } from "./programs.ts";
@@ -318,7 +319,7 @@ export class Demo {
     row({ row: "10", title: "Review and release: submit, expert ticks, a different person releases", status: !released.length ? "waiting" : blocked.length ? "partial" : "done", shows: released.length ? `Release 1 of ${released.join(", ")}` : "No combination can be released yet",
       why: blocked.length ? blocked.join(" · ") : null });
     const visitor = released.some((l) => /Visitor visa/.test(l));
-    row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, IMM 5707 PDF upload, IMM 5476 Signed PDF upload)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
+    row({ row: "9", title: "Channels for release 2 (Mixed: IMM 5257 Online, IMM 5707 PDF upload, IMM 5476 PDF upload, signed by hand and scanned)", status: "waiting", shows: "The channel route and the signed-scan lines are built (Forms tab)",
       why: visitor ? "Set on the Visitor visa's Forms tab for release 2." : "Waits for the Visitor visa's release 1: its channels change for release 2." });
     row({ row: "11", title: "A family case on release 1", status: "waiting", shows: "The case area is built (Demo › Open the case area)", why: visitor ? "Open a case on the Visitor visa's release 1." : "Waits for the Visitor visa's release 1 (a case runs on a release)." });
     row({ row: "12", title: "IMM 5257 filled as a PDF and read back equal", status: "waiting", shows: "The fill is built (C7.1)", why: "IMM 5257 has no saved field-map answer under today's 5-part drafting: it waits for the founder's paid run (Lead, 30 Oct)." });
@@ -375,7 +376,7 @@ export class Demo {
     const fp = (label: string, paths: string[]) => { const h = createHash("sha256"); let n = 0; for (const p of paths.sort()) { if (!existsSync(p)) continue; h.update(p.replace(ROOT, "")); h.update(readFileSync(p)); n++; } return { label, files: n, sha256: h.digest("hex") }; };
     const under = (d: string, f: (x: string) => boolean = () => true) => (existsSync(d) ? this.walk(d).filter(f) : []);
     return [
-      fp("Spend ledger and launch tickets (append-only)", under(join(PROTOTYPE, "p2", "ledger"))),
+      fp("Spend ledger and launch tickets (append-only)", under(LEDGER_DIR)),
       fp("AI run records (P2 drafting and P5 reader)", [...under(join(PROTOTYPE, "p2", "runs")), ...under(join(PROTOTYPE, "p5", "reader", "runs"))]),
       fp("AI job definitions and form inventories (inputs of the saved runs)", [...under(join(PROTOTYPE, "p2", "jobs")), ...under(join(PROTOTYPE, "p1", "inventory"))]),
       fp("Official source originals and manifest", under(join(SOLUTION, "official-sources"))),

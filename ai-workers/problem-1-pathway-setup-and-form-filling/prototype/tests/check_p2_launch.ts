@@ -66,7 +66,8 @@ t("... could not read the answer key or family values, write outside the ledger,
 t("the stub caller was invoked exactly once", ev.stub_calls === 1);
 t(`the one experiment ledger at the fixed policy cap (US$${EXPERIMENT_CAP_USD}, AIW-D282) was used`, ev.ledger?.file === LEDGER && ev.ledger?.cap_usd === EXPERIMENT_CAP_USD);
 const lines = ledgerLines();
-t("the attempt reserved its worst case before the call and settled at zero (stub)", lines.length === 2 && lines[0].type === "reserve" && lines[0].caller === "stub" && lines[0].worst_usd > 0 && lines[1].type === "settle" && lines[1].actual_usd === 0);
+// P-179 break B1, QA-90 §9: the stub never spends, so it reserves US$0 (before, the paid worst case, which blocked a Continue).
+t("the attempt reserved before the call, at US$0 (a stub never spends), and settled at zero (stub)", lines.length === 2 && lines[0].type === "reserve" && lines[0].caller === "stub" && lines[0].worst_usd === 0 && lines[1].type === "settle" && lines[1].actual_usd === 0);
 t("the record carries the screened template hash and the AIW-D260 label", ev.screened === true && ev.template_sha256?.length === 64 && /prototype-only exception/.test(env4.label ?? ""));
 t("a stub pass bound to this exact path code is recorded", JSON.parse(readFileSync(join(P2, "runs", "stub-pass", "c1-fieldmap-imm5707.json"), "utf8")).path_code_sha256 === ev.path_code_sha256);
 
@@ -266,6 +267,46 @@ const clean9 = parse(isoT("c1-fieldmap-imm5707", "stub", "direct-clean-after"));
 t("clean control: draft.ts started directly on clean text with a current ticket runs after the change", clean9.ok === true && clean9.stub_calls === 1 && clean9.screening?.digest_sources?.length === 4);
 writeFileSync(FAM, famOriginal);
 t("restoring the family values closes the gate again until a new stub pass (sources must match exactly)", gateNow("c1-fieldmap-imm5707").ok === false);
+
+// 10. QA-90 (8): with P2_LEDGER_DIR set, the launcher and the drafting process use that one shared folder, never the copy's own.
+const shared = join(root, "shared-ledger"), copyBefore = ledgerLines().length;
+const launchShared = (dir: string) => {
+  const r = spawnSync(process.execPath, [join(P2, "launch.ts"), "--job", "c1-fieldmap-imm5707", "--stub"], { encoding: "utf8", env: { ...env, P2_LEDGER_DIR: dir } });
+  try { return { code: r.status, ...JSON.parse(r.stdout.trim().split("\n").pop() ?? "{}") }; } catch { return { code: r.status, refused: r.stderr.slice(0, 300) }; }
+};
+const sh = launchShared(shared);
+const shEv = sh.run_file ? JSON.parse(readFileSync(sh.run_file, "utf8")).launch_evidence ?? {} : {};
+const shLines = existsSync(join(shared, "spend.jsonl")) ? readFileSync(join(shared, "spend.jsonl"), "utf8").split("\n").filter(Boolean) : [];
+t("C11.8 QA-90 pass: with P2_LEDGER_DIR set, the drafting process reserves and settles in the shared ledger (2 lines there, its used ticket too)",
+  sh.code === 0 && shEv.ledger?.file === join(shared, "spend.jsonl") && shLines.length === 2 && existsSync(join(shared, "used-launch-tickets")) && readdirSync(join(shared, "used-launch-tickets")).length === 1);
+t("C11.8 QA-90 fail: ... and writes nothing to the copy's own ledger", ledgerLines().length === copyBefore);
+t("C11.8 QA-90 fail: a relative P2_LEDGER_DIR is refused before any process starts", launchShared("shared-ledger").code !== 0 && ledgerLines().length === copyBefore && shLines.length === 2);
+
+// 11. P-179: an override id and run key reach the drafting process's reservation; anything but plain words is refused.
+const launchArgs = (extra: string[]) => {
+  const r = spawnSync(process.execPath, [join(P2, "launch.ts"), "--job", "c1-fieldmap-imm5707", "--stub", ...extra], { encoding: "utf8", env });
+  try { return { code: r.status, ...JSON.parse(r.stdout.trim().split("\n").pop() ?? "{}") }; } catch { return { code: r.status, refused: r.stderr.slice(0, 300) }; }
+};
+const l11 = ledgerLines().length;
+const ov = launchArgs(["--override-id", "override-1-abc", "--run-key", "field_map:LIVE:source:x"]);
+t("C11.8 P-179 pass: the launcher passes --override-id and --run-key to the drafting process, whose reservation names the override",
+  ov.code === 0 && ledgerLines().length === l11 + 2 && ledgerLines()[l11]?.override_id === "override-1-abc");
+t("C11.8 P-179 fail: an override id that is not a plain word, or one without its run key, is refused before any process starts",
+  /plain words/.test(launchArgs(["--override-id", "x --live", "--run-key", "k"]).refused ?? "") && /go together/.test(launchArgs(["--override-id", "override-1"]).refused ?? "") && ledgerLines().length === l11 + 2);
+
+// 12. P-179 review B1, end to end: the stub pass every live step runs first goes through the real launcher and drafting
+// process with the shared ledger already past the experiment cap and the Wave 1 cap (as after a Continue); before, the
+// stub reserved the paid worst case there and was refused, so a Continue never reached its paid call.
+const b1Dir = join(root, "b1-ledger");
+mkdirSync(b1Dir, { recursive: true });
+writeFileSync(join(b1Dir, "spend.jsonl"), JSON.stringify({ type: "reserve", id: "b1-seed#1", run_id: "b1-seed", attempt: 1, worst_usd: EXPERIMENT_CAP_USD + 1, caller: "check_p2_launch seed", at: new Date().toISOString() }) + "\n");
+const b1 = launchShared(b1Dir);
+const b1Lines = readFileSync(join(b1Dir, "spend.jsonl"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+const b1Stub = b1Lines.find((l) => l.type === "reserve" && l.caller === "stub");
+t("C11.8 review B1 pass: past the experiment and Wave 1 caps, launch.ts --stub runs through the drafting process: reserved at US$0, settled at US$0",
+  b1.code === 0 && b1Stub?.worst_usd === 0 && b1Lines.some((l) => l.type === "settle" && l.id === b1Stub.id && l.actual_usd === 0));
+t("C11.8 review B1 fail: on that ledger a paid attempt without a Continue is still refused (the caps are really passed)",
+  (() => { try { new SpendLedger(b1Dir).reserve("b1-live", 1, 0.32, 5, "paid"); return false; } catch (e) { return /experiment cap US\$120/.test((e as Error).message); } })());
 
 for (const [n, p] of results) console.log(`${p ? "PASS" : "FAIL"}  ${n}`);
 const failed = results.filter(([, p]) => !p).length;

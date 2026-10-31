@@ -99,6 +99,11 @@ export function LibraryChangePage() {
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
         : <>
           {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
+          {/* Break M5: approving what IRCC accepts names every combination it leaves with a line filed in a refused way. */}
+          {x.accepts_impact?.length ? <div data-accepts-impact><Notice tone="warn" title={`Approving this breaks ${x.accepts_impact.length} combination${x.accepts_impact.length === 1 ? "" : "s"} in use`}>
+            <ul className="mt-1 list-disc space-y-1 pl-5">{x.accepts_impact.map((i) => <li key={i.combination}><b className="font-medium">{i.label}</b>: {i.words}</li>)}</ul>
+            <p className="mt-1">Each one shows this as a problem and cannot be released until its line is chosen again. Return the change if that is not intended.</p>
+          </Notice></div> : null}
           {x.recheck ? (x.recheck.ok
             ? <p className="text-sm" data-recheck="ok">{RECHECK.clear}{x.recheck.kept.length ? <span className="text-text-muted"> Kept: {x.recheck.kept.join(" · ")}.</span> : null}</p>
             : <div data-recheck="refused"><Notice tone="danger" title="Can't approve">{x.recheck.text} Return it with that reason.</Notice></div>) : null}

@@ -6,8 +6,9 @@
 // alone, writes nothing, and its five siblings keep their proposals. US$0: replays only, no live AI call.
 //   tsx studio/tests/check_queue_tx.ts [port=4434] [name=runtime_qtx]   (starts its own isolated copy)
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { LEDGER_DIR } from "../../p2/policy.ts";
 const STUDIO = join(import.meta.dirname, "..");
 
 const PORT = Number(process.argv[2] ?? 4434), NAME = (process.argv[3] ?? "runtime_qtx").replace(/^xr_studio_/, ""), DB = `xr_studio_${NAME}`;
@@ -24,7 +25,8 @@ const load = async () => {
 const steps = () => sql(`select a.file_name || '§' || j.status || '§' || regexp_replace(coalesce(j.message, ''), '\\s+', ' ', 'g') || '§' || (select count(*) from proposal_item p where p.run_id = j.id and p.status = 'waiting')
   from drafting_job j join source_attachment a on a.id = j.attachment_id where j.kind = 'field_map' order by a.file_name`).split("\n").filter(Boolean)
   .map((l) => { const [file, status, message, items] = l.split("§"); return { file, status, message, items: Number(items), said: Number(/(\d+) fields: /.exec(message)?.[1] ?? -1) }; });
-const ledger = () => readFileSync(join(STUDIO, "..", "p2", "ledger", "spend.jsonl"), "utf8").length;
+// QA-90: the one shared spend ledger (p2/policy.ts LEDGER_DIR); not there yet = nothing spent.
+const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsSync(f) ? readFileSync(f, "utf8").length : 0; };
 
 (async () => {
   const before = ledger();

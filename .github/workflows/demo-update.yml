@@ -1,0 +1,30 @@
+# Demo update (P-189, founder 31 Oct): after every merge to main the demo app (:4400) on the founder's Mac moves to the
+# new main by itself, data kept (migrations applied, no reset), and the job summary lists what is new. Runs on the
+# Mac's runner (xr-mac); the demo copy is .claude/worktrees/demo-main, detached on origin/main. No AI call, US$0.
+name: demo-update
+on:
+  push: { branches: [main] }
+  workflow_dispatch: {}
+permissions: { contents: read }
+concurrency: { group: demo-update, cancel-in-progress: true }
+jobs:
+  demo:
+    runs-on: [self-hosted, macOS, xr-mac]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 1 }
+      - name: move the demo copy to the new main and restart :4400
+        run: |
+          set -euo pipefail
+          ROOT="$HOME/Desktop/Xpatready"
+          D="$ROOT/.claude/worktrees/demo-main"
+          [ -d "$D" ] || { echo "no demo copy at $D: skipped"; exit 0; }
+          old=$(git -C "$D" rev-parse HEAD)
+          # The runner has no GitHub sign-in: take the new commit from this job's own checkout (no network, no token).
+          git -C "$ROOT" fetch -q "$GITHUB_WORKSPACE" "$GITHUB_SHA"
+          git -C "$D" checkout -q --detach "$GITHUB_SHA"
+          new=$(git -C "$D" rev-parse HEAD)
+          PGDATA="$ROOT/.tools/solution-1-prototype/pg18-data" zsh "$D/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/start.sh"
+          curl -fsS -o /dev/null --retry 10 --retry-delay 3 --retry-all-errors http://localhost:4400/ && echo "demo answers on :4400"
+          { echo "### What's new on the demo (:4400)"; git -C "$D" log --no-merges --format='- %s' "$old..$new" | head -30; } >> "$GITHUB_STEP_SUMMARY"
