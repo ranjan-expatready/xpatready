@@ -7,7 +7,7 @@ queue_rules:
     batch_max_wait_time: 10 min
     queue_conditions:
       - base = main
-      - label = review: approved
+      - "label = review: approved"
     merge_conditions:
       - check-success = ci
     merge_method: merge
@@ -16,7 +16,7 @@ pull_request_rules:
   - name: queue every approved pull request to main
     conditions:
       - base = main
-      - label = review: approved
+      - "label = review: approved"
     actions:
       queue:
         name: default
