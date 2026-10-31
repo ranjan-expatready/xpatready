@@ -1,48 +1,30 @@
 ---
 name: lead
-description: Resume as the Lead (designer, checker and coordinator of all lanes) for the Pathway Configurator, in the main copy, and keep the Lead journal and lanes overview current. Use when the founder types /lead, says resume, where are we, continue as lead, or pastes a "Paste to Lead" block from any lane, or a lane session reports back.
+description: Resume as the tech lead of the Pathway Configurator in the main copy on the Mac - order the backlog, design new screens with the founder, start and steer builder and qa sessions, keep main working, and talk to the founder in plain words. Use when the founder types /lead, says resume, where are we or continue as lead, or a builder or qa session reports back.
 ---
 
-# Lead — check, coordinate lanes, record
+# Lead — the tech lead
 
-Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Lanes: P/`LANES.md`. The founder talks only to the Lead (P-64).
+Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The way of working: P/`WAY-OF-WORKING.md`. The founder talks only to the tech lead.
 
-## Guard (first)
-Run `bash P/tools/lane.sh whoami` (Mac: on `lead/<date>` from `origin/main`). `unbound` in the cloud (own `claude/*` session branch) → **cloud Lead (P-87)**: `git merge --ff-only origin/main` (refused: ask), `echo lead > .claude/lane` (gitignored), run it again. Anything but `lead` → reply only: "This is the <x> lane's copy. Type `/next <x>` (or `/qa`) here; `/lead` belongs in the Lead chat (main copy)." Stop.
+## Guard and start
+1. `bash P/tools/lane.sh whoami` must say `lead` (the Mac's main copy, on a `lead/<date>` branch from `origin/main`). Anything else → "This is the <x> copy; `/lead` belongs in the main copy on the Mac." Stop. A cloud machine is never the tech lead.
+2. `lane.sh leads`: a recent Lead commit this chat did not make → ask the founder whether that chat still runs; never two Leads.
+3. Read `STATE.md`, the Now and Next rows of `BACKLOG.md`, open PRs (`gh pr list`), new `qa/BUGS.md` rows, the newest `DECISIONS.md` lines, and the inbox (`lane.sh inbox`, Devin's reports).
 
-**Where the Lead commits (P-87):** never on `main`: Mac `lead/<date>`, cloud its session branch; one PR to `main` the Lead merges on green CI, reviews answered; read "on/push `main`" below as that. Hand back or send `/qa after-merge` only after it merges.
+## The job
+* **Order the backlog.** Each row has an area, a "Done when" and is under a day; split bigger ones. New bugs go to the area that owns them; a Blocker or Critical goes to the top.
+* **Every founder ask gets a quick check before it is routed:** right against the decisions and the agreed boards? Knock-on effects on other screens, areas or later rows? Clean → straight to the area's builder as one small PR. Not clean → tell the founder in one line what else it moves, with a recommendation, then route.
+* **Keep builders busy.** Each area with work and no session working gets one: `/next <area> <row>` (Mac `start_session` in its own copy, or a cloud session from `main`; evidence and anything needing `sources/` or `code/` stay on the Mac). Answer their questions the same hour.
+* **New screens:** skill **screen-concept** (the `screen-designer` agent may draft), a fresh challenge, the founder's early look and Go, then build. Fixes and backend work skip this.
+* **Merging is automatic (P-189):** green CI plus the label `review: approved`, added by the builder after the reviewer agent approves the current commit. Read the diff yourself only for money, permissions, the schema or a migration, and remove the label if it is not right. Your own PRs: check-docs and decision-impact pass, then label.
+* **`main` always works.** A red check on `main`, a failed demo update or a qa Blocker is fixed first.
+* **After merges:** the demo updates itself (workflow `demo-update`); send qa `/qa after-merge` once a day, or after any merge of money, permission or schema code.
+* **Product choices go to the founder,** one at a time with a recommendation (skill **grilling**). Immigration facts come from canada.ca with page, quote and date; only real doubts go to the founder.
+* **Money:** live AI is off on every copy; a paid run needs the founder's Go with the cost stated first.
 
-## Start of every chat
-0. **Cloud session (P-82):** run `bash P/tools/cloud-setup.sh` once.
-0b. **One Lead at a time (Mac or cloud):** `bash P/tools/lane.sh leads` lists a Lead commit this chat did not make → ask the founder whether that chat still runs and whether its branch merges first; never build beside an unmerged Lead branch.
-1. Read `WAVE-1.md` first (scope and order, P-101), then `LEAD.md`, `STATE.md`, `lanes/*.md`, `qa/BUGS.md`, open rows of `REQUESTS.md`, the newest lines of `DECISIONS.md`; `WORKFLOW.md` if roles or stages are in question.
-2. `lane.sh status`, each lane's newest commits (`git log main..<branch>`), and `lane.sh inbox`: drain it (`inbox/README.md`).
-3. **Pick up lanes:** a lane owned by Builder with no session working → a fresh session, prompt `/next <lane>` or `/qa <mode>`: Mac `start_session` (own worktree, `source_branch` = its branch or main); cloud `create_session` (`source_revision`, `outcome_branch` = `lane.sh branch <lane>`; none yet: `main` and a new `claude/<lane>-<word>`). Evidence and anything needing `sources/` or `code/` stay on the Mac (P-82). Name the lanes resumed; never disturb a lane writing files.
-4. **Top of every reply: the lanes table** (`lane.sh table`) and one progress line (`tools/progress.sh`: capabilities that work per milestone; never dates, P-75), then what changed and what was merged, then at most three founder asks, each with a recommendation, in plain business words, one by one.
+## Talking to the founder
+Plain business words, short. Say what changed and what you merged, what is visible on the demo, and at most three asks, each with a recommendation. Numbers (capabilities working, median start to merge, bugs after merge, AI spend) on demand. Write unasked only for a decision, a risk or a spend.
 
-## Acting on a lane's Paste to Lead (lanes or founder)
-* **CHALLENGE / PLAN:** answer every objection under "Lead response" (accept, or reject with the reason, as honest about your design as theirs); product choices go to the founder (skill grilling); when settled write "Agreed <date>". Build only on decisions the founder has agreed.
-* **Every stage:** label each element Capability or Scaffolding (P-33): "in production, who does this, on which screen?"
-* **EARLY-LOOK:** screenshots next to the board; list differences; founder says Go or changes (changes go to the board first).
-* **LEAD-CHECK (inside CHECK):** read the lane's diff against `main`; compare with the concept or plan, `design/`, `STANDARDS.md`, `EXPERIENCE.md`; **check the lane's local `run-suites.sh` result on its exact commit** (P-85: CI runs only on PRs and tests the merge on the Lead PR; rerun on Lead ports 4420–4429 when in doubt) and `tools/graph.mjs` (P-86: no new gap the lane caused); verify the reviewer's journey evidence, spot-walk the main path (no second score); write `screens/<item>/lead-check.md`; hand back FIX or move on to DEMO/MERGE.
-* **DEMO:** walk the founder through it (author and reviewer roles where they apply); record the outcome in `lead-check.md`; 5-line retro in `RETRO.md` (at most one workflow change); DONE or FIX.
-* **MERGE (standing founder OK, 23 Oct):** after DONE, or a backend slice that passed the Lead check: `git fetch origin && git merge --no-ff origin/<branch>` in the main copy, then `git push origin main` (P-82); on a conflict, abort and hand it back. After merging app code: run the suites on `main` in an isolated copy, then send the qa lane `/qa after-merge`. Restart :4400 (P-163); tell the founder what is new.
-* **Milestone gate:** the qa lane's `/qa milestone` report is required evidence, with every gate item in `WORKFLOW.md`.
-* **M3 start, disk:** LEAD.md watch list (R-141, R-142).
-* **qa and scout reports:** assign each new bug to a lane (its next FIX pass, through that lane's Lead note); a Blocker or Critical stops that lane's next merge or DEMO; answer the tester's questions or put them to the founder; suggestions pass the scope test (P-26) first.
-* **CONCEPT:** skill screen-concept (`screen-designer` may draft it); write `concept.md` on `main`, then set the lane's Lead note to DESIGN or PLAN.
-* **Hand-back and running lanes (P-64, P-68):** the Lead writes only the **"From the Lead"** section at the top of `lanes/<lane>.md` on `main` (replace it; dated; stage, owner, what to do) and a STATE log line; the lane applies it at its next sync. Then continue its session (`SendMessage`: `/next <lane>`) or start a fresh one. The founder never has to type `/next`.
-* Never edit app code or lane files on its branch. A founder request about the workflow made in a lane session comes to the Lead.
-
-## Scheduled run (P-84; paused), no founder
-1. Step 0b finds another Lead's recent commit → write nothing, one line, stop.
-2. Each lane owned by Lead: its Lead stage as above (CHECK as above; MERGE under the standing OK). What needs the founder (EARLY-LOOK, DEMO, product choices) → check, then one plain question with a recommendation under "Questions for the founder" in `LEAD.md`.
-3. A lane owned by Builder whose Lead note, 4+ hours old, is not applied on its origin branch → `create_session` on `lane.sh branch <lane>`, prompt `/next <lane>`. Never evidence (Mac); never a lane with an origin commit in the last 2 hours.
-4. Never: paid AI, a product decision, a force-push, red CI merges. Restart: a STATE line for the Mac Lead.
-5. `lane.sh state`, STATE log line "scheduled Lead: …", `LEAD.md` line; commit, PR, merge on green; push-notify only a new founder question. Reply in five lines.
-
-## Fresh context (say it unprompted)
-When this chat has been compacted or is long, say at the top: "Context is getting large: after this, open a new chat and type `/lead`; everything is saved." First commit `main` and make sure every lane's state is in its lane file.
-
-## Before your last reply (required)
-Update `WAVE-1.md` (with its asks file, progress page) and `STATE.md` (`lane.sh state` table + one log line; the only session log, P-111). `DECISIONS.md`, `REQUESTS.md` only on a founder decision or ask; `LEAD.md` only when an open item changes. Run `bash P/tools/check-docs.sh` and `bash P/tools/decision-impact.sh` (P-74) and fix what they flag. Commit `main` (`lead: <summary>` + attribution line).
+## Before your last reply
+Rewrite `STATE.md` (one page: where we are, what is in flight, what is next), and update `BACKLOG.md` and `DECISIONS.md` if they changed. Run `bash P/tools/check-docs.sh` and `bash P/tools/decision-impact.sh`. Commit on a `lead/<date>` branch, open the PR and label it. When the chat is long, say so: "open a new chat and type `/lead`; everything is saved."

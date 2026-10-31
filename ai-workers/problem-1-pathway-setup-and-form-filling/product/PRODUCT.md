@@ -1,6 +1,6 @@
 # Product Studio · Pathway Configurator — product home
 
-What we build, the words we use, and where everything lives. Owner: the Lead. Read with `WORKFLOW.md` (who does what) and `STATE.md` (where we are).
+What we build, the words we use, and where everything lives. Owner: the Lead. Read with `WAY-OF-WORKING.md` (who does what) and `STATE.md` (where we are).
 
 ## 1. What we are building
 A **simple working prototype** of one ExpatReady capability: a content publisher sets up each immigration combination once (AI drafts it from IRCC forms and checklists; people review and release it); each person on a case then gets the right questions, documents and forms; facts are asked once and fill every form.
@@ -26,7 +26,7 @@ Immigration values come from the immigration expert; sample content is labelled 
 | Configure | **To review** (P-79) · **Programs** |
 | Shared library | **Fields** · **Sections** · **Document types** · **Forms** · **Checks** · **Rules** (read-only central list, P-37) |
 | History | **AI work** · **Releases** · **Activity** |
-The team merges these into the product's menus. A new item needs a screen in `SCREENS.md` and a decision. Case officer and client menus are defined when their milestones start.
+The team merges these into the product's menus. A new item needs a row in `BACKLOG.md` and a decision. Case officer and client menus are defined when their milestones start.
 
 ## 4. Words on screen (P-05)
 | Use | Not | Meaning |
@@ -53,20 +53,17 @@ Reference app `../prototype/studio/`: NestJS + Prisma + PostgreSQL (`api/`, `pri
 ## 6. Files and owners
 | File | Holds | Edited by |
 |---|---|---|
-| `WORKFLOW.md` | roles, stages, gates, sync rules | Lead |
-| `STANDARDS.md` · `EXPERIENCE.md` · `QUALITY.md` | engineering bar · UX/UI bar · scoring and gate | Lead |
-| `domain/MASTERS.md` · `domain/RULES-MODEL.md` · `domain/TAXONOMY.md` | data model · rules and validation · immigration structure | Lead |
-| `DECISIONS.md` · `decisions/` | product decisions | Lead (founder decides) |
-| `REQUESTS.md` | every founder request | Lead |
-| `BACKLOG.md` | requirements not yet scheduled (from the SA-01B and one-pager trace) | Lead |
-| `PLAN.md` | dated plan from measured pace, re-planned every Friday | Lead |
-| `LANES.md` · `lanes/<lane>.md` · `STATE.md` | lanes and file ownership · each lane's stage (the lane; the Lead writes only its "From the Lead" note) · generated overview (`lane.sh state`) | Lead · lane · Lead |
-| `SCREENS.md` | register of screens and slices | Lead |
-| `qa/` (CAPABILITIES, BUGS, reports) | what works, open bugs, test runs | qa lane |
-| `LEAD.md` | Lead journal | Lead |
-| `RETRO.md` · `design/journey-v2.dc.html` | five-line retro per screen · the clickable journey board (source of every screen's layout) | Lead |
-| `screens/<item>/` | concept, design, challenge or plan, build-notes, review, break-report, lead-check | as named in `LANES.md` |
-Every file stays under 100 lines (checked by `tools/check-docs.sh`).
+| `WAY-OF-WORKING.md` | roles, the flow of one piece of work, the rules | tech lead |
+| `STANDARDS.md` · `EXPERIENCE.md` · `QUALITY.md` | engineering bar · UX/UI bar · milestone scoring | tech lead |
+| `domain/MASTERS.md` · `domain/RULES-MODEL.md` · `domain/TAXONOMY.md` | data model · rules and validation · immigration structure | tech lead |
+| `DECISIONS.md` · `decisions/` | product decisions | tech lead (founder decides) |
+| `BACKLOG.md` (+ `BACKLOG-requirements.md`, `BACKLOG-requirements-qa.md`) | the one ordered list of work · requirements not yet scheduled | tech lead |
+| `STATE.md` | one page: where we are | tech lead |
+| `ASSUMPTIONS.md` · `STAND-INS.md` · `DEMO.md` | values not yet final · stand-ins for the team's modules · the demo story | tech lead |
+| `qa/` (CAPABILITIES, BUGS, reports) | what works, open bugs, test runs | qa |
+| `screens/<item>/` | concept, board, challenge or plan, build-notes, review, break-report | the area's builder (concept: tech lead) |
+| `ENVIRONMENT.md` | installed tools | tech lead |
+Older rules and records (WORKFLOW, LANES, CHARTER, LEAD, RETRO, WAVE-1, SCREENS, REQUESTS, PLAN) are in git history (P-188, P-189).
 
 ## 7. Measured so far — the baseline (P-27; keep, do not re-run or extend)
 | What | Result | Evidence |
