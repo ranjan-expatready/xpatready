@@ -57,10 +57,14 @@ export class StartSetup {
     if (forms) return { run: last?.id ?? null, ended: false, offer: null }; // forms came another way (by hand, Load sample)
     const live = await this.finder.plan(combinationId, { mode: "live" });
     const worst = live.totals.worst_usd, left = live.ledger.remaining_usd;
+    if (!live.live.on) {
+      const rules = await this.finder.plan(combinationId, { mode: "rules" });
+      return { run: last?.id ?? null, ended, offer: { mode: "rules", planSha256: rules.plan_sha256, label: START.rulesOnly, tip: START.rulesTip, why: START.liveOff } };
+    }
     if (worst <= left + 1e-9) {
       // The plan's "about" (finder-cost.ts): the same rule as the run card, so button, tip and card say one cost.
       const about = live.totals.about_usd;
-      return { run: last?.id ?? null, ended, offer: { mode: "live", planSha256: live.plan_sha256, label: START.findLive(about, worst), tip: START.findLiveTip(about, worst), why: null } };
+      return { run: last?.id ?? null, ended, offer: { mode: "live", planSha256: live.plan_sha256, label: START.findLive(about, worst), tip: START.findLiveTip(about, worst, live.steps), why: null } };
     }
     const rules = await this.finder.plan(combinationId, { mode: "rules" });
     return { run: last?.id ?? null, ended, offer: { mode: "rules", planSha256: rules.plan_sha256, label: START.rulesOnly, tip: START.rulesTip, why: START.overCap(worst, left) } };

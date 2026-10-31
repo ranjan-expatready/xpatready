@@ -41,9 +41,37 @@ export function FormsPanel({ caseId }: { caseId: string }) {
 function OnlineRow({ f }: { f: CaseOnlineForm }) {
   return (
     <li className="px-4 py-3" data-online-form={f.form}>
-      <h3 className="text-sm font-semibold"><span className="mono">{f.form}</span> · filed {ONLINE_LATER_WAVE} <Pill tone="info">No PDF copy</Pill></h3>
-      <p className="text-[13px] text-text-muted">{f.title}, for {f.people.join(", ")}. It is filed online, in a later wave: until then the case officer types it into the portal from the answer sheet; no PDF copy is made here.</p>
+      <h3 className="text-sm font-semibold"><span className="mono">{f.form}</span> · filed {ONLINE_LATER_WAVE} <Pill tone="info">{f.pdf_copy ? "PDF copy, not for filing" : "Answer sheet only"}</Pill></h3>
+      <p className="text-[13px] text-text-muted">{f.title}, for {f.people.join(", ")}. It is filed online: the case officer types it into the IRCC account from the answer sheet{f.pdf_copy ? "; a PDF copy, not for filing, is listed with the forms below (P-145)." : `. ${f.why_no_copy ?? ""}`}</p>
     </li>
+  );
+}
+
+/** C-9, C-10 (P-144, P-171 (1)): Validate is the last step. The officer validates the copy in Adobe, saves it and sends it
+ *  back here; a later change to a fact on the form marks it "Out of date: validate again". */
+function ValidatedState({ caseId, c, form }: { caseId: string; c: FormCopy; form: string }) {
+  const qc = useQueryClient(); const toast = useToast();
+  const input = React.useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = React.useState(false);
+  async function send(file: File) {
+    setBusy(true);
+    try {
+      const fd = new FormData(); fd.append("file", file, file.name);
+      await api(`/runtime/form-copies/${c.id}/validated`, { method: "POST", body: fd });
+      toast.push({ tone: "ok", text: `${form}: validated copy read back` });
+      void qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
+    } catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); }
+    finally { setBusy(false); if (input.current) input.current.value = ""; }
+  }
+  const v = c.validated;
+  return (
+    <span className="inline-flex items-center gap-2" data-validated={v ? (v.current ? "current" : "out_of_date") : "none"}>
+      {v ? <Pill tone={v.current ? "ok" : "warn"} title={`Read back ${v.read_back.equal} of ${v.read_back.written} values`}>{v.words}</Pill> : <Pill tone="warn">Not validated yet</Pill>}
+      {c.out_of_date ? null : <>
+        <input ref={input} type="file" accept="application/pdf" className="sr-only" aria-label={`Validated copy of ${form}`} onChange={(e) => { const x = e.target.files?.[0]; if (x) void send(x); }} />
+        <Button size="sm" variant="secondary" busy={busy} onClick={() => input.current?.click()}>{v && v.current ? "Read back again" : "Read back the validated copy"}</Button>
+      </>}
+    </span>
   );
 }
 
@@ -81,7 +109,9 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
   // P-71 and P-65 (a): a copy is filed or uploaded back only when the form is ready to file and its fill trial passed;
   // until then the buttons say why.
   const lockable = latest && latest.status === "GENERATED" && !latest.locked && !latest.out_of_date && latest.file_ok;
-  const why = !f.trial_passed ? `${f.form}'s fill trial has not passed yet: this is a checked copy, not for filing.` : !f.readiness.ready ? notReady(f.readiness.missing.length) : null;
+  // P-145: a copy of a form filed Online is never filed; C-9 (P-144): a barcode form is filed only after its validated copy is read back.
+  const why = !f.for_filing ? `${f.form} is filed Online: this PDF is a copy, not for filing.` : !f.trial_passed ? `${f.form}'s fill trial has not passed yet: this is a checked copy, not for filing.` : !f.readiness.ready ? notReady(f.readiness.missing.length)
+    : f.needs_validate && !latest?.validated?.current ? `Validate ${f.form} in Adobe, save it and read the validated copy back before it is filed.` : null;
   const canLock = lockable && !why;
   const lockBlocked = lockable && why ? why : null;
   const missing = f.readiness.missing;
@@ -90,8 +120,12 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <FileText className="size-4 text-text-muted" aria-hidden />
         <h3 ref={heading} tabIndex={-1} className="text-sm font-semibold outline-none">{f.form} <span className="font-normal text-text-muted">for</span> <span className="[overflow-wrap:anywhere]">{f.person}</span></h3>
-        {!f.trial_passed ? <Pill tone="warn" title="The evidence lane's fill trial for this form has not passed (P-65)">Checked copy, not for filing</Pill> : null}
-        {f.readiness.ready ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks (the form's own Validate still runs in Adobe)"><Check className="size-3" aria-hidden />Ready to file</Pill>
+        {!f.for_filing ? <Pill tone="info" title="Filed Online: IRCC's PDF filled from the same confirmed facts, for reading and checking only (P-145)">Copy, not for filing</Pill>
+          : !f.trial_passed ? <Pill tone="warn" title="The evidence lane's fill trial for this form has not passed (P-65)">Checked copy, not for filing</Pill> : null}
+        {f.for_filing && f.needs_validate && latest?.status === "GENERATED" ? <ValidatedState caseId={caseId} c={latest} form={f.form} /> : null}
+        {/* Break M2 (C-9): a barcode form with no current validated copy is never "Ready to file", in words. */}
+        {f.readiness.ready && f.for_filing && f.needs_validate && !latest?.validated?.current ? <Pill tone="warn" title="Every fact is confirmed; IRCC returns a barcode form unprocessed unless it was validated in Adobe (P-144)" data-needs-validated>Validate before filing</Pill>
+          : f.readiness.ready ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks (the form's own Validate still runs in Adobe)"><Check className="size-3" aria-hidden />Ready to file</Pill>
           : <Pill tone="warn">{missing.length} fact{missing.length === 1 ? "" : "s"} to answer or confirm before filing</Pill>}
         <span className="flex-1" />
         <Button size="sm" variant={!latest || latest.out_of_date || latest.status === "FAILED" ? "default" : "secondary"} disabled={!f.applies} busy={working || (latest ? busy(latest) : false)} onClick={() => void generate()}>

@@ -37,6 +37,12 @@ export function isSameSavedRun(r: SavedRun, want: { templateSha256: string; inpu
     && JSON.stringify(r.drafting_run?.inputs?.official_files) === JSON.stringify(want.inputs) && savedRunKey(r, want.legacy) === want.contextKey && typeof r.raw_output === "string";
 }
 
+/** W1-10 slice 1 (plan §4): which prompt a saved run answered, among the step's current prompt and the earlier versions
+ *  it names as still replayable (by their checksums); null for any other prompt, which is never replayed. */
+export function promptOfRun(r: SavedRun, prompts: { sha256: string; label: string }[]): string | null {
+  return prompts.find((p) => p.sha256 === r?.launch_evidence?.template_sha256)?.label ?? null;
+}
+
 /** A round's job base: the step's own, with "-check" for the checker round. */
 export const roundBase = (jobBase: string, isCheck: boolean) => `${jobBase}${isCheck ? "-check" : ""}`;
 /** The saved run files of one round: the checker's carry "-check"; the draft's never do. */
