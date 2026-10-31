@@ -50,7 +50,8 @@ function Shell() {
     { to: "/activity", label: "Activity", icon: Activity },
   ];
   // QA-80: the browser tab names the page ("<page> · Product Studio"), from the menu item the address belongs to.
-  const here = nav.find((n) => n.match ? n.match(loc.pathname) : loc.pathname.startsWith(n.to));
+  // A page reached from the draft bar, not the menu, names itself too (QA-80 retest: "/release" said "Product Studio" alone).
+  const here = nav.find((n) => n.match ? n.match(loc.pathname) : loc.pathname.startsWith(n.to)) ?? (loc.pathname === "/release" ? { label: "Review and release" } : undefined);
   React.useEffect(() => { document.title = here ? `${here.label} · Product Studio` : "Product Studio"; }, [here?.label]);
   return (
     <div className="flex min-h-full flex-col">
