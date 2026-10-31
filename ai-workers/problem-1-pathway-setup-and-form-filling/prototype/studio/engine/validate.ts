@@ -53,6 +53,9 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   const docFacts = new Set((s.document_types ?? []).flatMap((t) => t.supplies_facts ?? []));
   const sectionIds = new Set(s.sections.map((x) => x.id));
   // No forms is not a warning here: the missing list (BR-8, engine/programs.ts) says it once, with its next step.
+  // F8 (X1a, found in #113): but a combination with no form and no document line has nothing a case could file or
+  // collect, so it is never submitted, signed off or released (an error blocks all three).
+  if (!s.forms.length && !(s.document_requirements ?? []).length) out.push({ level: "error", where: "Forms", item: "", message: "Nothing to release yet: this combination has no forms and no documents. Add the forms it files (Find forms, or add one from the Form library) before sending it for review." });
   for (const f of s.forms) {
     for (const e of checkCondition(f.condition, types, derived)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Condition ${e}.` });
     // S5 (challenge M1): "Only if" in words with no rule cannot be evaluated on a case, so it is never released as is.

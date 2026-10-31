@@ -1,0 +1,61 @@
+// F8 (X1a, found by the runtime builder in #113): a combination with no form and no document line is never submitted,
+// signed off or released. The validator's error blocks submit and approve, in words that name the fix; adding a form or a
+// document line takes it away; a combination with lines never shows it. On an isolated copy with the sample loaded. No
+// browser, no model call (US$0).
+//   zsh studio/tools/isolated.sh screens_f8 4448 start && tsx studio/tests/check_f8_empty_release.ts 4448 xr_studio_screens_f8
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { validate } from "../engine/validate.ts";
+import { problemWords } from "../contracts/programs.ts";
+
+const PORT = Number(process.argv[2] ?? 4448), DB = process.argv[3] ?? "xr_studio_screens_f8";
+const log: any[] = []; let pass = 0, fail = 0;
+const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 220)}` : ""}`); };
+const call = async (method: string, path: string, body?: unknown, actor = "user-A") => {
+  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const t = await r.text(); let j: any = null; try { j = JSON.parse(t); } catch { j = t; }
+  return { status: r.status, body: j };
+};
+const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? "");
+const EMPTY = /Nothing to release yet: this combination has no forms and no documents/;
+
+(async () => {
+  const served = (await call("GET", "/session")).body?.workspace?.id;
+  const inDb = (() => { try { return sql(`select id from workspace where id='${served}'`); } catch { return ""; } })();
+  if (!served || !inDb) { console.error(`STOP  the database ${DB} is not the one the server on port ${PORT} uses. Pass the copy's database: tsx <check> ${PORT} xr_studio_<name>.`); process.exit(2); }
+  if (!(await call("GET", "/demo/status")).body?.loaded) { const l = await call("POST", "/demo/load", {}); if (l.status >= 300) { console.error("STOP  the sample did not load", l.body); process.exit(2); } }
+
+  // ---------------------------------------------------------------- the rule itself (engine)
+  const base: any = { forms: [], document_requirements: [], placements: [], sections: [], document_types: [], field_maps: [], rules: [], checks: [], canonical_fields: [], derived_fields: [], combination: { participants: [] } };
+  const errs = (s: any) => validate(s, [], []).filter((p) => p.level === "error" && EMPTY.test(p.message));
+  ok("F8 fail (engine): no form and no document line is a release-blocking error", errs(base).length === 1);
+  ok("F8 pass (engine): one document line and no form is not 'nothing to release'", errs({ ...base, document_requirements: [{ lineage: "d", document_type: "Passport", who: "each_applicant", base_or_conditional: "base" }] }).length === 0);
+  ok("F8 pass (engine): one form and no document line is not 'nothing to release'", errs({ ...base, forms: [{ form_number: "IMM 5257", title: "x", who: "each_applicant", status: "always", condition: null, form_kind: "document" }] }).length === 0);
+  ok("F8 (words): the error is said without an item prefix", problemWords({ level: "error", where: "Forms", item: "", message: "Nothing to release yet: x" }) === "Nothing to release yet: x" && problemWords({ level: "error", where: "Forms", item: "IMM 1", message: "y" }) === "IMM 1: y");
+
+  // ---------------------------------------------------------------- through the API
+  const vv = sql("select id from combination where combination_key='vv.single'");
+  ok("setup: Visitor visa has no form line and no document line", !!vv && sql(`select count(*) from combination_form where combination_id='${vv}'`) === "0" && sql(`select count(*) from document_requirement where combination_id='${vv}'`) === "0");
+  const probs = (await call("GET", `/combinations/${vv}`)).body.draft.problems as any[];
+  ok("F8 fail: its draft lists the error 'Nothing to release yet', naming the fix", probs.some((p) => p.level === "error" && EMPTY.test(p.message) && /Find forms/.test(p.message)), probs.map((p) => p.message).slice(0, 3));
+  let r = await call("POST", `/combinations/${vv}/submit`, {});
+  ok("F8 fail: sending it for review is refused, in words", r.status === 400 && EMPTY.test(words(r)) && !/^: /.test(words(r).split("before submitting: ")[1] ?? ""), words(r));
+  r = await call("POST", `/combinations/${vv}/approve`, {}, "user-B");
+  ok("F8 fail: approving it is refused (409), in words", r.status === 409 && EMPTY.test(words(r)), words(r));
+  ok("F8 fail: nothing was released", sql(`select count(*) from config_release where combination_id='${vv}'`) === "0");
+
+  r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 5257" });
+  const after = (await call("GET", `/combinations/${vv}`)).body.draft.problems as any[];
+  ok("F8 pass: once a form is added the 'nothing to release' error is gone", r.status < 300 && !after.some((p) => EMPTY.test(p.message)), { status: r.status, body: r.status >= 300 ? words(r) : undefined });
+
+  const wp = sql("select id from combination where combination_key='wp.family'");
+  const wpProbs = (await call("GET", `/combinations/${wp}`)).body.draft.problems as any[];
+  ok("F8 pass: the work-permit combination (forms and documents) never shows it", !wpProbs.some((p) => EMPTY.test(p.message)));
+
+  const out = join(import.meta.dirname, "..", "var", "suites"); mkdirSync(out, { recursive: true });
+  writeFileSync(join(out, "check_f8_empty_release.json"), JSON.stringify({ at: new Date().toISOString(), pass, fail, log }, null, 1));
+  console.log(`\n${pass}/${pass + fail} passed`);
+  process.exit(fail ? 1 : 0);
+})().catch((e) => { console.error("FAIL  unexpected", e); process.exit(1); });
