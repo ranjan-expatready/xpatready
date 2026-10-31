@@ -65,8 +65,11 @@ export type Package = { title: string; url: string };
 export function indexTitleOk(title: string): boolean {
   // Break (e466adb1) m22: every invisible character counts as none: format and control characters, private use, separators,
   // and the blank letters (Hangul fillers, the braille blank, the combining grapheme joiner).
-  const shown = title.replace(/[\p{Cf}\p{Cc}\p{Co}\u034F\u115F\u1160\u2800\u3164\uFFA0]/gu, "");
-  return shown.replace(/\p{Z}/gu, "").length > 0 && [...shown].length <= 300;
+  // Break (89cccd71) m22: also lone marks and variation selectors, unpaired surrogates and the Khmer inherent vowels; the
+  // 300 limit counts what is seen (a letter with its accents is one).
+  const shown = title.replace(/[\p{Cf}\p{Cc}\p{Co}\p{Cs}\u034F\u115F\u1160\u17B4\u17B5\u2800\u3164\uFE00-\uFE0F\uFFA0]/gu, "");
+  const letters = shown.replace(/\p{M}/gu, "");
+  return letters.replace(/\p{Z}/gu, "").length > 0 && [...letters].length <= 300;
 }
 
 /** A date canada.ca writes (YYYY-MM or YYYY-MM-DD) that is a real calendar date: month 01-12, the day within the month. */

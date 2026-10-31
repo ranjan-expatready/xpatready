@@ -51,7 +51,7 @@ const STATUS: Record<Row["status"], { word: string; tone: string; tip: string }>
 /** X5 (P-156 (1)): the words of a row filled from IRCC's forms list, beside the usual ones. */
 const STATUS_INDEX: Record<"listed" | "newer", { word: string; tip: string }> = {
   listed: { word: "Listed by IRCC · no file yet", tip: "IRCC's forms list names this form; its PDF is not in the library yet. It is downloaded from canada.ca when a combination picks it, or you can upload it." },
-  newer: { word: "Newer edition on canada.ca", tip: "IRCC's forms list shows a newer date for this form than when the library was last filled. Combinations keep using the library's file: check it against canada.ca (⋯ › Replace with a new edition)." },
+  newer: { word: "Newer edition on canada.ca", tip: "IRCC's forms list shows a later date for this form than the library's file, since it was last checked. Combinations keep using the library's file: check it against canada.ca (⋯ › Replace with a new edition)." },
 };
 const ORIGIN: Record<string, string> = { DOWNLOADED: "Downloaded from canada.ca by the form finder", UPLOADED: "Uploaded by a person", SAMPLE: "Official copy loaded with the sample" };
 

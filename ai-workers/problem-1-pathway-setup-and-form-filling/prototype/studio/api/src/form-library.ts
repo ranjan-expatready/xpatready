@@ -103,7 +103,7 @@ export class FormLibrary {
       // X5 (P156-2): "Newer edition on canada.ca" when IRCC's index lists a later month than the current edition's.
       // Review / break (e466adb1) M10, M11, automated review (89cccd71): newerOnIndex, the dates plus the date last seen current.
       const month = current ? editionMonth(current) : null;
-      const indexNewer = !!current && newerOnIndex(f.indexDateModified, month, f.indexDateSeenCurrent);
+      const indexNewer = !!current && newerOnIndex(f.indexDateModified, month, current.indexDateSeenCurrent);
       const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 || indexNewer ? "newer_file" : current ? "ready" : "no_file";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
         // P-143 (C-3): one record per IRCC account (ANY first); the column says them in words, one line per account.
@@ -180,7 +180,7 @@ export class FormLibrary {
     // Review (5a5f0d16) m2 / Devin: the fill judges a form by the same current edition the list shows (an approved printed
     // edition, the newest; newestEdition), never by a held or older edition's date: one "newer" rule in both.
     const [defs, approved] = await Promise.all([this.db.govFormDef.findMany({ where: { workspaceId }, include: { editions: true } }), this.approvedShas(workspaceId)]);
-    const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionMonth: current ? editionMonth(current) : null, seenCurrent: d.indexDateSeenCurrent }; }));
+    const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionMonth: current ? editionMonth(current) : null, currentId: current?.id ?? null, seenCurrent: current?.indexDateSeenCurrent ?? null }; }));
     const now = new Date();
     // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
     // Break m14 / Devin on #145: the words count what this fill did, not what it planned: a form another fill created meanwhile
@@ -195,8 +195,8 @@ export class FormLibrary {
         // moment earlier leaves this one's guarded write empty).
         const moved = isNewer && l.dateModified ? (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey, indexDateModified: l.before }, data: { indexDateModified: l.dateModified } })).count : 0;
         const n = (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}) } })).count;
-        // The form's baseline, written only where none is (a check or another fill may have set one meanwhile).
-        if (n && l.seenCurrent) await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey, indexDateSeenCurrent: null }, data: { indexDateSeenCurrent: l.seenCurrent } });
+        // An undated file's baseline, written only where none is (a check or another fill may have set one meanwhile).
+        if (n && l.seenCurrent && l.editionId) await tx.formEdition.updateMany({ where: { id: l.editionId, indexDateSeenCurrent: null }, data: { indexDateSeenCurrent: l.seenCurrent } });
         kept += n;
         if (n && moved) marked.push(l.formKey);
       }
@@ -214,10 +214,10 @@ export class FormLibrary {
       // X5 break M2 / Devin: only a check that found the library's edition still current answers the index's "newer" mark;
       // a check that failed, or that found another date on canada.ca, keeps it.
       if (r.outcome === "current") {
-        // Automated review (89cccd71): a check that finds the library's PDF current answers the index's date as it stands: it
-        // becomes the date last seen current, so a page edited without a new edition stops reading "newer".
-        const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId: await this.ws.id(), formKey: code } }, select: { id: true, indexDateModified: true } });
-        if (def?.indexDateModified) await this.db.govFormDef.update({ where: { id: def.id }, data: { indexDateSeenCurrent: def.indexDateModified } });
+        // Automated reviews (89cccd71, c5b8be03): a check that finds the library's PDF current answers the index's date as it
+        // stands: it becomes that file's date last seen current, so a page edited without a new edition stops reading "newer".
+        // The baseline is the checked file's own (the current edition the check compared), never the form's.
+        if (r.editionId && r.indexDate) await this.db.formEdition.update({ where: { id: r.editionId }, data: { indexDateSeenCurrent: r.indexDate } });
       }
       return r;
     } catch (e) {
@@ -246,7 +246,7 @@ export class FormLibrary {
     // with canada.ca's date never answers the "newer" mark.
     const current = this.currentEdition(def.editions, (await this.approvedShas(workspaceId)).all);
     await this.db.formEdition.updateMany({ where: { govFormDefId: def.id }, data: { checkedAt: new Date(), formPageUrl: pageUrl } });
-    if (current && current.canadaUpdated && page.lastUpdated && current.canadaUpdated === page.lastUpdated && current.sourceUrl === pdfUrl) return { outcome: "current", message: `${current.editionLabel} is still the current edition on canada.ca (last updated ${page.lastUpdated}).`, last_updated: page.lastUpdated };
+    if (current && current.canadaUpdated && page.lastUpdated && current.canadaUpdated === page.lastUpdated && current.sourceUrl === pdfUrl) return { outcome: "current", editionId: current.id, indexDate: def.indexDateModified, message: `${current.editionLabel} is still the current edition on canada.ca (last updated ${page.lastUpdated}).`, last_updated: page.lastUpdated };
     return { outcome: "check", message: `canada.ca shows ${code} last updated ${page.lastUpdated ?? "on an unknown date"}. Run "Find again" on a combination that uses it to download it: a newer edition goes to edition review, the same edition from a new file is marked for you to replace.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
   }
 
