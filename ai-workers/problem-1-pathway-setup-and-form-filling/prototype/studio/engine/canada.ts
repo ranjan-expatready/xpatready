@@ -60,23 +60,26 @@ export type Package = { title: string; url: string };
  *  is the page's date, not the edition) and the "Select an application package" links. A row whose number cannot be read
  *  or whose link is not an official address is left out. Guides are not rows of this table; they are linked from the
  *  package pages (pageLinks, guideLinks). */
-export function parseFormsIndex(html: string): { rows: IndexRow[]; packages: Package[] } {
-  const rows: IndexRow[] = [];
+export function parseFormsIndex(html: string): { rows: IndexRow[]; packages: Package[]; noPage: string[]; unreadable: string[] } {
+  const rows: IndexRow[] = [], noPage: string[] = [], unreadable: string[] = [];
   const body = /<tbody\b[^>]*>([\s\S]*?)<\/tbody>/i.exec(html)?.[1] ?? "";
   for (const tr of body.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
     const tds = [...tr[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((t) => t[1]);
     if (tds.length < 2) continue;
     const code = normaliseCode(strip(tds[0])), a = anchors(tds[1])[0];
-    if (!code || !a) continue;
+    // X5 break m7: a number that cannot be read is counted too (shown to the person), never silently dropped.
+    if (!code) { if (strip(tds[0])) unreadable.push(strip(tds[0]).slice(0, 40)); continue; }
+    // X5 (P156-1): a row whose number reads but whose link is missing or not an official address is counted, never guessed.
+    if (!a) { noPage.push(code); continue; }
     const u = officialUrl(a.href);
-    if (!u.ok) continue;
+    if (!u.ok) { noPage.push(code); continue; }
     const title = a.text, date = tds[2] ? strip(tds[2]) : "";
     rows.push({ code, title, pageUrl: u.url, dateModified: /^\d{4}-\d{2}(-\d{2})?$/.test(date) ? date : null, kind: /^document checklist/i.test(title) ? "checklist" : "form" });
   }
   const packages: Package[] = [], seen = new Set<string>();
   const ff = /<form\b[^>]*id\s*=\s*["']applications-ff["'][^>]*>([\s\S]*?)<\/form>/i.exec(html)?.[1] ?? "";
   for (const a of anchors(ff)) { const u = officialUrl(a.href); if (u.ok && a.text && !seen.has(u.url)) { seen.add(u.url); packages.push({ title: a.text, url: u.url }); } }
-  return { rows, packages };
+  return { rows, packages, noPage, unreadable };
 }
 
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
