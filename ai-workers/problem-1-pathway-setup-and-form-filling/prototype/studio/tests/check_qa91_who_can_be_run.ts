@@ -1,13 +1,14 @@
 // QA-91 (C11.12, P-110; Lead 30 Oct: build now): Who can be › AI now runs in the background as a run, like the form
 // finder and Upload PDF: it answers at once with a run id, the shared run card reads its four steps (rules, AI, AI check,
 // rules), Stop ends it so no later round starts, and the proposal is read when it is done (never saved). Rules only and
-// saved AI answers still answer at once. AI now opens on this isolated copy only because its launcher is the test fixture
-// (tests/fixtures/fake-launch.mjs; no live switch, Lead 30 Oct): no network, no model call (US$0).
-//   zsh studio/tools/isolated.sh runtime_qa91 4433 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_qa91_who_can_be_run.ts 4433 xr_studio_runtime_qa91
+// saved AI answers still answer at once. AI now opens on this isolated copy only because the live switch is paired with
+// the test fixture as its launcher (tests/fixtures/fake-launch.mjs; P-192, PR #113 review M1): no network, no model call (US$0).
+// No other live switch (STUDIO_PEOPLE_AI_LIVE and the like) may be on: the spend guard stops the check.
+//   zsh studio/tools/isolated.sh runtime_qa91 4433 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_qa91_who_can_be_run.ts 4433 xr_studio_runtime_qa91
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { rulesReading } from "../api/src/people-ai.ts";
+import { rulesReading, whoCanBeLiveOpen } from "../api/src/people-ai.ts";
 import { FAKE_LAUNCHER, launcherFor } from "../api/src/sources.ts";
 
 const PORT = Number(process.argv[2] ?? 4433), DB = process.argv[3] ?? "xr_studio_runtime_qa91";
@@ -32,6 +33,13 @@ const launches = () => (existsSync(join(VAR, "fake-launch.log")) ? readFileSync(
   const fake = env.match(/STUDIO_FAKE_LAUNCHER=(\S+)/)?.[1], varRoot = env.match(/STUDIO_VAR=(\S+)/)?.[1] ?? "";
   if (!fake || launcherFor(fake, varRoot) !== FAKE_LAUNCHER) { console.error(`STOP  the server on :${PORT} does not run the fake launcher (${fake ?? "not set"}): this check would make paid AI calls. Start it as the usage line says.`); process.exit(2); }
   ok("spend guard pass: this server runs the fake launcher (resolved as the server does), so nothing here reaches a model", launcherFor(fake, varRoot) === FAKE_LAUNCHER, fake);
+  const otherLive = [...env.matchAll(/\b(\w+_LIVE)=approved\b/g)].map((m) => m[1]).filter((k) => k !== "STUDIO_AI_LIVE");
+  if (otherLive.length) { console.error(`STOP  the server on :${PORT} has another live switch on (${otherLive.join(", ")}): only STUDIO_AI_LIVE, paired with the fake launcher.`); process.exit(2); }
+  ok("spend guard pass: the only live switch on is STUDIO_AI_LIVE, paired with the fake launcher (P-192)", /\bSTUDIO_AI_LIVE=approved\b/.test(env) && !otherLive.length);
+  ok("M1 pass: the live switch with the fake launcher opens AI now", whoCanBeLiveOpen({ STUDIO_AI_LIVE: "approved" }, true));
+  ok("M1 fail: the fake launcher alone never opens AI now (the live switch P-175 is the one door)", !whoCanBeLiveOpen({}, true) && !whoCanBeLiveOpen({ STUDIO_PEOPLE_AI_LIVE: "approved" }, true));
+  ok("M1 fail: the live switch alone, with the real launcher and no founder trial, keeps AI now closed", !whoCanBeLiveOpen({ STUDIO_AI_LIVE: "approved" }, false));
+  ok("M1 pass: the founder's trial opens it only with the live switch", whoCanBeLiveOpen({ STUDIO_AI_LIVE: "approved", STUDIO_PEOPLE_AI_LIVE: "approved" }, false) && !whoCanBeLiveOpen({ STUDIO_PEOPLE_AI_LIVE: "approved" }, false));
   ok("spend guard fail: the incident's path (relative to the wrong folder) does not count as the fake launcher, so the guard stops", launcherFor("studio/tests/fixtures/fake-launch.mjs", varRoot) !== FAKE_LAUNCHER);
   await call("POST", "/demo/reset", { confirm: "RESET" });
   if ((await call("POST", "/demo/load", {})).status >= 300) { console.error("STOP  the sample did not load"); process.exit(2); }
