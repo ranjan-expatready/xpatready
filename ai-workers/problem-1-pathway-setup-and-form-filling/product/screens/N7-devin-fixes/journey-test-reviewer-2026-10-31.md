@@ -60,3 +60,34 @@ A real screen reader. An intended user's unaided walk (D17 and D20 stay with the
 - The new-field withdraw from a non-proposer is refused (403) and the change stays waiting.
 - New Minor: a returned row that is not mine is greyed with "waiting for a second person" (`lifecycle.ts:116`). It should say the proposer acts.
 - **Score at cddef56a: 9/10, pass.** Next step obvious is 1 and correct data is 1; speed stays ½ because it was not timed.
+
+## Re-walk at `aef35efa`: B50 / P-193 (copy `rev_n7e` on :4436; script `/tmp/rev_n7e/journey.cjs`, run twice, 31/32)
+Returned fields were seeded through SQL, because the demo has one author.
+- **J1 (main):** the proposer, as Configuration author, uses To review → "Correct or withdraw" → renames by keyboard → Send again. Toast, back on To review, WAITING v2, the draft renamed, no duplicate. Open 110 ms, send 60 ms.
+- **J2:** the Approver approves the corrected field (APPROVED).
+- **J3 (wrong person):** another person's returned field. Page: "Only Content reviewer can correct it or withdraw it.", no inputs, no buttons. To review lists it as waiting. Axe 0; 1024 px, 400 px and 200 % zoom all fit.
+- **J4:** Send again stays disabled until 8 characters.
+- **J5:** correct or withdraw by URL as the author or the approver is refused with 403, and nothing changes.
+- **J6:** a second send gives 409.
+- **J8:** the proposer sees Withdraw.
+- **Merge:** the LMIA review tab shows no doubled prefix and no role key.
+
+**Break:**
+- Non-English name and zero-width characters: cleaned.
+- A rewrite through `PATCH /library/fields/:key` followed by a self-approve went through. That is Major 1 in `review.md` (older routes).
+- The correction writes no audit line.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | J1 and J2 end to end |
+| Next step obvious | 1 | "Correct or withdraw" for the proposer; "Waiting for others" for anyone else |
+| Plain words | 1 | 403 and page line name the proposer; no ids |
+| Feedback and state | 1 | Toast; disabled until 8 characters; Returned chip and reason |
+| Correct data | ½ | resubmit is exact, but Major 1 (PATCH route) and no audit line |
+| Error recovery | 1 | 409 on a second send; refusals change nothing |
+| Accessibility and screen sizes | 1 | Axe 0 on both pages; keyboard J1; 400, 1024 and 200 % zoom fit |
+| Speed | 1 | Page open 110 ms, send 60 ms, well under the §9 budgets |
+| Visual quality | 1 | Screenshots at 1440 and 200 %: team tokens, line sits where the form would |
+| Trust and sources | 1 | Proposed by, Returned by and the reason are shown; no AI here |
+
+**Score: 9.5 / 10, pass.** Closing Major 1 and adding the audit line would raise correct data to 1. A screen reader and a real second author were not tested.

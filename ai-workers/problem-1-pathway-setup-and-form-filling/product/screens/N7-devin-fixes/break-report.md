@@ -97,3 +97,54 @@ Simulated people never leave, so this cannot happen today.
 **Held in round 2:** `withdrawLifecycle` no longer checks the proposer itself, but its only caller is `withdrawChange`, which
 checks before it (`library-changes.ts:156-158`, grep). A lifecycle resubmit carrying a label still gets 400 before the
 proposer check, so it does not reveal the proposer's name.
+
+## Round 3: commit aef35efa (copy `b50break` on :4438; P-193 / B50)
+
+Web rebuilt, fresh database, `POST /api/demo/load`; returned/waiting/approved changes made by the real routes or by SQL
+with `proposed_by='user-C'` (a second author). Note: during the run another agent's check (rev_n7e, :4436) briefly edited
+`review-items.tsx`, rebuilt `web/dist` and rewrote four N7 screenshots; the page was re-tested on a HEAD build.
+
+**R3-1 · Major: another author still rewrites a returned field's name and meaning, outside `resubmitChange`.**
+C's field ADD is RETURNED. As user-A: `PATCH /library/fields/person.b50_ret/name {"name":"Renamed by A via PATCH"}` gives 200
+and `PATCH /library/fields/person.b50_ret {"meaning":"Meaning rewritten by another author."}` gives 200. The draft field now
+holds A's words (`updated_by user-A`), and the change page shows them as the field. C sends it again with only a reason
+(201); A approves (201): APPROVED, decided_by user-A, and the field meaning is A's text, so A wrote and approved it alone.
+The same works for a returned section (`PATCH /library/sections/b50_sec`, 200) and for aliases
+(`POST /library/fields/:key/aliases`, 201). Cause: `updateField` (`api/src/studio.ts:412`), `renameField` / `renameSection`
+(`api/src/library-sources.ts:152,176`) only check the author duty and never look for an open change on the key;
+`decideChange` checks only `proposedBy` and `appliedBy` (`api/src/library-changes.ts:83-85`).
+
+**R3-2 · Major: edits to a WAITING or APPROVED new field go out without a second look (approve-alone).**
+(a) C's field is WAITING; A renames it, rewrites the meaning and changes its kind of value to date (200 each), then approves it
+(201). (b) No SQL needed: A's own field ADD is APPROVED by user-B; A then renames it and rewrites the meaning (200 each); the
+change stays APPROVED, and the release publishes whatever the DRAFT row holds (`library-changes.ts:195`). Same doors as R3-1.
+
+**R3-3 · Major: a corrected document type or section name is approved but never released.**
+C's returned document_type `b50_doc` (draft row "B50 doc type"): C resubmits `{"label":"B50 doc type corrected name"}` (201),
+user-B approves (201). The change says "B50 doc type corrected name"; `document_type.name` is still "B50 doc type", and that
+row is what the release publishes. Same for a section (change "B50 section corrected", section title unchanged).
+`resubmitChange` writes the draft only for `kind === "field"` (`library-changes.ts:148`).
+
+**R3-4 · Major: a returned what-IRCC-accepts or who-fills change cannot be corrected or withdrawn, and blocks its form or field.**
+A's form_accepts for IMM 5257 (Paper) is returned. The "Correct" form offers only Name and Meaning; `resubmit` with
+`"channels":["ONLINE"]` gives 201 and still Paper. Withdraw gives 409 "Only a new shared field that is waiting or returned is
+withdrawn." (`library-changes.ts:162`), but the page offers "Withdraw the new field" (`review-items.tsx:177`). Pressing
+Enter on it by keyboard gives the same 409. A new proposal gives 409 "Already waiting" (`form-library.ts:128`, RETURNED
+counted; who-fills `OPEN`, `who-fills.ts:26`). The only way out is to send the same value again. Before aef35efa this was the
+same; P-193 makes the proposer the only person who can try.
+
+**R3-5 · Minor: a correction can retitle a form_accepts change so it contradicts itself.**
+Proposer resubmits `{"label":"IMM 5257 · IRCC accepts: Online", "meaning":"…"}` (201). On To review the title says "Online"
+and the text says "Not set yet → Paper". Approving applies Paper. The meaning is dropped without a word. The page also says
+"Corrected after: Corrected after: Returned: check it" after two rounds.
+
+**Held in round 3**
+- `POST /library/changes/:id/resubmit` by a non-proposer gives 403 "Not yours… Content reviewer proposed this one". Checked
+  for field, form_accepts, placement_fills and document_type, as user-A, B, O, P, Q and `author`. Label and reason are
+  unchanged. No header, `bogus` and `USER-C` give 401; `"user-C "` is trimmed to the proposer.
+- Withdraw by a non-proposer gives 403 (round 2 holds). Approving a RETURNED change gives 409.
+- Five resubmits at once by the proposer: one 201 and four 409, version 2.
+- To review for user-A on another person's returned field, section, document type, accepts and who-fills: "waiting", no
+  action. `/review/change/:id` for user-A (1024 px, 512 px, 40 Tabs) shows "Only Content reviewer can correct it or
+  withdraw it." with no inputs or buttons, no POSTs and no page errors. The proposer gets Correct and Withdraw. The
+  officer gets the "for the configuration people" page.

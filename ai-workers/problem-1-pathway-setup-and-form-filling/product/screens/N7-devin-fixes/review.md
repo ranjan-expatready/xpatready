@@ -136,3 +136,58 @@ How I checked:
 - An APPROVED change that is not mine also still reads "waiting for a second person", although it is waiting for the release. That is older than N7 and outside this delta; noted for the screens lane.
 
 **Verdict: Approve on commit `aef48f3a`.** No Blocker or Major is open. Minor 3 (GRAPH.md) is with qa, and B3 is the Lead's decision.
+
+---
+
+## Re-review at `aef35efa`: the two merges and B50 / P-193 (31 Oct)
+Read: `git show aef35efa`, the combined diffs of `912dccfa` (origin/main) and `d76f4d9d` (#113 at `52d2c2be`), and `git diff origin/main...aef35efa`. Copies `rev_n7e` :4436 and `rev_n7f` :4437, both stopped. `P2_LEDGER_DIR=/tmp/rev_n7e-ledger`, no `*_LIVE`, no :4400, US$0.
+
+**Checks run**
+- Web built; `tsc --noEmit` passes for api and web.
+- `check_runtime_n7.cjs`: **32/32**, twice. `check_screen02_fix.ts`: 61/61. `graph.mjs`: G1/G2/G4/G5/G6 0; the one G3 (`GET /attachments/:id/file`) is not N7's.
+- Each new rule fails its test when removed:
+  - Server back to "or an author": the B50 403 step fails.
+  - Queue back to `needs` for an author: 31/32, the B50 queue step fails.
+  - Page back to the old condition: the `[data-withdraw-not-mine]` wait times out and the check exits 1.
+- My own journeys (`/tmp/rev_n7e/journey.cjs`, untracked): 31/32, twice. The one miss is under Minor 2.
+
+**Merges: held**
+- `review.tsx`: `problemLine` keeps main's message-once branch, and N7's `roleKeysInWords` applies only to the Derived-fields label. The import is from `@/pages/job`. The changes table also uses `roleKeysInWords`. On With an LMIA's review tab: no doubled "X: X:" and no `subject_…` key.
+- `main.ts`: the `@Module` list is main's exactly. It is a superset of #113's (it adds `OfficialPagesController` and `OfficialPagesService`), so nothing is dropped. Against origin/main, `main.ts` differs only by N7's own lines: the upload door removed, the sample comment, `b?.officialFile`, and `demo/load` taking a body (from #113).
+- Only N7 and #113 are on the branch. `origin/main..aef35efa ^52d2c2be` is N7's five commits (`10939d21`, `cddef56a`, `aef48f3a`, `53eb01f4`, `aef35efa`). Everything else is in #113's head `52d2c2be`.
+- Main + #113 conflict on their own only in `main.ts`, and this branch resolved that. The branch also merges cleanly with today's origin/main `eddb4b94` (#129, #130).
+- No caller of the removed `POST /combinations/:id/attachments` remains. `check_forms_demo.ts` moved to `/intake`; only N7's 404 fail-check calls the old route.
+
+**B50 / P-193 at `aef35efa`: held as written**
+- `library-changes.ts:137`: a non-proposer's resubmit is 403 "Not yours", naming the proposer from `ACTORS`. I checked it for the Configuration author and for the Approver; label, meaning and status do not change.
+- The proposer corrects by keyboard: Name, then Tab to "What you corrected"; Send again stays disabled under 8 characters; Enter sends.
+  - Result: a toast "… sent to a second person again", back on To review, WAITING, version 2, the draft field renamed, one change row.
+  - A second send is a 409 in words.
+  - Then the Approver approves it: APPROVED, decided by user-B.
+- A proposer without the author duty (Content reviewer) corrects a non-English name. Zero-width characters and spaces are removed.
+- The page for another person's returned field (`review-items.tsx:97`) shows "Only Content reviewer can correct it or withdraw it." It has no inputs and no Withdraw, and the return reason stays visible. Axe 0. No sideways scroll at 1024 and 400 px, or at 200 % zoom of a 1024 window (screenshot checked). `Correct` always carries `Withdraw` now, which is right because it renders for the proposer only.
+- To review (`review-queue.ts:195`) files it under "Waiting for others" with "The person who proposed it corrects it or withdraws it.". The proposer's link reads "Correct or withdraw".
+- The `main.ts:84` comment says why the sample route is not `/intake`.
+
+**Major 1 (Should; for the Lead, not from this diff): another author can still rewrite a returned field by other routes and then approve it alone.** This is breaker R3-1/R3-2; I reproduced it on :4436.
+- Setup: the Content reviewer's field is RETURNED.
+- The Configuration author calls `PATCH /library/fields/person.rev_x` with a new meaning: 200.
+- The Content reviewer sends it again with a reason only: 201.
+- The Configuration author approves it: 201, APPROVED, `decided_by user-A`.
+- Result: the draft's meaning is the approver's own text. The resubmit also set `updated_by` back to `user-C` (`library-changes.ts:148`), so nothing shows who wrote it, and neither edit has an audit line.
+- Cause: `updateField` (`studio.ts`) and `renameField`/`renameSection` (`library-sources.ts`) check only the author duty, and `decideChange` (`library-changes.ts:83-85`) compares only `proposedBy`/`appliedBy`.
+- These routes are older than N7 and unchanged by it. The demo has a single author, so the gap is latent. It is still the exact gap P-193 gives as its reason, so B50 is not closed end to end.
+- Fix, one of:
+  - (a) refuse those edits while the key has an open change, unless the person is its proposer;
+  - (b) record each editor on the change and make the second-person check differ from all of them.
+- Breaker R3-3 (a corrected document type or section name is never written to its draft, since only `kind === "field"` is) and R3-4 (a returned accepts or who-fills change cannot be corrected or withdrawn) are also older than this diff. I did not reproduce them.
+
+**Minors (Should, later PR)**
+1. `library-changes.ts:136-137` checks the status before the proposer, so a non-proposer gets 409 "this one is waiting" instead of 403. The lifecycle path checks the proposer first (`lifecycle.ts:250`). This is harmless, but the two paths are inconsistent.
+2. Correcting or withdrawing a field writes no `audit_event` line. That is older than N7; resubmit for lifecycle kinds does log (`lifecycle.ts:278`). STANDARDS audit rule.
+
+**D-scores changed:** D2 4 (P-193 holds on `resubmit`; Major 1 is another route) · D16 5 (each B50 rule has a fail and a pass case and fails when removed).
+**Journey score at aef35efa: 9.5/10, pass** (`journey-test-reviewer-2026-10-31.md`; correct data ½ for Major 1 and the missing audit line).
+**Not checked:** a screen reader; a real second author (set up through SQL); breaker R3-3 to R3-5; the two `*_LIVE` suites (CI).
+
+**Verdict: Approve on commit `aef35efa`.** The merges are correct and this diff carries only N7 and #113. B50 holds on the resubmit route, on the page and in the queue. Major 1 is older than N7 and sits on routes this PR does not touch; the Lead should open it as a follow-up before marking B50 closed.
