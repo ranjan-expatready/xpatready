@@ -31,6 +31,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("setup: sample inputs loaded", (await api("/demo/load", { method: "POST" })).status === 201);
     const visitor = sql("select id from combination where label = 'Visitor visa' limit 1");
     const released = sql("select combination_id from config_release order by released_at desc limit 1"); // the sample's released combination
+    // #118 review Minor 2: a form-field warning's example is the form's own words, never a PDF path (IMM_5476[0].Page1[0]…).
+    const paths = [];
+    for (const id of sql("select id from combination where retired_at is null").split("\n").filter(Boolean)) for (const x of (await api(`/combinations/${id}/review`)).body?.draft?.problems ?? []) if (/\w\[\d+\]\./.test(x.message)) paths.push(`${x.where} ${x.item}: ${x.message.slice(0, 120)}`);
+    step("Review and release (#118 Minor 2): no warning or error shows a PDF field path as its example", paths.length === 0, paths[0] ?? "none");
 
     for (const [w, h] of [[1440, 900], [1024, 768]]) {
       await p.setViewportSize({ width: w, height: h });
