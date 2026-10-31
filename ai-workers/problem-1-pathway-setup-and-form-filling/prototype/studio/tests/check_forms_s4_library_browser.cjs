@@ -228,7 +228,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await open();
     step("C11.18 pass: after the second person approves, the row shows PDF upload · Online, set by a person · Sample", /PDF upload · Online\s*Set by a person · Sample/.test(await rows().filter({ hasText: "IMM 1295" }).first().innerText()), await rows().filter({ hasText: "IMM 1295" }).first().innerText());
     await shot("15-accepts-approved");
-    // N8 DV-d1-1 (Devin D1 walk): "2 combinations" in Used by read as struck through (a dotted line through the words). It
+    // N8 DV-d1-1 (The outside check D1 walk): "2 combinations" in Used by read as struck through (a dotted line through the words). It
     // is a plain link-style button now: no dotted decoration, and it opens the form's drawer (where it is used).
     const count = p.locator("[data-used-by-count]").first();
     const deco = await count.evaluate((e) => { const cs = getComputedStyle(e); return { tag: e.tagName, style: cs.textDecorationStyle, line: cs.textDecorationLine, text: e.textContent }; });
@@ -236,7 +236,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await count.click();
     step("N8 DV-d1-1 pass: the count opens the form's drawer, which says where it is used", await p.getByRole("dialog").filter({ hasText: /Where used|where it is used/i }).count() === 1);
     await p.keyboard.press("Escape");
-    // N8 DV-d1-2 (Devin D1 walk): the loading list was a div with a label and no role (axe aria-prohibited-attr, seen at
+    // N8 DV-d1-2 (The outside check D1 walk): the loading list was a div with a label and no role (axe aria-prohibited-attr, seen at
     // 1440 px while the list loaded). The list is held back for a moment so axe sees the loading state.
     await p.route("**/api/library/forms/list**", async (route) => { await new Promise((r) => setTimeout(r, 2_000)); await route.continue(); });
     await p.goto(`${BASE}/library/forms`);
@@ -275,11 +275,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const allMs = await p.evaluate(async () => { const b = [...document.querySelectorAll("button")].find((x) => /^All\s*\d+$/.test(x.textContent.trim())); const t0 = performance.now(); b.click(); for (;;) { if (document.querySelectorAll("tr[data-form]").length >= 40) return performance.now() - t0; await new Promise((r) => requestAnimationFrame(r)); } });
     step("X5 review (86f9447c, 5a5f0d16) M1 fail: after the fill, search, the Guides chip and widening back to All answer in under 200 ms (STANDARDS §9; before: 184-375, 207-217 and 316-325 ms)", Math.min(...searches) < 200 && guidesMs < 200 && allMs < 200, JSON.stringify({ searches: searches.map((x) => Math.round(x)), guidesMs: Math.round(guidesMs), allMs: Math.round(allMs) }));
     await p.getByRole("button", { name: /^All\s*\d+$/ }).click(); await sleep(300); // back to every type
-    // Devin on #145: a listed form with no file offers no "Set what IRCC accepts" (it would answer "No edition yet"); the
+    // the outside check on #145: a listed form with no file offers no "Set what IRCC accepts" (it would answer "No edition yet"); the
     // drawer says what comes first.
     await p.locator('tr[data-form]').filter({ hasText: "Listed by IRCC · no file yet" }).first().getByRole("button").first().click();
     await p.getByRole("dialog").waitFor();
-    step("X5 Devin (#145) fail: a form with no file offers no 'Set what IRCC accepts'; the drawer says to upload or find its PDF first", (await p.getByRole("dialog").getByRole("button", { name: /what IRCC accepts/ }).count()) === 0 && (await p.getByRole("dialog").locator("[data-accepts-needs-file]").count()) === 1);
+    step("X5 the outside check (#145) fail: a form with no file offers no 'Set what IRCC accepts'; the drawer says to upload or find its PDF first", (await p.getByRole("dialog").getByRole("button", { name: /what IRCC accepts/ }).count()) === 0 && (await p.getByRole("dialog").locator("[data-accepts-needs-file]").count()) === 1);
     await p.keyboard.press("Escape"); await sleep(300);
     // X5 review/break (57f7d79d) m1, m11, m12: Show more puts focus on the first row it added, the count is a status, the last
     // press leaves focus on a row (before: on the page), and any filter or search change starts again at 50.

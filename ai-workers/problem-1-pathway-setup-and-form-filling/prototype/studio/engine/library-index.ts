@@ -21,13 +21,15 @@ export type IndexFill = {
   newer: string[];
 };
 
-/** Review / break (e466adb1) M10, M11, Devin: the month a library edition is from: the later of canada.ca's "last updated"
+/** Review / break (e466adb1) M10, M11, the outside check: the month a library edition is from: the later of canada.ca's "last updated"
  *  month and the edition's own month printed in its label ("IMM 1295 (09-2023)"). Intake and the finder both write that
  *  label, so a hand upload or an approved held file is dated too. */
 export function fileMonth(e: { canadaUpdated?: string | null; editionLabel: string }): string | null {
-  // Break (89cccd71) m31: a month IRCC could print (1990 to next year, 01-12); break note: the later of the two months, so
+  // Break (89cccd71) m31: a month IRCC could print (01-12, from 1990); break note: the later of the two months, so
   // canada.ca's page month never makes a file read older than its own printed edition.
-  const ok = (y: number, mo: number) => mo >= 1 && mo <= 12 && y >= 1990 && y <= new Date().getUTCFullYear() + 1;
+  // Break (63d2ba6d) m37: no month after this one (a label printed for a future month would hide every later index date).
+  const now = new Date(), thisMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const ok = (y: number, mo: number) => mo >= 1 && mo <= 12 && y >= 1990 && `${y}-${String(mo).padStart(2, "0")}` <= thisMonth;
   const ca = /^(\d{4})-(\d{2})/.exec(e.canadaUpdated ?? ""), lb = /\((\d{2})-(\d{4})\)\s*$/.exec(e.editionLabel);
   const months = [ca && ok(Number(ca[1]), Number(ca[2])) ? `${ca[1]}-${ca[2]}` : null, lb && ok(Number(lb[2]), Number(lb[1])) ? `${lb[2]}-${lb[1]}` : null].filter((x): x is string => !!x);
   return months.length ? months.sort().pop()! : null;
@@ -63,7 +65,7 @@ export function libraryRows(rows: IndexRow[], unreadable: string[] = []): { rows
 
 export function planIndexFill(rows: IndexRow[], library: LibraryForm[]): IndexFill {
   const have = new Map(library.map((f) => [f.formKey, f]));
-  // X5 break m6, Devin on #138: a number the index lists twice (a form and its checklist link) is one form; if any of its
+  // X5 break m6, the outside check on #138: a number the index lists twice (a form and its checklist link) is one form; if any of its
   // rows is a form, that row is the one kept, whole (its title, page and date as well as its kind), never the checklist's.
   // X5 break m15, dc93b60f m26: the same number listed twice (another spacing, read as one number) is one form: the row kept
   // whole is a form row if there is one, and of those the one with the latest date (its title, page and date together).

@@ -96,7 +96,7 @@ export function parseFormsIndex(html: string): { rows: IndexRow[]; packages: Pac
     const u = officialUrl(a.href);
     if (!u.ok) { noPage.push(code); continue; }
     const title = a.text.trim(), date = tds[2] ? strip(tds[2]) : "";
-    // X5 break m15 / Devin on #145: a date that is not a real calendar date (2024-02-30) is kept as no date. (Titles are
+    // X5 break m15 / the outside check on #145: a date that is not a real calendar date (2024-02-30) is kept as no date. (Titles are
     // judged by the library fill only, indexTitleOk: the finder and the check still find a row by its number.)
     rows.push({ code, title, pageUrl: u.url, dateModified: realDate(date) ? date : null, kind: /^document checklist/i.test(title) ? "checklist" : "form" });
   }

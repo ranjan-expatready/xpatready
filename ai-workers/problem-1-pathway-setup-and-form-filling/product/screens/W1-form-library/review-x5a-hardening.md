@@ -199,7 +199,7 @@ The full record is in `journey-test-reviewer-2026-10-31-x5a-e466adb1.md`.
 
 Reviewer, fresh context. Focus: `git diff e466adb1 89cccd71 -- '*.ts' '*.tsx' '*.cjs'`, with `0fc3f8a7..89cccd71` for context. Copy made with `git archive 89cccd71` into `/tmp/x5rv89-mut` (web built with `npx vite build`), run on :4452, :4453 and :4455, all stopped and their databases dropped. The ledger folders stayed empty: no `*_LIVE`, US$0. No slice3 screenshot in this tree was changed (the browser suite wrote to the /tmp copy). Scripts are in `/tmp/x5rv89-scripts/` and screenshots in `/tmp/x5rv89-shots/` (not committed).
 
-**Verdict: Block** (ship after fixes). Issue 1 is a Major: a check that finds the file current can no longer answer "Newer", so the row and the check contradict each other. The coordinator says Devin raised the same red, and a per-form baseline is planned for the next commit. Everything else in this commit holds.
+**Verdict: Block** (ship after fixes). Issue 1 is a Major: a check that finds the file current can no longer answer "Newer", so the row and the check contradict each other. The coordinator says the outside check raised the same red, and a per-form baseline is planned for the next commit. Everything else in this commit holds.
 
 **Results.**
 * `check_forms_x5_library`: 47/47.
@@ -290,3 +290,101 @@ The full record is in `journey-test-reviewer-2026-10-31-x5a-89cccd71.md`.
 * Live canada.ca. A page-only change could not be shown on recorded data; it is reasoned from IMM 5475 and IRM 0002.
 * An unaided walk by an intended user (D17 and D20 stay with the founder).
 * Retrofit mapping: not applicable.
+
+---
+
+# Re-check of commit 63d2ba6d ("Newer" judged from dates plus a per-file baseline), 31 Oct 2026
+
+Reviewer, fresh context. Focus: `git diff 89cccd71 63d2ba6d -- '*.ts' '*.tsx' '*.sql' '*.prisma'`, with `0fc3f8a7..63d2ba6d` for context.
+* Copies ran on :4452 and :4453 (from `/home/user/x5i`, web built with `npx vite build`), and on :4454 and :4455 (a `git archive 63d2ba6d` copy in `/tmp/x5rv63-mut`, `node_modules` entries symlinked to x5i's).
+* All are stopped and their databases dropped. The ledger folders stayed empty: no `*_LIVE`, US$0. No `prisma generate` was run.
+* The browser suite wrote its slice3 screenshots inside the /tmp copy, so none in x5i changed (`git status` clean).
+* Scripts are in `/tmp/x5rv63-scripts/` and screenshots in `/tmp/x5rv63-shots/` (not committed).
+
+**Verdict: Approve** (Ship). There is no Blocker or Major. All four reds from 89cccd71 are closed as their repros were written, and I found no path to a false Ready in product code. Issues 1 and 2 below should be fixed in this PR if cheap; neither blocks.
+
+**Results.**
+* `check_forms_x5_library` 59/59.
+* `check_forms_s4_canada` 80/80.
+* Browser suite 95/95 on a fresh database.
+* `tsc --noEmit -p api` clean.
+* Sample plus first fill: 15 editions, all Ready, no baseline written (the dated files get none; the 4 undated guides are not on IRCC's list).
+
+## Your four questions
+1. **Sound and safe? Yes for "Ready". A false Ready needs a wrong `canada_updated` or a wrong check. I found neither in product paths.**
+   * `canada_updated` is written in four places. Three compare the bytes with canada.ca's file first: `finder.ts:581` (same sha), `upload-run.ts:131/157` (same sha), and `finder.ts:633` (the file just downloaded).
+   * The fourth, `finder.ts:740` (`fillSample`), stamps the page's date on the sample's file without comparing it. That is the sample loader only, and the recorded PDFs are the sample's.
+   * The check writes the baseline on the compared edition only. Proven live: a held "IMM 5257 (02-2025)" copy kept `-` while the current file got `2026-03-01`.
+   * A replacement or newly approved edition starts with no baseline, so its dates decide. A fill never gives a dated file a baseline (mutation M2 is caught).
+   * Read and write race safely. A fill moving the index while a check runs leaves the check's older date as the baseline, so the row stays Newer (the safe side). The check (dated files only) and the fill (undated only) never write the same row.
+2. **The migration on a database with old marks: it carries them as designed, with one documented-claim gap (issue 3).**
+   * Setup (:4453): sample, fill, the 140000 migration undone by hand, marks set on 5 forms, then `prisma migrate deploy`.
+   * After: the column is dropped. IMM 5257 (dated, index later), IMM 5488 (label-dated, index later) and Guide 5289 (undated, baseline 1990-01-01) read Newer. CIT 0001 (no file) reads "No file yet".
+   * IMM 1295 (label-dated, `canada_updated` null, marked, index 2023-09 = its label month) went from Newer (rule at 0fc3f8a7: the mark wins without `canada_updated`) to Ready.
+3. **Can a form with no recorded page, or a hand upload with no canada.ca date, be answered?**
+   * No recorded page: yes. The check looks the form up in IRCC's list and records the page (`form-library.ts:236-241`). A form not on the list has no index date, so it is never Newer.
+   * No `canada_updated`: never by the check. Find again re-dates it (`finder.ts:581`) when a combination uses the form and the finder reaches its fetch step. A byte-identical re-upload says "Already in the library" and re-dates nothing.
+   * The same holds for the real page edit. In the recorded copy the index date equals the page's "Last updated" on 27 of 27 pages, and the PDF's folder month is never earlier.
+   * So the check's new baseline only fires when IRCC's list is later than the page's own date, which no recorded page shows. J2 (below) moved both dates with the same PDF: the check said "check" and the row stayed Newer.
+   * Acceptable to ship: the error is a false Newer, the safe side, and forms in use have a path. It is a gap against the PR's own claim (issue 1).
+4. **Finder and intake: they behave.**
+   * Intake and the finder refuse a label with no (MM-YYYY) (`read_form_identity.py:122`), so every non-sample file is dated.
+   * Re-stamping on the same bytes (`finder.ts:581`) moves the file's month forward, which is right because canada.ca still serves that file.
+   * A different file with the same label sets `newerFileSha256`; a new label is held for review. Neither changes the current file's dates.
+
+## Issues, ranked
+1. **Should (D2/D18; affects J2): one check does not answer a moved "Last updated" with an unchanged PDF, or any file with no `canada_updated`.**
+   * The test "a check that finds the PDF current answers a page edit" (`check_forms_x5_library.ts:365-370`) sets IRCC's list later than the page's own date, a state the recorded copy never shows. The comment at `form-library.ts:216-219` says the same thing.
+   * Fix (small, same scope): when the dates differ but `sourceUrl` matches, `compareWithCanada` fetches the PDF (US$0). If its sha equals the current edition's, it re-dates `canada_updated` as `finder.ts:581` does, answers "current" and sets the baseline. The test then edits the page and the list together, as J2 did.
+   * Otherwise narrow the comment and the test name, and make the "check" words say what Find again does with the same file.
+2. **Should (D16; STANDARDS [M] "a rule's test fails when the rule is removed"): "the baseline is the checked file's own" has no failing test.**
+   * Changing the write at `form-library.ts:220` to every edition of the form passes 59/59 (M1). The c5b8be03 test inserts the replacement after the check, so it cannot see the difference.
+   * This rule guards a false Ready: a held older file present at check time would inherit the baseline and read Ready once approved.
+   * Fix: insert the held copy before the check and assert its `index_date_seen_current` stays null.
+   * Also: dropping the fill's `indexDateSeenCurrent: null` guard (`form-library.ts:199`) passes 59/59 (M3). That path is dormant (undated files only), so a Minor.
+3. **Should (D4): the migration's note "a form marked newer keeps reading newer" (`migration.sql:4-5`) is not true for a label-dated file whose label month is at or after the index date.**
+   * Measured on IMM 1295 above. The new answer is defensible: the printed edition matches IRCC's month.
+   * Fix: say so in the note and the PR, and add one migration carry-over check (none of the suites runs the migration on marked data).
+4. **Minor: the check's response now returns the internal `editionId` and `indexDate`** (`form-library.ts:250`). Strip them before returning, or describe them in a contract.
+5. **Minor: no audit line when a check turns a row from Newer to Ready.** The baseline write is silent; the fill is audited, the check is not. The old mark clear was silent too.
+6. **Minor: `formEdition.update` at `:220` throws (a 500) if the edition was deleted between the compare and the write.** `updateMany` avoids it.
+
+**Mutations (in `/tmp/x5rv63-mut`), each run against a fresh :4454:**
+* Caught: a fill gives dated files a baseline (2 fail); `fileMonth` takes the earlier month (3); the list ignores the baseline (2); the check's baseline is the page date instead of IRCC's list (1).
+* Not caught: M1 and M3 (issue 2).
+* Your own results (the check's write 2, the guard 1) were not repeated.
+* The property tests cover `newerOnIndex`, `isLaterDate`, `fileMonth`, `realDate` and `libraryRows` against plain models. This meets STANDARDS §7 ([M] when the engine changes).
+
+## D1–D20
+| D | Score | Evidence |
+|---|---|---|
+| D1 | 5 | P156-2 per file; the check answers the case it is written for (J1) |
+| D2 | 4 | A moved "Last updated" with the same PDF is answered only by Find again (issue 1) |
+| D3 | 5 | One `newerOnIndex` for the list, the fill and the check; one `fileMonth` |
+| D4 | 4 | Expand, carry over, contract, with rollback written; one row flips Newer → Ready unlike the note (issue 3) |
+| D5 | 5 | The check and the fill write disjoint editions; guarded writes; the 4-fill race test passes |
+| D6 | 5 | Baseline per edition: a replacement starts clean; approval and rejection write nothing |
+| D7 | 5 | No AI; US$0, ledgers empty |
+| D8 | 5 | Shared library › Forms unchanged; the tooltip now says "since it was last checked" |
+| D9 | 5 | J2 notice and row agree (still Newer); J1 notice and row agree (Ready) |
+| D10 | 5 | Plain words |
+| D11 | 4 | The "check" words do not cover "same file, page re-dated"; the action sits under "Replace with a new edition…" (unchanged) |
+| D12 | 5 | No sideways scroll at 400 and 1024 (400 stands in for 200 % at 1024 CSS px; CSS zoom is not reflow) |
+| D13 | 5 | axe 0 on both states ×2 journeys; keyboard: Enter on the row menu, Enter on the item; focus returns to the trigger |
+| D14 | 5 | Team components |
+| D15 | 5 | First rows 1.19–1.23 s cold; the check's notice is present by 1.27 s |
+| D16 | 4 | 59 + 80 + 95 green, with property tests; M1 and M3 survive (issue 2) |
+| D17 | simulated only | No intended user walked it |
+| D18 | 4 | The canada.ca answer and the row agree; the evidence shows the check's baseline path rarely fires (issue 1) |
+| D19 | 5 | Fill → row → check → Find again hand-off named in the notice |
+| D20 | simulated only | The founder's walkthrough |
+
+**Graph (P-86):** read from the committed `qa/GRAPH.md`. `graph.mjs` needs a committed tree, so it could not regenerate in the /tmp copy, and I did not run it in x5i, to leave GRAPH.md untouched. G3 lists 2 routes, neither in the form library. `check-canada` and `fill-from-index` are reached by tests. C2.6 is named.
+
+## Journey score: 9 / 10 (pass, no criterion at 0)
+The full record is in `journey-test-reviewer-2026-10-31-x5a-63d2ba6d.md`.
+
+## What I could not check
+* Find again re-dating the same file end to end: replay stopped at step 1 for "With an LMIA" (no saved page choice), and live AI is not allowed. I checked it from the code (`finder.ts:581`) and the S4 suite.
+* Live canada.ca: whether IRCC ever moves "Last updated" without a new PDF, or lists a date later than the page's.
+* A real screen reader. An unaided walk by an intended user (D17 and D20 stay with the founder). Retrofit mapping: not applicable.

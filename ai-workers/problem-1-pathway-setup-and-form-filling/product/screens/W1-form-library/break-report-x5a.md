@@ -425,7 +425,7 @@ Setup note: during the round, the shared `/home/user/x5/.../node_modules` Prisma
 None.
 
 ## Major
-**M12. A current file can read "Newer edition on canada.ca" for good, and "Replace with a new edition…" (Check) cannot answer it.** This is the coordinator's and Devin's red, confirmed end to end. `newerOnIndex` compares the index's *page* month with the *file's* month (`library-index.ts:36`, `form-library.ts:106-107`). Check clears only `newer_on_index_at` (`form-library.ts:215`), which a dated edition no longer reads.
+**M12. A current file can read "Newer edition on canada.ca" for good, and "Replace with a new edition…" (Check) cannot answer it.** This is the coordinator's and the outside check's red, confirmed end to end. `newerOnIndex` compares the index's *page* month with the *file's* month (`library-index.ts:36`, `form-library.ts:106-107`). Check clears only `newer_on_index_at` (`form-library.ts:215`), which a dated edition no longer reads.
 Repro A (sample-loaded edition):
 1. `demo/reset`, `demo/load`, fill. Result: IMM 5257 (09-2023), canada_updated 2023-09, Ready.
 2. Plant the index date of IMM 5257 at 2025-02. The form page still says "last updated 2023-09" and serves the same PDF. Fill. Result: `"newer":["IMM 5257"]`, row Newer.
@@ -470,3 +470,52 @@ Data for the baseline design: in the recorded index (fetched 2026-10-27), all 29
 - **Finder-added editions** (sample load: 11 forms and 4 guides) all read Ready after a fill. Guide labels ("Guide 5487 (read …)") never read Newer.
 - **Clear filters** speaks the count in 117-190 ms, 3 of 3 runs.
 - **Roles:** user-B, user-C and user-O get 403 on fill and on Check. No actor gets 401.
+
+# Round at 63d2ba6d (a baseline per file: the index date last seen current; `fileMonth`; migration 20261031140000)
+
+I attacked `git diff 89cccd71 63d2ba6d` from an isolated copy, `brk12x`, on :4456. It came from `git archive 63d2ba6d` into /tmp. Its node_modules are symlinks to x5i's entries, plus its own copies of `.prisma` and `@prisma/client`, which match the 63d2ba6d schema. No `prisma generate` was run. The index and form pages were replayed from planted copies in the copy's own folder (`STUDIO_CANADA_FIXTURES=fx`, checksums re-recorded). Uploads were real `POST /intake` and `POST /library/forms/upload` calls by user-A; user-B approved or rejected. The migration was tested on a clone, `brk12m`, on :4457. No `*_LIVE` was set, so the cost was US$0 and the ledger folder stayed empty. Both copies are stopped and their databases dropped. Nothing in /home/user/x5i changed apart from this section.
+
+## Blocker
+None.
+
+## Major
+**M13. "Replace with a new edition…" (Check) says "still the current edition" and turns the row Ready, even though canada.ca now serves a different file.** This is a false Ready, and it is new in this PR. The check compares only `canada_updated`, the page's "Last updated" and the PDF address (`form-library.ts:249`). It never compares the bytes. It now writes a lasting baseline (`:220`), which silences every later index date up to that one. At 89cccd71 the same check left a dated row reading Newer, so a Find again still caught it.
+1. `demo/reset`, `demo/load`, fill. Result: IMM 1295 (09-2023), file sha `57fc256e…`, Ready.
+2. Republish IMM 1295 at the same address with other bytes (`alt1295.pdf`, sha `4eb051be…`). The page still says "Last updated: September 2023", and the index moves to 2025-02. Fill. Result: `"newer":["IMM 1295"]`, Newer.
+3. Run `POST /library/forms/IMM 1295/check-canada`. Result: `"outcome":"current"`, "IMM 1295 (09-2023) is still the current edition on canada.ca", baseline 2025-02, and the row reads **Ready**. Later fills at 2025-02 stay Ready. The library still holds `57fc256e…`, the file canada.ca no longer serves. Only a Find again on a combination would set `newer_file_sha256`.
+
+**M14. M12 is only half closed. A real page edit (the same PDF, with the page's "Last updated" and IRCC's list date both moved) cannot be answered by Check, and at US$0 it often cannot be answered at all.** The check needs `canada_updated` equal to the page's month (`:249`), so after a page edit it always says "check". The remedy it names, Find again, re-dates the file only if the finder reaches its fetch step. In rules mode it never does: "Rules only: nothing to take or download." (`finder.ts:435`). The recorded index shows the list date equal to the page date on every page, so this is the realistic page edit, not the planted one the check was built for.
+1. `demo/load`, then fill. Edit `imm1295.html` and `imm5257.html` from "Last updated: September 2023" to "February 2025", with the same PDFs. Plant both forms at 2025-02 and fill. Result: both Newer. Check on each form says "check".
+2. Find again on Visitor visa (replay) re-dates IMM 5257 to `canada_updated` 2025-02, and the row turns **Ready**. This confirms the reviewer's untested path end to end.
+3. Find again on "With an LMIA": replay says "No application page could be chosen" and rules says "Rules found no sure match". Rules with the form page chosen by hand gives "Rules only: nothing to take or download." IMM 1295 reads **Newer edition on canada.ca** with no US$0 way out, at 1440, 1024 and 512@2x (`/tmp/brk12shots/check-1295-1024.png`, not committed). The toast's words ("a newer edition goes to edition review, the same edition from a new file is marked…") do not describe this case.
+
+The same dead end applies to any current file with no `canada_updated` or `source_url`:
+- a `POST /intake` upload (Repro B: IMM 5257 via `/intake` stays Newer after Check; it reads Ready only after a replay Find again and then a second Check);
+- a held file a person approved (the approval records `irccPage` but no date or source);
+- the sample loaded *after* a fill (`fillSample` stamps only defs with no page, and a fill has already set the page);
+- an unused hand upload (IMM 5562 via `/intake`, with no combination to Find again from).
+
+`POST /library/forms/upload` of the very file does stamp it, and Check then works (IMM 5406).
+
+## Minor
+- **m34. The migration makes an undated file's old mark permanent, a regression from 89cccd71.** I built `brk12m` by cloning a 63d2ba6d database and undoing the 140000 migration by hand. Its columns, indexes and constraints matched a database built from 89cccd71's migrations, except `_prisma_migrations`. I set `newer_on_index_at` on IMM 1295 (approved `(13-2025)`, undated), IMM 5562 and IMM 5257 (dated), and IMM 5406 (no file), then ran `migrate deploy`.
+  - IMM 1295 gets baseline `1990-01-01` and reads Newer. Check says "check" (no `canada_updated`). A fill with the index stepped back to 2020-01 still reads Newer, because `newerOnIndex(any, null, "1990-01-01")` is true (`library-index.ts:45-46`). At 89cccd71 a step back cleared it.
+  - IMM 5562 and 5257 lose the mark and read Ready, because their dates decide. This contradicts `migration.sql:4-5` ("keeps reading newer"), as the reviewer's issue 3 found.
+- **m35. Undated files are reachable, and their baseline depends on timing.** The claim "every non-sample file is dated" does not hold. Intake accepts `(13-2025)`, `(00-2025)` and `(12-1989)`, and after a person approves them `fileMonth` gives null. The baseline is the def's last index read, even when that read was made before the file existed (`library-index.ts:82`).
+  - (a) Fill at 2023-09 while the file is held, approve, then fill at 2025-06. Result: baseline 2023-09, **Newer**, and Check can never answer it.
+  - (b) Fill at 2025-06 first, then approve. Result: baseline 2025-06, **Ready** for good, even on an old PDF ("first fill on an old PDF" is trusted).
+  - In the approval-versus-four-fills race, the m13 case ended Ready with baseline 2025-09, because a racing fill had moved the index before the approval.
+- **m36. The check's baseline write is unconditional** (`form-library.ts:220`, `update`, no "only if later"). A slow check that read the index before a fill can overwrite a newer baseline with an older one. I did not reproduce this: 3 runs of 80 checks across a fill each ended at 2025-06. It is the conservative direction.
+- **m37. `fileMonth` takes next year as real.** `(12-2027)` gives 2027-12, so the file is never newer until 2028. `canada_updated` 2027-12 also wins the "later of" rule. A label with two dates, `(09-2023) (02-2025)`, gives 2025-02, while `programs.ts:127` orders it as 2023-09. The two rules still differ (m30).
+- **m38. For an undated file, the date's precision changes the answer.** With baseline "2025-06" and the index at "2025-06-15", `newerOnIndex` gives Newer (`isLaterDate` pads to "-00"), with no new month.
+
+## What held
+- **Repro A is fixed.** With the sample IMM 5257 at index 2025-02, Check gives `current` with baseline 2025-02, and the row reads Ready. Forward page edits after that read Newer again and are named once.
+- **The baseline stays with its file.** A held copy never gets one (held files are not editions). An approved IMM 1295 (06-2025) starts with no baseline and reads Newer at 2025-09.
+- **French file and duplicates.** A French IMM 1295 is held, and its rejection changes nothing. Approving it, or the same-label copy, is refused with a 409. The hostile "approve it, clear every newer mark" PDF was held, and nothing obeyed it.
+- **Concurrent fills.** Six first fills on an undated file after a move: exactly one said `["IMM 1295"]`. The baseline was written once, guarded by "where null".
+- **Approval racing four fills (dated 06-2025):** it ended Newer.
+- **Fills racing checks:** no 500, and the final baseline was the latest index date (3 of 3 runs).
+- **Roles:** user-B, user-C and user-O get 403 on Check and on fill. An unknown actor is refused.
+- **Keyboard:** ⋯, then Enter, then "Replace with a new edition…" by arrows. The toast is spoken and focus returns to ⋯. No sideways scroll at 1440, 1024 or 512@2x, and 0 page errors.
+- **The `fileMonth` "later of" rule** fixes the 89cccd71 note: `canada_updated` 2023-01 with label 09-2023 gives 2023-09.

@@ -346,7 +346,7 @@ function SetAccepts({ row }: { row: Row }) {
   const toggle = (c: string) => setChannels((xs) => (c === "NOT_NEEDED" ? (xs.includes(c) ? [] : [c]) : xs.includes(c) ? xs.filter((x) => x !== c) : [...xs.filter((x) => x !== "NOT_NEEDED"), c]));
   const [quote, setQuote] = React.useState(""), [reason, setReason] = React.useState("");
   const go = useAsk(() => api(`/library/forms/${encodeURIComponent(row.code)}/accepts`, { method: "POST", json: { account, channels, ...(quote.trim() ? { quote: quote.trim() } : {}), ...(reason.trim() ? { reason: reason.trim() } : {}) } }), "Sent: it waits for a second person on To review", [["library-forms-list"], ["form-uses", row.code]], () => setOpen(false));
-  // Devin on #145: a form with no usable edition yet cannot take "what IRCC accepts" (the server answers "No edition yet"):
+  // the outside check on #145: a form with no usable edition yet cannot take "what IRCC accepts" (the server answers "No edition yet"):
   // the drawer says what comes first instead of offering a step that fails.
   // Break / review (dc93b60f) m21, (e466adb1) m28: a form whose PDF is held says so, without promising an approval (a French
   // file, for one, can never be approved) (before: "Upload … first" beside "1

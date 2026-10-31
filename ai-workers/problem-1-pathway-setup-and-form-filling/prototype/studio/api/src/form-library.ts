@@ -177,13 +177,13 @@ export class FormLibrary {
     // number with no good row is counted as unreadable, once.
     const { rows, unreadable } = libraryRows(parsed.rows.map((r) => ({ ...r, code: normaliseCode(r.code) })), parsed.unreadable);
     // X5 break m9: a file means an edition a combination may file from (an online-only screen map is no file).
-    // Review (5a5f0d16) m2 / Devin: the fill judges a form by the same current edition the list shows (an approved printed
+    // Review (5a5f0d16) m2 / the outside check: the fill judges a form by the same current edition the list shows (an approved printed
     // edition, the newest; newestEdition), never by a held or older edition's date: one "newer" rule in both.
     const [defs, approved] = await Promise.all([this.db.govFormDef.findMany({ where: { workspaceId }, include: { editions: true } }), this.approvedShas(workspaceId)]);
     const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionMonth: current ? fileMonth(current) : null, currentId: current?.id ?? null, seenCurrent: current?.indexDateSeenCurrent ?? null }; }));
     const now = new Date();
     // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
-    // Break m14 / Devin on #145: the words count what this fill did, not what it planned: a form another fill created meanwhile
+    // Break m14 / the outside check on #145: the words count what this fill did, not what it planned: a form another fill created meanwhile
     // is "already in the library", one deleted meanwhile is not counted, and "newer" names only the rows this fill marked.
     const { created, already, newer } = await this.db.$transaction(async (tx) => {
       const made = plan.create.length ? (await tx.govFormDef.createMany({ data: plan.create.map((c) => ({ workspaceId, formKey: c.formKey, displayName: c.title, formKind: c.kind, formPageUrl: c.pageUrl, listedOnIndexAt: now, indexDateModified: c.dateModified })), skipDuplicates: true })).count : 0;
@@ -211,14 +211,9 @@ export class FormLibrary {
     need(actor, "author");
     try {
       const r = await this.compareWithCanada(code);
-      // X5 break M2 / Devin: only a check that found the library's edition still current answers the index's "newer" mark;
-      // a check that failed, or that found another date on canada.ca, keeps it.
-      if (r.outcome === "current") {
-        // Automated reviews (89cccd71, c5b8be03): a check that finds the library's PDF current answers the index's date as it
-        // stands: it becomes that file's date last seen current, so a page edited without a new edition stops reading "newer".
-        // The baseline is the checked file's own (the current edition the check compared), never the form's.
-        if (r.editionId && r.indexDate) await this.db.formEdition.update({ where: { id: r.editionId }, data: { indexDateSeenCurrent: r.indexDate } });
-      }
+      // Review (63d2ba6d): a check that finds the library's file to be canada.ca's own is in the audit trail (it can turn a
+      // row from "newer" to Ready).
+      if (r.outcome === "current") await this.audit.log(await this.ws.id(), actor.id, "checked", "form", code, `${actor.name} checked ${code} against canada.ca: the library's file is canada.ca's current PDF.`, { last_updated: r.last_updated });
       return r;
     } catch (e) {
       // canada.ca not answering (or a page not among the recorded copies) is said in words, never a server error.
@@ -246,7 +241,19 @@ export class FormLibrary {
     // with canada.ca's date never answers the "newer" mark.
     const current = this.currentEdition(def.editions, (await this.approvedShas(workspaceId)).all);
     await this.db.formEdition.updateMany({ where: { govFormDefId: def.id }, data: { checkedAt: new Date(), formPageUrl: pageUrl } });
-    if (current && current.canadaUpdated && page.lastUpdated && current.canadaUpdated === page.lastUpdated && current.sourceUrl === pdfUrl) return { outcome: "current", editionId: current.id, indexDate: def.indexDateModified, message: `${current.editionLabel} is still the current edition on canada.ca (last updated ${page.lastUpdated}).`, last_updated: page.lastUpdated };
+    // Break (63d2ba6d) M13, M14 / review Should 1: the check compares the file itself, not dates or addresses. canada.ca's
+    // PDF is downloaded (US$0) and its checksum compared with the library's current file: the same bytes are current (the file
+    // is re-dated from the page, as the finder does, and canada.ca's index date as it stands becomes that file's own date last
+    // seen current, so a page edited without a new edition stops reading "newer"); other bytes are not, whatever the dates say.
+    if (current?.sha256) {
+      const pdf = await this.canada.get(pdfUrl, "pdf");
+      if (pdf.sha256 === current.sha256) {
+        await this.db.formEdition.updateMany({ where: { id: current.id }, data: { sourceUrl: pdfUrl, ...(page.lastUpdated ? { canadaUpdated: page.lastUpdated } : {}) } });
+        // The checked file's own baseline, never lowered (a slower check never undoes a later one: break m36).
+        if (def.indexDateModified) await this.db.formEdition.updateMany({ where: { id: current.id, OR: [{ indexDateSeenCurrent: null }, { indexDateSeenCurrent: { lt: def.indexDateModified } }] }, data: { indexDateSeenCurrent: def.indexDateModified } });
+        return { outcome: "current", message: `${current.editionLabel} is canada.ca's current file: the same PDF${page.lastUpdated ? ` (page last updated ${page.lastUpdated})` : ""}.`, last_updated: page.lastUpdated };
+      }
+    }
     return { outcome: "check", message: `canada.ca shows ${code} last updated ${page.lastUpdated ?? "on an unknown date"}. Run "Find again" on a combination that uses it to download it: a newer edition goes to edition review, the same edition from a new file is marked for you to replace.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
   }
 
