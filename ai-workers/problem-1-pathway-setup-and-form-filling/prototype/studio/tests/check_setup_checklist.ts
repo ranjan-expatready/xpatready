@@ -2,7 +2,7 @@
 // ready first, the `where` and kind tables, one counts object, the duty and tier overlay) with a passing and a failing
 // case per rule, then the API on an isolated copy (GET /catalogue and GET /combinations/:id/summary carry `setup`,
 // parity with today's next step, the counts the row already shows) and the 150-combination timing. No AI (US$0).
-//   zsh studio/tools/isolated.sh screens_sa 4441 start && tsx studio/tests/check_setup_checklist.ts 4441
+//   zsh studio/tools/isolated.sh screens_sa 4441 start && tsx studio/tests/check_setup_checklist.ts 4441 xr_studio_screens_sa
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -149,7 +149,7 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
 
 // ------------------------------------------------------------------ the API (isolated copy)
 const PORT = Number(process.argv[2] ?? 0);
-const DB = process.argv[3] ?? "xr_studio";
+const DB = process.argv[3] ?? "xr_studio_screens_sa";
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 if (!PORT) { console.log(`${pass}/${pass + fail} passed (engine only; pass a port for the API part)`); process.exit(fail ? 1 : 0); }
 const api = async (path: string, actor: string | null = "user-A", method = "GET", body?: unknown) => {
