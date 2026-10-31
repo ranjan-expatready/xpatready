@@ -91,7 +91,7 @@ export const FormLineEdit = z.object({
   minAge: z.number({ error: "Minimum age is a whole number from 1 to 99, or empty." }).int("Minimum age is a whole number from 1 to 99, or empty.").min(1, "Minimum age is a whole number from 1 to 99, or empty.").max(99, "Minimum age is a whole number from 1 to 99, or empty.").nullable().optional(),
   signedBy: z.enum(SIGNED_BY.map((x) => x.key) as [string, ...string[]], { error: "Choose who signs it from the list." }).nullable().optional(),
   /** C1.8: copies of this form for each person it names (1 to 9; 1 is the default, so it is never empty). */
-  copies: z.number({ error: COPIES_WORDS }).int(COPIES_WORDS).min(1, COPIES_WORDS).max(9, COPIES_WORDS).optional(),
+  copies: z.number({ error: COPIES_WORDS }).refine((n) => Number.isInteger(n) && n >= 1 && n <= 9, COPIES_WORDS).optional(), // one rule, one message (break m4)
 });
 
 /** C1.8 (review m2): a checklist (document) line is never filed, so it keeps one copy; the screen does not offer it. */

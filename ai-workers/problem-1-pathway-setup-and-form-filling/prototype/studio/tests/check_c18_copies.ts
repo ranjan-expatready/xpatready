@@ -75,6 +75,29 @@ const field = (r: { body: any }, f: string) => (r.body?.errors ?? []).find((e: a
   ok("C1.8 pass: Undo last change puts the line back to 1 copy", r.status < 300 && line(F).copies === 1, { status: r.status, copies: line(F)?.copies });
   ok("C1.8 pass: back at 1 copy the snapshot has no copies key again and the fingerprint is the released one", !("copies" in (await snapForm(F))) && (await call("GET", `/combinations/${C}/config`)).body.sha256 === sha0);
 
+  // ---------------------------------------------------------------- break m4, m3, M1 (break-report-c18.md)
+  const huge = FormLineEdit.safeParse({ copies: 1e308 });
+  ok("C1.8 m4: a huge number is refused with the sentence once", !huge.success && huge.error.issues.length === 1, !huge.success && huge.error.issues.map((i) => i.message));
+  const release = async () => {
+    const s = await call("POST", `/combinations/${C}/submit`, {});
+    const changes = ((await call("GET", `/combinations/${C}/review`)).body.submission?.changeSummary ?? []) as any[];
+    const sme = changes.filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);
+    if (sme.length) await call("POST", `/combinations/${C}/signoff`, { items: sme, action: "signed" }, "user-C");
+    const a = await call("POST", `/combinations/${C}/approve`, {}, "user-B");
+    return s.status === 201 && a.status === 201;
+  };
+  f0 = await forms();
+  r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent(F)}`, { copies: 6, minAge: 18, signedBy: "person", baseRevision: line(F).revision });
+  ok("setup M1: 6 copies, from age 18, signed by the person, then released", r.status === 200 && await release(), r.status);
+  f0 = await forms();
+  r = await call("PATCH", `/combinations/${C}/forms/${encodeURIComponent(F)}`, { retire: true, copies: 9, baseRevision: line(F).revision });
+  const removed = sql(`select copies from combination_form where combination_id='${C}' and lineage_key='${F}' order by version desc limit 1`);
+  ok("C1.8 m3 fail: copies sent with a removal are not stored on the removed line (it keeps 6)", r.status === 200 && removed === "6", { status: r.status, removed });
+  ok("setup M1: the removal is released", await release());
+  r = await call("POST", `/combinations/${C}/forms`, { formKey: F });
+  f0 = await forms();
+  ok("C1.8 M1: a form added back after a released removal comes back with its 6 copies, from age 18 and signed by the person", r.status < 300 && line(F)?.copies === 6 && line(F)?.minAge === 18 && line(F)?.signedBy === "person", { status: r.status, copies: line(F)?.copies, minAge: line(F)?.minAge, signedBy: line(F)?.signedBy });
+
   const out = join(import.meta.dirname, "..", "var", "suites"); mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "check_c18_copies.json"), JSON.stringify({ at: new Date().toISOString(), pass, fail, log }, null, 1));
   console.log(`\n${pass}/${pass + fail} passed`);

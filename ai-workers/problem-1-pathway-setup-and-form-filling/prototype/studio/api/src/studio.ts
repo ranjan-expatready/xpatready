@@ -574,7 +574,8 @@ export class Studio {
       const doc = DocumentLineEdit.safeParse({ copies: line.data.copies });
       if (!doc.success) throw new HttpException(problemFromZod(doc.error), HttpStatus.BAD_REQUEST);
     }
-    for (const k of ["minAge", "signedBy", "copies"] as const) if (line.data[k] !== undefined) changes[k] = line.data[k];
+    // Break m3: a removal stores no line settings sent with it (they would come back unseen when the form is added again).
+    if (!b.retire) for (const k of ["minAge", "signedBy", "copies"] as const) if (line.data[k] !== undefined) changes[k] = line.data[k];
     // M1: "Only if" in words with no rule yet is allowed (a person turns it into a rule later); release refuses it
     // until it has one (engine/validate.ts), and Preview says "Cannot tell yet: no rule".
     if (b.conditionPlain !== undefined && b.condition === undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") changes.conditionPlain = b.conditionPlain.trim() || null;

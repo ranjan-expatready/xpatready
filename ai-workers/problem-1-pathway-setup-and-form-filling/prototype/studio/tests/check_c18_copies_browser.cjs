@@ -53,8 +53,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("copies-refused-on-field");
   await copies.fill("2");
   step("C1.8: editing the field clears its error", (await drawer.getByText("Copies is a whole number from 1 to 9.").count()) === 0);
-  await copies.fill("2x5");
-  step("C1.8: the field keeps one digit only", (await copies.inputValue()) === "2");
+  for (const typed of ["３", "10"]) {
+    await copies.fill(typed);
+    await drawer.getByRole("button", { name: "Save to draft" }).click();
+    await drawer.getByText("Copies is a whole number from 1 to 9.").waitFor({ timeout: 10000 });
+    step(`C1.8 break m1/m2 fail: "${typed}" is kept as typed and refused on the field, nothing saved`, (await copies.inputValue()) === typed && sql(`select copies from combination_form where combination_id='${vv}' and lineage_key='${F}' order by version desc limit 1`) === "1");
+  }
+  await copies.fill("2");
   await drawer.getByRole("button", { name: "Save to draft" }).click();
   await drawer.waitFor({ state: "hidden", timeout: 15000 }); await settle();
   await row.locator("[data-copies]").waitFor({ timeout: 15000 });
