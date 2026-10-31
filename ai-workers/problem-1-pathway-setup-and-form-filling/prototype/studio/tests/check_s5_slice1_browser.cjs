@@ -63,7 +63,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const ovButtons = await panel().getByRole("button").count();
   const ovText = await panel().innerText();
   step("BR-2 pass: Overview has no add or edit control (links only)", ovButtons === 0, `${ovButtons} buttons`);
-  step("BR-2: Overview shows the counts, who can be in the application (read only) and released versions in one line", /Who can be in this application/.test(ovText) && /Change in Questionnaires/.test(ovText) && /Released versions: Release 1/.test(ovText) && !/Held for a person|Recent steps|Add form/.test(ovText));
+  step("BR-2: Overview shows the counts, who can be in the application (read only) and released versions in one line", /Who can be in this application/.test(ovText) && /Change on Forms/.test(ovText) && /Released versions: Release 1/.test(ovText) && !/Held for a person|Recent steps|Add form/.test(ovText));
   await state("overview");
 
   // ======================================================== Forms: the line drawer (C11.6, M1)
@@ -119,7 +119,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.3: choosing a child shows that child's questions and forms (the address keeps the person)", /person=child-1/.test(p.url()) && /What Child 1 is asked/.test(await panel().innerText()));
 
   // ======================================================== Who can be in this application (C11.12, M3, M4)
-  await go("questionnaires");
+  // Slice C1 (P-161 (2)): the people card sits in Before forms on the Forms tab.
+  await go("forms");
   const who = p.locator("[data-who-can-be]");
   // Board v2 (P-147 §3): the card is folded to one line; "Show and edit" opens the built table.
   await who.getByRole("button", { name: "Show and edit" }).click();
@@ -170,7 +171,6 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== read only for the approver
   await as("user-B"); await go("forms");
   step("read only: the approver sees no Change on form lines", await p.getByRole("button", { name: /^Change IMM/ }).count() === 0);
-  await go("questionnaires");
   step("read only: the approver sees no Edit or Undo on who can be in the application", await p.locator("[data-who-can-be]").getByRole("button", { name: /Edit|Undo|Fill from the guide/ }).count() === 0);
   await state("read-only");
   await as("user-A");

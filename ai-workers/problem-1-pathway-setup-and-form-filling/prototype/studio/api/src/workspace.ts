@@ -26,7 +26,7 @@ export class WorkspaceViews {
   async view(id: string, q: Q): Promise<WorkspaceView> {
     const c = await this.combination(id);
     const asked = String(q.tab ?? "overview").slice(0, 40), tab = tabOf(asked);
-    if (tab === "forms") return { tab, asked, ...(await this.forms(id, c.workspaceId)) };
+    if (tab === "forms") return { tab, asked, people: await this.people(id, c.workspaceId), ...(await this.forms(id, c.workspaceId)) }; // C1: Before forms holds the people card (P-161 (2))
     if (tab === "questionnaires") return { tab, asked, people: await this.people(id, c.workspaceId), ...(await this.questionnaires(id, c.workspaceId, q.role)) };
     if (tab === "preview") return { tab, asked, ...(await this.preview(id, c.workspaceId, q)) };
     return { tab, asked };
