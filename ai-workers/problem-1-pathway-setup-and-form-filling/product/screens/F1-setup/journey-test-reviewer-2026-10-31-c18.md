@@ -50,3 +50,38 @@ To reach 10: reword the "Who fills it" hint (m1).
 
 ## Could not test
 A real screen reader. A visible-browser walk by a person (headless only). An intended user's unaided walk (D17, D20 stay with the founder). Runtime use of copies.
+
+---
+
+# Re-run: commit efc04311
+
+Role: reviewer agent, 31 Oct 2026, `screens_rev` on :4442 (fresh database), headless Chromium at 1024 px, keyboard only. Screenshots in /tmp (`j1-arabic-refused`, `j2-approver`), not committed. Builder checks rerun: API 28/28, browser 13/13.
+
+## Journeys and what held
+1. **Main (author, keyboard only).** Tab reaches "Change IMM 5707", Enter opens the panel. Typing " 4 " and pressing Enter on "Save to draft" saves in 378 ms. The row shows "· 4 copies each" and the DB has 4.
+2. **Error.** "٣" stays in the field, and "Copies is a whole number from 1 to 9." shows on the field; the DB keeps 1. axe finds nothing. "12" stays as typed, the error clears on the edit, and saving gives the server's error on the field.
+3. **Alternate (checklist line).** The panel has no Copies field, and Save to draft closes it.
+4. **Wrong role (approver).** No Change buttons; the row reads the same.
+5. **Across the boundary.** Release, removal, release, add back: 6 copies, age 18 and signer come back (API check M1).
+6. **Sizes.** No sideways scroll at 400 or 720 px. No page errors.
+
+## Break it
+* A removal sent with copies 7, age 40 and signer: none is stored. `who: "sponsor"` is stored and comes back (n2 in `review-c18.md`).
+* A checklist line already holding 5 copies (seeded by SQL): the drawer's save gets 400 on a field the drawer does not show (n1). The product cannot reach this state now.
+
+## Score
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | J1 saved by keyboard |
+| Next step obvious | 1 | Row and draft bar update at once |
+| Plain words | 1 | The Who hint no longer counts copies; the message is said once |
+| Feedback and state | 1 | Bad input is refused on the field, never dropped silently |
+| Correct data | 1 | DB 4 as typed; re-add keeps copies, age and signer |
+| Error recovery | 1 | The error clears on edit; the saved value is kept on refusal |
+| Accessibility and screen sizes | 1 | axe clean; keyboard path; no sideways scroll at 400/720/1024 |
+| Speed | 1 | Save and redraw in 378 ms |
+| Visual quality | 1 | Unchanged layout; the field keeps its text |
+| Trust and sources | 1 | "Sample" on the hint |
+| **Total** | **10/10** | **Pass** |
+
+Could not test: a real screen reader, a visible-browser walk by a person, an intended user's unaided walk.

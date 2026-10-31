@@ -69,3 +69,43 @@ Noted but not counted against this commit (existing behaviour, same for min_age,
 * The full run-suites (running elsewhere on 15400-15499; not touched).
 
 **Verdict: Approve** — commit 727ea2a7. Blockers: none. Majors: none. Minors: m1 (Who-fills-it hint contradicts Copies), m2 (server accepts copies on a document line).
+
+---
+
+# Re-review: commit efc04311 (after the review Minors and the break report)
+
+Reviewer: independent reviewer agent, fresh context (did not build it or fix it). Date: 31 Oct 2026. Diff `origin/main...efc04311`; new since 727ea2a7: 6a0535c4, 5a315d9c (evidence file only), efc04311. Same copy (`screens_rev`, :4442), fresh database for each run. No live AI, US$0.
+
+## What I ran
+* `check_c18_copies.ts`: **28/28**. `check_c18_copies_browser.cjs` (copied to /tmp, screenshots to /tmp): **13/13** on a fresh copy, axe clean.
+* Shared attach path (`form-lines.ts`), suites that add a form back: `check_forms_channels.ts` **105/105**, `check_screen01_api.ts` **135 passed, 0 failed** (fresh copies).
+* My own probes (API, SQL) and a 1024 px keyboard journey (see the journey report). `graph.mjs`: G1 0 · G2 0 · G3 2 (attachments, not this slice) · G4–G6 0, the same as committed.
+
+## Every earlier finding
+| Finding | State | Evidence |
+|---|---|---|
+| Review m1, hint contradicts Copies | Fixed | `forms.tsx:293` now says "Each person it names fills their own." |
+| Review m2 / break M2, copies on a checklist line | Fixed | `studio.ts:573-576` + `DocumentLineEdit`: 400 on field `copies`, "A checklist is not filed, so it has no copies."; IMM 5488 keeps 1; the snapshot stays clean. Residual n1 below |
+| Break M1, add back after a released removal loses copies | Fixed | `form-lines.ts:45` carries `minAge`, `signedBy`, `copies`. Test: 6 copies, age 18, signer come back. Matches the comment and Undo of a removal |
+| Break m1, non-ASCII digits dropped | Fixed | "٣" and "３" stay in the field and are refused on the field; DB keeps the old value (`forms.tsx:259`) |
+| Break m2, "10" became "1" | Fixed | "10" and "12" stay as typed; the server refuses them on the field |
+| Break m3, copies stored with a removal | Fixed for copies, min age, signer | `studio.ts:577-578`; test: removed line keeps 6. Residual n2 below |
+| Break m4, the sentence twice | Fixed | One `refine` (`contracts/workspace.ts:94`); 1e308 gives one issue |
+
+**The retire guard on min age and signer is right.** A removal is not an edit. The screen removes through `DELETE …/forms/:code`, which sends only `retire` (`form-library.ts:205-215`), so no screen path loses anything. Without the guard, now that M1 brings min age and signer back, a value sent with a removal would come back unseen on re-add, which is exactly break m3. Ignoring instead of refusing is what the break report allowed.
+**The shared attach path holds.** Only the "after a released removal" branch changed; a new line still gets the defaults; the AI finder never re-attaches a form a person removed (`finder.ts:658`). The neighbouring suites are green.
+
+## New or residual (none blocks)
+* **n1 (Should, Minor): a checklist line that already holds copies above 1 cannot be saved from its drawer, and nobody sees why.** The drawer always sends `copies` (`forms.tsx:262`). The server refuses it on field `copies`. The drawer puts that into `errors.copies` (`forms.tsx:271`), but a checklist line has no Copies field (`forms.tsx:295`), so no toast and no text appear. Repro (SQL `copies=5` on an IMM 5488 draft, then the drawer's body) → 400. This state is not reachable through the product after this commit (727ea2a7 never reached main or the demo), so it is Minor. The break report asked for this test and it is missing. Fix: send `copies` only when `!l.document`, or show field errors for fields the drawer does not show as a toast.
+* **n2 (Should, Minor, existed before for who): a PATCH removal still stores `who`, `attachMode` and the condition sent with it, and they come back on re-add.** Repro: add IMM 1295 to a combination → `PATCH {retire:true, who:"sponsor", minAge:40, signedBy:"person", copies:7}` → 200 → add again → who `sponsor`, minAge null, signer null, copies 1. `studio.ts:568` runs before the guard, so the comment at `studio.ts:577` ("stores no line settings") claims more than it does. Only a direct API call can do this. Fix: apply the same `!b.retire` guard to who, attachMode and the condition, or reword the comment.
+* Noted, not counted: the server rule keys on `formKind === "document"` (`studio.ts:573`) and the channel rule on `!== "data_form"` (`forms.ts:97`). The Forms tab flag uses "document" (`workspace.ts:57`), so screen and server agree and no hidden value can be stored. The sample attaches only data_form and document lines.
+
+## Scores changed from 727ea2a7 (the rest stand)
+D4 Rule integrity **5** (checklist lines refused on the field; a removal no longer carries copies) · D2 Data integrity **5** (re-add keeps copies, min age, signer) · D10 Language **5** (hint fixed; one message) · D11 Feedback **5** (non-digits refused on the field, not dropped). D13 stays **4** (focus goes to `<body>` when the panel closes, as before).
+Journey score (reviewer, the one score for this check): **10/10, pass**. See `journey-test-reviewer-2026-10-31-c18.md`, section efc04311.
+
+## Could not check
+A real screen reader; an intended user's walk (D17, D20 stay with the founder); runtime use of copies; the full run-suites.
+Housekeeping: my suite runs rewrote committed evidence JSON. I restored them with `git checkout`. Three of those files (`check_s5_leadcheck.json`, `check_pqr.json`, `canary-digest.json`) and later `check_w115_slice1.json` were not written by my runs, so another process may be writing into this checkout. I did not touch `check_w115_slice1.json`.
+
+**Verdict: Approve** — commit efc04311. Blockers: none. Majors: none (break M1 and M2 fixed). Minors open: n1 (a checklist drawer cannot show a copies error), n2 (a PATCH removal still stores who, attachMode and the condition).
