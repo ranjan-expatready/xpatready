@@ -13,7 +13,11 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",
+        // A disabled primary is plainly grey, not a half-faded blue that still reads as clickable (DV-d1-4, tech lead 31 Oct);
+        // while busy (aria-busy) it keeps its colour and the spinner. The ring is inset so the size does not change. A button
+        // greyed with aria-disabled (kept focusable so its reason is read, e.g. Start setup) takes the same look; its grey
+        // ring gives way to the focus ring when it is reached by keyboard (#133 re-review, WCAG 2.4.7).
+        default: "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover disabled:not-aria-busy:opacity-100 disabled:not-aria-busy:bg-surface disabled:not-aria-busy:text-text-muted disabled:not-aria-busy:shadow-none disabled:not-aria-busy:ring-1 disabled:not-aria-busy:ring-inset disabled:not-aria-busy:ring-border aria-disabled:opacity-100 aria-disabled:bg-surface aria-disabled:hover:bg-surface aria-disabled:text-text-muted aria-disabled:shadow-none aria-disabled:not-focus-visible:ring-1 aria-disabled:not-focus-visible:ring-inset aria-disabled:not-focus-visible:ring-border",
         destructive: "bg-danger text-danger-contrast hover:bg-danger/90 focus-visible:ring-danger/20 dark:bg-danger/30",
         outline: "border border-border-strong bg-gradient-to-b from-surface-raised to-surface-sunken shadow-sm hover:bg-text/5 hover:text-text dark:bg-none dark:bg-surface-raised dark:hover:bg-surface",
         secondary: "border border-border bg-surface-raised text-text shadow-sm hover:bg-text/5",
