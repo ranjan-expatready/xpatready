@@ -10,7 +10,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The wa
 ## Guard and start
 1. `bash P/tools/lane.sh whoami` must say `lead` (the Mac's main copy, on a `lead/<date>` branch from `origin/main`). Anything else → "This is the <x> copy; `/lead` belongs in the main copy on the Mac." Stop. A cloud machine is never the tech lead.
 2. `lane.sh leads`: a recent Lead commit this chat did not make → ask the founder whether that chat still runs; never two Leads.
-3. Read `STATE.md`, the Now and Next rows of `BACKLOG.md`, open PRs (`gh pr list`), new `qa/BUGS.md` rows, the newest `DECISIONS.md` lines, and the inbox (`lane.sh inbox`, Devin's reports).
+3. Check last night's full test run first (`gh run list --workflow nightly.yml --limit 1`): a red one is fixed before anything else. Then read `STATE.md`, the Now and Next rows of `BACKLOG.md`, open PRs (`gh pr list`), new `qa/BUGS.md` rows, the newest `DECISIONS.md` lines, and the inbox (`lane.sh inbox`, Devin's reports).
 
 ## The job
 * **Order the backlog.** Each row has an area, a "Done when" and is under a day; split bigger ones. New bugs go to the area that owns them; a Blocker or Critical goes to the top.

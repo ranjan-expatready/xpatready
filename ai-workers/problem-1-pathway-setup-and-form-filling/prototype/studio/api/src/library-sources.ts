@@ -6,6 +6,7 @@
 import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch } from "@nestjs/common";
 import { z } from "zod";
 import { normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
+import { newestEdition } from "../../engine/programs.ts";
 import { actorOf, Audit, Db, need, revise, strip, Workspace, type Actor } from "./core.ts";
 
 type H = string | undefined;
@@ -116,7 +117,12 @@ export class LibrarySources {
       ]);
       const formLines = current(lines, (l) => `${l.combinationId}|${l.lineageKey}`);
       const combosOf = new Map<string, string[]>(); for (const l of formLines) combosOf.set(l.govFormDefId, [...(combosOf.get(l.govFormDefId) ?? []), l.combinationId]);
-      for (const b of boxes) for (const c of combosOf.get(b.edition.govFormDefId) ?? []) uses.push([b.canonicalFieldKey!, c]);
+      // PR #108 minor (a): a combination fills its form's current edition (per channel: the newest one mapped; a newer
+      // edition not mapped yet leaves the older in use), so a field mapped only on a superseded edition is not used there.
+      const chan = (e: (typeof boxes)[number]["edition"]) => `${e.govFormDefId}|${e.channel}`;
+      const editions = [...new Map(boxes.map((b) => [b.edition.id, b.edition])).values()];
+      const currentOf = new Map<string, string>(); for (const k of new Set(editions.map(chan))) currentOf.set(k, newestEdition(editions.filter((e) => chan(e) === k))!.id);
+      for (const b of boxes) if (currentOf.get(chan(b.edition)) === b.edition.id) for (const c of combosOf.get(b.edition.govFormDefId) ?? []) uses.push([b.canonicalFieldKey!, c]);
       for (const l of formLines) for (const f of fieldsOf(l.predicateJson)) uses.push([f, l.combinationId]);
       for (const r of current(rules, (r) => `${r.combinationId}|${r.predicateKey}`)) for (const f of fieldsOf(r.predicateJson)) uses.push([f, r.combinationId]);
       for (const d of current(docs, (d) => `${d.combinationId}|${d.lineageKey}`)) for (const f of fieldsOf(d.predicateJson)) uses.push([f, d.combinationId]);

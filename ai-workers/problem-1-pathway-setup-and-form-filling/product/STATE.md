@@ -1,30 +1,45 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-10-31 · milestone: **M2 — Super Admin configuration**, with the thin runtime slice R1 · way of working: `WAY-OF-WORKING.md` (in force 31 Oct) · work list: `BACKLOG.md`
+updated: 2026-10-31 · milestone: **M2 — Super Admin configuration**, with the thin runtime slice R1 · way of working: `WAY-OF-WORKING.md` · work list: `BACKLOG.md` · why each choice was made: `design/why-we-chose-2026-10-31.md`
 
-## Progress (counted from `qa/CAPABILITIES.md` by `tools/progress.sh`)
+## Resume here (a fresh `/lead` chat)
+1. Open PRs: `gh pr list`. A PR merges by itself on green CI plus the label `review: approved` (the `automerge` workflow checks every approved open PR on each run). The demo updates itself after merges.
+2. Builders run as cloud sessions (forms, runtime, screens). They cannot message the Lead: their PRs are their reports, and their questions sit under "Questions" in each PR. Collect them; decide the technical ones; bring the founder only product, money and preference questions, one at a time, with a recommendation.
+3. Then `BACKLOG.md` row **X0**: regroup the backlog into features (P-191), and walk the founder through `design/why-we-chose-2026-10-31.md`.
+
+## Progress (counted from `qa/CAPABILITIES.md` by `tools/progress.sh`; moves only after qa tests)
 * M2 Super Admin setup: 21 of 57 work (36%) · 16 partial · 1 not tested · 19 not built
 * R1 thin runtime slice: 6 of 8 work (75%)
 * M3 case, agent and client: 0 of 15 work · 3 partial (design agreed; build at the M2 gate)
 
-## In flight (each merges by itself on green CI plus the reviewer's Approve, P-189)
+## In flight (31 Oct)
 | PR | Area | What | Where it stands |
 |---|---|---|---|
-| #112 | forms | slice 1 channels, live AI off by default (P-175), one shared spend ledger (QA-90), cost warning (P-179) | CI rerun after a test-only fix (134019cf) |
-| #111 | screens | PR #108 review Minors | CI rerun after a test-only fix (d8056ca8) |
-| #113 | runtime | queue transaction fix, C10.1 checkpoint, C3.11, P-184 speed helper, S7 Reset + Load sample | syncing with main (conflicts) |
-| parked | screens | C1 "Before forms" (`claude/screens-c1-before-forms`) | after #112 merges (cloud screens builder) |
-| cloud | forms · runtime · screens | N6 + N8 (stacked on #112) · N7 Devin fixes (stacked on #113) · N9 + X4 screens bugs | cloud builders started 31 Oct; their PRs are their reports |
+| #113 | runtime | queue transaction fix, C10.1 checkpoint, C3.11, P-184 speed helper, S7 Reset + Load sample | conflicts with main again; the Mac runtime session (local_3b02c2d2) syncs. The tech lead still has to decide the four "Found while building" points in its c10.1 plan before approving |
+| #116 | runtime (cloud) | DV-bb-9, DV-bb-8, DV-d1-3, and P-193 (only the proposer corrects) | stacked on #113 |
+| #111, #120 | screens (cloud) | review Minors · release page title | the screens builder refreshes both after #129 and handles their reviews |
+| #128 | forms (cloud) | the cost warning re-plans on Start | approved; merges on green |
 
-## Next (from `BACKLOG.md`)
-N4 qa after-merge · N6 forms P-179 follow-ups (two Majors, one stale-lock Major, Minors) · N7–N9 Devin findings · N10 paid runs waiting for the founder's Go (each with its cost).
+## Founder decisions waiting
+* One forms cloud session ("Does Continue cover a run's retries?") stopped to wait for a human answer. The forms builder was told to put that question in its PR; ask the founder when it appears.
+
+## Close-out still to do
+* After #111 and #113 merge: archive the four old Mac builder sessions (forms-fix8 local_c49f56b8, screens-card3 local_ba1559ab, runtime local_3b02c2d2, qa local_b27bf6a4) and remove their copies (about 12 GB). Then remove the frozen `lanes/` folder, and start a cloud qa session for `/qa after-merge` on main.
+* The first nightly full run on the Mac is tonight at 21:00 UTC (workflow `nightly`). A red nightly run is fixed first.
 
 ## Watch
-* The first PRs on the new path are the dry run: they prove the auto-merge and the demo update. Any failure is fixed before anything else.
-* Week-one numbers on demand: median start to merge (target under a day), the tech lead's share of commits (under 15%), bugs after merge (must not rise), AI spend (US$0 unless approved).
-* The `lanes/` files are frozen; they leave once #111, #112 and #113 have merged.
+* **Auto-merge:** the first day had three faults, all fixed: the Mac queue, a lost trigger, and an approval going stale after a refresh. Watch that approved PRs merge without help.
+* **Demo update:** it fails if the demo has rewritten tracked files (stub runs); then move it by hand (`git -C .claude/worktrees/demo-main checkout -- . && … checkout --detach origin/main`, then `start.sh`). An automatic reset step was refused by the permission system.
+* **Week-one numbers, on demand:**
+  * median time from start to merge (target under a day);
+  * the tech lead's share of commits (target under 15%);
+  * bugs found after merge (must not rise);
+  * red checks that pass on a re-run;
+  * AI spend (US$0 unless approved).
+* **The Mac:** stays on (the founder keeps it on). It holds about 22 GB free; restart it every week or two to clear macOS temp files.
 
 ## Log (newest first; earlier lines are in git history)
-- 2026-10-31 · tech lead: P-190 (affected-tests PR check on GitHub, nightly full set on the Mac, US$10 budget; billing cleared by the founder) and P-191 (feature-by-feature work after #111–#113). `design/why-we-chose-2026-10-31.md` for the founder's walkthrough. Fixed: decision-impact read only BACKLOG.md after the B-rows moved (it failed since Phase 1; #114 went in with it failing because only the tail of the output was read; now exit codes are checked).
-- 2026-10-31 · tech lead: #114 merged on its local checks (founder's one-time exception: its CI was queued about 2 h behind suite runs; check-docs, decision-impact, graph and push guard all passed locally). Three cloud builders started (forms, runtime, screens). Disk 3 → 7 GB (finished runtime-s7 copy removed; branch inside #113). Watch: :4400 still runs the old main, so "Find forms with AI" there can spend live money until #112 merges.
-- 2026-10-31 · tech lead: switch-over. P-189 (auto-merge; one ask = one PR; the demo updates itself). `automerge` and `demo-update` workflows; `next`, `lead` and `qa` skills rewritten short; stop hook keeps only code checks; old rules files out (git history + `archive/2026-10-30-before-simplify/`); `BACKLOG.md` is the one list (Phase 1, carry-over checked). Runtime's 40 unmerged commits opened as PR #113.
+- 2026-10-31 · tech lead: the switch-over is done.
+  - Merged today: #112, #114, #115, #117–#119, #121–#127, #129, #130. PR checks moved to GitHub's machines, affected tests only (#124); full set nightly on the Mac (#123); auto-merge fixed (#125, #126).
+  - Founder decisions: P-189 to P-193.
+  - Disk: 6.6 → 22 GB free. Removed idle test databases, stale temp files, updater caches, Chrome's leftover copies and the Codex cache. Three browser tests that loaded Playwright from that cache now load the project's own copy.

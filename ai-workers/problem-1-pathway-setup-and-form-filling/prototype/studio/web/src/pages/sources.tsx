@@ -134,7 +134,10 @@ function DraftDialog({ a, onClose }: { a: Attachment; onClose: () => void }) {
     try {
       const launch = (overrideId?: string) => api(`/attachments/${a.id}/draft`, { method: "POST", json: { mode, runFile: mode === "replay" ? runFile : undefined, idempotencyKey: key, ...(overrideId ? { overrideId } : {}) } });
       // No plan (it could not be made: the server's launch says why in words) or not live (US$0): straight to the launch.
-      const r = mode === "live" && plan.data ? await cost.gate(plan.data, { kind: "draft_field_maps", scope, mode: "LIVE", draftAgain: true }, launch) : await launch();
+      // N6 follow-up: the plan is made again in the click (after the Escape guard is armed), so after a Cancel or a refused
+      // Continue the warning shows today's spend, not the figures from when the dialog opened (and so does the Live line).
+      const planAgain = async () => { void qc.invalidateQueries({ queryKey: ["draft-options", a.id] }); const r = await plan.refetch(); if (r.error) throw r.error; return r.data!; };
+      const r = mode === "live" && plan.data ? await cost.gate(planAgain, { kind: "draft_field_maps", scope, mode: "LIVE", draftAgain: true }, launch) : await launch();
       if (r === undefined) { toast.push({ tone: "info", text: COST_WORDS.cancelled }); return; }
       toast.push({ tone: "ok", text: mode === "replay" ? "Saved AI answer used: proposals compared with the library" : mode === "live" ? "AI draft started" : "Stub pass started" });
       void qc.invalidateQueries({ queryKey: ["combination"] }); onClose();

@@ -12,7 +12,7 @@
 // Screenshots, a step log and API snapshots go to studio/evidence/browser-run-<n>/.  node studio/tests/check_studio_browser.cjs
 // (an isolated copy: STUDIO_URL=http://localhost:<port> STUDIO_DB=xr_studio_<name>; the section step writes to that database)
 const path = require("node:path"); const fs = require("node:fs");
-const { chromium } = require("/Users/ranjansingh/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+const { chromium } = require("playwright");
 const URL = process.env.STUDIO_URL ?? "http://localhost:4400"; // an isolated copy: STUDIO_URL=http://localhost:<port>
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..", "..");
 const OFFICIAL = path.join(ROOT, "ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/ircc");

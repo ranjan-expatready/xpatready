@@ -104,7 +104,7 @@ function Rows({ items }: { items: QueueItem[] }) {
                 <td className="px-4 py-3"><Pill tone={tone}>{word}</Pill>{i.waiting_on ? <p className="mt-1 max-w-[220px] text-xs text-text-muted">{i.waiting_on}</p> : null}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-xs">{i.cost_usd === null ? "—" : `US$${i.cost_usd.toFixed(2)}`}</td>
                 <td className="px-4 py-3" data-next>{!i.next ? <span className="text-xs text-text-muted">No step for you</span>
-                  : i.next.href ? <><Link className="font-semibold text-text-link hover:underline" to={i.next.href}>{i.next.label}</Link>{i.next.note ? <p className="mt-1 max-w-[220px] text-xs text-text-muted">{i.next.note}</p> : null}</>
+                  : i.next.href ? <><Link className="rounded font-semibold text-text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50" to={i.next.href}>{i.next.label}</Link>{i.next.note ? <p className="mt-1 max-w-[220px] text-xs text-text-muted">{i.next.note}</p> : null}</>
                   : <Tip tip={i.next.note ?? ""}><span tabIndex={0} className="cursor-help font-semibold text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">{i.next.label} <span className="text-xs font-normal">(not built yet)</span></span></Tip>}</td>
               </tr>
             );
