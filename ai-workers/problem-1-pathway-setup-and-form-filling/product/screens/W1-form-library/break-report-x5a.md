@@ -176,3 +176,69 @@ None. M6 is fixed (see What held).
   - "imm" goes to 50 of 196; Show more gives 100; "imm 5" goes back to 50 of 106; clearing gives 50 of 237, with focus kept in the box.
   - A keystroke after Show more does not undo it.
 - **Limit reset in render (m12 fixed).** Pressing a chip with all 237 rows shown takes 88–101 ms (Forms) and 69–100 ms (Checklists), against 100–189 ms before. Measured in the page, the search "imm" with 237 shown takes 78–83 ms, and clearing a search with 196 shown takes 105–138 ms. No React warnings or page errors.
+
+---
+
+# Round at 0fc3f8a7 (Show more focuses the added row; one always-present count)
+
+Only `git diff 310acb9c 0fc3f8a7 -- '*.tsx'` was attacked (`library-forms.tsx`). Isolated copy `brk8` on :4456 (`isolated.sh`, `P2_LEDGER_DIR=/tmp/brk8l`, web built with `npx vite build`), sample loaded, then filled (237 rows). No `*_LIVE`, US$0. Chromium 1243 through Playwright, keyboard events only for the focus runs.
+
+A reviewer's mutation run (`rvx5m`, :4453) was working in this same checkout at the same time. It reverted the fix in `library-forms.tsx`, rebuilt `web/dist` and rewrote 33 `slice3` screenshots, then put all of them back. Two of my runs hit its bundle; I threw them away and reran on a bundle built from `git archive 0fc3f8a7` and served to the browser from /tmp (`index-BoNC3h0X.js`, the same hash as my first build). The copy is stopped, its database dropped and its working folder removed. I changed no screenshot and no repo file apart from this section; `git status` is clean.
+
+## Blocker
+None.
+
+## Major
+**M7. The row that Show more focuses has no visible focus.** The row's classes are `outline-none focus-visible:outline-2 focus-visible:outline-ring` (`library-forms.tsx:129`). Tailwind 4.3.1 compiles them as follows:
+- `.outline-none` becomes `{--tw-outline-style:none; outline-style:none}`;
+- `.focus-visible\:outline-2:focus-visible` becomes `{outline-style:var(--tw-outline-style); outline-width:2px}`.
+
+The style therefore resolves to `none`.
+
+Repro, keyboard only:
+1. Open Forms (237 rows).
+2. Tab to "Show 50 more forms" and press Enter.
+
+Result: `document.activeElement` is `tr[data-form="IMM 0017"]`, and `:focus-visible` is true. Its computed outline is `none 3px`, and no box-shadow is set. Nothing on screen shows where focus is (`/tmp/brk8/shots/a-focused-row-1440.png`, not committed). The same holds at 1440, 1024, 390 and 720×450 (200 %), and on every later Show more (rows 101, 151 and 201).
+
+Under 310acb9c, focus went to the row's number button, which draws a ring. This commit replaces a visible focus with an invisible one (WCAG 2.4.7). Chrome does draw a `<tr>` outline: with `outline-style: solid` set on the same row, a 2 px line appears. So the cause is the class pair, not the element.
+
+At 390 px and at 200 % the focused row is 899 px wide inside a 356 px or 686 px table scroller. A working outline would still be cut off on its right side there.
+
+## Minor
+- **m20. After a failed refresh, the count still speaks the old list.** The text depends only on `lib.data` (`library-forms.tsx:191`), and TanStack keeps `data` when a refetch fails.
+  Repro:
+  1. Show more (100 rows); focus is on row 51.
+  2. Make `GET /library/forms/list` answer 500 and invalidate the query (for example, after an action's `lib.refetch()`).
+
+  Result: "The forms could not be loaded" replaces the table and focus falls to `<body>`. Yet `[data-list-count]` still reads "Showing 100 of 237 forms" with `data-shown="100"` while no row is on the page (`/tmp/brk8/shots/c-error-after-data.png`, not committed). A screen-reader user who reads on hears a count the page does not show, and a check that trusts `data-shown` would pass. With no earlier data (first load fails), the region is empty, which is correct.
+
+## What held
+- **Enter, Space and keyboard order:**
+  - One Enter on Show more puts focus on the first added row (51, 101, 151, 201). The last press gives "Showing 237 of 237 forms" with focus on IMM 5709.
+  - Enter on the focused row does nothing, and the drawer does not open (m16 is fixed). Space scrolls the page, the browser default for a non-control.
+  - Two Enters 60 ms apart give 100 rows and no drawer. Space held gives 100 rows (it fires on keyup). Two clicks in one task give 150 rows with focus on row 51.
+  - Enter held with a 500 ms repeat delay gives 100 rows and no drawer. Only an artificial 33 ms repeat from the first keydown, which no real keyboard sends, reaches all rows, still with no drawer.
+  - Tab from the focused row goes to its number button. Shift+Tab goes to row 50's ⋯, then to row 50's Delete. The row itself is not a Tab stop (`tabIndex -1`).
+- **The drawer and the row menu after focus moves:**
+  - Tab to row 51's number, then Enter, opens its drawer; Escape returns focus to that number.
+  - Row 51's ⋯ menu opens and Escape returns to "Actions for IMM 0017". Choosing a menu item opens the drawer, and Escape lands on the row's number.
+  - Delete opens the side panel with focus in its reason box.
+- **Refetch, filter and search:**
+  - A refetch with the same data keeps focus on the row and 100 rows.
+  - When IMM 0017 was deleted in another session (user-A asked, user-B approved), the refetch removed the focused row and focus fell to `<body>`. The count said "Showing 100 of 236". Focus was on that row's number button before this commit too, so this is not new.
+  - A chip pressed after Show more resets to 50 with focus on the chip. A search moves focus to the box.
+- **The count region:** there is always one `[data-list-count]` with `role=status`. Its text in each state:
+
+  | State | Text |
+  |---|---|
+  | Loading (beside the skeleton's own "Loading forms" status) | empty |
+  | First load fails (the error notice) | empty |
+  | Empty library ("No forms yet") | empty |
+  | Search with no match, empty or full library | "No form matches" |
+  | Guides | "Showing 4 of 4 forms" |
+  | After Clear filters | "Showing 50 of 236 forms" |
+
+  A mutation log of one session reads "", 50 of 237, No form matches, 50 of 237, 4 of 4, 50 of 237, so each change reaches a region that was already present (m17 is fixed). The visible "Showing N of M" in the pager is `aria-hidden`, so it is not read twice.
+- **Layout:** at 1440, 1024, 390×844 and 720×450 (200 %) there is no page scroll. The sr-only region is 1×1. The pager fits within its width (16–374 px at 390). After Show more, the focused row is scrolled into view.
+- **Not caused by this diff, noted only:** "Clear filters" unmounts itself and focus falls to `<body>`. The new count does now say "Showing 50 of 236 forms" there.
