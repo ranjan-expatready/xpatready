@@ -55,7 +55,7 @@ Every tool added for this work is listed here: version, official source, checksu
 ## Mac check slots (P-199, installed 31 Oct 2026 by the tech lead with the founder's Go)
 Three GitHub Actions runners, version 2.338.2 (osx-arm64; the official package already on the Mac at `~/actions-runner-xpatready/actions-runner-osx-arm64-2.338.2.tar.gz`, SHA-256 `25a065af409ffa317ab4d5a3b614dd15fc9c40f2172bc1b35a1b1258e919a388`), each a launchd service:
 * `xr-mac` (`~/actions-runner-xpatready`, label `xr-mac`): PR checks and the nightly run, copies named `ci_*`.
-* `xr-mac-2` (`~/actions-runner-xpatready-2`, label `xr-mac`): a second slot for the same jobs, copies named `ci2_*` (other ports), so two checks never meet.
+* `xr-mac-2` (`~/actions-runner-xpatready-2`, label `xr-mac`): a second slot for the same jobs, copies named `ci2_*` (other ports). **Stopped since 31 Oct 15:00 UTC (P-200):** two checks at once ran slower in total than one.
 * `xr-mac-light` (`~/actions-runner-xpatready-3`, label `xr-mac-light`): auto-merge and the demo update only, so they never wait behind a test run.
 Each runner's `.env` and `.path` are copies of the first one's. Stop or start one with `./svc.sh stop|start` in its folder. Registration needed a one-hour code from GitHub › Settings › Actions › Runners, pasted by the founder.
 
