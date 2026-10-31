@@ -44,7 +44,7 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   const plan = await call("POST", `/combinations/${vv}/people/propose/plan`, { mode: "live" });
   ok("X9b m7 fail: the fake launcher alone never opens AI now — its plan is refused (409, in words)", plan.status === 409 && /not approved/i.test(String(plan.body?.title ?? "") + words(plan)), { status: plan.status, title: plan.body?.title, detail: words(plan) });
   const run = await call("POST", `/combinations/${vv}/people/propose`, { mode: "live", planSha256: rules.body?.plan_sha256 });
-  ok("X9b m7 fail: starting AI now is refused too (409), and no run is started", run.status === 409 && !run.body?.runId, { status: run.status, title: run.body?.title });
+  ok("X9b m7 fail: starting AI now is refused too (409, \"AI now is not approved yet\"), and no run is started", run.status === 409 && /not approved/i.test(String(run.body?.title ?? "")) && !run.body?.runId, { status: run.status, title: run.body?.title });
   ok("X9b m7 fail-guard: nothing was launched, not even the fake launcher (no launch log)", !existsSync(join(VAR, "fake-launch.log")) || !readFileSync(join(VAR, "fake-launch.log"), "utf8").trim());
 
   console.log(`\n${pass}/${pass + fail} passed`);
