@@ -4,16 +4,16 @@ Capability C11.8. Founder P-179: an AI start over a cost limit warns before anyt
 
 ## 1. What is shared (do not copy, import)
 * **Contract:** `prototype/studio/contracts/cost-check.ts`: `CostCheck` (what every plan carries as `cost_check`), `OverrideBody` (`POST /ai/overrides`), `COST_WORDS` and `LIMIT_NAMES` (the dialog's words).
-* **Server:** `prototype/studio/api/src/cost-gate.ts`: `costCheckNow({ worst, expected, run, spentForms? })` (the shared ledger's numbers, as `reserve` counts them); `runKeyOf(operation, plan_sha256, check)`; `useOverride(id, plan)` at launch.
+* **Server:** `prototype/studio/api/src/cost-gate.ts`: `costPlanNow(operation, plan_sha256, { worst, expected, run, spentForms? }, await endedOverrides(db))` answers `{ cost_check, run_key }` (the shared ledger's numbers, as `reserve` and `recordOverride` count them, other starts' Continues held included, N6); at launch `checkOverride(actor, id, plan)` before anything is written, and `spendOverride(actor, ref)` last, inside the launch's transaction (review m1: a launch refused before it leaves the Continue unused). There is no `useOverride` in the API any more (updated 31 Oct, N6 review n5).
 * **Screen:** `prototype/studio/web/src/components/cost-warning.tsx`: `useCostGate()` → `{ gate, dialog }`.
 * **Launcher:** `Sources.launchOnce(jobId, "live", wanted, override)` passes `--override-id/--run-key` to `p2/launch.ts`; the ledger checks it again at each reservation.
 
 ## 2. Your three steps per AI start
 1. **Plan:** add `cost_check` and `run_key` to the plan reply:
-   `const cost_check = costCheckNow({ worst, expected, run }); return { ...plan, cost_check, run_key: runKeyOf("<operation>", plan_sha256, cost_check) };`
+   `const { cost_check, run_key } = costPlanNow("<operation>", plan_sha256, { worst, expected, run }, await endedOverrides(this.db)); return { ...plan, cost_check, run_key };`
    (`run` = the largest single launch's worst case; a launch is held to the US$5 run cap on its own.)
 2. **Launch:** accept `overrideId`; over a limit, use it, else refuse as today; keep the override on the run and pass it to each live launch:
-   `const override = !plan.cost_check.ok && b.overrideId ? useOverride(b.overrideId, plan) : null; if (!override && !plan.cost_check.ok) throw problem(409, "Over a cost limit", plan.cost_check.words);` … `this.sources.launchOnce(jobId, "live", wanted, override ?? undefined)`.
+   `const override = !plan.cost_check.ok && b.overrideId ? checkOverride(actor, b.overrideId, plan) : null; if (!override && !plan.cost_check.ok) throw problem(409, "Over a cost limit", plan.cost_check.words);` then, inside the launch's `$transaction`, after every other refusal: `if (override) spendOverride(actor, override);` … `this.sources.launchOnce(jobId, "live", wanted, override ?? undefined)`. A start that can spend nothing (worst case US$0) is never refused by the cap, even past it (N6).
 3. **Screen:** `const cost = useCostGate();` then `await cost.gate(plan, start, (overrideId) => api(<your launch>, { …, overrideId }))` (resolves `undefined` after Cancel: nothing started) and render `{cost.dialog}`.
    `POST /ai/overrides` re-makes the plan from `start`. It knows `{ kind: "draft_field_maps", … }` and `{ kind: "find_forms", … }` today; add your kind to `OverrideStart` (contract) and its plan to `Ai.override` (`api/src/ai.ts`, one line), or ask the forms lane to.
 

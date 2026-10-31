@@ -5,7 +5,7 @@
 //   zsh studio/tools/isolated.sh runtime_r1 4430 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4430 xr_studio_runtime_r1
 //   tsx studio/tests/runtime/check_runtime_r1d.ts 4430 xr_studio_runtime_r1
 import { createHash } from "node:crypto";
-import { appendFileSync, copyFileSync, readFileSync, renameSync, rmSync, symlinkSync } from "node:fs";
+import { appendFileSync, copyFileSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { request } from "node:http";
 import { join } from "node:path";
@@ -19,8 +19,8 @@ const OFFICER = "user-O", CLIENT = "user-P", CLIENT_B = "user-Q", AUTHOR = "user
 const ROOT = join(import.meta.dirname, "..", "..", "..", "..", "..", "..");
 const run = Date.now().toString(36);
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
-const bytes = (path: string, actor: string) => new Promise<{ status: number; body: Buffer }>((resolve, reject) => {
-  const req = request({ host: "127.0.0.1", port: PORT, path: `/api${path}`, headers: { "x-actor": actor }, agent: false }, (res) => { const c: Buffer[] = []; res.on("data", (x: Buffer) => c.push(x)); res.on("end", () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(c) })); });
+const bytes = (path: string, actor: string) => new Promise<{ status: number; body: Buffer; name: string }>((resolve, reject) => {
+  const req = request({ host: "127.0.0.1", port: PORT, path: `/api${path}`, headers: { "x-actor": actor }, agent: false }, (res) => { const c: Buffer[] = []; res.on("data", (x: Buffer) => c.push(x)); res.on("end", () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(c), name: /filename="([^"]+)"/.exec(String(res.headers["content-disposition"] ?? ""))?.[1] ?? "" })); });
   req.on("error", reject); req.end();
 });
 type Copy = { id: string; status: string; locked: { kind: string } | null; validated?: { current: boolean; words: string } | null; out_of_date: boolean; stale: boolean; changed: string[]; counts: { written: number; not_written: number } | null; intact: boolean | null; file_ok: boolean };
@@ -205,6 +205,26 @@ async function main() {
   r = await sendValidated(locked1, validatedFile, "imm5257-validated.pdf");
   ok("C11.6 C-9 pass: the validated and saved copy reads back with every value the product wrote; its checksum and the facts' fingerprint are kept", r.status === 201 && r.body?.copy?.validated?.current === true && r.body.copy.validated.read_back.equal === r.body.copy.validated.read_back.written && r.body.copy.validated.read_back.written > 0
     && sql(`select sha256 from validated_copy where form_instance_id='${locked1}'`) === sha(validatedFile), r.body);
+  // C-9 (Devin on PR #121): the copy marked ready for filing downloads in its validated form, checked like the copy.
+  const vPath = join(ROOT, sql(`select path from validated_copy where form_instance_id='${locked1}'`));
+  let d = await bytes(`/runtime/form-copies/${locked1}/file`, OFFICER);
+  ok("C11.6 C-9 pass: a barcode form with a current validated copy downloads the validated file (its recorded checksum, named validated), not the generated copy", d.status === 200 && sha(d.body) === sha(validatedFile) && sha(d.body) !== row1.sha && /^IMM5257-validated-/.test(d.name), d.name);
+  d = await bytes(`/runtime/form-copies/${locked1}/file?original=1`, OFFICER);
+  ok("C11.6 C-9 pass: the original generated copy stays downloadable on its own (?original=1)", d.status === 200 && sha(d.body) === row1.sha && /^IMM5257-copy-/.test(d.name), d.name);
+  ok("C11.6 C-9 fail: the client cannot download the validated file (officer only)", (await bytes(`/runtime/form-copies/${locked1}/file`, CLIENT)).status === 403);
+  appendFileSync(vPath, "% changed on disk\n");
+  d = await bytes(`/runtime/form-copies/${locked1}/file`, OFFICER);
+  ok("C11.6 C-9 fail: a validated file changed on disk since it was read back is refused (409, in words), never swapped for the unbarcoded copy", d.status === 409 && /validated file changed on disk/.test(d.body.toString()), d.body.toString());
+  writeFileSync(vPath, validatedFile);
+  renameSync(vPath, `${vPath}.away`);
+  d = await bytes(`/runtime/form-copies/${locked1}/file`, OFFICER);
+  ok("C11.6 C-9 fail: a missing validated file is a 404 in words, not the generated copy", d.status === 404 && /validated file is missing/.test(d.body.toString()), d.body.toString());
+  const vOutside = join(tmpdir(), `validated-${run}.pdf`); copyFileSync(`${vPath}.away`, vOutside); symlinkSync(vOutside, vPath);
+  d = await bytes(`/runtime/form-copies/${locked1}/file`, OFFICER);
+  ok("C11.6 C-9 fail: a validated file that lies outside the working files (a link out, same bytes) is not handed over (409, in words)", d.status === 409 && /validated file is not in the working files/.test(d.body.toString()), d.body.toString());
+  rmSync(vPath); rmSync(vOutside);
+  renameSync(`${vPath}.away`, vPath);
+  ok("C11.6 C-9 pass: with its file back, the validated copy downloads again", sha((await bytes(`/runtime/form-copies/${locked1}/file`, OFFICER)).body) === sha(validatedFile));
   r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "validated_copy_uploaded" }, OFFICER);
   ok("RT-16 pass: the officer locks an up-to-date generated copy (\"validated copy uploaded back\")", r.status === 201 && r.body.locked?.kind === "validated_copy_uploaded", r.body);
   r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "filed" }, OFFICER);
@@ -224,6 +244,7 @@ async function main() {
   ok("RT-15/16 pass: after the passport number changes, the locked copy is stale and names the fact; its file and row are unchanged", locked.stale && locked.out_of_date && locked.changed.some((x) => /passport/i.test(x)) && sha(readFileSync(join(ROOT, row1.path))) === row1.sha && sql(`select sha256 from form_instance where id='${locked1}'`) === row1.sha, locked);
   ok("RT-15 pass: nothing was regenerated on its own (a new copy only on the officer's request)", sql(`select count(*) from form_instance where case_id='${caseId}'`) === before);
   ok("C11.6 C-10 pass: after a fact on the form changed, its validated copy says \"Out of date: validate again\" and is kept as history", locked.validated?.current === false && locked.validated?.words === "Out of date: validate again" && sql(`select count(*) from validated_copy where form_instance_id='${locked1}'`) === "1", locked.validated);
+  ok("C11.6 C-10 pass: once its validated copy is out of date, the download is the copy as made again (the old validated file is not handed over as current)", sha((await bytes(`/runtime/form-copies/${locked1}/file`, OFFICER)).body) === row1.sha);
   ok("RT-15 fail-guard: the spouse's copy, whose facts did not change, is not out of date", !(await formOf("IMM 5257", spouse)).copies.find((x) => x.id === spouse2)!.out_of_date);
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-3` }, OFFICER);
   const second: string = r.body.id; await done(second);

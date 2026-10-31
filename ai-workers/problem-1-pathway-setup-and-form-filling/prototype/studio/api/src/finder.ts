@@ -35,7 +35,7 @@ import { canadaSource, CanadaError, type CanadaSource } from "./canada.ts";
 import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 import { aboutUsd, lastFinishedUsd } from "./finder-cost.ts";
 import { aiLive, overrideOf, Sources, type LaunchOverride } from "./sources.ts";
-import { checkOverride, costCheckNow, runKeyOf, spendOverride } from "./cost-gate.ts";
+import { checkOverride, costPlanNow, endedOverrides, spendOverride } from "./cost-gate.ts";
 import { channelProposal, channelsFrom, channelsRead, recordedCopy, sampleFixtures, type ChannelProposal, type ChannelReading } from "./filing.ts";
 import { WHO } from "./studio.ts";
 import { linkFinderGuides } from "./guide-sources.ts";
@@ -201,8 +201,8 @@ export class Finder implements OnModuleInit {
     // changed meanwhile is refused ("Look at the plan again"), never started with other words.
     const plan_sha256 = sha(JSON.stringify({ c: c.id, mode: b.mode, page: plan.page_url, only: plan.only, steps: steps.map((s) => s.kind + s.uses_ai), worst, about }));
     // P-179: the one cost check (each round is held to the run cap on its own) and the run key a Continue names.
-    const cost_check = costCheckNow({ worst, expected, run: Math.max(0, ...steps.map((s) => s.worst_usd ?? 0)) });
-    return { ...plan, plan_sha256, cost_check, run_key: runKeyOf(FINDER_OPERATION, plan_sha256, cost_check) };
+    const { cost_check, run_key } = costPlanNow(FINDER_OPERATION, plan_sha256, { worst, expected, run: Math.max(0, ...steps.map((s) => s.worst_usd ?? 0)) }, await endedOverrides(this.db));
+    return { ...plan, plan_sha256, cost_check, run_key };
   }
 
   private expectedUsd(trail: string[]): number | null {

@@ -2,7 +2,8 @@
 // ready first, the `where` and kind tables, one counts object, the duty and tier overlay) with a passing and a failing
 // case per rule, then the API on an isolated copy (GET /catalogue and GET /combinations/:id/summary carry `setup`,
 // parity with today's next step, the counts the row already shows) and the 150-combination timing. No AI (US$0).
-//   zsh studio/tools/isolated.sh screens_sa 4441 start && tsx studio/tests/check_setup_checklist.ts 4441
+//   zsh studio/tools/isolated.sh screens_sa 4441 start && tsx studio/tests/check_setup_checklist.ts 4441 xr_studio_screens_sa
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { forViewer, KIND_STEP, mayAct, setupChecklistOf, WHERE_STEP, type SetupInput } from "../engine/setup-checklist.ts";
@@ -115,6 +116,15 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
 }
 {
   // Step 4 (P-130, P-174): 4a documents, then 4b questions; an answer asked of nobody keeps 4b open.
+  // PR #108 minor (b): Submit for review only once Forms and Questions and documents have nothing open.
+  const ready = setupChecklistOf(live({ changes: 1 }));
+  step("C11.10: Submit for review is offered when Forms and Questions and documents are done", ready.steps[4].open.some((i) => i.kind === "submit") && ready.next?.item.kind === "submit", ready.steps[4].open.map((i) => i.kind));
+  const formsOpen = setupChecklistOf(live({ changes: 1, forms: { lines: 0, fromLibrary: 0, draftable: 0, unmapped: 0, sources: 0 } }));
+  const docsOpen = setupChecklistOf(live({ changes: 1, problems: [err("Documents")] }));
+  step("C11.10 (fail case): no Submit for review while Forms or Documents are still open (the endpoint would refuse it)", [formsOpen, docsOpen].every((c) => !c.steps.some((st) => st.open.some((i) => i.kind === "submit")) && c.next?.step !== "release"), [formsOpen.next?.line, docsOpen.next?.line]);
+  // #111 review m1: holding Submit back must not make step 5 look done on a Live combination with draft changes.
+  step("C11.10 (fail case): with draft changes and Forms or Documents open, step 5 is not done", [formsOpen, docsOpen].every((c) => c.steps[4].state !== "done"), [formsOpen.steps[4].state, docsOpen.steps[4].state]);
+  step("C11.10: a Live combination with no draft changes has step 5 done", setupChecklistOf(live()).steps[4].state === "done", setupChecklistOf(live()).steps[4].state);
   const gap = setupChecklistOf(live({ problems: [err("Questionnaires"), err("Questionnaires")], changes: 1, review: { stage: "submit", submittedBy: null, authors: [] } }));
   const s4 = gap.steps[3];
   step("C11.10: an answer a form reads and nobody is asked → step 4 open, \"2 answers asked of nobody\", 4b not done, 4a done", s4.state !== "done" && s4.open.some((i) => i.text === "2 answers asked of nobody") && s4.parts?.[1].done === false && s4.parts?.[0].done === true, s4.open);
@@ -137,11 +147,13 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
   const c = setupChecklistOf(draft({ proposals: { person_role: 2, field: 1, section: 4 }, problems: [err("Forms"), err("Documents"), err("Rules")] }));
   step("C11.10: one counts object — proposals and problems by step", JSON.stringify(c.counts.proposals) === JSON.stringify({ pages: 0, people: 2, forms: 1, questions_documents: 4, release: 0 }) && JSON.stringify(c.counts.problems) === JSON.stringify({ pages: 0, people: 0, forms: 1, questions_documents: 2, release: 0 }), c.counts);
   step("C11.10: the bar never says \"Step n of 5\"", ![c, setupChecklistOf(live())].some((x) => /Step \d of 5/.test(x.bar.text)));
-  step("C11.10: \"Review n proposals\" opens the review queue filtered to the combination and the step", c.next?.href === "/review?c=c-1&step=2", c.next?.href);
+  step("C11.10: \"Review n proposals\" opens the proposals page for the combination and the step (PR #108 minor (c))", c.next?.href === "/review/proposals?c=c-1&step=2", c.next?.href);
 }
 
 // ------------------------------------------------------------------ the API (isolated copy)
 const PORT = Number(process.argv[2] ?? 0);
+const DB = process.argv[3] ?? "xr_studio_screens_sa";
+const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 if (!PORT) { console.log(`${pass}/${pass + fail} passed (engine only; pass a port for the API part)`); process.exit(fail ? 1 : 0); }
 const api = async (path: string, actor: string | null = "user-A", method = "GET", body?: unknown) => {
   const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { ...(actor ? { "x-actor": actor } : {}), "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -192,6 +204,15 @@ const smeSummary = (await api(`/combinations/${started[0]?.combinationId}/summar
 step("C11.10: the expert's summary carries the same checklist with the expert's overlay (Open)", smeSummary.setup?.viewer?.button === "Open" && JSON.stringify(smeSummary.setup.steps) === JSON.stringify((await api(`/combinations/${started[0]?.combinationId}/summary`)).body.setup.steps));
 
 // 150 combinations: cold (after a write) under 1.5 s, warm under 200 ms (concept §8).
+// PR #108 minor (c): "Review n proposals" opens that combination's group for that step on the proposals page. The sample
+// has no waiting proposal, so one person-role proposal (rules, no AI) is written for a started combination.
+const reviewCombo = started[0]!.combinationId!;
+sql(`insert into proposal_item (id, workspace_id, kind, step, combination_id, lands_on, reuse, payload, rounds, agreement, confidence, origin, identity, identity_key) select gen_random_uuid(), workspace_id, 'person_role', 'person_roles', id, 'combination', '{"match":"new","existingKey":null}', '{"kind":"person_role","label":"Test accompanying person"}', '{"draft":null,"check":null}', 'rules_only', 'check', 'rules', '{"key":"test_role","near":[],"nearReason":null}', 'test_role' from combination where id='${reviewCombo}'`);
+const reviewLink = ((await api(`/combinations/${reviewCombo}/summary`, "user-A")).body.setup?.steps?.[1]?.open ?? []).some((i: { kind: string }) => i.kind === "review_proposals") ? `/review/proposals?c=${reviewCombo}&step=2` : null;
+const opened = reviewLink ? (await api(`/review/proposals?${reviewLink.split("?")[1]}`, "user-A")).body : null;
+step("C11.10: a setup checklist's Review link opens a group holding that combination's proposals", !!opened?.group && opened.group.total > 0 && opened.group.id === `combination:${reviewCombo}`, { reviewLink, group: opened?.group?.id });
+const [nobody, badStep] = await Promise.all([api("/review/proposals?c=00000000-0000-4000-8000-000000000000&step=2", "user-A"), api(`/review/proposals?c=${reviewCombo}&step=9`, "user-A")]);
+step("C11.10 (fail case): a combination with nothing waiting opens no group (200), and a step outside 1–5 is refused (400)", nobody.status === 200 && nobody.body.group === null && badStep.status === 400, [nobody.status, nobody.body?.group, badStep.status]);
 const sections = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.sections as { pathwayKey: string }[];
 const all = () => leaves("user-A");
 let have = (await all()).filter((r) => !r.retired).length;

@@ -3,11 +3,14 @@
 // usage. A crash or an error without usage leaves the worst case counted. Append-only JSON lines.
 import { closeSync, existsSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, renameSync, statSync, unlinkSync, writeSync } from "node:fs";
 import { randomBytes } from "node:crypto";
+import { hostname } from "node:os";
 import { join } from "node:path";
 import { EXPERIMENT_CAP_USD, OVERRIDE_TTL_MS, PRICE_PER_MTOK, WAVE1_CAP_USD, WAVE1_START } from "./policy.ts";
 
 export class BudgetExceeded extends Error {}
-/** P-179: an override that cannot be recorded or used (why: "unknown", "other_run", "used", "expired", "ceiling", "person", "limits"). */
+/** Break n1 (N6): the short ledger lock is held by another process past the wait; a moment later it is free again. */
+export class LedgerBusy extends BudgetExceeded {}
+/** P-179: an override that cannot be recorded or used (why: "unknown", "other_run", "used", "expired", "ceiling", "held", "person", "limits"). */
 export class OverrideRefused extends Error {
   readonly why: string;
   constructor(why: string, message: string) { super(message); this.why = why; } // no parameter property: the drafting process runs this file with Node's type stripping
@@ -34,13 +37,31 @@ type Entry =
   | { type: "override"; id: string; run_key: string; limits: OverrideLimit[]; worst_usd: number; by: string; at: string; expires_at: string; reason?: string }
   | { type: "override_use"; id: string; run_key: string; at: string };
 
+const HOST = hostname();
+/** Break N1 (N6): what a holder writes into a lock: this computer, its process id, and a random part of its own. */
+const lockToken = () => `${HOST}:${process.pid}:${randomBytes(6).toString("hex")}`;
+/** True when the lock names a process on this computer that has exited (a crash, SIGTERM, a kill). A lock from another
+ *  computer, or in an older form, is never judged by its process. */
+function holderGone(text: string): boolean {
+  const m = /^(.+):(\d+):[0-9a-f]+$/.exec(text);
+  if (!m || m[1] !== HOST || Number(m[2]) === process.pid) return false;
+  try { process.kill(Number(m[2]), 0); return false; } catch (e) { return (e as { code?: string }).code === "ESRCH"; }
+}
+const isAmount = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 0;
+const isTime = (v: unknown) => typeof v === "string" && Number.isFinite(Date.parse(v));
+const isText = (v: unknown) => typeof v === "string" && v.length > 0;
+
 export class SpendLedger {
   readonly file: string;
   readonly capUsd: number;
   private lockFile: string;
   private reserveLockFile: string;
-  constructor(dir: string, capUsd: number = EXPERIMENT_CAP_USD) {
+  private waitMs: number;
+  /** `waitMs`: how long a read-then-write waits for another process's short lock (break n1: the API waits 2 s, not 10 s,
+   *  because the wait holds its one thread). */
+  constructor(dir: string, capUsd: number = EXPERIMENT_CAP_USD, opts: { waitMs?: number } = {}) {
     this.capUsd = capUsd;
+    this.waitMs = opts.waitMs ?? 10_000;
     mkdirSync(dir, { recursive: true });
     this.file = join(dir, "spend.jsonl");
     this.lockFile = join(dir, "spend.lock");
@@ -50,9 +71,24 @@ export class SpendLedger {
   private entries(): Entry[] {
     if (!existsSync(this.file)) return [];
     // P-179 break m6: a line that is not JSON stops every start in words (it stopped them before too, as a bare SyntaxError).
-    return readFileSync(this.file, "utf8").split("\n").filter(Boolean).map((l, i) => {
+    const es: Entry[] = readFileSync(this.file, "utf8").split("\n").filter(Boolean).map((l, i) => {
       try { return JSON.parse(l); } catch { throw new BudgetExceeded(`the shared ledger ${this.file} has a line (${i + 1}) that is not a ledger entry; no AI start is counted until it is fixed`); }
     });
+    // P-179 break M1, N6 (break n4, review n3): every line the caps and the Continues read is checked, so one line that is
+    // not well formed (no amount, text, below 0, no time, an unknown limit) stops every start in words instead of
+    // switching a cap off, lowering what is held, never expiring, or failing as a TypeError.
+    for (const e of es) {
+      const x = e as Record<string, unknown>, bad = (what: string) => { throw new BudgetExceeded(`the shared ledger ${this.file} has a ${String(x.type)} line (${typeof x.id === "string" ? x.id : "no id"}) whose ${what}; no AI start is counted until it is fixed`); };
+      if (x.type === "reserve") { if (!isAmount(x.worst_usd)) bad("amount is not a number of US$ at or above 0"); if (!isTime(x.at)) bad("time is missing or not a date"); }
+      else if (x.type === "settle") { if (!isAmount(x.actual_usd)) bad("amount is not a number of US$ at or above 0"); }
+      else if (x.type === "override") {
+        if (!isAmount(x.worst_usd)) bad("amount is not a number of US$ at or above 0");
+        if (!isText(x.id) || !isText(x.run_key) || !isText(x.by)) bad("id, run or person is missing");
+        if (!Array.isArray(x.limits) || !x.limits.length || !x.limits.every((l) => (OVERRIDE_LIMITS as readonly unknown[]).includes(l))) bad("limits are not a list of known limits");
+        if (!isTime(x.at) || !isTime(x.expires_at)) bad("time or expiry is missing or not a date");
+      } else if (x.type === "override_use") { if (!isText(x.id) || !isText(x.run_key)) bad("id or run is missing"); }
+    }
+    return es;
   }
 
   /** Appends one line before the call it covers. Node's permission model disables fsync (found when the
@@ -80,10 +116,7 @@ export class SpendLedger {
   /** P-179 break M1: every amount the caps add up is a number of US$ at or above 0. One line that is not (no amount, text,
    *  below 0) would make the sum NaN or lower it and so switch the caps off; it stops every reservation instead, in words. */
   private counted(keep: (r: Extract<Entry, { type: "reserve" }>) => boolean): number {
-    const es = this.entries();
-    const bad = (v: unknown) => typeof v !== "number" || !Number.isFinite(v) || v < 0;
-    const wrong = es.find((e) => (e.type === "reserve" && bad(e.worst_usd)) || (e.type === "settle" && bad((e as { actual_usd: unknown }).actual_usd)));
-    if (wrong) throw new BudgetExceeded(`the shared ledger ${this.file} has a ${wrong.type} line (${(wrong as { id?: string }).id ?? "no id"}) whose amount is not a number of US$ at or above 0; no AI start is counted until it is fixed`);
+    const es = this.entries(); // every amount checked there
     const settled = new Map(es.filter((e) => e.type === "settle").map((e) => [e.id, (e as { actual_usd: number }).actual_usd]));
     return es.filter((e): e is Extract<Entry, { type: "reserve" }> => e.type === "reserve" && keep(e)).reduce((sum, r) => sum + (settled.get(r.id) ?? r.worst_usd), 0);
   }
@@ -91,24 +124,43 @@ export class SpendLedger {
   /** P-179: the most a click may take total spend to: the cap + 10% (US$132 for the US$120 experiment cap). */
   get ceilingUsd(): number { return Math.round(this.capUsd * 1.1 * 100) / 100; }
 
-  /** P-179 break m3: US$ that recorded Continues still hold: not used yet and not expired, each at its worst case. A used
-   *  one is counted by its run's reservations instead. */
-  heldByOverridesUsd(es: Entry[] = this.entries(), now = Date.now()): number {
-    const used = new Set(es.filter((e) => e.type === "override_use").map((e) => e.id));
-    return es.filter((e): e is Extract<Entry, { type: "override" }> => e.type === "override" && !used.has(e.id) && Date.parse(e.expires_at) >= now).reduce((a, o) => a + o.worst_usd, 0);
+  /** P-179 break m3, N6 (review N2, break n2): US$ that recorded Continues still hold against the ceiling. A Continue holds
+   *  its worst case, less what its run has reserved already, until it expires (10 minutes): unused, and also used while its
+   *  run waits in the queue and has not reserved yet (break n2). Continues for the same run key can start one run only (the
+   *  plan changes once it starts), so they hold once. `except`: the run key being looked at, which holds nothing against
+   *  itself (review N2: a person's own Continue from a moment ago no longer blocks their retry). `ended`: Continues whose run
+   *  has ended (the API knows: finished, failed or stopped), which hold nothing more. */
+  heldByOverridesUsd(es: Entry[] = this.entries(), now = Date.now(), except?: string, ended: ReadonlySet<string> = new Set()): number {
+    const reserved = new Map<string, number>();
+    for (const e of es) if (e.type === "reserve" && e.override_id) reserved.set(e.override_id, (reserved.get(e.override_id) ?? 0) + e.worst_usd);
+    const byRun = new Map<string, number>();
+    for (const o of es) {
+      if (o.type !== "override" || o.run_key === except || ended.has(o.id) || Date.parse(o.expires_at) < now) continue;
+      byRun.set(o.run_key, Math.max(byRun.get(o.run_key) ?? 0, Math.max(0, o.worst_usd - (reserved.get(o.id) ?? 0))));
+    }
+    return [...byRun.values()].reduce((a, v) => a + v, 0);
   }
 
   /** P-179: records a person's Continue past `limits` for one run (run_key), for that run's worst case only. Refused when
    *  it would take spend past the ceiling (nothing is written), for no person or the system, or for no limit. */
-  recordOverride(o: { run_key: string; limits: OverrideLimit[]; worst_usd: number; by: string; reason?: string }): { id: string; expires_at: string } {
+  recordOverride(o: { run_key: string; limits: OverrideLimit[]; worst_usd: number; by: string; reason?: string }, opts: { ended?: ReadonlySet<string> } = {}): { id: string; expires_at: string; again?: boolean } {
     if (!o.by || o.by === "system") throw new OverrideRefused("person", "only a person may continue past a cost limit");
     if (!o.run_key) throw new OverrideRefused("other_run", "an override names the run it is for");
     if (!o.limits.length || !o.limits.every((l) => (OVERRIDE_LIMITS as readonly string[]).includes(l)) || new Set(o.limits).size !== o.limits.length) throw new OverrideRefused("limits", `an override names one or more of the limits ${OVERRIDE_LIMITS.join(", ")}`);
     if (!Number.isFinite(o.worst_usd) || o.worst_usd < 0) throw new OverrideRefused("limits", `worst case must be a number of US$ at or above 0 (got ${o.worst_usd})`);
     return this.atomically(() => {
-      const total = this.committed(), held = this.heldByOverridesUsd();
+      const es = this.entries(), now = Date.now();
+      // Review N2: this person's own Continue for this same run, unused and not expired (a launch refused after the click
+      // leaves it so), is the one this click means: it is used again, not recorded twice.
+      const used = new Set(es.filter((e) => e.type === "override_use").map((e) => e.id)), same = (a: string[]) => [...a].sort().join();
+      const mine = es.find((e): e is Extract<Entry, { type: "override" }> => e.type === "override" && e.run_key === o.run_key && e.by === o.by && !used.has(e.id) && Date.parse(e.expires_at) >= now && e.worst_usd >= o.worst_usd - 1e-9 && same(e.limits) === same(o.limits));
+      // Break 3 m7: it is used again only while it still fits the ceiling (spend may have arrived since).
+      if (mine && this.committed() + o.worst_usd <= this.ceilingUsd) return { id: mine.id, expires_at: mine.expires_at, again: true };
+      const total = this.committed(), held = this.heldByOverridesUsd(es, now, o.run_key, opts.ended), usd = (n: number) => `US$${n.toFixed(2)}`;
+      if (total + o.worst_usd > this.ceilingUsd) throw new OverrideRefused("ceiling", `ceiling US$${this.ceilingUsd}: committed ${total.toFixed(4)} + worst case ${o.worst_usd.toFixed(4)}; the founder must raise the cap`);
       // Break m3: other Continues not started yet hold their worst case too, so two of them cannot together pass the ceiling.
-      if (total + held + o.worst_usd > this.ceilingUsd) throw new OverrideRefused("ceiling", `ceiling US$${this.ceilingUsd}: committed ${total.toFixed(4)}${held > 0 ? ` + ${held.toFixed(4)} held by other Continues not started yet` : ""} + worst case ${o.worst_usd.toFixed(4)}; the founder must raise the cap`);
+      // Review N2: that wait ends by itself (they start or expire within 10 minutes), so the words say wait, not the founder.
+      if (total + held + o.worst_usd > this.ceilingUsd) throw new OverrideRefused("held", `Other Continues chosen in the last 10 minutes still hold ${usd(held)} until their runs start; with them, this run could take spend to ${usd(total + held + o.worst_usd)}, past the ${usd(this.ceilingUsd)} a click may allow. Wait a few minutes, then look at the cost again`);
       const at = new Date(), id = `override-${at.getTime()}-${randomBytes(4).toString("hex")}`, expires_at = new Date(at.getTime() + OVERRIDE_TTL_MS).toISOString();
       this.append({ type: "override", id, run_key: o.run_key, limits: o.limits, worst_usd: o.worst_usd, by: o.by, at: at.toISOString(), expires_at, ...(o.reason ? { reason: o.reason } : {}) });
       return { id, expires_at };
@@ -191,41 +243,104 @@ export class SpendLedger {
    *  lock older than 30 s is left over from a crash and is broken (breakStaleLock). Each holder writes its own token into
    *  the lock, so on the way out it removes only its own. */
   private atomically<T>(fn: () => T): T {
-    const until = Date.now() + 10_000, token = `${process.pid}-${randomBytes(6).toString("hex")}`;
+    const until = Date.now() + this.waitMs, token = lockToken();
     for (;;) {
-      try { const fd = openSync(this.reserveLockFile, "wx"); try { writeSync(fd, token); } finally { closeSync(fd); } break; } catch {
-        if (this.breakStaleLock()) continue;
-        if (Date.now() > until) throw new BudgetExceeded(`ledger busy: another process held ${this.reserveLockFile} for 10 s`);
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5);
-      }
+      if (this.takeLock(this.reserveLockFile, token)) break;
+      // A lock older than 30 s, or whose process has exited (break n1: at once, not after 30 s), is left over from a crash.
+      if (this.breakStaleLock(this.reserveLockFile, (text, ageMs) => ageMs > 30_000 || holderGone(text))) continue;
+      if (Date.now() > until) throw new LedgerBusy(`ledger busy: another process held ${this.reserveLockFile} for ${Math.round(this.waitMs / 1000)} s`);
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5);
     }
-    try { return fn(); } finally { try { if (readFileSync(this.reserveLockFile, "utf8") === token) unlinkSync(this.reserveLockFile); } catch { /* already gone */ } }
+    try { return fn(); } finally { this.dropLock(this.reserveLockFile, token); }
+  }
+
+  /** Takes a lock with its holder's token already inside: the token is written to a file of this process's own, then
+   *  linked to the lock's name (a link fails when the name exists), so no other process ever sees a lock without its
+   *  holder (break N1: before, an empty lock could be seen between its creation and the write). True: taken. */
+  private takeLock(file: string, token: string): boolean {
+    const mine = `${file}.new-${process.pid}-${randomBytes(4).toString("hex")}`;
+    const fd = openSync(mine, "wx");
+    try { writeSync(fd, token); } finally { closeSync(fd); }
+    try { linkSync(mine, file); return true; } catch { return false; } finally { try { unlinkSync(mine); } catch { /* gone */ } }
+  }
+
+  /** On the way out, a holder removes only its own lock (review m9). */
+  private dropLock(file: string, token: string) {
+    try { if (readFileSync(file, "utf8") === token) unlinkSync(file); } catch { /* already gone */ }
   }
 
   /** Review m9: two waiters may both find the same crashed lock. Before, the slower one then deleted the fresh lock the
    *  faster one had just taken, and both entered. Now the old lock is moved aside (a rename: only one waiter can move it)
-   *  and looked at once moved: a lock that is not old after all (a waiter's fresh one) is put back. True: try again. */
-  private breakStaleLock(): boolean {
-    let mtime: number;
-    try { mtime = statSync(this.reserveLockFile).mtimeMs; } catch { return true; } // gone meanwhile
-    if (Date.now() - mtime <= 30_000) return false;
-    const aside = `${this.reserveLockFile}.stale-${process.pid}-${randomBytes(4).toString("hex")}`;
-    try { renameSync(this.reserveLockFile, aside); } catch { return true; } // another waiter moved it first
-    try { if (Date.now() - statSync(aside).mtimeMs <= 30_000) linkSync(aside, this.reserveLockFile); } catch { /* a newer lock is there: it stays */ }
-    try { unlinkSync(aside); } catch { /* gone */ }
-    return true;
+   *  and looked at once moved: a lock that is not stale after all (a waiter's fresh one) is put back. True: try again. */
+  private breakStaleLock(file: string, stale: (text: string, ageMs: number) => boolean): boolean {
+    const look = (f: string) => { try { const st = statSync(f); return { text: readFileSync(f, "utf8"), age: Date.now() - st.mtimeMs, ino: st.ino }; } catch { return null; } };
+    const first = look(file);
+    if (!first) return true; // gone meanwhile
+    if (!stale(first.text, first.age)) return false;
+    // PR #121 review (Devin): two breakers interleaving could move aside a fresh lock one of them had just taken, leaving
+    // the name free for a third. Breakers now take turns under a short breaker's lock of their own, and the one whose
+    // turn it is looks at the lock again: a fresh lock taken meanwhile is never touched. A breaker's lock left by a crash
+    // (a turn takes microseconds) is cleared after 5 s.
+    const turn = `${file}.break`;
+    try { closeSync(openSync(turn, "wx")); } catch {
+      // #121 review 6, Minor 4: a turn left by a crash is moved aside and looked at once moved (as the lock is), so a
+      // fresh turn another breaker took meanwhile is put back, never deleted.
+      try {
+        if (Date.now() - statSync(turn).mtimeMs > 5_000) {
+          const asideTurn = `${turn}.stale-${process.pid}-${randomBytes(4).toString("hex")}`;
+          renameSync(turn, asideTurn);
+          try { if (Date.now() - statSync(asideTurn).mtimeMs <= 5_000) linkSync(asideTurn, turn); } catch { /* a newer turn is there: it stays */ }
+          try { unlinkSync(asideTurn); } catch { /* gone */ }
+        }
+      } catch { /* gone or moved by another waiter */ }
+      return false; // another breaker's turn: wait, then look again
+    }
+    try {
+      const now = look(file);
+      if (!now) return true;
+      if (now.ino !== first.ino || !stale(now.text, now.age)) return now.ino !== first.ino;
+      const aside = `${file}.stale-${process.pid}-${randomBytes(4).toString("hex")}`;
+      try { renameSync(file, aside); } catch { return true; }
+      const moved = look(aside);
+      // Only the stale holder itself releasing in this very instant could have swapped the file: put a fresh one back.
+      try { if (moved && (moved.ino !== now.ino || !stale(moved.text, moved.age))) linkSync(aside, file); } catch { /* a newer lock is there: it stays */ }
+      try { unlinkSync(aside); } catch { /* gone */ }
+      return true;
+    } finally { try { unlinkSync(turn); } catch { /* gone */ } }
   }
 
   settle(id: string, actualUsd: number, outcome: string) {
     if (!Number.isFinite(actualUsd) || actualUsd < 0) throw new BudgetExceeded(`a settled cost must be a number of US$ at or above 0 (got ${actualUsd})`); // break M1
-    this.append({ type: "settle", id, actual_usd: actualUsd, outcome, at: new Date().toISOString() });
+    // Break n5: under the short lock, so the seed tool's read-and-replace never drops a settle appended meanwhile, and
+    // never outside it (PR #121 review, Devin: an unlocked append could be replaced by a seed's snapshot). Break 3 m3 is
+    // answered in the callers instead: a settle refused as busy leaves the reservation at its worst case (the safe side)
+    // and never makes the runner or the reader call the model again (settleOrKeep).
+    this.atomically(() => this.append({ type: "settle", id, actual_usd: actualUsd, outcome, at: new Date().toISOString() }));
   }
 
-  /** One runner at a time: a second process is refused while the lock file exists. */
+  /** Break 3 m3 / PR #121 review: a settle that cannot be written now (the ledger is busy or unreadable) is not a failed
+   *  call: the reservation stays counted at its worst case, which over-counts and never under-counts. Answers why the
+   *  settle was not written, or null. */
+  settleOrKeep(id: string, actualUsd: number, outcome: string): string | null {
+    try { this.settle(id, actualUsd, outcome); return null; } catch (e) { if (e instanceof BudgetExceeded) return e.message; throw e; }
+  }
+
+  /** One runner at a time: a second process is refused while another holds the lock. Break N1 (N6): the lock names its
+   *  holder (computer and process id); a lock whose process has exited (a crash, or Stop's SIGTERM, which skips
+   *  `finally`) is broken, so a crashed run no longer stops every copy's AI steps until a person deletes the file. An
+   *  empty lock (written before the holder was named) is broken once an hour old. */
   async withLock<T>(fn: () => Promise<T>): Promise<T> {
-    let fd: number;
-    try { fd = openSync(this.lockFile, "wx"); } catch { throw new BudgetExceeded(`ledger locked by another runner (${this.lockFile})`); }
-    closeSync(fd);
-    try { return await fn(); } finally { unlinkSync(this.lockFile); }
+    const token = lockToken();
+    let taken = this.takeLock(this.lockFile, token);
+    // A few short tries: another breaker's turn lasts microseconds.
+    for (let i = 0; !taken && i < 20; i++) {
+      if (!this.breakStaleLock(this.lockFile, (text, ageMs) => holderGone(text) || (text === "" && ageMs > 3_600_000))) {
+        if (!existsSync(`${this.lockFile}.break`)) break; // a live holder: refused
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5); continue;
+      }
+      taken = this.takeLock(this.lockFile, token);
+    }
+    if (!taken) throw new BudgetExceeded(`ledger locked by another runner (${this.lockFile})`);
+    try { return await fn(); } finally { this.dropLock(this.lockFile, token); }
   }
 }

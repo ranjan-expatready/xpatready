@@ -455,6 +455,9 @@ export class Lifecycle {
         await tx.reviewSubmission.deleteMany({ where: { id: { in: subs } } });
         await tx.intakeItem.updateMany({ where: { combinationId: c.key }, data: { combinationId: null } });
         await tx.combination.delete({ where: { id: c.key } });
+        // N8 (F2) break m4: its official-page record goes with it, after the combination's row (review of 7bc2dc02, 1: a
+        // confirm holding that row's lock has then finished, so its record cannot land after this delete).
+        await tx.officialPagesRecord.deleteMany({ where: { combinationId: c.key } });
       }
       await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? (c.kind === "library_form" ? "Deleted at approval: it left the library (never released)." : "Deleted at approval (never released).") } });
       return true;

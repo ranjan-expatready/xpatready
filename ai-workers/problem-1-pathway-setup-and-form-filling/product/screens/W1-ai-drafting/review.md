@@ -1,98 +1,92 @@
-# Review 2: P-179 cost warning + override on the QA-90 shared ledger, after the FIX (reviewer, 30 Oct)
+# Review 5: N6, the P-179 follow-ups (forms lane), at `586190d6` (reviewer, 31 Oct)
 
-Independent CHECK (P-68), backend path. Code at `c950b098` (branch HEAD `3b1e4c39`, notes only after it). The first CHECK is `review-p179-1.md` (6/10, B1) and `break-report-p179-1.md`. US$0 throughout: no live switch, no priced button, scratch `P2_LEDGER_DIR` only. The real `.tools/p2-ledger/spend.jsonl` had the same checksum before and after. Isolated copy `fx7_rev2` on :4458 with the queue held, stopped at the end.
+Independent CHECK (P-68) of backlog item N6 at commit **`586190d6`**, branch `claude/friendly-lamport-06zafk`, PR #121.
+* **The commit:** `586190d6` merges `origin/main` (#112, `73030d56`), and it merged clean. `git diff origin/main 586190d6` is exactly N6: 17 non-image files.
+* **Main brought no new tree content:** `git diff 2b4332ff 586190d6` is empty, because #112's commits were already in the branch. Main therefore cannot have broken N6's files.
+* **What I read most closely** was `git diff 10a0e90e 586190d6`, which comes to `2b4332ff`: `sources.tsx` (1 line) and `check_cost_warning_browser.cjs` (3 steps).
+* **Earlier CHECKs:** review 4 at `10a0e90e` and break report 3 are in git history and `break-report.md`.
+* **Cost:** US$0. No `*_LIVE` switch, no priced button clicked by me, queue held, scratch ledgers only (`/tmp/rv5/ledger`, the suites' own temp folders).
+* **Ports:** :4458 only. The copies `rv_walk`, `rv_co` and `rv_cw` were stopped and their databases dropped.
+* **Isolation:** rule removals were made only in a `git archive 586190d6` extract (`/tmp/rv5/src`). The browser suite's 11 rewritten screenshots in the tree were put back with `git restore` per file.
 
-## Verdict: Ship after fixes. Two Majors, no Blocker, no Must on money
-Every finding from the first CHECK is fixed in code, and each has a pass and a fail check. Money stays bounded. Two new gaps break P-179's promise ("warn, then Continue or Cancel") on paths a person will take:
-* **N1:** the Forms tab's own "Draft with AI" start has no warning at all.
-* **N2:** a person's own unused Continue blocks their retry, and the words say the founder must raise the cap.
+## Verdict
+Commit `586190d6`. No Blocker, no Major.
+* Review 4's three Should Minors are closed.
+  1. The Draft setup stale-plan check exists, and it fails when the fix is removed.
+  2. The Forms tab dialog reads its spend figure again after a refusal, and that check fails when the fix is removed.
+  3. The PR body now has the m1–m8 table, the residuals with their bounds, and 92/63/27.
+* One new Minor (Should): a stale warning after Cancel. It predates N6, and the server refuses correctly.
 
-**Journey score: 8 / 10. Pass** (8 or more, no criterion at 0), held back by N1 and N2.
+**Journey score: 9.5 / 10. Pass.** Report: `journey-test-reviewer-2026-10-31-586190d6.md`.
 
-## What I ran (US$0)
-* `check_cost_check.ts` 61/61 · `check_cost_override.ts` 50/50 (:4458) · `check_p2_launch.ts` 60/60 (temp copy; §12 is B1 end to end) · `check_cost_warning_browser.cjs` 14/14, run twice, both green.
-  * The browser check overwrote the builder's `screenshots/p179/*`; I put them back with git checkout.
-* Graph (`graph.mjs`, no `--write`): G1 0 · G2 0 · G3 2 · G4 0 · G5 0 · G6 0. The two G3 routes are not P-179 (`POST /combinations/:id/attachments`, `GET /attachments/:id/file`).
-* My walk (headless Chromium, Playwright, :4458) and ledger attacks on scratch ledgers. Screenshots are in my session scratchpad (`shots/j1-*`, `j2-*`, `j4-*`).
+**Note for the label:** PR #121's head moved, while I worked, to `968de33a` (main merged again: #115). That commit changes only `.claude/settings.json`, two workflows, `.claude/skills/lead`, and product docs and tools. No N6 file and no app code changed. Automerge wants the label added after the last commit, so the approval of `586190d6` must be re-applied to `968de33a` (or a newer head) by whoever adds the label.
 
-## First CHECK findings: each verified in code and in a check
-| Finding | Fix (code) | Pass / fail check |
+## What I ran
+* **Suites at `586190d6`:**
+  * `check_cost_check.ts` 92/92.
+  * `check_cost_override.ts 4458 rv_co` 63/63.
+  * `check_cost_warning_browser.cjs 4458 rv_cw` 27/27, after `vite build`.
+* **Graph** (no `--write`): G1 0 · G2 0 · G3 2 · G4 0 · G5 0 · G6 0. The two G3 routes are `POST /combinations/:id/attachments` and `GET /attachments/:id/file`, the same as before. Neither is part of P-179.
+* **Rule removed, then the browser suite run** (extract only, each restored afterwards):
+
+| Fix | Rule removed | Result |
 |---|---|---|
-| B1 stub pass refused past a money cap | `p2/ledger.ts:147` stub → US$0; `:157` a US$0 reservation passes no limit | `check_p2_launch` §12 (real launcher, ledger past the experiment and Wave caps) + `check_cost_check` B1 ×4; attack A4: stub admitted at US$130, paid and unmarked refused |
-| M1 malformed amounts switch the caps off | `ledger.ts:82-86` `counted`, `:220` settle | `check_cost_check` M1 ×3 |
-| M2 Continue starts past US$132 | `cost-gate.ts:62` | `check_cost_override` "break M2" |
-| m1/m2 click used up with no run; double click | `checkOverride` before, `spendOverride` last in the transaction (`ai.ts:289`, `finder.ts:250`); `launchSource` key check before the re-plan (`ai.ts:318`) | `check_cost_override` m1 ×3, m2 ×3 |
-| m3 unspent Continues not held | `ledger.ts:96-111` | `check_cost_check` m3 ×4 (but see N2) |
-| m4/m5 two totals, spend said 3–4 times | `sources.ts ledger()` uses `SpendLedger`; one label | browser check m4/m5; my walk: "Spent so far" said once |
-| m5/m6/m7 (break) strict body, 413/503, `by` | `contracts/cost-check.ts:21-33`, `cost-gate.ts:66`, `ledger.ts:131` | `check_cost_override` m5 ×3, m6 ×3, m7 |
-| review m3 focus lost after Cancel | `cost-warning.tsx:57-62` | browser check m3 ×2 |
-| review m6 audit words | `ai.ts:340-342`, `finder.ts:257` | `check_cost_override` m6; my walk: both audit lines name the limit and the override |
-| review m7 finder Cancel shown as an error | `finder.tsx:66-67` info toast | by reading (the finder dialog needs the live switch) |
-| review m8 seed without lock; m9 stale-lock race | `seed-shared-ledger.ts:24-33`; `ledger.ts:193-217` | `check_cost_check` m8, m9 ×3 |
-| review m2 weakened slice3 test | `check_s5_slice3_browser.cjs:96-103` branches on the server's `live.on` | — |
+| Review 4 Minor 2: dialog spend read again | `sources.tsx:145` without `invalidateQueries(["draft-options", a.id])` | FAIL "review (10a0e90e) 2" (26/27): the dialog keeps the figure from when it opened |
+| Review 4 Minor 1 (m1, Draft setup) | `ai-launch.tsx:47` re-plans on 409 only | FAIL: the run stops at the warning wait after "m1 setup (Draft setup)" passes (1 passed, 1 failed) |
 
-## New findings
-**Major**
-* **N1. The Forms tab's "Draft with AI" start has no cost warning and no Continue.**
-  * Where: `web/src/pages/sources.tsx:120` `DraftDialog` posts `/attachments/:id/draft` without `useCostGate`.
-  * Plan §2 "Wiring" lists the field-map draft among the forms lane's own starts.
-  * Walk (screenshot `j4-draft-with-ai-over-cap`): spend at US$119.50, Forms › IMM 5257 › Draft with AI › Live › "Start live AI draft". The only answer is a red toast, "The worst case (US$7.23) is above what is left of the experiment cap (US$0.50 of US$120).", with no warning and no way to Continue.
-  * The same refusal comes from the API: 400, nothing started.
-  * Only Draft setup (`ai-launch.tsx`) and the finder offer Continue.
-  * Fix: gate `DraftDialog` with `useCostGate` (plan from `/ai/plan` scope `source`, `start` `draft_field_maps`, pass `overrideId`), plus a pass and a fail check in the browser.
-* **N2. Your own unused Continue blocks your retry, and the error wrongly sends you to the founder.** This was brought in by the m3 fix.
-  * Code: `heldByOverridesUsd` (`ledger.ts:96`) counts every unused Continue for 10 minutes, including this person's own one for the same start. `costCheck` (`engine/cost-check.ts:40`) does not count held Continues, so the dialog still offers Continue.
-  * A launch refused after the click leaves the Continue unused, by design. Causes: the plan changed (409), a draft under review, or the limit field set below the worst case. On retry, `useCostGate.proceed` records a new Continue.
-  * Walk J2 (screenshot `j2-second-continue`): spend at US$120.01, worst case US$9.99.
-    * Continue is refused at launch, as expected, with "above this launch's limit (US$5.00)".
-    * Cancel, fix the limit, Start, Continue. The answer is 409 "ceiling US$132: committed 120.0120 + 9.9900 held by other Continues not started yet + worst case 9.9900; the founder must raise the cap. Nothing was recorded."
-    * The real total would be US$130.00, within US$132.
-    * The words are ledger internals (EXPERIENCE [M] 10 and plain words), and the fix they name is wrong: waiting 10 minutes is enough.
-  * Ledger proof: attack A1.
-  * Fix:
-    * Reuse this person's own unexpired, unused Continue for the same run key, or leave it out of `held`.
-    * Say a held Continue in words ("You have a Continue from a moment ago…").
-    * Add a pass and a fail check.
+* The earlier removals (m3, m7, m5, m1 Forms tab) are in review 4. Their code is unchanged since (`git diff 10a0e90e 586190d6` touches none of them).
+
+## Code check of the change since review 4
+* **`sources.tsx:145`:** the refetch runs after any `ApiError` from the launch, with `qc` from `:115`.
+  * The sentence comes from `opts.data.ledger`, which `/attachments/:id/draft-options` serves from the same ledger as the refusal.
+  * J1: the toast says "(US$1.38 of US$120)" and the dialog says "US$118.62 … US$1.38 left before a cap", 300 ms after the click.
+  * No extra request on success, and no per-row requests.
+* **`check_cost_warning_browser.cjs:51-64`:** the panel opens with Start enabled at US$0 spent. The seed then moves spend to `120 - worst/2`. The 1st Start is refused, with no batch. The 2nd Start shows the warning with Continue. This mirrors the Forms tab step.
+* **`:131-132`:** the expected figure is the ledger's own reserve sum, not a constant.
+* The rest of N6 (ledger lock holder, `LedgerBusy` and settle fallback, the held Continues in `costPlanNow`, the `reason` rules, the Escape guard) is unchanged since review 4. I re-read the diff and agree with its money-safety argument: settle can only lower what is counted; reuse only within the ceiling; reserve is the final check.
+
+## Findings
+**Blocker:** none. **Major:** none.
 
 **Minor**
-* **n3.** The amount check of the M1 fix covers `reserve` and `settle` lines only.
-  * An `override` line with no `worst_usd` makes `held` NaN, so `recordOverride` admits US$50 at US$125 (attack A2). `reserve` still caps at US$132, and the API checks `can_continue` first.
-  * A `reserve` line with no `at` counts toward the experiment but not toward the wave (A3).
-  * Both need a malformed line, which only the seed tool merges.
-  * Fix: validate those fields in `counted`/`heldByOverridesUsd`.
-* **n4.** `DraftDialog` still shows "Spent so far US$119.5 … US$0.5 left" (`sources.tsx:126`, no `toFixed(2)`), while Draft setup shows US$119.50. This is the m4 residue.
-* **n5.** `handover-p179.md` §1–§2 still tell other lanes to call `useOverride(b.overrideId, plan)`. That function no longer exists: it is now `checkOverride` before and `spendOverride` last inside the transaction, as the m1 fix needs. A lane following the note would bring m1 back.
+1. **(Should) After Cancel, or a refused Continue, in the cost warning, the next Start shows the same stale warning, Continue included.**
+   * J2 (`/tmp/rv5/walkshots/j2-stale-1440.png`): the warning opens at US$118.62 with Continue, and the author cancels. Spend then reaches US$131.12, so the Draft setup start (worst US$9.99) is past the ceiling. Start again still shows "Spent so far US$118.62 … Continue", not "past what a click may allow".
+   * Cause: Cancel resolves the start with `undefined` (`cost-warning.tsx:74`). The callers then only toast (`ai-launch.tsx:41`, `sources.tsx:138`), so no re-plan happens. A refused Continue keeps its error inside the warning (`cost-warning.tsx:85`) and does not re-plan either.
+   * Money-safe: `POST /ai/overrides` answers 409 "This run could reach US$141.11, past the US$132.00 … The founder must raise the cap" (J3). This predates N6. It is m1's class on the warning's own path.
+   * Fix: re-plan in both callers after a Cancel, or after a refused Continue (`plan.refetch()` where `r === undefined`, or from the gate on error).
+   * Its check: in the browser suite, Cancel, seed past the ceiling, Start shows the ceiling dialog.
+
+**Notes (not findings):**
+* The m4, m6 and m8 residuals are now listed in the PR with their bounds. Accepting them is the Lead's call.
+* The Draft setup removal fails on a timeout before its named step prints. It is still a failing check.
 
 ## D1–D20 (1–5)
-D1 Requirement fit 3: Continue works on Draft setup and the finder; N1 leaves the Forms-tab start unwired. · D2 Data integrity 4: one Continue, one use, one run (walk + checks); n3. · D3 n/a · D4 n/a · D5 Stability 4: lock and transaction fixes hold; N2. · D6 Governance 4: ledger line plus both audit lines name the limit, the person and the override (walk). · D7 AI trust 4: cost before spend, Sample words unchanged. · D8 Orientation 4. · D9 Flow 3: N1, N2. · D10 Language 3: N2 ledger words; n4. · D11 Feedback 3: N1 shows a red toast with no next step. · D12 Visual 4: team Dialog (shots j1). · D13 Accessibility 4: axe 0; 3 Tabs to Continue; focus returns; 400/1024 px and 200 % with no sideways scroll. · D14 Team look 4. · D15 Speed 4: warning opens in 0.1–0.3 s; Continue to run page in 0.7–2.0 s (one run over 1 s). · D16 Testability 4: every earlier fix has a pass and a fail check; N1 and N2 have none. · D17 simulated only. · D18 Provenance 4. · D19 Closure 3: N1, N2. · D20 simulated only.
-
-## Journey score (journey-test, reviewer)
-Journeys:
-* J1 main: an author at US$115 (worst US$9.99) clicks Continue on Draft setup, and the run is queued. Data underneath: override + use + 2 audit lines, then reload.
-* J2 recovery: a launch is refused after Continue, then retried (N2).
-* J3 wrong role: the approver's Continue gets 403.
-* J4 the per-form Draft with AI start over the cap (N1).
-* J5 keyboard and sizes: inside J1.
-* Cancel, Escape, past US$132 and double click: covered by the checks, run twice.
-
-| Criterion | Score | Evidence |
-|---|---|---|
-| Task completed | ½ | J1 done; B1 path proven (check_p2_launch §12); J4 cannot Continue (N1) |
-| Next step obvious | ½ | J1 clear; N1 has no next step; N2 points to the founder wrongly |
-| Plain words | ½ | dialog clear; N2 ledger internals; n4 |
-| Feedback and state | 1 | info toast on Cancel; run page queued; audit names the Continue |
-| Correct data | 1 | exactly 1 override, 1 use, 1 run; worst US$9.99 and limit `experiment` exact |
-| Error recovery | ½ | N2 |
-| Accessibility and sizes | 1 | axe 0; keyboard; focus back on Start (check); 400/1024/200 % |
-| Speed | 1 | warning 0.1–0.3 s |
-| Visual quality | 1 | shots j1 |
-| Trust and sources | 1 | spend against cap and ceiling shown; who and why recorded |
-
-Fixes most valuable first: N1 → N2 → n5 → n4 → n3.
+* D1 Requirement fit 5: every forms-lane start warns, then offers Continue or Cancel; a stale plan recovers in one click.
+* D2 Data integrity 5: refusals and wrong roles leave 0 override lines and 0 batches; Continue gives 1 override, 1 use, 1 run (suites).
+* D3 n/a · D4 n/a.
+* D5 Stability 5: suites green; settle never fails for a busy lock.
+* D6 Governance 5: author duty enforced on the server (403 for the others, 401 for no one).
+* D7 AI trust 5: worst case and caps are shown before any spend.
+* D8 Orientation 5: the dialog and the toast agree.
+* D9 Flow 4: Minor 1.
+* D10 Language 5: "US$1.38 left before a cap".
+* D11 Feedback 4: Minor 1.
+* D12 Visual 5.
+* D13 Accessibility 5: axe 0 after the refusal (and on the warnings, in the suite); Enter, then Escape works; no sideways scroll at 1024, 512 (200 %) or 400 px.
+* D14 Team look 5.
+* D15 Speed 5: refusal 286 ms; warning 34 ms.
+* D16 Testability 5: each fix since review 4 has a check that fails without it.
+* D17 simulated only.
+* D18 Provenance 5.
+* D19 Closure 5: review 4's three Minors are closed, and the PR body is updated.
+* D20 simulated only.
 
 ## Not checked
-* A live run or a real launcher run with the queue released: B1 rests on `check_p2_launch` §12, ledger attacks and code.
-* The finder's dialog in a browser: it needs the live switch.
-* The full 88/88: I took it from `run-suites-c950b098.md` and re-ran only the 4 P-179 suites.
-* A headed (visible) browser: I walked headless. A real screen reader: not tried. D17 and D20 stay with the founder.
-* An untracked `break-report.md` appeared in this folder during my run. It comes from another session; I did not read or touch it.
+* Clicking Continue myself (a priced button), a live run, or the launcher with the queue released.
+* The finder dialog in a browser (it needs the live switch).
+* A cross-computer ledger, or a network disk.
+* Suites beyond the three P-179 ones.
+* A headed browser or a real screen reader. D17 and D20 stay with the founder.
+* Commit `968de33a` (no N6 or app files changed; not run).
+
+Verdict: Approve

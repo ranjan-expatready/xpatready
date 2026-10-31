@@ -48,6 +48,9 @@ function pdf(title, text) {
     await p.setViewportSize({ width: 1024, height: 768 });
     await p.screenshot({ path: path.join(SHOTS, `${base}-1024.png`), fullPage: true });
     step(`1024 px: ${name} has no sideways scroll`, !(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)));
+    // QA-113: the To review table fits its own box too (it was 760 px in about 735, scrolled sideways, "Item" cut to "em").
+    const box = await p.evaluate(() => { const t = document.querySelector('table[aria-label="Items to review"]'); return t ? { table: t.scrollWidth, box: t.parentElement.clientWidth } : null; });
+    if (box) step(`C5.3 QA-113: 1024 px: ${name}: the To review table fits its box, no sideways scroll inside it`, box.table <= box.box + 1, `${box.table} in ${box.box}`);
     await p.setViewportSize({ width: 1440, height: 900 });
   };
 
@@ -136,7 +139,11 @@ function pdf(title, text) {
   // Keyboard: the AI proposals step is reachable by Tab and opens its review page with Enter.
   await open();
   const link = row(`job:${svJob}`).locator("[data-next] a");
-  await link.focus(); await p.keyboard.press("Enter"); await p.waitForURL(/\/jobs\//);
+  // #119 review (EXPERIENCE [M]12, WCAG 2.4.7): reached by Tab, the next-step link shows a focus ring.
+  await link.focus(); await p.keyboard.press("Shift+Tab"); await p.keyboard.press("Tab");
+  const ring = await p.evaluate(() => { const a = document.activeElement; const cs = getComputedStyle(a); return { link: a?.tagName === "A" && !!a.closest("[data-next]"), ring: cs.boxShadow !== "none" || cs.outlineStyle !== "none", shadow: cs.boxShadow }; });
+  step("C5.3 keyboard: a row's next step reached by Tab shows a focus ring", ring.link && ring.ring, JSON.stringify(ring));
+  await p.keyboard.press("Enter"); await p.waitForURL(/\/jobs\//);
   step("C5.3 keyboard: Enter on a row's next step opens its review page", new URL(p.url()).pathname === ai.next.href, p.url());
 
   // ======================================================== the page (second person)

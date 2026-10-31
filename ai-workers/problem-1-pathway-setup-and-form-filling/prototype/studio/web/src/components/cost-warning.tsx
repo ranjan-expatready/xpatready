@@ -1,7 +1,7 @@
 // P-179 (C11.8): the one cost warning every AI start shows before anything is spent, when its plan is over a limit:
 // expected and worst case, spend so far against the cap, which limit and why, then Continue (recorded with the person's
 // name, for this one run's worst case) or Cancel (nothing starts). Past the ceiling (the cap + 10%) there is no Continue.
-// One call wires it on any start:  const cost = useCostGate();  …  cost.gate(plan, start, (overrideId) => launch(overrideId))
+// One call wires it on any start:  const cost = useCostGate();  …  cost.gate(() => planAgain(), start, (overrideId) => launch(overrideId))
 // and render {cost.dialog}. Words and shape: contracts/cost-check.ts. The server checks everything again.
 import * as React from "react";
 import { AlertTriangle } from "lucide-react";
@@ -45,21 +45,47 @@ export function useCostGate() {
   const [pending, setPending] = React.useState<{ plan: Plan; start: OverrideStartBody; launch: (overrideId?: string) => Promise<unknown>; done: (v: unknown) => void } | null>(null);
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
   const opener = React.useRef<HTMLElement | null>(null);
-  const gate = React.useCallback((plan: Plan, start: OverrideStartBody, launch: (overrideId?: string) => Promise<unknown>) => {
-    if (!plan.cost_check || plan.cost_check.ok) return launch();
+  // N6: between the click and the warning's own dialog layer being ready (the portal mounts its content a render later, and
+  // the layer's Escape listener an effect after that), an Escape reached the panel underneath and closed it with the warning
+  // still to come. From the click until the warning closes, Escape is caught here first (window, capture, before any dialog
+  // layer's listener) and means what it means in the warning: Cancel, or nothing while Continue is busy.
+  const busyRef = React.useRef(false); busyRef.current = busy;
+  const escGuard = React.useRef<((e: KeyboardEvent) => void) | null>(null);
+  const disarm = () => { if (escGuard.current) window.removeEventListener("keydown", escGuard.current, true); escGuard.current = null; };
+  const cancelRef = React.useRef<() => void>(() => undefined);
+  const clickRef = React.useRef({ cancelled: false });
+  // N6 follow-up: `plan` may be a function that makes the plan again. Spend can arrive from another copy while the panel is
+  // open, so a plan made when it opened (or after a refusal) can be stale: after a Cancel the next Start would show old
+  // figures and even a Continue past the ceiling. The Escape guard is armed first, in the click, then the plan is made
+  // again, then the warning opens with the fresh figures; an Escape while the plan is being made cancels the start.
+  const gate = React.useCallback(async (plan: Plan | (() => Promise<Plan>), start: OverrideStartBody, launch: (overrideId?: string) => Promise<unknown>) => {
+    if (typeof plan !== "function" && (!plan.cost_check || plan.cost_check.ok)) return launch();
     setError(null);
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    disarm();
+    const click = { cancelled: false }; clickRef.current = click;
+    escGuard.current = (e: KeyboardEvent) => { if (e.key !== "Escape") return; e.preventDefault(); e.stopImmediatePropagation(); if (!busyRef.current) { click.cancelled = true; cancelRef.current(); } };
+    window.addEventListener("keydown", escGuard.current, true);
+    let fresh: Plan;
+    try { fresh = typeof plan === "function" ? await plan() : plan; } catch (e) { disarm(); throw e; }
+    if (click.cancelled) return undefined;
+    if (!fresh.cost_check || fresh.cost_check.ok) { disarm(); return launch(); }
     // Resolves with the launch's answer after Continue, or undefined after Cancel (nothing started).
-    return new Promise<unknown>((done) => setPending({ plan, start, launch, done }));
+    return new Promise<unknown>((done) => setPending({ plan: fresh, start, launch, done }));
   }, []);
+  // Review Minor 4: the panel closed while its plan is being made: the start is cancelled, nothing launches.
+  React.useEffect(() => () => { clickRef.current.cancelled = true; disarm(); }, []);
   // Review m3: the Start button that opened the warning is disabled while it waits, so focus fell to the page on Cancel or
   // Escape. Once the caller has enabled it again (a few frames), focus goes back to it, so the keyboard path goes on.
-  const refocus = (el: HTMLElement | null, tries = 30) => {
-    if (!el || !el.isConnected || tries <= 0) return;
-    if ((el as HTMLButtonElement).disabled || el.getAttribute("aria-disabled") === "true") { requestAnimationFrame(() => refocus(el, tries - 1)); return; }
+  // Review Minor 1: up to 5 s, not a frame count: an Escape while a slow plan is being made waits for Start to be enabled.
+  const refocus = (el: HTMLElement | null, until = performance.now() + 5000) => {
+    if (!el || !el.isConnected || performance.now() > until) return;
+    if ((el as HTMLButtonElement).disabled || el.getAttribute("aria-disabled") === "true") { requestAnimationFrame(() => refocus(el, until)); return; }
     el.focus();
   };
-  const cancel = () => { pending?.done(undefined); setPending(null); const el = opener.current; requestAnimationFrame(() => refocus(el)); };
+  const cancel = () => { disarm(); pending?.done(undefined); setPending(null); const el = opener.current; requestAnimationFrame(() => refocus(el)); };
+  // The guard may fire before the render that holds `pending`: it resolves the waiting start through the setter instead.
+  cancelRef.current = () => { disarm(); setPending((p) => { p?.done(undefined); return null; }); const el = opener.current; requestAnimationFrame(() => refocus(el)); };
   const proceed = async () => {
     if (!pending) return;
     setBusy(true); setError(null);
@@ -67,7 +93,7 @@ export function useCostGate() {
       const c = pending.plan.cost_check;
       const o = await api<OverrideReply>("/ai/overrides", { method: "POST", json: { run_key: pending.plan.run_key, worst_usd: c.worst_usd, limits: c.over.map((x) => x.limit), start: pending.start } });
       const r = await pending.launch(o.override_id);
-      pending.done(r); setPending(null);
+      disarm(); pending.done(r); setPending(null);
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
   const dialog = pending ? <CostWarning check={pending.plan.cost_check} busy={busy} error={error} onContinue={() => void proceed()} onCancel={cancel} /> : null;

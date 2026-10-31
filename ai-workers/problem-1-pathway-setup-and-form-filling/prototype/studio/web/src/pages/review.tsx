@@ -11,7 +11,9 @@ import { problemWords } from "../../../contracts/programs";
 export const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
 /** QA-73: the engine's part names in the words the pages use (the stored codes stay as they are). */
 const KIND_WORD: Record<string, string> = { "Derived definition": "Calculated answer", "Derived fields": "Calculated answers" };
-const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ?? "A calculation"}: this calculation is not checked by a test yet; it is shown, never used to decide.` : problemWords(p);
+// QA-73: a message that already starts with its form or item says it once ("IMM 1295: 37 rows", not "IMM 1295: IMM 1295: …").
+const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ?? "A calculation"}: this calculation is not checked by a test yet; it is shown, never used to decide.`
+  : String(p.message ?? "").startsWith(`${p.label ?? p.item}:`) ? p.message : problemWords(p);
 
 export function ReviewTab({ d }: { d: any }) {
   const id = d.combination.id;
@@ -25,7 +27,7 @@ export function ReviewTab({ d }: { d: any }) {
   const inv = [["review", id], ["combination", id], ["programs"], ["preview"], ["config", id]];
   const submit = useAction(() => api(`/combinations/${id}/submit`, { method: "POST", json: { note } }), { success: "Submitted for review", invalidate: inv, onDone: () => setNote("") });
   const sign = useAction((b: any) => api(`/combinations/${id}/signoff`, { method: "POST", json: b }), { success: (x: any) => "Recorded", invalidate: inv, onDone: () => { setPicked(new Set()); setNote(""); } });
-  const approve = useAction(() => api(`/combinations/${id}/approve`, { method: "POST" }), { success: (x: any) => `Released version ${x.version} (${x.sha256.slice(0, 12)})`, invalidate: inv });
+  const approve = useAction(() => api(`/combinations/${id}/approve`, { method: "POST" }), { success: (x: any) => `Released version ${x.version}`, invalidate: inv });
   // S5 m7 (P-123, AGENTS rule 4): the second person sees which forms AI picked, with IRCC's words, and confirms they apply.
   const cfg = useApi<{ snapshot: { forms: { form_number: string; title: string; origin?: string; source_quote?: string | null }[] } }>(["config", id, "draft"], `/combinations/${id}/config?mode=draft`);
   const aiPicked = (cfg.data?.snapshot.forms ?? []).filter((f) => f.origin === "AI_PROPOSAL" || f.origin === "AI_FOUND");
@@ -50,7 +52,7 @@ export function ReviewTab({ d }: { d: any }) {
       <div className="grid gap-3 md:grid-cols-3">
         <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author (only the author submits)" text={sub ? `Submitted by ${nameOf(session.data.actors, sub.submittedBy)}, ${fmtWhen(sub.submittedAt)}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${v.draft.changes.length} draft change${v.draft.changes.length === 1 ? "" : "s"}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
         <StepCard n={2} title="The immigration expert signs the content" done={!!sub && !unsignedSme.length} who="Content reviewer (the immigration expert's sign-off)" text={sub ? `${needSme.length - unsignedSme.length} of ${needSme.length} rule, document, check or AI-proposed changes signed` : "Rules, document requirements, checks and AI proposals need the immigration expert's sign-off"} />
-        <StepCard n={3} title="A second person releases" done={false} who="Approver (never the author or submitter)" text={v.releases[0] ? `Last release: Release ${v.releases[0].release} by ${v.releases[0].approver}` : "Nothing released yet"} />
+        <StepCard n={3} title="A second person releases" done={false} who="Approver (never the author or submitter)" text={v.releases[0] ? `Last released: version ${v.releases[0].version}, in Release ${v.releases[0].release}, by ${v.releases[0].approver}` : "Nothing released yet"} />
       </div>
       <Notice tone="info" title={`You are acting as ${me.name} (simulated): ${me.role}`}>Duties: {me.duties.join(", ")}. The server enforces them: an author or submitter can never approve, and a draft changed after submission cannot be released.</Notice>
       {errors.length || warnings.length ? (
@@ -88,7 +90,7 @@ export function ReviewTab({ d }: { d: any }) {
         <Button onClick={() => approve.mutate(undefined)} busy={approve.isPending} disabled={!sub || !can("approve")} title={!can("approve") ? "Only the approver duty can release" : ""}><Rocket /> Approve and release</Button>
       </div>
       {v.releases.length ? (
-        <div><p className="mb-2 font-medium">Released versions</p><Table dense head={["Version", "Fingerprint", "Author / submitter / approver", "Released", "Basis"]}>{v.releases.map((x: any) => <tr key={x.id}><td>v{x.version} {x.status === "SUPERSEDED" ? <Pill>superseded</Pill> : <Pill tone="ok">current</Pill>}</td><td className="mono text-xs">{x.sha256.slice(0, 16)}</td><td className="text-xs">{String(x.author ?? "").split(",").map((a: string) => nameOf(session.data.actors, a)).join(", ")} / {nameOf(session.data.actors, x.submitter)} / {nameOf(session.data.actors, x.approver)}</td><td className="text-xs">{new Date(x.released_at).toLocaleString()}</td><td className="max-w-md text-xs text-text-muted">{x.basis}</td></tr>)}</Table></div>
+        <div><p className="mb-2 font-medium">Released versions</p><Table dense head={["Version", "Author / submitter / approver", "Released", "Basis"]}>{v.releases.map((x: any) => <tr key={x.id}><td title={`Fingerprint (SHA-256): ${x.sha256}`}>v{x.version} <span className="text-xs text-text-muted">· Release {x.release}</span> {x.status === "SUPERSEDED" ? <Pill>superseded</Pill> : <Pill tone="ok">current</Pill>}</td><td className="text-xs">{String(x.author ?? "").split(",").map((a: string) => nameOf(session.data.actors, a)).join(", ")} / {nameOf(session.data.actors, x.submitter)} / {nameOf(session.data.actors, x.approver)}</td><td className="whitespace-nowrap text-xs">{fmtWhen(x.released_at)}</td><td className="max-w-md text-xs text-text-muted">{x.basis}</td></tr>)}</Table></div>
       ) : null}
     </div>
   );

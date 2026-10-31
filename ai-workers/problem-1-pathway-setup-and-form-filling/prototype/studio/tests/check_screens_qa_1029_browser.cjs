@@ -31,6 +31,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("setup: sample inputs loaded", (await api("/demo/load", { method: "POST" })).status === 201);
     const visitor = sql("select id from combination where label = 'Visitor visa' limit 1");
     const released = sql("select combination_id from config_release order by released_at desc limit 1"); // the sample's released combination
+    // #118 review Minor 2: a form-field warning's example is the form's own words, never a PDF path (IMM_5476[0].Page1[0]…).
+    const paths = [];
+    for (const id of sql("select id from combination where retired_at is null").split("\n").filter(Boolean)) for (const x of (await api(`/combinations/${id}/review`)).body?.draft?.problems ?? []) if (/\w\[\d+\]\./.test(x.message)) paths.push(`${x.where} ${x.item}: ${x.message.slice(0, 120)}`);
+    step("Review and release (#118 Minor 2): no warning or error shows a PDF field path as its example", paths.length === 0, paths[0] ?? "none");
 
     for (const [w, h] of [[1440, 900], [1024, 768]]) {
       await p.setViewportSize({ width: w, height: h });
@@ -50,6 +54,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     }
     await p.setViewportSize({ width: 1440, height: 900 });
     await go("/library/fields"); step("QA-80: another page has its own title", (await p.title()) === "Fields · Product Studio", await p.title());
+    await go("/release"); step("QA-80 retest (X4): Review and release, reached from the draft bar, names itself in the tab", (await p.title()) === "Review and release · Product Studio", await p.title());
 
     // QA-79: Overview counts in words and the release line (on the sample's released combination)
     await go(`/c/${released}`);
@@ -116,6 +121,19 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const rv = await main();
     step("QA-73: Review and release: no \"SME duty\", no \"Derived\", no \"no tested helper\"", !/SME duty|Derived definition|Derived fields|no tested helper/.test(rv), (rv.match(/SME duty|Derived[^\n]{0,40}|no tested helper/) ?? [])[0]);
     await axe("Review and release"); await p.screenshot({ path: path.join(SHOTS, "review-1440.png"), fullPage: true });
+    // QA-73 and QA-74 retest (X4): on the released combination, each list warning names its form once, and the versions
+    // table has no fingerprint column (it is in the version's tip) and dates in the one format.
+    await go(`/c/${released}/review`);
+    if (await p.getByRole("button", { name: /^Show all \d+$/ }).count()) await p.getByRole("button", { name: /^Show all \d+$/ }).click();
+    const rr = await main(), lists = rr.split("\n").filter((l) => /rows? of its lists/.test(l));
+    step("QA-73: a list warning names its form once (\"IMM 1295: 37 rows\", never \"IMM 1295: IMM 1295:\")", lists.length > 0 && lists.every((l) => !/(IMM [\w ]+?): \1:/.test(l)), lists.find((l) => /(IMM [\w ]+?): \1:/.test(l)) ?? `${lists.length} list warnings`);
+    const versions = await p.locator("main table").last().innerText();
+    step("QA-74: Released versions: no Fingerprint column and no hash; the fingerprint is in the version's tip", /^Version\s/.test(versions) && !/Fingerprint/.test(versions) && !/[0-9a-f]{16}/.test(versions) && /^Fingerprint \(SHA-256\): [0-9a-f]{64}$/.test(await p.locator("main table").last().locator("tbody td").first().getAttribute("title") ?? ""), versions.slice(0, 160));
+    step("QA-74: Released versions: dates in the one format (no \"10/29/2026, 8:34:03 PM\")", !/\d+\/\d+\/\d{4}/.test(versions), versions.slice(0, 160));
+    // #118 review Minor 3: step 3 said "Release 2" while the table said "v1"; both now name the version and its Release.
+    const card3 = /Last released: version (\d+), in Release (\d+)/.exec(rr), row1 = /v(\d+) · Release (\d+)/.exec(versions);
+    step("Review and release (#118 Minor 3): step 3 and the Released versions table name the same version and the same Release", !!card3 && !!row1 && card3[1] === row1[1] && card3[2] === row1[2], `${card3?.[0]} | ${row1?.[0]}`);
+    await axe("Review and release (released)"); await p.screenshot({ path: path.join(SHOTS, "review-released-1440.png"), fullPage: true });
 
     // QA-48: a retired combination is found under the Retired chip (card v4, P-180), and the counts line says it is hidden
     await go("/");
