@@ -43,17 +43,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await api(`/combinations/${vv}/lines`, { method: "POST", json: { kind: "FORM", formKey: "IMM 5707" } });
     const plan = (await api("/ai/plan", { method: "POST", json: { scope: { kind: "combination", ids: [vv] }, mode: "LIVE", draftAgain: true } })).body;
     const worst = plan.cost_check.worst_usd;
-    seed(120 - worst / 2); // spend so far just under the cap: this start could pass it by half its worst case
-    const open = async () => {
+    const open = async (start = true) => {
       await p.goto(`${BASE}/`); await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
       await p.goto(`${BASE}/c/${vv}`);
       await p.locator('[data-next-step="draft_ai"]').click();
       await p.getByLabel(/Draft again even where/).check();
-      await p.getByRole("button", { name: /^Start \d+ step/ }).click();
+      if (start) await p.getByRole("button", { name: /^Start \d+ step/ }).click();
     };
     const warning = p.locator("[data-cost-warning]");
-    await open();
+    // Break 3 m1 on Draft setup: the panel is opened while the start fits (US$0 spent); spend then arrives (another copy)
+    // to just under the cap, so this start could pass it by half its worst case, and the panel's plan is out of date.
+    await open(false);
+    await p.waitForFunction(() => [...document.querySelectorAll("button")].some((x) => /^Start \d+ step/.test(x.textContent?.trim() ?? "") && !x.disabled), null, { timeout: 30_000 });
+    seed(120 - worst / 2);
+    await p.getByRole("button", { name: /^Start \d+ step/ }).click();
+    await p.getByText("Not started").first().waitFor({ timeout: 30_000 });
+    step("C11.8 N6 break 3 m1 setup (Draft setup): the out-of-date plan's Start is refused by the server, nothing started", (await api("/ai/batches")).body.length === 0);
+    await p.getByRole("button", { name: /^Start \d+ step/ }).click();
     await warning.waitFor({ timeout: 30_000 });
+    step("C11.8 N6 break 3 m1 fail (Draft setup): the next Start shows the cost warning (before: the same refusal again)", (await p.locator("[data-cost-continue]").count()) === 1);
     const text = await p.getByRole("dialog", { name: "This start is over a cost limit" }).textContent();
     step("C11.8 P-179 pass: over the cap, the warning shows before anything starts: worst case, spend so far against the cap, the limit and why", worst > 0 && new RegExp(`US\\$${worst.toFixed(2)}`).test(text) && /Spent so far US\$\d+\.\d\d of US\$120\.00/.test(text) && /AI spending cap\./.test(text) && /Continue records your name and allows this one run/.test(text) && (await api("/ai/batches")).body.length === 0, text);
     // Review m5 + m4: spend so far is said once (before: 3 times), with the same label and cents as Draft setup's cost line.
@@ -120,6 +128,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await startLive.focus(); await p.keyboard.press("Enter"); await p.keyboard.press("Escape"); await sleep(600);
     step("C11.8 N6 fail: Escape before the warning is ready there cancels the warning, not the form's dialog", (await warning.count()) === 0 && (await dd.count()) === 1 && (await api("/ai/batches")).body.length === runsBefore);
     // Review n4: the dialog says spend in cents, as Draft setup and the warning do.
+    const spentNow = lines().filter((l) => l.type === "reserve").reduce((t, l) => t + l.worst_usd, 0).toFixed(2);
+    step("C11.8 N6 review (10a0e90e) 2: after the refusal, the dialog's spend figure is read again (the ledger's, as the refusal's words; before: the figure from when it opened)", (await dd.textContent()).includes(`Spent so far US$${spentNow} of the US$120.00`), `${spentNow} | ${await dd.textContent()}`);
     step("C11.8 N6 review n4 + break 3 m2: the form's dialog says spend in cents, names the wave, and what is left before a cap (never 'US$60 left of the experiment cap') (US$x.xx, never US$119.5)", /Spent so far US\$\d+\.\d\d of the US\$120\.00 experiment cap · Wave 1: US\$\d+\.\d\d of US\$60\.00; US\$\d+\.\d\d left before a cap\./.test(await dd.textContent()), await dd.textContent());
     await startLive.click();
     await warning.waitFor();
