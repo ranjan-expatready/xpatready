@@ -150,7 +150,8 @@ export function setupChecklistOf(s: SetupInput, key = ""): SetupChecklist {
     people: !!s.combinationId && !open.people.length,
     forms: !!s.combinationId && !open.forms.length,
     questions_documents: !!s.combinationId && !open.questions_documents.length,
-    release: !!s.combinationId && !!s.release && !notReady && !open.release.length,
+    // Done only with no draft changes since the latest release (concept), not just because Submit is held back (#111 review m1).
+    release: !!s.combinationId && !!s.release && !notReady && !open.release.length && !(s.changes > 0),
   };
   const firstOpen = STEP_KEYS.find((k) => !doneOf[k]) ?? null;
   const releaseFirst = STEP_KEYS.find((k) => open[k].some((i) => i.fromRelease));

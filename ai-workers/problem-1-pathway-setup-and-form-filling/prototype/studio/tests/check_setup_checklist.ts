@@ -122,6 +122,9 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
   const formsOpen = setupChecklistOf(live({ changes: 1, forms: { lines: 0, fromLibrary: 0, draftable: 0, unmapped: 0, sources: 0 } }));
   const docsOpen = setupChecklistOf(live({ changes: 1, problems: [err("Documents")] }));
   step("C11.10 (fail case): no Submit for review while Forms or Documents are still open (the endpoint would refuse it)", [formsOpen, docsOpen].every((c) => !c.steps.some((st) => st.open.some((i) => i.kind === "submit")) && c.next?.step !== "release"), [formsOpen.next?.line, docsOpen.next?.line]);
+  // #111 review m1: holding Submit back must not make step 5 look done on a Live combination with draft changes.
+  step("C11.10 (fail case): with draft changes and Forms or Documents open, step 5 is not done", [formsOpen, docsOpen].every((c) => c.steps[4].state !== "done"), [formsOpen.steps[4].state, docsOpen.steps[4].state]);
+  step("C11.10: a Live combination with no draft changes has step 5 done", setupChecklistOf(live()).steps[4].state === "done", setupChecklistOf(live()).steps[4].state);
   const gap = setupChecklistOf(live({ problems: [err("Questionnaires"), err("Questionnaires")], changes: 1, review: { stage: "submit", submittedBy: null, authors: [] } }));
   const s4 = gap.steps[3];
   step("C11.10: an answer a form reads and nobody is asked → step 4 open, \"2 answers asked of nobody\", 4b not done, 4a done", s4.state !== "done" && s4.open.some((i) => i.text === "2 answers asked of nobody") && s4.parts?.[1].done === false && s4.parts?.[0].done === true, s4.open);
