@@ -114,6 +114,29 @@ function pdf(title: string, text: string) {
   if (rel) { const lf = lineForms(sql(`select combination_id from review_submission where id = '${rest(rel)}'`));
     const lists = await Promise.all(lf.map((f) => queue(`&form=${encodeURIComponent(f)}`)));
     ok("C2.12 plan §7 pass: a release is listed under each of its combination's forms", lf.length >= 2 && lists.every((l) => l.items.some((x) => x.id === rel.id)), lf); }
+  // Review (9f2132bd) m2: a form line taken off a combination (its newest version RETIRED) is no longer one of its forms:
+  // the combination's change item stops listing it.
+  const comboItem = q.items.find((i) => i.id.startsWith("change:") && sql(`select kind from library_change where id = '${rest(i)}'`) === "combination" && i.forms.length >= 2);
+  if (comboItem) {
+    const cid = sql(`select coalesce(combination_id::text, key) from library_change where id = '${rest(comboItem)}'`), gone = comboItem.forms[0];
+    const ver = Number(sql(`select max(version) from combination_form where combination_id = '${cid}' and lineage_key = '${gone}'`));
+    const rm = await call("DELETE", `/combinations/${cid}/forms/${encodeURIComponent(gone)}`, { version: ver });
+    const after = (await queue()).items.find((i) => i.id === comboItem.id);
+    ok("C2.12 D2 fail (review m2): a form line removed from a combination is no longer one of its forms (before: any version counted)", rm.status < 300 && !!after && !after.forms.includes(gone) && after.forms.length === comboItem.forms.length - 1, { rm: rm.status, gone, before: comboItem.forms, after: after?.forms });
+  } else ok("C2.12 set-up: a combination change with two forms or more", false);
+  // Review (9f2132bd) m3: a file whose edition label is not "<number> (…)" ("IMM 5881 E (05-2026)") belongs to its form as
+  // the library knows it (IMM 5881), looked up through the edition, never parsed from the label. Test input: the form, its
+  // edition, a file and a running step reading it.
+  const runningBatch = q.items.find((i) => i.kind === "running");
+  if (runningBatch) {
+    const ws = sql("select id from workspace where key = 'demo'");
+    sql(`insert into gov_form_def (id, workspace_id, form_key, display_name) values (gen_random_uuid(), '${ws}', 'IMM 5881', 'C2.12 check form') on conflict do nothing`);
+    sql(`insert into form_edition (id, workspace_id, gov_form_def_id, edition_label) select gen_random_uuid(), '${ws}', id, 'IMM 5881 E (05-2026)' from gov_form_def where form_key = 'IMM 5881' and workspace_id = '${ws}' on conflict do nothing`);
+    const att5881 = sql(`insert into source_attachment select (jsonb_populate_record(null::source_attachment, to_jsonb(a) || jsonb_build_object('id', gen_random_uuid(), 'edition', 'IMM 5881 E (05-2026)', 'sha256', repeat('5', 64)))).* from source_attachment a where a.edition is not null limit 1 returning id`).split("\n")[0];
+    sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, started_by, batch_id) select gen_random_uuid(), workspace_id, combination_id, '${att5881}', 'read_form', 'STUB', 'QUEUED', 'user-A', '${rest(runningBatch)}' from source_attachment where id = '${att5881}'`);
+    const r5881 = (await queue()).items.find((i) => i.id === runningBatch.id);
+    ok("C2.12 D2 fail (review m3): a file labelled 'IMM 5881 E (05-2026)' belongs to IMM 5881, the library's form (before: 'IMM 5881 E', parsed from the label)", !!r5881 && r5881.forms.includes("IMM 5881") && !r5881.forms.includes("IMM 5881 E"), r5881?.forms);
+  } else ok("C2.12 set-up: a running AI batch", false);
   const bad2 = await call("GET", "/review-queue?filter=all&form=");
   ok("C2.12 fail (review m4): an empty form number is refused in words, naming the field", bad2.status === 400 && /form number/.test(JSON.stringify(bad2.body)), bad2.body);
   console.log(`\n${pass} passed, ${fail} failed`);
