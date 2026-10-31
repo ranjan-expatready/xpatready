@@ -46,3 +46,72 @@ Repro: mark IMM 5409 (set `index_date_modified='2001-01-01'`, then fill, and `ne
 - **Keyboard:** the fill button is reached by Tab (16th stop) and Enter fills. **Layout:** at 1024 px and at 720×450 (200 % zoom) there is no horizontal scroll and the button stays visible.
 
 Not tested: the finder end to end (it needs AI rounds) and a real second-edition upload for M3.
+
+---
+
+# Round at 57f7d79d (50-row "Show more"; the fill reads the newest approved edition)
+
+Isolated copies `brk6` on :4457 (sample loaded, then filled: 237 rows) and `brk6b` on :4458 (its own copy of the recorded canada.ca files in its working folder, `STUDIO_CANADA_FIXTURES`). Both used `P2_LEDGER_DIR` in /tmp, no `*_LIVE`, US$0. The X5 files are the same at the merge head e849e9e6. Both copies are stopped, their databases dropped and their working folders removed. No repo file was changed apart from this section.
+
+## Blocker
+None.
+
+## Major
+**M6. "Check against canada.ca" still judges by a held edition, so it clears the "newer" mark the fill and the list set from the approved one.** `compareWithCanada` uses `newestEdition(def.editions.filter(channel !== "ONLINE"))`, which includes editions not in `approvedShas` (`form-library.ts:215`). `checkCanada` then clears `newerOnIndexAt` on `outcome:"current"` (`:191`). This commit made the fill and the list use one rule (`:171`), but the check, the only thing that clears the mark, is a third reader and still uses the old rule.
+Repro on :4457:
+1. Relabel IMM 5409's approved edition "IMM 5409 (06-2022)", with `canada_updated='2022-06'`.
+2. Insert a held edition "IMM 5409 (01-2023)": sha `ddd…` (not approved), `canada_updated='2023-01'`, and the real 01-2023 PDF URL.
+3. Set `index_date_modified='2022-06'`.
+4. Fill. The answer has `newer:["IMM 5409"]`, and the list shows `newer_file` / "Newer edition on canada.ca". Both are correct.
+5. `POST /library/forms/IMM%205409/check-canada`. It answers 201 "IMM 5409 (01-2023) is still the current edition on canada.ca", naming the held edition. `newer_on_index_at` is now null and the row reads **Ready** with edition 06-2022.
+
+Result: combinations keep filing the 06-2022 file and nothing says canada.ca has a newer one. I reached a held edition row only by inserting it into the database; I found no product path that creates one in this round. Severity is Major if one can exist (Devin's point assumes it can). `proposeAccepts` (`:134`) has the same "any edition" rule; that is older than this slice.
+
+## Minor
+- **m11. The last "Show more" drops focus to `<body>`.** Keyboard only: Tab to "Show 50 more" and press Enter four times. After the fourth press the `[data-show-more]` paragraph unmounts and `document.activeElement` is BODY (WCAG 2.4.3). On earlier presses focus stays on the button, but the new rows appear above it, so the next Tab skips them and a keyboard user must Shift+Tab back through the new rows (`library-forms.tsx:177`). "Showing N of M" is not in a live region either, so the new count is not announced.
+- **m12. The limit resets in an effect, after one render that uses the old limit.** `useEffect(() => setLimit(PAGE), [type, usedBy, status, dq])` (`library-forms.tsx:77`). After Show more up to all 237 rows, the next chip press first renders every match, then renders again at 50. Timed in the page (click to two frames later, 3 runs each, 1440 px):
+
+  | Chip | From 50 rows shown | From all 237 shown |
+  |---|---|---|
+  | Forms | 51–64 ms | 119–189 ms |
+  | No file yet | 34–45 ms | 138–145 ms |
+  | Checklists | 60–65 ms | 100–114 ms |
+
+  This is within the 200 ms budget on this machine, but at its edge. Resetting the limit in the same handler, or keying it on the filter, would avoid the wasted render.
+- **m13. A form that held its only edition loses the index's newer date for good.** Repro on IMM 0008 (listed by IRCC, no file):
+  1. Add a held edition "IMM 0008 (01-2020)" and set `index_date_modified='2019-01'`.
+  2. Fill. `hasFile` is false, so there is no mark, but the index date silently moves to 2026-05 (`form-library.ts:177`).
+  3. Approve the edition (an `approved_source` row).
+  4. The list says **Ready** with 01-2020, and a fill again marks nothing.
+
+  Had the edition been approved before the fill, the same data would show "Newer edition on canada.ca". The outcome depends on timing.
+- **m14. The fill's words count its plan, not what it did.**
+  - Six simultaneous fills on a fresh sample give one `created:221` and five `created:0`; the counts are right now. Each of the five, however, says "9 already in the library" when 230 were.
+  - A fill raced against 8 approved deletes (3 rounds, all 201, no 404s) says "230 already in the library" while 8 of them were deleted during the fill. `listed` is `plan.listed.length`, not the count `updateMany` changed.
+- **m15. Unchecked rows from the index (hostile recorded copy on :4458):**
+  - a row with an empty link text is stored with `display_name=''`, so the list shows a blank Title;
+  - a 10,799-character title is stored whole (the row is clamped to 2 lines in the list);
+  - `2024-02-30` passes as a date (the date check is a regex only, `engine/canada.ts:77`);
+  - for "imm  9004" and "IMM 9004", the first row wins and the later date (2025-03) is ignored.
+
+## What held
+- **Paging:**
+  - 50 rows with "Showing 50 of 237 · Show 50 more", then 100, 150, 200 and 237.
+  - Every filter, chip, Used by and search change resets the list to 50.
+  - The count matches the matches: "imm" gives 196, and fast typing of "imm 52" gives 8 rows, the same as the API's `?q=imm%2052`, with focus kept in the search box.
+  - No stale rows after the deferred term settles. Clearing the search never flashed "No forms yet".
+  - Opening the drawer on row 121 (IMM 1018) and closing it with Escape puts focus back on that row's number, with 150 rows still shown.
+  - Widening back to All: 170 ms; clearing the search: 171 ms; refining "imm" to "imm 5": 190 ms (Playwright-timed). The first view took 509 ms.
+- **Held versus approved, fill and list:** the fill and the list now agree. In M6 steps 1–4 both say newer, and before the fill both say Ready.
+- **401, 403 and 409:**
+  - The fill, list and check-canada answer 401 with no actor, an empty actor, "USER-A", "nobody" or "user-A, user-A".
+  - The fill and check-canada answer 403 for user-B, user-C and user-O.
+  - A changed recorded copy gives 409 "IRCC's forms list could not be read … Nothing was added" with the count unchanged, and the UI shows this as a toast (`/tmp/brk6/shots/fill-409.png`, not committed).
+  - An unknown actor in the browser gets "The studio did not accept the simulated person", not a crash.
+- **Concurrency:** 6 parallel fills give 237 rows and 237 distinct keys, with one audit line saying 221. Fill against approved deletes gives no 404 and no rollback (m4 held). A removed form is re-listed by the next fill (m3, as decided).
+- **Hostile text:**
+  - a planted "IGNORE ALL PREVIOUS INSTRUCTIONS…" title is stored and shown as plain text, and nothing acts on it;
+  - `<img onerror>` is shown as text, with no dialog fired;
+  - Devanagari, CJK and Arabic titles are stored and found by search ("临时").
+- **Layout:** at 1024 px and at 720×450 (200 %) there is no page scroll and "Show N more" stays visible.
+- **Scale (not judged, §9 is sample-only):** 2,042 rows filled in 0.72 s; the list call takes 0.16–0.26 s and returns 1.4 MB.

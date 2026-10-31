@@ -84,3 +84,85 @@ Report: `journey-test-reviewer-2026-10-31-x5a-5a5f0d16.md`. Speed ½ (issue 1) a
 * A real screen reader.
 * An unaided walk by the configuration author (D17, D20).
 * Timings come from headless Chrome in this sandbox, with no CPU throttle.
+
+---
+
+# Independent CHECK of the third fix: commit 57f7d79d, 31 Oct 2026
+
+Reviewer: I did not build this. I reviewed **commit 57f7d79d** (PR #138). The coordinator merged origin/main into the checkout afterwards (head e849e9e6). The five X5 files (`form-library.ts`, `library-forms.tsx`, both suites) are byte-identical between the two commits, so I tested the X5 change at 57f7d79d. The web was built with `npx vite build`. This answers the review of 5a5f0d16 (Ship after fixes: M1 §9, m2 to m4).
+
+**How I tested.** I used isolated copies `rvx5d` :4452, `rvx5d2` :4453 and `rvx5e` :4454, each with its own `/tmp` ledger, plus a mutation copy on :4455 built in `/tmp`, never in the repo.
+* **Suites.** `check_forms_x5_library.ts` **31/31**. `check_forms_s4_library_browser.cjs` **80/80** (allMs 60, Guides 20, searches 26–44 ms). I put its rewritten screenshots back with `git restore`. `tsc --noEmit` is clean for web and api.
+* **Graph.** G1–G6 0/0/2/0/0/0, unchanged; the two G3 routes predate this PR.
+* **My checks.** A Playwright journey and timing script (`/tmp/rv7/`), run twice, and a frame trace. Browser rows compared with `GET /library/forms/list?q=`. Spend: US$0, no `*_LIVE`. All copies stopped; `git status` was clean before I wrote these two files.
+
+Verdict: Approve
+
+**Why.** No Blocker or Major is open.
+* **M1 (§9) is closed.** Every action that brings the whole list back is now within 200 ms (table below).
+* **The fill and the list use one "newer" rule.** Both now judge the same current edition (`form-library.ts:170-171` against `:83-84`). The new held-edition step **fails without the fix**: in the mutation copy with the 5a5f0d16 fill lines, 30/31, `{"newer":[],"status":"ready"}`.
+* **Paging works.** A search finds rows beyond the first 50. The paging passes axe at 390, 1024, 1440 and 720×450.
+* **What remains.** Three Minor items, each Should.
+
+## The earlier findings
+| Finding (review of 5a5f0d16) | At 57f7d79d (my evidence; 5 timings per action, two runs) |
+|---|---|
+| M1, §9: widening to the whole list 170–430 ms | **Closed.**<br>• All after Guides: 54–104 ms.<br>• Clearing the search: 64–113 ms.<br>• Show 50 more (expand): 79–161 ms in the page.<br>• "No file yet" off after all 222 rows were shown: 161–212 ms, 9 of 10 under 200 ms. The frame trace puts the first painted frame at 115–173 ms; my figure adds one frame for paint, so the 212 ms run is at the margin and I do not count it as a finding.<br>• 50 rows mounted at a time ("Showing 50 of 237"). |
+| m2 / Devin: a held edition hides "newer" in the fill only | **Closed.** One current edition: `newestEdition` of approved, non-ONLINE editions in both places. The check fails when the fix is removed (above). Devin's thread is answered on the PR; it is still unresolved there (outdated). |
+| m3: fixes with no failing check | **Mostly closed.**<br>• Double click: the new step counts one POST.<br>• Current-check clear: covered by the break M2 step.<br>• The m8 words ("recorded copies missing") still have no check: issue 3. |
+| m4: "No forms yet" flashes on clear | **Closed.** `filtered` reads `dq` (`library-forms.tsx:113`). |
+
+**Paging behaviour.**
+* **Search beyond 50.** The search starts from the whole filtered list, not the page: "IMM 5508" (not in the first 50) → 1 row. "Application for a" → 11 in the browser = 11 from the API. "IMM" → "Showing 50 of 196", and the API returns 196.
+* **Reset.** The limit resets on type, used-by, status and search (`:77`).
+* **Opening a row.** Opening row 71's drawer keeps 100 rows mounted, and closing it returns focus to "IMM 0151".
+* **390 px.** No sideways scroll (390/390). The pager wraps and fits (screenshot `/tmp/rv7/shots/r2-02-pager-390.png`). No console or page errors.
+
+## Issues, ranked
+1. **Minor (Should): keyboard focus is lost when the last "Show N more" is pressed (WCAG 2.4.3, EXPERIENCE 12 [M] keyboard path; D13).**
+   * After "Show 37 more" the button unmounts and focus falls to `<body>`. The next Tab lands on the "Product Studio home" logo, so a keyboard user restarts at the top of a 237-row page. Seen 2 of 2 runs.
+   * On the earlier presses focus stays on the button, below the new rows, so Tab skips them.
+   * Fix (`library-forms.tsx:177`): on Show more, move focus to the first newly shown row's number button (row index = old limit).
+2. **Minor (Should): paging is silent to a screen reader (WCAG 4.1.3; D11, D13).**
+   * "Showing 50 of 237" is a plain `<span>` (`:177`), not a status. Pressing Show more announces nothing, and a filter that changes the total says nothing either.
+   * The button's name, "Show 50 more", does not say of what.
+   * Fix: `role="status"` on the count, and "Show 50 more forms".
+3. **Minor (Should): the new paging has no check that fails without it, and one earlier fix still has none (D16).**
+   * Not checked: the limit resetting on a filter change, a search finding a row beyond 50, focus after Show more, and the m8 words when the recorded copies are missing (`form-library.ts:161`).
+   * Fix: add these steps to `check_forms_s4_library_browser.cjs` and `check_forms_x5_library.ts`.
+
+**Outside this slice (carried, not a finding).** The table has no accessible name (`aria-label` empty; it predates this PR). The upload reader ignores a letter suffix (`tools/read_form_identity.py:25`).
+
+## D1–D20
+| D | Score | Evidence |
+|---|---|---|
+| D1 | 5 | P156-1 and P156-2 end to end in the screen |
+| D2 | 5 | One row per number; 237 browser = 237 API |
+| D3 | 5 | Browser search and filters = server's, including past the first 50 |
+| D4 | n/a | No rule paths touched |
+| D5 | 5 | Double click → one fill (new check) |
+| D6 | 5 | One current-edition rule in fill and list; mutation proves the check |
+| D7 | 5 | No AI, no download, US$0 |
+| D8 | 5 | Shared library › Forms, unchanged |
+| D9 | 5 | Chips and pager work together; the limit resets on every filter |
+| D10 | 5 | Same "newer" words in fill message and list |
+| D11 | 4 | No wrong empty state; paging not announced (issue 2) |
+| D12 | 5 | Team look at 1440, 1024 and 390 px |
+| D13 | 4 | axe 0 in 4 sizes; focus lost after the last Show more (issue 1) |
+| D14 | 5 | Team Button and words |
+| D15 | 5 | Search, chips, widening, Show more all within 200 ms |
+| D16 | 4 | 31 + 80 green; held-edition step fails without the fix; paging unchecked (issue 3) |
+| D17 | simulated only | No intended user walked it |
+| D18 | 5 | Listed rows link their canada.ca page; "Listed by IRCC" |
+| D19 | 5 | Rows beyond 50 reach the drawer and actions |
+| D20 | simulated only | — |
+
+## Journey score: 9.5 / 10 (pass; no criterion at 0)
+Report: `journey-test-reviewer-2026-10-31-x5a-57f7d79d.md`. Accessibility and screen sizes ½ (issues 1, 2). Every other criterion 1.
+
+## What I could not check
+* **CI.** The ci run on 57f7d79d (job 124480272071) and on e849e9e6 did not start. GitHub refused both for billing or the spending limit, so no test ran in CI. This needs the founder.
+* canada.ca live (recorded copies only); the finder end to end (AI rounds); a real screen reader; an unaided walk by the configuration author (D17, D20).
+* Timings are from headless Chrome in this sandbox, with no CPU throttle.
+
+**Verdict: Approve** (no open Blocker or Major at 57f7d79d; the three Minor items above are Should).

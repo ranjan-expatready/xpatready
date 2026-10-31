@@ -275,6 +275,24 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const allMs = await p.evaluate(async () => { const b = [...document.querySelectorAll("button")].find((x) => /^All\s*\d+$/.test(x.textContent.trim())); const t0 = performance.now(); b.click(); for (;;) { if (document.querySelectorAll("tr[data-form]").length >= 40) return performance.now() - t0; await new Promise((r) => requestAnimationFrame(r)); } });
     step("X5 review (86f9447c, 5a5f0d16) M1 fail: after the fill, search, the Guides chip and widening back to All answer in under 200 ms (STANDARDS §9; before: 184-375, 207-217 and 316-325 ms)", Math.min(...searches) < 200 && guidesMs < 200 && allMs < 200, JSON.stringify({ searches: searches.map((x) => Math.round(x)), guidesMs: Math.round(guidesMs), allMs: Math.round(allMs) }));
     await p.getByRole("button", { name: /^All\s*\d+$/ }).click(); await sleep(300); // back to every type
+    // X5 review/break (57f7d79d) m1, m11, m12: Show more puts focus on the first row it added, the count is a status, the last
+    // press leaves focus on a row (before: on the page), and any filter or search change starts again at 50.
+    const pager = p.locator("[data-show-more]");
+    const total = Number(((await pager.textContent()) ?? "").match(/of (\d+)/)?.[1] ?? 0);
+    await pager.getByRole("button", { name: /^Show \d+ more forms$/ }).click(); await sleep(300);
+    const focusAfter = await p.evaluate(() => { const tr = document.activeElement?.closest("tr[data-form]"); return tr ? [...document.querySelectorAll("tr[data-form]")].indexOf(tr) : -1; });
+    step("X5 review m1 fail: Show more moves focus to the first row it added (row 51; before: the button below the new rows)", focusAfter === 50, `focused row index ${focusAfter}`);
+    step("X5 review m2 fail: the count beside Show more is a status, and the button says forms", (await pager.locator('[role="status"]').count()) === 1 && /Showing 100 of \d+ forms/.test((await pager.textContent()) ?? ""), await pager.textContent());
+    while (await pager.count()) { await pager.getByRole("button").click(); await sleep(200); }
+    const lastFocus = await p.evaluate(() => !!document.activeElement?.closest("tr[data-form]"));
+    const lastCode = await p.locator("tr[data-form]").last().getAttribute("data-form");
+    step("X5 break m11 fail: after the last Show more, focus is on a row it added (before: the page body)", lastFocus && (await p.locator("tr[data-form]").count()) === total, `rows ${await p.locator("tr[data-form]").count()} of ${total}`);
+    await p.getByRole("button", { name: /^Guides\s*\d+$/ }).click(); await sleep(200); await p.getByRole("button", { name: /^All\s*\d+$/ }).click(); await sleep(300);
+    step("X5 review m3 fail: a filter change starts the list again at 50 (Showing 50 of N)", (await p.locator("tr[data-form]").count()) === 50 && /Showing 50 of/.test((await pager.textContent()) ?? ""), await pager.textContent().catch(() => "none"));
+    // A search finds a form past the first 50 (the last row of the whole list).
+    await searchBox.fill(lastCode ?? "none"); await sleep(400);
+    step("X5 review m3 fail: a search finds a form past the first 50 rows", lastCode !== null && (await p.locator(`tr[data-form="${lastCode}"]`).count()) === 1, String(lastCode));
+    await searchBox.fill(""); await sleep(300);
     await axe("X5: the library after the fill from IRCC's forms list");
     // One readable view (the whole list is now some 240 rows): the first screen at 1440 px.
     await p.setViewportSize({ width: 1440, height: 900 }); await p.getByText("Listed by IRCC · no file yet").first().evaluate((e) => e.scrollIntoView({ block: "center" })); await sleep(150);
