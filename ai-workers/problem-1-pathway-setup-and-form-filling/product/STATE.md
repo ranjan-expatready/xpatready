@@ -46,7 +46,7 @@ Archived 31 Oct: five old Lead chats and five old Mac lanes; their copies remove
 
 ## Watch
 * **Auto-merge:** the first day had three faults, all fixed: the Mac queue, a lost trigger, and an approval going stale after a refresh. Watch that approved PRs merge without help.
-* **Demo update:** it fails if the demo has rewritten tracked files (stub runs); then move it by hand (`git -C .claude/worktrees/demo-main checkout -- . && … checkout --detach origin/main`, then `start.sh`). An automatic reset step was refused by the permission system.
+* **Demo update:** 31 Oct: the Mac runner ended the demo when the update job finished ("Terminate orphan process"); the tech lead restarted it by hand, and the workflow now starts it with an empty `RUNNER_TRACKING_ID` so it survives. Also: it fails if the demo has rewritten tracked files (stub runs); then move it by hand (`git -C .claude/worktrees/demo-main checkout -- . && … checkout --detach origin/main`, then `start.sh`). An automatic reset step was refused by the permission system.
 * **Week-one numbers, on demand:**
   * median time from start to merge (target under a day);
   * the tech lead's share of commits (target under 15%);

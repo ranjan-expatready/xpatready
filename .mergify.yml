@@ -1,0 +1,22 @@
+# Merge queue with batches (P-201, founder 31 Oct). An approved PR enters the queue; Mergify combines up to 4 of them
+# the way they will land on main, runs the full check once on that batch PR (branch mergify/merge-queue/...), and merges
+# them all when it passes. A failing batch is split until the PR that broke it is found; the others still merge.
+queue_rules:
+  - name: default
+    batch_size: 4
+    batch_max_wait_time: 10 min
+    queue_conditions:
+      - base = main
+      - "label = review: approved"
+    merge_conditions:
+      - check-success = ci
+    merge_method: merge
+
+pull_request_rules:
+  - name: queue every approved pull request to main
+    conditions:
+      - base = main
+      - "label = review: approved"
+    actions:
+      queue:
+        name: default
