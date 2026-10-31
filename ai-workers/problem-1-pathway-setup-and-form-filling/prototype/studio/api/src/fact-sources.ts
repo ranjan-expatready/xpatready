@@ -178,7 +178,7 @@ export class FactSources {
       return { runId: job.id, proposed: items.length, waitingAlready, decidedAlready };
     }, QUEUE_TX);
     await this.audit.log(c.workspaceId, actor.id, "proposed", "pre-qualification picks", c.combinationKey, `${actor.name} asked the rules for pre-qualification picks on "${c.label}": ${out.proposed} proposed${out.waitingAlready ? `, ${out.waitingAlready} already waiting on To review` : ""} (no AI, US$0)`, { runId: out.runId }, combinationId);
-    const decidedWords = out.decidedAlready ? ` ${out.decidedAlready} the rules would propose ${out.decidedAlready === 1 ? "was" : "were"} decided by a person before, so ${out.decidedAlready === 1 ? "it is" : "they are"} not proposed again.` : "";
+    const decidedWords = out.decidedAlready ? ` ${out.decidedAlready} pick${out.decidedAlready === 1 ? " was" : "s were"} decided by a person before, so ${out.decidedAlready === 1 ? "it is" : "they are"} not proposed again.` : "";
     const words = out.proposed
       ? `${out.proposed} pick${out.proposed === 1 ? " is" : "s are"} waiting on To review, each with its reason. Accept the ones a prospect should be asked.${out.waitingAlready ? ` ${out.waitingAlready} more ${out.waitingAlready === 1 ? "was" : "were"} already waiting.` : ""}${decidedWords}`
       : out.waitingAlready ? `Nothing new: the ${out.waitingAlready} pick${out.waitingAlready === 1 ? " the rules propose is" : "s the rules propose are"} already waiting on To review.${decidedWords}`
