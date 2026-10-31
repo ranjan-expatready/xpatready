@@ -286,9 +286,25 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     await p.getByRole("dialog").getByText("Use the saved AI answer").click();
     await click(p.getByRole("dialog").getByRole("button", { name: "Use saved AI answer" }));
     // The replay runs after the stub pass, in the background: a busy CI runner needs more than a click's 30 s (PR #39 CI
-    // timed out here once; a local run takes a few seconds). If it never ends, the row's own words say why.
+    // timed out here once; a local run takes a few seconds). The wait reads the real state from the API each second (the
+    // form's attachment and its newest field-map job), so a failure says which it was (#133 CI, 31 Oct): the job ended
+    // FAILED / BLOCKED / CANCELLED (its own message), the job finished but the page never showed the link (the Forms tab
+    // did not refresh: a real stall), or it was still running after 3 minutes (a slow machine: its state is printed).
     const link = p.getByRole("row", { name: new RegExp(edition) }).getByRole("link", { name: "Review AI proposals" });
-    await link.waitFor({ timeout: 180000 }).catch(async () => { throw new Error(`${edition}: no "Review AI proposals" after 3 minutes; the row says: ${(await p.getByRole("row", { name: new RegExp(edition) }).first().textContent().catch(() => "?"))?.slice(0, 400)}`); });
+    const cid = new globalThis.URL(p.url()).pathname.split("/")[2]; // URL is this file's base address
+    let doneAt = 0, state = null;
+    for (const deadline = Date.now() + 180000; !(await link.count()); await p.waitForTimeout(1000)) {
+      const c = await api(`/combinations/${cid}`).catch(() => null);
+      const att = (c?.attachments ?? []).find((a) => (a.edition ?? "").startsWith(edition));
+      const job = (c?.jobs ?? []).find((j) => j.attachmentId === att?.id && j.kind === "field_map"); // newest first
+      state = { attachment: att?.status ?? "none", job: job?.status ?? "none", message: job?.message ?? null };
+      if (["FAILED", "BLOCKED", "CANCELLED"].includes(state.job)) throw new Error(`${edition}: the AI step ended ${state.job}: ${state.message}`);
+      if (state.attachment === "DRAFTED" && ["COMPLETED", "APPLIED"].includes(state.job)) {
+        doneAt ||= Date.now();
+        if (Date.now() - doneAt > 15000) throw new Error(`${edition}: the job finished (${state.job}) 15 s ago but the page never showed "Review AI proposals": the Forms tab did not refresh`);
+      }
+      if (Date.now() > deadline) throw new Error(`${edition}: no "Review AI proposals" after 3 minutes; still ${JSON.stringify(state)}`);
+    }
     await link.click(); await idle();
   };
   await draftReplay("IMM 1295");
