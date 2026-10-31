@@ -6,11 +6,13 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { Play, Recycle, ScanLine, Sparkles } from "lucide-react";
-import { api, useAction, useApi, useSessionView } from "@/lib/api";
+import { api, ApiError, useAction, useApi, useSessionView, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Notice, Pill, Select } from "@/components/ui/controls";
 import { ModePill, StatusPill } from "@/pages/combination";
 import { fmtWhen } from "@/components/status";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCostGate } from "@/components/cost-warning";
+import { COST_WORDS, type CostCheck } from "../../../contracts/cost-check";
 
 /** One attached source as GET /combinations/:id lists it, and one reading or drafting step. */
 export type Attachment = { id: string; combinationId: string; kind: string; fileName: string; edition: string | null; status: string; statusDetail: string | null; recognised: boolean; uploadedVia: string; bytes: number };
@@ -117,16 +119,39 @@ function DraftDialog({ a, onClose }: { a: Attachment; onClose: () => void }) {
   const [runFile, setRunFile] = React.useState("");
   React.useEffect(() => { if (saved.length && !runFile) { setRunFile(saved[0].file); setMode("replay"); } }, [saved.length]);
   const qc = useQueryClient();
-  const go = useAction(() => api(`/attachments/${a.id}/draft`, { method: "POST", json: { mode, runFile: mode === "replay" ? runFile : undefined } }), {
-    success: mode === "replay" ? "Saved AI answer used: proposals compared with the library" : mode === "live" ? "AI draft started" : "Stub pass started", invalidate: [["combination", a.combinationId]], onDone: () => { void qc.invalidateQueries({ queryKey: ["combination"] }); onClose(); } });
+  const toast = useToast();
+  // N6 (review N1): the live start is the same plan as Draft setup's with the scope narrowed to this form (D280), so it
+  // carries the same cost check: over a limit, the cost warning first (Continue or Cancel), as on Draft setup. The plan is
+  // made when Live is chosen, so the click opens the warning at once. The server checks everything again.
+  const scope = { kind: "source" as const, ids: [a.id] };
+  const plan = useQuery<{ cost_check: CostCheck; run_key: string; plan_sha256: string }>({ queryKey: ["ai-plan", "source", a.id, "LIVE", true], queryFn: () => api("/ai/plan", { method: "POST", json: { scope, mode: "LIVE", draftAgain: true } }), enabled: mode === "live", staleTime: 0, retry: false });
+  const cost = useCostGate();
+  // One launch key per dialog: a retry after Continue (or a double click) returns the same run, never a second one.
+  const [key] = React.useState(() => (globalThis.crypto?.randomUUID?.() ?? `k-${Date.now()}-${Math.random().toString(36).slice(2)}`));
+  const [busy, setBusy] = React.useState(false);
+  const start = async () => {
+    setBusy(true);
+    try {
+      const launch = (overrideId?: string) => api(`/attachments/${a.id}/draft`, { method: "POST", json: { mode, runFile: mode === "replay" ? runFile : undefined, idempotencyKey: key, ...(overrideId ? { overrideId } : {}) } });
+      // No plan (it could not be made: the server's launch says why in words) or not live (US$0): straight to the launch.
+      const r = mode === "live" && plan.data ? await cost.gate(plan.data, { kind: "draft_field_maps", scope, mode: "LIVE", draftAgain: true }, launch) : await launch();
+      if (r === undefined) { toast.push({ tone: "info", text: COST_WORDS.cancelled }); return; }
+      toast.push({ tone: "ok", text: mode === "replay" ? "Saved AI answer used: proposals compared with the library" : mode === "live" ? "AI draft started" : "Stub pass started" });
+      void qc.invalidateQueries({ queryKey: ["combination"] }); onClose();
+    } catch (e) {
+      toast.push({ tone: "danger", text: (e as Error).message });
+      if (e instanceof ApiError && e.status === 409) void plan.refetch();
+    } finally { setBusy(false); }
+  };
   const l = opts.data?.ledger;
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()} title={`Draft the field map of ${a.edition}`} description="The AI reads the list of the form's fields (public official content only) and proposes, for every form field, whose fact fills it and which library field it is. People decide every proposal before anything reaches the draft."
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => go.mutate(undefined)} busy={go.isPending}><Play /> {mode === "replay" ? "Use saved AI answer" : mode === "live" ? "Start live AI draft" : "Run stub pass"}</Button></>}>
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void start()} busy={busy} disabled={mode === "live" && plan.isFetching}><Play /> {mode === "replay" ? "Use saved AI answer" : mode === "live" ? "Start live AI draft" : "Run stub pass"}</Button></>}>
       <div className="space-y-3 text-sm">
-        <label className="flex items-start gap-2"><input type="radio" checked={mode === "live"} onChange={() => setMode("live")} className="mt-1" disabled={liveClosed} /><span>{liveClosed ? <><b>Live AI call</b>: not open yet for a form approved in the product (only for files on the official list); run the stub pass.</> : <><b>Live AI call</b> through the guarded route: stub pass first, then Claude Opus 5.5, up to US$5 for this run. {l ? `Spent so far US$${l.committed_usd} of the US$${l.cap_usd} experiment cap; US$${l.remaining_usd} left.` : ""} {opts.data && !opts.data.key_present ? <span className="text-text-danger">The API key file is missing: a live call will be refused.</span> : null}</>}</span></label>
+        <label className="flex items-start gap-2"><input type="radio" checked={mode === "live"} onChange={() => setMode("live")} className="mt-1" disabled={liveClosed} /><span>{liveClosed ? <><b>Live AI call</b>: not open yet for a form approved in the product (only for files on the official list); run the stub pass.</> : <><b>Live AI call</b> through the guarded route: stub pass first, then Claude Opus 5.5, up to US$5 for this run. {l ? `Spent so far US$${l.committed_usd.toFixed(2)} of the US$${l.cap_usd.toFixed(2)} experiment cap; US$${l.remaining_usd.toFixed(2)} left.` : ""} {opts.data && !opts.data.key_present ? <span className="text-text-danger">The API key file is missing: a live call will be refused.</span> : null}</>}</span></label>
         <label className="flex items-start gap-2"><input type="radio" checked={mode === "replay"} onChange={() => setMode("replay")} className="mt-1" disabled={!saved.length} /><span><b>Use the saved AI answer</b> (no model call, US$0): an earlier real answer for this same form, checked with today's rules before use and labelled wherever it is shown.{saved.length ? <Select className="mt-1" value={runFile} onChange={(e) => setRunFile(e.target.value)}>{saved.map((r) => <option key={r.file} value={r.file}>{r.run_id} · {r.at?.slice(0, 16)} · paid US${r.cost_usd?.toFixed(2)} then{r.recheckable ? " · re-checked first" : r.rechecked ? " · re-checked" : ""}</option>)}</Select> : <span className="block text-xs text-text-muted">No saved AI answer for this form yet.</span>}</span></label>
         <label className="flex items-start gap-2"><input type="radio" checked={mode === "stub"} onChange={() => setMode("stub")} className="mt-1" /><span><b>Stub pass only</b>: proves the guarded path end to end without network or cost; produces no AI content.</span></label>
+        {cost.dialog}
         <Field label="Job" hint="Inputs: this form's inventory only (allowlisted); expected answers and family values are screened out of the prompt."><code className="mono block rounded bg-surface px-2 py-1">{opts.data?.job_id}</code></Field>
       </div>
     </Dialog>

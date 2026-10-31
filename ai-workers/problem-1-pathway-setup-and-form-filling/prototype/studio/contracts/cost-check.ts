@@ -12,6 +12,9 @@ export type CostCheck = {
   /** Over a limit and within the ceiling (the experiment cap + 10%): a person may Continue for this run's worst case. */
   can_continue: boolean; words: string;
   expected_usd: number | null; worst_usd: number; spent_usd: number; cap_usd: number; ceiling_usd: number;
+  /** US$ other Continues chosen in the last 10 minutes still hold until their runs start (N6): past the ceiling with them,
+   *  no Continue until they start or expire. */
+  held_usd: number;
   wave: { name: string; spent_usd: number; cap_usd: number };
 };
 
@@ -29,7 +32,9 @@ export const OverrideBody = z.strictObject({
   limits: z.array(z.enum(COST_LIMITS)).min(1, "Say which limit to continue past.").max(4),
   start: OverrideStart,
   /** Optional words the person adds (kept on the ledger line and in the audit). */
-  reason: z.string().max(500, "Keep the reason under 500 characters.").optional(),
+  // Break n3 (N6): a control character (NUL and the like) cannot be stored with the audit, so it is refused before anything
+  // is written; a line break or a tab is kept.
+  reason: z.string().max(500, "Keep the reason under 500 characters.").regex(/^[^\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]*$/, "The reason has a character that cannot be stored (a control character). Type it again; nothing was recorded.").optional(),
 }, unknownField);
 export type OverrideStartBody = z.infer<typeof OverrideStart>;
 export type OverrideReply = { override_id: string; expires_at: string };

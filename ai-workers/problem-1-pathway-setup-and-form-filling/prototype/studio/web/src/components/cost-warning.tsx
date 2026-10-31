@@ -45,13 +45,25 @@ export function useCostGate() {
   const [pending, setPending] = React.useState<{ plan: Plan; start: OverrideStartBody; launch: (overrideId?: string) => Promise<unknown>; done: (v: unknown) => void } | null>(null);
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
   const opener = React.useRef<HTMLElement | null>(null);
+  // N6: between the click and the warning's own dialog layer being ready (the portal mounts its content a render later, and
+  // the layer's Escape listener an effect after that), an Escape reached the panel underneath and closed it with the warning
+  // still to come. From the click until the warning closes, Escape is caught here first (window, capture, before any dialog
+  // layer's listener) and means what it means in the warning: Cancel, or nothing while Continue is busy.
+  const busyRef = React.useRef(false); busyRef.current = busy;
+  const escGuard = React.useRef<((e: KeyboardEvent) => void) | null>(null);
+  const disarm = () => { if (escGuard.current) window.removeEventListener("keydown", escGuard.current, true); escGuard.current = null; };
+  const cancelRef = React.useRef<() => void>(() => undefined);
   const gate = React.useCallback((plan: Plan, start: OverrideStartBody, launch: (overrideId?: string) => Promise<unknown>) => {
     if (!plan.cost_check || plan.cost_check.ok) return launch();
     setError(null);
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    disarm();
+    escGuard.current = (e: KeyboardEvent) => { if (e.key !== "Escape") return; e.preventDefault(); e.stopImmediatePropagation(); if (!busyRef.current) cancelRef.current(); };
+    window.addEventListener("keydown", escGuard.current, true);
     // Resolves with the launch's answer after Continue, or undefined after Cancel (nothing started).
     return new Promise<unknown>((done) => setPending({ plan, start, launch, done }));
   }, []);
+  React.useEffect(() => disarm, []);
   // Review m3: the Start button that opened the warning is disabled while it waits, so focus fell to the page on Cancel or
   // Escape. Once the caller has enabled it again (a few frames), focus goes back to it, so the keyboard path goes on.
   const refocus = (el: HTMLElement | null, tries = 30) => {
@@ -59,7 +71,9 @@ export function useCostGate() {
     if ((el as HTMLButtonElement).disabled || el.getAttribute("aria-disabled") === "true") { requestAnimationFrame(() => refocus(el, tries - 1)); return; }
     el.focus();
   };
-  const cancel = () => { pending?.done(undefined); setPending(null); const el = opener.current; requestAnimationFrame(() => refocus(el)); };
+  const cancel = () => { disarm(); pending?.done(undefined); setPending(null); const el = opener.current; requestAnimationFrame(() => refocus(el)); };
+  // The guard may fire before the render that holds `pending`: it resolves the waiting start through the setter instead.
+  cancelRef.current = () => { disarm(); setPending((p) => { p?.done(undefined); return null; }); const el = opener.current; requestAnimationFrame(() => refocus(el)); };
   const proceed = async () => {
     if (!pending) return;
     setBusy(true); setError(null);
@@ -67,7 +81,7 @@ export function useCostGate() {
       const c = pending.plan.cost_check;
       const o = await api<OverrideReply>("/ai/overrides", { method: "POST", json: { run_key: pending.plan.run_key, worst_usd: c.worst_usd, limits: c.over.map((x) => x.limit), start: pending.start } });
       const r = await pending.launch(o.override_id);
-      pending.done(r); setPending(null);
+      disarm(); pending.done(r); setPending(null);
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
   const dialog = pending ? <CostWarning check={pending.plan.cost_check} busy={busy} error={error} onContinue={() => void proceed()} onCancel={cancel} /> : null;
