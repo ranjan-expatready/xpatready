@@ -20,7 +20,9 @@ export const PROPOSAL_KIND_WORDS: Record<string, string> = {
 };
 export const AGREEMENT_WORDS: Record<string, string> = { agreed: "Both readings agree", differ: "The readings differ", one_round: "One reading only", rules_only: "From the rules, no AI reading" };
 
-export const ProposalsQuery = z.object({ group: z.string().max(200).optional() }).strict();
+/** `c` and `step` (PR #108 minor (c)): the setup checklist's "Review n proposals" opens the oldest group holding that
+ *  combination's proposals for that step (1–5), when no group is named. */
+export const ProposalsQuery = z.object({ group: z.string().max(200).optional(), c: z.string().uuid().optional(), step: z.coerce.number().int().min(1).max(5).optional() }).strict();
 export const DecideBody = z.object({
   ids: z.array(z.string().uuid()).min(1, "Choose at least one proposal.").max(200, "At most 200 proposals at a time."),
   action: z.enum(["accept", "edit", "reject"]),
