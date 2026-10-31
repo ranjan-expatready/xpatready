@@ -100,6 +100,15 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   const rHeld = await call("POST", "/library/forms/fill-from-index");
   const heldRow = (await call("GET", "/library/forms/list")).body.rows.find((x: any) => x.code === withFile); // eslint-disable-line @typescript-eslint/no-explicit-any
   ok("C2.6 X5 review m2 / Devin fail: a held edition with a later date does not hide the mark: the fill and the list both say newer (one current edition)", rHeld.body.newer?.includes(withFile) && heldRow?.status === "newer_file", { newer: rHeld.body.newer, status: heldRow?.status });
+  // X5 break (57f7d79d) M6: "Check against canada.ca" judges the same current edition too. The held copy now carries
+  // canada.ca's own date and PDF address (what the first check read), the approved edition an old one: the check must not call
+  // the held copy current and clear the mark (before: it named the held copy and the row read Ready on the old file).
+  sql(`update form_edition set canada_updated = '${chk.body?.last_updated ?? "2099-01"}', source_url = '${chk.body?.pdf_url ?? ""}' where sha256 = 'f' || repeat('0', 63)`);
+  sql(`update gov_form_def set newer_on_index_at = now() where form_key = '${withFile}'`);
+  const chkHeld = await call("POST", `/library/forms/${encodeURIComponent(withFile)}/check-canada`);
+  const markHeld = sql(`select coalesce(newer_on_index_at::text, '') from gov_form_def where form_key = '${withFile}'`);
+  ok("C2.6 X5 break M6 fail: a check never calls a held edition current, even one with canada.ca's own date and file: the mark stays and the row still says newer (one current edition for the list, the fill and the check)", !!chk.body?.pdf_url && chkHeld.body?.outcome !== "current" && markHeld !== "" && (await call("GET", "/library/forms/list")).body.rows.find((x: any) => x.code === withFile)?.status === "newer_file", { status: chkHeld.status, outcome: chkHeld.body?.outcome, m: msg(chkHeld), markHeld }); // eslint-disable-line @typescript-eslint/no-explicit-any
+  sql(`update gov_form_def set newer_on_index_at = null where form_key = '${withFile}'`);
   sql(`delete from form_edition where sha256 = 'f' || repeat('0', 63)`);
   // X5 break m5: a listed form with no file says so when someone tries to add it to a combination.
   const comboId = sql("select id from combination where retired_at is null limit 1");

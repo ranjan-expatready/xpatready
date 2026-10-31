@@ -60,6 +60,15 @@ export class FormLibrary {
     return { all: new Set([...manifest().map((i) => i.sha256), ...a.map((x) => x.sha256), ...d.map((x) => x.sha256)]), downloaded: new Set(d.map((x) => x.sha256)) };
   }
 
+  /** The form's current edition: the newest approved printed one (an online-only screen map or a held file is not). The list,
+   *  the fill and the check all judge "newer on canada.ca" by this one edition (X5 break M6). */
+  private printedApproved<E extends { channel: string; sha256: string | null; editionLabel: string; published?: string | null }>(editions: E[], approved: Set<string>): E[] {
+    return editions.filter((e) => e.channel !== "ONLINE" && !!e.sha256 && approved.has(e.sha256));
+  }
+  private currentEdition<E extends { channel: string; sha256: string | null; editionLabel: string; published?: string | null }>(editions: E[], approved: Set<string>): E | undefined {
+    return newestEdition(this.printedApproved(editions, approved));
+  }
+
   /** GET /library/forms/list: one lean list with type, used-by and status filters and a search (P-123). One query set. */
   async list(query: unknown, actorId?: string) {
     const q = parse(LibraryQuery, query);
@@ -80,7 +89,7 @@ export class FormLibrary {
     const releasedCodes = new Set((await this.db.$queryRaw<{ code: string }[]>`SELECT DISTINCT f->>'form_number' AS code FROM config_release r, jsonb_array_elements(COALESCE(r.snapshot->'forms', '[]'::jsonb)) f WHERE r.workspace_id = ${workspaceId}::uuid`).map((x) => x.code));
     const waitingAccepts = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "form_accepts", status: { in: ["WAITING", "RETURNED"] } }, select: { key: true } })).map((x) => x.key));
     const rows = forms.map((f) => {
-      const editions = f.editions.filter((e) => e.channel !== "ONLINE" && e.sha256 && approved.all.has(e.sha256));
+      const editions = this.printedApproved(f.editions, approved.all);
       const current = newestEdition(editions);
       const newestPerCombination = new Map<string, (typeof f.usedBy)[number]>();
       for (const u of f.usedBy) if (!newestPerCombination.has(u.combinationId)) newestPerCombination.set(u.combinationId, u);
@@ -168,7 +177,7 @@ export class FormLibrary {
     // Review (5a5f0d16) m2 / Devin: the fill judges a form by the same current edition the list shows (an approved printed
     // edition, the newest; newestEdition), never by a held or older edition's date: one "newer" rule in both.
     const [defs, approved] = await Promise.all([this.db.govFormDef.findMany({ where: { workspaceId }, include: { editions: true } }), this.approvedShas(workspaceId)]);
-    const plan = planIndexFill(rows, defs.map((d) => { const current = newestEdition(d.editions.filter((e) => e.channel !== "ONLINE" && e.sha256 && approved.all.has(e.sha256))); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionDated: current?.canadaUpdated ?? null }; }));
+    const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionDated: current?.canadaUpdated ?? null }; }));
     const now = new Date();
     // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
     const created = await this.db.$transaction(async (tx) => {
@@ -212,7 +221,9 @@ export class FormLibrary {
     const page = parseFormPage((await this.canada.get(pageUrl, "html")).bytes.toString("utf8"));
     const pdfUrl = page.pdfUrls.find((u) => officialUrl(u).ok);
     if (!pdfUrl) throw problem(409, "No PDF on canada.ca", `${code}'s canada.ca page has no PDF to download.`);
-    const current = newestEdition(def.editions.filter((e) => e.channel !== "ONLINE"));
+    // X5 break M6: the check judges the same current edition as the list and the fill (approved, printed), so a held file
+    // with canada.ca's date never answers the "newer" mark.
+    const current = this.currentEdition(def.editions, (await this.approvedShas(workspaceId)).all);
     await this.db.formEdition.updateMany({ where: { govFormDefId: def.id }, data: { checkedAt: new Date(), formPageUrl: pageUrl } });
     if (current && current.canadaUpdated && page.lastUpdated && current.canadaUpdated === page.lastUpdated && current.sourceUrl === pdfUrl) return { outcome: "current", message: `${current.editionLabel} is still the current edition on canada.ca (last updated ${page.lastUpdated}).`, last_updated: page.lastUpdated };
     return { outcome: "check", message: `canada.ca shows ${code} last updated ${page.lastUpdated ?? "on an unknown date"}. Run "Find again" on a combination that uses it to download it: a newer edition goes to edition review, the same edition from a new file is marked for you to replace.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
