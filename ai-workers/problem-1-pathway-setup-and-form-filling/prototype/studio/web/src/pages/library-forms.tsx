@@ -248,15 +248,24 @@ function useAsk<R>(fn: () => Promise<R>, success: string, keys: unknown[][], onD
 /** X5 slice c: the forms a second person approved deleting; fills leave them out until a person lists one again. */
 function RememberedDeletions({ items, canAuthor }: { items: { code: string; deleted_by: string; deleted_at: string }[]; canAuthor: boolean }) {
   const [code, setCode] = React.useState<string | null>(null);
-  const again = useAction((c: string) => api<{ message: string }>(`/library/forms/${encodeURIComponent(c)}/list-again`, { method: "POST" }), { success: (r) => r.message, invalidate: [["library-forms-list"]], onDone: () => setCode(null) });
+  const heading = React.useRef<HTMLHeadingElement | null>(null);
+  // Review (00007dd0) 2, WCAG 2.4.3: after List again, focus goes to the next List again button, else to this heading (or,
+  // when the section is gone, the Fill button), never to the page.
+  const refocus = (after: string, tries = 40) => {
+    const left = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-remembered-deletions] [data-list-again]")).filter((b) => b.dataset.listAgain !== after);
+    const target = left[0] ?? heading.current ?? document.querySelector<HTMLElement>("[data-fill-index]");
+    if (left.length || !document.querySelector(`[data-list-again="${CSS.escape(after)}"]`) || tries <= 0) { target?.focus(); return; }
+    requestAnimationFrame(() => refocus(after, tries - 1));
+  };
+  const again = useAction((c: string) => api<{ message: string; code: string }>(`/library/forms/${encodeURIComponent(c)}/list-again`, { method: "POST" }), { success: (r) => r.message, invalidate: [["library-forms-list"]], onDone: (r) => { setCode(null); requestAnimationFrame(() => refocus(r.code)); } });
   return (
     <section aria-labelledby="deleted-forms" className="space-y-1 text-sm" data-remembered-deletions>
-      <h2 id="deleted-forms" className="font-medium">Deleted from the library ({items.length})</h2>
+      <h2 id="deleted-forms" ref={heading} tabIndex={-1} className="font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">Deleted from the library ({items.length})</h2>
       <p className="text-text-muted">Fills from IRCC's forms list leave these out until someone lists one again.</p>
       <ul className="flex flex-wrap gap-2">{items.map((d) => (
         <li key={d.code} className="flex items-center gap-2 rounded border border-border px-2 py-1" data-deleted={d.code}>
           <span>{d.code}</span><span className="text-text-muted">deleted {d.deleted_at.slice(0, 10)}, approved by {d.deleted_by}</span>
-          {canAuthor ? <Button size="sm" variant="secondary" busy={again.isPending && code === d.code} onClick={() => { setCode(d.code); again.mutate(d.code); }} aria-label={`List ${d.code} again`}>List again</Button> : null}
+          {canAuthor ? <Button size="sm" variant="secondary" busy={again.isPending && code === d.code} onClick={() => { setCode(d.code); again.mutate(d.code); }} aria-label={`List again: ${d.code}`} data-list-again={d.code}>List again</Button> : null}
         </li>))}</ul>
     </section>
   );

@@ -223,12 +223,21 @@ export class FormLibrary {
   async listAgain(actor: Actor, code: string) {
     need(actor, "author");
     const workspaceId = await this.ws.id();
+    const memory = await this.db.libraryFormDeletion.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } } });
     const gone = await this.db.libraryFormDeletion.deleteMany({ where: { workspaceId, formKey: code } });
-    if (!gone.count) throw problem(404, "Not a deleted form", `${code} is not among the forms deleted from the library.`);
-    await this.audit.log(workspaceId, actor.id, "restored", "form", code, `${actor.name} listed ${code} again: later fills from IRCC's forms list include it`);
-    await this.fillFromIndex(actor);
+    if (!gone.count || !memory) throw problem(404, "Not a deleted form", `${code} is not among the forms deleted from the library.`);
+    // Review (00007dd0) 4: a fill that fails puts the memory back, and nothing is audited as listed again.
+    let fill: Awaited<ReturnType<FormLibrary["fillFromIndex"]>>;
+    try { fill = await this.fillFromIndex(actor); } catch (e) {
+      await this.db.libraryFormDeletion.createMany({ data: [{ workspaceId, formKey: code, deletedBy: memory.deletedBy, changeId: memory.changeId, deletedAt: memory.deletedAt }], skipDuplicates: true });
+      throw e;
+    }
     const back = await this.db.govFormDef.count({ where: { workspaceId, formKey: code } });
-    return { code, listed: back > 0, message: back ? `${code} is listed again (no file yet). Find again on a combination, or upload its PDF, to add its file.` : `${code} will be listed again when IRCC's forms list includes it (it is not on the list now).` };
+    await this.audit.log(workspaceId, actor.id, "restored", "form", code, `${actor.name} listed ${code} again: later fills from IRCC's forms list include it`);
+    // Review (00007dd0) 3: the ordinary fill ran, so any other form IRCC added since the last fill is said too.
+    const others = fill.created - (back && fill.created ? 1 : 0);
+    const more = others > 0 ? ` The fill also listed ${others} other new form${others === 1 ? "" : "s"} from IRCC's forms list.` : "";
+    return { code, listed: back > 0, others, message: (back ? `${code} is listed again (no file yet). Find again on a combination, or upload its PDF, to add its file.` : `${code} will be listed again when IRCC's forms list includes it (it is not on the list now).`) + more };
   }
 
   async checkCanada(actor: Actor, code: string) {

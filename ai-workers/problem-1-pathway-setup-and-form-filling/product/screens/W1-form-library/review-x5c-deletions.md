@@ -94,3 +94,82 @@ Reviewer: I did not build this. I reviewed `git diff 7570c9f4 02ca83a5` (stacked
 
 **Could not check:** a real screen reader; canada.ca live (fixtures only); IMM 5373 B (no recorded PDF); online-only forms with no PDF.
 **Journey test:** `journey-test-reviewer-2026-10-31-x5c-02ca83a5.md`, **8.0/10**, pass.
+
+# Round at 00007dd0
+
+Reviewer: a different one, who did not build it or review 02ca83a5. I reviewed `git diff 02ca83a5 00007dd0`, and the whole slice `7570c9f4..00007dd0`.
+
+**Verdict: Block.** One Major is open (issue A, axe and WCAG 2.5.3 on the new section). It is a one-line fix plus one browser check. Everything else in this round holds.
+
+**How I tested.**
+* Copies on :4450–4453 only, with fresh databases. Web build rebuilt from 00007dd0 (same bundle hash).
+* Mutants ran from `git archive 00007dd0` in `/tmp`, so the repo was not edited.
+* US$0. `STUDIO_AI_LIVE` was set only for `check_forms_s4_finder.ts`, with the fake launcher, as its usage line says.
+* Afterwards: copies stopped, 10 `xr_studio_rv5c*` databases dropped, the `slice3/` screenshots the browser suite rewrote restored (`git checkout --`), tree clean.
+
+| Suite | Result |
+|---|---|
+| `check_forms_x5_library.ts`, run twice | 77/77 both times |
+| `check_forms_x5_finder_baseline.ts`, run twice | 8/8 both times |
+| `check_forms_s4_library_browser.cjs` | 95/95 |
+| `check_forms_s4_finder.ts` | 144/144 |
+| `check_forms_demo.ts` | 23/23 |
+| `check_s6_library_sources.ts` | 39/39 |
+| `tsc --noEmit`, api and web | clean |
+| Graph | G1–G6 = 0/0/2/0/0/0 (the two G3 are the older attachment routes) |
+
+## Previous issues
+1. **Closed (Major 1, break M1).** I deleted IMM 0008 SCH4 and IMM 0008 DEP, then pressed List again in the browser. Each came back at once as "no file". The memory row is gone, a later fill lists it, and the audit has a `restored` line plus a fill line. Lower case `imm0008sch4` also works (201).
+2. **Closed (Major 2, race test).** Mutant: removing the second look fails `C3.12 … (02ca83a5) 2` (76/77).
+3. **Partly closed (Should).** Removing Find again's forget fails C3.12 in the finder baseline (7/8). Removing the sample load's forget (`engine/import.ts:83`) still fails nothing (77/77). The forgets in `sources.ts:777` and `finder.ts:558` remain untested. This stays a Should.
+4. **Closed (words).** The fill now says `"List again" under the table brings it back` (or "one" for several). The Fill tip now says deleted forms are left out.
+5. **Open, optional (Minor).** The delete confirm still does not say that later fills will leave the form out. This now matters less, because List again undoes it.
+
+## New rules: does each test fail when the rule is removed?
+| Mutant | Result |
+|---|---|
+| No `need(author)` in `listAgain` | 3 checks fail |
+| `listAgain` without the fill | 2 checks fail |
+| No `remembered_deletions` in the list | 1 check fails |
+| No second look | 1 check fails |
+| No Find again forget | 1 check fails |
+| No sample-load forget | **survives** (issue 3 above) |
+
+## New issues (ranked)
+A. **Major (Must; STANDARDS §7 [M] "axe-core on every screen state"; WCAG 2.5.3 Label in Name, level A).**
+   * Problem: the List again buttons fail axe `label-content-name-mismatch` (2 nodes). The test uses the suite's own tags (wcag2a…wcag22aa). The visible text "List again" is not inside the accessible name "List IMM 0008 SCH4 again" (`web/src/pages/library-forms.tsx:259`). A speech user who says "click List again" does not reach the button.
+   * Why no suite caught it: no browser check visits this section (the screenshots in `screenshots/x5c/` were taken by hand).
+   * Fix: use `aria-label={`List again: ${d.code}`}`, or no aria-label plus a visually hidden code after the text. Add one browser step that deletes a form, runs axe on the section and presses List again by keyboard. The approver view (no buttons) is axe-clean.
+B. **Should (WCAG 2.4.3; same pattern as review m5 on Fill).**
+   * Problem: after List again the pressed button disappears and focus falls to `<body>` (checked twice, also when the last item empties the section). Reaching the section takes 284 Tabs from the top at 50 rows.
+   * Fix: move focus to the next List again button, or else to the section heading or the toast.
+C. **Should (words, feedback).**
+   * Problem: `listAgain` runs the whole fill (`form-library.ts:229`), so it also lists any other forms IRCC added since the last fill. The toast names only the one form.
+   * Repro: fill, then remove 5 bare listed rows (standing in for "IRCC added 5 forms"), delete IMM 0008 SCH4, press List again. The toast says "IMM 0008 SCH4 is listed again". The audit says "6 new forms listed", and the library grew by 6.
+   * Fix: add the fill's count to the message when it created more than this form, or list only this form.
+D. **Minor.** `listAgain` forgets the memory and writes the audit line before the fill, outside one transaction (`form-library.ts:226-229`). If the fill fails, the person sees an error, but the audit says "listed … again" and the memory is already gone. The next fill lists the form anyway, so no data is lost.
+
+## What holds
+* Roles: a List again button only for an author (approver: section shown, no buttons; officer and client: no section). The server returns 403 for user-B, user-O and user-P, and 401 with no actor. A double click sends one request (one audit line).
+* A form that is not remembered gets 404 in words. A form not on IRCC's list says it will come back when the list includes it.
+* The memory stores the approver, so the text "approved by Approver" is true (`lifecycle.ts:449`).
+* No sideways scroll at 400, 1024 and 1440 px, nor at 512 px (200 %). The focus ring is visible (`/tmp/x5cscripts/shots/focus-1024.png`). The section has an h2 and a list, and it reads "deleted 2026-10-31, approved by Approver".
+* List again takes about 0.5 s; the fill 93 ms.
+
+## D1–D20 (this round; changes from 02ca83a5)
+| D | Score | Evidence |
+|---|---|---|
+| D1 | 4 | Every deleted number can be added back by a person (#138's "unless a person adds it back") |
+| D2 | 4 | Race tested; List again is idempotent (404 the second time) |
+| D4 | 4 | No more memory rows that cannot be reached |
+| D9 | 4 | The fill's next step works for every number |
+| D10 | 4 | Words fixed; the List again toast under-reports (C) |
+| D11 | 4 | Toast and audit; focus lost (B) |
+| D13 | 3 | axe failure on the new section (A); widths fine |
+| D16 | 4 | Race and Find again tests added; sample load untested; no browser check of the section |
+| D19 | 4 | Delete → fill → List again closes the loop |
+| D17, D20 | simulated only | No intended user walked it |
+Other D scores: unchanged from the round above.
+
+**Could not check:** a real screen reader; canada.ca live; Find again's add-back in a browser.
+**Journey test:** `journey-test-reviewer-2026-10-31-x5c-00007dd0.md`, **8.5/10**, pass. The verdict is still Block, on issue A.

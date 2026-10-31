@@ -290,8 +290,13 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
     ok("C3.12 X5 slice c pass: the list names each remembered deletion with who approved it, and the fill says how to bring one back (List again)", listed?.some((d) => d.code === sch && d.deleted_by !== "") && fsch.body.deleted?.includes(sch) && /"List again" under the table brings it back/.test(fsch.body.message), { listed, m: fsch.body?.message });
     const noB = await call("POST", `/library/forms/${schU}/list-again`, undefined, "user-B");
     ok("C3.12 X5 slice c fail: only an author lists a deleted form again (approver 403), and nothing changes", noB.status === 403 && sql(`select count(*) from library_form_deletion where form_key = '${sch}'`) === "1", noB.status);
+    // Review (00007dd0) 3: a form IRCC added since the last fill (played by removing one plain listed row) is listed by the
+    // same fill, and the answer says so.
+    const extra = [...plainNow].find((c) => c !== gk && c !== sch && sql(`select count(*) from gov_form_def where form_key = '${c}'`) === "1")!;
+    sql(`delete from gov_form_def where form_key = '${extra}'`);
     const la = await call("POST", `/library/forms/${schU}/list-again`);
     ok("C3.12 X5 review/break (02ca83a5) M1 fail: List again brings a deleted schedule back at once (before: no way back but a demo reset)", la.status === 201 && la.body?.listed === true && sql(`select count(*) from gov_form_def where form_key = '${sch}'`) === "1" && sql(`select count(*) from library_form_deletion where form_key = '${sch}'`) === "0" && /listed again/.test(la.body?.message ?? ""), { status: la.status, b: la.body });
+    ok("C3.12 X5 review (00007dd0) 3 fail: List again says when its fill also listed other new forms (before: only the one form was named)", la.body?.others === 1 && /also listed 1 other new form/.test(la.body?.message ?? "") && sql(`select count(*) from gov_form_def where form_key = '${extra}'`) === "1", { others: la.body?.others, m: la.body?.message });
     const la2 = await call("POST", `/library/forms/${schU}/list-again`);
     ok("C3.12 X5 slice c fail: List again on a form that is not a remembered deletion says so (404)", la2.status === 404 && /not among the forms deleted/.test(msg(la2)), la2.status);
   } else ok("C3.12 X5 slice c set-up: IMM 0008 SCH4 is listed by IRCC's recorded forms list", false, "not in the library after the fill");
