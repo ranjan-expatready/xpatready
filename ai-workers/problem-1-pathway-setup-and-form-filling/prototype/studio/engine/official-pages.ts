@@ -18,17 +18,28 @@ export type PagesRecord = { attachmentId: string; confirmedBy: string; confirmed
 export const isApplyPage = (s: Pick<PageSource, "kind">) => (APPLY_PAGE_KINDS as readonly string[]).includes(s.kind);
 export const isPage = (s: Pick<PageSource, "kind" | "file">) => isApplyPage(s) || (s.kind === "Instructions" && /\.html?$/i.test(s.file));
 
-/** Step 1's state for one combination: confirmed (its page still attached), proposed (pages attached; `matches` apply
+/** A stored confirmation that still holds: its page is attached and, for the author's tier ("sure"), the rules still find
+ *  exactly that one page (N8 break M2: a second apply page attached later makes it the expert's choice again). */
+export function recordHolds(sources: PageSource[], record: PagesRecord): boolean {
+  if (!record || !sources.some((s) => s.id === record.attachmentId && isPage(s))) return false;
+  if (record.confirmedAs === "expert") return true;
+  const matches = sources.filter(isApplyPage);
+  return matches.length === 1 && matches[0].id === record.attachmentId;
+}
+
+/** Step 1's state for one combination: confirmed (a record that still holds), proposed (pages attached; `matches` apply
  *  pages found by the rules), or no record (no page attached yet). */
 export function officialPagesFrom(sources: PageSource[], record: PagesRecord): OfficialPages {
-  if (record && sources.some((s) => s.id === record.attachmentId && isPage(s))) return { state: "confirmed", by: record.confirmedBy, as: record.confirmedAs };
+  if (record && recordHolds(sources, record)) return { state: "confirmed", by: record.confirmedBy, as: record.confirmedAs };
   if (!sources.some(isPage)) return { state: "no_record" };
   return { state: "proposed", matches: sources.filter(isApplyPage).length };
 }
 
 /** The item a confirmation acts on (P-176): the rules' one match confirmed → `confirm_pages` on the author's tier; any
  *  other page, or a choice among none or several → `choose_pages` on the expert's tier. The API refuses with mayAct. */
-export function confirmationOf(sources: PageSource[], attachmentId: string): { kind: ItemKind; tier: Tier; matches: number } {
+export function confirmationOf(sources: PageSource[], attachmentId: string, record: PagesRecord = null): { kind: ItemKind; tier: Tier; matches: number } {
   const matches = sources.filter(isApplyPage);
+  // N8 (F2 review M2, break M1): a choice the immigration expert made, still holding, is changed by the expert alone.
+  if (record && record.confirmedAs === "expert" && recordHolds(sources, record)) return { kind: "choose_pages", tier: "expert", matches: matches.length };
   return matches.length === 1 && matches[0].id === attachmentId ? { kind: "confirm_pages", tier: "author", matches: 1 } : { kind: "choose_pages", tier: "expert", matches: matches.length };
 }

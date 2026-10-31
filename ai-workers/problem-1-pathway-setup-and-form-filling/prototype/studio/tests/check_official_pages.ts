@@ -5,7 +5,7 @@
 // case per rule, on an isolated copy with the sample loaded. No AI (US$0).
 //   zsh studio/tools/isolated.sh forms_op 4450 start && tsx studio/tests/check_official_pages.ts 4450 xr_studio_forms_op
 import { execFileSync } from "node:child_process";
-import { confirmationOf, officialPagesFrom } from "../engine/official-pages.ts";
+import { confirmationOf, officialPagesFrom, recordHolds } from "../engine/official-pages.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_op";
 let pass = 0, fail = 0;
@@ -29,6 +29,9 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   ok("C11.10 F2 fail: two apply pages → the expert chooses (choose_pages, expert tier)", confirmationOf([web("a"), web("b")], "a").tier === "expert" && confirmationOf([web("a"), web("b")], "a").kind === "choose_pages");
   ok("C11.10 F2 fail: the rules' one match passed over for another page → the expert's choice", confirmationOf([web("a"), { id: "g", kind: "Instructions", title: "Guide", file: "guide.html" }], "g").tier === "expert");
   ok("C11.10 F2 pass: a confirmation counts while its page is attached", officialPagesFrom([web("a")], { attachmentId: "a", confirmedBy: "user-A", confirmedAs: "author" }).state === "confirmed");
+  ok("C11.10 F2 N8 break M2 fail: an author's 'sure' confirmation stops holding once a second apply page is attached (the expert's choice again)", !recordHolds([web("a"), web("b")], { attachmentId: "a", confirmedBy: "user-A", confirmedAs: "author" }) && officialPagesFrom([web("a"), web("b")], { attachmentId: "a", confirmedBy: "user-A", confirmedAs: "author" }).state === "proposed");
+  ok("C11.10 F2 N8 break M2 pass: the expert's choice still holds with two apply pages", officialPagesFrom([web("a"), web("b")], { attachmentId: "a", confirmedBy: "user-C", confirmedAs: "expert" }).state === "confirmed");
+  ok("C11.10 F2 N8 review M2 fail: over a holding expert's choice, even the rules' one match is the expert's to confirm", confirmationOf([web("a"), { id: "g", kind: "Instructions", title: "Guide", file: "guide.html" }], "a", { attachmentId: "g", confirmedBy: "user-C", confirmedAs: "expert" }).tier === "expert");
   ok("C11.10 F2 fail: a confirmation whose page is gone counts as none (proposed again)", officialPagesFrom([web("b")], { attachmentId: "a", confirmedBy: "user-A", confirmedAs: "author" }).state === "proposed");
 
   // ── the API on the sample (from a reset, so a run before this one leaves nothing behind)
@@ -42,23 +45,34 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   let sum = await call("GET", `/combinations/${wp}/summary`);
   const step1 = (s: Res) => s.body?.setup?.steps?.find((x: any) => x.key === "pages"); // eslint-disable-line @typescript-eslint/no-explicit-any
   ok("C11.10 F2 pass: the checklist reads the record: step 1 open with 'Confirm the checklist page' (before: no record, no item)", step1(sum)?.open?.some((i: any) => i.kind === "confirm_pages" && i.tier === "author"), step1(sum)); // eslint-disable-line @typescript-eslint/no-explicit-any
+  // N8 (F2 review M1, break M3): no screen offers Confirm yet (slice C), so it is not "Needs you" for anyone.
+  const vw = (s: Res) => s.body?.setup?.viewer;
+  const sumC = await call("GET", `/combinations/${sp}/summary`, undefined, "user-C");
+  ok("C11.10 F2 N8 review M1 fail: step 1's Confirm/Choose is not 'Needs you' for the author or the expert until a screen offers it", !!vw(sum) && !!vw(sumC) && !/checklist page/.test(vw(sum)?.needsYou?.text ?? "") && !/checklist page/.test(vw(sumC)?.needsYou?.text ?? ""), { a: vw(sum)?.needsYou, c: vw(sumC)?.needsYou });
   for (const [who, name] of [["user-B", "approver"], ["user-O", "case officer"], ["user-P", "client"]]) {
     r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: match.id }, who);
     ok(`C11.10 F2 fail: the ${name} cannot confirm the official page (403), nothing stored`, r.status === 403 && sql(`select count(*) from combination_official_pages where combination_id='${wp}'`) === "0", { status: r.status, m: msg(r) });
   }
   r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: other.id }, "user-A");
-  ok("C11.10 F2 fail (P-176): the author cannot pass over the rules' one match for another page: that is the expert's choice (403)", r.status === 403 && /immigration expert chooses it/.test(msg(r)), { status: r.status, m: msg(r) });
+  ok("C11.10 F2 fail (P-176): the author cannot pass over the rules' one match for another page: that is the expert's choice (403, plain words, no decision code)", r.status === 403 && /choosing a different page is the immigration expert's call/.test(msg(r)) && !/P-\d/.test(msg(r)), { status: r.status, m: msg(r) });
   r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: sql(`select id from source_attachment where combination_id='${sp}' limit 1`) }, "user-A");
   ok("C11.10 F2 fail: a page of another combination is refused (400), nothing stored", r.status === 400 && /not one of this combination's attached pages/.test(msg(r)), { status: r.status, m: msg(r) });
   r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: match.id, extra: 1 }, "user-A");
   ok("C11.10 F2 fail: an unknown field or no page is refused in words (400)", r.status === 400 && /field the server does not know/.test(msg(r)) && (await call("POST", `/combinations/${wp}/official-pages/confirm`, {}, "user-A")).status === 400, msg(r));
+  r = await call("POST", `/combinations/${wp}/official-pages/confirm`, [], "user-A");
+  ok("C11.10 F2 N8 break m7 fail: a body that is not an object is refused in plain words (400)", r.status === 400 && /Send the page to confirm as \{ attachmentId \}/.test(msg(r)), msg(r));
   r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: match.id }, null);
   ok("C11.10 F2 fail: nobody (no person named) cannot confirm (401)", r.status === 401, r.status);
+  r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: match.id }, "user-P");
+  ok("C11.10 F2 N8 break m6 fail: a case person (client) gets 'Not for case people', as on reading", r.status === 403 && r.body?.title === "Not for case people", r.body);
   r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: match.id }, "user-A");
   const row = sql(`select confirmed_by || '|' || confirmed_as || '|' || matches || '|' || attachment_id from combination_official_pages where combination_id='${wp}'`);
   ok("C11.10 F2 pass: the author confirms the rules' one match: stored with who, the tier (author) and the page", r.status === 201 && r.body.pages.state === "confirmed" && row === `user-A|author|1|${match.id}`, { status: r.status, row });
   ok("C11.10 F2 pass: the confirmation is in the audit trail with the page and the tier", /confirmed the official page of .*Work permit outside: forms and documents page.*configuration author tier, sure/.test(sql(`select summary from audit_event where action='confirmed' and entity='official page' and entity_key='${wp}'`)));
   sum = await call("GET", `/combinations/${wp}/summary`);
+  const audits = () => sql(`select count(*) from audit_event where action='confirmed' and entity='official page' and entity_key='${wp}'`);
+  const a1 = audits(); r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: match.id }, "user-A");
+  ok("C11.10 F2 N8 break m2 pass: the same confirmation again changes nothing and writes no second audit line", r.status === 201 && r.body?.again === true && audits() === a1, { status: r.status, a1, a2: audits() });
   ok("C11.10 F2 pass: step 1 is done on the checklist, confirmed by the author tier", step1(sum)?.state === "done" && step1(sum)?.confirmed?.as === "author" && !step1(sum)?.open?.length, step1(sum));
   // The expert's choice where the rules are not sure.
   r = await call("GET", `/combinations/${sp}/official-pages`);
@@ -68,6 +82,24 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   ok("C11.10 F2 fail (P-176): the author cannot choose where the rules are not sure (403, nothing stored)", r.status === 403 && sql(`select count(*) from combination_official_pages where combination_id='${sp}'`) === "0", { status: r.status, m: msg(r) });
   r = await call("POST", `/combinations/${sp}/official-pages/confirm`, { attachmentId: spPage.id }, "user-C");
   ok("C11.10 F2 pass: the immigration expert chooses it: stored on the expert tier", r.status === 201 && sql(`select confirmed_by || '|' || confirmed_as || '|' || matches from combination_official_pages where combination_id='${sp}'`) === "user-C|expert|0", { status: r.status, m: msg(r) });
+  // N8 (F2 review M2, break M1): the expert's choice over the rules' one match is not overwritten by the author.
+  r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: other.id }, "user-C");
+  ok("C11.10 F2 N8 pass: the expert chooses another page over the author's confirmation; the audit names what it replaces", r.status === 201 && /It replaces Work permit outside: forms and documents page, confirmed by user-A \(author tier\)/.test(sql(`select summary from audit_event where action='confirmed' and entity='official page' and entity_key='${wp}' order by at desc limit 1`)), { status: r.status, m: msg(r) });
+  r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: match.id }, "user-A");
+  ok("C11.10 F2 N8 review M2 fail: the author cannot overwrite the expert's choice, even with the rules' one match (403, the expert's record stays)", r.status === 403 && /only the immigration expert changes it/.test(msg(r)) && sql(`select confirmed_by || '|' || confirmed_as from combination_official_pages where combination_id='${wp}'`) === "user-C|expert", { status: r.status, m: msg(r) });
+  r = await call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: match.id }, "user-C");
+  ok("C11.10 F2 N8 pass: the expert may change their own choice back", r.status === 201 && sql(`select confirmed_by || '|' || confirmed_as from combination_official_pages where combination_id='${wp}'`) === "user-C|expert", { status: r.status, m: msg(r) });
+  // N8 break M2: a second apply page attached reopens an author's 'sure' confirmation (sp has none: use wp's record by the author).
+  sql(`update combination_official_pages set confirmed_by='user-A', confirmed_as='author' where combination_id='${wp}'`);
+  sql(`update source_attachment set kind='Web page' where id='${other.id}'`);
+  r = await call("GET", `/combinations/${wp}/official-pages`);
+  ok("C11.10 F2 N8 break M2 fail (API): with a second apply page attached, the author's 'sure' confirmation no longer counts: proposed, 2 matches, the expert's choice", r.body?.pages?.state === "proposed" && r.body.pages.matches === 2 && step1(await call("GET", `/combinations/${wp}/summary`))?.open?.some((i: any) => i.kind === "choose_pages"), r.body?.pages); // eslint-disable-line @typescript-eslint/no-explicit-any
+  sql(`update source_attachment set kind='Instructions' where id='${other.id}'`);
+  // Retired: no confirmation.
+  sql(`update combination set retired_at = now() where id='${sp}'`);
+  r = await call("POST", `/combinations/${sp}/official-pages/confirm`, { attachmentId: spPage.id }, "user-C");
+  ok("C11.10 F2 N8 break m1 fail: a retired combination's official page is not changed (409)", r.status === 409 && /retired/.test(msg(r)), { status: r.status, m: msg(r) });
+  sql(`update combination set retired_at = null where id='${sp}'`);
   // A confirmed page removed from the combination: the record no longer counts.
   sql(`delete from source_attachment where id='${match.id}'`);
   r = await call("GET", `/combinations/${wp}/official-pages`);
