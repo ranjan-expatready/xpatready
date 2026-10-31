@@ -50,6 +50,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     }
     await p.setViewportSize({ width: 1440, height: 900 });
     await go("/library/fields"); step("QA-80: another page has its own title", (await p.title()) === "Fields · Product Studio", await p.title());
+    await go("/release"); step("QA-80 retest (X4): Review and release, reached from the draft bar, names itself in the tab", (await p.title()) === "Review and release · Product Studio", await p.title());
 
     // QA-79: Overview counts in words and the release line (on the sample's released combination)
     await go(`/c/${released}`);
