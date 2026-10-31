@@ -46,3 +46,13 @@ No Blocker, no Major.
 * **`FilingLine`** (`components/channels.tsx:45`): it was already unused on origin/main before this commit (git grep finds only its definition), so "now unused" is not quite right. Dead code: delete it here or in the next screens item; not blocking.
 
 **Verdict: Approve** commit d7a2c84f (no open Blocker or Major; m1–m3 are Should-fix Minors for a follow-up or this branch).
+
+## Re-check at 44058fd6 (after b4c3a7b9 and a screenshots-only commit)
+Fresh copy `screens_rev3` on :4446, the builder's check copied to /tmp (screenshots to /tmp), the same journey script as above; copy stopped and no tracked file rewritten afterwards.
+* **m1 fixed** (`combination.tsx:82`): the condition is now `!f.document && f.channel !== "NOT_NEEDED"`. With every line set Not needed, the header has no "filing:" (J5 re-run). The check's new fail step covers it.
+* **m2 fixed:** the check records each line's channel and signature and puts them back, with two steps that prove it. Run twice on one copy: **11/11, then 10/10** (the second run skips the sample-load step). Nit, not blocking: the `string_agg` comparisons have no `ORDER BY`, so they depend on the database returning rows in the same order; adding `order by id` would make that certain.
+* **m3 fixed:** the line reads "… cases opened outside Canada · filing: PDF only · people: …", and the first step checks the order.
+* J1 to J4 re-run: the header updates in 0.9 s after a Forms tab channel change, survives a reload and reverts cleanly; the approver sees the same line; axe is clean at 400/1024/1440 px; no sideways scroll at 200 %; no console errors. The journey score rises to **9.5/10** (plain words now 1; trust and sources stays ½ for the reason above).
+* `FilingLine`: agreed to leave it and list it in the PR (dead code from before this item).
+
+**Verdict: Approve** commit 44058fd6 (no open Blocker, Major or Minor).
