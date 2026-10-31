@@ -110,7 +110,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // ======================================================== the click: the run on the Forms tab's card, then the page choice
   await offerBtn.click();
-  await panel.locator("[data-run-line]").first().waitFor({ timeout: 15000 }).catch(() => undefined);
+  // On GitHub's 2-core machine the card can still read "Starting the run…" (no run line, no cost yet) when it is read:
+  // wait up to 30 s for the cost line with text, and say so as a failure if it never comes (never a swallowed timeout).
+  const costWait = await panel.locator("[data-run-cost]").filter({ hasText: /\S/ }).first().waitFor({ state: "visible", timeout: 30000 }).then(() => "", (e) => e.message.split("\n")[0]);
+  step("S3 fix 4: the run card shows its cost line within 30 s of the click", !costWait, costWait || "shown");
   const batches = sql(`select count(*) from ai_batch where scope_label like '${cid}|%' and mode = 'LIVE'`);
   const runId = sql(`select id from ai_batch where scope_label like '${cid}|%' order by started_at desc limit 1`);
   step("M1 / M4: the click starts the live run (the fake launcher here, US$0) and the Forms tab's run card shows it", batches === "1" && !!runId, batches);
