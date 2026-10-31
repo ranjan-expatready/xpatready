@@ -470,16 +470,20 @@ export class Ai implements OnModuleInit {
     const worst = round(redo.reduce((a, j) => a + (j.mode === "LIVE" ? (worstEach.find((t) => t.attachmentId === j.attachmentId)?.worst_usd ?? RUN_CAP_USD) : 0), 0));
     const ledger = this.sources.ledger();
     if (ov) {
+      const planOv = (batch!.plan as { override?: { worst_usd?: number; limits?: string[] } } | null)?.override;
       // #131 review M1: a retry of a Continue run fits what is left of the worst case the person accepted (every attempt
       // of the run counts toward it); more needs a new look at the cost and a new Continue.
       // #131 review m3 (as break m7): only the person who chose Continue spends under it; anyone else starts again and
       // chooses Continue themselves.
       const by = ledgerRead(() => new SpendLedger(LEDGER_DIR).override(ov.id))?.by;
-      if (by !== actor.id) fail("This run was continued past a cost limit by another person: only they can retry it. Start the draft again to look at the cost and choose Continue yourself.", HttpStatus.CONFLICT);
+      // PR #131 Devin: only a retry that sends a paid live call spends under the Continue; a free step (a saved answer, a
+      // reuse) is any author's to retry, as before.
+      const paid = redo.some((j) => j.mode === "LIVE" && j.kind === "field_map");
+      if (paid && by !== actor.id) fail("This run was continued past a cost limit by another person: only they can retry it. Start the draft again to look at the cost and choose Continue yourself.", HttpStatus.CONFLICT);
       const room = ledgerRead(() => new SpendLedger(LEDGER_DIR).overrideRoomUsd(ov.id));
-      if (room === null || worst > room + 1e-9) fail(`This run has used its Continue: a retry could cost up to US$${worst.toFixed(2)}, and ${room === null ? "the Continue is not in the spend ledger" : `only US$${room.toFixed(2)} is left of the US$${(((batch!.plan as any).override?.worst_usd as number | undefined) ?? 0).toFixed(2)} the person accepted`}. Start the draft again to look at the cost and choose Continue again.`, HttpStatus.CONFLICT);
+      if (room === null || worst > room + 1e-9) fail(`This run has used its Continue: a retry could cost up to US$${worst.toFixed(2)}, and ${room === null ? "the Continue is not in the spend ledger" : `only US$${room.toFixed(2)} is left of the US$${(planOv?.worst_usd ?? 0).toFixed(2)} the person accepted`}. Start the draft again to look at the cost and choose Continue again.`, HttpStatus.CONFLICT);
       // #131 review m1: past the cap only when the Continue named it; then held to the ceiling (the cap + 10%).
-      const pastCap = (((batch!.plan as any).override?.limits ?? []) as string[]).includes("experiment");
+      const pastCap = (planOv?.limits ?? []).includes("experiment");
       if (pastCap ? ledger.committed_usd + worst > OVERRIDE_CEILING_USD + 1e-9 : worst > ledger.remaining_usd + 1e-9) fail(pastCap ? `Retrying could take spend to US$${(ledger.committed_usd + worst).toFixed(2)}, past the US$${OVERRIDE_CEILING_USD.toFixed(2)} a Continue may allow. The founder must raise the cap.` : `Retrying could cost up to US$${worst.toFixed(2)}, more than is left of the experiment cap.`, HttpStatus.CONFLICT);
     } else if (worst > ledger.remaining_usd) fail(`Retrying could cost up to US$${worst.toFixed(2)}, more than is left of the experiment cap.`);
     let ids: string[] = [];

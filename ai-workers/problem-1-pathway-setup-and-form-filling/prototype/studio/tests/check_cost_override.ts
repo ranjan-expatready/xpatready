@@ -107,6 +107,13 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   writeFileSync(LEDGER, snapLedger.replace(new RegExp(`("id":"${o1}"[^\\n]*"by":")user-A`), "$1user-Z"));
   r = await call("POST", `/ai/batches/${batch1}/retry`, {});
   ok("C11.8 #131 review m3 fail: a retry under another person's Continue is refused (409), nothing queued", r.status === 409 && /continued past a cost limit by another person/.test(msg(r)) && sql(`select count(*) from drafting_job where batch_id='${batch1}' and status='QUEUED'`) === "0", { status: r.status, m: msg(r) });
+  // PR #131 Devin: a free step (here the step made a US$0 stub pass) is any author's to retry, even under another's Continue.
+  sql(`update drafting_job set mode = 'STUB' where batch_id='${batch1}'`);
+  r = await call("POST", `/ai/batches/${batch1}/retry`, {});
+  ok("C11.8 #131 Devin pass: a free step of that run is retried by another author (201): the person check is for paid retries only", r.status === 201, { status: r.status, m: msg(r) });
+  await cancelOpen();
+  sql(`delete from drafting_job where batch_id='${batch1}' and attempt = (select max(attempt) from drafting_job where batch_id='${batch1}')`); // that extra step out again: the checks below count attempts
+  sql(`update drafting_job set mode = 'LIVE' where batch_id='${batch1}'`);
   writeFileSync(LEDGER, snapLedger);
   // #131 review M1: the run already reserved the whole worst case the person accepted (its first run was sent): no retry.
   appendFileSync(LEDGER, JSON.stringify({ type: "reserve", id: `run-o1#1#${Date.now()}`, run_id: "run-o1", attempt: 1, worst_usd: worst, caller: "paid", override_id: o1, at: new Date().toISOString() }) + "\n");
