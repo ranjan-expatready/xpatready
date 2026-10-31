@@ -212,7 +212,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.getByRole("button", { name: "IMM 1295", exact: true }).click();
     const sp = p.getByRole("dialog"); await sp.waitFor();
     await sp.getByRole("button", { name: /Set what IRCC accepts|Correct what IRCC accepts/ }).click();
-    await sp.getByLabel("IRCC accepts", { exact: true }).selectOption("PDF_OR_ONLINE");
+    await sp.getByRole("checkbox", { name: "PDF upload", exact: true }).check(); await sp.getByRole("checkbox", { name: "Online", exact: true }).check(); // P-143: ways IRCC accepts, for any account
     await sp.getByRole("button", { name: "Send for a second person" }).click(); await sleep(500);
     step("C11.18 fail: sending with neither the canada.ca line nor a reason says what is missing, nothing is sent", /canada\.ca line|say why/i.test(await sp.innerText()) && sql(`select count(*) from library_change where kind='form_accepts'`) === "0");
     await axe("set what IRCC accepts"); await shot("13-set-accepts");

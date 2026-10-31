@@ -5,7 +5,7 @@
 // upload equal to canada.ca's file (no second person) and one that is not (held) → a republished same-edition file.
 // canada.ca is the recorded copies (official-sources/ircc/canada), plus a test-made folder for two changed files. US$0:
 // the AI is tests/fixtures/fake-launch.mjs (honoured only in an isolated copy); nothing calls a model or canada.ca.
-//   zsh studio/tools/isolated.sh forms_s4 4455 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs STUDIO_CANADA_FIXTURES=canada-alt && tsx studio/tests/check_forms_s4_finder.ts 4455 xr_studio_forms_s4
+//   zsh studio/tools/isolated.sh forms_s4 4455 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs STUDIO_CANADA_FIXTURES=canada-alt && tsx studio/tests/check_forms_s4_finder.ts 4455 xr_studio_forms_s4
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -125,6 +125,11 @@ const lines = (c: string) => sql(`select string_agg(lineage_key || ':' || status
   const codes = (xs: any[]) => (xs ?? []).map((x: any) => x.code).sort();
   ok("C11.15: forms both rounds read the same way are attached automatically, no confirm step (IMM 5257, 5409, 5645, IRM 0002)", JSON.stringify(codes(res.attach)) === JSON.stringify(["IMM 5257", "IMM 5409", "IMM 5645", "IRM 0002"]), codes(res.attach));
   ok("C11.15: the attached lines are marked Picked by AI (AI_FOUND), conditions kept in plain words", /IMM 5409:DRAFT:AI_FOUND/.test(lines(vv)) && sql(`select attach_mode || '|' || coalesce(condition_plain,'') from combination_form where combination_id='${vv}' and lineage_key='IMM 5409' order by version desc limit 1`).startsWith("ANSWER_CONDITIONAL|If you are"), lines(vv));
+  // W1-10 slice 1, C-5 (P-140): the finder proposes each attached form's channel for a second person; it never writes it.
+  const proposed = sql(`select count(*) from library_change where kind='form_accepts' and matches->>'source'='finder' and status='WAITING'`);
+  ok("C11.15 C-5: every attached form's channel is proposed (ready or check, both readings kept) or listed with its reason", (res.channels ?? []).length === res.attach.length && res.channels.every((c: any) => ["ready", "check", "listed", "kept"].includes(c.outcome) && (c.outcome === "ready" || !!c.why))
+    && Number(proposed) === res.channels.filter((c: any) => c.outcome === "ready" || c.outcome === "check").length, { channels: res.channels, proposed });
+  ok("C11.15 C-5 fail: the finder never writes what IRCC accepts itself (no AI record without a person's approval)", sql(`select count(*) from form_edition_accept where basis='AI_SAMPLE' and set_by <> 'migration'`) === "0");
   ok("C11.15: the guide itself named in form style (\"IMM 5256\", as both live rounds did) is recognised: neither dropped nor attached", !res.dropped?.some((d: any) => d.code === "IMM 5256") && !codes(res.attach).includes("IMM 5256"), res.dropped);
   ok("C11.14: a number not printed on the pages is dropped and listed (IMM 9999)", res.dropped?.some((d: any) => d.code === "IMM 9999" && /not printed/.test(d.why)), res.dropped);
   ok("C11.14: a quote not on the page is dropped and listed (IMM 5476 first round), so only one round stands: Decide", res.dropped?.some((d: any) => d.code === "IMM 5476" && /quoted line/.test(d.why)) && res.decide?.some((d: any) => d.code === "IMM 5476" && /Only one AI round/.test(d.why)), res.decide);

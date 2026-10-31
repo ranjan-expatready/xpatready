@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { guideLinks, mentionsOf, officialUrl, pageLinks, pageText, parseFormPage, parseFormsIndex, textFingerprint } from "../engine/canada.ts";
 import { CanadaError, canadaSource, FixtureCanada, LiveCanada, MAX_BYTES, type CanadaCode } from "../api/src/canada.ts";
-import { channelsFrom, filingWhy, recordedCopy, sampleFixtures } from "../api/src/filing.ts";
+import { channelProposal, channelsFrom, channelsRead, filingWhy, recordedCopy, sampleFixtures } from "../api/src/filing.ts";
 
 const STUDIO = join(import.meta.dirname, ".."), SOLUTION = join(STUDIO, "..", "..");
 const OFFICIAL = join(SOLUTION, "official-sources", "ircc"), INVENTORY = join(STUDIO, "..", "p1", "inventory");
@@ -159,6 +159,29 @@ async function main() {
   ok("C11.11 pass: the filing rule reads a PDF upload from IRCC's upload line, with its heading too (IMM 5476), not Online", channelsFrom("Upload this form along with your online application") === "PDF" && channelsFrom("How to submit this form Online applications If you have not yet submitted your immigration or citizenship application: Upload this form along with your online application") === "PDF");
   ok("C11.11 pass: an online line is Online; a line with both is either", channelsFrom("You must apply online.") === "ONLINE" && channelsFrom("You can fill it out online in the portal, or upload the form.") === "PDF_OR_ONLINE");
   ok("Lead check 28 Oct fail: a paper line is paper filing, never a PDF upload, with or without its heading (IMM 5476)", channelsFrom("Send this form along with your application to the office listed in the guide of your application.") === null && channelsFrom("Paper applications If you have not yet submitted your immigration or citizenship application: Send this form along with your application to the office listed in the guide of your application.") === null && channelsFrom("Mail the completed form to the visa office.") === null && /paper filing/.test(filingWhy("Paper applications If you have not yet submitted your immigration or citizenship application: Send this form along with your application to the office listed in the guide of your application.") ?? ""));
+  // W1-10 slice 1 (P-143): C-6 the keyword rule also reads an affirmative paper instruction; C-5 the finder's two readings.
+  ok("C11.11 C-6 pass: each paper phrasing reads Paper (mail it to, apply on paper, print sign and mail, paper applications must)",
+    ["Mail it to the address in the guide.", "You must apply on paper.", "Print, sign and mail the form.", "Paper applications must include this form.", "Send your completed application by mail."].every((x) => channelsRead(x)?.join() === "PAPER"),
+    ["Mail it to the address in the guide.", "You must apply on paper."].map(channelsRead));
+  ok("C11.11 C-6 fail: a condition or a negation is never paper (if you cannot apply online, do not mail, a paper version exists)",
+    [channelsRead("If you cannot apply online, you may apply on paper."), channelsRead("Do not mail this form."), channelsRead("A paper version of this form is available.")].every((x) => x === null || !x.includes("PAPER")),
+    [channelsRead("If you cannot apply online, you may apply on paper."), channelsRead("Do not mail this form.")]);
+  ok("C11.11 C-6: the older reading keeps its three values (Load sample's fixtures are unchanged)", channelsFrom("Mail it to the address in the guide.") === null && channelsFrom("You must apply online.") === "ONLINE");
+  const page = "You must apply online in the IRCC secure account. Upload this form along with your online application.";
+  const onPage = (q: string) => page.includes(q);
+  const rd = (value: "ONLINE" | "PDF_UPLOAD" | "PAPER", quote = "Upload this form along with your online application.", account = "IRCC_SECURE_ACCOUNT") => ({ value, account, quote });
+  const ready = channelProposal(rd("PDF_UPLOAD"), rd("PDF_UPLOAD"), null, onPage);
+  ok("C11.11 C-5 pass: both rounds name the same channel and account with a sentence on the page, the keyword rule agrees: Ready, both readings kept",
+    ready.outcome === "ready" && "channels" in ready && ready.channels.join() === "PDF_UPLOAD" && ready.account === "IRCC_SECURE_ACCOUNT" && ready.readings.draft?.value === "PDF_UPLOAD" && ready.readings.check?.value === "PDF_UPLOAD", ready);
+  const differ = channelProposal(rd("PDF_UPLOAD"), rd("ONLINE", "You must apply online in the IRCC secure account."), null, onPage);
+  ok("C11.11 C-5 fail: the rounds differ: still proposed, marked Check with both readings", differ.outcome === "check" && /two rounds differ/.test(differ.why ?? "") && differ.readings.check?.value === "ONLINE", differ);
+  const contra = channelProposal(rd("ONLINE", "Upload this form along with your online application."), rd("ONLINE", "Upload this form along with your online application."), null, onPage);
+  ok("C11.11 C-5 fail: the keyword rule reads the quoted line otherwise: Check", contra.outcome === "check" && /keyword rule reads/.test(contra.why ?? ""), contra);
+  const none = channelProposal(rd("PDF_UPLOAD", "A sentence that is not on the page."), rd("PDF_UPLOAD", "Another one not there."), null, onPage);
+  ok("C11.11 C-5 fail: no quoted sentence is on the page: listed, nothing proposed", none.outcome === "listed" && !("channels" in none), none);
+  const v1 = channelProposal(undefined, undefined, "Upload this form along with your online application.", onPage, "Saved before channels");
+  ok("C11.11 §4: an answer saved before channels proposes nothing of its own: the keyword rule reads IRCC's line, as Check, labelled", v1.outcome === "check" && /Saved before channels: channel not proposed/.test(v1.why ?? "") && "channels" in v1 && v1.channels.join() === "PDF_UPLOAD" && v1.account === "ANY", v1);
+  ok("C11.11 §4 fail: saved before channels with no line saying how it is filed: listed", channelProposal(undefined, undefined, "Download and fill out the form on a computer.", onPage, "Saved before channels").outcome === "listed");
   ok("Lead check 28 Oct (should): one rule, one outcome: filling the form in on a computer says nothing about how it is filed (IMM 5707, IMM 5409, IMM 1295 alike)", ["If you have filled out the form on a computer, click on the “Validate” button located at the top of the form.", "You should fill out your forms on a computer and validate them electronically to reduce mistakes and help you submit forms that are complete.", "Download and fill out the form on a computer."].every((l) => channelsFrom(l) === null && /how to fill the form in/.test(filingWhy(l) ?? "")));
   ok("review round 7 Major 1 fail: a download link's size label is not how the form is filed", channelsFrom("Download the form Schedule 1: Application for Temporary Residence [IMM 5257 SCH1] (PDF, 0.5 MB)") === null);
   // QA-61: the rule reads the sentence, not single words.

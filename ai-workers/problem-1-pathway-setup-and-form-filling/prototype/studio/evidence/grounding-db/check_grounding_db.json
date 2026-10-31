@@ -1,7 +1,7 @@
 {
- "at": "2026-10-26T18:59:30.996Z",
- "port": 4402,
- "database": "xr_studio_grounding",
+ "at": "2026-10-30T05:03:49.692Z",
+ "port": 16402,
+ "database": "xr_studio_forms_grounding",
  "pass": 31,
  "fail": 0,
  "log": [
@@ -63,8 +63,8 @@
    "name": "one combination per last-level node, also under concurrent creates: one created, the other returns it",
    "ok": true,
    "detail": [
-    200,
-    201
+    201,
+    200
    ]
   },
   {
@@ -185,9 +185,9 @@
    }
   },
   {
-   "name": "isolated copy: sample inputs load through the normal paths: 2 pathways, 11 programs, 6 combinations set up",
+   "name": "isolated copy: sample inputs load through the normal paths: 5 P-112 pathways (S2 fix 1), 11 programs, 6 combinations set up",
    "ok": true,
-   "detail": 3.64
+   "detail": 6.492
   },
   {
    "name": "a person makes the given-names question conditional (saved as draft)",
@@ -200,7 +200,7 @@
   {
    "name": "finding 3 at release: submitting a draft that can hide a value IMM 1295 always reads is refused",
    "ok": true,
-   "detail": "Fix 6 problems before submitting: person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 1295 reads it whenever the form applies. Make the form or its form fields apply under the same condition, or remove the question's condition. · person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 5257 SCH1 reads it under a different condition. Make the form or its form fields apply under the same condition, or remove the question's condition. · person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 5475 reads it under a different condition. Make the form or its form fields apply under the same condition, or remove the question's condition."
+   "detail": "Fix 6 problems before submitting: Given name(s) as shown on passport or travel document: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 1295 reads it whenever the form applies. Make the form or its form fields apply under the same condition, or remove the question's condition. · Given name(s) as shown on passport or travel document: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 5257 SCH1 reads it under a different condition. Make the form or its form fields apply under the same condition, or remove the question's condition. · Given name(s) as shown on passport or travel document: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 5475 reads it under a different condition. Make the form or its form fields apply under the same condition, or remove the question's condition."
   },
   {
    "name": "after the condition is removed the draft no longer has that error",
