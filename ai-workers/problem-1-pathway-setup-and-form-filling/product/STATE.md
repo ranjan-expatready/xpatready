@@ -13,7 +13,7 @@ updated: 2026-10-31 · milestone: **M2 — Super Admin configuration**, with the
 * M3 case, agent and client: 0 of 15 work · 3 partial (design agreed; build at the M2 gate)
 
 ## In flight (31 Oct, 08:00 UTC)
-**Blocker: CI is refused for every PR** since about 06:15 UTC: GitHub says "recent account payments have failed or your spending limit needs to be increased". About 2,500 minutes of PR checks ran on GitHub's machines in the morning after P-190, so the US$10 monthly budget is gone. Nothing merges until the founder fixes billing or chooses where PR checks run (BACKLOG N0).
+**Blocker: CI was refused for every PR** from about 06:15 UTC, because GitHub's machines spent the US$10 monthly budget in one morning (about 2,500 minutes). The founder chose P-195: PR checks and auto-merge move back to the Mac runner `xr-mac` (free). When that PR is green on the Mac, the waiting PRs re-run and merge by themselves (BACKLOG N0).
 
 | PR | Area | What | Where it stands |
 |---|---|---|---|
@@ -28,7 +28,7 @@ updated: 2026-10-31 · milestone: **M2 — Super Admin configuration**, with the
 A new Lead chat took over (the founder confirmed the previous one is closed). Checked every Mac copy for unsaved work: nothing uncommitted. Rescued into #141: P-194 (its PR #132 merged before the commit), and the qa session's five commits on `claude/qa-l10-e3c849` that never had a PR (QA-99 live retest and closure, the slice 1 channels journey check). Cloud builders cannot be messaged; their PRs are their reports.
 
 ## Founder decisions waiting
-* N0: billing, or where PR checks run (recommendation in the chat).
+* None (31 Oct: P-195 answered N0).
 
 ## Close-out still to do
 * After #111 and #113 merge: archive the four old Mac builder sessions (forms-fix8 local_c49f56b8, screens-card3 local_ba1559ab, runtime local_3b02c2d2, qa local_b27bf6a4) and remove their copies (about 12 GB). Then remove the frozen `lanes/` folder, and start a cloud qa session for `/qa after-merge` on main.

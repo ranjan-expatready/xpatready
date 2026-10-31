@@ -7,7 +7,7 @@ One queue for everything: **Now** (in order, being done), **Next** (in order, st
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
-| N0 | founder | **Blocker: GitHub refuses every CI job (31 Oct, since about 06:15 UTC):** "recent account payments have failed or your spending limit needs to be increased". About 2,500 minutes of PR checks ran on GitHub's machines in the first morning after P-190, so the US$10 monthly budget is gone. Nothing can merge | the founder fixes billing or chooses where PR checks run; one PR goes green | Actions annotations, 31 Oct |
+| N0 | tech lead | **Blocker: GitHub refused every CI job (31 Oct, from about 06:15 UTC)** because the US$10 Actions budget was spent in one morning. P-195: PR checks and auto-merge move back to the Mac runner | the P-195 PR runs green on `xr-mac`; the waiting approved PRs re-run and merge by themselves | Actions annotations, 31 Oct |
 | N1 | forms | **Merge PR #112:** slice 1 channels (P-143), live AI off by default on every copy (P-175, QA-100), one shared spend ledger (QA-90), cost warning and recorded Continue (P-179, C11.8) | merged; :4400 on the new main; QA-90 and QA-100 retested by qa | PR #112; forms Handover at faf7fca9 |
 | N2 | screens | **Merge PR #111:** PR #108 review Minors | merged | PR #111 |
 | N3 | runtime | **Merge PR #113:** queue transaction fix, C10.1 configured checkpoint, C3.11 signed-scan lines, P-184 speed helper, S7 Reset + Load sample (six combinations, P-148) | synced with main; tech lead decides the four "Found while building" points in the runtime branch's c10.1 plan (screens/W1-reset-and-sample); merged | PR #113; runtime Handover 30 Oct |
