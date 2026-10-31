@@ -7,7 +7,7 @@ import { ACCOUNT_WORDS, CHANNEL_WORDS, CHANNELS, IRCC_ACCOUNTS } from "../../../
 import * as React from "react";
 import { Link } from "react-router-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { FileUp, MoreHorizontal, Search } from "lucide-react";
+import { FileUp, ListChecks, MoreHorizontal, Search } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { api, queryClient, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { RunCard } from "@/components/run-card";
@@ -23,7 +23,7 @@ type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; 
   /** P-143 (C-3): one record per IRCC account (ANY: every account), each with its basis and IRCC's line. */
   accepts_accounts?: { account: string; account_words: string; channels: string[]; words: string; basis: string; quote: string | null; source_url: string | null }[];
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
-  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
+  used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; listed_by_ircc?: boolean; newer_on_index?: boolean; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
 type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string };
 export type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
 
@@ -46,6 +46,11 @@ const STATUS: Record<Row["status"], { word: string; tone: string; tip: string }>
   newer_file: { word: "Newer file on canada.ca", tone: "warn", tip: "canada.ca now serves another file of the same printed edition. Combinations keep using the library's file until a person replaces it." },
   no_file: { word: "No file yet", tone: "neutral", tip: "No edition of this form is in the library yet: upload its PDF, or let the form finder download it from canada.ca." },
   retired: { word: "Retired", tone: "neutral", tip: "Hidden from pickers and AI; released versions and open cases keep it. Restore it to use it again." },
+};
+/** X5 (P-156 (1)): the words of a row filled from IRCC's forms list, beside the usual ones. */
+const STATUS_INDEX: Record<"listed" | "newer", { word: string; tip: string }> = {
+  listed: { word: "Listed by IRCC · no file yet", tip: "IRCC's forms list names this form; its PDF is not in the library yet. It is downloaded from canada.ca when a combination picks it, or you can upload it." },
+  newer: { word: "Newer edition on canada.ca", tip: "IRCC's forms list shows a newer date for this form than when the library was last filled. Combinations keep using the library's file: check it against canada.ca (⋯ › Replace with a new edition)." },
 };
 const ORIGIN: Record<string, string> = { DOWNLOADED: "Downloaded from canada.ca by the form finder", UPLOADED: "Uploaded by a person", SAMPLE: "Official copy loaded with the sample" };
 
@@ -95,6 +100,7 @@ export function FormsPage() {
       <div className="mx-auto max-w-7xl space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><p className="text-sm text-text-muted">Shared library › Forms</p><h1 className="text-2xl font-bold tracking-tight">Forms</h1><p className="mt-1 text-sm text-text-muted">Every IRCC form, guide and checklist, stored once. Combinations pick from here by themselves.</p></div>
+          {canAuthor ? <FillFromIndexButton /> : null}
           {canAuthor ? <UploadButton onRuns={(ids) => setRuns((r) => [...ids, ...r].slice(0, 20))} /> : null}
         </div>
         {runs.length ? <div className="space-y-3">{runs.map((id) => <RunCard key={id} runId={id} onEnded={() => void queryClient.invalidateQueries({ queryKey: ["library-forms-list"] })} onDismiss={() => setRuns((r) => r.filter((x) => x !== id))} />)}</div> : null}
@@ -131,7 +137,7 @@ export function FormsPage() {
                   <td className="hidden xl:table-cell">{editionText(r) ?? <span className="text-text-muted">no usable edition yet</span>}</td>
                   <td className="max-w-36 xl:max-w-none"><AcceptsCell r={r} /></td>
                   <td className="max-w-48 xl:max-w-72">{r.used_by.length === 0 ? <span className="text-text-muted">Not used</span> : r.used_by.length === 1 ? <TrailText label={r.used_by[0].label} /> : <Tip tip={r.used_by.map((u) => u.label).join(", ")}>{/* DV-d1-1 (N8): a count a person trusts at a glance: a plain link-style button (opens where it is used), never a dotted line that reads as struck through */}<button type="button" data-used-by-count className="rounded text-text-link underline-offset-2 hover:underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setOpen(r)}>{r.used_by.length} combinations</button></Tip>}</td>
-                  <td><span className="inline-flex flex-wrap gap-1"><Tip tip={STATUS[r.status].tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone={STATUS[r.status].tone}>{STATUS[r.status].word}</Pill></span></Tip>{r.lifecycle_waiting && r.lifecycle_returned ? <Tip tip={TIP.returned}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="danger">{RETURNED_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : r.lifecycle_waiting ? <Tip tip={r.lifecycle_approved ? `Approved: the form is ${r.lifecycle_waiting === "RESTORE" ? "restored" : "retired"} with the next release (Release, on the combination's Review page).` : `A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="warn">{r.lifecycle_approved ? `${ACTION_LABEL[r.lifecycle_waiting]} approved` : WAITING_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : null}</span></td>
+                  <td><span className="inline-flex flex-wrap gap-1">{(() => { const ix = r.status === "no_file" && r.listed_by_ircc ? STATUS_INDEX.listed : r.status === "newer_file" && r.newer_on_index ? STATUS_INDEX.newer : null; return <Tip tip={ix?.tip ?? STATUS[r.status].tip}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-row-status={r.status}><Pill tone={STATUS[r.status].tone}>{ix?.word ?? STATUS[r.status].word}</Pill></span></Tip>; })()}{r.lifecycle_waiting && r.lifecycle_returned ? <Tip tip={TIP.returned}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="danger">{RETURNED_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : r.lifecycle_waiting ? <Tip tip={r.lifecycle_approved ? `Approved: the form is ${r.lifecycle_waiting === "RESTORE" ? "restored" : "retired"} with the next release (Release, on the combination's Review page).` : `A request to ${r.lifecycle_waiting.toLowerCase()} this form waits for a second person on To review.`}><span tabIndex={0} className="rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Pill tone="warn">{r.lifecycle_approved ? `${ACTION_LABEL[r.lifecycle_waiting]} approved` : WAITING_LABEL[r.lifecycle_waiting]}</Pill></span></Tip> : null}</span></td>
                   <td className="text-right">
                     <div className="flex items-center justify-end gap-0.5">
                       <RowAction kind={r.action.kind} why={canAuthor ? r.action.why : WHY.author} canEdit={canAuthor} name={r.code} reasonId={`why-${r.code.replace(/\W+/g, "-")}`}
@@ -185,6 +191,12 @@ function useAsk<R>(fn: () => Promise<R>, success: string, keys: unknown[][], onD
 }
 
 /** One way in: Upload PDF, many files at once; each file runs on its own card (rules first, AI only when they cannot). */
+/** X5 (P-156 (1)): fills the library from IRCC's forms list once (US$0: no AI, no download); safe to press again. */
+function FillFromIndexButton() {
+  const fill = useAction(() => api<{ message: string }>("/library/forms/fill-from-index", { method: "POST" }), { success: (r) => r.message, invalidate: [["library-forms-list"]] });
+  return <Tip tip="Reads IRCC's forms and guides list into the library: every form number, listed with no file yet. No AI, no download, US$0. Forms already here keep their file."><span><Button variant="secondary" busy={fill.isPending} onClick={() => fill.mutate(undefined)} data-fill-index><ListChecks /> Fill from IRCC's forms list</Button></span></Tip>;
+}
+
 function UploadButton({ onRuns }: { onRuns: (ids: string[]) => void }) {
   const input = React.useRef<HTMLInputElement>(null);
   const [error, setError] = React.useState<string | null>(null);

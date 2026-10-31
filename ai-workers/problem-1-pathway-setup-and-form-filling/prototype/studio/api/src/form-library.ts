@@ -13,6 +13,7 @@ import { manifest } from "../../engine/import.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
 import { INDEX_URL } from "./finder.ts";
+import { planIndexFill } from "../../engine/library-index.ts";
 import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
 import { AcceptsBody, acceptsWords, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
@@ -87,13 +88,14 @@ export class FormLibrary {
       const pendingChange = lifecyclePending.find((x) => x.key === f.formKey), lifecycle = pendingChange?.action ?? null;
       const needsOk = held.some((h) => h.code === f.formKey);
       // Lead 28 Oct (carried should): "Needs your OK" only when something waits for a person; a form with no file is "No file yet".
-      const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 ? "newer_file" : current ? "ready" : "no_file";
+      // X5 (P156-2): a later read of IRCC's index that changed the date of a form with a file marks it newer, too.
+      const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 || (current && f.newerOnIndexAt) ? "newer_file" : current ? "ready" : "no_file";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
         // P-143 (C-3): one record per IRCC account (ANY first); the column says them in words, one line per account.
         ...acceptsRow(current?.accepts ?? [], TYPE_OF(f.formKind, f.displayName) === "form"), accepts_waiting: waitingAccepts.has(f.formKey),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
         form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256 && a.kind === "Form")?.id ?? null : null,
-        used_by: using, status, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", lifecycle_returned: pendingChange?.status === "RETURNED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
+        used_by: using, status, listed_by_ircc: !!f.listedOnIndexAt, newer_on_index: !!(current && f.newerOnIndexAt && !current.newerFileSha256), lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", lifecycle_returned: pendingChange?.status === "RETURNED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
     });
     // P-116 amended (28 Oct): one written action per row, decided by the one guard (formUses); greyed with its reason.
     // An earlier edition says what keeps it ("Kept by Release 2 of Visitor visa and 3 open cases"; P-51, never deleted).
@@ -138,8 +140,35 @@ export class FormLibrary {
   /** "Replace with a new edition" checked against canada.ca (M6): the form's own page and its PDF, rules only, US$0. A
    *  newer printed edition is held for today's edition impact review; the same edition from a new file is marked for a
    *  person; the same file says so. Downloads go through the form finder's checks (official host, the form's page). */
+  /** X5 slice a (P-156 (1), P156-1/2): fills the library from IRCC's forms-and-guides index, US$0 (the recorded copy, or
+   *  canada.ca on the Mac): every number becomes a library form, a new one "Listed by IRCC · no file yet"; a form already
+   *  there is matched by its number, keeps its file, and is marked "Newer edition on canada.ca" when the index's date for it
+   *  changed since the last read. No AI and no PDF download. Rows without an official page are counted, never guessed. */
+  async fillFromIndex(actor: Actor) {
+    need(actor, "author");
+    const workspaceId = await this.ws.id();
+    let parsed: ReturnType<typeof parseFormsIndex>;
+    try { parsed = parseFormsIndex((await this.canada.get(INDEX_URL, "html")).bytes.toString("utf8")); } catch (e) {
+      if (e instanceof CanadaError) throw problem(409, "IRCC's forms list could not be read", `${e.message} Nothing was added to the library.`);
+      throw e;
+    }
+    if (!parsed.rows.length) throw problem(409, "IRCC's forms list could not be read", "The forms list page has no form rows (its layout may have changed). Nothing was added to the library.");
+    const defs = await this.db.govFormDef.findMany({ where: { workspaceId }, select: { formKey: true, indexDateModified: true, formPageUrl: true, editions: { select: { id: true }, take: 1 } } });
+    const plan = planIndexFill(parsed.rows, defs.map((d) => ({ formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: d.editions.length > 0, formPageUrl: d.formPageUrl })));
+    const now = new Date();
+    await this.db.$transaction(async (tx) => {
+      if (plan.create.length) await tx.govFormDef.createMany({ data: plan.create.map((c) => ({ workspaceId, formKey: c.formKey, displayName: c.title, formKind: c.kind, formPageUrl: c.pageUrl, listedOnIndexAt: now, indexDateModified: c.dateModified })), skipDuplicates: true });
+      for (const l of plan.listed) await tx.govFormDef.update({ where: { workspaceId_formKey: { workspaceId, formKey: l.formKey } }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}), ...(plan.newer.includes(l.formKey) ? { newerOnIndexAt: now } : {}) } });
+    });
+    const words = `${plan.create.length} new form${plan.create.length === 1 ? "" : "s"} listed (no file yet), ${plan.listed.length} already in the library${plan.newer.length ? `, ${plan.newer.length} with a newer edition on canada.ca (${plan.newer.slice(0, 5).join(", ")}${plan.newer.length > 5 ? "…" : ""})` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}`;
+    await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created: plan.create.length, listed: plan.listed.length, newer: plan.newer, no_page: parsed.noPage });
+    return { created: plan.create.length, listed: plan.listed.length, newer: plan.newer, no_page: parsed.noPage, message: `Filled from IRCC's forms list: ${words}.` };
+  }
+
   async checkCanada(actor: Actor, code: string) {
     need(actor, "author");
+    // X5: a person checking the form against canada.ca answers the index's "newer edition" mark.
+    await this.db.govFormDef.updateMany({ where: { workspaceId: await this.ws.id(), formKey: code, newerOnIndexAt: { not: null } }, data: { newerOnIndexAt: null } });
     try { return await this.compareWithCanada(code); } catch (e) {
       // canada.ca not answering (or a page not among the recorded copies) is said in words, never a server error.
       if (e instanceof CanadaError) throw problem(409, "canada.ca could not be read", `${code}: ${e.message} Upload its new edition's PDF instead, or try again later.`);
@@ -322,6 +351,7 @@ export class FormLibraryController {
   @Post("combinations/:id/forms/:code/replace") replace(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.replace(actorOf(a), id, code, b); }
   @Post("combinations/:id/forms") attach(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.lib.attach(actorOf(a), id, b); }
   @Delete("combinations/:id/forms/:code") remove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.remove(actorOf(a), id, code, b); }
+  @Post("library/forms/fill-from-index") fill(@Headers("x-actor") a: H) { return this.lib.fillFromIndex(actorOf(a)); }
   @Get("library/forms/list") list(@Headers("x-actor") a: H, @Query() q: unknown) { return this.lib.list(q, readerOf(a).id); }
   @Get("library/forms/:code/uses") uses(@Param("code", { transform: normaliseCode }) code: string) { return this.lib.uses(code); }
   @Post("library/forms/:code/accepts") accepts(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.proposeAccepts(actorOf(a), code, b); }

@@ -243,7 +243,20 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.locator('[aria-label="Loading forms"]').waitFor({ timeout: 10_000 });
     step("N8 DV-d1-2: the loading list says so as a status (role status, busy)", (await p.locator('[aria-label="Loading forms"]').getAttribute("role")) === "status" && (await p.locator('[aria-label="Loading forms"]').getAttribute("aria-busy")) === "true");
     await axe("N8 DV-d1-2 fail: Forms while the list loads, 1440 px (before: aria-prohibited-attr on the loading list)");
-    await p.unroute("**/api/library/forms/list**");
+    await p.unrouteAll({ behavior: "ignoreErrors" }); // the held list request may still be pending: it must not fail the page that comes next
+    // X5 slice a (P-156 (1)): the author fills the library from IRCC's forms list (US$0); new rows read "Listed by IRCC · no
+    // file yet". A person without the author duty has no such button.
+    await as("user-A"); await open();
+    await p.locator("[data-fill-index]").click();
+    await p.getByText(/Filled from IRCC's forms list: \d+ new forms listed/).first().waitFor({ timeout: 30_000 });
+    await p.getByText("Listed by IRCC · no file yet").first().waitFor({ timeout: 30_000 });
+    step("X5 C2.6 pass: Fill from IRCC's forms list adds the listed forms, each 'Listed by IRCC · no file yet'", (await p.getByText("Listed by IRCC · no file yet").count()) > 50);
+    await axe("X5: the library after the fill from IRCC's forms list");
+    // One readable view (the whole list is now some 240 rows): the first screen at 1440 px.
+    await p.setViewportSize({ width: 1440, height: 900 }); await p.getByText("Listed by IRCC · no file yet").first().evaluate((e) => e.scrollIntoView({ block: "center" })); await sleep(150);
+    await p.screenshot({ path: path.join(SHOTS, "16-filled-from-index-1440.png") });
+    await as("user-B"); await open();
+    step("X5 C2.6 fail: a person without the author duty has no Fill from IRCC's forms list", (await p.locator("[data-fill-index]").count()) === 0);
     step("no page errors", errs.length === 0, errs.join(" | "));
   } catch (e) { fail++; console.log(`FAIL  unexpected ${e.stack}`); } finally { await b.close(); }
   console.log(`\n${pass} passed, ${fail} failed`);
