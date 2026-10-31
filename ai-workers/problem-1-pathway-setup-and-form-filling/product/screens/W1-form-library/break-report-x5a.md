@@ -595,3 +595,42 @@ Why it matters: the product shows "newer on canada.ca" for the very bytes it fet
 - **Printed month first.** A `(01-2021)` file under a 2025-03 page stays 2021-01. A planted marker plus canada.ca's own bytes gives `current`, the marker is cleared, and the row reads Ready (`newer_on_index false`).
 - **Races.** 12 checks raced a replay Find again that was downloading IMM 5645: all 12 said "check" (no file yet), with no 500. 12 more after the download all said `current`. Baseline 2025-08-01, never lowered.
 - **Roles.** user-B, user-C and user-O get 403, an unknown actor gets 401, an unknown code gets 404, and a 5,000-character code gets 404 in words.
+
+# Round at 521bc9c4 (the finder writes the guarded baseline on a download and on identical bytes and clears its stale marker; the check answers "no approved file" before downloading, clears the marker only if unchanged, audits the kept baseline)
+
+I attacked `git diff 0796fc0c 521bc9c4` from an isolated copy, `brk15a`, on :4454. It came from `git archive 521bc9c4` into /tmp, with node_modules symlinked to the checkout's (the schema is unchanged in this diff, and no `prisma generate` was run). canada.ca was replayed from planted copies in the copy's own folder (`STUDIO_CANADA_FIXTURES=fx`): index dates and page months edited, PDFs given extra trailing bytes (same printed edition, new checksum), checksums re-recorded, and the copy restarted for each variant. Find again ran in `replay` mode on "Visitor visa", plus `rules` mode on "With an LMIA" with the work-permit page chosen. The x5 library suite ran on `brk15t` on :4455: **65 passed, 0 failed**. The migration deployed cleanly on both fresh databases. No `*_LIVE` and no `STUDIO_CANADA=live` were set, so the cost was US$0 and the ledger folder stayed empty. Both copies are stopped, their databases dropped and the /tmp tree removed. `web/` is unchanged in this diff, so I did not re-run keyboard or layout.
+
+## Blocker
+None.
+
+## Major
+**M15 (re-run, still open; the new words add a second dead end).** Swap IMM 1295's fixture PDF for the same file plus trailing bytes (sha `9644f6ea…`), plant index 2025-09-03, then fill. Result: Newer. Check now ends "…marked for you to replace), **or upload canada.ca's PDF**." (`form-library.ts:270`). Neither path works:
+- Uploading exactly those bytes through `/intake` is held, "same edition, different file". `cannotApprove` says "this copy is not needed: reject it". user-B's approve gives 409.
+- `/library/forms/upload` ends NEEDS_PERSON "Already waiting for a person". Its own step said "The very file canada.ca's form page links: no second person is needed".
+- Find again in replay on "With an LMIA" and "Applicant outside Canada" gives NEEDS_PERSON (no saved answer). With the page chosen, replay FAILED (no saved answer) and rules gave "nothing to take or download".
+- The same dead end appears where the finder can run. Give IMM 5645 new bytes, then Find again: the row reads `newer_file` ("marked for you to replace"). An upload of canada.ca's bytes is held with "not needed: reject it". No route replaces the edition.
+
+## Minor
+- **m49 (new). The finder's new-edition baseline uses an index date read after the download, so a fill landing during the identity read makes an old file read Ready.** `storeDownloaded` re-reads the form at `finder.ts:622`, after the PDF is fetched and `read_form_identity.py` runs (`:616`). It then stores `indexDateSeenCurrent: d.indexDateModified` (`:640`). The same-bytes branch uses the date read before the download (`:566`), which is the safe direction.
+  - Repro, 3 of 3 runs: `demo/reset`, `demo/load`, fill (IMM 5645 has no file, index 2025-04-01). Start Find again (replay) on "Visitor visa". As soon as `workspaces/demo/library/*-imm5645e.pdf` appears, set `gov_form_def.index_date_modified='2026-09-01'` (the write a fill makes when canada.ca lists a newer date; simulated with SQL because one replay process cannot change its index).
+  - Result: the edition `IMM 5645 (01-2021)` is created with baseline **2026-09-01** and reads **Ready**. With baseline 2025-04-01 (the move landing a moment later), the same row reads **Newer**.
+  - Live, the window is the identity read, up to 60 s.
+- **m50 (new). Find again turns a row from Newer to Ready without leaving an audit line.** Repro: with index 2025-06-02 and baseline 2025-03-12, fill. Result: "1 with a newer edition (IMM 5645)". Find again (replay) then gives baseline 2025-06-02 and the row reads Ready. The only audit lines are "started" and "found… attached 0 forms". The fetch step says "5 in the library". A planted marker cleared by Find again leaves no trace either. The check writes a "checked" line for this very change (`form-library.ts:216`, review 63d2ba6d).
+- **m51 (new, from reading the code; not run). The m48 race moved into the finder.** The finder clears the marker unguarded (`finder.ts:586`, `newerFileSha256: { not: null }`). Suppose two Find again runs on two combinations that share a form straddle a file change on canada.ca. The run holding the old bytes then clears the marker the other run just set (`:627`), and the row reads Ready while canada.ca serves another file. Guarding on the marker read at `:566` would close it. I could not run it: one replay process serves one set of bytes per address, because the fixture index is cached.
+- **m45 (re-run, mostly fixed).** The index moved back to 2025-04-01 under baseline 2025-06-02. Check then audits `"baseline": "2025-06-02"`, which is the kept value. A check that clears a planted marker still does not say so in the line or its detail.
+- **m47 (re-run, partly fixed).** IMM 5562 had canada.ca's bytes, unapproved, with a held re-upload (row `needs_ok`). Check now answers before downloading, and `checked_at` stays null. That part is fixed. The words are unchanged: "no approved file… or upload its PDF" (`form-library.ts:252`), although its PDF is uploaded and waiting on To review.
+
+## What held
+- **M16 is fixed.**
+  - IMM 5645's page is re-dated to March 2025 and the index set to 2025-03-12, then a fill. Find again downloads the file. Result: baseline 2025-03-12, `status ready`, `newer_on_index false`.
+  - The index moves to 2025-06-02, then a fill. Result: "1 with a newer edition (IMM 5645)", which is right.
+  - Find again then gives baseline 2025-06-02, and the row reads Ready.
+- **m46 is fixed.** Plant `newer_file_sha256` on IMM 5645 while canada.ca serves the library's bytes. Find again clears it, and the row reads Ready.
+- **The baseline is never lowered by the finder.** The index moves back to 2025-04-01, then a fill and Find again. The baseline stays 2025-06-02, and Check keeps it too.
+- **A finder run on bytes that differ.** IMM 5645 with new bytes gets `newer_file` set to the new checksum, its baseline stays unchanged, and Check says "different PDF". After a revert to canada.ca's original bytes, Find again clears the marker.
+- **m48 (code).** The check clears only the marker it read (`form-library.ts:264`).
+- **Races.**
+  - 24 checks staggered across a Find again that was downloading IMM 5645: 4 said "no approved file" (before the file landed) and 20 said `current`.
+  - 12 simultaneous checks during a second Find again: all 12 said `current`.
+  - No 500 in the log. Baseline 2025-04-01 and no marker.
+- **Roles and guides.** user-B, user-C and user-O get 403 on the check, and an unknown actor gets 401. Guide 5256 gets 409 "Not for guides".

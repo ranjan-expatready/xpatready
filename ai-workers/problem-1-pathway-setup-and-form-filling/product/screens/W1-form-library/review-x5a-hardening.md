@@ -580,3 +580,103 @@ Full record: `journey-test-reviewer-2026-10-31-x5a-0796fc0c.md`.
 * Live canada.ca.
 * A real screen reader. Browser zoom proper.
 * An unaided walk by an intended user (D17 and D20 stay with the founder).
+
+# Round at 521bc9c4
+
+Reviewer, fresh context, 31 Oct 2026. Scope: `git diff 0796fc0c 521bc9c4` (`finder.ts`, `form-library.ts`, `check_forms_x5_library.ts`), plus a sanity pass on `git diff origin/main...521bc9c4`.
+* Copies on :4450–4453 only:
+  * :4450 ran the suite from the checkout, then the journeys from a `git archive 521bc9c4` copy in `/tmp/rv521`.
+  * :4451 and :4452 ran the M16 and no-file repros and the mutations, from `/tmp/rv521m`.
+  * :4453 ran the browser suite.
+* canada.ca was replayed from edited copies inside each copy's own folder (`STUDIO_CANADA_FIXTURES=fx`, `/tmp/rv521-scripts/fx.py`). Find again ran on saved answers (`replay`). No `*_LIVE`, no `STUDIO_CANADA=live`, no `prisma generate`: US$0.
+* All copies stopped and their 7 databases dropped. Nothing in the checkout changed apart from these two records. (`break-report-x5a.md` changed during my run: that is the breaker's round, not mine.)
+
+**Results.**
+* `tsc --noEmit -p api` clean.
+* `check_forms_x5_library` 65/65, twice.
+* `check_forms_s4_canada` 80/80. `check_forms_demo` 23/23. Browser suite 95/95.
+* My journey script (`/tmp/rv521-scripts/journey.cjs`) 28/28, twice.
+* Graph at 521bc9c4: G1 0, G2 0, G3 2 (neither is a form-library route).
+
+## Each claim, checked live and by mutation
+Mutations were made in `/tmp/rv521m`, each on a fresh :4452. Two detectors:
+* "suite" is the committed `check_forms_x5_library`.
+* "journey" is my US$0 repro (`/tmp/rv521-scripts/j-m16.sh`): IMM 5645's page is re-dated to March 2025 with the same PDF, the index is set to 2025-03-12, then fill and Find again (replay) on "Visitor visa". The index then moves to 2025-06-02, followed by a fill and Find again. Finally a marker is planted, followed by Find again.
+
+| Claim | Live at 521bc9c4 | Mutation | Suite | Journey |
+|---|---|---|---|---|
+| M16, download (`finder.ts:640`) | Fixed: the downloaded IMM 5645 (01-2021) reads **Ready**, baseline 2025-03-12 (at 0796fc0c: Newer) | drop `indexDateSeenCurrent` at create | **survives** 65/65 | caught |
+| M16, same bytes (`:585`) | Fixed: index to 2025-06-02, fill gives "1 with a newer edition (IMM 5645)", Find again gives "already", row **Ready**, baseline 2025-06-02 | `if (false)` | survives (one unrelated timing fail, below) | caught |
+| m46 (`:586`) | Fixed: planted marker, Find again gives Ready, marker null | delete the clear | **survives** | caught |
+| m48 (`form-library.ts:264`) | Code right: clears only if the marker is still the one read at `:245` | unguard | survives | survives (a race; replay cannot switch files mid-check) |
+| m45 (`:267`) | Fixed: the audit says the baseline kept (2099-01-01; J3: 2025-06-02) | revert to `def.indexDateModified` | caught | n/a |
+| No file: answer before downloading (`:252`) | Fixed: IMM 5645/5646 with no file and the PDF at 404 gives 201 "…has no approved file in the library to compare… or upload its PDF." (mutated: 409 "canada.ca's PDF could not be read") | `if (false)` | **survives** 65/65 | caught by `/tmp/rv521-scripts/j-nofile.sh` |
+| Review 3 words | "…or upload canada.ca's PDF." (J5, IMM 5409 with other bytes) | n/a | n/a | n/a |
+
+## Blocker
+None.
+
+## Major
+1. **Must (D16; [M] "a rule's test fails when the rule is removed", STANDARDS §7): 4 of the round's 6 fixes have no test that fails when the fix is removed. One of them is the round's only Major, M16.**
+   * Removing the finder's download baseline, its same-bytes baseline, or its marker clear leaves the committed suites green: x5 library 65/65. No US$0 suite asserts a baseline after a finder run. Grep: `index_date_seen|newer_file` appears in no finder suite. `check_forms_s4_finder` needs live AI.
+   * The new "no approved file" test (`check_forms_x5_library.ts:206–209`) passes without its fix. Changing the edition's `sha256` makes `current` null. The fixture PDF still downloads. So the old tail branch (`form-library.ts:271`) gives the same "no approved file" words. The test's own note ("before: … a missing PDF gave 409") is never exercised.
+   * The code itself is right (table above), so this is tests only. A US$0 test is feasible: the `j-m16.sh` sequence runs at US$0 with the committed saved answers and an edited fixture copy.
+   * Fix:
+     * Add a replay test that downloads IMM 5645 under a re-dated page (expect Ready), then moves the index (expect Newer, then Ready after Find again), then plants a marker (expect it cleared).
+     * In the no-file test, give the form's PDF a 404 in a fixture copy, so that removing `:252` turns 201 into 409.
+
+## Minor
+2. **m49 (new, from reading the code; not run): the finder's new marker clear (`finder.ts:586`) is unguarded. It has the same shape that m48 fixed in the check.**
+   * Run 1 downloads the old bytes. Canada.ca switches files. Run 2 downloads the new bytes and marks the edition (`:627`). Run 1 then clears that mark.
+   * The window is from run 1's download to its write (milliseconds), far narrower than the check's 60 s, so it is rare.
+   * Fix: guard the write with the marker read in `formFor` (`def.editions`), as `:264` does.
+3. **Carried Shoulds from the 0796fc0c review: not addressed, and the commit names only 3 and 4.**
+   * (1) `finder.ts:582` still writes the page month, which gives the undated-label false Ready.
+   * (2) m39 still has no failing test.
+4. **A timing assertion is flaky:** `check_forms_x5_library.ts:127` (list under 300 ms) failed once at 330 ms during the `same` mutation run (unrelated to the mutation). It was 65/65 on both clean runs.
+5. **Dead branch:** the `current ?` else-text at `form-library.ts:271` can no longer be reached after `:252`. This is harmless, but it is what lets the test in issue 1 pass.
+
+## Whole-PR sanity (origin/main...521bc9c4)
+* The schema change is additive (7 lines). Library page, browser suite and x5 suite are all green.
+* Roles, with Check = ⋯ › "Replace with a new edition…":
+  * user-B: the item is disabled, and the API gives 403.
+  * user-C: 403. No actor: 401.
+  * A guide gives 409. Unknown codes and 5,000-character codes give 404.
+* 8 checks at once: all `current`, 1 edition, baseline kept, 8 audit lines.
+* axe 0 on 4 states. No sideways scroll at 1440, 1024 or 400. 0 page errors.
+* Check takes 55–60 ms, fill 200–258 ms, and Find again (replay) about 1.35 s.
+
+## D1–D20
+| D | Score | Evidence |
+|---|---|---|
+| D1 | 5 | J1–J5: download Ready, page edit answered by Find again, no-file in words, other bytes in words |
+| D2 | 5 | M16 closed: what the product just fetched never reads "newer" |
+| D3 | 4 | Finder and check now share the guarded baseline; finder marker clear unguarded (issue 2) |
+| D4 | 5 | No schema change this round |
+| D5 | 5 | Guarded never-lower writes; 8 concurrent checks consistent |
+| D6 | 5 | Check writes the current edition's id only |
+| D7 | 5 | No AI; replay US$0 |
+| D8 | 5 | Menu words unchanged |
+| D9 | 5 | Toast and row agree (J2–J5) |
+| D10 | 5 | "…has no approved file in the library to compare…", "…or upload canada.ca's PDF." |
+| D11 | 5 | Unused form now offered upload (review 3 closed) |
+| D12 | 5 | 400, 1024 and 1440, no sideways scroll |
+| D13 | 5 | axe 0; keyboard ⋯ › Enter, focus returns to ⋯ |
+| D14 | 5 | Team toasts and pills (`/tmp/rv521-shots/j4-nofile.png`) |
+| D15 | 5 | See timings above |
+| D16 | 3 | Suites green, but 4 of 6 claimed fixes survive removal (issue 1) |
+| D17 | simulated only | No intended user walked it |
+| D18 | 4 | Audit baseline fixed; undated edge carried (issue 3) |
+| D19 | 5 | Library and combination give the same answers |
+| D20 | simulated only | The founder's walkthrough |
+
+## Journey score: 9.5 / 10 (pass, no criterion at 0)
+Full record: `journey-test-reviewer-2026-10-31-x5a-521bc9c4.md`.
+
+## What I could not check
+* Live canada.ca. A file switching mid-check (m48, m49).
+* `check_forms_s4_finder` (needs live AI).
+* A real screen reader. Browser zoom proper (400 px stands in for 200 %).
+* An unaided walk by an intended user.
+
+**Verdict: Block.** This is ship after fixes, and the fixes are tests only: the code for M16, m45, m46, m48 and the no-file answer is right, both live and on reading. To fix: issue 1, meaning a US$0 replay test for M16 and m46, and a no-file test that fails without `:252`. Issues 2–5 can follow.

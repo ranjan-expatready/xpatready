@@ -268,7 +268,7 @@ export class FormLibrary {
       return { outcome: "current" as const, message: `${current.editionLabel} is canada.ca's current file: the same PDF${page.lastUpdated ? ` (page last updated ${page.lastUpdated})` : ""}.`, last_updated: page.lastUpdated, edition: current.editionLabel, sha256: pdf.sha256, baseline };
     }
     // Break (6bc5eb72) M15 / review Should 4: what the check found, in words.
-    return { outcome: "check" as const, message: current ? `canada.ca now serves a different PDF for ${code} than the library's file (${current.editionLabel})${page.lastUpdated ? `; its page was last updated ${page.lastUpdated}` : ""}. Find again on a combination that uses ${code} downloads it for review (a new edition goes to edition review; the same edition from a new file is marked for you to replace), or upload canada.ca's PDF.` : `${code} has no approved file in the library to compare. Find again on a combination that uses it, or upload its PDF.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
+    return { outcome: "check" as const, message: `canada.ca now serves a different PDF for ${code} than the library's file (${current.editionLabel})${page.lastUpdated ? `; its page was last updated ${page.lastUpdated}` : ""}. Find again on a combination that uses ${code} downloads it for review (a new edition goes to edition review; the same edition from a new file is marked for you to replace), or upload canada.ca's PDF.`, last_updated: page.lastUpdated, pdf_url: pdfUrl }; // review (521bc9c4) 5: no other branch (no approved file is answered above)
   }
 
   // ------------------------------------------------------------------ hand actions on a combination's forms

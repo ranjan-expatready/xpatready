@@ -583,10 +583,11 @@ export class Finder implements OnModuleInit {
           // X5 break (0796fc0c) M16, m46: the library's file is canada.ca's own bytes, as a "Check against canada.ca" would find:
           // it gets the same guarded baseline (the index date as it stands, never lowered) and loses a stale new-file marker.
           if (def?.indexDateModified) await this.db.formEdition.updateMany({ where: { workspaceId, sha256: pdf.sha256, OR: [{ indexDateSeenCurrent: null }, { indexDateSeenCurrent: { lt: def.indexDateModified } }] }, data: { indexDateSeenCurrent: def.indexDateModified } });
-          await this.db.formEdition.updateMany({ where: { workspaceId, sha256: pdf.sha256, newerFileSha256: { not: null } }, data: { newerFileSha256: null } });
+          // Break / review (521bc9c4) m51, m49: only the marker this run read is cleared (another run may have marked a newer file meanwhile).
+          for (const e of usable) if (e.sha256 === pdf.sha256 && e.newerFileSha256) await this.db.formEdition.updateMany({ where: { id: e.id, newerFileSha256: e.newerFileSha256 }, data: { newerFileSha256: null } });
           return mine;
         }
-        const r = await this.storeDownloaded(workspaceId, p, row, fp, pdfUrl, pdf.bytes, by, batchId);
+        const r = await this.storeDownloaded(workspaceId, p, row, fp, pdfUrl, pdf.bytes, by, batchId, def?.indexDateModified ?? null);
         return "missing" in r ? mine : r;
       } catch (e) { if (e instanceof CanadaError) return mine; throw e; }
     }
@@ -596,7 +597,7 @@ export class Finder implements OnModuleInit {
     const pdfUrl = fp.pdfUrls.find((u) => officialUrl(u).ok);
     if (!pdfUrl) return { missing: `${p.code}'s canada.ca page has no PDF to download (it may be online only). Upload its PDF if IRCC publishes one.` };
     const pdf = await this.canada.get(pdfUrl, "pdf");
-    return this.storeDownloaded(workspaceId, p, row, fp, pdfUrl, pdf.bytes, by, batchId);
+    return this.storeDownloaded(workspaceId, p, row, fp, pdfUrl, pdf.bytes, by, batchId, def?.indexDateModified ?? null);
   }
 
   /** Editions a combination may use: PDF, and on the manifest, approved in the product or officially downloaded. */
@@ -608,7 +609,7 @@ export class Finder implements OnModuleInit {
   }
 
   /** Reads the downloaded file's identity (rules, no AI), checks it is the form asked for, and stores it once. */
-  private async storeDownloaded(workspaceId: string, p: Proposal, row: { code: string; title: string; pageUrl: string; kind: string }, page: { lastUpdated: string | null }, pdfUrl: string, bytes: Buffer, by: string, batchId: string): Promise<{ source: "library" | "downloaded" | "newer_file"; edition: string | null } | { missing: string }> {
+  private async storeDownloaded(workspaceId: string, p: Proposal, row: { code: string; title: string; pageUrl: string; kind: string }, page: { lastUpdated: string | null }, pdfUrl: string, bytes: Buffer, by: string, batchId: string, indexAtStart: string | null): Promise<{ source: "library" | "downloaded" | "newer_file"; edition: string | null } | { missing: string }> {
     const fileSha = sha(bytes);
     const name = basename(new URL(pdfUrl).pathname).replace(/[^A-Za-z0-9._-]/g, "_").slice(-80);
     const stored = join(this.libDir(), `${fileSha.slice(0, 12)}-${name}`);
@@ -637,7 +638,7 @@ export class Finder implements OnModuleInit {
     try {
       await this.db.$transaction(async (tx) => {
         const d = def ?? (await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId, formKey: p.code } }, update: {}, create: { workspaceId, formKey: p.code, displayName: id.title || row.title || p.code, formKind: kind === "checklist" ? "checklist" : "data_form", formPageUrl: row.pageUrl } }));
-        await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, sha256: fileSha, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: row.pageUrl, sourceUrl: pdfUrl, canadaUpdated: page.lastUpdated, checkedAt: new Date(), indexDateSeenCurrent: d.indexDateModified } }); // X5 break (0796fc0c) M16: just taken from canada.ca, so current at the index date as it stands. C-5: what IRCC accepts is proposed for a person after attach, never written here
+        await tx.formEdition.create({ data: { workspaceId, govFormDefId: d.id, editionLabel: id.edition_label, sha256: fileSha, storedPath: stored.replace(`${ROOT}/`, ""), origin: "DOWNLOADED", formPageUrl: row.pageUrl, sourceUrl: pdfUrl, canadaUpdated: page.lastUpdated, checkedAt: new Date(), indexDateSeenCurrent: indexAtStart } }); // X5 break (0796fc0c) M16: just taken from canada.ca, so current at the index date read before the download (break 521bc9c4 m49: never a date a fill set while it downloaded). C-5: what IRCC accepts is proposed for a person after attach, never written here
       });
     } catch (e) {
       // Another run stored the same edition a moment ago: use it (nothing is downloaded twice into the library).
