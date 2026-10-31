@@ -88,7 +88,7 @@ class SourcesController {
   @OpenRead("a file link the browser opens") @Get("attachments/:id/file") async file(@Param("id") id: string, @Res() res: any) { const d = await this.s.download(id); res.download(d.path, d.name, { dotfiles: "allow" }); }
   @Post("attachments/:id/read") read(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.read(actorOf(a), id); }
   @Get("attachments/:id/draft-options") opts(@Param("id") id: string) { return this.s.draftOptions(id); }
-  @Post("attachments/:id/draft") draft(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.ai.launchSource(actorOf(a), id, b.mode, b.runFile, b.idempotencyKey); }
+  @Post("attachments/:id/draft") draft(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.ai.launchSource(actorOf(a), id, b.mode, b.runFile, b.idempotencyKey, b.overrideId); }
   @Post("jobs/:id/recompare") recompare(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.recompare(actorOf(a), id); }
   @Post("attachments/:id/reuse") reuse(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.reuseForm(actorOf(a), id, b ?? {}); }
   @Get("jobs/:id") job(@Param("id") id: string) { return this.s.job(id); }
@@ -111,8 +111,10 @@ class DemoController {
 
 @Controller("api")
 class AiController {
-  constructor(@Inject(Ai) private readonly ai: Ai, @Inject(Studio) private readonly studio: Studio) {}
+  constructor(@Inject(Ai) private readonly ai: Ai, @Inject(Studio) private readonly studio: Studio, @Inject(Finder) private readonly finder: Finder) {}
   @Get("masters") masters() { return this.studio.masters(); }
+  /** P-179: a person's Continue past a cost limit, for the start they looked at (contracts/cost-check.ts). */
+  @Post("ai/overrides") override(@Headers("x-actor") a: H, @Body() b: any) { return this.ai.override(actorOf(a), b, (s) => this.finder.plan(s.combinationId, { mode: s.mode, pageUrl: s.pageUrl, only: s.only })); }
   @ConfigRead() @Post("ai/plan") plan(@Body() b: any) { return this.ai.plan(b.scope, b.mode, { draftAgain: !!b.draftAgain }); }
   @Post("ai/batches") launch(@Headers("x-actor") a: H, @Body() b: any) { return this.ai.launch(actorOf(a), b); }
   @Get("ai/batches") batches() { return this.ai.batches(); }
@@ -161,6 +163,8 @@ class ProblemErrors implements ExceptionFilter {
       const detail = typeof body === "object" ? (Array.isArray(body.message) ? body.message.join("; ") : body.message ?? e.message) : String(body);
       return send(status, status === 403 ? "Not allowed" : status === 404 ? "Not found" : status === 409 ? "Conflict" : "Request refused", detail, typeof body === "object" && body.existingId ? { existingId: body.existingId } : {});
     }
+    // P-179 break m6: a JSON body over the 5 MB limit is refused by the body parser before any route: say so (it was a 500).
+    if (e?.type === "entity.too.large" || e?.status === 413) return send(413, "Too large", "This request is larger than the 5 MB the server takes. Nothing was saved or started.");
     if (e?.code === "P2002") return send(409, "Already exists", "Already in progress or already exists: the database refused a duplicate. Refresh to see the current state.");
     // A malformed id (not a UUID, or with a NUL byte) is simply not found (review #4, break m5); so is a stored file that
     // is gone or whose folder is not a folder (a download: QA-4, break m5).

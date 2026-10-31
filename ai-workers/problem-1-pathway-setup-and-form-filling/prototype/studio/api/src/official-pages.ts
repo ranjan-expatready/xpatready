@@ -63,7 +63,10 @@ export class OfficialPagesService {
     // expert confirming at the same moment are decided one after the other (before: the author's write could replace the
     // expert's choice it never saw).
     return this.db.$transaction(async (tx) => {
-    await tx.$queryRawUnsafe(`select id from combination where id = $1::uuid for update`, combinationId);
+    // Review of 073b6baa, 3: the locked row is read again: a retire or an approved delete that landed while this waited wins.
+    const locked = await tx.$queryRawUnsafe<{ retired_at: Date | null }[]>(`select retired_at from combination where id = $1::uuid for update`, combinationId);
+    if (!locked.length) throw problem(404, "Not found", "This combination no longer exists.");
+    if (locked[0].retired_at) throw problem(409, "Retired", `"${c.label}" is retired: its official page is not changed. Restore it first.`);
     const record = await tx.officialPagesRecord.findUnique({ where: { combinationId } });
     const held = record ? { attachmentId: record.attachmentId, confirmedBy: record.confirmedBy, confirmedAs: record.confirmedAs as Tier } : null;
     const item = confirmationOf(sources, page.id, held);

@@ -54,6 +54,21 @@ export function byAPerson(fields: Box[], b: Box): string | null {
   if (isOathBox(fields, b)) return "the oath: completed when the declaration is made, by the person who administers it; the product never fills it";
   return null;
 }
+/** C-11 (P-171 c): at release, a field map that maps a box of the oath block says that box is completed by a person at
+ *  the oath and never filled (fill.ts already never writes it, F6). `fieldsOf` reads a map's form field list (its
+ *  inventory, in form order, which the oath block needs); a map with none is skipped. A warning: nothing is filled. */
+export function oathMappedProblems(maps: { form_number: string; form_edition: string; channel?: string; inventory_file?: string | null; entries: { data_path: string; caption?: string | null; outcome?: string; fact?: string | null }[] }[], fieldsOf: (inventoryFile: string) => Box[] | null): { level: "warning"; where: string; item: string; message: string }[] {
+  const out: { level: "warning"; where: string; item: string; message: string }[] = [];
+  for (const m of maps) {
+    if (m.channel === "ONLINE" || !m.inventory_file) continue;
+    const fields = fieldsOf(m.inventory_file);
+    if (!fields) continue;
+    const oath = new Set(oathBoxes(fields).map(pathOf));
+    for (const e of m.entries) if (e.outcome === "mapped" && e.fact && oath.has(e.data_path))
+      out.push({ level: "warning", where: `Field map ${m.form_edition}`, item: e.data_path, message: `${m.form_number}: the form field "${e.caption || e.data_path}" is mapped to ${e.fact}, but it belongs to the oath. By a person: it is completed when the declaration is made, by the person who administers it; the product never fills it.` });
+  }
+  return out;
+}
 /** F6: true when the box belongs to the oath block of its form (see oathBoxes). */
 export function isOathBox(fields: Box[], b: Box): boolean {
   return oathBoxes(fields).some((o) => pathOf(o) === pathOf(b));
