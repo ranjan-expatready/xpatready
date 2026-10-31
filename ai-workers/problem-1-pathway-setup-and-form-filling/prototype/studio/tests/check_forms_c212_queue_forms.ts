@@ -17,7 +17,7 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
   return { status: r.status, body: j };
 };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
-type Item = { id: string; kind: string; forms: string[]; state: string };
+type Item = { id: string; kind: string; forms: string[]; state: string; title: string };
 const queue = async (extra = "", actor = "user-A") => (await call("GET", `/review-queue?filter=all${extra}`, undefined, actor)).body as { items: Item[]; counts: Record<string, number>; kinds: Record<string, number> };
 const intake = async (name: string, bytes: Buffer) => {
   const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(bytes)]), name);
@@ -84,28 +84,28 @@ function pdf(title: string, text: string) {
     if (i.kind === "merge") return fieldForms(sql(`select keep_key || E'\n' || merge_key from field_merge where id = '${rest(i)}'`).split("\n"));
     if (i.kind === "form_fields") return list(sql(`select d.form_key from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where e.id = '${rest(i)}'`));
     if (i.kind === "new_edition" || i.kind === "held_file") return list(sql(`select coalesce(code, '') from intake_item where id = '${rest(i)}'`));
-    if (i.kind === "running") return list(sql(`select distinct d.form_key from drafting_job j join source_attachment a on a.id = j.attachment_id join form_edition e on e.edition_label = a.edition and e.workspace_id = a.workspace_id join gov_form_def d on d.id = e.gov_form_def_id where j.batch_id = '${rest(i)}'`));
-    if (i.kind === "ai_proposals") return list(sql(`select d.form_key from drafting_job j join source_attachment a on a.id = j.attachment_id join form_edition e on e.edition_label = a.edition and e.workspace_id = a.workspace_id join gov_form_def d on d.id = e.gov_form_def_id where j.id = '${rest(i)}'`));
+    if (i.kind === "running") return list(sql(`select distinct d.form_key from drafting_job j join source_attachment a on a.id = j.attachment_id join form_edition e on e.workspace_id = a.workspace_id and (e.sha256 = a.sha256 or (e.edition_label = a.edition and not exists (select 1 from form_edition x where x.workspace_id = a.workspace_id and x.sha256 = a.sha256))) join gov_form_def d on d.id = e.gov_form_def_id where j.batch_id = '${rest(i)}'`));
+    if (i.kind === "ai_proposals") return list(sql(`select d.form_key from drafting_job j join source_attachment a on a.id = j.attachment_id join form_edition e on e.workspace_id = a.workspace_id and (e.sha256 = a.sha256 or (e.edition_label = a.edition and not exists (select 1 from form_edition x where x.workspace_id = a.workspace_id and x.sha256 = a.sha256))) join gov_form_def d on d.id = e.gov_form_def_id where j.id = '${rest(i)}'`));
     if (i.kind === "library_change" && i.id.startsWith("change-batch:")) return [...new Set(sql(`select kind || '|' || key || '|' || coalesce(combination_id::text, '') from library_change where batch_id = '${rest(i)}'`).split("\n").flatMap((r) => { const [k, key] = r.split("|"); return k === "field" || k === "placement_fills" ? fieldForms([key]) : k === "library_form" || k === "form_accepts" ? [key] : []; }))].sort();
     if (i.kind === "library_change") { const [k, key, cid] = sql(`select kind || '|' || key || '|' || coalesce(combination_id::text, '') from library_change where id = '${rest(i)}'`).split("|");
       return k === "field" || k === "placement_fills" ? fieldForms([key]) : k === "library_form" || k === "form_accepts" ? [key] : k === "combination" ? lineForms(cid || key) : []; }
-    if (i.kind === "proposals") { const fe = sql(`select coalesce(form_edition, '') || '|' || coalesce(combination_id::text, '') from proposal_item where status = 'waiting' and (coalesce(form_edition, '') = '${i.title.replace(/'/g, "''")}' or combination_id is not null) order by (form_edition is null) limit 1`).split("|");
-      return i.title === fe[0] ? formOfLabel(fe[0]) : null; }
+    // Review (531ff8da) Major 2a: a group of one form edition belongs to its form; a combination's group to its form lines.
+    if (i.kind === "proposals") { const g = rest(i); return g.startsWith("edition:") ? formOfLabel(g.slice(8)) : g.startsWith("combination:") ? lineForms(g.slice(12)) : []; }
     return null;
   };
   const kindsSeen = new Map<string, { right: number; wrong: string[]; nonEmpty: number }>();
   for (const i of q.items) {
-    const key = i.kind === "library_change" ? `library_change:${i.id.startsWith("change-batch:") ? "batch" : sql(`select kind from library_change where id = '${rest(i)}'`)}` : i.kind;
+    const key = i.kind === "library_change" ? `library_change:${i.id.startsWith("change-batch:") ? "batch" : sql(`select kind from library_change where id = '${rest(i)}'`)}` : i.kind === "proposals" && rest(i).startsWith("combination:") ? "proposals:combination" : i.kind;
     const k = kindsSeen.get(key) ?? { right: 0, wrong: [], nonEmpty: 0 }; kindsSeen.set(key, k);
     const want = expected(i); if (want === null) continue;
     if (want.join() === [...i.forms].sort().join()) k.right++; else k.wrong.push(`${i.id}: ${i.forms} ≠ ${want}`);
     if (i.forms.length) k.nonEmpty++;
   }
-  for (const kind of ["release", "merge", "running", "form_fields", "new_edition", "ai_proposals", "proposals", "library_change:field", "library_change:placement_fills", "library_change:combination", "library_change:batch", "library_change:library_form", "library_change:form_accepts"]) {
+  for (const kind of ["held_file", "proposals:combination", "release", "merge", "running", "form_fields", "new_edition", "ai_proposals", "proposals", "library_change:field", "library_change:placement_fills", "library_change:combination", "library_change:batch", "library_change:library_form", "library_change:form_accepts"]) {
     const k = kindsSeen.get(kind);
     ok(`C2.12 D2 pass (${kind}): each item's forms are the forms its records name`, !!k && k.right > 0 && !k.wrong.length && k.nonEmpty > 0, k ? { right: k.right, wrong: k.wrong.slice(0, 3), nonEmpty: k.nonEmpty } : "no item of this kind");
     // The fail half: a form outside the item's set never lists it.
-    const sample = q.items.find((i) => (i.kind === "library_change" ? `library_change:${i.id.startsWith("change-batch:") ? "batch" : sql(`select kind from library_change where id = '${rest(i)}'`)}` : i.kind) === kind && i.forms.length);
+    const sample = q.items.find((i) => (i.kind === "library_change" ? `library_change:${i.id.startsWith("change-batch:") ? "batch" : sql(`select kind from library_change where id = '${rest(i)}'`)}` : i.kind === "proposals" && rest(i).startsWith("combination:") ? "proposals:combination" : i.kind) === kind && i.forms.length);
     if (sample) { const outside = ["IMM 0008", "IMM 1294", "IMM 5532", "IMM 9999"].find((c) => !sample.forms.includes(c))!;
       ok(`C2.12 BR-5 fail (${kind}): ?form=${outside}, a form outside its set, does not list it; its own form does`, !(await queue(`&form=${encodeURIComponent(outside)}`)).items.some((x) => x.id === sample.id) && (await queue(`&form=${encodeURIComponent(sample.forms[0])}`)).items.some((x) => x.id === sample.id)); }
   }
@@ -124,19 +124,27 @@ function pdf(title: string, text: string) {
     const after = (await queue()).items.find((i) => i.id === comboItem.id);
     ok("C2.12 D2 fail (review m2): a form line removed from a combination is no longer one of its forms (before: any version counted)", rm.status < 300 && !!after && !after.forms.includes(gone) && after.forms.length === comboItem.forms.length - 1, { rm: rm.status, gone, before: comboItem.forms, after: after?.forms });
   } else ok("C2.12 set-up: a combination change with two forms or more", false);
-  // Review (9f2132bd) m3: a file whose edition label is not "<number> (…)" ("IMM 5881 E (05-2026)") belongs to its form as
-  // the library knows it (IMM 5881), looked up through the edition, never parsed from the label. Test input: the form, its
-  // edition, a file and a running step reading it.
+  // Review (9f2132bd) m3, (531ff8da) Major 1: a file belongs to the form of the edition with its checksum, also when its own
+  // label differs (the sample's IMM 5475 files read "(12-2022)", the library's edition "(05-2021)"). Test input: a finished
+  // AI draft copied onto such a file, and a queued step for it in the running batch.
+  const odd = sql(`select a.id || '|' || d.form_key from source_attachment a join form_edition e on e.workspace_id = a.workspace_id and e.sha256 = a.sha256 join gov_form_def d on d.id = e.gov_form_def_id where a.edition is not null and a.edition <> e.edition_label and a.kind = 'Form' limit 1`).split("|");
   const runningBatch = q.items.find((i) => i.kind === "running");
-  if (runningBatch) {
-    const ws = sql("select id from workspace where key = 'demo'");
-    sql(`insert into gov_form_def (id, workspace_id, form_key, display_name) values (gen_random_uuid(), '${ws}', 'IMM 5881', 'C2.12 check form') on conflict do nothing`);
-    sql(`insert into form_edition (id, workspace_id, gov_form_def_id, edition_label) select gen_random_uuid(), '${ws}', id, 'IMM 5881 E (05-2026)' from gov_form_def where form_key = 'IMM 5881' and workspace_id = '${ws}' on conflict do nothing`);
-    const att5881 = sql(`insert into source_attachment select (jsonb_populate_record(null::source_attachment, to_jsonb(a) || jsonb_build_object('id', gen_random_uuid(), 'edition', 'IMM 5881 E (05-2026)', 'sha256', repeat('5', 64)))).* from source_attachment a where a.edition is not null limit 1 returning id`).split("\n")[0];
-    sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, started_by, batch_id) select gen_random_uuid(), workspace_id, combination_id, '${att5881}', 'read_form', 'STUB', 'QUEUED', 'user-A', '${rest(runningBatch)}' from source_attachment where id = '${att5881}'`);
-    const r5881 = (await queue()).items.find((i) => i.id === runningBatch.id);
-    ok("C2.12 D2 fail (review m3): a file labelled 'IMM 5881 E (05-2026)' belongs to IMM 5881, the library's form (before: 'IMM 5881 E', parsed from the label)", !!r5881 && r5881.forms.includes("IMM 5881") && !r5881.forms.includes("IMM 5881 E"), r5881?.forms);
-  } else ok("C2.12 set-up: a running AI batch", false);
+  if (odd[0] && runningBatch) {
+    const j2 = sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, started_by, finished_at, detail, cost_usd) select gen_random_uuid(), j.workspace_id, a.combination_id, a.id, 'field_map', 'REPLAY', 'COMPLETED', 'user-C', now(), j.detail, 0 from drafting_job j, source_attachment a where a.id = '${odd[0]}' and j.kind = 'field_map' and j.status = 'COMPLETED' and j.mode <> 'STUB' order by j.started_at desc limit 1 returning id`).split("\n")[0];
+    sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, started_by, batch_id) select gen_random_uuid(), workspace_id, combination_id, id, 'read_form', 'STUB', 'QUEUED', 'user-A', '${rest(runningBatch)}' from source_attachment where id = '${odd[0]}'`);
+    const now2 = (await queue()).items;
+    const ai2 = now2.find((i) => i.id === `job:${j2}`), run2 = now2.find((i) => i.id === runningBatch.id);
+    ok(`C2.12 D2 fail (review 531ff8da Major 1): a file whose label differs from its edition's belongs to that edition's form by checksum (${odd[1]}), for an AI draft and a running step (before: no form, or a form parsed from the label)`, ai2?.forms.join() === odd[1] && !!run2?.forms.includes(odd[1]), { odd, ai: ai2?.forms, run: run2?.forms });
+  } else ok("C2.12 set-up: a file whose label differs from its edition's, and a running batch", false, odd);
+  // Review (531ff8da) Minor 1: a field's forms come from each form field's newest version: a newer version of a form's
+  // mapping with no shared field takes that form off a who-fills change.
+  const fillsItem = q.items.find((i) => i.id.startsWith("change:") && sql(`select kind from library_change where id = '${rest(i)}'`) === "placement_fills" && i.forms.length >= 1);
+  if (fillsItem) {
+    const fkey = sql(`select key from library_change where id = '${rest(fillsItem)}'`), drop = fillsItem.forms[0];
+    sql(`insert into form_field_map select (jsonb_populate_record(null::form_field_map, to_jsonb(m) || jsonb_build_object('id', gen_random_uuid(), 'version', m.version + 1, 'status', 'DRAFT', 'canonical_field_key', null))).* from form_field_map m join form_edition e on e.id = m.form_edition_id join gov_form_def d on d.id = e.gov_form_def_id where d.form_key = '${drop}' and m.canonical_field_key = '${fkey}' and m.version = (select max(v.version) from form_field_map v where v.form_edition_id = m.form_edition_id and v.data_path = m.data_path)`);
+    const after = (await queue()).items.find((i) => i.id === fillsItem.id);
+    ok("C2.12 D2 fail (review 531ff8da Minor 1): a form whose newest mapping no longer reads the field leaves the who-fills change (before: any version counted)", !!after && !after.forms.includes(drop), { drop, before: fillsItem.forms, after: after?.forms });
+  } else ok("C2.12 set-up: a who-fills change with a form", false);
   const bad2 = await call("GET", "/review-queue?filter=all&form=");
   ok("C2.12 fail (review m4): an empty form number is refused in words, naming the field", bad2.status === 400 && /form number/.test(JSON.stringify(bad2.body)), bad2.body);
   console.log(`\n${pass} passed, ${fail} failed`);

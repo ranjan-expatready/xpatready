@@ -65,12 +65,19 @@ export class ReviewQueueService {
       return out.join(" › ");
     };
     const combo = new Map(combos.map((c) => [c.id, { label: c.label, path: pathOf(c.programDefId) }]));
-    const atts = new Map((await this.db.sourceAttachment.findMany({ where: { id: { in: [...jobs.map((j) => j.attachmentId), ...batches.flatMap((b) => b.jobs.map((j) => j.attachmentId))].filter((x): x is string => !!x) } }, select: { id: true, edition: true, fileName: true } })).map((a) => [a.id, a]));
+    const atts = new Map((await this.db.sourceAttachment.findMany({ where: { id: { in: [...jobs.map((j) => j.attachmentId), ...batches.flatMap((b) => b.jobs.map((j) => j.attachmentId))].filter((x): x is string => !!x) } }, select: { id: true, edition: true, fileName: true, sha256: true } })).map((a) => [a.id, a]));
     const out: QueueItem[] = [];
     // F2 C2.12 (F3 plan D2): which forms each item belongs to, read once for the whole list.
     // Review (9f2132bd) m3: a file's form is looked up through its edition (never parsed from a display label).
+    // Review (531ff8da) Major 1: a file belongs to the form of the edition with its checksum, as everywhere else in the product
+    // (ai.ts, screen02.ts, sources.ts); its label only when no edition has that checksum. A proposal's form edition is an
+    // edition label, looked up as such.
+    const shas = [...new Set([...atts.values()].map((a) => a.sha256).filter((x): x is string => !!x))];
     const labels = [...new Set([...[...atts.values()].map((a) => a.edition), ...queued.map((r) => r.formEdition)].filter((x): x is string => !!x))];
-    const formOfLabel = new Map(labels.length ? (await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: labels } }, select: { editionLabel: true, form: { select: { formKey: true } } } })).map((e) => [e.editionLabel, e.form.formKey] as const) : []);
+    const eds = shas.length || labels.length ? await this.db.formEdition.findMany({ where: { workspaceId, OR: [{ sha256: { in: shas } }, { editionLabel: { in: labels } }] }, select: { sha256: true, editionLabel: true, form: { select: { formKey: true } } } }) : [];
+    const formOfSha = new Map(eds.filter((e) => e.sha256).map((e) => [e.sha256!, e.form.formKey] as const));
+    const formOfLabel = new Map(eds.map((e) => [e.editionLabel, e.form.formKey] as const));
+    const formOfFile = (a: { sha256: string | null; edition: string | null } | undefined) => (a ? (a.sha256 ? formOfSha.get(a.sha256) : undefined) ?? (a.edition ? formOfLabel.get(a.edition) : undefined) ?? null : null);
     const codeOf = (label: string | null | undefined) => (label ? formOfLabel.get(label) ?? null : null);
     // Review (9f2132bd) m2: a combination's forms are its lines as the draft has them now (the newest version per line, as
     // effective() reads them), so a line removed after a release is not counted.
@@ -103,7 +110,7 @@ export class ReviewQueueService {
       const source = (a?.edition ?? a?.fileName ?? "A form").split(" (")[0];
       const what = counts ? `${source}: ${plural(counts.boxes, "form field")}, ${counts.mapped} mapped. ${plural(counts.proposed_fields, "shared field")} proposed: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.` : `${source}: an AI draft to review.`;
       const href = `/c/${j.combinationId}/jobs/${j.id}`;
-      const jobForm = codeOf(a?.edition);
+      const jobForm = formOfFile(a);
       const base = { id: `job:${j.id}`, kind: "ai_proposals" as const, title: c?.path ?? "A combination", by: nameOf(j.startedBy), at: (j.finishedAt ?? j.startedAt).toISOString(), cost_usd: j.costUsd ?? 0, forms: jobForm ? [jobForm] : [] };
       if (n) out.push({ ...base, what: `${what} ${plural(n, "proposal")} still to decide.`, ...(holds(actor, "review") ? { state: "needs" as const, waiting_on: null, next: { label: `Review ${plural(n, "AI proposal")}`, href, note: null } } : { state: "waiting" as const, waiting_on: "A content publisher decides each proposal.", next: null }) });
       else out.push({ ...base, what: `${what} Every proposal is decided.`, ...(holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: "Add the decisions to the draft", href, note: null } } : { state: "waiting" as const, waiting_on: "The configuration author adds the decisions to the draft.", next: null }) });
@@ -227,7 +234,7 @@ export class ReviewQueueService {
     // AI work still running: shown so a person knows it is coming, never as something to decide.
     for (const b of batches) {
       const spent = b.jobs.reduce((s, j) => s + (j.costUsd ?? 0), 0), done = b.jobs.filter((j) => !["QUEUED", "RUNNING"].includes(j.status)).length;
-      const batchForms = [...new Set(b.jobs.map((j) => codeOf(j.attachmentId ? atts.get(j.attachmentId)?.edition : null)).filter((x): x is string => !!x))].sort();
+      const batchForms = [...new Set(b.jobs.map((j) => formOfFile(j.attachmentId ? atts.get(j.attachmentId) : undefined)).filter((x): x is string => !!x))].sort();
       out.push({ id: `batch:${b.id}`, kind: "running", title: b.scopeLabel, by: nameOf(b.startedBy), at: b.startedAt.toISOString(), cost_usd: Math.round(spent * 100) / 100, forms: batchForms,
         what: `${b.status === "QUEUED" ? "Queued" : "Running"}: ${done} of ${plural(b.jobs.length, "step")} finished · worst case US$${b.worstCaseUsd.toFixed(2)}.`, state: "running" as const, waiting_on: null, next: { label: "View progress", href: `/ai/${b.id}`, note: null } });
     }

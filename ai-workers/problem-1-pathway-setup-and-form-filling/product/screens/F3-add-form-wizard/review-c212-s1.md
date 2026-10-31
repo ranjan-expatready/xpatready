@@ -39,3 +39,46 @@ The two live-AI suites (they need `STUDIO_AI_LIVE`). A real AI batch with mixed 
 Journey test: `journey-test-reviewer-2026-10-31-c212-9f2132bd.md`. **Score 8.5/10 (pass).**
 
 **Verdict: Block.** To fix: Major 1 (a failing test for each per-kind rule, including release under two forms). Minors 1–5 are Should items.
+
+# Round at 531ff8da
+Commit reviewed: **`531ff8da`** (fixes 51e0c0db and 531ff8da on 9f2132bd; base `origin/main` 4fb3d59a). I did not build it. Code changes: `api/src/review-queue.ts` (edition lookup, `effective()` for lines and field maps, `FIELD_KINDS`) and `contracts/review-queue.ts` (the 400 words). Tests: `fill_queue_kinds.ts` (helper) and `check_forms_c212_queue_forms.ts` (40 checks). I ran everything on /tmp `git archive` copies, on ports 4450–4453. Every database was dropped afterwards. No `*_LIVE` variable was set. Cost: US$0.
+
+## Verdict: **Ship after fixes** (0 Blocker, 2 Major, 1 Minor). For the PR: **Block**
+m1, m2 and m4 are closed, live and by mutation. The previous Major is mostly closed: 21 of 24 mutations are caught. The m3 fix brings a new problem. It matches a file to its form by the file's label, but the product links a file to its edition by checksum. So the demo's own IMM 5475 file now has no form.
+
+## Checks
+| Check | Result |
+|---|---|
+| New suite | 40/40 (:4450, 97 s) |
+| Mutations, one copy per run on :4452 and :4453, each with a fresh database | **21 caught, 3 missed.** Caught: all 17 from the last round, plus each fix removed: m1 (`FIELD_KINDS` = field only), m2 lines (any version), m3 (label parse back), m4 (zod words back). **Missed:** (a) proposals by combination → `[]`; (b) a held file with a code (off the list) → `[]` (`review-queue.ts:191`); (c) m2 for field maps (`effective()` removed at :87). |
+| m1, live | The `case.service_language` "who fills it" change → [IMM 1295, IMM 5257] ✓ |
+| m2, live | The suite removes a released line and the combination change drops it ✓. Field maps: I added a v2 DRAFT of the IMM 1295 mapping with no key, and the item became [IMM 5257] ✓. No test covers this (missed c). |
+| m3, live | IMM 5881 E → IMM 5881 ✓, but only on the suite's own inserted edition. See Major 1. |
+| m4, live | Empty or blank → "Give a form number, such as IMM 5257."; 41 characters → "A form number has at most 40 characters."; both with `errors[{field:"form"}]` ✓ |
+| Golden comparison, main vs 531ff8da | One `fillAllKinds` database, all 9 kinds, 54 items. Run order: branch, main (`isolated.sh rvgold 4451 restart`), branch. 4 people × 17 queries = 136 responses. **0 differences with `forms` removed** once the job runner had finished the inserted STUB jobs: 508 items. Before that, every difference was the `running` item, which the runner was finishing between snapshots. With that item left out, the comparison also gives 0 differences on the 517-item snapshots. |
+| Speed | 10 calls on 54 items: branch 64 ms, main 68 ms (this container) |
+| Neighbouring suites (fresh copies) | screen02_fix 61/61 · screen02_slice2 53/53 · s6_p149 73/73 (`tsx --tsconfig api/tsconfig.json`) · who_fills 26/26 · forms_qa53 20/20 · w1_structure 81/81. `check_who_fills.json` was rewritten and I restored it with `git checkout --`. |
+| Graph (P-86) | G1 0 · G2 0 · G3 2 (the same two routes as before) · G4–G6 0 |
+
+## Issues, ranked
+**Major 1 (Must): the m3 fix finds a file's form by its label, but the product finds a file's edition by checksum.** `review-queue.ts:72-74` looks up `source_attachment.edition` in `form_edition.editionLabel`. Everywhere else, the product links a file to its edition by `sha256` (`ai.ts:313`, `screen02.ts:85`, `sources.ts:132`). The loaded demo has 3 Form files labelled "IMM 5475 (12-2022)". The library has "IMM 5475 (05-2021)" with the same checksum. The IMM 5881 checklist and the IMM 5905 instructions do not match by label either, only by checksum. **Repro** (test input, the same way the suite adds rows): copy job `7aab959f` (field_map, REPLAY, COMPLETED) onto attachment `d861408e` (IMM 5475). Its item reads "IMM 5475: 242 form fields…", yet it has `forms: []`, and `?form=IMM 5475` does not list it. A QUEUED read_form step for that file in a running batch is also left out of the batch's forms. 9f2132bd's label parse gave IMM 5475 in both cases. The product reaches this through a batch read, or a draft of IMM 5475. The m3 check (`tests/check_forms_c212_queue_forms.ts:132-138`) passes only because it first adds a `form_edition` with the file's exact label "IMM 5881 E (05-2026)", which the product never creates. **Fix:** select `sha256` with the attachments. Find the form through `form_edition.sha256` in the same batched read, falling back to the label (keep the label lookup for `proposal_item.formEdition`, which is an edition label). Then point the m3 test at a real file whose label differs from its edition's (IMM 5475 or the IMM 5881 checklist), without inserting an edition.
+
+**Major 2 (Must): the last round's Major is only partly closed.** Two rules it named still fail no test, which breaks STANDARDS §5 [M] "A rule's test fails when the rule is removed":
+- (a) proposals fall back to the combination's lines. Change `forms: fe ? [fe] : formsOfCombination(r.combinationId)` (:117) to `fe ? [fe] : []` and the suite is still 40/40. The oracle (test :92-93) returns `null` for combination groups, so they are never checked.
+- (b) a held file with a code. Make :191 give `[]` and the suite is still 40/40, because `held_file` is not in the per-kind loop (test :104).
+
+**Fix:** add `held_file` to the loop (the oracle at :86 already handles it). Make the proposals oracle check combination groups against `lineForms`.
+
+**Minor 1 (Should): m2's field-map half has no failing test (missed c).** The code is right live (see above). **Fix:** in the same suite, add a newer version of one mapping that drops the key, and check that its form leaves the change's list.
+
+**m5:** recording both deviations in the PR body is **enough for this PR**. The PR body is the record of what was checked, and the deferral was the Lead's call (26 Oct). The golden comparison of this round and the last stands in for the golden test until the move. But today the obligation lives only in plan §9 slice 5, "golden test written first on today's code". The PR body should say the golden suite lands with the `engine/queue.ts` move, so it is not lost. There is no PR yet, so I could not read its body.
+
+## D1–D20 (changes from the last round)
+D1 4 (D2 per kind, except the checksum link) · D2 4 (newest versions now; Major 1) · D7 3 (an AI item on the demo's IMM 5475 file names no form) · D10 5 (m4 fixed) · D15 5 · D16 3 (21/24 mutations caught; Major 2, Minor 1) · D17 and D20 simulated only. The rest are unchanged from the last round (no UI file changed since 9f2132bd).
+
+## Could not check
+Live-AI suites and a product-made AI draft of IMM 5475. The replay route refused it: "already in this combination's configuration" or "not the newest valid run". So that repro uses a copied job row. I could not read the PR body. There is no screen yet (F3b).
+
+Journey test: `journey-test-reviewer-2026-10-31-c212-531ff8da.md`. **Score 8.5/10 (pass).**
+
+**Verdict: Block.** To fix: Major 1 (match files by checksum, and make the m3 test use real data) and Major 2 (failing tests for proposals by combination and held files with a code). Minor 1 is a Should.
