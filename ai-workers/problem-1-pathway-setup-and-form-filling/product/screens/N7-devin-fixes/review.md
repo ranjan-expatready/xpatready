@@ -112,3 +112,27 @@ D-scores that changed:
 | D16 | 5 | Each fix has a fail and a pass case (27 checks) |
 
 **Verdict: Approve on commit `cddef56a`.** There is no open Blocker or Major. Minor 4 (Should) and Minor 3 (qa) can go in a later PR. B3 is the Lead's decision.
+
+---
+
+## Re-review at `aef48f3a`: Minor 4 delta only (31 Oct)
+Diff read: `cddef56a..aef48f3a`, which touches `contracts/lifecycle.ts`, `api/src/lifecycle.ts`, `api/src/structure.ts`, `contracts/structure.ts` and `check_runtime_n7.cjs`.
+
+How I checked:
+- Own copy `rev_n7d` on :4438, now stopped. No :4400, no `*_LIVE`, US$0.
+- `check_runtime_n7.cjs`: **28/28**, run twice.
+- `tsc --noEmit`: passes for api and web.
+
+**Minor 4: closed.**
+- In the browser on Program structure (Corporate and employers), another person's returned remove now reads: "Returned by Approver: Check again (walk)", then "A change to it was returned to Content reviewer: only they send it again or withdraw it.". There is no Send again.
+- Another person's waiting change still reads "A change to it is waiting for a second person.".
+- My own returned change shows Send again (1).
+- To review still agrees: "The person who proposed it sends it again or withdraws it."
+- The name comes from `ACTORS` with a fallback and never shows an id. The new `pending.proposer` in `contracts/structure.ts` only adds a field, and `rowAction` still has a single caller.
+- The new check asserts the exact sentence and the proposer.
+
+**Not a finding here:**
+- The Form library row (`form-row-action.ts`, owned by the forms lane) has the same "waiting for a second person" wording for a returned change. The builder has listed it in the PR for forms.
+- An APPROVED change that is not mine also still reads "waiting for a second person", although it is waiting for the release. That is older than N7 and outside this delta; noted for the screens lane.
+
+**Verdict: Approve on commit `aef48f3a`.** No Blocker or Major is open. Minor 3 (GRAPH.md) is with qa, and B3 is the Lead's decision.
