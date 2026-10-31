@@ -32,6 +32,7 @@
   table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px; }
   th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
   th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  dialog table { min-width: 0; }
   .menu { display: inline-block; position: relative; }
   .menu ul { position: absolute; right: 0; top: 30px; background: #fff; border: 1px solid var(--border); border-radius: 8px; list-style: none; margin: 0; padding: 4px; width: 260px; box-shadow: 0 6px 18px rgba(0,0,0,.1); z-index: 3; }
   .menu li { padding: 6px 10px; border-radius: 6px; }
@@ -54,6 +55,7 @@
   <button data-s="remove">Remove from others: preview</button>
   <button data-s="from">Copy a line from another</button>
   <button data-s="done">After: toast with Undo</button>
+  <button data-s="undone">Undo done</button>
   <button data-s="undofail">Undo refused</button>
   <button data-s="readonly">Approver (read-only)</button>
 </div>
@@ -86,7 +88,7 @@
 </main>
 
 <div class="backdrop" data-show="add remove from undofail"></div>
-<dialog open aria-labelledby="add-h" data-show="add">
+<dialog open aria-modal="true" aria-labelledby="add-h" data-show="add">
   <h2 id="add-h">Copy IMM 5476 to other combinations</h2>
   <p class="muted">Line: IMM 5476 · Principal applicant · only if "Has a representative" · PDF upload. Nothing changes until you choose Add. Every combination gets its own draft change; one Undo takes back the whole copy while none of them has changed since.</p>
   <div class="tablewrap"><table>
@@ -97,6 +99,7 @@
       <tr><td><input type="checkbox" disabled aria-label="Extend stay: already has it"></td><td>Temporary residence › Visitors › Extend stay in Canada</td><td class="muted">Already has it: no change</td></tr>
       <tr><td><input type="checkbox" disabled aria-label="With an LMIA: different only if"></td><td>Temporary residence › Work permits › Employer-specific work permit › With an LMIA</td><td class="muted">Has it with a different "only if" (always): its own line is kept</td></tr>
       <tr><td><input type="checkbox" disabled aria-label="Grant of citizenship: cannot"></td><td>Citizenship › Grant of citizenship</td><td><span class="pill warn">Cannot</span> its "only if" uses "Has a representative", which this combination does not ask</td></tr>
+      <tr><td><input type="checkbox" disabled aria-label="Spouse or partner, applicant outside Canada: cannot, retired"></td><td>Permanent residence › Family sponsorship › Spouse or partner › Applicant outside Canada</td><td><span class="pill warn">Cannot</span> IMM 5476 is retired in the Form library (Sample)</td></tr>
       <tr><td><input type="checkbox" disabled aria-label="Dependent child: cannot"></td><td>Permanent residence › Family sponsorship › Dependent child</td><td><span class="pill warn">Cannot</span> PDF upload of IMM 5476 is not accepted through this combination's IRCC account (Sample)</td></tr>
       <tr><td><input type="checkbox" aria-label="Include Post-graduation, withdraws its review"></td><td>Temporary residence › Work permits › Open work permit › Post-graduation</td><td><span class="pill warn">Waits</span> submitted for review: adding withdraws that submission. Tick to add it anyway.</td></tr>
     </tbody>
@@ -104,7 +107,7 @@
   <div class="foot"><button class="btn" data-go="row">Cancel</button><button class="btn primary" data-go="done">Add to 2 combinations</button></div>
 </dialog>
 
-<dialog open aria-labelledby="rm-h" data-show="remove">
+<dialog open aria-modal="true" aria-labelledby="rm-h" data-show="remove">
   <h2 id="rm-h">Remove IMM 5476 from other combinations</h2>
   <p class="muted">Nothing changes until you choose Remove. A released line's removal is a draft change until that combination's next release.</p>
   <div class="tablewrap"><table>
@@ -119,7 +122,7 @@
   <div class="foot"><button class="btn" data-go="row">Cancel</button><button class="btn primary" data-go="done">Remove from 2 combinations</button></div>
 </dialog>
 
-<dialog open aria-labelledby="from-h" data-show="from">
+<dialog open aria-modal="true" aria-labelledby="from-h" data-show="from">
   <h2 id="from-h">Copy a line from another combination</h2>
   <label class="muted" for="src" style="display:block;margin-top:8px">Combination to copy from</label>
   <input id="src" class="btn" style="width:100%;text-align:left" value="Temporary residence › Visitors › Super visa">
@@ -127,28 +130,32 @@
   <div class="tablewrap"><table>
     <thead><tr><th><span class="sr-only">Copy</span></th><th>Line</th><th>What happens here</th></tr></thead>
     <tbody>
-      <tr><td><input type="checkbox" checked aria-label="Copy IMM 5257 SCH1"></td><td><b>IMM 5257 SCH1</b> · form · each applicant</td><td><span class="pill ok">Will be added</span></td></tr>
+      <tr><td><input type="checkbox" disabled aria-label="IMM 5257 SCH1: cannot, retired"></td><td><b>IMM 5257 SCH1</b> · form · each applicant</td><td><span class="pill warn">Cannot</span> the form's retirement is open in the Form library (Sample)</td></tr>
+      <tr><td><input type="checkbox" checked aria-label="Copy IMM 5409"></td><td><b>IMM 5409</b> · form · the couple, once</td><td><span class="pill ok">Will be added</span> <span class="muted">Sample</span></td></tr>
       <tr><td><input type="checkbox" checked aria-label="Copy proof of medical insurance"></td><td><b>Proof of medical insurance</b> · document · principal applicant</td><td><span class="pill ok">Will be added</span></td></tr>
-      <tr><td><input type="checkbox" disabled aria-label="Parent: cannot"></td><td><b>Letter of invitation</b> · document · child or grandchild in Canada</td><td><span class="pill warn">Cannot</span> that person is not in this application</td></tr>
+      <tr><td><input type="checkbox" disabled aria-label="Letter of invitation: cannot"></td><td><b>Letter of invitation</b> · document · child or grandchild in Canada</td><td><span class="pill warn">Cannot</span> that person is not in this application</td></tr>
     </tbody>
   </table></div>
   <div class="foot"><button class="btn" data-go="row">Cancel</button><button class="btn primary" data-go="done">Add 2 lines</button></div>
 </dialog>
 
-<dialog open aria-labelledby="ur-h" data-show="undofail" role="alertdialog">
+<dialog open aria-modal="true" aria-labelledby="ur-h" data-show="undofail" role="alertdialog">
   <h2 id="ur-h">The copy cannot be undone in one step</h2>
   <p class="err">Super visa was changed after the copy (IMM 5476's "only if", by the content publisher at 14:02). Nothing was undone.</p>
   <p class="muted">Remove IMM 5476 by hand where you want it gone, or use Remove from other combinations.</p>
   <div class="foot"><button class="btn primary" data-go="row">Close</button></div>
 </dialog>
 
-<div class="toast" role="status" data-show="done">IMM 5476 added to 2 combinations (draft changes in each). <button class="btn" data-go="undofail">Undo</button></div>
+<div class="toast" role="status" data-show="undone">Undone: IMM 5476 taken back from Super visa and Study permit. Nothing else changed.</div>
+<div class="toast" role="status" data-show="done">IMM 5476 added to 2 combinations (draft changes in each). <button class="btn" data-go="undone">Undo</button> <span class="muted">(board: "Undo refused" shows the case where one of them changed since)</span></div>
 
 <script>
   const show = (s) => {
     document.querySelectorAll(".bar button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.s === s)));
     document.querySelectorAll("[data-show]").forEach((e) => { e.hidden = !e.dataset.show.split(" ").includes(s); });
     document.querySelectorAll("[data-hide]").forEach((e) => { e.hidden = e.dataset.hide.split(" ").includes(s); });
+    const bar = document.querySelector(".bar").getBoundingClientRect().bottom;
+    document.querySelectorAll("dialog").forEach((x) => { x.style.top = `${Math.round(bar) + 12}px`; x.style.maxHeight = `calc(100vh - ${Math.round(bar) + 28}px)`; });
     const d = [...document.querySelectorAll("dialog")].find((x) => !x.hidden);
     if (d) (d.querySelector("input:not([disabled]), button") ?? d).focus();
   };
