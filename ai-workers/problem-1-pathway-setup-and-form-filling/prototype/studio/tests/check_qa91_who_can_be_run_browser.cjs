@@ -1,8 +1,8 @@
 // QA-91 (C11.12, P-110): Who can be › Fill from the guide › AI now, walked in a real browser: Fill shows the shared run
 // card with its step and Stop while AI runs, then the proposal with the guide's words; nothing is saved. The copy runs
-// the fake launcher only (no live switch, Lead 30 Oct); the check stops unless the server really runs it. Axe (WCAG 2.2
+// the fake launcher, its live switch STUDIO_AI_LIVE paired with it (P-192) and no other; the check stops unless the server really runs it. Axe (WCAG 2.2
 // AA) and no sideways scroll at 1440 and 1024; screenshots in screens/W1-combination-workspace/screenshots/qa91/. US$0.
-//   zsh studio/tools/isolated.sh runtime_qa91b 4434 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && node studio/tests/check_qa91_who_can_be_run_browser.cjs 4434 xr_studio_runtime_qa91b
+//   zsh studio/tools/isolated.sh runtime_qa91b 4434 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && node studio/tests/check_qa91_who_can_be_run_browser.cjs 4434 xr_studio_runtime_qa91b
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
@@ -22,8 +22,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const env = !pid ? "" : fs.existsSync(`/proc/${pid}/environ`) ? fs.readFileSync(`/proc/${pid}/environ`, "utf8").split("\0").join(" ") : execFileSync("ps", ["-E", "-ww", "-p", pid, "-o", "command="], { encoding: "utf8" });
   const fake = env.match(/STUDIO_FAKE_LAUNCHER=(\S+)/)?.[1];
   const real = path.join(ROOT, "..", "..", ""), fixture = path.join(__dirname, "fixtures", "fake-launch.mjs");
-  if (!fake || /_LIVE=approved/.test(env) || fs.realpathSync(path.resolve(real, fake)) !== fs.realpathSync(fixture)) { console.error(`STOP  the server on :${PORT} must run the fake launcher and no live switch: this check would make paid AI calls.`); process.exit(2); }
-  step("spend guard: the server runs the fake launcher and no live switch", true, fake);
+  const otherLive = [...env.matchAll(/\b(\w+_LIVE)=approved\b/g)].map((m) => m[1]).filter((k) => k !== "STUDIO_AI_LIVE");
+  if (!fake || otherLive.length || !/\bSTUDIO_AI_LIVE=approved\b/.test(env) || fs.realpathSync(path.resolve(real, fake)) !== fs.realpathSync(fixture)) { console.error(`STOP  the server on :${PORT} must run the fake launcher with STUDIO_AI_LIVE and no other live switch (P-192): otherwise this check would make paid AI calls or test nothing.`); process.exit(2); }
+  step("spend guard: the server runs the fake launcher, STUDIO_AI_LIVE paired with it and no other live switch", true, fake);
 
   const b = await chromium.launch({ channel: "chrome", headless: true });
   const p = await (await b.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "light", reducedMotion: "reduce" })).newPage();

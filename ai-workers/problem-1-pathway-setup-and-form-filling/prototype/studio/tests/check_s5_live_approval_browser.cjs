@@ -1,9 +1,9 @@
 // S5 Who can be (Lead check L2, Devin Review on PR #71): whether "AI now" may run is the server's answer, not a constant
-// in the page. On a copy where AI now is open (the founder's live-trial approval, or, for this check, the fake launcher
-// only: never a live switch on a check copy, Lead 30 Oct), the plan says approved, the choice is open
+// in the page. On a copy where AI now is open (the founder's live-trial approval, or, for this check, the live switch
+// STUDIO_AI_LIVE paired with the fake launcher, P-192 and PR #113 review M1: never another live switch on a check copy), the plan says approved, the choice is open
 // and says its cost first; on every other copy it is greyed (check_s5_leadcheck_browser.cjs). Nothing is run: no Fill
 // is pressed in AI now, so no model is called (US$0).
-//   zsh studio/tools/isolated.sh runtime_live 4433 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && node studio/tests/check_s5_live_approval_browser.cjs 4433 xr_studio_runtime_live
+//   zsh studio/tools/isolated.sh runtime_live 4433 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && node studio/tests/check_s5_live_approval_browser.cjs 4433 xr_studio_runtime_live
 const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const PORT = Number(process.argv[2] ?? 4433), DB = process.argv[3] ?? "xr_studio_runtime_live";

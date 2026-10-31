@@ -9,6 +9,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { checklist, signedScanLines } from "../engine/sources.ts";
 import { channelProblems } from "../engine/channels.ts";
+import { previewFamily } from "../engine/runtime/preview.ts";
+import { peopleFor, render } from "../engine/render.ts";
 
 const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_c311";
 const log: any[] = []; let pass = 0, fail = 0;
@@ -55,6 +57,9 @@ const scans = (v: any) => v.roles.flatMap((r: any) => r.lines.filter((l: any) =>
   ok("C3.11 pass: each line says why it is there (the form and its channel) and supplies no facts", mine.every((x: any) => x.automatic.reason.includes(`${F} is filed as PDF upload, signed by hand and scanned`) && !x.supplies.length && x.status === "AUTOMATIC"), mine[0]?.automatic);
   ok("C3.11 pass: the signed scans follow the person's other documents (last on the checklist)", V.roles.every((x: any) => { const i = x.lines.findIndex((y: any) => y.automatic); return i < 0 || x.lines.slice(i).every((y: any) => y.automatic); }));
   ok("C3.11 fail: a person the form is not about gets no signed scan of it (the representative)", !mine.some((x: any) => x.role === "representative"), mine.map((x: any) => x.role));
+  const previewDocs = async () => ((await call("GET", `/combinations/${wp}/workspace?tab=preview&person=principal`)).body?.preview?.documents ?? []).map((d: { requirement: string; status: string }) => `${d.requirement}|${d.status}`);
+  let pd = await previewDocs();
+  ok(`C3.11 M2 pass: Preview by person lists "${F} signed by hand and scanned" for the principal applicant, as the case gets it`, pd.some((x: string) => x.startsWith(`${F} signed by hand and scanned|`)), pd);
   ok("C3.11: nothing is stored for it (no document requirement row, no document type)", Number(sql(`select count(*) from document_requirement where combination_id='${wp}' and lineage_key like 'signed_scan:%'`)) === 0 && Number(sql(`select count(*) from document_type where document_type_key like 'signed_scan.%'`)) === 0);
 
   // ---------------------------------------------------------------- rule 2: it follows its form line (never moved or removed alone)
@@ -85,6 +90,8 @@ const scans = (v: any) => v.roles.flatMap((r: any) => r.lines.filter((l: any) =>
   r = await setChannel("PDF_UPLOAD", "SIGNED");
   V = await list();
   ok("C3.11 pass: filed as PDF upload again, every signed scan of the form is gone at once", r.status === 200 && scans(V).filter((x: any) => x.automatic.form === F).length === 0, scans(V).length);
+  pd = await previewDocs();
+  ok("C3.11 M2 fail: filed as PDF upload again, Preview by person no longer lists the signed scan", !pd.some((x: string) => x.startsWith(`${F} signed by hand and scanned|`)), pd);
   ok("C3.11 fail-guard: the release keeps its own checklist (no signed scan was ever released)", checklist((await call("GET", `/combinations/${wp}/config?mode=published`)).body.snapshot).every((x) => x.lines.every((y) => !y.automatic)));
   await setChannel("SIGNED", "PDF_UPLOAD");
   ok("C3.11 pass: the release snapshot carries it with its form line (the next release's checklist has the signed scans, the same rule)", signedScanLines(await draft()).filter((x) => x.automatic!.form === F).length === mine.length);
@@ -108,6 +115,18 @@ const scans = (v: any) => v.roles.flatMap((r: any) => r.lines.filter((l: any) =>
   const oldSpelling = (() => { const s = structuredClone(base); s.forms = [{ form_number: "IMM TEST", form_kind: "data_form", who: "principal_applicant", status: "always", channel: "SIGNED_PDF_UPLOAD" }]; return signedScanLines(s).length; })();
   ok("C3.11 engine pass: a release made before C1.6 (channel spelled SIGNED_PDF_UPLOAD) still asks for the signed scan", oldSpelling === 1, oldSpelling);
   ok("C3.11 engine fail: a PDF upload with a typed name asks for no signed scan", (() => { const s = structuredClone(base); s.forms = [{ form_number: "IMM TEST", form_kind: "data_form", who: "each_applicant", status: "always", signature: "TYPED_NAME" }]; return signedScanLines(s).length === 0; })());
+  const caseScans = (by: string | undefined, signature = "HAND_SCANNED", who = "each_applicant") => {
+    const s = structuredClone(base);
+    s.forms = [{ form_number: "IMM TEST", title: "Test", form_kind: "data_form", who, status: "always", signature, ...(by ? { signed_by: by } : {}) }] as typeof s.forms;
+    const people = peopleFor([{ role: "principal", preview: 1 }, { role: "spouse_or_partner", preview: 1 }, { role: "child", preview: 1 }]);
+    return render(s, people, new Map()).checklist.filter((d) => d.requirement === "IMM TEST signed by hand and scanned").map((d) => `${people.find((p) => p.id === d.person)?.role}:${d.status}`).sort();
+  };
+  const each = caseScans(undefined);
+  ok("C3.11 M2 engine pass: the case renderer asks each person the form is about for the signed scan (Needed)", JSON.stringify(each) === JSON.stringify(["child:Needed", "principal:Needed", "spouse_or_partner:Needed"]), each);
+  ok("C3.11 M2 engine pass: signed by the principal applicant for the family → only the principal gets it", JSON.stringify(caseScans("principal_for_family")) === JSON.stringify(["principal:Needed"]), caseScans("principal_for_family"));
+  ok("C3.11 M2 engine fail: a typed name, or No signature, asks nobody for a signed scan", caseScans(undefined, "TYPED_NAME").length === 0 && caseScans("none").length === 0);
+  const pv = (() => { const s = structuredClone(base); s.forms = [...s.forms, { form_number: "IMM TEST", title: "Test", form_kind: "data_form", who: "each_applicant", status: "always", signature: "HAND_SCANNED" }] as typeof s.forms; return previewFamily(s, "", "principal", {}).documents.map((d) => d.requirement); })();
+  ok("C3.11 M2 engine pass: Preview by person (previewFamily) lists it with the principal's documents", pv.includes("IMM TEST signed by hand and scanned"), pv.slice(-3));
   ok("C3.11 engine pass: a conditional form's signed scan is conditional with the form's own words", !!cond && cond.base === false && /representative/.test(cond.when), cond?.when);
 
   const out = join(import.meta.dirname, "..", "evidence", "c3-11-signed-scan");
