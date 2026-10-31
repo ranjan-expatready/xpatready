@@ -90,9 +90,10 @@ export async function runDrafting(
         const busy = typeof status === "number" && [429, 500, 502, 503, 529].includes(status);
         const timedOut = status === 408 || (status === undefined && /time(d)?\s*-?\s*out/i.test(`${(e as Error).name} ${(e as Error).message}`));
         const requestId = requestIdOf(e);
-        ledger.settleOrKeep(id, refused || busy ? 0 : worst, refused ? "refused_by_provider_usd0" : busy ? "busy_usd0" : "error_counted_at_worst_case");
+        // #121 review 6, Minor 2: a US$0 settle that could not be written is said on the attempt (it stays at its worst case).
+        const notSettled = ledger.settleOrKeep(id, refused || busy ? 0 : worst, refused ? "refused_by_provider_usd0" : busy ? "busy_usd0" : "error_counted_at_worst_case");
         out.attempts.push({ n, outcome: refused ? "refused_by_provider" : busy ? "busy" : timedOut ? "timed_out" : "error", error: (e as Error).message.slice(0, 300),
-          ...(requestId ? { request_id: requestId } : {}), ...(refused || busy ? { cost_usd: 0 } : {}), worst_usd: worst, duration_ms: Date.now() - t0 });
+          ...(requestId ? { request_id: requestId } : {}), ...(refused || busy ? { cost_usd: 0 } : {}), worst_usd: worst, duration_ms: Date.now() - t0, ...(notSettled ? { settle_error: `counted at its worst case: ${notSettled}` } : {}) });
         if (timedOut) out.status = "timed_out";
         // A refused request fails the same way on retry (D17): no second attempt.
         if (refused) break;
