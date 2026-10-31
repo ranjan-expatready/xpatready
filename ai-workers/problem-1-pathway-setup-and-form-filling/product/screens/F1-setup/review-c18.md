@@ -109,3 +109,15 @@ A real screen reader; an intended user's walk (D17, D20 stay with the founder); 
 Housekeeping: my suite runs rewrote committed evidence JSON. I restored them with `git checkout`. Three of those files (`check_s5_leadcheck.json`, `check_pqr.json`, `canary-digest.json`) and later `check_w115_slice1.json` were not written by my runs, so another process may be writing into this checkout. I did not touch `check_w115_slice1.json`.
 
 **Verdict: Approve** — commit efc04311. Blockers: none. Majors: none (break M1 and M2 fixed). Minors open: n1 (a checklist drawer cannot show a copies error), n2 (a PATCH removal still stores who, attachMode and the condition).
+
+## Re-review for 2447b557 (after merge of origin/main and migration rename)
+
+Narrow check of what changed since the Approve on efc04311: 469ed685 (review docs only), 469a40a5 (merge of origin/main at efb48c55, bringing the forms X5 library work and migration `20261031130000_x5_library_index`), 2447b557 (this PR's migration folder renamed `20261031130000_c18_copies` → `20261031140000_c18_copies`).
+
+1. **The PR's own changes are unchanged.** `git diff origin/main...efc04311` and `git diff origin/main...2447b557`, limited to the PR's code files (api/src/studio.ts, form-lines.ts, form-uses.ts, workspace.ts, contracts/workspace.ts, engine/snapshot.ts, prisma/schema.prisma, web/src/pages/workspace/forms.tsx, tests/check_c18_copies*.ts/.cjs), differ only in the schema.prisma blob ids and hunk offset (`@@ -503` → `@@ -508`, because main added lines above `CombinationForm`); the added lines are identical. The migration SQL is byte-identical before and after the rename (`git diff 469a40a5 2447b557` is a 0-line rename).
+2. **No conflict from the merge.** `git show --cc 469a40a5` shows no combined hunks in api/, contracts/, engine/, prisma/ or web/src/pages/workspace/ (a clean merge on these paths), and there are no conflict markers in any of the PR's files at 2447b557.
+3. **Migrations and checks on a fresh database (isolated copy `screens_rev`, port 4442, db `xr_studio_screens_rev`, US$0).** All migrations applied in order; `_prisma_migrations` ends `20261031120000_f2_official_pages`, `20261031130000_x5_library_index`, `20261031140000_c18_copies`, all finished; `combination_form.copies` exists. `tests/check_c18_copies.ts`: **28/28 passed**. Copy restarted fresh, then `tests/check_forms_x5_library.ts 4442 xr_studio_screens_rev`: **32 passed, 0 failed**. The browser check was not run. The runs rewrote no tracked files.
+
+No new findings. The Minors n1 and n2 from the second pass still apply as listed for the PR. The journey score from the earlier pass is unchanged; this re-review changes no user-visible behaviour.
+
+**Verdict: Approve** (commit 2447b557)
