@@ -98,6 +98,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await agentOpt.locator("input").check();
   step("P-155(3) pass: choosing Case officer shows the required reason box", await drawer.locator("[data-officer-why] textarea").count() === 1);
   await drawer.getByRole("button", { name: "Save" }).click(); await settle();
+  // The refusal arrives after the save request: wait for it before reading (a loaded runner read it too early once, #113).
+  await drawer.locator("[data-drawer-error]").waitFor({ timeout: 10000 }).catch(() => {});
   step("P-155(3) fail: Save without a reason is refused in plain words (write why)", /write why/.test(await drawer.locator("[data-drawer-error]").innerText().catch(() => "")), await drawer.locator("[data-drawer-error]").innerText().catch(() => ""));
   await state("drawer-case-officer-needs-why");
   await drawer.locator("[data-officer-why] textarea").fill("Sample: the officer copies it from the LMIA file.");
@@ -118,9 +120,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await openAll();
   const row = p.locator('[data-question][data-fact="person.family_name"]').first();
   await row.waitFor();
+  // Wait for the saved state on the row before reading it (and the undone state below): a loaded runner read them too early.
+  await row.locator('[data-row-status="draft"]').waitFor({ timeout: 10000 }).catch(() => {});
   step("C4.10 M1 pass: the row now says Client, Ask, Changed here", /Client/.test(await row.locator("[data-comes-from]").innerText()) && /Ask/.test(await row.innerText()) && await row.locator('[data-row-status="draft"]').count() === 1, await row.innerText());
   step("undo toast: one Undo for the save", await p.locator("[data-undo-toast] [data-undo]").count() === 1);
   await p.locator("[data-undo-toast] [data-undo]").click(); await settle();
+  await row.locator('[data-row-status="rules"]').waitFor({ timeout: 10000 }).catch(() => {});
   step("Undo pass: the row goes back to the passport and the rules", /Document/.test(await row.locator("[data-comes-from]").innerText()) && await row.locator('[data-row-status="rules"]').count() === 1, await row.innerText());
 
   // ======================================================== a declaration: always the client
@@ -143,6 +148,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("bulk-bar-two-ticked");
   await bar.getByLabel("Set where it comes from").selectOption("AGENT"); await settle();
   const refused = p.locator("[data-bulk-refused]");
+  // Same for the bulk refusal list: wait for both rows before reading it.
+  await refused.locator("li").nth(1).waitFor({ timeout: 10000 }).catch(() => {});
   step("P-155(3) fail (bulk): Case officer on two passport facts is refused per row, each in words with its question (write why in its details)", await refused.locator("li").count() === 2 && /The case officer enters only .+ Open its details to write why/.test(await refused.innerText()), await refused.innerText());
   await state("bulk-refused-in-words");
   await bar.getByLabel("Set where it comes from").selectOption("CLIENT"); await settle();
