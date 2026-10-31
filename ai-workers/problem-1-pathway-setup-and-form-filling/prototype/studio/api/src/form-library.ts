@@ -185,8 +185,16 @@ export class FormLibrary {
     // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
     // Break m14 / the outside check on #145: the words count what this fill did, not what it planned: a form another fill created meanwhile
     // is "already in the library", one deleted meanwhile is not counted, and "newer" names only the rows this fill marked.
-    const { created, already, newer } = await this.db.$transaction(async (tx) => {
-      const made = plan.create.length ? (await tx.govFormDef.createMany({ data: plan.create.map((c) => ({ workspaceId, formKey: c.formKey, displayName: c.title, formKind: c.kind, formPageUrl: c.pageUrl, listedOnIndexAt: now, indexDateModified: c.dateModified })), skipDuplicates: true })).count : 0;
+    const { created, already, newer, deleted } = await this.db.$transaction(async (tx) => {
+      // X5 slice c (the tech lead on #138): a form a second person approved deleting is not listed again until a person adds
+      // it back. Read in this transaction; a delete approved while this fill runs is undone below, after the insert.
+      const gone = new Set((await tx.libraryFormDeletion.findMany({ where: { workspaceId }, select: { formKey: true } })).map((d) => d.formKey));
+      const toCreate = plan.create.filter((c) => !gone.has(c.formKey));
+      let made = toCreate.length ? (await tx.govFormDef.createMany({ data: toCreate.map((c) => ({ workspaceId, formKey: c.formKey, displayName: c.title, formKind: c.kind, formPageUrl: c.pageUrl, listedOnIndexAt: now, indexDateModified: c.dateModified })), skipDuplicates: true })).count : 0;
+      // A delete approved meanwhile (its row committed after the read above): this fill's own new row for it goes again.
+      const late = (await tx.libraryFormDeletion.findMany({ where: { workspaceId, formKey: { in: toCreate.map((c) => c.formKey) } }, select: { formKey: true } })).map((d) => d.formKey);
+      if (late.length) { made -= (await tx.govFormDef.deleteMany({ where: { workspaceId, formKey: { in: late }, listedOnIndexAt: now, editions: { none: {} }, usedBy: { none: {} } } })).count; late.forEach((k) => gone.add(k)); }
+      const skipped = plan.create.filter((c) => gone.has(c.formKey)).map((c) => c.formKey);
       let kept = 0; const marked: string[] = [];
       // X5 break m4: a form deleted meanwhile (an approved delete) is skipped, never a failed fill.
       for (const l of plan.listed) {
@@ -200,11 +208,11 @@ export class FormLibrary {
         kept += n;
         if (n && moved) marked.push(l.formKey);
       }
-      return { created: made, already: kept + (plan.create.length - made), newer: marked };
+      return { created: made, already: kept + (plan.create.length - skipped.length - made), newer: marked, deleted: skipped };
     });
-    const words = `${created} new form${created === 1 ? "" : "s"} listed (no file yet), ${already} already in the library${newer.length ? `, ${newer.length} with a newer edition on canada.ca (${newer.slice(0, 5).join(", ")}${newer.length > 5 ? "…" : ""})` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}${unreadable.length ? `, ${unreadable.length} left out whose number or title could not be read` : ""}`;
-    await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created, listed: already, newer, no_page: parsed.noPage, unreadable });
-    return { created, listed: already, newer, no_page: parsed.noPage, unreadable, message: `Filled from IRCC's forms list: ${words}.` };
+    const words = `${created} new form${created === 1 ? "" : "s"} listed (no file yet), ${already} already in the library${newer.length ? `, ${newer.length} with a newer edition on canada.ca (${newer.slice(0, 5).join(", ")}${newer.length > 5 ? "…" : ""})` : ""}${deleted.length ? `, ${deleted.length} left out that ${deleted.length === 1 ? "was" : "were"} deleted from the library (${deleted.slice(0, 5).join(", ")}${deleted.length > 5 ? "…" : ""}; upload its PDF to add one back)` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}${unreadable.length ? `, ${unreadable.length} left out whose number or title could not be read` : ""}`;
+    await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created, listed: already, newer, deleted, no_page: parsed.noPage, unreadable });
+    return { created, listed: already, newer, deleted, no_page: parsed.noPage, unreadable, message: `Filled from IRCC's forms list: ${words}.` };
   }
 
   async checkCanada(actor: Actor, code: string) {

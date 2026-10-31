@@ -431,6 +431,21 @@ model OfficialPagesRecord {
   @@map("combination_official_pages")
 }
 
+/// X5 slice c (P-156 (1); the tech lead on #138): a form a second person approved deleting from the library is remembered,
+/// so a later fill from IRCC's forms list does not list it again. A person adding the form back (an upload, a canada.ca
+/// download by Find again, a sample load) forgets it. Keyed by form number; no foreign key (the form's row is gone).
+model LibraryFormDeletion {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  formKey     String   @map("form_key")
+  deletedBy   String   @map("deleted_by")
+  changeId    String?  @map("change_id") @db.Uuid
+  deletedAt   DateTime @default(now()) @map("deleted_at") @db.Timestamptz
+
+  @@unique([workspaceId, formKey])
+  @@map("library_form_deletion")
+}
+
 model ApprovedSource {
   id           String   @id @default(uuid()) @db.Uuid
   workspaceId  String   @map("workspace_id") @db.Uuid

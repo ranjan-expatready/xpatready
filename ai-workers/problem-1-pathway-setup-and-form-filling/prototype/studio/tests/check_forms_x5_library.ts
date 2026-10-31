@@ -5,11 +5,12 @@
 //   zsh studio/tools/isolated.sh forms_x5 4450 start && tsx studio/tests/check_forms_x5_library.ts 4450 xr_studio_forms_x5
 import { execFileSync } from "node:child_process";
 import fc from "fast-check";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { indexTitleOk, parseFormsIndex, realDate } from "../engine/canada.ts";
 import { fileMonth, isLaterDate, libraryRows, newerOnIndex, planIndexFill } from "../engine/library-index.ts";
 
+const OFFICIAL = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc");
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_x5";
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
@@ -253,6 +254,37 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   ok("C2.6 X5 break m1 fail: two fills at once report together exactly the rows created (before: each claimed all of them)", f1.status === 201 && f2.status === 201 && f1.body.created + f2.body.created === Number(sql("select count(*) from gov_form_def")) - b0, { a: f1.body?.created, b: f2.body?.created, made: Number(sql("select count(*) from gov_form_def")) - b0 });
   const onIndex = Number(sql("select count(*) from gov_form_def where listed_on_index_at is not null"));
   ok("C2.6 X5 break m14 / the outside check (#145) fail: each of two fills at once says every listed form is there, new or already (before: the losing fill counted its plan: '0 new, 9 already')", f1.body.created + f1.body.listed === onIndex && f2.body.created + f2.body.listed === onIndex, { a: [f1.body?.created, f1.body?.listed], b: [f2.body?.created, f2.body?.listed], onIndex });
+  // ── X5 slice c (the tech lead on #138): a deletion is remembered; a later fill skips it until a person adds the form back.
+  // A recorded official PDF whose form is listed with no file (plain): delete it (a second person approves), fill, add back.
+  const recorded = readdirSync(join(OFFICIAL, "forms")).map((f) => /^(imm|irm)(\d{4})e\.pdf$/.exec(f)).filter((m): m is RegExpExecArray => !!m);
+  const plainNow = new Set(((await call("GET", "/library/forms/list")).body.rows as any[]).filter((x) => x.status === "no_file" && x.action?.kind === "DELETE").map((x) => x.code)); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const pick = recorded.find((m) => plainNow.has(`${m[1].toUpperCase()} ${m[2]}`))!;
+  const gk = `${pick[1].toUpperCase()} ${pick[2]}`, gkU = encodeURIComponent(gk);
+  const del = await call("DELETE", `/library/forms/${gkU}`, { reason: "Not needed in this library" });
+  const appr = await call("POST", `/library/changes/${del.body?.id}/approve`, { note: "Checked: unused" }, "user-B");
+  const inLib = () => sql(`select count(*) from gov_form_def where form_key = '${gk}'`);
+  ok("C3.12 X5 slice c pass: an approved delete of a listed form leaves the library and is remembered (who, which change)", del.body?.status === "WAITING" && appr.status < 300 && inLib() === "0" && sql(`select deleted_by || ' ' || (change_id = '${del.body?.id}') from library_form_deletion where form_key = '${gk}'`) === "user-B true", { gk, del: del.body?.status, appr: appr.status });
+  const fd1 = await call("POST", "/library/forms/fill-from-index");
+  ok("C3.12 X5 slice c fail: a later fill does not list the deleted form again, and says so in words (before: it came back as 'new')", fd1.status === 201 && inLib() === "0" && fd1.body.deleted?.includes(gk) && /1 left out that was deleted from the library \(/.test(fd1.body.message) && !fd1.body.created, { m: fd1.body?.message, created: fd1.body?.created });
+  ok("C3.12 X5 slice c pass: the fill's counts still add up (created + already + deleted = the forms IRCC lists)", fd1.body.listed + fd1.body.created + fd1.body.deleted.length === Number(sql("select count(*) from gov_form_def where listed_on_index_at is not null")) + 1, { listed: fd1.body.listed, created: fd1.body.created });
+  // The memory removed by hand: the same fill lists the form again, so the memory alone kept it out.
+  sql(`delete from library_form_deletion where form_key = '${gk}'`);
+  const fd2 = await call("POST", "/library/forms/fill-from-index");
+  ok("C3.12 X5 slice c fail: without the memory the form is listed again (the memory, not chance, kept it out)", fd2.status === 201 && inLib() === "1" && !fd2.body.deleted?.length, { m: fd2.body?.message });
+  // Delete again, then a person uploads canada.ca's PDF: the memory is forgotten, and the next fill lists the form.
+  const del2 = await call("DELETE", `/library/forms/${gkU}`, { reason: "Not needed in this library" });
+  await call("POST", `/library/changes/${del2.body?.id}/approve`, { note: "Checked: unused" }, "user-B");
+  const fdUp = new FormData(); fdUp.append("files", new Blob([new Uint8Array(readFileSync(join(OFFICIAL, "forms", pick[0])))], { type: "application/pdf" }), pick[0]);
+  const up = await (await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fdUp })).json() as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  ok("C3.12 X5 slice c pass: a person uploading the form adds it back: the memory is forgotten", inLib() === "1" && sql(`select count(*) from library_form_deletion where form_key = '${gk}'`) === "0", up?.results?.[0]);
+  const fd3 = await call("POST", "/library/forms/fill-from-index");
+  ok("C3.12 X5 slice c pass: after the add-back a fill treats it as any form (already there, nothing left out)", fd3.status === 201 && !fd3.body.deleted?.length && inLib() === "1", { m: fd3.body?.message });
+  // Demo reset forgets every remembered deletion (nothing is left behind for the next workspace).
+  const del3 = await call("DELETE", `/library/forms/${encodeURIComponent([...plainNow].find((c) => c !== gk)!)}`, { reason: "Not needed in this library" });
+  await call("POST", `/library/changes/${del3.body?.id}/approve`, { note: "Checked: unused" }, "user-B");
+  const remembered = sql("select count(*) from library_form_deletion");
+  await call("POST", "/demo/reset", { confirm: "RESET" });
+  ok("C3.12 X5 slice c pass: Reset to blank forgets remembered deletions", remembered === "1" && sql("select count(*) from library_form_deletion") === "0", { remembered });
   r = await call("POST", "/library/forms/fill-from-index", undefined, null);
   ok("C2.6 X5 fail: nobody (no person named) cannot fill (401)", r.status === 401, r.status);
   console.log(`\n${pass} passed, ${fail} failed`);
