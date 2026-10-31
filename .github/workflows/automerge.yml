@@ -4,9 +4,9 @@
 # seconds on the founder's Mac (P-195, 31 Oct: GitHub's machines are off budget; it may wait behind a running check);
 # it reads and merges only, never pushes code.
 name: automerge
+# P-201: Mergify's merge queue merges now; this job stays as a by-hand fallback (Actions › automerge › Run workflow).
 on:
-  workflow_run: { workflows: [ci], types: [completed] }
-  pull_request_target: { types: [labeled] }
+  workflow_dispatch: {}
 permissions: { contents: write, pull-requests: write, actions: write }
 jobs:
   merge:
