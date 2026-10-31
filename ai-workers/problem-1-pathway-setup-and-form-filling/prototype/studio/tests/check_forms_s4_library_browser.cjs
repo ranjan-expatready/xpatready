@@ -285,9 +285,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // press leaves focus on a row (before: on the page), and any filter or search change starts again at 50.
     const pager = p.locator("[data-show-more]");
     const total = Number(((await pager.textContent()) ?? "").match(/of (\d+)/)?.[1] ?? 0);
-    await pager.getByRole("button", { name: /^Show \d+ more forms$/ }).click(); await sleep(300);
+    await pager.getByRole("button", { name: /^Show \d+ more forms$/ }).focus(); await p.keyboard.press("Enter"); await sleep(300); // by keyboard, as the focus ring is for keyboard users
     const focusAfter = await p.evaluate(() => { const tr = document.activeElement?.closest("tr[data-form]"); return tr ? [...document.querySelectorAll("tr[data-form]")].indexOf(tr) : -1; });
     step("X5 review m1 fail: Show more moves focus to the first row it added (row 51; before: the button below the new rows)", focusAfter === 50, `focused row index ${focusAfter}`);
+    // Review / break (0fc3f8a7) M7: the focused row shows its focus (before: outline-none won, nothing was drawn).
+    const outline = await p.evaluate(() => { const a = document.activeElement; const c = a ? getComputedStyle(a) : null; return c ? `${c.outlineStyle} ${c.outlineWidth}` : "none"; });
+    step("X5 review (0fc3f8a7) M7 fail: the row Show more focuses draws a visible outline (WCAG 2.4.7; before: outline-style none)", !/^none/.test(outline) && outline !== "", outline);
     const countSays = async () => (await p.locator('[data-list-count][role="status"]').textContent()) ?? "";
     step("X5 review m2 fail: the count is a status, and the button says forms", /^Showing 100 of \d+ forms$/.test(await countSays()) && /Show \d+ more forms/.test((await pager.textContent()) ?? ""), await countSays());
     // Review (310acb9c) 1 / break m16: a second Enter after Show more opens no drawer (focus is on the row, not its button).
@@ -313,6 +316,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await searchBox.fill(lastCode ?? "none"); await sleep(400);
     step("X5 review m3 fail: a search finds a form past the first 50 rows", lastCode !== null && (await p.locator(`tr[data-form="${lastCode}"]`).count()) === 1, String(lastCode));
     await searchBox.fill(""); await sleep(300);
+    // Review (0fc3f8a7) 2: typing speaks the count once it pauses, not per keystroke.
+    const spokenUpdates = await p.evaluate(async () => { const el = document.querySelector("[data-list-count]"); let n = 0; const obs = new MutationObserver(() => n++); obs.observe(el, { childList: true, characterData: true, subtree: true }); const box = document.querySelector('input[aria-label="Search number or title"]'); const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set; for (const t of ["i", "im", "imm", "imm ", "imm 5", "imm 52", "imm 525", "imm 5257"]) { setter.call(box, t); box.dispatchEvent(new Event("input", { bubbles: true })); await new Promise((r) => setTimeout(r, 60)); } await new Promise((r) => setTimeout(r, 1200)); obs.disconnect(); return { n, text: el.textContent }; });
+    step("X5 review (0fc3f8a7) 2 fail: typing a search speaks the count once it pauses (before: 5 updates for 8 keys)", spokenUpdates.n <= 2 && /^Showing \d+ of \d+ forms$/.test(spokenUpdates.text ?? ""), spokenUpdates);
+    await searchBox.fill(""); await sleep(1000);
+    // Break (0fc3f8a7) m20: when the list cannot be loaded again, no count of the old list is said.
+    await p.route("**/api/library/forms/list**", (r) => r.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ title: "Broken", detail: "test" }) }));
+    await p.locator("[data-fill-index]").click();
+    await p.getByText("The forms could not be loaded").waitFor({ timeout: 15_000 });
+    step("X5 break (0fc3f8a7) m20 fail: when the list fails to load, the count says nothing (before: the old list's 'Showing 100 of 237')", ((await p.locator("[data-list-count]").textContent()) ?? "") === "", await p.locator("[data-list-count]").textContent());
+    await p.unrouteAll({ behavior: "ignoreErrors" }); await p.getByRole("button", { name: "Try again" }).click(); await p.locator("tr[data-form]").first().waitFor();
     await axe("X5: the library after the fill from IRCC's forms list");
     // One readable view (the whole list is now some 240 rows): the first screen at 1440 px.
     await p.setViewportSize({ width: 1440, height: 900 }); await p.getByText("Listed by IRCC · no file yet").first().evaluate((e) => e.scrollIntoView({ block: "center" })); await sleep(150);
