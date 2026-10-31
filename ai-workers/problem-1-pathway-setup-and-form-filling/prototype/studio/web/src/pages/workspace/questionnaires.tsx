@@ -4,7 +4,7 @@
 // the rules and checks used here fold below (m4). People pick from the shared library's person roles; a new kind of
 // person is added there (S6), never here.
 import * as React from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookOpen, ChevronDown, Plus, Undo2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -232,8 +232,23 @@ function PqrSet({ id, roleLabel, n }: { id: string; roleLabel: string; n: number
   const [open, setOpen] = React.useState(false);
   const c = country.data;
   const pending = c ? c.thisCombination.draftAdds.length + c.thisCombination.draftRemoves.length : 0;
+  const { canAuthor } = useSessionView();
+  // C4.7 (F6 slice 1): the rules propose picks onto To review (no AI, US$0); a person accepts or rejects each there.
+  const [picked, setPicked] = React.useState<{ proposed: number; waitingAlready: number; words: string } | null>(null);
+  const propose = useAction(() => api<{ runId: string; proposed: number; waitingAlready: number; words: string }>(`/combinations/${id}/pqr/picks`, { method: "POST" }), { onDone: (r) => setPicked(r), invalidate: [["proposals"]] });
   return (
     <section aria-label="Pre-qualification questions" className="space-y-2 rounded-xl border border-border bg-surface-raised p-4" data-pqr-set>
+      {canAuthor ? (
+        <div className="flex flex-wrap items-center gap-2" data-pqr-propose>
+          <Button size="sm" variant="secondary" busy={propose.isPending} onClick={() => { setPicked(null); propose.mutate(undefined); }}>Propose picks from the rules</Button>
+          <span className="text-xs text-text-muted">Each pick waits on To review with its reason; nothing is ticked until a person accepts it. No AI, US$0.</span>
+        </div>
+      ) : null}
+      {picked ? (
+        <Notice tone={picked.proposed ? "ok" : "info"} title={picked.proposed ? `${picked.proposed} pick${picked.proposed === 1 ? "" : "s"} proposed` : "No new pick"} action={picked.proposed || picked.waitingAlready ? <Link className="whitespace-nowrap text-text-link underline" to={`/review/proposals?group=${encodeURIComponent(`combination:${id}`)}`}>Open on To review</Link> : undefined}>
+          <span data-pqr-propose-result>{picked.words}</span>
+        </Notice>
+      ) : null}
       <p className="text-sm"><span className="font-medium">{roleLabel}: {n} pre-qualification question{n === 1 ? "" : "s"} in this combination.</span> <span className="text-text-muted">A prospect answers them before a case starts; the client questionnaire later shows each answer as "please confirm", and a document read that differs is a check, not an overwrite. A tick goes out with this combination's next release, checked with everything else in it.</span></p>
       {country.error ? <Notice tone="warn" title="The country pre-qualification could not load">{country.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void country.refetch()}>Retry</button></Notice> : null}
       {c ? (
