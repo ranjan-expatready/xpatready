@@ -104,17 +104,22 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const cents = (a) => Math.round(a.reduce((s, x) => s + x, 0) * 100);
   const buttonWorst = usdOf(words);
   step("C11.15: QA-98: the button's tip lists each AI step's reserve (the page pick and both forms rounds), and they add up to its 'at most'", tipSteps.length === 3 && cents(tipSteps.map((s) => s.usd)) === Math.round(buttonWorst * 100), { tipSteps, buttonWorst });
-  fs.writeFileSync(path.join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 1, err: RAW } }));
+  fs.writeFileSync(path.join(VAR, "fake-launch.json"), JSON.stringify({ stub: { exit: 1, err: RAW, sleep_ms: 5000 } })); // the run stays active long enough for its card to be read
   await p.evaluate(() => document.activeElement?.blur?.());
   await state("just-started");
 
   // ======================================================== the click: the run on the Forms tab's card, then the page choice
   await offerBtn.click();
-  await panel.locator("[data-run-line]").first().waitFor({ timeout: 15000 }).catch(() => undefined);
+  // The card shows only while the run is active, and a stand-in that fails at once could end before the card's first
+  // fetch on GitHub's 2-core machine (cardCost "" in #111, #120): the stand-in above now takes 5 s, and the cost line is
+  // waited for (up to 30 s, with text) and read from that same element; a timeout is a named failure, never swallowed.
+  const costEl = panel.locator("[data-run-cost]").filter({ hasText: /\S/ }).first();
+  const costWait = await costEl.waitFor({ state: "visible", timeout: 30000 }).then(() => "", (e) => e.message.split("\n")[0]);
+  step("S3 fix 4: the run card shows its cost line within 30 s of the click", !costWait, costWait || "shown");
   const batches = sql(`select count(*) from ai_batch where scope_label like '${cid}|%' and mode = 'LIVE'`);
   const runId = sql(`select id from ai_batch where scope_label like '${cid}|%' order by started_at desc limit 1`);
   step("M1 / M4: the click starts the live run (the fake launcher here, US$0) and the Forms tab's run card shows it", batches === "1" && !!runId, batches);
-  const cardCost = (await panel.locator("[data-run-cost]").first().innerText().catch(() => "")).trim();
+  const cardCost = costWait ? "" : (await costEl.innerText({ timeout: 5000 }).catch(() => "")).trim();
   step("S3 fix 4: the run card's cost says the button's words (about US$x · at most US$y), then what it spent", cardCost.startsWith(`${words} · US$`), { cardCost, words });
   await panel.locator('[data-find-forms="page"]').waitFor({ timeout: 30000 }).catch(() => undefined);
   const panelText = await panel.innerText();

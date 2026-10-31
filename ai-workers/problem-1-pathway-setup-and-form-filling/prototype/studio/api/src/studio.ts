@@ -33,6 +33,8 @@ const LOCATIONS = ["inside_canada", "outside_canada"];
 /** A release publishes row by row in one transaction; Prisma's 5 s default ended it half-way on a busy machine (a 500
  *  on release while the lanes' suites ran, 23 Oct), so a release may take up to 30 s before it is rolled back. */
 const RELEASE_TX = { timeout: 30_000, maxWait: 10_000 };
+/** " (for example "<the form's words>")", shortened as listRowsWords does, or nothing when no field has a caption. */
+const forExample = (caption: string) => (caption ? ` (for example "${caption.length > 60 ? `${caption.slice(0, 57).replace(/\s+\S*$/, "")}…` : caption}")` : "");
 
 type Gate = { ok: true; sub: ReviewSubmission } | { ok: false; why: string };
 /** QA-1's gate on loaded rows (pure): the newest submission, the items signed on it, the draft's fingerprint now. */
@@ -130,7 +132,7 @@ export class Studio {
     if (c.program.nodeKind !== "STREAM" && c.program.nodeKind !== "CATEGORY") return [{ level: "error", where: "Row", item: c.combinationKey, message: `This configuration is attached to a ${LEVEL[c.program.nodeKind].name.toLowerCase()} ("${c.program.label}"), above a full combination. Publishing is blocked: attach configuration to a category, or to its sub-category (SA-1B-55/56).` }];
     if (kids) return [{ level: "error", where: "Row", item: c.combinationKey, message: `"${c.program.label}" now has sub-categories, so this row sits above a full combination. Publishing is blocked (SA-1B-56).` }];
     return (await this.undecidedFormFields(combinationId, "DRAFT")).map((f) => ({ level: "error" as const, where: "Forms", item: f.form,
-      message: `${f.n} form field${f.n === 1 ? " has" : "s have"} no decision in this draft (for example ${f.example}). Map each one, mark it "not a fact", or "filled by hand" with a reason on To review › Form fields (K1).` }));
+      message: `${f.n} form field${f.n === 1 ? " has" : "s have"} no decision in this draft${forExample(f.example)}. Map each one, mark it "not a fact", or "filled by hand" with a reason on To review › Form fields (K1).` }));
   }
 
   /** K1 (Screen 02 challenge point 2): form fields of the combination's forms that have no decision, per form. DRAFT rows
@@ -142,7 +144,8 @@ export class Studio {
     const later = status === "PUBLISHED" && found.length ? new Set((await this.db.formFieldMap.findMany({ where: { supersedesId: { in: found.map((r) => r.id) } }, select: { supersedesId: true } })).map((r) => r.supersedesId)) : new Set<string | null>();
     const rows = found.filter((r) => !later.has(r.id));
     const by = new Map<string, { form: string; n: number; example: string }>();
-    for (const r of rows) { const k = r.edition.form.formKey; const cur = by.get(k) ?? { form: k, n: 0, example: r.caption || r.dataPath }; cur.n++; by.set(k, cur); }
+    // The example is the form's own words (a field's caption), never its PDF path (IMM_5476[0].Page1[0]…, #118 review).
+    for (const r of rows) { const k = r.edition.form.formKey; const cur = by.get(k) ?? { form: k, n: 0, example: "" }; cur.n++; if (!cur.example && r.caption?.trim()) cur.example = r.caption.trim(); by.set(k, cur); }
     return [...by.values()];
   }
 
@@ -326,7 +329,7 @@ export class Studio {
   async problems(workspaceId: string, s: Snapshot, combinationId?: string) {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
-    const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"} (for example ${f.example}). Decide them when this edition is drafted again.` })) : [];
+    const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"}${forExample(f.example)}. Decide them when this edition is drafted again.` })) : [];
     return [...structure, ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
   }
 

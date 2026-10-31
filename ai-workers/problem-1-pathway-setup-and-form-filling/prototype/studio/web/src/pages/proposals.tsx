@@ -27,10 +27,12 @@ export function ProposalsPage() {
   const [sp, setSp] = useSearchParams();
   const actor = useActorId();
   const asked = sp.get("group");
-  const view = useApi<ProposalsView>(["proposals", actor, asked], `/review/proposals${asked ? `?group=${encodeURIComponent(asked)}` : ""}`, { retry: false });
+  // PR #108 minor (c): a setup checklist link names the combination and step; the server picks that group.
+  const forCombo = !asked && sp.get("c") ? `?c=${encodeURIComponent(sp.get("c")!)}${sp.get("step") ? `&step=${encodeURIComponent(sp.get("step")!)}` : ""}` : "";
+  const view = useApi<ProposalsView>(["proposals", actor, asked, forCombo], `/review/proposals${asked ? `?group=${encodeURIComponent(asked)}` : forCombo}`, { retry: false });
   const groups = view.data?.groups ?? [];
   // Without a group in the URL, the oldest group opens (one click less for the usual case).
-  React.useEffect(() => { if (!asked && groups.length) setSp({ group: groups[0].id }, { replace: true }); }, [asked, groups.length]);
+  React.useEffect(() => { if (!asked && groups.length) setSp({ group: view.data?.group?.id ?? groups[0].id }, { replace: true }); }, [asked, groups.length]);
   const [open, setOpen] = React.useState<QueueProposal | null>(null);
   const [picked, setPicked] = React.useState<Set<string>>(new Set());
   const [undoable, setUndoable] = React.useState<{ batchId: string; n: number; until: number } | null>(null);
