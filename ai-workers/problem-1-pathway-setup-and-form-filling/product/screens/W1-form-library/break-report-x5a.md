@@ -242,3 +242,103 @@ At 390 px and at 200 % the focused row is 899 px wide inside a 356 px or 686 px 
   A mutation log of one session reads "", 50 of 237, No form matches, 50 of 237, 4 of 4, 50 of 237, so each change reaches a region that was already present (m17 is fixed). The visible "Showing N of M" in the pager is `aria-hidden`, so it is not read twice.
 - **Layout:** at 1440, 1024, 390×844 and 720×450 (200 %) there is no page scroll. The sr-only region is 1×1. The pager fits within its width (16–374 px at 390). After Show more, the focused row is scrolled into view.
 - **Not caused by this diff, noted only:** "Clear filters" unmounts itself and focus falls to `<body>`. The new count does now say "Showing 50 of 236 forms" there.
+
+---
+
+# Round at 337cdfd5 (row outline marked important; count spoken once typing pauses; no count after a failed load)
+
+Only `git diff 0fc3f8a7 337cdfd5 -- '*.tsx'` was attacked (`library-forms.tsx`). Tree from `git archive 337cdfd5` in /tmp/brk10tree, web built there with `vite build` (`index-BYGt_5Sy.js`, `index-CtTqo-3r.css`), served by isolated copy `brk10` on :4454 (`P2_LEDGER_DIR=/tmp/brk10l`). Sample loaded, then filled from IRCC's list (237 rows). No `*_LIVE`, US$0. Chromium 1243 through Playwright. A MutationObserver on `[data-list-count]` logged each change with in-page times, next to the input, click and change events. The copy is stopped and its database dropped. I changed no file in /home/user/x5m apart from this section.
+
+## Blocker
+None.
+
+## Major
+None.
+
+## Minor
+- **m21. A count that changes while the drawer is open is never spoken.** The 700 ms wait (`library-forms.tsx:134-136`) lets the update land after the drawer opens. The drawer sets `aria-hidden="true"` on the page's main column (`div.flex.flex-1`), and the status region sits inside that column. Closing the drawer does not repeat the count.
+  Repro:
+  1. Type "imm" in the search.
+  2. Before 700 ms pass, open a row's number (here Guide 5289).
+
+  Result: the region changes to "Showing 50 of 196 forms" at about 915 ms, while it is hidden. After Escape, focus is back on the number, and the count was never spoken. Opening and closing within 700 ms gives the same result. Under 0fc3f8a7 the count changed with the keystroke, before the drawer opened.
+- **m22. Clear filters is a button press, yet it waits 700 ms, and in the meantime the region names the wrong state.** The button also resets `q`, so `dq` changes and the effect takes it for typing.
+  Repro: search "zzzq" (No form matches), then press Clear filters.
+
+  Result: 50 rows are on screen from about 160 ms. `[data-list-count]` still reads "No form matches" until 790–894 ms, then "Showing 50 of 237 forms". When Clear filters resets chips only (no search term), the count comes at once (99 ms). The same wait follows Escape or Backspace that clears the box (778 and 800 ms). That case is typing, so it is as designed. Focus falls to `<body>` here; that is not new (see the 0fc3f8a7 round).
+- **m23. The focused row's outline is cut off on its right side wherever the table scrolls sideways.** The row is 899 px wide. The scroller is 750 px at 1024, 686 px at 720×450 (200 %) and 356 px at 390. The inset outline shows on the left, top and bottom only (`/tmp/brk10/shots/kbd-1024.png`, not committed). Focus is still easy to see, so this is Minor. It was predicted in M7's note and is now confirmed. At 1440 all four sides show (`kbd-1440.png`).
+- **m24. `data-shown` still gives a count while the list could not be loaded.** The spoken text is now empty (m20 fixed), but `data-shown={pageRows.length}` (`:205`) still reads `"50"` beside the error notice, with 0 rows on the page. A check that trusts the attribute would still pass.
+  Repro: load Forms, wait more than 2 s (staleTime), make `GET /library/forms/list` answer 500, go to Home and press Back.
+
+## What held
+- **Outline (M7 fixed):** the CSS compiles to `outline-width:2px!important; outline-style:solid!important; outline-offset:-2px!important; outline-color:var(--color-ring)!important` on `:focus-visible` only. After a keyboard Show more, IMM 0017 is `:focus-visible` with computed `solid 2px rgb(8, 98, 197)` and offset -2px. That holds at 1440, 1024, 720×450 and 390, and the outline is drawn inside the row, clear of the next row and the header.
+  - With the mouse: Show more gives row focus with `:focus-visible` false and outline `none`. A click on a cell gives the same, even right after Tab or Shift+Tab. Clicking a row that already has keyboard focus keeps its outline, which is the browser's usual behaviour.
+  - The outline goes on no other element. Reason rows (`tr[data-reason-for]`) are not focusable. The number button keeps its ring and draws no outline (`none 3px`).
+- **Type, then a chip within 700 ms:** with gaps of 0, 150, 400 and 650 ms after the last key, Forms gives one update, "Showing 50 of 133 forms", 30–50 ms after the click. No later stale "196" arrives. At 650 ms the 700 ms timer had already said "50 of 196", and the chip then said 133. "5" then Guides by keyboard gives a single "Showing 4 of 4 forms". All (count unchanged) leaves the typing timer to say "50 of 196" once. Chip then type gives the chip's count at once, and the search count about 700 ms after the last key. A Used by choice after typing is spoken at once ("3 of 3", 16 ms after the change).
+- **Typing:** "imm" at 120 ms per key gives one update, about 700 ms after the last key. Typing and clearing within 700 ms back to the same list gives no update. A no-match search keeps the old count for 700 ms, then says "No form matches".
+- **Show more:** pressed 250 ms after typing, it says "Showing 100 of 196" at once, with focus on the first added row (IMM 0193), and nothing stale follows. Show more, then a keystroke, gives "100 of 237" at once and then "50 of 237" after the pause.
+- **Error and Try again (m20 text fixed):**
+  - A failed first load leaves the region empty, and typing during the error keeps it empty.
+  - Try again by keyboard gives "Showing 50 of 196 forms" as soon as the list arrives. The typed term is kept.
+  - With data and then a failed refetch, the text goes to "" while the notice shows. A Try again that fails again keeps "". A Try again that succeeds says "Showing 50 of 237 forms" at once.
+  - Not from this diff: after Try again succeeds, the button unmounts and focus falls to `<body>`.
+- **Focus:** the `spoken` state never moved focus. Focus stayed in the search box through typing, on the chip after a chip press, on the added row after Show more, and on the number after closing the drawer. There were no React warnings and no page errors.
+
+---
+
+# Round at dc93b60f (fill hardening: counts from what the fill did, a date that goes back clears the mark, IRCC rows checked, no accepts without a file)
+
+Only `git diff 0fc3f8a7 dc93b60f` was attacked. Isolated copy `brk9` on :4458, built from `git archive 5ae993a0` into /tmp (`isolated.sh`, `P2_LEDGER_DIR=/tmp/brk9l`, web built there). The forms index was replayed from a planted copy inside the copy's own folder (`STUDIO_CANADA_FIXTURES=fx`, checksum re-recorded, restarted per variant). No `*_LIVE`, US$0: the ledger folder stayed empty. The PR's `check_forms_x5_library.ts` passes 39/39 on this copy. Copy stopped, database dropped. Nothing in /home/user/x5h was built or changed apart from this section.
+
+## Blocker
+None.
+
+## Major
+**M8. A date that goes back clears the mark while canada.ca's date is still after the library's edition.** `library-index.ts:53` clears whenever the new index date is earlier than the *last read* (`indexDateModified`). It never compares with the edition the mark was about. Once a mark is set, the stored date is the newer date, so any step back clears it, even one that is still later than the file.
+Repro (IMM 1295, edition 2023-09, index 2023-09):
+1. Plant the index with IMM 1295 at 2025-06 and fill. Result: "1 with a newer edition (IMM 1295)", row Newer.
+2. Plant 2025-03 and fill. Result: the mark is cleared and the row reads **Ready** on the 09-2023 file, although canada.ca dates it 18 months later. The fill's words and the audit say nothing about a cleared mark.
+3. Plant 2025-06 again. It is marked again.
+
+Same result with smaller steps:
+- `2025-06-15` then `2025-06`, which is the same month written another way, clears the mark (verified end to end).
+- `2025-06-30` then `2025-06-01` clears it (engine).
+
+Nothing brings the mark back unless the date later goes past 2025-03. A check that found "another date" (M2 keeps the mark) is also undone silently. Expected: clear only when the index date is at or before the edition's own date, or only when it goes back to or before the date that set the mark.
+
+**M9. The m13 fix does not reach a real held file: the form still reads Ready on an old file.** `hasHeldFile` (`form-library.ts:180`) looks for a `form_edition` with an unapproved checksum. A printed upload that waits for a second person is an `intake_item` (HELD) and has no edition row (`intake.ts:303-309`: "Hold before library creation"). In the product, `hasHeldFile` is therefore false. Only the SQL-planted edition in the PR's check (and the instant between `finder.ts:633` and `:643`) sets it.
+Repro:
+1. Run `demo/reset` (empty library) and fill. IMM 1295 is listed at 2023-09.
+2. As user-A, upload a copy of `imm1295e.pdf` with one byte appended. Result: "Held for source verification", row Needs your OK.
+3. Plant IMM 1295 at 2025-06 and fill. Result: no "newer" in the words, `newer_on_index_at` is null, and the stored date moves to 2025-06.
+4. user-A records the page (`PATCH /intake/held/:id`) and user-B approves.
+
+Result: the row reads **Ready** on IMM 1295 (09-2023), with no mark. This is exactly the case m13 describes. The check that guards it passes only on a state the product does not create.
+
+## Minor
+- **m21. A held-only form's drawer says to upload a PDF that is already uploaded.** On IMM 1295 in step 2 of M9, the drawer reads "Upload or find its PDF first: what IRCC accepts is set on a form's current edition." The same drawer says "1 held file waiting for a person" (`library-forms.tsx:333`; 1440, 1024 and 720@200 %, `/tmp/brk9/shots/drawer-heldonly-*.png`, not committed). This invites a second upload of the same file. Expected: "Its PDF waits for a second person on To review" when `status === "needs_ok"`.
+- **m22. Invisible titles pass.** `a.text.trim()` (`canada.ts:84`) does not remove U+200B or the soft hyphen. A planted `IMM 9003` with title `&#8203;` was stored with `display_name` = U+200B (length 1), shown as a row with no visible title. The engine gives the same result for `&shy;` and for raw U+200B. Nit: the 300 limit counts UTF-16 units, so 151 emoji (151 characters) are refused.
+- **m23. One number counted both "already in the library" and "left out".** A second row for IMM 1295 with a blank title, and for IMM 5409 with a 301-character title, adds both to `unreadable`, while their first rows list them. The planted fill said "234 already in the library, 5 left out whose number or title could not be read". Only 3 forms were left out.
+- **m24. Concurrent fills all claim the same "newer".** Five fills at once after IMM 1295 and IMM 5257 moved: each said "2 with a newer edition (IMM 1295, IMM 5257)", and there are 5 audit lines. `n && isNewer` (`form-library.ts:192`) counts a re-stamp of a mark another fill just set. That is not "only the rows this fill marked" (the m1/m14 rule that `created` now follows).
+- **m25. `realDate` accepts 0000 and 9999.** A planted `9999-12` is stored. On a form with a file it marks Newer, and no edition can ever answer it (`canada_updated >= '9999-12'`, `form-library.ts:105`). Only the next real read clears it, through M8's rule.
+- **m26. A number listed twice becomes a mixed record.** `library-index.ts:45` keeps the first form row's title and page with the latest row's date. A new IMM 2222 listed as "Old title" (`…/old.html`, 2023-01) and "New title" (`…/new.html`, 2026-01) is created as "Old title" at `old.html` dated 2026-01.
+- **Noted, not from this diff:** the parser's `normaliseCode` (`canada.ts:51`) refuses "IMM 5373 B", the library's own spelling, and counts it unreadable. m15's "another spacing" therefore covers only the spellings the parser reads.
+
+## What held
+- **Concurrent fills:**
+  - Six fills on an empty library gave one "221 new, 9 already" and five "0 new, 230 already", with 230 rows and no duplicates.
+  - Five fills raced 25 approved deletes. All 25 approvals returned 201, and the fills reported 230, 224, 205, 205, 205 already, which is what each one touched. No error, and no deleted form was recreated by those fills.
+  - Five fills raced the approval of a held IMM 1295, three times. Each time there was one row, the edition was added, and the approval result was "added".
+- **Titles:** spaces, `&nbsp;`, tab/newline, BOM, U+3000, `<span></span>` and `<img>` were all counted unreadable. 300 characters (also 300 after trimming, and 300 after decoding entities) were kept, and 301 were refused. French and Chinese titles were kept.
+- **Dates:**
+  - Kept: 2024-02-29, 2000-02-29, and ` 2024-01 ` (trimmed).
+  - Read as no date: 2023-02-29, 1900-02-29, 2024-04-31, 2024-00, 2024-13, 2024-1, 2024-01-1, a time suffix, full-width digits, a non-breaking hyphen, and two dates in one cell.
+  - A missing date never moves the stored date.
+- **Spellings:** IMM 5373B, IMM5373B, imm 5373b and IMM-5373B read as one form and kept the latest date (2026-07), which was marked. End to end, a second "IMM5257" row dated 2026-12 marked IMM 5257 Newer, and its checklist row's later date is not used for the form.
+- **Lifecycle:** up, back to the edition's own date (2023-09), then up again gives Newer, then Ready, then Newer. Going back to or before the edition is a correct clear.
+- **Roles:** user-B, user-C and user-O get 403; nobody gets 401.
+- **Drawer:**
+  - A listed form with no file shows the note and no button.
+  - Ready forms (IMM 5257, IMM 5409) keep "Set what IRCC accepts".
+  - The drawer opens by keyboard and has no page scroll at 1440, 1024 or 720@200 %.
+  - The hooks run before the early return, so a row whose edition is removed does not crash.

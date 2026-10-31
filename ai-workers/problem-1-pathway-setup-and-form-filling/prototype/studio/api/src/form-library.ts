@@ -11,7 +11,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { manifest } from "../../engine/import.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
-import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
+import { indexTitleOk, officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
 import { INDEX_URL } from "./finder.ts";
 import { planIndexFill } from "../../engine/library-index.ts";
 import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
@@ -172,12 +172,24 @@ export class FormLibrary {
     if (!parsed.rows.length) throw problem(409, "IRCC's forms list could not be read", "The forms list page has no form rows (its layout may have changed). Nothing was added to the library.");
     // X5 break M1: each number in the library's own spelling (contracts' normaliseCode, as every route and the finder use:
     // "IMM 5373 B", not "IMM 5373B"), so a listed form is found, deleted and attached like any other.
-    const rows = parsed.rows.map((r) => ({ ...r, code: normaliseCode(r.code) }));
+    const all = parsed.rows.map((r) => ({ ...r, code: normaliseCode(r.code) }));
+    // Break m15 / review (dc93b60f): a row with no title the library can show, or one over 300 characters, is left out and
+    // counted as unreadable; a number with another, good row is kept by that row and not counted twice (break m23).
+    const rows = all.filter((r) => indexTitleOk(r.title));
+    const unreadable = [...parsed.unreadable, ...new Set(all.filter((r) => !indexTitleOk(r.title) && !rows.some((g) => g.code === r.code)).map((r) => r.code))];
     // X5 break m9: a file means an edition a combination may file from (an online-only screen map is no file).
     // Review (5a5f0d16) m2 / Devin: the fill judges a form by the same current edition the list shows (an approved printed
     // edition, the newest; newestEdition), never by a held or older edition's date: one "newer" rule in both.
-    const [defs, approved] = await Promise.all([this.db.govFormDef.findMany({ where: { workspaceId }, include: { editions: true } }), this.approvedShas(workspaceId)]);
-    const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, hasHeldFile: !current && d.editions.some((e) => e.channel !== "ONLINE" && !!e.sha256), formPageUrl: d.formPageUrl, editionDated: current?.canadaUpdated ?? null }; }));
+    // Break / review (dc93b60f) M9: a hand upload waiting for a second person is a HELD intake item (no edition yet), so it
+    // counts as a held file too, as an unapproved edition does.
+    const [defs, approved, heldUploads] = await Promise.all([this.db.govFormDef.findMany({ where: { workspaceId }, include: { editions: true } }), this.approvedShas(workspaceId), this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD", kind: { in: ["form", "checklist"] } }, select: { code: true } })]);
+    const heldCodes = new Set(heldUploads.map((h) => (h.code ? normaliseCode(h.code) : "")).filter(Boolean));
+    const plan = planIndexFill(rows, defs.map((d) => {
+      const current = this.currentEdition(d.editions, approved.all);
+      const heldEditions = d.editions.filter((e) => e.channel !== "ONLINE" && !!e.sha256 && !approved.all.has(e.sha256));
+      const heldDated = heldEditions.map((e) => e.canadaUpdated).filter((x): x is string => !!x).sort().pop() ?? null;
+      return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, hasHeldFile: !current && (heldEditions.length > 0 || heldCodes.has(d.formKey)), heldDated, formPageUrl: d.formPageUrl, editionDated: current?.canadaUpdated ?? null };
+    }));
     const now = new Date();
     // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
     // Break m14 / Devin on #145: the words count what this fill did, not what it planned: a form another fill created meanwhile
@@ -187,15 +199,18 @@ export class FormLibrary {
       let kept = 0; const marked: string[] = [];
       // X5 break m4: a form deleted meanwhile (an approved delete) is skipped, never a failed fill.
       for (const l of plan.listed) {
-        const isNewer = plan.newer.includes(l.formKey), isClear = plan.clear.includes(l.formKey);
-        const n = (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}), ...(isNewer ? { newerOnIndexAt: now } : isClear ? { newerOnIndexAt: null } : {}) } })).count;
-        kept += n; if (n && isNewer) marked.push(l.formKey);
+        const isNewer = plan.newer.includes(l.formKey), isPending = plan.pending.includes(l.formKey), isClear = plan.clear.includes(l.formKey);
+        const n = (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}), ...(isClear ? { newerOnIndexAt: null } : {}) } })).count;
+        kept += n;
+        // Break / review (dc93b60f) m24: "newer" names a form only when this fill set its mark (not one another fill marked a
+        // moment earlier): the mark is written only where none was.
+        if (n && (isNewer || isPending) && (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey, newerOnIndexAt: null }, data: { newerOnIndexAt: now } })).count && isNewer) marked.push(l.formKey);
       }
       return { created: made, already: kept + (plan.create.length - made), newer: marked };
     });
-    const words = `${created} new form${created === 1 ? "" : "s"} listed (no file yet), ${already} already in the library${newer.length ? `, ${newer.length} with a newer edition on canada.ca (${newer.slice(0, 5).join(", ")}${newer.length > 5 ? "…" : ""})` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}${parsed.unreadable.length ? `, ${parsed.unreadable.length} left out whose number or title could not be read` : ""}`;
-    await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created, listed: already, newer, no_page: parsed.noPage, unreadable: parsed.unreadable });
-    return { created, listed: already, newer, no_page: parsed.noPage, unreadable: parsed.unreadable, message: `Filled from IRCC's forms list: ${words}.` };
+    const words = `${created} new form${created === 1 ? "" : "s"} listed (no file yet), ${already} already in the library${newer.length ? `, ${newer.length} with a newer edition on canada.ca (${newer.slice(0, 5).join(", ")}${newer.length > 5 ? "…" : ""})` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}${unreadable.length ? `, ${unreadable.length} left out whose number or title could not be read` : ""}`;
+    await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created, listed: already, newer, no_page: parsed.noPage, unreadable });
+    return { created, listed: already, newer, no_page: parsed.noPage, unreadable, message: `Filled from IRCC's forms list: ${words}.` };
   }
 
   async checkCanada(actor: Actor, code: string) {

@@ -112,7 +112,9 @@ export function FormsPage() {
   // Review major 8: focus goes back to what opened the drawer (the number), never to the top of the page.
   const back = React.useRef<HTMLElement | null>(null);
   const setOpen = (r: Row | null) => {
-    if (r) { back.current = document.activeElement as HTMLElement | null; setOpened(r); return; }
+    // Review (337cdfd5) 1 / break m21: a count still waiting on typing is said now, before the drawer hides the page from
+    // screen readers (before: it landed behind the drawer and was never heard).
+    if (r) { back.current = document.activeElement as HTMLElement | null; setSpoken(countText); setOpened(r); return; }
     const code = opened?.code; setOpened(null);
     setTimeout(() => (back.current?.isConnected ? back.current : document.querySelector<HTMLElement>(`tr[data-form="${CSS.escape(code ?? "")}"] button`))?.focus(), 0);
   };
@@ -129,9 +131,11 @@ export function FormsPage() {
   // more is spoken at once. Break (0fc3f8a7) m20: no count while the list could not be loaded (before: the old list's).
   const countText = lib.data && !lib.isError ? (rows.length ? `Showing ${pageRows.length} of ${rows.length} forms` : filtered ? "No form matches" : "") : "";
   const [spoken, setSpoken] = React.useState(countText);
-  const spokenQ = React.useRef(dq);
+  const spokenQ = React.useRef(dq), typedRef = React.useRef(false);
   React.useEffect(() => {
-    const typing = spokenQ.current !== dq; spokenQ.current = dq;
+    // Review (337cdfd5) 2 / break m22: only the search box's own typing waits; Clear filters (which also empties the search)
+    // is said at once.
+    const typing = typedRef.current && spokenQ.current !== dq; spokenQ.current = dq; typedRef.current = false;
     if (!typing) { setSpoken(countText); return; }
     const t = setTimeout(() => setSpoken(countText), 700);
     return () => clearTimeout(t);
@@ -192,7 +196,7 @@ export function FormsPage() {
             {chip(status === "no_file", "No file yet", c.no_file ?? 0, () => setStatus(status === "no_file" ? "" : "no_file"), STATUS.no_file.tip)}
             {chip(status === "retired", "Retired", c.retired, () => setStatus(status === "retired" ? "" : "retired"), STATUS.retired.tip)}
           </div>
-          <label className="relative ml-auto"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input type="search" aria-label="Search number or title" placeholder="Search number or title" value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} className="w-64 pl-8" /></label>
+          <label className="relative ml-auto"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input type="search" aria-label="Search number or title" placeholder="Search number or title" value={q} maxLength={80} onChange={(e) => { typedRef.current = true; setQ(e.target.value); }} className="w-64 pl-8" /></label>
         </div>
         {lib.isLoading ? <div className="space-y-2" role="status" aria-busy="true" aria-label="Loading forms">{/* DV-d1-2 (N8): a label needs a role (axe aria-prohibited-attr) */}{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
           : lib.isError ? <Notice tone="danger" title="The forms could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void lib.refetch()}>Try again</Button>}>{(lib.error as Error).message}</Notice>
@@ -202,7 +206,7 @@ export function FormsPage() {
           : <>{tableEl}{rows.length > pageRows.length ? <p className="flex flex-wrap items-center gap-3 text-sm" data-show-more><span className="text-text-muted" aria-hidden>Showing {pageRows.length} of {rows.length} forms</span><Button size="sm" variant="secondary" onClick={showMore}>Show {Math.min(PAGE, rows.length - pageRows.length)} more forms</Button></p> : null}</>}
         {/* Review (310acb9c) 2 / break m17, WCAG 4.1.3: one status region, always on the page, says how many forms are shown
             (before: it lived in the pager, so the last Show more and a short filter were never spoken). */}
-        <p className="sr-only" role="status" data-list-count data-shown={pageRows.length}>{spoken}</p>
+        <p className="sr-only" role="status" data-list-count data-shown={lib.isError ? 0 : pageRows.length}>{spoken}</p>
         <p className="text-xs text-text-muted">{lib.data?.sample_note}</p>
         {open ? <FormDrawer row={open} onClose={() => setOpen(null)} canAuthor={canAuthor} /> : null}
         {confirm ? <div className="xl:fixed xl:right-6 xl:top-20 xl:z-40 xl:w-[440px]"><ImpactPanel key={`impact-${confirm.code}`} kind={confirm.action.kind} name={`${confirm.code} · ${confirm.title}`}
@@ -344,7 +348,9 @@ function SetAccepts({ row }: { row: Row }) {
   const go = useAsk(() => api(`/library/forms/${encodeURIComponent(row.code)}/accepts`, { method: "POST", json: { account, channels, ...(quote.trim() ? { quote: quote.trim() } : {}), ...(reason.trim() ? { reason: reason.trim() } : {}) } }), "Sent: it waits for a second person on To review", [["library-forms-list"], ["form-uses", row.code]], () => setOpen(false));
   // Devin on #145: a form with no usable edition yet cannot take "what IRCC accepts" (the server answers "No edition yet"):
   // the drawer says what comes first instead of offering a step that fails.
-  if (!row.edition) return <p className="text-text-muted" data-accepts-needs-file>Upload or find its PDF first: what IRCC accepts is set on a form's current edition.</p>;
+  // Break / review (dc93b60f) m21: a form whose PDF waits for a second person says so (before: "Upload … first" beside "1
+  // held file waiting for a person").
+  if (!row.edition) return <p className="text-text-muted" data-accepts-needs-file>{row.status === "needs_ok" ? "Its PDF waits for a second person on To review: what IRCC accepts is set once that edition is approved." : "Upload or find its PDF first: what IRCC accepts is set on a form's current edition."}</p>;
   if (!open) return <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>{row.accepts ? "Correct what IRCC accepts" : "Set what IRCC accepts"}</Button>;
   return (
     <div className="space-y-2 rounded-lg border border-border p-3">

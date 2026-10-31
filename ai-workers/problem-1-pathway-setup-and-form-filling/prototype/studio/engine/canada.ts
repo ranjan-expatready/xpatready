@@ -60,11 +60,20 @@ export type Package = { title: string; url: string };
  *  is the page's date, not the edition) and the "Select an application package" links. A row whose number cannot be read
  *  or whose link is not an official address is left out. Guides are not rows of this table; they are linked from the
  *  package pages (pageLinks, guideLinks). */
+/** Review (dc93b60f) / break m22: a title the library can show: not blank once invisible characters (zero-width spaces, soft
+ *  hyphens, byte-order marks) are taken out, and at most 300 characters (counted as characters, not UTF-16 units). */
+export function indexTitleOk(title: string): boolean {
+  const seen = title.replace(/[\u00AD\u200B-\u200F\u2060\uFEFF]/g, "").trim();
+  return seen.length > 0 && [...title].length <= 300;
+}
+
 /** A date canada.ca writes (YYYY-MM or YYYY-MM-DD) that is a real calendar date: month 01-12, the day within the month. */
 export function realDate(d: string): boolean {
   const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(d);
   if (!m) return false;
   const y = Number(m[1]), mo = Number(m[2]), day = m[3] ? Number(m[3]) : 1;
+  // Break (dc93b60f) m25: a year IRCC could have written (1990 to next year): 0000 or 9999 would mark a form no edition answers.
+  if (y < 1990 || y > new Date().getUTCFullYear() + 1) return false;
   return mo >= 1 && mo <= 12 && day >= 1 && day <= new Date(Date.UTC(y, mo, 0)).getUTCDate();
 }
 
@@ -82,9 +91,8 @@ export function parseFormsIndex(html: string): { rows: IndexRow[]; packages: Pac
     const u = officialUrl(a.href);
     if (!u.ok) { noPage.push(code); continue; }
     const title = a.text.trim(), date = tds[2] ? strip(tds[2]) : "";
-    // X5 break m15 / Devin on #145: a row with no title, or one too long to be a title (over 300 characters), is counted as
-    // unreadable, never stored; a date that is not a real calendar date (2024-02-30) is kept as no date.
-    if (!title || title.length > 300) { unreadable.push(code); continue; }
+    // X5 break m15 / Devin on #145: a date that is not a real calendar date (2024-02-30) is kept as no date. (Titles are
+    // judged by the library fill only, indexTitleOk: the finder and the check still find a row by its number.)
     rows.push({ code, title, pageUrl: u.url, dateModified: realDate(date) ? date : null, kind: /^document checklist/i.test(title) ? "checklist" : "form" });
   }
   const packages: Package[] = [], seen = new Set<string>();

@@ -6,9 +6,12 @@
 import type { IndexRow } from "./canada.ts";
 
 export type LibraryForm = { formKey: string; indexDateModified: string | null; hasFile: boolean; formPageUrl: string | null; /** canada.ca's month for the library's newest edition (YYYY-MM), if known */ editionDated?: string | null;
-  /** X5 break m13: a printed file waits for a second person (no approved one yet): a later date still marks it, so the mark is
-   *  there once the file is approved (before: the date moved on silently and the form read Ready on an old file). */
-  hasHeldFile?: boolean };
+  /** X5 break m13, M9: a printed file waits for a second person (a held upload, or an unapproved edition) and no approved one
+   *  exists yet: a later date still marks the form, so the mark is there once the file is approved (before: the date moved
+   *  on silently and the form read Ready on an old file). */
+  hasHeldFile?: boolean;
+  /** canada.ca's month for the newest held edition, if known: a held file dated at or after the index answers it already. */
+  heldDated?: string | null };
 export type IndexFill = {
   /** New library forms, listed with no file yet. */
   create: { formKey: string; title: string; kind: "data_form" | "checklist"; pageUrl: string; dateModified: string | null }[];
@@ -16,8 +19,12 @@ export type IndexFill = {
   listed: { formKey: string; pageUrl: string | null; dateModified: string | null }[];
   /** Forms with a file whose index date changed since the last read: "Newer edition on canada.ca". */
   newer: string[];
-  /** Devin on #145: forms whose index date went back to or before the date the library had: an earlier "newer" mark is
-   *  cleared (the change that set it is gone). */
+  /** Forms with no approved file yet (only a held one) marked the same way: not said as "newer" (the list says "Needs your
+   *  OK" or "No file yet" for them), the mark waits for the approval (review dc93b60f q2). */
+  pending: string[];
+  /** Break / review (dc93b60f) M8: forms whose current edition is dated at or after the index's date: an earlier mark is
+   *  answered and cleared, the list's own rule written down (before: any step back cleared it, even one still later than
+   *  the file). */
   clear: string[];
 };
 
@@ -33,24 +40,27 @@ export function planIndexFill(rows: IndexRow[], library: LibraryForm[]): IndexFi
   const have = new Map(library.map((f) => [f.formKey, f]));
   // X5 break m6, Devin on #138: a number the index lists twice (a form and its checklist link) is one form; if any of its
   // rows is a form, that row is the one kept, whole (its title, page and date as well as its kind), never the checklist's.
-  const formRow = new Map<string, IndexRow>();
-  for (const r of rows) if (r.kind === "form" && !formRow.has(r.code)) formRow.set(r.code, r);
-  // X5 break m15: the same number listed twice (another spacing, read as one number) keeps the latest date of its kind.
-  const latest = new Map<string, string>();
-  for (const r of rows) if (r.dateModified) { const k = `${r.code}|${r.kind}`, d = latest.get(k); if (!d || isLaterDate(r.dateModified, d)) latest.set(k, r.dateModified); }
-  const out: IndexFill = { create: [], listed: [], newer: [], clear: [] }, seen = new Set<string>();
-  for (const r0 of rows) {
-    if (seen.has(r0.code)) continue;
-    seen.add(r0.code);
-    const r1 = formRow.get(r0.code) ?? r0, r = { ...r1, dateModified: latest.get(`${r1.code}|${r1.kind}`) ?? r1.dateModified };
+  // X5 break m15, dc93b60f m26: the same number listed twice (another spacing, read as one number) is one form: the row kept
+  // whole is a form row if there is one, and of those the one with the latest date (its title, page and date together).
+  const best = new Map<string, IndexRow>();
+  const later = (a: IndexRow, b: IndexRow) => !!a.dateModified && (!b.dateModified || isLaterDate(a.dateModified, b.dateModified));
+  for (const r of rows) {
+    const b = best.get(r.code);
+    if (!b || (r.kind === "form" && b.kind !== "form") || (r.kind === b.kind && later(r, b))) best.set(r.code, r);
+  }
+  const out: IndexFill = { create: [], listed: [], newer: [], pending: [], clear: [] };
+  for (const r of best.values()) {
     const f = have.get(r.code);
     if (!f) { out.create.push({ formKey: r.code, title: r.title, kind: r.kind === "checklist" ? "checklist" : "data_form", pageUrl: r.pageUrl, dateModified: r.dateModified }); continue; }
     out.listed.push({ formKey: r.code, pageUrl: f.formPageUrl ? null : r.pageUrl, dateModified: r.dateModified });
     // X5 review (86f9447c) m2: the same rule the list applies: not newer when the library's edition is already dated at or
     // after the index's date (the fill's words then agree with the list's count).
-    const answered = !!(f.editionDated && r.dateModified && f.editionDated >= r.dateModified.slice(0, 7));
-    if ((f.hasFile || f.hasHeldFile) && f.indexDateModified && r.dateModified && isLaterDate(r.dateModified, f.indexDateModified) && !answered) out.newer.push(r.code);
-    else if (f.indexDateModified && r.dateModified && isLaterDate(f.indexDateModified, r.dateModified)) out.clear.push(r.code);
+    const month = r.dateModified?.slice(0, 7);
+    const answered = !!(f.editionDated && month && f.editionDated >= month);
+    const changed = !!(f.indexDateModified && r.dateModified && isLaterDate(r.dateModified, f.indexDateModified));
+    if (f.hasFile && changed && !answered) out.newer.push(r.code);
+    else if (!f.hasFile && f.hasHeldFile && changed && !(f.heldDated && month && f.heldDated >= month)) out.pending.push(r.code);
+    else if (answered) out.clear.push(r.code);
   }
   return out;
 }

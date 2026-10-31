@@ -318,13 +318,23 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await searchBox.fill(""); await sleep(300);
     // Review (0fc3f8a7) 2: typing speaks the count once it pauses, not per keystroke.
     const spokenUpdates = await p.evaluate(async () => { const el = document.querySelector("[data-list-count]"); let n = 0; const obs = new MutationObserver(() => n++); obs.observe(el, { childList: true, characterData: true, subtree: true }); const box = document.querySelector('input[aria-label="Search number or title"]'); const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set; for (const t of ["i", "im", "imm", "imm ", "imm 5", "imm 52", "imm 525", "imm 5257"]) { setter.call(box, t); box.dispatchEvent(new Event("input", { bubbles: true })); await new Promise((r) => setTimeout(r, 60)); } await new Promise((r) => setTimeout(r, 1200)); obs.disconnect(); return { n, text: el.textContent }; });
-    step("X5 review (0fc3f8a7) 2 fail: typing a search speaks the count once it pauses (before: 5 updates for 8 keys)", spokenUpdates.n <= 2 && /^Showing \d+ of \d+ forms$/.test(spokenUpdates.text ?? ""), spokenUpdates);
+    step("X5 review (0fc3f8a7) 2 fail: typing a search speaks the count once it pauses (before: 5 updates for 8 keys)", spokenUpdates.n <= 2 && /^Showing \d+ of \d+ forms$/.test(spokenUpdates.text ?? ""), JSON.stringify(spokenUpdates));
     await searchBox.fill(""); await sleep(1000);
+    // Review (337cdfd5) 2 / break m22: Clear filters (which also empties the search) says the new count at once.
+    await searchBox.fill("zzzq"); await p.getByText("No form matches").first().waitFor(); await sleep(900);
+    await p.getByRole("button", { name: "Clear filters" }).click(); await sleep(250);
+    step("X5 review (337cdfd5) 2 fail: Clear filters says the new count at once (before: 'No form matches' for 700 ms more)", /^Showing 50 of \d+ forms$/.test((await p.locator("[data-list-count]").textContent()) ?? ""), await p.locator("[data-list-count]").textContent());
+    // Review (337cdfd5) 1 / break m21: a count still waiting on typing is said when a drawer opens, before it hides the page.
+    await searchBox.fill("imm"); await sleep(250);
+    await p.locator("tr[data-form]").first().getByRole("button").first().click(); await sleep(60);
+    const saidAtOpen = (await p.locator("[data-list-count]").textContent()) ?? "";
+    step("X5 review (337cdfd5) 1 fail: opening a drawer while the count waits on typing says it then (before: it landed behind the drawer, never heard)", /^Showing \d+ of \d+ forms$/.test(saidAtOpen) && !saidAtOpen.endsWith(" 237 forms"), saidAtOpen);
+    await p.keyboard.press("Escape"); await sleep(300); await searchBox.fill(""); await sleep(1000);
     // Break (0fc3f8a7) m20: when the list cannot be loaded again, no count of the old list is said.
     await p.route("**/api/library/forms/list**", (r) => r.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ title: "Broken", detail: "test" }) }));
     await p.locator("[data-fill-index]").click();
     await p.getByText("The forms could not be loaded").waitFor({ timeout: 15_000 });
-    step("X5 break (0fc3f8a7) m20 fail: when the list fails to load, the count says nothing (before: the old list's 'Showing 100 of 237')", ((await p.locator("[data-list-count]").textContent()) ?? "") === "", await p.locator("[data-list-count]").textContent());
+    step("X5 break (0fc3f8a7) m20 / (337cdfd5) m24 fail: when the list fails to load, the count says nothing and shows no rows (before: the old list's 'Showing 100 of 237', data-shown 50)", ((await p.locator("[data-list-count]").textContent()) ?? "") === "" && (await p.locator("[data-list-count]").getAttribute("data-shown")) === "0", `${await p.locator("[data-list-count]").textContent()} | ${await p.locator("[data-list-count]").getAttribute("data-shown")}`);
     await p.unrouteAll({ behavior: "ignoreErrors" }); await p.getByRole("button", { name: "Try again" }).click(); await p.locator("tr[data-form]").first().waitFor();
     await axe("X5: the library after the fill from IRCC's forms list");
     // One readable view (the whole list is now some 240 rows): the first screen at 1440 px.
