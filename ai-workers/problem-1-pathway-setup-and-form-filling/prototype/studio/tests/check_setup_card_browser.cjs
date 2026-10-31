@@ -22,7 +22,10 @@ const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 1
   const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "light", reducedMotion: "reduce" });
   const p = await ctx.newPage(); const errs = [];
   p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|status of 4\d\d/.test(m.text())) errs.push(m.text()); });
-  const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json" }, data: init.data, timeout: 180000 }); return { status: r.status(), body: await r.json().catch(() => null) }; };
+  // #131 CI (ECONNRESET, "socket hang up"): under machine load the server closes a kept-alive connection while a slow
+  // step runs and the next request finds it closed (as check_forms_channels notes). Each call opens its own connection
+  // (connection: close), so none is reused; nothing is retried, so no POST can run twice.
+  const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json", connection: "close" }, data: init.data, timeout: 180000 }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   const as = async (id) => { await p.evaluate((x) => { try { localStorage.setItem("xr-actor", x); } catch { /* ignore */ } }, id); };
   const ready = () => p.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && !!document.querySelector("[data-view]"), null, { timeout: 30000 });
   const open = async (qs = "") => { await p.goto(`${BASE}/${qs}`); await ready(); await p.waitForTimeout(300); };
@@ -38,6 +41,13 @@ const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 1
   };
 
   // ======================================================== setup: sample inputs, one AI replay, one release
+  // The isolated server answers before the first request (up to 60 s), or the run says so by name.
+  for (let i = 0; ; i++) {
+    const ok = await p.request.fetch(`${BASE}/api/session`, { headers: { "x-actor": "user-A", connection: "close" }, timeout: 5000 }).then((r) => r.ok(), () => false);
+    if (ok) break;
+    if (i >= 60) throw new Error(`the isolated server at ${BASE} did not answer /api/session within 60 s`);
+    await new Promise((r) => setTimeout(r, 1000));
+  }
   await p.goto(BASE); await as("user-A");
   await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } });
   await api("/demo/load", { method: "POST" });
