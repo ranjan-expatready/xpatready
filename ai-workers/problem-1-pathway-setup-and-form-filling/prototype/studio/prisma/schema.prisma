@@ -270,6 +270,11 @@ model GovFormDef {
   /// Which source drafting reads for this form (P-62 §1, C2.10): PDF_FIRST (the PDF version first, then the online
   /// screens for what differs; the default) or ONLINE_ONLY (the online screens alone: the PDF version is not reused).
   draftFrom   String  @default("PDF_FIRST") @map("draft_from")
+  /// X5 (P-156 (1)): when IRCC's forms index last listed this number (the library fill, US$0), the index's date modified
+  /// for it then, and when a later read found that date changed for a form that has a file ("Newer edition on canada.ca").
+  listedOnIndexAt   DateTime? @map("listed_on_index_at") @db.Timestamptz
+  indexDateModified String?   @map("index_date_modified")
+  newerOnIndexAt    DateTime? @map("newer_on_index_at") @db.Timestamptz
 
   editions FormEdition[]
   usedBy   CombinationForm[]
