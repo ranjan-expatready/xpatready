@@ -12,7 +12,7 @@ import { normalizeLabel } from "../../contracts/programs.ts";
 import { subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
 import { fail, need, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
-import { acceptPqrPick, pickKey, pickStamp, unlandPick } from "./fact-sources.ts";
+import { acceptPqrPick, pickKey, pickStamp, priorPickDraft, unlandPick } from "./fact-sources.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -153,15 +153,21 @@ const slugKey = (label: string, used: Set<string>) => keyFor("x", label, used).s
 const sourceRef = (r: Row, actor: Actor) => `${r.origin === "rules" ? "rules" : "AI"} run ${r.runId}; accepted by ${actor.id} on the review queue (item ${r.id})`;
 
 /** LANDERS[kind]: what accepting an item writes, inside decide's transaction. A kind with no lander yet is refused. */
-export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<string>>> = {
+/** A lander returns what it landed as; a combination lander may also return what Undo needs to put back (kept on the item's work). */
+type Landed = string | { key: string; work: Record<string, unknown> };
+export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalPayload, l: Landing) => Promise<Landed>>> = {
   // C4.7 (F6 slice 1, plan-slice1 item 1c): a pre-qualification pick ticks its fact in the combination's draft
   // (fact-sources.ts acceptPqrPick: the same refusals as the tick by hand); no library item, no second person (P-76).
   async pqr_pick(tx, r, p, l) {
     if (p.kind !== "pqr_pick") fail("Wrong payload.");
     const pick = p as Extract<ProposalPayload, { kind: "pqr_pick" }>;
-    await acceptPqrPick(tx, l.actor, { id: r.id, kind: r.kind, runId: r.runId, step: r.step, scope: { formEdition: r.formEdition, combinationId: r.combinationId }, landsOn: r.landsOn, reuse: r.reuse, payload: { ...pick, reason: (l.reason ?? pick.reason).slice(0, 300) },
+    // Review M1 (f6): the person's own reason when they typed one, else the pick's own reason (never the run's sentence).
+    const typed = l.reason && l.reason !== r.reason ? l.reason : null;
+    // Review m1 (f6): the draft row the accept replaces, kept for Undo to put back as it was.
+    const prior = await priorPickDraft(tx, r.combinationId ?? "", pick.role, pick.factKey);
+    await acceptPqrPick(tx, l.actor, { id: r.id, kind: r.kind, runId: r.runId, step: r.step, scope: { formEdition: r.formEdition, combinationId: r.combinationId }, landsOn: r.landsOn, reuse: r.reuse, payload: { ...pick, reason: (typed ?? pick.reason).slice(0, 300) },
       source: r.source ?? null, rounds: r.rounds, rules: r.rules, agreement: r.agreement, confidence: r.confidence, reason: r.reason, origin: r.origin, identity: r.identity, relatesTo: r.relatesTo, revision: r.revision ?? null, status: "waiting", decision: null, basis: r.basis });
-    return pickKey(r.combinationId ?? "", pick.role, pick.factKey);
+    return { key: pickKey(r.combinationId ?? "", pick.role, pick.factKey), work: { priorDraft: prior } };
   },
   async field(tx, r, p, l) {
     if (p.kind !== "field") fail("Wrong payload.");
@@ -217,7 +223,7 @@ const STAMP: Record<string, (tx: Tx, ws: string, key: string) => Promise<unknown
 STAMP.pqr_pick = (tx, _ws, key) => pickStamp(tx, key);
 const stampOf = async (tx: Tx, ws: string, kind: string, key: string) => (STAMP[kind] ? JSON.stringify(await STAMP[kind](tx, ws, key)) : null);
 /** What Undo takes back for an item that lands on a combination, not the library (C4.7: a pick's tick). */
-const UNLAND: Partial<Record<string, (tx: Tx, key: string) => Promise<unknown>>> = { pqr_pick: unlandPick };
+const UNLAND: Partial<Record<string, (tx: Tx, key: string, landed: Record<string, unknown>) => Promise<unknown>>> = { pqr_pick: unlandPick };
 
 export const UNDO_SECONDS = 10;
 export const BATCH_MAX = 200;
@@ -272,7 +278,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         if (p.data!.kind !== r.kind) fail("An edit keeps the proposal's kind.");
         payload = p.data!;
       }
-      let landedAs: string | null = null, reused = false;
+      let landedAs: string | null = null, reused = false, landedWork: Record<string, unknown> | null = null;
       if (d.action !== "reject") {
         if (r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
           const twin = await sameInLibrary(tx, workspaceId, payload);
@@ -286,15 +292,16 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         } else {
           const land = LANDERS[r.kind as ProposalKind];
           if (!land) fail(`A ${r.kind.replace(/_/g, " ")} proposal is accepted with its own step, not yet on this queue.`, HttpStatus.CONFLICT);
-          landedAs = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason, proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+          const got = await land!(tx, r, payload, { ws: workspaceId, actor, batchId, itemId: r.id, reason: reason ?? r.reason, proposedBy: actor.id, combinationId: r.combinationId, sourceJobId: r.runId });
+          if (typeof got === "string") landedAs = got; else { landedAs = got.key; landedWork = got.work; }
         }
       }
       // What a library lander wrote, as it stands now: Undo refuses once it has changed (PR #96 review (1)).
       const landedStamp = landedAs && !reused ?await stampOf(tx, workspaceId, r.kind, landedAs) : null;
-      const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}) };
+      const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}), ...(landedWork ? { landed: landedWork } : {}) };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(),
         decisionReason: reason, batchId, decidedKey: landedAs,
-        ...(d.action === "edit" || landedStamp ? { work: work as Prisma.InputJsonValue } : {}),
+        ...(d.action === "edit" || landedStamp || landedWork ? { work: work as Prisma.InputJsonValue } : {}),
         // An edit keeps the item's own reading beside it, so Undo puts the item back as it was proposed (1b).
         ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey) } : {}) } });
       out.push({ id: r.id, landedAs });
@@ -328,12 +335,12 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
           : `"${identityKeyOf(r.payload as ProposalPayload, r.identityKey)}" was changed after it was accepted, so Undo would erase that change. Nothing was undone: retire or delete it in the shared library instead.`, HttpStatus.CONFLICT);
     }
     for (const c of adds) await LANDED[c.kind]?.(tx, workspaceId, c.key);
-    for (const r of rows) if (r.decidedKey && r.landsOn === "combination") await UNLAND[r.kind]?.(tx, r.decidedKey);
+    for (const r of rows) if (r.decidedKey && r.landsOn === "combination") await UNLAND[r.kind]?.(tx, r.decidedKey, ((r.work ?? {}) as { landed?: Record<string, unknown> }).landed ?? {});
     await tx.libraryChange.deleteMany({ where: { workspaceId, batchId } });
     for (const r of rows) {
-      const { beforeEdit, landedStamp, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string };
+      const { beforeEdit, landedStamp, landed, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string; landed?: unknown };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: "waiting", decidedBy: null, decidedAt: null, decisionReason: null, batchId: null, decidedKey: null,
-        ...(beforeEdit || landedStamp ? { work: work as Prisma.InputJsonValue } : {}),
+        ...(beforeEdit || landedStamp || landed ? { work: work as Prisma.InputJsonValue } : {}),
         ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey) } : {}) } });
     }
     return rows.length;

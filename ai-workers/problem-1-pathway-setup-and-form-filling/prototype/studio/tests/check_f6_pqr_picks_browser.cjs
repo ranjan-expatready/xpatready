@@ -52,6 +52,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-pqr-propose-result]").waitFor({ timeout: 30000 });
   const said = await p.locator("[data-pqr-propose-result]").innerText();
   step("C4.7 pass: it says how many picks wait on To review, and nothing is ticked yet", /^\d+ picks? (is|are) waiting on To review/.test(said) && (await chipCount()) === before, said);
+  step("C4.7 review m5 (f6): the answer takes the focus (a keyboard or screen reader user hears it next)", await p.evaluate(() => !!document.activeElement?.closest("[data-pqr-propose-said]")), await p.evaluate(() => document.activeElement?.tagName));
   await state("proposed");
   await btn.click();
   await p.waitForFunction(() => /Nothing new/.test(document.querySelector("[data-pqr-propose-result]")?.textContent ?? ""), null, { timeout: 30000 });
@@ -100,6 +101,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-B"); } catch { /* ignore */ } });
   await go();
   step("C4.7 fail: the Approver (no author duty) is not offered the button", !(await p.getByRole("button", { name: "Propose picks from the rules" }).count()));
+  await p.goto(`${BASE}/review/proposals?group=${encodeURIComponent(`combination:${wp}`)}`);
+  await p.locator("[data-band]").first().waitFor({ timeout: 30000 }); await settle();
+  await p.locator("tr[data-id]", { hasText: "Pre-qualification pick" }).first().getByRole("button", { name: /^Open / }).click();
+  await panel.waitFor();
+  step("C4.7 review m3 (f6) fail: the Approver's Accept on a pick is disabled and says in words who accepts it", await panel.getByRole("button", { name: "Accept", exact: true }).isDisabled() && /Only a configuration author accepts a pre-qualification pick/.test(await panel.innerText()));
+  await state("approver-side-panel");
 
   step("no page errors", errs.length === 0, errs.join(" | "));
   await b.close();
