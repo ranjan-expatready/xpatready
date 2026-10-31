@@ -77,6 +77,9 @@ export function CombinationPage() {
     d.submission?.status === "SUBMITTED" ? (d.submission.stale ? "submitted, then changed" : "in review") : null,
     d.allowed_locations?.length ? `cases opened ${d.allowed_locations.map((l) => l === "inside_canada" ? "inside Canada" : "outside Canada").join(" or ")}` : null,
     `people: ${peopleWords(c.participants)}`,
+    // C1.6 (Screen 03 concept: the facts line names the filing method): how the application is filed, from its form
+    // lines; said only once a form that is filed is on it (a checklist alone is not filed).
+    sum.data?.forms?.some((f) => !f.document) ? `filing: ${sum.data.filing}` : null,
     c.source_basis === "ILLUSTRATIVE" ? "Sample" : null, // SC-5: no "source-backed" jargon in the subtitle
   ].filter(Boolean).join(" · ");
   return (
