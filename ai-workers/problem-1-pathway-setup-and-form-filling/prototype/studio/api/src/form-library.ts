@@ -101,10 +101,9 @@ export class FormLibrary {
       const needsOk = held.some((h) => h.code === f.formKey);
       // Lead 28 Oct (carried should): "Needs your OK" only when something waits for a person; a form with no file is "No file yet".
       // X5 (P156-2): "Newer edition on canada.ca" when IRCC's index lists a later month than the current edition's.
-      // Review / break (e466adb1) M10, M11: judged by the dates (newerOnIndex: the index's month after the month of the current
-      // edition); the stored mark only for an undated edition.
+      // Review / break (e466adb1) M10, M11, automated review (89cccd71): newerOnIndex, the dates plus the date last seen current.
       const month = current ? editionMonth(current) : null;
-      const indexNewer = !!current && (month ? newerOnIndex(f.indexDateModified, month) : !!f.newerOnIndexAt);
+      const indexNewer = !!current && newerOnIndex(f.indexDateModified, month, f.indexDateSeenCurrent);
       const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 || indexNewer ? "newer_file" : current ? "ready" : "no_file";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
         // P-143 (C-3): one record per IRCC account (ANY first); the column says them in words, one line per account.
@@ -181,7 +180,7 @@ export class FormLibrary {
     // Review (5a5f0d16) m2 / Devin: the fill judges a form by the same current edition the list shows (an approved printed
     // edition, the newest; newestEdition), never by a held or older edition's date: one "newer" rule in both.
     const [defs, approved] = await Promise.all([this.db.govFormDef.findMany({ where: { workspaceId }, include: { editions: true } }), this.approvedShas(workspaceId)]);
-    const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionMonth: current ? editionMonth(current) : null }; }));
+    const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionMonth: current ? editionMonth(current) : null, seenCurrent: d.indexDateSeenCurrent }; }));
     const now = new Date();
     // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
     // Break m14 / Devin on #145: the words count what this fill did, not what it planned: a form another fill created meanwhile
@@ -191,11 +190,13 @@ export class FormLibrary {
       let kept = 0; const marked: string[] = [];
       // X5 break m4: a form deleted meanwhile (an approved delete) is skipped, never a failed fill.
       for (const l of plan.listed) {
-        const isNewer = plan.newer.includes(l.formKey), isMark = plan.mark.includes(l.formKey), isClear = plan.clear.includes(l.formKey);
+        const isNewer = plan.newer.includes(l.formKey);
         // Break / review (dc93b60f) m24: "newer" names a form only in the fill that moved its date (another fill that moved it a
         // moment earlier leaves this one's guarded write empty).
         const moved = isNewer && l.dateModified ? (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey, indexDateModified: l.before }, data: { indexDateModified: l.dateModified } })).count : 0;
-        const n = (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}), ...(isMark ? { newerOnIndexAt: now } : isClear ? { newerOnIndexAt: null } : {}) } })).count;
+        const n = (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}) } })).count;
+        // The form's baseline, written only where none is (a check or another fill may have set one meanwhile).
+        if (n && l.seenCurrent) await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey, indexDateSeenCurrent: null }, data: { indexDateSeenCurrent: l.seenCurrent } });
         kept += n;
         if (n && moved) marked.push(l.formKey);
       }
@@ -212,7 +213,12 @@ export class FormLibrary {
       const r = await this.compareWithCanada(code);
       // X5 break M2 / Devin: only a check that found the library's edition still current answers the index's "newer" mark;
       // a check that failed, or that found another date on canada.ca, keeps it.
-      if (r.outcome === "current") await this.db.govFormDef.updateMany({ where: { workspaceId: await this.ws.id(), formKey: code, newerOnIndexAt: { not: null } }, data: { newerOnIndexAt: null } });
+      if (r.outcome === "current") {
+        // Automated review (89cccd71): a check that finds the library's PDF current answers the index's date as it stands: it
+        // becomes the date last seen current, so a page edited without a new edition stops reading "newer".
+        const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId: await this.ws.id(), formKey: code } }, select: { id: true, indexDateModified: true } });
+        if (def?.indexDateModified) await this.db.govFormDef.update({ where: { id: def.id }, data: { indexDateSeenCurrent: def.indexDateModified } });
+      }
       return r;
     } catch (e) {
       // canada.ca not answering (or a page not among the recorded copies) is said in words, never a server error.

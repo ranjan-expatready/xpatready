@@ -271,10 +271,11 @@ model GovFormDef {
   /// screens for what differs; the default) or ONLINE_ONLY (the online screens alone: the PDF version is not reused).
   draftFrom   String  @default("PDF_FIRST") @map("draft_from")
   /// X5 (P-156 (1)): when IRCC's forms index last listed this number (the library fill, US$0), the index's date modified
-  /// for it then, and when a later read found that date changed for a form that has a file ("Newer edition on canada.ca").
-  listedOnIndexAt   DateTime? @map("listed_on_index_at") @db.Timestamptz
-  indexDateModified String?   @map("index_date_modified")
-  newerOnIndexAt    DateTime? @map("newer_on_index_at") @db.Timestamptz
+  /// for it then, and the index date last seen as current for the library's file (engine/library-index.ts newerOnIndex:
+  /// "Newer edition on canada.ca" once the index moves past it and past the file's own month).
+  listedOnIndexAt      DateTime? @map("listed_on_index_at") @db.Timestamptz
+  indexDateModified    String?   @map("index_date_modified")
+  indexDateSeenCurrent String?   @map("index_date_seen_current")
 
   editions FormEdition[]
   usedBy   CombinationForm[]
