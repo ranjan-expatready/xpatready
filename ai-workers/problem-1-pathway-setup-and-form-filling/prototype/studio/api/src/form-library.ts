@@ -13,7 +13,7 @@ import { manifest } from "../../engine/import.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
 import { INDEX_URL } from "./finder.ts";
-import { editionMonth, libraryRows, newerOnIndex, planIndexFill } from "../../engine/library-index.ts";
+import { fileMonth, libraryRows, newerOnIndex, planIndexFill } from "../../engine/library-index.ts";
 import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
 import { AcceptsBody, acceptsWords, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
@@ -102,7 +102,7 @@ export class FormLibrary {
       // Lead 28 Oct (carried should): "Needs your OK" only when something waits for a person; a form with no file is "No file yet".
       // X5 (P156-2): "Newer edition on canada.ca" when IRCC's index lists a later month than the current edition's.
       // Review / break (e466adb1) M10, M11, automated review (89cccd71): newerOnIndex, the dates plus the date last seen current.
-      const month = current ? editionMonth(current) : null;
+      const month = current ? fileMonth(current) : null;
       const indexNewer = !!current && newerOnIndex(f.indexDateModified, month, current.indexDateSeenCurrent);
       const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 || indexNewer ? "newer_file" : current ? "ready" : "no_file";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
@@ -180,7 +180,7 @@ export class FormLibrary {
     // Review (5a5f0d16) m2 / Devin: the fill judges a form by the same current edition the list shows (an approved printed
     // edition, the newest; newestEdition), never by a held or older edition's date: one "newer" rule in both.
     const [defs, approved] = await Promise.all([this.db.govFormDef.findMany({ where: { workspaceId }, include: { editions: true } }), this.approvedShas(workspaceId)]);
-    const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionMonth: current ? editionMonth(current) : null, currentId: current?.id ?? null, seenCurrent: current?.indexDateSeenCurrent ?? null }; }));
+    const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionMonth: current ? fileMonth(current) : null, currentId: current?.id ?? null, seenCurrent: current?.indexDateSeenCurrent ?? null }; }));
     const now = new Date();
     // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
     // Break m14 / Devin on #145: the words count what this fill did, not what it planned: a form another fill created meanwhile

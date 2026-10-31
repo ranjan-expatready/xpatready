@@ -192,3 +192,101 @@ The full record is in `journey-test-reviewer-2026-10-31-x5a-e466adb1.md`.
 * An unaided walk by an intended user (D17 and D20 stay with the founder).
 * Live canada.ca (only the recorded copy).
 * Retrofit mapping: not applicable.
+
+---
+
+# Re-check of commit 89cccd71 ("newer on canada.ca" judged by the dates), 31 Oct 2026
+
+Reviewer, fresh context. Focus: `git diff e466adb1 89cccd71 -- '*.ts' '*.tsx' '*.cjs'`, with `0fc3f8a7..89cccd71` for context. Copy made with `git archive 89cccd71` into `/tmp/x5rv89-mut` (web built with `npx vite build`), run on :4452, :4453 and :4455, all stopped and their databases dropped. The ledger folders stayed empty: no `*_LIVE`, US$0. No slice3 screenshot in this tree was changed (the browser suite wrote to the /tmp copy). Scripts are in `/tmp/x5rv89-scripts/` and screenshots in `/tmp/x5rv89-shots/` (not committed).
+
+**Verdict: Block** (ship after fixes). Issue 1 is a Major: a check that finds the file current can no longer answer "Newer", so the row and the check contradict each other. The coordinator says Devin raised the same red, and a per-form baseline is planned for the next commit. Everything else in this commit holds.
+
+**Results.**
+* `check_forms_x5_library`: 47/47.
+* Browser suite: 95/95 (fresh database).
+* The sample after a first fill: 15 editions, all Ready, no false "Newer".
+* Race on the guard: 3 rounds × 6 fills, exactly one fill names IMM 1295 each round, all answered.
+
+## Your four questions
+1. **Is judging by dates sound? Only where both dates come from canada.ca. It is not sound when a printed label stands in for the date.**
+   * The index's date is canada.ca's page date, not the PDF edition. The recorded copy shows this. IMM 5475's index and page say 2021-05, while its PDF sits in `/16-12-2022/` and the manifest edition is "IMM 5475 (12-2022)". IRM 0002 is the same: page 2021-03, PDF `/16-12-2022/`.
+   * So the claim "in all sample data, the index's date equals the edition's label month" is not true for IMM 5475. That case errs the safe way (index earlier, so not newer). It still proves the two dates are independent.
+   * The opposite drift, a page edited later with the same PDF, gives a false "Newer" on the first fill for any edition dated only by its label. That covers every hand upload (`canada_updated` null) and the sample's IMM 5488. No recorded row shows it today, so I could not reproduce it on recorded data. I simulated it by moving IMM 5488's index to 2025-02: the row read Newer, and Check could not read the page.
+   * When `canadaUpdated` is known, both sides are canada.ca's page date, and the rule is the same as P156-2's "a later read whose date changed".
+2. **What does `compareWithCanada` now mean for a dated file? Nothing for "Newer"** (issue 1).
+   * "current" needs `canadaUpdated === page.lastUpdated` (`form-library.ts:243`). The list then compares the index, not the page, against that same month (`:107`). The clear at `:215` only touches `newer_on_index_at`, which the list ignores for a dated file.
+   * For an undated file, "current" cannot happen, because it needs `canadaUpdated`. So line 215 is dead code: removing it passes 47/47.
+   * In a real page-only change (page and index move together), Check says "check" and points to Find again. Find again on the same bytes re-stamps `canadaUpdated` (`finder.ts:581`) and the row turns Ready. A form no combination uses has no such way out.
+3. **Is the guard race-safe? Yes.**
+   * `updateMany … where indexDateModified = before` (`:197`) takes the row lock. Under read committed, a waiting fill re-checks the `where` against the committed row and gets 0.
+   * `before = null` becomes `IS NULL`. Every fill walks `plan.listed` in the same order, so there is no deadlock.
+   * ABA case: a later step back and a stale plan that moves the date on again. The stale fill is named, which is correct, because it did move the date.
+   * Removing the `where` fails 1 check (m24).
+4. **Does anything still depend on `newer_on_index_at` wrongly?**
+   * The list reads it only for an undated edition. The fill writes it only on that path. Check clears it, but only on a path that cannot happen (question 2).
+   * No dated path reads it. Old marks left from e466adb1 (pending marks, m27) are ignored once a dated file is approved, so M10, M11 and m27 are fixed by design. The 7 checks that fail with the old list rule restored cover approve, reject, held and step back.
+   * The undated path still clears on any step back, even one still later than the file. That is M8 again, now only for undated editions. No index row in the sample is undated (every undated edition there is a guide or a visa-office file, none of them listed), so this is Minor.
+   * Removing the fill's undated mark write, or its clear, passes 47/47 (issue 2).
+
+## Issues, ranked
+1. **Must (Major, D2/D11/D18): a check that finds the file current leaves "Newer edition on canada.ca" on the row.**
+   * Repro (J3, `/tmp/x5rv89-shots/j3-check-current-still-newer-1440.png`):
+     1. Take IMM 1295 (09-2023), `canada_updated` 2023-09, and set the stored index date to 2025-06.
+     2. Choose ⋯ › Replace with a new edition….
+     3. The notice says "IMM 1295 (09-2023) is still the current edition on canada.ca (last updated 2023-09)". The row still reads Newer.
+   * The M2 test for the "current" branch is now vacuous (`check_forms_x5_library.ts:113`: `outcome === "current" ? true : …`).
+   * For label-dated files, a first fill can mark a current PDF newer (question 1), and nothing on this screen answers it.
+   * Fix: the planned per-form baseline. Record the index date last seen as current at the first read with a file, and at a "current" check. Judge newer as index > baseline. Write the check's step as a real assertion.
+2. **Should (D16, STANDARDS [M] "a rule's test fails when it is removed"): the fill's undated writes are untested end to end.**
+   * Dropping `isMark ? { newerOnIndexAt: now }` passes 47/47. So does dropping `isClear ? { newerOnIndexAt: null }` (`form-library.ts:198`). So does dropping the check's clear (`:215`).
+   * Fix: one API step on an undated edition (set by a later date, cleared by a step back), or remove the dead clear together with issue 1.
+3. **Minor: two exported `editionMonth` functions with different rules.**
+   * `engine/programs.ts:127` returns a number, with the month found anywhere in the label.
+   * `engine/library-index.ts:27` returns `YYYY-MM`, with the month only at the end in brackets.
+   * A label such as "IMM 5905 E (03-2026), New Delhi…" orders by one and counts as undated by the other. Fix: one parser, or rename one.
+4. **Minor: the undated step-back clear repeats M8.** `library-index.ts:81` clears on any earlier date, not only on one at or before the file.
+
+**Caught when removed:**
+* the list's date rule (7 checks);
+* the guard (1);
+* "not named again" (1);
+* the label fallback (2);
+* `libraryRows` filter and count (1 each);
+* the invisible-character classes (1);
+* the undated plan clear (1);
+* `typedRef` reset (browser 94/95).
+
+So review (e466adb1) issues 2 and 3 are fixed and tested, and m28 has new words.
+
+## D1–D20
+| D | Score | Evidence |
+|---|---|---|
+| D1 | 4 | P156-2 holds for dated files; the check no longer answers "Newer" (issue 1) |
+| D2 | 3 | The check contradicts the row; a label-dated file can read Newer with no new edition |
+| D3 | 4 | One date rule in the list and the fill; two `editionMonth` functions (issue 3) |
+| D4 | 5 | No schema change; old marks harmless on dated files |
+| D5 | 5 | 6-way race ×3: one name per round |
+| D6 | 4 | No stored state for dated files; the check's clear does nothing visible |
+| D7 | 5 | No AI; US$0, ledgers empty |
+| D8 | 5 | Shared library › Forms unchanged |
+| D9 | 5 | The held drawer says "is held on To review", without a promise |
+| D10 | 5 | Plain words |
+| D11 | 3 | "still the current edition" beside "Newer edition on canada.ca" |
+| D12 | 5 | No sideways scroll at 400, 1024 and 1440; 720 at 200 % |
+| D13 | 5 | axe 0 on three states; 16 Tabs to Fill; focus returns; `typedRef` fixed |
+| D14 | 5 | Team components |
+| D15 | 5 | Fill 103–128 ms; list 164 ms |
+| D16 | 4 | 47 + 95 green; the undated writes and the check clear uncaught (issue 2) |
+| D17 | simulated only | No intended user walked it |
+| D18 | 3 | The check's canada.ca answer is overridden by the list's date |
+| D19 | 5 | Fill → row → drawer → To review hand-off |
+| D20 | simulated only | The founder's walkthrough |
+
+## Journey score: 8 / 10 (pass, no criterion at 0)
+The full record is in `journey-test-reviewer-2026-10-31-x5a-89cccd71.md`.
+
+## What I could not check
+* A real screen reader.
+* Live canada.ca. A page-only change could not be shown on recorded data; it is reasoned from IMM 5475 and IRM 0002.
+* An unaided walk by an intended user (D17 and D20 stay with the founder).
+* Retrofit mapping: not applicable.

@@ -8,7 +8,7 @@ import fc from "fast-check";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { indexTitleOk, parseFormsIndex, realDate } from "../engine/canada.ts";
-import { editionMonth, isLaterDate, libraryRows, newerOnIndex, planIndexFill } from "../engine/library-index.ts";
+import { fileMonth, isLaterDate, libraryRows, newerOnIndex, planIndexFill } from "../engine/library-index.ts";
 
 const PORT = Number(process.argv[2] ?? 4450), DB = process.argv[3] ?? "xr_studio_forms_x5";
 let pass = 0, fail = 0;
@@ -44,7 +44,7 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   const lf = (extra: object = {}) => ({ formKey: "IMM 1295", indexDateModified: "2024-05-01", hasFile: true, formPageUrl: "x", ...extra });
   // Review / break (e466adb1) M10, M11, Devin: "newer" is judged by the dates: the index's month after the current edition's
   // month (canada.ca's when known, else the month printed in its label). Nothing stored, so nothing left wrong by events.
-  ok("C2.6 X5 review (e466adb1) M10 pass: an edition's month is the later of canada.ca's and its label's (break 89cccd71: canada.ca's never makes it older); months out of range count as none", editionMonth({ canadaUpdated: "2024-10", editionLabel: "IMM 5488 (01-2019)" }) === "2024-10" && editionMonth({ canadaUpdated: "2023-01", editionLabel: "IMM 5488 (09-2023)" }) === "2023-09" && editionMonth({ editionLabel: "IMM 1 (12-9999)" }) === null && editionMonth({ editionLabel: "IMM 1 (01-0000)" }) === null && editionMonth({ canadaUpdated: "2025-13", editionLabel: "IMM 1" }) === null && editionMonth({ canadaUpdated: null, editionLabel: "IMM 1295 (09-2023)" }) === "2023-09" && editionMonth({ editionLabel: "Guide 5289 (read 2026-10-31)" }) === null && editionMonth({ editionLabel: "IMM 1295 (13-2023)" }) === null);
+  ok("C2.6 X5 review (e466adb1) M10 pass: an edition's month is the later of canada.ca's and its label's (break 89cccd71: canada.ca's never makes it older); months out of range count as none", fileMonth({ canadaUpdated: "2024-10", editionLabel: "IMM 5488 (01-2019)" }) === "2024-10" && fileMonth({ canadaUpdated: "2023-01", editionLabel: "IMM 5488 (09-2023)" }) === "2023-09" && fileMonth({ editionLabel: "IMM 1 (12-9999)" }) === null && fileMonth({ editionLabel: "IMM 1 (01-0000)" }) === null && fileMonth({ canadaUpdated: "2025-13", editionLabel: "IMM 1" }) === null && fileMonth({ canadaUpdated: null, editionLabel: "IMM 1295 (09-2023)" }) === "2023-09" && fileMonth({ editionLabel: "Guide 5289 (read 2026-10-31)" }) === null && fileMonth({ editionLabel: "IMM 1295 (13-2023)" }) === null);
   ok("C2.6 X5 review (e466adb1) M10 fail: a hand-uploaded file (no canada.ca month) is newer only while the index is later than its own month: back to its month it is not (before: newer for good)", newerOnIndex("2025-06", "2023-09") && !newerOnIndex("2023-09", "2023-09") && !newerOnIndex("2020-01", "2023-09") && !newerOnIndex(null, "2023-09") && !newerOnIndex("2025-06", null));
   ok("C2.6 X5 review (dc93b60f) M8 fail: an index date that goes back but is still later than the file stays newer (before: cleared; the row read Ready on 09-2023)", newerOnIndex("2025-03-01", "2023-09"));
   const named = planIndexFill([row("IMM 1295", { dateModified: "2025-06-01" })], [lf({ indexDateModified: "2023-09-01", editionMonth: "2023-09" })]);
@@ -83,7 +83,7 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   prop("C2.6 X5 property: a successful check (baseline = the index date) always answers 'newer' until the index moves again", fc.property(day, fc.option(month, { nil: null }), (idx, file) => !newerOnIndex(idx, file, idx)));
   prop("C2.6 X5 property: a file dated at or after the index month is never newer", fc.property(day, month, fc.option(day, { nil: null }), (idx, file, seen) => file < idx.slice(0, 7) || !newerOnIndex(idx, file, seen)));
   prop("C2.6 X5 property: isLaterDate is a strict order on real dates (never both ways, never with itself)", fc.property(day, day, (a, b) => !(isLaterDate(a, b) && isLaterDate(b, a)) && !isLaterDate(a, a) && (a === b || isLaterDate(a, b) || isLaterDate(b, a))));
-  prop("C2.6 X5 property: editionMonth reads MM-YYYY from a label and takes the later of it and canada.ca's month", fc.property(month, fc.option(month, { nil: null }), (mo, ca) => editionMonth({ canadaUpdated: ca, editionLabel: `IMM 1295 (${mo.slice(5)}-${mo.slice(0, 4)})` }) === (ca && ca > mo ? ca : mo)));
+  prop("C2.6 X5 property: fileMonth reads MM-YYYY from a label and takes the later of it and canada.ca's month", fc.property(month, fc.option(month, { nil: null }), (mo, ca) => fileMonth({ canadaUpdated: ca, editionLabel: `IMM 1295 (${mo.slice(5)}-${mo.slice(0, 4)})` }) === (ca && ca > mo ? ca : mo)));
   prop("C2.6 X5 property: realDate accepts exactly the real calendar days in range", fc.property(fc.integer({ min: 1980, max: 2035 }), fc.integer({ min: 0, max: 13 }), fc.integer({ min: 0, max: 32 }), (y, m, d) => {
     const s = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`, dt = new Date(Date.UTC(y, m - 1, d));
     const real = m >= 1 && m <= 12 && d >= 1 && dt.getUTCMonth() === m - 1 && y >= 1990 && y <= new Date().getUTCFullYear() + 1;
@@ -142,7 +142,7 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   const before2 = (await call("GET", "/library/forms/list")).body.rows.find((x: any) => x.code === withFile)?.status; // eslint-disable-line @typescript-eslint/no-explicit-any
   const chk = await call("POST", `/library/forms/${encodeURIComponent(withFile)}/check-canada`);
   const after2 = (await call("GET", "/library/forms/list")).body.rows.find((x: any) => x.code === withFile)?.status; // eslint-disable-line @typescript-eslint/no-explicit-any
-  ok("C2.6 X5 break M2 fail: a check that did not find the library's edition current leaves the row as it was (before: cleared the mark, whatever the check found)", chk.status === 201 && chk.body?.outcome === "current" ? true : before2 === "newer_file" && after2 === "newer_file", { status: chk.status, outcome: chk.body?.outcome, before2, after2 });
+  ok("C2.6 X5 break M2 fail: a check that did not find the library's edition current leaves the row as it was (before: cleared the mark, whatever the check found)", chk.status === 201 && chk.body?.outcome !== "current" && before2 === "newer_file" && after2 === "newer_file", { status: chk.status, outcome: chk.body?.outcome, before2, after2 });
   // X5 break M3 / Devin: the mark is answered once the library holds an edition canada.ca dates at or after the index's date.
   sql(`update gov_form_def set index_date_modified = '2025-02-01' where form_key = '${withFile}'`); sql(`update form_edition set index_date_seen_current = '2000-01-01' where gov_form_def_id = (select id from gov_form_def where form_key = '${withFile}')`);
   const before3 = (await call("GET", "/library/forms/list")).body.rows.find((x: any) => x.code === withFile)?.status; // eslint-disable-line @typescript-eslint/no-explicit-any

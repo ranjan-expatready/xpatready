@@ -6,7 +6,7 @@
 import { indexTitleOk, type IndexRow } from "./canada.ts";
 
 export type LibraryForm = { formKey: string; indexDateModified: string | null; hasFile: boolean; formPageUrl: string | null;
-  /** The month the library's current (approved, printed) edition is from (editionMonth), if known. */
+  /** The month the library's current (approved, printed) edition is from (fileMonth), if known. */
   editionMonth?: string | null;
   /** The current edition (its id) and the index date last seen as current for that file (see newerOnIndex). */
   currentId?: string | null; seenCurrent?: string | null };
@@ -24,7 +24,7 @@ export type IndexFill = {
 /** Review / break (e466adb1) M10, M11, Devin: the month a library edition is from: the later of canada.ca's "last updated"
  *  month and the edition's own month printed in its label ("IMM 1295 (09-2023)"). Intake and the finder both write that
  *  label, so a hand upload or an approved held file is dated too. */
-export function editionMonth(e: { canadaUpdated?: string | null; editionLabel: string }): string | null {
+export function fileMonth(e: { canadaUpdated?: string | null; editionLabel: string }): string | null {
   // Break (89cccd71) m31: a month IRCC could print (1990 to next year, 01-12); break note: the later of the two months, so
   // canada.ca's page month never makes a file read older than its own printed edition.
   const ok = (y: number, mo: number) => mo >= 1 && mo <= 12 && y >= 1990 && y <= new Date().getUTCFullYear() + 1;
