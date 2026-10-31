@@ -322,7 +322,8 @@ export class Sources {
       return { index: p.index, count: p.count, sections: p.sections, fields: p.fields.length, paths: p.fields.map((f) => f.data_path!), jobId, file, inputSha, saved_run: saved?.file ?? null, repeats_failed_run: repeats?.run_id ?? null, worst_usd: Math.round(worst * 100) / 100 };
     });
     return { plan: { total: plan.total, reused: plan.reused, leftover: plan.leftover } as Omit<DraftPlan, "parts">, parts, wholeJobId: whole.jobId, inventoryFile: invRel, inventorySha: invSha,
-      reusedFrom: [...new Set(plan.reused.map((r) => r.reused_from))], worst_usd: Math.round(parts.reduce((x, p) => x + p.worst_usd, 0) * 100) / 100 };
+      // #131 review M1: rounded up to the cent, never down (the runner reserves each part's exact worst case).
+      reusedFrom: [...new Set(plan.reused.map((r) => r.reused_from))], worst_usd: Math.ceil(parts.reduce((x, p) => x + p.worst_usd, 0) * 100 - 1e-6) / 100 };
   }
 
   /** The edition printed on the file, as the intake read it into the library (P-51); else the approved list's label. */

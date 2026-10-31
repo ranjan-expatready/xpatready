@@ -1,55 +1,63 @@
-# Review: PR #131, P-179 follow-up (a Continue covers retries of the run it started)
+# Review: PR #131, P-179 follow-up (a Continue covers retries of the run it started), the fix of M1
 
-Commit reviewed: **cfb98bda** (branch `claude/friendly-lamport-06zafk`). Code change against the merge base: `studio/api/src/ai.ts` (`retry`), `studio/api/src/sources.ts` (`runDraftStep`), `studio/tests/check_cost_override.ts`. Reviewer: an independent check. Cost: US$0 (scratch `P2_LEDGER_DIR` only, no `*_LIVE` switch, port 4458, stopped afterwards).
+Commit reviewed: **468f5102** (branch `claude/friendly-lamport-06zafk`, the PR head). The fix itself is `468f5102~1..468f5102`: `p2/ledger.ts` (`reserveNow`, `overrideRoomUsd`), `studio/api/src/ai.ts` (`retry`), `studio/tests/check_cost_check.ts`, `studio/tests/check_cost_override.ts`. Against origin/main the PR also carries the cfb98bda change (`sources.ts` `runDraftStep`, the retry exemption) and the earlier review. Reviewer: an independent check. Cost: US$0. I used a scratch `P2_LEDGER_DIR` (`/tmp/rv131/ledger`), no `*_LIVE` switch, and port 4458, which was stopped afterwards.
 
-The product question (does one Continue cover retries of the same run?) is for the founder. This review judges the code on the PR's own recommendation, "retries of that same run are covered, and money stays within what the person accepted". The code does not meet that second half.
+The earlier review of cfb98bda is replaced by this one. Its M1 is fixed. One new Major remains: the fix makes a Continue run's own second attempt depend on how a cent rounds.
 
 ## What was run
 
 | Run | Result |
 |---|---|
-| `check_cost_override.ts 4458 rv_rt` at cfb98bda | 67/67 |
-| `check_ai_orchestration.ts 4458 rv_or` at cfb98bda | 22/22 |
-| `check_cost_override.ts` with `ai.ts` and `sources.ts` from `origin/main` (test from cfb98bda) | 65/67. The new "Continue run is retried" check fails (400 "used its 4 paid AI attempts"), and so does the "past US$132 gives 409" check (400 instead). The "no Continue is still refused" check passes on main as well, which is expected because it guards against a regression. So the new checks do fail without the fix. |
-| Probe A (scratch ledger, `SpendLedger` directly): a Continue with limits `["attempts"]` and worst case US$2, used for run key `rk-A`, then three reservations of US$2 each under that override, settled as failed | **All three admitted.** US$6 was reserved under a Continue that accepted US$2. |
-| Probe B (temporary block in `check_cost_override.ts`, then `git restore`). This is the C11.8 Continue (limits `attempts`, worst US$2.76). Attempt 2 is marked FAILED after spending its worst case, and the ledger shows US$5.52 already reserved and settled under `override_id` o1. Then `POST /ai/batches/:id/retry` is called | **201, attempt 3 queued.** The API never compares what the Continue has already reserved with what the person accepted. |
+| `studio/tests/check_cost_check.ts` | 98/98 |
+| `studio/tests/check_cost_override.ts 4458 rv_rt` | 68/68 |
+| `studio/tests/check_ai_orchestration.ts 4458 rv_or` | 22/22 |
+| `tests/check_p2_launch.ts` (§12 uses a Continue through the real launcher) | 60/60 |
+| `tests/check_p2_guard.ts` | 80/80 |
+| `check_cost_check.ts` with the 7-line `reserveNow` branch removed (`overrideRoomUsd` kept, so the suite loads) | 97/98. "a second US$2 reservation under it (a retry) is refused" fails, so the ledger check guards the fix. With the whole pre-fix `ledger.ts`, the suite stops with `TypeError: overrideRoomUsd is not a function`. |
+| `check_cost_override.ts` with `ledger.ts` and `ai.ts` from `468f5102~1` | 62/68. Two checks fail directly: the "past the cap" check (on the old code the retry is refused against the ceiling, with the wrong words) and the "no room left" check (201, queued). Four more fail because a job is left queued. The new API checks fail without the fix. |
+| Probe R (scratch ledger, `/tmp/rv131/probe/round.ts`). A whole-form request of 151,000 bytes gives a worst case of US$1.892 per attempt. `estimate()` shows round(2 × 1.892) = **US$3.78** and the Continue records that. Attempt 1 reserves US$1.892, then attempt 2 reserves US$1.892 | **Attempt 2 refused**: "would reserve US$1.8920 more … above the US$1.8880 left". At 151,234 bytes (US$3.7859, which rounds up to US$3.79) both attempts are admitted. |
 
-Every file I touched was put back: the test file, both API source files, `studio/evidence/ai-orchestration/check_ai_orchestration.json` and `p2/screening/canary-digest.json`, which the runs had rewritten. The `p2/runs/stub-pass/*` changes in the working copy were there before this review and were left alone. Port 4458 is free.
-
-## Findings
-
-### Major M1: a retry can reserve more than the worst case the person accepted (attempts-only Continue)
-The PR's safety claim is: "the ledger already holds the run's reservations to the worst case the person accepted (`SpendLedger.overrideRefusal`)". That holds only when a reservation passes a **ledger** limit. `reserveNow` builds `passed` from `experiment`, `run` and `wave` only. `attempts` is never a ledger limit, so `overrideRefusal` and its `used + worstUsd > o.worst_usd` test **never run** for a Continue that passed only `attempts`. That is exactly the C11.8 case this PR targets (`cost_check.over` = `attempts`).
-
-The new `continued()` exemption in `retry` also skips `paidRetryAllowed` (the per-run paid-retry rule), and `retryable` includes `FAILED` (a run that failed after it was sent and paid). As a result:
-- one click lets the form run up to `MAX_ATTEMPTS_PER_SOURCE` = 3 times, each with up to `MAX_ATTEMPTS` = 2 paid calls, each at the full worst case;
-- spend can reach about 3× the worst case shown in the dialog, past the per-form budget of 4 paid attempts, limited only by the US$120 experiment cap.
-
-Probes A and B show this end to end. This contradicts P-179 as amended by the lead on 30 Oct: "one click covers only that run's worst case".
-
-**Fix (small).** Hold every reservation that carries an override to that override's accepted worst case, whether or not a ledger limit is passed. For example, in `reserveNow`, when `opts.overrideId` is set, always check `sum(reserve.worst_usd where override_id) + worstUsd <= o.worst_usd`. Also make `retry` refuse up front, in words, when the Continue's reservations so far plus the retry's worst case exceed `o.worst_usd`. Then a retry of a run that was stopped before it was sent (US$0 reserved) still goes through, which is the PR's stated purpose, and a run that already spent cannot spend again on the same click. Add a failing check for each: the ledger unit (probe A) and the API (probe B).
-
-### Minor m1: the retry's money check switches to the ceiling for any Continue, even one that did not name `experiment`
-`if (ov) { committed + worst <= OVERRIDE_CEILING_USD }` replaces the remaining-cap check for the whole batch, even when the Continue passed `attempts` only. If committed + worst lands between the cap and the ceiling, the API accepts and queues the retry. The ledger then refuses at reserve time, because the override does not name `experiment`, and the job fails after being queued. No money moves, but the person gets a retry that cannot run. Use the ceiling only when `experiment` is among the limits the override names (and the cap otherwise), or reuse the plan's `cost_check`.
-
-### Minor m2: no check for a batch with several targets, only some over attempts
-By reading: `continued()` is per target (`over_attempts` on that target), so targets without the flag still go through `paidRetryAllowed` and `paidRunAllowed`. All targets share the one override's worst-case budget in the ledger once M1 is fixed. This looks right, but no check covers it. Add one: a two-target Continue batch where the target that is not over attempts and has used its paid budget is still refused.
-
-### Minor m3: the PR text over-claims the ledger's protection
-The "Why" and "Change" sections say a retry "cannot spend more than the person said yes to". For attempts-only Continues it can (M1). Correct the text along with the fix, so the founder decides on accurate terms.
+Every file the suites changed is restored: `p2/runs/stub-pass/*.json` (5), `p2/screening/canary-digest.json` and `studio/evidence/ai-orchestration/check_ai_orchestration.json`. The swapped `ledger.ts` and `ai.ts` are restored too. `git status` is clean, and port 4458 is free.
 
 ## Money-safety questions asked
 
-- **Can a retry reserve more than the accepted worst case?** Yes, for an attempts-only Continue (M1): up to about 3× in total. For a Continue naming `experiment`, `run` or `wave`, the ledger holds the total to `o.worst_usd`.
-- **Can it pass US$132?** No. A Continue without `experiment` is refused by the ledger at the US$120 cap. With `experiment`, `overrideRefusal` holds the total to the ceiling, and `retry` checks the ceiling first.
-- **Can it start a run that had no Continue?** No. `continued()` needs `plan.override`, which is written only at launch, inside the transaction that uses the override. The ledger also needs `override_use` and a matching `run_key`. The new "no Continue is still refused" check covers this.
-- **Does passing the override to every live attempt let another run use it?** No. `launchArgs` takes it from the job's own batch plan. `overrideRefusal` refuses another `run_key` and an override that was never used. No code copies `plan.override` to another batch. Inside the batch, every step already carried it on its first attempt, and the shared per-override total covers them together once M1 is fixed.
-- **Batch with several targets, some over attempts:** behaves right by reading. Untested (m2).
-- **Do the new checks fail without the fix?** Yes: 2 of the 3 fail on main's source, and the third is a regression guard.
+- **Is every reservation that carries an override now held to that override's accepted worst case?** Yes. A reservation that passes a ledger limit still goes through `overrideRefusal`, which checks used + worst ≤ `o.worst_usd`. A reservation that passes none and adds money now goes through the new branch, which checks worst ≤ `overrideRoomUsd`. Both run inside the reserve lock, so two processes cannot both fit into the same room. An override the ledger does not know is refused. The branch can only refuse, never admit, so it skipping the run-key and used checks is harmless.
+- **Does the new branch break an earlier path?**
+  - *Stub passes and the US$0 B1 path:* no. `caller === "stub"` sets the worst case to 0, so `adds` is false and the branch is skipped. This is covered by the check_cost_check stub check and by launch §12, B1.
+  - *A4 parts under one batch Continue:* no. The planned worst case per part uses `bytes + 8,000`, against the runner's request + 2,000. The real request is the compacted part plus about 7,070 bytes of template and schema. For the five IMM 5257 parts the plan bounds are 123,989 / 82,663 / 93,603 / 104,221 / 36,921 tokens, against requests of 79,272 / 54,661 / 60,938 / 65,566 / 26,456 bytes. That leaves cents of slack per attempt, well above any rounding.
+  - *A first whole-form run started with a Continue:* **yes, in about half the cases (Major M1 below).** Its reservations do not fit by construction, because the accepted worst case is rounded to the nearest cent, not up.
+- **Is the retry's up-front room check right?** It is money-safe and uses the same ledger and the same sum as the reserve. It compares the target's whole planned worst case with the room. A run stopped before anything was sent therefore retries (the PR's purpose, and checked). A run with anything sent is refused with "start the draft again … choose Continue again". That is conservative for A4 (m1).
+- **Is the cap-versus-ceiling choice (old m1) right?** Yes. The ceiling applies only when the Continue names `experiment`, which matches the ledger: `overrideRefusal` admits passing the cap only for a named limit, and holds the total to the ceiling. Otherwise the remaining cap applies. After the change, the ceiling branch has no check (m2).
+- **Do the new checks fail without the fix?** Yes: the ledger check and both API checks (see the table).
+
+## Findings
+
+### Major M1: a Continue run's own second attempt can be refused, because the accepted worst case is rounded to the cent, not up
+The plan's worst case is `round(Math.min(RUN_CAP_USD, perAttempt * 2))` in `studio/api/src/ai.ts:226` (`estimate`). The parts are `Math.round(worst*100)/100` at `sources.ts:322`, and the totals are `round(...)` at `ai.ts:158`. The Continue records that figure (`overrideAllowed` checks it to 1e-9). The runner reserves the exact, unrounded per-attempt figure (`p2/runner.ts:60`).
+
+For a whole form, `estimate` uses the past run's exact `request_bytes`, which is the usual case for a form over `attempts`, since it already has paid runs. So the plan's per-attempt figure equals the runner's. Whenever 2 × per-attempt rounds **down**, attempt 2 is short by up to US$0.005, and the new branch (`ledger.ts`, `worstUsd > room + 1e-9`) refuses it. Probe R shows this.
+
+Effect: on the C11.8 path this PR targets, a Continue run whose first attempt times out (counted at its worst case) or meets a busy service (US$0, but its reservation still counts toward the room) ends as budget_exceeded. The run never gets the "up to 2 attempts" the dialog promised. Its retry is then refused up front too. On main, that attempt 2 ran. Money is safe (it only refuses), but this breaks the path the earlier rules guaranteed. The same rounding already affected Continues naming `experiment`, `run` or `wave` through `overrideRefusal`; the fix widens it to attempts-only Continues.
+
+**Fix (small).** Round every worst case shown and recorded **up** to the cent: `Math.ceil(x * 100 - 1e-9) / 100` in `estimate`, in the part worst case in `draftSplit` and in the totals. Then the person accepts at least what the runner reserves, and the ledger stays exact. Add a failing check: a Continue whose worst case is the rounded figure for an exact request size that rounds down, where attempt 2 is admitted. Probe R's 151,000 bytes is such a case.
+
+### Minor m1: under a Continue, an A4 run with any part already sent cannot be retried, even when the parts left would fit
+`retry` compares the target's whole `worst_usd` (every part, two attempts each) with the room. Parts that finished reuse their saved answers at US$0, but they still count toward the retry's worst case. So a run cancelled part-way, or one with a single failed part, is refused ("start the draft again"). This is money-safe, and the advice works: a new start re-plans at US$0 for the saved parts. But it means the PR's "a Continue covers retries" holds only for runs that sent nothing. Either say so in the PR's question to the founder, or count only the parts that will be sent (the `a4.parts` with no `saved_answer` and no finished run).
+
+### Minor m2: the US$132 ceiling branch of a Continue's retry lost its check
+The old "past US$132 gives 409, the founder must raise the cap" check was turned into the cap check for an attempts-only Continue (`check_cost_override.ts:103-104`). No check now covers a Continue naming `experiment` whose retry would pass the ceiling. Add one, for example by recording the C11.8 Continue's plan override with `limits: ["experiment"]` and seeding a ledger at US$140.
+
+### Minor m3: another author's Retry spends under the first person's Continue
+`retry` needs only the author role (`ai.ts:439`). Break m7 holds a Continue to the person who recorded it when it **starts** a run, but a retry by any other author is admitted under it. The money stays within the accepted worst case, so this is not a money fault. It is a gap against "a Continue is used only by the person who recorded it". Either refuse a Continue-covered retry by anyone other than `override.by`, or name this in the PR's question to the founder.
+
+### Minor m4 (carried from the earlier review, m2): no check for a batch with several targets, only some over attempts
+This is unchanged. By reading, the behaviour is right (`continued()` is per target, and the room is shared), but it is untested.
+
+Note (not a finding): the room counts a reservation settled at US$0 (refused or busy) at its worst case, as `overrideRefusal` always has. This is conservative and consistent. It is what makes M1 bite on a busy first attempt.
 
 ## Journey test
-Not applicable to this change: it is API-only, and no screen, words on a screen or flow changed. Not scored. The Retry button's behaviour is covered above at the API.
+Not scored. The change is API and ledger only: no screen, no flow and no words on a screen changed, apart from the Retry error text. That text is plain and gives the next step: "This run has used its Continue: a retry could cost up to US$x, and only US$y is left of the US$z the person accepted. Start the draft again to look at the cost and choose Continue again." An unaided walk by an intended user stays with the founder. Not checked: the graph tool (I did not run it, because it rewrites `qa/GRAPH.md`), and a live paid call (US$0 rule).
 
 Verdict: Ship after fixes
 
-To fix before merge: M1 (hold every override-tagged reservation and the retry to the accepted worst case, with failing checks). Recommended in the same PR: m1, m2, m3.
+To fix before merge: M1 (round the shown and recorded worst case up to the cent, with a failing check). Recommended in the same PR: m2 (the ceiling check). m1, m3 and m4 can be fixed, or named in the PR's question to the founder.

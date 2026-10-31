@@ -29,6 +29,7 @@ type A4 = { total: number; reused: number; leftover: number };
 const a4Of = (detail: unknown): A4 | null => { const a = (detail as { a4?: A4 } | null)?.a4; return a ? { total: a.total, reused: a.reused, leftover: a.leftover } : null; };
 const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return null; const n = (s: string) => all.filter((p) => p.status === s).length; return `${all.length} part${all.length === 1 ? "" : "s"} · ${[n("done") && `${n("done")} done`, n("failed") && `${n("failed")} failed`, n("running") && `${n("running")} running`, n("queued") && `${n("queued")} queued`, n("not started") && `${n("not started")} not started`].filter(Boolean).join(", ")}`; };
 import { overrideOf, Sources } from "./sources.ts";
+import { ceilCents } from "../../engine/cost-check.ts";
 import { checkOverride, costPlanNow, endedOverrides, ledgerRead, overrideAllowed, recordOverride, spendOverride } from "./cost-gate.ts";
 import { SpendLedger } from "../../../p2/ledger.ts";
 import { OverrideStart, type OverrideRef } from "../../contracts/cost-check.ts";
@@ -37,6 +38,7 @@ import { paidRetryAllowed, paidRunAllowed, paidRunsOf } from "./rounds.ts";
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const MAX_PARALLEL = 2, MAX_ATTEMPTS_PER_SOURCE = 3;
 const round = (n: number) => Math.round(n * 100) / 100;
+
 type Mode = "LIVE" | "REPLAY" | "STUB";
 export type Scope = { kind: "catalogue" | "program" | "combination" | "source"; ids: string[] };
 type Action = "draft" | "reuse_saved_output" | "reuse_library" | "skip" | "not_eligible";
@@ -223,7 +225,7 @@ export class Ai implements OnModuleInit {
     const past = all.map((r) => { try { return JSON.parse(readFileSync(join(runsDir, r.file), "utf8")); } catch { return null; } }).filter(Boolean);
     const bytes = past.find((p: any) => p.launch_evidence?.request_bytes)?.launch_evidence.request_bytes ?? (prepared?.inventoryBytes ?? 200_000) + 30_000;
     const perAttempt = costUsd(prepared?.settings.model ?? "claude-opus-5-5", bytes + 2_000, prepared?.settings.max_output_tokens ?? 64_000);
-    const worst = round(Math.min(RUN_CAP_USD, perAttempt * (prepared?.settings.max_attempts ?? 2)));
+    const worst = ceilCents(Math.min(RUN_CAP_USD, perAttempt * (prepared?.settings.max_attempts ?? 2)));
     const lastOk = saved.length ? past.find((p: any) => p.drafting_run?.run_id === saved[0].run_id && p.drafting_run?.usage?.cost_usd) : null;
     return { expected: lastOk?.drafting_run?.usage?.cost_usd != null ? round(lastOk.drafting_run.usage.cost_usd) : null, worst };
   }
@@ -470,6 +472,10 @@ export class Ai implements OnModuleInit {
     if (ov) {
       // #131 review M1: a retry of a Continue run fits what is left of the worst case the person accepted (every attempt
       // of the run counts toward it); more needs a new look at the cost and a new Continue.
+      // #131 review m3 (as break m7): only the person who chose Continue spends under it; anyone else starts again and
+      // chooses Continue themselves.
+      const by = ledgerRead(() => new SpendLedger(LEDGER_DIR).override(ov.id))?.by;
+      if (by !== actor.id) fail("This run was continued past a cost limit by another person: only they can retry it. Start the draft again to look at the cost and choose Continue yourself.", HttpStatus.CONFLICT);
       const room = ledgerRead(() => new SpendLedger(LEDGER_DIR).overrideRoomUsd(ov.id));
       if (room === null || worst > room + 1e-9) fail(`This run has used its Continue: a retry could cost up to US$${worst.toFixed(2)}, and ${room === null ? "the Continue is not in the spend ledger" : `only US$${room.toFixed(2)} is left of the US$${(((batch!.plan as any).override?.worst_usd as number | undefined) ?? 0).toFixed(2)} the person accepted`}. Start the draft again to look at the cost and choose Continue again.`, HttpStatus.CONFLICT);
       // #131 review m1: past the cap only when the Continue named it; then held to the ceiling (the cap + 10%).

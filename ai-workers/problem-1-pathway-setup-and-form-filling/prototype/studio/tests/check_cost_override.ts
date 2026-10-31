@@ -103,6 +103,11 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   // #131 review m1: this Continue names "attempts" only, so its retry is held to the cap, not the ceiling.
   ok("C11.8 P-179 follow-up fail: past the cap, a retry under a Continue that did not name the cap is refused (409, what is left of the cap), nothing queued", r.status === 409 && /more than is left of the experiment cap/.test(msg(r)) && sql(`select count(*) from drafting_job where batch_id='${batch1}' and status='QUEUED'`) === "0", { status: r.status, m: msg(r) });
   writeFileSync(LEDGER, snapLedger);
+  // #131 review m3 (as break m7): only the person who chose Continue may retry under it.
+  writeFileSync(LEDGER, snapLedger.replace(new RegExp(`("id":"${o1}"[^\\n]*"by":")user-A`), "$1user-Z"));
+  r = await call("POST", `/ai/batches/${batch1}/retry`, {});
+  ok("C11.8 #131 review m3 fail: a retry under another person's Continue is refused (409), nothing queued", r.status === 409 && /continued past a cost limit by another person/.test(msg(r)) && sql(`select count(*) from drafting_job where batch_id='${batch1}' and status='QUEUED'`) === "0", { status: r.status, m: msg(r) });
+  writeFileSync(LEDGER, snapLedger);
   // #131 review M1: the run already reserved the whole worst case the person accepted (its first run was sent): no retry.
   appendFileSync(LEDGER, JSON.stringify({ type: "reserve", id: `run-o1#1#${Date.now()}`, run_id: "run-o1", attempt: 1, worst_usd: worst, caller: "paid", override_id: o1, at: new Date().toISOString() }) + "\n");
   r = await call("POST", `/ai/batches/${batch1}/retry`, {});
@@ -139,6 +144,13 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   const o3 = r.body?.override_id as string;
   r = await draft(o3);
   ok("C11.8 P-179 pass: with the author's Continue the start over the cap is queued, for this run's worst case only", r.status === 201 && lines().find((l) => l.type === "override" && l.id === o3)?.worst_usd === worst, { status: r.status, m: msg(r) });
+  // #131 review m2: a retry under a Continue that named the experiment cap is held to the US$132 ceiling.
+  await cancelOpen();
+  const batch3 = sql(`select batch_id from drafting_job where attachment_id='${src}' order by started_at desc limit 1`);
+  const snap3 = readFileSync(LEDGER, "utf8"); seed(14);
+  r = await call("POST", `/ai/batches/${batch3}/retry`, {});
+  ok("C11.8 #131 review m2 fail: past US$132, a retry under a Continue that named the cap is refused in the founder's words (409), nothing queued", JSON.parse(sql(`select plan::text from ai_batch where id='${batch3}'`)).override?.limits?.includes("experiment") && r.status === 409 && /founder must raise the cap/.test(msg(r)) && sql(`select count(*) from drafting_job where batch_id='${batch3}' and status='QUEUED'`) === "0", { status: r.status, m: msg(r) });
+  writeFileSync(LEDGER, snap3);
   // Review m6: the Continue's audit line says what was over and why, not the dialog's instructions.
   const auditO3 = sql(`select summary from audit_event where action='ai_override' and entity_key='${o3}'`);
   ok("C11.8 review m6: the ai_override audit line names the limit and why (the cap's words), not 'Continue records…; Cancel starts nothing'", /AI spending cap/.test(auditO3) && !/Cancel starts nothing|Continue records your name/.test(auditO3), auditO3);
