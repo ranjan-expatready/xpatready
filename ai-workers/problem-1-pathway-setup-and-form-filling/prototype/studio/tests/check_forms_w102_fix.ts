@@ -47,7 +47,7 @@ const onlineEdition = (ws: string, defId: string, label: string) => sql(`insert 
 
   // ──────────────────────────────────────────── break M2: an older release keeps its fingerprint
   ok("C1.6: setup: With an LMIA's draft equals its release (sample)", (await call("GET", `/combinations/${wp}`)).body.draft?.matches_release === true);
-  sql(`update combination set portal_key = 'apr_portal' where id = '${wp}'`); // an older database: the portal chosen before the park
+  sql(`update combination set portal_key = 'APR_PORTAL' where id = '${wp}'`); // an older database: the portal chosen before the park, as w110_channels renamed it
   const r1 = await release(wp, "W1-02 fix check: a release made with a portal (older database)");
   ok("C1.6: break M2 setup: a release made with a portal and an Online-free draft goes out", r1.approve.status === 201, r1.approve.body?.message);
   let r = await call("POST", `/combinations/${wp}/submit`, { note: "nothing changed" });
