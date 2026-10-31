@@ -30,11 +30,20 @@ const peopleWords = (ps: { label: string; min: number; max: number }[]) => (ps ?
  *  level a link back to the list filtered to it, the status, the facts in one muted line and the one next step; one row
  *  of tabs in setup order (walkthrough v2 S5). Old addresses (Sources and forms, Configuration) open the tab that now
  *  holds their part. */
+/** A field-map job finished while its form is not yet marked DRAFTED (the server's second write is still to come). */
+const settling = (d: unknown) => {
+  const v = d as { jobs?: { kind: string; status: string; attachmentId?: string | null }[]; attachments?: { id: string; status: string }[] } | undefined;
+  return !!v?.jobs?.some((j) => j.kind === "field_map" && j.status === "COMPLETED" && v.attachments?.some((a) => a.id === j.attachmentId && a.status === "READ"));
+};
+
 export function CombinationPage() {
   const { id, tab: asked = "overview" } = useParams();
   const [sp] = useSearchParams();
   const tab = tabOf(asked, sp.get("area"));
-  const o = useApi<CombinationView>(["combination", id], `/combinations/${id}`, { refetchInterval: (q) => (q.state.data?.jobs?.some((j) => j.status === "RUNNING" || j.status === "QUEUED") ? 3000 : false) });
+  // #143 review (Major): the server marks a field-map job COMPLETED a moment before its form becomes DRAFTED (two
+  // writes). A fetch between them saw no running job and stopped, so "Review AI proposals" never appeared until a reload.
+  // The tab also keeps asking while a finished field-map job's form still reads READ.
+  const o = useApi<CombinationView>(["combination", id], `/combinations/${id}`, { refetchInterval: (q) => (q.state.data?.jobs?.some((j) => j.status === "RUNNING" || j.status === "QUEUED") || settling(q.state.data) ? 3000 : false) });
   const sum = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`, { refetchInterval: (q) => (q.state.data?.row?.aiRunning ? 3000 : false) });
   if (asked !== tab) return <Navigate replace to={`/c/${id}/${tab}`} />;
   if (o.isLoading) return <Spinner label="Loading combination" />;
