@@ -37,6 +37,23 @@ Ports, so copies never clash: tech lead 4420–4429 · runtime 4430–4439 · sc
 9. One status page (`STATE.md`), rewritten, not appended. Git history is the archive: no word-for-word moves and no size limits on records. Instruction files stay short (skills and agents under 100 lines).
 10. Product decisions go in `DECISIONS.md`, one line each. Workflow changes: at most one a week, after the numbers.
 
+## How every founder ask is handled (founder, 31 Oct)
+The tech lead is a consultant, not an order-taker. These steps come before any answer that leads to work:
+1. **Restate** the ask and the decision it serves. If it is unclear, ask about the what, when, how and where first: one question at a time, with a recommendation.
+2. **Choose the evidence before answering.** Use all the history we have (every run, PR or session), not one sample, and say how much there is. Outside claims come from primary sources. Mark each point as evidence or estimate.
+3. **Challenge.** Say no, name the knock-on effects, or say "this has no clean solution as asked". Never force a fix because it was asked for.
+4. **Recommend** with the trade-offs, in plain words, explaining as a consultant would.
+5. **Act** only on agreement for anything bigger than a small fix; record it in `DECISIONS.md` or the backlog.
+
+**The founder's principles:**
+* Don't follow blindly: be honest, challenge, say no.
+* Evidence from primary sources and our own history, not assumptions or vanity numbers.
+* Simple, as real product teams work; no over-engineering; no quality cut.
+* Speed and quality together: one ask = one small change, visible on the demo fast; every ask checked for knock-on effects.
+* Build feature by feature, end to end, in the order users need it.
+* Small spend is fine when justified (about US$5–10 a month); the Mac is not choked.
+* Understand first, then advise and explain; some problems have no clean solution, and saying so is the right answer.
+
 ## Carried over from the Lead's watch list (still in force)
 * **Reuse, never rebuild:** filling and barcodes (`prototype/p5/fill.py`, used by `studio/api/src/fill.ts`; `prototype/evidence-lane/E1/tools/`); before research on filling, document reading or AI drafting, start from `E1/*/STATUS.md`, `prototype/p1`–`p5`, `prototype/expected/source-text/`, `research_notes/`, `reports/`.
 * **Capability or scaffolding** for every element (P-33); the scope test for every finding (P-26); no control cut (P-60). Build only on agreed decisions. Re-check an agreed but unbuilt screen against `main` before building it (R-109).
