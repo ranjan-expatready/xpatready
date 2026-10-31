@@ -25,7 +25,7 @@ type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; 
   accepts_accounts?: { account: string; account_words: string; channels: string[]; words: string; basis: string; quote: string | null; source_url: string | null }[];
   origin: string | null; downloaded_from: string | null; checked_at: string | null; form_page_url: string | null; fingerprint: string | null; attachment_id: string | null;
   used_by: { id: string; label: string; picked_by_ai: boolean; as_source?: boolean }[]; status: "ready" | "needs_ok" | "newer_file" | "no_file" | "retired"; listed_by_ircc?: boolean; newer_on_index?: boolean; lifecycle_waiting: "DELETE" | "RETIRE" | "RESTORE" | null; lifecycle_approved?: boolean; lifecycle_returned?: boolean; older_editions: { label: string; kept_by: string }[]; action: { kind: "DELETE" | "RETIRE" | "RESTORE" | "WITHDRAW"; why: string | null; change_id: string | null } };
-type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string };
+type List = { rows: Row[]; counts: Record<string, number>; combinations: { id: string; label: string }[]; sample_note: string; remembered_deletions?: { code: string; deleted_by: string; deleted_at: string }[] };
 export type Uses = { label: string; released: boolean; retired: boolean; uses: { kind: string; label: string; href: string | null; blocks: boolean; why: string }[]; can: { delete: string | null; retire: string | null; restore: string | null }; pending: { id: string; action: string; by: string | null } | null; history: { at: string; by: string | null; what: string }[] };
 
 const TYPE_WORD: Record<Row["type"], string> = { form: "Form", guide: "Guide", checklist: "Checklist" };
@@ -207,6 +207,7 @@ export function FormsPage() {
         {/* Review (310acb9c) 2 / break m17, WCAG 4.1.3: one status region, always on the page, says how many forms are shown
             (before: it lived in the pager, so the last Show more and a short filter were never spoken). */}
         <p className="sr-only" role="status" data-list-count data-shown={lib.isError ? 0 : pageRows.length}>{spoken}</p>
+        {lib.data?.remembered_deletions?.length ? <RememberedDeletions items={lib.data.remembered_deletions} canAuthor={canAuthor} /> : null}
         <p className="text-xs text-text-muted">{lib.data?.sample_note}</p>
         {open ? <FormDrawer row={open} onClose={() => setOpen(null)} canAuthor={canAuthor} /> : null}
         {confirm ? <div className="xl:fixed xl:right-6 xl:top-20 xl:z-40 xl:w-[440px]"><ImpactPanel key={`impact-${confirm.code}`} kind={confirm.action.kind} name={`${confirm.code} · ${confirm.title}`}
@@ -244,13 +245,30 @@ function useAsk<R>(fn: () => Promise<R>, success: string, keys: unknown[][], onD
   return useMutation<R, Error, void>({ mutationFn: fn, onSuccess: () => { for (const k of keys) void queryClient.invalidateQueries({ queryKey: k }); toast.push({ tone: "ok", text: success }); onDone(); } });
 }
 
+/** X5 slice c: the forms a second person approved deleting; fills leave them out until a person lists one again. */
+function RememberedDeletions({ items, canAuthor }: { items: { code: string; deleted_by: string; deleted_at: string }[]; canAuthor: boolean }) {
+  const [code, setCode] = React.useState<string | null>(null);
+  const again = useAction((c: string) => api<{ message: string }>(`/library/forms/${encodeURIComponent(c)}/list-again`, { method: "POST" }), { success: (r) => r.message, invalidate: [["library-forms-list"]], onDone: () => setCode(null) });
+  return (
+    <section aria-labelledby="deleted-forms" className="space-y-1 text-sm" data-remembered-deletions>
+      <h2 id="deleted-forms" className="font-medium">Deleted from the library ({items.length})</h2>
+      <p className="text-text-muted">Fills from IRCC's forms list leave these out until someone lists one again.</p>
+      <ul className="flex flex-wrap gap-2">{items.map((d) => (
+        <li key={d.code} className="flex items-center gap-2 rounded border border-border px-2 py-1" data-deleted={d.code}>
+          <span>{d.code}</span><span className="text-text-muted">deleted {d.deleted_at.slice(0, 10)}, approved by {d.deleted_by}</span>
+          {canAuthor ? <Button size="sm" variant="secondary" busy={again.isPending && code === d.code} onClick={() => { setCode(d.code); again.mutate(d.code); }} aria-label={`List ${d.code} again`}>List again</Button> : null}
+        </li>))}</ul>
+    </section>
+  );
+}
+
 /** X5 (P-156 (1)): fills the library from IRCC's forms list once (US$0: no AI, no download); safe to press again. */
 function FillFromIndexButton() {
   const ref = React.useRef<HTMLButtonElement | null>(null), inFlight = React.useRef(false); // review (86f9447c) m4: a double click sends one fill
   // X5 review m5 (WCAG 2.4.3): the busy button is disabled while it fills; focus goes back to it once it is enabled again.
   const refocus = (tries = 30) => { const el = ref.current; if (!el || tries <= 0) return; if (el.disabled) { requestAnimationFrame(() => refocus(tries - 1)); return; } el.focus(); };
   const fill = useAction(() => api<{ message: string }>("/library/forms/fill-from-index", { method: "POST" }), { success: (r) => r.message, invalidate: [["library-forms-list"]], onDone: () => requestAnimationFrame(() => refocus()) });
-  return <Tip tip="Reads IRCC's forms and guides list into the library: every form number, listed with no file yet. No AI, no download, US$0. Forms already here keep their file."><span><Button ref={ref} variant="secondary" busy={fill.isPending} onClick={() => { if (inFlight.current) return; inFlight.current = true; fill.mutate(undefined, { onSettled: () => { inFlight.current = false; } }); }} data-fill-index><ListChecks /> Fill from IRCC's forms list</Button></span></Tip>;
+  return <Tip tip="Reads IRCC's forms and guides list into the library: every form number not in the library yet, listed with no file (forms deleted from the library are left out). No AI, no download, US$0. Forms already here keep their file."><span><Button ref={ref} variant="secondary" busy={fill.isPending} onClick={() => { if (inFlight.current) return; inFlight.current = true; fill.mutate(undefined, { onSettled: () => { inFlight.current = false; } }); }} data-fill-index><ListChecks /> Fill from IRCC's forms list</Button></span></Tip>;
 }
 
 /** One way in for a file: Upload PDF, many files at once; each file runs on its own card (rules first, AI only when they cannot). */

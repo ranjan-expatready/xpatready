@@ -279,8 +279,34 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   ok("C3.12 X5 slice c pass: a person uploading the form adds it back: the memory is forgotten", inLib() === "1" && sql(`select count(*) from library_form_deletion where form_key = '${gk}'`) === "0", up?.results?.[0]);
   const fd3 = await call("POST", "/library/forms/fill-from-index");
   ok("C3.12 X5 slice c pass: after the add-back a fill treats it as any form (already there, nothing left out)", fd3.status === 201 && !fd3.body.deleted?.length && inLib() === "1", { m: fd3.body?.message });
+  // Review / break (02ca83a5) M1: a schedule (IMM 0008 SCH4) cannot come back through an upload (the reader files its PDF as
+  // IMM 0008); "List again" is the way back for every number.
+  const sch = "IMM 0008 SCH4", schU = encodeURIComponent(sch);
+  if (sql(`select count(*) from gov_form_def where form_key = '${sch}'`) === "1") {
+    const ds = await call("DELETE", `/library/forms/${schU}`, { reason: "Not needed in this library" });
+    await call("POST", `/library/changes/${ds.body?.id}/approve`, { note: "Checked: unused" }, "user-B");
+    const listed = (await call("GET", "/library/forms/list")).body.remembered_deletions as { code: string; deleted_by: string }[];
+    const fsch = await call("POST", "/library/forms/fill-from-index");
+    ok("C3.12 X5 slice c pass: the list names each remembered deletion with who approved it, and the fill says how to bring one back (List again)", listed?.some((d) => d.code === sch && d.deleted_by !== "") && fsch.body.deleted?.includes(sch) && /"List again" under the table brings it back/.test(fsch.body.message), { listed, m: fsch.body?.message });
+    const noB = await call("POST", `/library/forms/${schU}/list-again`, undefined, "user-B");
+    ok("C3.12 X5 slice c fail: only an author lists a deleted form again (approver 403), and nothing changes", noB.status === 403 && sql(`select count(*) from library_form_deletion where form_key = '${sch}'`) === "1", noB.status);
+    const la = await call("POST", `/library/forms/${schU}/list-again`);
+    ok("C3.12 X5 review/break (02ca83a5) M1 fail: List again brings a deleted schedule back at once (before: no way back but a demo reset)", la.status === 201 && la.body?.listed === true && sql(`select count(*) from gov_form_def where form_key = '${sch}'`) === "1" && sql(`select count(*) from library_form_deletion where form_key = '${sch}'`) === "0" && /listed again/.test(la.body?.message ?? ""), { status: la.status, b: la.body });
+    const la2 = await call("POST", `/library/forms/${schU}/list-again`);
+    ok("C3.12 X5 slice c fail: List again on a form that is not a remembered deletion says so (404)", la2.status === 404 && /not among the forms deleted/.test(msg(la2)), la2.status);
+  } else ok("C3.12 X5 slice c set-up: IMM 0008 SCH4 is listed by IRCC's recorded forms list", false, "not in the library after the fill");
+  // Review (02ca83a5) 2: a delete approved while a fill runs (after its first read of the memory, before its insert) is
+  // still honoured: played by a trigger that writes the memory row as the fill inserts the form.
+  const raceKey = [...plainNow].find((c) => c !== gk && c !== sch && sql(`select count(*) from gov_form_def where form_key = '${c}'`) === "1")!;
+  sql(`delete from gov_form_def where form_key = '${raceKey}'`);
+  sql(`create or replace function x5c_race() returns trigger language plpgsql as $$ begin if new.form_key = '${raceKey}' then insert into library_form_deletion (id, workspace_id, form_key, deleted_by) values (gen_random_uuid(), new.workspace_id, new.form_key, 'user-B') on conflict do nothing; end if; return new; end $$`);
+  sql(`create trigger x5c_race after insert on gov_form_def for each row execute function x5c_race()`);
+  const fr = await call("POST", "/library/forms/fill-from-index");
+  sql(`drop trigger x5c_race on gov_form_def`); sql(`drop function x5c_race()`);
+  ok("C3.12 X5 review (02ca83a5) 2 fail: a delete approved during a fill is honoured: the fill removes its own new row and lists the form as left out (before the second look: it came back while remembered)", fr.status === 201 && sql(`select count(*) from gov_form_def where form_key = '${raceKey}'`) === "0" && fr.body.deleted?.includes(raceKey) && !fr.body.created, { raceKey, created: fr.body?.created, deleted: fr.body?.deleted });
+  sql(`delete from library_form_deletion where form_key = '${raceKey}'`);
   // Demo reset forgets every remembered deletion (nothing is left behind for the next workspace).
-  const del3 = await call("DELETE", `/library/forms/${encodeURIComponent([...plainNow].find((c) => c !== gk)!)}`, { reason: "Not needed in this library" });
+  const del3 = await call("DELETE", `/library/forms/${encodeURIComponent([...plainNow].find((c) => c !== gk && c !== sch && c !== raceKey)!)}`, { reason: "Not needed in this library" });
   await call("POST", `/library/changes/${del3.body?.id}/approve`, { note: "Checked: unused" }, "user-B");
   const remembered = sql("select count(*) from library_form_deletion");
   await call("POST", "/demo/reset", { confirm: "RESET" });
