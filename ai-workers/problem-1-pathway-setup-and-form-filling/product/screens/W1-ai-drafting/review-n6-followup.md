@@ -70,3 +70,25 @@ The other dimensions are unchanged since the `10a0e90e` review (`review.md`). D1
 * 200 % zoom: the diff changes no layout.
 
 **Verdict: Approve** (no open Blocker or Major). Minors 1-3 should be fixed in this PR or the next one, 4 is optional, and 5 is for the backlog.
+
+## Re-review at `715257eb` (fixes for Minors 1, 2 and 4)
+* **Scope:** `git diff 9296e60d..715257eb -- …/studio/web`, which changes `cost-warning.tsx` and `ai-launch.tsx`.
+* **Build and check:** `tsc` and `vite build` are clean. `check_cost_warning_browser.cjs 4456 forms_cw` passes 26/26.
+* **Probe:** `/tmp/rvprobe/probe2.cjs`, scratch, on :4456 with the queue held. US$0: no reserve lines other than the seed lines.
+* **Minor 1, fixed.** `refocus` now waits up to 5 s (`performance.now()`), not 30 frames.
+  * Probe: plan slowed to 1.5 s, then Enter, then Escape after 300 ms.
+  * Result: focus is on `BUTTON: Start 2 steps, up to US$9.99`. No warning, panel stays, 0 runs.
+* **Minor 2, fixed.** `planAgain` refuses with the server's own "The work changed…" words when the new `plan_sha256` differs from the shown one, before any warning opens.
+  * Probe: with the panel open over the cap, I changed the work (IMM 5409's edition matched to the library, so the plan's fingerprint changed), then pressed Start.
+  * Result: the message shows, there is no warning, 0 overrides were added, 0 runs, and the guard listener is removed.
+  * The next Start uses the new plan and shows the warning with Continue.
+  * Spend-only changes do not trip it: the fingerprint excludes spend (`ai.ts:159`). Probe: the spend-only Start still showed the warning.
+* **Minor 4, fixed.** The unmount cleanup marks the current click as cancelled (`clickRef`).
+  * Probe: the panel was opened over the cap, the ledger was then emptied so the new plan fits, the plan was slowed to 1.5 s, and the panel was closed with Cancel during the fetch.
+  * Result: 0 runs, and the page stays on the combination.
+  * Control: the same steps without closing launches 1 run (queue held) and opens `/ai/:id`. This also walks the fits-after-re-plan path once by hand; there is still no test step for it (Minor 3).
+* **Minors 3 and 5:** moved to the PR as follow-ups. I agree; neither blocks.
+* **New, Minor (Could):** `refocus` now runs for up to 5 s while Start is disabled. If the person moves focus elsewhere in that time, focus is pulled back to Start when it is enabled again. Fix: move focus only while `document.activeElement` is the body or inside the panel. Not observed in use.
+* **Page errors:** 0.
+
+**Verdict on `715257eb`: Approve** (no open Blocker or Major). Open Minors: 3 and 5 (PR follow-ups) and the new focus Minor above (Could).
