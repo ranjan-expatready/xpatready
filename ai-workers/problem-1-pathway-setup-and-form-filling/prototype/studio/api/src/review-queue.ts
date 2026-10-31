@@ -68,16 +68,29 @@ export class ReviewQueueService {
     const atts = new Map((await this.db.sourceAttachment.findMany({ where: { id: { in: [...jobs.map((j) => j.attachmentId), ...batches.flatMap((b) => b.jobs.map((j) => j.attachmentId))].filter((x): x is string => !!x) } }, select: { id: true, edition: true, fileName: true } })).map((a) => [a.id, a]));
     const out: QueueItem[] = [];
     // F2 C2.12 (F3 plan D2): which forms each item belongs to, read once for the whole list.
-    const codeOf = (label: string | null | undefined) => (label ? normaliseCode(label.split(" (")[0]) : null);
-    const lines = await this.db.combinationForm.findMany({ where: { workspaceId, status: { not: "RETIRED" } }, distinct: ["combinationId", "lineageKey"], select: { combinationId: true, lineageKey: true } });
+    // Review (9f2132bd) m3: a file's form is looked up through its edition (never parsed from a display label).
+    const labels = [...new Set([...[...atts.values()].map((a) => a.edition), ...queued.map((r) => r.formEdition)].filter((x): x is string => !!x))];
+    const formOfLabel = new Map(labels.length ? (await this.db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: labels } }, select: { editionLabel: true, form: { select: { formKey: true } } } })).map((e) => [e.editionLabel, e.form.formKey] as const) : []);
+    const codeOf = (label: string | null | undefined) => (label ? formOfLabel.get(label) ?? null : null);
+    // Review (9f2132bd) m2: a combination's forms are its lines as the draft has them now (the newest version per line, as
+    // effective() reads them), so a line removed after a release is not counted.
+    const lines = effective(await this.db.combinationForm.findMany({ where: { workspaceId }, select: { combinationId: true, lineageKey: true, version: true, status: true } }), (l) => `${l.combinationId}|${l.lineageKey}`, "draft").filter((l) => l.status !== "RETIRED");
     const formsOfCombination = (id: string | null | undefined) => (id ? [...new Set(lines.filter((l) => l.combinationId === id).map((l) => l.lineageKey))].sort() : []);
-    const fieldKeys = [...new Set([...merges.flatMap((m) => [m.keepKey, m.mergeKey]), ...changes.filter((c) => c.kind === "field").map((c) => c.key)])];
+    // Review (9f2132bd) m1: a "who fills it" change is about a shared field too.
+    const FIELD_KINDS = new Set(["field", "placement_fills"]);
+    const fieldKeys = [...new Set([...merges.flatMap((m) => [m.keepKey, m.mergeKey]), ...changes.filter((c) => FIELD_KINDS.has(c.kind)).map((c) => c.key)])];
     const fieldUse = new Map<string, Set<string>>();
-    if (fieldKeys.length) for (const r of await this.db.formFieldMap.findMany({ where: { canonicalFieldKey: { in: fieldKeys }, edition: { workspaceId } }, distinct: ["canonicalFieldKey", "formEditionId"], select: { canonicalFieldKey: true, edition: { select: { form: { select: { formKey: true } } } } } })) {
-      const set = fieldUse.get(r.canonicalFieldKey!) ?? new Set<string>(); set.add(r.edition.form.formKey); fieldUse.set(r.canonicalFieldKey!, set);
+    if (fieldKeys.length) {
+      // The form fields that read one of these keys in any version, then each one's newest version (m2's rule for field maps).
+      const hits = await this.db.formFieldMap.findMany({ where: { canonicalFieldKey: { in: fieldKeys }, edition: { workspaceId } }, distinct: ["formEditionId", "dataPath"], select: { formEditionId: true, dataPath: true } });
+      const rows = hits.length ? await this.db.formFieldMap.findMany({ where: { formEditionId: { in: [...new Set(hits.map((h) => h.formEditionId))] }, dataPath: { in: [...new Set(hits.map((h) => h.dataPath))] } }, select: { formEditionId: true, dataPath: true, version: true, status: true, canonicalFieldKey: true, edition: { select: { form: { select: { formKey: true } } } } } }) : [];
+      for (const r of effective(rows, (x) => `${x.formEditionId}|${x.dataPath}`, "draft")) {
+        if (r.status === "RETIRED" || !r.canonicalFieldKey || !fieldKeys.includes(r.canonicalFieldKey)) continue;
+        const set = fieldUse.get(r.canonicalFieldKey) ?? new Set<string>(); set.add(r.edition.form.formKey); fieldUse.set(r.canonicalFieldKey, set);
+      }
     }
     const formsOfFields = (keys: string[]) => [...new Set(keys.flatMap((k) => [...(fieldUse.get(k) ?? [])]))].sort();
-    const formsOfChange = (c: (typeof changes)[number]) => (c.kind === "library_form" || c.kind === "form_accepts" ? [normaliseCode(c.key)] : c.kind === "field" ? formsOfFields([c.key]) : c.kind === "combination" ? formsOfCombination(c.combinationId ?? c.key) : []);
+    const formsOfChange = (c: (typeof changes)[number]) => (c.kind === "library_form" || c.kind === "form_accepts" ? [normaliseCode(c.key)] : FIELD_KINDS.has(c.kind) ? formsOfFields([c.key]) : c.kind === "combination" ? formsOfCombination(c.combinationId ?? c.key) : []);
 
     // AI proposals: the newest drafting step per source, as the Programs row counts them (programs.ts catalogue).
     const waitingCount = new Map(pending.map((p) => [p.runId, p._count]));

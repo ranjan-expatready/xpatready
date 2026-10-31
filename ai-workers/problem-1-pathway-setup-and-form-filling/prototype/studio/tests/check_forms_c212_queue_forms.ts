@@ -5,6 +5,7 @@
 // answer replayed, no model call).
 //   zsh studio/tools/isolated.sh forms_c212 4452 start && tsx studio/tests/check_forms_c212_queue_forms.ts 4452 xr_studio_forms_c212
 import { execFileSync } from "node:child_process";
+import { fillAllKinds } from "./fill_queue_kinds.ts";
 
 const PORT = Number(process.argv[2] ?? 4452), DB = process.argv[3] ?? "xr_studio_forms_c212";
 let pass = 0, fail = 0;
@@ -67,6 +68,54 @@ function pdf(title: string, text: string) {
   // The same per person: the approver sees the same items' forms (forms do not depend on who asks).
   const other = await queue("&form=IMM%205257", "user-B");
   ok("C2.12 D2 pass: forms do not depend on who asks (the approver sees the same items for IMM 5257)", other.items.map((i) => i.id).sort().join() === one.items.map((i) => i.id).sort().join());
+
+  // ── Review (9f2132bd) Major: a pass and a fail per kind on a queue with every kind open (fillAllKinds, test input). Each
+  // item's forms are compared with the records underneath (newest version per line or form field, as effective() reads
+  // them); a form outside that set never lists the item.
+  await fillAllKinds(PORT, DB);
+  const q = await queue();
+  const list = (x: string) => (x ? x.split("\n").filter(Boolean).sort() : []);
+  const lineForms = (cid: string) => list(sql(`select distinct cf.lineage_key from combination_form cf where cf.combination_id = '${cid}' and cf.version = (select max(v.version) from combination_form v where v.combination_id = cf.combination_id and v.lineage_key = cf.lineage_key) and cf.status <> 'RETIRED'`));
+  const fieldForms = (keys: string[]) => list(sql(`select distinct d.form_key from form_field_map m join form_edition e on e.id = m.form_edition_id join gov_form_def d on d.id = e.gov_form_def_id where m.version = (select max(v.version) from form_field_map v where v.form_edition_id = m.form_edition_id and v.data_path = m.data_path) and m.status <> 'RETIRED' and m.canonical_field_key in (${keys.map((k) => `'${k}'`).join(",")})`));
+  const formOfLabel = (label: string) => list(sql(`select d.form_key from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where e.edition_label = '${label.replace(/'/g, "''")}'`));
+  const rest = (i: Item) => i.id.slice(i.id.indexOf(":") + 1);
+  const expected = (i: Item): string[] | null => {
+    if (i.kind === "release") return lineForms(sql(`select combination_id from review_submission where id = '${rest(i)}'`));
+    if (i.kind === "merge") return fieldForms(sql(`select keep_key || E'\n' || merge_key from field_merge where id = '${rest(i)}'`).split("\n"));
+    if (i.kind === "form_fields") return list(sql(`select d.form_key from form_edition e join gov_form_def d on d.id = e.gov_form_def_id where e.id = '${rest(i)}'`));
+    if (i.kind === "new_edition" || i.kind === "held_file") return list(sql(`select coalesce(code, '') from intake_item where id = '${rest(i)}'`));
+    if (i.kind === "running") return list(sql(`select distinct d.form_key from drafting_job j join source_attachment a on a.id = j.attachment_id join form_edition e on e.edition_label = a.edition and e.workspace_id = a.workspace_id join gov_form_def d on d.id = e.gov_form_def_id where j.batch_id = '${rest(i)}'`));
+    if (i.kind === "ai_proposals") return list(sql(`select d.form_key from drafting_job j join source_attachment a on a.id = j.attachment_id join form_edition e on e.edition_label = a.edition and e.workspace_id = a.workspace_id join gov_form_def d on d.id = e.gov_form_def_id where j.id = '${rest(i)}'`));
+    if (i.kind === "library_change" && i.id.startsWith("change-batch:")) return [...new Set(sql(`select kind || '|' || key || '|' || coalesce(combination_id::text, '') from library_change where batch_id = '${rest(i)}'`).split("\n").flatMap((r) => { const [k, key] = r.split("|"); return k === "field" || k === "placement_fills" ? fieldForms([key]) : k === "library_form" || k === "form_accepts" ? [key] : []; }))].sort();
+    if (i.kind === "library_change") { const [k, key, cid] = sql(`select kind || '|' || key || '|' || coalesce(combination_id::text, '') from library_change where id = '${rest(i)}'`).split("|");
+      return k === "field" || k === "placement_fills" ? fieldForms([key]) : k === "library_form" || k === "form_accepts" ? [key] : k === "combination" ? lineForms(cid || key) : []; }
+    if (i.kind === "proposals") { const fe = sql(`select coalesce(form_edition, '') || '|' || coalesce(combination_id::text, '') from proposal_item where status = 'waiting' and (coalesce(form_edition, '') = '${i.title.replace(/'/g, "''")}' or combination_id is not null) order by (form_edition is null) limit 1`).split("|");
+      return i.title === fe[0] ? formOfLabel(fe[0]) : null; }
+    return null;
+  };
+  const kindsSeen = new Map<string, { right: number; wrong: string[]; nonEmpty: number }>();
+  for (const i of q.items) {
+    const key = i.kind === "library_change" ? `library_change:${i.id.startsWith("change-batch:") ? "batch" : sql(`select kind from library_change where id = '${rest(i)}'`)}` : i.kind;
+    const k = kindsSeen.get(key) ?? { right: 0, wrong: [], nonEmpty: 0 }; kindsSeen.set(key, k);
+    const want = expected(i); if (want === null) continue;
+    if (want.join() === [...i.forms].sort().join()) k.right++; else k.wrong.push(`${i.id}: ${i.forms} ≠ ${want}`);
+    if (i.forms.length) k.nonEmpty++;
+  }
+  for (const kind of ["release", "merge", "running", "form_fields", "new_edition", "ai_proposals", "proposals", "library_change:field", "library_change:placement_fills", "library_change:combination", "library_change:batch", "library_change:library_form", "library_change:form_accepts"]) {
+    const k = kindsSeen.get(kind);
+    ok(`C2.12 D2 pass (${kind}): each item's forms are the forms its records name`, !!k && k.right > 0 && !k.wrong.length && k.nonEmpty > 0, k ? { right: k.right, wrong: k.wrong.slice(0, 3), nonEmpty: k.nonEmpty } : "no item of this kind");
+    // The fail half: a form outside the item's set never lists it.
+    const sample = q.items.find((i) => (i.kind === "library_change" ? `library_change:${i.id.startsWith("change-batch:") ? "batch" : sql(`select kind from library_change where id = '${rest(i)}'`)}` : i.kind) === kind && i.forms.length);
+    if (sample) { const outside = ["IMM 0008", "IMM 1294", "IMM 5532", "IMM 9999"].find((c) => !sample.forms.includes(c))!;
+      ok(`C2.12 BR-5 fail (${kind}): ?form=${outside}, a form outside its set, does not list it; its own form does`, !(await queue(`&form=${encodeURIComponent(outside)}`)).items.some((x) => x.id === sample.id) && (await queue(`&form=${encodeURIComponent(sample.forms[0])}`)).items.some((x) => x.id === sample.id)); }
+  }
+  // Plan §7: a release belongs to every form of its combination; a form the combination does not use excludes it.
+  const rel = q.items.find((i) => i.kind === "release");
+  if (rel) { const lf = lineForms(sql(`select combination_id from review_submission where id = '${rest(rel)}'`));
+    const lists = await Promise.all(lf.map((f) => queue(`&form=${encodeURIComponent(f)}`)));
+    ok("C2.12 plan §7 pass: a release is listed under each of its combination's forms", lf.length >= 2 && lists.every((l) => l.items.some((x) => x.id === rel.id)), lf); }
+  const bad2 = await call("GET", "/review-queue?filter=all&form=");
+  ok("C2.12 fail (review m4): an empty form number is refused in words, naming the field", bad2.status === 400 && /form number/.test(JSON.stringify(bad2.body)), bad2.body);
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log(`FAIL  the check stopped: ${(e as Error).stack}`); process.exit(1); });

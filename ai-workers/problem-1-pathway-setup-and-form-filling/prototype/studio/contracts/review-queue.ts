@@ -19,7 +19,7 @@ export const ReviewQueueQuery = z.object({
   kind: z.enum(QUEUE_KINDS).optional(),
   q: z.string().trim().max(120).optional(),
   /** F2 C2.12 (F3 plan D2): only the items that belong to this form (its number as the library writes it, "IMM 5257"). */
-  form: z.string().trim().min(1).max(40).optional(),
+  form: z.string().trim().min(1, "Give a form number, such as IMM 5257.").max(40, "A form number has at most 40 characters.").optional(),
 }).strict();
 
 /** needs: the asking person can take the next step. waiting: someone else must (a second person, an approver).
