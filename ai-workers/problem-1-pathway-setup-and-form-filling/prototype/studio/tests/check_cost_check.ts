@@ -163,6 +163,14 @@ for (const [what, line, re] of [
 }
 ok("C11.8 N6 break n4 pass: well-formed override and use lines pass the check (a clean ledger adds up as before)", (() => { const g = fresh(100); const x = g.l.recordOverride({ run_key: "g", limits: ["experiment", "wave"], worst_usd: 1, by: "user-A" }); g.l.useOverride(x.id, "g"); return Math.abs(g.l.committed() - 100) < 1e-9; })());
 
+// ── #131 review M1: a Continue past "attempts" only (no money limit passed) still holds its run to the worst case the
+// person accepted: before, every reservation that passed no limit was admitted, so one click could pay for ~3 runs.
+const ao = fresh(10); const aoO = ao.l.recordOverride({ run_key: "ao", limits: ["attempts"], worst_usd: 2, by: "user-A" }); ao.l.useOverride(aoO.id, "ao");
+const ao1 = (() => { try { return ao.l.reserve("run-ao", 1, 2, 5, "paid", { overrideId: aoO.id, runKey: "ao" }); } catch (e) { return e as Error; } })();
+ok("C11.8 #131 review M1 pass: an attempts-only Continue admits its run up to the accepted worst case (US$2)", typeof ao1 === "string" && ao.l.overrideRoomUsd(aoO.id) === 0, ao1);
+ok("C11.8 #131 review M1 fail: a second US$2 reservation under it (a retry) is refused, above what is left of the accepted worst case (before: admitted)", throws(() => ao.l.reserve("run-ao", 2, 2, 5, "paid", { overrideId: aoO.id, runKey: "ao" }), BudgetExceeded, /above the US\$0\.0000 left of the worst case the person accepted/));
+ok("C11.8 #131 review M1 pass: a US$0 stub pass under it still runs (it spends nothing)", typeof (() => { try { return ao.l.reserve("run-ao", 3, 0.5, 5, "stub", { overrideId: aoO.id, runKey: "ao" }); } catch (e) { return e; } })() === "string");
+
 // ── Break m7: a Continue is used only by the person who recorded it.
 const pr = fresh(118); const po = pr.l.recordOverride({ run_key: "pr", limits: ["experiment"], worst_usd: 3, by: "user-A" });
 ok("C11.8 break m7 fail: another person cannot use it, and it stays unused", throws(() => pr.l.useOverride(po.id, "pr", "user-Z"), OverrideRefused, /another person/) && !pr.lines().some((x) => x.type === "override_use"));

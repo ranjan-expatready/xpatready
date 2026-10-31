@@ -18,7 +18,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Prisma } from "@prisma/client";
 import { costUsd } from "../../../p2/ledger.ts";
-import { EXPERIMENT_CAP_USD, MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, OVERRIDE_CEILING_USD, RUN_CAP_USD } from "../../../p2/policy.ts";
+import { EXPERIMENT_CAP_USD, LEDGER_DIR, MAX_ATTEMPTS, MAX_PAID_ATTEMPTS_PER_FORM, OVERRIDE_CEILING_USD, RUN_CAP_USD } from "../../../p2/policy.ts";
 import { ACTORS, Audit, Db, fail, need, PROTOTYPE, Workspace, type Actor } from "./core.ts";
 /** A person by name on every AI work view (Screen 02 board view 10): never an internal id. */
 const personName = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "A person";
@@ -29,7 +29,8 @@ type A4 = { total: number; reused: number; leftover: number };
 const a4Of = (detail: unknown): A4 | null => { const a = (detail as { a4?: A4 } | null)?.a4; return a ? { total: a.total, reused: a.reused, leftover: a.leftover } : null; };
 const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return null; const n = (s: string) => all.filter((p) => p.status === s).length; return `${all.length} part${all.length === 1 ? "" : "s"} · ${[n("done") && `${n("done")} done`, n("failed") && `${n("failed")} failed`, n("running") && `${n("running")} running`, n("queued") && `${n("queued")} queued`, n("not started") && `${n("not started")} not started`].filter(Boolean).join(", ")}`; };
 import { overrideOf, Sources } from "./sources.ts";
-import { checkOverride, costPlanNow, endedOverrides, overrideAllowed, recordOverride, spendOverride } from "./cost-gate.ts";
+import { checkOverride, costPlanNow, endedOverrides, ledgerRead, overrideAllowed, recordOverride, spendOverride } from "./cost-gate.ts";
+import { SpendLedger } from "../../../p2/ledger.ts";
 import { OverrideStart, type OverrideRef } from "../../contracts/cost-check.ts";
 import { paidRetryAllowed, paidRunAllowed, paidRunsOf } from "./rounds.ts";
 
@@ -466,9 +467,15 @@ export class Ai implements OnModuleInit {
     if (spent.length) fail(`${spent.length} form${spent.length > 1 ? "s have" : " has"} used ${spent.length > 1 ? "their" : "its"} ${MAX_PAID_ATTEMPTS_PER_FORM} paid AI attempts (${MAX_ATTEMPTS} per run); ${spent.length > 1 ? "they need" : "it needs"} a person, not another paid retry.`);
     const worst = round(redo.reduce((a, j) => a + (j.mode === "LIVE" ? (worstEach.find((t) => t.attachmentId === j.attachmentId)?.worst_usd ?? RUN_CAP_USD) : 0), 0));
     const ledger = this.sources.ledger();
-    // A batch started with a Continue was allowed past the cap: its retry is held to the ceiling instead (the cap + 10%).
-    if (ov) { if (ledger.committed_usd + worst > OVERRIDE_CEILING_USD + 1e-9) fail(`Retrying could take spend to US$${(ledger.committed_usd + worst).toFixed(2)}, past the US$${OVERRIDE_CEILING_USD.toFixed(2)} a Continue may allow. The founder must raise the cap.`, HttpStatus.CONFLICT); }
-    else if (worst > ledger.remaining_usd) fail(`Retrying could cost up to US$${worst.toFixed(2)}, more than is left of the experiment cap.`);
+    if (ov) {
+      // #131 review M1: a retry of a Continue run fits what is left of the worst case the person accepted (every attempt
+      // of the run counts toward it); more needs a new look at the cost and a new Continue.
+      const room = ledgerRead(() => new SpendLedger(LEDGER_DIR).overrideRoomUsd(ov.id));
+      if (room === null || worst > room + 1e-9) fail(`This run has used its Continue: a retry could cost up to US$${worst.toFixed(2)}, and ${room === null ? "the Continue is not in the spend ledger" : `only US$${room.toFixed(2)} is left of the US$${(((batch!.plan as any).override?.worst_usd as number | undefined) ?? 0).toFixed(2)} the person accepted`}. Start the draft again to look at the cost and choose Continue again.`, HttpStatus.CONFLICT);
+      // #131 review m1: past the cap only when the Continue named it; then held to the ceiling (the cap + 10%).
+      const pastCap = (((batch!.plan as any).override?.limits ?? []) as string[]).includes("experiment");
+      if (pastCap ? ledger.committed_usd + worst > OVERRIDE_CEILING_USD + 1e-9 : worst > ledger.remaining_usd + 1e-9) fail(pastCap ? `Retrying could take spend to US$${(ledger.committed_usd + worst).toFixed(2)}, past the US$${OVERRIDE_CEILING_USD.toFixed(2)} a Continue may allow. The founder must raise the cap.` : `Retrying could cost up to US$${worst.toFixed(2)}, more than is left of the experiment cap.`, HttpStatus.CONFLICT);
+    } else if (worst > ledger.remaining_usd) fail(`Retrying could cost up to US$${worst.toFixed(2)}, more than is left of the experiment cap.`);
     let ids: string[] = [];
     try {
       // PR #36 review: a retried draft takes the same file lock and re-check as a launch, so it never queues a second

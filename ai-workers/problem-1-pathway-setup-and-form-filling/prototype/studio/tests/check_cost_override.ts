@@ -100,7 +100,13 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   await cancelOpen();
   const snapLedger = readFileSync(LEDGER, "utf8"); seed(140);
   r = await call("POST", `/ai/batches/${batch1}/retry`, {});
-  ok("C11.8 P-179 follow-up fail: past the US$132 ceiling that retry is refused in the founder's words (409), nothing queued", r.status === 409 && /founder must raise the cap/.test(msg(r)) && sql(`select count(*) from drafting_job where batch_id='${batch1}' and status='QUEUED'`) === "0", { status: r.status, m: msg(r) });
+  // #131 review m1: this Continue names "attempts" only, so its retry is held to the cap, not the ceiling.
+  ok("C11.8 P-179 follow-up fail: past the cap, a retry under a Continue that did not name the cap is refused (409, what is left of the cap), nothing queued", r.status === 409 && /more than is left of the experiment cap/.test(msg(r)) && sql(`select count(*) from drafting_job where batch_id='${batch1}' and status='QUEUED'`) === "0", { status: r.status, m: msg(r) });
+  writeFileSync(LEDGER, snapLedger);
+  // #131 review M1: the run already reserved the whole worst case the person accepted (its first run was sent): no retry.
+  appendFileSync(LEDGER, JSON.stringify({ type: "reserve", id: `run-o1#1#${Date.now()}`, run_id: "run-o1", attempt: 1, worst_usd: worst, caller: "paid", override_id: o1, at: new Date().toISOString() }) + "\n");
+  r = await call("POST", `/ai/batches/${batch1}/retry`, {});
+  ok("C11.8 #131 review M1 fail: once the run reserved the worst case its Continue accepted, a retry is refused up front (409, start again and Continue again), nothing queued (before: queued, ~3 runs per click)", r.status === 409 && /only US\$0\.00 is left of the US\$\d+\.\d\d the person accepted/.test(msg(r)) && sql(`select count(*) from drafting_job where batch_id='${batch1}' and status='QUEUED'`) === "0", { status: r.status, m: msg(r) });
   writeFileSync(LEDGER, snapLedger);
   const keptOverride = JSON.stringify(JSON.parse(sql(`select plan::text from ai_batch where id='${batch1}'`)).override);
   sql(`update ai_batch set plan = plan - 'override' where id='${batch1}'`);
