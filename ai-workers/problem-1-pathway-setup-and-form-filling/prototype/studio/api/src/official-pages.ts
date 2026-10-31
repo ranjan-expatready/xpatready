@@ -54,11 +54,17 @@ export class OfficialPagesService {
   async confirm(actor: Actor, combinationId: string, body: unknown) {
     const b = ConfirmPages.safeParse(body ?? {});
     if (!b.success) throw problem(400, "Not confirmed", b.error.issues[0]?.message ?? "Choose the page to confirm.");
-    const { workspaceId, c, sources, record } = await this.load(combinationId);
+    const { workspaceId, c, sources } = await this.load(combinationId);
     // N8 break m1: a retired combination is not set up any more, as every other write on it says.
     if (c.retiredAt) throw problem(409, "Retired", `"${c.label}" is retired: its official page is not changed. Restore it first.`);
     const page = sources.find((s) => s.id === b.data.attachmentId);
     if (!page) throw problem(400, "Not one of its pages", "That is not one of this combination's attached pages (an IRCC apply page or a guide page). Choose one of them.");
+    // N8 re-review 2: the stored record is read and replaced under a lock on the combination's row, so an author and the
+    // expert confirming at the same moment are decided one after the other (before: the author's write could replace the
+    // expert's choice it never saw).
+    return this.db.$transaction(async (tx) => {
+    await tx.$queryRawUnsafe(`select id from combination where id = $1::uuid for update`, combinationId);
+    const record = await tx.officialPagesRecord.findUnique({ where: { combinationId } });
     const held = record ? { attachmentId: record.attachmentId, confirmedBy: record.confirmedBy, confirmedAs: record.confirmedAs as Tier } : null;
     const item = confirmationOf(sources, page.id, held);
     if (!mayAct({ kind: item.kind, tier: item.tier }, { id: actor.id, duties: actor.duties as readonly string[] })) {
@@ -72,11 +78,12 @@ export class OfficialPagesService {
     // N8 break m2: the same page confirmed again by the same person on the same tier changes nothing and writes nothing.
     if (held && recordHolds(sources, held) && held.attachmentId === page.id && held.confirmedBy === actor.id && held.confirmedAs === item.tier) return { pages: { state: "confirmed" as const, by: held.confirmedBy, as: held.confirmedAs }, record, again: true };
     const data = { attachmentId: page.id, matches: item.matches, confirmedBy: actor.id, confirmedAs: item.tier, confirmedAt: new Date() };
-    const saved = await this.db.officialPagesRecord.upsert({ where: { combinationId }, create: { workspaceId, combinationId, ...data }, update: data });
+    const saved = await tx.officialPagesRecord.upsert({ where: { combinationId }, create: { workspaceId, combinationId, ...data }, update: data });
     // N8 break m3: a replaced confirmation is named (which page, who).
     const before = held ? sources.find((s) => s.id === held.attachmentId)?.title ?? "a page no longer attached" : null;
-    await this.audit.log(workspaceId, actor.id, "confirmed", "official page", combinationId, `${actor.name} confirmed the official page of "${c.label}": ${page.title} (${item.tier === "author" ? "the rules found exactly this page; configuration author tier, sure" : `chosen by the immigration expert${item.matches === 1 ? " over the rules' one match" : item.matches ? ` among ${item.matches} matches` : "; the rules found no apply page"}; not sure`})${held ? `. It replaces ${before}, confirmed by ${held.confirmedBy} (${held.confirmedAs} tier)` : ""}`, { attachment_id: page.id, matches: item.matches, confirmed_as: item.tier, ...(held ? { replaced: held } : {}) }, combinationId);
+    await tx.auditEvent.create({ data: { workspaceId, actor: actor.id, action: "confirmed", entity: "official page", entityKey: combinationId, combinationId, summary: `${actor.name} confirmed the official page of "${c.label}": ${page.title} (${item.tier === "author" ? "the rules found exactly this page; configuration author tier, sure" : `chosen by the immigration expert${item.matches === 1 ? " over the rules' one match" : item.matches ? ` among ${item.matches} matches` : "; the rules found no apply page"}; not sure`})${held ? `. It replaces ${before}, confirmed by ${held.confirmedBy} (${held.confirmedAs} tier)` : ""}`.slice(0, 600), detail: { attachment_id: page.id, matches: item.matches, confirmed_as: item.tier, ...(held ? { replaced: held } : {}) } } });
     return { pages: { state: "confirmed" as const, by: saved.confirmedBy, as: saved.confirmedAs as Tier }, record: saved };
+    });
   }
 }
 

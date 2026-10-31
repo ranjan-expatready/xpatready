@@ -1,76 +1,83 @@
-# N8 (forms lane): F2 official-pages record and confirm, DV-d1-1, DV-d1-2: independent review (CHECK)
+# N8 (forms lane): F2 official-pages record and confirm, DV-d1-1, DV-d1-2: independent re-review (CHECK on the fix)
 
-Reviewer agent, 31 Oct. Commit **0810c25e** on `claude/forms-n8-devin-06zafk`, compared with `origin/main` 48c8fbef. Isolated copies `rvn8` and `rvn8b` on :4457, each with its own empty ledger. US$0: the ledger stayed empty, no live switch was set and no priced button was clicked. Sources used: BACKLOG row N8, `inbox/2026-10-30-devin-d1-walk.md`, `plan.md` (F2), `concept-draft.md` §4, §5, §8 and §11, and DECISIONS P-156 (2), P-161 (3) and P-176. Journey test: `journey-test-reviewer-2026-10-31-f2.md`, the one score for this check.
+Reviewer agent, 31 Oct. Commit **2c3ba2f8** on `claude/forms-n8-devin-06zafk` (PR #122), diff `48c8fbef..2c3ba2f8`. The earlier CHECK on 0810c25e is in git history (this file and `break-report-f2.md`). Isolated copies on :4457 only, each with its own empty ledger; all stopped and dropped at the end. US$0: no AI, no live switch, no priced button. Journey test: `journey-test-reviewer-2026-10-31-f2b.md`, **8 / 10**, the one score for this check.
 
 Verdict: Ship after fixes
 
-**Journey score 8 / 10.** It passes, and no criterion scored 0. The endpoint, the tier rule, the audit line and the two Devin fixes are right. Two Majors remain. The first: this change turns on a "Needs you · Confirm the checklist page" item, but no screen offers that action. The second: the configuration author can overwrite the immigration expert's choice of page.
+The fixes hold, and each has a check that fails without it. One Major remains, and it was already in 0810c25e. The rule counts every attached "Web page" as the IRCC apply page, but 10 of the 12 `web-pages/` files in the official manifest are single-form pages. That lets the author confirm a form's page as the checklist page on the "sure" tier.
 
 ## Checks run
-* `check_official_pages.ts`: **25/25**. `check_forms_s4_library_browser.cjs` on a fresh copy, with the web built from the commit: **73/73**, including the four N8 DV-d1 steps. This run rewrote the slice3 screenshots. They were left as they were.
-* Graph (`graph.mjs --check`): G1 0 · G2 0 · G3 2 · G4–G6 0. The two G3 routes are the old attachments routes, not this item's. Both new routes are reached by `check_official_pages.ts`, and neither is used by any page (`webUse: false`).
-* Server probes on wp.family ("With an LMIA"):
-  * 8 parallel author confirms → 8 × 201, **one row** (the upsert on unique `combination_id` holds) and **8 audit lines**.
-  * A PDF instructions id → 400. A random UUID as the approver → 400. `[]` as the body → 400 with zod's own words.
-  * GET as the case officer or the client → 403.
-  * `GET /catalogue` → 195 ms.
-* Browser walk:
-  * Forms library: "2 combinations" is a link-style button, Tab reaches it, and Enter opens the drawer. axe at 1024 px is clean. No page errors.
-  * As the configuration author, **Resume setup** on Visitor visa lands on `/c/…/forms?focus=pages%3Arecord`. That page has no Official pages block and no Confirm control. The header's "Next step" reads "Add 1 form from the library".
+* `check_official_pages.ts` **37/37**. `check_setup_checklist.ts` (fresh copy) **54/54**. `check_forms_s4_library_browser.cjs` (fresh copy, web built at the commit) **73/73**. `graph.mjs --check`: G1 0 · G2 0 · G3 2 (the old attachments routes) · G4–G6 0.
+* **Mutation run:** I reverted the seven code fixes at once (REVIEWS, the expert-hold line, `recordHolds` in the reader, the retired 409, the idempotent return, `readerOf`), and **9 checks failed**, at least one per fix: M1, M2 (unit and API), break M2 (unit and API), m1, m2, m6. The files were restored, and the code matches 2c3ba2f8.
+* Probes, browser walk and data checks: see the journey report.
 
-## Judgement on the deviation: proposal worked out on read, only confirmations stored. **Accepted.**
-The plan said to back-fill each combination as *proposed*. Without the back-fill, every reader sees the same states: no record, proposed (n matches), confirmed. There are fewer ways to go wrong. No proposal row can go stale when a source is attached or detached, and no back-fill migration has to be kept in step with later attachments. The concept's "Not built: step 1 reopened by a rules refresh" also holds: once confirmed, step 1 stays done while that page is attached, and it reopens only when the confirmed page goes (tested).
+## Each earlier finding at 2c3ba2f8
+| Finding | Holds? | Evidence |
+|---|---|---|
+| review M2 / break M1: the author overwrites the expert's choice | **Yes, for one person at a time** | 403 "only the immigration expert changes it", and the row stays `user-C|expert`. Under a race it does not hold: see issue 2 |
+| break M2: a "sure" confirmation stays done after a second apply page | Yes | `recordHolds` (`engine/official-pages.ts:23`). The API check shows proposed, 2 matches, `choose_pages` |
+| review M1 / break M3: Needs you on an action no screen offers | **Yes for Needs you.** Resume setup is still open (issue 3) | Author and expert Needs you = 0 on the sample (chip "Needs you 0"). Resume setup on Visitor visa lands on `/forms?focus=pages%3Arecord` |
+| m1: confirm on a retired combination | Yes | 409 "is retired … Restore it first" |
+| m2: re-confirming writes again | Yes | Same page, same person, same tier: `again: true` and no audit line. 10 parallel first confirms gave 1 row and 1 audit line |
+| m3: the audit does not say what it replaced | Yes | "It replaces …, confirmed by user-A (author tier)". `replaced` is in the details |
+| m4: orphaned record on an approved delete | Yes, but **no check** | Confirmed fs.outside, deleted it, user-B approved: combination 0 rows, record 0 rows. No test asserts it (issue 5) |
+| m5: refusal text contradicts itself and shows P-176 | Yes | One plain reason, no decision code (checked by the test) |
+| m6: case person gets the configuration explanation | Yes | Client gets 403 "Not for case people" (`readerOf`) |
+| m7: `[]` body | Yes | 400 "Send the page to confirm as { attachmentId }." |
+| review m1: no foreign key | Answered by deletion in `lifecycle.ts:421` instead of an FK | Acceptable: there are only two delete paths (demo reset and the approved delete), and both now remove the row |
 
-The cost: there is no stored "date checked / proposed by rules" (concept §1 Links). `confirmedAt` and `matches` (stored at confirmation time) cover the audit side. **For the Lead:** record this as an agreed deviation in `plan.md`, which still says "back-fill".
-
-## Judgement on the matching rule. **Accepted, with one watch point.**
-* **"Web page" counts as the one apply page.** This attachment kind is set only for recognised files from the official manifest's `web-pages/` folder (`api/src/sources.ts:36,116`). Any other upload becomes "Unrecognised file". So a match is in practice "a canada.ca page" (P-176).
-* **"Instructions" HTML can be chosen.** Guide pages are canada.ca guide editions linked from the library (`api/src/guide-sources.ts:24`). Choosing one is always on the expert's tier (`engine/official-pages.ts:31`), which is P-176's "Choose another".
-* **PDFs are not pages.** That is right: an office's instructions PDF is not a page.
-* **Watch point:** the rule trusts the kind and not the page's role. A future `web-pages/` capture that is not an apply page (for example a processing-times page) would become a second "match" and send the item to the expert. That is the safe direction, so this is not a finding.
+## Judgement on s1 (the confirmed page is "the checklist page"; Document checklist PDFs are not checked). **Accepted, with a condition.**
+* **Why it is acceptable:** the step's own words are "Confirm the checklist page". The step 1 tooltip names "IRCC's apply page and document checklist". On canada.ca, the apply or forms-and-documents page is where the document checklist is listed. So one confirmed IRCC page is a reasonable reading of concept §4 step 1, and "at least one checklist" needs no separate rule.
+* **Condition 1:** the deviation must be written down. The PR body at head 2c3ba2f8 does not yet state it, and neither does `plan.md` or `challenge.md`. The previous review asked for that.
+* **Condition 2:** the reading holds only if "the checklist page" is a page that carries a checklist. A single-form page does not, which is why issue 1 is a Major and not a watch point.
 
 ## D1–D20 (1–5)
 | D | Score | Evidence |
 |---|---|---|
-| D1 Requirement fit | 3 | F2 as asked: record, tier, `mayAct` imported, 403 in words. DV-d1-1 and DV-d1-2 fixed. Step 1 becomes actionable with no screen to act on (M1). The concept's done rule asks for "an apply page and at least one checklist", but the record holds one page (s1) |
-| D2 Data integrity | 3 | One row per combination under a race. 400 for a page of another combination. The author can overwrite the expert's record (M2). No foreign key to the combination (m1) |
-| D3 Reuse | 5 | Uses the checklist's own `mayAct` and `OfficialPages` type. One reader, `officialPagesOf`, for the catalogue, the summary and GET |
-| D4 Rule integrity | 3 | Tier per P-176 (one match → author, anything else → expert). The tier is not kept against later overwrites (M2) |
-| D5 Stability | 4 | Double and parallel confirms are safe. Detaching the page reopens step 1. A demo reset clears the table. Re-confirming is not idempotent: it writes a new audit line and moves `confirmedAt` (m2) |
-| D6 Freshness and governance | 4 | Who, which tier, which page, how many matches and when are stored and audited. The audit line says "sure / not sure" |
-| D7 AI trust | 5 | No AI on this path (P-156 (2): rules propose, a person confirms) |
-| D8 Orientation | 4 | Unchanged. The landing URL carries `focus=pages:record`, but nothing on the page answers it (M1) |
-| D9 Flow | 2 | Needs you and Resume setup point to "Confirm the checklist page", which cannot be done on screen. The header's Next step names something else (M1) |
-| D10 Language | 4 | The 403 and 400 messages say who confirms and why (P-176). A `[]` body gets "Invalid input: expected object, received array" (m3) |
-| D11 Feedback | 3 | The checklist shows step 1 done after a confirmation. There is no on-screen feedback, because there is no on-screen action (M1) |
-| D12 Visual | 4 | The Used-by count reads as a link, the same as Number, with no strike-through look (`02-list-1440.png`) |
-| D13 Accessibility | 4 | axe clean, including the loading state (`role="status"`, `aria-busy`). Keyboard reaches the count and Enter opens the drawer |
-| D14 Team look | 4 | `text-text-link` and the existing focus ring. No new component |
-| D15 Speed | 4 | Two batched queries for all combinations (`official-pages.ts:23-26`). Catalogue 195 ms on the sample |
-| D16 Testability | 4 | Each rule has a pass and a fail case (tier, duty, foreign page, missing page, reset). No test covers an overwrite of a stored expert choice (M2) |
+| D1 Requirement fit | 4 | F2 record, tier, 403s and Devin fixes done. s1 accepted, but the rule takes form pages as apply pages (1) |
+| D2 Data integrity | 3 | Expert hold, idempotency, retired, delete cleanup. A race still loses the expert's choice (2). A form page is stored as "sure" (1) |
+| D3 Reuse | 5 | `mayAct`, `readerOf`, one reader `officialPagesOf`. `recordHolds` is shared by the reader and the writer |
+| D4 Rule integrity | 3 | P-176 is held one request at a time. It is broken by the apply-page rule (1) and under concurrency (2) |
+| D5 Stability | 4 | Parallel identical confirms: 1 row, 1 audit line. Detaching a page reopens the step. Reset clears the table |
+| D6 Freshness and governance | 4 | The audit names what is replaced. The reset inventory leaves the table out (4) |
+| D7 AI trust | 5 | No AI on this path |
+| D8 Orientation | 4 | No change. The card's Resume setup lands on the Forms tab |
+| D9 Flow | 3 | No dead Needs you any more. Resume setup on 4 of 6 sample combinations targets step 1, which no screen offers (3) |
+| D10 Language | 5 | Every 400, 403 and 409 is in plain words, with no codes |
+| D11 Feedback | 3 | Step 1 shows done after an API confirm. There is no on-screen action yet (slice C) |
+| D12 Visual | 4 | Used-by count is a link-style button (73/73 suite, screenshots) |
+| D13 Accessibility | 4 | axe clean on Programs at 1440 and 1024 as author and expert, and on the library. Keyboard Enter on Resume setup works. Focus lands on `<body>` |
+| D14 Team look | 4 | Unchanged components |
+| D15 Speed | 4 | Programs about 0.65–1.0 s to network idle. Confirm well under 1 s |
+| D16 Testability | 4 | A failing check per fix (mutation run). None for m4, the race, or a form page as a match |
 | D17 First use | – | Simulated only |
-| D18 Provenance | 4 | The audit says the rules found the page, or the expert chose it over n matches |
-| D19 Capability closure | 2 | Step 1 can be completed only through the API (P-33). No screen closes it (M1) |
+| D18 Provenance | 4 | Who, tier, page, matches and the replaced record. "Sure" can be wrong (1) |
+| D19 Capability closure | 3 | Step 1 closes only through the API until slice C. Needs you no longer claims otherwise |
 | D20 Wow | – | Simulated only |
 
 ## Issues, ranked
-1. **Must · Major (M1): Needs you and Resume setup point to an action no screen offers.**
-   * **What happens:** on main without this change, step 1 was "no record" and showed no item. With it, Visitor visa shows the author **Needs you · Confirm the checklist page**. Super visa and Study permit show the expert **Needs you · Choose the checklist page**. **Resume setup** lands on Forms `?focus=pages:record`, where there is no pages block and no Confirm or Choose control, and the header's Next step says "Add 1 form from the library". The cause is in `engine/setup-checklist.ts`: `confirm_pages` and `choose_pages` are in `REVIEWS` (line 49), and step 1 opens on Forms (`contracts/setup-checklist.ts:12`).
-   * **Precedent:** this is the class of the card CHECK's M2, which the Lead fixed by holding `confirm_people` out of `REVIEWS` until a screen offers it.
-   * **Fix:** do the same for `confirm_pages` and `choose_pages`, keeping step 1 open, until the "Before forms" block lands (slice B/C). Add a pass/fail step: no Needs you for a pages item while no screen offers it. Alternatively, the Lead records the gap as accepted until slice C.
-2. **Must · Major (M2): the author can overwrite the immigration expert's choice.**
-   * **Repro:** the expert chooses the Guide 5487 page over the rules' one match (201, `expert`). The author then confirms the match: 201, and the row becomes `user-A|author`. The expert's decision is silently replaced on a lower tier.
-   * **Cause:** `confirmationOf` (`engine/official-pages.ts:31`) ignores the stored record, and `confirm` upserts over it (`api/src/official-pages.ts:60-67`).
-   * **Why it matters:** P-176 makes "the rules' match passed over" the expert's call, and P-156 (2) says "a person confirms once".
-   * **Fix:** when a confirmed record stands on the expert tier (or names a different page), any new confirmation is the expert's (`choose_pages`, expert tier). Add a pass case and a fail case.
-3. **Should (s1): the done rule is narrower than the concept.** Concept §4, step 1: "the record has an apply page and at least one checklist". The record holds one page, and attached "Document checklist" files are not read. Either state in `challenge.md` that the confirmed IRCC page is the checklist page (the words already say "Confirm the checklist page"), or check for a checklist as well.
-4. **Should (m1): no foreign key.** `OfficialPagesRecord` has no relation to `Combination` with `onDelete: Cascade` (`prisma/schema.prisma:383`). When an approved delete removes a never-released combination (`api/src/lifecycle.ts:421`), its row is orphaned. Other tables use the cascade relation. Because the migration only adds a table, adding the foreign key now is free.
-5. **Should (m2): re-confirmation is not idempotent.** Confirming the same page again by the same tier writes a new audit line and moves `confirmedAt`: 8 lines for 8 identical clicks. Return the stored record unchanged when nothing differs.
-6. **Should (m3): one 400 is not in plain words.** A non-object body gets zod's default text. Give `ConfirmPages` a root error ("Choose the page to confirm.").
+1. **Must · Major: a single-form page counts as the IRCC apply page, so the author confirms it "sure".**
+   * **Where:** `engine/official-pages.ts:10,18`. Every `web-pages/` manifest file becomes kind "Web page" (`api/src/sources.ts:36`), and the manifest holds `page-imm1295.html`, `page-imm5257.html` and 8 more form pages.
+   * **Repro:** upload `official-sources/ircc/web-pages/page-imm5257.html` to Study permit through the product's attach route. GET gives `proposed, 1 match`, "IMM5257 form page [match]". The author's confirm returns 201 and is audited "the rules found exactly this page; configuration author tier, sure". Step 1 is `done`. A visitor-visa form page is now Study permit's checklist page on the author's tier, against P-176.
+   * **The other direction:** attaching a form page next to a real apply page reopens a confirmed step 1 as the expert's choice (`recordHolds`).
+   * **Fix:** count as apply pages only the manifest's package and forms-and-documents pages (by manifest path or edition role), and keep form pages as candidates for the expert. Add a fail check: one form page attached → `choose_pages`, expert tier.
+   * Devin's PR comment raises the same point.
+2. **Should · Minor: two people at once still lose the expert's choice.**
+   * **Where:** the guard reads `held` (`api/src/official-pages.ts:62`) and then upserts outside a transaction (`:75`).
+   * **Repro:** author confirms M while the expert chooses G, in parallel, from no record. Over 12 rounds both got 201 in 11, and the row ended `user-A|author` (the expert's G lost) in 5.
+   * **Fix:** a conditional write, for example `updateMany` keyed on the held `confirmedAt` or `confirmedAs`, with 409 "changed meanwhile, reload", or a transaction with a row lock.
+3. **Should · Minor (Lead to accept or fix): Resume setup still targets step 1.**
+   * `setup.next` is still "Official pages: Confirm the checklist page" → `/forms?focus=pages%3Arecord` for Visitor visa, Super visa and two others. Nothing on the web reads `focus`, and the header's Next step names "Add 1 form from the library".
+   * The author is not stuck, because the Forms tab is where step 3 works anyway. The fix commit follows the `confirm_people` precedent ("counts in Next").
+   * **Fix:** the Lead records this as accepted until slice C, or skip held-back items in `next`.
+4. **Should · Minor: the reset inventory leaves out the new table.**
+   * **Where:** `api/src/demo.ts:129` `rows` does not count `officialPagesRecord`, so `removed_rows` under-reports by one per confirmation.
+   * **Fix:** add the row count. Devin's PR comment raises the same point.
+5. **Should · Minor: m4 has no check.**
+   * `lifecycle.ts:421` works (verified by hand), but no test asserts that an approved delete removes the record, so removing the line goes unnoticed.
+6. **Should: write s1 down** in the PR or `plan.md`, as judged above.
 
 ## Could not check
-* An intended user's unaided walk (D17, D20).
-* A real screen reader.
-* 200 % zoom and keyboard-only on the step 1 action, because no screen offers it.
-* The Overview strip, which is slice B.
-* `check_setup_checklist`, `check_screen01_*`: the builder's counts are in the commit message; I did not re-run them.
+* An intended user's unaided walk (D17, D20), and a real screen reader.
+* 200 % zoom on a step 1 control, because there is none until slice C.
+* `check_screen01_*`: the counts are the builder's; I did not re-run them.

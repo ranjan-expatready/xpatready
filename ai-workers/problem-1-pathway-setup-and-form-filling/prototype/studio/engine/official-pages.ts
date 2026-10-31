@@ -6,8 +6,12 @@
 import type { OfficialPages } from "./setup-checklist.ts";
 import type { ItemKind, Tier } from "../contracts/setup-checklist.ts";
 
-/** What the rules match: an IRCC apply page (application package or forms-and-documents page). */
+/** What the rules match: an IRCC apply page (an application package or a forms-and-documents page): an official "Web
+ *  page" that is not a single form's page. The official manifest labels each single-form page "<form> form page"
+ *  (official-sources/ircc/manifest.json: 10 of its 12 web pages); N8 re-review M1: those are no apply page, so they are
+ *  never the rules' match (an expert may still choose one). */
 export const APPLY_PAGE_KINDS = ["Web page"] as const;
+export const isFormPage = (s: Pick<PageSource, "title" | "file">) => /\bform page$/i.test(s.title.trim()) || /^page-imm/i.test(s.file);
 /** What a person may choose as the official page: an apply page, or a guide's web page (kind Instructions, an HTML file;
  *  an office's PDF instructions are not a page). */
 export const PAGE_KINDS = ["Web page", "Instructions"] as const;
@@ -15,8 +19,8 @@ export const PAGE_KINDS = ["Web page", "Instructions"] as const;
 export type PageSource = { id: string; kind: string; title: string; file: string };
 export type PagesRecord = { attachmentId: string; confirmedBy: string; confirmedAs: Tier } | null;
 
-export const isApplyPage = (s: Pick<PageSource, "kind">) => (APPLY_PAGE_KINDS as readonly string[]).includes(s.kind);
-export const isPage = (s: Pick<PageSource, "kind" | "file">) => isApplyPage(s) || (s.kind === "Instructions" && /\.html?$/i.test(s.file));
+export const isApplyPage = (s: Pick<PageSource, "kind" | "title" | "file">) => (APPLY_PAGE_KINDS as readonly string[]).includes(s.kind) && !isFormPage(s);
+export const isPage = (s: Pick<PageSource, "kind" | "title" | "file">) => (APPLY_PAGE_KINDS as readonly string[]).includes(s.kind) || (s.kind === "Instructions" && /\.html?$/i.test(s.file));
 
 /** A stored confirmation that still holds: its page is attached and, for the author's tier ("sure"), the rules still find
  *  exactly that one page (N8 break M2: a second apply page attached later makes it the expert's choice again). */

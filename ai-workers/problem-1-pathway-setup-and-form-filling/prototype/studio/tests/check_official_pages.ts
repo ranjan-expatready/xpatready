@@ -28,6 +28,9 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   ok("C11.10 F2 pass: one apply page → proposed, 1 match (the author's to confirm)", one.state === "proposed" && one.matches === 1 && confirmationOf([web("a")], "a").tier === "author" && confirmationOf([web("a")], "a").kind === "confirm_pages");
   ok("C11.10 F2 fail: two apply pages → the expert chooses (choose_pages, expert tier)", confirmationOf([web("a"), web("b")], "a").tier === "expert" && confirmationOf([web("a"), web("b")], "a").kind === "choose_pages");
   ok("C11.10 F2 fail: the rules' one match passed over for another page → the expert's choice", confirmationOf([web("a"), { id: "g", kind: "Instructions", title: "Guide", file: "guide.html" }], "g").tier === "expert");
+  const formPage = { id: "fp", kind: "Web page", title: "IMM5257 form page", file: "page-imm5257.html" };
+  ok("C11.10 F2 N8 re-review M1 fail: a single form's page (\"… form page\") is no apply page: alone it is 0 matches, the expert's choice", officialPagesFrom([formPage], null).state === "proposed" && (officialPagesFrom([formPage], null) as { matches: number }).matches === 0 && confirmationOf([formPage], "fp").tier === "expert");
+  ok("C11.10 F2 N8 re-review M1 pass: an application package beside form pages is the one match (the author's)", confirmationOf([web("a"), formPage, { ...formPage, id: "fp2", title: "IMM5409 form page", file: "page-imm5409.html" }], "a").tier === "author");
   ok("C11.10 F2 pass: a confirmation counts while its page is attached", officialPagesFrom([web("a")], { attachmentId: "a", confirmedBy: "user-A", confirmedAs: "author" }).state === "confirmed");
   ok("C11.10 F2 N8 break M2 fail: an author's 'sure' confirmation stops holding once a second apply page is attached (the expert's choice again)", !recordHolds([web("a"), web("b")], { attachmentId: "a", confirmedBy: "user-A", confirmedAs: "author" }) && officialPagesFrom([web("a"), web("b")], { attachmentId: "a", confirmedBy: "user-A", confirmedAs: "author" }).state === "proposed");
   ok("C11.10 F2 N8 break M2 pass: the expert's choice still holds with two apply pages", officialPagesFrom([web("a"), web("b")], { attachmentId: "a", confirmedBy: "user-C", confirmedAs: "expert" }).state === "confirmed");
@@ -100,8 +103,32 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   r = await call("POST", `/combinations/${sp}/official-pages/confirm`, { attachmentId: spPage.id }, "user-C");
   ok("C11.10 F2 N8 break m1 fail: a retired combination's official page is not changed (409)", r.status === 409 && /retired/.test(msg(r)), { status: r.status, m: msg(r) });
   sql(`update combination set retired_at = null where id='${sp}'`);
+  // N8 re-review M1 (API): a single form's page attached to Study permit is not the rules' match: the author cannot confirm it.
+  sql(`delete from combination_official_pages where combination_id='${sp}'`); // the expert's earlier choice there is set aside
+  r = await call("POST", `/combinations/${sp}/attachments/sample`, { officialFile: "page-imm5257.html" });
+  const fpId = sql(`select id from source_attachment where combination_id='${sp}' and file_name='page-imm5257.html' limit 1`);
+  r = await call("GET", `/combinations/${sp}/official-pages`);
+  const rf = await call("POST", `/combinations/${sp}/official-pages/confirm`, { attachmentId: fpId }, "user-A");
+  ok("C11.10 F2 N8 re-review M1 fail (API): with only IMM 5257's form page attached, there is no match and the author's confirm is 403 (before: 201 'sure', step done)", !!fpId && r.body?.pages?.matches === 0 && rf.status === 403, { id: fpId, pages: r.body?.pages, status: rf.status, m: msg(rf) });
+  // N8 re-review 2: an author and the expert at the same moment: whichever runs first, the expert's choice is what stays.
+  let kept = 0;
+  for (let i = 0; i < 8; i++) {
+    sql(`delete from combination_official_pages where combination_id='${wp}'`);
+    await Promise.all([call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: match.id }, "user-A"), call("POST", `/combinations/${wp}/official-pages/confirm`, { attachmentId: other.id }, "user-C")]);
+    if (sql(`select confirmed_by || '|' || confirmed_as || '|' || attachment_id from combination_official_pages where combination_id='${wp}'`) === `user-C|expert|${other.id}`) kept++;
+  }
+  ok("C11.10 F2 N8 re-review 2 fail: in 8 rounds of the author and the expert confirming at once, the expert's choice stays every time (before: the author's write replaced it in some)", kept === 8, kept);
+  // N8 break m4: the approved delete of a never-released combination removes its record.
+  const fresh = sql(`select c.id from combination c where not exists (select 1 from config_release r where r.combination_id = c.id) and exists (select 1 from source_attachment a where a.combination_id = c.id and (a.kind = 'Web page' or (a.kind = 'Instructions' and a.file_name like '%.html'))) and c.id <> '${wp}' order by c.created_at limit 1`);
+  const fpg = (await call("GET", `/combinations/${fresh}/official-pages`)).body?.candidates?.[0]?.id;
+  await call("POST", `/combinations/${fresh}/official-pages/confirm`, { attachmentId: fpg }, "user-C");
+  const had = sql(`select count(*) from combination_official_pages where combination_id='${fresh}'`);
+  const prop = await call("DELETE", `/combinations/${fresh}`, { reason: "Not needed in this demo (check)" }, "user-A");
+  const chId = sql(`select id from library_change where kind='combination' and key='${fresh}' and status='WAITING' order by proposed_at desc limit 1`);
+  const appr = await call("POST", `/library/changes/${chId}/approve`, { note: "Agreed: never released" }, "user-B");
+  ok("C11.10 F2 N8 break m4 pass: the approved delete of a never-released combination removes its official-page record", !!fresh && had === "1" && prop.status < 300 && appr.status < 300 && sql(`select count(*) from combination where id='${fresh}'`) === "0" && sql(`select count(*) from combination_official_pages where combination_id='${fresh}'`) === "0", { fresh, had, prop: [prop.status, msg(prop)], appr: [appr.status, msg(appr)] });
   // A confirmed page removed from the combination: the record no longer counts.
-  sql(`delete from source_attachment where id='${match.id}'`);
+  sql(`delete from source_attachment where id=(select attachment_id from combination_official_pages where combination_id='${wp}')`);
   r = await call("GET", `/combinations/${wp}/official-pages`);
   ok("C11.10 F2 fail: once the confirmed page is no longer attached, step 1 is open again (never confirmed on a missing page)", r.body?.pages?.state === "proposed" && r.body.record === null, r.body?.pages);
   r = await call("GET", "/combinations/00000000-0000-0000-0000-000000000000/official-pages");
@@ -109,7 +136,7 @@ const msg = (r: Res) => String(r.body?.detail ?? r.body?.message ?? "");
   // A demo reset clears the records.
   const before = sql("select count(*) from combination_official_pages");
   r = await call("POST", "/demo/reset", { confirm: "RESET" });
-  ok("C11.10 F2 pass: a demo reset clears the confirmations", before === "2" && r.status < 300 && sql("select count(*) from combination_official_pages") === "0", { before, status: r.status, m: msg(r) });
+  ok("C11.10 F2 pass: a demo reset clears the confirmations", Number(before) >= 1 && r.status < 300 && sql("select count(*) from combination_official_pages") === "0", { before, status: r.status, m: msg(r) });
   await call("POST", "/demo/load");
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
