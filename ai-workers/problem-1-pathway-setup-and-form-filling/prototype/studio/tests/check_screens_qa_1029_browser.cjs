@@ -125,6 +125,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const versions = await p.locator("main table").last().innerText();
     step("QA-74: Released versions: no Fingerprint column and no hash; the fingerprint is in the version's tip", /^Version\s/.test(versions) && !/Fingerprint/.test(versions) && !/[0-9a-f]{16}/.test(versions) && /^Fingerprint \(SHA-256\): [0-9a-f]{64}$/.test(await p.locator("main table").last().locator("tbody td").first().getAttribute("title") ?? ""), versions.slice(0, 160));
     step("QA-74: Released versions: dates in the one format (no \"10/29/2026, 8:34:03 PM\")", !/\d+\/\d+\/\d{4}/.test(versions), versions.slice(0, 160));
+    // #118 review Minor 3: step 3 said "Release 2" while the table said "v1"; both now name the version and its Release.
+    const card3 = /Last released: version (\d+), in Release (\d+)/.exec(rr), row1 = /v(\d+) · Release (\d+)/.exec(versions);
+    step("Review and release (#118 Minor 3): step 3 and the Released versions table name the same version and the same Release", !!card3 && !!row1 && card3[1] === row1[1] && card3[2] === row1[2], `${card3?.[0]} | ${row1?.[0]}`);
     await axe("Review and release (released)"); await p.screenshot({ path: path.join(SHOTS, "review-released-1440.png"), fullPage: true });
 
     // QA-48: a retired combination is found under the Retired chip (card v4, P-180), and the counts line says it is hidden
