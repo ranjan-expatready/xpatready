@@ -92,3 +92,27 @@ as the caller asked for one short file.
 **Verdict: Block** (commit e260a098). To fix:
 1. Major 1: make the date-of-birth assertion name IMM 1295 in the question's `why`, so that M1 fails it.
 2. Minor 2 (should): correct the comment on test lines 45–46.
+
+## Re-review: commit f8c37bee
+Reviewer: independent. Diff `e260a098..f8c37bee`. The test changes 8 lines; this review file is added.
+
+Run from the worktree `/tmp/wt-c18-age` on its own copy, :4447, database `xr_studio_screens_rev` (fresh start).
+
+**Results:**
+- Unchanged code: 12/12, run twice.
+- M1, the age gate stops asking the date of birth (render.ts:96): 11/12. The "asks the principal's date of birth because
+  it decides IMM 1295" step fails. Major 1 is closed.
+- M3, the age gate off entirely: 7/12.
+- The engine was restored after each mutation.
+
+**The other findings:**
+- Minor 2 is closed. The comment now gives the real reason: the placement is collected from a verified document
+  (`isClientField`).
+- Minor 3 (clean-up skipped if the check throws) is left as is. That is accepted: it is harmless on a fresh copy and
+  is listed in the PR.
+
+**New note (not a finding):** the question's `why` lists only the first three things the question decides
+(render.ts:223, `slice(0, 3)`). If more forms come to depend on the date of birth, the check could fail even though
+the product is right. It cannot pass when the product is wrong, so it is safe.
+
+**Verdict: Approve** (commit f8c37bee). No Blocker or Major is open.
