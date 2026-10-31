@@ -87,6 +87,15 @@ const MARK = { done: "✓", next: "●", todo: "○", ai: "◐", waiting: "⧗" 
   // ======================================================== the card's Resume on the people step
   let target = null;
   for (const r of started) { const c = await setupOf(r.combinationId); if (c?.next?.step === "people") { target = { r, c }; break; } }
+  // Since N8 (#122) step 1 waits for its checklist page to be confirmed, so on the sample every started combination's
+  // next step is Official pages: confirm the matching page on one (as the author, as check_official_pages does).
+  for (const r of started) {
+    if (target) break;
+    const op = (await api(`/combinations/${r.combinationId}/official-pages`)).body;
+    const match = op?.candidates?.find((x) => x.match);
+    if (!match || (await api(`/combinations/${r.combinationId}/official-pages/confirm`, { method: "POST", data: { attachmentId: match.id } })).status >= 300) continue;
+    const c = await setupOf(r.combinationId); if (c?.next?.step === "people") target = { r, c };
+  }
   if (!target) {
     const ns = rows.find((r) => !r.combinationId && !r.retired);
     const made = ns ? await api("/combinations", { method: "POST", data: { nodeKey: ns.nodeKey } }) : null;
