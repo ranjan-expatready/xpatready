@@ -15,6 +15,7 @@ import { RECHECK, WHY } from "../../contracts/lifecycle.ts";
 /** The entity an audit line names for a library change (the same on every line about it). */
 const entityOf = (kind: string) => (kind === "structure_node" ? "structure" : kind === "library_form" ? "form" : "combination");
 import { formUses, hasApprovedFile } from "./form-uses.ts";
+import { rememberDeletion } from "./library-deletions.ts";
 import { newestEdition } from "../../engine/programs.ts";
 import { acceptsOf, allowedChannels, lineOf, notAcceptedWords, notNeededWords, type AcceptRecord } from "../../engine/channels.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
@@ -444,6 +445,8 @@ export class Lifecycle {
         const def = await tx.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: c.key }, include: { editions: { select: { sha256: true } } } });
         if (def && !(await tx.combinationForm.count({ where: { govFormDefId: def.id } })) && !(await hasApprovedFile(tx, c.workspaceId, def.editions.map((e) => e.sha256).filter((x): x is string => !!x)))) {
           await tx.govFormDef.delete({ where: { id: def.id } });
+          // X5 slice c (the tech lead on #138): remembered, so a later fill from IRCC's forms list does not list it again.
+          await rememberDeletion(tx, c.workspaceId, c.key, actor.id, c.id);
         } else {
           // Break M1: never report a delete that did not happen. It is handed back with the reason.
           await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RETURNED", decisionNote: "Not deleted: a combination still has a line for this form (perhaps retired), or its file is approved. Retire it instead." } });
