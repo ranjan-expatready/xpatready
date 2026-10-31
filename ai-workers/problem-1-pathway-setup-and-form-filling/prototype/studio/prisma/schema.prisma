@@ -508,6 +508,9 @@ model CombinationForm {
   /// (contracts/workspace.ts SIGNED_BY). Both Sample until the immigration expert confirms.
   minAge        Int?             @map("min_age")
   signedBy      String?          @map("signed_by")
+  /// C1.8 (Screen 03 concept, "Who and copies"): how many copies of this form each person it names files, 1 to 9
+  /// (database check). Default 1, today's behaviour. Sample until the immigration expert confirms.
+  copies        Int              @default(1)
   /// S4: the form-finder run that attached this line (AI_FOUND), for "Picked by AI" and its Undo.
   finderBatchId String?          @map("finder_batch_id") @db.Uuid
   updatedBy     String           @map("updated_by")
