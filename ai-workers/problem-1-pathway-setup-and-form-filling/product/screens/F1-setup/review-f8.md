@@ -58,3 +58,21 @@ Results: axe WCAG 2.2 A/AA found 0 violations on Overview, Review, To review and
 Not checked: a keyboard-only walk and a screen reader. The 400 px check covered layout only, not 200 % zoom. D17/D20 stay with the founder.
 
 **Verdict: Block** on commit ee4d13b0. Fix M1 (missing list says it once, with the right step) and M2 (check_screen01_rules green), then re-request review.
+
+## Re-check of f6258cb4 (reviewer, 31 Oct)
+
+Fresh copy `screens_rev4` on :4449, web rebuilt from the worktree, sample loaded. US$0.
+
+* **Fix:** the rule moved out of `validate()` into `emptyProblem()` in `api/src/studio.ts`. It is added in `StudioService.problems()` (`where: "Release"`, empty `item`), which submit, approve, `releaseRows` (the release page and pack release) and the Review tab all read. `engine/validate.ts` is back to main.
+* **M1 fixed.** On the Overview, Super visa lists 2 lines ("2 forms attached as sources, 0 set up." and "No questions yet for …") under one line, "Next step for all of these: Add 1 form from the library". There is no filing line and no "Nothing to release" line (`/tmp/rev-f8/overview-1024.png`). The check now asserts this (the "F8 (M1)" line).
+* **M2 fixed.** `check_screen01_rules` passes 67/67.
+* **Review and release tab:** says it once, as "Release · Nothing to release yet: …". Submit is disabled. The draft bar and To review do not mention it.
+* `check_f8_empty_release` passes 12/12. It calls `emptyProblem` directly, and the API refusals (400 at submit, 409 at approve, 0 releases) prove `problems()` uses it. Removing either part makes the check fail.
+* **Browser:** at 400, 1024 and 1440 px, axe found 0 violations, nothing scrolls sideways and the console has no errors. Pages load in 0.7 to 1.6 s.
+* **PR #113:** still unaffected (it skips combinations with no forms before submit).
+* **Should, not blocking.** On the release page (`programs.ts:347`), a held row's reason comes from `validate()`, which no longer has this rule. An empty combination that has sections or rules but no forms or documents is therefore held with the review-gate words ("not submitted …") instead of "Nothing to release yet". The server still refuses it.
+* **Minor, from before this change.** The Overview's "Rules and checks" card shows "1 problem to fix" in red for a release problem. The Review tab says "22 draft changes" while the draft bar says "No unreleased changes" for the same row.
+
+Journey score after the fix: **9.5/10**. Plain words and visual quality are now 1, and accessibility and sizes stays 1. Next step stays at ½ because of the release-page wording above.
+
+**Verdict: Approve** for commit f6258cb4.
