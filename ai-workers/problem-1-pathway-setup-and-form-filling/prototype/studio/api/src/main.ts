@@ -78,9 +78,8 @@ class StudioController {
 @Controller("api")
 class SourcesController {
   constructor(@Inject(Sources) private readonly s: Sources, @Inject(Fill) private readonly f: Fill, @Inject(Ai) private readonly ai: Ai, @Inject(Intake) private readonly intake: Intake) {}
-  // A combination's sources go through the one intake (P-51), one or many files.
-  @Post("combinations/:id/attachments") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_BYTES, files: MAX_FILES } }))
-  upload(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: any[]) { return this.intake.intake(actorOf(a), files, id); }
+  // A combination's files are uploaded through the one intake, POST /intake with combinationId (P-51, P-103); the second
+  // door POST /combinations/:id/attachments was removed (DV-bb-8).
   @Post("combinations/:id/attachments/sample") sample(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.intake.sample(actorOf(a), id, b.officialFile); }
   @Get("combinations/:id/attachments") list(@Param("id") id: string) { return this.s.attachmentsOf(id); }
   // dotfiles "allow" (QA-4): stored paths are the server's own, and a lane copy under .claude/worktrees/ made every download a 404.

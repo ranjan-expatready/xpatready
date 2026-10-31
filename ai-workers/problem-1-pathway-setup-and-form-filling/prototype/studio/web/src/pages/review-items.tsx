@@ -94,7 +94,7 @@ export function LibraryChangePage() {
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
       </div>
       <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span> (generated from the group and the name)</p></details>
-      {x.status === "RETURNED" && (mine || me.has("author")) ? (LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
+      {x.status === "RETURNED" && (mine || me.has("author")) ? (LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} mine={mine} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
         : <>
           {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
@@ -123,7 +123,7 @@ function FormUses({ code, changeId }: { code: string; changeId: string }) {
 
 /** QA-68: a returned delete, retire or restore is sent again with what changed only (no name or meaning to edit), or withdrawn. */
 const LIFECYCLE_KINDS = ["structure_node", "combination", "library_form"];
-function SendAgain({ change }: { change: LibraryChangeDetail }) {
+function SendAgain({ change, mine }: { change: LibraryChangeDetail; mine: boolean }) {
   const nav = useNavigate();
   const [reason, setReason] = React.useState(""), [why, setWhy] = React.useState(""), [withdrawing, setWithdrawing] = React.useState(false);
   const kind = change.action as "DELETE" | "RETIRE" | "RESTORE";
@@ -134,7 +134,7 @@ function SendAgain({ change }: { change: LibraryChangeDetail }) {
       <h2 id="again-h" className="font-semibold">Send it again</h2>
       <label className="block text-sm">What you corrected<Textarea className="mt-1" value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} placeholder="So the second person can check it" /></label>
       <div className="flex justify-end"><Button busy={send.isPending} disabled={reason.trim().length < 3} onClick={() => send.mutate(undefined)}>Send again</Button></div>
-      {withdrawing ? (
+      {!mine ? <p className="border-t border-border pt-3 text-sm text-text-muted" data-withdraw-not-mine>Only {change.proposed_by ?? "the person who proposed it"} can withdraw it.</p> : withdrawing ? (
         <div className="flex flex-wrap items-end gap-2 border-t border-border pt-3" data-withdraw>
           <label className="flex-1 text-sm">Why withdraw it<Input className="mt-1" value={why} maxLength={300} onChange={(e) => setWhy(e.target.value)} /></label>
           <Button variant="destructive" busy={withdraw.isPending} disabled={why.trim().length < 3} onClick={() => withdraw.mutate(undefined)}>Withdraw it</Button>

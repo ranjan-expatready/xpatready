@@ -433,6 +433,8 @@ export class Lifecycle {
  *  released). Reached through POST /library/changes/:id/withdraw (library-changes.ts withdrawChange). */
 export async function withdrawLifecycle(db: Db, actor: Actor, c: LibraryChange, note?: string) {
   need(actor, "author");
+  // DV-bb-9: only the person who proposed a change withdraws it, as only they undo their own delete (Undo above).
+  if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can withdraw it. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to withdraw it.`);
   const why = (note ?? "").trim();
   if (why.length < 3 || why.length > 300) throw problem(400, "Say why", "Say why it is withdrawn (3 to 300 characters).");
   const done = await db.libraryChange.updateMany({ where: { id: c.id, status: { in: OPEN } }, data: { status: "WITHDRAWN", decidedBy: actor.id, decidedAt: new Date(), decisionNote: why } });
