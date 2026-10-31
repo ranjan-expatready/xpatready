@@ -1,6 +1,7 @@
 // S4 Form library and form finder contract, slice 1 (W1-06, P-123; challenge.md M2–M7, m1–m6). Shared by the API and the
 // web app; requests are parsed with these schemas on the server and refusals are RFC 9457 Problem Details.
 import { z } from "zod";
+import { CHANNEL_WORDS, CHANNELS, IRCC_ACCOUNTS, type Channel } from "./forms.ts";
 
 /** How the finder decides which forms apply: AI read live (paid, cost shown first), saved AI answers replayed (US$0), or
  *  rules only (forms printed on the page are listed, none attached: AI did not decide). */
@@ -27,6 +28,8 @@ export const FinderBody = z.object({
 export const FinderLaunchBody = FinderBody.extend({
   planSha256: z.string().regex(/^[0-9a-f]{64}$/, "Look at the plan first: its fingerprint is missing."),
   idempotencyKey: z.string().trim().min(8).max(120),
+  /** P-179: a person's Continue past a cost limit (POST /ai/overrides), used once by this launch. */
+  overrideId: z.string().trim().min(1).max(80).optional(),
 });
 
 /** POST /combinations/:id/forms: attach a library form by hand. */
@@ -49,14 +52,21 @@ export const LineVersionBody = z.object({ version: z.number().int().min(1).optio
 /** POST …/forms/undo: the change the person saw as "last" (409 when someone made a newer one; S5 ask). */
 export const UndoBody = z.object({ changeId: z.string().uuid().optional() });
 
-/** C11.18: what IRCC accepts for a form, set by a person with the canada.ca line it comes from, or a reason. */
-export const ACCEPTS_CHANNELS = ["PDF", "ONLINE", "PDF_OR_ONLINE"] as const;
-export const ACCEPTS_WORD: Record<(typeof ACCEPTS_CHANNELS)[number], string> = { PDF: "PDF upload", ONLINE: "Online", PDF_OR_ONLINE: "PDF upload · Online" };
+/** C11.18 as amended by P-143 (W1-10 slice 1, C-3): what IRCC accepts for a form, per IRCC account (or ANY: every
+ *  account), set by a person with the canada.ca line it comes from, or a reason. Not needed only for a named account (C-4). */
+export const ACCEPTS_ACCOUNTS = [...IRCC_ACCOUNTS, "ANY"] as const;
+export const acceptsWords = (channels: readonly string[] | null | undefined) => (channels?.length ? channels.map((c) => CHANNEL_WORDS[c as Channel] ?? c).join(" · ") : "Not set yet");
 export const AcceptsBody = z.object({
-  channels: z.enum(ACCEPTS_CHANNELS, { message: "Choose what IRCC accepts: PDF upload, Online, or both." }),
-  quote: z.string().trim().min(8, "Paste the canada.ca line (at least 8 characters), or give a reason instead.").max(400).optional(),
-  reason: z.string().trim().min(3, "Say why (3 to 300 characters).").max(300).optional(),
-}).refine((b) => !!b.quote || !!b.reason, { message: "Paste the canada.ca line this comes from, or say why.", path: ["quote"] });
+  account: z.enum(ACCEPTS_ACCOUNTS, { error: "Choose the IRCC account this is for, or any account." }).default("ANY"),
+  channels: z.array(z.enum(CHANNELS, { error: "Choose from Online, PDF upload, Paper and Not needed." }), { error: "Choose what IRCC accepts: Online, PDF upload, Paper, or Not needed." })
+    .min(1, "Choose at least one way IRCC accepts.").max(4).refine((x) => new Set(x).size === x.length, "Each way once."),
+  quote: z.string().trim().min(8, "Paste the canada.ca line (at least 8 characters), or give a reason instead.").max(400, "Paste only IRCC's sentence (at most 400 characters), not the whole page.").optional(),
+  reason: z.string().trim().min(3, "Say why (3 to 300 characters).").max(300, "Say why (3 to 300 characters).").optional(),
+}).refine((b) => !!b.quote || !!b.reason, { message: "Paste the canada.ca line this comes from, or say why.", path: ["quote"] })
+  .refine((b) => b.account !== "ANY" || !b.channels.includes("NOT_NEEDED"), { message: "Not needed is said for one IRCC account (the account that asks it itself), never for every account.", path: ["channels"] })
+  // Break M6: no account means paper filing, so the only way IRCC can accept a form "through" it is on paper.
+  .refine((b) => b.account !== "PAPER" || (b.channels.length === 1 && b.channels[0] === "PAPER"), { message: "No account (paper filing) files only on paper: choose Paper, or choose the IRCC account that accepts it another way.", path: ["channels"] })
+  .refine((b) => !b.channels.includes("NOT_NEEDED") || b.channels.length === 1, { message: "Not needed stands alone: the account asks the form itself, so it is not also filed another way.", path: ["channels"] });
 
 /** POST /library/forms/:code/retire|restore and DELETE /library/forms/:code: the P-116 lifecycle, a second person approves. */
 export const LifecycleReasonBody = z.object({ reason: z.string().trim().min(3, "Say why (3 to 300 characters).").max(300, "Say why (3 to 300 characters).") });

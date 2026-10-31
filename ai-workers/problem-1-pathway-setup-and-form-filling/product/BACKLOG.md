@@ -32,6 +32,7 @@ One queue for everything: **Now** (in order, being done), **Next** (in order, st
 | X9 | runtime | Open runtime bugs QA-76–78, QA-91, QA-99 (Critical: live retest in N10), QA-108, QA-112, QA-114–117 | qa/BUGS.md |
 | X10 | evidence (Mac) | W1-12: Adobe checks of the official PDFs for the 5 combinations (+1 Corporate Sample); E1b IMM 5409 check, F5 (static forms' page fields empty outside Adobe) and F6 (oath details in Validate) to forms, then IMM 5476 | WAVE-1 W1-12; evidence lane |
 | X11 | qa | M2 gate: content publisher walk on the six combinations, like a person (S8, W1-13); intended user for D17/D20 arranged by the founder (R-93) | WAVE-1 S8 |
+| X0 | tech lead | **Regroup this backlog into features (P-191)** after #111–#113 merge: Super Admin setup, then case officer, then client; each feature done when a person can do it on the demo; then walk the founder through `design/why-we-chose-2026-10-31.md` | P-191 |
 | X12 | tech lead | PQR/SQR boundary page against the team's modules (R-135, P-166); rule tracing check P-153; Devin D3 now, D1 after screens merges, D2 Mondays, D3 + D4 before the M2 gate; lane test databases dropped when idle (≈3.7 GB) | LEAD.md; REQUESTS |
 
 ## Later (after the M2 gate, in wave order)
