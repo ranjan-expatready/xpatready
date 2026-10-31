@@ -29,6 +29,12 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). The wa
 * Before pushing to a PR's branch, check that the PR is still open: a PR may have merged itself, and a later commit then never reaches `main`.
 * Base advice on all the history there is (every run, PR or session), never on one sample.
 * Before deleting a cache or tool, search the repository for paths into it.
+* One Mac runner (P-195): push to a PR only when it is ready; every push cancels its check and sends it to the back of the queue.
+
+## Handover (founder, 31 Oct)
+* **The team hands over together (P-198).** When the Lead or any builder reaches 50% of its context, the whole team changes at the next quiet moment: each builder pushes everything and writes a "Handover" comment on its open PR (done, next, open questions); the Lead rewrites `STATE.md` with each lane's next step and asks the founder to open a new chat and type `/lead`. The new Lead starts fresh builders from itself, each adopting its lane's open PRs, checks every old copy and branch for unpushed work, then archives the old sessions.
+* A builder session lasts one feature: when the feature's PRs have merged, archive it and start a fresh one for the next feature.
+* **Context, measured:** `get_usage` gives this chat's and every Mac session's exact share (31 Oct: Lead 30%, Mac runtime 14%; auto-summary only at 97%). Cloud builders write theirs on each PR update. Report all of them when the founder asks, with what to do. A builder also ends at its feature's end (fresh session for the next feature).
 
 ## Talking to the founder
 Plain business words, short. Say what changed and what you merged, what is visible on the demo, and at most three asks, each with a recommendation. Numbers (capabilities working, median start to merge, bugs after merge, AI spend) on demand. Write unasked only for a decision, a risk or a spend.
