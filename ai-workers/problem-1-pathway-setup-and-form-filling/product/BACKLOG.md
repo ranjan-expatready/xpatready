@@ -7,7 +7,6 @@ One queue for everything: **Now** (in order, being done), **Next** (in order, st
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
-| N0 | tech lead | **Blocker: GitHub refused every CI job (31 Oct, from about 06:15 UTC)** because the US$10 Actions budget was spent in one morning. P-195: PR checks and auto-merge move back to the Mac runner | the P-195 PR runs green on `xr-mac`; the waiting approved PRs re-run and merge by themselves | Actions annotations, 31 Oct |
 | N1 | forms | **Merge PR #112:** slice 1 channels (P-143), live AI off by default on every copy (P-175, QA-100), one shared spend ledger (QA-90), cost warning and recorded Continue (P-179, C11.8) | merged; :4400 on the new main; QA-90 and QA-100 retested by qa | PR #112; forms Handover at faf7fca9 |
 | N2 | screens | **Merge PR #111:** PR #108 review Minors | merged | PR #111 |
 | N3 | runtime | **Merge PR #113:** queue transaction fix, C10.1 configured checkpoint, C3.11 signed-scan lines, P-184 speed helper, S7 Reset + Load sample (six combinations, P-148) | synced with main; tech lead decides the four "Found while building" points in the runtime branch's c10.1 plan (screens/W1-reset-and-sample); merged | PR #113; runtime Handover 30 Oct |
@@ -24,6 +23,8 @@ One queue for everything: **Now** (in order, being done), **Next** (in order, st
 |---|---|---|---|
 | X1a | screens | **Bug: a combination with 0 forms and 0 documents can be submitted, signed off and approved** (the release rule in `studio.ts`; found by the runtime builder in #113 on three combinations) | c10.1-plan.md "Found while building" |
 | X9a | runtime | Sample: add one off-list file with a readable edition (IMM 5476, 2021 edition) so held-file approval can be shown; the validator's K1 message names a raw form-field path (`IMM_5707[0].page1[0]…`) instead of the field's label | c10.1-plan.md "Found while building" |
+| X8a | forms | `check_cost_warning_browser.cjs` waits 30 s for "Start live AI draft" to enable on the Forms tab (line 111) and timed out once on the Mac under load (#141, run 41185122197 attempt 1; passed on attempt 2): make the wait follow the page's own ready signal, not a fixed time | CI run 41185122197 |
+| X9b | runtime | #113 review Minors: m6 the "who signs" rule is written in both `render.ts` and `sources.ts` and they differ when a form's condition is on one person kind (one rule, one place); m7 a suite checks that the server refuses AI now with the fake launcher alone (the reviewer proved it by hand) | review-pr113-r2.md |
 | X1 | screens | C2: StepBadge and `?focus=` landing on Documents and Questionnaires; then C3 Overview strip | W1-setup-checklist plan |
 | X2 | screens | Linking combinations and copying a line (C1.3, C1.5) | screens queue (4) |
 | X3 | screens | S6 Shared library: one review queue, one Add in plain words (W1-09; P-120, P-121, P-149; recheck 2026-10-28 has 5 Majors to fold in; P-138 drafting on a click); code lists and shared condition (W1-16 part); QA-82 (question column shows the definition) | WAVE-1 S6, W1-09, W1-16 |
