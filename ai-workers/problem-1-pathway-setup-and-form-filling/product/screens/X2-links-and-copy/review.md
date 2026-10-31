@@ -54,3 +54,38 @@ Task completed 1 · next step obvious 1 · plain words 1 · feedback and state �
 The team's code and `sources/` are not in this copy. There is no running app, test, graph or axe run (documents only). A real screen reader was not used.
 
 **Verdict: Block** (commit 014b19cc). Fix: M1 (concept v3 still carries the superseded X2a design and the old BR-C1, BR-C2 and tests beside §3b), M2 (the DoR's "after F8" box is false against BACKLOG's order), M3 (the board lacks the "form retired, or retire open" outcome). S1 and the Minors can ride along. The leftovers in (a) go to the tech lead.
+
+## Re-review at c720529f (31 Oct 2026)
+
+I read the diff `014b19cc..c720529f` and the new `concept-draft.md`. I re-ran the board in Playwright Chromium at 390, 1024 and 1440 px, across all 8 states, the add → toast → Undo flow, and the dialog geometry.
+
+### Fixed
+* **M1 fixed.** The concept is now X2b only and consistent from top to bottom:
+  * no X2a, no P-59, and no "carried fact counts as asked";
+  * BR-C1 lists every add and remove outcome, and BR-C2 says what is copied (S1 fixed);
+  * BR-C3 covers one batch, one transaction and idempotency; BR-C4 covers batch Undo, its refusal, and that a released target is never undone;
+  * the §6 tests cover every outcome plus the retry and both Undo paths;
+  * §6b has no scaffolding;
+  * the board pointer is right, and §7 has no open questions.
+* **M2 fixed.** BACKLOG X2 says "Built after F8 (tech lead, 31 Oct)", so the DoR tick is now true.
+* **M3 fixed.** The copy-from dialog shows "Cannot: the form's retirement is open (IMM 5257 SCH1)", and the add preview has a retired row.
+* **The Minors are fixed:**
+  * there is an "Undo done" toast, and add → Undo → done works;
+  * every dialog has `aria-modal`;
+  * the "Letter of invitation" label matches its row;
+  * dialogs now open below the state bar (bar bottom 263 px, dialog top 275 px at 390);
+  * the dialog tables wrap at 390 px (`scrollWidth` 324 = `clientWidth` 324), so no column is hidden;
+  * C1.3 now says facts only;
+  * there is still no page sideways scroll in any state at 390, 1024 or 1440, Esc closes all four dialogs, and there are no page errors.
+
+### Still open (Minor, not blocking)
+* **n1:** the add preview's row "IMM 5476 is retired in the Form library" cannot happen per target. Retiring a form applies to the whole library, so every target would be "cannot", or the copy would not be offered at all. Drop that row, or make it a refusal for the whole dialog. The copy-from row already shows the outcome correctly.
+* **n2:** BACKLOG F1 still folds in "X2 (X2b only)" and C1.5, while line 37 orders screens F1 → F8 and the X2 row says "after F8". The records disagree slightly. The tech lead should say in F1 that X2b follows F8.
+* **The leftovers from (a)** (TAXONOMY:62, DEMO:8, lanes/screens.md:26,34, Screen 03 concept BR-12/13) go to the tech lead in the PR, as agreed.
+
+**Journey score (re-run, board only, simulated): 9/10, pass.**
+* Feedback and state is now 1 (Undo done is drawn).
+* Accessibility and screen sizes is now 1 (wrapping, `aria-modal`, labels fixed).
+* Correct data stays ½ because of n1. Speed stays ½ because a static board cannot show it.
+
+**Verdict: Approve** (commit c720529f). There are no open Blocker or Major findings.
