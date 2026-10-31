@@ -75,6 +75,9 @@ export class FormLibrary {
     const lifecyclePending = await this.db.libraryChange.findMany({ where: { workspaceId, kind: "library_form", status: { in: ["WAITING", "RETURNED", "APPROVED"] } }, select: { id: true, key: true, action: true, status: true, proposedBy: true } });
     const trails = await combinationTrails(this.db, workspaceId);
     const combos = (await this.db.combination.findMany({ where: { workspaceId, retiredAt: null }, select: { id: true, label: true } })).map((c) => ({ id: c.id, label: trails.get(c.id) ?? c.label })).sort((a, b) => a.label.localeCompare(b.label));
+    // X5 review M1: what makes a row more than plain, read once for the whole list.
+    const lineCodes = new Set((await this.db.combinationForm.findMany({ where: { workspaceId }, distinct: ["lineageKey"], select: { lineageKey: true } })).map((x) => x.lineageKey));
+    const releasedCodes = new Set((await this.db.$queryRaw<{ code: string }[]>`SELECT DISTINCT f->>'form_number' AS code FROM config_release r, jsonb_array_elements(COALESCE(r.snapshot->'forms', '[]'::jsonb)) f WHERE r.workspace_id = ${workspaceId}::uuid`).map((x) => x.code));
     const waitingAccepts = new Set((await this.db.libraryChange.findMany({ where: { workspaceId, kind: "form_accepts", status: { in: ["WAITING", "RETURNED"] } }, select: { key: true } })).map((x) => x.key));
     const rows = forms.map((f) => {
       const editions = f.editions.filter((e) => e.channel !== "ONLINE" && e.sha256 && approved.all.has(e.sha256));
@@ -89,24 +92,29 @@ export class FormLibrary {
       const needsOk = held.some((h) => h.code === f.formKey);
       // Lead 28 Oct (carried should): "Needs your OK" only when something waits for a person; a form with no file is "No file yet".
       // X5 (P156-2): a later read of IRCC's index that changed the date of a form with a file marks it newer, too.
-      const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 || (current && f.newerOnIndexAt) ? "newer_file" : current ? "ready" : "no_file";
+      // X5 break M3 / Devin: the index's mark is answered once the library holds an edition canada.ca dates at or after it.
+      const indexNewer = !!(current && f.newerOnIndexAt && !(current.canadaUpdated && f.indexDateModified && current.canadaUpdated >= f.indexDateModified.slice(0, 7)));
+      const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 || indexNewer ? "newer_file" : current ? "ready" : "no_file";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
         // P-143 (C-3): one record per IRCC account (ANY first); the column says them in words, one line per account.
         ...acceptsRow(current?.accepts ?? [], TYPE_OF(f.formKind, f.displayName) === "form"), accepts_waiting: waitingAccepts.has(f.formKey),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
         form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256 && a.kind === "Form")?.id ?? null : null,
-        used_by: using, status, listed_by_ircc: !!f.listedOnIndexAt, newer_on_index: !!(current && f.newerOnIndexAt && !current.newerFileSha256), lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", lifecycle_returned: pendingChange?.status === "RETURNED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
+        used_by: using, status, listed_by_ircc: !!f.listedOnIndexAt, newer_on_index: indexNewer && !current?.newerFileSha256, plain: !f.retiredAt && !f.editions.length && !lineCodes.has(f.formKey) && !releasedCodes.has(f.formKey) && !held.some((h) => h.code === f.formKey) && !pendingChange, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", lifecycle_returned: pendingChange?.status === "RETURNED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
     });
     // P-116 amended (28 Oct): one written action per row, decided by the one guard (formUses); greyed with its reason.
     // An earlier edition says what keeps it ("Kept by Release 2 of Visitor visa and 3 open cases"; P-51, never deleted).
-    const shaped = await Promise.all(rows.map(async ({ older_editions, retired, pending, ...r }) => ({ ...r,
-      action: rowActionOf(retired, await formUses(this.db, workspaceId, r.code), pending, actorId),
+    // X5 review M1 / break M4 (STANDARDS §9): a plain row (no file, no line, no release, nothing held or waiting) is
+    // nothing anyone uses, so its one action is Delete with no reason (rowActionOf on formUses' answer for it), worked out
+    // without formUses' nine queries per row: the list stays fast with IRCC's ~220 listed forms in it.
+    const shaped = await Promise.all(rows.map(async ({ older_editions, retired, pending, plain, ...r }) => ({ ...r,
+      action: plain ? { kind: "DELETE" as const, why: null, change_id: null } : rowActionOf(retired, await formUses(this.db, workspaceId, r.code), pending, actorId),
       older_editions: await Promise.all(older_editions.map(async (label) => ({ label, kept_by: await keptBy(this.db, workspaceId, label) }))) })));
     const term = q.q?.toLowerCase(), termCode = q.q ? normaliseCode(q.q).toLowerCase() : undefined;
     // S5's "Add a form from the library" (for=picker): forms a combination may use now, never retired or still waiting.
     const shown = shaped.filter((r) => (q.for !== "picker" || (r.status !== "retired" && !!r.edition)) && (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.code.toLowerCase().includes(termCode!) || r.title.toLowerCase().includes(term)));
     const count = (pred: (r: (typeof shaped)[number]) => boolean) => shaped.filter(pred).length;
-    return { rows: shown, counts: { all: shaped.length, form: count((r) => r.type === "form"), guide: count((r) => r.type === "guide"), checklist: count((r) => r.type === "checklist"), needs_ok: count((r) => r.status === "needs_ok"), newer_file: count((r) => r.status === "newer_file"), retired: count((r) => r.status === "retired") },
+    return { rows: shown, counts: { all: shaped.length, form: count((r) => r.type === "form"), guide: count((r) => r.type === "guide"), checklist: count((r) => r.type === "checklist"), needs_ok: count((r) => r.status === "needs_ok"), no_file: count((r) => r.status === "no_file"), ready: count((r) => r.status === "ready"), newer_file: count((r) => r.status === "newer_file"), retired: count((r) => r.status === "retired") },
       combinations: combos, sample_note: "Which forms a combination needs and what IRCC accepts are Sample until the immigration expert confirms." };
   }
 
@@ -149,27 +157,38 @@ export class FormLibrary {
     const workspaceId = await this.ws.id();
     let parsed: ReturnType<typeof parseFormsIndex>;
     try { parsed = parseFormsIndex((await this.canada.get(INDEX_URL, "html")).bytes.toString("utf8")); } catch (e) {
-      if (e instanceof CanadaError) throw problem(409, "IRCC's forms list could not be read", `${e.message} Nothing was added to the library.`);
-      throw e;
+      // X5 break m8: the recorded copies themselves missing is said in words too, never a server error.
+      throw problem(409, "IRCC's forms list could not be read", `${e instanceof CanadaError ? e.message : "The recorded copy of canada.ca's forms list could not be opened."} Nothing was added to the library.`);
     }
     if (!parsed.rows.length) throw problem(409, "IRCC's forms list could not be read", "The forms list page has no form rows (its layout may have changed). Nothing was added to the library.");
-    const defs = await this.db.govFormDef.findMany({ where: { workspaceId }, select: { formKey: true, indexDateModified: true, formPageUrl: true, editions: { select: { id: true }, take: 1 } } });
-    const plan = planIndexFill(parsed.rows, defs.map((d) => ({ formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: d.editions.length > 0, formPageUrl: d.formPageUrl })));
+    // X5 break M1: each number in the library's own spelling (contracts' normaliseCode, as every route and the finder use:
+    // "IMM 5373 B", not "IMM 5373B"), so a listed form is found, deleted and attached like any other.
+    const rows = parsed.rows.map((r) => ({ ...r, code: normaliseCode(r.code) }));
+    // X5 break m9: a file means an edition a combination may file from (an online-only screen map is no file).
+    const defs = await this.db.govFormDef.findMany({ where: { workspaceId }, select: { formKey: true, indexDateModified: true, formPageUrl: true, editions: { where: { channel: { not: "ONLINE" } }, select: { id: true }, take: 1 } } });
+    const plan = planIndexFill(rows, defs.map((d) => ({ formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: d.editions.length > 0, formPageUrl: d.formPageUrl })));
     const now = new Date();
-    await this.db.$transaction(async (tx) => {
-      if (plan.create.length) await tx.govFormDef.createMany({ data: plan.create.map((c) => ({ workspaceId, formKey: c.formKey, displayName: c.title, formKind: c.kind, formPageUrl: c.pageUrl, listedOnIndexAt: now, indexDateModified: c.dateModified })), skipDuplicates: true });
-      for (const l of plan.listed) await tx.govFormDef.update({ where: { workspaceId_formKey: { workspaceId, formKey: l.formKey } }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}), ...(plan.newer.includes(l.formKey) ? { newerOnIndexAt: now } : {}) } });
+    // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
+    const created = await this.db.$transaction(async (tx) => {
+      const made = plan.create.length ? (await tx.govFormDef.createMany({ data: plan.create.map((c) => ({ workspaceId, formKey: c.formKey, displayName: c.title, formKind: c.kind, formPageUrl: c.pageUrl, listedOnIndexAt: now, indexDateModified: c.dateModified })), skipDuplicates: true })).count : 0;
+      // X5 break m4: a form deleted meanwhile (an approved delete) is skipped, never a failed fill.
+      for (const l of plan.listed) await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}), ...(plan.newer.includes(l.formKey) ? { newerOnIndexAt: now } : {}) } });
+      return made;
     });
-    const words = `${plan.create.length} new form${plan.create.length === 1 ? "" : "s"} listed (no file yet), ${plan.listed.length} already in the library${plan.newer.length ? `, ${plan.newer.length} with a newer edition on canada.ca (${plan.newer.slice(0, 5).join(", ")}${plan.newer.length > 5 ? "…" : ""})` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}`;
-    await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created: plan.create.length, listed: plan.listed.length, newer: plan.newer, no_page: parsed.noPage });
-    return { created: plan.create.length, listed: plan.listed.length, newer: plan.newer, no_page: parsed.noPage, message: `Filled from IRCC's forms list: ${words}.` };
+    const words = `${created} new form${created === 1 ? "" : "s"} listed (no file yet), ${plan.listed.length} already in the library${plan.newer.length ? `, ${plan.newer.length} with a newer edition on canada.ca (${plan.newer.slice(0, 5).join(", ")}${plan.newer.length > 5 ? "…" : ""})` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}${parsed.unreadable.length ? `, ${parsed.unreadable.length} left out whose number could not be read` : ""}`;
+    await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created, listed: plan.listed.length, newer: plan.newer, no_page: parsed.noPage, unreadable: parsed.unreadable });
+    return { created, listed: plan.listed.length, newer: plan.newer, no_page: parsed.noPage, unreadable: parsed.unreadable, message: `Filled from IRCC's forms list: ${words}.` };
   }
 
   async checkCanada(actor: Actor, code: string) {
     need(actor, "author");
-    // X5: a person checking the form against canada.ca answers the index's "newer edition" mark.
-    await this.db.govFormDef.updateMany({ where: { workspaceId: await this.ws.id(), formKey: code, newerOnIndexAt: { not: null } }, data: { newerOnIndexAt: null } });
-    try { return await this.compareWithCanada(code); } catch (e) {
+    try {
+      const r = await this.compareWithCanada(code);
+      // X5 break M2 / Devin: only a check that found the library's edition still current answers the index's "newer" mark;
+      // a check that failed, or that found another date on canada.ca, keeps it.
+      if (r.outcome === "current") await this.db.govFormDef.updateMany({ where: { workspaceId: await this.ws.id(), formKey: code, newerOnIndexAt: { not: null } }, data: { newerOnIndexAt: null } });
+      return r;
+    } catch (e) {
       // canada.ca not answering (or a page not among the recorded copies) is said in words, never a server error.
       if (e instanceof CanadaError) throw problem(409, "canada.ca could not be read", `${code}: ${e.message} Upload its new edition's PDF instead, or try again later.`);
       throw e;
@@ -211,6 +230,8 @@ export class FormLibrary {
     const closing = await closingChange(this.db, c.workspaceId, def.formKey);
     if (closing) throw problem(409, "Being retired", `A request to ${closing.action.toLowerCase()} ${b.formKey} is open on To review: nothing new may use it until it is decided.`, { errors: [{ field: "formKey", message: "Being retired." }] });
     const ok = (await this.approvedShas(c.workspaceId)).all;
+    // X5 break m5: a form listed by IRCC with no file at all says so (before: "its file waits for a second person").
+    if (!def.editions.some((e) => e.channel !== "ONLINE")) throw problem(409, "No file yet", `${b.formKey} is listed by IRCC but has no file in the library yet: upload its PDF in the Form library, or let the form finder download it.`, { errors: [{ field: "formKey", message: "No file yet." }] });
     if (!def.editions.some((e) => e.channel !== "ONLINE" && e.sha256 && ok.has(e.sha256))) throw problem(409, "Waiting for a person", `${b.formKey} has no edition a combination may use yet: its file waits for a second person on To review.`);
     const before = await snapshotLines(this.db, combinationId, [b.formKey]);
     const r = await addFormLine(this.db, { workspaceId: c.workspaceId, combinationId, govFormDefId: def.id, formKey: def.formKey, who: b.who, origin: "HUMAN", by: actor.id, sourceQuote: `${def.formKey}: added from the library` });

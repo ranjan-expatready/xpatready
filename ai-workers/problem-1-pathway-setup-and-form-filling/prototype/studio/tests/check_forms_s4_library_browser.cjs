@@ -251,6 +251,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.getByText(/Filled from IRCC's forms list: \d+ new forms listed/).first().waitFor({ timeout: 30_000 });
     await p.getByText("Listed by IRCC · no file yet").first().waitFor({ timeout: 30_000 });
     step("X5 C2.6 pass: Fill from IRCC's forms list adds the listed forms, each 'Listed by IRCC · no file yet'", (await p.getByText("Listed by IRCC · no file yet").count()) > 50);
+    // X5 review m5 (WCAG 2.4.3): after the fill, focus is back on the button (before: on the page).
+    let fillFocused = false; for (let i = 0; i < 50 && !fillFocused; i++) { fillFocused = await p.evaluate(() => document.activeElement?.hasAttribute("data-fill-index") ?? false); if (!fillFocused) await sleep(100); }
+    step("X5 review m5 fail: after Fill, keyboard focus is on the Fill button again", fillFocused, await p.evaluate(() => document.activeElement?.outerHTML.slice(0, 100)));
+    // X5 break M5: the "No file yet" chip shows only those rows; "Ready" only the forms with a file.
+    await p.getByRole("button", { name: /^Ready\s*\d+$/ }).click(); await sleep(400);
+    const readyRows = await p.locator("[data-row-status]").evaluateAll((els) => els.map((e) => e.getAttribute("data-row-status")));
+    step("X5 break M5 fail: the Ready chip shows only forms with a file (before: no such chip)", readyRows.length > 0 && readyRows.every((x) => x === "ready"), readyRows.slice(0, 5).join());
+    await p.getByRole("button", { name: /^Ready\s*\d+$/ }).click(); await sleep(200);
     await axe("X5: the library after the fill from IRCC's forms list");
     // One readable view (the whole list is now some 240 rows): the first screen at 1440 px.
     await p.setViewportSize({ width: 1440, height: 900 }); await p.getByText("Listed by IRCC · no file yet").first().evaluate((e) => e.scrollIntoView({ block: "center" })); await sleep(150);

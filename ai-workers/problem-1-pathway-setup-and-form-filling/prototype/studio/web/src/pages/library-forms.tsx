@@ -100,8 +100,8 @@ export function FormsPage() {
       <div className="mx-auto max-w-7xl space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><p className="text-sm text-text-muted">Shared library › Forms</p><h1 className="text-2xl font-bold tracking-tight">Forms</h1><p className="mt-1 text-sm text-text-muted">Every IRCC form, guide and checklist, stored once. Combinations pick from here by themselves.</p></div>
-          {canAuthor ? <FillFromIndexButton /> : null}
-          {canAuthor ? <UploadButton onRuns={(ids) => setRuns((r) => [...ids, ...r].slice(0, 20))} /> : null}
+          {/* X5 review m6: the two ways forms come in, side by side. */}
+          {canAuthor ? <span className="flex flex-wrap items-center gap-2"><FillFromIndexButton /><UploadButton onRuns={(ids) => setRuns((r) => [...ids, ...r].slice(0, 20))} /></span> : null}
         </div>
         {runs.length ? <div className="space-y-3">{runs.map((id) => <RunCard key={id} runId={id} onEnded={() => void queryClient.invalidateQueries({ queryKey: ["library-forms-list"] })} onDismiss={() => setRuns((r) => r.filter((x) => x !== id))} />)}</div> : null}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3" role="group" aria-label="Filters">
@@ -116,7 +116,11 @@ export function FormsPage() {
           </label>
           <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">Status</span>
             {chip(status === "needs_ok", "Needs your OK", c.needs_ok, () => setStatus(status === "needs_ok" ? "" : "needs_ok"), STATUS.needs_ok.tip)}
-            {chip(status === "newer_file", "Newer file on canada.ca", c.newer_file, () => setStatus(status === "newer_file" ? "" : "newer_file"), STATUS.newer_file.tip)}
+            {/* X5 (review 4, break m10): one word for both kinds of "newer" (a newer file, or a newer date on IRCC's list). */}
+            {chip(status === "newer_file", "Newer on canada.ca", c.newer_file, () => setStatus(status === "newer_file" ? "" : "newer_file"), "canada.ca shows something newer than the library's file: another file of the same edition, or a newer date on IRCC's forms list. Combinations keep the library's file until a person checks it.")}
+            {/* X5 break M5: after the fill most rows have no file yet; these two chips find the rest, or only those. */}
+            {chip(status === "ready", "Ready", c.ready ?? 0, () => setStatus(status === "ready" ? "" : "ready"), STATUS.ready.tip)}
+            {chip(status === "no_file", "No file yet", c.no_file ?? 0, () => setStatus(status === "no_file" ? "" : "no_file"), STATUS.no_file.tip)}
             {chip(status === "retired", "Retired", c.retired, () => setStatus(status === "retired" ? "" : "retired"), STATUS.retired.tip)}
           </div>
           <label className="relative ml-auto"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden /><Input type="search" aria-label="Search number or title" placeholder="Search number or title" value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} className="w-64 pl-8" /></label>
@@ -190,13 +194,16 @@ function useAsk<R>(fn: () => Promise<R>, success: string, keys: unknown[][], onD
   return useMutation<R, Error, void>({ mutationFn: fn, onSuccess: () => { for (const k of keys) void queryClient.invalidateQueries({ queryKey: k }); toast.push({ tone: "ok", text: success }); onDone(); } });
 }
 
-/** One way in: Upload PDF, many files at once; each file runs on its own card (rules first, AI only when they cannot). */
 /** X5 (P-156 (1)): fills the library from IRCC's forms list once (US$0: no AI, no download); safe to press again. */
 function FillFromIndexButton() {
-  const fill = useAction(() => api<{ message: string }>("/library/forms/fill-from-index", { method: "POST" }), { success: (r) => r.message, invalidate: [["library-forms-list"]] });
-  return <Tip tip="Reads IRCC's forms and guides list into the library: every form number, listed with no file yet. No AI, no download, US$0. Forms already here keep their file."><span><Button variant="secondary" busy={fill.isPending} onClick={() => fill.mutate(undefined)} data-fill-index><ListChecks /> Fill from IRCC's forms list</Button></span></Tip>;
+  const ref = React.useRef<HTMLButtonElement | null>(null);
+  // X5 review m5 (WCAG 2.4.3): the busy button is disabled while it fills; focus goes back to it once it is enabled again.
+  const refocus = (tries = 30) => { const el = ref.current; if (!el || tries <= 0) return; if (el.disabled) { requestAnimationFrame(() => refocus(tries - 1)); return; } el.focus(); };
+  const fill = useAction(() => api<{ message: string }>("/library/forms/fill-from-index", { method: "POST" }), { success: (r) => r.message, invalidate: [["library-forms-list"]], onDone: () => requestAnimationFrame(() => refocus()) });
+  return <Tip tip="Reads IRCC's forms and guides list into the library: every form number, listed with no file yet. No AI, no download, US$0. Forms already here keep their file."><span><Button ref={ref} variant="secondary" busy={fill.isPending} onClick={() => fill.mutate(undefined)} data-fill-index><ListChecks /> Fill from IRCC's forms list</Button></span></Tip>;
 }
 
+/** One way in for a file: Upload PDF, many files at once; each file runs on its own card (rules first, AI only when they cannot). */
 function UploadButton({ onRuns }: { onRuns: (ids: string[]) => void }) {
   const input = React.useRef<HTMLInputElement>(null);
   const [error, setError] = React.useState<string | null>(null);

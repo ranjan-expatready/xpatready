@@ -15,16 +15,28 @@ export type IndexFill = {
   newer: string[];
 };
 
+/** X5 break m2: a date is newer only when it is later (canada.ca writes YYYY-MM or YYYY-MM-DD; compared month first). A
+ *  date that went back, or one in another shape, marks nothing. */
+export function isLaterDate(next: string, before: string): boolean {
+  const ok = /^\d{4}-\d{2}(-\d{2})?$/;
+  if (!ok.test(next) || !ok.test(before)) return false;
+  return `${next}-00`.slice(0, 10) > `${before}-00`.slice(0, 10);
+}
+
 export function planIndexFill(rows: IndexRow[], library: LibraryForm[]): IndexFill {
   const have = new Map(library.map((f) => [f.formKey, f]));
+  // X5 break m6: a number the index lists twice (a form and its checklist link) is one form; if any of its rows is a form,
+  // it is a form (a checklist row listed first no longer makes a real form a checklist).
+  const isForm = new Set(rows.filter((r) => r.kind === "form").map((r) => r.code));
   const out: IndexFill = { create: [], listed: [], newer: [] }, seen = new Set<string>();
-  for (const r of rows) {
-    if (seen.has(r.code)) continue; // the index lists a few numbers twice (a form and its checklist link): once is enough
-    seen.add(r.code);
+  for (const r0 of rows) {
+    if (seen.has(r0.code)) continue;
+    seen.add(r0.code);
+    const r = isForm.has(r0.code) ? { ...r0, kind: "form" as const } : r0;
     const f = have.get(r.code);
     if (!f) { out.create.push({ formKey: r.code, title: r.title, kind: r.kind === "checklist" ? "checklist" : "data_form", pageUrl: r.pageUrl, dateModified: r.dateModified }); continue; }
     out.listed.push({ formKey: r.code, pageUrl: f.formPageUrl ? null : r.pageUrl, dateModified: r.dateModified });
-    if (f.hasFile && f.indexDateModified && r.dateModified && r.dateModified !== f.indexDateModified) out.newer.push(r.code);
+    if (f.hasFile && f.indexDateModified && r.dateModified && isLaterDate(r.dateModified, f.indexDateModified)) out.newer.push(r.code);
   }
   return out;
 }
