@@ -62,6 +62,14 @@ const MARK = { done: "✓", next: "●", todo: "○", ai: "◐", waiting: "⧗" 
   const words = await who.locator("[data-people-words]").innerText();
   step("P-161 (2) pass: the folded line says who in the board's plain words, e.g. \"Principal applicant (always)\"", /Principal applicant \(always\)/.test(words) && words.split(" · ").every((w) => /\((always|optional)\)$/.test(w.replace(/^· /, ""))), words);
   step("P-161 (2) fail case: no exact counts on the folded line (\"exactly\", \"0 to 1\": they stay in Show and edit)", !/exactly|\d to \d/.test(words), words);
+  // #139 review: a role whose most is 0 cannot be in the application, so the folded line leaves it out (not "(optional)").
+  const zeroUrl = /\/api\/combinations\/[^/]+\/workspace\?tab=forms/;
+  let zeroLabel = null;
+  await p.route(zeroUrl, async (route) => { const r = await route.fetch(); const j = await r.json(); const l = j.people?.lines?.find((x) => x.min === 0 && x.max > 0); if (l) { l.max = 0; zeroLabel = l.label ?? l.role; } await route.fulfill({ response: r, json: j }); });
+  await p.reload(); await settle();
+  const zeroWords = await peopleLine.locator("[data-who-can-be] [data-people-words]").innerText().catch(() => "");
+  await p.unroute(zeroUrl); await p.reload(); await settle();
+  step("#139 review fail case: a role allowed 0 times is not listed as \"(optional)\" on the folded line", zeroLabel !== null && zeroWords.split(" · ").length === words.split(" · ").length - 1, { zeroLabel, words, zeroWords });
   await shot("forms-before-forms");
   await who.getByRole("button", { name: "Show and edit" }).click(); await settle();
   step("P-147 §3: Show and edit opens the full table there", await p.locator("[data-who-can-be] table").count() === 1 && await p.locator('[data-who-can-be] [data-person="principal"]').count() === 1);
