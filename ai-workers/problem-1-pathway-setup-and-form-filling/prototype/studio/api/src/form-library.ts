@@ -213,7 +213,8 @@ export class FormLibrary {
       const r = await this.compareWithCanada(code);
       // Review (63d2ba6d): a check that finds the library's file to be canada.ca's own is in the audit trail (it can turn a
       // row from "newer" to Ready).
-      if (r.outcome === "current") await this.audit.log(await this.ws.id(), actor.id, "checked", "form", code, `${actor.name} checked ${code} against canada.ca: the library's file is canada.ca's current PDF.`, { last_updated: r.last_updated });
+      if (r.outcome === "current") await this.audit.log(await this.ws.id(), actor.id, "checked", "form", code, `${actor.name} checked ${code} against canada.ca: the library's file (${r.edition}) is canada.ca's current PDF.`, { last_updated: r.last_updated, edition: r.edition, sha256: r.sha256, baseline: r.baseline });
+      if (r.outcome === "current") { const { edition: _e, sha256: _s, baseline: _b, ...shown } = r; void _e; void _s; void _b; return shown; }
       return r;
     } catch (e) {
       // canada.ca not answering (or a page not among the recorded copies) is said in words, never a server error.
@@ -226,6 +227,8 @@ export class FormLibrary {
     const workspaceId = await this.ws.id();
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } }, include: { editions: true } });
     if (!def) throw problem(404, "Not in the library", `${code} is not in the library.`);
+    // Break (6bc5eb72) m40: a guide is not checked (the page's PDF is a form's, not the guide); the API says what the UI does.
+    if (TYPE_OF(def.formKind, def.displayName) === "guide") throw problem(409, "Not for guides", `${code} is a guide: the form finder reads it from canada.ca; there is no PDF to check.`);
     // A form without a recorded page (a sample copy, an upload) is looked up in canada.ca's list of forms (rules, US$0).
     let pageUrl = def.formPageUrl;
     if (!pageUrl) {
@@ -240,21 +243,27 @@ export class FormLibrary {
     // X5 break M6: the check judges the same current edition as the list and the fill (approved, printed), so a held file
     // with canada.ca's date never answers the "newer" mark.
     const current = this.currentEdition(def.editions, (await this.approvedShas(workspaceId)).all);
-    await this.db.formEdition.updateMany({ where: { govFormDefId: def.id }, data: { checkedAt: new Date(), formPageUrl: pageUrl } });
     // Break (63d2ba6d) M13, M14 / review Should 1: the check compares the file itself, not dates or addresses. canada.ca's
-    // PDF is downloaded (US$0) and its checksum compared with the library's current file: the same bytes are current (the file
-    // is re-dated from the page, as the finder does, and canada.ca's index date as it stands becomes that file's own date last
-    // seen current, so a page edited without a new edition stops reading "newer"); other bytes are not, whatever the dates say.
-    if (current?.sha256) {
-      const pdf = await this.canada.get(pdfUrl, "pdf");
-      if (pdf.sha256 === current.sha256) {
-        await this.db.formEdition.updateMany({ where: { id: current.id }, data: { sourceUrl: pdfUrl, ...(page.lastUpdated ? { canadaUpdated: page.lastUpdated } : {}) } });
-        // The checked file's own baseline, never lowered (a slower check never undoes a later one: break m36).
-        if (def.indexDateModified) await this.db.formEdition.updateMany({ where: { id: current.id, OR: [{ indexDateSeenCurrent: null }, { indexDateSeenCurrent: { lt: def.indexDateModified } }] }, data: { indexDateSeenCurrent: def.indexDateModified } });
-        return { outcome: "current", message: `${current.editionLabel} is canada.ca's current file: the same PDF${page.lastUpdated ? ` (page last updated ${page.lastUpdated})` : ""}.`, last_updated: page.lastUpdated };
-      }
+    // PDF is downloaded (US$0) and its checksum compared with the library's current file: the same bytes are current, and
+    // canada.ca's index date as it stands becomes that file's own date last seen current (never lowered: break m36), so a
+    // page edited without a new edition stops reading "newer"; other bytes are not, whatever the dates say. The file is not
+    // re-dated from the page (review 6bc5eb72 M: a page month would hide a later edition; fileMonth reads the printed month).
+    let pdf: Awaited<ReturnType<CanadaSource["get"]>>;
+    try { pdf = await this.canada.get(pdfUrl, "pdf"); } catch (e) {
+      // Break (6bc5eb72) m41: the page was read, its PDF was not; said as such, and nothing is recorded as checked (m39).
+      if (e instanceof CanadaError) throw problem(409, "canada.ca's PDF could not be read", `${code}: canada.ca's form page was read but its PDF could not be downloaded (${e.message}). Nothing changed; try again later.`);
+      throw e;
     }
-    return { outcome: "check", message: `canada.ca shows ${code} last updated ${page.lastUpdated ?? "on an unknown date"}. Run "Find again" on a combination that uses it to download it: a newer edition goes to edition review, the same edition from a new file is marked for you to replace.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
+    await this.db.formEdition.updateMany({ where: { govFormDefId: def.id }, data: { checkedAt: new Date(), formPageUrl: pageUrl } });
+    if (current?.sha256 && pdf.sha256 === current.sha256) {
+      // The outside check (6bc5eb72): canada.ca serving the library's own bytes again also ends a finder's "new file" marker.
+      await this.db.formEdition.updateMany({ where: { id: current.id }, data: { sourceUrl: pdfUrl, newerFileSha256: null } });
+      const baseline = def.indexDateModified;
+      if (baseline) await this.db.formEdition.updateMany({ where: { id: current.id, OR: [{ indexDateSeenCurrent: null }, { indexDateSeenCurrent: { lt: baseline } }] }, data: { indexDateSeenCurrent: baseline } });
+      return { outcome: "current" as const, message: `${current.editionLabel} is canada.ca's current file: the same PDF${page.lastUpdated ? ` (page last updated ${page.lastUpdated})` : ""}.`, last_updated: page.lastUpdated, edition: current.editionLabel, sha256: pdf.sha256, baseline };
+    }
+    // Break (6bc5eb72) M15 / review Should 4: what the check found, in words.
+    return { outcome: "check" as const, message: current ? `canada.ca now serves a different PDF for ${code} than the library's file (${current.editionLabel})${page.lastUpdated ? `; its page was last updated ${page.lastUpdated}` : ""}. Find again on a combination that uses ${code} downloads it for review (a new edition goes to edition review; the same edition from a new file is marked for you to replace).` : `${code} has no approved file in the library to compare. Find again on a combination that uses it, or upload its PDF.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
   }
 
   // ------------------------------------------------------------------ hand actions on a combination's forms

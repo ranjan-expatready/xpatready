@@ -21,18 +21,19 @@ export type IndexFill = {
   newer: string[];
 };
 
-/** Review / break (e466adb1) M10, M11, the outside check: the month a library edition is from: the later of canada.ca's "last updated"
- *  month and the edition's own month printed in its label ("IMM 1295 (09-2023)"). Intake and the finder both write that
+/** Review / break (e466adb1) M10, M11, the outside check, review (6bc5eb72): the month a library edition is from: the month
+ *  printed in its label ("IMM 1295 (09-2023)"), else canada.ca's "last updated" month for it. Intake and the finder both write that
  *  label, so a hand upload or an approved held file is dated too. */
 export function fileMonth(e: { canadaUpdated?: string | null; editionLabel: string }): string | null {
-  // Break (89cccd71) m31: a month IRCC could print (01-12, from 1990); break note: the later of the two months, so
-  // canada.ca's page month never makes a file read older than its own printed edition.
+  // Break (89cccd71) m31: a month IRCC could print (01-12, from 1990).
   // Break (63d2ba6d) m37: no month after this one (a label printed for a future month would hide every later index date).
   const now = new Date(), thisMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
   const ok = (y: number, mo: number) => mo >= 1 && mo <= 12 && y >= 1990 && `${y}-${String(mo).padStart(2, "0")}` <= thisMonth;
   const ca = /^(\d{4})-(\d{2})/.exec(e.canadaUpdated ?? ""), lb = /\((\d{2})-(\d{4})\)\s*$/.exec(e.editionLabel);
-  const months = [ca && ok(Number(ca[1]), Number(ca[2])) ? `${ca[1]}-${ca[2]}` : null, lb && ok(Number(lb[2]), Number(lb[1])) ? `${lb[2]}-${lb[1]}` : null].filter((x): x is string => !!x);
-  return months.length ? months.sort().pop()! : null;
+  const printed = lb && ok(Number(lb[2]), Number(lb[1])) ? `${lb[2]}-${lb[1]}` : null, page = ca && ok(Number(ca[1]), Number(ca[2])) ? `${ca[1]}-${ca[2]}` : null;
+  // Review (6bc5eb72) M: the printed edition month first (it is the file's own); canada.ca's page month only when the label has
+  // none (a page edit must never make an old file read as new).
+  return printed ?? page;
 }
 
 /** P156-2, one rule for the list, the fill and the check: "Newer edition on canada.ca" when IRCC's index date is later than

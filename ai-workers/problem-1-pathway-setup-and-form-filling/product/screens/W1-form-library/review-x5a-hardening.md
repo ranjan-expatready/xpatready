@@ -388,3 +388,92 @@ The full record is in `journey-test-reviewer-2026-10-31-x5a-63d2ba6d.md`.
 * Find again re-dating the same file end to end: replay stopped at step 1 for "With an LMIA" (no saved page choice), and live AI is not allowed. I checked it from the code (`finder.ts:581`) and the S4 suite.
 * Live canada.ca: whether IRCC ever moves "Last updated" without a new PDF, or lists a date later than the page's.
 * A real screen reader. An unaided walk by an intended user (D17 and D20 stay with the founder). Retrofit mapping: not applicable.
+
+---
+
+# Re-check of commit 6bc5eb72 ("Check against canada.ca" compares the file itself), 31 Oct 2026
+
+Reviewer, fresh context. Focus: `git diff 63d2ba6d 6bc5eb72 -- '*.ts' '*.tsx' '*.sql'`, with `337cdfd5..6bc5eb72` for context.
+* Copies: :4452 (journeys, recorded copies as committed) and :4453 (canada.ca copies edited by `/tmp/x5rv6b-scripts/fx.py` inside the copy's own folder, `STUDIO_CANADA_FIXTURES=fx`), both from `/home/user/x5i`, web built first. :4454 and :4455 from a `git archive 6bc5eb72` copy in `/tmp/x5rv6b-mut` (node_modules entries symlinked to x5i's).
+* All stopped, databases dropped, var folders removed. No `*_LIVE`, no `STUDIO_CANADA=live`, no `prisma generate`: US$0. The ledger folders stayed empty, except the finder suite's stub entries (`caller: stub`, US$0) in `/tmp/x5rv6b-l4`.
+* Slice3 screenshots: the browser suite ran in the /tmp copy, so none in x5i changed. Scripts are in `/tmp/x5rv6b-scripts/`, screenshots in `/tmp/x5rv6b-shots/` (not committed).
+
+**Verdict: Block (Ship after fixes).** M13 and M14 are closed as written: other bytes → "check", same bytes → "current" with a baseline and an audit line, also for an undated upload. But the check's new re-date of `canada_updated` opens a false Ready (issue 1, Major). The fix is one line and a test.
+
+**Results.**
+* `check_forms_x5_library` 60/60. `check_forms_s4_canada` 80/80. Browser suite 95/95 (fresh database). `tsc --noEmit -p api` clean.
+* `check_forms_s4_finder` (it calls Replace and the check) could not run: it needs `STUDIO_AI_LIVE=approved`, which this check may not set.
+
+## Your five questions
+1. **Replace path (⋯ › Replace edition… on a combination):** it is the same `checkCanada` (`form-library.ts:315-320`). Live on :4452 (J5): toast "IMM 1295 (09-2023) is canada.ca's current file: the same PDF (page last updated 2023-09).", 135 ms, baseline moved to the new index date 2026-10-25, axe 0. Stale version → 409 "Changed since". Approver → 403. On Library › Forms the item is disabled for the approver.
+2. **PDF download fails:** 409 "canada.ca could not be read" with the reason and "Upload its new edition's PDF instead, or try again later." (J4: IMM 5257's PDF left out of the copies). The row stays Newer. No baseline and no audit line are written. **But** `checked_at` moved from 11:09:04 to 11:15:21 on the failed check (issue 2).
+3. **Cost:** one PDF per click, US$0. Live it is capped at 25 MB and 60 s (`api/src/canada.ts`). On the recorded copies a check takes 122–135 ms. The list and the fill download nothing, and nothing checks per row or in bulk. All 7 sample forms with a recorded page also have their PDF recorded, and the bytes equal the library's. IMM 5488, 5881 and 5905 have no recorded page, so they get 409, as before.
+4. **`finder.ts` and the check:** they give the same answer: same bytes means current. Both re-date `canada_updated` from the page (`finder.ts:581`, `form-library.ts:251`). Only the check sets a baseline. The finder re-dates every edition with that checksum and writes null when the page has no date; the check keeps the old value. They share issue 1.
+5. **A false Ready: yes, one (J7, issue 1).** None in the other paths I tried:
+   * other bytes at the same address;
+   * a held copy with canada.ca's date (judged on the approved file only);
+   * a failed download;
+   * a label for a future month (`fileMonth` drops it, so the file is judged as undated).
+
+## Issues, ranked
+1. **Major (D18, D1; a false Ready): the check moves the file's month to the page's month, and the month rule then ignores the check's own baseline.**
+   * Where: `form-library.ts:251` writes `canadaUpdated: page.lastUpdated`. `newerOnIndex` (`library-index.ts:45`) compares months once an index date is past the baseline.
+   * J7 (:4453), step 1: IMM 1295's page reads "Last updated: October 2026" with the same PDF, and the index says 2026-10-05. The fill marks it Newer. The check says current. The file is re-dated 2023-09 → 2026-10, the baseline is 2026-10-05, and the row reads Ready (all correct so far).
+   * Step 2: IRCC lists IMM 1295 on 2026-10-20 (a new edition later that month). The fill says "0 … with a newer edition", and the row reads **Ready** on the 09-2023 file (`j7-B-1295-1440.png`).
+   * Rule check: `newerOnIndex("2026-10-20", "2026-10", "2026-10-05")` is false. With the file's own month, `("2026-10-20", "2023-09", "2026-10-05")` is true.
+   * At 63d2ba6d this check said "check" and the row stayed Newer. `finder.ts:581` has the same re-date without a baseline (since 89cccd71). I called that re-stamp right at 63d2ba6d; it is not right for this case.
+   * Fix: drop the `canadaUpdated` re-date in the check. The baseline alone answers M13 and M14: mutation "nodate" fails only the C2.6 M14 assertion that `canada_updated` is filled, and that row still reads Ready.
+   * Change that assertion. Add a test: a page month later than the file's, checked, then a later index date in the same month → Newer. Fix `finder.ts:581` the same way, or record its limit.
+   * Not recommended: making the baseline decide alone (`if (seenCurrent) return isLaterDate(...)`). That fails 4 tests (M3, the 89cccd71 test and two property models).
+2. **Should (D9; EXPERIENCE "feedback and state"): a failed check still records "checked".**
+   * Where: `form-library.ts:243` writes `checkedAt` before the download at `:249`. The detail panel shows "· checked <when>" (`library-forms.tsx:316`), and the API's `checked_at` moved on the 409 in J4.
+   * Fix: write `checkedAt` only after the PDF is read.
+3. **Should (D16; [M] "a rule's test fails when the rule is removed"): two rules on the new path have no failing test.**
+   * (a) Compare with the current file only. Mutation "anyfile" (`pdf.sha256` equal to any edition's) passes 60/60. That mutation is a false Ready: a held copy that is canada.ca's file would vouch for an older approved file. Fix: in the M6 test (`check_forms_x5_library.ts:164-177`), give the held copy canada.ca's real checksum and the approved file another one, then assert "check" and no baseline.
+   * (b) The baseline is never lowered (m36). Mutation "lower" passes 60/60. It can only cause a false Newer, so it ranks below (a).
+4. **Should (D11): the "check" answer now means "canada.ca serves another file", but its words do not say so.**
+   * `form-library.ts:257` gives only the page date and "Run "Find again" on a combination that uses it". In J2 IMM 5257 is "Not used" (`j2-other-bytes-1440.png`), so that is a dead end.
+   * Fix: say the library's file differs from canada.ca's PDF, and point to Upload PDF when no combination uses the form.
+5. **Minor (D9):** neither menu shows a running state while the check reads a PDF (`library-forms.tsx:282-290`, `forms.tsx:182-193`). Live, that can take up to 60 s.
+6. **Minor (D10, recorded copies only):** a missing recorded PDF is reported as "This page is not in the recorded canada.ca copies" (`api/src/canada.ts:120`).
+
+**Mutations (in `/tmp/x5rv6b-mut`, each against a fresh :4454):**
+* Caught: "nodate" (1 fail, the re-date assertion only).
+* Survived: "anyfile" and "lower" (issue 3).
+* Your two (the always-equal comparison, a baseline on every edition) were not repeated.
+
+## D1–D20
+| D | Score | Evidence |
+|---|---|---|
+| D1 | 4 | Same bytes = current, other bytes = check (J1–J3); J7 false Ready (issue 1) |
+| D2 | 5 | M14 answered: an undated upload goes Newer → Ready with one check (J3) |
+| D3 | 4 | One check for Library and Replace; the finder and the check re-date differently (null vs kept, all shas vs current) |
+| D4 | 5 | Migration note corrected; no schema change in this commit |
+| D5 | 5 | Guarded baseline write; `updateMany` (no 500 on a vanished edition); a triple check gives 1 edition, 3 audit lines |
+| D6 | 5 | Baseline and re-date on the current edition's id only (`:251-253`); the M6 test (held copy keeps its own) passes |
+| D7 | 5 | No AI; US$0 |
+| D8 | 5 | Shared library › Forms; menu words unchanged |
+| D9 | 4 | Toast and row agree in J1–J5; a failed check still says "checked" (issue 2) |
+| D10 | 5 | "…is canada.ca's current file: the same PDF" is plain |
+| D11 | 4 | "check" words lead to Find again even for unused forms (issue 4) |
+| D12 | 5 | No sideways scroll at 400 and 1024 (CSS zoom at 200 % does not reflow; 400 stands in) |
+| D13 | 5 | axe 0 on Newer, Ready and the combination's Forms tab; keyboard: Enter on ⋯, Enter on the item |
+| D14 | 5 | Team components and toasts |
+| D15 | 5 | Check 122–135 ms on recorded copies; first rows 0.80–1.30 s cold |
+| D16 | 4 | 60 + 80 + 95 green; "anyfile" and "lower" survive (issue 3) |
+| D17 | simulated only | No intended user walked it |
+| D18 | 3 | J7: the row says Ready while canada.ca lists a later date than the check confirmed |
+| D19 | 5 | Replace from the combination and Library › Forms give the same answer |
+| D20 | simulated only | The founder's walkthrough |
+
+**Graph (P-86):** read from the committed `qa/GRAPH.md` (not regenerated, to leave it untouched). G3 lists 2 routes, neither in the form library. `check-canada` and `…/forms/:code/replace` are reached by tests (x5 library suite; finder and runs suites).
+
+## Journey score: 8.5 / 10 (pass, no criterion at 0)
+The full record is in `journey-test-reviewer-2026-10-31-x5a-6bc5eb72.md`. Correct data scores ½ because of J7.
+
+## What I could not check
+* `check_forms_s4_finder` (needs `STUDIO_AI_LIVE=approved`).
+* Live canada.ca: how often a page's "Last updated" runs ahead of its PDF.
+* A real screen reader. Browser zoom proper.
+* An unaided walk by an intended user (D17 and D20 stay with the founder).
+* The breaker's 6bc5eb72 round was being written in `break-report-x5a.md` meanwhile (not by me). I did not use it.
