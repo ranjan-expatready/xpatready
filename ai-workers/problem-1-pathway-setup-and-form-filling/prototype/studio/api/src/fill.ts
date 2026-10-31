@@ -23,11 +23,13 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
  *  the form field's own format or code, signatures and the oath never written, the official copy written append-only by
  *  p5/fill.py and read back. Shared by the configuration preview (sample facts) and a case (its confirmed answers,
  *  runtime lane S-11). Writes <dir>/<base>.pdf, .request.json and .report.json. */
-export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, form: string, dir: string, base: string) {
+export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, form: string, dir: string, base: string, opts: { notForFiling?: boolean } = {}) {
   // F1: the PDF edition. A line filed Online is never filled as a PDF, even when the library also has its PDF (review 18);
   // online filling needs the browser extension (later wave, W1-02, P-102).
   const line = (snapshot.forms as { form_number: string; channel?: string }[]).find((f) => f.form_number === form);
-  if (line?.channel === "ONLINE") fail(`${form} is filed Online here: it needs the browser extension (later wave), so the product does not fill it. File it as a PDF upload to fill its PDF.`, HttpStatus.CONFLICT);
+  // C-4: a Not needed line is never filled. P-145: an Online line is filled only as a "Copy, not for filing" (a case copy).
+  if (line?.channel === "NOT_NEEDED") fail(`${form} is Not needed here: the IRCC account asks it itself, so nothing is filled.`, HttpStatus.CONFLICT);
+  if (line?.channel === "ONLINE" && !opts.notForFiling) fail(`${form} is filed Online here: it needs the browser extension (later wave), so the product does not fill it. File it as a PDF upload to fill its PDF.`, HttpStatus.CONFLICT);
   const map = snapshot.field_maps.find((m: { form_number: string; channel?: string }) => m.form_number === form && m.channel !== "ONLINE");
   if (!map?.official_file || !map.inventory_file) fail("This form's official file or form field list is not recorded; it cannot be filled.");
   type Entry = { data_path: string; fact?: string | null; option_map?: OptionMap | null };

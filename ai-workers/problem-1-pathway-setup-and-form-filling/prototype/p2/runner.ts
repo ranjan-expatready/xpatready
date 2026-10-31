@@ -39,7 +39,7 @@ export async function runDrafting(
   build: (admitted: ReturnType<typeof admitRun>) => DraftRequest,
   call: Caller,
   ledger: SpendLedger,
-  opts: AdmitOptions & { screened?: () => boolean } = {},
+  opts: AdmitOptions & { screened?: () => boolean; override?: { id: string; runKey: string } } = {},
 ): Promise<RunOutcome> {
   if (call.kind === "paid") {
     assertIsolated();
@@ -62,7 +62,7 @@ export async function runDrafting(
   return ledger.withLock(async () => {
     for (let n = 1; n <= run.settings.max_attempts; n++) {
       let id: string;
-      try { id = ledger.reserve(run.run_id, n, worst, run.settings.budget_usd, call.kind ?? "unmarked"); } catch (e) {
+      try { id = ledger.reserve(run.run_id, n, worst, run.settings.budget_usd, call.kind ?? "unmarked", opts.override ? { overrideId: opts.override.id, runKey: opts.override.runKey } : {}); } catch (e) {
         if (!(e instanceof BudgetExceeded)) throw e;
         out.status = "budget_exceeded"; out.attempts.push({ n, outcome: "refused_before_call", error: e.message, worst_usd: worst });
         return out;
