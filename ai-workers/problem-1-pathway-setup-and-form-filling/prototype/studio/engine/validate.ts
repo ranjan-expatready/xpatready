@@ -6,10 +6,18 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
-import { channelProblems, type Accepts } from "./channels.ts";
+import { channelProblems, fingerprintLine, type Accepts } from "./channels.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
+import { oathMappedProblems } from "./form-steps.ts";
 
+// C-11: a field map's form field list, read once per file (paths are relative to the Solution 1 folder, as in fill.ts).
+const SOLUTION = join(import.meta.dirname, "..", "..", "..");
+const inventories = new Map<string, { data_path?: string; caption?: string; ui?: string }[] | null>();
+const inventoryFields = (file: string) => {
+  if (!inventories.has(file)) { try { inventories.set(file, JSON.parse(readFileSync(join(SOLUTION, file), "utf8")).fields ?? null); } catch { inventories.set(file, null); } }
+  return inventories.get(file) ?? null;
+};
 const schema = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "contracts", "predicate.v0.schema.json"), "utf8"));
 const ajv = new Ajv({ strict: false, allErrors: true });
 ajv.addSchema(schema); // the same lookup as tests/check_conditions.ts
@@ -86,6 +94,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   const reads = derivedRead(s);
   for (const d of derivedRows) if (reads.has(d.id) && !CALCULATIONS[d.calculation]) out.push({ level: "warning", where: "Derived fields", item: d.id, message: `Calculation ${d.calculation} has no tested helper: recorded, never evaluated.` });
   out.push(...channelProblems(s, accepts));
+  out.push(...oathMappedProblems(s.field_maps, inventoryFields)); // C-11 (P-171 c): a mapped oath box is by a person
   out.push(...factSourceProblems(s)); // W1-15 slice 1 (C4.10): where each answer comes from, and the PQR ticks // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
   // Drift check 2: an item that is a field code also carries its words (the question's meaning, a derived field's plain
   // words), so Review and the refusals never lead with the code.
@@ -150,7 +159,8 @@ const KINDS: [keyof Snapshot, (x: any) => string, string][] = [
   ["canonical_fields", (x) => x.id, "Field"], ["sections", (x) => x.id, "Section"], ["placements", (x) => x.lineage, "Question placement"], ["forms", (x) => x.form_number, "Form"],
   ["document_requirements", (x) => x.lineage, "Document requirement"], ["rules", (x) => x.id, "Rule"], ["checks", (x) => x.id, "Check"],
 ];
-const bare = (x: any) => { const { item_version, status, origin, ...r } = x; void item_version; void status; void origin; return canonical(r); };
+// C-8 (W1-10 slice 1): a line released as "Signed PDF upload" and now PDF upload + signed by hand and scanned is unchanged.
+const bare = (x: any) => { const { item_version, status, origin, ...r } = fingerprintLine(x); void item_version; void status; void origin; return canonical(r); };
 export type Change = { kind: string; key: string; change: "added" | "changed" | "removed"; origin?: string; needs_sme: boolean; label: string };
 export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const out: Change[] = [];

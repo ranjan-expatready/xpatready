@@ -16,6 +16,8 @@ import { fmtWhen } from "@/components/status";
 import { irccWords } from "../../../../contracts/workspace";
 import { costWords, START } from "../../../../contracts/start-setup";
 import { FindFormsStart } from "@/components/start-setup";
+import { useCostGate } from "@/components/cost-warning";
+import { COST_WORDS } from "../../../../contracts/cost-check";
 
 export type FinderState = "ATTACHED" | "DOWNLOADED_ATTACHED" | "NEWER_FILE_SAME_EDITION" | "NOT_FOUND" | "UPLOAD_WAITING_SECOND_PERSON" | "REMOVED_BY_PERSON" | "TO_DECIDE" | "NOT_FOR_THIS_APPLICATION";
 export type FinderForm = { code: string; title: string; quote: string | null; conditionPlain: string | null; who: string | null; state: FinderState; why?: string | null; lineId?: string | null; lineVersion?: number | null; runId: string };
@@ -23,7 +25,7 @@ export type FinderForm = { code: string; title: string; quote: string | null; co
 export type PageChoice = { candidates: { title: string; url: string }[]; why: string };
 export type FinderLatest = { run: { id: string; status: string; mode: string; finished_at: string | null } | null; forms: FinderForm[]; sample_note?: string; page_choice?: PageChoice | null };
 type Mode = "replay" | "rules" | "live";
-type Plan = { steps: { n: number; label: string; uses_ai: boolean }[]; totals: { worst_usd: number | null; expected_usd: number | null; about_usd?: number | null; ai_rounds: number }; note?: string | null; plan_sha256: string };
+type Plan = { live?: { on: boolean; why: string | null }; steps: { n: number; label: string; uses_ai: boolean; chosen?: boolean; worst_usd?: number | null }[]; totals: { worst_usd: number | null; expected_usd: number | null; about_usd?: number | null; ai_rounds: number }; note?: string | null; plan_sha256: string };
 
 const ACTIVE = new Set(["QUEUED", "RUNNING"]);
 const ON_LINE = new Set<FinderState>(["ATTACHED", "DOWNLOADED_ATTACHED", "NEWER_FILE_SAME_EDITION"]);
@@ -49,12 +51,20 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
   const key = React.useMemo(() => crypto.randomUUID(), []);
   const plan = useQuery<Plan, ApiError>({ queryKey: ["finder-plan", id, mode, only?.join(",") ?? "", pageUrl ?? ""], queryFn: () => api<Plan>(`/combinations/${id}/forms/find/plan`, { method: "POST", json: { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) } }), retry: false, enabled: !page || !!pageUrl });
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
-  const qc = useQueryClient();
+  const qc = useQueryClient(), toast = useToast();
+  // Lead Critical 29 Oct: with AI now switched off on this copy the live choice is greyed with the reason (any plan says it).
+  const liveOff = plan.data?.live && !plan.data.live.on ? plan.data.live.why : null;
+  React.useEffect(() => { if (liveOff && mode === "live") setMode(page ? "rules" : "replay"); }, [liveOff, mode, page]);
+  const cost = useCostGate(); // P-179: over a limit, the cost warning first (Continue or Cancel)
   const start = async () => {
     if (!plan.data) return;
     setBusy(true); setError(null);
     try {
-      const v = await api<{ id: string }>(`/combinations/${id}/forms/find`, { method: "POST", json: { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}), planSha256: plan.data.plan_sha256, idempotencyKey: `s5-${key}-${mode}-${pageUrl ?? ""}` } });
+      const body = { mode, ...(only ? { only } : {}), ...(pageUrl ? { pageUrl } : {}) };
+      const v = (await cost.gate(plan.data as unknown as Parameters<typeof cost.gate>[0], { kind: "find_forms", combinationId: id, ...body },
+        (overrideId) => api<{ id: string }>(`/combinations/${id}/forms/find`, { method: "POST", json: { ...body, planSha256: plan.data!.plan_sha256, idempotencyKey: `s5-${key}-${mode}-${pageUrl ?? ""}`, ...(overrideId ? { overrideId } : {}) } }))) as { id: string } | undefined;
+      // Review m7: Cancel is the person's choice, not an error: the same info toast as Draft setup.
+      if (!v) { toast.push({ tone: "info", text: COST_WORDS.cancelled }); return; }
       for (const k of formsKeys(id)) void qc.invalidateQueries({ queryKey: k });
       void qc.invalidateQueries({ queryKey: ["combination", id, "finder"] });
       onStarted(v.id); onClose();
@@ -79,17 +89,18 @@ export function FindDialog({ id, only, page, onClose, onStarted }: { id: string;
         <fieldset className="space-y-2">
           <legend className="text-xs font-medium">How AI answers</legend>
           {MODES.map(([m, label, hint]) => (
-            <label key={m} className="flex gap-2 text-sm"><input type="radio" name="find-mode" checked={mode === m} onChange={() => setMode(m)} className="mt-1" /><span><span className="font-medium">{label}</span><br /><span className="text-xs text-text-muted">{hint}</span></span></label>
+            <label key={m} className={`flex gap-2 text-sm${m === "live" && liveOff ? " text-text-muted" : ""}`} data-mode={m}><input type="radio" name="find-mode" checked={mode === m} disabled={m === "live" && !!liveOff} onChange={() => setMode(m)} className="mt-1" /><span><span className="font-medium">{label}</span><br /><span className="text-xs text-text-muted">{m === "live" && liveOff ? liveOff : hint}</span></span></label>
           ))}
         </fieldset>
         {plan.isPending ? <p className="text-sm text-text-muted">Working out the steps and their cost…</p> : plan.error ? <Notice tone="danger" title="This find cannot start">{plan.error.message}</Notice> : plan.data ? (
           <div className="rounded-lg border border-border p-3 text-sm" data-find-plan>
-            <ol className="list-decimal space-y-0.5 pl-5">{plan.data.steps.map((s) => <li key={s.n}>{s.label} {s.uses_ai ? <Pill tone="ai">AI</Pill> : <Pill>rules</Pill>}</li>)}</ol>
+            <ol className="list-decimal space-y-0.5 pl-5">{plan.data.steps.map((s) => <li key={s.n}>{s.label} {s.uses_ai ? <Pill tone="ai">AI</Pill> : s.chosen ? <Pill title="The page a person chose: no AI and no rule reads it again">your choice</Pill> : <Pill>rules</Pill>}{mode === "live" && s.worst_usd != null ? <span className="ml-1 text-xs text-text-muted" data-step-reserve>at most US${s.worst_usd.toFixed(2)}</span> : null}</li>)}</ol>
             <p className="mt-2 font-medium" data-find-cost>{mode === "live" ? `${costWords(plan.data.totals.about_usd ?? null, plan.data.totals.worst_usd ?? 0).replace(/^./, (x) => x.toUpperCase())}, inside the AI spending cap. Nothing is spent until you click Start.` : "Cost: US$0 (no AI call)."}</p>
             {plan.data.note ? <p className="mt-1 text-xs text-text-muted">{plan.data.note}</p> : null}
           </div>
         ) : null}
         {error ? <p role="alert" className="text-sm text-text-danger">{error}</p> : null}
+        {cost.dialog}
       </div>
     </Dialog>
   );
