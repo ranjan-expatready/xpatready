@@ -290,7 +290,8 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     fromDocuments.set(k, e);
     return true;
   };
-  const questions = needed.filter((q) => (mode === "agent" || isClientField(s, q.fact)) && !skipped(q)).map((q) => {
+  // C7.7: the representative's parts (from the firm record) are the firm's, never in the client's questionnaire.
+  const questions = needed.filter((q) => (mode === "agent" || (isClientField(s, q.fact) && q.about !== "representative")) && !skipped(q)).map((q) => {
     const subjectId = subjectOf(q.about), p = placementOf(s, q.fact);
     let required = q.required, hidden = q.status === "hidden by a condition";
     if (p?.condition && p.condition_effect === "REQUIRE") { const c = evalCondition(s, known, p.condition, q.about === "case" ? "case" : subjectId); required = c.applies === true; }

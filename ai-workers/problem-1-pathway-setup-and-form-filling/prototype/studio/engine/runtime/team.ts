@@ -89,12 +89,21 @@ export function representativeContact(firm: Firm, members: Member[]): Record<str
   return Object.fromEntries(Object.entries(all).filter(([, v]) => v !== undefined && v !== null && v !== ""));
 }
 
+/** A value with its object keys in the order PostgreSQL's jsonb returns them (shorter keys first, then by bytes), so a
+ *  firm-record value compares equal to the same value read back from a stored copy (review B1: the phone object). */
+export function inStoredOrder(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(inStoredOrder);
+  if (!v || typeof v !== "object") return v;
+  const keys = Object.keys(v).sort((a, b) => Buffer.byteLength(a) - Buffer.byteLength(b) || Buffer.compare(Buffer.from(a), Buffer.from(b)));
+  return Object.fromEntries(keys.map((k) => [k, inStoredOrder((v as Record<string, unknown>)[k])]));
+}
+
 /** The same facts as confirmed answers about the representative (channel "firm_record", by the representative of
  *  record), so the case view, readiness and the filler read them like any other confirmed fact. Never stored. */
 export function representativeAnswers(firm: Firm, members: Member[]): { id: string; subjectId: string; field: string; rowKey: null; value: unknown; status: "VERIFIED"; channel: string; actor: string; at: string; origin: null }[] {
   const rep = representativeOf(members), facts = representativeContact(firm, members);
   if (!rep || !facts) return [];
-  return Object.entries(facts).map(([field, value]) => ({ id: `${FIRM_RECORD}:${rep.userId}:${field}`, subjectId: REPRESENTATIVE, field, rowKey: null, value, status: "VERIFIED", channel: FIRM_RECORD, actor: rep.userId, at: rep.assignedAt.toISOString(), origin: null }));
+  return Object.entries(facts).map(([field, value]) => ({ id: `${FIRM_RECORD}:${rep.userId}:${field}`, subjectId: REPRESENTATIVE, field, rowKey: null, value: inStoredOrder(value), status: "VERIFIED", channel: FIRM_RECORD, actor: rep.userId, at: rep.assignedAt.toISOString(), origin: null }));
 }
 
 /** BR-20: a change of representative of record asks for a new IMM 5476, and the one signed with the earlier

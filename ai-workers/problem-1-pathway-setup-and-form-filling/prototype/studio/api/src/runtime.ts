@@ -220,9 +220,8 @@ export class Runtime {
     const gFirsts = new Map((gFrom.length ? await this.db.clientGroupAnswer.findMany({ where: { id: { in: gFrom } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
     const groups: GroupAnswer[] = groupRows.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string }; const first = src.from ? gFirsts.get(src.from) : undefined; return { id: x.id, subjectId: x.subjectId, group: x.groupKey, noneApply: x.noneApply, status: x.status as GroupAnswer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null }; });
     // C7.7 (G25): IMM 5476's representative block reads the representative of record from the firm record (never asked).
-    const [team, firm] = await Promise.all([this.db.caseTeamMember.findMany({ where: { caseId: c.id } }), this.db.case.findUnique({ where: { id: c.id }, select: { firmKey: true } })]);
-    const f = firm?.firmKey ? firmByKey(firm.firmKey) : null;
-    if (f) a.push(...representativeAnswers(f, team as unknown as Member[]));
+    const f = firmByKey(c.firmKey);
+    if (f) a.push(...representativeAnswers(f, (await this.db.caseTeamMember.findMany({ where: { caseId: c.id } })).map((m): Member => ({ ...m, role: m.role as Member["role"] }))));
     return { answers: a, rows: r, groups };
   }
 
