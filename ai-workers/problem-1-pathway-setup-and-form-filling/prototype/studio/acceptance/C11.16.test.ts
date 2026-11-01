@@ -15,9 +15,9 @@
 // (acceptance/lib/pack1.ts plantRun). p2/runs/.gitignore does not cover these names: proposal for the Lead, add
 // "*-pk1*.json" to it. The "i" tooltip on Start setup (P-125 (3)) is screen-only: journey J1.
 //   zsh tools/isolated.sh acc_a1 4561 start && ./node_modules/.bin/tsx acceptance/C11.16.test.ts 4561 xr_studio_acc_a1
-// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 23 pass, 2 fail — failing: AT-9 (PATCH
-// /combinations/:id renames the combination, 200) and AT-10 (the same PATCH with a move answers 200 instead of a
-// refusal in words), so the place is not read-only in its workspace (P-125 (3)).
+// Expected today (screens C11.16 PR, run 1 Nov 2026 on an isolated copy, US$0): 25 pass. Before it (main 931cb99a): 23
+// pass, AT-9 and AT-10 failing (PATCH /combinations/:id renamed or moved the combination with 200); PATCH now refuses
+// the name and the place in plain words (api/src/studio.ts updateCombination).
 // Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy not reachable, sample).
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

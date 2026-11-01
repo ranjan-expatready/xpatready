@@ -3,7 +3,7 @@
 // where it is used, read from the rows that already hold them (form field maps, checklist requirement quotes, the
 // imported release); a direct, versioned rename of a field's name or a section's title with the exact-duplicate check.
 // The one door (every item a ProposalItem, a rule as a source) comes in S6 slice 1, on the forms lane's contract v2.
-import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Query } from "@nestjs/common";
 import { z } from "zod";
 import { normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
 import { newestEdition } from "../../engine/programs.ts";
@@ -26,7 +26,7 @@ export const noFreeAdd = (kind: keyof typeof FROM): never => {
 /** The URL word for each kind (`GET /library/:kind/:key/sources`). */
 const KINDS = { fields: "field", sections: "section", "document-types": "document_type", "answer-lists": "answer_list" } as const;
 type Kind = (typeof KINDS)[keyof typeof KINDS];
-export type SourceLine = { kind: "form_box" | "checklist" | "release" | "ai_run" | "forms"; text: string; quote?: string | null; file?: string | null };
+export type SourceLine = { kind: "form_box" | "checklist" | "release" | "ai_run" | "forms" | "rule"; text: string; quote?: string | null; file?: string | null };
 export type SourcesView = { kind: Kind; key: string; name: string; sources: SourceLine[]; unsourced: boolean; used_in: string[] };
 
 /** "prototype/p1/inventory/imm5488e.text.inventory.json" → "IMM 5488"; any other file keeps its own name. */
@@ -66,7 +66,8 @@ export class LibrarySources {
       const latest = new Map<string, (typeof fields)[number]>(); for (const f of fields) if (!latest.has(f.canonicalFieldKey)) latest.set(f.canonicalFieldKey, f);
       if (kind === "field") {
         for (const b of boxes) add(b.canonicalFieldKey!, { kind: "form_box", text: `From: ${b.edition.editionLabel} form field "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"`, quote: b.evidenceQuote });
-        for (const f of latest.values()) if (f.sourceRef) add(f.canonicalFieldKey, f.origin === "AI_PROPOSAL" ? { kind: "ai_run", text: `From the ${f.sourceRef}` } : releaseLine(f.sourceRef));
+        // C3.6 (P-158 (5), plan §6): a fact added for a rule says "Needed by rule …", the rule's key and its sentence.
+        for (const f of latest.values()) if (f.sourceRef) add(f.canonicalFieldKey, /^Needed by (Rule|Check|Form condition|Question condition|Document condition) /.test(f.sourceRef) ? { kind: "rule", text: f.sourceRef.split(/; (?:rules|AI) run /)[0] } : f.origin === "AI_PROPOSAL" ? { kind: "ai_run", text: `From the ${f.sourceRef}` } : releaseLine(f.sourceRef));
       } else if (kind === "answer_list") {
         for (const b of boxes) { const list = latest.get(b.canonicalFieldKey!)?.answerListKey; if (list) add(list, { kind: "form_box", text: `Choices of: ${b.edition.editionLabel} form field "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"` }); }
       } else {
@@ -97,8 +98,14 @@ export class LibrarySources {
   /** Combinations each item is used in, by label (C3.13 where used). */
   async usedIn(kind: Kind, workspaceId: string): Promise<Map<string, string[]>> {
     const label = new Map((await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } })).map((c) => [c.id, c.label]));
+    const ids = await this.usedInIds(kind, workspaceId);
+    return new Map([...ids].map(([k, s]) => [k, [...new Set([...s].map((id) => label.get(id)).filter((l): l is string => !!l))].sort()]));
+  }
+
+  /** Combinations each item is used in, by id (where used, and reuse per combination). */
+  private async usedInIds(kind: Kind, workspaceId: string): Promise<Map<string, Set<string>>> {
     const out = new Map<string, Set<string>>();
-    const add = (key: string, combinationId: string) => { const l = label.get(combinationId); if (!l) return; const s = out.get(key) ?? new Set(); s.add(l); out.set(key, s); };
+    const add = (key: string, combinationId: string) => { const s = out.get(key) ?? new Set(); s.add(combinationId); out.set(key, s); };
     if (kind === "section") for (const s of await this.db.sqrSectionSelection.findMany({ where: { workspaceId } })) add(s.sectionKey, s.combinationId);
     else if (kind === "document_type") for (const r of current(await this.db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } } }), (r) => `${r.combinationId}|${r.lineageKey}`)) add(r.documentTypeKey, r.combinationId);
     else {
@@ -133,7 +140,56 @@ export class LibrarySources {
       if (kind === "answer_list") for (const f of await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })) listOf.set(f.canonicalFieldKey, f.answerListKey);
       for (const [f, c] of uses) { const key = kind === "field" ? f : listOf.get(f); if (key) add(key, c); }
     }
-    return new Map([...out].map(([k, s]) => [k, [...s].sort()]));
+    return out;
+  }
+
+  /** C3.13 (Screen 04 BR-4, P-37): with a combination chosen, each library item it uses is "Reused" (it was in the library
+   *  before this combination: another combination brought it in) or "New here" (this combination brought it in), with
+   *  the totals. The combination that brought an item in is the one its first ADD library change names (every way into
+   *  the library writes one with the combination it came from: an AI proposal, a document type named on a checklist
+   *  line); that record never changes, so a release or an edit elsewhere never flips the mark (review c313 M1, M2). An
+   *  item with no such record (loaded with the sample setup's release) was brought in by the first of its combinations
+   *  to be released, then the first created. Only items in the library count (review c313 M3: values a rule calculates
+   *  are not fields). Without a combination: the combinations to choose from, each with how many items it uses. */
+  async reuse(kindWord: string, combination: string | undefined) {
+    const kind = (KINDS as Record<string, Kind>)[kindWord];
+    if (!kind) throw problem(404, "Not found", `There is no library list "${kindWord}": use fields, sections, document-types or answer-lists.`);
+    const workspaceId = await this.ws.id();
+    const [combos, usedAll, inLibrary] = await Promise.all([
+      this.db.combination.findMany({ where: { workspaceId }, select: { id: true, combinationKey: true, label: true, createdAt: true } }),
+      this.usedInIds(kind, workspaceId),
+      this.keysOf(kind, workspaceId),
+    ]);
+    const used = new Map([...usedAll].filter(([k]) => inLibrary.has(k)));
+    const uses = (id: string) => [...used.values()].filter((s) => s.has(id)).length;
+    const combinations = combos.map((c) => ({ id: c.id, key: c.combinationKey, label: c.label, uses: uses(c.id) })).sort((a, b) => a.label.localeCompare(b.label));
+    if (combination === undefined || combination === "") return { combinations, combination: null };
+    const chosen = combos.find((c) => c.id === combination || c.combinationKey === combination);
+    if (!chosen) throw problem(404, "Not found", "That combination is not in this workspace. Choose one from the list.");
+    const mine = [...used].filter(([, s]) => s.has(chosen.id)).map(([k]) => k);
+    const [adds, releases] = await Promise.all([
+      this.db.libraryChange.findMany({ where: { workspaceId, kind, action: "ADD", key: { in: mine }, combinationId: { not: null } }, orderBy: { proposedAt: "asc" }, select: { key: true, combinationId: true } }),
+      this.db.configRelease.groupBy({ by: ["combinationId"], where: { workspaceId }, _min: { releasedAt: true } }),
+    ]);
+    const addedBy = new Map<string, string>(); for (const a of adds) if (!addedBy.has(a.key) && combos.some((c) => c.id === a.combinationId)) addedBy.set(a.key, a.combinationId!);
+    const released = new Map(releases.map((r) => [r.combinationId, r._min.releasedAt?.getTime() ?? Infinity]));
+    const rank = (id: string) => { const c = combos.find((x) => x.id === id)!; return [released.get(id) ?? Infinity, c.createdAt.getTime(), c.combinationKey] as const; };
+    const before = (a: string, b: string) => { const [x, y] = [rank(a), rank(b)]; return x[0] !== y[0] ? x[0] < y[0] : x[1] !== y[1] ? x[1] < y[1] : x[2] < y[2]; };
+    const items: Record<string, { in_combination: "REUSED" | "NEW"; brought_in_by: string }> = {};
+    for (const key of mine) {
+      const first = addedBy.get(key) ?? [...used.get(key)!].reduce((a, b) => (before(b, a) ? b : a));
+      items[key] = { in_combination: first === chosen.id ? "NEW" : "REUSED", brought_in_by: combos.find((c) => c.id === first)!.label };
+    }
+    const all = Object.values(items), reused = all.filter((x) => x.in_combination === "REUSED").length;
+    return { combinations, combination: { id: chosen.id, key: chosen.combinationKey, label: chosen.label }, total: all.length, reused, new: all.length - reused, items };
+  }
+
+  /** The keys of one kind's items in the library (any version), so a list's counts count only what the list shows. */
+  private async keysOf(kind: Kind, workspaceId: string): Promise<Set<string>> {
+    if (kind === "field") return new Set((await this.db.canonicalField.findMany({ where: { workspaceId }, distinct: ["canonicalFieldKey"], select: { canonicalFieldKey: true } })).map((r) => r.canonicalFieldKey));
+    if (kind === "section") return new Set((await this.db.logicalSection.findMany({ where: { workspaceId }, distinct: ["sectionKey"], select: { sectionKey: true } })).map((r) => r.sectionKey));
+    if (kind === "document_type") return new Set((await this.db.documentType.findMany({ where: { workspaceId }, distinct: ["documentTypeKey"], select: { documentTypeKey: true } })).map((r) => r.documentTypeKey));
+    return new Set((await this.db.answerList.findMany({ where: { workspaceId }, distinct: ["answerListKey"], select: { answerListKey: true } })).map((r) => r.answerListKey));
   }
 
   async sources(kindWord: string, key: string): Promise<SourcesView> {
@@ -294,6 +350,7 @@ const parseName = (body: unknown) => { const r = NameBody.safeParse(body); if (!
 @Controller("api")
 export class LibrarySourcesController {
   constructor(@Inject(LibrarySources) private readonly s: LibrarySources) {}
+  @Get("library/reuse/:kind") reuse(@Headers("x-actor") a: H, @Param("kind") kind: string, @Query("combination") combination?: string) { readerOf(a); return this.s.reuse(kind, combination); }
   @Get("library/:kind/:key/sources") sources(@Param("kind") kind: string, @Param("key") key: string) { return this.s.sources(kind, key); }
   @Patch("library/fields/:key/name") renameField(@Headers("x-actor") a: H, @Param("key") key: string, @Body() b: unknown) { return this.s.renameField(actorOf(a), key, b); }
   @Patch("library/sections/:key") renameSection(@Headers("x-actor") a: H, @Param("key") key: string, @Body() b: unknown) { return this.s.renameSection(actorOf(a), key, b); }
