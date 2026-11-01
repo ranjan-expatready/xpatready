@@ -31,9 +31,9 @@ esac; shift; done
 SKIP="check_catalogue_scale.cjs"
 # Quarantine (P-205, 31 Oct): a suite that fails at random is skipped in PR and merge-queue checks (--changed) until its
 # fix merges, so one unreliable test cannot stall every batch; the nightly full run still runs it. Remove a name when
-# its fix lands. check_cost_warning_browser.cjs: line 111 waits 30 s for "Start live AI draft"; passed in 19 s on one
-# batch and timed out at 44-50 s on others with the same code (runs 41231402694, 41231387000, 41240923705); fix X8a.
-QUARANTINE="check_cost_warning_browser.cjs"
+# its fix lands. check_cost_warning_browser.cjs was quarantined 31 Oct and came back 1 Nov when its fix (#177, X8a: the
+# check waits for the page's ready signal) merged.
+QUARANTINE=""
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
 export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 / P-179: test runs never write the real ledger (forms plan-p179 §5)
