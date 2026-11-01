@@ -86,3 +86,15 @@ Rebuilt web in the worktree and started a fresh `screens_rev5` on :4447.
 **Journey score, re-walk: 9 / 10.** Task completed 1 · next step obvious 1 · plain words 1 · feedback and state 1 · correct data ½ (one problem counted twice, item 1) · error recovery 1 · accessibility and screen sizes 1 · speed 1 · visual quality ½ (codes in the notice) · trust and sources 1.
 
 **Verdict: Approve** (commit 32938196). No Blocker or Major is open. Items 1–4 go in the PR or to the Lead.
+
+## Re-check of 255b3a76 (1 Nov)
+Reviewed the diff since 32938196: `combination.tsx`, two check lines, and refreshed screenshots. The badge is now aria-hidden digits after a real space. The tab carries `aria-label="Forms 2 setup items open"`, which starts with its visible text "Forms 2", so WCAG 2.5.3 is met. Tabs without a count keep their own text as the name. The Review tab's error count is untouched.
+
+Rebuilt web in the worktree and ran each suite on a fresh `screens_rev5` copy on :4447:
+* `check_x1_tabs_focus_browser`: **29/29**.
+* `check_s5_slice1_browser`: **52/52**. "One row of six tabs" passes, and axe is clean on every state.
+* `check_w1_start_setup_browser`: **44/44**, with the fake launcher from its usage line. "item 5" passes.
+
+The `check_w1_start_setup_browser` change only strips a trailing count from the selected tab's text, so it still fails on any tab other than Forms. Tracked screenshots the suites rewrote were restored. The runtime `r1c` speed budget was not run here; it belongs to runtime and is untouched.
+
+**Verdict: Approve** (commit 255b3a76). No Blocker or Major is open. The non-blocking items 1–4 from the 32938196 section stand.
