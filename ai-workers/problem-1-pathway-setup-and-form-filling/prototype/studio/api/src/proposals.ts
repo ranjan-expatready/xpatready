@@ -100,7 +100,7 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`proposal-door:${workspaceId}`}))`;
   const firstNew = new Map<string, { id: string; edition: string | null }>();
   for (const [n, it] of items.entries()) {
-    const { choice, decidedKey, work, ...item } = it;
+    const { choice, decidedKey, work: given, ...item } = it; let work = given;
     const parsed = ProposalItem.safeParse({ ...item, id: randomUUID(), status: "waiting", decision: null });
     if (!parsed.success) fail(`Proposal ${n + 1} (${item.kind ?? "no kind"}) does not follow the queue's contract: ${plainIssues(parsed.error)}.`);
     const x = parsed.data!;
@@ -116,13 +116,13 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
       const first = firstNew.get(ident) ?? await db.proposalItem.findFirst({ where: { workspaceId, kind: x.kind, identityKey: key, landsOn: "library", status: "waiting", reuse: { path: ["match"], equals: "new" }, NOT: { formEdition: x.scope.formEdition } }, select: { id: true, formEdition: true }, orderBy: { createdAt: "asc" } })
         .then((r) => (r ? { id: r.id, edition: r.formEdition } : null));
       if (first && first.edition !== x.scope.formEdition) {
-        x.reuse = { match: "reuse", existingKey: null }; x.relatesTo = first.id;
+        x.reuse = { match: "reuse", existingKey: null }; x.relatesTo = first.id; work = { ...((work ?? {}) as object), twinOf: first.id };
         if (x.confidence === "ready") x.confidence = "check";
-        x.reason = `Drafted for ${first.edition ?? "another source"} too: this reuses that item once it is accepted (one item per meaning, P-120).${x.reason ? ` ${x.reason}` : ""}`.slice(0, 500);
+        x.reason = `The same item is drafted for ${(first.edition ?? "another form").trim()}. Whichever is accepted first adds it to the library; this one then reuses it.${x.reason ? ` ${x.reason}` : ""}`.slice(0, 500);
       } else if (!firstNew.has(ident)) firstNew.set(ident, { id: x.id, edition: x.scope.formEdition });
     }
     // C11.13 (BAND_TIPS): an item close to a library item is never Ready: a person reads the near match and its reason.
-    if (x.identity.near.length && x.confidence === "ready") { x.confidence = "check"; x.reason = `Close to ${x.identity.near.slice(0, 3).join(", ")}: ${x.identity.nearReason}`.slice(0, 500); }
+    if (x.identity.near.length && x.confidence === "ready") { x.confidence = "check"; x.reason = `Close to ${x.identity.near.slice(0, 3).join(", ")}: ${x.identity.nearReason}${x.reason ? ` ${x.reason}` : ""}`.slice(0, 500); }
     rows.push({ id: x.id, workspaceId, kind: x.kind, runId: x.runId, step: x.step, formEdition: x.scope.formEdition, combinationId: x.scope.combinationId, landsOn: x.landsOn,
       reuse: x.reuse, payload: x.payload as Prisma.InputJsonValue, source: (x.source ?? undefined) as Prisma.InputJsonValue | undefined, rounds: x.rounds as Prisma.InputJsonValue,
       rules: x.rules, agreement: x.agreement, confidence: x.confidence, reason: x.reason, origin: x.origin, identity: x.identity, identityKey: key,
@@ -319,6 +319,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         payload = p.data!;
       }
       let landedAs: string | null = null, reused = false, pqr: (PqrWork & { stamp: string }) | null = null;
+      let resolved: { match: string; existingKey: string | null } | null = null;
       if (d.action !== "reject") {
         if (r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
           const twin = await sameInLibrary(tx, workspaceId, payload);
@@ -326,10 +327,13 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         }
         const reuse = r.reuse as { match: string; existingKey: string | null };
         // P-120: a reuse adds nothing to the library; it records the existing item it uses, if that is still there.
-        if (r.landsOn === "library" && reuse.match === "reuse" && !reuse.existingKey && r.relatesTo) {
-          const first = await tx.proposalItem.findUnique({ where: { id: r.relatesTo }, select: { status: true, decidedKey: true, formEdition: true } });
-          if (!first?.decidedKey || !["accepted", "edited"].includes(first.status)) fail(`"${identityKeyOf(payload, r.identityKey)}" reuses the item drafted for ${first?.formEdition ?? "another source"}: accept that one first, or reject this one.`, HttpStatus.CONFLICT);
-          reuse.existingKey = first!.decidedKey;
+        // C11.13 (review M1–M2): a twin drafted for another edition reuses the item its first copy added; when that one
+        // is not in the library (waiting, rejected or undone), the twin adds it itself, unless the library already has it.
+        if (r.landsOn === "library" && reuse.match === "reuse" && !reuse.existingKey && r.relatesTo && (r.work as { twinOf?: string } | null)?.twinOf) {
+          const first = await tx.proposalItem.findUnique({ where: { id: r.relatesTo }, select: { status: true, decidedKey: true } });
+          const key = first?.decidedKey && ["accepted", "edited"].includes(first.status) && (await usableInLibrary(tx, workspaceId, r.kind, first.decidedKey)) ? first.decidedKey : await sameInLibrary(tx, workspaceId, payload);
+          resolved = key ? { match: "reuse", existingKey: key } : { match: "new", existingKey: null };
+          reuse.match = resolved.match; reuse.existingKey = resolved.existingKey;
         }
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
           if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${identityKeyOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
@@ -347,7 +351,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       const landedStamp = landedAs && !reused ?await stampOf(tx, workspaceId, r.kind, landedAs) : null;
       const work = { ...((r.work ?? {}) as object), ...(d.action === "edit" ? { beforeEdit: r.payload } : {}), ...(landedStamp ? { landedStamp } : {}), ...(pqr ? { pqr } : {}) };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: d.action === "accept" ? "accepted" : d.action === "edit" ? "edited" : "rejected", decidedBy: actor.id, decidedAt: new Date(),
-        decisionReason: reason, batchId, decidedKey: landedAs,
+        decisionReason: reason, batchId, decidedKey: landedAs, ...(resolved && d.action !== "reject" ? { reuse: resolved } : {}),
         ...(d.action === "edit" || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
         // An edit keeps the item's own reading beside it, so Undo puts the item back as it was proposed (1b).
         ...(d.action === "edit" ? { payload: payload as Prisma.InputJsonValue, identityKey: identityKeyOf(payload, r.identityKey) } : {}) } });
@@ -375,6 +379,12 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     if (Date.now() - at > UNDO_SECONDS * 1000) fail(`Undo is offered for ${UNDO_SECONDS} seconds; after that, retire or delete the item in the library.`, HttpStatus.CONFLICT);
     const adds = await tx.libraryChange.findMany({ where: { workspaceId, batchId } });
     if (adds.some((c) => c.status !== "WAITING")) fail("A second person has already decided one of these items: it cannot be undone here.", HttpStatus.CONFLICT);
+    // C11.13 (review M3): an item this batch added that another accepted item now reuses is not taken away under it.
+    const added = rows.filter((r) => r.decidedKey && (r.reuse as { match?: string } | null)?.match !== "reuse");
+    const keys = added.map((r) => r.decidedKey!);
+    const users = keys.length ? await tx.proposalItem.findMany({ where: { workspaceId, status: { in: ["accepted", "edited"] }, decidedKey: { in: keys }, reuse: { path: ["match"], equals: "reuse" }, NOT: { batchId } }, select: { kind: true, decidedKey: true, formEdition: true } }) : [];
+    const user = users.find((u) => added.some((r) => r.kind === u.kind && r.decidedKey === u.decidedKey));
+    if (user) fail(`${user.decidedKey} is now reused by an item accepted for ${user.formEdition ?? "another source"}, so Undo would take it away under that item. Nothing was undone: undo that decision first, or retire the item in the shared library.`, HttpStatus.CONFLICT);
     // PR #96 review (1): an item edited after the accept is not erased by Undo; the library keeps the person's edit.
     for (const r of rows) {
       const { landedStamp } = (r.work ?? {}) as { landedStamp?: string };
@@ -396,6 +406,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
     for (const r of rows) {
       const { beforeEdit, landedStamp, pqr, ...work } = (r.work ?? {}) as { beforeEdit?: ProposalPayload; landedStamp?: string; pqr?: unknown };
       await tx.proposalItem.update({ where: { id: r.id }, data: { status: "waiting", decidedBy: null, decidedAt: null, decisionReason: null, batchId: null, decidedKey: null,
+        ...((r.work as { twinOf?: string } | null)?.twinOf ? { reuse: { match: "reuse", existingKey: null } } : {}),
         ...(beforeEdit || landedStamp || pqr ? { work: work as Prisma.InputJsonValue } : {}),
         ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey) } : {}) } });
     }

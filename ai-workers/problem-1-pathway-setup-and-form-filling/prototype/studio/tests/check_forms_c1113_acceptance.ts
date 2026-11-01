@@ -83,6 +83,27 @@ run(async () => {
   ok("setup: a twin 'Passport colour' enters the library after the proposal was written", !!twin && made === "made", { twin, made });
   r = await call("POST", "/review/proposals/decide", { ids: [twin ?? randomUUID()], action: "accept" }, AUTHOR);
   ok("C11.13 pass: a twin added after the proposal is caught at acceptance (409 naming it)", r.status === 409 && /person\.passport_colour/.test(words(r)), words(r));
+  // ---------------------------------------------------------------- review c1113: twins decided on the queue
+  const ed2 = (label: string) => item(label, { scope: { formEdition: "IMM 5257 Schedule 1 (test)", combinationId: null }, runId: run2 });
+  const run2 = randomUUID();
+  await db.draftingJob.create({ data: { id: run2, workspaceId: ws, combinationId: vv, kind: "masters_edition", mode: "REPLAY", status: "COMPLETED", startedBy: AUTHOR, finishedAt: new Date() } });
+  const a = (await tryInsert(item("Twin colour"))).ids[0], bb = (await tryInsert(ed2("Twin colour"))).ids[0];
+  const tie = sql(`select (reuse->>'match')||'|'||coalesce(relates_to::text,'')||'|'||confidence from proposal_item where id='${bb}'`);
+  ok("C11.13 pass: the second edition's copy waits as a reuse of the first, in Check, saying whichever is accepted first adds it", tie === `reuse|${a}|check` && /Whichever is accepted first adds it/.test(sql(`select reason from proposal_item where id='${bb}'`)), tie);
+  r = await call("POST", "/review/proposals/decide", { ids: [a], action: "reject", reason: "Not this one (test)." }, AUTHOR);
+  r = await call("POST", "/review/proposals/decide", { ids: [bb], action: "accept" }, AUTHOR);
+  ok("C11.13 pass (review M2): with the first rejected, the twin is accepted and adds the item itself", r.status === 201 && !!r.body?.items?.[0]?.landedAs && sql(`select reuse->>'match' from proposal_item where id='${bb}'`) === "new", [r.status, words(r) || r.body?.items]);
+  const c = (await tryInsert(item("Twin shade"))).ids[0], dd = (await tryInsert(ed2("Twin shade"))).ids[0];
+  const rc = await call("POST", "/review/proposals/decide", { ids: [c], action: "accept" }, AUTHOR);
+  r = await call("POST", "/review/proposals/decide", { ids: [dd], action: "accept" }, AUTHOR);
+  const cKey = rc.body?.items?.[0]?.landedAs;
+  ok("C11.13 pass: with the first accepted, the twin reuses its item (one library item), and the resolved key is written back", r.status === 201 && r.body?.items?.[0]?.landedAs === cKey && sql(`select reuse->>'existingKey' from proposal_item where id='${dd}'`) === cKey && sql(`select count(*) from canonical_field where label='Twin shade'`) === "1", [r.status, cKey, r.body?.items]);
+  r = await call("POST", `/review/proposals/undo/${rc.body?.batchId}`, undefined, AUTHOR);
+  ok("C11.13 fail (review M3): Undo of the first is refused while its twin reuses the item, in words (409)", r.status === 409 && /reused by an item/.test(words(r)) && sql(`select count(*) from canonical_field where label='Twin shade'`) === "1", [r.status, words(r)]);
+  const dBatch = sql(`select batch_id from proposal_item where id='${dd}'`);
+  r = await call("POST", `/review/proposals/undo/${dBatch}`, undefined, AUTHOR);
+  const r2 = await call("POST", `/review/proposals/undo/${rc.body?.batchId}`, undefined, AUTHOR);
+  ok("C11.13 pass: once the twin's decision is undone, the first can be undone too", r.status < 300 && r2.status < 300, [r.status, words(r), r2.status, words(r2)]);
   ok("C11.13 pass: no AI was called (US$0)", T.spent() === before);
   await db.$disconnect();
   T.done();
