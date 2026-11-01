@@ -14,6 +14,23 @@ import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
 import { PqrDrafts } from "./pqr-drafts.ts";
 import { Checklists } from "./checklist.ts";
 import { linesOf, savedReading } from "./saved-readings.ts";
+import { insertProposals } from "./proposals.ts";
+import { StepRunner, type AiStep, type RoundContext } from "./rounds.ts";
+import { Sources } from "./sources.ts";
+import { conditionsFromRounds, conditionsShapeOk, CONDITIONS_STEP, type CondAnswer, type CondRound } from "../../engine/qd-conditions.ts";
+
+/** Step 5's AI step (C4.11 part 2b): a draft round and a blind checker round on the shared step runner, replayed from
+ *  saved real answers (US$0); live waits for the founder's trial (P-131). Prompts: p2/prompts/conditions{,-check}.v1.md. */
+export const CONDITIONS_AI: AiStep = {
+  kind: CONDITIONS_STEP, jobBase: "studio-qd-conditions", configurationVersion: "c411-conditions",
+  template: "conditions.v1.md", check: "conditions-check.v1.md", schema: "conditions-output.v1.schema.json", effort: "low", max_output_tokens: 6000,
+  shapeOk: conditionsShapeOk,
+  words: {
+    noSaved: "No saved AI answer for this guide, prompt and combination yet: it is recorded once in the founder-approved live trial (P-131). Meanwhile a person adds conditions on the Questions tab.",
+    badSaved: "The saved AI answer could not be read, so it is not used. Meanwhile a person adds conditions on the Questions tab.",
+    nothingUsed: "Nothing of it is proposed.",
+  },
+};
 
 type H = string | undefined;
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -23,7 +40,6 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
 export const QD_LIVE_WAITING = "AI now for this run waits for the founder's Go for the live trial (P-131). Use rules only, or saved AI answers, meanwhile (US$0).";
 /** Steps 2 and 5 are built in the next parts of C4.11; until then they say so on the card (never a pretend result). */
 export const NOT_YET: Partial<Record<QdKind, string>> = {
-  qd_conditions: "Not available in this run yet: AI reading the forms' \"if yes, give details\" questions and the guide's conditions comes in the next part. Meanwhile a person adds conditions on the Questions tab.",
 };
 /** Tests only (the check's usage line): STUDIO_SLOW_QD_STEP=<ms> waits that long in each step, so Stop can be tested. */
 const slowForTest = async () => { const ms = Number(process.env.STUDIO_SLOW_QD_STEP ?? 0); if (ms > 0) await new Promise((r) => setTimeout(r, ms)); };
@@ -33,7 +49,7 @@ export const QdBody = z.object({ mode: z.enum(["rules", "replay", "live"]), plan
 
 @Injectable()
 export class DraftQd {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(PqrDrafts) private readonly pqr: PqrDrafts, @Inject(Checklists) private readonly checklists: Checklists, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(PqrDrafts) private readonly pqr: PqrDrafts, @Inject(Checklists) private readonly checklists: Checklists, @Inject(Sources) private readonly sources: Sources, @Inject(Audit) private readonly audit: Audit) {}
 
   /** A run left running by a stopped server can never finish: it says so, and no longer blocks a new run (as people-ai does). */
   async onModuleInit() {
@@ -73,6 +89,35 @@ export class DraftQd {
     return { status: jobs.length ? "COMPLETED" : "FAILED", message, proposed, detail: { checklist_jobs: jobs } };
   }
 
+  /** Step 5 (part 2b): conditional questions from the guide, two rounds replayed from saved answers, the rules of
+   *  engine/qd-conditions.ts on each, items of kind `condition` through insertProposals, one per question and deciding
+   *  question (under a lock; a removed one is not proposed again). Accepting one on the queue comes with its lander. */
+  private async conditions(c: { id: string; workspaceId: string; label: string; combinationKey: string }, mode: string, batchId: string, jobId: string, snapshot: Parameters<typeof conditionsFromRounds>[0]) {
+    if (mode !== "replay") return { status: "SKIPPED", message: "Not run with rules only: reading the guide's conditions is AI work. Choose saved AI answers to replay them (US$0).", proposed: 0, detail: {} };
+    let g: Awaited<ReturnType<PqrDrafts["guide"]>>;
+    try { g = await this.pqr.guide(c); } catch (e) { if (e instanceof HttpException) return { status: "FAILED", message: String((e.getResponse() as { detail?: string }).detail ?? e.message), proposed: 0, detail: {} }; throw e; }
+    if (!g.input) return { status: "FAILED", message: `${g.code} is not among the official files the AI may read, so its conditions are not drafted here.`, proposed: 0, detail: {} };
+    const runner = new StepRunner(this.sources);
+    const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], mode: "replay", wanted: async () => true, batchId };
+    const d = await runner.round<CondAnswer>(CONDITIONS_AI, false, ctx);
+    const k = d.ok ? await runner.round<CondAnswer>(CONDITIONS_AI, true, ctx) : null;
+    if (!d.ok || !k?.ok) return { status: "FAILED", message: (!d.ok ? d.reason : k && !k.ok ? k.reason : null) ?? "The AI step did not finish.", proposed: 0, detail: {} };
+    const r = (x: typeof d & { ok: true }): CondRound => ({ output: x.output, from: x.from, runFile: x.runFile, costUsd: x.costUsd });
+    const res = conditionsFromRounds(snapshot, { draft: r(d), check: r(k) }, { ...g.input, text: g.text, code: g.code }, { runId: jobId, combinationId: c.id });
+    let fresh: typeof res.items = [], already = 0, removed = 0;
+    await this.db.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `qd_conditions:${c.id}`);
+      const seen = await tx.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "condition", status: { in: ["waiting", "rejected"] } }, select: { identityKey: true, status: true } });
+      const waiting = new Set(seen.filter((x) => x.status === "waiting").map((x) => x.identityKey)), gone = new Set(seen.filter((x) => x.status === "rejected").map((x) => x.identityKey));
+      fresh = res.items.filter((x) => !waiting.has(x.identity.key) && !gone.has(x.identity.key));
+      already = res.items.filter((x) => waiting.has(x.identity.key)).length; removed = res.items.filter((x) => gone.has(x.identity.key) && !waiting.has(x.identity.key)).length;
+      await insertProposals(tx, c.workspaceId, fresh);
+    });
+    const ready = fresh.filter((x) => x.confidence === "ready").length;
+    const message = `${fresh.length} condition${fresh.length === 1 ? "" : "s"} for To review (Ready ${ready} · Check ${fresh.filter((x) => x.confidence === "check").length} · Decide ${fresh.filter((x) => x.confidence === "decide").length})${already ? `; ${already} already waiting there` : ""}${removed ? `; ${removed} a person removed before are not proposed again` : ""}${res.dropped.length ? `; ${res.dropped.length} left out with the reason` : ""}. Saved AI answers, US$0.`;
+    return { status: "COMPLETED", message, proposed: fresh.length, detail: { dropped: res.dropped, unresolved: res.unresolved, run_files: [d.runFile, k.runFile], details: res.dropped.length ? res.dropped.map((x) => `${x.asks}: ${x.why}`).join("\n") : null } };
+  }
+
   private async combination(id: string) {
     const c = /^[0-9a-f-]{36}$/i.test(id) ? await this.db.combination.findUnique({ where: { id } }) : null;
     if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
@@ -91,8 +136,8 @@ export class DraftQd {
     const facts = factsPerRole(snapshot);
     if (!facts.total) throw problem(409, "No forms yet", `"${c.label}" has no form fields mapped to facts yet, so there is nothing to draft. Find its forms (Start setup) first.`);
     const steps = QD_STEPS.map((s, i) => ({ n: i + 1, kind: s.kind, label: s.label,
-      how: NOT_YET[s.kind] ? "not_yet" : s.kind === "pqr_picks" ? (mode === "replay" ? "saved" : "rules") : s.kind === "qd_documents" ? (mode === "replay" ? "saved" : "ai_only") : "rules",
-      uses_ai: (s.kind === "pqr_picks" || s.kind === "qd_documents") && mode === "replay" }));
+      how: NOT_YET[s.kind] ? "not_yet" : s.kind === "pqr_picks" ? (mode === "replay" ? "saved" : "rules") : (s.kind === "qd_documents" || s.kind === "qd_conditions") ? (mode === "replay" ? "saved" : "ai_only") : "rules",
+      uses_ai: (s.kind === "pqr_picks" || s.kind === "qd_documents" || s.kind === "qd_conditions") && mode === "replay" }));
     const fingerprint = JSON.stringify({ id: c.id, mode, facts: facts.total, roles: facts.roles.map((r) => `${r.role}:${r.facts}`), steps: steps.map((s) => s.how) });
     return { mode, combination: { id: c.id, label: c.label }, steps, facts, totals: { worst_usd: 0 },
       note: mode === "rules" ? "No AI: rules work out each step; what needs a person goes to To review." : "Replays the answers AI gave before for this exact guide, prompt and combination (US$0); a step with none saved says so and proposes nothing.",
@@ -159,6 +204,10 @@ export class DraftQd {
         if (NOT_YET[s.kind]) { await end(s.kind, "NOT_YET", NOT_YET[s.kind]!); continue; }
         if (s.kind === "qd_documents") {
           const r = await this.documents(actor, c, plan.mode);
+          out.proposed += r.proposed;
+          await end(s.kind, r.status, r.message, r.detail);
+        } else if (s.kind === "qd_conditions") {
+          const r = await this.conditions(c, plan.mode, batch.id, jobs.get("qd_conditions")!, snapshot);
           out.proposed += r.proposed;
           await end(s.kind, r.status, r.message, r.detail);
         } else if (s.kind === "qd_facts") {

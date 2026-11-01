@@ -53,7 +53,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const dlg = p.getByRole("dialog", { name: "Draft questions and documents" }); await dlg.waitFor();
   await dlg.locator("[data-qd-cost]").waitFor();
   step("C4.11 P pass: the plan shows the seven steps and US$0 before anything runs", /US\$0/.test(await dlg.locator("[data-qd-cost]").innerText()) && (await dlg.locator("[data-qd-steps] li").count()) === 7, await dlg.locator("[data-qd-cost]").innerText());
-  step("C4.11 N pass: step 5 says not available yet, step 2 that it is AI work (rules only)", /not available yet/.test(await dlg.locator('[data-qd-step="qd_conditions"]').innerText()) && /AI work/.test(await dlg.locator('[data-qd-step="qd_documents"]').innerText()));
+  step("C4.11 N pass: steps 2 and 5 say they are AI work (not run with rules only)", /AI work/.test(await dlg.locator('[data-qd-step="qd_conditions"]').innerText()) && /AI work/.test(await dlg.locator('[data-qd-step="qd_documents"]').innerText()));
   step("C4.11 L fail: AI now is greyed with the reason (the founder's live trial)", await dlg.locator('[data-qd-mode="live"] input').isDisabled() && /live trial/.test(await dlg.locator('[data-qd-mode="live"]').innerText()));
   step("C4.11 no system key shows in the plan", !KEYS.test(await dlg.locator("[data-qd-plan]").innerText()), (await dlg.locator("[data-qd-plan]").innerText()).match(KEYS)?.[0]);
   await state("plan-rules-only");
@@ -72,9 +72,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await dlg.getByRole("button", { name: "Draft", exact: true }).click();
   await dlg.locator("[data-qd-result]").waitFor({ timeout: 60000 });
   await dlg.locator("[data-qd-note]").waitFor({ timeout: 30000 });
-  await p.waitForFunction(() => /Not available yet/.test(document.querySelector("[data-qd-result]")?.textContent ?? ""), null, { timeout: 30000 });
+  await p.waitForFunction(() => /AI work/.test(document.querySelector("[data-qd-result]")?.textContent ?? ""), null, { timeout: 30000 });
   const res = await dlg.locator("[data-qd-result]").innerText();
-  step("C4.11 R pass: the run shows on the run card in the dialog, step 5 reads Not available yet", /Not available yet/.test(res) && /Rules check the whole draft/.test(res), res.slice(0, 200));
+  step("C4.11 R pass: the run shows on the run card in the dialog; steps 2 and 5 say they are AI work", /AI work/.test(res) && /Rules check the whole draft/.test(res), res.slice(0, 200));
   step("C4.11 K pass: on the sample the rules' check reads All four rules pass", await dlg.locator("[data-qd-clean]").isVisible());
   step("C4.11 pass: the picks are counted for To review", /\d+ items? for To review/.test(await dlg.locator("[data-qd-note]").innerText()), await dlg.locator("[data-qd-note]").innerText());
   await state("run-done");

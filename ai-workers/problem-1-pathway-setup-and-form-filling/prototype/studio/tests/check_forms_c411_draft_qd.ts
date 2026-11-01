@@ -50,7 +50,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   let r = await plan("rules");
   const kinds = (r.body.steps ?? []).map((s: J) => s.kind).join(",");
   ok("C4.11 P pass: the plan lists the seven steps in order, how each runs, US$0, before anything runs", r.status === 200 && kinds === "qd_facts,qd_documents,qd_document_facts,qd_sources,qd_conditions,pqr_picks,qd_check" && r.body.totals.worst_usd === 0 && r.body.facts.total > 0 && /^[0-9a-f]{64}$/.test(r.body.plan_sha256), { kinds, facts: r.body.facts?.total });
-  ok("C4.11 N pass: the plan says step 5 is not available yet and step 2 is AI work, not run with rules only", r.body.steps?.filter((s: J) => s.how === "not_yet").map((s: J) => s.n).join(",") === "5" && r.body.steps?.[1]?.how === "ai_only", r.body.steps?.map((s: J) => s.how));
+  ok("C4.11 N pass: the plan says steps 2 and 5 are AI work, not run with rules only; no step is a pretend result", r.body.steps?.filter((s: J) => s.how === "not_yet").length === 0 && r.body.steps?.[1]?.how === "ai_only" && r.body.steps?.[4]?.how === "ai_only", r.body.steps?.map((s: J) => s.how));
   r = await call("POST", `/combinations/${wp}/draft-qd`, { mode: "rules", planSha256: "0".repeat(64) });
   ok("C4.11 P fail: a run whose plan was not looked at (another checksum) is refused in words (409), nothing started", r.status === 409 && /plan again/.test(words(r)) && sql(`select count(*) from ai_batch where operation='draft_questions_documents'`) === "0", words(r));
   r = await plan("fast");
@@ -73,9 +73,11 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
 
   // ---------------------------------------------------------------- S6 replay fail: nothing saved → says so, never looks live
   r = await run("replay");
+  const c5none = step(r, "qd_conditions");
+  ok("C4.11 C fail: with no saved AI answer for the conditions, step 5 says so, proposes nothing, US$0", c5none?.status === "FAILED" && /No saved AI answer/.test(c5none.message) && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "0", c5none);
   const s6none = step(r, "pqr_picks"), firstDocs = step(r, "qd_documents"), firstLines = Number(sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='requirement_line' and status='waiting'`));
   ok("C4.11 S6 fail: with no saved AI answer, step 6 says so and proposes nothing, US$0; step 7 still runs", r.status === 201 && waiting("ai") === 0 && r.body.usd === 0 && s6none?.status === "FAILED" && /No saved AI answer/.test(s6none.message) && step(r, "qd_check")?.status === "COMPLETED", s6none);
-  ok("C4.11 S6 fail (break m4): the reply says the run had a problem and names step 6, never only \"rules pass\"", r.body.status === "done_with_problems" && /Not done: Pre-qualification picks/.test(r.body.note), r.body.note);
+  ok("C4.11 S6 fail (break m4): the reply says the run had a problem and names step 6, never only \"rules pass\"", r.body.status === "done_with_problems" && /Not done:.*Pre-qualification picks/.test(r.body.note), r.body.note);
   let card = await call("GET", `/runs/${r.body.runId}`);
   ok("C4.11 R pass: the run shows on the shared run card with its label, seven steps and Done with problems (step 6)", card.status === 200 && card.body.label === "Drafting questions and documents" && card.body.steps.length === 7 && card.body.status === "done_with_problems" && card.body.usd.spent === 0 && card.body.error?.next === null, { label: card.body.label, status: card.body.status, steps: card.body.steps?.length });
 
@@ -101,7 +103,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   ok("C4.11 R pass (review M1): starting answers at once with the run id while the steps go on (the card and Stop show at once)", r.body.started?.status === "running" && r.body.started?.runId === r.body.runId, r.body.started);
   ok("C4.11 R pass: rules only runs all seven steps as one run; step 6 puts the rules' picks on the queue, US$0", r.status === 201 && r.body.status === "done" && r.body.steps.length === 7 && rulesProposed > 0 && waiting("rules") === rulesProposed && r.body.usd === 0
     && ["qd_facts", "qd_document_facts", "qd_sources", "pqr_picks", "qd_check"].every((k) => step(r, k)?.status === "COMPLETED"), r.body.steps?.map((s: J) => `${s.kind}:${s.status}`));
-  ok("C4.11 N pass: step 5 ends as not available yet with what to do meanwhile; step 2 says rules only reads no checklist", step(r, "qd_conditions")?.status === "NOT_YET" && /Meanwhile/.test(step(r, "qd_conditions")?.message ?? "") && step(r, "qd_documents")?.status === "SKIPPED" && /saved AI answers/.test(step(r, "qd_documents")?.message ?? ""), step(r, "qd_documents"));
+  ok("C4.11 N pass: with rules only, steps 2 and 5 say they are AI work and are not run", step(r, "qd_conditions")?.status === "SKIPPED" && /AI work/.test(step(r, "qd_conditions")?.message ?? "") && step(r, "qd_documents")?.status === "SKIPPED" && /saved AI answers/.test(step(r, "qd_documents")?.message ?? ""), step(r, "qd_documents"));
   ok("C4.11 R pass: one run is one batch with exactly its seven steps", sql(`select count(*) from drafting_job where batch_id='${r.body.runId}'`) === "7", sql(`select string_agg(kind, ',') from drafting_job where batch_id='${r.body.runId}'`));
   ok("C4.11 pass: step 1 says the facts per person, step 4 where each answer comes from, in words", /facts the forms need: .+ \d+/.test(step(r, "qd_facts")?.message ?? "") && /Document \d+ · Client \d+ · Case officer \d+/.test(step(r, "qd_sources")?.message ?? ""), [step(r, "qd_facts")?.message, step(r, "qd_sources")?.message]);
   const r2 = await run("rules");
@@ -152,6 +154,36 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   const n2 = lines();
   r = await run("replay");
   ok("C4.11 D fail: drafting again puts no requirement line on the queue twice", lines() === n2 && /replayed before/.test(step(r, "qd_documents")?.message ?? ""), { before: n2, after: lines(), message: step(r, "qd_documents")?.message });
+
+  // ---------------------------------------------------------------- C: step 5, conditional questions (saved answers)
+  const facts5 = ((await call("GET", `/combinations/${wp}/fact-sources`)).body.facts ?? []) as { role: string; fact: string; label: string; placed: boolean; forms: string[] }[];
+  const mine5 = facts5.filter((f) => f.role === "principal" && f.placed && f.forms.length);
+  const uniq = mine5.filter((f) => mine5.filter((g) => g.label.toLowerCase() === f.label.toLowerCase()).length === 1);
+  const [ct1, cd1, ct2, cd2] = uniq;
+  const cond = (asks: string, depends_on: string, when = "yes", quote = QUOTE) => ({ role: "principal", asks, depends_on, when, quote, why: "The guide asks it only in this case." });
+  const saveC = (check: boolean, conditions: unknown[]) => {
+    const f = `studio-qd-conditions${check ? "-check" : ""}-c411-test-live-20261101t170000000z-${check ? "c" : "d"}${Date.now().toString(36)}.json`;
+    writeFileSync(join(RUNS, f), JSON.stringify({ caller: "live", contract_valid: true, launch_evidence: { template_sha256: sha(readFileSync(join(PROMPTS, check ? "conditions-check.v1.md" : "conditions.v1.md"))) }, drafting_run: { status: "completed", inputs: { official_files: inputs, combination: "wp.family" }, usage: { cost_usd: 0.5 } }, raw_output: JSON.stringify({ conditions, unresolved: [] }) }));
+    written.push(join(RUNS, f));
+  };
+  if (ct1 && cd1 && ct2 && cd2) {
+    saveC(false, [cond(ct1.label, cd1.label), cond(ct2.label, cd2.label, "no"), cond("A made up question", cd1.label), cond(cd2.label, ct1.label, "yes", "This sentence is not anywhere in the guide at all.")]);
+    saveC(true, [cond(ct1.label, cd1.label), cond(ct2.label, cd2.label, "yes")]);
+    r = await run("replay");
+    const c5 = step(r, "qd_conditions");
+    const item = (t: string, d: string) => sql(`select agreement || '|' || confidence || '|' || (select bool_and((x->>'passed')::boolean) from jsonb_array_elements(rules) x) from proposal_item where combination_id='${wp}' and kind='condition' and identity_key='principal|${t}|${d}'`).split("|");
+    const [ag1, cf1, rules1] = item(ct1.fact, cd1.fact), [ag2, cf2] = item(ct2.fact, cd2.fact);
+    ok("C4.11 C pass: both readings give the same question, deciding question and answer: agreed, Ready when every rule passes (else Check with the reason)", c5?.status === "COMPLETED" && ag1 === "agreed" && cf1 === (rules1 === "t" ? "ready" : "check"), { ag1, cf1, rules1, message: c5?.message });
+    ok("C4.11 C fail: the readings give different deciding answers: Check, never Ready", ag2 === "differ" && cf2 === "check", { ag2, cf2 });
+    const dropped5 = (await call("GET", `/runs/${r.body.runId}`)).body.steps?.find((x: J) => x.kind === "qd_conditions")?.message ?? "";
+    ok("C4.11 C fail: a question this combination does not ask, and a sentence not in the guide, are left out with the reason (never guessed)", /2 left out with the reason/.test(dropped5) && sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2", dropped5);
+    ok("C4.11 C pass: each condition is a queue item from AI with its guide sentence and a valid condition on the deciding question", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition' and origin='ai' and source->>'quote' is not null and payload->'condition'->'tree'->>'field' in ('${cd1.fact}','${cd2.fact}')`) === "2");
+    r = await run("replay");
+    ok("C4.11 C fail: drafting again puts no condition on the queue twice", sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='condition'`) === "2" && /2 already waiting/.test(step(r, "qd_conditions")?.message ?? ""), step(r, "qd_conditions")?.message);
+    const cid = sql(`select id from proposal_item where combination_id='${wp}' and kind='condition' limit 1`);
+    const acc = await call("POST", "/review/proposals/decide", { ids: [cid], action: "accept" });
+    ok("C4.11 C fail: a condition is not yet accepted on the queue (its lander is part 3): refused in words, nothing changes", acc.status === 409 && /not yet on this queue/.test(words(acc)) && sql(`select status from proposal_item where id='${cid}'`) === "waiting", words(acc));
+  } else ok("C4.11 C setup: the sample has four principal questions with distinct names", false, uniq.length);
 
   // ---------------------------------------------------------------- R: a run its server left running never blocks for good (review M3)
   const wsId = sql(`select workspace_id from combination where id='${wp}'`);

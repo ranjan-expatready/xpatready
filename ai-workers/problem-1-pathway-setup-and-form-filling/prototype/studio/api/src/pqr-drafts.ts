@@ -65,7 +65,7 @@ export class PqrDrafts {
   }
 
   /** The combination's guide: the one linked as its source (the finder read it, or Load sample linked it), as people-ai reads it. */
-  private async guide(c: { id: string; workspaceId: string; label: string }): Promise<Guide> {
+  async guide(c: { id: string; workspaceId: string; label: string }): Promise<Guide> {
     const shas = (await this.db.sourceAttachment.findMany({ where: { combinationId: c.id }, select: { sha256: true } })).map((a) => a.sha256);
     const ed = shas.length ? await this.db.formEdition.findFirst({ where: { workspaceId: c.workspaceId, sha256: { in: shas }, form: { formKind: "guide" } }, include: { form: true } }) : null;
     if (!ed?.form.formPageUrl) throw problem(409, "No guide yet", `"${c.label}" has no IRCC guide among its sources yet: finding its forms (Start setup) reads and links it. Then draft its pre-qualification.`);
