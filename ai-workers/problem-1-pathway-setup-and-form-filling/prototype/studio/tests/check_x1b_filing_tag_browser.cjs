@@ -32,7 +32,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   for (const r of all) {
     if (!(await card(r.label).count())) continue;
     const t = await tagOf(r.label);
-    const want = r.filing ? (r.filing.startsWith("Mixed") ? "Mixed" : r.filing) : null;
+    const want = r.filing && ["PDF only", "Online only", "Paper only", "Mixed"].some((k) => r.filing.startsWith(k)) ? (r.filing.startsWith("Mixed") ? "Mixed" : r.filing) : null;
     if ((t?.tag ?? null) !== want || (t && t.shown !== want)) bad.push(`${r.label}: tag ${t?.shown} vs filing ${r.filing}`);
   }
   step("C1.6 X1b (P-208): every card's filing tag is the catalogue's filing (PDF only · Online only · Mixed)", bad.length === 0 && all.some((r) => r.filing), bad.length ? bad : all.map((r) => `${r.label}: ${r.filing}`));
@@ -49,15 +49,15 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const r1 = await setChannel(forms[0].code, "ONLINE");
     await openList();
     const mixed = await tagOf(pdf.label);
-    step("C1.6 X1b: one line online and one PDF → the card reads 'Mixed', with the full words on hover and for screen readers", r1.status === 200 && mixed?.shown === "Mixed" && /Mixed: online and PDF/.test(mixed.title ?? "") && /Filed: Mixed: online and PDF/.test(await card(pdf.label).locator("[data-filing-tag] .sr-only").innerText()), { status: r1.status, mixed });
+    step("C1.6 X1b: one line online and one PDF → the card reads 'Mixed', with the full words on hover and for screen readers", r1.status === 200 && mixed?.shown === "Mixed" && /Mixed: online and PDF/.test(mixed.title ?? "") && /Filing: Mixed: online and PDF/.test(await card(pdf.label).locator("[data-filing-tag] .sr-only").innerText()), { status: r1.status, mixed });
     // Back to one channel: every form line on PDF upload again (IRCC takes each of these as a PDF).
     for (const f of forms) await setChannel(f.code, "PDF_UPLOAD");
   }
   await openList();
-  const online = await tagOf(pdf.label);
+  const back = await tagOf(pdf.label);
   const after = (await rows()).find((r) => r.label === pdf.label).filing;
-  step("C1.6 X1b: every form line on PDF upload again → the card reads 'PDF only', the same as the catalogue", after === "PDF only" && online?.shown === "PDF only", { online, after });
-  step("C1.6 X1b fail: the card does not keep 'Mixed' once the lines are on one channel again", online?.shown !== "Mixed");
+  step("C1.6 X1b: every form line on PDF upload again → the card reads 'PDF only', the same as the catalogue", after === "PDF only" && back?.shown === "PDF only", { back, after });
+  step("C1.6 X1b fail: the card does not keep 'Mixed' once the lines are on one channel again", back?.shown !== "Mixed");
 
   const ax = await new AxeBuilder({ page: p }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   step("axe: the Programs cards with filing tags have no WCAG A/AA violation", ax.violations.length === 0, ax.violations.map((v) => `${v.id}: ${v.nodes[0]?.target?.join(" ")}`).join(" | "));

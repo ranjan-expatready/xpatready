@@ -4,7 +4,7 @@
 // Corporate and employers), under the same filter bar as Program structure (Pathway chips, Program, status chips
 // All · Not started · In progress · Live, Needs you, active-filter chips and Clear all, all in the address).
 // "Add combination" opens the one "Add to Program structure" pop-up here; the new card shows in place, outlined for 2 s.
-// Cards (default) or List, remembered per person. A card shows five things only: the name, the full trail, "n of 5
+// Cards (default) or List, remembered per person. A card shows the name, the full trail, its filing tag (P-208), "n of 5
 // steps" or "✓ Live" (with a 2 px five-part edge bar that only repeats it), Needs you, and one button (Start setup ·
 // Resume setup · Open), all read from the setup checklist (`setup`, slice A); the rest lives on the combination's
 // Overview. Sections: Pathway, then Program, each with "n of m live", folded per person. One request per view
@@ -486,7 +486,7 @@ function Progress({ r, mini }: { r: CatalogueLeaf; mini?: boolean }) {
   return <span data-progress={st} className={cn(st === "LIVE" ? "font-semibold text-text-ok" : st === "RETIRED" ? "text-text-muted" : "text-text")}>{text}</span>;
 }
 
-/** A card (concept v4 §7): the name, the full trail, "n of 5 steps" or "✓ Live" with the edge bar, Needs you and one
+/** A card (concept v4 §7): the name, the full trail, "n of 5 steps" or "✓ Live" with the edge bar, the filing tag (X1b, P-208), Needs you and one
  *  button. The name, and the rest of the card, open the combination page. */
 function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onResume }: { r: CatalogueLeaf; lit: boolean; justAdded?: boolean; q: string; canAuthor: boolean; onOpen: () => void; onResume: () => void }) {
   const trail = trailOf(r).join(" › ");
@@ -500,7 +500,7 @@ function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onResume }: { r: C
       </h3>
       <p className="truncate text-xs text-text-muted" title={trail} data-trail>{trail}</p>
       <Tip tip={BAR_TIP}><p className="mt-1.5 w-fit text-[13px]">{<Progress r={r} />}</p></Tip>
-      {r.filing ? <FilingTag filing={r.filing} /> : null}
+      {r.filing && FILING_KINDS.some((k) => r.filing!.startsWith(k)) ? <FilingTag filing={r.filing} /> : null}
       {q && r.matches.some((m) => m !== "name") ? <p className="text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</p> : null}
       <div className="mt-auto pt-2.5" data-card-act><CardButton r={r} canAuthor={canAuthor} onOpen={onOpen} onResume={onResume} /></div>
       <StepBar r={r} />
@@ -511,9 +511,11 @@ function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onResume }: { r: C
 /** X1b (P-208): how the combination is filed, as a small tag on its card: "PDF only" · "Online only" · "Mixed" (the
  *  catalogue's C1.6 words, engine/channels.ts filingKind; "Mixed: online and PDF" is shortened on the card and said in
  *  full to screen readers and on hover). No tag while it has no form lines (filing is null). */
+/** Review m2: only a filing method gets a tag ("Checklists only" is not one). */
+export const FILING_KINDS = ["PDF only", "Online only", "Paper only", "Mixed"];
 export const FILING_TAG = (filing: string) => (filing.startsWith("Mixed") ? "Mixed" : filing);
 function FilingTag({ filing }: { filing: string }) {
-  return <p className="w-fit"><span className="rounded border border-border px-1.5 py-px text-xs text-text-muted" title={`Filed: ${filing}`} data-filing-tag={FILING_TAG(filing)}><span className="sr-only">Filed: {filing}</span><span aria-hidden>{FILING_TAG(filing)}</span></span></p>;
+  return <p className="w-fit"><span className="rounded border border-border px-1.5 py-px text-xs text-text-muted" title={`Filing: ${filing}`} data-filing-tag={FILING_TAG(filing)}><span className="sr-only">Filing: {filing}</span><span aria-hidden>{FILING_TAG(filing)}</span></span></p>;
 }
 
 function CorporateCallout() {
