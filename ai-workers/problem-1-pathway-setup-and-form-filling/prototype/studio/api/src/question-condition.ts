@@ -39,7 +39,7 @@ export async function proposeConditionChange(tx: Tx, l: { ws: string; actor: Act
   if (sameTree(current.predicateJson, p.condition.tree)) throw problem(409, "Nothing changes", `"${name}" already has this condition in the library.`);
   await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `placement_condition:${l.ws}:${key}`);
   if (await tx.libraryChange.findFirst({ where: { workspaceId: l.ws, kind: COND_KIND, key, status: { in: OPEN } } })) throw problem(409, "Already waiting", `A change of when "${name}" is asked already waits on To review or for the next release.`);
-  const uses = await tx.combination.count({ where: { workspaceId: l.ws, retiredAt: null, sqrSections: { some: { sectionKey: current.sectionKey } } } }).catch(() => 0);
+  const uses = await tx.combination.count({ where: { workspaceId: l.ws, retiredAt: null, sections: { some: { sectionKey: current.sectionKey } } } });
   const label = `${name} · ${p.condition.sentence.replace(/^"[^"]*" is /, "").replace(/\.$/, "")}, for every combination that asks it`.slice(0, 300);
   const c = await tx.libraryChange.create({ data: { workspaceId: l.ws, kind: COND_KIND, key, label, action: COND_ACTION, reason: l.reason, status: "WAITING", proposedBy: l.actor.id, appliedBy: l.actor.id,
     matches: { before: current.predicateJson ?? null, beforePlain: current.conditionPlain ?? null, after: p.condition.tree, sentence: p.condition.sentence, section: current.sectionKey, uses } as Prisma.InputJsonValue,

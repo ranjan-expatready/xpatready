@@ -193,6 +193,9 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     const q0 = sql(`select coalesce(predicate_json::text,'none') || '|' || count(*) over () from section_question where lineage_key='${ct1.fact}' order by version desc limit 1`);
     let acc = await call("POST", "/review/proposals/decide", { ids: [keep], action: "accept" });
     const chg = sql(`select id || '|' || status from library_change where kind='placement_condition' and key='${ct1.fact}' order by proposed_at desc limit 1`).split("|");
+    ok("C4.11 L3 pass (part-3 review M1): the change counts the combinations that ask the question (at least this one)", Number(sql(`select matches->>'uses' from library_change where id='${chg[0]}'`)) >= 1, sql(`select matches->>'uses' from library_change where id='${chg[0]}'`));
+    const page = await call("GET", `/library/changes/${chg[0]}`, undefined, "user-B");
+    ok("C4.11 L3 pass (part-3 review M2): the change reads in words on its review page, never its action code", page.status === 200 && /Change when it is asked/.test(JSON.stringify(page.body)) && !/sET_|"SET_CONDITION when/.test(JSON.stringify(page.body)), JSON.stringify(page.body).slice(0, 200));
     ok("C4.11 L3 pass: accepting a condition writes a waiting library change for a second person; the question is unchanged until then", (acc.status === 200 || acc.status === 201) && chg[1] === "WAITING" && sql(`select coalesce(predicate_json::text,'none') || '|' || count(*) over () from section_question where lineage_key='${ct1.fact}' order by version desc limit 1`) === q0, { status: acc.status, chg, words: words(acc) });
     const batch = String(acc.body.batchId ?? "");
     r = await call("POST", `/review/proposals/undo/${batch}`);
