@@ -238,6 +238,84 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   r = await undo(rm8.body?.batchId);
   ok("C1.5 break m8: undoing a removal leaves the released row it never touched as it was, its save time too", rm8.status === 200 && r.status === 200 && lines(WP, "IMM 1295") === "1:PUBLISHED" && sql(`select updated_at from combination_form where combination_id='${WP}' and lineage_key='IMM 1295' and status='PUBLISHED'`) === relAt, { rm: rm8.status, u: r.status, w: words(r) });
 
+  // ------------------------------------------------------------ re-review nit: the PAPER channel is copied
+  const edP = sql(`select e.id from form_edition e join gov_form_def f on f.id=e.gov_form_def_id where f.form_key='IMM 5476' and e.channel<>'ONLINE' order by e.edition_label desc limit 1`);
+  const accBefore = sql(`select channels from form_edition_accept where form_edition_id='${edP}' and account='ANY'`);
+  const srcBefore = sql(`select channel||'|'||signature from combination_form where combination_id='${WP}' and lineage_key='IMM 5476' order by version desc limit 1`).split("|");
+  sql(`update form_edition_accept set channels='{PDF_UPLOAD,PAPER}' where form_edition_id='${edP}' and account='ANY'`);
+  sql(`update combination_form set channel='PAPER', signature='PEN' where combination_id='${WP}' and lineage_key='IMM 5476'`);
+  sql(`delete from combination_form where combination_id='${SV}' and lineage_key='IMM 5476'`);
+  r = await apply(form("IMM 5476"), "add", [SV]);
+  const svLine = sql(`select channel||'|'||signature from combination_form where combination_id='${SV}' and lineage_key='IMM 5476' order by version desc limit 1`);
+  ok("C1.5 BR-C2 channel pass (re-review nit): a Paper line copied where the record accepts Paper arrives filed on Paper, signed in pen", r.status === 200 && svLine === "PAPER|PEN", { s: r.status, svLine, w: words(r) });
+  if (r.status === 200) await undo(r.body.batchId);
+  sql(`update form_edition_accept set channels='{PDF_UPLOAD}' where form_edition_id='${edP}' and account='ANY'`);
+  r = await apply(form("IMM 5476"), "add", [SV]);
+  ok("C1.5 BR-C2 channel fail: once the record accepts only a PDF upload, the Paper line is refused, nothing written", r.status === 409 && lines(SV, "IMM 5476") === "", words(r));
+  sql(`update form_edition_accept set channels='${accBefore}' where form_edition_id='${edP}' and account='ANY'`);
+  sql(`update combination_form set channel='${srcBefore[0]}', signature='${srcBefore[1]}' where combination_id='${WP}' and lineage_key='IMM 5476'`);
+
+  // ------------------------------------------------------------ re-review nit: "Busy" only for 40P01, 55P03, P2034 and the line's own P2002
+  const { isBusy } = await import("../api/src/busy.ts");
+  const { Prisma } = await import("@prisma/client");
+  const known = (code: string, meta: Record<string, unknown> = {}, message = "x") => new Prisma.PrismaClientKnownRequestError(message, { code, clientVersion: "7", meta });
+  ok("C1.5 Busy pass: a deadlock (40P01), a lock wait (55P03) and a write conflict (P2034) are Busy", isBusy(known("P2010", { code: "40P01" })) && isBusy(known("P2010", { code: "55P03" })) && isBusy(known("P2034")) && isBusy(new Error("deadlock detected")));
+  ok("C1.5 Busy pass: the line's own unique key (P2002 on combination_form or document_requirement) is Busy", isBusy(known("P2002", { modelName: "CombinationForm" })) && isBusy(known("P2002", { modelName: "DocumentRequirement" })));
+  ok("C1.5 Busy fail: P2010 for another reason, P2025, and P2002 on another table stay server errors", !isBusy(known("P2010", { code: "42601" })) && !isBusy(known("P2025")) && !isBusy(known("P2002", { modelName: "LineBatch" })) && !isBusy(new Error("boom")));
+
+  // ------------------------------------------------------------ slice (c): the combinations offered
+  r = await call("GET", `/lines/bulk/combinations?from=${WP}`);
+  ok("C1.5 slice (c) pass: the dialog's combinations are every other one that is not retired, each with its trail", r.status === 200 && Array.isArray(r.body) && !r.body.some((c: any) => c.id === WP) && r.body.some((c: any) => c.id === VV && c.trail.length >= 2), r.body?.length);
+  sql(`update combination set retired_at=now() where id='${SV}'`);
+  r = await call("GET", `/lines/bulk/combinations?from=${WP}`);
+  ok("C1.5 slice (c) fail: a retired combination is not offered", r.status === 200 && !r.body.some((c: any) => c.id === SV), r.body?.length);
+  sql(`update combination set retired_at=null where id='${SV}'`);
+  r = await call("GET", `/lines/bulk/combinations?from=${WP}`, undefined, "user-B");
+  ok("C1.5 slice (c) roles fail: the approver gets no copy controls (403)", r.status === 403, r.status);
+
+  // ------------------------------------------------------------ slice (d): copy a line from another combination
+  const cpPrev = (sourceId: string, targetId: string, actor = "user-A") => call("POST", "/lines/copy/preview", { sourceId, targetId }, actor);
+  const cp = (sourceId: string, targetId: string, ls: { kind: string; key: string }[], k = randomUUID(), actor = "user-A") => call("POST", "/lines/copy", { sourceId, targetId, lines: ls, idempotencyKey: k }, actor);
+  sql(`delete from combination_form where combination_id='${SP}' and lineage_key in ('IMM 5476','IMM 5707')`);
+  r = await cpPrev(WP, SP);
+  const row = (k: string) => (r.body?.lines ?? []).find((x: any) => x.key === k);
+  ok("C1.5 slice (d) pass: the source's lines each say what happens here (IMM 5476 will be added)", r.status === 200 && row("IMM 5476")?.outcome === "WILL_ADD" && row("IMM 5476")?.tickable, row("IMM 5476"));
+  ok("C1.5 slice (d) fail: a line that cannot come here is shown, not tickable, with its reason (IMM 5409: no spouse in Study permit)", row("IMM 5409") ? !row("IMM 5409").tickable && /CANNOT/.test(row("IMM 5409").outcome) && !!row("IMM 5409").reason : true, row("IMM 5409"));
+  ok("C1.5 slice (d): lines this combination already has are not offered (counted as hidden)", !(r.body?.lines ?? []).some((x: any) => x.outcome === "ALREADY_HAS") && typeof r.body?.hidden === "number", r.body?.hidden);
+  r = await cpPrev(WP, WP);
+  ok("C1.5 slice (d) fail: copying from the combination itself is refused in words (400)", r.status === 400 && /this is the combination itself/.test(words(r)), words(r));
+  r = await cpPrev(WP, SP, "user-B");
+  ok("C1.5 slice (d) roles fail: the approver cannot copy (403)", r.status === 403, r.status);
+  const docKey = ((await cpPrev(WP, SP)).body?.lines ?? []).find((x: any) => x.kind === "document" && x.tickable)?.key as string | undefined;
+  const cpKey = randomUUID();
+  const preDocs = sql(`select count(*) from document_requirement where combination_id='${SP}'`);
+  r = await cp(WP, SP, [{ kind: "form", key: "IMM 5476" }, ...(docKey ? [{ kind: "document", key: docKey }] : [])], cpKey);
+  const cpIds = r.body?.batchIds as string[];
+  const nLines = docKey ? 2 : 1;
+  ok("C1.5 slice (d) pass: the ticked lines are added here in one go, one batch per line, with the toast's words", r.status === 200 && cpIds?.length === nLines && lines(SP, "IMM 5476") === "1:DRAFT" && new RegExp(`^${nLines} lines? copied here from .+ \\(draft changes\\)\\.$`).test(r.body.message), r.body);
+  ok("C1.5 slice (d): the document line is copied too", !docKey || Number(sql(`select count(*) from document_requirement where combination_id='${SP}'`)) === Number(preDocs) + 1, docKey);
+  const again = await cp(WP, SP, [{ kind: "form", key: "IMM 5476" }, ...(docKey ? [{ kind: "document", key: docKey }] : [])], cpKey);
+  ok("C1.5 slice (d) retry pass: the same key answers the first copy, nothing written twice", again.status === 200 && again.body.replayed && again.body.batchIds.join() === cpIds?.join() && lines(SP, "IMM 5476") === "1:DRAFT", again.body);
+  r = await cp(WP, SP, [{ kind: "form", key: "IMM 5707" }], cpKey);
+  ok("C1.5 slice (d) retry fail: the same key for other lines is refused (409)", r.status === 409 && /already used for another change/.test(words(r)), words(r));
+  r = await cp(WP, SP, [{ kind: "form", key: "IMM 5409" }]);
+  ok("C1.5 slice (d) fail: a line that cannot come here is refused by a direct call, named by the line, nothing written", r.status === 409 && /IMM 5409/.test(words(r)) && lines(SP, "IMM 5409") === "", words(r));
+  r = await cp(WP, SP, [{ kind: "form", key: "IMM 5707" }, { kind: "form", key: "IMM 5409" }]);
+  ok("C1.5 slice (d) fail: one line that cannot come refuses the whole copy (IMM 5707 is not written either)", r.status === 409 && lines(SP, "IMM 5707") === "", words(r));
+  r = await call("POST", "/lines/bulk/undo", { batchIds: cpIds }, "user-B");
+  ok("C1.5 slice (d) Undo roles fail: the approver cannot undo (403)", r.status === 403, r.status);
+  r = await call("POST", "/lines/bulk/undo", { batchIds: cpIds });
+  ok("C1.5 slice (d) Undo pass: one Undo takes back every line copied, in words", r.status === 200 && lines(SP, "IMM 5476") === "" && (!docKey || sql(`select count(*) from document_requirement where combination_id='${SP}'`) === preDocs) && /^Undone: .+ taken back from .+\. Nothing else changed\.$/.test(r.body.message), r.body);
+  r = await call("POST", "/lines/bulk/undo", { batchIds: cpIds });
+  ok("C1.5 slice (d) Undo fail: a second Undo is refused", r.status === 409 && /undone/i.test(words(r)), words(r));
+  sql(`delete from combination_form where combination_id='${SP}' and lineage_key in ('IMM 5476','IMM 5707')`);
+  r = await cp(WP, SP, [{ kind: "form", key: "IMM 5476" }, { kind: "form", key: "IMM 5707" }]);
+  const two = r.body?.batchIds as string[];
+  const ch = await call("PATCH", `/combinations/${SP}/forms/${encodeURIComponent("IMM 5707")}`, { minAge: 30 }, "user-A");
+  r = await call("POST", "/lines/bulk/undo", { batchIds: two });
+  ok("C1.5 slice (d) Undo refused: one line changed since, so nothing is undone (IMM 5476 stays too), named in words", ch.status < 300 && r.status === 409 && /was changed after the copy/.test(words(r)) && lines(SP, "IMM 5476") === "1:DRAFT", { ch: ch.status, w: words(r) });
+  sql(`delete from combination_form where combination_id='${SP}' and lineage_key in ('IMM 5476','IMM 5707')`);
+
   // ------------------------------------------------------------ review M2: a bulk add racing the Forms tab's own Add never answers 500
   let five = 0; const seen = new Set<string>();
   for (let i = 0; i < 4; i++) {
