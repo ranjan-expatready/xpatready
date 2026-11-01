@@ -42,7 +42,7 @@ export function RuntimeApp() {
         <div className="ml-auto flex min-w-0 items-center gap-2">
           <label className="flex min-w-0 items-center gap-2 rounded-lg border border-dashed border-warn bg-surface px-2 py-1" title="Simulated people for the prototype: not part of the product">
             <span className="hidden whitespace-nowrap text-[11px] text-text-muted md:inline">Acting as (simulated)</span>
-            <select className="min-w-0 bg-transparent text-xs font-medium outline-none" value={actor} onChange={(e) => setActor(e.target.value)} aria-label="Simulated person">
+            <select className="min-w-0 bg-transparent text-xs font-medium" value={actor} onChange={(e) => setActor(e.target.value)} aria-label="Simulated person">
               {PEOPLE.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.role}</option>)}
             </select>
           </label>
