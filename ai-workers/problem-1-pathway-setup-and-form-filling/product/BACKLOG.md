@@ -4,6 +4,26 @@ One queue for everything: **Now** (in order, being done), **Next** (in order, st
 
 **Done when, for every row:** acceptance checks pass with a pass and a fail test per business rule, CI green on the PR, the reviewer approves, merged; then the demo (:4400) runs it and qa tests it on `main`. US$0 unless the founder approves a stated cost.
 
+## Owners (current owner per open row; moved from the team board, P-224; the tech lead keeps it current)
+One owner per row and per shared file; never build another owner's rows. Under the lean model (`WAY-OF-WORKING.md`) each builder holds one row at a time; the owners below are as of 1 Nov night and shrink as rows merge. Shared-file rules are in `WAY-OF-WORKING.md`.
+
+| Owner | Journey | Rows (capabilities), in order |
+|---|---|---|
+| B1 | J1 forms in | C2.12, C3.12, C1.6, C11.1 · owns `contracts/workspace.ts` |
+| Forms builder | J3 draft the rest | #270, #274 (C11.15, C11.11), #277 C2.6, then C3.4, C3.6, C11.13, C11.14 |
+| B2 | J2 map fields, trust AI | C3.1, C3.3, C11.8, C9.1 |
+| B3 | J4 questionnaires | C4.1, C4.5, C4.6, C4.4 |
+| B4 | J3/J4 AI drafting | C4.7, C4.11 |
+| B5 | J5 library upkeep | C3.13, C3.14, C11.9, C3.15 |
+| Screens builder | J1/J5 setup | C1.5, C11.16, C11.10, C11.3, C11.12 |
+| Runtime builder 2 | J6 demo, runtime | #113 (C10.1, C3.11, C11.7), runtime Minors, X9, #116 |
+| M3-A | J7 Visitor visa | C6.11, C11.5 (firm, team, case) |
+| M3-B | J7 Visitor visa | C6.12, C11.6, C6.4 (filings, fees, checklist) |
+| Flaky-checks fixer | merge flow | batch-breaking checks (P-214) |
+| Test writers (Mac, Day 0) | acceptance tests | Pack 1 J1–J2 · Pack 2 J3–J4 · Pack 3 J5–J6 · Pack 4 Visitor visa M3 path → `prototype/studio/acceptance/`, `acceptance/journeys/`, the compliance trace table; builders adopt their rows' tests |
+| qa-1 | after-merge | re-scores the rows each merged PR names |
+| qa-2 | Visitor visa | baseline walk, then journey walks |
+
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
