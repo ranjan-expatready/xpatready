@@ -1,42 +1,57 @@
-# Review: M3-B prepare view, stored filings and filing items (C6.12 + C11.6, MIGRATION), commit 0d8097f6
+# Review: M3-B prepare view, stored filings and filing items (C6.12 + C11.6, MIGRATION), commit c0e8dae2 (round 2)
 
-Reviewer agent, 1 Nov 2026. Backend only, no screen. Branch `claude/runtime-prepare`, diff `22dd1251..0d8097f6` (#325 is the base and is not reviewed here). Isolated copy :4433, database `xr_studio_rev_prep`, US$0, no live switch, never :4400. The copy is stopped.
+Reviewer agent, 1 Nov 2026. Backend only, no screen. Branch `claude/runtime-prepare`, round-2 diff `0d8097f6..c0e8dae2` (the item as a whole is `22dd1251..c0e8dae2`; #325 is the base and is not reviewed). **Fresh** isolated copy on :4433, `xr_studio_rev_prep`, with no data changes this time. US$0, no live switch, never :4400. The copy is stopped.
 Spec: `acceptance/C6.12.test.ts`, `C11.6.test.ts`, `M3-CONTRACT.md` (prepare and channel rows), `PACK-4-visitor-visa.md`, `compliance-trace.md` VV-R02, R03, R10, R13–R15, R17. Readiness is a stub slot (C7.6) and is not reviewed.
-Journey test: `journey-test-reviewer-2026-11-01.md`, **8/10, passes**.
+Journey test: `journey-test-reviewer-2026-11-01.md`, **9/10, passes**.
 
-**Verdict: Block.** Two Majors are open (M1 and M2). Both are small fixes.
+Round 1 (0d8097f6) was Block: M1 and M2 Major, m1–m5 Minor, N1 outside the item. Git history keeps that text. The breaker's report (`break-report.md`) found B1, which I had missed: another firm could read these audit lines in `/activity`.
 
-## Runs
-* `tests/check_vv_prepare.ts` (pure): **30/30**.
-* `tests/check_vv_prepare_api.ts`, first run on a fresh copy: **15/19**. Pack 4's setup could not approve release 2 (S8: "changed while it was being released", twice). Cases then pinned release 1, so C6.12 scored 23/24 (3a) and C11.6 10/14 (3, 4, 5, 6). The cause is not this diff (see N1). I broke the tie in my own database only (`section_question` display order 4 → 9, data only, no code change) and ran again: setup PASS, **C6.12 24/24, C11.6 14/14, builder edges 18/18**.
-* `tsc -p api/tsconfig.json`: no errors in the changed files. Graph: G1 0, G2 0, G3 1 (unrelated attachments route). The three new routes are reached by tests.
+## Runs (round 2)
+* `tests/check_vv_prepare.ts`: **32/32**.
+* `tests/check_vv_prepare_api.ts` on a fresh copy: **25/25**. Pack 4's setup now approves release 2 (S8 PASS; only S2w, S7 and S7a fail, and other rows own those). C6.12 **24/24**, C11.6 **14/14**.
+* `tsc -p api/tsconfig.json`: no errors in the changed files.
+* My own break script, run again:
+  * Group of two, two parallel splits: **200 + 409**, leaving FAMILY plus SEPARATE.
+  * Group of six, five parallel splits: **200 + 4 × 409**, then visa CAD 600 (500 + 100, correct).
+  * A split and a channel change at once from the same read: 200 + 409.
+  * The same filing split twice: 200 + 409.
+  * Another firm: 404 on all three routes. Client B 403, no actor 401.
+  * A person stops and starts travelling: the same filing and item ids, and the PAPER channel is kept.
+  * A read takes about 52 ms.
 
-## Findings
-**M1 · Major · two splits from the same read both succeed** (`api/src/case-prepare.ts:150–160`). The version check (l.150) and the "group of one" check run on a `build()` made before the lock. Inside the locked transaction (l.154–155) the only re-check is whether this filing is still in the group. Live on :4433: in a group of two, two parallel `POST …/split` calls (one per filing, same `version`) both returned **200**. The database was left with `FAMILY, SEPARATE, SEPARATE` and an empty family group, which the "a group of one has nothing to split" rule forbids. It also breaks the contract that every write carries a version and an older one gets a 409. Splitting the same filing twice was correctly 200 + 409. **Fix:** inside the transaction, after `FOR UPDATE`, count the group's active filings (refuse below 2) and recompute or compare the version. Add a parallel-split test (two filings, one version, exactly one 200).
+## Round-1 findings, re-checked
+* **M1 · closed.** `case-prepare.ts` `split` and `channel` now check, inside the `FOR UPDATE` transaction: the version (`storedVersion`, worked out from the stored rows the same way the view computes it), the group's active members (refused below 2), and the filing's place in the group. The parallel-split test fails without the fix and passes with it. `prepareVersion` now sorts the groups, so the order rows come back in no longer changes the version.
+* **M2 · closed, B1 too.** Neither audit line holds the reason any more: the summary says "(reason given)" and the detail is `{from, to, reason_given}`. The reason stays on `submission_group.reason` and `filing_item.channel_reason`. I searched every `audit_event` row for the sample client values: **0** found. `studio.ts:943` adds `item` and `submission group` to `CASE_ENTITIES`, so `/activity` filters them by firm (tested as `user-S`).
+* **m1 · closed.** `feeRule()` in `engine/runtime/filings.ts` is the one source for the biometrics ages and the family maximums in the split refusal.
+* **m2 · closed.** With no date of birth, the biometrics step is kept as `cannot_start`: "Waits for the date of birth" (pure test added).
+* **m3 · open, accepted for now.** Contract departures (no stored `fee_line`, `signed_by` instead of `signers[]`) go in the PR's first lines, as `M3-CONTRACT.md` asks. Check the PR when it opens.
+* **m4 · open, Minor.** The derivation still runs before the lock. A slow read can briefly restore stale removed/withdrawn marks; the next read corrects them, and writes now check the stored version under the lock, so nothing is decided on stale data.
+* **m5 · closed.** The header path is fixed, and `/filings` uses the stored group ids (`case-filings.ts:32–36`).
+* **N1 · fixed here, outside the item, flag for the Lead.** `engine/snapshot.ts:161` now breaks ties on `lineageKey`, so the hash is deterministic. It is proven by S8 passing on a fresh copy. The placement route that gave a second placement order 4 is not changed, so the duplicate order remains (now stable).
 
-**M2 · Major · the free-text reason goes into the audit log** (`case-prepare.ts:163`, `:186`). The split's audit summary ends with `${b.reason}` verbatim. The channel line says "(reason given)" in the summary but stores `{reason}` in `audit_event.detail`. Live: detail held `"reason": "Sample accommodation for Client B whose passport is X1234567"`. A Paper reason is an accommodation, which VV-R02 describes as, for example, a disability, so it is health-related personal data. STANDARDS [M] says "Personal data minimised and never logged". The case-side team route (C6.11, `api/src/team.ts:101–103`) keeps the reason on its row and leaves it out of the audit line. The builder's check "audited without client values" passes only because its reason is a sample. **Fix:** keep the reason on `submission_group.reason` and `filing_item.channel_reason` (already stored). In the audit line, say "reason given" for both routes and drop `reason` from `detail`. Add a test with a sample client value in the reason that the audit rows must not contain.
+## Breaker items also addressed
+* Setting the channel an item already has is a no-op: 200 `changed:false`, no write, no new version, no audit line.
+* A reason with a control, zero-width or direction character is a 400 on `reason`.
+* A channel sent as a list gets a clear 400.
 
-**m1 · Minor · biometrics ages copied into the API** (`case-prepare.ts:70`). `exempt: { underAge: 14, overAge: 79 }` repeats the rule in `engine/runtime/filings.ts`, and the split refusal's fallback (l.149) hard-codes "CAD 500 for 5 or more, CAD 170 for 2 or more". STANDARDS §1 rule 1 says no immigration values in code. Fees in code are already accepted until W4. **Fix:** read the rule from one place (export the biometrics `FeeRule`).
-**m2 · Minor · a person with no date of birth has no biometrics step** (`engine/runtime/prepare.ts:39`). Their fee line says it waits for the date (G15), but the item is left out without a word. **Fix:** keep the step as `cannot_start`, with a reason that it waits for the date of birth.
-**m3 · Minor · deviations from the contract are not recorded.** `M3-CONTRACT.md` names a `fee_line` table and `signers[]`/`representative` on items. The build works fees out on each read and returns `signed_by`. That is defensible (fees are derived, W4 owns the dated table), but the contract asks for it to be said in the PR's first line (or `challenge.md`). No PR exists yet.
-**m4 · Minor · the derivation is computed before the lock** (`case-prepare.ts:60–71` vs `:74`). A read that started before an answer changed can commit after a newer read and restore stale `removed_at`/`withdrawn_at` until the next read. It heals itself. Optional fix: derive inside the transaction.
-**m5 · Minor · wording.** `engine/runtime/prepare.ts:12` names `tests/runtime/check_vv_prepare.ts`; the file is `tests/check_vv_prepare.ts`. `/filings` names the family group `group-family` while `/prepare` gives it a UUID (`case-filings.ts:32`).
+## New in round 2 (Minor, none blocking)
+* **n1 · Minor.** The `Reason` check (`case-prepare.ts:39`) also refuses `\n`, so a screen with a multi-line reason box would get a 400. **Fix:** allow `\n` (and maybe `\t`), or make the future screen use a one-line field.
+* **n2 · Minor, for the Lead.** The tie-break can change the stored fingerprint order for any combination already released with tied placement orders. Such a combination may show "changed since release" once until it is re-released. Not checkable here (it would need the demo database).
 
-**N1 · not this item, for the Lead.** `engine/snapshot.ts:161` sorts placements by section, then order, with no tie-break. The S6a placement route gave `person.travelling_alone_to_canada` display order 4 in "Your visit", already taken by `case.intended_stay_to`. Publishing the draft row changes the order PostgreSQL returns, so the published hash never matches. I proved this with a rolled-back transaction: the only content difference is those two rows swapped. On a fresh copy, pack 4 cannot make release 2, which blocks every M3 acceptance run. It needs its own fix (a tie-break on lineage, and the placement route taking the next free order).
-
-## What holds
-* **Migration:** only the four tables. CHECK constraints on kind, mode and channel; a reason required for SEPARATE; one FAMILY group per case (partial unique index, as earlier migrations do). Unique on (case, subject) and (filing, kind, item). Cascade from `runtime_case`, so demo reset (`demo.ts:435` `case.deleteMany`) clears them. Rollback is recorded, and no existing row is touched. People cannot be deleted from a case, so a missing subject foreign key cannot orphan a row.
-* **Read path:** the client is refused (403) before anything is written. Writes happen under `FOR UPDATE`. Two parallel first reads made one family group and two filings. `createMany(skipDuplicates)` plus the unique indexes make the read idempotent. About 59 ms per read.
-* **Ids:** a person who stops and starts travelling keeps the same filing id, item ids and chosen channel (live: PAPER kept). Their items are marked removed, then restored, never deleted.
-* **Version/409:** a stale split and a stale channel change get 409. The channel `updateMany` checks the item version.
-* **Permissions:** client 403, author 403, client B 403, no actor 401, another firm (solo) 404 on all three routes, unknown or malformed ids 404.
-* **Fees and ages match IRCC as cited:** CAD 100, CAD 500 for 5 or more (VV-R13); CAD 85, CAD 170 for 2 or more *eligible* people (only those who pay are counted, VV-R14); none under 14 or over 79, read as 80+ (VV-R15, page and quote on the line); priced per submission group (BR-16).
-* **Channel rules:** C11.6: 422 with IRCC's line, 400 for an unknown channel, Paper needs a reason (FQ-3), the combination line does not move, the portal is read-only.
+## What holds (from round 1, re-verified)
+* **Migration:** four tables only; constraints and indexes; cascade from `runtime_case`, so demo reset clears them; rollback recorded; no existing row touched.
+* **Permissions:** client 403, author 403, client B 403, no actor 401, another firm 404; malformed or unknown ids 404.
+* **Fees and ages match IRCC as cited:**
+  * VV-R13: visitor visa CAD 100 each, CAD 500 for 5 or more.
+  * VV-R14: biometrics CAD 85 each, CAD 170 for 2 or more eligible people.
+  * VV-R15: no biometrics under 14 or over 79 (read as 80+).
+  * BR-16: each submission group is priced on its own.
+* **Channel rules:** C11.6: 422 with IRCC's line, Paper needs a reason (FQ-3), the combination line does not move, the portal is read-only.
 
 ## D1–D20 (1–5)
-D1 Requirement fit 4 (pack 4 green once release 2 exists) · D2 Data integrity 3 (M1) · D3 Reuse 4 (`reach`, `deriveFilings`, `channels.ts`) · D4 Rule integrity 4 (m1) · D5 Stability 4 (stable ids; m4) · D6 Freshness 4 (dated sources) · D7 n/a · D8–D13 n/a (no screen) · D14 Team look 4 (contract names, m3) · D15 Speed 5 · D16 Testability 4 (pass/fail per rule; no race test for split) · D17 simulated only · D18 Provenance 5 · D19 Privacy 2 (M2) · D20 simulated only.
+D1 Requirement fit 5 (pack 4 green on a fresh copy) · D2 Data integrity 5 (races hold) · D3 Reuse 4 · D4 Rule integrity 5 (one fee rule) · D5 Stability 4 (m4) · D6 Freshness 4 · D7 n/a · D8–D13 n/a (no screen) · D14 Team look 4 (m3 pending in the PR) · D15 Speed 5 · D16 Testability 5 (a race test, an audit-search test, pass/fail pairs) · D17 simulated only · D18 Provenance 5 · D19 Privacy 5 (no reason in audit; firm-filtered activity) · D20 simulated only.
 
 ## Not checked
-canada.ca was not re-read; the values rest on the cited compliance-trace rows. No screen, so no browser, axe or screen sizes. No mutation runs (I edit no code); the pass/fail pairs were read instead. Coverage was not run.
+canada.ca was not re-read; the values rest on the cited compliance-trace rows. No screen, so no browser, axe or screen sizes. No mutation runs (I edit no code). Coverage was not run. The effect of N1 on existing releases in the demo database (n2) was not checked.
 
-**Verdict: Block** (Changes needed) for commit 0d8097f6. Fix: M1 (re-check the group and version inside the split lock, plus a parallel-split test) and M2 (no free-text reason in audit summary or detail, plus a test). The Minors are optional for approval. N1 goes to the Lead separately.
+**Verdict: Approve** for commit c0e8dae2. No Blocker or Major is open. m3 (PR first lines), m4, n1 and n2 are Minor; n2 and N1 go to the Lead.
