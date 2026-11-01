@@ -214,10 +214,27 @@ export class SpendLedger {
       if (!opts.overrideId) throw new BudgetExceeded(passed[0][1]);
       const why = this.overrideRefusal(opts.overrideId, opts.runKey, passed.map(([l]) => l), worstUsd, total);
       if (why) throw new BudgetExceeded(`${passed[0][1]}; the override does not admit it: ${why}`);
+    } else if (opts.overrideId && adds) {
+      // #131 review M1: a reservation that carries a person's Continue stays within the worst case they accepted even
+      // when it passes no money limit (a Continue past "attempts" only): every attempt and every retry of that run counts
+      // toward it, so one click never pays for more than the person said yes to.
+      const room = this.overrideRoomUsd(opts.overrideId);
+      if (room === null) throw new BudgetExceeded(`this run carries an override the ledger does not know (${opts.overrideId})`);
+      if (worstUsd > room + 1e-9) throw new BudgetExceeded(`this run would reserve US$${worstUsd.toFixed(4)} more under its override, above the US$${room.toFixed(4)} left of the worst case the person accepted`);
     }
     const id = `${runId}#${attempt}#${Date.now()}`;
     this.append({ type: "reserve", id, run_id: runId, attempt, worst_usd: worstUsd, ...(caller ? { caller } : {}), ...(opts.overrideId ? { override_id: opts.overrideId } : {}), at: new Date().toISOString() });
     return id;
+  }
+
+  /** #131 review M1: what is left of a Continue's accepted worst case after its run's reservations (at their worst case),
+   *  or null for an unknown override. */
+  overrideRoomUsd(overrideId: string): number | null {
+    const es = this.entries();
+    const o = es.find((e): e is Extract<Entry, { type: "override" }> => e.type === "override" && e.id === overrideId);
+    if (!o) return null;
+    const used = es.filter((e): e is Extract<Entry, { type: "reserve" }> => e.type === "reserve" && e.override_id === overrideId).reduce((a, r) => a + r.worst_usd, 0);
+    return Math.max(0, o.worst_usd - used);
   }
 
   /** Why an override cannot pass these limits for this reservation, or null when it can. */
