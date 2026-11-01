@@ -1,0 +1,48 @@
+// C8.2 Filing records: portal, our reference, application number and UCI (M3-F; r5c BR-11, BR-15, BR-16, BR-21;
+// AV-6, P-155, P-168). Visitor visa part: one "Record the submission" per submission group; per filing our reference,
+// submitted on (not after today), the application number (required) and the fee receipt; a UCI per person; refused
+// while a filing in the group is not Ready to file; recording makes the filings read-only; a second recording is
+// refused; "Correct a number" keeps the history; the record reads "Prepared by · Reviewed by".
+// Breadth, after Visitor visa: the sponsorship + PR pair (two numbers, one group, no split), citizenship envelopes.
+//   tsx studio/acceptance/C8.2.test.ts 4440 xr_studio_accept
+import { CLIENT, OFFICER, call, firms, inDays, main, needVisitorVisa, ok, openCase, prepare, readyToFile, sql, yearsAgo, answer, itemsOf } from "./lib/m3.ts";
+
+await main("C8.2", "Record the submission per group (Visitor visa)", async () => {
+  const vv = needVisitorVisa();
+  const f = await firms();
+  const officer = f.officer ?? OFFICER;
+  const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }, { role: "spouse_or_partner", name: "Sample Spouse A", dob: yearsAgo(38) }], { representative: f.rep, caseOfficers: [officer] });
+  const [P, S] = [c.subjects["Sample Client A"], c.subjects["Sample Spouse A"]];
+  let p = (await prepare(c.id, officer)).p;
+  const g = p?.groups[0], [fP, fS] = [p?.filings.find((x) => x.applicants[0]?.subject === P)?.id, p?.filings.find((x) => x.applicants[0]?.subject === S)?.id];
+  const body = (over: Record<string, unknown> = {}) => ({ filings: [{ filing: fP, our_reference: "SAMPLE-REF-1", submitted_on: inDays(0), application_number: "V300000001", fee_receipt: "SAMPLE-RECEIPT" }, { filing: fS, our_reference: "SAMPLE-REF-2", submitted_on: inDays(0), application_number: "V300000002", fee_receipt: "SAMPLE-RECEIPT" }], ucis: [{ subject: P, uci: "1111-1111" }, { subject: S, uci: "2222-2222" }], version: p?.version, ...over });
+
+  let r = await call("PATCH", `/runtime/groups/${g?.id}/record`, body(), officer);
+  ok("C8.2-1 fail (BR-11, P-168): recording is refused while the filings are not Ready to file (409, names the blocks)", r.status === 409 && /ready to file/i.test(JSON.stringify(r.body)), r.status);
+  const ready = await readyToFile(c.id, f.rep);
+  ok("C8.2-2 pass: both filings reach Ready to file (setup for the record)", ready.length === 2, ready);
+  p = (await prepare(c.id, officer)).p;
+  r = await call("PATCH", `/runtime/groups/${g?.id}/record`, body({ version: p?.version, filings: [{ ...body().filings[0], application_number: "" }, body().filings[1]] }), officer);
+  ok("C8.2-3 fail: a missing application number is refused on its field (400, Problem Details)", r.status === 400 && /application number/i.test(JSON.stringify(r.body)), r.body);
+  r = await call("PATCH", `/runtime/groups/${g?.id}/record`, body({ version: p?.version, filings: [{ ...body().filings[0], submitted_on: inDays(2) }, body().filings[1]] }), officer);
+  ok("C8.2-4 fail: a submission date after today is refused on its field (400)", r.status === 400 && /today|future/i.test(JSON.stringify(r.body)), r.body);
+  r = await call("PATCH", `/runtime/groups/${g?.id}/record`, body({ version: p?.version }), CLIENT);
+  ok("C8.2-5 fail: a client cannot record the submission (403)", r.status === 403, r.status);
+  r = await call("PATCH", `/runtime/groups/${g?.id}/record`, body({ version: p?.version }), officer);
+  p = (await prepare(c.id, officer)).p;
+  ok("C8.2-6 pass: one action records the whole group: each filing has its own number, status submitted", r.status === 200 && p?.filings.every((x) => x.status === "submitted") && p.filings.find((x) => x.id === fP)?.number === "V300000001" && p.filings.find((x) => x.id === fS)?.number === "V300000002", p?.filings);
+  ok("C8.2-7 pass (data): the record keeps the portal, our reference, date, receipt, the UCI per person, Prepared by and Reviewed by",
+    sql(`select portal || '|' || our_reference || '|' || prepared_by || '|' || reviewed_by from filing_record where filing_id='${fP}'`) === `APR_PORTAL|SAMPLE-REF-1|${officer}|${f.rep}` && sql(`select uci from filing_person_record where subject_id='${S}' and filing_id='${fS}'`) === "2222-2222");
+  r = await call("PATCH", `/runtime/groups/${g?.id}/record`, body({ version: p?.version }), officer);
+  ok("C8.2-8 fail (BR-15): a second recording is refused (409)", r.status === 409, r.status);
+  r = await call("PATCH", `/runtime/items/${itemsOf(p, P, "IMM 5257")[0]?.id}/channel`, { channel: "PAPER", reason: "Accommodation (Sample)", version: p?.version }, officer);
+  ok("C8.2-9 fail: after recording the filing is read-only: even an accepted channel change is refused (409)", r.status === 409, r.status);
+  r = await call("POST", `/runtime/filings/${fP}/record/corrections`, { application_number: "V300000009" }, officer);
+  ok("C8.2-10 fail: correcting a number without a reason is refused (400)", r.status === 400, r.status);
+  r = await call("POST", `/runtime/filings/${fP}/record/corrections`, { application_number: "V300000009", reason: "Typo in the number (Sample)" }, officer);
+  ok("C8.2-11 pass: \"Correct a number\" changes it and keeps the old one in the history with the reason", r.status === 200 && (await prepare(c.id, officer)).p?.filings.find((x) => x.id === fP)?.number === "V300000009" && sql(`select count(*) from filing_record_correction where filing_id='${fP}'`) === "1");
+  await answer(c.id, P, "person.family_name", "SAMPLEDY", CLIENT); // counts as confirmed (P-78), as in C9.2
+  p = (await prepare(c.id, officer)).p;
+  ok("C8.2-12 pass (BR-12, P-142 D7): a fact changed after filing marks the filed items \"Filed with an earlier value\" and opens a task to re-sign or tell IRCC (Unconfirmed: no counsel)",
+    itemsOf(p, P).some((i) => i.state === "out_of_date" && /earlier value/i.test(i.reason ?? "")) && Number(sql(`select count(*) from case_task where case_id='${c.id}' and kind='after_filing_change'`) ?? 0) >= 1);
+});

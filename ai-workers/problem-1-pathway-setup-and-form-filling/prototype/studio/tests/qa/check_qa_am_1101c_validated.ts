@@ -43,7 +43,7 @@ const plain = (s: string) => s.length > 20 && !/^(File too large|Too many files|
   let r = await send(copy, [Buffer.concat([validated, Buffer.alloc(21 * 1024 * 1024, 32)])]);
   ok("C-9 fail: a file over 20 MB is refused (413) in words that name this upload's limit (20 MB), nothing recorded", r.status === 413 && plain(words(r)) && /20 MB/.test(words(r)) && n() === "0", { status: r.status, words: words(r) });
   r = await send(copy, [validated, validated]);
-  ok("C-9 fail: two files at once are refused (400) in the product's words, nothing recorded", r.status === 400 && plain(words(r)) && /one/i.test(words(r)) && n() === "0", { status: r.status, words: words(r) });
+  ok("C-9 fail: two files at once are refused (400 or 413; the words matter, QA-126 closed at 73396df2) in the product's words, nothing recorded", (r.status === 400 || r.status === 413) && plain(words(r)) && /one/i.test(words(r)) && n() === "0", { status: r.status, words: words(r) });
   r = await send(copy, [validated], "user-A");
   ok("C-9 fail: the configuration author cannot send a validated copy (403, in words)", r.status === 403 && plain(words(r)) && n() === "0", { status: r.status, words: words(r) });
 

@@ -26,7 +26,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|status of 4\d\d/.test(m.text())) errs.push(m.text()); });
   const api = async (pth, init = {}) => { const r = await p.request.fetch(`${BASE}/api${pth}`, { method: init.method ?? "GET", headers: { "x-actor": init.actor ?? "user-A", "content-type": "application/json" }, data: init.data, timeout: 180000 }); return { status: r.status(), body: await r.json().catch(() => null) }; };
   const panel = () => p.getByRole("tabpanel");
-  const settle = async () => { await p.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && !document.querySelector(".animate-spin"), null, { timeout: 30000 }).catch(() => {}); await p.waitForTimeout(300); };
+  // A wait the check relies on fails loudly when it times out (flaky-checks fix, 1 Nov): a FAIL step naming the wait,
+  // never a silent catch that leaves a later step to fail on a page that had not finished.
+  const loud = (what) => (e) => step(`wait: ${what}`, false, String(e?.message ?? e).split("\n")[0]);
+  const settle = async () => { await p.waitForFunction(() => !document.querySelector('[aria-busy="true"]') && !document.querySelector(".animate-spin"), null, { timeout: 30000 }).catch(loud("the page settles (nothing busy, no spinner)")); await p.waitForTimeout(300); };
   let n = 0;
   const state = async (name) => {
     n++; const base = `${String(n).padStart(2, "0")}-${name}`;
@@ -71,12 +74,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.9 P-116: Keep it closes the question and removes nothing", await ask.count() === 0 && (await api(`/combinations/${C}/workspace?tab=forms`)).body.lines.some((l) => l.code === "IMM 5475"));
   await p.getByRole("button", { name: "Remove from this combination" }).click();
   await p.locator("[data-confirm-remove]").getByRole("button", { name: "Remove IMM 5475" }).click(); await settle();
-  await p.locator("[data-removed]").waitFor({ timeout: 15000 }).catch(() => {});
+  await p.locator("[data-removed]").waitFor({ timeout: 15000 }).catch(loud("the removed form shows under \"Removed in this draft\""));
   step("C11.9 P-116: the removed form leaves the list and shows under \"Removed in this draft\" with Add back; the shared Undo toast names it", await p.locator('[data-line="IMM 5475"]').count() === 0 && /IMM 5475/.test(await p.locator("[data-removed]").innerText()) && await p.getByRole("button", { name: "Add back IMM 5475" }).count() === 1 && /IMM 5475 removed from this combination/.test(await p.locator("[data-undo-toast]").innerText().catch(() => "")));
   step("C11.9 P-116: the one Undo bar names the last change, the list is in view, and the removed form is not a form waiting to be set up", /Last change: Removed IMM 5475/.test(await p.locator("[data-undo-bar]").innerText().catch(() => "")) && await p.evaluate(() => { const r = document.querySelector("[data-removed]").getBoundingClientRect(), bar = document.querySelector("header")?.getBoundingClientRect().bottom ?? 0; return r.top >= bar && r.bottom <= window.innerHeight; }) && await p.locator("[data-pending-summary]").count() === 0 && await p.locator('[data-pending^="IMM 5475"]').count() === 0);
   await state("forms-removed-undo");
   await p.locator("[data-undo-bar]").getByRole("button", { name: "Undo" }).click(); await settle();
-  await p.locator('[data-line="IMM 5475"]').waitFor({ timeout: 15000 }).catch(() => {});
+  await p.locator('[data-line="IMM 5475"]').waitFor({ timeout: 15000 }).catch(loud("Undo puts IMM 5475 back in the list"));
   step("C11.9 P-116: Undo puts the same line back and the notice goes", await p.locator('[data-line="IMM 5475"]').count() === 1 && await p.locator("[data-removed]").count() === 0);
   await p.getByRole("button", { name: "Change IMM 5409" }).click();
   const drawer = p.getByRole("dialog");
@@ -113,7 +116,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await state("question-details");
   await det.getByRole("button", { name: "Close" }).first().click();
   await p.locator('[data-role-chip="spouse_or_partner"]').click(); await settle();
-  await p.waitForFunction(() => /Spouse or partner:/.test(document.querySelector("[data-coverage]")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
+  await p.waitForFunction(() => /Spouse or partner:/.test(document.querySelector("[data-coverage]")?.textContent ?? ""), null, { timeout: 15000 }).catch(loud("the spouse's coverage line shows"));
   step("C4.1: choosing the spouse shows the spouse's questions (the address keeps the person)", /role=spouse_or_partner/.test(p.url()) && /Spouse or partner:/.test(await p.locator("[data-coverage]").innerText()));
   // A needed answer asked of nobody: the gap shows on the chip and the page, and release waits (BR-11).
   const fact = (await api(`/combinations/${C}/workspace?tab=questionnaires`)).body.questionnaire.sections.flatMap((s) => s.questions).find((x) => x.neededBy.length && x.filledBy === "CLIENT").fact;
@@ -181,10 +184,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await dlg.locator("select").first().selectOption({ label: "With an LMIA · release 2" });
   await dlg.getByLabel("Case reference").fill("S5-QA38"); await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant Q");
   await dlg.getByRole("button", { name: "Open case" }).click();
-  await o.waitForURL(/\/cases\/[0-9a-f-]{36}$/, { timeout: 30000 }).catch(() => {});
-  await o.getByText(/^Release \d+$/).first().waitFor({ timeout: 15000 }).catch(() => {});
+  await o.waitForURL(/\/cases\/[0-9a-f-]{36}$/, { timeout: 30000 }).catch(loud("the new case opens"));
+  await o.getByText(/^Release \d+$/).first().waitFor({ timeout: 15000 }).catch(loud("the case names its release"));
   step("C6.1 QA-38 pass: the case opens pinned to release 2, as the list said", await o.getByText("Release 2", { exact: true }).count() > 0 && await o.getByText("Release 1", { exact: true }).count() === 0);
-  await o.locator('[data-online-form="IMM 1295"]').waitFor({ timeout: 15000 }).catch(() => {});
+  await o.locator('[data-online-form="IMM 1295"]').waitFor({ timeout: 15000 }).catch(loud("the case lists IMM 1295 as filed Online"));
   const onl = await o.locator('[data-online-form="IMM 1295"]').innerText().catch(() => "");
   // P-145 (forms slice 1): the Online row says how it is filed and that its PDF is only a copy, not for filing.
   step("C7.6 QA-40 pass: the case still names IMM 1295 and says in words it is filed Online in a later wave, its PDF a copy not for filing (P-145)", /IMM 1295 · filed Online \(later wave\)/.test(onl.replace(/\s+/g, " ")) && /It is filed online: the case officer types it into the IRCC account/.test(onl.replace(/\s+/g, " ")) && /PDF copy, not for filing/.test(onl), onl.replace(/\s+/g, " ").slice(0, 200));
