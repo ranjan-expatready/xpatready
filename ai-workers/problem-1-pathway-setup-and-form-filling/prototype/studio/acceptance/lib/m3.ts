@@ -21,7 +21,7 @@ export const rec = recorder();
 export const ok = rec.ok;
 
 /** Simulated people already built (api/src/core.ts). The M3 firm's users (representative, case officer, firm admin,
- *  solo representative) are read from GET /runtime/firms (SI-9), never assumed. */
+ *  solo representative) are read from GET /runtime/firm (SI-9), never assumed. */
 export const OFFICER = "user-O", CLIENT = "user-P", CLIENT_B = "user-Q", AUTHOR = "user-A", REVIEWER = "user-C", APPROVER = "user-B";
 export const run = Date.now().toString(36);
 
@@ -40,17 +40,28 @@ export const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISO
 export const FIXED = { dob: "1986-04-13", expiry: "2035-06-30", stayFrom: "2030-03-01", stayTo: "2030-04-15" } as const;
 
 export type Firm = { id: string; name: string; solo: boolean; users: { actor: string; name: string; duties: string[]; licence: { body: string; number: string } | null }[] };
-type Firms = { firm: Firm | null; solo: Firm | null; rep: string | null; rep2: string | null; officer: string | null; admin: string | null; soloRep: string | null; raw: Res };
+type Firms = { firm: Firm | null; solo: Firm | null; rep: string | null; rep2: string | null; officer: string | null; admin: string | null; soloRep: string | null; standIn: string | null; raw: Res };
 let firmsCache: Firms | null = null;
-/** GET /runtime/firms (C6.11, SI-9): the Sample firm and the Sample solo firm with their users, read by a test as
- *  staff. The Sample firm has two representatives (FQ-9) so a change of representative can be tested. */
+/** The built duty keys (engine/runtime/team.ts) in the words the pack uses. */
+const DUTY: Record<string, string> = { represent: "representative", case: "case_officer", firm_admin: "firm_admin" };
+/** One user of each Sample firm (api/src/core.ts): firms are isolated, so each firm is read as one of its own users. */
+export const FIRM_READERS = { firm: OFFICER, solo: "user-S" } as const;
+/** GET /runtime/firm (C6.11, SI-9, built in #288): the acting user's own firm and its users. The Sample firm is read as
+ *  its case officer and the Sample solo firm as its one person. The Sample firm has two representatives (FQ-9) so a
+ *  change of representative can be tested. `raw` is the Sample firm's answer; `standIn` is SI-9 when both firms say so. */
 export async function firms(): Promise<Firms> {
   if (firmsCache?.firm) return firmsCache;
-  const raw = await call("GET", "/runtime/firms", undefined, OFFICER);
-  const list: Firm[] = Array.isArray(raw.body?.firms) ? raw.body.firms : [];
-  const firm = list.find((f) => !f.solo) ?? null, solo = list.find((f) => f.solo) ?? null;
+  const read = async (actor: string) => {
+    const res = await call("GET", "/runtime/firm", undefined, actor);
+    const b = res.status === 200 ? res.body : null;
+    const firm: Firm | null = b ? { id: b.key, name: b.name, solo: !!b.solo, users: (b.users ?? []).map((u: { id: string; name: string; duties: string[]; licence: { body: string; number: string } | null }) => ({ actor: u.id, name: u.name, duties: u.duties.map((d) => DUTY[d] ?? d), licence: u.licence })) } : null;
+    return { res, firm, standIn: (b?.stand_in?.id as string | undefined) ?? null };
+  };
+  const a = await read(FIRM_READERS.firm), s = await read(FIRM_READERS.solo);
+  const firm = a.firm && !a.firm.solo ? a.firm : null, solo = s.firm?.solo ? s.firm : null;
   const all = (f: Firm | null, duty: string, not?: string) => (f?.users ?? []).filter((u) => u.duties.includes(duty) && (!not || !u.duties.includes(not))).map((u) => u.actor);
-  firmsCache = { firm, solo, rep: all(firm, "representative")[0] ?? null, rep2: all(firm, "representative")[1] ?? null, officer: all(firm, "case_officer", "representative")[0] ?? null, admin: all(firm, "firm_admin")[0] ?? null, soloRep: all(solo, "representative")[0] ?? null, raw };
+  firmsCache = { firm, solo, rep: all(firm, "representative")[0] ?? null, rep2: all(firm, "representative")[1] ?? null, officer: all(firm, "case_officer", "representative")[0] ?? null, admin: all(firm, "firm_admin")[0] ?? null, soloRep: all(solo, "representative")[0] ?? null,
+    standIn: a.standIn === "SI-9" && s.standIn === "SI-9" ? "SI-9" : null, raw: a.res };
   return firmsCache;
 }
 
@@ -74,14 +85,14 @@ const isMinor = (dob: string | null) => !!dob && dob > yearsAgo(18);
 
 export type Case = { id: string; subjects: Record<string, string>; caseSubject: string; officer: string; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- responses read loosely, as in the other checks
 /** Opens a Visitor visa case with these people. `team` names the representative of record and case officers (C6.11);
- *  without it the Sample firm's representative and case officer are used once GET /runtime/firms exists (C6.11-5
- *  refuses a case without a representative). Subjects are keyed by display name; each date of birth is answered. */
+ *  without it the Sample firm's representative and case officer are used. The built route (#288) takes them as
+ *  top-level `representative` and `caseOfficers`. Subjects are keyed by display name; each date of birth is answered. */
 export async function openCase(vv: string, people: Person[] = FAMILY, team?: { representative: string | null; caseOfficers: string[] }, ref = `ACC-${run}-${Math.random().toString(36).slice(2, 6)}`): Promise<Case> {
   const f = await firms();
   const t = team ?? (f.rep ? { representative: f.rep, caseOfficers: [f.officer ?? OFFICER] } : undefined);
   const officer = t?.caseOfficers[0] || OFFICER;
   const principal = people.find((p) => p.role === "principal")!;
-  const r = await call("POST", "/runtime/cases", { combinationId: vv, reference: ref, clientActor: CLIENT, principal: { displayName: principal.name }, ...(t ? { team: t } : {}) }, officer);
+  const r = await call("POST", "/runtime/cases", { combinationId: vv, reference: ref, clientActor: CLIENT, principal: { displayName: principal.name }, ...(t?.representative ? { representative: t.representative } : {}), ...(t ? { caseOfficers: t.caseOfficers } : {}) }, officer);
   const id: string = r.body?.id ?? "";
   OFFICERS.set(id, officer);
   const subjects: Record<string, string> = {}, who = new Map<string, Person>();

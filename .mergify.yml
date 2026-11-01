@@ -4,13 +4,15 @@
 # P-210 (founder 1 Nov, the free fix): one batch checked at a time (the Mac has one test runner: stacked batches were
 # cancelled whenever one ahead failed, 43% of its time on 31 Oct), batches of up to 6, and a PR joins only once its own
 # check is green, so a batch fails only on how PRs combine.
+# Founder 1 Nov night (reverses P-210's limit of one): the repository is public, so batches run free on GitHub's
+# machines, not the one Mac; up to 3 batches are checked at once, each assuming the ones ahead of it pass.
 merge_queue:
-  max_parallel_checks: 1
+  max_parallel_checks: 3
 
 queue_rules:
   - name: default
     batch_size: 6
-    batch_max_wait_time: 10 min
+    batch_max_wait_time: 2 min
     queue_conditions:
       - base = main
       - "label = review: approved"

@@ -261,8 +261,9 @@ export class Demo {
     let after = done.result ? ` Then the intake: ${done.result.message}` : "";
     if (done.result?.outcome === "older_edition_held") {
       const older = await this.db.intakeItem.findFirst({ where: { workspaceId, sha256: item.sha256, status: "HELD", outcome: "older_edition_held" }, select: { id: true } });
+      // #300 n2: say "set it aside" only when there was a held row to set aside.
       if (older) await this.intake.decideHeld(approver, older.id, "reject", { note: "Sample: older than the library's IMM 5476 (11-2025), so it is not used." });
-      after = ` Then the intake found it older than the library's IMM 5476 (11-2025), and ${approver.name} set it aside: not used.`;
+      after = older ? ` Then the intake found it older than the library's IMM 5476 (11-2025), and ${approver.name} set it aside: not used.` : ` Then the intake found it older than the library's IMM 5476 (11-2025): not used.`;
     }
     return { ok: true, shows: `an off-list copy of ${item.editionLabel ?? "IMM 5476 (11-2021)"} (${OFF_LIST_COPY.name}) held for a source check, its IRCC page recorded by ${author.name}, approved by ${approver.name}.${after}` };
   }
