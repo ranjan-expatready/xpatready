@@ -18,7 +18,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 (async () => {
   // Spend guard (30 Oct incident): the server on this port must run the fake launcher, resolved as the server does.
   const pid = execFileSync("lsof", ["-ti", `tcp:${PORT}`, "-sTCP:LISTEN"], { encoding: "utf8" }).trim().split("\n")[0];
-  const env = pid ? execFileSync("ps", ["-E", "-ww", "-p", pid, "-o", "command="], { encoding: "utf8" }) : "";
+  // The server's environment: /proc on Linux (CI), "ps -E" on macOS (its -E flag is macOS-only; lead, 31 Oct).
+  const env = !pid ? "" : fs.existsSync(`/proc/${pid}/environ`) ? fs.readFileSync(`/proc/${pid}/environ`, "utf8").split("\0").join(" ") : execFileSync("ps", ["-E", "-ww", "-p", pid, "-o", "command="], { encoding: "utf8" });
   const fake = env.match(/STUDIO_FAKE_LAUNCHER=(\S+)/)?.[1];
   const real = path.join(ROOT, "..", "..", ""), fixture = path.join(__dirname, "fixtures", "fake-launch.mjs");
   const otherLive = [...env.matchAll(/\b(\w+_LIVE)=approved\b/g)].map((m) => m[1]).filter((k) => k !== "STUDIO_AI_LIVE");

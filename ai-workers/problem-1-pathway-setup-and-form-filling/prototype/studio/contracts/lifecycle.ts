@@ -17,6 +17,8 @@ const list = (names: string[]) => (names.length <= 2 ? names.map(q).join(" and "
 /** Why an action cannot be taken: one full sentence each, shown as visible text under the greyed action. */
 export const WHY = {
   waiting: "A change to it is waiting for a second person.",
+  // N7 break N1: another person's returned change waits for its proposer, not a second person.
+  returnedToOther: (name: string) => `A change to it was returned to ${name}: only they send it again or withdraw it.`,
   waitingCombination: "A change to its combination is waiting for a second person.",
   released: "Can't delete: released items are kept. Retire it instead.",
   retiredNoDelete: "Can't delete: it is retired.",
