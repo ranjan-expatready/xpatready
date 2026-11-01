@@ -1,17 +1,17 @@
 {
- "at": "2026-10-26T14:41:51.833Z",
+ "at": "2026-11-01T03:31:47.245Z",
  "timings": {
-  "cold_first_view_ms": 497,
-  "first_view_ms": 197,
-  "filter_ms": 30
+  "cold_first_view_ms": 517,
+  "first_view_ms": 170,
+  "filter_ms": 42
  },
- "pass": 129,
+ "pass": 116,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load through the form intake",
    "ok": true,
-   "detail": "7.871"
+   "detail": "6.514"
   },
   {
    "name": "setup: one replay of a saved real AI run on Super visa (no model call, US$0)",
@@ -26,25 +26,20 @@
   {
    "name": "performance: first view under 1 s with the sample data (app files cached)",
    "ok": true,
-   "detail": "197 ms (cold browser 497 ms)"
+   "detail": "170 ms (cold browser 517 ms)"
   },
   {
-   "name": "P-49: Needs work is the default view, with its count",
+   "name": "BR-13 / P-180 Q2: All is the default; the chips are All · Not started · In progress · Live, each with a count",
    "ok": true,
-   "detail": "Needs work · 20"
+   "detail": "all:true:All21 | not_started:false:Not started15 | in_progress:false:In progress4 | live:false:Live2"
   },
   {
-   "name": "P-49: the three views are Needs work · Live · All, each with a count",
+   "name": "item 4 (card v4 List): sentence-case column headers (Combination · Trail · Progress, then Needs you and Action for screen readers)",
    "ok": true,
-   "detail": "Needs work · 20 | Live · 1 | All · 21"
+   "detail": "Combination|Trail|Progress |Needs you|Action / none"
   },
   {
-   "name": "item 4: sentence-case column headers (Combination · Status · Next step), no capitals styling",
-   "ok": true,
-   "detail": "Combination|Status |Next step / none"
-  },
-  {
-   "name": "P-49: \"Ready\" never appears; statuses say In setup, Not ready or Live",
+   "name": "P-49: \"Ready\" never appears; the list says n of 5 or Live",
    "ok": true
   },
   {
@@ -52,14 +47,14 @@
    "ok": true
   },
   {
-   "name": "AI proposals waiting: the row's next step is Review N AI proposals",
+   "name": "AI proposals waiting (card v4): the row's button is Resume setup and it says Needs you",
    "ok": true,
-   "detail": "Review 84 AI proposals"
+   "detail": "Super visa\nRetail › Temporary residence › Visitors\n0 of 5\nNeeds you\nResume setup"
   },
   {
-   "name": "item 3: path on two lines — muted Program › Category above, the combination's name below; nothing truncated",
+   "name": "item 3 + BR-7 (card v4): the name, then the trail above it, full on hover",
    "ok": true,
-   "detail": "[{\"t\":\"Economic immigration › Express Entry\",\"cut\":false,\"ell\":\"clip\"},{\"t\":\"Permanent residence application\",\"cut\":false,\"ell\":\"clip\"}]"
+   "detail": "{\"name\":\"Permanent residence application\",\"trail\":\"Retail › Permanent residence › Economic immigration › Express Entry\",\"title\":\"Retail › Permanent residence › Economic immigration › Express Entry\"}"
   },
   {
    "name": "axe: programs-needs-work-default has no WCAG A/AA violation",
@@ -71,36 +66,23 @@
    "ok": true
   },
   {
-   "name": "F3: AI steps carry the AI mark (Sparkles, labelled) in the Next step column",
-   "ok": true
-  },
-  {
-   "name": "F3: the AI step's tooltip says what AI did and that nothing changes until a person accepts",
-   "ok": true
-  },
-  {
-   "name": "F3: \"Add N forms from the library\" has a tooltip naming the forms: reuses field maps, no AI, draft only",
-   "ok": true,
-   "detail": "IMM 5476, IMM 5475: reuses field maps already in the library. No AI. Adds to the draft only; nothing changes for firms until release."
-  },
-  {
-   "name": "review #7: Tab from the active row reaches its status chip, which explains itself",
+   "name": "review #7 (card v4): Tab from the active row reaches its Needs you mark, which says what waits",
    "ok": true
   },
   {
    "name": "item 5: Super visa is one row, Visitors › Super visa (no Parent / Grandparent)",
    "ok": true,
-   "detail": "VisitorsSuper visaIn setupReview 84 AI proposals"
+   "detail": "Super visaRetail › Temporary residence › Visitors0 of 5Needs youResume setup"
   },
   {
    "name": "performance: changing the view answers under 200 ms",
    "ok": true,
-   "detail": "30 ms"
+   "detail": "42 ms"
   },
   {
-   "name": "F1: Live shows every row whose status is Live",
+   "name": "F1: Live shows every row that is Live",
    "ok": true,
-   "detail": "1"
+   "detail": "2"
   },
   {
    "name": "axe: programs-live has no WCAG A/AA violation",
@@ -112,13 +94,14 @@
    "ok": true
   },
   {
-   "name": "P-49: the Status column is sortable (Not ready / In setup first, then Live) and says so to screen readers",
+   "name": "P-49: the Progress column is sortable (not Live first, then Live, in every Program band) and says so to screen readers",
    "ok": true,
-   "detail": "ascending NOT_READY"
+   "detail": "ascending [[\"IN_PROGRESS\",\"IN_PROGRESS\",\"NOT_STARTED\"],[\"IN_PROGRESS\",\"NOT_STARTED\"],[\"NOT_STARTED\",\"NOT_STARTED\",\"NOT_STARTED\",\"NOT_STARTED\",\"NOT_STARTED\",\"LIVE\",\"LIVE\"],[\"IN_PROGRESS\",\"NOT_STARTED\",\"NOT_STARTED\"],[\"NOT_STARTED\",\"NOT_STARTED\",\"NOT_STARTED\"],[\"NOT_STARTED\",\"NOT_STARTED\"],[\"NOT_STARTED\"]]"
   },
   {
-   "name": "P-49: sorting again puts Live first (descending)",
-   "ok": true
+   "name": "P-49: sorting again puts Live first in every Program band (descending)",
+   "ok": true,
+   "detail": "[[\"LIVE\",\"LIVE\",\"NOT_STARTED\",\"NOT_STARTED\",\"NOT_STARTED\",\"NOT_STARTED\",\"NOT_STARTED\"],[\"NOT_STARTED\",\"IN_PROGRESS\",\"IN_PROGRESS\"],[\"NOT_STARTED\",\"IN_PROGRESS\"],[\"NOT_STARTED\",\"NOT_STARTED\",\"IN_PROGRESS\"],[\"NOT_STARTED\",\"NOT_STARTED\",\"NOT_STARTED\"],[\"NOT_STARTED\",\"NOT_STARTED\"],[\"NOT_STARTED\"]]"
   },
   {
    "name": "axe: programs-all-sorted-by-status has no WCAG A/AA violation",
@@ -130,7 +113,7 @@
    "ok": true
   },
   {
-   "name": "Program filter: only Work permits rows, in path order",
+   "name": "Program scope: only Work permits rows, in path order, with a 'Work permits' filter chip (P-128 (4))",
    "ok": true
   },
   {
@@ -169,13 +152,14 @@
    "ok": true
   },
   {
-   "name": "regression: \"Show all\" keeps the All view after the search box settles (no stale URL rewrite)",
+   "name": "regression: \"Clear search\" keeps the All view after the search box settles (no stale URL rewrite)",
    "ok": true,
-   "detail": "http://localhost:4454/?f=all"
+   "detail": "http://localhost:4443/"
   },
   {
    "name": "item 5: Corporate shows the demo names (LMIA › High-wage position, Low-wage position, Global Talent Stream, In-home caregiver)",
-   "ok": true
+   "ok": true,
+   "detail": "High-wage position\nCorporate and employers › Temporary residence › LMIA\n0 of 5\nResume setup"
   },
   {
    "name": "axe: programs-corporate has no WCAG A/AA violation",
@@ -189,12 +173,12 @@
   {
    "name": "keyboard: one tab stop, ↑/↓/Home/End move, Enter opens the combination page (P-50)",
    "ok": true,
-   "detail": "Spouse of a skilled worker → http://localhost:4454/c/9d711439-1c1d-46f9-951c-21eca2ea59de"
+   "detail": "Visitor visa → http://localhost:4443/c/41d34a4e-302b-4868-9b2f-74b3ae6b0f82"
   },
   {
    "name": "P-50: Back keeps the view (All), highlights the opened row and restores the scroll",
    "ok": true,
-   "detail": "{\"url\":\"?f=all&sel=individual.work_permits.open.spouse_worker\",\"sel\":\"Spouse of a skilled worker\",\"y\":695,\"focus\":\"Spouse of a skilled worker\",\"scrollBefore\":695}"
+   "detail": "{\"url\":\"?f=all&sel=individual.visitors.visitor_visa\",\"sel\":\"Visitor visa\",\"y\":27,\"focus\":\"Visitor visa\",\"scrollBefore\":27}"
   },
   {
    "name": "axe: programs-back-row-highlighted has no WCAG A/AA violation",
@@ -211,14 +195,14 @@
    "detail": "{\"sel\":\"Super visa\",\"focus\":\"Super visa\",\"url\":\"?f=all&sel=individual.visitors.super_visa\"}"
   },
   {
-   "name": "P-50: the page header carries the full path, every level a link (Programs › Individual › Visitors › Visitor visa)",
+   "name": "P-50: the page header carries the full path, every level a link (Immigration programs › Temporary residence › Visitors › Visitor visa)",
    "ok": true,
-   "detail": "Programs › Individual › Visitors › Visitor visa"
+   "detail": "Immigration programs › Temporary residence › Visitors › Visitor visa"
   },
   {
-   "name": "item 1: Visitor visa — row step = header step = the missing list's one shared step (said once); sources and set-up forms counted apart",
+   "name": "item 1 P-180 (X1 C3, QA-119): Visitor visa — the row says Resume setup; the header's step is the strip's ● Next item; the Forms row names the one form found; no missing list",
    "ok": true,
-   "detail": "Add 1 form from the library | Add 1 form from the library | 2 forms attached as sources, 0 set up. | No questions yet for Applicant, Spouse or partner (travelling), Child (travelling)."
+   "detail": "Resume setup | Confirm the checklist page | ● Step 1, Next: Official pages IRCC's apply page and document checklist; the forms, people and documents are read from them Proposed by the rules, not confirmed Confirm the checklist page | ○ Step 3, To do: Forms 0 forms Add 1 form found · Map 1 form After Who can be in this application"
   },
   {
    "name": "item 3: a combination with no setup shows no warnings (\"no problems\")",
@@ -239,16 +223,16 @@
   {
    "name": "item 7: the facts sit in one muted line under the title",
    "ok": true,
-   "detail": "Not released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample (illustrative)"
+   "detail": "Not released yet · cases opened outside Canada · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4) · Sample"
   },
   {
-   "name": "item 1: \"+ Add form\" lives on the combination page",
+   "name": "item 1 → S5: no \"+ Add form\" on the Overview (it only reports)",
    "ok": true
   },
   {
-   "name": "review #1: the page's next step is the row's (same words, same action)",
+   "name": "QA-119: the page's next step is the setup checklist's next item (its words and kind), not the catalogue's older step",
    "ok": true,
-   "detail": "Add 1 form from the library / Add 1 form from the library"
+   "detail": "Confirm the checklist page / Confirm the checklist page / old Add 1 form from the library"
   },
   {
    "name": "review #1: a form already mapped in the library is not called unmapped",
@@ -264,16 +248,16 @@
    "ok": true
   },
   {
-   "name": "+ Add form opens a right panel (team pattern), not a centred modal",
+   "name": "S5: the Forms tab offers \"Add a form from the library\" (picks only; no upload on the combination)",
    "ok": true
   },
   {
-   "name": "item 9 / #5: one intake, many files, one result per file (added · older edition not used · already in the library)",
+   "name": "item 9 / #5: one way in, many files, one card per file (added · older edition not used · already in the library)",
    "ok": true,
-   "detail": "IMM 1344 (09-2024)Added to the libraryForm · Application to sponsor, s | IMM 5257 (06-2019)Older edition: not usedForm · APPLICATION FOR TEMPOR | IMM 5707 (01-2023)Already in the libraryForm · Family Information · im"
+   "detail": "44 (09-2024) added to the library as a new form (read from the file).Added to the library. | To review; then a second person compares and approves it.Record the IRCC page it came from | y: IMM 5707 (01-2023). Nothing duplicated.Already in the library: nothing was added twice."
   },
   {
-   "name": "item 9: what the file says is shown (code, kind, title, published date)",
+   "name": "item 9: what the file says is shown (code, edition and title, read by rules)",
    "ok": true
   },
   {
@@ -290,9 +274,9 @@
    "ok": true
   },
   {
-   "name": "held for a person: the page lists the older edition as not used",
+   "name": "held for a person: the older edition waits for a person (To review and the Form library; S5: no longer on the combination)",
    "ok": true,
-   "detail": "Held for a person (1)IMM 5257 (06-2019) · Older edition: not used (Not newer than the library's IMM 5257 (09-2023); file imm5257e-pre-2023.pdf)Held files are not in the library and not used by this combination. A person reviews what changed before a new edition is used."
+   "detail": "[\"IMM 5257 (06-2019):older_edition_held\"]"
   },
   {
    "name": "review #3: no technical words on the page (screen numbers, error names, hashes, user ids, \"inventory\")",
@@ -332,7 +316,7 @@
   {
    "name": "source-trust: the held unapproved edition does not change a Live row or expose edition-impact review",
    "ok": true,
-   "detail": "Work permits › Employer-specific work permitWith an LMIASupported by: Corporate › LMIAFiled: PDF onlyLiveOpen"
+   "detail": "With an LMIARetail › Temporary residence › Work permits › Employer-specific work permitLiveOpen"
   },
   {
    "name": "axe: programs-live-row-unverified-source-held has no WCAG A/AA violation",
@@ -344,14 +328,14 @@
    "ok": true
   },
   {
-   "name": "F1: Individual: the Live count equals the rows showing Live, and the Live view lists them",
+   "name": "F1: Retail: the Live count equals the rows showing Live, and the Live view lists them",
    "ok": true,
-   "detail": "Live · 1 · chips 1 · shown 1"
+   "detail": "2 · chips 2 · shown 2"
   },
   {
    "name": "F1: Corporate: the Live count equals the rows showing Live, and the Live view lists them",
    "ok": true,
-   "detail": "Live · 0 · chips 0 · shown 0"
+   "detail": "0 · chips 0 · shown 0"
   },
   {
    "name": "review #3: released version and approver role appear without a technical fingerprint",
@@ -381,14 +365,13 @@
    "ok": true
   },
   {
-   "name": "See N missing opens the combination page with each missing item",
+   "name": "?show=missing opens the combination page on the setup strip, five steps",
    "ok": true,
-   "detail": "No questions yet for Principal applicant, Spouse or partner, Dependent child. Next step: Add questions (Configuration › Questions and sections)."
+   "detail": "● Step 1, Next: Official pages IRCC's apply page and document checklist; the forms, people and documents are read from them Proposed by the rules, not confirmed Confirm the checklist page | ○ Step 2, To do: Who can be in this application 3 person roles, 3 applicant roles Sample Confirm who can apply After Official pages | ○ Step 3, To do: Forms 0 forms Add 1 form found · Map 1 form After Who can b"
   },
   {
-   "name": "F2: one cause, one line; the next step said once (under the list when shared, else on each line); no line per person role",
-   "ok": true,
-   "detail": "No questions yet for Principal applicant, Spouse or partner, Dependent child. Next step: Add questions (Configuration › Questions and sections)."
+   "name": "F2 (X1 C3): one line per step, never a line per person role",
+   "ok": true
   },
   {
    "name": "axe: combination-page-show-missing has no WCAG A/AA violation",
@@ -400,11 +383,7 @@
    "ok": true
   },
   {
-   "name": "the header's draft count matches the list and draft bar (an empty draft shows no changes)",
-   "ok": true
-  },
-  {
-   "name": "a not-started row opens its (new, empty) combination page for the author",
+   "name": "S2 fix 3 / S3: a not-started row opens no page, says Start setup begins it, and starts nothing by itself",
    "ok": true
   },
   {
@@ -417,8 +396,9 @@
    "ok": true
   },
   {
-   "name": "non-author: author-only next steps are shown, not offered; a not-started row says who starts it",
-   "ok": true
+   "name": "non-author P-180: a not-started row offers Open, never Start setup, and says who starts it",
+   "ok": true,
+   "detail": "Open"
   },
   {
    "name": "axe: programs-non-author has no WCAG A/AA violation",
@@ -448,45 +428,8 @@
    "ok": true
   },
   {
-   "name": "New combination opens the path builder page",
+   "name": "S3 M2: the New combination page is gone (Page not found, with the way back)",
    "ok": true
-  },
-  {
-   "name": "review #10: a path back to Programs, no stray hint under Pathway, placeholders not cut",
-   "ok": true
-  },
-  {
-   "name": "axe: new-combination-path-builder has no WCAG A/AA violation",
-   "ok": true,
-   "detail": ""
-  },
-  {
-   "name": "1024 px: new-combination-path-builder has no sideways scroll",
-   "ok": true
-  },
-  {
-   "name": "QA-7: a 131-character program name shows \"Keep the name under 120 characters.\" on its field, and Create is not offered",
-   "ok": true,
-   "detail": "Keep the name under 120 characters."
-  },
-  {
-   "name": "axe: new-combination-name-too-long has no WCAG A/AA violation",
-   "ok": true,
-   "detail": ""
-  },
-  {
-   "name": "1024 px: new-combination-name-too-long has no sideways scroll",
-   "ok": true
-  },
-  {
-   "name": "QA-6: a name of symbols only says to use letters or digits; nothing can be created",
-   "ok": true,
-   "detail": "Use letters or digits in the name, not only punctuation."
-  },
-  {
-   "name": "QA-11: \"Open the existing combination\" opens that combination's page (not the list)",
-   "ok": true,
-   "detail": "http://localhost:4454/c/15e5a631-8590-47d5-813a-471e798ff3cf"
   },
   {
    "name": "QA-1: the shared Release page holds back a combination nobody submitted, saying why",
@@ -509,7 +452,7 @@
   {
    "name": "QA-10: the review tab names who submitted (\"Submitted by Configuration author\"), never an internal id",
    "ok": true,
-   "detail": "Submitted by Configuration author, today "
+   "detail": "Submitted by Configuration author, today at"
   },
   {
    "name": "axe: combination-review-submitted-by-name has no WCAG A/AA violation",
@@ -527,16 +470,17 @@
   {
    "name": "narrow 390 px: the combination's name keeps its width (≥ 200 px), next steps are not clipped, no sideways scroll",
    "ok": true,
-   "detail": "{\"nameW\":232,\"over\":0,\"clipped\":0}"
+   "detail": "{\"nameW\":207,\"over\":0,\"clipped\":0}"
   },
   {
    "name": "narrow 512 px: the combination's name keeps its width (≥ 200 px), next steps are not clipped, no sideways scroll",
    "ok": true,
-   "detail": "{\"nameW\":354,\"over\":0,\"clipped\":0}"
+   "detail": "{\"nameW\":329,\"over\":0,\"clipped\":0}"
   },
   {
-   "name": "C1.6: the Programs row says how the combination is filed",
-   "ok": true
+   "name": "C1.6 P-180: the row no longer says how the combination is filed (the Forms tab does)",
+   "ok": true,
+   "detail": "With an LMIARetail › Temporary residence › Work permits › Employer-specific work permitLiveOpen"
   },
   {
    "name": "C1.6: the combination page shows the filing method and each line's channel",
@@ -565,7 +509,8 @@
   },
   {
    "name": "C1.6: someone without the author duty sees the channels but cannot change them",
-   "ok": true
+   "ok": true,
+   "detail": "{\"boxes\":[],\"pdf\":true,\"add\":0,\"text\":\"Before forms●Official pages: Proposed by the rules, not confirmed · Confirm the checklist page○Who can be in this application · Principal applicant (always) · Spouse or partner (optional) · Child, 0–4 (optional) · Representative (optional) ShowNo form find yetIts forms and checklists come from canada.ca into the Form library and attach here. Nothing was spent"
   },
   {
    "name": "C1.6 P-102: the sources tab no longer offers what drafting reads online",
@@ -578,7 +523,7 @@
   {
    "name": "QA-17: a step run on another day shows its date (\"Oct 21, …\"); one run today says \"today\"",
    "ok": true,
-   "detail": "today 8:10 p.m. | today 8:10 p.m. | today 8:10 p.m."
+   "detail": "Oct 21, 5:23 p.m. Ch | today at 3:30 a. | today at 3:30 a."
   },
   {
    "name": "P-63: no page says \"box\" or \"box map\" (form field, field map)",
@@ -665,23 +610,15 @@
    "violations": []
   },
   {
-   "state": "19-new-combination-path-builder",
+   "state": "19-release-page-held-not-submitted",
    "violations": []
   },
   {
-   "state": "20-new-combination-name-too-long",
+   "state": "20-combination-review-submitted-by-name",
    "violations": []
   },
   {
-   "state": "21-release-page-held-not-submitted",
-   "violations": []
-  },
-  {
-   "state": "22-combination-review-submitted-by-name",
-   "violations": []
-  },
-  {
-   "state": "23-combination-online-later-wave",
+   "state": "21-combination-online-later-wave",
    "violations": []
   }
  ]

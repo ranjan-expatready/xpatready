@@ -9,7 +9,7 @@ import { SetupStrip } from "@/components/setup-strip";
 import { Stat } from "@/components/ui/controls";
 import { fmtWhen } from "@/components/status";
 
-export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: CombinationSummary | undefined; show: string | null }) {
+export function OverviewTab({ d, sum, show, failed, onRetry }: { d: CombinationView; sum: CombinationSummary | undefined; show: string | null; failed?: boolean; onRetry?: () => void }) {
   const id = d.combination.id;
   const row = sum?.row;
   const k = d.draft.counts;
@@ -22,7 +22,10 @@ export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: Combina
     <div className="space-y-5" data-overview>
       {/* X1 slice C3: the setup strip replaces "Missing before firms can use it"; ?show=missing (the header's "See n
           missing") lands on it. */}
-      {sum?.setup ? <SetupStrip id={id} setup={sum.setup} landRef={stripRef} /> : !sum ? <p className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-text-muted" role="status" data-setup-strip-loading>Loading the setup steps…</p> : null}
+      {/* X1 follow-up (C3 review minor 1): a failed summary says so and offers Retry, never an endless "Loading". */}
+      {sum?.setup ? <SetupStrip id={id} setup={sum.setup} landRef={stripRef} />
+        : failed && !sum ? <p className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-text-danger" role="alert" data-setup-strip-error>The setup steps could not be loaded · <button type="button" className="font-medium text-text-link underline" onClick={onRetry}>Retry</button></p>
+        : !sum ? <p className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-text-muted" role="status" data-setup-strip-loading>Loading the setup steps…</p> : null}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Forms" value={k.forms} sub={<>{k.map_boxes} form field{k.map_boxes === 1 ? "" : "s"} matched to shared fields · <Link className="text-text-link underline" to={`/c/${id}/forms`}>see them</Link></>} />
         <Stat label="Questions" value={row?.counts?.questions ?? 0} sub={`questions across all people (each person role counted) · ${k.sections} sections`} />

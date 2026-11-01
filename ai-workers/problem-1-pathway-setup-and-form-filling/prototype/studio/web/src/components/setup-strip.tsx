@@ -8,6 +8,7 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 import { itemHref, STEP_KEYS, tabOfFocus, type SetupChecklist, type Step, type ViewerChecklist } from "../../../contracts/setup-checklist";
 import { Pill } from "@/components/ui/controls";
+import { Tip } from "@/components/status";
 import { cn } from "@/lib/utils";
 
 const TAB_NAME: Record<string, string> = { forms: "Forms", documents: "Documents", questionnaires: "Questionnaires", review: "Review and release" };
@@ -28,6 +29,8 @@ export const STRIP_TIP = "Worked out from what is set up now · ✓ done · ● 
 /** Review minor 1: the page's `:focus-visible` reset removes outlines, so the strip's links draw their own ring. */
 const LINK_FOCUS = "rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1";
 const TIER_WORDS = { author: "the configuration author · sure", expert: "the immigration expert · not sure" } as const;
+/** The concept's sure/not-sure tooltip (v4 "Copy"). */
+export const TIER_TIP = "The configuration author confirms what the rules or both AI readings agree on; anything else waits for the immigration expert.";
 
 export function SetupStrip({ id, setup, landRef }: { id: string; setup: SetupChecklist | ViewerChecklist; landRef?: React.Ref<HTMLElement> }) {
   const viewer = "viewer" in setup ? setup.viewer : null;
@@ -44,7 +47,8 @@ export function SetupStrip({ id, setup, landRef }: { id: string; setup: SetupChe
           // The viewer overlay (§5): the current step whose first item is not this person's reads ⧗ waiting.
           const mark: Mark = s.state === "next" && viewer && !viewer.filled && s.key === setup.next?.step && setup.next.item.kind !== "view_ai" ? "waiting" : s.state;
           const later = !!current && STEP_KEYS.indexOf(s.key) > STEP_KEYS.indexOf(current) && s.state !== "done";
-          const confirmed = s.confirmed && s.key !== "pages" ? ` · confirmed by ${TIER_WORDS[s.confirmed.as]}` : "";
+          // X1 follow-up (concept v4 copy): the tier words carry the sure/not-sure tooltip, reachable by keyboard.
+          const confirmed = s.confirmed && s.key !== "pages" ? <> · confirmed by <Tip tip={TIER_TIP} focusable><span className={cn("underline decoration-dotted underline-offset-2", LINK_FOCUS)} data-tier-tip={s.confirmed.as}>{TIER_WORDS[s.confirmed.as]}</span></Tip></> : null;
           return (
             <li key={s.key} data-step-row={s.key} data-mark={mark} className={cn("grid grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-b border-border px-4 py-2.5 last:border-b-0 md:grid-cols-[2rem_14rem_minmax(0,1fr)_minmax(0,18rem)]", mark === "next" || mark === "waiting" ? "bg-primary/5" : "")}>
               <span className={cn("inline-flex size-6 items-center justify-center rounded-full border text-xs font-bold", MARK[mark].cls)} aria-hidden>{MARK[mark].sign}</span>
