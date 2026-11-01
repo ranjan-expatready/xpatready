@@ -40,6 +40,18 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   await panel.getByRole("button", { name: /Draft sections and lists/ }).click();
   await p.waitForFunction(() => /Already drafted for this edition/.test(document.querySelector("[data-form-masters]")?.textContent ?? ""), null, { timeout: 20000 });
   step("C3.4 fail: a second click proposes nothing more and says the edition is already drafted (P-138)", Number(sql("select count(*) from proposal_item where step='masters_edition'")) === n);
+  // Review Minor 1: "Open Proposals" opens this edition's group, not the oldest one.
+  await panel.getByRole("link", { name: "Open Proposals" }).first().click();
+  await p.waitForURL(/\/review\/proposals\?group=/, { timeout: 20000 });
+  const groupAsked = decodeURIComponent(new URL(p.url()).searchParams.get("group") ?? "");
+  step("C3.4 fail→pass (review Minor 1): Open Proposals opens IMM 5257's own group", /^edition:IMM 5257/.test(groupAsked), groupAsked);
+  // Review Minor 2: a rules item's reading says it came from the rules, never "saved run".
+  const openBtn = p.locator("tr", { has: p.getByText("Rules", { exact: true }) }).getByRole("button", { name: /^Open / }).first();
+  await openBtn.waitFor({ timeout: 20000 });
+  await openBtn.click();
+  const first = p.getByText(/^First reading · /).first();
+  await first.waitFor({ timeout: 20000 });
+  step("C3.4 fail→pass (review Minor 2): a rules item's reading reads \"rules, US$0\", not \"saved run\"", (await first.innerText()).includes("rules, US$0"), await first.innerText());
   step("no page errors", errors.length === 0, errors);
   await b.close();
   console.log(`\n${pass} passed, ${failed} failed`);
