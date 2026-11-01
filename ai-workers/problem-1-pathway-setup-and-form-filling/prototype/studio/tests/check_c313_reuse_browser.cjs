@@ -65,7 +65,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await axe("Fields filtered to a combination");
     await go("/library/documents?combination=wp.family");
     const dt = await main();
-    step("C3.13 BR-4 pass: Document types shows the totals and marks for the chosen combination", /With an LMIA uses 26 document types · 0 reused · 26 new here/.test(dt) && (await p.locator("main table tbody tr", { hasText: "New here" }).count()) === 26, dt.slice(0, 300));
+    // The number is read from the API (where used), not written in: the sample's checklist can change (it was 26, then 22).
+    const lmiaTypes = (await (await p.request.fetch(`${BASE}/api/library/document-types`, { headers: { "x-actor": "user-A" } })).json()).filter((t) => t.used_in.includes("With an LMIA")).length;
+    step("C3.13 BR-4 pass: Document types shows the totals and marks for the chosen combination (as many as where used counts)", lmiaTypes > 0 && new RegExp(`With an LMIA uses ${lmiaTypes} document types · 0 reused · ${lmiaTypes} new here`).test(dt) && (await p.locator("main table tbody tr", { hasText: "New here" }).count()) === lmiaTypes, `${lmiaTypes}: ${dt.slice(0, 300)}`);
     await p.screenshot({ path: path.join(SHOTS, "document-types-lmia-1440.png"), fullPage: false });
     await axe("Document types filtered to a combination");
     await go("/library/fields?combination=no.such");
