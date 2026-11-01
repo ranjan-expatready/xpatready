@@ -7,6 +7,8 @@ Full text of each row (steps, expected, actual, evidence and check): `reports/bu
 
 | # | Type · Severity | Capability · Req./decision | Found · last seen | What happens (short) | Lane | Status |
 |---|---|---|---|---|---|---|
+| QA-134 | UX · Minor | C11.18 · STANDARDS (no decision ids on screen) | 25cefb67 (re-score) | Forms drawer › What IRCC accepts: the account hint says "Any account, or the one account this applies to (P-143)." — a decision id on screen. … | forms | Open |
+| QA-135 | UX · Minor | C6.2, C11.12 · STANDARDS (Problem Details in plain words) | 25cefb67 (re-score) | Adding a second "case" subject to a case is refused 422 "This case's release does not list a case in who can be in this application …": the internal role name "case" in the words. … | runtime | Open |
 | QA-132 | UX · Minor | C11.1, C4.6 · P-102, W1-02 | 25cefb67 (re-score) | Preview shows an Online line as "Filled on the portal (Online) · IMM 5707 …" with no "later wave" note; the Forms tab and fill say later wave. … | runtime | Open |
 | QA-133 | UX · Minor | C4.1, C4.8 · PRODUCT §4 | 25cefb67 (re-score) | After a section is removed from a combination's questionnaire, Review and release lists 17 warnings "Placed in section submitted_documents, which this combination's …": the section's system key, not its title (engine/validate.ts:81). … | runtime | Open |
 | QA-131 | UX · Minor | C1.5 X2b (API) · STANDARDS (Problem Details in plain words) | 25cefb67 (after-merge #254) | `POST /api/lines/bulk/preview` with a body that is not JSON answers 400 "Invalid input: expected object, received undefined" (the validator's words, not ours). No screen sends this today; the screen in slice (c) will. … | screens | Open |
