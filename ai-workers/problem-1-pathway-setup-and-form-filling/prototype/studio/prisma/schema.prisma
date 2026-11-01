@@ -1652,3 +1652,16 @@ model FactSource {
   @@index([combinationId, batchId])
   @@map("fact_source")
 }
+
+/// C11.10 (P-115: Cards / List remembered per person): a person's own view choices, kept on the server so they follow the
+/// person to any browser. Keyed by the person only (no workspace): a demo Reset makes a new workspace, and a person's own
+/// view choice is not configuration, so it stays. Values are checked against a fixed list per key (contracts/session.ts).
+model PersonPreference {
+  actor     String
+  key       String
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@id([actor, key])
+  @@map("person_preference")
+}

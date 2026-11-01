@@ -13,6 +13,7 @@ import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedW
 import { recordAction, snapshotLines } from "./form-uses.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../contracts/programs.ts";
+import { PreferencesBody, PROGRAMS_VIEWS, type Preferences, type ProgramsView } from "../../contracts/session.ts";
 import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
@@ -81,7 +82,26 @@ export class Studio {
     // "Structure exists" counts any name, Pathways included (W1-03 B1: after Reset the Structure is empty in both tabs).
     const [programs, fields, releases, jobs, sample] = await Promise.all([this.db.programDef.count({ where: { workspaceId } }), this.db.canonicalField.count({ where: { workspaceId } }), this.db.configRelease.count({ where: { workspaceId } }), this.db.draftingJob.count({ where: { workspaceId } }), this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } })]);
     // sampleLoaded: the sample inputs were loaded into this workspace, not merely "some program exists" (QA-12).
-    return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0 };
+    return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0, preferences: await this.preferences(actor.id) };
+  }
+
+  /** C11.10 (P-115): a person's own view choices. Only known keys and values are kept (contracts/session.ts). */
+  private async preferences(actorId: string): Promise<Preferences> {
+    const rows = await this.db.personPreference.findMany({ where: { actor: actorId } });
+    const out: Preferences = {};
+    for (const r of rows) if (r.key === "programsView" && (PROGRAMS_VIEWS as readonly string[]).includes(r.value)) out.programsView = r.value as ProgramsView;
+    return out;
+  }
+
+  /** PATCH /session/preferences: saves this person's choice for them only; nothing else changes, nothing is audited. */
+  async setPreferences(actor: Actor, body: unknown): Promise<Preferences> {
+    const parsed = PreferencesBody.safeParse(body);
+    if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
+    for (const [key, value] of Object.entries(parsed.data)) {
+      if (value === undefined) continue;
+      await this.db.personPreference.upsert({ where: { actor_key: { actor: actor.id, key } }, create: { actor: actor.id, key, value }, update: { value } });
+    }
+    return this.preferences(actor.id);
   }
 
   /** The programme structure (SA-1B-50/51, D285): Pathway (who the client is: Individual or Corporate) › Program › Category

@@ -12,12 +12,12 @@
 // it highlighted and the scroll where it was.
 import * as React from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { keepPreviousData } from "@tanstack/react-query";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Info, LayoutGrid, List as ListIcon, ListTree, Plus, Search, X } from "lucide-react";
-import type { CatalogueLeaf, CatalogueResponse, CatalogueSection } from "../../../contracts/programs";
+import type { CatalogueLeaf, CatalogueResponse, CatalogueSection, SessionView } from "../../../contracts/programs";
 import { PATHWAY_TYPE_LABEL } from "../../../contracts/structure";
 import type { ChipStatus } from "../../../contracts/setup-checklist";
-import { useActorId, useApi, useSessionView, useToast } from "@/lib/api";
+import { api, useActorId, useApi, useSessionView, useToast } from "@/lib/api";
 import type { PathwayType } from "../../../contracts/structure";
 import { AddToStructure, type AddPrefill } from "@/components/add-to-structure";
 import { Button, Input, Notice } from "@/components/ui/controls";
@@ -67,16 +67,24 @@ export function rememberList(nodeKey: string) {
   } catch { /* private window: Back still opens the page */ }
 }
 
-/** Cards or List, per person (concept §2): the URL's `v` wins, else what this person chose last. */
+/** Cards or List, per person (concept §2): the URL's `v` wins, else what this person chose last. C11.10 (P-115): the
+ *  choice is kept on the server for the person (PATCH /session/preferences), so it follows them to any browser; this
+ *  browser's copy only shows it at once while the session loads. */
 function useView(sp: URLSearchParams): ["cards" | "list", (v: "cards" | "list") => void] {
   const actor = useActorId();
+  const qc = useQueryClient();
+  const server = useApi<SessionView>(["session", actor], "/session").data?.preferences?.programsView;
   const key = `xr-programs-view:${actor ?? "anyone"}`;
   const read = () => { try { return localStorage.getItem(key) === "list" ? "list" : "cards"; } catch { return "cards"; } };
   const [saved, setSaved] = React.useState<"cards" | "list">(read);
   React.useEffect(() => setSaved(read()), [key]);
+  React.useEffect(() => { if (server) { setSaved(server); try { localStorage.setItem(key, server); } catch { /* private window */ } } }, [server, key]);
   const url = sp.get("v");
   const view = url === "list" || url === "cards" ? url : saved;
-  return [view, (v) => { setSaved(v); try { localStorage.setItem(key, v); } catch { /* private window */ } }];
+  return [view, (v) => {
+    setSaved(v); try { localStorage.setItem(key, v); } catch { /* private window */ }
+    void api("/session/preferences", { method: "PATCH", json: { programsView: v } }).then(() => qc.invalidateQueries({ queryKey: ["session", actor] })).catch(() => undefined); // the view still changes here; only the server copy is missed
+  }];
 }
 
 /** Folded Pathway and Program sections, remembered per person (P-180). While a filter or search is on, every section
