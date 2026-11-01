@@ -1258,6 +1258,7 @@ model Case {
   groups       SubmissionGroup[]
   filings      Filing[]
   filingItems  FilingItem[]
+  enteredSections EnteredSection[]
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -1291,8 +1292,9 @@ model CaseTeamMember {
 }
 
 /// C7.3 (r5c §6, P-62 §6): "Entered in the portal" for one section of an Online form item's answer sheet: who ticked it,
-/// when, and the answers it showed, frozen in an answer snapshot. One tick per item and section; a fact changed after it
-/// marks the section out of date (P-65), the frozen answers never change.
+/// when, and the answers it showed, frozen in an answer snapshot. One current tick per item and section; a fact changed
+/// after it marks the section out of date (P-65). Ticking an out-of-date section again freezes a new snapshot and marks the
+/// old tick superseded (kept as history); the frozen answers never change.
 model EnteredSection {
   id          String   @id @default(uuid()) @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid
@@ -1303,11 +1305,16 @@ model EnteredSection {
   snapshotId  String   @unique @map("snapshot_id") @db.Uuid
   enteredBy   String   @map("entered_by")
   enteredAt   DateTime @default(now()) @map("entered_at") @db.Timestamptz
+  /// Set when the section is ticked again after it went out of date (the next tick is the current one).
+  supersededAt DateTime? @map("superseded_at") @db.Timestamptz
 
+  case     Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
   item     FilingItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   snapshot AnswerSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
-  @@unique([itemId, sectionKey])
+  /// One current tick per item and section: a partial unique index in the migration (WHERE superseded_at IS NULL).
+  @@index([itemId, sectionKey])
+  @@index([caseId])
   @@map("entered_section")
 }
 
