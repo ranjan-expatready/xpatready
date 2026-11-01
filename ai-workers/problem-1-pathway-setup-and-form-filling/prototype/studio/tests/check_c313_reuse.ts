@@ -3,7 +3,10 @@
 // to choose from carry how many items each uses. A passing and a failing case per rule, through the API on an isolated
 // copy with the sample inputs loaded (the demo is never touched). No browser, NO model call (US$0).
 //   zsh studio/tools/isolated.sh screens_reuse 4447 start && tsx studio/tests/check_c313_reuse.ts 4447 xr_studio_screens_reuse
-const PORT = Number(process.argv[2] ?? 4447);
+import { execFileSync } from "node:child_process";
+
+const PORT = Number(process.argv[2] ?? 4447), DB = process.argv[3] ?? "xr_studio_screens_reuse";
+const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
@@ -49,6 +52,30 @@ type Item = { in_combination: "REUSED" | "NEW"; brought_in_by: string };
   await call("DELETE", `/combinations/${vv.id}/sections/${s0.key}`);
   const gone = await call("GET", "/library/reuse/sections?combination=vv.single");
   ok("C3.13 fail: once the section is taken off again, the second combination uses nothing (0 · 0 reused · 0 new)", gone.body.total === 0 && gone.body.reused === 0 && gone.body.new === 0, gone.body);
+
+  // ─────────────────── Review c313 M3: only library items count (values a rule calculates are not fields)
+  const libFields = new Set(((await call("GET", "/library/fields")).body as { key: string }[]).map((f) => f.key));
+  const lf = await call("GET", "/library/reuse/fields?combination=wp.family");
+  const lfKeys = Object.keys(lf.body.items);
+  ok("C3.13 M3 pass: the Fields totals count only fields in the library (every marked key is a Fields row)", lf.body.total > 0 && lfKeys.length === lf.body.total && lfKeys.every((k) => libFields.has(k)), lfKeys.filter((k) => !libFields.has(k)).slice(0, 5));
+  ok("C3.13 M3 fail: a value a rule calculates (person.age_years, read by the rules) is not counted as a field", !libFields.has("person.age_years") && !("person.age_years" in lf.body.items) && lf.body.combinations.find((c: { key: string }) => c.key === "wp.family").uses === lf.body.total);
+
+  // ─────────────────── Review c313 M1, M2: the combination that brought an item in is the one that added it
+  const sp = r.body.combinations.find((c: { key: string }) => c.key === "sp.student");
+  const line = (newTypeName?: string, documentTypeKey?: string) => ({ ...(newTypeName ? { newTypeName } : { documentTypeKey }), attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant", providedBy: "client", sourceQuote: "C3.13 test line." });
+  const spAdd = await call("POST", `/combinations/${sp.id}/requirements`, line("C313 probe letter"));
+  const probe = sql("select key from library_change where kind='document_type' and label='C313 probe letter'");
+  const lmAdd = await call("POST", `/combinations/${lmia.id}/requirements`, line(undefined, probe));
+  ok("setup: Study permit names a new document type on a checklist line; With an LMIA (set up first) then uses it too", spAdd.status === 201 && lmAdd.status === 201 && !!probe, [spAdd.status, lmAdd.status, spAdd.body?.detail, lmAdd.body?.detail]);
+  const mark = async (combo: string) => (await call("GET", `/library/reuse/document-types?combination=${combo}`)).body.items[probe] as Item | undefined;
+  let [spM, lmM] = [await mark("sp.student"), await mark("wp.family")];
+  ok("C3.13 M1 pass: the combination that added the item is credited (Study permit: New here), even though another was set up first", spM?.in_combination === "NEW" && spM.brought_in_by === "Study permit", spM);
+  ok("C3.13 M1 fail: the combination set up first but taking the item up later is not credited (With an LMIA: Reused, from Study permit)", lmM?.in_combination === "REUSED" && lmM.brought_in_by === "Study permit", lmM);
+  // A release or an edit rewrites setup rows (their updated time moves): the marks do not flip.
+  sql(`update document_requirement set updated_at = now() + interval '1 hour' where combination_id='${sp.id}'`);
+  sql(`update document_requirement set updated_at = now() - interval '30 days' where combination_id='${lmia.id}'`);
+  [spM, lmM] = [await mark("sp.student"), await mark("wp.family")];
+  ok("C3.13 M2 fail: rewriting the setup rows' times (as a release or an edit does) does not flip the marks", spM?.in_combination === "NEW" && lmM?.in_combination === "REUSED" && lmM.brought_in_by === "Study permit", [spM, lmM]);
 
   // ─────────────────── Refusals, in words
   const [unknown, kind, nobody] = await Promise.all([call("GET", "/library/reuse/fields?combination=no.such"), call("GET", "/library/reuse/forms?combination=wp.family"), call("GET", "/library/reuse/fields", undefined, null)]);

@@ -41,7 +41,9 @@ function useReuse(kind: "fields" | "sections" | "document-types") {
   const r = useApi<ReuseView>(["library-reuse", kind, combination], `/library/reuse/${kind}${combination ? `?combination=${encodeURIComponent(combination)}` : ""}`);
   const choose = (key: string) => setParams((p) => { const n = new URLSearchParams(p); if (key) n.set("combination", key); else n.delete("combination"); return n; }, { replace: true });
   const items = combination && r.data?.combination ? r.data.items ?? {} : null;
-  return { combination, choose, view: r.data, error: r.isError ? (r.error as Error).message : null, items, keep: (key: string) => !items || key in items };
+  // Review c313 m2: with a combination in the address, nothing is drawn until its marks are known (no whole list first).
+  const waiting = !!combination && r.isLoading;
+  return { combination, choose, view: r.data, waiting, error: r.isError ? (r.error as Error).message : null, items, keep: (key: string) => !waiting && (!items || key in items) };
 }
 /** The Combination chooser and, once one is chosen, its totals ("18 · 12 reused · 6 new here"). */
 function ReuseBar({ reuse, noun }: { reuse: ReturnType<typeof useReuse>; noun: string }) {
@@ -52,7 +54,8 @@ function ReuseBar({ reuse, noun }: { reuse: ReturnType<typeof useReuse>; noun: s
   </>;
 }
 /** A row's mark with a combination chosen: Reused (another combination brought it in) or New here. */
-const ReuseMark = ({ reuse, k }: { reuse: ReturnType<typeof useReuse>; k: string }) => { const it = reuse.items?.[k]; return !it ? null : it.in_combination === "NEW" ? <Pill tone="info" title={`${reuse.view?.combination?.label} brought it into the library`}>New here</Pill> : <Pill title={`Brought in by ${it.brought_in_by}`}>Reused</Pill>; };
+/** Review c313 m1: who brought a reused item in is visible text, not only a hover title. */
+const ReuseMark = ({ reuse, k }: { reuse: ReturnType<typeof useReuse>; k: string }) => { const it = reuse.items?.[k]; return !it ? null : it.in_combination === "NEW" ? <Pill tone="info">New here</Pill> : <span data-reused className="inline-flex flex-col gap-0.5"><Pill>Reused</Pill><span className="text-[11px] text-text-muted">from {it.brought_in_by}</span></span>; };
 const NoneInCombination = ({ reuse, noun }: { reuse: ReturnType<typeof useReuse>; noun: string }) => <EmptyState title={`${reuse.view?.combination?.label} uses no ${noun}s yet`} description="Choose All combinations to see the whole library, or set up this combination first." />;
 
 export function FieldsPage() {
@@ -70,7 +73,7 @@ export function FieldsPage() {
         <ReuseBar reuse={reuse} noun="field" />
         <span className="text-xs text-text-muted">{rows.length} of {list.data?.length ?? 0}</span>
       </div>
-      {list.isLoading ? <Spinner label="Loading fields" /> : !list.data?.length ? <EmptyState title="The library is empty" description="Load sample inputs, or add a form with AI drafting; reviewed fields land here." /> : reuse.items && !Object.keys(reuse.items).length ? <NoneInCombination reuse={reuse} noun="field" /> : (
+      {list.isLoading || reuse.waiting ? <Spinner label="Loading fields" /> : !list.data?.length ? <EmptyState title="The library is empty" description="Load sample inputs, or add a form with AI drafting; reviewed fields land here." /> : reuse.items && !Object.keys(reuse.items).length ? <NoneInCombination reuse={reuse} noun="field" /> : (
         <Table head={["Field", "Meaning", "Type", "Forms", "Asked in", "Status"]}>
           {rows.slice(0, 400).map((f) => <tr key={f.key}><td><Link className="font-medium text-text-link hover:underline" to={`/library/fields/${encodeURIComponent(f.key)}`}>{f.name ?? fieldName(f.key)}</Link><p className="mono break-all text-[11px] text-text-muted">{f.key}</p></td><td className="max-w-md text-xs">{f.meaning}<SourceNote r={f} /></td><td className="text-xs">{TYPE_WORD[f.value_type] ?? f.value_type}</td><td className="text-xs">{f.forms.join(", ") || <span className="text-text-muted">none</span>}<span className="text-text-muted"> · {f.boxes} form field{f.boxes === 1 ? "" : "s"}{f.used_in?.length ? ` · ${f.used_in.length} combination${f.used_in.length === 1 ? "" : "s"}` : ""}</span></td><td className="text-xs">{f.placement ? `${f.placement.section.replace(/_/g, " ")} · ${collectedWord(f.placement.collected_from)}` : <span className="text-text-warn">not placed</span>}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={f.key} /><ListPill origin={f.origin} status={f.status} /></div></td></tr>)}
         </Table>
@@ -163,7 +166,7 @@ export function SectionsPage() {
     <div className="mx-auto max-w-6xl space-y-4">
       <div><h1 className="text-xl font-semibold">Sections</h1><p className="mt-1 text-sm text-text-muted">Reusable groups of questions. Each combination selects the sections its questionnaire uses.</p><Origin>the forms' own parts, each confirmed on To review. Nothing is added by hand; a combination picks its sections on its Questionnaires tab.</Origin></div>
       <div className="flex flex-wrap items-center gap-2"><ReuseBar reuse={reuse} noun="section" /></div>
-      {s.isLoading ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : !shown.length ? <NoneInCombination reuse={reuse} noun="section" /> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status", ""]}>{shown.map((x) => <tr key={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.key} /><ListPill origin={x.origin} status={x.status} /></div></td><td><Button variant="ghost" size="sm" aria-label={`Rename ${x.title}`} onClick={() => setEditing({ key: x.key, title: x.title })}><Pencil /> Rename</Button></td></tr>)}</Table>}
+      {s.isLoading || reuse.waiting ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : !shown.length ? <NoneInCombination reuse={reuse} noun="section" /> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status", ""]}>{shown.map((x) => <tr key={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.key} /><ListPill origin={x.origin} status={x.status} /></div></td><td><Button variant="ghost" size="sm" aria-label={`Rename ${x.title}`} onClick={() => setEditing({ key: x.key, title: x.title })}><Pencil /> Rename</Button></td></tr>)}</Table>}
       {editing ? <RenameSection section={editing} onClose={() => setEditing(null)} /> : null}
     </div>
   );
@@ -187,7 +190,7 @@ export function DocumentTypesPage() {
     <div className="mx-auto max-w-6xl space-y-4">
       <div><h1 className="text-xl font-semibold">Document types</h1><p className="mt-1 text-sm text-text-muted">Reusable document definitions. The facts a supported document can supply are a proposal until reading that document proves them on a case.</p><Origin>the document checklist lines of each combination (its official checklist, quoted), applied on the combination's Documents tab. Nothing is added by hand.</Origin></div>
       <div className="flex flex-wrap items-center gap-2"><ReuseBar reuse={reuse} noun="document type" /></div>
-      {t.isLoading ? <Spinner label="Loading" /> : !t.data?.length ? <EmptyState title="No document types yet" /> : !shown.length ? <NoneInCombination reuse={reuse} noun="document type" /> : <Table head={["Document type", "Category", "Facts it can supply", "Used by combinations", "Status"]}>{shown.map((x) => <tr key={x.documentTypeKey}><td className="max-w-md font-medium">{x.name}<SourceNote r={x} /></td><td className="text-xs">{CATEGORY_WORD[x.category] ?? x.category}</td><td className="max-w-lg text-xs">{x.suppliesFacts?.length ? x.suppliesFacts.map(fieldName).join(", ") : <span className="text-text-muted">none recorded</span>}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.documentTypeKey} /><ListPill origin={x.origin} status={x.status} /></div></td></tr>)}</Table>}
+      {t.isLoading || reuse.waiting ? <Spinner label="Loading" /> : !t.data?.length ? <EmptyState title="No document types yet" /> : !shown.length ? <NoneInCombination reuse={reuse} noun="document type" /> : <Table head={["Document type", "Category", "Facts it can supply", "Used by combinations", "Status"]}>{shown.map((x) => <tr key={x.documentTypeKey}><td className="max-w-md font-medium">{x.name}<SourceNote r={x} /></td><td className="text-xs">{CATEGORY_WORD[x.category] ?? x.category}</td><td className="max-w-lg text-xs">{x.suppliesFacts?.length ? x.suppliesFacts.map(fieldName).join(", ") : <span className="text-text-muted">none recorded</span>}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.documentTypeKey} /><ListPill origin={x.origin} status={x.status} /></div></td></tr>)}</Table>}
     </div>
   );
 }

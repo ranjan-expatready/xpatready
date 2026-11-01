@@ -142,39 +142,53 @@ export class LibrarySources {
     return out;
   }
 
-  /** C3.13 (Screen 04 BR-4, P-37): with a combination chosen, each item it uses is "Reused" (another combination brought
-   *  it into the library first) or "New here" (this combination brought it in), with the totals. The combination that
-   *  brought an item in is, of the combinations using it, the one whose setup started first: its earliest setup line
-   *  (a form, checklist, rule or check line); a combination with none yet comes after every one that has, then by the
-   *  time it was created. Without a combination: the combinations to choose from, each with how many items it uses. */
+  /** C3.13 (Screen 04 BR-4, P-37): with a combination chosen, each library item it uses is "Reused" (it was in the library
+   *  before this combination: another combination brought it in) or "New here" (this combination brought it in), with
+   *  the totals. The combination that brought an item in is the one its first ADD library change names (every way into
+   *  the library writes one with the combination it came from: an AI proposal, a document type named on a checklist
+   *  line); that record never changes, so a release or an edit elsewhere never flips the mark (review c313 M1, M2). An
+   *  item with no such record (loaded with the sample setup's release) was brought in by the first of its combinations
+   *  to be released, then the first created. Only items in the library count (review c313 M3: values a rule calculates
+   *  are not fields). Without a combination: the combinations to choose from, each with how many items it uses. */
   async reuse(kindWord: string, combination: string | undefined) {
     const kind = (KINDS as Record<string, Kind>)[kindWord];
     if (!kind) throw problem(404, "Not found", `There is no library list "${kindWord}": use fields, sections, document-types or answer-lists.`);
     const workspaceId = await this.ws.id();
-    const [combos, used] = await Promise.all([this.db.combination.findMany({ where: { workspaceId }, select: { id: true, combinationKey: true, label: true, createdAt: true } }), this.usedInIds(kind, workspaceId)]);
+    const [combos, usedAll, inLibrary] = await Promise.all([
+      this.db.combination.findMany({ where: { workspaceId }, select: { id: true, combinationKey: true, label: true, createdAt: true } }),
+      this.usedInIds(kind, workspaceId),
+      this.keysOf(kind, workspaceId),
+    ]);
+    const used = new Map([...usedAll].filter(([k]) => inLibrary.has(k)));
     const uses = (id: string) => [...used.values()].filter((s) => s.has(id)).length;
     const combinations = combos.map((c) => ({ id: c.id, key: c.combinationKey, label: c.label, uses: uses(c.id) })).sort((a, b) => a.label.localeCompare(b.label));
     if (combination === undefined || combination === "") return { combinations, combination: null };
     const chosen = combos.find((c) => c.id === combination || c.combinationKey === combination);
     if (!chosen) throw problem(404, "Not found", "That combination is not in this workspace. Choose one from the list.");
-    const firsts = await Promise.all([
-      this.db.combinationForm.groupBy({ by: ["combinationId"], where: { workspaceId }, _min: { updatedAt: true } }),
-      this.db.documentRequirement.groupBy({ by: ["combinationId"], where: { workspaceId }, _min: { updatedAt: true } }),
-      this.db.predicate.groupBy({ by: ["combinationId"], where: { workspaceId }, _min: { updatedAt: true } }),
-      this.db.check.groupBy({ by: ["combinationId"], where: { workspaceId }, _min: { updatedAt: true } }),
+    const mine = [...used].filter(([, s]) => s.has(chosen.id)).map(([k]) => k);
+    const [adds, releases] = await Promise.all([
+      this.db.libraryChange.findMany({ where: { workspaceId, kind, action: "ADD", key: { in: mine }, combinationId: { not: null } }, orderBy: { proposedAt: "asc" }, select: { key: true, combinationId: true } }),
+      this.db.configRelease.groupBy({ by: ["combinationId"], where: { workspaceId }, _min: { releasedAt: true } }),
     ]);
-    const started = new Map<string, number>();
-    for (const g of firsts.flat()) { const t = g._min.updatedAt?.getTime(); if (t !== undefined && t < (started.get(g.combinationId) ?? Infinity)) started.set(g.combinationId, t); }
-    const order = (id: string) => { const c = combos.find((x) => x.id === id)!; return [started.get(id) ?? Infinity, c.createdAt.getTime(), c.combinationKey] as const; };
-    const before = (a: string, b: string) => { const [x, y] = [order(a), order(b)]; return x[0] !== y[0] ? x[0] < y[0] : x[1] !== y[1] ? x[1] < y[1] : x[2] < y[2]; };
+    const addedBy = new Map<string, string>(); for (const a of adds) if (!addedBy.has(a.key) && combos.some((c) => c.id === a.combinationId)) addedBy.set(a.key, a.combinationId!);
+    const released = new Map(releases.map((r) => [r.combinationId, r._min.releasedAt?.getTime() ?? Infinity]));
+    const rank = (id: string) => { const c = combos.find((x) => x.id === id)!; return [released.get(id) ?? Infinity, c.createdAt.getTime(), c.combinationKey] as const; };
+    const before = (a: string, b: string) => { const [x, y] = [rank(a), rank(b)]; return x[0] !== y[0] ? x[0] < y[0] : x[1] !== y[1] ? x[1] < y[1] : x[2] < y[2]; };
     const items: Record<string, { in_combination: "REUSED" | "NEW"; brought_in_by: string }> = {};
-    for (const [key, s] of used) {
-      if (!s.has(chosen.id)) continue;
-      const first = [...s].reduce((a, b) => (before(b, a) ? b : a));
+    for (const key of mine) {
+      const first = addedBy.get(key) ?? [...used.get(key)!].reduce((a, b) => (before(b, a) ? b : a));
       items[key] = { in_combination: first === chosen.id ? "NEW" : "REUSED", brought_in_by: combos.find((c) => c.id === first)!.label };
     }
     const all = Object.values(items), reused = all.filter((x) => x.in_combination === "REUSED").length;
     return { combinations, combination: { id: chosen.id, key: chosen.combinationKey, label: chosen.label }, total: all.length, reused, new: all.length - reused, items };
+  }
+
+  /** The keys of one kind's items in the library (any version), so a list's counts count only what the list shows. */
+  private async keysOf(kind: Kind, workspaceId: string): Promise<Set<string>> {
+    if (kind === "field") return new Set((await this.db.canonicalField.findMany({ where: { workspaceId }, distinct: ["canonicalFieldKey"], select: { canonicalFieldKey: true } })).map((r) => r.canonicalFieldKey));
+    if (kind === "section") return new Set((await this.db.logicalSection.findMany({ where: { workspaceId }, distinct: ["sectionKey"], select: { sectionKey: true } })).map((r) => r.sectionKey));
+    if (kind === "document_type") return new Set((await this.db.documentType.findMany({ where: { workspaceId }, distinct: ["documentTypeKey"], select: { documentTypeKey: true } })).map((r) => r.documentTypeKey));
+    return new Set((await this.db.answerList.findMany({ where: { workspaceId }, distinct: ["answerListKey"], select: { answerListKey: true } })).map((r) => r.answerListKey));
   }
 
   async sources(kindWord: string, key: string): Promise<SourcesView> {

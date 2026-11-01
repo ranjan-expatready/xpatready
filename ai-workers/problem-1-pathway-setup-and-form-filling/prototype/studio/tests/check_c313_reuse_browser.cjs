@@ -55,7 +55,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await go("/library/sections?combination=vv.single");
     const t = await main();
     const mark = p.locator("main table tbody tr").first().getByText("Reused", { exact: true });
-    step("C3.13 BR-4 pass: opened from the address, the second combination's section is Reused, brought in by the first", /Visitor visa uses 1 section · 1 reused · 0 new here/.test(t) && (await mark.count()) === 1 && (await mark.getAttribute("title")) === "Brought in by With an LMIA", t.slice(0, 300));
+    step("C3.13 BR-4 pass: opened from the address, the second combination's section is Reused, brought in by the first", /Visitor visa uses 1 section · 1 reused · 0 new here/.test(t) && (await mark.count()) === 1 && /from With an LMIA/.test(await p.locator("main table tbody tr").first().locator("[data-reused]").innerText()), t.slice(0, 300));
     await p.screenshot({ path: path.join(SHOTS, "sections-visitor-reused-1440.png"), fullPage: true });
     await axe("Sections with a Reused row");
     await go("/library/fields?combination=vv.single");
