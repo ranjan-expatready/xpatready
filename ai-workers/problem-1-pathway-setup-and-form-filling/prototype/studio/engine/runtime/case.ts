@@ -7,7 +7,7 @@ import { subjectKindOf, type Snapshot } from "../snapshot.ts";
 import { checkFormat, snapshotFieldFormat } from "../field-format.ts";
 import { z } from "zod";
 import type { Period } from "../../../contracts/history.ts";
-import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
+import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
 export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
@@ -320,6 +320,36 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const subjectId = c.person === "case" ? caseSubject.subjectId : c.person, fact = c.applies_to && placementOf(s, c.applies_to) ? c.applies_to : null;
     return { id: c.id, severity: c.severity, message: c.message, subjectId, about_label: c.person === "case" ? caseSubject.label : c.person_label, fact, section: fact ? placementOf(s, fact)!.section_id : null, illustrative: c.illustrative };
   }).filter((c) => mode === "agent" || (c.section !== null && shown.has(`${c.subjectId}|${c.section}`)));
-  return { mode, sections, checks, forms: r.forms.map((f) => ({ form: f.form, person: f.person_label, applies: f.applies })), ...(opts.skipDocumentFacts ? { from_documents: [...fromDocuments.values()] } : {}), summary: { not_asked: notAsked, questions: questions.length, answered: sections.reduce((n, x) => n + x.answered, 0), confirmed: sections.reduce((n, x) => n + x.confirmed, 0), missing: sections.reduce((n, x) => n + x.missing.length, 0) } };
+  // P-47 tier 2 (C4.4 part 2): each section's error summary, GOV.UK pattern: every answer that fails its checks and every
+  // section check that fired on the section, each naming the field (and row) it links to, in the order of the questions.
+  const withProblems = sections.map((sec) => {
+    const order = new Map(sec.questions.map((q, i) => [q.fact, i]));
+    const fieldProblems: SectionProblem[] = sec.questions.flatMap((q) => (q.group ? q.rows.map((x) => ({ a: x.answer, row: x.row as string | null })) : [{ a: q.answer, row: null }])
+      .flatMap(({ a, row }) => (a?.problems ?? []).map((message) => ({ kind: "field" as const, field: q.fact, subjectId: sec.subjectId, row, label: q.label, message }))));
+    const checkProblems: SectionProblem[] = checks.filter((c) => c.subjectId === sec.subjectId && c.section === sec.section && c.fact)
+      .map((c) => ({ kind: "check" as const, field: c.fact!, subjectId: sec.subjectId, row: null, label: sec.questions.find((q) => q.fact === c.fact)?.label ?? c.fact!, message: c.message, check: c.id }));
+    const problems = [...fieldProblems, ...checkProblems].sort((a, b) => (order.get(a.field) ?? 1e9) - (order.get(b.field) ?? 1e9));
+    return { ...sec, problems };
+  });
+  return { mode, sections: withProblems, checks, forms: r.forms.map((f) => ({ form: f.form, person: f.person_label, applies: f.applies })), ...(opts.skipDocumentFacts ? { from_documents: [...fromDocuments.values()] } : {}), summary: { not_asked: notAsked, questions: questions.length, answered: sections.reduce((n, x) => n + x.answered, 0), confirmed: sections.reduce((n, x) => n + x.confirmed, 0), missing: sections.reduce((n, x) => n + x.missing.length, 0) } };
 }
 export type CaseView = ReturnType<typeof caseView>;
+
+/** P-47 mode 1, PQR (C4.4 part 2): only the questions the release flags pre-qualification (W1-15's tick, per person role
+ *  and fact: snapshot.fact_sources), in the agent view's order, and one plain result line. The result is never a verdict
+ *  on eligibility: it says what is left to answer, or that a check fired, or that the answers raise nothing so far. */
+export function pqrView(s: Snapshot, people: Participant[], view: CaseView) {
+  const ticked = new Set((s.fact_sources ?? []).filter((x) => x.prequalification).map((x) => `${x.role}|${x.fact}`));
+  const roleOf = (subjectId: string) => people.find((p) => p.subjectId === subjectId)?.role ?? "";
+  const questions = view.sections.flatMap((sec) => sec.questions).filter((q) => ticked.has(`${roleOf(q.subjectId)}|${q.fact}`) && !q.hidden)
+    .map((q) => ({ ...q, pre_qualification: true as const }));
+  const open = questions.filter((q) => (q.group ? !q.rows.length || q.rows.some((x) => !x.answer) : !q.answer)).length;
+  const fixes = questions.filter((q) => (q.group ? q.rows.some((x) => x.answer?.problems.length) : q.answer?.problems.length)).length;
+  const fired = view.checks.filter((c) => c.fact && questions.some((q) => q.fact === c.fact && q.subjectId === c.subjectId));
+  const result = !questions.length ? "No pre-qualification questions in this release yet: tick them on the combination's Questions and documents tab."
+    : open ? `${open} of ${questions.length} pre-qualification question${questions.length === 1 ? "" : "s"} still to answer before a result.`
+    : fixes ? `${fixes} answer${fixes === 1 ? " needs" : "s need"} a fix before a result.`
+    : fired.length ? `Needs a closer look: ${fired.map((c) => c.message).join(" ")} Next: talk it through with the representative.`
+    : "Looks eligible so far · next: book a consultation. This is not a decision on the application.";
+  return { mode: "pqr" as const, questions, result, checks: fired };
+}

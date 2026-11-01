@@ -9,10 +9,11 @@ import { createHash, randomUUID } from "node:crypto";
 import type { z } from "zod";
 import { ConfirmSection, fillsText, NewCase, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { caseView, checkValue, isClientField, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { caseView, checkValue, isClientField, pqrView, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from "./core.ts";
 import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
+import { aiLive } from "./sources.ts";
 import { openingTeam } from "../../engine/runtime/team.ts";
 import { employerLinkOffer } from "../../engine/runtime/employer.ts";
 
@@ -222,6 +223,25 @@ export class Runtime {
     return { case: await this.get(actor, caseId), ...caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups) };
   }
 
+  /** P-47 mode 1, PQR (C4.4 part 2): the pre-qualification questions only, with a plain result line. The officer's PQR
+   *  reads the agent view; a client's reads their own questionnaire (PQR ⊂ SQR). */
+  async pqr(actor: Actor, caseId: string) {
+    const c = await this.reach(actor, caseId, "read");
+    const { answers, rows, groups } = await this.state(c);
+    const s = this.snapshotOf(c), people = this.peopleOf(c);
+    return { case: await this.get(actor, caseId), ...pqrView(s, people, caseView(s, people, answers, rows, isOfficer(actor) ? "agent" : "sqr", new Date(), groups)) };
+  }
+
+  /** P-47 tier 3 (C4.4 part 2): the independent review the officer runs on demand. It reads answers and never changes
+   *  them. The run itself is an AI call (C7.5, M3-E): with this copy's live switch off it is refused in words at US$0
+   *  before anything starts (P-175, QA-100); with it on it is still refused until C7.5 builds the run. Nothing is written. */
+  async review(actor: Actor, caseId: string) {
+    await this.reach(actor, caseId, "read");
+    if (!isOfficer(actor)) fail("The independent review is run by the case officer.", HttpStatus.FORBIDDEN);
+    if (!aiLive()) refused("The independent review is an AI run, and live AI is off on this copy (the founder's switch). Nothing was run and nothing changed: US$0.");
+    return refused("The independent review run is not built yet (C7.5, M3-E). Nothing was run and nothing changed: US$0.");
+  }
+
   /** Saves one answer: append-only (the old row is stamped superseded by the new one, in one transaction). A client
    *  answers only the client's own fields (engine rule, P-72); the officer any fact. Never blocked by its checks (P-47). */
   async putAnswer(actor: Actor, caseId: string, subjectId: string, fieldKey: string, body: unknown) {
@@ -415,7 +435,8 @@ export class RuntimeController {
   @Get("cases/:id") get(@Headers("x-actor") a: H, @Param("id") id: string) { return this.r.get(actorOf(a), id); }
   @Post("cases/:id/people") addPerson(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.r.addPerson(actorOf(a), id, b); }
   @Patch("cases/:id/people/:subject") updatePerson(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Body() b: unknown) { return this.r.updatePerson(actorOf(a), id, s, b); }
-  @Get("cases/:id/questionnaire") view(@Headers("x-actor") a: H, @Param("id") id: string, @Query("mode") m?: string) { return this.r.view(actorOf(a), id, m === "agent" ? "agent" : "sqr"); }
+  @Get("cases/:id/questionnaire") view(@Headers("x-actor") a: H, @Param("id") id: string, @Query("mode") m?: string) { return m === "pqr" ? this.r.pqr(actorOf(a), id) : this.r.view(actorOf(a), id, m === "agent" ? "agent" : "sqr"); }
+  @Post("cases/:id/review") review(@Headers("x-actor") a: H, @Param("id") id: string) { return this.r.review(actorOf(a), id); }
   @Put("cases/:id/answers/:subject/:field") answer(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("field") f: string, @Body() b: unknown) { return this.r.putAnswer(actorOf(a), id, s, f, b); }
   @Put("cases/:id/groups/:subject/:group/none-apply") noneApply(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("group") g: string, @Body() b: unknown) { return this.r.noneApply(actorOf(a), id, s, g, b); }
   @Post("cases/:id/groups/:subject/rows") addRow(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Body() b: unknown) { return this.r.addRow(actorOf(a), id, s, b); }

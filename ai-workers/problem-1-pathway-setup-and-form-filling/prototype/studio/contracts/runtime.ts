@@ -128,9 +128,13 @@ export type ViewQuestion = {
 export type ViewGroup = { required: boolean; client: boolean; rows: number; none_apply: (ViewAnswer & { value: boolean }) | null };
 export type ViewSection = { subjectId: string; about_label: string; section: string; title: string; questions: ViewQuestion[]; answered: number; confirmed: number; invalid: number; missing: string[];
   /** When the section is a repeating group: its rows and its "none apply" answer (null otherwise). */
-  group: ViewGroup | null };
-/** A section check the case's answers trigger (RT-7, release data): a warning on the person's answers, never a block
- *  (P-71). fact and section place it on the question it concerns; null when the check names no one question. */
+  group: ViewGroup | null;
+  /** P-47 tier 2 (C4.4 part 2): the section's error summary, GOV.UK pattern, each line linked to its field. */
+  problems: SectionProblem[] };
+/** One line of a section's error summary: an answer's problem (kind "field") or a section check that fired (kind "check"). */
+export type SectionProblem = { kind: "field" | "check"; field: string; subjectId: string; row: string | null; label: string; message: string; check?: string };
+/** A section check the case's answers trigger (RT-7, release data): a warning on the person's answers. It never blocks
+ *  saving (P-71); it blocks "ready to file" for the forms the checked fact fills (P-47 tier 2, C4.4 part 2). fact and section place it on the question it concerns; null when the check names no one question. */
 export type ViewCheck = { id: string; severity: string; message: string; subjectId: string; about_label: string; fact: string | null; section: string | null; illustrative: boolean };
 export type QuestionnaireView = {
   mode: "sqr" | "agent"; sections: ViewSection[]; checks: ViewCheck[]; forms: { form: string; person: string; applies: boolean | string }[];
@@ -189,9 +193,10 @@ export function newestReleases<T extends { combination_id: string; version: numb
   return [...newest.values()];
 }
 /** P-71: what blocks filing one form for one person. missing: a required fact not answered, answered but not confirmed,
+ *  or a section check that fired on a fact it reads (fact "check:<id>", label the check's words, P-47 tier 2);
  *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */
-export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" }[] };
+export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" | "a check fired" }[] };
 /** How a required repeating group with no entries is named where it blocks filing. */
 export const groupLabel = (title: string) => `Entries in "${title}": add them, or say none apply`;
 

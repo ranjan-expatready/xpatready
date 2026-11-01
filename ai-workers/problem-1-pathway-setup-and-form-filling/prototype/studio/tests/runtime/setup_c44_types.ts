@@ -4,7 +4,8 @@
 // every person and mapped to a Sample box of IMM 5257 (data paths "C44.sample.*", never filled: the release is a test
 // fixture), the way x1_tabs_focus and forms_s4_runs patch a release. The 10-year history check is held as data: a derived
 // field with the tested calculation months_uncovered_10y and a section check "gt 0" on it (P-47 tier 2; tech lead on
-// #295), within the closed predicate vocabulary. Sample values only; no AI (US$0). Idempotent.
+// #295), within the closed predicate vocabulary. Part 2: two Pre-qualification ticks for PQR mode. Sample values only; no AI
+// (US$0). Idempotent.
 //   tsx studio/tests/runtime/setup_c44_types.ts <port> <db>   (after setup_visitor_visa.ts)
 import { client } from "./api.ts";
 
@@ -45,4 +46,8 @@ sql(`update config_release set snapshot = jsonb_set(jsonb_set(jsonb_set(jsonb_se
   '{field_maps,${idx},entries}', (snapshot->'field_maps'->${idx}->'entries') || ${j(entries)}),
   '{derived_fields}', (snapshot->'derived_fields') || ${j([derived])}),
   '{checks}', (snapshot->'checks') || ${j([check])}) where id = '${rel}'`);
-console.log(`c44 types added to release ${rel}: ${FIELDS.length} fields, 1 derived field, 1 section check`);
+// C4.4 part 2, PQR mode (P-47 mode 1): two Pre-qualification ticks for the principal applicant (W1-15's fact_sources), as
+// a person ticks them on the Questions and documents tab. Sample picks, not advice on what pre-qualifies.
+const ticks = ["person.refused_visa_or_entry", "person.criminal_history"].map((fact) => ({ role: "principal", fact, source: null, document_type: null, prequalification: true, reason: "Sample pick (C4.4 fixture)", origin: "HUMAN" }));
+sql(`update config_release set snapshot = jsonb_set(snapshot, '{fact_sources}', coalesce(snapshot->'fact_sources', '[]'::jsonb) || ${j(ticks)}) where id = '${rel}'`);
+console.log(`c44 types added to release ${rel}: ${FIELDS.length} fields, 1 derived field, 1 section check, ${ticks.length} pre-qualification ticks`);
