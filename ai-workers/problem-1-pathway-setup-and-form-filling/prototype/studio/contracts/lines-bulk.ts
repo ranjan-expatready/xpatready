@@ -63,7 +63,9 @@ export type BulkPreview = z.infer<typeof BulkPreview>;
 
 /** Slice (b): the same fields, the rows the person ticked, and a key so a retried request changes nothing twice. */
 export const BulkApply = BulkPreview.extend({
-  idempotencyKey: z.string({ error: "Reload the page: the request key is missing." }).trim().min(8, "Reload the page: the request key is missing.").max(100, "Reload the page: the request key is not valid."),
+  idempotencyKey: z.string({ error: "Reload the page: the request key is missing." }).trim().min(8, "Reload the page: the request key is missing.").max(100, "Reload the page: the request key is not valid.").regex(/^[^#]+$/, "Reload the page: the request key is not valid."),
+  /** Break m1 (#281): the source line as the preview showed it (PreviewResult.line.version); a change since is refused. */
+  sourceVersion: z.string().max(64).optional(),
   include: z.array(uuid("A combination")).min(1, "Tick at least one combination."),
 });
 export type BulkApply = z.infer<typeof BulkApply>;
@@ -79,7 +81,7 @@ export type PreviewTarget = {
 };
 export type PreviewResult = {
   /** The line in words ("IMM 5476 Use of a representative · for the case · always"). */
-  line: { kind: LineKind; key: string; words: string; from: string };
+  line: { kind: LineKind; key: string; words: string; from: string; /** What the line says now, short (break m1). */ version: string };
   op: BulkOp;
   targets: PreviewTarget[];
   counts: { tickable: number; waits: number; cannot: number; nothing: number };
@@ -106,11 +108,11 @@ export const CopyFromPreview = z.object({
 export type CopyFromPreview = z.infer<typeof CopyFromPreview>;
 export const CopyFromApply = CopyFromPreview.extend({
   // Each line is its own batch under "<key>#<n>", so the key stays shorter than a batch's (100).
-  idempotencyKey: z.string({ error: "Reload the page: the request key is missing." }).trim().min(8, "Reload the page: the request key is missing.").max(90, "Reload the page: the request key is not valid."),
-  lines: z.array(z.object({ kind: z.enum(LINE_KINDS), key: z.string().trim().min(1).max(200) }), { error: "Tick at least one line." }).min(1, "Tick at least one line.").max(100, "At most 100 lines in one copy."),
+  idempotencyKey: z.string({ error: "Reload the page: the request key is missing." }).trim().min(8, "Reload the page: the request key is missing.").max(90, "Reload the page: the request key is not valid.").regex(/^[^#]+$/, "Reload the page: the request key is not valid."),
+  lines: z.array(z.object({ kind: z.enum(LINE_KINDS), key: z.string().trim().min(1).max(200), version: z.string().max(64).optional() }), { error: "Tick at least one line." }).min(1, "Tick at least one line.").max(100, "At most 100 lines in one copy."),
 });
 export type CopyFromApply = z.infer<typeof CopyFromApply>;
-export type CopyFromLine = { kind: LineKind; key: string; short: string; words: string; outcome: Outcome; reason: string | null; tickable: boolean };
+export type CopyFromLine = { kind: LineKind; key: string; version: string; short: string; words: string; outcome: Outcome; reason: string | null; tickable: boolean };
 export type CopyFromResult = { source: { id: string; trail: string[] }; lines: CopyFromLine[]; hidden: number };
 /** Slice (d): the copy's answer: one batch per line, undone together. */
 export type CopyFromApplied = { batchIds: string[]; message: string; replayed: boolean };

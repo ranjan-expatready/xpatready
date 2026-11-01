@@ -101,7 +101,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const undo = canAuthor ? <>{lastChange ? <UndoBar change={lastChange} onUndo={undoLast} /> : null}{removed.length ? <RemovedNotice id={id} removed={removed} /> : null}</> : null;
   if (!lines.length && !pending.length) return (
     <div className="space-y-5">
-      {undo}{finder}
+      {undo}{bulk.note}{finder}
       <div className="rounded-xl border border-border bg-surface-raised p-5" data-forms-empty>
         <div className="flex flex-wrap items-start justify-between gap-3"><h2 className="font-semibold">No forms yet</h2>{add}</div>
         <p className="mt-1 text-sm text-text-muted">Find them with AI above, or add one from the <Link className="text-text-link underline" to="/library/forms">Form library</Link>.</p>
@@ -116,10 +116,10 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const count = pending.length ? `${plural(lines.length + pending.length, "form")} attached, ${lines.length} set up` : plural(lines.length, "form");
   return (
     <div className="space-y-4">
-      {undo}{finder}
+      {undo}{bulk.note}{finder}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="min-w-0 text-sm" data-filing>{/* P-143, review M2: the IRCC account, chosen here by an author; min-w-0 (QA-20): the line shrinks to 390 px and the picker with it */}<span className="mr-3" data-account><span className="text-text-muted">IRCC account: </span>{canAuthor ? <AccountPicker id={id} saved={accountKey} /> : account ? `Filed ${accountKey ? throughAccount(accountKey) : `through the ${account}`}` : <span className="text-text-muted">Not set (every way IRCC may accept is offered, Sample)</span>}</span><span className="text-text-muted">Filing: </span>{lines.length ? <><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null}</> : <b className="font-semibold">not known until a form is set up</b>} <span className="text-text-muted">· {count} · Sample until the immigration expert confirms</span></p>
-        <span className="flex items-center gap-3">{add}<Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></span>
+        <span className="flex flex-wrap items-center gap-3">{add}<Link className="text-sm text-text-link underline" to="/library/forms">Open the Form library</Link></span>
       </div>
       {pending.length ? <p className={cn("text-sm", FOCUS_RING)} data-pending-summary data-focus="forms:sources"><span className="font-medium">Not set up yet: </span>{[ready ? `${plural(ready, "form")} can be added from the library now (${ready === 1 ? "its" : "their"} form fields are already matched, no AI needed)` : "", toDraft ? `${plural(toDraft, "form")} ${toDraft === 1 ? "needs" : "need"} reading and drafting with AI` : ""].filter(Boolean).join("; ")}. Each row has its step.</p> : null}
       <StepNotices d={combo} />

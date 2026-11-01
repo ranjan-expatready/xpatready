@@ -5,7 +5,7 @@
 // Founder 31 Oct (#167): form and document lines first; links between combinations stay on the case (P-106).
 import { Body, Controller, Get, Headers, HttpCode, HttpException, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { acceptsOf, allowedChannels, notAcceptedWords, notNeededWords } from "../../engine/channels.ts";
 import { rolesNamedBy } from "../../engine/people.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
@@ -45,6 +45,8 @@ type BatchTarget = { combinationId: string; label: string; short: string; typeKe
 type DocRow = Prisma.DocumentRequirementGetPayload<object>;
 /** What a document line says (as lineSig for forms): an edit that keeps its status and version still changes this. */
 const docSig = (r: DocRow) => JSON.stringify([r.documentTypeKey, r.attachMode, r.predicateJson, r.conditionPlain, r.appliesToRoles, r.providedBy, r.isRequired, r.position, r.alternatives, r.note, r.sourceQuote]);
+/** Break m1: a short fingerprint of what a source line says, so an apply can tell it changed after the preview. */
+const versionOf = (l: SourceLine) => createHash("sha256").update(JSON.stringify([l.kind, l.typeKey, l.who, l.attachMode, l.predicateJson ?? null, l.conditionPlain, l.channel ?? null, l.copied])).digest("hex").slice(0, 16);
 const sigOf = (kind: "form" | "document", r: LineRow | DocRow) => (kind === "form" ? lineSig(r as LineRow) : docSig(r as DocRow));
 
 @Injectable()
@@ -150,7 +152,7 @@ export class LinesBulk {
     const n = (f: (t: PreviewTarget) => boolean) => targets.filter(f).length;
     return {
       src, source: line,
-      line: { kind: line.kind, key: line.key, words: line.words, from: trails(src).join(" › ") },
+      line: { kind: line.kind, key: line.key, words: line.words, from: trails(src).join(" › "), version: versionOf(line) },
       op: b.op, targets,
       counts: { tickable: n((t) => t.outcome === "WILL_ADD" || t.outcome === "WILL_REMOVE"), waits: n((t) => t.outcome === "WAITS"), cannot: n((t) => t.outcome.startsWith("CANNOT")), nothing: n((t) => ["ALREADY_HAS", "HAS_OTHER_CONDITION", "DOES_NOT_HAVE", "REMOVED_IN_DRAFT", "SOURCE"].includes(t.outcome)) },
     };
@@ -209,6 +211,9 @@ export class LinesBulk {
    *  another combination, the line). */
   private async applyIn(tx: Tx, actor: Actor, b: BulkApply, include: string[], name: "target" | "line"): Promise<ApplyResult> {
     const pv = await this.evaluate(tx, b);
+    // Break m1 (#281): the source line changed after the preview (its who, "only if", channel or other settings): what was
+    // previewed is not what would be written.
+    if (b.sourceVersion && b.sourceVersion !== versionOf(pv.source)) throw problem(409, "Changed since the preview", `${pv.source.short} was changed in ${pv.line.from} after the preview. Nothing was changed. Preview again.`);
     const ticked = include.map((id) => pv.targets.find((t) => t.combinationId === id)!);
     const stale = ticked.filter((t) => !t.tickable);
     if (stale.length) throw problem(409, "Changed since the preview", `${stale.map((t) => `${name === "line" ? pv.source.short : t.trail.at(-1)}: ${OUTCOME_WORDS[t.outcome].toLowerCase()}${t.reason ? ` (${t.reason})` : ""}`).join("; ")}. Nothing was changed. Preview again.`, { targets: stale });
@@ -388,7 +393,7 @@ export class LinesBulk {
     need(actor, "author");
     const parsed = UndoMany.safeParse(body);
     if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), 400);
-    const ids = [...new Set(parsed.data.batchIds)];
+    const ids = [...new Set(parsed.data.batchIds.map((x) => x.toLowerCase()))];
     const bts: Prisma.LineBatchGetPayload<object>[] = [];
     for (const id of ids) bts.push(await this.undoable(actor, id));
     await this.db.$transaction(async (tx) => { for (const bt of bts) await this.undoIn(tx, actor, bt); }, { timeout: 60_000, maxWait: 10_000 });
@@ -397,7 +402,7 @@ export class LinesBulk {
     const shorts = bts.map((bt) => (bt.targets as unknown as BatchTarget[])[0]?.short ?? bt.lineKey);
     const trails = await this.trails(this.db, bts[0].workspaceId);
     const rows = await this.db.combination.findMany({ where: { id: { in: [...new Set(targets.map((t) => t.combinationId))] } }, select: { id: true, label: true, programDefId: true } });
-    return { batchId: bts[0].id, batchIds: ids, undone: rows.map((c) => ({ combinationId: c.id, trail: trails(c) })), message: `Undone: ${shorts.join(", ")} taken back from ${combos.join(", ")}. Nothing else changed.` };
+    return { batchId: bts[0].id, batchIds: ids, undone: rows.map((c) => ({ combinationId: c.id, trail: trails(c) })), message: `Undone: ${shorts.length > 3 ? `${shorts.length} lines` : shorts.join(", ")} taken back from ${combos.length > 3 ? `${combos.length} combinations` : combos.join(", ")}. Nothing else changed.` };
   }
 
   private async sourceLine(db: Tx, src: { id: string; label: string; workspaceId: string }, kind: "form" | "document", key: string): Promise<SourceLine> {
@@ -457,7 +462,8 @@ export class LinesBulk {
     if (sourceId === targetId) throw problem(400, "Same combination", "Choose another combination to copy from: this is the combination itself.", { errors: [{ field: "sourceId", message: "Choose another combination." }] });
     const [src, tgt] = await Promise.all([sourceId, targetId].map((id) => this.db.combination.findUnique({ where: { id }, select: { id: true, label: true, workspaceId: true, programDefId: true, retiredAt: true } })));
     if (!src || !tgt || src.workspaceId !== tgt.workspaceId) throw problem(404, "Not found", "One of these combinations does not exist any more. Reload the page.");
-    if (tgt.retiredAt) throw problem(409, "Retired", `"${tgt.label}" is retired: nothing in it changes. Restore it on Structure first.`);
+    // Break m2: a retired combination is not copied from either.
+    if (src.retiredAt) throw problem(409, "Retired", `"${src.label}" is retired: its lines are not copied. Restore it on Structure first.`);
     return { src, tgt };
   }
 
@@ -471,7 +477,7 @@ export class LinesBulk {
       for (const r of rows) {
         const pv = await this.evaluate(db, { line: { combinationId: sourceId, kind, key: r.lineageKey }, op: "add", combinationIds: [targetId] });
         const t = pv.targets[0];
-        out.push({ kind, key: r.lineageKey, short: pv.source.short, words: pv.line.words, outcome: t.outcome, reason: t.reason, tickable: t.tickable });
+        out.push({ kind, key: r.lineageKey, version: pv.line.version, short: pv.source.short, words: pv.line.words, outcome: t.outcome, reason: t.reason, tickable: t.tickable });
       }
     }
     return out;
@@ -483,7 +489,8 @@ export class LinesBulk {
     need(actor, "author");
     const parsed = CopyFromPreview.safeParse(body);
     if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), 400);
-    const { src } = await this.ends(parsed.data.sourceId, parsed.data.targetId);
+    const { src, tgt } = await this.ends(parsed.data.sourceId, parsed.data.targetId);
+    if (tgt.retiredAt) throw problem(409, "Retired", `"${tgt.label}" is retired: nothing in it changes. Restore it on Structure first.`);
     const rows = await this.copyRows(this.db, src.id, parsed.data.targetId);
     const trails = await this.trails(this.db, src.workspaceId);
     const shown = rows.filter((r) => r.outcome !== "ALREADY_HAS");
@@ -504,15 +511,18 @@ export class LinesBulk {
     const trails = await this.trails(this.db, src.workspaceId);
     const from = trails(src).join(" › ");
     const replay = async (db: Tx): Promise<CopyFromApplied | null> => {
-      const prior = await db.lineBatch.findMany({ where: { workspaceId: src.workspaceId, idempotencyKey: { startsWith: `${b.idempotencyKey}#` } } });
+      // Break m3: matched exactly on every key this request could have made (at most 100 lines), never by a pattern.
+      const prior = await db.lineBatch.findMany({ where: { workspaceId: src.workspaceId, idempotencyKey: { in: Array.from({ length: 100 }, (_, i) => `${b.idempotencyKey}#${i + 1}`) } } });
       if (!prior.length) return null;
       const same = prior.length === lines.length && prior.every((p) => p.actor === actor.id && p.op === "add" && p.sourceCombinationId === src.id && (p.targets as unknown as BatchTarget[]).every((t) => t.combinationId === tgt.id) && lines.some((l, i) => keys[i] === p.idempotencyKey && l.kind === p.kind && l.key === p.lineKey));
       if (!same) throw problem(409, "Key used", "That request key was already used for another change. Reload the page.");
       const ordered = keys.map((k) => prior.find((p) => p.idempotencyKey === k)!);
       return { batchIds: ordered.map((p) => p.id), message: ordered.some((p) => p.undoneAt) ? `${copiedFromWords(lines.length, from).replace(/\.$/, "")}, and undone since. Nothing changed now.` : copiedFromWords(lines.length, from), replayed: true };
     };
+    // Break m4: a retry of a copy that was made answers it, even if the combination was retired since.
     const first = await replay(this.db);
     if (first) return first;
+    if (tgt.retiredAt) throw problem(409, "Retired", `"${tgt.label}" is retired: nothing in it changes. Restore it on Structure first.`);
     try {
       return await this.db.$transaction(async (tx) => {
         await tx.$executeRaw`SET LOCAL lock_timeout = '10s'`;
@@ -521,7 +531,7 @@ export class LinesBulk {
         if (again) return again;
         const batchIds: string[] = [];
         for (const [i, l] of lines.entries()) {
-          const r = await this.applyIn(tx, actor, { line: { combinationId: src.id, kind: l.kind, key: l.key }, op: "add", combinationIds: [tgt.id], include: [tgt.id], idempotencyKey: keys[i] }, [tgt.id], "line");
+          const r = await this.applyIn(tx, actor, { line: { combinationId: src.id, kind: l.kind, key: l.key }, op: "add", combinationIds: [tgt.id], include: [tgt.id], idempotencyKey: keys[i], sourceVersion: l.version }, [tgt.id], "line");
           batchIds.push(r.batchId);
         }
         return { batchIds, message: copiedFromWords(lines.length, from), replayed: false };

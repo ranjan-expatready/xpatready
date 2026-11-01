@@ -68,13 +68,17 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.keyboard.press("Escape");
   await dlg.waitFor({ state: "hidden" });
   step("C1.5 keyboard: Esc closes the preview and nothing changes", lines(VV, F) === "" && lines(SP, F) === "");
+  await p.waitForFunction((l) => document.activeElement?.getAttribute("aria-label") === l, `Actions for ${F}`, { timeout: 5000 }).catch(() => undefined);
+  step("C1.5 keyboard (review M1): after Esc, focus is back on the line's ⋯ button", await p.evaluate((l) => document.activeElement?.getAttribute("aria-label") === l, `Actions for ${F}`), await p.evaluate(() => document.activeElement?.outerHTML?.slice(0, 120)));
 
   // Keyboard only: open the menu with the keyboard, tick off one row with Space, Add with Enter.
+  await p.waitForTimeout(300); // a person's pace: the closing dialog has finished handing focus back
   await p.getByRole("button", { name: `Actions for ${F}` }).focus();
   await p.keyboard.press("Enter");
   await p.getByRole("menuitem", { name: "Copy to other combinations…" }).waitFor();
-  await p.keyboard.press("ArrowDown"); // focus moves into the menu
-  for (let i = 0; i < 8 && !(await p.evaluate(() => document.activeElement?.textContent?.includes("Copy to other combinations"))); i++) await p.keyboard.press("ArrowDown");
+  // Arrow keys move through the items; the item that holds focus is the one whose own text is "Copy to other combinations…".
+  for (let i = 0; i < 8 && !(await p.evaluate(() => document.activeElement?.getAttribute("role") === "menuitem" && document.activeElement.textContent.trim() === "Copy to other combinations…")); i++) { await p.keyboard.press("ArrowDown"); await p.waitForTimeout(100); }
+  step("C1.5 keyboard: the arrow keys reach Copy to other combinations… in the menu", await p.evaluate(() => document.activeElement?.textContent?.trim() === "Copy to other combinations…"), await p.evaluate(() => `${document.activeElement?.tagName} ${document.activeElement?.getAttribute("role")} ${document.activeElement?.textContent?.trim().slice(0, 50)} menus=${document.querySelectorAll("[role=menu]").length}`));
   await p.keyboard.press("Enter");
   await dlg.waitFor(); await dlg.locator("[data-bulk-row]").first().waitFor({ timeout: 30000 }); await settle();
   // Keep two will-add rows (Visitor visa and Study permit) by unticking the rest.
@@ -89,8 +93,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await toast.waitFor({ timeout: 30000 });
   step("C1.5 after: the toast says the concept's words, with Undo", (await toast.innerText()).includes(`${F} added to 2 combinations (draft changes in each).`) && await toast.locator("[data-bulk-undo]").isVisible(), await toast.innerText());
   step("C1.5 after: each combination has its own draft line", lines(VV, F) === "1:DRAFT" && lines(SP, F) === "1:DRAFT", `${lines(VV, F)} / ${lines(SP, F)}`);
+  await p.waitForFunction(() => document.activeElement?.hasAttribute("data-bulk-undo"), null, { timeout: 5000 }).catch(() => undefined);
+  step("C1.5 keyboard (review M1): after Add, focus is on the toast's Undo", await p.evaluate(() => !!document.activeElement?.hasAttribute("data-bulk-undo")), await p.evaluate(() => document.activeElement?.outerHTML?.slice(0, 120)));
   await state("toast");
-  await toast.locator("[data-bulk-undo]").click();
+  // Review M1: the toast waits while focus is on it, and the Undo stays on the tab after the toast is closed.
+  await p.waitForTimeout(13000);
+  step("C1.5 review M1: the toast stays while focus is on its Undo (past its 12 s)", await toast.isVisible());
+  await toast.getByRole("button", { name: "Close" }).click();
+  const note = p.locator("[data-bulk-note]");
+  step("C1.5 review M1: after the toast is closed, the batch's Undo stays on the tab", await note.isVisible() && (await note.innerText()).includes("added to 2 combinations"), await note.innerText().catch(() => ""));
+  await note.locator("[data-bulk-note-undo]").focus(); await p.keyboard.press("Enter");
   await p.waitForFunction(() => /Undone: 2 combinations are back/.test(document.querySelector("[data-bulk-toast]")?.textContent ?? ""), null, { timeout: 20000 });
   step("C1.5 Undo: one Undo takes back the whole copy, in words", lines(VV, F) === "" && lines(SP, F) === "", await toast.innerText());
   await state("undone");
@@ -170,6 +182,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C1.5 390 px: the preview fits the screen (its table scrolls inside it)", fit.left >= 0 && fit.right <= fit.w + 1 && fit.inner <= 1, JSON.stringify(fit));
   await state("add-preview");
   await p.keyboard.press("Escape");
+  await p.setViewportSize({ width: 1440, height: 900 });
+
+  // ------------------------------------------------------------ 1024 px at 200 % zoom (512 CSS px): the Forms tab does not scroll sideways (review m1)
+  await p.setViewportSize({ width: 512, height: 700 });
+  await p.goto(`${BASE}/c/${WP}/forms`); await p.getByRole("tablist", { name: "Combination" }).waitFor(); await settle();
+  const sw = await p.evaluate(() => document.documentElement.scrollWidth);
+  step("C1.5 review m1: at 512 px the Forms tab header wraps; the page does not scroll sideways", sw <= 513, `${sw} px`);
   await p.setViewportSize({ width: 1440, height: 900 });
 
   // ------------------------------------------------------------ the approver

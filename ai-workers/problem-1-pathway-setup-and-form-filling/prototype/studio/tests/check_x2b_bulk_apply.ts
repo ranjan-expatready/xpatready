@@ -280,7 +280,7 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   r = await cpPrev(WP, SP);
   const row = (k: string) => (r.body?.lines ?? []).find((x: any) => x.key === k);
   ok("C1.5 slice (d) pass: the source's lines each say what happens here (IMM 5476 will be added)", r.status === 200 && row("IMM 5476")?.outcome === "WILL_ADD" && row("IMM 5476")?.tickable, row("IMM 5476"));
-  ok("C1.5 slice (d) fail: a line that cannot come here is shown, not tickable, with its reason (IMM 5409: no spouse in Study permit)", row("IMM 5409") ? !row("IMM 5409").tickable && /CANNOT/.test(row("IMM 5409").outcome) && !!row("IMM 5409").reason : true, row("IMM 5409"));
+  ok("C1.5 slice (d) fail: a line that cannot come here is shown, not tickable, with its reason (IMM 5409: no spouse in Study permit)", !!row("IMM 5409") && !row("IMM 5409").tickable && /CANNOT/.test(row("IMM 5409").outcome) && !!row("IMM 5409").reason, row("IMM 5409"));
   ok("C1.5 slice (d): lines this combination already has are not offered (counted as hidden)", !(r.body?.lines ?? []).some((x: any) => x.outcome === "ALREADY_HAS") && typeof r.body?.hidden === "number", r.body?.hidden);
   r = await cpPrev(WP, WP);
   ok("C1.5 slice (d) fail: copying from the combination itself is refused in words (400)", r.status === 400 && /this is the combination itself/.test(words(r)), words(r));
@@ -315,6 +315,48 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   r = await call("POST", "/lines/bulk/undo", { batchIds: two });
   ok("C1.5 slice (d) Undo refused: one line changed since, so nothing is undone (IMM 5476 stays too), named in words", ch.status < 300 && r.status === 409 && /was changed after the copy/.test(words(r)) && lines(SP, "IMM 5476") === "1:DRAFT", { ch: ch.status, w: words(r) });
   sql(`delete from combination_form where combination_id='${SP}' and lineage_key in ('IMM 5476','IMM 5707')`);
+
+  // ------------------------------------------------------------ break report x2b-c (#281)
+  sql(`delete from combination_form where combination_id='${SP}' and lineage_key in ('IMM 5476','IMM 5707')`);
+  // m1: the source line changed after the preview is refused (bulk and copy from), nothing written.
+  let pvw = await call("POST", "/lines/bulk/preview", { line: form("IMM 5476"), op: "add", combinationIds: [SP] });
+  const ver = pvw.body?.line?.version as string;
+  sql(`update combination_form set min_age=21 where combination_id='${WP}' and lineage_key='IMM 5476'`);
+  r = await apply(form("IMM 5476"), "add", [SP], { sourceVersion: ver });
+  ok("C1.5 break m1 fail: the source line changed after the preview: refused in words, nothing written", r.status === 409 && /was changed in .+ after the preview/.test(words(r)) && lines(SP, "IMM 5476") === "", words(r));
+  pvw = await call("POST", "/lines/bulk/preview", { line: form("IMM 5476"), op: "add", combinationIds: [SP] });
+  r = await apply(form("IMM 5476"), "add", [SP], { sourceVersion: pvw.body?.line?.version });
+  ok("C1.5 break m1 pass: with the preview's current version, the copy is made", r.status === 200 && lines(SP, "IMM 5476") === "1:DRAFT", words(r));
+  if (r.status === 200) await undo(r.body.batchId);
+  const cpv = ((await cpPrev(WP, SP)).body?.lines ?? []).find((x: any) => x.key === "IMM 5476");
+  sql(`update combination_form set min_age=22 where combination_id='${WP}' and lineage_key='IMM 5476'`);
+  r = await cp(WP, SP, [{ kind: "form", key: "IMM 5476", version: cpv?.version }]);
+  ok("C1.5 break m1 fail: copy from: a source line changed since its preview is refused", r.status === 409 && /after the preview/.test(words(r)) && lines(SP, "IMM 5476") === "", words(r));
+  sql(`update combination_form set min_age=null where combination_id='${WP}' and lineage_key='IMM 5476'`);
+  // m2: a retired source is not copied from.
+  sql(`update combination set retired_at=now() where id='${WP}'`);
+  r = await cp(WP, SP, [{ kind: "form", key: "IMM 5476" }]);
+  ok("C1.5 break m2 fail: a retired combination is not copied from (409), nothing written", r.status === 409 && /is retired: its lines are not copied/.test(words(r)) && lines(SP, "IMM 5476") === "", words(r));
+  sql(`update combination set retired_at=null where id='${WP}'`);
+  // m3: keys are matched exactly; a key with "#" is refused; a key made of LIKE wildcards does not meet another copy.
+  r = await cp(WP, SP, [{ kind: "form", key: "IMM 5476" }], "pfxtest1#1");
+  ok("C1.5 break m3 fail: a request key with # is refused (400)", r.status === 400, r.status);
+  r = await cp(WP, SP, [{ kind: "form", key: "IMM 5476" }], "%%%%%%%%");
+  ok("C1.5 break m3 pass: a key of wildcards is a key like any other (a fresh copy, not \"Key used\")", r.status === 200 && !r.body.replayed, words(r) || r.body?.message);
+  const wild = r.body?.batchIds as string[];
+  // m5: the same batch id in two spellings is one id.
+  r = await call("POST", "/lines/bulk/undo", { batchIds: [wild[0], wild[0].toUpperCase()] });
+  ok("C1.5 break m5 pass: the same batch id upper-cased is the same batch: one Undo", r.status === 200 && lines(SP, "IMM 5476") === "", words(r) || r.body?.message);
+  // m4: a retry after the target was retired answers the copy that was made.
+  const rk = randomUUID();
+  r = await cp(WP, SP, [{ kind: "form", key: "IMM 5476" }], rk);
+  sql(`update combination set retired_at=now() where id='${SP}'`);
+  const rr = await cp(WP, SP, [{ kind: "form", key: "IMM 5476" }], rk);
+  ok("C1.5 break m4 pass: a retry after the target was retired answers the copy that was made (replayed)", r.status === 200 && rr.status === 200 && rr.body.replayed, words(rr));
+  const nr = await cp(WP, SP, [{ kind: "form", key: "IMM 5707" }]);
+  ok("C1.5 break m4 fail: a new copy to a retired combination is refused", nr.status === 409 && /is retired/.test(words(nr)), words(nr));
+  sql(`update combination set retired_at=null where id='${SP}'`);
+  if (r.status === 200) await call("POST", "/lines/bulk/undo", { batchIds: r.body.batchIds });
 
   // ------------------------------------------------------------ review M2: a bulk add racing the Forms tab's own Add never answers 500
   let five = 0; const seen = new Set<string>();
