@@ -35,7 +35,13 @@ SKIP="check_catalogue_scale.cjs"
 # check waits for the page's ready signal) merged.
 # check_forms_c31_formats.ts was quarantined 1 Nov night (QA-145: untracked p1/inventory files left by a Load sample suite)
 # and came back when its fix (#316, C3.1/QA-146: it reads only committed inventories) merged.
-QUARANTINE=""
+# check_c313_reuse_browser.cjs (C3.13, screens) quarantined 1 Nov 22:00 UTC: merge-queue run 41352319862 (#349 alone on
+# main) failed at its first step "setup: sample inputs loaded" (POST /demo/load not 201; a second load into a loaded copy
+# answers 409), while it passes 24/24, exit 0, twice on main ffaf54aa and twice on #349 merged with main, each on a fresh
+# isolated copy. Likely cause: four suites share port 4448 (check_f8_empty_release.ts ran earlier on the same shard), so
+# the check can reach a copy that is already loaded. Fix row (screens): give it its own port and name, or reset the demo
+# before loading; take it off this list in that PR.
+QUARANTINE="check_c313_reuse_browser.cjs"
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
 export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 / P-179: test runs never write the real ledger (forms plan-p179 §5)
