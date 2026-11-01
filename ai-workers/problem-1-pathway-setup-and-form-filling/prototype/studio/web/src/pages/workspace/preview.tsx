@@ -7,6 +7,7 @@
 import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { OUTPUT_GROUPS, type PreviewForm, type PreviewView } from "../../../../contracts/workspace";
+import { ONLINE_LATER_WAVE } from "../../../../contracts/runtime";
 
 import { PreviewQuestions } from "@/runtime/questionnaire";
 import { Notice, Pill } from "@/components/ui/controls";
@@ -145,7 +146,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
               <ul className="mt-1 space-y-2 text-sm">{p.forms.filter((f) => f.group === g.key).map((f) => (
                 <li key={f.form} data-preview-form={f.form}>
                   <span className="mono font-medium">{f.form}</span> <span className="text-text-muted">{f.title}</span>
-                  <span className="ml-1.5 inline-flex gap-1">{g.key === "APPLICATION" || g.key === "COUPLE" ? <Pill tone={f.channel === "ONLINE" ? "ai" : f.channel === "PAPER" ? "warn" : "neutral"}>{f.channelWords}</Pill> : null}{(f as FormOut).checklist ? <Pill tone="neutral">Checklist · read, not filed</Pill> : null}{(f as FormOut).toSign ? <span data-to-sign><Pill tone="warn">{(f as FormOut).signatureWords}</Pill></span> : (f as FormOut).signatureWords && (f as FormOut).signature !== "NONE" ? <Pill tone="neutral">{(f as FormOut).signatureWords}</Pill> : null}{f.noRule ? <Pill tone="warn">Cannot tell yet: no rule</Pill> : f.applies === "cannot_tell" ? <Pill tone="warn">Cannot tell yet</Pill> : null}</span>
+                  <span className="ml-1.5 inline-flex gap-1">{/* C11.1 (P-102): each Online line says itself that it is a later-wave line, not only its group's heading. */}{g.key === "ONLINE" ? <span data-later-wave-pill><Pill tone="ai" title={(f as FormOut).laterWave ?? undefined}>{ONLINE_LATER_WAVE}</Pill></span> : null}{g.key === "APPLICATION" || g.key === "COUPLE" ? <Pill tone={f.channel === "ONLINE" ? "ai" : f.channel === "PAPER" ? "warn" : "neutral"}>{f.channelWords}</Pill> : null}{(f as FormOut).checklist ? <Pill tone="neutral">Checklist · read, not filed</Pill> : null}{(f as FormOut).toSign ? <span data-to-sign><Pill tone="warn">{(f as FormOut).signatureWords}</Pill></span> : (f as FormOut).signatureWords && (f as FormOut).signature !== "NONE" ? <Pill tone="neutral">{(f as FormOut).signatureWords}</Pill> : null}{f.noRule ? <Pill tone="warn">Cannot tell yet: no rule</Pill> : f.applies === "cannot_tell" ? <Pill tone="warn">Cannot tell yet</Pill> : null}</span>
                   <br /><span className="text-xs text-text-muted">{f.why}</span>
                   {/* Review Major 2: an Online line filed for the couple or the application says it too. */}
                   {g.key !== "ONLINE" && (f as FormOut).laterWave ? <><br /><span className="text-xs text-text-muted" data-later-wave-line>Online: {(f as FormOut).laterWave}</span></> : null}
