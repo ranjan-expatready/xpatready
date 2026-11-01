@@ -146,8 +146,10 @@ export class Intake {
       if (body.note!.length > 300) fail("Keep the reason under 300 characters.");
       const done = await this.db.intakeItem.updateMany({ where: { id, status: "HELD" }, data: { status: "DONE", outcome: "refused", reason: `${h.outcome === "held" ? "Rejected" : "Set aside"} by ${actor.name}: ${body.note!.trim()}` } });
       if (!done.count) fail("Someone decided this file at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
-      await this.audit.log(h.workspaceId, actor.id, "rejected", "held file", h.code ?? h.fileName, `${actor.name} rejected ${h.editionLabel ?? h.fileName} as a source: ${body.note!.trim()}`, undefined, h.combinationId ?? undefined);
-      return { outcome: "rejected" };
+      // #300 m4: an approved older or new edition is set aside, not rejected as a source (its approval stays on record).
+      const setAside = h.outcome !== "held";
+      await this.audit.log(h.workspaceId, actor.id, setAside ? "set aside" : "rejected", "held file", h.code ?? h.fileName, setAside ? `${actor.name} set aside ${h.editionLabel ?? h.fileName} (an edition not used): ${body.note!.trim()}` : `${actor.name} rejected ${h.editionLabel ?? h.fileName} as a source: ${body.note!.trim()}`, undefined, h.combinationId ?? undefined);
+      return { outcome: setAside ? "set aside" : "rejected" };
     }
     if (!h.irccPage) fail("The uploader records the IRCC page the file came from first; then compare and approve.", HttpStatus.CONFLICT);
     // Break m5: what is approved is the page the second person saw, not one changed after they opened it.

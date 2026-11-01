@@ -139,7 +139,9 @@ export class Runtime {
     const limits = (this.snapshotOf(c).combination.participants ?? []) as { role: string; max?: number; label?: string }[];
     const limit = limits.find((p) => p.role === b.role);
     // S5 (M3): any role the pinned release lists, within its maximum; anything else is refused (P-119).
-    if (!limit || !(limit.max ?? 0)) fail(`This case's release does not list a ${b.role.replace(/_/g, " ")} in who can be in this application, so one cannot be added.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    // QA-135: the role in the release's own words, never its internal name; the application itself is not a person.
+    if (b.role === "case") fail("The application itself is not a person, so it cannot be added. Add a person this application lists, such as a spouse, partner or child.", HttpStatus.UNPROCESSABLE_ENTITY);
+    if (!limit || !(limit.max ?? 0)) fail(`This case's release does not list ${(limit?.label ?? b.role.replace(/_/g, " ")).toLowerCase()} in who can be in this application, so one cannot be added.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const workspaceId = c.workspaceId;
     // QA-28: the same idempotency key answers with the person it added; a different request with that key is refused.
     const { idempotencyKey: key, ...request } = b;
