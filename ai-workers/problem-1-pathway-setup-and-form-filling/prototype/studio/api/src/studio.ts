@@ -7,7 +7,7 @@ import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
-import { checkCondition, diff, validate } from "../../engine/validate.ts";
+import { checkCondition, diff, ordinal, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, RUNTIME_ACTORS, strip, Workspace, type Actor } from "./core.ts";
 import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { recordAction, snapshotLines } from "./form-uses.ts";
@@ -485,7 +485,8 @@ export class Studio {
     if (on === !!had) return { ok: true, sectionOrder: had?.sectionOrder ?? null };
     if (on) {
       const back = Number.isInteger(b?.sectionOrder) && (b!.sectionOrder as number) >= 0 ? b!.sectionOrder as number : null;
-      const n = back ?? await this.db.sqrSectionSelection.count({ where: { combinationId } });
+      // C4.1 review m1: a new section goes after the last place in use (never a place another section has).
+      const n = back ?? ((await this.db.sqrSectionSelection.aggregate({ where: { combinationId }, _max: { sectionOrder: true } }))._max.sectionOrder ?? -1) + 1;
       await this.db.sqrSectionSelection.upsert({ where: { combinationId_sectionKey: { combinationId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, combinationId, sectionKey, sectionOrder: n } });
     } else {
       sectionOrder = had!.sectionOrder;
@@ -493,6 +494,43 @@ export class Studio {
     }
     await this.audit.log(c.workspaceId, actor.id, "updated", "section selection", sectionKey, `${actor.name} ${on ? "added" : "removed"} the section "${title}" ${on ? "to" : "from"} the questionnaire of "${c.label}"`, undefined, c.id);
     return { ok: true, sectionOrder };
+  }
+
+  /** C4.1 (P-216): the combination's sections in its own order, with the library title of each (one title everywhere). */
+  async sectionOrder(combinationId: string) {
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    const rows = await this.db.sqrSectionSelection.findMany({ where: { combinationId }, orderBy: [{ sectionOrder: "asc" }, { sectionKey: "asc" }] });
+    const lib = await this.db.logicalSection.findMany({ where: { workspaceId: c.workspaceId, sectionKey: { in: rows.map((r) => r.sectionKey) } }, orderBy: { version: "desc" } });
+    const title = (k: string) => lib.find((x) => x.sectionKey === k)?.title ?? k;
+    return { order: rows.map((r) => ({ key: r.sectionKey, title: title(r.sectionKey) })) };
+  }
+
+  /** C4.1 (P-216 answer 1): Move up / Move down on a section header. One move is one draft change of this combination,
+   *  released with it (C4.8); the order is the same for every person. `seen` is the order the author was looking at: a
+   *  move from an older order is refused (409), so two authors never undo each other's move without knowing. */
+  async moveSection(actor: Actor, combinationId: string, sectionKey: string, b: unknown) {
+    need(actor, "author");
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    if (c.retiredAt) fail(`"${c.label}" is retired: its questionnaire is not changed. Restore it on Structure first; open cases keep their release.`, HttpStatus.CONFLICT);
+    const body = (b ?? {}) as { direction?: unknown; seen?: unknown };
+    if (body.direction !== "up" && body.direction !== "down") fail('Say which way to move the section: "up" or "down".', HttpStatus.BAD_REQUEST);
+    if (!Array.isArray(body.seen) || !body.seen.every((x) => typeof x === "string")) fail("The order you were looking at was not sent. Reload the tab, then move the section again.", HttpStatus.BAD_REQUEST);
+    const up = body.direction === "up";
+    const { order } = await this.sectionOrder(combinationId);
+    const keys = order.map((x) => x.key);
+    const at = keys.indexOf(sectionKey);
+    if (at < 0) fail("That section is not one this combination chose, so it has no place of its own to move. Its questions follow the sections chosen here; add the section first.", HttpStatus.CONFLICT);
+    const title = order[at].title;
+    const seen = (body.seen as string[]).filter((k) => keys.includes(k));
+    if (seen.length !== keys.length || seen.some((k, i) => k !== keys[i])) fail("The sections were reordered since you opened this tab. Reload to see the order now, then move it again.", HttpStatus.CONFLICT);
+    if (up && at === 0) fail(`"${title}" is already the first section.`, HttpStatus.CONFLICT);
+    if (!up && at === keys.length - 1) fail(`"${title}" is already the last section.`, HttpStatus.CONFLICT);
+    const to = up ? at - 1 : at + 1;
+    [keys[at], keys[to]] = [keys[to], keys[at]];
+    await this.db.$transaction(keys.map((k, i) => this.db.sqrSectionSelection.update({ where: { combinationId_sectionKey: { combinationId, sectionKey: k } }, data: { sectionOrder: i } })));
+    const nth = ordinal(to + 1);
+    await this.audit.log(c.workspaceId, actor.id, "updated", "section selection", sectionKey, `${actor.name} moved the section "${title}" ${body.direction} in the questionnaire of "${c.label}": now ${nth} of ${keys.length}`, undefined, c.id);
+    return { ok: true, position: to + 1, of: keys.length, order: keys.map((k) => ({ key: k, title: order.find((x) => x.key === k)!.title })) };
   }
 
   async documentTypes() {
