@@ -17,6 +17,9 @@ import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleVi
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
+/** C3.6 (P-223, option (a)): a draft condition may read a fact the library lacks; validate() keeps it as an error that
+ *  blocks release, and Questionnaires › "Facts a rule needs that no form asks" offers the add. Other errors still refuse. */
+const draftErrors = (errs: string[]) => errs.filter((e) => !/^reads [a-z][a-z0-9_]*\.[a-z0-9_.]+, which is not in the library$/.test(e));
 
 const VALUE_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
 /** S6 (2a), P-158 item 6: a list row's first source and how many more; an item with none is flagged, never blank. */
@@ -495,7 +498,7 @@ export class Studio {
     if (!COLLECTED.includes(b.collectedFrom)) fail(`Collected from must be one of: ${COLLECTED.join(", ")}.`);
     if (!["once_per_case", "per_person", "per_row"].includes(b.repeats)) fail("Repeats must be once per case, per person or per row.");
     const types = await this.libraryTypes(workspaceId);
-    if (b.condition) { const errs = checkCondition(b.condition, types.fields, types.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); if (!b.conditionEffect) fail("Choose what the condition does (show, hide, require or optional)."); }
+    if (b.condition) { const errs = draftErrors(checkCondition(b.condition, types.fields, types.derived)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); if (!b.conditionEffect) fail("Choose what the condition does (show, hide, require or optional)."); }
     const data = { sectionKey: b.sectionKey, collectedFrom: b.collectedFrom, repeats: b.repeats, tier: b.tier ?? "case", questionText: b.questionText?.trim() || null, helpText: b.helpText?.trim() || null, predicateJson: b.condition ?? null, conditionEffect: (b.conditionEffect as any) ?? null, conditionPlain: b.conditionPlain ?? null, ruleOnly: !!b.ruleOnly };
     const rows = await this.db.sectionQuestion.findMany({ where: { workspaceId, lineageKey: key } });
     // C4.9 (P-97): who fills an existing placement changes only through a library change with a second person (who-fills.ts).
@@ -625,7 +628,7 @@ export class Studio {
     if (!typeKey || !(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) fail("Choose a document type, or name a new one.");
     if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
     if (b.attachMode === "ANSWER_CONDITIONAL" && !b.condition) fail("A conditional requirement needs its condition.");
-    if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
+    if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = draftErrors(checkCondition(b.condition, t.fields, t.derived)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
     // W1-15 slice 3: alternatives are other library document types; any one of them counts instead of this line's.
     const alternatives = [...new Set((Array.isArray(b.alternatives) ? b.alternatives : []).filter((k) => typeof k === "string" && k && k !== typeKey))];
     if (alternatives.length) { const known = await this.db.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: alternatives } }, select: { documentTypeKey: true } });
@@ -648,7 +651,7 @@ export class Studio {
     if (!b.thenPlain?.trim()) fail("Say what the rule does, in plain words.");
     if (!WHO.includes(b.forWhom)) fail("Choose whom the rule is evaluated for.");
     const t = await this.libraryTypes(c.workspaceId);
-    const errs = checkCondition(b.condition, t.fields, t.derived);
+    const errs = draftErrors(checkCondition(b.condition, t.fields, t.derived));
     if (!b.condition || errs.length) fail(`Condition: ${errs.join("; ") || "missing"}.`);
     const data = { predicateJson: b.condition, whenPlain: b.whenPlain ?? null, thenPlain: b.thenPlain.trim(), forWhom: b.forWhom, sourceQuote: b.sourceQuote ?? null, origin: "HUMAN" as const };
     let row;
@@ -684,7 +687,7 @@ export class Studio {
     // until it has one (engine/validate.ts), and Preview says "Cannot tell yet: no rule".
     if (b.conditionPlain !== undefined && b.condition === undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") changes.conditionPlain = b.conditionPlain.trim() || null;
     if (b.attachMode) { changes.attachMode = b.attachMode; if (b.attachMode === "COMBINATION_MANDATORY") { changes.predicateJson = null; changes.conditionPlain = null; } }
-    if (b.condition !== undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") { const t = await this.libraryTypes(c.workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); changes.predicateJson = b.condition; changes.conditionPlain = b.conditionPlain ?? null; }
+    if (b.condition !== undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") { const t = await this.libraryTypes(c.workspaceId); const errs = draftErrors(checkCondition(b.condition, t.fields, t.derived)); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); changes.predicateJson = b.condition; changes.conditionPlain = b.conditionPlain ?? null; }
     const { row } = await revise(this.db.combinationForm, rows, { ...changes, origin: "HUMAN" }, actor.id, strip);
     // A released line's removal is a new version (revise makes it a draft): it must say RETIRED too, or the removal is lost.
     if (b.retire) await this.db.combinationForm.update({ where: { id: row.id }, data: { status: "RETIRED" } });
