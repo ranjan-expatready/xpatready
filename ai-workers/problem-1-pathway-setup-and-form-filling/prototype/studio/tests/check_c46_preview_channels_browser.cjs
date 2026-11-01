@@ -61,6 +61,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const onlineGroup = p.locator('[data-output-group="ONLINE"]');
   const note = await onlineGroup.locator("[data-later-wave]").innerText();
   step("C4.6 pass: the Online group says the portal screens come in a later wave and that no PDF is made", /later wave/.test(note) && /no PDF/.test(note) && (await onlineGroup.locator('[data-preview-form="IMM 1295"]').count()) === 1, note);
+  const online1295 = await onlineGroup.locator('[data-preview-form="IMM 1295"]').innerText();
+  step("C11.1 pass: the Online line itself says 'Online (later wave)' (not only its group's heading) and offers no Fill PDF", /Online \(later wave\)/.test(online1295) && !/Fill PDF/.test(online1295), online1295.slice(0, 160));
+  step("C11.1 fail: a line filed another way (Paper, PDF upload) carries no later-wave mark", (await p.locator('[data-output-group="PAPER"] [data-later-wave-pill], [data-output-group="PDF_UPLOAD"] [data-later-wave-pill]').count()) === 0);
   step("C4.6 pass: the Paper line says it is signed in pen", /Signed in pen/.test(await p.locator('[data-output-group="PAPER"] [data-preview-form="IMM 5707"] [data-to-sign]').innerText()));
   step("C4.6 pass: the hand-signed upload says so", /Signed by hand and scanned/.test(await p.locator('[data-output-group="PDF_UPLOAD"] [data-preview-form="IMM 5257 SCH1"] [data-to-sign]').innerText()));
   step("C4.6 fail: a PDF upload with no signature carries no signature pill", (await p.locator('[data-preview-form="IMM 5488"] [data-to-sign]').count()) === 0);
