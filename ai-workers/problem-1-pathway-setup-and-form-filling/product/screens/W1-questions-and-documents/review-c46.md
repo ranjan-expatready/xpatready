@@ -58,3 +58,44 @@ See `journey-test-reviewer-2026-11-01.md`. The low criteria are correct data ½ 
 ## To fix before Approve
 1. Major 1: leave checklists out of the "filled PDFs to upload" count, or name them as checklists; add a test.
 2. Major 2: show the later-wave words on every Online line, whatever its group; add a test with an Online couple or application line.
+
+---
+
+# Round 2: commit 41e1d981, re-reviewed 1 Nov
+
+## Verdict: **Approve** (**Verdict: Approve**)
+Both Majors are fixed and tested. No Blocker or Major is open. The approval applies to commit **41e1d981** only.
+
+## Re-run on :4439 (web rebuilt, fresh copy, US$0)
+- c46 API: 21/21.
+- c46 browser: 23/23, run twice with the same result (no flakiness).
+- preview_sets: 27/27.
+- preview_sets_browser: 24/24.
+- engine: 38/38.
+
+The worktree is clean apart from the untracked `node_modules`.
+
+## Round 1 findings
+- **Major 1, fixed.** `outputOf(…, checklist)` marks lines with `form_kind === "document"` (`engine/runtime/preview.ts`). Walked: the principal's count now reads "4 filled PDFs to upload · 1 PDF to print, sign in pen and mail · 1 PDF to sign by hand and scan · 2 document checklists (read, not filed)". That is right: IMM 1295, 5257 SCH1, 5475 and 5476 are filed; IMM 5488 and 5905 are checklists. Tests R7 pass and fail as they should.
+- **Major 2, fixed.** I set IMM 5409 (filed once for the couple) to Online and left IMM 1295 as a PDF upload. On the spouse's view, IMM 5409 stays under "Filed once for the couple" and shows "Online: Typed into the IRCC account … later wave." (`data-later-wave-line`). Test R8 and the browser step cover it.
+- **Minor 1, fixed.** There is no decision number in the words. A fail-guard (`/P-\d+/`) now checks the API words and the panel.
+- **Minor 2, fixed.** The Paper count says "sign in pen". The new "sign by hand and scan" count leaves Paper lines out, so nothing is counted twice.
+- **Minor 3, open by agreement.** `PreviewForm` still lacks the new fields. That file belongs to builder B1, and the gap is noted in the PR. This is not blocking.
+- **Minor 4, fixed.** `outputsLine` is now below the imports.
+
+## New, Minor (not blocking)
+- **m5. The checklists still sit under the heading "Filled PDF to upload".** The two checklists carry a "Checklist · read, not filed" pill, but they are listed under that heading. The grouping comes from `groupOf`, which existed before this PR. The count and the pill are now correct; only the heading over them contradicts them. A later small fix would give checklists their own group, for example "Checklists (read, not filed)".
+- **m6. Small wording and formatting gaps.**
+  - The Paper group heading says "PDF to print, sign and mail" while the count says "sign in pen and mail".
+  - The `].filter(Boolean)` line in `outputsLine` lost its indentation.
+  - Both are cosmetic.
+
+## Standards, round 2
+- Correct data: met.
+- Plain words: met, apart from m5.
+- Accessibility: met. axe found 0 violations; no sideways scroll at 400, 1024 or 512 px (200 % zoom); Tab and Enter switch person; no page errors.
+- Speed: met.
+- Server authorisation and draft-against-release behaviour were not touched since round 1, and the tests still pass.
+
+## Journey score, round 2: **9.5 / 10, pass**
+Correct data goes from ½ to 1. Plain words goes from ½ to ½, because of m5 only. See `journey-test-reviewer-2026-11-01.md`, round 2.

@@ -59,3 +59,20 @@ Changes that would raise the low criteria, most valuable first:
 - A real screen reader.
 - An intended user's unaided walk (D17 and D20 stay with the founder).
 - A visible, headed browser pane: the walk ran headless through Playwright.
+
+## Round 2: commit 41e1d981, 1 Nov
+I re-walked J1 and J3 on :4439 after rebuilding the web.
+
+| Journey | Result |
+|---|---|
+| J1 | The principal's count reads "4 filled PDFs to upload · 1 PDF to print, sign in pen and mail · 1 PDF to sign by hand and scan · 2 document checklists (read, not filed)", which is correct. IMM 5488 and IMM 5905 carry "Checklist · read, not filed", but they are still listed under the heading "Filled PDF to upload" (m5, a grouping that existed before this PR) |
+| J3 | IMM 5409 set to Online, under "Filed once for the couple", shows "Online: Typed into the IRCC account … later wave." There is no decision number in the words |
+
+The rest still holds:
+- axe found 0 violations.
+- No sideways scroll at 400, 1024 or 512 px.
+- The keyboard walk works.
+- No page errors.
+- The builder's browser check passed 23/23 twice.
+
+Score changes from round 1: correct data goes from ½ to 1; plain words stays at ½ (m5). **Total 9.5 / 10, pass.**
