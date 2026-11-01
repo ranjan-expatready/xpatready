@@ -43,10 +43,13 @@ if [ -z "${CI:-}" ] && [ -z "${COPY_PREFIX+x}" ]; then PREFIX=$(bash "$P/product
 [[ "$PREFIX" =~ ^[a-z0-9_]{0,12}$ ]] || { echo "COPY_PREFIX: lower case letters, digits and _ only, at most 12"; exit 2; }
 SLOT=0
 if [ -n "$PREFIX" ]; then
-  # One slot per lane, so lanes never share ports; any other prefix hashes into slots 9 to 40. Ports move by 10000 +
-  # 1000 x (SLOT - 1): 14400 to 53480, clear of the demo :4400 and the database :54329.
+  # One slot per lane, so lanes never share ports; any other prefix hashes into slots 9 to 35. Ports move by 10000 +
+  # 1000 x (SLOT - 1): 14400 to 48480, clear of the demo :4400 and the database :54329, and below macOS's range for
+  # outgoing connections (49152 and up). Above it, a request to a test server that is briefly down can connect to
+  # itself and read its own request back (31 Oct: batch 2 failed with "Response does not match the HTTP/1.1 protocol"
+  # on port 50438, prefix ci, slot 37).
   case "$PREFIX" in lead) SLOT=1;; screens) SLOT=2;; forms) SLOT=3;; evidence) SLOT=4;; runtime) SLOT=5;; m3) SLOT=6;; qa) SLOT=7;; scout) SLOT=8;;
-    *) SLOT=$(( $(printf '%s' "$PREFIX" | cksum | cut -d' ' -f1) % 32 + 9 ));; esac
+    *) SLOT=$(( $(printf '%s' "$PREFIX" | cksum | cut -d' ' -f1) % 27 + 9 ));; esac
   LOCK="${SUITES_LOCKS:-$ROOT/.tools/run-suites-locks}/slot-$SLOT"; mkdir -p "${LOCK%/*}"
   claim() { mkdir "$LOCK" 2>/dev/null && printf '%s %s %s\n' "$$" "$PREFIX" "$ROOT" > "$LOCK/owner"; }
   if [ "$NAMES" = 1 ]; then :; elif ! claim; then
