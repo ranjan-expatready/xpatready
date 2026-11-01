@@ -7,11 +7,14 @@
 // fixture's field maps given a data_path (every real map has one; the engine read it) and "document" per P-130.
 // Part 1 runs on the engine (no server); part 2 on a Visitor visa case through the API. A pass and a fail per rule.
 // Rules only, no AI (US$0).
-//   zsh studio/tools/isolated.sh runtime_c44 4436 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4436 xr_studio_runtime_c44 && tsx studio/tests/runtime/setup_c44_types.ts 4436 xr_studio_runtime_c44 && tsx studio/tests/check_c44_question_types.ts 4436 xr_studio_runtime_c44
+// The suite prepares its own copy (tests/runtime/prepare_c44.cjs: the Visitor visa release, then the C4.4 Sample types).
+//   zsh studio/tools/isolated.sh runtime_c44 4436 start && tsx studio/tests/check_c44_question_types.ts 4436 xr_studio_runtime_c44
 import { evalCondition, kkey } from "../engine/render.ts";
 import { checkValue, DOCUMENT_NOT_A_QUESTION } from "../engine/runtime/case.ts";
 import { historyGaps } from "../../contracts/history.ts";
 import { client, recorder } from "./runtime/api.ts";
+import { createRequire } from "node:module";
+const { prepareC44 } = createRequire(import.meta.url)("./runtime/prepare_c44.cjs") as { prepareC44: (port: number, db: string) => void };
 
 const PORT = Number(process.argv[2] ?? 4436), DB = process.argv[3] ?? "xr_studio_runtime_c44";
 const { call, sql } = client(PORT, DB);
@@ -52,6 +55,7 @@ const check = (t: string, v: unknown) => checkValue(snapshot, `person.sample_${t
 const plain = (m: string[]) => m.length > 0 && m.every((x) => x.length > 8 && !/undefined|null|\[object|P-\d/.test(x));
 
 (async () => {
+  try { prepareC44(PORT, DB); } catch (e) { ok("setup: the copy is prepared (Visitor visa released, C4.4 Sample types added)", false, String(e)); summary(); process.exit(1); }
   // ── Part 1: tier 1 on the engine ──
   for (const [t, good, bad] of TYPES) {
     const g = check(t, good), b = check(t, bad);

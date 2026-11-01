@@ -4,7 +4,8 @@
 // are in order the check leaves the summary and the forms panel. A pass and a fail per rule; axe-core (WCAG 2.2 A/AA)
 // on every state; no sideways scroll at 1440 and 1024 px. No AI (US$0). Sample values.
 // Screenshots: product/screens/W1-questions-and-documents/screenshots/c44-part2/.
-//   zsh studio/tools/isolated.sh runtime_c44p2b 4439 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4439 xr_studio_runtime_c44p2b && node studio/tests/check_c44_part2_browser.cjs 4439 xr_studio_runtime_c44p2b
+// The suite prepares its own copy (tests/runtime/prepare_c44.cjs: the Visitor visa release, then the C4.4 Sample types).
+//   zsh studio/tools/isolated.sh runtime_c44p2b 4439 start && node studio/tests/check_c44_part2_browser.cjs 4439 xr_studio_runtime_c44p2b
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
@@ -18,6 +19,7 @@ const step = (name, pass, detail) => { results.push({ name, pass }); console.log
 const call = async (method, url, body, actor) => { const r = await fetch(`${BASE}/api${url}`, { method, headers: { "x-actor": actor, ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined }); const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch { j = t; } return { status: r.status, body: j }; };
 
 (async () => {
+  try { require("./runtime/prepare_c44.cjs").prepareC44(PORT, DB); } catch (e) { step("setup: the copy is prepared (Visitor visa released, C4.4 Sample types added)", false, String(e)); console.log(`\n0/1 passed`); process.exit(1); }
   fs.mkdirSync(SHOTS, { recursive: true });
   for (const f of fs.readdirSync(SHOTS)) if (f.endsWith(".png")) fs.unlinkSync(path.join(SHOTS, f));
   const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();

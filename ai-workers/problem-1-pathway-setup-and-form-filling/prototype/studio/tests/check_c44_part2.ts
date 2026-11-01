@@ -12,10 +12,13 @@
 //   R5 PQR mode: only the questions the release ticks Pre-qualification, per person role, with one plain result line
 //      that never decides eligibility: what is left to answer, else "Looks eligible so far"; none ticked says so.
 // Adopts acceptance/C4.4.test.ts part 2 (pack 3). Rules only, no AI (US$0). Sample values.
-//   zsh studio/tools/isolated.sh runtime_c44p2 4439 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4439 xr_studio_runtime_c44p2 && tsx studio/tests/runtime/setup_c44_types.ts 4439 xr_studio_runtime_c44p2 && tsx studio/tests/check_c44_part2.ts 4439
+// The suite prepares its own copy (tests/runtime/prepare_c44.cjs: the Visitor visa release, then the C4.4 Sample types).
+//   zsh studio/tools/isolated.sh runtime_c44p2 4439 start && tsx studio/tests/check_c44_part2.ts 4439 xr_studio_runtime_c44p2
 import { caseView, pqrView, type Answer, type Participant } from "../engine/runtime/case.ts";
 import { readiness } from "../engine/runtime/forms.ts";
 import { client, recorder } from "./runtime/api.ts";
+import { createRequire } from "node:module";
+const { prepareC44 } = createRequire(import.meta.url)("./runtime/prepare_c44.cjs") as { prepareC44: (port: number, db: string) => void };
 
 const PORT = Number(process.argv[2] ?? 4439), DB = process.argv[3] ?? "xr_studio_runtime_c44p2";
 const { call, sql } = client(PORT, DB);
@@ -26,6 +29,7 @@ type Q = { fact: string; subjectId: string; pre_qualification?: boolean; answer:
 type Sec = { subjectId: string; section: string; questions: Q[]; problems: { kind: string; field: string; subjectId: string; row: string | null; label: string; message: string; check?: string }[] };
 
 (async () => {
+  try { prepareC44(PORT, DB); } catch (e) { ok("setup: the copy is prepared (Visitor visa released, C4.4 Sample types added)", false, String(e)); summary(); process.exit(1); }
   const vv = sql(`select id from combination where combination_key = 'vv.single'`);
   const rel = sql(`select snapshot::text from config_release where combination_id = '${vv}' order by version desc limit 1`);
   if (!vv || !rel) { ok("setup: the Visitor visa release exists (run setup_visitor_visa.ts and setup_c44_types.ts first)", false); summary(); process.exit(1); }
