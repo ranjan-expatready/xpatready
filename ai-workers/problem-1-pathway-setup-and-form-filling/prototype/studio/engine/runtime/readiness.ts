@@ -14,14 +14,18 @@
 //   BR-9 4 representative_review  the representative's review not done (P-155, BR-21)
 // Warns (a permitted person passes each with a written reason, recorded; AG-07 BR-26):
 //          missing_document · finding · edition_superseded · copy_stale · entered_out_of_date
+// An Online section entered before a fact changed warns (P-168 and r5c BR-9 list it among the warnings; the earlier
+// P-136 named entered items among the blocks: the newer decision is followed). Passes (review M3): each warning line
+// has a key; a pass records the keys it covered when it was written, so it never covers a line that appears later.
+// Dates are compared on their first 10 characters (YYYY-MM-DD); anything else is refused, never ignored (review M1).
 // Not here yet: Express Entry's police and medical block (P-172, BR-9 5), other portals' rules. Legal points:
 // Unconfirmed: no counsel.
+import type { Channel, Signature } from "../../contracts/forms.ts";
 import type { Readiness } from "../../contracts/runtime.ts";
+export type { Channel, Signature };
 
 /** Who owes a block or warning: the left list groups by these (You · Client · Employer · IRCC; r5c "One left list"). */
 export type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
-export type Channel = "ONLINE" | "PDF_UPLOAD" | "PAPER" | "NOT_NEEDED";
-export type Signature = "TYPED" | "HAND_SCANNED" | "PEN" | "NONE";
 
 export type BlockCode = "missing_facts" | "fact_problem" | "open_check" | "out_of_date" | "missing_signature" | "barcode_not_validated" | "edition_expired" | "representative_review";
 export type WarnCode = "missing_document" | "finding" | "edition_superseded" | "copy_stale" | "entered_out_of_date";
@@ -38,6 +42,8 @@ export type FormItem = {
   /** A validated copy is read back and still matches today's facts (C-9, C-10). */
   validatedCurrent: boolean;
   signature: Signature; signed: boolean; signers?: string[];
+  /** Who owes a missing signature (default the client; the representative signs IMM 5476's own part). */
+  signerOwes?: Owes;
   /** Signed or uploaded, then a fact changed: the fact and when (BR-12). */
   outOfDate?: { fact: string; since: string } | null;
   edition?: { label: string; superseded: boolean; acceptedUntil: string | null } | null;
@@ -47,8 +53,9 @@ export type FormItem = {
 export type DocumentItem = { item?: string; label: string; subject: string; person: string; required: boolean; received: boolean; owes?: Owes };
 export type OpenCheck = { fact: string; label: string; subject: string; person: string };
 export type Finding = { id: string; subject?: string; form?: string; severity: "CRITICAL" | "MAJOR" | "MINOR" | "INFO"; words: string };
-export type Fee = { line: string; acceptedUntil: string | null };
-export type Pass = { code: WarnCode; item?: string | null; reason: string; by: string; at: string };
+export type Fee = { line: string; superseded?: boolean; acceptedUntil: string | null };
+/** A warning passed with a reason: `keys` are the warning lines it covered when it was written (passKeys). */
+export type Pass = { code: WarnCode; keys: string[]; reason: string; by: string; at: string };
 
 export type FilingInput = {
   filing: string; forms: FormItem[]; documents?: DocumentItem[]; openChecks?: OpenCheck[]; findings?: Finding[]; fees?: Fee[];
@@ -58,7 +65,9 @@ export type FilingInput = {
   /** Today, YYYY-MM-DD (the firm's date; UTC until firms have a time zone). */
   today: string;
 };
-export type Line<C extends string> = { code: C; item?: string; subject?: string; owes: Owes; words: string };
+/** One block or warning: `key` is stable for the same thing (its item, else code, person and form); `unblocks` says
+ *  what clearing it allows. */
+export type Line<C extends string> = { code: C; key: string; item?: string; subject?: string; owes: Owes; words: string; unblocks: string };
 export type FilingReadiness = {
   filing: string; ready: boolean;
   blocks: Line<BlockCode>[]; warns: Line<WarnCode>[];
@@ -70,46 +79,61 @@ export type FilingReadiness = {
 
 const ORDER: Owes[] = ["staff", "representative", "client", "employer", "ircc"];
 const list = (xs: string[]) => xs.length <= 3 ? xs.join(", ") : `${xs.slice(0, 3).join(", ")} and ${xs.length - 3} more`;
-const isDate = (d: string | null | undefined): d is string => !!d && /^\d{4}-\d{2}-\d{2}$/.test(d);
+/** YYYY-MM-DD of a date or timestamp; null stays null; anything else is refused (review M1: never fail open). */
+export function dayOf(d: string | null | undefined, what: string): string | null {
+  if (d === null || d === undefined) return null;
+  const m = /^(\d{4}-\d{2}-\d{2})(T[\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/.exec(d.trim());
+  if (!m || Number.isNaN(Date.parse(m[1]))) throw new Error(`${what} is not a date: ${JSON.stringify(d)}`);
+  return m[1];
+}
+const UNBLOCKS = "Ready to file and Record", PASS_OR_FIX = "Ready to file, once passed with a reason or fixed";
 const ofWho = (f: { form: string; person: string }) => `${f.form} for ${f.person}`;
 
 /** The blocks and warnings of one filing, and whether it may be marked "Ready to file". */
 export function filingReadiness(x: FilingInput): FilingReadiness {
   const blocks: Line<BlockCode>[] = [], warns: Line<WarnCode>[] = [];
-  const block = (l: Line<BlockCode>) => blocks.push(l), warn = (l: Line<WarnCode>) => warns.push(l);
+  type In<C extends string> = Omit<Line<C>, "key" | "unblocks"> & { form?: string };
+  const keyOf = (l: In<string>) => l.item ?? `${l.code}|${l.subject ?? ""}|${l.form ?? ""}`;
+  const block = ({ form, ...l }: In<BlockCode>) => blocks.push({ ...l, key: keyOf({ ...l, form }), unblocks: UNBLOCKS });
+  const warn = ({ form, ...l }: In<WarnCode>) => warns.push({ ...l, key: keyOf({ ...l, form }), unblocks: PASS_OR_FIX });
+  const today = dayOf(x.today, "today")!;
   for (const f of x.forms) {
     if (f.channel === "NOT_NEEDED") continue;   // the portal asks it itself: shown greyed, never a block
-    const at = { item: f.item, subject: f.subject };
+    const at = { item: f.item, subject: f.subject, form: f.form };
     // P-71: missing or unconfirmed facts, by who owes them; a fact with a problem on its own line.
     const missing = f.readiness.missing.filter((m) => m.reason !== "needs a fix"), problems = f.readiness.missing.filter((m) => m.reason === "needs a fix");
     const byOwner = new Map<Owes, string[]>();
     for (const m of missing) { const o = f.owesFact?.[m.fact] ?? "staff"; byOwner.set(o, [...(byOwner.get(o) ?? []), m.label]); }
-    for (const [owes, labels] of byOwner) block({ code: "missing_facts", ...at, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). Only confirmed facts fill the form.` });
-    for (const m of problems) block({ code: "fact_problem", ...at, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
+    for (const [owes, labels] of byOwner) block({ code: "missing_facts", ...at, item: f.item && `${f.item}|facts|${owes}`, owes, words: `${ofWho(f)}: ${labels.length} fact${labels.length === 1 ? "" : "s"} missing or not confirmed (${list(labels)}). Only confirmed facts fill the form.` });
+    for (const m of problems) block({ code: "fact_problem", ...at, item: f.item && `${f.item}|${m.fact}`, owes: f.owesFact?.[m.fact] ?? "staff", words: `${ofWho(f)}: "${m.label}" has a problem, so it would be written wrong. Fix it, then confirm it.` });
     // BR-9 1: out of date, or a required signature missing.
     if (f.outOfDate) block({ code: "out_of_date", ...at, owes: "staff", words: `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${f.outOfDate.since.slice(0, 10)} after it was signed or uploaded. Make a new copy.` });
-    if (f.signature !== "NONE" && f.signature !== "TYPED" && !f.signed) {
+    if (f.signature !== "NONE" && f.signature !== "TYPED_NAME" && !f.signed) {
       const how = f.signature === "HAND_SCANNED" ? "signed by hand and its scan uploaded" : "signed in pen";
-      block({ code: "missing_signature", ...at, owes: "client", words: `${ofWho(f)} must be ${how}${f.signers?.length ? ` by ${list(f.signers)}` : ""}.` });
+      block({ code: "missing_signature", ...at, owes: f.signerOwes ?? "client", words: `${ofWho(f)} must be ${how}${f.signers?.length ? ` by ${list(f.signers)}` : ""}.` });
     }
     // BR-9 2 (P-144): IRCC returns a barcode form unprocessed without its Validate.
     if (f.needsValidate && (f.channel === "PDF_UPLOAD" || f.channel === "PAPER") && !f.validatedCurrent)
       block({ code: "barcode_not_validated", ...at, owes: "staff", words: `${ofWho(f)}: no validated copy read back for today's facts. Validate it in Adobe and upload the validated copy; IRCC returns it unprocessed otherwise.` });
     // BR-9 3 (P-151): past the accepted-until date blocks; before it, a superseded edition warns.
-    const e = f.edition;
-    if (e && isDate(e.acceptedUntil) && x.today > e.acceptedUntil) block({ code: "edition_expired", ...at, owes: "staff", words: `${ofWho(f)}: edition ${e.label} was accepted by IRCC until ${e.acceptedUntil}. Adopt update to the current edition.` });
-    else if (e?.superseded) warn({ code: "edition_superseded", ...at, owes: "staff", words: `${ofWho(f)}: edition ${e.label} has a newer edition${isDate(e.acceptedUntil) ? `; IRCC accepts it until ${e.acceptedUntil}` : ""}. Adopt update.` });
+    const e = f.edition, until = dayOf(e?.acceptedUntil, `${f.form}'s accepted-until date`);
+    if (e && until && today > until) block({ code: "edition_expired", ...at, owes: "staff", words: `${ofWho(f)}: edition ${e.label} was accepted by IRCC until ${until}. Adopt update to the current edition.` });
+    else if (e?.superseded) warn({ code: "edition_superseded", ...at, owes: "staff", words: `${ofWho(f)}: edition ${e.label} has a newer edition${until ? `; IRCC accepts it until ${until}` : ""}. Adopt update.` });
     if (f.channel === "ONLINE" && f.copyStale) warn({ code: "copy_stale", ...at, owes: "staff", words: `${ofWho(f)}: the PDF copy is older than today's facts (a copy, not for filing). Download it again.` });
     if (f.channel === "ONLINE" && f.enteredOutOfDate?.length) warn({ code: "entered_out_of_date", ...at, owes: "staff", words: `${ofWho(f)}: ${list(f.enteredOutOfDate)} ${f.enteredOutOfDate.length === 1 ? "was" : "were"} entered in the portal before a fact changed. Enter ${f.enteredOutOfDate.length === 1 ? "it" : "them"} again.` });
   }
   for (const c of x.openChecks ?? []) block({ code: "open_check", subject: c.subject, owes: "staff", words: `${c.person}: "${c.label}" differs between the answer and the document. Resolve the check.` });
-  for (const fee of x.fees ?? []) if (isDate(fee.acceptedUntil) && x.today > fee.acceptedUntil) block({ code: "edition_expired", owes: "staff", words: `Fee "${fee.line}" was valid until ${fee.acceptedUntil}. Adopt the current fee table.` });
+  for (const fee of x.fees ?? []) {
+    const until = dayOf(fee.acceptedUntil, `Fee "${fee.line}"'s valid-until date`), at = { item: `fee|${fee.line}`, form: fee.line };
+    if (until && today > until) block({ code: "edition_expired", ...at, owes: "staff", words: `Fee "${fee.line}" was valid until ${until}. Adopt the current fee table.` });
+    else if (fee.superseded) warn({ code: "edition_superseded", ...at, owes: "staff", words: `Fee "${fee.line}" has a newer amount${until ? `; it is accepted until ${until}` : ""}. Adopt update.` });
+  }
   if (!x.reviewed) block({ code: "representative_review", owes: "representative", words: "The representative of record has not reviewed this filing. Nothing reaches IRCC unreviewed." });
   for (const d of x.documents ?? []) if (d.required && !d.received) warn({ code: "missing_document", item: d.item, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received.` });
-  for (const g of x.findings ?? []) warn({ code: "finding", subject: g.subject, owes: "staff", words: `${g.severity} finding${g.form ? ` on ${g.form}` : ""}: ${g.words}` });
+  for (const g of x.findings ?? []) warn({ code: "finding", item: `finding|${g.id}`, subject: g.subject, owes: "staff", words: `${g.severity} finding${g.form ? ` on ${g.form}` : ""}: ${g.words}` });
 
-  // A pass covers a warning of its code (and of its item, when it names one), with a reason (BR-26).
-  const passOf = (w: Line<WarnCode>) => (x.passes ?? []).find((p) => p.code === w.code && (!p.item || p.item === w.item) && passProblem(p.reason) === null);
+  // A pass covers the warning lines it named when it was written, with a reason (BR-26); a new line needs a new pass.
+  const passOf = (w: Line<WarnCode>) => (x.passes ?? []).find((p) => p.code === w.code && p.keys.includes(w.key) && passProblem(p.reason) === null);
   const passed: FilingReadiness["passed"] = [], open: Line<WarnCode>[] = [];
   for (const w of warns) { const p = passOf(w); if (p) passed.push({ ...w, reason: p.reason, by: p.by, at: p.at }); else open.push(w); }
   const owes: FilingReadiness["owes"] = {};
@@ -118,16 +142,31 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
   return { filing: x.filing, ready: blocks.length === 0 && open.length === 0, blocks: sort(blocks), warns: sort(open), passed, owes };
 }
 
+/** The keys a pass of `code` covers now: the open warning lines of that code (optionally only `key`). The route stores
+ *  them with the pass, so a line that appears later is never covered by it. */
+export function passKeys(r: FilingReadiness, code: WarnCode, key?: string): string[] {
+  return r.warns.filter((w) => w.code === code && (!key || w.key === key)).map((w) => w.key);
+}
+
 /** Why a pass's reason is refused (null: accepted). A written reason of at least 5 characters (as the case team's). */
 export function passProblem(reason: unknown): string | null {
-  if (typeof reason !== "string" || reason.trim().length < 5) return "Say why this warning is passed (at least 5 characters).";
-  if (reason.length > 500) return "Keep the reason under 500 characters.";
+  const t = typeof reason === "string" ? reason.trim() : "";
+  if (t.length < 5) return "Say why this warning is passed (at least 5 characters).";
+  if (t.length > 500) return "Keep the reason under 500 characters.";
   return null;
 }
 
+/** People's words for each code (never the key itself). */
+export const CODE_WORDS: Record<BlockCode | WarnCode, string> = {
+  missing_facts: "Missing facts", fact_problem: "A fact with a problem", open_check: "An open check", out_of_date: "Out of date",
+  missing_signature: "A missing signature", barcode_not_validated: "No validated copy read back", edition_expired: "Past IRCC's accepted-until date",
+  representative_review: "The representative's review", missing_document: "A missing document", finding: "A review finding",
+  edition_superseded: "A newer edition or fee", copy_stale: "A PDF copy out of date", entered_out_of_date: "A portal section entered before a change",
+};
+
 /** Why a code cannot be passed (null: it can): blocks are never passed, only fixed; an unknown code is named. */
 export function cannotPass(code: string): string | null {
-  if ((BLOCK_CODES as readonly string[]).includes(code)) return `"${code}" blocks Ready to file and cannot be passed: fix it instead.`;
-  if (!(WARN_CODES as readonly string[]).includes(code)) return `There is no warning "${code}".`;
+  if ((BLOCK_CODES as readonly string[]).includes(code)) return `${CODE_WORDS[code as BlockCode]} blocks Ready to file and cannot be passed: fix it instead.`;
+  if (!(WARN_CODES as readonly string[]).includes(code)) return "There is no such warning on this filing.";
   return null;
 }
