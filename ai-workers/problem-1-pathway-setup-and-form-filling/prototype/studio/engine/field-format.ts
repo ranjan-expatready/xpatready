@@ -106,7 +106,7 @@ function dateOrder(args: string[]): { check: FormatCheckId; params: Params } | n
 }
 
 export type FormatSource = { form: string; box: string; quote: string | null; from: "pdf_box" | "form_script" | "field_map" };
-export type FormatRule = { check: FormatCheckId; params: Params; words: string; part: string | null; sources: FormatSource[] };
+export type FormatRule = { check: FormatCheckId; params: Params; words: string; part: string | null; part_words: string | null; sources: FormatSource[] };
 export type FieldFormat = { rules: FormatRule[]; not_checked: { function: string; form: string; quote: string | null }[]; read: boolean };
 type BoxFormat = { caption?: string | null; max_chars?: number; checks?: { function: string; args: string[]; quote: { key: string; text: string }[] }[]; ui_picture?: string; format_picture?: string };
 type FormatsFile = { file: string; sha256: string; boxes: Record<string, BoxFormat> };
@@ -135,7 +135,7 @@ export function fieldFormat(boxes: MappedBox[]): FieldFormat {
   const add = (check: FormatCheckId, params: Params, part: string | null, src: FormatSource) => {
     const id = `${check}|${part ?? ""}|${check === "max_length" || check === "min_length" ? "" : JSON.stringify(params)}`;
     const r = rules.get(id);
-    if (!r) { rules.set(id, { check, params, words: FORMAT_CHECKS[check].words(params), part, sources: [src] }); return; }
+    if (!r) { rules.set(id, { check, params, words: FORMAT_CHECKS[check].words(params), part, part_words: part ? partWords(part) : null, sources: [src] }); return; }
     if (check === "max_length" && params.n! < r.params.n!) { r.params = params; r.words = FORMAT_CHECKS[check].words(params); r.sources = [src, ...r.sources]; return; }
     if (!r.sources.some((s) => s.form === src.form && s.box === src.box)) r.sources.push(src);
   };
@@ -164,8 +164,12 @@ export function fieldFormat(boxes: MappedBox[]): FieldFormat {
   return { rules: [...rules.values()].sort((a, b) => order(a) - order(b) || (a.part ?? "").localeCompare(b.part ?? "")), not_checked: [...notChecked.values()], read };
 }
 
+/** An answer part in words (P-63: never "box"; the post office box is "post office number"). */
+const PART_WORD: Record<string, string> = { po_box: "post office number", apt_unit: "apartment or unit", street_number: "street number", street_name: "street name", postal_code: "postal code", nanp_area_code: "area code", nanp_exchange: "exchange", nanp_subscriber: "line number", national_number_without_country_code: "number", country_code: "country code" };
+export const partWords = (part: string) => PART_WORD[part] ?? part.replace(/_/g, " ");
+
 /** The format in one line for a list row ("Digits only · At most 10 characters"), or null when nothing was read. */
-export const formatWords = (f: FieldFormat) => (f.rules.length ? [...new Set(f.rules.map((r) => (r.part ? `${r.part.replace(/_/g, " ")}: ${r.words}` : r.words)))].join(" · ") : null);
+export const formatWords = (f: FieldFormat) => (f.rules.length ? [...new Set(f.rules.map((r) => (r.part ? `${partWords(r.part)}: ${r.words}` : r.words)))].join(" · ") : null);
 
 /** Every format problem of a value, in plain words (empty when it is fine). A value that is an object (an address, a
  *  phone) is checked part by part; an empty value is left to the "required" check. */
