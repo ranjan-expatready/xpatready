@@ -106,7 +106,7 @@ export class PqrDrafts {
     const c = await this.combination(id);
     const snapshot = (await buildSnapshot(this.db, c.workspaceId, c.id, "draft")).snapshot;
     const job = await this.db.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: PQR_STEP, mode: plan.mode === "rules" ? "LOCAL" : plan.mode.toUpperCase(), status: "RUNNING", startedBy: actor.id, message: "Drafting pre-qualification picks" } });
-    const out = { runId: job.id, mode: plan.mode, from: plan.mode === "rules" ? "rules" as string | null : null, proposed: 0, ready: 0, decide: 0, check: 0, already: 0, dropped: [] as { role: string; asks: string; why: string }[], unresolved: [] as { passage: string; reason: string }[], usd: 0, run_files: [] as string[], note: "" };
+    const out = { runId: job.id, mode: plan.mode, from: plan.mode === "rules" ? "rules" as string | null : null, proposed: 0, ready: 0, decide: 0, check: 0, already: 0, removed: 0, dropped: [] as { role: string; asks: string; why: string }[], unresolved: [] as { passage: string; reason: string }[], usd: 0, run_files: [] as string[], note: "" };
     let items: ReturnType<typeof pqrPicksFromRounds>["items"] = [];
     if (plan.mode === "rules") {
       items = pqrPicksByRules(snapshot, c.id, job.id, randomUUID).map(({ id: _i, status: _s, decision: _d, ...x }) => x);
@@ -115,8 +115,10 @@ export class PqrDrafts {
       if (!g.input) { out.note = `${g.code} is not among the official files the AI may read, so only rules can draft these.`; }
       else {
         const ctx: RoundContext = { trail: g.trail, contextKey: c.combinationKey, inputs: [g.input], mode: plan.mode, wanted: async () => true, batchId: job.id };
-        const d = await this.runner.round<PqrAnswer>(PQR_AI, false, ctx);
-        const k = d.ok ? await this.runner.round<PqrAnswer>(PQR_AI, true, ctx) : null;
+        // Review minor (#282): a round that throws ends this job as FAILED, never left running.
+        const safe = async (isCheck: boolean) => { try { return await this.runner.round<PqrAnswer>(PQR_AI, isCheck, ctx); } catch (e) { console.warn(`pqr picks ${job.id}:`, String(e).slice(0, 400)); return { ok: false as const, costUsd: 0, reason: "The AI step stopped on this computer, so nothing of it is used." }; } };
+        const d = await safe(false);
+        const k = d.ok ? await safe(true) : null;
         out.usd = round2(d.costUsd + (k?.costUsd ?? 0));
         out.run_files = [d.ok ? d.runFile : null, k?.ok ? k.runFile : null].filter((x): x is string => !!x);
         if (!d.ok || !k?.ok) out.note = (!d.ok ? d.reason : k && !k.ok ? k.reason : null) ?? "The AI step did not finish.";
@@ -128,18 +130,26 @@ export class PqrDrafts {
         }
       }
     }
-    // One item per person and fact on the queue: a pick already waiting there is not proposed twice.
-    const waiting = new Set((await this.db.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "pqr_pick", status: "waiting" }, select: { identityKey: true } })).map((x) => x.identityKey));
-    const fresh = items.filter((x) => !waiting.has(x.identity.key));
-    out.already = items.length - fresh.length;
+    // One item per person and fact on the queue (break B1): the check and the insert run in one transaction under a lock
+    // per combination, so two drafts at the same moment never both add the same pick. A pick a person removed is not
+    // proposed again by the same producer (break B3): its removal and reason stand; an AI reading of that question (with the
+    // guide's sentence) is new evidence and may still be proposed after a rules pick was removed, and the other way round.
+    let fresh: typeof items = [];
     await this.db.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `pqr_picks:${c.id}`);
+      const seen = await tx.proposalItem.findMany({ where: { workspaceId: c.workspaceId, combinationId: c.id, kind: "pqr_pick", status: { in: ["waiting", "rejected"] } }, select: { identityKey: true, status: true, origin: true } });
+      const waiting = new Set(seen.filter((x) => x.status === "waiting").map((x) => x.identityKey)), removed = new Set(seen.filter((x) => x.status === "rejected").map((x) => `${x.origin}|${x.identityKey}`));
+      const gone = (x: (typeof items)[number]) => removed.has(`${x.origin}|${x.identity.key}`);
+      fresh = items.filter((x) => !waiting.has(x.identity.key) && !gone(x));
+      out.already = items.filter((x) => waiting.has(x.identity.key)).length;
+      out.removed = items.filter((x) => !waiting.has(x.identity.key) && gone(x)).length;
       await insertProposals(tx, c.workspaceId, fresh);
       await tx.draftingJob.update({ where: { id: job.id }, data: { status: out.note && !items.length ? "FAILED" : "COMPLETED", costUsd: out.usd, finishedAt: new Date(), runFile: out.run_files[0] ?? null, message: out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} proposed`, detail: { dropped: out.dropped, unresolved: out.unresolved, run_files: out.run_files } } });
     });
     out.proposed = fresh.length;
     out.ready = fresh.filter((x) => x.confidence === "ready").length; out.check = fresh.filter((x) => x.confidence === "check").length; out.decide = fresh.filter((x) => x.confidence === "decide").length;
     const how = plan.mode === "rules" ? "rules only" : plan.mode === "replay" ? "saved AI answers" : "AI now";
-    out.note = out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} for To review${out.already ? ` (${out.already} already waiting there)` : ""}${out.dropped.length ? `, ${out.dropped.length} left out with the reason` : ""}. Nothing is asked until a person accepts a pick. Sample until the immigration expert confirms.`;
+    out.note = out.note || `${fresh.length} pick${fresh.length === 1 ? "" : "s"} for To review${out.already ? ` (${out.already} already waiting there)` : ""}${out.removed ? `; ${out.removed} a person removed before are not proposed again` : ""}${out.dropped.length ? `, ${out.dropped.length} left out with the reason` : ""}. Nothing is asked until a person accepts a pick. Sample until the immigration expert confirms.`;
     await this.audit.log(c.workspaceId, actor.id, "proposed", "pre-qualification", c.combinationKey, `${actor.name} drafted pre-qualification picks for "${c.label}" (${how}, US$${out.usd.toFixed(2)}): ${fresh.length} to review`, { runId: job.id, mode: plan.mode, run_files: out.run_files }, c.id);
     return out;
   }

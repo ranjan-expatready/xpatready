@@ -62,8 +62,13 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   ok("C4.7 Q5 fail: the approver (no author duty) cannot draft picks (403)", r.status === 403, r.status);
 
   // ---------------------------------------------------------------- rules only (the stand-in producer, now routed)
-  r = await draft(wp, "rules");
+  // Break B1: two drafts at the same moment (same plan) never put the same pick on the queue twice.
+  const p0 = (await plan(wp, "rules")).body.plan_sha256;
+  const both = await Promise.all([1, 2].map(() => call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "rules", planSha256: p0 })));
+  r = both[0];
   const nRules = Number(waiting("rules"));
+  ok("C4.7 R5 fail (break B1): two drafts at the same moment give one pick per person and fact", both.every((x) => x.status === 201) && nRules === both[0].body.proposed + both[1].body.proposed && Math.min(both[0].body.proposed, both[1].body.proposed) === 0 && sql(`select count(*) from (select identity_key from proposal_item where combination_id='${wp}' and kind='pqr_pick' and status='waiting' group by identity_key having count(*) > 1) d`) === "0", both.map((x) => x.body?.proposed));
+  r = both[0].body.proposed ? both[0] : both[1];
   ok("C4.7 pass: rules only puts picks on the one review queue, each a contract item from the rules with its reason, US$0", r.status === 201 && r.body.proposed > 0 && r.body.proposed === nRules && r.body.usd === 0 && r.body.check === r.body.proposed, { proposed: r.body?.proposed, nRules });
   r = await draft(wp, "rules");
   ok("C4.7 R5 fail: drafting again does not put the same pick on the queue twice", r.status === 201 && r.body.proposed === 0 && r.body.already === nRules && Number(waiting("rules")) === nRules, r.body?.note);
@@ -87,8 +92,10 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   // Reject the rules' picks first, so the AI's picks are not already waiting (one item per person and fact).
   const ids = sql(`select string_agg(id::text, ',') from proposal_item where combination_id='${wp}' and kind='pqr_pick' and status='waiting'`).split(",");
   r = await call("POST", "/review/proposals/decide", { ids, action: "reject", reason: "Cleared for the AI's reading (test)." });
+  const again = await draft(wp, "rules");
+  ok("C4.7 Q2 fail (break B3): a pick a person removed is not proposed again by the next draft", again.status === 201 && again.body.proposed === 0 && again.body.removed === ids.length && Number(waiting("rules")) === 0, { proposed: again.body?.proposed, removed: again.body?.removed });
   ok("C4.7 Q2 pass: Remove takes picks off the queue with a reason; nothing is ticked", r.status === 201 || r.status === 200 ? Number(waiting("rules")) === 0 && sql(`select count(*) from fact_source where combination_id='${wp}' and prequalification`) === "0" : false, r.status);
-  save(false, [pick("Date of birth"), pick("Country of citizenship"), pick("criminal history"), pick("uci"), pick("Favourite colour"), pick("Country of birth", "Asked first.", "A sentence that is not in the guide at all."), pick("Marital status", "x")]);
+  save(false, [pick("Date of birth"), pick("Country of citizenship"), pick("criminal history"), pick("uci"), pick("Favourite colour"), pick("Country of birth", "Asked first.", "A sentence that is not in the guide at all."), pick("Marital status", "x"), pick("Family name", "..."), pick("Email address", "Asked first to reach the prospect.", "You must")]);
   save(true, [pick("Date of birth", "The guide tests age-related eligibility."), pick("Criminal history")]);
   r = await draft(wp, "replay");
   const body = r.body;
@@ -101,6 +108,8 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   ok("C4.7 R1/R5 fail: a fact no question asks is left out, never guessed", body.dropped.some((d: any) => d.asks === "Favourite colour" && /No question/.test(d.why)));
   ok("C4.7 R2 fail: a pick whose sentence is not in the guide is left out with the reason", body.dropped.some((d: any) => d.asks === "Country of birth" && /not in Guide 5487/.test(d.why)));
   ok("C4.7 R3 fail: a pick with no reason in words is left out", body.dropped.some((d: any) => d.asks === "Marital status" && /reason in words/.test(d.why)));
+  ok("C4.7 R3 fail (break B12): a reason of dots only is no reason in words", body.dropped.some((d: any) => d.asks === "Family name" && /reason in words/.test(d.why)));
+  ok("C4.7 R2 fail (break B4): two words found anywhere in the guide are not its sentence", body.dropped.some((d: any) => d.asks === "Email address" && /not in Guide 5487/.test(d.why)) && item("principal|person.email_address")[0] === "", body.dropped.filter((d: any) => d.asks === "Email address"));
   ok("C4.7 R2 pass: each pick keeps the guide's sentence, its file and the reason a person reads", (() => { const x = JSON.parse(sql(`select json_build_object('s', source, 'p', payload, 'o', origin, 'b', basis) from proposal_item where id='${dob[0]}'`)); return x.s.quote === QUOTE && x.s.file === guideFile && x.s.quoteFound === true && x.p.reason.length >= 3 && x.o === "ai" && x.b === "SAMPLE"; })());
   ok("C4.7 passages the rounds could not turn into one fact are listed", body.unresolved.length === 1, body.unresolved);
   const view = (await call("GET", `/review/proposals?group=${encodeURIComponent(`combination:${wp}`)}`)).body;
@@ -138,6 +147,8 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   if (r.status >= 300) ok("C4.7 setup: the tick changes by hand after the accept", false, words(r));
   r = await call("POST", `/review/proposals/undo/${b3}`);
   ok("C4.7 Q3 fail: once the tick was changed after the accept, Undo refuses in words and erases nothing (409)", r.status === 409 && /changed or released after it was accepted/.test(words(r)) && tick("principal|person.criminal_history").includes("|false|"), words(r));
+  r = await call("POST", "/review/proposals/decide", { ids: [cit[0]], action: "edit", payload: { kind: "pqr_pick", factKey: "person.family_name", role: "child", reason: "Forged into another question." } });
+  ok("C4.7 Q1 fail (break B5): an edit cannot turn a pick into another question or person (409); nothing ticked", r.status === 409 && /changes only the pick's reason/.test(words(r)) && sql(`select count(*) from fact_source where combination_id='${wp}' and lineage_key='child|person.family_name'`) === "0" && item("principal|person.citizenship")[3] === "waiting", words(r));
   r = await call("POST", "/review/proposals/decide", { ids: [cit[0]], action: "reject" });
   ok("C4.7 Q2 fail: Remove without a reason is refused in words (400)", r.status === 400 && /Say why/.test(words(r)), words(r));
   r = await call("POST", "/review/proposals/decide", { ids: [cit[0]], action: "reject", reason: "Citizenship is asked in the client questionnaire." });
@@ -149,7 +160,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   mkdirSync(VAR, { recursive: true });
   for (const f of ["fake-launch.log", "fake-launch.count"]) rmSync(join(VAR, f), { force: true });
   const rec = (picks: unknown[]) => ({ caller: "live", contract_valid: true, raw_output: JSON.stringify({ picks, unresolved: [] }), drafting_run: { status: "completed", usage: { cost_usd: 0 }, attempts: [{ n: 1, outcome: "ok" }] } });
-  writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs: { "studio-pqr-picks-check": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: rec([pick("Country of citizenship")]) } }, "studio-pqr-picks": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: rec([pick("Country of citizenship")]) } } } }));
+  writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs: { "studio-pqr-picks-check": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: rec([pick("given names")]) } }, "studio-pqr-picks": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record: rec([pick("given names")]) } } } }));
   r = await plan(wp, "live");
   ok("C4.7 L pass: AI now states its worst case before it runs", r.status === 200 && r.body.totals.worst_usd > 0 && r.body.live.approved === true, r.body?.totals);
   r = await draft(wp, "live");
@@ -165,6 +176,22 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   ok("C4.7 L fail: without the switch AI now is refused in words before anything runs (409); the plan says it is off", r.status === 409 && /waits for the founder's Go/.test(words(r)) && rp.body?.live?.approved === false, words(r));
   r = await call("POST", `/combinations/${wp}/pqr-picks/draft`, { mode: "live", planSha256: "0".repeat(64) });
   ok("C4.7 L fail: a live draft is refused (409) and the launcher is never asked", r.status === 409 && readFileSync(join(VAR, "fake-launch.log"), "utf8") === calls, r.status);
+  // ---------------------------------------------------------------- Q4 (review M2): a bulk accept of 80 Ready picks
+  {
+    const facts = (await call("GET", `/combinations/${wp}/fact-sources`)).body.facts as any[];
+    const taken = new Set(sql(`select coalesce(string_agg(identity_key, ','), '') from proposal_item where combination_id='${wp}' and kind='pqr_pick'`).split(","));
+    const many = facts.filter((f) => f.placed && f.source !== "AGENT" && !f.prequalification && f.forms.length && !taken.has(`${f.role}|${f.fact}`)).slice(0, 80);
+    for (const f of written.splice(0)) rmSync(f, { force: true });
+    const picks = many.map((f) => pick(f.fact, "Sample: asked first in this bulk check.", QUOTE, f.role));
+    save(false, picks); save(true, picks);
+    r = await draft(wp, "replay");
+    const ready = sql(`select string_agg(id::text, ',') from proposal_item where combination_id='${wp}' and kind='pqr_pick' and status='waiting' and confidence='ready'`).split(",");
+    const t0 = Date.now();
+    r = await call("POST", "/review/proposals/decide", { ids: ready, action: "accept" });
+    const ticked = Number(sql(`select count(*) from fact_source where combination_id='${wp}' and prequalification and status='DRAFT' and origin='AI_PROPOSAL'`));
+    ok("C4.7 Q4 pass (review M2): 80 Ready picks are accepted together in one batch, each ticked", many.length === 80 && ready.length >= 80 && (r.status === 201 || r.status === 200) && ticked >= 80, { picks: ready.length, status: r.status, ticked, ms: Date.now() - t0 });
+  }
+
 })().catch((e) => { console.error("FAIL  unexpected", e); fail++; }).finally(() => {
   for (const f of written) rmSync(f, { force: true });
   const out = join(STUDIO, "var", "suites"); mkdirSync(out, { recursive: true });

@@ -24,8 +24,8 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
 /** The group an item belongs to: its form edition (S6, one draft per edition), else its combination (W1-10), else its run. */
 export const groupOf = (r: Pick<Row, "formEdition" | "combinationId" | "runId">) => (r.formEdition ? `edition:${r.formEdition}` : r.combinationId ? `combination:${r.combinationId}` : `run:${r.runId}`);
 /** C4.7: "Ask in pre-qualification: Date of birth (Principal applicant)". */
-const pickTitle = (p: Record<string, any>, facts: Map<string, string>) => {
-  const m = facts.get(p.factKey) ?? "an answer this combination's forms need", fact = m.length > 110 ? `${m.slice(0, 109).trimEnd()}…` : m;
+const pickTitle = (p: { factKey?: string; role?: string }, facts: Map<string, string>) => {
+  const m = facts.get(p.factKey ?? "") ?? "an answer this combination's forms need", fact = m.length > 110 ? `${m.slice(0, 109).trimEnd()}…` : m;
   return `Ask in pre-qualification: ${fact} (${p.role === "case" ? "The application" : STARTING_ROLES.find((x) => x.key === p.role)?.label ?? "a person in the application"})`;
 };
 const titleOf = (p: Record<string, any>) => String(p.label ?? p.name ?? p.condition?.sentence ?? p.sentence ?? p.target?.key ?? p.kind ?? "A proposal").slice(0, 160);

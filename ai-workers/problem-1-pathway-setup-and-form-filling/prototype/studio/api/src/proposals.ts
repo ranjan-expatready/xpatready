@@ -195,12 +195,15 @@ export const LANDERS: Partial<Record<ProposalKind, (tx: Tx, r: Row, p: ProposalP
  *  transaction; the draft row it replaced is kept in the item's work, so Undo puts it back as it was. */
 async function landPqrPick(tx: Tx, r: Row, p: ProposalPayload, l: Landing): Promise<{ key: string; work: PqrWork }> {
   if (p.kind !== "pqr_pick") fail("Wrong payload.");
+  // Break B5: an edit changes only a pick's reason; the question and the person it ticks are the pick itself.
+  const was = r.payload as { factKey?: string; role?: string };
+  if ((p as { factKey: string }).factKey !== was.factKey || (p as { role: string }).role !== was.role) fail("An edit changes only the pick's reason. To ask another question, remove this pick and tick that question on the Questionnaires tab.", HttpStatus.CONFLICT);
   const lineageKey = `${(p as { role: string }).role}|${(p as { factKey: string }).factKey}`;
   const before = r.combinationId ? await tx.factSource.findFirst({ where: { combinationId: r.combinationId, lineageKey }, orderBy: { version: "desc" } }) : null;
   const item = { id: r.id, kind: r.kind, runId: r.runId, step: r.step, scope: { formEdition: r.formEdition, combinationId: r.combinationId }, landsOn: r.landsOn, reuse: r.reuse, payload: p,
     source: r.source ?? null, rounds: r.rounds, rules: r.rules, agreement: r.agreement, confidence: r.confidence, reason: r.reason, origin: r.origin, identity: r.identity,
     relatesTo: r.relatesTo, revision: r.revision ?? null, status: "waiting", decision: null, basis: r.basis };
-  await acceptPqrPick(tx, l.actor, item);
+  await acceptPqrPick(tx, l.actor, item, { view: false });
   const made = await tx.factSource.findFirst({ where: { combinationId: r.combinationId!, lineageKey }, orderBy: { version: "desc" } });
   const { updatedAt, ...kept } = before ?? ({} as NonNullable<typeof before>);
   return { key: lineageKey, work: { pqrRowId: made!.id, pqrBefore: before?.status === "DRAFT" ? { ...kept, updatedAt: updatedAt.toISOString() } : null } };
@@ -304,7 +307,9 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       out.push({ id: r.id, landedAs });
     }
     return out;
-  });
+  // Review M2 (#282): a bulk accept of up to BATCH_MAX picks checks each against the combination inside this one
+  // transaction; Prisma's 5 s default ended batches above about 45 picks with nothing accepted.
+  }, { timeout: 120_000, maxWait: 10_000 });
   await audit.log(workspaceId, actor.id, "decided", "proposals", batchId, `${actor.name} ${d.action === "accept" ? "accepted" : d.action === "edit" ? "edited and accepted" : "rejected"} ${landed.length} proposal${landed.length === 1 ? "" : "s"}${reason ? `: ${reason}` : ""}`);
   return { batchId, items: landed };
 }
@@ -335,7 +340,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
       const { pqr } = (r.work ?? {}) as { pqr?: PqrWork & { stamp: string } };
       if (!pqr || !r.decidedKey) continue;
       if (JSON.stringify(await pqrStamp(tx, r.combinationId, r.decidedKey)) !== pqr.stamp)
-        fail(`The pre-qualification tick for "${r.decidedKey}" was changed or released after it was accepted, so Undo would erase that change. Nothing was undone: change it on the Questionnaires tab instead.`, HttpStatus.CONFLICT);
+        fail(`A pre-qualification tick this decision made was changed or released after it was accepted, so Undo would erase that change. Nothing was undone: change it on the Questionnaires tab instead.`, HttpStatus.CONFLICT);
       await tx.factSource.delete({ where: { id: pqr.pqrRowId } });
       if (pqr.pqrBefore) await tx.factSource.create({ data: { ...(pqr.pqrBefore as Prisma.FactSourceUncheckedCreateInput), updatedAt: new Date(String(pqr.pqrBefore.updatedAt)) } });
     }

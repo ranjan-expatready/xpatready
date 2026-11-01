@@ -32,6 +32,9 @@ export const pqrShapeOk = (o: unknown): o is PqrAnswer => {
 export const sameText = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
 const words = (s: string) => sameText(s).replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
 
+/** R2: a quote long enough to be the guide's sentence: at least 5 words and 25 letters. */
+export const isSentence = (q: string) => (q.trim().split(/\s+/).filter((w) => /\p{L}/u.test(w)).length >= 5) && (q.match(/\p{L}/gu) ?? []).length >= 25;
+
 /** R1: the facts a prospect may be asked in pre-qualification, per person role. */
 export function pqrCandidates(s: Snapshot): FactSourceView[] {
   return factSources(s).filter((f) => f.placed && f.source !== "AGENT" && !f.prequalification && f.forms.length > 0);
@@ -64,17 +67,18 @@ export function pqrPicksFromRounds(s: Snapshot, rounds: { draft: Round; check: R
     for (const p of r.output.picks) {
       const f = matchFact(candidates, p.role, p.asks);
       if (!f) {
-        const named = namedBy(all, p.role, p.asks), any = named.length === 1 ? named[0] : null;
+        const named = namedBy(all, p.role, p.asks), one = named.length === 1 ? named[0] : null;
         const why = named.length > 1 ? `"${p.asks}" could be ${named.length} questions of this person, so it is not guessed: pick it by hand (${which}).`
-          : !any ? `No question of this combination asks "${p.asks}" of this person, so a prospect cannot be asked it (${which}).`
-          : any.prequalification ? `"${any.label}" is already asked in pre-qualification (${which}).`
-          : any.source === "AGENT" ? `"${any.label}" comes from the case officer: a prospect is asked only what they can answer (${which}).`
-          : `"${any.label}" is not asked by a question of this combination yet (${which}).`;
+          : !one ? `No question of this combination asks "${p.asks}" of this person, so a prospect cannot be asked it (${which}).`
+          : one.prequalification ? `"${one.label}" is already asked in pre-qualification (${which}).`
+          : one.source === "AGENT" ? `"${one.label}" comes from the case officer: a prospect is asked only what they can answer (${which}).`
+          : `"${one.label}" is not asked by a question of this combination yet (${which}).`;
         dropped.push({ role: p.role, asks: p.asks, why }); continue;
       }
-      if (!p.quote.trim() || !text.includes(sameText(p.quote))) { dropped.push({ role: p.role, asks: p.asks, why: `Its sentence is not in ${guide.code}'s text, so it is not proposed (${which}).` }); continue; }
+      // Break B4: a quote is a sentence (at least 5 words and 25 letters), not a word that is found anywhere.
+      if (!isSentence(p.quote) || !text.includes(sameText(p.quote))) { dropped.push({ role: p.role, asks: p.asks, why: `Its sentence is not in ${guide.code}'s text, so it is not proposed (${which}).` }); continue; }
       const reason = p.why.trim();
-      if (reason.length < 3 || reason.length > 300) { dropped.push({ role: p.role, asks: p.asks, why: `It has no reason in words of 3 to 300 characters (${which}).` }); continue; }
+      if (reason.length > 300 || (reason.match(/\p{L}/gu) ?? []).length < 3) { dropped.push({ role: p.role, asks: p.asks, why: `It has no reason in words of 3 to 300 characters (${which}).` }); continue; }
       const k = `${f.role}|${f.fact}`;
       if (!out.has(k)) out.set(k, { f, p });
     }
