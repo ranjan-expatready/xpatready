@@ -1,7 +1,7 @@
 // WCAG 2.4.7 (focus visible), the handover of #210: `web/src/styles/index.css` removed the outline from every focused
 // element app-wide. Now every keyboard-focused element shows a 2 px ring in the brand colour (--color-ring), or the ring a
-// control draws itself. Walked by keyboard (Tab only) on three pages, Immigration programs, a combination's Forms tab and
-// the Form library, in light and dark; axe (WCAG 2.2 AA) on each. No model call (US$0).
+// control draws itself. Walked by keyboard (Tab only) on four pages, Immigration programs, a combination's Forms tab, the
+// Form library and To review, in light and dark; axe (WCAG 2.2 AA) on each. No model call (US$0).
 //   zsh studio/tools/isolated.sh screens_focus 4443 start && node studio/tests/check_focus_ring_browser.cjs 4443
 const fs = require("node:fs");
 const { chromium } = require("../node_modules/playwright");
@@ -21,7 +21,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.goto(BASE); await p.evaluate(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch { /* ignore */ } });
   if (!(await api("/demo/status")).body?.loaded) step("setup: the sample loads", (await api("/demo/load", { method: "POST" })).status === 201);
   const vv = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.rows.find((r) => r.label === "Visitor visa").combinationId;
-  const PAGES = [["Immigration programs", "/", "main h1"], ["a combination's Forms tab", `/c/${vv}/forms`, "main h1"], ["the Form library", "/library/forms", "main h1"]];
+  const PAGES = [["Immigration programs", "/", "main h1"], ["a combination's Forms tab", `/c/${vv}/forms`, "main h1"], ["the Form library", "/library/forms", "main h1"], ["To review", "/review", "main h1"]];
 
   /** Tab through the page; for each focused element, whether it shows a focus indicator: an outline of at least 2 px
    *  that is not transparent, or a ring (box shadow) the control draws itself. */
@@ -40,7 +40,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
         // A ring: a box-shadow layer with a spread of at least 1 px in a colour that is not fully transparent.
         const ring = (cs.boxShadow ?? "none").split(/,(?![^(]*\))/).some((l) => { const spread = /(-?[\d.]+)px\s*$/.exec(l.trim()); return !!spread && parseFloat(spread[1]) >= 1 && !/rgba\(\d+, \d+, \d+, 0\)|\/ 0\)/.test(l); });
         const name = `${el.tagName.toLowerCase()}${el.getAttribute("role") ? `[${el.getAttribute("role")}]` : ""} "${(el.getAttribute("aria-label") ?? el.textContent ?? "").trim().slice(0, 40)}"`;
-        return { name, visible: !!(outline || ring), outline, outlineColor: cs.outlineColor, matches: el.matches(":focus-visible") };
+        return { name, visible: !!(outline || ring), both: !!(outline && ring), outline, outlineColor: cs.outlineColor, matches: el.matches(":focus-visible") };
       });
       if (f) seen.push(f);
     }
@@ -55,6 +55,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       await p.waitForTimeout(300);
       const seen = await walk();
       const bare = seen.filter((f) => f.matches && !f.visible);
+      const both = seen.filter((f) => f.matches && f.both);
+      step(`WCAG 2.4.7 (${scheme}): on ${label}, no control shows two indicators (the app-wide ring stays under a control's own ring)`, both.length === 0, both.map((f) => f.name));
       step(`WCAG 2.4.7 (${scheme}): on ${label}, every element reached by Tab shows a focus ring (${seen.length} stops)`, seen.length >= 10 && bare.length === 0, bare.length ? bare.map((f) => f.name) : `${seen.length} stops`);
       const ringColour = await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--color-ring").trim());
       const outlined = seen.filter((f) => f.outline);
