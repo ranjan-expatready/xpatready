@@ -35,3 +35,20 @@ export type FormProgress = {
   /** Every step not done, with how many things are open and who acts. */
   whats_left: { step: StepKey; what: string; count: number; who: string | null; href: string | null }[];
 };
+
+/** Slice 3 (review 28b3bba3 Major 1, concept §6 "one more field progress{n,label,state} per line"): a form's step chip on
+ *  the Forms tab, in the tab's one workspace response (never one request per row). */
+export const STEP_SHORT: Record<StepKey, string> = {
+  attach: "Add the form", map: "Field map", review: "Review", fields: "New shared fields", second_person: "Second person", complete: "Complete",
+};
+export type FormStepChip = {
+  /** The first step not done (null: all six done), its number and short name, its state and how many things are open. */
+  current: StepKey | null; n: number; label: string; state: ProgressState; count: number;
+  /** Whether the asking person has a step of their own on this form now (the rail names it). */
+  yours: boolean;
+};
+export const chipOf = (p: FormProgress): FormStepChip => {
+  const s = p.current ? p.steps.find((x) => x.key === p.current)! : null;
+  return s ? { current: s.key, n: s.n, label: STEP_SHORT[s.key], state: s.state, count: s.count, yours: !!p.next_for_you }
+    : { current: null, n: 6, label: STEP_SHORT.complete, state: "done", count: 0, yours: false };
+};
