@@ -36,7 +36,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const go = async (id, tab) => { await p.goto(`${BASE}/c/${id}/${tab}`); await p.getByRole("tablist", { name: "Combination" }).waitFor(); await settle(); };
 
   // ======================================================== L8, L2, L3: Who can be, filled from the guide while editing
-  await go(sv, "questionnaires");
+  // Slice C1 (P-161 (2)): the people card sits in Before forms on the Forms tab.
+  await go(sv, "forms");
   const who = p.locator("[data-who-can-be]");
   // Board v2 (P-147 §3): the card is folded to one line; "Show and edit" opens the built table.
   await who.getByRole("button", { name: "Show and edit" }).click();
