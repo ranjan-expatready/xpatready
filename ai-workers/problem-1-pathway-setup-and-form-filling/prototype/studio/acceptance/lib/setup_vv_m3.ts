@@ -21,6 +21,9 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
   // signed by the applicant and the representative.
   r = await call("POST", `/combinations/${vv}/forms`, { formKey: "IMM 5476", who: "each_applicant" }, AUTHOR);
   ok("S2 IMM 5476 joins the combination from the library", r.status < 300 || /already/.test(r.body?.detail ?? ""), r.body?.detail ?? r.status);
+  // G8 (C1.8, C8.1): before who signs is set, the release check names IMM 5476's missing signer (a warning, not silence).
+  const unsigned = ((await call("GET", `/combinations/${vv}`, undefined, AUTHOR)).body?.draft?.problems ?? []) as { level: string; item: string; message: string }[];
+  ok("S2w (G8) a form line with no signer set is named by the release check before release", unsigned.some((x) => /IMM 5476/.test(`${x.item} ${x.message}`) && /sign/i.test(x.message)), unsigned.filter((x) => /IMM 5476/.test(x.item)).slice(0, 3));
   r = await call("PATCH", `/combinations/${vv}/forms/IMM%205476`, { minAge: 18, signedBy: "person_and_representative" }, AUTHOR);
   ok("S2 IMM 5476: each applicant 18 or older, signed by the person and the representative", r.status < 300, r.body?.detail ?? r.status);
   // VV-R07 and VV-R09: IMM 5707 by each person 18 or older; IMM 5257 by each person, a parent signs under 18.

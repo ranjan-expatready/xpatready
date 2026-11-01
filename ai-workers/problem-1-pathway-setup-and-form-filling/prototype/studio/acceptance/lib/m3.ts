@@ -54,7 +54,9 @@ export async function firms(): Promise<Firms> {
   return firmsCache;
 }
 
-export type Person = { role: "principal" | "spouse_or_partner" | "child"; name: string; dob: string };
+/** `dob: null` leaves the date of birth unanswered (adding a person asks only for a name, G15); `applies: false` is a
+ *  person on the case who is not travelling (P-209). */
+export type Person = { role: "principal" | "spouse_or_partner" | "child"; name: string; dob: string | null; applies?: boolean };
 /** The Visitor visa family used across the pack (Sample people, no real names): Client A, an adult spouse, a child of
  *  10 (no biometrics, under 14) and a child of 15 (biometrics; IMM 5707 not needed under 18). */
 export const FAMILY: Person[] = [
@@ -68,7 +70,7 @@ export const FAMILY: Person[] = [
 const OFFICERS = new Map<string, string>();
 const PEOPLE = new Map<string, Map<string, Person>>();
 export const officerOf = (caseId: string) => OFFICERS.get(caseId) ?? OFFICER;
-const isMinor = (dob: string) => dob > yearsAgo(18);
+const isMinor = (dob: string | null) => !!dob && dob > yearsAgo(18);
 
 export type Case = { id: string; subjects: Record<string, string>; caseSubject: string; officer: string; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- responses read loosely, as in the other checks
 /** Opens a Visitor visa case with these people. `team` names the representative of record and case officers (C6.11);
@@ -86,11 +88,11 @@ export async function openCase(vv: string, people: Person[] = FAMILY, team?: { r
   const p0 = (r.body?.people ?? []).find((p: { role: string }) => p.role === "principal"); if (p0) { subjects[principal.name] = p0.subject_id; who.set(p0.subject_id, principal); }
   const caseSubject: string = (r.body?.people ?? []).find((p: { role: string }) => p.role === "case")?.subject_id ?? "";
   for (const p of people.filter((x) => x.role !== "principal")) {
-    const a = await call("POST", `/runtime/cases/${id}/people`, { role: p.role, displayName: p.name }, officer);
+    const a = await call("POST", `/runtime/cases/${id}/people`, { role: p.role, displayName: p.name, ...(p.applies === false ? { applies: false } : {}) }, officer);
     if (a.body?.subject_id) { subjects[p.name] = a.body.subject_id; who.set(a.body.subject_id, p); }
   }
   PEOPLE.set(id, who);
-  for (const p of people) if (subjects[p.name]) await answer(id, subjects[p.name], "person.date_of_birth", p.dob);
+  for (const p of people) if (subjects[p.name] && p.dob) await answer(id, subjects[p.name], "person.date_of_birth", p.dob);
   return { id, subjects, caseSubject, officer, body: r.body };
 }
 

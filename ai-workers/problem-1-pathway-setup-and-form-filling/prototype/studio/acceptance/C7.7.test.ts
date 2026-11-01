@@ -7,7 +7,7 @@
 // Breadth, after Visitor visa: Paper lines with the barcode page, waiting filings ("Cannot start yet"), our-format copy
 // for an online-only form with no IRCC PDF.
 //   tsx studio/acceptance/C7.7.test.ts 4440 xr_studio_accept
-import { FAMILY, OFFICER, call, filingOf, fillEverything, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, until } from "./lib/m3.ts";
+import { FAMILY, OFFICER, call, filingOf, fillEverything, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, sql, until } from "./lib/m3.ts";
 
 const STATES = ["cannot_start", "to_do", "in_progress", "ready", "out_of_date", "done", "not_needed"];
 
@@ -49,4 +49,14 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   r = await call("POST", `/runtime/items/${itemsOf(p, P, "IMM 5257")[0]?.id}/pdf-copy`, {}, OFFICER);
   ok("C7.7-14 fail: a PDF upload line has no separate \"PDF copy\" (its own PDF is the deliverable): 409 or 422", [409, 422].includes(r.status), r.status);
   ok("C7.7-15 pass (data): one filing per person, items keyed by filing × person × form", filingOf(p, P)?.id !== filingOf(p, S)?.id && Number(sql(`select count(*) from filing_item where case_id='${c.id}' and kind='form'`) ?? 0) === 8);
+  // G24, G25 (QA-139): a copy ready to file never asks to write by hand a fact the case holds, and never shows engine
+  // words. IMM 5707 for the principal: the case has children, so "has any children" is written, not left by hand.
+  const c5707 = await generateCopy(c.id, "IMM 5707", P);
+  const hand = JSON.parse(sql(`select coalesce(json_agg(b), '[]') from form_instance f, jsonb_array_elements(f.result_json->'boxes') b where f.id='${c5707}' and b->>'result' = 'by hand'`) ?? "null") as { fact: string | null; why?: string }[] | null;
+  const held = new Set((sql(`select distinct canonical_field_key from client_canonical_answer where subject_id='${P}' and superseded_by_id is null`) ?? "").split("\n").filter(Boolean));
+  ok("C7.7-16 pass (G25): the principal's IMM 5707 copy leaves nothing by hand that the case holds (\"has any children\" is written from the children on the case)", !!c5707 && Array.isArray(hand) && !hand.some((b) => !!b.fact && held.has(b.fact)) && !hand.some((b) => /child/i.test(b.fact ?? "")), hand?.filter((b) => b.fact && held.has(b.fact)));
+  const shown = (await call("GET", `/runtime/form-copies/${c5707}`, undefined, OFFICER)).body?.by_hand as { label: string; why: string }[] | undefined;
+  ok("C7.7-17 pass (G24, QA-139): every \"To write by hand\" line is in plain words: no engine step names", Array.isArray(shown) && !shown.some((x) => /derived:|phone_part:|derive_inverse:|executable set|[a-z]+\.[a-z_]+\(/.test(`${x.label} ${x.why}`)), shown);
+  const rd = readinessOf((await prepare(c.id)).p, filingOf((await prepare(c.id)).p, P)?.id);
+  ok("C7.7-18 pass: any line still to write by hand shows on the filing as a warning naming the form and the line (BR-9: everything else warns)", !!rd && ((shown ?? []).length === 0 || (rd.warns ?? []).some((w) => w.code === "hand_write" && /IMM 5707/.test(w.words))), rd?.warns);
 });

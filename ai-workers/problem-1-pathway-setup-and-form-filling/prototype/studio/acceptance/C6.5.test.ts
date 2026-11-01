@@ -21,7 +21,7 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   const section = v?.sections?.find((s: { subjectId: string; questions: { fact: string }[] }) => s.subjectId === P && s.questions.some((q) => q.fact === "person.passport_number"))?.section;
   const lines = (await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people?.find((x: { subject: string }) => x.subject === P)?.lines ?? [];
   const passLine = lines.find((x: { label: string }) => /passport/i.test(x.label))?.id;
-  const doc = { surname: "SAMPLED", given: "CLIENT A", number: "SAMPLEP12", nationality: "IND", dob: FAMILY[0].dob, sex: "X" as const, expiry: FIXED.expiry };
+  const doc = { surname: "SAMPLED", given: "CLIENT A", number: "SAMPLEP12", nationality: "IND", dob: FAMILY[0].dob!, sex: "X" as const, expiry: FIXED.expiry };
 
   let u = await upload(PORT, `/runtime/checklist-lines/${passLine}/documents`, passportPdf(doc), "sample-passport.pdf", OFFICER);
   ok("C6.5-1 pass: the synthetic passport is uploaded to Client A's passport line", u.status === 201, u.status);
@@ -68,7 +68,7 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   // Unreadable is flagged, never guessed.
   const S = c.subjects["Sample Spouse A"];
   const sLine = ((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people?.find((x: { subject: string }) => x.subject === S)?.lines ?? []).find((x: { label: string }) => /passport/i.test(x.label))?.id;
-  await upload(PORT, `/runtime/checklist-lines/${sLine}/documents`, passportPdf({ ...doc, surname: "SAMPLES", number: "SAMPLES34", dob: FAMILY[1].dob }, true), "sample-passport-bad.pdf", OFFICER);
+  await upload(PORT, `/runtime/checklist-lines/${sLine}/documents`, passportPdf({ ...doc, surname: "SAMPLES", number: "SAMPLES34", dob: FAMILY[1].dob! }, true), "sample-passport-bad.pdf", OFFICER);
   r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/fill-from-documents`, { subjectId: S }, OFFICER);
   ok("C6.5-18 fail: a coded line whose check digit fails proposes no passport number; the field is flagged unreadable", r.status === 200 && !(r.body?.proposals ?? []).some((x: Proposal) => x.fact === "person.passport_number") && (r.body?.unreadable ?? []).some((x: { fact: string }) => x.fact === "person.passport_number"), r.body);
 
