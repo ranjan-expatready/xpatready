@@ -294,7 +294,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const countSays = async () => (await p.locator('[data-list-count][role="status"]').textContent()) ?? "";
     step("X5 review m2 fail: the count is a status, and the button says forms", /^Showing 100 of \d+ forms$/.test(await countSays()) && /Show \d+ more forms/.test((await pager.textContent()) ?? ""), await countSays());
     // Review (310acb9c) 1 / break m16: a second Enter after Show more opens no drawer (focus is on the row, not its button).
-    await pager.getByRole("button").focus(); await p.keyboard.press("Enter"); await sleep(60); await p.keyboard.press("Enter"); await sleep(300);
+    // The second Enter waits for the first one's rows and focus (before: a fixed 60 ms, which under load pressed Show more
+    // twice; 91/92 on main). The wait fails loudly: no .catch, so a Show more that never lands focus on row 101 fails here.
+    await pager.getByRole("button").focus(); await p.keyboard.press("Enter");
+    await p.waitForFunction(() => { const rows = [...document.querySelectorAll("tr[data-form]")]; const tr = document.activeElement?.closest("tr[data-form]"); return rows.length === 150 && !!tr && rows.indexOf(tr) === 100; }, null, { timeout: 10000 });
+    await p.keyboard.press("Enter"); await sleep(300);
     step("X5 review (310acb9c) 1 fail: a second Enter after Show more opens no drawer (before: row 51's drawer opened)", (await p.getByRole("dialog").count()) === 0 && (await p.locator("tr[data-form]").count()) === 150, `dialogs ${await p.getByRole("dialog").count()}, rows ${await p.locator("tr[data-form]").count()}`);
     if (await p.getByRole("dialog").count()) { await p.keyboard.press("Escape"); await sleep(200); }
     while (await pager.count()) { await pager.getByRole("button").click(); await sleep(200); }
