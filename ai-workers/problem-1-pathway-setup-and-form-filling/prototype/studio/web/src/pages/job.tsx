@@ -206,7 +206,7 @@ function NewFieldForm({ item, busy, onSave, error }: { item: { proposedKey: stri
       <div className="grid gap-2 md:grid-cols-[1fr_2fr_auto]">
         <Field label="Name"><Input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} maxLength={120} /></Field>
         <Field label="Meaning"><Input value={meaning} onChange={(e) => setMeaning(e.target.value)} /></Field>
-        <Field label="Kind of value"><Select value={type} onChange={(e) => setType(e.target.value)}>{["text", "date", "yes_no", "code", "country", "number", "address", "phone", "email"].map((t) => <option key={t}>{t}</option>)}</Select></Field>
+        <Field label="Kind of value"><Select value={type} onChange={(e) => setType(e.target.value)}>{["text", "date", "yes_no", "code", "country", "number", "address", "phone", "email", "long_text", "multi_choice", "person_name", "period_history", "declaration"].map((t) => <option key={t}>{t}</option>)}</Select></Field>
       </div>
       <Field label={close ? `Why is this not "${close.key}"? (needed)` : "Reason (optional)"} hint={close ? "The library already has a field that could fit; say why this one means something else." : undefined}><Textarea className="min-h-10" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} /></Field>
       {error ? <p role="alert" className="text-sm text-text-danger">{error}</p> : null}
