@@ -234,7 +234,18 @@ export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], r
     known.set(kkey(about(a.subjectId), a.field, row), v);
     if (row === 0 && !known.has(kkey(about(a.subjectId), a.field))) known.set(kkey(about(a.subjectId), a.field), v);
   }
+  // C7.7 (G25): "has any children" is worked out from the people on the case, never left by hand when the case holds them.
+  for (const [subjectId, value] of hasChildrenOf(people)) known.set(kkey(subjectId, HAS_CHILDREN), { value, status: "confirmed", source: HAS_CHILDREN_SOURCE });
   return { known, confirm };
+}
+
+/** C7.7 (G25, QA-139): `person.has_children` is derived for the principal and the spouse or partner: Yes when the case
+ *  holds a child. With no child on the case it stays a question (a child may exist who is not on this application), so
+ *  only Yes is ever derived. A derived Yes overrides an answer of No. */
+export const HAS_CHILDREN = "person.has_children", HAS_CHILDREN_SOURCE = "worked out: the case holds this family's children";
+export function hasChildrenOf(people: Participant[]): Map<string, true> {
+  if (!people.some((p) => p.role === "child")) return new Map();
+  return new Map(people.filter((p) => p.role === "principal" || p.role === "spouse_or_partner").map((p) => [p.subjectId, true as const]));
 }
 
 /** Rows in their order; equal orders (never written by the API) fall back to the row id, so a form's first row is stable. */
@@ -266,7 +277,8 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   r.questions.forEach((q, i) => { if (!first.has(`${q.section}|${q.about}`)) first.set(`${q.section}|${q.about}`, i); });
   const placed = (fact: string) => placementOf(s, fact)?.order ?? Number.MAX_SAFE_INTEGER;
   const countries = (s.canonical_fields as FieldDef[]).find((f) => f.answer_list?.key === "country")?.answer_list?.values.map((v) => v.label) ?? null;
-  const needed = r.questions.filter((q) => !q.about.includes("/") && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
+  const derivedYes = hasChildrenOf(people);
+  const needed = r.questions.filter((q) => !q.about.includes("/") && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
     .sort((a, b) => first.get(`${a.section}|${a.about}`)! - first.get(`${b.section}|${b.about}`)! || placed(a.fact) - placed(b.fact));
   const notAsked = r.questions.filter((q) => !q.about.includes("/")).length - needed.length;
   const fromDocuments = new Map<string, { subjectId: string; document: string; facts: string[] }>();

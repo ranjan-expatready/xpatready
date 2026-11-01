@@ -87,6 +87,9 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     if ((m = /^date:(YYYY-MM-DD|YYYY|MM|DD)$/.exec(s))) { const d = DATE.exec(String(v)); if (!d) return hand(`not a full date: ${v}`); v = m[1] === "YYYY-MM-DD" ? d[0] : m[1] === "YYYY" ? d[1] : m[1] === "MM" ? d[2] : d[3]; continue; }
     if ((m = /^yes_no_code:([^/]+)\/(.+)$/.exec(s))) { if (typeof v !== "boolean") return hand(`not a yes/no value: ${v}`); v = v ? m[1] : m[2]; continue; }
     if ((m = /^derive:Y if any .+ (?:is|are) recorded, else N$/.exec(s))) { v = (Array.isArray(v) ? v.length > 0 : v !== false && v !== "") ? "Y" : "N"; continue; }
+    // C7.7 (G25): an inverted yes/no box, "derive_inverse:1 when the subject has no child records (…), 0 when any child
+    // exists": the first code when the fact is No, the second when it is Yes. Only a yes/no value; anything else by hand.
+    if ((m = /^derive_inverse:(\w+) when [^,]+?(?: \([^)]*\))?, (\w+) when .+$/.exec(s))) { const yn = typeof v === "boolean" ? v : /^(y|yes|true)$/i.test(String(v)) ? true : /^(n|no|false)$/i.test(String(v)) ? false : null; if (yn === null) return hand(`not a yes/no value: ${v}`); v = yn ? m[2] : m[1]; continue; }
     if ((m = /^derive:1 if (?:fax )?country calling code is (not )?1(?: \([^)]*\))?, else 0$/.exec(s))) { const cc = String((v as Phone).country_code ?? ""); if (!cc) return hand("phone has no country calling code"); v = (cc === "1") !== !!m[1] ? "1" : "0"; continue; }
     if ((m = /^phone_part:(extension|country_calling_code|national_number)\b/.exec(s))) {
       const p = v as Phone; const part = m[1] === "extension" ? p.extension : m[1] === "country_calling_code" ? p.country_code : p.number;
