@@ -15,12 +15,13 @@ const S = {
   combination: { key: "vv.single" },
   canonical_fields: [{ id: "person.date_of_birth", value_type: "date" }, { id: "person.has_criminal_record", value_type: "yes_no" }, { id: "case.purpose", value_type: "code" }],
   derived_fields: [],
-  document_types: [{ key: "passport", name: "Passport" }, { key: "police_certificate", name: "Police certificate" }, { key: "invitation_letter", name: "Invitation letter" }, { key: "birth_certificate", name: "Birth certificate" }, { key: "photo", name: "Photo" }],
+  document_types: [{ key: "passport", name: "Passport" }, { key: "police_certificate", name: "Police certificate" }, { key: "invitation_letter", name: "Invitation letter" }, { key: "birth_certificate", name: "Birth certificate" }, { key: "photo", name: "Photo" }, { key: "marriage_certificate", name: "Marriage certificate" }],
   document_requirements: [
     req("passport:each_applicant", "passport", "each_applicant", { alternatives: ["photo"], source_quote: "Sample quote" }),
     req("police:each_adult_18_plus", "police_certificate", "each_adult_18_plus"),
     req("invitation:case", "invitation_letter", "principal_applicant", { base_or_conditional: "conditional", condition: { subjectKind: "CASE", op: "eq", field: "case.purpose", value: "family" }, condition_plain: "the visit is to see family" }),
     req("birth:children", "birth_certificate", "each_dependent_child"),
+    req("marriage:spouse", "marriage_certificate", "spouse_or_partner"),
   ],
 } as unknown as Snapshot;
 const P = (id: string, role: Participant["role"], applies = true): Participant => ({ subjectId: id, role, label: `Client ${id}`, applies });
@@ -62,6 +63,12 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
   const open = line(run(known(adults)), "A", "invitation_letter")!;
   ok("C6.4 condition: unanswered → answer first, naming the fact", open.state === "answer_first" && open.missing.includes("case.purpose"), open);
   ok("C6.4 condition: the list changes when the answer changes (dynamic)", line(run(known({ ...adults, "case|case.purpose": "family" })), "A", "invitation_letter")!.state !== tourism.state);
+}
+// qa G23: a line for a role appears once that person is added to the case.
+{
+  const alone = run(known(adults), [P("case", "case"), P("A", "principal")]);
+  ok("C6.4 G23 (fail): with no spouse on the case nobody has a marriage certificate line", alone.people.every((p) => !p.lines.some((l) => l.document.key === "marriage_certificate")));
+  ok("C6.4 G23: once a spouse is added, the marriage certificate is on the spouse's list", line(run(known(adults)), "B", "marriage_certificate")?.state === "needed");
 }
 // Order and counts: needed first, then answer first, then not needed.
 {

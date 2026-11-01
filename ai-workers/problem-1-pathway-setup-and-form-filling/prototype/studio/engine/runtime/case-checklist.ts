@@ -66,9 +66,10 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     const document = { key: t?.key ?? r.document_type_key, name: t?.name ?? r.document_type };
     const kind = r.condition?.subjectKind;
     if (kind === "DOCUMENT") continue;
-    // A case-level line ("case") belongs to the principal's list; everyone else by whose document it is.
+    // A case-level line ("case") belongs to the principal's list; everyone else by whose document it is. A person not
+    // applying has no filing on a Visitor visa (C6.12), so no lines of their own.
     const holders = (kind === "CASE" ? ["case"] : subjectsFor(persons, r.who, kind === "EACH_APPLICANT" || kind === "EACH_PERSON" ? undefined : kind))
-      .map((h) => (h === "case" ? persons.find((p) => p.role === "principal")?.id : h)).filter((h): h is string => !!h && byPerson.has(h));
+      .map((h) => (h === "case" ? persons.find((p) => p.role === "principal")?.id : h)).filter((h): h is string => !!h && byPerson.has(h) && persons.find((p) => p.id === h)!.applies);
     for (const h of new Set(holders)) {
       let state: LineState = "needed", why = r.base_or_conditional === "base" ? "Always needed for this application." : `Needed: ${r.condition_plain ?? "its condition holds"}.`, missing: string[] = [];
       if (r.who === "each_adult_18_plus") {
