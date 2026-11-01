@@ -19,8 +19,11 @@ export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: Combina
   const row = sum?.row;
   const missing = row && row.status !== "READY" ? row.missing : [];
   const k = d.draft.counts;
-  const errors = d.draft.problems.filter((p) => p.level === "error").length;
-  const warnings = d.draft.problems.length - errors;
+  // F8: "Nothing to release yet" is a release problem the missing list already says ("No forms yet", with its step);
+  // the Rules and checks tile counts rule and check problems only (Lead check item 3: no setup shows "no problems").
+  const ruleProblems = d.draft.problems.filter((p) => p.where !== "Release");
+  const errors = ruleProblems.filter((p) => p.level === "error").length;
+  const warnings = ruleProblems.length - errors;
   const missingRef = React.useRef<HTMLElement>(null);
   React.useEffect(() => { if (show === "missing") { missingRef.current?.scrollIntoView({ block: "center" }); missingRef.current?.focus({ preventScroll: true }); } }, [show, !!sum]);
   const people = d.combination.participants as { role: string; label: string; min: number; max: number; applies?: boolean }[];
@@ -43,7 +46,7 @@ export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: Combina
           sub={errors || warnings ? <Link className="text-text-link underline" to={`/c/${id}/review`}>{errors ? `${errors} problem${errors === 1 ? "" : "s"} to fix` : `${warnings} warning${warnings === 1 ? "" : "s"}`}: see them</Link> : "no problems"} />
       </div>
       <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm" aria-labelledby="ov-people" data-overview-people>
-        <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="ov-people" className="font-semibold">Who can be in this application</h2><Link className="text-sm text-text-link underline" to={`/c/${id}/questionnaires`}>Change in Questionnaires</Link></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="ov-people" className="font-semibold">Who can be in this application</h2><Link className="text-sm text-text-link underline" to={`/c/${id}/forms?focus=people%3Acard`}>Change on Forms</Link></div>
         <ul className="mt-2 flex flex-wrap gap-2 text-sm">{people.filter((p) => p.max > 0).map((p) => <li key={p.role} className="rounded-full border border-border px-3 py-1">{p.label} · {p.min === p.max ? p.min : `${p.min} to ${p.max}`}{p.applies !== false ? " · applicant" : ""}</li>)}</ul>
         <p className="mt-2 text-xs text-text-muted">Each person marked as applicant gets their own forms, questions and documents. Numbers Sample until the immigration expert confirms.</p>
       </section>

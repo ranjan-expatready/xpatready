@@ -13,7 +13,7 @@ import { manifest } from "../../engine/import.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
 import { INDEX_URL } from "./finder.ts";
-import { planIndexFill } from "../../engine/library-index.ts";
+import { fileMonth, libraryRows, newerOnIndex, planIndexFill } from "../../engine/library-index.ts";
 import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
 import { AcceptsBody, acceptsWords, AttachBody, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
@@ -115,9 +115,10 @@ export class FormLibrary {
       const pendingChange = lifecyclePending.find((x) => x.key === f.formKey), lifecycle = pendingChange?.action ?? null;
       const needsOk = held.some((h) => h.code === f.formKey);
       // Lead 28 Oct (carried should): "Needs your OK" only when something waits for a person; a form with no file is "No file yet".
-      // X5 (P156-2): a later read of IRCC's index that changed the date of a form with a file marks it newer, too.
-      // X5 break M3 / Devin: the index's mark is answered once the library holds an edition canada.ca dates at or after it.
-      const indexNewer = !!(current && f.newerOnIndexAt && !(current.canadaUpdated && f.indexDateModified && current.canadaUpdated >= f.indexDateModified.slice(0, 7)));
+      // X5 (P156-2): "Newer edition on canada.ca" when IRCC's index lists a later month than the current edition's.
+      // Review / break (e466adb1) M10, M11, automated review (89cccd71): newerOnIndex, the dates plus the date last seen current.
+      const month = current ? fileMonth(current) : null;
+      const indexNewer = !!current && newerOnIndex(f.indexDateModified, month, current.indexDateSeenCurrent);
       const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 || indexNewer ? "newer_file" : current ? "ready" : "no_file";
       return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
         // P-143 (C-3): one record per IRCC account (ANY first); the column says them in words, one line per account.
@@ -139,6 +140,9 @@ export class FormLibrary {
     const shown = shaped.filter((r) => (q.for !== "picker" || (r.status !== "retired" && !!r.edition)) && (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.code.toLowerCase().includes(termCode!) || r.title.toLowerCase().includes(term)));
     const count = (pred: (r: (typeof shaped)[number]) => boolean) => shaped.filter(pred).length;
     return { rows: shown, counts: { all: shaped.length, form: count((r) => r.type === "form"), guide: count((r) => r.type === "guide"), checklist: count((r) => r.type === "checklist"), needs_ok: count((r) => r.status === "needs_ok"), no_file: count((r) => r.status === "no_file"), ready: count((r) => r.status === "ready"), newer_file: count((r) => r.status === "newer_file"), retired: count((r) => r.status === "retired") },
+      // X5 slice c review / break M1: the remembered deletions, each with "List again" (an upload cannot add back a number
+      // the file reader does not produce, such as a schedule: this is the one way back that always works).
+      remembered_deletions: (await this.db.libraryFormDeletion.findMany({ where: { workspaceId }, orderBy: { formKey: "asc" } })).map((d) => ({ code: d.formKey, deleted_by: nameOf(d.deletedBy), deleted_at: d.deletedAt.toISOString() })),
       combinations: combos, sample_note: "Which forms a combination needs and what IRCC accepts are Sample until the immigration expert confirms." };
   }
 
@@ -187,32 +191,78 @@ export class FormLibrary {
     if (!parsed.rows.length) throw problem(409, "IRCC's forms list could not be read", "The forms list page has no form rows (its layout may have changed). Nothing was added to the library.");
     // X5 break M1: each number in the library's own spelling (contracts' normaliseCode, as every route and the finder use:
     // "IMM 5373 B", not "IMM 5373B"), so a listed form is found, deleted and attached like any other.
-    const rows = parsed.rows.map((r) => ({ ...r, code: normaliseCode(r.code) }));
+    // Break m15 / review (dc93b60f, e466adb1): rows the library can show (libraryRows: a title, not over 300 characters); a
+    // number with no good row is counted as unreadable, once.
+    const { rows, unreadable } = libraryRows(parsed.rows.map((r) => ({ ...r, code: normaliseCode(r.code) })), parsed.unreadable);
     // X5 break m9: a file means an edition a combination may file from (an online-only screen map is no file).
-    // Review (5a5f0d16) m2 / Devin: the fill judges a form by the same current edition the list shows (an approved printed
+    // Review (5a5f0d16) m2 / the outside check: the fill judges a form by the same current edition the list shows (an approved printed
     // edition, the newest; newestEdition), never by a held or older edition's date: one "newer" rule in both.
     const [defs, approved] = await Promise.all([this.db.govFormDef.findMany({ where: { workspaceId }, include: { editions: true } }), this.approvedShas(workspaceId)]);
-    const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionDated: current?.canadaUpdated ?? null }; }));
+    const plan = planIndexFill(rows, defs.map((d) => { const current = this.currentEdition(d.editions, approved.all); return { formKey: d.formKey, indexDateModified: d.indexDateModified, hasFile: !!current, formPageUrl: d.formPageUrl, editionMonth: current ? fileMonth(current) : null, currentId: current?.id ?? null, seenCurrent: current?.indexDateSeenCurrent ?? null }; }));
     const now = new Date();
     // X5 break m1: the count is what this fill created (two fills at once no longer both say "221 new").
-    const created = await this.db.$transaction(async (tx) => {
-      const made = plan.create.length ? (await tx.govFormDef.createMany({ data: plan.create.map((c) => ({ workspaceId, formKey: c.formKey, displayName: c.title, formKind: c.kind, formPageUrl: c.pageUrl, listedOnIndexAt: now, indexDateModified: c.dateModified })), skipDuplicates: true })).count : 0;
+    // Break m14 / the outside check on #145: the words count what this fill did, not what it planned: a form another fill created meanwhile
+    // is "already in the library", one deleted meanwhile is not counted, and "newer" names only the rows this fill marked.
+    const { created, already, newer, deleted } = await this.db.$transaction(async (tx) => {
+      // X5 slice c (the tech lead on #138): a form a second person approved deleting is not listed again until a person adds
+      // it back. Read in this transaction; a delete approved while this fill runs is undone below, after the insert.
+      const gone = new Set((await tx.libraryFormDeletion.findMany({ where: { workspaceId }, select: { formKey: true } })).map((d) => d.formKey));
+      const toCreate = plan.create.filter((c) => !gone.has(c.formKey));
+      let made = toCreate.length ? (await tx.govFormDef.createMany({ data: toCreate.map((c) => ({ workspaceId, formKey: c.formKey, displayName: c.title, formKind: c.kind, formPageUrl: c.pageUrl, listedOnIndexAt: now, indexDateModified: c.dateModified })), skipDuplicates: true })).count : 0;
+      // A delete approved meanwhile (its row committed after the read above): this fill's own new row for it goes again.
+      const late = (await tx.libraryFormDeletion.findMany({ where: { workspaceId, formKey: { in: toCreate.map((c) => c.formKey) } }, select: { formKey: true } })).map((d) => d.formKey);
+      if (late.length) { made -= (await tx.govFormDef.deleteMany({ where: { workspaceId, formKey: { in: late }, listedOnIndexAt: now, editions: { none: {} }, usedBy: { none: {} } } })).count; late.forEach((k) => gone.add(k)); }
+      const skipped = plan.create.filter((c) => gone.has(c.formKey)).map((c) => c.formKey);
+      let kept = 0; const marked: string[] = [];
       // X5 break m4: a form deleted meanwhile (an approved delete) is skipped, never a failed fill.
-      for (const l of plan.listed) await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}), ...(plan.newer.includes(l.formKey) ? { newerOnIndexAt: now } : {}) } });
-      return made;
+      for (const l of plan.listed) {
+        const isNewer = plan.newer.includes(l.formKey);
+        // Break / review (dc93b60f) m24: "newer" names a form only in the fill that moved its date (another fill that moved it a
+        // moment earlier leaves this one's guarded write empty).
+        const moved = isNewer && l.dateModified ? (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey, indexDateModified: l.before }, data: { indexDateModified: l.dateModified } })).count : 0;
+        const n = (await tx.govFormDef.updateMany({ where: { workspaceId, formKey: l.formKey }, data: { listedOnIndexAt: now, ...(l.dateModified ? { indexDateModified: l.dateModified } : {}), ...(l.pageUrl ? { formPageUrl: l.pageUrl } : {}) } })).count;
+        // An undated file's baseline, written only where none is (a check or another fill may have set one meanwhile).
+        if (n && l.seenCurrent && l.editionId) await tx.formEdition.updateMany({ where: { id: l.editionId, indexDateSeenCurrent: null }, data: { indexDateSeenCurrent: l.seenCurrent } });
+        kept += n;
+        if (n && moved) marked.push(l.formKey);
+      }
+      return { created: made, already: kept + (plan.create.length - skipped.length - made), newer: marked, deleted: skipped };
     });
-    const words = `${created} new form${created === 1 ? "" : "s"} listed (no file yet), ${plan.listed.length} already in the library${plan.newer.length ? `, ${plan.newer.length} with a newer edition on canada.ca (${plan.newer.slice(0, 5).join(", ")}${plan.newer.length > 5 ? "…" : ""})` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}${parsed.unreadable.length ? `, ${parsed.unreadable.length} left out whose number could not be read` : ""}`;
-    await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created, listed: plan.listed.length, newer: plan.newer, no_page: parsed.noPage, unreadable: parsed.unreadable });
-    return { created, listed: plan.listed.length, newer: plan.newer, no_page: parsed.noPage, unreadable: parsed.unreadable, message: `Filled from IRCC's forms list: ${words}.` };
+    const words = `${created} new form${created === 1 ? "" : "s"} listed (no file yet), ${already} already in the library${newer.length ? `, ${newer.length} with a newer edition on canada.ca (${newer.slice(0, 5).join(", ")}${newer.length > 5 ? "…" : ""})` : ""}${deleted.length ? `, ${deleted.length} left out that ${deleted.length === 1 ? "was" : "were"} deleted from the library (${deleted.slice(0, 5).join(", ")}${deleted.length > 5 ? "…" : ""}; "List again" under the table brings ${deleted.length === 1 ? "it" : "one"} back)` : ""}${parsed.noPage.length ? `, ${parsed.noPage.length} left out with no canada.ca page` : ""}${unreadable.length ? `, ${unreadable.length} left out whose number or title could not be read` : ""}`;
+    await this.audit.log(workspaceId, actor.id, "filled", "form library", null, `${actor.name} filled the form library from IRCC's forms list: ${words}. No AI, no download, US$0.`, { created, listed: already, newer, deleted, no_page: parsed.noPage, unreadable });
+    return { created, listed: already, newer, deleted, no_page: parsed.noPage, unreadable, message: `Filled from IRCC's forms list: ${words}.` };
+  }
+
+  /** X5 slice c (break / review of 02ca83a5 M1): a person brings a remembered deletion back. The memory is forgotten and the
+   *  form is listed again from IRCC's forms list at once (the ordinary fill, US$0: no AI, no download). */
+  async listAgain(actor: Actor, code: string) {
+    need(actor, "author");
+    const workspaceId = await this.ws.id();
+    const memory = await this.db.libraryFormDeletion.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } } });
+    const gone = await this.db.libraryFormDeletion.deleteMany({ where: { workspaceId, formKey: code } });
+    if (!gone.count || !memory) throw problem(404, "Not a deleted form", `${code} is not among the forms deleted from the library.`);
+    // Review (00007dd0) 4: a fill that fails puts the memory back, and nothing is audited as listed again.
+    let fill: Awaited<ReturnType<FormLibrary["fillFromIndex"]>>;
+    try { fill = await this.fillFromIndex(actor); } catch (e) {
+      await this.db.libraryFormDeletion.createMany({ data: [{ workspaceId, formKey: code, deletedBy: memory.deletedBy, changeId: memory.changeId, deletedAt: memory.deletedAt }], skipDuplicates: true });
+      throw e;
+    }
+    const back = await this.db.govFormDef.count({ where: { workspaceId, formKey: code } });
+    await this.audit.log(workspaceId, actor.id, "restored", "form", code, `${actor.name} listed ${code} again: later fills from IRCC's forms list include it`);
+    // Review (00007dd0) 3: the ordinary fill ran, so any other form IRCC added since the last fill is said too.
+    const others = fill.created - (back && fill.created ? 1 : 0);
+    const more = others > 0 ? ` The fill also listed ${others} other new form${others === 1 ? "" : "s"} from IRCC's forms list.` : "";
+    return { code, listed: back > 0, others, message: (back ? `${code} is listed again (no file yet). Find again on a combination, or upload its PDF, to add its file.` : `${code} will be listed again when IRCC's forms list includes it (it is not on the list now).`) + more };
   }
 
   async checkCanada(actor: Actor, code: string) {
     need(actor, "author");
     try {
       const r = await this.compareWithCanada(code);
-      // X5 break M2 / Devin: only a check that found the library's edition still current answers the index's "newer" mark;
-      // a check that failed, or that found another date on canada.ca, keeps it.
-      if (r.outcome === "current") await this.db.govFormDef.updateMany({ where: { workspaceId: await this.ws.id(), formKey: code, newerOnIndexAt: { not: null } }, data: { newerOnIndexAt: null } });
+      // Review (63d2ba6d): a check that finds the library's file to be canada.ca's own is in the audit trail (it can turn a
+      // row from "newer" to Ready).
+      if (r.outcome === "current") await this.audit.log(await this.ws.id(), actor.id, "checked", "form", code, `${actor.name} checked ${code} against canada.ca: the library's file (${r.edition}) is canada.ca's current PDF.`, { last_updated: r.last_updated, edition: r.edition, sha256: r.sha256, baseline: r.baseline });
+      if (r.outcome === "current") { const { edition: _e, sha256: _s, baseline: _b, ...shown } = r; void _e; void _s; void _b; return shown; }
       return r;
     } catch (e) {
       // canada.ca not answering (or a page not among the recorded copies) is said in words, never a server error.
@@ -225,6 +275,8 @@ export class FormLibrary {
     const workspaceId = await this.ws.id();
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: code } }, include: { editions: true } });
     if (!def) throw problem(404, "Not in the library", `${code} is not in the library.`);
+    // Break (6bc5eb72) m40: a guide is not checked (the page's PDF is a form's, not the guide); the API says what the UI does.
+    if (TYPE_OF(def.formKind, def.displayName) === "guide") throw problem(409, "Not for guides", `${code} is a guide: the form finder reads it from canada.ca; there is no PDF to check.`);
     // A form without a recorded page (a sample copy, an upload) is looked up in canada.ca's list of forms (rules, US$0).
     let pageUrl = def.formPageUrl;
     if (!pageUrl) {
@@ -239,9 +291,32 @@ export class FormLibrary {
     // X5 break M6: the check judges the same current edition as the list and the fill (approved, printed), so a held file
     // with canada.ca's date never answers the "newer" mark.
     const current = this.currentEdition(def.editions, (await this.approvedShas(workspaceId)).all);
+    // Break (63d2ba6d) M13, M14 / review Should 1: the check compares the file itself, not dates or addresses. canada.ca's
+    // PDF is downloaded (US$0) and its checksum compared with the library's current file: the same bytes are current, and
+    // canada.ca's index date as it stands becomes that file's own date last seen current (never lowered: break m36), so a
+    // page edited without a new edition stops reading "newer"; other bytes are not, whatever the dates say. The file is not
+    // re-dated from the page (review 6bc5eb72 M: a page month would hide a later edition; fileMonth reads the printed month).
+    // The outside check (0796fc0c): with no approved file there is nothing to compare: say so before downloading anything.
+    if (!current?.sha256) return { outcome: "check" as const, message: `${code} has no approved file in the library to compare. Find again on a combination that uses it, or upload its PDF.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
+    let pdf: Awaited<ReturnType<CanadaSource["get"]>>;
+    try { pdf = await this.canada.get(pdfUrl, "pdf"); } catch (e) {
+      // Break (6bc5eb72) m41: the page was read, its PDF was not; said as such, and nothing is recorded as checked (m39).
+      if (e instanceof CanadaError) throw problem(409, "canada.ca's PDF could not be read", `${code}: canada.ca's form page was read but its PDF could not be downloaded (${e.message}). Nothing changed; try again later.`);
+      throw e;
+    }
     await this.db.formEdition.updateMany({ where: { govFormDefId: def.id }, data: { checkedAt: new Date(), formPageUrl: pageUrl } });
-    if (current && current.canadaUpdated && page.lastUpdated && current.canadaUpdated === page.lastUpdated && current.sourceUrl === pdfUrl) return { outcome: "current", message: `${current.editionLabel} is still the current edition on canada.ca (last updated ${page.lastUpdated}).`, last_updated: page.lastUpdated };
-    return { outcome: "check", message: `canada.ca shows ${code} last updated ${page.lastUpdated ?? "on an unknown date"}. Run "Find again" on a combination that uses it to download it: a newer edition goes to edition review, the same edition from a new file is marked for you to replace.`, last_updated: page.lastUpdated, pdf_url: pdfUrl };
+    if (current?.sha256 && pdf.sha256 === current.sha256) {
+      // The outside check (6bc5eb72): canada.ca serving the library's own bytes again also ends a finder's "new file" marker.
+      // Break (0796fc0c) m48: the finder's marker is cleared only if it is still the one this check read.
+      await this.db.formEdition.updateMany({ where: { id: current.id }, data: { sourceUrl: pdfUrl } });
+      if (current.newerFileSha256) await this.db.formEdition.updateMany({ where: { id: current.id, newerFileSha256: current.newerFileSha256 }, data: { newerFileSha256: null } });
+      if (def.indexDateModified) await this.db.formEdition.updateMany({ where: { id: current.id, OR: [{ indexDateSeenCurrent: null }, { indexDateSeenCurrent: { lt: def.indexDateModified } }] }, data: { indexDateSeenCurrent: def.indexDateModified } });
+      // Break m45 / review (0796fc0c) 4: the audit names the baseline the file keeps, not only the date this check offered.
+      const baseline = (await this.db.formEdition.findUnique({ where: { id: current.id }, select: { indexDateSeenCurrent: true } }))?.indexDateSeenCurrent ?? null;
+      return { outcome: "current" as const, message: `${current.editionLabel} is canada.ca's current file: the same PDF${page.lastUpdated ? ` (page last updated ${page.lastUpdated})` : ""}.`, last_updated: page.lastUpdated, edition: current.editionLabel, sha256: pdf.sha256, baseline };
+    }
+    // Break (6bc5eb72) M15 / review Should 4: what the check found, in words.
+    return { outcome: "check" as const, message: `canada.ca now serves a different PDF for ${code} than the library's file (${current.editionLabel})${page.lastUpdated ? `; its page was last updated ${page.lastUpdated}` : ""}. Find again on a combination that uses ${code} downloads it for review (a new edition goes to edition review; the same edition from a new file is marked for you to replace), or upload canada.ca's PDF.`, last_updated: page.lastUpdated, pdf_url: pdfUrl }; // review (521bc9c4) 5: no other branch (no approved file is answered above)
   }
 
   // ------------------------------------------------------------------ hand actions on a combination's forms
@@ -401,6 +476,7 @@ export class FormLibraryController {
   @Post("combinations/:id/forms") attach(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.lib.attach(actorOf(a), id, b); }
   @Delete("combinations/:id/forms/:code") remove(@Headers("x-actor") a: H, @Param("id") id: string, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.remove(actorOf(a), id, code, b); }
   @Post("library/forms/fill-from-index") fill(@Headers("x-actor") a: H) { return this.lib.fillFromIndex(actorOf(a)); }
+  @Post("library/forms/:code/list-again") listAgain(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string) { return this.lib.listAgain(actorOf(a), code); }
   @Get("library/forms/list") list(@Headers("x-actor") a: H, @Query() q: unknown) { return this.lib.list(q, readerOf(a).id); }
   @Get("library/forms/:code/uses") uses(@Param("code", { transform: normaliseCode }) code: string) { return this.lib.uses(code); }
   @Post("library/forms/:code/accepts") accepts(@Headers("x-actor") a: H, @Param("code", { transform: normaliseCode }) code: string, @Body() b: unknown) { return this.lib.proposeAccepts(actorOf(a), code, b); }

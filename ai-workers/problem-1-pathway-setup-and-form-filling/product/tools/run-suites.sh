@@ -5,6 +5,8 @@
 #   bash product/tools/run-suites.sh --demo     also check_studio_browser.cjs (it RESETS the :4400 demo: CI and cloud only)
 #   bash product/tools/run-suites.sh --changed <base>..<head>   only the suites the change can affect, plus a smoke set
 #        (select-suites.mjs; pull requests, founder 31 Oct); everything when a shared file changed. Combines with --demo.
+#   bash product/tools/run-suites.sh --shard <i>/<n>   only every n-th suite, starting at the i-th (P-213: merge-queue
+#        batches split across n GitHub machines, each its own fresh copy). Combines with --changed and --demo.
 # Each tests/check_*.ts|cjs names its run in a usage line: "isolated.sh <name> <port> start && tsx|node studio/tests/<file>
 # <args>" (an isolated copy: own database, own files, the demo is never touched) or "tsx studio/tests/<file>" (no server).
 # Never calls a model (every suite replays saved runs; US$0). Exit 1 when any suite fails; a summary table either way.
@@ -15,16 +17,23 @@ export PATH="$ROOT/.tools/node-v24.21.0/bin:/opt/homebrew/opt/postgresql@18/bin:
 # GNU timeout: `timeout` on Linux (CI), `gtimeout` from Homebrew coreutils on the Mac. Missing → stop loudly, never run unguarded.
 TIMEOUT="$(command -v timeout || command -v gtimeout || true)"
 [ -n "$TIMEOUT" ] || { echo "GNU timeout is missing (Mac: brew install coreutils, which provides gtimeout); no suite was run"; exit 2; }
-DEMO=0; NAMES=0; CHANGED=""
+DEMO=0; NAMES=0; CHANGED=""; SHARD=1; SHARDS=1
 while [ $# -gt 0 ]; do case "$1" in
   --demo) DEMO=1;;
   --names) NAMES=1;;   # print the names and ports this copy would use, run nothing
   --changed) [ -n "${2:-}" ] || { echo "--changed wants <base>..<head>; no suite was run"; exit 2; }; CHANGED="$2"; shift;;
   --changed=*) CHANGED="${1#--changed=}";;
+  --shard) [[ "${2:-}" =~ ^([1-9][0-9]*)/([1-9][0-9]*)$ ]] && [ "${BASH_REMATCH[1]}" -le "${BASH_REMATCH[2]}" ] || { echo "--shard wants <i>/<n>, 1 <= i <= n; no suite was run"; exit 2; }
+    SHARD="${BASH_REMATCH[1]}"; SHARDS="${BASH_REMATCH[2]}"; shift;;
   *) echo "run-suites.sh: unknown option $1 (--demo, --names, --changed <base>..<head>); no suite was run"; exit 2;;
 esac; shift; done
 # Not regression suites: the 100-program exercise needs its own fixture copy (run by hand, see its usage line).
 SKIP="check_catalogue_scale.cjs"
+# Quarantine (P-205, 31 Oct): a suite that fails at random is skipped in PR and merge-queue checks (--changed) until its
+# fix merges, so one unreliable test cannot stall every batch; the nightly full run still runs it. Remove a name when
+# its fix lands. check_cost_warning_browser.cjs was quarantined 31 Oct and came back 1 Nov when its fix (#177, X8a: the
+# check waits for the page's ready signal) merged.
+QUARANTINE=""
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
 export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 / P-179: test runs never write the real ledger (forms plan-p179 §5)
@@ -38,10 +47,13 @@ if [ -z "${CI:-}" ] && [ -z "${COPY_PREFIX+x}" ]; then PREFIX=$(bash "$P/product
 [[ "$PREFIX" =~ ^[a-z0-9_]{0,12}$ ]] || { echo "COPY_PREFIX: lower case letters, digits and _ only, at most 12"; exit 2; }
 SLOT=0
 if [ -n "$PREFIX" ]; then
-  # One slot per lane, so lanes never share ports; any other prefix hashes into slots 9 to 40. Ports move by 10000 +
-  # 1000 x (SLOT - 1): 14400 to 53480, clear of the demo :4400 and the database :54329.
+  # One slot per lane, so lanes never share ports; any other prefix hashes into slots 9 to 35. Ports move by 10000 +
+  # 1000 x (SLOT - 1): 14400 to 48480, clear of the demo :4400 and the database :54329, and below macOS's range for
+  # outgoing connections (49152 and up). Above it, a request to a test server that is briefly down can connect to
+  # itself and read its own request back (31 Oct: batch 2 failed with "Response does not match the HTTP/1.1 protocol"
+  # on port 50438, prefix ci, slot 37).
   case "$PREFIX" in lead) SLOT=1;; screens) SLOT=2;; forms) SLOT=3;; evidence) SLOT=4;; runtime) SLOT=5;; m3) SLOT=6;; qa) SLOT=7;; scout) SLOT=8;;
-    *) SLOT=$(( $(printf '%s' "$PREFIX" | cksum | cut -d' ' -f1) % 32 + 9 ));; esac
+    *) SLOT=$(( $(printf '%s' "$PREFIX" | cksum | cut -d' ' -f1) % 27 + 9 ));; esac
   LOCK="${SUITES_LOCKS:-$ROOT/.tools/run-suites-locks}/slot-$SLOT"; mkdir -p "${LOCK%/*}"
   claim() { mkdir "$LOCK" 2>/dev/null && printf '%s %s %s\n' "$$" "$PREFIX" "$ROOT" > "$LOCK/owner"; }
   if [ "$NAMES" = 1 ]; then :; elif ! claim; then
@@ -85,6 +97,9 @@ if [ -n "$CHANGED" ]; then
   fi
 fi
 picked() { [ -z "$PICK" ] && return 0; case "$PICK" in *" $1 "*) return 0;; esac; return 1; }
+# --shard i/n: each chosen unit (a suite, or the three R1 suites together) takes the next turn; this copy runs turn i of
+# every n. Same order on every machine (the glob is sorted), so the n shards together run each chosen suite once.
+TURN=0; myturn() { TURN=$((TURN + 1)); [ $(( (TURN - 1) % SHARDS + 1 )) -eq "$SHARD" ]; }
 pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 || zsh "$S/start.sh" >/dev/null 2>&1 || { echo "the demo database is not running and start.sh failed"; exit 2; }
 
 rows=(); fail=0
@@ -100,6 +115,8 @@ run() {  # $1 file, $2 label, rest: command
 for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
   f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac
   picked "$f" || continue
+  myturn || continue
+  case " $QUARANTINE " in *" $f "*) [ -n "$CHANGED" ] && { rows+=("| $f | quarantined | | fails at random: nightly only until its fix merges (P-205) |"); continue; };; esac
   usage=$(grep -m1 -E "studio/tests/$f" "$path")
   if [ "$f" = check_studio_browser.cjs ]; then
     if [ "$DEMO" = 0 ] && [ "${SUITES_BROWSER_ISOLATED:-}" = 1 ]; then
@@ -133,9 +150,9 @@ done
 # Suites outside tests/check_*: the runtime lane's (R1, two steps on one copy) and the drafting guard's (prototype/tests,
 # plain: they make their own temporary copies). Both lanes' Lead checks found CI skipping them (24 Oct).
 RT="$S/tests/runtime"; RN=$(iname runtime_r1); RP=$(iport 4430)
-if [ -f "$RT/check_case_engine.ts" ] && picked check_case_engine.ts; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
+if [ -f "$RT/check_case_engine.ts" ] && picked check_case_engine.ts && myturn; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
 # The three R1 suites share one copy and run in order: chosen together (select-suites.mjs) or not at all.
-if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; }; then
+if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && myturn; then
   if zsh "$S/tools/isolated.sh" "$RN" "$RP" start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" "$RP" "xr_studio_$RN" > "$OUT/setup_visitor_visa.log" 2>&1; then
     # R1c's browser journey first: it publishes a release 2 that R1a expects (runtime lane, 24 Oct).
     [ -f "$RT/check_runtime_r1c.cjs" ] && run check_runtime_r1c.cjs "$RN" node "$RT/check_runtime_r1c.cjs" "$RP"
@@ -146,10 +163,14 @@ if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked 
   zsh "$S/tools/isolated.sh" "$RN" "$RP" stop >/dev/null 2>&1
 fi
 for t in check_p2_guard check_p2_launch; do
-  [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
+  [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && myturn && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
 done
 # A choice that ran nothing is a fault, never a pass.
-[ -n "$PICK" ] && [ "${#rows[@]}" -eq 0 ] && { rows=("| (none) | FAIL | | suites were chosen but none ran |"); fail=1; }
+# A shard can rightly get nothing when few suites were chosen (fewer than n): that shard says so and passes.
+if [ -n "$PICK" ] && [ "${#rows[@]}" -eq 0 ]; then
+  if [ "$SHARDS" -gt 1 ] && [ "$TURN" -lt "$SHARD" ]; then rows=("| (none) | PASS | | $TURN chosen units, none for shard $SHARD/$SHARDS |")
+  else rows=("| (none) | FAIL | | suites were chosen but none ran |"); fail=1; fi
+fi
 echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; printf '%s\n' "${rows[@]}"
-echo "commit $(git rev-parse --short HEAD)${PICK:+ · only the chosen suites ran (--changed $CHANGED)} · logs in ${OUT#$ROOT/}${PREFIX:+ · copies named ${PREFIX}_*, ports +$(( 10000 + 1000 * (SLOT - 1) ))}"
+echo "commit $(git rev-parse --short HEAD)${PICK:+ · only the chosen suites ran (--changed $CHANGED)}$([ "$SHARDS" -gt 1 ] && echo " · shard $SHARD/$SHARDS of $TURN units") · logs in ${OUT#$ROOT/}${PREFIX:+ · copies named ${PREFIX}_*, ports +$(( 10000 + 1000 * (SLOT - 1) ))}"
 exit $fail

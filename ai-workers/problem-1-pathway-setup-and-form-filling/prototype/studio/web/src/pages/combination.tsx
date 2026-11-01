@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { type CatalogueLeaf, type CombinationSummary, type CombinationView, type SessionView } from "../../../contracts/programs";
 import { tabOf, TABS, type WorkspaceView } from "../../../contracts/workspace";
+import { tabCounts, type BadgeTab } from "../../../contracts/setup-checklist";
 import { ArrowRight, ChevronRight } from "lucide-react";
 import { CATALOGUE_URL_KEY, STATUS_WORD } from "@/pages/programs";
 import { SHOW_ONLY_STEPS, StepLabel, StepTip, useNextStep } from "@/components/next-step";
@@ -15,6 +16,7 @@ import { PreviewTab as StudioPreview } from "@/pages/preview";
 import { ReviewTab } from "@/pages/review";
 import { OverviewTab } from "@/pages/workspace/overview";
 import { FormsTab } from "@/pages/workspace/forms";
+import { BeforeForms } from "@/components/before-forms";
 import { QuestionnairesTab } from "@/pages/workspace/questionnaires";
 import { DocumentsTab } from "@/pages/workspace/documents";
 import { PreviewTab, usePreviewParams } from "@/pages/workspace/preview";
@@ -65,6 +67,8 @@ export function CombinationPage() {
   const row = sum.data?.row;
   const changes = sum.data?.changes ?? 0;
   const errorCount = d.draft.problems.filter((p) => p.level === "error").length;
+  // X1 (slice C2): each setup tab says how many open setup items land on it, from the summary's checklist.
+  const badges = tabCounts(sum.data?.setup);
   // Back to the list exactly as it was left (pathway, filters, sort, search; scroll restored there), this row highlighted.
   const backTo = (() => { try { return sessionStorage.getItem(CATALOGUE_URL_KEY) ?? "/"; } catch { return "/"; } })();
   const pw = d.pathway?.client_type === "CORPORATE" ? "pw=CORPORATE&" : "";
@@ -76,6 +80,10 @@ export function CombinationPage() {
     changes ? `${changes} draft change${changes === 1 ? "" : "s"}` : last ? "draft matches the release" : null,
     d.submission?.status === "SUBMITTED" ? (d.submission.stale ? "submitted, then changed" : "in review") : null,
     d.allowed_locations?.length ? `cases opened ${d.allowed_locations.map((l) => l === "inside_canada" ? "inside Canada" : "outside Canada").join(" or ")}` : null,
+    // C1.6 (Screen 03 concept: the facts line names the filing method, before the people): how the application is
+    // filed, from its form lines; said only once a form that is actually filed is on it (not a checklist, not a line
+    // marked Not needed: review c16 m1).
+    sum.data?.forms?.some((f) => !f.document && f.channel !== "NOT_NEEDED") ? `filing: ${sum.data.filing}` : null,
     `people: ${peopleWords(c.participants)}`,
     c.source_basis === "ILLUSTRATIVE" ? "Sample" : null, // SC-5: no "source-backed" jargon in the subtitle
   ].filter(Boolean).join(" · ");
@@ -95,7 +103,7 @@ export function CombinationPage() {
       </div>
       {c.basis_note ? <Notice tone={c.source_basis === "ILLUSTRATIVE" ? "warn" : "info"}>{c.basis_note}</Notice> : null}
       <div role="tablist" aria-label="Combination" className="flex gap-1 overflow-x-auto border-b border-border">
-        {TABS.map((t) => <Link key={t.key} role="tab" aria-selected={tab === t.key} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{t.key === "review" && errorCount ? <span className="ml-1.5 rounded bg-danger/12 px-1 text-xs text-text-danger">{errorCount}</span> : null}</Link>)}
+        {TABS.map((t) => <Link key={t.key} role="tab" aria-selected={tab === t.key} aria-label={t.key in badges && badges[t.key as BadgeTab] ? `${t.label} ${badges[t.key as BadgeTab]} setup ${badges[t.key as BadgeTab] === 1 ? "item" : "items"} open` : undefined} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{t.key in badges && badges[t.key as BadgeTab] ? <>{" "}<StepBadge n={badges[t.key as BadgeTab]} /></> : null}{t.key === "review" && errorCount ? <span className="ml-1.5 rounded bg-danger/12 px-1 text-xs text-text-danger">{errorCount}</span> : null}</Link>)}
       </div>
       <div role="tabpanel" aria-label={TABS.find((t) => t.key === tab)!.label}>
         {tab === "overview" ? <OverviewTab d={d} sum={sum.data} show={sp.get("show")} />
@@ -121,7 +129,7 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
   if (w.isLoading) return <Spinner label={`Loading ${tab}`} />;
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;
-  if (v.tab === "forms") return <FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} progress={v.progress} />;
+  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} progress={v.progress} /></div>;
   if (v.tab === "questionnaires") return <QuestionnairesTab id={id} people={v.people} questionnaire={v.questionnaire} available={v.available} />;
   if (v.tab === "preview") return <PreviewTab id={id} p={v.preview} empty={v.empty} fetching={w.isFetching} hasRelease={hasRelease} />;
   return null;
@@ -159,3 +167,12 @@ export function StatusPill({ status }: { status: string }) {
   return <Pill tone={tone}>{status === "RUNNING" ? <span className="size-2 animate-pulse rounded-full bg-current" /> : null}{label[status] ?? status}</Pill>;
 }
 export function useGo() { return useNavigate(); }
+
+/** X1 (slice C2, board v3 "Forms 5"): the number of open setup items on a tab; nothing when none. Read aloud as words
+ *  through the tab's aria-label. */
+function StepBadge({ n }: { n: number }) {
+  if (!n) return null;
+  // The words are the tab's accessible name (aria-label "Forms 2 setup items open", which starts with the visible text
+  // "Forms 2", WCAG 2.5.3), so the tab's visible text stays "Forms 2".
+  return <span aria-hidden className="ml-1 rounded-full bg-warn/15 px-1.5 text-xs text-text-warn" data-step-badge={n}>{n}</span>;
+}

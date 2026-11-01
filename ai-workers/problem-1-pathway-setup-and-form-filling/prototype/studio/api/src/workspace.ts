@@ -19,7 +19,7 @@ import { PeopleFromGuide } from "./people-ai.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type Q = { tab?: string; family?: string; person?: string; tweaks?: string; release?: string; role?: string };
-type SnapForm = { form_number: string; title: string; form_kind?: string; who: string; status: string; condition: unknown; condition_plain?: string | null; source_quote?: string | null; origin?: string; channel?: Channel; min_age?: number; signed_by?: string };
+type SnapForm = { form_number: string; title: string; form_kind?: string; who: string; status: string; condition: unknown; condition_plain?: string | null; source_quote?: string | null; origin?: string; channel?: Channel; min_age?: number; signed_by?: string; copies?: number };
 
 @Injectable()
 export class WorkspaceViews {
@@ -28,7 +28,8 @@ export class WorkspaceViews {
   async view(id: string, q: Q, actor?: Actor): Promise<WorkspaceView> {
     const c = await this.combination(id);
     const asked = String(q.tab ?? "overview").slice(0, 40), tab = tabOf(asked);
-    if (tab === "forms") { const f = await this.forms(id, c.workspaceId); return { tab, asked, ...f, ...(actor ? { progress: await this.chips(actor, id, c.workspaceId, f.lines) } : {}) }; }
+    // C1: Before forms holds the people card (P-161 (2)); C2.12 slice 3: each form's step chip (one read for the tab).
+    if (tab === "forms") { const f = await this.forms(id, c.workspaceId); return { tab, asked, people: await this.people(id, c.workspaceId), ...f, ...(actor ? { progress: await this.chips(actor, id, c.workspaceId, f.lines) } : {}) }; }
     if (tab === "questionnaires") return { tab, asked, people: await this.people(id, c.workspaceId), ...(await this.questionnaires(id, c.workspaceId, q.role)) };
     if (tab === "preview") return { tab, asked, ...(await this.preview(id, c.workspaceId, q)) };
     return { tab, asked };
@@ -66,7 +67,7 @@ export class WorkspaceViews {
       const onlyIf: OnlyIf = f.status !== "conditional" ? { kind: "always" } : wordsOnly(f) ? { kind: "words_only", words: f.condition_plain ?? "" } : { kind: "rule", words: f.condition_plain ?? "" };
       return {
         line: f.form_number, code: f.form_number, title: f.title, document: (f.form_kind ?? "data_form") === "document", edition: map?.form_edition ?? null,
-        boxes: map ? map.entries.filter((e) => e.outcome === "mapped").length : 0, who: f.who, minAge: f.min_age ?? null, onlyIf, condition: f.condition ?? null,
+        boxes: map ? map.entries.filter((e) => e.outcome === "mapped").length : 0, who: f.who, minAge: f.min_age ?? null, copies: f.copies ?? 1, onlyIf, condition: f.condition ?? null,
         channel, channelWords: CHANNEL_WORDS[channel], signature: (f.form_kind ?? "data_form") === "document" ? null : signatureOf(signature), signatureKind: signature,
         // P-143 (C-2): the signatures that fit the line's channel; C-3, C-4: each channel, offered or refused with its reason.
         signatures: SIGNATURE_FITS[channel].map((k) => ({ kind: k, words: SIGNATURE_WORDS[k] })),

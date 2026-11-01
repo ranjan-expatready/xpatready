@@ -13,7 +13,7 @@ import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedW
 import { recordAction, snapshotLines } from "./form-uses.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../contracts/programs.ts";
-import { FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
+import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 
@@ -53,6 +53,14 @@ const participantsLabel = (list: { role: string; label?: string }[], role: strin
 function retiredPeople(c: { label: string; retiredAt: Date | null }) {
   if (c.retiredAt) fail(`"${c.label}" is retired: who can be in it is not changed. Restore it on Structure first; open cases keep their release.`, HttpStatus.CONFLICT);
 }
+
+/** F8 (X1a, found in #113): a combination with no form and no document line has nothing a case could file or collect, so
+ *  it is never submitted, signed off or released. It is a release problem (submit, approve, the release page, the Review
+ *  tab read problems()), not a validator one: the Overview's missing list (engine/programs.ts, fed by validate()) already
+ *  says "No forms yet" with its next step, once (review f8 M1, check_screen01_rules). */
+export const EMPTY_WORDS = "Nothing to release yet: this combination has no forms and no documents. Add the forms it files (Find forms, or add one from the Form library) before sending it for review.";
+export const emptyProblem = (s: Pick<Snapshot, "forms" | "document_requirements">) =>
+  s.forms.length || (s.document_requirements ?? []).length ? [] : [{ level: "error" as const, where: "Release", item: "", message: EMPTY_WORDS }];
 
 @Injectable()
 export class Studio {
@@ -330,7 +338,7 @@ export class Studio {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"}${forExample(f.example)}. Decide them when this edition is drafted again.` })) : [];
-    return [...structure, ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
+    return [...structure, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
   }
 
   async config(id: string, mode: Mode) {
@@ -466,6 +474,11 @@ export class Studio {
   async selectSection(actor: Actor, combinationId: string, sectionKey: string, on: boolean, b?: { sectionOrder?: unknown }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    // F6 C4.8: the section choice is a draft change of this combination, so it follows the same locks as every other one.
+    if (c.retiredAt) fail(`"${c.label}" is retired: its questionnaire is not changed. Restore it on Structure first; open cases keep their release.`, HttpStatus.CONFLICT);
+    const section = await this.db.logicalSection.findFirst({ where: { workspaceId: c.workspaceId, sectionKey }, orderBy: { version: "desc" } });
+    if (on && !section) fail("That section is not in the shared library (it may have been removed by a reset). Reload, then choose one from the list.", HttpStatus.NOT_FOUND);
+    const title = section?.title ?? "That section";
     let sectionOrder: number | null = null;
     if (on) {
       const back = Number.isInteger(b?.sectionOrder) && (b!.sectionOrder as number) >= 0 ? b!.sectionOrder as number : null;
@@ -475,7 +488,7 @@ export class Studio {
       sectionOrder = (await this.db.sqrSectionSelection.findFirst({ where: { combinationId, sectionKey } }))?.sectionOrder ?? null;
       await this.db.sqrSectionSelection.deleteMany({ where: { combinationId, sectionKey } });
     }
-    await this.audit.log(c.workspaceId, actor.id, "updated", "section selection", sectionKey, `${actor.name} ${on ? "added" : "removed"} section ${sectionKey} ${on ? "to" : "from"} "${c.label}"`, undefined, c.id);
+    await this.audit.log(c.workspaceId, actor.id, "updated", "section selection", sectionKey, `${actor.name} ${on ? "added" : "removed"} the section "${title}" ${on ? "to" : "from"} the questionnaire of "${c.label}"`, undefined, c.id);
     return { ok: true, sectionOrder };
   }
 
@@ -554,7 +567,7 @@ export class Studio {
     return row;
   }
 
-  async saveForm(actor: Actor, combinationId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean; baseRevision?: string; minAge?: number | null; signedBy?: string | null }) {
+  async saveForm(actor: Actor, combinationId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean; baseRevision?: string; minAge?: number | null; signedBy?: string | null; copies?: number }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const rows = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: formKey } });
@@ -567,9 +580,15 @@ export class Studio {
     if (b.retire) changes.status = "RETIRED";
     if (b.who) { if (!WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
     // S5: minimum age and who signs (contracts/workspace.ts); field errors as Problem Details.
-    const line = FormLineEdit.safeParse({ minAge: b.minAge, signedBy: b.signedBy });
+    const line = FormLineEdit.safeParse({ minAge: b.minAge, signedBy: b.signedBy, copies: b.copies });
     if (!line.success) throw new HttpException(problemFromZod(line.error), HttpStatus.BAD_REQUEST);
-    for (const k of ["minAge", "signedBy"] as const) if (line.data[k] !== undefined) changes[k] = line.data[k];
+    // C1.8 (review m2): a checklist (document) line is never filed, so it has no copies; the screen does not offer it.
+    if (line.data.copies !== undefined && (await this.db.govFormDef.findUniqueOrThrow({ where: { id: rows[0].govFormDefId }, select: { formKind: true } })).formKind === "document") {
+      const doc = DocumentLineEdit.safeParse({ copies: line.data.copies });
+      if (!doc.success) throw new HttpException(problemFromZod(doc.error), HttpStatus.BAD_REQUEST);
+    }
+    // Break m3: a removal stores no line settings sent with it (they would come back unseen when the form is added again).
+    if (!b.retire) for (const k of ["minAge", "signedBy", "copies"] as const) if (line.data[k] !== undefined) changes[k] = line.data[k];
     // M1: "Only if" in words with no rule yet is allowed (a person turns it into a rule later); release refuses it
     // until it has one (engine/validate.ts), and Preview says "Cannot tell yet: no rule".
     if (b.conditionPlain !== undefined && b.condition === undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") changes.conditionPlain = b.conditionPlain.trim() || null;

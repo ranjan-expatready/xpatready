@@ -12,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Undo2 } from "lucide-react";
 import { CHANNEL_WORDS, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, throughAccount, type Channel, type Signature } from "../../../../contracts/forms";
-import { changeWords, SIGNED_BY, type LastFormChange, type RemovedForm, type WorkspaceFormLine } from "../../../../contracts/workspace";
+import { changeWords, COPIES_WORDS, copiesWords, SIGNED_BY, type LastFormChange, type RemovedForm, type WorkspaceFormLine } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
 import { useUndoToast } from "@/components/lifecycle";
 import { FindDialog, FinderPanel, formsKeys, useFinderLatest } from "./finder";
@@ -119,7 +119,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
           <tr key={l.line} data-line={l.code} data-line-not-needed={l.channel === "NOT_NEEDED" || undefined} className={l.channel === "NOT_NEEDED" ? "bg-surface text-text-muted" : undefined}>{/* C-4: kept visible, greyed, never filled */}
             <td><span className="mono font-medium">{l.code}</span><br /><span className="text-xs text-text-muted">{l.title}</span>{l.origin === "AI_FOUND" || l.origin === "AI_PROPOSAL" ? <><br /><Pill tone="ai">Picked by AI · Sample</Pill></> : null}</td>
             <td className="max-w-56 text-xs text-text-muted">{l.quote ? `"${l.quote.slice(0, 120)}${l.quote.length > 120 ? "…" : ""}"` : l.added ?? "Added by a person"}</td>
-            <td className="text-sm">{l.document ? <span className="text-text-muted">Checklist · not filed</span> : <>{whoLabel(l.who)}{l.minAge ? <span className="text-text-muted"> · {l.minAge}+</span> : null}</>}</td>
+            <td className="text-sm">{l.document ? <span className="text-text-muted">Checklist · not filed</span> : <>{whoLabel(l.who)}{l.minAge ? <span className="text-text-muted"> · {l.minAge}+</span> : null}{l.copies > 1 ? <span className="text-text-muted" data-copies> · {copiesWords(l.copies)}</span> : null}</>}</td>
             <td className="max-w-56 text-xs"><OnlyIfCell l={l} /></td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} options={l.channelOptions} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <SignatureCell id={id} code={l.code} channel={l.channel as Channel} signature={l.signatureKind as Signature} signatures={l.signatures} canAuthor={canAuthor} />}</td>
@@ -248,6 +248,7 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
   const fields = useLibraryFields();
   const [who, setWho] = React.useState(l.who);
   const [minAge, setMinAge] = React.useState(l.minAge ? String(l.minAge) : "");
+  const [copies, setCopies] = React.useState(String(l.copies ?? 1));
   const [mode, setMode] = React.useState<"always" | "only_if">(l.onlyIf.kind === "always" ? "always" : "only_if");
   const [cond, setCond] = React.useState<any>(l.condition);
   const [words, setWords] = React.useState(l.onlyIf.kind === "always" ? "" : l.onlyIf.words);
@@ -263,8 +264,13 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
     setBusy(true); setErrors({});
     try {
       const age = minAge.trim() === "" ? null : Number(minAge);
+      // C1.8: an emptied Copies field means the default single copy. Anything else is sent as typed only when it is plain
+      // digits (break m1, m2: nothing is stripped silently); the API refuses what is outside 1 to 9, on the field.
+      const typed = copies.trim();
+      if (typed !== "" && !/^[0-9]+$/.test(typed)) { setErrors({ copies: COPIES_WORDS }); setBusy(false); return; }
+      const copiesN = typed === "" ? 1 : Number(typed);
       await api(`/combinations/${id}/forms/${encodeURIComponent(l.code)}`, { method: "PATCH", json: {
-        who, minAge: age, signedBy: signedBy || null, baseRevision: l.revision || undefined,
+        who, minAge: age, copies: copiesN, signedBy: signedBy || null, baseRevision: l.revision || undefined,
         attachMode: mode === "always" ? "COMBINATION_MANDATORY" : "ANSWER_CONDITIONAL",
         ...(mode === "only_if" ? (cond ? { condition: cond, conditionPlain: words } : { conditionPlain: words }) : {}),
       } });
@@ -295,8 +301,9 @@ function LineDrawer({ id, l, d, onClose, onRemoved }: { id: string; l: Workspace
       <div className="space-y-5">
         {l.quote ? <p className="rounded-lg bg-surface px-3 py-2 text-xs text-text-muted">IRCC's words: "{l.quote}"</p> : null}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Who fills it" hint="One copy for each person it names." error={errors.who}><Select value={who} onChange={(e) => setWho(e.target.value)}>{WHO.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</Select></Field>
+          <Field label="Who fills it" hint="Each person it names fills their own." error={errors.who}><Select value={who} onChange={(e) => setWho(e.target.value)}>{WHO.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</Select></Field>
           <Field label="From age (optional)" hint="Leave empty for any age. Sample." error={errors.minAge}><Input inputMode="numeric" value={minAge} onChange={(e) => setMinAge(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="Any age" /></Field>
+          {!l.document ? <Field label="Copies" hint="Copies of this form for each person it names, 1 to 9. Sample." error={errors.copies}><Input inputMode="numeric" value={copies} onChange={(e) => { setCopies(e.target.value.slice(0, 3)); setErrors(({ copies: _c, ...rest }) => rest); }} placeholder="1" /></Field> : null}
         </div>
         <fieldset className="space-y-3">
           <legend className="text-xs font-medium">Only if</legend>

@@ -7,9 +7,9 @@ import { z } from "zod";
 export const STEP_KEYS = ["pages", "people", "forms", "questions_documents", "release"] as const;
 export type StepKey = (typeof STEP_KEYS)[number];
 export const STEP_LABEL: Record<StepKey, string> = { pages: "Official pages", people: "Who can be in this application", forms: "Forms", questions_documents: "Questions and documents", release: "Review and release" };
-/** The tab each step opens (P-161 (2): Official pages and people sit in "Before forms" on Forms). Temporary deviation
- *  (Lead, 30 Oct, review M3): people opens Questionnaires, where people are changed today; revert when slice C lands. */
-export const STEP_TAB: Record<StepKey, "forms" | "documents" | "questionnaires" | "review"> = { pages: "forms", people: "questionnaires", forms: "forms", questions_documents: "documents", release: "review" };
+/** The tab each step opens (P-161 (2): Official pages and people sit in "Before forms" on Forms). Slice C1 put
+ *  them there; the 30 Oct interim (people on Questionnaires) is reverted. */
+export const STEP_TAB: Record<StepKey, "forms" | "documents" | "questionnaires" | "review"> = { pages: "forms", people: "forms", forms: "forms", questions_documents: "documents", release: "review" };
 
 /** ✓ Done · ● Next · ○ To do · ◐ AI at work · ⧗ Waiting for someone else (the viewer overlay turns "next" into
  *  "waiting" when the first open item is not this person's). */
@@ -96,3 +96,22 @@ export const ViewerChecklist = SetupChecklist.extend({ viewer: ViewerOverlay });
 export type ViewerChecklist = z.infer<typeof ViewerChecklist>;
 /** GET /catalogue cards: the steps without their open items (the summary carries the full checklist). */
 export type CardSetup = Pick<ViewerChecklist, "chip" | "bar" | "next" | "current" | "viewer"> & { steps: Omit<Step, "open">[] };
+
+/** W1 setup checklist slice C2 (X1): the tab each open item lands on. Before forms' official pages and people sit on
+ *  Forms (P-161 (2)); a proposal ("review:<part>") and a step-level key ("<step>:problems", the Not ready items) take
+ *  the tab of their step, as the board counts them. The tab headers count from this, never recount (concept §8). */
+export type BadgeTab = "forms" | "documents" | "questionnaires";
+const BADGE_TABS: readonly string[] = ["forms", "documents", "questionnaires"];
+export const tabOfFocus = (focus: string, stepTab?: string): BadgeTab | null => {
+  const [head, tail] = focus.split(/[:\s]/);
+  if (head === "forms" || head === "pages" || head === "people") return "forms";
+  if (head === "documents" || head === "questionnaires") return head;
+  if (head === "review") return tail === "documents" ? "documents" : tail === "questions" ? "questionnaires" : tail === "forms" || tail === "people" ? "forms" : null;
+  return stepTab && BADGE_TABS.includes(stepTab) ? (stepTab as BadgeTab) : null;
+};
+/** Open setup work per tab: the sum of each item's count (board v3: "Forms 5" = 3 forms found + 1 proposal + 1 problem). */
+export function tabCounts(setup: { steps: { tab?: string; open: { focus: string; count: number }[] }[] } | null | undefined): Record<BadgeTab, number> {
+  const out: Record<BadgeTab, number> = { forms: 0, documents: 0, questionnaires: 0 };
+  for (const s of setup?.steps ?? []) for (const i of s.open) { const t = tabOfFocus(i.focus, s.tab); if (t) out[t] += i.count; }
+  return out;
+}

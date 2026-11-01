@@ -39,9 +39,10 @@ export async function addFormLine(db: Pick<Db, "combinationForm" | "govFormDef" 
   if (newest && before?.status === "PUBLISHED") n = (await db.combinationForm.deleteMany({ where: { id: newest.id, status: "RETIRED" } })).count; // the released line stands again
   else if (newest && !newest.supersedesId) n = (await db.combinationForm.updateMany({ where: { id: newest.id, status: "RETIRED" }, data: { status: "DRAFT", updatedBy: l.by } })).count;
   else {
-    // After a released removal the line comes back with the content it had when removed; a new line gets the defaults.
+    // After a released removal the line comes back with the content it had when removed (break M1, C1.8: its copies,
+    // minimum age and signer too); a new line gets the defaults.
     const row: Prisma.CombinationFormCreateManyInput = newest
-      ? { workspaceId: newest.workspaceId, combinationId: newest.combinationId, lineageKey: newest.lineageKey, govFormDefId: newest.govFormDefId, who: newest.who, attachMode: newest.attachMode, predicateJson: newest.predicateJson ?? Prisma.DbNull, conditionPlain: newest.conditionPlain, sourceQuote: newest.sourceQuote, channel: newest.channel, signature: newest.signature, origin: l.origin, updatedBy: l.by, status: "DRAFT", version: newest.version + 1, supersedesId: newest.id }
+      ? { workspaceId: newest.workspaceId, combinationId: newest.combinationId, lineageKey: newest.lineageKey, govFormDefId: newest.govFormDefId, who: newest.who, attachMode: newest.attachMode, predicateJson: newest.predicateJson ?? Prisma.DbNull, conditionPlain: newest.conditionPlain, sourceQuote: newest.sourceQuote, channel: newest.channel, signature: newest.signature, minAge: newest.minAge, signedBy: newest.signedBy, copies: newest.copies, origin: l.origin, updatedBy: l.by, status: "DRAFT", version: newest.version + 1, supersedesId: newest.id }
       : { workspaceId: l.workspaceId, combinationId: l.combinationId, lineageKey: l.formKey, govFormDefId: l.govFormDefId, who: l.who ?? "each_applicant", attachMode: l.attachMode ?? "COMBINATION_MANDATORY", conditionPlain: l.conditionPlain ?? null, sourceQuote: l.sourceQuote.slice(0, 500), channel: "PDF_UPLOAD", origin: l.origin, finderBatchId: l.finderBatchId ?? null, updatedBy: l.by, status: "DRAFT", version: 1 };
     n = (await db.combinationForm.createMany({ data: [row], skipDuplicates: true })).count;
   }
