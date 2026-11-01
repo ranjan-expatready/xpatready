@@ -54,6 +54,14 @@ function retiredPeople(c: { label: string; retiredAt: Date | null }) {
   if (c.retiredAt) fail(`"${c.label}" is retired: who can be in it is not changed. Restore it on Structure first; open cases keep their release.`, HttpStatus.CONFLICT);
 }
 
+/** F8 (X1a, found in #113): a combination with no form and no document line has nothing a case could file or collect, so
+ *  it is never submitted, signed off or released. It is a release problem (submit, approve, the release page, the Review
+ *  tab read problems()), not a validator one: the Overview's missing list (engine/programs.ts, fed by validate()) already
+ *  says "No forms yet" with its next step, once (review f8 M1, check_screen01_rules). */
+export const EMPTY_WORDS = "Nothing to release yet: this combination has no forms and no documents. Add the forms it files (Find forms, or add one from the Form library) before sending it for review.";
+export const emptyProblem = (s: Pick<Snapshot, "forms" | "document_requirements">) =>
+  s.forms.length || (s.document_requirements ?? []).length ? [] : [{ level: "error" as const, where: "Release", item: "", message: EMPTY_WORDS }];
+
 @Injectable()
 export class Studio {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(LibrarySources) private readonly lib: LibrarySources) {}
@@ -330,7 +338,7 @@ export class Studio {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"}${forExample(f.example)}. Decide them when this edition is drafted again.` })) : [];
-    return [...structure, ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
+    return [...structure, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
   }
 
   async config(id: string, mode: Mode) {
