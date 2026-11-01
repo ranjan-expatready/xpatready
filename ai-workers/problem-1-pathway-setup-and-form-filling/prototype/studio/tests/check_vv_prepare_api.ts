@@ -96,5 +96,30 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   ok("C6.12: the /filings view (#283) prices the same as the prepare view: same ages, same split groups", fl.groups?.length === after.groups.length && ["visitor_visa", "biometrics"].every((k) => cents(fl, k) === cents(after, k)) && cents(fl, "biometrics") === 85_00, { filings: fl.groups?.length, prepare: after.groups.length });
   ok("C6.12: the item list follows: no biometrics step for the person over 79", !after.items.some((i: { kind: string; subject: string }) => i.kind === "step" && i.subject === spouse) && after.items.some((i: { kind: string; subject: string }) => i.kind === "step" && i.subject === principal));
 
+  // C7.7 (review m1): "has any children" is asked while no child is on the case, and not asked once a child is (worked
+  // out); C7.7 (review M1): the client's questionnaire never shows the representative's parts (the firm record's).
+  const qsOf = async (mode: string, actor: string) => ((await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=${mode}`, undefined, actor)).body?.sections ?? []) as { about_label: string; questions: { subjectId: string; fact: string; answer: { channel: string } | null }[] }[];
+  const asksChildren = async () => (await qsOf("agent", OFFICER)).flatMap((x) => x.questions).some((q) => q.fact === "person.has_children" && [principalId, spouse].includes(q.subjectId));
+  const principalId = sql(`select subject_id from case_participant where case_id='${caseId}' and role='principal'`);
+  const before = await asksChildren();
+  await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: "Sample Child P" }, OFFICER);
+  const afterChild = await asksChildren();
+  ok("C7.7 (review m1, pass and fail): \"has any children\" is asked with no child on the case, and not asked once the case holds a child", before === true && afterChild === false, { before, afterChild });
+  const agentRep = (await qsOf("agent", OFFICER)).flatMap((x) => x.questions).filter((q) => q.subjectId === "representative");
+  const clientRep = (await qsOf("sqr", CLIENT)).filter((x) => /representative/i.test(x.about_label));
+  ok("C7.7 (review M1): the officer sees the representative's facts as from the firm record; the client's questionnaire has no representative part", agentRep.some((q) => q.answer?.channel === "firm_record") && clientRep.length === 0, { agent: agentRep.length, client: clientRep.map((x) => x.about_label) });
+
+  // C7.7 review B1: an IMM 5476 copy holds the representative's firm-record facts (the phone is an object) and is current
+  // right after it is made: not "out of date", so locking it is never refused for that.
+  const gen5476 = await call("POST", `/runtime/cases/${caseId}/forms/${encodeURIComponent("IMM 5476")}/${opened.body?.principal?.subject_id ?? sql(`select subject_id from case_participant where case_id='${caseId}' and role='principal'`)}/generate`, { idempotencyKey: `b1-${Date.now().toString(36)}` }, OFFICER);
+  const copyId: string | undefined = gen5476.body?.id;
+  for (let i = 0; i < 180 && copyId && !["GENERATED", "FAILED"].includes((await call("GET", `/runtime/form-copies/${copyId}`, undefined, OFFICER)).body?.status); i++) await new Promise((r) => setTimeout(r, 500));
+  const made = copyId ? (await call("GET", `/runtime/form-copies/${copyId}`, undefined, OFFICER)).body : null;
+  const phone = sql(`select count(*) from form_instance f, jsonb_array_elements(f.result_json->'boxes') b where f.id='${copyId}' and b->>'fact' = 'person.telephone_number' and b->>'box' like '%SectionB%question7%' and b->>'result' = 'written'`);
+  const country = sql(`select b->>'result' from form_instance f, jsonb_array_elements(f.result_json->'boxes') b where f.id='${copyId}' and b->>'fact' = 'person.mailing_address_country' and b->>'box' like '%SectionB%question7%'`);
+  ok("C7.7 (review B1, M2): a new IMM 5476 copy writes the representative's phone from the firm record and nothing has changed since it was made", made?.status === "GENERATED" && Array.isArray(made?.changed) && made.changed.length === 0 && Number(phone) === 2 && country === "written", { status: made?.status, changed: made?.changed, phone, country });
+  const lk = copyId ? await call("POST", `/runtime/form-copies/${copyId}/lock`, { kind: "filed" }, OFFICER) : null;
+  ok("C7.7 (review B1, fail before the fix): locking that copy is never refused as out of date", !!lk && !/out of date/i.test(lk.body?.detail ?? ""), lk?.body?.detail);
+
   process.exitCode = summary() ? 1 : 0;
 })().catch((e) => { console.error(e); process.exitCode = 1; });
