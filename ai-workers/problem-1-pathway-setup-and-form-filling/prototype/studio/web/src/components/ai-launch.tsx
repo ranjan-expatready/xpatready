@@ -113,19 +113,25 @@ function Count({ n, l, tone }: { n: React.ReactNode; l: string; tone?: string })
   return <div className={cn("rounded-lg border border-border px-3 py-2", tone === "ai" && "border-[#7c3aed]/40")}><p className="text-base font-semibold">{n}</p><p className="text-[11px] text-text-muted">{l}</p></div>;
 }
 
-/** K2 (Screen 02 slice 3): the combination's official checklists, drafted into document requirements on the same review
- *  path. Only the stub pass runs until the founder agrees the live run's cost. */
+/** K2 (Screen 02 slice 3) and C2.6: the combination's official checklists, read into document requirements on the same
+ *  review path. A checklist with a saved real AI reading replays it (US$0); live waits for the founder's OK on its cost,
+ *  so the others offer the stub pass only. */
 function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: (jobId: string) => void }) {
   const list = useQuery<{ id: string; recognised: boolean; kind: string; edition: string | null; fileName: string }[]>({ queryKey: ["attachments", combinationId], queryFn: () => api(`/combinations/${combinationId}/attachments`) });
+  const readings = useQuery<{ attachmentId: string; saved: boolean; lines: number }[]>({ queryKey: ["checklist-readings", combinationId], queryFn: () => api(`/combinations/${combinationId}/checklist-readings`) });
   const [busy, setBusy] = React.useState<string | null>(null), [err, setErr] = React.useState<string | null>(null);
   const checklists = (list.data ?? []).filter((a) => a.recognised && a.kind === "Document checklist");
   if (!checklists.length) return null;
-  const run = async (id: string) => { setBusy(id); setErr(null); try { const j = await api<{ id: string }>(`/attachments/${id}/draft-checklist`, { method: "POST", json: { mode: "stub" } }); onOpen(j.id); } catch (e) { setErr((e as Error).message); } finally { setBusy(null); } };
+  const run = async (id: string, mode: "stub" | "replay") => { setBusy(`${id}:${mode}`); setErr(null); try { const j = await api<{ id: string }>(`/attachments/${id}/draft-checklist`, { method: "POST", json: { mode } }); onOpen(j.id); } catch (e) { setErr((e as Error).message); } finally { setBusy(null); } };
+  const savedOf = (id: string) => (readings.data ?? []).find((r) => r.attachmentId === id && r.saved);
   return (
     <section aria-labelledby="ck-h" className="space-y-2 rounded-lg border border-border p-3" data-checklists>
       <h3 id="ck-h" className="text-sm font-semibold">Checklists: document requirements</h3>
-      <p className="text-xs text-text-muted">AI drafts each checklist's document requirements with its own words beside them; a person decides each one. A live draft waits for the founder's OK on its cost (Sample estimate under US$0.50, capped at US$5): until then the stub pass shows the path, with no AI content.</p>
-      <ul className="space-y-1 text-sm">{checklists.map((a) => <li key={a.id} className="flex items-center justify-between gap-2"><span>{a.edition ?? a.fileName}</span><Button size="sm" variant="secondary" busy={busy === a.id} onClick={() => void run(a.id)}>Stub pass · US$0</Button></li>)}</ul>
+      <p className="text-xs text-text-muted">AI reads each checklist's document requirements with its own words beside them; a person decides each one. Where AI has read a checklist before, its saved reading is replayed at US$0. A live reading waits for the founder's OK on its cost (Sample estimate under US$0.50, capped at US$5): until then the stub pass shows the path, with no AI content.</p>
+      <ul className="space-y-1 text-sm">{checklists.map((a) => { const saved = savedOf(a.id); return (
+        <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-checklist-row={a.edition ?? a.fileName}><span>{a.edition ?? a.fileName}{saved ? <span className="ml-2 text-xs text-text-muted">saved AI reading: {saved.lines} line{saved.lines === 1 ? "" : "s"}</span> : null}</span>
+          <span className="flex gap-2">{saved ? <Button size="sm" busy={busy === `${a.id}:replay`} onClick={() => void run(a.id, "replay")}>Replay the saved reading · US$0</Button> : null}
+            <Button size="sm" variant="secondary" busy={busy === `${a.id}:stub`} onClick={() => void run(a.id, "stub")}>Stub pass · US$0</Button></span></li>); })}</ul>
       {err ? <p role="alert" className="text-sm text-text-danger">{err}</p> : null}
     </section>
   );
