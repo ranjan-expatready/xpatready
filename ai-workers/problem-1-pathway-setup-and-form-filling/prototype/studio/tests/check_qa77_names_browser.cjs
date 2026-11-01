@@ -63,8 +63,19 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.goto(`${BASE}/c/${id}/questionnaires`); await p.locator("[data-who-can-be-moved]").waitFor({ timeout: 15000 });
     const note = await p.locator("[data-who-can-be-moved]").innerText();
     step("QA-77 #113 pass (wp.family): the Questionnaires note says each person in the same words as Who can be on Forms", folded.length > 1 && note.includes(`(${folded.join(" · ")})`), `${note} vs ${folded.join(" · ")}`);
-    const oldHeader = folded.map((w) => w.replace(/, (\d+–\d+) \(optional\)$/, " ($1)").replace(/ \(always\)$/, "")).join("; ");
-    step("QA-77 #113 fail guard: the old header words (\"Child (0–4)\", no \"(always)\") would not match", oldHeader.split("; ").join(" | ") !== folded.join(" | "), oldHeader);
+    // Overview's people chips (QA-77 names "header and Overview"): the same words, " · applicant" after an applicant.
+    await p.goto(`${BASE}/c/${id}/overview`); await p.locator("[data-overview-people] li").first().waitFor({ timeout: 15000 });
+    const chips = (await p.locator("[data-overview-people] li").allInnerTexts()).map((x) => x.replace(/ · applicant$/, "").trim());
+    step("QA-77 #113 pass (wp.family): Overview's people chips say each person in the same words as Who can be on Forms", JSON.stringify(chips) === JSON.stringify(folded), `${chips.join(" | ")} vs ${folded.join(" | ")}`);
+    // Real fail guard: the stored people written the way the header and Overview wrote them before (#113) do not pass
+    // the same comparison, and the live header has none of the old "(0–4)" form.
+    const stored = JSON.parse(sql(`select coalesce(json_agg(json_build_object('label', p->>'label', 'min', (p->>'min')::int, 'max', (p->>'max')::int) order by o), '[]') from combination c cross join lateral jsonb_array_elements(c.participants) with ordinality as x(p, o) where c.combination_key='wp.family'`)).filter((x) => x.max > 0);
+    const oldHeader = stored.map((x) => `${x.label}${x.max > 1 ? ` (${x.min}–${x.max})` : x.min === 0 ? " (optional)" : ""}`);
+    const oldOverview = stored.map((x) => `${x.label} · ${x.min === x.max ? x.min : `${x.min} to ${x.max}`}`);
+    step("QA-77 #113 fail guard: the old header and Overview words of the same people fail the comparison", stored.length === folded.length && JSON.stringify(oldHeader) !== JSON.stringify(folded) && JSON.stringify(oldOverview) !== JSON.stringify(folded), `${oldHeader.join("; ")} / ${oldOverview.join(" | ")}`);
+    await p.goto(`${BASE}/c/${id}/forms`); await p.locator("[data-people-words]").waitFor({ timeout: 15000 });
+    const headerPeople = ((await p.locator("main").innerText()).split("\n").find((l) => /people:/.test(l)) ?? "").split("people: ")[1]?.split(" · ")[0] ?? "";
+    step("QA-77 #113 fail guard: the live header has no old \"(0–4)\" count and one part per person", !/ \(\d+–\d+\)/.test(headerPeople) && headerPeople.split("; ").length === stored.length, headerPeople);
   }
   step("no page errors", errs.length === 0, errs.join(" | "));
   await b.close();

@@ -7,6 +7,7 @@ import { sharedStep, type CombinationSummary, type CombinationView, type Missing
 import { Stat } from "@/components/ui/controls";
 import { fmtWhen } from "@/components/status";
 import { cn } from "@/lib/utils";
+import { personWords } from "@/lib/people";
 
 /** The tab where each missing item is fixed (BR-2). */
 const FIX_TAB: Record<MissingItem["code"], [string, string]> = {
@@ -47,7 +48,7 @@ export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: Combina
       </div>
       <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm" aria-labelledby="ov-people" data-overview-people>
         <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="ov-people" className="font-semibold">Who can be in this application</h2><Link className="text-sm text-text-link underline" to={`/c/${id}/forms?focus=people%3Acard`}>Change on Forms</Link></div>
-        <ul className="mt-2 flex flex-wrap gap-2 text-sm">{people.filter((p) => p.max > 0).map((p) => <li key={p.role} className="rounded-full border border-border px-3 py-1">{p.label} · {p.min === p.max ? p.min : `${p.min} to ${p.max}`}{p.applies !== false ? " · applicant" : ""}</li>)}</ul>
+        <ul className="mt-2 flex flex-wrap gap-2 text-sm">{people.filter((p) => p.max > 0).map((p) => <li key={p.role} className="rounded-full border border-border px-3 py-1">{personWords(p.label, p)}{p.applies !== false ? " · applicant" : ""}</li>)}</ul>
         <p className="mt-2 text-xs text-text-muted">Each person marked as applicant gets their own forms, questions and documents. Numbers Sample until the immigration expert confirms.</p>
       </section>
       <p className="text-sm text-text-muted" data-releases>{last ? <>Released versions: <b className="font-semibold text-text">Release {last.release}</b>, {fmtWhen(last.released_at)}, approved by {last.approver}{d.releases.length > 1 ? ` · ${d.releases.length - 1} earlier` : ""} · <Link className="text-text-link underline" to={`/c/${id}/review`}>Review and release</Link></> : "Nothing released yet. Case work only ever uses a released version; drafts are previews."}</p>
