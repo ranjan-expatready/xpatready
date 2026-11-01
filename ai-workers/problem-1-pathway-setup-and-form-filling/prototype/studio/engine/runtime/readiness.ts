@@ -53,7 +53,9 @@ export type FormItem = {
 export type DocumentItem = { item?: string; label: string; subject: string; person: string; required: boolean; received: boolean; owes?: Owes };
 export type OpenCheck = { fact: string; label: string; subject: string; person: string };
 export type Finding = { id: string; subject?: string; form?: string; severity: "CRITICAL" | "MAJOR" | "MINOR" | "INFO"; words: string };
-export type Fee = { line: string; superseded?: boolean; acceptedUntil: string | null };
+export type Fee = { line: string; superseded?: boolean; acceptedUntil: string | null;
+  /** The amount shown (e.g. "CAD 100"): part of the line's key, so a pass on one amount never covers the next (review r4 B). */
+  amount?: string | null };
 /** A warning passed with a reason: `keys` are the warning lines it covered when it was written (passKeys). */
 export type Pass = { code: WarnCode; keys: string[]; reason: string; by: string; at: string };
 
@@ -99,7 +101,9 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
   const keyOf = (l: In<string>) => `${l.item ?? `${l.code}|${l.subject ?? ""}|${l.form ?? ""}`}${l.part ? `|${l.part}` : ""}`;
   const block = ({ form, part, ...l }: In<BlockCode>) => blocks.push({ ...l, key: keyOf({ ...l, form, part }), unblocks: UNBLOCKS });
   const warn = ({ form, part, ...l }: In<WarnCode>) => warns.push({ ...l, key: keyOf({ ...l, form, part }), unblocks: PASS_OR_FIX });
-  const today = dayOf(x.today, "today")!;
+  // Review r4 A: no today means no expiry check, so it is refused, never read as "not expired" (never fail open).
+  const today = dayOf(x.today, "today");
+  if (today === null) throw new Error("today is required to judge accepted-until dates");
   for (const f of x.forms) {
     if (f.channel === "NOT_NEEDED") continue;   // the portal asks it itself: shown greyed, never a block
     const at = { item: f.item, subject: f.subject, form: f.form };
@@ -120,15 +124,15 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
       block({ code: "barcode_not_validated", ...at, owes: "staff", words: `${ofWho(f)}: no validated copy read back for today's facts. Validate it in Adobe and upload the validated copy; IRCC returns it unprocessed otherwise.` });
     // BR-9 3 (P-151): past the accepted-until date blocks; before it, a superseded edition warns.
     const e = f.edition, until = dayOf(e?.acceptedUntil, `${f.form}'s accepted-until date`);
-    if (e && until && today > until) block({ code: "edition_expired", ...at, owes: "staff", words: `${ofWho(f)}: edition ${e.label} was accepted by IRCC until ${until}. Adopt update to the current edition.` });
-    else if (e?.superseded) warn({ code: "edition_superseded", ...at, owes: "staff", words: `${ofWho(f)}: edition ${e.label} has a newer edition${until ? `; IRCC accepts it until ${until}` : ""}. Adopt update.` });
+    if (e && until && today > until) block({ code: "edition_expired", ...at, part: e.label, owes: "staff", words: `${ofWho(f)}: edition ${e.label} was accepted by IRCC until ${until}. Adopt update to the current edition.` });
+    else if (e?.superseded) warn({ code: "edition_superseded", ...at, part: e.label, owes: "staff", words: `${ofWho(f)}: edition ${e.label} has a newer edition${until ? `; IRCC accepts it until ${until}` : ""}. Adopt update.` });
     if (f.channel === "ONLINE" && f.copyStale) warn({ code: "copy_stale", ...at, owes: "staff", words: `${ofWho(f)}: the PDF copy is older than today's facts (a copy, not for filing). Download it again.` });
     // One line per entered section (review r2 m2): a pass for one section never covers another that goes out of date later.
     if (f.channel === "ONLINE") for (const sec of f.enteredOutOfDate ?? []) warn({ code: "entered_out_of_date", ...at, part: sec, owes: "staff", words: `${ofWho(f)}: "${sec}" was entered in the portal before a fact changed. Enter it again.` });
   }
-  for (const c of x.openChecks ?? []) block({ code: "open_check", subject: c.subject, owes: "staff", words: `${c.person}: "${c.label}" differs between the answer and the document. Resolve the check.` });
+  for (const c of x.openChecks ?? []) block({ code: "open_check", subject: c.subject, part: c.fact, owes: "staff", words: `${c.person}: "${c.label}" differs between the answer and the document. Resolve the check.` });
   for (const fee of x.fees ?? []) {
-    const until = dayOf(fee.acceptedUntil, `Fee "${fee.line}"'s valid-until date`), at = { item: `fee|${fee.line}`, form: fee.line };
+    const until = dayOf(fee.acceptedUntil, `Fee "${fee.line}"'s valid-until date`), at = { item: `fee|${fee.line}`, form: fee.line, part: `${fee.amount ?? ""}|${until ?? ""}` };
     if (until && today > until) block({ code: "edition_expired", ...at, owes: "staff", words: `Fee "${fee.line}" was valid until ${until}. Adopt the current fee table.` });
     else if (fee.superseded) warn({ code: "edition_superseded", ...at, owes: "staff", words: `Fee "${fee.line}" has a newer amount${until ? `; it is accepted until ${until}` : ""}. Adopt update.` });
   }
@@ -154,9 +158,12 @@ export function passKeys(r: FilingReadiness, code: WarnCode, key?: string): stri
 
 /** Why a pass's reason is refused (null: accepted). A written reason of at least 5 characters (as the case team's). */
 export function passProblem(reason: unknown): string | null {
+  // The same rule as the contract's reason (contracts/runtime.ts `reason`: 5–300 characters, a letter or digit, no
+  // control or invisible characters; review r4 m2).
   const t = typeof reason === "string" ? reason.trim() : "";
-  if (t.length < 5) return "Say why this warning is passed (at least 5 characters).";
-  if (t.length > 500) return "Keep the reason under 500 characters.";
+  if (t.length < 5 || !/[\p{L}\p{N}]/u.test(t.replace(/[\u115f\u1160\u3164\uffa0]/g, ""))) return "Say why this warning is passed (at least 5 characters, with words).";
+  if (t.length > 300) return "Keep it to 300 characters.";
+  if (/[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(t)) return "Remove the control or invisible characters from this text.";
   return null;
 }
 

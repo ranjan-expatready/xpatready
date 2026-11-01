@@ -177,3 +177,66 @@ Round 2 Minors, all fixed:
 Nothing new found. Journey score unchanged: **8.5 / 10, pass**. The ½ for error recovery now stands at 1, but I have not re-scored.
 
 **Verdict: Approve** for commit 48f926d3. No Blocker, Major or Minor is open.
+
+---
+
+# Round 4: commit eaabf50d (full `git diff origin/main...eaabf50d`, fresh reviewer)
+
+Reviewer: a fresh agent that did not build it and did not write rounds 1–3 · 1 Nov 2026.
+
+What I ran:
+* An isolated copy, `isolated.sh rev350 4436 start` (never :4400). The check needs no server; its usage line takes no port or database.
+* `check_c76_readiness.ts`: 50/50, twice.
+* `tsc -p api/tsconfig.json`: no error in either C7.6 file. CI does not run `tsc`.
+* `graph.mjs --check`: G3 1, same as main. No explicit `any`.
+* Probes and mutants were run in the scratchpad, not committed. US$0, Live AI off.
+
+Journey test: **8 / 10, pass** (round 4 section of `journey-test-reviewer-2026-11-01.md`).
+
+## Verdict: Block (commit eaabf50d)
+The classification is right against P-168, P-71, r5c BR-9 and the C7.6 row of `M3-CONTRACT.md`. Rounds 1–3 fixes hold. Two Majors remain, both cases of the engine's own "never fail open / a pass never covers a later line" promise.
+
+**Major A (Must): a missing `today` turns the P-151 hard block off.**
+* Where: `readiness.ts:102` (`dayOf(x.today, "today")!`) with `:84`. `dayOf` returns null for undefined, and `!` hides it. `null > "2026-10-01"` is false, so `edition_expired` never fires (lines 123 and 132).
+* Scenario: part 2's route calls `filingReadiness({...input})` and leaves out `today`. CI runs tsx with no type-check, so nothing catches it. The result:
+  * An edition whose accepted-until date has passed only gives `edition_superseded`, a warning that can be passed.
+  * If `superseded` is false, it gives nothing and the filing is `ready: true`.
+  * An expired fee disappears in the same way.
+* Probe 3: `blocks: [] warns: [edition_superseded]`. The PR body says such a value is "refused with its field named, never ignored".
+* Fix: throw when `today` is null or undefined (for example `const today = dayOf(x.today ?? "", "today")!`). Add a fail test.
+
+**Major B (Must): an edition or fee pass covers a later, different edition or fee.**
+* Where: `readiness.ts:105` and `:124`. The `edition_superseded` key is just the form item (`i-5707`), with no edition. The fee key is `fee|<line>` (`:131`, `:133`), with no amount or date.
+* Scenario:
+  * IMM 5707 is on edition 01-2024, which is superseded. It is passed with the reason "Client files this week".
+  * The firm adopts edition 06-2026, and the warning goes.
+  * Later 06-2026 is superseded in turn. Its new warning has the same key, so it is shown as already **passed**, with the old reason that was written about 01-2024 (probe 1).
+  * A fee whose amount is replaced twice behaves the same way (probe 1b).
+* This breaks AG-07 BR-26 and the header's rule at `:18-19`, "it never covers a line that appears later". It is the same class as round 1's Major 3.
+* Fix: add `part: e.label` to the edition warning, and the fee's `acceptedUntil` or amount to its key. Test it by moving to edition B and checking that B is open.
+
+## Minors (Should)
+1. **A line can come back already passed.** `copy_stale`, a `missing_document` and an entered section use the same key each time they come back. A pass from the first time covers the second (probe 2). Part 2 should drop a pass once its line clears, or put the occurrence in the key.
+2. **`passProblem` (`:156-160`) differs from the contracts' `reason` (`contracts/runtime.ts:24,47`: 5–300 characters, a letter or digit required, control characters refused).**
+   * `"....."` and 400 characters are accepted here.
+   * Fix: use one rule, the contract's.
+3. **Keys are not unique per filing.**
+   * Two open checks on one person both get `open_check|s|` (probe 6, `:129`). The fix is to add `part: c.fact`.
+   * Every per-item block shares the bare item id (probe 7). Pass matching still checks `code`, so this is harmless for passes but breaks list keys in /prepare.
+4. **Test gaps, found by mutants that survive.**
+   * Removing `p.code === w.code` (`:140`) passes 50/50. A copy_stale pass would then cover edition_superseded on the same item.
+   * Removing the Online guard on `entered_out_of_date` (`:127`) also passes 50/50.
+   * Fix: add one test for each.
+5. **An edition with an accepted-until date but `superseded: false` warns nothing before its date** (probe 4). Pack 4 C7.6-20a sets only the date. Either derive `superseded` from a non-null date, or keep the caller note.
+6. **`dayOf` takes the local day of an offset timestamp, and does not check the time part.**
+   * `2026-10-31T23:00-05:00` is 1 November in UTC, but `dayOf` reads it as 31 October.
+   * `T99:99:99` is accepted (probes 8, 9).
+   * Harmless today, since Prisma gives Z timestamps.
+
+Checked and correct: Not needed lines are skipped. Online lines have no barcode block. A typed name waits for nothing. Hand-scanned and pen lines block until signed. The accepted-until day itself is still accepted. Expired means a block, not also a warning. Findings, CRITICAL included, only warn. A pass never clears a block (probe 12). Facts are grouped by owner. Repeating-group facts flow through. No percentage anywhere. Mutants that removed Not needed, open check, typed name, the Online guard on the barcode block, review, reason, copy_stale Online and out of date were all caught.
+
+D1–D20 (engine only): D1 4, every BR-9 code present · D2 3, Majors A and B · D3 4, contract types imported; the reason rule is duplicated (m2) · D4 4 · D5 3, pass scope (B, m1) · D6 4 · D7 4 · D8–D14 n/a, no UI · D15 5, pure · D16 4, two mutants survive (m4) · D17 simulated only · D18 4 · D19 n/a · D20 simulated only.
+
+Could not check: any UI, keyboard, axe or widths (none exist); real /prepare input (not built yet); races (no store until part 2).
+
+**Verdict: Block** on eaabf50d. Fix Majors A and B, each with a fail test.

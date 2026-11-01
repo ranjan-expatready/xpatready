@@ -79,3 +79,32 @@ Two places are still loose:
 | Visual quality | ½ | Not applicable (no UI), held at ½. |
 | Trust and sources | 1 | Findings only warn and keep their severity. Passes are recorded. The Unconfirmed legal line is kept. |
 | **Total** | **8.5 / 10** | **Pass** (8 or more, no criterion at 0). |
+
+---
+
+## Round 4: commit eaabf50d (fresh reviewer, engine only)
+Setup: isolated copy `rev350` on :4436 (no server needed). The check passed 50/50, twice. Probes were in the scratchpad. US$0.
+
+Journeys walked as calls a /prepare caller would make. The case officer:
+1. Opens a Visitor visa filing with facts missing → `missing_facts`, one line per owner. Holds.
+2. Clears the barcode, the signature and the review → ready. Holds.
+3. Passes a superseded IMM 5707 edition with a reason, adopts the update, and later meets a newer superseded edition. **Fails**: the new edition shows as already passed, with the old reason (Major B).
+4. A caller leaves out `today` while an edition has expired. **Fails open**: no block (Major A).
+5. A stale copy, passed, is refreshed and goes stale again. It is still passed (Minor 1).
+6. Two open checks on one person share a key (Minor 3).
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Every BR-9 block and warning is present. |
+| Next step obvious | 1 | Each line gives the fix and what it `unblocks`. |
+| Plain words | 1 | `CODE_WORDS`. Form and person are named. No %. |
+| Feedback and state | 1 | `passed` keeps who, when and why. |
+| Correct data | ½ | A pass covers a later edition or fee (Major B). Keys are not unique (m3). |
+| Error recovery | ½ | A missing `today` fails open (Major A). |
+| Accessibility and screen sizes | ½ | Not applicable (no UI), held at ½. |
+| Speed | 1 | Pure, no queries. 50 checks in about 1 s. |
+| Visual quality | ½ | Not applicable (no UI), held at ½. |
+| Trust and sources | 1 | Findings only warn and keep their severity. The Unconfirmed legal line is kept. |
+| **Total** | **8 / 10** | **Pass** on the score. The review is still Block on Majors A and B. |
+
+Could not test: a UI, a screen reader, an intended user's walk (D17 and D20 stay with the founder).

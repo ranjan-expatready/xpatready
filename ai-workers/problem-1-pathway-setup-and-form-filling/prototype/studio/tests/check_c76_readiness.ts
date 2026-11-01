@@ -126,13 +126,31 @@ r = filingReadiness(done({ forms: [i5257({ copyStale: true }), i5476()] }));
 ok("C7.6 warn pass: a PDF upload line has no \"PDF copy\" warning (its own copy is checked by Validate)", r.ready);
 
 ok("C7.6 pass rules: a block code cannot be passed, in people's words (no internal key); a warning code can; an unknown code is refused", /representative's review/.test(cannotPass("representative_review") ?? "") && !/representative_review|nope/.test(`${cannotPass("representative_review")}${cannotPass("nope")}`) && cannotPass("missing_document") === null && !!cannotPass("nope"));
-ok("C7.6 pass rules: a reason of fewer than 5 characters, or none, is refused; a written one is accepted", !!passProblem("") && !!passProblem(undefined) && !!passProblem("abc") && !!passProblem("   ab   ") && passProblem("Passport uploaded in the portal (Sample)") === null && passProblem(`  ${"x".repeat(499)}  `) === null && !!passProblem("x".repeat(501)));
+ok("C7.6 pass rules: a reason of fewer than 5 characters, or none, is refused; a written one is accepted", !!passProblem("") && !!passProblem(undefined) && !!passProblem("abc") && !!passProblem("   ab   ") && passProblem("Passport uploaded in the portal (Sample)") === null && passProblem(`  ${"x".repeat(299)}  `) === null && !!passProblem("x".repeat(301)));
 
 // Order: blocks and warnings are listed by who owes them (You · Representative · Client …).
 r = filingReadiness(done({ reviewed: false, forms: [i5257({ validatedCurrent: false }), i5476({ signed: false })] }));
 ok("C7.6 order pass: blocks are grouped by who owes them, staff first, then the representative, then the client", r.blocks.map((b) => b.owes).join() === "staff,representative,client", r.blocks.map((b) => b.code));
 
 // Properties: never ready with a block; no percentage anywhere; every line has words and a known code.
+// Review r4 A: a missing today is refused, never read as "not expired" (P-151, never fail open).
+{ const x = done({ forms: [i5257({ edition: { label: "IMM 5257 (06-2023)", superseded: false, acceptedUntil: "2026-10-01" } }), i5476()] }); delete (x as { today?: string }).today;
+  let threw = false; try { filingReadiness(x); } catch { threw = true; }
+  ok("C7.6 r4 A fail: with no today an expired edition is not passed as ready (refused)", threw); }
+// Review r4 B: a pass on one edition or fee amount never covers a later, different one (AG-07 BR-26).
+{ const ed = (label: string) => done({ forms: [i5257({ edition: { label, superseded: true, acceptedUntil: "2026-12-31" } }), i5476()] });
+  const a = filingReadiness(ed("IMM 5257 (01-2024)")), keys = passKeys(a, "edition_superseded");
+  const passes = [{ code: "edition_superseded" as WarnCode, keys, reason: "Client files this week", by: "user-a", at: "2026-11-01" }];
+  ok("C7.6 r4 B pass: the passed edition is covered", filingReadiness({ ...ed("IMM 5257 (01-2024)"), passes }).warns.length === 0);
+  ok("C7.6 r4 B fail: a newer superseded edition is open again, not covered by the old pass", codes(filingReadiness({ ...ed("IMM 5257 (06-2026)"), passes }).warns).join() === "edition_superseded");
+  const fee = (amount: string) => done({ fees: [{ line: "Visitor visa fee (Sample)", amount, superseded: true, acceptedUntil: "2026-12-01" }] });
+  const fk = passKeys(filingReadiness(fee("CAD 100")), "edition_superseded"), fp = [{ ...passes[0], keys: fk }];
+  ok("C7.6 r4 B fail: a pass on one fee amount does not cover the next amount", filingReadiness({ ...fee("CAD 100"), passes: fp }).warns.length === 0 && codes(filingReadiness({ ...fee("CAD 120"), passes: fp }).warns).join() === "edition_superseded"); }
+// Review r4 m2/m3: the reason follows the contract's rule; two open checks on one person have their own keys.
+ok("C7.6 r4 m2 fail: a reason of only marks, or over 300 characters, is refused", !!passProblem(".....") && !!passProblem("a".repeat(301)) && passProblem("Client files this week") === null);
+{ const r2 = filingReadiness(done({ openChecks: [{ fact: "dob", label: "Date of birth", subject: "s-P", person: "A" }, { fact: "name", label: "Name", subject: "s-P", person: "A" }] }));
+  const k = r2.blocks.filter((b) => b.code === "open_check").map((b) => b.key); ok("C7.6 r4 m3: two open checks on one person have distinct keys", k.length === 2 && k[0] !== k[1], k); }
+
 const form = fc.record({ needsValidate: fc.boolean(), validatedCurrent: fc.boolean(), signed: fc.boolean(), channel: fc.constantFrom<Channel>("ONLINE", "PDF_UPLOAD", "PAPER", "NOT_NEEDED"), signature: fc.constantFrom<Signature>("TYPED_NAME", "HAND_SCANNED", "PEN", "NONE"), reason: fc.constantFrom<null | "not answered" | "not confirmed" | "needs a fix">(null, "not answered", "not confirmed", "needs a fix"), until: fc.constantFrom(null, "2026-10-31", "2026-11-01", "2026-12-01"), superseded: fc.boolean(), stale: fc.boolean() });
 const input = (fs: { needsValidate: boolean; validatedCurrent: boolean; signed: boolean; channel: Channel; signature: Signature; reason: null | "not answered" | "not confirmed" | "needs a fix"; until: string | null; superseded: boolean; stale: boolean }[], reviewed: boolean, docMissing: boolean): FilingInput => ({ filing: "f", reviewed, today: TODAY, documents: [{ label: "Passport", subject: "s", person: "Sample Client A", required: true, received: !docMissing }],
     forms: fs.map((f, i) => ({ item: `i${i}`, form: `IMM ${5257 + i}`, subject: "s", person: "Sample Client A", channel: f.channel, signature: f.signature, signed: f.signed, needsValidate: f.needsValidate, validatedCurrent: f.validatedCurrent, copyStale: f.stale,
