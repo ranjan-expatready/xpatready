@@ -10,19 +10,17 @@
 // kept; a failed answer is re-checked at US$0, never paid for again).
 // US$0: saved answers and library reuse only; the failure is the test-only switch STUDIO_FAULT_SOURCE (an induced fault
 // for one form, honoured only on an isolated copy); no live switch; ledger checked unchanged.
-// Run (from prototype/studio):
-//   zsh tools/isolated.sh acc_c3 4571 start STUDIO_FAULT_SOURCE=imm5707e.pdf STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs
-//   ./node_modules/.bin/tsx acceptance/C3.3.test.ts 4571 xr_studio_acc_c3 ; zsh tools/isolated.sh acc_c3 4571 stop
-// Expected today (main 931cb99a, run 1 Nov 2026 on an isolated copy, US$0): 14 pass, 0 fail — a guard file: it guards
-// what works. The paid repeat of a failed run is refused through the API (AT-12, the plan answers not_eligible "A new
-// paid call is refused … failed our own check"); the person walk is J2 step 9.
+// Adopted into the suites (B2b, 1 Nov, C3.3 PR); the person walk is tests/check_forms_c33_failed_run_browser.ts.
+// Run (usage line for run-suites.sh):
+//   zsh studio/tools/isolated.sh forms_c33a 4457 start STUDIO_FAULT_SOURCE=imm5707e.pdf STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_forms_c33_acceptance.ts 4457 xr_studio_forms_c33a
+// Expected (1 Nov 2026, isolated copy, US$0): 14 pass, 0 fail.
 // Exit: 0 all pass · 1 a check failed · 2 setup missing or refused (demo port or database, copy, sample, fault switch).
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkedOutput, explainRun, failedOurCheck, sameDraftInputs, type RunEnvelope } from "../engine/ai-run.ts";
 import { convertFieldMap } from "../../p2/convert.ts";
-import { checkCopy, needCombo, PLANT_MARK, plantRun, sqlFor, stop } from "./lib/pack1.ts";
+import { checkCopy, needCombo, PLANT_MARK, plantRun, sqlFor, stop } from "../acceptance/lib/pack1.ts";
 
 const PORT = Number(process.argv[2] ?? 4571), DB = process.argv[3] ?? "xr_studio_acc_c3", NAME = DB.replace(/^xr_studio_/, "");
 const STUDIO = join(import.meta.dirname, ".."), PROTOTYPE = join(STUDIO, ".."), RUNS = join(PROTOTYPE, "p2", "runs");
