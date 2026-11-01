@@ -82,3 +82,83 @@ Reviewer: I did not build this. Commit **456fb7d0** (`git diff origin/main..456f
 The fixes that would raise the score are m1 first, then m2.
 
 **Could not check:** a real screen reader; an unaided walk by an intended user (D17 and D20 stay with the founder); a library of about 220 editions on a cold first fill (I measured only 18); mutation runs (I reasoned about them only, because the working tree is shared with other copies).
+
+---
+
+## Delta review on d373fa43
+
+Reviewer, 1 Nov 2026. Scope: commit dd58528f "break fixes" (`git diff 10440a56 d373fa43 -- prototype/studio ':!*.png'`). The merge of origin/main brought only acceptance packs and docs, and none of them touch C3.12. US$0, no live AI.
+
+**How I checked.**
+* I read the diff of `api/src/edition-published.ts`, `engine/published-date.ts` (new), `api/src/form-library.ts`, `api/src/intake.ts`, `tools/read_form_identity.py`, `web/src/pages/library-forms.tsx` and both tests.
+* I ran `tests/check_forms_c312_field_map.ts` on my own isolated copy (`rev2_c312`, :4481, fresh database): **48 passed, 0 failed**.
+* I added one probe of my own on that copy, to see how the fix holds against a regular file that hangs the reader (details under M1).
+* I did not run the browser suite (it runs elsewhere, 112/0). I read its new steps, and I viewed the committed evidence shot.
+* Afterwards I stopped the copy, dropped its database, and deleted its var folder and the probe file.
+
+### Findings, one by one
+| Finding | Fixed? | Fail test | Evidence |
+|---|---|---|---|
+| Break **M1**: one blocking file stalls the list for 60 s, readers stack up, and the batch starves | **Fixed for the list; partly fixed for the batch** (see new m-a below) | Yes, for a FIFO: "does not stall … (under 4 s)" and "the pipe is left unread and the edition beside it is still read" | The `regular()` stat check skips pipes and folders. The `running` map gives one fill per workspace. The list waits at most `WAIT_MS` = 3 s. |
+| Break **M2**: unread or unreadable files shown as "Date not in the file" | **Fixed** | Yes: the pure rule (null gives `unread`, "?" gives `unreadable`, "" gives `none`), the API test (row with "?"), and the browser step ("Date could not be read from the file") | `publishedOf` returns `published_state`. The web says "Date not read yet", "Date could not be read from the file" or "Date not in the file", and the drawer and older editions use the same words. The reader returns "?" when it throws, which also closes break m2. |
+| Break **m1**: impossible dates | **Fixed** | Yes: the rule test covers 2023-02-30, 0000-00-00, 2099-12-31 and 9999-13-99, and the API test covers 9999-13-99 in the column | `realDate` accepts only a real calendar date from 1990 to next year. The value is still stored as read and only hidden when shown, which is acceptable. |
+| Break **m3** / my m3 (manifest read per row) | **Fixed** | Not testable as behaviour, so I checked it by reading the code | `manifest()` is read once per fill, after `if (!unread.length) return 0`. |
+| Break **m5**: an HTML page date taken as "Published" | **Fixed** | No dedicated test (code reading only, as in the break) | `published_only` returns null for anything that is not `%PDF-`. Intake stores "" for a non-PDF upload. |
+| My **m1**: the date breaks mid-date at 1024 px | **Fixed** | Yes: browser step "at ${w} px the date never breaks in the middle (one line box)" | `PublishedLine` wraps the date in a `whitespace-nowrap` span. |
+| My **m2** (= break M2) | **Fixed** | as M2 | as M2 |
+| My **m3**: the evidence shot misses the feature | **Fixed** | n/a | `c312-published-1440.png` now shows the list rows: IMM 1295 "Published 2026-06-04", IMM 5409 "Date could not be read from the file". |
+
+### Probe: a regular file that hangs the reader
+I made a sparse 3 GB file with a `%PDF-1.7` header. pypdf runs for more than 70 s on it. I inserted an edition whose `stored_path` points at that file, and set IMM 1295 and IMM 5257 (06-2018) to NULL.
+
+What held:
+* **Five parallel lists each took 3.8–4.1 s, not 60 s.**
+* Only **one** reader process was running, so the in-flight guard works.
+* While the fill ran, IMM 1295 said `unread` ("Date not read yet"), which is honest.
+* After the 60 s timeout, lists took 0.19–0.21 s (the back-off).
+
+What did not hold:
+* **All three rows stayed NULL.** The healthy files are still never written while one hanging regular file is in the batch.
+* Every ten minutes this repeats: about 60 s in which each list takes about 3 s.
+
+### New / residual findings
+* **m-a (Minor, Should): a hanging regular file still starves the batch and slows the list to about 3 s once every 10 min.**
+  * Where: `edition-published.ts` `fill`. It is still one reader call for the whole batch with a 60 s timeout, and on failure nothing is written.
+  * Why Minor:
+    * The list no longer hangs. 3 s is over the 1 s budget, but only inside the window.
+    * The page says "Date not read yet", which is true, so nothing false is shown.
+    * Reach is low: the same file would hang the identity read at intake, so it is unlikely to become an edition.
+  * Fix: write what the reader has finished. For example, the reader prints one line per file and the API keeps the lines it got before the timeout. Or read in small chunks, or with a per-file timeout. Then mark the file that timed out "?".
+* **m-b (Minor, Should): the 3 s wait cap and the in-flight guard have no fail test.**
+  * The FIFO is filtered by `statSync` before the reader is ever called. So deleting the `Promise.race` cap, or the `running` map, still passes "under 4 s".
+  * A test that needs a reader to hang must use a file that hangs pypdf. For example, a sparse multi-GB file with a `%PDF-` header: my probe took over 70 s on one.
+* **Observation:** a file that is missing from disk now says "Date not read yet" indefinitely. That is true, but "File not found" would say more; the breaker suggested it. This is not a finding.
+* **Observation:** impact review (`impact.ts:74`) copies `h.published` from the intake item. For a held HTML item this could carry a page date. Held items come from PDF downloads in practice, so I did not raise it.
+
+No regression found. The earlier C3.12 rules all pass again in the 48/0 run: date shown, never the edition, read once and kept, older edition apart, missing file stays NULL, upload keeps its date.
+
+### D1–D20 (changed only)
+| Dimension | Before | Now | Evidence |
+|---|---|---|---|
+| D10 Language | 4 | 5 | Four honest states, never "not in the file" for a file that was not read |
+| D13 Accessibility and responsive | 4 | 5 | The date never breaks; one-line-box step at 1024 and 400 |
+| D14 Performance | 5 | 4 | The list is capped at about 3 s while a fill runs; a hanging file still starves the batch (m-a) |
+| D16 Testability | 4 | 4 | A fail test for each break finding; the wait cap and in-flight guard are untested (m-b) |
+
+### Journey score: **9/10, no criterion at 0 (pass)**
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Dates are shown in the list and the drawer, current and earlier |
+| Next step obvious | 1 | Read-only |
+| Plain words | 1 | "Date not read yet", "Date could not be read from the file" and "Date not in the file" each say what is true |
+| Feedback and state | 1 | Never blank, never false |
+| Correct data | 1 | Matches pypdf ModDate; impossible dates are hidden |
+| Error recovery | 1 | An unread row is retried; an unreadable one is said as such |
+| Accessibility and screen sizes | 1 | The date never breaks; earlier axe and sideways-scroll checks unchanged |
+| Speed | ½ | 0.2 s normally, but about 3 s per list during a fill that hangs (m-a) |
+| Visual quality | 1 | Evidence shot shows the dates in the row |
+| Trust and sources | ½ | Honest, but healthy files stay "not read yet" while one bad file is in the batch (m-a) |
+
+**Could not check:** the browser suite myself (it runs elsewhere, 112/0); a real screen reader; an unaided walk by an intended user (D17 and D20 stay with the founder).
+
+**Verdict: Approve** (no open Blocker or Major). Both break Majors are fixed with fail tests. m-a and m-b are Minor and can go in a follow-up: chunk or stream the reader so a file that hangs does not starve the rest, and add a fail test for the wait cap.
