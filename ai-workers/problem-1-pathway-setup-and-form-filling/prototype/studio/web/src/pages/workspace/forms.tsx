@@ -131,7 +131,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <><ChannelCell id={id} line={{ code: l.code, channel: l.channel as Channel, channelWords: l.channelWords, signature: l.signature, document: l.document } as ChannelLine} canAuthor={canAuthor} options={l.channelOptions} />{l.channel === "ONLINE" ? <p className="text-xs text-text-muted" data-online-words>Answer sheet in portal order (P-113)</p> : null}</>}</td>
             <td className="text-sm">{l.document ? <span className="text-text-muted">—</span> : <SignatureCell id={id} code={l.code} channel={l.channel as Channel} signature={l.signatureKind as Signature} signatures={l.signatures} canAuthor={canAuthor} />}</td>
             <td className="text-xs">{l.document ? "—" : l.signedBy ? l.signedByLabel : <span className="text-text-muted">Not set</span>}</td>
-            <td className="text-xs"><span className="block">{l.edition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}{l.document ? null : <span className="mt-1 block"><StepChip code={l.code} chip={progress[l.code]} onOpen={() => openSetup(l.code)} /></span>}</td>
+            <td className="text-xs"><span className="block">{l.edition ?? l.libraryEdition ?? <span className="text-text-muted">No edition read yet</span>}{l.document ? null : <span className="text-text-muted"> · {l.boxes} form fields matched</span>}</span>{l.document ? null : <LineReading combo={combo} l={l} fromLibrary={fromLibrary} />}{l.document ? null : <span className="mt-1 block"><StepChip code={l.code} chip={progress[l.code]} onOpen={() => openSetup(l.code)} /></span>}</td>
             <td className="whitespace-nowrap">{canAuthor ? <><Button size="sm" variant="ghost" aria-label={`Change ${l.code}`} onClick={() => setOpen(l)}><Pencil /> Change</Button><LineMenu id={id} l={l} onRedo={() => redo([l.code])} onRemove={() => setRemoving(l)} /></> : null}</td>
           </tr>
         ))}
@@ -158,6 +158,11 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
  *  fromLibrary: its edition has a field map), never the line's count, so a newer unmapped edition keeps Draft with AI. */
 function LineReading({ combo, l, fromLibrary }: { combo: Combo; l: WorkspaceFormLine; fromLibrary: string[] }) {
   const a = attachmentFor(combo, l.code);
+  // QA-103: a line whose file is in the library but not on this combination never says "Not attached": it says the file
+  // is in the library, and its next step is the line's own step chip below (Field map); with no file anywhere, it says so.
+  if (!a && !l.boxes) return l.libraryEdition
+    ? <span className="mt-1 inline-flex flex-col items-start gap-1" data-line-next="library"><Pill tone="info">File in the library</Pill></span>
+    : <span className="mt-1 block text-text-muted" data-line-next="file">No file yet: upload it or find it in <Link className="text-text-link underline" to="/library/forms">Shared library › Forms</Link></span>;
   const mapped = a ? a.status === "IN_LIBRARY" || fromLibrary.includes(a.id) : l.boxes > 0;
   // The last step and when it ran stay (QA-17); only the next step, which would be AI, goes.
   const last = a ? combo.jobs.find((j) => j.attachmentId === a.id) : undefined;
