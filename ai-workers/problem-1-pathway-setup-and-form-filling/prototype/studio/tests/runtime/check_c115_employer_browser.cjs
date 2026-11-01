@@ -23,7 +23,8 @@ const WORDS = "Not offered: the Visitor visa has no employer facts.";
   const noSideways = async (p, name) => ok(`C11.5: ${name} has no sideways scroll at ${p.viewportSize().width} px`, !(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)));
   const ref = `C115B-${Date.now().toString(36)}`;
   try {
-    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    // Tall enough that Tab does not scroll the dialog: Radix closes any tooltip on scroll (the shared Tip; noted in the PR).
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 1200 } });
     await ctx.addInitScript(() => { localStorage.setItem("xr-actor", "user-R"); });
     const p = await ctx.newPage();
     p.on("pageerror", (e) => errors.push(e.message));
@@ -33,7 +34,12 @@ const WORDS = "Not offered: the Visitor visa has no employer facts.";
     const line = dlg.getByTestId("employer-link");
     await line.getByText(WORDS).waitFor(T);
     ok("C11.5 fail: Open a case on the Visitor visa says the employer case link is not offered, and why", (await line.innerText()).includes("Relies on an employer case"));
-    ok("C11.5: the line explains itself in a tooltip", /employer-specific work permits/.test((await line.getByRole("img").getAttribute("aria-label")) ?? ""));
+    const about = line.getByRole("button", { name: "About: relies on an employer case" });
+    await dlg.getByLabel("Case officer").focus();
+    await p.keyboard.press("Tab"); // a real keyboard move: the tooltip opens on keyboard focus
+    ok("C11.5: Tab from the case team reaches the ⓘ", await about.evaluate((el) => el === document.activeElement));
+    await p.getByRole("tooltip").filter({ hasText: "employer-specific work permits" }).first().waitFor({ state: "attached", timeout: 15000 }); // Radix keeps the role=tooltip copy visually hidden for screen readers
+    ok("C11.5: the line's tooltip opens from the keyboard (review m1)", true);
     await axe(p, "Open a case with the employer line");
     await dlg.getByLabel("Case reference").fill(ref);
     await dlg.getByLabel("Principal applicant's name").fill("Client A");

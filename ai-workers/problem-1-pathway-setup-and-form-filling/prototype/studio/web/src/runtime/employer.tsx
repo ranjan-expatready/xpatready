@@ -3,6 +3,7 @@
 import { Info } from "lucide-react";
 import { useApi } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tip, TipProvider } from "@/components/status";
 
 export type EmployerLink = { offered: boolean; reason: string; facts: string[] };
 
@@ -10,10 +11,12 @@ const TIP = "Only for employer-specific work permits. The worker's case reads th
 
 export function EmployerLinkLine({ link, loading, error }: { link?: EmployerLink; loading?: boolean; error?: string }) {
   return (
+    <TipProvider>
     <div className="text-sm" data-testid="employer-link">
-      <p className="flex items-center gap-1 font-medium">Relies on an employer case<span title={TIP} aria-label={TIP} role="img" className="inline-flex text-text-muted"><Info className="size-3.5" aria-hidden /></span></p>
+      <p className="flex items-center gap-1 font-medium">Relies on an employer case<Tip tip={TIP}><button type="button" aria-label="About: relies on an employer case" className="inline-flex rounded-sm text-text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"><Info className="size-3.5" aria-hidden /></button></Tip></p>
       {loading ? <Skeleton className="mt-1 h-4 w-2/3" /> : error ? <p className="text-xs text-danger">{error}</p> : link ? <p className="text-xs text-text-muted">{link.reason}</p> : null}
     </div>
+    </TipProvider>
   );
 }
 

@@ -22,5 +22,5 @@ export function employerLinkOffer(s: SnapshotPart): EmployerLinkOffer {
   if (s.combination.client_type === "CORPORATE") return { offered: false, reason: `Not offered: "${label}" is a Corporate case, the one a worker's case links to.`, facts: [] };
   const facts = employerFacts(s);
   if (!facts.length) return { offered: false, reason: `Not offered: the ${label} has no employer facts.`, facts };
-  return { offered: true, reason: `Offered: the ${label} forms read ${facts.length} employer fact${facts.length === 1 ? "" : "s"} (the employer's name, address, LMIA or offer number) from a Corporate case, read-only.`, facts };
+  return { offered: true, reason: `Offered: the ${label} forms read ${facts.length} employer fact${facts.length === 1 ? "" : "s"} from a Corporate case, read-only.`, facts };
 }

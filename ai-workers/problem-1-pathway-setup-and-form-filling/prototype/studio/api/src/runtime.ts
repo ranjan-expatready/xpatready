@@ -121,8 +121,8 @@ export class Runtime {
     return { id: c.id, ...(team ? { team } : {}), reference: c.reference, status: c.status, combination_id: c.combinationId, client: c.clientActorId,
       pin: { release_version: pin.release.version, sha256: pin.contentHash, pinned_at: pin.pinnedAt, revision: pin.revision },
       people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })),
-      // C11.5 (P-106): whether this case may rely on an employer case, read from its pinned release.
-      employer_link: employerLinkOffer(this.snapshotOf(c)) };
+      // C11.5 (P-106): whether this case may rely on an employer case, read from its pinned release (staff only, as the team; review m3).
+      ...(team ? { employer_link: employerLinkOffer(this.snapshotOf(c)) } : {}) };
   }
 
   /** C11.5 (P-106): before a case opens, whether one on this combination's newest release may rely on an employer case
