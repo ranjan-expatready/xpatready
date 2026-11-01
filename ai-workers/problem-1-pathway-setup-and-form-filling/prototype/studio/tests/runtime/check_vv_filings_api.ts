@@ -20,22 +20,33 @@ const run = Date.now().toString(36);
   const filings = (who = OFFICER) => call("GET", `/runtime/cases/${caseId}/filings`, undefined, who);
 
   r = await filings();
-  ok("C6.12 pass: one person → one Visitor visa filing, CAD 100 and biometrics CAD 85, from the pinned release", r.status === 200 && r.body.derived === true && r.body.filings.length === 1 && r.body.groups[0].totalCents === 185_00 && r.body.release_version >= 1 && r.body.combination === "vv.single", r.body);
-  ok("C6.12: the case row is never a filing", !r.body.filings.some((f: { role: string }) => f.role === "case") && !r.body.notFiling.some((f: { role: string }) => f.role === "case"));
-  ok("C6.12 P-170: the fee lines carry the IRCC fee list URL, its words and the date read", r.body.groups[0].fees.every((f: { source: { url: string; quote: string; read: string } }) => /ircc\.canada\.ca/.test(f.source.url) && /same time and place/.test(f.source.quote) && f.source.read === "2026-10-29"));
+  ok("C6.12 pass: one person → one Visitor visa filing, CAD 100 and biometrics CAD 85, from the pinned release", r.status === 200 && r.body.derived === true && r.body.filings.length === 1 && r.body.groups[0].total_cents === 185_00 && r.body.release_version >= 1 && r.body.combination === "vv.single", r.body);
+  ok("C6.12: the case row is never a filing", !r.body.filings.some((f: { applicants: { role: string }[] }) => f.applicants[0].role === "case") && !r.body.not_filing.some((f: { role: string }) => f.role === "case"));
+  ok("C6.12 P-170: the fee lines carry the IRCC fee list URL, its words and the date read", r.body.groups[0].totals.every((f: { source: { url: string; quote: string; read: string } }) => /ircc\.canada\.ca/.test(f.source.url) && f.source.quote.length > 10 && f.source.read === "2026-10-29") && r.body.groups[0].totals.some((f: { source: { quote: string } }) => /same time and place/.test(f.source.quote)));
 
   // Grow the family to six: the CAD 500 maximum applies.
   const spouse = (await call("POST", `/runtime/cases/${caseId}/people`, { role: "spouse_or_partner", displayName: "Sample Spouse A" }, OFFICER)).body?.subject_id as string;
   for (let i = 1; i <= 4; i++) await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: `Sample Child ${i}` }, OFFICER);
   r = await filings();
-  const vvFee = (b: { groups: { fees: { key: string; totalCents: number; capApplied: boolean }[] }[] }) => b.groups[0].fees.find((f) => f.key === "visitor_visa")!;
-  ok("C6.12 pass: six people in one submission group → six filings, the family maximum CAD 500 (not CAD 600) and biometrics CAD 170", r.status === 200 && r.body.filings.length === 6 && r.body.groups.length === 1 && r.body.groups[0].filings.length === 6 && vvFee(r.body).totalCents === 500_00 && vvFee(r.body).capApplied && r.body.groups[0].totalCents === 670_00, r.body.groups?.[0]);
+  const vvFee = (b: { groups: { totals: { line: string; total_cents: number; cap_applied: boolean }[] }[] }) => b.groups[0].totals.find((f) => f.line === "visitor_visa")!;
+  const feeSum = (b: { fees: { amount_cents: number }[] }) => b.fees.reduce((s, f) => s + f.amount_cents, 0);
+  ok("C6.12 pass: six people in one submission group → six filings, the family maximum CAD 500 (not CAD 600) and biometrics CAD 170", r.status === 200 && r.body.filings.length === 6 && r.body.groups.length === 1 && r.body.groups[0].filings.length === 6 && vvFee(r.body).total_cents === 500_00 && vvFee(r.body).cap_applied && r.body.groups[0].total_cents === 670_00 && feeSum(r.body) === 670_00, r.body.groups?.[0]);
 
   // The spouse stops travelling: no filing, no fee, five left (CAD 500 is the plain total, no cap claimed).
   r = await call("PATCH", `/runtime/cases/${caseId}/people/${spouse}`, { applies: false }, OFFICER);
   ok("setup: the spouse is marked not travelling", r.status === 200, r.body?.detail);
   r = await filings();
-  ok("C6.12 fail: a person not applying has no filing and no fee, and the reason says so", r.body.filings.length === 5 && r.body.notFiling.length === 1 && r.body.notFiling[0].subjectId === spouse && /no filing and no fee/.test(r.body.notFiling[0].why) && vvFee(r.body).totalCents === 500_00 && !vvFee(r.body).capApplied, r.body.notFiling);
+  ok("C6.12 fail: a person not applying has no filing and no fee, and the reason says so", r.body.filings.length === 5 && r.body.not_filing.length === 1 && r.body.not_filing[0].subject === spouse && /no filing and no fee/.test(r.body.not_filing[0].why) && vvFee(r.body).total_cents === 500_00 && !vvFee(r.body).cap_applied && !r.body.fees.some((f: { filing: string }) => f.filing === `filing-${spouse}`), r.body.not_filing);
+
+  // A release whose snapshot names another combination is refused, never priced as that one (break report M2).
+  const rel = sql(`select r.id from config_release r join pack_work_pin p on p.config_release_id = r.id where p.case_id = '${caseId}'`);
+  sql(`update config_release set snapshot = jsonb_set(snapshot, '{combination,key}', '"wp.family"') where id = '${rel}'`);
+  try {
+    r = await filings();
+    ok("C6.12 fail: a release that no longer names the case's combination is refused (409), no fee worked out", r.status === 409 && /does not describe the case's own combination/.test(r.body?.detail ?? r.body?.message ?? ""), r.body);
+  } finally { sql(`update config_release set snapshot = jsonb_set(snapshot, '{combination,key}', '"vv.single"') where id = '${rel}'`); }
+  r = await filings();
+  ok("C6.12 pass: the same case reads again once the release is as released", r.status === 200 && r.body.derived === true);
 
   // Who may read it.
   r = await filings(CLIENT);

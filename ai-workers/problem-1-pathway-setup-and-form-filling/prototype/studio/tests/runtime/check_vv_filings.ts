@@ -3,7 +3,8 @@
 // no server, no model call (US$0). Amounts are Sample until the immigration expert confirms (P-171).
 //   tsx studio/tests/runtime/check_vv_filings.ts
 import fc from "fast-check";
-import { deriveFilings, familyFee, FEE_LIST, type Derived } from "../../engine/runtime/filings.ts";
+import { BIOMETRICS_FEE_SOURCE, deriveFilings, familyFee, VISITOR_FEE_SOURCE } from "../../engine/runtime/filings.ts";
+import type { CaseFilings } from "../../contracts/runtime.ts";
 import type { Participant } from "../../engine/runtime/case.ts";
 import { recorder } from "./api.ts";
 
@@ -11,76 +12,105 @@ const { ok, summary } = recorder();
 const person = (i: number, role: Participant["role"], applies = true): Participant => ({ subjectId: `s-${i}`, role, label: `Client ${String.fromCharCode(65 + i)}`, applies });
 const family = (n: number) => [person(0, "principal"), ...(n > 1 ? [person(1, "spouse_or_partner")] : []), ...Array.from({ length: Math.max(0, n - 2) }, (_, i) => person(i + 2, "child"))];
 const caseRow: Participant = { subjectId: "s-case", role: "case", label: "Case", applies: true };
-const d = (people: Participant[], key = "vv.single") => deriveFilings(key, people) as Extract<Derived, { derived: true }>;
-const fee = (r: ReturnType<typeof d>, k: string) => r.groups[0]?.fees.find((f) => f.key === k);
+type D = Extract<CaseFilings, { derived: true }>;
+const d = (people: Participant[], key = "vv.single") => deriveFilings(key, people) as D;
+const total = (r: D, k: string) => r.groups[0]?.totals.find((f) => f.line === k);
+const lines = (r: D, k: string) => r.fees.filter((f) => f.line === k);
+const sum = (r: D, k?: string) => r.fees.filter((f) => !k || f.line === k).reduce((s, f) => s + f.amount_cents, 0);
 
 // BR-1: each person who applies files their own application.
 {
   const r = d([caseRow, ...family(3)]);
-  ok("C6.12 BR-1: three visitors applying → three filings, each their own, in one submission group", r.filings.length === 3 && r.filings.every((f) => f.mode === "files_own" && f.group === "group-1") && r.groups.length === 1 && new Set(r.filings.map((f) => f.subjectId)).size === 3, JSON.stringify(r.filings.map((f) => f.person)));
-  ok("C6.12 BR-1: the case itself is never a filing", !r.filings.some((f) => f.role === "case") && !r.notFiling.some((f) => f.role === "case"));
-  ok("C6.12 BR-1: each filing has its own application-number box, empty until recorded", r.filings.every((f) => f.applicationNumber === null));
+  ok("C6.12 BR-1: three visitors applying → three filings, each their own, in one submission group", r.filings.length === 3 && r.filings.every((f) => f.mode === "files_own" && f.group === "group-family" && f.applicants.length === 1 && f.applicants[0].mode === "applying") && r.groups.length === 1 && new Set(r.filings.map((f) => f.applicants[0].subject)).size === 3, JSON.stringify(r.filings.map((f) => f.label)));
+  ok("C6.12 BR-1: the case itself is never a filing", !r.filings.some((f) => f.applicants[0].role === "case") && !r.not_filing.some((f) => f.role === "case"));
+  ok("C6.12 BR-1: each filing has its own application-number box, empty until recorded, and starts Not started", r.filings.every((f) => f.number === null && f.status === "NOT_STARTED" && f.combination === "vv.single"));
   const odd = d([person(0, "principal"), { ...person(1, "child"), role: "representative" as Participant["role"] }]);
-  ok("C6.12 BR-1 (fail): a role with no visitor filing gets none and says why", odd.filings.length === 1 && odd.notFiling.length === 1 && /no filing for the role "representative"/.test(odd.notFiling[0].why), JSON.stringify(odd.notFiling));
+  ok("C6.12 BR-1 (fail): a role with no visitor filing gets none and says why", odd.filings.length === 1 && odd.not_filing.length === 1 && /no filing for the role "representative"/.test(odd.not_filing[0].why), JSON.stringify(odd.not_filing));
+  const built = d([person(0, "principal"), { ...person(1, "child"), role: "constructor" as Participant["role"] }, { ...person(2, "child"), role: "toString" as Participant["role"] }]);
+  ok("C6.12 BR-1 (fail): role names that are built-in object names are not filings (break m3)", built.filings.length === 1 && built.not_filing.length === 2);
+  const a = d(family(4)), b = d([person(0, "principal"), person(1, "spouse_or_partner", false), person(2, "child"), person(3, "child")]);
+  ok("C6.12 (break m1): a filing keeps its id when someone else stops travelling", a.filings.find((f) => f.applicants[0].subject === "s-2")!.id === b.filings.find((f) => f.applicants[0].subject === "s-2")!.id && !b.filings.some((f) => f.id === "filing-s-1"));
+}
+// BR-16: one family submission group; splittable once there are two or more.
+{
+  ok("C6.12 BR-16: two or more filings are one family group that may be split", d(family(2)).groups[0].splittable === true && d(family(2)).groups[0].kind === "family");
+  ok("C6.12 BR-16 (fail): one filing alone has nothing to split", d(family(1)).groups[0].splittable === false);
 }
 // Not applying → no filing and no fee.
 {
   const r = d([person(0, "principal"), person(1, "spouse_or_partner", false), person(2, "child")]);
-  ok("C6.12: a person not applying has no filing and no fee, and the reason is shown", r.filings.length === 2 && r.notFiling.length === 1 && r.notFiling[0].subjectId === "s-1" && /no filing and no fee/.test(r.notFiling[0].why) && fee(r, "visitor_visa")!.totalCents === 200_00);
+  ok("C6.12: a person not applying has no filing and no fee, and the reason is shown", r.filings.length === 2 && r.not_filing.length === 1 && r.not_filing[0].subject === "s-1" && /no filing and no fee/.test(r.not_filing[0].why) && total(r, "visitor_visa")!.total_cents === 200_00 && !r.fees.some((f) => f.filing === "filing-s-1"));
   const all = d([person(0, "principal"), person(1, "spouse_or_partner"), person(2, "child")]);
-  ok("C6.12 (fail): the same household all applying pays for three", fee(all, "visitor_visa")!.totalCents === 300_00 && all.notFiling.length === 0);
+  ok("C6.12 (fail): the same household all applying pays for three", total(all, "visitor_visa")!.total_cents === 300_00 && all.not_filing.length === 0);
   const none = d([person(0, "principal", false)]);
-  ok("C6.12: nobody applying → no filing, no group, no fee", none.filings.length === 0 && none.groups.length === 0);
+  ok("C6.12 (break m4): nobody applying → no filing, no group, no fee, and the reason says so", none.filings.length === 0 && none.groups.length === 0 && none.fees.length === 0 && /Nobody on this case is applying/.test(none.why ?? ""));
+  ok("C6.12: with people applying there is no such reason", d(family(1)).why === null);
 }
 // Visitor visa fee: CAD 100 per person, CAD 500 for a family of 5 or more at the same time and place.
 {
-  const six = fee(d(family(6)), "visitor_visa")!;
-  ok("C6.12 fee: six visitors together pay the family maximum CAD 500, not CAD 600", six.totalCents === 500_00 && six.listCents === 600_00 && six.capApplied && /family maximum CAD 500 applies instead of 6 × CAD 100 = CAD 600/.test(six.why), six.why);
-  const five = fee(d(family(5)), "visitor_visa")!;
-  ok("C6.12 fee: five visitors pay CAD 500, which is the maximum (no saving to claim)", five.totalCents === 500_00 && !five.capApplied);
-  const four = fee(d(family(4)), "visitor_visa")!;
-  ok("C6.12 fee (fail): four visitors are not a family of 5: CAD 400, and the cap is named as not reached", four.totalCents === 400_00 && !four.capApplied && /starts at 5 people/.test(four.why), four.why);
-  const one = fee(d(family(1)), "visitor_visa")!;
-  ok("C6.12 fee: one visitor pays CAD 100", one.totalCents === 100_00);
+  const six = total(d(family(6)), "visitor_visa")!;
+  ok("C6.12 fee: six visitors together pay the family maximum CAD 500, not CAD 600", six.total_cents === 500_00 && six.list_cents === 600_00 && six.cap_applied && /family maximum CAD 500 applies instead of 6 × CAD 100 = CAD 600/.test(six.why), six.why);
+  const five = total(d(family(5)), "visitor_visa")!;
+  ok("C6.12 fee: five visitors pay CAD 500, which is the maximum (no saving to claim)", five.total_cents === 500_00 && !five.cap_applied);
+  const four = total(d(family(4)), "visitor_visa")!;
+  ok("C6.12 fee (fail): four visitors are not a family of 5: CAD 400, and the cap is named as not reached", four.total_cents === 400_00 && !four.cap_applied && /starts at 5 people/.test(four.why), four.why);
+  ok("C6.12 fee: one visitor pays CAD 100", total(d(family(1)), "visitor_visa")!.total_cents === 100_00);
 }
 // Biometrics: CAD 85 per person, CAD 170 for a family of 2 or more.
 {
-  ok("C6.12 biometrics: one person CAD 85", fee(d(family(1)), "biometrics")!.totalCents === 85_00);
-  const three = fee(d(family(3)), "biometrics")!;
-  ok("C6.12 biometrics: three people together pay CAD 170, not CAD 255", three.totalCents === 170_00 && three.capApplied && three.listCents === 255_00);
-  const two = fee(d(family(2)), "biometrics")!;
-  ok("C6.12 biometrics (fail): two people CAD 170 equals 2 × CAD 85, so no cap is claimed", two.totalCents === 170_00 && !two.capApplied);
-  const r = d(family(6));
-  ok("C6.12: the group total adds the capped lines (CAD 500 + CAD 170 = CAD 670)", r.groups[0].totalCents === 670_00);
-  ok("C6.12: each filing lists its own per-person lines (CAD 100 and CAD 85)", r.filings.every((f) => f.fees.map((x) => x.amountCents).join() === "10000,8500"));
+  ok("C6.12 biometrics: one person CAD 85", total(d(family(1)), "biometrics")!.total_cents === 85_00);
+  const three = total(d(family(3)), "biometrics")!;
+  ok("C6.12 biometrics: three people together pay CAD 170, not CAD 255", three.total_cents === 170_00 && three.cap_applied && three.list_cents === 255_00);
+  const two = total(d(family(2)), "biometrics")!;
+  ok("C6.12 biometrics (fail): two people CAD 170 equals 2 × CAD 85, so no cap is claimed", two.total_cents === 170_00 && !two.cap_applied);
+  ok("C6.12: the group total adds the capped lines (CAD 500 + CAD 170 = CAD 670)", d(family(6)).groups[0].total_cents === 670_00);
 }
-// Every fee line carries its official source (P-170).
+// BR-18: fee lines per filing: a capped line on the principal's filing, the others exempt; they add up to the group's total.
+{
+  const r = d(family(6)), vv = lines(r, "visitor_visa");
+  ok("C6.12 BR-18 (review M1): with the cap, the principal's filing carries CAD 500 and the other five are exempt at CAD 0", vv.length === 6 && vv.find((f) => f.filing === "filing-s-0")!.amount_cents === 500_00 && vv.filter((f) => f.exempt).length === 5 && vv.filter((f) => f.exempt).every((f) => f.amount_cents === 0 && f.payer === "s-0" && /Covered by the family maximum on Client A's filing/.test(f.why)));
+  ok("C6.12 BR-18 (review M1): the filings' lines add up to the group total (CAD 670)", sum(r) === r.groups[0].total_cents && sum(r) === 670_00, sum(r));
+  const four = d(family(4));
+  ok("C6.12 BR-18 (fail): without the visitor cap, each filing pays its own CAD 100, nobody exempt", lines(four, "visitor_visa").every((f) => f.amount_cents === 100_00 && !f.exempt && f.payer === f.filing.replace("filing-", "")));
+  const noPrincipal = d([person(0, "principal", false), person(1, "spouse_or_partner"), person(2, "child")]);
+  ok("C6.12 BR-18: when the principal is not applying, the first filing carries the capped biometrics", lines(noPrincipal, "biometrics").find((f) => !f.exempt)!.filing === "filing-s-1" && sum(noPrincipal, "biometrics") === 170_00);
+}
+// Every fee line carries its official source (P-170), and says which part is IRCC's words.
 {
   const r = d(family(2));
-  ok("C6.12 P-170: every fee line names the page, the URL, IRCC's words and the date read", r.groups[0].fees.every((f) => f.source === FEE_LIST && /^https:\/\/ircc\.canada\.ca\//.test(f.source.url) && /same time and place/.test(f.source.quote) && /^\d{4}-\d{2}-\d{2}$/.test(f.source.read)) && /Sample until the immigration expert confirms/.test(r.basis));
+  ok("C6.12 P-170: every total names the page, the URL, the words and the date read", r.groups[0].totals.every((t) => /^https:\/\/ircc\.canada\.ca\//.test(t.source.url) && t.source.quote.length > 10 && /^\d{4}-\d{2}-\d{2}$/.test(t.source.read)) && /Sample until the immigration expert confirms/.test(r.basis));
+  ok("C6.12 P-170 (review m2): IRCC's own words are marked as such, the record's summary as a summary", VISITOR_FEE_SOURCE.quote_kind === "IRCC's words" && /same time and place/.test(VISITOR_FEE_SOURCE.quote) && BIOMETRICS_FEE_SOURCE.quote_kind === "summary of the Lead-checked record");
+  ok("C6.12 (review m2): the basis says biometrics exemptions are not checked yet", /Biometrics exemptions .* not checked yet/.test(r.basis));
 }
 // Only the Visitor visa is derived in this slice; nothing is guessed for others.
 {
   const other = deriveFilings("ee.pnp", family(3));
-  ok("C6.12 (fail): another combination is not derived yet and says so, with no filings or fees", other.derived === false && /not derived yet/.test(other.why) && !("filings" in other));
+  ok("C6.12 (fail): another combination is not derived yet and says so, with no filings or fees, in plain words", other.derived === false && /not derived yet/.test(other.why) && !("filings" in other) && !/C6\.12/.test(other.why));
+  for (const k of ["constructor", "toString", "__proto__"]) ok(`C6.12 (break m3): the key "${k}" is not derived, never a crash`, deriveFilings(k, family(1)).derived === false);
   ok("C6.12: the Visitor visa is derived", deriveFilings("vv.single", family(2)).derived === true);
+  ok("C6.12: the version changes when the people change and stays the same otherwise", d(family(2)).version === d(family(2)).version && d(family(2)).version !== d(family(3)).version);
 }
-// Property: on any household, the group fee is never above either the per-person total or (from familyFrom) the maximum,
-// one filing per applying person, and people not applying never add a cent.
+// The threshold decides on its own (review m3): a made-up rule where per-person × people is above the maximum below the threshold.
+{
+  const rule = { key: "t", label: "Test fee", perPersonCents: 100_00, familyMaxCents: 150_00, familyFrom: 3, source: VISITOR_FEE_SOURCE };
+  ok("C6.12 threshold (fail): two people below the threshold pay CAD 200 although it is above the CAD 150 maximum", familyFee(rule, 2).total_cents === 200_00 && !familyFee(rule, 2).cap_applied);
+  ok("C6.12 threshold: three people reach it and pay CAD 150", familyFee(rule, 3).total_cents === 150_00 && familyFee(rule, 3).cap_applied);
+  ok("C6.12 familyFee: zero people pay nothing", familyFee(rule, 0).total_cents === 0);
+}
+// Property: on any household, fees within the maximums, one filing per applying person, lines add up to the group total.
 try {
   fc.assert(fc.property(fc.array(fc.record({ role: fc.constantFrom("spouse_or_partner", "child"), applies: fc.boolean() }), { maxLength: 12 }), fc.boolean(), (rest, principalApplies) => {
     const people = [person(0, "principal", principalApplies), ...rest.map((x, i) => person(i + 1, x.role as Participant["role"], x.applies))];
     const r = d(people), n = people.filter((p) => p.applies).length;
-    if (r.filings.length !== n || r.filings.length + r.notFiling.length !== people.length) return false;
-    for (const f of r.groups[0]?.fees ?? []) {
-      if (f.people !== n || f.totalCents > f.listCents) return false;
-      if (n >= f.familyFrom && f.totalCents > f.familyMaxCents) return false;
-      if (f.totalCents !== Math.min(f.listCents, n >= f.familyFrom ? f.familyMaxCents : Infinity)) return false;
+    if (r.filings.length !== n || r.filings.length + r.not_filing.length !== people.length) return false;
+    for (const f of r.groups[0]?.totals ?? []) {
+      if (f.people !== n || f.total_cents > f.list_cents) return false;
+      if (f.total_cents !== Math.min(f.list_cents, n >= f.family_from ? f.family_max_cents : Infinity)) return false;
+      if (sum(r, f.line) !== f.total_cents) return false;
     }
-    return n > 0 || r.groups.length === 0;
+    return n > 0 ? r.fees.length === n * 2 : r.groups.length === 0 && r.fees.length === 0;
   }), { numRuns: 400 });
-  ok("C6.12 property: 400 households: one filing per applying person, fees within the family maximums", true);
-} catch (e) { ok("C6.12 property: 400 households: one filing per applying person, fees within the family maximums", false, String((e as Error).message).slice(0, 400)); }
-ok("C6.12 familyFee: zero people pay nothing", familyFee({ key: "visitor_visa", label: "x", perPersonCents: 100_00, familyMaxCents: 500_00, familyFrom: 5, source: FEE_LIST }, 0).totalCents === 0);
+  ok("C6.12 property: 400 households: one filing per applying person, fees within the maximums, lines add up", true);
+} catch (e) { ok("C6.12 property: 400 households: one filing per applying person, fees within the maximums, lines add up", false, String((e as Error).message).slice(0, 400)); }
 
 process.exitCode = summary() ? 1 : 0;

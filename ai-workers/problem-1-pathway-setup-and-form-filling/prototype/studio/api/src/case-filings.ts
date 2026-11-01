@@ -2,21 +2,25 @@
 // fee lines, derived from its pinned release's combination and its people on every read (nothing stored, nothing typed by
 // hand). The case officer reads them; a client and configuration people do not (deny by default, as runtime.ts). Visitor
 // visa only in this slice: other combinations answer "not derived yet". Amounts Sample until the expert confirms. US$0.
-import { Controller, Get, Headers, Inject, Injectable, Param } from "@nestjs/common";
+import { Controller, Get, Headers, HttpStatus, Inject, Injectable, Param } from "@nestjs/common";
 import { deriveFilings } from "../../engine/runtime/filings.ts";
-import { actorOf, CaseRead, type Actor } from "./core.ts";
+import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 
 type H = string | undefined;
 
 @Injectable()
 export class CaseFilings {
-  constructor(@Inject(Runtime) private readonly r: Runtime) {}
+  constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db) {}
 
   async list(actor: Actor, caseId: string) {
     const c = await this.r.reach(actor, caseId, "officer");
     const s = this.r.snapshotOf(c), pin = c.pins[0];
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...deriveFilings(s.combination.key, this.r.peopleOf(c)) };
+    // Money follows the combination: the release's snapshot must name the case's own combination (break report M2: a
+    // release row edited underneath would otherwise price the case as another combination).
+    const own = await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true } });
+    if (!own || s?.combination?.key !== own.combinationKey) fail("This case's release does not describe the case's own combination; no filing or fee was worked out. Ask the Lead.", HttpStatus.CONFLICT);
+    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...deriveFilings(own!.combinationKey, this.r.peopleOf(c)) };
   }
 }
 
