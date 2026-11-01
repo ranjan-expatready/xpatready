@@ -215,11 +215,16 @@ export type FeeSource = { page: string; url: string; quote: string; quote_kind: 
 export type FilingApplicant = { subject: string; label: string; role: string; mode: "applying" | "declared_only" };
 export type CaseFiling = { id: string; combination: string; label: string; mode: "files_own" | "on_principal"; applicants: FilingApplicant[]; group: string;
   status: "NOT_STARTED"; number: string | null };
-export type SubmissionGroup = { id: string; kind: "family"; label: string; filings: string[]; splittable: boolean; why: string;
+export type SubmissionGroup = { id: string; kind: "family" | "separate"; label: string; filings: string[]; splittable: boolean; why: string;
   totals: { line: string; label: string; people: number; per_person_cents: number; list_cents: number; family_max_cents: number; family_from: number; total_cents: number; cap_applied: boolean; why: string; source: FeeSource }[];
   total_cents: number };
-export type FeeLine = { filing: string; payer: string; line: string; label: string; amount_cents: number; exempt: boolean; why: string };
+/** `waiting`: the fact the line waits for (not counted until answered, G15); `source`: an exemption's own IRCC page. */
+export type FeeLine = { filing: string; payer: string; line: string; label: string; amount_cents: number; exempt: boolean; why: string; waiting?: string; source?: FeeSource };
 export type NotFiling = { subject: string; label: string; role: string; why: string };
 export type CaseFilings =
   | { derived: true; combination: string; label: string; filings: CaseFiling[]; groups: SubmissionGroup[]; fees: FeeLine[]; not_filing: NotFiling[]; currency: "CAD"; basis: string; why: string | null; version: string }
   | { derived: false; combination: string; why: string };
+
+/** G13 (QA-140): a release in the same words in the studio and on a case: "Release N", N being the content pack release
+ *  the studio shows (else the combination's released version). */
+export const releaseLabel = (r: { version: number; packVersion?: { version: number } | null }) => `Release ${r.packVersion?.version ?? r.version}`;

@@ -32,6 +32,7 @@ import { firmOfActor } from "./firms.ts";
 import { CaseForms, CaseFormsController, MAX_VALIDATED_MB } from "./fill-case.ts";
 import { CaseChecklists, CaseChecklistsController } from "./case-checklist.ts";
 import { CaseFilings, CaseFilingsController } from "./case-filings.ts";
+import { CasePrepare, CasePrepareController } from "./case-prepare.ts";
 import { Sources } from "./sources.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { Structure, StructureController } from "./structure.ts";
@@ -193,7 +194,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, CaseChecklistsController, CaseFilingsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController], providers: [LinesBulk, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, CaseChecklists, CaseFilings, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, PqrDrafts] })
+@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, CaseChecklistsController, CaseFilingsController, CasePrepareController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController], providers: [LinesBulk, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, CaseChecklists, CaseFilings, CasePrepare, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, PqrDrafts] })
 class AppModule {}
 
 async function main() {

@@ -1250,6 +1250,9 @@ model Case {
   forms        FormInstance[]
   snapshots    AnswerSnapshot[]
   team         CaseTeamMember[]
+  submissionGroups SubmissionGroup[]
+  filings      Filing[]
+  filingItems  FilingItem[]
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -1280,6 +1283,96 @@ model CaseTeamMember {
 
   @@index([caseId, assignedAt])
   @@map("case_team_member")
+}
+
+/// C6.12 (M3-B; r5c BR-16, P-135): a submission group: the filings sent together, at the same time and place, so the family
+/// fee maximums apply within it. Every case has one FAMILY group, made on the first read of its prepare view; a filing
+/// split out (with a reason) goes into a SEPARATE group of its own. Never deleted.
+model SubmissionGroup {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  /// FAMILY · SEPARATE
+  kind        String
+  /// Why a SEPARATE group was split out (required for one; the family maximum it loses is said on the split).
+  reason      String?
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  case    Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filings Filing[]
+
+  @@index([caseId, createdAt])
+  @@map("submission_group")
+}
+
+/// C6.12 (r5c BR-1, VV-R03): one application a person files, derived from the case (never created by hand), stored so its
+/// id stays when other people change. One per case and person; a person who stops travelling keeps the row, withdrawn,
+/// and the same row comes back if they travel again.
+model Filing {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  caseId            String    @map("case_id") @db.Uuid
+  /// The person whose application this is (an answer_subject of the case).
+  subjectId         String    @map("subject_id") @db.Uuid
+  combinationKey    String    @map("combination_key")
+  /// files_own · on_principal (the release's filing mode for the person's role, M3-0)
+  mode              String
+  submissionGroupId String    @map("submission_group_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  withdrawnAt       DateTime? @map("withdrawn_at") @db.Timestamptz
+
+  case       Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  group      SubmissionGroup   @relation(fields: [submissionGroupId], references: [id], onDelete: Cascade)
+  applicants FilingApplicant[]
+  items      FilingItem[]
+
+  @@unique([caseId, subjectId])
+  @@index([submissionGroupId])
+  @@map("filing")
+}
+
+/// C6.12: who a filing is for (one applicant each on a visitor visa; a sponsorship pair names two later).
+model FilingApplicant {
+  id        String @id @default(uuid()) @db.Uuid
+  filingId  String @map("filing_id") @db.Uuid
+  subjectId String @map("subject_id") @db.Uuid
+  role      String
+
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@unique([filingId, subjectId])
+  @@map("filing_applicant")
+}
+
+/// C6.12, C11.6, C7.7 (r5c §6 "items"): a deliverable of one filing for one person: a form, a document or an IRCC step.
+/// Derived from the release and the case on each read and stored so its id, and the channel the case officer chose for a
+/// form (inside what IRCC accepts), stay; an item that stops applying is marked removed, never deleted.
+model FilingItem {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  caseId        String    @map("case_id") @db.Uuid
+  filingId      String    @map("filing_id") @db.Uuid
+  subjectId     String    @map("subject_id") @db.Uuid
+  /// form · document · step
+  kind          String
+  /// The form number, the document type key or the step key.
+  itemKey       String    @map("item_key")
+  /// C11.6: the case officer's channel for this form (null: the combination line's channel).
+  channel       String?
+  channelReason String?   @map("channel_reason")
+  channelBy     String?   @map("channel_by")
+  channelAt     DateTime? @map("channel_at") @db.Timestamptz
+  version       Int       @default(1)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  removedAt     DateTime? @map("removed_at") @db.Timestamptz
+
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@unique([filingId, kind, itemKey])
+  @@index([caseId])
+  @@map("filing_item")
 }
 
 /// The release a case works from (team PackWorkPin, pinned per case and combination here). Insert-only.

@@ -17,6 +17,7 @@ import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleVi
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 import { checkFormat, fieldFormat, formatWords, type MappedBox } from "../../engine/field-format.ts";
+import { releaseLabel } from "../../contracts/runtime.ts";
 
 const VALUE_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
 /** S6 (2a), P-158 item 6: a list row's first source and how many more; an item with none is flagged, never blank. */
@@ -195,7 +196,7 @@ export class Studio {
     if (lines.some((p) => !Number.isInteger(p.min) || !Number.isInteger(p.max) || p.min < 0 || p.max > 9)) fail("The number of people must be a whole number between 0 and 9, minimum no more than maximum.");
     const { errors, lines: ok } = checkPeople(lines, await this.personRoles(workspaceId), strict);
     if (errors.length) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: errors[0].message, errors }, HttpStatus.BAD_REQUEST);
-    return ok.map((p) => ({ role: p.role, label: String(p.label).slice(0, 60), min: p.min, max: p.max, preview: Math.max(p.min, Math.min(p.max, Number(p.preview ?? (p.min || 1)))), applies: p.applies, ...(p.quote ? { quote: p.quote } : {}), ...(p.origin ? { origin: p.origin } : {}) }));
+    return ok.map((p) => ({ role: p.role, label: String(p.label).slice(0, 60), min: p.min, max: p.max, preview: Math.max(p.min, Math.min(p.max, Number(p.preview ?? (p.min || 1)))), applies: p.applies, ...(p.filingMode ? { filingMode: p.filingMode } : {}), ...(p.quote ? { quote: p.quote } : {}), ...(p.origin ? { origin: p.origin } : {}) }));
   }
 
   /** The shared library's person roles (M3; GET /library/roles), in display order. */
@@ -333,7 +334,7 @@ export class Studio {
       program: { key: (programNode ?? c.program).programNodeKey, label: (programNode ?? c.program).label, kind: (programNode ?? c.program).nodeKind, source_basis: (programNode ?? c.program).sourceBasis }, pathway: parent ? { key: parent.programNodeKey, label: parent.label, client_type: parent.clientType } : null,
       path: chain.map((n) => ({ key: n.programNodeKey, label: n.label, level: LEVEL[n.nodeKind].name })), allowed_locations: c.program.allowedLocations,
       attachments: c.attachments, jobs: c.jobs.map((j) => ({ ...j, detail: undefined })),
-      releases: c.releases.map((r) => ({ id: r.id, version: r.version, release: r.packVersion?.version ?? r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
+      releases: c.releases.map((r) => ({ id: r.id, version: r.version, release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
       draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot) },
       submission: sub ? { ...sub, stale: sub.status === "SUBMITTED" && sub.draftSha256 !== sha256 } : null,
     };

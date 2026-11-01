@@ -47,6 +47,9 @@ export const PeopleLine = z.object({
   max: z.number({ error: "How many: the most is a whole number from 0 to 9." }).int("How many: the most is a whole number from 0 to 9.").min(0, "How many: the most is a whole number from 0 to 9.").max(9, "How many: the most is a whole number from 0 to 9."),
   applies: z.boolean({ error: "Say whether this person files their own application." }),
   preview: z.number().int().min(0).max(9).optional(),
+  // M3-0 (r5c BR-1, P-135): how this person's application is filed: their own filing, or on the principal's. Released
+  // with the people, read by the case's filings (C6.12); left out, the case uses the combination's built-in default.
+  filingMode: z.enum(["files_own", "on_principal"], { error: "Filing: choose \"Files their own application\" or \"On the principal's application\"." }).optional(),
   quote: z.string().trim().max(400).nullable().optional(),
   origin: z.enum(["HUMAN", "AI_PROPOSAL", "CODE_MATCH", "SAMPLE"]).optional(), // CODE_MATCH: found by rules from the guide, no AI (Lead check L3)
 });
