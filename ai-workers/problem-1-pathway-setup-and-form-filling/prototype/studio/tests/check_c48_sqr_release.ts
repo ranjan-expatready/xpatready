@@ -47,6 +47,16 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   ok("C4.8 fail-guard: the change on Review is said in words, not as a system name", !!line && !KEYS.test(line.label), line?.label);
   const audit = sql(`select summary from audit_event where combination_id='${wp}' and entity='section selection' order by at desc limit 1`);
   ok("C4.8: the history line names the section by its title, not its system name", audit.includes(`"${title}"`) && !audit.includes(key), audit);
+  // #201 review m3: a removal that removes nothing, or an add of a section already chosen, changes nothing and writes no history line.
+  const lines = () => sql(`select count(*) from audit_event where combination_id='${wp}' and entity='section selection'`);
+  const n0 = lines();
+  r = await call("DELETE", `/combinations/${wp}/sections/${key}`);
+  ok("C4.8 m3 fail: removing a section that is no longer chosen is 200 and writes no history line", r.status === 200 && lines() === n0, { status: r.status, lines: [n0, lines()] });
+  r = await call("DELETE", `/combinations/${wp}/sections/no_such_section_key`);
+  ok("C4.8 m3 fail: removing a key that is not a section is 200 and writes no history line", r.status === 200 && lines() === n0, { status: r.status, lines: [n0, lines()] });
+  const other = sql(`select section_key from sqr_section_selection where combination_id='${wp}' limit 1`);
+  r = await call("POST", `/combinations/${wp}/sections/${other}`, {});
+  ok("C4.8 m3 fail: adding a section that is already chosen is 2xx and writes no history line", r.status < 300 && lines() === n0, { status: r.status, lines: [n0, lines()] });
   ok("C4.8 fail: the released questionnaire still asks it until the next release", inRelease(await released()));
   ok("C4.8 fail: another combination's draft is unchanged (P-132: one record per combination)", (await vvChanges()) === vv0);
 

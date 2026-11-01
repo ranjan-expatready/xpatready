@@ -19,6 +19,7 @@ import { ConfigArea } from "@/pages/configuration";
 import { FOCUS_RING, useFocusItem } from "@/components/focus-item";
 import { PartProblems } from "@/components/part-problems";
 import { cn } from "@/lib/utils";
+import { peopleWords } from "@/lib/people";
 
 const TIPS = {
   card: "Sets which people a case may include and how many; each person marked as applicant gets their own forms, questions and documents.",
@@ -31,7 +32,7 @@ const TIPS = {
 export function QuestionnairesTab({ id, people, questionnaire, available }: { id: string; people: PeopleView; questionnaire: QuestionnairesView | null; available: { key: string; title: string }[] }) {
   return (
     <div className="space-y-6">
-      <p className="text-sm text-text-muted" data-who-can-be-moved>Who can be in this application ({people.lines.filter((l) => l.max > 0).map((l) => l.label).join(", ") || "nobody yet"}) is set before the forms. <Link className="text-text-link underline" to={`/c/${id}/forms?focus=people%3Acard`}>Change on Forms</Link></p>
+      <p className="text-sm text-text-muted" data-who-can-be-moved>Who can be in this application ({peopleWords(people.lines, (l) => l.label) || "nobody yet"}) is set before the forms. <Link className="text-text-link underline" to={`/c/${id}/forms?focus=people%3Acard`}>Change on Forms</Link></p>
       <QuestionsByPerson id={id} q={questionnaire} available={available} />
       <ConfigArea id={id} areas={["rules", "checks"]} />
     </div>
@@ -43,7 +44,6 @@ const toLines = (v: PeopleView): Line[] => v.lines.map((l) => ({ role: l.role, l
 /** The folded line's plain words (board P-161 (2), Lead C1 decision 4): "Principal applicant (always) · Dependent child,
  *  0–5 (optional)"; exact counts and who files their own application stay in Show and edit. A role whose most is 0
  *  cannot be in the application, so the folded line leaves it out (#139 review). */
-const plainWords = (label: string, l: { min: number; max: number }) => `${label}${l.max > 1 ? `, ${l.min}–${l.max}` : ""} (${l.min > 0 ? "always" : "optional"})`;
 const howMany = (l: { min: number; max: number }) => (l.min === l.max ? (l.min === 1 ? "exactly 1" : `exactly ${l.min}`) : `${l.min} to ${l.max}`);
 
 export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
@@ -95,7 +95,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   const shown = editing ? lines : toLines(v);
   if (!unfolded && !editing && !filling) return (
     <section aria-labelledby="who-can-be" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface-raised px-5 py-3 shadow-sm" data-who-can-be data-folded>
-      <p className="min-w-0 text-sm"><span id="who-can-be" className="font-semibold">Who can be in this application</span> <span className="text-text-muted" data-people-words>· {shown.filter((l) => l.max > 0).map((l) => plainWords(nameOf(l), l)).join(" · ")}</span></p>
+      <p className="min-w-0 text-sm"><span id="who-can-be" className="font-semibold">Who can be in this application</span> <span className="text-text-muted" data-people-words>· {peopleWords(shown, nameOf)}</span></p>
       <Button size="sm" variant="ghost" onClick={() => setUnfolded(true)} aria-expanded={false}><ChevronDown /> {canAuthor ? "Show and edit" : "Show"}</Button>
     </section>
   );

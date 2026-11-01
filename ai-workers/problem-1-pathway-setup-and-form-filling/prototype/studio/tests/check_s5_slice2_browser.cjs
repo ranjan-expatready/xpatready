@@ -87,10 +87,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("fix 1: forms attached but not set up yet are their own rows with their next step (Read form or Draft with AI)", await p.locator("[data-pending]").count() >= 1 && (await p.getByRole("button", { name: /Read form|Draft with AI|Add from library/ }).count()) >= 1, await p.locator("[data-pending]").count());
   const filingLine = await p.locator("[data-filing]").innerText(), pendingN = await p.locator("[data-pending]").count();
   step("C11.10 drift 5: the header counts the attached forms (never \"No forms yet · 0 forms\" above them) and says what each waits for", !/No forms yet|· 0 forms/.test(filingLine) && filingLine.includes(`${pendingN} form${pendingN === 1 ? "" : "s"} attached, 0 set up`) && /Not set up yet: .*(added from the library now|drafting with AI)/.test(await p.locator("[data-pending-summary]").innerText()), filingLine);
-  // The page's next step ("Add 1 form from the library") and the rows name the same step, for the same number of forms.
-  const nextStep = (await p.locator("button, a").filter({ hasText: /^\s*Add \d+ forms? from the library/ }).first().innerText().catch(() => "")).trim();
-  const k = Number((nextStep.match(/Add (\d+)/) ?? [])[1] ?? 0), summary = await p.locator("[data-pending-summary]").innerText();
-  step("C11.10 drift 5: the next step, the summary and the rows agree on the forms to add from the library (no AI for them)", k > 0 && summary.includes(`${k} form${k === 1 ? "" : "s"} can be added from the library now`) && await p.locator("[data-pending]").getByRole("button", { name: "Add from library" }).count() === k, `${nextStep} | ${summary}`);
+  // QA-119 (P-157, P-161 (1)): the header's one next step is the setup checklist's next item (here step 1, Official pages),
+  // no longer the catalogue's "Add n forms from the library"; the summary and the rows still agree on the forms to add
+  // from the library (no AI for them), and no second "Add n forms from the library" step competes with the header.
+  const setupNext = (await api(`/combinations/${VV}/summary`)).body?.setup?.next ?? null;
+  const header = (await p.locator("[data-header-next]").innerText().catch(() => "")).replace(/\s+/g, " ").trim();
+  step("C11.10 drift 5 QA-119: the header's next step is the setup checklist's next item, in the same words (one next step per page)", !!setupNext && header.includes(setupNext.item.text) && await p.locator("[data-next-step]").count() === 1 && await p.locator("button, a").filter({ hasText: /^\s*Add \d+ forms? from the library/ }).count() === 0, `${header} | ${setupNext?.item.text}`);
+  const summary = await p.locator("[data-pending-summary]").innerText(), k = Number((summary.match(/(\d+) forms? can be added from the library now/) ?? [])[1] ?? 0);
+  step("C11.10 drift 5: the summary and the rows agree on the forms to add from the library (no AI for them)", k > 0 && await p.locator("[data-pending]").getByRole("button", { name: "Add from library" }).count() === k, summary);
   await state("forms-attached-not-set-up");
 
   // ======================================================== fix 3 and slice 2: Questionnaires per person
