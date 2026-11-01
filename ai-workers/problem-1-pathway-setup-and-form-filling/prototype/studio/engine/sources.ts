@@ -2,7 +2,7 @@
 // each fact a combination's forms need comes from, per person role, worked out by rules from the snapshot:
 // a document on that role's checklist that supplies it › the client › the case officer. A person's choice over that default and
 // the Pre-qualification tick are the snapshot's `fact_sources` (only when set). Pure: no database, no AI (US$0).
-import { formSigners, signsForOthers, subjectsFor, type Person } from "./render.ts";
+import { formSigners, lineHolders, signsForOthers, type Person } from "./render.ts";
 import { anyMapped, previewRender } from "./coverage.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
@@ -47,9 +47,8 @@ export function documentFacts(s: Snapshot, people: Person[]): Map<string, Map<st
   for (const r of s.document_requirements as Req[]) {
     const t = (s.document_types as DocType[]).find((x) => x.key === r.document_type_key || x.name === r.document_type);
     if (!t) continue;
-    const kind = r.condition?.subjectKind;
-    if (kind === "DOCUMENT") continue;
-    const holders = kind === "CASE" ? subjectsFor(people, r.who) : subjectsFor(people, r.who, kind === "EACH_APPLICANT" || kind === "EACH_PERSON" ? undefined : kind);
+    // Q2 (#325): the holders are the line's own "who" (lineHolders), whatever its condition is about.
+    const holders = lineHolders(people, r.who);
     const sup = { key: t.key, name: t.name, base: r.base_or_conditional === "base" };
     for (const h of holders) for (const { fact, about } of suppliesOf(t)) {
       if (about === "holder") add(h, fact, sup);
@@ -267,8 +266,7 @@ export function checklist(s: Snapshot): { role: string; label: string; lines: Ch
   const byRole = new Map<string, ChecklistLine[]>();
   for (const r of s.document_requirements as any[]) {
     const t = types.find((x) => x.key === r.document_type_key || x.name === r.document_type);
-    const kind = r.condition?.subjectKind;
-    const holders = kind === "DOCUMENT" ? [] : kind === "CASE" ? subjectsFor(people, r.who) : subjectsFor(people, r.who, kind === "EACH_APPLICANT" || kind === "EACH_PERSON" ? undefined : kind);
+    const holders = lineHolders(people, r.who); // Q2 (#325): one rule with Preview and the case's checklist
     const roles = [...new Set(holders.map((h) => roleOf(people, h)))];
     for (const role of roles) {
       const holder = holders.find((h) => roleOf(people, h) === role)!;
