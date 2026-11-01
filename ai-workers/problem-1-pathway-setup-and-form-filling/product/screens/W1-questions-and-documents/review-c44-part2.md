@@ -89,3 +89,27 @@ graph.mjs (P-86) not run.
 
 **Verdict: Block.** To fix: M1 (only tier-2 section checks, or severity `block`, stop "ready to file"; never advisory,
 readiness_warning or sme_pending checks; plus a fail test for that). m1–m5 are optional.
+
+## Round 2 — head 32bbd5d1 (diff 7a10f5cf..32bbd5d1), 1 Nov 2026
+Fresh isolated copy `rev_c44p2` on :4438, web rebuilt, no `*_LIVE`, US$0. The builder's committed screenshots were put back after the browser run.
+- **M1: fixed.** `engine/runtime/forms.ts` `blocksFiling` lets only `group === "section_check"` at severity warn or block stop
+  "ready to file". ViewCheck now carries `group` (case.ts, contracts/runtime.ts). I re-ran my round-1 engine scenario on
+  the release: the advise-level readiness_warning and the sme_pending official_rule still fire on the end date, and both
+  now give IMM 5257 no "a check fired" (they only warn, P-168). The builder's new R2 pass test asserts the same.
+  The crossed-dates section check still blocks (R2 fail side, r1c). The lock at fill-case.ts:259 follows readiness, so
+  it is correct now.
+- **m1: partly fixed.** A repeat of the same draft check gets 409 "This check is already in the draft." But the guard
+  in studio.ts saveCheck runs findMany and then create, with no lock or unique key, so 8 parallel identical POSTs still
+  saved 2 rows (201 201, then 409 ×6). Remains Minor (API only, no screen yet). Fix later: a transaction with an
+  advisory lock per combination, or a unique content hash.
+- **m3: fixed.** acceptance C4.4 passed 28/28 twice in a row on one database.
+- m2, m4 and m5 are left as follow-ups in the PR, as agreed. The founder question (should a Sample section check block?)
+  goes in the PR.
+- Re-run: check_c44_part2 31/31 · check_c44_part2_browser 19/19 · `count-any --against 7a10f5cf` 428 = 428 · web `tsc`
+  clean · api `tsc`: no errors in files this PR touches; only the existing ones in check_c18_age_case.ts and
+  check_x2b_bulk_apply.ts. No new `any`, no personal names, Sample labels intact.
+- Journey score: 8.5 / 10. Correct data goes back to 1 (readiness no longer over-blocks), and trust and sources stays at ½
+  until the Sample-check question is answered. Accessibility and sizes, and speed, stay at ½ (400 px, 200 % zoom and the
+  §9 timings were not run).
+
+**Verdict: Approve** (round 2, commit 32bbd5d1). No Blocker or Major is open. Open Minors: m1 (the parallel race), m2, m4, m5.
