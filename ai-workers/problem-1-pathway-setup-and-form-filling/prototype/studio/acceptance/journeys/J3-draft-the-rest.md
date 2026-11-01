@@ -1,11 +1,11 @@
 # J3 — Draft the rest of a combination's masters (P-220 pack 2)
 
-**Who:** the configuration author (`user-A`), then the approver (`user-B`) as the second person. **Combination:** Individual › Visitors › Visitor visa (`vv.single`) first. Then part A again on Super visa (IMM 5484 page 2 documents appear there and only there) and Work permit (family) (IMM 5488): the same expected results, with that combination's own checklist lines and quotes.
+**Who:** the configuration author (`user-A`), then the approver (`user-B`) as the second person. **Combination:** Visitors › Visitor visa (`vv.single`) of the six (Demo menu › Load sample) first. Then part A again on the other five of the six — Study permit outside Canada (`sp.outside`, IMM 5483), Work permit with an LMIA inside Canada (`wp.lmia_inside`, IMM 5556), Spouse sponsorship (`fs.spouse`, IMM 5533 and IMM 5589); Express Entry PNP (`pnp.express_entry`) and the corporate High-wage position (`lm.high_wage`) have no checklist attached, so part A says "No official checklist on this combination yet": the same expected results with each checklist's own lines and quotes.
 **Capabilities:** C2.6, C3.4, C11.13, C3.6, C4.11, C3.11. **API checks:** `acceptance/C2.6.test.ts`, `C3.4.test.ts`, `C11.13.test.ts`, `C3.6.test.ts`, `C4.11.test.ts`, `C3.11.test.ts`. **IRCC rules:** `product/compliance-trace.md`, Pack 2 (IRCC-P2-01 … P2-25).
 **Money:** Saved and Rules only (US$0). A step offering Live shows its cost and stays greyed on any copy without the founder's Go; the builder's browser check never clicks it (memory rule: no priced-button clicks).
-**Start:** a fresh isolated copy, Reset, Load sample. Visitor visa has Who can be set (principal, spouse or partner, child, representative) and the IMM 5257 and IMM 5707 form lines.
+**Start:** a fresh isolated copy; Demo menu › Reset, then Load sample (the six). Visitor visa then has Who can be set (principal, spouse or partner, child, representative) and its form lines (IMM 5257, IMM 5257 Schedule 1, IMM 5707, IMM 5645, IMM 5409, IMM 5476, IMM 5475). **Needs first:** the saved runs of Visitor visa's AI steps, recorded once in the founder-approved live trial (P-131), committed with the build; without them parts A, B and D offer Rules only.
 
-Each step: what the person does → what they must see (and what the data must hold). A builder turns these into a browser check (`tests/check_j3_*_browser.cjs`), at 1440 and 1024 px, axe clean, keyboard only for at least steps 4, 7 and 12.
+Each step: what the person does → what they must see (and what the data must hold). A builder turns these into a browser check (`tests/check_j3_*_browser.cjs`), at 1440 and 1024 px and at 400 px for steps 3, 8 and 17 (no sideways scroll, nothing cut), axe clean, keyboard only for at least steps 4, 7 and 12.
 
 ## A. Documents from the official checklist (C2.6)
 1. **Open Visitor visa › Documents.** → The page names the official checklist **IMM 5484 (05-2026)** under Sources, with a button **Draft document lines from the checklist** and the choice *Saved AI result (date, US$0)* · *Rules only* · *Live (about US$…; needs the founder's Go)*, Live greyed.
@@ -23,8 +23,8 @@ Each step: what the person does → what they must see (and what the data must h
 11. **Find an item the library already has (e.g. Family name).** → It says **Reuse existing: Family Name (person.family_name)**, never *New*. An item close to an existing one says **Close to: Family Name** and shows its one-line reason; it is under **Check**, not Ready.
 12. **Accept a new section.** → It is added as *Draft, waiting for a second person*. As the approver, **Library changes** shows it in the batch, with the near reason where there is one. The Release page's library list shows the same reason.
 
-## C. The fact a rule needs (C3.6)
-13. **On Work permit (family) › Rules, open a rule and choose Add the fact this rule needs.** → A dialog asks for the fact in words (name, meaning, answer type, who it is about). There is no key box.
+## C. The fact a rule needs (C3.6) — after part D
+13. **After part D (Visitor visa then has rules), on Visitor visa › Rules open a rule and choose Add the fact this rule needs.** → A dialog asks for the fact in words (name, meaning, answer type, who it is about). There is no key box.
 14. **Type the name of an existing field (Family Name) and save.** → Refused in words, naming *Family Name (person.family_name)* and where it is used (its combinations or forms); offers to use it instead.
 15. **Type a new fact and save.** → "Proposed: waits in the review queue". The queue shows it as *From the rules · rests on rule R-…*, marked *not meaning-checked*. The library has nothing yet.
 
@@ -36,7 +36,12 @@ Each step: what the person does → what they must see (and what the data must h
 
 ## E. Signed scans (C3.11)
 20. **On Visitor visa › Forms, set IMM 5257 to PDF upload, signed by hand and scanned.** → Documents shows, for each person applying (principal, spouse or partner, child), *IMM 5257 signed by hand and scanned* with "Because IMM 5257 is filed as PDF upload, signed by hand and scanned" (IRCC-P2-01, P2-07); it has no Move or Remove buttons.
-21. **Look at the child's line (under 18).** → It is still there (an unsigned form is returned, IRCC-P2-07) and says it is signed by a parent or legal guardian (IRCC-P2-06). The representative has no IMM 5257 scan.
+21. **Look at the child's line, then set Signed by to "A parent, for a minor".** → By default the child has their own line (not set = the person signs); with "a parent, for a minor" the child's scan is asked of the principal and adults still sign their own (main's Sample rule). G5256 says a parent or legal guardian signs (IRCC-P2-06): which of the two is right is the founder's open question. The representative never has an IMM 5257 scan; a scan has no Move or Remove of its own, and the last own document cannot move below it.
 22. **Set IMM 5257 back to PDF upload with no signature.** → Every signed-scan line of IMM 5257 is gone at once.
+
+## F. Wrong person, same pages
+23. **As the approver (`user-B`), open Visitor visa › Documents and the queue.** → *Draft document lines from the checklist* and *Draft questions and documents* are not offered (or disabled, saying "Only an author drafts"); a direct API call answers 403. Accept and Reject are available (the approver holds the review duty) but a new library item still needs a second person.
+24. **As the content reviewer (`user-C`), try Add the fact this rule needs.** → Not offered; the API answers 403.
+25. **As a client (`user-P`), open any configuration URL.** → "This page is for the configuration people".
 
 **Done when:** every step's expected result holds on `main`, the API checks named above are green and moved into `tests/`, and qa has walked J3 like a person.

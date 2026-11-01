@@ -20,10 +20,11 @@ run(async () => {
     ok(`C3.6 pass: ${path} by hand is gone (410, in words)`, r.status === 410 && /by hand/i.test(String(r.body?.title ?? "") + words(r)), r.status);
   }
   // ---------------------------------------------------------------- the rule-fact add
-  const wp = T.combo("wp.family");
+  // A rule to name: on Visitor visa of the six that needs C4.11's conditions first; meanwhile `wp.family` (fixture).
+  const wp = T.combo(T.key("vv.single"));
   const rule = (await call("GET", `/combinations/${wp}/config?mode=draft`)).body?.snapshot?.rules?.[0];
   const key = rule?.key ?? rule?.id;
-  ok("setup: Work permit (family) has a rule to name", !!key, key);
+  if (!key) { console.error(`STOP  setup missing: the combination has no rule yet (Visitor visa needs C4.11 first). Meanwhile: tsx <test> ${T.PORT} ${T.DB} wp.family on a fresh copy.`); process.exit(2); }
   const ROUTE = `/combinations/${wp}/rules/${encodeURIComponent(key ?? "R-01")}/fact`;
   const fact = { label: "Date the job offer was signed", meaning: "The date the employer and the person signed the offer of employment (Sample).", valueType: "date", subject: "person" };
   let r = await call("POST", ROUTE, { ...fact, key: "person.offer_signed_on" }, AUTHOR);
@@ -36,14 +37,27 @@ run(async () => {
   ok("C3.6 pass: the fact this rule needs is proposed (201)", r.status === 201, r.status >= 300 ? words(r) : r.status);
   const it = sql(`select origin||'|'||kind||'|'||lands_on||'|'||coalesce(source->'rule'->>'key','')||'|'||status from proposal_item where payload->>'label'='${fact.label}' order by created_at desc limit 1`);
   ok("C3.6 pass: it waits in the one queue as a rules field landing on the library, resting on the rule it names (P-158 (5))", it === `rules|field|library|${key}|waiting`, it);
-  ok("C3.6 pass: it says it was not meaning-checked (P-95: the AI check is off by default)", /not meaning-checked/i.test(JSON.stringify(r.body ?? {})) || sql(`select count(*) from proposal_item where payload->>'label'='${fact.label}' and rules::text ilike '%meaning%'`) !== "0");
+  ok("C3.6 pass: it says it was not meaning-checked (P-95: the AI check is off by default)", r.status === 201 && r.body?.meaningChecked === false, r.body);
   ok("C3.6 pass: the key is built by the system as subject.attribute (never typed)", /^person\.[a-z0-9_]+$/.test(String(r.body?.key ?? r.body?.proposedKey ?? "")), r.body);
   ok("C3.6 pass: nothing is in the library yet (a second person approves after acceptance)", r.status === 201 && sql(`select count(*) from canonical_field where label='${fact.label}'`) === "0");
-  // Same duplicate rules as an AI item (P-149 (2)): the exact name of a live field is refused, saying which.
-  r = await call("POST", ROUTE, { ...fact, label: sql("select label from canonical_field where canonical_field_key='person.family_name'") }, AUTHOR);
-  ok("C3.6 fail: a fact whose name is a live library field is refused (409, naming person.family_name and where it is used)", r.status === 409 && /person\.family_name/.test(words(r)) && /used (by|in|on)|combination|IMM \d{4}/i.test(words(r)), words(r));
+  // Same duplicate rules as an AI item (P-149 (2)): the exact name of a live field is refused, saying which; a near one
+  // needs its one-line reason.
+  const live = sql("select canonical_field_key||'|'||label from canonical_field where status in ('DRAFT','PUBLISHED') and label is not null order by canonical_field_key limit 1").split("|");
+  ok("setup: the library has a live field to collide with", !!live[1], live);
+  r = await call("POST", ROUTE, { ...fact, label: `${live[1]} at birth` }, AUTHOR);
+  ok("C3.6 fail: a near duplicate (a live field's name plus words) without a reason is refused (400, asking why it is not the same)", r.status === 400 && /why|reason|not the same/i.test(words(r)), words(r));
+  r = await call("POST", ROUTE, { ...fact, label: `${live[1]} at birth`, nearReason: "The name at birth, which can differ from today's (Sample)." }, AUTHOR);
+  ok("C3.6 pass: with its reason the near duplicate is proposed, the reason kept for the second person", r.status === 201 && sql(`select identity->>'nearReason' from proposal_item where payload->>'label'='${live[1]} at birth' limit 1`).length > 3, r.status >= 300 ? words(r) : undefined);
+  r = await call("POST", ROUTE, { ...fact, label: live[1] }, AUTHOR);
+  ok("C3.6 fail: a fact whose name is a live library field is refused (409, naming the existing field and where it is used)", r.status === 409 && words(r).includes(live[0]) && /used (by|in|on)|combination|IMM \d{4}/i.test(words(r)), words(r));
   r = await call("POST", ROUTE, fact, AUTHOR);
   ok("C3.6 fail: the same fact twice is one item (409)", r.status === 409, words(r));
+  // P-158: a document type named while adding a requirement line is proposed to the library, never written by hand.
+  // SHAPE (proposed): POST /combinations/:id/requirements {documentTypeName, appliesToRoles, attachMode} with a name the
+  // library lacks answers 202 with the waiting proposal's id.
+  const types0 = sql("select count(*) from document_type");
+  r = await call("POST", `/combinations/${wp}/requirements`, { documentTypeName: "Proof of hotel booking (Sample)", appliesToRoles: "each_applicant", attachMode: "COMBINATION_MANDATORY" }, AUTHOR);
+  ok("C3.6 pass: a new document type named while adding a requirement waits as a library proposal; no document type row is written", r.status === 202 && !!r.body?.proposalId && sql("select count(*) from document_type") === types0 && sql(`select count(*) from proposal_item where kind='document_type' and payload->>'name'='Proof of hotel booking (Sample)'`) === "1", { status: r.status, body: words(r) || r.body });
   ok("C3.6 pass: US$0", T.spent() === before);
   T.done();
 });

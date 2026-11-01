@@ -4,8 +4,10 @@
 // Today the SQR per role and the fromDocuments skip work (Questionnaires tab, Preview); there is no section move, so this
 // fails. ROUTE (proposed; Question for the tech lead): POST /combinations/:id/sections/:key/move {direction: "up"|"down"}.
 // IRCC: every family member completes their own forms (G5256, trace IRCC-P2-02) — so each applying role has its own
-// questions; all background questions must be answered (IRCC-P2-19). Rules only (US$0).
-//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C4.1.test.ts 4440 xr_studio_accept
+// questions. Rules only (US$0).
+// Runs on Visitor visa of the six (qa-1 gaps G4, G5, G10 / QA-133 there). Needs first: Visitor visa has questions (J3 /
+// C4.11); until then it stops with exit 2, and runs meanwhile on the suites' fixture: add `wp.family` as 4th argument.
+//   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C4.1.test.ts 4440 xr_studio_accept [wp.family]
 import { AUTHOR, pack2, run } from "./lib/pack2.ts";
 
 const T = pack2("C4.1");
@@ -13,12 +15,23 @@ const { call, sql, ok, words } = T;
 
 run(async () => {
   await T.ready();
-  const wp = T.combo(T.key("wp.family"));
+  const KEY = T.key("vv.single");
+  const wp = T.combo(KEY);
+  await T.needQuestions(wp);
   const q = (await call("GET", `/combinations/${wp}/workspace?tab=questionnaires`)).body;
   const roles = q?.questionnaire?.roles ?? [];
   const applying = (q?.people?.lines ?? []).filter((l: any) => l.applies).map((l: any) => l.role);
   ok("C4.1 pass: each applying person role has its own questions (IRCC: family members complete their own forms)", applying.length >= 2 && applying.every((r: string) => (roles.find((x: any) => x.role === r)?.questions ?? 0) > 0), roles.map((r: any) => `${r.role}:${r.questions}`));
-  ok("C4.1 pass: no role has a gap (every fact a form needs is asked or comes from a document or the case officer)", roles.every((r: any) => r.gaps === 0));
+  ok("C4.1 pass: no role has a gap (every fact a form needs is asked or comes from a document or the case officer)", roles.length > 0 && roles.every((r: any) => r.gaps === 0));
+  // qa-1 G5: no "…is needed by IMM …, but nobody is asked for it" error on the draft, for any role.
+  const nobody = ((await call("GET", `/combinations/${wp}`)).body?.draft?.problems ?? []).filter((p: any) => /nobody is asked for it/.test(p.message));
+  ok("C4.1 pass (G5): no fact a form needs is asked of nobody, for any role", nobody.length === 0, { count: nobody.length, first: nobody[0]?.message?.slice(0, 120) });
+  const allSections = q?.questionnaire?.sections ?? [];
+  // qa-1 G10 / QA-133: every section header is the library's title in words, never a system key.
+  ok("C4.1 pass (G10, QA-133): every section header is a title in words, never a system key", allSections.length > 0 && allSections.every((x: any) => !!x.title && !/^[a-z0-9]+(_[a-z0-9]+)+$/.test(x.title) && x.title !== x.id), allSections.map((x: any) => x.title).slice(0, 6));
+  // qa-1 G4: IMM 5257's own parts "Your visit" and "Previous countries of residence" are sections of Visitor visa (from the
+  // form's parts, P-158: never added by hand). Visitor visa only.
+  if (KEY === "vv.single") ok("C4.1 pass (G4): Visitor visa's questionnaire has the sections Your visit and Previous countries of residence", ["your visit", "previous countries of residence"].every((t) => allSections.some((x: any) => String(x.title).toLowerCase().includes(t))), allSections.map((x: any) => x.title));
   const pv = (await call("GET", `/combinations/${wp}/workspace?tab=preview&person=principal`)).body?.preview;
   const fromDocs = (pv?.sets?.sqr?.fromDocuments ?? []).flatMap((d: any) => d.facts);
   const askedLabels = new Set((pv?.questionnaire?.sections ?? []).flatMap((s: any) => (s.questions ?? []).flatMap((x: any) => [x.label, x.meaning])));
@@ -27,7 +40,7 @@ run(async () => {
   // ---------------------------------------------------------------- section order per combination (P-216 (1))
   const order = () => sql(`select string_agg(section_key, ',' order by section_order) from sqr_section_selection where combination_id='${wp}'`).split(",").filter(Boolean);
   const o0 = order();
-  ok("setup: Work permit (family) has at least three chosen sections", o0.length >= 3, o0);
+  ok("setup: the combination has at least three chosen sections", o0.length >= 3, o0);
   const second = o0[1];
   let r = await call("POST", `/combinations/${wp}/sections/${encodeURIComponent(second)}/move`, { direction: "up" }, AUTHOR);
   ok("C4.1 pass: Move up puts the second section first", r.status < 300 && order()[0] === second, r.status >= 300 ? words(r) : order().slice(0, 3));
@@ -42,10 +55,12 @@ run(async () => {
   const sections = (await call("GET", `/combinations/${wp}/workspace?tab=questionnaires`)).body?.questionnaire?.sections ?? [];
   ok("C4.1 pass: the Questionnaires tab shows the new order", sections.length > 0 && sections[0]?.id === second, sections.map((s: any) => s.id).slice(0, 3));
   const lib = sql(`select title from logical_section where section_key='${second}' order by version desc limit 1`);
-  ok("C4.1 pass: the section keeps the library's one title (P-216 (2))", sections[0]?.title === lib, { tab: sections[0]?.title, library: lib });
-  const review = (await call("GET", `/combinations/${wp}/review`)).body;
-  ok("C4.1 pass: the new order is a change of the combination's draft, in words, for its next review (C4.8)", /order|moved/i.test(JSON.stringify(review?.draft?.changes ?? review?.changes ?? review ?? {})));
+  ok("C4.1 pass: the section keeps the library's one title (P-216 (2))", !!lib && sections[0]?.title === lib, { tab: sections[0]?.title, library: lib });
   const released = sql(`select (select string_agg(x->>'id', ',' order by n) from jsonb_array_elements(snapshot->'sections') with ordinality as t(x, n)) from config_release where combination_id='${wp}' order by version desc limit 1`).split(",");
-  ok("C4.1 data: the released snapshot still has the old order until the next release", released.indexOf(o0[0]) >= 0 && released.indexOf(o0[0]) < released.indexOf(second), released.slice(0, 3));
+  if (released[0]) ok("C4.1 data: the released snapshot still has the old order until the next release", released.indexOf(o0[0]) >= 0 && released.indexOf(o0[0]) < released.indexOf(second), released.slice(0, 3));
+  // The move is one named change line of the next review (C4.8): submitted last, so nothing after it depends on it.
+  r = await call("POST", `/combinations/${wp}/submit`, { note: "section order (acceptance C4.1)" }, AUTHOR);
+  const line = ((r.body?.changeSummary ?? []) as any[]).find((c) => /section/i.test(String(c.kind)) && String(c.key) === second);
+  ok("C4.1 pass: the review names the move as one change line, in words (the section's title and 'moved up')", !!line && String(line.label).includes(lib) && /moved up|order/i.test(String(line.label)), r.status >= 300 ? words(r) : line ?? (r.body?.changeSummary ?? []).map((c: any) => `${c.kind}|${c.key}`).slice(0, 5));
   T.done();
 });

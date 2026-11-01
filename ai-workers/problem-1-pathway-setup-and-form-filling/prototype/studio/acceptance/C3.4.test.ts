@@ -5,6 +5,8 @@
 // ROUTE (proposed; Question for the tech lead): POST /attachments/:id/draft-masters {mode: "replay" | "rules" | "live"},
 // beside the existing /attachments/:id/draft (fields) and /attachments/:id/draft-checklist. The builder may rename it
 // with the tech lead's OK; the assertions on the queue stay.
+// Needs first: the saved run of this step for IMM 5257 (and guide 5256), recorded in the founder-approved live trial of
+// Visitor visa (P-131) and committed with the build; until then the replay is refused and this stays red.
 // Rules from P-158: an answer list comes only from a PDF box's choices or an IRCC code list; sections from the form's
 // parts. P-134: an identity document is never read by AI vision. Every value Sample until the immigration expert confirms.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C3.4.test.ts 4440 xr_studio_accept
@@ -35,7 +37,9 @@ run(async () => {
   const b = v.body?.group?.bands ?? {};
   const items: any[] = [...(b.ready ?? []), ...(b.check ?? []), ...(b.decide ?? [])];
   const of = (k: string) => items.filter((x) => x.kind === k);
-  ok("C3.4 pass: it proposes sections, answer lists, document types and form checks (not only fields)", ["section", "answer_list", "document_type", "form_check"].every((k) => of(k).length > 0), Object.fromEntries(["section", "answer_list", "document_type", "form_check"].map((k) => [k, of(k).length])));
+  ok("C3.4 pass: it proposes sections, answer lists and form checks from the form (not only fields)", ["section", "answer_list", "form_check"].every((k) => of(k).length > 0), Object.fromEntries(["section", "answer_list", "form_check", "document_type"].map((k) => [k, of(k).length])));
+  // qa-1 G2: one answer list per drop-down list of IMM 5257 (13 lists in the official form; tests/runtime/setup_visitor_visa.ts LIST_NAMES).
+  ok("C3.4 pass (G2): one answer list per drop-down list of IMM 5257 (at least 13), each resting on the form", of("answer_list").length >= 13 && of("answer_list").every((x) => /imm5257/i.test(x.source?.file ?? "")), of("answer_list").length);
   ok("C3.4 pass: every item lands on the library and rests on the IMM 5257 file with its quote found", items.length > 0 && items.every((x) => x.lands_on === "library" && /imm5257/i.test(x.source?.file ?? "") && x.source?.quote_found === true));
   // P-158 (b): an answer list comes only from a PDF box's choices. IMM 5257's marital-status box lists
   // Married, Single, Common-Law, Divorced, Widowed (the form's own drop-down, read from the official PDF).
@@ -43,9 +47,11 @@ run(async () => {
   const codes = (marital?.readings?.draft?.payload?.values ?? []).map((x: any) => String(x.label).toLowerCase());
   ok("C3.4 pass: the marital-status answer list carries the form's own 8 choices (IRCC-P2-25)", codes.length === 8 && ["annulled", "common", "divorced", "separated", "married", "single", "unknown", "widowed"].every((w) => codes.some((c: string) => c.includes(w))), codes);
   ok("C3.4 pass: every section names the form fields it groups (from the form's parts)", of("section").length > 0 && of("section").every((x) => (x.readings?.draft?.payload?.fieldKeys ?? []).length > 0));
-  const idDocs = of("document_type").filter((x) => x.readings?.draft?.payload?.identityDocument);
-  ok("C3.4 pass: a passport is proposed as an identity document read by its coded lines, never AI vision (P-134)", idDocs.some((x) => /passport/i.test(x.title)) && idDocs.every((x) => ["coded_lines", "printed_layout", "person_only"].includes(x.readings?.draft?.payload?.readerKind)), idDocs.map((x) => `${x.title}:${x.readings?.draft?.payload?.readerKind}`));
-  ok("C3.4 pass: every document type says what it proves", of("document_type").length > 0 && of("document_type").every((x) => String(x.meaning ?? "").length >= 3));
+  // Document types: P-158 has them drafted from a checklist, P-120 and W1-ai-drafting [C1] keep them with the form — a
+  // conflict for the founder (PR question). So no document type is required from the form here; when one is proposed
+  // it says what it proves and an identity document is never read by AI vision (P-134). The checklist's are in C2.6.
+  const docTypes = of("document_type");
+  ok("C3.4 pass: any document type proposed says what it proves; an identity document is read by its coded lines or layout, never AI vision", docTypes.every((x) => String(x.meaning ?? "").length >= 3 && (!x.readings?.draft?.payload?.identityDocument || ["coded_lines", "printed_layout", "person_only"].includes(x.readings?.draft?.payload?.readerKind))), docTypes.map((x) => x.title));
   ok("C3.4 pass: every form check carries 2–3 worked examples, unconfirmed until the expert confirms (P-149 (5))", of("form_check").length > 0 && of("form_check").every((x) => { const e = x.readings?.draft?.payload?.examples ?? []; return e.length >= 2 && e.length <= 3 && e.every((c: any) => c.confirmedBy === null); }));
   // P-120: a "new" item never has the exact name of a live library item of its kind (it would be "reuse").
   const live = (q: string) => new Set(sql(q).split("\n").filter(Boolean).map((x) => x.trim().toLowerCase()));
@@ -54,9 +60,16 @@ run(async () => {
   ok("C3.4 data: every item is Sample", items.length > 0 && items.every((x) => x.basis === "SAMPLE"));
 
   // Accepting a section writes a DRAFT library row and a waiting change for a second person (the lander exists today).
+  const waitingSections = () => Number(sql(`select count(*) from library_change where status='WAITING' and kind='section'`));
+  const w0 = waitingSections();
   const sec = of("section")[0];
   r = await call("POST", "/review/proposals/decide", { ids: [sec?.id ?? "00000000-0000-4000-8000-000000000000"], action: "accept" }, AUTHOR);
-  ok("C3.4 pass: an accepted section lands as a DRAFT section waiting for a second person", r.status < 300 && sql(`select count(*) from library_change where status='WAITING' and kind='section'`) !== "0", r.status >= 300 ? words(r) : undefined);
-  ok("C3.4 pass: the whole test spent US$0", T.spent() === before);
+  ok("C3.4 pass: an accepted section lands as a DRAFT section waiting for a second person", !!sec && r.status < 300 && waitingSections() === w0 + 1, r.status >= 300 ? words(r) : undefined);
+  // "From sources": the rules (conditions, checks) also come from the combination's guide, not only from a form.
+  const guide = T.attachment(vv, "guide-5256.html");
+  r = await call("POST", ROUTE(guide), { mode: "replay" }, AUTHOR);
+  const fromGuide = ((await call("GET", "/review/proposals")).body?.groups ?? []).length ? (await T.queued(vv)).filter((x: any) => ["condition", "form_check", "cross_check"].includes(x.kind) && /5256/.test(x.source?.file ?? "")) : [];
+  ok("C3.4 pass: drafting from Visitor visa's guide 5256 proposes rules (conditions or checks) resting on the guide's words", !!guide && r.status < 300 && fromGuide.length > 0 && fromGuide.every((x: any) => x.source?.quote_found === true), r.status >= 300 ? words(r) : fromGuide.length);
+  ok("C3.4 pass: the whole test spent US$0", items.length > 0 && T.spent() === before);
   T.done();
 });

@@ -11,6 +11,8 @@
 //   POST /combinations/:id/draft {planSha256, idempotencyKey, spendLimitUsd}
 // IRCC rules the checker enforces (compliance trace, Pack 2): the checklist's documents per person (IRCC-P2-10..15), each
 // family member's own forms (IRCC-P2-02), every background question answered (IRCC-P2-19).
+// Needs first: the saved runs of the AI steps on Visitor visa, recorded once in the founder-approved live trial (P-131;
+// its cost stated before it is spent) and committed with the build.
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C4.11.test.ts 4440 xr_studio_accept
 import { randomUUID } from "node:crypto";
 import { AUTHOR, pack2, run } from "./lib/pack2.ts";
@@ -68,6 +70,32 @@ run(async () => {
   const docs = new Set(items.filter((x: any) => x.kind === "requirement_line").map((x: any) => x.readings?.draft?.payload?.documentType));
   ok("C4.11 pass (checker): every fact from a document names a document on the checklist", items.length > 0 && items.filter((x: any) => x.kind === "comes_from" && x.readings?.draft?.payload?.from === "document").every((x: any) => docs.has(x.readings.draft.payload.documentType) || x.band !== "ready"));
   ok("C4.11 data: every item is Sample; nothing is in the combination's draft until accepted", items.length > 0 && items.every((x: any) => x.basis === "SAMPLE") && sql(`select count(*) from document_requirement where combination_id='${vv}'`) === "0");
+  // BR-7: a role not in "Who can be in this application" never reaches the queue (Visitor visa lists no sponsor).
+  ok("C4.11 pass (BR-7): no item names a person role that Who can be does not list", items.length > 0 && items.every((x: any) => (x.readings?.draft?.payload?.roles ?? [x.readings?.draft?.payload?.role].filter(Boolean)).every((role: string) => ["principal", "spouse_or_partner", "child", "representative", "case"].includes(role))));
+  // G5 (qa-1): after accepting every Ready item, no fact a form needs is asked of nobody.
+  const ready = items.filter((x: any) => x.band === "ready").map((x: any) => x.id);
+  for (let i = 0; i < ready.length; i += 200) await call("POST", "/review/proposals/decide", { ids: ready.slice(i, i + 200), action: "accept" }, AUTHOR);
+  const nobody = ((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []).filter((p: any) => /nobody is asked for it/.test(p.message));
+  ok("C4.11 pass (G5): with the run's Ready items accepted, no fact a form needs is asked of nobody (any role)", ready.length > 0 && nobody.length === 0, { ready: ready.length, nobody: nobody.length });
+  // BR-12: a live plan whose worst case is over what is left of the cap is refused before it starts (409, in words).
+  r = await call("POST", `/combinations/${vv}/draft/plan`, { steps: STEPS.map((step) => ({ step, mode: AI_STEPS.has(step) ? "live" : "rules" })) }, AUTHOR);
+  const livePlan = r.body;
+  // Never on a copy where live AI is approved (it could spend): the test says so and fails instead of calling.
+  if (livePlan?.live?.approved !== false) r = { status: 0, body: { detail: "not tested: this copy did not say live AI is off (live.approved false)" } };
+  else r = await call("POST", `/combinations/${vv}/draft`, { planSha256: livePlan?.plan_sha256 ?? livePlan?.planSha256 ?? "0".repeat(64), idempotencyKey: randomUUID(), spendLimitUsd: 0.01 }, AUTHOR);
+  ok("C4.11 fail (BR-12): a live run whose worst case is over the spend limit is refused before any call (409, 'use saved results or rules only')", !!livePlan?.steps && r.status === 409 && /saved|rules only/i.test(words(r)), words(r));
+  // BR-10: a newer edition of the checklist makes its saved result Out of date; it never replays silently.
+  sql(`update source_attachment set edition='IMM 5484 (06-2026)' where combination_id='${vv}' and file_name='imm5484e.pdf'`);
+  r = await call("POST", `/combinations/${vv}/draft/plan`, { steps: saved }, AUTHOR);
+  const docStep = (r.body?.steps ?? []).find((s: any) => s.step === "documents");
+  ok("C4.11 fail (BR-10): with a newer IMM 5484 edition, the documents step's saved result is Out of date and is not offered as Replay", docStep?.saved?.state === "out_of_date", docStep?.saved);
+  // Stop: a run can be stopped; it says so and adds nothing more.
+  r = await call("POST", `/combinations/${vv}/draft/plan`, { steps: STEPS.map((step) => ({ step, mode: "rules" })) }, AUTHOR);
+  r = await call("POST", `/combinations/${vv}/draft`, { planSha256: r.body?.plan_sha256 ?? r.body?.planSha256 ?? "0".repeat(64), idempotencyKey: randomUUID(), spendLimitUsd: 0 }, AUTHOR);
+  const stopRun = r.body?.runId;
+  const st = await call("POST", `/runs/${stopRun ?? randomUUID()}/stop`, {}, AUTHOR);
+  const after = (await call("GET", `/runs/${stopRun ?? randomUUID()}`)).body;
+  ok("C4.11 pass: Stop stops a run (its state says stopped or finished, in words)", !!stopRun && st.status < 300 && /stop|complet|finish/i.test(String(after?.status ?? "")), { stop: st.status, status: after?.status });
   ok("C4.11 pass: the whole run spent US$0 (Replay and Rules only)", !!view && T.spent() === before && Number(view?.usd ?? 0) === 0);
   T.done();
 });
