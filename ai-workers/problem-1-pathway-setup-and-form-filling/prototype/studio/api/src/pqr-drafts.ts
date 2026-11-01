@@ -91,7 +91,7 @@ export class PqrDrafts {
     const note = mode === "rules" ? "No AI: the rules propose the facts this combination's rules read. Each pick goes to To review for a person to accept or remove."
       : mode === "replay" ? "Uses the answers AI gave for this exact guide and prompt before (US$0); with none saved yet, it says so and nothing is proposed."
       : "Two AI rounds read the guide; a pick is Ready only when both make it, with its sentence in the guide.";
-    return { mode, combination: { id: c.id, label: c.label }, guide: g ? { code: g.code, title: g.title } : null, steps: mode === "rules" ? STEPS.rules : STEPS.ai, candidates,
+    return { mode, combination: { id: c.id, label: c.label }, guide: g ? { code: g.code, title: g.title, file: g.input?.file ?? null } : null, steps: mode === "rules" ? STEPS.rules : STEPS.ai, candidates,
       totals: { worst_usd: worst, remaining_usd: remaining }, note, live: { approved: aiLive(), why: aiLive() ? null : LIVE_WAITING },
       plan_sha256: sha(JSON.stringify({ id: c.id, mode, guide: g?.input?.sha256 ?? null, worst, candidates })) };
   }

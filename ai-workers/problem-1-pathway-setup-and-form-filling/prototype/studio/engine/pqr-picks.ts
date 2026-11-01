@@ -42,9 +42,13 @@ export function pqrCandidates(s: Snapshot): FactSourceView[] {
 export function matchFact(candidates: FactSourceView[], role: string, asks: string): FactSourceView | null {
   const w = words(asks);
   if (!w) return null;
-  const mine = candidates.filter((f) => f.role === role);
-  const hits = mine.filter((f) => words(f.label) === w || words(f.fact.split(".").pop()!.replace(/_/g, " ")) === w || f.fact === asks.trim());
+  const hits = namedBy(candidates, role, asks);
   return hits.length === 1 ? hits[0] : null;
+}
+/** The facts of that person whose words (label, or the last part of the key) are exactly those words, or whose key it is. */
+function namedBy(facts: FactSourceView[], role: string, asks: string): FactSourceView[] {
+  const w = words(asks);
+  return w ? facts.filter((f) => f.role === role && (words(f.label) === w || words(f.fact.split(".").pop()!.replace(/_/g, " ")) === w || f.fact === asks.trim())) : [];
 }
 
 /** The two rounds into queue items (R1–R5). `guide` is the file the rounds read; its text is where quotes must be. */
@@ -60,8 +64,9 @@ export function pqrPicksFromRounds(s: Snapshot, rounds: { draft: Round; check: R
     for (const p of r.output.picks) {
       const f = matchFact(candidates, p.role, p.asks);
       if (!f) {
-        const any = all.find((x) => x.role === p.role && (words(x.label) === words(p.asks) || x.fact === p.asks.trim()));
-        const why = !any ? `No question of this combination asks "${p.asks}" of this person, so a prospect cannot be asked it (${which}).`
+        const named = namedBy(all, p.role, p.asks), any = named.length === 1 ? named[0] : null;
+        const why = named.length > 1 ? `"${p.asks}" could be ${named.length} questions of this person, so it is not guessed: pick it by hand (${which}).`
+          : !any ? `No question of this combination asks "${p.asks}" of this person, so a prospect cannot be asked it (${which}).`
           : any.prequalification ? `"${any.label}" is already asked in pre-qualification (${which}).`
           : any.source === "AGENT" ? `"${any.label}" comes from the case officer: a prospect is asked only what they can answer (${which}).`
           : `"${any.label}" is not asked by a question of this combination yet (${which}).`;

@@ -7,7 +7,7 @@ import type { ProposalItem as Row } from "@prisma/client";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { AGREEMENT_WORDS, BANDS, BatchDecisionBody, DecideBody, PROPOSAL_KIND_WORDS, ProposalsQuery, type Band, type ChangeBatch, type ProposalGroup, type ProposalsView, type QueueProposal, type Reading } from "../../contracts/review-proposals.ts";
-import { ACTORS, actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Audit, Db, fail, need, STARTING_ROLES, Workspace, type Actor } from "./core.ts";
 import { changeView, decideChange } from "./library-changes.ts";
 import { BATCH_MAX, bulkWhy, decide, ON_ITS_PAGE, undo, UNDO_SECONDS } from "./proposals.ts";
 import { Screen02 } from "./screen02.ts";
@@ -23,6 +23,11 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
 }
 /** The group an item belongs to: its form edition (S6, one draft per edition), else its combination (W1-10), else its run. */
 export const groupOf = (r: Pick<Row, "formEdition" | "combinationId" | "runId">) => (r.formEdition ? `edition:${r.formEdition}` : r.combinationId ? `combination:${r.combinationId}` : `run:${r.runId}`);
+/** C4.7: "Ask in pre-qualification: Date of birth (Principal applicant)". */
+const pickTitle = (p: Record<string, any>, facts: Map<string, string>) => {
+  const m = facts.get(p.factKey) ?? "an answer this combination's forms need", fact = m.length > 110 ? `${m.slice(0, 109).trimEnd()}…` : m;
+  return `Ask in pre-qualification: ${fact} (${p.role === "case" ? "The application" : STARTING_ROLES.find((x) => x.key === p.role)?.label ?? "a person in the application"})`;
+};
 const titleOf = (p: Record<string, any>) => String(p.label ?? p.name ?? p.condition?.sentence ?? p.sentence ?? p.target?.key ?? p.kind ?? "A proposal").slice(0, 160);
 const readingOf = (x: unknown): Reading => { const r = x as { reading?: string; from?: "live" | "replay"; payload?: unknown } | null; return r ? { text: r.reading ?? "", from: r.from ?? "replay", payload: r.payload ?? null } : null; };
 
@@ -64,7 +69,10 @@ export class ReviewProposals {
     let group: ProposalsView["group"] = null;
     if (chosen) {
       const bands: Record<Band, QueueProposal[]> = { ready: [], check: [], decide: [] };
-      for (const r of rows) if (groupOf(r) === chosen.id) bands[r.confidence as Band].push(this.view(r));
+      // C4.7: a pre-qualification pick is read in words (the fact's meaning, the person), never its keys.
+      const picks = rows.filter((r) => r.kind === "pqr_pick" && groupOf(r) === chosen.id);
+      const facts = picks.length ? new Map((await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: picks.map((r) => String((r.payload as { factKey?: string }).factKey)) } }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, meaning: true } })).reverse().map((f) => [f.canonicalFieldKey, f.meaning.trim().replace(/\.$/, "")])) : new Map<string, string>();
+      for (const r of rows) if (groupOf(r) === chosen.id) bands[r.confidence as Band].push(this.view(r, facts));
       group = { ...chosen, bands };
     }
     return { groups: [...groups.values()], group, batch_max: BATCH_MAX, undo_seconds: UNDO_SECONDS };
@@ -80,10 +88,10 @@ export class ReviewProposals {
     return r ? groups.get(groupOf(r)) : undefined;
   }
 
-  private view(r: Row): QueueProposal {
+  private view(r: Row, facts = new Map<string, string>()): QueueProposal {
     const p = r.payload as Record<string, any>, src = r.source as Record<string, any> | null, rounds = r.rounds as { draft?: unknown; check?: unknown }, id = r.identity as { near?: string[]; nearReason?: string | null };
     const reuse = r.reuse as { match: "reuse" | "new"; existingKey: string | null };
-    return { id: r.id, kind: r.kind, kind_word: PROPOSAL_KIND_WORDS[r.kind] ?? r.kind, title: titleOf(p), meaning: p.meaning ?? p.proves ?? null, band: r.confidence as Band, agreement: r.agreement, agreement_word: AGREEMENT_WORDS[r.agreement] ?? r.agreement,
+    return { id: r.id, kind: r.kind, kind_word: PROPOSAL_KIND_WORDS[r.kind] ?? r.kind, title: r.kind === "pqr_pick" ? pickTitle(p, facts) : titleOf(p), meaning: p.meaning ?? p.proves ?? (r.kind === "pqr_pick" ? p.reason : null) ?? null, band: r.confidence as Band, agreement: r.agreement, agreement_word: AGREEMENT_WORDS[r.agreement] ?? r.agreement,
       reason: r.reason, lands_on: r.landsOn as "library" | "combination", reuse: { match: reuse.match, existing_key: reuse.existingKey }, origin: r.origin as "ai" | "rules", step: r.step,
       readings: { draft: readingOf(rounds?.draft), check: readingOf(rounds?.check) },
       source: src ? { file: src.file, edition: src.edition ?? null, page: src.page ?? null, quote: src.quote, quote_found: !!src.quoteFound, rule: src.rule ?? null } : null,

@@ -206,7 +206,7 @@ export async function bulkUndo(db: Db, audit: Audit, actor: Actor, c: { id: stri
   return { undone: go.length, kept };
 }
 
-/** C4.7 Accept (Lead, 29 Oct; P-149 one door; N-2 of S6 slice 1): the queue's lander for `pqr_pick`. S6's decide
+/** C4.7 Accept (Lead, 29 Oct; P-149 one door; N-2 of S6 slice 1): the queue's lander for `pqr_pick` (proposals.ts landPqrPick, #282). S6's decide
  *  transaction calls it with its own transaction client, so the tick and the item's status change together (the queue
  *  writes the item's status and decision). It writes the tick through the same draft row and refusals as a person's tick,
  *  keeping the pick's reason, so it goes out in the combination's one release. Origin: AI_PROPOSAL for an AI pick;
