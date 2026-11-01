@@ -52,7 +52,7 @@ export type BulkPreview = z.infer<typeof BulkPreview>;
 
 /** Slice (b): the same fields, the rows the person ticked, and a key so a retried request changes nothing twice. */
 export const BulkApply = BulkPreview.extend({
-  idempotencyKey: z.string().trim().min(8, "Reload the page: the request key is missing.").max(100),
+  idempotencyKey: z.string({ error: "Reload the page: the request key is missing." }).trim().min(8, "Reload the page: the request key is missing.").max(100, "Reload the page: the request key is not valid."),
   include: z.array(uuid("A combination")).min(1, "Tick at least one combination."),
 });
 export type BulkApply = z.infer<typeof BulkApply>;
@@ -73,3 +73,12 @@ export type PreviewResult = {
   targets: PreviewTarget[];
   counts: { tickable: number; waits: number; cannot: number; nothing: number };
 };
+
+/** Slice (b), BR-C3: what the apply returns. `replayed`: the same request key was seen before; nothing changed twice. */
+export type ApplyResult = { batchId: string; op: BulkOp; changed: { combinationId: string; trail: string[] }[]; message: string; replayed: boolean };
+/** Slice (b), BR-C4: what one Undo of a whole batch returns. */
+export type UndoResult = { batchId: string; undone: { combinationId: string; trail: string[] }[]; message: string };
+/** Concept §4 "After": the toast. */
+export const appliedWords = (line: string, op: BulkOp, n: number) => `${line} ${op === "add" ? "added to" : "removed from"} ${n} combination${n === 1 ? "" : "s"} (draft changes in each).`;
+/** Concept §5 "Undo refused" (review m3: a removal says removal). */
+export const undoRefusedWords = (op: BulkOp, combination: string, what: string, who: string, time: string) => `${combination} was changed after the ${op === "add" ? "copy" : "removal"} (${what}, by ${who} at ${time}). Nothing was undone.`;

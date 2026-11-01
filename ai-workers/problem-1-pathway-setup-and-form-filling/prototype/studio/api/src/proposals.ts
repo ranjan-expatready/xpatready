@@ -208,6 +208,11 @@ const stampOf = async (tx: Tx, ws: string, kind: string, key: string) => (STAMP[
 
 export const UNDO_SECONDS = 10;
 export const BATCH_MAX = 200;
+/** Room for a batch's work inside one transaction (runtime lane, cross-lane fix, 30 Oct): the queue's transactions run a
+ *  library query per item (identity check, lander, stamp), up to BATCH_MAX items or one form's whole field-map draft.
+ *  Under load that passed Prisma's 5 s default and the step failed with "Transaction API error" (S7 six load, IMM 5257
+ *  Schedule 1 and IMM 5707). Every queue transaction takes this option. */
+export const QUEUE_TX = { timeout: 60_000, maxWait: 10_000 };
 /** The field-map step's items map form fields as well, so they are decided on their form-field page (job.tsx) until
  *  that page folds into the queue with the edition drafts (1b, build-notes). */
 export const ON_ITS_PAGE = new Set(["field_map"]);
@@ -282,7 +287,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       out.push({ id: r.id, landedAs });
     }
     return out;
-  });
+  }, QUEUE_TX);
   await audit.log(workspaceId, actor.id, "decided", "proposals", batchId, `${actor.name} ${d.action === "accept" ? "accepted" : d.action === "edit" ? "edited and accepted" : "rejected"} ${landed.length} proposal${landed.length === 1 ? "" : "s"}${reason ? `: ${reason}` : ""}`);
   return { batchId, items: landed };
 }
@@ -316,7 +321,7 @@ export async function undo(db: Db, audit: Audit, actor: Actor, workspaceId: stri
         ...(beforeEdit ? { payload: beforeEdit as Prisma.InputJsonValue, identityKey: identityKeyOf(beforeEdit, r.identityKey) } : {}) } });
     }
     return rows.length;
-  });
+  }, QUEUE_TX);
   await audit.log(workspaceId, actor.id, "undone", "proposals", batchId, `${actor.name} undid a decision on ${res} proposal${res === 1 ? "" : "s"}`);
   return { undone: res };
 }

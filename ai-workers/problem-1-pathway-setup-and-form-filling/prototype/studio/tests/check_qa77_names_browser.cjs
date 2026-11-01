@@ -47,7 +47,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const headerWords = peopleLine.split("people: ")[1].split(" · ")[0].split("; ").map((x) => x.trim());
     step(`QA-77 #113 pass (${key}): the header says each person in the same words as Who can be, counts included`, foldedWords.length === names.length && JSON.stringify(headerWords) === JSON.stringify(foldedWords) && foldedWords.every((w) => /\((always|optional)\)$/.test(w)), `${headerWords.join(" | ")} vs ${foldedWords.join(" | ")}`);
     const roleNotes = await who.locator("[data-library-role]").allInnerTexts();
-    if (typed) step(`QA-77 (${key}): a typed label shows the library role under it (PRODUCT §4 term kept in view)`, roleNotes.some((t) => /role: Principal applicant/.test(t)), roleNotes.join(" | "));
+    if (typed) step(`QA-77 (${key}): a typed label shows the library role under it (PRODUCT §4 term kept in view)`, roleNotes.some((t) => /role: Spouse or partner$/.test(t)) && roleNotes.some((t) => /role: Child$/.test(t)), roleNotes.join(" | "));
+    // X1c (P-209): the sample names its principal "Principal applicant", the library's own name, so that person has no role line.
+    if (typed) step(`C11.12 X1c fail guard (${key}): the principal, named as the library names it, gets no extra role line`, names[0] === "Principal applicant" && !roleNotes.some((t) => /role: Principal applicant/.test(t)), `${names[0]} · ${roleNotes.join(" | ")}`);
     else step(`QA-77 fail guard (${key}): with no typed label there is no extra role line`, roleNotes.length === 0, roleNotes.join(" | "));
     if (typed) {
       await p.screenshot({ path: path.join(SHOTS, "01-visitor-visa-who-can-be-1440.png") });

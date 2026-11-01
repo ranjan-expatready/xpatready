@@ -4,7 +4,8 @@
 // team's closed operator vocabulary through contracts/rules.ts (deterministic; no AI call per answer).
 import { CALCULATIONS, evaluate, type PredicateNode, type Truth } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
-import { documentFacts } from "./sources.ts";
+import { documentFacts, SIGNED_SCAN } from "./sources.ts";
+import { lineOf } from "./channels.ts";
 
 /** A person role key from the shared library's person roles (S5, M3); principal, spouse_or_partner, child,
  *  representative and sponsor keep their meaning in the rules below. */
@@ -186,6 +187,32 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
         status: c.applies === false ? "Not needed" : c.applies === "cannot_tell" ? "Cannot tell yet" : "Needed", why: d.condition_plain ?? (d.base_or_conditional === "base" ? "required for every person it names" : d.note ?? ""), source_quote: d.source_quote, origin: d.origin, item_status: d.status };
     });
   });
+
+  // C3.11 (PR #113 review M2): a form line filed as PDF upload, signed by hand and scanned, asks each person who signs it
+  // for the signed scan, by the same "Signed by" rule as the Documents tab (sources.ts signedScanLines), so Preview by
+  // person and the case list it. Needed when the form applies to someone the signer signs for; never stored.
+  const principalId = people.find((p) => p.role === "principal")?.id;
+  for (const f of s.forms as { form_number: string; form_kind?: string | null; status?: string; channel?: string; signature?: string; signed_by?: string }[]) {
+    const { channel, signature } = lineOf(f), by = f.signed_by ?? "person";
+    if (channel !== "PDF_UPLOAD" || signature !== "HAND_SCANNED" || (f.form_kind ?? "data_form") === "document" || by === "none") continue;
+    const bySigner = new Map<string, typeof forms>();
+    for (const row of forms.filter((x) => x.form === f.form_number)) {
+      const about = row.person === "case" ? principalId : row.person.split("/")[0];
+      if (!about) continue;
+      const signsFor = by === "principal_for_family" || (by === "parent_for_minor" && people.find((p) => p.id === about)?.role === "child") ? principalId : about;
+      const signers = [signsFor, ...(by === "person_and_representative" ? people.filter((p) => p.role === "representative").map((p) => p.id) : [])];
+      for (const id of signers) if (id) bySigner.set(id, [...(bySigner.get(id) ?? []), row]);
+    }
+    for (const [person, rows] of bySigner) {
+      const applies = rows.some((x) => x.applies === true) ? true : rows.some((x) => x.applies === "cannot_tell") ? "cannot_tell" as const : false;
+      const forOthers = rows.some((x) => x.person.split("/")[0] !== person && x.person !== "case");
+      checklist.push({ lineage: `${SIGNED_SCAN}:${f.form_number}`, requirement: `${f.form_number} signed by hand and scanned`, document_type_key: `${SIGNED_SCAN}.${f.form_number}`, person, person_label: label(person),
+        base_or_conditional: f.status === "always" ? "base" : "conditional", provided_by: "client", applies, missing: applies === "cannot_tell" ? [...new Set(rows.flatMap((x) => x.missing))] : [],
+        status: applies === false ? "Not needed" : applies === "cannot_tell" ? "Cannot tell yet" : "Needed",
+        why: `${f.form_number} is filed as PDF upload, signed by hand and scanned: it is printed, signed by hand${forOthers ? " (for the family members it is about)" : ""}, scanned and uploaded.`,
+        source_quote: null, origin: "FORM_LINE", item_status: "AUTOMATIC" } as (typeof checklist)[number]);
+    }
+  }
 
   // ------------------------------------------------------------ rules (plain effects), evaluated per subject
   const rules = s.rules.map((r) => {
