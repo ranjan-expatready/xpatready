@@ -42,7 +42,8 @@ export class ReviewQueueService {
     return { items, counts, kinds };
   }
 
-  private async items(actor: Actor): Promise<QueueItem[]> {
+  /** Every open item for this person (also read by the guided path, api/src/form-progress.ts: one source, plan D3). */
+  async items(actor: Actor): Promise<QueueItem[]> {
     const workspaceId = await this.ws.id();
     const [nodes, combos, jobs, pending, queued, batches, subs, merges, held, changes] = await Promise.all([
       this.db.programDef.findMany({ where: { workspaceId }, select: { id: true, programNodeKey: true, parentNodeKey: true, nodeKind: true, label: true } }),
