@@ -5,6 +5,10 @@
 //   BR-1 the same file again says "Already in the library": nothing duplicated, attached to a combination at most once.
 //   BR-2 the same code with a newer edition is held for impact review: not added, not attached, no AI, listed on To review.
 //        An older edition is kept aside, never held for review; a held file sent again stays one held item.
+//   The Upload PDF card (Form library) says what a held edition waits for and links to its step: Review impact for a newer
+//   one, its To review item for an older one, never "Record the IRCC page" (review of 6c940174, Major 2).
+//   Not here: the same edition from a different file ("Held for a person") needs a non-official file, and an unapproved
+//   file is held for source verification first; both are covered by the intake's own checks (check_screen01_*).
 //   zsh studio/tools/isolated.sh forms_c24 4451 start && tsx studio/tests/check_forms_c24_same_and_new.ts 4451 xr_studio_forms_c24
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -33,10 +37,29 @@ const attached = (combo: string) => Number(sql(`select count(*) from source_atta
 const jobs = () => Number(sql("select count(*) from drafting_job"));
 const heldItems = (outcome: string) => Number(sql(`select count(*) from intake_item where code='IMM 5476' and status='HELD' and outcome='${outcome}'`));
 /** To review items asking for an impact review of IMM 5476 (an older edition is listed too, as "See the older edition"). */
+const node = async (level: string, label: string, parentKey: string | null, extra: Record<string, unknown> = {}) => {
+  const r = await call("POST", "/structure/nodes", { pathwayType: "INDIVIDUAL", level, label, parentKey, ...extra });
+  if (r.status !== 201) throw new Error(`setup: ${level} ${label} was not added: ${r.status} ${JSON.stringify(r.body).slice(0, 200)}`);
+  return r.body.key as string;
+};
+/** The Form library's Upload PDF run for one official file, followed to its end (the card reads GET /runs/:id). */
+const uploadRun = async (dir: string, name: string) => {
+  const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(readFileSync(join(IRCC, dir, name)))], { type: "application/pdf" }), name);
+  const u = await fetch(`http://localhost:${PORT}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd });
+  const id = ((await u.json()) as { runId?: string }).runId;
+  if (!id) throw new Error(`Upload PDF gave no run: ${u.status}`);
+  for (let i = 0; i < 240; i++) { const r = await call("GET", `/runs/${id}`); if (!["queued", "running", "stopping"].includes(r.body?.status)) return r.body; await new Promise((res) => setTimeout(res, 250)); }
+  throw new Error(`the Upload PDF run ${id} did not end in 60 s`);
+};
 const onReview = async () => ((await call("GET", "/review-queue?filter=all")).body.items as { kind: string; forms: string[]; what: string; next: { label: string } | null }[])
   .filter((i) => i.kind === "new_edition" && i.forms.includes("IMM 5476") && /^A newer edition/.test(i.what)).length;
 
 (async () => {
+  // The database this check reads is the one the server uses (as check_w1_structure does).
+  const served = (await call("GET", "/session")).body?.workspace?.id;
+  const inDb = (() => { try { return sql(`select id from workspace where id='${served}'`); } catch { return ""; } })();
+  if (!served || !inDb) { console.error(`STOP  the database ${DB} is not the one the server on port ${PORT} uses. Pass the copy's database: tsx <check> ${PORT} xr_studio_<name>.`); process.exit(2); }
+
   // ── Part 1, an empty library (reset): the 2021 IMM 5476, the same file again, then the current one (newer).
   const reset = await call("POST", "/demo/reset", { confirm: "RESET" });
   if (reset.status >= 300) throw new Error(`reset failed: ${reset.status}`);
@@ -52,16 +75,32 @@ const onReview = async () => ((await call("GET", "/review-queue?filter=all")).bo
   const other = await intake("forms", "imm5257e.pdf");
   ok("C2.4 BR-1 fail case: another form's file is not 'already in the library'", other.outcome !== "in_library" && !/Already in the library/.test(other.message) && other.code === "IMM 5257", other);
 
-  // BR-2: the same code, a newer edition.
-  r = await intake("forms", "imm5476e.pdf");
+  // A combination of its own (pathway → program → category), with the 2021 edition attached.
+  const tr = await node("pathway", "Temporary residence C24", null);
+  const vis = await node("program", "Visitors C24", tr);
+  const cat = await node("category", "Visitor visa C24", vis, { allowedLocations: ["outside_canada"] });
+  const made = await call("POST", "/combinations", { nodeKey: cat });
+  const combo = made.body?.combination?.id ?? sql(`select id from combination where combination_key like '%${cat.split(".").pop()}%' limit 1`);
+  if (!combo) throw new Error(`setup: no combination for ${cat}: ${made.status} ${JSON.stringify(made.body).slice(0, 200)}`);
+  r = await intake("previous-editions", "imm5476e-2021.pdf", combo);
+  ok("setup: on its own combination the 2021 file is in the library and attached once", r.outcome === "in_library" && attached(combo) === 1, { outcome: r.outcome, attached: attached(combo) });
+
+  // BR-2: the same code, a newer edition, uploaded on that combination.
+  r = await intake("forms", "imm5476e.pdf", combo);
   ok("C2.4 BR-2 pass: the current IMM 5476 is held as a new edition for impact review", r.outcome === "new_edition_held" && /impact review needed/.test(r.message) && /newer than the library's IMM 5476 \(11-2021\)/.test(r.message), r);
-  ok("C2.4 BR-2 pass: held means not added to the library and no AI step", editions() === 1 && jobs() === jobs0, { editions: editions(), jobs: jobs() - jobs0 });
+  ok("C2.4 BR-2 pass: held means not added to the library, not attached to the combination, and no AI step", editions() === 1 && attached(combo) === 1 && Number(sql(`select count(*) from source_attachment where combination_id='${combo}' and edition like 'IMM 5476 (11-2025)%'`)) === 0 && jobs() === jobs0, { editions: editions(), attached: attached(combo), jobs: jobs() - jobs0 });
   ok("C2.4 BR-2 pass: one held item, listed on To review as a new edition", heldItems("new_edition_held") === 1 && (await onReview()) === 1, { held: heldItems("new_edition_held"), onReview: await onReview() });
   r = await intake("forms", "imm5476e.pdf");
   ok("C2.4 BR-2 pass: the held file sent again stays one held item, and says it waits for a person", r.outcome === "new_edition_held" && /^Already waiting for a person/.test(r.message) && heldItems("new_edition_held") === 1, r);
+  // The Upload PDF card for the newer edition: its words and its next step are the impact review's.
+  const heldId = sql("select id from intake_item where code='IMM 5476' and status='HELD' and outcome='new_edition_held' limit 1");
+  let run = await uploadRun("forms", "imm5476e.pdf");
+  ok("C2.4 BR-2 pass: the Upload PDF card says the new edition waits for its impact review and links to Review impact", /^Held as a new edition: nothing changes until a person reviews its impact/.test(run.message ?? "") && run.error?.next?.label === "Review impact" && run.error?.next?.href === `/review/edition/${heldId}`, { message: run.message, next: run.error?.next });
+  ok("C2.4 BR-2 fail case: the card never sends a new edition to source verification ('Record the IRCC page')", !/record the IRCC page/i.test(`${run.message} ${run.error?.next?.label}`) && !/\/review\/held\//.test(run.error?.next?.href ?? ""), run.error?.next);
 
   // ── Part 2, the sample (its library holds the current IMM 5476, 11-2025) and its Super visa combination.
-  await call("POST", "/demo/reset", { confirm: "RESET" });
+  const reset2 = await call("POST", "/demo/reset", { confirm: "RESET" });
+  if (reset2.status >= 300) throw new Error(`second reset failed: ${reset2.status}`);
   const load = await call("POST", "/demo/load");
   if (load.status !== 201) throw new Error(`sample load failed: ${load.status}`);
   const sv = sql("select id from combination where combination_key = 'sv.super_visa' limit 1");
@@ -76,6 +115,8 @@ const onReview = async () => ((await call("GET", "/review-queue?filter=all")).bo
   r = await intake("previous-editions", "imm5476e-2021.pdf", sv);
   ok("C2.4 BR-2 fail case: an older edition is 'not used', not held for impact review", r.outcome === "older_edition_held" && /^Older edition: not used/.test(r.message) && heldItems("new_edition_held") === held1 && (await onReview()) === review1, { outcome: r.outcome, held: heldItems("new_edition_held") - held1, review: (await onReview()) - review1 });
   ok("C2.4 BR-2 fail case: the older edition is not added, not attached and starts no AI step", editions() === 1 && attached(sv) === att1 && jobs() === jobs1, { editions: editions(), attached: attached(sv) - att1, jobs: jobs() - jobs1 });
+  run = await uploadRun("previous-editions", "imm5476e-2021.pdf");
+  ok("C2.4 BR-2 fail case: the Upload PDF card says an older edition is kept aside and links to To review, not to Review impact or source verification", /^Kept aside as an older edition: it is not used/.test(run.message ?? "") && run.error?.next?.label === "See it on To review" && run.error?.next?.href === "/review", { message: run.message, next: run.error?.next });
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
