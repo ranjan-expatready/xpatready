@@ -79,3 +79,42 @@ D1 3: the format is shown with its source, but M1 and M2 · D2 3: M3 lets in cha
 * A walk by an intended user (D17, D20).
 * Adobe's own refusal of ’ in a filled PDF. I inferred it from the form's regex and did not observe it.
 * Forms other than IMM 1295: I compared validator bodies only there, and they share `util.validateFormat`.
+
+## Review 2 (cf5a8da4)
+**Commit reviewed: cf5a8da4** (branch `claude/vigilant-curie-kd2ngw`), 1 Nov 2026.
+* **Setup:** a clean `git archive cf5a8da4` export with its own web build and database `xr_studio_rev_c31y`. US$0, no live AI. The copy is now stopped and its database dropped.
+* **Port:** :4450. Ports 4451–4459 (including 4457 and 4458) were held by other lanes' copies, and I left those alone.
+* **Port warning:** my first attempt on :4457 ran against another lane's server (`xr_studio_forms_s01`) and showed 7 false failures. Check who owns a port before testing on it.
+
+**Verdict: Block. One new Major, introduced by the M1 fix. M1–M4 and m1–m7 are fixed.**
+
+### Checks run
+* `check_forms_c31_formats.ts`: **98/98**, run twice on the same copy (m7 fixed).
+* `check_forms_c31_formats_browser.cjs`: **15/15** (1440 and 1024: every row has a format, no "box", no sideways scroll, axe clean, the Format panel, the phone's not-checked list).
+* My own walk: 1440, 1024, 1024 at 200 % and 400 px; axe 0 violations; keyboard path unchanged; list 0.42–0.58 s, field page 0.36–0.43 s.
+* **M4 mutation spot-check:** I made two mutations, one at a time (`validateName` → null, then the postal-code hyphen removed). Each one fails exactly its own named test, 97/98. The file was restored and compared byte for byte against the commit.
+
+### The four Majors
+* **M1 fixed.** `core()` drops the "select …;" clause. `person.phone_number` now reads "extension: At most 5 characters · number: At most 20 characters · extension: Digits only · number: Digits and spaces only". `format-check` on the phone no longer refuses every value.
+* **M2 fixed.** I audited every field in the release (164): **0 rules are shown but skipped** by `checkFormat`.
+  * The following moved to "Read from the form, not checked on answers here", each with a reason: area code, exchange and line; whole-address rules (`organisation.address`); and date order.
+  * Month answers are compared at month precision: "2026-12" is refused and "2026-11" passes (today is 2026-11-01).
+* **M3 fixed.** `LATIN` is now the forms' own set.
+  * Refused: ñ, á, í, ã, ø, `|`, "+" and "'" in an email.
+  * Accepted: é, à, ç, ë, ï, ö, ü, æ, œ.
+  * "O’Brien", "L’Oréal" and "Rue de l’Église" get "… Type the apostrophe as ' (the form refuses ’)".
+* **M4 fixed.** There is a pass and a fail case per check, one test per mapping, the phone and address cases, and the browser check.
+
+### New finding
+**M5 Major (new, from the M1 fix): a phone number written with hyphens is now refused, but the form never sees the hyphens.**
+* `{"country_code":"1","number":"613-555-1234"}` → "Use digits and spaces only." The same happens for "44 20-7946-0958".
+* The type check accepts hyphens: `case.ts:147` strips `[\s-]` before testing.
+* The filler strips every non-digit before writing a phone part (`p5/transforms.ts:95`: `String(part).replace(/\D/g, "")`). For country code 1, it does not write the number box at all (`:94`).
+* So the IntlNum rule "digits and spaces" can never fail on what is actually printed. Even so, through QA-122 (`engine/runtime/forms.ts:25`), this refusal stops a confirmed phone being written.
+* **Fix:** test the `number` part after the same step the filler applies: strip non-digits, or at least `[\s-]` as the type check does. Then add the pass case "613-555-1234" and keep a fail case with a letter.
+
+### Minor
+* **m8** `organisation.address` reads "Its forms set no format beyond the type." and, directly below, lists two rules read from the form. Say instead "Nothing here is checked beyond the type; read from the form: …".
+* **m9** `whole` (`field-format.ts`, `fieldFormat`) keys on the field's value type. But the phone fields are type "text" with a phone-shaped answer (`shapeOf(...).phone`). A rule with no part on such a field would be shown and then skipped. None exists in today's data (audit 0), so this is a latent risk. Use the same phone-shape test as `shapeOf`.
+
+The journey score stays with Review 1's report. Re-scored at cf5a8da4 it is 8.5 / 10: correct data and trust go to 1, while plain words and error recovery stay ½ because of M5 and m8. That passes the bar, but M5 is an open Major, so the verdict is Block.

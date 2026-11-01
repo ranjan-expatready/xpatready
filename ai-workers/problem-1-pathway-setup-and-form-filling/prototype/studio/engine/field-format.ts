@@ -144,13 +144,15 @@ const partOf = (transform: string | null | undefined) => {
   const p = /^(?:address_part|phone_part):(\w+)/.exec(core(transform))?.[1] ?? null;
   return p === "national_number_without_country_code" || p === "national_number" ? "number" : p;
 };
+const PHONE_PARTS = new Set(["number", "extension", "country_code"]);
 /** The parts a stored answer has (contracts/runtime.ts Address and Phone): only these can be checked. */
 const ANSWER_PARTS = new Set(["po_box", "apt_unit", "street_number", "street_name", "city", "district", "province", "postal_code", "country", "country_code", "number", "extension"]);
 
 /** A shared field's format: every rule its boxes carry, merged (the tightest maximum length; each check once, with
  *  every form box that says so as its sources). `read` is false when no box of the field has a formats file. */
 export function fieldFormat(boxes: MappedBox[], valueType?: string | null): FieldFormat {
-  const whole = valueType === "address" || valueType === "phone";
+  // Review m9: a field is a whole address or phone by its type, or when its form fields write its parts.
+  const whole = valueType === "address" || valueType === "phone" || boxes.some((b) => partOf(b.transform) !== null);
   const rules = new Map<string, FormatRule>();
   const notChecked = new Map<string, NotChecked>();
   let read = false;
@@ -214,7 +216,10 @@ export function checkFormat(format: FieldFormat, value: unknown, ctx: FormatCont
       if (typeof country === "string" && !c.country) c = { ...c, country };
     } else if (value && typeof value === "object") continue;
     if (v === null || v === undefined || typeof v === "boolean") continue;
-    const s = typeof v === "number" ? String(v) : typeof v === "string" ? v.trim() : null;
+    let s = typeof v === "number" ? String(v) : typeof v === "string" ? v.trim() : null;
+    // Review M5: a phone piece is written as its digits (p5/transforms.ts drops spaces, hyphens, dots and brackets), as
+    // the type check reads it; letters still fail.
+    if (s && PHONE_PARTS.has(r.part ?? "")) s = s.replace(/[\s\-.()]/g, "");
     if (!s) continue;
     const m = FORMAT_CHECKS[r.check].test(s, r.params, c);
     if (m && !out.includes(m)) out.push(m);
