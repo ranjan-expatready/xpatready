@@ -40,7 +40,7 @@ export async function importConfiguration(db: PrismaClient, workspaceId: string,
   await db.canonicalField.createMany({ data: newFields.map((f: any) => ({ ...ws, canonicalFieldKey: f.id, version: 1, status: "PUBLISHED", meaning: f.meaning, valueType: f.value_type,
     dataType: VALUE_TYPE_TO_DATA_TYPE[f.value_type] ?? "STRING", scope: f.id.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(f.id), origin: "IMPORTED_RELEASE",
     sourceRef: `${src}; proposed by ${(f.proposed_by ?? []).join(", ")}`.slice(0, 900), updatedBy: o.by })) });
-  inc("canonical fields added", newFields.length); inc("canonical fields reused", config.canonical_fields.length - newFields.length);
+  inc("library fields added", newFields.length); inc("library fields reused", config.canonical_fields.length - newFields.length);
 
   const existingSections = new Set((await db.logicalSection.findMany({ where: ws, select: { sectionKey: true } })).map((s) => s.sectionKey));
   const qd = QD();

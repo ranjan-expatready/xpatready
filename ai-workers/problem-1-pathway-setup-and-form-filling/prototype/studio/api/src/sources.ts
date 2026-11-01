@@ -21,7 +21,7 @@ import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
 import { ledgerRead } from "./cost-gate.ts";
 import { keyFor, sameName } from "./library-changes.ts";
-import { identityKeyOf, insertProposals, landField, recordChoice, reviewRow, type NewProposal, type Work } from "./proposals.ts";
+import { identityKeyOf, insertProposals, QUEUE_TX, landField, recordChoice, reviewRow, type NewProposal, type Work } from "./proposals.ts";
 import { cleanLabel, labelProblem } from "../../contracts/programs.ts";
 import { START } from "../../contracts/start-setup.ts";
 import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
@@ -35,6 +35,9 @@ export async function libraryRevision(db: Db, workspaceId: string) {
 
 const run = promisify(execFile);
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
+/** Induced slow step (isolated test server only, like STUDIO_FAULT_SOURCE): STUDIO_SLOW_TX="<file name>:<ms>" waits that
+ *  long inside the field-map draft's transaction for that file, so the queue's transaction room is tested both ways. */
+const slowForTest = async (file: string) => { const [f, ms] = (process.env.STUDIO_SLOW_TX ?? "").split(":"); if (f && f === file && Number(ms) > 0) await new Promise((r) => setTimeout(r, Number(ms))); };
 const KIND: Record<string, string> = { forms: "Form", checklists: "Document checklist", instructions: "Instructions", "web-pages": "Web page" };
 const JOBS = join(PROTOTYPE, "p2", "jobs"), RUNS = join(PROTOTYPE, "p2", "runs");
 /** Scaffolding (QA-34, P-69): an isolated test copy may start with STUDIO_FAKE_LAUNCHER naming the test fixture
@@ -49,6 +52,8 @@ export function launcherFor(requested: string | undefined, varRoot: string): str
   try { return realpathSync(resolve(ROOT, requested)) === realpathSync(FAKE_LAUNCHER) ? FAKE_LAUNCHER : guarded; } catch { return guarded; }
 }
 const LAUNCHER = launcherFor(process.env.STUDIO_FAKE_LAUNCHER, VAR_ROOT);
+/** True only on an isolated test copy whose launches go to the fake launcher: nothing it launches can reach a model. */
+export const usesFakeLauncher = () => LAUNCHER === FAKE_LAUNCHER;
 /** Lead Critical 29 Oct (qa spent US$0.27 by one click on a test copy): every live AI call of this server (finder rounds,
  *  guide pick, field-map drafting, Who can be, anything through the launcher) needs the explicit switch
  *  STUDIO_AI_LIVE=approved at server start. isolated.sh and run-suites.sh never set it; a check that tests a live path
@@ -596,7 +601,9 @@ export class Sources {
         work: { proposedKey: i.proposedKey, outcome: i.outcome, matchedKey: i.matchedKey, candidates: i.candidates, persons: i.persons, boxes: i.boxes, evidence: { ...i.evidence, recommendation: i.recommendation },
           affected: Object.fromEntries([i.matchedKey, ...i.candidates.map((c) => c.key)].filter(Boolean).map((k) => [k, affected.get(k!) ?? null])), reason: i.reason } };
     });
-    await this.db.$transaction(async (tx) => { await tx.proposalItem.deleteMany({ where: { runId: jobId } }); await insertProposals(tx, a.workspaceId, proposals); });
+    await this.db.$transaction(async (tx) => { await tx.proposalItem.deleteMany({ where: { runId: jobId } }); await slowForTest(a.fileName); await insertProposals(tx, a.workspaceId, proposals); }, QUEUE_TX)
+      // Past the room the transaction is rolled back: said in words for a person, never Prisma's text with a file path.
+      .catch((e) => { if (/Transaction API error/.test(String((e as Error).message))) fail(`Putting ${a.edition ?? a.fileName}'s ${proposals.length} proposals on the review queue took longer than ${QUEUE_TX.timeout / 1000} s, so none was added. Run it again when the computer is less busy.`, HttpStatus.SERVICE_UNAVAILABLE); throw e; });
     // Re-compare (D280 stale result): a person's decision is kept when the comparison for that proposal is unchanged and
     // its decided key means what it meant (an existing field is still there; a new key has not been created meanwhile).
     let kept = 0, reopened = 0;
