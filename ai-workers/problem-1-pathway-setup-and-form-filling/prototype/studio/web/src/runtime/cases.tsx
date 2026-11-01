@@ -10,15 +10,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { noRetryOnRefusal, Questionnaire, useCaseView, type CaseInfo, type CasePerson } from "./questionnaire";
 import { FormsPanel } from "./forms";
+import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
 import { newestReleases } from "../../../contracts/runtime";
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
 const PEOPLE = [
-  { id: "user-O", name: "Case officer", role: "Firm staff" },
+  { id: "user-O", name: "Case officer", role: "Sample firm" },
+  { id: "user-R", name: "Representative", role: "Sample firm · firm admin" },
+  { id: "user-T", name: "Second representative", role: "Sample firm" },
+  { id: "user-S", name: "Solo representative", role: "Sample solo firm" },
   { id: "user-P", name: "Client A", role: "Client" },
   { id: "user-Q", name: "Client B", role: "Client" },
 ] as const;
-const isOfficer = (id: string) => id === "user-O";
+const STAFF = new Set(["user-O", "user-R", "user-T", "user-S"]);
+const isOfficer = (id: string) => STAFF.has(id);
 const isClient = (id: string) => id === "user-P" || id === "user-Q";
 const ROLE: Record<CasePerson["role"], string> = { case: "Application", principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child" };
 
@@ -104,8 +109,10 @@ function NewCaseDialog({ close }: { close: () => void }) {
   // QA-38: a case opens on the combination's newest release, so the list names that one (the server's rule).
   const combos = newestReleases(releases.data ?? []);
   const [f, setF] = React.useState({ combinationId: "", reference: "", principal: "", clientActor: "user-P" });
+  const firm = useFirm();
+  const [team, setTeam] = React.useState<{ representative: string; officer: string }>({ representative: "", officer: "" });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
-  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: f.combinationId || combos[0]?.combination_id, reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
+  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: f.combinationId || combos[0]?.combination_id, reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
   const submit = () => create.mutate(undefined, { onError: (e) => { const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.map((x) => [x.field.split(".")[0], x.message]))); } });
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title="Open a case" description="The case works from the combination's latest release, frozen now: a later release never changes it." guard
@@ -119,6 +126,7 @@ function NewCaseDialog({ close }: { close: () => void }) {
         <Field label="Case reference" hint="Your firm's reference, at least 3 characters" error={errors.reference}><Input value={f.reference} onChange={(e) => setF({ ...f, reference: e.target.value })} /></Field>
         <Field label="Principal applicant's name" hint="Shown to the client as written; Sample names only in the prototype" error={errors.principal}><Input value={f.principal} onChange={(e) => setF({ ...f, principal: e.target.value })} /></Field>
         <Field label="Client login that answers" error={errors.clientActor}><Select value={f.clientActor} onChange={(e) => setF({ ...f, clientActor: e.target.value })}><option value="user-P">Client A (simulated)</option><option value="user-Q">Client B (simulated)</option></Select></Field>
+        <OpeningTeam firm={firm} value={team} onChange={setTeam} errors={errors} />
         <button type="submit" hidden />
       </form>
     </Dialog>
@@ -143,6 +151,7 @@ function CasePage() {
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={`Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case`}>Release {c.pin.release_version}</Pill></h1>
+          {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
           <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.confirmed} confirmed · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
         </div>
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">

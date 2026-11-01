@@ -1,0 +1,2241 @@
+{
+ "file": "imm1344e.pdf",
+ "sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+ "read_by": "prototype/p1/xfa_formats.py (the form's own XFA template: maxChars, picture clauses, validate scripts; no AI)",
+ "boxes_with_format": 165,
+ "boxes_unmatched": 0,
+ "boxes": {
+  "form1[0].Part1[0].Header[0].titleSF[0].ReaderInfo[0]": {
+   "caption": "Reader Info",
+   "max_chars": 50
+  },
+  "form1[0].Part1[0].Header[0].titleSF[0].FormVersion[0]": {
+   "caption": "Reader Info",
+   "max_chars": 30
+  },
+  "form1[0].Part1[0].Header[0].titleSF[0].crcNum[0]": {
+   "caption": "Reader Info",
+   "max_chars": 50
+  },
+  "form1[0].Part1[0].Header[0].titleSF[0].DateLastValidated[0]": {
+   "caption": "DateLastValidated",
+   "max_chars": 30
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q1[0].ApplicationValidatedFlagMirror[0]": {
+   "caption": "validated",
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q2[0].LangPref[0]": {
+   "caption": "*Language preference for correspondence",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAFamilyName[0]": {
+   "caption": "*Family Name(s) (exactly as shown on passport or travel document)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAGivenName[0]": {
+   "caption": "Given Name(s) (exactly as shown on passport or travel document)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBYear[0]": {
+   "caption": "*YYYY",
+   "checks": [
+    {
+     "function": "validateDOBYYYY",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Year",
+       "text": "The correct format is: Between 1900 - current year, or ****."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBMonth[0]": {
+   "caption": "*MM",
+   "checks": [
+    {
+     "function": "validateDOBMM",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month",
+       "text": "The correct format is: Between 01 and 12, or **"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBDay[0]": {
+   "caption": "*DD",
+   "checks": [
+    {
+     "function": "validateDOBDD",
+     "args": [
+      "DOBMonth",
+      "this"
+     ],
+     "quote": []
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q5New[0].Other[0]": {
+   "caption": "b) Other",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q5New[0].RelationFrom[0]": {
+   "caption": "Date",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      "<=",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q1[0].FamilyName[0]": {
+   "caption": "*Family Name(s) (exactly as shown on your passport or travel document)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q1[0].GivenName[0]": {
+   "caption": "Given Name(s) (exactly as shown on your passport or travel document)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q2[0].AliasName[0].AliasFamilyName[0]": {
+   "caption": "Family Name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q2[0].AliasName[0].AliasGivenName[0]": {
+   "caption": "Given Name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].sex[0].Sex[0]": {
+   "caption": "*Gender",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBDay[0]": {
+   "caption": "*DD",
+   "checks": [
+    {
+     "function": "validateDOBDD",
+     "args": [
+      "DOBMonth",
+      "this"
+     ],
+     "quote": []
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBMonth[0]": {
+   "caption": "*MM",
+   "checks": [
+    {
+     "function": "validateDOBMM",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month",
+       "text": "The correct format is: Between 01 and 12, or **"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBYear[0]": {
+   "caption": "*YYYY",
+   "checks": [
+    {
+     "function": "validateDOBYYYY",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Year",
+       "text": "The correct format is: Between 1900 - current year, or ****."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCity[0]": {
+   "caption": "*City/Town",
+   "checks": [
+    {
+     "function": "validatePOBText",
+     "args": [],
+     "quote": [
+      {
+       "key": "POBCity",
+       "text": "The correct format is: Alphabetic characters and special characters slash, hyphen, double quotes, period, ampersand, apostrophe and comma."
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCountry[0]": {
+   "caption": "*Country",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q6New[0].StatusInCan[0]": {
+   "caption": "*Status in Canada",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q7New[0].UCI[0]": {
+   "caption": "b) UCI/Client ID",
+   "checks": [
+    {
+     "function": "validateUCI",
+     "args": [],
+     "quote": [
+      {
+       "key": "UCI",
+       "text": "The correct format is: Must be numeric"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q7New[0].DateStatInCan[0]": {
+   "caption": "Date",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      "<=",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q7New[0].StatusDates[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q7New[0].StatusDates[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q7New[0].StatusDates[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q7cNew[0].FamilyName[0]": {
+   "caption": "Family Name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q7cNew[0].GivenName[0]": {
+   "caption": "Given Name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].MaritalStatus[0]": {
+   "caption": "*a) Your current marital status",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].DateOfMarriage[0]": {
+   "caption": "Date",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      "<=",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].MarriageDate[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].MarriageDate[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].MarriageDate[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].FamilyName[0]": {
+   "caption": "Family name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].GivenName[0]": {
+   "caption": "Given name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9New[0].fullname[0].PMFamilyName[0]": {
+   "caption": "Family name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9New[0].fullname[0].PMGivenName[0]": {
+   "caption": "Given name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorDetails[0].PrevSpouseDOB[0].DOBYear[0]": {
+   "caption": "YYYY",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorDetails[0].PrevSpouseDOB[0].DOBMonth[0]": {
+   "caption": "MM",
+   "checks": [
+    {
+     "function": "validateDOBMM",
+     "args": [
+      "Header.titleSF.PrevSpouseAge"
+     ],
+     "quote": [
+      {
+       "key": "DOB_Month",
+       "text": "The correct format is: Between 01 and 12, or **"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].PrevSpouseDOB[0].DOBDay[0]": {
+   "caption": "DD",
+   "checks": [
+    {
+     "function": "validateDOBDD",
+     "args": [
+      "DOBMonth",
+      "this",
+      "Header.titleSF.PrevSpouseAge"
+     ],
+     "quote": []
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].TypeOfRelationship[0]": {
+   "caption": "Type of relationship",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].ToDate[0]": {
+   "caption": "To",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].FromDate[0]": {
+   "caption": "From",
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].POBox[0]": {
+   "caption": "P.O. box",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 15
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].AptUnit[0]": {
+   "caption": "Apt./Unit",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].StreetNum[0]": {
+   "caption": "Street no.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].Streetname[0]": {
+   "caption": "Street name",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].CityTown[0]": {
+   "caption": "*City/Town",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].Country[0]": {
+   "caption": "*Country",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].ProvinceState[0]": {
+   "caption": "Province/State",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].PostalCode[0]": {
+   "caption": "Postal code",
+   "checks": [
+    {
+     "function": "validatePostalCodeBasedOnCountry",
+     "args": [
+      "Country"
+     ],
+     "quote": [
+      {
+       "key": "Incorrect_CAN_PostalCode",
+       "text": "The Postal Code you entered does not follow Canadian format (ie. X9X 9X9)."
+      },
+      {
+       "key": "Incorrect_US_ZipCode",
+       "text": "The correct format is: Must be formatted 99999 or 99999-9999"
+      },
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      },
+      {
+       "key": "CANPostalError",
+       "text": "Postal Code is a Canadian format. Country must be equal to Canada."
+      },
+      {
+       "key": "Postal Code Format",
+       "text": "The correct format is: Numbers, Letters, Spaces and Hyphens only"
+      },
+      {
+       "key": "Leave_Blank",
+       "text": "If you do not have a Postal Code, leave the field BLANK."
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].District[0]": {
+   "caption": "District",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].AptUnit[0]": {
+   "caption": "Apt./Unit",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].StreetNum[0]": {
+   "caption": "Street no.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].Streetname[0]": {
+   "caption": "Street name",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].CityTown[0]": {
+   "caption": "City/Town",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].Country[0]": {
+   "caption": "Country",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].ProvinceState[0]": {
+   "caption": "Province/State",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].PostalCode[0]": {
+   "caption": "Postal code",
+   "checks": [
+    {
+     "function": "validatePostalCodeBasedOnCountry",
+     "args": [
+      "Country"
+     ],
+     "quote": [
+      {
+       "key": "Incorrect_CAN_PostalCode",
+       "text": "The Postal Code you entered does not follow Canadian format (ie. X9X 9X9)."
+      },
+      {
+       "key": "Incorrect_US_ZipCode",
+       "text": "The correct format is: Must be formatted 99999 or 99999-9999"
+      },
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      },
+      {
+       "key": "CANPostalError",
+       "text": "Postal Code is a Canadian format. Country must be equal to Canada."
+      },
+      {
+       "key": "Postal Code Format",
+       "text": "The correct format is: Numbers, Letters, Spaces and Hyphens only"
+      },
+      {
+       "key": "Leave_Blank",
+       "text": "If you do not have a Postal Code, leave the field BLANK."
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].District[0]": {
+   "caption": "District",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].ActualNumber[0]": {
+   "caption": "",
+   "checks": [
+    {
+     "function": "validateUniqueTelephone",
+     "args": [],
+     "quote": [
+      {
+       "key": "AltTwinPhoneNumberError",
+       "text": "Alternate Telephone No. must not be the same as Telephone No. Alternate Telephone Data has been cleared."
+      },
+      {
+       "key": "FaxTwinPhoneNumberError",
+       "text": "Fax Telephone No. must not be the same as Telephone No. Fax Telephone Data has been cleared."
+      },
+      {
+       "key": "FaxAltTwinPhoneNumberError",
+       "text": "Fax Telephone No. must not be the same as Alternate Telephone No. Fax Telephone Data has been cleared."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].Type[0]": {
+   "caption": "Type",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NumberExt[0]": {
+   "caption": "Ext.",
+   "checks": [
+    {
+     "function": "validateDigits",
+     "args": [],
+     "quote": [
+      {
+       "key": "DigitText",
+       "text": "The correct format is: Must contain only numbers ."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "max_chars": 5
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NumberCountry[0]": {
+   "caption": "Country Code",
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].AreaCode[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].FirstThree[0]": {
+   "caption": "Question 3 Telephone number",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].LastFive[0]": {
+   "caption": "Question 3 Telephone number",
+   "checks": [
+    {
+     "function": "validatePhoneNAN",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_subscriber",
+       "text": "The correct format is: Must be 4 numbers"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].IntlNumber[0].IntlNumber[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateIntlNum",
+     "args": [],
+     "quote": [
+      {
+       "key": "PhoneText",
+       "text": "The correct format is: Must contain only numbers and spaces."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].ActualNumber[0]": {
+   "caption": "",
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].Type[0]": {
+   "caption": "Type",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].NumberExt[0]": {
+   "caption": "Ext.",
+   "checks": [
+    {
+     "function": "validateDigits",
+     "args": [],
+     "quote": [
+      {
+       "key": "DigitText",
+       "text": "The correct format is: Must contain only numbers ."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "max_chars": 5
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].NumberCountry[0]": {
+   "caption": "Country Code",
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].NANumber[0].AreaCode[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].NANumber[0].FirstThree[0]": {
+   "caption": "Question 4 Telephone number",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].NANumber[0].LastFive[0]": {
+   "caption": "Question 4 Telephone number",
+   "checks": [
+    {
+     "function": "validatePhoneNAN",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_subscriber",
+       "text": "The correct format is: Must be 4 numbers"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].IntlNumber[0].IntlNumber[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateIntlNum",
+     "args": [],
+     "quote": [
+      {
+       "key": "PhoneText",
+       "text": "The correct format is: Must contain only numbers and spaces."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Phone[0].NumberExt[0]": {
+   "caption": "Ext.",
+   "checks": [
+    {
+     "function": "validateDigits",
+     "args": [],
+     "quote": [
+      {
+       "key": "DigitText",
+       "text": "The correct format is: Must contain only numbers ."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "max_chars": 5
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Phone[0].NumberCountry[0]": {
+   "caption": "Country Code",
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Phone[0].ActualNumber[0]": {
+   "caption": "",
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Phone[0].NANumber[0].AreaCode[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Phone[0].NANumber[0].FirstThree[0]": {
+   "caption": "Question 5 Fax Telephone number",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Phone[0].NANumber[0].LastFive[0]": {
+   "caption": "Question 5 Fax Telephone number",
+   "checks": [
+    {
+     "function": "validatePhoneNAN",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_subscriber",
+       "text": "The correct format is: Must be 4 numbers"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Phone[0].IntlNumber[0].IntlNumber[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateIntlNum",
+     "args": [],
+     "quote": [
+      {
+       "key": "PhoneText",
+       "text": "The correct format is: Must contain only numbers and spaces."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Email[0].Email[0]": {
+   "caption": "E-mail address",
+   "checks": [
+    {
+     "function": "validateEmail",
+     "args": [],
+     "quote": [
+      {
+       "key": "Email",
+       "text": "The correct format is: Must contain one '@' and at least one '.' and use English and/or French characters only and have from 2 to 6 characters after the last Period."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].SponsorEA[0].IfYesDetails[0].Details[0]": {
+   "caption": "If you answered \"Yes\" to question 13, 16, 17, or 18 please provide details including date and place.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 200
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q1[0].FamilyName[0]": {
+   "caption": "Family Name(s) (exactly as shown on your passport or travel document)",
+   "checks": [
+    {
+     "function": "validateSponsorSpouseFNameWithCosigner",
+     "args": [],
+     "quote": [
+      {
+       "key": "Cosign_Same_Name",
+       "text": "Must be the same as the Family Name of the Sponsor's current spouse/common-law partner"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q1[0].GivenName[0]": {
+   "caption": "Given Name(s) (exactly as shown on your passport or travel document)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    },
+    {
+     "function": "validateSponsorSpouseGNameWithCosigner",
+     "args": [],
+     "quote": [
+      {
+       "key": "Cosign_Same_GName",
+       "text": "Must be the same as the Given Name(s) of the Sponsor's current spouse/common-law partner"
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasFamilyName[0]": {
+   "caption": "Family Name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasGivenName[0]": {
+   "caption": "Given Name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].sex[0].Sex[0]": {
+   "caption": "Gender",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBDay[0]": {
+   "caption": "DD",
+   "checks": [
+    {
+     "function": "validateDOBDD",
+     "args": [
+      "DOBMonth",
+      "this"
+     ],
+     "quote": []
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBMonth[0]": {
+   "caption": "MM",
+   "checks": [
+    {
+     "function": "validateDOBMM",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Month",
+       "text": "The correct format is: Between 01 and 12, or **"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBYear[0]": {
+   "caption": "YYYY",
+   "checks": [
+    {
+     "function": "validateDOBYYYY",
+     "args": [],
+     "quote": [
+      {
+       "key": "DOB_Year",
+       "text": "The correct format is: Between 1900 - current year, or ****."
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].pob[0].PlaceBirthCity[0]": {
+   "caption": "City/Town",
+   "checks": [
+    {
+     "function": "validatePOBText",
+     "args": [],
+     "quote": [
+      {
+       "key": "POBCity",
+       "text": "The correct format is: Alphabetic characters and special characters slash, hyphen, double quotes, period, ampersand, apostrophe and comma."
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q6New[0].StatusInCan[0]": {
+   "caption": "Status in Canada",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].UCI[0]": {
+   "caption": "b) UCI/Client ID",
+   "checks": [
+    {
+     "function": "validateUCI",
+     "args": [],
+     "quote": [
+      {
+       "key": "UCI",
+       "text": "The correct format is: Must be numeric"
+      }
+     ]
+    }
+   ],
+   "max_chars": 10
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].DateStatInCan[0]": {
+   "caption": "Date",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      "<=",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].StatusDates[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].StatusDates[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].StatusDates[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].FamilyName[0]": {
+   "caption": "Family Name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].GivenName[0]": {
+   "caption": "Given Name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].Rel2Sponsor[0]": {
+   "caption": "a) Relationship to the sponsor",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].Other[0]": {
+   "caption": "b) Other",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 30
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].MaritalStatusNew[0]": {
+   "caption": "c) Current marital status",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].DateOfMarriage[0]": {
+   "caption": "Date",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      "<=",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].MarriageDate[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].MarriageDate[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].MarriageDate[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].e[0].FamilyName[0]": {
+   "caption": "Family name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].e[0].GivenName[0]": {
+   "caption": "Given name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PMFamilyName[0]": {
+   "caption": "Family name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PMGivenName[0]": {
+   "caption": "Given name(s)",
+   "checks": [
+    {
+     "function": "validateName",
+     "args": [],
+     "quote": [
+      {
+       "key": "Family Name",
+       "text": "The correct format is: Alphabetic characters and special characters hyphen, apostrophe and space."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBYear[0]": {
+   "caption": "YYYY",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBMonth[0]": {
+   "caption": "MM",
+   "checks": [
+    {
+     "function": "validateDOBMM",
+     "args": [
+      "form1.Part1.Header.titleSF.PrevSpouseAge"
+     ],
+     "quote": [
+      {
+       "key": "DOB_Month",
+       "text": "The correct format is: Between 01 and 12, or **"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBDay[0]": {
+   "caption": "DD",
+   "checks": [
+    {
+     "function": "validateDOBDD",
+     "args": [
+      "DOBMonth",
+      "this",
+      "form1.Part1.Header.titleSF.PrevSpouseAge"
+     ],
+     "quote": []
+    }
+   ],
+   "ui_picture": "num{99}",
+   "format_picture": "num{99}",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].TypeOfRelationship[0]": {
+   "caption": "Type of relationship",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].FromDate[0].FromDate[0]": {
+   "caption": "From",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      "<=",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].ToDate[0].ToDate[0]": {
+   "caption": "To",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      "<=",
+      "utilDates.getToday("
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    },
+    {
+     "function": "validateDate",
+     "args": [
+      ">=",
+      "FromDate.FromDate.rawValue"
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToYr[0]": {
+   "caption": "",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToMM[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToDD[0]": {
+   "caption": "",
+   "max_chars": 2
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].Type[0]": {
+   "caption": "Type",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NumberCountry[0]": {
+   "caption": "Country Code",
+   "checks": [
+    {
+     "function": "validateCountryTeleCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "InvalidCountryCode1",
+       "text": "The correct format is: Must be 3 or fewer characters"
+      },
+      {
+       "key": "InvalidCountryCode3",
+       "text": "The correct format is: Country codes that start with 1 must be 4 digits"
+      },
+      {
+       "key": "InvalidCountryCode2",
+       "text": "The correct format is: Must be numeric and must not start with '11'"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NumberExt[0]": {
+   "caption": "Ext.",
+   "checks": [
+    {
+     "function": "validateDigits",
+     "args": [],
+     "quote": [
+      {
+       "key": "DigitText",
+       "text": "The correct format is: Must contain only numbers ."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "max_chars": 5
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].ActualNumber[0]": {
+   "caption": "",
+   "checks": [
+    {
+     "function": "validateUniqueTelephone",
+     "args": [],
+     "quote": [
+      {
+       "key": "AltTwinPhoneNumberError",
+       "text": "Alternate Telephone No. must not be the same as Telephone No. Alternate Telephone Data has been cleared."
+      },
+      {
+       "key": "FaxTwinPhoneNumberError",
+       "text": "Fax Telephone No. must not be the same as Telephone No. Fax Telephone Data has been cleared."
+      },
+      {
+       "key": "FaxAltTwinPhoneNumberError",
+       "text": "Fax Telephone No. must not be the same as Alternate Telephone No. Fax Telephone Data has been cleared."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NANumber[0].AreaCode[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NANumber[0].FirstThree[0]": {
+   "caption": "Question 1: 3 digit Exchange Number",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NANumber[0].LastFive[0]": {
+   "caption": "Question 1 : 4 digit Subscriber Number",
+   "checks": [
+    {
+     "function": "validatePhoneNAN",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_subscriber",
+       "text": "The correct format is: Must be 4 numbers"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].IntlNumber[0].IntlNumber[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateIntlNum",
+     "args": [],
+     "quote": [
+      {
+       "key": "PhoneText",
+       "text": "The correct format is: Must contain only numbers and spaces."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].Type[0]": {
+   "caption": "Type",
+   "checks": [
+    {
+     "function": "validateDropDown",
+     "args": [],
+     "quote": []
+    }
+   ]
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NumberCountry[0]": {
+   "caption": "Country Code",
+   "checks": [
+    {
+     "function": "validateCountryTeleCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "InvalidCountryCode1",
+       "text": "The correct format is: Must be 3 or fewer characters"
+      },
+      {
+       "key": "InvalidCountryCode3",
+       "text": "The correct format is: Country codes that start with 1 must be 4 digits"
+      },
+      {
+       "key": "InvalidCountryCode2",
+       "text": "The correct format is: Must be numeric and must not start with '11'"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NumberExt[0]": {
+   "caption": "Ext.",
+   "checks": [
+    {
+     "function": "validateDigits",
+     "args": [],
+     "quote": [
+      {
+       "key": "DigitText",
+       "text": "The correct format is: Must contain only numbers ."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "max_chars": 5
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].ActualNumber[0]": {
+   "caption": "",
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NANumber[0].AreaCode[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NANumber[0].FirstThree[0]": {
+   "caption": "Question 2: 3 digit Exchange Number",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NANumber[0].LastFive[0]": {
+   "caption": "Question 2: 4 digit Subscriber Number",
+   "checks": [
+    {
+     "function": "validatePhoneNAN",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_subscriber",
+       "text": "The correct format is: Must be 4 numbers"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].IntlNumber[0].IntlNumber[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateIntlNum",
+     "args": [],
+     "quote": [
+      {
+       "key": "PhoneText",
+       "text": "The correct format is: Must contain only numbers and spaces."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NumberExt[0]": {
+   "caption": "Ext.",
+   "checks": [
+    {
+     "function": "validateDigits",
+     "args": [],
+     "quote": [
+      {
+       "key": "DigitText",
+       "text": "The correct format is: Must contain only numbers ."
+      }
+     ]
+    }
+   ],
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}|text{99999}",
+   "max_chars": 5
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NumberCountry[0]": {
+   "caption": "Country Code",
+   "checks": [
+    {
+     "function": "validateCountryTeleCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "InvalidCountryCode1",
+       "text": "The correct format is: Must be 3 or fewer characters"
+      },
+      {
+       "key": "InvalidCountryCode3",
+       "text": "The correct format is: Country codes that start with 1 must be 4 digits"
+      },
+      {
+       "key": "InvalidCountryCode2",
+       "text": "The correct format is: Must be numeric and must not start with '11'"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "format_picture": "text{9}|text{99}|text{999}|text{9999}",
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].ActualNumber[0]": {
+   "caption": "",
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NANumber[0].AreaCode[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NANumber[0].FirstThree[0]": {
+   "caption": "Question 3: 3 digit Exchange Number",
+   "checks": [
+    {
+     "function": "validateAreaCode",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_areaCode_exchange",
+       "text": "The correct format is: Must be 3 numbers and must not start with '0' or '1'"
+      }
+     ]
+    }
+   ],
+   "max_chars": 3
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NANumber[0].LastFive[0]": {
+   "caption": "Question 3: 4 digit Subscriber Number",
+   "checks": [
+    {
+     "function": "validatePhoneNAN",
+     "args": [],
+     "quote": [
+      {
+       "key": "invalid_subscriber",
+       "text": "The correct format is: Must be 4 numbers"
+      }
+     ]
+    }
+   ],
+   "max_chars": 4
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].IntlNumber[0].IntlNumber[0]": {
+   "caption": "No.",
+   "checks": [
+    {
+     "function": "validateIntlNum",
+     "args": [],
+     "quote": [
+      {
+       "key": "PhoneText",
+       "text": "The correct format is: Must contain only numbers and spaces."
+      }
+     ]
+    }
+   ],
+   "max_chars": 20
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Email[0].Email[0]": {
+   "caption": "E-mail address",
+   "checks": [
+    {
+     "function": "validateEmail",
+     "args": [],
+     "quote": [
+      {
+       "key": "Email",
+       "text": "The correct format is: Must contain one '@' and at least one '.' and use English and/or French characters only and have from 2 to 6 characters after the last Period."
+      }
+     ]
+    }
+   ],
+   "max_chars": 100
+  },
+  "form1[0].Part1[0].CoSigner[0].CosignEA[0].IfYesDetails[0].Details[0]": {
+   "caption": "If you answered \"Yes\" to question 10, 13, 14, or 15 please provide details including date and place.",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ],
+   "max_chars": 200
+  },
+  "form1[0].Signatures[0].Sigs[0].SponSiglbl[0]": {
+   "caption": "Sponsor's signature",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ]
+  },
+  "form1[0].Signatures[0].Sigs[0].SponSigDate[0]": {
+   "caption": "Date: YYYY-MM-DD",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      "none",
+      "this.rawValue"
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Signatures[0].Sigs[0].CoSignSiglbl[0]": {
+   "caption": "Signature of sponsor's spouse or common-law partner (if co-signer)",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ]
+  },
+  "form1[0].Signatures[0].Sigs[0].CoSignSigDate[0]": {
+   "caption": "Date: YYYY-MM-DD",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      "none",
+      "this.rawValue"
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "form1[0].Signatures[0].Sigs[0].PASiglbl[0]": {
+   "caption": "Signature of sponsored person (principal applicant)",
+   "checks": [
+    {
+     "function": "validateOpenText",
+     "args": [],
+     "quote": [
+      {
+       "key": "Open Text",
+       "text": "The correct format is: English and/or French characters only"
+      }
+     ]
+    }
+   ]
+  },
+  "form1[0].Signatures[0].Sigs[0].PASignDate[0]": {
+   "caption": "Date: YYYY-MM-DD",
+   "checks": [
+    {
+     "function": "validateDate",
+     "args": [
+      "none",
+      "this.rawValue"
+     ],
+     "quote": [
+      {
+       "key": "Validation Error",
+       "text": "Validation Error"
+      }
+     ]
+    }
+   ],
+   "ui_picture": "date{YYYY-MM-DD}|date{YYYYMMDD}|date{YYYY/MM/DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  }
+ }
+}

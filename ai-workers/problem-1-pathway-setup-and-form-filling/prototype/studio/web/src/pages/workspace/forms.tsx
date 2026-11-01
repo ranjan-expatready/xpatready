@@ -59,11 +59,11 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   // C2.12 slice 3: one form's guided path, addressable as ?setup=<form number> (a reload lands on the same form).
   const setup = sp.get("setup");
   const openSetup = (code: string) => setSp((x) => { const n = new URLSearchParams(x); n.set("setup", code); return n; });
-  const closeSetup = () => { const code = setup ? normaliseCode(setup) : null; setSp((x) => { const n = new URLSearchParams(x); n.delete("setup"); return n; }, { replace: true }); refocusChip(code); };
+  const closeSetup = () => { const code = setup ? normaliseCode(setup) : null; setSp((x) => { const n = new URLSearchParams(x); n.delete("setup"); n.delete("back"); return n; }, { replace: true }); refocusChip(code); };
   // WCAG 2.4.3: focus goes back to the form's chip; the dialog hands focus back to what was focused before it opened (the
   // page, when the rail opened from the address), so the chip is focused again for a few frames until it holds.
   const refocusChip = (code: string | null, tries = 20) => { const el = document.querySelector<HTMLElement>(`[data-step-chip="${CSS.escape(code ?? "")}"]`); if (el && document.activeElement !== el) el.focus(); if (tries > 0) requestAnimationFrame(() => refocusChip(code, tries - 1)); };
-  const rail = setup ? <SetupRail id={id} code={setup} onClose={closeSetup} /> : null;
+  const rail = setup ? <SetupRail key={setup} id={id} code={setup} onClose={closeSetup} focusCurrent={sp.get("back") === "1"} /> : null;
   const d = useApi<CombinationView>(["combination", id], `/combinations/${id}`);
   const latest = useFinderLatest(id);
   const toast = useUndoToast();

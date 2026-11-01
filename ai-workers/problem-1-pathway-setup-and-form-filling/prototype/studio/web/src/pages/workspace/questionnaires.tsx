@@ -7,7 +7,7 @@
 import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { BookOpen, ChevronDown, Plus, Undo2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, ChevronDown, Plus, Undo2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { type BulkSourceResult, type CountryPqrView, type FactSourceRow, type PeopleLine, type PeoplePlan, type PeopleProposal, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useSessionView, useToast } from "@/lib/api";
@@ -286,10 +286,39 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   const [openIds, setOpenIds] = React.useState<Set<string> | null>(null);
   const [removing, setRemoving] = React.useState<{ key: string; title: string } | null>(null);
   const qc = useQueryClient();
-  const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["combination", id], ["config", id], ["preview"], ["fact-sources", id]] });
+  // C4.1 (P-216): the combination's own section order (the sections it chose); Move up / Move down on each header.
+  const secOrder = useQuery({ queryKey: ["section-order", id], queryFn: () => api<{ order: { key: string; title: string }[] }>(`/combinations/${id}/section-order`) });
+  const [moved, setMoved] = React.useState<string | null>(null);
+  const [moveRefused, setMoveRefused] = React.useState<string | null>(null);
+  const moving = React.useRef(false); // a double click sends one move, not a second one from the order before it
+  const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["combination", id], ["config", id], ["preview"], ["fact-sources", id], ["section-order", id]] });
   React.useEffect(() => { setPicked(new Set()); setFilter("all"); }, [q?.role]);
   // QA-93 (P-116): removing a section asks first, says what goes for whom, then offers one Undo that puts it back in its place.
-  const reload = () => { for (const k of [["combination", id], ["config", id], ["preview"], ["fact-sources", id]]) void qc.invalidateQueries({ queryKey: k }); };
+  const reload = () => { for (const k of [["combination", id], ["config", id], ["preview"], ["fact-sources", id], ["section-order", id]]) void qc.invalidateQueries({ queryKey: k }); };
+  const move = async (x: { key: string; title: string }, direction: "up" | "down", undo = false) => {
+    if (moving.current) return;
+    moving.current = true;
+    try { await moveOnce(x, direction, undo); } finally { moving.current = false; }
+  };
+  const moveOnce = async (x: { key: string; title: string }, direction: "up" | "down", undo: boolean) => {
+    const seen = (qc.getQueryData<{ order: { key: string }[] }>(["section-order", id])?.order ?? []).map((y) => y.key);
+    let r: { position: number; of: number; order: { key: string; title: string }[] };
+    try { r = await api(`/combinations/${id}/sections/${x.key}/move`, { method: "POST", json: { direction, seen } }); }
+    catch (e) { setMoveRefused(`"${x.title}" was not moved: ${(e as Error).message.replace(/ Reload to see the order now, then move it again\.$/, " The order shown now is the current one; move it again if you still want to.")}`); reload(); return; }
+    setMoveRefused(null);
+    qc.setQueryData(["section-order", id], { order: r.order });
+    setMoved(`${x.key}|${direction}`); reload();
+    if (!undo) undoToast.show(`"${x.title}" moved ${direction}: now ${r.position} of ${r.of} sections, for every person`, () => move(x, direction === "up" ? "down" : "up", true));
+  };
+  // Keep the keyboard on the button that was pressed after the section changes place (React moves the node), once:
+  // the next render belongs to whatever the author does next (review Major 1).
+  React.useEffect(() => {
+    if (!moved) return;
+    const [key, dir] = moved.split("|");
+    const b = document.querySelector<HTMLButtonElement>(`[data-section="${CSS.escape(key)}"] [data-move="${dir}"]`);
+    if (b && !b.disabled) b.focus(); else document.querySelector<HTMLButtonElement>(`[data-section="${CSS.escape(key)}"] [data-move]:not(:disabled)`)?.focus();
+    setMoved(null);
+  }, [moved]);
   const remove = async (x: { key: string; title: string }) => {
     let r: { sectionOrder: number | null };
     try { r = await api<{ sectionOrder: number | null }>(`/combinations/${id}/sections/${x.key}`, { method: "DELETE" }); }
@@ -378,8 +407,9 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
       <SourceChips rows={mine} needs={checks.size} value={filter} onChange={setFilter} />
       <PartProblems id={id} part="questions" />
       {filter === "pqr" ? <PqrSet id={id} roleLabel={role?.label ?? q.role} n={mine.filter((f) => f.prequalification).length} /> : null}
-      {pickedRows.length && canAuthor ? <BulkBar id={id} picked={pickedRows} onClear={() => setPicked(new Set())} onDone={(r, undo) => { setRefused(r.refused); if (r.saved) { setPicked(new Set()); undoToast.show(`${r.what.charAt(0).toUpperCase()}${r.what.slice(1)} on ${r.saved} question${r.saved === 1 ? "" : "s"}`, undo); } }} /> : null}
+      {pickedRows.length && canAuthor ? <BulkBar id={id} picked={pickedRows} onClear={() => setPicked(new Set())} onDone={(r, undo) => { setRefused(r.refused); if (r.saved) { setPicked(new Set()); undoToast.show(`${r.what.charAt(0).toUpperCase()}${r.what.slice(1)} for ${r.saved} question${r.saved === 1 ? "" : "s"}`, undo); } }} /> : null}
       {refused.length ? <Notice tone="warn" title={`${refused.length} row${refused.length === 1 ? "" : "s"} not changed`} action={<Button size="sm" variant="ghost" onClick={() => setRefused([])}>Dismiss</Button>}><ul className="mt-1 space-y-0.5" data-bulk-refused>{refused.map((x, i) => <li key={i}>{x.label && !x.message.includes(x.label) ? <><span className="font-medium">{x.label}</span>: </> : null}{x.message}</li>)}</ul></Notice> : null}
+      {moveRefused ? <Notice tone="warn" title="Section not moved" action={<Button size="sm" variant="ghost" onClick={() => setMoveRefused(null)}>Dismiss</Button>}><span data-move-refused>{moveRefused}</span></Notice> : null}
       {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
       {/* S2-1 (Lead, 29 Oct): the same sources and numbers as the chips and the strip (slice 1's rules), not the older
           placement count (client or case officer). */}
@@ -402,6 +432,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
               <button className="flex-1 px-4 py-3 text-left" aria-expanded={isOpen} onClick={() => { const n = new Set(opened); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); setOpenIds(n); }}>
                 <span className="font-medium">{s.title}</span>{locked ? <span className="ml-2 inline-flex items-center gap-1 text-xs text-text-muted" data-client-only><Lock className="size-3.5" aria-hidden /> Always the client</span> : null} <span className="text-xs text-text-muted">· {s.questions.length} question{s.questions.length === 1 ? "" : "s"} for {role?.label ?? "this person"}{fromDocs ? ` · ${fromDocs} from documents` : ""}</span>
               </button>
+              {canAuthor ? <MoveButtons s={s} order={secOrder.data?.order ?? null} onMove={(d) => void move({ key: s.id, title: s.title }, d)} /> : null}
               {/* QA-93: a question the shared library places in a section is asked whether or not the section is chosen, so
                   removing it here would only move it to the end. Offered only where it changes something: a section that
                   asks this person nothing. */}
@@ -438,5 +469,26 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
       </Dialog> : null}
       {undoToast.node}
     </section>
+  );
+}
+
+/** C4.1 (P-216): Move up and Move down on a section header. Only a section this combination chose has a place of its
+ *  own; a greyed button says why in words (first, last, or placed by the library). */
+function MoveButtons({ s, order, onMove }: { s: { id: string; title: string }; order: { key: string; title: string }[] | null; onMove: (d: "up" | "down") => void }) {
+  if (!order) return null;
+  const at = order.findIndex((x) => x.key === s.id);
+  const not = at < 0 ? "This section is not chosen for this combination: its questions follow the chosen sections. Add it to give it a place." : null;
+  const why = { up: not ?? (at === 0 ? `"${s.title}" is already the first section.` : null), down: not ?? (at === order.length - 1 ? `"${s.title}" is already the last section.` : null) };
+  return (
+    <span className="flex items-center gap-0.5" data-move-buttons>
+      {(["up", "down"] as const).map((d) => (
+        // A disabled button shows no tooltip, so the reason sits on its wrapper (and in its name for screen readers).
+        <span key={d} title={why[d] ?? `Move ${d}: ${s.title}`} data-move-why={why[d] ?? undefined}>
+          <Button size="sm" variant="ghost" data-move={d} disabled={!!why[d]} aria-label={`Move ${d}: ${s.title}${why[d] ? ` (${why[d]})` : ""}`} onClick={() => onMove(d)}>
+            {d === "up" ? <ArrowUp aria-hidden /> : <ArrowDown aria-hidden />}<span className="sr-only sm:not-sr-only">Move {d}</span>
+          </Button>
+        </span>
+      ))}
+    </span>
   );
 }

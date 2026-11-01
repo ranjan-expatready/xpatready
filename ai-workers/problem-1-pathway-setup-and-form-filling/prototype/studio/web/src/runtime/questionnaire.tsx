@@ -15,7 +15,9 @@ import { cn } from "@/lib/utils";
 import { fillsText, groupLabel, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
 export type CasePerson = { subject_id: string; role: "case" | "principal" | "spouse_or_partner" | "child"; label: string; applies: boolean };
-export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[] };
+/** C6.11: the case team in the header (staff only; Sample firm, stand-in SI-9). */
+export type CaseTeamLine = { firm: { key: string; name: string; solo: boolean } | null; representative: { id: string; name: string; licence: { body: string; number: string } | null } | null; officers: { id: string; name: string }[] };
+export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[]; team?: CaseTeamLine };
 export type View = QuestionnaireView & { case: CaseInfo };
 type Section = ViewSection;
 type Question = ViewQuestion;
@@ -482,7 +484,7 @@ function ConfirmPill({ a }: { a: Answer }) {
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
 const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "case view", confirm_section: "confirmed section" };
-const WHO: Record<string, string> = { "user-O": "Case officer", "user-P": "Client A", "user-Q": "Client B" };
+const WHO: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 function AgentView({ view }: { view: View }) {
