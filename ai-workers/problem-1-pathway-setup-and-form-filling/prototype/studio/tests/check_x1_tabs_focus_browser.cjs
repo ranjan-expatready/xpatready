@@ -48,7 +48,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C11.10 X1 pass: the Forms tab shows the number of open setup items that land on it", want.forms > 0 && bf.n === want.forms, { want, got: bf });
   step("C11.10 X1 pass: the Documents tab shows its number", want.documents > 0 && bd.n === want.documents, { want, got: bd });
   step("C11.10 X1 fail: a tab with nothing open shows no badge", want.questionnaires === 0 && bq.n === 0, { want, got: bq });
-  step("C11.10 X1: the badge is read as words by a screen reader", /setup items? open/.test(await p.getByRole("tab", { name: /^Forms/ }).locator(".sr-only").innerText()));
+  step("C11.10 X1: the badge is read as words by a screen reader (the tab's name), while the tab's text stays 'Forms 4'", /^Forms \d+ setup items? open$/.test(await p.getByRole("tab", { name: /^Forms/ }).getAttribute("aria-label")) && /^Forms\s*\d+$/.test((await p.getByRole("tab", { name: /^Forms/ }).innerText()).trim()));
   await p.screenshot({ path: path.join(SHOTS, "01-tab-badges-1440.png"), clip: { x: 0, y: 0, width: 1440, height: 520 } });
 
   // ---------------------------------------------------------------- Documents: the checklist's own link lands

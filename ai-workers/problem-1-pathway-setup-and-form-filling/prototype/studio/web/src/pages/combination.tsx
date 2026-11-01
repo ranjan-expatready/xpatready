@@ -99,7 +99,7 @@ export function CombinationPage() {
       </div>
       {c.basis_note ? <Notice tone={c.source_basis === "ILLUSTRATIVE" ? "warn" : "info"}>{c.basis_note}</Notice> : null}
       <div role="tablist" aria-label="Combination" className="flex gap-1 overflow-x-auto border-b border-border">
-        {TABS.map((t) => <Link key={t.key} role="tab" aria-selected={tab === t.key} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{t.key in badges ? <StepBadge n={badges[t.key as BadgeTab]} /> : null}{t.key === "review" && errorCount ? <span className="ml-1.5 rounded bg-danger/12 px-1 text-xs text-text-danger">{errorCount}</span> : null}</Link>)}
+        {TABS.map((t) => <Link key={t.key} role="tab" aria-selected={tab === t.key} aria-label={t.key in badges && badges[t.key as BadgeTab] ? `${t.label} ${badges[t.key as BadgeTab]} setup ${badges[t.key as BadgeTab] === 1 ? "item" : "items"} open` : undefined} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{t.key in badges && badges[t.key as BadgeTab] ? <>{" "}<StepBadge n={badges[t.key as BadgeTab]} /></> : null}{t.key === "review" && errorCount ? <span className="ml-1.5 rounded bg-danger/12 px-1 text-xs text-text-danger">{errorCount}</span> : null}</Link>)}
       </div>
       <div role="tabpanel" aria-label={TABS.find((t) => t.key === tab)!.label}>
         {tab === "overview" ? <OverviewTab d={d} sum={sum.data} show={sp.get("show")} />
@@ -162,8 +162,11 @@ export function StatusPill({ status }: { status: string }) {
 }
 export function useGo() { return useNavigate(); }
 
-/** X1 (slice C2, board v3 "Forms 5"): the number of open setup items on a tab; nothing when none. Read aloud as words. */
+/** X1 (slice C2, board v3 "Forms 5"): the number of open setup items on a tab; nothing when none. Read aloud as words
+ *  through the tab's aria-label. */
 function StepBadge({ n }: { n: number }) {
   if (!n) return null;
-  return <span className="relative ml-1.5 rounded-full bg-warn/15 px-1.5 text-xs text-text-warn" data-step-badge={n}><span aria-hidden>{n}</span><span className="sr-only">, {n} setup {n === 1 ? "item" : "items"} open</span></span>;
+  // The words are the tab's accessible name (aria-label "Forms 2 setup items open", which starts with the visible text
+  // "Forms 2", WCAG 2.5.3), so the tab's visible text stays "Forms 2".
+  return <span aria-hidden className="ml-1 rounded-full bg-warn/15 px-1.5 text-xs text-text-warn" data-step-badge={n}>{n}</span>;
 }
