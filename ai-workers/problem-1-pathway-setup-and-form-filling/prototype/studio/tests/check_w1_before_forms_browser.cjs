@@ -60,7 +60,11 @@ const MARK = { done: "✓", next: "●", todo: "○", ai: "◐", waiting: "⧗" 
   const who = peopleLine.locator("[data-who-can-be]");
   step("P-147 §3 pass: the people card is folded to one line with Show and edit (moved, not rebuilt)", await who.getAttribute("data-folded") !== null && await who.getByRole("button", { name: "Show and edit" }).count() === 1);
   const words = await who.locator("[data-people-words]").innerText();
-  step("P-161 (2) pass: the folded line says who in the board's plain words, e.g. \"Principal applicant (always)\"", /Principal applicant \(always\)/.test(words) && words.split(" · ").every((w) => /\((always|optional)\)$/.test(w.replace(/^· /, ""))), words);
+  // QA-77 (#171): each person is named as the combination names them (its own label, kept when typed, L7), the same as
+  // the header; the board's plain-words form ("<name> (always)" / "(optional)") is unchanged.
+  const people = ((await api(`/combinations/${sv.combinationId}`)).body.combination.participants ?? []).filter((x) => x.max > 0);
+  const principal = people.find((x) => x.role === "principal");
+  step("P-161 (2) pass: the folded line says who in the board's plain words, each named as the combination names them, e.g. \"<principal> (always)\"", !!principal && words.includes(`${principal.label} (always)`) && words.split(" · ").every((w) => /\((always|optional)\)$/.test(w.replace(/^· /, ""))), { words, principal: principal?.label });
   step("P-161 (2) fail case: no exact counts on the folded line (\"exactly\", \"0 to 1\": they stay in Show and edit)", !/exactly|\d to \d/.test(words), words);
   // #139 review: a role whose most is 0 cannot be in the application, so the folded line leaves it out (not "(optional)").
   const zeroUrl = /\/api\/combinations\/[^/]+\/workspace\?tab=forms/;
