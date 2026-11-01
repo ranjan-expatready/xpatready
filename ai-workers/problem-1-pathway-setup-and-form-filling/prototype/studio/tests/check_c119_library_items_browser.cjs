@@ -42,7 +42,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.screenshot({ path: path.join(SHOTS, "fields-retire-refused-1440.png") });
     await axe("Fields, a refused Retire");
     await panel.getByRole("button", { name: "Close" }).click();
-    step("C11.9 keyboard: Close returns focus to the row's action", await p.evaluate(() => document.activeElement?.closest("tr")?.getAttribute("data-item") === "person.family_name" && document.activeElement?.getAttribute("data-action") === "RETIRE"));
+    // The focus moves after the panel unmounts (a 0 ms timer): wait for it; a timeout is this step's FAIL.
+    step("C11.9 keyboard: Close returns focus to the row's action", await p.waitForFunction(() => document.activeElement?.closest("tr")?.getAttribute("data-item") === "person.family_name" && document.activeElement?.getAttribute("data-action") === "RETIRE", null, { timeout: 5000 }).then(() => true, () => false));
 
     // ── an allowed Retire: confirm with a reason, Undo, then a second person approves
     await search("c119_spare");

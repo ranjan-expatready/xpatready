@@ -21,10 +21,12 @@ export class LibraryItemsController {
   private act(a: H, kind: ItemKind, key: string, action: "DELETE" | "RETIRE" | "RESTORE", b: unknown) { return this.lifecycle.propose(actorOf(a), kind, key, action, reason(b)); }
   @Get("library/fields/:key/uses") fieldUses(@Headers("x-actor") a: H, @Param("key") k: string) { return this.uses(a, "field", k); }
   @Delete("library/fields/:key") fieldDelete(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.act(a, "field", k, "DELETE", b); }
+  @Post("library/fields/:key/delete") fieldDeletePost(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.act(a, "field", k, "DELETE", b); } // Screen 04 concept §6
   @Post("library/fields/:key/retire") fieldRetire(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.act(a, "field", k, "RETIRE", b); }
   @Post("library/fields/:key/restore") fieldRestore(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.act(a, "field", k, "RESTORE", b); }
   @Get("library/document-types/:key/uses") typeUses(@Headers("x-actor") a: H, @Param("key") k: string) { return this.uses(a, "document_type", k); }
   @Delete("library/document-types/:key") typeDelete(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.act(a, "document_type", k, "DELETE", b); }
+  @Post("library/document-types/:key/delete") typeDeletePost(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.act(a, "document_type", k, "DELETE", b); } // Screen 04 concept §6
   @Post("library/document-types/:key/retire") typeRetire(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.act(a, "document_type", k, "RETIRE", b); }
   @Post("library/document-types/:key/restore") typeRestore(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.act(a, "document_type", k, "RESTORE", b); }
 }

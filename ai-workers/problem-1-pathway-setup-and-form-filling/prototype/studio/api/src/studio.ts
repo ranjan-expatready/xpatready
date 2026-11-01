@@ -386,7 +386,7 @@ export class Studio {
   }
 
   // ------------------------------------------------------------------ the shared library
-  async fields(q: { q?: string }) {
+  async fields(q: { q?: string; retired?: string }) {
     const workspaceId = await this.ws.id();
     const rows = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: [{ canonicalFieldKey: "asc" }, { version: "desc" }] });
     const usage = await this.db.formFieldMap.groupBy({ by: ["canonicalFieldKey", "formEditionId"], where: { workspaceId, outcome: "mapped", status: { in: ["PUBLISHED", "DRAFT"] } }, _count: { _all: true } });
@@ -403,7 +403,8 @@ export class Studio {
       const forms = [...new Set(u.map((x) => editions.get(x.formEditionId)))].filter(Boolean);
       const p = placements.get(f.canonicalFieldKey);
       return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey), f.valueType), ...itemState(versionsBy.get(f.canonicalFieldKey) ?? [], open.get(f.canonicalFieldKey)) };
-    });
+    // C11.9 BR-10 (pack 3): the default list, the one pickers read, leaves retired fields out; ?retired=only lists them.
+    }).filter((r) => (q.retired === "all" ? true : q.retired === "only" ? r.retired : !r.retired));
   }
 
   /** P-162 (C3.1): each field's current mapped form fields with their edition's inventory, for its format. Only the

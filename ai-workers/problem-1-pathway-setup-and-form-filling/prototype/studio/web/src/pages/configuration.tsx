@@ -14,7 +14,7 @@ export const whoLabel = (w: string) => WHO.find(([v]) => v === w)?.[1] ?? w;
 export const RevCtx = React.createContext<Record<string, string>>({});
 
 export function useLibraryFields() {
-  const q = useApi<any[]>(["fields"], "/library/fields");
+  const q = useApi<any[]>(["fields", "all"], "/library/fields?retired=all"); // C11.9: the meaning of a retired field is still shown
   // C11.9 (BR-10): a retired field is not offered in pickers; its meaning is still shown where something reads it.
   const all: FieldInfo[] = (q.data ?? []).map((f) => ({ key: f.key, meaning: f.meaning, value_type: f.value_type }));
   const list = all.filter((_, i) => !(q.data ?? [])[i]?.retired);

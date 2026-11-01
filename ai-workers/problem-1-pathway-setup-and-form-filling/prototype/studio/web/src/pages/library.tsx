@@ -44,7 +44,8 @@ const usedWords = (used: string[] | undefined) => !used?.length ? <span classNam
 export function FieldsPage() {
   const [q, setQ] = React.useState("");
   const [only, setOnly] = React.useState("all");
-  const list = useApi<any[]>(["fields"], "/library/fields");
+  // C11.9 BR-10: the default list leaves retired fields out; the whole list (retired=all) feeds the Retired filter.
+  const list = useApi<any[]>(["fields", "all"], "/library/fields?retired=all");
   const navigate = useNavigate();
   const canAuthor = useCanAuthor();
   const life = useItemLifecycle("fields", () => list.refetch(), canAuthor);

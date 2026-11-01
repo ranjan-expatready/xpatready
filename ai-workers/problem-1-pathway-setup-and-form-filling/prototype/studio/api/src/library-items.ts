@@ -73,7 +73,11 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
   // Break minor: a draft question that asks it in a section no combination selects is removed with a delete: said, never silent.
   if (kind === "field") {
     const qs = current(await db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: key }, select: { lineageKey: true, sectionKey: true, version: true, status: true } }), (q) => q.lineageKey);
-    for (const q of qs) if (q.status === "DRAFT") uses.push({ kind: "placement", label: `Draft question in ${q.sectionKey.replace(/_/g, " ")}`, href: `/library/sections`, blocks: false, why: "Not released, and no combination asks it yet: a delete removes it with the field" });
+    // Pack 3 (P-116): for a released field the draft question stops a retire (a draft still asks it); a never-released
+    // field's delete removes it with the field, said in the confirm.
+    for (const q of qs) if (q.status === "DRAFT") uses.push(st.released
+      ? { kind: "placement", label: `Draft question in ${q.sectionKey.replace(/_/g, " ")}`, href: `/library/sections`, blocks: true, why: "A draft question asks it: remove it there first" }
+      : { kind: "placement", label: `Draft question in ${q.sectionKey.replace(/_/g, " ")}`, href: `/library/sections`, blocks: false, why: "Not released: a delete removes this draft question with the field" });
   }
   // Releases keep it, never changed (L2): listed, never blocking.
   const path = kind === "field" ? "canonical_fields" : "document_types", prop = kind === "field" ? "id" : "key";
