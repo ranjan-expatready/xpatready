@@ -661,6 +661,9 @@ function AgentView({ view }: { view: View }) {
   );
 }
 
+/** The id of one answer's line in the officer's section, the target of its error summary link. */
+const lineId = (subjectId: string, fact: string, row?: string) => `a-${subjectId}-${fact.replace(/[^a-z0-9_]/gi, "-")}${row ? `-${row}` : ""}`;
+
 function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Question, row?: string) => void }) {
   const qc = useQueryClient(), toast = useToast();
   const [busy, setBusy] = React.useState(false);
@@ -693,7 +696,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
       </div>
     );
     return (
-      <div key={keyOf(q, row)} className="grid gap-x-4 gap-y-1 border-t border-border px-4 py-2.5 first:border-t-0 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_auto]">
+      <div key={keyOf(q, row)} id={lineId(s.subjectId, q.fact, row)} tabIndex={-1} className="grid scroll-mt-4 gap-x-4 gap-y-1 border-t border-border px-4 py-2.5 outline-none first:border-t-0 focus-visible:ring-2 focus-visible:ring-ring md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_auto]">
         <div className="text-[13px] text-text-muted">{q.label}{q.required || /\(optional\)\s*$/i.test(q.label) ? null : <span> (optional)</span>}</div>
         <div className="min-w-0 text-sm">
           {a ? (
@@ -726,7 +729,16 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           <Check aria-hidden />Confirm section
         </Button>
       </header>
-      {checks.length ? <div className="border-b border-border px-4 py-2"><Notice tone="warn" title={`Check before confirming${checks.some((c) => c.illustrative) ? " (Sample check)" : ""}`}>{checks.map((c) => c.message).join(" ")}</Notice></div> : null}
+      {/* P-47 tier 2 (C4.4 part 2): the section's error summary, GOV.UK pattern: each answer to fix and each fired check, linked to its line. */}
+      {(s.problems ?? []).length ? (
+        <div className="border-b border-border px-4 py-2" data-section-summary>
+          <Notice tone={s.problems.some((p) => p.kind === "field") ? "danger" : "warn"} title={`${checks.length ? "Check before confirming" : "Answers to fix"}${checks.some((c) => c.illustrative) ? " (Sample check)" : ""}`}>
+            <ul className="space-y-0.5">{s.problems.map((p, i) => (
+              <li key={i}><a className="text-text-link underline" href={`#${lineId(s.subjectId, p.field, p.row ?? undefined)}`} onClick={(e) => { e.preventDefault(); const el = document.getElementById(lineId(s.subjectId, p.field, p.row ?? undefined)); el?.scrollIntoView({ block: "center" }); el?.focus(); }}>{p.label}</a>: {p.message}</li>
+            ))}</ul>
+          </Notice>
+        </div>
+      ) : null}
       <div>{single.map((q) => line(q))}</div>
       {grouped.length ? (
         <div className="space-y-2 border-t border-border bg-surface/60 px-4 py-3">

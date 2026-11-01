@@ -11,7 +11,9 @@ import { PERSON } from "@/pages/job";
 import { nameOf } from "@/pages/review";
 
 /** QA-39: value types in words (the stored code stays the value). */
-const TYPE_WORD: Record<string, string> = { text: "Text", date: "Date", yes_no: "Yes or no", code: "List of choices", country: "Country", number: "Number", address: "Address", phone: "Phone number", email: "Email address" };
+const TYPE_WORD: Record<string, string> = { text: "Text", date: "Date", yes_no: "Yes or no", code: "List of choices", country: "Country", number: "Number", address: "Address", phone: "Phone number", email: "Email address",
+  // P-47 types (C4.4 review m5); "document" is not one (P-130: an upload is a checklist line).
+  long_text: "Long text", multi_choice: "Several choices", person_name: "Person's name (family and given names)", period_history: "Periods of time (history)", declaration: "Declaration (tick to agree)" };
 const TYPES = Object.keys(TYPE_WORD);
 const COLLECTED: [string, string][] = [["client_questionnaire", "Client questionnaire"], ["verified_document", "A verified document"], ["staff_working_view", "The case officer (case view)"], ["profile_record", "Client profile"], ["existing_record", "Existing record"]];
 const collectedWord = (k: string) => COLLECTED.find(([x]) => x === k)?.[1] ?? k.replace(/_/g, " ");
