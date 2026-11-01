@@ -66,3 +66,23 @@ Rebuilt web in the worktree and started a fresh `screens_rev5` on :4447. The bui
 **Journey score, re-walk: 8 / 10.** Task completed ½ (case (a)) · next step obvious ½ (Documents 1 over an empty page) · plain words 1 · feedback and state 1 · correct data 1 · error recovery 1 · accessibility and screen sizes 1 · speed 1 · visual quality ½ (codes in the notice) · trust and sources ½ (a release-only problem is shown nowhere). The score passes, but a Major is open.
 
 **Verdict: Block** (commit d93bb3cb). Fix: open item 1 (step 4 Not ready items split by part, so the link, the landing and the badge follow the problem, with the two tests). Items 2 and 3 should be fixed or recorded; they do not block.
+
+## Re-review of 32938196 (1 Nov)
+Rebuilt web in the worktree and started a fresh `screens_rev5` on :4447.
+* `check_x1_tabs_focus_browser` (a /tmp copy): **28/28**. The sample was already loaded, so "sample loads" was skipped.
+* `check_setup_checklist` with the API part on :4447: **63/63**.
+
+**M1 closed.** The engine splits step 4's release problems by `WHERE_STEP` part (`engine/setup-checklist.ts:104-115`), so the step's tab, the link and the badge follow the problem.
+* Walked: the With an LMIA release and draft both read a retired field in rule R-04. Step 4's tab is now **questionnaires**. `questionnaires:problems` (from the release) lands on the notice that names R-04, and the address is cleared. The badges read "Questionnaires 2", and Documents has none.
+* The release-only case (a broken rule only in `config_release.snapshot`) is walked by the check through the checklist's own `next.href`. It lands on the new "The released version has 1 problem…: release it" notice.
+* All the earlier closures still hold.
+
+**Not blocking:**
+1. When the release and the draft share a problem, step 4 has two items (from the release and from the draft), so the badge counts it twice ("Questionnaires 2" for one R-04). This is the engine's §6 model, and the C3 strip will list the same two items. Record it for C3.
+2. The "This draft no longer has it" notice ignores the draft's `where: "Questionnaires"` gaps (`part-problems.tsx`, `mine` excludes them). A release whose only questions problem is an "asked of nobody" gap that the draft still has would get that claim falsely. This is rare: a gap only appears in a release when the library changes after release. I found it by reading the code and did not reproduce it.
+3. Leftovers the builder will list in the PR: `done=[]` on these tabs; gaps land on the selected person; `problemWords` shows rule codes and fact keys.
+4. Outside this slice, for the Lead: Forms has no target for `forms:problems` (also `forms:lines`, `forms:sources`, `forms:held`). The Not ready card above links to `/forms?focus=forms%3Aproblems`, and nothing is focused there. Only `pages:record` and `people:card` exist on Forms (C1).
+
+**Journey score, re-walk: 9 / 10.** Task completed 1 · next step obvious 1 · plain words 1 · feedback and state 1 · correct data ½ (one problem counted twice, item 1) · error recovery 1 · accessibility and screen sizes 1 · speed 1 · visual quality ½ (codes in the notice) · trust and sources 1.
+
+**Verdict: Approve** (commit 32938196). No Blocker or Major is open. Items 1–4 go in the PR or to the Lead.
