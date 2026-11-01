@@ -5,7 +5,9 @@
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
 import { checkFormat, snapshotFieldFormat } from "../field-format.ts";
-import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
+import { z } from "zod";
+import type { Period } from "../../../contracts/history.ts";
+import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
 export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
@@ -25,6 +27,12 @@ type FieldDef = { id: string; value_type?: string; item_version?: number; answer
 const placementOf = (s: Snapshot, field: string): Placement | undefined => (s.placements as Placement[]).find((p) => p.fact === field);
 const fieldOf = (s: Snapshot, field: string): FieldDef | undefined => (s.canonical_fields as FieldDef[]).find((f) => f.id === field);
 export const isClientField = (s: Snapshot, field: string) => CLIENT_SOURCES.has(placementOf(s, field)?.collected_from ?? "") && CLIENT_KINDS.has(subjectKindOf(field));
+
+/** P-47 types (C4.4). Long text with no form box limit: a generous cap so a pasted document is not saved as an answer. */
+const LONG_TEXT_MAX = 4000;
+const PersonName = z.object({ family_name: z.string().optional(), given_names: z.string().optional(), no_given_name: z.boolean().optional() }).strict();
+/** P-130 amends P-47: an upload is a document checklist line, not a question (C4.5). A field typed "document" is never asked. */
+export const DOCUMENT_NOT_A_QUESTION = "An upload is a line of the document checklist, not a question: add it on the Documents tab.";
 
 const realDate = (y: number, m: number, d: number) => { const t = new Date(Date.UTC(y, m - 1, d)); return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d && y >= 1900 && y <= 2100; };
 
@@ -68,7 +76,7 @@ export function shapeOf(s: Snapshot, field: string) {
   // C3.1 AT-10 (IRCC-F07, P-162): the form's own box limit for the whole answer (read from the PDF) counts too.
   const boxMax = snapshotFieldFormat(s as never, field).rules.filter((r) => r.check === "max_length" && !r.part).map((r) => Number(r.params.n)).filter((n) => n > 0);
   maxes.push(...boxMax);
-  return { maxLength: maxes.length ? Math.min(...maxes) : 500, datePrecision: dayNeeded ? "day" as const : "month" as const, phone: ts.some((t) => /phone_part/.test(t)), money: ts.some((t) => /CAD/.test(t)), choices };
+  return { maxLength: maxes.length ? Math.min(...maxes) : fieldOf(s, field)?.value_type === "long_text" ? LONG_TEXT_MAX : 500, datePrecision: dayNeeded ? "day" as const : "month" as const, phone: ts.some((t) => /phone_part/.test(t)), money: ts.some((t) => /CAD/.test(t)), choices };
 }
 
 
@@ -133,6 +141,46 @@ function checkType(s: Snapshot, field: string, value: unknown, today: Date): str
       if (list.length) return list.some((v) => v.key === str) ? [] : ["Choose one of the listed answers."];
       if (shape.choices) return shape.choices.some((c) => c.toLowerCase() === str.toLowerCase()) ? [] : [`Choose one of: ${shape.choices.join(", ")}.`];
       return chars(str) > 120 ? ["Keep the answer to 120 characters."] : [];
+    case "multi_choice": {
+      if (!Array.isArray(value) || !value.length || !value.every((v) => typeof v === "string")) return ["Choose at least one answer."];
+      if (new Set(value).size !== value.length) return ["Choose each answer once."];
+      return !list.length || value.every((v) => list.some((x) => x.key === v)) ? [] : ["Choose only from the listed answers."];
+    }
+    case "long_text": {
+      if (str === null) return ["Enter text."];
+      if (!str) return ["Enter an answer."];
+      return chars(str) > shape.maxLength ? [`Keep it to ${shape.maxLength} characters (it is ${chars(str)}).`] : [];
+    }
+    case "person_name": {
+      const parsed = PersonName.safeParse(value);
+      if (!parsed.success) return ["Enter the name in its parts: family name, and given names or \"no given name\"."];
+      const n = parsed.data, family = (n.family_name ?? "").trim(), given = (n.given_names ?? "").trim(), out: string[] = [];
+      if (!family) out.push("Enter the family name, as on the passport.");
+      if (n.no_given_name && given) out.push("Leave the given names empty, or untick \"no given name\".");
+      else if (!n.no_given_name && !given) out.push("Enter the given names, or tick \"no given name\" if the passport shows none.");
+      for (const [w, x] of [["family name", family], ["given names", given]] as const) if (chars(x) > shape.maxLength) out.push(`Keep the ${w} to ${shape.maxLength} characters.`);
+      return out;
+    }
+    case "period_history": {
+      if (!Array.isArray(value)) return ["Add each period with its start month, end month and what you did."];
+      if (!value.length) return ["Add at least one period."];
+      const now = today.getUTCFullYear() * 100 + today.getUTCMonth() + 1, out: string[] = [];
+      value.forEach((row: Period, i) => {
+        const at = `Period ${i + 1}`;
+        const month = (x: unknown) => { const m = typeof x === "string" ? /^(\d{4})-(\d{2})$/.exec(x.trim()) : null; return m && realDate(Number(m[1]), Number(m[2]), 1) ? Number(m[1]) * 100 + Number(m[2]) : null; };
+        const from = month(row?.from), open = row?.to === undefined || row?.to === null || row?.to === "", to = open ? now : month(row?.to);
+        const early = (x: unknown) => typeof x === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(x.trim()) && Number(x.slice(0, 4)) < 1900;
+        if (from === null) out.push(early(row?.from) ? `${at}: the start is before 1900; check the year.` : `${at}: enter the start as month and year, for example 2019-06.`);
+        if (to === null) out.push(early(row?.to) ? `${at}: the end is before 1900; check the year.` : `${at}: enter the end as month and year, or leave it empty if it goes on today.`);
+        if (from !== null && from > now) out.push(`${at}: the start is in the future; a history covers what has already happened.`);
+        else if (from !== null && to !== null && to < from) out.push(`${at}: the end is before the start; check both months.`);
+        if (to !== null && to > now) out.push(`${at}: the end is in the future; leave it empty if it goes on today.`);
+        if (typeof row?.what !== "string" || !row.what.trim()) out.push(`${at}: say what you did (work, study, unemployed, travel).`);
+      });
+      return out;
+    }
+    case "declaration": return value === true ? [] : ["Tick the box to make the declaration; the application cannot be filed without it."];
+    case "document": return [DOCUMENT_NOT_A_QUESTION];
     case "address": {
       const parsed = Address.strict().safeParse(value);
       if (!parsed.success) return ["Enter the address in its parts (street, city, country), as text."];
@@ -239,7 +287,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
       answer: group ? null : one(current.find((a) => !a.rowKey)),
       rows: group ? live.map((x, i) => ({ row: x.rowKey, index: i, fits: q.rows.length ? i < q.rows.length : true, answer: one(current.find((a) => a.rowKey === x.rowKey)) })) : [],
       options,
-      note: !options && (q.value_type === "code" || q.value_type === "country") ? "No answer list yet (forms slice 2): the officer checks this answer before confirming the section." : null,
+      note: !options && (q.value_type === "code" || q.value_type === "country" || q.value_type === "multi_choice") ? "No answer list yet (forms slice 2): the officer checks this answer before confirming the section." : null,
       fills: [...(fills.get(`${q.about}|${q.fact}`)?.values() ?? [])],
       countries: !options && (q.value_type === "country" || q.value_type === "address") ? countries : null,
     };
@@ -271,10 +319,40 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   });
   // Checks the answers trigger, on the question they concern; in the client's view only those on the client's parts.
   const shown = new Set(sections.map((x) => `${x.subjectId}|${x.section}`));
-  const checks: ViewCheck[] = (r.checks as { id: string; severity: string; message: string; person: string; person_label: string; applies_to: string | null; illustrative: boolean }[]).map((c) => {
+  const checks: ViewCheck[] = (r.checks as { id: string; severity: string; group: string; message: string; person: string; person_label: string; applies_to: string | null; illustrative: boolean }[]).map((c) => {
     const subjectId = c.person === "case" ? caseSubject.subjectId : c.person, fact = c.applies_to && placementOf(s, c.applies_to) ? c.applies_to : null;
-    return { id: c.id, severity: c.severity, message: c.message, subjectId, about_label: c.person === "case" ? caseSubject.label : c.person_label, fact, section: fact ? placementOf(s, fact)!.section_id : null, illustrative: c.illustrative };
+    return { id: c.id, severity: c.severity, group: c.group, message: c.message, subjectId, about_label: c.person === "case" ? caseSubject.label : c.person_label, fact, section: fact ? placementOf(s, fact)!.section_id : null, illustrative: c.illustrative };
   }).filter((c) => mode === "agent" || (c.section !== null && shown.has(`${c.subjectId}|${c.section}`)));
-  return { mode, sections, checks, forms: r.forms.map((f) => ({ form: f.form, person: f.person_label, applies: f.applies })), ...(opts.skipDocumentFacts ? { from_documents: [...fromDocuments.values()] } : {}), summary: { not_asked: notAsked, questions: questions.length, answered: sections.reduce((n, x) => n + x.answered, 0), confirmed: sections.reduce((n, x) => n + x.confirmed, 0), missing: sections.reduce((n, x) => n + x.missing.length, 0) } };
+  // P-47 tier 2 (C4.4 part 2): each section's error summary, GOV.UK pattern: every answer that fails its checks and every
+  // section check that fired on the section, each naming the field (and row) it links to, in the order of the questions.
+  const withProblems = sections.map((sec) => {
+    const order = new Map(sec.questions.map((q, i) => [q.fact, i]));
+    const fieldProblems: SectionProblem[] = sec.questions.flatMap((q) => (q.group ? q.rows.map((x) => ({ a: x.answer, row: x.row as string | null })) : [{ a: q.answer, row: null }])
+      .flatMap(({ a, row }) => (a?.problems ?? []).map((message) => ({ kind: "field" as const, field: q.fact, subjectId: sec.subjectId, row, label: q.label, message }))));
+    const checkProblems: SectionProblem[] = checks.filter((c) => c.subjectId === sec.subjectId && c.section === sec.section && c.fact)
+      .map((c) => ({ kind: "check" as const, field: c.fact!, subjectId: sec.subjectId, row: null, label: sec.questions.find((q) => q.fact === c.fact)?.label ?? c.fact!, message: c.message, check: c.id }));
+    const problems = [...fieldProblems, ...checkProblems].sort((a, b) => (order.get(a.field) ?? 1e9) - (order.get(b.field) ?? 1e9));
+    return { ...sec, problems };
+  });
+  return { mode, sections: withProblems, checks, forms: r.forms.map((f) => ({ form: f.form, person: f.person_label, applies: f.applies })), ...(opts.skipDocumentFacts ? { from_documents: [...fromDocuments.values()] } : {}), summary: { not_asked: notAsked, questions: questions.length, answered: sections.reduce((n, x) => n + x.answered, 0), confirmed: sections.reduce((n, x) => n + x.confirmed, 0), missing: sections.reduce((n, x) => n + x.missing.length, 0) } };
 }
 export type CaseView = ReturnType<typeof caseView>;
+
+/** P-47 mode 1, PQR (C4.4 part 2): only the questions the release flags pre-qualification (W1-15's tick, per person role
+ *  and fact: snapshot.fact_sources), in the agent view's order, and one plain result line. The result is never a verdict
+ *  on eligibility: it says what is left to answer, or that a check fired, or that the answers raise nothing so far. */
+export function pqrView(s: Snapshot, people: Participant[], view: CaseView) {
+  const ticked = new Set((s.fact_sources ?? []).filter((x) => x.prequalification).map((x) => `${x.role}|${x.fact}`));
+  const roleOf = (subjectId: string) => people.find((p) => p.subjectId === subjectId)?.role ?? "";
+  const questions = view.sections.flatMap((sec) => sec.questions).filter((q) => ticked.has(`${roleOf(q.subjectId)}|${q.fact}`) && !q.hidden)
+    .map((q) => ({ ...q, pre_qualification: true as const }));
+  const open = questions.filter((q) => (q.group ? !q.rows.length || q.rows.some((x) => !x.answer) : !q.answer)).length;
+  const fixes = questions.filter((q) => (q.group ? q.rows.some((x) => x.answer?.problems.length) : q.answer?.problems.length)).length;
+  const fired = view.checks.filter((c) => c.fact && questions.some((q) => q.fact === c.fact && q.subjectId === c.subjectId));
+  const result = !questions.length ? "No pre-qualification questions in this release yet: tick them on the combination's Questions and documents tab."
+    : open ? `${open} of ${questions.length} pre-qualification question${questions.length === 1 ? "" : "s"} still to answer before a result.`
+    : fixes ? `${fixes} answer${fixes === 1 ? " needs" : "s need"} a fix before a result.`
+    : fired.length ? `Needs a closer look: ${fired.map((c) => c.message).join(" ")} Next: talk it through with the representative.`
+    : "Looks eligible so far · next: book a consultation. This is not a decision on the application.";
+  return { mode: "pqr" as const, questions, result, checks: fired };
+}

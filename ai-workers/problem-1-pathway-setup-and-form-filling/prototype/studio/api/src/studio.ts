@@ -681,6 +681,36 @@ export class Studio {
     return row;
   }
 
+  /** RT-7, P-47 tier 2 (C4.4 part 2): the author adds a section check to a combination's draft, as data: a condition in
+   *  the closed vocabulary (engine/validate.ts), the words shown when it fires, and the fact it sits on (default: the
+   *  first fact the condition reads). No source quote: labelled Sample (illustrative). It goes out with the next release. */
+  async saveCheck(actor: Actor, combinationId: string, raw: unknown) {
+    // The database keeps a condition's keys in its own order: compare them sorted.
+    const canonical = (v: unknown): string => Array.isArray(v) ? `[${v.map(canonical).join(",")}]` : v && typeof v === "object" ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canonical((v as Record<string, unknown>)[k])}`).join(",")}}` : JSON.stringify(v);
+    const b = (raw ?? {}) as { group?: unknown; appliesTo?: unknown; condition?: unknown; message?: unknown; sourceQuote?: unknown };
+    need(actor, "author"); // draft edits are the author duty
+    const c = await this.db.combination.findUnique({ where: { id: combinationId } });
+    if (!c) fail("No such combination.", HttpStatus.NOT_FOUND);
+    if ((b.group ?? "section_check") !== "section_check") fail("Only a section check can be added here (group \"section_check\").");
+    const message = (typeof b.message === "string" ? b.message : "").trim();
+    if (message.length < 5) fail("Say what the person should check, in plain words (at least 5 characters).");
+    const t = await this.libraryTypes(c!.workspaceId);
+    const errs = checkCondition(b.condition, t.fields, t.derived);
+    if (!b.condition || errs.length) fail(`Condition: ${errs.join("; ") || "missing"}.`);
+    const condField = (b.condition as { field?: unknown }).field;
+    const appliesTo = typeof b.appliesTo === "string" ? b.appliesTo : typeof condField === "string" ? condField : null;
+    const quote = typeof b.sourceQuote === "string" ? b.sourceQuote.trim() : "";
+    if (!appliesTo || !t.fields.has(appliesTo)) fail("Name the question the check sits on: a field of the library (for example case.funds_available_cad).");
+    // Review c44-part2 m1: the same check twice in the draft (a double click) is refused, never saved again.
+    const same = (await this.db.check.findMany({ where: { combinationId, checkGroup: "section_check", status: "DRAFT", appliesTo, message: message.slice(0, 500) } }))
+      .some((x) => canonical(x.predicateJson) === canonical(b.condition));
+    if (same) fail("This check is already in the draft.", HttpStatus.CONFLICT);
+    const n = await this.db.check.count({ where: { combinationId } });
+    const row = await this.db.check.create({ data: { workspaceId: c!.workspaceId, combinationId, checkKey: `SC-${String(n + 1).padStart(2, "0")}-${Date.now().toString(36).slice(-3)}`, checkGroup: "section_check", appliesTo, predicateJson: b.condition as Prisma.InputJsonValue, severity: "warn", message: message.slice(0, 500), sourceQuote: quote || null, illustrative: !quote, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
+    await this.audit.log(c!.workspaceId, actor.id, "created", "check", row.checkKey, `${actor.name} added section check "${message.slice(0, 80)}" in "${c!.label}" (draft v1${row.illustrative ? ", Sample" : ""})`, { appliesTo, condition: b.condition }, combinationId);
+    return { key: row.checkKey, group: row.checkGroup, applies_to: row.appliesTo, condition: row.predicateJson, message: row.message, illustrative: row.illustrative, status: row.status, version: row.version };
+  }
+
   async saveForm(actor: Actor, combinationId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean; baseRevision?: string; minAge?: number | null; signedBy?: string | null; copies?: number }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
