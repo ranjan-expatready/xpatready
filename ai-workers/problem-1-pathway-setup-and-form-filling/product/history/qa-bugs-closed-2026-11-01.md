@@ -62,3 +62,39 @@ Row as it stood in `qa/BUGS.md`:
 Detail as it stood in `qa/reports/bugs-open-detail.md`:
 
 | QA-122 | Bug · Major | C7.6 · P-71, P-72 | **751cbc42** (explore runtime) | Steps: release Visitor visa (`setup_visitor_visa.ts`); case officer opens a case; answers an optional date that fills IMM 5257 (e.g. `person.national_id_issue_date`, or the spouse's `person.current_residence_status_to`) with "tomorrow"; Confirm section (reply: `invalid: 1`); open the case's forms. Expected: IMM 5257 lists that fact "needs a fix" and is not ready, like a required fact with a problem (P-71: blocked by facts it would write wrong). Actual: the answer is VERIFIED with problems ["Enter a real date as day, month and year."]; readiness omits it (`engine/runtime/forms.ts` `readiness` filters `q.required`); Generate wrote it: the copy's snapshot records `ToDate` = "tomorrow". Once every required fact is fine the form shows Ready to file with a wrong value | `tests/qa/check_qa_am_1101b_api.ts` (6/7 today; the QA-122 line passes when fixed; a guard keeps empty optional facts non-blocking) | runtime | Open |
+
+## QA-126 — closed 1 Nov 2026 (after-merge 73396df2, qa-2)
+
+Closed by the qa lane on main **73396df2** (fixed by #278): `check_runtime_r1d.ts` 86/86 and `tests/qa/check_qa_am_1101c_validated.ts` 9/9 on test copy qa_rt :4473 (`setup_visitor_visa.ts`): a file over 20 MB is refused "The file is larger than 20 MB: send the validated PDF of this form. Nothing was recorded." (413); two files "Send only the one validated PDF you saved from Adobe. Nothing was recorded." The words are fixed. Two files answer 413, not 400; the check now accepts either, because the words were the finding.
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-126 | UX · Minor | C11.6 C-9 · P-144, PRODUCT §4 | 63168762 (explore evidence) | Sending a validated copy over the limit says "A file is larger than 25 MB… add files up to 25 MB each" (this upload's limit is 20 MB); two files say "Add at most 20 files at a time" (it takes one). The global upload filter (`api/src/main.ts:161`) words every upload with the intake limits | runtime | Open |
+
+Detail as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-126 | UX · Minor | C11.6 C-9 · P-144, PRODUCT §4 | **63168762** (explore evidence) | Steps: case officer sends a validated copy of IMM 5257 (`POST /runtime/form-copies/:id/validated`) (a) over 20 MB, (b) as two files. Expected: "The file is larger than 20 MB: send the validated PDF of this form" (the service's own words, `MAX_VALIDATED_BYTES`) and "Send the one validated PDF you saved from Adobe". Actual: (a) 413 "A file is larger than 25 MB. Nothing was added; add files up to 25 MB each." (b) 413 "Add at most 20 files at a time. Nothing was added." The interceptor refuses first and the global filter in `api/src/main.ts:161` words it with the intake limits. Nothing is recorded (good) | `tests/qa/check_qa_am_1101c_validated.ts` (its two limit lines) | runtime | Open |
+
+## QA-127 — closed 1 Nov 2026 (after-merge 73396df2, qa-2)
+
+Closed by the qa lane on main **73396df2** (fixed by #278): one value changed after Validate is refused (422) with "The value that differs: \"*Family name (as shown on your passport…)\"", what the copy wrote and what the file holds; nothing recorded (`check_qa_am_1101c_validated.ts` 9/9, `check_runtime_r1d.ts` 86/86).
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-127 | UX · Minor | C11.6 C-9 · P-144 | 63168762 (explore evidence) | A validated copy with one value changed after Validate is refused "Not read back: 1 of the 47 values the product wrote differ", but never says which value, so the person cannot put it back | runtime | Open |
+
+Detail as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-127 | UX · Minor | C11.6 C-9 · P-144 | **63168762** (explore evidence) | Steps: generate an IMM 5257 copy; change one written value in the XFA datasets (FamilyName, as if typed in Adobe); send it. Expected: refused, naming the field in the form's words ("Family name: the copy wrote SAMPLED, this file has QASAMPLED") so the person can fix it. Actual: 422 "Not read back: 1 of the 47 values the product wrote differ in this file. Nothing was recorded; validate this copy in Adobe, save it and send it again." (refusal and nothing recorded are right; the which is missing; `read_validated.py` returns `mismatches`) | `tests/qa/check_qa_am_1101c_validated.ts` (UX line) | runtime | Open |
+
+## QA-128 — closed 1 Nov 2026 (after-merge 73396df2, qa-2)
+
+Closed by the qa lane on main **73396df2** (fixed by #278): two sends of the same validated file at once answer [201, 409]; one validated copy is kept and one audit line (`check_qa_am_1101c_validated.ts` 9/9, `check_runtime_r1d.ts` 86/86).
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-128 | Bug · Minor | C11.6 C-9 · P-65 (append-only, once) | 63168762 (explore evidence) | Two sends of the same validated file at once (double click) both answer 201: two validated copies of one copy and two audit lines are kept | runtime | Open |
+
+Detail as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-128 | Bug · Minor | C11.6 C-9 · P-65 | **63168762** (explore evidence) | Steps: send the same validated file twice at once. Expected: one validated copy recorded, the second answered 201 with the same record or 409 "already read back". Actual: [201, 201]; `validated_copy` holds 2 rows for the copy and the audit two "read back a validated copy" lines. No wrong value is filed, but the history doubles | `tests/qa/check_qa_am_1101c_validated.ts` (double-click line) | runtime | Open |
