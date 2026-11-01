@@ -47,7 +47,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // ======================================================== before: PDFs only, nothing to sign, no Online group
   await go("principal");
   const line0 = await p.locator("[data-outputs-line]").innerText();
-  step("C4.6 pass: the principal's Forms panel counts what they get per channel", /Principal applicant gets: \d+ filled PDFs to upload/.test(line0), line0);
+  step("C4.6 pass: the principal's Forms panel counts what they get per channel", /Principal applicant gets: 5 filled PDFs to upload · 2 document checklists \(read, not filed\)/.test(line0), line0);
+  step("C4.6 Major 1 fail: a document checklist is not counted as a filled PDF, and says so on its line", !/7 filled PDFs/.test(line0) && /Checklist · read, not filed/.test(await p.locator('[data-preview-form="IMM 5488"]').innerText()), line0);
   step("C4.6 fail: with no signed or Online line, the count names nothing to sign and no portal", !/to sign|portal/.test(line0) && (await p.locator('[data-output-group="ONLINE"]').count()) === 0 && (await p.locator("[data-to-sign]").count()) === 0, line0);
 
   // ======================================================== the author sets Online, Paper and a hand-signed upload
@@ -56,7 +57,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("setup: three lines changed on the Forms tab's route", rs.every((r) => r.status < 300), rs.map((r) => r.status).join(","));
   await go("principal");
   const line1 = await p.locator("[data-outputs-line]").innerText();
-  step("C4.6 pass: the count names the portal (later wave), the PDFs to upload, to print and mail, and the PDFs to sign", /1 filled on the portal \(later wave\)/.test(line1) && /filled PDFs? to upload/.test(line1) && /1 PDF to print, sign and mail/.test(line1) && /2 PDFs to sign/.test(line1), line1);
+  step("C4.6 pass: the count names the portal (later wave), the PDFs to upload, to print and mail, and the PDFs to sign", /1 filled on the portal \(later wave\)/.test(line1) && /3 filled PDFs to upload/.test(line1) && /1 PDF to print, sign in pen and mail/.test(line1) && /1 PDF to sign by hand and scan/.test(line1) && /2 document checklists/.test(line1), line1);
   const onlineGroup = p.locator('[data-output-group="ONLINE"]');
   const note = await onlineGroup.locator("[data-later-wave]").innerText();
   step("C4.6 pass: the Online group says the portal screens come in a later wave and that no PDF is made", /later wave/.test(note) && /no PDF/.test(note) && (await onlineGroup.locator('[data-preview-form="IMM 1295"]').count()) === 1, note);
@@ -65,13 +66,19 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.6 fail: a PDF upload with no signature carries no signature pill", (await p.locator('[data-preview-form="IMM 5488"] [data-to-sign]').count()) === 0);
   const forms = await p.locator("section[aria-labelledby=pv-f]").innerText();
   step("C4.6 fail-guard: no system name in the Forms panel", !KEYS.test(forms), forms.match(KEYS)?.[0]);
+  step("C4.6 m1 fail-guard: no decision number in the Forms panel", !/P-\d+/.test(forms), forms.match(/P-\d+/)?.[0]);
   await state("principal-channels");
 
   // ======================================================== another person: their own lines
   await go("spouse");
   const line2 = await p.locator("[data-outputs-line]").innerText();
-  step("C4.6 pass: the spouse's count is their own (their IMM 1295 on the portal, IMM 5707 in pen)", /^Spouse or partner gets:/.test(line2) && /1 filled on the portal/.test(line2) && /PDF to print, sign and mail/.test(line2), line2);
+  step("C4.6 pass: the spouse's count is their own (their IMM 1295 on the portal, IMM 5707 in pen)", /^Spouse or partner gets:/.test(line2) && /1 filled on the portal/.test(line2) && /PDF to print, sign in pen and mail/.test(line2), line2);
   step("C4.6 fail: a form filed once for the application is not counted for the spouse", (await p.locator('[data-preview-form="IMM 5475"]').count()) === 0);
+  step("C4.6 Major 2 fail: before it is Online, the couple's IMM 5409 has no later-wave words", (await p.locator('[data-preview-form="IMM 5409"] [data-later-wave-line]').count()) === 0);
+  step("setup: IMM 5409 (filed once for the couple) set to Online", (await set("IMM 5409", { channel: "ONLINE" })).status < 300);
+  await go("spouse");
+  const coupleLine = await p.locator('[data-output-group="COUPLE"] [data-preview-form="IMM 5409"]').innerText();
+  step("C4.6 Major 2 pass: an Online line filed for the couple says the portal screens come in a later wave", /later wave/.test(coupleLine) && /no PDF/.test(coupleLine), coupleLine);
   await state("spouse-channels");
 
   // ======================================================== the released preview keeps the released lines

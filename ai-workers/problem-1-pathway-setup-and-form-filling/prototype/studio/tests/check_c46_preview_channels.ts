@@ -66,6 +66,17 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   ok("C4.6 R4 fail: a form filed once for the application (IMM 5475) is not listed under the spouse", !spouse.forms.some((f: any) => f.form === "IMM 5475") && !!form(v1, "IMM 5475"), spouse.forms.map((f: any) => f.form));
   ok("C4.6 fail-guard: no system name in the words", !KEYS.test(JSON.stringify(v1.forms.map((f: any) => [f.signatureWords, f.laterWave]))));
 
+  // R7 (review Major 1) a document checklist is read, never filed: not a PDF the person gets, never to sign.
+  const lists = v1.forms.filter((f: any) => f.checklist);
+  ok("C4.6 R7 pass: the sample's document checklists (IMM 5488, IMM 5905) are marked as checklists", ["IMM 5488", "IMM 5905"].every((c) => lists.some((f: any) => f.form === c)), lists.map((f: any) => f.form));
+  ok("C4.6 R7 fail: a checklist is never a PDF to sign and never carries the later-wave words", lists.every((f: any) => !f.toSign && !f.laterWave) && outputOf("PDF_UPLOAD", "HAND_SCANNED", true).toSign === false && outputOf("ONLINE", "NONE", true).laterWave === null);
+  ok("C4.6 R7 fail: a filed form is never marked as a checklist", v1.forms.filter((f: any) => !["IMM 5488", "IMM 5905"].includes(f.form)).every((f: any) => f.checklist === false));
+  // R8 (review Major 2) an Online line filed once for the couple carries the later-wave words too.
+  const rc = await set("IMM 5409", { channel: "ONLINE" });
+  const couple = form(await pv("&person=spouse"), "IMM 5409");
+  ok("C4.6 R8 pass: an Online line filed for the couple keeps its group and carries the later-wave words", rc.status < 300 && couple?.group === "COUPLE" && couple.laterWave === LATER_WAVE_ONLINE, couple);
+  ok("C4.6 fail-guard: no decision number in the words a person reads", !/P-\d+/.test(LATER_WAVE_ONLINE));
+
   // R5 released vs draft: the released preview reads the release's lines, not the draft's.
   const rel = (await call("GET", `/combinations/${wp}/workspace?tab=preview&release=1&person=principal`)).body.preview;
   ok("C4.6 R5 fail: the released preview still shows the released channels (the draft's change is not live)", form(rel, "IMM 1295")?.channel === "PDF_UPLOAD" && form(rel, "IMM 5707")?.toSign === false, [form(rel, "IMM 1295")?.channel, form(rel, "IMM 5707")?.signature]);

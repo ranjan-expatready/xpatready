@@ -92,6 +92,8 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
   });
   // C4.6: each line's channel and signature as the release reads them (a line released before W1-10 included).
   const lineAt = new Map((s.forms as { form_number: string; channel?: string; signature?: string }[]).map((f) => [f.form_number, lineOf(f)]));
+  // Review Major 1: a document checklist is read, never filed, so it is not a PDF a person gets.
+  const checklists = new Set((s.forms as { form_number: string; form_kind?: string | null }[]).filter((f) => f.form_kind === "document").map((f) => f.form_number));
   const channelOf = new Map([...lineAt].map(([k, v]) => [k, v.channel]));
   const chosen = people.some((p) => p.subjectId === person && p.role !== "case") ? person : "principal";
   // The application's own questions, documents and forms are shown with the principal applicant, who answers them.
@@ -139,7 +141,7 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
     people: people.filter((p) => p.role !== "case").map((p) => { const x = forPerson(p.subjectId); return { subjectId: p.subjectId, role: p.role, label: p.label, questions: x.questions, asked: x.asked, documents: x.documents.length, forms: x.forms.length }; }),
     questionnaire,
     documents: forPerson(chosen).documents.map((d) => ({ requirement: d.requirement, status: d.status, why: d.why, provided_by: d.provided_by })),
-    forms: forPerson(chosen).forms.map((f) => { const ch = channelOf.get(f.form) ?? "PDF_UPLOAD"; const sig: Signature = lineAt.get(f.form)?.signature ?? "NONE"; return { form: f.form, title: f.title, applies: f.applies, why: f.why, channel: ch, channelWords: CHANNEL_WORDS[ch], noRule: !!(f as { no_rule?: boolean }).no_rule, group: groupOf(f.form, ch), ...outputOf(ch, sig) }; }),
+    forms: forPerson(chosen).forms.map((f) => { const ch = channelOf.get(f.form) ?? "PDF_UPLOAD"; const sig: Signature = lineAt.get(f.form)?.signature ?? "NONE"; return { form: f.form, title: f.title, applies: f.applies, why: f.why, channel: ch, channelWords: CHANNEL_WORDS[ch], noRule: !!(f as { no_rule?: boolean }).no_rule, group: groupOf(f.form, ch), ...outputOf(ch, sig, checklists.has(f.form)) }; }),
     tweaks: tweakList,
     sets,
   };
@@ -148,7 +150,8 @@ export function previewFamily(s: Snapshot, family: FamilyKey | "", person: strin
 /** C4.6 (P-62 §7, P-102, P-143): what one form line gives the person, in words: its signature ("PDF to sign" when a
  *  person signs it by hand or in pen) and, for an Online line, that the portal screens come in a later wave. Extra
  *  fields on the preview form (contracts/workspace.ts is builder B1's file; the web reads them as optional). */
-export const LATER_WAVE_ONLINE = "Typed into the IRCC account from the answer sheet by the case officer. The product makes no PDF for it: portal screens come with the browser extension in a later wave (P-102).";
-export function outputOf(ch: Channel, sig: Signature): { signature: Signature; signatureWords: string; toSign: boolean; laterWave: string | null } {
-  return { signature: sig, signatureWords: SIGNATURE_WORDS[sig], toSign: sig === "HAND_SCANNED" || sig === "PEN", laterWave: ch === "ONLINE" ? LATER_WAVE_ONLINE : null };
+export const LATER_WAVE_ONLINE = "Typed into the IRCC account from the answer sheet by the case officer. The product makes no PDF for it: portal screens come with the browser extension in a later wave.";
+export function outputOf(ch: Channel, sig: Signature, checklist = false): { signature: Signature; signatureWords: string; toSign: boolean; laterWave: string | null; checklist: boolean } {
+  if (checklist) return { signature: "NONE", signatureWords: SIGNATURE_WORDS.NONE, toSign: false, laterWave: null, checklist: true };
+  return { signature: sig, signatureWords: SIGNATURE_WORDS[sig], toSign: sig === "HAND_SCANNED" || sig === "PEN", laterWave: ch === "ONLINE" ? LATER_WAVE_ONLINE : null, checklist: false };
 }
