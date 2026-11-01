@@ -38,13 +38,14 @@ export function savedReading(officialFile: string | null): SavedReading | null {
   const sha256 = createHash("sha256").update(bytes).digest("hex");
   let files: string[]; try { files = readdirSync(RUNS).filter((f) => /-requirements-live-.*\.json$/.test(f)).sort().reverse(); } catch { return null; }
   for (const f of files) {
-    let d: any; try { d = JSON.parse(readFileSync(join(RUNS, f), "utf8")); } catch { continue; }
+    type SavedRun = { caller?: unknown; contract_valid?: unknown; raw_output?: unknown; drafting_run?: { kind?: unknown; run_id?: unknown; inputs?: { official_files?: { file?: unknown; sha256?: unknown }[] } } };
+    let d: SavedRun; try { d = JSON.parse(readFileSync(join(RUNS, f), "utf8")) as SavedRun; } catch { continue; }
     if (d?.caller !== "live" || d?.contract_valid !== true || d?.drafting_run?.kind !== "requirements") continue;
-    if (!(d.drafting_run.inputs?.official_files ?? []).some((x: any) => x?.file === inventory && x?.sha256 === sha256)) continue;
-    let out: any; try { out = typeof d.raw_output === "string" ? JSON.parse(d.raw_output) : d.raw_output; } catch { continue; }
+    if (!(d.drafting_run.inputs?.official_files ?? []).some((x) => x?.file === inventory && x?.sha256 === sha256)) continue;
+    let out: { documents?: unknown }; try { out = (typeof d.raw_output === "string" ? JSON.parse(d.raw_output) : d.raw_output) as { documents?: unknown }; } catch { continue; }
     if (!Array.isArray(out?.documents)) continue;
     let text = ""; try { text = String(JSON.parse(bytes.toString("utf8")).text ?? ""); } catch { /* no text: every quote is dropped */ }
-    return { runFile: `prototype/p2/runs/${f}`, runId: String(d.drafting_run.run_id ?? f.replace(/\.json$/, "")), inventory, sha256, text, docs: out.documents };
+    return { runFile: `prototype/p2/runs/${f}`, runId: String(d.drafting_run.run_id ?? f.replace(/\.json$/, "")), inventory, sha256, text, docs: out.documents as SavedDoc[] };
   }
   return null;
 }
@@ -54,12 +55,12 @@ export type ReadLine = RequirementProposal & { condition_plain: string | null; c
 /** The saved run's condition ({ subject_kind, tree_json: "…" }) as a condition-language root, as p2/assemble.ts toRoot
  *  makes it: the first live drafts named branch keys "conditions"/"condition", renamed to "args"/"arg" (discovery D18),
  *  and the subject kind goes on the root. Null when it has none or the text does not parse. */
-const renameBranches = (n: any): any => {
+const renameBranches = (n: unknown): unknown => {
   if (!n || typeof n !== "object" || Array.isArray(n)) return n;
-  const o: Record<string, unknown> = {};
+  const o: Record<string, unknown> = {}, op = (n as { op?: unknown }).op;
   for (const [k, v] of Object.entries(n)) {
-    if (k === "conditions" && (n.op === "and" || n.op === "or") && Array.isArray(v)) o.args = v.map(renameBranches);
-    else if (k === "condition" && n.op === "not") o.arg = renameBranches(v);
+    if (k === "conditions" && (op === "and" || op === "or") && Array.isArray(v)) o.args = v.map(renameBranches);
+    else if (k === "condition" && op === "not") o.arg = renameBranches(v);
     else o[k] = v;
   }
   return o;
@@ -69,7 +70,7 @@ export const treeOf = (c: unknown): unknown => {
   if (typeof x?.tree_json !== "string") return null;
   let t: unknown; try { t = JSON.parse(x.tree_json); } catch { return null; }
   if (!t || typeof t !== "object" || Array.isArray(t)) return null;
-  return { subjectKind: String(x.subject_kind ?? "").toUpperCase().replace(/[^A-Z0-9_]/g, "_"), ...renameBranches(t) };
+  return { subjectKind: String(x.subject_kind ?? "").toUpperCase().replace(/[^A-Z0-9_]/g, "_"), ...(renameBranches(t) as Record<string, unknown>) };
 };
 /** The rules on a saved reading (P-121), no database: only the lines read from this checklist itself; each complete
  *  (document type, person, kind, and a condition when conditional); its quote found in the checklist's text; no line
@@ -183,7 +184,7 @@ export class Checklists {
       // fields first (C2.6: never a half-applied draft, never a conditional line without its condition).
       if (p.base_or_conditional === "conditional") {
         if (!p.condition_tree || typeof p.condition_tree !== "object") { skipped.push(`${p.document_type} (conditional: write its condition by hand on the combination)`); continue; }
-        const errs = checkCondition(p.condition_tree as any, lib!.fields, lib!.derived);
+        const errs = checkCondition(p.condition_tree, lib!.fields, lib!.derived);
         if (errs.length) { skipped.push(`${p.document_type} (its condition does not fit the library yet: ${errs[0]})`); continue; }
       }
       plan.push({ item: i, typeKey: type.documentTypeKey, p: p as RequirementProposal });
