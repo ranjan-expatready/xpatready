@@ -2,7 +2,7 @@
 // each fact a combination's forms need comes from, per person role, worked out by rules from the snapshot:
 // a document on that role's checklist that supplies it › the client › the case officer. A person's choice over that default and
 // the Pre-qualification tick are the snapshot's `fact_sources` (only when set). Pure: no database, no AI (US$0).
-import { subjectsFor, type Person } from "./render.ts";
+import { formSigners, signsForOthers, subjectsFor, type Person } from "./render.ts";
 import { anyMapped, previewRender } from "./coverage.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
@@ -241,18 +241,11 @@ export function signedScanLines(s: Snapshot): ChecklistLine[] {
   for (const f of s.forms as { form_number: string; title?: string; form_kind?: string; who: string; status?: string; condition?: { subjectKind?: string } | null; condition_plain?: string | null; channel?: string; signature?: string; signed_by?: string }[]) {
     const line = lineOf(f);
     if (line.channel !== "PDF_UPLOAD" || line.signature !== "HAND_SCANNED" || (f.form_kind ?? "data_form") === "document") continue;
-    const by = f.signed_by ?? "person";
-    if (by === "none") continue;
-    const about = [...new Set(subjectsFor(people, f.who, f.condition?.subjectKind).map((h) => roleOf(people, h)))].filter((r) => r !== "case");
-    const signers = new Set<string>();
-    for (const r of about.length ? about : f.who === "case" ? ["principal"] : []) {
-      if (by === "principal_for_family" || (by === "parent_for_minor" && r === "child")) signers.add("principal"); else signers.add(r);
-      if (by === "person_and_representative") signers.add("representative");
-    }
-    const has = new Set(people.map((p) => p.role as string));
+    // X9b (#113 review m6): the one "who signs" rule (render.ts formSigners), read per person role on the preview people.
+    const signers = new Map<string, boolean>();
+    for (const [id, rows] of formSigners(people, f.who, f.signed_by)) { const role = roleOf(people, id); signers.set(role, (signers.get(role) ?? false) || signsForOthers(id, rows)); }
     const base = (f.status ?? "always") === "always";
-    for (const role of [...signers].filter((r) => has.has(r))) {
-      const forOthers = by === "principal_for_family" || (by === "parent_for_minor" && role === "principal" && about.includes("child") && !about.includes("principal"));
+    for (const [role, forOthers] of signers) {
       const reason = `${f.form_number} is filed as PDF upload, signed by hand and scanned: it is printed, signed by hand${forOthers ? " (for the family members it is about)" : ""}, scanned and uploaded.`;
       out.push({
         lineage: `${SIGNED_SCAN}:${f.form_number}:${role}`, role, document: { key: `${SIGNED_SCAN}.${f.form_number}`, name: `${f.form_number} signed by hand and scanned` }, who: WHO_OF_ROLE[role] ?? role,

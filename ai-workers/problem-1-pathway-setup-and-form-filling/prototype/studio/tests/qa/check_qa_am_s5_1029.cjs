@@ -68,7 +68,8 @@ const enc = encodeURIComponent;
 
   // ------------------------------------------------------------ Filed as: only what the edition accepts
   L = await lineOf(wp, F);
-  const notOk = ["PDF_UPLOAD", "SIGNED_PDF_UPLOAD", "ONLINE"].find((c) => !L.accepted.includes(c)), ok = L.accepted.find((c) => c !== L.channel) ?? L.accepted[0];
+  // P-143 (drift fixed 1 Nov): four ways, Online · PDF upload · Paper · Not needed; SIGNED_PDF_UPLOAD is now PDF upload plus a signature.
+  const notOk = ["ONLINE", "PDF_UPLOAD", "PAPER", "NOT_NEEDED"].find((c) => !L.accepted.includes(c)), ok = L.accepted.find((c) => c !== L.channel) ?? L.accepted[0];
   step("C1.6: the line says which ways IRCC accepts and why", L.accepted.length > 0 && !!L.acceptedBasis, { accepted: L.accepted, basis: L.acceptedBasis });
   if (notOk) {
     r = await call("PATCH", `/combinations/${wp}/forms/${enc(F)}/channel`, { channel: notOk });
@@ -153,7 +154,7 @@ const enc = encodeURIComponent;
   const settle = async () => { await p.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 20000 }).catch(() => {}); await p.waitForTimeout(400); };
   await p.goto(`${BASE}/c/${wp}/forms`); await p.getByRole("tablist", { name: "Combination" }).waitFor(); await settle();
   const tp = p.getByRole("tabpanel");
-  step("C11.6 browser: Forms tab shows the finder strip and the form table", /form find|Find the forms|finder/i.test(await tp.innerText()) && await p.locator("table").count() > 0, (await tp.innerText()).slice(0, 120));
+  step("C11.6 browser: Forms tab shows the finder strip and the form table", /form find|Find the forms|finder|AI find/i.test(await tp.innerText()) && await p.locator("table").count() > 0, (await tp.innerText()).slice(0, 120));
   await p.getByRole("button", { name: "Actions for IMM 5475" }).click();
   const items = await p.getByRole("menuitem").allInnerTexts();
   step("C11.6 browser: the row menu offers Redo with AI, Replace edition, Remove", items.length === 3 && /Redo with AI/.test(items[0]) && /Replace edition/.test(items[1]) && /Remove/.test(items[2]), items);
@@ -172,14 +173,15 @@ const enc = encodeURIComponent;
   const panel = p.locator("aside, [role=dialog]").filter({ hasText: "Filed as by default" }).first();
   await panel.waitFor({ timeout: 5000 }).catch(() => {});
   const opts = await panel.getByLabel("Filed as by default").locator("option").evaluateAll((o) => o.map((x) => `${x.textContent}|${x.disabled}`)).catch(() => []);
-  step("C1.6 browser: Filed as lists the three ways; any it greys says IRCC does not accept it", opts.length === 3 && opts.filter((o) => o.endsWith("|true")).every((o) => /does not accept/.test(o)), opts);
+  step("C1.6 browser: Filed as lists the four ways (P-143); any it greys says IRCC does not accept it", opts.length === 4 && opts.filter((o) => o.endsWith("|true")).every((o) => /does not accept/.test(o)), opts);
   const age = panel.getByLabel(/From age/);
   await age.fill("0"); await panel.getByRole("button", { name: "Save to draft" }).click(); await settle();
   step("C11.6 browser: age 0 shows its message on the field, not only a toast", /Minimum age/.test(await panel.innerText().catch(() => "")), (await panel.innerText().catch(() => "")).match(/.{0,40}Minimum age.{0,60}/)?.[0]);
   await p.screenshot({ path: path.join(SHOTS, "02-age-error.png") });
   await p.keyboard.press("Escape");
   // People: Rules / Saved / live greyed.
-  await p.goto(`${BASE}/c/${sv}/questionnaires`); await p.getByRole("tablist", { name: "Combination" }).waitFor(); await settle();
+  // Drift fixed 1 Nov: Who can be in this application moved to Before forms on the Forms tab (P-161 (2), slice C1).
+  await p.goto(`${BASE}/c/${sv}/forms`); await p.getByRole("tablist", { name: "Combination" }).waitFor(); await settle();
   // 29 Oct (W1-15 slice 2): Who can be is folded to one line; its table opens with "Show and edit".
   const showEdit = p.getByRole("button", { name: /^Show and edit/ });
   if (await showEdit.count()) { await showEdit.first().click(); await settle(); }

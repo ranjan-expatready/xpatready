@@ -1,7 +1,7 @@
 // C10.1 the configured checkpoint (DEMO.md "Checkpoints" 2; plan screens/W1-reset-and-sample/c10.1-plan.md): Load sample
 // six, then each DEMO.md row through the screens' services by the people who hold each duty. One check per row, and the
-// rules it must not get round: the author never approves their own library items or release, a held file whose
-// edition cannot be read is never approved, an empty combination is never released, rows 7 and 17 say "not built yet"
+// rules it must not get round: the author never approves their own library items or release, an off-list copy is
+// approved by a second person (X9a) and an older edition is never used, a held file whose edition cannot be read is never approved, an empty combination is never released, rows 7 and 17 say "not built yet"
 // in plain words, IMM 5257 waits for the paid run, no live AI call, Reset returns to blank. US$0.
 //   zsh studio/tools/isolated.sh runtime_c101 4431 start && tsx studio/tests/check_c10_1_configured.ts 4431 xr_studio_runtime_c101
 import { execFileSync } from "node:child_process";
@@ -38,7 +38,15 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
 
   // Row 1: the six's files through the intake; a held file whose edition cannot be read is never approved.
   ok("C10.1 row 1: the six's official files are read through the form intake (code, edition, checksum)", /official files read/.test(r("1").shows) && n(`select count(*) from source_attachment`) > 30, r("1").shows);
-  ok("C10.1 row 1 fail: a held file whose edition cannot be read stays held and is not approved (Break M4)", n(`select count(*) from intake_item where status = 'HELD'`) === (/(\d+) files? (is|are) held/.exec(r("1").why ?? "")?.[1] ? Number(/(\d+) files? (is|are) held/.exec(r("1").why!)![1]) : 0) && n(`select count(*) from approved_source`) === 0, r("1").why);
+  // Row 1 (X9a): an off-list copy of IMM 5476 (11-2021) with a readable edition, held, its IRCC page recorded by the
+  // uploader, approved by a second person; the files whose edition cannot be read stay held and are never approved.
+  const copy = sql(`select sha256 || '|' || created_by || '|' || coalesce(ircc_page, '') || '|' || coalesce(edition_label, '') from intake_item where file_name = 'imm5476e-2021-from-email.pdf' and reason like 'Approved as a source by %' and status = 'DONE'`).split("|");
+  const manifestHas = (hash: string) => (JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "manifest.json"), "utf8")).items as { sha256?: string }[]).some((i) => i.sha256 === hash);
+  ok("C10.1 row 1 / X9a pass: an off-list copy of IMM 5476 (11-2021) was held, its IRCC page recorded by the author, and approved by the Approver (user-B)", r("1").status === "done" && copy[1] === "user-A" && /canada\.ca\/.*imm5476\.html$/.test(copy[2] ?? "") && copy[3] === "IMM 5476 (11-2021)"
+    && n(`select count(*) from approved_source where sha256 = '${copy[0]}' and uploaded_by = 'user-A' and approved_by = 'user-B'`) === 1 && /approved by Approver/.test(r("1").shows), { shows: r("1").shows, copy });
+  ok("C10.1 row 1 / X9a fail-guard: the copy really is off-list (its checksum is on no approved list) and is a different file from the official 2021 one", !!copy[0] && !manifestHas(copy[0]), copy[0]);
+  ok("C10.1 row 1 / X9a fail: approved or not, an edition older than the library's is never used (set aside by the Approver, not in the library, nothing left on To review)", n(`select count(*) from form_edition where edition_label = 'IMM 5476 (11-2021)'`) === 0 && n(`select count(*) from intake_item where sha256 = '${copy[0]}' and status = 'HELD'`) === 0 && n(`select count(*) from intake_item where sha256 = '${copy[0]}' and outcome = 'refused' and reason like 'Set aside by Approver: %'`) === 1 && /set it aside: not used/.test(r("1").shows), r("1").shows);
+  ok("C10.1 row 1 fail: a held file whose edition cannot be read stays held and is not approved (Break M4); the only approved file is the copy", n(`select count(*) from intake_item where status = 'HELD' and outcome = 'held'`) === Number(/(\d+) official files? stays?/.exec(r("1").why ?? "")?.[1] ?? 0) && n(`select count(*) from approved_source`) === 1, r("1").why);
   // Rows 3–4: saved answers replayed (US$0), decided by the author with a reason, one edit and one return kept visible.
   const jobs = n(`select count(*) from drafting_job where kind = 'field_map' and mode = 'REPLAY'`);
   ok("C10.1 row 3: every saved AI field-map answer is replayed (US$0); forms without one are listed as waiting for the paid run", jobs >= 6 && r("3").shows.startsWith(`${jobs} saved`) && /paid run the founder approves/.test(r("3").why ?? ""), r("3"));
@@ -53,6 +61,8 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   const released = sql(`select c.label || '§' || r.version || '§' || p.approver_id from config_release r join combination c on c.id = r.combination_id join pack_version p on p.id = r.pack_version_id`).split("\n").filter(Boolean);
   ok("C10.1 row 10: any release goes through submit by the author, SME sign-off by user-C and approval by user-B", released.every((x) => x.endsWith("§user-B")) && n(`select count(*) from review_submission where status = 'APPROVED' and submitted_by = 'user-A'`) === released.length && (released.length === 0 || n(`select count(*) from review_signoff where actor_id = 'user-C' and action = 'signed'`) > 0), released);
   ok("C10.1 row 10 fail: a combination with no form is never released as configured", n(`select count(*) from config_release r where not exists (select 1 from combination_form f where f.combination_id = r.combination_id)`) === 0 && /no form is on it yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
+  ok("C10.1 row 10 / X9a: the validator's K1 words name a form field by its own caption, never its PDF path (IMM_5707[0].page1[0]…)", /\(K1\)/.test(r("10").why ?? "") && !/[A-Za-z0-9_]+\[\d+\]\./.test(r("10").why ?? "") && /for example "/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
+  ok("C10.1 row 10 / X9a fail-guard: some undecided form fields here do have a raw path and no caption, so the words above are chosen, not lucky", n(`select count(*) from form_field_map where outcome = 'unresolved' and data_path ~ '\\[0\\]\\.' and coalesce(btrim(caption), '') = ''`) > 0);
   ok("C10.1 row 10 fail: a combination the validator refuses stays a draft and its row gives the validator's words", n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 0 && /Visitor visa: Fix \d+ problems? before submitting/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   // Rows 9, 11, 12: wait for release 1 of the Visitor visa and for the paid IMM 5257 run.
   ok("C10.1 rows 9, 11, 12: wait for the Visitor visa's release 1 and the paid IMM 5257 run, said for a person", ["9", "11", "12"].every((id) => r(id).status === "waiting") && /IMM 5257 has no saved field-map answer/.test(r("12").why ?? "") && n(`select count(*) from runtime_case`) === 0, ["9", "11", "12"].map((id) => r(id).why?.slice(0, 80)));

@@ -129,6 +129,31 @@ const scans = (v: any) => v.roles.flatMap((r: any) => r.lines.filter((l: any) =>
   ok("C3.11 M2 engine pass: Preview by person (previewFamily) lists it with the principal's documents", pv.includes("IMM TEST signed by hand and scanned"), pv.slice(-3));
   ok("C3.11 engine pass: a conditional form's signed scan is conditional with the form's own words", !!cond && cond.base === false && /representative/.test(cond.when), cond?.when);
 
+  // ---------------------------------------------------------------- X9b (#113 review m6): one "who signs" rule, so the Documents tab and the case agree
+  // Every "Signed by" × who × condition kind: the roles the Documents tab gives (signedScanLines) are the roles the case
+  // renderer asks for the scan (render on the same preview people), with the same reason. A form whose condition is on
+  // one person kind (PRINCIPAL, CASE) is still about each person its "who" names; the condition decides whether it applies.
+  const withRep = structuredClone(base);
+  withRep.combination = { ...withRep.combination, participants: [{ role: "principal", min: 1, max: 1 }, { role: "spouse_or_partner", min: 0, max: 1 }, { role: "child", min: 0, max: 2 }, { role: "representative", min: 0, max: 1 }] } as typeof withRep.combination;
+  const pp = peopleFor([{ role: "principal", preview: 1 }, { role: "spouse_or_partner", preview: 1 }, { role: "child", preview: 2 }, { role: "representative", preview: 1 }]);
+  const parity: string[] = []; let cases = 0;
+  for (const by of [undefined, "person", "parent_for_minor", "principal_for_family", "person_and_representative", "none"])
+    for (const who of ["each_applicant", "principal_applicant", "spouse_or_partner", "each_dependent_child", "each_person", "case"])
+      for (const kind of [undefined, "PRINCIPAL", "CASE", "DEPENDENT", "EACH_APPLICANT"]) {
+        const s = structuredClone(withRep);
+        s.forms = [{ form_number: "IMM TEST", title: "Test", form_kind: "data_form", who, status: kind ? "conditional" : "always", signature: "HAND_SCANNED", ...(by ? { signed_by: by } : {}),
+          ...(kind ? { condition: { subjectKind: kind, op: "exists", field: "person.date_of_birth" }, condition_plain: "Only if the date of birth is known" } : {}) }] as typeof s.forms;
+        const tab = signedScanLines(s).map((x) => `${x.role}|${x.automatic!.reason}`).sort();
+        const roleOfId = (id: string) => pp.find((p) => p.id === id)?.role ?? id;
+        const caseSide = [...new Set(render(s, pp, new Map()).checklist.filter((d) => d.requirement === "IMM TEST signed by hand and scanned").map((d) => `${roleOfId(d.person)}|${(d as { why: string }).why}`))].sort();
+        cases++;
+        if (JSON.stringify(tab) !== JSON.stringify(caseSide)) parity.push(`${by ?? "not set"} × ${who} × ${kind ?? "no condition"}: tab ${JSON.stringify(tab.map((x) => x.split("|")[0]))} vs case ${JSON.stringify(caseSide.map((x) => x.split("|")[0]))}`);
+      }
+  ok(`X9b m6 pass: the Documents tab and the case agree on who signs and why, in all ${cases} "Signed by" × who × condition-kind cases`, parity.length === 0, parity.slice(0, 4));
+  const onKind = (kind?: string) => { const s = structuredClone(withRep); s.forms = [{ form_number: "IMM TEST", form_kind: "data_form", who: "each_applicant", status: kind ? "conditional" : "always", signature: "HAND_SCANNED", ...(kind ? { condition: { subjectKind: kind, op: "exists", field: "person.date_of_birth" } } : {}) }] as typeof s.forms; return signedScanLines(s).map((x) => x.role).sort(); };
+  const every = onKind();
+  ok("X9b m6 fail-guard: a form on each applicant whose condition is on the principal (or the case) still asks each applicant it is about on the Documents tab, not the principal alone or nobody", every.length >= 3 && JSON.stringify(onKind("PRINCIPAL")) === JSON.stringify(every) && JSON.stringify(onKind("CASE")) === JSON.stringify(every), { PRINCIPAL: onKind("PRINCIPAL"), CASE: onKind("CASE"), every });
+
   const out = join(import.meta.dirname, "..", "evidence", "c3-11-signed-scan");
   mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "result.json"), JSON.stringify({ at: new Date().toISOString(), port: PORT, pass, fail, log }, null, 2));

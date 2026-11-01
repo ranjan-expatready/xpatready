@@ -3,6 +3,7 @@
 // and None apply by click, with the client changing an answer in between; the library pages no browser test visits.
 // Findings QA-38 to QA-42 fail here today and pass when fixed; the rest guard what works. Setup the walk does not test
 // goes through the API (P-33). Every person and value is Sample. No model call (US$0).
+// Repaired 1 Nov: the capture setup and the parked online routes are gone (P-102); the release files IMM 5257 Online directly.
 //   zsh studio/tools/isolated.sh qa_x1 4476 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4476 xr_studio_qa_x1
 //   node studio/tests/qa/check_qa_explore_1025.cjs 4476 xr_studio_qa_x1
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
@@ -23,42 +24,30 @@ const run = Date.now().toString(36).slice(-5);
   const vv = sql("select id from combination where combination_key='vv.single'");
   // ───────────────────────── setup: IMM 5257 filed Online, released as a new version (not under test)
   if (Number(sql(`select count(*) from config_release where combination_id='${vv}'`)) < 2) {
-    const c = (await call("POST", "/captures", { portal: "ircc_portal", form: "IMM 5257", title: "Application for a visitor visa (online)", applicationType: "Visitor visa" })).body;
-    await upload(`/captures/${c.id}/screens`, ["imm5257-online-s1-personal.html", "imm5257-online-s2-marital.html", "imm5257-online-s3-language.html"]);
-    await call("POST", `/captures/${c.id}/finish`);
-    await wait(async () => ((await call("GET", `/captures/${c.id}`)).body.review_file ?? "").endsWith(".pdf"));
-    await call("POST", `/captures/${c.id}/approve`, undefined, "user-B");
-    const ed = sql(`select form_edition_id from portal_capture where id='${c.id}'`);
-    await call("PATCH", `/combinations/${vv}/portal`, { portal: "ircc_portal" });
+    // Drift fixed 1 Nov: portal capture, screen maps and the IRCC Portal choice were parked with the browser extension
+    // (P-102, W1-02); Online stays a choice with a later-wave note. The second release now just files IMM 5257 Online.
     await call("PATCH", `/combinations/${vv}/forms/IMM 5257/channel`, { channel: "ONLINE" });
-    await call("POST", `/online-versions/${ed}/screen-map/draft`);
-    await call("POST", `/online-versions/${ed}/screen-map/accept`, {}, "user-C");
-    for (const i of sql(`select data_path from form_field_map where form_edition_id='${ed}' and outcome='unresolved'`).split("\n").filter(Boolean))
-      await call("PATCH", `/online-versions/${ed}/screen-map`, i === "birthCity" ? { input: i, fact: "person.place_of_birth_city" } : { input: i, notAFact: true, reason: "Asked elsewhere in this case (qa explore)" }, "user-C");
-    await call("POST", `/editions/${ed}/option-maps/draft`);
-    await call("PATCH", `/editions/${ed}/option-maps`, { dataPath: "sex", map: { f_female: "FEMALE", m_male: "MALE", u_unknown: "UNKNOWN", x_another_gender: "ANOTHER" } });
     await call("POST", `/combinations/${vv}/submit`, { note: "qa explore: IMM 5257 filed Online" });
     const sub = (await call("GET", `/combinations/${vv}/review`, undefined, "user-C")).body.submission;
     await call("POST", `/combinations/${vv}/signoff`, { items: (sub?.changeSummary ?? []).map((x) => `${x.kind}|${x.key}`), action: "signed" }, "user-C");
     await call("POST", `/combinations/${vv}/approve`, undefined, "user-B");
   }
   const latest = Number(sql(`select max(version) from config_release where combination_id='${vv}'`));
-  step("setup: Visitor visa has a second release that files IMM 5257 Online (capture, second person, screen map)", latest >= 2, { latest });
+  step("setup: Visitor visa has a second release that files IMM 5257 Online (later wave, P-102)", latest >= 2, { latest });
 
   // ───────────────────────── API routes no test reached (graph G3): valid reads answer, bad ids are 404 in plain words, writes refuse
   // the wrong person, nothing answers 5xx.
   const Z = "00000000-0000-0000-0000-000000000000";
   const att = sql(`select id from source_attachment limit 1`), lineage = sql(`select lineage_key from document_requirement limit 1`);
   const probes = [
-    ["GET /portals", await call("GET", `/portals`), 200], ["GET /library/forms/:code/editions", await call("GET", `/library/forms/IMM%205257/editions`), 200],
+    ["GET /library/forms/:code/editions", await call("GET", `/library/forms/IMM%205257/editions`), 200],
     ["GET /library/forms/:code/editions (unknown)", await call("GET", `/library/forms/NOPE/editions`), 404], ["GET /library/answer-lists", await call("GET", `/library/answer-lists`), 200],
-    ["GET /library/merges", await call("GET", `/library/merges`), 200], ["GET /combinations/:id/online-forms", await call("GET", `/combinations/${vv}/online-forms`), 200],
-    ["GET /combinations/:id/preview", await call("GET", `/combinations/${vv}/preview`), 200], ["GET /combinations/:id/preview (bad id)", await call("GET", `/combinations/not-a-uuid/preview`), 404],
+    ["GET /library/merges", await call("GET", `/library/merges`), 200], ["GET /combinations/:id/preview", await call("GET", `/combinations/${vv}/preview`), 200], ["GET /combinations/:id/preview (bad id)", await call("GET", `/combinations/not-a-uuid/preview`), 404],
     ["PATCH /combinations/:id/requirements/:lineage (empty)", await call("PATCH", `/combinations/${vv}/requirements/${lineage}`, {}), 400],
     ["PATCH /combinations/:id/requirements/:lineage (client)", await call("PATCH", `/combinations/${vv}/requirements/${lineage}`, {}, CLIENT), 403],
     ["POST /combinations/:id/rules (empty)", await call("POST", `/combinations/${vv}/rules`, {}), 400], ["PATCH /combinations/:id/rules/:key (empty)", await call("PATCH", `/combinations/${vv}/rules/nope`, {}), 400],
     ["GET /library/fields/:key", await call("GET", `/library/fields/person.uci`), 200], ["GET /library/fields/:key (unknown)", await call("GET", `/library/fields/nope`), 404],
-    ["GET /library/sections", await call("GET", `/library/sections`), 200], ["POST /library/sections (no title)", await call("POST", `/library/sections`, {}), 400],
+    ["GET /library/sections", await call("GET", `/library/sections`), 200], ["POST /library/sections (by hand: no free add, C3.6; drift fixed 1 Nov)", await call("POST", `/library/sections`, {}), 410],
     ["GET /combinations/:id/attachments", await call("GET", `/combinations/${vv}/attachments`), 200], ["GET /attachments/:id/draft-options", await call("GET", `/attachments/${att}/draft-options`), 200],
     ["GET /attachments/:id/draft-options (bad id)", await call("GET", `/attachments/not-a-uuid/draft-options`), 404], ["GET /ledger", await call("GET", `/ledger`), 200],
     ["GET /official-library", await call("GET", `/official-library`), 200], ["GET /artifacts/:id/file (unknown)", await call("GET", `/artifacts/${Z}/file`), 404],
@@ -67,8 +56,9 @@ const run = Date.now().toString(36).slice(-5);
   ];
   const off = probes.filter(([, r, want]) => r.status !== want || (want >= 400 && !(r.body?.detail ?? r.body?.message)));
   step(`G3: ${probes.length} API probes of routes no test reached answer as expected, refusals in plain words, no 5xx`, !off.length, off.map(([n, r]) => `${n}: ${r.status}`));
-  const r404 = await call("GET", `/combinations/${Z}/online-forms`);
-  step("QA-43 C2.7: online forms of a combination that does not exist is 404, as for a malformed id (not 200 with an empty list)", r404.status === 404, r404.status);
+  // QA-43's route (online forms of a combination) left the app with the extension (P-102): it must now be gone for any id.
+  const r404 = await call("GET", `/combinations/${Z}/online-forms`), rGone = await call("GET", `/combinations/${vv}/online-forms`);
+  step("C11.1 P-102: the parked online-forms route is gone (404) for an unknown and a real combination", r404.status === 404 && rGone.status === 404, [r404.status, rGone.status]);
 
   const browser = await chromium.launch({ channel: "chrome" });
   const page = async (actor, width) => {
@@ -94,8 +84,10 @@ const run = Date.now().toString(36).slice(-5);
 
   // ───────────────────────── QA-40: the forms panel of a case whose release files IMM 5257 Online
   const panel = await o.locator("section", { has: o.getByRole("heading", { name: "Forms", exact: true }) }).first().innerText().catch(async () => text(o));
-  step("C7.1: a form filed Online is not offered as a PDF copy (no IMM 5257 Generate)", !(await o.getByRole("heading", { name: /IMM 5257 for Sample Applicant N/ }).count()));
-  step("QA-40 C7.6, C7.7: the forms panel still names IMM 5257 and says it is filed Online on the IRCC Portal (it is not silently missing)", /IMM 5257/.test(panel) && /Online/.test(panel), panel.replace(/\s+/g, " ").slice(0, 200));
+  // P-145 (drift fixed 1 Nov): an Online line now offers one PDF copy marked "not for filing" instead of no copy at all.
+  const onl = (await text(o)).match(/IMM 5257 · filed Online \(later wave\).{0,80}/)?.[0] ?? "";
+  step("C7.1 P-145: a form filed Online is offered only as a copy not for filing (IMM 5257 · filed Online (later wave) · PDF copy, not for filing)", /not for filing|Answer sheet only/.test(onl), onl || "(no IMM 5257 Online card)");
+  step("QA-40 C7.6, C7.7: the forms panel still names IMM 5257 and says it is filed Online (later wave; it is not silently missing)", /IMM 5257/.test(panel) && /Online/.test(panel), panel.replace(/\s+/g, " ").slice(0, 200));
 
   // ───────────────────────── C6.6 by click: Confirm section; refused when the client changed an answer meanwhile
   const sub = (await call("GET", `/runtime/cases/${caseId}`, undefined, OFFICER)).body;
@@ -135,7 +127,7 @@ const run = Date.now().toString(36).slice(-5);
   step("QA-39 C3.10: a field page names people by role, not by login id (no 'user-A')", !/\buser-[A-Z]\b/.test(fieldText), fieldText.match(/.{30}\buser-[A-Z]\b.{5}/)?.[0]);
   const s = await page("user-A", 390); await s.goto(`${BASE}/library/fields/person.uci`); await s.getByText("Where it is asked").waitFor();
   const sw = await s.evaluate(() => document.documentElement.scrollWidth);
-  step("QA-39: a field page fits a 390 px phone (no sideways scroll)", sw <= 391, `${sw} px`);
+  step("QA-137 (was QA-39) C3.10: a field page fits a 390 px phone (no sideways scroll)", sw <= 391, `${sw} px`);
   // Pages no browser test visited (graph G4): each opens with its heading and no page error, as author and approver.
   const job = sql(`select id from drafting_job where combination_id='${vv}' limit 1`), batch = sql("select id from ai_batch limit 1");
   const errors = []; a.on("pageerror", (e) => errors.push(String(e)));

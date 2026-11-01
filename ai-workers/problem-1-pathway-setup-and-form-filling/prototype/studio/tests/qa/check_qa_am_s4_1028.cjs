@@ -87,16 +87,19 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   step("Review M8: closing the drawer puts focus back on the form number", await a.evaluate(() => /IMM 5476/.test(document.activeElement?.textContent ?? "")), await a.evaluate(() => document.activeElement?.outerHTML?.slice(0, 80)));
 
   // ═════════════ 2. What IRCC accepts set by a person (C11.18): pass and fail
-  const ac1 = await call("POST", `/library/forms/${enc("IMM 5409")}/accepts`, { channels: "PDF" });
+  const ac1 = await call("POST", `/library/forms/${enc("IMM 5409")}/accepts`, { account: "ANY", channels: ["PDF_UPLOAD"] });
   step("C11.18 fail: neither a canada.ca line nor a reason is refused (400, plain)", ac1.status === 400 && !!ac1.body?.detail, `${ac1.status} ${ac1.body?.detail}`);
-  const ac2 = await call("POST", `/library/forms/${enc("Guide 5256")}/accepts`, { channels: "PDF", reason: "qa: a guide is never filed" });
+  const ac2 = await call("POST", `/library/forms/${enc("Guide 5256")}/accepts`, { account: "ANY", channels: ["PDF_UPLOAD"], reason: "qa: a guide is never filed" });
   step("C11.18 fail: a guide is refused (409, never filed)", ac2.status === 409, `${ac2.status} ${ac2.body?.detail}`);
-  const ac3 = await call("POST", `/library/forms/${enc("IMM 5409")}/accepts`, { channels: "PDF", reason: "qa: approver tries" }, "user-B");
+  const ac3 = await call("POST", `/library/forms/${enc("IMM 5409")}/accepts`, { account: "ANY", channels: ["PDF_UPLOAD"], reason: "qa: approver tries" }, "user-B");
   step("C11.18 fail: the approver (no author duty) cannot propose it (403)", ac3.status === 403, ac3.status);
   await openLib(a);
   await a.locator("main tbody tr td button").filter({ hasText: /^IMM 5409$/ }).click(); await a.getByRole("dialog", { name: /IMM 5409/ }).waitFor();
-  await a.getByRole("button", { name: /Set what IRCC accepts/ }).click();
-  await a.getByRole("combobox", { name: "IRCC accepts" }).selectOption("PDF");
+  // P-143 (drift fixed 1 Nov): the panel now asks which IRCC account and offers the four ways as checkboxes; the API takes
+  // { account, channels: [...] } instead of one "PDF" / "ONLINE" value.
+  await a.getByRole("button", { name: /what IRCC accepts/ }).click();
+  await a.getByRole("combobox", { name: "For which IRCC account" }).selectOption("ANY");
+  await a.getByRole("dialog", { name: /IMM 5409/ }).getByRole("checkbox", { name: /^PDF upload/ }).check();
   await a.getByRole("textbox", { name: "The canada.ca line it comes from" }).fill("Upload this form along with your online application if it applies to you (qa Sample).");
   await a.getByRole("button", { name: "Send for a second person" }).click(); await wait(1500);
   const accChange = sql("select id from library_change where action='SET_ACCEPTS' and status='WAITING' limit 1");
@@ -106,7 +109,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const b = await page("user-B");
   if (accChange) { await b.goto(`${BASE}/review/change/${accChange}`); await b.locator("main h1").waitFor(); await b.getByRole("button", { name: "Approve", exact: true }).click(); await wait(1500); }
   const after = (await call("GET", "/library/forms/list")).body.rows.find((r) => r.code === "IMM 5409");
-  step("C11.18 pass: after the second person approves, IMM 5409 shows PDF upload, set by a person (Sample)", after?.accepts === "PDF" && /PERSON/.test(after?.accepts_basis ?? ""), `${after?.accepts} ${after?.accepts_basis}`);
+  step("C11.18 pass: after the second person approves, IMM 5409 shows PDF upload, set by a person (Sample)", after?.accepts === "PDF upload" && /PERSON/.test(after?.accepts_basis ?? ""), `${after?.accepts} ${after?.accepts_basis}`);
 
   // ═════════════ 3. Upload: one door, duplicates, held, Delete when unused (P-103, P-116)
   const up = async (files, actor = "user-A") => { const fd = new FormData(); for (const [name, buf] of files) fd.append("files", new Blob([buf], { type: "application/pdf" }), name); const r = await fetch(`${BASE}/api/library/forms/upload`, { method: "POST", headers: { "x-actor": actor }, body: fd }); return { status: r.status, body: await r.json().catch(() => null) }; };
