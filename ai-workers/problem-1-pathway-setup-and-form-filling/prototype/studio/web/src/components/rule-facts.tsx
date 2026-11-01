@@ -7,19 +7,21 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useSessionView } from "@/lib/api";
 import { Button, Field, Input, Select } from "@/components/ui/controls";
 
+type RuleRef = { kind: string; key: string; sentence: string };
 type RuleFact = { fact: string; rules: { kind: string; key: string; sentence: string }[]; waitingProposal: string | null };
 const TYPE_WORDS: Record<string, string> = { text: "Text", yes_no: "Yes or no", date: "Date", code: "A list to choose from", country: "Country", address: "Address in parts", number: "Number", phone: "Phone", email: "Email" };
 
 export function RuleFacts({ combinationId }: { combinationId: string }) {
-  const q = useQuery<{ facts: RuleFact[]; types: string[] }>({ queryKey: ["rule-facts", combinationId], queryFn: () => api(`/combinations/${combinationId}/rule-facts`) });
+  const q = useQuery<{ facts: RuleFact[]; types: string[]; rules?: RuleRef[]; subjects?: string[] }>({ queryKey: ["rule-facts", combinationId], queryFn: () => api(`/combinations/${combinationId}/rule-facts`) });
   const { canAuthor } = useSessionView();
-  const facts = q.data?.facts ?? [];
-  if (!facts.length) return null;
+  const facts = q.data?.facts ?? [], rules = q.data?.rules ?? [];
+  if (!facts.length && !(canAuthor && rules.length)) return null;
   return (
     <section aria-labelledby="rf-h" className="space-y-2 rounded-lg border border-border p-3" data-rule-facts>
-      <h3 id="rf-h" className="text-sm font-semibold">Facts a rule needs that no form asks · {facts.length}</h3>
+      <h3 id="rf-h" className="text-sm font-semibold">Facts a rule needs that no form asks{facts.length ? ` · ${facts.length}` : ""}</h3>
       <p className="text-xs text-text-muted">A fact enters the library only from a source. These are read by a rule here but are not in the library yet: name the rule, say what the fact means, and it goes to To review as a proposal (no AI, US$0). Sample until the immigration expert confirms.</p>
-      <ul className="space-y-2">{facts.map((f) => <FactRow key={f.fact} combinationId={combinationId} f={f} types={q.data?.types ?? []} canAuthor={canAuthor} />)}</ul>
+      {facts.length ? <ul className="space-y-2">{facts.map((f) => <FactRow key={f.fact} combinationId={combinationId} f={f} types={q.data?.types ?? []} canAuthor={canAuthor} />)}</ul> : null}
+      {canAuthor && rules.length ? <NewFact combinationId={combinationId} rules={rules} types={q.data?.types ?? []} subjects={q.data?.subjects ?? ["person"]} /> : null}
     </section>
   );
 }
@@ -53,5 +55,43 @@ function FactRow({ combinationId, f, types, canAuthor }: { combinationId: string
         </div>
       ) : null}
     </li>
+  );
+}
+
+const SUBJECT_WORDS: Record<string, string> = { person: "A person in the application", case: "The case", application: "The application", sponsor: "The sponsor", employer: "The employer" };
+
+/** C3.6 (Day-0 acceptance): name a rule and say the new fact in words; the system builds the key (never typed). */
+function NewFact({ combinationId, rules, types, subjects }: { combinationId: string; rules: RuleRef[]; types: string[]; subjects: string[] }) {
+  const [open, setOpen] = React.useState(false), [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null), [done, setDone] = React.useState<string | null>(null);
+  const [rule, setRule] = React.useState(rules[0]?.key ?? ""), [label, setLabel] = React.useState(""), [meaning, setMeaning] = React.useState(""), [valueType, setType] = React.useState(""), [subject, setSubject] = React.useState(subjects[0] ?? "person"), [nearReason, setNear] = React.useState("");
+  const [near, setNearAsked] = React.useState(false);
+  const add = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const r = await api<{ key: string }>(`/combinations/${combinationId}/rules/${encodeURIComponent(rule)}/fact`, { method: "POST", json: { label, meaning, valueType, subject, ...(near && nearReason.trim() ? { nearReason } : {}) } });
+      setDone(`Proposed as ${r.key}: it waits on To review › Proposals (not meaning-checked; a second person approves it).`); setOpen(false); setLabel(""); setMeaning(""); setNear(""); setNearAsked(false);
+      requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-new-fact-done] a")?.focus());
+    } catch (e) { const m = (e as Error).message; setErr(m); if (/is close to/.test(m)) setNearAsked(true); } finally { setBusy(false); }
+  };
+  return (
+    <div className="space-y-2 border-t border-border pt-2 text-sm" data-new-fact>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-text-muted">A rule here needs a fact the library doesn't have? Name the rule and say the fact in words.</span>
+        <Button size="sm" variant="secondary" aria-expanded={open} aria-controls="rf-new" onClick={() => { setOpen((o) => !o); setDone(null); }}>Add a fact a rule needs</Button>
+      </div>
+      {done ? <p className="text-xs" data-new-fact-done role="status">{done} <Link className="text-text-link underline" to="/review/proposals">Open Proposals</Link></p> : null}
+      {open ? (
+        <div id="rf-new" className="grid gap-2 sm:grid-cols-2">
+          <Field label="The rule that needs it" className="sm:col-span-2"><Select value={rule} onChange={(e) => setRule(e.target.value)}>{rules.map((r) => <option key={`${r.kind}:${r.key}`} value={r.key}>{r.sentence}</option>)}</Select></Field>
+          <Field label="Name a person reads"><Input value={label} maxLength={120} onChange={(e) => setLabel(e.target.value)} /></Field>
+          <Field label="About whom"><Select value={subject} onChange={(e) => setSubject(e.target.value)}>{subjects.map((s) => <option key={s} value={s}>{SUBJECT_WORDS[s] ?? s}</option>)}</Select></Field>
+          <Field label="Answer type"><Select value={valueType} onChange={(e) => setType(e.target.value)}><option value="">Choose…</option>{types.map((t) => <option key={t} value={t}>{TYPE_WORDS[t] ?? t}</option>)}</Select></Field>
+          <Field label="What it means"><Input value={meaning} maxLength={500} onChange={(e) => setMeaning(e.target.value)} /></Field>
+          {near ? <Field label="Why it is not the same as the close field" className="sm:col-span-2"><Input value={nearReason} maxLength={300} onChange={(e) => setNear(e.target.value)} /></Field> : null}
+          <div className="sm:col-span-2"><Button size="sm" busy={busy} onClick={() => void add()}>Propose it · US$0</Button></div>
+          {err ? <p role="alert" className="text-sm text-text-danger sm:col-span-2">{err}</p> : null}
+        </div>
+      ) : null}
+    </div>
   );
 }

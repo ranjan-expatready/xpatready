@@ -12,6 +12,8 @@ import { canonical } from "../../../contracts/rules.ts";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { actorOf, Audit, Db, fail, need, readerOf, type Actor } from "./core.ts";
 import { insertProposals } from "./proposals.ts";
+import { keyFor } from "./library-changes.ts";
+import { LibrarySources } from "./library-sources.ts";
 
 /** A rule that reads facts: where it sits, its key there, its sentence and its condition tree. */
 export type RuleRef = { kind: "form" | "question" | "requirement" | "rule" | "check"; key: string; sentence: string; tree: unknown };
@@ -46,6 +48,13 @@ export function rulesOf(s: Snapshot): RuleRef[] {
   return out;
 }
 
+/** Every rule a person can name for a new fact: the ones with a condition, plus the combination's rules without one. */
+export function namedRules(s: Snapshot): RuleRef[] {
+  const all = rulesOf(s);
+  for (const r of s.rules) if (!all.some((x) => x.kind === "rule" && x.key === r.id)) all.push({ kind: "rule", key: r.id, sentence: clip(`Rule ${r.id}: ${[r.when_plain, r.then].filter(Boolean).join(", then ") || "no sentence yet"}`), tree: r.when ?? null });
+  return all;
+}
+
 /** The facts the combination's rules read that neither the library nor a derived definition has, each with its rules.
  *  Pure: the screen's list and the add's checks use the same answer. */
 export function missingRuleFacts(rules: RuleRef[], library: Set<string>, derived: Set<string>): { fact: string; rules: RuleRef[] }[] {
@@ -62,9 +71,29 @@ export const AddRuleFact = z.object({
   valueType: z.enum(RULE_FACT_TYPES as [string, ...string[]], { message: `Choose the answer type: ${RULE_FACT_TYPES.join(", ")}.` }),
 }).strict();
 
+/** The add by a rule's key (Day-0 acceptance C3.6, P-158 (5)): the person names the rule and says the fact in words;
+ *  the system builds the key (subject.name), so a typed key is refused. A name close to a live field's needs a reason. */
+export const FACT_SUBJECTS = ["person", "case", "application", "sponsor", "employer"] as const;
+export const AddFactForRule = z.object({
+  label: z.string({ error: "Give the fact a name a person reads." }).trim().min(2, "Give the fact a name a person reads (2 characters or more).").max(120),
+  meaning: z.string({ error: "Say what the fact means." }).trim().min(10, "Say what the fact means, in a sentence (10 characters or more).").max(500),
+  valueType: z.enum(RULE_FACT_TYPES as [string, ...string[]], { message: `Choose the answer type: ${RULE_FACT_TYPES.join(", ")}.` }),
+  subject: z.enum(FACT_SUBJECTS, { message: `Say whom the fact is about: ${FACT_SUBJECTS.join(", ")}.` }).default("person"),
+  nearReason: z.string().trim().min(10, "Say in a sentence why it is not the same as the field it is close to (10 characters or more).").max(300).optional(),
+}).strict();
+
+/** A label's words, for the near-duplicate test (lowercase letters and digits). */
+const wordsOf = (s: string) => s.normalize("NFKC").toLocaleLowerCase("en-CA").split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+/** Pure: the live labels a new name is close to: one's words appear, in order, inside the other's, and they differ. */
+export function nearLabels(label: string, live: string[]): string[] {
+  const a = wordsOf(label).join(" ");
+  const inside = (x: string, y: string) => ` ${y} `.includes(` ${x} `);
+  return live.filter((l) => { const b = wordsOf(l).join(" "); return !!b && !!a && a !== b && (inside(b, a) || inside(a, b)); });
+}
+
 @Injectable()
 export class RuleFacts {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(LibrarySources) private readonly sources: LibrarySources) {}
 
   private async combination(id: string) {
     const c = await this.db.combination.findUnique({ where: { id }, select: { id: true, workspaceId: true, combinationKey: true } }).catch(() => null);
@@ -90,7 +119,9 @@ export class RuleFacts {
   async list(id: string) {
     const c = await this.combination(id);
     const { missing, waitingFor } = await this.state(c);
-    return { facts: missing.map((m) => ({ fact: m.fact, rules: m.rules.map(({ kind, key, sentence }) => ({ kind, key, sentence })), waitingProposal: waitingFor.get(m.fact) ?? null })), types: RULE_FACT_TYPES };
+    const { snapshot } = await buildSnapshot(this.db, c.workspaceId, c.id, "draft");
+    return { facts: missing.map((m) => ({ fact: m.fact, rules: m.rules.map(({ kind, key, sentence }) => ({ kind, key, sentence })), waitingProposal: waitingFor.get(m.fact) ?? null })), types: RULE_FACT_TYPES,
+      rules: namedRules(snapshot).map(({ kind, key, sentence }) => ({ kind, key, sentence })), subjects: FACT_SUBJECTS };
   }
 
   /** One `field` proposal for a fact a named rule reads, through the one door. */
@@ -133,11 +164,56 @@ export class RuleFacts {
     await this.audit.log(c.workspaceId, actor.id, "proposed", "rule fact", b.fact, `${actor.name} proposed the fact ${b.fact} ("${b.label}") for ${rule!.sentence.split(":")[0]} (Sample; a second person approves it)`, undefined, c.id);
     return { proposalId, fact: b.fact, rule: { key: rule!.key, sentence: rule!.sentence } };
   }
+
+  /** C3.6 (Day-0 acceptance): one `field` proposal for a new fact a named rule needs; the key is built, never typed. */
+  async addForRule(actor: Actor, id: string, ruleKey: string, body: unknown) {
+    if (body && typeof body === "object" && ("key" in body || "fact" in body)) fail("Name the fact in words only: the system builds its key from the subject and the name, so a typed key is not accepted.");
+    const parsed = AddFactForRule.safeParse(body ?? {});
+    if (!parsed.success) fail(parsed.error.issues[0]?.message ?? "Name the fact in words.");
+    const b = parsed.data!;
+    const c = await this.combination(id);
+    const { snapshot } = await buildSnapshot(this.db, c.workspaceId, c.id, "draft");
+    const rule = namedRules(snapshot).find((r) => r.key === ruleKey);
+    if (!rule) fail(`No rule, check or condition "${ruleKey}" in this combination: name a rule it has.`, HttpStatus.NOT_FOUND);
+    need(actor, "author");
+    const fields = await this.db.canonicalField.findMany({ where: { workspaceId: c.workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true, label: true } });
+    const same = fields.find((f) => f.label && normalizeLabel(f.label) === normalizeLabel(b.label));
+    if (same) {
+      const used = (await this.sources.usedIn("field", c.workspaceId)).get(same.canonicalFieldKey) ?? [];
+      fail(`"${b.label}" is already the library field ${same.canonicalFieldKey}, used in ${used.length ? used.join(", ") : "no combination yet"}: the rule can read it as it is.`, HttpStatus.CONFLICT);
+    }
+    const near = nearLabels(b.label, fields.map((f) => f.label ?? "").filter(Boolean)).slice(0, 5);
+    if (near.length && !b.nearReason) fail(`"${b.label}" is close to the library's ${near.map((n) => `"${n}"`).join(", ")}: say why it is not the same (a one-line reason the second person reads), or use the existing field.`);
+    const key = keyFor(b.subject, b.label, new Set(fields.map((f) => f.canonicalFieldKey)));
+    const sha256 = createHash("sha256").update(canonical((rule!.tree ?? {}) as any)).digest("hex"); // eslint-disable-line @typescript-eslint/no-explicit-any -- same as add()
+    const name = rule!.sentence.split(":")[0];
+    const { proposalId } = await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`rule-fact:${c.id}:${normalizeLabel(b.label)}`}))`;
+      if (await tx.proposalItem.findFirst({ where: { workspaceId: c.workspaceId, kind: "field", status: "waiting", identityKey: normalizeLabel(b.label) }, select: { id: true } }))
+        fail(`A proposal to add "${b.label}" is already waiting on To review › Proposals: decide it there.`, HttpStatus.CONFLICT);
+      const job = await tx.draftingJob.create({ data: { workspaceId: c.workspaceId, combinationId: c.id, kind: "rule_fact", mode: "LOCAL", status: "COMPLETED", costUsd: 0, startedBy: actor.id, finishedAt: new Date(),
+        message: `${actor.name} named ${name} as needing "${b.label}": one library proposal (rules only, no AI, US$0).`, detail: { operation: "rule_fact", rule: rule!.key, ruleKind: rule!.kind, fact: key } } });
+      const [proposalId] = await insertProposals(tx, c.workspaceId, [{
+        kind: "field", runId: job.id, step: "rule_fact", scope: { formEdition: null, combinationId: c.id }, landsOn: "library", reuse: { match: "new", existingKey: null },
+        payload: { kind: "field", label: b.label, aliases: [], meaning: b.meaning, valueType: b.valueType, subject: b.subject, formBox: null },
+        source: { file: `rule ${rule!.key} (${c.combinationKey})`, sha256, edition: null, page: null, quote: rule!.sentence, quoteFound: true, rule: { key: rule!.key, sentence: rule!.sentence } },
+        rounds: { draft: null, check: null },
+        rules: [{ rule: "named_rule_exists", passed: true, why: null }, { rule: "not_in_library", passed: true, why: null }, ...(near.length ? [{ rule: "near_duplicate_reason", passed: true, why: b.nearReason ?? null }] : [])],
+        agreement: "rules_only", confidence: "check", reason: "Added for a rule, with a meaning a person wrote; not meaning-checked (P-95): a second person checks the name and meaning.",
+        origin: "rules", identity: { key: normalizeLabel(b.label), near, nearReason: b.nearReason ?? null }, relatesTo: null, revision: null, basis: "SAMPLE",
+        work: { ruleFact: key, ruleKind: rule!.kind },
+      }]);
+      return { proposalId };
+    }, { timeout: 30_000, maxWait: 10_000 });
+    await this.audit.log(c.workspaceId, actor.id, "proposed", "rule fact", key, `${actor.name} proposed the fact ${key} ("${b.label}") for ${name} (Sample; not meaning-checked; a second person approves it)`, undefined, c.id);
+    return { proposalId, key, meaningChecked: false, rule: { key: rule!.key, sentence: rule!.sentence } };
+  }
 }
 
 @Controller("api")
 export class RuleFactsController {
   constructor(@Inject(RuleFacts) private readonly r: RuleFacts) {}
   @Get("combinations/:id/rule-facts") list(@Headers("x-actor") a: string | undefined, @Param("id") id: string) { readerOf(a); return this.r.list(id); }
+  @Post("combinations/:id/rules/:key/fact") addForRule(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Param("key") key: string, @Body() b: unknown) { return this.r.addForRule(actorOf(a), id, key, b); }
   @Post("combinations/:id/rule-facts") add(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Body() b: unknown) { return this.r.add(actorOf(a), id, b); }
 }

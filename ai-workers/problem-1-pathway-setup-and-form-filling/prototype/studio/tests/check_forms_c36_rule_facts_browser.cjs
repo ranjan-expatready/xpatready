@@ -1,7 +1,7 @@
 // C3.6 (P-158 (5); forms lane): "Facts a rule needs that no form asks" on a combination's Questionnaires tab, walked in a
 // real browser as the configuration author: the panel lists a fact a rule reads, its form refuses an incomplete add in
 // plain words, a complete add becomes a proposal that waits on To review › Proposals, and the panel is gone once nothing
-// is missing. axe (WCAG 2.2 AA) on the open form; no sideways scroll at 400 px. US$0, no model call.
+// is missing; "Add a fact a rule needs" names a rule and proposes a new fact under a built key (Day-0 acceptance). axe (WCAG 2.2 AA) on the open form; no sideways scroll at 400 px. US$0, no model call.
 //   zsh studio/tools/isolated.sh forms_c36b 4463 start && node studio/tests/check_forms_c36_rule_facts_browser.cjs 4463 xr_studio_forms_c36b
 const fs = require("node:fs");
 const { execFileSync } = require("node:child_process");
@@ -52,6 +52,23 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   await link.click(); await p.waitForURL(/\/review\/proposals/, { timeout: 10000 });
   step("C3.6 pass: its link opens To review › Proposals", /\/review\/proposals/.test(p.url()));
 
+  // Day-0 acceptance C3.6: a new fact for a rule the combination has, named in words; the system builds the key.
+  await p.goto(`${BASE}/c/${combo}/questionnaires`); await sec.waitFor({ timeout: 20000 });
+  const nf = sec.locator("[data-new-fact]");
+  await nf.getByRole("button", { name: "Add a fact a rule needs" }).click();
+  step("C3.6 pass: \"Add a fact a rule needs\" opens a form naming the rule (aria-expanded)", (await nf.getByRole("button", { name: "Add a fact a rule needs" }).getAttribute("aria-expanded")) === "true" && (await nf.getByLabel("The rule that needs it").count()) === 1);
+  const axe2 = await new AxeBuilder({ page: p }).include("[data-new-fact]").withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
+  step("C3.6 pass: axe finds no WCAG 2.2 AA violation in the new-fact form", axe2.violations.length === 0, axe2.violations.map((v) => v.id));
+  await nf.getByLabel("The rule that needs it").selectOption("r_c36_browser");
+  await nf.getByLabel("Name a person reads").fill("Date the visit ends");
+  await nf.getByLabel("Answer type").selectOption("date");
+  await nf.getByLabel("What it means").fill("The last day the person plans to stay in Canada (Sample).");
+  await nf.getByRole("button", { name: /Propose it/ }).click();
+  const done = nf.locator("[data-new-fact-done]");
+  await done.waitFor({ timeout: 10000 });
+  step("C3.6 pass: the new fact is proposed under a built key, resting on the named rule", /Proposed as person\.date_the_visit_ends/.test(await done.innerText()) && sql("select source->'rule'->>'key' from proposal_item where payload->>'label'='Date the visit ends'") === "r_c36_browser", await done.innerText());
+  step("C3.6 pass: focus lands on the Proposals link", await p.evaluate(() => document.activeElement?.tagName === "A" && /Open Proposals/.test(document.activeElement.textContent ?? "")));
+
   await p.setViewportSize({ width: 400, height: 900 }); await p.goto(`${BASE}/c/${combo}/questionnaires`); await sec.waitFor({ timeout: 20000 });
   step("C3.6 pass: no sideways scroll at 400 px", await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   // Once nothing is missing, the panel is not shown at all.
@@ -59,7 +76,7 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   await p.reload();
   await p.getByRole("heading", { level: 1 }).first().waitFor({ timeout: 20000 });
   await p.waitForLoadState("networkidle");
-  step("C3.6 fail: with no fact missing on this combination, the panel is not shown", missingBefore !== 1 || (await sec.count()) === 0, missingBefore);
+  step("C3.6 fail: with no fact missing on this combination, no missing-fact row is shown", missingBefore !== 1 || (await sec.locator("[data-rule-fact]").count()) === 0, missingBefore);
   step("no page errors", errors.length === 0, errors);
   await b.close();
   console.log(`\n${pass} passed, ${failed} failed`);
