@@ -1,10 +1,10 @@
 // QA-78 (free part, runtime lane): the Forms tab's finder strip on a combination whose forms came without an AI find.
 // A combination whose forms came without an AI find (the sample setup or by hand) says how many forms it
 // has, never "No form find yet" (with no forms and no find the find is still offered:
-// check_s5_slice3_browser). US$0: no AI call.
-//   zsh studio/tools/isolated.sh runtime_qa78 4443 start && node studio/tests/check_qa78_words_browser.cjs 4443
+// check_w1_start_setup_browser item 5). US$0: no AI call.
+//   zsh studio/tools/isolated.sh runtime_qa78 4431 start && node studio/tests/check_qa78_words_browser.cjs 4431
 const { chromium } = require("../node_modules/playwright");
-const PORT = Number(process.argv[2] ?? 4443);
+const PORT = Number(process.argv[2] ?? 4431);
 const BASE = `http://localhost:${PORT}`;
 let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${ok || detail === undefined ? "" : ` — ${String(detail).slice(0, 260)}`}`); };
@@ -32,7 +32,7 @@ const api = async (url, init = {}) => { const r = await fetch(`${BASE}/api${url}
     step("QA-78 pass: forms added without an AI find show their count and how they came", /\d+ forms? on this combination/.test(text) && /Added without an AI find/.test(text), text.slice(0, 200));
     step("QA-78 fail-guard: no \"No form find yet\" above attached forms", !/No form find yet/.test(text), text.slice(0, 200));
 
-    // The other way (no forms, no find → "No form find yet" and the one Find button) is check_s5_slice3_browser's C11.15 step.
+    // The other way (no forms, no find → "No form find yet" and the one Find button) is check_w1_start_setup_browser's item 5.
   } catch (e) { step("no unexpected error", false, e.stack); } finally { await browser.close(); }
   console.log(`\nQA-78 words: ${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

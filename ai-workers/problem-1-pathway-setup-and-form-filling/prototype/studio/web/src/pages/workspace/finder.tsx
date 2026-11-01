@@ -125,7 +125,7 @@ export function FinderPanel({ id, latest, onRedo, onChoosePage, removed = [], li
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="text-sm">
           <p className="font-medium">{waitsForPage ? START.pageTitle : run ? `AI found ${attached} form${attached === 1 ? "" : "s"} for this combination${notFound ? `, ${notFound} not found` : ""}${decide ? `, ${decide} to decide` : ""}` : lineCount ? `${lineCount} form${lineCount === 1 ? "" : "s"} on this combination` : "No form find yet"}</p>
-          <p className="text-xs text-text-muted" data-finder-status>{waitsForPage ? `${START.pageBody} ` : run ? `Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · saved AI answers, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}. ` : lineCount ? "Added without an AI find (by hand or with the sample setup). Nothing was spent yet. " : `${START.body} `}Which forms apply is Sample until the immigration expert confirms.</p>
+          <p className="text-xs text-text-muted" data-finder-status>{waitsForPage ? `${START.pageBody} ` : run ? `Last find ${run.finished_at ? fmtWhen(run.finished_at) : "running now"}${run.mode === "replay" ? " · saved AI answers, US$0" : run.mode === "rules" ? " · rules only, US$0" : ""}. ` : lineCount ? "Added without an AI find. Nothing was spent on finding forms yet. " : `${START.body} `}Which forms apply is Sample until the immigration expert confirms.</p>
         </div>
         {/* Lead split (28 Oct): the first find is started from Start setup (screens lane, S3): its "Find forms with AI"
             button is this slot. Once a find exists, Find again (or choosing the page it waits for) is this list's one action. */}
