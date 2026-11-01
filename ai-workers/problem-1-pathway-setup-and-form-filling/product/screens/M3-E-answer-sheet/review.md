@@ -1,66 +1,69 @@
-# Review: M3-E answer sheet, "Entered in the portal" (C7.3, MIGRATION `entered_section`), commit 3eab8873
+# Review: M3-E answer sheet, "Entered in the portal" (C7.3, MIGRATION `entered_section`)
 
-Reviewer agent, 1 Nov 2026. Backend only, no screen. Branch `claude/runtime-answer-sheet`; only the C7.3 commit is under review (`git diff dd16d505..3eab8873`). It is stacked on C6.12/C11.6 (approved at c0e8dae2) and C7.7 part 1 (f64d63bb), which are not reviewed here. I used a fresh isolated copy on :4433 (`xr_studio_rev_sheet`). US$0, no live AI, no `*_LIVE` variable, never :4400. The copy is now stopped.
-Spec: `acceptance/C7.3.test.ts`, the C7.3 row of `acceptance/M3-CONTRACT.md`, `contracts/pdf-sections.json`, and FQ-6 in `PACK-4-visitor-visa.md`.
-Journey test: `journey-test-reviewer-2026-11-01.md`, **7/10, does not pass**.
+Spec: `acceptance/C7.3.test.ts`, the C7.3 row of `acceptance/M3-CONTRACT.md`, `contracts/pdf-sections.json`, FQ-6 in `PACK-4-visitor-visa.md`. Backend only, no screen; only the C7.3 commits are reviewed (the C6.12/C11.6 and C7.7 part 1 commits below them are not).
+
+Round 1 (3eab8873) was **Block**:
+* Major: M1 (an out-of-date tick could never be redone), M2 (Done with nothing confirmed), M3 (the tick froze what the server held, not what the officer read).
+* Minor: m1–m5.
+* Its full text is in git history (this file at acb1ee93).
+
+# Round 2: commit acb1ee93 (diff `3eab8873..acb1ee93`)
+
+Reviewer agent, 2 Nov 2026. I used a fresh copy on :4433 (`xr_studio_rev_sheet`), stopped afterwards. US$0, no live AI, no `*_LIVE`.
+Journey test: round 2 in `journey-test-reviewer-2026-11-01.md`, **8/10, passes**. The review still blocks, on N1.
 
 ## Runs
-* `tests/check_vv_answer_sheet.ts`: **11/11**.
-* `tests/check_vv_prepare_api.ts` on a fresh copy: **29/29**. Pack 4's C7.3 passed **13/13**, C6.12 24/24 and C11.6 14/14.
-* My own break script on the same copy. The results are in the findings and the journey report.
+* `check_vv_answer_sheet.ts`: **11/11**.
+* `check_vv_prepare_api.ts` on a fresh copy: **32/32**, including pack 4's C7.3 13/13.
+* Pack 4's edit to `C7.3.test.ts` only sends `version` with each tick (per the contract's "every write carries a version"). Its 13 rules and their checks are unchanged.
+* Prisma drift (`migrate diff`, against the migrated copy): nothing for `entered_section`. Prisma leaves the partial index alone.
 
-## Findings
+## Round-1 findings, re-checked
+* **M1 · closed.**
+  * The tick now has `superseded_at`, with the partial unique index `entered_section_one_current` (`migration.sql:42`).
+  * A re-tick of an out-of-date section supersedes the old tick and freezes a new snapshot (`case-prepare.ts:227–231`).
+  * Seen: 6 parallel re-ticks gave 201 + 5 × 200, leaving 1 current tick, 2 in total, 2 snapshots, and the section current again.
+  * A raw SQL insert of a second current tick fails on `entered_section_one_current`, so the database enforces the rule.
+  * The audit says "again, after a change".
+* **M2 · closed as written** (`:140`): every section entered, current and waiting for nothing. All-ticked with facts waiting is no longer Done. N1 below shows the waiting list itself is wrong.
+* **M3 · closed.**
+  * Each section carries `version`. The tick checks it: a missing, numeric, list or null version gets 400; an older, superseded or stale-read one gets 409.
+  * The frozen hash is the version the officer sent, so the snapshot is the sheet the officer read. A change that lands between the check and the lock correctly shows as out of date afterwards.
+* **m1 closed:** foreign key to `runtime_case` and an index on `case_id`.
+* **m4 closed:** "1 answer frozen".
+* **m5 closed:** `cannot_start` wins (`:136`).
+* **m2, m3:** open, Minor, accepted.
+
+## New in round 2
 
 ### Major
-* **M1 · An out-of-date section can never be brought up to date.** In `api/src/case-prepare.ts:223`, `if (was) return { row: was, created: false }` returns the first tick for good. The unique key `(item_id, section_key)` (`migration.sql:27`, `schema.prisma` `@@unique([itemId, sectionKey])`) allows only one tick per section, ever. Yet the item's reason (`case-prepare.ts:136`) tells the officer: "Enter the new answers, then tick it again."
-  * **Seen:** I changed the family name and confirmed it, and Section A read out of date. I ticked it again and got 200 `created:false`; the section was still out of date. The item stays `out_of_date` permanently and can never read `done`, even after the officer re-enters the answers in the portal. The warning loses its meaning, which goes against P-65 and FQ-6.
-  * **Fix:** when the existing tick is out of date, ticking again freezes a new snapshot. Either keep the old row as history (for example a `superseded_at` column, with the unique key on the current tick only) or point the row at the new snapshot and keep the old snapshot. Audit it as a re-tick. Ticking a current section stays a 200 no-op (C7.3-11). Add a test that fails without this fix. Fix it in this migration, before any data exists.
-* **M2 · The item reads "Done" with nothing confirmed.** `case-prepare.ts:137` (`allEntered`) only checks that every section has a tick. `entered()` (`:215`) accepts a tick on a section with 0 answers and only waiting facts.
-  * **Seen:** on a new case with no answers, I ticked Sections A (16 waiting), B (10 waiting) and C. `GET prepare` then gave the IMM 5707 item `state: "done"`, "Every section is entered in the portal." With 26 facts unconfirmed, this state is false, and the next step (readiness, C7.6) would rely on it.
-  * **Fix:** count an item as `done` only when every section is entered, current, and has no `waiting` entries. Or refuse the tick (422, in words) while the section is still waiting for facts. Add a pass/fail pair.
-* **M3 · The tick freezes what the server holds when the POST arrives, not what the officer saw.** `entered()` rebuilds the sheet inside the request (`case-prepare.ts:217`) and freezes it (`:224`). The POST carries no fingerprint or version of the sheet the officer read.
-  * **Effect:** suppose a fact changes between the officer's read and the tick (a client answer, a document read, a second tab). The officer typed the old value into the portal, but the new value is frozen and the section reads current. This is exactly the case the out-of-date check exists to catch, and it is missed silently. It also contradicts the stated rule, "freezes the answers it showed" (schema doc comment; C7.3-10).
-  * **Fix:** return each section's `hash` on the sheet and have the tick send it back. If it differs, refuse with 409 ("changed since you read it, reload"), checked under the row lock. This is the same pattern as C11.6's `version` and P-72's "Confirm section". Make the field optional only if the contract must stay as it is; state that in the PR.
+* **N1 · Parents are folded into the applicant, so IMM 5707 can never read Done.** I missed this in round 1.
+  * **Cause:** `engine/runtime/answer-sheet.ts:44` keys each box by `(b.about ?? "").split("/")[0]`. For IMM 5707's parent boxes, `about` is `<applicant>/parent_1` or `<applicant>/parent_2` (`render.ts` `aboutOf`), so they are keyed as the applicant.
+  * **Seen, after `fillEverything` on a solo case:** Section A lists 8 waiting entries under the principal's own id, including Family name, Given names, Date of birth, Country of birth, Marital status and Occupation. The sheet confirms those same facts for the principal just above.
+  * **Effect 1:** parent 1 and parent 2 fold into one entry, because the waiting de-duplication is by subject and fact.
+  * **Effect 2:** once parent answers exist, the answer de-duplication (`:47`) will drop a parent's answer as a copy of the applicant's.
+  * **Effect 3:** with M2, IMM 5707 can then never read Done. Its reason meanwhile says "Every fact it reads is confirmed." (`case-prepare.ts:140`, from `formReadiness`), which contradicts the sheet.
+  * **Fix:** key answers and waiting entries by the full `about` (person plus relation). Give each waiting entry `person: b.about_label`. Add a pass/fail pair: two parents give two entries, and neither is the applicant.
+  * Parents having no question in this release is not a finding: the section correctly waits for them. The PR should say that IMM 5707 cannot reach Done until parents are collected.
 
 ### Minor
-* **m1 · `case_id` has no foreign key and no index** (`migration.sql:10–21`). The prepare view filters on it (`case-prepare.ts:121`). Deletion is still safe, because rows cascade through `filing_item`. **Fix:** add `@@index([caseId])`, and either a foreign key to `runtime_case` or a note on why there is none.
-* **m2 · Switching away from Online and back brings the old ticks back as they were**, including stale ones. Seen: PDF_UPLOAD gave 409 on both routes and the item read `to_do`; ONLINE again showed the old ticks. This is acceptable as history. Say it in the PR, or note the channel change on the ticks.
-* **m3 · The source of a row fact uses the first answer of that fact** (`case-prepare.ts:287`, `answers.find(...)` has no row). A repeated fact can show the wrong source.
-* **m4 · The audit wording reads "(1 answers frozen)"** (`:229`). Fix the plural.
-* **m5 · Out of date wins over `cannot_start`** (`:135–136`). An item waiting to see whether it applies at all shows "Out of date" instead. This is an edge case; order the states as the concept intends.
+* **n1 · The 409 on a stale tick reuses the filings wording.** It says "This application's filings or items changed since you read them" (`case-prepare.ts:33`, used at `:224`). **Fix:** "This section's answers changed since you read the sheet. Reload it, check the new answers, then tick it."
 
-## What holds
-* **Migration:** one new table and no change to existing rows. Rollback is recorded. The cascade runs from `filing_item` and `answer_snapshot`, so a case or demo reset clears it. Section snapshots are reached only through `entered_section`; `FormInstance` reads its own snapshot, so form copies never pick these rows up.
-* **P-72:** only `confirmed fact` boxes fill answers; everything else is listed as waiting. Before filling there were 0 answers, with 16 and 10 waiting. After filling, Section A had 14 answers, including the spouse's.
-* **The snapshot is never changed:** there is no update path. The `facts_json` md5 was the same before and after a later change.
-* **Concurrency:** 6 parallel ticks gave 201 + 5 × 200, with 1 row and 1 snapshot. They are serialised by `FOR UPDATE` on `runtime_case`, with the unique index as a backstop.
-* **Bad section keys:** `__proto__`, `constructor`, `toString`, a 3,000-character key, NUL, a space, `/..` and RLO all gave a 404 in words, never a 500.
-* **Permissions:** client, client B and author 403; other firm (`user-S`) 404 on GET and POST; no actor 401; a malformed or unknown id 404; a document item 422; a PDF upload form 409 in words.
-* **Audit:** the lines name the actor, the section title, the form, the role and the short case id. A search of all audit rows for the sample values and names found **0**.
-* **Channel:** the item's own channel comes first, then the line's (`channelOf`). This is the same in `onlineItem` and in the view.
-* **Speed:** prepare view 56 ms, sheet 38 ms (averages of 5 runs).
+## What holds (round 2)
+* **Permissions:** client 403, even with a valid version. A bad key with a good version gives 404 before the body is read. Changing the channel to PDF upload makes both routes 409.
+* **Audit:** a search of all audit rows for the sample values and names found 0.
+* **Speed:** prepare view 74 ms, sheet 15 ms.
 
-## D1–D20 (1–5)
-* D1 Requirement fit: 3. Pack 4 passes 13/13, but M1 and M2 break the state the concept relies on.
-* D2 Data integrity: 3 (M3).
-* D3 Reuse: 5 (`answer_snapshot`, `formCoverage`, the twin).
-* D4 Rule integrity: 3 (M2).
-* D5 Stability: 4.
-* D6 Freshness: 3 (M1).
-* D7 n/a.
-* D8–D13: n/a, no screen.
-* D14 Team look: 4.
-* D15 Speed: 5.
-* D16 Testability: 3. Pass/fail pairs, but no test for re-ticking, an empty tick, or a change between read and tick.
-* D17: simulated only.
-* D18 Provenance: 4 (m3).
-* D19 Privacy: 5.
-* D20: simulated only.
+## D1–D20 (round 2; changes only)
+* D1 Requirement fit: 4 (N1).
+* D2 Data integrity: 4 (N1 de-duplication).
+* D4 Rule integrity: 4.
+* D6 Freshness: 5.
+* D16 Testability: 4 (no parents case).
+* D18 Provenance: 3 (N1 names the wrong person).
+* All other scores as in round 1.
 
-## Not checked
-* No screen, so no browser, axe check or screen sizes.
-* `graph.mjs` was not run, because it writes `qa/GRAPH.md` and this review writes only its own files.
-* No mutation runs, since I edit no code. Mutation is covered by reasoning: removing the out-of-date rule fails C7.3-12 and C7.3-13.
-* canada.ca was not re-read; IMM 5707 being Online is Sample (FQ-2).
+## Not checked (round 2)
+As in round 1. Parent answers could not be entered in this release, so the answer de-duplication loss is shown from the code, not from a run.
 
-**Verdict: Block** for commit 3eab8873. Fix M1, M2 and M3, each with a test that fails without the fix. m1–m5 are Minor.
+**Verdict: Block** for commit acb1ee93. Fix N1 with its test. n1, m2 and m3 are Minor.
