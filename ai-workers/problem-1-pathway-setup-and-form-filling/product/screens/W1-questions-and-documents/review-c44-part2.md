@@ -138,3 +138,21 @@ browser runs.
 
 **Verdict: Approve** (round 3, commit 09e1c868). No Blocker or Major is open. Open Minors: m1 (the parallel race), m2,
 m4, m5, r3-a, r3-b. Any later push needs a new review.
+
+## Round 4 — merge only: head 9975587d = b18ebd8f (round-3 Approve + record) merged with origin/main 74d558ab, 1 Nov 2026
+- **api/src/studio.ts:** saveCheck (now at line 664, with the duplicate guard at line 684) is byte-for-byte the same as at
+  b18ebd8f. Main's C11.16 lines (the PLACE refusal in the combination setup save) sit in another method and do not touch
+  it. Against main, the PR's diff to this file is only its own +30 lines.
+- **web/src/pages/library.tsx:** the TYPE_WORD block with the five P-47 types is identical. Main's C3.13 reuse chooser
+  (useReuse, ReuseBar, ReuseMark) merged around it. Against main, the PR's diff to this file is only its own +4/−1.
+- `count-any --against 74d558ab`: 428 = 428. Web `tsc` is clean. Api `tsc`: no errors in the merged files; only the
+  existing error in check_c18_age_case.ts (the form-library "published" errors come from the stale linked client, as the
+  builder said).
+- **Could not run the runtime suites in /home/user/m336.** On a fresh :4438 copy, check_c44_part2 and
+  check_c44_question_types both stop at "setup: the copy is prepared" (FAIL line, exit 1, as designed).
+  setup_visitor_visa.ts fails because the linked Prisma client predates main's migration 20261101150000_c312_edition_published
+  (api.log: `Unknown argument 'published'`). That is the environment, not this PR. I did not run `prisma generate`, as
+  instructed. Behaviour was proven at 09e1c868 (round 3), and the merge leaves the C4.4 code unchanged; the PR's required
+  CI run on GitHub with a generated client remains the gate.
+
+**Verdict: Approve** (round 4, commit 9975587d). No Blocker or Major. The Minors are as in round 3. Any later push needs a new review.
