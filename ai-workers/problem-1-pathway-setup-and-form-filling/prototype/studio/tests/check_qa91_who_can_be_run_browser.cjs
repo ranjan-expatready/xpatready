@@ -48,7 +48,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const record = { caller: "live", contract_valid: true, drafting_run: { status: "completed", usage: { cost_usd: 0 } }, raw_output: JSON.stringify({ people: [{ role: "principal", min: 1, max: 1, applies: true, quote: sentence, why: null }], unresolved: [] }) };
   fs.writeFileSync(path.join(VAR, "fake-launch.json"), JSON.stringify({ jobs: { "studio-who-can-be-check": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, record } }, "studio-who-can-be-": { stub: { exit: 0, out: { ok: true } }, live: { exit: 0, sleep_ms: 4000, record } } } }));
 
-  await p.goto(`${BASE}/c/${vv}/questionnaires`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  // Slice C1 (P-161 (2)): the people card sits in Before forms on the Forms tab.
+  await p.goto(`${BASE}/c/${vv}/forms`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
   const who = p.locator("[data-who-can-be]");
   await who.getByRole("button", { name: "Show and edit" }).click();
   await who.getByRole("button", { name: "Fill from the guide" }).click();
