@@ -1,0 +1,10 @@
+# C3.14 build notes — Checks list and Shared library › Rules (swarm builder J5, 1 Nov)
+
+* **What:** `/library/checks` (was an empty state) and a new `/library/rules` page with its menu item under Shared library, both read-only (P-28), drawn on the agreed Screen 04 board (views 9 and 10). API: `GET /library/checks`, `GET /library/rules` in `library-sources.ts` (no schema change, no `studio.ts` change; `App.tsx` gains the route and menu item; the old `ChecksPage` placeholder leaves `library-forms.tsx`).
+* **Checks:** one row per check key across combinations (newest draft or published version in each; a newest retired version takes it off that combination), with its kind, what it is about, its message, the fields its condition reads, "Warns" or "Stops until resolved", where used (linked to the combination's Questionnaires tab), its source quote (none: "No source recorded"), Sample when illustrative, origin and status.
+* **Rules:** every rule as a sentence ("<then> when: <when>"): a combination's rules, the conditions on its form lines and checklist lines, and the conditions on questions (living on the section, used by every combination that picks it). Each with where it lives (combination · tab, linked: where it is changed), the fields it reads and its source.
+* **Differences from the board, for the tech lead:**
+  1. Kinds are the four groups the data holds (Official rule, Readiness warning, Consistency across answers, Read back from the filled form), not RULES-MODEL §7's tiers (Field validation, Consistency, Document validity, AI review): the checks carry no tier, and mapping them would be a guess. Question in the PR.
+  2. No "Runs" (stage) column: no check records when it runs. Question in the PR.
+  3. Rules: "Used by" folded into "Lives on" (it repeated the combination for every row but a question's); at under 1280 px the Kind column moves under the sentence so nothing is cut at 1024.
+* Tests: `tests/check_c314_rules.ts` (17), `tests/check_c314_rules_browser.cjs` (28, 1440 + 1024, axe). Fresh copy each run.
