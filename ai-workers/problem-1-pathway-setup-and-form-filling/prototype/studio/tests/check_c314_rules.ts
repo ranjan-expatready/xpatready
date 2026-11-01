@@ -18,7 +18,8 @@ const call = async (method: string, path: string, body?: unknown, actor: string 
 };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 const n = (q: string) => Number(sql(q));
-type Check = { key: string; kind: string; kind_word: string; about: string | null; message: string | null; stops: boolean; reads: { key: string; name: string | null }[]; used_in: { key: string; label: string }[]; source: string | null; unsourced: boolean; origin: string; status: string };
+type Per = { combination: { key: string; label: string }; serious: boolean; message: string | null; source: string | null; unsourced: boolean; origin: string };
+type Check = { key: string; kind: string; kind_word: string; group: string; group_word: string; about: string | null; message: string | null; serious: boolean | null; reads: { key: string; name: string | null }[]; used_in: { key: string; label: string }[]; differs: boolean; per_combination: Per[]; source: string | null; unsourced: boolean | null; origin: string | null; status: string };
 type Rule = { id: string; kind: string; when: string | null; then: string; lives_on: { combination: { key: string } | null; section: string | null; tab: string }; used_in: { key: string }[]; reads: unknown[]; source: string | null; unsourced: boolean };
 
 (async () => {
@@ -29,23 +30,37 @@ type Rule = { id: string; kind: string; when: string | null; then: string; lives
   let checks = (await call("GET", "/library/checks")).body as Check[];
   const keys = n("select count(distinct check_key) from check_def where status in ('PUBLISHED','DRAFT')");
   ok("C3.14 BR-15 pass: the Checks list has one row per check across combinations, as many as the setup holds", Array.isArray(checks) && checks.length === keys && new Set(checks.map((c) => c.key)).size === checks.length, [checks.length, keys]);
-  ok("C3.14 BR-15 pass: each row says its kind in words, whether it stops or warns, and where it is used", checks.every((c) => c.kind_word && !/_/.test(c.kind_word) && typeof c.stops === "boolean" && c.used_in.length >= 1) && checks.some((c) => c.stops) && checks.some((c) => !c.stops), checks.find((c) => !c.kind_word || !c.used_in.length));
+  ok("C3.14 BR-15 pass: each row says its kind and group in words, and per combination whether it is a serious warning", checks.every((c) => c.kind_word && !/_/.test(c.kind_word + c.group_word) && c.used_in.length >= 1 && c.per_combination.length === c.used_in.length && c.per_combination.every((x) => typeof x.serious === "boolean")) && checks.some((c) => c.serious) && checks.some((c) => c.serious === false), checks.find((c) => !c.kind_word || !c.used_in.length));
+  // Challenge M8 (accepted): the kind comes from a written mapping of the stored group; a group that does not map is Other.
+  const kindOf = (g: string) => [...new Set(checks.filter((c) => c.group === g).map((c) => c.kind_word))].join();
+  ok("C3.14 M8 pass: answers compared and read-backs are Consistency; readiness warnings are Document validity", kindOf("cross_record") === "Consistency" && kindOf("read_back") === "Consistency" && kindOf("readiness_warning") === "Document validity", [kindOf("cross_record"), kindOf("read_back"), kindOf("readiness_warning")]);
+  ok("C3.14 M8 fail: official rules (documents, forms and answers mixed) are not forced into one kind: Other, with their group named", kindOf("official_rule") === "Other" && checks.filter((c) => c.group === "official_rule").every((c) => c.group_word === "Official rule"));
   const withPred = checks.find((c) => c.key === "CR_LMIA_AND_EXEMPT")!;
   ok("C3.14 BR-15 pass: a check names the shared fields its condition reads", withPred?.reads.map((r) => r.key).join() === "case.employer_obtained_lmia,case.offer_lmia_exempt", withPred?.reads);
-  ok("C3.14 pass: a check with a source quotes it", !withPred.unsourced && /labour market impact assessment/.test(withPred.source ?? ""), withPred.source);
+  ok("C3.14 pass: a check with a source quotes it", withPred.unsourced === false && /labour market impact assessment/.test(withPred.source ?? ""), withPred.source);
   // The same check in a second combination: still one row, used by both.
   const vv = sql("select id from combination where combination_key='vv.single'");
   sql(`insert into check_def (id, workspace_id, combination_id, check_key, check_group, applies_to, predicate_json, severity, message, source_quote, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, '${vv}', check_key, check_group, applies_to, predicate_json, severity, message, source_quote, 1, 'DRAFT', origin, 'user-A' from check_def where check_key='CR_LMIA_AND_EXEMPT' and status='PUBLISHED' limit 1`);
   checks = (await call("GET", "/library/checks")).body as Check[];
   const twice = checks.filter((c) => c.key === "CR_LMIA_AND_EXEMPT");
   ok("C3.14 BR-15 pass: a check two combinations hold is one row, used by both (and Draft while one copy is a draft)", twice.length === 1 && twice[0].used_in.map((c) => c.key).sort().join() === "vv.single,wp.family" && twice[0].status === "DRAFT", twice);
+  ok("C3.14 M1 fail: two identical copies do not differ: one message, source and effect for the row", twice[0].differs === false && !!twice[0].message && !!twice[0].source && twice[0].serious !== null);
+  // Review c314 M1: the same check with other values in a second combination keeps each combination's own values.
+  sql(`insert into check_def (id, workspace_id, combination_id, check_key, check_group, applies_to, predicate_json, severity, message, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, '${vv}', check_key, check_group, applies_to, predicate_json, 'warn', 'C314 Visitor visa wording.', 1, 'DRAFT', 'HUMAN', 'user-A' from check_def where check_key='OR_PASSPORT_PAGE_FACTS' and status='PUBLISHED' limit 1`);
+  const pp = ((await call("GET", "/library/checks")).body as Check[]).find((c) => c.key === "OR_PASSPORT_PAGE_FACTS")!;
+  const ppL = pp.per_combination.find((x) => x.combination.key === "wp.family"), ppV = pp.per_combination.find((x) => x.combination.key === "vv.single");
+  ok("C3.14 M1 pass: a check whose copies differ says so, with no shared value shown for every combination", pp.differs === true && pp.message === null && pp.source === null && pp.serious === null && pp.origin === null, pp);
+  ok("C3.14 M1 pass: each combination keeps its own effect, wording, source and origin (LMIA: serious, quoted IRCC; Visitor visa: warns, no source, a person)", ppL?.serious === true && !!ppL.source && ppL.origin === "IMPORTED_RELEASE" && ppV?.serious === false && ppV.unsourced && ppV.message === "C314 Visitor visa wording." && ppV.origin === "HUMAN", [ppL, ppV]);
+  sql(`insert into check_def (id, workspace_id, combination_id, check_key, check_group, applies_to, severity, message, source_quote, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, id, 'C314_NEW_GROUP', 'zz_future_group', 'A check of a group not mapped yet', 'warn', 'Test.', 'A test quote.', 1, 'DRAFT', 'HUMAN', 'user-A' from combination where combination_key='wp.family'`);
+  const fut = ((await call("GET", "/library/checks")).body as Check[]).find((c) => c.key === "C314_NEW_GROUP");
+  ok("C3.14 M8 fail: a group with no written mapping shows Other (its group in words), never a raw code as the kind", fut?.kind === "other" && fut.kind_word === "Other" && fut.group_word === "zz future group", fut);
   // A newer version replaces the older; a newest retired version takes the check off that combination.
   const lmia = sql("select id from combination where combination_key='wp.family'");
   sql(`update check_def set status='SUPERSEDED' where combination_id='${vv}' and check_key='CR_LMIA_AND_EXEMPT'`);
   sql(`insert into check_def (id, workspace_id, combination_id, check_key, check_group, applies_to, predicate_json, severity, message, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, '${vv}', check_key, check_group, applies_to, predicate_json, severity, 'C314 newer wording', 2, 'RETIRED', 'HUMAN', 'user-A' from check_def where check_key='CR_LMIA_AND_EXEMPT' and combination_id='${lmia}' limit 1`);
   checks = (await call("GET", "/library/checks")).body as Check[];
   const after = checks.find((c) => c.key === "CR_LMIA_AND_EXEMPT")!;
-  ok("C3.14 BR-15 fail: a check whose newest version in a combination is retired is no longer used there (older versions are not shown)", after.used_in.map((c) => c.key).join() === "wp.family" && after.message !== "C314 newer wording" && after.status === "PUBLISHED", after);
+  ok("C3.14 BR-15 fail: a check whose newest version in a combination is retired is no longer used there (older versions are not shown)", after.used_in.map((c) => c.key).join() === "wp.family" && after.message !== "C314 newer wording" && after.status === "PUBLISHED" && after.differs === false, after);
   // A check with no source is flagged, never blank.
   sql(`insert into check_def (id, workspace_id, combination_id, check_key, check_group, applies_to, severity, message, version, status, origin, updated_by) select gen_random_uuid(), workspace_id, id, 'C314_NO_SOURCE', 'cross_record', 'A test check', 'warn', 'A check written without a source.', 1, 'DRAFT', 'HUMAN', 'user-A' from combination where combination_key='wp.family'`);
   const bare = ((await call("GET", "/library/checks")).body as Check[]).find((c) => c.key === "C314_NO_SOURCE");
@@ -71,7 +86,7 @@ type Rule = { id: string; kind: string; when: string | null; then: string; lives
   await call("POST", `/combinations/${vv}/sections/${q[1]}`, {});
   rules = (await call("GET", "/library/rules")).body as Rule[];
   const qr = rules.filter((r) => r.kind === "question");
-  ok("C3.14 pass: a condition on a question is one rule, living on its section, used by each combination that picks the section", qr.length === 1 && !!qr[0].lives_on.section && qr[0].lives_on.combination === null && qr[0].used_in.map((c) => c.key).sort().join() === "vv.single,wp.family" && /^Ask /.test(qr[0].then), qr[0]);
+  ok("C3.14 pass: a condition on a question is one rule, living on its section, used by each combination that picks the section", qr.length === 1 && !!qr[0].lives_on.section && qr[0].lives_on.combination === null && qr[0].used_in.map((c) => c.key).sort().join() === "vv.single,wp.family" && /^Ask [A-Z][a-z ]+$/.test(qr[0].then) && !qr[0].then.includes("."), qr[0]);
 
   // ─────────────────── Read-only, and who may read
   const before = [n("select count(*) from check_def"), n("select count(*) from predicate"), n("select count(*) from library_change")];

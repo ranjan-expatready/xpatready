@@ -218,12 +218,18 @@ export class LibrarySources {
     const byKey = new Map<string, typeof cur>(); for (const k of cur) byKey.set(k.checkKey, [...(byKey.get(k.checkKey) ?? []), k]);
     const label = new Map(combos.map((c) => [c.id, c]));
     const out = [...byKey].map(([key, ks]) => {
-      const k = [...ks].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0];
+      // Review c314 M1: each combination keeps its own values (effect, message, source, origin); the row says when they differ.
+      const per = ks.filter((x) => label.has(x.combinationId)).map((x) => { const c = label.get(x.combinationId)!; return { combination: { id: c.id, key: c.combinationKey, label: c.label }, serious: x.severity === "block", message: x.message, source: x.sourceQuote ?? null, unsourced: !x.sourceQuote, sample: x.illustrative, origin: x.origin, status: x.status }; }).sort((a, b) => a.combination.label.localeCompare(b.combination.label));
+      const same = (f: (x: (typeof per)[number]) => unknown) => new Set(per.map((x) => JSON.stringify(f(x)))).size <= 1;
+      const differs = !(same((x) => x.serious) && same((x) => x.message) && same((x) => x.source) && same((x) => x.origin) && same((x) => x.sample));
+      const k = ks[0], one = per[0];
       const reads = [...new Set(ks.flatMap((x) => fieldsOf(x.predicateJson)))];
-      const used = ks.map((x) => label.get(x.combinationId)).filter((c): c is NonNullable<typeof c> => !!c).sort((a, b) => a.label.localeCompare(b.label));
-      return { key, kind: k.checkGroup, kind_word: CHECK_KIND[k.checkGroup] ?? k.checkGroup.replace(/_/g, " "), about: k.appliesTo, message: k.message, stops: k.severity === "block", reads: reads.map((f) => ({ key: f, name: names.get(f) ?? null })), used_in: used.map((c) => ({ id: c.id, key: c.combinationKey, label: c.label })), source: k.sourceQuote ?? null, unsourced: !k.sourceQuote, sample: ks.some((x) => x.illustrative), origin: k.origin, status: ks.some((x) => x.status === "DRAFT") ? "DRAFT" : k.status };
+      const kind = CHECK_TIER[k.checkGroup] ?? "other";
+      return { key, kind, kind_word: TIER_WORD[kind], group: k.checkGroup, group_word: GROUP_WORD[k.checkGroup] ?? k.checkGroup.replace(/_/g, " "), about: k.appliesTo, reads: reads.map((f) => ({ key: f, name: names.get(f) ?? null })), used_in: per.map((x) => x.combination), differs, per_combination: per,
+        // The shared values, only when every combination holds the same (otherwise null: the screen says "Differs by combination").
+        message: differs ? null : one?.message ?? null, serious: differs ? null : one?.serious ?? null, source: differs ? null : one?.source ?? null, unsourced: differs ? null : one?.unsourced ?? true, sample: per.some((x) => x.sample), origin: differs ? null : one?.origin ?? null, status: per.some((x) => x.status === "DRAFT") ? "DRAFT" : one?.status ?? "PUBLISHED" };
     });
-    return out.sort((a, b) => a.kind_word.localeCompare(b.kind_word) || a.key.localeCompare(b.key));
+    return out.sort((a, b) => a.kind_word.localeCompare(b.kind_word) || a.group_word.localeCompare(b.group_word) || a.key.localeCompare(b.key));
   }
 
   /** C3.14 (P-37, RULES-MODEL §2, Screen 04 view 10): Shared library › Rules, read-only. Every rule in one place as a
@@ -265,15 +271,21 @@ export class LibrarySources {
     const pickedBy = new Map<string, string[]>(); for (const p of picks) pickedBy.set(p.sectionKey, [...(pickedBy.get(p.sectionKey) ?? []), p.combinationId]);
     for (const q of current(questions, (q) => q.lineageKey).filter((q) => q.predicateJson || q.conditionPlain)) {
       const used = (pickedBy.get(q.sectionKey) ?? []).map((id) => combo.get(id)).filter((c): c is NonNullable<typeof c> => !!c).sort((a, b) => a.label.localeCompare(b.label));
-      out.push({ id: `question:${q.id}`, kind: "question", kind_word: RULE_KIND.question, when: q.conditionPlain, then: `Ask ${names.get(q.canonicalFieldKey) ?? q.canonicalFieldKey}${q.conditionEffect === "HIDE" ? " (hidden when this holds)" : q.conditionEffect === "OPTIONAL" ? " (optional when this holds)" : ""}`, lives_on: { combination: null, section: sectionTitle.get(q.sectionKey) ?? q.sectionKey, tab: "questionnaires", tab_word: "the section's question" }, used_in: used, reads: reads(q.predicateJson), source: null, unsourced: true, origin: q.origin, status: status(q) });
+      out.push({ id: `question:${q.id}`, kind: "question", kind_word: RULE_KIND.question, when: q.conditionPlain, then: `Ask ${names.get(q.canonicalFieldKey) ?? fieldWord(q.canonicalFieldKey)}${q.conditionEffect === "HIDE" ? " (hidden when this holds)" : q.conditionEffect === "OPTIONAL" ? " (optional when this holds)" : ""}`, lives_on: { combination: null, section: sectionTitle.get(q.sectionKey) ?? q.sectionKey, tab: "questionnaires", tab_word: "the section's question" }, used_in: used, reads: reads(q.predicateJson), source: null, unsourced: true, origin: q.origin, status: status(q) });
     }
     const order = { rule: 0, form_line: 1, checklist_line: 2, question: 3 } as const;
     return out.sort((a, b) => order[a.kind] - order[b.kind] || (a.lives_on.combination?.label ?? "").localeCompare(b.lives_on.combination?.label ?? "") || a.then.localeCompare(b.then));
   }
 }
 
-/** C3.14: each check group in words (the stored code stays the value). */
-const CHECK_KIND: Record<string, string> = { official_rule: "Official rule", readiness_warning: "Readiness warning", cross_record: "Consistency across answers", read_back: "Read back from the filled form" };
+/** C3.14 (challenge M8, accepted by the Lead): the kind of a check, from a written mapping of its stored group onto
+ *  RULES-MODEL §7's kinds; a group that does not map cleanly shows "Other". Official rules mix document, form and
+ *  answer checks, so they stay Other until each check carries its kind. Field validation lives on the field (tier 1);
+ *  AI review objectives are not built yet (no screen creates them). */
+const CHECK_TIER: Record<string, "consistency" | "document_validity"> = { cross_record: "consistency", read_back: "consistency", readiness_warning: "document_validity" };
+const TIER_WORD: Record<string, string> = { field_validation: "Field validation", consistency: "Consistency", document_validity: "Document validity", ai_review: "AI review", other: "Other" };
+const GROUP_WORD: Record<string, string> = { official_rule: "Official rule", readiness_warning: "Readiness warning", cross_record: "Answers compared", read_back: "Read back from the filled form" };
+const fieldWord = (key: string) => { const w = (key.split(".").pop() ?? key).replace(/_/g, " "); return w.charAt(0).toUpperCase() + w.slice(1); };
 const RULE_KIND = { rule: "Rule", form_line: "Condition on a form", checklist_line: "Condition on a document", question: "Condition on a question" } as const;
 
 const NameBody = z.object({ name: z.string({ error: "Give the new name." }).trim().min(2, "A name has at least two characters.").max(80, "Keep the name under 80 characters.") });
