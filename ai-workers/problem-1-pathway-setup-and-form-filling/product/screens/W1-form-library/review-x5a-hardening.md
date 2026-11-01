@@ -680,3 +680,77 @@ Full record: `journey-test-reviewer-2026-10-31-x5a-521bc9c4.md`.
 * An unaided walk by an intended user.
 
 **Verdict: Block.** This is ship after fixes, and the fixes are tests only: the code for M16, m45, m46, m48 and the no-file answer is right, both live and on reading. To fix: issue 1, meaning a US$0 replay test for M16 and m46, and a no-file test that fails without `:252`. Issues 2–5 can follow.
+
+# Round at 7570c9f4
+
+Reviewer, fresh context, 31 Oct 2026. Scope: `git diff 521bc9c4 7570c9f4`: the new `check_forms_x5_finder_baseline.ts`, `finder.ts` (m49 baseline read before the download, m51 marker cleared only if it is the one read) and the removed dead branch in `form-library.ts`. The breaker's M15 is a follow-up proposed to the tech lead, not this commit's scope.
+* Copies on :4450–4453 only, through `isolated.sh`.
+  * The suites ran from the checkout, each with its own usage line. `check_forms_s4_finder` and `check_forms_s4_runs` were paired with the fake launcher, as their usage lines say.
+  * Mutations and journeys ran on a `git archive 7570c9f4` copy in `/tmp/rv757m` (`/tmp/rv757-scripts/mut.sh`), a fresh database for each.
+* canada.ca was replayed from fixture copies (`STUDIO_CANADA_FIXTURES=fx`). Find again used saved answers. No other `*_LIVE`: US$0.
+* All copies stopped and their 10 databases dropped. A browser suite rewrote the `screenshots/slice3/` files and `check_forms_channels` rewrote its evidence JSON: both restored with `git checkout --`. Only this record and the journey report were written.
+
+**Results**
+* `tsc --noEmit -p api` clean.
+* The new suite: `check_forms_x5_finder_baseline` 7/7 (39 s), and 7/7 again on the archive copy.
+* Regression suites:
+  * `check_forms_x5_library` 65/65 (the 300 ms list timing held this time).
+  * `check_forms_s4_finder` 144/144 and `check_forms_s4_canada` 80/80.
+  * `check_forms_demo` 23/23, `check_forms_s4_runs` 91/91, `check_forms_channels` 105/105 and `check_forms_s4_library_browser` 95/95.
+* `select-suites.mjs` picks the new suite for this change, so CI runs it.
+* Graph: G1 0, G2 0, G3 2. Both G3 routes are attachment routes, not form-library ones.
+* My journey script (`/tmp/rv757-scripts/journey.cjs`) passed 26/26, twice.
+
+## Each fix removed, against the new suite
+| Fix removed (archive copy, fresh database) | Result | Check that fails |
+|---|---|---|
+| A: download baseline (`finder.ts:641` to `null`) | **6/7** | M16 download |
+| B: same-bytes baseline (`:585` to `if (false)`) | **4/7** | M16 same bytes, m46, m36 never lowered |
+| C: marker clear (`:587` to `false &&`) | **6/7** | m46 |
+| D: no-file early answer (`form-library.ts:252` to `if (false)`) | **6/7** | no-file 201 (mutated: 500, because `current.editionLabel` is null) |
+| E: the finder's never-lower guard (`:585` OR removed) | **6/7** | m36 |
+| F: m39, the check stamped before the download | **6/7** | m39 |
+| A2: m49 reverted (`d.indexDateModified`, read after the download) | 7/7, survives | a race: replay cannot land a fill mid-download |
+| C2: m51 reverted (the old unguarded clear) | 7/7, survives | a race: replay cannot interleave two runs |
+
+The previous round's Major is closed. M16 (both paths), m46 and the no-file answer each now have a committed US$0 test that fails when the fix is removed. The commit's own counts (A 6/7, B 4/7, C 6/7, D 6/7) are exact. The m39 Should carried from 0796fc0c is closed too (F).
+
+## The finder changes, read and walked
+* **m49 (`finder.ts:590, 600, 641`):** `indexAtStart` is `def.indexDateModified` from `formFor`'s read, which comes before `canada.get`. Before this fix, `storeDownloaded` read the definition again after the download, so a fill landing in between could stamp a date the bytes were never checked against.
+  * In the usable path, `create` is never reached (`pdfEditions` is non-empty), so passing the value there is harmless.
+  * When the definition does not exist at the start, the baseline is null. That is the conservative answer, and the same as before for a form never filled.
+* **m51 (`:587`):** clears only `{ id: e.id, newerFileSha256: <value read at the start> }`. This is the same shape as the check's m48 guard. A marker that another run set after this run's read survives.
+  * J3 walked a real marker, not a planted one. canada.ca's IMM 5645 PDF got other bytes with the same edition, and Find again showed "Newer file on canada.ca" (`/tmp/rv757-shots/j3-marked.png`), still with 1 edition.
+  * canada.ca then served the library's bytes again. Find again showed **Ready**, with the marker null and the baseline kept at 2025-06-02.
+* **The dead branch (`form-library.ts:271`):** removed. `current` is non-null there because `:252` returns first. The words for other bytes are unchanged (the J5 words from the last round).
+* **No regression:** all finder, library and canada suites are green. 8 concurrent checks all gave `current`, with 1 edition, the baseline kept and no marker.
+
+## Blocker
+None.
+
+## Major
+None.
+
+## Minor
+1. **Should (D16): the two race fixes, m49 and m51, have no test that fails when they are removed** (A2 and C2 above). The code is right on reading. Replay cannot interleave a fill or a second run mid-download, and the m48 guard was accepted on the same basis last round. Fix when there is a way to pause the fake canada source, for example a fixture delay: start Find again, fill a later index (m49) or mark a newer file (m51) during the pause, then assert.
+2. **Carried Should from 0796fc0c, still open: the undated-label false Ready.** `finder.ts:582` still writes the page month into `canadaUpdated` on the same-bytes path. This is not this commit's scope, and the commit does not claim it.
+3. **Observation, not scored:** the first "Check against canada.ca" after a copy restart took 692 ms (cold process). Warm checks took 107 ms. This is not a product path a user meets after a deploy warm-up.
+
+## D1–D20 (changes from the 521bc9c4 round only; the rest are as scored there)
+| D | Score | Evidence |
+|---|---|---|
+| D3 | 5 | The finder's marker clear is now guarded, like the check (m51). The download baseline is read before the download (m49) |
+| D16 | 4 | Every non-race fix has a failing test (A–F). The two race fixes are untested (issue 1) |
+| D18 | 4 | Undated-label edge carried (issue 2) |
+| D17, D20 | simulated only | No intended user walked it |
+
+## Journey score: 9.5 / 10 (pass, no criterion at 0)
+Full record: `journey-test-reviewer-2026-10-31-x5a-7570c9f4.md`.
+
+## What I could not check
+* Live canada.ca. A real mid-download race (m49, m51).
+* The full selected suite set. CI runs all 70+ selected suites, and I ran the 8 nearest.
+* A real screen reader. Browser zoom proper (400 px stands in for 200 %).
+* A visible browser (headless only). An unaided walk by an intended user.
+
+**Verdict: Approve** for 7570c9f4. There is no open Blocker or Major. Issues 1 and 2 are Shoulds and can follow.
