@@ -1,0 +1,62 @@
+{
+ "file": "imm5476e-2021.pdf",
+ "sha256": "0c11cdf3a55be2e4a7e8471074a47873f775ed5c9c9e3c759eb07018b3f75534",
+ "read_by": "prototype/p1/xfa_formats.py (the form's own XFA template: maxChars, picture clauses, validate scripts; no AI)",
+ "boxes_with_format": 12,
+ "boxes_unmatched": 0,
+ "boxes": {
+  "IMM_5476[0].Page1[0].SectionA[0].DOB[0]": {
+   "caption": "2. Your date of birth (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "ui_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5476[0].Page1[0].SectionB[0].question7[0].unit[0]": {
+   "caption": "Apt/Unit",
+   "max_chars": 10
+  },
+  "IMM_5476[0].Page1[0].SectionB[0].question7[0].streetNo[0]": {
+   "caption": "Street no.",
+   "max_chars": 10
+  },
+  "IMM_5476[0].Page1[0].SectionB[0].question7[0].streetName[0]": {
+   "caption": "Street name",
+   "max_chars": 100
+  },
+  "IMM_5476[0].Page1[0].SectionB[0].question7[0].city[0]": {
+   "caption": "City/Town",
+   "max_chars": 30
+  },
+  "IMM_5476[0].Page1[0].SectionB[0].question7[0].country[0]": {
+   "caption": "Country or territory",
+   "max_chars": 255
+  },
+  "IMM_5476[0].Page1[0].SectionB[0].question7[0].postalcode[0]": {
+   "caption": "Postal code/ZIP",
+   "format_picture": "text{A9A 9A9}"
+  },
+  "IMM_5476[0].Page1[0].SectionB[0].question7[0].phoneNumber[0]": {
+   "caption": "Area Code and Telephone number",
+   "format_picture": "text{'('999')' 999-9999}"
+  },
+  "IMM_5476[0].Page1[0].SectionB[0].question7[0].faxNumber[0]": {
+   "caption": "Area Code and Telephone number",
+   "format_picture": "text{'('999')' 999-9999}"
+  },
+  "IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[0]": {
+   "caption": "Date (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5476[0].Page1[0].sectionD[0].dateApplicantSigned[0]": {
+   "caption": "Date (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  },
+  "IMM_5476[0].Page1[0].sectionD[0].dateSpouseSigned[0]": {
+   "caption": "Date (YYYY-MM-DD)",
+   "validate_picture": "date{YYYY-MM-DD}",
+   "format_picture": "date{YYYY-MM-DD}"
+  }
+ }
+}

@@ -27,6 +27,13 @@ const Origin = ({ children }: { children: React.ReactNode }) => <p data-origin c
 const SourceNote = ({ r }: { r: { source?: string | null; more_sources?: number; unsourced?: boolean } }) => r.unsourced
   ? <p data-source className="mt-1 text-[11px] text-text-warn">No source recorded</p>
   : <p data-source className="mt-1 text-[11px] text-text-muted">{r.source}{r.more_sources ? ` · ${r.more_sources} more` : ""}</p>;
+/** P-162 (C3.1): a field's format in the list, from its form fields; never blank (why there is none is said). */
+type FormatLine = { text: string | null; state: "read" | "none_on_form" | "not_read" | "no_form" };
+const FORMAT_NONE: Record<Exclude<FormatLine["state"], "read">, string> = { none_on_form: "No format on its forms", not_read: "Format: not read yet", no_form: "On no form" };
+const FormatCell = ({ f }: { f?: FormatLine }) => f?.text ? <span data-format>{f.text}</span> : <span data-format className={f?.state === "not_read" ? "text-text-warn" : "text-text-muted"}>{FORMAT_NONE[(f?.state ?? "not_read") as Exclude<FormatLine["state"], "read">]}</span>;
+/** GET /library/fields/:key → format (engine/field-format.ts): each rule, the forms and boxes that say so, the quote. */
+type FieldFormatView = { rules: { check: string; words: string; part: string | null; sources: { form: string; box: string; quote: string | null; from: string }[] }[]; not_checked: { function: string; form: string; quote: string | null }[]; read: boolean };
+const FROM_WORD: Record<string, string> = { pdf_box: "the PDF box", form_script: "the form's own check", field_map: "the field map" };
 /** GET /library/:kind/:key/sources (api/src/library-sources.ts). */
 type SourcesView = { name: string; sources: { kind: string; text: string; quote?: string | null }[]; unsourced: boolean; used_in: string[] };
 /** Where used (C3.13): the combinations by name, the first two and a count. */
@@ -46,8 +53,8 @@ export function FieldsPage() {
         <span className="text-xs text-text-muted">{rows.length} of {list.data?.length ?? 0}</span>
       </div>
       {list.isLoading ? <Spinner label="Loading fields" /> : !list.data?.length ? <EmptyState title="The library is empty" description="Load sample inputs, or add a form with AI drafting; reviewed fields land here." /> : (
-        <Table head={["Field", "Meaning", "Type", "Forms", "Asked in", "Status"]}>
-          {rows.slice(0, 400).map((f) => <tr key={f.key}><td><Link className="font-medium text-text-link hover:underline" to={`/library/fields/${encodeURIComponent(f.key)}`}>{f.name ?? fieldName(f.key)}</Link><p className="mono break-all text-[11px] text-text-muted">{f.key}</p></td><td className="max-w-md text-xs">{f.meaning}<SourceNote r={f} /></td><td className="text-xs">{TYPE_WORD[f.value_type] ?? f.value_type}</td><td className="text-xs">{f.forms.join(", ") || <span className="text-text-muted">none</span>}<span className="text-text-muted"> · {f.boxes} form field{f.boxes === 1 ? "" : "s"}{f.used_in?.length ? ` · ${f.used_in.length} combination${f.used_in.length === 1 ? "" : "s"}` : ""}</span></td><td className="text-xs">{f.placement ? `${f.placement.section.replace(/_/g, " ")} · ${collectedWord(f.placement.collected_from)}` : <span className="text-text-warn">not placed</span>}</td><td><ListPill origin={f.origin} status={f.status} /></td></tr>)}
+        <Table head={["Field", "Meaning", "Type", "Format", "Forms", "Asked in", "Status"]}>
+          {rows.slice(0, 400).map((f) => <tr key={f.key}><td><Link className="font-medium text-text-link hover:underline" to={`/library/fields/${encodeURIComponent(f.key)}`}>{f.name ?? fieldName(f.key)}</Link><p className="mono break-all text-[11px] text-text-muted">{f.key}</p></td><td className="max-w-md text-xs">{f.meaning}<SourceNote r={f} /></td><td className="text-xs">{TYPE_WORD[f.value_type] ?? f.value_type}</td><td className="max-w-56 text-xs"><FormatCell f={f.format} /></td><td className="text-xs">{f.forms.join(", ") || <span className="text-text-muted">none</span>}<span className="text-text-muted"> · {f.boxes} form field{f.boxes === 1 ? "" : "s"}{f.used_in?.length ? ` · ${f.used_in.length} combination${f.used_in.length === 1 ? "" : "s"}` : ""}</span></td><td className="text-xs">{f.placement ? `${f.placement.section.replace(/_/g, " ")} · ${collectedWord(f.placement.collected_from)}` : <span className="text-text-warn">not placed</span>}</td><td><ListPill origin={f.origin} status={f.status} /></td></tr>)}
         </Table>
       )}
     </div>
@@ -107,6 +114,16 @@ export function FieldPage() {
           </> : null}
         </section>
       </div>
+      <section data-format-panel className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
+        <h2 className="font-semibold">Format</h2>
+        <p className="mt-1 text-sm text-text-muted">Type: {TYPE_WORD[cur.valueType] ?? cur.valueType}. The format is read from the official forms that ask it (the PDF box and the form's own checks, no AI) and checked on every answer; nobody types a rule here.</p>
+        {(() => {
+          const fmt = v.format as FieldFormatView | undefined;
+          if (!fmt?.rules.length) return <Notice tone={fmt?.read || !v.used_by.length ? "info" : "warn"}>{!v.used_by.length ? "On no form, so no format is read." : fmt?.read ? "Its forms set no format beyond the type." : "Format: not read yet (its form's boxes have not been read)."}</Notice>;
+          return <Table dense className="mt-2" head={["Rule", "From", "The form says"]}>{fmt.rules.map((r) => <tr key={`${r.check}|${r.part}`}><td className="text-sm">{r.part ? <span className="text-text-muted">{r.part.replace(/_/g, " ")}: </span> : null}{r.words}</td><td className="text-xs">{r.sources.slice(0, 3).map((x) => `${x.form}, "${x.box}" (${FROM_WORD[x.from] ?? x.from})`).join(" · ")}{r.sources.length > 3 ? ` · ${r.sources.length - 3} more` : ""}</td><td className="text-xs text-text-muted">{r.sources.find((x) => x.quote)?.quote ? `"${r.sources.find((x) => x.quote)!.quote}"` : "—"}</td></tr>)}</Table>;
+        })()}
+        {(v.format as FieldFormatView | undefined)?.not_checked?.length ? <p className="mt-2 text-xs text-text-muted">Read from the form, not checked here yet: {(v.format as FieldFormatView).not_checked.map((n) => `${n.form} ${n.quote ? `"${n.quote}"` : n.function}`).join(" · ")}</p> : null}
+      </section>
       <section data-sources className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
         <h2 className="font-semibold">Where it comes from</h2>
         {src.isLoading ? <Spinner label="Loading sources" /> : src.data?.unsourced ? <Notice tone="warn">No source recorded: this field was not read from a form field, a checklist line or a rule.</Notice> : <ul className="mt-2 space-y-1 text-sm">{(src.data?.sources ?? []).slice(0, 30).map((l) => <li key={l.text}>{l.text}{l.quote ? <span className="text-xs text-text-muted"> · {l.kind === "release" ? l.quote : `"${l.quote}"`}</span> : null}</li>)}</ul>}
