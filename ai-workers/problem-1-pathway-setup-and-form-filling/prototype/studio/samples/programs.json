@@ -50,7 +50,7 @@
       "participants": [
        {
         "role": "principal",
-        "label": "Applicant",
+        "label": "Principal applicant",
         "min": 1,
         "max": 1
        },
