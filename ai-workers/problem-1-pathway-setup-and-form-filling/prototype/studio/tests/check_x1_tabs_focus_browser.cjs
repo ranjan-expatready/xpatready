@@ -158,7 +158,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.waitForTimeout(1800);
   step("QA-121 fail: a focus that lands says nothing about being done", await p.locator("[data-done-since]").count() === 0);
   // QA-121 review Major: a key another part of the tab owns (forms:*, not drawn by Before forms) never says "done".
-  for (const key of ["forms:sources", "forms:lines"]) {
+  for (const key of ["forms:sources", "forms:lines", "forms:finder"]) { // forms:finder: C11.10 review M1 (never claimed by Forms)
     await p.goto(`${BASE}/c/${sv}/forms?focus=${encodeURIComponent(key)}`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
     await p.locator("[data-people-words]").waitFor({ timeout: 15000 });
     await p.waitForTimeout(2200);
@@ -170,6 +170,18 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-done-since]").waitFor({ timeout: 8000 }).catch(() => { throw new Error("QA-121: the done-since notice never showed for forms:held with no held edition"); });
   step("QA-121 pass (Forms): forms:held with no held edition says \"This was done since you opened it\" on Forms, and the key leaves the address", /This was done since you opened it\./.test(await p.locator("[data-done-since]").innerText()) && /\/forms$/.test(new URL(p.url()).pathname) && !new URL(p.url()).searchParams.has("focus"), p.url());
   await axe("Forms, held edition gone");
+  // C11.10 review M2: places drawn from the summary (forms:held, a released version's forms:problems and documents:problems)
+  // may come late, so the 1.5 s clock starts only once the summary is in: with it held back 2.5 s, nothing says "done"
+  // before it arrives; after it, a key whose place is not drawn still does.
+  for (const tab of ["forms", "documents"]) {
+    await p.route("**/api/combinations/*/summary", async (route) => { await new Promise((r) => setTimeout(r, 2500)); await route.continue(); });
+    await p.goto(`${BASE}/c/${sv}/${tab}?focus=${tab}%3Anothing-here`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+    await p.waitForTimeout(2000);
+    const early = await p.locator("[data-done-since]").count();
+    await p.locator("[data-done-since]").waitFor({ timeout: 10000 }).catch(() => { throw new Error(`C11.10 M2: ${tab} never said done once the summary came in`); });
+    step(`C11.10 review M2 fail guard (${tab}): with the summary 2.5 s late, nothing says "done" before it arrives; after it, the gone place still does`, early === 0 && !new URL(p.url()).searchParams.has("focus"), { early });
+    await p.unroute("**/api/combinations/*/summary");
+  }
 
   step("no page errors", errs.length === 0, errs.join(" | "));
   await b.close();

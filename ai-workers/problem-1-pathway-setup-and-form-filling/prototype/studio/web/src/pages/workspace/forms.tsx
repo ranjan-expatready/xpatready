@@ -95,7 +95,11 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   // forms:held): scrolled to, focused, outlined 2 s, the address cleared (components/focus-item). Nothing lands while the
   // tab loads.
   // QA-121: a forms:* place no longer on the tab (no held edition now, no problems now) says so and leaves the address.
-  const doneSince = useFocusItem(known && combo ? [] : undefined, (k) => k.startsWith("forms:"));
+  // Review M2: forms:held and a released version's forms:problems are drawn from the summary, so nothing counts as gone
+  // before it is in (as Questionnaires). Review M1: forms:finder ("Find forms") has no single place drawn here; it is
+  // never claimed, so an open Find forms item is never called done.
+  const sumForFocus = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`);
+  const doneSince = useFocusItem(known && combo && sumForFocus.data ? [] : undefined, (k) => k.startsWith("forms:") && k !== "forms:finder");
   const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} onChoosePage={choosePage} removed={removed.map((r) => r.code)} lineCount={lines.length + pending.length} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} page={choosingPage ? latest.data?.page_choice ?? { candidates: [], why: "" } : null} onClose={() => { setFinding(null); setChoosingPage(false); }} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
   // Break m4 (Screen 01): an author never sees the channels as read-only words while the session loads.
   if (!known || !combo) return <Spinner label="Loading forms" />;

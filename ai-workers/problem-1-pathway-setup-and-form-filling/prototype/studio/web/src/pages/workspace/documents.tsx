@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Plus } from "lucide-react";
 import type { ChecklistLineRow, ChecklistView } from "../../../../contracts/workspace";
 import { api, ApiError, useActorId, useApi, useSessionView } from "@/lib/api";
+import type { CombinationSummary } from "../../../../contracts/programs";
 import { DoneSinceNotice, FOCUS_RING, useFocusItem } from "@/components/focus-item";
 import { PartProblems } from "@/components/part-problems";
 import { Button, Input, Notice, Panel, Pill, Table } from "@/components/ui/controls";
@@ -54,7 +55,9 @@ export function DocumentsTab({ id }: { id: string }) {
   const [edit, setEdit] = React.useState<any>(null);
   const [error, setError] = React.useState<string | null>(null);
   // X1 (slice C2): a ?focus= link from the setup checklist lands on its place here (documents:lines, documents:problems).
-  const doneSince = useFocusItem(v.data ? [] : undefined, (k) => k.startsWith("documents:") || k === "questions_documents:problems");
+  // Review M2 (C11.10): a released version's documents:problems is drawn from the summary; wait for it (as Questionnaires).
+  const sumForFocus = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`);
+  const doneSince = useFocusItem(v.data && sumForFocus.data ? [] : undefined, (k) => k.startsWith("documents:") || k === "questions_documents:problems");
   const refresh = () => { for (const k of [["checklist", id], ["config", id], ["combination", id], ["fact-sources", id], ["preview"], ["draft"]]) void qc.invalidateQueries({ queryKey: k }); };
   if (v.isPending) return <div className="h-40 animate-pulse rounded-xl border border-border bg-surface" aria-busy="true"><span className="sr-only" role="status">Loading each person's checklist</span></div>;
   if (v.error) return <Notice tone="danger" title="The checklists could not be loaded">{v.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void v.refetch()}>Retry</button></Notice>;
