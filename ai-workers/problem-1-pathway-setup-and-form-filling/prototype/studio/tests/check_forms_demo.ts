@@ -33,8 +33,8 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   ok("demo fail: a combination that does not exist (404)", r.status === 404, r.body.message);
 
   // Break m5: a person's own file whose name ends like the story's copy never marks the story as already run.
-  const own = new FormData(); own.append("files", new Blob([readFileSync(join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "forms", "imm5476e.pdf"))]), "mine-from-email.pdf");
-  await fetch(`http://localhost:${PORT}/api/combinations/${vv}/attachments`, { method: "POST", headers: { "x-actor": "user-A" }, body: own });
+  const own = new FormData(); own.append("combinationId", vv); own.append("files", new Blob([readFileSync(join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "forms", "imm5476e.pdf"))]), "mine-from-email.pdf");
+  await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: own });
   ok("demo setup (break m5): a person uploads their own file named mine-from-email.pdf on the Visitor visa first", sql("select count(*) from intake_item where file_name='mine-from-email.pdf'") === "1");
   r = await call("POST", "/demo/forms-story", { combinationId: vv, online: true });
   ok("demo: the forms part of the story runs and says what it did, row by row (rows 1 and 7; no APR row, no capture, the old online flag ignored)", r.status === 201 && ["row 1:", "row 7:"].every((x) => (r.body.log as string[]).some((l) => l.startsWith(x))) && !(r.body.log as string[]).some((l) => /^row (2|13):/.test(l)) && r.body.capture_id === undefined && sql("select count(*) from portal_capture") === "0", r.body.log ?? r.body.message);
@@ -53,8 +53,8 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   // For the draft dialog below (review-3 Minor 4), this check approves its own off-list copy, as p80_guard does: the
   // official IMM 1344 with one byte line added (check data only, never the demo story).
   const checkCopy = Buffer.concat([readFileSync(join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "forms", "imm1344e.pdf")), Buffer.from("\n% check only: an off-list copy for the draft dialog\n")]);
-  const cfd = new FormData(); cfd.append("files", new Blob([checkCopy]), "imm1344e-check-copy.pdf");
-  await fetch(`http://localhost:${PORT}/api/combinations/${vv}/attachments`, { method: "POST", headers: { "x-actor": "user-A" }, body: cfd });
+  const cfd = new FormData(); cfd.append("combinationId", vv); cfd.append("files", new Blob([checkCopy]), "imm1344e-check-copy.pdf");
+  await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: cfd });
   const checkHeld = sql("select id from intake_item where file_name='imm1344e-check-copy.pdf' and status='HELD'");
   await call("PATCH", `/intake/held/${checkHeld}`, { irccPage: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm1344.html" });
   const checkApproved = await call("POST", `/intake/held/${checkHeld}/approve`, {}, "user-C");
@@ -96,8 +96,8 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   ok("C2.2: review-4 Major 2 on the loaded demo too, every off-list copy the story made is a visitor visa form", copyCodes().every((c) => VISITOR_FORMS.includes(c)), copyCodes());
   // The same copy uploaded by hand and sent for approval: refused before anything changes, in words.
   const copy = Buffer.concat([readFileSync(join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "forms", "imm5257_1e.pdf")), Buffer.from("\n% another copy\n")]);
-  const fd = new FormData(); fd.append("files", new Blob([copy]), "schedule1-again.pdf");
-  const up = await fetch(`http://localhost:${PORT}/api/combinations/${demoVv}/attachments`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd }).then((x) => x.json()) as { results?: { message: string }[] };
+  const fd = new FormData(); fd.append("combinationId", demoVv); fd.append("files", new Blob([copy]), "schedule1-again.pdf");
+  const up = await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd }).then((x) => x.json()) as { results?: { message: string }[] };
   const again = sql("select id from intake_item where file_name='schedule1-again.pdf' and status='HELD'");
   await call("PATCH", `/intake/held/${again}`, { irccPage: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5257-schedule-1.html" });
   r = await call("POST", `/intake/held/${again}/approve`, {}, "user-C");

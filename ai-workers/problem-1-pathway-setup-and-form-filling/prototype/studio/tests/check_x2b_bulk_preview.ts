@@ -232,6 +232,21 @@ const PLAIN = (s: string) => !/\bP-\d+\b/.test(s) && !/\b[a-z]+_[a-z_]+\b/.test(
   sql(`update form_edition_accept set channels='{PDF_UPLOAD}' where form_edition_id='${ed5476}' and account='ANY'`);
   sql(`update combination_form set channel='PDF_UPLOAD', signature='NONE' where combination_id='${WP}' and lineage_key='IMM 5476'`);
 
+  // ------------------------------------------------------------ slice (c), tech lead 1 Nov (#273 Question 1): no file yet, waiting for a person
+  // A form listed by IRCC with no file at all (Sample number), put on Work permit as a line by hand.
+  sql(`insert into gov_form_def (id, workspace_id, form_key, display_name) values (gen_random_uuid(), '${ws}', 'IMM 0000X', 'Sample: listed, no file')`);
+  sql(`insert into combination_form (id, workspace_id, combination_id, gov_form_def_id, lineage_key, who, attach_mode, version, status, origin, updated_by) select gen_random_uuid(), '${ws}', '${WP}', id, 'IMM 0000X', 'each_applicant', 'COMBINATION_MANDATORY', 1, 'DRAFT', 'HUMAN', 'user-A' from gov_form_def where form_key='IMM 0000X'`);
+  x = await outcomeOf(add(form("IMM 0000X"), [VV]), VV);
+  ok("C1.5 slice (c) fail: a form with no file yet shows Cannot per target before Add, in words", x.o === "CANNOT_NO_FILE" && !x.t?.tickable && /no file in the library yet/.test(x.why) && PLAIN(x.why), x.t);
+  sql(`delete from combination_form where lineage_key='IMM 0000X'`); sql(`delete from gov_form_def where form_key='IMM 0000X'`);
+  const edw = sql(`select e.id||'|'||e.sha256 from form_edition e join gov_form_def f on f.id=e.gov_form_def_id where f.form_key='IMM 5476' and e.channel<>'ONLINE' limit 1`).split("|");
+  sql(`update form_edition set sha256='${"0".repeat(64)}' where id='${edw[0]}'`);
+  x = await outcomeOf(add(form("IMM 5476"), [VV]), VV);
+  ok("C1.5 slice (c) fail: a form whose file waits for a second person shows Cannot per target, in words", x.o === "CANNOT_WAITING_PERSON" && !x.t?.tickable && /waits for a second person/.test(x.why) && PLAIN(x.why), x.t);
+  sql(`update form_edition set sha256='${edw[1]}' where id='${edw[0]}'`);
+  x = await outcomeOf(add(form("IMM 5476"), [VV]), VV);
+  ok("C1.5 slice (c) pass: with its approved file back, the same form will be added", x.o === "WILL_ADD" && x.t?.tickable, x.t);
+
   // ------------------------------------------------------------ every reason is plain words
   const all = [await preview(add(form("IMM 5409"))), await preview(add(form("IMM 5707"))), await preview(add(doc(MARRIAGE)))].flatMap((p) => p.body.targets.map((t: any) => String(t.reason ?? "")));
   ok("words: no reason carries a decision code or a system name", all.every(PLAIN), all.filter((s) => !PLAIN(s)));
