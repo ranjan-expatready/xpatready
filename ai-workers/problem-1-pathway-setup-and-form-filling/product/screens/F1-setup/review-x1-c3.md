@@ -104,3 +104,41 @@ Housekeeping: my test runs rewrote tracked screenshots and `evidence/screen01/br
   4. No loading or failed state.
   5. Sample label lost on the people counts.
   6. Retired wording.
+
+## Re-review on a770e278 (diff c0ccd2f6..a770e278, 1 Nov)
+
+**What I ran:** web build and `tsc --noEmit` (clean), then port 4449 with the sample loaded.
+* `check_x1_overview_strip_browser`: 27/27 passed, including the three new checks.
+* `check_x1_tabs_focus_browser`: 28/28 passed. It covers `part-problems`.
+
+**Each minor:**
+* **m1, fixed.** `LINK_FOCUS` draws a 2 px primary ring with a 1 px white offset on every strip link.
+  * I saw it when tabbing to "Add 1 form found".
+  * The check fails if the class is removed: unfocused and focused shadows would then be equal.
+  * The app-wide `:focus-visible` reset (`index.css:19`) is still for the Lead.
+* **m2, fixed for two of the three tooltips.**
+  * The legend is now a visible line (`data-strip-legend`).
+  * The Step 1 hint carries the concept's tooltip text.
+  * The sure/not-sure tooltip is not added. It is recorded for the PR, so it is not counted here.
+* **m3, moved.** It goes to the tech lead as #206's finding 6. Not counted here.
+* **m4, partly fixed.**
+  * A slow summary now shows "Loading the setup steps…" (`role=status`).
+  * A failed summary still shows that loading line forever. I checked this with a 500 on `/summary`, waiting 6 s (`overview.tsx:25`, the `!sum` branch).
+  * EXPERIENCE §4 [M] wants an error state that gives the fix.
+  * **Still Minor (Should):** show "The setup steps could not be loaded · Retry" when the query has failed.
+* **m5, fixed.** A Sample pill sits on the people summary until the immigration expert confirms, and it is checked.
+* **m6, fixed.** The retired line now reads "Its setup is kept as it was released; nothing new is set up on it."
+
+**Other commits:**
+* 1fab9366 types `part-problems` through the contract. Adding `&& released` changes no behaviour, since the line before already returns when both are empty.
+* 7575b36e restores three C1 screenshots.
+
+**Working tree:** my runs rewrote three tracked PNGs in `screens/F1-setup/screenshots/x1-strip/03` and `x1/01, 03`. Restoring them was refused by the permission system, so they are left modified. Discard them before any commit. I committed nothing.
+
+**Verdict: Approve on a770e278.**
+* Blockers: none.
+* Majors: none.
+* Minors open:
+  1. A failed summary shows "Loading…" forever (m4 remainder).
+  2. The sure/not-sure tooltip (in the PR).
+  3. The Forms landing (moved to the tech lead as #206's finding 6).
