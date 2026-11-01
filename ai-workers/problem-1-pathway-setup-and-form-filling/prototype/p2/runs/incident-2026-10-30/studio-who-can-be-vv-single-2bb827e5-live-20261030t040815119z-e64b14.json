@@ -1,0 +1,119 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-who-can-be-vv-single-2bb827e5-live-20261030t040815119z-e64b14",
+  "idempotency_key": "2e0ef559ebfb2c8aaa60d777215fb28d400f194ca32406130aa2448c595bcc88",
+  "contract_version": "drafting-run/v0",
+  "kind": "who_can_be",
+  "output_sha256": "d140c96c7e87300ed18544cab4b888cb2bf252877753e32b491d420e1e4a7fa5",
+  "inputs": {
+   "combination": "vv.single",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+     "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2"
+    }
+   ],
+   "configuration_version": "s5-who-can-be"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 3000,
+   "prompt_version": "who-can-be.v1.md",
+   "prompt_sha256": "aa5c132ca19487e5aed58f4390b6f8bdf0a9368d208602ae012aaa5c8fc603c1"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 17107,
+    "output_tokens": 1029,
+    "duration_ms": 12510
+   }
+  ],
+  "usage": {
+   "input_tokens": 17107,
+   "output_tokens": 1029,
+   "cost_usd": 0.089008,
+   "duration_ms": 12510
+  },
+  "started_at": "2026-10-30T04:08:15.122Z",
+  "ended_at": "2026-10-30T04:08:27.987Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "60fe4f0d7aae502743e39f6a4edb1db3cbeeb067d2c485f243f06b1797f35e1c",
+  "template_sha256": "06ae8a330a62f00c0cc49b2af03043493e630347bdbe57074ca047e8fb43f71c",
+  "schema_file": "who-can-be-output.v1.schema.json",
+  "schema_sha256": "3e66b9479e25ab0d0b1a2000dc72a6630f1e11f9f752bec053d2a7c56920e5cc",
+  "known": {
+   "combination_trail": "Temporary residence › Visitors › Visitor visa"
+  },
+  "screened": true,
+  "output_sha256": "d140c96c7e87300ed18544cab4b888cb2bf252877753e32b491d420e1e4a7fa5",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/runtime-s7-6d5965/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "6c3f3b1971d7505e047608c348bb98fb652c2fb5e9743c4e9de8c81fb5778d9b",
+  "request_bytes": 56936,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/runtime-s7-6d5965/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 37.85323999999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+    "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "c6d3ffca537a6d228600721c7e74e02a2028fab72065174bdde8bcb0f1f4c064",
+   "digest_made_at": "2026-10-30T04:08:15.120Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "ffde64e19aa9f09179a397764fa677d3",
+   "ticket_expires_at": "2026-10-30T04:10:15.120Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"people\":[{\"role\":\"principal\",\"min\":1,\"max\":1,\"applies\":true,\"quote\":\"This form must be completed by each person applying for a Temporary Resident Visa to visit Canada.\",\"why\":\"Each applicant completes the IMM 5257; the principal is the one person applying.\"},{\"role\":\"representative\",\"min\":0,\"max\":1,\"applies\":false,\"quote\":\"If you wish to have a representative who can conduct business on your behalf, you must give us their email and mailing addresses in this section and fill out the Use of a Representative (IMM 5476 [PDF, 0.26 MB]) form.\",\"why\":\"A representative is optional; the guide gives no number, so the default of 0 to 1 is used.\"}],\"unresolved\":[{\"passage\":\"Family members must complete their own application forms. However, you may submit your applications together online or at a Visa Application Centre (VAC) and use one payment receipt for the total amount.\",\"reason\":\"This can be read as family members being included in one application, or as each making a separate application that is only submitted together. The narrower reading (separate applications) was chosen, so spouse or partner and children were not added.\"},{\"passage\":\"If your family members are also applying for TRVs, you can include your whole family's applications in the same envelope.\",\"reason\":\"Family applications are sent in the same envelope but appear to be separate applications. It is unclear whether this application can include a spouse or children.\"},{\"passage\":\"If you are less than 18 years of age, your form must be signed by one of your parents or a legal guardian.\",\"reason\":\"A parent who signs for a minor takes part in the case. That does not fit the parent role (never takes part) or any other role cleanly.\"},{\"passage\":\"Minors travelling with only one parent or legal guardian should have a letter of authorization, preferably in English or French, from the non accompanying parent or guardian.\",\"reason\":\"A non-accompanying parent supplies a document but is not clearly named on the forms. It is unclear whether this counts as a parent role.\"}]}"
+}

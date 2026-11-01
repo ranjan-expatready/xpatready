@@ -10,7 +10,7 @@ import type { Snapshot } from "./snapshot.ts";
 import { compareEditions } from "./programs.ts";
 import type { PrismaClient } from "@prisma/client";
 
-type Line = { form_number: string; channel?: string; signature?: string; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean };
+type Line = { form_number: string; channel?: string; signature?: string; signed_by?: string; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean };
 /** The parts of the snapshot (engine/snapshot.ts) these rules read. */
 type MapEntry = { data_path: string; caption?: string | null; outcome: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null; row?: number | null; list_purpose?: { kind: string; overflow: string } | null };
 type FieldMap = { form_number: string; form_edition: string; channel?: string; entries: MapEntry[] };
@@ -125,6 +125,8 @@ export function channelProblems(s: Snapshot, accepts?: Accepts): Problem[] {
       if (channel === "NOT_NEEDED" && !channels.includes("NOT_NEEDED")) out.push({ level: "error", where: "Forms", item: f.form_number, message: notNeededWords(f.form_number, account) });
       else if (record && !channels.includes(channel)) out.push({ level: "error", where: "Forms", item: f.form_number, message: notAcceptedWords(f.form_number, channel, record) });
       if (!signatureFits(channel, signature)) out.push({ level: "error", where: "Forms", item: f.form_number, message: signatureMisfitWords(f.form_number, channel, signature) });
+      // C3.11: a line signed by hand and scanned needs someone who signs it, or its signed scan is asked of nobody.
+      else if (channel === "PDF_UPLOAD" && signature === "HAND_SCANNED" && f.signed_by === "none") out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} is filed as PDF upload, signed by hand and scanned, but "Signed by" says No signature, so nobody is asked for its signed scan. Choose who signs it, or choose another signature.` });
     }
     if (chOf(f) === "ONLINE") out.push({ level: "warning", where: "Forms", item: f.form_number, message: `${f.form_number} is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.` });
   }

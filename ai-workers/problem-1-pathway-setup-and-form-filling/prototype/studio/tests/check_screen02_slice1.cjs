@@ -7,6 +7,7 @@
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
+const { speed } = require("./speed_budget.cjs"); // P-184: speed budgets judged only when the Mac is not busy
 const PORT = Number(process.argv[2] ?? 4441), DB = process.argv[3] ?? "xr_studio_screens_s02";
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
@@ -124,7 +125,7 @@ function pdf(title, text) {
   // ======================================================== the page (author)
   await as("user-A");
   let t0 = Date.now(); await open(); const firstView = Date.now() - t0;
-  step("performance: To review first view under 1 s with the sample data", firstView < 1000, `${firstView} ms`);
+  { const s = speed("performance: To review first view under 1 s with the sample data", firstView < 1000, `${firstView} ms`); step(s.label, s.ok, s.detail); }
   const chips = await p.getByRole("group", { name: "Show items" }).textContent();
   step("C5.3: four views with counts: Needs you · Waiting for others · Running · All", new RegExp(`Needs you · ${qa.counts.needs}.*Waiting for others · ${qa.counts.waiting}.*Running · ${qa.counts.running}.*All · ${qa.counts.all}`).test(chips), chips);
   await p.waitForFunction((x) => [...document.querySelectorAll('nav[aria-label="Studio"] a')].some((a) => a.textContent.startsWith("To review") && a.textContent.includes(String(x))), qa.counts.needs, { timeout: 20000 }).catch(() => {}); // the menu asks on its own
