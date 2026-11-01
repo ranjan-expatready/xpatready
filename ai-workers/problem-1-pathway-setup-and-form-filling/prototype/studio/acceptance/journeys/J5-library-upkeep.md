@@ -17,7 +17,7 @@
 1. Author opens Shared library › Checks. **Expect:** every check of every combination, each with its kind (Field validation · Consistency · Document validity · AI review), what it reads in words, when it runs, where it is used, its origin and its source passage ("No source recorded" when none). Kinds as PR #294 words them: answers compared and read-backs are Consistency, readiness warnings Document validity, any other group Other with its group named (the Visitor visa's two seeded section checks are Other · "section check", unsourced, Sample). A check held by two combinations is one row; when their wording differs the row says "Differs by combination".
 2. Author filters by kind Consistency, then by Combination Visitor visa (filtering happens on the screen). **Expect:** only those rows; the counts on the chips agree with the rows.
 3. Author opens Shared library › Rules. **Expect:** each rule as a sentence ("When the person is 18 or older at the application date, then IMM 5707 is needed") with where it lives (combination and tab, or section), the fields it reads and its IRCC passage ("No source recorded" flagged); the conditions on form lines and checklist lines are listed too; no JSON, no "op".
-4. **Expect throughout:** no Add, Edit or Delete on these two lists (read-only); a rule or check is changed in place in its combination or field drawer (P-37). A person without the author duty sees the same lists.
+4. **Expect throughout:** no Add, Edit or Delete on these two lists (read-only); a rule or check is changed in place in its combination or field drawer (P-37). The content reviewer and the Approver see the same lists (case people get 403 on every configuration read).
 
 ## J5.3 Rename a shared field; a change of meaning goes to a second person (C3.15)
 1. Author opens "Country of birth" in the Fields list (right panel). Edits its name to "Country or territory of birth" and saves. **Expect:** saved at once ("Renamed: draft version 2; goes out with the next release"), the History section shows the old and new name with who and when; no second person is asked (P-96).
@@ -26,7 +26,7 @@
 4. Another tab renamed the field meanwhile; the author saves from the old panel. **Expect:** "Changed since you opened it" with Reload; nothing overwritten.
 5. Author edits the **meaning**, giving a reason. **Expect:** "Waiting for a second person"; the field keeps its old meaning until approved; To review shows the change to the Approver.
 6. Author opens the change in To review. **Expect:** no Approve for the person who proposed it (the reason in words). Approver approves with a note. **Expect:** a new version with the new meaning; earlier releases and open cases keep the old version.
-7. Content reviewer and case officer open the field. **Expect:** no Rename or Edit meaning control; the reason is shown as text.
+7. Content reviewer opens the field. **Expect:** no Rename or Edit meaning control; the reason is shown as text. (Case people never reach the studio: every configuration read is 403 for them.)
 
 ## J5.4 Remove, retire, restore and reorder (C11.9)
 1. Author opens a field used by the Visitor visa. **Expect:** "Where used" is the first section of the panel, each use linked; Delete is greyed with the reason as visible text ("used by IMM 5257 on Visitor visa"), Retire is offered.
@@ -38,13 +38,13 @@
 7. Visitor visa › Forms tab: author drags IMM 5707 above IMM 5257 (or uses Move up / Move down from the keyboard). **Expect:** the filing order is saved at once with a History line, the draft's forms list and Preview follow it. There is no "Move to another program" anywhere (P-116: no move).
 
 ## J5.5 Copy one line, add or remove it across many (C1.5)
-1. Author opens With an LMIA › Forms › IMM 5476 › **Add to other combinations…**, ticks Visitor visa and Study permit. **Expect:** a preview, one row per combination with its full trail and one outcome ("Will be added", "Already has it", "Has it with a different 'only if'", "Cannot …" with the reason, "Waits"); only "Will be added" and "Waits" can be ticked; "Nothing changes until you choose Add."
+1. Author opens With an LMIA › Forms › IMM 5476 › **Copy to other combinations…**, ticks Visitor visa and Study permit. **Expect:** a preview, one row per combination with its full trail and one outcome ("Will be added", "Already has it", "Has it with a different 'only if'", "Cannot …" with the reason, "Waits"); only "Will be added" and "Waits" can be ticked; "Nothing changes until you choose Add."
 2. Author chooses Add. **Expect:** toast "IMM 5476 added to 2 combinations (draft changes in each)." with Undo; each combination's Forms tab shows IMM 5476 as a draft line with the same who, "only if", channel, signature, minimum age, signer and copies, and its origin "Copied from Temporary residence › Work permits › …"; no AI origin.
 3. Author chooses Undo. **Expect:** the line goes from both combinations at once. Repeat the Add; change Study permit's IMM 5476 line; Undo the batch. **Expect:** "Study permit was changed after the copy (IMM 5476 changed, by Configuration author at hh:mm UTC). Nothing was undone."
 4. Approver tries to undo the author's batch. **Expect:** not offered (only the person who made it).
 5. From Visitor visa › Forms › IMM 5476 › **Remove from other combinations…** with Study permit and Super visa. **Expect:** Super visa "Does not have it"; Study permit "Will be removed"; Remove makes a removing draft there.
 6. High-wage position › Forms › **Copy a line from another combination…** › With an LMIA › IMM 5476. **Expect:** the line arrives as a draft with the same settings; copying onto With an LMIA itself is refused in words.
-7. Case officer: none of these menu items is shown.
+7. Content reviewer and Approver (no author duty): the menu items are not offered; their reason is shown as text.
 
 ## J5.6 A new edition: compare, see the impact, decide, release (C9.1)
 1. Load the configured checkpoint (J6.2). To review lists "New edition: review impact" for IMM 5476 (2021 → 11-2025), naming Visitor visa and With an LMIA.

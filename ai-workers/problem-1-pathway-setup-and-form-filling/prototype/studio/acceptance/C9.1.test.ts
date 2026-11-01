@@ -2,7 +2,7 @@
 // combinations, then release (P-32, P-38 in decisions/; Screen 02 concept BR-12; DEMO.md row 17: IMM 5476 2021 → 11-2025
 // on both combinations; team SA-1B-26 "a new edition never touches a row", SA-1B-33 "AI may … diff a new edition against
 // the existing map; a person approves before publishing", SA-1-32 "published editions and maps never change").
-// Status today: Not built in qa's table. On main: the held new edition, the box-by-box comparison with no AI
+// Status: Partial (qa re-score 1 Nov, 25cefb67). On main: the held new edition, the box-by-box comparison with no AI
 // (GET /intake/held/:id/impact) and accept as draft maps (POST …/impact/accept). Missing and tested here: the impact on
 // sections, document types, rules and checks; AI for the new and reworded boxes only, started on a click (P-138; saved
 // answers replay at US$0); the edition going out with a release while open cases stay on theirs (P-67); and To review
@@ -75,10 +75,19 @@ const spent = () => n(`select count(*) from drafting_job where mode = 'LIVE'`) +
   const vv = sql(`select id from combination where label = 'Visitor visa' limit 1`);
   const relBefore = vv ? sql(`select coalesce(max(version), 0) || '§' || coalesce(max(sha256), '') from config_release where combination_id = '${vv}'`) : "";
   const caseRel = sql(`select i.config_release_id from form_instance i join runtime_case c on c.id = i.case_id where c.combination_id = '${vv || "00000000-0000-0000-0000-000000000000"}' limit 1`);
+  // K1: the new edition's undecided boxes block submit, counted from the combination's own problem list (not the first
+  // three in the refusal), so other problems of the draft do not make the check pass (qa-2 on #295).
+  const p5476 = async () => vv ? (((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []) as { where?: string; item?: string; message?: string }[]).filter((x) => /IMM 5476/.test(`${x.item ?? ""} ${x.message ?? ""}`)) : [];
+  const before5476 = (await p5476()).length;
   const acc = id2 ? await call("POST", `/intake/held/${id2}/impact/accept`, { expected: imp2?.counts?.form_fields }) : { status: 0, body: null };
   ok("C9.1 SA-1-32 pass: accepting the impact changes no released configuration (same release, same hash)", acc.status >= 200 && acc.status < 300 && (vv ? sql(`select coalesce(max(version), 0) || '§' || coalesce(max(sha256), '') from config_release where combination_id = '${vv}'`) : "x") === relBefore, { status: acc.status, words: words(acc) });
-  const sub = vv ? await call("POST", `/combinations/${vv}/submit`, {}) : { status: 0, body: null };
-  ok("C9.1 fail (K1, check_screen02_slice2.ts): a release with the new edition's boxes still undecided is refused, naming the boxes in words (no raw form-field path)", sub.status === 409 && /IMM 5476/.test(words(sub)) && !/\[0\]/.test(words(sub)), { status: sub.status, words: words(sub).slice(0, 200) });
+  const after5476 = await p5476();
+  ok("C9.1 fail (K1, check_screen02_slice2.ts): after accepting, the Visitor visa's draft lists the new edition's undecided IMM 5476 boxes as problems, by caption (no raw form-field path)", after5476.length > before5476 && after5476.every((x) => !/\[0\]/.test(`${x.item ?? ""} ${x.message ?? ""}`)), { before: before5476, after: after5476.length, first: after5476[0] });
+  // Deciding every box of the new edition (K1 route) clears them: none of the IMM 5476 problems remain.
+  const ed = sql(`select e.id from form_edition e join gov_form_def g on g.id = e.gov_form_def_id where g.form_key = 'IMM 5476' and e.edition_label like '%11-2025%' limit 1`);
+  const open = ed ? (((await call("GET", `/editions/${ed}/form-fields`)).body?.fields ?? []) as { dataPath: string; outcome?: string }[]).filter((x) => x.outcome === "unresolved") : [];
+  for (const b of open) await call("POST", `/editions/${ed}/form-fields/decision`, { dataPath: b.dataPath, decision: "by_hand", reason: "acceptance: filled by hand for now" });
+  ok("C9.1 pass (K1): once every new or reworded box of IMM 5476 11-2025 is decided, no IMM 5476 problem is left on the Visitor visa", ed !== "" && open.length > 0 && (await p5476()).length === before5476, { edition: ed, decided: open.length, left: (await p5476()).length - before5476 });
   ok("C9.1 P-67: the family case stays on its release while the new edition waits", caseRel !== "" && sql(`select i.config_release_id from form_instance i join runtime_case c on c.id = i.case_id where c.combination_id = '${vv}' limit 1`) === caseRel);
   ok("C9.1 (R-143): no live AI call at any step, US$0, the spend ledger unchanged", spent() === 0 && ledger() === ledgerBefore);
   process.exit(summary() ? 1 : 0);

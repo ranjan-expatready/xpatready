@@ -46,6 +46,10 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
     const bc = up.body?.copy?.validated?.barcodes ?? up.body?.barcodes;
     ok("C7.2 P-46: the upload reports the barcode check: barcodes expected for IMM 5257 (5, as the evidence lane decoded on 23 Oct), decoded, matched", bc && bc.checked === true && bc.expected === 5 && Number.isInteger(bc.decoded) && typeof bc.matched === "boolean", bc ?? { status: up.status, words: words(up) });
     ok("C7.2 fail: a copy whose barcodes cannot be read (Validate not pressed, or a page missing) is never ready for filing; the words say to press Validate in Adobe Reader", bc && bc.matched === false && /Validate/.test(String(bc.words ?? "")) && up.body?.copy?.validated?.current !== true, { status: up.status, validated: up.body?.copy?.validated });
+    // P-171 (1), founder's Sample rule: any change to a fact on the form after Validate marks the validated copy out of date.
+    const put = await call("PUT", `/runtime/cases/${caseId}/answers/${P}/person.family_name`, { value: "SAMPLE-CHANGED", expectedId: null }, OFFICER);
+    const after = (await call("GET", `/runtime/form-copies/${copy}`, undefined, OFFICER)).body;
+    ok("C7.2 P-171 (1): changing a fact on the form after the upload marks the validated copy out of date and asks for Validate again", put.status === 200 && after?.validated?.current !== true && after?.out_of_date === true, { put: put.status, validated: after?.validated?.current, out_of_date: after?.out_of_date });
   } else {
     ok("C7.2 P-46: the upload reports the barcode check", false, "no generated copy");
     ok("C7.2 fail: a copy whose barcodes cannot be read is never ready for filing", false, "no generated copy");

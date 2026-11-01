@@ -4,25 +4,25 @@
 
 **How to read this.** As J5: numbered steps with what must be true afterwards; the builder turns them into a browser check and moves the API test into the suites in the PR that makes the capability work. 400 / 1024 / 1440 px, axe, keyboard, plain words at every step. Values are Sample. **No live AI anywhere in this journey (US$0):** AI is saved answers replayed, labelled "replay" (DEMO.md).
 
-## J6.1 Reset to blank, then Load sample (C11.7)
+## J6.1 Reset demo, then Load sample (C11.7)
 Set-up: an isolated copy with the suites' fixture loaded (`POST /api/demo/load {}`), or the demo after any use.
-1. Author opens **Demo ▾ Reset to blank**. **Expect:** a list of what will be removed, counted by kind (programs, combinations, forms, shared fields, sections, document types, checks, AI steps, cases, files saved by the finder, form line changes …) and what stays (the six built-in person roles, the two Pathway types); a field where the person types RESET; the button stays disabled until they do.
+1. Author opens **Demo ▾ Reset demo…**. **Expect:** a list of what will be removed, counted by kind (programs, combinations, forms, shared fields, sections, document types, checks, AI steps, cases, files saved by the finder, form line changes …) and what stays (the six built-in person roles, the two Pathway types); a field where the person types RESET; the button stays disabled until they do.
 2. Author types RESET and confirms. **Expect:** Immigration programs is empty and teaches the first step; Shared library lists are empty; To review is empty; the six person roles remain.
-3. Author opens **Demo ▾ Load sample**. **Expect:** exactly six combinations with P-112's names, five Retail and one Corporate: Visitor visa · Study permit › Outside Canada · Employer-specific work permit › With an LMIA – inside Canada · Provincial nominees › Express Entry stream · Family sponsorship › Spouse or common-law partner · Labour market impact assessment › High-wage position. No Super visa, no "Not started" rows from the old sample.
+3. Author opens **Demo ▾ Load sample…**. **Expect:** exactly six combinations with P-112's names, five Retail and one Corporate: Visitor visa · Study permit › Outside Canada · Employer-specific work permit › With an LMIA – inside Canada · Provincial nominees › Express Entry stream · Family sponsorship › Spouse or common-law partner · Labour market impact assessment › High-wage position. No Super visa, no "Not started" rows from the old sample.
 4. **Expect:** each combination has its official PDFs in the Form library (code, edition as printed, checksum); nothing is released; the shared fields, sections and document types wait in To review as AI proposals (origin AI, replay, US$0) for a person to accept; a form with no saved AI answer says "Draft with AI (about US$x)" and is not run.
 5. Provincial nominees › Express Entry stream › Forms. **Expect:** the IRCC permanent-residence application from its paper forms: IMM 0008, IMM 0008DEP, IMM 5669, IMM 5406, IMM 5476, with IMM 5669 and IMM 5406 as Online lines (answer sheet, no PDF; P-171 (3), Sample); Documents lists the provincial nomination certificate as required (P-109). Ontario's own nomination application is not there.
 6. Author chooses Load sample again. **Expect:** refused: "Reset first", nothing doubled.
 
 ## J6.2 The configured checkpoint (C10.1)
-1. After Reset, author opens **Demo ▾ Load configured checkpoint**. **Expect:** a progress view, then a result dialog with one row per DEMO.md mechanism of the M2 gate (rows 1–12 and 17), each saying what it shows; any row not done says why in plain words.
-2. **Expect, on PR #113's promise:** rows 1, 3–6 and 8 done; row 10 says which combinations were released and gives the validator's words for the Visitor visa, which stays a draft; row 2 Parked (P-102); rows 7 and 17 "Not built yet: …"; rows 9, 11 and 12 "Waiting: …" (the Visitor visa's release 1 and the paid IMM 5257 run). No live AI; US$0.
+1. After Reset, author opens **Demo ▾ Load the configured checkpoint…**. **Expect:** a progress view, then a result dialog with one row per DEMO.md mechanism of the M2 gate (rows 1–12 and 17), each saying what it shows; any row not done says why in plain words.
+2. **Expect, as main gives it today (PR #113, merged):** rows 4, 5, 6 and 8 done; rows 1 and 3 partly done, each saying why; nothing released yet (row 10 gives the validator's words: the Visitor visa stops at its submit problems); row 2 Parked (P-102); rows 7 and 17 "Not built yet: …"; rows 9, 11 and 12 "Waiting: …" (the Visitor visa's release 1 and the paid IMM 5257 run). No live AI; US$0.
 3. **Expect, for the capability to be Works (DEMO.md "Checkpoints" 2):** every row done except the Parked row 2:
    * Visitor visa (A) release 1 with every form line PDF upload, and release 2 mixed (IMM 5257 Online · IMM 5707 PDF upload · IMM 5476 PDF upload, signed by hand and scanned);
    * With an LMIA (B) released, reusing A's family facts (only its own new form newly mapped);
    * each release submitted by the author, signed off by the content reviewer (SME), released by the Approver; no library item approved by the person who proposed it;
    * the thin family case on A's release 1: Client A's family of four (applicant, travelling spouse, a child under 18 answered for by the principal, a child 18 or over), every name labelled Sample;
    * IMM 5257 filled for each applicant on release 1 (C7.1), and IMM 5476 2021 → 11-2025 held for J5.6.
-4. Author opens Demo ▾ Load configured checkpoint again. **Expect:** "Reset first", nothing doubled. **Demo ▾ Reset to blank** returns to step J6.1.2 with no case, copy or configuration left.
+4. Author opens Demo ▾ Load the configured checkpoint… again. **Expect:** the item is greyed with "(reset first)"; by the API, 409 and nothing doubled. **Demo ▾ Reset demo…** returns to step J6.1.2 with no case, copy or configuration left.
 
 ## J6.3 Every question type in the one renderer, three tiers of checks (C4.4)
 Set-up: `setup_visitor_visa.ts`; the case officer creates a Visitor visa case for the Sample family. The other types are proven on the questionnaire kit fields (P-47 board `product/design/questionnaire-kit.dc.html`) until a combination asks them.
@@ -31,7 +31,7 @@ Set-up: `setup_visitor_visa.ts`; the case officer creates a Visitor visa case fo
 3. Officer enters a visit that ends before it starts. **Expect:** the section shows an error summary at its top linking to both date fields (GOV.UK pattern); "Ready to file" lists it; saving still works.
 4. Author adds a section check to the Visitor visa draft from its Questionnaires tab ("The passport expires before the visit ends", Sample, no source) and releases it through review. **Expect:** it reaches the case on the new release only (cases on release 1 keep theirs).
 5. Officer chooses **Independent review**. **Expect:** with live AI off, refused in plain words at US$0; no answer changes.
-6. A prospect opens the pre-qualification (PQR) link. **Expect:** one short page with only the questions flagged pre-qualification and a plain result ("Looks eligible · next: book a consultation"); the answers carry into the case when it is opened.
+6. The client (Client A, user-P) opens the pre-qualification (PQR) view; there is no prospect or salesperson person yet (Question for the tech lead: PQR's actor). **Expect:** one short page with only the questions flagged pre-qualification and a plain result ("Looks eligible · next: book a consultation"); the answers carry into the case when it is opened.
 
 ## J6.4 A filled IMM 5257 passes Adobe Validate and its barcodes match the facts (C7.2)
 Set-up: `setup_visitor_visa.ts`, a Visitor visa case whose principal's IMM 5257 facts are all confirmed (the Sample family, as J6.2 step 3). **Steps 4–9 run on the Mac** (Adobe Acrobat Reader is there and nowhere in CI), following the evidence lane's method in `prototype/evidence-lane/E1-plan.md` §3–5 and `E1/imm5257/STATUS.md`.

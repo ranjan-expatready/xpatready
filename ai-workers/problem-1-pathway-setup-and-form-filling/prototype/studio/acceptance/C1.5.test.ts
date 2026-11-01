@@ -1,9 +1,9 @@
 // Acceptance C1.5 (P-220, pack 3): the author copies a form or document line from another combination, and adds or
 // removes one line across many, after a preview of what happens in each (SA-1B-61 and SA1B-D6 in the team's SA-01B;
 // founder 31 Oct on PR #167: form and document lines first; concept screens/X2-links-and-copy/concept-draft.md v3,
-// BR-C1 to BR-C4; P-106: links between combinations are not configuration). Status today: Not built. On main: slice (a),
-// POST /lines/bulk/preview. Open: PR #273, slice (b), POST /lines/bulk and POST /lines/bulk/:batchId/undo with table
-// line_batch. Not built anywhere: slice (d), copy a line from another combination, POST /combinations/:id/lines/copy
+// BR-C1 to BR-C4; P-106: links between combinations are not configuration). Status: Partial (qa, 1 Nov). On main: slice (a),
+// POST /lines/bulk/preview, and slice (b) (PR #273, merged), POST /lines/bulk and POST /lines/bulk/:batchId/undo with
+// table line_batch (its suite check_x2b_bulk_apply.ts covers the cannot-channel/person/fact and waits outcomes). Not built anywhere: slice (d), copy a line from another combination, POST /combinations/:id/lines/copy
 // (named in the concept). Visitor visa first: IMM 5476 (Use of a representative) from With an LMIA. Rules only, US$0.
 //   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4448 xr_studio_accept \
 //     && tsx studio/acceptance/C1.5.test.ts 4448 xr_studio_accept
@@ -46,15 +46,32 @@ const attrs = (l: string) => l.split("§").slice(0, 7).join("§");
   ok("C1.5 fail: a case officer cannot change configuration (403)", off.status === 403 && !lineOf(SV, F), off.status);
 
   // ── Undo (BR-C4) ──
-  const other = await call("POST", `/lines/bulk/${batch || randomUUID()}/undo`, {}, APPROVER);
-  ok("C1.5 BR-C4 fail: only the person who made the batch can undo it (403)", other.status === 403 && lineOf(VV, F) !== "", other.status);
+  // Only the person who made the batch undoes it: user-A is the only author, so the batch is recorded as another
+  // author's (planted, as lines-bulk.ts stores the maker) to reach the ownership rule, not the author-duty one.
+  const notAuthor = await call("POST", `/lines/bulk/${batch || randomUUID()}/undo`, {}, APPROVER);
+  ok("C1.5 BR-C4 fail: a person without the author duty cannot undo (403)", notAuthor.status === 403 && lineOf(VV, F) !== "", notAuthor.status);
+  if (batch) sql(`update line_batch set actor = 'user-X' where id = '${batch}'`);
+  const other = await call("POST", `/lines/bulk/${batch || randomUUID()}/undo`, {}, AUTHOR);
+  ok("C1.5 BR-C4 fail: another author cannot undo someone else's batch (403 \"Only the person who made this change can undo it\")", other.status === 403 && /Only the person who made/.test(words(other)) && lineOf(VV, F) !== "", { status: other.status, words: words(other) });
+  if (batch) sql(`update line_batch set actor = '${AUTHOR}' where id = '${batch}'`);
   const un = await call("POST", `/lines/bulk/${batch || randomUUID()}/undo`, {}, AUTHOR);
   ok("C1.5 BR-C4 pass: one Undo takes the line back from every combination of the batch", un.status >= 200 && un.status < 300 && !["DRAFT", "PUBLISHED"].includes(lineOf(VV, F).split("§")[7] ?? "") && !["DRAFT", "PUBLISHED"].includes(lineOf(SP, F).split("§")[7] ?? ""), { status: un.status, vv: lineOf(VV, F).split("§")[7], sp: lineOf(SP, F).split("§")[7] });
   const ap2 = await call("POST", "/lines/bulk", { line, op: "add", combinationIds: [VV, SP], include: [VV, SP], idempotencyKey: `acceptance-${randomUUID()}` });
   const b2 = String(ap2.body?.batchId ?? ap2.body?.batch?.id ?? "");
-  await call("PATCH", `/combinations/${SP}/forms/${encodeURIComponent(F)}`, { minAge: 18 });
+  const change = await call("PATCH", `/combinations/${SP}/forms/${encodeURIComponent(F)}`, { minAge: 18 });
+  ok("C1.5 setup: Study permit's copied IMM 5476 line is changed after the copy (minimum age 18)", change.status === 200 && lineOf(SP, F).split("§")[4] === "18", { status: change.status, words: words(change) });
   const un2 = await call("POST", `/lines/bulk/${b2 || randomUUID()}/undo`, {}, AUTHOR);
   ok("C1.5 BR-C4 fail: when one combination changed after the copy, Undo is refused naming it, and nothing is undone", un2.status === 409 && /was changed after the copy/.test(words(un2)) && /Nothing was undone/.test(words(un2)) && lineOf(VV, F).split("§")[7] === "DRAFT", { status: un2.status, words: words(un2) });
+
+  // ── More preview outcomes (BR-C1, BR-C3) ──
+  const has = await call("POST", "/lines/bulk/preview", { line, op: "add", combinationIds: [VV] });
+  ok("C1.5 BR-C1: a combination that already has the line (same \"only if\") is \"Already has it\", not tickable", has.status === 200 && has.body.targets[0]?.outcome === "ALREADY_HAS" && has.body.targets[0]?.tickable === false, has.body?.targets?.[0]);
+  const LMX = id("lm.high_wage");
+  sql(`update combination set retired_at = now(), retired_by = 'user-B' where id = '${LMX}'`);
+  const ret = await call("POST", "/lines/bulk/preview", { line, op: "add", combinationIds: [LMX] });
+  const retAdd = await call("POST", "/lines/bulk", { line, op: "add", combinationIds: [LMX], include: [LMX], idempotencyKey: `acceptance-${randomUUID()}` });
+  ok("C1.5 BR-C3 fail: a retired combination is never a target (\"Cannot\" in the preview, refused on Add, nothing written)", ret.status === 200 && ret.body.targets[0]?.outcome === "CANNOT_COMBINATION_RETIRED" && retAdd.status >= 400 && !lineOf(LMX, F), { preview: ret.body?.targets?.[0]?.outcome, add: retAdd.status });
+  sql(`update combination set retired_at = null, retired_by = null where id = '${LMX}'`);
 
   // ── Remove across many ──
   const rmPv = await call("POST", "/lines/bulk/preview", { line: { combinationId: VV, kind: "form", key: F }, op: "remove", combinationIds: [SP, SV] });

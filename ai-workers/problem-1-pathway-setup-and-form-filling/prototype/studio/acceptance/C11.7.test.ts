@@ -1,7 +1,7 @@
 // Acceptance C11.7 (P-220, pack 3): Reset empties all configuration, the shared library included; Load sample adds only
 // the six agreed combinations (P-108, P-112, P-148) with their official PDFs through the form intake, and the rest as
-// replayed AI proposals waiting for a person (US$0). Status today: Not built on main; PR #113 promises it as
-// POST /demo/load {"sample":"six"} (its suites check_s7_reset.ts and check_s7_load.ts). Part A is what #113 promises;
+// replayed AI proposals waiting for a person (US$0). Status: Partial (qa, 1 Nov); PR #113 (merged) built
+// POST /demo/load {"sample":"six"} (suites check_s7_reset.ts, check_s7_load.ts), so most of part A passes on main and guards it;
 // part B is the rest of the capability row (P-109 as amended by P-112: the Provincial nominee combination is the IRCC
 // permanent-residence application) and stays red after #113 until a builder adds it. No live AI (US$0).
 //   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/acceptance/C11.7.test.ts 4448 xr_studio_accept
@@ -34,7 +34,7 @@ const rootType = (combo: string) => sql(`with recursive up as (select p.program_
   const r = await call("POST", "/demo/reset", { confirm: "RESET" });
   const left = CONFIG.map((t) => [t, n(`select count(*) from ${t}`)] as const).filter(([, c]) => c > 0);
   ok("C11.7 pass (P-108): Reset empties every configuration table, the shared library included", r.status < 300 && left.length === 0, left);
-  ok("C11.7 (P-108, 27 Oct): Reset keeps the six built-in person roles and nothing else of the old workspace", n(`select count(*) from person_role where built_in`) >= 6 && n(`select count(*) from person_role where not built_in`) === 0);
+  ok("C11.7 (P-108, 27 Oct): Reset keeps exactly the six built-in person roles (P-108 lists them) and nothing else of the old workspace", n(`select count(*) from person_role where built_in`) === 6 && n(`select count(*) from person_role where not built_in`) === 0);
   const noConfirm = await call("POST", "/demo/reset", {});
   ok("C11.7 fail: Reset without typing RESET is refused in words", noConfirm.status === 400 && /RESET/.test(noConfirm.body?.message ?? ""), noConfirm.body?.message);
 
@@ -54,9 +54,13 @@ const rootType = (combo: string) => sql(`with recursive up as (select p.program_
   const missing = (Array.isArray(l.body?.missing) ? l.body.missing : []) as { combination?: string; code?: string; why?: string }[];
   const noFile = combos.filter((c) => !n(`select count(*) from source_attachment where combination_id = '${c}'`));
   ok("C11.7 (P-108): every combination has its official PDFs in the library through the form intake (code, edition, checksum), or each file it lacks is listed with the reason", combos.length > 0 && noFile.every((c) => missing.some((m) => m.combination && trail(c).endsWith(m.combination.split(" › ").at(-1)!) && (m.why ?? "").length > 20)) && n(`select count(*) from form_edition where sha256 is null or edition_label is null`) === 0, { noFile: noFile.map(trail), missing });
-  ok("C11.7 (P-108): the load writes no shared field, section or document type itself: they wait as AI proposals for a person", n(`select count(*) from canonical_field where origin <> 'AI_PROPOSAL' or status <> 'DRAFT'`) === 0 && n(`select count(*) from proposal_item where status = 'waiting'`) > 0, { fields: n(`select count(*) from canonical_field`), waiting: n(`select count(*) from proposal_item where status = 'waiting'`) });
+  ok("C11.7 (P-108): the load writes no shared field, section or document type itself: they wait as AI proposals for a person", n(`select count(*) from canonical_field where origin <> 'AI_PROPOSAL' or status <> 'DRAFT'`) === 0 && n(`select count(*) from logical_section`) === 0 && n(`select count(*) from document_type`) === 0 && n(`select count(*) from proposal_item where status = 'waiting'`) > 0, { fields: n(`select count(*) from canonical_field`), waiting: n(`select count(*) from proposal_item where status = 'waiting'`) });
   ok("C11.7 (P-108): nothing is released by the load", n(`select count(*) from config_release`) === 0);
   ok("C11.7 (P-138, P-175): the AI answers are replays (mode REPLAY), no live run, US$0", n(`select count(*) from drafting_job where mode = 'REPLAY'`) > 0 && n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && n(`select count(*) from ai_batch where mode = 'LIVE'`) === 0 && Number(sql(`select coalesce(sum(cost_usd), 0) from drafting_job`)) === 0 && (l.body?.cost_usd ?? 0) === 0);
+  const vvParts = sql(`select participants::text from combination where label = 'Visitor visa' limit 1`);
+  ok("C11.7 (P-209, QA-143): on the Visitor visa the principal reads \"Principal applicant\"; the spouse keeps \"(travelling)\"", /"label": ?"Principal applicant"/.test(vvParts) && /\(travelling\)/.test(vvParts), vvParts.slice(0, 200));
+  const denied = await Promise.all([call("POST", "/demo/reset", { confirm: "RESET" }, "user-O"), call("POST", "/demo/load", { sample: "six" }, "user-P")]);
+  ok("C11.7 fail: a case officer or a client cannot reset or load (403), nothing changed", denied.every((d) => d.status === 403) && n(`select count(*) from combination`) === 6, denied.map((d) => d.status));
   const again = await call("POST", "/demo/load", { sample: "six" });
   ok("C11.7 fail: loading twice is refused (Reset first), nothing doubled", again.status === 409 && n(`select count(*) from combination`) === 6, again.body?.message);
 
@@ -68,6 +72,11 @@ const rootType = (combo: string) => sql(`with recursive up as (select p.program_
   ok("C11.7 part B (P-109): the provincial nomination certificate is a required document on the Provincial nominee combination", pnp !== undefined && n(`select count(*) from document_requirement d left join document_type t on t.document_type_key = d.document_type_key and t.workspace_id = d.workspace_id where d.combination_id = '${pnp}' and d.is_required and (coalesce(t.name, d.document_type_key) ilike '%nominat%')`) >= 1);
   ok("C11.7 part B (P-171 (3), Sample): on the Provincial nominee combination IMM 5669 and IMM 5406 are Online lines (answer sheet, no PDF)", pnp !== undefined && n(`select count(*) from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${pnp}' and g.form_key in ('IMM 5669', 'IMM 5406') and f.channel = 'ONLINE'`) === 2);
 
+  ok("C11.7 part B (P-109): Ontario's own nomination application stays out (only IRCC forms on the Provincial nominee combination)", pnp !== undefined && n(`select count(*) from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${pnp}' and (g.form_key !~ '^IMM' or g.display_name ~* 'ontario|OINP')`) === 0, pnpForms);
+  // Two loads at once load once (demo.ts: one load at a time).
+  await call("POST", "/demo/reset", { confirm: "RESET" });
+  const [c1, c2] = await Promise.all([call("POST", "/demo/load", { sample: "six" }), new Promise<Awaited<ReturnType<typeof call>>>((res) => setTimeout(() => res(call("POST", "/demo/load", { sample: "six" })), 200))]);
+  ok("C11.7 fail: a second load sent while the first runs is refused (409), and the six are loaded once", c1.status < 300 && c2.status === 409 && n(`select count(*) from combination`) === 6, [c1.status, c2.status]);
   // Reset after the load returns to blank again.
   await call("POST", "/demo/reset", { confirm: "RESET" });
   const after = CONFIG.map((t) => [t, n(`select count(*) from ${t}`)] as const).filter(([, c]) => c > 0);

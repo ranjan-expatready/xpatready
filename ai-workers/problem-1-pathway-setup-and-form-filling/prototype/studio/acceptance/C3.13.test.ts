@@ -1,6 +1,6 @@
 // Acceptance C3.13 (P-220, pack 3): the library lists (fields by section, sections, document types) show where used,
 // origin (AI or person) and a worked-out status; with a combination chosen, each row is "Reused" or "New here" with the
-// totals (P-37; Screen 04 concept BR-2, BR-3, BR-4, BR-10; contract in its §6). Status today: Not built in qa's table,
+// totals (P-37; Screen 04 concept BR-2, BR-3, BR-4, BR-10; contract in its §6). Status: Partial (qa, 1 Nov),
 // partly built on main (queue item 2a: used_in labels, raw origin and status, sources); reuse per combination is in open
 // PR #289 (GET /library/reuse/:kind), which part BR-4 follows. Missing and tested here: counts that say what they count
 // (usedBy), status words including "Waiting for a second person", origin words, the section and status filters, search by

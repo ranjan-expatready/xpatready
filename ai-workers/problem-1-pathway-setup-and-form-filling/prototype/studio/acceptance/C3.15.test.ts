@@ -1,9 +1,11 @@
 // Acceptance C3.15 (P-220, pack 3): the author renames a shared field in the library drawer: direct, versioned, the
 // exact-duplicate check runs; a change of meaning needs a second person (P-96 in decisions/P-96-P-97.md; P-116 amended:
-// "a meaning edit makes a new version with a second person"; Screen 04 concept BR-6, BR-8). Status today: Not built in
-// qa's table; on main PATCH /library/fields/:key/name renames directly and versioned with a duplicate check (queue
-// item 2a), but (1) PATCH /library/fields/:key changes the meaning directly with no second person, (2) the duplicate
-// check does not see names waiting in open library changes, (3) a stale version is not refused. Rules only, US$0.
+// "a meaning edit makes a new version with a second person"; Screen 04 concept BR-6, BR-8). Status: Works (qa, 25cefb67):
+// the rename is direct and versioned with the duplicate check, and a meaning edit makes a DRAFT version that goes out
+// only through review and release by a different person. Most checks here guard that. Still red on main, by the tech
+// lead's answers on #295: a meaning change needs a reason (400 without), the duplicate check also sees names waiting in
+// open library changes ("same group" = the key's first part), and a stale version is refused. Either second-person
+// route counts: a library change approved by another person, or the draft version released by another person. US$0.
 //   zsh studio/tools/isolated.sh accept 4448 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4448 xr_studio_accept \
 //     && tsx studio/acceptance/C3.15.test.ts 4448 xr_studio_accept
 import { randomUUID } from "node:crypto";
@@ -57,12 +59,19 @@ const tag = Date.now().toString(36);
   const meaning = `Acceptance meaning ${tag}: the date the person last entered the country`;
   const m = await call("PATCH", `/library/fields/${encodeURIComponent(K)}`, { meaning, reason: "acceptance: the meaning on IMM 5707 is narrower" });
   const change = sql(`select id from library_change where kind = 'field' and key = '${K}' and status = 'WAITING' order by proposed_at desc limit 1`);
-  ok("C3.15 pass (P-96): a meaning change by the author is proposed, not applied: a library change waits for the second person", m.status >= 200 && m.status < 300 && change !== "" && newest(K).meaning !== meaning, { status: m.status, words: words(m), change });
-  const own = change ? await call("POST", `/library/changes/${change}/approve`, { note: "own" }, AUTHOR) : { status: 0, body: null };
-  ok("C3.15 fail (BR-8): the author cannot approve their own meaning change (403), the meaning unchanged", own.status === 403 && newest(K).meaning !== meaning, own.status);
-  const ap = change ? await call("POST", `/library/changes/${change}/approve`, { note: "acceptance: approved by the second person" }, APPROVER) : { status: 0, body: null };
-  ok("C3.15 pass: a different person approves; a new version carries the new meaning, the earlier version is kept for releases and cases", ap.status >= 200 && ap.status < 300 && newest(K).meaning === meaning && Number(sql(`select count(*) from canonical_field where canonical_field_key = '${K}' and meaning <> '${meaning.replace(/'/g, "''")}'`)) >= 1, { status: ap.status, newest: newest(K) });
+  const published = () => sql(`select meaning from canonical_field where canonical_field_key = '${K}' and status = 'PUBLISHED' order by version desc limit 1`);
+  ok("C3.15 pass (P-96, P-116 amended): a meaning change by the author is not live: the published meaning stays until a different person approves (a waiting library change, or a draft version that goes out with a release)", m.status >= 200 && m.status < 300 && published() !== meaning && (change !== "" || (newest(K).status === "DRAFT" && newest(K).meaning === meaning)), { status: m.status, words: words(m), change, newest: newest(K).status });
+  if (change) {
+    const own = await call("POST", `/library/changes/${change}/approve`, { note: "own" }, AUTHOR);
+    ok("C3.15 fail (BR-8): the author cannot approve their own meaning change (403), the meaning unchanged", own.status === 403 && published() !== meaning, own.status);
+    const ap = await call("POST", `/library/changes/${change}/approve`, { note: "acceptance: approved by the second person" }, APPROVER);
+    ok("C3.15 pass: a different person approves; a new version carries the new meaning, the earlier version kept for releases and cases", ap.status >= 200 && ap.status < 300 && newest(K).meaning === meaning && Number(sql(`select count(*) from canonical_field where canonical_field_key = '${K}' and meaning <> '${meaning.replace(/'/g, "''")}'`)) >= 1, { status: ap.status, newest: newest(K) });
+  } else {
+    // The draft route: the release that publishes it is submitted by the author and approved by another person (every
+    // release, check_screen01_release_race.ts and C10.1 row 10); the earlier version stays for releases and cases.
+    ok("C3.15 pass (draft route): the new meaning sits in a new draft version and the earlier published version is kept", newest(K).status === "DRAFT" && Number(sql(`select count(*) from canonical_field where canonical_field_key = '${K}' and status = 'PUBLISHED'`)) >= 1);
+  }
   const direct = await call("PATCH", `/library/fields/${encodeURIComponent(OTHER)}`, { meaning: `Direct ${tag}` });
-  ok("C3.15 fail: a meaning change sent without a reason is refused in words (400), nothing proposed or changed", direct.status === 400 && newest(OTHER).meaning !== `Direct ${tag}`, { status: direct.status, words: words(direct) });
+  ok("C3.15 fail (tech lead on #295): a meaning change sent without a reason is refused in words (400), nothing proposed or changed", direct.status === 400 && newest(OTHER).meaning !== `Direct ${tag}`, { status: direct.status, words: words(direct) });
   process.exit(summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });
