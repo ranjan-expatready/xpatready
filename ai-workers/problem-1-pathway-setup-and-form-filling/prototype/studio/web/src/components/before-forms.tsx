@@ -24,7 +24,7 @@ function Mark({ state }: { state: keyof typeof MARK }) {
 export function BeforeForms({ id, people }: { id: string; people: PeopleView }) {
   const sum = useApi<CombinationSummary>(["combination-summary", id], `/combinations/${id}/summary`);
   const steps = sum.data?.setup?.steps;
-  const doneSince = useFocusItem(steps ? [steps[0].state === "done" ? "pages:record" : "", steps[1].state === "done" ? "people:card" : ""].filter(Boolean) : undefined);
+  const doneSince = useFocusItem(steps ? [steps[0].state === "done" ? "pages:record" : "", steps[1].state === "done" ? "people:card" : ""].filter(Boolean) : undefined, (k) => k === "pages:record" || k === "people:card");
   const [pages, who] = [steps?.[0], steps?.[1]];
   return (
     <section aria-labelledby="before-forms" className="space-y-3 rounded-xl border border-border bg-surface p-4" data-before-forms>
