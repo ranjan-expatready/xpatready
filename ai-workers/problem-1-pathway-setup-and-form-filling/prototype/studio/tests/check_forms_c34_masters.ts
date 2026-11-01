@@ -62,6 +62,7 @@ run(async () => {
   const group = (q.body?.groups ?? []).find((g: any) => g.kind === "edition" && /IMM 5257/.test(g.title) && !/Schedule/.test(g.title));
   ok("C3.4 pass: an edition group for IMM 5257 waits in the one review queue", !!group, (q.body?.groups ?? []).map((g: any) => g.title));
   const v = group ? await call("GET", `/review/proposals?group=${encodeURIComponent(group.id)}`) : { body: null };
+  ok("C3.4 fail→pass (review Minor 1): the draft names its queue group, so \"Open Proposals\" opens IMM 5257's group, not the oldest", !!group && r.body?.group === group.id && again.body?.group === group.id, { said: r.body?.group, queue: group?.id });
   const b = v.body?.group?.bands ?? {};
   const items: any[] = [...(b.ready ?? []), ...(b.check ?? []), ...(b.decide ?? [])].filter((x) => x.step === "masters_edition");
   const of = (k: string) => items.filter((x) => x.kind === k);
@@ -85,6 +86,11 @@ run(async () => {
   ok("C3.4 pass: an accepted section lands as a DRAFT section waiting for a second person", !!sec && r.status < 300 && waiting("section") === s0 + 1, r.status >= 300 ? words(r) : undefined);
   r = await call("POST", "/review/proposals/decide", { ids: [lst?.id ?? "00000000-0000-4000-8000-000000000000"], action: "accept" }, AUTHOR);
   ok("C3.4 pass: an accepted answer list lands as a DRAFT list waiting for a second person", !!lst && r.status < 300 && waiting("answer_list") === l0 + 1, r.status >= 300 ? words(r) : undefined);
+  // Review Minor 5: a 409 names an answer list by its name, never by its code list or hash.
+  const lst2 = of("answer_list").find((x) => x.reuse?.match === "new" && x.id !== lst?.id);
+  const lstPayload = lst?.readings?.draft?.payload, p2 = lst2?.readings?.draft?.payload;
+  r = await call("POST", "/review/proposals/decide", { ids: [lst2?.id ?? "00000000-0000-4000-8000-000000000000"], action: "edit", payload: { ...p2, label: "Edited twin list", values: lstPayload?.values } }, AUTHOR);
+  ok("C3.4 fail→pass (review Minor 5): an edited list that is already in the library is refused (409) by its name, not its codes", !!lst2 && r.status === 409 && words(r).includes('"Edited twin list"') && !/codes:\d+:/.test(words(r)) && !words(r).includes(String(lstPayload?.values?.map((x: any) => x.code).sort().join(","))), words(r));
   ok("C3.4 pass: the whole check spent US$0", T.spent() === before);
   T.done();
 });

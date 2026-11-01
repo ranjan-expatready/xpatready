@@ -143,12 +143,12 @@ function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: 
 type Att = { id: string; recognised: boolean; kind: string; edition: string | null; fileName: string };
 function FormMasters({ combinationId, source }: { combinationId?: string; source?: Att }) {
   const list = useQuery<Att[]>({ queryKey: ["attachments", combinationId], queryFn: () => api(`/combinations/${combinationId}/attachments`), enabled: !!combinationId, initialData: source ? [source] : undefined });
-  const [busy, setBusy] = React.useState<string | null>(null), [err, setErr] = React.useState<string | null>(null), [done, setDone] = React.useState<Record<string, string>>({});
+  const [busy, setBusy] = React.useState<string | null>(null), [err, setErr] = React.useState<string | null>(null), [done, setDone] = React.useState<Record<string, { text: string; group: string }>>({});
   const forms = (list.data ?? []).filter((a) => a.recognised && a.kind !== "Document checklist" && /\.pdf$/i.test(a.fileName));
   if (!forms.length) return null;
   const run = async (a: { id: string; edition: string | null; fileName: string }) => {
     setBusy(a.id); setErr(null);
-    try { const j = await api<{ proposals: number; message: string }>(`/attachments/${a.id}/draft-masters`, { method: "POST", json: { mode: "rules" } }); setDone((d) => ({ ...d, [a.id]: j.proposals ? `${j.proposals} proposals wait on To review.` : `Already drafted for this edition: ${j.message}` })); }
+    try { const j = await api<{ proposals: number; message: string; group: string }>(`/attachments/${a.id}/draft-masters`, { method: "POST", json: { mode: "rules" } }); setDone((d) => ({ ...d, [a.id]: { text: j.proposals ? `${j.proposals} proposals wait on To review.` : `Already drafted for this edition: ${j.message}`, group: j.group } })); }
     catch (e) { setErr((e as Error).message); } finally { setBusy(null); }
   };
   return (
@@ -156,7 +156,7 @@ function FormMasters({ combinationId, source }: { combinationId?: string; source
       <h3 id="fm-h" className="text-sm font-semibold">Forms: sections and answer lists</h3>
       <p className="text-xs text-text-muted">The rules read each form's own parts and drop-down lists into library proposals, once per edition (no AI, US$0). A person checks each name on To review and a second person approves it. Form checks and rules from the guide need the AI step, which waits for the founder's OK on its cost.</p>
       <ul className="space-y-1 text-sm">{forms.map((a) => (
-        <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-form-masters-row={a.edition ?? a.fileName}><span className="min-w-0 break-words">{a.edition ?? a.fileName}{done[a.id] ? <span className="block text-xs" role="status">{done[a.id]} <Link className="text-text-link underline" to="/review/proposals">Open Proposals</Link></span> : null}</span>
+        <li key={a.id} className="flex flex-wrap items-center justify-between gap-2" data-form-masters-row={a.edition ?? a.fileName}><span className="min-w-0 break-words">{a.edition ?? a.fileName}{done[a.id] ? <span className="block text-xs" role="status">{done[a.id].text} <Link className="text-text-link underline" to={`/review/proposals?group=${encodeURIComponent(done[a.id].group)}`}>Open Proposals</Link></span> : null}</span>
           <Button size="sm" variant="secondary" busy={busy === a.id} onClick={() => void run(a)}>Draft sections and lists · US$0</Button></li>))}</ul>
       {err ? <p role="alert" className="text-sm text-text-danger">{err}</p> : null}
     </section>

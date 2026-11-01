@@ -126,7 +126,8 @@ export class FormMasters {
       return { job, made: items.length };
     }, QUEUE_TX);
     if (out.made) await this.audit.log(a!.workspaceId, actor.id, "started", "masters draft", edition, `${actor.name} drafted ${edition}'s sections and answer lists by the rules (${out.made} proposals, no AI, US$0)`, undefined, a!.combinationId);
-    return { ...out.job, proposals: out.made };
+    // The queue group these proposals wait in (review-proposals.ts groupOf), so the panel opens this edition's group (review Minor 1).
+    return { ...out.job, proposals: out.made, group: `edition:${edition}` };
   }
 }
 

@@ -35,6 +35,12 @@ export function listIdentity(codes: string[]): string {
   return all.length <= 300 ? all : `codes:${new Set(codes).size}:${createHash("sha256").update(all).digest("hex").slice(0, 40)}`;
 }
 
+/** The words a person reads for an item: its name, never an answer list's code list or hash (C3.4 review Minor 5). */
+export function nameOf(p: ProposalPayload, given: string): string {
+  const named = (p as { label?: unknown; name?: unknown }).label ?? (p as { name?: unknown }).name;
+  return typeof named === "string" && named.trim() ? named : identityKeyOf(p, given);
+}
+
 export function identityKeyOf(p: ProposalPayload, given: string): string {
   switch (p.kind) {
     case "field": case "section": case "person_role": return normalizeLabel(p.label);
@@ -304,7 +310,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
       if (d.action !== "reject") {
         if (r.landsOn === "library" && (r.reuse as { match: string }).match === "new") {
           const twin = await sameInLibrary(tx, workspaceId, payload);
-          if (twin) fail(`"${identityKeyOf(payload, r.identityKey)}" is already in the library as ${twin} (added since it was proposed): reject this one, or reuse that item.`, HttpStatus.CONFLICT);
+          if (twin) fail(`"${nameOf(payload, r.identityKey)}" is already in the library as ${twin} (added since it was proposed): reject this one, or reuse that item.`, HttpStatus.CONFLICT);
         }
         const reuse = r.reuse as { match: string; existingKey: string | null };
         // P-120: a reuse adds nothing to the library; it records the existing item it uses, if that is still there.
