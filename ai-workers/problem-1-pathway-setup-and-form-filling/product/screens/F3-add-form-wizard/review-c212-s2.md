@@ -57,3 +57,75 @@ Journey test: `journey-test-reviewer-2026-10-31-c212-514f0d8d.md`. **Score 6/10 
 2. Major 2: a removed line is not "on this combination"; steps 2–5 wait for step 1.
 3. Major 3: failing tests for the six missed rules, including API checks as a non-author.
 4. Major 4: a one-form library read; a query-count check under 200 ms with IRCC's index loaded.
+
+# Round at cd8a023d
+Independent reviewer, 1 Nov 2026. I read `git diff 514f0d8d cd8a023d` (code: `api/src/form-progress.ts`, `form-library.ts` `currentOf`, `engine/form-progress.ts`, `contracts/form-progress.ts`, the suite). Ports 4452–4453 and 4450–4451, every copy stopped and its database dropped. US$0 (replay, fixture canada.ca, no `*_LIVE`). Tree clean after every suite (no `prototype/p2/` rewrite).
+
+## Verdict: **Ship after fixes** (0 Blocker, 0 Major, 6 Minor). For the PR: **Approve**
+All four Majors are closed live, and each one's test fails when its fix is removed. Minors 1–5 of the last round are closed. Minors 6 and 7 are still open, and the commit does not mention them.
+
+| Previous | Live at cd8a023d (sample, then IRCC's index filled, 237 forms) | Fix removed (/tmp `git archive`, fresh :4452) |
+|---|---|---|
+| M1 | With an LMIA, all 8 forms, as A and B: step 3 is "Nothing waits here" and To review `?form=` is empty. The carried fields are said on step 6: "Not decided yet (from an earlier release): 16 form fields … Decide them when this edition is drafted again" | DRAFT filter removed → caught |
+| M2a | After `DELETE` of IMM 5409 on LMIA: step 1 says "not on this combination" and steps 2–6 are not started. Adding it back makes step 1 done | history ignored → caught |
+| M2b | Super visa IMM 5476: steps 2–6 are "Comes after the form is on this combination", next is step 1. After `POST …/forms` the whole path is done | gate removed → caught |
+| M3 | 13 of 18 mutations caught (list below). Caught: API `canAuthor:true`, stub counted, form_fields dropped, item filter, problem filter | — |
+| M4 | LMIA, 20 warm calls: median 88–118 ms, p95 100–126, max 137. Super visa IMM 5257: median 45–59 ms. **≈73 statements per read** (xact count, stats settled), down from ≈308. Of these, about 66 come from the shared `Studio.combination` and queue reads | old `list({q})` back: 292 statements, p95 216–251 ms, **suite still green** (Minor C) |
+| m1–m5 | m2: an accepts change on IMM 1295 is not step 4 (B still gets it on To review). m3: a warning is said, and step 6 completes. m4: C reads "The last AI draft stopped before it finished." and "has/have" is right. m5: an upper-case id gives 200 | m1, m3, m5 caught; **m2 and the two m4 word rules missed** (Minor B) |
+| m6, m7 | Not addressed. By the code, a form with no library row still gives 404 (`form-progress.ts:32`). `build-notes.md` still has no C2.12 entry. The contract has no zod schema, and the route still differs from plan §7 | — |
+
+**The "retired line as present" mutation is equivalent: confirmed.** `effective()` (`engine/snapshot.ts:26`) never returns a RETIRED pick. `heldRetires` is off and the mode is "draft", so `.some(l => l.status !== "RETIRED")` at `form-progress.ts:38` always holds when there is a line.
+
+**`next_for_you` and a not-started step: correct, with one gap.** Only step 1 can be not started with a link. The `author()` wrapper strips that link for B and C, and the gate strips steps 2–6. A gets "Add it from the library" on a removed form, and C gets null with "The configuration author does this." The gap is Minor A.
+
+## Issues (all Should)
+**Minor A: a library form with no file is offered "Add it from the library", which the product refuses.**
+- Repro: on LMIA, read IMM 5802, an index-listed form with no file. A gets `next_for_you` "Add it from the library" → `/c/:id/forms`.
+- `POST /combinations/:id/forms {"formKey":"IMM 5802"}` then answers 409: "listed by IRCC but has no file in the library yet: upload its PDF in the Form library, or let the form finder download it."
+- This breaks BR-4 ("never a step they cannot take") for 221 of the 237 library forms once the index is filled.
+- Cause: `engine/form-progress.ts:60` does not look at `edition`.
+- Fix: when the line is none and the edition is null, the next step is "Upload its PDF in the Form library" (`/library/forms`), with a unit check.
+
+**Minor B: three rules still have no failing test (STANDARDS §5 [M]).**
+- The step-4 filter for field changes only (`api/src/form-progress.ts:48-50`).
+- The non-author words (`engine/form-progress.ts:67`).
+- "has/have" (`:65`).
+- Fix: add an API check with a `form_accepts` change on a form (step 4 stays done for B), and two unit checks for the words.
+
+**Minor C: no query-count check (plan §7 "one batched query set per request (counted)", last fix list item 4).**
+- Today's speed meets §9. But going back to the 292-statement read leaves the suite green.
+- Fix: assert the statements per read (for example `pg_stat_database` xact delta ≤ 90) with the index filled.
+
+**Minor D: dead step-3 fallback.**
+- `engine/form-progress.ts:83-85` still makes a "needs you" step that links to the Forms tab, and its unit check ("no item yet: step 3 needs you") encodes the opposite of M1.
+- K1 (`review-queue.ts:168-178`) lists a form_fields item for every person whenever a DRAFT undecided field exists, and channels are PDF/ONLINE only. So the branch cannot fire live.
+- Fix: drop the branch and its check, or give it To review's link.
+
+**Minor E (carried m6):** a held first PDF of a form that is not in the library gives 404.
+
+**Minor F (carried m7):** record the departures from the plan (route, the `not_needed`/`held` states, no zod schema) in `build-notes.md`.
+
+## Mutations (18)
+- **Caught (13):** canAuthor, STUB, form_fields, item filter, problem filter, M1 DRAFT, M2a, M2b, m1 order, m3, m5, not_started next, whats_left href.
+- **Missed (5):**
+  - retired line (equivalent)
+  - m2 filter
+  - non-author words
+  - has/have
+  - M4 slow read
+
+## Suites (fresh copies)
+- `check_forms_c212_progress` **38/38** (:4453, and the archive baseline on :4452)
+- `check_forms_c212_queue_forms` **45/45** (:4450)
+- `check_forms_qa53` **20/20** (:4450)
+- `check_screen02_fix` **61/61** (:4451)
+- tsc 0 errors
+- Graph: G1 0 · G2 0 · G3 2 (the old routes) · G4–G6 0
+
+None rewrote a tracked file.
+
+D1 4 · D2 4 · D5 4 · D7 4 · D9 4 (Minor A) · D10 4 · D11 4 · D15 4 · D16 3 (Minors B, C) · D18 4 · D17 and D20 simulated only. Not checkable: a browser walk, axe and widths (no screen until F3b), a real screen reader, live AI, an intended user's walk.
+
+Journey test: `journey-test-reviewer-2026-11-01-c212-cd8a023d.md`. **Score 9.5/10 (pass).**
+
+**Verdict: Approve** for cd8a023d (no open Blocker or Major). Minors A–F go to the next slice.

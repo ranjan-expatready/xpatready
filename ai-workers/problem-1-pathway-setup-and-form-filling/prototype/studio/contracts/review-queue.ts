@@ -45,5 +45,9 @@ export type QueueItem = {
   /** F2 C2.12 (F3 plan D2): the forms this item belongs to, by number (an item can belong to several: a release lists every
    *  form of its combination, a shared field every form whose field map reads it); [] when it belongs to none. */
   forms: string[];
+  /** F2 C2.12 slice 3 (review 28b3bba3 Major 2, concept K1: a form's path is keyed by form and combination): the combination
+   *  this item is about (an AI draft or proposals on it, its release); null for a library-wide item (a held file, a new
+   *  edition, a shared field, a merge). */
+  combination: string | null;
 };
 export type ReviewQueue = { items: QueueItem[]; counts: Record<QueueFilter, number>; kinds: Partial<Record<QueueKind, number>> };
