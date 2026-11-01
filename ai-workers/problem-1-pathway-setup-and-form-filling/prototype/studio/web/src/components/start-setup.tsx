@@ -36,7 +36,7 @@ export function StartSetupButton({ nodeKey, label, why, className, size = "sm", 
     <span className={className}>
       <Tip tip={START.tip(label)}>
         <span><Button size={size} variant={variant} aria-disabled={why ? true : undefined} aria-describedby={why ? id : undefined} aria-label={`${START.label}: ${label}`} data-start-setup data-next-step={step ? "start" : undefined}
-          className={why ? "cursor-not-allowed opacity-60" : undefined} onClick={(e) => { e.stopPropagation(); if (!why) void start(nodeKey); }}>{START.label}</Button></span>
+          className={why ? (variant === "default" ? "cursor-not-allowed" : "cursor-not-allowed opacity-60") : undefined} onClick={(e) => { e.stopPropagation(); if (!why) void start(nodeKey); }}>{START.label}</Button></span>
       </Tip>
       {why ? <BlockedLine id={id} text={why} className="mt-1" /> : null}
     </span>
