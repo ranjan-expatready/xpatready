@@ -10,7 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Plus } from "lucide-react";
 import type { ChecklistLineRow, ChecklistView } from "../../../../contracts/workspace";
 import { api, ApiError, useActorId, useApi, useSessionView } from "@/lib/api";
-import { FOCUS_RING, useFocusItem } from "@/components/focus-item";
+import { DoneSinceNotice, FOCUS_RING, useFocusItem } from "@/components/focus-item";
 import { PartProblems } from "@/components/part-problems";
 import { Button, Input, Notice, Panel, Pill, Table } from "@/components/ui/controls";
 import { Tip } from "@/components/status";
@@ -54,7 +54,7 @@ export function DocumentsTab({ id }: { id: string }) {
   const [edit, setEdit] = React.useState<any>(null);
   const [error, setError] = React.useState<string | null>(null);
   // X1 (slice C2): a ?focus= link from the setup checklist lands on its place here (documents:lines, documents:problems).
-  useFocusItem(v.data ? [] : undefined);
+  const doneSince = useFocusItem(v.data ? [] : undefined, (k) => k.startsWith("documents:") || k === "questions_documents:problems");
   const refresh = () => { for (const k of [["checklist", id], ["config", id], ["combination", id], ["fact-sources", id], ["preview"], ["draft"]]) void qc.invalidateQueries({ queryKey: k }); };
   if (v.isPending) return <div className="h-40 animate-pulse rounded-xl border border-border bg-surface" aria-busy="true"><span className="sr-only" role="status">Loading each person's checklist</span></div>;
   if (v.error) return <Notice tone="danger" title="The checklists could not be loaded">{v.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void v.refetch()}>Retry</button></Notice>;
@@ -64,6 +64,7 @@ export function DocumentsTab({ id }: { id: string }) {
   const addButton = canAuthor ? <><Button size="sm" onClick={() => setEdit({})} data-add-document><Plus /> Add a document</Button><Button size="sm" variant="secondary" onClick={bulk.openFrom} data-copy-from-open><Copy /> Copy a line from another combination</Button></> : null;
   if (!role) return (
     <section className={cn("rounded-xl border border-border bg-surface-raised p-5", FOCUS_RING)} data-documents-empty data-focus="documents:lines">
+      <DoneSinceNotice shown={doneSince} />
       <h2 className="font-semibold">No documents yet</h2>
       <p className="mt-1 text-sm text-text-muted">Draft them from IRCC's checklist, or add one.</p>
       <div className="mt-3 flex flex-wrap gap-2">{addButton}</div>{bulk.node}
@@ -116,6 +117,7 @@ export function DocumentsTab({ id }: { id: string }) {
   return (
     <RevCtx.Provider value={cfg.data?.revisions ?? {}}>
       <section aria-labelledby="docs-head" className={cn("space-y-4", FOCUS_RING)} data-documents data-focus="documents:lines">
+        <DoneSinceNotice shown={doneSince} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="docs-head" className="font-semibold">Documents each person gives</h2>
           <span className="flex flex-wrap items-center gap-2"><Input aria-label="Find a document" placeholder="Find a document…" className="h-8 w-56" value={find} onChange={(e) => setFind(e.target.value)} />{addButton}</span>
