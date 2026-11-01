@@ -157,6 +157,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-focused]").waitFor({ timeout: 5000 });
   await p.waitForTimeout(1800);
   step("QA-121 fail: a focus that lands says nothing about being done", await p.locator("[data-done-since]").count() === 0);
+  // QA-121 review Major: a key another part of the tab owns (forms:*, not drawn by Before forms) never says "done".
+  for (const key of ["forms:sources", "forms:lines"]) {
+    await p.goto(`${BASE}/c/${sv}/forms?focus=${encodeURIComponent(key)}`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+    await p.locator("[data-people-words]").waitFor({ timeout: 15000 });
+    await p.waitForTimeout(2200);
+    step(`QA-121 fail guard (review Major): ${key} on Forms, still open, says nothing about being done`, await p.getByText("This was done since you opened it").count() === 0);
+  }
 
   step("no page errors", errs.length === 0, errs.join(" | "));
   await b.close();

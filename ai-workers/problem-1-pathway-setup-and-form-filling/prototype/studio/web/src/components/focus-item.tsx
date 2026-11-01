@@ -12,14 +12,17 @@ export const DONE_SINCE = "This was done since you opened it.";
 /** QA-121: how long a ?focus= place may take to be drawn once the tab's data is in, before it counts as gone. */
 export const MISS_AFTER_MS = 1500;
 
-/** `done`: the focus keys whose step is done by now; undefined while the checklist loads (nothing lands before it). */
-export function useFocusItem(done: string[] | undefined) {
+/** `done`: the focus keys whose step is done by now; undefined while the checklist loads (nothing lands before it).
+ *  `owns`: the keys this page draws (QA-121 review Major): only these count as gone when not on the page, so a key drawn
+ *  elsewhere on the tab, or not drawn anywhere yet (forms:*), never says "done". */
+export function useFocusItem(done: string[] | undefined, owns: (key: string) => boolean) {
   const [sp, setSp] = useSearchParams();
   const focus = sp.get("focus");
   const [doneSince, setDoneSince] = React.useState<string | null>(null);
   const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const missTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  React.useEffect(() => () => { clearTimeout(timer.current); clearTimeout(missTimer.current); }, []);
+  // Review m4: the ids are cleared too, so a remount (StrictMode) starts its timers again.
+  React.useEffect(() => () => { clearTimeout(timer.current); clearTimeout(missTimer.current); timer.current = undefined; missTimer.current = undefined; }, []);
   React.useEffect(() => {
     if (!focus || !done) return;
     // X1: an element may also answer a step-level key (data-focus-also, space-separated), e.g. a Not ready item's
@@ -28,7 +31,7 @@ export function useFocusItem(done: string[] | undefined) {
     if (!el) {
       // Not drawn yet: the next render tries again. QA-121: a place still not on the page after a short wait (done since
       // the link was made, or a key nothing answers) says so, on the tab, and the key leaves the address.
-      if (!missTimer.current) missTimer.current = setTimeout(() => {
+      if (owns(focus) && !missTimer.current) missTimer.current = setTimeout(() => {
         missTimer.current = undefined;
         if (document.querySelector(`[data-focus="${CSS.escape(focus)}"], [data-focus-also~="${CSS.escape(focus)}"]`)) return;
         setDoneSince(focus);
