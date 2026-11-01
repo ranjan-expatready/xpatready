@@ -80,7 +80,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const menu = p.locator("[data-row-menu-items]"); await menu.waitFor();
   const menuText = await menu.innerText();
   step("P-147 Q1 pass: the ⋯ menu lists every action", ["Open details", "Change where it comes from…", "Back to the rules' default", "Change in the library…", "Move up or down", "Retire"].every((x) => menuText.includes(x)), menuText.replace(/\n/g, " | "));
-  step("P-147 Q1 fail-guard: each greyed action keeps its reason as visible text (order set in the library section; a line is not retired here)", /The order is set in the library section .+ Change it there\./.test(menuText) && /A question line is not retired here\. Retire the question in the library\./.test(menuText) && await menu.locator('[data-disabled] [data-menu-why]').count() >= 3, menuText.replace(/\n/g, " | "));
+  step("P-147 Q1 fail-guard: each greyed action keeps its reason as visible text (order inside a section set in the library, sections moved on their header; a line is not retired here)", /Questions keep the library's order inside .+ use Move up or Move down on its header\./.test(menuText) && /A question line is not retired here\. Retire the question in the library\./.test(menuText) && await menu.locator('[data-disabled] [data-menu-why]').count() >= 3, menuText.replace(/\n/g, " | "));
   await state("row-menu-greyed-reasons");
   await p.keyboard.press("Escape");
 
