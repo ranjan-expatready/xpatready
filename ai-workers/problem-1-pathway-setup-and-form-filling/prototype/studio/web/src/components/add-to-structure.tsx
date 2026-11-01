@@ -190,9 +190,8 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
     } finally { setBusy(false); }
   };
 
-  // With nothing to add, both buttons look the same and plainly greyed, like the fields above (DV-d1-4): a half-faded
-  // blue Add still read as clickable beside a greyed "Add and add another". The reason is the "You are adding" line.
-  // Only then: while saving, Add keeps its colour and shows the spinner.
+  // With nothing to add, "Add and add another" takes the same plain grey the shared Button gives a disabled primary Add
+  // (DV-d1-4); the reason is the "You are adding" line. Only then: while saving, Add keeps its colour and its spinner.
   const OFF = "disabled:opacity-100 disabled:border disabled:border-border disabled:bg-surface disabled:text-text-muted disabled:shadow-none";
   const verb = fresh.length === 1 ? `Add ${WORD[fresh[0]].toLowerCase()}` : `Add ${fresh.length} names`;
   const title = "Add to Program structure";
@@ -202,7 +201,7 @@ export function AddToStructure({ open, onClose, type: initialType, prefill, onAd
         <div className="flex w-full flex-wrap items-center justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Tip tip="Adds, then keeps the levels above so you can type the next name."><span><Button variant="secondary" className={fresh.length ? undefined : OFF} disabled={!fresh.length || busy} onClick={() => void send(true)} data-add-again>Add and add another</Button></span></Tip>
-          <Tip tip={fresh.length ? `Writes ${fresh.length === 1 ? "the new name" : `the ${fresh.length} new names`} in one go; all or nothing.` : exists ? "Everything you chose is already in the Program structure." : "Type or pick a name first."}><span><Button className={fresh.length ? undefined : OFF} disabled={!fresh.length || busy} busy={busy} onClick={() => void send(false)} data-add-submit>{fresh.length ? verb : "Add"}</Button></span></Tip>
+          <Tip tip={fresh.length ? `Writes ${fresh.length === 1 ? "the new name" : `the ${fresh.length} new names`} in one go; all or nothing.` : exists ? "Everything you chose is already in the Program structure." : "Type or pick a name first."}><span><Button disabled={!fresh.length || busy} busy={busy} onClick={() => void send(false)} data-add-submit>{fresh.length ? verb : "Add"}</Button></span></Tip>
         </div>}>
       <div className="space-y-3" data-add-dialog>
         <div className="space-y-1">
