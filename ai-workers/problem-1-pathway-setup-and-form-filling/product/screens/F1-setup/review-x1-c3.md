@@ -142,3 +142,30 @@ Housekeeping: my test runs rewrote tracked screenshots and `evidence/screen01/br
   1. A failed summary shows "Loading…" forever (m4 remainder).
   2. The sure/not-sure tooltip (in the PR).
   3. The Forms landing (moved to the tech lead as #206's finding 6).
+
+## Re-check on c12259bb (merge of main)
+
+Scope: only the merge commit c12259bb (parents 5d6a97e3, main 832ee5bd). I ran no browser suite. The builder's runs on c12259bb, after `vite build` and `prisma generate`, gave: x1_overview_strip 28/28, x1_tabs_focus 29/29, screen01 116/116.
+
+**What I checked:**
+* **Main's side of `overview.tsx` is kept.** Between merge-base 19d55bfc and 832ee5bd, main changed only one thing in this file: F8 #174's `ruleProblems`, which excludes `where === "Release"`, with `errors` and `warnings` counted from it. The merge has that change word for word. Its comment was reworded to name the setup strip (step 3, Forms) in place of the missing list, which is correct now that the list is gone.
+* **#210's side is kept.**
+  * The `stripRef` landing for `?show=missing` is there, with the dependency `[show, !!sum?.setup]`.
+  * The SetupStrip and loading branch are there.
+  * The people card is still gone.
+* **The dropped `missing`, `missingRef` and `people` are not needed.** None of them is referenced anywhere in the merged file (grep). `npx tsc --noEmit` in `web/` passes.
+* **The rest of the web diff from 5d6a97e3 to c12259bb is main's own work, taken unchanged:** add-to-structure, start-setup, controls, combination, library-forms, sources, questionnaires. None of it touches the strip.
+* **Main's tests are unaffected.**
+  * `check_w1_before_forms_browser.cjs` merged both sides' edits: QA-77's principal label check and X1 C3's "no people card" step.
+  * `check_f8_empty_release.ts` asserts on the API's `row.missing`, which still exists, so it is unaffected.
+  * Nit: its comment at line 42 still says "the Overview's missing list". Not counted.
+* **F8's intent still holds.** The strip renders no draft problems (it has no `problem` or `Release` text), so "Nothing to release yet" is not said twice. With no forms, the tile says "no problems" and step 3 shows Forms to do.
+
+**Journey score:** 8/10, pass (`journey-test-reviewer-2026-11-01-x1-c3.md`). It stands, because the merge changes no step of the journey.
+
+**Working tree:** `evidence/screen01/browser-checks.json` is modified and uncommitted. It comes from the builder's screen01 run, not from me. Decide whether to keep it or discard it before committing. I committed nothing.
+
+**Verdict: Approve on c12259bb.**
+* Blockers: none.
+* Majors: none.
+* Minors: the ones open on a770e278 are unchanged.
