@@ -1,0 +1,119 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-who-can-be-check-vv-single-1919cd7d-live-20261030t040829154z-2ad193",
+  "idempotency_key": "d4ea3fa8dbf49ac2eb5b628eaa340070d9a0dc2a01aad1c827b6698da6d5fe66",
+  "contract_version": "drafting-run/v0",
+  "kind": "who_can_be",
+  "output_sha256": "21e242925521ad464351f95e3e6afa0c378f1d9eb726a77f790591e033eaa6b0",
+  "inputs": {
+   "combination": "vv.single",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+     "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2"
+    }
+   ],
+   "configuration_version": "s5-who-can-be"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 1,
+   "max_output_tokens": 3000,
+   "prompt_version": "who-can-be-check.v1.md",
+   "prompt_sha256": "d39e94ef073ca44e0ef8c2930e5208f991cbbc4ef35c0bea1a8da7aad5bcbfe3"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 16851,
+    "output_tokens": 737,
+    "duration_ms": 8540
+   }
+  ],
+  "usage": {
+   "input_tokens": 16851,
+   "output_tokens": 737,
+   "cost_usd": 0.082144,
+   "duration_ms": 8540
+  },
+  "started_at": "2026-10-30T04:08:29.158Z",
+  "ended_at": "2026-10-30T04:08:38.178Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "a53c187605991fc278f6fab307b2ec25588fd79c10e5485c10a4dc2f9c99e1dd",
+  "template_sha256": "919e2113afb4840442158a2b896d08145cff1b325461c50ba6812680463481a5",
+  "schema_file": "who-can-be-output.v1.schema.json",
+  "schema_sha256": "3e66b9479e25ab0d0b1a2000dc72a6630f1e11f9f752bec053d2a7c56920e5cc",
+  "known": {
+   "combination_trail": "Temporary residence › Visitors › Visitor visa"
+  },
+  "screened": true,
+  "output_sha256": "21e242925521ad464351f95e3e6afa0c378f1d9eb726a77f790591e033eaa6b0",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/runtime-s7-6d5965/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "2baefa8423ad790e00e07e0fd944481e1b3b08ea36fcdc875bd865d0e3f49b8d",
+  "request_bytes": 56081,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/runtime-s7-6d5965/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 37.93538399999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/guide-5256.text.inventory.json",
+    "sha256": "c6bc458e9381a53f71ae15015330eee769ce91a18cfc00a7daad1dad65ab16c2",
+    "kind": "inventory"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "8d02255212c6b81d0108d264f60703dc710893d597bc21697fb4a57a2bac3779",
+   "digest_made_at": "2026-10-30T04:08:29.156Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "3f05d8df3690a418ceaf9e3f590bf7eb",
+   "ticket_expires_at": "2026-10-30T04:10:29.156Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"people\":[{\"role\":\"principal\",\"min\":1,\"max\":1,\"applies\":true,\"quote\":\"This form must be completed by each person applying for a Temporary Resident Visa to visit Canada.\",\"why\":\"The applicant completes their own IMM 5257.\"},{\"role\":\"spouse_or_partner\",\"min\":0,\"max\":1,\"applies\":true,\"quote\":\"If your family members are also applying for TRVs, you can include your whole family's applications in the same envelope.\",\"why\":\"The guide gives no number, so 0 to 1 is used; each family member completes their own forms but they can be submitted together.\"},{\"role\":\"child\",\"min\":0,\"max\":9,\"applies\":true,\"quote\":\"If your family members are also applying for TRVs, you can include your whole family's applications in the same envelope.\",\"why\":\"The guide gives no number, so 0 to 9 is used; children file their own forms within the joint submission.\"},{\"role\":\"representative\",\"min\":0,\"max\":1,\"applies\":false,\"quote\":\"If you wish to have a representative who can conduct business on your behalf, you must give us their email and mailing addresses in this section and fill out the Use of a Representative (IMM 5476 [PDF, 0.26 MB]) form.\",\"why\":\"The guide gives no number, so 0 to 1 is used.\"},{\"role\":\"parent\",\"min\":0,\"max\":2,\"applies\":false,\"quote\":\"If you are less than 18 years of age, your form must be signed by one of your parents or a legal guardian.\",\"why\":\"A parent signs for a minor applicant but does not apply.\"}],\"unresolved\":[{\"passage\":\"Family members must complete their own application forms. However, you may submit your applications together online or at a Visa Application Centre (VAC) and use one payment receipt for the total amount.\",\"reason\":\"This could mean family members make separate applications rather than being included in one; it was read here as a joint submission.\"},{\"passage\":\"Your family members include your spouse or common-law partner, your dependent children and any children that are\\ntheir dependent children.\",\"reason\":\"Dependent children of dependent children (grandchildren) have no listed role.\"},{\"passage\":\"The age of your children is ‘locked in’ when you make your refugee claim.\",\"reason\":\"The dependent child definition refers to refugee claims and permanent residence, so it does not match this application.\"}]}"
+}

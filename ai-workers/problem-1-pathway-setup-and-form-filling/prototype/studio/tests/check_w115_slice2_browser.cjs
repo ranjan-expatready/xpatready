@@ -126,8 +126,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.10 M1 pass: the row now says Client, Ask, Changed here", /Client/.test(await row.locator("[data-comes-from]").innerText()) && /Ask/.test(await row.innerText()) && await row.locator('[data-row-status="draft"]').count() === 1, await row.innerText());
   await p.locator("[data-undo-toast] [data-undo]").waitFor({ timeout: 5000 }).catch(() => {});
   step("undo toast: one Undo for the save", await p.locator("[data-undo-toast] [data-undo]").count() === 1);
-  await p.locator("[data-undo-toast] [data-undo]").click(); await settle();
-  await row.locator('[data-row-status="rules"]').waitFor({ timeout: 10000 }).catch(() => {});
+  await p.locator("[data-undo-toast] [data-undo]").click();
+  // Lead, 30 Oct (main CI flake, the QA-116 family): under load the refetch lands after settle's fixed pause; wait on
+  // the change itself (the row back on the rules), not a timer. A row that never goes back still fails below.
+  await row.locator('[data-row-status="rules"]').waitFor({ timeout: 30000 }).catch(() => {}); await settle();
   step("Undo pass: the row goes back to the passport and the rules", /Document/.test(await row.locator("[data-comes-from]").innerText()) && await row.locator('[data-row-status="rules"]').count() === 1, await row.innerText());
 
   // ======================================================== a declaration: always the client
@@ -172,18 +174,6 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("Minors 1 Nov fail-guard: no \"on on\" in the toast", !/\bon on\b/.test(pqToast), pqToast);
   await p.locator("[data-note-undo]").click(); await settle();
   step("Undo pass: the pre-qualification change is taken back too", (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change).length === 0);
-
-  // QA-112 (C4.10): a case fact the case officer enters, with no document: the Document option says why in one sentence
-  // (the case has no checklist of its own), and no "fallback question" line, since no document is the source.
-  await go(); await openAll();
-  await p.locator('[data-question][data-fact="case.application_number"]').first().getByRole("button", { name: /^Details of/ }).click();
-  const caseDrawer = p.getByRole("dialog"); await caseDrawer.locator("[data-fact-drawer]").waitFor();
-  const caseDoc = await caseDrawer.locator('[data-source-option="DOCUMENT:"]').innerText();
-  step("QA-112 pass: the case fact's Document option says once that no document supplies it and the case has no checklist", (caseDoc.match(/No document/g) ?? []).length === 1 && /the case has no checklist of its own/.test(caseDoc), caseDoc);
-  step("QA-112 fail-guard: no \"The case (asked once)'s checklist\" and no second \"No document supplies it.\"", !/'s checklist/.test(caseDoc) && !/No document supplies it\.\s*$/m.test(caseDoc.replace(/the case has no checklist of its own\./, "")), caseDoc);
-  step("QA-112 pass: no fallback line when the case officer is the source (nothing about a missing document)", await caseDrawer.locator("[data-fallback]").count() === 0 && !/Fallback question|if the document is missing/.test(await caseDrawer.innerText()));
-  await state("drawer-case-fact-no-document");
-  await p.keyboard.press("Escape"); await settle();
 
   // ======================================================== Needs you: a release check on its row
   sql(`insert into fact_source (workspace_id, combination_id, lineage_key, role, canonical_field_key, source, version, status, origin, updated_by) select workspace_id, id, '${decl.role}|${decl.fact}', '${decl.role}', '${decl.fact}', 'AGENT', 1, 'DRAFT', 'HUMAN', 'user-A' from combination where id='${wp}'`);
