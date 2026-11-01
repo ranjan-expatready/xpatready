@@ -6,10 +6,28 @@
 // be shared and Back works. One request per view: GET /combinations/:id/workspace?tab=preview&family=&person=&tweaks=.
 import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { OUTPUT_GROUPS, type PreviewView } from "../../../../contracts/workspace";
+import { OUTPUT_GROUPS, type PreviewForm, type PreviewView } from "../../../../contracts/workspace";
+
 import { PreviewQuestions } from "@/runtime/questionnaire";
 import { Notice, Pill } from "@/components/ui/controls";
 import { cn } from "@/lib/utils";
+
+/** C4.6: the preview's extra words per form (engine/runtime/preview.ts outputOf); optional, so an older response reads. */
+type FormOut = PreviewForm & { signature?: string; signatureWords?: string; toSign?: boolean; laterWave?: string | null; checklist?: boolean };
+/** C4.6 (P-62 §7): what one person gets, counted per channel, in words: "2 filled PDFs to upload · 1 to sign by hand". */
+export function outputsLine(forms: FormOut[]): string {
+  const n = (k: (f: FormOut) => boolean) => forms.filter(k).length;
+  const say = (c: number, one: string, many: string) => (c ? `${c} ${c === 1 ? one : many}` : "");
+  return [
+    say(n((f) => !f.checklist && f.channel === "ONLINE"), "filled on the portal (later wave)", "filled on the portal (later wave)"),
+    say(n((f) => !f.checklist && f.channel === "PDF_UPLOAD"), "filled PDF to upload", "filled PDFs to upload"),
+    say(n((f) => !f.checklist && f.channel === "PAPER"), "PDF to print, sign in pen and mail", "PDFs to print, sign in pen and mail"),
+    // Review m2: a Paper line is already "sign in pen"; this counts only the uploads a person signs by hand.
+    say(n((f) => !!f.toSign && f.channel !== "PAPER"), "PDF to sign by hand and scan", "PDFs to sign by hand and scan"),
+    say(n((f) => !f.checklist && f.channel === "NOT_NEEDED"), "asked by the IRCC account itself", "asked by the IRCC account itself"),
+    say(n((f) => !!f.checklist), "document checklist (read, not filed)", "document checklists (read, not filed)"),
+].filter(Boolean).join(" · ");
+}
 
 export function usePreviewParams() {
   const [sp] = useSearchParams();
@@ -119,14 +137,18 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
         <section aria-labelledby="pv-f" className="rounded-xl border border-border bg-surface-raised p-4">
           <h2 id="pv-f" className="font-semibold">Forms ({p.forms.length})</h2>
           <p className="mt-1 text-xs text-text-muted">What {who.label} gets, by how each form is filed.</p>
+          {p.forms.length ? <p className="mt-1 text-sm" data-outputs-line><span className="font-medium">{who.label} gets:</span> {outputsLine(p.forms as FormOut[])}</p> : null}
           {!p.forms.length ? <p className="mt-2 text-sm text-text-muted">No form applies to this person for this family.</p> : OUTPUT_GROUPS.filter((g) => p.forms.some((f) => f.group === g.key)).map((g) => (
             <div key={g.key} className="mt-3" data-output-group={g.key}>
               <h3 className="text-sm font-medium">{g.title}</h3>
+              {g.key === "ONLINE" ? <p className="text-xs text-text-muted" data-later-wave>{(p.forms as FormOut[]).find((f) => f.group === "ONLINE")?.laterWave ?? "Portal screens come with the browser extension in a later wave."}</p> : null}
               <ul className="mt-1 space-y-2 text-sm">{p.forms.filter((f) => f.group === g.key).map((f) => (
                 <li key={f.form} data-preview-form={f.form}>
                   <span className="mono font-medium">{f.form}</span> <span className="text-text-muted">{f.title}</span>
-                  <span className="ml-1.5 inline-flex gap-1">{g.key === "APPLICATION" || g.key === "COUPLE" ? <Pill tone={f.channel === "ONLINE" ? "ai" : f.channel === "PAPER" ? "warn" : "neutral"}>{f.channelWords}</Pill> : null}{f.noRule ? <Pill tone="warn">Cannot tell yet: no rule</Pill> : f.applies === "cannot_tell" ? <Pill tone="warn">Cannot tell yet</Pill> : null}</span>
+                  <span className="ml-1.5 inline-flex gap-1">{g.key === "APPLICATION" || g.key === "COUPLE" ? <Pill tone={f.channel === "ONLINE" ? "ai" : f.channel === "PAPER" ? "warn" : "neutral"}>{f.channelWords}</Pill> : null}{(f as FormOut).checklist ? <Pill tone="neutral">Checklist · read, not filed</Pill> : null}{(f as FormOut).toSign ? <span data-to-sign><Pill tone="warn">{(f as FormOut).signatureWords}</Pill></span> : (f as FormOut).signatureWords && (f as FormOut).signature !== "NONE" ? <Pill tone="neutral">{(f as FormOut).signatureWords}</Pill> : null}{f.noRule ? <Pill tone="warn">Cannot tell yet: no rule</Pill> : f.applies === "cannot_tell" ? <Pill tone="warn">Cannot tell yet</Pill> : null}</span>
                   <br /><span className="text-xs text-text-muted">{f.why}</span>
+                  {/* Review Major 2: an Online line filed for the couple or the application says it too. */}
+                  {g.key !== "ONLINE" && (f as FormOut).laterWave ? <><br /><span className="text-xs text-text-muted" data-later-wave-line>Online: {(f as FormOut).laterWave}</span></> : null}
                 </li>
               ))}</ul>
             </div>
