@@ -13,7 +13,9 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j };
 };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+import { existsSync } from "node:fs";
+const PSQL = existsSync("/opt/homebrew/opt/postgresql@18/bin/psql") ? "/opt/homebrew/opt/postgresql@18/bin/psql" : "psql"; // the Mac, else the cloud copy's own
+const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 const status = (table: string, col: string, key: string) => sql(`select string_agg(status::text, ',' order by version) from ${table} where ${col} = '${key}'`);
 const field = (key: string, st: string) => sql(`insert into canonical_field (id, workspace_id, canonical_field_key, version, status, meaning, value_type, data_type, scope, subject_kind, origin, updated_by, label, label_checked) select gen_random_uuid(), id, '${key}', 1, '${st}', 'A test field for C11.9.', 'text', 'STRING', 'CLIENT_LEVEL', 'PERSON', 'HUMAN', 'user-A', '${key.split(".")[1].replace(/_/g, " ")}', true from workspace where key='demo'`);
 const docType = (key: string, st: string) => sql(`insert into document_type (id, workspace_id, document_type_key, name, category, version, status, origin, updated_by) select gen_random_uuid(), id, '${key}', 'C11.9 test ${key}', 'client', 1, '${st}', 'HUMAN', 'user-A' from workspace where key='demo'`);
@@ -98,6 +100,69 @@ const why = { reason: "Not needed by any setup any more." };
   const ddel = await call("DELETE", "/library/document-types/c119_draft_type", why);
   r = await call("POST", `/library/changes/${ddel.body.id}/approve`, {}, "user-B");
   ok("C11.9 pass: a never-released, unused document type is deleted at approval", r.status < 300 && status("document_type", "document_type_key", "c119_draft_type") === "", r.body?.status);
+
+  // ─────────────────── B5c fixes: a retired item takes no new use or edit (break B1, M1-M4; review Ma2-Ma4)
+  // person.c119_released was restored above; retire it again for these checks.
+  ret = await call("POST", "/library/fields/person.c119_released/retire", why);
+  await call("POST", `/library/changes/${ret.body.id}/approve`, {}, "user-B");
+  ok("setup: person.c119_released is retired again", status("canonical_field", "canonical_field_key", "person.c119_released") === "RETIRED");
+  field("person.c119_live", "PUBLISHED");
+  r = await call("PATCH", "/library/fields/person.c119_live", { retire: true });
+  ok("C11.9 break B1 fail: the old edit route never retires (410, use Retire), the field stays published", r.status === 410 && /\/retire/.test(r.body?.detail) && status("canonical_field", "canonical_field_key", "person.c119_live") === "PUBLISHED", [r.status, r.body?.detail]);
+  r = await call("PATCH", "/library/fields/person.c119_live", { meaning: "A changed meaning for the C11.9 check." });
+  ok("C11.9 Ma2 pass: a published field is still edited as before", r.status < 300, r.body);
+  r = await call("PATCH", "/library/fields/person.c119_released", { meaning: "This would bring it back silently." });
+  ok("C11.9 Ma2 fail: editing a retired field is refused in words (409) and it stays retired", r.status === 409 && /is retired: .*Restore it/.test(r.body?.detail) && status("canonical_field", "canonical_field_key", "person.c119_released") === "RETIRED", r.body?.detail);
+  r = await call("PATCH", "/library/fields/person.c119_released/name", { name: "Released again" });
+  ok("C11.9 Ma2 fail: renaming a retired field is refused in words (409)", r.status === 409 && /is retired/.test(r.body?.detail), [r.status, r.body?.detail]);
+  const section = sql("select section_key from logical_section limit 1");
+  r = await call("POST", "/library/fields/person.c119_released/placement", { sectionKey: section, collectedFrom: "client_questionnaire", repeats: "per_person" });
+  ok("C11.9 Ma3 fail: a retired field takes no new placement (409), nothing written", r.status === 409 && /is retired/.test(r.body?.detail) && Number(sql("select count(*) from section_question where canonical_field_key='person.c119_released'")) === 0, [r.status, r.body?.detail]);
+  const comboId = sql("select id from combination where retired_at is null order by label limit 1");
+  const line = { attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant", providedBy: "client" };
+  r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, documentTypeKey: "c119_unused_type" });
+  ok("C11.9 M1 fail: a retired document type is not added to a checklist (409), nothing written", r.status === 409 && /is retired/.test(r.body?.detail) && Number(sql("select count(*) from document_requirement where document_type_key='c119_unused_type'")) === 0, [r.status, r.body?.detail]);
+  r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, newTypeName: "c119 unused type" });
+  ok("C11.9 M1 fail: naming a new type that is a retired one reuses nothing (409)", r.status === 409 && /is retired/.test(r.body?.detail), [r.status, r.body?.detail]);
+  const anyType = usedType.documentTypeKey;
+  r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, documentTypeKey: anyType, alternatives: ["c119_unused_type"] });
+  ok("C11.9 M1 fail: a retired document type is not an alternative (409)", r.status === 409 && /is retired/.test(r.body?.detail), [r.status, r.body?.detail]);
+  r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, attachMode: "ANSWER_CONDITIONAL", documentTypeKey: anyType, condition: { field: "person.c119_released", op: "eq", value: "x" }, conditionPlain: "test" });
+  ok("C11.9 M1 fail: a new condition cannot read a retired field (400)", r.status === 400 && /person\.c119_released/.test(r.body?.detail ?? r.body?.message ?? ""), [r.status, r.body?.detail ?? r.body?.message]);
+
+  // M4: a document type used only as another line's alternative counts as used.
+  docType("c119_alt_type", "PUBLISHED");
+  r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, documentTypeKey: anyType, alternatives: ["c119_alt_type"] });
+  ok("setup: a line names c119_alt_type as its alternative", r.status < 300, r.body?.detail);
+  u = await call("GET", "/library/document-types/c119_alt_type/uses");
+  ok("C11.9 M4 fail: a document type used only as an alternative is not retired (it is used there)", u.body?.uses?.some((x: { kind: string; blocks: boolean }) => x.kind === "combination" && x.blocks) && u.body.can.retire !== null, u.body?.can);
+  ok("C11.9 M4 pass: an unused document type still may be retired", (await call("GET", "/library/document-types/c119_unused_type/uses")).body?.can?.restore === null);
+
+  // M3: a retired combination's draft line blocks a delete.
+  docType("c119_draft_in_retired", "DRAFT");
+  r = await call("POST", `/combinations/${comboId}/requirements`, { ...line, documentTypeKey: "c119_draft_in_retired" });
+  sql(`update combination set retired_at = now() where id = '${comboId}'`);
+  u = await call("GET", "/library/document-types/c119_draft_in_retired/uses");
+  ok("C11.9 M3 fail: a draft type a retired combination still lists is not deleted", r.status < 300 && u.body?.can?.delete !== null && u.body.uses.some((x: { why: string }) => /retired/.test(x.why)), u.body?.can);
+  sql(`update combination set retired_at = null where id = '${comboId}'`);
+
+  // M2: approve and withdraw at the same moment: only one wins.
+  docType("c119_race_type", "PUBLISHED");
+  const race = await call("POST", "/library/document-types/c119_race_type/retire", why);
+  const [ap, wd] = await Promise.all([call("POST", `/library/changes/${race.body.id}/approve`, {}, "user-B"), call("POST", `/library/changes/${race.body.id}/withdraw`, { note: "Undone at the same moment." })]);
+  const final = sql(`select status from library_change where id='${race.body.id}'`), typeNow = status("document_type", "document_type_key", "c119_race_type");
+  ok("C11.9 M2 fail: approve and withdraw at once never both succeed, and the type matches the outcome", !(ap.status < 300 && wd.status < 300) && ((final === "RELEASED" && typeNow === "RETIRED") || (final === "WITHDRAWN" && typeNow === "PUBLISHED")), [ap.status, wd.status, final, typeNow]);
+  r = await call("POST", `/library/changes/${race.body.id}/withdraw`, { note: "Too late now." });
+  ok("C11.9 M2 fail: a change already applied or withdrawn is not withdrawn again (409)", r.status === 409, r.status);
+
+  // Break minor: a delete names the draft question it removes; a waiting new field offers Withdraw, never Delete.
+  field("person.c119_placed", "DRAFT");
+  r = await call("POST", "/library/fields/person.c119_placed/placement", { sectionKey: section, collectedFrom: "client_questionnaire", repeats: "per_person" });
+  u = await call("GET", "/library/fields/person.c119_placed/uses");
+  ok("C11.9 minor pass: a draft question that asks a never-released field is listed (not stopping), so the delete says it goes too", r.status < 300 && u.body?.uses?.some((x: { kind: string; blocks: boolean }) => x.kind === "placement" && !x.blocks), [r.status, u.body?.uses]);
+  sql("insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by, proposed_at) select gen_random_uuid(), id, 'field', 'person.c119_placed', 'placed', 'ADD', 'Read from a form.', 'WAITING', 'user-A', now() from workspace where key='demo'");
+  const added = ((await call("GET", "/library/fields")).body as { key: string; row_action: string; change: { action: string } | null }[]).find((f) => f.key === "person.c119_placed");
+  ok("C11.9 minor fail: a new field still waiting is not offered Delete; its row offers Withdraw", added?.row_action === "WITHDRAW" && added.change?.action === "ADD", added);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

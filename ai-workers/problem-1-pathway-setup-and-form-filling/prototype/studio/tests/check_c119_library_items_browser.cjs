@@ -9,7 +9,8 @@ const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const PORT = Number(process.argv[2] ?? 4447), BASE = `http://localhost:${PORT}`, DB = process.argv[3] ?? "xr_studio_b5b";
 const SHOTS = path.join(__dirname, "..", "..", "..", "product", "screens", "04-shared-library", "screenshots", "c119"); fs.mkdirSync(SHOTS, { recursive: true });
-const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const PSQL = fs.existsSync("/opt/homebrew/opt/postgresql@18/bin/psql") ? "/opt/homebrew/opt/postgresql@18/bin/psql" : "psql"; // the Mac, else the cloud copy's own
+const sql = (q) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 let fail = 0, pass = 0;
 const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).replace(/\s+/g, " ").slice(0, 260)}` : ""}`); };
 
@@ -79,8 +80,20 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.screenshot({ path: path.join(SHOTS, "document-types-retire-refused-1440.png") });
     await axe("Document types, a refused Retire");
     await p.locator("[data-item-panel]").getByRole("button", { name: "Close" }).click();
+    // Review Ma1: on Document types the first button is View (no page of its own) and opens where used and history only.
+    await first.locator("[data-edit]").click();
+    await p.locator("[data-item-view] [data-where-panel]").waitFor({ timeout: 15000 });
+    step("C11.9 Ma1 pass: View on a document type opens where it is used and its history, with no action to send", (await first.locator("[data-edit]").innerText()).startsWith("View") && (await p.locator("[data-item-view]").count()) === 1 && (await p.locator("[data-impact-panel], [data-confirm-send]").count()) === 0 && /History|No history yet/.test(await p.locator("[data-item-view]").innerText()));
+    await p.keyboard.press("Escape");
+    await p.waitForFunction(() => !document.querySelector("[data-item-panel]"), null, { timeout: 5000 });
+    step("C11.9 minor pass: Escape closes the panel", (await p.locator("[data-item-panel]").count()) === 0);
     await p.getByLabel("Filter").selectOption("retired");
     step("C11.9 BR-10: the Retired filter says when nothing is retired", /No document type is retired/.test(await p.locator("main").innerText()));
+
+    // ── the Fields table fits at 1024 px (the action sits in the Status cell, no extra column)
+    await p.setViewportSize({ width: 1024, height: 800 }); await go("/library/fields");
+    step("C11.9 1024 px pass: Fields has no sideways scroll", await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1 && [...document.querySelectorAll("main table")].every((t) => (t.parentElement?.scrollWidth ?? 0) <= (t.parentElement?.clientWidth ?? 0) + 1)));
+    await p.setViewportSize({ width: 1440, height: 900 });
 
     // ── a reader without the author duty sees the action greyed with the reason
     await p.evaluate(() => { localStorage.setItem("xr-actor", "user-B"); });

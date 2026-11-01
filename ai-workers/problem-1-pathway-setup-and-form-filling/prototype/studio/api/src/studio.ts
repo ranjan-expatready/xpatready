@@ -1,6 +1,6 @@
 // Product Studio application service: programs and combinations, the shared library (versioned edits), the
 // combination's own configuration, previews through the common renderer, validation, review and release.
-import { itemState, openItemChanges } from "./library-items.ts";
+import { itemState, openItemChanges, refuseRetired, retiredFieldKeys } from "./library-items.ts";
 import { FILLS_LOCK } from "./who-fills.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
@@ -469,7 +469,10 @@ export class Studio {
 
   async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
+    // C11.9 (break B1, review Ma4): retiring goes through the one guard (where used first, a second person), never here.
+    if (b.retire !== undefined) throw new HttpException({ type: "https://expatready.local/problems/use-retire", title: "Use Retire", status: 410, detail: `A shared field is retired with POST /api/library/fields/${key}/retire (where used first; a second person approves), not by editing it.` }, HttpStatus.GONE);
     const workspaceId = await this.ws.id();
+    await refuseRetired(this.db, workspaceId, "field", [key]); // review Ma2: editing a retired field never brings it back
     const rows = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } });
     const merged = [...rows].sort((x, y) => y.version - x.version)[0]?.mergedIntoKey; // F1: a merged field only redirects (break m12)
     if (merged) fail(`${key} was merged into ${merged}: change that field instead.`, HttpStatus.CONFLICT);
@@ -488,6 +491,7 @@ export class Studio {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const workspaceId = await this.ws.id();
     if (!(await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key } }))) fail(`No field ${key}.`, HttpStatus.NOT_FOUND);
+    await refuseRetired(this.db, workspaceId, "field", [key]); // C11.9 break M1: a retired field takes no new placement
     if (!(await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: b.sectionKey } }))) fail("Choose an existing section (or create one first).");
     if (!COLLECTED.includes(b.collectedFrom)) fail(`Collected from must be one of: ${COLLECTED.join(", ")}.`);
     if (!["once_per_case", "per_person", "per_row"].includes(b.repeats)) fail("Repeats must be once per case, per person or per row.");
@@ -589,7 +593,9 @@ export class Studio {
   }
 
   async libraryTypes(workspaceId: string) {
-    const fields = new Map((await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })).map((f) => [f.canonicalFieldKey, f.valueType]));
+    // C11.9 (break M1): a retired field is no longer offered to conditions, so a new condition cannot read it.
+    const retired = await retiredFieldKeys(this.db, workspaceId);
+    const fields = new Map((await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })).filter((f) => !retired.has(f.canonicalFieldKey)).map((f) => [f.canonicalFieldKey, f.valueType]));
     const derived = new Set((await this.db.derivedField.findMany({ where: { workspaceId } })).map((d) => d.derivedKey));
     return { fields, derived };
   }
@@ -620,6 +626,7 @@ export class Studio {
         await this.db.libraryChange.create({ data: { workspaceId, kind: "document_type", key: typeKey, label: b.newTypeName.trim(), action: "ADD", reason: "Named while adding a document requirement.", status: "WAITING", proposedBy: actor.id, combinationId } }); }
     }
     if (!typeKey || !(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) fail("Choose a document type, or name a new one.");
+    await refuseRetired(this.db, workspaceId, "document_type", [typeKey, ...(Array.isArray(b.alternatives) ? b.alternatives : [])]); // C11.9 break M1
     if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
     if (b.attachMode === "ANSWER_CONDITIONAL" && !b.condition) fail("A conditional requirement needs its condition.");
     if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }

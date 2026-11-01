@@ -44,7 +44,7 @@ const releaseLine = (ref: string | null | undefined): SourceLine => {
 /** PR #96 finding (a): only each row's newest version counts (a replaced form mapping or checklist line is no longer a
  *  source or a use), and only while that version is a draft or published (a retired newest one hides the older ones). */
 const LIVE = ["PUBLISHED", "DRAFT", "RETIRED"] as const;
-const current = <T extends { version: number; status: string }>(rows: T[], idOf: (r: T) => string): T[] => {
+export const current = <T extends { version: number; status: string }>(rows: T[], idOf: (r: T) => string): T[] => {
   const top = new Map<string, T>(); for (const r of rows) { const k = idOf(r), t = top.get(k); if (!t || r.version > t.version) top.set(k, r); }
   return [...top.values()].filter((r) => r.status === "PUBLISHED" || r.status === "DRAFT");
 };
@@ -167,7 +167,9 @@ export class LibrarySources {
     const workspaceId = await this.ws.id();
     const rows = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } });
     const newest = [...rows].sort((x, y) => y.version - x.version)[0];
-    if (!newest || newest.status === "RETIRED") throw problem(404, "Not found", `${key} is not in the shared library.`);
+    if (!newest) throw problem(404, "Not found", `${key} is not in the shared library.`);
+    // C11.9 review Ma2: a retired field is restored before it is renamed (said in words, not "not found").
+    if (newest.status === "RETIRED") throw problem(409, "Retired", `The field "${(newest.labelChecked && newest.label) || key}" is retired: it takes no new use or change. Restore it in Shared library › Fields first, or choose another.`);
     if (newest.mergedIntoKey) throw problem(409, "Merged", `${key} was merged into ${newest.mergedIntoKey}: rename that field instead.`);
     const group = newest.groupKey ?? key.split(".")[0], want = normalizeLabel(b.name);
     const twins = await this.db.canonicalField.findMany({ where: { workspaceId, groupKey: group, canonicalFieldKey: { not: key }, mergedIntoKey: null, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { canonicalFieldKey: true, label: true, aliases: true } });

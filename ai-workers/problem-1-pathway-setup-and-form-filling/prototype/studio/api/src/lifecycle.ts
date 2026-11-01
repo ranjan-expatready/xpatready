@@ -441,7 +441,7 @@ export class Lifecycle {
     }
     // C11.9: a shared field's or document type's delete, retire or restore is applied at approval (as a library form's).
     if (isItemLifecycle(c)) {
-      await this.db.$transaction((tx) => applyItem(tx, c));
+      if (!(await this.db.$transaction((tx) => applyItem(tx, c)))) return;
       const what = c.action === "DELETE" ? "deleted (never released, used nowhere)" : c.action === "RETIRE" ? "retired now: hidden from pickers and AI; earlier releases and open cases keep it" : "restored now: back in pickers and AI";
       await this.audit.log(c.workspaceId, actor.id, c.action === "DELETE" ? "deleted" : c.action === "RETIRE" ? "retired" : "restored", entityOf(c.kind), c.key, `${actor.name} approved ${actionVerb(c.action, c.kind)} "${c.label ?? c.key}": ${what}`);
       return;

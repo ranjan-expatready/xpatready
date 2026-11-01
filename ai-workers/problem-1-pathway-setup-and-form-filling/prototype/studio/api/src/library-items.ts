@@ -9,7 +9,7 @@ import type { Use, UsesView } from "../../contracts/structure.ts";
 import { WHY } from "../../contracts/lifecycle.ts";
 import { ACTORS, type Db } from "./core.ts";
 import { combinationTrails } from "./form-uses.ts";
-import { LibrarySources } from "./library-sources.ts";
+import { current, LibrarySources } from "./library-sources.ts";
 
 export const ITEM_KINDS = ["field", "document_type"] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
@@ -40,7 +40,19 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
   // Only its database is read here (usedInIds needs no workspace service or audit).
   const lib = new LibrarySources(db, undefined as never, undefined as never);
   const [ids, trails, combos] = await Promise.all([
-    lib.usedInIds(kind, workspaceId).then((m) => m.get(key) ?? new Set<string>()),
+    lib.usedInIds(kind, workspaceId).then(async (m) => {
+      const s = new Set(m.get(key) ?? []);
+      // Break M4: a document type is also used as another line's alternative, and as the document a fact is read from.
+      if (kind === "document_type") {
+        const [reqs, facts] = await Promise.all([
+          db.documentRequirement.findMany({ where: { workspaceId }, select: { combinationId: true, lineageKey: true, version: true, status: true, alternatives: true } }),
+          db.factSource.findMany({ where: { workspaceId }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true } }),
+        ]);
+        for (const r of current(reqs, (r) => `${r.combinationId}|${r.lineageKey}`)) if (Array.isArray(r.alternatives) && (r.alternatives as unknown[]).includes(key)) s.add(r.combinationId);
+        for (const f of current(facts, (f) => `${f.combinationId}|${f.lineageKey}`)) if (f.documentTypeKey === key) s.add(f.combinationId);
+      }
+      return s;
+    }),
     combinationTrails(db, workspaceId),
     db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true, retiredAt: true } }),
   ]);
@@ -49,13 +61,19 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
   for (const id of [...ids].sort((a, b) => (trails.get(a) ?? "").localeCompare(trails.get(b) ?? ""))) {
     const c = combo.get(id); if (!c) continue;
     const label = trails.get(id) ?? c.label;
-    uses.push(c.retiredAt ? { kind: "combination", label, href: `/c/${id}`, blocks: false, why: "Combination retired: it keeps it" }
+    // Break M3: a retired combination's draft still names it, so it blocks a delete (never a retire: it keeps it).
+    uses.push(c.retiredAt ? { kind: "combination", label, href: `/c/${id}`, blocks: true, retireOk: true, why: "Combination retired: it keeps it, so it can be retired, not deleted" }
       : { kind: "combination", label, href: kind === "document_type" ? `/c/${id}/documents` : `/c/${id}`, blocks: true, why: kind === "document_type" ? "Its document checklist lists it: remove the line there first" : "Its setup reads it: remove it there first" });
   }
   // A field read by a form field of a library form no combination uses yet: it blocks a delete, never a retire.
   if (kind === "field") {
     const boxes = await db.formFieldMap.findMany({ where: { workspaceId, canonicalFieldKey: key, outcome: "mapped", status: { in: ["DRAFT", "PUBLISHED"] } }, select: { edition: { select: { editionLabel: true } } } });
     if (boxes.length) { const forms = [...new Set(boxes.map((b) => b.edition.editionLabel))]; uses.push({ kind: "form_field", label: `${boxes.length} form field${boxes.length === 1 ? "" : "s"} on ${forms.slice(0, 2).join(", ")}${forms.length > 2 ? ` and ${forms.length - 2} more` : ""}`, href: `/library/fields/${encodeURIComponent(key)}`, blocks: true, retireOk: true, why: "Its form fields read it: it can be retired, not deleted" }); }
+  }
+  // Break minor: a draft question that asks it in a section no combination selects is removed with a delete: said, never silent.
+  if (kind === "field") {
+    const qs = current(await db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: key }, select: { lineageKey: true, sectionKey: true, version: true, status: true } }), (q) => q.lineageKey);
+    for (const q of qs) if (q.status === "DRAFT") uses.push({ kind: "placement", label: `Draft question in ${q.sectionKey.replace(/_/g, " ")}`, href: `/library/sections`, blocks: false, why: "Not released, and no combination asks it yet: a delete removes it with the field" });
   }
   // Releases keep it, never changed (L2): listed, never blocking.
   const path = kind === "field" ? "canonical_fields" : "document_types", prop = kind === "field" ? "id" : "key";
@@ -78,6 +96,21 @@ export async function itemUses(db: Db, workspaceId: string, kind: ItemKind, key:
     pending: pending && pending.action !== "ADD" ? { id: pending.id, action: pending.action as "DELETE" | "RETIRE" | "RESTORE", by: nameOf(pending.proposedBy) } : null, history };
 }
 
+/** C11.9 (break M1, review Ma2/Ma3): a retired shared field or document type takes no new use and no edit. Every write
+ *  route that names one calls this (field edits, rename, placement, document lines and their alternatives, conditions). */
+export async function refuseRetired(db: Db | Prisma.TransactionClient, workspaceId: string, kind: ItemKind, keys: (string | null | undefined)[]) {
+  for (const key of [...new Set(keys.filter((k): k is string => !!k))]) {
+    const v = await versionsOf(db, kind, workspaceId, key);
+    if (v.length && stateOf(v).retired) throw problem(409, "Retired", `${kind === "field" ? "The field" : "The document type"} "${v[0].name}" is retired: it takes no new use or change. Restore it in Shared library › ${kind === "field" ? "Fields" : "Document types"} first, or choose another.`, { key });
+  }
+}
+/** The keys of retired shared fields (conditions may not read them, C11.9). */
+export async function retiredFieldKeys(db: Db, workspaceId: string): Promise<Set<string>> {
+  const rows = await db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, status: true, version: true } });
+  const by = new Map<string, Version[]>(); for (const r of rows) by.set(r.canonicalFieldKey, [...(by.get(r.canonicalFieldKey) ?? []), { id: "", status: r.status, version: r.version }]);
+  return new Set([...by].filter(([, v]) => stateOf(v).retired).map(([k]) => k));
+}
+
 /** The approval re-check (before the click and at the click): the same rule as the proposal, read without this change. */
 export async function recheckItem(db: Db, c: LibraryChange): Promise<string | null> {
   const u = await itemUses(db, c.workspaceId, c.kind as ItemKind, c.key, c.id).catch(() => null);
@@ -88,8 +121,22 @@ export async function recheckItem(db: Db, c: LibraryChange): Promise<string | nu
 
 /** Applied at approval, inside one transaction: retire turns its published version to retired, restore turns the newest
  *  retired version back to published, delete removes its never-released draft rows (and a draft question that asks it). */
-export async function applyItem(tx: Prisma.TransactionClient, c: LibraryChange): Promise<void> {
+export async function applyItem(tx: Prisma.TransactionClient, c: LibraryChange): Promise<boolean> {
   const kind = c.kind as ItemKind;
+  // Break M2: only a change still APPROVED is applied; the guarded write locks its row, so a withdraw at the same
+  // moment waits and then finds nothing open (withdrawLifecycle's own guarded write).
+  const note = c.decisionNote ?? (c.action === "DELETE" ? "Deleted at approval (never released, used nowhere)." : c.action === "RETIRE" ? "Retired at approval: hidden from pickers and AI now; earlier releases and open cases keep it." : "Restored at approval: back in pickers and AI now.");
+  const won = await tx.libraryChange.updateMany({ where: { id: c.id, status: "APPROVED" }, data: { status: "RELEASED", decisionNote: note } });
+  if (!won.count) throw problem(409, "No longer open", "This change was withdrawn or decided meanwhile: nothing was applied.");
+  // Break M1: the same rule once more inside the transaction (a use added since the approver's click hands it back).
+  const u = await itemUses(tx as unknown as Db, c.workspaceId, kind, c.key, c.id).catch(() => null);
+  const no = !u ? "It was deleted meanwhile." : c.action === "DELETE" ? u.can.delete : c.action === "RETIRE" ? u.can.retire : u.can.restore;
+  if (no) {
+    const back = `Not applied: ${no}`.slice(0, 600);
+    await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RETURNED", decisionNote: back } });
+    await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: "system", action: "returned", entity: kind === "field" ? "field" : "document type", entityKey: c.key, summary: `The approval did not ${c.action.toLowerCase()} ${c.key}: ${no}`.slice(0, 600) } });
+    return false;
+  }
   const v = await versionsOf(tx, kind, c.workspaceId, c.key);
   const set = (id: string, status: "PUBLISHED" | "RETIRED") => kind === "field" ? tx.canonicalField.update({ where: { id }, data: { status } }) : tx.documentType.update({ where: { id }, data: { status } });
   if (c.action === "RETIRE") { const cur = v.find((r) => r.status === "PUBLISHED"); if (!cur) throw problem(409, "No longer allowed", "It has no published version to retire: return this change."); await set(cur.id, "RETIRED"); }
@@ -101,12 +148,13 @@ export async function applyItem(tx: Prisma.TransactionClient, c: LibraryChange):
       await tx.canonicalField.deleteMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" } });
     } else await tx.documentType.deleteMany({ where: { workspaceId: c.workspaceId, documentTypeKey: c.key, status: "DRAFT" } });
   }
-  await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", decisionNote: c.decisionNote ?? (c.action === "DELETE" ? "Deleted at approval (never released, used nowhere)." : c.action === "RETIRE" ? "Retired at approval: hidden from pickers and AI now; earlier releases and open cases keep it." : "Restored at approval: back in pickers and AI now.") } });
+  return true;
 }
 
 /** The open delete, retire or restore of each item of one kind, for the list rows (one read per page). */
 export async function openItemChanges(db: Db, workspaceId: string, kind: ItemKind) {
-  const rows = await db.libraryChange.findMany({ where: { workspaceId, kind, action: { in: LIFECYCLE_ACTIONS }, status: { in: OPEN } }, orderBy: { proposedAt: "desc" }, select: { id: true, key: true, action: true, status: true, proposedBy: true } });
+  // Break minor: a new field still waiting (its ADD) offers Withdraw on its row, never Delete (library-changes.ts withdraws it).
+  const rows = await db.libraryChange.findMany({ where: { workspaceId, kind, action: { in: kind === "field" ? [...LIFECYCLE_ACTIONS, "ADD"] : LIFECYCLE_ACTIONS }, status: { in: OPEN } }, orderBy: { proposedAt: "desc" }, select: { id: true, key: true, action: true, status: true, proposedBy: true } });
   const out = new Map<string, { id: string; action: string; status: string; by: string | null; by_id: string }>();
   for (const r of rows) if (!out.has(r.key)) out.set(r.key, { id: r.id, action: r.action, status: r.status, by: nameOf(r.proposedBy), by_id: r.proposedBy });
   return out;

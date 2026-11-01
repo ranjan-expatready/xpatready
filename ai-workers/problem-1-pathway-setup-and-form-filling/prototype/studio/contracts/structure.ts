@@ -79,7 +79,7 @@ export const LifecycleBody = z.object({ reason: z.string().trim().min(3, "Say wh
 
 export type LifecycleAction = "DELETE" | "RETIRE" | "RESTORE";
 /** One use of a name or a combination, with where to see it (P-52 L3: each use with a link). */
-export type Use = { kind: "combination" | "release" | "case" | "child" | "draft_change" | "form_field"; label: string; href: string | null; blocks: boolean; why: string;
+export type Use = { kind: "combination" | "release" | "case" | "child" | "draft_change" | "form_field" | "placement"; label: string; href: string | null; blocks: boolean; why: string;
   /** S4 round 5: this use blocks Delete but not Retire (a combination reads the form's file as a source; it keeps it). */ retireOk?: boolean };
 /** GET …/uses: everything that uses it, and what may be done now with the reason when it may not. */
 export type UsesView = {
