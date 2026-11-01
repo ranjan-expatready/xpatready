@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X2b board: copy a form or document line across combinations (v3, Sample)</title>
+<style>
+  :root { --primary:#0862c5; --link:#054e9c; --surface:#f7f7f7; --raised:#fff; --border:#d9d9d9; --text:#2d2d2d; --muted:#595959; --danger:#dc2626; --warnbg:#fff4e6; --warnbd:#f5b46b; --ai:#e6f4ff; --ok:#e9f7ef; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 14px/1.45 Inter, system-ui, sans-serif; color: var(--text); background: var(--surface); }
+  .bar { position: sticky; top: 0; z-index: 20; background: #fff; border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .bar b { margin-right: 6px; flex-basis: 100%; }
+  .bar button { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 4px 12px; cursor: pointer; font: inherit; }
+  .bar button[aria-pressed="true"] { border-color: var(--primary); color: var(--link); background: var(--ai); font-weight: 600; }
+  main { max-width: 1180px; margin: 0 auto; padding: 16px; }
+  .crumbs { color: var(--link); font-size: 13px; overflow-wrap: anywhere; }
+  h1 { font-size: 22px; margin: 6px 0 2px; }
+  .facts { color: var(--muted); font-size: 13px; }
+  .tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--border); margin: 16px 0 12px; overflow-x: auto; }
+  .tabs span { padding: 8px 2px; color: var(--muted); white-space: nowrap; }
+  .tabs span.on { color: var(--text); border-bottom: 2px solid var(--primary); font-weight: 600; }
+  .card { background: var(--raised); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .btn { border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer; border: 1px solid var(--border); background: #fff; }
+  .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn:disabled { background: #e5e5e5; color: #737373; border-color: #d9d9d9; cursor: not-allowed; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .pill { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; border: 1px solid var(--border); background: var(--surface); white-space: nowrap; }
+  .pill.warn { border-color: var(--warnbd); background: var(--warnbg); }
+  .pill.ok { border-color: #8fd1a8; background: var(--ok); }
+  .pill.sample { border-color: #e0c27a; background: #fff8e1; }
+  .tablewrap { overflow-x: auto; position: relative; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  dialog table { min-width: 0; }
+  .menu { display: inline-block; position: relative; }
+  .menu ul { position: absolute; right: 0; top: 30px; background: #fff; border: 1px solid var(--border); border-radius: 8px; list-style: none; margin: 0; padding: 4px; width: 260px; box-shadow: 0 6px 18px rgba(0,0,0,.1); z-index: 3; }
+  .menu li { padding: 6px 10px; border-radius: 6px; }
+  .menu li.on { background: var(--ai); }
+  .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 9; }
+  dialog { position: fixed; inset: auto 0 0 0; top: 120px; margin: 0 auto 16px; width: min(760px, calc(100vw - 24px)); max-height: calc(100vh - 140px); overflow: auto; border: 1px solid var(--border); border-radius: 12px; padding: 20px; z-index: 10; background: #fff; }
+  dialog h2 { margin: 0 0 4px; font-size: 18px; }
+  .foot { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+  .toast { position: fixed; right: 16px; bottom: 16px; background: #fff; border: 1px solid var(--border); border-left: 4px solid #2f9e5b; border-radius: 8px; padding: 10px 14px; box-shadow: 0 6px 18px rgba(0,0,0,.1); max-width: calc(100vw - 32px); }
+  .err { color: var(--danger); font-size: 13px; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 24px; border-top: 1px dashed var(--border); padding-top: 10px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="bar" role="toolbar" aria-label="Board states">
+  <b>X2b board v3 · Sample · founder's answers of 31 Oct (PR #167): forms and documents first; no links between combinations (P-106)</b>
+  <button data-s="row" aria-pressed="true">Forms tab: line menu</button>
+  <button data-s="add">Copy to others: preview</button>
+  <button data-s="remove">Remove from others: preview</button>
+  <button data-s="from">Copy a line from another</button>
+  <button data-s="done">After: toast with Undo</button>
+  <button data-s="undone">Undo done</button>
+  <button data-s="undofail">Undo refused</button>
+  <button data-s="readonly">Approver (read-only)</button>
+</div>
+<main>
+  <div class="crumbs">Immigration programs › Temporary residence › Visitors › Visitor visa</div>
+  <h1>Visitor visa <span class="pill sample">Sample</span></h1>
+  <div class="facts">Not released yet · cases opened outside Canada · filing: PDF only · people: Applicant, Spouse or partner (travelling) (optional), Child (travelling) (0–4)</div>
+  <div class="tabs" role="tablist" aria-label="Combination"><span>Overview</span><span class="on">Forms</span><span>Questionnaires</span><span>Documents</span><span>Preview</span><span>Review and release</span></div>
+
+  <section class="card">
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+      <span class="muted">Filing: <b>PDF only</b> · 3 forms · Sample until the immigration expert confirms</span>
+      <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-hide="readonly">+ Add a form from the library</button><button class="btn" data-hide="readonly" data-go="from">Copy a line from another combination</button></span>
+    </div>
+    <div class="tablewrap" style="margin-top:10px">
+    <table>
+      <thead><tr><th>Form</th><th>Who fills it</th><th>Only if</th><th>Filed as</th><th><span class="sr-only">Actions</span></th></tr></thead>
+      <tbody>
+        <tr><td><b>IMM 5257</b><br><span class="muted">Application for temporary resident visa</span></td><td>Each applicant</td><td><span class="pill ok">Always</span></td><td>PDF upload</td><td></td></tr>
+        <tr><td><b>IMM 5645</b><br><span class="muted">Family information</span></td><td>Each applicant</td><td><span class="pill ok">Always</span></td><td>PDF upload</td><td></td></tr>
+        <tr><td><b>IMM 5476</b><br><span class="muted">Use of a representative</span></td><td>Principal applicant</td><td>Has a representative</td><td>PDF upload</td>
+          <td data-hide="readonly"><span class="menu"><button class="btn" aria-label="More for IMM 5476" aria-expanded="true">⋯</button>
+            <ul data-show="row" role="menu"><li role="menuitem">Change</li><li role="menuitem" class="on">Copy to other combinations…</li><li role="menuitem">Remove from other combinations…</li><li role="menuitem">Remove from this combination</li></ul></span></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="muted" data-show="readonly">Approver view: copies arrive as draft changes in each combination and are approved with that combination's other changes (before and after shown on Review and release). No copy controls here.</p>
+  </section>
+  <p class="note">X2b only (C1.5): form lines and document lines; rules and questions later (founder, 31 Oct). Links between combinations are not configuration (P-106); a case may rely on an employer case in M3. Every form, trail and outcome here is Sample from the demo's sample structure, not an IRCC statement.</p>
+</main>
+
+<div class="backdrop" data-show="add remove from undofail"></div>
+<dialog open aria-modal="true" aria-labelledby="add-h" data-show="add">
+  <h2 id="add-h">Copy IMM 5476 to other combinations</h2>
+  <p class="muted">Line: IMM 5476 · Principal applicant · only if "Has a representative" · PDF upload. Nothing changes until you choose Add. Every combination gets its own draft change; one Undo takes back the whole copy while none of them has changed since.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th><span class="sr-only">Include</span></th><th>Combination</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td><input type="checkbox" checked aria-label="Include Super visa"></td><td>Temporary residence › Visitors › Super visa</td><td><span class="pill ok">Will change</span> IMM 5476 added as above</td></tr>
+      <tr><td><input type="checkbox" checked aria-label="Include Study permit"></td><td>Temporary residence › Study permits › Study permit</td><td><span class="pill ok">Will change</span> IMM 5476 added as above</td></tr>
+      <tr><td><input type="checkbox" disabled aria-label="Extend stay: already has it"></td><td>Temporary residence › Visitors › Extend stay in Canada</td><td class="muted">Already has it: no change</td></tr>
+      <tr><td><input type="checkbox" disabled aria-label="With an LMIA: different only if"></td><td>Temporary residence › Work permits › Employer-specific work permit › With an LMIA</td><td class="muted">Has it with a different "only if" (always): its own line is kept</td></tr>
+      <tr><td><input type="checkbox" disabled aria-label="Grant of citizenship: cannot"></td><td>Citizenship › Grant of citizenship</td><td><span class="pill warn">Cannot</span> its "only if" uses "Has a representative", which this combination does not ask</td></tr>
+      <tr><td><input type="checkbox" disabled aria-label="Spouse or partner, applicant outside Canada: cannot, retired"></td><td>Permanent residence › Family sponsorship › Spouse or partner › Applicant outside Canada</td><td><span class="pill warn">Cannot</span> IMM 5476 is retired in the Form library (Sample)</td></tr>
+      <tr><td><input type="checkbox" disabled aria-label="Dependent child: cannot"></td><td>Permanent residence › Family sponsorship › Dependent child</td><td><span class="pill warn">Cannot</span> PDF upload of IMM 5476 is not accepted through this combination's IRCC account (Sample)</td></tr>
+      <tr><td><input type="checkbox" aria-label="Include Post-graduation, withdraws its review"></td><td>Temporary residence › Work permits › Open work permit › Post-graduation</td><td><span class="pill warn">Waits</span> submitted for review: adding withdraws that submission. Tick to add it anyway.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="foot"><button class="btn" data-go="row">Cancel</button><button class="btn primary" data-go="done">Add to 2 combinations</button></div>
+</dialog>
+
+<dialog open aria-modal="true" aria-labelledby="rm-h" data-show="remove">
+  <h2 id="rm-h">Remove IMM 5476 from other combinations</h2>
+  <p class="muted">Nothing changes until you choose Remove. A released line's removal is a draft change until that combination's next release.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th><span class="sr-only">Include</span></th><th>Combination</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td><input type="checkbox" checked aria-label="Include Extend stay"></td><td>Temporary residence › Visitors › Extend stay in Canada</td><td><span class="pill ok">Will be removed</span></td></tr>
+      <tr><td><input type="checkbox" checked aria-label="Include With an LMIA"></td><td>Temporary residence › Work permits › Employer-specific work permit › With an LMIA</td><td><span class="pill ok">Will be removed</span> (its "only if" differs: always)</td></tr>
+      <tr><td><input type="checkbox" disabled aria-label="Super visa: does not have it"></td><td>Temporary residence › Visitors › Super visa</td><td class="muted">Does not have it</td></tr>
+      <tr><td><input type="checkbox" disabled aria-label="Study permit: removed already"></td><td>Temporary residence › Study permits › Study permit</td><td class="muted">Removed already in its draft</td></tr>
+    </tbody>
+  </table></div>
+  <div class="foot"><button class="btn" data-go="row">Cancel</button><button class="btn primary" data-go="done">Remove from 2 combinations</button></div>
+</dialog>
+
+<dialog open aria-modal="true" aria-labelledby="from-h" data-show="from">
+  <h2 id="from-h">Copy a line from another combination</h2>
+  <label class="muted" for="src" style="display:block;margin-top:8px">Combination to copy from</label>
+  <input id="src" class="btn" style="width:100%;text-align:left" value="Temporary residence › Visitors › Super visa">
+  <p class="muted">Its form and document lines. Lines this combination already has are not offered.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th><span class="sr-only">Copy</span></th><th>Line</th><th>What happens here</th></tr></thead>
+    <tbody>
+      <tr><td><input type="checkbox" disabled aria-label="IMM 5257 SCH1: cannot, retired"></td><td><b>IMM 5257 SCH1</b> · form · each applicant</td><td><span class="pill warn">Cannot</span> the form's retirement is open in the Form library (Sample)</td></tr>
+      <tr><td><input type="checkbox" checked aria-label="Copy IMM 5409"></td><td><b>IMM 5409</b> · form · the couple, once</td><td><span class="pill ok">Will be added</span> <span class="muted">Sample</span></td></tr>
+      <tr><td><input type="checkbox" checked aria-label="Copy proof of medical insurance"></td><td><b>Proof of medical insurance</b> · document · principal applicant</td><td><span class="pill ok">Will be added</span></td></tr>
+      <tr><td><input type="checkbox" disabled aria-label="Letter of invitation: cannot"></td><td><b>Letter of invitation</b> · document · child or grandchild in Canada</td><td><span class="pill warn">Cannot</span> that person is not in this application</td></tr>
+    </tbody>
+  </table></div>
+  <div class="foot"><button class="btn" data-go="row">Cancel</button><button class="btn primary" data-go="done">Add 2 lines</button></div>
+</dialog>
+
+<dialog open aria-modal="true" aria-labelledby="ur-h" data-show="undofail" role="alertdialog">
+  <h2 id="ur-h">The copy cannot be undone in one step</h2>
+  <p class="err">Super visa was changed after the copy (IMM 5476's "only if", by the content publisher at 14:02). Nothing was undone.</p>
+  <p class="muted">Remove IMM 5476 by hand where you want it gone, or use Remove from other combinations.</p>
+  <div class="foot"><button class="btn primary" data-go="row">Close</button></div>
+</dialog>
+
+<div class="toast" role="status" data-show="undone">Undone: IMM 5476 taken back from Super visa and Study permit. Nothing else changed.</div>
+<div class="toast" role="status" data-show="done">IMM 5476 added to 2 combinations (draft changes in each). <button class="btn" data-go="undone">Undo</button> <span class="muted">(board: "Undo refused" shows the case where one of them changed since)</span></div>
+
+<script>
+  const show = (s) => {
+    document.querySelectorAll(".bar button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.s === s)));
+    document.querySelectorAll("[data-show]").forEach((e) => { e.hidden = !e.dataset.show.split(" ").includes(s); });
+    document.querySelectorAll("[data-hide]").forEach((e) => { e.hidden = e.dataset.hide.split(" ").includes(s); });
+    const bar = document.querySelector(".bar").getBoundingClientRect().bottom;
+    document.querySelectorAll("dialog").forEach((x) => { x.style.top = `${Math.round(bar) + 12}px`; x.style.maxHeight = `calc(100vh - ${Math.round(bar) + 28}px)`; });
+    const d = [...document.querySelectorAll("dialog")].find((x) => !x.hidden);
+    if (d) (d.querySelector("input:not([disabled]), button") ?? d).focus();
+  };
+  document.querySelectorAll(".bar button").forEach((b) => b.addEventListener("click", () => show(b.dataset.s)));
+  document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => show(b.dataset.go)));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && [...document.querySelectorAll("dialog")].some((x) => !x.hidden)) show("row"); });
+  show("row");
+</script>
+<style>.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}</style>
+</body>
+</html>
