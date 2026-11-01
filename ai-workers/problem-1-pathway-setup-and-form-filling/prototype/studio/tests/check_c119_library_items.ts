@@ -165,6 +165,47 @@ const why = { reason: "Not needed by any setup any more." };
   const added = ((await call("GET", "/library/fields?retired=all")).body as { key: string; row_action: string; change: { action: string } | null }[]).find((f) => f.key === "person.c119_placed");
   ok("C11.9 minor fail: a new field still waiting is not offered Delete; its row offers Withdraw", added?.row_action === "WITHDRAW" && added.change?.action === "ADD", added);
 
+  // ─────────────────── break round 2 (B5c fixes)
+  // Major 1: a merged field (an older published version, the newest retired with merged_into_key) is never retired.
+  field("person.c119_merged", "PUBLISHED");
+  sql("insert into canonical_field (id, workspace_id, canonical_field_key, version, status, meaning, value_type, data_type, scope, subject_kind, origin, updated_by, merged_into_key) select gen_random_uuid(), id, 'person.c119_merged', 2, 'RETIRED', 'Merged.', 'text', 'STRING', 'CLIENT_LEVEL', 'PERSON', 'HUMAN', 'user-A', 'person.family_name' from workspace where key='demo'");
+  u = await call("GET", "/library/fields/person.c119_merged/uses");
+  r = await call("POST", "/library/fields/person.c119_merged/retire", why);
+  ok("C11.9 break-2 Major 1 fail: a merged field is not retired, restored or deleted (409, says where it points)", r.status === 409 && /merged into person\.family_name/.test(r.body?.detail) && [u.body?.can?.retire, u.body?.can?.restore, u.body?.can?.delete].every((x: unknown) => typeof x === "string"), [r.status, r.body?.detail]);
+
+  // Major 2: a retire approved at the same moment as a new line using the type: never a retired type on a current line.
+  let both = 0;
+  for (let i = 0; i < 6; i++) {
+    const k = `c119_race_line_${i}`; docType(k, "PUBLISHED");
+    const rq = await call("POST", `/library/document-types/${k}/retire`, why);
+    const [ap2, ln] = await Promise.all([call("POST", `/library/changes/${rq.body.id}/approve`, {}, "user-B"), call("POST", `/combinations/${comboId}/requirements`, { ...line, documentTypeKey: k })]);
+    if (status("document_type", "document_type_key", k) === "RETIRED" && ln.status < 300) both++;
+    void ap2;
+  }
+  ok("C11.9 break-2 Major 2 fail: in 6 simultaneous approve-and-add rounds a retired type never ends up on a current line", both === 0, both);
+
+  // Major 3: a waiting change of who fills its question stops a retire.
+  field("person.c119_fills", "PUBLISHED");
+  sql("insert into library_change (id, workspace_id, kind, key, label, action, reason, status, proposed_by) select gen_random_uuid(), id, 'placement_fills', 'person.c119_fills', 'fills', 'EDIT', 'test', 'WAITING', 'user-A' from workspace where key='demo'");
+  r = await call("POST", "/library/fields/person.c119_fills/retire", why);
+  ok("C11.9 break-2 Major 3 fail: a waiting who-fills change stops a retire (409, waiting)", r.status === 409 && /waiting/.test(r.body?.detail), [r.status, r.body?.detail]);
+
+  // Major 4: a restore whose name another current field now answers to is refused.
+  sql("update canonical_field set aliases = array['c119 released'] where canonical_field_key = 'person.c119_live'");
+  u = await call("GET", "/library/fields/person.c119_released/uses");
+  ok("C11.9 break-2 Major 4 fail: a restore is refused while another field of its group answers to its name", /Can't restore yet: .*c119 released.* is now also a name/.test(u.body?.can?.restore ?? ""), u.body?.can?.restore);
+  sql("update canonical_field set aliases = '{}' where canonical_field_key = 'person.c119_live'");
+  u = await call("GET", "/library/fields/person.c119_released/uses");
+  ok("C11.9 break-2 Major 4 pass: with the name free again the restore is allowed", u.body?.can?.restore === null, u.body?.can?.restore);
+
+  // Minors: a document type that supplies a field stops its delete; a missing reason says so in words.
+  field("person.c119_supplied", "DRAFT");
+  docType("c119_supplier", "PUBLISHED"); sql("update document_type set supplies_facts = array['person.c119_supplied'] where document_type_key = 'c119_supplier'");
+  u = await call("GET", "/library/fields/person.c119_supplied/uses");
+  ok("C11.9 break-2 minor fail: a field a document type supplies is not deleted", typeof u.body?.can?.delete === "string" && u.body.uses.some((x: { label: string }) => /supplies it/.test(x.label)), u.body?.can);
+  r = await call("POST", "/library/fields/person.c119_live/retire", {});
+  ok("C11.9 break-2 minor fail: a retire with no reason says 'Say why' in words, never the validator's", r.status === 400 && /^Say why/.test(r.body?.detail), r.body?.detail);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

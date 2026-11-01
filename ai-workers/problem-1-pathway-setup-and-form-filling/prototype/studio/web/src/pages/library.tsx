@@ -93,17 +93,20 @@ export function FieldPage() {
   if (f.isError) return <Notice tone="danger" title="Field not found">{(f.error as Error).message}</Notice>;
   const v = f.data;
   const shown = (cur.labelChecked && cur.label) || fieldName(key);
+  // C11.9 break round 2 minor: a retired field is read-only here until it is restored (each change would be refused).
+  const retiredNow = cur.status === "RETIRED";
   return (
     <div className="mx-auto max-w-7xl space-y-5">
       <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/library/fields" className="hover:underline">Fields</Link><ChevronRight className="size-3" /><span>{shown}</span></nav>
-      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mono text-xs text-text-muted">{key}</p><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill><OriginPill origin={cur.origin} status={cur.status} /><Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div></div>
+      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mono text-xs text-text-muted">{key}</p><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill>{retiredNow ? <Pill>Retired</Pill> : <OriginPill origin={cur.origin} status={cur.status} />}<Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div></div>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
           <h2 className="font-semibold">Definition</h2>
-          <div className="flex items-start gap-2"><Field label="Name" className="flex-1" hint="Renaming is direct and makes a new draft version; a name another field in this group already has is refused."><Input value={name} onChange={(e) => setName(e.target.value)} /></Field><Button className="mt-6" variant="secondary" onClick={() => rename.mutate(undefined)} busy={rename.isPending} disabled={!name.trim() || name.trim() === shown}><Pencil /> Rename</Button></div>
+          {retiredNow ? <Notice tone="warn" title="Retired">It takes no change or new use. Restore it on Fields (choose the Retired filter) first.</Notice> : null}
+          <div className="flex items-start gap-2"><Field label="Name" className="flex-1" hint="Renaming is direct and makes a new draft version; a name another field in this group already has is refused."><Input value={name} onChange={(e) => setName(e.target.value)} /></Field><Button className="mt-6" variant="secondary" onClick={() => rename.mutate(undefined)} busy={rename.isPending} disabled={retiredNow || !name.trim() || name.trim() === shown}><Pencil /> Rename</Button></div>
           <Field label="Meaning" hint="What reviewers and the comparison rely on; one meaning per field."><Textarea value={meaning} onChange={(e) => setMeaning(e.target.value)} /></Field>
           <Field label="Value type"><Select value={type} onChange={(e) => setType(e.target.value)}>{TYPES.map((t) => <option key={t} value={t}>{TYPE_WORD[t]}</option>)}</Select></Field>
-          <div className="flex justify-end"><Button onClick={() => saveDef.mutate(undefined)} busy={saveDef.isPending} disabled={meaning === cur.meaning && type === cur.valueType}><Save /> Save as draft</Button></div>
+          <div className="flex justify-end"><Button onClick={() => saveDef.mutate(undefined)} busy={saveDef.isPending} disabled={retiredNow || meaning === cur.meaning && type === cur.valueType}><Save /> Save as draft</Button></div>
           <p className="text-xs text-text-muted">Versions: {v.versions.map((x: any) => `v${x.version} ${x.status.toLowerCase()}${x.updatedBy ? ` (${nameOf(session.data?.actors, x.updatedBy)})` : ""}`).join(" · ")}</p>
         </section>
         <section className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
@@ -118,7 +121,7 @@ export function FieldPage() {
             </div>
             <Field label="Condition on the question"><Select value={p.conditionEffect ?? ""} onChange={(e) => setP({ ...p, conditionEffect: e.target.value || null, condition: e.target.value ? p.condition : null })}><option value="">None: asked whenever a form needs it</option><option value="SHOW">Show only when…</option><option value="HIDE">Hide when…</option><option value="OPTIONAL">Optional when…</option></Select></Field>
             {p.conditionEffect ? <><ConditionBuilder value={p.condition} onChange={(c) => setP({ ...p, condition: c })} fields={fields.list} /><Field label="In plain words"><Input value={p.conditionPlain} onChange={(e) => setP({ ...p, conditionPlain: e.target.value })} /></Field></> : null}
-            <div className="flex justify-end"><Button onClick={() => savePlace.mutate(undefined)} busy={savePlace.isPending} disabled={!p.sectionKey}><Save /> Save placement as draft</Button></div>
+            <div className="flex justify-end"><Button onClick={() => savePlace.mutate(undefined)} busy={savePlace.isPending} disabled={retiredNow || !p.sectionKey}><Save /> Save placement as draft</Button></div>
           </> : null}
         </section>
       </div>

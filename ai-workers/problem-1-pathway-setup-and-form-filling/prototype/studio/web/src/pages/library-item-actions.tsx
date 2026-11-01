@@ -55,7 +55,7 @@ export function useItemLifecycle(list: ItemList, refetch: () => Promise<unknown>
 
   /** Edit (or View) and the row's one written action. */
   const action = (r: ItemRow, onEdit: () => void) => (
-    <RowAction kind={r.row_action} why={canAuthor ? null : WHY.author} tip={r.row_action === "DELETE" ? TIP.DELETE(0, false) : r.row_action === "RETIRE" ? TIP.RETIRE(false) : r.row_action === "RESTORE" ? ITEM_RESTORE_TIP : TIP.WITHDRAW(r.name)}
+    <RowAction kind={r.row_action} why={!canAuthor ? WHY.author : r.change?.action === "ADD" && r.row_action !== "WITHDRAW" ? "Its addition waits on To review: decide it there first." : null} tip={r.row_action === "DELETE" ? TIP.DELETE(0, false) : r.row_action === "RETIRE" ? TIP.RETIRE(false) : r.row_action === "RESTORE" ? ITEM_RESTORE_TIP : TIP.WITHDRAW(r.name)}
       canEdit={canAuthor && list === "fields"} name={r.name} reasonId={domId(r.key)} onEdit={onEdit} onAction={() => start(r)} editTip={canAuthor && list === "fields" ? "Open it: rename, where it is used, its history." : "See where it is used and its history."} />
   );
   const kind = open?.row_action;

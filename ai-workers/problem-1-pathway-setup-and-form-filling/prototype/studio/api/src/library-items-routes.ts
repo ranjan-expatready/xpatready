@@ -10,7 +10,7 @@ import { itemUses, type ItemKind } from "./library-items.ts";
 type H = string | undefined;
 const reason = (b: unknown) => {
   const r = LifecycleReasonBody.safeParse(b ?? {});
-  if (!r.success) throw new HttpException({ type: "https://expatready.local/problems/check-the-request", title: "Check the request", status: 400, detail: r.error.issues[0]?.message ?? "Say why (3 to 300 characters)." }, 400);
+  if (!r.success) throw new HttpException({ type: "https://expatready.local/problems/check-the-request", title: "Check the request", status: 400, detail: r.error.issues[0]?.code === "invalid_type" ? "Say why (3 to 300 characters)." : r.error.issues[0]?.message ?? "Say why (3 to 300 characters)." }, 400); // break round 2 minor: never Zod's own words
   return r.data.reason;
 };
 

@@ -1,6 +1,6 @@
 // Product Studio application service: programs and combinations, the shared library (versioned edits), the
 // combination's own configuration, previews through the common renderer, validation, review and release.
-import { itemState, openItemChanges, refuseRetired, retiredFieldKeys } from "./library-items.ts";
+import { itemState, lockItem, openItemChanges, refuseRetired, retiredFieldKeys } from "./library-items.ts";
 import { FILLS_LOCK } from "./who-fills.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
@@ -482,7 +482,11 @@ export class Studio {
     if (b.valueType !== undefined) { if (!VALUE_TYPES.includes(b.valueType)) fail("Unknown value type."); changes.valueType = b.valueType; changes.dataType = VALUE_TYPE_TO_DATA_TYPE[b.valueType]; }
     if (b.note !== undefined) changes.note = b.note;
     if (b.retire) changes.status = "RETIRED";
-    const { row, created } = await revise(this.db.canonicalField, rows, changes, actor.id, (r) => ({ ...strip(r), origin: "HUMAN" }));
+    // C11.9 break round 2 (Major 2): checked again and written under the item's lock, so a retire approved at the same moment waits.
+    const { row, created } = await this.db.$transaction(async (tx) => {
+      await lockItem(tx, workspaceId, "field", [key]); await refuseRetired(tx, workspaceId, "field", [key]);
+      return revise(tx.canonicalField, await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } }), changes, actor.id, (r: typeof rows[number]) => ({ ...strip(r), origin: "HUMAN" }));
+    });
     if (b.retire && !created) await this.db.canonicalField.update({ where: { id: row.id }, data: { status: "RETIRED" } });
     await this.audit.log(workspaceId, actor.id, "updated", "field", key, `${actor.name} ${b.retire ? "retired" : "changed"} field ${key} (draft v${row.version})`, changes);
     return row;
@@ -503,11 +507,15 @@ export class Studio {
     // C4.9 (P-97): who fills an existing placement changes only through a library change with a second person (who-fills.ts).
     const now = [...rows].sort((a, b) => b.version - a.version).find((r) => r.status === "DRAFT" || r.status === "PUBLISHED");
     if (now && now.collectedFrom !== b.collectedFrom) fail(FILLS_LOCK, HttpStatus.CONFLICT);
-    let row;
-    if (!rows.length) {
-      const order = await this.db.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });
-      row = await this.db.sectionQuestion.create({ data: { workspaceId, lineageKey: key, canonicalFieldKey: key, displayOrder: order + 1, ...data, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
-    } else row = (await revise(this.db.sectionQuestion, rows, { ...data, origin: "HUMAN" }, actor.id, strip)).row;
+    // C11.9 break round 2 (Major 2): checked again and written under the field's lock (a retire approved at once waits).
+    const row = await this.db.$transaction(async (tx) => {
+      await lockItem(tx, workspaceId, "field", [key]); await refuseRetired(tx, workspaceId, "field", [key]);
+      if (!rows.length) {
+        const order = await tx.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });
+        return tx.sectionQuestion.create({ data: { workspaceId, lineageKey: key, canonicalFieldKey: key, displayOrder: order + 1, ...data, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
+      }
+      return (await revise(tx.sectionQuestion, rows, { ...data, origin: "HUMAN" }, actor.id, strip)).row;
+    });
     await this.audit.log(workspaceId, actor.id, "updated", "placement", key, `${actor.name} placed ${key} in ${b.sectionKey} (${b.collectedFrom}${b.condition ? ", conditional" : ""}; draft v${row.version})`, data);
     return row;
   }
@@ -590,7 +598,7 @@ export class Studio {
     const rows = await this.db.documentType.findMany({ where: { workspaceId }, orderBy: [{ name: "asc" }, { version: "desc" }] });
     const seen = new Set<string>();
     const [src, used, open] = await Promise.all([this.lib.all("document_type", workspaceId), this.lib.usedIn("document_type", workspaceId), openItemChanges(this.db, workspaceId, "document_type")]);
-    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey)).map((r) => ({ ...r, ...sourceSummary(src.get(r.documentTypeKey)), used_in: used.get(r.documentTypeKey) ?? [], ...itemState(rows.filter((x) => x.documentTypeKey === r.documentTypeKey), open.get(r.documentTypeKey)) }));
+    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey)).map((r) => ({ ...r, ...sourceSummary(src.get(r.documentTypeKey)), used_in: used.get(r.documentTypeKey) ?? [], ...itemState(rows.filter((x) => x.documentTypeKey === r.documentTypeKey), open.get(r.documentTypeKey), "document_type") }));
   }
 
   async libraryTypes(workspaceId: string) {
@@ -636,12 +644,18 @@ export class Studio {
     if (alternatives.length) { const known = await this.db.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: alternatives } }, select: { documentTypeKey: true } });
       const missing = alternatives.filter((k) => !known.some((t) => t.documentTypeKey === k)); if (missing.length) fail(`An alternative must be a document type in the library: ${missing.join(", ")} is not.`); }
     const data = { alternatives: alternatives.length ? alternatives : Prisma.DbNull, documentTypeKey: typeKey!, attachMode: b.attachMode, predicateJson: b.attachMode === "ANSWER_CONDITIONAL" ? b.condition : null, conditionPlain: b.attachMode === "ANSWER_CONDITIONAL" ? (b.conditionPlain ?? null) : null, appliesToRoles: b.appliesToRoles, providedBy: b.providedBy ?? "client", sourceQuote: b.sourceQuote ?? null, sourceFile: b.sourceFile ?? null, note: b.note ?? null, origin: "HUMAN" as const };
-    let row;
-    if (!lineage) {
-      let key = `${typeKey}:${b.appliesToRoles}`;
-      if (await this.db.documentRequirement.findFirst({ where: { combinationId, lineageKey: key } })) key = `${key}:${Date.now().toString(36)}`;
-      row = await this.db.documentRequirement.create({ data: { workspaceId, combinationId, lineageKey: key, ...data, version: 1, status: "DRAFT", updatedBy: actor.id } });
-    } else { const rows = await this.db.documentRequirement.findMany({ where: { combinationId, lineageKey: lineage } }); this.sameRevision(rows, b.baseRevision); row = (await revise(this.db.documentRequirement, rows, data, actor.id, strip)).row; }
+    // C11.9 break round 2 (Major 2): the type and its alternatives are checked again and the line written under their
+    // locks, so a retire approved at the same moment either waits for this line (and is refused) or refuses it.
+    const typeKeys = [typeKey!, ...alternatives];
+    const row = await this.db.$transaction(async (tx) => {
+      await lockItem(tx, workspaceId, "document_type", typeKeys); await refuseRetired(tx, workspaceId, "document_type", typeKeys);
+      if (!lineage) {
+        let key = `${typeKey}:${b.appliesToRoles}`;
+        if (await tx.documentRequirement.findFirst({ where: { combinationId, lineageKey: key } })) key = `${key}:${Date.now().toString(36)}`;
+        return tx.documentRequirement.create({ data: { workspaceId, combinationId, lineageKey: key, ...data, version: 1, status: "DRAFT", updatedBy: actor.id } });
+      }
+      const rows = await tx.documentRequirement.findMany({ where: { combinationId, lineageKey: lineage } }); this.sameRevision(rows, b.baseRevision); return (await revise(tx.documentRequirement, rows, data, actor.id, strip)).row;
+    });
     await this.audit.log(workspaceId, actor.id, lineage ? "updated" : "created", "document requirement", row.lineageKey, `${actor.name} ${lineage ? "changed" : "added"} a ${b.attachMode === "ANSWER_CONDITIONAL" ? "conditional" : "base"} document requirement in "${c.label}" (draft v${row.version})`, data, combinationId);
     return row;
   }
