@@ -643,11 +643,18 @@ export class Finder implements OnModuleInit {
     const name = basename(new URL(pdfUrl).pathname).replace(/[^A-Za-z0-9._-]/g, "_").slice(-80);
     const stored = join(this.libDir(), `${fileSha.slice(0, 12)}-${name}`);
     if (!existsSync(stored)) writeFileSync(stored, bytes);
-    const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form_identity.py"), stored], { cwd: ROOT, timeout: 60_000 });
-    const id = JSON.parse(stdout.trim().split("\n").pop()!);
-    if (!id.ok || !id.code || !id.edition_label) return { missing: `${p.code} was downloaded from canada.ca, but its form number and edition could not be read from the file. Upload it by hand for a person to check.`, link: pdfUrl };
-    if (normaliseCode(id.code) !== p.code) return { missing: `canada.ca's file for ${p.code} reads as ${id.code}: not stored. Upload the right PDF by hand.`, link: pdfUrl };
-    if (id.language === "fr") return { missing: `canada.ca's file for ${p.code} is the French version: not stored.`, link: pdfUrl };
+    // #261 m3: a reader that crashes or times out still says where the file is (the PDF's link), never the generic message.
+    const unread = { missing: `${p.code} was downloaded from canada.ca, but its form number and edition could not be read from the file. Upload it by hand for a person to check.`, link: pdfUrl };
+    let read: { ok?: boolean; code?: string; edition_label?: string; language?: string; kind?: string; title?: string; published?: string };
+    try {
+      const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form_identity.py"), stored], { cwd: ROOT, timeout: 60_000 });
+      read = JSON.parse(stdout.trim().split("\n").pop()!);
+    } catch { return unread; }
+    if (!read.ok || !read.code || !read.edition_label) return unread;
+    const id = { ...read, code: read.code, edition_label: read.edition_label };
+    // #261 m2: the file just refused is the wrong one, so the link is the form's canada.ca page, not that file.
+    if (normaliseCode(id.code) !== p.code) return { missing: `canada.ca's file for ${p.code} reads as ${id.code}: not stored. Upload the right PDF by hand.`, link: row.pageUrl };
+    if (id.language === "fr") return { missing: `canada.ca's file for ${p.code} is the French version: not stored.`, link: row.pageUrl };
     const kind = row.kind === "checklist" || id.kind === "checklist" ? "checklist" : "form";
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey: p.code } }, include: { editions: true } });
     const same = def?.editions.find((e) => e.sha256 === fileSha);
