@@ -44,3 +44,21 @@ D1 4: steps 29–30 and the paid-repeat refusal behave as J2 says, apart from M1
 
 ## Not checked
 A real screen reader. An unaided walk by an intended user (D17/D20). A real unexpected server error, as opposed to the induced one (the M1 risk is read from the code). Graph: no C3.3 finding (G3's two routes are unrelated). `p2/jobs/studio-fieldmap-imm1344e-p*of5-*.json` (ignored files, written 16:13, before my runs) were left in place.
+
+## Re-review on 67fe534c (1 Nov 2026)
+
+Fresh copy `rev33` on :4466, web rebuilt. Walk 22/22 twice, acceptance 14/14, no planted file left, US$0.
+
+* **M1: closed.**
+  * The AI work page now shows `said`, which goes through the shared `plainRunText` (`api/src/plain-run-text.ts`; `ai.ts` batch view; `ai.tsx` "What happened").
+  * The induced fault now reads in product words with a next step.
+  * The walk's `TECH` pattern now matches `.pdf` names and setting names, so it would fail on the earlier string.
+* **m1: closed.** The walk asserts "All (84)".
+* **m2: closed.** After three attempts `retryable` is false and `needs_person` is true. The page offers no Retry and shows "IMM 5707 (01-2023) needs a person. … Add the form from the Form library by hand, or start its draft again once the cause is fixed." (`30-after-three-attempts-1440.png`). The record is corrected.
+* **m3: closed.** Retry is shown only with the author duty (`/session`). The walk asserts that the Content reviewer is offered no button, and the server still returns 403.
+* **m4:** kept as a note (J2 defines the setup).
+* **New, Minor, not blocking:** the attempt 3 row still says "Retry the failed step" while no Retry is offered; the notice above the table explains why.
+
+Journey score **9.5 / 10** (next step and error recovery are now 1; plain words stays ½ for the induced-fault wording, which only appears on test copies).
+
+**Verdict: Approve** (no open Blocker or Major) for 67fe534c.
