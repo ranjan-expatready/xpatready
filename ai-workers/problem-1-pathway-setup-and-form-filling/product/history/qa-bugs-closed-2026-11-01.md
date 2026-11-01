@@ -98,3 +98,39 @@ Row as it stood in `qa/BUGS.md`:
 Detail as it stood in `qa/reports/bugs-open-detail.md`:
 
 | QA-128 | Bug · Minor | C11.6 C-9 · P-65 | **63168762** (explore evidence) | Steps: send the same validated file twice at once. Expected: one validated copy recorded, the second answered 201 with the same record or 409 "already read back". Actual: [201, 201]; `validated_copy` holds 2 rows for the copy and the audit two "read back a validated copy" lines. No wrong value is filed, but the history doubles | `tests/qa/check_qa_am_1101c_validated.ts` (double-click line) | runtime | Open |
+
+## QA-101 — closed 1 Nov 2026 (after-merge b350b989, qa-2)
+
+Closed by the qa lane on main **b350b989** (fixed by #274): Study permit after a find whose two rounds name IMM 5483 (a Document Checklist): no IMM 5483 line on the Forms tab; the checklist stays in the library as a checklist. `check_forms_qa101_103.cjs` 22/22 (stand-in launcher, US$0) and the tab read by qa as a person (`reports/2026-11-01-after-merge-8/sp-forms-after-find-1440.png`).
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-101 | Bug · Major | C11.15, C11.11 · P-118, P-156 | a9fe60c0 (live find) | The live finder attached IMM 5483 "Document Checklist" to Study permit as a filed form line (PDF upload, Each applicant, Always); the library types it Checklist, "Not filed" … | forms | Open |
+
+Detail as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-101 | Bug · Major | C11.15, C11.11 · P-118, P-156 (checklists are read, never filed) | **a9fe60c0** (the QA-100 live find) | Study permit live find → step 6 "5 attached automatically (Picked by AI · Sample)" → expected: IMM 5483 (Document Checklist) stored as a checklist, read for documents, not a form line → actual: a form line "IMM 5483 Document Checklist - For a Study Permit · Picked by AI · Each applicant · Always · PDF upload"; Shared library › Forms types it "Checklist · Not filed" | `live-find-study-forms.jpg/.txt`, `live-find-library-forms.txt` | forms | Open |
+
+## QA-102 — closed 1 Nov 2026 (after-merge b350b989, qa-2)
+
+Closed by the qa lane on main **b350b989** (fixed by #274): IMM 5707, already attached by a person, is not offered again: no "Add to this combination" anywhere on the tab. `check_forms_qa101_103.cjs` 22/22 (stand-in launcher, US$0) and the tab read by qa as a person (`reports/2026-11-01-after-merge-8/sp-forms-after-find-1440.png`).
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-102 | Bug · Major | C11.15 · P-123 | a9fe60c0 (live find) | After the live find, IMM 5707 is both a library row on Study permit ("Add from library") and a finder row "AI's two rounds disagree · you decide" with "Add to this combination": two adds for one form already attached … | forms | Open |
+
+Detail as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-102 | Bug · Major | C11.15 · P-123 (the list is confirmed once) | **a9fe60c0** (live find) | Same run → expected: a form already attached (IMM 5707, from the sample) is not offered again → actual: two rows: the finder strip "IMM 5707 Family Information · AI's two rounds disagree · you decide · Add to this combination" and the lines table "IMM 5707 … In the library · Add from library" | `live-find-study-forms.jpg/.txt` | forms | Open |
+
+## QA-103 — closed 1 Nov 2026 (after-merge b350b989, qa-2)
+
+Closed by the qa lane on main **b350b989** (fixed by #274): IMM 1294, downloaded and attached by the finder, reads "File in the library · Step 2 of 6 · Field map · Your step"; no "Not attached" on the tab. `check_forms_qa101_103.cjs` 22/22 (stand-in launcher, US$0) and the tab read by qa as a person (`reports/2026-11-01-after-merge-8/sp-forms-after-find-1440.png`).
+
+Row as it stood in `qa/BUGS.md`:
+
+| QA-103 | UX · Major | C11.15, C1.6 · PRODUCT §4 | a9fe60c0 (live find) | Forms downloaded and attached by the finder (IMM 1294, IMM 5483) show on the lines "Picked by AI" with "No edition read yet · 0 form fields matched · Not attached": "Not attached" on an attached line, and no next step … | forms | Open |
+
+Detail as it stood in `qa/reports/bugs-open-detail.md`:
+
+| QA-103 | UX · Major | C11.15, C1.6 · PRODUCT §4 | **a9fe60c0** (live find) | Same run: step 5 "2 downloaded from canada.ca" (IMM 1294, IMM 5483) → expected: the line says the file is in the library and what to do next (read and match its form fields) → actual: "No edition read yet · 0 form fields matched · Not attached" on lines that the change bar says "AI attached"; no button for the next step on those rows | `live-find-study-forms.jpg/.txt` | forms | Open |
