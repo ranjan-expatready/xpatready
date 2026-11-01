@@ -102,3 +102,29 @@ So no sample combination can reach the header's Map forms (the combination-wide 
 Journey score (reviewer): **9/10, pass.** See `journey-test-reviewer-2026-11-01-qa119.md`.
 
 **Verdict: Approve on 11485f0d.** Blockers: none. Majors: none. Minors: m1 (Must), m2, m3; one note.
+
+## Re-check on f2b321c8
+**Scope:** `git show f2b321c8` only (`combination.tsx`, `overview.tsx`, `check_qa119_next_step_browser.cjs`, plus this report). Web app rebuilt from f2b321c8 and `tsc --noEmit` clean. Fresh copy `rv_q119` on :4449, now stopped. US$0.
+
+**Check:** `check_qa119_next_step_browser` 30/30. It writes only `/tmp/qa119-forms-next.png`. I ran no suite that rewrites tracked screenshots, and the working tree is clean.
+
+**m1, fixed.**
+* "See it on …" (`combination.tsx:159`) and Retry (`overview.tsx:30`) now draw the strip's 2 px primary ring with offset.
+* I reached Retry by Tab with the summary forced to 500. Its computed `box-shadow` is a 3 px `rgb(8, 98, 197)` ring.
+* The check asserts the ring on the "See it on …" link.
+
+**m2, fixed.**
+* Retry sets `retried`, and once the strip is back, focus moves to the strip's `<section tabIndex=-1>` (`overview.tsx:20-22`).
+* The check asserts that focus is on `[data-setup-strip]` afterwards.
+
+**m3, fixed.**
+* The check finishes steps 1–2 on High-wage position with the fixture, clicks the header's Find forms, and asserts focus on `[data-find-forms]`.
+* It also asserts that the element is a `BUTTON`. So removing `find_forms` from `PAIRED` now fails (the header would render a link instead).
+* View AI progress still has no check. It cannot be reached without an AI run (US$0), so this stays as could-not-check.
+
+**Observation for the tech lead, pre-existing and not this commit.**
+* The fixture saves High-wage position's people list as the configuration author, and the server accepts it (200). Step 2 then counts as done, although the checklist had marked "Confirm who can apply" as the expert's item (`tier: expert`).
+* The expert's own save is refused (403).
+* This is the people endpoint's existing rule, in forms F2 territory. It should be settled when F2 adds the confirm controls (concept §5 Q1).
+
+**Verdict: Approve on f2b321c8.** Blockers: none. Majors: none. The minors m1–m3 are closed. The `LANDED_FOCUS` note and the F2 note stand as recorded.
