@@ -339,6 +339,9 @@ model FormEdition {
   indexDateSeenCurrent String? @map("index_date_seen_current")
   /// S4 (M6): canada.ca now serves a different file for this same printed edition; a person decides to Replace.
   newerFileSha256 String?  @map("newer_file_sha256")
+  /// C3.12: the date the file says it was published (YYYY-MM-DD; its ModDate, else CreationDate), not the printed edition.
+  /// Null: not read yet (the Forms list reads it once); "": read, and the file names no date.
+  published       String?
 
   form GovFormDef     @relation(fields: [govFormDefId], references: [id], onDelete: Cascade)
   maps FormFieldMap[]
