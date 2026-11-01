@@ -44,7 +44,7 @@ The team merges these into the product's menus. A new item needs a row in `BACKL
 | Draft · Review and release · Release 3 | hash, snapshot | Governance |
 | AI proposal · Accept · Edit · Reject | AI output | Nothing applies until accepted |
 | Not applicable / No sub-categories | none, N/A | The category is itself the combination |
-| ↔ Supported by · Follows | dependency | Links between combinations (P-13) |
+| Relies on employer case … (on a case) | dependency | A worker's case points to the employer's case, which pre-fills the employer's facts (P-106; built with the case officer step, M3). Not a link between combinations in configuration. "Follows" is only a suggestion of the next application (founder, 31 Oct, PR #167) |
 No hashes, run IDs, decision numbers, model names or file paths on the main path.
 
 ## 5. Stack and app
