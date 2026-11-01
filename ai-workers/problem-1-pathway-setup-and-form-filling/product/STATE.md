@@ -4,7 +4,7 @@ updated: 2026-11-01 19:05 UTC (overnight Lead hand-over to a fresh Lead, founder
 
 ## Start here (fresh `/lead`)
 1. Founder's first message: "Resume from STATE. Run builders and qa in the cloud, one fresh session per row. Process frozen until 15 Nov."
-2. Read `WAY-OF-WORKING.md` (if #347 has not merged yet, read it on branch `lead/2026-11-01-lean-setup`), then this page. Run `/usage` in the first hour to see where the plan goes (token analysis: notes `factory-recommendation-2026-11-01.md`).
+2. Read `WAY-OF-WORKING.md` (if #347 has not merged yet, read it on branch `lead/2026-11-01-lean-setup`), then this page. Run `/usage` in the first hour to see where the plan goes (token analysis: session notes, factory-recommendation-2026-11-01).
 3. Start builders **in the cloud**, one fresh session per row, under yourself; size by the measures (add while batch failures < 10% and approved→merged < 1 h). One qa in the cloud. The Mac runs only the Lead and the :4400 demo.
 4. Watch with event monitors and one 20-minute check; no minute-level sweeps. Hand over at about 250k tokens.
 
@@ -39,6 +39,7 @@ C6.11 ✓ merged → C6.12 + C6.4 (#325) → /prepare + C11.6 (#356) → C7.3 (#
 * **GitHub job slots:** every PR now runs 4 shards; a free account runs about 20 jobs at once, so batches can wait behind PR checks. With fewer builders it is fine; if not, run PR checks on 2 shards.
 * **Schema drift on main** (`DROP canonical_field_name`), raised in #356's Questions.
 * `check_forms_c31_formats.ts` is quarantined (#333): take it out of `QUARANTINE` now that #316 is merged.
+* **Batch b489cc2d79 (#353 + #340) failed** on `check_forms_c36_rule_facts_browser.cjs` "after Propose, focus lands on the row's To review link" (C3.6, merged in #329): either #340 (C11.10) changes that page's focus, or the check is timing-sensitive. Mergify is splitting the batch; if #340 alone fails it, #340's owner fixes it; if it fails on main too, quarantine with a fix row.
 * Measure batch failures for 24 h after #337 (was 37% of finished batches since 31 Oct).
 
 ## Decisions waiting for the founder
@@ -48,5 +49,5 @@ C6.11 ✓ merged → C6.12 + C6.4 (#325) → /prepare + C11.6 (#356) → C7.3 (#
 ## Resources (1 Nov 19:00 UTC)
 Disk 11 GB free (alarm under 10 GB; 1.9 GB of old snapshots moved to `~/Archive`); weekly plan about 64% (resets 5 Nov). Repository is public; Mergify Open Source plan; 3 batches at once (#341); every PR runs its suites on GitHub (#337).
 
-## Lessons of the night (detail: notes folder, `overnight-lead-log.md`, `factory-recommendation-2026-11-01.md`)
+## Lessons of the night (detail: the session notes folder, files overnight-lead-log and factory-recommendation-2026-11-01)
 Verify numbers before advising (a fresh verifier found 5 wrong claims) · archive sessions by exact name, never by position · a long, often-woken Lead session is the biggest token sink · the queue, not building, was the bottleneck (81–85% of PR time) · builders run in the cloud, never on the Mac.
