@@ -3,7 +3,7 @@
 // anything runs (AI now greyed with the reason); Draft runs them as one run on the shared run card, steps 2 and 5 read
 // "Not available yet", the rules' findings or "All four rules pass" show, and Open To review lists the picks.
 // axe on each state, 1024 px without sideways scroll. Rules only: NO model call (US$0).
-//   zsh studio/tools/isolated.sh forms_c411b 4464 start && node studio/tests/check_forms_c411_draft_qd_browser.cjs 4464 xr_studio_forms_c411b
+//   zsh studio/tools/isolated.sh forms_c411b 4464 start STUDIO_SLOW_QD_STEP=400 && node studio/tests/check_forms_c411_draft_qd_browser.cjs 4464 xr_studio_forms_c411b
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -57,9 +57,21 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C4.11 L fail: AI now is greyed with the reason (the founder's live trial)", await dlg.locator('[data-qd-mode="live"] input').isDisabled() && /live trial/.test(await dlg.locator('[data-qd-mode="live"]').innerText()));
   step("C4.11 no system key shows in the plan", !KEYS.test(await dlg.locator("[data-qd-plan]").innerText()), (await dlg.locator("[data-qd-plan]").innerText()).match(KEYS)?.[0]);
   await state("plan-rules-only");
+  // Review M1: the run card shows at once while the steps go on, and its Stop ends the run between steps.
+  await dlg.getByRole("button", { name: "Draft", exact: true }).click();
+  const stopBtn = dlg.getByRole("button", { name: /\bStop\b/ });
+  await stopBtn.waitFor({ timeout: 10000 });
+  step("C4.11 R pass (review M1): the run card with Stop shows in the dialog while the run goes on", await stopBtn.isEnabled());
+  await stopBtn.click();
+  await p.waitForFunction(() => /Stopped/.test(document.querySelector("[data-qd-result]")?.textContent ?? ""), null, { timeout: 30000 });
+  await state("run-stopped");
+  step("C4.11 R pass (review M1): Stop on screen ends the run; the card says Stopped", sql(`select status from ai_batch where operation='draft_questions_documents' order by started_at desc limit 1`) === "CANCELLED");
+  step("C4.11 R fail: a stopped run shows no rules verdict (it did not check)", !(await dlg.locator("[data-qd-clean]").count()) && !(await dlg.locator("[data-qd-findings]").count()));
+  await dlg.getByRole("button", { name: "Done" }).click();
+  await btn.click(); await dlg.waitFor(); await dlg.locator("[data-qd-cost]").waitFor();
   await dlg.getByRole("button", { name: "Draft", exact: true }).click();
   await dlg.locator("[data-qd-result]").waitFor({ timeout: 60000 });
-  await dlg.locator("[data-qd-note]").waitFor();
+  await dlg.locator("[data-qd-note]").waitFor({ timeout: 30000 });
   await p.waitForFunction(() => /Not available yet/.test(document.querySelector("[data-qd-result]")?.textContent ?? ""), null, { timeout: 30000 });
   const res = await dlg.locator("[data-qd-result]").innerText();
   step("C4.11 R pass: the run shows on the run card in the dialog, steps 2 and 5 read Not available yet", /Not available yet/.test(res) && /Rules check the whole draft/.test(res), res.slice(0, 200));

@@ -8,7 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ListChecks } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Button, Dialog, Notice, Pill } from "@/components/ui/controls";
-import { RunCard } from "@/components/run-card";
+import { RunCard, type RunView } from "@/components/run-card";
 
 type Mode = "rules" | "replay";
 type Plan = { mode: Mode; steps: { n: number; kind: string; label: string; how: "rules" | "saved" | "not_yet"; uses_ai: boolean }[]; facts: { total: number; roles: { role: string; label: string; facts: number }[] }; note: string; live: { approved: boolean; why: string | null }; plan_sha256: string };
@@ -40,10 +40,24 @@ function QdDialog({ id, onClose }: { id: string; onClose: () => void }) {
     if (!plan.data) return;
     setBusy(true); setError(null);
     try {
-      setResult(await api<Result>(`/combinations/${id}/draft-qd`, { method: "POST", json: { mode, planSha256: plan.data.plan_sha256 } }));
-      for (const k of [["proposals"], ["review-queue"], ["setup-checklist"], ["fact-sources"]]) void qc.invalidateQueries({ queryKey: k });
-    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+      // Review M1: the run goes on in the background; its card (with Stop) shows at once, the result when it ends.
+      const r = await api<{ runId: string }>(`/combinations/${id}/draft-qd`, { method: "POST", json: { mode, planSha256: plan.data.plan_sha256 } });
+      setResult({ runId: r.runId, status: "running", proposed: 0, findings: [], rules: {}, note: "" });
+    } catch (e) {
+      // Break m5: a run already going on for this combination: show its card here instead of words alone.
+      const runId = e instanceof ApiError && e.status === 409 ? (e.problem as { runId?: string }).runId : undefined;
+      if (runId) setResult({ runId, status: "running", proposed: 0, findings: [], rules: {}, note: e instanceof Error ? e.message : "" });
+      else setError((e as Error).message);
+    } finally { setBusy(false); }
   };
+  /** When the card says the run ended: read its result (the server writes it just after the last step). */
+  const ended = React.useCallback(async (v: RunView) => {
+    for (const k of [["proposals"], ["review-queue"], ["setup-checklist"], ["fact-sources"]]) void qc.invalidateQueries({ queryKey: k });
+    for (let i = 0; i < 10; i++) {
+      try { const r = await api<Result>(`/combinations/${id}/draft-qd/${v.id}`); setResult(r); return; }
+      catch (e) { if (!(e instanceof ApiError) || e.status !== 409) break; if (v.status === "failed" || v.status === "stopped") { setResult((x) => x && { ...x, status: v.status, note: v.message ?? e.message }); return; } await new Promise((res) => setTimeout(res, 300)); }
+    }
+  }, [id, qc]);
   const to = `/review/proposals?group=${encodeURIComponent(`combination:${id}`)}`;
   const footer = result
     ? <><Button variant="ghost" onClick={onClose}>Done</Button>{result.proposed ? <Button asChild><Link to={to} data-qd-open-review>Open To review</Link></Button> : null}</>
@@ -52,9 +66,9 @@ function QdDialog({ id, onClose }: { id: string; onClose: () => void }) {
     <Dialog open wide onOpenChange={(o) => { if (!o) onClose(); }} title="Draft questions and documents" description="One run of seven steps. What needs a person goes to To review, where you accept or remove each; nothing changes the draft until then. Sample until the immigration expert confirms." footer={footer}>
       {result ? (
         <div className="space-y-3 text-sm" data-qd-result>
-          <RunCard runId={result.runId} />
-          <p data-qd-note>{result.note}</p>
-          {result.findings.length ? (
+          <RunCard runId={result.runId} onEnded={(v) => void ended(v)} />
+          {result.note ? <p data-qd-note>{result.note}</p> : null}
+          {result.status === "running" || result.status === "stopped" || result.status === "failed" ? null : result.findings.length ? (
             <Notice tone="warn" title={`The rules found ${result.findings.length} thing${result.findings.length === 1 ? "" : "s"} to fix`}>
               <ul className="space-y-1" data-qd-findings>{result.findings.map((f, i) => <li key={i}><span className="font-medium">{result.rules[f.rule] ?? f.rule}:</span> {f.message}</li>)}</ul>
             </Notice>

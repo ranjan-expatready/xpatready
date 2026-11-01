@@ -37,7 +37,12 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   if ((await call("POST", "/demo/load", {})).status >= 300) { console.error("STOP  the sample did not load"); process.exit(2); }
   const wp = sql(`select id from combination where combination_key='wp.family'`);
   const plan = (mode: string, id = wp) => call("POST", `/combinations/${id}/draft-qd/plan`, { mode });
-  const run = async (mode: string, actor = "user-A") => { const p = await plan(mode); return call("POST", `/combinations/${wp}/draft-qd`, { mode, planSha256: p.body?.plan_sha256 }, actor); };
+  /** The run goes on in the background (review M1): its result is read once it has ended (waits fail loudly). */
+  const result = async (runId: string): Promise<{ status: number; body: J }> => {
+    for (let i = 0; i < 300; i++) { const x = await call("GET", `/combinations/${wp}/draft-qd/${runId}`); if (x.status !== 409) return x; await new Promise((res) => setTimeout(res, 100)); }
+    throw new Error(`run ${runId} did not end within 30 s`);
+  };
+  const run = async (mode: string, actor = "user-A") => { const p = await plan(mode); const s0 = await call("POST", `/combinations/${wp}/draft-qd`, { mode, planSha256: p.body?.plan_sha256 }, actor); if (s0.status !== 201) return s0; const x = await result(s0.body.runId); return { status: s0.status, body: { ...x.body, started: s0.body } }; };
   const waiting = (origin: string) => Number(sql(`select count(*) from proposal_item where combination_id='${wp}' and kind='pqr_pick' and status='waiting' and origin='${origin}'`));
   const step = (r: { body: J }, kind: string) => (r.body.steps as { kind: string; status: string; message: string }[] | undefined)?.find((s) => s.kind === kind);
 
@@ -53,6 +58,9 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   r = await plan("rules", "00000000-0000-4000-8000-000000000000");
   ok("C4.11 P fail: an unknown combination is refused in words (404)", r.status === 404 && /does not exist/.test(words(r)), words(r));
 
+  r = await call("POST", `/combinations/${wp}/draft-qd/plan`, { mode: "rules" }, "user-O");
+  ok("C4.11 A fail (break m2): the case officer cannot read the plan (403)", r.status === 403, r.status);
+
   // ---------------------------------------------------------------- L: only US$0 ways
   r = await plan("live");
   ok("C4.11 L fail: AI now is refused in words until the founder's live trial (409)", r.status === 409 && /live trial/.test(words(r)), words(r));
@@ -67,8 +75,9 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   r = await run("replay");
   const s6none = step(r, "pqr_picks");
   ok("C4.11 S6 fail: with no saved AI answer, step 6 says so and proposes nothing, US$0; step 7 still runs", r.status === 201 && r.body.proposed === 0 && r.body.usd === 0 && s6none?.status === "FAILED" && /No saved AI answer/.test(s6none.message) && step(r, "qd_check")?.status === "COMPLETED", s6none);
+  ok("C4.11 S6 fail (break m4): the reply says the run had a problem and names step 6, never only \"rules pass\"", r.body.status === "done_with_problems" && /Not done: Pre-qualification picks/.test(r.body.note), r.body.note);
   let card = await call("GET", `/runs/${r.body.runId}`);
-  ok("C4.11 R pass: the run shows on the shared run card with its label, seven steps and Done with problems (step 6)", card.status === 200 && card.body.label === "Drafting questions and documents" && card.body.steps.length === 7 && card.body.status === "done_with_problems" && card.body.usd.spent === 0, { label: card.body.label, status: card.body.status, steps: card.body.steps?.length });
+  ok("C4.11 R pass: the run shows on the shared run card with its label, seven steps and Done with problems (step 6)", card.status === 200 && card.body.label === "Drafting questions and documents" && card.body.steps.length === 7 && card.body.status === "done_with_problems" && card.body.usd.spent === 0 && card.body.error?.next === null, { label: card.body.label, status: card.body.status, steps: card.body.steps?.length });
 
   // ---------------------------------------------------------------- S6 replay pass: saved answers replayed, labelled as saved
   const guideFile = (await call("POST", `/combinations/${wp}/pqr-picks/plan`, { mode: "replay" })).body.guide.file as string;
@@ -89,6 +98,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   // ---------------------------------------------------------------- R + S6 rules: the whole run, rules only
   r = await run("rules");
   const rulesProposed = r.body.proposed;
+  ok("C4.11 R pass (review M1): starting answers at once with the run id while the steps go on (the card and Stop show at once)", r.body.started?.status === "running" && r.body.started?.runId === r.body.runId, r.body.started);
   ok("C4.11 R pass: rules only runs all seven steps as one run; step 6 puts the rules' picks on the queue, US$0", r.status === 201 && r.body.status === "done" && r.body.steps.length === 7 && rulesProposed > 0 && waiting("rules") === rulesProposed && r.body.usd === 0
     && ["qd_facts", "qd_document_facts", "qd_sources", "pqr_picks", "qd_check"].every((k) => step(r, k)?.status === "COMPLETED"), r.body.steps?.map((s: J) => `${s.kind}:${s.status}`));
   ok("C4.11 N pass: steps 2 and 5 end as not available yet, with what to do meanwhile", step(r, "qd_documents")?.status === "NOT_YET" && /next part/.test(step(r, "qd_conditions")?.message ?? "") && /Meanwhile/.test(step(r, "qd_documents")?.message ?? ""), step(r, "qd_documents"));
@@ -101,6 +111,7 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   const p1 = (await plan("rules")).body.plan_sha256;
   const two = await Promise.all([1, 2].map(() => call("POST", `/combinations/${wp}/draft-qd`, { mode: "rules", planSha256: p1 })));
   const started = two.filter((x) => x.status === 201).map((x) => x.body.runId as string);
+  for (const id of started) await result(id);
   const overlap = started.length === 2 && sql(`select count(*) from ai_batch a join ai_batch b on a.id='${started[0]}' and b.id='${started[1]}' where a.started_at < b.finished_at and b.started_at < a.finished_at`) === "1";
   ok("C4.11 R fail: two runs started at the same moment never run together: the second is refused in words (409)", started.length >= 1 && !overlap && two.every((x) => x.status === 201 || (x.status === 409 && /being drafted already/.test(words(x)))), two.map((x) => `${x.status} ${words(x).slice(0, 60)}`));
   const p2 = (await plan("rules")).body.plan_sha256;
@@ -108,13 +119,27 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   let stopped: { status: number; body: J } | null = null;
   for (let i = 0; i < 100 && !stopped; i++) {
     const id = sql(`select id from ai_batch where operation='draft_questions_documents' and status='RUNNING' limit 1`);
-    if (id) stopped = await call("POST", `/runs/${id}/stop`);
+    if (id) {
+      const other = await call("POST", `/runs/${id}/stop`, undefined, "user-B");
+      ok("C4.11 R fail (break M1): the approver (no author duty) cannot stop a run (403)", other.status === 403, other.status);
+      stopped = await call("POST", `/runs/${id}/stop`);
+    }
     else await new Promise((res) => setTimeout(res, 20));
   }
-  const ended = await going;
+  const ended = await result((await going).body.runId);
   ok("C4.11 R pass: Stop ends the run between steps; later steps are not run", !!stopped && stopped.status < 300 && ended.body.status === "stopped" && ended.body.steps.at(-1)?.status === "CANCELLED" && ended.body.steps[0]?.status !== "WAITING" && sql(`select status from ai_batch where id='${ended.body.runId}'`) === "CANCELLED", { stop: stopped?.status, status: ended.body.status, steps: ended.body.steps?.map((s: J) => s.status) });
+  ok("C4.11 R pass (break M1): the activity log says who stopped the run", sql(`select count(*) from audit_event where action='stopped' and entity_key='${ended.body.runId}'`) === "1", sql(`select string_agg(summary, ' | ') from audit_event where entity_key='${ended.body.runId}'`));
   r = await call("POST", `/runs/${ended.body.runId}/stop`);
   ok("C4.11 R fail: a run that has ended cannot be stopped again (409)", r.status === 409 && /already ended/.test(words(r)), words(r));
+
+  // ---------------------------------------------------------------- R: a run its server left running never blocks for good (review M3)
+  const wsId = sql(`select workspace_id from combination where id='${wp}'`);
+  sql(`insert into ai_batch (id, workspace_id, idempotency_key, operation, scope_kind, scope_label, mode, status, plan_sha256, plan, spend_limit_usd, worst_case_usd, started_by, started_at) values ('11111111-1111-4111-8111-111111111111', '${wsId}', 'qd-stale-test', 'draft_questions_documents', 'combination', 'stale', 'LOCAL', 'RUNNING', 'x', '{"combination":{"id":"${wp}"}}', 0, 0, 'user-A', now() - interval '1 minute')`);
+  r = await run("rules");
+  ok("C4.11 R fail (review M3): a run still moving (started a minute ago) blocks a new one (409) with its run id", r.status === 409 && r.body.runId === "11111111-1111-4111-8111-111111111111", { status: r.status, runId: r.body.runId });
+  sql(`update ai_batch set started_at = now() - interval '1 hour' where id='11111111-1111-4111-8111-111111111111'`);
+  r = await run("rules");
+  ok("C4.11 R pass (review M3): a run that stopped moving (an hour, its server gone) ends as Failed and a new run starts", r.status === 201 && sql(`select status from ai_batch where id='11111111-1111-4111-8111-111111111111'`) === "FAILED", { status: r.status, old: sql(`select status || ' ' || coalesce(message,'') from ai_batch where id='11111111-1111-4111-8111-111111111111'`) });
 
   // ---------------------------------------------------------------- K: step 7 rules
   r = await run("rules");
@@ -136,6 +161,12 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
     ok("C4.11 K fail: a document fact whose document is not on the checklist is found by step 7, under its rule", doc.length >= 1 && /not on this person's checklist/.test(doc[0].message), doc[0]);
     ok("C4.11 K pass: findings are for a person to fix; the run still ends Done and changes nothing in the draft", r.body.status === "done" && sql(`select count(*) from fact_source where combination_id='${wp}' and version=99`) === "2", r.body.note);
   } else ok("C4.11 K setup: the sample has a case officer fact and a client fact", false, { agentFact, clientFact });
+  // K, pure (review m2): "deciding fact asked first" on a small snapshot: a question decided by an answer nobody gives.
+  const { qdChecks } = await import("../engine/draft-qd.ts");
+  const snap = (cond: string) => ({ placements: [{ fact: "q.details", condition: { op: "eq", field: cond, value: true } }, { fact: "q.flag" }], document_types: [], derived_fields: [], canonical_fields: [{ id: "q.details", meaning: "Details" }, { id: "q.flag", meaning: "Has a flag" }], field_maps: [], fact_sources: [], rules: [], document_requirements: [], forms: [], checks: [], combination: { participants: [] } });
+  const okSnap = qdChecks(snap("q.flag") as never), badSnap = qdChecks(snap("q.nobody") as never);
+  ok("C4.11 K pass: a question decided by an answer that is asked has no asked-first finding", !okSnap.some((f) => f.rule === "asked_first"), okSnap);
+  ok("C4.11 K fail: a question decided by an answer nobody gives is an asked-first finding", badSnap.some((f) => f.rule === "asked_first" && /Unreachable question/.test(f.message)), badSnap);
 })().catch((e) => { console.error("FAIL  unexpected", e); fail++; }).finally(() => {
   for (const f of written) rmSync(f, { force: true });
   const out = join(STUDIO, "var", "suites"); mkdirSync(out, { recursive: true });

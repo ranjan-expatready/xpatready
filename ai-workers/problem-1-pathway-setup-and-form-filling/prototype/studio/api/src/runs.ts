@@ -15,6 +15,7 @@ import { UPLOAD_OPERATION, UPLOAD_STEPS, UploadRuns } from "./upload-run.ts";
 import { statedUsd } from "./finder-cost.ts";
 import { PeopleFromGuide, WHO_OPERATION, WHO_STEPS } from "./people-ai.ts";
 import { QD_OPERATION, QD_STEPS } from "../../engine/draft-qd.ts";
+import { DraftQd } from "./draft-qd.ts";
 
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail }, status);
 const ACTIVE = ["QUEUED", "RUNNING"];
@@ -38,7 +39,7 @@ type Step = { n: number; kind: string; label: string; uses: "rules" | "ai"; stat
 
 @Injectable()
 export class Runs {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Finder) private readonly finder: Finder, @Inject(Ai) private readonly ai: Ai, @Inject(UploadRuns) private readonly uploads: UploadRuns, @Inject(PeopleFromGuide) private readonly people: PeopleFromGuide) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Finder) private readonly finder: Finder, @Inject(Ai) private readonly ai: Ai, @Inject(UploadRuns) private readonly uploads: UploadRuns, @Inject(PeopleFromGuide) private readonly people: PeopleFromGuide, @Inject(DraftQd) private readonly qd: DraftQd) {}
 
   private steps(b: AiBatch & { jobs: DraftingJob[] }): Step[] {
     const plan = (b.plan ?? {}) as { steps?: { kind: string; uses_ai?: boolean }[] };
@@ -71,7 +72,7 @@ export class Runs {
     const last = Math.max(b.startedAt.getTime(), ...b.jobs.map((j) => Math.max(j.startedAt.getTime(), j.finishedAt?.getTime() ?? 0)));
     const failedStep = steps.find((s) => ["FAILED", "BLOCKED", "NEEDS_PERSON"].includes(s.status));
     // Where the run's card is: the library for an upload; its own page otherwise (S5 points a finder run at its Forms tab).
-    const href = b.operation === UPLOAD_OPERATION ? "/library/forms" : b.operation === WHO_OPERATION || b.operation === QD_OPERATION ? `/c/${(b.plan as { combination?: { id?: string } } | null)?.combination?.id ?? ""}/questionnaires` : `/ai/${b.id}`;
+    const href = b.operation === UPLOAD_OPERATION ? "/library/forms" : b.operation === WHO_OPERATION ? `/c/${(b.plan as { combination?: { id?: string } } | null)?.combination?.id ?? ""}/questionnaires` : `/ai/${b.id}`;
     return { id: b.id, operation: b.operation, label: LABEL[b.operation] ?? b.operation, scope: b.operation === FINDER_OPERATION ? b.scopeLabel.split("|")[1] ?? null : b.scopeLabel, status: st.code, status_word: st.word, message: plainRunText(b.message),
       step: cur ? { n: cur.n, m: steps.length, label: cur.label } : null, steps, started_at: b.startedAt, finished_at: b.finishedAt, elapsed_ms: (b.finishedAt ?? new Date()).getTime() - b.startedAt.getTime(), usual_ms: usual.ms, last_activity_at: new Date(last),
       usd: { spent: Math.round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0) * 100) / 100, worst: b.worstCaseUsd, usual: usual.usd, about: b.operation === FINDER_OPERATION ? statedUsd(b, usual.usd).about : usual.usd }, can_stop: ACTIVE.includes(b.status) && !b.cancelRequested,
@@ -92,6 +93,8 @@ export class Runs {
     if (b.operation === UPLOAD_OPERATION && plan.held_id && plan.held_outcome === "new_edition_held") return { label: "Review impact", href: `/review/edition/${plan.held_id}` };
     if (b.operation === UPLOAD_OPERATION && plan.held_id && plan.held_outcome === "older_edition_held") return { label: "See it on To review", href: "/review" };
     if (b.operation === UPLOAD_OPERATION) return plan.held_id ? (plan.held_unread ? { label: "Open it on To review", href: `/review/held/${plan.held_id}` } : { label: "Record the IRCC page it came from", href: `/review/held/${plan.held_id}` }) : null;
+    // C4.11 (break m4): the run's card is shown on its own Questionnaires tab: no link to the page already open.
+    if (b.operation === QD_OPERATION) return null;
     return { label: "See the details", href };
   }
 
@@ -104,7 +107,7 @@ export class Runs {
     else if (b.operation === UPLOAD_OPERATION) await this.uploads.stop(actor, id);
     else if (b.operation === WHO_OPERATION) await this.people.stop(actor, id);
     // C4.11: the run checks this between its steps; the step going on finishes, no later step starts.
-    else if (b.operation === QD_OPERATION) await this.db.aiBatch.update({ where: { id }, data: { cancelRequested: true } });
+    else if (b.operation === QD_OPERATION) await this.qd.stop(actor, id);
     else await this.ai.cancel(actor, id);
     return this.view(id);
   }
