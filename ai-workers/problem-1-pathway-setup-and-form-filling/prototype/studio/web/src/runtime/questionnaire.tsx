@@ -612,12 +612,17 @@ function GroupIntro({ questions }: { questions: Question[] }) {
 
 // ------------------------------------------------------------------ Agent view: the case officer
 
+/** C7.7: an answer the firm record supplies (the representative's name, e-mail, office address and phone) is shown as
+ *  read-only, with its source; it is changed in the firm record, never on the case. */
+const FIRM_RECORD = "firm_record";
+const fromFirm = (a: Answer | null | undefined) => a?.channel === FIRM_RECORD;
 function ConfirmPill({ a }: { a: Answer }) {
+  if (fromFirm(a)) return <Pill tone="ok" title="Filled from the representative of record's firm record (Sample). It changes in the firm record, not on the case."><Check className="size-3" aria-hidden />From the firm record</Pill>;
   const tone = a.status === "VERIFIED" ? "ok" : a.confirmed ? "info" : "warn";
   const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
-const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "case view", confirm_section: "confirmed section" };
+const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "case view", confirm_section: "confirmed section", firm_record: "firm record" };
 const WHO: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -672,7 +677,8 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   // The group's "none apply" is reviewed and confirmed with the section's answers.
   // With entries, the group's earlier answer is not shown, so it is not sent as seen (review m6).
   const shownGroup = s.group && s.group.rows === 0 ? s.group.none_apply : null;
-  const seen = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer?.id) : [q.answer?.id])), shownGroup?.id].filter((x): x is string => !!x);
+  // C7.7: firm-record answers are never sent as seen (they are not the case's to confirm).
+  const seen = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])).filter((a) => !fromFirm(a)).map((a) => a?.id), shownGroup?.id].filter((x): x is string => !!x);
   const open = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])), shownGroup].filter((a) => a && a.status !== "VERIFIED").length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", view.case.id] });
   const checks = view.checks.filter((c) => c.subjectId === s.subjectId && c.section === s.section);
@@ -709,7 +715,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           ) : <span className="text-text-muted">{q.required ? "Not answered" : "Not answered (optional)"}{q.collected_from !== "client_questionnaire" ? " · the officer enters this from a document or record" : ""}</span>}
           {q.note ? <p className="text-xs text-text-warn">{q.note}</p> : null}
         </div>
-        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${s.about_label}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
+        {kindOf(q) === "declaration" ? <p className="max-w-40 text-xs text-text-muted">Only the client makes this declaration</p> : fromFirm(a) ? <p className="max-w-40 text-xs text-text-muted">Change it in the firm record</p> : <div><Button size="sm" variant="ghost" onClick={() => edit(q, row)} aria-label={`${a ? "Edit" : "Add"} ${q.label}${row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""} for ${s.about_label}`}><Pencil aria-hidden />{a ? "Edit" : "Add"}</Button></div>}
       </div>
     );
   };

@@ -88,5 +88,9 @@ const INV = "derive_inverse:1 when the subject has no child records (hides child
   ok("C7.7 pass: derive_inverse writes 0 when the fact is Yes and 1 when it is No (yes/no words too)", y.ok && y.value === "0" && n.ok && n.value === "1" && w.ok && w.value === "1"); }
 { const x = runTransform(INV, "two", {}), e = runTransform(INV, undefined, {});
   ok("C7.7 fail: derive_inverse on a value that is not yes/no goes by hand with its reason; a missing fact stays blank", !x.ok && "hand" in x && /yes\/no/.test(x.reason) && !e.ok && "blank" in e); }
+{ const cc = runTransform("phone:country_code_digits", { country_code: "+1", number: "416 555 0100" }, {}), nn = runTransform("phone:area_code_and_number", { country_code: "1", number: "416 555 0100" }, {});
+  const none = runTransform("phone:area_code_and_number", { country_code: "1" }, {}), ctry = runTransform("country_name_text (max 255 characters)", "Canada", {}), long = runTransform("country_name_text (max 3 characters)", "Canada", {});
+  ok("C7.7 pass (review M2): IMM 5476's phone boxes take the calling code's and the number's digits; a country name with its length limit is written", cc.ok && cc.value === "1" && nn.ok && nn.value === "4165550100" && ctry.ok && ctry.value === "Canada");
+  ok("C7.7 fail (review M2): a phone with no number leaves that box blank; a country name longer than its box goes by hand (never truncated)", !none.ok && "blank" in none && !long.ok && "hand" in long); }
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

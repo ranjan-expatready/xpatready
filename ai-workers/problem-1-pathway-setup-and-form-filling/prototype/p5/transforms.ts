@@ -97,10 +97,12 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       if (m[1] !== "country_calling_code" && p.country_code === "1" && m[1] === "national_number") return blank("North American number goes in the area-code boxes");
       v = String(part).replace(/\D/g, ""); continue;
     }
+    // C7.7 (IMM 5476's representative phone): the country calling code's digits, and the number's digits (area code included).
+    if ((m = /^phone:(country_code_digits|area_code_and_number)$/.exec(s))) { const p = v as Phone; const part = m[1] === "country_code_digits" ? p?.country_code : p?.number; if (!part) return blank(`no ${m[1] === "country_code_digits" ? "country calling code" : "number"}`); v = String(part).replace(/\D/g, ""); continue; }
     if (/^phone_part:nanp_/.test(s)) { const p = v as Phone; if (p.country_code !== "1") return blank("not a North American number"); return hand("North American number parts are not in the executable set yet"); }
     if ((m = /^address_part:(city|province|country|postal_code|street_number|street_name|apt_unit|district|po_box)\b/.exec(s))) { const a = parseAddress(v); const part = a?.[m[1] as keyof Address]; if (!part) return blank(`address has no ${m[1]}`); v = part; const max = /max (\d+) char/.exec(s); if (max && String(v).length > Number(max[1])) return hand(`${m[1]} longer than ${max[1]} characters`); continue; }
     if ((m = /^address_single_line(?: \(max (\d+) chars\))?$/.exec(s))) { const a = parseAddress(v); if (!a) return hand("not an address"); v = typeof value === "string" ? value : oneLine(a); if (m[1] && v.length > Number(m[1])) return hand(`address longer than ${m[1]} characters`); continue; }
-    if (/^country_name_text$/.test(s)) { const c = ISO3[String(v).toUpperCase()] ?? String(v); v = c; continue; }
+    if ((m = /^country_name_text(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const c = ISO3[String(v).toUpperCase()] ?? String(v); if (m[1] && c.length > Number(m[1])) return hand(`country name longer than ${m[1]} characters`); v = c; continue; }
     if ((m = /^code_list:[\w.]+(?: \((.*)\))?$/.exec(s))) {
       const inline: Record<string, string> = {};
       for (const pair of (m[1] ?? "").split(",")) { const q = /^\s*([^=|]+?)\s*=\s*(\w+)\s*$/.exec(pair); if (q) inline[q[1]] = q[2]; }
