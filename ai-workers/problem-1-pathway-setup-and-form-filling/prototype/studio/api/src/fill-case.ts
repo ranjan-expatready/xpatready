@@ -309,7 +309,7 @@ export class CaseForms implements OnModuleInit {
 
   /** The copy's bytes, checked against the hash recorded when it was made, and those same bytes are what is sent (break
    *  M1: one read). The file must lie in the working files (break m5) and still exist (break m1).
-   *  C-9 (P-144, Devin on PR #121): a barcode form with a current validated copy downloads that validated file (the one
+   *  C-9 (P-144, a reviewer on PR #121): a barcode form with a current validated copy downloads that validated file (the one
    *  with Adobe's barcode, the one that is filed), checked the same way against its own recorded checksum; a failed
    *  check is refused, never answered with the unbarcoded copy. `original` asks for the copy as the product made it. */
   async file(actor: Actor, id: string, original = false) {
