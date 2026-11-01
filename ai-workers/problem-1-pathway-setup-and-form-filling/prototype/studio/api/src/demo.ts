@@ -13,7 +13,7 @@ import { importConfiguration, sampleFamilyFacts } from "../../engine/import.ts";
 import { buildSnapshot } from "../../engine/snapshot.ts";
 import { LEDGER_DIR } from "../../../p2/policy.ts";
 import { Ai } from "./ai.ts";
-import { ACTORS, Audit, Db, fail, need, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, fail, need, OFFICIAL, PROTOTYPE, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
 import { Programs } from "./programs.ts";
 import { Intake } from "./intake.ts";
 import { Finder } from "./finder.ts";
@@ -22,6 +22,9 @@ import { linkSampleGuides } from "./guide-sources.ts";
 import { libraryRevision, Sources } from "./sources.ts";
 import { Screen02 } from "./screen02.ts";
 import { Studio } from "./studio.ts";
+/** C10.1 row 1 (X9a): the off-list file the configured checkpoint uploads (Sample): IMM 5476's 2021 edition, the file row 17
+ *  also uses (official-sources/ircc manifest, P-32), saved again so its checksum is on no list; its IRCC page on canada.ca. */
+export const OFF_LIST_COPY = { official: "previous-editions/imm5476e-2021.pdf", name: "imm5476e-2021-from-email.pdf", page: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5476.html" };
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 /** C10.1: one DEMO.md row of the configured checkpoint, as the Demo menu shows it. */
@@ -236,6 +239,32 @@ export class Demo {
    *  submits, the SME (user-C) signs and user-B releases. Nothing is faked: a step a rule refuses stays undone and its row
    *  says the rule's own words; a row whose function another lane has not merged says "not built yet". New saved AI
    *  answers drop in with no code change (the six load replays whatever saved answer matches). US$0, no live AI call. */
+  /** C10.1 row 1 (X9a): an off-list copy of IMM 5476's 2021 edition, as a person would have saved it from an email (its
+   *  bytes differ from the official file, so its checksum is on no approved list; Sample). The author uploads it on the
+   *  Visitor visa (held for source verification), records the IRCC page it came from, and the approver, a second person,
+   *  compares and approves it on the intake's own route (P-80). The library holds IMM 5476 (11-2025), not 11-2021, so the
+   *  copy is not a duplicate (review-3 Major 1). Once approved it goes through the intake again: an edition older than the
+   *  library's is set aside by the Approver, never used, which the row says. */
+  private async heldFileApproved(author: Actor, approver: Actor, workspaceId: string): Promise<{ ok: true; shows: string } | { ok: false; why: string }> {
+    const vv = await this.db.combination.findFirst({ where: { workspaceId, combinationKey: "vv.single" }, select: { id: true } });
+    if (!vv) return { ok: false, why: "The Visitor visa combination is not in the sample, so the off-list copy has nowhere to be uploaded." };
+    const copy = Buffer.concat([readFileSync(join(OFFICIAL, OFF_LIST_COPY.official)), Buffer.from("\n% Sample: a copy saved from an email (C10.1 row 1, X9a)\n")]);
+    const up = (await this.intake.intake(author, [{ originalname: OFF_LIST_COPY.name, buffer: copy }], vv.id)).results[0];
+    const item = await this.db.intakeItem.findFirst({ where: { workspaceId, sha256: up.sha256 ?? "", status: "HELD", outcome: "held" } });
+    if (!item) return { ok: false, why: `The off-list copy of IMM 5476 (11-2021) was not held for a source check: ${up.message}` };
+    await this.intake.recordPage(author, item.id, { irccPage: OFF_LIST_COPY.page });
+    const done = await this.intake.decideHeld(approver, item.id, "approve", { note: "Sample: compared with the IRCC page", irccPage: OFF_LIST_COPY.page });
+    // Review m2 (f7): the re-intake holds it as an older edition; the Approver sets it aside with that reason, so nothing is
+    // left waiting on To review (a second person may set aside an older edition: Intake.heldFile anyHold).
+    let after = done.result ? ` Then the intake: ${done.result.message}` : "";
+    if (done.result?.outcome === "older_edition_held") {
+      const older = await this.db.intakeItem.findFirst({ where: { workspaceId, sha256: item.sha256, status: "HELD", outcome: "older_edition_held" }, select: { id: true } });
+      if (older) await this.intake.decideHeld(approver, older.id, "reject", { note: "Sample: older than the library's IMM 5476 (11-2025), so it is not used." });
+      after = ` Then the intake found it older than the library's IMM 5476 (11-2025), and ${approver.name} set it aside: not used.`;
+    }
+    return { ok: true, shows: `an off-list copy of ${item.editionLabel ?? "IMM 5476 (11-2021)"} (${OFF_LIST_COPY.name}) held for a source check, its IRCC page recorded by ${author.name}, approved by ${approver.name}.${after}` };
+  }
+
   private async loadConfigured(actor: Actor, workspaceId: string, t0: number, log: string[]) {
     const six = await this.loadSix(actor, workspaceId, t0, log);
     const person = (id: string) => ACTORS.find((a) => a.id === id)!;
@@ -247,12 +276,15 @@ export class Demo {
     const row = (r: CheckpointRow) => { rows.push(r); log.push(`  row ${r.row} ${r.title}: ${r.status}${r.why ? ` (${r.why.slice(0, 200)})` : ""}`); };
     log.push("configured checkpoint (C10.1): each DEMO.md row through the screens' services");
 
-    // Row 1: every official file through the intake (the six load). A file the intake held stays held with its reason:
-    // only a file whose code and edition were read can become a source (intake, Break M4), so none is approved here.
-    const held = await this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, select: { fileName: true } });
+    // Row 1: every official file through the intake (the six load), then one off-list file with a readable edition, held
+    // and approved by a second person through the intake's own steps (X9a; the forms lane's demo story does the same).
     const files = six.combinations.reduce((t, c) => t + c.files, 0);
-    row({ row: "1", title: "Ingest PDF forms; a held file approved by a second person", status: "partial", shows: `${files} official files read on the six combinations (code, edition, checksum; no AI)`,
-      why: held.length ? `${held.length} file${held.length === 1 ? " is" : "s are"} held because the form's edition could not be read from the file (${held.map((h) => h.fileName).join(", ")}). Such a file cannot become a source, so there is nothing for a second person to approve; approval works on Library › To review for an off-list file whose edition can be read.` : "The intake held no file, so there is no held file to approve." });
+    const unread = await this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, select: { fileName: true } });
+    const offList = await timed("held file approved by a second person", () => this.heldFileApproved(author, approver, workspaceId).catch((e) => ({ ok: false as const, why: said(e) })));
+    const unreadWords = unread.length ? ` ${unread.length} official file${unread.length === 1 ? " stays" : "s stay"} held because the form's edition could not be read from the file (${unread.map((h) => h.fileName).join(", ")}): such a file cannot become a source.` : "";
+    row({ row: "1", title: "Ingest PDF forms; a held file approved by a second person", status: offList.ok ? "done" : "partial",
+      shows: `${files} official files read on the six combinations (code, edition, checksum; no AI)${offList.ok ? `; ${offList.shows}` : ""}`,
+      why: offList.ok ? (unreadWords.trim() || null) : `${offList.why}${unreadWords}` });
     row({ row: "2", title: "Online forms captured with the browser extension", status: "out", shows: "Parked (P-102, W6)", why: null });
 
     // Rows 3–4: the replayed field-map drafts, decided by the author on each draft's own page, then applied to the draft.
