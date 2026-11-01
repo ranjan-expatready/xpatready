@@ -11,7 +11,12 @@ import { Studio } from "./studio.ts";
 import { itemsOf, KIND_NOUN, actionWord, unapprovedAdds, unapprovedWhy, acceptsView } from "./library-changes.ts";
 import { fillsView } from "./who-fills.ts";
 import { ON_ITS_PAGE } from "./proposals.ts";
+/** The ON_ITS_PAGE steps whose drafts already have their own row in this list (the field-map jobs below). A checklist
+ *  draft's lines (C2.6) have no job row, so they keep their proposals row, whose page links each line to its checklist
+ *  page (#277 re-review Major). */
+const LISTED_AS_JOBS = new Set(["field_map"]);
 import { groupOf } from "./review-proposals.ts";
+import { isLifecycleKind } from "./lifecycle.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
@@ -52,7 +57,7 @@ export class ReviewQueueService {
       this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, kind: true, mode: true, status: true, costUsd: true, startedBy: true, startedAt: true, finishedAt: true, detail: true } }),
       this.db.proposalItem.groupBy({ by: ["runId"], where: { workspaceId, status: "waiting" }, _count: true }),
-      this.db.proposalItem.findMany({ where: { workspaceId, status: "waiting", step: { notIn: [...ON_ITS_PAGE] } }, orderBy: { createdAt: "asc" }, select: { formEdition: true, combinationId: true, runId: true, confidence: true, createdAt: true } }),
+      this.db.proposalItem.findMany({ where: { workspaceId, status: "waiting", step: { notIn: [...ON_ITS_PAGE].filter((x) => LISTED_AS_JOBS.has(x)) } }, orderBy: { createdAt: "asc" }, select: { formEdition: true, combinationId: true, runId: true, confidence: true, createdAt: true } }),
       this.db.aiBatch.findMany({ where: { workspaceId, status: { in: ["QUEUED", "RUNNING"] } }, include: { jobs: { select: { status: true, costUsd: true, attachmentId: true } } } }),
       this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" } }),
       this.db.fieldMerge.findMany({ where: { workspaceId, status: "PROPOSED" } }),
@@ -230,7 +235,7 @@ export class ReviewQueueService {
       const fil = c.kind === "placement_fills" ? fillsView(c) : null; // C4.9 (runtime lane, P-97)
       const what = fil ? `Who fills it, for every combination: ${fil.before} → ${fil.after} (used by ${fil.uses} combination${fil.uses === 1 ? "" : "s"}; goes out with the next release). Reason: ${fil.reason}` : acc ? `What IRCC accepts for ${acc.form}: ${acc.before} → ${acc.after}. ${acc.quote ? `canada.ca: "${acc.quote}"` : `Reason: ${acc.reason}`}` : `${c.action === "ADD" ? `New ${word}` : `${actionWord(c.action, c.kind)} the ${word}`}${c.reason ? `. Reason: ${c.reason}` : ""}${c.aiVerdict ? ` · Advisory check: ${c.aiVerdict}` : ""}`;
       const base = { id: `change:${c.id}`, kind: "library_change" as const, title: c.label ?? c.key, by: nameOf(c.proposedBy), at: c.proposedAt.toISOString(), cost_usd: null, forms: formsOfChange(c), combination: c.kind === "combination" ? c.combinationId ?? c.key : null };
-      if (c.status === "RETURNED") out.push({ ...base, what: `${what} · Returned by ${nameOf(c.decidedBy)}: ${c.decisionNote}`, ...(mine || holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: "Correct or withdraw", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: "The person who proposed it, or an author, corrects or withdraws it.", next: null }) });
+      if (c.status === "RETURNED") out.push({ ...base, what: `${what} · Returned by ${nameOf(c.decidedBy)}: ${c.decisionNote}`, ...(mine ? { state: "needs" as const, waiting_on: null, next: { label: "Correct or withdraw", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: isLifecycleKind(c.kind) ? "The person who proposed it sends it again or withdraws it." : "The person who proposed it corrects it or withdraws it.", next: null }) });
       else out.push({ ...base, what, ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: c.action === "ADD" ? "Approve or return the new field" : "Approve or return", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or returns it." : "A content publisher approves or returns it.", next: null }) });
     }
 

@@ -14,6 +14,7 @@ import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, need, Workspace, type Actor } from "./core.ts";
 import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { openingTeam } from "../../engine/runtime/team.ts";
+import { employerLinkOffer } from "../../engine/runtime/employer.ts";
 
 type H = string | undefined;
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
@@ -119,7 +120,21 @@ export class Runtime {
     const team = isOfficer(actor) ? await this.teamLine(c.id) : undefined;
     return { id: c.id, ...(team ? { team } : {}), reference: c.reference, status: c.status, combination_id: c.combinationId, client: c.clientActorId,
       pin: { release_version: pin.release.version, sha256: pin.contentHash, pinned_at: pin.pinnedAt, revision: pin.revision },
-      people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })) };
+      people: c.participants.map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })),
+      // C11.5 (P-106): whether this case may rely on an employer case, read from its pinned release (staff only, as the team; review m3).
+      ...(team ? { employer_link: employerLinkOffer(this.snapshotOf(c)) } : {}) };
+  }
+
+  /** C11.5 (P-106): before a case opens, whether one on this combination's newest release may rely on an employer case
+   *  (the "Open a case" line). Staff only; a combination with no release answers 409, as opening one does. */
+  async employerLink(actor: Actor, combinationId: string) {
+    need(actor, "case");
+    const workspaceId = await this.ws.id();
+    const ok = /^[0-9a-f-]{36}$/i.test(combinationId) ? await this.db.combination.findFirst({ where: { id: combinationId, workspaceId }, select: { id: true, label: true } }) : null;
+    if (!ok) fail("No such combination.", HttpStatus.NOT_FOUND);
+    const release = await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" } });
+    if (!release) fail(`"${ok!.label}" has no released version yet: a case opens only on a released configuration.`, HttpStatus.CONFLICT);
+    return { combination_id: combinationId, release_version: release!.version, ...employerLinkOffer(release!.snapshot as unknown as Snapshot) };
   }
 
   /** The header's team chip: the representative of record and the case officers now (names from the Sample firm). */
@@ -396,6 +411,7 @@ export class RuntimeController {
   constructor(@Inject(Runtime) private readonly r: Runtime) {}
   @Get("cases") list(@Headers("x-actor") a: H, @Query() q: { take?: string; after?: string }) { return this.r.list(actorOf(a), q); }
   @Post("cases") create(@Headers("x-actor") a: H, @Body() b: unknown) { return this.r.createCase(actorOf(a), b); }
+  @Get("combinations/:id/employer-link") employerLink(@Headers("x-actor") a: H, @Param("id") id: string) { return this.r.employerLink(actorOf(a), id); }
   @Get("cases/:id") get(@Headers("x-actor") a: H, @Param("id") id: string) { return this.r.get(actorOf(a), id); }
   @Post("cases/:id/people") addPerson(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.r.addPerson(actorOf(a), id, b); }
   @Patch("cases/:id/people/:subject") updatePerson(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Body() b: unknown) { return this.r.updatePerson(actorOf(a), id, s, b); }
