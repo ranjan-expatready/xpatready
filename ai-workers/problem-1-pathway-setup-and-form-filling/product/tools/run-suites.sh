@@ -35,17 +35,13 @@ SKIP="check_catalogue_scale.cjs"
 # check waits for the page's ready signal) merged.
 # check_forms_c31_formats.ts was quarantined 1 Nov night (QA-145: untracked p1/inventory files left by a Load sample suite)
 # and came back when its fix (#316, C3.1/QA-146: it reads only committed inventories) merged.
-# check_c313_reuse_browser.cjs (C3.13, screens) quarantined 1 Nov 22:00 UTC: merge-queue run 41352319862 (#349 alone on
-# main) failed at its first step "setup: sample inputs loaded" (POST /demo/load not 201; a second load into a loaded copy
-# answers 409), while it passes 24/24, exit 0, twice on main ffaf54aa and twice on #349 merged with main, each on a fresh
-# isolated copy. Likely cause: four suites share port 4448 (check_f8_empty_release.ts ran earlier on the same shard), so
-# the check can reach a copy that is already loaded. Fix row (screens): give it its own port and name, or reset the demo
-# before loading; take it off this list in that PR.
+# check_c313_reuse_browser.cjs (C3.13, screens) was quarantined 1 Nov 22:00 UTC (it shared port 4448 and reached an
+# already-loaded copy) and came back when its fix (own port 4468 and copy screens_c313ui) merged.
 # check_forms_c36_rule_facts_browser.cjs (C3.6, forms) quarantined 1 Nov 22:45 UTC: its focus check ("after Propose,
 # focus lands on the row's To review link") failed batch b489cc2d79 and #374's own PR check (a run-suites.sh-only change),
 # and on main 70eb4b7e it failed 1 of 3 runs on a fresh isolated copy ("focus lands on the Proposals link"). Fix row
 # (forms): the check waits for the page's ready signal and the focus move before reading document.activeElement.
-QUARANTINE="check_c313_reuse_browser.cjs check_forms_c36_rule_facts_browser.cjs"
+QUARANTINE="check_forms_c36_rule_facts_browser.cjs"
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
 export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 / P-179: test runs never write the real ledger (forms plan-p179 §5)
