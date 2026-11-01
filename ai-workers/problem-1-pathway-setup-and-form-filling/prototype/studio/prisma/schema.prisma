@@ -1224,8 +1224,10 @@ model Case {
   snapshots    AnswerSnapshot[]
   team         CaseTeamMember[]
 
-  @@unique([workspaceId, idempotencyKey])
-  @@unique([workspaceId, reference])
+  /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
+  /// nor learns of another firm's cases.
+  @@unique([workspaceId, firmKey, idempotencyKey])
+  @@unique([workspaceId, firmKey, reference])
   @@index([workspaceId, createdAt])
   @@map("runtime_case")
 }

@@ -29,6 +29,7 @@ const RELATIONSHIP: Record<string, string> = { spouse_or_partner: "SPOUSE_OR_PAR
 const isOfficer = (a: Actor) => (a.duties as readonly string[]).includes("case");
 const FIELD_KEY = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
 const short = (id: string) => id.slice(0, 8);
+const nameIn = (f: { users: { id: string; name: string }[] }, id: string) => f.users.find((u) => u.id === id)?.name ?? id;
 const unique = (e: unknown) => (e as { code?: string }).code === "P2002";
 
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
@@ -62,10 +63,13 @@ export class Runtime {
     need(actor, "case");
     const b = parse(NewCase, body);
     const workspaceId = await this.ws.id();
+    // C6.11 (BR-20): the case belongs to the opener's firm; its reference and idempotency key are the firm's own (break M2, M3).
+    const firm = firmOfActor(actor);
+    if (!firm) fail(`${actor.name} (simulated) is not staff of a firm, so cannot open a case.`, HttpStatus.FORBIDDEN);
     const { idempotencyKey: _k, ...request } = b;
     const fingerprint = createHash("sha256").update(JSON.stringify(request)).digest("hex");
     const replay = async () => {
-      const again = b.idempotencyKey ? await this.db.case.findFirst({ where: { workspaceId, idempotencyKey: b.idempotencyKey } }) : null;
+      const again = b.idempotencyKey ? await this.db.case.findFirst({ where: { workspaceId, firmKey: firm!.key, idempotencyKey: b.idempotencyKey } }) : null;
       if (!again) return null;
       if (again.idempotencyFingerprint !== fingerprint) fail("This idempotency key was already used for a different case request; nothing was created. Use a new key.", HttpStatus.CONFLICT);
       return { ...(await this.get(actor, again.id)), created: false };
@@ -82,9 +86,7 @@ export class Runtime {
     let client: Actor | null = null;
     try { client = actorOf(b.clientActor); } catch { /* reported below as a field error */ }
     if (!client || !(client.duties as readonly string[]).includes("answer")) fieldError("clientActor", "Choose a client login (the client who answers the questionnaire).");
-    // C6.11 (BR-20): the case belongs to the opener's firm and opens with its representative of record and case officers.
-    const firm = firmOfActor(actor);
-    if (!firm) fail(`${actor.name} (simulated) is not staff of a firm, so cannot open a case.`, HttpStatus.FORBIDDEN);
+    // C6.11 (BR-20): the case opens with the firm's representative of record and case officers.
     const team = openingTeam(firm!, { representative: b.representative, caseOfficers: b.caseOfficers });
     if ("field" in team) fieldError(team.field, team.message);
     const { representative, officers } = team as { representative: string; officers: string[] };
@@ -106,7 +108,7 @@ export class Runtime {
       if (same) return same;
       fail("A case with this reference already exists; give the new case its own reference.", HttpStatus.CONFLICT);
     }
-    await this.audit.log(workspaceId, actor.id, "opened", "case", id!, `${actor.name} opened case ${short(id!)} on "${combination!.label}" released version ${release!.version} (${release!.sha256.slice(0, 12)}); representative of record ${representative}, case officers ${officers.join(", ")}`, undefined, b.combinationId);
+    await this.audit.log(workspaceId, actor.id, "opened", "case", id!, `${actor.name} opened case ${short(id!)} on "${combination!.label}" released version ${release!.version} (${release!.sha256.slice(0, 12)}); representative of record ${nameIn(firm!, representative)}, case officers ${officers.map((o) => nameIn(firm!, o)).join(", ")}`, undefined, b.combinationId);
     return { ...(await this.get(actor, id!)), created: true };
   }
 

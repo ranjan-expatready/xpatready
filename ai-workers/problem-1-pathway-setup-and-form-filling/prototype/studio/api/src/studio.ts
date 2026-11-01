@@ -836,11 +836,27 @@ export class Studio {
     return rows.map((r) => ({ id: r.id, combination: r.combination.label, combination_id: r.combinationId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, names: { author: peopleNames(r.authorId), submitter: peopleNames(r.submitterId), approver: peopleNames(r.approverId) }, summary: r.summary, basis: r.basis }));
   }
 
-  async activity(limit = 200) {
+  /** C6.11 review Major 1: firm staff read the configuration lines and their own firm's case lines only; another firm's
+   *  case events (opened, team, people, answers, sections, form copies) are left out. Case lines name their case as
+   *  "case <first 8 of its id>". Configuration people read every line, as before. */
+  async activity(limit = 200, firmKey: string | null = null) {
     const workspaceId = await this.ws.id();
-    return (await this.db.auditEvent.findMany({ where: { workspaceId }, orderBy: { at: "desc" }, take: limit })).map((e) => ({ ...e, who: peopleNames(e.actor) }));
+    const rows = await this.db.auditEvent.findMany({ where: { workspaceId }, orderBy: { at: "desc" }, take: firmKey ? limit * 5 : limit });
+    let kept = rows;
+    if (firmKey) {
+      const own = new Set((await this.db.case.findMany({ where: { workspaceId, firmKey }, select: { id: true } })).map((c) => c.id.slice(0, 8)));
+      kept = rows.filter((e) => {
+        if (!CASE_ENTITIES.has(e.entity)) return true;
+        const id = e.entity === "case" && e.entityKey ? e.entityKey.slice(0, 8) : /\bcase ([0-9a-f]{8})\b/.exec(e.summary)?.[1];
+        return !!id && own.has(id);
+      }).slice(0, limit);
+    }
+    return kept.map((e) => ({ ...e, who: peopleNames(e.actor) }));
   }
 }
+
+/** The audit entities written by case work (runtime.ts, fill-case.ts, team.ts). */
+const CASE_ENTITIES = new Set(["case", "person", "case fact", "row", "group", "section", "form copy"]);
 
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */
 const PEOPLE: readonly { id: string; name: string }[] = [...ACTORS, ...RUNTIME_ACTORS];

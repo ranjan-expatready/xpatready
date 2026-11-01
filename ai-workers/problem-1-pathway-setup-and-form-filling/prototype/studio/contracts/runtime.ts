@@ -43,9 +43,12 @@ export const NewCase = z.object({
 /** C6.11 (BR-20, SI-9): the firm admin changes the representative of record, with a reason kept in the history; a new
  *  representative asks for a new IMM 5476 (BR-12). */
 const teamUser = z.string({ message: "Choose a person of your firm." }).trim().regex(/^user-[A-Za-z0-9]{1,8}$/, "Choose a person of your firm.");
-export const ChangeRepresentative = z.object({ userId: teamUser, reason: text("Say why the representative changes (at least 5 characters).", 5, 300) });
+/** A reason a person reads in the history: some letters or digits, not only marks or filler characters (break m1). */
+const reason = (missing: string) => text(missing, 5, 300).refine((x) => /[\p{L}\p{N}]/u.test(x.replace(/[\u115f\u1160\u3164\uffa0]/g, "")), missing);
+/** expectedRepresentative: the representative the person saw; a change made meanwhile by someone else is refused (break m4). */
+export const ChangeRepresentative = z.object({ userId: teamUser, reason: reason("Say why the representative changes (at least 5 characters)."), expectedRepresentative: teamUser.nullable().optional() });
 export const AddCaseOfficer = z.object({ userId: teamUser });
-export const EndCaseOfficer = z.object({ reason: text("Say why this case officer leaves the case (at least 5 characters).", 5, 300) });
+export const EndCaseOfficer = z.object({ reason: reason("Say why this case officer leaves the case (at least 5 characters).") });
 
 export const NewPerson = z.object({
   role: z.string({ message: "Choose who the person is (a person the release lists)." }).trim().regex(/^[a-z][a-z0-9_]{1,40}$/, "Choose who the person is (a person the release lists).").refine((r) => r !== "principal", "The case already has its principal applicant."),

@@ -5,7 +5,7 @@
 import * as React from "react";
 import { History, Pencil, UserMinus, UserPlus } from "lucide-react";
 import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
-import { Button, Dialog, Field, Notice, Pill, Select, Textarea } from "@/components/ui/controls";
+import { Button, Dialog, Field, Input, Notice, Pill, Select } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
 import type { CaseTeamLine } from "./questionnaire";
@@ -83,8 +83,9 @@ function TeamDialog({ caseId, close }: { caseId: string; close: () => void }) {
   const [rep, setRep] = React.useState(""), [reason, setReason] = React.useState(""), [add, setAdd] = React.useState("");
   const [ending, setEnding] = React.useState<string | null>(null), [endWhy, setEndWhy] = React.useState("");
   const [err, setErr] = React.useState<Record<string, string>>({});
-  const onErr = (field: string) => (e: Error) => setErr({ [field]: e instanceof ApiError ? e.field("userId") ?? e.field("reason") ?? e.message : e.message });
-  const change = useAction(() => api(`/runtime/cases/${caseId}/team/representative`, { method: "PUT", json: { userId: rep, reason } }), { success: "Representative of record changed: a new IMM 5476 is needed", invalidate: [["runtime"]], onDone: () => { setRep(""); setReason(""); setErr({}); } });
+  // An error goes under its own field (break m3): the person chosen, or the reason; a refusal with no field under the reason.
+  const onErr = (field: string) => (e: Error) => { const user = e instanceof ApiError ? e.field("userId") : null, why = e instanceof ApiError ? e.field("reason") : null; setErr({ [`${field}User`]: user ?? "", [field]: why ?? (user ? "" : e.message) }); };
+  const change = useAction(() => api(`/runtime/cases/${caseId}/team/representative`, { method: "PUT", json: { userId: rep, reason, expectedRepresentative: team.data?.representative?.id ?? null } }), { success: "Representative of record changed: a new IMM 5476 is needed", invalidate: [["runtime"]], onDone: () => { setRep(""); setReason(""); setErr({}); } });
   const addOff = useAction(() => api(`/runtime/cases/${caseId}/team/officers`, { method: "POST", json: { userId: add } }), { success: "Case officer assigned", invalidate: [["runtime"]], onDone: () => { setAdd(""); setErr({}); } });
   const endOff = useAction(() => api(`/runtime/cases/${caseId}/team/officers/${ending}/end`, { method: "POST", json: { reason: endWhy } }), { success: "Case officer taken off the case", invalidate: [["runtime"]], onDone: () => { setEnding(null); setEndWhy(""); setErr({}); } });
   const t = team.data, f = firm.data;
@@ -95,15 +96,15 @@ function TeamDialog({ caseId, close }: { caseId: string; close: () => void }) {
       footer={<Button variant="ghost" onClick={close}>Close</Button>}>
       {team.isLoading || firm.isLoading ? <Skeleton className="h-40 w-full" /> : team.isError ? <Notice tone="danger" title="The case team could not be read">{(team.error as Error).message}</Notice> : (
         <div className="space-y-5 text-sm">
-          {t!.imm5476.new_needed ? <Notice tone="warn" title="A new IMM 5476 is needed">The representative of record changed on {when(t!.imm5476.since!)}. IMM 5476 must name {t!.representative?.name}; the one with the earlier representative is out of date.</Notice> : null}
+          {t!.imm5476.new_needed ? <Notice tone="warn" title="A new IMM 5476 is needed">The representative of record changed ({when(t!.imm5476.since!)}): IMM 5476 must name {t!.representative?.name}; the one with the earlier representative is out of date.</Notice> : null}
           <section aria-labelledby="t-rep" className="space-y-2">
             <h3 id="t-rep" className="font-semibold">Representative of record</h3>
             <p>{t!.representative ? <>{t!.representative.name} · {licenceText(t!.representative.licence)} <span className="text-text-muted">since {when(t!.representative.since)}</span></> : "None yet."}</p>
             {t!.imm5476.facts ? <p className="text-xs text-text-muted">IMM 5476 fills: membership number {t!.imm5476.facts["representative.membership_id"]}, category {t!.imm5476.facts["representative.representative_category"]?.toUpperCase()} (Sample).</p> : null}
             {t!.may_assign ? (repChoices.length ? (
               <form className="grid gap-2 sm:grid-cols-[1fr_2fr_auto] sm:items-end" onSubmit={(e) => { e.preventDefault(); change.mutate(undefined, { onError: onErr("rep") }); }}>
-                <Field label="Change to" error={null}><Select value={rep} onChange={(e) => setRep(e.target.value)}><option value="">Choose…</option>{repChoices.map((u) => <option key={u.id} value={u.id}>{u.name} · {licenceText(u.licence)}</option>)}</Select></Field>
-                <Field label="Reason" hint="Kept in the history" error={err.rep}><Textarea rows={1} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
+                <Field label="Change to" error={err.repUser || null}><Select value={rep} onChange={(e) => setRep(e.target.value)}><option value="">Choose…</option>{repChoices.map((u) => <option key={u.id} value={u.id}>{u.name} · {licenceText(u.licence)}</option>)}</Select></Field>
+                <Field label="Reason" hint="Kept in the history" error={err.rep || null}><Input value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
                 <Button type="submit" variant="secondary" busy={change.isPending} disabled={!rep}>Change representative</Button>
               </form>
             ) : <p className="text-xs text-text-muted">Your firm has no other licensed representative.</p>) : <p className="text-xs text-text-muted">Only the firm admin changes the case team.</p>}
@@ -114,7 +115,8 @@ function TeamDialog({ caseId, close }: { caseId: string; close: () => void }) {
               <li key={o.id} className="flex flex-wrap items-center gap-2"><span className="font-medium">{o.name}</span><span className="text-xs text-text-muted">since {when(o.since)}</span>
                 {t!.may_assign ? (ending === o.id ? (
                   <form className="flex w-full flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); endOff.mutate(undefined, { onError: onErr("end") }); }}>
-                    <Field label={`Why ${o.name} leaves the case`} error={err.end} className="min-w-60 flex-1"><Textarea rows={1} value={endWhy} onChange={(e) => setEndWhy(e.target.value)} autoFocus /></Field>
+                    <Field label={`Why ${o.name} leaves the case`} error={err.end || null} className="min-w-60 flex-1"><Input value={endWhy} onChange={(e) => setEndWhy(e.target.value)} autoFocus /></Field>
+                    {t!.officers.length === 1 ? <p className="w-full text-xs text-warn">This is the case's last case officer: the case has none until you assign another.</p> : null}
                     <Button type="submit" size="sm" variant="secondary" busy={endOff.isPending}>Take off</Button><Button type="button" size="sm" variant="ghost" onClick={() => setEnding(null)}>Cancel</Button>
                   </form>
                 ) : <Button size="sm" variant="ghost" onClick={() => { setEnding(o.id); setEndWhy(""); }}><UserMinus aria-hidden />Take off</Button>) : null}
@@ -123,7 +125,7 @@ function TeamDialog({ caseId, close }: { caseId: string; close: () => void }) {
             </ul>
             {t!.may_assign && addChoices.length ? (
               <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); addOff.mutate(undefined, { onError: onErr("add") }); }}>
-                <Field label="Assign a case officer" error={err.add}><Select value={add} onChange={(e) => setAdd(e.target.value)}><option value="">Choose…</option>{addChoices.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select></Field>
+                <Field label="Assign a case officer" error={err.addUser || err.add || null}><Select value={add} onChange={(e) => setAdd(e.target.value)}><option value="">Choose…</option>{addChoices.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select></Field>
                 <Button type="submit" size="sm" variant="secondary" busy={addOff.isPending} disabled={!add}><UserPlus aria-hidden />Assign</Button>
               </form>
             ) : null}
@@ -132,7 +134,7 @@ function TeamDialog({ caseId, close }: { caseId: string; close: () => void }) {
             <h3 id="t-hist" className="flex items-center gap-1.5 font-semibold"><History className="size-4" aria-hidden />History</h3>
             <ul className="space-y-1 text-[13px]">{t!.history.map((h, i) => (
               <li key={i} className="flex flex-wrap gap-x-2"><span className="font-medium">{h.user}</span><Pill>{h.role === "LEAD_REPRESENTATIVE" ? "Representative of record" : "Case officer"}</Pill>
-                <span className="text-text-muted">from {when(h.assigned_at)}{h.ended_at ? ` to ${when(h.ended_at)}` : " · now"}</span>{h.reason ? <span className="[overflow-wrap:anywhere]">“{h.reason}”</span> : null}</li>))}
+                <span className="text-text-muted">from {when(h.assigned_at)} by {h.assigned_by}{h.ended_at ? ` to ${when(h.ended_at)} by ${h.ended_by}` : " · now"}</span>{h.reason ? <span className="[overflow-wrap:anywhere]">“{h.reason}”</span> : null}</li>))}
             </ul>
           </section>
         </div>

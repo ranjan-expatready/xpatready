@@ -129,11 +129,34 @@ async function api() {
   ok("C6.11 fail: a case officer cannot assign (403)", offAdd.status === 403, offAdd.status);
   const end = await call("POST", `/runtime/cases/${id}/team/officers/${OFFICER}/end`, { reason: "Sample: moved to another case" }, REP);
   const hist = (end.body.history ?? []) as { user_id: string; role: string; ended_at: string | null; reason: string | null; ended_by: string | null }[];
-  ok("C6.11: taking a case officer off keeps the history (who, when, why)", end.status === 201 && end.body.officers.map((o: { id: string }) => o.id).join() === REP && hist.some((h) => h.user_id === OFFICER && h.ended_at && h.ended_by === REP && h.reason === "Sample: moved to another case"), end.status);
+  ok("C6.11: taking a case officer off keeps the history (who, when, why)", end.status === 201 && end.body.officers.map((o: { id: string }) => o.id).join() === REP && hist.some((h) => h.user_id === OFFICER && h.ended_at && h.ended_by === "Representative (Sample)" && h.reason === "Sample: moved to another case"), end.status);
   const endAgain = await call("POST", `/runtime/cases/${id}/team/officers/${OFFICER}/end`, { reason: "Sample: again" }, REP);
   ok("C6.11 fail: taking off someone who is not on the case is refused (404)", endAgain.status === 404, endAgain.status);
   const back = await call("POST", `/runtime/cases/${id}/team/officers`, { userId: OFFICER }, REP);
   ok("C6.11: reassigning the case officer adds a new row; the earlier one stays in the history", back.status === 201 && sql(`select count(*) from case_team_member where case_id='${id}' and user_id='${OFFICER}' and role='OFFICER'`) === "2");
+  const notAdminEnd = await call("POST", `/runtime/cases/${id}/team/officers/${REP}/end`, { reason: "Sample: not the admin" }, "user-T");
+  ok("C6.11 fail: a representative who is not firm admin cannot take a case officer off (403)", notAdminEnd.status === 403, notAdminEnd.status);
+  const blank = await call("POST", `/runtime/cases/${id}/team/officers/${REP}/end`, { reason: "\u0301\u0301\u0301\u0301\u0301\u0301" }, REP);
+  ok("C6.11 fail: a reason of marks only is refused (400), nothing ended", blank.status === 400 && sql(`select count(*) from case_team_member where case_id='${id}' and user_id='${REP}' and role='OFFICER' and ended_at is null`) === "1", blank.status);
+  const stale = await call("PUT", `/runtime/cases/${id}/team/representative`, { userId: REP, reason: "Sample: from a stale tab", expectedRepresentative: REP }, REP);
+  ok("C6.11 fail: a change from a stale view (it expected another representative) is refused (409)", stale.status === 409 && (await call("GET", `/runtime/cases/${id}/team`, undefined, REP)).body.representative?.id === "user-T", stale.status);
+  const fresh = await call("PUT", `/runtime/cases/${id}/team/representative`, { userId: REP, reason: "Sample: back from leave", expectedRepresentative: "user-T" }, REP);
+  ok("C6.11: a change from the current view goes through", fresh.status === 200 && fresh.body.representative?.id === REP, fresh.status);
+
+  // Firm isolation beyond the case: activity, references, idempotency keys (review Major 1, break M1–M3).
+  const actS = (await call("GET", "/activity", undefined, SOLO)).body as { summary: string; entity: string; entityKey: string | null }[];
+  const actR = (await call("GET", "/activity", undefined, REP)).body as { summary: string; entity: string; entityKey: string | null }[];
+  ok("C6.11 fail: another firm's case lines are not in a firm's activity", !actS.some((e) => e.summary.includes(id.slice(0, 8))), actS.filter((e) => e.summary.includes(id.slice(0, 8))).length);
+  ok("C6.11: a firm's own case lines are in its activity, with names, not ids", actS.some((e) => e.summary.includes(sid.slice(0, 8))) && actR.some((e) => e.summary.includes(id.slice(0, 8)) && /Second representative \(Sample\)/.test(e.summary)) && !actR.some((e) => /\buser-[A-Z]\b/.test(e.summary) && e.summary.includes(id.slice(0, 8))));
+  const reuse = await open(`C611-A-${run}`, SOLO);
+  ok("C6.11: another firm may use the same case reference", reuse.status === 201, reuse.status);
+  const dupe = await open(`C611-A-${run}`, OFFICER);
+  ok("C6.11 fail: the same reference twice in one firm is refused (409)", dupe.status === 409, dupe.status);
+  const key = `c611-shared-${run}`;
+  const k1 = await open(`C611-K1-${run}`, OFFICER, { idempotencyKey: key }), k2 = await open(`C611-K2-${run}`, SOLO, { idempotencyKey: key });
+  ok("C6.11: an idempotency key is the firm's own (another firm's same key opens its own case)", k1.status === 201 && k2.status === 201 && k1.body.id !== k2.body.id, `${k1.status} ${k2.status}`);
+  const k3 = await open(`C611-K1-${run}`, OFFICER, { idempotencyKey: key });
+  ok("C6.11 fail: the same key again in the same firm answers with that firm's case, nothing new", k3.status === 201 && k3.body.id === k1.body.id && k3.body.created === false, k3.status);
   const audit = sql(`select string_agg(action, ',' order by at) from audit_event where entity='case' and entity_key='${id}'`);
   ok("C6.11: each assignment is in the audit trail", /opened.*officer_assigned.*officer_ended.*officer_assigned/.test(audit), audit);
   ok("C6.11 fail: audit lines carry no typed values (the reason stays in the history only)", !sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='case' and entity_key='${id}'`).includes("moved to another case"));

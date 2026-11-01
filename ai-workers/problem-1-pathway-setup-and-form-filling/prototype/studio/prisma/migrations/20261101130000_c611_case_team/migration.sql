@@ -6,6 +6,13 @@
 -- "firm_key" (no other table refers to either).
 ALTER TABLE "runtime_case" ADD COLUMN "firm_key" TEXT NOT NULL DEFAULT 'sample-firm';
 
+-- A case reference and an idempotency key are unique within a firm (break M2, M3): one firm can reuse another's reference
+-- and never learns that it exists. Every existing case is the Sample firm's, so no existing pair can collide.
+DROP INDEX "runtime_case_workspace_id_reference_key";
+DROP INDEX "runtime_case_workspace_id_idempotency_key_key";
+CREATE UNIQUE INDEX "runtime_case_workspace_id_firm_key_reference_key" ON "runtime_case"("workspace_id", "firm_key", "reference");
+CREATE UNIQUE INDEX "runtime_case_workspace_id_firm_key_idempotency_key_key" ON "runtime_case"("workspace_id", "firm_key", "idempotency_key");
+
 CREATE TABLE "case_team_member" (
     "id" UUID NOT NULL,
     "workspace_id" UUID NOT NULL,

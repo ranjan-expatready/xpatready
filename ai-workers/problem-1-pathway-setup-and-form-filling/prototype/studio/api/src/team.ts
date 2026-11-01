@@ -38,7 +38,7 @@ export class Team {
   }
 
   private async members(caseId: string): Promise<Member[]> {
-    return (await this.db.caseTeamMember.findMany({ where: { caseId }, orderBy: [{ assignedAt: "asc" }, { id: "asc" }] })).map((m) => ({ ...m, role: m.role as TeamRole }));
+    return (await this.db.caseTeamMember.findMany({ where: { caseId }, orderBy: [{ assignedAt: "asc" }, { role: "asc" }, { userId: "asc" }] })).map((m) => ({ ...m, role: m.role as TeamRole }));
   }
 
   /** The case team now, its history and IMM 5476's representative part. Staff of the case's firm only. */
@@ -51,7 +51,7 @@ export class Team {
       firm: { key: firm.key, name: firm.name, solo: firm.solo }, stand_in: STAND_IN,
       representative: rep ? { ...person(firm, rep.userId), since: rep.assignedAt } : null,
       officers: now.filter((m) => m.role === "OFFICER").map((m) => ({ ...person(firm, m.userId), since: m.assignedAt })),
-      history: [...all].reverse().map((m) => ({ user: person(firm, m.userId).name, user_id: m.userId, role: m.role, assigned_by: m.assignedBy, assigned_at: m.assignedAt, ended_at: m.endedAt, ended_by: m.endedBy, reason: m.endReason })),
+      history: [...all].reverse().map((m) => ({ user: person(firm, m.userId).name, user_id: m.userId, role: m.role, assigned_by: person(firm, m.assignedBy).name, assigned_at: m.assignedAt, ended_at: m.endedAt, ended_by: m.endedBy ? person(firm, m.endedBy).name : null, reason: m.endReason })),
       imm5476: { facts: representativeFacts(firm, all), ...imm5476(all) },
       may_assign: !!you && !cannotAssign(firm, actor.id),
     };
@@ -70,13 +70,14 @@ export class Team {
       await this.db.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR UPDATE`;
         const rep = await tx.caseTeamMember.findFirst({ where: { caseId, role: "LEAD_REPRESENTATIVE", endedAt: null } });
+        if (b.expectedRepresentative !== undefined && (rep?.userId ?? null) !== b.expectedRepresentative) refused("Someone changed the representative of record meanwhile; nothing changed. Look at the case team again.");
         if (rep?.userId === b.userId) refused(`${person(firm, b.userId).name} is already the representative of record; nothing changed.`);
         const at = new Date();
         if (rep) { earlier = rep.userId; await tx.caseTeamMember.update({ where: { id: rep.id }, data: { endedAt: at, endedBy: actor.id, endReason: b.reason } }); }
         await tx.caseTeamMember.create({ data: { workspaceId: c.workspaceId, caseId, userId: b.userId, role: "LEAD_REPRESENTATIVE", assignedBy: actor.id, assignedAt: at } });
       });
     } catch (e) { if (unique(e)) refused("The representative of record changed at the same moment; nothing changed. Reload and try again."); throw e; }
-    await this.audit.log(c.workspaceId, actor.id, "representative_changed", "case", caseId, `${actor.name} made ${b.userId} the representative of record on case ${short(caseId)}${earlier ? ` (was ${earlier}); a new IMM 5476 is needed` : ""}`);
+    await this.audit.log(c.workspaceId, actor.id, "representative_changed", "case", caseId, `${actor.name} made ${person(firm, b.userId).name} the representative of record on case ${short(caseId)}${earlier ? ` (was ${person(firm, earlier).name}); a new IMM 5476 is needed` : ""}`);
     return this.team(actor, caseId);
   }
 
@@ -88,7 +89,7 @@ export class Team {
     const why = cannotBeOfficer(firm, b.userId); if (why) fieldError("userId", why);
     try { await this.db.caseTeamMember.create({ data: { workspaceId: c.workspaceId, caseId, userId: b.userId, role: "OFFICER", assignedBy: actor.id } }); }
     catch (e) { if (unique(e)) refused(`${person(firm, b.userId).name} is already a case officer on this case; nothing changed.`); throw e; }
-    await this.audit.log(c.workspaceId, actor.id, "officer_assigned", "case", caseId, `${actor.name} assigned ${b.userId} as case officer on case ${short(caseId)}`);
+    await this.audit.log(c.workspaceId, actor.id, "officer_assigned", "case", caseId, `${actor.name} assigned ${person(firm, b.userId).name} as case officer on case ${short(caseId)}`);
     return this.team(actor, caseId);
   }
 
@@ -99,7 +100,7 @@ export class Team {
     const b = parse(EndCaseOfficer, body);
     const n = await this.db.caseTeamMember.updateMany({ where: { caseId, userId, role: "OFFICER", endedAt: null }, data: { endedAt: new Date(), endedBy: actor.id, endReason: b.reason } });
     if (n.count !== 1) refused("That person is not a case officer on this case now; nothing changed.", HttpStatus.NOT_FOUND);
-    await this.audit.log(c.workspaceId, actor.id, "officer_ended", "case", caseId, `${actor.name} took ${userId} off case ${short(caseId)} as case officer`);
+    await this.audit.log(c.workspaceId, actor.id, "officer_ended", "case", caseId, `${actor.name} took ${person(firm, userId).name} off case ${short(caseId)} as case officer`);
     return this.team(actor, caseId);
   }
 }
