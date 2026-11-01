@@ -147,7 +147,7 @@ export function fieldFormat(boxes: MappedBox[]): FieldFormat {
     if (file) read = true;
     // Date parts (date_part:MM …) are pieces of one date: the whole-date checks cover them.
     const datePart = /^date(_part)?:(YYYY|MM|DD)\b/.test(b.transform ?? "");
-    if (f?.max_chars && !datePart && !/^(yes_no|code_list|date)/.test(b.transform ?? "")) add("max_length", { n: f.max_chars }, part, { form: b.form, box, quote: `maxChars="${f.max_chars}"`, from: "pdf_box" });
+    if (f?.max_chars && !datePart && !/^(yes_no|code_list|date)/.test(b.transform ?? "")) add("max_length", { n: f.max_chars }, part, { form: b.form, box, quote: `The box holds at most ${f.max_chars} characters (maxChars ${f.max_chars})`, from: "pdf_box" });
     else if (!f?.max_chars && !datePart) { const m = /max (\d+) char/.exec(b.transform ?? ""); if (m) add("max_length", { n: +m[1] }, part, { form: b.form, box, quote: b.transform ?? null, from: "field_map" }); }
     if (f?.format_picture && /^date\{YYYY-MM-DD\}/.test(f.format_picture)) add("date_pattern", {}, part, { form: b.form, box, quote: f.format_picture, from: "pdf_box" });
     for (const c of f?.checks ?? []) {
