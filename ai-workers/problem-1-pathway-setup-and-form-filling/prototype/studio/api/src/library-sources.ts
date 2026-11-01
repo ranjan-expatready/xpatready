@@ -26,7 +26,7 @@ export const noFreeAdd = (kind: keyof typeof FROM): never => {
 /** The URL word for each kind (`GET /library/:kind/:key/sources`). */
 const KINDS = { fields: "field", sections: "section", "document-types": "document_type", "answer-lists": "answer_list" } as const;
 type Kind = (typeof KINDS)[keyof typeof KINDS];
-export type SourceLine = { kind: "form_box" | "checklist" | "release" | "ai_run" | "forms"; text: string; quote?: string | null; file?: string | null };
+export type SourceLine = { kind: "form_box" | "checklist" | "release" | "ai_run" | "forms" | "rule"; text: string; quote?: string | null; file?: string | null };
 export type SourcesView = { kind: Kind; key: string; name: string; sources: SourceLine[]; unsourced: boolean; used_in: string[] };
 
 /** "prototype/p1/inventory/imm5488e.text.inventory.json" → "IMM 5488"; any other file keeps its own name. */
@@ -66,7 +66,8 @@ export class LibrarySources {
       const latest = new Map<string, (typeof fields)[number]>(); for (const f of fields) if (!latest.has(f.canonicalFieldKey)) latest.set(f.canonicalFieldKey, f);
       if (kind === "field") {
         for (const b of boxes) add(b.canonicalFieldKey!, { kind: "form_box", text: `From: ${b.edition.editionLabel} form field "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"`, quote: b.evidenceQuote });
-        for (const f of latest.values()) if (f.sourceRef) add(f.canonicalFieldKey, f.origin === "AI_PROPOSAL" ? { kind: "ai_run", text: `From the ${f.sourceRef}` } : releaseLine(f.sourceRef));
+        // C3.6 (P-158 (5), plan §6): a fact added for a rule says "Needed by rule …", the rule's key and its sentence.
+        for (const f of latest.values()) if (f.sourceRef) add(f.canonicalFieldKey, /^Needed by (Rule|Check|Form condition|Question condition|Document condition) /.test(f.sourceRef) ? { kind: "rule", text: f.sourceRef.split(/; (?:rules|AI) run /)[0] } : f.origin === "AI_PROPOSAL" ? { kind: "ai_run", text: `From the ${f.sourceRef}` } : releaseLine(f.sourceRef));
       } else if (kind === "answer_list") {
         for (const b of boxes) { const list = latest.get(b.canonicalFieldKey!)?.answerListKey; if (list) add(list, { kind: "form_box", text: `Choices of: ${b.edition.editionLabel} form field "${(b.caption ?? b.dataPath).replace(/^\*/, "").trim()}"` }); }
       } else {
