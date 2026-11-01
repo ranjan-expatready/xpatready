@@ -500,11 +500,20 @@ function SetupCard({ r, lit, justAdded, q, canAuthor, onOpen, onResume }: { r: C
       </h3>
       <p className="truncate text-xs text-text-muted" title={trail} data-trail>{trail}</p>
       <Tip tip={BAR_TIP}><p className="mt-1.5 w-fit text-[13px]">{<Progress r={r} />}</p></Tip>
+      {r.filing ? <FilingTag filing={r.filing} /> : null}
       {q && r.matches.some((m) => m !== "name") ? <p className="text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</p> : null}
       <div className="mt-auto pt-2.5" data-card-act><CardButton r={r} canAuthor={canAuthor} onOpen={onOpen} onResume={onResume} /></div>
       <StepBar r={r} />
     </article>
   );
+}
+
+/** X1b (P-208): how the combination is filed, as a small tag on its card: "PDF only" · "Online only" · "Mixed" (the
+ *  catalogue's C1.6 words, engine/channels.ts filingKind; "Mixed: online and PDF" is shortened on the card and said in
+ *  full to screen readers and on hover). No tag while it has no form lines (filing is null). */
+export const FILING_TAG = (filing: string) => (filing.startsWith("Mixed") ? "Mixed" : filing);
+function FilingTag({ filing }: { filing: string }) {
+  return <p className="w-fit"><span className="rounded border border-border px-1.5 py-px text-xs text-text-muted" title={`Filed: ${filing}`} data-filing-tag={FILING_TAG(filing)}><span className="sr-only">Filed: {filing}</span><span aria-hidden>{FILING_TAG(filing)}</span></span></p>;
 }
 
 function CorporateCallout() {
