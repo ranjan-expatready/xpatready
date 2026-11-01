@@ -225,7 +225,13 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   step("C11.3 R3-1: the List's No. is the Tree number", (await listText("Visitor visa")).startsWith(treeNums.vv) && (await listText("Study permit › Outside Canada")).startsWith(treeNums.oc), [treeNums.vv, treeNums.oc].join(" "));
   const firstTrail = async () => (await listRows().first().locator("[data-trail-line]").innerText()).replace(/\s+/g, " ");
   const pageFirst = await firstTrail();
-  await p.locator("[data-sort]").selectOption("az"); await p.waitForTimeout(250);
+  await p.locator("[data-sort]").selectOption("az");
+  // Wait for the re-sort itself (the first row is no longer the page order's first), not a fixed 250 ms: on a 2-core
+  // GitHub machine the list was read before it re-sorted (merge-queue run 41284666655, 1 Nov: "Retail › Temporary
+  // residence › Visitors" still first). The step below still checks which row comes first. A wait that times out is a
+  // FAIL step naming it, never silent.
+  await p.waitForFunction((was) => { const first = document.querySelector("[data-list] [data-row] [data-trail-line]"); return !!first && first.innerText.replace(/\s+/g, " ") !== was; }, pageFirst, { timeout: 15000 })
+    .catch((e) => step("wait: 'A to Z' re-sorts the List by the trail", false, String(e?.message ?? e).split("\n")[0]));
   step("C11.3 R3-5: page order by default; 'A to Z' sorts by the trail", /Visitors › Visitor visa/.test(pageFirst) && /Permanent residence › Economic immigration › Start-up visa/.test(await firstTrail()), `${pageFirst} → ${await firstTrail()}`);
   await state("list");
   await p.goto(`${BASE}/structure`); await ready();
@@ -235,13 +241,20 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   // ======================================================== the filter bar: Pathway chips, Program, Status, chips and Clear all
   const chipText = (await p.locator("[data-pathway-chip]").allInnerTexts()).map((x) => x.replace(/\s+/g, " ").trim());
   step("C11.3 R3-6: Pathway chips with their counts (All 6 · Temporary residence 4 · Permanent residence 2)", chipText.join("|") === "All 6|Temporary residence 4|Permanent residence 2", chipText.join("|"));
-  await p.locator("[data-status-filter]").selectOption("setup"); await p.waitForTimeout(250);
+  await p.locator("[data-status-filter]").selectOption("setup");
+  // Wait for the filter to apply (the counts change), not a fixed 250 ms; loud when it times out (flaky-checks fix, 1 Nov).
+  await p.waitForFunction(() => /Showing 1 of \d+ combinations/.test(document.querySelector("[data-stats]")?.textContent ?? ""), null, { timeout: 15000 })
+    .catch((e) => step("wait: Status 'In setup' filters the Tree (the counts change)", false, String(e?.message ?? e).split("\n")[0]));
   step("C11.3 R3-6: Status 'In setup' leaves only Visitor visa, with the names above it; the counts say so", await p.locator('[data-row][data-level="category"], [data-row][data-level="subCategory"]').count() === 1 && await row("Visitor visa").count() === 1 && /Showing 1 of 6 combinations/.test(await p.locator("[data-stats]").textContent()));
   await p.locator("[data-status-filter]").selectOption("");
   await p.locator("[data-pathway-chip]").filter({ hasText: /^Temporary residence/ }).click();
   await p.locator("[data-program-filter]").selectOption({ label: "Work permits" });
-  await p.waitForFunction(() => document.querySelectorAll(`[data-row][data-level="program"]`).length === 1 && /[?&]prog=/.test(location.search), null, { timeout: 5000 }).catch(() => undefined);
-  step("C11.3 R3-6: a Pathway chip and a Program leave that Program only; both show as chips with Clear all", await p.locator('[data-row][data-level="program"]').count() === 1 && await row("Work permits").count() === 1 && /Temporary residence/.test(await p.locator("[data-stats]").textContent()) && await p.locator("[data-clear-all]").count() === 1);
+  // 15 s, and loud: with Chrome's CPU slowed 6 times this silent 5 s wait ran out and the step below failed with no reason.
+  // The wait covers all the step reads (the one Program, the address, the counts line and Clear all), so it never reads a
+  // half-drawn bar.
+  await p.waitForFunction(() => document.querySelectorAll(`[data-row][data-level="program"]`).length === 1 && /[?&]prog=/.test(location.search) && /Temporary residence/.test(document.querySelector("[data-stats]")?.textContent ?? "") && document.querySelectorAll("[data-clear-all]").length === 1, null, { timeout: 15000 })
+    .catch((e) => step("wait: the Pathway chip and the Program filter leave one Program in the address and the Tree", false, String(e?.message ?? e).split("\n")[0]));
+  step("C11.3 R3-6: a Pathway chip and a Program leave that Program only; both show as chips with Clear all", await p.locator('[data-row][data-level="program"]').count() === 1 && await row("Work permits").count() === 1 && /Temporary residence/.test(await p.locator("[data-stats]").textContent()) && await p.locator("[data-clear-all]").count() === 1, `${await p.locator('[data-row][data-level="program"]').count()} programs · Work permits rows ${await row("Work permits").count()} · ${(await p.locator("[data-stats]").textContent())?.replace(/\s+/g, " ")} · Clear all ${await p.locator("[data-clear-all]").count()} · ${new URL(p.url()).search}`);
   await p.reload(); await ready();
   step("C11.3 P-115: the filters live in the address and survive a reload", await p.locator('[data-row][data-level="program"]').count() === 1 && /[?&]prog=/.test(p.url()));
   await state("filters");
