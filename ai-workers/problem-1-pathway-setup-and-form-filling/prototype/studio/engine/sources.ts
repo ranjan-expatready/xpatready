@@ -175,7 +175,7 @@ export function prequalification(s: Snapshot): { role: string; fact: string; lab
  *  one per fact a rule of the combination reads (directly, or through a derived field such as an age), for each person
  *  role whose forms need it, that a prospect can answer (Client or Document, a question asks it) and that is not ticked.
  *  Each is a contract v2.1 queue item (contracts/proposal-item.ts), origin "rules", never labelled AI; it enters S6's one
- *  queue only once S6 slice 1 is on main. Pure: no database, no AI (US$0). */
+ *  queue through api/src/pqr-drafts.ts ("Rules only", C4.7). Pure: no database, no AI (US$0). */
 export function pqrPicksByRules(s: Snapshot, combinationId: string, runId: string, newId: () => string): ProposalItem[] {
   const fieldsOf = (c: unknown) => c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : [];
   const derived = new Map((s.derived_fields as { id: string; inputs?: string[]; reference?: string }[]).map((d) => [d.id, [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])]]));

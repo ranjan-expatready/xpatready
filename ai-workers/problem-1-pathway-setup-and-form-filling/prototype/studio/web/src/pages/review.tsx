@@ -6,13 +6,14 @@ import { Button, Notice, Pill, Table, Textarea } from "@/components/ui/controls"
 import { Spinner } from "@/components/ui/spinner";
 import { irccWords } from "../../../contracts/workspace";
 import { problemWords } from "../../../contracts/programs";
+import { roleKeysInWords } from "@/pages/job";
 
 /** The simulated person's name for an id the server stores (QA-10: never "user-A" on screen). */
 export const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
 /** QA-73: the engine's part names in the words the pages use (the stored codes stay as they are). */
 const KIND_WORD: Record<string, string> = { "Derived definition": "Calculated answer", "Derived fields": "Calculated answers" };
 // QA-73: a message that already starts with its form or item says it once ("IMM 1295: 37 rows", not "IMM 1295: IMM 1295: …").
-const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ?? "A calculation"}: this calculation is not checked by a test yet; it is shown, never used to decide.`
+const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ? roleKeysInWords(p.label) : "A calculation"}: this calculation is not checked by a test yet; it is shown, never used to decide.`
   : String(p.message ?? "").startsWith(`${p.label ?? p.item}:`) ? p.message : problemWords(p);
 
 export function ReviewTab({ d }: { d: any }) {
@@ -73,7 +74,7 @@ export function ReviewTab({ d }: { d: any }) {
             {changes.slice(0, allChanges ? undefined : 25).map((c) => { const s = signed.get(ref(c)); return (
               <tr key={ref(c)}>
                 <td>{sub && !s ? <input type="checkbox" aria-label={`Select ${c.label || c.key}`} checked={picked.has(ref(c))} disabled={c.needs_sme && !can("sme")} onChange={(e) => setPicked((p) => { const n = new Set(p); e.target.checked ? n.add(ref(c)) : n.delete(ref(c)); return n; })} /> : null}</td>
-                <td className="text-xs">{KIND_WORD[c.kind] ?? c.kind}</td><td className="max-w-md text-xs" title={c.key}>{c.label || c.key}</td>
+                <td className="text-xs">{KIND_WORD[c.kind] ?? c.kind}</td><td className="max-w-md text-xs" title={c.key}>{c.label ? roleKeysInWords(c.label) : c.key}</td>
                 <td><Pill tone={c.change === "added" ? "info" : c.change === "removed" ? "danger" : "warn"}>{c.change}</Pill></td>
                 <td>{c.origin === "AI_PROPOSAL" ? <Pill tone="ai">AI-proposed</Pill> : c.origin === "HUMAN" ? <Pill tone="info">person</Pill> : <Pill>{c.origin ?? "—"}</Pill>}</td>
                 <td className="text-xs">{c.needs_sme ? "Immigration expert" : "Review"}</td>

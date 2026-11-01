@@ -7,7 +7,7 @@
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Copy, Plus } from "lucide-react";
 import type { ChecklistLineRow, ChecklistView } from "../../../../contracts/workspace";
 import { api, ApiError, useActorId, useApi, useSessionView } from "@/lib/api";
 import { FOCUS_RING, useFocusItem } from "@/components/focus-item";
@@ -15,6 +15,8 @@ import { PartProblems } from "@/components/part-problems";
 import { Button, Input, Notice, Panel, Pill, Table } from "@/components/ui/controls";
 import { Tip } from "@/components/status";
 import { useUndoToast } from "@/components/lifecycle";
+import { useBulkLines } from "@/components/bulk-lines";
+import { APPROVER_WORDS } from "../../../../contracts/lines-bulk";
 import { OriginPill, RequirementDialog, RevCtx, whoLabel, useLibraryFields } from "@/pages/configuration";
 import { RowMenu } from "@/pages/workspace/sources";
 import { irccWords } from "../../../../contracts/workspace";
@@ -44,6 +46,8 @@ export function DocumentsTab({ id }: { id: string }) {
   const cfg = useApi<any>(["config", id, "draft"], `/combinations/${id}/config?mode=draft`);
   const fields = useLibraryFields();
   const undoToast = useUndoToast();
+  // X2b (C1.5): copy a line to other combinations, remove it from them, or copy lines here from another combination.
+  const bulk = useBulkLines(id);
   const [when, setWhen] = React.useState<When>("all");
   const [find, setFind] = React.useState("");
   const [shown, setShown] = React.useState<string | null>(null);
@@ -57,12 +61,12 @@ export function DocumentsTab({ id }: { id: string }) {
   const roles = v.data.roles;
   const role = roles.find((r) => r.role === sp.get("role")) ?? roles[0];
   const reqOf = (lineage: string) => (cfg.data?.snapshot?.document_requirements ?? []).find((r: any) => r.lineage === lineage);
-  const addButton = canAuthor ? <Button size="sm" onClick={() => setEdit({})} data-add-document><Plus /> Add a document</Button> : null;
+  const addButton = canAuthor ? <><Button size="sm" onClick={() => setEdit({})} data-add-document><Plus /> Add a document</Button><Button size="sm" variant="secondary" onClick={bulk.openFrom} data-copy-from-open><Copy /> Copy a line from another combination</Button></> : null;
   if (!role) return (
     <section className={cn("rounded-xl border border-border bg-surface-raised p-5", FOCUS_RING)} data-documents-empty data-focus="documents:lines">
       <h2 className="font-semibold">No documents yet</h2>
       <p className="mt-1 text-sm text-text-muted">Draft them from IRCC's checklist, or add one.</p>
-      <div className="mt-3">{addButton}</div>
+      <div className="mt-3 flex flex-wrap gap-2">{addButton}</div>{bulk.node}
       {edit ? <RevCtx.Provider value={cfg.data?.revisions ?? {}}><RequirementDialog id={id} r={edit} fields={fields} onClose={() => setEdit(null)} onSaved={refresh} /></RevCtx.Provider> : null}
     </section>
   );
@@ -97,6 +101,8 @@ export function DocumentsTab({ id }: { id: string }) {
       { label: "Open details", onSelect: () => setShown(l.lineage) },
       { label: "Move up", why: !canAuthor ? SAY.readOnly : i === 0 ? SAY.first : null, onSelect: () => void move(l, "up") },
       { label: "Move down", why: !canAuthor ? SAY.readOnly : i === role.lines.length - 1 || role.lines[i + 1]?.automatic ? SAY.last : null, onSelect: () => void move(l, "down") },
+      { label: "Copy to other combinations…", why: !canAuthor ? SAY.readOnly : null, onSelect: () => bulk.open({ kind: "document", key: l.lineage, short: l.document.name }, "add") },
+      { label: "Remove from other combinations…", why: !canAuthor ? SAY.readOnly : null, onSelect: () => bulk.open({ kind: "document", key: l.lineage, short: l.document.name }, "remove") },
       { label: "Remove from checklist", why: !canAuthor ? SAY.readOnly : null, onSelect: () => void remove(l) },
       { label: "Change the document type in the library…", href: `/library/documents` },
       { label: "Retire", why: SAY.retire },
@@ -124,6 +130,7 @@ export function DocumentsTab({ id }: { id: string }) {
         <PartProblems id={id} part="documents" />
         {error ? <Notice tone="warn" title="Not changed" action={<Button size="sm" variant="ghost" onClick={() => setError(null)}>Dismiss</Button>}><span data-documents-error>{error}</span></Notice> : null}
         {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
+        {bulk.note}
         <p className="text-sm text-text-muted">A document that supplies facts takes those questions out of the client questionnaire. Missing or unreadable at the case, the questionnaire asks them ("We could not read it from your passport").</p>
         <p className="text-xs text-text-muted" data-doc-order-note>Order: Move up or Move down in a line's ⋯ menu. A line given by several people (Each applicant) keeps one place: its order applies to everyone on this list.</p>
         {lines.length ? (
@@ -147,9 +154,10 @@ export function DocumentsTab({ id }: { id: string }) {
           </div>
         ) : null}
         <p className="text-xs text-text-muted">{v.data.basis}.</p>
+        {!canAuthor ? <p className="text-xs text-text-muted" data-approver-copies>{APPROVER_WORDS}</p> : null}
         {open ? <DocumentDrawer line={open} roles={roles} roleLabel={role.label} canAuthor={canAuthor} onClose={() => setShown(null)} onEdit={() => { const r = reqOf(open.lineage); if (r) { setShown(null); setEdit(r); } }} onRemove={() => { setShown(null); void remove(open); }} /> : null}
         {edit ? <RequirementDialog id={id} r={edit} fields={fields} onClose={() => setEdit(null)} onSaved={refresh} /> : null}
-        {undoToast.node}
+        {undoToast.node}{bulk.node}
       </section>
     </RevCtx.Provider>
   );
