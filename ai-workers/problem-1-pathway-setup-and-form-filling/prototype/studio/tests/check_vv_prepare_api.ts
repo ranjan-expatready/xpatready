@@ -1,7 +1,7 @@
-// C6.12, C11.6 API checks (M3-B, runtime lane): a Visitor visa case's "Prepare application" view on an isolated copy.
+// C6.12, C11.6, C7.3 API checks (M3-B and M3-E, runtime lane): a Visitor visa case's "Prepare application" view on an isolated copy.
 // It releases the Visitor visa twice through the screens' own routes when its copy has none (setup_visitor_visa.ts, then
 // pack 4's acceptance/lib/setup_vv_m3.ts: IRCC account, IMM 5476, channels, filing modes, documents), runs pack 4's
-// acceptance tests C6.12 and C11.6 (moved into the suites by the PR that makes them pass, acceptance/README.md), and adds
+// acceptance tests C6.12, C11.6 and C7.3 (moved into the suites by the PR that makes them pass, acceptance/README.md), and adds
 // the edges they leave out: who may split, ids that are not ids, a document has no channel, two reads at once make one
 // family group, and the older /filings view prices the same ages. Each rule has a passing and a failing case. No model
 // call (US$0). Values Sample until the immigration expert confirms. Setup lines owned by other rows (S2w G8, S7 M3-8,
@@ -27,7 +27,7 @@ const releases = () => Number(sql("select count(*) from config_release r join co
     ok("setup: release 2 (pack 4 setup_vv_m3.ts) with every role's filing mode (S5, M3-0) and the three form channels (S4)", releases() === 2 && line("S5").startsWith("PASS") && r.stdout.split("\n").filter((l) => / S4 /.test(l)).every((l) => l.startsWith("PASS")), r.stdout.split("\n").filter((l) => l.startsWith("FAIL")).map((l) => l.slice(6, 60)));
   }
   // Pack 4's acceptance tests, each line shown here; the test's exit code is the verdict.
-  for (const t of ["C6.12", "C11.6"]) {
+  for (const t of ["C6.12", "C11.6", "C7.3"]) {
     const r = tsx(`acceptance/${t}.test.ts`);
     for (const l of r.stdout.split("\n").filter((x) => x.startsWith("FAIL"))) console.log(`  ${t}: ${l}`);
     ok(`${t}: pack 4's acceptance test passes in full (${(r.stdout.trim().split("\n").pop() ?? "").trim()})`, r.status === 0, r.stderr.slice(-300) || undefined);
@@ -91,6 +91,14 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   ok("C11.6 (break m1): the same channel again changes nothing: no new version, no audit line", r.status === 200 && r.body.changed === false && r.body.version === rs.version && sql(`select count(*) from audit_event where entity='item' and entity_key='${i5257?.id}'`) === "1", r.body?.changed);
   r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "PDF_UPLOAD", reason: "bad\u0000reason", version: rs.version }, OFFICER);
   ok("C11.6 (break m2, fail): a reason with a control character is a 400 on the reason, nothing saved", r.status === 400 && /plain text/.test(JSON.stringify(r.body)) && sql(`select channel from filing_item where id='${i5257?.id}'`) === "PAPER", r.status);
+  // C7.3 edges: a PDF upload form has no answer sheet; a section that is not on the sheet is not found; the tick's audit
+  // line names the section and the form, never a value.
+  const i5257p = q.items.find((i: { form?: string; channel?: string }) => i.form === "IMM 5257");
+  ok("C7.3 (fail): a PDF upload form item has no answer sheet (409, in words)", (await call("GET", `/runtime/items/${i5257p?.id}/answer-sheet`, undefined, OFFICER)).status === 409);
+  const i5707p = q.items.find((i: { form?: string; subject: string }) => i.form === "IMM 5707" && i.subject === principal);
+  ok("C7.3 (fail): a section that is not on the sheet is not found (404)", (await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionZ/entered`, {}, OFFICER)).status === 404);
+  r = await call("POST", `/runtime/items/${i5707p?.id}/screens/SectionA/entered`, {}, OFFICER);
+  ok("C7.3: the tick is audited by section and form, without values", r.status === 201 && /ticked "Applicant, spouse and parents" of IMM 5707 as entered in the portal/.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='item' and entity_key='${i5707p?.id}'`) ?? "") && !/Sample Client P/.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity='item' and entity_key='${i5707p?.id}'`) ?? ""), r.status);
   const fl = (await call("GET", `/runtime/cases/${caseId}/filings`, undefined, OFFICER)).body;
   const cents = (x: { fees: { line?: string; key?: string; amount_cents: number; waiting?: string }[] }, k: string) => x.fees.filter((f) => (f.key ?? f.line) === k && !f.waiting).reduce((n, f) => n + f.amount_cents, 0);
   ok("C6.12: the /filings view (#283) prices the same as the prepare view: same ages, same split groups", fl.groups?.length === after.groups.length && ["visitor_visa", "biometrics"].every((k) => cents(fl, k) === cents(after, k)) && cents(fl, "biometrics") === 85_00, { filings: fl.groups?.length, prepare: after.groups.length });
