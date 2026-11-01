@@ -66,3 +66,25 @@ Fixes that would raise the score, most valuable first:
 6. Return focus to the button after Esc.
 
 Not tested: a real screen reader; a headed browser; an intended user's unaided walk (D17 and D20 stay with the founder); a real saved AI run (none exists until P-131).
+
+## Re-check at c3d62b5e (same day): 8/10, pass
+I re-ran the journeys that failed, through the API on :4463 (US$0). No web file changed, so the browser walk above still applies.
+
+* **Journey 8 (double click or two tabs):** three drafts at the same moment gave 32 picks for 32 facts. **Held.**
+* **Journey 9 (bulk accept):** 167 Ready picks were accepted in 8.8 s, and Undo took 0.5 s. **Held, but slow.**
+* **Journey 10 (hostile AI output):**
+  * "a", "the" and 21-letter quotes are dropped.
+  * Mid-word fragments of 5 words or more still pass (Minor).
+  * **Mostly held.**
+* **Journey 11 (edit):** an edit that changes the person or fact gets 409 in words. **Held.**
+
+| Criterion | Before | Now | Why |
+|---|---|---|---|
+| Correct data | ½ | 1 | One pick per fact under a race; an edit cannot change the fact |
+| Error recovery | ½ | 1 | Bulk accept no longer fails |
+| Speed | ½ | ½ | 167 picks take 8.8 s |
+| Trust and sources | ½ | ½ | Fragment quotes still count as "found" |
+
+The other criteria are unchanged: plain words ½, accessibility and screen sizes ½, and the rest 1.
+
+**Score: 8/10. Pass** (no criterion at 0).
