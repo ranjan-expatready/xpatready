@@ -164,6 +164,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.waitForTimeout(2200);
     step(`QA-121 fail guard (review Major): ${key} on Forms, still open, says nothing about being done`, await p.getByText("This was done since you opened it").count() === 0);
   }
+  // QA-121 retest (25cefb67, #247's landing): forms:held with no held edition now says so on Forms and leaves the address.
+  step("QA-121 setup: the combination has no held edition", await p.locator("[data-held-editions]").count() === 0);
+  await p.goto(`${BASE}/c/${sv}/forms?focus=forms%3Aheld`); await p.getByRole("tablist", { name: "Combination" }).waitFor();
+  await p.locator("[data-done-since]").waitFor({ timeout: 8000 }).catch(() => { throw new Error("QA-121: the done-since notice never showed for forms:held with no held edition"); });
+  step("QA-121 pass (Forms): forms:held with no held edition says \"This was done since you opened it\" on Forms, and the key leaves the address", /This was done since you opened it\./.test(await p.locator("[data-done-since]").innerText()) && /\/forms$/.test(new URL(p.url()).pathname) && !new URL(p.url()).searchParams.has("focus"), p.url());
+  await axe("Forms, held edition gone");
 
   step("no page errors", errs.length === 0, errs.join(" | "));
   await b.close();

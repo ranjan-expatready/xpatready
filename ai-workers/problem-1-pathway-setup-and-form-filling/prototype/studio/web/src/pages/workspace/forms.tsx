@@ -25,7 +25,7 @@ import { fmtWhen, Tip } from "@/components/status";
 import { useLibraryFields, WHO, whoLabel } from "@/pages/configuration";
 import { attachmentFor, pendingForms, ReadingCell, ReadingSteps, SourcesLine, StepNotices } from "@/pages/sources";
 import { FormPicker } from "@/components/forms";
-import { FOCUS_RING, useFocusItem } from "@/components/focus-item";
+import { DoneSinceNotice, FOCUS_RING, useFocusItem } from "@/components/focus-item";
 import { cn } from "@/lib/utils";
 import { useApi } from "@/lib/api";
 import { SetupRail, StepChip } from "./setup-rail";
@@ -94,13 +94,15 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   // X1 / #206 finding 6: the setup checklist's forms items land here (?focus=forms:sources, forms:lines, forms:problems,
   // forms:held): scrolled to, focused, outlined 2 s, the address cleared (components/focus-item). Nothing lands while the
   // tab loads.
-  useFocusItem(known && combo ? [] : undefined);
+  // QA-121: a forms:* place no longer on the tab (no held edition now, no problems now) says so and leaves the address.
+  const doneSince = useFocusItem(known && combo ? [] : undefined, (k) => k.startsWith("forms:"));
   const finder = <><FinderPanel id={id} latest={latest.data} onRedo={redo} onChoosePage={choosePage} removed={removed.map((r) => r.code)} lineCount={lines.length + pending.length} />{finding ? <FindDialog id={id} only={finding.length ? finding : undefined} page={choosingPage ? latest.data?.page_choice ?? { candidates: [], why: "" } : null} onClose={() => { setFinding(null); setChoosingPage(false); }} onStarted={(runId) => window.dispatchEvent(new CustomEvent("s5-find-started", { detail: runId }))} /> : null}</>;
   // Break m4 (Screen 01): an author never sees the channels as read-only words while the session loads.
   if (!known || !combo) return <Spinner label="Loading forms" />;
   const undo = canAuthor ? <>{lastChange ? <UndoBar change={lastChange} onUndo={undoLast} /> : null}{removed.length ? <RemovedNotice id={id} removed={removed} /> : null}</> : null;
   if (!lines.length && !pending.length) return (
     <div className="space-y-5">
+      <DoneSinceNotice shown={doneSince} />
       {undo}{bulk.note}{finder}
       <div className="rounded-xl border border-border bg-surface-raised p-5" data-forms-empty>
         <div className="flex flex-wrap items-start justify-between gap-3"><h2 className="font-semibold">No forms yet</h2>{add}</div>
@@ -116,6 +118,7 @@ export function FormsTab({ id, lines, filing, filingDetail, account = null, acco
   const count = pending.length ? `${plural(lines.length + pending.length, "form")} attached, ${lines.length} set up` : plural(lines.length, "form");
   return (
     <div className="space-y-4">
+      <DoneSinceNotice shown={doneSince} />
       {undo}{bulk.note}{finder}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="min-w-0 text-sm" data-filing>{/* P-143, review M2: the IRCC account, chosen here by an author; min-w-0 (QA-20): the line shrinks to 390 px and the picker with it */}<span className="mr-3" data-account><span className="text-text-muted">IRCC account: </span>{canAuthor ? <AccountPicker id={id} saved={accountKey} /> : account ? `Filed ${accountKey ? throughAccount(accountKey) : `through the ${account}`}` : <span className="text-text-muted">Not set (every way IRCC may accept is offered, Sample)</span>}</span><span className="text-text-muted">Filing: </span>{lines.length ? <><b className="font-semibold" title={filingDetail !== filing ? filingDetail : undefined}>{filing}</b>{filingDetail !== filing ? <span className="sr-only"> ({filingDetail})</span> : null}</> : <b className="font-semibold">not known until a form is set up</b>} <span className="text-text-muted">· {count} · Sample until the immigration expert confirms</span></p>
