@@ -67,3 +67,34 @@ Journey test: round 2 in `journey-test-reviewer-2026-11-01.md`, **8/10, passes**
 As in round 1. Parent answers could not be entered in this release, so the answer de-duplication loss is shown from the code, not from a run.
 
 **Verdict: Block** for commit acb1ee93. Fix N1 with its test. n1, m2 and m3 are Minor.
+
+---
+
+# Round 3: commit 732d4241 (diff `acb1ee93..732d4241`)
+
+Reviewer agent, 2 Nov 2026. I used a fresh copy on :4433 (`xr_studio_rev_sheet`), stopped afterwards. US$0, no live AI, no `*_LIVE`.
+
+## Runs
+* `check_vv_answer_sheet.ts`: **13/13**.
+* `check_vv_prepare_api.ts` on a fresh copy: **32/32**, including pack 4's C7.3 13/13.
+* My round-2 break script again. Concurrency, versions, roles, channel and audit results are all unchanged: 201 + 5 × 200 on both first ticks and re-ticks, 1 current tick, stale or old version 409, missing version 400, client 403, after the channel change 409, and 0 client values in any audit line.
+
+## Round-2 findings, re-checked
+* **N1 · closed.** Boxes are keyed by the full `about` (`answer-sheet.ts:46`).
+  * Seen, after `fillEverything` on a one-person case: Section A lists 16 waiting entries, 8 for "Sample Client B2: parent 1" and 8 for "parent 2". None are under the applicant, and the applicant's 6 answers stand.
+  * New pure checks: two parents give two entries, and a parent's confirmed answer is kept next to the applicant's. Both fail on the round-2 code.
+* **n1 · closed.** A stale tick says: The answers in "Applicant, spouse and parents" changed since you read the sheet… (`case-prepare.ts:225`).
+
+## Still open (Minor, none blocking)
+* **n2 · A parent's answer would take its source from the applicant's answer to the same fact.** At `answer-sheet.ts:50`, `origin(subject.split("/")[0], fact)` drops the relation. This is latent: parent answers cannot be entered in this release. **Fix:** look up the origin by the full `about`, or by however parent facts end up stored, when they are collected.
+* **n3 · Two messages disagree.** An Online IMM 5707 item reads `to_do`, "Every fact it reads is confirmed." (`case-prepare.ts:140`, from `formReadiness`), while its sheet waits for the parents' 16 facts. The PR will state that IMM 5707 cannot reach Done until parents are collected. **Fix:** for an Online item, take the reason from the sheet's waiting count.
+* **m2, m3:** as before.
+
+## D1–D20 (round 3; changes only)
+* D1 Requirement fit: 5.
+* D2 Data integrity: 5.
+* D16 Testability: 5.
+* D18 Provenance: 4 (n2, latent).
+* All other scores as in round 2.
+
+**Verdict: Approve** for commit 732d4241. No Blocker or Major is open. n2, n3, m2 and m3 are Minor. The PR's first lines must say that IMM 5707 cannot reach Done until parents are collected.
