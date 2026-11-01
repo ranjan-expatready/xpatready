@@ -1,61 +1,37 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-10-31 · milestone: **M2 — Super Admin configuration**, with the thin runtime slice R1 · way of working: `WAY-OF-WORKING.md` · work list: `BACKLOG.md` · why each choice was made: `design/why-we-chose-2026-10-31.md`
+updated: 2026-11-01 10:05 UTC (Lead handover at 55% context) · milestone: **M2 — Super Admin configuration**, with the thin runtime slice R1 · way of working: `WAY-OF-WORKING.md` · work list: `BACKLOG.md` (features F1–F8) · merge flow trial: `design/merge-flow-trial-2026-11-01.md`
+
+## Goals (P-202)
+* **Today (1 Nov):** keep the four lanes building; land #113 (now fixed for Linux) so runtime's waiting branches follow; qa retests today's merges.
+* **This week (to 7 Nov):** F7 done; F1, F2 and F6 well under way; workflow frozen except fixes (P-204).
+* **3 Nov:** verdict on the P-213 trial with the founder (keep the four GitHub shards if batches stay at 15 minutes or less within the US$30 cap; fallback `BATCH_RUNNER=mac`).
 
 ## Resume here (a fresh `/lead` chat)
-1. Open PRs: `gh pr list`. A PR merges by itself on green CI plus the label `review: approved` (the `automerge` workflow checks every approved open PR on each run). The demo updates itself after merges.
-2. Builders run as cloud sessions (forms, runtime, screens). They cannot message the Lead: their PRs are their reports, and their questions sit under "Questions" in each PR. Collect them; decide the technical ones; bring the founder only product, money and preference questions, one at a time, with a recommendation.
-3. Then `BACKLOG.md` row **X0**: regroup the backlog into features (P-191), and walk the founder through `design/why-we-chose-2026-10-31.md`.
+1. **Set three watches first:** the 20-minute check (lead skill standing rule 1); the 10-minute lane nudge (`ListAgents`; an idle cloud session with work left and no Handover gets `SendMessage` "continue" with its next step, P-218); the 90-second alarm (Monitor: red checks, merges, PR "Question for the tech lead" / "Handover" / "Blocker/Major" comments, demo down; re-arm every 30 minutes).
+2. **Lanes now (cloud; one-way: they read `SendMessage`, answer in PR comments):**
+   * **Forms:** "Forms builder: rest of F2, then F3", running. Brief: Handover on #249.
+   * **qa:** "QA: after-merge from 63168762, retests and C2.12", running. Brief: Handover on #253; told to explore while main was still.
+   * **Runtime:** needs the founder to start the card "Runtime builder: X1c, then F7, F6, #116 after #113" (brief: Handover on #257).
+   * **Screens:** needs the founder to start the card "Screens builder: X2b slices (b)–(d), QA-129, F5" (brief: Handover 4 on #254). X2b slice (b) adds a `line_batch` migration: the Lead reads that diff before it merges.
+3. **Queue at handover:** batch #242 + #249 + #252 + #253 + #254 + #257 testing; #113, #216 and #256 queued next; #248 (this records PR) refreshed.
+4. **Old sessions to archive (the founder, from the sidebar):** the Mac session "Runtime lane: transaction timeout fix…" (`local_3b02c2d2`; Remote Control blocks `archive_session`; nothing unpushed) and every cloud session whose PRs are merged and Handover written (all except the four above).
+5. **Watch:** `check_w1_structure_browser.cjs` C11.3 R3-5 failed once at random (07:54); a second random fail quarantines it (P-205). Spend: about US$3 of US$30 by 08:08 UTC from run minutes (the Lead cannot read billing; ask the founder for the figure on 3 Nov).
 
-## Progress (counted from `qa/CAPABILITIES.md` by `tools/progress.sh`; moves only after qa tests)
-* M2 Super Admin setup: 21 of 57 work (36%) · 16 partial · 1 not tested · 19 not built
+## Progress (from `qa/CAPABILITIES.md` by `tools/progress.sh`; moves only after qa tests)
+* M2 Super Admin setup: 21 of 57 work (36%) at the last count; about 20 product PRs merged 1 Nov await qa's retest.
 * R1 thin runtime slice: 6 of 8 work (75%)
-* M3 case, agent and client: 0 of 15 work · 3 partial (design agreed; build at the M2 gate)
+* M3 case, agent and client: 0 of 15 work · 3 partial
 
-## In flight (31 Oct, 08:00 UTC)
-**CI runs on the Mac again (P-195, #141 merged 31 Oct):** GitHub refused every job from about 06:15 UTC (the US$10 budget was spent in one morning). The Mac runs one job at a time, so approved PRs merge one after another. #131, #133 and #139 were refreshed with main to re-check there.
-
-| PR | Area | What | Where it stands |
-|---|---|---|---|
-| #113 | runtime (Mac, local_3b02c2d2) | queue transaction fix, C10.1 checkpoint, C3.11, P-184 speed helper, S7 Reset + Load sample | the tech lead decided its four "Found while building" points (two new rows X1a, X9a; the other two need no change); the builder is syncing main and getting a fresh Approve |
-| #116 | runtime (cloud) | DV-bb-9, DV-bb-8, DV-d1-3, P-193 | approved on aef35efa; labels after #113 merges |
-| #131 | forms (cloud) | a Continue covers retries of the run it started (P-194) | approved; waits for CI |
-| #133, #139 | screens (cloud) | grey disabled button; N5 C1 "Before forms" | approved; wait for CI |
-| #138 | forms (cloud) | X5 slice a: the form library from IRCC's forms list | the tech lead answered its two questions (whole index; remember deletions in slice c); reviewer checking |
-| #141 | tech lead | P-195, lead skill habits, P-194 and the qa session's QA-99 work rescued | merged by the tech lead with the founder's leave (auto-merge could not run until it landed) |
-
-## Takeover (31 Oct)
-A new Lead chat took over (the founder confirmed the previous one is closed). Checked every Mac copy for unsaved work: nothing uncommitted. Rescued into #141: P-194 (its PR #132 merged before the commit), and the qa session's five commits on `claude/qa-l10-e3c849` that never had a PR (QA-99 live retest and closure, the slice 1 channels journey check). Cloud builders cannot be messaged; their PRs are their reports.
+## The merge flow now (1 Nov)
+* Builders' PRs: fast checks on the Mac; a PR joins the Mergify queue only with its own check green and the label (P-210). Before the label, the builder runs its files' suites (P-217; when the selection is ALL, only the touched files' suites).
+* Batches of up to 6, one at a time, on four GitHub Linux machines (P-213), split by measured suite times: 12–17 minutes. Speed budgets are judged on the Mac nightly only (P-215). Tests must work on Linux (#113's `ps -E` broke two batches).
+* The Lead merges merge-flow fixes ahead of the queue, refreshes records-only conflicts and labels approved PRs whose builder stopped before its pre-check (P-214). A PR dropped for failing checks needs "@mergifyio requeue", not "queue".
+* Results 1 Nov: 41 merges. About 2 an hour before 05:49 UTC, about 7 an hour after when PRs wait; 16 batches since the switch, 8 failed (most of them #113).
 
 ## Founder decisions waiting
-* None (31 Oct: P-195 answered N0).
-
-## Plan from here (31 Oct, agreed with the founder in outline)
-1. **Today: drain the Mac queue.** About ten checks wait on the one Mac runner (#131, #133, #139, #113, #148, four forms X5 slices, #116), plus the full run started by hand (P-196). One at a time, 1–35 min each: about 4–5 hours. The single runner is now the bottleneck: watch it, and propose a second runner only with evidence.
-2. **After #113 merges:** archive the runtime Mac session (local_3b02c2d2) and its copy; start a cloud qa session from this Lead chat for `/qa after-merge` (BACKLOG N4).
-3. **Done 31 Oct, X0:** the backlog is regrouped into features F1–F8, R1 and the gate (`BACKLOG.md` › Features), each with a builder and a size. The M2 gate is about three weeks out on that estimate. Still to do: walk the founder through `design/why-we-chose-2026-10-31.md`.
-4. **Then fresh sessions from this Lead chat** (they show under it): one cloud builder per feature (three at once, no two on the same files), qa after each day's merges, evidence on the Mac when a feature needs the official PDFs. The old cloud builders are archived once their open PRs merge.
-
-Archived 31 Oct: five old Lead chats and five old Mac lanes; their copies removed except `strange-leakey-909146` (2.8 GB, stub-run files only; needs a forced removal, refused by the permission check). Two old forms lanes (local_5770574b, local_ab5f7df4) refused archiving ("live work", likely a Remote Control client): archive from the sidebar.
-
-## Close-out still to do
-* After #111 and #113 merge: archive the four old Mac builder sessions (forms-fix8 local_c49f56b8, screens-card3 local_ba1559ab, runtime local_3b02c2d2, qa local_b27bf6a4) and remove their copies (about 12 GB). Then remove the frozen `lanes/` folder, and start a cloud qa session for `/qa after-merge` on main.
-* The first nightly full run on the Mac is tonight at 21:00 UTC (workflow `nightly`). A red nightly run is fixed first.
-
-## Watch
-* **Auto-merge:** the first day had three faults, all fixed: the Mac queue, a lost trigger, and an approval going stale after a refresh. Watch that approved PRs merge without help.
-* **Demo update:** 31 Oct: the Mac runner ended the demo when the update job finished ("Terminate orphan process"); the tech lead restarted it by hand, and the workflow now starts it with an empty `RUNNER_TRACKING_ID` so it survives. Also: it fails if the demo has rewritten tracked files (stub runs); then move it by hand (`git -C .claude/worktrees/demo-main checkout -- . && … checkout --detach origin/main`, then `start.sh`). An automatic reset step was refused by the permission system.
-* **Week-one numbers, on demand:**
-  * median time from start to merge (target under a day);
-  * the tech lead's share of commits (target under 15%);
-  * bugs found after merge (must not rise);
-  * red checks that pass on a re-run;
-  * AI spend (US$0 unless approved).
-* **The Mac:** stays on (the founder keeps it on). It holds about 22 GB free; restart it every week or two to clear macOS temp files.
+* None.
 
 ## Log (newest first; earlier lines are in git history)
-- 2026-10-31 · tech lead (new chat): took over; rescued P-194 and the qa session's unmerged QA-99 retest; found CI refused by GitHub billing; decided #113's four points and #138's two questions.
-- 2026-10-31 · tech lead: the switch-over is done.
-  - Merged today: #112, #114, #115, #117–#119, #121–#127, #129, #130. PR checks moved to GitHub's machines, affected tests only (#124); full set nightly on the Mac (#123); auto-merge fixed (#125, #126).
-  - Founder decisions: P-189 to P-193.
-  - Disk: 6.6 → 22 GB free. Removed idle test databases, stale temp files, updater caches, Chrome's leftover copies and the Codex cache. Three browser tests that loaded Playwright from that cache now load the project's own copy.
+- 2026-11-01 10:05 · tech lead: handover at 55% context. 41 merges today. P-210 to P-218 recorded (queue fix, any per PR, shards, unblock, speed budgets on the Mac, #195 answers, local suites before the label, finish the item then hand over). #113 solved (the speed miss was the measure; `ps -E` replaced on Linux). QA-122 (Major) fixed in #257. Builders now hand over at 60–80% after finishing the item.
+- 2026-11-01 01:45 · tech lead: handover at 59% context. Overnight 31 Oct: 8 merges since 17:20 UTC; one unreliable suite quarantined.

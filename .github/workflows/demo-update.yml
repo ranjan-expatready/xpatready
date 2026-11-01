@@ -13,7 +13,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 1 }
+        # Full history (31 Oct): fetching a commit from a depth-1 checkout gave the Mac's main copy a commit without its
+        # parent (git log and merges failed until a refetch). The workspace stays on the Mac, so later fetches are small.
+        with: { fetch-depth: 0 }
       - name: move the demo copy to the new main and restart :4400
         run: |
           set -euo pipefail
@@ -29,4 +31,4 @@ jobs:
           # 11:49 UTC). An empty RUNNER_TRACKING_ID keeps the demo running after the job ends.
           RUNNER_TRACKING_ID="" PGDATA="$ROOT/.tools/solution-1-prototype/pg18-data" zsh "$D/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/start.sh"
           curl -fsS -o /dev/null --retry 10 --retry-delay 3 --retry-all-errors http://localhost:4400/ && echo "demo answers on :4400"
-          { echo "### What's new on the demo (:4400)"; git -C "$D" log --no-merges --format='- %s' "$old..$new" | head -30; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "### What's new on the demo (:4400)"; git -C "$D" log --no-merges --format='- %s' "$old..$new" | head -30 || true; } >> "$GITHUB_STEP_SUMMARY"

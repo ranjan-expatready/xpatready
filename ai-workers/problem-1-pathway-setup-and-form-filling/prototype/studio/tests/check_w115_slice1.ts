@@ -129,6 +129,8 @@ const PASSPORT = "passport_or_travel_document_information_page_photocopy";
   ok("C4.2 M4 fail: a pre-qualification tick on an agent fact is refused at save (422)", r.status === 422 && r.body?.errors?.some((e: any) => e.field === "prequalification"), words(r));
   const unplaced = L.facts.find((f: any) => !f.placed && f.source !== "AGENT" && !f.clientOnly);
   if (unplaced) { r = await put(unplaced.role, unplaced.fact, { prequalification: true, version: 0 }); ok("C4.2 M4 fail: a tick on a fact no question asks is refused at save (422)", r.status === 422 && /No question asks/.test(words(r)), `${unplaced.fact}: ${words(r)}`); }
+  // #197 review m3: the sample asks every fact, so say so instead of skipping silently; check_c42_marking_browser makes one fact unasked on purpose.
+  else console.log("SKIP  C4.2 M4 fail (a tick on a fact no question asks): every sample fact has a question; check_c42_marking_browser.cjs proves it");
   r = await put("principal", "person.date_of_birth", { prequalification: true, reason: "Sample: the guide's age test", version: 0 });
   L = (await call("GET", `/combinations/${wp}/fact-sources`)).body;
   ok("C4.2 M4 (Q1) pass: the passport's date of birth is ticked for pre-qualification; it stays a Document fact and is in the PQR", r.status === 200 && r.body?.source === "DOCUMENT" && r.body?.prequalification === true && L.counts.prequalification === 1 && L.prequalification.some((x: any) => x.fact === "person.date_of_birth" && x.source === "DOCUMENT"), L.prequalification);

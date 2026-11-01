@@ -1,14 +1,16 @@
 import * as React from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { type CatalogueLeaf, type CombinationSummary, type CombinationView, type SessionView } from "../../../contracts/programs";
+import { type CatalogueLeaf, type CombinationSummary, type CombinationView, type NextAction } from "../../../contracts/programs";
 import { tabOf, TABS, type WorkspaceView } from "../../../contracts/workspace";
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { nextStepHref, STEP_LABEL, tabCounts, type BadgeTab, type ItemKind } from "../../../contracts/setup-checklist";
+import { ArrowRight, ChevronRight, Sparkles } from "lucide-react";
 import { CATALOGUE_URL_KEY, STATUS_WORD } from "@/pages/programs";
-import { SHOW_ONLY_STEPS, StepLabel, StepTip, useNextStep } from "@/components/next-step";
+import { StepTip, useNextStep } from "@/components/next-step";
 import { StatusChip, TipProvider } from "@/components/status";
-import { useActorId, useApi } from "@/lib/api";
+import { useApi } from "@/lib/api";
 import { Button, Notice, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
+import { peopleWords } from "@/lib/people";
 import { ErrorState } from "@/components/ui/error-state";
 import { cn } from "@/lib/utils";
 import { PreviewTab as StudioPreview } from "@/pages/preview";
@@ -24,8 +26,6 @@ import { LEVEL_TEXT } from "@/components/levels";
 /** Where it sits, read-only here (P-125 (3)), in the level colours of the shared Trail (S3 m6). */
 const PLACE_TEXT: Record<string, string> = { Pathway: LEVEL_TEXT.pathway, Program: LEVEL_TEXT.program, Category: LEVEL_TEXT.category, "Sub-category": LEVEL_TEXT.subCategory };
 
-/** "Principal applicant, Spouse or partner (optional), Child (0–6)": who can be in the application, in one line. */
-const peopleWords = (ps: { label: string; min: number; max: number }[]) => (ps ?? []).filter((p) => p.max > 0).map((p) => `${p.label}${p.max > 1 ? ` (${p.min}–${p.max})` : p.min === 0 ? " (optional)" : ""}`).join(", ");
 
 /** The combination workspace (S5, W1-08; P-50: a Programs row opens it). Its header carries the full path with every
  *  level a link back to the list filtered to it, the status, the facts in one muted line and the one next step; one row
@@ -66,6 +66,8 @@ export function CombinationPage() {
   const row = sum.data?.row;
   const changes = sum.data?.changes ?? 0;
   const errorCount = d.draft.problems.filter((p) => p.level === "error").length;
+  // X1 (slice C2): each setup tab says how many open setup items land on it, from the summary's checklist.
+  const badges = tabCounts(sum.data?.setup);
   // Back to the list exactly as it was left (pathway, filters, sort, search; scroll restored there), this row highlighted.
   const backTo = (() => { try { return sessionStorage.getItem(CATALOGUE_URL_KEY) ?? "/"; } catch { return "/"; } })();
   const pw = d.pathway?.client_type === "CORPORATE" ? "pw=CORPORATE&" : "";
@@ -81,7 +83,8 @@ export function CombinationPage() {
     // filed, from its form lines; said only once a form that is actually filed is on it (not a checklist, not a line
     // marked Not needed: review c16 m1).
     sum.data?.forms?.some((f) => !f.document && f.channel !== "NOT_NEEDED") ? `filing: ${sum.data.filing}` : null,
-    `people: ${peopleWords(c.participants)}`,
+    // QA-77: the same words per person as Who can be on Forms; "; " because a person's words may hold a comma.
+    `people: ${peopleWords(c.participants, (p) => p.label, "; ")}`,
     c.source_basis === "ILLUSTRATIVE" ? "Sample" : null, // SC-5: no "source-backed" jargon in the subtitle
   ].filter(Boolean).join(" · ");
   return (
@@ -96,14 +99,14 @@ export function CombinationPage() {
           <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{c.label}</h1>{row ? <StatusChip status={row.status} text={STATUS_WORD[row.status as keyof typeof STATUS_WORD]} /> : null}</div>
           <p className="mt-1 text-sm text-text-muted">{facts}</p>
         </div>
-        {row ? <NextStep row={row} /> : null}
+        {row ? <NextStep row={row} setup={sum.data?.setup ?? null} /> : null}
       </div>
       {c.basis_note ? <Notice tone={c.source_basis === "ILLUSTRATIVE" ? "warn" : "info"}>{c.basis_note}</Notice> : null}
       <div role="tablist" aria-label="Combination" className="flex gap-1 overflow-x-auto border-b border-border">
-        {TABS.map((t) => <Link key={t.key} role="tab" aria-selected={tab === t.key} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{t.key === "review" && errorCount ? <span className="ml-1.5 rounded bg-danger/12 px-1 text-xs text-text-danger">{errorCount}</span> : null}</Link>)}
+        {TABS.map((t) => <Link key={t.key} role="tab" aria-selected={tab === t.key} aria-label={t.key in badges && badges[t.key as BadgeTab] ? `${t.label} ${badges[t.key as BadgeTab]} setup ${badges[t.key as BadgeTab] === 1 ? "item" : "items"} open` : undefined} to={`/c/${id}/${t.key}`} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{t.key in badges && badges[t.key as BadgeTab] ? <>{" "}<StepBadge n={badges[t.key as BadgeTab]} /></> : null}{t.key === "review" && errorCount ? <span className="ml-1.5 rounded bg-danger/12 px-1 text-xs text-text-danger">{errorCount}</span> : null}</Link>)}
       </div>
       <div role="tabpanel" aria-label={TABS.find((t) => t.key === tab)!.label}>
-        {tab === "overview" ? <OverviewTab d={d} sum={sum.data} show={sp.get("show")} />
+        {tab === "overview" ? <OverviewTab d={d} sum={sum.data} show={sp.get("show")} failed={sum.isError} onRetry={() => void sum.refetch()} />
           : tab === "documents" ? <DocumentsTab id={c.id} />
           : tab === "review" ? <ReviewTab d={d} />
           : tab === "preview" && sp.get("view") === "studio" ? <div className="space-y-3"><Link className="text-sm text-text-link underline" to={`/c/${id}/preview`}>Back to the preview by person</Link><StudioPreview d={d} /></div>
@@ -120,32 +123,50 @@ function WorkspaceTab({ id, tab, hasRelease }: { id: string; tab: "forms" | "que
   const pp = usePreviewParams();
   const [sp] = useSearchParams();
   const qs = new URLSearchParams({ tab, ...(tab === "preview" ? Object.fromEntries(Object.entries(pp).filter(([, v]) => v)) : {}), ...(tab === "questionnaires" && sp.get("role") ? { role: sp.get("role")! } : {}) }).toString();
-  const w = useApi<WorkspaceView>(["combination", id, "workspace", qs], `/combinations/${id}/workspace?${qs}`, { placeholderData: (prev) => (prev?.tab === tab ? prev : undefined) });
+  const w = useApi<WorkspaceView>(["combination", id, "workspace", qs], `/combinations/${id}/workspace?${qs}`, { placeholderData: (prev) => (prev?.tab === tab ? prev : undefined), refetchOnWindowFocus: tab === "forms",
+    // C2.12 slice 3 (review ed2516cf Major A): while a form's step runs (an AI draft), the chips follow it as the rail does.
+    refetchInterval: (q) => (q.state.data?.tab === "forms" && Object.values(q.state.data.progress ?? {}).some((c) => c.state === "running") ? 4000 : false) }); // m6: the step chips follow work done elsewhere
   if (w.isLoading) return <Spinner label={`Loading ${tab}`} />;
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;
-  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} /></div>;
+  if (v.tab === "forms") return <div className="space-y-6"><BeforeForms id={id} people={v.people} /><FormsTab id={id} lines={v.lines} filing={v.filing} filingDetail={v.filingDetail} account={v.account ?? null} accountKey={v.accountKey ?? null} problems={v.problems} removed={v.removed} fromLibrary={v.fromLibrary} lastChange={v.lastChange} progress={v.progress} /></div>;
   if (v.tab === "questionnaires") return <QuestionnairesTab id={id} people={v.people} questionnaire={v.questionnaire} available={v.available} />;
   if (v.tab === "preview") return <PreviewTab id={id} p={v.preview} empty={v.empty} fetching={w.isFetching} hasRelease={hasRelease} />;
   return null;
 }
 
-/** The row's one next step from the server (BR-13, review #1): the same words and the same handler as the Programs
- *  row, so the list and the page never disagree. Nothing is worked out here. */
-function NextStep({ row }: { row: CatalogueLeaf }) {
+/** QA-119 (P-157, P-161 (1)): the header's one next step is the setup checklist's next item, the same item the Overview
+ *  strip marks ● Next and the tab badges count, in the same words. It is a button only when the item is this person's to
+ *  do (the viewer overlay's `filled`); otherwise it says who it waits for. Where the server's catalogue step does that
+ *  same item (Map forms = Draft with AI, Add forms found = add from the library, Find forms, View AI progress), the button
+ *  runs it as the Programs list does; any other item opens where it is done (`nextStepHref`: its tab when the tab has no
+ *  landing place for it yet). No checklist item (Live, nothing open; retired): nothing to do. */
+const PAIRED: Partial<Record<ItemKind, NextAction["kind"]>> = { map_forms: "draft_ai", add_forms_found: "add_from_library", find_forms: "add_forms", view_ai: "view_progress" };
+const TAB_WORD: Record<string, string> = { forms: "Forms", documents: "Documents", questionnaires: "Questionnaires", review: "Review and release" };
+function NextStep({ row, setup }: { row: CatalogueLeaf; setup: CombinationSummary["setup"] }) {
   const nav = useNavigate();
   const [, setSp] = useSearchParams();
-  const actorId = useActorId();
-  const session = useApi<SessionView>(["session", actorId], "/session");
-  const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
   const id = row.combinationId!;
   const step = useNextStep((_leaf, suffix = "") => suffix.startsWith("?") ? setSp(new URLSearchParams(suffix.slice(1)), { replace: true }) : nav(`/c/${id}${suffix}`));
-  const a = row.nextAction;
-  const mayRun = a && (canAuthor || SHOW_ONLY_STEPS.includes(a.kind));
+  const next = setup?.next ?? null;
+  const viewer = setup && "viewer" in setup ? setup.viewer : null;
+  const stepTab = next ? setup!.steps.find((s) => s.key === next.step)?.tab ?? "forms" : "forms";
+  const paired = next && row.nextAction && PAIRED[next.item.kind] === row.nextAction.kind ? row.nextAction : null;
+  // View AI progress is anyone's to follow; every other item is a button only for the person whose duty and tier it is.
+  const mine = !!next && (next.item.kind === "view_ai" || !!viewer?.filled);
+  const href = next ? nextStepHref(id, next, stepTab) : "";
+  const ai = next?.item.kind === "map_forms" || next?.item.kind === "view_ai";
+  const label = next ? <>{ai ? <Sparkles className="size-3.5 shrink-0 text-[#6d28d9] dark:text-[#c4b5fd]" aria-label="AI step:" /> : null}{next.item.text}</> : null;
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 shadow-sm">
-      <div><p className="text-xs font-medium text-text-muted">Next step</p>{a && mayRun ? null : <p className="text-sm font-medium">{a ? a.label : row.status === "READY" ? "Nothing to do: firms can open cases on it" : "Nothing to do right now"}</p>}{a && !mayRun ? <p className="text-xs text-text-muted">A configuration author does this step.</p> : null}</div>
-      {a && mayRun ? <StepTip a={a}><Button size="sm" data-next-step={a.kind} onClick={() => void step.run(row, a)}><StepLabel a={a} /> <ArrowRight /></Button></StepTip> : null}
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 shadow-sm" data-header-next={next ? next.item.focus : ""}>
+      <div>
+        <p className="text-xs font-medium text-text-muted">Next step{next ? ` · ${STEP_LABEL[next.step]}` : ""}</p>
+        {!next ? <p className="text-sm font-medium">{row.status === "READY" ? "Nothing to do: firms can open cases on it" : "Nothing to do right now"}</p>
+          : !mine ? <><p className="text-sm font-medium" data-next-waiting>{viewer?.nextLine ?? next.line}</p><Link className="rounded-sm text-xs text-text-link underline outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1" to={href}>See it on {TAB_WORD[href.split("?")[0].split("/")[3] ?? ""] ?? "its page"}</Link></> : null}
+      </div>
+      {next && mine ? (paired
+        ? <StepTip a={paired}><Button size="sm" data-next-step={next.item.kind} onClick={() => void step.run(row, paired)}>{label} <ArrowRight /></Button></StepTip>
+        : <Button size="sm" asChild><Link to={href} data-next-step={next.item.kind}>{label} <ArrowRight /></Link></Button>) : null}
       {step.dialog}
     </div>
   );
@@ -162,3 +183,12 @@ export function StatusPill({ status }: { status: string }) {
   return <Pill tone={tone}>{status === "RUNNING" ? <span className="size-2 animate-pulse rounded-full bg-current" /> : null}{label[status] ?? status}</Pill>;
 }
 export function useGo() { return useNavigate(); }
+
+/** X1 (slice C2, board v3 "Forms 5"): the number of open setup items on a tab; nothing when none. Read aloud as words
+ *  through the tab's aria-label. */
+function StepBadge({ n }: { n: number }) {
+  if (!n) return null;
+  // The words are the tab's accessible name (aria-label "Forms 2 setup items open", which starts with the visible text
+  // "Forms 2", WCAG 2.5.3), so the tab's visible text stays "Forms 2".
+  return <span aria-hidden className="ml-1 rounded-full bg-warn/15 px-1.5 text-xs text-text-warn" data-step-badge={n}>{n}</span>;
+}

@@ -108,14 +108,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const target = principal.lines.find((l) => l.who === "principal_applicant" && !l.supplies.length);
   const row = p.locator(`[data-doc-line="${target.lineage}"]`);
   await row.getByRole("button", { name: /^Actions for/ }).click();
+  // QA-116: wait for the state each step reads (the line gone and listed as removed; after Undo, back and not listed),
+  // never a fixed pause; a wait that times out makes the step fail with what the page shows.
+  const reaches = (loc, state) => loc.waitFor({ state, timeout: 15000 }).then(() => true, () => false);
   await p.locator("[data-row-menu-items]").getByText("Remove from checklist", { exact: true }).click(); await settle();
-  step("remove pass: the line leaves the checklist and shows under Removed in this draft", await row.count() === 0 && /Removed in this draft/.test(await p.locator("[data-removed-docs]").innerText().catch(() => "")));
+  const removedNow = await reaches(row, "detached") && await reaches(p.locator("[data-removed-docs]"), "visible");
+  step("remove pass: the line leaves the checklist and shows under Removed in this draft", removedNow && await row.count() === 0 && /Removed in this draft/.test(await p.locator("[data-removed-docs]").innerText().catch(() => "")));
   step("remove: one Undo for it", await p.locator("[data-undo-toast] [data-undo]").count() === 1);
   await state("documents-removed-in-draft");
-  await p.locator("[data-note-undo]").click();
-  // QA-116 (the QA-96 family): under load the refetch lands after a fixed pause; wait on the change itself, not a timer.
-  await row.waitFor({ state: "attached", timeout: 20000 }).catch(() => {});
-  await p.locator("[data-removed-docs]").waitFor({ state: "detached", timeout: 20000 }).catch(() => {}); await settle();
+  await p.locator("[data-note-undo]").click(); await settle();
+  await reaches(row, "visible"); await reaches(p.locator("[data-removed-docs]"), "detached");
   step("Undo pass: the line is back and nothing is listed as removed", await row.count() === 1 && await p.locator("[data-removed-docs]").count() === 0, `${await row.count()} ${await p.locator("[data-removed-docs]").innerText().catch(() => "-")} ${await p.locator("[data-documents-error]").innerText().catch(() => "")}`);
 
   // ======================================================== read only: the approver

@@ -1,13 +1,20 @@
-# Merge queue with batches (P-201, founder 31 Oct). An approved PR enters the queue; Mergify combines up to 4 of them
+# Merge queue with batches (P-201, founder 31 Oct). An approved PR enters the queue; Mergify combines up to 6 of them
 # the way they will land on main, runs the full check once on that batch PR (branch mergify/merge-queue/...), and merges
 # them all when it passes. A failing batch is split until the PR that broke it is found; the others still merge.
+# P-210 (founder 1 Nov, the free fix): one batch checked at a time (the Mac has one test runner: stacked batches were
+# cancelled whenever one ahead failed, 43% of its time on 31 Oct), batches of up to 6, and a PR joins only once its own
+# check is green, so a batch fails only on how PRs combine.
+merge_queue:
+  max_parallel_checks: 1
+
 queue_rules:
   - name: default
-    batch_size: 4
+    batch_size: 6
     batch_max_wait_time: 10 min
     queue_conditions:
       - base = main
       - "label = review: approved"
+      - check-success = ci
     merge_conditions:
       - check-success = ci
     merge_method: merge

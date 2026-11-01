@@ -7,6 +7,7 @@
 //   pass · Release page with its Library changes group
 //   zsh studio/tools/isolated.sh screens_s02c 4443 start && node studio/tests/check_screen02_slice2_browser.cjs 4443 xr_studio_screens_s02c
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
+const { stepsBeforeForms } = require("./fixtures/steps-before-forms.cjs");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const PORT = Number(process.argv[2] ?? 4443), DB = process.argv[3] ?? "xr_studio_screens_s02c";
@@ -205,8 +206,9 @@ function pdf(title, text) {
   await upload("imm5406e.pdf", fs.readFileSync(path.join(OFFICIAL, "forms", "imm5406e.pdf")), wh.id);
   const draftRow = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body.rows.find((x) => x.nextAction?.kind === "draft_ai");
   if (draftRow) {
+    await stepsBeforeForms(api, draftRow.combinationId); // QA-119: the header shows Map n forms once steps 1 and 2 are done
     await asWho("user-A"); await p.goto(`${BASE}/c/${draftRow.combinationId}`); await ready(draftRow.label);
-    await p.locator("main [data-next-step='draft_ai']").first().click();
+    await p.locator("main [data-next-step='map_forms']").first().click();
     await p.getByRole("dialog", { name: "Draft setup" }).waitFor();
     await p.locator("[data-cost-line]").waitFor({ timeout: 30000 });
     step("C3.3 view 2: the combination's next step opens Draft setup as a right panel with the cost line before any paid run", /worst case|Replay|Stub/.test(await p.locator("[data-cost-line]").textContent()));
