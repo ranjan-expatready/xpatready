@@ -6,6 +6,7 @@
 // 1024 and 390 px into product/screens/W1-ai-drafting/screenshots/p179/; axe (WCAG 2.2 AA) on the warning.
 //   node studio/tests/check_cost_warning_browser.cjs [port=4456] [name=forms_cw]
 const path = require("node:path"); const fs = require("node:fs"); const os = require("node:os"); const { execFileSync } = require("node:child_process");
+const { stepsBeforeForms } = require("./fixtures/steps-before-forms.cjs");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const PORT = Number(process.argv[2] ?? 4456), NAME = process.argv[3] ?? "forms_cw", DB = `xr_studio_${NAME}`;
@@ -41,12 +42,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     sql("update form_field_map set status = 'DRAFT' where form_edition_id = (select id from form_edition where edition_label = 'IMM 5409 (01-2023)')");
     sql(`update source_attachment set status = 'RECOGNISED' where id = '${src}'`);
     await api(`/combinations/${vv}/lines`, { method: "POST", json: { kind: "FORM", formKey: "IMM 5707" } });
+    await stepsBeforeForms(api, vv, "json"); // QA-119: the header shows Map n forms once steps 1 and 2 are done
     const plan = (await api("/ai/plan", { method: "POST", json: { scope: { kind: "combination", ids: [vv] }, mode: "LIVE", draftAgain: true } })).body;
     const worst = plan.cost_check.worst_usd;
     const open = async (start = true) => {
       await p.goto(`${BASE}/`); await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
       await p.goto(`${BASE}/c/${vv}`);
-      await p.locator('[data-next-step="draft_ai"]').click();
+      await p.locator('[data-next-step="map_forms"]').click();
       await p.getByLabel(/Draft again even where/).check();
       if (start) await p.getByRole("button", { name: /^Start \d+ step/ }).click();
     };
