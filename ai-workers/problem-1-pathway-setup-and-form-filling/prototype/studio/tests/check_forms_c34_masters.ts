@@ -23,6 +23,14 @@ run(async () => {
   ok("C3.4 pass: two boxes with the same choices make one answer list (P-120: one meaning, one item)", d.lists.length === 1 && d.lists[0].boxes.length === 2 && d.lists[0].label === "Status", d.lists);
   ok("C3.4 fail: a box without choices makes no answer list (P-158: only a box's choices)", !d.lists.some((l) => l.boxes.includes("c")));
   ok("C3.4 pass: sections come from the form's parts, each naming its fields", d.sections.length === 2 && d.sections.every((s) => s.fieldKeys.length > 0), d.sections);
+  const h = draftFromInventory([
+    { data_path: "x1", section: "Page1.ButtonsHeader.A", caption: "", presence: "invisible" },
+    { data_path: "x2", section: "Page1.Header.A", caption: "CRC" },
+    { data_path: "x3", section: "Page1.Details.A", caption: "Barcode 1" },
+    { data_path: "x4", section: "Page1.Details.B", caption: "* Family name" },
+    { data_path: "x5", section: "Page1.Quiet.A", caption: "" },
+  ]);
+  ok("C3.4 fail (review M1): hidden boxes, barcodes and machine parts make no section; a part with no printed words makes none", h.sections.length === 1 && h.sections[0].label === "Details" && h.sections[0].fieldKeys.join() === "x4" && h.sections[0].quote === "Family name", h.sections);
 
   await T.ready();
   const vv = T.combo("vv.single");

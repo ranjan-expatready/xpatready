@@ -12,7 +12,10 @@ import { actorOf, Audit, Db, fail, need, SOLUTION, type Actor } from "./core.ts"
 import { identityKeyOf, insertProposals, QUEUE_TX, sameInLibrary, type NewProposal, type Work } from "./proposals.ts";
 
 export const MASTERS_STEP = "masters_edition";
-type InvField = { caption?: string | null; data_path?: string | null; section?: string | null; options_from?: string | null; options_resolved?: unknown };
+type InvField = { caption?: string | null; data_path?: string | null; section?: string | null; options_from?: string | null; options_resolved?: unknown; presence?: string | null; heading?: string | null; ui?: string | null };
+/** Review c34 M1: hidden boxes, barcodes and the form's machine parts are not a person's section. */
+const hidden = (f: InvField) => /invisible|hidden/i.test(String(f.presence ?? "")) || /barcode/i.test(`${f.data_path ?? ""} ${f.caption ?? ""} ${f.ui ?? ""}`);
+const MACHINE_PART = /^(#?subform\d*|text ?field\d*|header|buttons?( ?header)?|page\d*|one|two|three|four|five|six|seven|eight|nine|ten|fragment\d*|row\d*)$/i;
 
 /** "MaritalStatusList" → "Marital status"; "PersonalDetails" → "Personal details". */
 export function words(name: string): string {
@@ -46,7 +49,7 @@ export function draftFromInventory(fields: InvField[]) {
   const lists = new Map<string, { label: string; values: { code: string; label: string }[]; quote: string; boxes: string[] }>();
   for (const f of fields) {
     const values = choices(f);
-    if (!values.length || !f.data_path) continue;
+    if (!values.length || !f.data_path || hidden(f)) continue;
     const id = values.map((v) => v.code).sort().join(",");
     const from = String(f.options_from ?? "").match(/LOV\.([A-Za-z0-9_]+)/)?.[1];
     const prev = lists.get(id);
@@ -55,9 +58,9 @@ export function draftFromInventory(fields: InvField[]) {
   }
   const sections = new Map<string, { label: string; fieldKeys: string[]; quote: string }>();
   for (const f of fields) {
-    if (!f.data_path || !f.section) continue;
+    if (!f.data_path || !f.section || hidden(f)) continue;
     const part = f.section.split(".").slice(0, 2);
-    if (part.length < 2) continue;
+    if (part.length < 2 || MACHINE_PART.test(part[1].replace(/\[\d+\]$/, ""))) continue;
     const key = part.join(".");
     const s = sections.get(key) ?? { label: words(part[1]).slice(0, 120), fieldKeys: [], quote: caption(f) };
     if (s.fieldKeys.length < 400) s.fieldKeys.push(f.data_path.slice(0, 120));
@@ -67,7 +70,8 @@ export function draftFromInventory(fields: InvField[]) {
   // One section per name (two pages with a part of the same name are one section of the form).
   const byName = new Map<string, { label: string; fieldKeys: string[]; quote: string }>();
   for (const s of sections.values()) { const n = byName.get(s.label); if (n) n.fieldKeys.push(...s.fieldKeys.slice(0, 400 - n.fieldKeys.length)); else byName.set(s.label, s); }
-  return { lists: [...lists.values()], sections: [...byName.values()].filter((s) => s.fieldKeys.length) };
+  // The quote is the form's printed words (a box caption in the part); a part with none is not proposed (P-170).
+  return { lists: [...lists.values()], sections: [...byName.values()].filter((s) => s.fieldKeys.length && s.quote) };
 }
 
 @Injectable()
@@ -114,7 +118,7 @@ export class FormMasters {
       for (const s of sections) {
         const payload = { kind: "section" as const, label: s.label, aliases: [], fieldKeys: s.fieldKeys };
         const twin = await sameInLibrary(tx, a!.workspaceId, payload);
-        items.push({ ...base, kind: "section", payload, rounds: rulesRead(`Rules read the form part "${s.label}": ${s.fieldKeys.length} form fields`, payload), source: source(s.quote || s.label), reuse: twin ? { match: "reuse", existingKey: twin } : { match: "new", existingKey: null },
+        items.push({ ...base, kind: "section", payload, rounds: rulesRead(`Rules read the form part "${s.label}": ${s.fieldKeys.length} form fields`, payload), source: source(s.quote), reuse: twin ? { match: "reuse", existingKey: twin } : { match: "new", existingKey: null },
           rules: [{ rule: "from_form_part", passed: true, why: null }], reason: `A part of ${edition} grouping ${s.fieldKeys.length} form fields: check its name.`.slice(0, 500),
           identity: { key: identityKeyOf(payload, ""), near: [], nearReason: null }, work: {} });
       }
