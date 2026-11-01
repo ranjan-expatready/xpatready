@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight, Pencil, Save, Search } from "lucide-react";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table, Textarea } from "@/components/ui/controls";
@@ -9,6 +9,8 @@ import { ConditionBuilder } from "@/components/conditions";
 import { OriginPill, useLibraryFields } from "@/pages/configuration";
 import { PERSON } from "@/pages/job";
 import { nameOf } from "@/pages/review";
+import { ItemStatusNote, useCanAuthor, useItemLifecycle } from "@/pages/library-item-actions";
+import { TipProvider } from "@/components/status";
 
 /** QA-39: value types in words (the stored code stays the value). */
 const TYPE_WORD: Record<string, string> = { text: "Text", date: "Date", yes_no: "Yes or no", code: "List of choices", country: "Country", number: "Number", address: "Address", phone: "Phone number", email: "Email address",
@@ -70,24 +72,30 @@ const NoneInCombination = ({ reuse, noun }: { reuse: ReturnType<typeof useReuse>
 export function FieldsPage() {
   const [q, setQ] = React.useState("");
   const [only, setOnly] = React.useState("all");
-  const list = useApi<any[]>(["fields"], "/library/fields");
+  // C11.9 BR-10: the default list leaves retired fields out; the whole list (retired=all) feeds the Retired filter.
+  const list = useApi<any[]>(["fields", "all"], "/library/fields?retired=all");
   const reuse = useReuse("fields");
-  const rows = (list.data ?? []).filter((f) => reuse.keep(f.key) && (!q || f.key.includes(q.toLowerCase()) || (f.name ?? fieldName(f.key)).toLowerCase().includes(q.toLowerCase()) || f.meaning.toLowerCase().includes(q.toLowerCase())) && (only === "all" || (only === "draft" && f.has_draft) || (only === "ai" && f.origin === "AI_PROPOSAL") || (only === "unplaced" && !f.placement) || (only === "shared" && f.forms.length > 1)));
+  const navigate = useNavigate();
+  const canAuthor = useCanAuthor();
+  const life = useItemLifecycle("fields", () => list.refetch(), canAuthor);
+  // C11.9 (BR-10): a retired field is listed only under "Retired".
+  const rows = (list.data ?? []).filter((f) => (only === "retired" ? f.retired : !f.retired)).filter((f) => reuse.keep(f.key) && (!q || f.key.includes(q.toLowerCase()) || (f.name ?? fieldName(f.key)).toLowerCase().includes(q.toLowerCase()) || f.meaning.toLowerCase().includes(q.toLowerCase())) && (only === "all" || only === "retired" || (only === "draft" && f.has_draft) || (only === "ai" && f.origin === "AI_PROPOSAL") || (only === "unplaced" && !f.placement) || (only === "shared" && f.forms.length > 1)));
   return (
-    <div className="mx-auto max-w-7xl space-y-4">
+    <TipProvider><div className="mx-auto max-w-7xl space-y-4">
       <div><h1 className="text-xl font-semibold">Fields</h1><p className="mt-1 text-sm text-text-muted">One definition per meaning, shared by every form and program. Values about people and cases are never stored here.</p><Origin>each field is read from a form field (proposed by AI, confirmed by a person), a document checklist line, or a rule that needs it. Nothing is added by hand.</Origin></div>
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-96"><Search className="absolute left-2.5 top-2.5 size-4 text-text-muted" /><Input className="pl-8" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a field or its meaning" aria-label="Search fields" /></div>
-        <Select className="w-64" value={only} onChange={(e) => setOnly(e.target.value)} aria-label="Filter"><option value="all">All fields</option><option value="shared">Used by more than one form</option><option value="draft">With a draft change</option><option value="ai">AI-proposed</option><option value="unplaced">Not asked anywhere</option></Select>
+        <Select className="w-64" value={only} onChange={(e) => setOnly(e.target.value)} aria-label="Filter"><option value="all">All fields</option><option value="shared">Used by more than one form</option><option value="draft">With a draft change</option><option value="ai">AI-proposed</option><option value="unplaced">Not asked anywhere</option><option value="retired">Retired</option></Select>
         <ReuseBar reuse={reuse} noun="field" />
         <span className="text-xs text-text-muted">{rows.length} of {list.data?.length ?? 0}</span>
       </div>
       {list.isLoading || reuse.waiting ? <Spinner label="Loading fields" /> : !list.data?.length ? <EmptyState title="The library is empty" description="Load sample inputs, or add a form with AI drafting; reviewed fields land here." /> : reuse.items && !Object.keys(reuse.items).length ? <NoneInCombination reuse={reuse} noun="field" /> : (
         <Table head={["Field", "Meaning, format and source", "Type", "Forms", "Asked in", "Status"]}>
-          {rows.slice(0, 400).map((f) => <tr key={f.key}><td><Link className="font-medium text-text-link hover:underline" to={`/library/fields/${encodeURIComponent(f.key)}`}>{f.name ?? fieldName(f.key)}</Link><p className="mono break-all text-[11px] text-text-muted">{f.key}</p></td><td className="max-w-md text-xs">{f.meaning}<p className="mt-1 text-[11px]"><span className="text-text-muted">Format: </span><FormatCell f={f.format} /></p><SourceNote r={f} /></td><td className="text-xs">{TYPE_WORD[f.value_type] ?? f.value_type}</td><td className="text-xs">{f.forms.join(", ") || <span className="text-text-muted">none</span>}<span className="text-text-muted"> · {f.boxes} form field{f.boxes === 1 ? "" : "s"}{f.used_in?.length ? ` · ${f.used_in.length} combination${f.used_in.length === 1 ? "" : "s"}` : ""}</span></td><td className="text-xs">{f.placement ? `${f.placement.section.replace(/_/g, " ")} · ${collectedWord(f.placement.collected_from)}` : <span className="text-text-warn">not placed</span>}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={f.key} /><ListPill origin={f.origin} status={f.status} /></div></td></tr>)}
+          {rows.slice(0, 400).map((f) => <tr key={f.key} data-item={f.key}><td><Link className="font-medium text-text-link hover:underline" to={`/library/fields/${encodeURIComponent(f.key)}`}>{f.name ?? fieldName(f.key)}</Link><p className="mono break-all text-[11px] text-text-muted">{f.key}</p></td><td className="max-w-md text-xs">{f.meaning}<p className="mt-1 text-[11px]"><span className="text-text-muted">Format: </span><FormatCell f={f.format} /></p><SourceNote r={f} /></td><td className="text-xs">{TYPE_WORD[f.value_type] ?? f.value_type}</td><td className="text-xs">{f.forms.join(", ") || <span className="text-text-muted">none</span>}<span className="text-text-muted"> · {f.boxes} form field{f.boxes === 1 ? "" : "s"}{f.used_in?.length ? ` · ${f.used_in.length} combination${f.used_in.length === 1 ? "" : "s"}` : ""}</span></td><td className="text-xs">{f.placement ? `${f.placement.section.replace(/_/g, " ")} · ${collectedWord(f.placement.collected_from)}` : <span className="text-text-warn">not placed</span>}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={f.key} />{f.retired ? <Pill>Retired</Pill> : <ListPill origin={f.origin} status={f.status} />}</div><ItemStatusNote r={f} /><div className="mt-1.5">{life.action({ ...f, name: f.name ?? fieldName(f.key) }, () => navigate(`/library/fields/${encodeURIComponent(f.key)}`))}</div></td></tr>)}
         </Table>
       )}
-    </div>
+      {life.node}
+    </div></TipProvider>
   );
 }
 
@@ -115,17 +123,20 @@ export function FieldPage() {
   if (f.isError) return <Notice tone="danger" title="Field not found">{(f.error as Error).message}</Notice>;
   const v = f.data;
   const shown = (cur.labelChecked && cur.label) || fieldName(key);
+  // C11.9 break round 2 minor: a retired field is read-only here until it is restored (each change would be refused).
+  const retiredNow = cur.status === "RETIRED";
   return (
     <div className="mx-auto max-w-7xl space-y-5">
       <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/library/fields" className="hover:underline">Fields</Link><ChevronRight className="size-3" /><span>{shown}</span></nav>
-      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mono text-xs text-text-muted">{key}</p><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill><OriginPill origin={cur.origin} status={cur.status} /><Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div></div>
+      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mono text-xs text-text-muted">{key}</p><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill>{retiredNow ? <Pill>Retired</Pill> : <OriginPill origin={cur.origin} status={cur.status} />}<Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div></div>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
           <h2 className="font-semibold">Definition</h2>
-          <div className="flex items-start gap-2"><Field label="Name" className="flex-1" hint="Renaming is direct and makes a new draft version; a name another field in this group already has is refused."><Input value={name} onChange={(e) => setName(e.target.value)} /></Field><Button className="mt-6" variant="secondary" onClick={() => rename.mutate(undefined)} busy={rename.isPending} disabled={!name.trim() || name.trim() === shown}><Pencil /> Rename</Button></div>
+          {retiredNow ? <Notice tone="warn" title="Retired">It takes no change or new use. Restore it on Fields (choose the Retired filter) first.</Notice> : null}
+          <div className="flex items-start gap-2"><Field label="Name" className="flex-1" hint="Renaming is direct and makes a new draft version; a name another field in this group already has is refused."><Input value={name} onChange={(e) => setName(e.target.value)} /></Field><Button className="mt-6" variant="secondary" onClick={() => rename.mutate(undefined)} busy={rename.isPending} disabled={retiredNow || !name.trim() || name.trim() === shown}><Pencil /> Rename</Button></div>
           <Field label="Meaning" hint="What reviewers and the comparison rely on; one meaning per field."><Textarea value={meaning} onChange={(e) => setMeaning(e.target.value)} /></Field>
           <Field label="Value type"><Select value={type} onChange={(e) => setType(e.target.value)}>{TYPES.map((t) => <option key={t} value={t}>{TYPE_WORD[t]}</option>)}</Select></Field>
-          <div className="flex justify-end"><Button onClick={() => saveDef.mutate(undefined)} busy={saveDef.isPending} disabled={meaning === cur.meaning && type === cur.valueType}><Save /> Save as draft</Button></div>
+          <div className="flex justify-end"><Button onClick={() => saveDef.mutate(undefined)} busy={saveDef.isPending} disabled={retiredNow || meaning === cur.meaning && type === cur.valueType}><Save /> Save as draft</Button></div>
           <p className="text-xs text-text-muted">Versions: {v.versions.map((x: any) => `v${x.version} ${x.status.toLowerCase()}${x.updatedBy ? ` (${nameOf(session.data?.actors, x.updatedBy)})` : ""}`).join(" · ")}</p>
         </section>
         <section className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
@@ -133,14 +144,14 @@ export function FieldPage() {
           {!place ? <Notice tone="warn">Not placed: nobody is asked for this value yet, so form fields that read it stay unresolved in a case unless a supported document supplies it.</Notice> : null}
           {p ? <>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Section"><Select value={p.sectionKey} onChange={(e) => setP({ ...p, sectionKey: e.target.value })}><option value="">Choose a section</option>{(sections.data ?? []).map((s) => <option key={s.key} value={s.key}>{s.title}</option>)}</Select></Field>
+              <Field label="Section"><Select value={p.sectionKey} onChange={(e) => setP({ ...p, sectionKey: e.target.value })}><option value="">Choose a section</option>{(sections.data ?? []).filter((x) => !x.retired || x.key === p.sectionKey).map((s) => <option key={s.key} value={s.key}>{s.title}</option>)}</Select></Field>
               <Field label="Collected from"><Select value={p.collectedFrom} onChange={(e) => setP({ ...p, collectedFrom: e.target.value })}>{COLLECTED.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
               <Field label="Repeats"><Select value={p.repeats} onChange={(e) => setP({ ...p, repeats: e.target.value })}><option value="once_per_case">Once per case</option><option value="per_person">For each person the forms need</option><option value="per_row">For each row (history, children)</option></Select></Field>
               <Field label="Question text" hint="Optional; the meaning is used when empty."><Input value={p.questionText} onChange={(e) => setP({ ...p, questionText: e.target.value })} /></Field>
             </div>
             <Field label="Condition on the question"><Select value={p.conditionEffect ?? ""} onChange={(e) => setP({ ...p, conditionEffect: e.target.value || null, condition: e.target.value ? p.condition : null })}><option value="">None: asked whenever a form needs it</option><option value="SHOW">Show only when…</option><option value="HIDE">Hide when…</option><option value="OPTIONAL">Optional when…</option></Select></Field>
             {p.conditionEffect ? <><ConditionBuilder value={p.condition} onChange={(c) => setP({ ...p, condition: c })} fields={fields.list} /><Field label="In plain words"><Input value={p.conditionPlain} onChange={(e) => setP({ ...p, conditionPlain: e.target.value })} /></Field></> : null}
-            <div className="flex justify-end"><Button onClick={() => savePlace.mutate(undefined)} busy={savePlace.isPending} disabled={!p.sectionKey}><Save /> Save placement as draft</Button></div>
+            <div className="flex justify-end"><Button onClick={() => savePlace.mutate(undefined)} busy={savePlace.isPending} disabled={retiredNow || !p.sectionKey}><Save /> Save placement as draft</Button></div>
           </> : null}
         </section>
       </div>
@@ -181,13 +192,19 @@ export function SectionsPage() {
   const reuse = useReuse("sections");
   const shown = (s.data ?? []).filter((x) => reuse.keep(x.key));
   const [editing, setEditing] = React.useState<{ key: string; title: string } | null>(null);
+  // C11.9: delete, retire and restore through the one guard; a retired section is listed only under "Retired".
+  const canAuthor = useCanAuthor();
+  const life = useItemLifecycle("sections", () => s.refetch(), canAuthor);
+  const [retired, setRetired] = React.useState(false);
+  const shownRows = shown.filter((x) => !!x.retired === retired);
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <TipProvider><div className="mx-auto max-w-6xl space-y-4">
       <div><h1 className="text-xl font-semibold">Sections</h1><p className="mt-1 text-sm text-text-muted">Reusable groups of questions. Each combination selects the sections its questionnaire uses.</p><Origin>the forms' own parts, each confirmed on To review. Nothing is added by hand; a combination picks its sections on its Questionnaires tab.</Origin></div>
-      <div className="flex flex-wrap items-center gap-2"><ReuseBar reuse={reuse} noun="section" /></div>
-      {s.isLoading || reuse.waiting ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : !shown.length ? <NoneInCombination reuse={reuse} noun="section" /> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status", ""]}>{shown.map((x) => <tr key={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.key} /><ListPill origin={x.origin} status={x.status} /></div></td><td><Button variant="ghost" size="sm" aria-label={`Rename ${x.title}`} onClick={() => setEditing({ key: x.key, title: x.title })}><Pencil /> Rename</Button></td></tr>)}</Table>}
+      <div className="flex flex-wrap items-center gap-2"><ReuseBar reuse={reuse} noun="section" /><Select className="w-56" value={retired ? "retired" : "current"} onChange={(e) => setRetired(e.target.value === "retired")} aria-label="Filter"><option value="current">Current sections</option><option value="retired">Retired</option></Select><span className="text-xs text-text-muted">{shownRows.length} of {s.data?.length ?? 0}</span></div>
+      {s.isLoading || reuse.waiting ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : !shown.length ? <NoneInCombination reuse={reuse} noun="section" /> : !shownRows.length ? <p className="text-sm text-text-muted">{retired ? "No section is retired." : "Every section is retired: choose Retired to see them."}</p> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status"]}>{shownRows.map((x) => <tr key={x.key} data-item={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.key} />{x.retired ? <Pill>Retired</Pill> : <ListPill origin={x.origin} status={x.status} />}</div><ItemStatusNote r={x} /><div className="mt-1.5">{life.action({ ...x, name: x.title }, () => (x.retired ? life.view({ ...x, name: x.title }) : setEditing({ key: x.key, title: x.title })))}</div></td></tr>)}</Table>}
       {editing ? <RenameSection section={editing} onClose={() => setEditing(null)} /> : null}
-    </div>
+      {life.node}
+    </div></TipProvider>
   );
 }
 
@@ -205,11 +222,17 @@ export function DocumentTypesPage() {
   const t = useApi<any[]>(["doc-types"], "/library/document-types");
   const reuse = useReuse("document-types");
   const shown = (t.data ?? []).filter((x) => reuse.keep(x.documentTypeKey));
+  const canAuthor = useCanAuthor();
+  const life = useItemLifecycle("document-types", () => t.refetch(), canAuthor);
+  const [retired, setRetired] = React.useState(false);
+  // C11.9 (BR-10): a retired document type is listed only under "Retired".
+  const rows = shown.filter((x) => !!x.retired === retired);
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <TipProvider><div className="mx-auto max-w-6xl space-y-4">
       <div><h1 className="text-xl font-semibold">Document types</h1><p className="mt-1 text-sm text-text-muted">Reusable document definitions. The facts a supported document can supply are a proposal until reading that document proves them on a case.</p><Origin>the document checklist lines of each combination (its official checklist, quoted), applied on the combination's Documents tab. Nothing is added by hand.</Origin></div>
-      <div className="flex flex-wrap items-center gap-2"><ReuseBar reuse={reuse} noun="document type" /></div>
-      {t.isLoading || reuse.waiting ? <Spinner label="Loading" /> : !t.data?.length ? <EmptyState title="No document types yet" /> : !shown.length ? <NoneInCombination reuse={reuse} noun="document type" /> : <Table head={["Document type", "Category", "Facts it can supply", "Used by combinations", "Status"]}>{shown.map((x) => <tr key={x.documentTypeKey}><td className="max-w-md font-medium">{x.name}<SourceNote r={x} /></td><td className="text-xs">{CATEGORY_WORD[x.category] ?? x.category}</td><td className="max-w-lg text-xs">{x.suppliesFacts?.length ? x.suppliesFacts.map(fieldName).join(", ") : <span className="text-text-muted">none recorded</span>}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.documentTypeKey} /><ListPill origin={x.origin} status={x.status} /></div></td></tr>)}</Table>}
-    </div>
+      <div className="flex flex-wrap items-center gap-2"><ReuseBar reuse={reuse} noun="document type" /><Select className="w-56" value={retired ? "retired" : "current"} onChange={(e) => setRetired(e.target.value === "retired")} aria-label="Filter"><option value="current">Current document types</option><option value="retired">Retired</option></Select><span className="text-xs text-text-muted">{rows.length} of {t.data?.length ?? 0}</span></div>
+      {t.isLoading || reuse.waiting ? <Spinner label="Loading" /> : !t.data?.length ? <EmptyState title="No document types yet" /> : !shown.length ? <NoneInCombination reuse={reuse} noun="document type" /> : !rows.length ? <p className="text-sm text-text-muted" data-none-retired>{retired ? "No document type is retired." : "Every document type is retired: choose Retired to see them."}</p> : <Table head={["Document type", "Category", "Facts it can supply", "Used by combinations", "Status"]}>{rows.map((x) => <tr key={x.documentTypeKey} data-item={x.documentTypeKey}><td className="max-w-md font-medium">{x.name}<SourceNote r={x} /></td><td className="text-xs">{CATEGORY_WORD[x.category] ?? x.category}</td><td className="max-w-lg text-xs">{x.suppliesFacts?.length ? x.suppliesFacts.map(fieldName).join(", ") : <span className="text-text-muted">none recorded</span>}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.documentTypeKey} />{x.retired ? <Pill>Retired</Pill> : <ListPill origin={x.origin} status={x.status} />}</div><ItemStatusNote r={x} /><div className="mt-1.5">{life.action({ ...x, key: x.documentTypeKey }, () => life.view({ ...x, key: x.documentTypeKey }))}</div></td></tr>)}</Table>}
+      {life.node}
+    </div></TipProvider>
   );
 }

@@ -4,6 +4,7 @@
 // decideChange), applied at approval as a draft placement version, and published with the next release that carries the
 // question (publishLibraryChanges marks it released). A per-combination choice (Comes from, C4.10) stays and still wins.
 // Background and declaration sections (client-only) are never changed (P-97). US$0, no AI.
+import { refuseRetired } from "./library-items.ts";
 import { Body, Controller, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import type { LibraryChange, Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -87,6 +88,8 @@ export async function applyFills(db: Db, audit: Audit, actor: Actor, c: LibraryC
   const m = c.matches as { after?: Fills; before?: Fills };
   const { rows, current } = await placementOf(db, c.workspaceId, c.key);
   if (!current || !m.after) throw problem(409, "Not placed", "The question is no longer placed in the library, so nothing was changed. Return the change.");
+  // C11.9 break round 2 (Major 3): a field retired meanwhile gets no new draft question.
+  await refuseRetired(db, c.workspaceId, "field", [c.key]);
   if (fillsOf(current.collectedFrom) !== m.before) throw problem(409, "Changed since", "Who fills this question changed after it was proposed, so nothing was changed. Return it; the author proposes it again.");
   await revise(db.sectionQuestion, rows, { collectedFrom: FILLS[m.after], origin: "HUMAN" }, actor.id, strip);
   await audit.log(c.workspaceId, actor.id, "approved", "placement", c.key, `${actor.name} approved: ${c.label ?? c.key}. A draft of the placement goes out with the next release.`);
