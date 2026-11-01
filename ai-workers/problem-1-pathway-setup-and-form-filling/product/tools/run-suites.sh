@@ -33,7 +33,11 @@ SKIP="check_catalogue_scale.cjs"
 # fix merges, so one unreliable test cannot stall every batch; the nightly full run still runs it. Remove a name when
 # its fix lands. check_cost_warning_browser.cjs was quarantined 31 Oct and came back 1 Nov when its fix (#177, X8a: the
 # check waits for the page's ready signal) merged.
-QUARANTINE=""
+# check_forms_c31_formats.ts (tech lead, 1 Nov night, P-205/P-214): fails in merge-queue shards whenever a Load sample suite
+# runs before it on the same machine and leaves untracked p1/inventory/*.inventory.json with no formats file (QA-145);
+# batches 41326644185 and de60a7bfd8 failed on imm0008e/imm1294e/imm5406e, none of them tracked. Fix row: #316 (C3.1,
+# QA-146) or the QA-145 working-area PR; take it off this list in that PR. Nightly still runs it.
+QUARANTINE="check_forms_c31_formats.ts"
 OUT="${SUITES_OUT:-$ROOT/$S/var/suites}"; mkdir -p "$OUT"
 TSX="$S/node_modules/.bin/tsx --tsconfig $S/api/tsconfig.json"
 export P2_LEDGER_DIR="${P2_LEDGER_DIR_SUITES:-$OUT/p2-ledger-$$}"; mkdir -p "$P2_LEDGER_DIR"   # QA-90 / P-179: test runs never write the real ledger (forms plan-p179 §5)
