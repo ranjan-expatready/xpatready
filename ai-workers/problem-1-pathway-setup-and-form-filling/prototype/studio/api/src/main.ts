@@ -57,7 +57,7 @@ class StudioController {
   @Get("combinations/:id/preview") preview(@Param("id") id: string, @Query() q: any) { return this.s.preview(id, q); }
   @Post("combinations/:id/requirements") addReq(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.saveRequirement(actorOf(a), id, null, b); }
   @Patch("combinations/:id/requirements/:lineage") updReq(@Headers("x-actor") a: H, @Param("id") id: string, @Param("lineage") l: string, @Body() b: any) { return this.s.saveRequirement(actorOf(a), id, l, b); }
-  @Post("combinations/:id/checks") addCheck(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.saveCheck(actorOf(a), id, b ?? {}); }
+  @Post("combinations/:id/checks") addCheck(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.saveCheck(actorOf(a), id, b); }
   @Post("combinations/:id/rules") addRule(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, null, b); }
   @Patch("combinations/:id/rules/:key") updRule(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, k, b); }
   @Patch("combinations/:id/forms/:form") updForm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("form") f: string, @Body() b: any) { return oneAtATime(id, () => this.s.saveForm(actorOf(a), id, normaliseCode(f), b)); } // S4 round 2 N6: one change at a time
