@@ -319,3 +319,73 @@ Report: `journey-test-reviewer-2026-10-31-x5a-0fc3f8a7.md`. Accessibility and sc
 
 **Verdict: Block.** One open Major. Fix before the PR is labelled `review: approved`:
 1. Make the focused row's outline visible (`library-forms.tsx:129`, add `focus-visible:outline-solid`), and add a suite step asserting a non-`none` outline on the row focused by Show more.
+
+---
+
+# Review of 337cdfd5 (PR #145, X5 paging polish FIX, on 0fc3f8a7), 31 Oct 2026
+
+Reviewer: I did not build this. Scope: `git diff 0fc3f8a7 337cdfd5 -- '*.tsx' '*.cjs'`, which is `library-forms.tsx` (+16/−2) and `check_forms_s4_library_browser.cjs` (+14/−1). It answers the 0fc3f8a7 review: Major M7 (no visible focus on the row), Minor 2 (count spoken per keystroke) and break m20 (old count after a failed load).
+
+**How I tested.**
+* **Copies.** Review copy `rvx5e` on :4452, with the web built (`npx vite build`, `index-BYGt_5Sy.js`, `index-CtTqo-3r.css`). Mutation copy `rvx5n` on :4453, made from `git archive 337cdfd5` under `/tmp/rvx5n-src`; I changed no source in /home/user/x5m. Each copy had its own `/tmp` ledger.
+* **Suites.** The browser suite passes **92/92 twice**, each time on a fresh database. I put the rewritten slice3 screenshots back with `git restore`. `tsc --noEmit` is clean. `graph.mjs` gives G1–G6 0/0/2/0/0/0, unchanged.
+* **Mutation run.** I put the three old behaviours back: `outline-none` without `!`, no `!lib.isError`, and the count set at once. Result: **89 passed, 3 failed**, and each failure was the new step meant to catch it (`none 3px`; the typing count; "Showing 50 of 237 forms" beside the error).
+* **My own probes.** Four Playwright scripts in `/tmp/rv8/`, outside the repo, run twice with the same texts. They covered:
+  * pixel differences of the focused row with and without its outline, at 1440, 1024, 390, 1440 at 200 % and 1024 at 200 %;
+  * MutationObserver timelines next to click times, for eight mixed type/chip/Show more/Clear sequences;
+  * mouse and keyboard focus, forced colours, the dark theme, axe with the row focused, and a 500 on the list.
+* **Clean-up.** Both copies are stopped and their databases dropped. Spend: **US$0**, with no `*_LIVE` set.
+* **Note.** A break tester was writing `break-report-x5a.md` in this checkout at the same time (modified 09:01). I did not touch it. Its m21, m22 and m24 match what I reproduced below.
+
+Verdict: Ship
+
+**Why.** M7 is fixed. After a keyboard Show more, row 51 draws a 2 px solid inset outline (`rgb(8, 98, 197)`, about 5.9:1 on the light surface and 5.6:1 in dark) at every size checked. A check now catches a missing outline. The count is spoken once typing pauses and at once for chips and Show more. Every final count matches the rows on screen, and no stale count comes after a later action. The error path says nothing. What is left is Minor.
+
+## Answers to the builder's questions
+* **Does the outline show at 1440, 1024, 390 and 200 %, inset and not clipped?** Yes.
+  * Changed pixels in the edge bands of the row: at 1440, top 2356, bottom 2356, left 82 and right 82. At 1024, 390 and both 200 % sizes, the top, bottom and left edges change (`/tmp/rv8/row-*.png`).
+  * Below 1440 the row (899 px) is wider than its sideways scroller, so its right edge is off-screen, not clipped. At 1024, with the box scrolled to its end, the row's right edge is at 999 px inside a box ending at 1000, and the outline draws there (`/tmp/rv8/right-edge-1024.png`). Without `-outline-offset-2` this edge would be cut off.
+  * The break report's m23 is this off-screen edge. It is not a 2.4.7 or 2.4.11 failure (three sides show and the row is in view), so it is not a finding.
+* **Does the debounce leave a stale count anywhere?** Never at the end. Transiently, in one case (issue 2).
+  * Typing "imm" and pressing Guides 70 ms later gives one update, "Showing 1 of 1 forms", 13 ms after the click. Nothing follows.
+  * Type, chip, type within 700 ms gives the chip's count at once (52 ms), then the search count after the pause.
+  * Type, pause 400 ms, type, then Forms: one update, 6 ms after the click.
+  * Type, then Show more within 250 ms: "Showing 100 of 196" 115 ms later, and nothing stale after.
+  * Type and erase back to the same list: no update. Eight keys at 150 ms: one update.
+  * Why this holds: a new effect run always clears the pending timer, and a run started by a chip or a page change sets the current text at once.
+* **Does the important modifier have side effects?** None found.
+  * The `!` applies only under `:focus-visible` and only on `tr[data-form]`. No other element uses these classes.
+  * A mouse click on a cell, or a mouse-clicked Show more, focuses the row with `:focus-visible` false, so no outline draws.
+  * Tab from the row moves to its number button: the button's ring shows and the row's outline goes. Escape from the drawer returns to the number.
+  * Forced colours keeps a visible system-coloured outline (`/tmp/rv8/forced-colors.png`). Retired rows keep `text-text-muted`. axe reports 0 violations with the row focused.
+  * The cause in the code comment is right. The base sheet's unlayered `:focus-visible{outline:none}` (`web/src/styles/index.css:19`) outranks layered utilities, and only `!important` gets past it from a utility.
+
+## Issues, ranked
+1. **Minor (Should): a count that changes in the 700 ms before a drawer opens is never spoken (break m21, reproduced).**
+   * Type "imm", then open a number 200 ms later. The region changes to "Showing 50 of 196 forms" at 1020 ms, inside the `aria-hidden` main column. Closing the drawer does not repeat it.
+   * **Fix.** Flush the pending text when the drawer opens: `setSpoken(countText)` in `setOpen(r)` (`:114`), before `setOpened`.
+2. **Minor (Should): Clear filters is a button but waits 700 ms. Meanwhile the region still says "No form matches" while 50 rows show (break m22, reproduced: click at 1555 ms, update at 2316 ms).**
+   * `library-forms.tsx:134` treats any `dq` change as typing.
+   * **Fix.** Mark typing in the search box's `onChange` (a ref), and speak at once when `q` changes any other way.
+3. **Nit: `data-shown` still says 50 beside the error notice** (`:205`, break m24). Only checks read it, so it is not user-facing. Use `countText ? pageRows.length : 0`.
+4. **Nit: the typing step prints `[object Object]`** as its detail (`check_forms_s4_library_browser.cjs:315`). Use `JSON.stringify(spokenUpdates)`.
+
+## D1–D20 (changes from 0fc3f8a7 in bold)
+| D | Score | Evidence |
+|---|---|---|
+| D1–D10, D12, D14, D15, D18, D19 | as at 0fc3f8a7 | Untouched by this diff; 92/92 twice |
+| D11 | 4 | **Count spoken after typing pauses and at once for chips and Show more; Clear filters 700 ms late, drawer case silent (issues 1, 2)** |
+| D13 | **5** | **Visible inset outline at 5 sizes, forced colours and dark; [M] #12 / 2.4.7 met; axe 0; no sideways page scroll** |
+| D16 | **5** | **The three new steps fail under mutation (89/92); outline, typing and error each guarded** |
+| D17, D20 | simulated only | No intended user walked it |
+
+## Journey score: 9.5 / 10 (pass; no criterion at 0)
+Report: `journey-test-reviewer-2026-10-31-x5a-337cdfd5.md`. Feedback and state ½ (issues 1, 2). Every other criterion 1; accessibility rises to 1 now that the outline shows.
+
+## What I could not check
+* A real screen reader. How NVDA, JAWS or VoiceOver queue the debounced polite update is inferred from the DOM and Chrome's tree.
+* Safari and Firefox drawing an outline on a `tr`.
+* CI on 337cdfd5.
+* An unaided walk by the configuration author (D17, D20).
+
+**Verdict: Approve** (no open Blocker or Major at 337cdfd5). Issues 1–4 are Minor or Nit, Should, and do not block.
