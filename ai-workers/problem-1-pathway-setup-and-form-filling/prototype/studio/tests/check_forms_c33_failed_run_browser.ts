@@ -83,9 +83,12 @@ const rowOf = (p: Page, form: RegExp, attempt?: number) => p.locator("main table
     await p.setViewportSize({ width: 1440, height: 900 });
     await rowOf(p, /IMM 5257/).first().getByRole("link", { name: "Review proposals" }).click();
     await p.waitForURL(/\/jobs\//, { timeout: 30_000 });
-    await p.getByText(/proposal/i).first().waitFor({ timeout: 30_000 });
+    // Waits for the count itself, not the first word "proposal": the count renders after the items load (a PR check read
+    // the page too early, 1 Nov). A wait that times out fails the check loudly, with what the page said.
+    const all = `All (${kept.items.length})`;
+    const shown = await p.locator("main").getByText(all, { exact: false }).first().waitFor({ timeout: 30_000 }).then(() => true, () => false);
     const jobText = await p.locator("main").innerText();
-    ok("C3.3 step 29: the kept IMM 5257 draft opens with every proposal of its answer, ready to decide", kept.status === "COMPLETED" && kept.items.length > 0 && jobText.includes(`All (${kept.items.length})`), { items: kept.items.length });
+    ok("C3.3 step 29: the kept IMM 5257 draft opens with every proposal of its answer, ready to decide", kept.status === "COMPLETED" && kept.items.length > 0 && shown && jobText.includes(all), { items: kept.items.length, said: shown ? all : jobText.slice(0, 300) });
     await p.screenshot({ path: join(SHOTS, "29-kept-draft-1440.png") });
 
     // ── step 30, refusal: the Content reviewer has no way to retry

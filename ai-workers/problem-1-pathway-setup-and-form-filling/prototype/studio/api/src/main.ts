@@ -38,6 +38,7 @@ import { Studio } from "./studio.ts";
 import { WorkspaceController, WorkspaceViews } from "./workspace.ts";
 import { PeopleFromGuide } from "./people-ai.ts";
 import { PqrDrafts, PqrDraftsController } from "./pqr-drafts.ts";
+import { DraftQd, DraftQdController } from "./draft-qd.ts";
 import { Finder } from "./finder.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 import { FormLibrary, FormLibraryController } from "./form-library.ts";
@@ -52,12 +53,15 @@ type H = string | undefined;
 class StudioController {
   constructor(@Inject(Studio) private readonly s: Studio) {}
   @OpenRead("who-am-I before a person is chosen; the copies' health check") @Get("session") session(@Headers("x-actor") a: H) { return this.s.session(actorOf(a)); }
+  /** C11.10 (P-115): Cards / List per person, on the server. Any known person keeps their own choice. */
+  @Patch("session/preferences") preferences(@Headers("x-actor") a: H, @Body() b: unknown) { return this.s.setPreferences(actorOf(a), b); }
   @Get("combinations/:id") overview(@Param("id") id: string) { return this.s.combination(id); }
   @Patch("combinations/:id") updateComp(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.updateCombination(actorOf(a), id, b); }
   @Get("combinations/:id/config") config(@Param("id") id: string, @Query("mode") mode: any) { return this.s.config(id, mode === "published" ? "published" : "draft"); }
   @Get("combinations/:id/preview") preview(@Param("id") id: string, @Query() q: any) { return this.s.preview(id, q); }
   @Post("combinations/:id/requirements") addReq(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.saveRequirement(actorOf(a), id, null, b); }
   @Patch("combinations/:id/requirements/:lineage") updReq(@Headers("x-actor") a: H, @Param("id") id: string, @Param("lineage") l: string, @Body() b: any) { return this.s.saveRequirement(actorOf(a), id, l, b); }
+  @Post("combinations/:id/checks") addCheck(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.saveCheck(actorOf(a), id, b); }
   @Post("combinations/:id/rules") addRule(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, null, b); }
   @Patch("combinations/:id/rules/:key") updRule(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") k: string, @Body() b: any) { return this.s.saveRule(actorOf(a), id, k, b); }
   @Patch("combinations/:id/forms/:form") updForm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("form") f: string, @Body() b: any) { return oneAtATime(id, () => this.s.saveForm(actorOf(a), id, normaliseCode(f), b)); } // S4 round 2 N6: one change at a time
@@ -192,7 +196,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, RuleFactsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController], providers: [LinesBulk, PqrDrafts, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, RuleFacts, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
+@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController, DraftQdController, RuleFactsController], providers: [LinesBulk, PqrDrafts, DraftQd, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, RuleFacts] })
 class AppModule {}
 
 async function main() {
