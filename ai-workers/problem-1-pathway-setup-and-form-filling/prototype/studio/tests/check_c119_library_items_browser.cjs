@@ -3,7 +3,7 @@
 // used first); an allowed one is confirmed in the right panel with a reason, then the Undo toast; a retired item is listed
 // only under "Retired", with Restore. Keyboard: the panel's Cancel or Close returns focus to the row's action. Sample
 // inputs; no AI call (US$0). Screenshots into product/screens/04-shared-library/screenshots/c119/, axe on each state.
-//   zsh studio/tools/isolated.sh b5b 4447 start && node studio/tests/check_c119_library_items_browser.cjs 4447 xr_studio_b5b
+//   zsh studio/tools/isolated.sh screens_c119ui 4472 start && node studio/tests/check_c119_library_items_browser.cjs 4472 xr_studio_screens_c119ui
 const path = require("node:path"); const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;

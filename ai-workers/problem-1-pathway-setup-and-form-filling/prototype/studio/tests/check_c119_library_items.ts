@@ -1,7 +1,7 @@
 // C11.9 (screens lane, J5; P-116, Screen 04 BR-8 to BR-10): Delete, Retire and Restore of a shared field and a document
 // type, with where used first. A passing and a failing case per rule, through the API on an isolated copy with the
 // sample inputs loaded (the demo is never touched). No browser, NO model call (US$0).
-//   zsh studio/tools/isolated.sh b5b 4447 start && tsx --tsconfig studio/api/tsconfig.json studio/tests/check_c119_library_items.ts 4447 xr_studio_b5b
+//   zsh studio/tools/isolated.sh screens_c119 4471 start && tsx studio/tests/check_c119_library_items.ts 4471 xr_studio_screens_c119
 import { execFileSync } from "node:child_process";
 
 const PORT = Number(process.argv[2] ?? 4447), DB = process.argv[3] ?? "xr_studio_b5b";
