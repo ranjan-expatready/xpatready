@@ -347,7 +347,12 @@ export class Studio {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"}${forExample(f.example)}. Decide them when this edition is drafted again.` })) : [];
-    return [...structure, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
+    const all = [...structure, ...emptyProblem(s), ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })), await acceptsOf(this.db, workspaceId)), ...carried]; // L4: what IRCC accepts
+    // C2.12 (plan F3a-1, BR-10): each problem names the forms it touches, so a form's path shows its own: a Forms problem its form,
+    // any other the forms whose field map reads that item as a fact; none otherwise.
+    const formsOf = new Map<string, Set<string>>();
+    for (const m of s.field_maps) for (const e of m.entries) if (e.fact) (formsOf.get(e.fact) ?? formsOf.set(e.fact, new Set()).get(e.fact)!).add(m.form_number);
+    return all.map((p) => ({ ...p, forms: p.where === "Forms" ? [p.item] : [...(formsOf.get(p.item) ?? [])].sort() }));
   }
 
   async config(id: string, mode: Mode) {

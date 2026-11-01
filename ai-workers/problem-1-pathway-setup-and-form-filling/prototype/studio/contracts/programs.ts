@@ -212,7 +212,7 @@ export type CombinationSummary = {
   held: HeldFile[];
 };
 /** A validator finding (engine/validate.ts): errors block release, warnings are shown and recorded. */
-export type ProblemLine = { level: "error" | "warning"; where: string; item: string; message: string; label?: string; role?: string };
+export type ProblemLine = { level: "error" | "warning"; where: string; item: string; message: string; label?: string; role?: string; /** C2.12: the forms the problem touches (a Forms problem: its own form) */ forms?: string[] };
 /** A problem in words for a person (drift check 2): a coverage gap's message already names the question, so it stands
  *  alone; any other problem leads with its item's words (`label`, a question's meaning) or its item when it has none (a
  *  form number, a rule id). Never a field code on its own. */
