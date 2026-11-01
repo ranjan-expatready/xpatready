@@ -128,13 +128,13 @@ export const unapprovedWhy = (rows: Unapproved[]) => {
   return `it uses ${rows.slice(0, 3).map((r) => `"${r.label ?? r.key}"`).join(", ")}${rows.length > 3 ? ` and ${rows.length - 3} more` : ""}, ${noun} ${why}`;
 };
 
-/** B1 (break B1): the person who proposed a returned new field (or an author) corrects its name, meaning or reason and
- *  sends it to a second person again. */
+/** B1 (break B1): the person who proposed a returned new field corrects its name, meaning or reason and sends it to a
+ *  second person again. Only they do (P-193, B50): another author who corrected it could then approve it alone. */
 export async function resubmitChange(db: Db, actor: Actor, id: string, b: { label?: string; meaning?: string; reason?: string }) {
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
   if (c.status !== "RETURNED") throw problem(409, "Not returned", `Only a returned change is corrected and sent again; this one is ${c.status.toLowerCase()}.`);
-  if (c.proposedBy !== actor.id && !(actor.duties as readonly string[]).includes("author")) throw problem(403, "Not allowed", "The person who proposed it, or a configuration author, corrects it.");
+  if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can correct it and send it again. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to correct or withdraw it.`);
   const reason = (b.reason ?? "").trim();
   if (reason.length < 8 || reason.length > 300) throw problem(400, "Say what changed", "Say what you corrected, so the second person can check it (8 to 300 characters).");
   const label = b.label === undefined ? c.label : b.label.normalize("NFKC").replace(/[\p{Cf}]/gu, "").trim().replace(/\s+/g, " ");
@@ -156,6 +156,8 @@ export async function withdrawChange(db: Db, actor: Actor, id: string, note?: st
   if (!(actor.duties as readonly string[]).includes("author")) throw problem(403, "Not allowed", `${actor.name} (simulated) does not hold the author duty.`);
   const c = await db.libraryChange.findUnique({ where: { id } });
   if (!c) throw problem(404, "Not found", "This library change does not exist (the demo may have been reset).");
+  // DV-bb-9: only the person who proposed a change withdraws it, whatever its kind (as only they undo their own delete).
+  if (c.proposedBy !== actor.id) throw problem(403, "Not yours", `Only the person who proposed a change can withdraw it. ${ACTORS.find((a) => a.id === c.proposedBy)?.name ?? "Another person"} proposed this one: ask them to withdraw it.`);
   if (isLifecycleKind(c.kind)) return withdrawLifecycle(db, actor, c, note); // W1-03: remove, retire or restore (P-116)
   if (c.kind !== "field" || c.action !== "ADD" || !["WAITING", "RETURNED"].includes(c.status)) throw problem(409, "Cannot withdraw", "Only a new shared field that is waiting or returned is withdrawn.");
   const why = (note ?? "").trim();

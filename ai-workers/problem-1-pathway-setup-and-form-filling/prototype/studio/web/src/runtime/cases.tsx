@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { noRetryOnRefusal, Questionnaire, useCaseView, type CaseInfo, type CasePerson } from "./questionnaire";
 import { FormsPanel } from "./forms";
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
+import { EmployerLinkFor, EmployerLinkLine } from "./employer";
 import { newestReleases } from "../../../contracts/runtime";
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
@@ -127,6 +128,7 @@ function NewCaseDialog({ close }: { close: () => void }) {
         <Field label="Principal applicant's name" hint="Shown to the client as written; Sample names only in the prototype" error={errors.principal}><Input value={f.principal} onChange={(e) => setF({ ...f, principal: e.target.value })} /></Field>
         <Field label="Client login that answers" error={errors.clientActor}><Select value={f.clientActor} onChange={(e) => setF({ ...f, clientActor: e.target.value })}><option value="user-P">Client A (simulated)</option><option value="user-Q">Client B (simulated)</option></Select></Field>
         <OpeningTeam firm={firm} value={team} onChange={setTeam} errors={errors} />
+        {combos.length ? <EmployerLinkFor combinationId={f.combinationId || combos[0].combination_id} /> : null}
         <button type="submit" hidden />
       </form>
     </Dialog>
@@ -152,6 +154,7 @@ function CasePage() {
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={`Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case`}>Release {c.pin.release_version}</Pill></h1>
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
+          {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} /></div> : null}
           <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.confirmed} confirmed · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
         </div>
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">

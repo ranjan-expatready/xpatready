@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { RunCard } from "@/components/run-card";
 import { RuleFacts } from "@/components/rule-facts";
 import { peopleWords } from "@/lib/people";
+import { DraftPqrPicks } from "@/components/pqr-draft";
 
 const TIPS = {
   card: "Sets which people a case may include and how many; each person marked as applicant gets their own forms, questions and documents.",
@@ -244,9 +245,11 @@ function PqrSet({ id, roleLabel, n }: { id: string; roleLabel: string; n: number
   const [open, setOpen] = React.useState(false);
   const c = country.data;
   const pending = c ? c.thisCombination.draftAdds.length + c.thisCombination.draftRemoves.length : 0;
+  const { canAuthor } = useSessionView();
   return (
     <section aria-label="Pre-qualification questions" className="space-y-2 rounded-xl border border-border bg-surface-raised p-4" data-pqr-set>
       <p className="text-sm"><span className="font-medium">{roleLabel}: {n} pre-qualification question{n === 1 ? "" : "s"} in this combination.</span> <span className="text-text-muted">A prospect answers them before a case starts; the client questionnaire later shows each answer as "please confirm", and a document read that differs is a check, not an overwrite. A tick goes out with this combination's next release, checked with everything else in it.</span></p>
+      {canAuthor ? <div className="flex items-center gap-2"><DraftPqrPicks id={id} /><span className="text-xs text-text-muted">Picks with a reason each go to To review, where you accept or remove each.</span></div> : null}
       {country.error ? <Notice tone="warn" title="The country pre-qualification could not load">{country.error.message} <button type="button" className="font-medium text-text-link underline" onClick={() => void country.refetch()}>Retry</button></Notice> : null}
       {c ? (
         <div className="text-sm" data-pqr-country>

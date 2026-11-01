@@ -37,6 +37,7 @@ import { Structure, StructureController } from "./structure.ts";
 import { Studio } from "./studio.ts";
 import { WorkspaceController, WorkspaceViews } from "./workspace.ts";
 import { PeopleFromGuide } from "./people-ai.ts";
+import { PqrDrafts, PqrDraftsController } from "./pqr-drafts.ts";
 import { Finder } from "./finder.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 import { FormLibrary, FormLibraryController } from "./form-library.ts";
@@ -89,10 +90,10 @@ class StudioController {
 @Controller("api")
 class SourcesController {
   constructor(@Inject(Sources) private readonly s: Sources, @Inject(Fill) private readonly f: Fill, @Inject(Ai) private readonly ai: Ai, @Inject(Intake) private readonly intake: Intake) {}
-  // A combination's sources go through the one intake (P-51), one or many files.
-  @Post("combinations/:id/attachments") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_BYTES, files: MAX_FILES } }))
-  upload(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: any[]) { return this.intake.intake(actorOf(a), files, id); }
-  @Post("combinations/:id/attachments/sample") sample(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.intake.sample(actorOf(a), id, b.officialFile); }
+  // A combination's files are uploaded through the one intake, POST /intake with combinationId (P-51, P-103); the second
+  // door POST /combinations/:id/attachments was removed (DV-bb-8).
+  // Not /intake (lead, 31 Oct): it adds a file from the official library, never a person's upload; it still goes through Intake.sample.
+  @Post("combinations/:id/attachments/sample") sample(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.intake.sample(actorOf(a), id, b?.officialFile); } // N7 break B5: no body is a 400 in words, never a 500
   @Get("combinations/:id/attachments") list(@Param("id") id: string) { return this.s.attachmentsOf(id); }
   // dotfiles "allow" (QA-4): stored paths are the server's own, and a lane copy under .claude/worktrees/ made every download a 404.
   @OpenRead("a file link the browser opens") @Get("attachments/:id/file") async file(@Param("id") id: string, @Res() res: any) { const d = await this.s.download(id); res.download(d.path, d.name, { dotfiles: "allow" }); }
@@ -191,7 +192,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, RuleFactsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController], providers: [LinesBulk, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, RuleFacts, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
+@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, RuleFactsController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController], providers: [LinesBulk, PqrDrafts, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, RuleFacts, WhoFills, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs] })
 class AppModule {}
 
 async function main() {

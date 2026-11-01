@@ -209,12 +209,12 @@ export async function bulkUndo(db: Db, audit: Audit, actor: Actor, c: { id: stri
   return { undone: go.length, kept };
 }
 
-/** C4.7 Accept (Lead, 29 Oct; P-149 one door; N-2 of S6 slice 1): the queue's lander for `pqr_pick`. S6's decide
+/** C4.7 Accept (Lead, 29 Oct; P-149 one door; N-2 of S6 slice 1): the queue's lander for `pqr_pick` (proposals.ts landPqrPick, #282). S6's decide
  *  transaction calls it with its own transaction client, so the tick and the item's status change together (the queue
  *  writes the item's status and decision). It writes the tick through the same draft row and refusals as a person's tick,
  *  keeping the pick's reason, so it goes out in the combination's one release. Origin: AI_PROPOSAL for an AI pick;
  *  CODE_MATCH for the rules' stand-in (never shown as AI). No route or button of its own: the queue's Accept is the one. */
-export async function acceptPqrPick(tx: Prisma.TransactionClient, actor: Actor, raw: unknown) {
+export async function acceptPqrPick(tx: Prisma.TransactionClient, actor: Actor, raw: unknown, opts: { view?: boolean } = {}) {
   // Reads and the audit line go through the caller's transaction client too (buildSnapshot and Audit only use its tables).
   const db = tx as unknown as Db, audit = new Audit(db);
   need(actor, "author");
@@ -241,6 +241,8 @@ export async function acceptPqrPick(tx: Prisma.TransactionClient, actor: Actor, 
   await tx.factSource.create({ data: { workspaceId: c.workspaceId, combinationId: id, lineageKey, role, canonicalFieldKey: fact, source: newest?.source ?? null, documentTypeKey: newest?.documentTypeKey ?? null, prequalification: true, reason, sourceReason: newest?.sourceReason ?? null,
     version: (newest?.version ?? 0) + 1, status: "DRAFT", supersedesId: rows.find((r) => r.status === "PUBLISHED")?.id ?? null, origin: item.origin === "ai" ? "AI_PROPOSAL" : "CODE_MATCH", updatedBy: actor.id } });
   await audit.log(c.workspaceId, actor.id, "accepted", "fact source", lineageKey, `${actor.name} accepted the ${item.origin === "ai" ? "AI's" : "rules'"} pick: ask "${f.label}" (${who(snapshot, role)}) in pre-qualification for "${c.label}". Why: ${reason}`, { itemId: item.id, runId: item.runId }, id);
+  // Review M2 (#282): the queue's bulk accept needs no view back, so it skips the second snapshot per pick.
+  if (opts.view === false) return undefined;
   return factSources((await buildSnapshot(db, c.workspaceId, id, "draft")).snapshot).find((x) => x.role === role && x.fact === fact);
 }
 
