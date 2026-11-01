@@ -9,7 +9,7 @@
 //     and Paper only with a written accommodation reason when the combination files through an IRCC account (VV-R02:
 //     "You must apply online", FQ-3). The portal is the combination's and never changes on a case.
 //   * Readiness of a filing is C7.6's (engine/runtime/readiness.ts, M3-A3): this file never decides it.
-// tests/runtime/check_vv_prepare.ts.
+// tests/check_vv_prepare.ts.
 import { createHash } from "node:crypto";
 import { CHANNEL_WORDS, CHANNELS, SIGNATURE_FITS, signatureFits, type Channel, type Signature } from "../../contracts/forms.ts";
 import { allowedChannels, lineOf, notAcceptedWords, notNeededWords, type AcceptRecord } from "../channels.ts";
@@ -37,6 +37,8 @@ export function wantedItems(filers: string[], forms: FormRow[], docs: Map<string
       out.push({ subject, kind: "document", key: d.document.key, label: d.label, document_type: d.document_type, applies: true });
     const bio = biometrics ? ageCheck(biometrics, ages.get(subject)) : { pays: false as const, why: "" };
     if ("pays" in bio && bio.pays) out.push({ subject, kind: "step", key: BIOMETRICS_STEP.key, label: BIOMETRICS_STEP.label, applies: true, neededBefore: "after_filing" });
+    // Review m2: with no date of birth yet the step is kept, waiting for it, so the person is never silently left out.
+    else if ("waits" in bio) out.push({ subject, kind: "step", key: BIOMETRICS_STEP.key, label: BIOMETRICS_STEP.label, applies: "cannot_tell", missing: ["person.date_of_birth"], neededBefore: "after_filing" });
   }
   return out;
 }
@@ -56,7 +58,8 @@ export const CHANNEL_CHOICES = `Choose ${CHANNELS.map((c) => CHANNEL_WORDS[c]).j
 /** C11.6: whether a form item may move to `want`: 400 for an unknown channel or Paper without a reason where an IRCC
  *  account files online, 422 outside what IRCC accepts (IRCC's own line quoted when the record has one). */
 export function channelChange(form: string, want: unknown, reason: string | null | undefined, records: AcceptRecord[] | undefined, account: string | null | undefined): { ok: true; channel: Channel } | { ok: false; status: 400 | 422; field: string; detail: string } {
-  if (typeof want !== "string" || !(CHANNELS as readonly string[]).includes(want)) return { ok: false, status: 400, field: "channel", detail: `"${String(want).slice(0, 20)}" is not a way to file. ${CHANNEL_CHOICES}` };
+  if (typeof want !== "string") return { ok: false, status: 400, field: "channel", detail: `Send one way to file, as text. ${CHANNEL_CHOICES}` };
+  if (!(CHANNELS as readonly string[]).includes(want)) return { ok: false, status: 400, field: "channel", detail: `"${want.slice(0, 20)}" is not a way to file. ${CHANNEL_CHOICES}` };
   const channel = want as Channel;
   const { channels, record } = allowedChannels(records, account);
   if (channel === "NOT_NEEDED" && !channels.includes("NOT_NEEDED")) return { ok: false, status: 422, field: "channel", detail: notNeededWords(form, account) };
@@ -72,5 +75,5 @@ export function channelChange(form: string, want: unknown, reason: string | null
 /** The view's version: changes whenever a group, a filing's group or an item's channel changes, so a write made from an
  *  older read is refused (409, Reload). */
 export function prepareVersion(groups: { id: string; filings: string[] }[], items: { id: string; channel?: string | null; version: number }[]): string {
-  return createHash("sha256").update(JSON.stringify([groups.map((g) => [g.id, [...g.filings].sort()]), items.map((i) => [i.id, i.channel ?? null, i.version]).sort()])).digest("hex").slice(0, 16);
+  return createHash("sha256").update(JSON.stringify([groups.map((g) => [g.id, [...g.filings].sort()] as const).sort((a, b) => a[0].localeCompare(b[0])), items.map((i) => [i.id, i.channel ?? null, i.version]).sort()])).digest("hex").slice(0, 16);
 }

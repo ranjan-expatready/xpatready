@@ -64,13 +64,33 @@ const releases = () => Number(sql("select count(*) from config_release r join co
   ok("C11.6 (fail): an item id that is not an id is not found (404)", r.status === 404, r.status);
   const form = q.items.find((i: { kind: string; form?: string }) => i.form === "IMM 5257");
   r = await call("PATCH", `/runtime/items/${form?.id}/channel`, { channel: "PDF_UPLOAD", version: q.version }, OFFICER);
-  ok("C11.6: choosing the line's own channel again is allowed and kept on the item", r.status === 200 && r.body.item?.channel === "PDF_UPLOAD" && sql(`select channel from filing_item where id='${form?.id}'`) === "PDF_UPLOAD", r.body);
+  ok("C11.6 (break m1): choosing the channel the item already has is a 200 that changes nothing (nothing stored, no new version)", r.status === 200 && r.body.changed === false && r.body.item?.channel === "PDF_UPLOAD" && r.body.version === q.version && sql(`select coalesce(channel, 'none') from filing_item where id='${form?.id}'`) === "none", r.body?.changed);
   // The older /filings view (#283) agrees with the prepare view on ages: answer both dates of birth, then compare.
   const answerDob = async (subject: string, dob: string) => { const qs = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections?.flatMap((x: { questions: { subjectId: string; fact: string; answer: { id: string } | null }[] }) => x.questions) ?? []; const a = qs.find((x: { subjectId: string; fact: string }) => x.subjectId === subject && x.fact === "person.date_of_birth"); return call("PUT", `/runtime/cases/${caseId}/answers/${subject}/person.date_of_birth`, { value: dob, expectedId: a?.answer?.id ?? null }, OFFICER); };
   const principal = opened.body?.people?.find((x: { role: string }) => x.role === "principal")?.subject_id;
   await answerDob(principal, "1950-01-01"); await answerDob(spouse, "1940-01-01");
   const after = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body;
   ok("C6.12 VV-R15: a person over 79 has an exempt biometrics line with IRCC's words; one aged 76 pays CAD 85", after.fees.some((f: { key: string; subject: string; exempt: boolean; reason: string }) => f.key === "biometrics" && f.subject === spouse && f.exempt && /over the age of 79/.test(f.reason)) && after.fees.some((f: { key: string; subject: string; amount: number }) => f.key === "biometrics" && f.subject === principal && f.amount === 85));
+  // Review M1, break M1: two splits from one read, sent at once on a group of two: one passes, the family group is never emptied.
+  const race = await call("POST", "/runtime/cases", { combinationId: vv, reference: `RACE-${Date.now().toString(36)}`, clientActor: CLIENT, principal: { displayName: "Sample Client R" } }, OFFICER);
+  await call("POST", `/runtime/cases/${race.body?.id}/people`, { role: "spouse_or_partner", displayName: "Sample Spouse R" }, OFFICER);
+  const rp = (await call("GET", `/runtime/cases/${race.body?.id}/prepare`, undefined, OFFICER)).body;
+  const both2 = await Promise.all(rp.filings.map((f: { id: string }) => call("POST", `/runtime/groups/${rp.groups[0].id}/split`, { filing: f.id, reason: "Sample: race", version: rp.version }, OFFICER)));
+  ok("C6.12 (fail): two splits from one read at once: exactly one passes, the other is 409, and the family group keeps a filing", both2.filter((x) => x.status === 200).length === 1 && both2.filter((x) => x.status === 409).length === 1 && sql(`select count(*) from filing f join submission_group g on g.id=f.submission_group_id where f.case_id='${race.body?.id}' and g.kind='FAMILY'`) === "1", both2.map((x) => x.status));
+  // Review M2, break B1: reasons stay on their rows: never in an audit line, and another firm never reads these lines.
+  const PRIVATE = "Sample private reason 7Q";
+  const rq = (await call("GET", `/runtime/cases/${race.body?.id}/prepare`, undefined, OFFICER)).body;
+  const i5257 = rq.items.find((i: { form?: string }) => i.form === "IMM 5257");
+  r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "PAPER", reason: PRIVATE, version: rq.version }, OFFICER);
+  ok("C11.6: Paper with a reason is saved on the item, reason included", r.status === 200 && sql(`select channel_reason from filing_item where id='${i5257?.id}'`) === PRIVATE, r.status);
+  ok("C6.12, C11.6 (fail): no audit line holds a split or Paper reason, in its words or its detail", sql(`select count(*) from audit_event where (summary like '%Sample: race%' or summary like '%${PRIVATE}%' or detail::text like '%${PRIVATE}%' or detail::text like '%Sample: race%')`) === "0");
+  const feed = (await call("GET", "/activity", undefined, "user-S")).body;
+  ok("C6.12, C11.6 (fail): the solo firm's staff never read the Sample firm's item or group lines in the activity feed", Array.isArray(feed) && !feed.some((e: { entity: string }) => ["item", "submission group"].includes(e.entity)), Array.isArray(feed) ? feed.length : feed);
+  const rs = (await call("GET", `/runtime/cases/${race.body?.id}/prepare`, undefined, OFFICER)).body;
+  r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "PAPER", reason: "again", version: rs.version }, OFFICER);
+  ok("C11.6 (break m1): the same channel again changes nothing: no new version, no audit line", r.status === 200 && r.body.changed === false && r.body.version === rs.version && sql(`select count(*) from audit_event where entity='item' and entity_key='${i5257?.id}'`) === "1", r.body?.changed);
+  r = await call("PATCH", `/runtime/items/${i5257?.id}/channel`, { channel: "PDF_UPLOAD", reason: "bad\u0000reason", version: rs.version }, OFFICER);
+  ok("C11.6 (break m2, fail): a reason with a control character is a 400 on the reason, nothing saved", r.status === 400 && /plain text/.test(JSON.stringify(r.body)) && sql(`select channel from filing_item where id='${i5257?.id}'`) === "PAPER", r.status);
   const fl = (await call("GET", `/runtime/cases/${caseId}/filings`, undefined, OFFICER)).body;
   const cents = (x: { fees: { line?: string; key?: string; amount_cents: number; waiting?: string }[] }, k: string) => x.fees.filter((f) => (f.key ?? f.line) === k && !f.waiting).reduce((n, f) => n + f.amount_cents, 0);
   ok("C6.12: the /filings view (#283) prices the same as the prepare view: same ages, same split groups", fl.groups?.length === after.groups.length && ["visitor_visa", "biometrics"].every((k) => cents(fl, k) === cents(after, k)) && cents(fl, "biometrics") === 85_00, { filings: fl.groups?.length, prepare: after.groups.length });

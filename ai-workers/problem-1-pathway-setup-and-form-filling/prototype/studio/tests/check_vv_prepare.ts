@@ -74,6 +74,7 @@ ok("C6.12 G15: no date of birth yet waits for it", "waits" in ageCheck(BIO, null
   const of = (s: string, k: string) => items.filter((i) => i.subject === s && i.kind === k);
   ok("C7.7 items: the principal has IMM 5257 and IMM 5707, a passport once, and the biometrics step after filing", of("s-0", "form").map((i) => i.key).join() === "IMM 5257,IMM 5707" && of("s-0", "document").length === 1 && of("s-0", "step")[0]?.neededBefore === "after_filing");
   ok("C7.7 items (fail): a form that does not apply and a document-kind line are never items; the child of 10 has no biometrics step", !of("s-2", "form").some((i) => i.key === "IMM 5707") && !items.some((i) => i.key === "Checklist") && of("s-2", "step").length === 0);
+  ok("C7.7 items (review m2): with no date of birth the biometrics step is kept, waiting for it", of("s-3", "step")[0]?.applies === "cannot_tell" && of("s-3", "step")[0]?.missing?.[0] === "person.date_of_birth");
   ok("C7.7 items: a form that cannot be told yet is kept, saying what it waits for; nobody else's filing gets it", of("s-3", "form")[0]?.applies === "cannot_tell" && of("s-3", "form")[0]?.missing?.[0] === "person.date_of_birth" && !items.some((i) => i.subject === "s-1"));
 }
 
@@ -92,6 +93,8 @@ ok("C6.12 G15: no date of birth yet waits for it", "waits" in ageCheck(BIO, null
   ok("C11.6 VV-R10 (fail): Online on IMM 5476 is refused (422) with IRCC's own line", !online.ok && online.status === 422 && /Upload this form along with your online application/.test(online.detail));
   const fax = channelChange("IMM 5257", "FAX", null, R5257, "APR_PORTAL");
   ok("C11.6 (fail): an unknown channel is a 400 naming the four", !fax.ok && fax.status === 400 && /Online, PDF upload, Paper or Not needed/.test(fax.detail));
+  const arr = channelChange("IMM 5257", ["PAPER"], null, R5257, "APR_PORTAL");
+  ok("C11.6 (break m3, fail): a channel sent as a list asks for one channel as text", !arr.ok && arr.status === 400 && /one way to file, as text/.test(arr.detail));
   const paperNoReason = channelChange("IMM 5257", "PAPER", "  ", R5257, "APR_PORTAL");
   ok("C11.6 VV-R02, FQ-3 (fail): Paper through an IRCC account without a reason is a 400 on the reason", !paperNoReason.ok && paperNoReason.status === 400 && paperNoReason.field === "reason" && /accommodation/.test(paperNoReason.detail));
   const paper = channelChange("IMM 5257", "PAPER", "Cannot apply online (Sample)", R5257, "APR_PORTAL");

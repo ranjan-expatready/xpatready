@@ -29,8 +29,11 @@ export class CaseFilings {
     const ages = new Map(people.filter((p) => p.role !== "case").map((p) => [p.subjectId, ageOn(answers.find((a) => a.subjectId === p.subjectId && a.field === "person.date_of_birth" && !a.rowKey && checkValue(s, a.field, a.value, today).length === 0)?.value as string | undefined, today)]));
     const modes = new Map(((s.combination.participants ?? []) as { role: string; filingMode?: CaseFiling["mode"] }[]).filter((p) => p.filingMode).map((p) => [p.role, p.filingMode!]));
     const rows = await this.db.filing.findMany({ where: { caseId: c.id, withdrawnAt: null }, include: { group: { select: { kind: true } } } });
-    const groupOf = new Map(rows.map((f) => [f.subjectId, f.group.kind === "FAMILY" ? FAMILY_GROUP : f.submissionGroupId]));
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...deriveFilings(own!.combinationKey, people, undefined, { ages, modes, groupOf: (x) => groupOf.get(x) ?? FAMILY_GROUP, groupKind: (g) => (g === FAMILY_GROUP ? "family" : "separate") }) };
+    // Review m5: the stored group's own id, as GET …/prepare shows it ("group-family" only before the first prepare read).
+    const groupOf = new Map(rows.map((f) => [f.subjectId, f.submissionGroupId]));
+    const kindOf = new Map(rows.map((f) => [f.submissionGroupId, f.group.kind === "FAMILY" ? "family" as const : "separate" as const]));
+    const family = rows.find((f) => f.group.kind === "FAMILY")?.submissionGroupId ?? FAMILY_GROUP;
+    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...deriveFilings(own!.combinationKey, people, undefined, { ages, modes, groupOf: (x) => groupOf.get(x) ?? family, groupKind: (g) => kindOf.get(g) ?? "family" }) };
   }
 }
 

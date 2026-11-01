@@ -13,7 +13,7 @@ import type { CaseFiling } from "../../contracts/runtime.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
 import { caseView, checkValue, knownOf } from "../../engine/runtime/case.ts";
-import { ageOn, cad, deriveFilings, FAMILY_GROUP } from "../../engine/runtime/filings.ts";
+import { ageOn, cad, deriveFilings, FAMILY_GROUP, feeRule } from "../../engine/runtime/filings.ts";
 import { readiness as formReadiness } from "../../engine/runtime/forms.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, prepareVersion, wantedItems, type FormLine } from "../../engine/runtime/prepare.ts";
 import { render, type Role } from "../../engine/render.ts";
@@ -30,8 +30,10 @@ const parse = <S extends z.ZodType>(schema: S, input: unknown): z.infer<S> => { 
 const stale = (): never => { throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed since you read it", status: 409, detail: "This application's filings or items changed since you read them. Reload, then make your change again." }, HttpStatus.CONFLICT); };
 const refuse = (status: number, field: string, detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/validation", title: status === 422 ? "Not accepted" : "Some details need fixing", status, detail, errors: [{ field, message: detail }] }, status); };
 const Version = z.union([z.string(), z.number()], { error: "Reload: the version you read is missing." });
-const SplitBody = z.object({ filing: z.string({ error: "Choose the filing to split out." }), reason: z.string().trim().max(400).optional(), version: Version });
-const ChannelBody = z.object({ channel: z.unknown(), reason: z.string().trim().max(400).optional(), version: Version });
+// Break m2: a reason is plain text: no control characters, no hidden direction marks or zero-width characters.
+const Reason = z.string().trim().max(400, "Keep the reason under 400 characters.").refine((x) => !/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(x), "Write the reason as plain text: it holds a hidden or control character.").optional();
+const SplitBody = z.object({ filing: z.string({ error: "Choose the filing to split out." }), reason: Reason, version: Version });
+const ChannelBody = z.object({ channel: z.unknown(), reason: Reason, version: Version });
 const DOB = "person.date_of_birth";
 
 type Item = Awaited<ReturnType<Db["filingItem"]["findMany"]>>[number];
@@ -66,10 +68,8 @@ export class CasePrepare {
     const r = render(s, people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies })), known, { today });
     const list = caseChecklist(s, own!.combinationKey, people, known, today);
     const docs = new Map(list.derived ? list.people.map((p) => [p.subject, p.lines]) : []);
-    const bio = first.groups[0]?.totals.find((t) => t.line === "biometrics");
     const filers = first.filings.map((f) => f.applicants[0].subject);
-    const bioRule = bio ? { key: "biometrics", label: bio.label, perPersonCents: bio.per_person_cents, familyMaxCents: bio.family_max_cents, familyFrom: bio.family_from, source: bio.source, exempt: { underAge: 14, overAge: 79, source: bio.source } } : undefined;
-    const wanted = wantedItems(filers, r.forms as never, docs as never, bioRule, ages);
+    const wanted = wantedItems(filers, r.forms as never, docs as never, feeRule(own!.combinationKey, "biometrics"), ages);
 
     const stored = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
@@ -127,19 +127,21 @@ export class CasePrepare {
           state: waits ? "cannot_start" : "to_do", reason: waits ? `Cannot start yet: waits for ${(w?.missing ?? []).length || "an"} answer${(w?.missing ?? []).length === 1 ? "" : "s"} that decide${(w?.missing ?? []).length === 1 ? "s" : ""} whether it applies.` : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
       }
       if (i.kind === "document") return { ...base, document_type: w?.document_type ?? i.itemKey, label: w?.label ?? i.itemKey, state: "to_do", reason: "Not requested yet (the checklist, C6.4)." };
-      return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: BIOMETRICS_STEP.after };
+      return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? "Waits for the date of birth: no biometrics under 14 or over 79 (VV-R15)." : BIOMETRICS_STEP.after };
     });
     // Stage 1 (C7.7): the facts each filing's forms still wait for, counted before any item.
     const stage1 = filings.map((f) => { const mine = items.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReadiness(view, i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
     // C7.6 (M3-A3) fills this from engine/runtime/readiness.ts; until then each filing is not ready and says why.
     const readiness = filings.map((f) => ({ filing: f.id, ready: false, blocks: [] as { code: string; item?: string; words: string }[], warns: [] as { code: string; item?: string; words: string }[], built: false, why: "Ready to file is worked out by C7.6 (not built yet)." }));
-    const version = prepareVersion(groups, stored.items);
+    const version = await storedVersion(this.db, c.id);
     const peopleView = people.filter((p) => p.role !== "case").map((p) => { const f = filings.find((x) => x.applicants[0].subject === p.subjectId); const nf = done.not_filing.find((x) => x.subject === p.subjectId); return { subject: p.subjectId, label: p.label, role: p.role, applies: p.applies, age: ages.get(p.subjectId) ?? null, filing: f?.id ?? null, why: nf?.why ?? null }; });
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed through ${own!.portalKey === "APR_PORTAL" ? "APR Portal" : own!.portalKey}: set by the combination, not on the case` : null,
       people: peopleView, filings, groups, items, fees, stage1, readiness, currency: done.currency, basis: done.basis, version };
   }
 
-  /** C6.12 (BR-16): split one filing out of a group, with a reason (the family maximum it loses is said first). */
+  /** C6.12 (BR-16): split one filing out of a group, with a reason (the family maximum it loses is said first). The
+   *  version, the group's size and the filing's place are all checked under the case's row lock (review M1, break M1):
+   *  two splits from one read never both pass, so a family group is never emptied. */
   async split(actor: Actor, groupId: string, body: unknown) {
     const g = await this.db.submissionGroup.findUnique({ where: { id: idOf(groupId, "submission group") } });
     if (!g) fail("No such submission group.", HttpStatus.NOT_FOUND);
@@ -147,21 +149,27 @@ export class CasePrepare {
     const b = parse(SplitBody, body);
     const now = await this.build(actor, c);
     const group = now.groups.find((x) => x.id === g!.id);
-    if (!b.reason) refuse(400, "reason", `Give a reason to split this filing out: it is then priced on its own, and the family maximum (${(group?.totals ?? []).filter((t) => t.cap_applied || t.people >= t.family_from).map((t) => `${t.label} ${cad(t.family_max_cents)}`).join(", ") || "visitor visa CAD 500 for 5 or more, biometrics CAD 170 for 2 or more"}) no longer covers it.`);
-    if (String(b.version) !== now.version) stale();
-    if (!group || !group.filings.includes(b.filing)) refuse(409, "filing", "That filing is not in this submission group (it may have been split out already). Reload.");
-    if (group!.filings.length < 2) refuse(409, "filing", "A group of one has nothing to split.");
+    if (!b.reason) {
+      const rules = ["visitor_visa", "biometrics"].map((k) => feeRule(now.combination ?? "", k)).filter((x) => !!x);
+      refuse(400, "reason", `Give a reason to split this filing out: it is then priced on its own, and the family maximum (${rules.map((r) => `${r!.label} ${cad(r!.familyMaxCents)} for ${r!.familyFrom} or more`).join(", ")}) of ${group ? "this group" : "the family"} no longer covers it.`);
+    }
     const moved = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
-      const f = await tx.filing.findFirst({ where: { id: b.filing, submissionGroupId: g!.id, withdrawnAt: null } });
-      if (!f) return null;
+      if (String(b.version) !== await storedVersion(tx, c.id)) return "stale" as const;
+      const members = await tx.filing.findMany({ where: { submissionGroupId: g!.id, withdrawnAt: null }, select: { id: true, subjectId: true } });
+      const f = members.find((x) => x.id === b.filing);
+      if (!f) return "not_in_group" as const;
+      if (members.length < 2) return "alone" as const;
       const own = await tx.submissionGroup.create({ data: { workspaceId: c.workspaceId, caseId: c.id, kind: "SEPARATE", reason: b.reason!, createdBy: actor.id } });
       await tx.filing.update({ where: { id: f.id }, data: { submissionGroupId: own.id } });
-      return { filing: f, group: own };
+      return f;
     });
-    if (!moved) stale();
-    const who = c.participants.find((p) => p.subjectId === moved!.filing.subjectId);
-    await this.audit.log(c.workspaceId, actor.id, "split", "submission group", g!.id, `${actor.name} split the ${ROLE[who?.role ?? ""] ?? "person"}'s filing out of the family submission group on case ${short(c.id)}: ${b.reason}`);
+    if (moved === "stale") stale();
+    if (moved === "not_in_group") refuse(409, "filing", "That filing is not in this submission group (it may have been split out already). Reload.");
+    if (moved === "alone") refuse(409, "filing", "A group of one has nothing to split.");
+    const who = c.participants.find((p) => p.subjectId === (moved as { subjectId: string }).subjectId);
+    // Review M2, break B1: the reason stays on the group row; the audit line says only that one was given.
+    await this.audit.log(c.workspaceId, actor.id, "split", "submission group", g!.id, `${actor.name} split the ${ROLE[who?.role ?? ""] ?? "person"}'s filing out of the family submission group on case ${short(c.id)} (reason given)`);
     return this.build(actor, await this.r.reach(actor, c.id, "officer"));
   }
 
@@ -179,7 +187,8 @@ export class CasePrepare {
     return this.forms.generate(actor, c.id, item!.itemKey, item!.subjectId, typeof b.idempotencyKey === "string" ? { idempotencyKey: b.idempotencyKey } : {});
   }
 
-  /** C11.6: a form item's channel, inside what IRCC accepts for it on the combination's IRCC account. */
+  /** C11.6: a form item's channel, inside what IRCC accepts for it on the combination's IRCC account. The same channel
+   *  again changes nothing (break m1); the version is checked under the case's row lock. */
   async channel(actor: Actor, itemId: string, body: unknown) {
     const item = await this.db.filingItem.findUnique({ where: { id: idOf(itemId, "item") } });
     if (!item) fail("No such item.", HttpStatus.NOT_FOUND);
@@ -191,17 +200,38 @@ export class CasePrepare {
     const ok = channelChange(item!.itemKey, b.channel, b.reason, accepts.get(item!.itemKey), portal);
     if (!ok.ok) refuse(ok.status, ok.field, ok.detail);
     const now = await this.build(actor, c);
-    if (String(b.version) !== now.version) stale();
-    const before = now.items.find((i) => i.id === item!.id) as { channel?: string } | undefined;
+    const before = (now.items.find((i) => i.id === item!.id) as { channel?: keyof typeof CHANNEL_WORDS } | undefined)?.channel ?? "PDF_UPLOAD";
     const to = (ok as { channel: keyof typeof CHANNEL_WORDS }).channel;
-    const done = await this.db.filingItem.updateMany({ where: { id: item!.id, version: item!.version }, data: { channel: to, channelReason: b.reason || null, channelBy: actor.id, channelAt: new Date(), version: item!.version + 1 } });
-    if (!done.count) stale();
-    const who = c.participants.find((p) => p.subjectId === item!.subjectId);
-    // RT-17: the audit line names the form, the person's role and the case, never a client value.
-    await this.audit.log(c.workspaceId, actor.id, "changed", "item", item!.id, `${actor.name} changed how ${item!.itemKey} is filed for the ${ROLE[who?.role ?? ""] ?? "person"} on case ${short(c.id)}: from ${CHANNEL_WORDS[(before?.channel ?? "PDF_UPLOAD") as keyof typeof CHANNEL_WORDS]} to ${CHANNEL_WORDS[to]}${b.reason ? ` (reason given)` : ""}`, { from: before?.channel ?? null, to, reason: b.reason ?? null });
-    const after = await this.build(actor, await this.r.reach(actor, c.id, "officer"));
-    return { item: after.items.find((i) => i.id === item!.id), version: after.version };
+    const result = await this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      if (String(b.version) !== await storedVersion(tx, c.id)) return "stale" as const;
+      const row = await tx.filingItem.findUnique({ where: { id: item!.id } });
+      if (!row || row.removedAt) return "stale" as const;
+      if ((row.channel ?? before) === to) return "same" as const;
+      await tx.filingItem.update({ where: { id: row.id }, data: { channel: to, channelReason: b.reason || null, channelBy: actor.id, channelAt: new Date(), version: row.version + 1 } });
+      return "changed" as const;
+    });
+    if (result === "stale") stale();
+    if (result === "changed") {
+      const who = c.participants.find((p) => p.subjectId === item!.subjectId);
+      // RT-17, review M2, break B1: the form, the person's role and the case; the reason stays on the item row only.
+      await this.audit.log(c.workspaceId, actor.id, "changed", "item", item!.id, `${actor.name} changed how ${item!.itemKey} is filed for the ${ROLE[who?.role ?? ""] ?? "person"} on case ${short(c.id)}: from ${CHANNEL_WORDS[before]} to ${CHANNEL_WORDS[to]}${b.reason ? " (reason given)" : ""}`, { from: before, to, reason_given: !!b.reason });
+    }
+    const after = result === "same" ? now : await this.build(actor, await this.r.reach(actor, c.id, "officer"));
+    return { item: after.items.find((i) => i.id === item!.id), version: after.version, changed: result === "changed" };
   }
+}
+
+type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
+/** The view's version from the stored rows (the groups holding a current filing, and the current items), so a write
+ *  checks it under the case's row lock exactly as the view computed it. */
+async function storedVersion(tx: Tx | Db, caseId: string) {
+  const [filings, items] = await Promise.all([
+    tx.filing.findMany({ where: { caseId, withdrawnAt: null }, select: { id: true, submissionGroupId: true } }),
+    tx.filingItem.findMany({ where: { caseId, removedAt: null }, select: { id: true, channel: true, version: true } }),
+  ]);
+  const groups = [...new Set(filings.map((f) => f.submissionGroupId))].map((id) => ({ id, filings: filings.filter((f) => f.submissionGroupId === id).map((f) => f.id) }));
+  return prepareVersion(groups, items);
 }
 
 @CaseRead()

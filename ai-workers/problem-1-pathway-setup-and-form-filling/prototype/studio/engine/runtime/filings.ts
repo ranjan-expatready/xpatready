@@ -47,6 +47,9 @@ const RULES = new Map<string, Rules>([
   }],
 ]);
 
+/** The fee rule of a combination by its key (biometrics: its ages, VV-R15), for the items and words that need it. */
+export const feeRule = (combinationKey: string, key: string): FeeRule | undefined => RULES.get(combinationKey)?.fees.find((f) => f.key === key);
+
 export const cad = (cents: number) => `CAD ${(cents / 100).toFixed(cents % 100 ? 2 : 0)}`;
 /** Whole years between a date of birth (YYYY-MM-DD) and today; null without one. */
 export function ageOn(dob: string | null | undefined, today: Date): number | null {
