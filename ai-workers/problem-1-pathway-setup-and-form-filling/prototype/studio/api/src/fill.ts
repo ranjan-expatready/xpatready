@@ -45,7 +45,7 @@ export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, fo
   const boxes = cov.boxes.map((r: any) => {
     const person = byAPerson(inv.fields, box.get(r.box) ?? { data_path: r.box });
     if (person) return { ...r, result: "by a person", why: person };
-    if (r.coverage !== "confirmed fact") return { ...r, result: "not written", why: r.coverage === "answered on screen" ? "answered on screen, not confirmed" : r.detail };
+    if (r.coverage !== "confirmed fact") return { ...r, result: "not written", why: r.fix ?? (r.coverage === "answered on screen" ? "answered on screen, not confirmed" : r.detail) };
     // A form field on an answer list takes its own code from its option map (the team's ENUM map, onMissing REFUSE).
     const e = entryOf.get(r.box), list = e?.fact ? listOf.get(e.fact) : undefined;
     if (e?.option_map && list) { const code = codeForValue(r.value, e.option_map, list); if (code === null) return { ...r, result: "by hand", why: `"${r.value}" has no code in this form field's option map` }; write(r.box, code); return { ...r, result: "written", written: values[r.box] }; }

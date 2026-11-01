@@ -6,6 +6,7 @@
 // official originals, fixtures, AI run records, the spend ledger and review evidence, which it fingerprints before
 // and after so "unchanged" is checked, not asserted.
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -87,7 +88,8 @@ export class Demo {
   private loading = false;
 
   private async loadSteps(actor: Actor, workspaceId: string, t0: number, log: string[]) {
-    const config = JSON.parse(readFileSync(join(RELEASE, "configuration.json"), "utf8"));
+    // The reviewed release as engine/import.ts reads it; the sample loader itself reads only its document lines (QA-115).
+    const config = JSON.parse(readFileSync(join(RELEASE, "configuration.json"), "utf8")) as Record<string, unknown> & { document_requirements: { document_type: string }[] };
     const rel = JSON.parse(readFileSync(join(RELEASE, "release.json"), "utf8"));
     const sample = JSON.parse(readFileSync(SAMPLES, "utf8")) as SampleFile;
     let rows = 0, nodes = 0;
@@ -107,9 +109,9 @@ export class Demo {
       // QA-115 (Lead, 30 Oct): a sub-category lists only the document lines that can apply to it; the sample names each
       // line it leaves out of the release, with why. A name that matches no line stops the load (never a silent miss).
       const drop = c.drop_documents ?? [];
-      const missed = drop.filter((x) => !config.document_requirements.some((d: any) => d.document_type === x.document_type));
+      const missed = drop.filter((x) => !config.document_requirements.some((d) => d.document_type === x.document_type));
       if (missed.length) throw new Error(`Sample ${c.key}: no release line named ${missed.map((x) => `"${x.document_type}"`).join(", ")}`);
-      const cfg = drop.length ? { ...config, document_requirements: config.document_requirements.filter((d: any) => !drop.some((x) => x.document_type === d.document_type)) } : config;
+      const cfg = drop.length ? { ...config, document_requirements: config.document_requirements.filter((d) => !drop.some((x) => x.document_type === d.document_type)) } : config;
       const counts = await importConfiguration(this.db, workspaceId, comp.id, cfg, { by: actor.id, releaseLabel: "the reviewed work-permit release", releaseSha: rel.configuration_sha256 });
       if (drop.length) log.push(`  ${path}: left out ${drop.length} document lines that cannot apply here (${drop.map((x) => x.why).join("; ")})`);
       const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, comp.id, "published");
@@ -139,7 +141,7 @@ export class Demo {
     await this.db.programDef.updateMany({ where: { workspaceId }, data: { createdBy: SAMPLE_CREATOR } });
     const fam = sampleFamilyFacts();
     const prof = await this.db.sampleProfile.create({ data: { workspaceId, profileKey: "client-a-family", label: "Client A family (existing sample record, made-up)", basis: "expected/p5-case-c1.json: made-up family prepared by the Lead; confirmed facts for previews and the PDF proof; never an AI result, never sent to a model", people: fam.people } });
-    await this.db.sampleFact.createMany({ data: fam.facts.map((f) => ({ workspaceId, profileId: prof.id, personId: f.personId, canonicalFieldKey: f.key, row: f.row, value: f.value as any, status: "confirmed", source: f.source })) });
+    await this.db.sampleFact.createMany({ data: fam.facts.map((f) => ({ workspaceId, profileId: prof.id, personId: f.personId, canonicalFieldKey: f.key, row: f.row, value: f.value as Prisma.InputJsonValue, status: "confirmed", source: f.source })) });
     log.push(`sample profile "${prof.label}": ${fam.facts.length} confirmed facts for ${fam.people.length} people`);
     const filled = await this.finder.fillSample(workspaceId); // S4: canada.ca pages and what IRCC accepts (US$0)
     const guides = await linkSampleGuides(this.db, workspaceId); // S5 slice 3: each guide is a source of its combinations
@@ -201,7 +203,7 @@ export class Demo {
     // The sample family stays: preview test data, never configuration (plan "Technical choices").
     const fam = sampleFamilyFacts();
     const prof = await this.db.sampleProfile.create({ data: { workspaceId, profileKey: "client-a-family", label: "Client A family (existing sample record, made-up)", basis: "expected/p5-case-c1.json: made-up family prepared by the Lead; confirmed facts for previews and the PDF proof; never an AI result, never sent to a model", people: fam.people } });
-    await this.db.sampleFact.createMany({ data: fam.facts.map((f) => ({ workspaceId, profileId: prof.id, personId: f.personId, canonicalFieldKey: f.key, row: f.row, value: f.value as any, status: "confirmed", source: f.source })) });
+    await this.db.sampleFact.createMany({ data: fam.facts.map((f) => ({ workspaceId, profileId: prof.id, personId: f.personId, canonicalFieldKey: f.key, row: f.row, value: f.value as Prisma.InputJsonValue, status: "confirmed", source: f.source })) });
     log.push(`sample profile "${prof.label}": ${fam.facts.length} confirmed facts for ${fam.people.length} people`);
     const filled = await timed("library forms and guides", () => this.finder.fillSample(workspaceId));
     const guides = await linkSampleGuides(this.db, workspaceId);
@@ -388,6 +390,7 @@ export class Demo {
       // Runtime lane (R1): cases, the people on them and their answers (all versions)
       Cases: await t.case.count({ where: ws }), "People on cases": await t.party.count({ where: ws }), "Case answers (all versions) and rows": (await t.clientCanonicalAnswer.count({ where: ws })) + (await t.clientFactRecord.count({ where: ws })),
       "Official pages confirmed": await t.officialPagesRecord.count({ where: ws }), // F2 (forms lane, N8)
+      "Library forms remembered as deleted": await t.libraryFormDeletion.count({ where: ws }), // X5 slice c (forms lane)
       // F1 (forms lane): answer lists and field merges (rows parked by W1-02 on an older database are removed too)
       "Answer lists and merges": (await t.answerList.count({ where: ws })) + (await t.fieldMerge.count({ where: ws })),
       "Library changes and sources approved in the product": (await t.libraryChange.count({ where: ws })) + (await t.approvedSource.count({ where: ws })),
@@ -440,6 +443,8 @@ export class Demo {
       await tx.portalCapture.deleteMany({ where: ws }); await tx.answerList.deleteMany({ where: ws }); await tx.fieldMerge.deleteMany({ where: ws }); // F1 (forms lane)
       await tx.libraryChange.deleteMany({ where: ws }); await tx.approvedSource.deleteMany({ where: ws }); // Screen 02 slice 2
       await tx.officialPagesRecord.deleteMany({ where: ws }); // F2 (forms lane, N8)
+      await tx.libraryFormDeletion.deleteMany({ where: ws }); // X5 slice c (forms lane): remembered library deletions
+      await tx.lineBatch.deleteMany({ where: ws }); // X2b slice (b) (screens lane): one copy or removal across many combinations
       await tx.recaptureTask.deleteMany({ where: ws }); await tx.extensionSession.deleteMany({ where: ws }); await tx.extensionPairing.deleteMany({ where: ws }); // F2 (forms lane, parked by W1-02): the browser extension's tasks, sessions and codes left from before the park; a reset signs every extension out
       await tx.personRole.deleteMany({ where: ws }); // S5 (Lead check L9): person roles have no foreign key to the workspace
       await tx.officialDownload.deleteMany({ where: ws }); await tx.formLineAction.deleteMany({ where: ws }); // S7 (P-108): canada.ca files the finder saved and Forms tab line changes have no foreign key either

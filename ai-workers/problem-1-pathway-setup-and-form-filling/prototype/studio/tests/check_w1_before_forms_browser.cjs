@@ -60,7 +60,11 @@ const MARK = { done: "✓", next: "●", todo: "○", ai: "◐", waiting: "⧗" 
   const who = peopleLine.locator("[data-who-can-be]");
   step("P-147 §3 pass: the people card is folded to one line with Show and edit (moved, not rebuilt)", await who.getAttribute("data-folded") !== null && await who.getByRole("button", { name: "Show and edit" }).count() === 1);
   const words = await who.locator("[data-people-words]").innerText();
-  step("P-161 (2) pass: the folded line says who in the board's plain words, e.g. \"Principal applicant (always)\"", /Principal applicant \(always\)/.test(words) && words.split(" · ").every((w) => /\((always|optional)\)$/.test(w.replace(/^· /, ""))), words);
+  // QA-77 (#171): each person is named as the combination names them (its own label, kept when typed, L7), the same as
+  // the header; the board's plain-words form ("<name> (always)" / "(optional)") is unchanged.
+  const people = ((await api(`/combinations/${sv.combinationId}`)).body.combination.participants ?? []).filter((x) => x.max > 0);
+  const principal = people.find((x) => x.role === "principal");
+  step("P-161 (2) pass: the folded line says who in the board's plain words, each named as the combination names them, e.g. \"<principal> (always)\"", !!principal && words.includes(`${principal.label} (always)`) && words.split(" · ").every((w) => /\((always|optional)\)$/.test(w.replace(/^· /, ""))), { words, principal: principal?.label });
   step("P-161 (2) fail case: no exact counts on the folded line (\"exactly\", \"0 to 1\": they stay in Show and edit)", !/exactly|\d to \d/.test(words), words);
   // #139 review: a role whose most is 0 cannot be in the application, so the folded line leaves it out (not "(optional)").
   const zeroUrl = /\/api\/combinations\/[^/]+\/workspace\?tab=forms/;
@@ -132,7 +136,8 @@ const MARK = { done: "✓", next: "●", todo: "○", ai: "◐", waiting: "⧗" 
   await p.waitForURL(/\/forms/); await p.locator('[data-step="people"][data-focused]').waitFor({ timeout: 8000 }).catch(() => {});
   step("P-161 (2) pass: following it lands on the people line on Forms", await p.locator('[data-step="people"][data-focused]').count() === 1);
   await go(`/c/${sv.combinationId}/overview`);
-  step("P-161 (2) pass: the Overview's people line says Change on Forms (C3 removes it there)", await p.getByRole("link", { name: "Change on Forms" }).count() === 1 && await p.getByRole("link", { name: "Change in Questionnaires" }).count() === 0);
+  await p.locator("[data-setup-strip]").waitFor();
+  step("P-161 (2) pass (X1 C3): the Overview has no people card any more; its strip's people step links to Forms", await p.locator("[data-overview-people]").count() === 0 && await p.getByRole("link", { name: "Change in Questionnaires" }).count() === 0 && /\/forms(\?focus=people%3Acard)?$/.test(await p.locator('[data-step-row="people"] a').first().getAttribute("href")));
 
   // ======================================================== read only, and save from Forms
   await as("user-B"); await go(`/c/${sv.combinationId}/forms`);

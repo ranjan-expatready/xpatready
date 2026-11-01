@@ -18,7 +18,9 @@ export function useFocusItem(done: string[] | undefined) {
   React.useEffect(() => () => clearTimeout(timer.current), []);
   React.useEffect(() => {
     if (!focus || !done) return;
-    const el = document.querySelector<HTMLElement>(`[data-focus="${CSS.escape(focus)}"]`);
+    // X1: an element may also answer a step-level key (data-focus-also, space-separated), e.g. a Not ready item's
+    // "questions_documents:problems" lands on the tab's problems notice.
+    const el = document.querySelector<HTMLElement>(`[data-focus="${CSS.escape(focus)}"], [data-focus-also~="${CSS.escape(focus)}"]`);
     if (!el) return; // not drawn yet: the next render tries again
     setDoneSince(done.includes(focus) ? focus : null);
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

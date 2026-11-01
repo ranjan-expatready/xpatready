@@ -70,3 +70,29 @@ export const AcceptsBody = z.object({
 
 /** POST /library/forms/:code/retire|restore and DELETE /library/forms/:code: the P-116 lifecycle, a second person approves. */
 export const LifecycleReasonBody = z.object({ reason: z.string().trim().min(3, "Say why (3 to 300 characters).").max(300, "Say why (3 to 300 characters).") });
+
+/** C3.12 (P-123, P-32): the Forms list's "Field map" column for a library form's current edition, worked out from its
+ *  field-map rows as a draft reads them (one row per form field, the newest draft over the published one). A guide or
+ *  checklist is read by AI, never filled, so it has no field map; a form with no usable edition has nothing to map yet.
+ *  `proposed`: the AI field-map proposals for that edition still waiting on To review (not yet field-map rows). */
+export type FieldMapKind = "not_filled" | "no_edition" | "none" | "proposed" | "undecided" | "waiting" | "complete";
+export type FieldMapState = { kind: FieldMapKind; decided: number; total: number; words: string; tip: string };
+export function fieldMapState(type: (typeof LIBRARY_TYPES)[number], hasEdition: boolean, rows: readonly { outcome: string; status: string }[], proposed = 0): FieldMapState {
+  const live = rows.filter((r) => r.status !== "RETIRED" && r.status !== "SUPERSEDED");
+  const total = live.length, decided = live.filter((r) => r.outcome !== "unresolved").length, drafts = live.filter((r) => r.status === "DRAFT").length;
+  const say = (kind: FieldMapKind, words: string, tip: string): FieldMapState => ({ kind, decided, total, words, tip });
+  if (type !== "form") return say("not_filled", "No field map", "Guides and checklists are read by AI, never filled: they have no field map.");
+  if (!hasEdition) return say("no_edition", "No edition yet", "The field map is made on a form's current edition: upload or find its PDF first.");
+  const ai = `${proposed} AI proposal${proposed === 1 ? "" : "s"}`;
+  if (!total && proposed) return say("proposed", `AI draft · ${proposed} to review`, `${ai} for this edition's form fields wait on To review; nothing is mapped until a person accepts them.`);
+  if (!total) return say("none", "Not mapped yet", "No form field of this edition is mapped yet: add the form to a combination and map it from its Forms tab.");
+  const of = `${decided} of ${total} form field${total === 1 ? "" : "s"}`;
+  // Review (b6d8b50b) M1: only form fields still in a draft wait on To review; ones carried from an earlier release are
+  // not listed there (review-queue.ts), so the tip says where each kind is decided (job.tsx words).
+  const open = total - decided, onReview = live.filter((r) => r.outcome === "unresolved" && r.status === "DRAFT").length, carried = open - onReview;
+  const many = (n: number, one: string, more: string) => `${n} form field${n === 1 ? ` ${one}` : `s ${more}`}`;
+  const where = [onReview ? `${many(onReview, "waits", "wait")} for a decision on To review.` : "", carried ? `${many(carried, "comes", "come")} from an earlier release, not decided yet: decide ${carried === 1 ? "it" : "them"} when this edition is drafted again (Redo with AI in the form's ⋯ menu on the combination's Forms tab).` : ""].filter(Boolean).join(" ");
+  if (decided < total) return say("undecided", `${of} decided`, `Each form field needs a decision: mapped, not a fact, or filled by hand. ${where}`);
+  if (drafts || proposed) return say("waiting", `${of} · waits for review`, `Every form field has a decision; ${proposed ? `${ai} also wait` : "some are a draft that waits for a second person"} on To review.`);
+  return say("complete", `Complete · ${total} form field${total === 1 ? "" : "s"}`, "Every form field of this edition is mapped or marked not a fact, and approved.");
+}

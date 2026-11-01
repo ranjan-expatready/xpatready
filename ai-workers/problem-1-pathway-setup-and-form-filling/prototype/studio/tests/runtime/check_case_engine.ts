@@ -193,6 +193,23 @@ ok("fail: the representative's facts are never the client's own", !confirmation(
   const twins = [...ppl, { subjectId: "c0", role: "child" as const, label: "Applicant", applies: true }];
   const tw = caseView(S, twins, all, [], "agent", TODAY, [none({ status: "VERIFIED", channel: "confirm_section", actor: "user-O" })]);
   ok("RT-14 pass (break M6): readiness matches the person by id, so another person with the same name never blocks", readiness(tw, "F 1", "p").ready && !readiness(tw, "F 1", "c0").ready);
+  // QA-122 (P-71, P-72): an optional fact (person.phone) answered with a problem would be written wrong, so it blocks
+  // filing and is never written, confirmed or not (it needs a fix either way); left empty, or answered validly and not
+  // confirmed (never written), it does not block.
+  const noneOk = [none({ status: "VERIFIED", channel: "confirm_section", actor: "user-O" })];
+  const badPhone = ans("p", "person.phone", "12", { status: "VERIFIED", channel: "confirm_section" });
+  const optFix = readiness(caseView(S, ppl, [...all, badPhone], [], "agent", TODAY, noneOk), "F 1", "p");
+  ok("C7.6 QA-122 fail: an optional fact confirmed with a problem lists the form as not ready, \"needs a fix\"", !optFix.ready && optFix.missing.length === 1 && optFix.missing[0].fact === "person.phone" && optFix.missing[0].reason === "needs a fix", optFix.missing);
+  const optDeclaredBad = readiness(caseView(S, ppl, [...all, { ...badPhone, status: "DECLARED" as const, channel: "agent_view" }], [], "agent", TODAY, noneOk), "F 1", "p");
+  ok("C7.6 QA-122 fail: an optional fact answered with a problem and not yet confirmed also needs a fix", !optDeclaredBad.ready && optDeclaredBad.missing[0]?.reason === "needs a fix", optDeclaredBad.missing);
+  const goodPhone = ans("p", "person.phone", { country_code: "91", number: "9876543210" }, { status: "VERIFIED", channel: "confirm_section" });
+  const optDeclared = readiness(caseView(S, ppl, [...all, { ...goodPhone, status: "DECLARED" as const, channel: "agent_view" }], [], "agent", TODAY, noneOk), "F 1", "p");
+  const optGood = readiness(caseView(S, ppl, [...all, goodPhone], [], "agent", TODAY, noneOk), "F 1", "p");
+  ok("C7.6 QA-122 pass: an optional fact left empty, answered validly and not confirmed, or confirmed and valid does not block", done.ready && optDeclared.ready && optGood.ready, [optDeclared.missing, optGood.missing]);
+  const covBad = formCoverage(S, ppl, [...all, badPhone], [], "F 1", "p", TODAY)!, covGood = formCoverage(S, ppl, [...all, goodPhone], [], "F 1", "p", TODAY)!;
+  const gBox = covBad.boxes.find((b) => b.box === "g") as { coverage: string; fix?: string } | undefined;
+  ok("C7.6 QA-122 fail: Generate never writes a confirmed value that fails its check: not among the facts, its form field says why", !covBad.facts.some((f) => f.fact === "person.phone") && gBox?.coverage === "answered on screen" && /confirmed with a problem, not written: Enter the country code/.test(gBox?.fix ?? ""), gBox);
+  ok("C7.6 QA-122 pass: a confirmed valid value is written as before", covGood.facts.some((f) => f.box === "g" && f.fact === "person.phone"), covGood.facts.map((f) => f.box));
 }
 // ── PR 7 review D2: ageOn gives no age for a date that is not real or is in the future
 ok("D2 pass: a real past birth date gives the age in whole years (birthday today counts)", ageOn("2015-02-28", TODAY) === 11 && ageOn("2008-10-23", TODAY) === 18 && ageOn("2008-10-24", TODAY) === 17 && ageOn("2024-02-29", TODAY) === 2 && ageOn("2026-10-23", TODAY) === 0);

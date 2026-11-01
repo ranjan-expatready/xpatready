@@ -6,6 +6,7 @@
 // 1024 and 390 px into product/screens/W1-ai-drafting/screenshots/p179/; axe (WCAG 2.2 AA) on the warning.
 //   node studio/tests/check_cost_warning_browser.cjs [port=4456] [name=forms_cw]
 const path = require("node:path"); const fs = require("node:fs"); const os = require("node:os"); const { execFileSync } = require("node:child_process");
+const { stepsBeforeForms } = require("./fixtures/steps-before-forms.cjs");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
 const PORT = Number(process.argv[2] ?? 4456), NAME = process.argv[3] ?? "forms_cw", DB = `xr_studio_${NAME}`;
@@ -41,12 +42,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     sql("update form_field_map set status = 'DRAFT' where form_edition_id = (select id from form_edition where edition_label = 'IMM 5409 (01-2023)')");
     sql(`update source_attachment set status = 'RECOGNISED' where id = '${src}'`);
     await api(`/combinations/${vv}/lines`, { method: "POST", json: { kind: "FORM", formKey: "IMM 5707" } });
+    await stepsBeforeForms(api, vv, "json"); // QA-119: the header shows Map n forms once steps 1 and 2 are done
     const plan = (await api("/ai/plan", { method: "POST", json: { scope: { kind: "combination", ids: [vv] }, mode: "LIVE", draftAgain: true } })).body;
     const worst = plan.cost_check.worst_usd;
     const open = async (start = true) => {
       await p.goto(`${BASE}/`); await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
       await p.goto(`${BASE}/c/${vv}`);
-      await p.locator('[data-next-step="draft_ai"]').click();
+      await p.locator('[data-next-step="map_forms"]').click();
       await p.getByLabel(/Draft again even where/).check();
       if (start) await p.getByRole("button", { name: /^Start \d+ step/ }).click();
     };
@@ -106,9 +108,19 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await row.getByRole("button", { name: "Read form" }).click();
     await row.getByRole("button", { name: "Draft with AI" }).click({ timeout: 30_000 });
     const dd = p.getByRole("dialog", { name: /^Draft the field map of IMM 5409/ });
+    // X8a: follow the page's own ready signals, never a fixed time. First the dialog's saved answers must be in: until then
+    // the dialog may still switch itself to "Use saved AI answer", undoing a Live choice made too early (the cause of the
+    // 30 s time-outs in CI runs 41185122197 and 41231387000). Then choose Live and wait until Start says it is ready.
+    const startBtn = dd.locator("[data-draft-start]");
+    const ready = async (what, attr, value) => {
+      try { await dd.locator(`[data-draft-start][${attr}="${value}"]`).waitFor({ timeout: 90_000 }); }
+      catch { throw new Error(`the field-map dialog never reported ${what} (Start: mode ${await startBtn.getAttribute("data-mode")}, options loaded ${await startBtn.getAttribute("data-options-loaded")}, ready ${await startBtn.getAttribute("data-start-ready")})`); }
+    };
+    await ready("its saved answers loaded", "data-options-loaded", "true");
     await dd.locator('input[type="radio"]').first().check();
+    await ready("Live chosen", "data-mode", "live");
+    await ready("Start ready", "data-start-ready", "true");
     const startLive = dd.getByRole("button", { name: "Start live AI draft" });
-    await p.waitForFunction(() => [...document.querySelectorAll("button")].some((x) => /Start live AI draft/.test(x.textContent ?? "") && !x.disabled), null, { timeout: 30_000 });
     const runsBefore = (await api("/ai/batches")).body.length;
     seed(worst / 2);
     await startLive.click();
@@ -125,7 +137,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     step("C11.8 N6 fail: Escape before the warning is ready there cancels the warning, not the form's dialog", (await warning.count()) === 0 && (await dd.count()) === 1 && (await api("/ai/batches")).body.length === runsBefore);
     // Review n4: the dialog says spend in cents, as Draft setup and the warning do.
     const spentNow = lines().filter((l) => l.type === "reserve").reduce((t, l) => t + l.worst_usd, 0).toFixed(2);
-    step("C11.8 N6 review (10a0e90e) 2: after Start, the dialog's spend figure is read again (the ledger's, as the warning's; before: the figure from when it opened)", (await dd.textContent()).includes(`Spent so far US$${spentNow} of the US$120.00`), `${spentNow} | ${await dd.textContent()}`);
+    // X8a: the figure is read again by a request after Start; wait for it to arrive (it may take a while under load) rather
+    // than read the dialog after a fixed pause.
+    const figure = `Spent so far US$${spentNow} of the US$120.00`;
+    const fresh = await p.waitForFunction((t) => [...document.querySelectorAll('[role="dialog"]')].some((d) => (d.textContent ?? "").includes(t)), figure, { timeout: 60_000 }).then(() => true, () => false);
+    step("C11.8 N6 review (10a0e90e) 2: after Start, the dialog's spend figure is read again (the ledger's, as the warning's; before: the figure from when it opened)", fresh, `${spentNow} | ${await dd.textContent()}`);
     step("C11.8 N6 review n4 + break 3 m2: the form's dialog says spend in cents, names the wave, and what is left before a cap (never 'US$60 left of the experiment cap') (US$x.xx, never US$119.5)", /Spent so far US\$\d+\.\d\d of the US\$120\.00 experiment cap · Wave 1: US\$\d+\.\d\d of US\$60\.00; US\$\d+\.\d\d left before a cap\./.test(await dd.textContent()), await dd.textContent());
     await startLive.click();
     await warning.waitFor();

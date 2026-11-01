@@ -121,6 +121,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const rv = await main();
     step("QA-73: Review and release: no \"SME duty\", no \"Derived\", no \"no tested helper\"", !/SME duty|Derived definition|Derived fields|no tested helper/.test(rv), (rv.match(/SME duty|Derived[^\n]{0,40}|no tested helper/) ?? [])[0]);
     await axe("Review and release"); await p.screenshot({ path: path.join(SHOTS, "review-1440.png"), fullPage: true });
+    // Tech lead 31 Oct (#117 Q1): a disabled primary button is plainly grey on every page, not a half-faded blue.
+    const off = await p.getByRole("button", { name: /Approve and release/ }).evaluate((e) => { const c = getComputedStyle(e); return { off: e.disabled, bg: c.backgroundColor, opacity: c.opacity }; });
+    step("Button: a disabled primary (Approve and release, for the author) is grey at full opacity, not a faded brand blue", off.off && off.opacity === "1" && !/rgb\(8, 98, 197\)/.test(off.bg), JSON.stringify(off));
     // QA-73 and QA-74 retest (X4): on the released combination, each list warning names its form once, and the versions
     // table has no fingerprint column (it is in the version's tip) and dates in the one format.
     await go(`/c/${released}/review`);
@@ -172,6 +175,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     if (href) { await corpCard.getByRole("link", { name: "Restore on Program structure" }).click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(400); }
     step("QA-48: there it is listed (Show retired on), so it can be restored", !!href && (await main()).includes(corp[1]), p.url().replace(BASE, ""));
     sql(`update program_def set retired_at = null, retired_by = null where program_node_key = '${corp[0]}'`);
+
+    // #133 review Major: a Start setup greyed with aria-disabled (a change to it waits for a second person) is grey too.
+    const del = await api("/structure/nodes/individual.visitors.extend_stay", { method: "DELETE", data: { reason: "Check: a greyed Start setup." } });
+    await go("/");
+    const startBtn = p.getByRole("button", { name: "Start setup: Extend stay in Canada" }).first();
+    const sLook = await startBtn.evaluate((e) => { const c = getComputedStyle(e); return { aria: e.getAttribute("aria-disabled"), bg: c.backgroundColor, opacity: c.opacity }; }).catch((e) => ({ error: e.message.split("\n")[0] }));
+    step("Button: a greyed Start setup (a change waits for a second person) is grey at full opacity, not a faded brand blue", del.status < 300 && sLook.aria === "true" && sLook.opacity === "1" && !/rgb\(8, 98, 197\)/.test(sLook.bg ?? "rgb(8, 98, 197)"), JSON.stringify({ del: del.status, ...sLook }));
+    await startBtn.focus(); await p.keyboard.press("Shift+Tab"); await p.keyboard.press("Tab");
+    const sFocus = await p.evaluate(() => { const a = document.activeElement; return { start: !!a?.matches?.("[data-start-setup]"), shadow: getComputedStyle(a).boxShadow }; });
+    step("Button: the greyed Start setup, reached by Tab, shows the 3 px focus ring (WCAG 2.4.7)", sFocus.start && /0px 0px 0px 3px/.test(sFocus.shadow), JSON.stringify(sFocus));
 
     step("no page error", !errs.length, errs.join(" | "));
     const all = [ov, rel, act, ck, sc, dt, rv].join("\n");

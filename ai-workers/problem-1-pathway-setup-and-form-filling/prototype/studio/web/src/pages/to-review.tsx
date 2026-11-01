@@ -63,7 +63,7 @@ export function ToReviewPage() {
           </div>
           <label className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-surface-raised pl-3 pr-1 text-sm">
             <span className="text-text-muted">Kind</span>
-            <select className="bg-transparent pr-1 text-sm font-medium outline-none" value={kind ?? ""} onChange={(e) => set({ kind: e.target.value || null })} aria-label="Kind of item">
+            <select className="bg-transparent pr-1 text-sm font-medium" value={kind ?? ""} onChange={(e) => set({ kind: e.target.value || null })} aria-label="Kind of item">
               <option value="">All</option>
               {(kind && !kinds.includes(kind) ? [...kinds, kind] : kinds).map((k) => <option key={k} value={k}>{KIND_WORDS[k]} ({d?.kinds[k] ?? 0})</option>)}
             </select>

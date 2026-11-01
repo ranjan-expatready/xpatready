@@ -159,7 +159,7 @@ function PersonaSwitch({ actors }: { actors: any[] }) {
   return (
     <label className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface px-2 py-1">
       <span className="hidden whitespace-nowrap text-[11px] text-text-muted lg:inline">Acting as</span>
-      <select className="min-w-0 max-w-[13rem] truncate bg-transparent text-xs font-medium outline-none xl:max-w-[22rem]" value={id} onChange={(e) => { setActor(e.target.value); const a = actors.find((x) => x.id === e.target.value); qc.push({ tone: "info", text: `Now acting as ${a?.name} (simulated): ${a?.role}` }); }} aria-label="Simulated person">
+      <select className="min-w-0 max-w-[13rem] truncate bg-transparent text-xs font-medium xl:max-w-[22rem]" value={id} onChange={(e) => { setActor(e.target.value); const a = actors.find((x) => x.id === e.target.value); qc.push({ tone: "info", text: `Now acting as ${a?.name} (simulated): ${a?.role}` }); }} aria-label="Simulated person">
         {/* QA-80: one name per person in the header; the staff role and duties are in the tip of "Simulated". */}
         {actors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
       </select>
