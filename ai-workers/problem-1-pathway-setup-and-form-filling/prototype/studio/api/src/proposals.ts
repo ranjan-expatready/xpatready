@@ -13,6 +13,7 @@ import { subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts
 import { fail, need, type Actor, type Audit, type Db } from "./core.ts";
 import { keyFor } from "./library-changes.ts";
 import { acceptPqrPick } from "./fact-sources.ts";
+import { LibrarySources } from "./library-sources.ts";
 
 type Tx = Prisma.TransactionClient;
 type Client = Db | Tx;
@@ -80,10 +81,24 @@ const plainIssues = (e: { issues: { path: PropertyKey[]; message: string }[] }) 
 /** The one door: parses each item against contract v2, checks its identity, and writes them together (all or none).
  *  Refused: a malformed item (400), two items of one batch with the same identity, or a new library item that already
  *  exists in the library (409: reuse it instead). A waiting item of another run is caught again at approval. */
+/** C11.13 (P-120 "with where used"): the combinations a library item is used in, in words, for a duplicate refusal.
+ *  The same answer as Library › Where used (LibrarySources.usedIn reads only the database). */
+export async function whereUsedWords(db: Client, workspaceId: string, kind: string, key: string): Promise<string> {
+  const k = (["field", "section", "document_type", "answer_list"] as const).find((x) => x === kind);
+  if (!k) return "";
+  const used = (await new LibrarySources(db as unknown as Db, undefined as never, undefined as never).usedIn(k, workspaceId)).get(key) ?? [];
+  return used.length ? `, used in ${used.slice(0, 5).join(", ")}${used.length > 5 ? ` and ${used.length - 5} more` : ""}` : ", used in no combination yet";
+}
+
 export async function insertProposals(db: Client, workspaceId: string, items: (NewProposal & Work)[]): Promise<string[]> {
   if (!items.length) return [];
   const rows: Prisma.ProposalItemCreateManyInput[] = [];
   const seen = new Set<string>();
+  // C11.13 (P-120: drafted once, reused): a library item drafted "new" for one form edition is the one "new" item; the
+  // same identity drafted for another edition waits as a reuse of it, resolved when the first is accepted. One lock per
+  // workspace inside a transaction, so two editions read at once still make one "new" item.
+  if ("$executeRaw" in db && !("$transaction" in db)) await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`proposal-door:${workspaceId}`}))`;
+  const firstNew = new Map<string, { id: string; edition: string | null }>();
   for (const [n, it] of items.entries()) {
     const { choice, decidedKey, work, ...item } = it;
     const parsed = ProposalItem.safeParse({ ...item, id: randomUUID(), status: "waiting", decision: null });
@@ -96,8 +111,18 @@ export async function insertProposals(db: Client, workspaceId: string, items: (N
     seen.add(one);
     if (x.landsOn === "library" && x.reuse.match === "new") {
       const twin = await sameInLibrary(db, workspaceId, x.payload);
-      if (twin) fail(`Proposal ${n + 1} (${x.kind}) is already in the library as ${twin}: propose reusing it instead.`, HttpStatus.CONFLICT);
+      if (twin) fail(`Proposal ${n + 1} (${x.kind}) is already in the library as ${twin}${await whereUsedWords(db, workspaceId, x.kind, twin)}: propose reusing it instead.`, HttpStatus.CONFLICT);
+      const ident = `${x.kind}|${key}`;
+      const first = firstNew.get(ident) ?? await db.proposalItem.findFirst({ where: { workspaceId, kind: x.kind, identityKey: key, landsOn: "library", status: "waiting", reuse: { path: ["match"], equals: "new" }, NOT: { runId: x.runId } }, select: { id: true, formEdition: true }, orderBy: { createdAt: "asc" } })
+        .then((r) => (r ? { id: r.id, edition: r.formEdition } : null));
+      if (first && first.edition !== x.scope.formEdition) {
+        x.reuse = { match: "reuse", existingKey: null }; x.relatesTo = first.id;
+        if (x.confidence === "ready") x.confidence = "check";
+        x.reason = `Drafted for ${first.edition ?? "another source"} too: this reuses that item once it is accepted (one item per meaning, P-120).${x.reason ? ` ${x.reason}` : ""}`.slice(0, 500);
+      } else if (!firstNew.has(ident)) firstNew.set(ident, { id: x.id, edition: x.scope.formEdition });
     }
+    // C11.13 (BAND_TIPS): an item close to a library item is never Ready: a person reads the near match and its reason.
+    if (x.identity.near.length && x.confidence === "ready") { x.confidence = "check"; x.reason = `Close to ${x.identity.near.slice(0, 3).join(", ")}: ${x.identity.nearReason}`.slice(0, 500); }
     rows.push({ id: x.id, workspaceId, kind: x.kind, runId: x.runId, step: x.step, formEdition: x.scope.formEdition, combinationId: x.scope.combinationId, landsOn: x.landsOn,
       reuse: x.reuse, payload: x.payload as Prisma.InputJsonValue, source: (x.source ?? undefined) as Prisma.InputJsonValue | undefined, rounds: x.rounds as Prisma.InputJsonValue,
       rules: x.rules, agreement: x.agreement, confidence: x.confidence, reason: x.reason, origin: x.origin, identity: x.identity, identityKey: key,
@@ -293,6 +318,11 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
         }
         const reuse = r.reuse as { match: string; existingKey: string | null };
         // P-120: a reuse adds nothing to the library; it records the existing item it uses, if that is still there.
+        if (r.landsOn === "library" && reuse.match === "reuse" && !reuse.existingKey && r.relatesTo) {
+          const first = await tx.proposalItem.findUnique({ where: { id: r.relatesTo }, select: { status: true, decidedKey: true, formEdition: true } });
+          if (!first?.decidedKey || !["accepted", "edited"].includes(first.status)) fail(`"${identityKeyOf(payload, r.identityKey)}" reuses the item drafted for ${first?.formEdition ?? "another source"}: accept that one first, or reject this one.`, HttpStatus.CONFLICT);
+          reuse.existingKey = first!.decidedKey;
+        }
         if (r.landsOn === "library" && reuse.match === "reuse" && d.action === "accept") {
           if (!(await usableInLibrary(tx, workspaceId, r.kind, reuse.existingKey))) fail(`"${identityKeyOf(payload, r.identityKey)}" reuses ${reuse.existingKey ?? "no item"}, which is not in the library (retired, merged or never added): reject this proposal, or edit it into a new item.`, HttpStatus.CONFLICT);
           landedAs = reuse.existingKey; reused = true;
