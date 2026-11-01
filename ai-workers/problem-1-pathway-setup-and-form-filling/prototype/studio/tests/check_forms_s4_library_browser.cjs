@@ -342,6 +342,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // One readable view (the whole list is now some 240 rows): the first screen at 1440 px.
     await p.setViewportSize({ width: 1440, height: 900 }); await p.getByText("Listed by IRCC · no file yet").first().evaluate((e) => e.scrollIntoView({ block: "center" })); await sleep(150);
     await p.screenshot({ path: path.join(SHOTS, "16-filled-from-index-1440.png") });
+    // X5 slice c (review 00007dd0 1, 2): two remembered deletions; the section passes axe (the button's name holds its visible
+    // words, WCAG 2.5.3), List again works by keyboard and focus moves to the next List again, then to the heading.
+    for (const code of ["IMM 0008 SCH4", "IMM 0008 SCH5"]) {
+      const d = await api(`/library/forms/${encodeURIComponent(code)}`, { method: "DELETE", json: { reason: "Not needed in this library" } });
+      await api(`/library/changes/${d.body?.id}/approve`, { method: "POST", json: { note: "Checked: unused" }, actor: "user-B" });
+    }
+    await open(); const sec = p.locator("[data-remembered-deletions]"); await sec.waitFor({ timeout: 15_000 }); await sec.scrollIntoViewIfNeeded();
+    step("X5 slice c pass: the library names the forms deleted from it, each with List again", (await sec.locator("[data-list-again]").count()) === 2 && /Deleted from the library \(2\)/.test((await sec.textContent()) ?? ""));
+    await axe("X5 slice c: deleted forms with List again");
+    await sec.locator('[data-list-again="IMM 0008 SCH4"]').focus(); await p.keyboard.press("Enter");
+    await p.getByText("IMM 0008 SCH4 is listed again").first().waitFor({ timeout: 15_000 });
+    await p.waitForFunction(() => document.activeElement?.getAttribute("data-list-again") === "IMM 0008 SCH5", null, { timeout: 10_000 });
+    step("X5 slice c (review 00007dd0 2) fail: after List again by keyboard, focus is on the next List again (before: the page)", (await p.evaluate(() => document.activeElement?.getAttribute("data-list-again"))) === "IMM 0008 SCH5");
+    await p.keyboard.press("Enter"); await p.getByText("IMM 0008 SCH5 is listed again").first().waitFor({ timeout: 15_000 });
+    await p.waitForFunction(() => !document.querySelector("[data-remembered-deletions]") && document.activeElement?.hasAttribute("data-fill-index"), null, { timeout: 10_000 });
+    step("X5 slice c fail: with the last one listed again the section goes and focus lands on Fill from IRCC's forms list", (await p.locator("[data-remembered-deletions]").count()) === 0 && await p.evaluate(() => document.activeElement?.hasAttribute("data-fill-index")));
     await as("user-B"); await open();
     step("X5 C2.6 fail: a person without the author duty has no Fill from IRCC's forms list", (await p.locator("[data-fill-index]").count()) === 0);
     step("no page errors", errs.length === 0, errs.join(" | "));
