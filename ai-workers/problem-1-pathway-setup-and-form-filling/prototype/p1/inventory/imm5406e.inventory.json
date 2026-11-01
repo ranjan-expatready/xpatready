@@ -1,0 +1,1550 @@
+{
+ "summary": {
+  "file": "official-sources/ircc/forms/imm5406e.pdf",
+  "sha256": "4f544818e48b7355b2b7bb0dc89feed47fdd7e7ce836075b5d3c9489ed315b27",
+  "reason_read": "added through Product Studio",
+  "pdf": {
+   "pages": 1,
+   "needs_rendering": true,
+   "perms": [
+    "/UR3"
+   ],
+   "acroform_fields": 0,
+   "encryption": {
+    "V": 4,
+    "R": 4,
+    "P": -20
+   }
+  },
+  "template_ns": "http://www.xfa.org/schema/xfa-template/3.3/",
+  "fields_total": 62,
+  "entry_fields_bound": 50,
+  "entry_fields_in_shipped_data": 50,
+  "ui_counts": {
+   "textEdit": 33,
+   "button": 10,
+   "dateTimeEdit": 7,
+   "choiceList": 8,
+   "exclGroup": 2,
+   "checkButton": 2
+  },
+  "required_fields": 0,
+  "choice_fields_with_options": 12,
+  "repeat_groups_dynamic": 2,
+  "row_groups_fixed": 3,
+  "barcode_fields": [],
+  "buttons": [
+   {
+    "som": "IMM_5406[0].page1[0].#subform[0].link[0]",
+    "caption": "A child who is under the maximum age and is not married or i",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5406[0].page1[0].#subform[0].link[1]",
+    "caption": "Your native language is the original language that was taugh",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].Relationship[0].link[0]",
+    "caption": "A person who has been living with another person in a conjug",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].Relationship[0].link[1]",
+    "caption": "A person outside Canada who has had a binding relationship w",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].buttons[0].addRow[0]",
+    "caption": "+",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].buttons[0].removeRow[0]",
+    "caption": "-",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].buttons[0].addRow[0]",
+    "caption": "+",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].buttons[0].removeRow[0]",
+    "caption": "-",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5406[0].page1[0].SectionD[0].Privacy[0].link[0]",
+    "caption": "Link to the Office of the Privacy Commissioner of Canada",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5406[0].page1[0].SectionD[0].Privacy[0].link[1]",
+    "caption": "Link to the Office of the Privacy Commissioner of Canada",
+    "scripts": {
+     "click": 1
+    }
+   }
+  ],
+  "scripts_by_activity": {
+   "initialize": 1,
+   "ready": 3,
+   "click": 11,
+   "exit": 2,
+   "change": 1,
+   "script-object": 2
+  },
+  "presence_changing_scripts": 6,
+  "sections": {
+   "page1.SectionA.SectionAinfo": 30,
+   "page1.SectionB.SectionBinfo": 9,
+   "page1.SectionC.SectionCinfo": 9,
+   "page1.SectionD.Signature": 2
+  }
+ },
+ "groups": [
+  {
+   "som": "IMM_5406[0].page1[0]",
+   "data_path": "IMM_5406[0].page1[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0]",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0]",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "occur": {
+    "max": "-1",
+    "initial": "3"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "occur": {
+    "max": "-1",
+    "initial": "3"
+   },
+   "fixed_row": false
+  }
+ ],
+ "presence_scripts": [
+  {
+   "on": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "sets": [
+    "MarriageInPerson->hidden",
+    "MarriageInPerson->visible",
+    "Spouse->hidden",
+    "Spouse->visible"
+   ]
+  },
+  {
+   "on": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "sets": [
+    "MarriageInPerson->hidden",
+    "MarriageInPerson->visible"
+   ]
+  },
+  {
+   "on": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0]",
+   "sets": [
+    "buttons->hidden",
+    "buttons->visible"
+   ]
+  },
+  {
+   "on": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].hideChildren[0]",
+   "sets": [
+    "child->hidden",
+    "child->visible"
+   ]
+  },
+  {
+   "on": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0]",
+   "sets": [
+    "buttons->hidden",
+    "buttons->visible"
+   ]
+  },
+  {
+   "on": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].hideSiblings[0]",
+   "sets": [
+    "sibling->hidden",
+    "sibling->visible"
+   ]
+  }
+ ],
+ "fields": [
+  {
+   "som": "IMM_5406[0].FormNumber[0]",
+   "section": "FormNumber",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "hidden",
+   "heading": null,
+   "in_row": null,
+   "scripts": {
+    "initialize": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].totPage[0]",
+   "section": "totPage",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "hidden",
+   "heading": null,
+   "in_row": null,
+   "scripts": {
+    "ready": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].#subform[0].link[0]",
+   "section": "page1.#subform.link",
+   "kind": "field",
+   "ui": "button",
+   "caption": "A child who is under the maximum age and is not married or in a common law relationship. Generally, to qualify as dependants, children must be under 22 years old and not have a spouse or common-law partner.",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "You (the principal applicant), your spouse, common-law or conjugal partner (if applicable), and all dependent children 1",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].#subform[0].link[1]",
+   "section": "page1.#subform.link",
+   "kind": "field",
+   "ui": "button",
+   "caption": "Your native language is the original language that was taught to you as a child and spoken in your household while growing up. It is also known as your mother tongue or first language.",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "You (the principal applicant), your spouse, common-law or conjugal partner (if applicable), and all dependent children 1",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Family Name",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "APPLICANT",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Given Name(s)",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "APPLICANT",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "Date of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "APPLICANT",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Country or territory of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "APPLICANT",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Present address",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "APPLICANT",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Marital Status",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "Annulled marriage",
+     "Common-law",
+     "Conjugal",
+     "Divorced",
+     "Legally separated",
+     "Married",
+     "Single",
+     "Unknown",
+     "Widowed"
+    ],
+    [
+     "4",
+     "1",
+     "10",
+     "3",
+     "7",
+     "5",
+     "2",
+     "9",
+     "8"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "APPLICANT",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": {
+    "exit": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "E-mail address",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "APPLICANT",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "exclGroup",
+   "ui": "exclGroup",
+   "caption": "",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Applicant[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "YES",
+     "1"
+    ],
+    [
+     "NO",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "I was physically present at the marriage ceremony",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].Relationship[0].link[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "button",
+   "caption": "A person who has been living with another person in a conjugal relationship for at least one year. The term refers to opposite-sex and same-sex relationships.",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].Relationship[0].link[1]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "button",
+   "caption": "A person outside Canada who has had a binding relationship with a sponsor for at least one year but could not live with their partner. The term refers to both opposite-sex and same-sex relationships.",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Family Name",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION A",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Given Name(s)",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION A",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "Date of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION A",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Country or territory of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION A",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Present address",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION A",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Marital Status",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "Annulled marriage",
+     "Common-law",
+     "Conjugal",
+     "Divorced",
+     "Legally separated",
+     "Married",
+     "Single",
+     "Unknown",
+     "Widowed"
+    ],
+    [
+     "4",
+     "1",
+     "10",
+     "3",
+     "7",
+     "5",
+     "2",
+     "9",
+     "8"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION A",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": {
+    "exit": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "E-mail address",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION A",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "exclGroup",
+   "ui": "exclGroup",
+   "caption": "",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Spouse[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "YES",
+     "1"
+    ],
+    [
+     "NO",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "My spouse was physically present at the marriage ceremony",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Family Name",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 1 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Given Name(s)",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 1 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "Date of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 1 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Country or territory of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 1 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Present address",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 1 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Marital Status",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "Annulled marriage",
+     "Common-law",
+     "Divorced",
+     "Legally separated",
+     "Married",
+     "Single",
+     "Unknown",
+     "Widowed"
+    ],
+    [
+     "4",
+     "1",
+     "3",
+     "7",
+     "5",
+     "2",
+     "9",
+     "8"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 1 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "E-mail address",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 1 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Family Name",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 2 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Given Name(s)",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 2 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "Date of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 2 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Country or territory of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 2 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Present address",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 2 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Marital Status",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "Annulled marriage",
+     "Common-law",
+     "Divorced",
+     "Legally separated",
+     "Married",
+     "Single",
+     "Unknown",
+     "Widowed"
+    ],
+    [
+     "4",
+     "1",
+     "3",
+     "7",
+     "5",
+     "2",
+     "9",
+     "8"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 2 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "section": "page1.SectionA.SectionAinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "E-mail address",
+   "data_path": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "PARENT 2 (MOTHER OR FATHER)",
+   "in_row": "IMM_5406[0].page1[0].SectionA[0].SectionAinfo[0].Parent2[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].hideChildren[0]",
+   "section": "page1.SectionB.SectionBinfo",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].hideChildren[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION B -",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].Relationship[0]",
+   "section": "page1.SectionB.SectionBinfo",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Relationship",
+   "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].Relationship[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "Son",
+     "Daughter",
+     "Step-Daughter",
+     "Step-Son",
+     "Adopted Son",
+     "Adopted Daughter"
+    ],
+    [
+     "1",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION B -",
+   "in_row": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "section": "page1.SectionB.SectionBinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Family Name",
+   "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION B -",
+   "in_row": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "section": "page1.SectionB.SectionBinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Given Name(s)",
+   "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION B -",
+   "in_row": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "section": "page1.SectionB.SectionBinfo",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "Date of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION B -",
+   "in_row": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].buttons[0].addRow[0]",
+   "section": "page1.SectionB.SectionBinfo",
+   "kind": "field",
+   "ui": "button",
+   "caption": "+",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION B -",
+   "in_row": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].buttons[0].removeRow[0]",
+   "section": "page1.SectionB.SectionBinfo",
+   "kind": "field",
+   "ui": "button",
+   "caption": "-",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION B -",
+   "in_row": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "section": "page1.SectionB.SectionBinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Country or territory of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION B -",
+   "in_row": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "section": "page1.SectionB.SectionBinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Present address",
+   "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION B -",
+   "in_row": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "section": "page1.SectionB.SectionBinfo",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Marital Status",
+   "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "Annulled marriage",
+     "Common-law",
+     "Divorced",
+     "Legally separated",
+     "Married",
+     "Single",
+     "Unknown",
+     "Widowed"
+    ],
+    [
+     "4",
+     "1",
+     "3",
+     "7",
+     "5",
+     "2",
+     "9",
+     "8"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION B -",
+   "in_row": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "section": "page1.SectionB.SectionBinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "E-mail address",
+   "data_path": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION B -",
+   "in_row": "IMM_5406[0].page1[0].SectionB[0].SectionBinfo[0].Child[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].hideSiblings[0]",
+   "section": "page1.SectionC.SectionCinfo",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].hideSiblings[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION C -",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": {
+    "change": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].Relationship[0]",
+   "section": "page1.SectionC.SectionCinfo",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Relationship",
+   "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].Relationship[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "Brother",
+     "Sister",
+     "Half Brother",
+     "Half Sister",
+     "Step-brother",
+     "Step-sister"
+    ],
+    [
+     "1",
+     "2",
+     "5",
+     "6",
+     "3",
+     "4"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION C -",
+   "in_row": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "section": "page1.SectionC.SectionCinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Family Name",
+   "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].FamilyName[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION C -",
+   "in_row": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "section": "page1.SectionC.SectionCinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Given Name(s)",
+   "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].GivenNames[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION C -",
+   "in_row": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "section": "page1.SectionC.SectionCinfo",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "Date of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[0].Row[0].DOB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION C -",
+   "in_row": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].buttons[0].addRow[0]",
+   "section": "page1.SectionC.SectionCinfo",
+   "kind": "field",
+   "ui": "button",
+   "caption": "+",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION C -",
+   "in_row": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].buttons[0].removeRow[0]",
+   "section": "page1.SectionC.SectionCinfo",
+   "kind": "field",
+   "ui": "button",
+   "caption": "-",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION C -",
+   "in_row": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "section": "page1.SectionC.SectionCinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Country or territory of birth",
+   "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].COB[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION C -",
+   "in_row": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "section": "page1.SectionC.SectionCinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Present address",
+   "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].Address[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION C -",
+   "in_row": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "section": "page1.SectionC.SectionCinfo",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Marital Status",
+   "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].MaritalStatus[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "Annulled marriage",
+     "Common-law",
+     "Divorced",
+     "Legally separated",
+     "Married",
+     "Single",
+     "Unknown",
+     "Widowed"
+    ],
+    [
+     "4",
+     "1",
+     "3",
+     "7",
+     "5",
+     "2",
+     "9",
+     "8"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION C -",
+   "in_row": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "section": "page1.SectionC.SectionCinfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "E-mail address",
+   "data_path": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0].PaddedEntry[0].PersonalData[1].Row[0].Email[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SECTION C -",
+   "in_row": "IMM_5406[0].page1[0].SectionC[0].SectionCinfo[0].Sibling[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionD[0].Signature[0].Signature[0]",
+   "section": "page1.SectionD.Signature",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Signature:",
+   "data_path": "IMM_5406[0].page1[0].SectionD[0].Signature[0].Signature[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "I certify that the information contained on this document is complete, accurate and factual. I also realize that once th",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionD[0].Signature[0].SignedDate[0]",
+   "section": "page1.SectionD.Signature",
+   "kind": "field",
+   "ui": "dateTimeEdit",
+   "caption": "Date (YYYY-MM-DD)",
+   "data_path": "IMM_5406[0].page1[0].SectionD[0].Signature[0].SignedDate[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "I certify that the information contained on this document is complete, accurate and factual. I also realize that once th",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionD[0].Privacy[0].link[0]",
+   "section": "page1.SectionD.Privacy",
+   "kind": "field",
+   "ui": "button",
+   "caption": "Link to the Office of the Privacy Commissioner of Canada",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Personal information provided on this form is collected by Immigration, Refugees, and Citizenship Canada (IRCC) under th",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5406[0].page1[0].SectionD[0].Privacy[0].link[1]",
+   "section": "page1.SectionD.Privacy",
+   "kind": "field",
+   "ui": "button",
+   "caption": "Link to the Office of the Privacy Commissioner of Canada",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Personal information provided on this form is collected by Immigration, Refugees, and Citizenship Canada (IRCC) under th",
+   "in_row": "IMM_5406[0].page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  }
+ ]
+}
