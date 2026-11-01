@@ -77,7 +77,7 @@ function pdf(title, text) {
     // The return strip on To review (opened from the path).
     await wait('[data-return-strip="IMM 5257"]', "the return strip");
     const strip = p.locator("[data-return-strip]");
-    step("C2.12 m1 pass: the return strip names the form, the combination and where the path stands, with Back to the steps", new RegExp(`Setting up IMM 5257 on ${svLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} · Step \\d of 6`).test(await strip.textContent()) && (await strip.locator("[data-back-to-steps]").getAttribute("href")) === `/c/${sv}/forms?setup=IMM%205257&back=1`, await strip.textContent());
+    step("C2.12 m1 pass: the return strip names the form, the combination and where the path stands, with Back to the steps", new RegExp(`Setting up IMM 5257 on ${svLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} · Step \\d of 6`).test(await strip.textContent()) && !/ \d+ open$/.test((await strip.textContent()).replace("Back to the steps", "").trim()) && (await strip.locator("[data-back-to-steps]").getAttribute("href")) === `/c/${sv}/forms?setup=IMM%205257&back=1`, await strip.textContent());
     step("C2.12 no sideways scroll at 390 px with the filter line and the strip", (await sideways()) <= 390);
     await axe("To review for one form, with the return strip"); await shot("10-to-review-one-form");
     // Show every form clears both.
@@ -85,6 +85,22 @@ function pdf(title, text) {
     await p.waitForFunction(() => !new URL(location.href).searchParams.has("form"));
     await wait("tr[data-kind=held_file]", "the held file row");
     step("C2.12 m2 fail: Show every form clears ?form= and ?c=, the strip goes, and every item is back (the held file, the Visitor visa's draft)", !q(p.url()).has("c") && (await p.locator("[data-return-strip]").count()) === 0 && (await p.locator(`tr[data-item="${vvAi.id}"]`).count()) === 1);
+    step("C2.12 review m5 fail: after Show every form, focus is on the page's heading (never the page body)", (await p.evaluate(() => document.activeElement?.tagName)) === "H1", await p.evaluate(() => document.activeElement?.tagName));
+    // Review m1: a row's step link keeps the way back, so the page it opens shows the strip.
+    await p.goto(`${BASE}/review?f=all&form=IMM%205257&c=${sv}`); await wait("tr[data-item] [data-next] a", "a row's step link");
+    const rowHref = await p.locator("tr[data-item] [data-next] a").first().getAttribute("href");
+    step("C2.12 review m1 fail: a row's step link on To review for one form carries ?form=&c= (before: the strip was lost one click later)", q(new URL(rowHref, BASE).href).get("form") === "IMM 5257" && q(new URL(rowHref, BASE).href).get("c") === sv, rowHref);
+    // Review m7: any spelling the library accepts is shown as the library writes it.
+    await p.goto(`${BASE}/review?f=all&form=imm5257&c=${sv}`); await wait('[data-form-filter="IMM 5257"]', "the filter line for imm5257");
+    step("C2.12 review m7 fail: ?form=imm5257 is shown as IMM 5257 on the filter line, as on the strip", /Only IMM 5257/.test(await p.locator("[data-form-filter]").textContent()));
+    // Review m6: a hand-made combination reference never reaches the API path, and never blanks the app.
+    const before = errs.length;
+    await p.goto(`${BASE}/review?f=all&form=IMM%205257&c=${encodeURIComponent("../../review-queue?x=1#")}`); await p.waitForLoadState("networkidle");
+    step("C2.12 review m6 fail: a hand-made ?c= gives no strip, no page error, and the app still shows To review", (await p.locator("[data-return-strip]").count()) === 0 && errs.length === before && (await p.getByRole("heading", { name: "To review" }).count()) === 1, errs.slice(before).join(" | "));
+    // Review m3: a combination reference the studio refuses names the combination, not the form number.
+    await p.goto(`${BASE}/review?form=IMM%205257&c=${"a".repeat(65)}`);
+    await wait("text=This combination reference is not one the studio reads", "the combination refusal");
+    step("C2.12 review m3 fail: a combination reference over 64 characters is refused under its own name, with Show every form", (await p.getByText("This form number is not one the studio reads").count()) === 0 && (await p.getByRole("button", { name: "Show every form" }).count()) >= 1);
     // ?form= without ?c=: every combination, no strip.
     await p.goto(`${BASE}/review?f=all&form=IMM%205257`); await wait('[data-form-filter="IMM 5257"]', "the form filter line");
     await wait(`tr[data-item="${vvAi.id}"]`, "the Visitor visa's row");

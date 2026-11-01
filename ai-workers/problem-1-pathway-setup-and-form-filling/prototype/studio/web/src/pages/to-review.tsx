@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtWhen, Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
+import { normaliseCode } from "../../../contracts/form-library";
+import { withReturn } from "@/pages/workspace/setup-rail";
 
 const VIEWS = [["needs", "Needs you"], ["waiting", "Waiting for others"], ["running", "Running"], ["all", "All"]] as const;
 const KIND_TONE: Record<QueueKind, string> = { proposals: "ai", ai_proposals: "ai", release: "info", library_change: "info", form_fields: "warn", new_edition: "warn", held_file: "warn", merge: "neutral", running: "ai" };
@@ -26,7 +28,12 @@ export function ToReviewPage() {
   const q = sp.get("q") ?? "";
   // C2.12 (concept m2, K1): opened from a form's guided path, the list is that form's items (?form=), on that combination
   // (?c=) as the path counts them; "Show every form" clears both. The API checks the number (400 in words).
-  const form = sp.get("form")?.trim() || null;
+  // Review m7: the number as the library writes it ("imm5257" → "IMM 5257"), as the strip and the API say it.
+  const asked = sp.get("form")?.trim() || null;
+  const form = asked ? (asked.length <= 40 ? normaliseCode(asked) : asked) : null;
+  const heading = React.useRef<HTMLHeadingElement>(null);
+  // Review m5 (WCAG 2.4.3): after "Show every form" the button is gone; focus goes to the page's heading, not the body.
+  const showEvery = () => { set({ form: null, c: null }); requestAnimationFrame(() => heading.current?.focus()); };
   const combo = form ? sp.get("c")?.trim() || null : null;
   const [typed, setTyped] = React.useState(q);
   React.useEffect(() => setTyped(q), [q]);
@@ -43,7 +50,7 @@ export function ToReviewPage() {
     <TipProvider>
       <div className="mx-auto flex max-w-[1240px] flex-col gap-4">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">To review</h1>
+          <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold tracking-tight outline-none">To review</h1>
           <span className="flex-1" />
           <div className="relative w-full sm:w-[22rem]">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-text-muted" aria-hidden />
@@ -56,7 +63,7 @@ export function ToReviewPage() {
         {form ? <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm" data-form-filter={form}>
           <span>Only <b className="font-semibold">{form.length > 40 ? `${form.slice(0, 40)}…` : form}</b>{combo ? " on this combination, and the shared library's items for it" : ", on every combination"}.</span>
           <span className="flex-1" />
-          <Button size="sm" variant="secondary" onClick={() => set({ form: null, c: null })}>Show every form</Button>
+          <Button size="sm" variant="secondary" onClick={showEvery}>Show every form</Button>
         </div> : null}
 
         <div className="flex flex-wrap items-center gap-2">
@@ -82,15 +89,16 @@ export function ToReviewPage() {
 
         {list.isError ? (form && list.error instanceof ApiError && list.error.status === 400
             // C2.12: a form number the studio refuses (too long, empty) is said in its words, with the way out, not "Try again".
-            ? <Notice tone="danger" title="This form number is not one the studio reads" action={<Button size="sm" variant="secondary" onClick={() => set({ form: null, c: null })}>Show every form</Button>}>{list.error.message}</Notice>
+            // Review m3: the title names what was refused (the combination reference or the form number).
+            ? <Notice tone="danger" title={list.error.field("combination") ? "This combination reference is not one the studio reads" : "This form number is not one the studio reads"} action={<Button size="sm" variant="secondary" onClick={showEvery}>Show every form</Button>}>{list.error.message}</Notice>
             : <Notice tone="danger" title="The list could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void list.refetch()}>Try again</Button>}>{(list.error as Error).message} Your decisions so far are saved.</Notice>)
           : list.isLoading || !known ? <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4" aria-busy="true" aria-label="Loading items to review">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}<span className="sr-only" role="status">Loading items to review</span></div>
           : !d!.items.length ? (
-            form && !q && !kind ? <EmptyState title={`Nothing for ${form.length > 40 ? `${form.slice(0, 40)}…` : form} in ${VIEWS.find(([k]) => k === filter)![1]}`} description={`${filter !== "all" && d!.counts.all ? `${d!.counts.all} other item${d!.counts.all === 1 ? "" : "s"} of this form ${d!.counts.all === 1 ? "is" : "are"} under All. ` : ""}Items of other forms are not shown.`} action={<Button variant="secondary" onClick={() => set({ form: null, c: null })}>Show every form</Button>} />
+            form && !q && !kind ? <EmptyState title={`Nothing for ${form.length > 40 ? `${form.slice(0, 40)}…` : form} in ${VIEWS.find(([k]) => k === filter)![1]}`} description={`${filter !== "all" && d!.counts.all ? `${d!.counts.all} other item${d!.counts.all === 1 ? "" : "s"} of this form ${d!.counts.all === 1 ? "is" : "are"} under All. ` : ""}Items of other forms are not shown.`} action={<Button variant="secondary" onClick={showEvery}>Show every form</Button>} />
             : q || kind ? <EmptyState title="Nothing matches" description={`No item ${q ? `matches "${q}"` : ""}${q && kind ? " and " : ""}${kind ? `is a ${KIND_WORDS[kind].toLowerCase()}` : ""} in ${VIEWS.find(([k]) => k === filter)![1]}.`} action={<Button variant="secondary" onClick={() => { setTyped(""); set({ q: null, kind: null, f: "all" }); }}>Show all</Button>} />
               : filter === "needs" ? <EmptyState title="Nothing waits for you" description={`When you add sources to a combination, its AI draft, new editions and approvals appear here.${d!.counts.waiting ? ` ${d!.counts.waiting} item${d!.counts.waiting === 1 ? " waits" : "s wait"} for someone else.` : ""}`} action={<Button asChild variant="secondary"><Link to="/">Open Immigration programs</Link></Button>} />
               : <EmptyState title={filter === "running" ? "No AI work is running" : filter === "waiting" ? "Nothing waits for someone else" : "Nothing to review"} description="Items appear here as sources are added, drafted and submitted." />
-          ) : <Rows items={d!.items} />}
+          ) : <Rows items={d!.items} way={form && combo ? { form, combo } : null} />}
         {d?.items.length ? <p className="text-xs text-text-muted">Oldest first within each group. Each row shows only the step you can take; the studio checks it again when you take it.</p> : null}
         {d ? <p className="sr-only" role="status">{d.items.length} item{d.items.length === 1 ? "" : "s"} shown</p> : null}
       </div>
@@ -98,7 +106,7 @@ export function ToReviewPage() {
   );
 }
 
-function Rows({ items }: { items: QueueItem[] }) {
+function Rows({ items, way }: { items: QueueItem[]; way: { form: string; combo: string } | null }) {
   return (
     // QA-113: at 1024 px the box is about 735 px wide; a 760 px floor scrolled sideways and cut "Item". The columns wrap
     // down to 640 px, and only a narrower window scrolls.
@@ -118,7 +126,7 @@ function Rows({ items }: { items: QueueItem[] }) {
                 <td className="px-4 py-3"><Pill tone={tone}>{word}</Pill>{i.waiting_on ? <p className="mt-1 max-w-[220px] text-xs text-text-muted">{i.waiting_on}</p> : null}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-xs">{i.cost_usd === null ? "—" : `US$${i.cost_usd.toFixed(2)}`}</td>
                 <td className="px-4 py-3" data-next>{!i.next ? <span className="text-xs text-text-muted">No step for you</span>
-                  : i.next.href ? <><Link className="rounded font-semibold text-text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50" to={i.next.href}>{i.next.label}</Link>{i.next.note ? <p className="mt-1 max-w-[220px] text-xs text-text-muted">{i.next.note}</p> : null}</>
+                  : i.next.href ? <><Link className="rounded font-semibold text-text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50" to={way ? withReturn(i.next.href, way.form, way.combo) : i.next.href}>{i.next.label}</Link>{i.next.note ? <p className="mt-1 max-w-[220px] text-xs text-text-muted">{i.next.note}</p> : null}</>
                   : <Tip tip={i.next.note ?? ""}><span tabIndex={0} className="cursor-help font-semibold text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">{i.next.label} <span className="text-xs font-normal">(not built yet)</span></span></Tip>}</td>
               </tr>
             );

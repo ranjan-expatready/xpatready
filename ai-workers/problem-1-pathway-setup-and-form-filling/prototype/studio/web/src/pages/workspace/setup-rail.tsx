@@ -13,7 +13,7 @@ import type { FormProgress, FormStepChip, ProgressState } from "../../../../cont
 
 export const STATE_WORDS: Record<ProgressState, string> = { done: "Done", needs_you: "Your step", waiting_others: "Waiting on someone else", running: "Running", not_started: "Not started" };
 const STATE_TONE: Record<ProgressState, "ok" | "warn" | "ai" | "neutral"> = { done: "ok", needs_you: "warn", waiting_others: "neutral", running: "ai", not_started: "neutral" };
-export const progressPath = (id: string, code: string) => `/combinations/${id}/forms/${encodeURIComponent(code)}/progress`;
+export const progressPath = (id: string, code: string) => `/combinations/${encodeURIComponent(id)}/forms/${encodeURIComponent(code)}/progress`;
 /** Under the ["combination", id] key (review Major 3): every row action that refreshes the combination refreshes the rail. */
 export const progressKey = (id: string, code: string) => ["combination", id, "form-progress", code];
 /** The chip's words: the step's number and short name and where it stands (board: "Step 3 of 6 · Review"). */
@@ -27,7 +27,7 @@ export function withReturn(href: string, form: string, combination: string): str
   return `${path}?${sp.toString()}${hash ? `#${hash}` : ""}`;
 }
 /** Where "Back to the steps" lands: the combination's Forms tab with this form's rail open, focus on its current step. */
-export const backToSteps = (form: string, combination: string) => `/c/${combination}/forms?setup=${encodeURIComponent(form)}&back=1`;
+export const backToSteps = (form: string, combination: string) => `/c/${encodeURIComponent(combination)}/forms?setup=${encodeURIComponent(form)}&back=1`;
 
 const CHIP_TIP = "Worked out from what has been done. You never tick a step. Open it to see each step and what is left.";
 
