@@ -20,6 +20,7 @@ import { AcceptsBody, acceptsWords, AttachBody, fieldMapState, LibraryQuery, Lif
 import { CanadaError, canadaSource, type CanadaSource } from "./canada.ts";
 import { ACTORS, actorOf, Audit, ConfigRead, Db, need, readerOf, Workspace, type Actor } from "./core.ts";
 import { rowActionOf } from "./form-row-action.ts";
+import { fillPublished, publishedOf } from "./edition-published.ts";
 import { Finder } from "./finder.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { addFormLine } from "./form-lines.ts";
@@ -87,6 +88,7 @@ export class FormLibrary {
   async list(query: unknown, actorId?: string) {
     const q = parse(LibraryQuery, query);
     const workspaceId = await this.ws.id();
+    await fillPublished(this.db, workspaceId); // C3.12: editions not read yet, once (then kept); waits at most 3 s
     const [forms, approved, held] = await Promise.all([
       this.db.govFormDef.findMany({ where: { workspaceId }, orderBy: { formKey: "asc" }, include: { editions: { include: { accepts: true } }, usedBy: { orderBy: { version: "desc" }, select: { combinationId: true, status: true, version: true, origin: true, combination: { select: { label: true } } } } } }),
       this.approvedShas(workspaceId),
@@ -127,13 +129,13 @@ export class FormLibrary {
       const month = current ? fileMonth(current) : null;
       const indexNewer = !!current && newerOnIndex(f.indexDateModified, month, current.indexDateSeenCurrent);
       const status = f.retiredAt ? "retired" : needsOk ? "needs_ok" : current?.newerFileSha256 || indexNewer ? "newer_file" : current ? "ready" : "no_file";
-      return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, canada_updated: current?.canadaUpdated ?? null,
+      return { code: f.formKey, title: f.displayName, type: TYPE_OF(f.formKind, f.displayName), edition: current?.editionLabel ?? null, ...(current ? publishedOf(current.published) : { published: null, published_state: "unread" as const }), canada_updated: current?.canadaUpdated ?? null,
         // P-143 (C-3): one record per IRCC account (ANY first); the column says them in words, one line per account.
         ...acceptsRow(current?.accepts ?? [], TYPE_OF(f.formKind, f.displayName) === "form"), accepts_waiting: waitingAccepts.has(f.formKey),
         field_map: fieldMapState(TYPE_OF(f.formKind, f.displayName), !!current, current ? effective(mapsOf.get(current.id) ?? [], (m) => m.dataPath, "draft") : [], current ? proposedOf.get(current.editionLabel) ?? 0 : 0),
         origin: current?.origin ?? (current?.officialFile ? "SAMPLE" : current ? "UPLOADED" : null), downloaded_from: current && approved.downloaded.has(current.sha256!) ? current.sourceUrl : null, checked_at: current?.checkedAt ?? null,
         form_page_url: f.formPageUrl ?? current?.formPageUrl ?? null, fingerprint: current?.sha256 ?? null, attachment_id: current ? atts.find((a) => a.sha256 === current.sha256 && a.kind === "Form")?.id ?? null : null,
-        used_by: using, status, listed_by_ircc: !!f.listedOnIndexAt, newer_on_index: indexNewer && !current?.newerFileSha256, plain: !f.retiredAt && !f.editions.length && !lineCodes.has(f.formKey) && !releasedCodes.has(f.formKey) && !held.some((h) => h.code === f.formKey) && !pendingChange, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", lifecycle_returned: pendingChange?.status === "RETURNED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => e.editionLabel), retired: !!f.retiredAt, pending: pendingChange ?? null };
+        used_by: using, status, listed_by_ircc: !!f.listedOnIndexAt, newer_on_index: indexNewer && !current?.newerFileSha256, plain: !f.retiredAt && !f.editions.length && !lineCodes.has(f.formKey) && !releasedCodes.has(f.formKey) && !held.some((h) => h.code === f.formKey) && !pendingChange, lifecycle_waiting: lifecycle, lifecycle_approved: pendingChange?.status === "APPROVED", lifecycle_returned: pendingChange?.status === "RETURNED", older_editions: editions.filter((e) => e.id !== current?.id).sort((a, b) => compareEditions(b, a)).map((e) => ({ label: e.editionLabel, ...publishedOf(e.published) })), retired: !!f.retiredAt, pending: pendingChange ?? null };
     });
     // P-116 amended (28 Oct): one written action per row, decided by the one guard (formUses); greyed with its reason.
     // An earlier edition says what keeps it ("Kept by Release 2 of Visitor visa and 3 open cases"; P-51, never deleted).
@@ -142,7 +144,7 @@ export class FormLibrary {
     // without formUses' nine queries per row: the list stays fast with IRCC's ~220 listed forms in it.
     const shaped = await Promise.all(rows.map(async ({ older_editions, retired, pending, plain, ...r }) => ({ ...r,
       action: plain ? { kind: "DELETE" as const, why: null, change_id: null } : rowActionOf(retired, await formUses(this.db, workspaceId, r.code), pending, actorId),
-      older_editions: await Promise.all(older_editions.map(async (label) => ({ label, kept_by: await keptBy(this.db, workspaceId, label) }))) })));
+      older_editions: await Promise.all(older_editions.map(async (e) => ({ ...e, kept_by: await keptBy(this.db, workspaceId, e.label) }))) })));
     const term = q.q?.toLowerCase(), termCode = q.q ? normaliseCode(q.q).toLowerCase() : undefined;
     // S5's "Add a form from the library" (for=picker): forms a combination may use now, never retired or still waiting.
     const shown = shaped.filter((r) => (q.for !== "picker" || (r.status !== "retired" && !!r.edition)) && (!q.type || r.type === q.type) && (!q.usedBy || r.used_by.some((u) => u.id === q.usedBy)) && (!q.status || r.status === q.status) && (!term || r.code.toLowerCase().includes(term) || r.code.toLowerCase().includes(termCode!) || r.title.toLowerCase().includes(term)));
