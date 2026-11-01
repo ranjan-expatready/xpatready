@@ -112,7 +112,7 @@ export class ReviewQueueService {
       const what = counts ? `${source}: ${plural(counts.boxes, "form field")}, ${counts.mapped} mapped. ${plural(counts.proposed_fields, "shared field")} proposed: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.` : `${source}: an AI draft to review.`;
       const href = `/c/${j.combinationId}/jobs/${j.id}`;
       const jobForm = formOfFile(a);
-      const base = { id: `job:${j.id}`, kind: "ai_proposals" as const, title: c?.path ?? "A combination", by: nameOf(j.startedBy), at: (j.finishedAt ?? j.startedAt).toISOString(), cost_usd: j.costUsd ?? 0, forms: jobForm ? [jobForm] : [] };
+      const base = { id: `job:${j.id}`, kind: "ai_proposals" as const, title: c?.path ?? "A combination", by: nameOf(j.startedBy), at: (j.finishedAt ?? j.startedAt).toISOString(), cost_usd: j.costUsd ?? 0, forms: jobForm ? [jobForm] : [], combination: j.combinationId ?? null };
       if (n) out.push({ ...base, what: `${what} ${plural(n, "proposal")} still to decide.`, ...(holds(actor, "review") ? { state: "needs" as const, waiting_on: null, next: { label: `Review ${plural(n, "AI proposal")}`, href, note: null } } : { state: "waiting" as const, waiting_on: "A content publisher decides each proposal.", next: null }) });
       else out.push({ ...base, what: `${what} Every proposal is decided.`, ...(holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: "Add the decisions to the draft", href, note: null } } : { state: "waiting" as const, waiting_on: "The configuration author adds the decisions to the draft.", next: null }) });
     }
@@ -128,7 +128,7 @@ export class ReviewQueueService {
     for (const [id, g] of qGroups) {
       const total = g.n.ready + g.n.check + g.n.decide, href = `/review/proposals?group=${encodeURIComponent(id)}`;
       const what = `${plural(total, "proposal")} waiting: ${g.n.ready} ready to accept, ${g.n.check} to check, ${g.n.decide} to decide.`;
-      out.push({ id: `proposals:${id}`, kind: "proposals", title: g.title, by: null, at: g.at.toISOString(), cost_usd: null, what, forms: g.forms,
+      out.push({ id: `proposals:${id}`, kind: "proposals", title: g.title, by: null, at: g.at.toISOString(), cost_usd: null, what, forms: g.forms, combination: id.startsWith("combination:") ? id.slice(12) : null,
         ...(holds(actor, "review") ? { state: "needs" as const, waiting_on: null, next: { label: `Review ${plural(total, "proposal")}`, href, note: null } } : { state: "waiting" as const, waiting_on: "A content publisher decides each proposal.", next: null }) });
     }
 
@@ -143,7 +143,7 @@ export class ReviewQueueService {
       for (const s of open) {
         const c = combo.get(s.combinationId), gate = gates.get(s.combinationId)!, mine = s.submittedBy === actor.id;
         const changes = (s.changeSummary as unknown[]).length, href = `/c/${s.combinationId}/review`;
-        const base = { id: `submission:${s.id}`, kind: "release" as const, title: c?.path ?? "A combination", by: nameOf(s.submittedBy), at: s.submittedAt.toISOString(), cost_usd: null, forms: formsOfCombination(s.combinationId) };
+        const base = { id: `submission:${s.id}`, kind: "release" as const, title: c?.path ?? "A combination", by: nameOf(s.submittedBy), at: s.submittedAt.toISOString(), cost_usd: null, forms: formsOfCombination(s.combinationId), combination: s.combinationId };
         // Review Must 1: the same new-field check as both release routes, so "Release" is never offered on a refusal.
         const unapproved = gate.ok ? await unapprovedAdds(this.db, workspaceId, itemsOf((snaps.get(s.combinationId) as { snapshot: Snapshot }).snapshot)) : [];
         if (unapproved.length) out.push({ ...base, what: `Submitted with ${plural(changes, "change")}. Not ready to release: ${unapprovedWhy(unapproved)}.`, state: "waiting" as const, waiting_on: "Its new shared fields are decided on To review first.", next: null });
@@ -158,7 +158,7 @@ export class ReviewQueueService {
     const names = new Map((merges.length ? await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: merges.flatMap((m) => [m.keepKey, m.mergeKey]) } }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, label: true } }) : []).reverse().map((f) => [f.canonicalFieldKey, f.label ?? f.canonicalFieldKey]));
     for (const m of merges) {
       const mine = m.proposedBy === actor.id, gone = names.get(m.mergeKey) ?? m.mergeKey, keep = names.get(m.keepKey) ?? m.keepKey;
-      out.push({ id: `merge:${m.id}`, kind: "merge", title: `${gone} → ${keep}`, by: nameOf(m.proposedBy), at: m.proposedAt.toISOString(), cost_usd: null, forms: formsOfFields([m.keepKey, m.mergeKey]),
+      out.push({ id: `merge:${m.id}`, kind: "merge", title: `${gone} → ${keep}`, by: nameOf(m.proposedBy), at: m.proposedAt.toISOString(), cost_usd: null, forms: formsOfFields([m.keepKey, m.mergeKey]), combination: null,
         what: `Merge two shared fields: "${gone}" goes away and redirects to "${keep}". Reason: ${m.reason}`,
         ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Approve or reject the merge", href: `/review/merge/${m.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or rejects it." : "A content publisher approves or rejects it.", next: null }) });
     }
@@ -173,7 +173,7 @@ export class ReviewQueueService {
       const n = rows.filter((r) => r.outcome === "unresolved" && r.status === "DRAFT").length;
       if (!n) continue;
       const users = ed.form.usedBy.length;
-      out.push({ id: `form-fields:${ed.id}`, kind: "form_fields", title: ed.editionLabel, by: null, at: (ed.capturedOn ?? new Date(0)).toISOString(), cost_usd: null, forms: [ed.form.formKey],
+      out.push({ id: `form-fields:${ed.id}`, kind: "form_fields", title: ed.editionLabel, by: null, at: (ed.capturedOn ?? new Date(0)).toISOString(), cost_usd: null, forms: [ed.form.formKey], combination: null,
         what: `${plural(n, "form field")} with no decision: map each one, mark it "not a fact", or "filled by hand" with a reason. Until then ${users === 1 ? "the combination that uses this form is" : `the ${plural(users, "combination")} that use this form are`} not released.`,
         ...(holds(actor, "review") ? { state: "needs" as const, waiting_on: null, next: { label: `Decide ${plural(n, "form field")}`, href: `/review/form-fields/${ed.id}`, note: null } } : { state: "waiting" as const, waiting_on: "A content publisher decides each form field.", next: null }) });
     }
@@ -190,20 +190,20 @@ export class ReviewQueueService {
         // Lead 28 Oct (carried should, drift #7): a file whose form code and edition the rules could not read can never be
         // approved (intake cannotApprove), so nobody records its IRCC page: a second person rejects it, as its card says.
         if (!h.code || !h.editionLabel) {
-          out.push({ id: `held:${h.id}`, kind: "held_file", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null, forms: h.code ? [normaliseCode(h.code)] : [],
+          out.push({ id: `held:${h.id}`, kind: "held_file", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null, forms: h.code ? [normaliseCode(h.code)] : [], combination: null,
             what: "Held: the rules could not read its form number and edition, so it cannot be approved and AI was not called. Upload the official PDF from canada.ca instead.",
             ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Reject the copy", href: `/review/held/${h.id}`, note: null } }
               : { state: "waiting" as const, waiting_on: mine ? "A different person rejects it; upload the official PDF from canada.ca instead." : "A content publisher rejects it.", next: null }) });
           continue;
         }
-        out.push({ id: `held:${h.id}`, kind: "held_file", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null, forms: h.code ? [normaliseCode(h.code)] : [],
+        out.push({ id: `held:${h.id}`, kind: "held_file", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null, forms: h.code ? [normaliseCode(h.code)] : [], combination: null,
           what: `Not on the approved source list: not read into the library, attached or sent to AI.${noPage ? " The person who uploaded it records the IRCC page it came from first." : ""}`,
           ...(mine && noPage ? { state: "needs" as const, waiting_on: null, next: { label: "Record the IRCC page", href: `/review/held/${h.id}`, note: null } }
             : noPage ? { state: "waiting" as const, waiting_on: `${nameOf(h.createdBy)} records the IRCC page it came from; then a different person checks it.`, next: null }
             : holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Check the source", href: `/review/held/${h.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You uploaded it; a different person checks the source." : "A content publisher checks the source.", next: null }) });
       } else {
         const older = h.outcome === "older_edition_held";
-        out.push({ id: `held:${h.id}`, kind: "new_edition", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null, forms: h.code ? [normaliseCode(h.code)] : [],
+        out.push({ id: `held:${h.id}`, kind: "new_edition", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null, forms: h.code ? [normaliseCode(h.code)] : [], combination: null,
           what: older ? "An older edition than the one in the library: it is not used unless a person decides otherwise." : "A newer edition of a form in the library: nothing changes until a person reviews its impact and releases it.",
           ...(holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: older ? "See the older edition" : "Review impact", href: older ? where : `/review/edition/${h.id}`, note: null } } : { state: "waiting" as const, waiting_on: "The configuration author reviews it.", next: null }) });
       }
@@ -217,7 +217,7 @@ export class ReviewQueueService {
     for (const [batchId, list] of perBatch) {
       if (list.length < 2) { perBatch.delete(batchId); continue; }
       const mine = list.some((c) => c.proposedBy === actor.id || c.appliedBy === actor.id);
-      out.push({ id: `change-batch:${batchId}`, kind: "library_change", title: `${plural(list.length, "new library item")} from one review decision`, by: nameOf(list[0].proposedBy), at: list[0].proposedAt.toISOString(), cost_usd: null, forms: [...new Set(list.flatMap(formsOfChange))].sort(),
+      out.push({ id: `change-batch:${batchId}`, kind: "library_change", title: `${plural(list.length, "new library item")} from one review decision`, by: nameOf(list[0].proposedBy), at: list[0].proposedAt.toISOString(), cost_usd: null, forms: [...new Set(list.flatMap(formsOfChange))].sort(), combination: null,
         what: `${list.slice(0, 3).map((c) => `"${c.label ?? c.key}"`).join(", ")}${list.length > 3 ? ` and ${list.length - 3} more` : ""}: approve or return them together.`,
         ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: `Approve or return ${plural(list.length, "item")}`, href: `/review/batch/${batchId}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You accepted them; a different person approves or returns them." : "A content publisher approves or returns them.", next: null }) });
     }
@@ -227,7 +227,7 @@ export class ReviewQueueService {
       const acc = c.kind === "form_accepts" ? acceptsView(c) : null; // C11.18: plain words, before → after
       const fil = c.kind === "placement_fills" ? fillsView(c) : null; // C4.9 (runtime lane, P-97)
       const what = fil ? `Who fills it, for every combination: ${fil.before} → ${fil.after} (used by ${fil.uses} combination${fil.uses === 1 ? "" : "s"}; goes out with the next release). Reason: ${fil.reason}` : acc ? `What IRCC accepts for ${acc.form}: ${acc.before} → ${acc.after}. ${acc.quote ? `canada.ca: "${acc.quote}"` : `Reason: ${acc.reason}`}` : `${c.action === "ADD" ? `New ${word}` : `${actionWord(c.action, c.kind)} the ${word}`}${c.reason ? `. Reason: ${c.reason}` : ""}${c.aiVerdict ? ` · Advisory check: ${c.aiVerdict}` : ""}`;
-      const base = { id: `change:${c.id}`, kind: "library_change" as const, title: c.label ?? c.key, by: nameOf(c.proposedBy), at: c.proposedAt.toISOString(), cost_usd: null, forms: formsOfChange(c) };
+      const base = { id: `change:${c.id}`, kind: "library_change" as const, title: c.label ?? c.key, by: nameOf(c.proposedBy), at: c.proposedAt.toISOString(), cost_usd: null, forms: formsOfChange(c), combination: c.kind === "combination" ? c.combinationId ?? c.key : null };
       if (c.status === "RETURNED") out.push({ ...base, what: `${what} · Returned by ${nameOf(c.decidedBy)}: ${c.decisionNote}`, ...(mine || holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: "Correct or withdraw", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: "The person who proposed it, or an author, corrects or withdraws it.", next: null }) });
       else out.push({ ...base, what, ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: c.action === "ADD" ? "Approve or return the new field" : "Approve or return", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or returns it." : "A content publisher approves or returns it.", next: null }) });
     }
@@ -236,7 +236,7 @@ export class ReviewQueueService {
     for (const b of batches) {
       const spent = b.jobs.reduce((s, j) => s + (j.costUsd ?? 0), 0), done = b.jobs.filter((j) => !["QUEUED", "RUNNING"].includes(j.status)).length;
       const batchForms = [...new Set(b.jobs.map((j) => formOfFile(j.attachmentId ? atts.get(j.attachmentId) : undefined)).filter((x): x is string => !!x))].sort();
-      out.push({ id: `batch:${b.id}`, kind: "running", title: b.scopeLabel, by: nameOf(b.startedBy), at: b.startedAt.toISOString(), cost_usd: Math.round(spent * 100) / 100, forms: batchForms,
+      out.push({ id: `batch:${b.id}`, kind: "running", title: b.scopeLabel, by: nameOf(b.startedBy), at: b.startedAt.toISOString(), cost_usd: Math.round(spent * 100) / 100, forms: batchForms, combination: null,
         what: `${b.status === "QUEUED" ? "Queued" : "Running"}: ${done} of ${plural(b.jobs.length, "step")} finished · worst case US$${b.worstCaseUsd.toFixed(2)}.`, state: "running" as const, waiting_on: null, next: { label: "View progress", href: `/ai/${b.id}`, note: null } });
     }
     return out;
