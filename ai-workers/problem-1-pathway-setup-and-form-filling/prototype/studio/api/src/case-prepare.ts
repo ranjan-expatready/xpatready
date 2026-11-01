@@ -22,6 +22,7 @@ import { BIOMETRICS_STEP, channelChange, channelOf, prepareVersion, wantedItems,
 import { render, type Role } from "../../engine/render.ts";
 import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
+import { CaseForms } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 
 type H = string | undefined;
@@ -43,7 +44,7 @@ type Item = Awaited<ReturnType<Db["filingItem"]["findMany"]>>[number];
 
 @Injectable()
 export class CasePrepare {
-  constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(CaseForms) private readonly forms: CaseForms) {}
 
   async view(actor: Actor, caseId: string) {
     const c = await this.r.reach(actor, idOf(caseId, "case"), "officer");
@@ -196,6 +197,20 @@ export class CasePrepare {
     return this.build(actor, await this.r.reach(actor, c.id, "officer"));
   }
 
+  /** C7.7 (P-145): "Download PDF copy" on an Online form item: IRCC's own PDF filled from the same confirmed facts, as a
+   *  queued copy marked "Copy, not for filing" (never an item, never counted, never locked or filed). A PDF upload or
+   *  Paper item has no separate copy: its own PDF is the deliverable. */
+  async pdfCopy(actor: Actor, itemId: string, body: unknown) {
+    const item = await this.db.filingItem.findUnique({ where: { id: idOf(itemId, "item") } });
+    if (!item) fail("No such item.", HttpStatus.NOT_FOUND);
+    const c = await this.r.reach(actor, item!.caseId, "officer");
+    if (item!.kind !== "form" || !item!.active) refuse(422, "item", "Only a form on this application has a PDF copy.");
+    const now = (await this.build(actor, c)).items.find((i) => i.id === item!.id) as { channel?: string } | undefined;
+    if (now?.channel !== "ONLINE") refuse(409, "item", `${item!.itemKey} is filed as ${CHANNEL_WORDS[(now?.channel ?? "PDF_UPLOAD") as keyof typeof CHANNEL_WORDS]}: its own PDF is what is filed, so there is no separate copy. Make its copy from the form.`);
+    const b = (body ?? {}) as { idempotencyKey?: unknown };
+    return this.forms.generate(actor, c.id, item!.itemKey, item!.subjectId, typeof b.idempotencyKey === "string" ? { idempotencyKey: b.idempotencyKey } : {});
+  }
+
   /** C11.6: a form item's channel, inside what IRCC accepts for it on the combination's IRCC account. The same channel
    *  again changes nothing (break m1); the version is checked under the case's row lock. */
   async channel(actor: Actor, itemId: string, body: unknown) {
@@ -251,6 +266,7 @@ export class CasePrepareController {
   @Head("cases/:id/prepare") head() { fail("HEAD is not offered on /prepare: use GET.", HttpStatus.METHOD_NOT_ALLOWED); }
   @Get("cases/:id/prepare") view(@Headers("x-actor") a: H, @Param("id") id: string) { return this.p.view(actorOf(a), id); }
   @Post("groups/:gid/split") @HttpCode(HttpStatus.OK) split(@Headers("x-actor") a: H, @Param("gid") gid: string, @Body() b: unknown) { return this.p.split(actorOf(a), gid, b); }
+  @Post("items/:id/pdf-copy") @HttpCode(HttpStatus.ACCEPTED) pdfCopy(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.p.pdfCopy(actorOf(a), id, b); }
   @Patch("items/:id/channel") channel(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.p.channel(actorOf(a), id, b); }
 }
 
