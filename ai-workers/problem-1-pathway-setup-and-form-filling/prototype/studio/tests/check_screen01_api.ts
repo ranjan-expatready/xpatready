@@ -7,6 +7,8 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { rowCounts } from "../engine/programs.ts";
+import { createRequire } from "node:module";
+const { speed } = createRequire(import.meta.url)("./speed_budget.cjs") as typeof import("./speed_budget.cjs"); // P-184
 
 const PORT = Number(process.argv[2] ?? 4403), DB = process.argv[3] ?? "xr_studio_s01api";
 const OFFICIAL = join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc");
@@ -369,7 +371,7 @@ function pdf(title: string, text: string) {
   r = await call("POST", `/combinations/${minorsId}/lines`, { kind: "FORM", formKey: "IMM 5707" }, "user-C");
   ok("authorisation: the reviewer persona cannot change a combination", r.status === 403);
   const t0 = Date.now(); await call("GET", "/catalogue?pathway=INDIVIDUAL&filter=in_setup"); const ms = Date.now() - t0;
-  ok("performance: a filtered catalogue answers in under 200 ms with the sample data", ms < 200, `${ms} ms`);
+  { const s = speed("performance: a filtered catalogue answers in under 200 ms with the sample data", ms < 200, `${ms} ms`); ok(s.label, s.ok, s.detail); }
 
   // ---------------------------------------------------------------- QA-6, QA-7 names; QA-11 the existing combination
   // S3 (P-125): names are added on Program structure only; the name rules are checked through its endpoint.

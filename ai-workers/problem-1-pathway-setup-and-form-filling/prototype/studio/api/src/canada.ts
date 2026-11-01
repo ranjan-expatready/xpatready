@@ -5,7 +5,7 @@
 // follows at most 3 redirects, gives up after 20 s for a page and 60 s for a PDF, refuses more than 25 MB and checks the
 // body is what was asked for (a PDF starts with %PDF-, a page is text/html). Built-in Node only, no new package.
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { officialUrl } from "../../engine/canada.ts";
 
@@ -109,9 +109,12 @@ export type FixtureIndex = { note: string; recorded_utc: string; items: FixtureI
 export class FixtureCanada implements CanadaSource {
   private readonly root: string;
   private index: FixtureIndex | null = null;
+  private indexMtime = 0;
   constructor(opts: { root?: string } = {}) { this.root = resolve(opts.root ?? OFFICIAL_ROOT); }
+  /** Read again when the index file changes (a test copy re-records one file, #261 m1), else the one read is kept. */
   private items(): FixtureItem[] {
-    this.index ??= JSON.parse(readFileSync(join(this.root, "canada", "index.json"), "utf8")) as FixtureIndex;
+    const file = join(this.root, "canada", "index.json"), m = statSync(file).mtimeMs;
+    if (!this.index || m !== this.indexMtime) { this.index = JSON.parse(readFileSync(file, "utf8")) as FixtureIndex; this.indexMtime = m; }
     return this.index.items;
   }
   async get(url: string, want: "html" | "pdf"): Promise<Fetched> {

@@ -27,7 +27,8 @@ export const SAY = {
   clientNotPlaced: "No question asks it, so the client cannot give it. Add the question first.",
   pqAgent: "Not offered: the case officer enters it.",
   pqNoQuestion: "The prospect needs a question to answer. Add a fallback question first.",
-  order: (section: string) => `The order is set in the library section ${section}. Change it there.`,
+  // C4.1 (P-216): inside a section the library sets the questions' order; the sections move on this tab.
+  order: (section: string) => `Questions keep the library's order inside ${section}. To move the whole section, use Move up or Move down on its header.`,
   retire: "A question line is not retired here. Retire the question in the library.",
   library: "Wording, answer and options are shared by every combination that asks it; a second person approves.",
   atDefault: "Already as the rules say.",
@@ -97,6 +98,8 @@ export function ComesFrom({ f, fallbackless }: { f: FactSourceRow | undefined; f
   return (
     <span className="flex flex-col gap-0.5" data-comes-from={f.source}>
       <span className="inline-flex items-center gap-1">{f.clientOnly ? <Lock className="size-3.5 text-text-muted" aria-label="Always the client" /> : null}{sourceText(f)}{f.proposedBy === "Person" ? <span className="sr-only"> (changed here)</span> : null}</span>
+      {/* QA-114: the row shows the next release's source; an approved library change says it is still coming. */}
+      {f.fills.change?.status === "APPROVED" ? <span className="text-xs text-text-muted" data-fills-coming>From the next release: filled by {FILLS_WORD[f.fills.change.to]} (library change approved)</span> : null}
       {fallbackless ? <span className="inline-flex items-center gap-1 text-xs text-text-warn"><TriangleAlert className="size-3.5" aria-hidden /> No fallback question</span> : null}
       {f.sourceReason ? <span className="text-xs text-text-muted" data-source-reason>Why: {f.sourceReason}</span> : null}
     </span>
@@ -195,10 +198,11 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
             <fieldset className="space-y-1.5" disabled={!editable}>
               <legend className="sr-only">Where the answer comes from</legend>
               {[...docs.map((d) => ({ value: `DOCUMENT:${d.key}`, label: `Document · ${d.name}`, hint: d.key === f.ruleDocument?.key ? `Default by the rules: it is on ${roleLabel}'s checklist and supplies it.` : "Also supplied by it." })),
-                ...(docs.length ? [] : [{ value: "DOCUMENT:", label: "Document", hint: `No document on ${roleLabel}'s checklist supplies it. Add one on Documents.` }]),
+                // QA-112: said once, in the option's reason; the case has no checklist of its own.
+                ...(docs.length ? [] : [{ value: "DOCUMENT:", label: "Document", hint: "" }]),
                 { value: "CLIENT", label: "Client", hint: f.placed ? "Asked in the client questionnaire." : "" },
                 { value: "AGENT", label: "Case officer", hint: f.agentOffered ? "The case officer enters it." : f.clientOnly ? "" : "Not one of the case officer's own details: only with a written reason, reviewed at release." }].map((o) => {
-                const off = o.value === "DOCUMENT:" ? "No document supplies it." : why(o.value);
+                const off = o.value === "DOCUMENT:" ? (role === "case" ? "The case has no documents of its own: the client or the case officer answers it." : `No document on ${roleLabel}'s checklist supplies it. Add one on Documents.`) : why(o.value);
                 return (
                   <label key={o.value} className={cn("flex gap-2 rounded-lg border p-2", choice === o.value ? "border-primary bg-primary/5" : "border-border", off ? "text-text-muted" : "")} data-source-option={o.value}>
                     <input type="radio" name="fact-source" className="mt-1" checked={choice === o.value} disabled={!!off} onChange={() => setChoice(o.value)} aria-describedby={off ? `why-${o.value}` : undefined} />
@@ -213,7 +217,8 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
               </label>
             ) : null}
             {error?.field === "source" || error?.field === "documentTypeKey" || error?.field === "sourceReason" ? <p role="alert" id={error.field === "sourceReason" ? "officer-why-error" : undefined} className="text-text-danger" data-drawer-error>{error.message}</p> : null}
-            <p className="text-xs" data-fallback>{f.placed ? <span className="text-text-ok">✓ Fallback question reachable{section ? ` in ${section}` : ""}: the client is asked if the document is missing or cannot be read.</span> : <span className="text-text-warn">No fallback question: if the document is missing or cannot be read, nobody is asked.</span>}</p>
+            {/* QA-112: a fallback is only for a document that can supply it; with none, there is nothing to fall back from. */}
+            {docs.length ? <p className="text-xs" data-fallback>{f.placed ? <span className="text-text-ok">✓ Fallback question reachable{section ? ` in ${section}` : ""}: the client is asked if the document is missing or cannot be read.</span> : <span className="text-text-warn">No fallback question: if the document is missing or cannot be read, nobody is asked.</span>}</p> : null}
             {f.also.length ? <p className="text-xs text-text-muted" data-also>Also supplied by: {f.also.map((x) => x.name).join(", ")} (information only).</p> : null}
             <p className="rounded-lg bg-surface p-2 text-xs text-text-muted">Changing it here is an override for this combination only, reviewed in this combination's release. The library default stays.</p>
           </section>

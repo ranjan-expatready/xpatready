@@ -138,7 +138,9 @@ async function main() {
   r = refusal("person applies wrong type", await addChild(A.id, "Sample Child T", { applies: "yes" }));
   ok("C6.2 'travelling' given as text is a 400 field error in plain words (not the library's default wording)", r.status === 400 && r.body?.errors?.[0]?.field === "applies" && !ZOD_OR_TECH.test(r.body?.errors?.[0]?.message ?? ""), r.body?.errors);
   r = refusal("person role case", await call("POST", `/runtime/cases/${A.id}/people`, { role: "case", displayName: "The application again" }));
-  ok("C6.2 a second 'application' subject cannot be added as a person (400)", r.status === 400, r.body?.errors);
+  // Drift fixed 1 Nov: the app now checks the role against the release's "who can be in this application" and answers
+  // 422 (a valid request the release does not allow), not a 400 shape error. Its words are QA-135 (the role name "case").
+  ok("C6.2 a second 'application' subject cannot be added as a person (422, nothing stored)", r.status === 422 && !!r.body?.detail, { status: r.status, detail: r.body?.detail });
   r = refusal("person name too long", await addChild(A.id, "N".repeat(121)));
   ok("C6.2 a display name over 120 characters is refused with the limit", r.status === 400 && /120/.test(r.body?.detail), r.body?.detail);
   r = refusal("person name control", await addChild(A.id, "Sample\u001b[31mChild"));

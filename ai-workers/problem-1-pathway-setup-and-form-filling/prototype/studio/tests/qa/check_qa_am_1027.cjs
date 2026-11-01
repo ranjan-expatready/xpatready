@@ -209,7 +209,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     step("C11.1 W1-02: no Extension, capture, pairing or 'Add an online form' anywhere on the menu or the combination page", !/Extension|Add an online form|Pair|Capture/i.test(body.replace(/browser extension \(later wave\)/gi, "")), body.match(/.{30}(Extension|Add an online form|Pair|Capture).{30}/i)?.[0]);
     // An Online line shows the later-wave note (set through the API: the channel choice is not under test).
     await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "ONLINE" });
-    await a.reload(); await a.getByRole("heading", { name: "Visitor visa", level: 1 }).waitFor();
+    // Drift fixed 1 Nov: the later-wave words sit under the line's Filed as on the Forms tab, not on the combination page.
+    await a.goto(`${a.base}/c/${vv}/forms`); await a.locator('tr[data-line="IMM 5707"]').waitFor({ timeout: 15000 }).catch(() => {});
     await a.getByText(/needs the browser extension \(later wave\)/i).first().waitFor({ timeout: 10000 }).catch(() => {});
     step("C11.1 W1-02: a line filed Online says it needs the browser extension (later wave)", /needs the browser extension \(later wave\)/i.test(await text(a)), (await text(a)).match(/.{40}later wave.{40}/i)?.[0]);
     await a.goto(`${a.base}/c/${vv}/preview`); await a.waitForLoadState("networkidle");
@@ -266,7 +267,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     if (ap3.status < 300 && oc.status < 300) {
       await o.goto(`${o.base}/cases/${oc.body.id ?? oc.body.case?.id}`); await o.getByRole("heading", { name: /IMM 5257 for Sample Applicant N/ }).waitFor({ timeout: 15000 }).catch(() => {});
       const casePage = await text(o);
-      step("QA-40 C7.6: a case whose release files IMM 5707 Online still names IMM 5707 and says it is filed Online (later wave)", /IMM 5707/.test(casePage) && /Online|later wave/i.test(casePage.match(/.{0,120}IMM 5707.{0,160}/)?.[0] ?? ""), casePage.match(/.{0,80}IMM 5707.{0,120}/)?.[0] ?? "IMM 5707 not on the case page");
+      step("QA-40 C7.6: a case whose release files IMM 5707 Online still names IMM 5707 and says it is filed Online (later wave)", /IMM 5707 · filed Online \(later wave\)/.test(casePage), casePage.match(/.{0,40}IMM 5707 · filed.{0,120}/)?.[0] ?? casePage.match(/.{0,80}IMM 5707.{0,120}/)?.[0] ?? "IMM 5707 not on the case page"); // drift fixed 1 Nov: the first "IMM 5707" on the page is now the What blocks filing list (P-145 copy); the forms panel heads its own card "IMM 5707 · filed Online (later wave)"
     } else step("QA-40 setup: a release with an Online IMM 5707 line and a case on it", false, `approve ${ap3.status} ${ap3.body?.detail ?? ""} · case ${oc.status} ${oc.body?.detail ?? ""}`);
     await call("PATCH", `/combinations/${vv}/forms/IMM 5707/channel`, { channel: "PDF_UPLOAD" });
 

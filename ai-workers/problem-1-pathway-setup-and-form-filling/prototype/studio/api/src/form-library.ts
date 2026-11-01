@@ -13,7 +13,7 @@ import { manifest } from "../../engine/import.ts";
 import { effective } from "../../engine/snapshot.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { officialUrl, parseFormPage, parseFormsIndex } from "../../engine/canada.ts";
-import { INDEX_URL } from "./finder.ts";
+import { INDEX_URL, libraryType } from "./finder.ts";
 import { fileMonth, libraryRows, newerOnIndex, planIndexFill } from "../../engine/library-index.ts";
 import { ACCOUNT_WORDS, throughAccount } from "../../contracts/forms.ts";
 import { AcceptsBody, acceptsWords, AttachBody, fieldMapState, LibraryQuery, LifecycleReasonBody, LineVersionBody, normaliseCode, UndoBody } from "../../contracts/form-library.ts";
@@ -34,10 +34,8 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
   return r.data;
 }
 const nameOf = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "another person";
-/** Library type. Rows made before S4 say only "document": a filed form when its title says so (IMM 5802, an employer's
- *  offer of employment form; review major 9), otherwise a checklist or instructions, read by AI and never filed (IMM 5881,
- *  IMM 5905; round 2 major 4). */
-const TYPE_OF = (kind: string, title = "") => (kind === "guide" ? "guide" : kind === "checklist" || (kind === "document" && !(/\bform\b/i.test(title) && !/checklist/i.test(title))) ? "checklist" : "form");
+/** Library type: one rule with the finder (finder.ts libraryType). */
+const TYPE_OF = libraryType;
 
 /** P-143 (C-3): a form's records of what IRCC accepts, per IRCC account, for the Form library row (ANY first). A guide
  *  or checklist is read by AI and never filed. */
