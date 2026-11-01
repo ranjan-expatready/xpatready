@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { channelProblems, fingerprintLine, type Accepts } from "./channels.ts";
+import { duplicateValidity, validityProblems } from "./runtime/case-checklist.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
 import { oathMappedProblems } from "./form-steps.ts";
@@ -87,7 +88,15 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     if (d.base_or_conditional === "conditional" && !d.condition) out.push({ level: "error", where: "Documents", item: d.document_type, message: "A conditional requirement needs a condition." });
   }
   for (const r of s.rules) for (const e of checkCondition(r.when, types, derived)) out.push({ level: "error", where: "Rules", item: r.id, message: `Condition ${e}.` });
-  for (const c of s.checks.filter((x) => x.condition && typeof x.condition === "object")) for (const e of checkCondition(c.condition, types, derived)) out.push({ level: "warning", where: "Checks", item: c.id, message: `Condition ${e}; the check is not evaluated.` });
+  for (const c of s.checks.filter((x) => x.condition && typeof x.condition === "object" && x.group !== "document_validity")) for (const e of checkCondition(c.condition, types, derived)) out.push({ level: "warning", where: "Checks", item: c.id, message: `Condition ${e}; the check is not evaluated.` });
+  // C6.4: a document validity rule (engine/runtime/case-checklist.ts) names a document type, whole months, the date it
+  // is measured to and its citation (P-170); one that does not is never used, so the release says why.
+  const docKeys = new Set((s.document_types ?? []).map((t: { key: string }) => t.key));
+  for (const c of s.checks.filter((x) => x.group === "document_validity")) {
+    const why = validityProblems(c, (f) => types.has(f), docKeys);
+    if (why.length) out.push({ level: "warning", where: "Checks", item: c.id, message: `Document validity rule not used: ${why.join("; ")}.` });
+  }
+  for (const k of duplicateValidity(s.checks)) out.push({ level: "warning", where: "Checks", item: k, message: `Two document validity rules name ${k}: neither is used until one is removed.` });
   out.push(...reachability(s, placed, docFacts, derived, (f) => `"${(meaningOf.get(f) ?? (s.derived_fields as { id: string; plain?: string | null }[]).find((d) => d.id === f)?.plain ?? f).trim().replace(/\.$/, "")}"`));
   // Only the derived definitions this combination reads (Lead check item 3): the library holds every definition, and
   // one nobody here uses is not this combination's warning.
