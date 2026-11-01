@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-updated: 2026-11-01 16:35 UTC (Lead close-out at 65% context, founder's ask) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path (P-220) · plan: `design/delivery-plan-2026-11-01.md` · who owns what: `TEAM.md` · lessons: the ops folder
+updated: 2026-11-01 16:35 UTC (Lead close-out at 65% context, founder's ask) · milestone: **M2 — Super Admin configuration**, plus the Visitor visa M3 path (P-220) · plan: `design/delivery-plan-2026-11-01.md` · who owns what: Owners in `BACKLOG.md` · lessons: the ops folder
 
 ## Status at close-out (from `qa/CAPABILITIES.md` on main plus open PRs, 16:30 UTC)
 | | Built, merged, qa-tested (Works) | Built, approved, not merged | In progress (PR open) | Partly built, no open PR | Not built |
