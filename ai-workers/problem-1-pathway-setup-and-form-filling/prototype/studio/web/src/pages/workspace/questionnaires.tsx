@@ -16,6 +16,8 @@ import { Tip } from "@/components/status";
 import { BulkBar, FactDrawer, RowMenu, RowStatus, ComesFrom, PreQual, SAY, SourceChips, SourceStrip, useFactSources, useRefreshSources, useUndoToast, type Filter } from "@/pages/workspace/sources";
 import { Lock } from "lucide-react";
 import { ConfigArea } from "@/pages/configuration";
+import { FOCUS_RING, useFocusItem } from "@/components/focus-item";
+import { PartProblems } from "@/components/part-problems";
 import { cn } from "@/lib/utils";
 
 const TIPS = {
@@ -257,6 +259,8 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
   const [add, setAdd] = React.useState("");
   const [shown, setShown] = React.useState<{ fact: string; q: QuestionnaireQuestion | null; section: string | null } | null>(null);
   const [filter, setFilter] = React.useState<Filter>("all");
+  // X1 (slice C2): a ?focus= link from the setup checklist lands here (questionnaires:gaps, questionnaires:problems).
+  useFocusItem([]);
   const [picked, setPicked] = React.useState<Set<string>>(new Set());
   const [refused, setRefused] = React.useState<BulkSourceResult["refused"]>([]);
   const fs = useFactSources(id);
@@ -284,7 +288,7 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
     </div>
   ) : null;
   if (!q) return (
-    <section className="rounded-xl border border-border bg-surface-raised p-5" data-questions-empty>
+    <section className={cn("rounded-xl border border-border bg-surface-raised p-5", FOCUS_RING)} data-questions-empty data-focus="questionnaires:gaps">
       <h2 className="font-semibold">No questions yet</h2>
       <p className="mt-1 text-sm text-text-muted">The questions each person needs come from the facts their forms read. Add forms on the Forms tab, or a library section here.</p>
       <div className="mt-3">{addSection}</div>
@@ -356,18 +360,19 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
           className={cn("min-h-9 rounded-full border px-3 py-1 text-sm", r.role === q.role ? "border-primary bg-primary/10 font-medium text-text-link" : "border-border bg-surface-raised text-text-muted hover:bg-text/5")}>{r.label} · {r.questions} question{r.questions === 1 ? "" : "s"}{r.gaps ? <span className="ml-1 rounded bg-danger/12 px-1 text-xs text-text-danger">{r.gaps} not asked</span> : null}</button>)}
       </div>
       <SourceChips rows={mine} needs={checks.size} value={filter} onChange={setFilter} />
+      <PartProblems id={id} part="questions" />
       {filter === "pqr" ? <PqrSet id={id} roleLabel={role?.label ?? q.role} n={mine.filter((f) => f.prequalification).length} /> : null}
       {pickedRows.length && canAuthor ? <BulkBar id={id} picked={pickedRows} onClear={() => setPicked(new Set())} onDone={(r, undo) => { setRefused(r.refused); if (r.saved) { setPicked(new Set()); undoToast.show(`${r.what.charAt(0).toUpperCase()}${r.what.slice(1)} on ${r.saved} question${r.saved === 1 ? "" : "s"}`, undo); } }} /> : null}
       {refused.length ? <Notice tone="warn" title={`${refused.length} row${refused.length === 1 ? "" : "s"} not changed`} action={<Button size="sm" variant="ghost" onClick={() => setRefused([])}>Dismiss</Button>}><ul className="mt-1 space-y-0.5" data-bulk-refused>{refused.map((x, i) => <li key={i}>{x.label && !x.message.includes(x.label) ? <><span className="font-medium">{x.label}</span>: </> : null}{x.message}</li>)}</ul></Notice> : null}
       {undoToast.link ? <p className="text-xs text-text-muted" data-undo-note>Last change on this tab{undoToast.link}</p> : null}
       {/* S2-1 (Lead, 29 Oct): the same sources and numbers as the chips and the strip (slice 1's rules), not the older
           placement count (client or case officer). */}
-      <p className="text-sm" data-coverage><span className="font-medium">{role?.label}:</span> {fs.data ? <>the forms need {mine.length} answer{mine.length === 1 ? "" : "s"} for this person · {count("DOCUMENT")} from documents · {count("CLIENT")} asked of the client · {count("AGENT")} entered by the case officer</> : "working out where each answer comes from…"}{q.coverage.gaps.length ? <span className="text-text-danger"> · {q.coverage.gaps.length} asked of nobody</span> : null}</p>
+      <p className={cn("text-sm", FOCUS_RING)} data-coverage data-focus={q.coverage.gaps.length ? undefined : "questionnaires:gaps"}><span className="font-medium">{role?.label}:</span> {fs.data ? <>the forms need {mine.length} answer{mine.length === 1 ? "" : "s"} for this person · {count("DOCUMENT")} from documents · {count("CLIENT")} asked of the client · {count("AGENT")} entered by the case officer</> : "working out where each answer comes from…"}{q.coverage.gaps.length ? <span className="text-text-danger"> · {q.coverage.gaps.length} asked of nobody</span> : null}</p>
       {q.coverage.gaps.length ? (
-        <Notice tone="danger" title={`${q.coverage.gaps.length} answer${q.coverage.gaps.length === 1 ? " is" : "s are"} needed but asked of nobody: release waits for ${q.coverage.gaps.length === 1 ? "it" : "them"}`}>
+        <div className={FOCUS_RING} data-focus="questionnaires:gaps"><Notice tone="danger" title={`${q.coverage.gaps.length} answer${q.coverage.gaps.length === 1 ? " is" : "s are"} needed but asked of nobody: release waits for ${q.coverage.gaps.length === 1 ? "it" : "them"}`}>
           <ul className="mt-1 space-y-0.5" data-gaps>{q.coverage.gaps.slice(0, 8).map((g) => <li key={g.fact}>"{g.meaning}", needed by {g.forms.join(", ")}</li>)}</ul>
           <p className="mt-1">Fix: add the library section that asks it, or have the case officer fill it (set once in the shared library).</p>
-        </Notice>
+        </Notice></div>
       ) : null}
       {q.sections.map((s) => {
         const isOpen = opened.has(s.id) || filter !== "all";
