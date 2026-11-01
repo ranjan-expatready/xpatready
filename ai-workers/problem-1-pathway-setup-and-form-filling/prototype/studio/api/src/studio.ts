@@ -13,7 +13,7 @@ import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedW
 import { recordAction, snapshotLines } from "./form-uses.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../contracts/programs.ts";
-import { FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
+import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 
@@ -554,7 +554,7 @@ export class Studio {
     return row;
   }
 
-  async saveForm(actor: Actor, combinationId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean; baseRevision?: string; minAge?: number | null; signedBy?: string | null }) {
+  async saveForm(actor: Actor, combinationId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean; baseRevision?: string; minAge?: number | null; signedBy?: string | null; copies?: number }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const rows = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: formKey } });
@@ -567,9 +567,15 @@ export class Studio {
     if (b.retire) changes.status = "RETIRED";
     if (b.who) { if (!WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
     // S5: minimum age and who signs (contracts/workspace.ts); field errors as Problem Details.
-    const line = FormLineEdit.safeParse({ minAge: b.minAge, signedBy: b.signedBy });
+    const line = FormLineEdit.safeParse({ minAge: b.minAge, signedBy: b.signedBy, copies: b.copies });
     if (!line.success) throw new HttpException(problemFromZod(line.error), HttpStatus.BAD_REQUEST);
-    for (const k of ["minAge", "signedBy"] as const) if (line.data[k] !== undefined) changes[k] = line.data[k];
+    // C1.8 (review m2): a checklist (document) line is never filed, so it has no copies; the screen does not offer it.
+    if (line.data.copies !== undefined && (await this.db.govFormDef.findUniqueOrThrow({ where: { id: rows[0].govFormDefId }, select: { formKind: true } })).formKind === "document") {
+      const doc = DocumentLineEdit.safeParse({ copies: line.data.copies });
+      if (!doc.success) throw new HttpException(problemFromZod(doc.error), HttpStatus.BAD_REQUEST);
+    }
+    // Break m3: a removal stores no line settings sent with it (they would come back unseen when the form is added again).
+    if (!b.retire) for (const k of ["minAge", "signedBy", "copies"] as const) if (line.data[k] !== undefined) changes[k] = line.data[k];
     // M1: "Only if" in words with no rule yet is allowed (a person turns it into a rule later); release refuses it
     // until it has one (engine/validate.ts), and Preview says "Cannot tell yet: no rule".
     if (b.conditionPlain !== undefined && b.condition === undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") changes.conditionPlain = b.conditionPlain.trim() || null;
