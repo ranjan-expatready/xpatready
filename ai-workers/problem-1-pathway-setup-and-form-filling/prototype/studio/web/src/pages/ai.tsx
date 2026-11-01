@@ -12,7 +12,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { BatchPart } from "../../../contracts/screen02";
 
-const STATUS: Record<string, [string, string]> = { QUEUED: ["neutral", "Queued"], RUNNING: ["ai", "Running"], COMPLETED: ["ok", "Done"], APPLIED: ["ok", "Added to draft"], PARTIAL: ["warn", "Partly done"], FAILED: ["danger", "Failed"], BLOCKED: ["warn", "Blocked"], CANCELLED: ["neutral", "Cancelled"], NEEDS_PERSON: ["warn", "Waiting for you"], WAITING: ["neutral", "Waiting"], SKIPPED: ["neutral", "Skipped"] }; // QA-62: no code on screen
+const STATUS: Record<string, [string, string]> = { QUEUED: ["neutral", "Queued"], RUNNING: ["ai", "Running"], COMPLETED: ["ok", "Done"], APPLIED: ["ok", "Added to draft"], PARTIAL: ["warn", "Partly done"], FAILED: ["danger", "Failed"], BLOCKED: ["warn", "Blocked"], CANCELLED: ["neutral", "Cancelled"], NEEDS_PERSON: ["warn", "Waiting for you"], WAITING: ["neutral", "Waiting"], SKIPPED: ["neutral", "Skipped"], NOT_YET: ["neutral", "Not available yet"] }; // QA-62: no code on screen
 export const BatchStatus = ({ s }: { s: string }) => { const [t, l] = STATUS[s] ?? ["neutral", s]; return <Pill tone={t}>{l}</Pill>; };
 const MODE: Record<string, string> = { LIVE: "Live AI", REPLAY: "Replay of saved runs", STUB: "Stub pass", LOCAL: "No AI (library)", RULES: "Rules only (no AI)", live: "Live AI", replay: "Replay of saved runs", rules: "Rules only (no AI)" };
 const active = (s: string) => s === "QUEUED" || s === "RUNNING";
@@ -50,7 +50,7 @@ export function AiBatchPage() {
   const d = b.data;
   // S4 slice 2: the form finder and Upload PDF are shown with the shared run card (their steps are not field-map steps).
   // QA-80: the same breadcrumb, heading and left edge as every other page.
-  if (d.operation === "find_forms" || d.operation === "upload_form") return (
+  if (d.operation === "find_forms" || d.operation === "upload_form" || d.operation === "draft_questions_documents") return (
     <div className="mx-auto max-w-6xl space-y-5">
       <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/ai" className="hover:underline">AI work</Link><ChevronRight className="size-3" /><span>{d.scopeLabel}</span></nav>
       <h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {d.operation_label}</h1>
