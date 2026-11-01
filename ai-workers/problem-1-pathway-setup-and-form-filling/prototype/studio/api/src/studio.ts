@@ -287,6 +287,12 @@ export class Studio {
   async updateCombination(actor: Actor, id: string, b: { label?: string; description?: string; participants?: any[]; expectedLabel?: string; allowedLocations?: string[] }) {
     need(actor, "author");
     const c = await this.db.combination.findUniqueOrThrow({ where: { id } });
+    // C11.16 (P-125 (1)(3)): the name and the place come from Program structure only. The setup cannot rename the
+    // combination nor move it to another Pathway, Program, Category or Sub-category; nothing is written (checked
+    // first, review M1: before any other part of the request is saved).
+    const PLACE = ["label", "programKey", "nodeKey", "programDefId", "pathwayType", "pathway", "program", "category", "subCategory", "combinationKey"];
+    const asked = PLACE.filter((k) => (b as Record<string, unknown>)[k] !== undefined && !(k === "label" && b.label === c.label));
+    if (asked.length) fail(asked.includes("label") ? `The name "${c.label}" comes from Program structure: rename it there. Nothing was changed.` : `Where "${c.label}" sits comes from Program structure: a setup cannot move to another place. Nothing was changed.`);
     // Where a case may be opened is a setting of the combination's node (SA-1B-51), kept with the program tree.
     if (b.allowedLocations !== undefined) {
       const locations = [...new Set(b.allowedLocations)];
@@ -296,7 +302,6 @@ export class Studio {
     }
     if (b.expectedLabel !== undefined && b.expectedLabel !== c.label) fail(`Someone renamed this combination to "${c.label}" while you were editing. Your change was not saved.`, HttpStatus.CONFLICT);
     const data: any = {};
-    if (b.label !== undefined) data.label = b.label.trim() || fail("The name cannot be empty.");
     if (b.description !== undefined) data.description = b.description;
     // S5 (M4): people saved here too move the version on, so the editor's guard holds.
     if (b.participants) { data.participants = await this.checkParticipants(c.workspaceId, b.participants); data.participantsVersion = c.participantsVersion + 1; data.participantsBy = actor.id; }
