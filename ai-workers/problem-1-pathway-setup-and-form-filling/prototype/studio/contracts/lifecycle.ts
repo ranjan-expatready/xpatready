@@ -42,6 +42,10 @@ export const WHY = {
     unused.length ? `${list(unused)} under it ${unused.length === 1 ? "was" : "were"} never released: delete ${unused.length === 1 ? "it" : "those"} first` : "",
   ].filter(Boolean).join("; ")}. Open cases and earlier releases keep everything either way.`,
   notRetired: "It is not retired.",
+  // C11.9: a shared field or document type (the library's own items, used by combinations, not names under it).
+  usedBy: (names: string[]) => `Can't retire yet: ${list(names)} still ${names.length === 1 ? "uses" : "use"} it: remove it there first. Open cases and earlier releases keep it either way.`,
+  usedByDelete: (name: string) => `Can't delete: ${q(name)} uses it.`,
+  draftVersion: "Can't retire yet: a new version of it is a draft. Release or discard that draft first.",
   parentRetired: (name: string) => `Can't restore yet: ${q(name)} above it is retired. Restore it first.`,
   author: "Only a configuration author deletes, retires or restores names. You can read everything.",
 } as const;

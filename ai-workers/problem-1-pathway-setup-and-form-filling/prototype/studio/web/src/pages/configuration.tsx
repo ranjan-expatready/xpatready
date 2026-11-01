@@ -14,9 +14,11 @@ export const whoLabel = (w: string) => WHO.find(([v]) => v === w)?.[1] ?? w;
 export const RevCtx = React.createContext<Record<string, string>>({});
 
 export function useLibraryFields() {
-  const q = useApi<any[]>(["fields"], "/library/fields");
-  const list: FieldInfo[] = (q.data ?? []).map((f) => ({ key: f.key, meaning: f.meaning, value_type: f.value_type }));
-  const meaning = React.useCallback((k: string) => list.find((f) => f.key === k)?.meaning ?? k, [list]);
+  const q = useApi<any[]>(["fields", "all"], "/library/fields?retired=all"); // C11.9: the meaning of a retired field is still shown
+  // C11.9 (BR-10): a retired field is not offered in pickers; its meaning is still shown where something reads it.
+  const all: FieldInfo[] = (q.data ?? []).map((f) => ({ key: f.key, meaning: f.meaning, value_type: f.value_type }));
+  const list = all.filter((_, i) => !(q.data ?? [])[i]?.retired);
+  const meaning = React.useCallback((k: string) => all.find((f) => f.key === k)?.meaning ?? k, [all]);
   return { list, meaning, loading: q.isLoading };
 }
 
@@ -84,7 +86,7 @@ export function RequirementDialog({ id, r, fields, onClose, onSaved }: { id: str
       footer={<>{!isNew ? <Button variant="destructive" className="mr-auto" onClick={() => save.mutate({ retire: true })}><Trash2 /> Remove</Button> : null}<Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => save.mutate(f)} busy={save.isPending}>Save to draft</Button></>}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Document type" hint="Reuse a library type, or name a new one below."><Select value={f.documentTypeKey} onChange={(e) => set({ documentTypeKey: e.target.value, newTypeName: "" })}><option value="">(a new type)</option>{(types.data ?? []).map((t) => <option key={t.documentTypeKey} value={t.documentTypeKey}>{t.name}</option>)}</Select></Field>
+          <Field label="Document type" hint="Reuse a library type, or name a new one below."><Select value={f.documentTypeKey} onChange={(e) => set({ documentTypeKey: e.target.value, newTypeName: "" })}><option value="">(a new type)</option>{(types.data ?? []).filter((t) => !t.retired || t.documentTypeKey === f.documentTypeKey).map((t) => <option key={t.documentTypeKey} value={t.documentTypeKey}>{t.name}</option>)}</Select></Field>
           <Field label="New document type name"><Input value={f.newTypeName} disabled={!!f.documentTypeKey} onChange={(e) => set({ newTypeName: e.target.value })} placeholder="Proof of financial support" /></Field>
           <Field label="Whose document"><Select value={f.appliesToRoles} onChange={(e) => set({ appliesToRoles: e.target.value })}>{WHO.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></Field>
           <Field label="Provided by"><Select value={f.providedBy} onChange={(e) => set({ providedBy: e.target.value })}><option value="client">The client</option><option value="agent">The firm</option><option value="employer">The employer</option><option value="third_party">A third party</option></Select></Field>
@@ -94,7 +96,7 @@ export function RequirementDialog({ id, r, fields, onClose, onSaved }: { id: str
         <Field label="Alternatives (any one counts)" hint="Other library document types the client may give instead. The facts read are this line's document's.">
           <span className="flex flex-wrap items-center gap-1.5" data-alternatives>
             {(f.alternatives as string[]).map((k) => <Pill key={k}>{(types.data ?? []).find((t) => t.documentTypeKey === k)?.name ?? k}<button type="button" aria-label={`Remove alternative ${(types.data ?? []).find((t) => t.documentTypeKey === k)?.name ?? k}`} className="ml-1" onClick={() => set({ alternatives: (f.alternatives as string[]).filter((x) => x !== k) })}>×</button></Pill>)}
-            <Select aria-label="Add an alternative" className="h-8 w-64" value="" onChange={(e) => { if (e.target.value) set({ alternatives: [...f.alternatives, e.target.value] }); }}><option value="">Add an alternative…</option>{(types.data ?? []).filter((t) => t.documentTypeKey !== f.documentTypeKey && !(f.alternatives as string[]).includes(t.documentTypeKey)).map((t) => <option key={t.documentTypeKey} value={t.documentTypeKey}>{t.name}</option>)}</Select>
+            <Select aria-label="Add an alternative" className="h-8 w-64" value="" onChange={(e) => { if (e.target.value) set({ alternatives: [...f.alternatives, e.target.value] }); }}><option value="">Add an alternative…</option>{(types.data ?? []).filter((t) => t.documentTypeKey !== f.documentTypeKey && !(f.alternatives as string[]).includes(t.documentTypeKey) && !t.retired).map((t) => <option key={t.documentTypeKey} value={t.documentTypeKey}>{t.name}</option>)}</Select>
           </span>
         </Field>
         <Field label="Source quote" hint="Exact words from the attached official source; leave empty if none (it then shows as unsourced)."><Textarea value={f.sourceQuote} onChange={(e) => set({ sourceQuote: e.target.value })} /></Field>
@@ -140,7 +142,7 @@ function Questions({ id, s }: { id: string; s: any }) {
   const [add, setAdd] = React.useState("");
   const sel = useAction((b: { key: string; on: boolean }) => api(`/combinations/${id}/sections/${b.key}`, { method: b.on ? "POST" : "DELETE" }), { success: "Questionnaire sections updated", invalidate: [["config", id], ["combination", id], ["preview"]] });
   const by = (sec: string) => s.placements.filter((p: any) => p.section_id === sec);
-  const unselected = (sections.data ?? []).filter((x) => !s.sections.some((y: any) => y.id === x.key));
+  const unselected = (sections.data ?? []).filter((x) => !x.retired && !s.sections.some((y: any) => y.id === x.key)); // C11.9: retired sections are not offered
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-2"><Field label="Add a library section to this questionnaire" className="w-96"><Select value={add} onChange={(e) => setAdd(e.target.value)}><option value="">choose a section</option>{unselected.map((x) => <option key={x.key} value={x.key}>{x.title} ({x.questions} questions)</option>)}</Select></Field><Button disabled={!add} onClick={() => { sel.mutate({ key: add, on: true }); setAdd(""); }}><Plus /> Add section</Button><Link to="/library/sections" className="ml-auto text-sm text-text-link underline">Manage sections</Link></div>
