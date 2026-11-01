@@ -8,8 +8,9 @@
 //   C2.6 R5  accepted lines apply through the requirement writer as draft rows with the checklist's quote
 //   zsh studio/tools/isolated.sh forms_c26 4458 start && tsx studio/tests/check_forms_c26_checklist.ts 4458 xr_studio_forms_c26
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { linesOf, savedReading, treeOf, wordsOf } from "../api/src/checklist.ts";
 
 const PORT = Number(process.argv[2] ?? 4458), DB = process.argv[3] ?? "xr_studio_forms_c26";
@@ -50,6 +51,16 @@ async function main() {
   ok("C2.6 R5: a saved condition becomes a condition-language root (subject kind on the root; branch keys args and arg, as p2 assemble)", tree?.subjectKind === "EACH_APPLICANT" && tree.arg?.op === "and" && tree.arg.args?.[0]?.field === "person.a" && !("condition" in tree), tree);
   ok("C2.6 R5 fail: a condition whose text does not parse, or no condition, gives no tree", treeOf({ tree_json: "{not json" }) === null && treeOf(null) === null && treeOf({ tree_json: "[1]" }) === null);
 
+  // #277 M4: the checksum rule. The same inventory in another root still matches; a changed one gives no reading.
+  const tmp = mkdtempSync(join(tmpdir(), "c26-")), inv = saved!.inventory;
+  mkdirSync(join(tmp, dirname(inv)), { recursive: true });
+  const SOLUTION = join(import.meta.dirname, "..", "..", "..");
+  copyFileSync(join(SOLUTION, inv), join(tmp, inv));
+  ok("C2.6 R1 (#277 M4): the same checklist text, read from another folder, still has its saved reading", savedReading("imm5488e.pdf", { root: tmp })?.runFile === saved!.runFile);
+  writeFileSync(join(tmp, inv), readFileSync(join(SOLUTION, inv), "utf8").replace("DOCUMENT CHECKLIST", "DOCUMENT CHECK LIST"));
+  ok("C2.6 R1 fail (#277 M4): a changed checklist text (another checksum) has no saved reading, so nothing is replayed", savedReading("imm5488e.pdf", { root: tmp }) === null);
+  rmSync(tmp, { recursive: true, force: true });
+
   // ─────────────────────────────── through the API on the isolated copy
   await call("POST", "/demo/reset", { confirm: "RESET" });
   let r = await call("POST", "/demo/load");
@@ -62,7 +73,7 @@ async function main() {
 
   r = await call("GET", `/combinations/${combo}/checklist-readings`);
   const rd = (id: string) => (r.body as any[]).find((x) => x.attachmentId === id);
-  ok("C2.6 R1: the launch panel learns which checklist has a saved reading, and how many lines it holds", r.status === 200 && rd(c5488.id)?.saved === true && rd(c5488.id)?.lines === own && rd(c5483.id)?.saved === false, r.body);
+  ok("C2.6 R1: the launch panel learns which checklist has a saved reading, and how many lines it holds", r.status === 200 && rd(c5488.id)?.saved === true && rd(c5488.id)?.lines === base.lines.length && rd(c5483.id)?.saved === false, r.body);
 
   r = await call("POST", `/attachments/${c5483.id}/draft-checklist`, { mode: "replay" });
   ok("C2.6 R1 fail: replaying a checklist with no saved reading answers 409 in words, and nothing is queued", r.status === 409 && /No saved AI reading of IMM 5483/.test(r.body?.message ?? "") && sql(`select count(*) from drafting_job where attachment_id='${c5483.id}'`) === "0", r.body?.message);
@@ -73,22 +84,27 @@ async function main() {
 
   r = await call("POST", `/attachments/${c5488.id}/draft-checklist`, { mode: "replay" });
   const job = r.body;
-  ok("C2.6 R1: the replay is a checklist draft at US$0, marked replay, naming the saved run and what was dropped", r.status === 201 && job.kind === "checklist_draft" && job.mode === "REPLAY" && Number(job.costUsd) === 0 && job.detail?.runFile === saved!.runFile && job.detail?.proposed === base.lines.length && job.detail?.dropped.length === base.dropped.length && /Sample/.test(job.message), job.message);
+  // A line the combination already has (its document type and person) is never proposed again (#277 review M2).
+  const already = ((job.detail?.dropped ?? []) as string[]).filter((d) => /already on this combination/.test(d)).length, proposed = base.lines.length - already;
+  ok("C2.6 R1: the replay is a checklist draft at US$0, marked replay, naming the saved run and what was dropped", r.status === 201 && job.kind === "checklist_draft" && job.mode === "REPLAY" && Number(job.costUsd) === 0 && job.detail?.runFile === saved!.runFile && job.detail?.proposed === proposed && proposed > 0 && job.detail?.dropped.length === base.dropped.length + already && /Sample/.test(job.message), { proposed, already, message: job.message });
   const rows = JSON.parse(sql(`select coalesce(json_agg(json_build_object('kind', kind, 'conf', confidence, 'agr', agreement, 'basis', basis, 'lands', lands_on, 'origin', origin, 'quote', source->>'quote', 'found', source->>'quoteFound', 'from', rounds->'draft'->>'from', 'check', rounds->'check', 'cost', rounds->'draft'->>'costUsd', 'type', payload->>'documentType', 'combo', combination_id)), '[]') from proposal_item where run_id='${job.id}'`));
-  ok("C2.6 R3: each line is a requirement_line on this combination, from the replayed draft round at US$0, with no checker round", rows.length === base.lines.length && rows.every((x: any) => x.kind === "requirement_line" && x.lands === "combination" && x.combo === combo && x.from === "replay" && x.check === null && Number(x.cost) === 0 && x.origin === "ai"), rows[0]);
+  ok("C2.6 R3: each line is a requirement_line on this combination, from the replayed draft round at US$0, with no checker round", rows.length === proposed && rows.every((x: any) => x.kind === "requirement_line" && x.lands === "combination" && x.combo === combo && x.from === "replay" && x.check === null && Number(x.cost) === 0 && x.origin === "ai"), rows[0]);
   ok("C2.6 R3: one AI round, so every line reads Check (never Ready) and stays Sample until the immigration expert confirms it", rows.every((x: any) => x.conf === "check" && x.agr === "one_round" && x.basis === "SAMPLE"), rows.map((x: any) => x.conf));
   const text = saved!.text.replace(/\s+/g, " ").toLowerCase().replace(/[‘’“”'"`]/g, "");
   ok("C2.6 R2: every queued line carries its quote, and the quote is in IMM 5488's own text", rows.every((x: any) => x.found === "true" && x.quote && text.includes(x.quote.replace(/\s+/g, " ").toLowerCase().replace(/[‘’“”'"`]/g, "").trim())), rows.filter((x: any) => !text.includes(String(x.quote).toLowerCase())).map((x: any) => x.type));
 
   r = await call("POST", `/attachments/${c5488.id}/draft-checklist`, { mode: "replay" });
-  ok("C2.6 R4 fail: a second replay returns the open one; nothing is queued twice", r.status === 201 && r.body.id === job.id && sql(`select count(*) from proposal_item where run_id='${job.id}'`) === String(base.lines.length) && sql(`select count(*) from drafting_job where attachment_id='${c5488.id}'`) === "1", r.body.id);
+  ok("C2.6 R4 fail: a second replay returns the open one; nothing is queued twice", r.status === 201 && r.body.id === job.id && sql(`select count(*) from proposal_item where run_id='${job.id}'`) === String(proposed) && sql(`select count(*) from drafting_job where attachment_id='${c5488.id}'`) === "1", r.body.id);
   r = await call("POST", `/attachments/${c5488.id}/draft-checklist`, { mode: "stub" });
   ok("C2.6 R4: the stub pass keeps its own empty draft beside the replay (it never returns the replay)", r.status === 201 && r.body.id !== job.id && r.body.mode === "STUB" && sql(`select count(*) from proposal_item where run_id='${r.body.id}'`) === "0", r.body.mode);
 
   r = await call("GET", `/review/proposals?group=${encodeURIComponent(`combination:${combo}`)}`);
   const check = r.body.group?.bands?.check ?? [];
   const mine = check.filter((x: any) => x.kind === "requirement_line" && x.step === "checklist_draft");
-  ok("C2.6 R3: the lines wait in the one review queue under their combination, in Check, titled by document and person, with the quote", r.status === 200 && mine.length === base.lines.length && (r.body.group?.bands?.ready ?? []).every((x: any) => x.kind !== "requirement_line") && mine.every((x: any) => / · /.test(x.title) && x.source?.quote && x.readings?.draft?.from === "replay"), mine[0]?.title);
+  ok("C2.6 R3: the lines wait in the one review queue under their combination, in Check, titled by document and person, with the quote", r.status === 200 && mine.length === proposed && (r.body.group?.bands?.ready ?? []).every((x: any) => x.kind !== "requirement_line") && mine.every((x: any) => / · /.test(x.title) && x.source?.quote && x.readings?.draft?.from === "replay"), mine[0]?.title);
+  ok("C2.6 R3 (#277 M1): each queue line links to its checklist page, where the lines are decided and applied together", mine.every((x: any) => x.decide_on === `/c/${combo}/jobs/${job.id}` && /checklist page/.test(x.bulk_why ?? "")), mine[0]?.decide_on);
+  r = await call("POST", "/review/proposals/decide", { ids: [mine[0].id], action: "accept" });
+  ok("C2.6 R3 fail (#277 M1): accepting a checklist line on the queue answers 409 and says where it is decided; nothing changes", r.status === 409 && /checklist page/.test(r.body?.message ?? "") && sql(`select status from proposal_item where id='${mine[0].id}'`) === "waiting", r.body?.message);
 
   // ─────────────────────────────── R5 apply
   r = await call("POST", `/jobs/${job.id}/apply-checklist`);
@@ -101,10 +117,25 @@ async function main() {
   const after = Number(sql(`select count(*) from document_requirement where combination_id='${combo}' and status='DRAFT'`));
   const conds = Number(sql(`select count(*) from document_requirement where combination_id='${combo}' and status='DRAFT' and source_file='imm5488e.pdf' and attach_mode='ANSWER_CONDITIONAL' and predicate_json is not null and condition_plain is not null`));
   const bases = Number(sql(`select count(*) from document_requirement where combination_id='${combo}' and status='DRAFT' and source_file='imm5488e.pdf' and attach_mode='COMBINATION_MANDATORY'`));
-  ok("C2.6 R5: accepted lines are written as draft requirements in one go; each one not written is listed with its reason", r.status === 201 && r.body.added + r.body.skipped.length === base.lines.length && after - before === r.body.added && r.body.added === conds + bases
+  ok("C2.6 R5: accepted lines are written as draft requirements in one go; each one not written is listed with its reason", r.status === 201 && r.body.added + r.body.skipped.length === proposed && after - before === r.body.added && r.body.added === conds + bases
     && r.body.skipped.every((s: string) => /no such document type|condition does not fit the library|write its condition by hand|is not a choice yet/.test(s)), { added: r.body.added, skipped: r.body.skipped, known });
-  ok("C2.6 R5: both base lines are written as always-needed, with the checklist's quote and IMM 5488's file", bases === base.lines.filter((l) => l.base_or_conditional === "base").length && Number(sql(`select count(*) from document_requirement where combination_id='${combo}' and status='DRAFT' and source_file='imm5488e.pdf' and source_quote is null`)) === 0, bases);
-  ok("C2.6 R5 fail: a conditional line is never written without its condition (written with the saved condition, or listed)", conds + r.body.skipped.filter((s: string) => /condition/.test(s)).length === base.lines.filter((l) => l.base_or_conditional === "conditional").length - r.body.skipped.filter((s: string) => /document type|not a choice/.test(s)).length, { conds, skipped: r.body.skipped });
+  const kinds = sql(`select string_agg(payload->>'base_or_conditional', ',') from proposal_item where run_id='${job.id}'`).split(",");
+  ok("C2.6 R5: every proposed base line is written as always-needed, with the checklist's quote and IMM 5488's file", bases === kinds.filter((k) => k === "base").length && Number(sql(`select count(*) from document_requirement where combination_id='${combo}' and status='DRAFT' and source_file='imm5488e.pdf' and source_quote is null`)) === 0, bases);
+  ok("C2.6 R5 fail: a conditional line is never written without its condition (written with the saved condition, or listed)", conds + r.body.skipped.filter((s: string) => /condition/.test(s)).length === kinds.filter((k) => k === "conditional").length - r.body.skipped.filter((s: string) => /document type|not a choice/.test(s)).length, { conds, skipped: r.body.skipped });
+  const shown = (await call("GET", `/jobs/${job.id}`)).body;
+  ok("C2.6 R5 (#277 M3): what was not applied, and why, stays on the checklist page's record", shown.status === "APPLIED" && shown.detail?.applied?.added === r.body.added && JSON.stringify(shown.detail?.applied?.skipped) === JSON.stringify(r.body.skipped), shown.detail?.applied);
+
+  // ─────────────────────────────── #277 M2: no line twice on the combination
+  const lineages = sql(`select count(*) from document_requirement where combination_id='${combo}' and lineage_key <> document_type_key || ':' || applies_to_roles`);
+  r = await call("POST", `/attachments/${c5488.id}/draft-checklist`, { mode: "replay" });
+  const again = r.body, againDropped = ((again.detail?.dropped ?? []) as string[]).filter((d) => /already on this combination/.test(d)).length;
+  ok("C2.6 M2: replaying after apply proposes only what the combination does not have yet; the rest is listed as already there", r.status === 201 && again.id !== job.id && againDropped + Number(again.detail?.proposed) === base.lines.length && againDropped === already + Number(shown.detail?.applied?.added ?? 0), { againDropped, proposed: again.detail?.proposed });
+  for (const i of (await call("GET", `/jobs/${again.id}`)).body.items) await call("POST", `/jobs/${again.id}/items/${i.id}`, { decision: "ACCEPTED" });
+  const before2 = Number(sql(`select count(*) from document_requirement where combination_id='${combo}' and status='DRAFT'`));
+  r = await call("POST", `/jobs/${again.id}/apply-checklist`);
+  ok("C2.6 M2 fail: applying the second replay writes no requirement twice (same count, no suffixed copies)", r.status === 201 && Number(sql(`select count(*) from document_requirement where combination_id='${combo}' and status='DRAFT'`)) === before2 + r.body.added && r.body.added === 0
+    && sql(`select count(*) from document_requirement where combination_id='${combo}' and lineage_key <> document_type_key || ':' || applies_to_roles`) === lineages, r.body);
+
   ok("C2.6: the replay is in the audit log in words, with its cost", /replayed the saved AI reading of IMM 5488.*US\$0/.test(sql(`select string_agg(summary, ' | ') from audit_event where entity='checklist draft'`)));
 
   console.log(`\n${pass} passed, ${fail} failed`);

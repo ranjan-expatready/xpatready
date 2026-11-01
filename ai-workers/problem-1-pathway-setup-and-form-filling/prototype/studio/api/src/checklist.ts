@@ -22,7 +22,7 @@ export const CHECKLIST_KINDS = ["document_requirement", "section", "rule", "chec
 /** What a checklist proposal carries in its payload (ProposalItem kind requirement_line; its review row says document_requirement). */
 export type RequirementProposal = { document_type: string; who: string; base_or_conditional: "base" | "conditional"; condition_plain?: string | null; condition_tree?: unknown; provided_by?: string };
 
-const RUNS = join(PROTOTYPE, "p2", "runs");
+const RUNS_DIR = join(PROTOTYPE, "p2", "runs");
 /** "imm5488e.pdf" → "prototype/p1/inventory/imm5488e.text.inventory.json": the checklist's text as the AI read it. */
 export const inventoryOf = (officialFile: string) => `prototype/p1/inventory/${basename(officialFile).replace(/\.pdf$/i, "").toLowerCase()}.text.inventory.json`;
 /** Quotes are compared on their words: case, spaces and the kind of quote mark do not count. */
@@ -31,10 +31,10 @@ type SavedDoc = { document_type?: unknown; who?: unknown; base_or_conditional?: 
 export type SavedReading = { runFile: string; runId: string; inventory: string; sha256: string; text: string; docs: SavedDoc[] };
 /** The newest saved real (live, contract-valid) requirements run that read this checklist's text with the same checksum,
  *  or null. A stub run is never replayed (break R5-1); a run of another edition's text does not match its checksum. */
-export function savedReading(officialFile: string | null): SavedReading | null {
+export function savedReading(officialFile: string | null, where: { runs?: string; root?: string } = {}): SavedReading | null {
   if (!officialFile) return null;
-  const inventory = inventoryOf(officialFile);
-  let bytes: Buffer; try { bytes = readFileSync(join(SOLUTION, inventory)); } catch { return null; }
+  const inventory = inventoryOf(officialFile), RUNS = where.runs ?? RUNS_DIR;
+  let bytes: Buffer; try { bytes = readFileSync(join(where.root ?? SOLUTION, inventory)); } catch { return null; }
   const sha256 = createHash("sha256").update(bytes).digest("hex");
   let files: string[]; try { files = readdirSync(RUNS).filter((f) => /-requirements-live-.*\.json$/.test(f)).sort().reverse(); } catch { return null; }
   for (const f of files) {
@@ -90,6 +90,15 @@ export function linesOf(r: Pick<SavedReading, "inventory" | "text" | "docs">, la
   return { lines, dropped };
 }
 
+/** "document type key|person" of every requirement the combination has now (each lineage's newest version, unless
+ *  retired): a checklist line already there is never written twice (#277 review M2). */
+export async function linesOnCombination(db: Db, combinationId: string): Promise<Set<string>> {
+  const rows = await db.documentRequirement.findMany({ where: { combinationId }, select: { lineageKey: true, version: true, status: true, documentTypeKey: true, appliesToRoles: true } });
+  const top = new Map<string, (typeof rows)[number]>();
+  for (const r of rows) { const t = top.get(r.lineageKey); if (!t || r.version > t.version) top.set(r.lineageKey, r); }
+  return new Set([...top.values()].filter((r) => r.status !== "RETIRED").map((r) => `${r.documentTypeKey}|${r.appliesToRoles}`));
+}
+
 @Injectable()
 export class Checklists {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio) {}
@@ -120,7 +129,7 @@ export class Checklists {
   /** The saved readings this combination's checklists have (the launch panel offers Replay only where one exists). */
   async readings(combinationId: string) {
     const list = await this.db.sourceAttachment.findMany({ where: { combinationId, kind: "Document checklist", recognised: true }, select: { id: true, officialFile: true } });
-    return list.map((a) => { const r = savedReading(a.officialFile); return { attachmentId: a.id, saved: !!r, runFile: r?.runFile ?? null, lines: r ? r.docs.filter((d) => d.source_file === r.inventory).length : 0 }; });
+    return list.map((a) => { const r = savedReading(a.officialFile); return { attachmentId: a.id, saved: !!r, runFile: r?.runFile ?? null, lines: r ? linesOf(r, a.officialFile ?? "").lines.length : 0 }; });
   }
 
   /** C2.6: the saved reading replayed into requirement_line proposals (US$0). One open replay per checklist: a second
@@ -129,13 +138,15 @@ export class Checklists {
     const r = savedReading(a.officialFile);
     if (!r) fail(`No saved AI reading of ${a.edition ?? a.fileName} yet, so there is nothing to replay. A live reading waits for the founder's OK on its cost (Sample estimate under US$0.50, capped at US$5); the stub pass shows the path.`, HttpStatus.CONFLICT);
     const types = await this.db.documentType.findMany({ where: { workspaceId: a.workspaceId, status: { in: ["DRAFT", "PUBLISHED"] } }, select: { documentTypeKey: true, name: true } });
-    const { lines, dropped } = linesOf(r!, a.edition ?? a.fileName);
+    const read = linesOf(r!, a.edition ?? a.fileName), dropped = read.dropped, have = await linesOnCombination(this.db, a.combinationId);
+    const typeOf = (name: string) => types.find((t) => t.documentTypeKey === name || t.name.toLowerCase() === name.toLowerCase());
+    const lines = read.lines.filter((l) => { const t = typeOf(l.document_type); if (t && have.has(`${t.documentTypeKey}|${l.who}`)) { dropped.push(`${l.document_type} for ${l.who.replace(/_/g, " ")} (already on this combination)`); return false; } return true; });
     const items: Prisma.ProposalItemCreateManyInput[] = lines.map((l) => {
       const key = `requirement_line:${a.combinationId}:${wordsOf(l.document_type)}:${l.who}`;
-      const match = types.find((t) => t.documentTypeKey === l.document_type || t.name.toLowerCase() === l.document_type.toLowerCase());
+      const match = typeOf(l.document_type);
       const legacy: RequirementProposal = { document_type: l.document_type, who: l.who, base_or_conditional: l.base_or_conditional, condition_plain: l.condition_plain, condition_tree: l.condition_tree, provided_by: l.provided_by };
       const payload = { kind: "requirement_line", documentType: l.document_type, roles: [l.who], always: l.base_or_conditional === "base", condition: l.condition_plain ? { sentence: l.condition_plain, tree: l.condition_tree ?? null, sharedConditionKey: null, examples: [] } : null, alternativeGroup: null, ...legacy, label: `${l.document_type} · ${l.who.replace(/_/g, " ")}`.slice(0, 160) };
-      const reading = `${l.document_type}: ${l.condition_plain ? `when ${l.condition_plain}` : "always"}, for ${l.who.replace(/_/g, " ")}`.slice(0, 300);
+      const reading = `${l.document_type}: ${l.condition_plain ?? "always"}, for ${l.who.replace(/_/g, " ")}`.slice(0, 300);
       return { workspaceId: a.workspaceId, kind: "requirement_line", step: "checklist_draft", combinationId: a.combinationId, landsOn: "combination",
         reuse: { match: match ? "reuse" : "new", existingKey: match?.documentTypeKey ?? null }, payload: payload as Prisma.InputJsonValue,
         source: { file: r!.inventory, sha256: r!.sha256, edition: a.edition, page: null, quote: l.quote, quoteFound: true, rule: null },
@@ -172,6 +183,7 @@ export class Checklists {
     // Every accepted proposal is checked before anything is written (break M7: a malformed one failed half-way after the
     // draft was already marked applied).
     const lib = job!.items.some((x) => x.decision === "ACCEPTED" && (x.payload as Partial<RequirementProposal> | null)?.base_or_conditional === "conditional") ? await this.studio.libraryTypes(job!.workspaceId) : null;
+    const have = await linesOnCombination(this.db, job!.combinationId!);
     const plan: { item: ReturnType<typeof reviewRow>; typeKey: string; p: RequirementProposal }[] = []; const skipped: string[] = []; const bad: string[] = [];
     for (const i of job!.items.filter((x) => x.decision === "ACCEPTED")) {
       if (i.kind !== "document_requirement") { skipped.push(`${i.proposedKey} (${i.kind.replace("_", " ")}: applied by hand in this slice)`); continue; }
@@ -179,6 +191,8 @@ export class Checklists {
       if (typeof p.document_type !== "string" || !p.document_type.trim() || typeof p.who !== "string" || !["base", "conditional"].includes(String(p.base_or_conditional)) || (p.condition_plain !== undefined && p.condition_plain !== null && typeof p.condition_plain !== "string")) { bad.push(i.proposedMeaning || i.proposedKey); continue; }
       const type = types.find((t) => t.documentTypeKey === p.document_type || t.name.toLowerCase() === p.document_type!.toLowerCase());
       if (!type) { skipped.push(`${p.document_type} (no such document type in the library yet)`); continue; }
+      if (have.has(`${type.documentTypeKey}|${p.who}`)) { skipped.push(`${p.document_type} (already on this combination for ${p.who.replace(/_/g, " ")})`); continue; }
+      have.add(`${type.documentTypeKey}|${p.who}`);
       if (!WHO.includes(p.who)) { skipped.push(`${p.document_type} (whose document it is, "${p.who}", is not a choice yet)`); continue; }
       // A conditional line is written with its condition in the condition language, checked against the library's
       // fields first (C2.6: never a half-applied draft, never a conditional line without its condition).
@@ -204,6 +218,8 @@ export class Checklists {
       throw e;
     }
     await this.audit.log(job!.workspaceId, actor.id, "applied", "checklist draft", a.edition ?? a.fileName, `${actor.name} applied the reviewed checklist draft of ${a.edition ?? a.fileName}: ${added} document requirements added to the draft${skipped.length ? `; not applied: ${skipped.join(", ")}` : ""}`, undefined, job!.combinationId ?? undefined);
+    // #277 review M3: what was not applied, and why, stays on the checklist page (the job's own record).
+    await this.db.draftingJob.update({ where: { id: jobId }, data: { detail: { ...((job!.detail ?? {}) as Record<string, unknown>), applied: { added, skipped } } as Prisma.InputJsonValue } });
     return { added, skipped };
   }
 }

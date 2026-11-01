@@ -209,12 +209,16 @@ const stampOf = async (tx: Tx, ws: string, kind: string, key: string) => (STAMP[
 export const UNDO_SECONDS = 10;
 export const BATCH_MAX = 200;
 /** The field-map step's items map form fields as well, so they are decided on their form-field page (job.tsx) until
- *  that page folds into the queue with the edition drafts (1b, build-notes). */
-export const ON_ITS_PAGE = new Set(["field_map"]);
+ *  that page folds into the queue with the edition drafts (1b, build-notes). A checklist draft's requirement lines
+ *  (C2.6) are decided and applied together on their checklist page (job.tsx ChecklistJob), which writes them through
+ *  the requirement writer with their conditions; the queue lists them with the link (#277 review M1). */
+export const ON_ITS_PAGE = new Set(["field_map", "checklist_draft"]);
+/** The page an ON_ITS_PAGE step is decided on, in words. */
+export const PAGE_WORDS: Record<string, string> = { field_map: "form-field page, where its form fields are mapped too", checklist_draft: "checklist page, where the checklist's lines are decided and applied together" };
 /** Why an item cannot be accepted with others (P-121, P-158): only Ready items, never a rules item landing on the
  *  library. null when it can. */
 export function bulkWhy(r: Pick<Row, "confidence" | "origin" | "landsOn" | "step">): string | null {
-  if (ON_ITS_PAGE.has(r.step)) return "It is decided on its form-field page.";
+  if (ON_ITS_PAGE.has(r.step)) return `It is decided on its ${(PAGE_WORDS[r.step] ?? "own page").split(",")[0]}.`;
   if (r.confidence !== "ready") return r.confidence === "check" ? "It needs a check first: open it and decide it on its own." : "Its two readings differ: open it and choose.";
   if (r.origin === "rules" && r.landsOn === "library") return "A rules item that adds to the shared library is accepted on its own.";
   return null;
@@ -239,7 +243,7 @@ export async function decide(db: Db, audit: Audit, actor: Actor, workspaceId: st
     const done = rows.filter((r) => r.status !== "waiting");
     if (done.length) fail(`${done.length === 1 ? "A proposal is" : `${done.length} proposals are`} already decided (${done[0].status}); an approved item changes only as a revision.`, HttpStatus.CONFLICT);
     const elsewhere = rows.find((r) => ON_ITS_PAGE.has(r.step));
-    if (elsewhere) fail(`"${identityKeyOf(elsewhere.payload as ProposalPayload, elsewhere.identityKey)}" is decided on its form-field page, where its form fields are mapped too.`, HttpStatus.CONFLICT);
+    if (elsewhere) fail(`"${identityKeyOf(elsewhere.payload as ProposalPayload, elsewhere.identityKey)}" is decided on its ${PAGE_WORDS[elsewhere.step] ?? "own page"}.`, HttpStatus.CONFLICT);
     // P-121: several at once is for Ready items only, and never a rules item that adds to the library (1b).
     if (d.action === "accept" && rows.length > 1) {
       const no = rows.map((r) => [r, bulkWhy(r)] as const).filter(([, why]) => why);
