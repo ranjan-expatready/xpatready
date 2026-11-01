@@ -2,8 +2,8 @@
 # Runs pack 4 (Visitor visa M3 path) on its own isolated copy: fresh database, release 1 (setup_visitor_visa.ts),
 # release 2 (setup_vv_m3.ts), then every test; C10.2 last on a second fresh copy. US$0, no live AI. Prints one line per
 # test file with its pass count; exit 0 only when every test passes.
-#   zsh studio/acceptance/lib/run_pack4.sh [port]
-STUDIO="${0:A:h:h:h}"; PROTO="${STUDIO:h}"; PORT="${1:-4440}"; NAME=accept_pack4; DB="xr_studio_$NAME"
+#   zsh studio/acceptance/lib/run_pack4.sh [port]   (default 4449, the tech lead's port for pack 4)
+STUDIO="${0:A:h:h:h}"; PROTO="${STUDIO:h}"; PORT="${1:-4449}"; NAME=accept_pack4; DB="xr_studio_$NAME"
 ROOT="${STUDIO:h:h:h:h}"; export PATH="$ROOT/.tools/node-v24.21.0/bin:$PATH"
 TSX="$STUDIO/node_modules/.bin/tsx"; OUT="$STUDIO/var/acceptance-pack4"; mkdir -p "$OUT"
 cd "$PROTO"

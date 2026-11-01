@@ -1,6 +1,6 @@
 # Pack 4 — Visitor visa (`vv.single`) M3 path (P-220 Day 0)
 
-From a case to the application ready to file, on the agreed design M3 case view r5c (29 Oct; `product/screens/M3-agent-view/`, `M3-prepare-application/`; BACKLOG L1; features M3-A to M3-F). Run: `zsh studio/acceptance/lib/run_pack4.sh [port]` (its own isolated copy, US$0, no live AI). The routes and names the tests assume: `M3-CONTRACT.md`. The click-through: `journeys/J7-visitor-visa-end-to-end.md`. The IRCC rules: `product/compliance-trace.md`, section "Pack 4" (VV-R01…VV-R21).
+From a case to the application ready to file, on the agreed design M3 case view r5c (29 Oct; `product/screens/M3-agent-view/`, `M3-prepare-application/`; BACKLOG L1; features M3-A to M3-F). Run: `zsh studio/acceptance/lib/run_pack4.sh [port]` (default port 4449, the tech lead's choice for pack 4) (its own isolated copy, US$0, no live AI). The routes and names the tests assume: `M3-CONTRACT.md`. The click-through: `journeys/J7-visitor-visa-end-to-end.md`. The IRCC rules: `product/compliance-trace.md`, section "Pack 4" (VV-R01…VV-R21).
 
 ## Tests (each fails today; a builder moves it into the suites in the PR that makes it pass)
 | Feature | Capability | Test | What it proves for Visitor visa | Needs first (cannot go green alone) |
