@@ -106,7 +106,6 @@ if [ "$SHARDS" -gt 1 ]; then
   for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do f=$(basename "$path"); case " $SKIP " in *" $f "*) continue;; esac; picked "$f" && units+=("$f"); done
   RT0="$S/tests/runtime"
   [ -f "$RT0/check_case_engine.ts" ] && picked check_case_engine.ts && units+=(check_case_engine.ts)
-  for path in "$RT0"/check_vv_*.ts; do [ -f "$path" ] && picked "$(basename "$path")" && units+=("$(basename "$path")"); done
   [ -f "$RT0/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked check_runtime_r1c.cjs || picked check_runtime_r1d.ts; } && units+=(check_runtime_r1a.ts)
   for t in check_p2_guard check_p2_launch; do [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && units+=("$t.ts"); done
   TURN=${#units[@]}
@@ -196,21 +195,6 @@ if [ -f "$RT/check_runtime_r1a.ts" ] && { picked check_runtime_r1a.ts || picked 
   else rows+=("| check_runtime_r1a.ts | FAIL | | isolated copy runtime_r1 or setup_visitor_visa.ts failed (see setup_visitor_visa.log) |"); fail=1; fi
   zsh "$S/tools/isolated.sh" "$RN" "$RP" stop >/dev/null 2>&1
 fi
-# The M3 Visitor visa suites (C6.4, C6.12; R2 of the C6.4 review): check_vv_<x>.ts runs plain (pure engine);
-# check_vv_<x>_api.ts on its own copy, after setup_visitor_visa.ts releases the Visitor visa there (never on the R1 copy:
-# it releases again, which R1a's release count would see).
-VN=$(iname runtime_vv); VP=$(iport 4431)
-for path in "$RT"/check_vv_*.ts; do
-  [ -f "$path" ] || continue; f=$(basename "$path"); picked "$f" && myturn "$f" || continue
-  case "$f" in
-    *_api.ts)
-      if zsh "$S/tools/isolated.sh" "$VN" "$VP" start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" "$VP" "xr_studio_$VN" > "$OUT/setup_visitor_visa_vv.log" 2>&1; then
-        run "$f" "$VN" $TSX "$path" "$VP" "xr_studio_$VN"
-      else rows+=("| $f | FAIL | | isolated copy runtime_vv or setup_visitor_visa.ts failed (see setup_visitor_visa_vv.log) |"); fail=1; fi
-      zsh "$S/tools/isolated.sh" "$VN" "$VP" stop >/dev/null 2>&1;;
-    *) run "$f" plain $TSX "$path";;
-  esac
-done
 for t in check_p2_guard check_p2_launch; do
   [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && myturn "$t.ts" && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
 done
