@@ -23,9 +23,9 @@ const VALUE_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
 const SHORT: Partial<Record<SourceLine["kind"], string>> = { release: "From a reviewed release", ai_run: "From an AI run a person decided" };
 /** P-162: a field's format in one line, or why there is none ("Format: not read yet" when no form field of it has
  *  been read; a field on no form says so). */
-const formatLine = (boxes: MappedBox[] | undefined) => {
+const formatLine = (boxes: MappedBox[] | undefined, valueType?: string | null) => {
   if (!boxes?.length) return { text: null, state: "no_form" as const };
-  const f = fieldFormat(boxes);
+  const f = fieldFormat(boxes, valueType);
   const text = formatWords(f);
   return text ? { text, state: "read" as const } : { text: null, state: f.read ? "none_on_form" as const : "not_read" as const };
 };
@@ -400,7 +400,7 @@ export class Studio {
       const u = usage.filter((x) => x.canonicalFieldKey === f.canonicalFieldKey);
       const forms = [...new Set(u.map((x) => editions.get(x.formEditionId)))].filter(Boolean);
       const p = placements.get(f.canonicalFieldKey);
-      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey)) };
+      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null, name: (f.labelChecked && f.label) || null, ...sourceSummary(src.get(f.canonicalFieldKey)), used_in: used.get(f.canonicalFieldKey) ?? [], format: formatLine(fmt.get(f.canonicalFieldKey), f.valueType) };
     });
   }
 
@@ -421,10 +421,11 @@ export class Studio {
   /** P-162: a shared field's format, read from its form fields (`GET /library/fields/:key/format`). */
   async fieldFormatOf(key: string) {
     const workspaceId = await this.ws.id();
-    if (!(await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, select: { id: true } }))) fail(`${key} is not in the shared library.`, HttpStatus.NOT_FOUND);
+    const field = await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" }, select: { valueType: true } });
+    if (!field) fail(`${key} is not in the shared library.`, HttpStatus.NOT_FOUND);
     const boxes = (await this.fieldBoxes(workspaceId, key)).get(key) ?? [];
-    const f = fieldFormat(boxes);
-    return { key, ...f, line: formatLine(boxes), forms: [...new Set(boxes.map((b) => b.form))] };
+    const f = fieldFormat(boxes, field!.valueType);
+    return { key, ...f, line: formatLine(boxes, field!.valueType), forms: [...new Set(boxes.map((b) => b.form))] };
   }
 
   /** P-162: the fixed format checks run on a value, as a case would (`POST /library/fields/:key/format-check`). */
@@ -448,7 +449,7 @@ export class Studio {
     const [forms, reqs, rules, checks, comps] = await Promise.all([this.db.combinationForm.findMany({ where: { workspaceId }, include: { form: true } }), this.db.documentRequirement.findMany({ where: { workspaceId } }), this.db.predicate.findMany({ where: { workspaceId } }), this.db.check.findMany({ where: { workspaceId } }), this.db.combination.findMany({ where: { workspaceId } })]);
     const compLabel = new Map(comps.map((c) => [c.id, c.label]));
     const types = await this.db.documentType.findMany({ where: { workspaceId } });
-    const format = fieldFormat((await this.fieldBoxes(workspaceId, key)).get(key) ?? []);
+    const format = fieldFormat((await this.fieldBoxes(workspaceId, key)).get(key) ?? [], versions[0].valueType);
     return {
       format,
       versions: versions.map((v) => ({ ...v })), current: versions[0],

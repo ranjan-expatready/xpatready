@@ -32,7 +32,7 @@ type FormatLine = { text: string | null; state: "read" | "none_on_form" | "not_r
 const FORMAT_NONE: Record<Exclude<FormatLine["state"], "read">, string> = { none_on_form: "none on its forms", not_read: "not read yet", no_form: "on no form" };
 const FormatCell = ({ f }: { f?: FormatLine }) => f?.text ? <span data-format>{f.text}</span> : <span data-format className={f?.state === "not_read" ? "text-text-warn" : "text-text-muted"}>{FORMAT_NONE[(f?.state ?? "not_read") as Exclude<FormatLine["state"], "read">]}</span>;
 /** GET /library/fields/:key → format (engine/field-format.ts): each rule, the forms and boxes that say so, the quote. */
-type FieldFormatView = { rules: { check: string; words: string; part: string | null; part_words: string | null; sources: { form: string; box: string; quote: string | null; from: string }[] }[]; not_checked: { function: string; form: string; quote: string | null }[]; read: boolean };
+type FieldFormatView = { rules: { check: string; words: string; part: string | null; part_words: string | null; sources: { form: string; box: string; quote: string | null; from: string }[] }[]; not_checked: { function: string; form: string; quote: string | null; why: string }[]; read: boolean };
 const FROM_WORD: Record<string, string> = { pdf_box: "the PDF form field", form_script: "the form's own check", field_map: "the field map" };
 /** GET /library/:kind/:key/sources (api/src/library-sources.ts). */
 type SourcesView = { name: string; sources: { kind: string; text: string; quote?: string | null }[]; unsourced: boolean; used_in: string[] };
@@ -116,13 +116,13 @@ export function FieldPage() {
       </div>
       <section data-format-panel className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
         <h2 className="font-semibold">Format</h2>
-        <p className="mt-1 text-sm text-text-muted">Type: {TYPE_WORD[cur.valueType] ?? cur.valueType}. The format is read from the official forms that ask it (the PDF form field and the form's own checks, no AI) and checked on every answer; nobody types a rule here.</p>
+        <p className="mt-1 text-sm text-text-muted">Type: {TYPE_WORD[cur.valueType] ?? cur.valueType}. The format is read from the official forms that ask it (the PDF form field and the form's own checks, no AI) and the rules listed are checked on every answer; nobody types a rule here.</p>
         {(() => {
           const fmt = v.format as FieldFormatView | undefined;
           if (!fmt?.rules.length) return <Notice tone={fmt?.read || !v.used_by.length ? "info" : "warn"}>{!v.used_by.length ? "On no form, so no format is read." : fmt?.read ? "Its forms set no format beyond the type." : "Format: not read yet (its forms have not been read)."}</Notice>;
           return <Table dense className="mt-2" head={["Rule", "From", "The form says"]}>{fmt.rules.map((r) => <tr key={`${r.check}|${r.part}`}><td className="text-sm">{r.part_words ? <span className="text-text-muted">{r.part_words}: </span> : null}{r.words}</td><td className="text-xs">{r.sources.slice(0, 3).map((x) => `${x.form}, "${x.box}" (${FROM_WORD[x.from] ?? x.from})`).join(" · ")}{r.sources.length > 3 ? ` · ${r.sources.length - 3} more` : ""}</td><td className="text-xs text-text-muted">{r.sources.find((x) => x.quote)?.quote ? `"${r.sources.find((x) => x.quote)!.quote}"` : "—"}</td></tr>)}</Table>;
         })()}
-        {(v.format as FieldFormatView | undefined)?.not_checked?.length ? <p className="mt-2 text-xs text-text-muted">Read from the form, not checked here yet: {(v.format as FieldFormatView).not_checked.map((n) => `${n.form} ${n.quote ? `"${n.quote}"` : n.function}`).join(" · ")}</p> : null}
+        {(v.format as FieldFormatView | undefined)?.not_checked?.length ? <p className="mt-2 text-xs text-text-muted">Read from the form, not checked on answers here: {(v.format as FieldFormatView).not_checked.map((n) => `${n.form}: ${n.quote ? `"${n.quote}"` : n.function} (${n.why})`).join(" · ")}</p> : null}
       </section>
       <section data-sources className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
         <h2 className="font-semibold">Where it comes from</h2>

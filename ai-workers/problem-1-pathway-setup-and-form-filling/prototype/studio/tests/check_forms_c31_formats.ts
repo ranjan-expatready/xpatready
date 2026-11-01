@@ -6,7 +6,7 @@
 //   zsh studio/tools/isolated.sh forms_c31 4451 start && tsx studio/tests/check_forms_c31_formats.ts 4451
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { checkFormat, fieldFormat, FORMAT_CHECK_IDS, FORMAT_CHECKS, formatWords } from "../engine/field-format.ts";
+import { checkForFunction, checkFormat, fieldFormat, FORMAT_CHECK_IDS, FORMAT_CHECKS, formatWords } from "../engine/field-format.ts";
 import { checkValue } from "../engine/runtime/case.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 
@@ -40,6 +40,66 @@ const POSTAL = "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0
   const lmia = lmiaPath ? fieldFormat([{ form: "IMM 1295 (09-2023)", inventoryFile: inv1295, dataPath: lmiaPath, caption: "LMIA" }]) : unknown;
   ok("C3.1 P-153 fail: a form check with no fixed check in code is shown as not checked, never claimed as enforced", !!lmiaPath && lmia.not_checked.some((n) => n.function === "validateLMIAandExemptionCode" && /LMIA No\./.test(n.quote ?? "")) && !lmia.rules.some((r) => r.sources.some((s) => /LMIA No\./.test(s.quote ?? ""))), lmia);
 
+  // ─────────────────── Review M4: every fixed check has a passing and a failing case (removing one fails here)
+  const T = new Date("2026-11-01T12:00:00Z");
+  const CASES: Record<string, { params?: Record<string, unknown>; ctx?: Record<string, unknown>; good: string; bad: string }> = {
+    max_length: { params: { n: 5 }, good: "abcde", bad: "abcdef" },
+    min_length: { params: { n: 5 }, good: "Cook.", bad: "Cook" },
+    digits_only: { good: "0123", bad: "01a3" },
+    digits_and_spaces: { good: "613 555 0100", bad: "613-555-0100" },
+    digits_exact: { params: { n: 4 }, good: "0100", bad: "100" },
+    area_code: { good: "613", bad: "113" },
+    letters_digits: { good: "AB 12345", bad: "AB-12345" },
+    letters_digits_no_space: { good: "AB12345", bad: "AB 12345" },
+    english_french: { good: "Rue de l'Église, 3e étage", bad: "Calle Peñón" },
+    name_characters: { good: "O'Brien-Lefèvre", bad: "O\u2019Brien" },
+    place_characters: { good: "Saint-Jean-sur-Richelieu", bad: "Zürich (CH)" },
+    email: { good: "a.b_c@example.ca", bad: "a+b@example.ca" },
+    postal_code: { ctx: { country: "Canada" }, good: "K1A-0B1", bad: "K1A 0B" },
+    month: { good: "2019-06", bad: "2019-13" },
+    day: { good: "2019-06-30", bad: "2019-06-32" },
+    year_from_1900: { params: { max: "this_year" }, good: "1990-01-01", bad: "1899-12-31" },
+    not_future: { good: "2026-11", bad: "2026-12" },
+    date_after: { params: { than: "today" }, good: "2027-01-01", bad: "2026-10-31" },
+    whole_number: { good: "2500", bad: "2500.50" },
+    date_pattern: { good: "2019-06-30", bad: "30/06/2019" },
+  };
+  ok("C3.1 M4: every fixed check has a case here", FORMAT_CHECK_IDS.every((k) => CASES[k]), FORMAT_CHECK_IDS.filter((k) => !CASES[k]));
+  for (const k of FORMAT_CHECK_IDS) {
+    const c = CASES[k]; if (!c) continue;
+    const f = { rules: [{ check: k, params: c.params ?? {}, words: "", part: null, part_words: null, sources: [] }], not_checked: [], read: true } as never;
+    ok(`C3.1 ${k} pass: "${c.good}"`, checkFormat(f, c.good, { today: T, ...c.ctx }).length === 0, checkFormat(f, c.good, { today: T, ...c.ctx }));
+    ok(`C3.1 ${k} fail: "${c.bad}" refused in words`, checkFormat(f, c.bad, { today: T, ...c.ctx }).length === 1, checkFormat(f, c.bad, { today: T, ...c.ctx }));
+  }
+  ok("C3.1 M3 fail: a curly apostrophe is refused with the way out (type ')", /Type the apostrophe as '/.test(checkFormat({ rules: [{ check: "name_characters", params: {}, words: "", part: null, part_words: null, sources: [] }], not_checked: [], read: true } as never, "O\u2019Brien")[0] ?? ""));
+
+  // ─────────────────── Review M4: each form validation function maps to the check its own words describe
+  const EXPECT: Record<string, string | null> = {
+    validateUCI: "digits_only", validatePassportNum: "letters_digits", validateUSCIS: "letters_digits_no_space", validatePostalCodeBasedOnCountry: "postal_code",
+    validateEmail: "email", validateOpenText: "english_french", validateName: "name_characters", validatePOBText: "place_characters", validateDigits: "digits_only",
+    validateIntlNum: "digits_and_spaces", validateAreaCode: "area_code", validatePhoneNAN: "digits_exact", validateDOBMM: "month", validateEduMonth: "month", validateDOBDD: "day",
+    validateDOBYYYY: "year_from_1900", validateEduFromYear: "year_from_1900", validateEduToYear: "year_from_1900", validateEduDateInPresentOrPast: "not_future", validateFunds: "whole_number",
+    validateJobDescription: "min_length", validateDropDown: "type",
+  };
+  const fns = new Map<string, string>(); for (const { j } of formats) for (const b of Object.values((j?.boxes ?? {}) as Record<string, { checks?: { function: string; quote: { text: string }[] }[] }>)) for (const c of b.checks ?? []) if (!fns.has(c.function)) fns.set(c.function, c.quote.map((q) => q.text).join(" "));
+  for (const [fn, want] of Object.entries(EXPECT)) {
+    const got = checkForFunction(fn);
+    ok(`C3.1 mapping: ${fn} → ${want}${fns.has(fn) ? ` (the form says "${fns.get(fn)?.slice(0, 70)}")` : ""}`, (got === "type" ? "type" : got?.check ?? null) === want, got);
+  }
+  ok("C3.1 mapping fail: a validation function with no check (validateLMIAandExemptionCode) maps to nothing", checkForFunction("validateLMIAandExemptionCode") === null);
+  ok("C3.1 mapping: a date order with today is enforced; with another date of the form it is not claimed", checkForFunction("validateDate", [">", "utilDates.getToday("]) && (checkForFunction("validateDate", [">", "utilDates.getToday("]) as { params: { than: string } }).params.than === "today" && (checkForFunction("validateDate", [">=", "FromDate.rawValue"]) as { params: { than: string } }).params.than === "other_date");
+
+  // ─────────────────── Review M1, M2: "select …;" transforms, phone pieces and whole answers
+  const b1295 = formats.find((x) => x.f === "imm1295e.inventory.json")!.j.boxes as Record<string, { checks?: { function: string }[] }>;
+  const boxBy = (fn: string) => Object.entries(b1295).find(([, b]) => b.checks?.some((c) => c.function === fn))![0];
+  const phone = fieldFormat([["validateAreaCode", "nanp_area_code (3 digits)"], ["validatePhoneNAN", "nanp_subscriber (4 digits)"], ["validateIntlNum", "national_number_without_country_code (max 20 chars)"]].map(([fn, t]) => ({ form: "IMM 1295 (09-2023)", inventoryFile: inv1295, dataPath: boxBy(fn), caption: "Phone", transform: `select primary phone; phone_part:${t}` })), "phone");
+  ok("C3.1 M1 pass: a \"select primary phone;\" transform is read by its part (the national number is the answer's number)", phone.rules.some((r) => r.part === "number") && phone.rules.every((r) => r.part === "number"), phone.rules.map((r) => `${r.part}:${r.check}`));
+  ok("C3.1 M2 fail: rules on pieces the answer does not store (area code, line number) are listed as not checked, with why", phone.not_checked.some((n) => /area code/.test(n.why)) && phone.not_checked.every((n) => !!n.why), phone.not_checked);
+  ok("C3.1 M1 pass: a real phone answer passes its format", checkFormat(phone, { type: "cell", country_code: "1", number: "613 555 0100" }).length === 0, checkFormat(phone, { type: "cell", country_code: "1", number: "613 555 0100" }));
+  ok("C3.1 M1 fail: a phone number with letters is refused", checkFormat(phone, { country_code: "1", number: "613 CALL ME" }).length === 1, checkFormat(phone, { country_code: "1", number: "613 CALL ME" }));
+  const addr = fieldFormat([{ form: "IMM 1295", inventoryFile: null, dataPath: "x[0]", caption: "Address", transform: "address_single_line (max 60 chars)" }], "address");
+  ok("C3.1 M2 fail: a rule on a whole address written as one line is listed as not checked, never shown as checked", addr.rules.length === 0 && addr.not_checked.length === 1 && /whole address/.test(addr.not_checked[0].why), addr);
+
   // ─────────────────── Engine: a field's format and its checks, from its boxes
   const uci = fieldFormat([{ form: "IMM 1295 (09-2023)", inventoryFile: inv1295, dataPath: UCI, caption: "UCI", transform: "as_is (max 10 chars)" }]);
   ok("C3.1 P-162 pass: the UCI field's format is digits only, at most 10, each with its form box and quote", formatWords(uci) === "At most 10 characters · Digits only" && uci.rules.every((r) => r.sources[0].form === "IMM 1295 (09-2023)" && r.sources[0].box === "UCI" && !!r.sources[0].quote), uci.rules);
@@ -64,7 +124,7 @@ const POSTAL = "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0
 
   // ─────────────────── The library, through the API
   const loaded = await call("POST", "/demo/load");
-  ok("setup: the sample inputs load", loaded.status === 201, loaded.body?.message);
+  ok("setup: the sample inputs load (or are already loaded on this copy)", loaded.status === 201 || loaded.status === 409, loaded.body?.message);
   let r = await call("GET", "/library/fields/person.uci/format");
   ok("C3.1 P-162 pass: GET …/format gives the UCI field's rules, each sourced to a form box and quoted", r.status === 200 && r.body.rules.some((x: { check: string; sources: { quote: string | null; from: string }[] }) => x.check === "digits_only" && x.sources.some((s) => s.from === "form_script" && s.quote === "The correct format is: Numeric characters")) && r.body.rules.some((x: { check: string }) => x.check === "max_length"), r.body);
   r = await call("GET", "/library/fields/person.no_such_field/format");
@@ -73,6 +133,8 @@ const POSTAL = "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0
   ok("C3.1 P-162 pass: format-check accepts a UCI in the form's format", r.status === 201 && r.body.ok === true && r.body.problems.length === 0, r.body);
   r = await call("POST", "/library/fields/person.uci/format-check", { value: "12AB5678" });
   ok("C3.1 P-162 fail: format-check refuses a UCI with letters, in plain words", r.status === 201 && r.body.ok === false && r.body.problems[0] === "Use digits only (0 to 9), no letters, spaces or signs.", r.body);
+  r = await call("POST", "/library/fields/person.uci/format-check", { value: "1" }, "user-Z");
+  ok("C3.1 m4 fail: format-check needs a known person (401), as the other library calls do", r.status === 401, r.status);
   r = await call("POST", "/library/fields/person.uci/format-check", {});
   ok("C3.1 fail: format-check without a value is 400 in words", r.status === 400 && /Give the value/.test(JSON.stringify(r.body)), r.body);
   const fields = (await call("GET", "/library/fields")).body as { key: string; forms: string[]; format: { text: string | null; state: string } }[];

@@ -66,7 +66,7 @@ class StudioController {
   @Get("library/fields") fields(@Query() q: any) { return this.s.fields(q); }
   @Get("library/fields/:key") field(@Param("key") k: string) { return this.s.field(k); }
   @Get("library/fields/:key/format") fieldFormat(@Param("key") k: string) { return this.s.fieldFormatOf(k); } // P-162 (C3.1)
-  @Post("library/fields/:key/format-check") formatCheck(@Param("key") k: string, @Body() b: unknown) { return this.s.checkFieldFormat(k, b); } // P-162 (C3.1)
+  @Post("library/fields/:key/format-check") formatCheck(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { actorOf(a); return this.s.checkFieldFormat(k, b); } // P-162 (C3.1)
   @Post("library/fields") addField(@Headers("x-actor") a: H) { actorOf(a); return noFreeAdd("field"); } // P-158: no free add (410)
   @Patch("library/fields/:key") updField(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: any) { return this.s.updateField(actorOf(a), k, b); }
   @Post("library/fields/:key/placement") place(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: any) { return this.s.placeField(actorOf(a), k, b); }
