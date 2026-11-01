@@ -80,6 +80,7 @@ export async function importConfiguration(db: PrismaClient, workspaceId: string,
   for (const f of config.forms.filter((x: any) => keepWho(x.who) && keepForm(x.form_number))) {
     const map = config.field_maps.find((m: any) => m.form_edition.startsWith(`${f.form_number} (`));
     const def = await db.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId, formKey: f.form_number } }, update: {}, create: { ...ws, formKey: f.form_number, displayName: f.title, formKind: map ? "data_form" : "document" } });
+    await db.libraryFormDeletion.deleteMany({ where: { workspaceId, formKey: f.form_number } }); // X5 slice c: the sample load adds it back
     await db.combinationForm.create({ data: { ...ws, combinationId, govFormDefId: def.id, lineageKey: f.form_number, who: f.who, attachMode: f.status === "always" ? "COMBINATION_MANDATORY" : "ANSWER_CONDITIONAL",
       predicateJson: f.condition ?? undefined, conditionPlain: f.condition_plain, sourceQuote: f.source_quote, version: 1, status: f.status === "dismissed" ? "RETIRED" : cs, origin: "IMPORTED_RELEASE", updatedBy: o.by } });
     inc("forms");

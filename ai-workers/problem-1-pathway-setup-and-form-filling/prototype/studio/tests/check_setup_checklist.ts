@@ -70,6 +70,16 @@ const err = (where: string) => ({ level: "error" as const, where, item: "x", mes
   step("C11.10: Not ready — the release's problem is the first item (before a draft proposal), chip Not ready, step 5 reopens", nr.next?.item.fromRelease === true && nr.next.step === "questions_documents" && nr.chip.status === "NOT_READY" && nr.steps[4].state !== "done", nr.next);
   const v = forViewer(nr, AUTHOR);
   step("C11.10: Not ready → Resume setup and Needs you for the author", v.button === "Resume setup" && !!v.needsYou, v);
+  // X1 (review M1): step 4's release problems land on the tab of their part, and the step opens that tab.
+  const nrQ = setupChecklistOf(live({ release: { number: 2, problems: [err("Rules")] } }));
+  const q4 = nrQ.steps.find((x) => x.key === "questions_documents")!;
+  step("C11.10 X1 pass: a Not ready rule problem is a questionnaires:problems item and step 4 opens Questionnaires", q4.open[0]?.focus === "questionnaires:problems" && q4.open[0].fromRelease === true && q4.tab === "questionnaires" && (nrQ.next?.href ?? "").includes("/questionnaires?focus=questionnaires%3Aproblems"), { focus: q4.open[0]?.focus, tab: q4.tab, href: nrQ.next?.href });
+  const nrD = setupChecklistOf(live({ release: { number: 2, problems: [err("Documents")] } }));
+  const d4 = nrD.steps.find((x) => x.key === "questions_documents")!;
+  step("C11.10 X1 fail: a Not ready documents problem never lands on Questionnaires (documents:problems, Documents tab)", d4.open[0]?.focus === "documents:problems" && d4.tab === "documents", { focus: d4.open[0]?.focus, tab: d4.tab });
+  const nrB = setupChecklistOf(live({ release: { number: 2, problems: [err("Documents"), err("Rules"), err("Checks")] } }));
+  const b4 = nrB.steps.find((x) => x.key === "questions_documents")!;
+  step("C11.10 X1: problems in both parts are two items with their own counts (1 documents, 2 questions)", b4.open.filter((i) => i.fromRelease).map((i) => `${i.focus}:${i.count}`).join() === "documents:problems:1,questionnaires:problems:2", b4.open.map((i) => `${i.focus}:${i.count}`));
   const ok = setupChecklistOf(live({ release: { number: 2, problems: [] } }));
   step("C11.10 (fail case): a release with no problems is Live and has no release item", ok.chip.status === "LIVE" && !ok.steps.some((s) => s.open.some((i) => i.fromRelease)));
 }
