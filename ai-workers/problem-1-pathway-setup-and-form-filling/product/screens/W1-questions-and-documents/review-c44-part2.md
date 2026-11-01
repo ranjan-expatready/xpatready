@@ -113,3 +113,28 @@ Fresh isolated copy `rev_c44p2` on :4438, web rebuilt, no `*_LIVE`, US$0. The bu
   §9 timings were not run).
 
 **Verdict: Approve** (round 2, commit 32bbd5d1). No Blocker or Major is open. Open Minors: m1 (the parallel race), m2, m4, m5.
+
+## Round 3 — head 09e1c868 (diff 32bbd5d1..09e1c868), 1 Nov 2026
+Changes since the round-2 Approve: tests/runtime/prepare_c44.cjs (new), the four C4.4 suites call it and use the standard
+usage line, and run-suites.sh gains QUARANTINE from the merge of origin/main. There are no product code changes (engine,
+api and web are as in round 2). Fresh copy `rev_c44p2` on :4438. The builder's screenshots were put back after the
+browser runs.
+- **Usage lines and run-suites.sh:** each of the four first usage lines passes run-suites.sh's regex (line ~166), tested
+  with bash `=~`: check_c44_part2 → runtime_c44p2 4439 xr_studio_runtime_c44p2; part2_browser → runtime_c44p2b 4439;
+  question_types → runtime_c44 4436; question_types_browser → runtime_c44b 4437. Each database name is
+  `xr_studio_<name>`, so the prefix rename works.
+- **With no setup step** (only `isolated.sh start` and then the suite, as run-suites.sh runs them): c44_part2 31/31 ·
+  question_types 44/44 · part2_browser 19/19 · question_types_browser 32/32, all on one copy.
+- **Idempotence:** prepare_c44 runs setup_visitor_visa only when vv.single has no release. setup_c44_types exits before
+  appending once the C4.4 fields are present, so after four prepares the release still holds 2 Pre-qualification ticks.
+- **Failure:** a database that does not exist gives one FAIL line ("setup: the copy is prepared…") and exit 1, never a crash.
+- Minor r3-a: those failure words are raw (`Error: Command failed: /opt/homebrew/…/psql … select count(*)…`). Fix later:
+  catch the psql call and say "the database <db> is not there or has no Visitor visa".
+- Minor r3-b: check_c44_part2 run a second time on the same database is 29/31. Its two R3 pass lines get the round-2
+  duplicate guard's 409 ("This check is already in the draft."). run-suites.sh always starts a fresh copy, so CI is not
+  affected. Fix later: a unique message per run, as m3 did for acceptance.
+- The paths are the same as every other suite (`/opt/homebrew/opt/postgresql@18/bin/psql`, studio/node_modules/.bin/tsx);
+  the hard-coded psql path is already follow-up m4.
+
+**Verdict: Approve** (round 3, commit 09e1c868). No Blocker or Major is open. Open Minors: m1 (the parallel race), m2,
+m4, m5, r3-a, r3-b. Any later push needs a new review.
