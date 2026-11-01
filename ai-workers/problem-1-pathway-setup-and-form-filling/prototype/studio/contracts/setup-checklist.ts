@@ -123,3 +123,12 @@ export function itemHref(id: string, step: StepKey, stepTab: string, i: Pick<Ope
   if (i.kind === "view_ai") return `/c/${id}/jobs`;
   return `/c/${id}/${tabOfFocus(i.focus, stepTab) ?? stepTab}?focus=${encodeURIComponent(i.focus)}`;
 }
+/** QA-119: the focus keys a tab has a landing place for (an element with `data-focus` or `data-focus-also` there). The
+ *  header's "Next step" takes the checklist's next item now, before forms F2; an item with no landing place yet
+ *  (forms:sources, forms:lines, forms:problems, forms:held, forms:finder, the review keys) opens its tab, without a
+ *  `?focus=` that nothing would answer. Add a key here when its tab draws the place. */
+export const LANDED_FOCUS: readonly string[] = ["pages:record", "people:card", "documents:lines", "documents:problems", "questionnaires:problems", "questionnaires:gaps", "questions_documents:problems"];
+export function nextStepHref(id: string, next: { item: Pick<OpenItem, "kind" | "focus">; step: StepKey }, stepTab: string): string {
+  const h = itemHref(id, next.step, stepTab, next.item);
+  return h.includes("?focus=") && !LANDED_FOCUS.includes(next.item.focus) ? h.slice(0, h.indexOf("?")) : h;
+}
