@@ -151,12 +151,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await bar.getByLabel("Set where it comes from").selectOption("AGENT"); await settle();
   const refused = p.locator("[data-bulk-refused]");
   // Same for the bulk refusal list: wait for both rows before reading it.
-  await refused.locator("li").nth(1).waitFor({ timeout: 10000 }).catch(() => {});
+  await refused.locator("li").nth(1).waitFor({ timeout: 10000 });
   step("P-155(3) fail (bulk): Case officer on two passport facts is refused per row, each in words with its question (write why in its details)", await refused.locator("li").count() === 2 && /The case officer enters only .+ Open its details to write why/.test(await refused.innerText()), await refused.innerText());
   await state("bulk-refused-in-words");
   await bar.getByLabel("Set where it comes from").selectOption("CLIENT"); await settle();
   const toast = p.locator("[data-undo-toast]");
-  step("P-147 Q2 pass: set to the client on 2 questions, with one Undo", /set to the client on 2 questions/.test(await toast.innerText()) && await toast.locator("[data-undo]").count() === 1 && await p.locator("[data-bulk-bar]").count() === 0, await toast.innerText());
+  step("P-147 Q2 pass: set to the client for 2 questions, with one Undo", /set to the client for 2 questions/.test(await toast.innerText()) && await toast.locator("[data-undo]").count() === 1 && await p.locator("[data-bulk-bar]").count() === 0, await toast.innerText());
   const changed = (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change?.batchId);
   step("bulk: both rows carry one batch id", changed.length === 2 && changed[0].change.batchId === changed[1].change.batchId, changed.map((f) => f.fact).join(", "));
   await state("bulk-done-undo-toast");
@@ -164,6 +164,26 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-note-undo]").click(); await settle();
   const after = (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change);
   step("Undo pass: one Undo takes both rows back", after.length === 0, after.map((f) => f.fact).join(", "));
+  // Runtime Minors 1 Nov: the pre-qualification toast read "Pre-qualification on on 2 questions".
+  await ticks.nth(0).check(); await ticks.nth(1).check();
+  await bar.getByLabel("Pre-qualification").selectOption("on"); await settle();
+  const pqToast = await toast.innerText();
+  step("Minors 1 Nov pass: the bulk pre-qualification toast reads \"Pre-qualification on for 2 questions\"", /^Pre-qualification on for 2 questions/m.test(pqToast), pqToast);
+  step("Minors 1 Nov fail-guard: no \"on on\" in the toast", !/\bon on\b/.test(pqToast), pqToast);
+  await p.locator("[data-note-undo]").click(); await settle();
+  step("Undo pass: the pre-qualification change is taken back too", (await api(`/combinations/${wp}/fact-sources`)).body.facts.filter((f) => f.change).length === 0);
+
+  // QA-112 (C4.10): a case fact the case officer enters, with no document: the Document option says why in one sentence
+  // (the case has no checklist of its own), and no "fallback question" line, since no document is the source.
+  await go(); await openAll();
+  await p.locator('[data-question][data-fact="case.application_number"]').first().getByRole("button", { name: /^Details of/ }).click();
+  const caseDrawer = p.getByRole("dialog"); await caseDrawer.locator("[data-fact-drawer]").waitFor();
+  const caseDoc = await caseDrawer.locator('[data-source-option="DOCUMENT:"]').innerText();
+  step("QA-112 pass: the case fact's Document option says once that no document supplies it and the case has no checklist", (caseDoc.match(/No document/g) ?? []).length === 1 && /the case has no checklist of its own/.test(caseDoc), caseDoc);
+  step("QA-112 fail-guard: no \"The case (asked once)'s checklist\" and no second \"No document supplies it.\"", !/'s checklist/.test(caseDoc) && !/No document supplies it\.\s*$/m.test(caseDoc.replace(/the case has no checklist of its own\./, "")), caseDoc);
+  step("QA-112 pass: no fallback line when the case officer is the source (nothing about a missing document)", await caseDrawer.locator("[data-fallback]").count() === 0 && !/Fallback question|if the document is missing/.test(await caseDrawer.innerText()));
+  await state("drawer-case-fact-no-document");
+  await p.keyboard.press("Escape"); await settle();
 
   // ======================================================== Needs you: a release check on its row
   sql(`insert into fact_source (workspace_id, combination_id, lineage_key, role, canonical_field_key, source, version, status, origin, updated_by) select workspace_id, id, '${decl.role}|${decl.fact}', '${decl.role}', '${decl.fact}', 'AGENT', 1, 'DRAFT', 'HUMAN', 'user-A' from combination where id='${wp}'`);

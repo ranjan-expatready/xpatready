@@ -13,7 +13,8 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { costUsd, inputTokenBound } from "../../../p2/ledger.ts";
-import { MAX_ATTEMPTS, RUN_CAP_USD } from "../../../p2/policy.ts";
+import { MAX_ATTEMPTS } from "../../../p2/policy.ts";
+import { runWorstUsd } from "../../engine/cost-check.ts";
 import { slug } from "../../engine/import.ts";
 import { AI_FAILED, checkCounts } from "../../engine/people.ts";
 import { ProposePeopleBody, type PeoplePlan, type PeopleProposal, type ProposedPerson } from "../../contracts/workspace.ts";
@@ -25,6 +26,10 @@ import { Studio } from "./studio.ts";
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 const round2 = (n: number) => Math.round(n * 100) / 100;
+/** #113 review (runtime Minors 1 Nov): the worst case shown before AI now is two rounds (draft and check), each its run of
+ *  two attempts held to the run cap and rounded UP to the cent (runWorstUsd, as every other plan does); round2 could
+ *  show up to half a cent less than the run may spend. */
+export const peopleWorstUsd = (perAttemptUsd: number) => round2(2 * runWorstUsd(perAttemptUsd, 2));
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) =>
   new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail, ...extra }, status);
 const RUNS = join(PROTOTYPE, "p2", "runs"), JOBS = join(PROTOTYPE, "p2", "jobs"), PROMPTS = join(PROTOTYPE, "p2", "prompts");
@@ -99,7 +104,7 @@ export class PeopleFromGuide {
     // Lead check L2: AI now was not in the slice 3 Go; it stays off until the founder approves a live trial (P-110 plan).
     if (b.data.mode === "live" && !LIVE_APPROVED()) throw problem(409, "AI now is not approved yet", LIVE_WAITING);
     const g = await this.guide(combinationId);
-    const worst = b.data.mode === "live" ? round2(2 * Math.min(RUN_CAP_USD, costUsd(MODEL, inputTokenBound(g.text), AI.max_output_tokens) * 2)) : 0;
+    const worst = b.data.mode === "live" ? peopleWorstUsd(costUsd(MODEL, inputTokenBound(g.text), AI.max_output_tokens)) : 0;
     const steps = b.data.mode === "rules" ? STEPS_RULES : STEPS_AI;
     const note = b.data.mode === "replay" ? "Uses the answers AI gave for this exact guide and prompt before (US$0); with none saved yet, it says so and nothing changes." : b.data.mode === "rules" ? "No AI: rules find the sentences that name each person. How many is a Sample default you check." : "Two AI rounds read the guide; only lines both agree on, with their sentence in the guide, are proposed.";
     const ledger = this.sources.ledger();

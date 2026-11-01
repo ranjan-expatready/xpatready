@@ -10,6 +10,8 @@ import { ceilCents, costCheck, runWorstUsd } from "../engine/cost-check.ts";
 import { COST_WORDS } from "../contracts/cost-check.ts";
 import { BudgetExceeded, costUsd, LedgerBusy, OverrideRefused, SpendLedger } from "../../p2/ledger.ts";
 import { runDrafting } from "../../p2/runner.ts";
+import { RUN_CAP_USD } from "../../p2/policy.ts";
+import { peopleWorstUsd } from "../api/src/people-ai.ts";
 import { createHash } from "node:crypto";
 import { EXPERIMENT_CAP_USD, OVERRIDE_CEILING_USD, WAVE1_START } from "../../p2/policy.ts";
 
@@ -312,6 +314,13 @@ holder.kill();
 
 ok("C11.8 P-179 pass: the dialog shows spend so far against the cap, the worst case and what Continue allows", COST_WORDS.spent(exp) === "Spent so far US$116.00 of US$120.00" && COST_WORDS.worst(exp) === "At most US$5.00" && /allows this one run, up to US\$5\.00\. Total spend stays within US\$132\.00/.test(COST_WORDS.continueNote(exp)));
 ok("C11.8 P-179 fail: an unknown expected cost is said as such, never as US$0", COST_WORDS.expected(exp) === "Expected not known yet");
+
+// #113 review (runtime Minors 1 Nov): "Who fills it" AI now shows its worst case rounded UP, never down.
+// US$0.0031 an attempt: 2 rounds × 2 attempts = US$0.0124 exactly; rounding to the nearest cent said US$0.01.
+const perAttempt = 0.0031, exactWorst = 2 * 2 * perAttempt, nearest = Math.round(exactWorst * 100) / 100;
+ok("C11.12 pass: the people AI worst case is never below what the two rounds may spend (US$0.0124 shows US$0.02)", peopleWorstUsd(perAttempt) >= exactWorst && peopleWorstUsd(perAttempt) === 0.02, peopleWorstUsd(perAttempt));
+ok("C11.12 fail-guard: the nearest cent (the old rounding) is below the spend, and is not what is shown", nearest < exactWorst && peopleWorstUsd(perAttempt) !== nearest, { nearest, shown: peopleWorstUsd(perAttempt) });
+ok("C11.12 pass: each round is still held to the run cap", peopleWorstUsd(1000) === 2 * RUN_CAP_USD, peopleWorstUsd(1000));
 
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

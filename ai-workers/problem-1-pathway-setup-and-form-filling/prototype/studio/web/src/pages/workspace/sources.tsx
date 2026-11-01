@@ -195,10 +195,11 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
             <fieldset className="space-y-1.5" disabled={!editable}>
               <legend className="sr-only">Where the answer comes from</legend>
               {[...docs.map((d) => ({ value: `DOCUMENT:${d.key}`, label: `Document · ${d.name}`, hint: d.key === f.ruleDocument?.key ? `Default by the rules: it is on ${roleLabel}'s checklist and supplies it.` : "Also supplied by it." })),
-                ...(docs.length ? [] : [{ value: "DOCUMENT:", label: "Document", hint: `No document on ${roleLabel}'s checklist supplies it. Add one on Documents.` }]),
+                // QA-112: one sentence, not two; the case (asked once for the application) has no checklist of its own.
+                ...(docs.length ? [] : [{ value: "DOCUMENT:", label: "Document", hint: role === "case" ? "" : "Add one on Documents." }]),
                 { value: "CLIENT", label: "Client", hint: f.placed ? "Asked in the client questionnaire." : "" },
                 { value: "AGENT", label: "Case officer", hint: f.agentOffered ? "The case officer enters it." : f.clientOnly ? "" : "Not one of the case officer's own details: only with a written reason, reviewed at release." }].map((o) => {
-                const off = o.value === "DOCUMENT:" ? "No document supplies it." : why(o.value);
+                const off = o.value === "DOCUMENT:" ? (role === "case" ? "No document supplies it: the case has no checklist of its own." : `No document on ${roleLabel}'s checklist supplies it.`) : why(o.value);
                 return (
                   <label key={o.value} className={cn("flex gap-2 rounded-lg border p-2", choice === o.value ? "border-primary bg-primary/5" : "border-border", off ? "text-text-muted" : "")} data-source-option={o.value}>
                     <input type="radio" name="fact-source" className="mt-1" checked={choice === o.value} disabled={!!off} onChange={() => setChoice(o.value)} aria-describedby={off ? `why-${o.value}` : undefined} />
@@ -213,7 +214,8 @@ export function FactDrawer({ id, role, roleLabel, section, q, f, canAuthor, onCl
               </label>
             ) : null}
             {error?.field === "source" || error?.field === "documentTypeKey" || error?.field === "sourceReason" ? <p role="alert" id={error.field === "sourceReason" ? "officer-why-error" : undefined} className="text-text-danger" data-drawer-error>{error.message}</p> : null}
-            <p className="text-xs" data-fallback>{f.placed ? <span className="text-text-ok">✓ Fallback question reachable{section ? ` in ${section}` : ""}: the client is asked if the document is missing or cannot be read.</span> : <span className="text-text-warn">No fallback question: if the document is missing or cannot be read, nobody is asked.</span>}</p>
+            {/* QA-112: the fallback line is about a document that is missing or unreadable, so it shows only when a document is the source. */}
+            {choice.startsWith("DOCUMENT:") && choice !== "DOCUMENT:" ? <p className="text-xs" data-fallback>{f.placed ? <span className="text-text-ok">✓ Fallback question reachable{section ? ` in ${section}` : ""}: the client is asked if the document is missing or cannot be read.</span> : <span className="text-text-warn">No fallback question: if the document is missing or cannot be read, nobody is asked.</span>}</p> : null}
             {f.also.length ? <p className="text-xs text-text-muted" data-also>Also supplied by: {f.also.map((x) => x.name).join(", ")} (information only).</p> : null}
             <p className="rounded-lg bg-surface p-2 text-xs text-text-muted">Changing it here is an override for this combination only, reviewed in this combination's release. The library default stays.</p>
           </section>
