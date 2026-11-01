@@ -10,6 +10,11 @@ import { cn } from "@/lib/utils";
 import type { FormFieldsView } from "../../../contracts/screen02";
 
 export const PERSON: Record<string, string> = { form_subject: "the form's subject", subject_spouse_or_partner: "the subject's spouse or partner", subject_parent_1: "the subject's first parent", subject_parent_2: "the subject's second parent", subject_child: "the subject's child", subject_sibling: "the subject's sibling", representative: "the representative", none: "the application" };
+/** DV-d1-3 (QA-94): a role's system key written inside stored prose ("holding the role subject_spouse_or_partner") is
+ *  shown in plain words ("holding the role of the subject's spouse or partner"); the stored text stays as it is. */
+export const roleKeysInWords = (text: string) => text
+  .replace(/\brole (form_subject|subject_[a-z0-9_]+)\b/g, (_, k: string) => `role of ${PERSON[k] ?? k.replace(/_/g, " ")}`)
+  .replace(/\b(form_subject|subject_[a-z0-9_]+)\b/g, (k: string) => PERSON[k] ?? k.replace(/_/g, " "));
 const OUTCOME: Record<string, [string, string]> = { REUSE: ["ok", "Reuse existing"], NEW: ["info", "New definition"], AMBIGUOUS: ["warn", "Ambiguous"], CONFLICT: ["danger", "Conflict"] };
 /** What "accept the clean ones" leaves for a person: ambiguous and conflicting proposals, and new fields a library field
  *  could fit (BR-7: they need a reason). */

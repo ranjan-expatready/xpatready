@@ -409,7 +409,7 @@ function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, o
       {n.pending?.status === "RETURNED" ? (
         <p className={cn("col-span-full -mt-0.5 pb-0.5 text-xs text-text-danger", list ? "pl-[4.25rem]" : ["pl-[3.25rem]", "pl-[3.75rem]", "pl-[5.5rem]", "pl-[7rem]"][level])} data-returned>
           {SAY.returnedNote(n.pending.by, n.pending.note)}
-          {canAuthor ? <button type="button" onClick={onSendAgain} className="ml-2 rounded font-semibold text-text-link underline underline-offset-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-send-again>Send again</button> : null}
+          {canAuthor && n.pending.mine ? <button type="button" onClick={onSendAgain} className="ml-2 rounded font-semibold text-text-link underline underline-offset-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" data-send-again>Send again</button> : null}
         </p>) : null}
       {canAuthor && a.why ? <BlockedLine id={reasonId} text={a.why} onWhere={onEdit} className={cn("col-span-full -mt-0.5 pb-0.5", list ? "pl-[4.25rem]" : ["pl-[3.25rem]", "pl-[3.75rem]", "pl-[5.5rem]", "pl-[7rem]"][level])} /> : null}
     </div>
