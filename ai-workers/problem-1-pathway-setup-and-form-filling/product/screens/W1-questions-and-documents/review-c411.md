@@ -41,3 +41,29 @@ M1, M2 (with tests), and a test for M3's fix in 8458dd2d. Minors m1–m7 can fol
 
 ## Not checked
 A real screen reader. Saved AI answers with real saved files (the suite plants them; I ran only the case with none saved). 1440 px (the builder's screenshots cover it). An intended user's unaided walk (D17/D20 stay with the founder).
+
+---
+
+# Round 2 (c94db558)
+
+Re-reviewed the C4.11 fixes only (`git diff ee66d870 c94db558`, merge of main ignored). Isolated copy rv411 :24470, `STUDIO_SLOW_QD_STEP=400`. Journey test: `journey-test-reviewer-c411-r2-2026-11-01.md`, **9/10 (pass)**. The C4.11 API suite on my copy: 33/33.
+
+## Verdict: Approve
+
+## Round-1 findings
+* **M1 fixed.** The run executes in the background (draft-qd.ts `execute`); POST answers in 94 ms with `{runId, status:"running"}`. The dialog shows the run card with Stop 204 ms after Draft. Clicking Stop on screen ends the run ("Stopped", later steps cancelled, no rules verdict). The chip's href is now `/ai/:id`, and AiBatchPage renders the run card (with Stop) for this operation. A second tab's 409 shows the running card (break m5). The browser suite clicks Stop.
+* **M2 fixed.** `DraftQd.stop` calls `need(actor,"author")`: user-O and user-B both get 403 (checked live; the suite has the user-B fail). One "stopped" audit line names the author and the run id. Leftover: see m9.
+* **M3 fixed and tested.** `onModuleInit` ends orphaned runs as FAILED; a RUNNING run older than 10 minutes is ended FAILED inside the locked transaction on the next Draft. Suite: 1-minute-old run gives 409 with its runId, 1-hour-old run gives 201. I could not walk a live restart (isolated.sh recreates the database).
+* Break m2 (plan readable by case officer): now `readerOf`, 403 live. Break m3 (Stop after the last step): note says so. Break m4 (replay failure said "done"): status `done_with_problems`, note "Not done: Pre-qualification picks: …", tested.
+* m1 recorded in `qa/built/C4.11.md`. m2 asked-first pass/fail tests added (pure snapshot; `coverageGaps` still has no fail test, acceptable for part 2). m4, m6, m7 fixed.
+* **m3 (regex rule attribution) and m5 ("rules · US$0" on a NOT_YET step) not changed: neither blocks.** m5 is still visible on the card; fix in part 2.
+
+## New Minors (do not block; part 2)
+* **m8 No next step on the run's own page after it ends.** runs.ts:96-97 returns `null` for this operation, and the comment says the card "is shown on its own Questionnaires tab", but href is now `/ai/:id`. A person who left the dialog and followed the chip ends on /ai/:id with "Done" and no link to To review or to the combination (breadcrumb is "AI work" only). Fix: next = "Open To review" (`/review/proposals?group=combination:<id>`) when the run proposed items; correct the comment.
+* **m9 A stopped or failed run is still audited as "drafted … 0 findings".** draft-qd.ts:218 writes the same "proposed" line whatever `out.status` is; checked live on a stopped run (it follows the "stopped" line). Round-1 M2 asked for different wording. "0 findings" reads as "the checks passed" when step 7 never ran. Fix: word it by `out.status` (stopped / failed / done with problems).
+
+## D1–D20 changes from round 1
+D1 4 (Stop from the screen now present) · D5 4 (background run, stale and restart recovery) · D6 4 (author check, stopped line; m9) · D9 4 (live card everywhere; m8) · D10 4 (m5 open) · D11 5 (card at 204 ms) · D12 5 · D16 4 (Stop clicked in the browser; restart tested by plant). The rest are unchanged.
+
+## Not checked
+A live server restart. A real screen reader. Replay with real saved files. The merged-in main files.
