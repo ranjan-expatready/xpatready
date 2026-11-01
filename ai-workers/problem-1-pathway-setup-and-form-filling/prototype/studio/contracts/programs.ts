@@ -195,7 +195,7 @@ export type CatalogueResponse = {
   timing_ms: { rows: number; total: number };
 };
 /** GET /session: who is acting, and what they may do. */
-export type SessionView = { actor: { id: string; name: string; role: string; duties: readonly string[] } };
+export type SessionView = { actor: { id: string; name: string; role: string; duties: readonly string[] }; preferences?: import("./session.ts").Preferences };
 /** A file held by the form intake (P-51) that concerns a combination. */
 export type HeldFile = { id: string; file: string; code: string | null; edition: string | null; outcome: string | null; reason: string | null; at: string | Date };
 /** GET /combinations/:id/summary (P-50): the combination page's header and Overview. */

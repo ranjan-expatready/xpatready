@@ -14,7 +14,7 @@ check() { local max=$1 kb=$2; shift 2; for f in "$@"; do [ -f "$f" ] || continue
   for f in "$PH"/*.md "$PH"/domain/*.md "$ROOT"/.claude/skills/*/SKILL.md "$ROOT"/.claude/agents/*.md; do
     grep -o '`[A-Za-z0-9_./-]*\.md`' "$f" | tr -d '`' | sort -u | while read -r ref; do
       # Retired files (P-188, P-189) live in git history; old decision rows and records may still name them.
-      case "$ref" in WORKFLOW.md|LANES.md|CHARTER.md|LEAD.md|RETRO.md|WAVE-1.md|SCREENS.md|REQUESTS.md|PLAN.md|WAY-OF-WORKING-draft.md) continue;; esac
+      case "$ref" in WORKFLOW.md|LANES.md|CHARTER.md|LEAD.md|RETRO.md|WAVE-1.md|SCREENS.md|REQUESTS.md|PLAN.md|WAY-OF-WORKING-draft.md|TEAM.md) continue;; esac
       case "$ref" in */NN*|*NN-*|*"<"*|concept.md|challenge.md|build-notes.md|review.md|break-report.md|lead-check.md|plan.md|journey-test.md|concept-draft.md) continue;; esac
       [ -f "$PH/$ref" ] || [ -f "$ROOT/$ref" ] || [ -f "$(dirname "$f")/$ref" ] || [ -f "$PH/domain/$ref" ] || [ -f "$PH/../$ref" ] || echo "MISSING LINK in ${f#$ROOT/}: $ref"
     done
