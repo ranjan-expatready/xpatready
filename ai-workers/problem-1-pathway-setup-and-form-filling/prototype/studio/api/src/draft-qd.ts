@@ -209,7 +209,8 @@ export class DraftQd {
           out.proposed += r.proposed;
           await end(s.kind, r.status, r.message, r.detail);
         } else if (s.kind === "qd_conditions") {
-          const r = await this.conditions(c, plan.mode, batch.id, jobs.get("qd_conditions")!, snapshot);
+          // Round 2 M2: whatever goes wrong in this step fails this step only, never the whole run.
+          const r = await this.conditions(c, plan.mode, batch.id, jobs.get("qd_conditions")!, snapshot).catch((e) => { console.warn(`[draft-qd] conditions ${batch.id}: ${String((e as Error).message ?? e).slice(0, 300)}`); return { status: "FAILED", message: "This step stopped on this computer, so nothing of it is proposed; the other steps ran.", proposed: 0, detail: {} }; });
           out.proposed += r.proposed;
           await end(s.kind, r.status, r.message, r.detail);
         } else if (s.kind === "qd_facts") {

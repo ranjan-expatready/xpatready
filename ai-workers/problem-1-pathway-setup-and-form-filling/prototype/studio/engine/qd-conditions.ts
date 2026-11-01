@@ -30,13 +30,13 @@ export const conditionsShapeOk = (o: unknown): o is CondAnswer => {
 };
 
 /** Review M1 (part 2): the deciding answer as the value the rules engine compares (===), for the deciding field's type:
- *  a yes-no field takes yes/no; a field with an answer list takes one of its answers (matched on its code or words, the
- *  code is stored); any other field (free text, a number, a date) cannot decide a question by one answer here. */
-export function answerOf(field: { value_type?: string; answer_list?: { values?: { code: string; label: string }[] } } | undefined, when: string): { value: boolean | string } | { why: string } {
+ *  a yes-no field takes yes/no; a field with an answer list takes one of its answers (matched on its key or words, the
+ *  key is stored; round 2 M2: the snapshot's list values are { key, label }); any other field (free text, a number, a date) cannot decide a question by one answer here. */
+export function answerOf(field: { value_type?: string; answer_list?: { values?: { key: string; label: string }[] } } | undefined, when: string): { value: boolean | string } | { why: string } {
   const w = when.trim(), low = w.toLowerCase(), norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const values = field?.answer_list?.values ?? [];
   if (field?.value_type === "yes_no" || field?.value_type === "boolean") return low === "yes" || low === "true" ? { value: true } : low === "no" || low === "false" ? { value: false } : { why: `"${w}" is not yes or no, and the deciding question is answered yes or no.` };
-  if (values.length) { const hit = values.find((v) => norm(v.code) === norm(w) || norm(v.label) === norm(w)); return hit ? { value: hit.code } : { why: `"${w}" is not one of the deciding question's answers (${values.slice(0, 5).map((v) => v.label).join(", ")}${values.length > 5 ? ", …" : ""}).` }; }
+  if (values.length) { const hit = values.find((v) => norm(String(v.key ?? "")) === norm(w) || norm(String(v.label ?? "")) === norm(w)); return hit ? { value: hit.key } : { why: `"${w}" is not one of the deciding question's answers (${values.slice(0, 5).map((v) => v.label).join(", ")}${values.length > 5 ? ", …" : ""}).` }; }
   return { why: `The deciding question is answered in ${field?.value_type ?? "free"} form, so "${w}" cannot decide by one answer; a person sets this condition.` };
 }
 
@@ -53,7 +53,7 @@ export function conditionProblem(s: Snapshot, guideText: string, guideCode: stri
   if (!isSentence(c.quote) || !sameText(guideText).includes(sameText(c.quote))) return { why: `Its sentence is not in ${guideCode}'s text, so it is not proposed.` };
   const reason = c.why.trim();
   if (reason.length > 300 || (reason.match(/\p{L}/gu) ?? []).length < 3) return { why: "It has no reason in words of 3 to 300 characters." };
-  const fields = s.canonical_fields as { id: string; value_type?: string; answer_list?: { values?: { code: string; label: string }[] } }[];
+  const fields = s.canonical_fields as { id: string; value_type?: string; answer_list?: { values?: { key: string; label: string }[] } }[];
   const ans = answerOf(fields.find((f) => f.id === decider.fact), c.when);
   if ("why" in ans) return { why: `Its condition is not valid: ${ans.why}` };
   const tree = { subjectKind: subjectKindOf(decider.fact), op: "eq", field: decider.fact, value: ans.value };

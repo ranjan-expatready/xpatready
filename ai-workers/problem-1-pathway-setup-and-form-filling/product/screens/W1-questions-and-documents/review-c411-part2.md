@@ -66,3 +66,37 @@ None.
 * Two browsers running step 2 at the same moment as C2.6's own replay button. Both paths share C2.6's lock, so this was judged by reading the code.
 
 To fix before Approve: **M1** (with its fail test). The Minors can follow; m1's Ready-path test should come with M1.
+
+## Round 2 (81166e07)
+
+Reviewed: `git diff 1f493b96 81166e07`, fixes only. Evidence: the code was read, and `answerOf` was run directly (tsx) on a field shaped like the ones `engine/snapshot.ts:159` builds. The app was not started again; the builder's runs are taken as given: tsc clean, c411 47/47, browser 19/19, c26 35/35.
+
+### Verdict: Block (one new Major)
+
+* **M2 (new, from the M1 fix): a deciding question with an answer list now crashes step 5, and the whole run fails.**
+  * Cause: `engine/qd-conditions.ts:39` reads `v.code`. The snapshot's answer-list values are `{ key, label }` (`engine/snapshot.ts:90`, `engine/channels.ts:17`); `code` exists only on the proposal contract.
+  * Result: `norm(undefined)` throws "Cannot read properties of undefined (reading 'toLowerCase')". This was reproduced with `{ key: "common_law", label: "Common-law" }` and the answer "Common-law".
+  * The error is not an HttpException, so `draft-qd.ts:240` marks the run FAILED with "A step stopped on this computer". Step 6 is cancelled, and every re-run fails the same way while the saved answer holds that condition. These are exactly round 1's cases (marital status, passport country).
+  * tsc missed it because the local cast types the values as `{code,label}`. No test uses a listed decider.
+  * Fix:
+    * Read `v.key` and store `hit.key`.
+    * Type the field from the snapshot's own shape instead of a cast.
+    * Add a pass test: a listed decider answered by its label gives the stored key and is valid.
+    * Add a fail test: an answer not on the list is left out with the reason.
+* **M1: fixed for yes-no and free-text deciders.**
+  * Yes-no takes only yes or no, as a boolean.
+  * Text, number, date, and code or country without a list are dropped with "a person sets this condition".
+  * Values are no longer lowercased.
+  * Fail test present. It stays open only through M2's listed-decider path.
+* **m1: mostly fixed.** The yes-no value `true` is asserted. The free-text drop, the drops for unknown question and quote-not-in-guide, and "removed, not proposed again" are all tested.
+  * The Ready path is still untested. This does not block: the cap is a correct Check, and Ready is the stricter label.
+  * Still asked, Should: a pure `conditionsFromRounds` test on a snapshot whose target no form reads must give `ready`. It needs no sample change.
+* **m2: fixed.** The sentence reads ""<question>" is asked only when …"; this is tested.
+* **m3: fixed.** The cut is at a word boundary with an ellipsis, not at a sentence; that is acceptable.
+* **m4: fixed.** "Replayed before" is said only when `replay` hands back an existing job id.
+* **m5:** recorded, not built. Accepted.
+* **Part 1's m8 and m9:** still open, as listed.
+
+Journey score: 7/10 (down from 7.5). A guide condition on a listed answer, the common case, now stops the run with an unhelpful message. Report: `journey-test-reviewer-2026-11-01-c411p2.md`, round 2.
+
+To fix before Approve: **M2**, with its pass and fail tests.

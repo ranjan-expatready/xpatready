@@ -55,3 +55,12 @@ Not tested:
 * A screen reader.
 * 200 % zoom beyond the 400 px reflow.
 * An intended user walking it unaided (D17 and D20 stay with the founder).
+
+## Round 2 (81166e07): 7/10
+
+Judged from the code and a direct run of `answerOf`; the app was not walked again.
+
+* Yes-no deciders now give `true`/`false`. Free-text deciders are left out with "a person sets this condition".
+* Queue rows name the hidden question, and reasons end on a word.
+* New break: when the deciding question has an answer list (marital status, passport country), step 5 throws. The run ends with "A step stopped on this computer; … Run it again", and running again fails the same way. The user gets no reason and has no way forward.
+* Fix first: M2 (`v.key`, not `v.code`).

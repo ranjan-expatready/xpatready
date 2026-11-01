@@ -224,6 +224,12 @@ const pick = (asks: string, why = "The officer tests it to decide eligibility, s
   // K, pure (review m2): "deciding fact asked first" on a small snapshot: a question decided by an answer nobody gives.
   const { qdChecks } = await import("../engine/draft-qd.ts");
   const snap = (cond: string) => ({ placements: [{ fact: "q.details", condition: { op: "eq", field: cond, value: true } }, { fact: "q.flag" }], document_types: [], derived_fields: [], canonical_fields: [{ id: "q.details", meaning: "Details" }, { id: "q.flag", meaning: "Has a flag" }], field_maps: [], fact_sources: [], rules: [], document_requirements: [], forms: [], checks: [], combination: { participants: [] } });
+  // C, pure (round 2 M2): the deciding answer must fit the deciding question; list values are { key, label }.
+  const { answerOf } = await import("../engine/qd-conditions.ts");
+  const list = { value_type: "code", answer_list: { values: [{ key: "common_law", label: "Common-law" }, { key: "married", label: "Married" }] } };
+  const a1 = answerOf(list, "Common-law"), a2 = answerOf(list, "Divorced"), a3 = answerOf({ value_type: "yes_no" }, "Yes"), a4 = answerOf({ value_type: "yes_no" }, "maybe");
+  ok("C4.11 C pass (round 2 M2): an answer given by its words is stored as the list's key; yes is true on a yes-no question", JSON.stringify(a1) === '{"value":"common_law"}' && JSON.stringify(a3) === '{"value":true}', [a1, a3]);
+  ok("C4.11 C fail (round 2 M2): an answer not on the list, or not yes/no on a yes-no question, is refused with the reason", "why" in a2 && /not one of the deciding question's answers/.test(a2.why) && "why" in a4, [a2, a4]);
   const okSnap = qdChecks(snap("q.flag") as never), badSnap = qdChecks(snap("q.nobody") as never);
   ok("C4.11 K pass: a question decided by an answer that is asked has no asked-first finding", !okSnap.some((f) => f.rule === "asked_first"), okSnap);
   ok("C4.11 K fail: a question decided by an answer nobody gives is an asked-first finding", badSnap.some((f) => f.rule === "asked_first" && /Unreachable question/.test(f.message)), badSnap);
