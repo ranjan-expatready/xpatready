@@ -237,12 +237,11 @@ export function FormFieldDecisions({ jobId, editionId, readOnly = false, focusOn
 /** K2 (Screen 02 slice 3): a checklist draft. Each proposal is a document requirement (or a section, rule or check) with
  *  the checklist's own words beside it; a person accepts or returns each, then applies them to the draft. */
 type ChecklistItem = { id: string; kind: string; decision: string; proposedMeaning: string; sourceQuote: string | null; payload: { document_type?: string; who?: string; base_or_conditional?: string; condition_plain?: string } | null };
-type ChecklistJobView = { id: string; status: string; mode: string; costUsd: number | null; message: string | null; attachment?: { edition: string | null } | null; items: ChecklistItem[] };
+type ChecklistJobView = { id: string; status: string; mode: string; costUsd: number | null; message: string | null; attachment?: { edition: string | null } | null; items: ChecklistItem[]; detail?: { applied?: { added: number; skipped: string[] } } | null };
 function ChecklistJob({ job, combinationId }: { job: ChecklistJobView; combinationId: string }) {
-  const nav = useNavigate();
   const items = job.items;
   const decide = useAction((v: { id: string; decision: string; note?: string }) => api(`/jobs/${job.id}/items/${v.id}`, { method: "POST", json: { decision: v.decision, note: v.note } }), { invalidate: [["job", job.id]] });
-  const apply = useAction(() => api<{ added: number; skipped: string[] }>(`/jobs/${job.id}/apply-checklist`, { method: "POST" }), { success: (r) => `${r.added} document requirement${r.added === 1 ? "" : "s"} added to the draft${r.skipped.length ? `; not applied: ${r.skipped.length}` : ""}`, invalidate: [["job", job.id], ["combination"], ["draft"], ["catalogue"]], onDone: () => nav(`/c/${combinationId}`) });
+  const apply = useAction(() => api<{ added: number; skipped: string[] }>(`/jobs/${job.id}/apply-checklist`, { method: "POST" }), { success: (r) => `${r.added} document requirement${r.added === 1 ? "" : "s"} added to the draft${r.skipped.length ? `; not applied: ${r.skipped.length}` : ""}`, invalidate: [["job", job.id], ["combination"], ["draft"], ["catalogue"]] });
   const pending = items.filter((i) => i.decision === "PENDING").length;
   const [back, setBack] = React.useState<string | null>(null), [note, setNote] = React.useState("");
   return (
@@ -251,17 +250,25 @@ function ChecklistJob({ job, combinationId }: { job: ChecklistJobView; combinati
       <div><h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {job.attachment?.edition ?? "Checklist"}: proposed document requirements</h1>
         <div className="mt-2 flex flex-wrap gap-1.5"><ModePill mode={job.mode} /><StatusPill status={job.status} /><Pill>US${Number(job.costUsd ?? 0).toFixed(2)}</Pill></div>
         <p className="mt-2 max-w-3xl text-sm text-text-muted">{job.message}</p></div>
-      {!items.length ? <Notice title="Nothing proposed">The stub pass proves the path only; a live draft proposes each document requirement with the checklist's words beside it.</Notice> : (
+      {!items.length ? <Notice title="Nothing proposed">{job.mode === "REPLAY" ? "Every line of the saved reading is already on this combination, or was dropped by the rules (listed above)." : "The stub pass proves the path only; a live draft proposes each document requirement with the checklist's words beside it."}</Notice> : (
         <ul className="space-y-3">{items.map((i) => { const p = i.payload ?? {}; return (
           <li key={i.id} className="rounded-xl border border-border bg-surface-raised p-4" data-checklist-item={i.kind}>
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><Pill tone="info">{i.kind.replace("_", " ")}</Pill> <b className="ml-1">{p.document_type ?? i.proposedMeaning}</b><p className="mt-1 text-sm">{p.who ? `For ${String(p.who).replace(/_/g, " ")}` : null}{p.base_or_conditional === "conditional" ? ` · when ${p.condition_plain}` : " · always"}</p></div>
+              <div><Pill tone="info">{i.kind.replace("_", " ")}</Pill> <b className="ml-1">{p.document_type ?? i.proposedMeaning}</b><p className="mt-1 text-sm">{p.who ? `For ${String(p.who).replace(/_/g, " ")}` : null}{p.base_or_conditional === "conditional" ? ` · ${p.condition_plain}` : " · always"}</p></div>
               {i.decision !== "PENDING" ? <Pill tone={i.decision === "RETURNED" ? "warn" : "ok"}>{i.decision === "ACCEPTED" ? "Accepted" : "Returned"}</Pill> : job.status === "COMPLETED" ? <div className="flex gap-2"><Button size="sm" onClick={() => decide.mutate({ id: i.id, decision: "ACCEPTED" })}>Accept</Button><Button size="sm" variant="ghost" onClick={() => { setBack(back === i.id ? null : i.id); setNote(""); }}>Return</Button></div> : null}
             </div>
             {back === i.id ? <div className="mt-2 flex items-end gap-2"><Field label="Why it goes back" className="flex-1"><Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} /></Field><Button size="sm" variant="secondary" disabled={note.trim().length < 3} onClick={() => { decide.mutate({ id: i.id, decision: "RETURNED", note }); setBack(null); }}>Return it</Button></div> : null}
             {i.sourceQuote ? <blockquote className="mt-2 border-l-2 border-border pl-3 text-sm text-text-muted">"{i.sourceQuote}"</blockquote> : null}
           </li>); })}</ul>
       )}
+      {job.status === "APPLIED" && job.detail?.applied ? (
+        <section aria-labelledby="ck-applied-h" className="space-y-2 rounded-xl border border-border bg-surface-raised p-4" data-checklist-applied>
+          <h2 id="ck-applied-h" className="text-base font-semibold">Applied: {job.detail.applied.added} document requirement{job.detail.applied.added === 1 ? "" : "s"} added to the draft</h2>
+          {job.detail.applied.skipped.length ? <><p className="text-sm">Not applied ({job.detail.applied.skipped.length}), each with its reason. Add these on the combination by hand if they are needed:</p>
+            <ul className="list-disc space-y-1 pl-5 text-sm" data-checklist-skipped>{job.detail.applied.skipped.map((s) => <li key={s}>{s}</li>)}</ul></> : <p className="text-sm text-text-muted">Every accepted line was added.</p>}
+          <Link to={`/c/${combinationId}`} className="text-sm text-text-link underline">Back to the combination</Link>
+        </section>
+      ) : null}
       {job.status === "COMPLETED" && items.length ? <div className="flex items-center justify-end gap-3"><p className="text-sm text-text-muted">{pending ? `${pending} still to decide` : "Every proposal decided"}</p><Button disabled={!!pending} busy={apply.isPending} onClick={() => apply.mutate(undefined)}>Apply to the draft</Button></div> : null}
     </div>
   );
